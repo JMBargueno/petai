@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "rarity": {
+    "normal": {
+      "probability": 0.60,
+      "multiplier": 1.00
+    },
+    "rare": {
+      "probability": 0.25,
+      "multiplier": 1.15
+    },
+    "super_rare": {
+      "probability": 0.10,
+      "multiplier": 1.30
+    },
+    "legendary": {
+      "probability": 0.04,
+      "multiplier": 1.50
+    },
+    "mythic": {
+      "probability": 0.01,
+      "multiplier": 1.75
+    }
+  },
+  "pity": {
+    "superRareThreshold": 30,
+    "legendaryThreshold": 120
+  },
+  "shinyProbability": 0.02,
+  "vitals": {
+    "max": 100,
+    "min": 0,
+    "decayPerHour": {
+      "awake": {
+        "hunger": 5.0,
+        "happiness": 4.0,
+        "energy": 3.0,
+        "hygiene": 2.5
+      },
+      "sleeping": {
+        "hunger": 1.5,
+        "happiness": 1.0,
+        "energy": -20.0,
+        "hygiene": 0.5
+      }
+    },
+    "criticalThreshold": 15.0,
+    "sicknessHealthThreshold": 20.0
+  },
+  "leveling": {
+    "maxLevel": 100,
+    "stages": {
+      "baby": 1,
+      "juvenile": 10,
+      "adult": 25,
+      "final": 50
+    }
+  },
+  "combats": {
+    "dailyFreeBattles": 10,
+    "energyCostPerBattle": 15
+  }
+}

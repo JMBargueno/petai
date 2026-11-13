@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <g transform="translate(0, -4)">
+    <!-- Sombras -->
+    <ellipse cx="64" cy="116" rx="36" ry="8" fill="#000000" opacity="0.2"/>
+    <circle cx="28" cy="55" r="8" fill="#80ED99" opacity="0.8"/>
+               <circle cx="100" cy="55" r="8" fill="#80ED99" opacity="0.8"/>
+    <!-- Cuerpo base -->
+    <circle cx="64" cy="68" r="42" fill="#38A3A5" stroke="#1A1A1A" stroke-width="3"/>
+    <!-- Vientre -->
+    <ellipse cx="64" cy="80" rx="26" ry="20" fill="#FFFFFF" opacity="0.35"/>
+    <path d="M 42 58 Q 48 50 54 58" stroke="#1A1A1A" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 74 58 Q 80 50 86 58" stroke="#1A1A1A" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M 54 68 Q 64 82 74 68 Z" fill="#8B0000" stroke="#1A1A1A" stroke-width="2"/>
+    
+  </g>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Máscara de rayas -->
+  <g stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.6">
+    <path d="M 52 42 Q 64 38 76 42"/>
+    <path d="M 46 54 Q 64 48 82 54"/>
+    <path d="M 44 68 Q 64 62 84 68"/>
+    <path d="M 48 82 Q 64 78 80 82"/>
+  </g>
+</svg>

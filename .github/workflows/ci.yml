@@ -1,0 +1,59 @@
+name: PetAI CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-data:
+    name: Validate Game Data & Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate Game Data Integrity
+        run: node scripts/validate-game-data.js
+
+  backend:
+    name: Backend Lint & Tests
+    runs-on: ubuntu-latest
+    needs: validate-data
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Check Backend Directory
+        id: check_backend
+        run: |
+          if [ -f backend/package.json ]; then
+            echo "has_backend=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_backend=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.check_backend.outputs.has_backend == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Backend Tests
+        if: steps.check_backend.outputs.has_backend == 'true'
+        run: pnpm --filter backend run test

@@ -1,0 +1,101 @@
+[
+  {
+    "id": "apple",
+    "name": "Manzana Crujiente",
+    "kind": "food",
+    "description": "Una fruta fresca y dulce que sacia el hambre rápidamente.",
+    "priceCoins": 10,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 25,
+      "happiness": 5,
+      "energy": 0,
+      "health": 2
+    }
+  },
+  {
+    "id": "spicy_berry",
+    "name": "Baya Ígnea",
+    "kind": "food",
+    "description": "Una baya ardiente que calienta el espíritu. Favorita de las criaturas de fuego.",
+    "priceCoins": 25,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 20,
+      "happiness": 15,
+      "energy": 5,
+      "health": 5
+    }
+  },
+  {
+    "id": "sweet_coral",
+    "name": "Coral Glaseado",
+    "kind": "food",
+    "description": "Delicadeza marina dulce y refrescante. Favorita de las criaturas acuáticas.",
+    "priceCoins": 25,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 20,
+      "happiness": 15,
+      "energy": 5,
+      "health": 5
+    }
+  },
+  {
+    "id": "sun_seed",
+    "name": "Semilla Solar",
+    "kind": "food",
+    "description": "Semilla rica en nutrientes vegetales cargada con luz solar pura. Favorita de criaturas de planta.",
+    "priceCoins": 25,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 20,
+      "happiness": 15,
+      "energy": 5,
+      "health": 5
+    }
+  },
+  {
+    "id": "cake",
+    "name": "Pastel de Fresas",
+    "kind": "food",
+    "description": "Un dulce delicioso que aumenta mucho la felicidad, aunque no es lo más saludable.",
+    "priceCoins": 40,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 30,
+      "happiness": 35,
+      "energy": 10,
+      "health": -5
+    }
+  },
+  {
+    "id": "healthy_salad",
+    "name": "Ensalada Silvestre",
+    "kind": "food",
+    "description": "Una mezcla de hojas verdes y raíces curativas que restablecen la salud.",
+    "priceCoins": 30,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 18,
+      "happiness": 5,
+      "energy": 5,
+      "health": 15
+    }
+  },
+  {
+    "id": "medicine",
+    "name": "Elixir Reparador",
+    "kind": "medicine",
+    "description": "Poción medicinal indispensable para curar a una mascota enferma.",
+    "priceCoins": 80,
+    "priceGems": 1,
+    "effects": {
+      "hunger": 0,
+      "happiness": -10,
+      "energy": 0,
+      "health": 40,
+      "curesSick": true
+    }
+  }
+]

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "ignisaur",
+    "name": "Ignisaurio",
+    "description": "Una pequeña criatura reptiliana de escamas cálidas y temperamento vivaz. Cuando se alegra, desprende chispas brillantes.",
+    "element": "fire",
+    "rarity": "normal",
+    "baseStats": {
+      "hp": 50,
+      "atk": 55,
+      "def": 45,
+      "vel": 48,
+      "esp": 52
+    },
+    "favoriteFood": "spicy_berry",
+    "spriteKey": "ignisaur",
+    "defaultPalette": {
+      "primary": "#E25822",
+      "secondary": "#F3C544",
+      "accent": "#6D1600"
+    }
+  },
+  {
+    "id": "axolunar",
+    "name": "Axolunar",
+    "description": "Criatura anfibia con branquias en forma de estrella lunar. Transmite una enorme serenidad y le encanta chapotear en agua fresca.",
+    "element": "water",
+    "rarity": "normal",
+    "baseStats": {
+      "hp": 55,
+      "atk": 45,
+      "def": 52,
+      "vel": 46,
+      "esp": 52
+    },
+    "favoriteFood": "sweet_coral",
+    "spriteKey": "axolunar",
+    "defaultPalette": {
+      "primary": "#38A3A5",
+      "secondary": "#80ED99",
+      "accent": "#22577A"
+    }
+  },
+  {
+    "id": "florabud",
+    "name": "Florabrote",
+    "description": "Un pequeño brote vegetal que responde a la música y a la luz solar. Absorbe la energía de la naturaleza para curarse.",
+    "element": "plant",
+    "rarity": "normal",
+    "baseStats": {
+      "hp": 52,
+      "atk": 48,
+      "def": 50,
+      "vel": 44,
+      "esp": 56
+    },
+    "favoriteFood": "sun_seed",
+    "spriteKey": "florabud",
+    "defaultPalette": {
+      "primary": "#57CC99",
+      "secondary": "#C7F9CC",
+      "accent": "#22577A"
+    }
+  }
+]

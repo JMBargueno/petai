@@ -1,0 +1,15 @@
+{
+  "name": "petai-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PetAI — Mascota virtual tamagotchi inteligente multiplataforma",
+  "scripts": {
+    "validate:data": "node scripts/validate-game-data.js",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "backend:dev": "pnpm --filter backend run start:dev",
+    "backend:test": "pnpm --filter backend run test",
+    "backend:build": "pnpm --filter backend run build"
+  },
+  "devDependencies": {}
+}

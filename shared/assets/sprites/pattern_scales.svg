@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Máscara de escamas -->
+  <g stroke="currentColor" stroke-width="2" fill="none" opacity="0.6">
+    <path d="M 48 50 Q 54 56 60 50 Q 66 56 72 50 Q 78 56 84 50"/>
+    <path d="M 44 62 Q 50 68 56 62 Q 62 68 68 62 Q 74 68 80 62 Q 86 68 92 62"/>
+    <path d="M 46 74 Q 52 80 58 74 Q 64 80 70 74 Q 76 80 82 74 Q 88 80 94 74"/>
+    <path d="M 52 86 Q 58 92 64 86 Q 70 92 76 86 Q 82 92 88 86"/>
+  </g>
+</svg>

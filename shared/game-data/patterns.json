@@ -1,0 +1,50 @@
+[
+  {
+    "id": "plain",
+    "name": "Liso",
+    "description": "Textura suave y uniforme con el color natural de la especie.",
+    "minRarity": "normal"
+  },
+  {
+    "id": "spots",
+    "name": "Manchas",
+    "description": "Motas decorativas dispersas por el torso y extremidades.",
+    "minRarity": "normal"
+  },
+  {
+    "id": "stripes",
+    "name": "Rayas",
+    "description": "Franjas dinámicas en el lomo y la cola.",
+    "minRarity": "normal"
+  },
+  {
+    "id": "gradient",
+    "name": "Degradado",
+    "description": "Transición tonal fluida desde la cabeza hacia la base.",
+    "minRarity": "rare"
+  },
+  {
+    "id": "scales",
+    "name": "Escamas",
+    "description": "Reflejos de escamas nacaradas con bordes luminosos.",
+    "minRarity": "super_rare"
+  },
+  {
+    "id": "crystal",
+    "name": "Cristal",
+    "description": "Estructuras prismáticas translúcidas que refractan la luz.",
+    "minRarity": "super_rare"
+  },
+  {
+    "id": "galaxy",
+    "name": "Galaxia",
+    "description": "Cúmulo cósmico estelar brillante integrado en el pelaje/piel.",
+    "minRarity": "legendary"
+  },
+  {
+    "id": "aurora",
+    "name": "Aurora",
+    "description": "Ondulaciones de luz polar que cambian según el estado de ánimo.",
+    "minRarity": "mythic"
+  }
+]
