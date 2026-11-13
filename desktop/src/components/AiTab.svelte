@@ -6,7 +6,7 @@
 
   const dispatch = createEventDispatcher();
 
-  type Msg = { id: string; role: 'user' | 'assistant'; content: string };
+  type Msg = { id: string; role: 'user' | 'assistant'; content: string; notice?: boolean };
 
   let loaded = false;
   let config: any = { configured: false };
@@ -28,6 +28,19 @@
   let chatErr = '';
   let scroller: HTMLElement;
   let abort: AbortController | null = null;
+
+  // Uso mensual de tokens y cuota
+  let usage: Awaited<ReturnType<typeof api.getAiUsage>> | null = null;
+
+  const fmtTokens = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
+
+  async function loadUsage() {
+    try {
+      usage = await api.getAiUsage();
+    } catch {
+      usage = null;
+    }
+  }
 
   // Agente: acciones propuestas por la mascota (requieren confirmación) y recordatorios
   type ActionCard = {
@@ -150,6 +163,7 @@
     if (config.configured && pet) {
       await loadHistory();
       await loadPending();
+      loadUsage();
     }
     loaded = true;
   });
@@ -246,8 +260,11 @@
     chatErr = '';
     input = '';
     streaming = true;
-    const reply: Msg = { id: 'tmp-reply', role: 'assistant', content: '' };
-    messages = [...messages, { id: `tmp-${Date.now()}`, role: 'user', content: text }, reply];
+    // Id único por respuesta: los avisos de moderación se quedan en pantalla y no deben chocar entre sí
+    const reply: Msg = { id: `tmp-reply-${Date.now()}`, role: 'assistant', content: '' };
+    const userMsg: Msg = { id: `tmp-${Date.now()}`, role: 'user', content: text };
+    let moderated = false;
+    messages = [...messages, userMsg, reply];
     await scrollDown();
     abort = new AbortController();
     toolHint = '';
@@ -262,6 +279,18 @@
             messages = messages;
             scrollDown();
           },
+          onModerated: (m) => {
+            moderated = true;
+            reply.content = m.message;
+            reply.notice = true;
+            if (m.hideUserMessage) {
+              // El texto con datos sensibles no se conserva ni en pantalla
+              messages = messages.filter((x) => x.id !== userMsg.id);
+              input = '';
+            }
+            messages = messages;
+            scrollDown();
+          },
           onTool: () => {
             toolHint = '🔍 Consultando…';
           },
@@ -272,17 +301,23 @@
         },
         abort.signal,
       );
+      if ('moderated' in done) {
+        // Aviso de moderación: no es una respuesta de la mascota ni queda en el historial
+        return;
+      }
       reply.content = done.message.content;
       messages = messages;
       dispatch('bubble', done.message.content);
       dispatch('refreshPet');
+      loadUsage();
       // La extracción de recuerdos se hace en segundo plano en el servidor
       if (memOpen) setTimeout(loadMemories, 3000);
     } catch (e: any) {
       if (e.name !== 'AbortError') chatErr = e.message;
       // Se retira el intercambio incompleto: el servidor no lo guardó
-      messages = messages.filter((m) => m !== reply && !(m.role === 'user' && m.content === text && m.id.startsWith('tmp-')));
+      messages = messages.filter((m) => m !== reply && m !== userMsg);
       input = text;
+      if (/cuota/i.test(e.message)) loadUsage();
     } finally {
       streaming = false;
       toolHint = '';
@@ -310,6 +345,13 @@
         {showSettings ? 'Ocultar ajustes' : '⚙ Ajustes'}
       </button>
     </div>
+  {/if}
+
+  {#if config.configured && usage}
+    <p class="usage" class:full={usage.quota !== null && (usage.remaining ?? 1) <= 0}>
+      📊 Este mes: {fmtTokens(usage.tokens)} tokens{usage.quota !== null ? ` de ${fmtTokens(usage.quota)}` : ' (sin límite)'}
+      {#if usage.quota !== null && (usage.remaining ?? 1) <= 0} — cuota agotada, se renueva el día 1{/if}
+    </p>
   {/if}
 
   {#if showSettings}
@@ -356,7 +398,7 @@
         <p class="muted">Saluda a {pet.nickname || pet.species?.name} 👋</p>
       {/if}
       {#each messages as m (m.id)}
-        <div class="msg {m.role}">{m.content}{#if streaming && m.id === 'tmp-reply' && !m.content}…{/if}</div>
+        <div class="msg {m.role}" class:notice={m.notice}>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}…{/if}</div>
       {/each}
       {#if toolHint}<div class="hint">{toolHint}</div>{/if}
       {#each actions as a (a.id)}
@@ -469,6 +511,9 @@
   .msg { max-width: 85%; padding: 6px 10px; border-radius: 12px; font-size: 13px; line-height: 1.35; white-space: pre-wrap; user-select: text; }
   .msg.user { align-self: flex-end; background: #0369a1; }
   .msg.assistant { align-self: flex-start; background: rgba(51, 65, 85, 0.9); }
+  .msg.notice { background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.45); }
+  .usage { font-size: 11px; opacity: 0.7; margin: 0 0 6px; }
+  .usage.full { color: #f87171; opacity: 1; }
   .composer { display: flex; gap: 6px; align-items: stretch; }
   .memory { margin-bottom: 8px; }
   .hint { align-self: flex-start; font-size: 12px; opacity: 0.7; }

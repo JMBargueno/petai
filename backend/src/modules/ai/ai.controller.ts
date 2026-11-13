@@ -7,6 +7,7 @@ import { AiConfigService, AiConfigInput } from './ai-config.service';
 import { ChatService } from './chat.service';
 import { MemoryService } from './memory.service';
 import { AgentService } from './agent.service';
+import { UsageService } from './usage.service';
 
 @ApiTags('AI')
 @ApiBearerAuth()
@@ -18,6 +19,7 @@ export class AiController {
     private readonly chat: ChatService,
     private readonly memory: MemoryService,
     private readonly agent: AgentService,
+    private readonly usage: UsageService,
   ) {}
 
   @Get('ai/config')
@@ -36,6 +38,13 @@ export class AiController {
   @ApiOperation({ summary: 'Eliminar la configuración y la key almacenada' })
   deleteConfig(@CurrentUser() user: any) {
     return this.aiConfig.remove(user.id);
+  }
+
+  @Get('ai/usage')
+  @ApiOperation({ summary: 'Consumo de tokens de IA del mes en curso y cuota' })
+  async getUsage(@CurrentUser() user: any) {
+    const cfg = await this.aiConfig.getView(user.id);
+    return this.usage.summary(user.id, cfg.configured ? (cfg as any).mode : 'byok');
   }
 
   @Post('ai/config/test')

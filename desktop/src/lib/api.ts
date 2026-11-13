@@ -230,9 +230,10 @@ export const api = {
       onDelta: (text: string) => void;
       onTool?: (name: string) => void;
       onAction?: (action: { id: string; tool: string; summary: string; expiresAt: string }) => void;
+      onModerated?: (info: { reason: string; message: string; hideUserMessage: boolean }) => void;
     },
     signal?: AbortSignal,
-  ): Promise<{ message: { id: string; content: string }; intelligence: number; tier: string }> {
+  ): Promise<{ message: { id: string; content: string }; intelligence: number; tier: string } | { moderated: true }> {
     const res = await fetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
       method: 'POST',
       signal,
@@ -265,6 +266,10 @@ export const api = {
         if (event === 'delta') handlers.onDelta(data.text);
         else if (event === 'tool') handlers.onTool?.(data.name);
         else if (event === 'action') handlers.onAction?.(data.action);
+        else if (event === 'moderated') {
+          handlers.onModerated?.(data);
+          return { moderated: true };
+        }
         else if (event === 'error') throw new Error(data.message);
         else if (event === 'done') return data;
       }
@@ -274,6 +279,16 @@ export const api = {
 
   async updateMe(data: { displayName?: string; timezone?: string }) {
     return minigameRequest<any>('PATCH', '/v1/me', data);
+  },
+
+  async getAiUsage() {
+    return minigameRequest<{
+      month: string;
+      tokens: number;
+      requests: number;
+      quota: number | null;
+      remaining: number | null;
+    }>('GET', '/v1/ai/usage');
   },
 
   async getPendingActions(petId: string) {

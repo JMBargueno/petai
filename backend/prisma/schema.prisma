@@ -29,6 +29,7 @@ model User {
   reminders      Reminder[]
   minigames      MinigameSession[]
   pendingActions PendingAction[]
+  aiUsage        AiUsage[]
 }
 
 model RefreshToken {
@@ -277,4 +278,16 @@ model PendingAction {
 
   @@index([userId, status])
   @@index([petId])
+}
+
+// Consumo mensual de tokens de IA por usuario (mes UTC "YYYY-MM"), para cuotas y transparencia
+model AiUsage {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month     String
+  tokens    Int      @default(0)
+  requests  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, month])
 }

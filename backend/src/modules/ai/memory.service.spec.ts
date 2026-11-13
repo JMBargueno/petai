@@ -14,6 +14,7 @@ function makeProvider(output: string | Error) {
 
 describe('MemoryService', () => {
   let prisma: any;
+  let usage: any;
   let svc: MemoryService;
   const created: any[] = [];
 
@@ -36,27 +37,44 @@ describe('MemoryService', () => {
       chatMessage: { findMany: jest.fn().mockResolvedValue(userMsgs(6)) },
       pet: { findFirst: jest.fn() },
     };
-    svc = new MemoryService(prisma);
+    usage = { hasQuota: jest.fn().mockResolvedValue(true), record: jest.fn().mockResolvedValue(undefined) };
+    svc = new MemoryService(prisma, usage);
   });
 
   const JSON_OK = '{"summary":"Hablaron de pesca","facts":["Le gusta pescar"]}';
 
   it('no hace nada por debajo del nivel de memoria (intelligence < 200)', async () => {
     const p = makeProvider(JSON_OK);
-    await svc.maybeSummarize('p1', 199, p, 'm');
+    await svc.maybeSummarize('p1', 199, p, 'm', 'u1', 'byok');
     expect(p.chat).not.toHaveBeenCalled();
+  });
+
+  it('si la cuota mensual está agotada no consume tokens en la extracción', async () => {
+    usage.hasQuota.mockResolvedValue(false);
+    const p = makeProvider(JSON_OK);
+    await svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'managed');
+    expect(usage.hasQuota).toHaveBeenCalledWith('u1', 'managed');
+    expect(p.chat).not.toHaveBeenCalled();
+  });
+
+  it('registra el consumo de la extracción (estimado si el proveedor no informa del uso)', async () => {
+    const p = makeProvider(JSON_OK);
+    await svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
+    expect(usage.record).toHaveBeenCalledTimes(1);
+    expect(usage.record.mock.calls[0][0]).toBe('u1');
+    expect(usage.record.mock.calls[0][1]).toBeGreaterThan(0);
   });
 
   it('no resume hasta acumular 6 mensajes del usuario', async () => {
     prisma.chatMessage.findMany.mockResolvedValue(userMsgs(5));
     const p = makeProvider(JSON_OK);
-    await svc.maybeSummarize('p1', 250, p, 'm');
+    await svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
     expect(p.chat).not.toHaveBeenCalled();
   });
 
   it('resume y guarda resumen + hechos nuevos; el resumen marca el último mensaje procesado', async () => {
     const p = makeProvider(JSON_OK);
-    await svc.maybeSummarize('p1', 250, p, 'm');
+    await svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
     expect(p.chat).toHaveBeenCalledTimes(1);
     const [msgs, opts] = p.chat.mock.calls[0];
     expect(msgs[0].content).toContain('extractor de recuerdos');
@@ -73,7 +91,7 @@ describe('MemoryService', () => {
     }));
     prisma.petMemory.findMany.mockResolvedValue(existing);
     const p = makeProvider('{"summary":"x resumen","facts":["Le gusta PESCAR","Tiene un loro"]}');
-    await svc.maybeSummarize('p1', 250, p, 'm');
+    await svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
     expect(created.filter((c) => c.kind === 'fact').map((c) => c.content)).toEqual(['Tiene un loro']);
     // 50 existentes + 1 nuevo = 51 → se borra el más antiguo
     expect(prisma.petMemory.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['f0'] } } });
@@ -81,21 +99,21 @@ describe('MemoryService', () => {
 
   it('una salida inválida no guarda nada y respeta el enfriamiento (no reintenta de inmediato)', async () => {
     const p = makeProvider('lo siento, no puedo');
-    await svc.maybeSummarize('p1', 250, p, 'm');
+    await svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
     expect(created).toHaveLength(0);
-    await svc.maybeSummarize('p1', 250, p, 'm');
+    await svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
     expect(p.chat).toHaveBeenCalledTimes(1);
   });
 
   it('un fallo del proveedor no lanza excepción hacia el chat', async () => {
     const p = makeProvider(new Error('boom'));
-    await expect(svc.maybeSummarize('p1', 250, p, 'm')).resolves.toBeUndefined();
+    await expect(svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok')).resolves.toBeUndefined();
     expect(created).toHaveLength(0);
   });
 
   it('no lanza dos extracciones a la vez para la misma mascota', async () => {
     const p = makeProvider(JSON_OK);
-    await Promise.all([svc.maybeSummarize('p1', 250, p, 'm'), svc.maybeSummarize('p1', 250, p, 'm')]);
+    await Promise.all([svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok'), svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok')]);
     expect(p.chat).toHaveBeenCalledTimes(1);
   });
 

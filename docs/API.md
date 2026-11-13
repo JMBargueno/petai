@@ -73,6 +73,15 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `POST /ai/config/test`: Comprobar validez de la clave y conectividad con el modelo.
 - `POST /pets/:id/chat` `{ message }` (máx. 1000 caracteres, 20 mensajes/min por usuario): Conversación en streaming SSE. Eventos: `delta` `{text}`, `done` `{message, intelligence, tier}` y `error` `{message}`. El prompt de sistema se genera en el servidor (especie, carácter, ánimo y estadísticas). Solo se guarda el intercambio si se completa; cada charla suma 1 a `intelligence`.
 - `GET /pets/:id/chat/history?limit=`: Historial de la conversación (usuario y mascota).
+- `GET /ai/usage`: Tokens consumidos en el mes en curso (UTC), peticiones, cuota y restante (`null` = sin límite). Cuota por modo: `AI_MONTHLY_TOKEN_QUOTA_BYOK` (0 = ilimitada por defecto) y `AI_MONTHLY_TOKEN_QUOTA_MANAGED` (500 000). Al agotarla, el chat responde 429 hasta el mes siguiente. También cuentan la extracción de memoria y las respuestas bloqueadas; si el proveedor no informa del uso se estima (~4 caracteres por token).
+
+#### Moderación
+Evento SSE `moderated` `{reason, message, hideUserMessage}` (el mensaje no se guarda y no gasta tokens salvo `output_leak`):
+- `sensitive_data`: el mensaje contiene claves/tokens, contraseñas, tarjetas (Luhn) o IBAN; no se envía al proveedor ni se muestra.
+- `self_harm`: se responde con recursos de ayuda (024 / 112) sin pasar por el modelo; funciona incluso sin proveedor de IA y con la cuota agotada.
+- `prompt_injection`: intento evidente de jailbreak o de revelar el prompt.
+- `output_leak`: la respuesta del modelo filtraba el prompt de sistema o un secreto; el streaming retiene los últimos 80 caracteres para bloquearla antes de mostrarla y no se guarda.
+Límites: solo una respuesta en curso por usuario y 20 mensajes/min. La moderación es por reglas: no sustituye a un modelo de moderación de contenido.
 
 #### Agente (intelligence ≥ 500)
 Con 500+ de inteligencia el modelo recibe herramientas (*function calling*): `get_my_status`, `request_food`, `suggest_minigame`, `search_memory`, `list_reminders` y `create_reminder`. El usuario y la mascota salen siempre de la sesión, nunca de los argumentos del modelo. Se permiten hasta 3 vueltas de herramientas por mensaje. El stream SSE añade los eventos `tool` `{name}` (herramienta de lectura ejecutada) y `action` `{id, tool, summary, expiresAt}` (acción pendiente de confirmar).

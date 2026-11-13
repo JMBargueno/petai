@@ -104,7 +104,7 @@ export class AiConfigService {
   }
 
   /** Prepara el proveedor del usuario (descifra la key solo en memoria). */
-  async resolveProvider(userId: string): Promise<{ provider: LlmProvider; model: string }> {
+  async resolveProvider(userId: string): Promise<{ provider: LlmProvider; model: string; mode: string }> {
     const cfg = await this.prisma.aiConfig.findUnique({ where: { userId } });
     if (!cfg || !cfg.encryptedKey || !cfg.keyIv || !cfg.keyTag || !cfg.baseUrl || !cfg.model) {
       throw new NotFoundException('Configura primero tu proveedor de IA');
@@ -116,7 +116,7 @@ export class AiConfigService {
       keyIv: cfg.keyIv,
       keyTag: cfg.keyTag,
     });
-    return { provider: this.createProvider(baseUrl, key), model: cfg.model };
+    return { provider: this.createProvider(baseUrl, key), model: cfg.model, mode: cfg.mode };
   }
 
   /** Punto de extensión (y de sustitución en tests). */

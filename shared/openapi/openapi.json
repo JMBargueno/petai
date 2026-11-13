@@ -660,6 +660,26 @@
         ]
       }
     },
+    "/v1/ai/usage": {
+      "get": {
+        "operationId": "AiController_getUsage",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consumo de tokens de IA del mes en curso y cuota",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
     "/v1/ai/config/test": {
       "post": {
         "operationId": "AiController_testConfig",

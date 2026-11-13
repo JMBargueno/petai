@@ -14,6 +14,9 @@ export const envSchema = z.object({
     .string()
     .regex(/^[0-9a-fA-F]{64}$/, 'AI_KEY_ENCRYPTION_KEY debe tener 64 caracteres hexadecimales')
     .default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
+  // Cuota mensual de tokens de IA por usuario (0 = sin límite). BYOK: la key es del usuario; managed: key del servidor.
+  AI_MONTHLY_TOKEN_QUOTA_BYOK: z.coerce.number().int().min(0).default(0),
+  AI_MONTHLY_TOKEN_QUOTA_MANAGED: z.coerce.number().int().min(0).default(500000),
   // Solo desarrollo/tests: permite baseUrl http o hacia direcciones privadas (anula la protección SSRF)
   AI_ALLOW_INSECURE_URLS: z.enum(['true', 'false']).default('false'),
   CORS_ORIGINS: z.string().default('http://localhost:5173,tauri://localhost'),

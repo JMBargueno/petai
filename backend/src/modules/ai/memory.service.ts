@@ -12,6 +12,7 @@ import {
   selectRelevantFacts,
 } from './memory';
 import { MEMORY_UNLOCK } from './personality';
+import { UsageService } from './usage.service';
 
 /** Mensajes del usuario sin resumir que disparan una nueva extracción. */
 const SUMMARIZE_EVERY_USER_MESSAGES = 6;
@@ -24,7 +25,10 @@ export class MemoryService {
   private readonly inflight = new Set<string>();
   private readonly lastAttempt = new Map<string, number>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly usage: UsageService,
+  ) {}
 
   /** Bloque de recuerdos para el prompt (vacío si la mascota aún no tiene memoria). */
   async recall(petId: string, message: string): Promise<string> {
@@ -57,13 +61,24 @@ export class MemoryService {
    * Si hay suficientes mensajes nuevos, resume la conversación y extrae hechos.
    * Se ejecuta en segundo plano: nunca debe romper ni retrasar el chat.
    */
-  async maybeSummarize(petId: string, intelligence: number, provider: LlmProvider, model: string) {
+  async maybeSummarize(
+    petId: string,
+    intelligence: number,
+    provider: LlmProvider,
+    model: string,
+    userId: string,
+    mode: string,
+  ) {
     if (intelligence < MEMORY_UNLOCK || this.inflight.has(petId)) return;
     const last = this.lastAttempt.get(petId) ?? 0;
     if (Date.now() - last < RETRY_COOLDOWN_MS) return;
 
+    // Se marca en curso ANTES de cualquier await: así dos llamadas simultáneas no pasan a la vez
     this.inflight.add(petId);
     try {
+      // La extracción también consume tokens de la key: respeta la cuota mensual
+      if (!(await this.usage.hasQuota(userId, mode))) return;
+
       const lastMemory = await this.prisma.petMemory.findFirst({
         where: { petId, kind: 'summary' },
         orderBy: { createdAt: 'desc' },
@@ -78,15 +93,19 @@ export class MemoryService {
 
       this.lastAttempt.set(petId, Date.now());
       let output = '';
+      let reported = 0;
+      const transcript = formatTranscript(recent);
       for await (const ev of provider.chat(
         [
           { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
-          { role: 'user', content: formatTranscript(recent) },
+          { role: 'user', content: transcript },
         ],
         { model, temperature: 0, maxTokens: 400 },
       )) {
         if (ev.type === 'delta') output += ev.text;
+        else if (ev.type === 'done') reported = (ev.usage?.promptTokens ?? 0) + (ev.usage?.completionTokens ?? 0);
       }
+      await this.usage.record(userId, reported || Math.ceil((transcript.length + output.length + EXTRACTION_SYSTEM_PROMPT.length) / 4));
 
       const extraction = parseExtraction(output);
       if (!extraction) {

@@ -6,6 +6,7 @@ import * as request from 'supertest';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { ChatService } from '../src/modules/ai/chat.service';
 
 const VALID_KEY = 'sk-test-key-123456';
 
@@ -241,6 +242,8 @@ describe('IA: configuración BYOK y chat (e2e, LLM mock)', () => {
     });
 
     it('11. eliminar la configuración borra la key y desactiva el chat', async () => {
+      // El test anterior agotó la ventana de mensajes por minuto: se reinicia para probar la configuración
+      (app.get(ChatService) as any).hits.clear();
       await api().delete('/v1/ai/config').set(user.auth).expect(200);
       const cfg = await api().get('/v1/ai/config').set(user.auth).expect(200);
       expect(cfg.body).toEqual({ configured: false });

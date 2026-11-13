@@ -11,7 +11,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 0** | Preparación y Monorepo | ✅ Completada | Inicialización de repos, datos compartidos, docker-compose y CI |
 | **Fase 1** | Núcleo Backend + Escritorio | ✅ Completada | Ciclo básico: Registro, Eclosión, Cuidado, Sprite interactivo |
 | **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
-| **Fase 3** | Inteligencia Artificial (IA) | 🔄 En curso (charla, memoria y agente ✅) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
+| **Fase 3** | Inteligencia Artificial (IA) | 🔄 En curso (IA casi completa) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ⏳ Pendiente | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ⏳ Pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
 | **Fase 6** | Pulido y Lanzamiento | ⏳ Pendiente | Seguridad, balance, optimización, tiendas y despliegue |
@@ -59,7 +59,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 ---
 
 ## Fase 3 — Inteligencia Artificial (IA)
-- **Backend** (charla, memoria y agente ✅):
+- **Backend** (charla, memoria, agente y moderación ✅):
   - [x] Proveedor agnóstico `LlmProvider` y `OpenAiCompatibleProvider` (OpenAI y Hermes Agent remoto por HTTPS).
   - [x] Cifrado AES-256-GCM de API keys (BYOK); la key nunca se devuelve, solo una máscara.
   - [x] Protección SSRF en `baseUrl` (HTTPS, sin credenciales, sin rangos privados; revalidada en cada uso; sin redirecciones).
@@ -67,7 +67,9 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
   - [x] Personalidad dinámica según especie, carácter, estado de ánimo y estadísticas; `intelligence` sube al conversar.
   - [x] Memoria contextual a largo plazo (`PetMemory`, intelligence ≥ 200): resumen y hechos extraídos en segundo plano cada 6 mensajes, recuperación por relevancia en el prompt, filtro de datos sensibles y control del usuario (ver y olvidar).
   - [x] Function Calling / agente (intelligence ≥ 500): `get_my_status`, `request_food`, `suggest_minigame`, `search_memory`, `list_reminders` y `create_reminder`. Las herramientas con efectos no se ejecutan hasta que el usuario confirma una tarjeta (acciones pendientes con caducidad de 10 min, argumentos validados y resumen generado por el servidor). Recordatorios con entrega.
-  - [ ] Moderación de contenido, cuotas mensuales (Redis) y modo suscripción.
+  - [x] Moderación local de entrada y salida (datos sensibles, autolesión con recursos de ayuda, manipulación del prompt, fuga del prompt/secretos en la respuesta con filtro en streaming), una respuesta en curso por usuario y cuota mensual de tokens por modo (contador en PostgreSQL, `GET /ai/usage`).
+  - [ ] Moderación de contenido con un modelo (odio, sexual, violencia): hoy se delega en el proveedor del usuario.
+  - [ ] Modo suscripción (key gestionada por el servidor) y mover límites/cuotas a Redis para varias instancias.
 - **Escritorio**:
   - [x] Pestaña "IA": ajustes BYOK, prueba de conexión, chat en streaming y lista de recuerdos (con olvidar uno o todos).
   - [x] Burbuja de chat flotante sobre el sprite.
