@@ -170,11 +170,12 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
+      # El runner ya trae el SDK de Android (ANDROID_HOME); solo se añade la plataforma 37
       - name: Install platform (compileSdk 37)
-        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" || sdkmanager "platforms;android-37.0"
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-37.0"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
