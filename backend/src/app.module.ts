@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppExceptionFilter } from './common/app-exception.filter';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.config';
@@ -16,6 +18,9 @@ import { AiModule } from './modules/ai/ai.module';
 import { BattlesModule } from './modules/battles/battles.module';
 import { HealthModule } from './modules/health/health.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { ObservabilityModule } from './observability/observability.module';
+import { MissionsModule } from './missions/missions.module';
+import { ChestsModule } from './modules/chests/chests.module';
 
 @Module({
   imports: [
@@ -24,6 +29,9 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
       envFilePath: ['.env', 'backend/.env'],
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
+    ObservabilityModule.forRoot(),
     PrismaModule,
     RedisModule,
     RealtimeModule,
@@ -37,6 +45,8 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
     AiModule,
     BattlesModule,
     HealthModule,
+    MissionsModule,
+    ChestsModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],
 })

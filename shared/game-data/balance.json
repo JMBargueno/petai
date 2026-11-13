@@ -192,5 +192,90 @@
         "happiness": 12
       }
     }
+  },
+  "chests": {
+    "bronze": {
+      "dropTable": [
+        { "itemId": "apple", "tier": "common", "qtyMin": 1, "qtyMax": 4 },
+        { "itemId": "spicy_berry", "tier": "common", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "sweet_coral", "tier": "common", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "sun_seed", "tier": "uncommon", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "cake", "tier": "uncommon", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "healthy_salad", "tier": "rare", "qtyMin": 1, "qtyMax": 1 },
+        { "itemId": "medicine", "tier": "epic", "qtyMin": 1, "qtyMax": 1 },
+        { "itemId": "evolution_stone", "tier": "legendary", "qtyMin": 1, "qtyMax": 1 }
+      ],
+      "tierWeights": { "common": 60, "uncommon": 24, "rare": 9, "epic": 4, "legendary": 3 },
+      "pity": { "threshold": 10, "minTier": "rare" },
+      "prices": { "coins": 30, "gems": 2 },
+      "dropsPerChest": 2
+    },
+    "silver": {
+      "dropTable": [
+        { "itemId": "apple", "tier": "common", "qtyMin": 1, "qtyMax": 5 },
+        { "itemId": "spicy_berry", "tier": "common", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "sweet_coral", "tier": "common", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "sun_seed", "tier": "uncommon", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "cake", "tier": "uncommon", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "healthy_salad", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "medicine", "tier": "epic", "qtyMin": 1, "qtyMax": 1 },
+        { "itemId": "evolution_stone", "tier": "legendary", "qtyMin": 1, "qtyMax": 1 }
+      ],
+      "tierWeights": { "common": 50, "uncommon": 28, "rare": 14, "epic": 5, "legendary": 3 },
+      "pity": { "threshold": 8, "minTier": "rare" },
+      "prices": { "coins": 75, "gems": 5 },
+      "dropsPerChest": 2
+    },
+    "gold": {
+      "dropTable": [
+        { "itemId": "spicy_berry", "tier": "common", "qtyMin": 1, "qtyMax": 4 },
+        { "itemId": "sweet_coral", "tier": "common", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "sun_seed", "tier": "uncommon", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "cake", "tier": "uncommon", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "healthy_salad", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "medicine", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "evolution_stone", "tier": "epic", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "apple", "tier": "legendary", "qtyMin": 1, "qtyMax": 1 }
+      ],
+      "tierWeights": { "common": 40, "uncommon": 30, "rare": 20, "epic": 7, "legendary": 3 },
+      "pity": { "threshold": 6, "minTier": "epic" },
+      "prices": { "coins": 180, "gems": 12 },
+      "dropsPerChest": 3
+    },
+    "diamond": {
+      "dropTable": [
+        { "itemId": "spicy_berry", "tier": "common", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "sun_seed", "tier": "uncommon", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "cake", "tier": "uncommon", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "healthy_salad", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "medicine", "tier": "epic", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "evolution_stone", "tier": "epic", "qtyMin": 1, "qtyMax": 1 },
+        { "itemId": "evolution_stone", "tier": "legendary", "qtyMin": 1, "qtyMax": 2 }
+      ],
+      "tierWeights": { "common": 30, "uncommon": 30, "rare": 24, "epic": 11, "legendary": 5 },
+      "pity": { "threshold": 5, "minTier": "epic" },
+      "prices": { "coins": 450, "gems": 30 },
+      "dropsPerChest": 3
+    },
+    "mythic": {
+      "dropTable": [
+        { "itemId": "sun_seed", "tier": "uncommon", "qtyMin": 1, "qtyMax": 3 },
+        { "itemId": "cake", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "healthy_salad", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "medicine", "tier": "epic", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "evolution_stone", "tier": "epic", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "evolution_stone", "tier": "legendary", "qtyMin": 1, "qtyMax": 2 }
+      ],
+      "tierWeights": { "common": 0, "uncommon": 30, "rare": 30, "epic": 28, "legendary": 12 },
+      "pity": { "threshold": 3, "minTier": "legendary" },
+      "prices": { "coins": 1200, "gems": 80 },
+      "dropsPerChest": 4
+    },
+    "rewardConfig": {
+      "missionReward": { "type": "bronze", "probability": 1.0 },
+      "battleReward": { "type": "gold", "probability": 0.10 }
+    },
+    "maxPurchasesPerDay": 5,
+    "expiryDays": 30
   }
 }

@@ -6,6 +6,9 @@ import * as path from 'path';
 import { AppModule } from './app.module';
 import { applyCors } from './common/cors';
 import { applySecurity } from './common/security';
+import { envSchema } from './config/env.config';
+import { initOtel } from './observability/otel-sdk';
+import { createNestLogger } from './observability/log-serializer';
 
 /** Exporta openapi.json a shared/openapi para los generadores de clientes. */
 function exportOpenApi(document: unknown) {
@@ -28,7 +31,14 @@ function exportOpenApi(document: unknown) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Validamos el entorno y arrancamos el SDK de OpenTelemetry ANTES del bootstrap de Nest
+  // (T005) para que el auto-instrumentado se hookue desde el primer request.
+  const env = envSchema.parse(process.env);
+  const otelConfig = new ConfigService(env as Record<string, unknown>);
+  initOtel(otelConfig);
+  const logger = createNestLogger(env.NODE_ENV);
+
+  const app = await NestFactory.create(AppModule, { logger });
   const configService = app.get(ConfigService);
 
   // Detrás de un proxy/balanceador hay que declarar cuántos saltos son de confianza para que req.ip

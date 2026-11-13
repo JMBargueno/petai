@@ -900,8 +900,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Liveness: el proceso responde */
-        get: operations["HealthController_live"];
+        /** Health con sub-checks por componente: db, redis, bullmq + uptime + version (FR-007) */
+        get: operations["HealthController_health"];
         put?: never;
         post?: never;
         delete?: never;
@@ -917,8 +917,161 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Readiness: PostgreSQL responde (Redis es opcional: solo degrada) */
+        /** Readiness: mismos sub-checks que /health (db crítico → 503 si está caído) */
         get: operations["HealthController_ready"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/health/otel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Estado del pipeline de OpenTelemetry (exporter, sampling, buffer) */
+        get: operations["HealthController_otel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/missions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener misiones activas del usuario (diarias + semanales) */
+        get: operations["MissionsController_getMissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/missions/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resumen de progreso y streaks de misiones */
+        get: operations["MissionsController_getSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/missions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una misión específica */
+        get: operations["MissionsController_getMissionById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/missions/{id}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reclamar la recompensa de una misión completada */
+        post: operations["MissionsController_claimReward"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/chests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar los cofres no abiertos del usuario */
+        get: operations["ChestsController_listChests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/chests/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Abrir un cofre (resuelve drops autoritativamente, acredita inventario y pity) */
+        post: operations["ChestsController_openChest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/chests/purchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Comprar un cofre (bronze/silver/gold) con monedas o gemas */
+        post: operations["ChestsController_purchaseChest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/chests/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historial paginado de aperturas (ordenado por fecha desc) */
+        get: operations["ChestsController_getChestHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -976,6 +1129,297 @@ export interface components {
             currentPassword: string;
             /** @description Contraseña nueva (mínimo 8 caracteres, distinta de la actual) */
             newPassword: string;
+        };
+        MissionRewardDto: {
+            /**
+             * @description Monedas de recompensa
+             * @example 15
+             */
+            coins: number;
+            /**
+             * @description Gemas de recompensa
+             * @example 0
+             */
+            gems: number;
+            /**
+             * @description XP de recompensa
+             * @example 10
+             */
+            xp: number;
+        };
+        MissionResponseDto: {
+            /** @description ID de la misión (UUID) */
+            id: string;
+            /**
+             * @description Tipo de acción
+             * @example feed
+             * @enum {string}
+             */
+            type: "feed" | "battle" | "minigame" | "chat" | "clean" | "sleep" | "evolve" | "hatch" | "level_up" | "battle_win" | "hatch_rare";
+            /**
+             * @description Texto descriptivo para la UI
+             * @example Alimenta a tu pet 2 veces
+             */
+            description: string;
+            /**
+             * @description Objetivo total
+             * @example 2
+             */
+            target: number;
+            /**
+             * @description Progreso actual
+             * @example 1
+             */
+            current: number;
+            /**
+             * @description Si está completada
+             * @example false
+             */
+            completed: boolean;
+            /** @description Recompensa */
+            reward: components["schemas"]["MissionRewardDto"];
+            /**
+             * @description Fecha de reset (ISO 8601)
+             * @example 2026-11-14T00:00:00.000Z
+             */
+            resetsAt: string;
+        };
+        MissionListResponseDto: {
+            /**
+             * @description Timestamp de la respuesta
+             * @example 2026-11-13T14:30:00.000Z
+             */
+            timestamp: string;
+            /** @description Misiones diarias activas */
+            daily: components["schemas"]["MissionResponseDto"][];
+            /** @description Misiones semanales activas */
+            weekly: components["schemas"]["MissionResponseDto"][];
+            /**
+             * @description Si todas las diarias están completadas (desbloquea cofre)
+             * @example false
+             */
+            dailyChestUnlocked: boolean;
+        };
+        MissionSummaryResponseDto: {
+            /**
+             * @description Misiones diarias completadas hoy
+             * @example 3
+             */
+            dailyCompleted: number;
+            /**
+             * @description Total de misiones diarias hoy
+             * @example 4
+             */
+            dailyTotal: number;
+            /**
+             * @description Misiones semanales completadas esta semana
+             * @example 1
+             */
+            weeklyCompleted: number;
+            /**
+             * @description Total de misiones semanales esta semana
+             * @example 6
+             */
+            weeklyTotal: number;
+            /**
+             * @description Racha de días consecutivos con todas las diarias completadas
+             * @example 5
+             */
+            streak: number;
+            /**
+             * @description Mejor racha histórica
+             * @example 12
+             */
+            bestStreak: number;
+        };
+        MissionDetailResponseDto: {
+            /** @description ID de la misión (UUID) */
+            id: string;
+            /**
+             * @description Tipo de acción
+             * @example feed
+             */
+            type: string;
+            /**
+             * @description Período (daily o weekly)
+             * @example daily
+             */
+            period: string;
+            /**
+             * @description Texto descriptivo
+             * @example Alimenta a tu pet 2 veces
+             */
+            description: string;
+            /**
+             * @description Objetivo total
+             * @example 2
+             */
+            target: number;
+            /**
+             * @description Progreso actual
+             * @example 1
+             */
+            current: number;
+            /**
+             * @description Si está completada
+             * @example false
+             */
+            completed: boolean;
+            /**
+             * @description Si la recompensa ya fue reclamada
+             * @example false
+             */
+            claimed: boolean;
+            /** @description Recompensa */
+            reward: components["schemas"]["MissionRewardDto"];
+            /**
+             * @description Inicio del período (ISO 8601)
+             * @example 2026-11-13T00:00:00.000Z
+             */
+            periodStart: string;
+            /**
+             * @description Fin del período (ISO 8601)
+             * @example 2026-11-14T00:00:00.000Z
+             */
+            periodEnd: string;
+            /**
+             * @description Fecha de creación de la misión (ISO 8601)
+             * @example 2026-11-13T00:00:01.000Z
+             */
+            createdAt: string;
+        };
+        ClaimedMissionDto: {
+            /** @description ID de la misión */
+            id: string;
+            /**
+             * @description Tipo de misión
+             * @example feed
+             */
+            type: string;
+            /**
+             * @description Si está completada
+             * @example true
+             */
+            completed: boolean;
+        };
+        ClaimRewardResponseDto: {
+            /** @description Misión reclamada */
+            mission: components["schemas"]["ClaimedMissionDto"];
+            /** @description Recompensa acreditada */
+            reward: components["schemas"]["MissionRewardDto"];
+            /**
+             * @description Si todas las diarias están completadas (desbloquea cofre)
+             * @example true
+             */
+            dailyChestUnlocked: boolean;
+        };
+        ChestResponse: {
+            /** @example a1b2c3d4-e5f6-7890-abcd-ef1234567890 */
+            id: string;
+            /** @enum {string} */
+            type: "bronze" | "silver" | "gold" | "diamond" | "mythic";
+            /** @enum {string} */
+            source: "daily_mission" | "battle" | "evolution" | "purchase" | "event";
+            /**
+             * Format: date-time
+             * @example 2026-11-13T10:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de apertura; null si no está abierto
+             * @example null
+             */
+            openedAt?: string | null;
+        };
+        ChestListResponse: {
+            chests: components["schemas"]["ChestResponse"][];
+        };
+        OpenChestDto: {
+            /**
+             * @description UUID del cofre a abrir
+             * @example a1b2c3d4-e5f6-7890-abcd-ef1234567890
+             */
+            chestId: string;
+        };
+        DropItem: {
+            /**
+             * @description ID del item en el catálogo Item
+             * @example food_apple
+             */
+            itemId: string;
+            /** @example Manzana */
+            name: string;
+            /**
+             * @description Cantidad otorgada (cap 99; excedente → monedas)
+             * @example 3
+             */
+            qty: number;
+            /** @enum {string} */
+            tier: "common" | "uncommon" | "rare" | "epic" | "legendary";
+            /**
+             * @description true si el usuario no tenía ese item antes de la apertura
+             * @example true
+             */
+            isNew: boolean;
+        };
+        PityProgress: {
+            /**
+             * @description Aperturas consecutivas sin drop >= minTier
+             * @example 3
+             */
+            count: number;
+            /** @example 10 */
+            threshold: number;
+            /**
+             * @example rare
+             * @enum {string}
+             */
+            minTier: "common" | "uncommon" | "rare" | "epic" | "legendary";
+        };
+        OpenChestResponse: {
+            chest: components["schemas"]["ChestResponse"];
+            drops: components["schemas"]["DropItem"][];
+            pityProgress: components["schemas"]["PityProgress"];
+        };
+        PurchaseChestDto: {
+            /**
+             * @example bronze
+             * @enum {string}
+             */
+            type: "bronze" | "silver" | "gold";
+            /**
+             * @example coins
+             * @enum {string}
+             */
+            paymentMethod: "coins" | "gems";
+        };
+        PurchaseChestResponse: {
+            chest: components["schemas"]["ChestResponse"];
+            /** @example 65 */
+            coinsRemaining: number;
+            /** @example 5 */
+            gemsRemaining: number;
+        };
+        OpeningRecord: {
+            /** @example a1b2c3d4-e5f6-7890-abcd-ef1234567890 */
+            chestId: string;
+            /** @enum {string} */
+            type: "bronze" | "silver" | "gold" | "diamond" | "mythic";
+            drops: components["schemas"]["DropItem"][];
+            /**
+             * Format: date-time
+             * @example 2026-11-13T10:10:00.000Z
+             */
+            openedAt: string;
+        };
+        ChestHistoryResponse: {
+            openings: components["schemas"]["OpeningRecord"][];
+            /**
+             * @description Total de aperturas registradas del usuario
+             * @example 120
+             */
+            total: number;
         };
     };
     responses: never;
@@ -2046,7 +2490,7 @@ export interface operations {
             };
         };
     };
-    HealthController_live: {
+    HealthController_health: {
         parameters: {
             query?: never;
             header?: never;
@@ -2073,6 +2517,310 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HealthController_otel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MissionsController_getMissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Misiones del usuario */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MissionListResponseDto"];
+                };
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MissionsController_getSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen de misiones */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MissionSummaryResponseDto"];
+                };
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MissionsController_getMissionById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Detalle de la misión */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MissionDetailResponseDto"];
+                };
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Misión no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MissionsController_claimReward: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recompensa reclamada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimRewardResponseDto"];
+                };
+            };
+            /** @description Misión no completada */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Misión no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Misión ya reclamada */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ChestsController_listChests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cofres no abiertos */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChestListResponse"];
+                };
+            };
+            /** @description Token ausente o inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ChestsController_openChest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenChestDto"];
+            };
+        };
+        responses: {
+            /** @description Apertura exitosa */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenChestResponse"];
+                };
+            };
+            /** @description Token ausente o inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cofre no encontrado o ajeno al usuario */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cofre ya abierto */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ChestsController_purchaseChest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseChestDto"];
+            };
+        };
+        responses: {
+            /** @description Compra exitosa */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseChestResponse"];
+                };
+            };
+            /** @description Tipo no comprable / método inválido / saldo insuficiente */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token ausente o inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Límite de 5 compras diarias alcanzado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ChestsController_getChestHistory: {
+        parameters: {
+            query: {
+                limit: number;
+                offset: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aperturas registradas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChestHistoryResponse"];
+                };
+            };
+            /** @description Token ausente o inválido */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

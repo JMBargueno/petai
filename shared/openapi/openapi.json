@@ -1475,14 +1475,14 @@
     },
     "/v1/health": {
       "get": {
-        "operationId": "HealthController_live",
+        "operationId": "HealthController_health",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
-        "summary": "Liveness: el proceso responde",
+        "summary": "Health con sub-checks por componente: db, redis, bullmq + uptime + version (FR-007)",
         "tags": [
           "Health"
         ]
@@ -1497,9 +1497,343 @@
             "description": ""
           }
         },
-        "summary": "Readiness: PostgreSQL responde (Redis es opcional: solo degrada)",
+        "summary": "Readiness: mismos sub-checks que /health (db crítico → 503 si está caído)",
         "tags": [
           "Health"
+        ]
+      }
+    },
+    "/v1/health/otel": {
+      "get": {
+        "operationId": "HealthController_otel",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Estado del pipeline de OpenTelemetry (exporter, sampling, buffer)",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/v1/missions": {
+      "get": {
+        "operationId": "MissionsController_getMissions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Misiones del usuario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissionListResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener misiones activas del usuario (diarias + semanales)",
+        "tags": [
+          "Missions"
+        ]
+      }
+    },
+    "/v1/missions/summary": {
+      "get": {
+        "operationId": "MissionsController_getSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Resumen de misiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissionSummaryResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resumen de progreso y streaks de misiones",
+        "tags": [
+          "Missions"
+        ]
+      }
+    },
+    "/v1/missions/{id}": {
+      "get": {
+        "operationId": "MissionsController_getMissionById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle de la misión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissionDetailResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "404": {
+            "description": "Misión no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle de una misión específica",
+        "tags": [
+          "Missions"
+        ]
+      }
+    },
+    "/v1/missions/{id}/claim": {
+      "post": {
+        "operationId": "MissionsController_claimReward",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recompensa reclamada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimRewardResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Misión no completada"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "404": {
+            "description": "Misión no encontrada"
+          },
+          "409": {
+            "description": "Misión ya reclamada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reclamar la recompensa de una misión completada",
+        "tags": [
+          "Missions"
+        ]
+      }
+    },
+    "/v1/chests": {
+      "get": {
+        "operationId": "ChestsController_listChests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Cofres no abiertos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChestListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente o inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar los cofres no abiertos del usuario",
+        "tags": [
+          "Chests"
+        ]
+      }
+    },
+    "/v1/chests/open": {
+      "post": {
+        "operationId": "ChestsController_openChest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenChestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apertura exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenChestResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente o inválido"
+          },
+          "404": {
+            "description": "Cofre no encontrado o ajeno al usuario"
+          },
+          "409": {
+            "description": "Cofre ya abierto"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Abrir un cofre (resuelve drops autoritativamente, acredita inventario y pity)",
+        "tags": [
+          "Chests"
+        ]
+      }
+    },
+    "/v1/chests/purchase": {
+      "post": {
+        "operationId": "ChestsController_purchaseChest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseChestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Compra exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseChestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Tipo no comprable / método inválido / saldo insuficiente"
+          },
+          "401": {
+            "description": "Token ausente o inválido"
+          },
+          "409": {
+            "description": "Límite de 5 compras diarias alcanzado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprar un cofre (bronze/silver/gold) con monedas o gemas",
+        "tags": [
+          "Chests"
+        ]
+      }
+    },
+    "/v1/chests/history": {
+      "get": {
+        "operationId": "ChestsController_getChestHistory",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aperturas registradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChestHistoryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente o inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial paginado de aperturas (ordenado por fecha desc)",
+        "tags": [
+          "Chests"
         ]
       }
     }
@@ -1612,6 +1946,587 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "MissionRewardDto": {
+        "type": "object",
+        "properties": {
+          "coins": {
+            "type": "number",
+            "description": "Monedas de recompensa",
+            "example": 15
+          },
+          "gems": {
+            "type": "number",
+            "description": "Gemas de recompensa",
+            "example": 0
+          },
+          "xp": {
+            "type": "number",
+            "description": "XP de recompensa",
+            "example": 10
+          }
+        },
+        "required": [
+          "coins",
+          "gems",
+          "xp"
+        ]
+      },
+      "MissionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID de la misión (UUID)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de acción",
+            "enum": [
+              "feed",
+              "battle",
+              "minigame",
+              "chat",
+              "clean",
+              "sleep",
+              "evolve",
+              "hatch",
+              "level_up",
+              "battle_win",
+              "hatch_rare"
+            ],
+            "example": "feed"
+          },
+          "description": {
+            "type": "string",
+            "description": "Texto descriptivo para la UI",
+            "example": "Alimenta a tu pet 2 veces"
+          },
+          "target": {
+            "type": "number",
+            "description": "Objetivo total",
+            "example": 2
+          },
+          "current": {
+            "type": "number",
+            "description": "Progreso actual",
+            "example": 1
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Si está completada",
+            "example": false
+          },
+          "reward": {
+            "description": "Recompensa",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MissionRewardDto"
+              }
+            ]
+          },
+          "resetsAt": {
+            "type": "string",
+            "description": "Fecha de reset (ISO 8601)",
+            "example": "2026-11-14T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "description",
+          "target",
+          "current",
+          "completed",
+          "reward",
+          "resetsAt"
+        ]
+      },
+      "MissionListResponseDto": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp de la respuesta",
+            "example": "2026-11-13T14:30:00.000Z"
+          },
+          "daily": {
+            "description": "Misiones diarias activas",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MissionResponseDto"
+            }
+          },
+          "weekly": {
+            "description": "Misiones semanales activas",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MissionResponseDto"
+            }
+          },
+          "dailyChestUnlocked": {
+            "type": "boolean",
+            "description": "Si todas las diarias están completadas (desbloquea cofre)",
+            "example": false
+          }
+        },
+        "required": [
+          "timestamp",
+          "daily",
+          "weekly",
+          "dailyChestUnlocked"
+        ]
+      },
+      "MissionSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "dailyCompleted": {
+            "type": "number",
+            "description": "Misiones diarias completadas hoy",
+            "example": 3
+          },
+          "dailyTotal": {
+            "type": "number",
+            "description": "Total de misiones diarias hoy",
+            "example": 4
+          },
+          "weeklyCompleted": {
+            "type": "number",
+            "description": "Misiones semanales completadas esta semana",
+            "example": 1
+          },
+          "weeklyTotal": {
+            "type": "number",
+            "description": "Total de misiones semanales esta semana",
+            "example": 6
+          },
+          "streak": {
+            "type": "number",
+            "description": "Racha de días consecutivos con todas las diarias completadas",
+            "example": 5
+          },
+          "bestStreak": {
+            "type": "number",
+            "description": "Mejor racha histórica",
+            "example": 12
+          }
+        },
+        "required": [
+          "dailyCompleted",
+          "dailyTotal",
+          "weeklyCompleted",
+          "weeklyTotal",
+          "streak",
+          "bestStreak"
+        ]
+      },
+      "MissionDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID de la misión (UUID)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de acción",
+            "example": "feed"
+          },
+          "period": {
+            "type": "string",
+            "description": "Período (daily o weekly)",
+            "example": "daily"
+          },
+          "description": {
+            "type": "string",
+            "description": "Texto descriptivo",
+            "example": "Alimenta a tu pet 2 veces"
+          },
+          "target": {
+            "type": "number",
+            "description": "Objetivo total",
+            "example": 2
+          },
+          "current": {
+            "type": "number",
+            "description": "Progreso actual",
+            "example": 1
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Si está completada",
+            "example": false
+          },
+          "claimed": {
+            "type": "boolean",
+            "description": "Si la recompensa ya fue reclamada",
+            "example": false
+          },
+          "reward": {
+            "description": "Recompensa",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MissionRewardDto"
+              }
+            ]
+          },
+          "periodStart": {
+            "type": "string",
+            "description": "Inicio del período (ISO 8601)",
+            "example": "2026-11-13T00:00:00.000Z"
+          },
+          "periodEnd": {
+            "type": "string",
+            "description": "Fin del período (ISO 8601)",
+            "example": "2026-11-14T00:00:00.000Z"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Fecha de creación de la misión (ISO 8601)",
+            "example": "2026-11-13T00:00:01.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "period",
+          "description",
+          "target",
+          "current",
+          "completed",
+          "claimed",
+          "reward",
+          "periodStart",
+          "periodEnd",
+          "createdAt"
+        ]
+      },
+      "ClaimedMissionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID de la misión"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de misión",
+            "example": "feed"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Si está completada",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "completed"
+        ]
+      },
+      "ClaimRewardResponseDto": {
+        "type": "object",
+        "properties": {
+          "mission": {
+            "description": "Misión reclamada",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClaimedMissionDto"
+              }
+            ]
+          },
+          "reward": {
+            "description": "Recompensa acreditada",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MissionRewardDto"
+              }
+            ]
+          },
+          "dailyChestUnlocked": {
+            "type": "boolean",
+            "description": "Si todas las diarias están completadas (desbloquea cofre)",
+            "example": true
+          }
+        },
+        "required": [
+          "mission",
+          "reward",
+          "dailyChestUnlocked"
+        ]
+      },
+      "ChestResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "bronze",
+              "silver",
+              "gold",
+              "diamond",
+              "mythic"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "daily_mission",
+              "battle",
+              "evolution",
+              "purchase",
+              "event"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-11-13T10:00:00.000Z"
+          },
+          "openedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": null,
+            "nullable": true,
+            "description": "Fecha de apertura; null si no está abierto"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "source",
+          "createdAt"
+        ]
+      },
+      "ChestListResponse": {
+        "type": "object",
+        "properties": {
+          "chests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChestResponse"
+            }
+          }
+        },
+        "required": [
+          "chests"
+        ]
+      },
+      "OpenChestDto": {
+        "type": "object",
+        "properties": {
+          "chestId": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            "description": "UUID del cofre a abrir"
+          }
+        },
+        "required": [
+          "chestId"
+        ]
+      },
+      "DropItem": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "example": "food_apple",
+            "description": "ID del item en el catálogo Item"
+          },
+          "name": {
+            "type": "string",
+            "example": "Manzana"
+          },
+          "qty": {
+            "type": "number",
+            "example": 3,
+            "minimum": 1,
+            "maximum": 99,
+            "description": "Cantidad otorgada (cap 99; excedente → monedas)"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "common",
+              "uncommon",
+              "rare",
+              "epic",
+              "legendary"
+            ]
+          },
+          "isNew": {
+            "type": "boolean",
+            "example": true,
+            "description": "true si el usuario no tenía ese item antes de la apertura"
+          }
+        },
+        "required": [
+          "itemId",
+          "name",
+          "qty",
+          "tier",
+          "isNew"
+        ]
+      },
+      "PityProgress": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "example": 3,
+            "description": "Aperturas consecutivas sin drop >= minTier"
+          },
+          "threshold": {
+            "type": "number",
+            "example": 10
+          },
+          "minTier": {
+            "type": "string",
+            "example": "rare",
+            "enum": [
+              "common",
+              "uncommon",
+              "rare",
+              "epic",
+              "legendary"
+            ]
+          }
+        },
+        "required": [
+          "count",
+          "threshold",
+          "minTier"
+        ]
+      },
+      "OpenChestResponse": {
+        "type": "object",
+        "properties": {
+          "chest": {
+            "$ref": "#/components/schemas/ChestResponse"
+          },
+          "drops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DropItem"
+            }
+          },
+          "pityProgress": {
+            "$ref": "#/components/schemas/PityProgress"
+          }
+        },
+        "required": [
+          "chest",
+          "drops",
+          "pityProgress"
+        ]
+      },
+      "PurchaseChestDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "bronze",
+              "silver",
+              "gold"
+            ],
+            "example": "bronze"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "coins",
+              "gems"
+            ],
+            "example": "coins"
+          }
+        },
+        "required": [
+          "type",
+          "paymentMethod"
+        ]
+      },
+      "PurchaseChestResponse": {
+        "type": "object",
+        "properties": {
+          "chest": {
+            "$ref": "#/components/schemas/ChestResponse"
+          },
+          "coinsRemaining": {
+            "type": "number",
+            "example": 65
+          },
+          "gemsRemaining": {
+            "type": "number",
+            "example": 5
+          }
+        },
+        "required": [
+          "chest",
+          "coinsRemaining",
+          "gemsRemaining"
+        ]
+      },
+      "OpeningRecord": {
+        "type": "object",
+        "properties": {
+          "chestId": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "bronze",
+              "silver",
+              "gold",
+              "diamond",
+              "mythic"
+            ]
+          },
+          "drops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DropItem"
+            }
+          },
+          "openedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-11-13T10:10:00.000Z"
+          }
+        },
+        "required": [
+          "chestId",
+          "type",
+          "drops",
+          "openedAt"
+        ]
+      },
+      "ChestHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "openings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpeningRecord"
+            }
+          },
+          "total": {
+            "type": "number",
+            "example": 120,
+            "description": "Total de aperturas registradas del usuario"
+          }
+        },
+        "required": [
+          "openings",
+          "total"
         ]
       }
     }

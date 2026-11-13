@@ -1,0 +1,71 @@
+# Reglas de alerta PromQL (US6, api-contract §3).
+groups:
+  - name: petai-observability
+    rules:
+      # 1. Latencia p95 sostenida > 200ms
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(petai_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          service: petai-backend
+        annotations:
+          summary: "Latencia p95 sostenida > 200ms"
+          description: "El p95 es {{ $value | humanizeDuration }} (umbral: 200ms) desde hace 5 min."
+
+      # 2. Error rate > 1%
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(petai_http_request_duration_seconds_count{status=~"5.."}[3m])) by (route)
+            /
+            sum(rate(petai_http_request_duration_seconds_count[3m])) by (route)
+          ) > 0.01
+        for: 3m
+        labels:
+          severity: critical
+          service: petai-backend
+        annotations:
+          summary: "Error rate > 1% en {{ $labels.route }}"
+          description: "El ratio de 5xx es {{ $value | humanizePercentage }} (umbral: 1%) desde hace 3 min."
+
+      # 3. Cola BullMQ saturada (>1000)
+      - alert: BullMQQueueSaturated
+        expr: |
+          max(petai_bullmq_queue_depth) by (queue) > 1000
+        for: 2m
+        labels:
+          severity: critical
+          service: petai-backend
+        annotations:
+          summary: "Cola {{ $labels.queue }} saturada (>1000 jobs)"
+          description: "Profundidad: {{ $value }} jobs (umbral: 1000)."
+
+      # 4. OOM Kill
+      - alert: ProcessOOMKilled
+        expr: |
+          increase(container_oom_events_total{container="backend"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: petai-backend
+        annotations:
+          summary: "OOM kill detectado en backend"
+          description: "El contenedor backend fue OOM-killed. Verificar límites de memoria."
+
+      # 5. GC pause p99 > 500ms
+      - alert: LongGCPause
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(petai_gc_pause_seconds_bucket[10m])) by (le)
+          ) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+          service: petai-backend
+        annotations:
+          summary: "GC pause p99 > 500ms"
+          description: "GC pauses p99 superan {{ $value | humanizeDuration }} (umbral: 500ms)."

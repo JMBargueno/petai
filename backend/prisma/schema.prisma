@@ -30,6 +30,9 @@ model User {
   minigames      MinigameSession[]
   pendingActions PendingAction[]
   aiUsage        AiUsage[]
+  missions       Mission[]
+  chests         Chest[]
+  chestPity      ChestPity[]
 }
 
 model RefreshToken {
@@ -292,4 +295,56 @@ model AiUsage {
   updatedAt DateTime @updatedAt
 
   @@id([userId, month])
+}
+
+// Misiones diarias/semanales: un objetivo numérico que se incrementa con acciones del jugador
+model Mission {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period      String   // "daily" | "weekly"
+  type        String   // feed | battle | minigame | chat | clean | sleep | evolve | hatch | level_up | battle_win | hatch_rare
+  description String
+  target      Int
+  current     Int      @default(0)
+  completed   Boolean  @default(false)
+  claimed     Boolean  @default(false)
+  rewardCoins Int      @default(0)
+  rewardGems  Int      @default(0)
+  rewardXp    Int      @default(0)
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([userId, period, periodEnd])
+  @@index([userId, completed])
+}
+
+// Cofre del usuario: contiene items aleatorios resueltos al abrirlo (drop table data-driven en
+// shared/game-data/balance.json → chests). `openedAt` es null hasta que se abre; `drops` guarda
+// los drops resueltos (Json) al momento de la apertura. Caduca a los 30 días (job chests:cleanup).
+model Chest {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // bronze | silver | gold | diamond | mythic
+  source    String // daily_mission | battle | evolution | purchase | event
+  openedAt  DateTime?
+  drops     Json?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, openedAt])
+}
+
+// Progreso de pity de un usuario por tipo de cofre (independiente de PityCounter, que gestiona el
+// pity de eclosión de pets). `count` = aperturas consecutivas sin drop de `minTier`; se resetea a 0
+// cuando cae un drop de tier >= minTier. Único por [userId, tier].
+model ChestPity {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier   String // tipo de cofre: bronze | silver | gold | diamond | mythic
+  count  Int    @default(0)
+
+  @@unique([userId, tier])
 }

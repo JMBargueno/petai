@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
@@ -16,6 +17,7 @@ export class PetsService {
     private readonly inventoryService: InventoryService,
     private readonly realtimeGateway: RealtimeGateway,
     private readonly gameData: GameDataService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getPets(userId: string) {
@@ -84,6 +86,7 @@ export class PetsService {
 
     const withXp = await this.addXpInternal(updated, 15);
     this.realtimeGateway.emitPetUpdate(userId, withXp);
+    this.eventEmitter.emit('pet:fed', { userId, petId });
     return withXp;
   }
 
@@ -111,6 +114,7 @@ export class PetsService {
 
     const withXp = await this.addXpInternal(updated, 10);
     this.realtimeGateway.emitPetUpdate(userId, withXp);
+    this.eventEmitter.emit('pet:cleaned', { userId, petId });
     return withXp;
   }
 
@@ -127,6 +131,7 @@ export class PetsService {
     });
 
     this.realtimeGateway.emitPetUpdate(userId, updated);
+    this.eventEmitter.emit('pet:slept', { userId, petId });
     return updated;
   }
 
@@ -206,6 +211,7 @@ export class PetsService {
       include: { species: true, pattern: true },
     });
     this.realtimeGateway.emitPetUpdate(userId, updated);
+    this.eventEmitter.emit('pet:evolved', { userId, petId });
     return updated;
   }
 
@@ -335,6 +341,7 @@ export class PetsService {
     let currentLevel = pet.level;
     let statPoints = pet.statPoints;
     let stage = pet.stage;
+    let levelChanged = false;
 
     // xp(n) = round(100 * n^1.5)
     let neededXp = Math.round(100 * Math.pow(currentLevel, 1.5));
@@ -343,6 +350,7 @@ export class PetsService {
       currentXp -= neededXp;
       currentLevel += 1;
       statPoints += 3; // 3 puntos de combate por nivel
+      levelChanged = true;
 
       // Hitos de evolución automáticos (la forma final requiere un objeto: ver evolve())
       let reached = 'baby';
@@ -353,7 +361,7 @@ export class PetsService {
       neededXp = Math.round(100 * Math.pow(currentLevel, 1.5));
     }
 
-    return this.prisma.pet.update({
+    const updated = await this.prisma.pet.update({
       where: { id: pet.id },
       data: {
         xp: currentXp,
@@ -363,5 +371,11 @@ export class PetsService {
       },
       include: { species: true, pattern: true },
     });
+
+    if (levelChanged) {
+      this.eventEmitter.emit('pet:level_up', { userId: pet.userId, petId: pet.id });
+    }
+
+    return updated;
   }
 }

@@ -3,8 +3,15 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppModule } from './app.module';
+import { PrismaService } from './prisma/prisma.service';
 
 async function exportOpenApi() {
+  // El contrato OpenAPI solo necesita la metadatos de los controladores/DTOs, no una base de datos
+  // viva. Desactivamos la conexión de Prisma al arrancar para poder regenerar el JSON en cualquier
+  // entorno (CI, desarrollo local sin DB). No afecta a la app real: solo esta herramienta de build.
+  (PrismaService.prototype as unknown as { onModuleInit: () => Promise<void> }).onModuleInit =
+    async () => undefined;
+
   const app = await NestFactory.create(AppModule, { logger: false });
   const prefix = 'v1';
   app.setGlobalPrefix(prefix);

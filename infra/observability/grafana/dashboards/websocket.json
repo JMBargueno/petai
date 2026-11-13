@@ -1,0 +1,50 @@
+{
+  "title": "PetAI WebSocket",
+  "uid": "petai-websocket",
+  "tags": ["petai", "observabilidad", "websocket"],
+  "timezone": "browser",
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Conexiones Socket.IO activas",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "petai_socketio_active_connections", "refId": "A", "legendFormat": "activas" }],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Conexiones actuales",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "petai_socketio_active_connections", "refId": "A", "instant": true }],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Latencia SSE (p50/p95)",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 10 },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum(rate(petai_sse_stream_duration_seconds_bucket[10m])) by (le, stream_type))", "refId": "A", "legendFormat": "p50 {{stream_type}}" },
+        { "expr": "histogram_quantile(0.95, sum(rate(petai_sse_stream_duration_seconds_bucket[10m])) by (le, stream_type))", "refId": "B", "legendFormat": "p95 {{stream_type}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Streams SSE completados (rate)",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 10 },
+      "targets": [
+        { "expr": "sum(rate(petai_sse_stream_duration_seconds_count[5m])) by (stream_type)", "refId": "A", "legendFormat": "{{stream_type}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    }
+  ]
+}

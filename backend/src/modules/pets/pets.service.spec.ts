@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PetsService } from './pets.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -38,6 +39,10 @@ describe('PetsService', () => {
     }),
   };
 
+  const mockEventEmitter = {
+    emit: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,6 +51,7 @@ describe('PetsService', () => {
         { provide: InventoryService, useValue: mockInventoryService },
         { provide: RealtimeGateway, useValue: mockRealtimeGateway },
         { provide: GameDataService, useValue: mockGameDataService },
+        { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
 

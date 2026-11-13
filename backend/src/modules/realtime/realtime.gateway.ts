@@ -9,6 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { socketCorsOrigin } from '../../common/cors';
+import { MetricsService } from '../../observability/metrics.service';
+import { startSpanFromRemoteTrace } from '../../observability/otel-context';
+import { SPAN_HEADER, TRACE_HEADER } from '../../observability/otel.constants';
 
 /** Conexiones simultáneas por usuario; al superarlas se cierran las más antiguas. */
 const MAX_SOCKETS_PER_USER = 5;
@@ -26,6 +29,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   private readonly logger = new Logger(RealtimeGateway.name);
   /** Temporizador de caducidad de cada conexión (por id de socket). */
   private readonly expiry = new Map<string, NodeJS.Timeout>();
+  /** Span de conexión por socket (para correlación y cierre). */
+  private readonly connSpans = new Map<string, import('@opentelemetry/api').Span>();
+  /** Instante de conexión por socket, para medir la duración del stream (métrica SSE, gap G5). */
+  private readonly connStart = new Map<string, number>();
 
   @WebSocketServer()
   server: Server;
@@ -33,6 +40,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -62,6 +70,17 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
       await client.join(room);
 
+      // Correlación de trace (US3): el cliente puede enviar `x-trace-id`/`x-span-id` en el
+      // handshake para enlazar el flujo REST → WebSocket. Si no hay, se abre un nuevo trace.
+      const [headerTraceId, headerSpanId] = this.readTraceContext(client);
+      const { span } = startSpanFromRemoteTrace('realtime.connection', headerTraceId, headerSpanId, {
+        'messaging.system': 'socketio',
+        'messaging.destination': 'realtime',
+      });
+      this.connSpans.set(client.id, span);
+      this.connStart.set(client.id, Date.now());
+      this.metrics.incSocketConnections(1);
+
       // La conexión no sobrevive al token con el que se abrió: al caducar se avisa y se corta.
       // El cliente debe reconectar con un access token renovado.
       if (payload.exp) {
@@ -85,6 +104,33 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       clearTimeout(timer);
       this.expiry.delete(client.id);
     }
+    // Cerramos el span de conexión y actualizamos el gauge solo si la conexión fue contada.
+    const span = this.connSpans.get(client.id);
+    if (span) {
+      try {
+        span.end();
+      } catch {
+        /* noop */
+      }
+      this.connSpans.delete(client.id);
+      this.metrics.incSocketConnections(-1);
+      // Métrica de stream en vivo (gap G5 / T024): la duración de la conexión se registra en
+      // `petai_sse_stream_duration_seconds{stream_type="realtime"}`; antes el helper `recordSseStream`
+      // nunca se llamaba y la serie quedaba vacía (afecta al dashboard "WebSocket").
+      const startedAt = this.connStart.get(client.id);
+      this.connStart.delete(client.id);
+      if (typeof startedAt === 'number') {
+        this.metrics.recordSseStream('realtime', (Date.now() - startedAt) / 1000);
+      }
+    }
+  }
+
+  /** Lee `x-trace-id` / `x-span-id` de los headers del handshake de Socket.IO. */
+  private readTraceContext(client: Socket): [string | undefined, string | undefined] {
+    const headers = (client.handshake?.headers ?? {}) as Record<string, unknown>;
+    const traceHeader = headers[TRACE_HEADER] as string | undefined;
+    const spanHeader = headers[SPAN_HEADER] as string | undefined;
+    return [typeof traceHeader === 'string' ? traceHeader : undefined, typeof spanHeader === 'string' ? spanHeader : undefined];
   }
 
   /** Corta todas las conexiones de un usuario (cierre de todas las sesiones, cambio de contraseña). */

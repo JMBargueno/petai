@@ -1,0 +1,42 @@
+{
+  "title": "PetAI BullMQ",
+  "uid": "petai-bullmq",
+  "tags": ["petai", "observabilidad", "bullmq"],
+  "timezone": "browser",
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Profundidad de colas por queue",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "petai_bullmq_queue_depth", "refId": "A", "legendFormat": "{{queue}}" }],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Profundidad máxima actual",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "max(petai_bullmq_queue_depth)", "refId": "A", "instant": true }],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 500 }, { "color": "red", "value": 1000 }] } },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Variación de profundidad (jobs/s encolados)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
+      "targets": [
+        { "expr": "sum(rate(increase(petai_bullmq_queue_depth[1m])[5m:])) by (queue)", "refId": "A", "legendFormat": "{{queue}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    }
+  ]
+}
