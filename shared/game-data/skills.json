@@ -1,0 +1,213 @@
+[
+  {
+    "id": "tackle",
+    "name": "Placaje",
+    "element": "neutral",
+    "kind": "attack",
+    "power": 40,
+    "accuracy": 100,
+    "cooldown": 0,
+    "unlockLevel": 1,
+    "description": "Un golpe directo sin elemento."
+  },
+  {
+    "id": "swift_strike",
+    "name": "Golpe Veloz",
+    "element": "neutral",
+    "kind": "attack",
+    "power": 30,
+    "accuracy": 100,
+    "cooldown": 1,
+    "unlockLevel": 5,
+    "description": "Ataca siempre primero.",
+    "priority": 1
+  },
+  {
+    "id": "guard",
+    "name": "Guardia",
+    "element": "neutral",
+    "kind": "guard",
+    "power": 0,
+    "accuracy": 100,
+    "cooldown": 3,
+    "unlockLevel": 8,
+    "description": "Aumenta la defensa durante 2 turnos.",
+    "turns": 2
+  },
+  {
+    "id": "power_slam",
+    "name": "Embestida",
+    "element": "neutral",
+    "kind": "attack",
+    "power": 75,
+    "accuracy": 85,
+    "cooldown": 2,
+    "unlockLevel": 12,
+    "description": "Un golpe pesado, algo impreciso."
+  },
+  {
+    "id": "recover",
+    "name": "Recuperar",
+    "element": "neutral",
+    "kind": "heal",
+    "power": 0,
+    "accuracy": 100,
+    "cooldown": 4,
+    "unlockLevel": 15,
+    "description": "Recupera el 30 % de la vida máxima.",
+    "healPct": 0.3
+  },
+  {
+    "id": "ember",
+    "name": "Ascuas",
+    "element": "fire",
+    "kind": "attack",
+    "power": 45,
+    "accuracy": 100,
+    "cooldown": 0,
+    "unlockLevel": 1,
+    "description": "Pequeñas llamas. Puede quemar.",
+    "inflicts": {
+      "kind": "burn",
+      "chance": 0.15,
+      "turns": 3,
+      "value": 0
+    }
+  },
+  {
+    "id": "flame_burst",
+    "name": "Llamarada",
+    "element": "fire",
+    "kind": "attack",
+    "power": 80,
+    "accuracy": 90,
+    "cooldown": 2,
+    "unlockLevel": 10,
+    "description": "Una explosión de fuego. Suele quemar.",
+    "inflicts": {
+      "kind": "burn",
+      "chance": 0.4,
+      "turns": 3,
+      "value": 0
+    }
+  },
+  {
+    "id": "inferno",
+    "name": "Infierno",
+    "element": "fire",
+    "kind": "attack",
+    "power": 105,
+    "accuracy": 80,
+    "cooldown": 3,
+    "unlockLevel": 25,
+    "description": "El fuego más intenso. Casi siempre quema.",
+    "inflicts": {
+      "kind": "burn",
+      "chance": 0.6,
+      "turns": 3,
+      "value": 0
+    }
+  },
+  {
+    "id": "bubble",
+    "name": "Burbuja",
+    "element": "water",
+    "kind": "attack",
+    "power": 45,
+    "accuracy": 100,
+    "cooldown": 0,
+    "unlockLevel": 1,
+    "description": "Burbujas que pueden ralentizar.",
+    "inflicts": {
+      "kind": "slow",
+      "chance": 0.15,
+      "turns": 2,
+      "value": 0.3
+    }
+  },
+  {
+    "id": "tidal_wave",
+    "name": "Marea",
+    "element": "water",
+    "kind": "attack",
+    "power": 80,
+    "accuracy": 90,
+    "cooldown": 2,
+    "unlockLevel": 10,
+    "description": "Una ola que suele ralentizar.",
+    "inflicts": {
+      "kind": "slow",
+      "chance": 0.4,
+      "turns": 2,
+      "value": 0.3
+    }
+  },
+  {
+    "id": "tsunami",
+    "name": "Tsunami",
+    "element": "water",
+    "kind": "attack",
+    "power": 105,
+    "accuracy": 80,
+    "cooldown": 3,
+    "unlockLevel": 25,
+    "description": "Una ola gigante que casi siempre ralentiza.",
+    "inflicts": {
+      "kind": "slow",
+      "chance": 0.6,
+      "turns": 2,
+      "value": 0.3
+    }
+  },
+  {
+    "id": "vine_whip",
+    "name": "Látigo",
+    "element": "plant",
+    "kind": "attack",
+    "power": 45,
+    "accuracy": 100,
+    "cooldown": 0,
+    "unlockLevel": 1,
+    "description": "Lianas que pueden debilitar la defensa.",
+    "inflicts": {
+      "kind": "sap",
+      "chance": 0.15,
+      "turns": 3,
+      "value": 0.25
+    }
+  },
+  {
+    "id": "razor_leaf",
+    "name": "Hoja Afilada",
+    "element": "plant",
+    "kind": "attack",
+    "power": 80,
+    "accuracy": 90,
+    "cooldown": 2,
+    "unlockLevel": 10,
+    "description": "Hojas cortantes que suelen debilitar.",
+    "inflicts": {
+      "kind": "sap",
+      "chance": 0.4,
+      "turns": 3,
+      "value": 0.25
+    }
+  },
+  {
+    "id": "overgrowth",
+    "name": "Sobrecrecimiento",
+    "element": "plant",
+    "kind": "attack",
+    "power": 105,
+    "accuracy": 80,
+    "cooldown": 3,
+    "unlockLevel": 25,
+    "description": "Raíces que casi siempre debilitan.",
+    "inflicts": {
+      "kind": "sap",
+      "chance": 0.6,
+      "turns": 3,
+      "value": 0.25
+    }
+  }
+]

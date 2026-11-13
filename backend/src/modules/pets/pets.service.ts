@@ -204,7 +204,8 @@ export class PetsService {
     const updated = await this.prisma.pet.update({
       where: { id: petId },
       data: {
-        happiness: Math.min(100, pet.happiness + reward.happiness),
+        // La felicidad puede bajar (p. ej. perder una pelea) pero siempre se mantiene en 0–100
+        happiness: Math.min(100, Math.max(0, pet.happiness + reward.happiness)),
         energy: Math.max(0, pet.energy - reward.energyCost),
         lastTickAt: new Date(),
       },

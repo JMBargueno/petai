@@ -1117,6 +1117,236 @@
           "AI"
         ]
       }
+    },
+    "/v1/pets/{id}/combat": {
+      "get": {
+        "operationId": "BattlesController_profile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estadísticas de combate, habilidades, ELO, liga y límites diarios",
+        "tags": [
+          "Battles"
+        ]
+      }
+    },
+    "/v1/pets/{id}/combat/stats": {
+      "post": {
+        "operationId": "BattlesController_allocate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Repartir puntos de estadística (HP, ATK, DEF, VEL, ESP)",
+        "tags": [
+          "Battles"
+        ]
+      }
+    },
+    "/v1/pets/{id}/combat/skills": {
+      "put": {
+        "operationId": "BattlesController_equip",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Equipar hasta 4 habilidades",
+        "tags": [
+          "Battles"
+        ]
+      }
+    },
+    "/v1/battles/matchmake": {
+      "post": {
+        "operationId": "BattlesController_matchmake",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Buscar rival por ELO, simular el combate determinista y devolver la repetición",
+        "tags": [
+          "Battles"
+        ]
+      }
+    },
+    "/v1/battles": {
+      "get": {
+        "operationId": "BattlesController_history",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de peleas del usuario (como atacante y como defensor)",
+        "tags": [
+          "Battles"
+        ]
+      }
+    },
+    "/v1/battles/{id}": {
+      "get": {
+        "operationId": "BattlesController_battle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle y repetición de una pelea (solo participantes)",
+        "tags": [
+          "Battles"
+        ]
+      }
+    },
+    "/v1/leaderboard": {
+      "get": {
+        "operationId": "BattlesController_leaderboard",
+        "parameters": [
+          {
+            "name": "scope",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "petId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Clasificación global (ELO) o semanal (puntos de liga)",
+        "tags": [
+          "Battles"
+        ]
+      }
+    },
+    "/v1/arena/leagues": {
+      "get": {
+        "operationId": "BattlesController_leagues",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ligas, límites y recompensas de la arena",
+        "tags": [
+          "Battles"
+        ]
+      }
     }
   },
   "info": {

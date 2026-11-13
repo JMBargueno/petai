@@ -19,6 +19,7 @@ const balance = readJson('shared/game-data/balance.json');
 const species = readJson('shared/game-data/species.json');
 const patterns = readJson('shared/game-data/patterns.json');
 const foods = readJson('shared/game-data/foods.json');
+const skills = readJson('shared/game-data/skills.json');
 
 // 1. Validar probabilidades en balance.json
 const rarities = balance.rarity;
@@ -56,6 +57,37 @@ for (const [id, g] of Object.entries(mg.games)) {
   }
 }
 console.log(`✓ balance.json: sueño, evolución y ${Object.keys(mg.games).length} minijuegos validados`);
+
+// 1c. Combate (Fase 4): balance, ligas y habilidades
+const cb = balance.combats;
+for (const k of ['dailyFreeBattles', 'energyCostPerBattle', 'maxRounds', 'hpMultiplier', 'damageScale', 'critChance', 'critMultiplier', 'elementAdvantage', 'elementDisadvantage', 'burnPctPerTurn', 'guardDefMultiplier']) {
+  if (typeof cb?.[k] !== 'number' || cb[k] <= 0) throw new Error(`balance.combats.${k} inválido`);
+}
+if (!cb.elo || cb.elo.k <= 0 || cb.elo.window <= 0 || cb.elo.maxWindow < cb.elo.window) throw new Error('balance.combats.elo inválido');
+if (!Array.isArray(cb.leagues) || cb.leagues.length < 2 || cb.leagues[0].minElo !== 0) {
+  throw new Error('balance.combats.leagues debe empezar en minElo 0');
+}
+for (let i = 1; i < cb.leagues.length; i++) {
+  if (cb.leagues[i].minElo <= cb.leagues[i - 1].minElo) throw new Error('Las ligas deben estar ordenadas por minElo creciente');
+}
+for (const r of ['win', 'draw', 'loss']) {
+  if (typeof cb.rewards?.[r]?.xp !== 'number' || typeof cb.rewards?.[r]?.coins !== 'number') throw new Error(`balance.combats.rewards.${r} inválido`);
+}
+const skillIds = new Set();
+const elements = new Set(species.map((s) => s.element));
+for (const sk of skills) {
+  if (skillIds.has(sk.id)) throw new Error(`Habilidad duplicada: ${sk.id}`);
+  skillIds.add(sk.id);
+  if (!['attack', 'heal', 'guard'].includes(sk.kind)) throw new Error(`Habilidad ${sk.id}: kind inválido`);
+  if (sk.element !== 'neutral' && !elements.has(sk.element)) throw new Error(`Habilidad ${sk.id}: elemento sin especies (${sk.element})`);
+  if (!(sk.accuracy > 0 && sk.accuracy <= 100) || sk.cooldown < 0 || sk.unlockLevel < 1) throw new Error(`Habilidad ${sk.id}: valores inválidos`);
+  if (sk.kind === 'attack' && !(sk.power > 0)) throw new Error(`Habilidad ${sk.id}: un ataque necesita power`);
+}
+for (const el of elements) {
+  if (!skills.some((s) => s.element === el && s.unlockLevel === 1)) throw new Error(`El elemento ${el} no tiene habilidad de nivel 1`);
+}
+if (!skills.some((s) => s.id === 'tackle')) throw new Error('Falta la habilidad base "tackle"');
+console.log(`✓ combate: ${skills.length} habilidades y ${cb.leagues.length} ligas validadas`);
 
 // 2. Validar comidas
 const foodIds = new Set(foods.map(f => f.id));

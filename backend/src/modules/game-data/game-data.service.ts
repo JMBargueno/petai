@@ -8,6 +8,7 @@ export class GameDataService implements OnModuleInit {
   private speciesData: any[];
   private patternsData: any[];
   private foodsData: any[];
+  private skillsData: any[];
 
   onModuleInit() {
     this.loadData();
@@ -27,6 +28,7 @@ export class GameDataService implements OnModuleInit {
     this.speciesData = JSON.parse(fs.readFileSync(path.join(dataDir, 'species.json'), 'utf8'));
     this.patternsData = JSON.parse(fs.readFileSync(path.join(dataDir, 'patterns.json'), 'utf8'));
     this.foodsData = JSON.parse(fs.readFileSync(path.join(dataDir, 'foods.json'), 'utf8'));
+    this.skillsData = JSON.parse(fs.readFileSync(path.join(dataDir, 'skills.json'), 'utf8'));
   }
 
   getBalance() {
@@ -45,12 +47,17 @@ export class GameDataService implements OnModuleInit {
     return this.foodsData;
   }
 
+  getSkills() {
+    return this.skillsData;
+  }
+
   getCatalog() {
     return {
       balance: this.balanceData,
       species: this.speciesData,
       patterns: this.patternsData,
       foods: this.foodsData,
+      skills: this.skillsData,
     };
   }
 }

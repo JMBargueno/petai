@@ -59,7 +59,84 @@
   },
   "combats": {
     "dailyFreeBattles": 10,
-    "energyCostPerBattle": 15
+    "energyCostPerBattle": 15,
+    "minLevel": 1,
+    "maxRounds": 30,
+    "hpMultiplier": 4,
+    "damageScale": 1.5,
+    "critChance": 0.0625,
+    "critMultiplier": 1.5,
+    "elementAdvantage": 1.5,
+    "elementDisadvantage": 0.67,
+    "burnPctPerTurn": 0.06,
+    "guardDefMultiplier": 1.5,
+    "mood": {
+      "minMultiplier": 0.8,
+      "sickMultiplier": 0.9
+    },
+    "elo": {
+      "initial": 1000,
+      "k": 32,
+      "floor": 0,
+      "window": 100,
+      "maxWindow": 400,
+      "windowStep": 100
+    },
+    "leagues": [
+      {
+        "id": "bronze",
+        "name": "Bronce",
+        "minElo": 0
+      },
+      {
+        "id": "silver",
+        "name": "Plata",
+        "minElo": 1100
+      },
+      {
+        "id": "gold",
+        "name": "Oro",
+        "minElo": 1300
+      },
+      {
+        "id": "platinum",
+        "name": "Platino",
+        "minElo": 1500
+      },
+      {
+        "id": "diamond",
+        "name": "Diamante",
+        "minElo": 1700
+      },
+      {
+        "id": "mythic",
+        "name": "Mítica",
+        "minElo": 1900
+      }
+    ],
+    "rewards": {
+      "win": {
+        "xp": 40,
+        "coins": 25,
+        "happiness": 8
+      },
+      "draw": {
+        "xp": 25,
+        "coins": 12,
+        "happiness": 0
+      },
+      "loss": {
+        "xp": 15,
+        "coins": 5,
+        "happiness": -5
+      },
+      "botMultiplier": 0.5
+    },
+    "weeklyPoints": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+    }
   },
   "sleep": {
     "nightStartHour": 22,

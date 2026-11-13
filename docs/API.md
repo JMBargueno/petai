@@ -62,9 +62,22 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - Ciclo de sueño: según la zona horaria del usuario (`PATCH /me`), de 22:00 a 07:00 estar despierto gasta 1.5x energía y dormir recupera 1.25x energía y regenera salud.
 
 ### 2.8 Peleas Asíncronas (`/battles`)
-- `POST /battles/matchmake`: Buscar rival por rango ELO y simular combate determinista. Devuelve `battleId` y el log de eventos de la repetición.
-- `GET /battles/:id`: Consultar detalle y repetición de una batalla.
-- `GET /leaderboard`: Clasificación semanal de la liga.
+Perfil de combate de la mascota:
+- `GET /pets/:id/combat`: estadísticas efectivas (`round(base·rareza·(1+0.05·nivel) + puntos)`), puntos repartidos y disponibles, ánimo (multiplicador de rendimiento 0.8–1.0), ELO, liga y puntos que faltan para la siguiente, habilidades desbloqueadas/equipadas, peleas de las últimas 24 h, límite, coste de energía y `canFight`/`reason`.
+- `POST /pets/:id/combat/stats` `{ hp?, atk?, def?, vel?, esp? }`: reparte puntos (enteros ≥ 0, sin superar los disponibles; cierre optimista ante repartos simultáneos).
+- `PUT /pets/:id/combat/skills` `{ skills: string[] }`: equipa de 1 a 4 habilidades únicas, desbloqueadas, del elemento de la especie o neutras y con al menos un ataque.
+
+Peleas:
+- `POST /battles/matchmake` `{ petId }`: busca un rival con ELO parecido (ventana ±100 que se amplía hasta ±400; se evita repetir rival en la última hora), simula el combate **determinista** (semilla del servidor) y devuelve `{ battleId, seed, result, opponent, elo, rewards, replay, pet }`. Si no hay rival cercano se enfrenta a un **bot determinista** (no puntúa en el ELO y da la mitad de recompensa). Requiere mascota despierta con ≥ 15 de energía y respeta el límite de 10 peleas por 24 h (429); una pelea a la vez por usuario.
+- `GET /battles?limit=`: historial del usuario (como atacante y como defensor), visto desde su perspectiva.
+- `GET /battles/:id`: detalle y repetición, solo para los dos participantes (404 para el resto).
+- Al defensor real se le avisa por WebSocket con el evento `battle:defended` `{ battleId, defenderPetName, attackerName, won, draw, eloDelta, elo }` y el resultado queda en su historial.
+
+Clasificación y ligas:
+- `GET /leaderboard?scope=global|weekly&limit=&petId=`: global = ELO actual de las mascotas que han peleado; semanal = puntos de liga de la semana ISO (victoria 3, empate 1, derrota 0, solo para el atacante). Vive en Redis (ZSET) y, si Redis no responde, se calcula desde PostgreSQL. Con `petId` propio añade `me: { rank, score }`.
+- `GET /arena/leagues`: ligas (Bronce → Mítica), límites y recompensas.
+
+**Formato de la repetición** (`replay`): `{ version: 1, seed, participants: [atacante, defensor], events }`. Cada participante lleva su instantánea (estadísticas efectivas, ánimo, habilidades, estrategia, `isBot`), de modo que la repetición no depende de datos posteriores. Eventos: `round`, `move` (habilidad, acierto, crítico, multiplicador elemental, daño y vida de ambos), `heal`, `guard`, `status` (quemadura, ralentización, savia), `dot`, `faint` y `end` (ganador 0/1/null, motivo y rondas). Simular de nuevo con la misma semilla reproduce exactamente los mismos eventos.
 
 ### 2.9 Inteligencia Artificial (`/ai` y `/pets/:id/chat`)
 - `GET /ai/config`: Obtener configuración actual de IA (proveedor, modelo, máscara de clave).

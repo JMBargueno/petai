@@ -78,6 +78,14 @@ $$\text{XP}(n) = \text{round}\left(100 \cdot n^{1.5}\right)$$
 
 $$\text{Stat} = \text{round}\left((\text{BaseSpecies} \cdot \text{RarityMultiplier} \cdot (1 + 0.05 \cdot \text{Level})) + \text{AllocatedPoints}\right)$$
 
+### 4.1b Reglas del motor (valores en `balance.json → combats`)
+- **Vida en combate** = HP · 4. Por ronda cada bando elige una habilidad con una IA de reglas según su estrategia (agresiva, equilibrada o defensiva) y actúan por prioridad, luego VEL (empate: azar de la semilla). Máximo 30 rondas; si nadie cae gana quien conserve más % de vida.
+- **Daño** = potencia · ATK/(ATK+DEF) · 1.5 · (1 + 0.05·nivel del atacante) · afinidad · variación 0.9–1.1 · crítico ×1.5 (6.25 %). Las habilidades elementales usan ESP contra ESP; las neutras, ATK contra DEF.
+- **Ánimo y salud**: felicidad y salud multiplican ATK/DEF/ESP/VEL entre ×1.0 y ×0.8, y estar enfermo resta otro 10 %. Cuidar a la mascota mejora su rendimiento.
+- **Habilidades** (`skills.json`): 5 neutras y 3 por elemento (nivel 1, 10 y 25), con enfriamientos. Las elementales pueden infligir estados: quemadura (6 % de la vida por ronda), ralentización (−30 % VEL) y savia (−25 % DEF).
+- **ELO**: K = 32, suma cero entre jugadores reales, suelo en 0. **Ligas**: Bronce < 1100 ≤ Plata < 1300 ≤ Oro < 1500 ≤ Platino < 1700 ≤ Diamante < 1900 ≤ Mítica.
+- **Recompensas**: victoria 40 XP y 25 monedas, empate 25/12, derrota 15/5; los bots dan la mitad. Cada pelea cuesta 15 de energía y hay 10 peleas por 24 h.
+
 ### 4.2 Tabla de Afinidades Elementales
 - **Fuego**: Fuerte contra Planta ($\times 1.5$), Débil contra Agua ($\times 0.67$).
 - **Agua**: Fuerte contra Fuego ($\times 1.5$), Débil contra Planta ($\times 0.67$).

@@ -47,6 +47,13 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   handleDisconnect(client: Socket) {}
 
+  /** Evento genérico para todos los dispositivos de un usuario (p. ej. aviso de pelea al defensor). */
+  emitToUser(userId: string, event: string, payload: unknown) {
+    if (this.server) {
+      this.server.to(`user:${userId}`).emit(event, payload);
+    }
+  }
+
   emitPetUpdate(userId: string, pet: any) {
     if (this.server) {
       this.server.to(`user:${userId}`).emit('pet:update', pet);

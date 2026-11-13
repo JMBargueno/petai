@@ -141,6 +141,7 @@ model Pet {
 
   @@index([userId])
   @@index([speciesId])
+  @@index([elo])
 }
 
 model PityCounter {
@@ -195,16 +196,17 @@ model Battle {
   id             String    @id @default(uuid())
   attackerPetId  String
   attackerPet    Pet       @relation("AttackerBattles", fields: [attackerPetId], references: [id])
-  defenderPetId  String
-  defenderPet    Pet       @relation("DefenderBattles", fields: [defenderPetId], references: [id])
+  // null cuando el rival es un bot determinista (su instantánea está en el log)
+  defenderPetId  String?
+  defenderPet    Pet?      @relation("DefenderBattles", fields: [defenderPetId], references: [id])
   seed           Int
   winnerPetId    String?
   log            Json
   eloDelta       Int       @default(0)
   createdAt      DateTime  @default(now())
 
-  @@index([attackerPetId])
-  @@index([defenderPetId])
+  @@index([attackerPetId, createdAt])
+  @@index([defenderPetId, createdAt])
 }
 
 model AiConfig {

@@ -10,6 +10,7 @@ import { PetsModule } from './modules/pets/pets.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { MinigamesModule } from './modules/minigames/minigames.module';
 import { AiModule } from './modules/ai/ai.module';
+import { BattlesModule } from './modules/battles/battles.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
     InventoryModule,
     MinigamesModule,
     AiModule,
+    BattlesModule,
   ],
 })
 export class AppModule {}

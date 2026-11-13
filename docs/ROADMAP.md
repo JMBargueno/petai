@@ -12,7 +12,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 1** | Núcleo Backend + Escritorio | ✅ Completada | Ciclo básico: Registro, Eclosión, Cuidado, Sprite interactivo |
 | **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
 | **Fase 3** | Inteligencia Artificial (IA) | ✅ Completada (salvo modo suscripción y Redis) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
-| **Fase 4** | Peleas Asíncronas | ⏳ Pendiente | Motor determinista, emparejamiento ELO y repeticiones |
+| **Fase 4** | Peleas Asíncronas | 🔄 En curso (backend ✅) | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ⏳ Pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
 | **Fase 6** | Pulido y Lanzamiento | ⏳ Pendiente | Seguridad, balance, optimización, tiendas y despliegue |
 
@@ -80,12 +80,16 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 ---
 
 ## Fase 4 — Peleas Asíncronas
-- **Backend**:
-  - Motor de combate por turnos 100% determinista basado en semillas fijas.
-  - Sistema de ELO, ligas y tabla de líderes en Redis.
-  - Generación de registro de repetición (`log json`).
+- **Backend** ✅:
+  - [x] Motor de combate por turnos 100 % determinista (PRNG con semilla, IA de reglas por estrategia, habilidades con enfriamientos y estados, afinidades, ánimo y salud).
+  - [x] Reparto de puntos de estadística, habilidades equipables y perfil de combate.
+  - [x] Emparejamiento por ELO con ventana creciente, bots deterministas como respaldo, límites diarios y coste de energía.
+  - [x] ELO de suma cero, ligas (Bronce → Mítica) y clasificación global y semanal en Redis (con respaldo en PostgreSQL).
+  - [x] Registro de repetición reproducible (`log json`) y aviso por WebSocket al defensor.
+  - [ ] Recompensas de fin de temporada.
 - **Escritorio**:
-  - Interfaz de Arena y visualizador de repeticiones animadas.
+  - [ ] Interfaz de Arena (perfil de combate, reparto de puntos, habilidades, buscar rival).
+  - [ ] Visualizador de repeticiones animadas, historial y clasificación.
 
 ---
 
