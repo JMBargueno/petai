@@ -6,6 +6,17 @@
 const STEP_MS = 10 * 60 * 1000; // resolución de 10 minutos
 const MAX_SPAN_MS = 72 * 60 * 60 * 1000; // se acota el cálculo a 72 h
 
+/** ¿Es un identificador IANA válido (p. ej. Europe/Madrid)? */
+export function isValidTimeZone(timeZone: string): boolean {
+  if (!timeZone || timeZone.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Valida un identificador IANA; si no es válido, usa UTC. */
 export function safeTimeZone(timeZone: string | null | undefined): string {
   if (!timeZone) return 'UTC';

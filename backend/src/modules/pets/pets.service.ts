@@ -215,15 +215,27 @@ export class PetsService {
     return withXp;
   }
 
-  async updatePet(userId: string, petId: string, data: { nickname?: string; strategy?: string }) {
+  async updatePet(userId: string, petId: string, input: { nickname?: string; strategy?: string } | undefined) {
     await this.getPetById(userId, petId);
+
+    const data: { nickname?: string; strategy?: string } = {};
+    if (input?.nickname !== undefined) {
+      const nick = typeof input.nickname === 'string' ? input.nickname.replace(/[\u0000-\u001f\u007f]/g, '').trim() : '';
+      if (nick.length < 1 || nick.length > 30) {
+        throw new BadRequestException('nickname debe tener entre 1 y 30 caracteres');
+      }
+      data.nickname = nick;
+    }
+    if (input?.strategy !== undefined) {
+      if (!['aggressive', 'defensive', 'balanced'].includes(input.strategy as string)) {
+        throw new BadRequestException('strategy debe ser aggressive, defensive o balanced');
+      }
+      data.strategy = input.strategy;
+    }
 
     const updated = await this.prisma.pet.update({
       where: { id: petId },
-      data: {
-        nickname: data.nickname,
-        strategy: data.strategy,
-      },
+      data,
       include: { species: true, pattern: true },
     });
 
