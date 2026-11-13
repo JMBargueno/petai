@@ -25,8 +25,11 @@ describe('Missions E2E', () => {
   });
 
   afterEach(async () => {
-    // Clean up test data
+    // Clean up test data (delete in FK dependency order)
     await prisma.mission.deleteMany({ where: { userId } });
+    await prisma.battle.deleteMany({
+      where: { OR: [{ attackerPet: { userId } }, { defenderPet: { userId } }] },
+    });
     await prisma.pet.deleteMany({ where: { userId } });
     await prisma.user.deleteMany({ where: { id: userId } });
   });
@@ -47,6 +50,18 @@ describe('Missions E2E', () => {
     return { token, userId };
   }
 
+  /** Helper: hatch the first available egg to create a pet */
+  async function hatchPet(token: string): Promise<void> {
+    const eggs = await request(app.getHttpServer())
+      .get('/v1/eggs')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/v1/eggs/${eggs.body[0].id}/hatch`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+  }
+
   it('GET /missions without token returns 401', async () => {
     await request(app.getHttpServer()).get('/v1/missions').expect(401);
   });
@@ -54,11 +69,7 @@ describe('Missions E2E', () => {
   it('GET /missions with valid token returns 200 with daily and weekly', async () => {
     const { token } = await auth();
     // Create a pet so missions make sense
-    const petRes = await request(app.getHttpServer())
-      .post('/v1/hatching/egg')
-      .set('Authorization', `Bearer ${token}`)
-      .send({})
-      .expect(201);
+    await hatchPet(token);
     // Get missions (triggers lazy init)
     const res = await request(app.getHttpServer())
       .get('/v1/missions')
@@ -87,7 +98,7 @@ describe('Missions E2E', () => {
 
   it('GET /missions/summary returns progress and streaks', async () => {
     const { token } = await auth();
-    await request(app.getHttpServer()).post('/v1/hatching/egg').set('Authorization', `Bearer ${token}`).send({}).expect(201);
+    await hatchPet(token);
     const res = await request(app.getHttpServer())
       .get('/v1/missions/summary')
       .set('Authorization', `Bearer ${token}`)
@@ -101,7 +112,7 @@ describe('Missions E2E', () => {
 
   it('GET /missions/:id returns 404 for invalid mission id', async () => {
     const { token } = await auth();
-    await request(app.getHttpServer()).post('/v1/hatching/egg').set('Authorization', `Bearer ${token}`).send({}).expect(201);
+    await hatchPet(token);
     await request(app.getHttpServer()).get('/v1/missions').set('Authorization', `Bearer ${token}`).expect(200);
     const res = await request(app.getHttpServer())
       .get('/v1/missions/non-existent-id')
@@ -112,7 +123,7 @@ describe('Missions E2E', () => {
 
   it('POST /missions/:id/claim on incomplete mission returns 400', async () => {
     const { token } = await auth();
-    await request(app.getHttpServer()).post('/v1/hatching/egg').set('Authorization', `Bearer ${token}`).send({}).expect(201);
+    await hatchPet(token);
     const missionsRes = await request(app.getHttpServer()).get('/v1/missions').set('Authorization', `Bearer ${token}`).expect(200);
     const mission = missionsRes.body.daily[0];
     const res = await request(app.getHttpServer())

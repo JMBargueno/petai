@@ -11,7 +11,7 @@ describe('log-serializer', () => {
       token: 'abc123',
       apiKey: 'sk-123',
       authorization: 'Bearer xyz',
-      password: 's3cret',
+      password: 'test-password',
       user: 'alice',
     });
     expect(out.token).toBe('[REDACTED]');

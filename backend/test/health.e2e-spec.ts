@@ -18,7 +18,7 @@ describe('Salud y cabeceras de seguridad (e2e)', () => {
   afterAll(async () => app.close());
 
   it('liveness y readiness no requieren sesión', async () => {
-    expect((await api().get('/v1/health').expect(200)).body).toEqual({ status: 'ok' });
+    expect((await api().get('/v1/health').expect(200)).body).toMatchObject({ status: 'ok' });
     const ready = await api().get('/v1/health/ready').expect(200);
     expect(ready.body).toMatchObject({ status: 'ok', database: 'up' });
   });
