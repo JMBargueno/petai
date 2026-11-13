@@ -9,6 +9,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
+  // Detrás de un proxy/balanceador hay que declarar cuántos saltos son de confianza para que req.ip
+  // (usado en el límite de intentos) sea la IP real y no la del proxy ni una cabecera falsificada.
+  const trustProxy = Number(configService.get('TRUST_PROXY') ?? 0);
+  if (trustProxy > 0) app.getHttpAdapter().getInstance().set('trust proxy', trustProxy);
+
   const prefix = configService.get<string>('API_PREFIX', 'v1');
   app.setGlobalPrefix(prefix);
 

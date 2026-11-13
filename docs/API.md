@@ -14,10 +14,12 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 ## 2. Endpoints REST
 
 ### 2.1 Autenticación (`/auth`)
-- `POST /auth/register`: Registro con email y contraseña (Argon2id). Devuelve `accessToken` y cookie `refreshToken`.
-- `POST /auth/login`: Autenticación con email y contraseña.
-- `POST /auth/refresh`: Renovación de `accessToken` mediante cookie o token de refresco rotativo.
-- `POST /auth/logout`: Revocación del token de refresco actual.
+- `POST /auth/register` `{ email, password, displayName? }`: Registro (Argon2id). El correo se normaliza a minúsculas (máx. 254) y debe ser válido; la contraseña tiene de 8 a 128 caracteres; `displayName` de 1 a 50 sin caracteres de control. Devuelve `accessToken`, `refreshToken` y el usuario. Entradas inválidas → 400; correo repetido → 409.
+- `POST /auth/login` `{ email, password }`: Autenticación. Cuenta inexistente y contraseña errónea dan la misma respuesta (401) y el mismo coste de cálculo (sin pistas por tiempos).
+- `POST /auth/refresh` `{ refreshToken }`: Rotación del token de refresco, atómica (un token solo se canjea una vez). Reutilizar un token ya revocado hace más de 10 s se trata como robo y **revoca todas las sesiones** de la cuenta.
+- `POST /auth/logout` `{ refreshToken }`: Revoca ese token (idempotente).
+
+**Límite de intentos** (429 con `retryAfterSeconds`): 10 fallos de login por cuenta+IP y 100 por IP cada 15 min (un acierto reinicia el de la cuenta), 10 registros por IP y hora, 60 refresh por IP y minuto. Se configura con `AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT`, `AUTH_LOGIN_MAX_FAILS_PER_IP`, `AUTH_LOGIN_WINDOW_MINUTES`, `AUTH_REGISTER_MAX_PER_IP` y `AUTH_REFRESH_MAX_PER_MINUTE`. Detrás de un proxy hay que declarar `TRUST_PROXY` (nº de saltos de confianza) para que cuente la IP real. Está en memoria: con varias instancias del backend debe pasar a Redis.
 - `POST /auth/device/start`: Iniciar vinculación para clientes de escritorio (genera código de 6 dígitos).
 - `POST /auth/device/confirm`: Confirmar código desde app móvil autenticada.
 - `POST /auth/device/poll`: Comprobación periódica desde el cliente de escritorio hasta confirmación.
