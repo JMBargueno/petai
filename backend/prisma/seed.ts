@@ -8,7 +8,7 @@ async function main() {
   console.log('--- Iniciando Seed de datos de juego PetAI ---');
 
   const readJson = (relPath: string) => {
-    const fullPath = path.resolve(__dirname, '../../../shared/game-data', relPath);
+    const fullPath = path.resolve(__dirname, '../../shared/game-data', relPath);
     return JSON.parse(fs.readFileSync(fullPath, 'utf8'));
   };
 

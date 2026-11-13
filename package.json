@@ -8,9 +8,12 @@
     "generate:api": "openapi-typescript shared/openapi/openapi.json -o shared/openapi/api-types.ts",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
-    "backend:dev": "pnpm --filter backend run start:dev",
-    "backend:test": "pnpm --filter backend run test",
-    "backend:build": "pnpm --filter backend run build"
+    "backend:dev": "pnpm --filter petai-backend run start:dev",
+    "backend:test": "pnpm --filter petai-backend run test",
+    "backend:build": "pnpm --filter petai-backend run build",
+    "desktop:dev": "pnpm --filter petai-desktop run dev",
+    "desktop:build": "pnpm --filter petai-desktop run build",
+    "test:all": "pnpm --filter petai-backend run test && pnpm --filter petai-backend run test:e2e"
   },
   "devDependencies": {
     "openapi-typescript": "^7.13.0"

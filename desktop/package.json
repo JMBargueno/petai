@@ -1,0 +1,27 @@
+{
+  "name": "petai-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-shell": "^2.0.0",
+    "lucide-svelte": "^0.475.0",
+    "openapi-fetch": "^0.13.4",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^22.13.0",
+    "svelte": "^5.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.0"
+  }
+}
