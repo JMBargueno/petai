@@ -42,7 +42,10 @@ export class PetsService {
     return this.applyLazyTick(pet);
   }
 
-  async feed(userId: string, petId: string, itemId: string) {
+  async feed(userId: string, petId: string, itemId?: string) {
+    if (!itemId || typeof itemId !== 'string') {
+      throw new BadRequestException('itemId es obligatorio');
+    }
     const pet = await this.getPetById(userId, petId);
     if (pet.sleeping) {
       throw new BadRequestException('No puedes alimentar a la mascota mientras duerme');

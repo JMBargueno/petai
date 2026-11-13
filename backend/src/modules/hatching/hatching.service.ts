@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
@@ -29,10 +29,15 @@ export class HatchingService {
     const hatchesAt = new Date(now.getTime() + 5 * 60 * 1000);
 
     return this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
+      // Cobro atómico: la comprobación de saldo y el descuento van en una sola sentencia,
+      // así peticiones simultáneas no pueden dejar el saldo en negativo.
+      const charged = await tx.user.updateMany({
+        where: { id: userId, coins: { gte: costCoins } },
         data: { coins: { decrement: costCoins } },
       });
+      if (charged.count === 0) {
+        throw new BadRequestException('Monedas insuficientes para comprar un huevo');
+      }
 
       return tx.egg.create({
         data: {
@@ -45,7 +50,24 @@ export class HatchingService {
     });
   }
 
+  /**
+   * Eclosiona un huevo. Concurrencia: el huevo se reclama de forma atómica (solo una petición puede
+   * crear la mascota) y el contador de pity se actualiza solo si no cambió desde que se leyó; si otra
+   * eclosión simultánea lo modificó, se reintenta con el valor actual.
+   */
   async hatchEgg(userId: string, eggId: string) {
+    if (typeof eggId !== 'string' || eggId.length > 64) throw new NotFoundException('Huevo no encontrado o ya eclosionado');
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.tryHatch(userId, eggId);
+      } catch (err) {
+        if (err instanceof ConflictException && attempt < 3) continue;
+        throw err;
+      }
+    }
+  }
+
+  private async tryHatch(userId: string, eggId: string) {
     const egg = await this.prisma.egg.findFirst({
       where: { id: eggId, userId, hatchedPetId: null },
     });
@@ -128,17 +150,25 @@ export class HatchingService {
         }
       : chosenSpecies.defaultPalette;
 
+    const petId = crypto.randomUUID();
     return this.prisma.$transaction(async (tx) => {
-      await tx.pityCounter.update({
-        where: { userId },
-        data: {
-          sinceSuperRare: newSinceSuper,
-          sinceLegendary: newSinceLeg,
-        },
+      // 1) Reclamo atómico del huevo: si otra petición lo eclosionó antes, esta se descarta entera
+      const claimed = await tx.egg.updateMany({
+        where: { id: eggId, userId, hatchedPetId: null },
+        data: { hatchedPetId: petId },
       });
+      if (claimed.count === 0) throw new NotFoundException('Huevo no encontrado o ya eclosionado');
+
+      // 2) Pity con comparación: solo se escribe si nadie lo cambió desde la lectura
+      const pityUpdated = await tx.pityCounter.updateMany({
+        where: { userId, sinceSuperRare: pity.sinceSuperRare, sinceLegendary: pity.sinceLegendary },
+        data: { sinceSuperRare: newSinceSuper, sinceLegendary: newSinceLeg },
+      });
+      if (pityUpdated.count === 0) throw new ConflictException('El contador cambió durante la eclosión');
 
       const pet = await tx.pet.create({
         data: {
+          id: petId,
           userId,
           speciesId: chosenSpecies.id,
           rarity: rolledRarity,
@@ -168,11 +198,6 @@ export class HatchingService {
           species: true,
           pattern: true,
         },
-      });
-
-      await tx.egg.update({
-        where: { id: eggId },
-        data: { hatchedPetId: pet.id },
       });
 
       return pet;

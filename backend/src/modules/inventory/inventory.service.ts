@@ -70,6 +70,9 @@ export class InventoryService {
 
   /** Consume 1 unidad. Si se indica `kind`, el objeto debe ser de ese tipo (se valida antes de gastarlo). */
   async consumeItem(userId: string, itemId: string, kind?: string) {
+    if (typeof itemId !== 'string' || itemId.length === 0 || itemId.length > 64) {
+      throw new BadRequestException('itemId no es válido');
+    }
     const inv = await this.prisma.inventoryItem.findUnique({
       where: { userId_itemId: { userId, itemId } },
       include: { item: true },

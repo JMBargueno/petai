@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
+import { AppExceptionFilter } from './common/app-exception.filter';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.config';
 import { PrismaModule } from './prisma/prisma.module';
@@ -32,5 +34,6 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
     AiModule,
     BattlesModule,
   ],
+  providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],
 })
 export class AppModule {}
