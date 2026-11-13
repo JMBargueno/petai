@@ -21,7 +21,12 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
   const api = () => request(app.getHttpServer());
 
   /** Cada prueba usa una banda de ELO propia: así los rivales son solo los que crea el propio test. */
-  const newBand = () => 2_000_000 + Math.floor(Math.random() * 5_000_000);
+  let bandCursor = 0;
+  const newBand = async () => {
+    const top = (await prisma.pet.aggregate({ _max: { elo: true } }))._max.elo ?? 0;
+    bandCursor = Math.max(bandCursor, top) + 10_000 + Math.floor(Math.random() * 1000);
+    return bandCursor;
+  };
 
   async function signup(opts: { elo?: number; level?: number; statPoints?: number } = {}) {
     const reg = await api().post('/v1/auth/register').send({
@@ -123,7 +128,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     let notified: any[];
 
     beforeAll(async () => {
-      const band = newBand();
+      const band = await newBand();
       a = await signup({ elo: band, level: 8 });
       b = await signup({ elo: band + 30, level: 8 });
       notified = [];
@@ -204,16 +209,18 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     it('10. clasificación global (ELO) y semanal (puntos): ambos aparecen y la posición propia se informa', async () => {
       const global = (await api().get(`/v1/leaderboard?scope=global&limit=100&petId=${a.petId}`).set(a.auth).expect(200)).body;
       const ids = global.entries.map((e: any) => e.petId);
-      expect(ids).toEqual(expect.arrayContaining([a.petId, b.petId]));
+      // Las bandas de ELO de los tests están siempre por encima del resto: ambas mascotas están en cabeza
+      expect(ids.slice(0, 2).sort()).toEqual([a.petId, b.petId].sort());
       // ordenada por ELO descendente
       const elos = global.entries.map((e: any) => e.elo);
       expect([...elos].sort((x: number, y: number) => y - x)).toEqual(elos);
       expect(global.me.rank).toBe(ids.indexOf(a.petId) + 1);
       expect(global.entries.find((e: any) => e.petId === a.petId)).toMatchObject({ mine: true, league: 'mythic' });
 
-      const weekly = (await api().get(`/v1/leaderboard?scope=weekly&limit=100`).set(a.auth).expect(200)).body;
-      const row = weekly.entries.find((e: any) => e.petId === a.petId);
-      expect(row.score).toBe(balance.combats.weeklyPoints[res.result.outcome]);
+      // Semanal: muchas mascotas empatan a puntos, así que se comprueba la puntuación propia con "me"
+      const weekly = (await api().get(`/v1/leaderboard?scope=weekly&limit=100&petId=${a.petId}`).set(a.auth).expect(200)).body;
+      expect(weekly.me.score).toBe(balance.combats.weeklyPoints[res.result.outcome]);
+      expect(weekly.me.rank).toBeGreaterThanOrEqual(1);
     });
 
     it('11. parámetros de la clasificación validados', async () => {
@@ -227,7 +234,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
 
   describe('bots, límites y reglas', () => {
     it('12. sin rival cercano se enfrenta a un bot determinista: sin ELO ni puntos globales y con menos recompensa', async () => {
-      const u = await signup({ elo: newBand(), level: 6 });
+      const u = await signup({ elo: await newBand(), level: 6 });
       const r = (await fight(u).expect(201)).body;
       expect(r.opponent.isBot).toBe(true);
       expect(r.opponent.name).toContain('Fantasma de');
@@ -242,12 +249,12 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
 
       const global = (await api().get('/v1/leaderboard?scope=global&limit=100').set(u.auth)).body.entries;
       expect(global.some((e: any) => e.name?.startsWith('Fantasma'))).toBe(false);
-      const weekly = (await api().get('/v1/leaderboard?scope=weekly&limit=100').set(u.auth)).body.entries;
-      expect(weekly.find((e: any) => e.petId === u.petId)?.score).toBe(balance.combats.weeklyPoints[r.result.outcome]);
+      const weekly = (await api().get(`/v1/leaderboard?scope=weekly&limit=100&petId=${u.petId}`).set(u.auth)).body;
+      expect(weekly.me.score).toBe(balance.combats.weeklyPoints[r.result.outcome]);
     });
 
     it('13. la misma semilla genera el mismo bot y la misma pelea (reproducible desde el registro)', async () => {
-      const u = await signup({ elo: newBand(), level: 6 });
+      const u = await signup({ elo: await newBand(), level: 6 });
       const r = (await fight(u).expect(201)).body;
       const stored = (await prisma.battle.findUniqueOrThrow({ where: { id: r.battleId } })).log as any;
       expect(stored.events).toEqual(r.replay.events);
@@ -255,7 +262,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     });
 
     it('14. no se puede pelear dormida, sin energía o con un petId inválido', async () => {
-      const u = await signup({ elo: newBand() });
+      const u = await signup({ elo: await newBand() });
       await api().post('/v1/battles/matchmake').set(u.auth).send({}).expect(400);
       await prisma.pet.update({ where: { id: u.petId }, data: { sleeping: true } });
       expect((await fight(u).expect(400)).body.message).toContain('durmiendo');
@@ -266,7 +273,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     });
 
     it('15. límite diario de peleas (429) que se recupera pasadas 24 h', async () => {
-      const u = await signup({ elo: newBand() });
+      const u = await signup({ elo: await newBand() });
       const limit = balance.combats.dailyFreeBattles;
       await prisma.battle.createMany({
         data: Array.from({ length: limit }, (_, i) => ({
@@ -283,7 +290,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     });
 
     it('16. la energía se descuenta y la felicidad se mantiene en 0–100', async () => {
-      const u = await signup({ elo: newBand() });
+      const u = await signup({ elo: await newBand() });
       await prisma.pet.update({ where: { id: u.petId }, data: { happiness: 2 } });
       const r = (await fight(u).expect(201)).body;
       expect(r.pet.happiness).toBeGreaterThanOrEqual(0);
@@ -292,7 +299,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     });
 
     it('17. solo una pelea a la vez por usuario', async () => {
-      const u = await signup({ elo: newBand() });
+      const u = await signup({ elo: await newBand() });
       const [x, y] = await Promise.all([fight(u), fight(u)]);
       const ok = [x, y].filter((r) => r.status === 201);
       expect(ok.length).toBeGreaterThanOrEqual(1);
@@ -305,7 +312,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     });
 
     it('18. la mejora de estadísticas se nota: una mascota reforzada gana más', async () => {
-      const band = newBand();
+      const band = await newBand();
       let wins = 0;
       const n = 8;
       for (let i = 0; i < n; i++) {
