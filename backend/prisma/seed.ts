@@ -86,6 +86,12 @@ async function main() {
     });
   }
 
+  // El usuario demo tiene una contraseña pública: jamás se crea en producción
+  if (process.env.NODE_ENV === 'production') {
+    console.log('✓ Catálogo cargado. Producción: no se crea el usuario demo.');
+    return;
+  }
+
   // Usuario Demo preconfigurado
   console.log('Creando usuario demo...');
   const argon2 = await import('argon2');

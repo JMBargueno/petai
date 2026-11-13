@@ -1,0 +1,13 @@
+.git
+**/node_modules
+**/dist
+**/target
+desktop
+mobile
+android
+ios
+docs
+*.log
+.env
+.env.*
+!.env.example

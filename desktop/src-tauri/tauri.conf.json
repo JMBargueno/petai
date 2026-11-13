@@ -33,6 +33,24 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "PetAI",
+    "copyright": "© 2026 PetAI",
+    "category": "Game",
+    "shortDescription": "Tu mascota virtual inteligente",
+    "longDescription": "PetAI: mascota virtual con IA que vive en tu escritorio.",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "Spanish",
+          "English"
+        ],
+        "displayLanguageSelector": true
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
   }
 }

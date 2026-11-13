@@ -1422,11 +1422,41 @@
           "Battles"
         ]
       }
+    },
+    "/v1/health": {
+      "get": {
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Liveness: el proceso responde",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/v1/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Readiness: PostgreSQL responde (Redis es opcional: solo degrada)",
+        "tags": [
+          "Health"
+        ]
+      }
     }
   },
   "info": {
     "title": "PetAI API",
-    "description": "API autoritativa para el ecosistema PetAI",
+    "description": "API autoritativa para el ecosistema PetAI (tamagotchi virtual inteligente)",
     "version": "1.0.0",
     "contact": {}
   },

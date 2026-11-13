@@ -14,7 +14,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 3** | Inteligencia Artificial (IA) | ✅ Completada (salvo modo suscripción y Redis) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ✅ Completada (falta fin de temporada) | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ✅ Android (salvo Play Billing/FCM) · ⏳ iOS pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
-| **Fase 6** | Pulido y Lanzamiento | ⏳ Pendiente | Seguridad, balance, optimización, tiendas y despliegue |
+| **Fase 6** | Pulido y Lanzamiento | 🚧 Hecho lo técnico; pendiente lo que depende de cuentas externas | Seguridad, balance, optimización, tiendas y despliegue |
 
 ---
 
@@ -106,6 +106,8 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 ---
 
 ## Fase 6 — Pulido y Lanzamiento
-- Empaquetado instalable para Windows (MSIX/NSIS) y macOS (.dmg).
-- Pruebas de estrés y auditoría de seguridad.
-- Documentación de despliegue en producción.
+- [x] Empaquetado de escritorio: instalador NSIS de Windows compilado y comprobado (3,85 MiB), URL del backend configurable con `VITE_API_URL`, flujo de release por etiqueta en `.github/workflows/release.yml` (Windows y macOS; sin probar en CI). MSIX no lo soporta Tauri 2.
+- [x] Seguridad: límites de intentos, vinculación de dispositivos y límite del chat en Redis (con respaldo en memoria), `helmet`, sondas `/health` y `/health/ready`, cierre ordenado, el seed no crea el usuario demo en producción, `pnpm audit` en CI. Sin pentest externo.
+- [x] Pruebas de carga de lectura (`backend/scripts/loadtest.sh`): sin errores a 50 conexiones; cifras en `docs/DEPLOY.md`.
+- [x] Despliegue: `backend/Dockerfile` (probado: migra, arranca en producción y queda *healthy*), `docker-compose.prod.yml` y `docs/DEPLOY.md`.
+- [ ] Pendiente (requiere cuentas o equipo externo): firma de código de Windows y notarización en macOS, .dmg (hay que compilarlo en un Mac), tienda de Microsoft/Mac App Store, publicación en Play Store/App Store, auto-actualización, servidor de producción y dominio, auditoría externa, balance del juego con datos reales de jugadores.

@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import { applyCors } from './common/cors';
+import { applySecurity } from './common/security';
 
 /** Exporta openapi.json a shared/openapi para los generadores de clientes. */
 function exportOpenApi(document: unknown) {
@@ -38,12 +39,16 @@ async function bootstrap() {
   const prefix = configService.get<string>('API_PREFIX', 'v1');
   app.setGlobalPrefix(prefix);
 
+  // Cierre ordenado: Nest cierra Prisma, Redis y el servidor al recibir SIGTERM/SIGINT
+  app.enableShutdownHooks();
+
   // CORS: solo los orígenes de CORS_ORIGINS (Vite y Tauri por defecto), no cualquiera
   applyCors(app, configService.get<string>('CORS_ORIGINS'));
 
   // OpenAPI / Swagger: por defecto solo fuera de producción (SWAGGER_ENABLED lo fuerza en cualquier entorno)
   const isProduction = configService.get<string>('NODE_ENV') === 'production';
   const swaggerEnabled = (configService.get<string>('SWAGGER_ENABLED') ?? (isProduction ? 'false' : 'true')) === 'true';
+  applySecurity(app, { swagger: swaggerEnabled });
   if (swaggerEnabled) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('PetAI API')

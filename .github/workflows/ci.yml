@@ -55,6 +55,9 @@ jobs:
       - name: Generate Prisma client
         run: pnpm --filter petai-backend exec prisma generate
 
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level=high
+
       - name: Build backend
         run: pnpm --filter petai-backend run build
 
@@ -194,3 +197,14 @@ jobs:
           name: petai-android-debug
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
+
+  docker:
+    name: Backend image (Docker build)
+    runs-on: ubuntu-latest
+    needs: validate-data
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -f backend/Dockerfile -t petai-backend:ci .

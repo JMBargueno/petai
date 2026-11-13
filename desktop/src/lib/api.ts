@@ -1,9 +1,15 @@
 import createClient from 'openapi-fetch';
 import type { paths } from '@shared/openapi/api-types';
 
+/**
+ * URL del backend. En el servidor de desarrollo de Vite se usa el proxy (misma origin); en una
+ * compilación de producción sale de VITE_API_URL (p. ej. https://api.petai.example, sin /v1) y, si no
+ * se define, apunta a un backend local.
+ */
+const configuredUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim().replace(/\/+$/, '');
 export const API_BASE_URL = typeof window !== 'undefined' && window.location.origin.includes('localhost:')
   ? ''
-  : 'http://127.0.0.1:3000';
+  : configuredUrl || 'http://127.0.0.1:3000';
 
 const client = createClient<paths>({ baseUrl: API_BASE_URL });
 
