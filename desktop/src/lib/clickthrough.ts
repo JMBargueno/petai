@@ -8,6 +8,10 @@ const REFRESH_MS = 50;
 type Rect = { x: number; y: number; w: number; h: number };
 
 function collectRects(): Rect[] {
+  // Arrastre en curso: capturar todo el viewport
+  if (document.body.dataset.dragging) {
+    return [{ x: 0, y: 0, w: window.innerWidth, h: window.innerHeight }];
+  }
   const rects: Rect[] = [];
   document.querySelectorAll<HTMLElement>(INTERACTIVE_SELECTOR).forEach((el) => {
     const style = getComputedStyle(el);

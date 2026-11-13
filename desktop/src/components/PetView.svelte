@@ -39,20 +39,41 @@
     }, 2500);
   }
 
+  let dragMoved = false;
+  const PET_SIZE = 128;
+
   function handleMouseDown(e: MouseEvent) {
+    if (e.button !== 0) return;
     isDragging = true;
+    dragMoved = false;
     dragStartX = e.clientX - posX;
     dragStartY = e.clientY - posY;
+    // Mientras se arrastra, el click-through captura todo el viewport para
+    // no perder mousemove/mouseup si el cursor se adelanta al sprite.
+    document.body.dataset.dragging = '1';
   }
 
   function handleMouseMove(e: MouseEvent) {
     if (!isDragging) return;
-    posX = e.clientX - dragStartX;
-    posY = Math.max(10, e.clientY - dragStartY);
+    const nx = e.clientX - dragStartX;
+    const ny = e.clientY - dragStartY;
+    if (Math.abs(nx - posX) + Math.abs(ny - posY) > 0) dragMoved = true;
+    posX = Math.min(Math.max(0, nx), window.innerWidth - PET_SIZE);
+    posY = Math.min(Math.max(0, ny), window.innerHeight - PET_SIZE);
   }
 
   function handleMouseUp() {
     isDragging = false;
+    delete document.body.dataset.dragging;
+  }
+
+  function handleClick() {
+    // Un arrastre no debe contar como clic (abriría el panel)
+    if (dragMoved) {
+      dragMoved = false;
+      return;
+    }
+    onPetClick();
   }
 
   onMount(() => {
@@ -101,9 +122,10 @@
   class="pet-container"
   role="button"
   tabindex="0"
+  class:dragging={isDragging}
   style="left: {posX}px; top: {posY}px; transform: scaleX({direction});"
   on:mousedown={handleMouseDown}
-  on:click={onPetClick}
+  on:click={handleClick}
   on:keydown={(e) => e.key === 'Enter' && onPetClick()}
 >
   <div class="sprite-wrapper">
@@ -155,6 +177,11 @@
 
   .pet-container:active {
     cursor: grabbing;
+  }
+
+  /* Sin interpolación mientras se arrastra: sigue al cursor al instante */
+  .pet-container.dragging {
+    transition: none;
   }
 
   .sprite-wrapper {

@@ -73,6 +73,15 @@ fn main() {
         .manage(HitRegions::default())
         .invoke_handler(tauri::generate_handler![set_hit_regions])
         .setup(|app| {
+            // La ventana transparente cubre el área útil del monitor (sin tapar la
+            // barra de tareas) para que la mascota pueda moverse por toda la pantalla.
+            if let Some(window) = app.get_webview_window("main") {
+                if let Ok(Some(monitor)) = window.primary_monitor() {
+                    let area = monitor.work_area();
+                    let _ = window.set_position(area.position);
+                    let _ = window.set_size(area.size);
+                }
+            }
             spawn_click_through_loop(app.handle().clone());
 
             // Configurar Menú de la Bandeja del Sistema (System Tray)
