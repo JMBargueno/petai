@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
   import { api } from '../lib/api';
   import { eggLibrary } from '../lib/sprites';
 
@@ -9,6 +9,44 @@
   export let inventory: any[] = [];
   export let shopItems: any[] = [];
   export let isOpen: boolean = true;
+
+  // Arrastre del panel desde su cabecera (la posición se conserva al cerrar/abrir)
+  let panelEl: HTMLElement | null = null;
+  let panelPos: { x: number; y: number } | null = null;
+  let panelDragging = false;
+  let panelGrab = { x: 0, y: 0 };
+
+  function startPanelDrag(e: MouseEvent) {
+    if (e.button !== 0 || !panelEl || (e.target as HTMLElement).closest('button')) return;
+    const r = panelEl.getBoundingClientRect();
+    panelPos = { x: r.left, y: r.top };
+    panelGrab = { x: e.clientX - r.left, y: e.clientY - r.top };
+    panelDragging = true;
+    // El click-through captura todo el viewport mientras se arrastra
+    document.body.dataset.dragging = '1';
+    window.addEventListener('mousemove', onPanelDrag);
+    window.addEventListener('mouseup', endPanelDrag);
+    e.preventDefault();
+  }
+
+  function onPanelDrag(e: MouseEvent) {
+    if (!panelDragging || !panelEl) return;
+    const maxX = window.innerWidth - panelEl.offsetWidth;
+    const maxY = window.innerHeight - 48; // deja la cabecera siempre visible
+    panelPos = {
+      x: Math.min(Math.max(0, e.clientX - panelGrab.x), Math.max(0, maxX)),
+      y: Math.min(Math.max(0, e.clientY - panelGrab.y), Math.max(0, maxY)),
+    };
+  }
+
+  function endPanelDrag() {
+    panelDragging = false;
+    delete document.body.dataset.dragging;
+    window.removeEventListener('mousemove', onPanelDrag);
+    window.removeEventListener('mouseup', endPanelDrag);
+  }
+
+  onDestroy(endPanelDrag);
 
   const dispatch = createEventDispatcher();
 
@@ -131,8 +169,12 @@
 </script>
 
 {#if isOpen}
-  <div class="panel-card">
-    <div class="panel-header">
+  <div
+    class="panel-card"
+    bind:this={panelEl}
+    style={panelPos ? `left: ${panelPos.x}px; top: ${panelPos.y}px; right: auto;` : ''}
+  >
+    <div class="panel-header" on:mousedown={startPanelDrag} role="presentation">
       <div class="header-title">
         <span class="logo">🐾 PetAI</span>
         {#if user}
@@ -347,6 +389,7 @@
   }
 
   .panel-header {
+    cursor: grab;
     display: flex;
     justify-content: space-between;
     align-items: center;
