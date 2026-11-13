@@ -31,9 +31,10 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `TRUST_PROXY` | sí tras proxy | Nº de saltos de confianza (normalmente `1`). Sin él, el límite de intentos vería la IP del proxy. |
 | `CORS_ORIGINS` | no | Orígenes de navegador permitidos. Los clientes nativos y el webview de Tauri no necesitan más. |
 | `SWAGGER_ENABLED` | no | Por defecto `false` en producción. |
-| `AI_ALLOW_INSECURE_URLS`, `AUTH_RATE_LIMIT_DISABLED` | **nunca** | El arranque falla si están activas en producción. |
+| `RATE_LIMIT_PER_MINUTE` | no | Peticiones por minuto por usuario autenticado o por IP (300 por defecto). Súbelo si muchos usuarios comparten IP sin iniciar sesión. |
+| `AI_ALLOW_INSECURE_URLS`, `AUTH_RATE_LIMIT_DISABLED`, `RATE_LIMIT_DISABLED` | **nunca** | El arranque falla si están activas en producción. |
 
-Los límites de intentos (`AUTH_*`) y las cuotas de IA (`AI_MONTHLY_TOKEN_QUOTA_*`) tienen valores por defecto
+Los límites de intentos (`AUTH_*`), el límite global (`RATE_LIMIT_PER_MINUTE`) y las cuotas de IA (`AI_MONTHLY_TOKEN_QUOTA_*`) tienen valores por defecto
 razonables; ver `.env.example` y `docs/API.md`.
 
 ## 3. Despliegue con Docker Compose (un servidor)
@@ -125,16 +126,31 @@ Medidas ya aplicadas, con su prueba automática:
 
 - Contraseñas con Argon2id; mismo coste de cálculo y misma respuesta para cuenta inexistente o contraseña errónea.
 - Tokens: acceso corto (15 min) y refresco rotatorio atómico con detección de reutilización (revoca todas las sesiones).
-- Límite de intentos en login, registro, refresh, vinculación de dispositivos y chat (Redis).
-- Keys de IA de los usuarios cifradas con AES-256-GCM; protección SSRF en las URL de proveedor.
+- El usuario puede cerrar todas sus sesiones (`/auth/logout-all`) y cambiar la contraseña (`/auth/password`, que también las cierra). Las conexiones WebSocket se cortan al caducar el token con el que se abrieron (máximo 5 por usuario).
+- Límite de intentos en login (por cuenta+IP, por IP y por cuenta), registro, refresh, vinculación de dispositivos y chat, más un límite global de peticiones por usuario/IP (Redis).
+- Vinculación de dispositivos: la confirmación es atómica y un código ya confirmado no se puede reasignar a otra cuenta.
+- Keys de IA de los usuarios cifradas con AES-256-GCM y ligadas al usuario (AAD): una key copiada a la fila de otro usuario no se descifra.
+- Protección SSRF en las URL de proveedor: solo HTTPS, sin rangos privados o reservados (incluidas las IPv4 incrustadas en IPv6: mapeadas, NAT64, 6to4) y con la conexión fijada a la IP validada, de modo que un cambio de DNS posterior (rebinding) no la desvía.
+- Las acciones que dan recompensa tienen coste, espera o condición (el baño solo cuenta si la mascota lo necesita); el ELO se actualiza por incrementos atómicos.
+- JWT con el algoritmo fijado (HS256); los errores de red del proveedor de IA no se devuelven al cliente.
 - Validación estricta de entradas (zod) y filtro global de excepciones sin filtrar trazas.
 - CORS por lista de orígenes; Swagger desactivado en producción; cabeceras de seguridad con `helmet`.
 - Arranque bloqueado en producción con secretos o ajustes inseguros.
 - El usuario demo (contraseña pública) no se crea en producción.
-- `pnpm audit --prod`: sin vulnerabilidades conocidas en la fecha de esta revisión (repetir en cada release; la CI no lo ejecuta todavía).
+- `pnpm audit --prod`: sin vulnerabilidades conocidas en la fecha de esta revisión (la CI lo ejecuta en cada cambio con `--audit-level=high`).
+- CI con permisos de solo lectura y acciones de terceros fijadas por SHA.
+
+Riesgos conocidos y aceptados:
+
+- El registro responde 409 si el correo ya existe (permite saber si una cuenta está registrada; el límite de registros por IP lo acota).
+- El límite de fallos por cuenta desde cualquier IP permite que un atacante con muchas direcciones bloquee temporalmente el inicio de sesión de un tercero (no sus sesiones ya abiertas).
+- Tras `logout-all` o un cambio de contraseña, los access tokens ya emitidos siguen valiendo hasta caducar (15 min).
+- En el modo Hermes local la respuesta la afirma el cliente: sube la inteligencia sin pasar por un proveedor (limitado a 20 mensajes por minuto y sin efecto en el combate).
+- La imagen de producción incluye las dependencias de desarrollo (necesita el CLI de Prisma y ts-node para migraciones y seed).
 
 Pendiente o fuera de alcance de esta revisión (no se ha hecho una auditoría externa ni un pentest):
-verificación de compras (Play Billing / StoreKit), rotación de secretos sin cortes, y WAF/DDoS a nivel de infraestructura.
+verificación de compras (Play Billing / StoreKit), rotación de secretos sin cortes, WAF/DDoS a nivel de infraestructura,
+verificación de correo y recuperación de contraseña, y renovación de sesión en la app de escritorio (hoy no usa el refresh token).
 
 ## 9. Distribución de los clientes
 

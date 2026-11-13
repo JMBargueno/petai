@@ -130,6 +130,56 @@
         ]
       }
     },
+    "/v1/auth/logout-all": {
+      "post": {
+        "operationId": "AuthController_logoutAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cerrar todas las sesiones del usuario en todos sus dispositivos",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/password": {
+      "post": {
+        "operationId": "AuthController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar la contraseña: exige la actual, cierra las demás sesiones y devuelve tokens nuevos",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/v1/auth/device/start": {
       "post": {
         "operationId": "AuthController_deviceStart",
@@ -1456,7 +1506,7 @@
   },
   "info": {
     "title": "PetAI API",
-    "description": "API autoritativa para el ecosistema PetAI (tamagotchi virtual inteligente)",
+    "description": "API autoritativa para el ecosistema PetAI",
     "version": "1.0.0",
     "contact": {}
   },
@@ -1545,6 +1595,23 @@
         },
         "required": [
           "refreshToken"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "Contraseña actual"
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "Contraseña nueva (mínimo 8 caracteres, distinta de la actual)"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
         ]
       }
     }

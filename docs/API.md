@@ -17,12 +17,16 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `POST /auth/register` `{ email, password, displayName? }`: Registro (Argon2id). El correo se normaliza a minúsculas (máx. 254) y debe ser válido; la contraseña tiene de 8 a 128 caracteres; `displayName` de 1 a 50 sin caracteres de control. Devuelve `accessToken`, `refreshToken` y el usuario. Entradas inválidas → 400; correo repetido → 409.
 - `POST /auth/login` `{ email, password }`: Autenticación. Cuenta inexistente y contraseña errónea dan la misma respuesta (401) y el mismo coste de cálculo (sin pistas por tiempos).
 - `POST /auth/refresh` `{ refreshToken }`: Rotación del token de refresco, atómica (un token solo se canjea una vez). Reutilizar un token ya revocado hace más de 10 s se trata como robo y **revoca todas las sesiones** de la cuenta.
-- `POST /auth/logout` `{ refreshToken }`: Revoca ese token (idempotente).
+- `POST /auth/logout` `{ refreshToken }`: Revoca ese token (idempotente). 30 por IP y minuto.
+- `POST /auth/logout-all` (con sesión): revoca **todos** los refresh tokens del usuario y corta sus conexiones en tiempo real. Devuelve `{ ok, revoked }`. Los access tokens ya emitidos valen hasta que caducan (15 min por defecto), pero no se pueden renovar.
+- `POST /auth/password` `{ currentPassword, newPassword }` (con sesión): cambia la contraseña. Exige la actual (incorrecta → 403), la nueva cumple la política del registro y debe ser distinta. Cierra todas las demás sesiones y devuelve `{ ok, accessToken, refreshToken }` para el dispositivo que hizo el cambio. 5 intentos por usuario cada 15 min.
 
-**Límite de intentos** (429 con `retryAfterSeconds`): 10 fallos de login por cuenta+IP y 100 por IP cada 15 min (un acierto reinicia el de la cuenta), 10 registros por IP y hora, 60 refresh por IP y minuto. Se configura con `AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT`, `AUTH_LOGIN_MAX_FAILS_PER_IP`, `AUTH_LOGIN_WINDOW_MINUTES`, `AUTH_REGISTER_MAX_PER_IP` y `AUTH_REFRESH_MAX_PER_MINUTE`. Detrás de un proxy hay que declarar `TRUST_PROXY` (nº de saltos de confianza) para que cuente la IP real. Los contadores viven en Redis (ZSET por clave, compartidos entre instancias del backend); si Redis no responde se usa un respaldo en memoria por instancia.
+**Límite de intentos** (429 con `retryAfterSeconds`): 10 fallos de login por cuenta+IP, 100 por IP y 50 por cuenta desde cualquier IP cada 15 min (un acierto reinicia solo el de cuenta+IP), 10 registros por IP y hora, 60 refresh por IP y minuto. Se configura con `AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT`, `AUTH_LOGIN_MAX_FAILS_PER_IP`, `AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT_GLOBAL`, `AUTH_LOGIN_WINDOW_MINUTES`, `AUTH_REGISTER_MAX_PER_IP` y `AUTH_REFRESH_MAX_PER_MINUTE`.
+
+**Límite global de peticiones** (429 con `retryAfterSeconds` y cabecera `Retry-After`): 300 peticiones por minuto por usuario autenticado, o por IP si no hay un access token válido. Afecta a todas las rutas salvo `/health`. Se configura con `RATE_LIMIT_PER_MINUTE`. Detrás de un proxy hay que declarar `TRUST_PROXY` (nº de saltos de confianza) para que cuente la IP real. Los contadores viven en Redis (ZSET por clave, compartidos entre instancias del backend); si Redis no responde se usa un respaldo en memoria por instancia.
 - `POST /auth/device/start` (sin sesión): devuelve `{ code, pollToken, expiresInSeconds }` (código de 6 dígitos, 5 min). 20 por IP y hora.
-- `POST /auth/device/confirm` `{ code }` (con sesión): vincula el código mostrado en otro dispositivo. 10 intentos por IP y por usuario cada 15 min; código inexistente o caducado → 404.
-- `POST /auth/device/poll` `{ pollToken }` (sin sesión): `{ status: "pending" }` o, una sola vez, `{ status: "confirmed", accessToken, refreshToken, user }`. Estado en Redis con caducidad de 5 min (respaldo en memoria si Redis no responde).
+- `POST /auth/device/confirm` `{ code }` (con sesión): vincula el código mostrado en otro dispositivo. 10 intentos por IP y por usuario cada 15 min; código inexistente o caducado → 404; código ya confirmado (por cualquier cuenta) → 409: la primera confirmación es la que vale.
+- `POST /auth/device/poll` `{ pollToken }` (sin sesión): `{ status: "pending" }` o, una sola vez, `{ status: "confirmed", accessToken, refreshToken, user }`. 120 por IP y minuto. Estado en Redis con caducidad de 5 min (respaldo en memoria si Redis no responde).
 
 ### 2.2 Usuario y Perfil (`/users` y `/me`)
 - `GET /me`: Obtener perfil del usuario actual (monedas, gemas, nivel de cuenta, zona horaria).
@@ -40,7 +44,7 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `GET /pets`: Listar mascotas del usuario (con cálculo de tick perezoso aplicado).
 - `GET /pets/:id`: Detalle completo de una mascota.
 - `POST /pets/:id/feed`: Alimentar con un ítem del inventario (`{ itemId: string }`).
-- `POST /pets/:id/clean`: Bañar/limpiar a la mascota.
+- `POST /pets/:id/clean`: Bañar/limpiar a la mascota (higiene a 100, +10 de felicidad y XP). Solo si lo necesita: con higiene ≥ 80 (`vitals.cleanMaxHygiene` en `balance.json`) responde 400.
 - `POST /pets/:id/sleep`: Poner a dormir a la mascota.
 - `POST /pets/:id/wake`: Despertar a la mascota.
 - `POST /pets/:id/heal`: Administrar medicina si la mascota está enferma.
