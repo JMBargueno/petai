@@ -73,6 +73,13 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `POST /ai/config/test`: Comprobar validez de la clave y conectividad con el modelo.
 - `POST /pets/:id/chat` `{ message }` (máx. 1000 caracteres, 20 mensajes/min por usuario): Conversación en streaming SSE. Eventos: `delta` `{text}`, `done` `{message, intelligence, tier}` y `error` `{message}`. El prompt de sistema se genera en el servidor (especie, carácter, ánimo y estadísticas). Solo se guarda el intercambio si se completa; cada charla suma 1 a `intelligence`.
 - `GET /pets/:id/chat/history?limit=`: Historial de la conversación (usuario y mascota).
+
+#### Agente (intelligence ≥ 500)
+Con 500+ de inteligencia el modelo recibe herramientas (*function calling*): `get_my_status`, `request_food`, `suggest_minigame`, `search_memory`, `list_reminders` y `create_reminder`. El usuario y la mascota salen siempre de la sesión, nunca de los argumentos del modelo. Se permiten hasta 3 vueltas de herramientas por mensaje. El stream SSE añade los eventos `tool` `{name}` (herramienta de lectura ejecutada) y `action` `{id, tool, summary, expiresAt}` (acción pendiente de confirmar).
+- Las herramientas con efectos (`create_reminder`) **no se ejecutan**: se crea una acción pendiente (máx. 5 por usuario, caduca a los 10 min) y el servidor genera el texto de la tarjeta a partir de los argumentos validados.
+- `GET /pets/:id/actions`: Acciones pendientes de confirmar.
+- `POST /pets/:id/actions/:actionId/confirm`: Confirma y ejecuta (una sola vez; se revalidan los argumentos). `POST …/reject`: Rechaza.
+- `GET /reminders`, `GET /reminders/due`, `POST /reminders/:id/delivered`, `DELETE /reminders/:id`: Recordatorios del usuario (máx. 20 pendientes). El escritorio consulta los vencidos cada minuto y avisa con una notificación.
 - `GET /pets/:id/memories`: Recuerdos de la mascota (`kind`: `fact` | `summary`) y si la memoria está desbloqueada (intelligence ≥ 200). Tras cada 6 mensajes del usuario, el servidor resume la conversación y extrae hechos en segundo plano con el proveedor del usuario; se descartan los hechos sensibles (claves, números largos, instrucciones a la IA) y se guardan como máximo 50 hechos por mascota. Los recuerdos relevantes se inyectan en el prompt como datos, nunca como instrucciones.
 - `DELETE /pets/:id/memories/:memoryId`: Olvidar un recuerdo. `DELETE /pets/:id/memories`: Borrar toda la memoria.
 - `POST /pets/:id/tool-calls/:callId/confirm`: Confirmar o denegar una acción solicitada por el agente.

@@ -1,6 +1,25 @@
-import { ChatMessageInput, ChatOptions, LlmEvent, LlmProvider } from './llm-provider';
+import { ChatMessageInput, ChatOptions, LlmEvent, LlmProvider, ToolCall } from './llm-provider';
 
 const REQUEST_TIMEOUT_MS = 60_000;
+const MAX_TOOL_ARGS_CHARS = 10_000;
+const MAX_TOOL_CALLS = 4;
+
+/** Traduce nuestros mensajes al formato de Chat Completions de OpenAI. */
+function toWire(m: ChatMessageInput) {
+  if (m.role === 'tool') return { role: 'tool', tool_call_id: m.toolCallId, content: m.content };
+  if (m.role === 'assistant' && m.toolCalls?.length) {
+    return {
+      role: 'assistant',
+      content: m.content || null,
+      tool_calls: m.toolCalls.map((c) => ({
+        id: c.id,
+        type: 'function',
+        function: { name: c.name, arguments: c.arguments },
+      })),
+    };
+  }
+  return { role: m.role, content: m.content };
+}
 
 /**
  * Proveedor para cualquier API compatible con OpenAI Chat Completions:
@@ -32,7 +51,16 @@ export class OpenAiCompatibleProvider implements LlmProvider {
       signal,
       body: JSON.stringify({
         model: opts.model,
-        messages,
+        messages: messages.map(toWire),
+        ...(opts.tools?.length
+          ? {
+              tools: opts.tools.map((t) => ({
+                type: 'function',
+                function: { name: t.name, description: t.description, parameters: t.parameters },
+              })),
+              tool_choice: 'auto',
+            }
+          : {}),
         stream: true,
         stream_options: { include_usage: true },
         temperature: opts.temperature ?? 0.8,
@@ -50,6 +78,14 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     const decoder = new TextDecoder();
     let buffer = '';
     let usage: { promptTokens?: number; completionTokens?: number } | undefined;
+    // Las llamadas a herramientas llegan fragmentadas por índice: se acumulan
+    const calls = new Map<number, { id: string; name: string; args: string }>();
+    const flushCalls = function* (): Generator<LlmEvent> {
+      for (const [, c] of [...calls.entries()].sort((a, b) => a[0] - b[0]).slice(0, MAX_TOOL_CALLS)) {
+        if (c.name) yield { type: 'tool_call', id: c.id || `call_${Math.random().toString(36).slice(2, 10)}`, name: c.name, arguments: c.args };
+      }
+      calls.clear();
+    };
 
     for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
       buffer += decoder.decode(chunk, { stream: true });
@@ -61,6 +97,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         if (!line.startsWith('data:')) continue;
         const data = line.slice(5).trim();
         if (data === '[DONE]') {
+          yield* flushCalls();
           yield { type: 'done', usage };
           return;
         }
@@ -68,6 +105,16 @@ export class OpenAiCompatibleProvider implements LlmProvider {
           const json = JSON.parse(data);
           const text = json.choices?.[0]?.delta?.content;
           if (typeof text === 'string' && text.length > 0) yield { type: 'delta', text };
+          for (const tc of json.choices?.[0]?.delta?.tool_calls ?? []) {
+            const idx = typeof tc.index === 'number' ? tc.index : 0;
+            const cur = calls.get(idx) ?? { id: '', name: '', args: '' };
+            if (tc.id) cur.id = tc.id;
+            if (tc.function?.name) cur.name += tc.function.name;
+            if (typeof tc.function?.arguments === 'string' && cur.args.length < MAX_TOOL_ARGS_CHARS) {
+              cur.args += tc.function.arguments;
+            }
+            calls.set(idx, cur);
+          }
           if (json.usage) {
             usage = {
               promptTokens: json.usage.prompt_tokens,
@@ -79,6 +126,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         }
       }
     }
+    yield* flushCalls();
     yield { type: 'done', usage };
   }
 

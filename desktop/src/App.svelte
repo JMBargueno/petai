@@ -3,7 +3,7 @@
   import { api, getAccessToken } from './lib/api';
   import { initSocket, getSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
-  import { notifyPetNeeds } from './lib/notifications';
+  import { notifyPetNeeds, notifyNow } from './lib/notifications';
   import PetView from './components/PetView.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
 
@@ -42,10 +42,22 @@
 
       if (getAccessToken()) {
         user = await api.getMe();
+        // El servidor usa la zona horaria del usuario (ciclo de sueño, recordatorios):
+        // si sigue en el valor por defecto (UTC), se ajusta a la del equipo.
+        const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (user.timezone === 'UTC' && localTz && localTz !== 'UTC') {
+          try {
+            user = await api.updateMe({ timezone: localTz });
+          } catch {
+            /* no crítico: se reintenta en el próximo inicio */
+          }
+        }
         pets = await api.getPets();
         currentPet = pets.length > 0 ? pets[0] : null;
         eggs = await api.getEggs();
         inventory = await api.getInventory();
+
+        checkReminders();
 
         // Conectar WebSocket en tiempo real
         const socket = initSocket();
@@ -78,7 +90,23 @@
 
   // Las constantes vitales solo se recalculan al consultar al servidor (tick perezoso):
   // se consulta cada minuto para poder avisar cuando la mascota necesita atención.
+  // Recordatorios creados por la mascota (con confirmación): al vencer se avisa y se marcan entregados
+  async function checkReminders() {
+    if (!getAccessToken()) return;
+    try {
+      const due = await api.getDueReminders();
+      for (const r of due) {
+        showBubble(`⏰ ${r.text}`);
+        await notifyNow('Recordatorio', r.text);
+        await api.markReminderDelivered(r.id);
+      }
+    } catch {
+      /* se reintenta en el siguiente ciclo */
+    }
+  }
+
   async function pollPet() {
+    checkReminders();
     if (!getAccessToken() || !currentPet) return;
     try {
       const fresh = await api.getPets();

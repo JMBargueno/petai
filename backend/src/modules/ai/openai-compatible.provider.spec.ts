@@ -68,4 +68,56 @@ describe('OpenAiCompatibleProvider', () => {
     const p = new OpenAiCompatibleProvider('https://x/v1', 'k', fetchMock as any);
     await expect(p.test('m')).rejects.toThrow('sin contenido');
   });
+
+  describe('function calling', () => {
+    const tc = (o: any) => `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [o] } }] })}
+`;
+
+    it('acumula los fragmentos de tool_calls por índice y los emite antes de done', async () => {
+      const fetchMock = jest.fn().mockResolvedValue(sse([
+        delta('Voy a mirar. '),
+        tc({ index: 0, id: 'call_1', type: 'function', function: { name: 'get_my_status', arguments: '' } }),
+        tc({ index: 1, id: 'call_2', type: 'function', function: { name: 'search_memory', arguments: '{"que' } }),
+        tc({ index: 1, function: { arguments: 'ry":"pesca"}' } }),
+        'data: [DONE]\n',
+      ]));
+      const out = await drain(new OpenAiCompatibleProvider('https://x/v1', 'k', fetchMock as any));
+      const calls = out.filter((e) => e.type === 'tool_call');
+      expect(calls).toEqual([
+        { type: 'tool_call', id: 'call_1', name: 'get_my_status', arguments: '' },
+        { type: 'tool_call', id: 'call_2', name: 'search_memory', arguments: '{"query":"pesca"}' },
+      ]);
+      expect(out[out.length - 1].type).toBe('done');
+      expect(out.findIndex((e) => e.type === 'tool_call')).toBeLessThan(out.length - 1);
+    });
+
+    it('envía tools/tool_choice y traduce mensajes assistant(tool_calls) y tool', async () => {
+      const fetchMock = jest.fn().mockResolvedValue(sse(['data: [DONE]\n']));
+      const p = new OpenAiCompatibleProvider('https://x/v1', 'k', fetchMock as any);
+      for await (const _ of p.chat(
+        [
+          { role: 'user', content: 'hola' },
+          { role: 'assistant', content: '', toolCalls: [{ id: 'c1', name: 'get_my_status', arguments: '{}' }] },
+          { role: 'tool', toolCallId: 'c1', content: '{"hambre":30}' },
+        ],
+        { model: 'm', tools: [{ name: 'get_my_status', description: 'd', parameters: { type: 'object', properties: {} } }] },
+      )) { /* consume */ }
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body.tool_choice).toBe('auto');
+      expect(body.tools[0]).toMatchObject({ type: 'function', function: { name: 'get_my_status' } });
+      expect(body.messages[1]).toEqual({
+        role: 'assistant', content: null,
+        tool_calls: [{ id: 'c1', type: 'function', function: { name: 'get_my_status', arguments: '{}' } }],
+      });
+      expect(body.messages[2]).toEqual({ role: 'tool', tool_call_id: 'c1', content: '{"hambre":30}' });
+    });
+
+    it('sin tools no envía tools ni tool_choice', async () => {
+      const fetchMock = jest.fn().mockResolvedValue(sse(['data: [DONE]\n']));
+      await drain(new OpenAiCompatibleProvider('https://x/v1', 'k', fetchMock as any));
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body.tools).toBeUndefined();
+      expect(body.tool_choice).toBeUndefined();
+    });
+  });
 });

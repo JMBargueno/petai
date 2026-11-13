@@ -6,6 +6,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { AiConfigService, AiConfigInput } from './ai-config.service';
 import { ChatService } from './chat.service';
 import { MemoryService } from './memory.service';
+import { AgentService } from './agent.service';
 
 @ApiTags('AI')
 @ApiBearerAuth()
@@ -16,6 +17,7 @@ export class AiController {
     private readonly aiConfig: AiConfigService,
     private readonly chat: ChatService,
     private readonly memory: MemoryService,
+    private readonly agent: AgentService,
   ) {}
 
   @Get('ai/config')
@@ -64,6 +66,52 @@ export class AiController {
   @ApiOperation({ summary: 'Borrar toda la memoria de la mascota' })
   forgetAll(@CurrentUser() user: any, @Param('id') petId: string) {
     return this.memory.clear(user.id, petId);
+  }
+
+  // ---------- Acciones del agente (requieren confirmación del usuario) ----------
+
+  @Get('pets/:id/actions')
+  @ApiOperation({ summary: 'Acciones propuestas por la mascota pendientes de confirmar' })
+  pendingActions(@CurrentUser() user: any, @Param('id') petId: string) {
+    return this.agent.listPending(user.id, petId);
+  }
+
+  @Post('pets/:id/actions/:actionId/confirm')
+  @ApiOperation({ summary: 'Confirmar y ejecutar una acción propuesta por la mascota' })
+  confirmAction(@CurrentUser() user: any, @Param('id') petId: string, @Param('actionId') actionId: string) {
+    return this.agent.confirm(user.id, petId, actionId);
+  }
+
+  @Post('pets/:id/actions/:actionId/reject')
+  @ApiOperation({ summary: 'Rechazar una acción propuesta por la mascota' })
+  rejectAction(@CurrentUser() user: any, @Param('id') petId: string, @Param('actionId') actionId: string) {
+    return this.agent.reject(user.id, petId, actionId);
+  }
+
+  // ---------- Recordatorios ----------
+
+  @Get('reminders')
+  @ApiOperation({ summary: 'Recordatorios pendientes del usuario' })
+  reminders(@CurrentUser() user: any) {
+    return this.agent.listReminders(user.id);
+  }
+
+  @Get('reminders/due')
+  @ApiOperation({ summary: 'Recordatorios vencidos aún no entregados' })
+  dueReminders(@CurrentUser() user: any) {
+    return this.agent.dueReminders(user.id);
+  }
+
+  @Post('reminders/:id/delivered')
+  @ApiOperation({ summary: 'Marcar un recordatorio como entregado' })
+  reminderDelivered(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.agent.markDelivered(user.id, id);
+  }
+
+  @Delete('reminders/:id')
+  @ApiOperation({ summary: 'Eliminar un recordatorio' })
+  deleteReminder(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.agent.deleteReminder(user.id, id);
   }
 
   @Post('pets/:id/chat')

@@ -810,6 +810,207 @@
         ]
       }
     },
+    "/v1/pets/{id}/actions": {
+      "get": {
+        "operationId": "AiController_pendingActions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Acciones propuestas por la mascota pendientes de confirmar",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/pets/{id}/actions/{actionId}/confirm": {
+      "post": {
+        "operationId": "AiController_confirmAction",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmar y ejecutar una acción propuesta por la mascota",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/pets/{id}/actions/{actionId}/reject": {
+      "post": {
+        "operationId": "AiController_rejectAction",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rechazar una acción propuesta por la mascota",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/reminders": {
+      "get": {
+        "operationId": "AiController_reminders",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recordatorios pendientes del usuario",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/reminders/due": {
+      "get": {
+        "operationId": "AiController_dueReminders",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recordatorios vencidos aún no entregados",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/reminders/{id}/delivered": {
+      "post": {
+        "operationId": "AiController_reminderDelivered",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Marcar un recordatorio como entregado",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/reminders/{id}": {
+      "delete": {
+        "operationId": "AiController_deleteReminder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar un recordatorio",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
     "/v1/pets/{id}/chat": {
       "post": {
         "operationId": "AiController_chatStream",

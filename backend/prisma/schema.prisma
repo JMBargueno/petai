@@ -28,6 +28,7 @@ model User {
   aiConfig       AiConfig?
   reminders      Reminder[]
   minigames      MinigameSession[]
+  pendingActions PendingAction[]
 }
 
 model RefreshToken {
@@ -132,6 +133,7 @@ model Pet {
   chatMessages  ChatMessage[]
   memories      PetMemory[]
   reminders     Reminder[]
+  pendingActions PendingAction[]
   minigames     MinigameSession[]
   battlesAsAttacker Battle[] @relation("AttackerBattles")
   battlesAsDefender Battle[] @relation("DefenderBattles")
@@ -256,5 +258,23 @@ model Reminder {
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([petId])
+}
+
+// Acción propuesta por la IA (function calling) que requiere confirmación explícita del usuario
+model PendingAction {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId     String
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  tool      String
+  args      Json
+  summary   String
+  status    String   @default("pending") // pending | confirmed | rejected
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId, status])
   @@index([petId])
 }

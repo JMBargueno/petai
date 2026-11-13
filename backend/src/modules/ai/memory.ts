@@ -109,6 +109,21 @@ export function selectRelevantFacts<T extends { content: string }>(
   return picked;
 }
 
+/** Búsqueda estricta: solo recuerdos que comparten palabras con la consulta, por relevancia. */
+export function searchByKeywords<T extends { content: string }>(items: T[], query: string, limit = 5): T[] {
+  const q = tokens(query);
+  return items
+    .map((it, i) => {
+      let score = 0;
+      for (const t of tokens(it.content)) if (q.has(t)) score++;
+      return { it, i, score };
+    })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .slice(0, limit)
+    .map((s) => s.it);
+}
+
 /** Bloque que se añade al prompt de sistema. Los recuerdos se presentan como datos. */
 export function buildMemoryBlock(
   facts: { content: string }[],

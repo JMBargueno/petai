@@ -4,11 +4,16 @@ import { PetsService } from '../pets/pets.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AiConfigService } from './ai-config.service';
 import { MemoryService } from './memory.service';
-import { ChatMessageInput, LlmProvider } from './llm-provider';
-import { INTELLIGENCE_MAX, MEMORY_UNLOCK, buildSystemPrompt, intelligenceTier } from './personality';
+import { AgentContext, AgentService } from './agent.service';
+import { toolDefinitions } from './agent-tools';
+import { ChatMessageInput, LlmProvider, ToolCall } from './llm-provider';
+import { safeTimeZone } from '../pets/sleep-cycle';
+import { AGENT_UNLOCK, INTELLIGENCE_MAX, MEMORY_UNLOCK, buildSystemPrompt, intelligenceTier } from './personality';
 
 export type ChatStreamEvent =
   | { type: 'delta'; text: string }
+  | { type: 'tool'; name: string }
+  | { type: 'action'; action: { id: string; tool: string; summary: string; expiresAt: Date } }
   | { type: 'done'; message: { id: string; content: string }; intelligence: number; tier: string }
   | { type: 'error'; message: string };
 
@@ -16,6 +21,8 @@ export const MAX_MESSAGE_CHARS = 1000;
 const HISTORY_MESSAGES = 20;
 const HISTORY_CHAR_BUDGET = 6000;
 const RATE_LIMIT = { max: 20, windowMs: 60_000 };
+/** Vueltas máximas de herramientas por mensaje (la última se fuerza sin herramientas). */
+const MAX_TOOL_ROUNDS = 3;
 
 @Injectable()
 export class ChatService {
@@ -29,6 +36,7 @@ export class ChatService {
     private readonly aiConfig: AiConfigService,
     private readonly realtime: RealtimeGateway,
     private readonly memory: MemoryService,
+    private readonly agent: AgentService,
   ) {}
 
   private checkRateLimit(userId: string) {
@@ -82,8 +90,11 @@ export class ChatService {
 
     const owner = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { displayName: true },
+      select: { displayName: true, timezone: true },
     });
+    const tier = intelligenceTier(pet.intelligence ?? 0);
+    const timeZone = safeTimeZone(owner?.timezone);
+    const now = new Date();
 
     const past = await this.prisma.chatMessage.findMany({
       where: { petId, role: { in: ['user', 'assistant'] } },
@@ -99,7 +110,7 @@ export class ChatService {
     }
 
     // Memoria (intelligence ≥ 200): recuerdos relevantes en el prompt de sistema
-    let systemPrompt = buildSystemPrompt(pet, owner ?? {});
+    let systemPrompt = buildSystemPrompt(pet, owner ?? {}, { tier, now, timeZone });
     if ((pet.intelligence ?? 0) >= MEMORY_UNLOCK) {
       const block = await this.memory.recall(pet.id, message);
       if (block) systemPrompt += `
@@ -113,7 +124,11 @@ ${block}`;
       { role: 'user', content: message },
     ];
 
-    return { events: this.run(userId, pet, message, messages, provider, model, signal) };
+    // Agente (intelligence ≥ 500): puede usar herramientas; los efectos requieren confirmación
+    const agentCtx: AgentContext | undefined =
+      (pet.intelligence ?? 0) >= AGENT_UNLOCK ? { userId, petId: pet.id, timeZone, now } : undefined;
+
+    return { events: this.run(userId, pet, message, messages, provider, model, signal, agentCtx) };
   }
 
   private async *run(
@@ -124,17 +139,47 @@ ${block}`;
     provider: LlmProvider,
     model: string,
     signal?: AbortSignal,
+    agentCtx?: AgentContext,
   ): AsyncGenerator<ChatStreamEvent> {
     let reply = '';
     let tokens = 0;
+    let proposed = 0;
+    const convo = [...messages];
     try {
-      for await (const ev of provider.chat(messages, { model, maxTokens: 300, signal })) {
-        if (ev.type === 'delta') {
-          reply += ev.text;
-          yield { type: 'delta', text: ev.text };
-        } else if (ev.type === 'done') {
-          tokens = (ev.usage?.promptTokens ?? 0) + (ev.usage?.completionTokens ?? 0);
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        // En la última vuelta no se ofrecen herramientas para forzar una respuesta de texto
+        const tools = agentCtx && round < MAX_TOOL_ROUNDS - 1 ? toolDefinitions() : undefined;
+        let text = '';
+        const calls: ToolCall[] = [];
+        for await (const ev of provider.chat(convo, { model, maxTokens: 300, tools, signal })) {
+          if (ev.type === 'delta') {
+            text += ev.text;
+            yield { type: 'delta', text: ev.text };
+          } else if (ev.type === 'tool_call') {
+            calls.push({ id: ev.id, name: ev.name, arguments: ev.arguments });
+          } else if (ev.type === 'done') {
+            tokens += (ev.usage?.promptTokens ?? 0) + (ev.usage?.completionTokens ?? 0);
+          }
         }
+        reply += text;
+        if (calls.length === 0 || !agentCtx) break;
+
+        convo.push({ role: 'assistant', content: text, toolCalls: calls });
+        for (const call of calls) {
+          const outcome = await this.agent.handle({ ...agentCtx, now: new Date() }, call);
+          if (outcome.kind === 'confirm') {
+            proposed++;
+            yield { type: 'action', action: outcome.action };
+          } else {
+            yield { type: 'tool', name: call.name };
+          }
+          convo.push({ role: 'tool', toolCallId: call.id, content: outcome.content });
+        }
+      }
+      // Si solo se propusieron acciones y el modelo no dijo nada, se avisa al usuario
+      if (!reply.trim() && proposed > 0) {
+        reply = 'Necesito tu confirmación para seguir. 👆';
+        yield { type: 'delta', text: reply };
       }
     } catch (err: any) {
       if (signal?.aborted) return; // el cliente cerró la conexión

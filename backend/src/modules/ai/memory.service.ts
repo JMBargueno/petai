@@ -5,6 +5,7 @@ import {
   EXTRACTION_SYSTEM_PROMPT,
   MAX_FACTS,
   buildMemoryBlock,
+  searchByKeywords,
   formatTranscript,
   normalizeForMatch,
   parseExtraction,
@@ -40,6 +41,16 @@ export class MemoryService {
       }),
     ]);
     return buildMemoryBlock(selectRelevantFacts(facts, message, 8), summaries);
+  }
+
+  /** Búsqueda por palabras clave en los recuerdos (herramienta search_memory). */
+  async search(petId: string, query: string, limit = 5): Promise<string[]> {
+    const items = await this.prisma.petMemory.findMany({
+      where: { petId },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    return searchByKeywords(items, query, limit).map((m) => m.content);
   }
 
   /**

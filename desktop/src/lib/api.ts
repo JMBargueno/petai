@@ -226,7 +226,11 @@ export const api = {
   async chatStream(
     petId: string,
     message: string,
-    onDelta: (text: string) => void,
+    handlers: {
+      onDelta: (text: string) => void;
+      onTool?: (name: string) => void;
+      onAction?: (action: { id: string; tool: string; summary: string; expiresAt: string }) => void;
+    },
     signal?: AbortSignal,
   ): Promise<{ message: { id: string; content: string }; intelligence: number; tier: string }> {
     const res = await fetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
@@ -258,12 +262,52 @@ export const api = {
         const raw = /^data: (.+)$/m.exec(block)?.[1];
         if (!event || !raw) continue;
         const data = JSON.parse(raw);
-        if (event === 'delta') onDelta(data.text);
+        if (event === 'delta') handlers.onDelta(data.text);
+        else if (event === 'tool') handlers.onTool?.(data.name);
+        else if (event === 'action') handlers.onAction?.(data.action);
         else if (event === 'error') throw new Error(data.message);
         else if (event === 'done') return data;
       }
     }
     throw new Error('La respuesta terminó sin completarse');
+  },
+
+  async updateMe(data: { displayName?: string; timezone?: string }) {
+    return minigameRequest<any>('PATCH', '/v1/me', data);
+  },
+
+  async getPendingActions(petId: string) {
+    return minigameRequest<{ id: string; tool: string; summary: string; expiresAt: string }[]>(
+      'GET',
+      `/v1/pets/${petId}/actions`,
+    );
+  },
+
+  async confirmAction(petId: string, actionId: string) {
+    return minigameRequest<{ ok: boolean; tool: string; summary: string; result: any }>(
+      'POST',
+      `/v1/pets/${petId}/actions/${actionId}/confirm`,
+    );
+  },
+
+  async rejectAction(petId: string, actionId: string) {
+    return minigameRequest<{ ok: boolean }>('POST', `/v1/pets/${petId}/actions/${actionId}/reject`);
+  },
+
+  async listReminders() {
+    return minigameRequest<{ id: string; text: string; dueAt: string }[]>('GET', '/v1/reminders');
+  },
+
+  async getDueReminders() {
+    return minigameRequest<{ id: string; text: string; dueAt: string }[]>('GET', '/v1/reminders/due');
+  },
+
+  async markReminderDelivered(id: string) {
+    return minigameRequest<{ ok: boolean }>('POST', `/v1/reminders/${id}/delivered`);
+  },
+
+  async deleteReminder(id: string) {
+    return minigameRequest<{ ok: boolean }>('DELETE', `/v1/reminders/${id}`);
   },
 
   async getMemories(petId: string) {

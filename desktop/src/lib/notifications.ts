@@ -36,6 +36,15 @@ async function send(title: string, body: string) {
   if (Notification.permission === 'granted') new Notification(title, { body });
 }
 
+/** Aviso puntual (p. ej. un recordatorio vencido), sin cooldown. */
+export async function notifyNow(title: string, body: string) {
+  try {
+    await send(title, body);
+  } catch (err) {
+    console.warn('[notificaciones] no se pudo enviar:', err);
+  }
+}
+
 /** Envía las notificaciones pendientes respetando un cooldown por tipo y mascota. */
 export async function notifyPetNeeds(pet: any) {
   const now = Date.now();

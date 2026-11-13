@@ -29,6 +29,80 @@
   let scroller: HTMLElement;
   let abort: AbortController | null = null;
 
+  // Agente: acciones propuestas por la mascota (requieren confirmación) y recordatorios
+  type ActionCard = {
+    id: string;
+    summary: string;
+    state: 'pending' | 'working' | 'done' | 'rejected' | 'error';
+    note?: string;
+  };
+  let actions: ActionCard[] = [];
+  let toolHint = '';
+  let remOpen = false;
+  let reminders: { id: string; text: string; dueAt: string }[] = [];
+  let remErr = '';
+
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+
+  async function loadPending() {
+    if (!pet) return;
+    try {
+      const rows = await api.getPendingActions(pet.id);
+      const known = new Set(actions.map((a) => a.id));
+      actions = [
+        ...actions,
+        ...rows.filter((r) => !known.has(r.id)).map((r) => ({ id: r.id, summary: r.summary, state: 'pending' as const })),
+      ];
+    } catch {
+      /* sin acciones pendientes o sin conexión */
+    }
+  }
+
+  async function decide(card: ActionCard, accept: boolean) {
+    card.state = 'working';
+    actions = actions;
+    try {
+      if (accept) {
+        await api.confirmAction(pet.id, card.id);
+        card.state = 'done';
+        card.note = 'Hecho ✅';
+        if (remOpen) loadReminders();
+      } else {
+        await api.rejectAction(pet.id, card.id);
+        card.state = 'rejected';
+        card.note = 'Rechazada';
+      }
+    } catch (e: any) {
+      card.state = 'error';
+      card.note = e.message;
+    }
+    actions = actions;
+  }
+
+  async function loadReminders() {
+    try {
+      reminders = await api.listReminders();
+      remErr = '';
+    } catch (e: any) {
+      remErr = e.message;
+    }
+  }
+
+  async function toggleReminders() {
+    remOpen = !remOpen;
+    if (remOpen) await loadReminders();
+  }
+
+  async function removeReminder(id: string) {
+    try {
+      await api.deleteReminder(id);
+      await loadReminders();
+    } catch (e: any) {
+      remErr = e.message;
+    }
+  }
+
   // Memoria
   let memOpen = false;
   let mem: Awaited<ReturnType<typeof api.getMemories>> | null = null;
@@ -73,7 +147,10 @@
 
   onMount(async () => {
     await loadConfig();
-    if (config.configured && pet) await loadHistory();
+    if (config.configured && pet) {
+      await loadHistory();
+      await loadPending();
+    }
     loaded = true;
   });
   onDestroy(() => abort?.abort());
@@ -173,14 +250,25 @@
     messages = [...messages, { id: `tmp-${Date.now()}`, role: 'user', content: text }, reply];
     await scrollDown();
     abort = new AbortController();
+    toolHint = '';
     try {
       const done = await api.chatStream(
         pet.id,
         text,
-        (delta) => {
-          reply.content += delta;
-          messages = messages;
-          scrollDown();
+        {
+          onDelta: (delta) => {
+            toolHint = '';
+            reply.content += delta;
+            messages = messages;
+            scrollDown();
+          },
+          onTool: () => {
+            toolHint = '🔍 Consultando…';
+          },
+          onAction: (a) => {
+            actions = [...actions, { id: a.id, summary: a.summary, state: 'pending' }];
+            scrollDown();
+          },
         },
         abort.signal,
       );
@@ -197,6 +285,7 @@
       input = text;
     } finally {
       streaming = false;
+      toolHint = '';
       abort = null;
     }
   }
@@ -269,8 +358,45 @@
       {#each messages as m (m.id)}
         <div class="msg {m.role}">{m.content}{#if streaming && m.id === 'tmp-reply' && !m.content}…{/if}</div>
       {/each}
+      {#if toolHint}<div class="hint">{toolHint}</div>{/if}
+      {#each actions as a (a.id)}
+        <div class="card" class:done={a.state === 'done'} class:bad={a.state === 'error'}>
+          <div class="card-title">🛠 Tu mascota quiere hacer algo</div>
+          <div class="card-body">{a.summary}</div>
+          {#if a.state === 'pending' || a.state === 'working'}
+            <div class="row">
+              <button class="primary" disabled={a.state === 'working'} on:click={() => decide(a, true)}>Confirmar</button>
+              <button disabled={a.state === 'working'} on:click={() => decide(a, false)}>Rechazar</button>
+            </div>
+          {:else}
+            <div class="card-note">{a.note}</div>
+          {/if}
+        </div>
+      {/each}
     </div>
     {#if chatErr}<p class="error">{chatErr}</p>{/if}
+    {#if (pet.intelligence ?? 0) >= 500}
+      <div class="memory">
+        <button class="link" on:click={toggleReminders}>⏰ Recordatorios {remOpen ? '▾' : '▸'}</button>
+        {#if remOpen}
+          {#if remErr}<p class="error">{remErr}</p>{/if}
+          {#if reminders.length === 0}
+            <p class="muted">No hay recordatorios pendientes. Pídele a tu mascota que te recuerde algo.</p>
+          {:else}
+            <ul class="mem-list">
+              {#each reminders as r (r.id)}
+                <li>
+                  <span>⏰ {r.text} <em>— {fmt(r.dueAt)}</em></span>
+                  <button class="x" title="Eliminar" on:click={() => removeReminder(r.id)}>✕</button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        {/if}
+      </div>
+    {:else}
+      <p class="muted">🔒 Con 500 de inteligencia tu mascota podrá usar herramientas y crear recordatorios.</p>
+    {/if}
     <div class="memory">
       <button class="link" on:click={toggleMemories}>
         🗂 Recuerdos {memOpen ? '▾' : '▸'}
@@ -345,6 +471,16 @@
   .msg.assistant { align-self: flex-start; background: rgba(51, 65, 85, 0.9); }
   .composer { display: flex; gap: 6px; align-items: stretch; }
   .memory { margin-bottom: 8px; }
+  .hint { align-self: flex-start; font-size: 12px; opacity: 0.7; }
+  .card {
+    align-self: stretch; padding: 8px 10px; border-radius: 10px; font-size: 12px;
+    background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.45);
+  }
+  .card.done { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.45); }
+  .card.bad { background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.45); }
+  .card-title { font-weight: 700; margin-bottom: 3px; }
+  .card-body { margin-bottom: 6px; user-select: text; }
+  .card-note { opacity: 0.85; }
   .mem-list { list-style: none; margin: 6px 0; padding: 0; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
   .mem-list li { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; background: rgba(15, 23, 42, 0.6); padding: 4px 8px; border-radius: 8px; user-select: text; }
   .mem-list li.summary { opacity: 0.75; font-style: italic; }
