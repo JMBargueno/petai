@@ -2,6 +2,7 @@
   "name": "petai-monorepo",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.18.0",
   "description": "PetAI — Mascota virtual tamagotchi inteligente multiplataforma",
   "scripts": {
     "validate:data": "node scripts/validate-game-data.js",

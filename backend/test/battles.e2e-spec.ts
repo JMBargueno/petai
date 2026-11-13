@@ -6,6 +6,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { RealtimeGateway } from '../src/modules/realtime/realtime.gateway';
+import { RedisService } from '../src/modules/battles/redis.service';
 import { simulateBattle } from '../src/modules/battles/combat/engine';
 import { Fighter, SkillDef } from '../src/modules/battles/combat/types';
 
@@ -53,6 +54,14 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     app.setGlobalPrefix('v1');
     await app.init();
     prisma = app.get(PrismaService);
+
+    // Clasificaciones limpias: se borran solo las claves del prefijo de tests (petai:test:); se reconstruyen
+    // desde la base de datos en la primera lectura, así no dependen de restos de ejecuciones anteriores.
+    const redis = app.get(RedisService);
+    await redis.run(async (r) => {
+      const keys = await r.keys(redis.key('lb:*'));
+      if (keys.length > 0) await r.del(...keys);
+    });
   });
   afterAll(async () => app.close());
 
