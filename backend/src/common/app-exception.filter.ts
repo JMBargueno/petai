@@ -28,6 +28,14 @@ export class AppExceptionFilter implements ExceptionFilter {
       return;
     }
 
+    // Errores HTTP de los middlewares de Express (http-errors): cuerpo demasiado grande (413),
+    // JSON mal formado (400), tipo de contenido no soportado (415)… Son culpa del cliente, no un 500.
+    const client = this.fromHttpError(exception);
+    if (client) {
+      res.status(client.status).json({ statusCode: client.status, message: client.message, error: HttpStatus[client.status] });
+      return;
+    }
+
     const mapped = this.fromPrisma(exception);
     if (mapped) {
       res.status(mapped.status).json({ statusCode: mapped.status, message: mapped.message, error: HttpStatus[mapped.status] });
@@ -37,6 +45,17 @@ export class AppExceptionFilter implements ExceptionFilter {
     const err = exception as Error;
     this.logger.error(err?.message ?? String(exception), err?.stack);
     res.status(500).json({ statusCode: 500, message: 'Error interno del servidor' });
+  }
+
+  private fromHttpError(e: unknown): { status: number; message: string } | null {
+    const status = Number((e as any)?.status ?? (e as any)?.statusCode);
+    if (!Number.isInteger(status) || status < 400 || status > 499) return null;
+    const messages: Record<number, string> = {
+      400: 'La petición no es válida (¿JSON mal formado?)',
+      413: 'El cuerpo de la petición es demasiado grande',
+      415: 'Tipo de contenido no soportado',
+    };
+    return { status, message: messages[status] ?? 'Petición no válida' };
   }
 
   private fromPrisma(e: unknown): { status: number; message: string } | null {

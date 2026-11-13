@@ -128,6 +128,16 @@ describe('Robustez: concurrencia y entradas hostiles (e2e)', () => {
       }
     });
 
+    it('7b. un cuerpo enorme es un 413 y un JSON roto un 400 (no 500)', async () => {
+      const huge = 'A'.repeat(200_000);
+      for (const path of ['/v1/auth/register', '/v1/auth/login']) {
+        const res = await api().post(path).set('Content-Type', 'application/json').send(JSON.stringify({ email: huge, password: huge }));
+        expect(res.status).toBe(413);
+      }
+      const res = await api().post('/v1/shop/buy').set(u.auth).set('Content-Type', 'application/json').send('{"roto":');
+      expect(res.status).toBe(400);
+    });
+
     it('8. parámetros de ruta y de consulta hostiles → 4xx', async () => {
       const paths = [
         '/v1/pets/%00', `/v1/pets/${petId}%00`, '/v1/battles/%00', '/v1/pets/%00/combat', '/v1/eggs/%00/hatch',

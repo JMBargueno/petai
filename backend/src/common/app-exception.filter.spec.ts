@@ -32,6 +32,24 @@ describe('AppExceptionFilter', () => {
     expect(run(new Prisma.PrismaClientValidationError('mal', { clientVersion: 'test' })).res.status).toHaveBeenCalledWith(400);
   });
 
+  it('los errores HTTP de Express (cuerpo enorme, JSON roto) conservan su 4xx y no filtran detalles', () => {
+    const tooLarge = Object.assign(new Error('request entity too large'), { status: 413, expose: true });
+    const r1 = run(tooLarge);
+    expect(r1.res.status).toHaveBeenCalledWith(413);
+    expect(r1.res.json.mock.calls[0][0].message).toBe('El cuerpo de la petición es demasiado grande');
+
+    const syntax = Object.assign(new SyntaxError('Unexpected token } in JSON at position 5'), { status: 400, statusCode: 400 });
+    const r2 = run(syntax);
+    expect(r2.res.status).toHaveBeenCalledWith(400);
+    expect(JSON.stringify(r2.res.json.mock.calls[0][0])).not.toContain('position 5');
+
+    expect(run(Object.assign(new Error('x'), { status: 415 })).res.status).toHaveBeenCalledWith(415);
+    expect(run(Object.assign(new Error('x'), { status: 499 })).res.status).toHaveBeenCalledWith(499);
+    // Un "status" fuera de 4xx no se confunde con un error de cliente
+    expect(run(Object.assign(new Error('x'), { status: 500 })).res.status).toHaveBeenCalledWith(500);
+    expect(run(Object.assign(new Error('x'), { status: 'abc' })).res.status).toHaveBeenCalledWith(500);
+  });
+
   it('un byte NUL en una cadena es un 400', () => {
     const e = new Error('invalid byte sequence for encoding "UTF8": 0x00');
     expect(run(e).res.status).toHaveBeenCalledWith(400);
