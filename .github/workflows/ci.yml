@@ -34,6 +34,9 @@ jobs:
       - name: Validate Game Data Integrity
         run: node scripts/validate-game-data.js
 
+      - name: Validate Layered Asset Pipeline
+        run: node scripts/validate-assets.js
+
   backend:
     name: Backend build & unit tests
     runs-on: ubuntu-latest

@@ -20,9 +20,11 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 
 ## Fase 0 — Preparación y Monorepo
 - [x] Inicialización de Git y `.gitignore` multiplataforma (Node, Rust/Tauri, Android, iOS).
-- [x] Definición de `docs/` (`ROADMAP.md`, `GAME_DESIGN.md`, `API.md`).
+- [x] Definición de `docs/` (`ROADMAP.md`, `GAME_DESIGN.md`, `API.md`, `ART_PIPELINE.md`).
 - [x] Configuración de datos de juego compartidos en `shared/game-data/` (`species.json`, `patterns.json`, `foods.json`, `balance.json`).
-- [x] Placeholders iniciales de sprites en `shared/assets/sprites/`.
+- [x] Estándar de arte: Pipeline de Composición por Capas en Tiempo Real determinista (`base.png`, `mask.png`, `anim.json`, `patterns/`, `palettes.json`).
+- [x] Script de validación de assets en CI (`scripts/validate-assets.js` / `npm run validate:assets`).
+- [x] Placeholders iniciales de sprites y patterns en `shared/assets/`.
 - [x] `docker-compose.yml` para PostgreSQL y Redis, y `.env.example`.
 - [x] Workflow de GitHub Actions (`.github/workflows/ci.yml`).
 
@@ -110,4 +112,4 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 - [x] Seguridad: límites de intentos, vinculación de dispositivos y límite del chat en Redis (con respaldo en memoria), `helmet`, sondas `/health` y `/health/ready`, cierre ordenado, el seed no crea el usuario demo en producción, `pnpm audit` en CI. Sin pentest externo.
 - [x] Pruebas de carga de lectura (`backend/scripts/loadtest.sh`): sin errores a 50 conexiones; cifras en `docs/DEPLOY.md`.
 - [x] Despliegue: `backend/Dockerfile` (probado: migra, arranca en producción y queda *healthy*), `docker-compose.prod.yml` y `docs/DEPLOY.md`.
-- [ ] Pendiente (requiere cuentas o equipo externo): firma de código de Windows y notarización en macOS, .dmg (hay que compilarlo en un Mac), tienda de Microsoft/Mac App Store, publicación en Play Store/App Store, auto-actualización, servidor de producción y dominio, auditoría externa, balance del juego con datos reales de jugadores.
+- [ ] Pendiente (requiere cuentas o equipo externo): arte definitivo de las 21 especies (reemplazando únicamente `base.png`, `mask.png` y `anim.json` de cada especie sin modificar código), firma de código de Windows y notarización en macOS, .dmg (hay que compilarlo en un Mac), tienda de Microsoft/Mac App Store, publicación en Play Store/App Store, auto-actualización, servidor de producción y dominio, auditoría externa, balance del juego con datos reales de jugadores.

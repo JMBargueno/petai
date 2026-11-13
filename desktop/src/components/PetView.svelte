@@ -1,13 +1,18 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { getPetSvg, getPatternSvg } from '../lib/sprites';
+  import {
+    bakePetSpriteSheet,
+    getPetSvg,
+    getPatternSvg,
+    type BakedPetSheet
+  } from '../lib/sprites';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
   /** Texto de la burbuja de chat sobre la mascota (vacío = oculta) */
   export let bubble: string = '';
 
-  let currentAnim: 'idle' | 'walk' | 'eat' | 'happy' | 'sleep' = 'idle';
+  let currentAnim = 'idle';
   let posX = 150;
   let posY = 50;
   let direction = 1; // 1: derecha, -1: izquierda
@@ -17,10 +22,27 @@
 
   let animTimer: any = null;
   let moveInterval: any = null;
+  let animRafId: number | null = null;
 
-  $: speciesKey = pet?.species?.spriteKey || 'ignisaur';
+  // Canvas y baking
+  let petCanvas: HTMLCanvasElement | null = null;
+  let bakedSheet: BakedPetSheet | null = null;
+  let isBaking = false;
+  let currentFrameIndex = 0;
+  let lastFrameTime = 0;
+
+  // Transformaciones procedurales
+  let squashScaleX = 1;
+  let squashScaleY = 1;
+  let recoilOffsetX = 0;
+  let isWhiteFlash = false;
+
+  $: speciesKey = pet?.species?.id || pet?.species?.spriteKey || 'ignisaur';
   $: patternKey = pet?.pattern?.id || 'plain';
   $: isSleeping = pet?.sleeping || false;
+  $: isShiny = pet?.shiny || false;
+  $: visualSeed = pet?.visualSeed ?? 1337;
+  $: palette = pet?.palette || { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' };
 
   $: if (isSleeping) {
     currentAnim = 'sleep';
@@ -28,17 +50,53 @@
     currentAnim = 'idle';
   }
 
+  // Hornear sprite sheet en memoria al cambiar de mascota, paleta o patrón
+  $: if (pet && (speciesKey || patternKey || palette || visualSeed)) {
+    triggerBake();
+  }
+
+  async function triggerBake() {
+    if (isBaking) return;
+    isBaking = true;
+    try {
+      bakedSheet = await bakePetSpriteSheet(
+        speciesKey,
+        patternKey,
+        palette,
+        visualSeed,
+        isShiny
+      );
+    } catch (err) {
+      console.warn('Fallback a SVG: error horneando sprite sheet:', err);
+      bakedSheet = null;
+    } finally {
+      isBaking = false;
+    }
+  }
+
+  // Fallback SVG legacy
   $: baseSvg = getPetSvg(speciesKey, currentAnim);
   $: patternSvg = getPatternSvg(patternKey);
-  $: accentColor = pet?.palette?.secondary || pet?.palette?.accent || '#FFFFFF';
+  $: accentColor = palette.secondary || palette.accent || '#FFFFFF';
 
-  export function triggerAnim(anim: 'eat' | 'happy') {
+  export function triggerAnim(anim: string) {
     if (isSleeping) return;
     currentAnim = anim;
+    currentFrameIndex = 0;
     clearTimeout(animTimer);
     animTimer = setTimeout(() => {
       currentAnim = 'idle';
+      currentFrameIndex = 0;
     }, 2500);
+  }
+
+  export function triggerHurt() {
+    recoilOffsetX = -12;
+    isWhiteFlash = true;
+    setTimeout(() => {
+      recoilOffsetX = 0;
+      isWhiteFlash = false;
+    }, 80);
   }
 
   let dragMoved = false;
@@ -50,8 +108,6 @@
     dragMoved = false;
     dragStartX = e.clientX - posX;
     dragStartY = e.clientY - posY;
-    // Mientras se arrastra, el click-through captura todo el viewport para
-    // no perder mousemove/mouseup si el cursor se adelanta al sprite.
     document.body.dataset.dragging = '1';
   }
 
@@ -70,26 +126,93 @@
   }
 
   function handleClick() {
-    // Un arrastre no debe contar como clic (abriría el panel)
     if (dragMoved) {
       dragMoved = false;
       return;
     }
+
+    // Procedural Squash & Stretch al interactuar
+    squashScaleX = 1.15;
+    squashScaleY = 0.85;
+    setTimeout(() => {
+      squashScaleX = 0.95;
+      squashScaleY = 1.05;
+      setTimeout(() => {
+        squashScaleX = 1;
+        squashScaleY = 1;
+      }, 70);
+    }, 60);
+
     onPetClick();
   }
 
+  // Loop de renderizado del Canvas a 60 FPS
+  function renderLoop(time: number) {
+    if (petCanvas && bakedSheet) {
+      const ctx = petCanvas.getContext('2d');
+      if (ctx) {
+        // Avance de frame cada 150 ms
+        if (time - lastFrameTime > 150) {
+          currentFrameIndex++;
+          lastFrameTime = time;
+        }
+
+        ctx.clearRect(0, 0, 128, 128);
+
+        // Recortar frame del sprite sheet horneado
+        const frame = bakedSheet.getFrame(currentAnim, currentFrameIndex);
+        ctx.drawImage(
+          bakedSheet.canvas,
+          frame.sx, frame.sy, frame.sw, frame.sh,
+          0, 0, 128, 128
+        );
+
+        // Efecto Flash blanco en daño
+        if (isWhiteFlash) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'source-atop';
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+          ctx.fillRect(0, 0, 128, 128);
+          ctx.restore();
+        }
+
+        // Efecto Shiny: Franja especular animada cada 4s
+        if (isShiny) {
+          const shinyPeriod = (time % 4000) / 4000; // 0.0 a 1.0 cada 4s
+          if (shinyPeriod < 0.35) { // La franja cruza en 1.4s
+            const progress = shinyPeriod / 0.35;
+            const bandX = progress * 240 - 60;
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop';
+            const grad = ctx.createLinearGradient(bandX, 0, bandX + 40, 128);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+            grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.45)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 128, 128);
+            ctx.restore();
+          }
+        }
+      }
+    }
+    animRafId = requestAnimationFrame(renderLoop);
+  }
+
   onMount(() => {
+    // Inicializar loop de animación
+    animRafId = requestAnimationFrame(renderLoop);
+
     // Ciclo de comportamiento de la mascota en pantalla
     moveInterval = setInterval(() => {
       if (isSleeping || isDragging || currentAnim === 'eat') return;
 
       const actionRoll = Math.random();
       if (actionRoll < 0.45) {
-        // Caminar
         currentAnim = 'walk';
         const step = 25 * direction;
         const windowWidth = window.innerWidth || 800;
-        
+
         if (posX + step > windowWidth - 140) {
           direction = -1;
         } else if (posX + step < 20) {
@@ -112,6 +235,7 @@
   });
 
   onDestroy(() => {
+    if (animRafId !== null) cancelAnimationFrame(animRafId);
     clearInterval(moveInterval);
     clearTimeout(animTimer);
     window.removeEventListener('mousemove', handleMouseMove);
@@ -119,31 +243,43 @@
   });
 </script>
 
-<!-- Contenedor del Sprite con física y arrastre -->
+<!-- Contenedor del Sprite con física, arrastre y Squash & Stretch procedural -->
 <div
   class="pet-container"
   role="button"
   tabindex="0"
   class:dragging={isDragging}
-  style="left: {posX}px; top: {posY}px; transform: scaleX({direction});"
+  style="
+    left: {posX + recoilOffsetX}px;
+    top: {posY}px;
+    transform: scaleX({direction}) scale({squashScaleX}, {squashScaleY});
+  "
   on:mousedown={handleMouseDown}
   on:click={handleClick}
   on:keydown={(e) => e.key === 'Enter' && onPetClick()}
 >
   <div class="sprite-wrapper">
-    <!-- SVG Base de la criatura -->
-    <div class="svg-base">
-      {@html baseSvg}
-    </div>
-
-    <!-- Capa de Patrón superpuesta -->
-    {#if patternSvg}
-      <div class="svg-pattern" style="color: {accentColor};">
-        {@html patternSvg}
+    <!-- Renderizado por Canvas horneado en memoria (In-Memory Baking) -->
+    {#if bakedSheet}
+      <canvas
+        bind:this={petCanvas}
+        width="128"
+        height="128"
+        class="pet-canvas"
+      ></canvas>
+    {:else}
+      <!-- Fallback provisional a SVG mientras se hornea -->
+      <div class="svg-base">
+        {@html baseSvg}
       </div>
+      {#if patternSvg}
+        <div class="svg-pattern" style="color: {accentColor};">
+          {@html patternSvg}
+        </div>
+      {/if}
     {/if}
 
-    <!-- Globo de estado / apodo -->
+    <!-- Burbuja de chat o estado -->
     {#if bubble}
       <div class="speech" class:below={posY < 110} style="transform: scaleX({direction});">{bubble}</div>
     {/if}
@@ -153,7 +289,7 @@
       <span class="pet-lvl">Nv. {pet.level || 1}</span>
     </div>
 
-    <!-- Indicador de sueño flotante -->
+    <!-- Indicador de partículas flotantes -->
     {#if isSleeping}
       <div class="floating-bubble zzz" style="transform: scaleX({direction});">
         💤
@@ -176,16 +312,16 @@
     width: 128px;
     height: 128px;
     cursor: grab;
-    transition: left 0.4s ease-out, top 0.4s ease-out;
+    transition: left 0.4s ease-out, top 0.4s ease-out, transform 0.08s ease-out;
     z-index: 50;
     pointer-events: auto;
+    transform-origin: bottom center;
   }
 
   .pet-container:active {
     cursor: grabbing;
   }
 
-  /* Sin interpolación mientras se arrastra: sigue al cursor al instante */
   .pet-container.dragging {
     transition: none;
   }
@@ -194,6 +330,15 @@
     position: relative;
     width: 100%;
     height: 100%;
+  }
+
+  .pet-canvas {
+    width: 128px;
+    height: 128px;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    pointer-events: none;
   }
 
   .svg-base {
@@ -232,7 +377,6 @@
     z-index: 60;
   }
 
-  /* Cerca del borde superior de la pantalla la burbuja se muestra debajo */
   .speech.below {
     bottom: auto;
     top: calc(100% + 30px);

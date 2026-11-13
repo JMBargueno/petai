@@ -22,11 +22,24 @@ Las tiradas de eclosión se resuelven en el servidor de forma autoritativa utili
 - **Legendario garantizado**: Si tras 119 huevos no ha salido ningún Legendario o Mítico, el huevo 120 garantiza al menos un Legendario.
 - Ambos contadores (`sinceSuperRare`, `sinceLegendary`) se reinician al obtener una rareza igual o superior a la requerida.
 
-### 1.3 Patrones y Rasgos Visuales
+### 1.3 Patrones y Rasgos Visuales (Pipeline de Composición Determinista)
 - Patrones: `liso` (predeterminado), `manchas`, `rayas`, `degradado`, `escamas`, `cristal`, `galaxia`, `aurora`.
 - Los patrones avanzados (`escamas`, `cristal`, `galaxia`, `aurora`) solo son accesibles en rarezas Super-raro, Legendario y Mítico.
-- Cada criatura recibe una `visualSeed` (entero de 32 bits) y una tupla de paleta (`primaryColor`, `secondaryColor`, `accentColor`) para garantizar un renderizado determinista en todas las plataformas.
-- Existe un 2% de probabilidad independiente de variante **Shiny** (paleta invertida o brillante especial).
+- Cada criatura recibe una `visualSeed` (entero de 32 bits autoritativo) y una tupla de paleta (`primaryColor`, `secondaryColor`, `accentColor`) proveniente de `palettes.json`.
+- Existe un 2% de probabilidad independiente de variante **Shiny** (paleta alternativa y efecto de brillo especular diagonal animado cada 4 s + destellos).
+- **Algoritmo Mulberry32**: Todos los clientes (Tauri, Android, iOS) ejecutan el mismo PRNG con `visualSeed` para derivar:
+  - Desplazamiento del patrón (`offsetX`, `offsetY`) de 0 a 255 px.
+  - Escala y rotación del patrón (0.85x a 1.15x, $\pm 0.15$ rad).
+  - Variación sutil de matiz (`hueShift` de $\pm 8^\circ$) para que dos criaturas de la misma especie y color tengan matices únicos.
+- **Pipeline de Composición por Capas**:
+  1. Base de Color: Canales R (primario) y G (secundario) de `mask.png`.
+  2. Proyección de Patrón: `patterns/{patternId}.png` recortado estrictamente por el canal B de `mask.png`.
+  3. Sombreado y Líneas: `base.png` superpuesto en modo `Multiply` (sombras grises) y `Normal` (lineart y reflejos de ojos).
+  4. Pase Shiny (si `shiny == true`): Franja brillante animada + partículas.
+- **Catálogo de Animaciones (14 estados)**:
+  - Críticas obligatorias (22 frames base): `idle` (4), `walk` (4), `eat` (4), `happy` (4), `sleep` (2), `attack` (4).
+  - Recomendadas ampliadas: `idle_alt` (4), `sit` (2), `clean` (4), `sad` (2), `sick` (2), `cast` (4), `hurt` (2), `faint` (3), `talk` (3).
+  - Sistema de fallbacks automáticos en runtime y transformaciones procedurales (squash & stretch, retroceso). Ver especificación técnica completa en [docs/ART_PIPELINE.md](ART_PIPELINE.md).
 
 ---
 

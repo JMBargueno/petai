@@ -21,13 +21,28 @@ import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
 import com.petai.app.data.Pet
 
-/** Animaciones disponibles en los sprites compartidos: idle, walk, eat, happy y sleep. */
-private val KNOWN_ANIMATIONS = setOf("idle", "walk", "eat", "happy", "sleep")
+/** Catálogo de animaciones conocidas en los assets de PetAI */
+private val KNOWN_ANIMATIONS = setOf(
+    "idle", "walk", "eat", "happy", "sleep", "attack",
+    "idle_alt", "sit", "clean", "sad", "sick", "cast", "hurt", "faint", "talk"
+)
+
+/** Tabla de fallbacks automáticos en runtime conforme a docs/ART_PIPELINE.md */
+private val ANIM_FALLBACKS = mapOf(
+    "cast" to "attack",
+    "sit" to "idle",
+    "idle_alt" to "idle",
+    "clean" to "happy",
+    "talk" to "happy",
+    "sad" to "idle",
+    "sick" to "idle",
+    "hurt" to "idle",
+    "faint" to "sleep"
+)
 
 /**
- * Sprite de la mascota: sprite base de la especie + máscara de patrón teñida con el color de acento
- * de su paleta (las mismas capas que el escritorio). Los SVG se leen de los assets compartidos
- * (`shared/assets/sprites`), que son la fuente única para todas las plataformas.
+ * Sprite de la mascota: composición por capas en tiempo real (docs/ART_PIPELINE.md).
+ * Soporta visualSeed determinista con Mulberry32, fallbacks automáticos y animación.
  */
 @Composable
 fun PetSprite(
@@ -38,13 +53,26 @@ fun PetSprite(
     bob: Boolean = true,
 ) {
     val context = LocalContext.current
-    val anim = when {
+    val visualTraits = remember(pet.visualSeed) { deriveVisualTraits(pet.visualSeed.toLong()) }
+
+    val rawAnim = when {
         pet.sleeping -> "sleep"
         animation in KNOWN_ANIMATIONS -> animation!!
         else -> "idle"
     }
 
-    val base = remember(pet.species.spriteKey, anim) { readAsset(context, "sprites/${pet.species.spriteKey}_$anim.svg") }
+    // Resolver animación final con fallback si es necesario
+    val anim = if (rawAnim in setOf("idle", "walk", "eat", "happy", "sleep", "attack")) {
+        rawAnim
+    } else {
+        ANIM_FALLBACKS[rawAnim] ?: "idle"
+    }
+
+    val base = remember(pet.species.spriteKey, anim) {
+        readAsset(context, "sprites/${pet.species.spriteKey}_$anim.svg")
+            ?: readAsset(context, "sprites/${pet.species.spriteKey}_idle.svg")
+    }
+
     val pattern = remember(pet.pattern.id, pet.palette.accent) {
         if (pet.pattern.id == "plain") null
         else readAsset(context, "sprites/pattern_${pet.pattern.id}.svg")?.replace("currentColor", pet.palette.accent)

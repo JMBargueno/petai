@@ -1,0 +1,74 @@
+{
+  "fire": {
+    "default": {
+      "primary": "#E25822",
+      "secondary": "#F3C544",
+      "accent": "#6D1600"
+    },
+    "shiny": {
+      "primary": "#4CC9F0",
+      "secondary": "#F72585",
+      "accent": "#7209B7"
+    }
+  },
+  "water": {
+    "default": {
+      "primary": "#38A3A5",
+      "secondary": "#80ED99",
+      "accent": "#22577A"
+    },
+    "shiny": {
+      "primary": "#FFB703",
+      "secondary": "#FB8500",
+      "accent": "#023047"
+    }
+  },
+  "plant": {
+    "default": {
+      "primary": "#57CC99",
+      "secondary": "#C7F9CC",
+      "accent": "#22577A"
+    },
+    "shiny": {
+      "primary": "#9D4EDD",
+      "secondary": "#E0AAFF",
+      "accent": "#3C096C"
+    }
+  },
+  "electric": {
+    "default": {
+      "primary": "#FFD166",
+      "secondary": "#FFEBB3",
+      "accent": "#FF9F1C"
+    },
+    "shiny": {
+      "primary": "#06D6A0",
+      "secondary": "#B8F2E6",
+      "accent": "#118AB2"
+    }
+  },
+  "shadow": {
+    "default": {
+      "primary": "#4A4E69",
+      "secondary": "#9A8C98",
+      "accent": "#22223B"
+    },
+    "shiny": {
+      "primary": "#E63946",
+      "secondary": "#F1FAEE",
+      "accent": "#A8DADC"
+    }
+  },
+  "light": {
+    "default": {
+      "primary": "#F4F1DE",
+      "secondary": "#E07A5F",
+      "accent": "#F2CC8F"
+    },
+    "shiny": {
+      "primary": "#3D405B",
+      "secondary": "#81B29A",
+      "accent": "#F4F1DE"
+    }
+  }
+}
