@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { api, getAccessToken } from './lib/api';
-  import { initSocket, getSocket } from './lib/socket';
+  import { api, getAccessToken, onSessionExpired } from './lib/api';
+  import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
   import PetView from './components/PetView.svelte';
@@ -82,8 +82,9 @@
         });
       }
     } catch (err) {
-      console.warn('Sesión no iniciada o token expirado:', err);
-      api.logout();
+      // Si la sesión ya no es válida, la capa de API la cierra (onSessionExpired). Un fallo de
+      // red no borra los tokens: se podrá entrar sin credenciales en el próximo arranque.
+      console.warn('Sesión no iniciada o servidor no disponible:', err);
       user = null;
     }
   }
@@ -94,7 +95,17 @@
     }
   }
 
+  function clearSessionState() {
+    closeSocket();
+    user = null;
+    currentPet = null;
+    pets = [];
+    eggs = [];
+    inventory = [];
+  }
+
   let stopClickThrough: () => void = () => {};
+  let stopSessionExpired: () => void = () => {};
   let needsPoll: any = null;
 
   // Las constantes vitales solo se recalculan al consultar al servidor (tick perezoso):
@@ -132,6 +143,11 @@
 
   onMount(() => {
     stopClickThrough = startClickThrough();
+    // Refresh token rechazado (caducado o revocado): vuelta a la pantalla de acceso
+    stopSessionExpired = onSessionExpired(() => {
+      clearSessionState();
+      isPanelOpen = true;
+    });
     needsPoll = setInterval(pollPet, 60_000);
     loadInitialData();
   });
@@ -140,8 +156,8 @@
     clearInterval(needsPoll);
     clearTimeout(bubbleTimer);
     stopClickThrough();
-    const socket = getSocket();
-    if (socket) socket.disconnect();
+    stopSessionExpired();
+    closeSocket();
   });
 </script>
 
@@ -186,13 +202,7 @@
     on:actionTriggered={(e) => handlePetAction(e.detail)}
     on:bubble={(e) => showBubble(e.detail)}
     on:refreshPet={refreshPet}
-    on:logout={() => {
-      user = null;
-      currentPet = null;
-      pets = [];
-      eggs = [];
-      inventory = [];
-    }}
+    on:logout={clearSessionState}
   />
 </main>
 

@@ -11,22 +11,122 @@ export const API_BASE_URL = typeof window !== 'undefined' && window.location.ori
   ? ''
   : configuredUrl || 'http://127.0.0.1:3000';
 
-const client = createClient<paths>({ baseUrl: API_BASE_URL });
+const ACCESS_KEY = 'petai_access_token';
+const REFRESH_KEY = 'petai_refresh_token';
 
-let currentToken: string | null = localStorage.getItem('petai_access_token');
+let currentToken: string | null = localStorage.getItem(ACCESS_KEY);
+let currentRefreshToken: string | null = localStorage.getItem(REFRESH_KEY);
+
+function store(key: string, value: string | null) {
+  if (value) localStorage.setItem(key, value);
+  else localStorage.removeItem(key);
+}
 
 export function setAccessToken(token: string | null) {
   currentToken = token;
-  if (token) {
-    localStorage.setItem('petai_access_token', token);
-  } else {
-    localStorage.removeItem('petai_access_token');
-  }
+  store(ACCESS_KEY, token);
+}
+
+/** Guarda (o borra, con null) el par de tokens de la sesión. */
+function setSession(tokens: { accessToken: string; refreshToken?: string | null } | null) {
+  setAccessToken(tokens?.accessToken ?? null);
+  currentRefreshToken = tokens?.refreshToken ?? null;
+  store(REFRESH_KEY, currentRefreshToken);
 }
 
 export function getAccessToken(): string | null {
   return currentToken;
 }
+
+const sessionExpiredListeners = new Set<() => void>();
+const tokenRenewedListeners = new Set<(token: string) => void>();
+
+/** Avisa cuando la sesión deja de ser válida (refresh rechazado): la app debe volver al login. */
+export function onSessionExpired(cb: () => void): () => void {
+  sessionExpiredListeners.add(cb);
+  return () => sessionExpiredListeners.delete(cb);
+}
+
+/** Avisa cada vez que se obtiene un access token nuevo mediante el refresh token. */
+export function onTokenRenewed(cb: (token: string) => void): () => void {
+  tokenRenewedListeners.add(cb);
+  return () => tokenRenewedListeners.delete(cb);
+}
+
+function expireSession() {
+  const hadSession = currentToken !== null || currentRefreshToken !== null;
+  setSession(null);
+  if (hadSession) sessionExpiredListeners.forEach((cb) => cb());
+}
+
+let refreshing: Promise<string | null> | null = null;
+
+/**
+ * Renueva el access token con el refresh token. Solo hay una renovación en curso a la vez: el
+ * refresh token rota en cada uso y el backend trata como robo la reutilización de uno ya canjeado.
+ *
+ * `stale` es el token con el que falló quien llama: si ya hay otro vigente (otra petición renovó
+ * mientras tanto) se devuelve ese sin volver a llamar al servidor.
+ *
+ * Devuelve null si no se pudo renovar. Solo se cierra la sesión cuando el servidor rechaza el
+ * refresh token; un fallo de red o un 429/5xx la conserva para reintentar más tarde.
+ */
+export function renewAccessToken(stale?: string | null): Promise<string | null> {
+  if (stale !== undefined && currentToken && currentToken !== stale) return Promise.resolve(currentToken);
+  refreshing ??= doRefresh().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
+async function doRefresh(): Promise<string | null> {
+  const refreshToken = currentRefreshToken;
+  if (!refreshToken) {
+    expireSession();
+    return null;
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+  } catch {
+    return null;
+  }
+  // Si mientras tanto se cerró la sesión o se inició otra, el resultado ya no aplica
+  if (currentRefreshToken !== refreshToken) return null;
+  if (res.status === 400 || res.status === 401) {
+    expireSession();
+    return null;
+  }
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => null);
+  if (!data?.accessToken || !data?.refreshToken) return null;
+  setSession(data);
+  tokenRenewedListeners.forEach((cb) => cb(data.accessToken));
+  return data.accessToken;
+}
+
+/**
+ * fetch con renovación de sesión: ante un 401 en una petición autenticada renueva el token y la
+ * repite una vez. Las rutas /auth/* (login incorrecto, refresh caducado) no se reintentan.
+ */
+async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const req = new Request(input, init);
+  const sent = req.headers.get('Authorization')?.replace(/^Bearer /, '') ?? null;
+  if (!sent || new URL(req.url).pathname.includes('/auth/')) return fetch(req);
+  const retry = req.clone();
+  const res = await fetch(req);
+  if (res.status !== 401) return res;
+  const token = await renewAccessToken(sent);
+  if (!token) return res;
+  retry.headers.set('Authorization', `Bearer ${token}`);
+  return fetch(retry);
+}
+
+const client = createClient<paths>({ baseUrl: API_BASE_URL, fetch: authFetch });
 
 function authHeaders() {
   return currentToken
@@ -43,7 +143,7 @@ export const api = {
     });
     if (res.error) throw new Error((res.error as any)?.message || 'Error en registro');
     if (res.data?.accessToken) {
-      setAccessToken(res.data.accessToken);
+      setSession(res.data);
     }
     return res.data;
   },
@@ -54,13 +154,25 @@ export const api = {
     });
     if (res.error) throw new Error((res.error as any)?.message || 'Credenciales inválidas');
     if (res.data?.accessToken) {
-      setAccessToken(res.data.accessToken);
+      setSession(res.data);
     }
     return res.data;
   },
 
+  /** Cierra la sesión en este equipo y revoca su refresh token en el servidor (sin esperar la respuesta). */
   logout() {
-    setAccessToken(null);
+    const refreshToken = currentRefreshToken;
+    setSession(null);
+    if (refreshToken) {
+      void fetch(`${API_BASE_URL}/v1/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+        keepalive: true,
+      }).catch(() => {
+        /* sin conexión: el token caducará por sí solo */
+      });
+    }
   },
 
   async getMe() {
@@ -241,7 +353,7 @@ export const api = {
     },
     signal?: AbortSignal,
   ): Promise<{ message: { id: string; content: string }; intelligence: number; tier: string } | { moderated: true }> {
-    const res = await fetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
+    const res = await authFetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
       method: 'POST',
       signal,
       headers: {
@@ -425,7 +537,7 @@ export const api = {
 };
 
 async function minigameRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await authFetch(`${API_BASE_URL}${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
