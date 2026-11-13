@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KeyCryptoService } from './key-crypto.service';
-import { assertSafeBaseUrl } from './ssrf';
+import { assertSafeBaseUrl, resolveSafeBaseUrl } from './ssrf';
+import { pinnedFetch } from './pinned-fetch';
 import { LlmProvider } from './llm-provider';
 import { OpenAiCompatibleProvider } from './openai-compatible.provider';
 
@@ -39,7 +40,7 @@ export class AiConfigService {
     if (cfg.encryptedKey && cfg.keyIv && cfg.keyTag) {
       try {
         keyMask = KeyCryptoService.mask(
-          this.crypto.decrypt({ encryptedKey: cfg.encryptedKey, keyIv: cfg.keyIv, keyTag: cfg.keyTag }),
+          this.crypto.decrypt({ encryptedKey: cfg.encryptedKey, keyIv: cfg.keyIv, keyTag: cfg.keyTag }, userId),
         );
       } catch {
         keyMask = null; // clave maestra rotada o dato corrupto: el usuario deberá volver a guardarla
@@ -84,7 +85,7 @@ export class AiConfigService {
       if (key.length < 4 || key.length > 512 || /[\s\u0000-\u001f]/.test(key)) {
         throw new BadRequestException('La API key no es válida');
       }
-      secret = this.crypto.encrypt(key);
+      secret = this.crypto.encrypt(key, userId);
     } else if (!existing?.encryptedKey) {
       throw new BadRequestException('apiKey es obligatoria la primera vez');
     }
@@ -110,18 +111,24 @@ export class AiConfigService {
       throw new NotFoundException('Configura primero tu proveedor de IA');
     }
     // Se revalida en cada uso: la URL pudo cambiar de destino (DNS) desde que se guardó
-    const baseUrl = await assertSafeBaseUrl(cfg.baseUrl, { allowInsecure: this.allowInsecure });
-    const key = this.crypto.decrypt({
-      encryptedKey: cfg.encryptedKey,
-      keyIv: cfg.keyIv,
-      keyTag: cfg.keyTag,
-    });
-    return { provider: this.createProvider(baseUrl, key), model: cfg.model, mode: cfg.mode };
+    const { url, addresses } = await resolveSafeBaseUrl(cfg.baseUrl, { allowInsecure: this.allowInsecure });
+    const stored = { encryptedKey: cfg.encryptedKey, keyIv: cfg.keyIv, keyTag: cfg.keyTag };
+    const key = this.crypto.decrypt(stored, userId);
+    // Keys guardadas antes de ligar el cifrado al usuario: se vuelven a cifrar ligadas la primera vez que se usan
+    if (!KeyCryptoService.isBound(stored)) {
+      await this.prisma.aiConfig
+        .updateMany({ where: { userId, encryptedKey: cfg.encryptedKey }, data: this.crypto.encrypt(key, userId) })
+        .catch(() => undefined);
+    }
+    return { provider: this.createProvider(url, key, addresses), model: cfg.model, mode: cfg.mode };
   }
 
-  /** Punto de extensión (y de sustitución en tests). */
-  protected createProvider(baseUrl: string, apiKey: string): LlmProvider {
-    return new OpenAiCompatibleProvider(baseUrl, apiKey);
+  /**
+   * Punto de extensión (y de sustitución en tests). `addresses` son las IP que pasaron la comprobación
+   * SSRF: la conexión se fija a ellas para que una segunda resolución DNS no pueda desviarla.
+   */
+  protected createProvider(baseUrl: string, apiKey: string, addresses: string[] = []): LlmProvider {
+    return new OpenAiCompatibleProvider(baseUrl, apiKey, addresses.length > 0 ? pinnedFetch(addresses) : fetch);
   }
 
   async test(userId: string) {

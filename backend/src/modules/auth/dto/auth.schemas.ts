@@ -41,6 +41,17 @@ export const refreshSchema = z.object({
   refreshToken: text('refreshToken').min(10, 'refreshToken no es válido').max(4096, 'refreshToken no es válido'),
 });
 
+// La contraseña actual solo se acota en longitud (igual que en el login); la nueva cumple la política de registro.
+export const changePasswordSchema = z.object({
+  currentPassword: text('currentPassword')
+    .min(1, 'currentPassword es obligatorio')
+    .max(128, 'La contraseña no puede superar los 128 caracteres'),
+  newPassword: z
+    .string({ error: (issue) => (issue.input === undefined ? 'newPassword es obligatorio' : 'newPassword debe ser un texto') })
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .max(128, 'La contraseña no puede superar los 128 caracteres'),
+});
+
 /** Valida y devuelve los datos tipados; ante un error responde 400 con el primer motivo. */
 export function parseOrBadRequest<T extends z.ZodTypeAny>(schema: T, raw: unknown): z.infer<T> {
   const result = schema.safeParse(raw ?? {});

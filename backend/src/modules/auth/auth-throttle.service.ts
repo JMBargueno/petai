@@ -20,6 +20,7 @@ const MAX_KEYS = 50_000;
 @Injectable()
 export class AuthThrottleService {
   private readonly hits = new Map<string, number[]>();
+  private readonly fixed = new Map<string, { count: number; resetAt: number }>();
   private ops = 0;
 
   constructor(private readonly config: ConfigService, @Optional() private readonly redis?: RedisService) {}
@@ -45,6 +46,7 @@ export class AuthThrottleService {
     return {
       loginFailsPerAccount: this.num('AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT', 10),
       loginFailsPerIp: this.num('AUTH_LOGIN_MAX_FAILS_PER_IP', 100),
+      loginFailsPerAccountGlobal: this.num('AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT_GLOBAL', 50),
       loginWindowMs: this.num('AUTH_LOGIN_WINDOW_MINUTES', 15) * MINUTE,
       registerPerIp: this.num('AUTH_REGISTER_MAX_PER_IP', 10),
       registerWindowMs: 60 * MINUTE,
@@ -122,6 +124,37 @@ export class AuthThrottleService {
     await this.add(key, windowMs);
   }
 
+  /**
+   * Contador de ventana fija para el límite global de peticiones (ver RateLimitGuard): una sola ida
+   * a Redis por petición, más barato que la ventana deslizante de arriba. No mira `enabled`: lo
+   * decide quien llama. Devuelve 0 si la petición cabe, o los segundos que faltan para reintentar.
+   */
+  async hitFixed(key: string, max: number, windowMs: number): Promise<number> {
+    if (this.redis) {
+      const res = await this.redis.run(async (r) => {
+        const k = this.rkey(`fixed:${key}`);
+        // PEXPIRE … NX: la caducidad se fija solo en la primera petición de la ventana
+        const out = await r.multi().incr(k).pexpire(k, windowMs, 'NX').pttl(k).exec();
+        return { count: Number(out?.[0]?.[1]), ttl: Number(out?.[2]?.[1]) };
+      });
+      if (res && Number.isFinite(res.count)) {
+        return res.count > max ? Math.max(1, Math.ceil((res.ttl > 0 ? res.ttl : windowMs) / 1000)) : 0;
+      }
+    }
+    const now = Date.now();
+    if (this.fixed.size >= MAX_KEYS) {
+      for (const [k, w] of this.fixed) if (w.resetAt <= now) this.fixed.delete(k);
+      if (this.fixed.size >= MAX_KEYS) this.fixed.clear();
+    }
+    let w = this.fixed.get(key);
+    if (!w || w.resetAt <= now) {
+      w = { count: 0, resetAt: now + windowMs };
+      this.fixed.set(key, w);
+    }
+    w.count++;
+    return w.count > max ? Math.max(1, Math.ceil((w.resetAt - now) / 1000)) : 0;
+  }
+
   async clear(key: string) {
     this.hits.delete(key);
     await this.redis?.run((r) => r.del(this.rkey(key)));
@@ -130,6 +163,7 @@ export class AuthThrottleService {
   /** Borra todos los contadores (memoria y Redis). Solo para tests. */
   async reset() {
     this.hits.clear();
+    this.fixed.clear();
     await this.redis?.run(async (r) => {
       const keys = await r.keys(this.redis!.key('throttle:*'));
       if (keys.length) await r.del(...keys);

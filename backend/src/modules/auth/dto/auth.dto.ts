@@ -24,6 +24,14 @@ export class RefreshTokenDto {
   refreshToken: string;
 }
 
+export class ChangePasswordDto {
+  @ApiProperty({ description: 'Contraseña actual' })
+  currentPassword: string;
+
+  @ApiProperty({ description: 'Contraseña nueva (mínimo 8 caracteres, distinta de la actual)' })
+  newPassword: string;
+}
+
 export class AuthResponseDto {
   @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   accessToken: string;

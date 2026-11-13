@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { z } from 'zod';
 import { RedisService } from '../../redis/redis.service';
@@ -11,6 +11,26 @@ const MAX_PENDING = 5000;
 
 const confirmSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/, 'El código debe tener 6 dígitos') });
 const pollSchema = z.object({ pollToken: z.string().min(16).max(128) });
+
+/**
+ * Confirmación atómica. KEYS[1] = clave del código; ARGV[1] = prefijo de las claves de sondeo;
+ * ARGV[2] = usuario que confirma. Devuelve 'missing', 'taken' (ya confirmado) u 'ok'.
+ * Conserva la caducidad que le quedaba a la vinculación.
+ */
+const CONFIRM_SCRIPT = `
+local token = redis.call('GET', KEYS[1])
+if not token then return 'missing' end
+local pollKey = ARGV[1] .. token
+local json = redis.call('GET', pollKey)
+if not json then return 'missing' end
+local data = cjson.decode(json)
+if data.userId then return 'taken' end
+data.userId = ARGV[2]
+local ttl = redis.call('PTTL', pollKey)
+if ttl < 1000 then ttl = 1000 end
+redis.call('SET', pollKey, cjson.encode(data), 'PX', ttl)
+return 'ok'
+`;
 
 interface Pending {
   code: string;
@@ -85,29 +105,31 @@ export class DeviceLinkService {
     await this.throttle.consume(`device-confirm-user:${userId}`, 10, 15 * 60_000);
     const { code } = parseOrBadRequest(confirmSchema, raw);
 
+    const alreadyConfirmed = () => new ConflictException('Este código ya fue confirmado');
+
     if (this.redis) {
-      const res = await this.redis.run(async (r) => {
-        const token = await r.get(this.codeKey(code));
-        if (!token) return 'missing' as const;
-        const json = await r.get(this.pollKey(token));
-        if (!json) return 'missing' as const;
-        const ttl = await r.pttl(this.pollKey(token));
-        await r.set(this.pollKey(token), JSON.stringify({ ...JSON.parse(json), userId }), 'PX', Math.max(ttl, 1000));
-        return 'ok' as const;
-      });
+      // Un solo script (atómico): dos confirmaciones simultáneas no pueden pisarse, y un código que ya
+      // tiene dueño no se reasigna a otra cuenta.
+      const res = await this.redis.run(
+        (r) => r.eval(CONFIRM_SCRIPT, 1, this.codeKey(code), this.redis!.key('devlink:poll:'), userId) as Promise<string>,
+      );
       if (res === 'ok') return { ok: true };
-      if (res === 'missing') throw new NotFoundException('Código inválido o caducado');
+      if (res === 'taken') throw alreadyConfirmed();
+      // 'missing' o Redis caído: puede ser una vinculación iniciada con el respaldo en memoria
     }
 
     this.sweep();
     const token = this.byCode.get(code);
     const pending = token ? this.byPollToken.get(token) : undefined;
     if (!pending) throw new NotFoundException('Código inválido o caducado');
+    if (pending.userId) throw alreadyConfirmed();
     pending.userId = userId;
     return { ok: true };
   }
 
-  async poll(raw: unknown) {
+  async poll(raw: unknown, ip: string) {
+    // El sondeo normal es de una petición cada pocos segundos; el tope solo frena el abuso
+    await this.throttle.consume(`device-poll:${ip}`, 120, 60_000);
     const { pollToken } = parseOrBadRequest(pollSchema, raw);
 
     if (this.redis) {
@@ -123,9 +145,9 @@ export class DeviceLinkService {
         return { kind: 'confirmed' as const, userId: p.userId };
       });
       if (res) {
-        if (res.kind === 'missing') throw new NotFoundException('Vinculación inexistente o caducada');
         if (res.kind === 'pending') return { status: 'pending' as const };
-        return { status: 'confirmed' as const, ...(await this.auth.issueSession(res.userId)) };
+        if (res.kind === 'confirmed') return { status: 'confirmed' as const, ...(await this.auth.issueSession(res.userId)) };
+        // 'missing': puede ser una vinculación iniciada con el respaldo en memoria
       }
     }
 

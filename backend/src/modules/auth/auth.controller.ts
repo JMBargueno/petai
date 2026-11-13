@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 import { DeviceLinkService } from './device-link.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
-import { RegisterDto, LoginDto, RefreshTokenDto, AuthResponseDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, RefreshTokenDto, AuthResponseDto, ChangePasswordDto } from './dto/auth.dto';
 
 /** IP del cliente (con TRUST_PROXY configurado respeta X-Forwarded-For del proxy de confianza). */
 const clientIp = (req: Request) => req.ip || req.socket?.remoteAddress || 'unknown';
@@ -40,8 +40,26 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cerrar sesión: revoca el refresh token' })
-  logout(@Body() dto: RefreshTokenDto) {
-    return this.authService.logout(dto);
+  logout(@Body() dto: RefreshTokenDto, @Req() req: Request) {
+    return this.authService.logout(dto, clientIp(req));
+  }
+
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cerrar todas las sesiones del usuario en todos sus dispositivos' })
+  logoutAll(@CurrentUser() user: any) {
+    return this.authService.logoutAll(user.id);
+  }
+
+  @Post('password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cambiar la contraseña: exige la actual, cierra las demás sesiones y devuelve tokens nuevos' })
+  changePassword(@CurrentUser() user: any, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(user.id, dto);
   }
 
   @Post('device/start')
@@ -63,7 +81,7 @@ export class AuthController {
   @Post('device/poll')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Consultar la vinculación: pending o confirmed con la sesión nueva' })
-  devicePoll(@Body() body: unknown) {
-    return this.deviceLink.poll(body);
+  devicePoll(@Body() body: unknown, @Req() req: Request) {
+    return this.deviceLink.poll(body, clientIp(req));
   }
 }

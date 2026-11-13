@@ -116,6 +116,14 @@ export class MinigamesService {
     const game = this.cfg.games[session.gameId];
     const now = new Date();
 
+    // Techo absoluto antes de guardar nada: ninguna partida legítima puede superarlo, y así una cifra
+    // desorbitada nunca llega a la base de datos (la sesión se cierra sin puntuación ni recompensa).
+    const ceiling = Math.ceil(game.maxScorePerSecond * (game.durationSeconds + this.cfg.graceSeconds));
+    if (score > ceiling) {
+      await this.prisma.minigameSession.updateMany({ where: { id: sessionId, userId, finishedAt: null }, data: { finishedAt: now } });
+      throw new BadRequestException('Puntuación imposible: rechazada');
+    }
+
     // Cierre atómico: solo una petición puede finalizar (y recompensar) la sesión
     const claimed = await this.prisma.minigameSession.updateMany({
       where: { id: sessionId, userId, finishedAt: null },

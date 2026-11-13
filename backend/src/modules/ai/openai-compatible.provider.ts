@@ -49,7 +49,29 @@ export class OpenAiCompatibleProvider implements LlmProvider {
       // redirect: 'error' evita que un endpoint redirija a una dirección interna (SSRF)
       redirect: 'error',
       signal,
-      body: JSON.stringify({
+      body: this.requestBody(messages, opts),
+    }).catch((err) => {
+      // El detalle del fallo de red (ECONNREFUSED, IP, certificado…) no se devuelve al cliente:
+      // serviría para sondear la red desde el servidor. Solo un mensaje fijo.
+      if (opts.signal?.aborted) throw err;
+      throw new Error(
+        timeout.aborted ? 'El proveedor de IA tardó demasiado en responder' : 'No se pudo conectar con el proveedor de IA',
+      );
+    });
+
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      throw new Error(describeError(res));
+    }
+    if (!res.body) {
+      throw new Error('El proveedor no devolvió un flujo de respuesta');
+    }
+
+    yield* this.readStream(res.body as unknown as AsyncIterable<Uint8Array>, opts, timeout);
+  }
+
+  private requestBody(messages: ChatMessageInput[], opts: ChatOptions): string {
+    return JSON.stringify({
         model: opts.model,
         messages: messages.map(toWire),
         ...(opts.tools?.length
@@ -65,16 +87,21 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         stream_options: { include_usage: true },
         temperature: opts.temperature ?? 0.8,
         ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
-      }),
     });
+  }
 
-    if (!res.ok) {
-      throw new Error(await describeError(res));
+  private async *readStream(body: AsyncIterable<Uint8Array>, opts: ChatOptions, timeout: AbortSignal): AsyncIterable<LlmEvent> {
+    try {
+      yield* this.parseStream(body);
+    } catch (err) {
+      if (opts.signal?.aborted) throw err;
+      throw new Error(
+        timeout.aborted ? 'El proveedor de IA tardó demasiado en responder' : 'Se cortó la conexión con el proveedor de IA',
+      );
     }
-    if (!res.body) {
-      throw new Error('El proveedor no devolvió un flujo de respuesta');
-    }
+  }
 
+  private async *parseStream(body: AsyncIterable<Uint8Array>): AsyncIterable<LlmEvent> {
     const decoder = new TextDecoder();
     let buffer = '';
     let usage: { promptTokens?: number; completionTokens?: number } | undefined;
@@ -87,7 +114,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
       calls.clear();
     };
 
-    for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+    for await (const chunk of body) {
       buffer += decoder.decode(chunk, { stream: true });
       let nl: number;
       while ((nl = buffer.indexOf('\n')) >= 0) {
@@ -139,7 +166,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   }
 }
 
-async function describeError(res: Response): Promise<string> {
+function describeError(res: Response): string {
   if (res.status === 401 || res.status === 403) return 'Key rechazada por el proveedor (401/403)';
   if (res.status === 404) return 'Endpoint o modelo no encontrado (404)';
   if (res.status === 429) return 'Límite de peticiones del proveedor alcanzado (429)';

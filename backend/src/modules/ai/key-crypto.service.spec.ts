@@ -6,6 +6,20 @@ const KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 describe('KeyCryptoService', () => {
   const svc = new KeyCryptoService(cfg(KEY));
 
+  it('ligado a un usuario: solo se descifra con ese mismo usuario', () => {
+    const enc = svc.encrypt('sk-test-1234567890', 'user-a');
+    expect(KeyCryptoService.isBound(enc)).toBe(true);
+    expect(svc.decrypt(enc, 'user-a')).toBe('sk-test-1234567890');
+    expect(() => svc.decrypt(enc, 'user-b')).toThrow();
+    expect(() => svc.decrypt(enc)).toThrow();
+  });
+
+  it('los secretos antiguos (sin ligar) se siguen descifrando', () => {
+    const legacy = svc.encrypt('sk-test-1234567890');
+    expect(KeyCryptoService.isBound(legacy)).toBe(false);
+    expect(svc.decrypt(legacy, 'user-a')).toBe('sk-test-1234567890');
+  });
+
   it('cifra y descifra (ida y vuelta)', () => {
     const enc = svc.encrypt('sk-test-1234567890');
     expect(enc.encryptedKey).not.toContain('sk-test');

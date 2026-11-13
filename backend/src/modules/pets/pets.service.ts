@@ -6,6 +6,8 @@ import { GameDataService } from '../game-data/game-data.service';
 import { nightHoursBetween, safeTimeZone } from './sleep-cycle';
 
 const STAGE_ORDER = ['baby', 'juvenile', 'adult', 'final'];
+/** Higiene a partir de la cual el baño se rechaza (balance.vitals.cleanMaxHygiene lo sustituye). */
+const DEFAULT_CLEAN_MAX_HYGIENE = 80;
 
 @Injectable()
 export class PetsService {
@@ -90,6 +92,12 @@ export class PetsService {
     if (pet.sleeping) {
       throw new BadRequestException('No puedes bañar a la mascota mientras duerme');
     }
+    // El baño da XP y felicidad: solo cuenta si la mascota lo necesita. Sin esta condición la acción
+    // (gratuita y sin espera) se podía repetir sin fin para subir de nivel.
+    const cleanMaxHygiene = this.gameData.getBalance().vitals?.cleanMaxHygiene ?? DEFAULT_CLEAN_MAX_HYGIENE;
+    if (pet.hygiene >= cleanMaxHygiene) {
+      throw new BadRequestException('La mascota ya está limpia; báñala cuando se ensucie');
+    }
 
     const updated = await this.prisma.pet.update({
       where: { id: petId },
@@ -151,12 +159,16 @@ export class PetsService {
       targetItemId = medicineItem.itemId;
     }
     const pet = await this.getPetById(userId, petId);
-    const item = await this.inventoryService.consumeItem(userId, targetItemId, 'medicine');
-    const effects = item.effects as any;
 
-    if (!effects.curesSick && (effects.health || 0) <= 0) {
+    // Se valida ANTES de gastar el objeto: un 400 no debe costarle la medicina al usuario
+    const candidate = targetItemId.length <= 64 ? await this.prisma.item.findUnique({ where: { id: targetItemId } }) : null;
+    const candidateEffects = (candidate?.effects ?? {}) as any;
+    if (candidate && candidate.kind === 'medicine' && !candidateEffects.curesSick && (candidateEffects.health || 0) <= 0) {
       throw new BadRequestException('Este objeto no tiene propiedades medicinales');
     }
+
+    const item = await this.inventoryService.consumeItem(userId, targetItemId, 'medicine');
+    const effects = item.effects as any;
 
     const updated = await this.prisma.pet.update({
       where: { id: petId },

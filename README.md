@@ -1,316 +1,142 @@
-# PetAI — Documento de proyecto y fases de implementación
+# PetAI
 
----
+PetAI es una mascota virtual al estilo tamagotchi. Eclosionas huevos de los que salen criaturas con rareza y patrón únicos, las cuidas, las haces subir de nivel con minijuegos y las pones a pelear contra mascotas de otros jugadores. Si conectas un modelo de lenguaje (OpenAI, Hermes Agent u otro compatible), tu mascota puede conversar, recordar y actuar como un pequeño agente personal.
 
-## 1. Visión
-PetAI es una mascota virtual al estilo tamagotchi. Cada jugador eclosiona huevos de los que salen criaturas con rareza y patrón únicos, las cuida (comida, higiene, juego), las hace subir de nivel con minijuegos y las pone a pelear contra mascotas de otros jugadores. Si se conectan a un LLM (OpenAI o Hermes Agent), las mascotas se vuelven **inteligentes**: conversan, recuerdan y acaban actuando como un **agente de IA** personal.
+La app es multiplataforma: un backend autoritativo y varios clientes que muestran la misma mascota y sincronizan los cambios al momento.
 
-**Plataformas**
-| Pieza | Tecnología | Estilo visual |
+## Funcionalidades
+
+### Eclosión
+- Los huevos se consiguen con monedas, gemas, recompensas diarias y subidas de nivel. Cada tipo tiene su tiempo de incubación, que se puede acelerar con gemas.
+- **Rareza** (normal, raro, super-raro, legendario y mítico), tirada en el servidor. Hay un sistema de *pity* que garantiza rarezas altas tras un número de huevos.
+- **Patrón** (liso, manchas, rayas, degradado, escamas, cristal, galaxia o aurora), paleta de color y una pequeña probabilidad de variante *shiny*.
+- Animación de eclosión según la rareza.
+
+### Cuidado
+- Cinco estadísticas vitales (hambre, felicidad, energía, higiene y salud), de 0 a 100.
+- El deterioro se calcula al leer el estado, sin tareas en segundo plano por mascota.
+- Si una estadística se queda baja mucho tiempo, la mascota puede enfermar (hay que curarla) o ponerse triste (rinde menos en combate).
+- Ciclo de sueño según tu zona horaria.
+- Etapas de vida: bebé, joven, adulto y forma final, con niveles de desbloqueo.
+
+### Comida, tienda e inventario
+- Cada comida tiene efectos distintos. Cada especie tiene una comida favorita que da un bonus.
+- La tienda vende comida, medicina, juguetes, huevos y cosméticos. Hay monedas blandas (se ganan jugando) y gemas.
+
+### Niveles
+- La experiencia necesaria para subir de nivel crece de forma no lineal, hasta el nivel 100.
+- Al subir ganas monedas y puntos de estadística de combate para repartir.
+- La cuenta también tiene nivel, que desbloquea más huecos de mascotas, tipos de huevo y la arena.
+
+### Minijuegos
+- **Atrapa la comida**, **Parejas de memoria** y **Reflejos**.
+- El servidor valida cada partida (duración y puntuación plausible) y limita las recompensas diarias, para evitar trampas.
+
+### Peleas asíncronas (Arena)
+- Cada mascota tiene estadísticas de combate (vida, ataque, defensa, velocidad y espíritu), elementos (fuego, agua, planta, eléctrico, sombra y luz) y hasta cuatro habilidades equipables.
+- Eliges una estrategia (agresiva, defensiva o equilibrada) y pulsas buscar rival. El servidor empareja por ELO y simula el combate de forma determinista: el mismo combate siempre da el mismo resultado.
+- Hay repeticiones animadas, historial, ELO de suma cero, ligas (de Bronce a Mítica) y clasificación global y semanal.
+- Límites: pelear gasta energía y hay un máximo diario. El defensor recibe un aviso con el resultado.
+- *Pendiente*: recompensas de fin de temporada.
+
+### Inteligencia (IA)
+- Conecta tu propia API key (BYOK) o un Hermes Agent. Las keys se cifran en el servidor y nunca vuelven a la app; solo se muestra una máscara.
+- La mascota tiene personalidad que depende de su especie, carácter, ánimo y estadísticas. Su estadística `intelligence` sube al conversar y desbloquea tres niveles:
+  1. **Charla**: conversación en streaming.
+  2. **Memoria**: resume conversaciones y recuerda hechos. Puedes ver y borrar cada recuerdo.
+  3. **Agente**: usa herramientas, como consultar su estado, pedir comida, sugerir un minijuego, crear y listar recordatorios, o buscar en su memoria.
+- Las acciones con efectos (por ejemplo, crear un recordatorio o abrir una URL en el escritorio) muestran una tarjeta de confirmación antes de ejecutarse.
+- Moderación de entrada y salida, y cuotas mensuales de tokens.
+- *Pendiente*: modo suscripción con la key del servidor, moderación con un modelo propio y mover los límites a Redis para varias instancias.
+
+## Clientes
+
+| Cliente | Estado | Qué incluye |
 |---|---|---|
-| Android | Kotlin + Jetpack Compose | Material 3 Expressive (Android 17) |
-| iOS | Swift + SwiftUI | Liquid Glass (iOS 27) |
-| Mascota de escritorio | Tauri 2 (Windows 11 / macOS 26+) | Ventana transparente con sprite y bandeja del sistema |
-| Backend | NestJS 11 | API REST + WebSocket, autoritativo |
+| **Escritorio** (Windows, Tauri 2 + Svelte) | Funcional | Mascota en una ventana transparente sobre el escritorio que camina, duerme y come, con clics a través de la ventana. Bandeja del sistema, panel de control (cuenta, eclosión, inventario, estadísticas, minijuegos, tienda, Arena, IA), chat flotante y notificaciones nativas. Modo Hermes local. Sincronización por WebSocket. |
+| **Android** (Kotlin + Jetpack Compose) | Funcional, sin Play Billing ni FCM | Registro e inicio de sesión, eclosión, cuidados con los sprites compartidos, tienda, pestaña Jugar (Arena y minijuegos), chat IA, ajustes de IA, vinculación con el escritorio por código, widget de pantalla de inicio y avisos locales de cuidados. |
+| **iOS** (SwiftUI, Liquid Glass) | Pendiente | — |
 
-**Decisiones tomadas**
-- El escritorio usa **Tauri 2**, con un solo código para Windows y macOS.
-- Las peleas son **asíncronas**: el servidor simula el combate contra la mascota de otro jugador.
-- La IA funciona con la **key propia del usuario (BYOK)** o con una **suscripción** que usa la key del servidor.
-- La entrega es **por fases**: primero el **backend** junto con la **mascota de escritorio**, que sirve como primer cliente para probarlo desde este PC con Windows. Las apps móviles llegan después, cuando la API ya esté estable.
+Para vincular el escritorio con el móvil, la app de escritorio muestra un código de 6 dígitos que confirmas desde Android.
 
----
+## Arquitectura
 
-## 2. Versiones objetivo (comprobadas en noviembre de 2026)
-- **iOS 27 / Xcode 27**: publicados en septiembre de 2026. Liquid Glass es obligatorio con el SDK 27.
-- **Android 17 (API 37)**: estable desde junio de 2026. `targetSdk 37`, `minSdk 26`.
-- **NestJS 11.1.x** sobre Node.js 24 LTS.
-- **Prisma ORM 8** si ya es estable (anunciado en septiembre de 2026); si no, Prisma 7.
-- **PostgreSQL 18**, **Redis 8**, **Tauri 2.x**, **Kotlin 2.x**, **Swift 6.x**.
-- **Paso 0**: confirmar las últimas versiones estables en el momento de crear cada proyecto.
-
----
-
-## 3. Estructura del monorepo
 ```
 petai/
-  backend/            NestJS 11 + Prisma + PostgreSQL + Redis (BullMQ)
-  android/            Proyecto Gradle (Kotlin DSL, version catalog)
-  ios/                Proyecto Xcode (SwiftUI) + extensión de widgets
-  desktop/            Tauri 2 (src-tauri en Rust + frontend en Svelte/TS)
+  backend/            API NestJS 11 (Prisma, PostgreSQL, Redis)
+  desktop/            Escritorio con Tauri 2 (Rust) y Svelte/TypeScript
+  mobile/android/     App Android (Kotlin, Jetpack Compose)
   shared/
-    openapi/          openapi.json exportado por el backend
-    assets/           sprites, animaciones, iconos (fuente única)
-    game-data/        species.json, patterns.json, foods.json, balance.json
-  docs/               ROADMAP.md, GAME_DESIGN.md, API.md
-  docker-compose.yml  postgres + redis (+ un mock de LLM para tests)
-  .github/workflows/  CI: backend, android, ios (runner macOS), desktop
-```
-- **Contrato único**: el backend genera `openapi.json` con `@nestjs/swagger`. A partir de él se generan los clientes: `openapi-generator` (Kotlin/Retrofit) en Android, `swift-openapi-generator` en iOS y `openapi-typescript` en escritorio.
-- **Datos de juego** en JSON compartido: el backend los carga en la base de datos con un seed y los clientes los usan para el arte y los textos.
-
----
-
-## 4. Diseño de juego
-
-### 4.1 Eclosión
-- **Huevos**: se consiguen con monedas, gemas, recompensas diarias, subidas de nivel y victorias.
-- **Tiempo de incubación**: de 5 minutos a 8 horas según el tipo de huevo; se puede acelerar con gemas.
-- **Rareza** (tirada en el servidor con `crypto.randomInt`, configurable en `balance.json`):
-
-| Rareza | Probabilidad | Multiplicador de stats | Nº de especies inicial |
-|---|---|---|---|
-| Normal | 60 % | ×1.00 | 8 |
-| Raro | 25 % | ×1.15 | 6 |
-| Super-raro | 10 % | ×1.30 | 4 |
-| Legendario | 4 % | ×1.50 | 2 |
-| Mítico | 1 % | ×1.75 | 1 |
-
-- **Pity**: se garantiza al menos un Super-raro cada 30 huevos y un Legendario o mejor cada 120.
-- **Patrón**: tirada independiente. Pueden salir liso, manchas, rayas, degradado, escamas, cristal, galaxia o aurora; los cuatro últimos solo aparecen en Super-raro o superior. Además se tira una paleta de color (primario y secundario) y un pequeño % de **variante shiny**.
-- Se guarda una `visualSeed` para que todos los clientes rendericen exactamente igual.
-- **Animación de eclosión**: el huevo tiembla, se agrieta y estalla con un efecto de color según la rareza; es la parte más espectacular de la app.
-
-### 4.2 Cuidado y estadísticas
-- Las **estadísticas vitales** van de 0 a 100: hambre, felicidad, energía, higiene y salud.
-- El **deterioro es perezoso**: se calcula con `lastTickAt` en cada lectura, sin tareas por mascota.
-- Si una estadística se queda baja más de X horas, la mascota **enferma** (necesita medicina) o se pone **triste** (rinde menos en las peleas).
-- Tiene **ciclo de sueño**: duerme de noche según la zona horaria del usuario, y entonces el deterioro se reduce.
-- **Etapas**: huevo → bebé (nivel 1) → joven (nivel 10) → adulto (nivel 25) → forma final (nivel 50, con requisitos).
-
-### 4.3 Comida y tienda
-- La **comida** tiene efectos distintos (por ejemplo: manzana +hambre; tarta +felicidad −salud; ensalada +salud). Cada especie tiene una comida **favorita** que da ×1.5.
-- La **tienda** vende comida, medicina, juguetes, huevos y cosméticos (accesorios y fondos).
-- **Monedas**: blandas (se ganan jugando) y gemas (recompensas o compra integrada, opcional).
-
-### 4.4 Minijuegos
-Hay tres minijuegos iniciales, implementados de forma nativa en cada cliente:
-1. **Atrapa la comida**: caen alimentos y se mueve a la mascota.
-2. **Memoria**: parejas de cartas.
-3. **Reflejos/ritmo**: toques a tiempo.
-
-**Antitrampas**:
-1. El servidor emite un `sessionToken` con seed, `startedAt` y `gameId`.
-2. El cliente envía la puntuación al terminar.
-3. El servidor comprueba la duración mínima y máxima y la puntuación máxima plausible para la seed.
-4. Hay un tope diario de recompensas.
-
-Recompensas: XP, monedas, felicidad y gasto de energía.
-
-### 4.5 Niveles
-- **XP necesaria**: `xp(n) = round(100 · n^1.5)`. El nivel máximo es 100.
-- Al subir de nivel ganas monedas y puntos de stat de combate para repartir, y en los niveles marcados desbloqueas habilidades y evolución.
-- También hay **nivel de cuenta**, que desbloquea huecos para más mascotas, tipos de huevo y la arena.
-
-### 4.6 Peleas asíncronas
-- **Stats de combate**: HP, ATK, DEF, VEL y ESP. Se calculan como base de la especie × multiplicador de rareza × nivel + puntos repartidos.
-- **Elemento** por especie (fuego, agua, planta, eléctrico, sombra, luz), con tabla de ventajas.
-- **Habilidades**: hasta 4 equipadas, que se desbloquean por nivel.
-- **Flujo**:
-  1. El jugador elige su mascota y pulsa "Buscar rival".
-  2. El servidor busca una mascota "en defensa" con ELO parecido.
-  3. El servidor simula el combate por turnos de forma **determinista** (con seed) y lo controla una IA de reglas en ambos bandos, según la estrategia configurada (agresiva, defensiva o equilibrada).
-  4. El servidor devuelve un **log de repetición** (lista de eventos) que el cliente anima.
-- **Progresión**: hay ELO, ligas (Bronce → Mítica), clasificación semanal en Redis y recompensas al final de cada temporada.
-- **Límites**: pelear gasta energía, y hay un máximo de peleas al día. Al defensor le llega una notificación con el resultado.
-- El estado de ánimo y la salud de la mascota modifican su rendimiento, lo que conecta el cuidado con el combate.
-
-### 4.7 Inteligencia (IA)
-- **Activación**: el usuario conecta un proveedor (BYOK) o se suscribe. A partir de ahí la mascota está **"despierta"**.
-- **Estadística `intelligence`** (0–1000): sube al conversar, al completar tareas y al usar herramientas, y desbloquea tres niveles:
-  1. **Charla** (0+): conversación con personalidad. El prompt de sistema se genera a partir de la especie, la rareza, el carácter, el estado de ánimo y las estadísticas, y el ánimo cambia el tono.
-  2. **Memoria** (200+): la mascota resume las conversaciones en `PetMemory` (recuerdos y hechos del usuario) y los recupera para conversaciones futuras.
-  3. **Agente** (500+): usa herramientas (*function calling*):
-     - `get_my_status`, `request_food`, `suggest_minigame` y `summarize_last_battles`.
-     - `create_reminder`, `list_reminders` y `search_memory`.
-     - En el escritorio: `open_url` y `read_clipboard`, que siempre piden confirmación.
-     - Cualquier acción con efectos muestra una tarjeta de confirmación en la interfaz.
-- La mascota también puede iniciar conversación (un saludo diario o un aviso si tiene hambre), con frecuencia configurable.
-
----
-
-## 5. Arquitectura del backend (NestJS)
-
-### 5.1 Módulos
-| Módulo | Responsabilidad |
-|---|---|
-| `auth` | Sign in with Apple, Google y email+contraseña (argon2id); JWT de acceso (15 min) + refresh rotatorio; device code para escritorio |
-| `users` | Perfil, monedas, gemas, nivel de cuenta, zona horaria y ajustes |
-| `game-data` | Carga species, patterns, foods y balance; endpoint de catálogo cacheado |
-| `hatching` | Huevos, incubación, tiradas de rareza y patrón, pity |
-| `pets` | Estado, deterioro perezoso, acciones (alimentar, limpiar, dormir, curar), evolución |
-| `inventory` / `shop` | Objetos, compra y uso |
-| `minigames` | Sesiones, validación y recompensas |
-| `leveling` | XP, subidas de nivel y recompensas |
-| `battles` | Emparejamiento, simulación determinista, ELO, repeticiones y clasificación |
-| `ai` | Proveedores LLM, keys cifradas, chat en streaming, memoria, herramientas y cuotas |
-| `subscriptions` | Verificación de StoreKit 2 y Play Billing, notificaciones servidor-a-servidor y derechos |
-| `notifications` | APNs y FCM; programación con BullMQ según el deterioro previsto |
-| `realtime` | Gateway Socket.IO: sincronización entre dispositivos y streaming del chat |
-| `health` | `/health` y métricas |
-
-### 5.2 Modelo de datos (Prisma, resumen)
-```
-User(id, email, appleSub, googleSub, displayName, timezone, coins, gems, accountXp, createdAt)
-RefreshToken(id, userId, hash, expiresAt, revokedAt)
-DeviceLink(code, userId, expiresAt, confirmedAt)
-Species(id, name, element, rarity, baseStats json, favoriteFood, spriteKey)
-Pattern(id, name, minRarity)
-Egg(id, userId, eggType, startedAt, hatchesAt, hatchedPetId?)
-Pet(id, userId, speciesId, rarity, patternId, palette json, shiny, visualSeed, nickname,
-    level, xp, stage, hunger, happiness, energy, hygiene, health, sick, sleeping,
-    combatStats json, statPoints, skills json, elo, strategy, intelligence, awakened,
-    personality json, lastTickAt, createdAt)
-PityCounter(userId, sinceSuperRare, sinceLegendary)
-Item(id, kind, name, effects json, price)  ·  InventoryItem(userId, itemId, qty)
-MinigameSession(id, userId, petId, gameId, seed, startedAt, finishedAt, score, rewarded)
-Battle(id, attackerPetId, defenderPetId, seed, winnerPetId, log json, eloDelta, createdAt)
-AiConfig(userId, mode[byok|managed], provider[openai|hermes|custom], baseUrl, model,
-         encryptedKey, keyIv, keyTag, lastTestedAt)
-ChatMessage(id, petId, role, content, toolCalls json, tokens, createdAt)
-PetMemory(id, petId, kind[fact|summary], content, createdAt)
-Reminder(id, userId, petId, text, dueAt, delivered)
-Subscription(userId, platform, productId, originalTxId, status, expiresAt)
-PushToken(userId, platform, token)
+    game-data/        Especies, patrones, comidas, habilidades y balance (JSON)
+    assets/           Sprites SVG compartidos
+    openapi/          Contrato de la API generado por el backend
+  docs/               Documentación técnica (ver abajo)
+  docker-compose.yml  PostgreSQL y Redis para desarrollo
 ```
 
-### 5.3 API principal (REST, `/v1`)
-- **Auth**: `POST /auth/apple|google|register|login|refresh|logout`, `POST /auth/device/start`, `POST /auth/device/confirm`, `POST /auth/device/poll`
-- **Catálogo y usuario**: `GET /catalog`, `GET /me`, `PATCH /me`
-- **Huevos**: `GET /eggs`, `POST /eggs/buy`, `POST /eggs/:id/hatch`
-- **Mascotas**: `GET /pets`, `GET /pets/:id`, `POST /pets/:id/feed|clean|sleep|wake|heal`, `PATCH /pets/:id` (apodo, estrategia, skills, stats)
-- **Tienda**: `GET /shop`, `POST /shop/buy`, `GET /inventory`
-- **Minijuegos**: `POST /minigames/:gameId/start`, `POST /minigames/sessions/:id/finish`
-- **Peleas**: `POST /battles` (busca rival y simula), `GET /battles`, `GET /battles/:id`, `GET /leaderboard`
-- **IA**:
-  - `GET /ai/config`, `PUT /ai/config`, `POST /ai/config/test`, `DELETE /ai/config`
-  - `POST /pets/:id/chat` (SSE), `GET /pets/:id/chat/history`
-  - `GET /pets/:id/memories`, `DELETE /pets/:id/memories/:mid`
-  - `POST /pets/:id/tool-calls/:callId/confirm`
-- **Suscripciones**: `POST /subscriptions/verify`, `POST /webhooks/appstore`, `POST /webhooks/googleplay`
-- **Push**: `POST /push-tokens`
-- **WebSocket** (`/realtime`): eventos `pet:update`, `chat:delta`, `battle:result` y `notification`
+- El backend es la única fuente de verdad. Los clientes no calculan rarezas, combates ni recompensas.
+- Los datos de juego viven en `shared/game-data` y el backend los carga en la base de datos.
+- La API REST está bajo `/v1`, con WebSocket (`/realtime`) para sincronizar mascotas y avisos.
 
-### 5.4 Subsistema de IA
-- **Interfaz `LlmProvider`**:
-  ```
-  chat(messages, tools, opts): AsyncIterable<Delta>
-  test(): Promise<boolean>
-  ```
-- **`OpenAiCompatibleProvider`** (`baseURL` + `apiKey` + `model`) cubre:
-  - **OpenAI**: Responses API o Chat Completions.
-  - **Hermes Agent** (Nous Research): su `API server` es compatible con OpenAI (Chat Completions y Responses). Se activa con `API_SERVER_ENABLED=true` y `API_SERVER_KEY`, y por defecto escucha en `127.0.0.1:8642`.
-    - Su streaming emite eventos extra `hermes.tool.progress`; se usan para mostrar "pensando…" o se ignoran.
-    - Si hiciera falta, hay un `HermesProvider` dedicado detrás de la misma interfaz.
-  - **Cualquier endpoint compatible** (OpenRouter, Ollama, etc.).
-- **Seguridad**:
-  - Las keys se cifran con AES-256-GCM. La clave maestra está en `AI_KEY_ENCRYPTION_KEY` o en un KMS. Las keys **nunca se devuelven** al cliente; solo se muestra `sk-…abcd`.
-  - Protección SSRF en `baseUrl`: solo HTTPS y se bloquean rangos privados/loopback.
-  - Un Hermes **local** se conecta desde la app de escritorio, que hace de proxy en local.
-  - Moderación de entrada y salida, límites de peticiones por usuario y cuota mensual de tokens para el modo suscripción (contador en Redis).
-  - Las herramientas con efectos requieren confirmación explícita del usuario.
+## Documentación
 
----
+- [`docs/PROYECTO.md`](docs/PROYECTO.md): visión, decisiones de diseño, arquitectura detallada y fases de implementación.
+- [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md): reglas del juego.
+- [`docs/API.md`](docs/API.md): referencia de la API.
+- [`docs/ROADMAP.md`](docs/ROADMAP.md): estado de cada fase.
+- [`docs/DEPLOY.md`](docs/DEPLOY.md): despliegue del backend en producción.
 
-## 6. App Android
-- **Stack**:
-  - Kotlin 2.x y Jetpack Compose (BOM más reciente) con Material 3 Expressive: Dynamic Color, formas y movimiento expresivos, edge-to-edge y predictive back.
-  - Arquitectura MVVM + UDF (`StateFlow`), Hilt y Navigation Compose type-safe.
-  - Retrofit/OkHttp con Kotlinx Serialization, Room (caché offline), DataStore, Coil, WorkManager y FCM.
-  - Credential Manager (Google), Play Billing 8 y widget Glance (estado de la mascota en la pantalla de inicio).
-- **Módulos**: `:app`, `:core:network` (cliente generado), `:core:data`, `:core:designsystem` y `:feature:{home,hatch,care,shop,minigames,arena,chat,collection,settings}`.
-- **Renderizado de la mascota**: un composable `PetView` dibuja con Canvas el sprite base de la especie, el patrón como capa enmascarada y la paleta como tinte. Las animaciones (idle, comer, feliz, triste, dormir, atacar) usan sprite sheets.
+## Puesta en marcha (desarrollo)
 
-## 7. App iOS
-- **Stack**:
-  - Swift 6 y SwiftUI para iOS 27 con Liquid Glass: `TabView` con la barra de pestañas de iOS 27, `NavigationStack` y `.glassEffect`.
-  - `@Observable`, async/await, SwiftData (caché) y cliente generado con `swift-openapi-generator`.
-  - Sign in with Apple, StoreKit 2, APNs, WidgetKit y Live Activity ("tu huevo eclosiona en 12 min").
-- **Renderizado de la mascota**: una `SKScene` de SpriteKit dentro de `SpriteView`, con las mismas capas (especie, patrón y paleta) y animaciones que en Android.
-- **Paquetes Swift locales**: `PetAICore` (modelos y red), `PetAIUI` (sistema de diseño) y `Features/*`.
+Requisitos: Node.js 24 LTS, pnpm, Docker y, para el escritorio, Rust y las dependencias de Tauri. Para Android hace falta Android Studio con un SDK reciente.
 
-## 8. Mascota de escritorio (Tauri 2)
-- **Ventana**: transparente, sin decoración, siempre visible y sin icono en la barra de tareas; ocupa la parte inferior de la pantalla principal.
-- **Movimiento**: la mascota camina, se sienta y duerme con una máquina de estados. Se puede arrastrar con el ratón.
-- **Clics a través de la ventana**: `set_ignore_cursor_events` afecta a toda la ventana, así que un bucle de unos 30 Hz en Rust consulta la posición global del cursor y desactiva el paso de clics solo cuando está sobre el sprite.
-- **Bandeja del sistema**: alimentar, jugar, abrir el chat, ver estado, pausar y salir. Plugins: `autostart`, `notification`, `updater`, `single-instance`, `global-shortcut` (abrir el chat) y `store` (preferencias).
-- **Panel de control**: una segunda ventana normal (no transparente) con login por email, eclosión, inventario/comida, estadísticas y chat. Como el escritorio es el **primer cliente**, este panel sirve para probar todo el backend antes de que existan las apps móviles.
-- **Vinculación**: al principio se hace login directo por email. Cuando lleguen las apps móviles se añade el código de dispositivo (la app muestra un código y se confirma en el móvil). El token se guarda en el llavero del sistema (plugin `keyring` o `stronghold`).
-- **Sincronización** por WebSocket: lo que pasa en el móvil se refleja al momento en el escritorio.
-- **Chat**: con la IA desbloqueada aparece una burbuja de chat y comentarios proactivos.
-- **Hermes local**: si el usuario lo elige, el escritorio habla directamente con `localhost:8642` y sincroniza los mensajes con el backend.
-- **Distribución**: instalador NSIS/MSIX firmado en Windows, `.dmg` firmado y notarizado en macOS, y auto-actualización.
+1. Instala las dependencias desde la raíz:
 
----
+   ```bash
+   pnpm install
+   ```
 
-## 9. Fases de implementación
+2. Copia el fichero de variables de entorno y ajústalo:
 
-### Fase 0 — Preparación
-- [ ] Verificar las versiones estables actuales (sección 2)
-- [ ] `git init`, `.gitignore` por plataforma, `README.md` y `docs/`
-- [ ] `docker-compose.yml` (PostgreSQL 18, Redis 8)
-- [ ] CI básica en GitHub Actions (lint y tests por proyecto)
-- [ ] Arte provisional: 3 especies × 4 animaciones y 4 patrones (placeholder)
-- **Hecho cuando**: `docker compose up` arranca y la CI está en verde con los proyectos vacíos.
+   ```bash
+   cp .env.example backend/.env
+   ```
 
-> Orden: **el backend y la mascota de escritorio avanzan juntos**. Cada funcionalidad del backend se prueba enseguida desde el escritorio, en este mismo PC con Windows y sin necesidad de Mac ni emulador. Las apps móviles empiezan cuando el núcleo de la API está estable.
+3. Levanta PostgreSQL y Redis:
 
-### Fase 1 — Núcleo del backend + mascota de escritorio
-- [ ] Backend: scaffold de NestJS, configuración (validada con zod), Prisma, migraciones y seed de `game-data`
-- [ ] Backend: módulos `auth` (de momento email+contraseña), `users`, `game-data`, `hatching` (rareza, patrón y pity), `pets` (deterioro perezoso y acciones), `inventory`/`shop` (comida), `leveling` y `realtime` (WebSocket `pet:update`)
-- [ ] Backend: exportación de OpenAPI y generación del cliente TypeScript (`openapi-typescript`)
-- [ ] Escritorio: scaffold de Tauri 2 (Svelte/TS), ventana transparente siempre visible, `PetView` (sprite + patrón + paleta), máquina de estados (andar, sentarse, dormir, comer) y clics a través de la ventana
-- [ ] Escritorio: bandeja del sistema y panel de control (login, eclosión con animación, comida/inventario y estadísticas)
-- [ ] Escritorio: sincronización por WebSocket; la mascota cambia de animación según su estado (hambre, sueño, tristeza)
-- [ ] Tests: distribución de rareza (1 M de tiradas), pity, deterioro y e2e de auth → eclosión → alimentar
-- **Hecho cuando**: en Windows te registras desde el panel, eclosionas un huevo, la mascota aparece paseando por la pantalla con su rareza y patrón, la alimentas desde la bandeja, ves bajar sus estadísticas con el tiempo y sube de nivel.
+   ```bash
+   docker compose up -d
+   ```
 
-### Fase 2 — Juego (backend + escritorio)
-- [ ] Backend: `minigames` (sesiones con antitrampas), tienda completa, evolución por etapas, enfermedad y sueño
-- [ ] Escritorio: los 3 minijuegos en el panel, tienda, colección, notificaciones nativas del sistema y autoarranque
-- **Hecho cuando**: los minijuegos dan XP y monedas validadas por el servidor, la mascota evoluciona y avisa de que tiene hambre.
+4. Arranca el backend en modo desarrollo:
 
-### Fase 3 — Inteligencia (IA) (backend + escritorio)
-- [ ] Backend: `LlmProvider` + `OpenAiCompatibleProvider` (OpenAI y Hermes), cifrado de keys, protección SSRF, `POST /ai/config/test` y chat en streaming por SSE
-- [ ] Backend: generador de personalidad y prompt, estadística `intelligence` y desbloqueos, memoria (resúmenes y búsqueda), herramientas de agente con confirmación, recordatorios, moderación y cuotas
-- [ ] Escritorio: ajustes de IA (BYOK), burbuja de chat con streaming, tarjetas de confirmación de herramientas, mensajes proactivos y modo **Hermes local** (`localhost:8642`)
-- [ ] Tests con un mock de LLM compatible con OpenAI; prueba manual contra OpenAI y un Hermes Agent real
-- **Hecho cuando**: con una key propia la mascota del escritorio conversa, recuerda hechos en sesiones posteriores y, en nivel Agente, crea un recordatorio previa confirmación.
-- *(La suscripción con la key del servidor se activa en la fase 5, porque necesita las compras integradas de las tiendas móviles.)*
+   ```bash
+   pnpm backend:dev
+   ```
 
-### Fase 4 — Peleas asíncronas (backend + escritorio)
-- [ ] Backend: motor de combate determinista (paquete aislado y testeado), elementos, habilidades, emparejamiento por ELO, ligas, clasificación en Redis y temporadas
-- [ ] Escritorio: Arena en el panel, configuración de estrategia y habilidades, y reproductor de repeticiones
-- [ ] Tests: con la misma seed se obtiene el mismo log, la tabla de elementos y el balance (simulación de miles de combates por rareza)
-- **Hecho cuando**: dos cuentas de prueba pelean, se ve la repetición animada y el ELO se actualiza en ambas.
+5. En otra terminal, arranca el escritorio:
 
-### Fase 5 — Apps móviles nativas (Android + iOS)
-- [ ] Backend: Sign in with Apple y Google, código de dispositivo (vincular el escritorio desde el móvil), `notifications` (APNs/FCM con BullMQ) y `subscriptions` (StoreKit 2, Play Billing, webhooks y modo IA gestionado)
-- [ ] Android: Compose con M3 Expressive y todas las pantallas (Inicio, Eclosión, Comida, Minijuegos, Arena, Chat IA, Colección, Ajustes), widget Glance, FCM y Play Billing
-- [ ] iOS: SwiftUI con Liquid Glass y las mismas pantallas, WidgetKit, Live Activity, APNs y StoreKit 2 (se compila en Mac o en la CI)
-- **Hecho cuando**: la misma cuenta y mascota funcionan en el móvil y en el escritorio, sincronizadas al momento, y la suscripción de IA se puede comprar en las dos tiendas.
+   ```bash
+   pnpm desktop:dev
+   ```
 
-### Fase 6 — Pulido y lanzamiento
-- [ ] Escritorio: firma (Windows) y notarización (macOS), auto-actualización, build de macOS en la CI
-- [ ] Arte definitivo de las 21 especies, patrones, sonidos y háptica
-- [ ] Ajuste de balance con datos, analítica (eventos clave) y monitorización de errores (Sentry)
-- [ ] Seguridad: rate limiting, auditoría de dependencias, revisión de keys y pentest básico
-- [ ] Accesibilidad (VoiceOver/TalkBack, Dynamic Type) y localización (ES/EN)
-- [ ] Publicación en App Store, Google Play y descargas de escritorio; despliegue del backend (contenedores con Postgres y Redis gestionados)
+6. Android: abre `mobile/android` en Android Studio, o compila desde la línea de comandos:
 
----
+   ```bash
+   cd mobile/android && ./gradlew assembleDebug
+   ```
 
-## 10. Verificación
-- **Backend**:
-  - Tests unitarios con Jest de rareza, pity, deterioro, motor de combate, XP, cifrado y validación de minijuegos.
-  - Tests e2e con Supertest contra el Postgres/Redis de docker-compose.
-- **Android**: tests de ViewModel y de UI con Compose en un emulador con API 37.
-- **iOS**: Swift Testing y XCUITest en un simulador de iOS 27. **Compilar y probar iOS y macOS requiere un Mac con Xcode 27**: desde Windows se escribe el código y se compila en un Mac o en la CI (runner macOS).
-- **Escritorio**: `tauri dev` en Windows; build de macOS en la CI.
-- **Flujo de punta a punta**: registrarse → eclosionar → alimentar → minijuego → subir de nivel → pelear → conectar la key → chatear → ver la misma mascota en el escritorio.
+## Pruebas
 
-## 11. Riesgos y notas
-- **Arte**: es el mayor cuello de botella. Conviene empezar con placeholders y un formato de sprites común a todos los clientes.
-- **Rendimiento del backend**: el deterioro perezoso evita tareas por mascota y escala bien.
-- **Cumplimiento de las tiendas**: las probabilidades de los huevos deben **publicarse** (requisito de Apple y Google para mecánicas aleatorias) y la suscripción de IA debe venderse con compras integradas.
-- **Coste de IA**: la cuota de tokens del modo suscripción debe ajustarse para que salga rentable.
+```bash
+pnpm backend:test      # tests unitarios del backend
+pnpm test:all          # unitarios y e2e del backend
+pnpm validate:data     # valida los datos de juego en shared/game-data
+```
+
+## Estado del proyecto
+
+Consulta [`docs/ROADMAP.md`](docs/ROADMAP.md) para ver el detalle de cada fase. Resumen:
+- Backend, escritorio y minijuegos, IA (salvo modo suscripción) y Arena: completados.
+- Android: funcional, pendientes Play Billing y FCM (requieren cuentas externas).
+- iOS y el despliegue público de las apps: pendientes.

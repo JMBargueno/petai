@@ -36,7 +36,7 @@ model RefreshToken {
   id        String    @id @default(uuid())
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hash      String
+  hash      String    @unique
   expiresAt DateTime
   revokedAt DateTime?
   createdAt DateTime  @default(now())
@@ -235,7 +235,7 @@ model ChatMessage {
   tokens    Int      @default(0)
   createdAt DateTime @default(now())
 
-  @@index([petId])
+  @@index([petId, createdAt])
 }
 
 model PetMemory {
@@ -246,7 +246,7 @@ model PetMemory {
   content   String
   createdAt DateTime @default(now())
 
-  @@index([petId])
+  @@index([petId, createdAt])
 }
 
 model Reminder {

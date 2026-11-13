@@ -224,11 +224,17 @@ export class BattlesService {
       defenderEloAfter = e.newB;
     }
     const eloDelta = eloAfter - eloBefore;
+    const defenderEloDelta = defenderRow ? defenderEloAfter - defenderRow.elo : 0;
 
     const battle = await this.prisma.$transaction(async (tx) => {
       if (defenderRow) {
-        await tx.pet.update({ where: { id: pet.id }, data: { elo: eloAfter } });
-        await tx.pet.update({ where: { id: defenderRow.id }, data: { elo: defenderEloAfter } });
+        // Se suma la variación en vez de escribir un valor calculado con una lectura anterior: si otro
+        // combate toca a la misma mascota a la vez, ninguna de las dos variaciones se pierde.
+        const a = await tx.pet.update({ where: { id: pet.id }, data: { elo: { increment: eloDelta } }, select: { elo: true } });
+        const d = await tx.pet.update({ where: { id: defenderRow.id }, data: { elo: { increment: defenderEloDelta } }, select: { elo: true } });
+        eloAfter = a.elo;
+        defenderEloAfter = d.elo;
+        eloBefore = eloAfter - eloDelta;
       }
       return tx.battle.create({
         data: {

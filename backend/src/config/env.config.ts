@@ -40,11 +40,17 @@ export const envSchema = z.object({
   // Límite de intentos de autenticación (en tests está desactivado salvo AUTH_RATE_LIMIT_FORCE=true)
   AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT: positiveInt(10),
   AUTH_LOGIN_MAX_FAILS_PER_IP: positiveInt(100),
+  // Fallos sobre una misma cuenta desde cualquier IP (frena ataques repartidos entre muchas direcciones)
+  AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT_GLOBAL: positiveInt(50),
   AUTH_LOGIN_WINDOW_MINUTES: positiveInt(15),
   AUTH_REGISTER_MAX_PER_IP: positiveInt(10),
   AUTH_REFRESH_MAX_PER_MINUTE: positiveInt(60),
   AUTH_RATE_LIMIT_DISABLED: z.enum(['true', 'false']).optional(),
   AUTH_RATE_LIMIT_FORCE: z.enum(['true', 'false']).optional(),
+  // Límite global de peticiones por minuto, por usuario autenticado o por IP (en tests, desactivado salvo RATE_LIMIT_FORCE=true)
+  RATE_LIMIT_PER_MINUTE: positiveInt(300),
+  RATE_LIMIT_DISABLED: z.enum(['true', 'false']).optional(),
+  RATE_LIMIT_FORCE: z.enum(['true', 'false']).optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -78,6 +84,9 @@ export function productionProblems(env: EnvConfig): string[] {
   }
   if (env.AUTH_RATE_LIMIT_DISABLED === 'true') {
     problems.push('AUTH_RATE_LIMIT_DISABLED=true no puede usarse en producción');
+  }
+  if (env.RATE_LIMIT_DISABLED === 'true') {
+    problems.push('RATE_LIMIT_DISABLED=true no puede usarse en producción');
   }
   return problems;
 }
