@@ -86,6 +86,64 @@ async function main() {
     });
   }
 
+  // Usuario Demo preconfigurado
+  console.log('Creando usuario demo...');
+  const argon2 = await import('argon2');
+  const demoEmail = 'demo@petai.local';
+  const demoPassword = 'Password123!';
+  const passwordHash = await argon2.hash(demoPassword, {
+    type: argon2.argon2id,
+  });
+
+  const demoUser = await prisma.user.upsert({
+    where: { email: demoEmail },
+    update: {
+      passwordHash,
+      coins: 500,
+      gems: 25,
+    },
+    create: {
+      email: demoEmail,
+      passwordHash,
+      displayName: 'Entrenador Demo',
+      coins: 500,
+      gems: 25,
+      pityCounter: {
+        create: {
+          sinceSuperRare: 0,
+          sinceLegendary: 0,
+        },
+      },
+    },
+  });
+
+  // Huevo de bienvenida listo para eclosionar si no tiene mascotas ni huevos
+  const existingEggs = await prisma.egg.findMany({ where: { userId: demoUser.id } });
+  if (existingEggs.length === 0) {
+    await prisma.egg.create({
+      data: {
+        userId: demoUser.id,
+        eggType: 'starter',
+        startedAt: new Date(),
+        hatchesAt: new Date(), // Eclosión inmediata
+      },
+    });
+  }
+
+  // Añadir manzanas de prueba al inventario
+  await prisma.inventoryItem.upsert({
+    where: {
+      userId_itemId: { userId: demoUser.id, itemId: 'apple' },
+    },
+    update: { qty: 5 },
+    create: {
+      userId: demoUser.id,
+      itemId: 'apple',
+      qty: 5,
+    },
+  });
+
+  console.log('✓ Usuario demo creado/actualizado: demo@petai.local / Password123!');
   console.log('✓ Seed completado con éxito.');
 }
 
