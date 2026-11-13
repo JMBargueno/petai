@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
 
 describe('PetAI End-to-End API Flow (e2e)', () => {
   let app: INestApplication;
@@ -118,5 +119,87 @@ describe('PetAI End-to-End API Flow (e2e)', () => {
 
     expect(res.body.id).toBe(petId);
     expect(res.body.xp).toBeGreaterThan(0);
+  });
+
+  // ---------- Fase 2 ----------
+  const auth = () => ({ Authorization: `Bearer ${accessToken}` });
+  const http = () => request(app.getHttpServer());
+
+  it('8. POST /v1/shop/buy — valida cantidad e itemId', async () => {
+    for (const body of [{ itemId: 'apple', quantity: 0 }, { itemId: 'apple', quantity: 1.5 },
+      { itemId: 'apple', quantity: 1000 }, { quantity: 1 }]) {
+      await http().post('/v1/shop/buy').set(auth()).send(body).expect(400);
+    }
+  });
+
+  it('9. GET /v1/shop?kind= — Filtra por tipo y expone la piedra de evolución', async () => {
+    const res = await http().get('/v1/shop?kind=evolution').expect(200);
+    expect(res.body.map((i: any) => i.id)).toContain('evolution_stone');
+    expect(res.body.every((i: any) => i.kind === 'evolution')).toBe(true);
+  });
+
+  it('10. Una medicina no se puede usar como comida y no se consume', async () => {
+    await http().post('/v1/shop/buy').set(auth()).send({ itemId: 'medicine', quantity: 1 }).expect(201);
+    await http().post(`/v1/pets/${petId}/feed`).set(auth()).send({ itemId: 'medicine' }).expect(400);
+    const inv = await http().get('/v1/inventory').set(auth()).expect(200);
+    expect(inv.body.find((i: any) => i.itemId === 'medicine').qty).toBe(1);
+  });
+
+  it('11. POST /v1/pets/:id/evolve — Rechaza la forma final sin nivel/objeto', async () => {
+    await http().post(`/v1/pets/${petId}/evolve`).set(auth()).expect(400);
+  });
+
+  describe('minijuegos', () => {
+    let prisma: PrismaService;
+    const backdateAll = (seconds: number) =>
+      prisma.minigameSession.updateMany({
+        where: { userId },
+        data: { startedAt: new Date(Date.now() - seconds * 1000) },
+      });
+
+    beforeAll(() => {
+      prisma = app.get(PrismaService);
+    });
+
+    it('12. Lista los minijuegos y exige petId para empezar', async () => {
+      const list = await http().get('/v1/minigames').set(auth()).expect(200);
+      expect(list.body.map((g: any) => g.id).sort()).toEqual(['catch_food', 'memory_match', 'reflex']);
+      await http().post('/v1/minigames/reflex/start').set(auth()).send({}).expect(400);
+      await http().post('/v1/minigames/nope/start').set(auth()).send({ petId }).expect(404);
+    });
+
+    it('13. Finalizar al instante se rechaza y quema la sesión; el cooldown aplica', async () => {
+      const start = await http().post('/v1/minigames/reflex/start').set(auth()).send({ petId }).expect(201);
+      expect(start.body.seed).toBeGreaterThan(0);
+      await http().post(`/v1/minigames/sessions/${start.body.sessionId}/finish`)
+        .set(auth()).send({ score: 5 }).expect(400);
+      await http().post('/v1/minigames/reflex/start').set(auth()).send({ petId }).expect(400); // cooldown
+    });
+
+    it('14. Partida válida: recompensa una vez; reenviar o una puntuación imposible fallan', async () => {
+      await backdateAll(120);
+      const before = (await http().get('/v1/me').set(auth()).expect(200)).body.coins;
+
+      const s = await http().post('/v1/minigames/reflex/start').set(auth()).send({ petId }).expect(201);
+      await prisma.minigameSession.update({
+        where: { id: s.body.sessionId }, data: { startedAt: new Date(Date.now() - 25_000) } });
+      const done = await http().post(`/v1/minigames/sessions/${s.body.sessionId}/finish`)
+        .set(auth()).send({ score: 20 }).expect(201);
+      expect(done.body.rewards.coins).toBe(12);
+      expect(done.body.pet.id).toBe(petId);
+
+      const after = (await http().get('/v1/me').set(auth()).expect(200)).body.coins;
+      expect(after - before).toBe(12);
+
+      await http().post(`/v1/minigames/sessions/${s.body.sessionId}/finish`)
+        .set(auth()).send({ score: 20 }).expect(400);
+
+      await backdateAll(120);
+      const cheat = await http().post('/v1/minigames/reflex/start').set(auth()).send({ petId }).expect(201);
+      await prisma.minigameSession.update({
+        where: { id: cheat.body.sessionId }, data: { startedAt: new Date(Date.now() - 25_000) } });
+      await http().post(`/v1/minigames/sessions/${cheat.body.sessionId}/finish`)
+        .set(auth()).send({ score: 9999 }).expect(400);
+    });
   });
 });

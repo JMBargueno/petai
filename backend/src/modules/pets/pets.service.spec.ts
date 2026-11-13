@@ -14,6 +14,9 @@ describe('PetsService', () => {
       findFirst: jest.fn(),
       update: jest.fn((args) => Promise.resolve({ ...args.data, id: args.where.id })),
     },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }),
+    },
   };
 
   const mockInventoryService = {
@@ -129,5 +132,96 @@ describe('PetsService', () => {
     expect(leveled.level).toBe(2);
     expect(leveled.xp).toBe(50);
     expect(leveled.statPoints).toBe(3);
+  });
+
+  describe('ciclo de sueño (zona horaria)', () => {
+    const baseBalance = mockGameDataService.getBalance();
+    const sleepBalance = {
+      ...baseBalance,
+      sleep: {
+        nightStartHour: 22,
+        nightEndHour: 7,
+        awakeNightEnergyMultiplier: 1.5,
+        sleepingNightEnergyBonus: 1.25,
+        sleepingNightHealthRegenPerHour: 2.0,
+      },
+    };
+    // Intervalo fijo de 2 h totalmente nocturno en UTC: 01:00 -> 03:00
+    const realNow = Date.now;
+    beforeEach(() => {
+      Date.now = () => new Date('2026-06-10T03:00:00Z').getTime();
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-10T03:00:00Z'));
+      mockGameDataService.getBalance.mockReturnValue(sleepBalance);
+    });
+    afterEach(() => {
+      Date.now = realNow;
+      jest.useRealTimers();
+      mockGameDataService.getBalance.mockReturnValue(baseBalance);
+      mockPrismaService.user.findUnique.mockResolvedValue({ timezone: 'UTC' });
+    });
+
+    const awakePet = () => ({
+      id: 'p', userId: 'u', hunger: 100, happiness: 100, energy: 100, hygiene: 100,
+      health: 100, sick: false, sleeping: false, lastTickAt: new Date('2026-06-10T01:00:00Z'),
+    });
+
+    it('despierta de noche gasta más energía (x1.5)', async () => {
+      const updated = await (service as any).applyLazyTick(awakePet());
+      // 3.0/h * (2h + 0.5*2h) = 9 -> 91
+      expect(updated.energy).toBe(91);
+    });
+
+    it('la misma hora en una zona donde es de día no penaliza', async () => {
+      // 01:00-03:00 UTC = 10:00-12:00 en Tokio (de día)
+      mockPrismaService.user.findUnique.mockResolvedValue({ timezone: 'Asia/Tokyo' });
+      const updated = await (service as any).applyLazyTick(awakePet());
+      expect(updated.energy).toBe(94);
+    });
+
+    it('dormir de noche recupera más energía (x1.25) y regenera salud', async () => {
+      const pet = { ...awakePet(), sleeping: true, energy: 20, health: 50 };
+      const updated = await (service as any).applyLazyTick(pet);
+      // 20/h * (2h + 0.25*2h) = 50 -> 70
+      expect(updated.energy).toBe(70);
+      // +2 salud/h nocturna * 2h = 54
+      expect(updated.health).toBe(54);
+    });
+  });
+
+  describe('evolución a forma final', () => {
+    const balance = () => ({ ...mockGameDataService.getBalance(), evolution: { finalStageItemId: 'evolution_stone', finalStageMinLevel: 50 } });
+    beforeEach(() => {
+      mockGameDataService.getBalance.mockReturnValue(balance());
+      mockInventoryService.consumeItem.mockReset();
+    });
+
+    it('rechaza si el nivel es insuficiente y no consume el objeto', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue({ id: 'p', stage: 'adult', level: 30 } as any);
+      await expect(service.evolve('u', 'p')).rejects.toThrow('nivel 50');
+      expect(mockInventoryService.consumeItem).not.toHaveBeenCalled();
+    });
+
+    it('rechaza si ya está en forma final', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue({ id: 'p', stage: 'final', level: 60 } as any);
+      await expect(service.evolve('u', 'p')).rejects.toThrow('forma final');
+    });
+
+    it('evoluciona consumiendo la piedra de evolución', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue({ id: 'p', stage: 'adult', level: 50 } as any);
+      mockInventoryService.consumeItem.mockResolvedValue({ id: 'evolution_stone' });
+      const updated = await service.evolve('u', 'p');
+      expect(mockInventoryService.consumeItem).toHaveBeenCalledWith('u', 'evolution_stone', 'evolution');
+      expect(updated.stage).toBe('final');
+    });
+
+    it('subir de nivel no otorga la forma final automáticamente ni la revierte', async () => {
+      const grown = await (service as any).addXpInternal(
+        { id: 'p', level: 49, xp: 0, statPoints: 0, stage: 'adult' }, 40000);
+      expect(grown.level).toBeGreaterThanOrEqual(50);
+      expect(grown.stage).toBe('adult');
+      const kept = await (service as any).addXpInternal(
+        { id: 'p', level: 60, xp: 0, statPoints: 0, stage: 'final' }, 500);
+      expect(kept.stage).toBe('final');
+    });
   });
 });

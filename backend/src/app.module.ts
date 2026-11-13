@@ -8,6 +8,7 @@ import { UsersModule } from './modules/users/users.module';
 import { HatchingModule } from './modules/hatching/hatching.module';
 import { PetsModule } from './modules/pets/pets.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { MinigamesModule } from './modules/minigames/minigames.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
     HatchingModule,
     PetsModule,
     InventoryModule,
+    MinigamesModule,
   ],
 })
 export class AppModule {}

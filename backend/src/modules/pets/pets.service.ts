@@ -3,6 +3,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { GameDataService } from '../game-data/game-data.service';
+import { nightHoursBetween, safeTimeZone } from './sleep-cycle';
+
+const STAGE_ORDER = ['baby', 'juvenile', 'adult', 'final'];
 
 @Injectable()
 export class PetsService {
@@ -45,7 +48,7 @@ export class PetsService {
       throw new BadRequestException('No puedes alimentar a la mascota mientras duerme');
     }
 
-    const item = await this.inventoryService.consumeItem(userId, itemId);
+    const item = await this.inventoryService.consumeItem(userId, itemId, 'food');
     const effects = item.effects as any;
 
     const isFavorite = pet.species.favoriteFood === item.id;
@@ -133,11 +136,19 @@ export class PetsService {
   }
 
   async heal(userId: string, petId: string, itemId?: string) {
-    if (!itemId || typeof itemId !== 'string') {
-      throw new BadRequestException('itemId es obligatorio');
+    let targetItemId = itemId;
+    if (!targetItemId || typeof targetItemId !== 'string') {
+      const medicineItem = await this.prisma.inventoryItem.findFirst({
+        where: { userId, qty: { gt: 0 }, item: { kind: 'medicine' } },
+        include: { item: true },
+      });
+      if (!medicineItem) {
+        throw new BadRequestException('No tienes medicinas en tu inventario para curar a la mascota');
+      }
+      targetItemId = medicineItem.itemId;
     }
     const pet = await this.getPetById(userId, petId);
-    const item = await this.inventoryService.consumeItem(userId, itemId);
+    const item = await this.inventoryService.consumeItem(userId, targetItemId, 'medicine');
     const effects = item.effects as any;
 
     if (!effects.curesSick && (effects.health || 0) <= 0) {
@@ -156,6 +167,52 @@ export class PetsService {
 
     this.realtimeGateway.emitPetUpdate(userId, updated);
     return updated;
+  }
+
+  /** Forma final: nivel mínimo + consumo del objeto especial de evolución. */
+  async evolve(userId: string, petId: string) {
+    const pet = await this.getPetById(userId, petId);
+    const cfg = this.gameData.getBalance().evolution;
+
+    if (pet.stage === 'final') {
+      throw new BadRequestException('La mascota ya está en su forma final');
+    }
+    if (pet.stage !== 'adult' || pet.level < cfg.finalStageMinLevel) {
+      throw new BadRequestException(
+        `La forma final requiere una mascota adulta de nivel ${cfg.finalStageMinLevel} o superior`,
+      );
+    }
+
+    await this.inventoryService.consumeItem(userId, cfg.finalStageItemId, 'evolution');
+
+    const updated = await this.prisma.pet.update({
+      where: { id: petId },
+      data: { stage: 'final' },
+      include: { species: true, pattern: true },
+    });
+    this.realtimeGateway.emitPetUpdate(userId, updated);
+    return updated;
+  }
+
+  /** Recompensa de actividades (minijuegos): XP, felicidad y coste de energía. */
+  async applyActivityReward(
+    userId: string,
+    petId: string,
+    reward: { xp: number; happiness: number; energyCost: number },
+  ) {
+    const pet = await this.getPetById(userId, petId);
+    const updated = await this.prisma.pet.update({
+      where: { id: petId },
+      data: {
+        happiness: Math.min(100, pet.happiness + reward.happiness),
+        energy: Math.max(0, pet.energy - reward.energyCost),
+        lastTickAt: new Date(),
+      },
+      include: { species: true, pattern: true },
+    });
+    const withXp = await this.addXpInternal(updated, reward.xp);
+    this.realtimeGateway.emitPetUpdate(userId, withXp);
+    return withXp;
   }
 
   async updatePet(userId: string, petId: string, data: { nickname?: string; strategy?: string }) {
@@ -188,13 +245,40 @@ export class PetsService {
       ? balance.vitals.decayPerHour.sleeping
       : balance.vitals.decayPerHour.awake;
 
+    // Ciclo de sueño: horas del intervalo que caen en la noche local del usuario
+    const sleepCfg = balance.sleep;
+    let nightHours = 0;
+    if (sleepCfg) {
+      const owner = await this.prisma.user.findUnique({
+        where: { id: pet.userId },
+        select: { timezone: true },
+      });
+      nightHours = nightHoursBetween(
+        new Date(pet.lastTickAt),
+        now,
+        safeTimeZone(owner?.timezone),
+        sleepCfg.nightStartHour,
+        sleepCfg.nightEndHour,
+      );
+    }
+
     let newHunger = Math.max(0, pet.hunger - decay.hunger * elapsedHours);
     let newHappiness = Math.max(0, pet.happiness - decay.happiness * elapsedHours);
-    let newEnergy = pet.sleeping
-      ? Math.min(100, pet.energy + Math.abs(decay.energy) * elapsedHours)
-      : Math.max(0, pet.energy - decay.energy * elapsedHours);
-    let newHygiene = Math.max(0, pet.hygiene - decay.hygiene * elapsedHours);
+    let newEnergy: number;
     let newHealth = pet.health;
+    if (pet.sleeping) {
+      // Dormir de noche recupera más energía y regenera algo de salud
+      const effectiveHours = elapsedHours + (sleepCfg ? (sleepCfg.sleepingNightEnergyBonus - 1) * nightHours : 0);
+      newEnergy = Math.min(100, pet.energy + Math.abs(decay.energy) * effectiveHours);
+      if (sleepCfg) {
+        newHealth = Math.min(100, newHealth + sleepCfg.sleepingNightHealthRegenPerHour * nightHours);
+      }
+    } else {
+      // Estar despierto de noche cansa más
+      const effectiveHours = elapsedHours + (sleepCfg ? (sleepCfg.awakeNightEnergyMultiplier - 1) * nightHours : 0);
+      newEnergy = Math.max(0, pet.energy - decay.energy * effectiveHours);
+    }
+    let newHygiene = Math.max(0, pet.hygiene - decay.hygiene * elapsedHours);
 
     // Si hambre o higiene están críticamente bajas (< 15), la salud decae
     if (newHunger < 15.0 || newHygiene < 15.0) {
@@ -232,10 +316,11 @@ export class PetsService {
       currentLevel += 1;
       statPoints += 3; // 3 puntos de combate por nivel
 
-      // Hitos de evolución
-      if (currentLevel >= 50) stage = 'final';
-      else if (currentLevel >= 25) stage = 'adult';
-      else if (currentLevel >= 10) stage = 'juvenile';
+      // Hitos de evolución automáticos (la forma final requiere un objeto: ver evolve())
+      let reached = 'baby';
+      if (currentLevel >= 25) reached = 'adult';
+      else if (currentLevel >= 10) reached = 'juvenile';
+      if (STAGE_ORDER.indexOf(reached) > STAGE_ORDER.indexOf(stage)) stage = reached;
 
       neededXp = Math.round(100 * Math.pow(currentLevel, 1.5));
     }

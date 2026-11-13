@@ -50,8 +50,16 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `GET /inventory`: Obtener los objetos y consumibles del usuario.
 
 ### 2.7 Minijuegos (`/minigames`)
-- `POST /minigames/:gameId/start`: Iniciar sesión de minijuego, devuelve `sessionToken` y `seed`.
-- `POST /minigames/sessions/:id/finish`: Enviar puntuación final y recibir recompensas validadas.
+- `GET /minigames`: Lista de minijuegos (`catch_food`, `memory_match`, `reflex`) con duración y recompensas máximas.
+- `POST /minigames/:gameId/start` `{ petId }`: Inicia una sesión y devuelve `sessionId`, `seed`, `durationSeconds` y `expiresAt`. Falla si la mascota duerme o está sin energía, durante el cooldown, o al superar el límite diario de partidas recompensadas.
+- `POST /minigames/sessions/:id/finish` `{ score }`: Envía la puntuación final (entero). La sesión es de un solo uso; se rechaza si caducó, si fue demasiado corta o si la puntuación supera el máximo por segundo del juego. Devuelve `{ score, rewards, pet }` (monedas, XP, felicidad y coste de energía).
+
+### 2.7b Tienda y evolución
+- `GET /shop?kind=food|medicine|evolution`: Catálogo, filtrable por tipo.
+- `POST /shop/buy` `{ itemId, quantity }`: `quantity` entero de 1 a 99; el cobro es atómico.
+- `POST /pets/:id/evolve`: Forma final; requiere mascota adulta de nivel ≥ 50 y consume una `evolution_stone`.
+- `feed` solo acepta objetos `food`; `heal` solo `medicine`. El tipo se valida antes de consumir.
+- Ciclo de sueño: según la zona horaria del usuario (`PATCH /me`), de 22:00 a 07:00 estar despierto gasta 1.5x energía y dormir recupera 1.25x energía y regenera salud.
 
 ### 2.8 Peleas Asíncronas (`/battles`)
 - `POST /battles/matchmake`: Buscar rival por rango ELO y simular combate determinista. Devuelve `battleId` y el log de eventos de la repetición.

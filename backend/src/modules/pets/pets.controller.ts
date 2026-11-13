@@ -51,6 +51,12 @@ export class PetsController {
     return this.petsService.wake(user.id, petId);
   }
 
+  @Post(':id/evolve')
+  @ApiOperation({ summary: 'Evolucionar a la forma final (nivel 50 + objeto especial)' })
+  evolve(@CurrentUser() user: any, @Param('id') petId: string) {
+    return this.petsService.evolve(user.id, petId);
+  }
+
   @Post(':id/heal')
   @ApiOperation({ summary: 'Administrar medicina a la mascota' })
   heal(

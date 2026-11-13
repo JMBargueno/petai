@@ -34,6 +34,29 @@ if (Math.abs(totalProb - 1.0) > 0.0001) {
 }
 console.log('✓ balance.json: Probabilidades de rareza suman 1.0');
 
+// 1b. Secciones de Fase 2: sueño, evolución y minijuegos
+const sleep = balance.sleep;
+if (!sleep || sleep.nightStartHour < 0 || sleep.nightStartHour > 23 || sleep.nightEndHour < 0 || sleep.nightEndHour > 23) {
+  throw new Error('balance.sleep inválido: las horas deben estar entre 0 y 23');
+}
+const evo = balance.evolution;
+if (!evo || !foods.some((f) => f.id === evo.finalStageItemId && f.kind === 'evolution')) {
+  throw new Error('balance.evolution.finalStageItemId debe existir en foods.json con kind "evolution"');
+}
+const mg = balance.minigames;
+if (!mg || !mg.games || Object.keys(mg.games).length === 0) {
+  throw new Error('balance.minigames.games vacío o ausente');
+}
+for (const [id, g] of Object.entries(mg.games)) {
+  for (const k of ['durationSeconds', 'minDurationSeconds', 'maxScorePerSecond', 'coinsPerPoint', 'maxCoins', 'xpPerPoint', 'maxXp', 'happiness']) {
+    if (typeof g[k] !== 'number' || g[k] < 0) throw new Error(`balance.minigames.games.${id}.${k} inválido`);
+  }
+  if (g.minDurationSeconds > g.durationSeconds) {
+    throw new Error(`minijuego ${id}: minDurationSeconds no puede superar durationSeconds`);
+  }
+}
+console.log(`✓ balance.json: sueño, evolución y ${Object.keys(mg.games).length} minijuegos validados`);
+
 // 2. Validar comidas
 const foodIds = new Set(foods.map(f => f.id));
 if (foodIds.size !== foods.length) {

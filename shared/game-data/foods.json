@@ -97,5 +97,14 @@
       "health": 40,
       "curesSick": true
     }
+  },
+  {
+    "id": "evolution_stone",
+    "name": "Piedra de Evolución",
+    "kind": "evolution",
+    "description": "Un cristal ancestral que libera la forma final de una mascota de nivel 50.",
+    "priceCoins": 0,
+    "priceGems": 20,
+    "effects": {}
   }
 ]

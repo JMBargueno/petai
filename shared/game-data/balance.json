@@ -3,20 +3,20 @@
   "version": "1.0.0",
   "rarity": {
     "normal": {
-      "probability": 0.60,
-      "multiplier": 1.00
+      "probability": 0.6,
+      "multiplier": 1
     },
     "rare": {
       "probability": 0.25,
       "multiplier": 1.15
     },
     "super_rare": {
-      "probability": 0.10,
-      "multiplier": 1.30
+      "probability": 0.1,
+      "multiplier": 1.3
     },
     "legendary": {
       "probability": 0.04,
-      "multiplier": 1.50
+      "multiplier": 1.5
     },
     "mythic": {
       "probability": 0.01,
@@ -33,20 +33,20 @@
     "min": 0,
     "decayPerHour": {
       "awake": {
-        "hunger": 5.0,
-        "happiness": 4.0,
-        "energy": 3.0,
+        "hunger": 5,
+        "happiness": 4,
+        "energy": 3,
         "hygiene": 2.5
       },
       "sleeping": {
         "hunger": 1.5,
-        "happiness": 1.0,
-        "energy": -20.0,
+        "happiness": 1,
+        "energy": -20,
         "hygiene": 0.5
       }
     },
-    "criticalThreshold": 15.0,
-    "sicknessHealthThreshold": 20.0
+    "criticalThreshold": 15,
+    "sicknessHealthThreshold": 20
   },
   "leveling": {
     "maxLevel": 100,
@@ -60,5 +60,59 @@
   "combats": {
     "dailyFreeBattles": 10,
     "energyCostPerBattle": 15
+  },
+  "sleep": {
+    "nightStartHour": 22,
+    "nightEndHour": 7,
+    "awakeNightEnergyMultiplier": 1.5,
+    "sleepingNightEnergyBonus": 1.25,
+    "sleepingNightHealthRegenPerHour": 2
+  },
+  "evolution": {
+    "finalStageItemId": "evolution_stone",
+    "finalStageMinLevel": 50
+  },
+  "minigames": {
+    "sessionTtlSeconds": 300,
+    "graceSeconds": 5,
+    "cooldownSeconds": 15,
+    "dailyRewardedSessions": 20,
+    "energyCost": 10,
+    "minEnergy": 10,
+    "games": {
+      "catch_food": {
+        "name": "Atrapa la comida",
+        "durationSeconds": 45,
+        "minDurationSeconds": 20,
+        "maxScorePerSecond": 3,
+        "coinsPerPoint": 0.4,
+        "maxCoins": 40,
+        "xpPerPoint": 1,
+        "maxXp": 60,
+        "happiness": 15
+      },
+      "memory_match": {
+        "name": "Parejas de memoria",
+        "durationSeconds": 90,
+        "minDurationSeconds": 15,
+        "maxScorePerSecond": 1,
+        "coinsPerPoint": 0.8,
+        "maxCoins": 40,
+        "xpPerPoint": 1.5,
+        "maxXp": 60,
+        "happiness": 12
+      },
+      "reflex": {
+        "name": "Reflejos",
+        "durationSeconds": 30,
+        "minDurationSeconds": 10,
+        "maxScorePerSecond": 2,
+        "coinsPerPoint": 0.6,
+        "maxCoins": 36,
+        "xpPerPoint": 1.5,
+        "maxXp": 50,
+        "happiness": 12
+      }
+    }
   }
 }

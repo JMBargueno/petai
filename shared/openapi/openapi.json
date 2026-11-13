@@ -404,6 +404,35 @@
         ]
       }
     },
+    "/v1/pets/{id}/evolve": {
+      "post": {
+        "operationId": "PetsController_evolve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Evolucionar a la forma final (nivel 50 + objeto especial)",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
     "/v1/pets/{id}/heal": {
       "post": {
         "operationId": "PetsController_heal",
@@ -436,7 +465,16 @@
     "/v1/shop": {
       "get": {
         "operationId": "InventoryController_getShop",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -485,6 +523,84 @@
         "summary": "Comprar artículo de la tienda",
         "tags": [
           "Inventory & Shop"
+        ]
+      }
+    },
+    "/v1/minigames": {
+      "get": {
+        "operationId": "MinigamesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar minijuegos disponibles",
+        "tags": [
+          "Minigames"
+        ]
+      }
+    },
+    "/v1/minigames/sessions/{id}/finish": {
+      "post": {
+        "operationId": "MinigamesController_finish",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar la puntuación final y recibir recompensas validadas",
+        "tags": [
+          "Minigames"
+        ]
+      }
+    },
+    "/v1/minigames/{gameId}/start": {
+      "post": {
+        "operationId": "MinigamesController_start",
+        "parameters": [
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Iniciar sesión de minijuego (devuelve sessionId y seed)",
+        "tags": [
+          "Minigames"
         ]
       }
     }

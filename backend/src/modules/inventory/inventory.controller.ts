@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -11,8 +11,8 @@ export class InventoryController {
 
   @Get('shop')
   @ApiOperation({ summary: 'Listar artículos de la tienda' })
-  getShop() {
-    return this.inventoryService.getShopItems();
+  getShop(@Query('kind') kind?: string) {
+    return this.inventoryService.getShopItems(kind);
   }
 
   @ApiBearerAuth()
@@ -29,8 +29,8 @@ export class InventoryController {
   @ApiOperation({ summary: 'Comprar artículo de la tienda' })
   buyItem(
     @CurrentUser() user: any,
-    @Body() body: { itemId: string; quantity?: number },
+    @Body() body: { itemId: string; quantity?: number } | undefined,
   ) {
-    return this.inventoryService.buyItem(user.id, body.itemId, body.quantity || 1);
+    return this.inventoryService.buyItem(user.id, body?.itemId as string, body?.quantity ?? 1);
   }
 }
