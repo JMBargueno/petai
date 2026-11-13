@@ -146,6 +146,16 @@ export class AuthService {
     return { ok: true };
   }
 
+  /** Abre una sesión nueva para un usuario ya verificado (vinculación de dispositivos). */
+  async issueSession(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException("Usuario no encontrado");
+    return {
+      ...(await this.generateTokens(user.id, user.email)),
+      user: { id: user.id, email: user.email, displayName: user.displayName, coins: user.coins, gems: user.gems },
+    };
+  }
+
   private async generateTokens(userId: string, email: string) {
     const payload = { sub: userId, email };
 

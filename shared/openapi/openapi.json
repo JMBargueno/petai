@@ -130,6 +130,56 @@
         ]
       }
     },
+    "/v1/auth/device/start": {
+      "post": {
+        "operationId": "AuthController_deviceStart",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Iniciar vinculación: devuelve un código de 6 dígitos y un pollToken",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/device/confirm": {
+      "post": {
+        "operationId": "AuthController_deviceConfirm",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmar el código mostrado en otro dispositivo (requiere sesión)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/device/poll": {
+      "post": {
+        "operationId": "AuthController_devicePoll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Consultar la vinculación: pending o confirmed con la sesión nueva",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/v1/me": {
       "get": {
         "operationId": "UsersController_getMe",
@@ -1376,7 +1426,7 @@
   },
   "info": {
     "title": "PetAI API",
-    "description": "API autoritativa para el ecosistema PetAI (tamagotchi virtual inteligente)",
+    "description": "API autoritativa para el ecosistema PetAI",
     "version": "1.0.0",
     "contact": {}
   },

@@ -1,7 +1,10 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Req } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
+import { DeviceLinkService } from './device-link.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { CurrentUser } from './current-user.decorator';
 import { RegisterDto, LoginDto, RefreshTokenDto, AuthResponseDto } from './dto/auth.dto';
 
 /** IP del cliente (con TRUST_PROXY configurado respeta X-Forwarded-For del proxy de confianza). */
@@ -10,7 +13,7 @@ const clientIp = (req: Request) => req.ip || req.socket?.remoteAddress || 'unkno
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService, private readonly deviceLink: DeviceLinkService) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Registrar nuevo usuario' })
@@ -39,5 +42,28 @@ export class AuthController {
   @ApiOperation({ summary: 'Cerrar sesión: revoca el refresh token' })
   logout(@Body() dto: RefreshTokenDto) {
     return this.authService.logout(dto);
+  }
+
+  @Post('device/start')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Iniciar vinculación: devuelve un código de 6 dígitos y un pollToken' })
+  deviceStart(@Req() req: Request) {
+    return this.deviceLink.start(clientIp(req));
+  }
+
+  @Post('device/confirm')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Confirmar el código mostrado en otro dispositivo (requiere sesión)' })
+  deviceConfirm(@CurrentUser() user: any, @Body() body: unknown, @Req() req: Request) {
+    return this.deviceLink.confirm(user.id, body, clientIp(req));
+  }
+
+  @Post('device/poll')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Consultar la vinculación: pending o confirmed con la sesión nueva' })
+  devicePoll(@Body() body: unknown) {
+    return this.deviceLink.poll(body);
   }
 }

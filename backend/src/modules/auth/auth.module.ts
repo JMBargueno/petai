@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
+import { DeviceLinkService } from './device-link.service';
 import { AuthThrottleService } from './auth-throttle.service';
 
 @Module({
@@ -12,7 +13,7 @@ import { AuthThrottleService } from './auth-throttle.service';
     JwtModule.register({}),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, AuthThrottleService],
+  providers: [AuthService, DeviceLinkService, JwtStrategy, AuthThrottleService],
   exports: [AuthService, PassportModule],
 })
 export class AuthModule {}

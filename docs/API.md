@@ -20,9 +20,9 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `POST /auth/logout` `{ refreshToken }`: Revoca ese token (idempotente).
 
 **Límite de intentos** (429 con `retryAfterSeconds`): 10 fallos de login por cuenta+IP y 100 por IP cada 15 min (un acierto reinicia el de la cuenta), 10 registros por IP y hora, 60 refresh por IP y minuto. Se configura con `AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT`, `AUTH_LOGIN_MAX_FAILS_PER_IP`, `AUTH_LOGIN_WINDOW_MINUTES`, `AUTH_REGISTER_MAX_PER_IP` y `AUTH_REFRESH_MAX_PER_MINUTE`. Detrás de un proxy hay que declarar `TRUST_PROXY` (nº de saltos de confianza) para que cuente la IP real. Está en memoria: con varias instancias del backend debe pasar a Redis.
-- `POST /auth/device/start`: Iniciar vinculación para clientes de escritorio (genera código de 6 dígitos).
-- `POST /auth/device/confirm`: Confirmar código desde app móvil autenticada.
-- `POST /auth/device/poll`: Comprobación periódica desde el cliente de escritorio hasta confirmación.
+- `POST /auth/device/start` (sin sesión): devuelve `{ code, pollToken, expiresInSeconds }` (código de 6 dígitos, 5 min). 20 por IP y hora.
+- `POST /auth/device/confirm` `{ code }` (con sesión): vincula el código mostrado en otro dispositivo. 10 intentos por IP y por usuario cada 15 min; código inexistente o caducado → 404.
+- `POST /auth/device/poll` `{ pollToken }` (sin sesión): `{ status: "pending" }` o, una sola vez, `{ status: "confirmed", accessToken, refreshToken, user }`. Estado en memoria (como el limitador de intentos): con varias instancias debe pasar a Redis.
 
 ### 2.2 Usuario y Perfil (`/users` y `/me`)
 - `GET /me`: Obtener perfil del usuario actual (monedas, gemas, nivel de cuenta, zona horaria).
