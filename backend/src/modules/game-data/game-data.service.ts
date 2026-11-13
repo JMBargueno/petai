@@ -14,7 +14,15 @@ export class GameDataService implements OnModuleInit {
   }
 
   private loadData() {
-    const dataDir = path.resolve(__dirname, '../../../../shared/game-data');
+    const candidates = [
+      path.resolve(process.cwd(), 'shared/game-data'),
+      path.resolve(process.cwd(), '../shared/game-data'),
+      path.resolve(__dirname, '../../../../shared/game-data'),
+      path.resolve(__dirname, '../../../shared/game-data'),
+    ];
+
+    const dataDir = candidates.find((dir) => fs.existsSync(dir)) || candidates[0];
+
     this.balanceData = JSON.parse(fs.readFileSync(path.join(dataDir, 'balance.json'), 'utf8'));
     this.speciesData = JSON.parse(fs.readFileSync(path.join(dataDir, 'species.json'), 'utf8'));
     this.patternsData = JSON.parse(fs.readFileSync(path.join(dataDir, 'patterns.json'), 'utf8'));

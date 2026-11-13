@@ -14,6 +14,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env', 'backend/.env'],
       validate: validateEnv,
     }),
     PrismaModule,

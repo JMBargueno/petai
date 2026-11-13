@@ -8,7 +8,9 @@ export function initSocket(userId?: string) {
     socket.disconnect();
   }
 
-  socket = io(`${API_BASE_URL}/realtime`, {
+  const socketUrl = API_BASE_URL || window.location.origin;
+
+  socket = io(`${socketUrl}/realtime`, {
     query: userId ? { userId } : {},
     transports: ['websocket', 'polling'],
   });

@@ -1,7 +1,9 @@
 import createClient from 'openapi-fetch';
 import type { paths } from '@shared/openapi/api-types';
 
-export const API_BASE_URL = 'http://localhost:3000';
+export const API_BASE_URL = typeof window !== 'undefined' && window.location.origin.includes('localhost:')
+  ? ''
+  : 'http://127.0.0.1:3000';
 
 const client = createClient<paths>({ baseUrl: API_BASE_URL });
 

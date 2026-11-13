@@ -12,11 +12,12 @@ async function bootstrap() {
   const prefix = configService.get<string>('API_PREFIX', 'v1');
   app.setGlobalPrefix(prefix);
 
-  // Configuración de CORS
-  const corsOrigins = configService.get<string>('CORS_ORIGINS', 'http://localhost:5173,tauri://localhost');
+  // Configuración de CORS permisiva para desarrollo local (Vite, Tauri, localhost, 127.0.0.1)
   app.enableCors({
-    origin: corsOrigins.split(',').map((o) => o.trim()),
+    origin: true,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   // Configuración de OpenAPI / Swagger
@@ -31,7 +32,12 @@ async function bootstrap() {
   SwaggerModule.setup(`${prefix}/docs`, app, document);
 
   // Exportar openapi.json a shared/openapi para generadores de clientes
-  const openApiPath = path.resolve(__dirname, '../../../shared/openapi/openapi.json');
+  const openApiCandidates = [
+    path.resolve(process.cwd(), 'shared/openapi/openapi.json'),
+    path.resolve(process.cwd(), '../shared/openapi/openapi.json'),
+    path.resolve(__dirname, '../../../shared/openapi/openapi.json'),
+  ];
+  const openApiPath = openApiCandidates.find((p) => fs.existsSync(path.dirname(p))) || openApiCandidates[0];
   try {
     const dir = path.dirname(openApiPath);
     if (!fs.existsSync(dir)) {
@@ -44,7 +50,7 @@ async function bootstrap() {
   }
 
   const port = configService.get<number>('PORT', 3000);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`[PetAI Backend] Servidor iniciado en http://localhost:${port}/${prefix}`);
   console.log(`[PetAI Backend] Documentación Swagger en http://localhost:${port}/${prefix}/docs`);
 }
