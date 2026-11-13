@@ -6,20 +6,24 @@ import { z } from 'zod';
  * Swagger; la validación real se hace aquí (zod) para no depender de decoradores globales.
  */
 
-const email = z
-  .string({ required_error: 'email es obligatorio', invalid_type_error: 'email debe ser un texto' })
+/** Texto obligatorio con mensajes distintos para "falta" y "no es texto". */
+const text = (name: string) =>
+  z.string({
+    error: (issue) => (issue.input === undefined ? `${name} es obligatorio` : `${name} debe ser un texto`),
+  });
+
+const email = text('email')
   .trim()
   .toLowerCase()
   .max(254, 'email demasiado largo')
-  .email('email no es válido');
+  .refine((v) => z.email().safeParse(v).success, 'email no es válido');
 
-const password = z
-  .string({ required_error: 'password es obligatoria', invalid_type_error: 'password debe ser un texto' })
+const password = text('password')
   .min(8, 'La contraseña debe tener al menos 8 caracteres')
   .max(128, 'La contraseña no puede superar los 128 caracteres');
 
 const displayName = z
-  .string({ invalid_type_error: 'displayName debe ser un texto' })
+  .string({ error: 'displayName debe ser un texto' })
   .transform((s) => s.replace(/[\u0000-\u001f\u007f]/g, '').trim())
   .pipe(z.string().min(1, 'displayName no puede estar vacío').max(50, 'displayName no puede superar los 50 caracteres'))
   .optional();
@@ -30,17 +34,11 @@ export const registerSchema = z.object({ email, password, displayName });
 // solo un tope de longitud para no hashear cuerpos enormes.
 export const loginSchema = z.object({
   email,
-  password: z
-    .string({ required_error: 'password es obligatoria', invalid_type_error: 'password debe ser un texto' })
-    .min(1, 'password es obligatoria')
-    .max(128, 'La contraseña no puede superar los 128 caracteres'),
+  password: text('password').min(1, 'password es obligatorio').max(128, 'La contraseña no puede superar los 128 caracteres'),
 });
 
 export const refreshSchema = z.object({
-  refreshToken: z
-    .string({ required_error: 'refreshToken es obligatorio', invalid_type_error: 'refreshToken debe ser un texto' })
-    .min(10)
-    .max(4096),
+  refreshToken: text('refreshToken').min(10, 'refreshToken no es válido').max(4096, 'refreshToken no es válido'),
 });
 
 /** Valida y devuelve los datos tipados; ante un error responde 400 con el primer motivo. */

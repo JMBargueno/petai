@@ -4,39 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppModule } from './app.module';
+import { applyCors } from './common/cors';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
-
-  // Detrás de un proxy/balanceador hay que declarar cuántos saltos son de confianza para que req.ip
-  // (usado en el límite de intentos) sea la IP real y no la del proxy ni una cabecera falsificada.
-  const trustProxy = Number(configService.get('TRUST_PROXY') ?? 0);
-  if (trustProxy > 0) app.getHttpAdapter().getInstance().set('trust proxy', trustProxy);
-
-  const prefix = configService.get<string>('API_PREFIX', 'v1');
-  app.setGlobalPrefix(prefix);
-
-  // Configuración de CORS permisiva para desarrollo local (Vite, Tauri, localhost, 127.0.0.1)
-  app.enableCors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  });
-
-  // Configuración de OpenAPI / Swagger
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('PetAI API')
-    .setDescription('API autoritativa para el ecosistema PetAI (tamagotchi virtual inteligente)')
-    .setVersion('1.0.0')
-    .addBearerAuth()
-    .build();
-
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup(`${prefix}/docs`, app, document);
-
-  // Exportar openapi.json a shared/openapi para generadores de clientes
+/** Exporta openapi.json a shared/openapi para los generadores de clientes. */
+function exportOpenApi(document: unknown) {
   const openApiCandidates = [
     path.resolve(process.cwd(), 'shared/openapi/openapi.json'),
     path.resolve(process.cwd(), '../shared/openapi/openapi.json'),
@@ -51,13 +22,46 @@ async function bootstrap() {
     fs.writeFileSync(openApiPath, JSON.stringify(document, null, 2), 'utf8');
     console.log(`[OpenAPI] Contrato exportado en: ${openApiPath}`);
   } catch (err) {
-    console.warn('[OpenAPI] No se pudo exportar openapi.json:', err.message);
+    console.warn('[OpenAPI] No se pudo exportar openapi.json:', (err as Error).message);
+  }
+}
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+
+  // Detrás de un proxy/balanceador hay que declarar cuántos saltos son de confianza para que req.ip
+  // (usado en el límite de intentos) sea la IP real y no la del proxy ni una cabecera falsificada.
+  const trustProxy = Number(configService.get('TRUST_PROXY') ?? 0);
+  if (trustProxy > 0) app.getHttpAdapter().getInstance().set('trust proxy', trustProxy);
+
+  const prefix = configService.get<string>('API_PREFIX', 'v1');
+  app.setGlobalPrefix(prefix);
+
+  // CORS: solo los orígenes de CORS_ORIGINS (Vite y Tauri por defecto), no cualquiera
+  applyCors(app, configService.get<string>('CORS_ORIGINS'));
+
+  // OpenAPI / Swagger: por defecto solo fuera de producción (SWAGGER_ENABLED lo fuerza en cualquier entorno)
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+  const swaggerEnabled = (configService.get<string>('SWAGGER_ENABLED') ?? (isProduction ? 'false' : 'true')) === 'true';
+  if (swaggerEnabled) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('PetAI API')
+      .setDescription('API autoritativa para el ecosistema PetAI (tamagotchi virtual inteligente)')
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup(`${prefix}/docs`, app, document);
+
+    // El contrato OpenAPI compartido solo se regenera en desarrollo (es una herramienta de build, no de servidor)
+    if (!isProduction) exportOpenApi(document);
   }
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port, '0.0.0.0');
   console.log(`[PetAI Backend] Servidor iniciado en http://localhost:${port}/${prefix}`);
-  console.log(`[PetAI Backend] Documentación Swagger en http://localhost:${port}/${prefix}/docs`);
+  if (swaggerEnabled) console.log(`[PetAI Backend] Documentación Swagger en http://localhost:${port}/${prefix}/docs`);
 }
 
 bootstrap();

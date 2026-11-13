@@ -8,10 +8,12 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
+import { socketCorsOrigin } from '../../common/cors';
 
 @WebSocketGateway({
+  // Solo los orígenes de CORS_ORIGINS (no '*'); además la conexión exige un JWT válido
   cors: {
-    origin: '*',
+    origin: socketCorsOrigin,
   },
   namespace: 'realtime',
 })
