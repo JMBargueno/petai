@@ -71,6 +71,15 @@
             pets[index] = updatedPet;
           }
         });
+        // Otro jugador ha retado a tu mascota en la arena (pelea asíncrona)
+        socket.on('battle:defended', (b: any) => {
+          // Resultado desde el punto de vista de la mascota defensora (la del usuario)
+          const outcome = b.draw ? 'empató' : b.won ? 'ganó' : 'perdió';
+          const delta = b.eloDelta ? ` (${b.eloDelta > 0 ? '+' : ''}${b.eloDelta} ELO)` : '';
+          const text = `⚔️ ${b.attackerName} retó a ${b.defenderPetName}: tu mascota ${outcome}${delta}`;
+          showBubble(text);
+          notifyNow('Te han retado en la arena', text);
+        });
       }
     } catch (err) {
       console.warn('Sesión no iniciada o token expirado:', err);

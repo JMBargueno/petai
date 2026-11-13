@@ -21,7 +21,8 @@ export default defineConfig({
         target: 'http://127.0.0.1:3000',
         changeOrigin: true,
       },
-      '/realtime': {
+      // socket.io usa la ruta HTTP /socket.io (el "/realtime" es solo el namespace del gateway)
+      '/socket.io': {
         target: 'http://127.0.0.1:3000',
         ws: true,
         changeOrigin: true,

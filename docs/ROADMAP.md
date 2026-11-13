@@ -12,7 +12,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 1** | Núcleo Backend + Escritorio | ✅ Completada | Ciclo básico: Registro, Eclosión, Cuidado, Sprite interactivo |
 | **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
 | **Fase 3** | Inteligencia Artificial (IA) | ✅ Completada (salvo modo suscripción y Redis) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
-| **Fase 4** | Peleas Asíncronas | 🔄 En curso (backend ✅) | Motor determinista, emparejamiento ELO y repeticiones |
+| **Fase 4** | Peleas Asíncronas | ✅ Completada (falta fin de temporada) | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ⏳ Pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
 | **Fase 6** | Pulido y Lanzamiento | ⏳ Pendiente | Seguridad, balance, optimización, tiendas y despliegue |
 
@@ -87,9 +87,10 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
   - [x] ELO de suma cero, ligas (Bronce → Mítica) y clasificación global y semanal en Redis (con respaldo en PostgreSQL).
   - [x] Registro de repetición reproducible (`log json`) y aviso por WebSocket al defensor.
   - [ ] Recompensas de fin de temporada.
-- **Escritorio**:
-  - [ ] Interfaz de Arena (perfil de combate, reparto de puntos, habilidades, buscar rival).
-  - [ ] Visualizador de repeticiones animadas, historial y clasificación.
+- **Escritorio** ✅:
+  - [x] Pestaña Arena: perfil de combate (liga, ELO, límites), reparto de puntos, estrategia, equipamiento de habilidades y búsqueda de rival.
+  - [x] Visor de repeticiones animado (barras de vida, golpes, críticos, estados; pausa, velocidad ×1/×2/×4, saltar al final) a partir del registro del servidor.
+  - [x] Historial de peleas (como atacante y defensor) con repetición, clasificación global y semanal y aviso al defensor (burbuja + notificación nativa).
 
 ---
 

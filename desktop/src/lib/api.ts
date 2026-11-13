@@ -308,6 +308,53 @@ export const api = {
     >('POST', `/v1/pets/${petId}/chat/local/sync`, { turnId, reply });
   },
 
+  // ---- Arena (Fase 4) ----
+  async getCombatProfile(petId: string) {
+    return minigameRequest<CombatProfile>('GET', `/v1/pets/${petId}/combat`);
+  },
+
+  async allocateStats(petId: string, points: Record<string, number>) {
+    return minigameRequest<CombatProfile>('POST', `/v1/pets/${petId}/combat/stats`, points);
+  },
+
+  async equipSkills(petId: string, skills: string[]) {
+    return minigameRequest<CombatProfile>('PUT', `/v1/pets/${petId}/combat/skills`, { skills });
+  },
+
+  async setStrategy(petId: string, strategy: string) {
+    return minigameRequest<any>('PATCH', `/v1/pets/${petId}`, { strategy });
+  },
+
+  async matchmake(petId: string) {
+    return minigameRequest<BattleResponse>('POST', '/v1/battles/matchmake', { petId });
+  },
+
+  async getBattles(limit = 20) {
+    return minigameRequest<BattleSummary[]>('GET', `/v1/battles?limit=${limit}`);
+  },
+
+  async getBattle(id: string) {
+    return minigameRequest<{ id: string; seed: number; createdAt: string; role: string; outcome: string; eloDelta: number; replay: any }>(
+      'GET',
+      `/v1/battles/${id}`,
+    );
+  },
+
+  async getLeaderboard(scope: 'global' | 'weekly', petId?: string, limit = 20) {
+    return minigameRequest<{
+      scope: string;
+      entries: LeaderboardEntry[];
+      me: { rank: number; score: number } | null;
+    }>('GET', `/v1/leaderboard?scope=${scope}&limit=${limit}${petId ? `&petId=${petId}` : ''}`);
+  },
+
+  async getArenaRules() {
+    return minigameRequest<{ leagues: { id: string; name: string; minElo: number }[]; dailyFreeBattles: number; energyCost: number }>(
+      'GET',
+      '/v1/arena/leagues',
+    );
+  },
+
   async getPendingActions(petId: string) {
     return minigameRequest<{ id: string; tool: string; summary: string; expiresAt: string; clientSide?: boolean }[]>(
       'GET',
@@ -383,4 +430,60 @@ async function minigameRequest<T>(method: string, path: string, body?: unknown):
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.message || 'Error en la petición');
   return data as T;
+}
+
+export interface CombatProfile {
+  petId: string;
+  name: string;
+  element: string;
+  level: number;
+  stats: Record<'hp' | 'atk' | 'def' | 'vel' | 'esp', number>;
+  allocated: Record<'hp' | 'atk' | 'def' | 'vel' | 'esp', number>;
+  statPoints: number;
+  mood: number;
+  strategy: string;
+  elo: number;
+  league: { id: string; name: string; minElo: number; next: { id: string; name: string; minElo: number } | null; toNext: number | null };
+  unlockedSkills: string[];
+  equippedSkills: string[];
+  battlesToday: number;
+  dailyLimit: number;
+  energyCost: number;
+  canFight: boolean;
+  reason: string | null;
+}
+
+export interface BattleResponse {
+  battleId: string;
+  seed: number;
+  result: { outcome: 'win' | 'draw' | 'loss'; winner: 0 | 1 | null; rounds: number };
+  opponent: { name: string; speciesId: string; element: string; level: number; isBot: boolean; ownerName: string | null };
+  elo: { before: number; after: number; delta: number; league: CombatProfile['league'] };
+  rewards: { xp: number; coins: number; happiness: number; energyCost: number };
+  replay: any;
+  pet: any;
+}
+
+export interface BattleSummary {
+  id: string;
+  createdAt: string;
+  role: 'attacker' | 'defender';
+  outcome: 'win' | 'draw' | 'loss';
+  eloDelta: number;
+  rounds: number | null;
+  me: { name: string; level: number; element: string };
+  opponent: { name: string; level: number; element: string; isBot: boolean };
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  petId: string;
+  name: string;
+  owner: string | null;
+  speciesId: string;
+  level: number;
+  elo: number;
+  league: string;
+  score: number;
+  mine: boolean;
 }
