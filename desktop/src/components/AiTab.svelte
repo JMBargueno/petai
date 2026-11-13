@@ -29,6 +29,45 @@
   let scroller: HTMLElement;
   let abort: AbortController | null = null;
 
+  // Memoria
+  let memOpen = false;
+  let mem: Awaited<ReturnType<typeof api.getMemories>> | null = null;
+  let memErr = '';
+
+  async function loadMemories() {
+    if (!pet) return;
+    try {
+      mem = await api.getMemories(pet.id);
+      memErr = '';
+    } catch (e: any) {
+      memErr = e.message;
+    }
+  }
+
+  async function toggleMemories() {
+    memOpen = !memOpen;
+    if (memOpen) await loadMemories();
+  }
+
+  async function forget(id: string) {
+    try {
+      await api.forgetMemory(pet.id, id);
+      await loadMemories();
+    } catch (e: any) {
+      memErr = e.message;
+    }
+  }
+
+  async function forgetAll() {
+    if (!confirm('¿Borrar todos los recuerdos de tu mascota? No se puede deshacer.')) return;
+    try {
+      await api.forgetAllMemories(pet.id);
+      await loadMemories();
+    } catch (e: any) {
+      memErr = e.message;
+    }
+  }
+
   $: needsUrl = provider !== 'openai';
   $: tier = (pet?.intelligence ?? 0) >= 500 ? 'Agente' : (pet?.intelligence ?? 0) >= 200 ? 'Memoria' : 'Charla';
 
@@ -149,6 +188,8 @@
       messages = messages;
       dispatch('bubble', done.message.content);
       dispatch('refreshPet');
+      // La extracción de recuerdos se hace en segundo plano en el servidor
+      if (memOpen) setTimeout(loadMemories, 3000);
     } catch (e: any) {
       if (e.name !== 'AbortError') chatErr = e.message;
       // Se retira el intercambio incompleto: el servidor no lo guardó
@@ -230,6 +271,31 @@
       {/each}
     </div>
     {#if chatErr}<p class="error">{chatErr}</p>{/if}
+    <div class="memory">
+      <button class="link" on:click={toggleMemories}>
+        🗂 Recuerdos {memOpen ? '▾' : '▸'}
+      </button>
+      {#if memOpen}
+        {#if memErr}<p class="error">{memErr}</p>{/if}
+        {#if mem && !mem.unlocked}
+          <p class="muted">
+            🔒 La memoria se desbloquea con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}). Sigue charlando.
+          </p>
+        {:else if mem && mem.memories.length === 0}
+          <p class="muted">Todavía no recuerda nada. Tras unas cuantas charlas empezará a hacerlo.</p>
+        {:else if mem}
+          <ul class="mem-list">
+            {#each mem.memories as m (m.id)}
+              <li class:summary={m.kind === 'summary'}>
+                <span>{m.kind === 'summary' ? '📝 ' : '💭 '}{m.content}</span>
+                <button class="x" title="Olvidar" on:click={() => forget(m.id)}>✕</button>
+              </li>
+            {/each}
+          </ul>
+          <button class="danger small" on:click={forgetAll}>Olvidar todo</button>
+        {/if}
+      {/if}
+    </div>
     <div class="composer">
       <textarea
         rows="2"
@@ -278,4 +344,11 @@
   .msg.user { align-self: flex-end; background: #0369a1; }
   .msg.assistant { align-self: flex-start; background: rgba(51, 65, 85, 0.9); }
   .composer { display: flex; gap: 6px; align-items: stretch; }
+  .memory { margin-bottom: 8px; }
+  .mem-list { list-style: none; margin: 6px 0; padding: 0; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+  .mem-list li { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; background: rgba(15, 23, 42, 0.6); padding: 4px 8px; border-radius: 8px; user-select: text; }
+  .mem-list li.summary { opacity: 0.75; font-style: italic; }
+  .x { background: none; border: none; padding: 0 4px; opacity: 0.6; }
+  .x:hover { opacity: 1; color: #f87171; }
+  .small { padding: 4px 8px; font-size: 11px; }
 </style>

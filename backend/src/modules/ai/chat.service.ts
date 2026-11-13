@@ -3,8 +3,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PetsService } from '../pets/pets.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AiConfigService } from './ai-config.service';
-import { ChatMessageInput } from './llm-provider';
-import { INTELLIGENCE_MAX, buildSystemPrompt, intelligenceTier } from './personality';
+import { MemoryService } from './memory.service';
+import { ChatMessageInput, LlmProvider } from './llm-provider';
+import { INTELLIGENCE_MAX, MEMORY_UNLOCK, buildSystemPrompt, intelligenceTier } from './personality';
 
 export type ChatStreamEvent =
   | { type: 'delta'; text: string }
@@ -27,6 +28,7 @@ export class ChatService {
     private readonly petsService: PetsService,
     private readonly aiConfig: AiConfigService,
     private readonly realtime: RealtimeGateway,
+    private readonly memory: MemoryService,
   ) {}
 
   private checkRateLimit(userId: string) {
@@ -96,8 +98,17 @@ export class ChatService {
       history.unshift({ role: m.role as 'user' | 'assistant', content: m.content });
     }
 
+    // Memoria (intelligence ≥ 200): recuerdos relevantes en el prompt de sistema
+    let systemPrompt = buildSystemPrompt(pet, owner ?? {});
+    if ((pet.intelligence ?? 0) >= MEMORY_UNLOCK) {
+      const block = await this.memory.recall(pet.id, message);
+      if (block) systemPrompt += `
+
+${block}`;
+    }
+
     const messages: ChatMessageInput[] = [
-      { role: 'system', content: buildSystemPrompt(pet, owner ?? {}) },
+      { role: 'system', content: systemPrompt },
       ...history,
       { role: 'user', content: message },
     ];
@@ -110,7 +121,7 @@ export class ChatService {
     pet: any,
     userMessage: string,
     messages: ChatMessageInput[],
-    provider: { chat: (m: ChatMessageInput[], o: any) => AsyncIterable<any> },
+    provider: LlmProvider,
     model: string,
     signal?: AbortSignal,
   ): AsyncGenerator<ChatStreamEvent> {
@@ -154,6 +165,9 @@ export class ChatService {
       include: { species: true, pattern: true },
     });
     this.realtime.emitPetUpdate(userId, updated);
+
+    // En segundo plano: no retrasa la respuesta ni puede romper el chat
+    void this.memory.maybeSummarize(pet.id, intelligence, provider, model);
 
     yield {
       type: 'done',

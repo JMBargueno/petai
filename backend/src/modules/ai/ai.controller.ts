@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AiConfigService, AiConfigInput } from './ai-config.service';
 import { ChatService } from './chat.service';
+import { MemoryService } from './memory.service';
 
 @ApiTags('AI')
 @ApiBearerAuth()
@@ -14,6 +15,7 @@ export class AiController {
   constructor(
     private readonly aiConfig: AiConfigService,
     private readonly chat: ChatService,
+    private readonly memory: MemoryService,
   ) {}
 
   @Get('ai/config')
@@ -44,6 +46,24 @@ export class AiController {
   @ApiOperation({ summary: 'Historial de conversación de la mascota' })
   history(@CurrentUser() user: any, @Param('id') petId: string, @Query('limit') limit?: string) {
     return this.chat.getHistory(user.id, petId, limit ? Number(limit) : undefined);
+  }
+
+  @Get('pets/:id/memories')
+  @ApiOperation({ summary: 'Recuerdos de la mascota (hechos y resúmenes)' })
+  memories(@CurrentUser() user: any, @Param('id') petId: string) {
+    return this.memory.list(user.id, petId);
+  }
+
+  @Delete('pets/:id/memories/:memoryId')
+  @ApiOperation({ summary: 'Olvidar un recuerdo concreto' })
+  forget(@CurrentUser() user: any, @Param('id') petId: string, @Param('memoryId') memoryId: string) {
+    return this.memory.remove(user.id, petId, memoryId);
+  }
+
+  @Delete('pets/:id/memories')
+  @ApiOperation({ summary: 'Borrar toda la memoria de la mascota' })
+  forgetAll(@CurrentUser() user: any, @Param('id') petId: string) {
+    return this.memory.clear(user.id, petId);
   }
 
   @Post('pets/:id/chat')

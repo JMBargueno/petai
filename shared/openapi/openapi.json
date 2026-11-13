@@ -717,6 +717,99 @@
         ]
       }
     },
+    "/v1/pets/{id}/memories": {
+      "get": {
+        "operationId": "AiController_memories",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recuerdos de la mascota (hechos y resúmenes)",
+        "tags": [
+          "AI"
+        ]
+      },
+      "delete": {
+        "operationId": "AiController_forgetAll",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Borrar toda la memoria de la mascota",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/pets/{id}/memories/{memoryId}": {
+      "delete": {
+        "operationId": "AiController_forget",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "memoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Olvidar un recuerdo concreto",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
     "/v1/pets/{id}/chat": {
       "post": {
         "operationId": "AiController_chatStream",

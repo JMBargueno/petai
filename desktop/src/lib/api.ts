@@ -266,6 +266,23 @@ export const api = {
     throw new Error('La respuesta terminó sin completarse');
   },
 
+  async getMemories(petId: string) {
+    return minigameRequest<{
+      unlocked: boolean;
+      unlockAt: number;
+      intelligence: number;
+      memories: { id: string; kind: 'fact' | 'summary'; content: string; createdAt: string }[];
+    }>('GET', `/v1/pets/${petId}/memories`);
+  },
+
+  async forgetMemory(petId: string, memoryId: string) {
+    return minigameRequest<{ deleted: number }>('DELETE', `/v1/pets/${petId}/memories/${memoryId}`);
+  },
+
+  async forgetAllMemories(petId: string) {
+    return minigameRequest<{ deleted: number }>('DELETE', `/v1/pets/${petId}/memories`);
+  },
+
   async evolvePet(petId: string) {
     return minigameRequest<any>('POST', `/v1/pets/${petId}/evolve`);
   },

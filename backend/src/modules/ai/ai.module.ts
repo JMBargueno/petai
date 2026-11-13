@@ -3,11 +3,12 @@ import { AiController } from './ai.controller';
 import { AiConfigService } from './ai-config.service';
 import { ChatService } from './chat.service';
 import { KeyCryptoService } from './key-crypto.service';
+import { MemoryService } from './memory.service';
 import { PetsModule } from '../pets/pets.module';
 
 @Module({
   imports: [PetsModule],
   controllers: [AiController],
-  providers: [AiConfigService, ChatService, KeyCryptoService],
+  providers: [AiConfigService, ChatService, KeyCryptoService, MemoryService],
 })
 export class AiModule {}

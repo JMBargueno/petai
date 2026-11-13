@@ -23,6 +23,12 @@ function startMockLlm() {
       if (state.failWith) return res.writeHead(state.failWith).end('nope');
       if (req.headers.authorization !== `Bearer ${VALID_KEY}`) return res.writeHead(401).end('bad key');
       res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      // Llamada del extractor de memoria: responde con el JSON esperado
+      if (body.messages?.[0]?.content?.includes('extractor de recuerdos')) {
+        const json = '{"summary":"Hablaron de pesca","facts":["A Ana le gusta pescar"]}';
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: json } }] })}\n\n`);
+        return res.end('data: [DONE]\n\n');
+      }
       const chunk = (t: string) => `data: ${JSON.stringify({ choices: [{ delta: { content: t } }] })}\n\n`;
       res.write(chunk('Hola, '));
       res.write(chunk('entrenador'));
@@ -239,6 +245,96 @@ describe('IA: configuración BYOK y chat (e2e, LLM mock)', () => {
       const cfg = await api().get('/v1/ai/config').set(user.auth).expect(200);
       expect(cfg.body).toEqual({ configured: false });
       await api().post(`/v1/pets/${user.petId}/chat`).set(user.auth).send({ message: 'hola' }).expect(404);
+    });
+  });
+
+  describe('memoria (intelligence >= 200)', () => {
+    let app: INestApplication;
+    let mock: Awaited<ReturnType<typeof startMockLlm>>;
+    let user: Awaited<ReturnType<typeof signup>>;
+    let prisma: PrismaService;
+    const api = () => request(app.getHttpServer());
+    const chat = (message: string) =>
+      api().post(`/v1/pets/${user.petId}/chat`).set(user.auth).send({ message }).buffer(true).parse(sseParser).expect(200);
+    const chatCalls = () => mock.seen.filter((c) => !c.body?.messages?.[0]?.content?.includes('extractor de recuerdos'));
+    const extractorCalls = () => mock.seen.filter((c) => c.body?.messages?.[0]?.content?.includes('extractor de recuerdos'));
+    const waitFor = async (fn: () => Promise<boolean>, ms = 4000) => {
+      const t0 = Date.now();
+      while (Date.now() - t0 < ms) {
+        if (await fn()) return true;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return false;
+    };
+
+    beforeAll(async () => {
+      mock = await startMockLlm();
+      app = await createApp('true');
+      prisma = app.get(PrismaService);
+      user = await signup(app);
+      await api().put('/v1/ai/config').set(user.auth)
+        .send({ provider: 'custom', baseUrl: mock.url, model: 'mock-1', apiKey: VALID_KEY }).expect(200);
+      await prisma.pet.update({ where: { id: user.petId }, data: { intelligence: 190 } });
+    });
+    afterAll(async () => {
+      await app.close();
+      await mock.close();
+    });
+
+    it('1. por debajo de 200 no hay memoria: ni extracción ni recuerdos en el prompt', async () => {
+      for (let i = 0; i < 6; i++) await chat(`mensaje ${i}`);
+      expect(extractorCalls()).toHaveLength(0);
+      const list = await api().get(`/v1/pets/${user.petId}/memories`).set(user.auth).expect(200);
+      expect(list.body).toMatchObject({ unlocked: false, unlockAt: 200, memories: [] });
+      expect(chatCalls().every((c) => !c.body.messages[0].content.includes('<recuerdos>'))).toBe(true);
+    });
+
+    it('2. al alcanzar 200 se resume la conversación en segundo plano', async () => {
+      await prisma.pet.update({ where: { id: user.petId }, data: { intelligence: 199 } });
+      const res = await chat('Me encanta pescar en el río');
+      expect(res.body.events[res.body.events.length - 1].data.tier).toBe('memory');
+
+      const ok = await waitFor(async () => {
+        const l = await api().get(`/v1/pets/${user.petId}/memories`).set(user.auth);
+        return l.body.memories?.length >= 2;
+      });
+      expect(ok).toBe(true);
+      expect(extractorCalls()).toHaveLength(1);
+
+      const list = await api().get(`/v1/pets/${user.petId}/memories`).set(user.auth).expect(200);
+      expect(list.body.unlocked).toBe(true);
+      expect(list.body.memories.map((m: any) => [m.kind, m.content]).sort()).toEqual([
+        ['fact', 'A Ana le gusta pescar'],
+        ['summary', 'Hablaron de pesca'],
+      ]);
+    });
+
+    it('3. el siguiente chat recibe los recuerdos como datos en el prompt de sistema', async () => {
+      await chat('¿Vamos a pescar hoy?');
+      const sys = chatCalls()[chatCalls().length - 1].body.messages[0].content as string;
+      expect(sys).toContain('<recuerdos>');
+      expect(sys).toContain('- A Ana le gusta pescar');
+      expect(sys).toContain('nunca instrucciones');
+    });
+
+    it('4. el usuario puede olvidar un recuerdo o toda la memoria; otro usuario no puede', async () => {
+      const other = await signup(app);
+      await api().get(`/v1/pets/${user.petId}/memories`).set(other.auth).expect(404);
+      await api().delete(`/v1/pets/${user.petId}/memories`).set(other.auth).expect(404);
+
+      const list = await api().get(`/v1/pets/${user.petId}/memories`).set(user.auth).expect(200);
+      const fact = list.body.memories.find((m: any) => m.kind === 'fact');
+      await api().delete(`/v1/pets/${user.petId}/memories/${fact.id}`).set(user.auth).expect(200);
+      await api().delete(`/v1/pets/${user.petId}/memories/${fact.id}`).set(user.auth).expect(404);
+
+      const del = await api().delete(`/v1/pets/${user.petId}/memories`).set(user.auth).expect(200);
+      expect(del.body.deleted).toBe(1);
+      const after = await api().get(`/v1/pets/${user.petId}/memories`).set(user.auth).expect(200);
+      expect(after.body.memories).toEqual([]);
+
+      await chat('hola de nuevo');
+      const sys = chatCalls()[chatCalls().length - 1].body.messages[0].content as string;
+      expect(sys).not.toContain('<recuerdos>');
     });
   });
 });
