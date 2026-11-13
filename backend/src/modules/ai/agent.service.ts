@@ -21,11 +21,17 @@ export interface AgentContext {
   petId: string;
   timeZone: string;
   now: Date;
+  /** Herramientas de escritorio que la app declara soportar (open_url, read_clipboard). */
+  clientTools?: string[];
 }
 
 export type ToolOutcome =
   | { kind: 'result'; content: string }
-  | { kind: 'confirm'; action: { id: string; tool: string; summary: string; expiresAt: Date }; content: string };
+  | {
+      kind: 'confirm';
+      action: { id: string; tool: string; summary: string; expiresAt: Date; clientSide: boolean };
+      content: string;
+    };
 
 @Injectable()
 export class AgentService {
@@ -45,6 +51,10 @@ export class AgentService {
   async handle(ctx: AgentContext, call: ToolCall): Promise<ToolOutcome> {
     const spec = TOOL_BY_NAME.get(call.name);
     if (!spec) return { kind: 'result', content: this.json({ error: `Herramienta desconocida: ${call.name}` }) };
+
+    if (spec.clientSide && !ctx.clientTools?.includes(spec.name)) {
+      return { kind: 'result', content: this.json({ error: `La herramienta ${spec.name} solo está disponible en la app de escritorio` }) };
+    }
 
     const parsed = parseToolArguments(call.arguments);
     if (parsed === undefined) return { kind: 'result', content: this.json({ error: 'Los argumentos no son JSON válido' }) };
@@ -89,7 +99,7 @@ export class AgentService {
     });
     return {
       kind: 'confirm',
-      action: { id: action.id, tool, summary, expiresAt: action.expiresAt },
+      action: { id: action.id, tool, summary, expiresAt: action.expiresAt, clientSide: !!TOOL_BY_NAME.get(tool)?.clientSide },
       content: this.json({ status: 'pendiente_de_confirmacion', note: 'La acción NO se ha ejecutado. Se ha enviado una tarjeta al entrenador para que la confirme.' }),
     };
   }
@@ -174,7 +184,13 @@ export class AgentService {
       where: { userId, petId, status: 'pending', expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'asc' },
     });
-    return rows.map((a) => ({ id: a.id, tool: a.tool, summary: a.summary, expiresAt: a.expiresAt }));
+    return rows.map((a) => ({
+      id: a.id,
+      tool: a.tool,
+      summary: a.summary,
+      expiresAt: a.expiresAt,
+      clientSide: !!TOOL_BY_NAME.get(a.tool)?.clientSide,
+    }));
   }
 
   async confirm(userId: string, petId: string, actionId: string) {
@@ -196,6 +212,12 @@ export class AgentService {
       await this.prisma.pendingAction.update({ where: { id: actionId }, data: { status: 'rejected' } });
       throw new BadRequestException('La acción ya no es válida');
     }
+    // Herramientas de escritorio: el servidor NO las ejecuta; solo registra la confirmación (una vez)
+    // y devuelve los argumentos ya validados para que la app los ejecute en el equipo del usuario.
+    if (spec.clientSide) {
+      return { ok: true, tool: action.tool, summary: action.summary, clientSide: true, args: valid.args };
+    }
+
     const owner = await this.prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } });
     try {
       const result = await this.execute(

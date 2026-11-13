@@ -11,7 +11,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 0** | Preparación y Monorepo | ✅ Completada | Inicialización de repos, datos compartidos, docker-compose y CI |
 | **Fase 1** | Núcleo Backend + Escritorio | ✅ Completada | Ciclo básico: Registro, Eclosión, Cuidado, Sprite interactivo |
 | **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
-| **Fase 3** | Inteligencia Artificial (IA) | 🔄 En curso (IA casi completa) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
+| **Fase 3** | Inteligencia Artificial (IA) | ✅ Completada (salvo modo suscripción y Redis) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ⏳ Pendiente | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ⏳ Pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
 | **Fase 6** | Pulido y Lanzamiento | ⏳ Pendiente | Seguridad, balance, optimización, tiendas y despliegue |
@@ -73,9 +73,9 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 - **Escritorio**:
   - [x] Pestaña "IA": ajustes BYOK, prueba de conexión, chat en streaming y lista de recuerdos (con olvidar uno o todos).
   - [x] Burbuja de chat flotante sobre el sprite.
-  - [ ] Modo Hermes local directo (`localhost:8642`) sin pasar por el backend.
+  - [x] Modo Hermes local (`127.0.0.1:8642`): la app llama a su Hermes con el plugin HTTP de Tauri (permiso limitado a loopback) y el backend sigue construyendo el prompt, moderando y guardando (`/pets/:id/chat/local/context` y `/sync`). Sin herramientas ni extracción de memoria nueva.
   - [x] Tarjetas de confirmación para las acciones propuestas por la mascota y entrega de recordatorios con notificación nativa.
-  - [ ] Herramientas del escritorio `open_url` y `read_clipboard` (siempre con confirmación).
+  - [x] Herramientas del escritorio `open_url` y `read_clipboard`: el servidor valida y pide confirmación; se ejecutan en el equipo solo tras confirmar.
 
 ---
 

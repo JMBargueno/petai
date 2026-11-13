@@ -1031,6 +1031,64 @@
         ]
       }
     },
+    "/v1/pets/{id}/chat/local/context": {
+      "post": {
+        "operationId": "AiController_localContext",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Hermes local: valida el mensaje y devuelve los mensajes a enviar al modelo local",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/pets/{id}/chat/local/sync": {
+      "post": {
+        "operationId": "AiController_localSync",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Hermes local: entrega la respuesta generada en local para moderarla y guardarla",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
     "/v1/pets/{id}/chat": {
       "post": {
         "operationId": "AiController_chatStream",

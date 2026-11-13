@@ -1,11 +1,22 @@
-import { TOOL_BY_NAME, TOOLS, parseToolArguments, toolDefinitions } from './agent-tools';
+import {
+  CLIENT_TOOL_NAMES,
+  TOOL_BY_NAME,
+  TOOLS,
+  isBlockedHost,
+  parseToolArguments,
+  sanitizeClientTools,
+  toolDefinitions,
+} from './agent-tools';
 
 const NOW = new Date('2026-11-13T12:00:00Z');
 const reminder = TOOL_BY_NAME.get('create_reminder')!;
 
 describe('agent-tools', () => {
-  it('solo create_reminder requiere confirmación; el resto son de lectura', () => {
-    expect(TOOLS.filter((t) => t.requiresConfirmation).map((t) => t.name)).toEqual(['create_reminder']);
+  it('las herramientas con efectos (servidor o escritorio) siempre requieren confirmación; el resto son de lectura', () => {
+    expect(TOOLS.filter((t) => t.requiresConfirmation).map((t) => t.name).sort()).toEqual([
+      'create_reminder', 'open_url', 'read_clipboard',
+    ]);
+    expect(TOOLS.filter((t) => t.clientSide).every((t) => t.requiresConfirmation)).toBe(true);
     expect(toolDefinitions().map((t) => t.name).sort()).toEqual([
       'create_reminder', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'suggest_minigame',
     ]);
@@ -51,6 +62,62 @@ describe('agent-tools', () => {
       const d = reminder.describe!({ text: 'Sacar la basura', due_at: '2026-11-14T08:30:00.000Z' }, 'Europe/Madrid');
       expect(d).toContain('«Sacar la basura»');
       expect(d).toContain('9:30');
+    });
+  });
+
+  describe('herramientas del escritorio', () => {
+    const open = TOOL_BY_NAME.get('open_url')!;
+    const v = (url: unknown) => open.validate({ url }, NOW);
+
+    it('solo se ofrecen al modelo si el cliente las declara', () => {
+      expect(CLIENT_TOOL_NAMES.sort()).toEqual(['open_url', 'read_clipboard']);
+      expect(toolDefinitions().map((t) => t.name)).not.toContain('open_url');
+      expect(toolDefinitions(['open_url']).map((t) => t.name)).toContain('open_url');
+      expect(toolDefinitions(['open_url']).map((t) => t.name)).not.toContain('read_clipboard');
+    });
+
+    it('sanitizeClientTools solo acepta nombres conocidos y sin duplicados', () => {
+      expect(sanitizeClientTools(['open_url', 'open_url', 'rm_rf', 7, 'read_clipboard'])).toEqual(['open_url', 'read_clipboard']);
+      expect(sanitizeClientTools('open_url')).toEqual([]);
+      expect(sanitizeClientTools(undefined)).toEqual([]);
+    });
+
+    it('open_url acepta http/https públicos y normaliza', () => {
+      expect(v('https://es.wikipedia.org/wiki/Axolote')).toEqual({ ok: true, args: { url: 'https://es.wikipedia.org/wiki/Axolote' } });
+      expect(v('http://example.com')).toEqual({ ok: true, args: { url: 'http://example.com/' } });
+      expect(v('https://8.8.8.8/x').ok).toBe(true);
+    });
+
+    it.each([
+      ['javascript:alert(1)', 'http o https'],
+      ['file:///etc/passwd', 'http o https'],
+      ['data:text/html,<h1>x</h1>', 'http o https'],
+      ['ftp://example.com', 'http o https'],
+      ['https://user:pass@example.com', 'credenciales'],
+      ['http://localhost:3000/admin', 'locales'],
+      ['http://127.0.0.1:8642/v1', 'locales'],
+      ['http://192.168.1.1/', 'locales'],
+      ['http://169.254.169.254/latest/meta-data', 'locales'],
+      ['http://[::1]/', 'locales'],
+      ['https://servidor.local/', 'locales'],
+      ['https://intranet/', 'locales'],
+      ['noesurl', 'válida'],
+      ['https://exa mple.com', 'sin espacios'],
+      ['https://example.com/' + 'a'.repeat(2100), 'máx. 2000'],
+    ])('open_url rechaza %s', (url, msg) => {
+      const r = v(url);
+      expect(r.ok).toBe(false);
+      expect((r as any).error).toContain(msg);
+    });
+
+    it('isBlockedHost cubre nombres internos y rangos privados', () => {
+      for (const h of ['localhost', 'a.localhost', 'x.internal', '10.0.0.1', '::1', 'router']) expect(isBlockedHost(h)).toBe(true);
+      for (const h of ['example.com', 'es.wikipedia.org', '8.8.8.8']) expect(isBlockedHost(h)).toBe(false);
+    });
+
+    it('la tarjeta de open_url muestra la URL completa que se abrirá', () => {
+      expect(open.describe!({ url: 'https://example.com/a' }, 'UTC')).toContain('https://example.com/a');
+      expect(TOOL_BY_NAME.get('read_clipboard')!.describe!({}, 'UTC')).toContain('portapapeles');
     });
   });
 

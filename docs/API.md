@@ -75,6 +75,15 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `GET /pets/:id/chat/history?limit=`: Historial de la conversación (usuario y mascota).
 - `GET /ai/usage`: Tokens consumidos en el mes en curso (UTC), peticiones, cuota y restante (`null` = sin límite). Cuota por modo: `AI_MONTHLY_TOKEN_QUOTA_BYOK` (0 = ilimitada por defecto) y `AI_MONTHLY_TOKEN_QUOTA_MANAGED` (500 000). Al agotarla, el chat responde 429 hasta el mes siguiente. También cuentan la extracción de memoria y las respuestas bloqueadas; si el proveedor no informa del uso se estima (~4 caracteres por token).
 
+#### Herramientas del escritorio
+`POST /pets/:id/chat` acepta `clientTools: string[]` (solo se reconocen `open_url` y `read_clipboard`). Declaradas y con inteligencia ≥ 500, el modelo puede proponerlas. El servidor nunca las ejecuta: valida los argumentos (`open_url`: solo http/https, sin credenciales, sin localhost/IP privadas/nombres internos), crea una acción pendiente con `clientSide: true` y, al confirmar (`POST …/actions/:id/confirm`), devuelve `{ clientSide: true, tool, args }` una sola vez para que la app lo ejecute. `read_clipboard` no devuelve datos al servidor: la app envía el texto leído como un mensaje de chat normal (visible, moderado y sujeto a cuota).
+
+#### Modo Hermes local
+Para un Hermes Agent en el propio equipo (el backend no puede alcanzar un loopback):
+- `POST /pets/:id/chat/local/context` `{ message }`: valida, aplica el límite de mensajes y la moderación de entrada, y devuelve `{ turnId, messages, maxTokens }` (o `{ moderated }`). No necesita proveedor configurado y no consume cuota. Con memoria (≥ 200) incluye los recuerdos; el prompt no promete herramientas.
+- `POST /pets/:id/chat/local/sync` `{ turnId, reply }`: el turno es de un solo uso, caduca a los 5 min y es del usuario y mascota que lo pidieron. La respuesta (máx. 4000 caracteres) se modera; si pasa se guarda y sube la inteligencia, si no devuelve `{ moderated }` y no se guarda.
+Límites: la respuesta la afirma el cliente (no debe usarse para nada competitivo), no hay herramientas de agente ni extracción de memoria, y la moderación de salida ocurre al sincronizar (el texto ya se mostró en local). La URL, el modelo y la key de Hermes se guardan solo en el equipo.
+
 #### Moderación
 Evento SSE `moderated` `{reason, message, hideUserMessage}` (el mensaje no se guarda y no gasta tokens salvo `output_leak`):
 - `sensitive_data`: el mensaje contiene claves/tokens, contraseñas, tarjetas (Luhn) o IBAN; no se envía al proveedor ni se muestra.

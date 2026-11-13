@@ -123,12 +123,30 @@ export class AiController {
     return this.agent.deleteReminder(user.id, id);
   }
 
+  // ---------- Modo Hermes local (la inferencia la hace el escritorio) ----------
+
+  @Post('pets/:id/chat/local/context')
+  @ApiOperation({ summary: 'Hermes local: valida el mensaje y devuelve los mensajes a enviar al modelo local' })
+  localContext(@CurrentUser() user: any, @Param('id') petId: string, @Body() body: { message?: string } | undefined) {
+    return this.chat.prepareLocal(user.id, petId, body?.message);
+  }
+
+  @Post('pets/:id/chat/local/sync')
+  @ApiOperation({ summary: 'Hermes local: entrega la respuesta generada en local para moderarla y guardarla' })
+  localSync(
+    @CurrentUser() user: any,
+    @Param('id') petId: string,
+    @Body() body: { turnId?: string; reply?: string } | undefined,
+  ) {
+    return this.chat.syncLocal(user.id, petId, body?.turnId, body?.reply);
+  }
+
   @Post('pets/:id/chat')
   @ApiOperation({ summary: 'Conversar con la mascota (streaming SSE: eventos delta, done, error)' })
   async chatStream(
     @CurrentUser() user: any,
     @Param('id') petId: string,
-    @Body() body: { message?: string } | undefined,
+    @Body() body: { message?: string; clientTools?: string[] } | undefined,
     @Req() req: Request,
     @Res() res: Response,
   ) {
@@ -136,7 +154,13 @@ export class AiController {
     res.on('close', () => abort.abort());
 
     // Las validaciones lanzan excepciones HTTP normales antes de abrir el flujo
-    const { events } = await this.chat.prepare(user.id, petId, body?.message, abort.signal);
+    const { events } = await this.chat.prepare(
+      user.id,
+      petId,
+      body?.message,
+      abort.signal,
+      body?.clientTools,
+    );
 
     res.status(200).set({
       'Content-Type': 'text/event-stream; charset=utf-8',

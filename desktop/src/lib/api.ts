@@ -226,10 +226,11 @@ export const api = {
   async chatStream(
     petId: string,
     message: string,
+    clientTools: readonly string[],
     handlers: {
       onDelta: (text: string) => void;
       onTool?: (name: string) => void;
-      onAction?: (action: { id: string; tool: string; summary: string; expiresAt: string }) => void;
+      onAction?: (action: { id: string; tool: string; summary: string; expiresAt: string; clientSide?: boolean }) => void;
       onModerated?: (info: { reason: string; message: string; hideUserMessage: boolean }) => void;
     },
     signal?: AbortSignal,
@@ -241,7 +242,7 @@ export const api = {
         'Content-Type': 'application/json',
         ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, clientTools }),
     });
     if (!res.ok || !res.body) {
       const data = await res.json().catch(() => ({}));
@@ -291,15 +292,38 @@ export const api = {
     }>('GET', '/v1/ai/usage');
   },
 
+  /** Modo Hermes local, paso 1: el servidor valida, modera y devuelve los mensajes a enviar al modelo local. */
+  async localChatContext(petId: string, message: string) {
+    return minigameRequest<
+      | { turnId: string; messages: { role: 'system' | 'user' | 'assistant'; content: string }[]; maxTokens: number }
+      | { moderated: { reason: string; message: string; hideUserMessage: boolean } }
+    >('POST', `/v1/pets/${petId}/chat/local/context`, { message });
+  },
+
+  /** Modo Hermes local, paso 2: entrega la respuesta generada para moderarla y guardarla. */
+  async localChatSync(petId: string, turnId: string, reply: string) {
+    return minigameRequest<
+      | { message: { id: string; content: string }; intelligence: number; tier: string }
+      | { moderated: { reason: string; message: string; hideUserMessage: boolean } }
+    >('POST', `/v1/pets/${petId}/chat/local/sync`, { turnId, reply });
+  },
+
   async getPendingActions(petId: string) {
-    return minigameRequest<{ id: string; tool: string; summary: string; expiresAt: string }[]>(
+    return minigameRequest<{ id: string; tool: string; summary: string; expiresAt: string; clientSide?: boolean }[]>(
       'GET',
       `/v1/pets/${petId}/actions`,
     );
   },
 
   async confirmAction(petId: string, actionId: string) {
-    return minigameRequest<{ ok: boolean; tool: string; summary: string; result: any }>(
+    return minigameRequest<{
+      ok: boolean;
+      tool: string;
+      summary: string;
+      result?: any;
+      clientSide?: boolean;
+      args?: any;
+    }>(
       'POST',
       `/v1/pets/${petId}/actions/${actionId}/confirm`,
     );

@@ -96,6 +96,60 @@ describe('AgentService', () => {
     expect(parse(o).error).toContain('demasiadas');
   });
 
+  describe('herramientas del escritorio', () => {
+    const withClient = { ...ctx, clientTools: ['open_url', 'read_clipboard'] };
+
+    it('sin declararlas el cliente, el modelo recibe un error y no se crea ninguna acción', async () => {
+      const o: any = await svc.handle(ctx, call('open_url', { url: 'https://example.com' }));
+      expect(o.kind).toBe('result');
+      expect(parse(o).error).toContain('app de escritorio');
+      expect(prisma.pendingAction.create).not.toHaveBeenCalled();
+    });
+
+    it('declaradas, proponen una acción marcada como clientSide con la URL validada', async () => {
+      const o: any = await svc.handle(withClient, call('open_url', { url: 'https://example.com' }));
+      expect(o.kind).toBe('confirm');
+      expect(o.action.clientSide).toBe(true);
+      expect(o.action.summary).toContain('https://example.com/');
+      expect(prisma.pendingAction.create.mock.calls[0][0].data.args).toEqual({ url: 'https://example.com/' });
+    });
+
+    it('una URL peligrosa nunca llega a ser acción', async () => {
+      for (const url of ['javascript:alert(1)', 'http://localhost:3000', 'file:///etc/passwd']) {
+        const o: any = await svc.handle(withClient, call('open_url', { url }));
+        expect(o.kind).toBe('result');
+        expect(parse(o).error).toBeTruthy();
+      }
+      expect(prisma.pendingAction.create).not.toHaveBeenCalled();
+    });
+
+    it('confirmar NO ejecuta nada en el servidor: devuelve los argumentos validados al cliente, una sola vez', async () => {
+      prisma.pendingAction.findUniqueOrThrow.mockResolvedValue({
+        id: 'a1', tool: 'open_url', summary: 'Abrir…', args: { url: 'https://example.com/' },
+      });
+      const r: any = await svc.confirm('u1', 'p1', 'a1');
+      expect(r).toMatchObject({ ok: true, clientSide: true, tool: 'open_url', args: { url: 'https://example.com/' } });
+      expect(prisma.reminder.create).not.toHaveBeenCalled();
+      expect(prisma.pendingAction.updateMany.mock.calls[0][0].where.status).toBe('pending');
+    });
+
+    it('si los argumentos guardados dejan de ser válidos, no se devuelven al cliente', async () => {
+      prisma.pendingAction.findUniqueOrThrow.mockResolvedValue({
+        id: 'a1', tool: 'open_url', summary: 'x', args: { url: 'http://localhost:3000' },
+      });
+      await expect(svc.confirm('u1', 'p1', 'a1')).rejects.toThrow('ya no es válida');
+    });
+
+    it('listPending marca las acciones de escritorio', async () => {
+      prisma.pendingAction.findMany.mockResolvedValue([
+        { id: 'a', tool: 'open_url', summary: 's', expiresAt: NOW },
+        { id: 'b', tool: 'create_reminder', summary: 's', expiresAt: NOW },
+      ]);
+      const l = await svc.listPending('u1', 'p1');
+      expect(l.map((a) => a.clientSide)).toEqual([true, false]);
+    });
+  });
+
   describe('confirmación', () => {
     const stored = { id: 'a1', tool: 'create_reminder', summary: 'Crear…', args: { text: 'Sacar la basura', due_at: '2026-11-14T08:30:00.000Z' } };
 

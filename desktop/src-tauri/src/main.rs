@@ -71,6 +71,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_http::init())
         .manage(HitRegions::default())
         .invoke_handler(tauri::generate_handler![set_hit_regions])
         .setup(|app| {

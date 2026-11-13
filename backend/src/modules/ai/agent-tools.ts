@@ -1,4 +1,6 @@
 import { cleanText } from './memory';
+import { isPrivateAddress } from './ssrf';
+import { isIP } from 'net';
 
 /**
  * Definiciones y validación de las herramientas del agente (intelligence >= 500).
@@ -25,6 +27,12 @@ export interface ToolSpec<A = any> {
   description: string;
   parameters: Record<string, unknown>;
   requiresConfirmation: boolean;
+  /**
+   * Herramienta que ejecuta la app de escritorio, no el servidor. El servidor solo
+   * valida los argumentos, pide la confirmación y los devuelve al cliente.
+   * Solo se ofrece al modelo si el cliente declara que la soporta.
+   */
+  clientSide?: boolean;
   validate(raw: unknown, now: Date): ValidationResult<A>;
   /** Texto para la tarjeta de confirmación (solo herramientas con efectos). */
   describe?(args: A, timeZone: string): string;
@@ -130,6 +138,77 @@ export const TOOLS: ToolSpec[] = [
   },
 ];
 
+// ---------- Herramientas del escritorio (siempre con confirmación) ----------
+
+export const MAX_URL_CHARS = 2000;
+
+/** Destinos que open_url nunca abre: loopback, redes privadas y nombres internos. */
+export function isBlockedHost(hostname: string): boolean {
+  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!h) return true;
+  if (isIP(h)) return isPrivateAddress(h);
+  return h === 'localhost' || /\.(localhost|local|internal|lan|home|corp)$/.test(h) || !h.includes('.');
+}
+
+TOOLS.push(
+  {
+    name: 'open_url',
+    description:
+      'Abre un enlace web (http/https) en el navegador del entrenador. REQUIERE su confirmación y solo funciona en la app de escritorio. No uses direcciones locales.',
+    parameters: {
+      type: 'object',
+      properties: { url: { type: 'string', description: 'URL completa, p. ej. https://es.wikipedia.org/wiki/Axolote' } },
+      required: ['url'],
+      additionalProperties: false,
+    },
+    requiresConfirmation: true,
+    clientSide: true,
+    validate(raw) {
+      const u = (raw as any)?.url;
+      if (typeof u !== 'string' || u.length > MAX_URL_CHARS || /[\u0000-\u0020\u007f]/.test(u.trim())) {
+        return { ok: false, error: 'url debe ser un texto sin espacios ni caracteres de control (máx. 2000)' };
+      }
+      let url: URL;
+      try {
+        url = new URL(u.trim());
+      } catch {
+        return { ok: false, error: 'url no es una URL válida' };
+      }
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return { ok: false, error: 'Solo se permiten enlaces http o https' };
+      }
+      if (url.username || url.password) return { ok: false, error: 'La URL no puede incluir credenciales' };
+      if (isBlockedHost(url.hostname)) {
+        return { ok: false, error: 'No se pueden abrir direcciones locales o privadas' };
+      }
+      return { ok: true, args: { url: url.toString() } };
+    },
+    describe(args: { url: string }) {
+      return `Abrir este enlace en tu navegador: ${args.url} (ábrelo solo si lo reconoces)`;
+    },
+  },
+  {
+    name: 'read_clipboard',
+    description:
+      'Lee el texto del portapapeles del entrenador para ayudarle con él. REQUIERE su confirmación y solo funciona en la app de escritorio.',
+    parameters: noArgs,
+    requiresConfirmation: true,
+    clientSide: true,
+    validate: acceptNoArgs,
+    describe() {
+      return 'Leer el texto de tu portapapeles y compartirlo con tu mascota (y con tu proveedor de IA)';
+    },
+  },
+);
+
+export const CLIENT_TOOL_NAMES = TOOLS.filter((t) => t.clientSide).map((t) => t.name);
+
+/** Interpreta la lista de herramientas de cliente que declara la app: solo nombres conocidos. */
+export function sanitizeClientTools(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return [...new Set(raw.filter((n): n is string => typeof n === 'string' && CLIENT_TOOL_NAMES.includes(n)))];
+}
+
 export const TOOL_BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 
 /** Parseo tolerante de los argumentos JSON que devuelve el modelo. */
@@ -142,6 +221,11 @@ export function parseToolArguments(raw: string): unknown {
   }
 }
 
-export function toolDefinitions() {
-  return TOOLS.map((t) => ({ name: t.name, description: t.description, parameters: t.parameters }));
+/** Herramientas del servidor y, solo si el cliente las declara, las suyas. */
+export function toolDefinitions(clientTools: string[] = []) {
+  return TOOLS.filter((t) => !t.clientSide || clientTools.includes(t.name)).map((t) => ({
+    name: t.name,
+    description: t.description,
+    parameters: t.parameters,
+  }));
 }

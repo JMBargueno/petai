@@ -6,16 +6,17 @@ import { AiConfigService } from './ai-config.service';
 import { MemoryService } from './memory.service';
 import { AgentContext, AgentService } from './agent.service';
 import { UsageService } from './usage.service';
-import { toolDefinitions } from './agent-tools';
+import { sanitizeClientTools, toolDefinitions } from './agent-tools';
 import { ChatMessageInput, LlmProvider, ToolCall } from './llm-provider';
-import { ModerationVerdict, OutputGuard, moderateInput } from './moderation';
+import { ModerationVerdict, OutputGuard, moderateInput, moderateOutput } from './moderation';
+import { randomUUID } from 'crypto';
 import { safeTimeZone } from '../pets/sleep-cycle';
 import { AGENT_UNLOCK, INTELLIGENCE_MAX, MEMORY_UNLOCK, buildSystemPrompt, intelligenceTier } from './personality';
 
 export type ChatStreamEvent =
   | { type: 'delta'; text: string }
   | { type: 'tool'; name: string }
-  | { type: 'action'; action: { id: string; tool: string; summary: string; expiresAt: Date } }
+  | { type: 'action'; action: { id: string; tool: string; summary: string; expiresAt: Date; clientSide: boolean } }
   | { type: 'moderated'; reason: string; message: string; hideUserMessage: boolean }
   | { type: 'done'; message: { id: string; content: string }; intelligence: number; tier: string }
   | { type: 'error'; message: string };
@@ -26,6 +27,10 @@ const HISTORY_CHAR_BUDGET = 6000;
 const RATE_LIMIT = { max: 20, windowMs: 60_000 };
 /** Vueltas máximas de herramientas por mensaje (la última se fuerza sin herramientas). */
 const MAX_TOOL_ROUNDS = 3;
+/** Modo Hermes local: vigencia de un turno y tamaño máximo de la respuesta sincronizada. */
+const LOCAL_TURN_TTL_MS = 5 * 60 * 1000;
+const LOCAL_MAX_TICKETS = 200;
+const LOCAL_MAX_REPLY_CHARS = 4000;
 
 @Injectable()
 export class ChatService {
@@ -34,6 +39,8 @@ export class ChatService {
   private readonly hits = new Map<string, number[]>();
   // Una respuesta en curso por usuario (evita ráfagas paralelas que disparan el gasto)
   private readonly active = new Set<string>();
+  // Turnos del modo Hermes local pendientes de sincronizar (un solo uso, en memoria)
+  private readonly localTurns = new Map<string, { userId: string; petId: string; message: string; expiresAt: number }>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -88,7 +95,13 @@ export class ChatService {
    * cuota) se hacen antes de devolver el iterador, de modo que el controlador
    * puede responder con un código HTTP normal antes de abrir el flujo SSE.
    */
-  async prepare(userId: string, petId: string, rawMessage: unknown, signal?: AbortSignal) {
+  async prepare(
+    userId: string,
+    petId: string,
+    rawMessage: unknown,
+    signal?: AbortSignal,
+    rawClientTools?: unknown,
+  ) {
     const message = this.sanitizeInput(rawMessage);
     const pet = await this.petsService.getPetById(userId, petId);
     this.checkRateLimit(userId);
@@ -103,16 +116,39 @@ export class ChatService {
     const { provider, model, mode } = await this.aiConfig.resolveProvider(userId);
     await this.usage.assertWithinQuota(userId, mode);
 
+    const { messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent');
+
+    // Agente (intelligence ≥ 500): puede usar herramientas; los efectos requieren confirmación
+    const agentCtx: AgentContext | undefined =
+      (pet.intelligence ?? 0) >= AGENT_UNLOCK
+        ? { userId, petId: pet.id, timeZone, now, clientTools: sanitizeClientTools(rawClientTools) }
+        : undefined;
+
+    return { events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx) };
+  }
+
+  /**
+   * Prompt de sistema (personalidad + recuerdos), historial reciente y mensaje.
+   * `maxTier` limita lo que el prompt promete: en modo local no hay herramientas.
+   */
+  private async buildContext(
+    userId: string,
+    pet: any,
+    message: string,
+    maxTier: 'chat' | 'memory' | 'agent',
+  ) {
     const owner = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { displayName: true, timezone: true },
     });
-    const tier = intelligenceTier(pet.intelligence ?? 0);
+    const order = ['chat', 'memory', 'agent'];
+    const real = intelligenceTier(pet.intelligence ?? 0);
+    const tier = order.indexOf(real) > order.indexOf(maxTier) ? maxTier : real;
     const timeZone = safeTimeZone(owner?.timezone);
     const now = new Date();
 
     const past = await this.prisma.chatMessage.findMany({
-      where: { petId, role: { in: ['user', 'assistant'] } },
+      where: { petId: pet.id, role: { in: ['user', 'assistant'] } },
       orderBy: { createdAt: 'desc' },
       take: HISTORY_MESSAGES,
     });
@@ -136,12 +172,80 @@ export class ChatService {
       ...history,
       { role: 'user', content: message },
     ];
+    return { messages, timeZone, now };
+  }
 
-    // Agente (intelligence ≥ 500): puede usar herramientas; los efectos requieren confirmación
-    const agentCtx: AgentContext | undefined =
-      (pet.intelligence ?? 0) >= AGENT_UNLOCK ? { userId, petId: pet.id, timeZone, now } : undefined;
+  // ---------- Modo Hermes local ----------
+  // La inferencia la hace la app de escritorio contra un Hermes en el propio equipo
+  // (el backend no puede alcanzar un loopback). El servidor sigue siendo quien construye
+  // el prompt, modera la entrada y la salida y guarda el historial.
+  // Límites: sin herramientas ni extracción de memoria, y la respuesta la afirma el cliente.
 
-    return { events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx) };
+  /** Paso 1: valida y devuelve los mensajes a enviar al Hermes local, con un turno de un solo uso. */
+  async prepareLocal(userId: string, petId: string, rawMessage: unknown) {
+    const message = this.sanitizeInput(rawMessage);
+    const pet = await this.petsService.getPetById(userId, petId);
+    this.checkRateLimit(userId);
+
+    const verdict = moderateInput(message);
+    if (verdict) {
+      this.logger.warn(`Mensaje moderado (${verdict.reason}) en la mascota ${pet.id} (modo local)`);
+      return { moderated: verdict };
+    }
+
+    const { messages } = await this.buildContext(userId, pet, message, 'memory');
+
+    const now = Date.now();
+    for (const [id, t] of this.localTurns) if (t.expiresAt < now) this.localTurns.delete(id);
+    if (this.localTurns.size >= LOCAL_MAX_TICKETS) {
+      throw new HttpException('Demasiados turnos pendientes, inténtalo de nuevo en un momento', HttpStatus.TOO_MANY_REQUESTS);
+    }
+    const turnId = randomUUID();
+    this.localTurns.set(turnId, { userId, petId, message, expiresAt: now + LOCAL_TURN_TTL_MS });
+    return { turnId, messages, maxTokens: 300, expiresInSeconds: LOCAL_TURN_TTL_MS / 1000 };
+  }
+
+  /** Paso 2: el cliente entrega la respuesta; se modera, se guarda y sube la inteligencia. */
+  async syncLocal(userId: string, petId: string, turnId: unknown, rawReply: unknown) {
+    const ticket = typeof turnId === 'string' ? this.localTurns.get(turnId) : undefined;
+    if (!ticket || ticket.userId !== userId || ticket.petId !== petId || ticket.expiresAt < Date.now()) {
+      throw new BadRequestException('Turno no válido o caducado');
+    }
+    this.localTurns.delete(turnId as string); // un solo uso
+
+    if (typeof rawReply !== 'string') throw new BadRequestException('reply es obligatorio');
+    const reply = rawReply.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim().slice(0, LOCAL_MAX_REPLY_CHARS);
+    if (!reply) throw new BadRequestException('La respuesta está vacía');
+
+    const verdict = moderateOutput(reply);
+    if (verdict) {
+      this.logger.warn(`Respuesta local bloqueada (${verdict.reason}); no se guarda`);
+      return { moderated: verdict };
+    }
+
+    const pet = await this.petsService.getPetById(userId, petId);
+    const saved = await this.persistExchange(userId, pet, ticket.message, reply, 0);
+    return { message: { id: saved.id, content: reply }, intelligence: saved.intelligence, tier: intelligenceTier(saved.intelligence) };
+  }
+
+  /** Guarda el intercambio, sube la inteligencia y avisa por WebSocket. */
+  private async persistExchange(userId: string, pet: any, userMessage: string, reply: string, tokens: number) {
+    // Marcas de tiempo explícitas y distintas para que el historial conserve el orden
+    const at = Date.now();
+    await this.prisma.chatMessage.create({
+      data: { petId: pet.id, role: 'user', content: userMessage, createdAt: new Date(at) },
+    });
+    const saved = await this.prisma.chatMessage.create({
+      data: { petId: pet.id, role: 'assistant', content: reply, tokens, createdAt: new Date(at + 1) },
+    });
+    const intelligence = Math.min(INTELLIGENCE_MAX, (pet.intelligence ?? 0) + 1);
+    const updated = await this.prisma.pet.update({
+      where: { id: pet.id },
+      data: { intelligence, awakened: true },
+      include: { species: true, pattern: true },
+    });
+    this.realtime.emitPetUpdate(userId, updated);
+    return { id: saved.id, intelligence };
   }
 
   private async *moderatedOnly(v: ModerationVerdict): AsyncGenerator<ChatStreamEvent> {
@@ -172,7 +276,8 @@ export class ChatService {
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
         // En la última vuelta no se ofrecen herramientas para forzar una respuesta de texto
-        const tools = agentCtx && round < MAX_TOOL_ROUNDS - 1 ? toolDefinitions() : undefined;
+        const tools =
+          agentCtx && round < MAX_TOOL_ROUNDS - 1 ? toolDefinitions(agentCtx.clientTools) : undefined;
         let text = '';
         const calls: ToolCall[] = [];
         for await (const ev of provider.chat(convo, { model, maxTokens: 300, tools, signal })) {
@@ -219,22 +324,8 @@ export class ChatService {
       }
 
       // Solo se persiste el intercambio si se completó
-      // Marcas de tiempo explícitas y distintas para que el historial conserve el orden
-      const at = Date.now();
-      await this.prisma.chatMessage.create({
-        data: { petId: pet.id, role: 'user', content: userMessage, createdAt: new Date(at) },
-      });
-      const saved = await this.prisma.chatMessage.create({
-        data: { petId: pet.id, role: 'assistant', content: reply, tokens, createdAt: new Date(at + 1) },
-      });
-
-      const intelligence = Math.min(INTELLIGENCE_MAX, (pet.intelligence ?? 0) + 1);
-      const updated = await this.prisma.pet.update({
-        where: { id: pet.id },
-        data: { intelligence, awakened: true },
-        include: { species: true, pattern: true },
-      });
-      this.realtime.emitPetUpdate(userId, updated);
+      const saved = await this.persistExchange(userId, pet, userMessage, reply, tokens);
+      const intelligence = saved.intelligence;
 
       // En segundo plano: no retrasa la respuesta ni puede romper el chat
       void this.memory.maybeSummarize(pet.id, intelligence, provider, model, userId, mode);

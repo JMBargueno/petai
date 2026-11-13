@@ -1,6 +1,15 @@
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import { api } from '../lib/api';
+  import {
+    isLoopbackUrl,
+    loadLocalConfig,
+    saveLocalConfig,
+    streamLocalCompletion,
+    testLocalHermes,
+    type LocalHermesConfig,
+  } from '../lib/hermesLocal';
+  import { CLIENT_TOOLS, openUrl, readClipboardText } from '../lib/clientTools';
 
   export let pet: any = null;
 
@@ -20,6 +29,12 @@
   let settingsMsg = '';
   let settingsErr = '';
   let busy = false;
+
+  // Modo Hermes local (la inferencia la hace un Hermes en este equipo; ver lib/hermesLocal.ts)
+  let local: LocalHermesConfig = loadLocalConfig();
+  let localMsg = '';
+  let localErr = '';
+  $: chatReady = config.configured || local.enabled;
 
   // Chat
   let messages: Msg[] = [];
@@ -75,12 +90,30 @@
   async function decide(card: ActionCard, accept: boolean) {
     card.state = 'working';
     actions = actions;
+    let followUp = '';
     try {
       if (accept) {
-        await api.confirmAction(pet.id, card.id);
-        card.state = 'done';
-        card.note = 'Hecho ✅';
-        if (remOpen) loadReminders();
+        const res = await api.confirmAction(pet.id, card.id);
+        if (res.clientSide) {
+          // Herramienta de escritorio: el servidor solo la validó; se ejecuta aquí, tras la confirmación
+          if (res.tool === 'open_url') {
+            await openUrl(res.args.url);
+            card.note = 'Abierto en tu navegador ✅';
+          } else if (res.tool === 'read_clipboard') {
+            const text = (await readClipboardText()).trim();
+            if (!text) {
+              card.note = 'El portapapeles está vacío';
+            } else {
+              card.note = 'Compartido con tu mascota ✅';
+              followUp = `Esto es lo que tengo en el portapapeles:\n"""\n${text.slice(0, 800)}\n"""`;
+            }
+          }
+          card.state = 'done';
+        } else {
+          card.state = 'done';
+          card.note = 'Hecho ✅';
+          if (remOpen) loadReminders();
+        }
       } else {
         await api.rejectAction(pet.id, card.id);
         card.state = 'rejected';
@@ -91,6 +124,8 @@
       card.note = e.message;
     }
     actions = actions;
+    // El contenido del portapapeles viaja como un mensaje normal: el usuario lo ve y se modera igual
+    if (followUp) await send(followUp);
   }
 
   async function loadReminders() {
@@ -160,10 +195,12 @@
 
   onMount(async () => {
     await loadConfig();
-    if (config.configured && pet) {
+    if (chatReady && pet) {
       await loadHistory();
-      await loadPending();
-      loadUsage();
+      if (config.configured) {
+        await loadPending();
+        loadUsage();
+      }
     }
     loaded = true;
   });
@@ -177,7 +214,8 @@
         baseUrl = config.baseUrl || '';
         model = config.model || '';
       } else {
-        showSettings = true;
+        // Sin proveedor en el servidor, los ajustes se muestran salvo que se use el Hermes local
+        showSettings = !local.enabled;
       }
     } catch (e: any) {
       settingsErr = e.message;
@@ -254,8 +292,47 @@
     }
   }
 
-  async function send() {
-    const text = input.trim();
+  function applyModeration(
+    m: { message: string; hideUserMessage: boolean },
+    reply: Msg,
+    userMsg: Msg,
+  ) {
+    reply.content = m.message;
+    reply.notice = true;
+    if (m.hideUserMessage) {
+      // El texto con datos sensibles no se conserva ni en pantalla
+      messages = messages.filter((x) => x.id !== userMsg.id);
+      input = '';
+    }
+    messages = messages;
+    scrollDown();
+  }
+
+  /** Modo Hermes local: contexto del servidor → inferencia en este equipo → sincronización. */
+  async function runLocal(text: string, reply: Msg, userMsg: Msg, signal: AbortSignal) {
+    const ctx = await api.localChatContext(pet.id, text);
+    if ('moderated' in ctx) {
+      applyModeration(ctx.moderated, reply, userMsg);
+      return { moderated: true as const };
+    }
+    let acc = '';
+    await streamLocalCompletion(local, ctx.messages, ctx.maxTokens, (d) => {
+      acc += d;
+      reply.content = acc;
+      messages = messages;
+      scrollDown();
+    }, signal);
+    const synced = await api.localChatSync(pet.id, ctx.turnId, acc);
+    if ('moderated' in synced) {
+      // La respuesta local se modera al sincronizar: si se bloquea, se sustituye y no se guarda
+      applyModeration(synced.moderated, reply, userMsg);
+      return { moderated: true as const };
+    }
+    return synced;
+  }
+
+  async function send(override?: string) {
+    const text = (typeof override === 'string' ? override : input).trim();
     if (!text || streaming || !pet) return;
     chatErr = '';
     input = '';
@@ -269,9 +346,12 @@
     abort = new AbortController();
     toolHint = '';
     try {
-      const done = await api.chatStream(
+      const done = local.enabled
+        ? await runLocal(text, reply, userMsg, abort.signal)
+        : await api.chatStream(
         pet.id,
         text,
+        CLIENT_TOOLS,
         {
           onDelta: (delta) => {
             toolHint = '';
@@ -281,15 +361,7 @@
           },
           onModerated: (m) => {
             moderated = true;
-            reply.content = m.message;
-            reply.notice = true;
-            if (m.hideUserMessage) {
-              // El texto con datos sensibles no se conserva ni en pantalla
-              messages = messages.filter((x) => x.id !== userMsg.id);
-              input = '';
-            }
-            messages = messages;
-            scrollDown();
+            applyModeration(m, reply, userMsg);
           },
           onTool: () => {
             toolHint = '🔍 Consultando…';
@@ -309,9 +381,9 @@
       messages = messages;
       dispatch('bubble', done.message.content);
       dispatch('refreshPet');
-      loadUsage();
-      // La extracción de recuerdos se hace en segundo plano en el servidor
-      if (memOpen) setTimeout(loadMemories, 3000);
+      if (config.configured && !local.enabled) loadUsage();
+      // La extracción de recuerdos se hace en segundo plano en el servidor (no en modo local)
+      if (memOpen && !local.enabled) setTimeout(loadMemories, 3000);
     } catch (e: any) {
       if (e.name !== 'AbortError') chatErr = e.message;
       // Se retira el intercambio incompleto: el servidor no lo guardó
@@ -322,6 +394,37 @@
       streaming = false;
       toolHint = '';
       abort = null;
+    }
+  }
+
+  function saveLocal() {
+    localErr = '';
+    localMsg = '';
+    if (!isLoopbackUrl(local.baseUrl)) {
+      localErr = 'La URL debe ser http(s) a 127.0.0.1 o localhost';
+      return;
+    }
+    if (!local.model.trim()) {
+      localErr = 'Indica el modelo';
+      return;
+    }
+    saveLocalConfig(local);
+    localMsg = local.enabled ? 'Guardado. El chat usará tu Hermes local.' : 'Guardado.';
+    local = local;
+    if (local.enabled && pet && messages.length === 0) loadHistory();
+  }
+
+  async function testLocal() {
+    localErr = '';
+    localMsg = '';
+    busy = true;
+    try {
+      await testLocalHermes(local);
+      localMsg = '✅ Hermes local responde';
+    } catch (e: any) {
+      localErr = e.message;
+    } finally {
+      busy = false;
     }
   }
 
@@ -338,7 +441,7 @@
 {:else if !loaded}
   <p class="muted">Cargando…</p>
 {:else}
-  {#if config.configured}
+  {#if chatReady}
     <div class="bar">
       <span class="badge">🧠 {tier} · {pet.intelligence ?? 0}/1000</span>
       <button class="link" on:click={() => (showSettings = !showSettings)}>
@@ -347,7 +450,7 @@
     </div>
   {/if}
 
-  {#if config.configured && usage}
+  {#if config.configured && usage && !local.enabled}
     <p class="usage" class:full={usage.quota !== null && (usage.remaining ?? 1) <= 0}>
       📊 Este mes: {fmtTokens(usage.tokens)} tokens{usage.quota !== null ? ` de ${fmtTokens(usage.quota)}` : ' (sin límite)'}
       {#if usage.quota !== null && (usage.remaining ?? 1) <= 0} — cuota agotada, se renueva el día 1{/if}
@@ -389,10 +492,41 @@
       </div>
       {#if settingsMsg}<p class="ok">{settingsMsg}</p>{/if}
       {#if settingsErr}<p class="error">{settingsErr}</p>{/if}
+
+      <div class="local-box">
+        <strong>🖥 Hermes local (este equipo)</strong>
+        <p class="note">
+          Conversa con un Hermes Agent que corre en tu ordenador, sin gastar tu key ni salir a internet. Los ajustes
+          se guardan solo aquí. El servidor sigue creando la personalidad, moderando y guardando el historial.
+          Limitaciones: sin herramientas de agente y sin nuevos recuerdos automáticos.
+        </p>
+        <label class="check">
+          <input type="checkbox" bind:checked={local.enabled} />
+          Usar mi Hermes local para conversar
+        </label>
+        <label>URL (127.0.0.1 o localhost)
+          <input type="url" bind:value={local.baseUrl} placeholder="http://127.0.0.1:8642/v1" autocomplete="off" />
+        </label>
+        <label>Modelo
+          <input type="text" bind:value={local.model} placeholder="hermes-agent" autocomplete="off" />
+        </label>
+        <label>API_SERVER_KEY <small>(si tu Hermes la exige)</small>
+          <input type="password" bind:value={local.apiKey} autocomplete="off" placeholder="opcional" />
+        </label>
+        <div class="row">
+          <button class="primary" on:click={saveLocal}>Guardar local</button>
+          <button disabled={busy} on:click={testLocal}>Probar Hermes local</button>
+        </div>
+        {#if localMsg}<p class="ok">{localMsg}</p>{/if}
+        {#if localErr}<p class="error">{localErr}</p>{/if}
+      </div>
     </div>
   {/if}
 
-  {#if config.configured && !showSettings}
+  {#if chatReady && !showSettings}
+    {#if local.enabled}
+      <p class="usage">🖥 Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</p>
+    {/if}
     <div class="chat" bind:this={scroller}>
       {#if messages.length === 0}
         <p class="muted">Saluda a {pet.nickname || pet.species?.name} 👋</p>
@@ -473,7 +607,7 @@
         placeholder="Escribe un mensaje… (Enter para enviar)"
         disabled={streaming}
       ></textarea>
-      <button class="primary" disabled={streaming || !input.trim()} on:click={send}>
+      <button class="primary" disabled={streaming || !input.trim()} on:click={() => send()}>
         {streaming ? '…' : 'Enviar'}
       </button>
     </div>
@@ -482,6 +616,8 @@
 
 <style>
   .muted { font-size: 12px; opacity: 0.7; margin: 0 0 8px; }
+  .local-box { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px; border-radius: 10px; border: 1px dashed rgba(255, 255, 255, 0.2); }
+  .check { flex-direction: row; align-items: center; gap: 6px; }
   .note { font-size: 11px; opacity: 0.6; margin: 4px 0; }
   .ok { color: #4ade80; font-size: 12px; margin: 6px 0 0; }
   .error { color: #f87171; font-size: 12px; margin: 6px 0 0; }
