@@ -1,0 +1,57 @@
+[
+  {
+    "id": "ano_nuevo",
+    "name": "Año Nuevo",
+    "monthStart": 1,
+    "dayStart": 1,
+    "monthEnd": 1,
+    "dayEnd": 1,
+    "accessory": "confeti",
+    "message": "¡Feliz año nuevo! 🎉"
+  },
+  {
+    "id": "san_valentin",
+    "name": "San Valentín",
+    "monthStart": 2,
+    "dayStart": 14,
+    "accessory": "corazon",
+    "message": "¡Feliz San Valentín! 💖"
+  },
+  {
+    "id": "halloween",
+    "name": "Halloween",
+    "monthStart": 10,
+    "dayStart": 31,
+    "accessory": "calabaza",
+    "message": "¡Feliz Halloween! 🎃"
+  },
+  {
+    "id": "navidad",
+    "name": "Navidad",
+    "monthStart": 12,
+    "dayStart": 24,
+    "monthEnd": 12,
+    "dayEnd": 26,
+    "accessory": "sombrerito",
+    "message": "¡Feliz Navidad! 🎄"
+  },
+  {
+    "id": "reinos",
+    "name": "Reyes Magos",
+    "monthStart": 1,
+    "dayStart": 6,
+    "accessory": "corona",
+    "message": "¡Feliz día de Reyes! 👑"
+  },
+  {
+    "id": "semana_verde",
+    "name": "Semana Verde",
+    "monthStart": 3,
+    "dayStart": 21,
+    "monthEnd": 3,
+    "dayEnd": 27,
+    "region": "es_latam",
+    "accessory": "hojas",
+    "message": "¡Cuidemos el planeta! 🌿"
+  }
+]

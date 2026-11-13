@@ -278,6 +278,23 @@ export interface paths {
         patch: operations["PetsController_updatePet"];
         trace?: never;
     };
+    "/v1/pets/{id}/bonding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle del métrico de vínculo: valor, rango, historial paginado de cambios, decaimiento y desbloqueos */
+        get: operations["PetsController_getBonding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pets/{id}/feed": {
         parameters: {
             query?: never;
@@ -425,6 +442,57 @@ export interface paths {
         put?: never;
         /** Comprar artículo de la tienda */
         post: operations["InventoryController_buyItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/environmental/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Estado ambiental del usuario (hora del día, clima, actividad, festividad) */
+        get: operations["EnvironmentalController_getStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/environmental/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Heartbeat del escritorio para detectar actividad/inactividad del PC */
+        post: operations["EnvironmentalController_postActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/environmental/festivals/upcoming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Festividades próximas (incluida la de hoy), con días restantes */
+        get: operations["EnvironmentalController_getUpcomingFestivals"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1080,6 +1148,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/dev/hot-reload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aplica un hot-reload atómico de game data (200 ok / 400 inválido / 404 desconocido) */
+        post: operations["DevController_hotReload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/dev/game-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve el snapshot de game-data vigente en memoria */
+        get: operations["DevController_getGameData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/dev/seed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Seed programático de usuarios y mascotas (crypto, con dryRun) */
+        post: operations["DevController_seed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/dev/action": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test harness: invoca una acción del juego (feed/battle) sin UI */
+        post: operations["DevController_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1129,6 +1265,232 @@ export interface components {
             currentPassword: string;
             /** @description Contraseña nueva (mínimo 8 caracteres, distinta de la actual) */
             newPassword: string;
+        };
+        BondingFieldsDto: {
+            /**
+             * @description Valor del vínculo, acotado a [0,100], 2 decimales
+             * @example 30
+             */
+            bonding: number;
+            /**
+             * @description Id del rango: acquainted | companion | ally | soulmate | legend
+             * @example companion
+             */
+            bondingTier: string;
+            /**
+             * @description Nombre display del rango (español)
+             * @example Compañero
+             */
+            bondingTierName: string;
+            /**
+             * @description Última vez que hubo interacción (base del decaimiento), ISO-8601
+             * @example 2026-11-13T10:00:00.000Z
+             */
+            lastInteractionAt: string;
+        };
+        BondingEventDto: {
+            /**
+             * @description Id del evento
+             * @example e1
+             */
+            id: string;
+            /**
+             * @description Variación signada: + incremento, − decaimiento
+             * @example 2
+             */
+            delta: number;
+            /**
+             * @description Motivo: feed | battle | minigame | chat | clean | sleep | evolve | decay
+             * @example feed
+             */
+            reason: string;
+            /**
+             * @description bonding resultante después del cambio
+             * @example 57
+             */
+            value: number;
+            /**
+             * @description Momento del cambio, ISO-8601
+             * @example 2026-11-11T12:00:00.000Z
+             */
+            createdAt: string;
+        };
+        HistoryPageDto: {
+            items: components["schemas"]["BondingEventDto"][];
+            /** @description createdAt ISO-8601 de la última fila (para la siguiente página); null si no hay más */
+            nextCursor: string | null;
+        };
+        DecayInfoDto: {
+            /**
+             * @description Puntos de decaimiento por día (balance)
+             * @example 0.5
+             */
+            decayRatePerDay: number;
+            /**
+             * @description Si ahora mismo el abandono está produciendo decaimiento
+             * @example true
+             */
+            isDecaying: boolean;
+            /**
+             * @description Ventana de gracia en horas (sin decaimiento)
+             * @example 24
+             */
+            graceWindowHours: number;
+            /**
+             * @description Horas de abandono a partir de las que decae
+             * @example 48
+             */
+            decayStartHours: number;
+            /**
+             * @description Horas transcurridas desde la última interacción (2 dec.)
+             * @example 72.4
+             */
+            hoursSinceInteraction: number;
+            /**
+             * @description Decaimiento total acumulado (para UI "cuánto se enfrió")
+             * @example 0.75
+             */
+            acumulatedDecay: number;
+        };
+        UnlocksDto: {
+            /**
+             * @description El pet saluda al iniciar sesión (>= 30, companion)
+             * @example true
+             */
+            greeting: boolean;
+            /**
+             * @description La IA recupera conversaciones previas (>= 60, ally — o intelligence >= MEMORY_UNLOCK)
+             * @example true
+             */
+            memoryRecall: boolean;
+            /**
+             * @description Reacciones emocionales personalizadas (>= 80, soulmate)
+             * @example false
+             */
+            emotionalReactions: boolean;
+            /**
+             * @description Patrón exclusivo desbloqueado (>= 100, legend)
+             * @example false
+             */
+            patternUnlocked: boolean;
+            /**
+             * @description Duerme cerca del cursor, animación de escritorio (>= 100, legend)
+             * @example false
+             */
+            sleepNearCursor: boolean;
+        };
+        BondingDetailResponseDto: {
+            /**
+             * @description Vínculo actual (post tick)
+             * @example 61.25
+             */
+            value: number;
+            /**
+             * @description Id del rango
+             * @example ally
+             */
+            tier: string;
+            /**
+             * @description Nombre del rango
+             * @example Aliado
+             */
+            tierName: string;
+            /**
+             * @description Última interacción, ISO-8601
+             * @example 2026-11-10T08:00:00.000Z
+             */
+            lastInteractionAt: string;
+            history: components["schemas"]["HistoryPageDto"];
+            decayInfo: components["schemas"]["DecayInfoDto"];
+            unlocks: components["schemas"]["UnlocksDto"];
+        };
+        WeatherInfoModel: {
+            /**
+             * @description Condición mapeada (WMO + temperatura).
+             * @example hot
+             * @enum {string}
+             */
+            condition: "clear" | "cloud" | "rain" | "snow" | "hot" | "cold" | "unknown";
+            /**
+             * @description Temperatura actual (°C)
+             * @example 32
+             */
+            temperature: number | null;
+            /**
+             * @description Código WMO de Open-Meteo
+             * @example 0
+             */
+            weatherCode: number | null;
+            /** @description Sirvió desde la cache de Redis */
+            cached: boolean;
+            /** @description ISO 8601 del último (re)obtenimiento */
+            fetchedAt: string | null;
+        };
+        ActivityInfoModel: {
+            /** @description ¿Hay un heartbeat reciente? */
+            active: boolean;
+            /**
+             * @example active
+             * @enum {string}
+             */
+            mode: "active" | "solo";
+            /** @description ISO 8601 del último heartbeat */
+            lastActiveAt: string | null;
+        };
+        FestivalInfoModel: {
+            /** @example navidad */
+            id: string;
+            /** @example Navidad */
+            name: string;
+            /**
+             * @description Clave de accesorio/overlay
+             * @example sombrerito
+             */
+            accessory: string;
+            /**
+             * @description Frase de micro-momento
+             * @example ¡Feliz Navidad! 🎄
+             */
+            message: string;
+        };
+        EnvironmentalStatusModel: {
+            /**
+             * @example afternoon
+             * @enum {string}
+             */
+            timeOfDay: "late_night" | "morning" | "afternoon" | "evening" | "night";
+            weather: components["schemas"]["WeatherInfoModel"];
+            activity: components["schemas"]["ActivityInfoModel"];
+            /** @description Festividad activa o null */
+            festival: components["schemas"]["FestivalInfoModel"] | null;
+        };
+        ActivityHeartbeatDto: {
+            /**
+             * @description ¿El PC está activo ahora?
+             * @example true
+             */
+            active?: boolean;
+            /**
+             * @description Uso de CPU (%)
+             * @example 42.5
+             */
+            cpuUsage?: number;
+        };
+        UpcomingFestivalModel: {
+            /** @example navidad */
+            id: string;
+            /** @example Navidad */
+            name: string;
+            /**
+             * @description Fecha ISO del próximo comienzo
+             * @example 2026-12-25
+             */
+            date: string;
+            /**
+             * @description Días restantes (0 si es hoy)
+             * @example 42
+             */
+            daysRemaining: number;
         };
         MissionRewardDto: {
             /**
@@ -1648,7 +2010,20 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    displayName?: string;
+                    timezone?: string;
+                    /** @description Coordenada opt-in para el clima (se borra con null) */
+                    latitude?: number | null;
+                    /** @description Coordenada opt-in para el clima (se borra con null) */
+                    longitude?: number | null;
+                    /** @description Cumpleaños (YYYY-MM-DD) */
+                    birthday?: string | null;
+                };
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -1763,6 +2138,32 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    PetsController_getBonding: {
+        parameters: {
+            query?: {
+                /** @description Nº de BondingEvent en history (1-100, default 20) */
+                limit?: string;
+                /** @description createdAt ISO-8601 de la última fila de la página previa */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BondingDetailResponseDto"];
+                };
             };
         };
     };
@@ -1930,6 +2331,70 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    EnvironmentalController_getStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvironmentalStatusModel"];
+                };
+            };
+        };
+    };
+    EnvironmentalController_postActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityHeartbeatDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        ok?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    EnvironmentalController_getUpcomingFestivals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpcomingFestivalModel"][];
+                };
             };
         };
     };
@@ -2821,6 +3286,74 @@ export interface operations {
             };
             /** @description Token ausente o inválido */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DevController_hotReload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DevController_getGameData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DevController_seed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DevController_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

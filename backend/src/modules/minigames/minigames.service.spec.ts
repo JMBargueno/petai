@@ -3,6 +3,7 @@ import { MinigamesService } from './minigames.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
+import { BondingService } from '../bonding/bonding.service';
 
 const CFG = {
   minigames: {
@@ -26,6 +27,7 @@ describe('MinigamesService', () => {
     user: { update: jest.fn() },
   };
   const pets: any = { getPetById: jest.fn(), applyActivityReward: jest.fn() };
+  const bonding: any = { recordInteraction: jest.fn().mockResolvedValue({ bonding: 2, bondingTier: 'acquainted', tierChanged: null }) };
 
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -35,6 +37,7 @@ describe('MinigamesService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: GameDataService, useValue: { getBalance: () => CFG } },
         { provide: PetsService, useValue: pets },
+        { provide: BondingService, useValue: bonding },
       ],
     }).compile();
     service = mod.get(MinigamesService);

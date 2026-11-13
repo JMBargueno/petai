@@ -4,6 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { GameDataService } from '../game-data/game-data.service';
+import { WeatherService } from '../environmental/weather.service';
+import { BondingService } from '../bonding/bonding.service';
 import { nightHoursBetween, safeTimeZone } from './sleep-cycle';
 
 const STAGE_ORDER = ['baby', 'juvenile', 'adult', 'final'];
@@ -18,6 +20,8 @@ export class PetsService {
     private readonly realtimeGateway: RealtimeGateway,
     private readonly gameData: GameDataService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly weatherService: WeatherService,
+    private readonly bonding: BondingService,
   ) {}
 
   async getPets(userId: string) {
@@ -30,7 +34,8 @@ export class PetsService {
     const updatedPets = [];
     for (const pet of pets) {
       const updated = await this.applyLazyTick(pet);
-      updatedPets.push(updated);
+      // Campos de vínculo (feature 006): el cliente recibe el rango sin calcular nada
+      updatedPets.push({ ...updated, ...this.bonding.bondingFields(updated) });
     }
     return updatedPets;
   }
@@ -43,7 +48,8 @@ export class PetsService {
     if (!pet) {
       throw new NotFoundException('Mascota no encontrada');
     }
-    return this.applyLazyTick(pet);
+    const updated = await this.applyLazyTick(pet);
+    return { ...updated, ...this.bonding.bondingFields(updated) };
   }
 
   async feed(userId: string, petId: string, itemId?: string) {
@@ -86,6 +92,9 @@ export class PetsService {
 
     const withXp = await this.addXpInternal(updated, 15);
     this.realtimeGateway.emitPetUpdate(userId, withXp);
+    // Vínculo (feature 006): la alimentación exitosa sube el bonding (+2 según balance); su
+    // propio `pet:update` llega después para que el cliente reciba el vínculo ya aplicado
+    await this.bonding.recordInteraction(petId, userId, 'feed');
     this.eventEmitter.emit('pet:fed', { userId, petId });
     return withXp;
   }
@@ -114,6 +123,8 @@ export class PetsService {
 
     const withXp = await this.addXpInternal(updated, 10);
     this.realtimeGateway.emitPetUpdate(userId, withXp);
+    // Vínculo (feature 006): el baño exitoso sube el bonding (+1 según balance)
+    await this.bonding.recordInteraction(petId, userId, 'clean');
     this.eventEmitter.emit('pet:cleaned', { userId, petId });
     return withXp;
   }
@@ -131,6 +142,8 @@ export class PetsService {
     });
 
     this.realtimeGateway.emitPetUpdate(userId, updated);
+    // Vínculo (feature 006): dormirlo también cuenta como interacción (+0.5 según balance)
+    await this.bonding.recordInteraction(petId, userId, 'sleep');
     this.eventEmitter.emit('pet:slept', { userId, petId });
     return updated;
   }
@@ -211,6 +224,8 @@ export class PetsService {
       include: { species: true, pattern: true },
     });
     this.realtimeGateway.emitPetUpdate(userId, updated);
+    // Vínculo (feature 006): la evolución sube el bonding (+5); el vínculo previo se conserva (FR-015)
+    await this.bonding.recordInteraction(petId, userId, 'evolve');
     this.eventEmitter.emit('pet:evolved', { userId, petId });
     return updated;
   }
@@ -278,15 +293,25 @@ export class PetsService {
     const decay = pet.sleeping
       ? balance.vitals.decayPerHour.sleeping
       : balance.vitals.decayPerHour.awake;
+    const maxVital = balance.vitals?.max ?? 100;
+
+    // Datos del propietario: zona horaria (ciclo de sueño) y coordenadas (clima ambiental).
+    const owner = await this.prisma.user.findUnique({
+      where: { id: pet.userId },
+      select: { timezone: true, latitude: true, longitude: true },
+    });
+
+    // Modificadores ambientales (feature 005): el clima actual incide en los vitales dentro del
+    // lazy tick (Constitución IV, sin cron por pet). El clima se cachea en Redis, así que el coste
+    // adicional es mínimo y tolera fallos (degradación a 'unknown' → sin modificador).
+    const env = balance.environmental;
+    const weather = await this.weatherService.getWeather(owner?.latitude ?? null, owner?.longitude ?? null);
+    const condition = weather.condition;
 
     // Ciclo de sueño: horas del intervalo que caen en la noche local del usuario
     const sleepCfg = balance.sleep;
     let nightHours = 0;
     if (sleepCfg) {
-      const owner = await this.prisma.user.findUnique({
-        where: { id: pet.userId },
-        select: { timezone: true },
-      });
       nightHours = nightHoursBetween(
         new Date(pet.lastTickAt),
         now,
@@ -314,12 +339,33 @@ export class PetsService {
     }
     let newHygiene = Math.max(0, pet.hygiene - decay.hygiene * elapsedHours);
 
+    // Modificadores ambientales (feature 005), acotados a [0, max]:
+    // - hot:  con calor le da más hambre (decaimiento extra de `hunger`).
+    // - rain: con lluvia sube su ánimo (recuperación de `happiness`).
+    // - snow: con nieve gasta energía (decaimiento extra de `energy`).
+    if (env) {
+      if (condition === 'hot' && env.hunger_hot) {
+        newHunger = Math.max(0, newHunger - env.hunger_hot * elapsedHours);
+      }
+      if (condition === 'rain' && env.happiness_rain) {
+        newHappiness = Math.min(maxVital, newHappiness + env.happiness_rain * elapsedHours);
+      }
+      if (condition === 'snow' && env.energy_snow) {
+        newEnergy = Math.max(0, newEnergy - env.energy_snow * elapsedHours);
+      }
+    }
+
     // Si hambre o higiene están críticamente bajas (< 15), la salud decae
     if (newHunger < 15.0 || newHygiene < 15.0) {
       newHealth = Math.max(0, newHealth - 3.0 * elapsedHours);
     }
 
     const isSick = newHealth < 20.0 ? true : pet.sick;
+
+    // Vínculo (feature 006): el decaimiento por abandono vive en el mismo lazy tick que las
+    // vitales (Constitución IV, sin cron por pet). Idempotente: al aplicar, `applyDecay`
+    // re-fija `lastInteractionAt` y persiste el `BondingEvent(reason="decay")` + los eventos WS.
+    await this.bonding.applyDecay(pet, now);
 
     return this.prisma.pet.update({
       where: { id: pet.id },

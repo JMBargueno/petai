@@ -1,4 +1,4 @@
-import { buildSystemPrompt, intelligenceTier, moodOf, traitOf } from './personality';
+import { buildEnvironmentBlock, buildSystemPrompt, intelligenceTier, moodOf, traitOf } from './personality';
 
 const pet = (o: any = {}) => ({
   nickname: 'Chispa',
@@ -48,5 +48,49 @@ describe('personality', () => {
     expect(intelligenceTier(0)).toBe('chat');
     expect(intelligenceTier(200)).toBe('memory');
     expect(intelligenceTier(500)).toBe('agent');
+  });
+
+  describe('contexto ambiental (feature 005)', () => {
+    it('sin contexto ambiental NO incluye el bloque de entorno', () => {
+      const p = buildSystemPrompt(pet(), { displayName: 'Ana' });
+      expect(p).not.toContain('Tu entorno ahora mismo');
+    });
+
+    it('con contexto SÍ incluye hora, clima y festividad', () => {
+      const p = buildSystemPrompt(pet(), { displayName: 'Ana' }, {
+        environment: {
+          timeOfDay: 'afternoon',
+          weatherCondition: 'rain',
+          temperature: 18,
+          festival: { name: 'Navidad', message: '¡Feliz Navidad! 🎄' },
+        },
+      });
+      expect(p).toContain('Tu entorno ahora mismo');
+      expect(p).toContain('tarde');
+      expect(p).toContain('lluvioso');
+      expect(p).toContain('18°C');
+      expect(p).toContain('Navidad');
+      expect(p).toContain('¡Feliz Navidad! 🎄');
+    });
+
+    it('solo incluye las partes presentes del contexto', () => {
+      const p = buildSystemPrompt(pet(), { displayName: 'Ana' }, {
+        environment: { timeOfDay: 'late_night' },
+      });
+      expect(p).toContain('madrugada');
+      expect(p).not.toContain('lluvioso');
+      expect(p).not.toContain('Hoy es');
+    });
+
+    it('buildEnvironmentBlock devuelve cadena vacía sin contexto', () => {
+      expect(buildEnvironmentBlock(null)).toBe('');
+      expect(buildEnvironmentBlock(undefined)).toBe('');
+    });
+
+    it('buildEnvironmentBlock con solo clima y temperatura', () => {
+      const block = buildEnvironmentBlock({ weatherCondition: 'hot', temperature: 33 });
+      expect(block).toContain('muy caluroso');
+      expect(block).toContain('33°C');
+    });
   });
 });

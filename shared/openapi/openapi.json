@@ -252,6 +252,39 @@
       "patch": {
         "operationId": "UsersController_updateMe",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Coordenada opt-in para el clima (se borra con null)"
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Coordenada opt-in para el clima (se borra con null)"
+                  },
+                  "birthday": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Cumpleaños (YYYY-MM-DD)"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -408,6 +441,60 @@
           }
         ],
         "summary": "Modificar apodo o estrategia de combate de la mascota",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/v1/pets/{id}/bonding": {
+      "get": {
+        "operationId": "PetsController_getBonding",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Nº de BondingEvent en history (1-100, default 20)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "createdAt ISO-8601 de la última fila de la página previa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BondingDetailResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle del métrico de vínculo: valor, rango, historial paginado de cambios, decaimiento y desbloqueos",
         "tags": [
           "Pets"
         ]
@@ -648,6 +735,106 @@
         "summary": "Comprar artículo de la tienda",
         "tags": [
           "Inventory & Shop"
+        ]
+      }
+    },
+    "/v1/environmental/status": {
+      "get": {
+        "operationId": "EnvironmentalController_getStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentalStatusModel"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estado ambiental del usuario (hora del día, clima, actividad, festividad)",
+        "tags": [
+          "Environmental"
+        ]
+      }
+    },
+    "/v1/environmental/activity": {
+      "post": {
+        "operationId": "EnvironmentalController_postActivity",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityHeartbeatDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Heartbeat del escritorio para detectar actividad/inactividad del PC",
+        "tags": [
+          "Environmental"
+        ]
+      }
+    },
+    "/v1/environmental/festivals/upcoming": {
+      "get": {
+        "operationId": "EnvironmentalController_getUpcomingFestivals",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UpcomingFestivalModel"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Festividades próximas (incluida la de hoy), con días restantes",
+        "tags": [
+          "Environmental"
         ]
       }
     },
@@ -1836,6 +2023,66 @@
           "Chests"
         ]
       }
+    },
+    "/v1/dev/hot-reload": {
+      "post": {
+        "operationId": "DevController_hotReload",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Aplica un hot-reload atómico de game data (200 ok / 400 inválido / 404 desconocido)",
+        "tags": [
+          "Dev"
+        ]
+      }
+    },
+    "/v1/dev/game-data": {
+      "get": {
+        "operationId": "DevController_getGameData",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Devuelve el snapshot de game-data vigente en memoria",
+        "tags": [
+          "Dev"
+        ]
+      }
+    },
+    "/v1/dev/seed": {
+      "post": {
+        "operationId": "DevController_seed",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Seed programático de usuarios y mascotas (crypto, con dryRun)",
+        "tags": [
+          "Dev"
+        ]
+      }
+    },
+    "/v1/dev/action": {
+      "post": {
+        "operationId": "DevController_action",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Test harness: invoca una acción del juego (feed/battle) sin UI",
+        "tags": [
+          "Dev"
+        ]
+      }
     }
   },
   "info": {
@@ -1946,6 +2193,406 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "BondingFieldsDto": {
+        "type": "object",
+        "properties": {
+          "bonding": {
+            "type": "number",
+            "description": "Valor del vínculo, acotado a [0,100], 2 decimales",
+            "example": 30,
+            "minimum": 0,
+            "maximum": 100
+          },
+          "bondingTier": {
+            "type": "string",
+            "description": "Id del rango: acquainted | companion | ally | soulmate | legend",
+            "example": "companion"
+          },
+          "bondingTierName": {
+            "type": "string",
+            "description": "Nombre display del rango (español)",
+            "example": "Compañero"
+          },
+          "lastInteractionAt": {
+            "type": "string",
+            "description": "Última vez que hubo interacción (base del decaimiento), ISO-8601",
+            "example": "2026-11-13T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "bonding",
+          "bondingTier",
+          "bondingTierName",
+          "lastInteractionAt"
+        ]
+      },
+      "BondingEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del evento",
+            "example": "e1"
+          },
+          "delta": {
+            "type": "number",
+            "description": "Variación signada: + incremento, − decaimiento",
+            "example": 2
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo: feed | battle | minigame | chat | clean | sleep | evolve | decay",
+            "example": "feed"
+          },
+          "value": {
+            "type": "number",
+            "description": "bonding resultante después del cambio",
+            "example": 57
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Momento del cambio, ISO-8601",
+            "example": "2026-11-11T12:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "delta",
+          "reason",
+          "value",
+          "createdAt"
+        ]
+      },
+      "HistoryPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BondingEventDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "createdAt ISO-8601 de la última fila (para la siguiente página); null si no hay más",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "DecayInfoDto": {
+        "type": "object",
+        "properties": {
+          "decayRatePerDay": {
+            "type": "number",
+            "description": "Puntos de decaimiento por día (balance)",
+            "example": 0.5
+          },
+          "isDecaying": {
+            "type": "boolean",
+            "description": "Si ahora mismo el abandono está produciendo decaimiento",
+            "example": true
+          },
+          "graceWindowHours": {
+            "type": "number",
+            "description": "Ventana de gracia en horas (sin decaimiento)",
+            "example": 24
+          },
+          "decayStartHours": {
+            "type": "number",
+            "description": "Horas de abandono a partir de las que decae",
+            "example": 48
+          },
+          "hoursSinceInteraction": {
+            "type": "number",
+            "description": "Horas transcurridas desde la última interacción (2 dec.)",
+            "example": 72.4
+          },
+          "acumulatedDecay": {
+            "type": "number",
+            "description": "Decaimiento total acumulado (para UI \"cuánto se enfrió\")",
+            "example": 0.75
+          }
+        },
+        "required": [
+          "decayRatePerDay",
+          "isDecaying",
+          "graceWindowHours",
+          "decayStartHours",
+          "hoursSinceInteraction",
+          "acumulatedDecay"
+        ]
+      },
+      "UnlocksDto": {
+        "type": "object",
+        "properties": {
+          "greeting": {
+            "type": "boolean",
+            "description": "El pet saluda al iniciar sesión (>= 30, companion)",
+            "example": true
+          },
+          "memoryRecall": {
+            "type": "boolean",
+            "description": "La IA recupera conversaciones previas (>= 60, ally — o intelligence >= MEMORY_UNLOCK)",
+            "example": true
+          },
+          "emotionalReactions": {
+            "type": "boolean",
+            "description": "Reacciones emocionales personalizadas (>= 80, soulmate)",
+            "example": false
+          },
+          "patternUnlocked": {
+            "type": "boolean",
+            "description": "Patrón exclusivo desbloqueado (>= 100, legend)",
+            "example": false
+          },
+          "sleepNearCursor": {
+            "type": "boolean",
+            "description": "Duerme cerca del cursor, animación de escritorio (>= 100, legend)",
+            "example": false
+          }
+        },
+        "required": [
+          "greeting",
+          "memoryRecall",
+          "emotionalReactions",
+          "patternUnlocked",
+          "sleepNearCursor"
+        ]
+      },
+      "BondingDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "description": "Vínculo actual (post tick)",
+            "example": 61.25,
+            "minimum": 0,
+            "maximum": 100
+          },
+          "tier": {
+            "type": "string",
+            "description": "Id del rango",
+            "example": "ally"
+          },
+          "tierName": {
+            "type": "string",
+            "description": "Nombre del rango",
+            "example": "Aliado"
+          },
+          "lastInteractionAt": {
+            "type": "string",
+            "description": "Última interacción, ISO-8601",
+            "example": "2026-11-10T08:00:00.000Z"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistoryPageDto"
+          },
+          "decayInfo": {
+            "$ref": "#/components/schemas/DecayInfoDto"
+          },
+          "unlocks": {
+            "$ref": "#/components/schemas/UnlocksDto"
+          }
+        },
+        "required": [
+          "value",
+          "tier",
+          "tierName",
+          "lastInteractionAt",
+          "history",
+          "decayInfo",
+          "unlocks"
+        ]
+      },
+      "WeatherInfoModel": {
+        "type": "object",
+        "properties": {
+          "condition": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "cloud",
+              "rain",
+              "snow",
+              "hot",
+              "cold",
+              "unknown"
+            ],
+            "example": "hot",
+            "description": "Condición mapeada (WMO + temperatura)."
+          },
+          "temperature": {
+            "type": "number",
+            "nullable": true,
+            "example": 32,
+            "description": "Temperatura actual (°C)"
+          },
+          "weatherCode": {
+            "type": "number",
+            "nullable": true,
+            "example": 0,
+            "description": "Código WMO de Open-Meteo"
+          },
+          "cached": {
+            "type": "boolean",
+            "description": "Sirvió desde la cache de Redis"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO 8601 del último (re)obtenimiento"
+          }
+        },
+        "required": [
+          "condition",
+          "temperature",
+          "weatherCode",
+          "cached",
+          "fetchedAt"
+        ]
+      },
+      "ActivityInfoModel": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean",
+            "description": "¿Hay un heartbeat reciente?"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "active",
+              "solo"
+            ],
+            "example": "active"
+          },
+          "lastActiveAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO 8601 del último heartbeat"
+          }
+        },
+        "required": [
+          "active",
+          "mode",
+          "lastActiveAt"
+        ]
+      },
+      "FestivalInfoModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "navidad"
+          },
+          "name": {
+            "type": "string",
+            "example": "Navidad"
+          },
+          "accessory": {
+            "type": "string",
+            "description": "Clave de accesorio/overlay",
+            "example": "sombrerito"
+          },
+          "message": {
+            "type": "string",
+            "description": "Frase de micro-momento",
+            "example": "¡Feliz Navidad! 🎄"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "accessory",
+          "message"
+        ]
+      },
+      "EnvironmentalStatusModel": {
+        "type": "object",
+        "properties": {
+          "timeOfDay": {
+            "type": "string",
+            "enum": [
+              "late_night",
+              "morning",
+              "afternoon",
+              "evening",
+              "night"
+            ],
+            "example": "afternoon"
+          },
+          "weather": {
+            "$ref": "#/components/schemas/WeatherInfoModel"
+          },
+          "activity": {
+            "$ref": "#/components/schemas/ActivityInfoModel"
+          },
+          "festival": {
+            "nullable": true,
+            "description": "Festividad activa o null",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FestivalInfoModel"
+              }
+            ]
+          }
+        },
+        "required": [
+          "timeOfDay",
+          "weather",
+          "activity",
+          "festival"
+        ]
+      },
+      "ActivityHeartbeatDto": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean",
+            "description": "¿El PC está activo ahora?",
+            "example": true
+          },
+          "cpuUsage": {
+            "type": "number",
+            "description": "Uso de CPU (%)",
+            "example": 42.5
+          }
+        }
+      },
+      "UpcomingFestivalModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "navidad"
+          },
+          "name": {
+            "type": "string",
+            "example": "Navidad"
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha ISO del próximo comienzo",
+            "example": "2026-12-25"
+          },
+          "daysRemaining": {
+            "type": "number",
+            "description": "Días restantes (0 si es hoy)",
+            "example": 42
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "date",
+          "daysRemaining"
         ]
       },
       "MissionRewardDto": {

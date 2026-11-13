@@ -13,6 +13,11 @@ model User {
   passwordHash String
   displayName  String?
   timezone     String         @default("UTC")
+  // Coordenadas opt-in para el clima (privacidad): se guardan redondeadas y solo las usa el servidor.
+  latitude     Float?
+  longitude    Float?
+  // Cumpleaños como "YYYY-MM-DD" (para micro-momentos de festividad).
+  birthday     String?
   coins        Int            @default(100)
   gems         Int            @default(5)
   accountXp    Int            @default(0)
@@ -134,6 +139,12 @@ model Pet {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Bonding Meter (feature 006): vínculo jugador-pet 0-100, rango y base del decaimiento lazy
+  bonding           Float       @default(0)
+  bondingTier       String      @default("acquainted")
+  lastInteractionAt DateTime    @default(now())
+  bondingEvents     BondingEvent[]
+
   chatMessages  ChatMessage[]
   memories      PetMemory[]
   reminders     Reminder[]
@@ -145,6 +156,20 @@ model Pet {
   @@index([userId])
   @@index([speciesId])
   @@index([elo])
+}
+
+// Auditoría del Bonding Meter (feature 006): cada cambio puntual del vínculo (incremento por
+// interacción o decaimiento por abandono) produce exactamente una fila.
+model BondingEvent {
+  id        String   @id @default(uuid())
+  petId     String
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  delta     Float
+  reason    String // feed | battle | minigame | chat | clean | sleep | evolve | decay
+  value     Float
+  createdAt DateTime @default(now())
+
+  @@index([petId, createdAt])
 }
 
 model PityCounter {

@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "birthday" TEXT;
+ALTER TABLE "User" ADD COLUMN "latitude" DOUBLE PRECISION;
+ALTER TABLE "User" ADD COLUMN "longitude" DOUBLE PRECISION;

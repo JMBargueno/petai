@@ -1,11 +1,15 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { getPetSvg, getPatternSvg } from '../lib/sprites';
+  import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
+  import type { EnvironmentalStatus } from '../lib/environmental';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
   /** Texto de la burbuja de chat sobre la mascota (vacío = oculta) */
   export let bubble: string = '';
+  /** Estado ambiental (feature 005): hora del día, clima, actividad y festividad. */
+  export let environmental: EnvironmentalStatus | null = null;
 
   let currentAnim: 'idle' | 'walk' | 'eat' | 'happy' | 'sleep' = 'idle';
   let posX = 150;
@@ -31,6 +35,11 @@
   $: baseSvg = getPetSvg(speciesKey, currentAnim);
   $: patternSvg = getPatternSvg(patternKey);
   $: accentColor = pet?.palette?.secondary || pet?.palette?.accent || '#FFFFFF';
+
+  // Variantes ambientales (feature 005): un tinte por tramo del día y clima sobre la mascota.
+  $: envVariant = environmental
+    ? `env--${environmental.timeOfDay} env--weather-${environmental.weather?.condition ?? 'unknown'}`
+    : '';
 
   export function triggerAnim(anim: 'eat' | 'happy') {
     if (isSleeping) return;
@@ -130,7 +139,12 @@
   on:click={handleClick}
   on:keydown={(e) => e.key === 'Enter' && onPetClick()}
 >
-  <div class="sprite-wrapper">
+  <div class="sprite-wrapper" class:env={!!envVariant}>
+    <!-- Tinte ambiental (feature 005): tramo del día + clima -->
+    {#if envVariant}
+      <div class="env-tint {envVariant}" aria-hidden="true"></div>
+    {/if}
+
     <!-- SVG Base de la criatura -->
     <div class="svg-base">
       {@html baseSvg}
@@ -142,6 +156,9 @@
         {@html patternSvg}
       </div>
     {/if}
+
+    <!-- Overlay ambiental: accesorios (paraguas, gorro, sombrerito) y micro-momentos -->
+    <EnvironmentalOverlay environmental={environmental} />
 
     <!-- Globo de estado / apodo -->
     {#if bubble}
@@ -297,5 +314,49 @@
       transform: translateY(-8px);
       opacity: 1;
     }
+  }
+
+  /* ---------- Tinte ambiental (feature 005) ---------- */
+  .env-tint {
+    position: absolute;
+    inset: -20px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+    transition: background 1.2s ease;
+  }
+
+  /* Tramo del día */
+  .env-tint.env--late_night {
+    background: radial-gradient(circle, rgba(30, 41, 90, 0.9) 0%, transparent 70%);
+  }
+  .env-tint.env--night {
+    background: radial-gradient(circle, rgba(30, 41, 90, 0.7) 0%, transparent 70%);
+  }
+  .env-tint.env--morning {
+    background: radial-gradient(circle, rgba(251, 191, 36, 0.7) 0%, transparent 70%);
+  }
+  .env-tint.env--afternoon {
+    background: radial-gradient(circle, rgba(253, 224, 71, 0.6) 0%, transparent 70%);
+  }
+  .env-tint.env--evening {
+    background: radial-gradient(circle, rgba(244, 114, 182, 0.5) 0%, transparent 70%);
+  }
+
+  /* Clima (refuerza el tinte del tramo) */
+  .env-tint.env--weather-rain,
+  .env-tint.env--weather-cloud {
+    background: radial-gradient(circle, rgba(71, 85, 105, 0.8) 0%, transparent 70%);
+    opacity: 0.5;
+  }
+  .env-tint.env--weather-snow,
+  .env-tint.env--weather-cold {
+    background: radial-gradient(circle, rgba(147, 197, 253, 0.85) 0%, transparent 70%);
+    opacity: 0.55;
+  }
+  .env-tint.env--weather-hot {
+    background: radial-gradient(circle, rgba(251, 146, 60, 0.7) 0%, transparent 70%);
+    opacity: 0.5;
   }
 </style>

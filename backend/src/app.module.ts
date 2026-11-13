@@ -12,6 +12,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { HatchingModule } from './modules/hatching/hatching.module';
 import { PetsModule } from './modules/pets/pets.module';
+import { BondingModule } from './modules/bonding/bonding.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { MinigamesModule } from './modules/minigames/minigames.module';
 import { AiModule } from './modules/ai/ai.module';
@@ -21,6 +22,12 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { MissionsModule } from './missions/missions.module';
 import { ChestsModule } from './modules/chests/chests.module';
+import { EnvironmentalModule } from './modules/environmental/environmental.module';
+import { DevModule } from './modules/dev/dev.module';
+
+// DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
+// En `NODE_ENV === 'production'` el DevModule no se registra ⇒ 404 (SC-007, constitución I/VIII).
+const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production';
 
 @Module({
   imports: [
@@ -40,6 +47,7 @@ import { ChestsModule } from './modules/chests/chests.module';
     UsersModule,
     HatchingModule,
     PetsModule,
+    BondingModule,
     InventoryModule,
     MinigamesModule,
     AiModule,
@@ -47,6 +55,8 @@ import { ChestsModule } from './modules/chests/chests.module';
     HealthModule,
     MissionsModule,
     ChestsModule,
+    EnvironmentalModule,
+    ...(DEV_TOOLS_ENABLED ? [DevModule] : []),
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],
 })

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "rarity": {
     "normal": {
       "probability": 0.6,
@@ -48,6 +48,14 @@
     },
     "criticalThreshold": 15,
     "sicknessHealthThreshold": 20
+  },
+  "environmental": {
+    "hot_temp": 30,
+    "cold_temp": 5,
+    "hunger_hot": 0.5,
+    "happiness_rain": 0.5,
+    "energy_snow": 0.5,
+    "inactivityThresholdHours": 2
   },
   "leveling": {
     "maxLevel": 100,
@@ -149,6 +157,27 @@
   "evolution": {
     "finalStageItemId": "evolution_stone",
     "finalStageMinLevel": 50
+  },
+  "bonding": {
+    "interactions": {
+      "feed": 2,
+      "battle": 3,
+      "minigame": 2,
+      "chat": 1,
+      "clean": 1,
+      "sleep": 0.5,
+      "evolve": 5
+    },
+    "decayRatePerDay": 0.5,
+    "graceWindowHours": 24,
+    "decayStartHours": 48,
+    "tiers": [
+      { "id": "acquainted", "name": "Acostumbrado", "min": 0 },
+      { "id": "companion", "name": "Compañero", "min": 30 },
+      { "id": "ally", "name": "Aliado", "min": 60 },
+      { "id": "soulmate", "name": "Alma gemela", "min": 80 },
+      { "id": "legend", "name": "Leyenda", "min": 100 }
+    ]
   },
   "minigames": {
     "sessionTtlSeconds": 300,
