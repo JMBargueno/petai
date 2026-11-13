@@ -3,6 +3,7 @@
   import { api, getAccessToken } from './lib/api';
   import { initSocket, getSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
+  import { notifyPetNeeds } from './lib/notifications';
   import PetView from './components/PetView.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
 
@@ -33,6 +34,7 @@
         socket.on('pet:update', (updatedPet: any) => {
           if (currentPet && currentPet.id === updatedPet.id) {
             currentPet = updatedPet;
+            notifyPetNeeds(updatedPet);
           }
           const index = pets.findIndex((p) => p.id === updatedPet.id);
           if (index !== -1) {
@@ -54,13 +56,33 @@
   }
 
   let stopClickThrough: () => void = () => {};
+  let needsPoll: any = null;
+
+  // Las constantes vitales solo se recalculan al consultar al servidor (tick perezoso):
+  // se consulta cada minuto para poder avisar cuando la mascota necesita atención.
+  async function pollPet() {
+    if (!getAccessToken() || !currentPet) return;
+    try {
+      const fresh = await api.getPets();
+      const pet = fresh.find((p: any) => p.id === currentPet.id);
+      if (pet) {
+        currentPet = pet;
+        pets = fresh;
+        notifyPetNeeds(pet);
+      }
+    } catch {
+      /* sin conexión o sesión caducada: se reintenta en el siguiente ciclo */
+    }
+  }
 
   onMount(() => {
     stopClickThrough = startClickThrough();
+    needsPoll = setInterval(pollPet, 60_000);
     loadInitialData();
   });
 
   onDestroy(() => {
+    clearInterval(needsPoll);
     stopClickThrough();
     const socket = getSocket();
     if (socket) socket.disconnect();

@@ -2,6 +2,7 @@
   import { createEventDispatcher, onDestroy } from 'svelte';
   import { api } from '../lib/api';
   import { eggLibrary } from '../lib/sprites';
+  import MinigamesTab from './MinigamesTab.svelte';
 
   export let user: any = null;
   export let pet: any = null;
@@ -50,7 +51,7 @@
 
   const dispatch = createEventDispatcher();
 
-  let activeTab: 'pet' | 'hatch' | 'shop' | 'account' = 'pet';
+  let activeTab: 'pet' | 'hatch' | 'games' | 'shop' | 'account' = 'pet';
 
   // Auth inputs
   let isLoginMode = true;
@@ -229,6 +230,7 @@
         <button class:active={activeTab === 'hatch'} on:click={() => (activeTab = 'hatch')}>
           Eclosión {#if eggs.length > 0}<span class="tab-badge">{eggs.length}</span>{/if}
         </button>
+        <button class:active={activeTab === 'games'} on:click={() => (activeTab = 'games')}>Juegos</button>
         <button class:active={activeTab === 'shop'} on:click={() => (activeTab = 'shop')}>Tienda</button>
         <button class:active={activeTab === 'account'} on:click={() => (activeTab = 'account')}>Cuenta</button>
       </div>
@@ -351,6 +353,17 @@
               </div>
             {/each}
           </div>
+
+        <!-- Pestaña: Minijuegos -->
+        {:else if activeTab === 'games'}
+          <MinigamesTab
+            {pet}
+            on:petUpdated={(e) => {
+              dispatch('petUpdated', e.detail);
+              dispatch('actionTriggered', 'happy');
+            }}
+            on:refreshUser
+          />
 
         <!-- Pestaña 4: Cuenta -->
         {:else if activeTab === 'account'}

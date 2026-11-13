@@ -10,7 +10,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 |---|---|---|---|
 | **Fase 0** | Preparación y Monorepo | ✅ Completada | Inicialización de repos, datos compartidos, docker-compose y CI |
 | **Fase 1** | Núcleo Backend + Escritorio | ✅ Completada | Ciclo básico: Registro, Eclosión, Cuidado, Sprite interactivo |
-| **Fase 2** | Mecánicas de Juego | 🔄 En curso (backend ✅) | Minijuegos, tienda, evolución y estados de salud |
+| **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
 | **Fase 3** | Inteligencia Artificial (IA) | ⏳ Pendiente | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ⏳ Pendiente | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ⏳ Pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
@@ -52,9 +52,9 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
   - [x] Tienda completa con compras atómicas y consumo de inventario validado por tipo.
   - [x] Ciclo de sueño sincronizado con la zona horaria del usuario.
   - [x] Sistema de evolución por etapas (bebé nivel 1, joven nivel 10, adulto nivel 25, forma final nivel 50 con `evolution_stone`).
-- **Escritorio**:
-  - [ ] Implementación de 3 minijuegos: Atrapa la comida, Parejas de memoria y Reflejos.
-  - [ ] Notificaciones nativas del sistema cuando la mascota requiere atención.
+- **Escritorio** ✅:
+  - [x] Implementación de 3 minijuegos: Atrapa la comida, Parejas de memoria y Reflejos (pestaña "Juegos", semilla del servidor).
+  - [x] Notificaciones nativas del sistema (plugin Tauri) cuando la mascota requiere atención, con cooldown de 30 min por tipo.
 
 ---
 

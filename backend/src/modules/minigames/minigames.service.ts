@@ -37,6 +37,7 @@ export class MinigamesService {
       id,
       name: g.name,
       durationSeconds: g.durationSeconds,
+      maxScorePerSecond: g.maxScorePerSecond,
       maxCoins: g.maxCoins,
       maxXp: g.maxXp,
     }));
@@ -92,6 +93,7 @@ export class MinigamesService {
       gameId,
       seed: session.seed,
       durationSeconds: game.durationSeconds,
+      maxScorePerSecond: game.maxScorePerSecond,
       expiresAt: new Date(session.startedAt.getTime() + this.cfg.sessionTtlSeconds * 1000),
     };
   }

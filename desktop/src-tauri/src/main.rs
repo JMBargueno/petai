@@ -70,6 +70,7 @@ fn spawn_click_through_loop(app: tauri::AppHandle) {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(HitRegions::default())
         .invoke_handler(tauri::generate_handler![set_hit_regions])
         .setup(|app| {

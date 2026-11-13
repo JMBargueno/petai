@@ -173,4 +173,46 @@ export const api = {
     if (res.error) throw new Error((res.error as any)?.message || 'Error al comprar');
     return res.data;
   },
+
+  // ---- Minijuegos (Fase 2) ----
+  async listMinigames() {
+    return minigameRequest<any[]>('GET', '/v1/minigames');
+  },
+
+  async startMinigame(gameId: string, petId: string) {
+    return minigameRequest<{
+      sessionId: string;
+      gameId: string;
+      seed: number;
+      durationSeconds: number;
+      maxScorePerSecond: number;
+      expiresAt: string;
+    }>('POST', `/v1/minigames/${gameId}/start`, { petId });
+  },
+
+  async finishMinigame(sessionId: string, score: number) {
+    return minigameRequest<{ score: number; rewards: any; pet: any }>(
+      'POST',
+      `/v1/minigames/sessions/${sessionId}/finish`,
+      { score },
+    );
+  },
+
+  async evolvePet(petId: string) {
+    return minigameRequest<any>('POST', `/v1/pets/${petId}/evolve`);
+  },
 };
+
+async function minigameRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || 'Error en la petición');
+  return data as T;
+}
