@@ -132,7 +132,10 @@ export class PetsService {
     return updated;
   }
 
-  async heal(userId: string, petId: string, itemId: string) {
+  async heal(userId: string, petId: string, itemId?: string) {
+    if (!itemId || typeof itemId !== 'string') {
+      throw new BadRequestException('itemId es obligatorio');
+    }
     const pet = await this.getPetById(userId, petId);
     const item = await this.inventoryService.consumeItem(userId, itemId);
     const effects = item.effects as any;

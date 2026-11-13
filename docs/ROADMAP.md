@@ -8,8 +8,8 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 
 | Fase | Título | Estado | Objetivo Principal |
 |---|---|---|---|
-| **Fase 0** | Preparación y Monorepo | 🔄 En curso | Inicialización de repos, datos compartidos, docker-compose y CI |
-| **Fase 1** | Núcleo Backend + Escritorio | ⏳ Pendiente | Ciclo básico: Registro, Eclosión, Cuidado, Sprite interactivo |
+| **Fase 0** | Preparación y Monorepo | ✅ Completada | Inicialización de repos, datos compartidos, docker-compose y CI |
+| **Fase 1** | Núcleo Backend + Escritorio | ✅ Completada | Ciclo básico: Registro, Eclosión, Cuidado, Sprite interactivo |
 | **Fase 2** | Mecánicas de Juego | ⏳ Pendiente | Minijuegos, tienda, evolución y estados de salud |
 | **Fase 3** | Inteligencia Artificial (IA) | ⏳ Pendiente | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ⏳ Pendiente | Motor determinista, emparejamiento ELO y repeticiones |
@@ -24,7 +24,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 - [x] Configuración de datos de juego compartidos en `shared/game-data/` (`species.json`, `patterns.json`, `foods.json`, `balance.json`).
 - [x] Placeholders iniciales de sprites en `shared/assets/sprites/`.
 - [x] `docker-compose.yml` para PostgreSQL y Redis, y `.env.example`.
-- [ ] Workflow de GitHub Actions (`.github/workflows/ci.yml`).
+- [x] Workflow de GitHub Actions (`.github/workflows/ci.yml`).
 
 ---
 

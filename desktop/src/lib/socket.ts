@@ -1,9 +1,9 @@
 import { io, Socket } from 'socket.io-client';
-import { API_BASE_URL } from './api';
+import { API_BASE_URL, getAccessToken } from './api';
 
 let socket: Socket | null = null;
 
-export function initSocket(userId?: string) {
+export function initSocket() {
   if (socket) {
     socket.disconnect();
   }
@@ -11,7 +11,8 @@ export function initSocket(userId?: string) {
   const socketUrl = API_BASE_URL || window.location.origin;
 
   socket = io(`${socketUrl}/realtime`, {
-    query: userId ? { userId } : {},
+    // Función: se reevalúa en cada (re)conexión para usar el token vigente
+    auth: (cb) => cb({ token: getAccessToken() }),
     transports: ['websocket', 'polling'],
   });
 

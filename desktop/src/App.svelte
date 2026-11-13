@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { api, getAccessToken } from './lib/api';
   import { initSocket, getSocket } from './lib/socket';
+  import { startClickThrough } from './lib/clickthrough';
   import PetView from './components/PetView.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
 
@@ -28,7 +29,7 @@
         inventory = await api.getInventory();
 
         // Conectar WebSocket en tiempo real
-        const socket = initSocket(user.id);
+        const socket = initSocket();
         socket.on('pet:update', (updatedPet: any) => {
           if (currentPet && currentPet.id === updatedPet.id) {
             currentPet = updatedPet;
@@ -52,11 +53,15 @@
     }
   }
 
+  let stopClickThrough: () => void = () => {};
+
   onMount(() => {
+    stopClickThrough = startClickThrough();
     loadInitialData();
   });
 
   onDestroy(() => {
+    stopClickThrough();
     const socket = getSocket();
     if (socket) socket.disconnect();
   });

@@ -4,6 +4,9 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
@@ -13,14 +16,32 @@ import { Server, Socket } from 'socket.io';
   namespace: 'realtime',
 })
 export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly logger = new Logger(RealtimeGateway.name);
+
   @WebSocketServer()
   server: Server;
 
-  handleConnection(client: Socket) {
-    // Permite que clientes se unan a salas específicas por userId
-    const userId = client.handshake.query.userId as string;
-    if (userId) {
-      client.join(`user:${userId}`);
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  async handleConnection(client: Socket) {
+    // El usuario se identifica únicamente por el JWT de acceso del handshake;
+    // nunca por un userId enviado por el cliente.
+    const token = client.handshake.auth?.token;
+    if (!token || typeof token !== 'string') {
+      client.disconnect(true);
+      return;
+    }
+    try {
+      const payload = await this.jwtService.verifyAsync<{ sub: string }>(token, {
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+      });
+      await client.join(`user:${payload.sub}`);
+    } catch {
+      this.logger.debug('Conexión realtime rechazada: token inválido o expirado');
+      client.disconnect(true);
     }
   }
 

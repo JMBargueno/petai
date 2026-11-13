@@ -56,9 +56,9 @@ export class PetsController {
   heal(
     @CurrentUser() user: any,
     @Param('id') petId: string,
-    @Body() body: { itemId: string },
+    @Body() body: { itemId: string } | undefined,
   ) {
-    return this.petsService.heal(user.id, petId, body.itemId);
+    return this.petsService.heal(user.id, petId, body?.itemId);
   }
 
   @Patch(':id')

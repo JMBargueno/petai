@@ -56,4 +56,4 @@ jobs:
 
       - name: Run Backend Tests
         if: steps.check_backend.outputs.has_backend == 'true'
-        run: pnpm --filter backend run test
+        run: pnpm --filter petai-backend run test
