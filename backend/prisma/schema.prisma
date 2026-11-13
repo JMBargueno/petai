@@ -1,0 +1,260 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  passwordHash String
+  displayName  String?
+  timezone     String         @default("UTC")
+  coins        Int            @default(100)
+  gems         Int            @default(5)
+  accountXp    Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  refreshTokens  RefreshToken[]
+  deviceLinks    DeviceLink[]
+  pets           Pet[]
+  eggs           Egg[]
+  inventory      InventoryItem[]
+  pityCounter    PityCounter?
+  aiConfig       AiConfig?
+  reminders      Reminder[]
+  minigames      MinigameSession[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hash      String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model DeviceLink {
+  code        String    @id
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  confirmedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Species {
+  id             String   @id
+  name           String
+  description    String
+  element        String
+  rarity         String
+  baseStats      Json
+  favoriteFood   String
+  spriteKey      String
+  defaultPalette Json
+
+  pets           Pet[]
+}
+
+model Pattern {
+  id          String   @id
+  name        String
+  description String
+  minRarity   String
+
+  pets        Pet[]
+}
+
+model Egg {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eggType      String    @default("standard")
+  startedAt    DateTime  @default(now())
+  hatchesAt    DateTime
+  hatchedPetId String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Pet {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  speciesId     String
+  species       Species   @relation(fields: [speciesId], references: [id])
+  rarity        String
+  patternId     String
+  pattern       Pattern   @relation(fields: [patternId], references: [id])
+  palette       Json
+  shiny         Boolean   @default(false)
+  visualSeed    Int
+  nickname      String
+  level         Int       @default(1)
+  xp            Int       @default(0)
+  stage         String    @default("baby")
+  
+  // Vital Stats (0-100)
+  hunger        Float     @default(100.0)
+  happiness     Float     @default(100.0)
+  energy        Float     @default(100.0)
+  hygiene       Float     @default(100.0)
+  health        Float     @default(100.0)
+  sick          Boolean   @default(false)
+  sleeping      Boolean   @default(false)
+
+  // Combat & RPG Stats
+  combatStats   Json
+  statPoints    Int       @default(0)
+  skills        Json      @default("[]")
+  elo           Int       @default(1000)
+  strategy      String    @default("balanced")
+
+  // Intelligence & AI
+  intelligence  Int       @default(0)
+  awakened      Boolean   @default(false)
+  personality   Json?
+
+  lastTickAt    DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  chatMessages  ChatMessage[]
+  memories      PetMemory[]
+  reminders     Reminder[]
+  minigames     MinigameSession[]
+  battlesAsAttacker Battle[] @relation("AttackerBattles")
+  battlesAsDefender Battle[] @relation("DefenderBattles")
+
+  @@index([userId])
+  @@index([speciesId])
+}
+
+model PityCounter {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sinceSuperRare  Int      @default(0)
+  sinceLegendary  Int      @default(0)
+}
+
+model Item {
+  id          String   @id
+  kind        String
+  name        String
+  description String
+  effects     Json
+  priceCoins  Int      @default(0)
+  priceGems   Int      @default(0)
+
+  inventory   InventoryItem[]
+}
+
+model InventoryItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id])
+  qty       Int      @default(1)
+
+  @@unique([userId, itemId])
+}
+
+model MinigameSession {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId      String
+  pet        Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  gameId     String
+  seed       Int
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  score      Int       @default(0)
+  rewarded   Boolean   @default(false)
+
+  @@index([userId])
+  @@index([petId])
+}
+
+model Battle {
+  id             String    @id @default(uuid())
+  attackerPetId  String
+  attackerPet    Pet       @relation("AttackerBattles", fields: [attackerPetId], references: [id])
+  defenderPetId  String
+  defenderPet    Pet       @relation("DefenderBattles", fields: [defenderPetId], references: [id])
+  seed           Int
+  winnerPetId    String?
+  log            Json
+  eloDelta       Int       @default(0)
+  createdAt      DateTime  @default(now())
+
+  @@index([attackerPetId])
+  @@index([defenderPetId])
+}
+
+model AiConfig {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mode         String    @default("byok") // byok | managed
+  provider     String    @default("openai") // openai | hermes | custom
+  baseUrl      String?
+  model        String?
+  encryptedKey String?
+  keyIv        String?
+  keyTag       String?
+  lastTestedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  petId     String
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  role      String   // user | assistant | system | tool
+  content   String
+  toolCalls Json?
+  tokens    Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([petId])
+}
+
+model PetMemory {
+  id        String   @id @default(uuid())
+  petId     String
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  kind      String   // fact | summary
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([petId])
+}
+
+model Reminder {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId     String
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  text      String
+  dueAt     DateTime
+  delivered Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([petId])
+}

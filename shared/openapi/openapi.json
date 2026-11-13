@@ -1,0 +1,587 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/v1/catalog": {
+      "get": {
+        "operationId": "GameDataController_getCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener catálogo general de juego (especies, balance, patrones y alimentos)",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/v1/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Registrar nuevo usuario",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Iniciar sesión con credenciales",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Renovar Access Token mediante Refresh Token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "operationId": "UsersController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener perfil del usuario autenticado",
+        "tags": [
+          "Users"
+        ]
+      },
+      "patch": {
+        "operationId": "UsersController_updateMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar preferencias del usuario",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/eggs": {
+      "get": {
+        "operationId": "HatchingController_getEggs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar huevos del usuario en incubación",
+        "tags": [
+          "Eggs"
+        ]
+      }
+    },
+    "/v1/eggs/buy": {
+      "post": {
+        "operationId": "HatchingController_buyEgg",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprar un nuevo huevo estándar",
+        "tags": [
+          "Eggs"
+        ]
+      }
+    },
+    "/v1/eggs/{id}/hatch": {
+      "post": {
+        "operationId": "HatchingController_hatchEgg",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eclosionar huevo completado",
+        "tags": [
+          "Eggs"
+        ]
+      }
+    },
+    "/v1/pets": {
+      "get": {
+        "operationId": "PetsController_getPets",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar todas las mascotas del usuario con deterioro perezoso calculado",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/v1/pets/{id}": {
+      "get": {
+        "operationId": "PetsController_getPet",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle de una mascota específica",
+        "tags": [
+          "Pets"
+        ]
+      },
+      "patch": {
+        "operationId": "PetsController_updatePet",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Modificar apodo o estrategia de combate de la mascota",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/v1/pets/{id}/feed": {
+      "post": {
+        "operationId": "PetsController_feed",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Alimentar a la mascota con un objeto del inventario",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/v1/pets/{id}/clean": {
+      "post": {
+        "operationId": "PetsController_clean",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Bañar / limpiar a la mascota",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/v1/pets/{id}/sleep": {
+      "post": {
+        "operationId": "PetsController_sleep",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Poner a dormir a la mascota",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/v1/pets/{id}/wake": {
+      "post": {
+        "operationId": "PetsController_wake",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Despertar a la mascota",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/v1/pets/{id}/heal": {
+      "post": {
+        "operationId": "PetsController_heal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Administrar medicina a la mascota",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/v1/shop": {
+      "get": {
+        "operationId": "InventoryController_getShop",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar artículos de la tienda",
+        "tags": [
+          "Inventory & Shop"
+        ]
+      }
+    },
+    "/v1/inventory": {
+      "get": {
+        "operationId": "InventoryController_getInventory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener inventario del usuario",
+        "tags": [
+          "Inventory & Shop"
+        ]
+      }
+    },
+    "/v1/shop/buy": {
+      "post": {
+        "operationId": "InventoryController_buyItem",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprar artículo de la tienda",
+        "tags": [
+          "Inventory & Shop"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "PetAI API",
+    "description": "API autoritativa para el ecosistema PetAI",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "jugador@petai.local",
+            "description": "Correo electrónico del usuario"
+          },
+          "password": {
+            "type": "string",
+            "example": "ContrasenaSegura123!",
+            "description": "Contraseña del usuario (mínimo 8 caracteres)"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "EntrenadorPet",
+            "description": "Nombre mostrado del jugador"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AuthResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "user": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "user"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "jugador@petai.local",
+            "description": "Correo electrónico del usuario"
+          },
+          "password": {
+            "type": "string",
+            "example": "ContrasenaSegura123!",
+            "description": "Contraseña del usuario"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Token de refresco rotativo"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      }
+    }
+  }
+}
