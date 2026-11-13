@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="@color/petai_egg"
+        android:pathData="M54,22 C38,22 28,44 28,60 C28,76 39,86 54,86 C69,86 80,76 80,60 C80,44 70,22 54,22 Z" />
+    <path android:fillColor="@color/petai_egg_spot"
+        android:pathData="M44,56 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 M62,66 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 M56,46 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+</vector>

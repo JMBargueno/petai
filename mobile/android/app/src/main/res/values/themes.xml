@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PetAI" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/petai_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.PetAI.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/petai_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_egg</item>
+        <item name="postSplashScreenTheme">@style/Theme.PetAI</item>
+    </style>
+</resources>

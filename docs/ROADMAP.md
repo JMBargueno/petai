@@ -13,7 +13,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
 | **Fase 3** | Inteligencia Artificial (IA) | ✅ Completada (salvo modo suscripción y Redis) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ✅ Completada (falta fin de temporada) | Motor determinista, emparejamiento ELO y repeticiones |
-| **Fase 5** | Clientes Móviles Nativos | ⏳ Pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
+| **Fase 5** | Clientes Móviles Nativos | 🚧 En curso (Android v1) | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
 | **Fase 6** | Pulido y Lanzamiento | ⏳ Pendiente | Seguridad, balance, optimización, tiendas y despliegue |
 
 ---
@@ -95,7 +95,10 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 ---
 
 ## Fase 5 — Clientes Móviles Nativos
-- **Android**: Jetpack Compose con Material 3 Expressive, widgets Glance y Play Billing.
+- **Android** (`mobile/android`): Jetpack Compose con Material 3 Expressive, widgets Glance y Play Billing.
+  - [x] v1 «núcleo + chat»: registro/login (tokens cifrados con Android Keystore, refresh automático), eclosión, estado y cuidados de la mascota con sprites SVG compartidos, tienda, chat IA con streaming SSE y ajustes BYOK. Probado en emulador (API 37) contra el backend local (`10.0.2.2:3000`).
+  - [ ] Pendiente: Arena, minijuegos, widgets Glance, Play Billing, notificaciones push (FCM).
+  - Build: `cd mobile/android && ./gradlew assembleDebug`. En Windows con JDK 25 hace falta `-Djdk.net.unixdomain.tmpdir=C:/t` (ya en `gradle.properties`; exportarlo también en `JAVA_TOOL_OPTIONS` para el cliente de Gradle) y que exista `C:	`.
 - **iOS**: SwiftUI con Liquid Glass para iOS 27, Live Activities y StoreKit 2.
 - **Sincronización**: Código de vinculación de dispositivos para sincronizar escritorio y móviles.
 
