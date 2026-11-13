@@ -31,7 +31,7 @@ export class AuthService {
 
   async register(raw: unknown, ip: string) {
     const l = this.throttle.limits;
-    this.throttle.consume(`register:${ip}`, l.registerPerIp, l.registerWindowMs);
+    await this.throttle.consume(`register:${ip}`, l.registerPerIp, l.registerWindowMs);
     const dto = parseOrBadRequest(registerSchema, raw);
 
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
@@ -76,8 +76,8 @@ export class AuthService {
     const accountKey = `login:${ip}:${dto.email}`;
     const ipKey = `login-ip:${ip}`;
     // Bloqueo previo: aunque la contraseña sea correcta, una cuenta/IP bloqueada no entra
-    this.throttle.assertBelow(accountKey, l.loginFailsPerAccount, l.loginWindowMs);
-    this.throttle.assertBelow(ipKey, l.loginFailsPerIp, l.loginWindowMs);
+    await this.throttle.assertBelow(accountKey, l.loginFailsPerAccount, l.loginWindowMs);
+    await this.throttle.assertBelow(ipKey, l.loginFailsPerIp, l.loginWindowMs);
 
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     // Siempre se ejecuta una verificación argon2 (real o de relleno): mismo coste exista o no la cuenta
@@ -85,12 +85,12 @@ export class AuthService {
     const ok = await argon2.verify(hash, dto.password).catch(() => false);
 
     if (!user || !ok) {
-      this.throttle.add(accountKey, l.loginWindowMs);
-      this.throttle.add(ipKey, l.loginWindowMs);
+      await this.throttle.add(accountKey, l.loginWindowMs);
+      await this.throttle.add(ipKey, l.loginWindowMs);
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    this.throttle.clear(accountKey);
+    await this.throttle.clear(accountKey);
     const tokens = await this.generateTokens(user.id, user.email);
     return {
       ...tokens,
@@ -100,7 +100,7 @@ export class AuthService {
 
   async refresh(raw: unknown, ip: string) {
     const l = this.throttle.limits;
-    this.throttle.consume(`refresh:${ip}`, l.refreshPerIp, l.refreshWindowMs);
+    await this.throttle.consume(`refresh:${ip}`, l.refreshPerIp, l.refreshWindowMs);
     const dto = parseOrBadRequest(refreshSchema, raw);
 
     let payload: { sub: string };

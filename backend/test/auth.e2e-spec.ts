@@ -30,9 +30,9 @@ describe('Autenticación: validación, límite de intentos y sesiones (e2e)', ()
   });
   afterAll(async () => app.close());
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Estado limpio del limitador y límites por defecto; cada bloque activa lo que necesita
-    (app.get(AuthThrottleService) as any).hits.clear();
+    await app.get(AuthThrottleService).reset();
     config.set('AUTH_RATE_LIMIT_FORCE', 'false');
     for (const k of ['AUTH_LOGIN_MAX_FAILS_PER_ACCOUNT', 'AUTH_LOGIN_MAX_FAILS_PER_IP', 'AUTH_REGISTER_MAX_PER_IP', 'AUTH_REFRESH_MAX_PER_MINUTE']) {
       config.set(k, undefined);

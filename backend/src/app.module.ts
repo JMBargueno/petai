@@ -4,6 +4,7 @@ import { AppExceptionFilter } from './common/app-exception.filter';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.config';
 import { PrismaModule } from './prisma/prisma.module';
+import { RedisModule } from './redis/redis.module';
 import { GameDataModule } from './modules/game-data/game-data.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -23,6 +24,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
       validate: validateEnv,
     }),
     PrismaModule,
+    RedisModule,
     RealtimeModule,
     GameDataModule,
     AuthModule,

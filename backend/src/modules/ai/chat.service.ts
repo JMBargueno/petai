@@ -1,4 +1,5 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, Optional } from '@nestjs/common';
+import { RedisService } from '../../redis/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PetsService } from '../pets/pets.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
@@ -35,7 +36,7 @@ const LOCAL_MAX_REPLY_CHARS = 4000;
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
-  // Ventana deslizante en memoria. Con varias instancias del backend debe pasar a Redis.
+  // Ventana deslizante: Redis (compartida entre instancias) con respaldo en memoria por instancia.
   private readonly hits = new Map<string, number[]>();
   // Una respuesta en curso por usuario (evita ráfagas paralelas que disparan el gasto)
   private readonly active = new Set<string>();
@@ -50,16 +51,33 @@ export class ChatService {
     private readonly memory: MemoryService,
     private readonly agent: AgentService,
     private readonly usage: UsageService,
+    @Optional() private readonly redis?: RedisService,
   ) {}
 
-  private checkRateLimit(userId: string) {
+  private async checkRateLimit(userId: string) {
+    const tooMany = () => new HttpException('Demasiados mensajes seguidos, espera un momento', HttpStatus.TOO_MANY_REQUESTS);
     const now = Date.now();
-    const recent = (this.hits.get(userId) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
-    if (recent.length >= RATE_LIMIT.max) {
-      throw new HttpException('Demasiados mensajes seguidos, espera un momento', HttpStatus.TOO_MANY_REQUESTS);
+    if (this.redis) {
+      const blocked = await this.redis.run(async (r) => {
+        const k = this.redis!.key(`chatrate:${userId}`);
+        await r.zremrangebyscore(k, 0, now - RATE_LIMIT.windowMs);
+        if ((await r.zcard(k)) >= RATE_LIMIT.max) return true;
+        await r.multi().zadd(k, now, `${now}-${Math.random().toString(36).slice(2, 8)}`).pexpire(k, RATE_LIMIT.windowMs).exec();
+        return false;
+      });
+      if (blocked === true) throw tooMany();
+      if (blocked === false) return;
     }
+    const recent = (this.hits.get(userId) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
+    if (recent.length >= RATE_LIMIT.max) throw tooMany();
     recent.push(now);
     this.hits.set(userId, recent);
+  }
+
+  /** Reinicia los contadores de mensajes por minuto de esos usuarios (memoria y Redis). Solo para tests. */
+  async resetRateLimits(userIds: string[]) {
+    for (const id of userIds) this.hits.delete(id);
+    await this.redis?.run((r) => (userIds.length ? r.del(...userIds.map((id) => this.redis!.key(`chatrate:${id}`))) : Promise.resolve(0)));
   }
 
   /** Normaliza y valida el mensaje del usuario. */
@@ -104,7 +122,7 @@ export class ChatService {
   ) {
     const message = this.sanitizeInput(rawMessage);
     const pet = await this.petsService.getPetById(userId, petId);
-    this.checkRateLimit(userId);
+    await this.checkRateLimit(userId);
 
     // Moderación de entrada: el mensaje bloqueado no llega al proveedor, no se guarda y no gasta cuota
     const verdict = moderateInput(message);
@@ -185,7 +203,7 @@ export class ChatService {
   async prepareLocal(userId: string, petId: string, rawMessage: unknown) {
     const message = this.sanitizeInput(rawMessage);
     const pet = await this.petsService.getPetById(userId, petId);
-    this.checkRateLimit(userId);
+    await this.checkRateLimit(userId);
 
     const verdict = moderateInput(message);
     if (verdict) {

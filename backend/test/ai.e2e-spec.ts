@@ -69,7 +69,7 @@ async function signup(app: INestApplication) {
   const auth = { Authorization: `Bearer ${reg.body.accessToken}` };
   const eggs = await http().get('/v1/eggs').set(auth).expect(200);
   const pet = await http().post(`/v1/eggs/${eggs.body[0].id}/hatch`).set(auth).expect(201);
-  return { auth, petId: pet.body.id as string, nickname: pet.body.nickname as string };
+  return { auth, userId: reg.body.user.id as string, petId: pet.body.id as string, nickname: pet.body.nickname as string };
 }
 
 /** Parsea la respuesta SSE completa en una lista de eventos. */
@@ -243,7 +243,7 @@ describe('IA: configuración BYOK y chat (e2e, LLM mock)', () => {
 
     it('11. eliminar la configuración borra la key y desactiva el chat', async () => {
       // El test anterior agotó la ventana de mensajes por minuto: se reinicia para probar la configuración
-      (app.get(ChatService) as any).hits.clear();
+      await app.get(ChatService).resetRateLimits([user.userId]);
       await api().delete('/v1/ai/config').set(user.auth).expect(200);
       const cfg = await api().get('/v1/ai/config').set(user.auth).expect(200);
       expect(cfg.body).toEqual({ configured: false });

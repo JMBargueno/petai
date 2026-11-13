@@ -1,5 +1,7 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Optional } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
+import { RedisService } from '../../redis/redis.service';
 
 const MINUTE = 60_000;
 const MAX_KEYS = 50_000;
@@ -11,8 +13,8 @@ const MAX_KEYS = 50_000;
  *   por IP (frena el barrido de muchas cuentas). Un acierto reinicia el contador de esa cuenta.
  * - Registro y refresh: se cuentan todas las peticiones por IP.
  *
- * Límite: al estar en memoria, con varias instancias del backend cada una cuenta por separado
- * (habría que moverlo a Redis). En tests (NODE_ENV=test) está desactivado salvo que se fuerce con
+ * Almacén: Redis (ZSET por clave, compartido entre instancias del backend) y, si Redis no responde o
+ * no está configurado, un mapa en memoria por instancia. En tests (NODE_ENV=test) está desactivado salvo que se fuerce con
  * AUTH_RATE_LIMIT_FORCE=true.
  */
 @Injectable()
@@ -20,7 +22,11 @@ export class AuthThrottleService {
   private readonly hits = new Map<string, number[]>();
   private ops = 0;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly config: ConfigService, @Optional() private readonly redis?: RedisService) {}
+
+  private rkey(key: string) {
+    return this.redis!.key(`throttle:${key}`);
+  }
 
   private get enabled(): boolean {
     if (this.config.get<string>('AUTH_RATE_LIMIT_DISABLED') === 'true') return false;
@@ -55,6 +61,19 @@ export class AuthThrottleService {
     return list;
   }
 
+  /** Intentos dentro de la ventana: Redis si está disponible, memoria si no. */
+  private async count(key: string, windowMs: number): Promise<number> {
+    if (this.redis) {
+      const n = await this.redis.run(async (r) => {
+        const k = this.rkey(key);
+        await r.zremrangebyscore(k, 0, Date.now() - windowMs);
+        return r.zcard(k);
+      });
+      if (n !== null) return n;
+    }
+    return this.recent(key, windowMs).length;
+  }
+
   private prune() {
     // Se limpian entradas antiguas de vez en cuando para que el mapa no crezca sin límite
     if (++this.ops % 500 !== 0 && this.hits.size < MAX_KEYS) return;
@@ -74,27 +93,46 @@ export class AuthThrottleService {
   }
 
   /** Lanza 429 si ya se alcanzó el máximo (sin registrar un intento nuevo). */
-  assertBelow(key: string, max: number, windowMs: number) {
+  async assertBelow(key: string, max: number, windowMs: number) {
     if (!this.enabled) return;
     this.prune();
-    if (this.recent(key, windowMs).length >= max) throw this.tooMany(windowMs);
+    if ((await this.count(key, windowMs)) >= max) throw this.tooMany(windowMs);
   }
 
   /** Registra un intento. */
-  add(key: string, windowMs: number) {
+  async add(key: string, windowMs: number) {
     if (!this.enabled) return;
+    if (this.redis) {
+      const ok = await this.redis.run(async (r) => {
+        const k = this.rkey(key);
+        const now = Date.now();
+        await r.multi().zadd(k, now, `${now}-${crypto.randomBytes(4).toString('hex')}`).pexpire(k, windowMs).exec();
+        return true;
+      });
+      if (ok) return;
+    }
     const list = this.recent(key, windowMs);
     list.push(Date.now());
     this.hits.set(key, list);
   }
 
   /** Comprueba el máximo y registra el intento (registro y refresh). */
-  consume(key: string, max: number, windowMs: number) {
-    this.assertBelow(key, max, windowMs);
-    this.add(key, windowMs);
+  async consume(key: string, max: number, windowMs: number) {
+    await this.assertBelow(key, max, windowMs);
+    await this.add(key, windowMs);
   }
 
-  clear(key: string) {
+  async clear(key: string) {
     this.hits.delete(key);
+    await this.redis?.run((r) => r.del(this.rkey(key)));
+  }
+
+  /** Borra todos los contadores (memoria y Redis). Solo para tests. */
+  async reset() {
+    this.hits.clear();
+    await this.redis?.run(async (r) => {
+      const keys = await r.keys(this.redis!.key('throttle:*'));
+      if (keys.length) await r.del(...keys);
+    });
   }
 }

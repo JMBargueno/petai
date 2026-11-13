@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
-import { RedisService } from './redis.service';
+import { RedisService } from '../../redis/redis.service';
 import { isoWeekKey } from './combat/ranking';
 
 export type BoardScope = 'global' | 'weekly';

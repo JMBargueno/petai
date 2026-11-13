@@ -72,10 +72,12 @@ describe('Moderación, cuota y concurrencia del chat (e2e, LLM mock)', () => {
   let config: ConfigService;
   const api = () => request(app.getHttpServer());
 
+  const createdUsers: string[] = [];
   async function signup(withAi = true) {
     const reg = await api().post('/v1/auth/register').send({
       email: `mod_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@petai.local`, password: 'Password123!',
     }).expect(201);
+    createdUsers.push(reg.body.user.id);
     const auth = { Authorization: `Bearer ${reg.body.accessToken}` };
     const eggs = await api().get('/v1/eggs').set(auth).expect(200);
     const petId = (await api().post(`/v1/eggs/${eggs.body[0].id}/hatch`).set(auth).expect(201)).body.id as string;
@@ -87,7 +89,7 @@ describe('Moderación, cuota y concurrencia del chat (e2e, LLM mock)', () => {
   }
   const chat = (u: { auth: any; petId: string }, message: string) =>
     api().post(`/v1/pets/${u.petId}/chat`).set(u.auth).send({ message }).buffer(true).parse(sseParser);
-  const clearRate = () => (app.get(ChatService) as any).hits.clear();
+  const clearRate = () => app.get(ChatService).resetRateLimits(createdUsers);
   const ev = (res: any, name: string) => res.body.events.find((e: any) => e.event === name);
   const history = async (u: { auth: any; petId: string }) =>
     (await api().get(`/v1/pets/${u.petId}/chat/history`).set(u.auth).expect(200)).body;
@@ -107,9 +109,9 @@ describe('Moderación, cuota y concurrencia del chat (e2e, LLM mock)', () => {
     await app.close();
     await mock.close();
   });
-  beforeEach(() => {
+  beforeEach(async () => {
     mock.state.mode = 'normal';
-    clearRate();
+    await clearRate();
   });
 
   describe('entrada', () => {

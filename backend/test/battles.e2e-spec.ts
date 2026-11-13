@@ -6,7 +6,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { RealtimeGateway } from '../src/modules/realtime/realtime.gateway';
-import { RedisService } from '../src/modules/battles/redis.service';
+import { RedisService } from '../src/redis/redis.service';
 import { simulateBattle } from '../src/modules/battles/combat/engine';
 import { Fighter, SkillDef } from '../src/modules/battles/combat/types';
 
