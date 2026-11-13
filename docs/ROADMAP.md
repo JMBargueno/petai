@@ -11,7 +11,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 0** | Preparación y Monorepo | ✅ Completada | Inicialización de repos, datos compartidos, docker-compose y CI |
 | **Fase 1** | Núcleo Backend + Escritorio | ✅ Completada | Ciclo básico: Registro, Eclosión, Cuidado, Sprite interactivo |
 | **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
-| **Fase 3** | Inteligencia Artificial (IA) | ⏳ Pendiente | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
+| **Fase 3** | Inteligencia Artificial (IA) | 🔄 En curso (charla ✅) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ⏳ Pendiente | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ⏳ Pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
 | **Fase 6** | Pulido y Lanzamiento | ⏳ Pendiente | Seguridad, balance, optimización, tiendas y despliegue |
@@ -59,16 +59,20 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 ---
 
 ## Fase 3 — Inteligencia Artificial (IA)
-- **Backend**:
-  - Proveedor agnóstico `LlmProvider` y soporte para OpenAI y Hermes Agent (`localhost:8642` o remoto).
-  - Cifrado seguro AES-256-GCM para almacenamiento de API keys (BYOK).
-  - Streaming con Server-Sent Events (SSE) y compatibilidad con WebSocket.
-  - Personalidad dinámica basada en estadísticas, estado de ánimo y especie.
-  - Memoria contextual a largo plazo (`PetMemory`) y soporte para Function Calling (Agente).
+- **Backend** (charla ✅, memoria y agente pendientes):
+  - [x] Proveedor agnóstico `LlmProvider` y `OpenAiCompatibleProvider` (OpenAI y Hermes Agent remoto por HTTPS).
+  - [x] Cifrado AES-256-GCM de API keys (BYOK); la key nunca se devuelve, solo una máscara.
+  - [x] Protección SSRF en `baseUrl` (HTTPS, sin credenciales, sin rangos privados; revalidada en cada uso; sin redirecciones).
+  - [x] Streaming por Server-Sent Events, historial, límite de 20 mensajes/min y validación de entrada.
+  - [x] Personalidad dinámica según especie, carácter, estado de ánimo y estadísticas; `intelligence` sube al conversar.
+  - [ ] Memoria contextual a largo plazo (`PetMemory`, intelligence ≥ 200).
+  - [ ] Function Calling / agente con tarjetas de confirmación (intelligence ≥ 500) y recordatorios.
+  - [ ] Moderación de contenido, cuotas mensuales (Redis) y modo suscripción.
 - **Escritorio**:
-  - Burbuja de chat flotante sobre el sprite.
-  - Modo Hermes local directo para inferencia sin costes ni salida a internet.
-  - Tarjetas de confirmación para acciones con efectos en el sistema.
+  - [x] Pestaña "IA": ajustes BYOK, prueba de conexión y chat en streaming.
+  - [x] Burbuja de chat flotante sobre el sprite.
+  - [ ] Modo Hermes local directo (`localhost:8642`) sin pasar por el backend.
+  - [ ] Tarjetas de confirmación para acciones con efectos en el sistema.
 
 ---
 

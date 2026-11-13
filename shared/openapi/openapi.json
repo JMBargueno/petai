@@ -603,6 +603,148 @@
           "Minigames"
         ]
       }
+    },
+    "/v1/ai/config": {
+      "get": {
+        "operationId": "AiController_getConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Configuración de IA (la API key se devuelve enmascarada)",
+        "tags": [
+          "AI"
+        ]
+      },
+      "put": {
+        "operationId": "AiController_putConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Configurar proveedor y API key BYOK (cifrada con AES-256-GCM)",
+        "tags": [
+          "AI"
+        ]
+      },
+      "delete": {
+        "operationId": "AiController_deleteConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar la configuración y la key almacenada",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/ai/config/test": {
+      "post": {
+        "operationId": "AiController_testConfig",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprobar la validez de la key y la conectividad",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/pets/{id}/chat/history": {
+      "get": {
+        "operationId": "AiController_history",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de conversación de la mascota",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/pets/{id}/chat": {
+      "post": {
+        "operationId": "AiController_chatStream",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Conversar con la mascota (streaming SSE: eventos delta, done, error)",
+        "tags": [
+          "AI"
+        ]
+      }
     }
   },
   "info": {

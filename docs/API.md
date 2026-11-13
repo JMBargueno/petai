@@ -68,9 +68,11 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 
 ### 2.9 Inteligencia Artificial (`/ai` y `/pets/:id/chat`)
 - `GET /ai/config`: Obtener configuración actual de IA (proveedor, modelo, máscara de clave).
-- `PUT /ai/config`: Configurar proveedor y API Key BYOK (cifrada con AES-256-GCM).
+- `PUT /ai/config` `{ provider, baseUrl?, model?, apiKey? }`: Configurar proveedor (`openai` | `hermes` | `custom`) y API key BYOK, cifrada con AES-256-GCM. `baseUrl` es obligatoria salvo para `openai`; `apiKey` solo es obligatoria la primera vez. La `baseUrl` debe ser HTTPS y no resolver a direcciones privadas/loopback (protección SSRF); se revalida en cada uso. Un Hermes local se conecta desde el escritorio, no desde el backend.
+- `DELETE /ai/config`: Elimina la configuración y la key almacenada.
 - `POST /ai/config/test`: Comprobar validez de la clave y conectividad con el modelo.
-- `POST /pets/:id/chat`: Conversación con la mascota en streaming (Server-Sent Events).
+- `POST /pets/:id/chat` `{ message }` (máx. 1000 caracteres, 20 mensajes/min por usuario): Conversación en streaming SSE. Eventos: `delta` `{text}`, `done` `{message, intelligence, tier}` y `error` `{message}`. El prompt de sistema se genera en el servidor (especie, carácter, ánimo y estadísticas). Solo se guarda el intercambio si se completa; cada charla suma 1 a `intelligence`.
+- `GET /pets/:id/chat/history?limit=`: Historial de la conversación (usuario y mascota).
 - `GET /pets/:id/memories`: Consultar recuerdos persistidos de la mascota.
 - `POST /pets/:id/tool-calls/:callId/confirm`: Confirmar o denegar una acción solicitada por el agente.
 

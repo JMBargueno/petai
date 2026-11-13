@@ -4,6 +4,8 @@
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
+  /** Texto de la burbuja de chat sobre la mascota (vacío = oculta) */
+  export let bubble: string = '';
 
   let currentAnim: 'idle' | 'walk' | 'eat' | 'happy' | 'sleep' = 'idle';
   let posX = 150;
@@ -142,6 +144,10 @@
     {/if}
 
     <!-- Globo de estado / apodo -->
+    {#if bubble}
+      <div class="speech" class:below={posY < 110} style="transform: scaleX({direction});">{bubble}</div>
+    {/if}
+
     <div class="pet-badge" style="transform: scaleX({direction});">
       <span class="pet-name">{pet.nickname || pet.species?.name}</span>
       <span class="pet-lvl">Nv. {pet.level || 1}</span>
@@ -206,6 +212,47 @@
     height: 128px;
     pointer-events: none;
     mix-blend-mode: overlay;
+  }
+
+  .speech {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    margin-left: -110px;
+    width: 220px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #0f172a;
+    font-size: 13px;
+    line-height: 1.35;
+    text-align: center;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+    z-index: 60;
+  }
+
+  /* Cerca del borde superior de la pantalla la burbuja se muestra debajo */
+  .speech.below {
+    bottom: auto;
+    top: calc(100% + 30px);
+  }
+
+  .speech.below::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.96);
+  }
+
+  .speech::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -6px;
+    border: 6px solid transparent;
+    border-top-color: rgba(255, 255, 255, 0.96);
   }
 
   .pet-badge {

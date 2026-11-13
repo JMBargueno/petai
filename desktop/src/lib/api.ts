@@ -198,6 +198,74 @@ export const api = {
     );
   },
 
+  // ---- IA (Fase 3) ----
+  async getAiConfig() {
+    return minigameRequest<any>('GET', '/v1/ai/config');
+  },
+
+  async saveAiConfig(cfg: { provider: string; baseUrl?: string; model?: string; apiKey?: string }) {
+    return minigameRequest<any>('PUT', '/v1/ai/config', cfg);
+  },
+
+  async deleteAiConfig() {
+    return minigameRequest<any>('DELETE', '/v1/ai/config');
+  },
+
+  async testAiConfig() {
+    return minigameRequest<{ ok: boolean; error?: string }>('POST', '/v1/ai/config/test');
+  },
+
+  async getChatHistory(petId: string) {
+    return minigameRequest<{ id: string; role: 'user' | 'assistant'; content: string }[]>(
+      'GET',
+      `/v1/pets/${petId}/chat/history`,
+    );
+  },
+
+  /** Chat en streaming (SSE). Llama a onDelta con cada fragmento y devuelve el evento final. */
+  async chatStream(
+    petId: string,
+    message: string,
+    onDelta: (text: string) => void,
+    signal?: AbortSignal,
+  ): Promise<{ message: { id: string; content: string }; intelligence: number; tier: string }> {
+    const res = await fetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
+      },
+      body: JSON.stringify({ message }),
+    });
+    if (!res.ok || !res.body) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.message || 'Error al enviar el mensaje');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let sep: number;
+      while ((sep = buffer.indexOf('\n\n')) >= 0) {
+        const block = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+        const event = /^event: (.+)$/m.exec(block)?.[1];
+        const raw = /^data: (.+)$/m.exec(block)?.[1];
+        if (!event || !raw) continue;
+        const data = JSON.parse(raw);
+        if (event === 'delta') onDelta(data.text);
+        else if (event === 'error') throw new Error(data.message);
+        else if (event === 'done') return data;
+      }
+    }
+    throw new Error('La respuesta terminó sin completarse');
+  },
+
   async evolvePet(petId: string) {
     return minigameRequest<any>('POST', `/v1/pets/${petId}/evolve`);
   },

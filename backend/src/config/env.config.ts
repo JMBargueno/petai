@@ -10,7 +10,12 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16).default('default-refresh-secret-minimum-16-characters'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
-  AI_KEY_ENCRYPTION_KEY: z.string().default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
+  AI_KEY_ENCRYPTION_KEY: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/, 'AI_KEY_ENCRYPTION_KEY debe tener 64 caracteres hexadecimales')
+    .default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
+  // Solo desarrollo/tests: permite baseUrl http o hacia direcciones privadas (anula la protección SSRF)
+  AI_ALLOW_INSECURE_URLS: z.enum(['true', 'false']).default('false'),
   CORS_ORIGINS: z.string().default('http://localhost:5173,tauri://localhost'),
 });
 

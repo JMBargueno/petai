@@ -14,6 +14,24 @@
   let inventory: any[] = [];
   let shopItems: any[] = [];
   let isPanelOpen = true;
+  let bubbleText = '';
+  let bubbleTimer: any = null;
+
+  function showBubble(text: string) {
+    bubbleText = text.length > 160 ? text.slice(0, 157) + '…' : text;
+    clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(() => (bubbleText = ''), 10_000);
+  }
+
+  async function refreshPet() {
+    try {
+      const fresh = await api.getPets();
+      pets = fresh;
+      currentPet = fresh.find((p: any) => p.id === currentPet?.id) ?? currentPet;
+    } catch {
+      /* se actualizará con el siguiente ciclo */
+    }
+  }
 
   let petViewRef: any = null;
 
@@ -83,6 +101,7 @@
 
   onDestroy(() => {
     clearInterval(needsPoll);
+    clearTimeout(bubbleTimer);
     stopClickThrough();
     const socket = getSocket();
     if (socket) socket.disconnect();
@@ -104,6 +123,7 @@
     <PetView
       bind:this={petViewRef}
       pet={currentPet}
+      bubble={bubbleText}
       onPetClick={() => (isPanelOpen = true)}
     />
   {/if}
@@ -127,6 +147,8 @@
       else pets = [currentPet, ...pets];
     }}
     on:actionTriggered={(e) => handlePetAction(e.detail)}
+    on:bubble={(e) => showBubble(e.detail)}
+    on:refreshPet={refreshPet}
     on:logout={() => {
       user = null;
       currentPet = null;
