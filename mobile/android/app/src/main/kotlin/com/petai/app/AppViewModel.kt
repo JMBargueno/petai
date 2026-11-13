@@ -16,8 +16,12 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.petai.app.widget.PetSnapshot
+import com.petai.app.widget.PetWidget
 import java.util.TimeZone
 
 data class AppUiState(
@@ -56,7 +60,22 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
         }
         viewModelScope.launch {
             // Si el servidor invalida la sesión (refresh caducado), se limpian los datos del usuario
-            session.signedIn.collect { if (it == false) _state.value = AppUiState() }
+            session.signedIn.collect {
+                if (it == false) {
+                    _state.value = AppUiState()
+                    PetSnapshot.clear(app)
+                    runCatching { PetWidget.refreshAll(app) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            // El widget y los avisos leen la última copia del estado de la mascota
+            _state.map { it.pet }.distinctUntilChanged().collect { pet ->
+                if (pet != null) {
+                    PetSnapshot.of(pet).save(app)
+                    runCatching { PetWidget.refreshAll(app) }
+                }
+            }
         }
     }
 
@@ -97,6 +116,21 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
             }
             _state.update { it.copy(busy = false) }
             if (error == null) refreshAll()
+            onResult(error)
+        }
+    }
+
+    /** Vincula el escritorio: confirma el código de 6 dígitos que muestra. `onResult(null)` si fue bien. */
+    fun linkDevice(code: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            val error = try {
+                service.confirmDeviceCode(code.trim())
+                null
+            } catch (e: ApiException) {
+                e.message
+            } catch (e: java.io.IOException) {
+                "Sin conexión con el servidor"
+            }
             onResult(error)
         }
     }

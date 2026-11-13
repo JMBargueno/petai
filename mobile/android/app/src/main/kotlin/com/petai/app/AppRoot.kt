@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -34,9 +35,12 @@ import com.petai.app.ui.chat.ChatScreen
 import com.petai.app.ui.chat.ChatViewModel
 import com.petai.app.ui.chat.ChatViewModelFactory
 import com.petai.app.ui.pet.PetScreen
+import com.petai.app.ui.play.PlayScreen
+import com.petai.app.ui.play.PlayViewModel
+import com.petai.app.ui.play.PlayViewModelFactory
 import com.petai.app.ui.shop.ShopScreen
 
-private enum class Tab(val label: String) { Pet("Mascota"), Chat("Chat"), Shop("Tienda"), Account("Cuenta") }
+private enum class Tab(val label: String) { Pet("Mascota"), Chat("Chat"), Play("Jugar"), Shop("Tienda"), Account("Cuenta") }
 
 @Composable
 fun AppRoot(vm: AppViewModel) {
@@ -71,6 +75,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                                 when (t) {
                                     Tab.Pet -> Icons.Default.Pets
                                     Tab.Chat -> Icons.Default.Chat
+                                    Tab.Play -> Icons.Default.SportsEsports
                                     Tab.Shop -> Icons.Default.ShoppingBag
                                     Tab.Account -> Icons.Default.AccountCircle
                                 },
@@ -108,8 +113,21 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                         ChatScreen(chat, pet.nickname.ifBlank { pet.species.name })
                     }
                 }
+                Tab.Play -> {
+                    val pet = state.pet
+                    if (pet == null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Eclosiona primero a tu mascota 🥚") }
+                    } else {
+                        val play: PlayViewModel = viewModel(
+                            key = "play-${pet.id}",
+                            factory = PlayViewModelFactory(app.service, pet.id) { vm.refreshAll() },
+                        )
+                        LaunchedEffect(Unit) { play.refresh() }
+                        PlayScreen(play)
+                    }
+                }
                 Tab.Shop -> ShopScreen(state, onRefresh = vm::refreshAll, onBuy = vm::buy)
-                Tab.Account -> AccountScreen(state, onLogout = vm::logout)
+                Tab.Account -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice)
             }
         }
     }

@@ -155,3 +155,41 @@ jobs:
 
       - name: Check Tauri (Rust)
         run: cargo check --manifest-path desktop/src-tauri/Cargo.toml --locked
+
+  android:
+    name: Android build (Compose)
+    runs-on: ubuntu-latest
+    needs: validate-data
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install platform (compileSdk 37)
+        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" || sdkmanager "platforms;android-37.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # gradle.properties fija -Djdk.net.unixdomain.tmpdir=C:/t (apaño de Windows+JDK 25): en Linux se
+      # sustituyen los jvmargs del daemon por unos sin esa ruta.
+      - name: Assemble debug APK
+        working-directory: mobile/android
+        run: ./gradlew --no-daemon "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8" :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: petai-android-debug
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7

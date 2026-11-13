@@ -75,6 +75,31 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
         api.send("POST", "/shop/buy", obj("itemId" to itemId, "quantity" to quantity))
     }
 
+    // ---------- Arena ----------
+
+    suspend fun combat(petId: String): CombatProfile = api.request("GET", "/pets/$petId/combat")
+    suspend fun matchmake(petId: String): BattleOutcome = api.request("POST", "/battles/matchmake", obj("petId" to petId))
+    suspend fun leaderboard(scope: String, petId: String): Leaderboard =
+        api.request("GET", "/leaderboard?scope=$scope&limit=20&petId=$petId")
+
+    // ---------- Minijuegos ----------
+
+    suspend fun minigames(): List<MinigameInfo> =
+        api.json.decodeFromString(ListSerializer(MinigameInfo.serializer()), api.send("GET", "/minigames"))
+
+    suspend fun startMinigame(gameId: String, petId: String): MinigameSession =
+        api.request("POST", "/minigames/$gameId/start", obj("petId" to petId))
+
+    suspend fun finishMinigame(sessionId: String, score: Int): MinigameResult =
+        api.request("POST", "/minigames/sessions/$sessionId/finish", obj("score" to score))
+
+    // ---------- Vinculación de dispositivos ----------
+
+    /** Confirma en el servidor el código que muestra otro dispositivo (escritorio) para darle sesión. */
+    suspend fun confirmDeviceCode(code: String) {
+        api.send("POST", "/auth/device/confirm", obj("code" to code))
+    }
+
     // ---------- IA ----------
 
     suspend fun aiConfig(): AiConfigView = api.request("GET", "/ai/config")
