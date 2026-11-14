@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
+import { BattlesService } from '../battles/battles.service';
 import { BracketService } from './bracket.service';
 import { WalletService } from '../wallet/wallet.service';
 import { CronLockService } from '../../redis/cron-lock.service';
@@ -27,6 +28,7 @@ export class TournamentService {
     private readonly wallet: WalletService,
     private readonly cronLock: CronLockService,
     private readonly cache: RedisCacheService,
+    private readonly battlesService: BattlesService,
   ) {}
 
   async getCurrent(userId: string) {
@@ -156,17 +158,32 @@ export class TournamentService {
       if (allResolved === total) await this.payOut(tournament.id);
       return;
     }
-    const entries = await this.prisma.tournamentEntry.findMany({
-      where: { tournamentId: tournament.id },
-      include: { pet: { include: { species: true } } },
-    });
-    for (const match of pending.slice(0, 10)) {
-      const entryA = entries[match.seed1];
-      const entryB = entries[match.seed2];
-      if (!entryA || !entryB) continue;
-      const fighterA = this.buildFighterFromPet(entryA.pet);
-      const fighterB = this.buildFighterFromPet(entryB.pet);
-      await this.bracketService.resolveMatch(tournament.id, match.id, fighterA, fighterB);
+    // Avanza un front por llamada (la ronda más baja pendiente). Las partidas vacías/bye no
+    // bloquean el front, así el campeón llega siempre a la final y el torneo termina (F-05).
+    const minRound = pending[0].round;
+    const frontier = pending.filter((m) => m.round === minRound);
+    const petIds = Array.from(new Set(frontier.flatMap((m) => [m.petAId, m.petBId]).filter((x): x is string => !!x)));
+    const pets = petIds.length
+      ? await this.prisma.pet.findMany({ where: { id: { in: petIds } }, include: { species: true } })
+      : [];
+    const petById = new Map(pets.map((p) => [p.id, p]));
+
+    for (const match of frontier) {
+      const a = match.petAId, b = match.petBId;
+      if (a && b) {
+        const petA = petById.get(a), petB = petById.get(b);
+        if (!petA || !petB) continue;
+        const fighterA = this.battlesService.fighterFromPet(petA);
+        const fighterB = this.battlesService.fighterFromPet(petB);
+        const { winnerPetId } = await this.bracketService.resolveMatch(tournament.id, match.id, fighterA, fighterB);
+        await this.bracketService.advanceWinner(tournament.id, match.round, match.slot, winnerPetId);
+      } else if (a || b) {
+        const winnerPetId = a ?? b!;
+        await this.bracketService.markBye(match.id, winnerPetId);
+        await this.bracketService.advanceWinner(tournament.id, match.round, match.slot, winnerPetId);
+      } else {
+        await this.bracketService.markVoid(match.id);
+      }
     }
   }
 
@@ -191,18 +208,6 @@ export class TournamentService {
       }
     });
     this.logger.log(`Tournament ${tournamentId} finished, prizes distributed`);
-  }
-
-  private buildFighterFromPet(pet: any): any {
-    return {
-      name: pet?.nickname || 'Pet',
-      speciesId: pet?.speciesId || 'unknown',
-      element: pet?.species?.element || 'fire',
-      level: pet?.level || 1,
-      stats: { hp: 100, atk: 50, def: 40, vel: 30, esp: 30 },
-      mood: 1.0, skills: [], strategy: 'balanced', isBot: false,
-      petId: pet?.id, ownerId: pet?.userId, elo: pet?.elo || 0,
-    };
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES)
