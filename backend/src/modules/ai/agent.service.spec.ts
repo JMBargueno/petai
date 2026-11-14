@@ -151,7 +151,10 @@ describe('AgentService', () => {
   });
 
   describe('confirmación', () => {
-    const stored = { id: 'a1', tool: 'create_reminder', summary: 'Crear…', args: { text: 'Sacar la basura', due_at: '2026-11-14T08:30:00.000Z' } };
+    // S-12/date-bomb: confirm() valida contra el reloj real (new Date()), así que due_at debe ser
+    // una fecha FUTURE relativa al momento de ejecución, no una fecha absoluta (que acabaría en el
+    // pasado y haría fallar la revalidación al cruzar esa fecha).
+    const stored = { id: 'a1', tool: 'create_reminder', summary: 'Crear…', args: { text: 'Sacar la basura', due_at: new Date(Date.now() + 3600 * 1000).toISOString() } };
 
     it('confirmar ejecuta la herramienta una sola vez', async () => {
       prisma.pendingAction.findUniqueOrThrow.mockResolvedValue(stored);
