@@ -27,7 +27,16 @@ import { AchievementsModule } from './achievements/achievements.module';
 import { ChestsModule } from './modules/chests/chests.module';
 import { EnvironmentalModule } from './modules/environmental/environmental.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { HabitatModule } from './modules/habitat/habitat.module';
+import { SeasonsModule } from './modules/seasons/seasons.module';
+import { BreedingModule } from './modules/breeding/breeding.module';
+import { TrainingModule } from './modules/training/training.module';
+import { GenesModule } from './modules/genes/genes.module';
+import { AdventureModule } from './modules/adventure/adventure.module';
 import { DevModule } from './modules/dev/dev.module';
+import { RaidModule } from './modules/raid/raid.module';
+import { TournamentModule } from './modules/tournament/tournament.module';
+import { CookingModule } from './modules/cooking/cooking.module';
 
 // DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
 // En `NODE_ENV === 'production'` el DevModule no se registra ⇒ 404 (SC-007, constitución I/VIII).
@@ -64,6 +73,15 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production';
     ChestsModule,
     EnvironmentalModule,
     NotificationsModule,
+    HabitatModule,
+    SeasonsModule,
+    BreedingModule,
+    RaidModule,
+    TournamentModule,
+    CookingModule,
+    TrainingModule,
+    GenesModule,
+    AdventureModule,
     ...(DEV_TOOLS_ENABLED ? [DevModule] : []),
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],

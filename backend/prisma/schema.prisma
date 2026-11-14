@@ -45,6 +45,21 @@ model User {
    achievements   Achievement[]
    // Opt-in de visibilidad pública de logros (feature 008): por defecto false (privacidad por defecto).
    achievementsPublic Boolean @default(false)
+  // Feature 011: Temporadas
+  seasonPasses     SeasonPass[]
+  seasonProgress   SeasonProgress[]
+  // Feature 012: Breeding
+  breedings        Breeding[]
+  // Feature 016: Entrenamiento Elemental
+  trainingSessions TrainingSession[]
+  // Feature 018: Aventura Narrativa IA
+  adventures       Adventure[]
+  // Feature 013: Raid
+  raidParticipants RaidParticipant[]
+  // Feature 014: Tournament
+  tournamentEntries TournamentEntry[]
+  // Feature 015: Cooking
+  cookingSessions  CookingSession[]
 }
 
 model RefreshToken {
@@ -159,6 +174,22 @@ model Pet {
   minigames     MinigameSession[]
   battlesAsAttacker Battle[] @relation("AttackerBattles")
   battlesAsDefender Battle[] @relation("DefenderBattles")
+
+  // Feature 010: Habitat
+  habitat Habitat?
+  // Feature 012: Breeding
+  breedingAsParent1 Breeding[] @relation("Parent1")
+  breedingAsParent2 Breeding[] @relation("Parent2")
+  // Feature 016: Entrenamiento Elemental
+  trainingSessions TrainingSession[]
+  // Feature 018: Aventura Narrativa IA
+  adventures Adventure[]
+  // Feature 013: Raid
+  raidParticipants RaidParticipant[]
+  // Feature 014: Tournament
+  tournamentEntries TournamentEntry[]
+  // Feature 015: Cooking
+  cookingSessions  CookingSession[]
 
   @@index([userId])
   @@index([speciesId])
@@ -399,4 +430,315 @@ model Achievement {
 
   @@unique([userId, achId])
   @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 010: Hábitat / Base Personalizable
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Habitat {
+  id          String         @id @default(uuid())
+  petId       String         @unique
+  pet         Pet            @relation(fields: [petId], references: [id], onDelete: Cascade)
+  habitatSeed Int
+  rooms       String[]       @default(["sala"])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  items       HabitatItem[]
+}
+
+model HabitatItem {
+  id          String   @id @default(uuid())
+  petId       String
+  habitatId   String
+  furnitureId String
+  roomId      String
+  x           Int
+  y           Int
+  purchasedAt DateTime @default(now())
+  habitat     Habitat  @relation(fields: [habitatId], references: [id], onDelete: Cascade)
+
+  @@unique([petId, x, y, roomId])
+  @@index([petId, roomId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 011: Temporadas + Pase de Temporada
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Season {
+  id        String    @id @default(uuid())
+  name      String
+  theme     String
+  startTime DateTime
+  endTime   DateTime
+  isActive  Boolean   @default(true)
+
+  passes    SeasonPass[]
+  progress  SeasonProgress[]
+  rewards   SeasonReward[]
+}
+
+model SeasonPass {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seasonId    String
+  season      Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  price       Int
+  purchasedAt DateTime @default(now())
+
+  @@unique([userId, seasonId])
+}
+
+model SeasonProgress {
+  id          String  @id @default(uuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seasonId    String
+  season      Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  currentTier Int     @default(0)
+  totalXp     Int     @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, seasonId])
+  @@index([userId, seasonId])
+}
+
+model SeasonReward {
+  id          String  @id @default(uuid())
+  seasonId    String
+  season      Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  tier        Int
+  rewardType  String
+  rewardValue String
+  isPremium   Boolean @default(false)
+
+  @@unique([seasonId, tier, rewardType, isPremium])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 012: Cruzamiento / Breeding
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Breeding {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent1Id  String
+  parent1    Pet       @relation("Parent1", fields: [parent1Id], references: [id])
+  parent2Id  String
+  parent2    Pet       @relation("Parent2", fields: [parent2Id], references: [id])
+  status     String    @default("in_progress")
+  startedAt  DateTime  @default(now())
+  completesAt DateTime
+  seed       Int
+
+  result     BreedingResult?
+
+  @@index([userId, status])
+}
+
+model BreedingResult {
+  id             String   @id @default(uuid())
+  breedingId     String   @unique
+  breeding       Breeding @relation(fields: [breedingId], references: [id], onDelete: Cascade)
+  offspringId    String
+  inheritedGenes Json
+  mutations      Json
+  createdAt      DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 013: Boss de Raid asíncrono
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Raid {
+  id          String    @id @default(uuid())
+  element     String
+  theme       String
+  level       Int       @default(50)
+  hpGlobal    Int
+  hpRemaining Int
+  status      String    @default("active")
+  startedAt   DateTime  @default(now())
+  endsAt      DateTime
+  endedAt     DateTime?
+  settledAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  participants RaidParticipant[]
+
+  @@index([status, endedAt])
+}
+
+model RaidParticipant {
+  id          String   @id @default(uuid())
+  raidId      String
+  raid        Raid     @relation(fields: [raidId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId       String
+  pet         Pet      @relation(fields: [petId], references: [id])
+  damageDealt Int      @default(0)
+  totalAttacks Int     @default(0)
+  lastAttackAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@unique([raidId, userId])
+  @@index([raidId, damageDealt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 014: Torneo Knockout semanal
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Tournament {
+  id              String    @id @default(uuid())
+  status          String    @default("entry")
+  entryFee        Int       @default(50)
+  totalPrizePool  Int       @default(3000)
+  entryDeadline   DateTime
+  startedAt       DateTime?
+  endsAt          DateTime
+  endedAt         DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  entries TournamentEntry[]
+  matches TournamentMatch[]
+
+  @@index([status])
+}
+
+model TournamentEntry {
+  id             String     @id @default(uuid())
+  tournamentId   String
+  tournament     Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId          String
+  pet            Pet        @relation(fields: [petId], references: [id])
+  elo            Int
+  placement      Int?
+  registeredAt   DateTime   @default(now())
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, elo])
+}
+
+model TournamentMatch {
+  id          String     @id @default(uuid())
+  tournamentId String
+  tournament  Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round       Int
+  slot        Int
+  bestOf      Int        @default(2)
+  seed1       Int
+  seed2       Int
+  winnerId    String?
+  status      String     @default("pending")
+  log         Json?
+  resolvedAt  DateTime?
+  createdAt   DateTime   @default(now())
+
+  @@unique([tournamentId, round, slot])
+  @@index([tournamentId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 015: Minijuego Cocina
+// ─────────────────────────────────────────────────────────────────────────────
+
+model CookingSession {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId           String
+  pet             Pet       @relation(fields: [petId], references: [id])
+  recipeId        String
+  seed            Int
+  ingredients     Json
+  hotPotPositions Json
+  score           Int?
+  buffApplied     Boolean   @default(false)
+  startedAt       DateTime  @default(now())
+  finishedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, finishedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 016: Entrenamiento Elemental
+// ─────────────────────────────────────────────────────────────────────────────
+
+model TrainingSession {
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId             String
+  pet               Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  seed              Int
+  floors            Json
+  currentFloor      Int       @default(0)
+  hearts            Int       @default(3)
+  prediction        String?
+  predictionCorrect Boolean   @default(false)
+  status            String    @default("active")
+  buffMultiplier    Float?
+  buffExpiresAt     DateTime?
+  startedAt         DateTime  @default(now())
+  finishedAt        DateTime?
+  xpAwarded         Int       @default(0)
+  coinsAwarded      Int       @default(0)
+
+  @@index([userId, status])
+  @@index([petId, buffExpiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 018: Aventura Narrativa IA
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Adventure {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId        String
+  pet          Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  seed         Int
+  theme        String
+  sceneCount   Int       @default(4)
+  currentScene Int       @default(0)
+  isPremium    Boolean   @default(false)
+  retriesLeft  Int       @default(0)
+  status       String    @default("active")
+  outcome      String?
+  score        Float?
+  xpAwarded    Int       @default(0)
+  coinsAwarded Int       @default(0)
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+
+  scenes       AdventureScene[]
+
+  @@index([userId, status])
+  @@index([userId, startedAt])
+}
+
+model AdventureScene {
+  id            String   @id @default(uuid())
+  adventureId   String
+  adventure     Adventure @relation(fields: [adventureId], references: [id], onDelete: Cascade)
+  order         Int
+  text          String
+  choices       Json
+  chosenOption  Int?
+  isFinal       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@unique([adventureId, order])
 }
