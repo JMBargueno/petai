@@ -6,8 +6,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { createHmac, randomBytes } from 'crypto';
-import { isIP } from 'net';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveSafeBaseUrl } from '../ai/ssrf';
+import { pinnedFetch } from '../ai/pinned-fetch';
 
 export interface RegisterWebhookDto {
   url: string;
@@ -37,10 +39,13 @@ const KNOWN_EVENTS = [
 export class WebhooksService {
   private readonly logger = new Logger(WebhooksService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
 
   async register(userId: string, dto: RegisterWebhookDto) {
-    this.validateUrl(dto.url);
+    const safe = await this.safeUrl(dto.url);
     if (!Array.isArray(dto.events) || dto.events.length === 0) {
       throw new BadRequestException('events no puede estar vacío');
     }
@@ -56,7 +61,7 @@ export class WebhooksService {
 
     const secret = dto.secret || randomBytes(24).toString('hex');
     const webhook = await this.prisma.webhook.create({
-      data: { userId, url: dto.url, secret, events: dto.events },
+      data: { userId, url: safe.url, secret, events: dto.events },
     });
 
     return {
@@ -94,7 +99,7 @@ export class WebhooksService {
       userId: webhook.userId,
       data: { test: true },
     });
-    return { delivered: result.status === 'delivered', statusCode: result.statusCode };
+    return { delivered: result.status === 'delivered' };
   }
 
   async dispatch(event: WebhookEvent): Promise<number> {
@@ -135,11 +140,28 @@ export class WebhooksService {
     let statusCode: number | null = null;
     let error: string | null = null;
 
+    let safe: { url: string; addresses: string[] };
+    try {
+      safe = await this.safeUrl(webhook.url);
+    } catch (err) {
+      const ssrfError = (err as Error)?.message ?? 'URL no válida por política de seguridad';
+      await this.prisma.webhookDelivery
+        .create({
+          data: { webhookId: webhook.id, event: event.event, status: 'failed', statusCode: null, attempts: 0, error: ssrfError },
+        })
+        .catch(() => undefined);
+      await this.prisma.webhook
+        .update({ where: { id: webhook.id }, data: { failureCount: { increment: 1 } } })
+        .catch(() => undefined);
+      return { status: 'failed', statusCode: null };
+    }
+    const fetchFn = safe.addresses.length > 0 ? pinnedFetch(safe.addresses) : fetch;
+
     for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
       const timestamp = new Date().toISOString();
       const signature = this.sign(webhook.secret, timestamp, body);
       try {
-        const res = await fetch(webhook.url, {
+        const res = await fetchFn(safe.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -148,6 +170,7 @@ export class WebhooksService {
             'X-Petai-Signature': `sha256=${signature}`,
           },
           body,
+          redirect: 'manual',
           signal: AbortSignal.timeout(10_000),
         });
         statusCode = res.status;
@@ -204,39 +227,13 @@ export class WebhooksService {
     return { status, statusCode };
   }
 
-  private validateUrl(url: string): void {
-    let parsed: URL;
-    try {
-      parsed = new URL(url);
-    } catch {
-      throw new BadRequestException('URL inválida');
-    }
-    if (parsed.protocol !== 'https:') {
-      throw new BadRequestException('El webhook debe usar HTTPS');
-    }
-    const host = parsed.hostname.toLowerCase();
-    if (host === 'localhost' || host === '0.0.0.0') {
-      throw new BadRequestException('Host no permitido (localhost)');
-    }
-    if (host === 'metadata.google.internal' || host.endsWith('.internal')) {
-      throw new BadRequestException('Endpoint de metadatos no permitido (SSRF)');
-    }
-    if (isIP(host) && this.isPrivateIp(host)) {
-      throw new BadRequestException('IP privada no permitida (SSRF)');
-    }
-  }
-
-  private isPrivateIp(ip: string): boolean {
-    if (isIP(ip) === 6) {
-      if (ip === '::1' || ip.toLowerCase().startsWith('fe80')) return true;
-      return false;
-    }
-    const parts = ip.split('.').map(Number);
-    if (parts[0] === 10 || parts[0] === 127) return true;
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-    if (parts[0] === 192 && parts[1] === 168) return true;
-    if (parts[0] === 169 && parts[1] === 254) return true;
-    return false;
+  /**
+   * Valida y (salvo `WEBHOOK_ALLOW_INSECURE`) resuelve la URL contra la política SSRF del núcleo
+   * (ai/ssrf): solo HTTPS, sin credenciales, sin rangos privados/loopback, y devuelve las IP
+   * validadas para que la conexión se fije a ellas (pinnedFetch) y un DNS rebinding no la desvíe.
+   */
+  private async safeUrl(url: string): Promise<{ url: string; addresses: string[] }> {
+    return resolveSafeBaseUrl(url, { allowInsecure: this.config.get('WEBHOOK_ALLOW_INSECURE') === 'true' });
   }
 
   private sleep(ms: number): Promise<void> {

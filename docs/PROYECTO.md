@@ -269,7 +269,7 @@ PushToken(userId, platform, token)
 - **Clics a través de la ventana**: `set_ignore_cursor_events` afecta a toda la ventana, así que un bucle de unos 30 Hz en Rust consulta la posición global del cursor y desactiva el paso de clics solo cuando está sobre el sprite.
 - **Bandeja del sistema**: alimentar, jugar, abrir el chat, ver estado, pausar y salir. Plugins: `autostart`, `notification`, `updater`, `single-instance`, `global-shortcut` (abrir el chat) y `store` (preferencias).
 - **Panel de control**: una segunda ventana normal (no transparente) con login por email, eclosión, inventario/comida, estadísticas y chat. Como el escritorio es el **primer cliente**, este panel sirve para probar todo el backend antes de que existan las apps móviles.
-- **Vinculación**: al principio se hace login directo por email. Cuando lleguen las apps móviles se añade el código de dispositivo (la app muestra un código y se confirma en el móvil). El token se guarda en el llavero del sistema (plugin `keyring` o `stronghold`).
+- **Vinculación**: al principio se hace login directo por email. Cuando lleguen las apps móviles se añade el código de dispositivo (la app muestra un código y se confirma en el móvil). El token se guarda hoy en `localStorage` del webview; el objetivo (ver S-09) es guardarlo en el llavero del sistema (plugin `keyring` o `stronghold`) con CSP activa.
 - **Sincronización** por WebSocket: lo que pasa en el móvil se refleja al momento en el escritorio.
 - **Chat**: con la IA desbloqueada aparece una burbuja de chat y comentarios proactivos.
 - **Hermes local**: si el usuario lo elige, el escritorio habla directamente con `localhost:8642` y sincroniza los mensajes con el backend.

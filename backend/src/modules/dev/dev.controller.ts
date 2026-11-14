@@ -1,5 +1,6 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { DevKitGuard } from './dev.guard';
 import { GameDataService } from '../game-data/game-data.service';
 import { DevHotReloadService, DevReloadRequest } from './dev-hot-reload.service';
 import { DevSeedService, DevSeedRequest } from './dev-seed.service';
@@ -11,6 +12,7 @@ import { DevActionService, DevActionRequest } from './dev-action.service';
  */
 @ApiTags('Dev')
 @Controller('dev')
+@UseGuards(DevKitGuard)
 export class DevController {
   constructor(
     private readonly gameData: GameDataService,

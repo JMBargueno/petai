@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { WalletService } from '../wallet/wallet.service';
 
 interface RoomConfig {
   id: string;
@@ -34,7 +35,7 @@ interface HabitatData {
 export class HabitatService {
   private habitatData: HabitatData;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(private readonly prisma: PrismaService, private readonly wallet: WalletService) {
     this.habitatData = require('../../../../shared/game-data/habitats.json');
   }
 
@@ -76,40 +77,30 @@ export class HabitatService {
       throw new BadRequestException(`Room locked. Requires stage: ${room.unlockStage}`);
     }
 
-    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    if (furniture.currency === 'coins' && user.coins < furniture.price) {
-      throw new BadRequestException('Not enough coins');
-    }
-    if (furniture.currency === 'gems' && user.gems < furniture.price) {
-      throw new BadRequestException('Not enough gems');
-    }
+    // S-05 (SDD §3.3): cobro atómico race-safe (C-01) y entrega en la misma transacción. Si no hay
+    // celda libre o el hábitat no existe, el cargo se revierte (antes se cobraba y luego fallaba).
+    return await this.prisma.$transaction(async (tx) => {
+      const { ok } = await this.wallet.debit(tx, userId, furniture.currency, furniture.price);
+      if (!ok) throw new BadRequestException(`Not enough ${furniture.currency}`);
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: furniture.currency === 'coins'
-        ? { coins: { decrement: furniture.price } }
-        : { gems: { decrement: furniture.price } },
-    });
+      const habitat = await tx.habitat.findUnique({ where: { petId: pet.id } });
+      if (!habitat) throw new NotFoundException('Habitat not found for this pet');
 
-    const habitat = await this.prisma.habitat.findUnique({ where: { petId: pet.id } });
-    if (!habitat) throw new NotFoundException('Habitat not found for this pet');
+      const existing = await tx.habitatItem.findMany({ where: { petId: pet.id, roomId: room.id } });
+      const occupied = new Set(existing.map((i) => `${i.x},${i.y}`));
 
-    const existing = await this.prisma.habitatItem.findMany({
-      where: { petId: pet.id, roomId: room.id },
-    });
-    const occupied = new Set(existing.map((i) => `${i.x},${i.y}`));
-
-    for (let x = 0; x < room.gridWidth; x++) {
-      for (let y = 0; y < room.gridHeight; y++) {
-        if (!occupied.has(`${x},${y}`)) {
-          await this.prisma.habitatItem.create({
-            data: { petId: pet.id, habitatId: habitat.id, furnitureId: furniture.id, roomId: room.id, x, y },
-          });
-          return { message: 'Furniture placed', furnitureId, room: room.id };
+      for (let x = 0; x < room.gridWidth; x++) {
+        for (let y = 0; y < room.gridHeight; y++) {
+          if (!occupied.has(`${x},${y}`)) {
+            await tx.habitatItem.create({
+              data: { petId: pet.id, habitatId: habitat.id, furnitureId: furniture.id, roomId: room.id, x, y },
+            });
+            return { message: 'Furniture placed', furnitureId, room: room.id };
+          }
         }
       }
-    }
-    throw new BadRequestException('No free cells in room');
+      throw new BadRequestException('No free cells in room');
+    });
   }
 
   async removeFurniture(userId: string, furnitureId: string) {

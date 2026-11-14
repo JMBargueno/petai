@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, Logger } from '@nes
 import { PrismaService } from '../../prisma/prisma.service';
 import { PetsService } from '../pets/pets.service';
 import { GeneRevealService } from './gene-reveal.service';
+import { WalletService } from '../wallet/wallet.service';
 
 export type GeneType = 'veloz' | 'ferreo' | 'sagaz' | 'devorador' | 'aurora' | 'crono';
 export type Temperament = 'valiente' | 'timido' | 'arribista' | 'curioso';
@@ -31,6 +32,7 @@ export class GenesService {
     private readonly prisma: PrismaService,
     private readonly petsService: PetsService,
     private readonly geneReveal: GeneRevealService,
+    private readonly wallet: WalletService,
   ) {}
 
   async getPetGenes(userId: string, petId: string) {
@@ -76,9 +78,11 @@ export class GenesService {
       g.type === target.type ? { ...g, revealed: true, revealedAt: now } : g,
     );
 
-    // Actualizar pet y descontar gemas
-    await this.prisma.$transaction([
-      this.prisma.pet.update({
+    // S-05 (SDD §3.3): cobro atómico race-safe (C-01) + revelación en una sola transacción.
+    await this.prisma.$transaction(async (tx) => {
+      const { ok } = await this.wallet.debit(tx, userId, 'gems', this.ANALYSIS_COST_GEMS);
+      if (!ok) throw new BadRequestException(`Se necesitan ${this.ANALYSIS_COST_GEMS} gemas para el análisis genético`);
+      await tx.pet.update({
         where: { id: petId },
         data: {
           personality: {
@@ -86,12 +90,8 @@ export class GenesService {
             genes: updatedGenes,
           },
         },
-      }),
-      this.prisma.user.update({
-        where: { id: userId },
-        data: { gems: { decrement: this.ANALYSIS_COST_GEMS } },
-      }),
-    ]);
+      });
+    });
 
     this.logger.log(`Gene revealed: ${target.type} for pet ${petId} by user ${userId}`);
 

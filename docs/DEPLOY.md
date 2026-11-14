@@ -150,7 +150,7 @@ Riesgos conocidos y aceptados:
 
 Pendiente o fuera de alcance de esta revisión (no se ha hecho una auditoría externa ni un pentest):
 verificación de compras (Play Billing / StoreKit), rotación de secretos sin cortes, WAF/DDoS a nivel de infraestructura,
-verificación de correo y recuperación de contraseña, y renovación de sesión en la app de escritorio (hoy no usa el refresh token).
+verificación de correo y recuperación de contraseña. (La app de escritorio **sí** renueva por refresh token, pero lo guarda en `localStorage`; moverlo al llavero del sistema y activar la CSP queda pendiente, ver S-09.)
 
 ## 9. Distribución de los clientes
 

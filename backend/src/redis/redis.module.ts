@@ -1,7 +1,8 @@
 import { Global, Module } from '@nestjs/common';
 import { RedisService } from './redis.service';
+import { CronLockService } from './cron-lock.service';
 
 /** Cliente de Redis compartido (tolerante a fallos) para limitadores, vinculación y clasificación. */
 @Global()
-@Module({ providers: [RedisService], exports: [RedisService] })
+@Module({ providers: [RedisService, CronLockService], exports: [RedisService, CronLockService] })
 export class RedisModule {}

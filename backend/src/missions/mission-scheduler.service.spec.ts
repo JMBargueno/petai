@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MissionSchedulerService } from './mission-scheduler.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MissionGenerationService } from './mission-generation.service';
+import { CronLockService } from '../redis/cron-lock.service';
 
 describe('MissionSchedulerService', () => {
   let service: MissionSchedulerService;
@@ -18,7 +19,7 @@ describe('MissionSchedulerService', () => {
       generateWeeklyMissions: jest.fn().mockResolvedValue(true),
     };
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MissionSchedulerService, { provide: PrismaService, useValue: mockPrisma }, { provide: MissionGenerationService, useValue: mockGeneration }],
+      providers: [MissionSchedulerService, { provide: PrismaService, useValue: mockPrisma }, { provide: MissionGenerationService, useValue: mockGeneration }, { provide: CronLockService, useValue: { guard: jest.fn().mockResolvedValue('tok'), release: jest.fn().mockResolvedValue(undefined) } }],
     }).compile();
     service = module.get(MissionSchedulerService);
     prisma = module.get(PrismaService);

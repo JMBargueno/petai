@@ -4,6 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
 import { BracketService } from './bracket.service';
+import { WalletService } from '../wallet/wallet.service';
+import { CronLockService } from '../../redis/cron-lock.service';
 
 const BRACKET_SIZE = 64;
 const DIAMOND_ELO = 1700;
@@ -19,6 +21,8 @@ export class TournamentService {
     private readonly gameData: GameDataService,
     private readonly petsService: PetsService,
     private readonly bracketService: BracketService,
+    private readonly wallet: WalletService,
+    private readonly cronLock: CronLockService,
   ) {}
 
   async getCurrent(userId: string) {
@@ -50,12 +54,12 @@ export class TournamentService {
       where: { tournamentId_userId: { tournamentId: tournament.id, userId } },
     });
     if (existing) throw new ConflictException('Ya estás inscrito en este torneo');
-    const user = await this.prisma.user.findFirst({ where: { id: userId, gems: { gte: ENTRY_FEE } } });
-    if (!user) throw new BadRequestException('Gemas insuficientes para la cuota');
-    await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: userId }, data: { gems: { decrement: ENTRY_FEE } } }),
-      this.prisma.tournamentEntry.create({ data: { tournamentId: tournament.id, userId, petId, elo: pet.elo } }),
-    ]);
+    // S-05 (SDD §3.3): cobro atómico race-safe (C-01); si no hay saldo no se crea la inscripción.
+    await this.prisma.$transaction(async (tx) => {
+      const { ok } = await this.wallet.debit(tx, userId, 'gems', ENTRY_FEE);
+      if (!ok) throw new BadRequestException('Gemas insuficientes para la cuota');
+      await tx.tournamentEntry.create({ data: { tournamentId: tournament.id, userId, petId, elo: pet.elo } });
+    });
     this.logger.log(`User ${userId} entered tournament ${tournament.id}`);
     return { tournamentId: tournament.id, petId, elo: pet.elo, feePaid: ENTRY_FEE };
   }
@@ -147,16 +151,21 @@ export class TournamentService {
     if (!tournament || tournament.status === 'finished') return;
     const final = await this.prisma.tournamentMatch.findFirst({ where: { tournamentId, round: 6, status: 'resolved' } });
     if (!final) return;
-    await this.prisma.tournament.update({ where: { id: tournamentId }, data: { status: 'finished', endedAt: new Date() } });
-    if (final.winnerId) {
-      const winnerEntry = await this.prisma.tournamentEntry.findFirst({
-        where: { tournamentId, petId: final.winnerId },
+    // S-14 (SDD §3.3): pago atómico — reclamo por estado + premio del ganador en UNA tx.
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.tournament.updateMany({
+        where: { id: tournamentId, status: { not: 'finished' } },
+        data: { status: 'finished', endedAt: new Date() },
       });
-      if (winnerEntry) {
-        await this.prisma.user.update({ where: { id: winnerEntry.userId }, data: { gems: { increment: 1000 } } });
-        await this.prisma.tournamentEntry.update({ where: { id: winnerEntry.id }, data: { placement: 1 } });
+      if (claimed.count === 0) return;
+      if (final.winnerId) {
+        const winnerEntry = await tx.tournamentEntry.findFirst({ where: { tournamentId, petId: final.winnerId } });
+        if (winnerEntry) {
+          await tx.user.update({ where: { id: winnerEntry.userId }, data: { gems: { increment: 1000 } } });
+          await tx.tournamentEntry.update({ where: { id: winnerEntry.id }, data: { placement: 1 } });
+        }
       }
-    }
+    });
     this.logger.log(`Tournament ${tournamentId} finished, prizes distributed`);
   }
 
@@ -174,11 +183,16 @@ export class TournamentService {
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async handleCron() {
+    // C-02 (SDD §3.3): solo una réplica resuelve/rotor por ventana.
+    const token = await this.cronLock.guard('tournament:resolve', 240_000);
+    if (!token) return;
     try {
       await this.seed();
       await this.resolveRound();
     } catch (err) {
       this.logger.error(`Tournament cron error: ${(err as Error).message}`);
+    } finally {
+      await this.cronLock.release('tournament:resolve', token);
     }
   }
 }

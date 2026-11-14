@@ -1,5 +1,7 @@
 # PetAI — Auditoría de seguridad
 
+> **Solución**: [`SDD_SEGURIDAD.md`](SDD_SEGURIDAD.md) — SDD de diseño para resolver los hallazgos de este informe.
+
 - **Fecha**: 14 de noviembre de 2026
 - **Commit revisado**: `8899ab3` (`main`, al día con `origin/main`)
 - **Alcance**: `backend/`, `edge/`, `desktop/`, `mobile/android/`, `docker-compose.prod.yml`, `backend/Dockerfile`, `.github/workflows/ci.yml`, y la documentación (`README.md`, `docs/`).

@@ -3,6 +3,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AdventureService } from './adventure.service';
+import { ZodPipe } from '../../common/zod.pipe';
+import { adventureStartSchema, adventureChooseSchema } from './adventure.schemas';
 
 @ApiTags('Adventure')
 @ApiBearerAuth()
@@ -15,7 +17,7 @@ export class AdventureController {
   @ApiOperation({ summary: 'Iniciar aventura diaria (1 gratis/día, premium con gemas)' })
   start(
     @CurrentUser() user: any,
-    @Body() body: { petId: string; premium?: boolean },
+    @Body(new ZodPipe(adventureStartSchema)) body: { petId: string; premium?: boolean },
   ) {
     return this.adventure.startDaily(user.id, body.petId, body.premium ?? false);
   }
@@ -24,7 +26,7 @@ export class AdventureController {
   @ApiOperation({ summary: 'Elegir opción y avanzar a la siguiente escena' })
   choose(
     @CurrentUser() user: any,
-    @Body() body: { adventureId: string; optionIndex: number },
+    @Body(new ZodPipe(adventureChooseSchema)) body: { adventureId: string; optionIndex: number },
   ) {
     return this.adventure.choose(user.id, body.adventureId, body.optionIndex);
   }

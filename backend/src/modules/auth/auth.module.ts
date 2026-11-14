@@ -7,7 +7,6 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { DeviceLinkService } from './device-link.service';
 import { AuthThrottleService } from './auth-throttle.service';
-import { FastPathJwtService } from './fast-path-jwt';
 import { RateLimitGuard } from './rate-limit.guard';
 
 @Module({
@@ -21,10 +20,9 @@ import { RateLimitGuard } from './rate-limit.guard';
     DeviceLinkService,
     JwtStrategy,
     AuthThrottleService,
-    FastPathJwtService,
     // Límite global de peticiones: se aplica a todas las rutas de la aplicación
     { provide: APP_GUARD, useClass: RateLimitGuard },
   ],
-  exports: [AuthService, FastPathJwtService, PassportModule],
+  exports: [AuthService, PassportModule],
 })
 export class AuthModule {}

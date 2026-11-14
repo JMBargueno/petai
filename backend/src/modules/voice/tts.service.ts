@@ -73,8 +73,8 @@ export class TtsService {
       );
 
       if (!response.ok) {
-        const errorBody = await response.text();
-        this.logger.error(`TTS API error ${response.status}: ${errorBody}`);
+        // S-19: no se loguea el cuerpo de error del proveedor (puede contener datos sensibles).
+        this.logger.error(`TTS API error (status ${response.status})`);
         throw new Error(`TTS failed: ${response.status}`);
       }
 

@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { GameDataModule } from '../game-data/game-data.module';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { DevController } from './dev.controller';
+import { DevKitGuard } from './dev.guard';
 import { DevHotReloadService } from './dev-hot-reload.service';
 import { DevSeedService } from './dev-seed.service';
 import { DevActionService } from './dev-action.service';
@@ -15,8 +17,8 @@ import { GameDataWatcherService } from './game-data-watcher.service';
  * sensibles (constitución I/VIII, SC-007).
  */
 @Module({
-  imports: [GameDataModule, PrismaModule],
+  imports: [ConfigModule, GameDataModule, PrismaModule],
   controllers: [DevController],
-  providers: [DevHotReloadService, DevSeedService, DevActionService, GameDataWatcherService],
+  providers: [DevHotReloadService, DevSeedService, DevActionService, GameDataWatcherService, DevKitGuard],
 })
 export class DevModule {}

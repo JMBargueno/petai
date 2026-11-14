@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CronLockService } from '../../redis/cron-lock.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
 import { BattlesService } from '../battles/battles.service';
@@ -25,6 +26,7 @@ export class RaidService {
     private readonly gameData: GameDataService,
     private readonly petsService: PetsService,
     private readonly battlesService: BattlesService,
+    private readonly cronLock: CronLockService,
   ) {}
 
   private get cfg(): RaidBalance {
@@ -85,7 +87,16 @@ export class RaidService {
       if (!updated || updated.status !== 'active') throw new ConflictException('Boss derrotado');
       throw new ConflictException('Error al aplicar daño');
     }
-    await this.prisma.pet.update({ where: { id: petId }, data: { energy: Math.max(0, pet.energy - this.cfg.energyCost) } });
+    // S-04 (SDD §3.3): descuento de energía ATÓMICO (updateMany con gte) tras aplicar el daño;
+    // si ya no hay energía (gasto concurrente) se reembolsa el daño para no regalar ataques.
+    const energySpent = await this.prisma.pet.updateMany({
+      where: { id: petId, userId, energy: { gte: this.cfg.energyCost } },
+      data: { energy: { decrement: this.cfg.energyCost } },
+    });
+    if (energySpent.count === 0) {
+      await this.prisma.raid.update({ where: { id: raid.id }, data: { hpRemaining: { increment: damage } } });
+      throw new BadRequestException('La mascota está demasiado cansada');
+    }
     const existing = await this.prisma.raidParticipant.findUnique({
       where: { raidId_userId: { raidId: raid.id, userId } },
     });
@@ -189,8 +200,18 @@ export class RaidService {
     const payouts = participants.map((p) => ({ userId: p.userId, gems: Math.max(Math.floor(totalGems * (p.damageDealt / totalDamage)), 1) }));
     const cap = Math.floor(totalGems * 0.5);
     const final = payouts.map((p) => ({ ...p, gems: Math.min(p.gems, cap) }));
-    await this.prisma.$transaction(final.map((p) => this.prisma.user.update({ where: { id: p.userId }, data: { gems: { increment: p.gems } } })));
-    await this.prisma.raid.update({ where: { id: raidId }, data: { status: 'settled', settledAt: new Date(), endedAt: new Date(), hpRemaining: 0 } });
+    // S-14 (SDD §3.3): liquidación atómica — el reclamo por estado y el reparto viven en UNA tx.
+    // El guard `status: { not: 'settled' }` deja un único `count === 1`: dos réplicas no reparten 2x.
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.raid.updateMany({
+        where: { id: raidId, status: { not: 'settled' } },
+        data: { status: 'settled', settledAt: new Date(), endedAt: new Date(), hpRemaining: 0 },
+      });
+      if (claimed.count === 0) return;
+      for (const p of final) {
+        await tx.user.update({ where: { id: p.userId }, data: { gems: { increment: p.gems } } });
+      }
+    });
     this.logger.log(`Raid ${raidId} settled: ${final.length} participants`);
   }
 
@@ -209,6 +230,9 @@ export class RaidService {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCronCheck() {
+    // C-02 (SDD §3.3): solo una réplica ejecuta el ciclo por ventana (TTL < intervalo).
+    const token = await this.cronLock.guard('raid:check', 55_000);
+    if (!token) return;
     try {
       const killed = await this.prisma.raid.findMany({ where: { status: 'active', hpRemaining: { lte: 0 } } });
       for (const r of killed) await this.settle(r.id);
@@ -216,6 +240,8 @@ export class RaidService {
       for (const r of expired) await this.prisma.raid.update({ where: { id: r.id }, data: { status: 'expired', endedAt: new Date() } });
     } catch (err) {
       this.logger.error(`Raid cron error: ${(err as Error).message}`);
+    } finally {
+      await this.cronLock.release('raid:check', token);
     }
   }
 }

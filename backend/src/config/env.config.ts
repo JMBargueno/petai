@@ -20,11 +20,6 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16).default(DEV_DEFAULTS.JWT_REFRESH_SECRET),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
-  // Fast-path de refresh (edge, US3): clave RS256 para el refresh JWT verificado stateless.
-  // Opcionales: en dev/test se genera un par efímero. En producción se definen por env.
-  JWT_FASTPATH_PRIVATE_KEY: z.string().optional(),
-  JWT_FASTPATH_PUBLIC_KEY: z.string().optional(),
-  JWT_FASTPATH_KID: z.string().optional(),
   AI_KEY_ENCRYPTION_KEY: z
     .string()
     .regex(/^[0-9a-fA-F]{64}$/, 'AI_KEY_ENCRYPTION_KEY debe tener 64 caracteres hexadecimales')
@@ -56,6 +51,21 @@ export const envSchema = z.object({
   RATE_LIMIT_PER_MINUTE: positiveInt(300),
   RATE_LIMIT_DISABLED: z.enum(['true', 'false']).optional(),
   RATE_LIMIT_FORCE: z.enum(['true', 'false']).optional(),
+  // ---- Seguridad (S-02 y S-08 del SDD de auditoría) ----
+  // Solo desarrollo/tests: permite webhooks http o hacia destinos privados (anula la protección SSRF de webhooks).
+  WEBHOOK_ALLOW_INSECURE: z.enum(['true', 'false']).default('false'),
+  // DevKit (S-08): OFF por defecto; exige activación explícita y se rechaza en producción (productionProblems).
+  DEVKIT_ENABLED: z.enum(['true', 'false']).default('false'),
+  // Token opcional de alta entropía para acceso remoto a /dev/* fuera de loopback.
+  DEVKIT_TOKEN: z.string().min(16).optional(),
+  // ---- Sync offline (S-07 del SDD de auditoría) ----
+  // Estado por usuario en Redis con TTL + topes duros; respaldo en memoria acotado si Redis cae.
+  SYNC_STATE_TTL_MS: positiveInt(86400000),
+  SYNC_MAX_DELTAS: positiveInt(2000),
+  SYNC_MAX_SEEN_ACTIONS: positiveInt(1000),
+  SYNC_MAX_ARGS_BYTES: positiveInt(4096),
+  SYNC_MAX_PETS: positiveInt(100),
+  SYNC_ENABLED: z.enum(['true', 'false']).default('true'),
   // ---- Observabilidad (OpenTelemetry) ----
   // Sin OTEL_EXPORTER_OTLP_ENDPOINT el SDK no se arranca (observabilidad desactivada de forma segura).
   OTEL_SERVICE_NAME: z.string().default('petai-backend'),
@@ -99,6 +109,12 @@ export function productionProblems(env: EnvConfig): string[] {
   }
   if (env.AI_ALLOW_INSECURE_URLS === 'true') {
     problems.push('AI_ALLOW_INSECURE_URLS=true desactiva la protección SSRF y no puede usarse en producción');
+  }
+  if (env.WEBHOOK_ALLOW_INSECURE === 'true') {
+    problems.push('WEBHOOK_ALLOW_INSECURE=true desactiva la protección SSRF de webhooks y no puede usarse en producción');
+  }
+  if (env.DEVKIT_ENABLED === 'true') {
+    problems.push('DEVKIT_ENABLED=true no puede usarse en producción');
   }
   if (env.AUTH_RATE_LIMIT_DISABLED === 'true') {
     problems.push('AUTH_RATE_LIMIT_DISABLED=true no puede usarse en producción');

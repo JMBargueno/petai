@@ -56,9 +56,10 @@ export class SttService {
       });
 
       if (!response.ok) {
-        const errorBody = await response.text();
-        this.logger.error(`Whisper API error ${response.status}: ${errorBody}`);
-        throw new Error(`STT failed: ${response.status} - ${errorBody}`);
+        // S-19: no se propaga al cliente ni se loguea el cuerpo de error del proveedor (puede contener
+        // datos sensibles). Mensaje genérico por estado, como en el núcleo (describeError).
+        this.logger.error(`Whisper API error (status ${response.status})`);
+        throw new Error(`STT failed: HTTP ${response.status}`);
       }
 
       const result = await response.json() as { text: string };

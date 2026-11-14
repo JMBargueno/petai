@@ -102,7 +102,7 @@ Además del núcleo original, PetAI incluye **33 funcionalidades nuevas** organi
 | 023 | **Combat Spectator** | Espectación en vivo (delay 10s), highlights de 30s, replays. |
 | 024 | **Modding API** | UGC: publicar mods (especies, muebles, minijuegos). Sandbox + rating. |
 | 025 | **Public API + Webhooks** | API keys, endpoints públicos, webhooks (`pet.evolved`, `combat.finished`). |
-| 026 | **Security Zero-Trust** | Token rotación, device fingerprinting, E2E encryption en chat. |
+| 026 | **Security Zero-Trust** | Token rotación, device fingerprinting, cifrado de keys de IA. (El "E2E" de chat es solo una clave pública almacenada; el chat sigue en claro por el servidor, ver S-13.) |
 | 027 | **iOS + Skia** | Motor de animación unificado (Rust/Skia). Live Activity en Dynamic Island. |
 | 028 | **Welcome Back** | Diario visual de ausencia, ritual de disculpa, regalos sorpresa. |
 | 029 | **Pet Buddies** | Dos pets interactúan. Bonus de bonding mutuo. |
@@ -140,6 +140,7 @@ petai/
 - [`docs/NUEVAS_FUNCIONALIDADES.md`](docs/NUEVAS_FUNCIONALIDADES.md): análisis y priorización de las 33 funcionalidades.
 - [`docs/specs/`](docs/specs/): especificaciones de detalle por feature (33 specs).
 - [`docs/DEPLOY.md`](docs/DEPLOY.md): despliegue del backend en producción.
+- [`docs/informes/`](docs/informes/): informes de auditoría y SDD de solución — [`AUDITORIA_SEGURIDAD.md`](docs/informes/AUDITORIA_SEGURIDAD.md), [`SDD_SEGURIDAD.md`](docs/informes/SDD_SEGURIDAD.md) y [`MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md`](docs/informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md).
 
 ## Puesta en marcha (desarrollo)
 

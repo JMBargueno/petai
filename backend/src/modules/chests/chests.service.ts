@@ -18,6 +18,7 @@ import {
 } from './drop-engine.service';
 import { ChestPityService } from './chest-pity.service';
 import { ChestsProcessor } from './chests.processor';
+import { WalletService } from '../wallet/wallet.service';
 import {
   ChestListResponse,
   ChestResponse,
@@ -49,6 +50,7 @@ export class ChestsService {
     private readonly dropEngine: DropEngineService,
     private readonly chestPityService: ChestPityService,
     private readonly processor: ChestsProcessor,
+    private readonly wallet: WalletService,
   ) {}
 
   /** Sección `chests` de balance.json (tablas de drop, precios, pity, límites). */
@@ -299,18 +301,9 @@ export class ChestsService {
 
     const now = new Date();
     const result = await this.prisma.$transaction(async (tx) => {
-      // Cobro atómico: la comprobación de saldo y el descuento van en una sola sentencia (race-safe).
-      const charged =
-        paymentMethod === 'coins'
-          ? await tx.user.updateMany({
-              where: { id: userId, coins: { gte: price } },
-              data: { coins: { decrement: price } },
-            })
-          : await tx.user.updateMany({
-              where: { id: userId, gems: { gte: price } },
-              data: { gems: { decrement: price } },
-            });
-      if (charged.count === 0) throw new BadRequestException('Saldo insuficiente');
+      // Cobro atómico race-safe vía la primitiva compartida (C-01): comprobación + descuento en 1 sentencia.
+      const { ok } = await this.wallet.debit(tx, userId, paymentMethod as 'coins' | 'gems', price);
+      if (!ok) throw new BadRequestException('Saldo insuficiente');
 
       const chest = await tx.chest.create({
         data: { userId, type, source: 'purchase', createdAt: now },
