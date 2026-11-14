@@ -1,0 +1,243 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      @if (headingLevel() === 1) {
+        <h1>{{ heading() }}</h1>
+      } @else {
+        <h2>{{ heading() }}</h2>
+      }
+      @if (intro()) {
+        <p>{{ intro() }}</p>
+      }
+    </div>
+    @if (blank()) {
+      <button class="btn btn--filled" type="button" (click)="openCreate()">Nuevo</button>
+    }
+  </header>
+
+  <div class="toolbar">
+    <label>
+      <span class="visually-hidden">Buscar en {{ heading() }}</span>
+      <input
+        class="input"
+        type="search"
+        placeholder="Buscar…"
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+      />
+    </label>
+    @if (filter(); as f) {
+      <label>
+        <span class="visually-hidden">{{ f.label }}</span>
+        <select class="input" [ngModel]="filterValue()" (ngModelChange)="filterValue.set($event)">
+          <option value="">{{ f.label }}: todos</option>
+          @for (o of f.options; track o.value) {
+            <option [value]="o.value">{{ o.label }}</option>
+          }
+        </select>
+      </label>
+    }
+    <ng-content select="[toolbar]" />
+  </div>
+
+  @if (store.error(); as error) {
+    <p class="error" role="alert">{{ error }}</p>
+  }
+
+  <div class="table-wrap" role="region" tabindex="0" [attr.aria-labelledby]="uid + '-caption'">
+    <table>
+      <caption [id]="uid + '-caption'">
+        {{ heading() }} · {{ visibleRows().length }} de {{ store.rows().length }}
+      </caption>
+      <thead>
+        <tr>
+          @for (col of columns(); track col.key) {
+            <th
+              scope="col"
+              [class.num]="col.type === 'number'"
+              [attr.aria-sort]="sort()?.key === col.key ? sort()!.dir : null"
+            >
+              <button type="button" (click)="toggleSort(col)">
+                {{ col.label }}
+                <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                  <path d="M2 4.5 6 1l4 3.5z" class="up" />
+                  <path d="M2 7.5 6 11l4-3.5z" class="down" />
+                </svg>
+              </button>
+            </th>
+          }
+          <th scope="col" class="plain">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of visibleRows(); track row.id) {
+          <tr>
+            @for (col of columns(); track col.key; let first = $first) {
+              @if (first) {
+                <th scope="row">{{ cell(row, col) }}</th>
+              } @else {
+                <td [attr.data-label]="col.label" [class.num]="col.type === 'number'">
+                  @if (col.editable) {
+                    <input
+                      class="input input--cell"
+                      type="number"
+                      min="0"
+                      step="1"
+                      [value]="row[col.key]"
+                      [attr.aria-label]="col.label + ' de ' + nameOf()(row)"
+                      (change)="inlineEdit(row, col, $event)"
+                    />
+                  } @else {
+                    {{ cell(row, col) }}
+                  }
+                </td>
+              }
+            }
+            <td data-label="Acciones">
+              <span class="actions">
+                <button
+                  class="btn btn--sm"
+                  type="button"
+                  [attr.aria-label]="'Editar ' + nameOf()(row)"
+                  (click)="openEdit(row)"
+                >
+                  Editar
+                </button>
+                @if (deletable()) {
+                  <button
+                    class="btn btn--sm"
+                    type="button"
+                    [attr.aria-label]="'Borrar ' + nameOf()(row)"
+                    (click)="askDelete(row)"
+                  >
+                    Borrar
+                  </button>
+                }
+              </span>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td class="empty" [attr.colspan]="columns().length + 1">
+              {{ store.loading() ? 'Cargando…' : 'Sin resultados' }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Un único mensaje por acción; aria-live en la tabla anunciaría cada fila. -->
+  <p class="visually-hidden" role="status">{{ status() }}</p>
+
+  <dialog #editDialog class="dialog" [attr.aria-labelledby]="uid + '-edit-title'" (close)="draft.set(null)">
+    @if (draft(); as d) {
+      <form class="form" ngNativeValidate (ngSubmit)="save()">
+        <h2 [id]="uid + '-edit-title'">{{ editingId() ? 'Editar' : 'Nuevo' }} · {{ heading() }}</h2>
+
+        @for (f of fields(); track f.key; let first = $first) {
+          @let id = uid + '-' + f.key;
+          @let locked = !!f.lockedOnEdit && !!editingId();
+          @if (f.type === 'checkbox') {
+            <label class="check">
+              <input
+                type="checkbox"
+                [name]="f.key"
+                [ngModel]="d[f.key]"
+                (ngModelChange)="setField(f.key, $event)"
+              />
+              {{ f.label }}
+            </label>
+          } @else {
+            <div class="field">
+              <label [for]="id">{{ f.label }}</label>
+              @switch (f.type) {
+                @case ('select') {
+                  <select
+                    class="input"
+                    [id]="id"
+                    [name]="f.key"
+                    [required]="!!f.required"
+                    [disabled]="locked"
+                    [ngModel]="d[f.key]"
+                    (ngModelChange)="setField(f.key, $event)"
+                  >
+                    @for (o of f.options; track o.value) {
+                      <option [value]="o.value">{{ o.label }}</option>
+                    }
+                  </select>
+                }
+                @case ('textarea') {
+                  <textarea
+                    class="input"
+                    [id]="id"
+                    [name]="f.key"
+                    [required]="!!f.required"
+                    [ngModel]="d[f.key]"
+                    (ngModelChange)="setField(f.key, $event)"
+                  ></textarea>
+                }
+                @case ('number') {
+                  <!-- type estático: es lo que hace que ngModel entregue un número y no un texto -->
+                  <input
+                    class="input"
+                    type="number"
+                    step="1"
+                    [id]="id"
+                    [name]="f.key"
+                    [required]="!!f.required"
+                    [attr.min]="f.min ?? null"
+                    [attr.max]="f.max ?? null"
+                    [ngModel]="d[f.key]"
+                    (ngModelChange)="setField(f.key, $event)"
+                  />
+                }
+                @default {
+                  <input
+                    class="input"
+                    [type]="f.type"
+                    [id]="id"
+                    [name]="f.key"
+                    [required]="!!f.required"
+                    [readOnly]="locked"
+                    [attr.min]="f.min ?? null"
+                    [attr.max]="f.max ?? null"
+                    [attr.autofocus]="first && !locked ? '' : null"
+                    [ngModel]="d[f.key]"
+                    (ngModelChange)="setField(f.key, $event)"
+                  />
+                }
+              }
+            </div>
+          }
+        }
+
+        @if (formError(); as error) {
+          <p class="error" role="alert">{{ error }}</p>
+        }
+
+        <div class="dialog__actions">
+          <button class="btn" type="button" (click)="editDialog.close()">Cancelar</button>
+          <button class="btn btn--filled" type="submit" [disabled]="store.loading()">Guardar</button>
+        </div>
+      </form>
+    }
+  </dialog>
+
+  <dialog
+    #deleteDialog
+    class="dialog"
+    closedby="any"
+    [attr.aria-labelledby]="uid + '-delete-title'"
+    (close)="onDeleteClose(deleteDialog)"
+  >
+    <h2 [id]="uid + '-delete-title'">
+      ¿Borrar «{{ pendingDelete() ? nameOf()(pendingDelete()!) : '' }}»?
+    </h2>
+    <p>Es un dato de demostración: puedes recuperarlo con «Restablecer datos».</p>
+    <form method="dialog" class="dialog__actions">
+      <button class="btn" value="cancel" autofocus>Cancelar</button>
+      <button class="btn btn--filled" value="delete">Borrar</button>
+    </form>
+  </dialog>
+</section>

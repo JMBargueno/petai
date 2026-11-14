@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pockai-web-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["web/scripts/preview.mjs"],
+      "port": 4300
+    }
+  ]
+}
