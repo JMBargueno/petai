@@ -6,7 +6,7 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { RitualsService, CreateRitualInput } from './rituals.service';
@@ -39,6 +39,20 @@ export class RitualsController {
   @ApiResponse({ status: 201, description: 'Ritual creado' })
   @ApiResponse({ status: 400, description: 'Parámetros inválidos' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['petId', 'type', 'hour'],
+      properties: {
+        petId: { type: 'string', description: 'Pet del ritual' },
+        type: { type: 'string', description: 'Tipo de ritual' },
+        hour: { type: 'integer', minimum: 0, maximum: 23, description: 'Hora del día (0-23)' },
+        minute: { type: 'integer', description: 'Minuto (opcional)' },
+        cadence: { type: 'string', enum: ['daily', 'weekly'], description: 'Cadencia' },
+        dayOfWeek: { type: 'integer', description: 'Día de la semana para cadencia weekly (opcional)' },
+      },
+    },
+  })
   create(@CurrentUser() user: { id: string }, @Body() input: CreateRitualInput) {
     return this.rituals.create(user.id, input);
   }
@@ -48,6 +62,14 @@ export class RitualsController {
   @ApiResponse({ status: 200, description: 'Progreso actualizado (con gift si aplica)' })
   @ApiResponse({ status: 404, description: 'Ritual no encontrado' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        completionAt: { type: 'string', format: 'date-time', description: 'Timestamp de la completación (opcional)' },
+      },
+    },
+  })
   check(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,

@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { ReengagementService, ForgiveAction } from './reengagement.service';
@@ -36,6 +36,17 @@ export class ReengagementController {
   @ApiResponse({ status: 200, description: 'Ritual completado, buff aplicado' })
   @ApiResponse({ status: 400, description: 'Ritual incompleto / umbral no alcanzado' })
   @ApiResponse({ status: 409, description: 'Secuencia ya completada (anti-spam)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      description: 'Datos del ritual de perdón (los tres son opcionales; basta con completar el umbral)',
+      properties: {
+        clicks: { type: 'integer', description: 'Clicks registrados en el ritual' },
+        chat: { type: 'string', description: 'Mensaje de reconciliación' },
+        actions: { type: 'array', items: { type: 'string' }, description: 'Acciones realizadas' },
+      },
+    },
+  })
   forgive(@CurrentUser() user: { id: string }, @Body() action: ForgiveAction) {
     return this.reengagementService.forgive(user.id, action);
   }

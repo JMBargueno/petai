@@ -8,7 +8,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { DeltaSyncService, SyncAction, PushResponse, PullResponse } from './delta-sync.service';
 import { ZodPipe } from '../../common/zod.pipe';
 import { syncPushSchema } from './sync.schemas';
@@ -34,6 +34,29 @@ export class SyncController {
   @Post('push')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Push a batch of offline actions to server' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['actions'],
+      properties: {
+        actions: {
+          type: 'array',
+          description: 'Lote de acciones offline (no vacío, ≤500)',
+          items: {
+            type: 'object',
+            required: ['id', 'petId', 'type', 'args', 'timestamp'],
+            properties: {
+              id: { type: 'string' },
+              petId: { type: 'string' },
+              type: { type: 'string', enum: ['feed', 'play', 'clean', 'sleep', 'wake', 'chat', 'battle', 'evolve'] },
+              args: { type: 'object' },
+              timestamp: { type: 'integer' },
+            },
+          },
+        },
+      },
+    },
+  })
   async push(
     @CurrentUser() user: any,
     @Body(new ZodPipe(syncPushSchema)) body: { actions: SyncAction[] },

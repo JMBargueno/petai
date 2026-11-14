@@ -7,7 +7,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { MoodTheaterService } from './mood-theater.service';
@@ -46,6 +46,16 @@ export class MoodTheaterController {
   @ApiResponse({ status: 201, description: 'Sticker capturado' })
   @ApiResponse({ status: 400, description: 'No hay momento activo' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['petId'],
+      properties: {
+        petId: { type: 'string', description: 'Pet cuyo momento se captura' },
+        momentId: { type: 'string', description: 'Momento concreto (opcional, por defecto el actual)' },
+      },
+    },
+  })
   capture(
     @CurrentUser() user: { id: string },
     @Body() body: { petId: string; momentId?: string },

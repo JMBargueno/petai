@@ -5,7 +5,7 @@ import {
   Body,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AccessibilityService } from './accessibility.service';
@@ -30,6 +30,14 @@ export class AccessibilityController {
   @ApiResponse({ status: 200, description: 'Prefs actualizadas' })
   @ApiResponse({ status: 400, description: 'Valor inválido' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      description: 'Prefs de accesibilidad (actualización parcial: se pasan solo los campos a cambiar)',
+      additionalProperties: true,
+      example: { largeText: true, reduceMotion: true, colorBlindMode: 'deuteranopia' },
+    },
+  })
   updatePrefs(@CurrentUser() user: { id: string }, @Body() body: Record<string, unknown>) {
     return this.accessibility.updatePrefs(user.id, body ?? {});
   }

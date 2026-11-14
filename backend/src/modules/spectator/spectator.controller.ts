@@ -10,7 +10,7 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { SpectatorService, LiveBattleState, SpectatorSubscription } from './spectator.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -53,6 +53,15 @@ export class SpectatorController {
   @Post('subscribe')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Subscribe to a battle as spectator' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['battleId'],
+      properties: {
+        battleId: { type: 'string', description: 'Pelea a la que suscribirse' },
+      },
+    },
+  })
   subscribe(
     @CurrentUser() user: any,
     @Body(new ZodPipe(spectatorSubscribeSchema)) body: { battleId: string },

@@ -7,7 +7,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { BuddiesService } from './buddies.service';
@@ -24,6 +24,16 @@ export class BuddiesController {
   @ApiResponse({ status: 200, description: 'Par creado o recuperado' })
   @ApiResponse({ status: 400, description: 'Pets inválidos o del mismo pet' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['petAId', 'petBId'],
+      properties: {
+        petAId: { type: 'string', description: 'ID del primer buddy' },
+        petBId: { type: 'string', description: 'ID del segundo buddy' },
+      },
+    },
+  })
   pair(
     @CurrentUser() user: { id: string },
     @Body() body: { petAId: string; petBId: string },
@@ -35,6 +45,14 @@ export class BuddiesController {
   @ApiOperation({ summary: 'Rolar y aplicar una interacción espontánea entre buddies' })
   @ApiResponse({ status: 200, description: 'Interacción aplicada o null si no procede' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        petId: { type: 'string', description: 'Pet que dispara la interacción (opcional)' },
+      },
+    },
+  })
   trigger(
     @CurrentUser() user: { id: string },
     @Body() body: { petId?: string } = {},

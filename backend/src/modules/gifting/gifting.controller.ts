@@ -7,7 +7,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { GiftingService } from './gifting.service';
@@ -31,6 +31,19 @@ export class GiftingController {
   @ApiResponse({ status: 400, description: 'Rate limit o inventario insuficiente' })
   @ApiResponse({ status: 404, description: 'Destinatario/item no encontrado' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['recipientUserId', 'petId', 'itemId'],
+      properties: {
+        recipientUserId: { type: 'string', description: 'Usuario receptor' },
+        petId: { type: 'string', description: 'Pet del receptor que recibe el item' },
+        itemId: { type: 'string', description: 'Item a enviar desde el inventario' },
+        qty: { type: 'integer', description: 'Cantidad (opcional, por defecto 1)' },
+        note: { type: 'string', description: 'Nota de acompañamiento' },
+      },
+    },
+  })
   send(
     @CurrentUser() user: { id: string },
     @Body() body: { recipientUserId: string; petId: string; itemId: string; qty?: number; note?: string },
@@ -64,6 +77,14 @@ export class GiftingController {
   @ApiResponse({ status: 200, description: 'Gift rechazado' })
   @ApiResponse({ status: 404, description: 'Gift no encontrado' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        thankYouNote: { type: 'string', description: 'Nota de agradecimiento (opcional)' },
+      },
+    },
+  })
   reject(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,
@@ -78,6 +99,20 @@ export class GiftingController {
   @ApiResponse({ status: 400, description: 'Pet no enfermo o rate limit' })
   @ApiResponse({ status: 404, description: 'Destinatario/item no encontrado' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['recipientUserId', 'petId', 'foodItemId', 'medicineItemId', 'toyItemId'],
+      properties: {
+        recipientUserId: { type: 'string', description: 'Usuario receptor' },
+        petId: { type: 'string', description: 'Pet enfermo' },
+        foodItemId: { type: 'string', description: 'Item de comida' },
+        medicineItemId: { type: 'string', description: 'Item de medicina' },
+        toyItemId: { type: 'string', description: 'Item de juguete' },
+        note: { type: 'string', description: 'Nota (opcional)' },
+      },
+    },
+  })
   sendCare(
     @CurrentUser() user: { id: string },
     @Body()
@@ -99,6 +134,15 @@ export class GiftingController {
   @ApiResponse({ status: 400, description: 'Room llena o expirada' })
   @ApiResponse({ status: 404, description: 'Room no encontrada' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: 'Código de room para unirse (si no existe, se crea)' },
+        maxPlayers: { type: 'integer', description: 'Máx. de jugadores de la room' },
+      },
+    },
+  })
   joinGroup(
     @CurrentUser() user: { id: string },
     @Body() body: { code?: string; maxPlayers?: number } = {},
@@ -111,6 +155,15 @@ export class GiftingController {
   @ApiResponse({ status: 200, description: 'Progreso actualizado (con reward si completo)' })
   @ApiResponse({ status: 404, description: 'Room no encontrada' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        gameType: { type: 'string', description: 'Tipo de minijuego' },
+        score: { type: 'number', description: 'Puntuación del minijuego' },
+      },
+    },
+  })
   completeGroup(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,

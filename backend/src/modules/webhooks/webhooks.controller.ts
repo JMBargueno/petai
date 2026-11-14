@@ -7,7 +7,7 @@ import {
   Body,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { WebhooksService, RegisterWebhookDto } from './webhooks.service';
@@ -33,6 +33,16 @@ export class WebhooksController {
   @ApiOperation({ summary: 'Crear una API key con scopes' })
   @ApiResponse({ status: 201, description: 'API key creada (key devuelta una vez)' })
   @ApiResponse({ status: 409, description: 'Límite de keys alcanzado' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['name', 'scopes'],
+      properties: {
+        name: { type: 'string', description: 'Nombre de la key' },
+        scopes: { type: 'array', items: { type: 'string' }, description: 'Scopes de la key (p.ej. read:leaderboard)' },
+      },
+    },
+  })
   createApiKey(@CurrentUser() user: { id: string }, @Body() dto: CreateApiKeyDto) {
     return this.apiKeyService.create(user.id, dto);
   }
@@ -58,6 +68,17 @@ export class WebhooksController {
   @ApiResponse({ status: 201, description: 'Webhook creado' })
   @ApiResponse({ status: 400, description: 'URL inválida / SSRF' })
   @ApiResponse({ status: 409, description: 'Límite de webhooks' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['url', 'events'],
+      properties: {
+        url: { type: 'string', format: 'uri', description: 'URL HTTPS de destino' },
+        events: { type: 'array', items: { type: 'string' }, description: 'Eventos a suscribir' },
+        secret: { type: 'string', description: 'Secreto para firmar (HMAC, opcional)' },
+      },
+    },
+  })
   registerWebhook(@CurrentUser() user: { id: string }, @Body() dto: RegisterWebhookDto) {
     return this.webhooksService.register(user.id, dto);
   }

@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -30,6 +30,17 @@ export class AiController {
 
   @Put('ai/config')
   @ApiOperation({ summary: 'Configurar proveedor y API key BYOK (cifrada con AES-256-GCM)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        provider: { type: 'string', description: 'Proveedor de IA' },
+        baseUrl: { type: 'string', description: 'URL base del endpoint' },
+        model: { type: 'string', description: 'Modelo a usar' },
+        apiKey: { type: 'string', description: 'API key BYOK (se cifra en el servidor)' },
+      },
+    },
+  })
   putConfig(@CurrentUser() user: any, @Body() body: AiConfigInput | undefined) {
     return this.aiConfig.upsert(user.id, body);
   }
@@ -127,12 +138,29 @@ export class AiController {
 
   @Post('pets/:id/chat/local/context')
   @ApiOperation({ summary: 'Hermes local: valida el mensaje y devuelve los mensajes a enviar al modelo local' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', description: 'Mensaje del usuario' },
+      },
+    },
+  })
   localContext(@CurrentUser() user: any, @Param('id') petId: string, @Body() body: { message?: string } | undefined) {
     return this.chat.prepareLocal(user.id, petId, body?.message);
   }
 
   @Post('pets/:id/chat/local/sync')
   @ApiOperation({ summary: 'Hermes local: entrega la respuesta generada en local para moderarla y guardarla' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        turnId: { type: 'string', description: 'ID del turno' },
+        reply: { type: 'string', description: 'Respuesta generada en local' },
+      },
+    },
+  })
   localSync(
     @CurrentUser() user: any,
     @Param('id') petId: string,
@@ -143,6 +171,15 @@ export class AiController {
 
   @Post('pets/:id/chat')
   @ApiOperation({ summary: 'Conversar con la mascota (streaming SSE: eventos delta, done, error)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', description: 'Mensaje del usuario' },
+        clientTools: { type: 'array', items: { type: 'string' }, description: 'Herramientas del cliente (opcional)' },
+      },
+    },
+  })
   async chatStream(
     @CurrentUser() user: any,
     @Param('id') petId: string,

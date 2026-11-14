@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { TournamentService } from './tournament.service';
@@ -19,6 +19,15 @@ export class TournamentController {
 
   @Post('enter')
   @ApiOperation({ summary: 'Inscribir al torneo (50 gemas de cuota)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['petId'],
+      properties: {
+        petId: { type: 'string', description: 'Pet inscrito al torneo' },
+      },
+    },
+  })
   enter(@CurrentUser() user: any, @Body() body: { petId: string }) {
     return this.tournamentService.enter(user.id, body?.petId);
   }

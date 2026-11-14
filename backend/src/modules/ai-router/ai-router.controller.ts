@@ -7,7 +7,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { ModelRouterService } from './model-router.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -37,6 +37,20 @@ export class AiRouterController {
   @Post('config')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update routing configuration for user' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        provider: { type: 'string', description: 'Proveedor por defecto' },
+        routingOverrides: {
+          type: 'object',
+          description: 'Overrides por tarea: { tarea: { provider, model, maxTokens, maxCostUsd } }',
+          additionalProperties: true,
+        },
+        fallbackProviders: { type: 'array', items: { type: 'string' }, description: 'Proveedores de respaldo' },
+      },
+    },
+  })
   updateConfig(
     @CurrentUser() user: any,
     @Body() body: {

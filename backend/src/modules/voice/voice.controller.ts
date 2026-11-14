@@ -14,7 +14,7 @@ import {
   UploadedFile,
   Res,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody, ApiProduces, ApiResponse } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import type { Response } from 'express';
@@ -132,6 +132,23 @@ export class VoiceController {
     description:
       'F-08: la respuesta es el audio binario en streaming (`audio/*`), no base64 en JSON. ' +
       'El `mood` y la duración van en las cabeceras `X-Voice-Mood` y `X-Audio-Duration-Ms`.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['text', 'speciesId'],
+      properties: {
+        text: { type: 'string', description: 'Texto a sintetizar (≤5000 caracteres)' },
+        speciesId: { type: 'string', description: 'Especie (define la voz base)' },
+        mood: { type: 'string', description: 'Emoción (p.ej. happy, sad, angry); opcional' },
+      },
+    },
+  })
+  @ApiProduces('audio/*')
+  @ApiResponse({
+    status: 200,
+    description: 'Audio binario (MP3) en streaming; mood/duración en cabeceras `X-Voice-Mood` / `X-Audio-Duration-Ms`',
+    content: { 'audio/*': { schema: { type: 'string', format: 'binary' } } },
   })
   async speak(
     @CurrentUser() user: any,

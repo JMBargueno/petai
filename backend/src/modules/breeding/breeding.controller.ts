@@ -6,7 +6,7 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { BreedingService } from './breeding.service';
@@ -24,6 +24,16 @@ export class BreedingController {
   @ApiResponse({ status: 400, description: 'Pets inválidos o cooldown activo' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
   @ApiResponse({ status: 404, description: 'Pet no encontrado' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['parent1Id', 'parent2Id'],
+      properties: {
+        parent1Id: { type: 'string', description: 'ID del primer progenitor' },
+        parent2Id: { type: 'string', description: 'ID del segundo progenitor' },
+      },
+    },
+  })
   startBreeding(
     @CurrentUser() user: { id: string },
     @Body() body: { parent1Id: string; parent2Id: string },

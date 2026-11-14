@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { TrainingService } from './training.service';
@@ -13,6 +13,15 @@ export class TrainingController {
 
   @Post('start')
   @ApiOperation({ summary: 'Iniciar dungeon de entrenamiento elemental (5 pisos)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['petId'],
+      properties: {
+        petId: { type: 'string', description: 'Pet que entrena' },
+      },
+    },
+  })
   start(
     @CurrentUser() user: any,
     @Body() body: { petId: string },
@@ -22,6 +31,17 @@ export class TrainingController {
 
   @Post('submit')
   @ApiOperation({ summary: 'Enviar elección elemental para el piso actual' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['petId', 'element'],
+      properties: {
+        petId: { type: 'string', description: 'Pet que entrena' },
+        element: { type: 'string', description: 'Elemento elegido para el piso' },
+        prediction: { type: 'string', description: 'Predicción del jugador (opcional)' },
+      },
+    },
+  })
   submit(
     @CurrentUser() user: any,
     @Body() body: { petId: string; element: string; prediction?: string },
