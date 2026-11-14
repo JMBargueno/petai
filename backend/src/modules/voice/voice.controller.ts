@@ -7,6 +7,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  HttpException,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -16,6 +17,11 @@ import { TtsService } from './tts.service';
 import { VoiceConfigService } from './voice-config.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { RedisService } from '../../redis/redis.service';
+
+/** S-06: cuota de peticiones de voz por usuario/ventana (evita abusar de la key del servidor). */
+const VOICE_QUOTA_PER_MIN = 20;
+const VOICE_QUOTA_WINDOW_MS = 60_000;
 
 /**
  * Voice AI REST endpoints.
@@ -35,14 +41,30 @@ export class VoiceController {
     private readonly sttService: SttService,
     private readonly ttsService: TtsService,
     private readonly voiceConfigService: VoiceConfigService,
+    private readonly redis: RedisService,
   ) {}
+
+  /** S-06: limita peticiones de voz por usuario/ventana (Redis, fail-open si cae). */
+  private async assertVoiceQuota(userId: string) {
+    const key = this.redis.key(`voice:quota:${userId}`);
+    const count = await this.redis.run(async (c) => {
+      const v = await c.incr(key);
+      if (v === 1) await c.pexpire(key, VOICE_QUOTA_WINDOW_MS);
+      return v;
+    }, 'voice.quota');
+    if (count != null && count > VOICE_QUOTA_PER_MIN) {
+      throw new HttpException('Límite de peticiones de voz alcanzado, inténtalo más tarde', HttpStatus.TOO_MANY_REQUESTS);
+    }
+  }
 
   @Post('transcribe')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Transcribe audio to text (STT)' })
   async transcribe(
+    @CurrentUser() user: any,
     @Body() body: { audio: string; lang?: string },
   ): Promise<SttResult> {
+    await this.assertVoiceQuota(user.id);
     if (!body.audio || typeof body.audio !== 'string') {
       throw new BadRequestException('Audio data required (base64)');
     }
@@ -65,6 +87,7 @@ export class VoiceController {
       mood?: string;
     },
   ): Promise<{ audioBase64: string; durationMs: number; mood: string }> {
+    await this.assertVoiceQuota(_user.id);
     if (!body.text || body.text.length > 5000) {
       throw new BadRequestException('Text required (max 5000 chars)');
     }

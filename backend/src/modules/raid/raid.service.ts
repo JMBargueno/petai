@@ -87,7 +87,16 @@ export class RaidService {
       if (!updated || updated.status !== 'active') throw new ConflictException('Boss derrotado');
       throw new ConflictException('Error al aplicar daño');
     }
-    await this.prisma.pet.update({ where: { id: petId }, data: { energy: Math.max(0, pet.energy - this.cfg.energyCost) } });
+    // S-04 (SDD §3.3): descuento de energía ATÓMICO (updateMany con gte) tras aplicar el daño;
+    // si ya no hay energía (gasto concurrente) se reembolsa el daño para no regalar ataques.
+    const energySpent = await this.prisma.pet.updateMany({
+      where: { id: petId, userId, energy: { gte: this.cfg.energyCost } },
+      data: { energy: { decrement: this.cfg.energyCost } },
+    });
+    if (energySpent.count === 0) {
+      await this.prisma.raid.update({ where: { id: raid.id }, data: { hpRemaining: { increment: damage } } });
+      throw new BadRequestException('La mascota está demasiado cansada');
+    }
     const existing = await this.prisma.raidParticipant.findUnique({
       where: { raidId_userId: { raidId: raid.id, userId } },
     });
