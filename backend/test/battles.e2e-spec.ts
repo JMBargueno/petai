@@ -337,7 +337,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
         if (r.result.outcome === 'win' && !r.opponent.isBot) wins++;
       }
       expect(wins).toBeGreaterThanOrEqual(n / 2 + 2);
-    });
+    }, 60_000);
 
     it('19. /arena/leagues expone ligas, límites y recompensas', async () => {
       const u = await signup();

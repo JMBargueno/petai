@@ -191,11 +191,19 @@ export class AchievementTrackingService implements OnModuleDestroy {
     if (val === null || val === undefined) return; // sin valor en caliente (fallback ya en PG)
     const current = Number(val);
     if (!Number.isFinite(current)) return;
-    await this.prisma.achievement.upsert({
-      where: { userId_achId: { userId, achId } },
-      update: { current },
-      create: { userId, achId, current },
-    });
-    await this.redis.run((r) => r.del(key), 'del');
+    try {
+      await this.prisma.achievement.upsert({
+        where: { userId_achId: { userId, achId } },
+        update: { current },
+        create: { userId, achId, current },
+      });
+      await this.redis.run((r) => r.del(key), 'del');
+    } catch (err) {
+      // Flush best-effort y asíncrono (se invoca con `void` desde el timer): un fallo puntual — p. ej.
+      // el engine de Prisma aún no conectado al arrancar, o un corte breve de DB — no debe propagarse
+      // como rechazo sin manejar. No se borra la clave: el valor queda en Redis y se re-flushea en el
+      // siguiente incremento o en el próximo timer.
+      this.logger.warn(`Flush del progreso del logro ${achId} (usuario ${userId}) aplazado: ${(err as Error).message}`);
+    }
   }
 }
