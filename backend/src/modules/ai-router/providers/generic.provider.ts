@@ -56,8 +56,8 @@ export class GenericProvider implements LlmProvider {
       });
 
       if (!response.ok) {
-        const errorBody = await response.text();
-        yield { type: 'error', message: `Provider error ${response.status}: ${errorBody}`, code: String(response.status) };
+        // S-19: no se propaga el cuerpo de error del proveedor (puede contener datos sensibles).
+        yield { type: 'error', message: `El proveedor respondió con error ${response.status}`, code: String(response.status) };
         return;
       }
 
