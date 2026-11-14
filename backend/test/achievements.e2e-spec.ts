@@ -32,6 +32,7 @@ describe('Achievements E2E', () => {
   afterEach(async () => {
     if (!userId) return;
     await prisma.achievement.deleteMany({ where: { userId } });
+    await prisma.inventoryItem.deleteMany({ where: { userId } });
     await prisma.pet.deleteMany({ where: { userId } });
     await prisma.egg.deleteMany({ where: { userId } });
     await prisma.user.deleteMany({ where: { id: userId } });
@@ -122,10 +123,16 @@ describe('Achievements E2E', () => {
     await auth();
     await ensurePet();
 
+    // Seed food items in the user's inventory (10 apples)
+    await prisma.inventoryItem.create({
+      data: { userId, itemId: 'apple', qty: 10 },
+    });
+
     for (let i = 0; i < 10; i++) {
       await request(app.getHttpServer())
         .post(`/v1/pets/${petId}/feed`)
         .set('Authorization', `Bearer ${token}`)
+        .send({ itemId: 'apple' })
         .expect(201);
     }
 
@@ -165,10 +172,16 @@ describe('Achievements E2E', () => {
     await auth();
     await ensurePet();
 
+    // Seed food items in the user's inventory (10 apples)
+    await prisma.inventoryItem.create({
+      data: { userId, itemId: 'apple', qty: 10 },
+    });
+
     for (let i = 0; i < 10; i++) {
       await request(app.getHttpServer())
         .post(`/v1/pets/${petId}/feed`)
         .set('Authorization', `Bearer ${token}`)
+        .send({ itemId: 'apple' })
         .expect(201);
     }
     await waitForAchievement('care_feed_10', (a) => a.status === 'unlocked');

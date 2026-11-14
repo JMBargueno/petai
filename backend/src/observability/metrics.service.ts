@@ -205,7 +205,10 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
         if (addr && typeof addr === 'object') this.metricsPort = addr.port;
         resolve(this.metricsPort);
       });
-      this.server!.on('error', () => resolve(this.metricsPort));
+      this.server!.on('error', () => {
+        this.metricsPort = 0; // 0 = el servidor no está activo
+        resolve(0);
+      });
     });
     this.server
       .listen(this.metricsPort, '0.0.0.0', () => {
