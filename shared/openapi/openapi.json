@@ -2695,6 +2695,29 @@
         ]
       }
     },
+    "/v1/breeding/history": {
+      "get": {
+        "operationId": "BreedingController_getHistory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Historial de crías"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener el historial de crías del usuario",
+        "tags": [
+          "Breeding"
+        ]
+      }
+    },
     "/v1/breeding/{id}": {
       "get": {
         "operationId": "BreedingController_getBreeding",
@@ -2725,29 +2748,6 @@
           }
         ],
         "summary": "Obtener el estado de una cría",
-        "tags": [
-          "Breeding"
-        ]
-      }
-    },
-    "/v1/breeding/history": {
-      "get": {
-        "operationId": "BreedingController_getHistory",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Historial de crías"
-          },
-          "401": {
-            "description": "Token inválido"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener el historial de crías del usuario",
         "tags": [
           "Breeding"
         ]

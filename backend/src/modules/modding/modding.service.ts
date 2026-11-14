@@ -200,8 +200,8 @@ export class ModdingService {
       throw new HttpException('Este mod está en revisión y no puede descargarse', 403);
     }
 
-    const existing = await this.prisma.modDownload.findUnique({
-      where: { modId_userId_petId: { modId, userId, petId: petId ?? null } },
+    const existing = await this.prisma.modDownload.findFirst({
+      where: { modId, userId, petId: petId ?? null },
     });
     if (!existing) {
       await this.prisma.modDownload.create({ data: { modId, userId, petId: petId ?? null } });
