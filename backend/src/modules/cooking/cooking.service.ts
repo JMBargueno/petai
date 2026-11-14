@@ -67,6 +67,11 @@ export class CookingService {
   }
 
   async submit(userId: string, sessionId: string, score: number, correctOrder: boolean) {
+    // S-12: `score`/`correctOrder` los afirma el cliente (minijuego de un solo uso). Se validan
+    // aquí y `correctCount` se acota abajo para que no se pueda inflar la recompensa.
+    if (typeof score !== 'number' || !Number.isFinite(score) || typeof correctOrder !== 'boolean') {
+      throw new BadRequestException('score y correctOrder inválidos');
+    }
     const session = await this.prisma.cookingSession.findFirst({ where: { id: sessionId, userId } });
     if (!session) throw new NotFoundException('Sesión no encontrada');
     if (session.finishedAt) throw new BadRequestException('Sesión ya finalizada');
@@ -81,8 +86,10 @@ export class CookingService {
       return { score: 0, buff: null, message: 'Tiempo agotado' };
     }
     const ingredients = session.ingredients as string[];
-    const correctCount = correctOrder ? ingredients.length : Math.max(0, Math.floor(score / 25));
-    const pct = correctCount / ingredients.length;
+    // S-12: acotar correctCount a [0, ingredientes] → pct <= 1. Sin acotado, un score desorbitado
+    // (lo afirma el cliente) daría buff máx. y monedas sin límite.
+    const correctCount = Math.min(ingredients.length, Math.max(0, Math.floor(correctOrder ? ingredients.length : score / 25)));
+    const pct = ingredients.length > 0 ? correctCount / ingredients.length : 0;
     let buff = null;
     if (pct >= 1.0) buff = this.buildBuff(session.recipeId, 1.0);
     else if (pct >= 0.75) buff = this.buildBuff(session.recipeId, 0.5);
