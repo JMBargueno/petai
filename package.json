@@ -20,7 +20,10 @@
     "backend:build": "pnpm --filter petai-backend run build",
     "desktop:dev": "pnpm --filter petai-desktop run dev",
     "desktop:build": "pnpm --filter petai-desktop run build",
-    "test:all": "pnpm --filter petai-backend run test && pnpm --filter petai-backend run test:e2e && pnpm test:assets"
+    "test:all": "pnpm --filter petai-backend run test && pnpm --filter petai-backend run test:e2e && pnpm test:assets",
+    "web:dev": "pnpm --filter pockai-web run start",
+    "web:build": "pnpm --filter pockai-web run build",
+    "web:test": "pnpm --filter pockai-web run test"
   },
   "devDependencies": {
     "openapi-typescript": "^7.13.0",

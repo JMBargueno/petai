@@ -1,0 +1,170 @@
+/*
+ * Piezas compartidas por la landing y el panel.
+ * Reglas del sistema: contorno negro de 1px, radios suaves, sin sombras, sin degradados.
+ */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 96px;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-paper-white);
+    color: var(--color-carbon);
+    font-family: var(--font-aeonik-pro);
+    font-weight: var(--font-weight-medium);
+    font-size: var(--text-body-lg);
+    line-height: var(--leading-body-lg);
+    letter-spacing: -0.01em;
+    font-feature-settings: 'ss01' on, 'tnum';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+@layer components {
+  /* Botones: siempre píldora, negro relleno o contorno negro. El azul nunca es color de acción. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-block-size: 40px;
+    padding: 10px 16px;
+    border: var(--outline);
+    border-radius: var(--radius-buttons);
+    background: var(--color-paper-white);
+    color: var(--color-carbon);
+    font: inherit;
+    font-weight: var(--font-weight-bold);
+    font-size: 14px;
+    line-height: 1;
+    letter-spacing: 0.032em;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 0.15s,
+      color 0.15s;
+  }
+  .btn:hover {
+    background: var(--color-soft-mist);
+  }
+  .btn--filled {
+    background: var(--color-carbon);
+    color: var(--color-paper-white);
+  }
+  .btn--filled:hover {
+    background: #2b2b2b;
+  }
+  .btn--sm {
+    min-block-size: 32px;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .btn:disabled,
+  .btn[aria-disabled='true'] {
+    background: var(--color-soft-mist);
+    color: #555;
+    cursor: not-allowed;
+  }
+
+  /* Etiqueta en mayúsculas */
+  .label-caps {
+    font-weight: var(--font-weight-bold);
+    font-size: var(--text-caption);
+    letter-spacing: 0.032em;
+    text-transform: uppercase;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border: var(--outline);
+    border-radius: var(--radius-pills);
+    background: var(--color-paper-white);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--text-caption);
+    letter-spacing: 0.032em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .card {
+    padding: var(--card-padding);
+    border: var(--outline);
+    border-radius: var(--radius-cards);
+    background: var(--color-paper-white);
+  }
+
+  /* Titular escultórico: interlineado aplastado, nunca por encima de 0.85 */
+  .display {
+    margin: 0;
+    font-family: var(--font-lateral);
+    font-weight: var(--font-weight-extrabold);
+    line-height: var(--leading-display);
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .input {
+    inline-size: 100%;
+    min-block-size: 40px;
+    padding: 8px 16px;
+    border: var(--outline);
+    border-radius: var(--radius-2xl);
+    background: var(--color-paper-white);
+    color: var(--color-carbon);
+    font: inherit;
+  }
+  textarea.input {
+    min-block-size: 96px;
+    resize: vertical;
+  }
+  .input:user-invalid {
+    border-width: 2px;
+    border-color: var(--color-ember);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Diálogos nativos (ver guía `dialog` de modern-web-guidance) */
+  dialog.dialog {
+    inline-size: min(560px, calc(100vw - 32px));
+    max-block-size: calc(100dvh - 32px);
+    margin: auto; /* el reset de Tailwind quita el margen que centra el diálogo */
+    padding: 24px;
+    border: var(--outline);
+    border-radius: var(--radius-cards-elevated);
+    background: var(--color-paper-white);
+    color: var(--color-carbon);
+  }
+  dialog.dialog:modal {
+    overscroll-behavior: contain;
+  }
+  dialog.dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background: rgb(0 0 0 / 0.45);
+  }
+}

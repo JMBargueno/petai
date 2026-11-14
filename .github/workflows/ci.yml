@@ -146,6 +146,33 @@ jobs:
       - name: Run e2e tests
         run: pnpm --filter petai-backend run test:e2e
 
+  web:
+    name: Web build & tests (Angular)
+    runs-on: ubuntu-latest
+    needs: validate-data
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm --filter pockai-web run test
+
+      # Compila es/en, prerenderiza la landing y falla si falta alguna traducción
+      - name: Build static site
+        run: pnpm --filter pockai-web run build
+
   desktop:
     name: Desktop build (Vite + Tauri)
     runs-on: ubuntu-latest
