@@ -13,6 +13,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagg
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { ModdingService, PublishModDto, WorkshopFilters } from './modding.service';
+import { ZodPipe } from '../../common/zod.pipe';
+import { publishModSchema, modRateSchema, modReportSchema, downloadModSchema, updateModSchema } from './modding.schemas';
 
 @ApiTags('Modding')
 @Controller('modding')
@@ -26,7 +28,7 @@ export class ModdingController {
   @ApiResponse({ status: 201, description: 'Mod publicado' })
   @ApiResponse({ status: 400, description: 'Payload/asset inválido' })
   @ApiResponse({ status: 429, description: 'Rate limit (5/día)' })
-  publish(@CurrentUser() user: { id: string }, @Body() dto: PublishModDto) {
+  publish(@CurrentUser() user: { id: string }, @Body(new ZodPipe(publishModSchema)) dto: PublishModDto) {
     return this.moddingService.publish(user.id, dto);
   }
 
@@ -70,7 +72,7 @@ export class ModdingController {
   rate(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,
-    @Body() body: { stars: number; rating?: string },
+    @Body(new ZodPipe(modRateSchema)) body: { stars: number; rating?: string },
   ) {
     return this.moddingService.rate(user.id, id, body.stars, body.rating);
   }
@@ -83,7 +85,7 @@ export class ModdingController {
   report(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,
-    @Body() body: { reason: string; details?: string },
+    @Body(new ZodPipe(modReportSchema)) body: { reason: string; details?: string },
   ) {
     return this.moddingService.report(user.id, id, body.reason, body.details);
   }
@@ -93,7 +95,7 @@ export class ModdingController {
   @Post(':id/download')
   @ApiOperation({ summary: 'Registrar descarga (+snapshot)' })
   @ApiResponse({ status: 201, description: 'Mod descargado' })
-  download(@CurrentUser() user: { id: string }, @Param('id') id: string, @Body() body: { petId?: string }) {
+  download(@CurrentUser() user: { id: string }, @Param('id') id: string, @Body(new ZodPipe(downloadModSchema)) body: { petId?: string }) {
     return this.moddingService.download(user.id, id, body?.petId);
   }
 
@@ -103,7 +105,7 @@ export class ModdingController {
   @ApiOperation({ summary: 'Editar un mod (solo creator)' })
   @ApiResponse({ status: 200, description: 'Mod actualizado' })
   @ApiResponse({ status: 403, description: 'No es el creator' })
-  update(@CurrentUser() user: { id: string }, @Param('id') id: string, @Body() dto: Partial<PublishModDto>) {
+  update(@CurrentUser() user: { id: string }, @Param('id') id: string, @Body(new ZodPipe(updateModSchema)) dto: Partial<PublishModDto>) {
     return this.moddingService.update(user.id, id, dto);
   }
 

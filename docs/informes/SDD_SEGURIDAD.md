@@ -809,6 +809,8 @@ Consecuencia: cualquier campo con tipo equivocado, faltante o malformado llega a
 **Diseño propuesto.**
 Decisión: **un `ZodValidationPipe` global + un esquema zod por endpoint, activado por un decorator**. Se reutiliza zod (ya usado en `auth`) y el idiom del `app-exception.filter.ts`. El pipe es *opt-in*: si un parámetro no lleva esquema, el cuerpo pasa sin tocar (así no rompe los 23 módulos de un golpe; se migran por riesgo).
 
+> **Nota de implementación.** Los pipes de NestJS reciben `ArgumentMetadata` (`{type, metatype, data}`), **no** `ExecutionContext`, por lo que un pipe global no puede identificar el handler/método para leer un esquema unido por decorator. Se implementa como un **pipe por endpoint**: `common/zod.pipe.ts` (`export class ZodPipe<T> { constructor(schema) }`) usado como `@Body(new ZodPipe(schema)) dto`. Es *opt-in* al igual que en el diseño (el endpoint que no lo lleva pasa intacto), devuelve `data` tipado y el 400 es `{ message: 'Datos inválidos', issues[] }`. El resto de secciones (esquemas por endpoint, orden de migración, tests) se cumple igual; el `@ZodBody` de los ejemplos se lee como `new ZodPipe(...)` y `main.ts` **no** registra pipe global.
+
 1. `common/zod-validation.pipe.ts` + `common/zod.decorator.ts`:
 
 ```ts

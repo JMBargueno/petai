@@ -8,11 +8,14 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SpectatorService, LiveBattleState, SpectatorSubscription } from './spectator.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { ZodPipe } from '../../common/zod.pipe';
+import { spectatorSubscribeSchema } from './spectator.schemas';
 
 /**
  * Combat Spectator REST endpoints.
@@ -33,8 +36,9 @@ export class SpectatorController {
   @Get('live')
   @ApiOperation({ summary: 'Get live battle state (10s delay applied)' })
   getLive(@Query('battleId') battleId: string): LiveBattleState | null {
+    // S-10: query param ausente → 400 (antes `throw new Error` → 500).
     if (!battleId) {
-      throw new Error('battleId query parameter required');
+      throw new BadRequestException('battleId es obligatorio');
     }
     return this.spectatorService.getLiveState(battleId);
   }
@@ -51,11 +55,9 @@ export class SpectatorController {
   @ApiOperation({ summary: 'Subscribe to a battle as spectator' })
   subscribe(
     @CurrentUser() user: any,
-    @Body() body: { battleId: string },
+    @Body(new ZodPipe(spectatorSubscribeSchema)) body: { battleId: string },
   ): SpectatorSubscription {
-    if (!body.battleId) {
-      throw new Error('battleId required');
-    }
+    // S-10: `battleId` se valida en el pipe (spectatorSubscribeSchema) → 400 si falta.
     return this.spectatorService.subscribe(body.battleId, user.id);
   }
 }

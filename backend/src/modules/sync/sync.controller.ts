@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { DeltaSyncService, SyncAction, PushResponse, PullResponse } from './delta-sync.service';
+import { ZodPipe } from '../../common/zod.pipe';
+import { syncPushSchema } from './sync.schemas';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 
@@ -34,11 +36,9 @@ export class SyncController {
   @ApiOperation({ summary: 'Push a batch of offline actions to server' })
   async push(
     @CurrentUser() user: any,
-    @Body() body: { actions: SyncAction[] },
+    @Body(new ZodPipe(syncPushSchema)) body: { actions: SyncAction[] },
   ): Promise<PushResponse> {
-    if (!body.actions || !Array.isArray(body.actions)) {
-      throw new Error('actions array required');
-    }
+    // S-10: `actions` (array no vacía, forma SyncAction, ≤500) se valida en el pipe → 400, no 500.
     return this.deltaSyncService.push(user.id, body.actions);
   }
 
