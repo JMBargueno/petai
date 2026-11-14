@@ -149,6 +149,39 @@ Recompensas: XP, monedas, felicidad y gasto de energía.
 | `notifications` | APNs y FCM; programación con BullMQ según el deterioro previsto |
 | `realtime` | Gateway Socket.IO: sincronización entre dispositivos y streaming del chat |
 | `health` | `/health` y métricas |
+| **Módulos de la Fase 7 (33 features)** ||
+| `missions` | Misiones diarias/semanales, generación, tracking, scheduler con paginación, claims |
+| `chests` | Cofres, drop engine ponderado, pity per-cofre, historial, WebSocket `chest:opened` |
+| `observability` | OpenTelemetry SDK, spans (request/DB/Redis), métricas, log serializer, W3C trace context |
+| `dev` (DevKit) | Actions de debug, seed rápido, hot-reload de game-data, watcher de archivos |
+| `environmental` | Clima (Open-Meteo), hora local, festivales, inactividad, contexto para IA |
+| `bonding` | Bonding meter 0-100, niveles de amistad, recompensas por nivel |
+| `notifications-ai` | Notificaciones IA personalizadas por personalidad, límites diarios |
+| `achievements` | Logros, constelación visual, puntos de logro, recompensas |
+| `assets` (Edge/CDN) | Served assets, versioning por hash, preloading predictivo |
+| `habitat` | Habitaciones, muebles, bonificaciones pasivas, colocación grid |
+| `seasons` | Temporadas, pase gratuito/premium, ligas por temporada |
+| `breeding` | Cruces, genética, mutaciones, incubación, tickets |
+| `raids` | Boss semanal, ataques, progreso global, recompensas |
+| `tournaments` | Bracket knockout, rondas, cuotas, recompensas |
+| `cooking` | Recetas, minijuego de cocina, buffs de combate |
+| `training` | Entrenamiento elemental, buffs temporales |
+| `genes` | Genes ocultos, temperamento, efectos en combate y IA |
+| `adventure` | Aventura narrativa IA, escenas, decisiones, recompensas |
+| `ai-router` | Multi-model router, fallback cascading, token budget |
+| `voice` | STT, TTS, voz por especie, prosodia emocional |
+| `presence` | Multi-device presence, cuidado cooperativo |
+| `sync` | CRDT, delta sync, offline-first |
+| `spectator` | Espectación en vivo, highlights, replays |
+| `modding` | UGC, workshop, sandbox, rating |
+| `webhooks` | Public API, API keys, webhooks configurables |
+| `security` | Token rotación, device fingerprint, E2E encryption |
+| `reengagement` | Welcome back, diario de ausencia, forgiveness ritual |
+| `buddies` | Pet buddies, interacciones, bonding mutuo |
+| `rituals` | Hábitos, streaks, detección de rutinas |
+| `mood-theater` | Micro-narrativas, moment capture, stickers |
+| `accessibility` | Prefs, alto contraste, minijuegos accesibles, modo simple |
+| `gifting` | Gifting, care packages, group feeding |
 
 ### 5.2 Modelo de datos (Prisma, resumen)
 ```
@@ -304,6 +337,13 @@ PushToken(userId, platform, token)
 - [ ] Seguridad: rate limiting, auditoría de dependencias, revisión de keys y pentest básico
 - [ ] Accesibilidad (VoiceOver/TalkBack, Dynamic Type) y localización (ES/EN)
 - [ ] Publicación en App Store, Google Play y descargas de escritorio; despliegue del backend (contenedores con Postgres y Redis gestionados)
+
+### Fase 7 — Funcionalidades Expandidas (33 features)
+- [x] **Oleada 1 — Hábito e Infraestructura**: Misiones, Cofres, Observability, DevKit, Environmental, Bonding, Notifications IA, Logros, Edge/CDN
+- [x] **Oleada 2 — Meta e IA**: Hábitat, Temporadas, Breeding, Raid, Torneo, Cocina, Entrenamiento, Genes, Aventura Narrativa IA
+- [x] **Oleada 3 — Comunidad y Ecosistema**: AI Router, Voice AI, Multi-Device, Offline CRDT, Spectator, Modding, Public API, Security, iOS+Skia, Welcome Back, Buddies, Rituals, Mood Theater, Accessibility, Gifting
+- **Hecho cuando**: cada feature tiene SDD completo (spec/plan/tasks en `.specify/memory/features/`), código backend funcional, tests unitarios pasando y build limpio.
+- **Detalle**: ver [`docs/NUEVAS_FUNCIONALIDADES.md`](NUEVAS_FUNCIONALIDADES.md) y [`docs/specs/`](specs/) para las 33 especificaciones.
 
 ---
 

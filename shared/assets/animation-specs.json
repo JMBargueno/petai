@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "notes": "AnimationSpec — un spec por species. Cada estado define frames (índices del sprite sheet), fps, easing, loop y triggers de transición. Se sirve de CDN con hash (integrity). Validación: scripts/validate-animations.ts.",
+  "validEasings": ["linear", "easeInQuad", "easeOutCubic", "easeInOutSine", "elastic"],
+  "specs": [
+    {
+      "species": "axolunar",
+      "element": "water",
+      "sheet": { "frames": 22, "source": "shared/assets/species/axolunar/anim.json" },
+      "defaultFps": 60,
+      "states": {
+        "idle": { "frames": [0, 1, 2, 3], "easing": "linear", "loop": true, "triggers": [
+          { "on": "mood=happy", "to": "happy" },
+          { "on": "vitals=sleep", "to": "sleep" },
+          { "on": "vitals=hunger", "to": "eat" },
+          { "on": "input=move", "to": "walk" }
+        ] },
+        "walk": { "frames": [4, 5, 6, 7], "easing": "linear", "loop": true, "triggers": [
+          { "on": "input=stop", "to": "idle" }
+        ] },
+        "eat": { "frames": [8, 9, 10, 11], "easing": "easeInOutSine", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "happy": { "frames": [12, 13, 14, 15], "easing": "elastic", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "sleep": { "frames": [16, 17], "easing": "linear", "loop": true, "triggers": [
+          { "on": "input=any", "to": "idle" }
+        ] },
+        "attack": { "frames": [18, 19, 20, 21], "easing": "easeOutCubic", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "hit": { "frames": [19, 20], "easing": "easeInQuad", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "victory": { "frames": [12, 13, 14, 15], "easing": "elastic", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "sad": { "frames": [2, 3], "easing": "linear", "loop": true, "triggers": [
+          { "on": "input=interact", "to": "happy" }
+        ] },
+        "evolution": { "frames": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], "easing": "easeInOutSine", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] }
+      }
+    },
+    {
+      "species": "ignisaur",
+      "element": "fire",
+      "sheet": { "frames": 22, "source": "shared/assets/species/ignisaur/anim.json" },
+      "defaultFps": 60,
+      "states": {
+        "idle": { "frames": [0, 1, 2, 3], "easing": "linear", "loop": true, "triggers": [
+          { "on": "mood=happy", "to": "happy" },
+          { "on": "vitals=sleep", "to": "sleep" },
+          { "on": "vitals=hunger", "to": "eat" },
+          { "on": "input=move", "to": "walk" }
+        ] },
+        "walk": { "frames": [4, 5, 6, 7], "easing": "linear", "loop": true, "triggers": [
+          { "on": "input=stop", "to": "idle" }
+        ] },
+        "eat": { "frames": [8, 9, 10, 11], "easing": "easeInOutSine", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "happy": { "frames": [12, 13, 14, 15], "easing": "elastic", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "sleep": { "frames": [16, 17], "easing": "linear", "loop": true, "triggers": [
+          { "on": "input=any", "to": "idle" }
+        ] },
+        "attack": { "frames": [18, 19, 20, 21], "easing": "easeOutCubic", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "hit": { "frames": [19, 20], "easing": "easeInQuad", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "victory": { "frames": [12, 13, 14, 15], "easing": "elastic", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "sad": { "frames": [2, 3], "easing": "linear", "loop": true, "triggers": [
+          { "on": "input=interact", "to": "happy" }
+        ] },
+        "evolution": { "frames": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], "easing": "easeInOutSine", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] }
+      }
+    },
+    {
+      "species": "florabud",
+      "element": "plant",
+      "sheet": { "frames": 22, "source": "shared/assets/species/florabud/anim.json" },
+      "defaultFps": 60,
+      "states": {
+        "idle": { "frames": [0, 1, 2, 3], "easing": "linear", "loop": true, "triggers": [
+          { "on": "mood=happy", "to": "happy" },
+          { "on": "vitals=sleep", "to": "sleep" },
+          { "on": "vitals=hunger", "to": "eat" },
+          { "on": "input=move", "to": "walk" }
+        ] },
+        "walk": { "frames": [4, 5, 6, 7], "easing": "linear", "loop": true, "triggers": [
+          { "on": "input=stop", "to": "idle" }
+        ] },
+        "eat": { "frames": [8, 9, 10, 11], "easing": "easeInOutSine", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "happy": { "frames": [12, 13, 14, 15], "easing": "elastic", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "sleep": { "frames": [16, 17], "easing": "linear", "loop": true, "triggers": [
+          { "on": "input=any", "to": "idle" }
+        ] },
+        "attack": { "frames": [18, 19, 20, 21], "easing": "easeOutCubic", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "hit": { "frames": [19, 20], "easing": "easeInQuad", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "victory": { "frames": [12, 13, 14, 15], "easing": "elastic", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] },
+        "sad": { "frames": [2, 3], "easing": "linear", "loop": true, "triggers": [
+          { "on": "input=interact", "to": "happy" }
+        ] },
+        "evolution": { "frames": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], "easing": "easeInOutSine", "loop": false, "triggers": [
+          { "on": "finish", "to": "idle" }
+        ] }
+      }
+    }
+  ]
+}

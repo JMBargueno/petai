@@ -15,6 +15,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 4** | Peleas Asíncronas | ✅ Completada (falta fin de temporada) | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ✅ Android (salvo Play Billing/FCM) · ⏳ iOS pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
 | **Fase 6** | Pulido y Lanzamiento | 🚧 Hecho lo técnico; pendiente lo que depende de cuentas externas | Seguridad, balance, optimización, tiendas y despliegue |
+| **Fase 7** | Funcionalidades Expandidas | ✅ Completada | 33 nuevas features (hábito, meta, IA, comunidad y ecosistema) |
 
 ---
 
@@ -113,3 +114,57 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 - [x] Pruebas de carga de lectura (`backend/scripts/loadtest.sh`): sin errores a 50 conexiones; cifras en `docs/DEPLOY.md`.
 - [x] Despliegue: `backend/Dockerfile` (probado: migra, arranca en producción y queda *healthy*), `docker-compose.prod.yml` y `docs/DEPLOY.md`.
 - [ ] Pendiente (requiere cuentas o equipo externo): arte definitivo de las 21 especies (reemplazando únicamente `base.png`, `mask.png` y `anim.json` de cada especie sin modificar código), firma de código de Windows y notarización en macOS, .dmg (hay que compilarlo en un Mac), tienda de Microsoft/Mac App Store, publicación en Play Store/App Store, auto-actualización, servidor de producción y dominio, auditoría externa, balance del juego con datos reales de jugadores.
+
+---
+
+## Fase 7 — Funcionalidades Expandidas (33 features)
+
+Implementación de 33 nuevas funcionalidades organizadas en tres oleadas. Cada feature tiene SDD completo (spec/plan/tasks en `.specify/memory/features/`) y specs de detalle en `docs/specs/`.
+
+### Oleada 1 — Hábito e Infraestructura
+
+| Feature | Módulo | Estado |
+|---|---|---|
+| 001 — Misiones diarias/semanales | `backend/src/missions/` | ✅ |
+| 002 — Cofres y drops aleatorios | `backend/src/modules/chests/` | ✅ |
+| 003 — Observabilidad OpenTelemetry | `backend/src/observability/` | ✅ |
+| 004 — DevKit + Hot Reload | `backend/src/modules/dev/` + `tools/devkit/` | ✅ |
+| 005 — Environmental Awareness | `backend/src/modules/environmental/` | ✅ |
+| 006 — Bonding Meter | `backend/src/modules/bonding/` | ✅ |
+| 007 — Pet Notifications IA | `backend/src/modules/notifications/` | ✅ |
+| 008 — Logros y Constelación | `backend/src/achievements/` | ✅ |
+| 009 — Edge/CDN + Preloading | `backend/src/modules/assets/` | ✅ |
+
+### Oleada 2 — Meta e IA
+
+| Feature | Módulo | Estado |
+|---|---|---|
+| 010 — Hábitat / Base | `backend/src/modules/habitat/` | ✅ |
+| 011 — Temporadas + Pase | `backend/src/modules/seasons/` | ✅ |
+| 012 — Breeding (Cruzamiento) | `backend/src/modules/breeding/` | ✅ |
+| 013 — Raid Boss | `backend/src/modules/raids/` | ✅ |
+| 014 — Torneo Knockout | `backend/src/modules/tournaments/` | ✅ |
+| 015 — Cocina / Menú | `backend/src/modules/cooking/` | ✅ |
+| 016 — Entrenamiento Elemental | `backend/src/modules/training/` | ✅ |
+| 017 — Genes y Temperamento | `backend/src/modules/genes/` | ✅ |
+| 018 — Aventura Narrativa IA | `backend/src/modules/adventure/` | ✅ |
+
+### Oleada 3 — Comunidad y Ecosistema
+
+| Feature | Módulo | Estado |
+|---|---|---|
+| 019 — Multi-Model AI Router | `backend/src/modules/ai-router/` | ✅ |
+| 020 — Voice AI (STT/TTS) | `backend/src/modules/voice/` | ✅ |
+| 021 — Multi-Device Presence | `backend/src/modules/presence/` | ✅ |
+| 022 — Offline-First CRDT | `backend/src/modules/sync/` | ✅ |
+| 023 — Combat Spectator | `backend/src/modules/spectator/` | ✅ |
+| 024 — Modding API + Workshop | `backend/src/modules/modding/` | ✅ |
+| 025 — Public API + Webhooks | `backend/src/modules/webhooks/` | ✅ |
+| 026 — Security Zero-Trust + E2E | `backend/src/modules/security/` | ✅ |
+| 027 — iOS + Skia Animation | `shared/assets/animation-specs.json` | ✅ |
+| 028 — Welcome Back | `backend/src/modules/reengagement/` | ✅ |
+| 029 — Pet Buddies | `backend/src/modules/buddies/` | ✅ |
+| 030 — Rituals | `backend/src/modules/rituals/` | ✅ |
+| 031 — Mood Theater | `backend/src/modules/mood-theater/` | ✅ |
+| 032 — Accessibility | `backend/src/modules/accessibility/` | ✅ |
+| 033 — Gifting & Care Packages | `backend/src/modules/gifting/` | ✅ |

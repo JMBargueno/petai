@@ -1,0 +1,12 @@
+{
+  "highContrast": { "minRatio": 7, "textMin": 16 },
+  "simpleMode": { "btnSize": 56, "textMax": 15, "aiMaxSentences": 2 },
+  "minigames": {
+    "catch_food": { "speedMul": 0.5, "zoneMul": 3, "timeMul": 2, "variant": "catch_food_easy" },
+    "memory_match": { "pairs": 4, "timeout": null, "hints": true, "variant": "memory_match_easy" },
+    "reflex": { "timing": false, "penalty": 0, "variant": "reflex_easy" }
+  },
+  "shortcuts": { "feed": "F", "clean": "C", "play": "J", "sleep": "S" },
+  "fontSize": { "min": 50, "max": 200, "default": 100 },
+  "colorblindModes": ["protanopia", "deuteranopia", "tritanopia"]
+}

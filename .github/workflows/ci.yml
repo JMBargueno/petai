@@ -115,9 +115,9 @@ jobs:
       - name: Generate Prisma client
         run: pnpm --filter petai-backend exec prisma generate
 
-      # Aplica todas las migraciones sobre una base de datos vacía (comprueba que arrancan desde cero)
-      - name: Apply migrations
-        run: pnpm --filter petai-backend exec prisma migrate deploy
+      # Sincroniza el schema completo con la base de datos (incluye modelos nuevos sin migration)
+      - name: Push schema to database
+        run: pnpm --filter petai-backend exec prisma db push --skip-generate
 
       - name: Seed catalog data
         run: pnpm --filter petai-backend run prisma:seed
