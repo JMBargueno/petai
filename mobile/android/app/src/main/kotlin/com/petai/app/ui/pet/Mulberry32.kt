@@ -10,8 +10,8 @@ class Mulberry32(seed: Long) {
     fun nextFloat(): Float {
         state = state + 0x6D2B79F5
         var t = state xor (state ushr 15)
-        t = Math.imul(t, 1 or state)
-        t = (t + Math.imul(t xor (t ushr 7), 61 or t)) xor t
+        t = t * (1 or state)
+        t = (t + ((t xor (t ushr 7)) * (61 or t))) xor t
         val res = (t xor (t ushr 14)) ushr 0
         return (res.toLong() and 0xFFFFFFFFL).toFloat() / 4294967296f
     }
