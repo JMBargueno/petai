@@ -2,6 +2,7 @@ packages:
   - 'backend'
   - 'desktop'
   - 'edge'
+  - 'web'
   - 'shared/*'
   - 'tools/*'
 
@@ -12,8 +13,11 @@ allowBuilds:
   '@cloudflare/workerd-linux-64': true
   '@cloudflare/workerd-macos-arm64': true
   '@cloudflare/workerd-windows-64': true
+  '@parcel/watcher': false
   argon2: true
   esbuild: true
+  lmdb: false
+  msgpackr-extract: false
   prisma: true
   protobufjs: true
   workerd: true

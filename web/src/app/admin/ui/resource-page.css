@@ -1,0 +1,221 @@
+:host {
+  display: block;
+}
+.page {
+  display: grid;
+  gap: 16px;
+}
+.page__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+h1,
+h2 {
+  margin: 0;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-heading-sm);
+  line-height: var(--leading-heading-sm);
+}
+.page__head h2,
+.dialog h2 {
+  font-size: var(--text-subheading);
+}
+p {
+  margin: 4px 0 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.toolbar .input {
+  inline-size: auto;
+  min-inline-size: 180px;
+  border-radius: var(--radius-pills);
+}
+
+.error {
+  margin: 0;
+  padding: 8px 16px;
+  border: 2px solid var(--color-ember);
+  border-radius: var(--radius-2xl);
+  background: var(--color-paper-white);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Tabla (guías `responsive-table` y `sortable-table`) */
+.table-wrap {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(640px, 70vh);
+  border: var(--outline);
+  border-radius: var(--radius-cards);
+  background: var(--color-paper-white);
+  container-type: inline-size;
+}
+table {
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+caption {
+  padding: 12px 16px;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-caption);
+  letter-spacing: 0.032em;
+  text-align: start;
+  text-transform: uppercase;
+}
+thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+}
+th,
+td {
+  padding: 8px 16px;
+  border-block-start: var(--outline);
+  text-align: start;
+  vertical-align: middle;
+}
+thead th {
+  background: var(--color-lavender);
+  font-size: var(--text-caption);
+  letter-spacing: 0.032em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+thead th:has(> button) {
+  padding: 0;
+}
+thead th button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  inline-size: 100%;
+  min-block-size: 40px;
+  padding: 8px 16px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+thead th button:focus-visible {
+  outline-offset: -3px;
+}
+thead th svg {
+  inline-size: 10px;
+  block-size: 10px;
+  flex: none;
+  fill: currentColor;
+}
+thead th svg path {
+  opacity: 0.3;
+}
+th[aria-sort='ascending'] .up,
+th[aria-sort='descending'] .down {
+  opacity: 1;
+}
+tbody th {
+  font-weight: var(--font-weight-bold);
+}
+.num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+thead th.num button {
+  justify-content: end;
+}
+.actions {
+  display: flex;
+  gap: 4px;
+}
+.empty {
+  padding: 32px;
+  text-align: center;
+}
+.input--cell {
+  inline-size: 104px;
+  min-block-size: 32px;
+  padding: 4px 12px;
+  text-align: end;
+}
+
+/* Estrecho: cada fila pasa a ser una tarjeta con la etiqueta de columna delante. */
+@container (width < 640px) {
+  table,
+  tbody,
+  tr,
+  th,
+  td {
+    display: block;
+  }
+  thead {
+    display: none;
+  }
+  tbody th {
+    background: var(--color-lavender);
+  }
+  td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-block-start: 0;
+    text-align: end;
+  }
+  td[data-label]::before {
+    content: attr(data-label);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--text-caption);
+    letter-spacing: 0.032em;
+    text-transform: uppercase;
+  }
+}
+
+/* Formulario del diálogo */
+.form {
+  display: grid;
+  gap: 12px;
+}
+.field {
+  display: grid;
+  gap: 4px;
+}
+.field label {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-caption);
+  letter-spacing: 0.032em;
+  text-transform: uppercase;
+}
+.field .input:read-only:not(select),
+.field .input:disabled {
+  background: var(--color-soft-mist);
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: var(--font-weight-bold);
+}
+.check input {
+  inline-size: 20px;
+  block-size: 20px;
+  accent-color: var(--color-carbon);
+}
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+  margin-block-start: 12px;
+}

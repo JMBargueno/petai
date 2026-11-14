@@ -56,6 +56,7 @@ La app es multiplataforma: un backend autoritativo y varios clientes que muestra
 | **Escritorio** (Windows, Tauri 2 + Svelte) | Funcional | Mascota en una ventana transparente sobre el escritorio que camina, duerme y come, con clics a través de la ventana. Bandeja del sistema, panel de control (cuenta, eclosión, inventario, estadísticas, minijuegos, tienda, Arena, IA), chat flotante y notificaciones nativas. Modo Hermes local. Sincronización por WebSocket. |
 | **Android** (Kotlin + Jetpack Compose) | Funcional, sin Play Billing ni FCM | Registro e inicio de sesión, eclosión, cuidados con los sprites compartidos, tienda, pestaña Jugar (Arena y minijuegos), chat IA, ajustes de IA, vinculación con el escritorio por código, widget de pantalla de inicio y avisos locales de cuidados. |
 | **iOS** (SwiftUI, Liquid Glass) | Pendiente | — |
+| **Web** (Angular 22, [`web/`](web/README.md)) | Landing funcional; panel con datos de ejemplo | Web oficial con el nombre público del juego, **Pockai** (pocket + yokai + AI): landing estática en español e inglés y un panel de administración oculto que, de momento, trabaja con datos simulados y no se conecta al backend. |
 
 Para vincular el escritorio con el móvil, la app de escritorio muestra un código de 6 dígitos que confirmas desde Android.
 

@@ -1,0 +1,170 @@
+<app-marquee [text]="marquee" />
+
+<header class="nav">
+  <a class="logo" href="#inicio" aria-label="Pockai, inicio" i18n-aria-label="@@nav.home">P</a>
+
+  <nav class="nav__links" aria-label="Principal" i18n-aria-label="@@nav.label">
+    <a class="btn btn--sm" href="#que-es" i18n="@@nav.about">Qué es</a>
+    <a class="btn btn--sm" href="#funciones" i18n="@@nav.features">Funciones</a>
+    <a class="btn btn--sm" href="#pockais" i18n="@@nav.species">Pockais</a>
+    <a class="btn btn--sm" href="#faq">FAQ</a>
+  </nav>
+
+  <div class="nav__end">
+    <div class="lang" role="group" aria-label="Idioma" i18n-aria-label="@@nav.lang">
+      <a href="/es/" lang="es" hreflang="es" [attr.aria-current]="locale === 'es' ? 'true' : null">ES</a>
+      <a href="/en/" lang="en" hreflang="en" [attr.aria-current]="locale === 'en' ? 'true' : null">EN</a>
+    </div>
+    <a class="btn btn--filled btn--sm" href="#descargar" i18n="@@nav.cta">Descargar</a>
+  </div>
+</header>
+
+<main>
+  <section id="inicio" class="band band--sky hero">
+    <app-ribbon shape="wave" />
+    <app-sticker class="float float--a" icon="egg" color="sunburst" [rotate]="-10" [size]="112" />
+    <app-sticker class="float float--b" icon="chat" color="lavender" [rotate]="9" [size]="88" />
+    <app-sticker class="float float--c" icon="bolt" color="ember" [rotate]="14" [size]="80" />
+    <app-sticker class="float float--d" icon="heart" color="mint-pop" [rotate]="-7" [size]="96" />
+
+    <div class="band__inner hero__inner">
+      <h1 class="display hero__title">Pockai</h1>
+      <p class="hero__tagline" i18n="@@hero.tagline">Tu yokai de bolsillo, con inteligencia artificial.</p>
+      <p class="hero__sub" i18n="@@hero.sub">
+        Eclosiona un huevo, cuida a tu criatura y hazla crecer. Vive en tu escritorio y en tu móvil a la vez.
+      </p>
+      <div class="hero__actions">
+        <a class="btn btn--filled" href="#descargar" i18n="@@hero.cta.primary">Descargar Pockai</a>
+        <a class="btn" href="#funciones" i18n="@@hero.cta.secondary">Ver funciones</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="que-es" class="band band--white">
+    <div class="band__inner">
+      <h2 class="display section-title" i18n="@@about.title">Qué es Pockai</h2>
+      <p class="lead" i18n="@@about.lead">Tres palabras en un nombre: pocket, yokai y AI.</p>
+
+      <ul class="trio">
+        <li class="card trio__card trio__card--sunburst">
+          <app-sticker icon="phone" color="voltage-violet" [rotate]="-6" />
+          <h3>Pocket</h3>
+          <p i18n="@@about.pocket.body">
+            De bolsillo. Tu mascota te acompaña en el escritorio de Windows y en Android, siempre sincronizada.
+          </p>
+        </li>
+        <li class="card trio__card trio__card--lavender">
+          <app-sticker icon="egg" color="mint-pop" [rotate]="5" />
+          <h3>Yokai</h3>
+          <p i18n="@@about.yokai.body">
+            Criaturas con rareza, patrón y paleta propios. Cada eclosión se decide en el servidor y ninguna sale igual que otra.
+          </p>
+        </li>
+        <li class="card trio__card trio__card--mint">
+          <app-sticker icon="chat" color="sunburst" [rotate]="-4" />
+          <h3>AI</h3>
+          <p i18n="@@about.ai.body">
+            Con un modelo de lenguaje conectado, tu pockai tiene personalidad: charla contigo, recuerda y te echa una mano.
+          </p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="funciones" class="band band--gray has-ribbon">
+    <app-ribbon shape="arc" />
+    <div class="band__inner">
+      <h2 class="display section-title" i18n="@@features.title">Todo lo que hace</h2>
+      <p class="lead" i18n="@@features.lead">Un tamagotchi con mucho más dentro.</p>
+
+      <ul class="features">
+        @for (f of features; track f.title) {
+          <li class="card feature">
+            <app-sticker [icon]="f.icon" [color]="f.color" [rotate]="$even ? -5 : 6" [size]="64" />
+            <h3>{{ f.title }}</h3>
+            <p>{{ f.body }}</p>
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section id="pockais" class="band band--sky">
+    <div class="band__inner">
+      <h2 class="display section-title" i18n="@@species.title">Los primeros pockais</h2>
+      <p class="lead" i18n="@@species.lead">Las especies con las que empieza el juego. Vendrán más.</p>
+
+      <ul class="species">
+        @for (s of species; track s.id) {
+          <li class="card species__card" [style.background]="'var(--color-' + s.color + ')'">
+            <div class="species__art">
+              <img [src]="s.sprite" [alt]="s.name" width="256" height="256" loading="lazy" decoding="async" />
+            </div>
+            <h3>{{ s.name }}</h3>
+            <p class="species__tags">
+              <span class="tag">{{ s.element }}</span>
+              <span class="tag">{{ s.rarity }}</span>
+            </p>
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section id="descargar" class="band band--white has-ribbon">
+    <app-ribbon shape="loop" />
+    <div class="band__inner">
+      <h2 class="display section-title" i18n="@@download.title">Llévatelo</h2>
+      <p class="lead" i18n="@@download.lead">La misma mascota en todos tus dispositivos.</p>
+
+      <div class="download">
+        <aside class="qr">
+          <div class="qr__panel">
+            <img src="sprites/egg_closed.svg" alt="" width="160" height="160" loading="lazy" decoding="async" />
+          </div>
+          <div class="qr__label">
+            <p class="qr__title" i18n="@@download.card.label">Descargar</p>
+            <p i18n="@@download.card.body">Tu primer huevo te espera.</p>
+          </div>
+        </aside>
+
+        <ul class="platforms">
+          @for (p of platforms; track p.name) {
+            <li class="card platform">
+              <div class="platform__head">
+                <h3>{{ p.name }}</h3>
+                <span class="tag">{{ p.status }}</span>
+              </div>
+              <p>{{ p.body }}</p>
+              @if (p.url) {
+                <a class="btn btn--filled" [href]="p.url" rel="noopener" i18n="@@download.cta">Descargar</a>
+              } @else {
+                <span class="btn" aria-disabled="true" i18n="@@download.soon">Descarga próximamente</span>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="band band--gray">
+    <div class="band__inner faq">
+      <h2 class="display section-title" i18n="@@faq.title">Preguntas</h2>
+      <div class="faq__list">
+        @for (item of faq; track item.q) {
+          <details class="card" name="faq">
+            <summary>{{ item.q }}</summary>
+            <p>{{ item.a }}</p>
+          </details>
+        }
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <p class="display footer__mark" aria-hidden="true">Pockai</p>
+  <p class="label-caps">Pocket + Yokai + AI</p>
+  <p>© {{ year }} Pockai. <span i18n="@@footer.rights">Todos los derechos reservados.</span></p>
+</footer>
