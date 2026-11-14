@@ -5,6 +5,7 @@
   import MinigamesTab from './MinigamesTab.svelte';
   import AiTab from './AiTab.svelte';
   import ArenaTab from './ArenaTab.svelte';
+  import SeasonsTab from './SeasonsTab.svelte';
 
   export let user: any = null;
   export let pet: any = null;
@@ -53,7 +54,7 @@
 
   const dispatch = createEventDispatcher();
 
-  let activeTab: 'pet' | 'hatch' | 'games' | 'arena' | 'ai' | 'shop' | 'account' = 'pet';
+  let activeTab: 'pet' | 'hatch' | 'games' | 'arena' | 'seasons' | 'ai' | 'shop' | 'account' = 'pet';
 
   // Auth inputs
   let isLoginMode = true;
@@ -234,6 +235,7 @@
         </button>
         <button class:active={activeTab === 'games'} on:click={() => (activeTab = 'games')}>Juegos</button>
         <button class:active={activeTab === 'arena'} on:click={() => (activeTab = 'arena')}>Arena</button>
+        <button class:active={activeTab === 'seasons'} on:click={() => (activeTab = 'seasons')}>Temporada</button>
         <button class:active={activeTab === 'ai'} on:click={() => (activeTab = 'ai')}>IA</button>
         <button class:active={activeTab === 'shop'} on:click={() => (activeTab = 'shop')}>Tienda</button>
         <button class:active={activeTab === 'account'} on:click={() => (activeTab = 'account')}>Cuenta</button>
@@ -377,6 +379,10 @@
             on:refreshUser
             on:refreshPet
           />
+
+        <!-- Pestaña: Temporada (oleada 3, F-10/F-11) -->
+        {:else if activeTab === 'seasons'}
+          <SeasonsTab on:refreshUser />
 
         <!-- Pestaña: IA (ajustes BYOK y chat) -->
         {:else if activeTab === 'ai'}

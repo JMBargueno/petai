@@ -161,29 +161,36 @@ export class GiftingService {
   }
 
   /**
-   * S-03 / C-02: expira los gifts pending caducados y devuelve el item al remitente.
-   * Solo una réplica ejecuta el ciclo por ventana (CronLockService).
+   * F-12 / S-03: expira los gifts `pending` ya caducados y devuelve el item al remitente.
+   * El reclamo es atómico por estado (`updateMany where status='pending'`), así que no hay
+   * devolución doble aunque el ciclo se solape. Devuelve cuántos se procesaron.
    */
+  async expireDueGifts(): Promise<number> {
+    const expired = await this.prisma.gift.findMany({
+      where: { status: 'pending', expiresAt: { lte: new Date() } },
+      take: 200,
+    });
+    for (const g of expired) {
+      await this.prisma.$transaction(async (tx) => {
+        const claimed = await tx.gift.updateMany({
+          where: { id: g.id, status: 'pending' },
+          data: { status: 'expired', resolvedAt: new Date() },
+        });
+        if (claimed.count === 0) return;
+        await this.grantInventory(tx, g.senderId, g.itemId, g.qty);
+      });
+    }
+    if (expired.length > 0) this.logger.log(`Gifts expirados: ${expired.length}`);
+    return expired.length;
+  }
+
+  /** C-02: solo una réplica ejecuta el ciclo por ventana (CronLockService). */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async expireGifts() {
     const token = await this.cronLock.guard('gifts:expire', 240_000);
     if (!token) return;
     try {
-      const expired = await this.prisma.gift.findMany({
-        where: { status: 'pending', expiresAt: { lte: new Date() } },
-        take: 200,
-      });
-      for (const g of expired) {
-        await this.prisma.$transaction(async (tx) => {
-          const claimed = await tx.gift.updateMany({
-            where: { id: g.id, status: 'pending' },
-            data: { status: 'expired', resolvedAt: new Date() },
-          });
-          if (claimed.count === 0) return;
-          await this.grantInventory(tx, g.senderId, g.itemId, g.qty);
-        });
-      }
-      if (expired.length > 0) this.logger.log(`Gifts expirados: ${expired.length}`);
+      await this.expireDueGifts();
     } catch (err) {
       this.logger.error(`Error expirando gifts: ${(err as Error).message}`);
     } finally {

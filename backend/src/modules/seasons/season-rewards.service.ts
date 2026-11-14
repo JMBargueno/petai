@@ -33,40 +33,38 @@ export class SeasonRewardsService {
       where: { userId_seasonId: { userId, seasonId } },
     });
 
-    let totalCoins = 0;
-    let totalGems = 0;
-    const items: string[] = [];
+    const acc: { coins: number; gems: number; items: string[] } = { coins: 0, gems: 0, items: [] };
 
     for (let tier = fromTier; tier <= toTier; tier++) {
       const tierConfig = this.allTiers.find((t) => t.tier === tier);
       if (!tierConfig) continue;
 
       for (const reward of tierConfig.freeRewards) {
-        this.applyReward(reward, { coins: totalCoins, gems: totalGems, items });
+        this.applyReward(reward, acc);
       }
 
       if (hasPass) {
         for (const reward of tierConfig.premiumRewards) {
-          this.applyReward(reward, { coins: totalCoins, gems: totalGems, items });
+          this.applyReward(reward, acc);
         }
       }
     }
 
-    if (totalCoins > 0 || totalGems > 0) {
+    if (acc.coins > 0 || acc.gems > 0) {
       await this.prisma.user.update({
         where: { id: userId },
         data: {
-          coins: totalCoins > 0 ? { increment: totalCoins } : undefined,
-          gems: totalGems > 0 ? { increment: totalGems } : undefined,
+          coins: acc.coins > 0 ? { increment: acc.coins } : undefined,
+          gems: acc.gems > 0 ? { increment: acc.gems } : undefined,
         },
       });
     }
 
     this.logger.log(
-      `Season rewards granted: user=${userId} tiers=${fromTier}-${toTier} coins=+${totalCoins} gems=+${totalGems} items=[${items.join(',')}]`,
+      `Season rewards granted: user=${userId} tiers=${fromTier}-${toTier} coins=+${acc.coins} gems=+${acc.gems} items=[${acc.items.join(',')}]`,
     );
 
-    return { coins: totalCoins, gems: totalGems, items };
+    return { coins: acc.coins, gems: acc.gems, items: acc.items };
   }
 
   private applyReward(
