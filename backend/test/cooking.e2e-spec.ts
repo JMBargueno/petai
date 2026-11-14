@@ -1,0 +1,184 @@
+import { Test } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
+
+/**
+ * Cooking / Menú del día (e2e) — camino feliz (feature 015).
+ *
+ * Cubre las 3 rutas del módulo `cooking` (cooking.controller.ts):
+ *   POST /v1/cooking/start       → sesión con receta, ingredientes, orden y timer.
+ *   POST /v1/cooking/submit      → valida el resultado y otorga buff + monedas si es correcto.
+ *   GET  /v1/cooking/daily-menu  → receta especial del día (determinista por fecha).
+ *
+ * Precondiciones reales leídas del service (cooking.service.ts), no adivinadas:
+ *   · start: el pet debe existir (getPetById), NO estar durmiendo (pet.sleeping=false),
+ *     tener pet.energy >= ENERGY_COST (=10), tener < DAILY_LIMIT (=20) sesiones en las
+ *     últimas 24 h, respetar el cooldown de COOLDOWN_SECONDS (=15 s) desde la última
+ *     sesión, y pet.level >= unlockLevel de al menos una receta (=1, `starter_soup`).
+ *   · submit: `score` (number) + `correctOrder` (boolean). Con correctOrder=true ⇒
+ *     correctCount = ingredientes.length ⇒ pct=1 ⇒ buff al 100% y coins = floor(1*40)=40.
+ *   · daily-menu: solo requiere auth; la receta se elige con hashSeed(`daily:YYYY-MM-DD`)
+ *     y es determinista dentro de un mismo día.
+ *
+ * Cada prueba crea un entrenador + mascota frescos (nivel 30, energía 100, no durmiendo,
+ * lastTickAt actual) para que el límite diario y el cooldown no interpongan. La receta de
+ * `start` es aleatoria entre las desbloqueadas, así que se asertan invariantes (shape,
+ * duración, buff presente) y no el stat concreto del buff.
+ */
+describe('Cooking: cocina, submit y menú del día (e2e) — happy path', () => {
+  let app: INestApplication;
+  let prisma: PrismaService;
+  const api = () => request(app.getHttpServer());
+  const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
+  const createdUsers: string[] = [];
+
+  const KNOWN_STATS = ['atk', 'def', 'esp', 'vel'];
+  const BUFF_DURATION_MS = 24 * 3600 * 1000;
+
+  type U = { token: string; userId: string; petId: string; auth: Record<string, string> };
+
+  /**
+   * Crea un entrenador + mascota con las precondiciones mínimas para cocinar:
+   * register → GET /v1/eggs → POST /v1/eggs/:id/hatch (petId) → GET /v1/me (userId),
+   * y luego fija nivel 30, energía 100, sleeping=false y lastTickAt actual.
+   */
+  async function signup(): Promise<U> {
+    const email = `cook_${Date.now()}_${Math.random().toString(36).slice(2, 8)}@petai.local`;
+    const reg = await api()
+      .post('/v1/auth/register')
+      .send({ email, password: 'Password123!', displayName: 'Cook Test' })
+      .expect(201);
+    const token = reg.body.accessToken as string;
+    const a = auth(token);
+    const eggs = await api().get('/v1/eggs').set(a).expect(200);
+    const petId = (await api().post(`/v1/eggs/${eggs.body[0].id}/hatch`).set(a).expect(201)).body
+      .id as string;
+    const userId = (await api().get('/v1/me').set(a).expect(200)).body.id as string;
+    createdUsers.push(userId);
+
+    await prisma.pet.update({
+      where: { id: petId },
+      data: { level: 30, sleeping: false, energy: 100, lastTickAt: new Date() },
+    });
+    return { token, userId, petId, auth: a };
+  }
+
+  beforeAll(async () => {
+    const mod = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    app = mod.createNestApplication();
+    app.setGlobalPrefix('v1');
+    await app.init();
+    prisma = app.get(PrismaService);
+  });
+
+  afterAll(async () => {
+    for (const id of createdUsers) {
+      await prisma.user.delete({ where: { id } }).catch(() => {});
+    }
+    await app.close();
+  });
+
+  it('POST /v1/cooking/start inicia una sesión (receta, orden, timer y descuento de energía)', async () => {
+    const { auth: a, petId } = await signup();
+
+    const start = await api()
+      .post('/v1/cooking/start')
+      .set(a)
+      .send({ petId })
+      .expect(201);
+
+    const body = start.body;
+    // Shape real de CookingService.start.
+    expect(typeof body.sessionId).toBe('string');
+    expect(typeof body.recipeId).toBe('string');
+    expect(typeof body.recipeName).toBe('string');
+    expect(typeof body.difficulty).toBe('number');
+    expect(Array.isArray(body.ingredients)).toBe(true);
+    expect(body.ingredients.length).toBeGreaterThan(0);
+    // `order` es una permutación de `ingredients` (misma longitud, mismos elementos).
+    expect(Array.isArray(body.order)).toBe(true);
+    expect(body.order.length).toBe(body.ingredients.length);
+    expect(new Set(body.order).size).toBe(body.ingredients.length);
+    expect(new Set(body.order).size).toBe(new Set(body.ingredients).size);
+    expect(Array.isArray(body.hotPotPositions)).toBe(true);
+    expect(body.durationSeconds).toBe(60);
+    expect(typeof body.seed).toBe('number');
+    expect(typeof body.expiresAt).toBe('string');
+
+    // Efecto real en BD: sesión creada (finishedAt nulo) y energía descontada (100 → 90).
+    const session = await prisma.cookingSession.findFirst({
+      where: { id: body.sessionId, petId },
+    });
+    expect(session).not.toBeNull();
+    expect(session!.finishedAt).toBeNull();
+    expect(session!.recipeId).toBe(body.recipeId);
+    expect((await prisma.pet.findUniqueOrThrow({ where: { id: petId } })).energy).toBe(90);
+  });
+
+  it('POST /v1/cooking/submit con orden correcto otorga buff al 100% y 40 monedas', async () => {
+    const { auth: a, userId, petId } = await signup();
+
+    const start = await api()
+      .post('/v1/cooking/start')
+      .set(a)
+      .send({ petId })
+      .expect(201);
+    const sessionId = start.body.sessionId as string;
+    const ingredientsCount = (start.body.ingredients as string[]).length;
+
+    const coinsBefore = (await prisma.user.findUniqueOrThrow({ where: { id: userId } })).coins;
+
+    // correctOrder=true ⇒ correctCount = ingredientes.length ⇒ pct=1 ⇒ buff full + coins=40.
+    // `score` es irrelevante cuando correctOrder=true; se envía 0 (número finito válido).
+    const submit = await api()
+      .post('/v1/cooking/submit')
+      .set(a)
+      .send({ sessionId, score: 0, correctOrder: true })
+      .expect(201);
+
+    const body = submit.body;
+    expect(body.score).toBe(ingredientsCount);
+    expect(body.correctPct).toBe(100);
+    expect(body.coins).toBe(40);
+    // La receta elegida es aleatoria entre las desbloqueadas (nivel 30), por lo que el stat
+    // del buff varía; se valida que existe, viene de cocina, con valor positivo y 24 h.
+    expect(body.buff).not.toBeNull();
+    expect(body.buff.source).toBe('cooking');
+    expect(KNOWN_STATS).toContain(body.buff.stat);
+    expect(body.buff.value).toBeGreaterThan(0);
+    expect(body.buff.durationMs).toBe(BUFF_DURATION_MS);
+    expect(body.buff.recipeId).toBe(start.body.recipeId);
+
+    // Efecto real en BD: sesión finalizada, buffApplied=true, score guardado y +40 monedas.
+    const session = await prisma.cookingSession.findUnique({ where: { id: sessionId } });
+    expect(session!.finishedAt).not.toBeNull();
+    expect(session!.buffApplied).toBe(true);
+    expect(session!.score).toBe(ingredientsCount);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: userId } })).coins).toBe(
+      coinsBefore + 40,
+    );
+  });
+
+  it('GET /v1/cooking/daily-menu devuelve la receta del día (determinista por fecha)', async () => {
+    const { auth: a } = await signup();
+
+    const res = await api().get('/v1/cooking/daily-menu').set(a).expect(200);
+
+    const today = new Date().toISOString().split('T')[0];
+    expect(res.body.date).toBe(today);
+    expect(typeof res.body.recipeId).toBe('string');
+    expect(typeof res.body.recipeName).toBe('string');
+    expect(typeof res.body.difficulty).toBe('number');
+    expect(Array.isArray(res.body.ingredients)).toBe(true);
+    expect(res.body.ingredients.length).toBeGreaterThan(0);
+    expect(res.body.buff).toMatchObject({ stat: expect.any(String), value: expect.any(Number) });
+    expect(typeof res.body.bonus).toBe('string');
+
+    // Determinista por fecha: dos lecturas el mismo día devuelven la misma receta.
+    const res2 = await api().get('/v1/cooking/daily-menu').set(a).expect(200);
+    expect(res2.body.recipeId).toBe(res.body.recipeId);
+    expect(res2.body.recipeName).toBe(res.body.recipeName);
+  });
+});

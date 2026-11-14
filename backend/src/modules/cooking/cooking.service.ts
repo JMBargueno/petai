@@ -51,7 +51,9 @@ export class CookingService {
     const available = RECIPES.filter((r) => r.unlockLevel <= pet.level);
     if (available.length === 0) throw new BadRequestException('Nivel insuficiente para cocinar');
     const recipe = available[Math.floor(Math.random() * available.length)];
-    const seed = hashSeed(`${userId}:${petId}:${Date.now().toString(36)}`);
+    // & 0x7FFFFFFF: la columna `cookingSession.seed` es INT4 (signed). `hashSeed` devuelve `>>> 0`
+    // (unsigned, hasta 2^32); sin la máscara, ~50% de las semillas no caben → 500 al crear la sesión.
+    const seed = hashSeed(`${userId}:${petId}:${Date.now().toString(36)}`) & 0x7fffffff;
     const ingredientOrder = this.buildOrder(recipe.ingredients, seed);
     const hotPotPositions = this.buildHotPots(recipe.ingredients.length, seed);
     await this.prisma.pet.update({ where: { id: petId }, data: { energy: Math.max(0, pet.energy - ENERGY_COST) } });

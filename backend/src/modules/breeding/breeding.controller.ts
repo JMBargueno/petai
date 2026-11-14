@@ -41,6 +41,16 @@ export class BreedingController {
     return this.breedingService.startBreeding(user.id, body.parent1Id, body.parent2Id);
   }
 
+  // 'history' debe declararse ANTES de ':id': NestJS resuelve las rutas en orden de declaración, y si
+  // ':id' fuera primero, GET /breeding/history sería capturado por el parámetro id="history" → 404.
+  @Get('history')
+  @ApiOperation({ summary: 'Obtener el historial de crías del usuario' })
+  @ApiResponse({ status: 200, description: 'Historial de crías' })
+  @ApiResponse({ status: 401, description: 'Token inválido' })
+  getHistory(@CurrentUser() user: { id: string }) {
+    return this.breedingService.getHistory(user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener el estado de una cría' })
   @ApiResponse({ status: 200, description: 'Estado de la cría' })
@@ -51,13 +61,5 @@ export class BreedingController {
     @Param('id') breedingId: string,
   ) {
     return this.breedingService.getBreeding(user.id, breedingId);
-  }
-
-  @Get('history')
-  @ApiOperation({ summary: 'Obtener el historial de crías del usuario' })
-  @ApiResponse({ status: 200, description: 'Historial de crías' })
-  @ApiResponse({ status: 401, description: 'Token inválido' })
-  getHistory(@CurrentUser() user: { id: string }) {
-    return this.breedingService.getHistory(user.id);
   }
 }
