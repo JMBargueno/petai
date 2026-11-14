@@ -28,21 +28,19 @@ export class SttService {
   }
 
   /**
-   * Transcribe base64-encoded audio to text.
-   * @param audioBase64 - Base64 encoded audio (WAV/MP3/Opus)
+   * Transcribe binary audio to text.
+   * @param audio - Binary audio (WAV/MP3/Opus)
    * @param lang - Language hint ('es', 'en', or 'auto')
    */
-  async transcribe(audioBase64: string, lang: string = 'auto'): Promise<SttResult> {
+  async transcribe(audio: Buffer, lang: string = 'auto'): Promise<SttResult> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
-      // Convert base64 to Buffer for FormData
-      const audioBuffer = Buffer.from(audioBase64, 'base64');
-      const fileName = `audio-${Date.now()}.wav`;
+      const fileName = `audio-${Date.now()}`;
 
       const formData = new FormData();
-      formData.append('file', new Blob([audioBuffer]), fileName);
+      formData.append('file', new Blob([new Uint8Array(audio)]), fileName);
       formData.append('model', this.model);
       if (lang !== 'auto') formData.append('language', lang);
 
@@ -63,7 +61,7 @@ export class SttService {
       }
 
       const result = await response.json() as { text: string };
-      const duration = audioBuffer.length / 32000; // Approximate duration for 16kHz mono
+      const duration = audio.length / 32000; // Approximate duration for 16kHz mono
 
       return {
         text: result.text.trim(),

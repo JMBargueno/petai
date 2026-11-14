@@ -1,16 +1,15 @@
 import { z } from 'zod';
 
 /**
- * S-10: validación de entrada de voz. La acotación de tamaño vive aquí (en vez del `if` manual
- * del controller): base64 ≤ 10MB, texto ≤ 5000, `lang`/`mood` acotados. `.strict()` rechaza
- * campos sobrantes.
+ * S-10: validación de entrada de voz. `.strict()` rechaza campos sobrantes.
+ *
+ * F-08: el audio ya no llega como base64 dentro de un JSON (el límite de 100 KB del body parser
+ * hacía inutilizable la ruta) sino como fichero multipart; su límite de tamaño vive en la ruta
+ * (`VOICE_MAX_AUDIO_BYTES`, multer). Aquí solo quedan los campos del formulario (`lang`) y los
+ * campos de `speak` (texto ≤ 5000, `mood` acotado).
  */
-export const transcribeSchema = z
+export const transcribeFieldsSchema = z
   .object({
-    audio: z
-      .string()
-      .min(1, 'audio es obligatorio (base64)')
-      .max(10 * 1024 * 1024, 'audio demasiado grande (máx 10MB base64)'),
     lang: z.string().max(16, 'lang demasiado largo').optional(),
   })
   .strict();
@@ -23,5 +22,5 @@ export const speakSchema = z
   })
   .strict();
 
-export type TranscribeInput = z.infer<typeof transcribeSchema>;
+export type TranscribeFields = z.infer<typeof transcribeFieldsSchema>;
 export type SpeakInput = z.infer<typeof speakSchema>;

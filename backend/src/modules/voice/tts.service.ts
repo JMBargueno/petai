@@ -42,9 +42,10 @@ export class TtsService {
 
   /**
    * Synthesize text to speech with emotion parameters.
-   * Returns audio as base64 Opus chunks (200ms each).
+   * F-08: returns the provider audio as a binary Buffer (the controller streams it as
+   * `audio/*`), not base64-in-JSON.
    */
-  async synthesize(request: TtsRequest): Promise<{ audioBase64: string; durationMs: number }> {
+  async synthesize(request: TtsRequest): Promise<{ audio: Buffer; durationMs: number }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -78,11 +79,10 @@ export class TtsService {
         throw new Error(`TTS failed: ${response.status}`);
       }
 
-      const audioBuffer = await response.arrayBuffer();
-      const audioBase64 = Buffer.from(audioBuffer).toString('base64');
-      const durationMs = Math.round((audioBuffer.byteLength / 32000) * 1000); // Approx
+      const audio = Buffer.from(await response.arrayBuffer());
+      const durationMs = Math.round((audio.byteLength / 32000) * 1000); // Approx
 
-      return { audioBase64, durationMs };
+      return { audio, durationMs };
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('TTS timeout: service took too long');
