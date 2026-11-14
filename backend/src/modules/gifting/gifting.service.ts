@@ -1,11 +1,14 @@
 import {
   Injectable,
+  Logger,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { CronLockService } from '../../redis/cron-lock.service';
 
 const DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_SENT_PER_DAY = 3;
@@ -13,9 +16,12 @@ const MAX_RECEIVED_PER_DAY = 5;
 
 @Injectable()
 export class GiftingService {
+  private readonly logger = new Logger(GiftingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimeGateway,
+    private readonly cronLock: CronLockService,
   ) {}
 
   async send(
@@ -28,18 +34,26 @@ export class GiftingService {
     if (input.recipientUserId === userId) {
       throw new BadRequestException('No puedes enviarte un regalo a ti mismo');
     }
-    const qty = Math.min(99, Math.max(1, input.qty ?? 1));
+    // S-03 (SDD §3.3): qty debe ser un entero; NaN/fracción → 400 (antes 500 o NaN en Prisma).
+    const rawQty = input.qty ?? 1;
+    if (!Number.isInteger(rawQty)) throw new BadRequestException('qty debe ser un entero');
+    const qty = Math.min(99, Math.max(1, rawQty));
 
     const recipient = await this.prisma.user.findUnique({ where: { id: input.recipientUserId } });
     if (!recipient) throw new NotFoundException('Destinatario no encontrado');
     const pet = await this.prisma.pet.findFirst({ where: { id: input.petId, userId: recipient.id } });
     if (!pet) throw new BadRequestException('El pet no pertenece al destinatario');
 
-    await this.checkRateLimits(userId, recipient.id);
     const item = await this.prisma.item.findUnique({ where: { id: input.itemId } });
     if (!item) throw new NotFoundException('Item no encontrado');
 
     const gift = await this.prisma.$transaction(async (tx) => {
+      // S-03: límites diarios contados dentro de la tx (reduce la ventana de un doble envío).
+      const dayAgo = new Date(Date.now() - DAILY_WINDOW_MS);
+      const sent = await tx.gift.count({ where: { senderId: userId, sentAt: { gte: dayAgo } } });
+      if (sent >= MAX_SENT_PER_DAY) throw new BadRequestException('Has alcanzado el límite diario de regalos enviados (3)');
+      const received = await tx.gift.count({ where: { receiverId: recipient.id, sentAt: { gte: dayAgo } } });
+      if (received >= MAX_RECEIVED_PER_DAY) throw new BadRequestException('El destinatario alcanzó su límite diario de regalos recibidos (5)');
       await this.decrementInventory(tx, userId, item.id, qty);
       return tx.gift.create({
         data: {
@@ -76,12 +90,19 @@ export class GiftingService {
     if (!gift) throw new NotFoundException('Gift no encontrado');
     if (gift.status !== 'pending') throw new BadRequestException('Este gift ya fue resuelto');
 
+    // S-03 (SDD §3.3): reclamar el gift ATÓMICAMENTE por estado+receptor antes de entregar.
+    // Dos accepts simultáneos → solo uno logra count===1; el otro no entrega (evita duplicación).
     const updated = await this.prisma.$transaction(async (tx) => {
-      await this.grantInventory(tx, userId, gift.itemId, gift.qty);
-      return tx.gift.update({
-        where: { id: gift.id },
+      const claimed = await tx.gift.updateMany({
+        where: { id: gift.id, receiverId: userId, status: 'pending', expiresAt: { gt: new Date() } },
         data: { status: 'accepted', resolvedAt: new Date() },
       });
+      if (claimed.count === 0) {
+        if (gift.expiresAt <= new Date()) throw new BadRequestException('Este gift ha caducado');
+        throw new BadRequestException('Este gift ya fue resuelto');
+      }
+      await this.grantInventory(tx, userId, gift.itemId, gift.qty);
+      return tx.gift.findUniqueOrThrow({ where: { id: gift.id } });
     });
     this.realtime.emitToUser(gift.senderId, 'gift:accepted', { giftId, receiverId: userId });
     return { id: updated.id, status: updated.status };
@@ -93,16 +114,22 @@ export class GiftingService {
     if (!gift) throw new NotFoundException('Gift no encontrado');
     if (gift.status !== 'pending') throw new BadRequestException('Este gift ya fue resuelto');
 
+    // S-03 (SDD §3.3): reclamo atómico por estado+receptor antes de devolver el item al remitente.
     const updated = await this.prisma.$transaction(async (tx) => {
-      await this.grantInventory(tx, gift.senderId, gift.itemId, gift.qty);
-      return tx.gift.update({
-        where: { id: gift.id },
+      const claimed = await tx.gift.updateMany({
+        where: { id: gift.id, receiverId: userId, status: 'pending', expiresAt: { gt: new Date() } },
         data: {
           status: 'rejected',
           resolvedAt: new Date(),
           thankYouNote: thankYouNote ? this.cleanNote(thankYouNote) : null,
         },
       });
+      if (claimed.count === 0) {
+        if (gift.expiresAt <= new Date()) throw new BadRequestException('Este gift ha caducado');
+        throw new BadRequestException('Este gift ya fue resuelto');
+      }
+      await this.grantInventory(tx, gift.senderId, gift.itemId, gift.qty);
+      return tx.gift.findUniqueOrThrow({ where: { id: gift.id } });
     });
     this.realtime.emitToUser(gift.senderId, 'gift:rejected', { giftId });
     return { id: updated.id, status: updated.status };
@@ -133,17 +160,34 @@ export class GiftingService {
     }));
   }
 
-  private async checkRateLimits(senderId: string, receiverId: string) {
-    const dayAgo = new Date(Date.now() - DAILY_WINDOW_MS);
-    const sent = await this.prisma.gift.count({ where: { senderId, sentAt: { gte: dayAgo } } });
-    if (sent >= MAX_SENT_PER_DAY) {
-      throw new BadRequestException('Has alcanzado el límite diario de regalos enviados (3)');
-    }
-    const received = await this.prisma.gift.count({
-      where: { receiverId, sentAt: { gte: dayAgo } },
-    });
-    if (received >= MAX_RECEIVED_PER_DAY) {
-      throw new BadRequestException('El destinatario alcanzó su límite diario de regalos recibidos (5)');
+  /**
+   * S-03 / C-02: expira los gifts pending caducados y devuelve el item al remitente.
+   * Solo una réplica ejecuta el ciclo por ventana (CronLockService).
+   */
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async expireGifts() {
+    const token = await this.cronLock.guard('gifts:expire', 240_000);
+    if (!token) return;
+    try {
+      const expired = await this.prisma.gift.findMany({
+        where: { status: 'pending', expiresAt: { lte: new Date() } },
+        take: 200,
+      });
+      for (const g of expired) {
+        await this.prisma.$transaction(async (tx) => {
+          const claimed = await tx.gift.updateMany({
+            where: { id: g.id, status: 'pending' },
+            data: { status: 'expired', resolvedAt: new Date() },
+          });
+          if (claimed.count === 0) return;
+          await this.grantInventory(tx, g.senderId, g.itemId, g.qty);
+        });
+      }
+      if (expired.length > 0) this.logger.log(`Gifts expirados: ${expired.length}`);
+    } catch (err) {
+      this.logger.error(`Error expirando gifts: ${(err as Error).message}`);
+    } finally {
+      await this.cronLock.release('gifts:expire', token);
     }
   }
 

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CronLockService } from '../../redis/cron-lock.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 
@@ -60,6 +61,7 @@ export class ChestsProcessor {
     private readonly prisma: PrismaService,
     private readonly gameData: GameDataService,
     private readonly realtime: RealtimeGateway,
+    private readonly cronLock: CronLockService,
   ) {}
 
   async processCreate(payload: CreateChestJob): Promise<void> {
@@ -75,6 +77,8 @@ export class ChestsProcessor {
    */
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async cleanupExpiredChests(): Promise<void> {
+    const token = await this.cronLock.guard('chests:cleanup', 5_400_000); // C-02
+    if (!token) return;
     try {
       const expiryDays = this.expiryDays();
       const cutoff = new Date(Date.now() - expiryDays * 24 * 60 * 60 * 1000);
@@ -99,6 +103,8 @@ export class ChestsProcessor {
       this.logger.log(`Cofres caducados: ${expired.length} convertidos a monedas`);
     } catch (err: any) {
       this.logger.error(`Error en limpieza de cofres: ${err?.message}`);
+    } finally {
+      await this.cronLock.release('chests:cleanup', token);
     }
   }
 

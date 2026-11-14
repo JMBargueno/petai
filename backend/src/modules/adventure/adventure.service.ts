@@ -5,6 +5,7 @@ import { PetsService } from '../pets/pets.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { AiConfigService } from '../ai/ai-config.service';
 import { AdventureOrchestratorService } from './adventure-orchestrator.service';
+import { WalletService } from '../wallet/wallet.service';
 
 const PREMIUM_COST_GEMS = 10;
 
@@ -20,6 +21,7 @@ export class AdventureService {
     private readonly gameData: GameDataService,
     private readonly aiConfig: AiConfigService,
     private readonly orchestrator: AdventureOrchestratorService,
+    private readonly wallet: WalletService,
   ) {}
 
   async startDaily(userId: string, petId: string, premium: boolean) {
@@ -36,37 +38,45 @@ export class AdventureService {
       throw new BadRequestException('Ya completaste tu aventura gratis de hoy');
     }
 
+    const seed = randomInt(1, 2 ** 31 - 1);
+    const sceneCount = premium ? this.PREMIUM_SCENES : this.FREE_SCENES;
+
     if (premium) {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
-      if (!user || user.gems < PREMIUM_COST_GEMS) {
-        throw new BadRequestException(`La aventura premium requiere ${PREMIUM_COST_GEMS} gemas`);
-      }
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { gems: { decrement: PREMIUM_COST_GEMS } },
+      // S-05 (SDD §3.3): cobro atómico race-safe (C-01); sin saldo no se avanza.
+      await this.prisma.$transaction(async (tx) => {
+        const { ok } = await this.wallet.debit(tx, userId, 'gems', PREMIUM_COST_GEMS);
+        if (!ok) throw new BadRequestException(`La aventura premium requiere ${PREMIUM_COST_GEMS} gemas`);
       });
     }
 
-    const seed = randomInt(1, 2 ** 31 - 1);
-    const sceneCount = premium ? this.PREMIUM_SCENES : this.FREE_SCENES;
-    const theme = await this.orchestrator.generateTheme(pet, seed);
-
-    const adventure = await this.prisma.adventure.create({
-      data: {
-        userId, petId, seed, theme, sceneCount,
-        currentScene: 0, isPremium: premium,
-        retriesLeft: premium ? 1 : 0, status: 'active',
-      },
-    });
-
-    const scene = await this.orchestrator.generateScene(pet, adventure, 0, seed);
-
-    await this.prisma.adventureScene.create({
-      data: {
-        adventureId: adventure.id, order: 0,
-        text: scene.text, choices: scene.choices as any, isFinal: (sceneCount as number) === 1,
-      },
-    });
+    // S-05: la generación del tema/escena puede fallar (LLM). Si falla tras cobrar, se reembolsa.
+    let adventure;
+    let theme;
+    let scene;
+    try {
+      theme = await this.orchestrator.generateTheme(pet, seed);
+      adventure = await this.prisma.adventure.create({
+        data: {
+          userId, petId, seed, theme, sceneCount,
+          currentScene: 0, isPremium: premium,
+          retriesLeft: premium ? 1 : 0, status: 'active',
+        },
+      });
+      scene = await this.orchestrator.generateScene(pet, adventure, 0, seed);
+      await this.prisma.adventureScene.create({
+        data: {
+          adventureId: adventure.id, order: 0,
+          text: scene.text, choices: scene.choices as any, isFinal: (sceneCount as number) === 1,
+        },
+      });
+    } catch (err) {
+      if (premium) {
+        await this.prisma.$transaction(async (tx) => {
+          await this.wallet.credit(tx, userId, 'gems', PREMIUM_COST_GEMS);
+        });
+      }
+      throw err;
+    }
 
     this.logger.log(`Adventure started: ${adventure.id} theme="${theme}" premium=${premium}`);
 

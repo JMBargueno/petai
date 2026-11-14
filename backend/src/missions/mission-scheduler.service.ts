@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { MissionGenerationService } from './mission-generation.service';
+import { CronLockService } from '../redis/cron-lock.service';
 
 /**
  * Scheduler de misiones: verifica periódicamente qué usuarios necesitan
@@ -22,6 +23,7 @@ export class MissionSchedulerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly generationService: MissionGenerationService,
+    private readonly cronLock: CronLockService,
   ) {}
 
   /**
@@ -31,6 +33,8 @@ export class MissionSchedulerService {
    */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async handleDailyReset() {
+    const token = await this.cronLock.guard('missions:daily', 240_000); // C-02
+    if (!token) return;
     try {
       const now = new Date();
       let skip = 0;
@@ -58,6 +62,8 @@ export class MissionSchedulerService {
       }
     } catch (err: any) {
       this.logger.error(`Error en reset diario de misiones: ${err?.message}`);
+    } finally {
+      await this.cronLock.release('missions:daily', token);
     }
   }
 
@@ -67,6 +73,8 @@ export class MissionSchedulerService {
    */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async handleWeeklyReset() {
+    const token = await this.cronLock.guard('missions:weekly', 240_000); // C-02
+    if (!token) return;
     try {
       const now = new Date();
       let skip = 0;
@@ -93,6 +101,8 @@ export class MissionSchedulerService {
       }
     } catch (err: any) {
       this.logger.error(`Error en reset semanal de misiones: ${err?.message}`);
+    } finally {
+      await this.cronLock.release('missions:weekly', token);
     }
   }
 
@@ -119,6 +129,8 @@ export class MissionSchedulerService {
    */
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async cleanupExpiredMissions() {
+    const token = await this.cronLock.guard('missions:cleanup', 5_400_000); // C-02
+    if (!token) return;
     try {
       const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000);
       const result = await this.prisma.mission.deleteMany({
@@ -129,6 +141,8 @@ export class MissionSchedulerService {
       }
     } catch (err: any) {
       this.logger.error(`Error en limpieza de misiones: ${err?.message}`);
+    } finally {
+      await this.cronLock.release('missions:cleanup', token);
     }
   }
 }

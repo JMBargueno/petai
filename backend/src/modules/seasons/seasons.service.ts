@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SeasonRewardsService } from './season-rewards.service';
+import { WalletService } from '../wallet/wallet.service';
 
 interface SeasonConfig {
   id: string;
@@ -40,6 +41,7 @@ export class SeasonsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rewardsService: SeasonRewardsService,
+    private readonly wallet: WalletService,
   ) {
     this.seasonsData = require('../../../../shared/game-data/seasons.json');
     this.allTiers = [
@@ -119,23 +121,19 @@ export class SeasonsService {
     });
     if (existing) throw new ConflictException('Pass already purchased');
 
-    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    if (user.gems < cs.passPrice) {
-      throw new BadRequestException(`Need ${cs.passPrice} gems, have ${user.gems}`);
-    }
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { gems: { decrement: cs.passPrice } },
-    });
-
-    const pass = await this.prisma.seasonPass.create({
-      data: { userId, seasonId: cs.id, price: cs.passPrice },
-    });
-    await this.prisma.seasonProgress.upsert({
-      where: { userId_seasonId: { userId, seasonId: cs.id } },
-      update: {},
-      create: { userId, seasonId: cs.id, currentTier: 0, totalXp: 0 },
+    // S-05 (SDD §3.3): cobro atómico race-safe (C-01) + creación del pase en una sola transacción.
+    const pass = await this.prisma.$transaction(async (tx) => {
+      const { ok } = await this.wallet.debit(tx, userId, 'gems', cs.passPrice);
+      if (!ok) throw new BadRequestException(`Need ${cs.passPrice} gems`);
+      const created = await tx.seasonPass.create({
+        data: { userId, seasonId: cs.id, price: cs.passPrice },
+      });
+      await tx.seasonProgress.upsert({
+        where: { userId_seasonId: { userId, seasonId: cs.id } },
+        update: {},
+        create: { userId, seasonId: cs.id, currentTier: 0, totalXp: 0 },
+      });
+      return created;
     });
 
     return {
