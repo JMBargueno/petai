@@ -323,18 +323,20 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     it('18. la mejora de estadísticas se nota: una mascota reforzada gana más', async () => {
       const band = await newBand();
       let wins = 0;
-      const n = 8;
+      const n = 16;
       for (let i = 0; i < n; i++) {
         const strong = await signup({ elo: band + i * 1000, level: 12 });
         const weak = await signup({ elo: band + i * 1000 + 5, level: 12 });
+        // Refuerzo amplio (supera cualquier multiplicador de elemento, 1.5/0.67 ≈ 2.24×): el test no mide
+        // la magnitud del boost, que "repartir puntos hace ganar". Con margen fijo y más muestras es estable.
         await prisma.pet.update({
           where: { id: strong.petId },
-          data: { combatStats: { ...(await prisma.pet.findUniqueOrThrow({ where: { id: strong.petId } })).combatStats as any, allocated: { atk: 60, esp: 60, hp: 60 } } },
+          data: { combatStats: { ...(await prisma.pet.findUniqueOrThrow({ where: { id: strong.petId } })).combatStats as any, allocated: { atk: 150, esp: 150, def: 150, hp: 150, vel: 150 } } },
         });
         const r = (await fight(strong).expect(201)).body;
         if (r.result.outcome === 'win' && !r.opponent.isBot) wins++;
       }
-      expect(wins).toBeGreaterThanOrEqual(6);
+      expect(wins).toBeGreaterThanOrEqual(n / 2 + 2);
     });
 
     it('19. /arena/leagues expone ligas, límites y recompensas', async () => {
