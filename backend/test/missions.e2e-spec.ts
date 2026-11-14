@@ -25,6 +25,7 @@ describe('Missions E2E', () => {
   });
 
   afterEach(async () => {
+    if (!userId) return;
     // Clean up test data (delete in FK dependency order)
     await prisma.mission.deleteMany({ where: { userId } });
     await prisma.battle.deleteMany({

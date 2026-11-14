@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -23,6 +23,7 @@ export class EnvironmentalController {
   }
 
   @Post('activity')
+  @HttpCode(200)
   @ApiOperation({
     summary: 'Heartbeat del escritorio para detectar actividad/inactividad del PC',
   })
