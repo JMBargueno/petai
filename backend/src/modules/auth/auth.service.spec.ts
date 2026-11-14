@@ -1,16 +1,13 @@
-import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
-import { FastPathJwtService } from './fast-path-jwt';
 
 /**
- * Tests del fast-path de refresh (feature 009-edge-cdn, T018).
+ * Tests de emisión de tokens de `register`/`login` (S-01: fast-path eliminado).
  *
- * Verifica que `register`/`login` emiten el "refresh JWT fast-path" (RS256) con los claims
- * esperados: `sub`, `jti`, `iat`, `exp` y `typ: "refresh"`, y que se verifica contra el JWKS
- * público expuesto (coherencia origin ↔ edge).
+ * Verifica que se devuelven access y refresh JWT firmados con HS256 y que YA no se emite el
+ * "refresh JWT fast-path" (RS256) del edge, que anulaba la revocación de tokens.
  */
 
 function decodeHeader(token: string): Record<string, unknown> {
@@ -55,72 +52,38 @@ function buildService(userId: string, email: string, displayName: string) {
     JWT_REFRESH_EXPIRES_IN: '7d',
   });
 
-  const fastPath = new FastPathJwtService();
-  fastPath.onModuleInit();
-
-  const service = new AuthService(
-    prismaMock as never,
-    new JwtService(),
-    configService,
-    throttleMock as never,
-    realtimeMock as never,
-    fastPath,
-  );
-  return { service, prismaMock, fastPath, user };
+  const service = new AuthService(prismaMock as never, new JwtService(), configService, throttleMock as never, realtimeMock as never);
+  return { service, prismaMock };
 }
 
-describe('AuthService fast-path de refresh (T018)', () => {
-  it('register emite el refresh JWT fast-path (RS256) con los claims esperados', async () => {
+describe('AuthService — emisión de tokens (S-01: sin fast-path)', () => {
+  it('register devuelve access y refresh HS256, sin fast-path', async () => {
     const { service } = buildService('user-1', 'jugador@petai.local', 'Astro');
     const res = await service.register({ email: 'jugador@petai.local', password: 'ContrasenaSegura123!' }, '127.0.0.1');
 
     expect(res.accessToken).toBeTruthy();
     expect(res.refreshToken).toBeTruthy();
-    expect(typeof res.refreshFastPath).toBe('string');
+    // S-01: ya no se emite el refresh JWT fast-path (RS256) que verificaba el edge sin estado.
+    expect('refreshFastPath' in res).toBe(false);
 
-    const header = decodeHeader(res.refreshFastPath);
-    expect(header.alg).toBe('RS256');
-
-    const payload = decodePayload(res.refreshFastPath);
+    expect(decodeHeader(res.accessToken).alg).toBe('HS256');
+    const payload = decodePayload(res.refreshToken);
     expect(payload.sub).toBe('user-1');
-    expect(payload.typ).toBe('refresh');
-    expect(payload.jti).toBeTruthy();
-    expect(typeof payload.iat).toBe('number');
-    expect(typeof payload.exp).toBe('number');
-    expect((payload.exp as number) > (payload.iat as number)).toBe(true);
     expect(payload.email).toBe('jugador@petai.local');
-    expect(payload.displayName).toBe('Astro');
+    expect(payload.jti).toBeTruthy();
   });
 
-  it('el refresh fast-path se verifica contra el JWKS público del origin', async () => {
-    const { service, fastPath } = buildService('user-2', 'otro@petai.local', 'Luna');
-    const res = await service.register({ email: 'otro@petai.local', password: 'ContrasenaSegura123!' }, '127.0.0.1');
-
-    const jwks = fastPath.buildJwks();
-    expect(jwks.keys).toHaveLength(1);
-    expect(jwks.keys[0].alg).toBe('RS256');
-    expect(jwks.keys[0].use).toBe('sig');
-
-    // Verificación del firma RS256 con la clave pública (mismo criterio que el edge).
-    const [h, p, sig] = res.refreshFastPath.split('.');
-    const publicKey = crypto.createPublicKey(fastPath.publicKeyPem);
-    const ok = crypto.verify('RSA-SHA256', Buffer.from(`${h}.${p}`, 'utf8'), publicKey, Buffer.from(sig, 'base64url'));
-    expect(ok).toBe(true);
-  });
-
-  it('login también emite el refresh JWT fast-path', async () => {
+  it('login también devuelve access y refresh HS256, sin fast-path', async () => {
     const userId = 'user-3';
     const { service, prismaMock } = buildService(userId, 'tres@petai.local', 'Sol');
-    // La cuenta existe con un hash válido para la contraseña.
     const passwordHash = await argon2.hash('ContrasenaSegura123!');
     prismaMock.user.findUnique.mockImplementation(async (q: any) =>
       q?.where?.email ? { id: userId, email: 'tres@petai.local', displayName: 'Sol', coins: 100, gems: 10, passwordHash } : null,
     );
 
     const res = await service.login({ email: 'tres@petai.local', password: 'ContrasenaSegura123!' }, '127.0.0.1');
-    expect(typeof res.refreshFastPath).toBe('string');
-    const payload = decodePayload(res.refreshFastPath);
-    expect(payload.typ).toBe('refresh');
-    expect(payload.sub).toBe(userId);
+    expect(decodeHeader(res.accessToken).alg).toBe('HS256');
+    expect('refreshFastPath' in res).toBe(false);
+    expect(decodePayload(res.refreshToken).sub).toBe(userId);
   });
 });

@@ -6,7 +6,6 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AuthThrottleService } from './auth-throttle.service';
-import { FastPathJwtService } from './fast-path-jwt';
 import { changePasswordSchema, loginSchema, parseOrBadRequest, refreshSchema, registerSchema } from './dto/auth.schemas';
 
 const ARGON_OPTIONS = { type: argon2.argon2id, memoryCost: 65536, timeCost: 3 } as const;
@@ -31,7 +30,6 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly throttle: AuthThrottleService,
     private readonly realtime: RealtimeGateway,
-    private readonly fastPath: FastPathJwtService,
   ) {}
 
   /** Hash de relleno: se verifica cuando el correo no existe para que el tiempo de respuesta no lo delate. */
@@ -221,7 +219,7 @@ export class AuthService {
     };
   }
 
-  private async generateTokens(userId: string, email: string, displayName?: string) {
+  private async generateTokens(userId: string, email: string, _displayName?: string) {
     const payload = { sub: userId, email };
 
     const accessToken = this.jwtService.sign(payload, {
@@ -246,27 +244,6 @@ export class AuthService {
       },
     });
 
-    return { accessToken, refreshToken, refreshFastPath: this.issueFastPathRefreshToken(userId, email, displayName) };
-  }
-
-  /**
-   * Emite el "refresh JWT fast-path" (feature 009-edge-cdn, T019). RS256 firmado con la clave
-   * privada del fast-path; el edge lo verifica stateless contra el JWKS público (US3). Claims:
-   * `sub`, `jti`, `iat`, `exp`, `typ: "refresh"` (+ `email`/`displayName` para el `user` del edge).
-   * No toca Prisma: es una vía optimista de refresh; la revocación dura sigue en origin.
-   */
-  private issueFastPathRefreshToken(userId: string, email: string, displayName?: string): string {
-    const claims = {
-      sub: userId,
-      email,
-      ...(displayName ? { displayName } : {}),
-      jti: crypto.randomUUID(),
-      typ: 'refresh',
-    };
-    return this.jwtService.sign(claims, {
-      secret: this.fastPath.privateKeyPem,
-      algorithm: 'RS256',
-      expiresIn: (this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d') as any,
-    });
+    return { accessToken, refreshToken };
   }
 }

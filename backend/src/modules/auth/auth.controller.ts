@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -6,7 +6,6 @@ import { DeviceLinkService } from './device-link.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
 import { RegisterDto, LoginDto, RefreshTokenDto, AuthResponseDto, ChangePasswordDto } from './dto/auth.dto';
-import { FastPathJwtService } from './fast-path-jwt';
 
 /** IP del cliente (con TRUST_PROXY configurado respeta X-Forwarded-For del proxy de confianza). */
 const clientIp = (req: Request) => req.ip || req.socket?.remoteAddress || 'unknown';
@@ -17,18 +16,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly deviceLink: DeviceLinkService,
-    private readonly fastPath: FastPathJwtService,
   ) {}
-
-  @Get('jwks')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'JWKS público del fast-path de refresh (RS256). Lo consume el edge para verificar el refresh JWT sin estado.',
-  })
-  @ApiResponse({ status: HttpStatus.OK, description: 'JWKS (solo claves públicas)' })
-  jwks() {
-    return this.fastPath.buildJwks();
-  }
 
   @Post('register')
   @ApiOperation({ summary: 'Registrar nuevo usuario' })
