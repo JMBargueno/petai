@@ -51,10 +51,11 @@ import { RitualsModule } from './modules/rituals/rituals.module';
 import { MoodTheaterModule } from './modules/mood-theater/mood-theater.module';
 import { AccessibilityModule } from './modules/accessibility/accessibility.module';
 import { GiftingModule } from './modules/gifting/gifting.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 
 // DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
 // En `NODE_ENV === 'production'` el DevModule no se registra ⇒ 404 (SC-007, constitución I/VIII).
-const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production';
+const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.DEVKIT_ENABLED === 'true';
 
 @Module({
   imports: [
@@ -112,6 +113,8 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production';
     MoodTheaterModule,
     AccessibilityModule,
     GiftingModule,
+    // C-01 (SDD §3.3): primitiva económica compartida (cobro/abono atómicos) — global.
+    WalletModule,
     ...(DEV_TOOLS_ENABLED ? [DevModule] : []),
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],
