@@ -169,6 +169,11 @@ export class ModdingService {
     const mod = await this.prisma.mod.findUnique({ where: { id: modId } });
     if (!mod || mod.status === 'deleted') throw new NotFoundException('Mod no encontrado');
 
+    // S-17: un usuario solo puede reportar un mod una vez. Sin esto, una cuenta que reportara
+    // `MAX_REPORTS_BEFORE_HIDE` veces ocultaría cualquier mod.
+    const existing = await this.prisma.modReport.findFirst({ where: { modId, userId } });
+    if (existing) throw new ConflictException('Ya has reportado este mod');
+
     const report = await this.prisma.modReport.create({
       data: { modId, userId, reason: reason ?? 'inapropiado', details: details ?? null },
     });

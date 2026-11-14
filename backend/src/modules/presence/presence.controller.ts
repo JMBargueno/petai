@@ -7,6 +7,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PresenceService } from './presence.service';
@@ -36,8 +37,13 @@ export class PresenceController {
   // ── Presence ──────────────────────────────────────────────────────────────────
 
   @Get('presence/:userId')
-  @ApiOperation({ summary: 'Get device presence for a user' })
-  getPresence(@Param('userId') userId: string) {
+  @ApiOperation({ summary: 'Get device presence for a user (own or accepted friend)' })
+  async getPresence(@CurrentUser() user: any, @Param('userId') userId: string) {
+    // S-15: la presencia (dispositivos/plataformas) es privada: solo el propio usuario o un amigo
+    // aceptado pueden consultarla. Antes era visible para cualquier cuenta autenticada.
+    const isSelf = user.id === userId;
+    const isFriend = !isSelf && (await this.coopCareService.checkFriendship(userId, user.id));
+    if (!isSelf && !isFriend) throw new ForbiddenException('No tienes permiso para ver la presencia de este usuario');
     return {
       userId,
       devices: this.presenceService.getPresence(userId),

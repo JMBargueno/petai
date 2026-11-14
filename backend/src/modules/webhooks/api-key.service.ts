@@ -69,7 +69,6 @@ export class ApiKeyService {
     return keys.map((k) => ({
       id: k.id,
       name: k.name,
-      keyHash: k.keyHash,
       scopes: k.scopes as string[],
       lastUsedAt: k.lastUsedAt,
       revokedAt: k.revokedAt,
@@ -107,16 +106,18 @@ export class ApiKeyService {
   /** Rate limit: 100 req/min por API key (Redis sliding window, respaldo en DB). */
   async enforceRateLimit(keyId: string): Promise<void> {
     const windowKey = this.redis.key(`apikey:rl:${keyId}:${Math.floor(Date.now() / 60000)}`);
-    const current = await this.redis.run(async (r) => {
-      const val = await r.get(windowKey);
-      return val ? parseInt(val, 10) : null;
+    // S-16: INCR + PEXPIRE atómico (antes hacía GET→INCR, con carrera, y la clave nunca expiraba →
+    // una key en Redis por key/minuto para siempre). La caducidad se fija solo en el primer INCR.
+    const count = await this.redis.run(async (r) => {
+      const n = await r.incr(windowKey);
+      if (n === 1) await r.pexpire(windowKey, 60_000);
+      return n;
     });
 
-    if (current === null) return; // Redis caído → sin rate limit (fallback permisivo)
-    if (current >= RATE_LIMIT_PER_MIN) {
+    if (count === null) return; // Redis caído → sin rate limit (fallback permisivo)
+    if (count > RATE_LIMIT_PER_MIN) {
       throw new HttpException('Rate limit excedido (100 req/min)', 429);
     }
-    await this.redis.run((r) => r.incr(windowKey));
   }
 
   /**
@@ -125,7 +126,12 @@ export class ApiKeyService {
    */
   async touchLastUsed(keyId: string): Promise<void> {
     const lockKey = this.redis.key(`apikey:lastused:${keyId}:${Math.floor(Date.now() / 60000)}`);
-    const allowed = await this.redis.run((r) => r.setnx(lockKey, '1'));
+    // S-16: la clave de throttle ahora expira (antes `SETNX` sin TTL dejaba claves para siempre).
+    const allowed = await this.redis.run(async (r) => {
+      const ok = await r.setnx(lockKey, '1');
+      if (ok === 1) await r.pexpire(lockKey, 60_000);
+      return ok;
+    });
     if (allowed !== 1) return; // ya se tocó en este minuto
     await this.prisma.apiKey.update({ where: { id: keyId }, data: { lastUsedAt: new Date() } }).catch(() => undefined);
   }
