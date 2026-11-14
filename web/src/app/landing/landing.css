@@ -1,3 +1,4 @@
+/* Las bandas, los titulares de sección y .hl son globales (styles/base.css): los comparten las secciones. */
 :host {
   display: block;
 }
@@ -40,6 +41,10 @@
 .nav__end {
   gap: 8px;
 }
+/* Sobre la banda negra el botón relleno perdería el borde: se le da uno blanco. */
+.nav .btn--filled {
+  border-color: var(--color-paper-white);
+}
 .lang {
   display: flex;
   padding: 3px;
@@ -63,48 +68,12 @@
   background: var(--color-carbon);
   color: var(--color-paper-white);
 }
-@media (width < 760px) {
+@media (width < 860px) {
   .nav__links {
     display: none;
   }
 }
 
-/* ───── Bandas de color ───── */
-.band {
-  position: relative;
-  overflow: clip;
-  padding: clamp(60px, 9vw, 128px) clamp(16px, 4vw, 48px);
-}
-.band--sky {
-  background: var(--color-sky-wash);
-}
-.band--white {
-  background: var(--color-paper-white);
-}
-.band--gray {
-  background: var(--color-concrete-gray);
-}
-.band__inner {
-  position: relative; /* por encima de la cinta */
-  max-inline-size: var(--page-max-width);
-  margin-inline: auto;
-}
-.has-ribbon > app-ribbon {
-  block-size: min(420px, 60%);
-  opacity: 1;
-}
-
-.section-title {
-  font-size: clamp(48px, 10.5vw, 160px);
-  text-wrap: balance;
-}
-.lead {
-  max-inline-size: 28ch;
-  margin: 24px 0 48px;
-  font-size: clamp(20px, 2.6vw, 30px);
-  line-height: 1.15;
-  text-wrap: balance;
-}
 h3 {
   margin: 0;
   font-weight: var(--font-weight-bold);
@@ -123,17 +92,35 @@ p {
 /* ───── Hero ───── */
 .hero {
   margin-block-start: -68px; /* la nav flota sobre la banda */
-  padding-block-start: calc(68px + clamp(48px, 8vw, 128px));
-  min-block-size: min(900px, 100svh);
+  padding-block-start: calc(68px + clamp(32px, 5vw, 80px));
+  border: 0;
+  border-radius: 0;
+  min-block-size: min(960px, 100svh);
   display: grid;
   align-items: center;
 }
 .hero__inner {
+  display: grid;
+  justify-items: center;
   inline-size: 100%;
   text-align: center;
 }
+.hero__pet {
+  --sprite-size: clamp(130px, 17vw, 240px);
+  position: relative;
+  z-index: 1; /* se sienta encima del titular */
+  margin-block-end: clamp(-58px, -4.2vw, -22px);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
 .hero__title {
   font-size: clamp(64px, 19vw, 280px);
+}
+.hero__title span {
+  display: inline-block;
 }
 .hero__tagline {
   margin-block-start: clamp(20px, 3vw, 40px);
@@ -144,12 +131,13 @@ p {
 }
 .hero__sub {
   max-inline-size: 46ch;
-  margin: 16px auto 0;
+  margin-block-start: 16px;
   padding: 12px 20px;
   border: var(--outline);
   border-radius: var(--radius-cards);
   background: var(--color-paper-white);
   font-size: 16px;
+  rotate: -1deg;
 }
 .hero__actions {
   display: flex;
@@ -158,38 +146,114 @@ p {
   gap: 8px;
   margin-block-start: 24px;
 }
-.float {
+.cue {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  aspect-ratio: 1;
+  margin-block-start: 32px;
+  border: var(--outline);
+  border-radius: 50%;
+  background: var(--color-paper-white);
+  color: var(--color-carbon);
+}
+.cue svg {
+  inline-size: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Pegatinas del hero: flotan (transform) y siguen un poco al cursor (translate). */
+.spot {
   position: absolute;
+  translate: calc(var(--px, 0) * var(--depth, 24px)) calc(var(--py, 0) * var(--depth, 24px));
+  transition: translate 0.4s var(--ease-out), scale var(--dur-2) var(--ease-bounce);
 }
-.float--a {
+.spot--a {
   inset: 16% auto auto 6%;
+  --depth: 46px;
+  --float-dur: 5.5s;
 }
-.float--b {
+.spot--b {
   inset: 20% 7% auto auto;
+  --depth: -34px;
+  --float-dur: 6.5s;
+  --float-delay: -2s;
 }
-.float--c {
+.spot--c {
   inset: auto auto 12% 12%;
+  --depth: -52px;
+  --float-dur: 4.8s;
+  --float-delay: -1s;
 }
-.float--d {
+.spot--d {
   inset: auto 10% 10% auto;
+  --depth: 38px;
+  --float-dur: 6s;
+  --float-delay: -3s;
+}
+.spot--e {
+  inset: 9% 27% auto auto;
+  --depth: 64px;
+  --float-dur: 4.2s;
+  --float-delay: -1.5s;
 }
 @media (width < 760px) {
-  .float {
+  .spot {
     scale: 0.6;
   }
-  .float--a {
+  .spot--a {
     inset: 96px auto auto 2%;
   }
-  .float--b {
+  .spot--b {
     inset: 110px 2% auto auto;
   }
-  .float--c,
-  .float--d {
+  .spot--c,
+  .spot--d,
+  .spot--e {
     display: none;
   }
 }
 
-/* ───── Qué es ───── */
+@keyframes letter-in {
+  from {
+    opacity: 0;
+    translate: 0 70%;
+    rotate: -14deg;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 28px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero__title span {
+    animation: letter-in 0.75s var(--ease-bounce) calc(0.15s + var(--i) * 70ms) backwards;
+  }
+  .hero__tagline {
+    animation: rise var(--dur-3) var(--ease-out) 0.7s backwards;
+  }
+  .hero__sub {
+    animation: rise var(--dur-3) var(--ease-out) 0.85s backwards;
+  }
+  .hero__actions,
+  .cue {
+    animation: rise var(--dur-3) var(--ease-out) 1s backwards;
+  }
+  /* .cue además rebota: se combina con la clase global .bob */
+  .cue.bob {
+    animation:
+      rise var(--dur-3) var(--ease-out) 1s backwards,
+      bob 1.4s ease-in-out 1.6s infinite;
+  }
+}
+
+/* ───── Rejillas con aire de collage ───── */
 .trio,
 .features,
 .species,
@@ -212,34 +276,40 @@ p {
 }
 .trio__card--sunburst {
   background: var(--color-sunburst);
+  rotate: -1.5deg;
 }
 .trio__card--lavender {
   background: var(--color-lavender);
-  rotate: 1deg;
+  rotate: 1.5deg;
+  margin-block-start: 28px;
 }
 .trio__card--mint {
   background: var(--color-mint-pop);
   rotate: -1deg;
 }
 
-/* ───── Funciones ───── */
 .feature {
   display: grid;
   gap: 12px;
   align-content: start;
+  rotate: -0.8deg;
+}
+.feature--tilt {
+  rotate: 1deg;
+  margin-block-start: 16px;
 }
 
-/* ───── Especies ───── */
 .species__card {
   display: grid;
   gap: 12px;
   border-radius: var(--radius-cards-elevated);
 }
 .species__card:nth-child(even) {
-  rotate: 1.5deg;
+  rotate: 2deg;
+  margin-block-start: 24px;
 }
 .species__card:nth-child(odd) {
-  rotate: -1deg;
+  rotate: -1.5deg;
 }
 .species__art {
   display: grid;
@@ -249,16 +319,22 @@ p {
   background: var(--color-paper-white);
   aspect-ratio: 4 / 3;
 }
-.species__art img {
-  inline-size: auto;
-  block-size: 80%;
-  max-inline-size: 80%;
-  object-fit: contain;
+.species__art app-pockai-sprite {
+  --sprite-size: min(62%, 190px);
 }
 .species__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+.demo-placeholder {
+  display: grid;
+  place-items: center;
+  min-block-size: 360px;
+  border: var(--outline);
+  border-radius: var(--radius-cards-elevated);
+  background: var(--color-sunburst);
 }
 
 /* ───── Descarga ───── */
@@ -314,6 +390,9 @@ p {
   align-content: start;
   justify-items: start;
 }
+.platform:nth-child(2) {
+  rotate: 1deg;
+}
 .platform__head {
   display: flex;
   flex-wrap: wrap;
@@ -342,8 +421,7 @@ details p {
   display: grid;
   gap: 12px;
   justify-items: center;
-  padding: 60px 16px 32px;
-  overflow: clip;
+  padding: 100px 16px 32px;
   background: var(--color-carbon);
   color: var(--color-paper-white);
   text-align: center;
@@ -351,4 +429,15 @@ details p {
 .footer__mark {
   font-size: clamp(64px, 19vw, 280px);
   color: var(--color-electric-blue);
+}
+
+/* En móvil, menos giro y sin solapes: prima la lectura. */
+@media (width < 700px) {
+  .trio__card,
+  .feature,
+  .species__card:nth-child(n),
+  .platform:nth-child(n) {
+    rotate: 0deg;
+    margin-block-start: 0;
+  }
 }

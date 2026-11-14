@@ -9,7 +9,8 @@ const web = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(web, '..', 'shared', 'assets', 'sprites');
 const target = join(web, 'public', 'sprites');
 
-const wanted = (name) => name.endsWith('_idle.svg') || name === 'egg_closed.svg';
+// Estados de cada especie (idle, happy, eat, sleep), huevos y patrones.
+const wanted = (name) => name.endsWith('.svg');
 
 rmSync(target, { recursive: true, force: true });
 mkdirSync(target, { recursive: true });

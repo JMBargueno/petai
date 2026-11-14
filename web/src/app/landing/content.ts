@@ -1,3 +1,5 @@
+import balance from '../../../../shared/game-data/balance.json';
+import patternData from '../../../../shared/game-data/patterns.json';
 import speciesData from '../../../../shared/game-data/species.json';
 import { DOWNLOADS } from '../site.config';
 import type { StickerColor, StickerIcon } from '../shared/ui/sticker';
@@ -69,7 +71,7 @@ const ELEMENTS: Record<string, string> = {
   light: $localize`:@@el.light:Luz`,
 };
 
-const RARITIES: Record<string, string> = {
+export const RARITIES: Record<string, string> = {
   normal: $localize`:@@rar.normal:Normal`,
   rare: $localize`:@@rar.rare:Raro`,
   super_rare: $localize`:@@rar.super_rare:Super-raro`,
@@ -83,7 +85,7 @@ const CARD_COLORS: StickerColor[] = ['sunburst', 'lavender', 'mint-pop', 'electr
 export const SPECIES = speciesData.map((s, i) => ({
   id: s.id,
   name: s.name,
-  sprite: `sprites/${s.spriteKey}_idle.svg`,
+  spriteKey: s.spriteKey,
   element: ELEMENTS[s.element] ?? s.element,
   rarity: RARITIES[s.rarity] ?? s.rarity,
   color: CARD_COLORS[i % CARD_COLORS.length],
@@ -134,4 +136,76 @@ export const FAQ = [
     q: $localize`:@@faq.5.q:¿Qué pasa si no cuido a mi pockai?`,
     a: $localize`:@@faq.5.a:Si una estadística se queda baja mucho tiempo puede enfermar y habrá que curarla, o ponerse triste y rendir menos en combate.`,
   },
+];
+
+export const STEPS: { icon: StickerIcon; color: StickerColor; motion: string; title: string; body: string }[] = [
+  {
+    icon: 'egg',
+    color: 'sunburst',
+    motion: 'wiggle',
+    title: $localize`:@@how.1.title:Eclosiona`,
+    body: $localize`:@@how.1.body:Consigue un huevo, espera a que incube y descubre qué criatura te ha tocado.`,
+  },
+  {
+    icon: 'heart',
+    color: 'ember',
+    motion: 'beat',
+    title: $localize`:@@how.2.title:Cuida`,
+    body: $localize`:@@how.2.body:Dale de comer, juega con ella y déjala dormir. Crece contigo, de bebé a forma final.`,
+  },
+  {
+    icon: 'shield',
+    color: 'electric-blue',
+    motion: 'clash',
+    title: $localize`:@@how.3.title:Combate`,
+    body: $localize`:@@how.3.body:Llévala a la Arena, elige estrategia y sube de liga contra las mascotas de otros jugadores.`,
+  },
+];
+
+const RARITY_COLORS: Record<string, StickerColor> = {
+  normal: 'mint-pop',
+  rare: 'electric-blue',
+  super_rare: 'lavender',
+  legendary: 'sunburst',
+  mythic: 'ember',
+};
+
+const percent = (p: number) => Math.round(p * 1000) / 10;
+
+/** Probabilidades reales de eclosión (shared/game-data/balance.json). */
+export const RARITY_ODDS = Object.entries(balance.rarity).map(([id, r]) => ({
+  id,
+  name: RARITIES[id] ?? id,
+  probability: r.probability,
+  percent: percent(r.probability),
+  color: RARITY_COLORS[id] ?? 'sunburst',
+}));
+
+export const SHINY_PROBABILITY = balance.shinyProbability;
+export const SHINY_NOTE = $localize`:@@rar.shiny:Y además, un ${percent(balance.shinyProbability)}:PERCENT: % de las eclosiones sale en variante shiny.`;
+
+const PATTERN_NAMES: Record<string, string> = {
+  plain: $localize`:@@pat.plain:Liso`,
+  spots: $localize`:@@pat.spots:Manchas`,
+  stripes: $localize`:@@pat.stripes:Rayas`,
+  gradient: $localize`:@@pat.gradient:Degradado`,
+  scales: $localize`:@@pat.scales:Escamas`,
+  crystal: $localize`:@@pat.crystal:Cristal`,
+  galaxy: $localize`:@@pat.galaxy:Galaxia`,
+  aurora: $localize`:@@pat.aurora:Aurora`,
+};
+const PATTERN_SPRITES = new Set(['spots', 'stripes', 'gradient', 'scales']);
+
+export const PATTERNS = patternData.map((p) => ({
+  id: p.id,
+  name: PATTERN_NAMES[p.id] ?? p.name,
+  minRarity: RARITIES[p.minRarity] ?? p.minRarity,
+  sprite: PATTERN_SPRITES.has(p.id) ? `sprites/pattern_${p.id}.svg` : null,
+  color: RARITY_COLORS[p.minRarity] ?? 'sunburst',
+}));
+
+export const DESKTOP_POINTS = [
+  $localize`:@@desk.1:Vive en una ventana transparente, por encima de lo que estés haciendo.`,
+  $localize`:@@desk.2:Los clics la atraviesan: no te estorba para trabajar.`,
+  $localize`:@@desk.3:Chat flotante y avisos nativos cuando necesita algo.`,
 ];

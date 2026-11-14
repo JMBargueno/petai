@@ -29,7 +29,7 @@
     @if (filter(); as f) {
       <label>
         <span class="visually-hidden">{{ f.label }}</span>
-        <select class="input" [ngModel]="filterValue()" (ngModelChange)="filterValue.set($event)">
+        <select class="input" [ngModel]="filterValue()" (ngModelChange)="onFilter($event)">
           <option value="">{{ f.label }}: todos</option>
           @for (o of f.options; track o.value) {
             <option [value]="o.value">{{ o.label }}</option>
@@ -71,7 +71,7 @@
       </thead>
       <tbody>
         @for (row of visibleRows(); track row.id) {
-          <tr>
+          <tr [style.view-transition-name]="rowTransitionName(row)">
             @for (col of columns(); track col.key; let first = $first) {
               @if (first) {
                 <th scope="row">{{ cell(row, col) }}</th>
