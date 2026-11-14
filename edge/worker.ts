@@ -11,6 +11,12 @@
 export interface Env {
   /** Origin autoritativo (p. ej. `https://api.petai.app`). */
   ORIGIN_URL: string;
+  /**
+   * S-20: token opcional para el endpoint `GET /__metrics`. Si se define, exige
+   * `Authorization: Bearer <token>` (o `?token=`); si no se define, el endpoint responde 404
+   * (deshabilitado). Secure-by-default: las métricas no se exponen sin configurar este secreto.
+   */
+  EDGE_METRICS_TOKEN?: string;
 }
 
 const BUCKETS = [5, 10, 20, 30, 50, 75, 100, 150, 250, 500, 1000];
@@ -33,8 +39,14 @@ export default {
   async fetch(request: Request, env: Env, _ctx: unknown): Promise<Response> {
     const url = new URL(request.url);
 
-    // Endpoint oculto de métricas del edge (Prometheus text).
+    // Endpoint oculto de métricas del edge (Prometheus text). S-20: protegido con
+    // EDGE_METRICS_TOKEN (secure-by-default: 404 si no se configuró; 401 si el bearer no coincide).
     if (url.pathname === '/__metrics') {
+      const token = env.EDGE_METRICS_TOKEN;
+      if (!token) return jsonError(404, 'Not found');
+      const auth = request.headers.get('Authorization');
+      const provided = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : url.searchParams.get('token') ?? '';
+      if (provided !== token) return jsonError(401, 'No autorizado');
       return new Response(renderMetrics(), { headers: { 'Content-Type': 'text/plain; version=0.0.4' } });
     }
 
