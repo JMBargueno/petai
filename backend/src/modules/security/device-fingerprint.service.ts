@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 
@@ -22,6 +23,9 @@ export interface FingerprintResult {
 
 const FLAG_THRESHOLD = 80;
 const SCORE_PER_EXTRA_ACCOUNT = 20;
+// R-05: caducidad del Set de cuentas por fingerprint (antes vivía para siempre). Se renueva
+// en cada verificación, de modo que las huellas inactivas dejan de ocupar Redis.
+const FINGERPRINT_TTL_MS = 24 * 3600 * 1000;
 
 /**
  * DeviceFingerprintService — Feature 026. Detecta cuentas bot/farming mediante
@@ -64,18 +68,24 @@ export class DeviceFingerprintService {
 
     const accountCount = await this.redis.run(async (r) => {
       await r.sadd(fpKey, userId);
+      // R-05: el Set por fingerprint caduca (renovable en cada verificación), no vive para siempre.
+      await r.pexpire(fpKey, FINGERPRINT_TTL_MS);
       return r.scard(fpKey);
     });
 
     let count = accountCount ?? null;
     if (count === null) {
-      // Fallback a DB: conteo de audits únicos por fingerprint (mejor esfuerzo).
-      const logs = await this.prisma.auditLog.findMany({
-        where: { fingerprint },
+      // R-04.5: sin Redis, no cargar todas las filas de `AuditLog`: un COUNT(DISTINCT userId)
+      // filtrado por huella (usa el índice `fingerprint`) + el usuario actual si aún no figura.
+      const rows = await this.prisma.$queryRaw<Array<{ count: number }>>(
+        Prisma.sql`SELECT COUNT(DISTINCT "userId") AS "count" FROM "AuditLog" WHERE "fingerprint" = ${fingerprint}`,
+      );
+      const distinctCount = Number(rows[0]?.count ?? 0);
+      const already = await this.prisma.auditLog.findFirst({
+        where: { fingerprint, userId },
         select: { userId: true },
       });
-      const unique = new Set([...logs.map((l) => l.userId), userId]);
-      count = unique.size;
+      count = distinctCount + (already ? 0 : 1);
     }
 
     const score = Math.min(100, Math.max(0, (count - 1) * SCORE_PER_EXTRA_ACCOUNT));

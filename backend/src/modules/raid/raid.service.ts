@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, Logger } from '@nes
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CronLockService } from '../../redis/cron-lock.service';
+import { RedisCacheService } from '../../redis/redis-cache.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
 import { BattlesService } from '../battles/battles.service';
@@ -11,6 +12,8 @@ import { Fighter, Element, SkillDef } from '../battles/combat/types';
 
 const DAY_MS = 24 * 3600 * 1000;
 const WEEK_MS = 7 * DAY_MS;
+// R-04: vida de la caché de `getCurrent` (5–30 s) para datos que cambian poco.
+const CURRENT_TTL_SECONDS = 10;
 
 interface RaidBalance {
   hpGlobal: number; maxDamagePerAttack: number; energyCost: number;
@@ -27,6 +30,7 @@ export class RaidService {
     private readonly petsService: PetsService,
     private readonly battlesService: BattlesService,
     private readonly cronLock: CronLockService,
+    private readonly cache: RedisCacheService,
   ) {}
 
   private get cfg(): RaidBalance {
@@ -43,6 +47,11 @@ export class RaidService {
   }
 
   async getCurrent(userId: string) {
+    // R-04: 2-3 consultas a datos de cambio lento → caché de vida corta por usuario.
+    return this.cache.getOrSet(`raid:current:${userId}`, CURRENT_TTL_SECONDS, () => this.getCurrentComputed(userId));
+  }
+
+  private async getCurrentComputed(userId: string) {
     const raid = await this.getActiveRaid();
     const userContrib = await this.prisma.raidParticipant.findUnique({
       where: { raidId_userId: { raidId: raid.id, userId } },

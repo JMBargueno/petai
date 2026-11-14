@@ -12,6 +12,18 @@ export interface BoardRow {
   rank: number;
 }
 
+/** Fila del leaderboard público (`GET /public/leaderboard`): solo campos públicos, sin filtrar datos privados. */
+export interface PublicBoardRow {
+  rank: number;
+  petId: string;
+  nickname: string;
+  element: string | null;
+  rarity: string;
+  level: number;
+  elo: number;
+  owner: string | null;
+}
+
 const WEEK_TTL_SECONDS = 21 * 24 * 3600;
 const MAX_LIMIT = 100;
 
@@ -77,6 +89,49 @@ export class LeaderboardService {
     });
     if (fromRedis) return fromRedis;
     return this.topFromDb(scope, n);
+  }
+
+  /**
+   * Top público para `GET /public/leaderboard` (R-04): reutiliza el ZSET global en vez de ordenar
+   * `Pet` por ELO con `include` en cada llamada. Solo expone mascotas reales que han peleado: los
+   * bots nunca se persisten como `Pet` (y por tanto no entran en el ZSET) y las que nunca pelearon
+   * no figuran en la clasificación. El contenido coincide con el de la clasificación del juego.
+   * `element` (opcional) filtra por elemento tras ordenar; el tope sale de `balance.publicApi`.
+   */
+  async publicTop(limit = 100, element?: string): Promise<PublicBoardRow[]> {
+    const max = Math.min(Math.max(1, Math.floor(this.gameData.getBalance().publicApi?.leaderboardMax ?? 100)), MAX_LIMIT);
+    const requested = Math.min(Math.max(1, Math.floor(limit) || 100), max);
+    // Ventana completa (hasta `max`) para poder filtrar por elemento y aun así entregar `requested`.
+    const rows = await this.top('global', max);
+    const ids = rows.map((r) => r.petId);
+    if (ids.length === 0) return [];
+    const pets = await this.prisma.pet.findMany({
+      where: {
+        id: { in: ids },
+        // Las que nunca pelearon quedan fuera (mismo criterio que la reconstrucción del ZSET).
+        OR: [{ battlesAsAttacker: { some: {} } }, { battlesAsDefender: { some: {} } }],
+        ...(element ? { species: { element } } : {}),
+      },
+      include: { species: true, user: { select: { displayName: true } } },
+    });
+    const byId = new Map(pets.map((p) => [p.id, p]));
+    const out: PublicBoardRow[] = [];
+    for (const r of rows) {
+      const p = byId.get(r.petId);
+      if (!p) continue; // bot / ya borrada → no es una fila de Pet
+      out.push({
+        rank: out.length + 1,
+        petId: p.id,
+        nickname: p.nickname,
+        element: p.species?.element ?? null,
+        rarity: p.rarity,
+        level: p.level,
+        elo: p.elo,
+        owner: p.user?.displayName ?? null,
+      });
+      if (out.length >= requested) break;
+    }
+    return out;
   }
 
   /** Posición (1 = primero) y puntuación de una mascota, o null si aún no figura. */

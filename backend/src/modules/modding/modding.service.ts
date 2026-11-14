@@ -287,6 +287,8 @@ export class ModdingService {
   private async enforceRateLimit(userId: string): Promise<void> {
     const today = new Date().toISOString().slice(0, 10);
     const redisKey = this.redis.key(`modding:publish:${userId}:${today}`);
+    // R-05: el contador diario caduca al terminar el día (antes no se fijaba TTL).
+    const secondsUntilEod = Math.max(60, Math.ceil((new Date(`${today}T23:59:59.999Z`).getTime() - Date.now()) / 1000));
     const current = await this.redis.run(async (r) => {
       const val = await r.get(redisKey);
       return val ? parseInt(val, 10) : null;
@@ -300,6 +302,12 @@ export class ModdingService {
       if (count >= MODS_PER_DAY) {
         throw new HttpException('Límite de publicaciones alcanzado (5/día)', 429);
       }
+      // Sembrar el contador desde el historial del día y fijar la caducidad. Antes el contador
+      // nunca se escribía en Redis (siempre caía en la BD) y, por tanto, no llevaba TTL.
+      await this.redis.run(async (r) => {
+        await r.set(redisKey, String(count), 'EX', secondsUntilEod);
+        await r.incr(redisKey); // +1 por la publicación que se está validando
+      });
       return;
     }
 

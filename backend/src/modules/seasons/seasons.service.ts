@@ -7,6 +7,10 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { SeasonRewardsService } from './season-rewards.service';
 import { WalletService } from '../wallet/wallet.service';
+import { RedisCacheService } from '../../redis/redis-cache.service';
+
+// R-04: vida de la caché de `getProgress` (5–30 s) para datos que cambian poco.
+const PROGRESS_TTL_SECONDS = 10;
 
 interface SeasonConfig {
   id: string;
@@ -42,6 +46,7 @@ export class SeasonsService {
     private readonly prisma: PrismaService,
     private readonly rewardsService: SeasonRewardsService,
     private readonly wallet: WalletService,
+    private readonly cache: RedisCacheService,
   ) {
     this.seasonsData = require('../../../../shared/game-data/seasons.json');
     this.allTiers = [
@@ -143,6 +148,12 @@ export class SeasonsService {
   }
 
   async getProgress(userId: string) {
+    // R-04: 2 consultas a datos de cambio lento → caché de vida corta por usuario+temporada.
+    const cs = this.seasonsData.currentSeason;
+    return this.cache.getOrSet(`season:progress:${cs.id}:${userId}`, PROGRESS_TTL_SECONDS, () => this.getProgressComputed(userId));
+  }
+
+  private async getProgressComputed(userId: string) {
     const cs = this.seasonsData.currentSeason;
     if (new Date() > new Date(cs.endTime)) {
       return { seasonId: cs.id, currentTier: 0, totalXp: 0, maxTier: cs.maxTier, hasPass: false, unlockedTiers: [], nextReward: this.allTiers[0], seasonExpired: true };

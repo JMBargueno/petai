@@ -321,5 +321,13 @@
     },
     "maxPurchasesPerDay": 5,
     "expiryDays": 30
+  },
+  "publicApi": {
+    "leaderboardMax": 100,
+    "eventsLimit": 10,
+    "standings": {
+      "defaultLimit": 50,
+      "maxLimit": 200
+    }
   }
 }

@@ -30,8 +30,8 @@ export class TournamentController {
   }
 
   @Get('standings')
-  @ApiOperation({ summary: 'Posiciones y progreso del usuario en el torneo' })
-  standings(@CurrentUser() user: any) {
-    return this.tournamentService.standings(user.id);
+  @ApiOperation({ summary: 'Posiciones y progreso del usuario en el torneo (paginado)' })
+  standings(@CurrentUser() user: any, @Query('limit') limit?: string, @Query('offset') offset?: string) {
+    return this.tournamentService.standings(user.id, limit ? Number(limit) : undefined, offset ? Number(offset) : undefined);
   }
 }

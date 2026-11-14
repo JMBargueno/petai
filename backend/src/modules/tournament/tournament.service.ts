@@ -6,11 +6,14 @@ import { PetsService } from '../pets/pets.service';
 import { BracketService } from './bracket.service';
 import { WalletService } from '../wallet/wallet.service';
 import { CronLockService } from '../../redis/cron-lock.service';
+import { RedisCacheService } from '../../redis/redis-cache.service';
 
 const BRACKET_SIZE = 64;
 const DIAMOND_ELO = 1700;
 const ENTRY_FEE = 50;
 const TOTAL_PRIZE = 3000;
+// R-04: vida de la caché de lecturas calientes (5–30 s) para `getCurrent`.
+const CURRENT_TTL_SECONDS = 10;
 
 @Injectable()
 export class TournamentService {
@@ -23,9 +26,15 @@ export class TournamentService {
     private readonly bracketService: BracketService,
     private readonly wallet: WalletService,
     private readonly cronLock: CronLockService,
+    private readonly cache: RedisCacheService,
   ) {}
 
   async getCurrent(userId: string) {
+    // R-04: datos que cambian poco → caché de vida corta para no hacer 2-4 consultas por llamada.
+    return this.cache.getOrSet(`tournament:current:${userId}`, CURRENT_TTL_SECONDS, () => this.getCurrentComputed(userId));
+  }
+
+  private async getCurrentComputed(userId: string) {
     let tournament = await this.prisma.tournament.findFirst({
       where: { status: { in: ['entry', 'bracket', 'active'] } },
       orderBy: { createdAt: 'desc' },
@@ -72,23 +81,38 @@ export class TournamentService {
     return this.bracketService.getBracketView(tournament.id);
   }
 
-  async standings(userId: string) {
+  async standings(userId: string, limit?: number, offset?: number) {
     const tournament = await this.prisma.tournament.findFirst({
       where: { status: { in: ['bracket', 'active', 'finished'] } }, orderBy: { createdAt: 'desc' },
     });
-    if (!tournament) return { tournamentId: null, entries: [], me: null };
+    if (!tournament) return { tournamentId: null, status: null, total: 0, limit: 0, offset: 0, entries: [], me: null };
+
+    // R-04: paginación (skip/take) para no cargar todas las inscripciones con su mascota a la vez.
+    const cfg = this.gameData.getBalance().publicApi?.standings ?? {};
+    const pageLimit = Math.min(Math.max(1, Math.floor(limit) || (cfg.defaultLimit ?? 50)), Math.max(1, cfg.maxLimit ?? 200));
+    const pageOffset = Math.max(0, Math.floor(offset) || 0);
+
+    const total = await this.prisma.tournamentEntry.count({ where: { tournamentId: tournament.id } });
     const entries = await this.prisma.tournamentEntry.findMany({
-      where: { tournamentId: tournament.id }, orderBy: { elo: 'desc' },
+      where: { tournamentId: tournament.id },
+      orderBy: { elo: 'desc' },
+      skip: pageOffset,
+      take: pageLimit,
       include: { pet: { select: { id: true, nickname: true, elo: true, level: true, species: { select: { element: true, name: true } } } } },
     });
-    const me = entries.find((e) => e.userId === userId);
+    const me = await this.prisma.tournamentEntry.findUnique({
+      where: { tournamentId_userId: { tournamentId: tournament.id, userId } },
+    });
+    const meRank = me
+      ? 1 + (await this.prisma.tournamentEntry.count({ where: { tournamentId: tournament.id, elo: { gt: me.elo } } }))
+      : 0;
     return {
-      tournamentId: tournament.id, status: tournament.status,
+      tournamentId: tournament.id, status: tournament.status, total, limit: pageLimit, offset: pageOffset,
       entries: entries.map((e, i) => ({
-        rank: i + 1, userId: e.userId, petId: e.petId,
+        rank: pageOffset + i + 1, userId: e.userId, petId: e.petId,
         petName: e.pet?.nickname || 'Pet', elo: e.elo, placement: e.placement, mine: e.userId === userId,
       })),
-      me: me ? { rank: entries.indexOf(me) + 1, placement: me.placement } : null,
+      me: me ? { rank: meRank, placement: me.placement } : null,
     };
   }
 
