@@ -5,7 +5,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 96px;
+    scroll-padding-top: 16px; /* cada banda ya trae aire arriba; la nav flota encima */
   }
 
   body {
@@ -56,10 +56,21 @@
     cursor: pointer;
     transition:
       background-color 0.15s,
-      color 0.15s;
+      color 0.15s,
+      translate var(--dur-2) var(--ease-bounce),
+      scale var(--dur-1) ease-out;
   }
   .btn:hover {
     background: var(--color-soft-mist);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .btn:not(:disabled, [aria-disabled='true']):hover {
+      translate: 0 -2px;
+    }
+    .btn:not(:disabled, [aria-disabled='true']):active {
+      translate: 0 1px;
+      scale: 0.96;
+    }
   }
   .btn--filled {
     background: var(--color-carbon);
@@ -165,6 +176,129 @@
   dialog.dialog::backdrop {
     overflow: hidden;
     overscroll-behavior: contain;
-    background: rgb(0 0 0 / 0.45);
+  }
+
+  /*
+   * Entrada y salida (guía `animate-to-from-top-layer`). La salida necesita `overlay` y
+   * transición discreta de display: donde no existan (Firefox, Safari) el cierre es instantáneo.
+   */
+  dialog.dialog {
+    opacity: 0;
+    transition-property: opacity, transform, display, overlay;
+    transition-duration: 0.25s;
+    transition-timing-function: var(--ease-out);
+    transition-behavior: allow-discrete;
+  }
+  dialog.dialog[open] {
+    opacity: 1;
+  }
+  @starting-style {
+    dialog.dialog[open] {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    dialog.dialog {
+      transform: scale(0.92) rotate(-1.5deg);
+    }
+    dialog.dialog[open] {
+      transform: none;
+    }
+    @starting-style {
+      dialog.dialog[open] {
+        transform: scale(0.92) rotate(-1.5deg);
+      }
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    dialog.dialog,
+    dialog.dialog::backdrop {
+      transition-duration: 0.1s;
+    }
+  }
+  dialog.dialog::backdrop {
+    background-color: rgb(0 0 0 / 0);
+    transition-property: background-color, display, overlay;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out;
+    transition-behavior: allow-discrete;
+  }
+  dialog.dialog[open]::backdrop {
+    background-color: rgb(0 0 0 / 0.45);
+  }
+  @starting-style {
+    dialog.dialog[open]::backdrop {
+      background-color: rgb(0 0 0 / 0);
+    }
+  }
+
+  /* ───── Bandas de la landing (compartidas por sus secciones) ───── */
+  .band {
+    position: relative;
+    overflow: clip;
+    margin-block-start: -40px; /* cada hoja monta sobre la anterior */
+    padding: calc(40px + clamp(60px, 9vw, 128px)) clamp(16px, 4vw, 48px) calc(40px + clamp(60px, 9vw, 128px));
+    border-block-start: var(--outline);
+    border-start-start-radius: var(--radius-cards-elevated);
+    border-start-end-radius: var(--radius-cards-elevated);
+  }
+  .band--sky {
+    background: var(--color-sky-wash);
+  }
+  .band--white {
+    background: var(--color-paper-white);
+  }
+  .band--gray {
+    background: var(--color-concrete-gray);
+  }
+  .band--lavender {
+    background: var(--color-lavender);
+  }
+  .band--ink {
+    background: var(--color-carbon);
+    color: var(--color-paper-white);
+  }
+  .band__inner {
+    position: relative; /* por encima de la cinta */
+    max-inline-size: var(--page-max-width);
+    margin-inline: auto;
+  }
+  .band > app-ribbon {
+    block-size: min(440px, 62%);
+  }
+  .section-title {
+    font-size: clamp(48px, 10.5vw, 168px);
+    text-wrap: balance;
+  }
+  /* Palabra resaltada como una pegatina */
+  .hl {
+    display: inline-block;
+    padding: 0.06em 0.14em 0;
+    border: var(--outline);
+    border-radius: var(--radius-cards);
+    background: var(--color-sunburst);
+    color: var(--color-carbon);
+    rotate: -2.5deg;
+  }
+  .hl--mint {
+    background: var(--color-mint-pop);
+    rotate: 2deg;
+  }
+  .hl--ember {
+    background: var(--color-ember);
+  }
+  .hl--lavender {
+    background: var(--color-lavender);
+    rotate: 2deg;
+  }
+  .hl--blue {
+    background: var(--color-electric-blue);
+  }
+  .lead {
+    max-inline-size: 30ch;
+    margin: 24px 0 48px;
+    font-size: clamp(20px, 2.6vw, 30px);
+    line-height: 1.15;
+    text-wrap: balance;
   }
 }

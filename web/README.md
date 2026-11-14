@@ -42,12 +42,14 @@ web/
     postbuild.mjs      redirección de la raíz, rutas del panel, robots.txt y sitemap.xml
     preview.mjs        servidor estático para revisar el build
   src/
-    styles/            tokens.css (sistema de diseño) y base.css (botones, tarjetas, diálogos…)
+    styles/            tokens.css (sistema de diseño), base.css (botones, tarjetas, bandas, diálogos…) y motion.css
     locale/            messages.en.json (traducción al inglés)
     app/
       site.config.ts   dominio público y enlaces de descarga (pendientes de definir)
-      shared/ui/       pegatina, cinta y marquee
+      shared/ui/       pegatina, cinta, marquee y sprite animado del pockai
       landing/         la landing: content.ts (textos y datos), plantilla y estilos
+        sections/      cómo funciona, rarezas y escena de escritorio
+        demo/          demo jugable de eclosión y cuidado
       admin/
         auth.ts        acceso simulado y guard
         shell.ts       marco del panel (navegación, restablecer datos, salir)
@@ -78,13 +80,38 @@ La referencia usa **Lateral** (display) y **Aeonik Pro** (interfaz), que son com
 
 La cinta azul y las pegatinas son SVG propios, dibujados para este proyecto.
 
+## Movimiento
+
+La referencia de estilo original limitaba la animación al marquee. La landing se aparta de eso a propósito (nivel "juguetón"), manteniendo el resto de reglas. Todo vive en `src/styles/motion.css`:
+
+- **Clases de bucle:** `.float`, `.wiggle`, `.beat`, `.clash`, `.bob`. Usan `transform`, así que se combinan con el giro (`rotate`) y el parallax (`translate`) de cada elemento.
+- **Entradas al hacer scroll:** `.reveal` y sus variantes `--left`, `--right`, `--pop`, `--tilt`. Son animaciones CSS ligadas al scroll (`animation-timeline: view()`), sin JavaScript. Donde el navegador no las soporta, el contenido simplemente está en su sitio.
+- **`.hover-lift`:** tarjeta girada que se endereza y sube al pasar el cursor.
+- **Componentes:** `<app-ribbon>` se dibuja al entrar en pantalla (`draw="load"` para lo que ya está a la vista), `<app-sticker>` hace "pop" al hover y `<app-pockai-sprite>` anima un pockai según su estado (`idle`, `happy`, `eat`, `sleep`) con los sprites reales.
+
+Normas al añadir animaciones:
+
+- Animar solo `transform`, `translate`, `rotate`, `scale` y `opacity`.
+- Meter todo lo que se mueve dentro de `@media (prefers-reduced-motion: no-preference)`. Con "reducir movimiento" activado no hay bucles, entradas ni parallax, y la mascota del hero deja de cambiar sola.
+- Ninguna animación puede esconder contenido: el HTML prerenderizado debe leerse entero sin JavaScript.
+
+En el panel el movimiento se limita a tres detalles: entrada y salida de los diálogos, fundido al cambiar de sección y filas que viajan a su sitio al ordenar o filtrar (tablas de hasta 60 filas). La salida animada de los diálogos solo funciona en navegadores con `overlay` (Chrome y Edge); en el resto se cierran al instante.
+
+## Demo de la landing
+
+La sección "Pruébalo aquí" (`src/app/landing/demo/`) deja tocar un huevo hasta que eclosiona y cuidar al pockai que sale. Se carga solo cuando entra en pantalla (`@defer (on viewport)`), así que no pesa en la carga inicial.
+
+- La rareza y el shiny se sortean con las probabilidades reales de `shared/game-data/balance.json`, pero en el navegador: en el juego esa tirada la hace el servidor, y la demo lo dice.
+- No guarda nada ni habla con el backend.
+- El azar se inyecta con el token `DEMO_RANDOM`, que los tests sustituyen por una secuencia fija.
+
 ## Idiomas
 
 Se usa el i18n nativo de Angular (`@angular/localize`). El español es el idioma fuente y el inglés vive en `src/locale/messages.en.json`. El build genera `/es/` y `/en/`, y la raíz redirige a uno u otro según el idioma del navegador.
 
 Para añadir o cambiar un texto de la landing:
 
-1. Escríbelo en español con un id fijo: `i18n="@@seccion.clave"` en la plantilla, o `` $localize`:@@seccion.clave:Texto` `` en `content.ts`.
+1. Escríbelo en español con un id fijo (si el texto lleva una etiqueta dentro, como la palabra resaltada de los titulares, la traducción debe conservar sus marcadores `{$START_TAG_SPAN}`…`{$CLOSE_TAG_SPAN}`; `pnpm extract-i18n` los muestra): `i18n="@@seccion.clave"` en la plantilla, o `` $localize`:@@seccion.clave:Texto` `` en `content.ts`.
 2. Añade la misma clave con su traducción en `messages.en.json`.
 
 Si falta una traducción el build falla (`i18nMissingTranslation: "error"`), así que no puede publicarse una página a medio traducir. El panel de administración no se traduce: está solo en español.

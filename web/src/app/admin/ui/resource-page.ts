@@ -52,6 +52,8 @@ export interface Filter<T> {
 type SortDirection = 'ascending' | 'descending';
 
 let nextUid = 0;
+/** Por encima de este tamaño no se anima la reordenación (demasiados elementos a la vez). */
+const MAX_ANIMATED_ROWS = 60;
 const collator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeZone: 'UTC' });
 
@@ -137,11 +139,36 @@ export class ResourcePage<T extends Entity> implements OnInit {
     return String(value ?? '');
   }
 
+  /** Nombre de transición por fila: así, al reordenar, cada una viaja a su nuevo sitio. */
+  protected rowTransitionName(row: T): string | null {
+    if (this.store.rows().length > MAX_ANIMATED_ROWS) return null;
+    return `${this.uid}-${row.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  }
+
+  /** Aplica un cambio de orden o filtro dentro de una view transition, si se puede. */
+  protected reorder(change: () => void) {
+    const doc = document as Document & { startViewTransition?: (cb: () => Promise<void>) => unknown };
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!doc.startViewTransition || calm || this.store.rows().length > MAX_ANIMATED_ROWS) {
+      change();
+      return;
+    }
+    doc.startViewTransition(() => {
+      change();
+      // La transición captura el estado nuevo cuando Angular ya ha pintado las filas.
+      return new Promise<void>((done) => afterNextRender(() => done(), { injector: this.injector }));
+    });
+  }
+
+  protected onFilter(value: string) {
+    this.reorder(() => this.filterValue.set(value));
+  }
+
   protected toggleSort(column: Column<T>) {
     const current = this.sort();
     const dir: SortDirection =
       current?.key === column.key && current.dir === 'ascending' ? 'descending' : 'ascending';
-    this.sort.set({ key: column.key, dir });
+    this.reorder(() => this.sort.set({ key: column.key, dir }));
     const direction = dir === 'ascending' ? 'ascendente' : 'descendente';
     this.status.set(`Ordenado por ${column.label}, ${direction}, ${this.visibleRows().length} filas`);
   }

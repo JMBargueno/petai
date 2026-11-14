@@ -1,0 +1,172 @@
+/*
+ * Movimiento. Se aparta a propósito de la guía de estilo original (que solo animaba el marquee),
+ * pero respeta el resto: colores planos, contornos, nada de sombras.
+ *
+ * Reglas:
+ *  - Solo se animan transform, translate, rotate, scale y opacity.
+ *  - Todo lo que se mueve va dentro de `prefers-reduced-motion: no-preference`.
+ *  - Las entradas por scroll son decorativas: donde no hay soporte, el contenido está en su sitio.
+ */
+:root {
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-1: 0.15s;
+  --dur-2: 0.3s;
+  --dur-3: 0.6s;
+}
+
+/* `transform` para los bucles: deja libres translate/rotate/scale para giros y parallax. */
+@keyframes float {
+  50% {
+    transform: translateY(calc(var(--float-y, 10px) * -1)) rotate(var(--float-r, 3deg));
+  }
+}
+@keyframes wiggle {
+  20% {
+    transform: rotate(-9deg);
+  }
+  40% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-5deg);
+  }
+  80% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes beat {
+  15% {
+    transform: scale(1.18);
+  }
+  30% {
+    transform: scale(0.96);
+  }
+  45% {
+    transform: scale(1.1);
+  }
+  60% {
+    transform: scale(1);
+  }
+}
+@keyframes clash {
+  40% {
+    transform: translateX(8px) rotate(10deg);
+  }
+  50% {
+    transform: translateX(-3px) rotate(-4deg);
+  }
+  60% {
+    transform: translateX(0) rotate(0);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    scale: 0.4;
+    rotate: -14deg;
+  }
+}
+@keyframes bob {
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .float {
+    animation: float var(--float-dur, 5s) ease-in-out var(--float-delay, 0s) infinite;
+  }
+  .wiggle {
+    animation: wiggle 1.6s ease-in-out infinite;
+  }
+  .beat {
+    animation: beat 1.4s ease-in-out infinite;
+  }
+  .clash {
+    animation: clash 1.8s ease-in-out infinite;
+  }
+  .bob {
+    animation: bob 1.4s ease-in-out infinite;
+  }
+  .pop-in {
+    animation: pop-in var(--dur-3) var(--ease-bounce) backwards;
+  }
+
+  /* Tarjeta girada que se endereza y sube al pasar el cursor */
+  .hover-lift {
+    transition:
+      rotate var(--dur-2) var(--ease-bounce),
+      translate var(--dur-2) var(--ease-bounce);
+  }
+  .hover-lift:hover {
+    rotate: 0deg;
+    translate: 0 -6px;
+  }
+
+  /* Entradas al entrar en pantalla (guía `scroll-entry-exit-effects`) */
+  @supports ((animation-timeline: view()) and (animation-range: entry)) {
+    @keyframes reveal-up {
+      from {
+        opacity: 0;
+        translate: 0 56px;
+      }
+    }
+    @keyframes reveal-left {
+      from {
+        opacity: 0;
+        translate: -72px 0;
+      }
+    }
+    @keyframes reveal-right {
+      from {
+        opacity: 0;
+        translate: 72px 0;
+      }
+    }
+    @keyframes reveal-pop {
+      from {
+        opacity: 0;
+        scale: 0.7;
+      }
+    }
+    @keyframes reveal-tilt {
+      from {
+        opacity: 0;
+        translate: 0 64px;
+        rotate: -10deg;
+      }
+    }
+
+    .reveal {
+      animation: reveal-up auto var(--ease-out) backwards;
+      /* Después del shorthand, que si no los reinicia. */
+      animation-timeline: view();
+      animation-range: entry 0% cover 28%;
+    }
+    .reveal--left {
+      animation-name: reveal-left;
+    }
+    .reveal--right {
+      animation-name: reveal-right;
+    }
+    .reveal--pop {
+      animation-name: reveal-pop;
+    }
+    .reveal--tilt {
+      animation-name: reveal-tilt;
+    }
+  }
+}
+
+/* Transiciones de vista (cambio de sección del panel y reordenación de tablas) */
+::view-transition-group(*) {
+  animation-duration: 0.25s;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,87 @@
+<div class="stage" [class.stage--shiny]="pet()?.shiny">
+  @if (pet(); as p) {
+    <div class="burst" aria-hidden="true">
+      @for (b of burst; track $index) {
+        <app-sticker [icon]="b.icon" [color]="b.color" [size]="44" [style.--n]="$index" />
+      }
+    </div>
+    <app-pockai-sprite class="pet pop-in" [species]="p.spriteKey" [state]="state()" [alt]="p.name" />
+    <p class="name">
+      <strong>{{ p.name }}</strong>
+      <span class="tag">{{ p.rarity }}</span>
+      @if (p.shiny) {
+        <span class="tag tag--shiny">Shiny</span>
+      }
+    </p>
+  } @else {
+    <button
+      class="egg"
+      type="button"
+      [class.egg--a]="taps() % 2 === 1"
+      [class.egg--b]="taps() > 0 && taps() % 2 === 0"
+      (click)="tapEgg()"
+    >
+      <img [src]="eggSprite()" alt="" width="128" height="128" />
+      <span class="visually-hidden" i18n="@@demo.egg.label">Tocar el huevo</span>
+    </button>
+    <p class="hint">
+      <span i18n="@@demo.egg.hint">Toca el huevo para que eclosione</span>
+      <span class="dots" aria-hidden="true">
+        @for (i of [0, 1, 2]; track i) {
+          <i [class.on]="taps() > i"></i>
+        }
+      </span>
+    </p>
+  }
+</div>
+
+<div class="panel">
+  @if (pet()) {
+    <div class="meters">
+      <div class="meter">
+        <span class="label-caps" id="demo-hunger" i18n="@@demo.hunger">Saciedad</span>
+        <span
+          class="track"
+          role="meter"
+          aria-labelledby="demo-hunger"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-valuenow]="hunger().toFixed(0)"
+        >
+          <span class="fill fill--hunger" [style.scale]="hunger() / 100 + ' 1'"></span>
+        </span>
+      </div>
+      <div class="meter">
+        <span class="label-caps" id="demo-happiness" i18n="@@demo.happiness">Felicidad</span>
+        <span
+          class="track"
+          role="meter"
+          aria-labelledby="demo-happiness"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-valuenow]="happiness().toFixed(0)"
+        >
+          <span class="fill fill--happiness" [style.scale]="happiness() / 100 + ' 1'"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--filled" type="button" (click)="feed()" i18n="@@demo.feed">Dar de comer</button>
+      <button class="btn" type="button" (click)="play()" i18n="@@demo.play">Jugar</button>
+      <button class="btn" type="button" [attr.aria-pressed]="state() === 'sleep'" (click)="toggleSleep()" i18n="@@demo.sleep">
+        Dormir
+      </button>
+      <button class="btn" type="button" (click)="reset()" i18n="@@demo.again">Otro huevo</button>
+    </div>
+  } @else {
+    <p class="pitch" i18n="@@demo.pitch">
+      Al tercer toque se rompe el cascarón. Luego podrás darle de comer, jugar con él y mandarlo a dormir.
+    </p>
+  }
+
+  <p class="status" role="status">{{ message() }}</p>
+  <p class="disclaimer" i18n="@@demo.disclaimer">
+    Es una demostración: usa las probabilidades reales, pero en el juego la tirada la hace el servidor.
+  </p>
+</div>

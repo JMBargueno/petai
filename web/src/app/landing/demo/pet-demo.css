@@ -1,0 +1,204 @@
+:host {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+@media (width >= 860px) {
+  :host {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+p {
+  margin: 0;
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  place-content: center;
+  justify-items: center;
+  min-block-size: 360px;
+  padding: 24px;
+  overflow: hidden;
+  border: var(--outline);
+  border-radius: var(--radius-cards-elevated);
+  background: var(--color-sunburst);
+  rotate: -1deg;
+}
+.stage--shiny {
+  background: var(--color-lavender);
+}
+
+.egg {
+  inline-size: clamp(150px, 22vw, 220px);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  transform-origin: 50% 85%;
+}
+.egg img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+.hint {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  font-weight: var(--font-weight-bold);
+}
+.dots {
+  display: flex;
+  gap: 6px;
+}
+.dots i {
+  inline-size: 14px;
+  aspect-ratio: 1;
+  border: var(--outline);
+  border-radius: 50%;
+  background: var(--color-paper-white);
+}
+.dots i.on {
+  background: var(--color-carbon);
+}
+
+.pet {
+  --sprite-size: clamp(170px, 24vw, 250px);
+}
+.name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--text-subheading);
+}
+.tag--shiny {
+  background: var(--color-carbon);
+  color: var(--color-paper-white);
+}
+
+.burst {
+  position: absolute;
+  inset: 50% auto auto 50%;
+}
+.burst app-sticker {
+  position: absolute;
+  inset: -22px auto auto -22px;
+  opacity: 0;
+}
+
+.panel {
+  display: grid;
+  gap: 16px;
+  align-content: center;
+  padding: 24px;
+  border: var(--outline);
+  border-radius: var(--radius-cards-elevated);
+  background: var(--color-paper-white);
+  color: var(--color-carbon);
+  rotate: 1deg;
+}
+.pitch {
+  font-size: 18px;
+}
+.meters {
+  display: grid;
+  gap: 12px;
+}
+.meter {
+  display: grid;
+  gap: 4px;
+}
+.track {
+  display: block;
+  block-size: 20px;
+  overflow: hidden;
+  border: var(--outline);
+  border-radius: var(--radius-pills);
+  background: var(--color-soft-mist);
+}
+.fill {
+  display: block;
+  block-size: 100%;
+  transform-origin: 0 50%;
+  transition: scale 0.5s var(--ease-out);
+}
+.fill--hunger {
+  background: var(--color-ember);
+}
+.fill--happiness {
+  background: var(--color-electric-blue);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.btn[aria-pressed='true'] {
+  background: var(--color-lavender);
+}
+.status {
+  min-block-size: 1.4em; /* reserva la línea: el mensaje no mueve los botones */
+  font-weight: var(--font-weight-bold);
+}
+.disclaimer {
+  font-size: var(--text-caption);
+}
+
+@keyframes egg-idle {
+  50% {
+    transform: rotate(2deg) translateY(-3px);
+  }
+}
+/* Dos nombres para el mismo temblor: alternarlos reinicia la animación en cada toque. */
+@keyframes shake-a {
+  20% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(10deg);
+  }
+  70% {
+    transform: rotate(-6deg);
+  }
+}
+@keyframes shake-b {
+  20% {
+    transform: rotate(12deg);
+  }
+  45% {
+    transform: rotate(-10deg);
+  }
+  70% {
+    transform: rotate(6deg);
+  }
+}
+@keyframes burst {
+  from {
+    opacity: 1;
+    transform: rotate(calc(var(--n) * 60deg)) translateY(0) scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(calc(var(--n) * 60deg)) translateY(-190px) scale(1);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .egg {
+    animation: egg-idle 2.4s ease-in-out infinite;
+  }
+  .egg--a {
+    animation: shake-a 0.45s ease-in-out;
+  }
+  .egg--b {
+    animation: shake-b 0.45s ease-in-out;
+  }
+  .burst app-sticker {
+    animation: burst 0.9s var(--ease-out) both;
+  }
+}

@@ -21,7 +21,11 @@ const PATHS: Record<StickerIcon, string> = {
     'M8.5 3h7A1.5 1.5 0 0 1 17 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 19.5v-15A1.5 1.5 0 0 1 8.5 3zm2 14.5h3',
 };
 
-/** Pegatina decorativa: recorte plano con contorno negro, siempre oculta a lectores de pantalla. */
+/**
+ * Pegatina decorativa: recorte plano con contorno negro, siempre oculta a lectores de pantalla.
+ * El giro va en `rotate` y el "pop" en `scale`; así las clases de movimiento globales
+ * (.float, .wiggle, .beat…), que usan `transform`, se pueden combinar con ambos.
+ */
 @Component({
   selector: 'app-sticker',
   template: `
@@ -49,6 +53,14 @@ const PATHS: Record<StickerIcon, string> = {
     svg {
       inline-size: 62%;
       block-size: 62%;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      :host {
+        transition: scale var(--dur-2) var(--ease-bounce);
+      }
+      :host(:hover) {
+        scale: 1.18;
+      }
     }
   `,
   host: {

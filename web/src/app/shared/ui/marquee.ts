@@ -37,6 +37,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         translate: -50% 0;
       }
     }
+    :host(:hover) .track {
+      animation-play-state: paused;
+    }
     @media (prefers-reduced-motion: reduce) {
       .track {
         animation: none;
