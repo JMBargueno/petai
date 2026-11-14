@@ -51,6 +51,19 @@ export const envSchema = z.object({
   RATE_LIMIT_PER_MINUTE: positiveInt(300),
   RATE_LIMIT_DISABLED: z.enum(['true', 'false']).optional(),
   RATE_LIMIT_FORCE: z.enum(['true', 'false']).optional(),
+  // ---- Observabilidad (OpenTelemetry) ----
+  // Sin OTEL_EXPORTER_OTLP_ENDPOINT el SDK no se arranca (observabilidad desactivada de forma segura).
+  OTEL_SERVICE_NAME: z.string().default('petai-backend'),
+  OTEL_SERVICE_VERSION: z.string().default('0.1.0'),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
+  OTEL_EXPORTER_OTLP_PROTOCOL: z.enum(['grpc', 'http']).default('grpc'),
+  OTEL_TRACES_SAMPLER: z.string().default('parentbased_traceidratio'),
+  // 1.0 en desarrollo; 10–20% en producción (FR-013).
+  OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(1.0),
+  // 'prometheus' => las métricas las expone prom-client (no se envían por OTLP).
+  OTEL_METRICS_EXPORTER: z.string().default('prometheus'),
+  // Puerto del servidor de métricas (aislado del 3000). 0 = puerto efímero (tests).
+  METRICS_PORT: z.coerce.number().int().min(0).default(9464),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

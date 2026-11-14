@@ -68,6 +68,77 @@ export interface PromptOptions {
   timeZone?: string;
 }
 
+export interface PromptOptions {
+  tier?: 'chat' | 'memory' | 'agent';
+  now?: Date;
+  timeZone?: string;
+  /**
+   * Contexto ambiental opcional (feature 005): hora del día, clima y festividad del usuario.
+   * Cuando está presente, se inyecta un bloque de micro-momentos en el prompt de sistema.
+   */
+  environment?: {
+    timeOfDay?: string;
+    weatherCondition?: string;
+    temperature?: number | null;
+    festival?: { name: string; message: string } | null;
+  } | null;
+  /**
+   * Vínculo con el entrenador (feature 006): id del rango (acquainted | companion | ally |
+   * soulmate | legend). Contexto de solo-lectura (Constitución VIII): no es un argumento de
+   * herramienta, solo modula el tono del prompt.
+   */
+  bondingTier?: string;
+}
+
+/** Línea de contexto por rango de vínculo (feature 006, FR-010). */
+const BONDING_TIER_CONTEXT: Record<string, string> = {
+  acquainted: 'Vínculo con tu entrenador: Acostumbrado — se están conociendo; sé cordial sin pasarte.',
+  companion: 'Vínculo con tu entrenador: Compañero — muestra afecto y confianza; saluda con calidez cuando iniciéis.',
+  ally: 'Vínculo con tu entrenador: Aliado — sois un gran equipo; recuerda lo que habéis hablado y alúdelo con naturalidad.',
+  soulmate:
+    'Vínculo con tu entrenador: Alma gemela — conexión muy profunda. Reacciones emocionales personalizadas: muéstrate cariñoso, emocionado o preocupado según el momento, sin perder tu carácter base.',
+  legend: 'Vínculo con tu entrenador: Leyenda — sois inseparables; celebra cada momento juntos como dos grandes amigos.',
+};
+
+const TIME_OF_DAY_LABEL: Record<string, string> = {
+  late_night: 'madrugada',
+  morning: 'mañana',
+  afternoon: 'tarde',
+  evening: 'noche (nocturna)',
+  night: 'noche',
+};
+
+const WEATHER_LABEL: Record<string, string> = {
+  clear: 'despejado',
+  cloud: 'nublado',
+  rain: 'lluvioso',
+  snow: 'nevado',
+  hot: 'muy caluroso',
+  cold: 'muy frío',
+  unknown: 'desconocido',
+};
+
+/** Bloque de contexto ambiental para el prompt (puro y testeable). Vacío si no hay contexto. */
+export function buildEnvironmentBlock(
+  env: PromptOptions['environment'],
+): string {
+  if (!env) return '';
+  const lines: string[] = [];
+  if (env.timeOfDay) {
+    lines.push(`- Es ${TIME_OF_DAY_LABEL[env.timeOfDay] ?? env.timeOfDay} donde vives (rompe la cuarta pared con naturalidad: bostezos de madrugada, energía de tarde…).`);
+  }
+  if (env.weatherCondition) {
+    const temp =
+      typeof env.temperature === 'number' ? ` (hace ${env.temperature}°C)` : '';
+    lines.push(`- Tu clima real es ${WEATHER_LABEL[env.weatherCondition] ?? env.weatherCondition}${temp}; reacciona con el cuerpo (paraguas si llueve, gorro si hace frío…).`);
+  }
+  if (env.festival) {
+    lines.push(`- Hoy es ${env.festival.name}: ${env.festival.message} (celebralo contigo mismo y con tu entrenador).`);
+  }
+  if (lines.length === 0) return '';
+  return `Tu entorno ahora mismo:\n${lines.join('\n')}`;
+}
+
 export function buildSystemPrompt(
   pet: any,
   owner: { displayName?: string | null },
@@ -79,6 +150,10 @@ export function buildSystemPrompt(
   const species = pet.species ?? {};
   const element = ELEMENTS[species.element] ?? species.element ?? 'desconocido';
   const ownerName = owner.displayName?.trim() || 'tu entrenador';
+  const environmentBlock = buildEnvironmentBlock(opts.environment);
+  // Vínculo (feature 006): contexto de solo-lectura; en soulmate añade reacciones emocionales
+  // personalizadas sin alterar el carácter base (rasgo + mood)
+  const bondingLine = opts.bondingTier ? BONDING_TIER_CONTEXT[opts.bondingTier] : undefined;
 
   return [
     `Eres ${pet.nickname || species.name}, una mascota virtual de la especie ${species.name} (elemento ${element}) en el juego PetAI.`,
@@ -87,6 +162,8 @@ export function buildSystemPrompt(
     `Estado de ánimo ahora mismo: ${MOOD_TONE[mood]}`,
     `Tus estadísticas (0-100): hambre ${Math.round(pet.hunger)}, felicidad ${Math.round(pet.happiness)}, energía ${Math.round(pet.energy)}, higiene ${Math.round(pet.hygiene)}, salud ${Math.round(pet.health)}.`,
     species.description ? `Sobre tu especie: ${species.description}` : '',
+    bondingLine,
+    environmentBlock,
     'Reglas:',
     '- Responde siempre en el idioma del entrenador, en primera persona y con el carácter y el ánimo descritos.',
     '- Sé breve: 1 a 3 frases, como una mascota que habla.',

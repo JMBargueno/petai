@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppExceptionFilter } from './common/app-exception.filter';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.config';
@@ -10,12 +12,22 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { HatchingModule } from './modules/hatching/hatching.module';
 import { PetsModule } from './modules/pets/pets.module';
+import { BondingModule } from './modules/bonding/bonding.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { MinigamesModule } from './modules/minigames/minigames.module';
 import { AiModule } from './modules/ai/ai.module';
 import { BattlesModule } from './modules/battles/battles.module';
 import { HealthModule } from './modules/health/health.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { ObservabilityModule } from './observability/observability.module';
+import { MissionsModule } from './missions/missions.module';
+import { ChestsModule } from './modules/chests/chests.module';
+import { EnvironmentalModule } from './modules/environmental/environmental.module';
+import { DevModule } from './modules/dev/dev.module';
+
+// DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
+// En `NODE_ENV === 'production'` el DevModule no se registra ⇒ 404 (SC-007, constitución I/VIII).
+const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production';
 
 @Module({
   imports: [
@@ -24,6 +36,9 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
       envFilePath: ['.env', 'backend/.env'],
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
+    ObservabilityModule.forRoot(),
     PrismaModule,
     RedisModule,
     RealtimeModule,
@@ -32,11 +47,16 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
     UsersModule,
     HatchingModule,
     PetsModule,
+    BondingModule,
     InventoryModule,
     MinigamesModule,
     AiModule,
     BattlesModule,
     HealthModule,
+    MissionsModule,
+    ChestsModule,
+    EnvironmentalModule,
+    ...(DEV_TOOLS_ENABLED ? [DevModule] : []),
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],
 })

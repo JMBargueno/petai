@@ -2,6 +2,7 @@ packages:
   - 'backend'
   - 'desktop'
   - 'shared/*'
+  - 'tools/*'
 
 allowBuilds:
   '@prisma/client': true
@@ -10,3 +11,7 @@ allowBuilds:
   argon2: true
   esbuild: true
   prisma: true
+  protobufjs: true
+
+overrides:
+  deepmerge-ts: '>=8.0.0'  

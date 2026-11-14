@@ -1,0 +1,16 @@
+{
+  "seed": 42,
+  "total": 2000,
+  "winRates": {
+    "byRarity": {
+      "normal": 0.5
+    },
+    "byElement": {
+      "fire": 0.51,
+      "water": 0.5,
+      "plant": 0.49
+    }
+  },
+  "avgRounds": 2.42,
+  "avgDamage": 1000.11
+}

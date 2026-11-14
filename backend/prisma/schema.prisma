@@ -13,6 +13,11 @@ model User {
   passwordHash String
   displayName  String?
   timezone     String         @default("UTC")
+  // Coordenadas opt-in para el clima (privacidad): se guardan redondeadas y solo las usa el servidor.
+  latitude     Float?
+  longitude    Float?
+  // Cumpleaños como "YYYY-MM-DD" (para micro-momentos de festividad).
+  birthday     String?
   coins        Int            @default(100)
   gems         Int            @default(5)
   accountXp    Int            @default(0)
@@ -30,6 +35,9 @@ model User {
   minigames      MinigameSession[]
   pendingActions PendingAction[]
   aiUsage        AiUsage[]
+  missions       Mission[]
+  chests         Chest[]
+  chestPity      ChestPity[]
 }
 
 model RefreshToken {
@@ -131,6 +139,12 @@ model Pet {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Bonding Meter (feature 006): vínculo jugador-pet 0-100, rango y base del decaimiento lazy
+  bonding           Float       @default(0)
+  bondingTier       String      @default("acquainted")
+  lastInteractionAt DateTime    @default(now())
+  bondingEvents     BondingEvent[]
+
   chatMessages  ChatMessage[]
   memories      PetMemory[]
   reminders     Reminder[]
@@ -142,6 +156,20 @@ model Pet {
   @@index([userId])
   @@index([speciesId])
   @@index([elo])
+}
+
+// Auditoría del Bonding Meter (feature 006): cada cambio puntual del vínculo (incremento por
+// interacción o decaimiento por abandono) produce exactamente una fila.
+model BondingEvent {
+  id        String   @id @default(uuid())
+  petId     String
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  delta     Float
+  reason    String // feed | battle | minigame | chat | clean | sleep | evolve | decay
+  value     Float
+  createdAt DateTime @default(now())
+
+  @@index([petId, createdAt])
 }
 
 model PityCounter {
@@ -292,4 +320,56 @@ model AiUsage {
   updatedAt DateTime @updatedAt
 
   @@id([userId, month])
+}
+
+// Misiones diarias/semanales: un objetivo numérico que se incrementa con acciones del jugador
+model Mission {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period      String   // "daily" | "weekly"
+  type        String   // feed | battle | minigame | chat | clean | sleep | evolve | hatch | level_up | battle_win | hatch_rare
+  description String
+  target      Int
+  current     Int      @default(0)
+  completed   Boolean  @default(false)
+  claimed     Boolean  @default(false)
+  rewardCoins Int      @default(0)
+  rewardGems  Int      @default(0)
+  rewardXp    Int      @default(0)
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([userId, period, periodEnd])
+  @@index([userId, completed])
+}
+
+// Cofre del usuario: contiene items aleatorios resueltos al abrirlo (drop table data-driven en
+// shared/game-data/balance.json → chests). `openedAt` es null hasta que se abre; `drops` guarda
+// los drops resueltos (Json) al momento de la apertura. Caduca a los 30 días (job chests:cleanup).
+model Chest {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // bronze | silver | gold | diamond | mythic
+  source    String // daily_mission | battle | evolution | purchase | event
+  openedAt  DateTime?
+  drops     Json?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, openedAt])
+}
+
+// Progreso de pity de un usuario por tipo de cofre (independiente de PityCounter, que gestiona el
+// pity de eclosión de pets). `count` = aperturas consecutivas sin drop de `minTier`; se resetea a 0
+// cuando cae un drop de tier >= minTier. Único por [userId, tier].
+model ChestPity {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier   String // tipo de cofre: bronze | silver | gold | diamond | mythic
+  count  Int    @default(0)
+
+  @@unique([userId, tier])
 }

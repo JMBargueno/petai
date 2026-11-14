@@ -121,6 +121,24 @@ Con 500+ de inteligencia el modelo recibe herramientas (*function calling*): `ge
 - `DELETE /pets/:id/memories/:memoryId`: Olvidar un recuerdo. `DELETE /pets/:id/memories`: Borrar toda la memoria.
 - `POST /pets/:id/tool-calls/:callId/confirm`: Confirmar o denegar una acción solicitada por el agente.
 
+### 2.10 Ambiental (`/environmental`) — hora del día, clima real, inactividad y festividades
+El backend resuelve el **estado ambiental** del usuario (no del pet): todos los pets de un usuario comparten el mismo clima, hora y festividad. La identidad (`userId`) sale del JWT; **nunca** de un parámetro. Los números de ajuste viven en `shared/game-data/balance.json → environmental` y las festividades en `shared/game-data/festivals.json`.
+
+- `GET /environmental/status` (con sesión): devuelve `{ timeOfDay, weather, activity, festival }`.
+  - `timeOfDay`: `late_night | morning | afternoon | evening | night`, calculado en la zona horaria (`User.timezone`) del usuario.
+  - `weather`: `{ condition, temperature, weatherCode, cached, fetchedAt }`. `condition` ∈ `clear | cloud | rain | snow | hot | cold | unknown`. Se consulta **Open-Meteo** (gratis, sin API key) con allowlist SSRF y timeout de 3 s; se cachea en Redis `weather:{lat}:{lon}` (TTL 30 min) y se mapea `weather_code` (WMO) + `temperature_2m` según `environmental.hot_temp`/`cold_temp`.
+  - `activity`: `{ active, mode, lastActiveAt }` con `mode ∈ active | solo`; pasa a `solo` si han pasado más de `environmental.inactivityThresholdHours` (2 h por defecto) sin heartbeat.
+  - `festival`: festividad activa (accesorio + frase) o `null`.
+  - **Degradación elegante**: sin coordenadas (opt-in desactivado) o con la API de meteo caída, `weather.condition = "unknown"` y el resto se devuelve igual. **Nunca** devuelve `5xx` por fallo del provider de meteo.
+- `POST /environmental/activity` (con sesión): heartbeat del escritorio `{ active?: boolean, cpuUsage?: number }`. `active` debe ser booleano y `cpuUsage` (opcional) un número ≥ 0 (si no → 400). Actualiza `activity:{userId}` en Redis (TTL 3 h). Al transitar de `solo` a `active` emite `environmental:changed`. Devuelve `{ ok: true }`.
+- `GET /environmental/festivals/upcoming` (con sesión): lista las festividades próximas (incluida la de hoy y el cumpleaños del usuario) como `[{ id, name, date, daysRemaining }]`, con `daysRemaining ≥ 0` (0 si es hoy).
+
+**Coordinadas (opt-in)**: `PATCH /me` acepta `latitude` y `longitude` (y `birthday`, `YYYY-MM-DD`), redondeadas a 2 decimales; se borran al enviar `null` (privacidad). Solo las usa el servidor para consultar el clima y como clave de cache.
+
+**Modificadores ambientales sobre los vitales** (dentro del *lazy tick*, sin cron por pet): con `hot` decae `hunger` extra (`hunger_hot`, ±0.5/h), con `rain` sube `happiness` (`happiness_rain`) y con `snow` gasta `energy` (`energy_snow`), siempre acotado a `[0, max]`.
+
+**WebSocket** — ver `environmental:changed` en la sección 3.
+
 ---
 
 ## 3. WebSocket Gateway (`/realtime`)
@@ -131,3 +149,4 @@ Conexión bidireccional basada en Socket.IO con autenticación por token en el h
 - `chat:delta`: Fragmentos de texto generados por el LLM en tiempo real.
 - `battle:result`: Notificación asíncrona de combate cuando otro jugador ataca la defensa de tu mascota.
 - `inventory:update`: Cambios en monedas o ítems del usuario.
+- `environmental:changed` (feature ambiental): se emite a la sala `user:<userId>` cuando cambia una condición relevante — `type: "weather" | "timeOfDay" | "activity" | "festival"` y un `data` acorde (p. ej. `{ condition, temperature, weatherCode }`, `{ timeOfDay }`, `{ mode }` o la `FestivalInfo`). No se emite en cada heartbeat (solo transiciones, para evitar ruido).

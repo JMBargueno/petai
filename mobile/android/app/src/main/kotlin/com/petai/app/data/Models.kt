@@ -59,6 +59,7 @@ data class Pet(
     val palette: PaletteDto = PaletteDto(),
     val species: SpeciesDto = SpeciesDto(),
     val pattern: PatternDto = PatternDto(),
+    val visualSeed: Int = 1337,
 ) {
     /** XP necesaria para pasar del nivel actual al siguiente: round(100 · n^1.5) (GAME_DESIGN §3.1). */
     val xpForNextLevel: Int get() = Math.round(100.0 * Math.pow(level.toDouble(), 1.5)).toInt()

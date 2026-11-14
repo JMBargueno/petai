@@ -35,10 +35,82 @@ services:
     networks:
       - petai-net
 
+  # ---- Observabilidad (Prometheus, Grafana, Jaeger, Alertmanager) ----
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: petai-prometheus
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/observability/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+    networks:
+      - petai-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: petai-grafana
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin_dev
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./infra/observability/grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ./infra/observability/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - petai-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: petai-jaeger
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:16686:16686" # UI
+      - "127.0.0.1:4317:4317" # OTLP gRPC
+      - "127.0.0.1:4318:4318" # OTLP HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: badger
+    volumes:
+      - jaeger_data:/badgerdata
+    networks:
+      - petai-net
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: petai-alertmanager
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./infra/observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    networks:
+      - petai-net
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  jaeger_data:
     driver: local
 
 networks:

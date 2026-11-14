@@ -285,6 +285,12 @@ PushToken(userId, platform, token)
 - [ ] Tests: con la misma seed se obtiene el mismo log, la tabla de elementos y el balance (simulación de miles de combates por rareza)
 - **Hecho cuando**: dos cuentas de prueba pelean, se ve la repetición animada y el ELO se actualiza en ambas.
 
+### Fase 4b — Ambientación y vida del pet (backend + escritorio)
+- [ ] Backend: módulo `environmental` (hora del día por `timezone`, clima real vía Open-Meteo con cache en Redis y fallback, inactividad por heartbeat y festividades), endpoints `GET /environmental/status`, `POST /environmental/activity` y `GET /environmental/festivals/upcoming`, modificadores ambientales sobre los vitales dentro del *lazy tick* y contexto ambiental en el prompt de la IA.
+- [ ] Datos: sección `environmental` en `balance.json` y `festivals.json`; `User.latitude/longitude/birthday` (opt-in) vía migración y `PATCH /me`.
+- [ ] Escritorio: cliente de heartbeat cada 60 s, geolocalización opt-in, overlay de accesorios (paraguas, gorro, sombrerito) y `environmental:changed` por WebSocket.
+- **Hecho cuando**: con coordenadas guardadas, `GET /environmental/status` devuelve la hora local y el clima real (servido de cache en 30 min, con fallback a `unknown` si la API cae), el clima modifica los vitales en el *lazy tick*, el pet entra en modo `solo` tras 2 h sin heartbeat y vuelve a `active` al reenviarlo, y la mascota muestra el accesorio (p. ej. paraguas si llueve, sombrerito en Navidad) y el contexto en su chat.
+
 ### Fase 5 — Apps móviles nativas (Android + iOS)
 - [ ] Backend: Sign in with Apple y Google, código de dispositivo (vincular el escritorio desde el móvil), `notifications` (APNs/FCM con BullMQ) y `subscriptions` (StoreKit 2, Play Billing, webhooks y modo IA gestionado)
 - [ ] Android: Compose con M3 Expressive y todas las pantallas (Inicio, Eclosión, Comida, Minijuegos, Arena, Chat IA, Colección, Ajustes), widget Glance, FCM y Play Billing

@@ -22,7 +22,11 @@ describe('RealtimeGateway', () => {
     open = [];
     disconnectSockets = jest.fn();
     verifyAsync = jest.fn(async () => ({ sub: 'u1', exp: NOW / 1000 + 900 }));
-    gateway = new RealtimeGateway({ verifyAsync } as any, { get: () => 'secreto' } as any);
+    gateway = new RealtimeGateway(
+      { verifyAsync } as any,
+      { get: () => 'secreto' } as any,
+      { incSocketConnections: jest.fn(), recordSseStream: jest.fn() } as any,
+    );
     gateway.server = { in: jest.fn(() => ({ fetchSockets: async () => open, disconnectSockets })) } as any;
   });
   afterEach(() => jest.useRealTimers());

@@ -1,0 +1,558 @@
+FAIL test/bonding.e2e-spec.ts (13.923 s)
+  ● Bonding Meter E2E (feature 006) › 1. sin token → 401; con token → GET /pets/:id expone bonding, bondingTier, bondingTierName y lastInteractionAt
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:66:11)
+
+  ● Bonding Meter E2E (feature 006) › 2. dormir sube el vínculo (+0.5), persiste BondingEvent y no emite tier_up
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:66:11)
+
+  ● Bonding Meter E2E (feature 006) › 3. cruce 29 → 30 emite bonding:tier_up una sola vez y GET /pets/:id refleja companion
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:66:11)
+
+  ● Bonding Meter E2E (feature 006) › 4. GET /pets/:id/bonding: historial, decayInfo y unlocks; limit/cursor validados
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:66:11)
+
+  ● Bonding Meter E2E (feature 006) › 5. abandono de 72h: el lazy tick decae el vínculo y audita BondingEvent(reason="decay")
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:66:11)
+
+  ● Bonding Meter E2E (feature 006) › 6. legend (100): patternUnlocked y sleepNearCursor true
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:66:11)
+
+  ● Bonding Meter E2E (feature 006) › 7. multi-pet: el vínculo de otro pet del mismo usuario no se ve afectado (SC-007)
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:66:11)
+
+  ● Bonding Meter E2E (feature 006) › 8. pet inexistente → 404 en GET /pets/:id y GET /pets/:id/bonding
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:66:11)
+
+  ● Bonding Meter E2E: integración con la IA (feature 006, LLM mock) › con bondingTier=ally el chat inyecta memoria y el prompt lleva el contexto de vínculo (SC-006)
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:255:11)
+
+  ● Bonding Meter E2E: integración con la IA (feature 006, LLM mock) › el turno de chat completado sube el vínculo (+1) y audita BondingEvent(reason="chat")
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\node_modules\.pnpm\chokidar@6.0.0\node_modules\chokidar\index.js:2
+    import { EventEmitter } from 'node:events';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+    [0m [90m 37 |[39m     [90m// require perezoso: `chokidar` (devDependency) solo se carga cuando el watcher arranca (dev).[39m
+     [90m 38 |[39m     [90m// eslint-disable-next-line @typescript-eslint/no-var-requires[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m chokidar [33m=[39m require([32m'chokidar'[39m) [36mas[39m { watch[33m:[39m (pattern[33m:[39m string[33m,[39m opts[33m?[39m[33m:[39m unknown) [33m=>[39m [33mWatcher[39m }[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mconst[39m dataDir [33m=[39m [36mthis[39m[33m.[39mgameData[33m.[39mgetDataDir()[33m;[39m
+     [90m 41 |[39m     [36mthis[39m[33m.[39mwatcher [33m=[39m chokidar[33m.[39mwatch(path[33m.[39mjoin(dataDir[33m,[39m [32m'*.json'[39m)[33m,[39m { ignoreInitial[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 42 |[39m[0m
+
+      at Runtime.createScriptFromCode (../../node_modules/.pnpm/jest-runtime@29.7.0_supports-color@8.1.1/node_modules/jest-runtime/build/index.js:1505:14)
+      at GameDataWatcherService.onModuleInit (../src/modules/dev/game-data-watcher.service.ts:39:22)
+      at MapIterator.iteratee (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:22:43)
+      at MapIterator.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/map.ts:9:39)
+      at IteratorWithOperators.next (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:19:28)
+          at Function.from (<anonymous>)
+      at IteratorWithOperators.toArray (../../node_modules/.pnpm/iterare@1.2.1/node_modules/iterare/src/iterate.ts:227:22)
+      at callOperator (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:23:10)
+      at callModuleInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:23)
+      at Proxy.callInitHook (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application-context.js:245:50)
+      at Proxy.init (../../node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs_991cc7d81f450b90385604f9a3f7317a/node_modules/@nestjs/core/nest-application.js:106:9)
+      at createApp (bonding.e2e-spec.ts:50:3)
+      at Object.<anonymous> (bonding.e2e-spec.ts:255:11)
+
+
+  ● Test suite failed to run
+
+    TypeError: Cannot read properties of undefined (reading 'close')
+
+    [0m [90m 71 |[39m
+     [90m 72 |[39m   afterAll([36masync[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 73 |[39m     [36mawait[39m app[33m.[39mclose()[33m;[39m
+     [90m    |[39m               [31m[1m^[22m[39m
+     [90m 74 |[39m   })[33m;[39m
+     [90m 75 |[39m
+     [90m 76 |[39m   afterEach([36masync[39m () [33m=>[39m {[0m
+
+      at Object.<anonymous> (bonding.e2e-spec.ts:73:15)
+
+  ● Test suite failed to run
+
+    TypeError: Cannot read properties of undefined (reading 'close')
+
+    [0m [90m 278 |[39m
+     [90m 279 |[39m   afterAll([36masync[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 280 |[39m     [36mawait[39m app[33m.[39mclose()[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 281 |[39m     [36mawait[39m mock[33m.[39mclose()[33m;[39m
+     [90m 282 |[39m     [36mawait[39m prisma[33m.[39mbondingEvent[33m.[39mdeleteMany({ where[33m:[39m { petId } })[33m;[39m
+     [90m 283 |[39m     [36mawait[39m prisma[33m.[39mpetMemory[33m.[39mdeleteMany({ where[33m:[39m { petId } })[33m;[39m[0m
+
+      at Object.<anonymous> (bonding.e2e-spec.ts:280:15)
+
+Test Suites: 1 failed, 1 total
+Tests:       10 failed, 10 total
+Snapshots:   0 total
+Time:        14.13 s
+Ran all test suites matching /test\\bonding.e2e-spec.ts/i.
+Jest did not exit one second after the test run has completed.
+
+'This usually means that there are asynchronous operations that weren't stopped in your tests. Consider running Jest with `--detectOpenHandles` to troubleshoot this issue.

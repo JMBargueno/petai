@@ -1,0 +1,13 @@
+# Provisioning de dashboards de Grafana (US5).
+apiVersion: 1
+providers:
+  - name: "petai-observability"
+    orgId: 1
+    folder: "PetAI"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

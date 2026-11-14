@@ -1,9 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PetsService } from './pets.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { GameDataService } from '../game-data/game-data.service';
+import { WeatherService } from '../environmental/weather.service';
+import { BondingService } from '../bonding/bonding.service';
 
 describe('PetsService', () => {
   let service: PetsService;
@@ -38,6 +41,29 @@ describe('PetsService', () => {
     }),
   };
 
+  const mockEventEmitter = {
+    emit: jest.fn(),
+  };
+
+  // Vínculo (feature 006): mock del BondingService
+  const mockBondingService = {
+    recordInteraction: jest.fn().mockResolvedValue({ bonding: 0, bondingTier: 'acquainted', tierChanged: null }),
+    applyDecay: jest.fn().mockResolvedValue({ decayed: false, bonding: 0, bondingTier: 'acquainted', delta: 0 }),
+    bondingFields: jest.fn().mockReturnValue({
+      bonding: 0,
+      bondingTier: 'acquainted',
+      bondingTierName: 'Acostumbrado',
+      lastInteractionAt: '2026-01-01T00:00:00.000Z',
+    }),
+  };
+
+  // Clima ambiental por defecto sin modificador (condición 'unknown').
+  const mockWeatherService = {
+    getWeather: jest
+      .fn()
+      .mockResolvedValue({ condition: 'unknown', temperature: null, weatherCode: null, cached: false, fetchedAt: null }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,6 +72,9 @@ describe('PetsService', () => {
         { provide: InventoryService, useValue: mockInventoryService },
         { provide: RealtimeGateway, useValue: mockRealtimeGateway },
         { provide: GameDataService, useValue: mockGameDataService },
+        { provide: EventEmitter2, useValue: mockEventEmitter },
+        { provide: WeatherService, useValue: mockWeatherService },
+        { provide: BondingService, useValue: mockBondingService },
       ],
     }).compile();
 
@@ -185,6 +214,108 @@ describe('PetsService', () => {
       expect(updated.energy).toBe(70);
       // +2 salud/h nocturna * 2h = 54
       expect(updated.health).toBe(54);
+    });
+  });
+
+  describe('modificadores ambientales (feature 005)', () => {
+    const FIXED_NOW = new Date('2026-11-13T15:00:00Z');
+    const baseBalance = {
+      vitals: {
+        max: 100,
+        min: 0,
+        decayPerHour: {
+          awake: { hunger: 5, happiness: 4, energy: 3, hygiene: 2.5 },
+          sleeping: { hunger: 1.5, happiness: 1, energy: -20, hygiene: 0.5 },
+        },
+      },
+      environmental: {
+        hot_temp: 30,
+        cold_temp: 5,
+        hunger_hot: 0.5,
+        happiness_rain: 0.5,
+        energy_snow: 0.5,
+        inactivityThresholdHours: 2,
+      },
+    };
+    const pet3h = () => ({
+      id: 'pet-env',
+      userId: 'user-env',
+      hunger: 100,
+      happiness: 100,
+      energy: 100,
+      hygiene: 100,
+      health: 100,
+      sick: false,
+      sleeping: false,
+      lastTickAt: new Date(FIXED_NOW.getTime() - 3 * 60 * 60 * 1000),
+    });
+    const weather = (condition: string) =>
+      mockWeatherService.getWeather.mockResolvedValue({
+        condition,
+        temperature: condition === 'hot' ? 32 : 5,
+        weatherCode: 0,
+        cached: false,
+        fetchedAt: null,
+      });
+
+    beforeEach(() => {
+      // Reloj fijo: evita fugas de `setSystemTime`/`Date.now` de otros bloques y hace el
+      // cálculo del lazy tick (3 h) determinista.
+      jest.useFakeTimers().setSystemTime(FIXED_NOW);
+      mockGameDataService.getBalance.mockReturnValue(baseBalance);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        timezone: 'UTC',
+        latitude: 19.4,
+        longitude: -99.13,
+      });
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+      mockGameDataService.getBalance.mockReturnValue({
+        vitals: {
+          decayPerHour: {
+            awake: { hunger: 5.0, happiness: 4.0, energy: 3.0, hygiene: 2.5 },
+            sleeping: { hunger: 1.5, happiness: 1.0, energy: -20.0, hygiene: 0.5 },
+          },
+        },
+      });
+      mockPrismaService.user.findUnique.mockResolvedValue({ timezone: 'UTC' });
+    });
+
+    it('hot: decae el hambre el extra de hunger_hot (±0.5/h)', async () => {
+      weather('hot');
+      const updated = await (service as any).applyLazyTick(pet3h());
+      // hambre: 100 - 5*3 - 0.5*3 = 100 - 15 - 1.5 = 83.5
+      expect(updated.hunger).toBe(83.5);
+    });
+
+    it('rain: recupera felicidad (happiness_rain)', async () => {
+      weather('rain');
+      const updated = await (service as any).applyLazyTick(pet3h());
+      // felicidad: 100 - 4*3 + 0.5*3 = 88 + 1.5 = 89.5
+      expect(updated.happiness).toBe(89.5);
+    });
+
+    it('snow: gasta energía (energy_snow)', async () => {
+      weather('snow');
+      const updated = await (service as any).applyLazyTick(pet3h());
+      // energía: 100 - 3*3 - 0.5*3 = 91 - 1.5 = 89.5
+      expect(updated.energy).toBe(89.5);
+    });
+
+    it('acota el modificador al rango [0, max]', async () => {
+      weather('hot');
+      const pet = { ...pet3h(), hunger: 2 };
+      const updated = await (service as any).applyLazyTick(pet);
+      // 2 - 15 - 1.5 < 0 → 0
+      expect(updated.hunger).toBe(0);
+    });
+
+    it('sin condición ambiental (unknown) no aplica modificador', async () => {
+      weather('unknown');
+      const updated = await (service as any).applyLazyTick(pet3h());
+      // hambre: 100 - 5*3 = 85 (sin modificador)
+      expect(updated.hunger).toBe(85);
     });
   });
 

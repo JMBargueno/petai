@@ -11,6 +11,7 @@ import { randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
+import { BondingService } from '../bonding/bonding.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { LeaderboardService, BoardScope } from './leaderboard.service';
 import { generateBot } from './combat/bots';
@@ -47,6 +48,7 @@ export class BattlesService {
     private readonly petsService: PetsService,
     private readonly leaderboard: LeaderboardService,
     private readonly realtime: RealtimeGateway,
+    private readonly bonding: BondingService,
   ) {}
 
   private get cfg(): CombatConfig & Record<string, any> {
@@ -265,6 +267,9 @@ export class BattlesService {
     if (rewards.coins > 0) {
       await this.prisma.user.update({ where: { id: userId }, data: { coins: { increment: rewards.coins } } });
     }
+
+    // Vínculo (feature 006): cualquier pelea terminada (victoria, empate o derrota) sube el bonding (+3)
+    await this.bonding.recordInteraction(pet.id, userId, 'battle');
 
     // Clasificaciones (no lanzan si Redis falla)
     await this.leaderboard.record([

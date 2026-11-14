@@ -1,0 +1,33 @@
+# Routing de Alertmanager (US6, api-contract §4): Slack + email, con inhibición critical→warning.
+global:
+  # Canal de email: requiere un smarthost SMTP global (sobrescribible en producción).
+  smtp_smarthost: "smtp.example.com:587"
+  smtp_from: "alerts@petai.example.com"
+  smtp_auth_username: "alerts@petai.example.com"
+  smtp_auth_password: "petai-alerts-smtp-token"
+
+route:
+  receiver: "default"
+  group_by: ["alertname", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: "default"
+    slack_configs:
+      - api_url_file: /etc/alertmanager/slack-webhook-url
+        channel: "#petai-alerts"
+        send_resolved: true
+        title: "[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}"
+        text: "{{ range .Alerts }}*{{ .Annotations.summary }}*\n{{ .Annotations.description }}\n{{ end }}"
+    email_configs:
+      - to: "ops@petai.example.com"
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["alertname", "service"]

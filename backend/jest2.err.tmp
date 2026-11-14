@@ -1,0 +1,32 @@
+PASS src/modules/bonding/bonding.spec.ts
+FAIL src/modules/bonding/bonding.service.spec.ts
+  ● BondingService › applyDecay › ventana de gracia: 20h de inactividad no decae
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "bonding": 50,
+    -   "bondingTier": "companion",
+    +   "bondingTier": "acquainted",
+        "decayed": false,
+        "delta": 0,
+      }
+
+    [0m [90m 173 |[39m       [36mconst[39m result [33m=[39m [36mawait[39m service[33m.[39mapplyDecay(petRow({ bonding[33m:[39m [35m50[39m[33m,[39m lastInteractionAt[33m:[39m hoursAgo([35m20[39m[33m,[39m now) })[33m,[39m now)[33m;[39m
+     [90m 174 |[39m
+    [31m[1m>[22m[39m[90m 175 |[39m       expect(result)[33m.[39mtoEqual({ decayed[33m:[39m [36mfalse[39m[33m,[39m bonding[33m:[39m [35m50[39m[33m,[39m bondingTier[33m:[39m [32m'companion'[39m[33m,[39m delta[33m:[39m [35m0[39m })[33m;[39m
+     [90m     |[39m                      [31m[1m^[22m[39m
+     [90m 176 |[39m       expect(prisma[33m.[39mpet[33m.[39mupdate)[33m.[39mnot[33m.[39mtoHaveBeenCalled()[33m;[39m
+     [90m 177 |[39m       expect(prisma[33m.[39mbondingEvent[33m.[39mcreate)[33m.[39mnot[33m.[39mtoHaveBeenCalled()[33m;[39m
+     [90m 178 |[39m       expect(realtime[33m.[39memitToUser)[33m.[39mnot[33m.[39mtoHaveBeenCalled()[33m;[39m[0m
+
+      at Object.<anonymous> (modules/bonding/bonding.service.spec.ts:175:22)
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       1 failed, 52 passed, 53 total
+Snapshots:   0 total
+Time:        5.087 s, estimated 15 s
+Ran all test suites matching /src\\modules\\bonding/i.

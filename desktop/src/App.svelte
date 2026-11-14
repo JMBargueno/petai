@@ -4,6 +4,14 @@
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
+  import {
+    fetchStatus,
+    startHeartbeat,
+    requestOptInCoordinates,
+    saveCoordinates,
+    type EnvironmentalStatus,
+    type EnvironmentalChangedEvent,
+  } from './lib/environmental';
   import PetView from './components/PetView.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
 
@@ -16,6 +24,9 @@
   let isPanelOpen = true;
   let bubbleText = '';
   let bubbleTimer: any = null;
+  // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
+  let environmental: EnvironmentalStatus | null = null;
+  let stopHeartbeat: () => void = () => {};
 
   function showBubble(text: string) {
     bubbleText = text.length > 160 ? text.slice(0, 157) + '…' : text;
@@ -80,6 +91,12 @@
           showBubble(text);
           notifyNow('Te han retado en la arena', text);
         });
+
+        // Feature ambiental: hora del día, clima, inactividad y festividades
+        socket.on('environmental:changed', (ev: EnvironmentalChangedEvent) => handleEnvironmentalChanged(ev));
+        setupCoordinates(); // geolocalización opt-in → clima real
+        loadEnvironmental(); // estado inicial
+        stopHeartbeat = startHeartbeat(); // heartbeat cada 60 s
       }
     } catch (err) {
       // Si la sesión ya no es válida, la capa de API la cierra (onSessionExpired). Un fallo de
@@ -97,11 +114,66 @@
 
   function clearSessionState() {
     closeSocket();
+    stopHeartbeat();
     user = null;
     currentPet = null;
     pets = [];
     eggs = [];
     inventory = [];
+    environmental = null;
+  }
+
+  // ---------- Ambiental (feature 005) ----------
+  /** Recarga el estado ambiental completo. */
+  async function loadEnvironmental() {
+    if (!getAccessToken()) return;
+    try {
+      environmental = await fetchStatus();
+    } catch {
+      /* sin conexión o sesión: se reintenta con el heartbeat */
+    }
+  }
+
+  /** Geolocalización opt-in (privacidad): si el usuario acepta, se guardan las coordenadas. */
+  async function setupCoordinates() {
+    if (!getAccessToken()) return;
+    const coords = await requestOptInCoordinates();
+    if (!coords) return; // denegado o no disponible → se sigue sin clima (degradación elegante)
+    try {
+      await saveCoordinates(coords);
+    } catch {
+      /* no crítico: se reintenta en el próximo arranque */
+    }
+  }
+
+  /** Aplica un evento `environmental:changed` del WebSocket al estado local. */
+  function handleEnvironmentalChanged(ev: EnvironmentalChangedEvent) {
+    if (!environmental) {
+      loadEnvironmental();
+      return;
+    }
+    if (ev.type === 'weather') {
+      const d = ev.data as { condition: any; temperature: number | null; weatherCode: number | null };
+      environmental = {
+        ...environmental,
+        weather: {
+          ...environmental.weather,
+          condition: d.condition,
+          temperature: d.temperature,
+          weatherCode: d.weatherCode,
+        },
+      };
+    } else if (ev.type === 'timeOfDay') {
+      environmental = { ...environmental, timeOfDay: (ev.data as { timeOfDay: any }).timeOfDay };
+    } else if (ev.type === 'activity') {
+      const mode = (ev.data as { mode: any }).mode;
+      environmental = {
+        ...environmental,
+        activity: { ...environmental.activity, mode, active: mode === 'active' },
+      };
+    } else if (ev.type === 'festival') {
+      environmental = { ...environmental, festival: ev.data };
+    }
   }
 
   let stopClickThrough: () => void = () => {};
@@ -155,6 +227,7 @@
   onDestroy(() => {
     clearInterval(needsPoll);
     clearTimeout(bubbleTimer);
+    stopHeartbeat();
     stopClickThrough();
     stopSessionExpired();
     closeSocket();
@@ -177,6 +250,7 @@
       bind:this={petViewRef}
       pet={currentPet}
       bubble={bubbleText}
+      environmental={environmental}
       onPetClick={() => (isPanelOpen = true)}
     />
   {/if}

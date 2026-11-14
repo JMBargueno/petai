@@ -1,0 +1,35 @@
+{
+  "name": "petai-devkit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PetAI DevKit — CLI de desarrollo: hot-reload (watch), simulate, seed, action y validate de game data.",
+  "bin": {
+    "petai-devkit": "./bin/petai-devkit.js"
+  },
+  "scripts": {
+    "devkit": "node bin/petai-devkit.js",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "@prisma/client": "^6.4.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.13.0",
+    "chokidar": "^6.0.0",
+    "commander": "^15.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3",
+    "zod": "^4.6.7"
+  },
+  "jest": {
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "testEnvironment": "node"
+  }
+}

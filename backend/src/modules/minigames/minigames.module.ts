@@ -3,9 +3,10 @@ import { MinigamesService } from './minigames.service';
 import { MinigamesController } from './minigames.controller';
 import { PetsModule } from '../pets/pets.module';
 import { GameDataModule } from '../game-data/game-data.module';
+import { BondingModule } from '../bonding/bonding.module';
 
 @Module({
-  imports: [PetsModule, GameDataModule],
+  imports: [PetsModule, GameDataModule, BondingModule],
   controllers: [MinigamesController],
   providers: [MinigamesService],
 })

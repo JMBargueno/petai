@@ -4,9 +4,10 @@ import { BattlesService } from './battles.service';
 import { LeaderboardService } from './leaderboard.service';
 import { PetsModule } from '../pets/pets.module';
 import { GameDataModule } from '../game-data/game-data.module';
+import { BondingModule } from '../bonding/bonding.module';
 
 @Module({
-  imports: [PetsModule, GameDataModule],
+  imports: [PetsModule, GameDataModule, BondingModule],
   controllers: [BattlesController],
   providers: [BattlesService, LeaderboardService],
 })

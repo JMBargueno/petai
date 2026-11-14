@@ -1,0 +1,23 @@
+# Configuración de scrape de Prometheus (US6, api-contract §2.1).
+# Scrapea el endpoint /metrics del backend (puerto 9464) cada 15 s.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert-rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: "petai-backend"
+    scrape_interval: 15s
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["backend:9464"]
+        labels:
+          service: "petai-backend"
+          environment: "production"

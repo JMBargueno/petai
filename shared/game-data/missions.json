@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "daily": {
+    "minCount": 3,
+    "maxCount": 5,
+    "types": [
+      { "type": "feed", "target": 2, "weight": 3, "description": "Alimenta a tu pet {target} veces", "reward": { "coins": 15, "xp": 10, "gems": 0 } },
+      { "type": "battle", "target": 1, "weight": 2, "description": "Juega {target} batalla(s)", "reward": { "coins": 25, "xp": 20, "gems": 0 } },
+      { "type": "minigame", "target": 1, "weight": 3, "description": "Completa {target} minijuego(s)", "reward": { "coins": 20, "xp": 15, "gems": 0 } },
+      { "type": "chat", "target": 5, "weight": 2, "description": "Envía {target} mensajes a tu pet", "reward": { "coins": 10, "xp": 10, "gems": 1 } },
+      { "type": "clean", "target": 1, "weight": 3, "description": "Limpia a tu pet {target} vez/veces", "reward": { "coins": 10, "xp": 5, "gems": 0 } },
+      { "type": "sleep", "target": 1, "weight": 2, "description": "Pon a dormir a tu pet {target} vez/veces", "reward": { "coins": 5, "xp": 5, "gems": 0 } }
+    ]
+  },
+  "weekly": {
+    "minCount": 5,
+    "maxCount": 7,
+    "types": [
+      { "type": "level_up", "target": 1, "weight": 2, "description": "Sube {target} pet de nivel", "reward": { "coins": 100, "gems": 5, "xp": 100 } },
+      { "type": "battle_win", "target": 3, "weight": 3, "description": "Gana {target} peleas", "reward": { "coins": 150, "gems": 3, "xp": 80 } },
+      { "type": "hatch_rare", "target": 1, "weight": 1, "description": "Eclosiona {target} huevo de rareza Rare o superior", "reward": { "coins": 200, "gems": 10, "xp": 0 } },
+      { "type": "minigame", "target": 5, "weight": 3, "description": "Completa {target} minijuegos", "reward": { "coins": 120, "gems": 5, "xp": 0 } },
+      { "type": "chat", "target": 30, "weight": 2, "description": "Envía {target} mensajes esta semana", "reward": { "coins": 80, "gems": 0, "xp": 60 } },
+      { "type": "feed", "target": 10, "weight": 3, "description": "Alimenta a tu pet {target} veces", "reward": { "coins": 90, "gems": 2, "xp": 50 } },
+      { "type": "clean", "target": 5, "weight": 2, "description": "Limpia a tu pet {target} veces", "reward": { "coins": 70, "gems": 3, "xp": 30 } }
+    ]
+  }
+}

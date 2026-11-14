@@ -3,6 +3,7 @@ import { randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
+import { BondingService } from '../bonding/bonding.service';
 
 export interface MinigameRewards {
   coins: number;
@@ -26,6 +27,7 @@ export class MinigamesService {
     private readonly prisma: PrismaService,
     private readonly gameData: GameDataService,
     private readonly petsService: PetsService,
+    private readonly bonding: BondingService,
   ) {}
 
   private get cfg() {
@@ -156,6 +158,8 @@ export class MinigamesService {
       data: { coins: { increment: rewards.coins }, accountXp: { increment: rewards.xp } },
     });
     const pet = await this.petsService.applyActivityReward(userId, session.petId, rewards);
+    // Vínculo (feature 006): minijuego terminado con premio sube el bonding (+2)
+    await this.bonding.recordInteraction(session.petId, userId, 'minigame');
 
     return { score, rewards, pet };
   }

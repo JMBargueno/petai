@@ -1,0 +1,50 @@
+{
+  "title": "PetAI Per-Endpoint",
+  "uid": "petai-per-endpoint",
+  "tags": ["petai", "observabilidad", "http"],
+  "timezone": "browser",
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Latencia p50/p95/p99 por ruta",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum(rate(petai_http_request_duration_seconds_bucket[5m])) by (le, route, method))", "refId": "A", "legendFormat": "p50 {{route}} {{method}}" },
+        { "expr": "histogram_quantile(0.95, sum(rate(petai_http_request_duration_seconds_bucket[5m])) by (le, route, method))", "refId": "B", "legendFormat": "p95 {{route}} {{method}}" },
+        { "expr": "histogram_quantile(0.99, sum(rate(petai_http_request_duration_seconds_bucket[5m])) by (le, route, method))", "refId": "C", "legendFormat": "p99 {{route}} {{method}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Throughput por ruta (req/s)",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(petai_http_request_duration_seconds_count[5m])) by (route, method)", "refId": "A", "legendFormat": "{{route}} {{method}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Error rate por ruta (%)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(petai_http_request_duration_seconds_count{status=~\"5..\"}[5m])) by (route) / sum(rate(petai_http_request_duration_seconds_count[5m])) by (route)",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent" }, "overrides": [] }
+    }
+  ]
+}

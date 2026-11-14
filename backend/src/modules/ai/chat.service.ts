@@ -12,6 +12,9 @@ import { ChatMessageInput, LlmProvider, ToolCall } from './llm-provider';
 import { ModerationVerdict, OutputGuard, moderateInput, moderateOutput } from './moderation';
 import { randomUUID } from 'crypto';
 import { safeTimeZone } from '../pets/sleep-cycle';
+import { EnvironmentalService } from '../environmental/environmental.service';
+import { BondingService } from '../bonding/bonding.service';
+import { isBondingTierAtLeast } from '../bonding/bonding';
 import { AGENT_UNLOCK, INTELLIGENCE_MAX, MEMORY_UNLOCK, buildSystemPrompt, intelligenceTier } from './personality';
 
 export type ChatStreamEvent =
@@ -51,7 +54,9 @@ export class ChatService {
     private readonly memory: MemoryService,
     private readonly agent: AgentService,
     private readonly usage: UsageService,
+    private readonly bonding: BondingService,
     @Optional() private readonly redis?: RedisService,
+    @Optional() private readonly environmental?: EnvironmentalService,
   ) {}
 
   private async checkRateLimit(userId: string) {
@@ -178,9 +183,39 @@ export class ChatService {
       history.unshift({ role: m.role as 'user' | 'assistant', content: m.content });
     }
 
-    // Memoria (intelligence ≥ 200): recuerdos relevantes en el prompt de sistema
-    let systemPrompt = buildSystemPrompt(pet, owner ?? {}, { tier, now, timeZone });
-    if ((pet.intelligence ?? 0) >= MEMORY_UNLOCK) {
+    // Contexto ambiental (feature 005): hora del día, clima y festividad del usuario.
+    // Es opcional y tolerante a fallos: si no se obtiene, el prompt simplemente no lleva el bloque.
+    let environment: {
+      timeOfDay?: string;
+      weatherCondition?: string;
+      temperature?: number | null;
+      festival?: { name: string; message: string } | null;
+    } | null = null;
+    if (this.environmental) {
+      try {
+        const env = await this.environmental.getStatus(userId);
+        environment = {
+          timeOfDay: env.timeOfDay,
+          weatherCondition: env.weather.condition,
+          temperature: env.weather.temperature,
+          festival: env.festival ? { name: env.festival.name, message: env.festival.message } : null,
+        };
+      } catch (e) {
+        this.logger.debug(`No se pudo obtener el contexto ambiental: ${(e as Error).message}`);
+      }
+    }
+
+    // Memoria (feature 006): recuerdos relevantes en el prompt de sistema cuando el
+    // `intelligence` lo desbloquea (≥ MEMORY_UNLOCK) O el vínculo alcanza `ally` (60+).
+    // Es idempotente: un solo bloque aunque ambas condiciones se cumplan.
+    let systemPrompt = buildSystemPrompt(pet, owner ?? {}, {
+      tier,
+      now,
+      timeZone,
+      environment,
+      bondingTier: pet.bondingTier,
+    });
+    if ((pet.intelligence ?? 0) >= MEMORY_UNLOCK || isBondingTierAtLeast(pet.bondingTier, 'ally')) {
       const block = await this.memory.recall(pet.id, message);
       if (block) systemPrompt += `\n\n${block}`;
     }
@@ -263,6 +298,11 @@ export class ChatService {
       include: { species: true, pattern: true },
     });
     this.realtime.emitPetUpdate(userId, updated);
+    // Vínculo (feature 006): cada turno de chat completado sube el bonding (+1). El intercambio
+    // ya está persistido: si el registro de vínculo falla, no rompe la respuesta del chat.
+    await this.bonding
+      .recordInteraction(pet.id, userId, 'chat')
+      .catch((e) => this.logger.warn(`No se pudo registrar el bonding del chat: ${e?.message}`));
     return { id: saved.id, intelligence };
   }
 

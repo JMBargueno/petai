@@ -1,15 +1,23 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse, ApiQuery, ApiExtraModels } from '@nestjs/swagger';
 import { PetsService } from './pets.service';
+import { BondingService } from '../bonding/bonding.service';
+import { BondingDetailResponseDto, BondingFieldsDto } from '../bonding/dto/bonding.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 
 @ApiTags('Pets')
+// El esquema `BondingFieldsDto` documenta los campos de vínculo que `GET /pets` y `GET /pets/:id`
+// añaden a cada respuesta (feature 006)
+@ApiExtraModels(BondingFieldsDto)
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('pets')
 export class PetsController {
-  constructor(private readonly petsService: PetsService) {}
+  constructor(
+    private readonly petsService: PetsService,
+    private readonly bondingService: BondingService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar todas las mascotas del usuario con deterioro perezoso calculado' })
@@ -21,6 +29,26 @@ export class PetsController {
   @ApiOperation({ summary: 'Detalle de una mascota específica' })
   getPet(@CurrentUser() user: any, @Param('id') petId: string) {
     return this.petsService.getPetById(user.id, petId);
+  }
+
+  @Get(':id/bonding')
+  @ApiOperation({
+    summary:
+      'Detalle del métrico de vínculo: valor, rango, historial paginado de cambios, decaimiento y desbloqueos',
+  })
+  @ApiQuery({ name: 'limit', required: false, description: 'Nº de BondingEvent en history (1-100, default 20)' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'createdAt ISO-8601 de la última fila de la página previa' })
+  @ApiOkResponse({ type: BondingDetailResponseDto })
+  async getBonding(
+    @CurrentUser() user: any,
+    @Param('id') petId: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    // Primero el lazy tick (vitales + decaimiento de vínculo); después el detalle
+    await this.petsService.getPetById(user.id, petId);
+    const limit = limitRaw !== undefined ? Number(limitRaw) : undefined;
+    return this.bondingService.getBondingDetail(petId, user.id, limit, cursor);
   }
 
   @Post(':id/feed')

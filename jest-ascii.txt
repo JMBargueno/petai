@@ -1,0 +1,7 @@
+[32m[Nest] 4928  - [39m13/11/2026, 22:50:11 [32m    LOG[39m [38;5;3m[GameDataService] [39m[32mGame-data cargado desde C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\shared\game-data (3 especies, 14 habilidades)[39m
+[32m[Nest] 4928  - [39m13/11/2026, 22:50:11 [32m    LOG[39m [38;5;3m[GameDataService] [39m[32mGame-data cargado desde C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\shared\game-data (3 especies, 14 habilidades)[39m
+[32m[Nest] 4928  - [39m13/11/2026, 22:50:11 [32m    LOG[39m [38;5;3m[GameDataService] [39m[32mGame-data cargado desde C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\shared\game-data (3 especies, 14 habilidades)[39m
+[32m[Nest] 4928  - [39m13/11/2026, 22:50:11 [32m    LOG[39m [38;5;3m[GameDataService] [39m[32mGame-data cargado desde C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\shared\game-data (3 especies, 14 habilidades)[39m
+[32m[Nest] 4928  - [39m13/11/2026, 22:50:11 [32m    LOG[39m [38;5;3m[GameDataService] [39m[32mGame-data cargado desde C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\shared\game-data (3 especies, 14 habilidades)[39m
+[32m[Nest] 4928  - [39m13/11/2026, 22:50:11 [32m    LOG[39m [38;5;3m[GameDataService] [39m[32mGame-data cargado desde C:\Users\jmbargueno\.cline\worktrees\c5c05\petai\shared\game-data (3 especies, 14 habilidades)[39m
+
