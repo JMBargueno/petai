@@ -18,6 +18,10 @@ model User {
   longitude    Float?
   // Cumpleaños como "YYYY-MM-DD" (para micro-momentos de festividad).
   birthday     String?
+  // Preferencias de notificaciones con personalidad (feature 007). `null` = defaults
+  // (todas las categorías activas, maxPerDay=3). Objeto: { vitals_critical, interaction,
+  // achievement, arena, event, maxPerDay }.
+  notificationPrefs Json?
   coins        Int            @default(100)
   gems         Int            @default(5)
   accountXp    Int            @default(0)
@@ -38,6 +42,9 @@ model User {
   missions       Mission[]
   chests         Chest[]
   chestPity      ChestPity[]
+   achievements   Achievement[]
+   // Opt-in de visibilidad pública de logros (feature 008): por defecto false (privacidad por defecto).
+   achievementsPublic Boolean @default(false)
 }
 
 model RefreshToken {
@@ -372,4 +379,24 @@ model ChestPity {
   count  Int    @default(0)
 
   @@unique([userId, tier])
+}
+
+// Logro del usuario (feature 008): un hito único y no repetible definido de forma data-driven en
+// shared/game-data/achievements.json. `current` se incrementa con eventos de dominio; al alcanzar
+// `target` se fija `unlockedAt` (desbloqueo atómico, una sola vez) y se acredita la recompensa.
+// `id` es el id lógico del logro (p. ej. `care_feed_50`); el par (userId, id) es único.
+model Achievement {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // id lógico del logro según achievements.json (p. ej. `care_feed_50`, `battle_10_wins`).
+  achId       String
+  current     Int       @default(0)
+  unlockedAt  DateTime?
+  claimed     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, achId])
+  @@index([userId])
 }
