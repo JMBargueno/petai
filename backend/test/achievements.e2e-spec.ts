@@ -88,7 +88,7 @@ describe('Achievements E2E', () => {
         .get('/v1/achievements')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
-      const a = (res.body.categories ?? []).flatMap((c: any[]) => c).find((x: any) => x.id === id);
+      const a = Object.values(res.body.categories ?? {}).flatMap((c: any[]) => c).find((x: any) => x.id === id);
       if (a && predicate(a)) return a;
       await new Promise((r) => setTimeout(r, 150));
     }
