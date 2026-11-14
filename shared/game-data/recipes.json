@@ -1,0 +1,58 @@
+[
+  {
+    "id": "starter_soup",
+    "name": "Sopa de Arranque",
+    "difficulty": 1,
+    "unlockLevel": 1,
+    "ingredients": ["carrot", "onion", "water"],
+    "buff": { "stat": "atk", "value": 5 }
+  },
+  {
+    "id": "elemental_brew",
+    "name": "Brew Elemental",
+    "difficulty": 2,
+    "unlockLevel": 5,
+    "ingredients": ["herb", "crystal", "water", "salt"],
+    "buff": { "stat": "def", "value": 5 }
+  },
+  {
+    "id": "shadow_paste",
+    "name": "Pasta Sombria",
+    "difficulty": 3,
+    "unlockLevel": 15,
+    "ingredients": ["mushroom", "ink", "rice"],
+    "buff": { "stat": "esp", "value": 5 }
+  },
+  {
+    "id": "storm_roast",
+    "name": "Asado Tormenta",
+    "difficulty": 3,
+    "unlockLevel": 20,
+    "ingredients": ["beef", "lightning", "pepper", "salt"],
+    "buff": { "stat": "vel", "value": 5 }
+  },
+  {
+    "id": "solar_bake",
+    "name": "Horno Solar",
+    "difficulty": 4,
+    "unlockLevel": 30,
+    "ingredients": ["flour", "sun_nectar", "butter", "honey"],
+    "buff": { "stat": "atk", "value": 8 }
+  },
+  {
+    "id": "abyssal_caviar",
+    "name": "Caviar Abisal",
+    "difficulty": 5,
+    "unlockLevel": 40,
+    "ingredients": ["roe", "seaweed", "pearl"],
+    "buff": { "stat": "def", "value": 8 }
+  },
+  {
+    "id": "mythic_feast",
+    "name": "Banquete Mítico",
+    "difficulty": 5,
+    "unlockLevel": 50,
+    "ingredients": ["phoenix", "dragon_glass", "star_dust", "elixir"],
+    "buff": { "stat": "atk", "value": 10 }
+  }
+]

@@ -20,6 +20,11 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16).default(DEV_DEFAULTS.JWT_REFRESH_SECRET),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  // Fast-path de refresh (edge, US3): clave RS256 para el refresh JWT verificado stateless.
+  // Opcionales: en dev/test se genera un par efímero. En producción se definen por env.
+  JWT_FASTPATH_PRIVATE_KEY: z.string().optional(),
+  JWT_FASTPATH_PUBLIC_KEY: z.string().optional(),
+  JWT_FASTPATH_KID: z.string().optional(),
   AI_KEY_ENCRYPTION_KEY: z
     .string()
     .regex(/^[0-9a-fA-F]{64}$/, 'AI_KEY_ENCRYPTION_KEY debe tener 64 caracteres hexadecimales')

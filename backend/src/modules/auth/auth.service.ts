@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AuthThrottleService } from './auth-throttle.service';
+import { FastPathJwtService } from './fast-path-jwt';
 import { changePasswordSchema, loginSchema, parseOrBadRequest, refreshSchema, registerSchema } from './dto/auth.schemas';
 
 const ARGON_OPTIONS = { type: argon2.argon2id, memoryCost: 65536, timeCost: 3 } as const;
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly throttle: AuthThrottleService,
     private readonly realtime: RealtimeGateway,
+    private readonly fastPath: FastPathJwtService,
   ) {}
 
   /** Hash de relleno: se verifica cuando el correo no existe para que el tiempo de respuesta no lo delate. */
@@ -75,7 +77,7 @@ export class AuthService {
       data: { userId: user.id, eggType: 'starter', startedAt: now, hatchesAt: now },
     });
 
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = await this.generateTokens(user.id, user.email, user.displayName);
     return { ...tokens, user };
   }
 
@@ -107,7 +109,7 @@ export class AuthService {
     // Solo se reinicia el contador de esta IP: el global de la cuenta no, o quien ataca desde otras
     // direcciones recuperaría sus intentos cada vez que el dueño inicia sesión.
     await this.throttle.clear(accountKey);
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = await this.generateTokens(user.id, user.email, user.displayName);
     return {
       ...tokens,
       user: { id: user.id, email: user.email, displayName: user.displayName, coins: user.coins, gems: user.gems },
@@ -158,7 +160,7 @@ export class AuthService {
       .deleteMany({ where: { userId: user.id, expiresAt: { lt: new Date(now.getTime() - EXPIRED_TOKEN_RETENTION_MS) } } })
       .catch((e) => this.logger.warn(`No se pudieron purgar refresh tokens antiguos: ${e?.message}`));
 
-    return this.generateTokens(user.id, user.email);
+    return this.generateTokens(user.id, user.email, user.displayName);
   }
 
   /** Cierra la sesión: revoca el refresh token indicado (idempotente). */
@@ -214,12 +216,12 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('Usuario no encontrado');
     return {
-      ...(await this.generateTokens(user.id, user.email)),
+      ...(await this.generateTokens(user.id, user.email, user.displayName)),
       user: { id: user.id, email: user.email, displayName: user.displayName, coins: user.coins, gems: user.gems },
     };
   }
 
-  private async generateTokens(userId: string, email: string) {
+  private async generateTokens(userId: string, email: string, displayName?: string) {
     const payload = { sub: userId, email };
 
     const accessToken = this.jwtService.sign(payload, {
@@ -244,6 +246,27 @@ export class AuthService {
       },
     });
 
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, refreshFastPath: this.issueFastPathRefreshToken(userId, email, displayName) };
+  }
+
+  /**
+   * Emite el "refresh JWT fast-path" (feature 009-edge-cdn, T019). RS256 firmado con la clave
+   * privada del fast-path; el edge lo verifica stateless contra el JWKS público (US3). Claims:
+   * `sub`, `jti`, `iat`, `exp`, `typ: "refresh"` (+ `email`/`displayName` para el `user` del edge).
+   * No toca Prisma: es una vía optimista de refresh; la revocación dura sigue en origin.
+   */
+  private issueFastPathRefreshToken(userId: string, email: string, displayName?: string): string {
+    const claims = {
+      sub: userId,
+      email,
+      ...(displayName ? { displayName } : {}),
+      jti: crypto.randomUUID(),
+      typ: 'refresh',
+    };
+    return this.jwtService.sign(claims, {
+      secret: this.fastPath.privateKeyPem,
+      algorithm: 'RS256',
+      expiresIn: (this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d') as any,
+    });
   }
 }

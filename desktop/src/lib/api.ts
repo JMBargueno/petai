@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch';
 import type { paths } from '@shared/openapi/api-types';
+import { createAuthClient } from './auth.client';
 
 /**
  * URL del backend. En el servidor de desarrollo de Vite se usa el proxy (misma origin); en una
@@ -13,9 +14,12 @@ export const API_BASE_URL = typeof window !== 'undefined' && window.location.ori
 
 const ACCESS_KEY = 'petai_access_token';
 const REFRESH_KEY = 'petai_refresh_token';
+const FAST_PATH_KEY = 'petai_refresh_fast_path';
 
 let currentToken: string | null = localStorage.getItem(ACCESS_KEY);
 let currentRefreshToken: string | null = localStorage.getItem(REFRESH_KEY);
+/** Refresh JWT fast-path (edge, US3). Si existe, el refresh lo intenta primero en el edge. */
+let currentRefreshFastPath: string | null = localStorage.getItem(FAST_PATH_KEY);
 
 function store(key: string, value: string | null) {
   if (value) localStorage.setItem(key, value);
@@ -27,11 +31,13 @@ export function setAccessToken(token: string | null) {
   store(ACCESS_KEY, token);
 }
 
-/** Guarda (o borra, con null) el par de tokens de la sesión. */
-function setSession(tokens: { accessToken: string; refreshToken?: string | null } | null) {
+/** Guarda (o borra, con null) el par de tokens de la sesión (+ el fast-path para el edge). */
+function setSession(tokens: { accessToken: string; refreshToken?: string | null; refreshFastPath?: string | null } | null) {
   setAccessToken(tokens?.accessToken ?? null);
   currentRefreshToken = tokens?.refreshToken ?? null;
   store(REFRESH_KEY, currentRefreshToken);
+  currentRefreshFastPath = tokens?.refreshFastPath ?? null;
+  store(FAST_PATH_KEY, currentRefreshFastPath);
 }
 
 export function getAccessToken(): string | null {
@@ -85,6 +91,34 @@ async function doRefresh(): Promise<string | null> {
     expireSession();
     return null;
   }
+
+  // US3/T021: si hay edge configurado, intenta el fast-path PRIMERO (refresh JWT fast-path). Si
+  // resuelve, actualiza la sesión; si no (4xx/5xx/red), sigue al origin autoritativo (fallback
+  // transparente: 1 reintento → origin). El cliente no percibe el cambio (FR-012).
+  const edgeBase = (import.meta.env.VITE_EDGE_URL as string | undefined)?.trim().replace(/\/+$/, '');
+  const fastToken = currentRefreshFastPath || refreshToken;
+  if (edgeBase) {
+    let edgeRes: Response;
+    try {
+      edgeRes = await fetch(`${edgeBase}/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: fastToken }),
+      });
+    } catch {
+      edgeRes = null as unknown as Response;
+    }
+    if (edgeRes?.ok) {
+      const data = await edgeRes.json().catch(() => null);
+      if (currentRefreshToken === refreshToken && data?.accessToken) {
+        setSession(data);
+        tokenRenewedListeners.forEach((cb) => cb(data.accessToken));
+        return data.accessToken;
+      }
+    }
+    // El edge rechazó (4xx) o falló → fallback al origin autoritativo con el token actual.
+  }
+
   let res: Response;
   try {
     res = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
@@ -396,7 +430,18 @@ export const api = {
     throw new Error('La respuesta terminó sin completarse');
   },
 
-  async updateMe(data: { displayName?: string; timezone?: string }) {
+  async updateMe(data: {
+    displayName?: string;
+    timezone?: string;
+    notificationPrefs?: {
+      vitals_critical?: boolean;
+      interaction?: boolean;
+      achievement?: boolean;
+      arena?: boolean;
+      event?: boolean;
+      maxPerDay?: number;
+    } | null;
+  }) {
     return minigameRequest<any>('PATCH', '/v1/me', data);
   },
 

@@ -1,0 +1,143 @@
+{
+  "rooms": [
+    {
+      "id": "sala",
+      "name": "Sala Principal",
+      "gridWidth": 14,
+      "gridHeight": 10,
+      "unlockStage": "baby",
+      "description": "La primera sala de tu pet. Cozy y funcional."
+    },
+    {
+      "id": "jardin",
+      "name": "Jardín",
+      "gridWidth": 14,
+      "gridHeight": 10,
+      "unlockStage": "juvenile",
+      "description": "Un espacio exterior con césped y flores."
+    },
+    {
+      "id": "santuario",
+      "name": "Santuario",
+      "gridWidth": 14,
+      "gridHeight": 10,
+      "unlockStage": "adult",
+      "description": "Un lugar místico para la meditación y el descanso."
+    },
+    {
+      "id": "citafinal",
+      "name": "Cita Final",
+      "gridWidth": 14,
+      "gridHeight": 10,
+      "unlockStage": "final",
+      "description": "El espacio definitivo de tu pet, un legendario."
+    }
+  ],
+  "furniture": [
+    {
+      "id": "fountain_water",
+      "name": "Fuente de Agua",
+      "room": "sala",
+      "price": 400,
+      "currency": "coins",
+      "buffs": { "hygiene_decay_reduction": 0.15 },
+      "description": "Reduce el decaimiento de higiene un 15%."
+    },
+    {
+      "id": "soft_bed",
+      "name": "Cama Suave",
+      "room": "sala",
+      "price": 600,
+      "currency": "coins",
+      "buffs": { "energy_recovery_boost": 0.20 },
+      "description": "Aumenta la recuperación de energía un 20% durante el sueño."
+    },
+    {
+      "id": "toy_ball",
+      "name": "Pelota de Juego",
+      "room": "sala",
+      "price": 400,
+      "currency": "coins",
+      "buffs": { "happiness_decay_reduction": 0.10 },
+      "description": "Reduce el decaimiento de felicidad un 10%."
+    },
+    {
+      "id": "wall_shelf",
+      "name": "Estantería",
+      "room": "sala",
+      "price": 150,
+      "currency": "coins",
+      "buffs": {},
+      "description": "Decoración pura. Un rincón para tus recuerdos."
+    },
+    {
+      "id": "flower_pot",
+      "name": "Maceta",
+      "room": "jardin",
+      "price": 100,
+      "currency": "coins",
+      "buffs": {},
+      "description": "Una planta decorativa para el jardín."
+    },
+    {
+      "id": "garden_bench",
+      "name": "Banco del Jardín",
+      "room": "jardin",
+      "price": 500,
+      "currency": "coins",
+      "buffs": { "happiness_decay_reduction": 0.15 },
+      "description": "Un lugar tranquilo para descansar. Reduce el decaimiento de felicidad un 15%."
+    },
+    {
+      "id": "garden_pond",
+      "name": "Estanque",
+      "room": "jardin",
+      "price": 800,
+      "currency": "coins",
+      "buffs": { "hygiene_decay_reduction": 0.20 },
+      "description": "Un estanque sereno. Reduce el decaimiento de higiene un 20%."
+    },
+    {
+      "id": "shrine_altar",
+      "name": "Altar del Santuario",
+      "room": "santuario",
+      "price": 1,
+      "currency": "gems",
+      "buffs": { "combat_mood_bonus": 0.05 },
+      "description": "Un altar místico que mejora el ánimo de combate un 5%."
+    },
+    {
+      "id": "crystal_lamp",
+      "name": "Lámpara de Cristal",
+      "room": "santuario",
+      "price": 900,
+      "currency": "coins",
+      "buffs": { "energy_recovery_boost": 0.15, "happiness_decay_reduction": 0.10 },
+      "description": "Ilumina el santuario. +15% recuperación de energía, -10% decaimiento de felicidad."
+    },
+    {
+      "id": "final_throne",
+      "name": "Trono Final",
+      "room": "citafinal",
+      "price": 2,
+      "currency": "gems",
+      "buffs": { "combat_mood_bonus": 0.10 },
+      "description": "El trono de un legendario. +10% de ánimo de combate."
+    },
+    {
+      "id": "final_garden",
+      "name": "Jardín Legendario",
+      "room": "citafinal",
+      "price": 700,
+      "currency": "coins",
+      "buffs": { "happiness_decay_reduction": 0.20, "hygiene_decay_reduction": 0.15 },
+      "description": "Un jardín extraordinario. Reduce decaimiento de felicidad 20% y higiene 15%."
+    }
+  ],
+  "buffCaps": {
+    "hygiene_decay_reduction_max": 0.40,
+    "happiness_decay_reduction_max": 0.30,
+    "energy_recovery_boost_max": 0.40,
+    "combat_mood_bonus_max": 0.10
+  }
+}

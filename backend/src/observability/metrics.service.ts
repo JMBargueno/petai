@@ -35,6 +35,9 @@ export const METRIC_NAMES = [
   'petai_sse_stream_duration_seconds',
   'petai_memory_heap_used_bytes',
   'petai_gc_pause_seconds',
+  'petai_cdn_hit_total',
+  'petai_cdn_fallback_origin_total',
+  'petai_cdn_refresh_ms',
 ] as const;
 
 const CONTENT_TYPE = 'text/plain; version=0.0.4; charset=utf-8';
@@ -58,6 +61,10 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
   readonly socketioConnections: client.Gauge;
   readonly bullmqQueueDepth: client.Gauge;
   readonly memoryHeapUsed: client.Gauge;
+  // Métricas de CDN (feature 009-edge-cdn, US4): por región.
+  readonly cdnHitTotal: client.Counter;
+  readonly cdnFallbackOriginTotal: client.Counter;
+  readonly cdnRefreshMs: client.Histogram;
 
   private metricsPort: number;
 
@@ -120,6 +127,27 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
       },
       registers: [this.register],
     });
+
+    // --- Métricas de CDN (feature 009-edge-cdn, US4) ---
+    this.cdnHitTotal = new client.Counter({
+      name: 'petai_cdn_hit_total',
+      help: 'Hits de assets del CDN por región (US4)',
+      labelNames: ['region', 'key'],
+      registers: [this.register],
+    });
+    this.cdnFallbackOriginTotal = new client.Counter({
+      name: 'petai_cdn_fallback_origin_total',
+      help: 'Miss del CDN → fallback a origin por región (AC6/SC-006)',
+      labelNames: ['region', 'key'],
+      registers: [this.register],
+    });
+    this.cdnRefreshMs = new client.Histogram({
+      name: 'petai_cdn_refresh_ms',
+      help: 'Latencia del auth refresh (ms) por región y outcome (edge/origin) — p95 < 50ms',
+      labelNames: ['region', 'outcome'],
+      buckets: [5, 10, 20, 30, 50, 75, 100, 150, 250, 500, 1000],
+      registers: [this.register],
+    });
   }
 
   onModuleInit(): void {
@@ -177,7 +205,10 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
         if (addr && typeof addr === 'object') this.metricsPort = addr.port;
         resolve(this.metricsPort);
       });
-      this.server!.on('error', () => resolve(this.metricsPort));
+      this.server!.on('error', () => {
+        this.metricsPort = 0; // 0 = el servidor no está activo
+        resolve(0);
+      });
     });
     this.server
       .listen(this.metricsPort, '0.0.0.0', () => {
@@ -219,6 +250,33 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
       this.httpDuration.labels(method, route, String(status)).observe(Math.max(0, durationSeconds));
     } catch {
       // Nunca dejamos que una métrica rompa la ruta crítica (FR-010).
+    }
+  }
+
+  /** Métricas de CDN (US4): hit servido por región (label `key` opcional, default `total`). */
+  recordCdnHit(region: string, key = 'total'): void {
+    try {
+      this.cdnHitTotal.labels(region || 'unknown', key).inc();
+    } catch {
+      /* noop */
+    }
+  }
+
+  /** Métricas de CDN (US4): fallback a origin por región tras un miss del CDN. */
+  recordCdnFallbackOrigin(region: string, key = 'total'): void {
+    try {
+      this.cdnFallbackOriginTotal.labels(region || 'unknown', key).inc();
+    } catch {
+      /* noop */
+    }
+  }
+
+  /** Métricas de CDN (US4): latencia del auth refresh en ms (outcome `edge`/`origin`). */
+  recordCdnRefreshMs(ms: number, region: string, outcome: 'edge' | 'origin'): void {
+    try {
+      this.cdnRefreshMs.labels(region || 'unknown', outcome).observe(Math.max(0, ms));
+    } catch {
+      /* noop */
     }
   }
 

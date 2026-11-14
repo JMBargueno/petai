@@ -1,0 +1,80 @@
+{
+  "genes": [
+    {
+      "id": "veloz",
+      "name": "Veloz",
+      "description": "Aumenta la velocidad en un 10%",
+      "effect": { "type": "stat_mult", "stat": "vel", "value": 1.10 },
+      "combat": true
+    },
+    {
+      "id": "ferreo",
+      "name": "Férreo",
+      "description": "Aumenta la defensa en un 10%",
+      "effect": { "type": "stat_mult", "stat": "def", "value": 1.10 },
+      "combat": true
+    },
+    {
+      "id": "sagaz",
+      "name": "Sagaz",
+      "description": "Incrementa la probabilidad de crítico en un 3%",
+      "effect": { "type": "crit_bonus", "value": 0.03 },
+      "combat": true
+    },
+    {
+      "id": "devorador",
+      "name": "Devorador",
+      "description": "Aumenta el efecto de la comida favorita en un 15%",
+      "effect": { "type": "food_mult", "value": 1.15 },
+      "combat": false
+    },
+    {
+      "id": "aurora",
+      "name": "Aurora",
+      "description": "Aumenta la probabilidad de shiny en un 1%",
+      "effect": { "type": "shiny_bonus", "value": 0.01 },
+      "combat": false
+    },
+    {
+      "id": "crono",
+      "name": "Crono",
+      "description": "Reduce el enfriamiento de habilidades en un 10%",
+      "effect": { "type": "cooldown_mult", "value": 0.90 },
+      "combat": true
+    }
+  ],
+  "probability": 0.15,
+  "maxGenes": 3,
+  "revealLevels": [10, 25, 50],
+  "temperaments": [
+    {
+      "id": "valiente",
+      "name": "Valiente",
+      "description": "Corajudo y desafiante",
+      "strategy": "aggressive",
+      "chatTone": "Eres valiente y desafiante. Hablas con coraje y ganas de pelear."
+    },
+    {
+      "id": "timido",
+      "name": "Tímido",
+      "description": "Cauteloso y suave",
+      "strategy": "defensive",
+      "chatTone": "Eres tímido y cauteloso. Hablas con suavidad y prefieres evitar conflictos."
+    },
+    {
+      "id": "arribista",
+      "name": "Arribista",
+      "description": "Competidor y ambicioso",
+      "strategy": "aggressive",
+      "chatTone": "Eres muy competitivo y ambicioso. Siempre quieres ganar."
+    },
+    {
+      "id": "curioso",
+      "name": "Curioso",
+      "description": "Explorador y alegre",
+      "strategy": "balanced",
+      "chatTone": "Eres curioso y alegre. Te encanta explorar y descubrir."
+    }
+  ],
+  "analysisCostGems": 3
+}

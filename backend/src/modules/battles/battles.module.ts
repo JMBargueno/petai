@@ -10,5 +10,6 @@ import { BondingModule } from '../bonding/bonding.module';
   imports: [PetsModule, GameDataModule, BondingModule],
   controllers: [BattlesController],
   providers: [BattlesService, LeaderboardService],
+  exports: [BattlesService],
 })
 export class BattlesModule {}

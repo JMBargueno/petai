@@ -192,6 +192,125 @@ export interface paths {
         patch: operations["UsersController_updateMe"];
         trace?: never;
     };
+    "/v1/users/{id}/achievements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Logros públicos de un usuario (solo si ha activado la visibilidad) */
+        get: operations["UsersAchievementsController_getPublicAchievements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/achievements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener todos los logros del usuario con su estado */
+        get: operations["AchievementsController_getAll"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/achievements/constellation/{cat}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Constelación (layout SVG + estado) de una categoría */
+        get: operations["AchievementsController_getConstellation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/achievements/{id}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reclamar el estado de recompensa de un logro desbloqueado */
+        post: operations["AchievementsController_claim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar artículos de la tienda */
+        get: operations["InventoryController_getShop"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener inventario del usuario */
+        get: operations["InventoryController_getInventory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shop/buy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Comprar artículo de la tienda */
+        post: operations["InventoryController_buyItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/eggs": {
         parameters: {
             query?: never;
@@ -391,57 +510,6 @@ export interface paths {
         put?: never;
         /** Administrar medicina a la mascota */
         post: operations["PetsController_heal"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/shop": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listar artículos de la tienda */
-        get: operations["InventoryController_getShop"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/inventory": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Obtener inventario del usuario */
-        get: operations["InventoryController_getInventory"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/shop/buy": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Comprar artículo de la tienda */
-        post: operations["InventoryController_buyItem"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1266,6 +1334,179 @@ export interface components {
             /** @description Contraseña nueva (mínimo 8 caracteres, distinta de la actual) */
             newPassword: string;
         };
+        AchievementRewardDto: {
+            /**
+             * @description Monedas de recompensa
+             * @example 100
+             */
+            coins: number;
+            /**
+             * @description Gemas de recompensa
+             * @example 0
+             */
+            gems: number;
+            /**
+             * @description XP de recompensa
+             * @example 40
+             */
+            xp: number;
+            /**
+             * @description Item exclusivo (solo epic/legendary)
+             * @example null
+             */
+            itemId?: string | null;
+        };
+        PublicAchievementDto: {
+            /**
+             * @description ID lógico del logro
+             * @example battle_10_wins
+             */
+            id: string;
+            /**
+             * @description Nombre
+             * @example Guerrero
+             */
+            name: string;
+            /**
+             * @description Categoría
+             * @example battle
+             * @enum {string}
+             */
+            category: "care" | "battle" | "ai" | "collection" | "social";
+            /**
+             * @description Tier
+             * @example rare
+             * @enum {string}
+             */
+            tier: "common" | "rare" | "epic" | "legendary";
+            /**
+             * @description Fecha de desbloqueo (ISO 8601)
+             * @example 2026-11-10T09:15:00.000Z
+             */
+            unlockedAt: string;
+            /** @description Recompensa */
+            reward: components["schemas"]["AchievementRewardDto"];
+        };
+        PublicAchievementsDto: {
+            /**
+             * @description ID del usuario dueño
+             * @example u-123
+             */
+            userId: string;
+            /**
+             * @description Nombre visible del dueño
+             * @example Felpa
+             */
+            displayName: string | null;
+            /**
+             * @description Si el dueño ha activado la visibilidad pública
+             * @example true
+             */
+            achievementsPublic: boolean;
+            /** @description Solo logros desbloqueados (sin progreso no desbloqueado) */
+            achievements: components["schemas"]["PublicAchievementDto"][];
+        };
+        AchievementListResponseDto: {
+            /**
+             * @description Timestamp de la respuesta (ISO 8601)
+             * @example 2026-11-13T14:30:00.000Z
+             */
+            timestamp: string;
+            /**
+             * @description Estado del opt-in de visibilidad pública
+             * @example false
+             */
+            achievementsPublic: boolean;
+            /** @description Logros por categoría (5: care, battle, ai, collection, social) */
+            categories: Record<string, never>;
+        };
+        StarDto: {
+            /**
+             * @description ID lógico del logro
+             * @example battle_10_wins
+             */
+            id: string;
+            /**
+             * @description Coordenada X normalizada [0,1]
+             * @example 0.45
+             */
+            x: number;
+            /**
+             * @description Coordenada Y normalizada [0,1]
+             * @example 0.45
+             */
+            y: number;
+            /**
+             * @description Estado del logro
+             * @example unlocked
+             * @enum {string}
+             */
+            status: "locked" | "in_progress" | "unlocked";
+            /**
+             * @description Nombre del logro
+             * @example Guerrero
+             */
+            name: string;
+            /**
+             * @description Tier del logro
+             * @example rare
+             * @enum {string}
+             */
+            tier: "common" | "rare" | "epic" | "legendary";
+        };
+        ConstellationResponseDto: {
+            /**
+             * @description Categoría/constelación
+             * @example battle
+             * @enum {string}
+             */
+            category: "care" | "battle" | "ai" | "collection" | "social";
+            /**
+             * @description Nombre de la constelación
+             * @example Batalla
+             */
+            name: string;
+            /** @description Estrellas de la constelación */
+            stars: components["schemas"]["StarDto"][];
+            /**
+             * @description Conexiones entre estrellas (pares de ids)
+             * @example [
+             *       [
+             *         "battle_5_fights",
+             *         "battle_1_wins"
+             *       ]
+             *     ]
+             */
+            connections: string[];
+        };
+        ClaimedAchievementDto: {
+            /**
+             * @description ID lógico del logro
+             * @example battle_10_wins
+             */
+            id: string;
+            /**
+             * @description Categoría
+             * @example battle
+             */
+            category: string;
+            /**
+             * @description Si fue reclamado
+             * @example true
+             */
+            claimed: boolean;
+        };
+        ClaimRewardResponseDto: {
+            /** @description Misión reclamada */
+            mission: components["schemas"]["ClaimedMissionDto"];
+            /** @description Recompensa acreditada */
+            reward: components["schemas"]["MissionRewardDto"];
+            /**
+             * @description Si todas las diarias están completadas (desbloquea cofre)
+             * @example true
+             */
+            dailyChestUnlocked: boolean;
+        };
         BondingFieldsDto: {
             /**
              * @description Valor del vínculo, acotado a [0,100], 2 decimales
@@ -1664,17 +1905,6 @@ export interface components {
              */
             completed: boolean;
         };
-        ClaimRewardResponseDto: {
-            /** @description Misión reclamada */
-            mission: components["schemas"]["ClaimedMissionDto"];
-            /** @description Recompensa acreditada */
-            reward: components["schemas"]["MissionRewardDto"];
-            /**
-             * @description Si todas las diarias están completadas (desbloquea cofre)
-             * @example true
-             */
-            dailyChestUnlocked: boolean;
-        };
         ChestResponse: {
             /** @example a1b2c3d4-e5f6-7890-abcd-ef1234567890 */
             id: string;
@@ -2021,11 +2251,240 @@ export interface operations {
                     longitude?: number | null;
                     /** @description Cumpleaños (YYYY-MM-DD) */
                     birthday?: string | null;
+                    /** @description Opt-in de visibilidad pública de logros */
+                    achievementsPublic?: boolean;
+                    /** @description Preferencias de notificaciones con personalidad (merge parcial). Campos: vitals_critical, interaction, achievement, arena, event (boolean) y maxPerDay (1-10). */
+                    notificationPrefs?: {
+                        vitals_critical?: boolean;
+                        interaction?: boolean;
+                        achievement?: boolean;
+                        arena?: boolean;
+                        event?: boolean;
+                        maxPerDay?: number;
+                    } | null;
                 };
             };
         };
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersAchievementsController_getPublicAchievements: {
+        parameters: {
+            query: {
+                public: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Perfil público de logros */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicAchievementsDto"];
+                };
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AchievementsController_getAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logros del usuario por categoría */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AchievementListResponseDto"];
+                };
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Game-data de logros no cargado */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AchievementsController_getConstellation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cat: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Constelación de la categoría */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConstellationResponseDto"];
+                };
+            };
+            /** @description Categoría inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Game-data de constelaciones no cargado */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AchievementsController_claim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logro reclamado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimRewardResponseDto"];
+                };
+            };
+            /** @description Logro no desbloqueado */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Logro no encontrado o no pertenece al usuario */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Logro ya reclamado (race condition) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InventoryController_getShop: {
+        parameters: {
+            query: {
+                kind: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InventoryController_getInventory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InventoryController_buyItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2269,59 +2728,6 @@ export interface operations {
             path: {
                 id: string;
             };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InventoryController_getShop: {
-        parameters: {
-            query: {
-                kind: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InventoryController_getInventory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InventoryController_buyItem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
             cookie?: never;
         };
         requestBody?: never;

@@ -8,6 +8,9 @@
     "validate:data": "node scripts/validate-game-data.js",
     "validate:assets": "node scripts/validate-assets.js",
     "validate:all": "node scripts/validate-game-data.js && node scripts/validate-assets.js",
+    "build:assets": "tsx scripts/build-assets.ts",
+    "build:assets:dry": "tsx scripts/build-assets.ts --dry-run",
+    "test:assets": "vitest run scripts/build-assets.spec.ts",
     "generate:api": "openapi-typescript shared/openapi/openapi.json -o shared/openapi/api-types.ts",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
@@ -16,9 +19,14 @@
     "backend:build": "pnpm --filter petai-backend run build",
     "desktop:dev": "pnpm --filter petai-desktop run dev",
     "desktop:build": "pnpm --filter petai-desktop run build",
-    "test:all": "pnpm --filter petai-backend run test && pnpm --filter petai-backend run test:e2e"
+    "test:all": "pnpm --filter petai-backend run test && pnpm --filter petai-backend run test:e2e && pnpm test:assets"
   },
   "devDependencies": {
-    "openapi-typescript": "^7.13.0"
+    "openapi-typescript": "^7.13.0",
+    "tsx": "^4.19.0",
+    "vitest": "^3.0.0",
+    "zod": "^4.6.7",
+    "@aws-sdk/client-s3": "^3.750.0",
+    "@types/node": "^22.13.0"
   }
 }

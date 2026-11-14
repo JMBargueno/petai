@@ -367,7 +367,9 @@ export class PetsService {
     // re-fija `lastInteractionAt` y persiste el `BondingEvent(reason="decay")` + los eventos WS.
     await this.bonding.applyDecay(pet, now);
 
-    return this.prisma.pet.update({
+    // Notificación con personalidad (feature 007): si alguna vital cae por debajo del umbral crítico
+    // se emite el evento de dominio; el dispatcher decide si notificar (rate limit/dedup/quiet hours).
+    const updated = await this.prisma.pet.update({
       where: { id: pet.id },
       data: {
         hunger: Number(newHunger.toFixed(2)),
@@ -380,6 +382,27 @@ export class PetsService {
       },
       include: { species: true, pattern: true },
     });
+
+    const criticalThreshold = this.gameData.getNotificationConfig().vitalsCriticalThreshold;
+    if (
+      newHunger < criticalThreshold ||
+      newHappiness < criticalThreshold ||
+      newEnergy < criticalThreshold ||
+      newHygiene < criticalThreshold
+    ) {
+      this.eventEmitter.emit('pet:vitals-critical', {
+        userId: pet.userId,
+        petId: pet.id,
+        vitals: {
+          hunger: newHunger,
+          happiness: newHappiness,
+          energy: newEnergy,
+          hygiene: newHygiene,
+        },
+      });
+    }
+
+    return updated;
   }
 
   private async addXpInternal(pet: any, xpGained: number) {

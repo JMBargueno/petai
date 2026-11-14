@@ -39,6 +39,13 @@ export class AuthResponseDto {
   @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   refreshToken: string;
 
+  @ApiProperty({
+    example: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description:
+      'Refresh JWT fast-path (RS256) para el edge. Claims: sub, jti, iat, exp, typ="refresh". El edge lo verifica stateless contra /auth/jwks.',
+  })
+  refreshFastPath: string;
+
   @ApiProperty()
   user: {
     id: string;

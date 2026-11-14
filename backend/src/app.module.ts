@@ -8,6 +8,8 @@ import { validateEnv } from './config/env.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { GameDataModule } from './modules/game-data/game-data.module';
+import { AssetsModule } from './modules/assets/assets.module';
+import { EventsModule } from './modules/events/events.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { HatchingModule } from './modules/hatching/hatching.module';
@@ -21,9 +23,20 @@ import { HealthModule } from './modules/health/health.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { MissionsModule } from './missions/missions.module';
+import { AchievementsModule } from './achievements/achievements.module';
 import { ChestsModule } from './modules/chests/chests.module';
 import { EnvironmentalModule } from './modules/environmental/environmental.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { HabitatModule } from './modules/habitat/habitat.module';
+import { SeasonsModule } from './modules/seasons/seasons.module';
+import { BreedingModule } from './modules/breeding/breeding.module';
+import { TrainingModule } from './modules/training/training.module';
+import { GenesModule } from './modules/genes/genes.module';
+import { AdventureModule } from './modules/adventure/adventure.module';
 import { DevModule } from './modules/dev/dev.module';
+import { RaidModule } from './modules/raid/raid.module';
+import { TournamentModule } from './modules/tournament/tournament.module';
+import { CookingModule } from './modules/cooking/cooking.module';
 
 // DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
 // En `NODE_ENV === 'production'` el DevModule no se registra ⇒ 404 (SC-007, constitución I/VIII).
@@ -43,6 +56,8 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production';
     RedisModule,
     RealtimeModule,
     GameDataModule,
+    AssetsModule,
+    EventsModule,
     AuthModule,
     UsersModule,
     HatchingModule,
@@ -54,8 +69,19 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production';
     BattlesModule,
     HealthModule,
     MissionsModule,
+    AchievementsModule,
     ChestsModule,
     EnvironmentalModule,
+    NotificationsModule,
+    HabitatModule,
+    SeasonsModule,
+    BreedingModule,
+    RaidModule,
+    TournamentModule,
+    CookingModule,
+    TrainingModule,
+    GenesModule,
+    AdventureModule,
     ...(DEV_TOOLS_ENABLED ? [DevModule] : []),
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],

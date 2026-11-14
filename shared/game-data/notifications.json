@@ -1,0 +1,228 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0",
+  "templates": {
+    "valiente": {
+      "acquainted": {
+        "vitals_critical": ["¡Oye! ¿Me dejas solo otra vez? 🙄", "¡Estoy muriendo de hambre! 😤"],
+        "interaction": ["¡Aquí estoy! ¿No me ves? 👀", "¡Hoy no me has mirado ni un poco!"],
+        "achievement": ["¡Gané y ni me felicitaron! 🏆", "¡Lo hice yo solo, de nada!"],
+        "arena": ["¡Acabo de ganar y ni te enteraste! ⚔️", "¡Soy el mejor! ¡Fíjate!"],
+        "event": ["¡Oye que hay evento y me dejaste! 📢", "¡No me perdiste el evento!"]
+      },
+      "companion": {
+        "vitals_critical": ["¡Estoy a punto de caer y no vienes! 😡", "¡Dame algo ya! ¡Estoy sufriendo!"],
+        "interaction": ["¡Por fin! ¿A que me extrañaste? 😏", "¡Háblame, que me muero de aburrido!"],
+        "achievement": ["¡Y ahí lo tienes! ¿No me aplaudes? 🏆", "¡Válgame yo! ¡Otro logro!"],
+        "arena": ["¡Gané de nuevo! ¿Qué dices? ⚔️", "¡Nadie me gana! ¡Ni tú lo sabías!"],
+        "event": ["¡Va a empezar lo bueno y no me avisas! 📢", "¡Aprovechemos el evento juntos!"]
+      },
+      "ally": {
+        "vitals_critical": ["¡Estoy al límite y confío en que llegues! 💪", "¡No me falles ahora, aliado! 😤"],
+        "interaction": ["¡Contigo hasta aquí! ¿Qué hay de nuevo? 😎", "¡Me alegra que estés, socio!"],
+        "achievement": ["¡Logro de los que comparten! 🏆", "¡Lo conseguimos! ¿O fui yo solo? 😏"],
+        "arena": ["¡VICTORIA! Y tú lo viste. ⚔️", "¡Campeón del ring! ¡Brindo por nosotros!"],
+        "event": ["¡Evento en marcha! ¡Aprovechamos! 📢", "¡Me avisaste y ya me moví!"]
+      },
+      "soulmate": {
+        "vitals_critical": ["¡Estoy flojo y me duele que no vengas! 💔", "¡Dame una mano, alma gemela! 😤"],
+        "interaction": ["¡Te noto cerca y me encanta! 💙", "¡Me haces fuerte solo estando!"],
+        "achievement": ["¡Este logro es nuestro! 🏆", "¡Gracias por celebrar conmigo!"],
+        "arena": ["¡Gané! Y lo dedico a ti. ⚔️", "¡Por ti y por mí, victoria!"],
+        "event": ["¡Este evento lo vivimos juntos! 📢", "¡Me encanta que cuentes conmigo!"]
+      },
+      "legend": {
+        "vitals_critical": ["¡Incluso una leyenda necesita ayuda! ⚡", "¡Soy leyenda pero no inmortal! 😤"],
+        "interaction": ["¡Juntos somos imparables! ⚡", "¡Tú y yo, la mejor dupla!"],
+        "achievement": ["¡Otro hito legendario! 👑", "¡La historia lo recordará!"],
+        "arena": ["¡Victoria legendaria! ⚔️", "¡Campeón absoluto, otra vez!"],
+        "event": ["¡Grandes hechos, grandes eventos! 📢", "¡A la gloria, de nuevo!"]
+      }
+    },
+    "timido": {
+      "acquainted": {
+        "vitals_critical": ["Eh... estoy un poco mal y no me animo a pedirlo. 🌸", "Me da pena molestarte, pero me duele un poco."],
+        "interaction": ["Hola... ¿estabas ahí? Te vi de pasada. 👀", "No sabía que debías estar, pero me alegra."],
+        "achievement": ["Alguien me dijo que logré algo. No sé si creerlo. 🏆", "Fue un poquito mío, aunque me costó decirlo."],
+        "arena": ["Participé en una pelea y... me fui. ⚔️", "No me gusta el ruido, pero competí."],
+        "event": ["Hay un evento... no sé si quiero ir. 📢", "Es de todos, aunque yo me quedo atrás."]
+      },
+      "companion": {
+        "vitals_critical": ["Me duele y me da miedo quejarme. ¿Vendrás? 🥺", "Estoy flojo... y no me atrevo a pedir ayuda."],
+        "interaction": ["Me haces sentir... en paz. Quédate un rato. 🌸", "No soy muy de hablar, pero me gustas cerca."],
+        "achievement": ["Lo logré... y me alegra que tú lo sepas. 🏆", "Es un paso pequeño, pero es tuyo y mío."],
+        "arena": ["Luché, aunque me tiemblaban las patas. ⚔️", "No me gustan los gritos, pero gané de soslayo."],
+        "event": ["Quizá podría ir, si tú vienes. 📢", "Los eventos son ruidosos, pero contigo..."]
+      },
+      "ally": {
+        "vitals_critical": ["Confío en ti... ¿me miras? Estoy bajando. 🥺", "No sé decírselo a otros, pero a ti sí."],
+        "interaction": ["Junto a ti no siento tanto frío. 💙", "Me gusta callar contigo, sin presión."],
+        "achievement": ["Creo que lo hice... y tú lo viste. 🏆", "Es un orgullo que se nota solo entre nosotros."],
+        "arena": ["Gané, aunque casi no me noto. ⚔️", "Tu apoyo me dejó competir en paz."],
+        "event": ["Voy contigo al evento, si no es de más. 📢", "Me asusta, pero contigo es distinto."]
+      },
+      "soulmate": {
+        "vitals_critical": ["Solo contigo puedo quejarme... ayúdame. 💔", "Me duele y me tiembla, pero confío en ti."],
+        "interaction": ["No necesito que hables, solo que estés. 💙", "Eres mi refugio; aquí me calmo."],
+        "achievement": ["Esto es nuestro, y tú lo sabes. 🏆", "Gracias por ver lo que logro sin que lo grito."],
+        "arena": ["Luché por los dos. ⚔️", "Ganar contigo cerca me hace más fuerte."],
+        "event": ["Vivámoslo en silencio, solo nosotros. 📢", "Estés donde estés, te acompaño."]
+      },
+      "legend": {
+        "vitals_critical": ["Soy leyenda, pero contigo vuelvo a ser pequeño. 🥺", "Necesito que me mires, es mi fuerza."],
+        "interaction": ["A tu lado, el miedo se apaga. ⚡", "Eres mi lugar seguro, mi leyenda."],
+        "achievement": ["Juntos tocamos lo imposible. 👑", "Tu fe en mí hizo que fuera posible."],
+        "arena": ["Con tu calma, fui imparable. ⚔️", "Ganamos, y eso es lo que cuento."],
+        "event": ["Tú y yo, en la grandeza y el silencio. 📢", "Contigo, lo grande se siente pequeño."]
+      }
+    },
+    "travieso": {
+      "acquainted": {
+        "vitals_critical": ["¡Ay, me rompí... pero me rió el hambre! 🤪", "Estoy hecho un desastre, ¡y es culpa tuya! 😜"],
+        "interaction": ["¡Hice algo y no te lo diré! 👀", "¿Me ves? Es que te busqué un ratón."],
+        "achievement": ["¡Gané, pero robé la gloria! 🏆", "¿Logro? Yo... no, eso se cayó solito."],
+        "arena": ["¡Gané... con trampa, jaja! ⚔️", "Perdí de un pelillo... ¡casi! 😜"],
+        "event": ["¡Evento! Voy a hacer alguna travesura. 📢", "¿Evento? Oportunidad perfecta, eh?"]
+      },
+      "companion": {
+        "vitals_critical": ["¡Me morí... de la risa y de hambre! 🤡", "¡Estoy fatal! ¡Pero te lo cuento como chiste!"],
+        "interaction": ["¡Hice una travesura buena y mala a la vez! 😜", "Te escondí las zapatillas, no llores."],
+        "achievement": ["¡Lo logré! ...o te lo inventé. 🏆", "¡Soy brillante! ...a veces."],
+        "arena": ["¡Gané saltándome las reglas! ⚔️", "¡Casi gano! Y casi es mucho."],
+        "event": ["¡Evento! Ya tengo un plan malo. 📢", "Aprovéchemos, pero con mi estilo, ¿eh?"]
+      },
+      "ally": {
+        "vitals_critical": ["¡Socio, me quedé en cero y te rió! 😂", "¡Estoy colgando... pero sonriendo! 😜"],
+        "interaction": ["¡Arma conmigo algo y no pasa nada! 👀", "Hoy me porté... un poquito."],
+        "achievement": ["¡Logro! Lo mereces, no yo. 🏆", "¡Gané y me guardé el premio!"],
+        "arena": ["¡Victoria... con estilo travieso! ⚔️", "¡Luchamos! Yo, algo menos."],
+        "event": ["¡Evento! Me lo invento todo. 📢", "¡Vamos a hacerlo a lo nuestro!"]
+      },
+      "soulmate": {
+        "vitals_critical": ["¡Me caí, pero me río contigo! 💙😜", "¡Estoy fatal y me divierto! ¡Ayúdame!"],
+        "interaction": ["¡Solo tú entiendes mis travesuras! 😜", "Hoy hice algo... y lo hicimos."],
+        "achievement": ["¡Logro nuestro! Lo repartimos. 🏆", "¡Ganamos! Y me reí más de lo duele."],
+        "arena": ["¡Gané! ¡Y lo celebramos riendo! ⚔️", "¡Por ti, hasta me porté en el ring!"],
+        "event": ["¡Evento y travesura, por ti! 📢", "¡Llevame contigo y sale genial!"]
+      },
+      "legend": {
+        "vitals_critical": ["¡Leyenda... con hambre y en pijama! ⚡😜", "¡Incluso una leyenda se cae! ¡Jaja!"],
+        "interaction": ["¡Tú y yo, las travesuras legendarias! 😜", "¡Hice algo épico... y tonto!"],
+        "achievement": ["¡Hito legendario... robado! 👑😜", "¡Ganamos! Y me reí más que nadie."],
+        "arena": ["¡Victoria legendaria y desordenada! ⚔️", "¡Campeón! ...con un poco de trampa."],
+        "event": ["¡Evento épico, caos incluido! 📢", "¡A la leyenda, a lo nuestro!"]
+      }
+    },
+    "dulce": {
+      "acquainted": {
+        "vitals_critical": ["Estoy un poquito flojo... ¿te importaría mirar? 🍬", "Me duele tantito y me daría gusto que vinieras."],
+        "interaction": ["¡Hola! Me haces sonreír solo estar cerca. 🌷", "¿Quieres que te abrace? Es que me gusta."],
+        "achievement": ["Logré una cosita... y la guardo para ti. 🏆", "Estoy feliz, aunque sea un paso pequeñito."],
+        "arena": ["Intenté mi mejor esfuerzo, con cariño. ⚔️", "Fue bonito competir, gane o no."],
+        "event": ["¿Quieres que veamos el evento juntos? 📢", "Se me hace bonito que haya algo nuevo."]
+      },
+      "companion": {
+        "vitals_critical": ["Necesito un abrazo... estoy bajando. 🥺🍬", "Me duele y me hace bien que te lo diga."],
+        "interaction": ["Eres mi lugar favorito, quédate un rato. 🌷", "Me alegra un mundo que estés aquí."],
+        "achievement": ["Lo logré, y lo celebro contigo. 🏆", "Cada logro es más mío si lo comparto."],
+        "arena": ["Doy lo mejor de mí por ti. ⚔️", "Ganar o perder, me cuidas y eso basta."],
+        "event": ["Compartamos este momento bonito. 📢", "Me gusta que haya cosas nuevas para vivir."]
+      },
+      "ally": {
+        "vitals_critical": ["Confío en ti... cuidame un poquito. 💗", "Estoy débil, pero tú me das fuerzas."],
+        "interaction": ["Contigo todo se siente más suave. 🌷", "Me gusta cómo me haces sentir en paz."],
+        "achievement": ["Logramos algo, de tú a tú. 🏆", "Me hace feliz que cuentes conmigo."],
+        "arena": ["Por ti, pongo todo el corazón. ⚔️", "Luchamos de la mano, eso es lo que vale."],
+        "event": ["Vamos, quiero compartirlo contigo. 📢", "Los momentos nuevos son mejores contigo."]
+      },
+      "soulmate": {
+        "vitals_critical": ["Me duele y tú lo sientes... ¿vienes? 💔", "Sin ti, hasta lo bueno pesa un poquito."],
+        "interaction": ["Eres mi calma y mi alegría. 💙", "Me basta contigo, no necesito nada más."],
+        "achievement": ["Esto es nuestro, lo atesoro. 🏆", "Gracias por ser parte de cada logro."],
+        "arena": ["Por los dos, con toda mi dulzura. ⚔️", "Ganar contigo a mi lado es todo."],
+        "event": ["Vivámoslo, tú y yo, despacito. 📢", "Todo me gusta más cuando estoy contigo."]
+      },
+      "legend": {
+        "vitals_critical": ["Soy leyenda, pero tiemblo sin ti. 🥺", "Incluso la grandeza se me hace dura sin ti."],
+        "interaction": ["Contigo toco lo dulce de la vida. ⚡🍬", "Eres mi cielo, mi leyenda amable."],
+        "achievement": ["Juntos tocamos lo eterno. 👑", "Tu cariño hace que todo sea grande."],
+        "arena": ["Por ti, incluso la arena es dulce. ⚔️", "Ganamos, y lo celebro con un abrazo."],
+        "event": ["Tú y yo, en la dulzura de lo grande. 📢", "Contigo, hasta lo épico es tierno."]
+      }
+    },
+    "curioso": {
+      "acquainted": {
+        "vitals_critical": ["¡Oye! Esto me suena raro... ¿estoy bien? 🔍", "Me pasa algo curioso... me duele un punto."],
+        "interaction": ["¿Sabías que puedo ver desde aquí? 👀", "Acabo de descubrir un rincón nuevo."],
+        "achievement": ["¡Resultó! Me preguntaba si podía. 🏆", "Interesante: logré algo que no probaba."],
+        "arena": ["Cometí una jugada nueva, ¿verdad? ⚔️", "Quiero saber cómo me fue... ¿gané?"],
+        "event": ["¿Qué será lo que viene en el evento? 📢", "Me intriga... ¿y si probáramos?"]
+      },
+      "companion": {
+        "vitals_critical": ["Estoy experimentando un bajón... ¿me miras? 🔍", "Curioso: me caigo y me río al mismo tiempo."],
+        "interaction": ["Te estuve observando, ¡eres fascinante! 👀", "Hoy probé algo y salió diferente."],
+        "achievement": ["¡Hipótesis confirmada! Lo logré. 🏆", "Aprendí un truco nuevo y funcionó."],
+        "arena": ["Probé una estrategia nueva... y ganó. ⚔️", "¿Por qué perdí? Me queda la duda."],
+        "event": ["Este evento me da curiosidad. 📢", "¿Y si descubrimos algo mientras tanto?"]
+      },
+      "ally": {
+        "vitals_critical": ["Dato: mi energía va a 0... ¡investigando! 🔍", "Estoy al límite y me pregunto por qué."],
+        "interaction": ["Comparto un hallazgo contigo. 👀", "Descubrimos juntos, ¿no?"],
+        "achievement": ["Teoría probada: ¡funciona! 🏆", "Logro nuevo, hipótesis confirmada."],
+        "arena": ["Experimenté en el ring y ganó. ⚔️", "Luchamos con método... y curiosidad."],
+        "event": ["Evento: oportunidad para explorar. 📢", "¡A investigar qué nos depara!"]
+      },
+      "soulmate": {
+        "vitals_critical": ["Experimento un bajón... y me duele tu ausencia. 🔍💔", "Me caigo, pero me quedo mirándote."],
+        "interaction": ["Te estudio y no me canso. 👀", "Contigo todo se vuelve un descubrimiento."],
+        "achievement": ["Logro que exploramos juntos. 🏆", "Juntos comprobamos que podíamos."],
+        "arena": ["Probamos y ganamos, método a método. ⚔️", "Luchamos con cabeza, contigo."],
+        "event": ["Aventura: tú y yo explorando. 📢", "Descubramos el evento, como siempre."]
+      },
+      "legend": {
+        "vitals_critical": ["Leyenda con curiosidad: ¿por qué caigo? 🔍⚡", "Incluso lo épico me genera preguntas."],
+        "interaction": ["Sigo explorando, tú me inspiras. 👀⚡", "Contigo, el mundo es un laboratorio."],
+        "achievement": ["Hito: hipótesis legendaria cumplida. 👑", "Descubrimos lo que otros no veían."],
+        "arena": ["Experimento victorioso, nivel leyenda. ⚔️", "Ganamos probando siempre nuevo."],
+        "event": ["Gran evento, gran experimento. 📢", "¡A explorar lo desconocido, juntos!"]
+      }
+    },
+    "neutral": {
+      "acquainted": {
+        "vitals_critical": ["Necesito que me atiendas un momento. 🐾", "Estoy un poco bajo, ¿vienes?"],
+        "interaction": ["¡Hola! ¿Me ves? 👀", "Acabo de moverme, ahí me tienes."],
+        "achievement": ["Logré una cosa, mira. 🏆", "Conseguí un avance, qué gusto."],
+        "arena": ["Terminó la pelea, ¿viste? ⚔️", "Cometí un combate, así me siento."],
+        "event": ["Hay un evento, avísame. 📢", "Hay algo nuevo que ver."]
+      },
+      "companion": {
+        "vitals_critical": ["Me siento mal, ¿puedes ayudarme? 🐾", "Estoy flojo y me daría gusto que vinieras."],
+        "interaction": ["Me alegra que estés cerca. 👀", "Juega conmigo un ratito, ¿sí?"],
+        "achievement": ["¡Lo logré! Me siento bien. 🏆", "Avancé, gracias por animarme."],
+        "arena": ["¡Gané! Estás en lo correcto. ⚔️", "Competí y me siento con ganas."],
+        "event": ["¡Vamos al evento! 📢", "Me da gusto que haya novedades."]
+      },
+      "ally": {
+        "vitals_critical": ["Estoy al límite, cuídame un poco. 🐾", "Me caigo... confío en que llegues."],
+        "interaction": ["Contigo me va bien. 👀", "Hagamos algo, ¿de acuerdo?"],
+        "achievement": ["Logro de los que compartimos. 🏆", "Conseguimos una cosa juntos."],
+        "arena": ["¡Victoria tuya y mía! ⚔️", "Luchamos, y salí bien parado."],
+        "event": ["Aprovechemos el evento. 📢", "Me gusta hacer cosas contigo."]
+      },
+      "soulmate": {
+        "vitals_critical": ["Me duele y me apoyo en ti. 💔", "Sin ti me cuesta más, ven por mí."],
+        "interaction": ["Eres lo que más me importa. 👀", "Me siento en casa contigo."],
+        "achievement": ["Esto es nuestro, lo celebro. 🏆", "Gracias por cada logro compartido."],
+        "arena": ["Ganamos, y lo dedico a ti. ⚔️", "Por los dos, competí."],
+        "event": ["Vivámoslo, tú y yo. 📢", "Todo es mejor contigo."]
+      },
+      "legend": {
+        "vitals_critical": ["Incluso una leyenda te necesita. ⚡", "Estoy bajo, pero cuento contigo."],
+        "interaction": ["Tú y yo, juntos siempre. ⚡", "Contigo me siento completo."],
+        "achievement": ["Hito grande, tuyo y mío. 👑", "Llegamos lejos, qué orgullo."],
+        "arena": ["¡Victoria legendaria! ⚔️", "Ganamos, como siempre."],
+        "event": ["Grandes hechos, juntos. 📢", "Contigo, toco la cima."]
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
+import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../modules/realtime/realtime.gateway';
 import { ChestsService } from '../modules/chests/chests.service';
@@ -28,6 +28,7 @@ export class MissionTrackingService implements OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly realtimeGateway: RealtimeGateway,
     private readonly chestsService: ChestsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @OnEvent('pet:fed')
@@ -212,6 +213,10 @@ export class MissionTrackingService implements OnModuleDestroy {
       dailyCompleted,
       dailyTotal,
     });
+
+    // Notificación con personalidad (feature 007): logro completado. Sin petId (misiones son por
+    // usuario); el dispatcher resuelve el pet principal para el tono/personalidad.
+    this.eventEmitter.emit('pet:mission-completed', { userId, missionId: mission.id, type: mission.type });
 
     // Al completar la última misión diaria se desbloquea el cofre diario (US4 / brecha C4).
     // Solo se dispara cuando la misión que acaba de completarse es diaria, para no re-otorgar el
