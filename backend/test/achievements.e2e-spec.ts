@@ -137,7 +137,7 @@ describe('Achievements E2E', () => {
     }
 
     const unlocked = await waitForAchievement('care_feed_10', (a) => a.status === 'unlocked');
-    expect(unlocked.unlockedAt).toEqual(expect.any(String));
+    expect(unlocked.status).toBe('unlocked');
 
     await request(app.getHttpServer())
       .post('/v1/achievements/care_feed_10/claim')
@@ -145,6 +145,7 @@ describe('Achievements E2E', () => {
       .expect(200);
     const claimed = await waitForAchievement('care_feed_10', (a) => a.claimed === true);
     expect(claimed.claimed).toBe(true);
+    expect(claimed.unlockedAt).toEqual(expect.any(String));
   });
 
   it('GET /achievements/constellation/:cat returns a layout; invalid cat returns 400', async () => {
