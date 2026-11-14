@@ -161,6 +161,13 @@ model Pet {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Feature 028: Welcome Back (Re-engagement) — reactivación tras ausencia
+  lastLoginAt         DateTime? // último momento en que el jugador "estuvo presente"
+  absenceDiary        Json?     // viñetas SVG/texto generadas durante la ausencia
+  recoveryBuffUntil   DateTime? // fin del buff anti-decaimiento (24h)
+  welcomeBackTier     String?   // happy | offended | sad | emotional (tramo de la ausencia)
+  lastWelcomeBackAt   DateTime? // última vez que se completó la cinemática (anti-spam)
+
   // Bonding Meter (feature 006): vínculo jugador-pet 0-100, rango y base del decaimiento lazy
   bonding           Float       @default(0)
   bondingTier       String      @default("acquainted")
@@ -280,12 +287,15 @@ model AiConfig {
   userId       String    @unique
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   mode         String    @default("byok") // byok | managed
-  provider     String    @default("openai") // openai | hermes | custom
+  provider     String    @default("openai") // openai | hermes | custom | auto
   baseUrl      String?
   model        String?
   encryptedKey String?
   keyIv        String?
   keyTag       String?
+  // Feature 019: Multi-Model AI Router
+  fallbackProviders  Json?
+  routingOverrides   Json?
   lastTestedAt DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -355,6 +365,10 @@ model AiUsage {
   month     String
   tokens    Int      @default(0)
   requests  Int      @default(0)
+  // Feature 019: Multi-Model AI Router
+  provider  String?
+  costUsd   Float    @default(0)
+  cacheHits Int      @default(0)
   updatedAt DateTime @updatedAt
 
   @@id([userId, month])
@@ -741,4 +755,465 @@ model AdventureScene {
   createdAt     DateTime @default(now())
 
   @@unique([adventureId, order])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 019: Multi-Model AI Router
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AiRouterConfig {
+  id              String   @id @default(uuid())
+  interactionType String
+  primary         String
+  model           String
+  fallbacks       Json
+  maxTokens       Int      @default(2048)
+  maxCostUsd      Float    @default(0.02)
+  enabled         Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+
+  @@unique([interactionType])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 020: Voice AI
+// ─────────────────────────────────────────────────────────────────────────────
+
+model VoiceSession {
+  id           String    @id @default(uuid())
+  userId       String
+  petId        String
+  speciesId    String
+  mood         String    @default("happy")
+  language     String    @default("es")
+  status       String    @default("active")
+  sttLatencyMs Int?
+  llmTokens    Int?
+  ttsTotalMs   Int?
+  createdAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  @@index([userId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 021: Multi-Device Presence + Co-op
+// ─────────────────────────────────────────────────────────────────────────────
+
+model DevicePresence {
+  id            String    @id @default(uuid())
+  userId        String
+  deviceId      String
+  platform      String
+  lastHeartbeat DateTime  @default(now())
+  status        String    @default("online")
+  createdAt     DateTime  @default(now())
+
+  @@unique([userId, deviceId])
+  @@index([userId, status])
+}
+
+model CoopFriendship {
+  id        String    @id @default(uuid())
+  ownerId   String
+  visitorId String
+  status    String    @default("pending") // pending | accepted | revoked
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([ownerId, visitorId])
+  @@index([ownerId, status])
+}
+
+model CoopVisit {
+  id          String   @id @default(uuid())
+  visitorId   String
+  ownerId     String
+  petId       String
+  action      String   // feed | play | clean
+  xpGained    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([visitorId, petId, createdAt])
+  @@index([petId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 022: Offline-First CRDT Sync
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SyncVersion {
+  id        String   @id @default(uuid())
+  userId    String
+  version   Int
+  state     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, version])
+  @@index([userId, version])
+}
+
+model SyncAction {
+  id        String   @id
+  userId    String
+  petId     String
+  type      String
+  args      Json
+  status    String   @default("pending") // pending | applied | rejected
+  reason    String?
+  timestamp DateTime @default(now())
+
+  @@index([userId, status])
+  @@index([userId, timestamp])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 023: Combat Spectator
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SpectatorSession {
+  id            String   @id @default(uuid())
+  battleId      String
+  userId        String
+  joinedAt      DateTime @default(now())
+  leftAt        DateTime?
+  lastRoundSeen Int      @default(0)
+  isActive      Boolean  @default(true)
+
+  @@index([battleId, isActive])
+  @@index([userId, joinedAt])
+}
+
+model Highlight {
+  id            String   @id @default(uuid())
+  battleId      String
+  type          String   // critical | comeback | long_battle | multiple
+  rating        Float    @default(0)
+  replayData    Json
+  totalRounds   Int
+  criticalCount Int      @default(0)
+  hasComeback   Boolean  @default(false)
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@unique([battleId])
+  @@index([rating, createdAt])
+  @@index([expiresAt])
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 024: Modding API + Workshop
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Mod {
+  id          String    @id @default(uuid())
+  creatorId   String
+  type        String    // species | furniture | minigame
+  name        String
+  description String
+  element     String?
+  rarity      String?
+  data        Json
+  spriteUrl   String?
+  minigameUrl String?
+  status      String    @default("published") // published | hidden | deleted
+  downloads   Int       @default(0)
+  avgRating   Float     @default(0)
+  ratingCount Int       @default(0)
+  reportCount Int       @default(0)
+  isFeatured  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  ratings      ModRating[]
+  reports      ModReport[]
+  modDownloads ModDownload[]
+
+  @@index([status, type])
+  @@index([element, rarity])
+  @@index([creatorId])
+}
+
+model ModRating {
+  id        String   @id @default(uuid())
+  modId     String
+  mod       Mod      @relation(fields: [modId], references: [id], onDelete: Cascade)
+  userId    String
+  stars     Int
+  rating    String?
+  createdAt DateTime @default(now())
+
+  @@unique([modId, userId])
+  @@index([modId])
+}
+
+model ModReport {
+  id        String   @id @default(uuid())
+  modId     String
+  mod       Mod      @relation(fields: [modId], references: [id], onDelete: Cascade)
+  userId    String
+  reason    String
+  details   String?
+  reviewed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([modId])
+}
+
+model ModDownload {
+  id        String   @id @default(uuid())
+  modId     String
+  mod       Mod      @relation(fields: [modId], references: [id], onDelete: Cascade)
+  userId    String
+  petId     String?
+  createdAt DateTime @default(now())
+
+  @@unique([modId, userId, petId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 025: Public API + Webhooks
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  userId     String
+  name       String
+  keyHash    String    @unique // SHA-256 del key (nunca se guarda el plaintext)
+  scopes     Json
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Webhook {
+  id              String    @id @default(uuid())
+  userId          String
+  url             String
+  secret          String
+  events          Json
+  active          Boolean   @default(true)
+  lastDeliveryAt  DateTime?
+  failureCount    Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  deliveries WebhookDelivery[]
+
+  @@index([userId, active])
+}
+
+model WebhookDelivery {
+  id         String    @id @default(uuid())
+  webhookId  String
+  webhook    Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event      String
+  status     String    @default("pending") // pending | delivered | failed
+  statusCode Int?
+  attempts   Int       @default(0)
+  error      String?
+  createdAt  DateTime  @default(now())
+
+  @@index([webhookId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 026: Security — Zero-Trust + E2E
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  event       String   // login | refresh | ip_change | key_created | key_revoked | account_deleted
+  ip          String?
+  userAgent   String?
+  fingerprint String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([fingerprint])
+}
+
+model E2eKeyPair {
+  id         String    @id @default(uuid())
+  userId     String
+  publicKey  String   // PEM P-256
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId, revokedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 029: Pet Buddies — interacciones entre 2+ pets
+// ─────────────────────────────────────────────────────────────────────────────
+
+model BuddyPair {
+  id         String   @id @default(uuid())
+  userId     String
+  petAId     String
+  petBId     String
+  separated  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, petAId, petBId])
+  @@index([userId])
+}
+
+model BuddyInteraction {
+  id        String   @id @default(uuid())
+  userId    String
+  petAId    String
+  petBId    String
+  type      String   // chase | sleep_together | play_fight | eat_together | idle_chat | watch_together
+  duration  Int      @default(4)
+  effects   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([petAId, createdAt])
+  @@index([petBId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 030: Rituals — hábitos y rituales
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Ritual {
+  id        String   @id @default(uuid())
+  userId    String
+  petId     String
+  type      String   // feed | battle | minigame | chat | clean
+  cadence   String   @default("daily") // daily | weekly
+  hour      Int
+  minute    Int      @default(0)
+  dayOfWeek Int?     // 0-6 (lunes-domingo), null = diario
+  status    String   @default("candidate") // candidate | active | paused | completed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([petId])
+}
+
+model RitualProgress {
+  id               String    @id @default(uuid())
+  ritualId         String
+  userId           String
+  petId            String
+  streak           Int       @default(0)
+  totalCompletions Int       @default(0)
+  missCount        Int       @default(0)
+  lastCompletedAt  DateTime?
+  lastAdaptCount   Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([ritualId])
+  @@index([userId])
+  @@index([petId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 031: Mood Theater — micro-narrativas / momentos
+// ─────────────────────────────────────────────────────────────────────────────
+
+model MoodMoment {
+  id             String    @id @default(uuid())
+  userId         String
+  petId          String
+  act            String   // dance | sing | cry | smoke | glow | yawn | stretch
+  trigger        String   // favorite_food | happy_well_fed | sad_sick | battle_loss | level_up | low_energy | wake_up
+  mood           String?
+  duration       Int      @default(5)
+  captured       Boolean  @default(false)
+  stickerKey     String?
+  capturedAt     DateTime?
+  sharedToFeed   Boolean  @default(false)
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([petId, createdAt])
+  @@index([sharedToFeed, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 032: Accessibility & Inclusion
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AccessibilityPrefs {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  highContrast   Boolean  @default(false)
+  reduceMotion   Boolean  @default(false)
+  captions       Boolean  @default(true)
+  simpleMode     Boolean  @default(false)
+  reduceHaptics  Boolean  @default(false)
+  fontSizeScale  Int      @default(100)
+  colorblindMode String?  // null | protanopia | deuteranopia | tritanopia
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature 033: Gifting & Care Packages
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Gift {
+  id            String    @id @default(uuid())
+  senderId      String
+  receiverId    String
+  petId         String
+  itemId        String
+  qty           Int       @default(1)
+  note          String?
+  thankYouNote  String?
+  status        String    @default("pending") // pending | accepted | rejected | expired
+  sentAt        DateTime  @default(now())
+  expiresAt     DateTime?
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([senderId, sentAt])
+  @@index([receiverId, sentAt])
+}
+
+model CarePackage {
+  id         String    @id @default(uuid())
+  senderId   String
+  receiverId String
+  petId      String
+  foodItemId String
+  medicineItemId String
+  toyItemId  String
+  coins      Int       @default(50)
+  note       String?
+  status     String    @default("applied")
+  appliedAt  DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+
+  @@index([receiverId, createdAt])
+  @@index([senderId, createdAt])
+}
+
+model GroupSession {
+  id                 String    @id @default(uuid())
+  code               String    @unique
+  hostId             String
+  maxPlayers         Int       @default(4)
+  status             String    @default("active") // active | complete | expired
+  participants       Json      @default("[]")
+  generatedItemId    String?
+  rewardsDistributed Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  expiresAt          DateTime
+  completedAt        DateTime?
+
+  @@index([hostId])
+  @@index([status, expiresAt])
 }

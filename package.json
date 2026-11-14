@@ -7,7 +7,8 @@
   "scripts": {
     "validate:data": "node scripts/validate-game-data.js",
     "validate:assets": "node scripts/validate-assets.js",
-    "validate:all": "node scripts/validate-game-data.js && node scripts/validate-assets.js",
+    "validate:animations": "tsx scripts/validate-animations.ts",
+    "validate:all": "node scripts/validate-game-data.js && node scripts/validate-assets.js && tsx scripts/validate-animations.ts",
     "build:assets": "tsx scripts/build-assets.ts",
     "build:assets:dry": "tsx scripts/build-assets.ts --dry-run",
     "test:assets": "vitest run scripts/build-assets.spec.ts",

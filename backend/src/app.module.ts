@@ -37,6 +37,20 @@ import { DevModule } from './modules/dev/dev.module';
 import { RaidModule } from './modules/raid/raid.module';
 import { TournamentModule } from './modules/tournament/tournament.module';
 import { CookingModule } from './modules/cooking/cooking.module';
+import { ModdingModule } from './modules/modding/modding.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { SecurityModule } from './modules/security/security.module';
+import { ReengagementModule } from './modules/reengagement/reengagement.module';
+import { AiRouterModule } from './modules/ai-router/ai-router.module';
+import { VoiceModule } from './modules/voice/voice.module';
+import { PresenceModule } from './modules/presence/presence.module';
+import { SyncModule } from './modules/sync/sync.module';
+import { SpectatorModule } from './modules/spectator/spectator.module';
+import { BuddiesModule } from './modules/buddies/buddies.module';
+import { RitualsModule } from './modules/rituals/rituals.module';
+import { MoodTheaterModule } from './modules/mood-theater/mood-theater.module';
+import { AccessibilityModule } from './modules/accessibility/accessibility.module';
+import { GiftingModule } from './modules/gifting/gifting.module';
 
 // DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
 // En `NODE_ENV === 'production'` el DevModule no se registra ⇒ 404 (SC-007, constitución I/VIII).
@@ -82,6 +96,22 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production';
     TrainingModule,
     GenesModule,
     AdventureModule,
+    ModdingModule,
+    WebhooksModule,
+    SecurityModule,
+    ReengagementModule,
+    // Feature 019-023:
+    AiRouterModule,
+    VoiceModule,
+    PresenceModule,
+    SyncModule,
+    SpectatorModule,
+    // Feature 029-033:
+    BuddiesModule,
+    RitualsModule,
+    MoodTheaterModule,
+    AccessibilityModule,
+    GiftingModule,
     ...(DEV_TOOLS_ENABLED ? [DevModule] : []),
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],
