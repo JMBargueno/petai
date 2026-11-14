@@ -9,7 +9,7 @@ import {
   HttpStatus,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { PresenceService } from './presence.service';
 import { CoopCareService } from './coop-care.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -56,6 +56,18 @@ export class PresenceController {
   @Post('coop/visit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Perform a co-op visit action on a friend\'s pet' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['ownerId', 'petId', 'action'],
+      properties: {
+        ownerId: { type: 'string', description: 'Dueño del pet visitado' },
+        petId: { type: 'string', description: 'Pet visitado' },
+        action: { type: 'string', enum: ['feed', 'play', 'clean'], description: 'Acción de la visita' },
+        itemId: { type: 'string', description: 'Item usado (para feed, opcional)' },
+      },
+    },
+  })
   async visit(
     @CurrentUser() user: any,
     @Body() body: {

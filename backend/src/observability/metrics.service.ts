@@ -340,6 +340,12 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
     await new Promise<void>((resolve) => {
       if (!this.server) return resolve();
       this.server.close(() => resolve());
+      // Cierra las conexiones keep-alive colgadas para que `close()` no espere al
+      // keepAliveTimeout (~5s) y libere el socket de inmediato. En la suite e2e (24
+      // AppModule en el mismo worker) esas conexiones se acumulaban y acababan
+      // agotando puertos efímeros (el listen(0) del servidor de métricas fallaba →
+      // puerto 0) y dejaban el worker sin salir con limpieza.
+      this.server.closeIdleConnections?.();
       this.server = null;
     });
   }

@@ -148,6 +148,20 @@ export const balanceSchema = z
       })
       .passthrough(),
     chests: z.any().optional(),
+    // R-04: topes de las lecturas públicas (límites de paginación/tamaño). Datos de juego,
+    // no literales: los servicios los leen vía GameDataService.
+    publicApi: z
+      .object({
+        leaderboardMax: z.number().int().positive(),
+        eventsLimit: z.number().int().positive(),
+        standings: z
+          .object({
+            defaultLimit: z.number().int().positive(),
+            maxLimit: z.number().int().positive(),
+          })
+          .optional(),
+      })
+      .optional(),
   })
   .passthrough();
 

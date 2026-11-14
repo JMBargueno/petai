@@ -68,6 +68,19 @@ jobs:
       - name: Build backend
         run: pnpm --filter petai-backend run build
 
+      # F-09: el contrato único (shared/openapi/openapi.json) debe coincidir con el que se genera
+      # desde los controladores. Si un controlador/DTO cambia sin regenerar el JSON, la CI falla.
+      # Reutiliza el comando de exportación (no necesita base de datos: stub de Prisma en el script).
+      - name: Verify OpenAPI contract is up to date (no drift)
+        run: |
+          pnpm --filter petai-backend run export:openapi
+          if ! git diff --quiet -- shared/openapi/openapi.json; then
+            echo "::error::shared/openapi/openapi.json está desfasado respecto a los controladores."
+            echo "Ejecuta 'pnpm --filter petai-backend run export:openapi' y commit el fichero regenerado."
+            git diff -- shared/openapi/openapi.json
+            exit 1
+          fi
+
       - name: Run unit tests
         run: pnpm --filter petai-backend run test
 

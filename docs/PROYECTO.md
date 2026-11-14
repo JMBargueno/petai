@@ -24,9 +24,9 @@ PetAI es una mascota virtual al estilo tamagotchi. Cada jugador eclosiona huevos
 ## 2. Versiones objetivo (comprobadas en noviembre de 2026)
 - **iOS 27 / Xcode 27**: publicados en septiembre de 2026. Liquid Glass es obligatorio con el SDK 27.
 - **Android 17 (API 37)**: estable desde junio de 2026. `targetSdk 37`, `minSdk 26`.
-- **NestJS 11.1.x** sobre Node.js 24 LTS.
-- **Prisma ORM 8** si ya es estable (anunciado en septiembre de 2026); si no, Prisma 7.
-- **PostgreSQL 18**, **Redis 8**, **Tauri 2.x**, **Kotlin 2.x**, **Swift 6.x**.
+- **NestJS 11.1.x** sobre Node.js 22 LTS (el `backend/Dockerfile` usa `node:22-slim` y la CI corre con Node 22).
+- **Prisma ORM 6** (versión instalada: 6.19, según `pnpm-lock.yaml`).
+- **PostgreSQL 17** y **Redis 7** (versiones de `docker-compose.yml` y `docker-compose.prod.yml`), **Tauri 2.x**, **Kotlin 2.x**, **Swift 6.x**.
 - **Paso 0**: confirmar las últimas versiones estables en el momento de crear cada proyecto.
 
 ---
@@ -34,9 +34,9 @@ PetAI es una mascota virtual al estilo tamagotchi. Cada jugador eclosiona huevos
 ## 3. Estructura del monorepo
 ```
 petai/
-  backend/            NestJS 11 + Prisma + PostgreSQL + Redis (BullMQ)
-  android/            Proyecto Gradle (Kotlin DSL, version catalog)
-  ios/                Proyecto Xcode (SwiftUI) + extensión de widgets
+  backend/            NestJS 11 + Prisma + PostgreSQL + Redis (sin colas aún; crons con @nestjs/schedule)
+  mobile/android/     Proyecto Gradle (Kotlin DSL, version catalog)
+  ios/                Pendiente (aún no existe; ver Fase 5)
   desktop/            Tauri 2 (src-tauri en Rust + frontend en Svelte/TS)
   shared/
     openapi/          openapi.json exportado por el backend
@@ -142,11 +142,8 @@ Recompensas: XP, monedas, felicidad y gasto de energía.
 | `pets` | Estado, deterioro perezoso, acciones (alimentar, limpiar, dormir, curar), evolución |
 | `inventory` / `shop` | Objetos, compra y uso |
 | `minigames` | Sesiones, validación y recompensas |
-| `leveling` | XP, subidas de nivel y recompensas |
 | `battles` | Emparejamiento, simulación determinista, ELO, repeticiones y clasificación |
 | `ai` | Proveedores LLM, keys cifradas, chat en streaming, memoria, herramientas y cuotas |
-| `subscriptions` | Verificación de StoreKit 2 y Play Billing, notificaciones servidor-a-servidor y derechos |
-| `notifications` | APNs y FCM; programación con BullMQ según el deterioro previsto |
 | `realtime` | Gateway Socket.IO: sincronización entre dispositivos y streaming del chat |
 | `health` | `/health` y métricas |
 | **Módulos de la Fase 7 (33 features)** ||
@@ -156,14 +153,14 @@ Recompensas: XP, monedas, felicidad y gasto de energía.
 | `dev` (DevKit) | Actions de debug, seed rápido, hot-reload de game-data, watcher de archivos |
 | `environmental` | Clima (Open-Meteo), hora local, festivales, inactividad, contexto para IA |
 | `bonding` | Bonding meter 0-100, niveles de amistad, recompensas por nivel |
-| `notifications-ai` | Notificaciones IA personalizadas por personalidad, límites diarios |
+| `notifications` | Notificaciones IA personalizadas por personalidad, límites diarios |
 | `achievements` | Logros, constelación visual, puntos de logro, recompensas |
 | `assets` (Edge/CDN) | Served assets, versioning por hash, preloading predictivo |
 | `habitat` | Habitaciones, muebles, bonificaciones pasivas, colocación grid |
 | `seasons` | Temporadas, pase gratuito/premium, ligas por temporada |
 | `breeding` | Cruces, genética, mutaciones, incubación, tickets |
-| `raids` | Boss semanal, ataques, progreso global, recompensas |
-| `tournaments` | Bracket knockout, rondas, cuotas, recompensas |
+| `raid` | Boss semanal, ataques, progreso global, recompensas |
+| `tournament` | Bracket knockout, rondas, cuotas, recompensas |
 | `cooking` | Recetas, minijuego de cocina, buffs de combate |
 | `training` | Entrenamiento elemental, buffs temporales |
 | `genes` | Genes ocultos, temperamento, efectos en combate y IA |
@@ -221,8 +218,8 @@ PushToken(userId, platform, token)
   - `POST /pets/:id/chat` (SSE), `GET /pets/:id/chat/history`
   - `GET /pets/:id/memories`, `DELETE /pets/:id/memories/:mid`
   - `POST /pets/:id/tool-calls/:callId/confirm`
-- **Suscripciones**: `POST /subscriptions/verify`, `POST /webhooks/appstore`, `POST /webhooks/googleplay`
-- **Push**: `POST /push-tokens`
+- **Suscripciones**: `POST /subscriptions/verify`, `POST /webhooks/appstore`, `POST /webhooks/googleplay` (pendiente, Fase 5: el módulo no existe todavía)
+- **Push**: `POST /push-tokens` (pendiente, Fase 5)
 - **WebSocket** (`/realtime`): eventos `pet:update`, `chat:delta`, `battle:result` y `notification`
 
 ### 5.4 Subsistema de IA
@@ -282,7 +279,7 @@ PushToken(userId, platform, token)
 ### Fase 0 — Preparación
 - [ ] Verificar las versiones estables actuales (sección 2)
 - [ ] `git init`, `.gitignore` por plataforma, `README.md` y `docs/`
-- [ ] `docker-compose.yml` (PostgreSQL 18, Redis 8)
+- [ ] `docker-compose.yml` (PostgreSQL 17, Redis 7)
 - [ ] CI básica en GitHub Actions (lint y tests por proyecto)
 - [ ] Arte provisional: 3 especies × 4 animaciones y 4 patrones (placeholder)
 - **Hecho cuando**: `docker compose up` arranca y la CI está en verde con los proyectos vacíos.
@@ -291,7 +288,7 @@ PushToken(userId, platform, token)
 
 ### Fase 1 — Núcleo del backend + mascota de escritorio
 - [ ] Backend: scaffold de NestJS, configuración (validada con zod), Prisma, migraciones y seed de `game-data`
-- [ ] Backend: módulos `auth` (de momento email+contraseña), `users`, `game-data`, `hatching` (rareza, patrón y pity), `pets` (deterioro perezoso y acciones), `inventory`/`shop` (comida), `leveling` y `realtime` (WebSocket `pet:update`)
+- [ ] Backend: módulos `auth` (de momento email+contraseña), `users`, `game-data`, `hatching` (rareza, patrón y pity), `pets` (deterioro perezoso y acciones), `inventory`/`shop` (comida) y `realtime` (WebSocket `pet:update`)
 - [ ] Backend: exportación de OpenAPI y generación del cliente TypeScript (`openapi-typescript`)
 - [ ] Escritorio: scaffold de Tauri 2 (Svelte/TS), ventana transparente siempre visible, `PetView` (sprite + patrón + paleta), máquina de estados (andar, sentarse, dormir, comer) y clics a través de la ventana
 - [ ] Escritorio: bandeja del sistema y panel de control (login, eclosión con animación, comida/inventario y estadísticas)
@@ -340,8 +337,9 @@ PushToken(userId, platform, token)
 
 ### Fase 7 — Funcionalidades Expandidas (33 features)
 - [x] **Oleada 1 — Hábito e Infraestructura**: Misiones, Cofres, Observability, DevKit, Environmental, Bonding, Notifications IA, Logros, Edge/CDN
-- [x] **Oleada 2 — Meta e IA**: Hábitat, Temporadas, Breeding, Raid, Torneo, Cocina, Entrenamiento, Genes, Aventura Narrativa IA
-- [x] **Oleada 3 — Comunidad y Ecosistema**: AI Router, Voice AI, Multi-Device, Offline CRDT, Spectator, Modding, Public API, Security, iOS+Skia, Welcome Back, Buddies, Rituals, Mood Theater, Accessibility, Gifting
+- [ ] **Oleada 2 — Meta e IA**: Hábitat, Temporadas, Breeding, Raid, Torneo, Cocina, Entrenamiento, Genes, Aventura Narrativa IA
+- [ ] **Oleada 3 — Comunidad y Ecosistema**: AI Router, Voice AI, Multi-Device, Offline CRDT, Spectator, Modding, Public API, Security, iOS+Skia, Welcome Back, Buddies, Rituals, Mood Theater, Accessibility, Gifting
+- *(Actualización: las oleadas 2 y 3 están implementadas en el backend (migración `20261114120000_wave2_wave3`), pero no cumplen el criterio «Hecho cuando» porque la mayoría de sus módulos no tiene tests, ningún cliente las consume y varias son prototipos; ver [`informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md`](informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md), F-03 a F-10.)*
 - **Hecho cuando**: cada feature tiene SDD completo (spec/plan/tasks en `.specify/memory/features/`), código backend funcional, tests unitarios pasando y build limpio.
 - **Detalle**: ver [`docs/NUEVAS_FUNCIONALIDADES.md`](NUEVAS_FUNCIONALIDADES.md) y [`docs/specs/`](specs/) para las 33 especificaciones.
 

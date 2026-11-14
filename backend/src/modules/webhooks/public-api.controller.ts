@@ -1,6 +1,8 @@
 import { Controller, Get, Param, Query, UseGuards, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LeaderboardService } from '../battles/leaderboard.service';
+import { GameDataService } from '../game-data/game-data.service';
 import { ApiKeyGuard, RequireScope } from './api-key.guard';
 
 /**
@@ -12,40 +14,23 @@ import { ApiKeyGuard, RequireScope } from './api-key.guard';
 @UseGuards(ApiKeyGuard)
 @Controller('public')
 export class PublicApiController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly leaderboardService: LeaderboardService,
+    private readonly gameData: GameDataService,
+  ) {}
 
   @Get('leaderboard')
   @RequireScope('read:leaderboard')
-  @ApiOperation({ summary: 'Top 100 del leaderboard (opcional por elemento)' })
+  @ApiOperation({ summary: 'Top del leaderboard (opcional por elemento), servido desde el ZSET' })
   @ApiResponse({ status: 200, description: 'Leaderboard' })
   async leaderboard(@Query('element') element?: string, @Query('top') top?: string) {
-    const limit = Math.min(100, Math.max(1, Number(top) || 100));
-    const where: Record<string, unknown> = {};
-    if (element) {
-      where.species = { element };
-    }
+    // R-04: reutiliza la clasificación del núcleo (ZSET) en vez de ordenar Pet por ELO con include.
+    const max = this.gameData.getBalance().publicApi?.leaderboardMax ?? 100;
+    const limit = Math.min(max, Math.max(1, Number(top) || max));
+    const entries = await this.leaderboardService.publicTop(limit, element);
 
-    const pets = await this.prisma.pet.findMany({
-      where,
-      orderBy: { elo: 'desc' },
-      take: limit,
-      include: { species: true, user: { select: { displayName: true } } },
-    });
-
-    return {
-      element: element ?? null,
-      limit,
-      entries: pets.map((p, i) => ({
-        rank: i + 1,
-        petId: p.id,
-        nickname: p.nickname,
-        element: p.species?.element ?? null,
-        rarity: p.rarity,
-        level: p.level,
-        elo: p.elo,
-        owner: p.user?.displayName ?? null,
-      })),
-    };
+    return { element: element ?? null, limit, entries };
   }
 
   @Get('events')
@@ -54,10 +39,15 @@ export class PublicApiController {
   @ApiResponse({ status: 200, description: 'Eventos globales' })
   async events() {
     const now = new Date();
+    const eventsLimit = Math.max(1, Math.floor(this.gameData.getBalance().publicApi?.eventsLimit ?? 10));
     const [season, raid, tournament] = await Promise.all([
       this.prisma.season.findFirst({ where: { isActive: true } }).catch(() => null),
-      this.prisma.raid.findMany({ where: { startedAt: { lte: now } } }).catch(() => []),
-      this.prisma.tournament.findMany({ where: { status: 'active' } }).catch(() => []),
+      // R-04: solo raids en curso (estado activo y no finalizadas) con un tope razonable,
+      // no todos los raids históricos.
+      this.prisma.raid
+        .findMany({ where: { status: 'active', endsAt: { gte: now } }, orderBy: { startedAt: 'desc' }, take: eventsLimit })
+        .catch(() => []),
+      this.prisma.tournament.findMany({ where: { status: 'active' }, take: eventsLimit }).catch(() => []),
     ]);
 
     return {

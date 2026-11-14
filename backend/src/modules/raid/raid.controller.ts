@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { RaidService } from './raid.service';
@@ -19,6 +19,15 @@ export class RaidController {
 
   @Post('attack')
   @ApiOperation({ summary: 'Atacar al boss con un pet (consume energía, combate determinista)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['petId'],
+      properties: {
+        petId: { type: 'string', description: 'Pet que ataca' },
+      },
+    },
+  })
   attack(
     @CurrentUser() user: any,
     @Body() body: { petId: string },

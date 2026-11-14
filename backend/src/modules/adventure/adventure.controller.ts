@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AdventureService } from './adventure.service';
@@ -15,6 +15,16 @@ export class AdventureController {
 
   @Post('start')
   @ApiOperation({ summary: 'Iniciar aventura diaria (1 gratis/día, premium con gemas)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['petId'],
+      properties: {
+        petId: { type: 'string', description: 'Pet que emprende la aventura' },
+        premium: { type: 'boolean', description: 'Usar una aventura premium (gasta gemas)' },
+      },
+    },
+  })
   start(
     @CurrentUser() user: any,
     @Body(new ZodPipe(adventureStartSchema)) body: { petId: string; premium?: boolean },
@@ -24,6 +34,16 @@ export class AdventureController {
 
   @Post('choose')
   @ApiOperation({ summary: 'Elegir opción y avanzar a la siguiente escena' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['adventureId', 'optionIndex'],
+      properties: {
+        adventureId: { type: 'string', description: 'Aventura en curso' },
+        optionIndex: { type: 'integer', description: 'Índice de la opción elegida' },
+      },
+    },
+  })
   choose(
     @CurrentUser() user: any,
     @Body(new ZodPipe(adventureChooseSchema)) body: { adventureId: string; optionIndex: number },

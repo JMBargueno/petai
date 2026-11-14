@@ -16,6 +16,98 @@
         ]
       }
     },
+    "/v1/assets/manifest": {
+      "get": {
+        "operationId": "AssetsController_manifest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Manifest de assets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Manifest no generado / shared inaccesible"
+          }
+        },
+        "summary": "Índice versionado de assets (manifest). Público.",
+        "tags": [
+          "Assets"
+        ]
+      }
+    },
+    "/v1/assets/{path}": {
+      "get": {
+        "operationId": "AssetsController_asset",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "description": "Key lógica del manifest (sin hash).",
+            "schema": {
+              "example": "sprites/ignisaur_idle"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contenido binario/JSON del asset"
+          },
+          "400": {
+            "description": "Key mal formada (path traversal)"
+          },
+          "404": {
+            "description": "Asset no encontrado"
+          },
+          "500": {
+            "description": "Error interno de lectura"
+          }
+        },
+        "summary": "Sirve un asset estático por `key` (fallback/mirror del CDN). Público.",
+        "tags": [
+          "Assets"
+        ]
+      }
+    },
+    "/v1/events/upcoming": {
+      "get": {
+        "operationId": "EventsController_upcoming",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Eventos próximos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpcomingEventsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente/inválido/expirado"
+          },
+          "500": {
+            "description": "Fuente de eventos inaccesible"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eventos de juego de las próximas 24h (con assetPrefix a pre-cargar)",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
     "/v1/auth/register": {
       "post": {
         "operationId": "AuthController_register",
@@ -1145,6 +1237,34 @@
       "put": {
         "operationId": "AiController_putConfig",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "description": "Proveedor de IA"
+                  },
+                  "baseUrl": {
+                    "type": "string",
+                    "description": "URL base del endpoint"
+                  },
+                  "model": {
+                    "type": "string",
+                    "description": "Modelo a usar"
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "description": "API key BYOK (se cifra en el servidor)"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -1563,6 +1683,22 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "Mensaje del usuario"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -1592,6 +1728,26 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "turnId": {
+                    "type": "string",
+                    "description": "ID del turno"
+                  },
+                  "reply": {
+                    "type": "string",
+                    "description": "Respuesta generada en local"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -1621,6 +1777,29 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "Mensaje del usuario"
+                  },
+                  "clientTools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Herramientas del cliente (opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2231,63 +2410,3492 @@
         ]
       }
     },
-    "/v1/dev/hot-reload": {
-      "post": {
-        "operationId": "DevController_hotReload",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Aplica un hot-reload atómico de game data (200 ok / 400 inválido / 404 desconocido)",
-        "tags": [
-          "Dev"
-        ]
-      }
-    },
-    "/v1/dev/game-data": {
+    "/v1/habitat": {
       "get": {
-        "operationId": "DevController_getGameData",
+        "operationId": "HabitatController_getHabitat",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Hábitat completo"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "404": {
+            "description": "Pet no encontrado"
           }
         },
-        "summary": "Devuelve el snapshot de game-data vigente en memoria",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener el hábitat del usuario (salas, layout, buffs)",
         "tags": [
-          "Dev"
+          "Habitat"
         ]
       }
     },
-    "/v1/dev/seed": {
+    "/v1/habitat/furniture/{id}/place": {
       "post": {
-        "operationId": "DevController_seed",
-        "parameters": [],
+        "operationId": "HabitatController_placeFurniture",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "200": {
-            "description": ""
+          "201": {
+            "description": "Mueble colocado"
+          },
+          "400": {
+            "description": "Celda ocupada o sala bloqueada"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble o pet no encontrado"
           }
         },
-        "summary": "Seed programático de usuarios y mascotas (crypto, con dryRun)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Colocar un mueble en una celda del hábitat",
         "tags": [
-          "Dev"
+          "Habitat"
         ]
       }
     },
-    "/v1/dev/action": {
+    "/v1/habitat/furniture/{id}": {
+      "delete": {
+        "operationId": "HabitatController_removeFurniture",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mueble removido"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quitar un mueble del hábitat",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/buffs": {
+      "get": {
+        "operationId": "HabitatController_getActiveBuffs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Buffs agregados de muebles colocados"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener los buffs activos del hábitat",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/seasons/current": {
+      "get": {
+        "operationId": "SeasonsController_getCurrentSeason",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Temporada actual"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener la temporada actual con tiers y recompensas",
+        "tags": [
+          "Seasons"
+        ]
+      }
+    },
+    "/v1/seasons/progress": {
+      "get": {
+        "operationId": "SeasonsController_getProgress",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Progreso de temporada"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener el progreso del usuario en la temporada actual",
+        "tags": [
+          "Seasons"
+        ]
+      }
+    },
+    "/v1/seasons/pass/purchase": {
       "post": {
-        "operationId": "DevController_action",
+        "operationId": "SeasonsController_purchasePass",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Pase comprado"
+          },
+          "400": {
+            "description": "Saldo insuficiente"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "409": {
+            "description": "Pase ya comprado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprar el pase de temporada",
+        "tags": [
+          "Seasons"
+        ]
+      }
+    },
+    "/v1/seasons/{id}": {
+      "get": {
+        "operationId": "SeasonsController_getSeasonById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle de la temporada"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Temporada no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener detalles de una temporada específica",
+        "tags": [
+          "Seasons"
+        ]
+      }
+    },
+    "/v1/breeding/start": {
+      "post": {
+        "operationId": "BreedingController_startBreeding",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "parent1Id",
+                  "parent2Id"
+                ],
+                "properties": {
+                  "parent1Id": {
+                    "type": "string",
+                    "description": "ID del primer progenitor"
+                  },
+                  "parent2Id": {
+                    "type": "string",
+                    "description": "ID del segundo progenitor"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cría iniciada"
+          },
+          "400": {
+            "description": "Pets inválidos o cooldown activo"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Iniciar una cría entre dos pets",
+        "tags": [
+          "Breeding"
+        ]
+      }
+    },
+    "/v1/breeding/{id}": {
+      "get": {
+        "operationId": "BreedingController_getBreeding",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado de la cría"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Cría no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener el estado de una cría",
+        "tags": [
+          "Breeding"
+        ]
+      }
+    },
+    "/v1/breeding/history": {
+      "get": {
+        "operationId": "BreedingController_getHistory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Historial de crías"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener el historial de crías del usuario",
+        "tags": [
+          "Breeding"
+        ]
+      }
+    },
+    "/v1/raid/current": {
+      "get": {
+        "operationId": "RaidController_current",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
-        "summary": "Test harness: invoca una acción del juego (feed/battle) sin UI",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ver el boss de raid activo con HP global y contribuciones",
         "tags": [
-          "Dev"
+          "Raid"
+        ]
+      }
+    },
+    "/v1/raid/attack": {
+      "post": {
+        "operationId": "RaidController_attack",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet que ataca"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Atacar al boss con un pet (consume energía, combate determinista)",
+        "tags": [
+          "Raid"
+        ]
+      }
+    },
+    "/v1/raid/leaderboard": {
+      "get": {
+        "operationId": "RaidController_leaderboard",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Top 100 contribuciones al raid actual",
+        "tags": [
+          "Raid"
+        ]
+      }
+    },
+    "/v1/raid/history": {
+      "get": {
+        "operationId": "RaidController_history",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de raids pasadas",
+        "tags": [
+          "Raid"
+        ]
+      }
+    },
+    "/v1/tournament/current": {
+      "get": {
+        "operationId": "TournamentController_current",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Torneo actual con estado, bracket y premios",
+        "tags": [
+          "Tournament"
+        ]
+      }
+    },
+    "/v1/tournament/enter": {
+      "post": {
+        "operationId": "TournamentController_enter",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet inscrito al torneo"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Inscribir al torneo (50 gemas de cuota)",
+        "tags": [
+          "Tournament"
+        ]
+      }
+    },
+    "/v1/tournament/bracket": {
+      "get": {
+        "operationId": "TournamentController_bracket",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Bracket completo del torneo (público)",
+        "tags": [
+          "Tournament"
+        ]
+      }
+    },
+    "/v1/tournament/standings": {
+      "get": {
+        "operationId": "TournamentController_standings",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Posiciones y progreso del usuario en el torneo (paginado)",
+        "tags": [
+          "Tournament"
+        ]
+      }
+    },
+    "/v1/cooking/start": {
+      "post": {
+        "operationId": "CookingController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet que cocina"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Iniciar sesión de cocina (receta + ingredientes + timer)",
+        "tags": [
+          "Cooking"
+        ]
+      }
+    },
+    "/v1/cooking/submit": {
+      "post": {
+        "operationId": "CookingController_submit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sessionId",
+                  "score",
+                  "correctOrder"
+                ],
+                "properties": {
+                  "sessionId": {
+                    "type": "string",
+                    "description": "ID de la sesión de cocina"
+                  },
+                  "score": {
+                    "type": "number",
+                    "description": "Puntuación obtenida"
+                  },
+                  "correctOrder": {
+                    "type": "boolean",
+                    "description": "Si el orden de los pasos fue correcto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar resultado de la sesión de cocina",
+        "tags": [
+          "Cooking"
+        ]
+      }
+    },
+    "/v1/cooking/daily-menu": {
+      "get": {
+        "operationId": "CookingController_dailyMenu",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Receta especial del día (determinista por fecha)",
+        "tags": [
+          "Cooking"
+        ]
+      }
+    },
+    "/v1/training/start": {
+      "post": {
+        "operationId": "TrainingController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet que entrena"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Iniciar dungeon de entrenamiento elemental (5 pisos)",
+        "tags": [
+          "Training"
+        ]
+      }
+    },
+    "/v1/training/submit": {
+      "post": {
+        "operationId": "TrainingController_submit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId",
+                  "element"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet que entrena"
+                  },
+                  "element": {
+                    "type": "string",
+                    "description": "Elemento elegido para el piso"
+                  },
+                  "prediction": {
+                    "type": "string",
+                    "description": "Predicción del jugador (opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar elección elemental para el piso actual",
+        "tags": [
+          "Training"
+        ]
+      }
+    },
+    "/v1/training/active-buff": {
+      "get": {
+        "operationId": "TrainingController_activeBuff",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ver buff de entrenamiento activo del pet",
+        "tags": [
+          "Training"
+        ]
+      }
+    },
+    "/v1/pets/{id}/genes": {
+      "get": {
+        "operationId": "GenesController_getGenes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ver genes y temperamento del pet (revelados y ocultos)",
+        "tags": [
+          "Genes"
+        ]
+      }
+    },
+    "/v1/pets/{id}/analyze": {
+      "post": {
+        "operationId": "GenesController_analyze",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Realizar análisis genético (consume 3 gemas, revela 1 gen)",
+        "tags": [
+          "Genes"
+        ]
+      }
+    },
+    "/v1/adventure/start": {
+      "post": {
+        "operationId": "AdventureController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet que emprende la aventura"
+                  },
+                  "premium": {
+                    "type": "boolean",
+                    "description": "Usar una aventura premium (gasta gemas)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Iniciar aventura diaria (1 gratis/día, premium con gemas)",
+        "tags": [
+          "Adventure"
+        ]
+      }
+    },
+    "/v1/adventure/choose": {
+      "post": {
+        "operationId": "AdventureController_choose",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "adventureId",
+                  "optionIndex"
+                ],
+                "properties": {
+                  "adventureId": {
+                    "type": "string",
+                    "description": "Aventura en curso"
+                  },
+                  "optionIndex": {
+                    "type": "integer",
+                    "description": "Índice de la opción elegida"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir opción y avanzar a la siguiente escena",
+        "tags": [
+          "Adventure"
+        ]
+      }
+    },
+    "/v1/adventure/current": {
+      "get": {
+        "operationId": "AdventureController_current",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ver aventura en curso",
+        "tags": [
+          "Adventure"
+        ]
+      }
+    },
+    "/v1/adventure/history": {
+      "get": {
+        "operationId": "AdventureController_history",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de aventuras completadas",
+        "tags": [
+          "Adventure"
+        ]
+      }
+    },
+    "/v1/modding/publish": {
+      "post": {
+        "operationId": "ModdingController_publish",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "name",
+                  "data"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "species",
+                      "furniture",
+                      "minigame"
+                    ],
+                    "description": "Tipo de mod"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Nombre del mod"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Descripción"
+                  },
+                  "element": {
+                    "type": "string",
+                    "description": "Elemento (especie)"
+                  },
+                  "rarity": {
+                    "type": "string",
+                    "description": "Rareza (especie)"
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "Datos del mod según su tipo"
+                  },
+                  "sprite": {
+                    "type": "string",
+                    "format": "base64",
+                    "description": "Sprite en base64"
+                  },
+                  "spriteUrl": {
+                    "type": "string",
+                    "description": "URL del sprite"
+                  },
+                  "minigameCode": {
+                    "type": "string",
+                    "description": "Código del minigame"
+                  },
+                  "minigameUrl": {
+                    "type": "string",
+                    "description": "URL del minigame"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mod publicado"
+          },
+          "400": {
+            "description": "Payload/asset inválido"
+          },
+          "429": {
+            "description": "Rate limit (5/día)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publicar un mod (especie, mueble o minigame)",
+        "tags": [
+          "Modding"
+        ]
+      }
+    },
+    "/v1/modding/workshop": {
+      "get": {
+        "operationId": "ModdingController_workshop",
+        "parameters": [
+          {
+            "name": "element",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rarity",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada de mods"
+          }
+        },
+        "summary": "Workshop: listar y filtrar mods publicados",
+        "tags": [
+          "Modding"
+        ]
+      }
+    },
+    "/v1/modding/{id}": {
+      "get": {
+        "operationId": "ModdingController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle del mod"
+          },
+          "404": {
+            "description": "Mod no encontrado"
+          }
+        },
+        "summary": "Detalle de un mod (snapshot)",
+        "tags": [
+          "Modding"
+        ]
+      },
+      "patch": {
+        "operationId": "ModdingController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Actualización parcial: solo se envían los campos a cambiar",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "element": {
+                    "type": "string"
+                  },
+                  "rarity": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "object"
+                  },
+                  "sprite": {
+                    "type": "string",
+                    "format": "base64"
+                  },
+                  "spriteUrl": {
+                    "type": "string"
+                  },
+                  "minigameUrl": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mod actualizado"
+          },
+          "403": {
+            "description": "No es el creator"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar un mod (solo creator)",
+        "tags": [
+          "Modding"
+        ]
+      },
+      "delete": {
+        "operationId": "ModdingController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mod borrado"
+          },
+          "403": {
+            "description": "No es el creator"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Borrar un mod (soft, solo creator)",
+        "tags": [
+          "Modding"
+        ]
+      }
+    },
+    "/v1/modding/{id}/rate": {
+      "post": {
+        "operationId": "ModdingController_rate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "stars"
+                ],
+                "properties": {
+                  "stars": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "Rating de 1 a 5"
+                  },
+                  "rating": {
+                    "type": "string",
+                    "description": "Comentario (opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Rating registrado"
+          },
+          "404": {
+            "description": "Mod no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rating de 1-5 estrellas",
+        "tags": [
+          "Modding"
+        ]
+      }
+    },
+    "/v1/modding/{id}/report": {
+      "post": {
+        "operationId": "ModdingController_report",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "Motivo del reporte"
+                  },
+                  "details": {
+                    "type": "string",
+                    "description": "Detalle (opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Report registrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reportar un mod (3 reports → auto-hidden)",
+        "tags": [
+          "Modding"
+        ]
+      }
+    },
+    "/v1/modding/{id}/download": {
+      "post": {
+        "operationId": "ModdingController_download",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet que usa el mod (opcional, para snapshot)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mod descargado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar descarga (+snapshot)",
+        "tags": [
+          "Modding"
+        ]
+      }
+    },
+    "/v1/apikeys": {
+      "post": {
+        "operationId": "WebhooksController_createApiKey",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "scopes"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Nombre de la key"
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Scopes de la key (p.ej. read:leaderboard)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key creada (key devuelta una vez)"
+          },
+          "409": {
+            "description": "Límite de keys alcanzado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una API key con scopes",
+        "tags": [
+          "Webhooks & API Keys"
+        ]
+      },
+      "get": {
+        "operationId": "WebhooksController_listApiKeys",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Lista de keys"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mis API keys",
+        "tags": [
+          "Webhooks & API Keys"
+        ]
+      }
+    },
+    "/v1/apikeys/{id}": {
+      "delete": {
+        "operationId": "WebhooksController_revokeApiKey",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key revocada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revocar una API key",
+        "tags": [
+          "Webhooks & API Keys"
+        ]
+      }
+    },
+    "/v1/webhooks": {
+      "post": {
+        "operationId": "WebhooksController_registerWebhook",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url",
+                  "events"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL HTTPS de destino"
+                  },
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Eventos a suscribir"
+                  },
+                  "secret": {
+                    "type": "string",
+                    "description": "Secreto para firmar (HMAC, opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook creado"
+          },
+          "400": {
+            "description": "URL inválida / SSRF"
+          },
+          "409": {
+            "description": "Límite de webhooks"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un webhook (HTTPS, max 10/user)",
+        "tags": [
+          "Webhooks & API Keys"
+        ]
+      },
+      "get": {
+        "operationId": "WebhooksController_listWebhooks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Lista de webhooks"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mis webhooks",
+        "tags": [
+          "Webhooks & API Keys"
+        ]
+      }
+    },
+    "/v1/webhooks/{id}": {
+      "delete": {
+        "operationId": "WebhooksController_removeWebhook",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook eliminado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Borrar un webhook",
+        "tags": [
+          "Webhooks & API Keys"
+        ]
+      }
+    },
+    "/v1/webhooks/{id}/test": {
+      "post": {
+        "operationId": "WebhooksController_testWebhook",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Resultado del test"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Probar un webhook (evento de test)",
+        "tags": [
+          "Webhooks & API Keys"
+        ]
+      }
+    },
+    "/v1/public/leaderboard": {
+      "get": {
+        "operationId": "PublicApiController_leaderboard",
+        "parameters": [
+          {
+            "name": "element",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "top",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Leaderboard"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Top del leaderboard (opcional por elemento), servido desde el ZSET",
+        "tags": [
+          "Public API"
+        ]
+      }
+    },
+    "/v1/public/events": {
+      "get": {
+        "operationId": "PublicApiController_events",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Eventos globales"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eventos globales activos (raid, temporada, torneos)",
+        "tags": [
+          "Public API"
+        ]
+      }
+    },
+    "/v1/public/pets/{petId}": {
+      "get": {
+        "operationId": "PublicApiController_pet",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Datos públicos del pet"
+          },
+          "404": {
+            "description": "Pet no público o no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pet público (solo si es opt-in) — stats básicas",
+        "tags": [
+          "Public API"
+        ]
+      }
+    },
+    "/v1/security/rotate-token": {
+      "post": {
+        "operationId": "SecurityController_rotateToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refreshToken"
+                ],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "description": "Refresh token a rotar"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nuevo refresh token"
+          },
+          "401": {
+            "description": "Token inválido/expirado/reutilizado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rotar el refresh token (con reuse detection)",
+        "tags": [
+          "Security"
+        ]
+      }
+    },
+    "/v1/security/device-status": {
+      "get": {
+        "operationId": "SecurityController_deviceStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado del dispositivo"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estado de seguridad del dispositivo (score, flag)",
+        "tags": [
+          "Security"
+        ]
+      }
+    },
+    "/v1/security/verify": {
+      "post": {
+        "operationId": "SecurityController_verify",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userAgent"
+                ],
+                "properties": {
+                  "userAgent": {
+                    "type": "string",
+                    "description": "User-Agent del cliente"
+                  },
+                  "screenWidth": {
+                    "type": "integer",
+                    "description": "Ancho de pantalla"
+                  },
+                  "screenHeight": {
+                    "type": "integer",
+                    "description": "Alto de pantalla"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "Zona horaria (IANA)"
+                  },
+                  "fontsCount": {
+                    "type": "integer",
+                    "description": "Número de fuentes detectadas"
+                  },
+                  "webglRenderer": {
+                    "type": "string",
+                    "description": "Renderer de WebGL"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Fingerprint verificado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Computar/actualizar fingerprint + score",
+        "tags": [
+          "Security"
+        ]
+      }
+    },
+    "/v1/security/e2e/public-key": {
+      "post": {
+        "operationId": "SecurityController_storePublicKey",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "publicKey"
+                ],
+                "properties": {
+                  "publicKey": {
+                    "type": "string",
+                    "description": "Public key P-256 en PEM"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Public key guardada"
+          },
+          "400": {
+            "description": "PEM inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar la public key P-256 (E2E)",
+        "tags": [
+          "Security"
+        ]
+      }
+    },
+    "/v1/security/audit": {
+      "get": {
+        "operationId": "SecurityController_audit",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Eventos de auditoría"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Últimos 100 eventos de auditoría del usuario",
+        "tags": [
+          "Security"
+        ]
+      }
+    },
+    "/v1/reengagement/status": {
+      "get": {
+        "operationId": "ReengagementController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado de re-engagement"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estado de la secuencia (tramo, plan, buff) para el pet activo",
+        "tags": [
+          "Reengagement"
+        ]
+      }
+    },
+    "/v1/reengagement/diary": {
+      "get": {
+        "operationId": "ReengagementController_diary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Diario de ausencia"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Diario de ausencia (3-5 viñetas con datos reales)",
+        "tags": [
+          "Reengagement"
+        ]
+      }
+    },
+    "/v1/reengagement/forgive": {
+      "post": {
+        "operationId": "ReengagementController_forgive",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Datos del ritual de perdón (los tres son opcionales; basta con completar el umbral)",
+                "properties": {
+                  "clicks": {
+                    "type": "integer",
+                    "description": "Clicks registrados en el ritual"
+                  },
+                  "chat": {
+                    "type": "string",
+                    "description": "Mensaje de reconciliación"
+                  },
+                  "actions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Acciones realizadas"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ritual completado, buff aplicado"
+          },
+          "400": {
+            "description": "Ritual incompleto / umbral no alcanzado"
+          },
+          "409": {
+            "description": "Secuencia ya completada (anti-spam)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Completar el ritual de perdón del tramo → recovery buff 24h (+regalo en tier emocional)",
+        "tags": [
+          "Reengagement"
+        ]
+      }
+    },
+    "/v1/ai/models": {
+      "get": {
+        "operationId": "AiRouterController_getModels",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List available AI models and provider status",
+        "tags": [
+          "AI Router"
+        ]
+      }
+    },
+    "/v1/ai/models/config": {
+      "post": {
+        "operationId": "AiRouterController_updateConfig",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "description": "Proveedor por defecto"
+                  },
+                  "routingOverrides": {
+                    "type": "object",
+                    "description": "Overrides por tarea: { tarea: { provider, model, maxTokens, maxCostUsd } }",
+                    "additionalProperties": true
+                  },
+                  "fallbackProviders": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Proveedores de respaldo"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update routing configuration for user",
+        "tags": [
+          "AI Router"
+        ]
+      }
+    },
+    "/v1/ai/models/budget": {
+      "get": {
+        "operationId": "AiRouterController_getBudget",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current AI usage and budget for user",
+        "tags": [
+          "AI Router"
+        ]
+      }
+    },
+    "/v1/voice/transcribe": {
+      "post": {
+        "operationId": "VoiceController_transcribe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Audio (WAV/MP3/Opus) ≤ 5MB"
+                  },
+                  "lang": {
+                    "type": "string",
+                    "description": "Language hint: \"es\", \"en\" or \"auto\""
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transcribe audio to text (STT)",
+        "tags": [
+          "Voice"
+        ]
+      }
+    },
+    "/v1/voice/speak": {
+      "post": {
+        "description": "F-08: la respuesta es el audio binario en streaming (`audio/*`), no base64 en JSON. El `mood` y la duración van en las cabeceras `X-Voice-Mood` y `X-Audio-Duration-Ms`.",
+        "operationId": "VoiceController_speak",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text",
+                  "speciesId"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Texto a sintetizar (≤5000 caracteres)"
+                  },
+                  "speciesId": {
+                    "type": "string",
+                    "description": "Especie (define la voz base)"
+                  },
+                  "mood": {
+                    "type": "string",
+                    "description": "Emoción (p.ej. happy, sad, angry); opcional"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Audio binario (MP3) en streaming; mood/duración en cabeceras `X-Voice-Mood` / `X-Audio-Duration-Ms`",
+            "content": {
+              "audio/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Synthesize text to speech (TTS) with emotion",
+        "tags": [
+          "Voice"
+        ]
+      }
+    },
+    "/v1/voice/config/{speciesId}": {
+      "get": {
+        "operationId": "VoiceController_getVoiceConfig",
+        "parameters": [
+          {
+            "name": "speciesId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get voice parameters for a species",
+        "tags": [
+          "Voice"
+        ]
+      }
+    },
+    "/v1/presence/{userId}": {
+      "get": {
+        "operationId": "PresenceController_getPresence",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get device presence for a user (own or accepted friend)",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/visit": {
+      "post": {
+        "operationId": "PresenceController_visit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ownerId",
+                  "petId",
+                  "action"
+                ],
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "Dueño del pet visitado"
+                  },
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet visitado"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "feed",
+                      "play",
+                      "clean"
+                    ],
+                    "description": "Acción de la visita"
+                  },
+                  "itemId": {
+                    "type": "string",
+                    "description": "Item usado (para feed, opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perform a co-op visit action on a friend's pet",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/history": {
+      "get": {
+        "operationId": "PresenceController_getVisitHistory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get visit history for my pets",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/sync/push": {
+      "post": {
+        "operationId": "SyncController_push",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "actions"
+                ],
+                "properties": {
+                  "actions": {
+                    "type": "array",
+                    "description": "Lote de acciones offline (no vacío, ≤500)",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "petId",
+                        "type",
+                        "args",
+                        "timestamp"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "petId": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "feed",
+                            "play",
+                            "clean",
+                            "sleep",
+                            "wake",
+                            "chat",
+                            "battle",
+                            "evolve"
+                          ]
+                        },
+                        "args": {
+                          "type": "object"
+                        },
+                        "timestamp": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Push a batch of offline actions to server",
+        "tags": [
+          "Sync"
+        ]
+      }
+    },
+    "/v1/sync/pull": {
+      "get": {
+        "operationId": "SyncController_pull",
+        "parameters": [
+          {
+            "name": "sinceVersion",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pull delta state since given version",
+        "tags": [
+          "Sync"
+        ]
+      }
+    },
+    "/v1/sync/status": {
+      "get": {
+        "operationId": "SyncController_getStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get sync status for user",
+        "tags": [
+          "Sync"
+        ]
+      }
+    },
+    "/v1/spectator/live": {
+      "get": {
+        "operationId": "SpectatorController_getLive",
+        "parameters": [
+          {
+            "name": "battleId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get live battle state (10s delay applied)",
+        "tags": [
+          "Spectator"
+        ]
+      }
+    },
+    "/v1/spectator/highlights": {
+      "get": {
+        "operationId": "SpectatorController_getHighlights",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get top combat highlights (weekly feed)",
+        "tags": [
+          "Spectator"
+        ]
+      }
+    },
+    "/v1/spectator/subscribe": {
+      "post": {
+        "operationId": "SpectatorController_subscribe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "battleId"
+                ],
+                "properties": {
+                  "battleId": {
+                    "type": "string",
+                    "description": "Pelea a la que suscribirse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Subscribe to a battle as spectator",
+        "tags": [
+          "Spectator"
+        ]
+      }
+    },
+    "/v1/buddies/pair": {
+      "post": {
+        "operationId": "BuddiesController_pair",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petAId",
+                  "petBId"
+                ],
+                "properties": {
+                  "petAId": {
+                    "type": "string",
+                    "description": "ID del primer buddy"
+                  },
+                  "petBId": {
+                    "type": "string",
+                    "description": "ID del segundo buddy"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Par creado o recuperado"
+          },
+          "400": {
+            "description": "Pets inválidos o del mismo pet"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear/obtener el par buddy entre dos pets del mismo usuario",
+        "tags": [
+          "PetBuddies"
+        ]
+      }
+    },
+    "/v1/buddies/trigger": {
+      "post": {
+        "operationId": "BuddiesController_trigger",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet que dispara la interacción (opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Interacción aplicada o null si no procede"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rolar y aplicar una interacción espontánea entre buddies",
+        "tags": [
+          "PetBuddies"
+        ]
+      }
+    },
+    "/v1/buddies/interactions": {
+      "get": {
+        "operationId": "BuddiesController_interactions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Lista de interacciones"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de interacciones buddy del usuario",
+        "tags": [
+          "PetBuddies"
+        ]
+      }
+    },
+    "/v1/buddies/{petId}": {
+      "get": {
+        "operationId": "BuddiesController_getForPet",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado buddy del pet"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estado buddy de un pet",
+        "tags": [
+          "PetBuddies"
+        ]
+      }
+    },
+    "/v1/rituals": {
+      "get": {
+        "operationId": "RitualsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Lista de rituales"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar todos los rituales del usuario con su progreso",
+        "tags": [
+          "Rituals"
+        ]
+      }
+    },
+    "/v1/rituals/active": {
+      "get": {
+        "operationId": "RitualsController_active",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Rituales activos"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar solo los rituales activos",
+        "tags": [
+          "Rituals"
+        ]
+      }
+    },
+    "/v1/rituals/create": {
+      "post": {
+        "operationId": "RitualsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId",
+                  "type",
+                  "hour"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet del ritual"
+                  },
+                  "type": {
+                    "type": "string",
+                    "description": "Tipo de ritual"
+                  },
+                  "hour": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 23,
+                    "description": "Hora del día (0-23)"
+                  },
+                  "minute": {
+                    "type": "integer",
+                    "description": "Minuto (opcional)"
+                  },
+                  "cadence": {
+                    "type": "string",
+                    "enum": [
+                      "daily",
+                      "weekly"
+                    ],
+                    "description": "Cadencia"
+                  },
+                  "dayOfWeek": {
+                    "type": "integer",
+                    "description": "Día de la semana para cadencia weekly (opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ritual creado"
+          },
+          "400": {
+            "description": "Parámetros inválidos"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un ritual activo",
+        "tags": [
+          "Rituals"
+        ]
+      }
+    },
+    "/v1/rituals/{id}/check": {
+      "post": {
+        "operationId": "RitualsController_check",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "completionAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Timestamp de la completación (opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Progreso actualizado (con gift si aplica)"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Ritual no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar la completación de hoy del ritual",
+        "tags": [
+          "Rituals"
+        ]
+      }
+    },
+    "/v1/mood-theater/current": {
+      "get": {
+        "operationId": "MoodTheaterController_current",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "favoriteFood",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "battleLost",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "levelUp",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "wokeUp",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acto actual (o null)"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Acto espontáneo actual del pet según contexto/vitals",
+        "tags": [
+          "MoodTheater"
+        ]
+      }
+    },
+    "/v1/mood-theater/capture": {
+      "post": {
+        "operationId": "MoodTheaterController_capture",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet cuyo momento se captura"
+                  },
+                  "momentId": {
+                    "type": "string",
+                    "description": "Momento concreto (opcional, por defecto el actual)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sticker capturado"
+          },
+          "400": {
+            "description": "No hay momento activo"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Capturar un momento como sticker",
+        "tags": [
+          "MoodTheater"
+        ]
+      }
+    },
+    "/v1/mood-theater/feed": {
+      "get": {
+        "operationId": "MoodTheaterController_feed",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Lista de momentos"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Feed social de actos públicos de otros pets",
+        "tags": [
+          "MoodTheater"
+        ]
+      }
+    },
+    "/v1/accessibility/prefs": {
+      "get": {
+        "operationId": "AccessibilityController_getPrefs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Prefs actuales"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener las prefs de accesibilidad del usuario",
+        "tags": [
+          "Accessibility"
+        ]
+      },
+      "put": {
+        "operationId": "AccessibilityController_updatePrefs",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Prefs de accesibilidad (actualización parcial: se pasan solo los campos a cambiar)",
+                "additionalProperties": true,
+                "example": {
+                  "largeText": true,
+                  "reduceMotion": true,
+                  "colorBlindMode": "deuteranopia"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prefs actualizadas"
+          },
+          "400": {
+            "description": "Valor inválido"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar prefs de accesibilidad (parcial)",
+        "tags": [
+          "Accessibility"
+        ]
+      }
+    },
+    "/v1/accessibility/minigames/accessible": {
+      "get": {
+        "operationId": "AccessibilityController_accessibleMinigames",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Listado de variantes accesibles"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Variantes accesibles de minijuegos",
+        "tags": [
+          "Accessibility"
+        ]
+      }
+    },
+    "/v1/accessibility/config": {
+      "get": {
+        "operationId": "AccessibilityController_config",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Config de accesibilidad"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Config centralizada de accesibilidad (tokens/parámetros)",
+        "tags": [
+          "Accessibility"
+        ]
+      }
+    },
+    "/v1/gifting/send": {
+      "post": {
+        "operationId": "GiftingController_send",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "recipientUserId",
+                  "petId",
+                  "itemId"
+                ],
+                "properties": {
+                  "recipientUserId": {
+                    "type": "string",
+                    "description": "Usuario receptor"
+                  },
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet del receptor que recibe el item"
+                  },
+                  "itemId": {
+                    "type": "string",
+                    "description": "Item a enviar desde el inventario"
+                  },
+                  "qty": {
+                    "type": "integer",
+                    "description": "Cantidad (opcional, por defecto 1)"
+                  },
+                  "note": {
+                    "type": "string",
+                    "description": "Nota de acompañamiento"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Gift enviado (pendiente)"
+          },
+          "400": {
+            "description": "Rate limit o inventario insuficiente"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Destinatario/item no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar un item del inventario al pet de un amigo",
+        "tags": [
+          "Gifting"
+        ]
+      }
+    },
+    "/v1/gifting/history": {
+      "get": {
+        "operationId": "GiftingController_history",
+        "parameters": [
+          {
+            "name": "direction",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de gifts (máx 50)"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de gifts (direction=sent|received)",
+        "tags": [
+          "Gifting"
+        ]
+      }
+    },
+    "/v1/gifting/{id}/accept": {
+      "post": {
+        "operationId": "GiftingController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gift aceptado"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Gift no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aceptar un gift (item al inventario del receptor)",
+        "tags": [
+          "Gifting"
+        ]
+      }
+    },
+    "/v1/gifting/{id}/reject": {
+      "post": {
+        "operationId": "GiftingController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "thankYouNote": {
+                    "type": "string",
+                    "description": "Nota de agradecimiento (opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gift rechazado"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Gift no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rechazar un gift (item vuelve al sender)",
+        "tags": [
+          "Gifting"
+        ]
+      }
+    },
+    "/v1/care-packages/send": {
+      "post": {
+        "operationId": "GiftingController_sendCare",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "recipientUserId",
+                  "petId",
+                  "foodItemId",
+                  "medicineItemId",
+                  "toyItemId"
+                ],
+                "properties": {
+                  "recipientUserId": {
+                    "type": "string",
+                    "description": "Usuario receptor"
+                  },
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet enfermo"
+                  },
+                  "foodItemId": {
+                    "type": "string",
+                    "description": "Item de comida"
+                  },
+                  "medicineItemId": {
+                    "type": "string",
+                    "description": "Item de medicina"
+                  },
+                  "toyItemId": {
+                    "type": "string",
+                    "description": "Item de juguete"
+                  },
+                  "note": {
+                    "type": "string",
+                    "description": "Nota (opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Care package enviado y aplicado"
+          },
+          "400": {
+            "description": "Pet no enfermo o rate limit"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Destinatario/item no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar un Care Package a un pet enfermo",
+        "tags": [
+          "Gifting"
+        ]
+      }
+    },
+    "/v1/group-feeding/join": {
+      "post": {
+        "operationId": "GiftingController_joinGroup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "Código de room para unirse (si no existe, se crea)"
+                  },
+                  "maxPlayers": {
+                    "type": "integer",
+                    "description": "Máx. de jugadores de la room"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Room creada / unirse con posición y minijuego"
+          },
+          "400": {
+            "description": "Room llena o expirada"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Room no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear o unirse a una room de Group Feeding",
+        "tags": [
+          "Gifting"
+        ]
+      }
+    },
+    "/v1/group-feeding/{id}/complete": {
+      "post": {
+        "operationId": "GiftingController_completeGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "gameType": {
+                    "type": "string",
+                    "description": "Tipo de minijuego"
+                  },
+                  "score": {
+                    "type": "number",
+                    "description": "Puntuación del minijuego"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Progreso actualizado (con reward si completo)"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Room no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Completar el minijuego de un jugador en la room",
+        "tags": [
+          "Gifting"
         ]
       }
     }
@@ -2309,6 +5917,102 @@
       }
     },
     "schemas": {
+      "ManifestDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "example": "2026.11.13-a3b2f1",
+            "description": "Versión del manifest (fecha + hash corto) — cambia con cada deploy."
+          },
+          "baseUrl": {
+            "type": "string",
+            "example": "https://cdn.petai.app/assets/",
+            "description": "Prefijo base del CDN; el `url` de cada asset es relativo a este."
+          },
+          "generatedAt": {
+            "type": "string",
+            "example": "2026-11-13T09:00:00.000Z",
+            "description": "Fecha de generación del manifest (ISO 8601)."
+          },
+          "assets": {
+            "type": "object",
+            "description": "Mapa `key → AssetDto` (AssetDto: `url`, `hash`, `type`, `size`)."
+          }
+        },
+        "required": [
+          "version",
+          "baseUrl",
+          "generatedAt",
+          "assets"
+        ]
+      },
+      "UpcomingEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "navidad",
+            "description": "ID del evento."
+          },
+          "name": {
+            "type": "string",
+            "example": "Navidad",
+            "description": "Nombre para la UI (es)."
+          },
+          "type": {
+            "type": "string",
+            "example": "festival",
+            "description": "Tipo: festival, buff, raid, ..."
+          },
+          "startsAt": {
+            "type": "string",
+            "example": "2026-12-24T00:00:00.000Z",
+            "description": "Inicio (ISO 8601)."
+          },
+          "endsAt": {
+            "type": "string",
+            "example": "2026-12-26T23:59:59.000Z",
+            "nullable": true,
+            "description": "Fin (ISO 8601) o null."
+          },
+          "assetPrefix": {
+            "type": "string",
+            "example": "event/navidad/",
+            "nullable": true,
+            "description": "Prefijo de assets a pre-cargar (el preloader lo usa si startsAt < 2h)."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "startsAt",
+          "endsAt",
+          "assetPrefix"
+        ]
+      },
+      "UpcomingEventsDto": {
+        "type": "object",
+        "properties": {
+          "windowHours": {
+            "type": "number",
+            "example": 24,
+            "description": "Ventana del endpoint (horas)."
+          },
+          "events": {
+            "description": "Eventos próximos (0..N).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpcomingEventDto"
+            }
+          }
+        },
+        "required": [
+          "windowHours",
+          "events"
+        ]
+      },
       "RegisterDto": {
         "type": "object",
         "properties": {

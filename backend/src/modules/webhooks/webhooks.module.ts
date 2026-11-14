@@ -5,9 +5,11 @@ import { WebhooksService } from './webhooks.service';
 import { ApiKeyService } from './api-key.service';
 import { ApiKeyGuard } from './api-key.guard';
 import { AuthModule } from '../auth/auth.module';
+import { BattlesModule } from '../battles/battles.module';
+import { GameDataModule } from '../game-data/game-data.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, BattlesModule, GameDataModule],
   controllers: [WebhooksController, PublicApiController],
   providers: [WebhooksService, ApiKeyService, ApiKeyGuard],
   exports: [WebhooksService, ApiKeyService],

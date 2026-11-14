@@ -1,8 +1,0 @@
-PASS src/test/seed-gen.spec.ts
-PASS src/test/simulate.spec.ts
-PASS src/test/validate.spec.ts
-
-Test Suites: 3 passed, 3 total
-Tests:       14 passed, 14 total
-Snapshots:   0 total
-Time:        2.597 s

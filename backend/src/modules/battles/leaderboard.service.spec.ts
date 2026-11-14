@@ -125,3 +125,86 @@ describe('LeaderboardService', () => {
     });
   });
 });
+
+describe('LeaderboardService.publicTop (R-04: leaderboard público reutilizando el ZSET)', () => {
+  // ZSET en memoria (solo lo que `top('global')` necesita: zcard + zrevrange), ordenado por score desc.
+  function zsetRedis(initial: [string, number][]) {
+    const entries = [...initial].sort((a, b) => b[1] - a[1]);
+    const api: any = {
+      zcard: async () => entries.length,
+      zrevrange: async (_k: string, _a: number, b: number) => entries.slice(0, b + 1).flatMap(([m, s]) => [m, String(s)]),
+    };
+    return { key: (n: string) => `k:${n}`, run: async (fn: any) => fn(api) };
+  }
+
+  function makeService(initialGlobal: [string, number][], petRows: any[]) {
+    const redis = zsetRedis(initialGlobal);
+    const prisma: any = {
+      pet: {
+        // Simula el filtrado de Prisma por elemento (si lo pide la consulta).
+        findMany: jest.fn((q: any) => {
+          const el = q?.where?.species?.element;
+          return Promise.resolve(petRows.filter((p) => !el || p.species?.element === el));
+        }),
+      },
+      battle: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const svc = new LeaderboardService(redis as never, prisma, gameData);
+    return { svc, prisma };
+  }
+
+  it('reutiliza el ZSET y devuelve filas enriquecidas en orden de clasificación', async () => {
+    const { svc, prisma } = makeService(
+      [['b', 1400], ['a', 1500]],
+      [
+        { id: 'b', nickname: 'Bob', rarity: 'common', level: 5, elo: 1400, species: { element: 'water' }, user: { displayName: 'Beto' } },
+        { id: 'a', nickname: 'Rex', rarity: 'rare', level: 10, elo: 1500, species: { element: 'fire' }, user: { displayName: 'Ana' } },
+      ],
+    );
+    const rows = await svc.publicTop(10);
+    expect(rows.map((r) => r.petId)).toEqual(['a', 'b']); // orden del ZSET, no el de la BD
+    expect(rows[0]).toMatchObject({ rank: 1, petId: 'a', nickname: 'Rex', element: 'fire', owner: 'Ana', elo: 1500 });
+    expect(rows[1].rank).toBe(2);
+    expect(prisma.pet.findMany).toHaveBeenCalledTimes(1); // una sola consulta de enriquecimiento
+  });
+
+  it('excluye bots/mascotas borradas (petId en el ZSET que no es una fila de Pet) y re-numera', async () => {
+    const { svc } = makeService(
+      [['a', 1500], ['ghost', 1499], ['b', 1400]],
+      [
+        { id: 'a', nickname: 'Rex', rarity: 'rare', level: 10, elo: 1500, species: { element: 'fire' }, user: { displayName: 'Ana' } },
+        // 'ghost' no devuelto por la BD → bot/borrada → excluida
+        { id: 'b', nickname: 'Bob', rarity: 'common', level: 5, elo: 1400, species: { element: 'water' }, user: { displayName: 'Beto' } },
+      ],
+    );
+    const rows = await svc.publicTop(10);
+    expect(rows.map((r) => r.petId)).toEqual(['a', 'b']);
+    expect(rows.map((r) => r.rank)).toEqual([1, 2]); // sin huecos
+  });
+
+  it('filtra por elemento (tras ordenar por el ZSET) y respeta el límite pedido', async () => {
+    const { svc } = makeService(
+      [['a', 1500], ['b', 1400], ['c', 1300], ['d', 1200]],
+      [
+        { id: 'a', nickname: 'A', rarity: 'rare', level: 10, elo: 1500, species: { element: 'fire' }, user: { displayName: 'A' } },
+        { id: 'b', nickname: 'B', rarity: 'common', level: 5, elo: 1400, species: { element: 'water' }, user: { displayName: 'B' } },
+        { id: 'c', nickname: 'C', rarity: 'common', level: 3, elo: 1300, species: { element: 'fire' }, user: { displayName: 'C' } },
+        { id: 'd', nickname: 'D', rarity: 'common', level: 2, elo: 1200, species: { element: 'fire' }, user: { displayName: 'D' } },
+      ],
+    );
+    const rows = await svc.publicTop(2, 'fire');
+    expect(rows.map((r) => r.petId)).toEqual(['a', 'c']); // solo fire, orden ZSET, máximo 2
+    expect(rows.every((r) => r.element === 'fire')).toBe(true);
+  });
+
+  it('la consulta de enriquecimiento excluye las que nunca pelearon (OR de combates) y por id del ZSET', async () => {
+    const { svc, prisma } = makeService([['a', 1500]], [
+      { id: 'a', nickname: 'Rex', rarity: 'rare', level: 10, elo: 1500, species: { element: 'fire' }, user: { displayName: 'Ana' } },
+    ]);
+    await svc.publicTop(10);
+    const arg = prisma.pet.findMany.mock.calls[0][0];
+    expect(arg.where.id).toEqual({ in: ['a'] });
+    expect(arg.where.OR).toEqual([{ battlesAsAttacker: { some: {} } }, { battlesAsDefender: { some: {} } }]);
+    expect(arg.include).toEqual({ species: true, user: { select: { displayName: true } } });
+  });
+});

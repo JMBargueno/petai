@@ -7,7 +7,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { TokenRotationService } from './token-rotation.service';
@@ -34,6 +34,15 @@ export class SecurityController {
   @ApiOperation({ summary: 'Rotar el refresh token (con reuse detection)' })
   @ApiResponse({ status: 200, description: 'Nuevo refresh token' })
   @ApiResponse({ status: 401, description: 'Token inválido/expirado/reutilizado' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['refreshToken'],
+      properties: {
+        refreshToken: { type: 'string', description: 'Refresh token a rotar' },
+      },
+    },
+  })
   rotateToken(
     @CurrentUser() user: { id: string },
     @Body('refreshToken') refreshToken: string,
@@ -55,6 +64,20 @@ export class SecurityController {
   @Post('verify')
   @ApiOperation({ summary: 'Computar/actualizar fingerprint + score' })
   @ApiResponse({ status: 201, description: 'Fingerprint verificado' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['userAgent'],
+      properties: {
+        userAgent: { type: 'string', description: 'User-Agent del cliente' },
+        screenWidth: { type: 'integer', description: 'Ancho de pantalla' },
+        screenHeight: { type: 'integer', description: 'Alto de pantalla' },
+        timezone: { type: 'string', description: 'Zona horaria (IANA)' },
+        fontsCount: { type: 'integer', description: 'Número de fuentes detectadas' },
+        webglRenderer: { type: 'string', description: 'Renderer de WebGL' },
+      },
+    },
+  })
   async verify(
     @CurrentUser() user: { id: string },
     @Body() features: FingerprintFeatures,
@@ -75,6 +98,15 @@ export class SecurityController {
   @ApiOperation({ summary: 'Guardar la public key P-256 (E2E)' })
   @ApiResponse({ status: 201, description: 'Public key guardada' })
   @ApiResponse({ status: 400, description: 'PEM inválido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['publicKey'],
+      properties: {
+        publicKey: { type: 'string', description: 'Public key P-256 en PEM' },
+      },
+    },
+  })
   storePublicKey(@CurrentUser() user: { id: string }, @Body('publicKey') publicKey: string) {
     return this.e2e.storePublicKey(user.id, publicKey);
   }
