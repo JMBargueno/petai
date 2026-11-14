@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const MAX_PURCHASE_QTY = 99;
@@ -96,5 +97,45 @@ export class InventoryService {
     }
 
     return inv.item;
+  }
+
+  /**
+   * Otorga un item exclusivo de logro (cosmético, feature 008 / SC-004). Es idempotente: si el item
+   * ya no existe en el catálogo se crea como cosmético (sin precio/poder), y la fila de inventario se
+   * upsertea por la única `(userId, itemId)`, así re-disparar el desbloqueo NO duplica el item.
+   *
+   * Acepta un cliente de transacción `tx` opcional para participar de la transacción atómica del
+   * desbloqueo (por defecto usa el `PrismaService` normal).
+   */
+  async grantExclusiveItem(
+    userId: string,
+    itemId: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    if (typeof itemId !== 'string' || itemId.length === 0 || itemId.length > 64) {
+      throw new BadRequestException('itemId no es válido');
+    }
+    const client = tx ?? this.prisma;
+
+    // Asegura que el item exista en el catálogo (cosmético, sin coste).
+    await client.item.upsert({
+      where: { id: itemId },
+      update: {},
+      create: {
+        id: itemId,
+        kind: 'cosmetic',
+        name: `Item exclusivo: ${itemId}`,
+        description: 'Item cosmético otorgado por un logro',
+        effects: {},
+        priceCoins: 0,
+        priceGems: 0,
+      },
+    });
+
+    return client.inventoryItem.upsert({
+      where: { userId_itemId: { userId, itemId } },
+      update: { qty: { increment: 0 } },
+      create: { userId, itemId, qty: 1 },
+    });
   }
 }

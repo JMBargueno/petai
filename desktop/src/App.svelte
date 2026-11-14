@@ -14,6 +14,9 @@
   } from './lib/environmental';
   import PetView from './components/PetView.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
+  import NotificationSettingsPanel from './components/NotificationSettingsPanel.svelte';
+  import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
+  import { unreadCount } from './lib/notification-inbox';
 
   let user: any = null;
   let pets: any[] = [];
@@ -22,6 +25,7 @@
   let inventory: any[] = [];
   let shopItems: any[] = [];
   let isPanelOpen = true;
+  let showNotifPanel = false;
   let bubbleText = '';
   let bubbleTimer: any = null;
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
@@ -32,6 +36,11 @@
     bubbleText = text.length > 160 ? text.slice(0, 157) + '…' : text;
     clearTimeout(bubbleTimer);
     bubbleTimer = setTimeout(() => (bubbleText = ''), 10_000);
+  }
+
+  // Badge de la bandeja/tray (feature 007 / US3): refleja los avisos no leídos en el título de la app.
+  $: if (typeof document !== 'undefined') {
+    document.title = $unreadCount > 0 ? `(${unreadCount}) PetAI` : 'PetAI';
   }
 
   async function refreshPet() {
@@ -72,6 +81,9 @@
 
         // Conectar WebSocket en tiempo real
         const socket = initSocket();
+        // Notificaciones con personalidad (feature 007): suscribe al evento `pet:notification`
+        // y lo entrega como nativa de Tauri (o al inbox offline si no es posible).
+        initNotificationHandler(socket);
         socket.on('pet:update', (updatedPet: any) => {
           if (currentPet && currentPet.id === updatedPet.id) {
             currentPet = updatedPet;
@@ -230,6 +242,7 @@
     stopHeartbeat();
     stopClickThrough();
     stopSessionExpired();
+    stopNotificationHandler();
     closeSocket();
   });
 </script>
@@ -243,6 +256,21 @@
   >
     {isPanelOpen ? '✕ Ocultar Panel' : '🐾 Abrir Panel'}
   </button>
+
+  <!-- Botón flotante de ajustes de notificaciones (feature 007 / US3) con badge de no leídas -->
+  <button
+    class="notif-toggle-pill"
+    on:click={() => (showNotifPanel = !showNotifPanel)}
+    title="Ajustes de notificaciones"
+  >
+    🔔 {#if $unreadCount > 0}<span class="notif-badge">{$unreadCount}</span>{/if}
+  </button>
+
+  {#if showNotifPanel}
+    <div class="notif-panel-host">
+      <NotificationSettingsPanel />
+    </div>
+  {/if}
 
   <!-- Mascota Interactiva Flotante -->
   {#if currentPet}
@@ -312,5 +340,49 @@
   .toggle-panel-pill:hover {
     background: rgba(30, 41, 59, 0.95);
     transform: translateY(-2px);
+  }
+
+  .notif-toggle-pill {
+    position: fixed;
+    bottom: 16px;
+    right: 160px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #38bdf8;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    pointer-events: auto;
+    z-index: 90;
+    transition: all 0.2s;
+  }
+
+  .notif-toggle-pill:hover {
+    background: rgba(30, 41, 59, 0.95);
+    transform: translateY(-2px);
+  }
+
+  .notif-badge {
+    display: inline-block;
+    min-width: 18px;
+    padding: 0 5px;
+    margin-left: 4px;
+    background: #f43f5e;
+    color: #fff;
+    border-radius: 9px;
+    font-size: 11px;
+    line-height: 18px;
+  }
+
+  .notif-panel-host {
+    position: fixed;
+    bottom: 60px;
+    right: 16px;
+    z-index: 95;
+    pointer-events: auto;
   }
 </style>

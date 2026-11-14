@@ -15,5 +15,8 @@ import { BondingModule } from '../bonding/bonding.module';
   imports: [PetsModule, GameDataModule, EnvironmentalModule, BondingModule],
   controllers: [AiController],
   providers: [AiConfigService, ChatService, KeyCryptoService, MemoryService, AgentService, UsageService],
+  // `AiConfigService` se exporta para el módulo de notificaciones (feature 007), que reutiliza el
+  // mecanismo de LLM call (resolveProvider) sin registrar consumo en `AiUsage`.
+  exports: [AiConfigService],
 })
 export class AiModule {}

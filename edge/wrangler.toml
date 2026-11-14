@@ -1,0 +1,15 @@
+# Edge function de PetAI (feature 009-edge-cdn, US3).
+# Despliegue: `pnpm --filter petai-edge exec wrangler deploy`
+name = "petai-edge"
+main = "worker.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# El worker usa TS (se compila con wrangler). No hay bundling adicional.
+workers_dev = true
+
+# --- Variables (se pasan vía `wrangler secret` / `.dev.vars`; NUNCA hard-codeadas) ---
+# ORIGIN_URL                 = "https://api.petai.app"
+# JWT_PUBLIC_KEY_JWKS_URL    = "https://api.petai.app/v1/auth/jwks"
+# JWT_ACCESS_SECRET          = <secret>        # `wrangler secret put JWT_ACCESS_SECRET`
+# JWT_ACCESS_EXPIRES_IN      = "15m"

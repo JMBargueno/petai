@@ -1,10 +1,17 @@
+import { Prisma } from '@prisma/client';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isValidTimeZone } from '../pets/sleep-cycle';
+import { resolveDefaults, NotificationPrefs } from '../notifications/notification-rules';
+import { parseNotificationPrefs } from '../notifications/dto/notification-prefs.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
+  ) {}
 
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -20,6 +27,8 @@ export class UsersService {
         coins: true,
         gems: true,
         accountXp: true,
+        achievementsPublic: true,
+        notificationPrefs: true,
         createdAt: true,
       },
     });
@@ -28,7 +37,12 @@ export class UsersService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    return user;
+    // Notificaciones (feature 007): `null` se mantiene null (el cliente aplica defaults); si existe,
+    // se devuelve el objeto completo con defaults resueltos (contrato de api-contract.md).
+    const notificationPrefs =
+      user.notificationPrefs != null ? resolveDefaults(user.notificationPrefs as Partial<NotificationPrefs>) : null;
+
+    return { ...user, notificationPrefs };
   }
 
   /**
@@ -44,6 +58,8 @@ export class UsersService {
       latitude?: number | null;
       longitude?: number | null;
       birthday?: string | null;
+      achievementsPublic?: boolean;
+      notificationPrefs?: Prisma.InputJsonValue | null;
     } = {};
 
     if (input.displayName !== undefined) {
@@ -89,7 +105,34 @@ export class UsersService {
       }
     }
 
-    return this.prisma.user.update({
+    // Opt-in de visibilidad pública de logros (feature 008).
+    if (input.achievementsPublic !== undefined) {
+      if (typeof input.achievementsPublic !== 'boolean') {
+        throw new BadRequestException('achievementsPublic debe ser un booleano');
+      }
+      data.achievementsPublic = input.achievementsPublic;
+    }
+
+    // Preferencias de notificaciones (feature 007): merge parcial — solo se sobreescriben los campos
+    // presentes; el resto conserva el valor anterior (o defaults si aún no hay prefs).
+    if (input.notificationPrefs !== undefined) {
+      let parsed;
+      try {
+        parsed = parseNotificationPrefs(input.notificationPrefs);
+      } catch (err: any) {
+        throw new BadRequestException(err?.message ?? 'notificationPrefs inválido');
+      }
+      if (Object.keys(parsed).length > 0) {
+        const existing = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { notificationPrefs: true },
+        });
+        const base = resolveDefaults((existing?.notificationPrefs ?? null) as Partial<NotificationPrefs>);
+        data.notificationPrefs = { ...base, ...parsed };
+      }
+    }
+
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data,
       select: {
@@ -103,8 +146,20 @@ export class UsersService {
         coins: true,
         gems: true,
         accountXp: true,
+        achievementsPublic: true,
+        notificationPrefs: true,
       },
     });
+
+    // Al activar la visibilidad pública (transición privado → público) se alimenta el logro social
+    // `social_opener` (feature 008, pregunta abierta #4 del spec).
+    if (data.achievementsPublic === true) {
+      this.events.emitAsync('social:public_profile', { userId }).catch(() => {
+        /* noop: el tracking de logros nunca debe romper la petición */
+      });
+    }
+
+    return updated;
   }
 
   /** Valida y redondea una coordenada; `null` borra el valor (opt-out). */

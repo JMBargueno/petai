@@ -15,8 +15,19 @@ import { z } from 'zod';
 export const ELEMENTS = ['fire', 'water', 'plant', 'electric', 'shadow', 'light'] as const;
 export type ElementValue = (typeof ELEMENTS)[number];
 
-export const GAME_DATA_FILES = ['balance', 'species', 'patterns', 'foods', 'skills', 'missions'] as const;
+export const GAME_DATA_FILES = ['balance', 'species', 'patterns', 'foods', 'skills', 'missions', 'achievements', 'constellations'] as const;
 export type GameDataFileKey = (typeof GAME_DATA_FILES)[number];
+
+// Categorías y tiers de logros (feature 008). `event` referencia un evento de dominio conocido.
+export const ACHIEVEMENT_CATEGORIES = ['care', 'battle', 'ai', 'collection', 'social'] as const;
+export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
+export const ACHIEVEMENT_TIERS = ['common', 'rare', 'epic', 'legendary'] as const;
+export type AchievementTier = (typeof ACHIEVEMENT_TIERS)[number];
+export const ACHIEVEMENT_EVENTS = [
+  'pet:fed', 'pet:cleaned', 'pet:slept', 'pet:evolved', 'pet:level_up',
+  'egg:hatched', 'battle:finished', 'battle_win', 'minigame:finished',
+  'chat:message_sent', 'social:constellation_shared', 'social:public_profile',
+] as const;
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color hex #RRGGBB');
 
@@ -58,6 +69,16 @@ export const balanceSchema = z
       criticalThreshold: z.number(),
       sicknessHealthThreshold: z.number(),
     }),
+    notifications: z
+      .object({
+        vitals: z.object({ criticalThreshold: z.number().nonnegative() }).optional(),
+        quietHours: z
+          .object({ start: z.number().int().min(0).max(23), end: z.number().int().min(0).max(23) })
+          .optional(),
+        rateLimit: z.object({ defaultMaxPerDay: z.number().int().nonnegative() }).optional(),
+        dedup: z.object({ windowMinutes: z.number().int().nonnegative() }).optional(),
+      })
+      .optional(),
     leveling: z.object({
       maxLevel: z.number().int().positive(),
       stages: z.record(z.string(), z.number().int()),
@@ -229,7 +250,44 @@ export const missionsSchema = z
   })
   .passthrough();
 
-/** Mapa nombre de archivo -> schema. `missions` es opcional en el snapshot (puede ser `null`). */
+/** achievements.json (feature 008): definiciones data-driven de logros. */
+export const achievementsSchema = z.object({
+  version: z.string(),
+  achievements: z
+    .array(
+      z
+        .object({
+          id: z.string().min(1),
+          name: z.string().min(1),
+          desc: z.string().min(1),
+          category: z.enum(ACHIEVEMENT_CATEGORIES),
+          target: z.number().int().positive(),
+          event: z.string().min(1),
+          tier: z.enum(ACHIEVEMENT_TIERS),
+          reward: z.object({
+            coins: z.number().int().nonnegative(),
+            gems: z.number().int().nonnegative(),
+            xp: z.number().int().nonnegative(),
+            itemId: z.string().nullable(),
+          }),
+        })
+        .passthrough(),
+    )
+    .min(1),
+});
+
+/** constellations.json (feature 008): layout SVG de estrellas por categoría. */
+export const constellationsSchema = z.object({
+  version: z.string(),
+  categories: z.record(
+    z.enum(ACHIEVEMENT_CATEGORIES),
+    z.object({
+      name: z.string().min(1),
+      stars: z.record(z.string(), z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) })),
+      connections: z.array(z.tuple([z.string(), z.string()])),
+    }),
+  ),
+});
 export const GAME_DATA_SCHEMAS: Record<GameDataFileKey, z.ZodType> = {
   balance: balanceSchema,
   species: speciesSchema,
@@ -237,6 +295,8 @@ export const GAME_DATA_SCHEMAS: Record<GameDataFileKey, z.ZodType> = {
   foods: foodsSchema,
   skills: skillsSchema,
   missions: missionsSchema,
+  achievements: achievementsSchema,
+  constellations: constellationsSchema,
 };
 
 export interface FieldError {
@@ -275,6 +335,8 @@ export interface GameDataBundle {
   foods: any[];
   skills: any[];
   missions: any;
+  achievements: any | null;
+  constellations: any | null;
 }
 
 /**
@@ -396,6 +458,42 @@ export function validateGameData(b: GameDataBundle): string[] {
   // 7. Patrones (minRarity)
   for (const pat of patterns ?? []) {
     if (!rarities[pat.minRarity]) errors.push(`minRarity '${pat.minRarity}' en patrón ${pat.id} no está en balance.json`);
+  }
+
+  // 8. Logros y constelaciones (feature 008): integridad cruzada
+  const achievements = b.achievements;
+  const constellations = b.constellations;
+  if (achievements && typeof achievements === 'object') {
+    const knownAchIds = new Set<string>();
+    const achIds = new Set<string>();
+    for (const a of (achievements as any).achievements ?? []) {
+      if (achIds.has(a.id)) {
+        errors.push(`Logro duplicado: ${a.id}`);
+        break;
+      }
+      achIds.add(a.id);
+      knownAchIds.add(a.id);
+      if (!ACHIEVEMENT_EVENTS.includes(a.event as (typeof ACHIEVEMENT_EVENTS)[number])) {
+        errors.push(`Logro ${a.id}: evento de dominio desconocido '${a.event}'`);
+      }
+      // Los logros epic/legendary pueden llevar item; los otros deben dejarlo nulo.
+      if (a.reward?.itemId && !['epic', 'legendary'].includes(a.tier)) {
+        errors.push(`Logro ${a.id}: solo epic/legendary pueden otorgar itemId`);
+      }
+    }
+
+    if (constellations && typeof constellations === 'object') {
+      for (const [cat, layout] of Object.entries((constellations as any).categories ?? {}) as [string, any][]) {
+        const stars = (layout?.stars ?? {}) as Record<string, unknown>;
+        for (const starId of Object.keys(stars)) {
+          if (!knownAchIds.has(starId)) errors.push(`Constelación ${cat}: la estrella '${starId}' no existe en achievements.json`);
+        }
+        for (const [a, b2] of (layout?.connections ?? []) as [string, string][]) {
+          if (stars[a] === undefined) errors.push(`Constelación ${cat}: conexión apunta a estrella inexistente '${a}'`);
+          if (stars[b2] === undefined) errors.push(`Constelación ${cat}: conexión apunta a estrella inexistente '${b2}'`);
+        }
+      }
+    }
   }
 
   return errors;

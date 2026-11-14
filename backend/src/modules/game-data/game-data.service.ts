@@ -25,6 +25,16 @@ export interface GameDataSnapshot {
   missions: any | null;
   /** Festividades (feature ambiental). Se carga de `festivals.json` (opcional) y no entra en el hot-reload. */
   festivals: any[];
+  /**
+   * Plantillas de notificaciones con personalidad (feature 007): `notifications.json` (opcional).
+   * Estructura `{ [trait]: { [tier]: { [category]: string[] } } }`. Se lee del disco como `festivals`
+   * (no entra en el hot-reload).
+   */
+  notifications: any;
+  /** Logros data-driven (feature 008). `null` si `achievements.json` no existe. */
+  achievements: any | null;
+  /** Layout de constelaciones por categoría (feature 008). `null` si `constellations.json` no existe. */
+  constellations: any | null;
   /** ISO de cuando el snapshot se construyó/actualizó. */
   loadedAt: string;
   /** Origen del último cambio aplicado: `disk` (watcher/arranque) o `inline` (hot-reload inline). */
@@ -120,10 +130,20 @@ export class GameDataService implements OnModuleInit {
       foods: (read('foods', true) as any[]) ?? [],
       skills: (read('skills', true) as any[]) ?? [],
       missions: (read('missions', false) as any) ?? null,
+      achievements: (read('achievements', false) as any) ?? null,
+      constellations: (read('constellations', false) as any) ?? null,
       // `festivals` NO es un archivo de hot-reload (no está en GAME_DATA_FILES): se lee directo del disco.
       festivals: (() => {
         const p = path.join(this.dataDir, 'festivals.json');
         return fs.existsSync(p) ? (JSON.parse(fs.readFileSync(p, 'utf8')) as any[]) ?? [] : [];
+      })(),
+      // Plantillas de notificaciones (feature 007): `notifications.json` (opcional). Se extrae la
+      // sección `templates`; si no existe, `null` (el motor resuelve un mensaje genérico de fallback).
+      notifications: (() => {
+        const p = path.join(this.dataDir, 'notifications.json');
+        if (!fs.existsSync(p)) return null;
+        const parsed = JSON.parse(fs.readFileSync(p, 'utf8')) as { templates?: any };
+        return parsed?.templates ?? null;
       })(),
       loadedAt: new Date().toISOString(),
       source,
@@ -159,6 +179,33 @@ export class GameDataService implements OnModuleInit {
   /** Festividades (feature ambiental): `festivals.json` (opcional, por defecto []). */
   getFestivals() {
     return this.snapshot.festivals ?? [];
+  }
+
+  /** Plantillas de notificaciones (feature 007): `templates` de `notifications.json` (o `null`). */
+  getNotificationTemplates() {
+    return this.snapshot.notifications ?? null;
+  }
+
+  /** Configuración de notificaciones (`balance.notifications`) con defaults de respaldo. */
+  getNotificationConfig() {
+    const n = (this.snapshot.balance as any)?.notifications ?? {};
+    return {
+      vitalsCriticalThreshold: n.vitals?.criticalThreshold ?? 10,
+      quietStart: n.quietHours?.start ?? 23,
+      quietEnd: n.quietHours?.end ?? 7,
+      defaultMaxPerDay: n.rateLimit?.defaultMaxPerDay ?? 3,
+      dedupWindowMs: (n.dedup?.windowMinutes ?? 5) * 60 * 1000,
+    };
+  }
+
+  /** Logros data-driven (feature 008): `achievements.json`. Devuelve `{ version, achievements: [] }` o `null`. */
+  getAchievements() {
+    return this.snapshot.achievements ?? null;
+  }
+
+  /** Layout de constelaciones por categoría (feature 008): `constellations.json`. O `null`. */
+  getConstellations() {
+    return this.snapshot.constellations ?? null;
   }
 
   /** Catálogo de juego (los 6 game-data gestionados). Lo sirve el endpoint público `/catalog`. */
@@ -208,6 +255,8 @@ export class GameDataService implements OnModuleInit {
       foods: file === 'foods' ? (fileCheck.data as any[]) : this.snapshot.foods,
       skills: file === 'skills' ? (fileCheck.data as any[]) : this.snapshot.skills,
       missions: file === 'missions' ? (fileCheck.data as any) : this.snapshot.missions,
+      achievements: file === 'achievements' ? (fileCheck.data as any) : this.snapshot.achievements,
+      constellations: file === 'constellations' ? (fileCheck.data as any) : this.snapshot.constellations,
     };
     const crossErrors = validateGameData(merged);
     if (crossErrors.length > 0) {
@@ -216,7 +265,8 @@ export class GameDataService implements OnModuleInit {
 
     const changedFields = collectChangedPaths(this.snapshot[file], fileCheck.data);
     const version =
-      (file === 'balance' || file === 'missions') && typeof (fileCheck.data as any)?.version === 'string'
+      (file === 'balance' || file === 'missions' || file === 'achievements' || file === 'constellations') &&
+        typeof (fileCheck.data as any)?.version === 'string'
         ? ((fileCheck.data as any).version as string)
         : undefined;
 

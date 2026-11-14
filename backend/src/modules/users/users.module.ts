@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { UsersController } from './users.controller';
+import { UsersController, UsersAchievementsController } from './users.controller';
+import { AchievementsModule } from '../../achievements/achievements.module';
 
 @Module({
-  controllers: [UsersController],
+  imports: [AchievementsModule],
+  controllers: [UsersController, UsersAchievementsController],
   providers: [UsersService],
   exports: [UsersService],
 })

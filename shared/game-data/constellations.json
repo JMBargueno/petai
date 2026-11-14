@@ -1,0 +1,134 @@
+{
+  "version": "2026-11-13.001",
+  "categories": {
+    "care": {
+      "name": "Cuidado",
+      "stars": {
+        "care_feed_10": { "x": 0.10, "y": 0.50 },
+        "care_routine": { "x": 0.22, "y": 0.62 },
+        "care_sleep_15": { "x": 0.35, "y": 0.55 },
+        "care_level_10": { "x": 0.45, "y": 0.70 },
+        "care_feed_50": { "x": 0.55, "y": 0.45 },
+        "care_clean_25": { "x": 0.62, "y": 0.62 },
+        "care_sleep_75": { "x": 0.72, "y": 0.40 },
+        "care_level_25": { "x": 0.80, "y": 0.60 },
+        "care_feed_200": { "x": 0.88, "y": 0.35 },
+        "care_clean_100": { "x": 0.30, "y": 0.30 },
+        "care_level_50": { "x": 0.90, "y": 0.75 },
+        "care_dedicated": { "x": 0.50, "y": 0.85 }
+      },
+      "connections": [
+        ["care_feed_10", "care_routine"],
+        ["care_routine", "care_clean_100"],
+        ["care_clean_100", "care_feed_50"],
+        ["care_routine", "care_sleep_15"],
+        ["care_sleep_15", "care_level_10"],
+        ["care_feed_50", "care_clean_25"],
+        ["care_clean_25", "care_sleep_75"],
+        ["care_sleep_75", "care_feed_200"],
+        ["care_sleep_75", "care_level_25"],
+        ["care_level_25", "care_level_50"],
+        ["care_level_10", "care_dedicated"],
+        ["care_dedicated", "care_level_50"]
+      ]
+    },
+    "battle": {
+      "name": "Batalla",
+      "stars": {
+        "battle_5_fights": { "x": 0.15, "y": 0.50 },
+        "battle_1_wins": { "x": 0.25, "y": 0.40 },
+        "battle_challenger": { "x": 0.35, "y": 0.55 },
+        "battle_10_wins": { "x": 0.45, "y": 0.45 },
+        "battle_25_fights": { "x": 0.55, "y": 0.60 },
+        "battle_warrior": { "x": 0.65, "y": 0.40 },
+        "battle_50_wins": { "x": 0.72, "y": 0.55 },
+        "battle_100_fights": { "x": 0.80, "y": 0.45 },
+        "battle_100_wins": { "x": 0.88, "y": 0.55 },
+        "battle_legend": { "x": 0.95, "y": 0.40 }
+      },
+      "connections": [
+        ["battle_5_fights", "battle_1_wins"],
+        ["battle_1_wins", "battle_challenger"],
+        ["battle_challenger", "battle_10_wins"],
+        ["battle_challenger", "battle_25_fights"],
+        ["battle_10_wins", "battle_warrior"],
+        ["battle_25_fights", "battle_50_wins"],
+        ["battle_warrior", "battle_100_fights"],
+        ["battle_50_wins", "battle_100_wins"],
+        ["battle_100_fights", "battle_100_wins"],
+        ["battle_100_wins", "battle_legend"]
+      ]
+    },
+    "ai": {
+      "name": "IA",
+      "stars": {
+        "ai_first_words": { "x": 0.10, "y": 0.50 },
+        "ai_chat_10": { "x": 0.18, "y": 0.42 },
+        "ai_conversationalist": { "x": 0.26, "y": 0.55 },
+        "ai_bond_25": { "x": 0.34, "y": 0.45 },
+        "ai_chat_50": { "x": 0.42, "y": 0.58 },
+        "ai_friend_100": { "x": 0.50, "y": 0.42 },
+        "ai_chat_200": { "x": 0.58, "y": 0.55 },
+        "ai_talkative": { "x": 0.66, "y": 0.45 },
+        "ai_chat_500": { "x": 0.78, "y": 0.50 },
+        "ai_deep_talk": { "x": 0.90, "y": 0.45 }
+      },
+      "connections": [
+        ["ai_first_words", "ai_chat_10"],
+        ["ai_chat_10", "ai_conversationalist"],
+        ["ai_conversationalist", "ai_bond_25"],
+        ["ai_conversationalist", "ai_chat_50"],
+        ["ai_bond_25", "ai_friend_100"],
+        ["ai_chat_50", "ai_chat_200"],
+        ["ai_friend_100", "ai_talkative"],
+        ["ai_chat_200", "ai_chat_500"],
+        ["ai_talkative", "ai_chat_500"],
+        ["ai_chat_500", "ai_deep_talk"]
+      ]
+    },
+    "collection": {
+      "name": "Colección",
+      "stars": {
+        "collection_hatch_1": { "x": 0.12, "y": 0.50 },
+        "collection_level_5": { "x": 0.22, "y": 0.40 },
+        "collection_evolve_1": { "x": 0.30, "y": 0.55 },
+        "collection_hatch_5": { "x": 0.40, "y": 0.45 },
+        "collection_level_20": { "x": 0.50, "y": 0.58 },
+        "collection_evolve_5": { "x": 0.60, "y": 0.42 },
+        "collection_hatch_20": { "x": 0.70, "y": 0.55 },
+        "collection_evolve_10": { "x": 0.80, "y": 0.45 },
+        "collection_hatch_50": { "x": 0.88, "y": 0.55 },
+        "collection_evolve_20": { "x": 0.95, "y": 0.40 }
+      },
+      "connections": [
+        ["collection_hatch_1", "collection_level_5"],
+        ["collection_level_5", "collection_evolve_1"],
+        ["collection_evolve_1", "collection_hatch_5"],
+        ["collection_hatch_5", "collection_level_20"],
+        ["collection_level_20", "collection_evolve_5"],
+        ["collection_evolve_5", "collection_hatch_20"],
+        ["collection_hatch_20", "collection_evolve_10"],
+        ["collection_evolve_10", "collection_hatch_50"],
+        ["collection_hatch_50", "collection_evolve_20"]
+      ]
+    },
+    "social": {
+      "name": "Social",
+      "stars": {
+        "social_opener": { "x": 0.15, "y": 0.50 },
+        "social_first_share": { "x": 0.30, "y": 0.40 },
+        "social_shares_5": { "x": 0.45, "y": 0.55 },
+        "social_influencer": { "x": 0.60, "y": 0.45 },
+        "social_shares_20": { "x": 0.75, "y": 0.55 },
+        "social_shares_50": { "x": 0.90, "y": 0.40 }
+      },
+      "connections": [
+        ["social_opener", "social_first_share"],
+        ["social_first_share", "social_shares_5"],
+        ["social_shares_5", "social_influencer"],
+        ["social_influencer", "social_shares_20"],
+        ["social_shares_20", "social_shares_50"]
+      ]
+    }
+  }
+}

@@ -8,6 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomInt } from 'crypto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
@@ -49,6 +50,7 @@ export class BattlesService {
     private readonly leaderboard: LeaderboardService,
     private readonly realtime: RealtimeGateway,
     private readonly bonding: BondingService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private get cfg(): CombatConfig & Record<string, any> {
@@ -270,6 +272,13 @@ export class BattlesService {
 
     // Vínculo (feature 006): cualquier pelea terminada (victoria, empate o derrota) sube el bonding (+3)
     await this.bonding.recordInteraction(pet.id, userId, 'battle');
+
+    // Notificación con personalidad (feature 007): victoria/derrota en la arena (el empate no notifica).
+    if (outcome === 'win') {
+      this.eventEmitter.emit('pet:battle-won', { userId, petId: pet.id, won: true });
+    } else if (outcome === 'loss') {
+      this.eventEmitter.emit('pet:battle-lost', { userId, petId: pet.id, won: false });
+    }
 
     // Clasificaciones (no lanzan si Redis falla)
     await this.leaderboard.record([

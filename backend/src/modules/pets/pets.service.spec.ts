@@ -39,6 +39,10 @@ describe('PetsService', () => {
         },
       },
     }),
+    // Umbbral alto para que los tests de decaimiento no disparen la notificación de vitales críticas.
+    getNotificationConfig: jest
+      .fn()
+      .mockReturnValue({ vitalsCriticalThreshold: 999, quietStart: 23, quietEnd: 7, defaultMaxPerDay: 3, dedupWindowMs: 300000 }),
   };
 
   const mockEventEmitter = {

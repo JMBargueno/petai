@@ -2,6 +2,8 @@
 // Conforme a la especificación técnica en docs/ART_PIPELINE.md
 
 import { deriveVisualTraits, hexToRgb, applyHueShiftRgb } from './prng';
+import { AssetLoader } from './asset-loader';
+import { createMemoryAssetCache } from './asset-cache';
 
 // Importación de assets raster y metadatos JSON
 import ignisaurBase from '@shared/assets/species/ignisaur/base.png';
@@ -328,10 +330,65 @@ export const eggLibrary = {
   cracked: eggCrackedSvg,
 };
 
-export function getPetSvg(speciesKey: string, animation: string): string {
+/**
+ * Integración con el `AssetLoader` (feature 009-edge-cdn, T013).
+ *
+ * El render debería preferir `loadSpriteSvg(...)`/`loadPatternSvg(...)` (CDN → cache local → origin
+ * → embebido). Los imports `?raw` se conservan como **last-resort**: si el CDN/origin caen, la app
+ * no se rompe (la retrocompatibilidad se elimina en v2).
+ */
+let spriteAssetLoader: AssetLoader | null = null;
+
+/** Configura el `AssetLoader` del sistema de sprites (idempotente). */
+export function initSpriteAssetLoader(
+  opts: { cdnManifestUrl?: string; originManifestUrl?: string; originBaseUrl?: string } = {},
+): AssetLoader {
+  if (!spriteAssetLoader) {
+    // La app de producción puede pasar un `AssetCache` backed por Tauri; por defecto, memoria.
+    spriteAssetLoader = new AssetLoader(createMemoryAssetCache(), {
+      cdnManifestUrl: opts.cdnManifestUrl,
+      originManifestUrl: opts.originManifestUrl,
+      originBaseUrl: opts.originBaseUrl,
+    });
+    void spriteAssetLoader.init();
+  }
+  return spriteAssetLoader;
+}
+
+/**
+ * Carga el SVG de un sprite por `key` (p. ej. `sprites/ignisaur_idle`) desde el CDN cacheándolo.
+ * Si no está disponible (CDN/origin caídos o `AssetNotFound`), devuelve `rawFallback` (el import
+ * `?raw` embebido) como last resort.
+ */
+export async function loadSpriteSvg(key: string, rawFallback = ''): Promise<string> {
+  const loader = initSpriteAssetLoader();
+  try {
+    const blob = await loader.loadAsset(key);
+    return await blob.text();
+  } catch {
+    return rawFallback;
+  }
+}
+
+/** Carga el SVG de un patrón por `key` (p. ej. `patterns/scales`) con fallback embebido. */
+export async function loadPatternSvg(key: string, rawFallback: string | null = null): Promise<string | null> {
+  const loader = initSpriteAssetLoader();
+  try {
+    const blob = await loader.loadAsset(key);
+    return await blob.text();
+  } catch {
+    return rawFallback;
+  }
+}
+
+/**
+ * Sincrono/retrocompatibilidad: devuelve el fallback embebido (`?raw`). Para la carga real desde el
+ * CDN usa `loadSpriteSvg(...)`.
+ */
+export function getPetSvg(_speciesKey: string, _animation: string): string {
   return ignisaurIdleSvg;
 }
 
-export function getPatternSvg(patternKey: string): string | null {
+export function getPatternSvg(_patternKey: string): string | null {
   return null;
 }

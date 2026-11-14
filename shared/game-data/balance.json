@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "rarity": {
     "normal": {
       "probability": 0.6,
@@ -48,6 +48,21 @@
     },
     "criticalThreshold": 15,
     "sicknessHealthThreshold": 20
+  },
+  "notifications": {
+    "vitals": {
+      "criticalThreshold": 10
+    },
+    "quietHours": {
+      "start": 23,
+      "end": 7
+    },
+    "rateLimit": {
+      "defaultMaxPerDay": 3
+    },
+    "dedup": {
+      "windowMinutes": 5
+    }
   },
   "environmental": {
     "hot_temp": 30,

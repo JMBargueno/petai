@@ -1,6 +1,7 @@
 packages:
   - 'backend'
   - 'desktop'
+  - 'edge'
   - 'shared/*'
   - 'tools/*'
 

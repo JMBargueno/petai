@@ -3,6 +3,7 @@ import { MissionTrackingService } from './mission-tracking.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../modules/realtime/realtime.gateway';
 import { ChestsService } from '../modules/chests/chests.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('MissionTrackingService', () => {
   let service: MissionTrackingService;
@@ -23,12 +24,14 @@ describe('MissionTrackingService', () => {
     };
     const mockRealtime = { emitToUser: jest.fn() };
     const mockChestsService = { grantChest: jest.fn().mockResolvedValue(undefined) };
+    const mockEvents = { emit: jest.fn(), emitAsync: jest.fn().mockResolvedValue(undefined) };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MissionTrackingService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: RealtimeGateway, useValue: mockRealtime },
         { provide: ChestsService, useValue: mockChestsService },
+        { provide: EventEmitter2, useValue: mockEvents },
       ],
     }).compile();
     service = module.get(MissionTrackingService);
