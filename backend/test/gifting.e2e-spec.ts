@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { GiftingService } from '../src/modules/gifting/gifting.service';
 
 /**
  * Gifting & Care Packages (e2e) — camino feliz (feature 033).
@@ -21,6 +22,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 describe('Gifting & Care Packages (e2e) — happy path', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let giftingService: GiftingService;
   const api = () => request(app.getHttpServer());
   const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
   const createdUsers: string[] = [];
@@ -70,6 +72,7 @@ describe('Gifting & Care Packages (e2e) — happy path', () => {
     app.setGlobalPrefix('v1');
     await app.init();
     prisma = app.get(PrismaService);
+    giftingService = app.get(GiftingService);
 
     // Items de distintos kinds (food/medicine/toy) para care package y gift genérico.
     const seeds: Array<{ id: string; kind: string; name: string }> = [
@@ -219,6 +222,71 @@ describe('Gifting & Care Packages (e2e) — happy path', () => {
       const dbGift = await prisma.gift.findUnique({ where: { id: giftId } });
       expect(dbGift.status).toBe('rejected');
       expect(dbGift.thankYouNote).toBe('gracias de corazón');
+    });
+  });
+
+  describe('F-12 — regalos caducados (no aceptables + devolución al remitente)', () => {
+    it('no permite ACEPTAR un gift caducado (400) y no transfiere el item', async () => {
+      const sender = await makeUser();
+      const receiver = await makeUser();
+      await grant(sender.userId, ITEMS.gift, 1);
+      const send = await api()
+        .post('/v1/gifting/send')
+        .set(auth(sender.token))
+        .send({ recipientUserId: receiver.userId, petId: receiver.petId, itemId: ITEMS.gift, qty: 1 })
+        .expect(201);
+      const giftId = send.body.id as string;
+      // El envío descontó del remitente (0). Simulamos que pasó el plazo de 24h.
+      expect(await invQty(sender.userId, ITEMS.gift)).toBe(0);
+      await prisma.gift.update({ where: { id: giftId }, data: { expiresAt: new Date(Date.now() - 60_000) } });
+
+      const res = await api().post(`/v1/gifting/${giftId}/accept`).set(auth(receiver.token));
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('caducado');
+
+      // El gift sigue pendiente y el item NO pasó al receptor.
+      expect((await prisma.gift.findUnique({ where: { id: giftId } }))!.status).toBe('pending');
+      expect(await invQty(receiver.userId, ITEMS.gift)).toBeFalsy();
+    });
+
+    it('no permite RECHAZAR un gift caducado (400)', async () => {
+      const sender = await makeUser();
+      const receiver = await makeUser();
+      await grant(sender.userId, ITEMS.gift, 1);
+      const send = await api()
+        .post('/v1/gifting/send')
+        .set(auth(sender.token))
+        .send({ recipientUserId: receiver.userId, petId: receiver.petId, itemId: ITEMS.gift, qty: 1 })
+        .expect(201);
+      const giftId = send.body.id as string;
+      await prisma.gift.update({ where: { id: giftId }, data: { expiresAt: new Date(Date.now() - 60_000) } });
+
+      const res = await api().post(`/v1/gifting/${giftId}/reject`).set(auth(receiver.token)).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('caducado');
+      expect((await prisma.gift.findUnique({ where: { id: giftId } }))!.status).toBe('pending');
+    });
+
+    it('expireDueGifts devuelve el item al remitente y marca el gift como expirado', async () => {
+      const sender = await makeUser();
+      const receiver = await makeUser();
+      await grant(sender.userId, ITEMS.gift, 1);
+      const send = await api()
+        .post('/v1/gifting/send')
+        .set(auth(sender.token))
+        .send({ recipientUserId: receiver.userId, petId: receiver.petId, itemId: ITEMS.gift, qty: 1 })
+        .expect(201);
+      const giftId = send.body.id as string;
+      // Tras el envío el item está "en el aire" (remitente 0). Lo caducamos y lanzamos el ciclo.
+      await prisma.gift.update({ where: { id: giftId }, data: { expiresAt: new Date(Date.now() - 60_000) } });
+      const processed = await giftingService.expireDueGifts();
+      expect(processed).toBeGreaterThanOrEqual(1);
+
+      const dbGift = await prisma.gift.findUnique({ where: { id: giftId } });
+      expect(dbGift.status).toBe('expired');
+      expect(dbGift.resolvedAt).not.toBeNull();
+      // El item volvió al inventario del remitente (0 → 1).
+      expect(await invQty(sender.userId, ITEMS.gift)).toBe(1);
     });
   });
 
