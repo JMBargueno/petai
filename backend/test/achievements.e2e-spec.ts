@@ -142,7 +142,7 @@ describe('Achievements E2E', () => {
     await request(app.getHttpServer())
       .post('/v1/achievements/care_feed_10/claim')
       .set('Authorization', `Bearer ${token}`)
-      .expect(200);
+      .expect(201);
     const claimed = await waitForAchievement('care_feed_10', (a) => a.claimed === true);
     expect(claimed.claimed).toBe(true);
     expect(claimed.unlockedAt).toEqual(expect.any(String));
