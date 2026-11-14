@@ -6,6 +6,8 @@
   "description": "PetAI — Mascota virtual tamagotchi inteligente multiplataforma",
   "scripts": {
     "validate:data": "node scripts/validate-game-data.js",
+    "validate:assets": "node scripts/validate-assets.js",
+    "validate:all": "node scripts/validate-game-data.js && node scripts/validate-assets.js",
     "generate:api": "openapi-typescript shared/openapi/openapi.json -o shared/openapi/api-types.ts",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",

@@ -40,9 +40,9 @@ petai/
   desktop/            Tauri 2 (src-tauri en Rust + frontend en Svelte/TS)
   shared/
     openapi/          openapi.json exportado por el backend
-    assets/           sprites, animaciones, iconos (fuente única)
+    assets/           base.png, mask.png, anim.json por especie; patterns/ y palettes.json (ver docs/ART_PIPELINE.md)
     game-data/        species.json, patterns.json, foods.json, balance.json
-  docs/               ROADMAP.md, GAME_DESIGN.md, API.md
+  docs/               ROADMAP.md, GAME_DESIGN.md, API.md, ART_PIPELINE.md
   docker-compose.yml  postgres + redis (+ un mock de LLM para tests)
   .github/workflows/  CI: backend, android, ios (runner macOS), desktop
 ```
@@ -68,7 +68,8 @@ petai/
 
 - **Pity**: se garantiza al menos un Super-raro cada 30 huevos y un Legendario o mejor cada 120.
 - **Patrón**: tirada independiente. Pueden salir liso, manchas, rayas, degradado, escamas, cristal, galaxia o aurora; los cuatro últimos solo aparecen en Super-raro o superior. Además se tira una paleta de color (primario y secundario) y un pequeño % de **variante shiny**.
-- Se guarda una `visualSeed` para que todos los clientes rendericen exactamente igual.
+- **Composición determinista por capas**: el servidor guarda `visualSeed` (entero de 32 bits). Los clientes ejecutan un PRNG idéntico (**Mulberry32**) para derivar parámetros cosméticos únicos (desplazamiento del patrón `offsetX/Y`, escala/rotación `0.85–1.15x` y variación de tono `hueShift ±8°`).
+- **Renderizado por capas en 4 pasos**: Base de color (canales R/G de `mask.png`), Proyección de patrón (canal B de `mask.png`), Sombreado Multiply + Lineart (`base.png`) y pase Shiny especular. Ver especificación técnica completa en [docs/ART_PIPELINE.md](ART_PIPELINE.md).
 - **Animación de eclosión**: el huevo tiembla, se agrieta y estalla con un efecto de color según la rareza; es la parte más espectacular de la app.
 
 ### 4.2 Cuidado y estadísticas
@@ -219,18 +220,18 @@ PushToken(userId, platform, token)
   - Retrofit/OkHttp con Kotlinx Serialization, Room (caché offline), DataStore, Coil, WorkManager y FCM.
   - Credential Manager (Google), Play Billing 8 y widget Glance (estado de la mascota en la pantalla de inicio).
 - **Módulos**: `:app`, `:core:network` (cliente generado), `:core:data`, `:core:designsystem` y `:feature:{home,hatch,care,shop,minigames,arena,chat,collection,settings}`.
-- **Renderizado de la mascota**: un composable `PetView` dibuja con Canvas el sprite base de la especie, el patrón como capa enmascarada y la paleta como tinte. Las animaciones (idle, comer, feliz, triste, dormir, atacar) usan sprite sheets.
+- **Renderizado de la mascota**: `PetSprite` implementa composición acelerada por hardware. En Android 13+ (API 33–37) usa `RuntimeShader` (AGSL) con `RenderEffect` para componer `base.png`, `mask.png` y `pattern.png` en un solo draw call en GPU. En API 26–32 recurre a fallback con `BlendMode.Multiply` en Canvas. Aplica **In-Memory Baking** (se hornea el sprite sheet una vez sobre un `Bitmap` en caché y las animaciones reproducen los cuadros de esa textura). Soporta 14 estados de animación con tabla de fallbacks.
 
 ## 7. App iOS
 - **Stack**:
   - Swift 6 y SwiftUI para iOS 27 con Liquid Glass: `TabView` con la barra de pestañas de iOS 27, `NavigationStack` y `.glassEffect`.
   - `@Observable`, async/await, SwiftData (caché) y cliente generado con `swift-openapi-generator`.
   - Sign in with Apple, StoreKit 2, APNs, WidgetKit y Live Activity ("tu huevo eclosiona en 12 min").
-- **Renderizado de la mascota**: una `SKScene` de SpriteKit dentro de `SpriteView`, con las mismas capas (especie, patrón y paleta) y animaciones que en Android.
-- **Paquetes Swift locales**: `PetAICore` (modelos y red), `PetAIUI` (sistema de diseño) y `Features/*`.
+- **Renderizado de la mascota**: `SpriteView` renderizando un `SKSpriteNode` con un `SKShader` personalizado en Metal/GLSL que recibe las 3 texturas (`u_base`, `u_mask`, `u_pattern`) y los uniformes de color y transformación derivados con Mulberry32. Aplica baking en textura en memoria para garantizar 60 FPS estables.
 
 ## 8. Mascota de escritorio (Tauri 2)
 - **Ventana**: transparente, sin decoración, siempre visible y sin icono en la barra de tareas; ocupa la parte inferior de la pantalla principal.
+- **Renderizado de la mascota (`PetView`)**: composición por capas en tiempo real mediante un `<canvas>` offscreen en memoria que hornea el sprite sheet completo al cargar la mascota (`baked_sheet`), reproduciendo los cuadros a 60 FPS a partir de `anim.json`. Soporta transformaciones procedurales (squash & stretch elástico al hacer clic, retroceso en combate) y catálogo de 14 animaciones con fallbacks en caliente.
 - **Movimiento**: la mascota camina, se sienta y duerme con una máquina de estados. Se puede arrastrar con el ratón.
 - **Clics a través de la ventana**: `set_ignore_cursor_events` afecta a toda la ventana, así que un bucle de unos 30 Hz en Rust consulta la posición global del cursor y desactiva el paso de clics solo cuando está sobre el sprite.
 - **Bandeja del sistema**: alimentar, jugar, abrir el chat, ver estado, pausar y salir. Plugins: `autostart`, `notification`, `updater`, `single-instance`, `global-shortcut` (abrir el chat) y `store` (preferencias).
@@ -316,7 +317,7 @@ PushToken(userId, platform, token)
 - **Flujo de punta a punta**: registrarse → eclosionar → alimentar → minijuego → subir de nivel → pelear → conectar la key → chatear → ver la misma mascota en el escritorio.
 
 ## 11. Riesgos y notas
-- **Arte**: es el mayor cuello de botella. Conviene empezar con placeholders y un formato de sprites común a todos los clientes.
+- **Arte**: históricamente el mayor cuello de botella. Se resuelve definitivamente con el **Pipeline de Composición Determinista por Capas en Tiempo Real** ([docs/ART_PIPELINE.md](ART_PIPELINE.md)): cada especie requiere únicamente 3 archivos (`base.png`, `mask.png`, `anim.json`) a 128x128 px, se hornea en memoria para rendimiento instantáneo a 60 FPS, y se valida en CI con `scripts/validate-assets.js`.
 - **Rendimiento del backend**: el deterioro perezoso evita tareas por mascota y escala bien.
 - **Cumplimiento de las tiendas**: las probabilidades de los huevos deben **publicarse** (requisito de Apple y Google para mecánicas aleatorias) y la suscripción de IA debe venderse con compras integradas.
 - **Coste de IA**: la cuota de tokens del modo suscripción debe ajustarse para que salga rentable.
