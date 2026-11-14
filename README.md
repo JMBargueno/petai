@@ -59,6 +59,58 @@ La app es multiplataforma: un backend autoritativo y varios clientes que muestra
 
 Para vincular el escritorio con el móvil, la app de escritorio muestra un código de 6 dígitos que confirmas desde Android.
 
+## Funcionalidades Expandidas (33 features)
+
+Además del núcleo original, PetAI incluye **33 funcionalidades nuevas** organizadas en tres oleadas. Ver detalle en [`docs/NUEVAS_FUNCIONALIDADES.md`](docs/NUEVAS_FUNCIONALIDADES.md) y specs en [`docs/specs/`](docs/specs/).
+
+### Oleada 1 — Hábito e Infraestructura (001-009)
+
+| # | Funcionalidad | Descripción |
+|---|---|---|
+| 001 | **Misiones diarias/semanales** | Set de misiones generadas cada día/semana. Recompensas progresivas, reset a medianoche, scheduler con paginación. |
+| 002 | **Cofres y drops aleatorios** | Cofres comprables (oro, plata, bronce) con tablas de drops ponderadas, pity per-cofre y evento WebSocket `chest:opened`. |
+| 003 | **Observabilidad OpenTelemetry** | Spans de request + DB + Redis, métricas (HTTP, GC, SSE), log serialization, trace context W3C en headers. |
+| 004 | **DevKit + Hot Reload** | Actions de debug (`/dev/action`), seed rápido, watcher de `game-data/` con hot-reload sin restart. |
+| 005 | **Environmental Awareness** | Clima real (Open-Meteo), hora local, festivales, inactividad, contexto ambiental inyectado al prompt de la IA. |
+| 006 | **Bonding Meter** | Métrica de vínculo 0-100 por mascota. Sube con interacciones. Niveles de amistad con recompensas. |
+| 007 | **Pet Notifications IA** | Notificaciones personalizadas por la IA con tono según personalidad, limitadas por día. |
+| 008 | **Logros y Constelación** | Logros desbloqueables con constelación visual, puntos de logro y recompensas únicas. |
+| 009 | **Edge/CDN + Preloading** | Assets por CDN, versión con hash, preload predictivo de sprites y game-data. |
+
+### Oleada 2 — Meta e IA (010-018)
+
+| # | Funcionalidad | Descripción |
+|---|---|---|
+| 010 | **Hábitat / Base** | Espacio decorable. Muebles con bonificaciones pasivas. Habitaciones desbloqueables por nivel. |
+| 011 | **Temporadas + Pase** | Ciclos de 8-12 semanas. Pase gratuito y premium. Ligas y clasificación por temporada. |
+| 012 | **Breeding** | Dos pets cruzan. Descendencia hereda genes con mutaciones. Ticket + incubación. |
+| 013 | **Raid Boss** | Jefe semanal asíncrono. Atacantes contribuyen hits. Progreso global, drops al vencer. |
+| 014 | **Torneo Knockout** | Bracket semanal de 64 jugadores (Diamond+). Cuota en gemas. Item exclusivo. |
+| 015 | **Cocina / Menú** | Minijuego de cocina. Recetas dan buffs de combate (24h). |
+| 016 | **Entrenamiento Elemental** | Buffs temporales de stats. Bonus por elemento rival. |
+| 017 | **Genes y Temperamento** | 3 genes ocultos + temperamento que afecta IA de combate y chat. |
+| 018 | **Aventura Narrativa IA** | Cuento interactivo diario. Decisiones, recompensas, la mascota lo recuerda. |
+
+### Oleada 3 — Comunidad y Ecosistema (019-033)
+
+| # | Funcionalidad | Descripción |
+|---|---|---|
+| 019 | **Multi-Model AI Router** | Router de LLMs con fallback cascading, token budget, selección por tipo de tarea. |
+| 020 | **Voice AI** | STT/TTS con voz por especie, barge-in, prosodia emocional. |
+| 021 | **Multi-Device Presence** | Presencia por dispositivo. Cuidado cooperativo entre amigos. |
+| 022 | **Offline-First CRDT** | Sync local-first, funciona sin red, resolución de conflictos merge/LWW. |
+| 023 | **Combat Spectator** | Espectación en vivo (delay 10s), highlights de 30s, replays. |
+| 024 | **Modding API** | UGC: publicar mods (especies, muebles, minijuegos). Sandbox + rating. |
+| 025 | **Public API + Webhooks** | API keys, endpoints públicos, webhooks (`pet.evolved`, `combat.finished`). |
+| 026 | **Security Zero-Trust** | Token rotación, device fingerprinting, E2E encryption en chat. |
+| 027 | **iOS + Skia** | Motor de animación unificado (Rust/Skia). Live Activity en Dynamic Island. |
+| 028 | **Welcome Back** | Diario visual de ausencia, ritual de disculpa, regalos sorpresa. |
+| 029 | **Pet Buddies** | Dos pets interactúan. Bonus de bonding mutuo. |
+| 030 | **Rituals** | Hábitos y streaks. El pet "aprende" rutinas del jugador. |
+| 031 | **Mood Theater** | Micro-narrativas espontáneas. Stickers compartibles. |
+| 032 | **Accessibility** | Alto contraste, minijuegos accesibles, modo simple 6-10, VoiceOver. |
+| 033 | **Gifting & Care Packages** | Regalos entre jugadores, care packages, group feeding. |
+
 ## Arquitectura
 
 ```
@@ -81,9 +133,11 @@ petai/
 ## Documentación
 
 - [`docs/PROYECTO.md`](docs/PROYECTO.md): visión, decisiones de diseño, arquitectura detallada y fases de implementación.
-- [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md): reglas del juego.
+- [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md): reglas del juego (incluye las 33 features de la Fase 7).
 - [`docs/API.md`](docs/API.md): referencia de la API.
-- [`docs/ROADMAP.md`](docs/ROADMAP.md): estado de cada fase.
+- [`docs/ROADMAP.md`](docs/ROADMAP.md): estado de cada fase (incluye Fase 7 con las 33 features).
+- [`docs/NUEVAS_FUNCIONALIDADES.md`](docs/NUEVAS_FUNCIONALIDADES.md): análisis y priorización de las 33 funcionalidades.
+- [`docs/specs/`](docs/specs/): especificaciones de detalle por feature (33 specs).
 - [`docs/DEPLOY.md`](docs/DEPLOY.md): despliegue del backend en producción.
 
 ## Puesta en marcha (desarrollo)
@@ -138,5 +192,6 @@ pnpm validate:data     # valida los datos de juego en shared/game-data
 
 Consulta [`docs/ROADMAP.md`](docs/ROADMAP.md) para ver el detalle de cada fase. Resumen:
 - Backend, escritorio y minijuegos, IA (salvo modo suscripción) y Arena: completados.
+- **33 funcionalidades expandidas (Fase 7)**: implementadas y con tests.
 - Android: funcional, pendientes Play Billing y FCM (requieren cuentas externas).
 - iOS y el despliegue público de las apps: pendientes.

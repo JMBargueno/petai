@@ -105,3 +105,130 @@ $$\text{Stat} = \text{round}\left((\text{BaseSpecies} \cdot \text{RarityMultipli
 - **Planta**: Fuerte contra Agua ($\times 1.5$), Débil contra Fuego ($\times 0.67$).
 - **Eléctrico**: Fuerte contra Agua ($\times 1.5$), Débil contra Tierra/Planta ($\times 0.67$).
 - **Sombra / Luz**: Ventaja mutua ($\times 1.5$ entre ellos), neutros frente a elementos naturales.
+
+---
+
+## 5. Misiones y Cofres
+
+### 5.1 Misiones Diarias y Semanales
+- **Generación**: cada día se genera un set de 3-5 misiones diarias (mezcla de categorías: cuidar, jugar, pelear, chatear) y un set semanal de 7 misiones.
+- **Reset**: a medianoche (zona horaria del usuario) se resetean las diarias. Los domingos se resetean las semanales.
+- **Recompensas**: XP + monedas + a veces gemas. Bonus por completar todo el set del día (+50% XP).
+- **Cofre diario**: completar todas las misiones diarias desbloquea un cofre de bronce gratis.
+
+### 5.2 Cofres y Sistema de Drops
+- **Tipos**: bronce (50 monedas), plata (200 monedas), oro (5 gemas), épico (25 gemas).
+- **Drop table**: cada cofre tiene una tabla ponderada en `balance.json → chests`.
+- **Pity per-cofre**: garantiza un item raro+ cada 10 aperturas de bronce, legendario+ cada 50 de oro.
+- **Evento**: `chest:opened` emitido por WebSocket con items obtenidos.
+
+---
+
+## 6. Hábitat y Decoración
+
+### 6.1 Estructura
+- **Habitaciones**: 5 habitaciones (jardín, interior, laboratorio, playa, montaña). Se desbloquean por nivel de cuenta.
+- **Muebles**: cada mueble tiene un `type` (decorativo, funcional) y un `bonus` (p. ej. camita: energía decay -10%).
+- **Colocación**: grid 8×8 por habitación. Máximo 12 muebles por habitación.
+- **Bonificaciones pasivas**: los muebles activos modifican el `lazy tick` de la mascota.
+
+---
+
+## 7. Temporadas
+
+- **Duración**: 8-12 semanas (configurable en `balance.json → seasons`).
+- **Tema**: cada temporada tiene un tema (elemento, evento). Afecta a skins, huevos, bosses, minijuegos.
+- **Pase**: gratuito y premium (gemas: skins, huevos, muebles).
+- **Recompensas de fin**: según liga y posición en clasificación.
+
+---
+
+## 8. Breeding (Cruzamiento)
+
+- **Requisitos**: dos pets del mismo elemento, nivel 20+, ticket de cría (10 gemas).
+- **Incubación**: 2 horas (acelerable con gemas).
+- **Genética**: descendencia hereda elemento (70/30), patrón (tirada del pool unido), rareza (media de padres ±1 tier), genes (50% de cada padre).
+- **Mutación**: 5% de probabilidad de un gen mutante nuevo.
+- **Límite**: 1 cría por pet cada 24h.
+
+---
+
+## 9. Raid Boss y Torneo
+
+### 9.1 Raid Boss
+- **Ciclo**: un boss semanal (domingo 00:00 UTC). Stats ×3 del boss elemental.
+- **Mecánica**: cada jugador ataca hasta 5 veces/día (10 energía/ataque). Progreso global de HP.
+- **Recompensas**: según daño infligido + item épico garantizado al vencer.
+
+### 9.2 Torneo Knockout
+- **Frecuencia**: semanal (jueves). 64 jugadores de liga Diamond+.
+- **Bracket**: eliminación directa, 2 combates por ronda (best-of-3).
+- **Cuota**: 10 gemas (refund 5 si pierdes en 1ª ronda).
+- **Recompensas**: campeón (item mítico + título), runner-up (legendario), top 8 (raro + gemas).
+
+---
+
+## 10. Cocina y Entrenamiento Elemental
+
+### 10.1 Cocina
+- **Mecánica**: minijuego de combinar ingredientes del inventario a una receta.
+- **Recetas**: 30 iniciales (10 por elemento). Se desbloquean por nivel.
+- **Buff**: el plato da un buff de combate de 24h (p. ej. Sopa de Fuego: ATK +10%).
+- **Validación**: el servidor valida la receta y duración del minijuego.
+
+### 10.2 Entrenamiento Elemental
+- **Mecánica**: minijuego de timing con el elemento del pet.
+- **Buff**: +5% al stat correspondiente por 24h. Bonus +10% si el elemento tiene ventaja sobre el rival siguiente.
+
+---
+
+## 11. Genes y Temperamento
+
+### 11.1 Genes Ocultos
+- Cada pet tiene **3 genes** al nacer (ocultos hasta nivel 30).
+- **Pool**: Veloz (+10% VEL), Férreo (+10% DEF), Sagaz (crítico +3%), Devorador (+15% comida), Espectral (−15% daño elemental), Resiliente (−20% estados), Afortunado (+5% drop), Intenso (+15% crítico).
+
+### 11.2 Temperamento
+- **Tipos**: Valiente (ATA+10%), Tímido (DEF+10%), Arribista (crítico+5%), Estable (variance−30%).
+- **Efecto**: modifica la IA de reglas del combate y el tono del chat.
+
+---
+
+## 12. Aventura Narrativa IA
+
+- **Frecuencia**: una aventura nueva cada 24h.
+- **Formato**: 3-5 escenas generadas por la IA. Cada escena tiene 2-3 opciones.
+- **Decisiones**: el jugador elige. El servidor valida y genera la siguiente escena.
+- **Recuerdos**: se guardan en `PetMemory`, la mascota las menciona en el chat.
+- **Recompensas**: XP + monedas. Gemas por decisiones correctas.
+- **Premium**: aventuras largas/reintentables por 2 gemas.
+
+---
+
+## 13. Bonding y Comunidad
+
+### 13.1 Bonding Meter (0-100)
+- **Ganancia**: comer (+1), minijuego (+2), pelear (+2), chatear 10 msgs (+1), completar misión (+3).
+- **Decay**: -1 por cada 48h sin interactuar.
+- **Niveles**: Extraño (0-20), Amigo (21-40), Buen amigo (41-60), Mejor amigo (61-80), Alma gemela (81-100).
+- **Efecto**: bono pasivo por nivel (p. ej. Nivel 3: +5% XP minijuegos).
+
+### 13.2 Pet Buddies
+- **Requisito**: dos pets de amigos, ambos nivel 15+.
+- **Interacciones**: se persiguen, duermen juntos, pelean (mini-riña), comen juntos.
+- **Frecuencia**: 2 interacciones/día. +1 bonding a ambos.
+
+### 13.3 Rituals
+- **Detección**: el sistema detecta hábitos del jugador (horarios de comer, jugar, pelear).
+- **Streak**: 7 días seguidos → "gift ritual" (monedas/XP/item).
+- **Ruptura**: no castiga, pero el pet lo menciona en el chat.
+
+### 13.4 Gifting y Care Packages
+- **Gifting**: enviar item del inventario a un amigo. Máx. 3/día.
+- **Care Package**: bundle automático [comida + medicina + toy] al pet enfermo de un amigo.
+- **Group Feeding**: 3-5 jugadores cocinan juntos un item raro. Se reparte proporcionalmente.
+
+### 13.5 Welcome Back
+- **Re-engagement**: al volver tras >24h, el pet muestra un "diario visual" de lo que hizo.
+- **Forgiveness ritual**: 48h-7d el pet está "ofendido", >7d está "triste" (secuencia de cuidados).
+- **>30d**: "¡Te eché de menos!" con regalo sorpresa.
