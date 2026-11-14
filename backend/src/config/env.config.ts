@@ -58,6 +58,14 @@ export const envSchema = z.object({
   DEVKIT_ENABLED: z.enum(['true', 'false']).default('false'),
   // Token opcional de alta entropía para acceso remoto a /dev/* fuera de loopback.
   DEVKIT_TOKEN: z.string().min(16).optional(),
+  // ---- Sync offline (S-07 del SDD de auditoría) ----
+  // Estado por usuario en Redis con TTL + topes duros; respaldo en memoria acotado si Redis cae.
+  SYNC_STATE_TTL_MS: positiveInt(86400000),
+  SYNC_MAX_DELTAS: positiveInt(2000),
+  SYNC_MAX_SEEN_ACTIONS: positiveInt(1000),
+  SYNC_MAX_ARGS_BYTES: positiveInt(4096),
+  SYNC_MAX_PETS: positiveInt(100),
+  SYNC_ENABLED: z.enum(['true', 'false']).default('true'),
   // ---- Observabilidad (OpenTelemetry) ----
   // Sin OTEL_EXPORTER_OTLP_ENDPOINT el SDK no se arranca (observabilidad desactivada de forma segura).
   OTEL_SERVICE_NAME: z.string().default('petai-backend'),
