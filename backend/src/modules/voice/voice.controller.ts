@@ -29,7 +29,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 @ApiTags('Voice')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/voice')
+@Controller('voice')
 export class VoiceController {
   constructor(
     private readonly sttService: SttService,

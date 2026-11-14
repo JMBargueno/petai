@@ -17,7 +17,7 @@ import { GroupFeedingService } from './group-feeding.service';
 @ApiTags('Gifting')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1')
+@Controller()
 export class GiftingController {
   constructor(
     private readonly gifting: GiftingService,

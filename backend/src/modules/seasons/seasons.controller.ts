@@ -13,7 +13,7 @@ import { SeasonsService } from './seasons.service';
 @ApiTags('Seasons')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/seasons')
+@Controller('seasons')
 export class SeasonsController {
   constructor(private readonly seasonsService: SeasonsService) {}
 

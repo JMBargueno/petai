@@ -10,7 +10,7 @@ import { ReengagementService, ForgiveAction } from './reengagement.service';
 @ApiTags('Reengagement')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/reengagement')
+@Controller('reengagement')
 export class ReengagementController {
   constructor(private readonly reengagementService: ReengagementService) {}
 

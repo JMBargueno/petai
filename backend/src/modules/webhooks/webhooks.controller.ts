@@ -20,7 +20,7 @@ import { ApiKeyService, CreateApiKeyDto } from './api-key.service';
 @ApiTags('Webhooks & API Keys')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1')
+@Controller()
 export class WebhooksController {
   constructor(
     private readonly webhooksService: WebhooksService,

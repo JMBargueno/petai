@@ -24,7 +24,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 @ApiTags('AI Router')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/ai/models')
+@Controller('ai/models')
 export class AiRouterController {
   constructor(private readonly modelRouter: ModelRouterService) {}
 

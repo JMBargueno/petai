@@ -7,7 +7,7 @@ import { GenesService } from './genes.service';
 @ApiTags('Genes')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/pets')
+@Controller('pets')
 export class GenesController {
   constructor(private readonly genes: GenesService) {}
 

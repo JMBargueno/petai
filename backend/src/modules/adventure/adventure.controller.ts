@@ -7,7 +7,7 @@ import { AdventureService } from './adventure.service';
 @ApiTags('Adventure')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/adventure')
+@Controller('adventure')
 export class AdventureController {
   constructor(private readonly adventure: AdventureService) {}
 

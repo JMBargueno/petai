@@ -14,7 +14,7 @@ import { RitualsService, CreateRitualInput } from './rituals.service';
 @ApiTags('Rituals')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/rituals')
+@Controller('rituals')
 export class RitualsController {
   constructor(private readonly rituals: RitualsService) {}
 

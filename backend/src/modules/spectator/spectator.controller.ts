@@ -26,7 +26,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 @ApiTags('Spectator')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/spectator')
+@Controller('spectator')
 export class SpectatorController {
   constructor(private readonly spectatorService: SpectatorService) {}
 

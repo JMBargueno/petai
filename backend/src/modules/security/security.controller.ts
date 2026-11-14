@@ -21,7 +21,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 @ApiTags('Security')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/security')
+@Controller('security')
 export class SecurityController {
   constructor(
     private readonly tokenRotation: TokenRotationService,

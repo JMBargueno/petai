@@ -14,7 +14,7 @@ import { HabitatService } from './habitat.service';
 @ApiTags('Habitat')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/habitat')
+@Controller('habitat')
 export class HabitatController {
   constructor(private readonly habitatService: HabitatService) {}
 

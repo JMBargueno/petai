@@ -13,7 +13,7 @@ import { AccessibilityService } from './accessibility.service';
 @ApiTags('Accessibility')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/accessibility')
+@Controller('accessibility')
 export class AccessibilityController {
   constructor(private readonly accessibility: AccessibilityService) {}
 

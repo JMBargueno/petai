@@ -15,7 +15,7 @@ import { MoodTheaterService } from './mood-theater.service';
 @ApiTags('MoodTheater')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/mood-theater')
+@Controller('mood-theater')
 export class MoodTheaterController {
   constructor(private readonly theater: MoodTheaterService) {}
 

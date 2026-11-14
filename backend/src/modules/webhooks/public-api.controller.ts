@@ -10,7 +10,7 @@ import { ApiKeyGuard, RequireScope } from './api-key.guard';
 @ApiTags('Public API')
 @ApiBearerAuth()
 @UseGuards(ApiKeyGuard)
-@Controller('v1/public')
+@Controller('public')
 export class PublicApiController {
   constructor(private readonly prisma: PrismaService) {}
 

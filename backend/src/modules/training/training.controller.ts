@@ -7,7 +7,7 @@ import { TrainingService } from './training.service';
 @ApiTags('Training')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/training')
+@Controller('training')
 export class TrainingController {
   constructor(private readonly training: TrainingService) {}
 

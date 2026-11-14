@@ -18,7 +18,7 @@ El núcleo (fases 1 a 4 y la oleada 1 de la Fase 7) funciona, tiene tests unitar
 
 La recomendación principal no es añadir funcionalidad sino ajustar el estado declarado al real, y después llevar las features a producción una a una, empezando por las que cierran el ciclo de juego.
 
-> **Actualización (rama `fix/migraciones-y-prefijos`)**: F-01 y F-02 están corregidos en esa rama. Se añadió la migración `20261114120000_wave2_wave3` (44 tablas y 10 columnas nuevas, sin sentencias destructivas), los 21 controladores afectados ya no repiten `v1/`, y el job e2e de la CI vuelve a usar `migrate deploy` con una comprobación de que esquema y migraciones coinciden. El texto de F-01 y F-02 describe el estado de `main` en `8899ab3`. Eran 21 controladores y no 20: faltaba `spectator` en la lista.
+> **Actualización**: F-01 y F-02 están corregidos en `main`, en el commit siguiente al de este informe. Se añadió la migración `20261114120000_wave2_wave3` (44 tablas y 10 columnas nuevas, sin sentencias destructivas), los 21 controladores afectados ya no repiten `v1/`, y el job e2e de la CI vuelve a usar `migrate deploy` con una comprobación de que esquema y migraciones coinciden. El texto de F-01 y F-02 describe el estado de `main` en `8899ab3`. Eran 21 controladores y no 20: faltaba `spectator` en la lista.
 
 ## 2. Resumen
 

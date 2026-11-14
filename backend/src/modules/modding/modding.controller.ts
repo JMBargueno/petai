@@ -15,7 +15,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { ModdingService, PublishModDto, WorkshopFilters } from './modding.service';
 
 @ApiTags('Modding')
-@Controller('v1/modding')
+@Controller('modding')
 export class ModdingController {
   constructor(private readonly moddingService: ModdingService) {}
 

@@ -25,7 +25,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 @ApiTags('Sync')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/sync')
+@Controller('sync')
 export class SyncController {
   constructor(private readonly deltaSyncService: DeltaSyncService) {}
 

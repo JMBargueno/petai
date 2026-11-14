@@ -26,7 +26,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 @ApiTags('Presence & Co-op')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1')
+@Controller()
 export class PresenceController {
   constructor(
     private readonly presenceService: PresenceService,

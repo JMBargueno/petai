@@ -14,7 +14,7 @@ import { BreedingService } from './breeding.service';
 @ApiTags('Breeding')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/breeding')
+@Controller('breeding')
 export class BreedingController {
   constructor(private readonly breedingService: BreedingService) {}
 

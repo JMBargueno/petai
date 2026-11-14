@@ -15,7 +15,7 @@ import { BuddiesService } from './buddies.service';
 @ApiTags('PetBuddies')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('v1/buddies')
+@Controller('buddies')
 export class BuddiesController {
   constructor(private readonly buddies: BuddiesService) {}
 
