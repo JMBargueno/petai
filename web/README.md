@@ -5,6 +5,8 @@ Web oficial de **Pockai** (*pocket* + *yokai* + *AI*), el nombre público del ju
 - **Landing pública** en español e inglés, generada como HTML estático.
 - **Panel de administración oculto** para gestionar precios, eventos, usuarios y pockais. Ahora mismo es un **mock**: trabaja con datos de ejemplo guardados en el navegador y no hace ninguna petición al backend.
 
+Las mejoras propuestas para la web pública (más funciones explicadas, estética, demo, conversión) están en [MEJORAS.md](MEJORAS.md).
+
 ## Requisitos
 
 - Node `^22.22.3` o `^24.15.0` (lo exige Angular CLI 22).
