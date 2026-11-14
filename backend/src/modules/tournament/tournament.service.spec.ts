@@ -14,7 +14,7 @@ describe('TournamentService.standings (R-04.3: paginación)', () => {
       },
     };
     const gameData: any = { getBalance: () => ({ publicApi: { standings: { defaultLimit: 50, maxLimit: 200 } } }) };
-    const service = new TournamentService(prisma, gameData, {} as never, {} as never, {} as never, {} as never, {} as never);
+    const service = new TournamentService(prisma, gameData, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
     return { service, prisma };
   }
 

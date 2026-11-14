@@ -253,5 +253,29 @@ describe('Raid: jefe global, ataque, leaderboard e historial (e2e)', () => {
       await api().get('/v1/raid/history').expect(401);
     });
   });
+
+  // F-06: se ejecuta al final porque liquida el raid activo (un test posterior vertería un raidId distinto).
+  describe('F-06: el jefe se remata aunque un golpe exceda la vida restante', () => {
+    it('la vida llega a 0 y el raid se liquida (antes el golpe final no se aplicaba)', async () => {
+      const { token, petId } = await signup({ energy: 100 });
+
+      // Vida por debajo del cap de daño por ataque (50.000): algún golpe excederá la vida restante.
+      // Antes, `hpRemaining >= damage` rechazaba ese golpe (0 filas) y el jefe quedaba a medio rematar.
+      // Ahora `GREATEST(hp - LEAST(hp, daño), 0)` lleva la vida a 0 y dispara el settle.
+      await prisma.raid.update({ where: { id: raidId }, data: { hpRemaining: 10_000, status: 'active' } });
+
+      let body: any;
+      for (let i = 0; i < 15; i++) {
+        await prisma.pet.update({ where: { id: petId }, data: { energy: 100 } }); // reponer energía entre golpes
+        body = (await api().post('/v1/raid/attack').set(auth(token)).send({ petId }).expect(201)).body;
+        if (body.settled) break;
+      }
+
+      expect(body.hpRemaining).toBe(0);
+      const raid = await prisma.raid.findUniqueOrThrow({ where: { id: raidId } });
+      expect(raid.hpRemaining).toBe(0);
+      expect(raid.status).toBe('settled');
+    });
+  });
 });
 

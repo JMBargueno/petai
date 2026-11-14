@@ -87,11 +87,17 @@ export class RaidService {
     const bossFinalHp = result.finalHp[1];
     const rawDamage = Math.max(0, bossMaxHp - bossFinalHp);
     const damage = Math.min(rawDamage, this.cfg.maxDamagePerAttack);
-    const claimed = await this.prisma.raid.updateMany({
-      where: { id: raid.id, status: 'active', hpRemaining: { gte: damage } },
-      data: { hpRemaining: { decrement: damage } },
-    });
-    if (claimed.count === 0) {
+    // F-06: el daño se aplica ATÓMICAMENTE recortado a la vida restante:
+    //   hpRemaining = GREATEST(hpRemaining - LEAST(hpRemaining, damage), 0)
+    // Antes, `where: { hpRemaining: { gte: damage } }` rechazaba el golpe final (daño > vida
+    // restante → 0 filas) y el jefe quedaba imposible de rematar. Ahora la vida llega a 0 y el
+    // raid se liquida en el `settle` de abajo.
+    const applied = await this.prisma.$executeRaw`
+      UPDATE "Raid"
+      SET "hpRemaining" = GREATEST("hpRemaining" - LEAST("hpRemaining", ${damage}), 0)
+      WHERE "id" = ${raid.id} AND "status" = 'active'
+    `;
+    if (applied === 0) {
       const updated = await this.prisma.raid.findUnique({ where: { id: raid.id } });
       if (!updated || updated.status !== 'active') throw new ConflictException('Boss derrotado');
       throw new ConflictException('Error al aplicar daño');
@@ -166,13 +172,50 @@ export class RaidService {
   }
 
   private async getActiveRaid() {
-    let raid = await this.prisma.raid.findFirst({ where: { status: 'active' }, orderBy: { startedAt: 'desc' } });
-    if (!raid) return this.rotate();
-    if (new Date() > raid.endsAt && raid.status === 'active') {
-      await this.prisma.raid.update({ where: { id: raid.id }, data: { status: 'expired', endedAt: new Date() } });
-      return this.rotate();
+    const raid = await this.findActiveRaid();
+    if (raid) return raid;
+    // F-06: no hay raid activo válido (no existe o está caducado). Se rota de forma atómica.
+    return this.ensureActiveRaid();
+  }
+
+  /** Raid activo no caducado (el más reciente). */
+  private findActiveRaid() {
+    return this.prisma.raid.findFirst({
+      where: { status: 'active', endsAt: { gt: new Date() } },
+      orderBy: { startedAt: 'desc' },
+    });
+  }
+
+  /**
+   * F-06: crea el siguiente raid de forma ATÓMICA (lock corto `raid:rotate`) para que dos peticiones
+   * concurrentes no dejen dos raids activos. Si no se puede tomar el lock, se espera a que termine el
+   * proceso que lo tiene y se lee el resultado. Degradación: sin Redis (lock no disponible) se rota
+   * igualmente como último recurso; `settle`/`attack` ya están protegidos por guards atómicos.
+   */
+  private async ensureActiveRaid() {
+    const now = new Date();
+    const token = await this.cronLock.guard('raid:rotate', 5_000);
+    if (token) {
+      try {
+        // Expira lo caducado (idempotente) y relee bajo el lock: si ya hay uno, lo reutiliza.
+        await this.prisma.raid.updateMany({
+          where: { status: 'active', endsAt: { lte: now } },
+          data: { status: 'expired', endedAt: now },
+        });
+        const existing = await this.findActiveRaid();
+        if (existing) return existing;
+        return this.rotate();
+      } finally {
+        await this.cronLock.release('raid:rotate', token);
+      }
     }
-    return raid;
+    // Sin lock: otra petición está rotando. Espera a que termine y lee el resultado.
+    await new Promise((r) => setTimeout(r, 250));
+    const existing = await this.findActiveRaid();
+    if (existing) return existing;
+    // Último recurso (lo normal es no llegar aquí): rota igualmente.
+    await this.prisma.raid.updateMany({ where: { status: 'active', endsAt: { lte: now } }, data: { status: 'expired', endedAt: now } });
+    return this.rotate();
   }
 
   private buildBossFighter(raid: any): Fighter {

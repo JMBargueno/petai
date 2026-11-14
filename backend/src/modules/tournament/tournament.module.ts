@@ -4,9 +4,10 @@ import { TournamentService } from './tournament.service';
 import { BracketService } from './bracket.service';
 import { PetsModule } from '../pets/pets.module';
 import { GameDataModule } from '../game-data/game-data.module';
+import { BattlesModule } from '../battles/battles.module';
 
 @Module({
-  imports: [PetsModule, GameDataModule],
+  imports: [PetsModule, GameDataModule, BattlesModule],
   controllers: [TournamentController],
   providers: [TournamentService, BracketService],
 })
