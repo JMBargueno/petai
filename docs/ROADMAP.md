@@ -15,7 +15,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 4** | Peleas Asíncronas | ✅ Completada (falta fin de temporada) | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ✅ Android (salvo Play Billing/FCM) · ⏳ iOS pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
 | **Fase 6** | Pulido y Lanzamiento | 🚧 Hecho lo técnico; pendiente lo que depende de cuentas externas | Seguridad, balance, optimización, tiendas y despliegue |
-| **Fase 7** | Funcionalidades Expandidas | ✅ Completada | 33 nuevas features (hábito, meta, IA, comunidad y ecosistema) |
+| **Fase 7** | Funcionalidades Expandidas | 🚧 Oleada 1 completada; oleadas 2 y 3 en el backend, sin tests ni clientes | 33 nuevas features (hábito, meta, IA, comunidad y ecosistema) |
 
 ---
 
@@ -102,7 +102,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
   - [x] v1 «núcleo + chat»: registro/login (tokens cifrados con Android Keystore, refresh automático), eclosión, estado y cuidados de la mascota con sprites SVG compartidos, tienda, chat IA con streaming SSE y ajustes BYOK. Probado en emulador (API 37) contra el backend local (`10.0.2.2:3000`).
   - [x] v2: pestaña «Jugar» (Arena con combate asíncrono, repetición y clasificación; minijuegos Atrapa la comida, Parejas de memoria y Reflejos validados por el servidor), vinculación del escritorio con código de 6 dígitos (`/auth/device/*`), widget Glance 4×2 y avisos locales de cuidados con WorkManager (cada ~30 min, sin FCM).
   - [ ] Pendiente (requiere cuentas externas): Play Billing (Play Console + endpoint de verificación de compras en el backend) y push con FCM (proyecto de Firebase y `google-services.json`).
-  - Build: `cd mobile/android && ./gradlew assembleDebug`. En Windows con JDK 25 hace falta `-Djdk.net.unixdomain.tmpdir=C:/t` (ya en `gradle.properties`; exportarlo también en `JAVA_TOOL_OPTIONS` para el cliente de Gradle) y que exista `C:	`.
+  - Build: `cd mobile/android && ./gradlew assembleDebug`. En Windows con JDK 25 hace falta `-Djdk.net.unixdomain.tmpdir=C:/t` (ya en `gradle.properties`; exportarlo también en `JAVA_TOOL_OPTIONS` para el cliente de Gradle) y que exista `C:\\t`.
 - **iOS**: SwiftUI con Liquid Glass para iOS 27, Live Activities y StoreKit 2.
 - **Sincronización**: Código de vinculación de dispositivos para sincronizar escritorio y móviles.
 
@@ -120,6 +120,8 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 ## Fase 7 — Funcionalidades Expandidas (33 features)
 
 Implementación de 33 nuevas funcionalidades organizadas en tres oleadas. Cada feature tiene SDD completo (spec/plan/tasks en `.specify/memory/features/`) y specs de detalle en `docs/specs/`.
+
+> **Estado real de las oleadas 2 y 3** (ver [`informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md`](informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md), F-03 a F-10): están implementadas en el backend y migradas (`20261114120000_wave2_wave3`), pero la mayoría de sus módulos no tiene tests (excepciones: `cooking`, `modding`, `presence`, `sync` y `webhooks`, con tests unitarios), ningún cliente las consume y varias son prototipos (021 cuidado cooperativo, 023 spectator y 026 E2E); 013 (raid) y 014 (torneo) tienen además defectos de lógica pendientes. En las tablas, ⚠️ = backend implementado, sin tests de backend ni consumo desde los clientes. La oleada 1 tiene tests unitarios y e2e.
 
 ### Oleada 1 — Hábito e Infraestructura
 
@@ -139,32 +141,32 @@ Implementación de 33 nuevas funcionalidades organizadas en tres oleadas. Cada f
 
 | Feature | Módulo | Estado |
 |---|---|---|
-| 010 — Hábitat / Base | `backend/src/modules/habitat/` | ✅ |
-| 011 — Temporadas + Pase | `backend/src/modules/seasons/` | ✅ |
-| 012 — Breeding (Cruzamiento) | `backend/src/modules/breeding/` | ✅ |
-| 013 — Raid Boss | `backend/src/modules/raids/` | ✅ |
-| 014 — Torneo Knockout | `backend/src/modules/tournaments/` | ✅ |
-| 015 — Cocina / Menú | `backend/src/modules/cooking/` | ✅ |
-| 016 — Entrenamiento Elemental | `backend/src/modules/training/` | ✅ |
-| 017 — Genes y Temperamento | `backend/src/modules/genes/` | ✅ |
-| 018 — Aventura Narrativa IA | `backend/src/modules/adventure/` | ✅ |
+| 010 — Hábitat / Base | `backend/src/modules/habitat/` | ⚠️ |
+| 011 — Temporadas + Pase | `backend/src/modules/seasons/` | ⚠️ |
+| 012 — Breeding (Cruzamiento) | `backend/src/modules/breeding/` | ⚠️ |
+| 013 — Raid Boss | `backend/src/modules/raid/` | ⚠️ |
+| 014 — Torneo Knockout | `backend/src/modules/tournament/` | ⚠️ |
+| 015 — Cocina / Menú | `backend/src/modules/cooking/` | ⚠️ |
+| 016 — Entrenamiento Elemental | `backend/src/modules/training/` | ⚠️ |
+| 017 — Genes y Temperamento | `backend/src/modules/genes/` | ⚠️ |
+| 018 — Aventura Narrativa IA | `backend/src/modules/adventure/` | ⚠️ |
 
 ### Oleada 3 — Comunidad y Ecosistema
 
 | Feature | Módulo | Estado |
 |---|---|---|
-| 019 — Multi-Model AI Router | `backend/src/modules/ai-router/` | ✅ |
-| 020 — Voice AI (STT/TTS) | `backend/src/modules/voice/` | ✅ |
-| 021 — Multi-Device Presence | `backend/src/modules/presence/` | ✅ |
-| 022 — Offline-First CRDT | `backend/src/modules/sync/` | ✅ |
-| 023 — Combat Spectator | `backend/src/modules/spectator/` | ✅ |
-| 024 — Modding API + Workshop | `backend/src/modules/modding/` | ✅ |
-| 025 — Public API + Webhooks | `backend/src/modules/webhooks/` | ✅ |
-| 026 — Security Zero-Trust + E2E | `backend/src/modules/security/` | ✅ |
-| 027 — iOS + Skia Animation | `shared/assets/animation-specs.json` | ✅ |
-| 028 — Welcome Back | `backend/src/modules/reengagement/` | ✅ |
-| 029 — Pet Buddies | `backend/src/modules/buddies/` | ✅ |
-| 030 — Rituals | `backend/src/modules/rituals/` | ✅ |
-| 031 — Mood Theater | `backend/src/modules/mood-theater/` | ✅ |
-| 032 — Accessibility | `backend/src/modules/accessibility/` | ✅ |
-| 033 — Gifting & Care Packages | `backend/src/modules/gifting/` | ✅ |
+| 019 — Multi-Model AI Router | `backend/src/modules/ai-router/` | ⚠️ |
+| 020 — Voice AI (STT/TTS) | `backend/src/modules/voice/` | ⚠️ |
+| 021 — Multi-Device Presence | `backend/src/modules/presence/` | ⚠️ (cuidado cooperativo: prototipo) |
+| 022 — Offline-First CRDT | `backend/src/modules/sync/` | ⚠️ |
+| 023 — Combat Spectator | `backend/src/modules/spectator/` | ⚠️ (prototipo) |
+| 024 — Modding API + Workshop | `backend/src/modules/modding/` | ⚠️ |
+| 025 — Public API + Webhooks | `backend/src/modules/webhooks/` | ⚠️ |
+| 026 — Security Zero-Trust + E2E | `backend/src/modules/security/` | ⚠️ (E2E: prototipo) |
+| 027 — iOS + Skia Animation | `shared/assets/animation-specs.json` | ⚠️ (sin app iOS todavía) |
+| 028 — Welcome Back | `backend/src/modules/reengagement/` | ⚠️ |
+| 029 — Pet Buddies | `backend/src/modules/buddies/` | ⚠️ |
+| 030 — Rituals | `backend/src/modules/rituals/` | ⚠️ |
+| 031 — Mood Theater | `backend/src/modules/mood-theater/` | ⚠️ |
+| 032 — Accessibility | `backend/src/modules/accessibility/` | ⚠️ |
+| 033 — Gifting & Care Packages | `backend/src/modules/gifting/` | ⚠️ |

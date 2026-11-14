@@ -144,7 +144,7 @@ petai/
 
 ## Puesta en marcha (desarrollo)
 
-Requisitos: Node.js 24 LTS, pnpm, Docker y, para el escritorio, Rust y las dependencias de Tauri. Para Android hace falta Android Studio con un SDK reciente.
+Requisitos: Node.js 22 LTS (el `backend/Dockerfile` usa `node:22-slim` y la CI corre con Node 22), pnpm, Docker y, para el escritorio, Rust y las dependencias de Tauri. Para Android hace falta Android Studio con un SDK reciente.
 
 1. Instala las dependencias desde la raíz:
 
@@ -194,6 +194,6 @@ pnpm validate:data     # valida los datos de juego en shared/game-data
 
 Consulta [`docs/ROADMAP.md`](docs/ROADMAP.md) para ver el detalle de cada fase. Resumen:
 - Backend, escritorio y minijuegos, IA (salvo modo suscripción) y Arena: completados.
-- **33 funcionalidades expandidas (Fase 7)**: implementadas y con tests.
+- **33 funcionalidades expandidas (Fase 7)**: implementadas en el backend. Oleada 1: con tests unitarios y e2e. Oleadas 2 y 3 (010-033): la mayoría de los módulos sin tests (hay unitarios en `cooking`, `modding`, `presence`, `sync` y `webhooks`) y ningún cliente las consume; 021 (cuidado cooperativo), 023 (spectator) y 026 (E2E) son prototipos y 013 (raid) y 014 (torneo) tienen defectos de lógica pendientes. Ver [`docs/informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md`](docs/informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md), F-03 a F-10.
 - Android: funcional, pendientes Play Billing y FCM (requieren cuentas externas).
 - iOS y el despliegue público de las apps: pendientes.
