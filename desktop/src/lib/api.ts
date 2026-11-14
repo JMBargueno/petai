@@ -547,6 +547,20 @@ export const api = {
   async evolvePet(petId: string) {
     return minigameRequest<any>('POST', `/v1/pets/${petId}/evolve`);
   },
+
+  // ── Temporadas (oleada 3, F-10/F-11) ─────────────────────────────────────────
+  async getSeasonCurrent() {
+    return minigameRequest<SeasonCurrent>('GET', '/v1/seasons/current');
+  },
+  async getSeasonProgress() {
+    return minigameRequest<SeasonProgress>('GET', '/v1/seasons/progress');
+  },
+  async purchaseSeasonPass() {
+    return minigameRequest<{
+      message: string;
+      pass: { id: string; seasonId: string; price: number; purchasedAt: string };
+    }>('POST', '/v1/seasons/pass/purchase');
+  },
 };
 
 async function minigameRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -561,6 +575,42 @@ async function minigameRequest<T>(method: string, path: string, body?: unknown):
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.message || 'Error en la petición');
   return data as T;
+}
+
+// ── Temporadas (oleada 3) ─────────────────────────────────────────────────────
+export interface SeasonCurrent {
+  id: string;
+  name: string;
+  theme: string;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+  timeRemainingMs: number;
+  passPrice: number;
+  passCurrency: string;
+  maxTier: number;
+  xpPerTier: number;
+  upcoming: { id: string; name: string; theme: string; startTime: string } | null;
+}
+
+export interface SeasonTier {
+  tier: number;
+  freeRewards: { type: string; value: number | string }[];
+  premiumRewards?: { type: string; value: number | string }[];
+}
+
+export interface SeasonProgress {
+  seasonId: string;
+  seasonName?: string;
+  currentTier: number;
+  totalXp: number;
+  xpPerTier?: number;
+  maxTier: number;
+  xpToNextTier?: number;
+  hasPass: boolean;
+  unlockedTiers: SeasonTier[];
+  nextReward: SeasonTier | null;
+  seasonExpired?: boolean;
 }
 
 export interface CombatProfile {
