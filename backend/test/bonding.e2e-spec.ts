@@ -115,7 +115,10 @@ describe('Bonding Meter E2E (feature 006)', () => {
     const events = await prisma.bondingEvent.findMany({ where: { petId } });
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ delta: 0.5, reason: 'sleep', value: 0.5 });
-    expect(gateway.emitToUser).not.toHaveBeenCalled();
+    // El sleep también emite una notificación `interaction` (pet:slept → dispatcher), pero nunca un
+    // bonding:tier_up: 0.5 de vínculo sigue en el tier inicial, sin cruce de umbral.
+    const tierUps = (gateway.emitToUser as jest.Mock).mock.calls.filter(([, ev]) => ev === 'bonding:tier_up');
+    expect(tierUps).toHaveLength(0);
 
     const pet = await api().get(`/v1/pets/${petId}`).set(auth()).expect(200);
     expect(pet.body.bonding).toBe(0.5);
