@@ -139,6 +139,7 @@ petai/
 - [`docs/NUEVAS_FUNCIONALIDADES.md`](docs/NUEVAS_FUNCIONALIDADES.md): análisis y priorización de las 33 funcionalidades.
 - [`docs/specs/`](docs/specs/): especificaciones de detalle por feature (33 specs).
 - [`docs/DEPLOY.md`](docs/DEPLOY.md): despliegue del backend en producción.
+- [`docs/informes/`](docs/informes/): informes de auditoría y SDD de solución — [`AUDITORIA_SEGURIDAD.md`](docs/informes/AUDITORIA_SEGURIDAD.md), [`SDD_SEGURIDAD.md`](docs/informes/SDD_SEGURIDAD.md) y [`MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md`](docs/informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md).
 
 ## Puesta en marcha (desarrollo)
 
