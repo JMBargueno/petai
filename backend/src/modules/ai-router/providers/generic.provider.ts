@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LlmProvider, LlmRequest, LlmEvent, LlmProviderConfig } from '../llm-provider.interface';
 
@@ -22,7 +22,7 @@ export class GenericProvider implements LlmProvider {
 
   constructor(
     private readonly configService: ConfigService,
-    config?: LlmProviderConfig,
+    @Optional() config?: LlmProviderConfig,
   ) {
     this.baseUrl = config?.baseUrl ?? this.configService.get<string>('LLM_BASE_URL') ?? 'http://localhost:11434/v1';
     this.apiKey = config?.apiKey ?? this.configService.get<string>('LLM_API_KEY') ?? '';

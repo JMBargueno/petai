@@ -1,8 +1,9 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { LlmRequest, LlmEvent, LlmProvider } from './llm-provider.interface';
 import { FallbackService } from './fallback.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * Model Router Service — core routing logic.
@@ -31,7 +32,7 @@ export class ModelRouterService {
   constructor(
     private readonly configService: ConfigService,
     private readonly fallbackService: FallbackService,
-    @Inject('PRISMA') private readonly prisma: PrismaClient,
+    private readonly prisma: PrismaService,
   ) {}
 
   async *route(
