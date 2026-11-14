@@ -9,10 +9,14 @@ allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
   '@scarf/scarf': true
+  '@cloudflare/workerd-linux-64': true
+  '@cloudflare/workerd-macos-arm64': true
+  '@cloudflare/workerd-windows-64': true
   argon2: true
   esbuild: true
   prisma: true
   protobufjs: true
+  workerd: true
 
 overrides:
   deepmerge-ts: '>=8.0.0'  
