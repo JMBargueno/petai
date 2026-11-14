@@ -29,8 +29,8 @@ export class GameDataWatcherService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit() {
-    if (process.env.NODE_ENV === 'production') {
-      this.logger.warn('GameDataWatcher: desactivado en producción');
+    if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'test') {
+      this.logger.warn(`GameDataWatcher: desactivado en ${process.env.NODE_ENV}`);
       return;
     }
 
