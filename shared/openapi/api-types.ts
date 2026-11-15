@@ -174,6 +174,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/reset/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Solicitar un código de recuperación de contraseña por email (sin enumeración de cuentas) */
+        post: operations["AuthController_resetRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/reset/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirmar la recuperación: con el código cambia la contraseña, cierra las demás sesiones y emite una sesión nueva */
+        post: operations["AuthController_resetConfirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/device/start": {
         parameters: {
             query?: never;
@@ -2898,6 +2932,30 @@ export interface components {
             /** @description Contraseña nueva (mínimo 8 caracteres, distinta de la actual) */
             newPassword: string;
         };
+        ResetRequestDto: {
+            /**
+             * @description Correo de la cuenta
+             * @example jugador@petai.local
+             */
+            email: string;
+        };
+        ResetConfirmDto: {
+            /**
+             * @description Correo de la cuenta
+             * @example jugador@petai.local
+             */
+            email: string;
+            /**
+             * @description Código de 6 dígitos recibido por email
+             * @example 482913
+             */
+            code: string;
+            /**
+             * @description Contraseña nueva (mínimo 8 caracteres)
+             * @example NuevaContrasena123!
+             */
+            newPassword: string;
+        };
         AchievementRewardDto: {
             /**
              * @description Monedas de recompensa
@@ -3821,6 +3879,48 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ChangePasswordDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_resetRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_resetConfirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetConfirmDto"];
             };
         };
         responses: {

@@ -32,6 +32,22 @@ export class ChangePasswordDto {
   newPassword: string;
 }
 
+export class ResetRequestDto {
+  @ApiProperty({ example: 'jugador@petai.local', description: 'Correo de la cuenta' })
+  email: string;
+}
+
+export class ResetConfirmDto {
+  @ApiProperty({ example: 'jugador@petai.local', description: 'Correo de la cuenta' })
+  email: string;
+
+  @ApiProperty({ example: '482913', description: 'Código de 6 dígitos recibido por email' })
+  code: string;
+
+  @ApiProperty({ example: 'NuevaContrasena123!', description: 'Contraseña nueva (mínimo 8 caracteres)' })
+  newPassword: string;
+}
+
 export class AuthResponseDto {
   @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   accessToken: string;

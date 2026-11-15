@@ -52,6 +52,19 @@ export const changePasswordSchema = z.object({
     .max(128, 'La contraseña no puede superar los 128 caracteres'),
 });
 
+// Recuperación de contraseña: request solo pide el correo; confirm pide correo + código (6 dígitos)
+// + contraseña nueva (misma política de registro). El código se valida por formato, no por longitud.
+export const resetRequestSchema = z.object({ email });
+
+export const resetConfirmSchema = z.object({
+  email,
+  code: z
+    .string({ error: (issue) => (issue.input === undefined ? 'code es obligatorio' : 'code debe ser un texto') })
+    .trim()
+    .regex(/^\d{6}$/, 'El código debe tener 6 dígitos'),
+  newPassword: password,
+});
+
 /** Valida y devuelve los datos tipados; ante un error responde 400 con el primer motivo. */
 export function parseOrBadRequest<T extends z.ZodTypeAny>(schema: T, raw: unknown): z.infer<T> {
   const result = schema.safeParse(raw ?? {});

@@ -30,6 +30,7 @@ model User {
 
   refreshTokens  RefreshToken[]
   deviceLinks    DeviceLink[]
+  passwordResetTokens PasswordResetToken[]
   pets           Pet[]
   eggs           Egg[]
   inventory      InventoryItem[]
@@ -81,6 +82,21 @@ model DeviceLink {
   expiresAt   DateTime
   confirmedAt DateTime?
   createdAt   DateTime  @default(now())
+}
+
+// Recuperación de contraseña: código de 6 dígitos de un solo uso, atado a un usuario por email.
+// `code` es la PK (espacio 10^6) y `consumedAt` marca el uso; `expiresAt` lo caduca (15 min).
+model PasswordResetToken {
+  code        String    @id
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email       String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  requestedIp String?
+  createdAt   DateTime  @default(now())
+
+  @@index([email])
 }
 
 model Species {
