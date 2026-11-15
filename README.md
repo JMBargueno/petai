@@ -138,6 +138,7 @@ petai/
 - [`docs/API.md`](docs/API.md): referencia de la API.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): estado de cada fase (incluye Fase 7 con las 33 features).
 - [`docs/PANTALLAS.md`](docs/PANTALLAS.md): pantallas y opciones que debe tener cada app (móvil y ordenador), con su estado actual.
+- [`docs/GUIA_ARTISTICA.md`](docs/GUIA_ARTISTICA.md): guía artística común de la web y las apps (paleta, tipografía, iconos, formas, sprites y movimiento).
 - [`docs/NUEVAS_FUNCIONALIDADES.md`](docs/NUEVAS_FUNCIONALIDADES.md): análisis y priorización de las 33 funcionalidades.
 - [`docs/specs/`](docs/specs/): especificaciones de detalle por feature (33 specs).
 - [`docs/DEPLOY.md`](docs/DEPLOY.md): despliegue del backend en producción.

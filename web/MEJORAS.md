@@ -145,7 +145,7 @@ Esfuerzo S · Impacto bajo, pero abre el juego a dos públicos que hoy no se sie
 
 ## 2. Estética
 
-> **Actualizado (noviembre de 2026):** el sistema v2 cambia las reglas. Se permiten profundidad (sombras tintadas `--shadow-*` y la sombra dura de pegatina `--shadow-pop`) y degradados de marca (`--grad-hero`, `--grad-ether`, `--grad-accent`). El contorno de 1 px se mantiene como firma, con el color de `--line`. La acción principal usa el degradado violeta→azul. Hay modo oscuro con `prefers-color-scheme`. Los tokens están en [`src/styles/tokens.css`](src/styles/tokens.css).
+> **Actualizado (noviembre de 2026):** el sistema v2 cambia las reglas. Se permiten profundidad (sombras tintadas `--shadow-*` y la sombra dura de pegatina `--shadow-pop`) y degradados de marca (`--grad-hero`, `--grad-ether`, `--grad-accent`). El contorno de 1 px se mantiene como firma, con el color de `--line`. La acción principal usa el degradado violeta→azul. Hay modo oscuro con `prefers-color-scheme`. Los tokens están en [`src/styles/tokens.css`](src/styles/tokens.css). La guía artística completa, común a la web y las apps, está en [`docs/GUIA_ARTISTICA.md`](../docs/GUIA_ARTISTICA.md).
 
 ### 2.1 Enseñar el producto real
 
