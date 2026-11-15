@@ -9,6 +9,9 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -39,8 +42,11 @@ import com.petai.app.ui.play.PlayScreen
 import com.petai.app.ui.play.PlayViewModel
 import com.petai.app.ui.play.PlayViewModelFactory
 import com.petai.app.ui.shop.ShopScreen
+import com.petai.app.ui.missions.MissionsScreen
+import com.petai.app.ui.chests.ChestsScreen
+import com.petai.app.ui.bonding.BondingScreen
 
-private enum class Tab(val label: String) { Pet("Mascota"), Chat("Chat"), Play("Jugar"), Shop("Tienda"), Account("Cuenta") }
+private enum class Tab(val label: String) { Pet("Mascota"), Chat("Chat"), Play("Jugar"), Missions("Misiones"), Chests("Cofres"), Bonding("Vínculo"), Shop("Tienda"), Account("Cuenta") }
 
 @Composable
 fun AppRoot(vm: AppViewModel) {
@@ -76,6 +82,9 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                                     Tab.Pet -> Icons.Default.Pets
                                     Tab.Chat -> Icons.Default.Chat
                                     Tab.Play -> Icons.Default.SportsEsports
+                                    Tab.Missions -> Icons.Default.EmojiEvents
+                                    Tab.Chests -> Icons.Default.Inventory2
+                                    Tab.Bonding -> Icons.Default.Favorite
                                     Tab.Shop -> Icons.Default.ShoppingBag
                                     Tab.Account -> Icons.Default.AccountCircle
                                 },
@@ -127,6 +136,16 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                     }
                 }
                 Tab.Shop -> ShopScreen(state, onRefresh = vm::refreshAll, onBuy = vm::buy)
+                Tab.Missions -> MissionsScreen(app.service, onChanged = { vm.refreshAll() })
+                Tab.Chests -> ChestsScreen(app.service, onChanged = { vm.refreshAll() })
+                Tab.Bonding -> {
+                    val pet = state.pet
+                    if (pet == null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Eclosiona primero a tu mascota 🥚") }
+                    } else {
+                        BondingScreen(app.service, pet.id)
+                    }
+                }
                 Tab.Account -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice)
             }
         }
