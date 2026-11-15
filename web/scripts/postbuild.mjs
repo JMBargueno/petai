@@ -53,14 +53,17 @@ writeFileSync(
   `User-agent: *\nDisallow: /es/admin\nDisallow: /en/admin\n\nSitemap: ${SITE_URL}/sitemap.xml\n`,
 );
 
-const alternates = LOCALES.map(
-  (l) => `    <xhtml:link rel="alternate" hreflang="${l}" href="${SITE_URL}/${l}/" />`,
-).join('\n');
+const SITEMAP_ROUTES = ['', 'lore'];
+const routeUrl = (l, r) => (r ? `${SITE_URL}/${l}/${r}` : `${SITE_URL}/${l}/`);
+const sitemapEntry = (l, r) => {
+  const alts = LOCALES.map((x) => `    <xhtml:link rel="alternate" hreflang="${x}" href="${routeUrl(x, r)}" />`).join('\n');
+  return `  <url>\n    <loc>${routeUrl(l, r)}</loc>\n${alts}\n  </url>`;
+};
 writeFileSync(
   join(out, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${LOCALES.map((l) => `  <url>\n    <loc>${SITE_URL}/${l}/</loc>\n${alternates}\n  </url>`).join('\n')}
+${LOCALES.flatMap((l) => SITEMAP_ROUTES.map((r) => sitemapEntry(l, r))).join('\n')}
 </urlset>
 `,
 );
