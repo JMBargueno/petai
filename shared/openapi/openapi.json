@@ -2559,6 +2559,29 @@
         ]
       }
     },
+    "/v1/habitat/catalog": {
+      "get": {
+        "operationId": "HabitatController_getCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Catálogo completo"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
     "/v1/habitat/buffs": {
       "get": {
         "operationId": "HabitatController_getActiveBuffs",
@@ -4830,6 +4853,120 @@
           }
         ],
         "summary": "Get visit history for my pets",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/friends": {
+      "get": {
+        "operationId": "CoopFriendsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mis relaciones de amistad (amigos aceptados + peticiones)",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      },
+      "post": {
+        "operationId": "CoopFriendsController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "targetUserId"
+                ],
+                "properties": {
+                  "targetUserId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar una petición de amistad",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/friends/{id}/accept": {
+      "post": {
+        "operationId": "CoopFriendsController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aceptar una petición de amistad recibida",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/friends/{id}/decline": {
+      "post": {
+        "operationId": "CoopFriendsController_decline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rechazar una petición de amistad recibida",
         "tags": [
           "Presence & Co-op"
         ]

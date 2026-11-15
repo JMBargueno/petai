@@ -240,3 +240,193 @@ data class BondingDetail(
     val decayInfo: BondingDecayInfo = BondingDecayInfo(),
     val unlocks: BondingUnlocks = BondingUnlocks(),
 )
+
+// ---------- Hábitat (feature 019) ----------
+
+@Serializable
+data class HabitatItem(val id: String = "", val furnitureId: String = "", val x: Int = 0, val y: Int = 0)
+
+@Serializable
+data class HabitatRoom(
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    val gridWidth: Int = 0,
+    val gridHeight: Int = 0,
+    val unlocked: Boolean = false,
+    val active: Boolean = false,
+    val items: List<HabitatItem> = emptyList(),
+)
+
+@Serializable
+data class HabitatState(val petId: String = "", val habitatSeed: Int = 0, val rooms: List<HabitatRoom> = emptyList())
+
+@Serializable
+data class HabitatCatalogRoom(
+    val id: String = "",
+    val name: String = "",
+    val gridWidth: Int = 0,
+    val gridHeight: Int = 0,
+    val unlockStage: String = "",
+    val description: String = "",
+)
+
+@Serializable
+data class HabitatFurniture(
+    val id: String = "",
+    val name: String = "",
+    val room: String = "",
+    val price: Int = 0,
+    val currency: String = "coins",
+    val buffs: Map<String, Double> = emptyMap(),
+    val description: String = "",
+)
+
+@Serializable
+data class HabitatCatalog(
+    val rooms: List<HabitatCatalogRoom> = emptyList(),
+    val furniture: List<HabitatFurniture> = emptyList(),
+    val buffCaps: Map<String, Double> = emptyMap(),
+)
+
+@Serializable
+data class HabitatBuffs(val petId: String = "", val activeBuffs: Map<String, Double> = emptyMap(), val itemCount: Int = 0)
+
+// ── Raid Boss (Paso 5, feature 013) ───────────────────────────────────────────
+@Serializable
+data class RaidContribution(val damageDealt: Long = 0, val attacks: Int = 0, val percentage: Double = 0.0)
+
+@Serializable
+data class RaidCurrent(
+    val id: String = "",
+    val theme: String = "",
+    val element: String = "",
+    val level: Int = 0,
+    val hpGlobal: Long = 0,
+    val hpRemaining: Long = 0,
+    val hpPercent: Double = 0.0,
+    val status: String = "",
+    val startedAt: String = "",
+    val endsAt: String = "",
+    val participantCount: Int = 0,
+    val myContribution: RaidContribution? = null,
+)
+
+@Serializable
+data class RaidAttackResponse(
+    val damage: Long = 0,
+    val seed: Int = 0,
+    val rounds: Int = 0,
+    val result: String = "",
+    val hpRemaining: Long = 0,
+    val hpPercent: Double = 0.0,
+    val settled: Boolean = false,
+)
+
+@Serializable
+data class RaidLeaderboardEntry(
+    val rank: Int = 0,
+    val userId: String = "",
+    val displayName: String = "",
+    val petId: String = "",
+    val petName: String = "",
+    val petLevel: Int = 0,
+    val petElement: String = "",
+    val damageDealt: Long = 0,
+    val percentage: Double = 0.0,
+    val attacks: Int = 0,
+    val mine: Boolean = false,
+)
+
+@Serializable
+data class RaidLeaderboard(
+    val raidId: String = "",
+    val totalDamage: Long = 0,
+    val hpRemaining: Long = 0,
+    val entries: List<RaidLeaderboardEntry> = emptyList(),
+)
+
+@Serializable
+data class RaidHistoryEntry(
+    val id: String = "",
+    val theme: String = "",
+    val element: String = "",
+    val hpGlobal: Long = 0,
+    val startedAt: String = "",
+    val endedAt: String? = null,
+    val status: String = "",
+)
+
+// ── Torneo Knockout (Paso 5, feature 014) ──────────────────────────────────────
+@Serializable
+data class TournamentCurrent(
+    val id: String = "",
+    val status: String = "",
+    val entryFee: Int = 0,
+    val totalPrizePool: Int = 0,
+    val entryDeadline: String = "",
+    val startedAt: String? = null,
+    val endsAt: String = "",
+    val entryCount: Int = 0,
+    val bracketSize: Int = 0,
+    val hasEntered: Boolean = false,
+    val myPlacement: Int? = null,
+)
+
+@Serializable
+data class TournamentEnterResponse(
+    val tournamentId: String = "",
+    val petId: String = "",
+    val elo: Int = 0,
+    val feePaid: Int = 0,
+)
+
+@Serializable
+data class TournamentBracketParticipant(
+    val name: String = "",
+    val elo: Int = 0,
+    val element: String = "",
+)
+
+@Serializable
+data class TournamentBracketMatch(
+    val id: String = "",
+    val slot: Int = 0,
+    val status: String = "",
+    val winnerId: String? = null,
+    val petA: TournamentBracketParticipant? = null,
+    val petB: TournamentBracketParticipant? = null,
+)
+
+@Serializable
+data class TournamentBracket(
+    val rounds: Map<String, List<TournamentBracketMatch>> = emptyMap(),
+)
+
+@Serializable
+data class TournamentStandingsEntry(
+    val rank: Int = 0,
+    val userId: String = "",
+    val petId: String = "",
+    val petName: String = "",
+    val elo: Int = 0,
+    val placement: Int? = null,
+    val mine: Boolean = false,
+)
+
+@Serializable
+data class TournamentStandingsMe(
+    val rank: Int = 0,
+    val placement: Int? = null,
+)
+
+@Serializable
+data class TournamentStandings(
+    val tournamentId: String? = null,
+    val status: String? = null,
+    val total: Int = 0,
+    val limit: Int = 0,
+    val offset: Int = 0,
+    val entries: List<TournamentStandingsEntry> = emptyList(),
+    val me: TournamentStandingsMe? = null,
+)

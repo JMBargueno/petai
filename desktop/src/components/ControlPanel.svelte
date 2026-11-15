@@ -9,6 +9,9 @@
   import MissionsTab from './MissionsTab.svelte';
   import ChestsTab from './ChestsTab.svelte';
   import BondingTab from './BondingTab.svelte';
+  import HabitatTab from './HabitatTab.svelte';
+import RaidTab from './RaidTab.svelte';
+import TournamentTab from './TournamentTab.svelte';
 
   export let user: any = null;
   export let pet: any = null;
@@ -57,7 +60,7 @@
 
   const dispatch = createEventDispatcher();
 
-  let activeTab: 'pet' | 'hatch' | 'games' | 'arena' | 'seasons' | 'missions' | 'chests' | 'bonding' | 'ai' | 'shop' | 'account' = 'pet';
+  let activeTab: 'pet' | 'hatch' | 'games' | 'arena' | 'seasons' | 'missions' | 'chests' | 'bonding' | 'habitat' | 'raid' | 'tournament' | 'ai' | 'shop' | 'account' = 'pet';
 
   // Auth inputs
   let isLoginMode = true;
@@ -242,6 +245,9 @@
         <button class:active={activeTab === 'missions'} on:click={() => (activeTab = 'missions')}>Misiones</button>
         <button class:active={activeTab === 'chests'} on:click={() => (activeTab = 'chests')}>Cofres</button>
         <button class:active={activeTab === 'bonding'} on:click={() => (activeTab = 'bonding')}>Vínculo</button>
+<button class:active={activeTab === 'habitat'} on:click={() => (activeTab = 'habitat')}>Hábitat</button>
+        <button class:active={activeTab === 'raid'} on:click={() => (activeTab = 'raid')}>Raid</button>
+        <button class:active={activeTab === 'tournament'} on:click={() => (activeTab = 'tournament')}>Torneo</button>
         <button class:active={activeTab === 'ai'} on:click={() => (activeTab = 'ai')}>IA</button>
         <button class:active={activeTab === 'shop'} on:click={() => (activeTab = 'shop')}>Tienda</button>
         <button class:active={activeTab === 'account'} on:click={() => (activeTab = 'account')}>Cuenta</button>
@@ -401,6 +407,18 @@
         <!-- Pestaña: Vínculo (Paso 3, feature 006) -->
         {:else if activeTab === 'bonding'}
           <BondingTab pet={pet} />
+
+        <!-- Pestaña: Hábitat (feature 019) -->
+        {:else if activeTab === 'habitat'}
+          <HabitatTab {pet} {user} on:refreshUser />
+
+        <!-- Pestaña: Raid Boss (feature 013) -->
+        {:else if activeTab === 'raid'}
+          <RaidTab {pet} on:refreshPet on:refreshUser />
+
+        <!-- Pestaña: Torneo Knockout (feature 014) -->
+        {:else if activeTab === 'tournament'}
+          <TournamentTab {pet} on:refreshUser />
 
         <!-- Pestaña: IA (ajustes BYOK y chat) -->
         {:else if activeTab === 'ai'}

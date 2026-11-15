@@ -139,4 +139,35 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     // ---------- Vínculo (Paso 3, feature 006) ----------
 
     suspend fun bonding(petId: String): BondingDetail = api.request("GET", "/pets/$petId/bonding?limit=20")
+
+    // ---------- Hábitat (feature 019) ----------
+
+    suspend fun habitatCatalog(): HabitatCatalog = api.request("GET", "/habitat/catalog")
+    suspend fun habitat(): HabitatState = api.request("GET", "/habitat")
+    suspend fun habitatBuffs(): HabitatBuffs = api.request("GET", "/habitat/buffs")
+
+    suspend fun placeHabitatFurniture(furnitureId: String) {
+        api.send("POST", "/habitat/furniture/$furnitureId/place")
+    }
+
+    suspend fun removeHabitatFurniture(furnitureId: String) {
+        api.send("DELETE", "/habitat/furniture/$furnitureId")
+    }
+
+    // ── Raid Boss (Paso 5, feature 013) ─────────────────────────────────────────
+    suspend fun raidCurrent(): RaidCurrent = api.request("GET", "/raid/current")
+    suspend fun raidAttack(petId: String): RaidAttackResponse =
+        api.request("POST", "/raid/attack", obj("petId" to petId))
+    suspend fun raidLeaderboard(limit: Int = 100): RaidLeaderboard =
+        api.request("GET", "/raid/leaderboard?limit=$limit")
+    suspend fun raidHistory(limit: Int = 10): List<RaidHistoryEntry> =
+        api.json.decodeFromString(ListSerializer(RaidHistoryEntry.serializer()), api.send("GET", "/raid/history?limit=$limit"))
+
+    // ── Torneo Knockout (Paso 5, feature 014) ────────────────────────────────────
+    suspend fun tournamentCurrent(): TournamentCurrent = api.request("GET", "/tournament/current")
+    suspend fun tournamentEnter(petId: String): TournamentEnterResponse =
+        api.request("POST", "/tournament/enter", obj("petId" to petId))
+    suspend fun tournamentBracket(): TournamentBracket = api.request("GET", "/tournament/bracket")
+    suspend fun tournamentStandings(limit: Int = 50): TournamentStandings =
+        api.request("GET", "/tournament/standings?limit=$limit")
 }

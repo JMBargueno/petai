@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { RedisService } from '../../redis/redis.service';
 import { WeatherService } from './weather.service';
 import { ActivityTrackerService, ActivityHeartbeatInput } from './activity-tracker.service';
 import { FestivalService } from './festival.service';
@@ -22,6 +23,9 @@ interface LastEnv {
   festivalId?: string | null;
 }
 
+/** Caducidad del estado ambiental en Redis (R-02): 24 h, suficiente para cubrir el ciclo timeOfDay. */
+const LAST_ENV_TTL_S = 24 * 60 * 60;
+
 /**
  * Orquestador del estado ambiental: compone `{ timeOfDay, weather, activity, festival }` a partir de
  * los servicios (hora, clima, actividad, festividad) y emite `environmental:changed` cuando cambia una
@@ -35,9 +39,35 @@ export class EnvironmentalService {
     private readonly activity: ActivityTrackerService,
     private readonly festival: FestivalService,
     private readonly realtime: RealtimeGateway,
+    private readonly redis: RedisService,
   ) {}
 
-  private readonly lastEnv = new Map<string, LastEnv>();
+  /**
+   * Estado ambiental anterior por usuario, en Redis con caducidad (R-02): compartido entre
+   * réplicas (la transición se detecta aunque la petición caiga en otra réplica) y acotado en
+   * memoria (TTL → no crece sin límite como el Map en memoria de antes). Si Redis no responde,
+   * `loadLastEnv` devuelve null y `saveLastEnv` es no-op: se pierde la detección de transición de
+   * ese ciclo (no crítico: son avisos en vivo, no estado de juego).
+   */
+  private envKey(userId: string): string {
+    return this.redis.key(`env:last:${userId}`);
+  }
+
+  private async loadLastEnv(userId: string): Promise<LastEnv | null> {
+    return this.redis.run(async (r) => {
+      const raw = await r.get(this.envKey(userId));
+      if (raw === null || raw === undefined) return null;
+      try {
+        return JSON.parse(raw) as LastEnv;
+      } catch {
+        return null;
+      }
+    }, 'env.load');
+  }
+
+  private async saveLastEnv(userId: string, env: LastEnv): Promise<void> {
+    await this.redis.run((r) => r.set(this.envKey(userId), JSON.stringify(env), 'EX', LAST_ENV_TTL_S), 'env.save');
+  }
 
   /** Compone el estado ambiental del usuario y avisa por WS de las transiciones relevantes. */
   async getStatus(userId: string): Promise<EnvironmentalStatus> {
@@ -57,7 +87,7 @@ export class EnvironmentalService {
     const festival = this.festival.getActive(day, null);
 
     const status: EnvironmentalStatus = { timeOfDay: tod, weather, activity, festival };
-    this.emitTransitions(userId, status);
+    await this.emitTransitions(userId, status);
     return status;
   }
 
@@ -65,13 +95,13 @@ export class EnvironmentalService {
   async recordActivity(userId: string, input: ActivityHeartbeatInput): Promise<{ ok: true }> {
     const { transitionedToActive } = await this.activity.recordHeartbeat(userId, input);
     if (transitionedToActive) {
-      const prev = this.lastEnv.get(userId);
+      const prev = await this.loadLastEnv(userId);
       if (prev && prev.mode === 'solo') {
         this.realtime.emitToUser(userId, 'environmental:changed', {
           type: 'activity',
           data: { mode: 'active' as ActivityMode },
         });
-        this.lastEnv.set(userId, { ...prev, mode: 'active' });
+        await this.saveLastEnv(userId, { ...prev, mode: 'active' });
       }
     }
     return { ok: true };
@@ -89,8 +119,8 @@ export class EnvironmentalService {
   }
 
   /** Emite el WS solo si alguna condición relevante cambió respecto al último estado recordado. */
-  private emitTransitions(userId: string, status: EnvironmentalStatus) {
-    const prev = this.lastEnv.get(userId);
+  private async emitTransitions(userId: string, status: EnvironmentalStatus) {
+    const prev = await this.loadLastEnv(userId);
     const festivalId = status.festival ? status.festival.id : null;
 
     if (prev) {
@@ -124,7 +154,7 @@ export class EnvironmentalService {
       }
     }
 
-    this.lastEnv.set(userId, {
+    await this.saveLastEnv(userId, {
       timeOfDay: status.timeOfDay,
       condition: status.weather.condition,
       mode: status.activity.mode,

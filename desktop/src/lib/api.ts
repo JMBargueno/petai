@@ -591,6 +591,58 @@ export const api = {
   async getBonding(petId: string) {
     return minigameRequest<BondingDetail>('GET', `/v1/pets/${petId}/bonding?limit=20`);
   },
+
+  // ── Raid Boss (Paso 5, feature 013) ──────────────────────────────────────────
+  async getRaidCurrent() {
+    return minigameRequest<RaidCurrent>('GET', '/v1/raid/current');
+  },
+  async raidAttack(petId: string) {
+    return minigameRequest<RaidAttackResponse>('POST', '/v1/raid/attack', { petId });
+  },
+  async getRaidLeaderboard(limit = 100) {
+    return minigameRequest<RaidLeaderboard>('GET', `/v1/raid/leaderboard?limit=${limit}`);
+  },
+  async getRaidHistory(limit = 10) {
+    return minigameRequest<RaidHistoryEntry[]>('GET', `/v1/raid/history?limit=${limit}`);
+  },
+
+  // ── Torneo Knockout (Paso 5, feature 014) ─────────────────────────────────────
+  async getTournamentCurrent() {
+    return minigameRequest<TournamentCurrent>('GET', '/v1/tournament/current');
+  },
+  async tournamentEnter(petId: string) {
+    return minigameRequest<TournamentEnterResponse>('POST', '/v1/tournament/enter', { petId });
+  },
+  async getTournamentBracket() {
+    return minigameRequest<TournamentBracket>('GET', '/v1/tournament/bracket');
+  },
+  async getTournamentStandings(limit = 50) {
+    return minigameRequest<TournamentStandings>('GET', `/v1/tournament/standings?limit=${limit}`);
+  },
+
+  // Hábitat (feature 019)
+  async getHabitat() {
+    return minigameRequest<HabitatState>('GET', '/v1/habitat');
+  },
+
+  async getHabitatCatalog() {
+    return minigameRequest<HabitatCatalog>('GET', '/v1/habitat/catalog');
+  },
+
+  async placeHabitatFurniture(furnitureId: string) {
+    return minigameRequest<{ message: string; furnitureId: string; room: string }>(
+      'POST',
+      `/v1/habitat/furniture/${furnitureId}/place`,
+    );
+  },
+
+  async removeHabitatFurniture(furnitureId: string) {
+    return minigameRequest<{ message: string; furnitureId: string }>('DELETE', `/v1/habitat/furniture/${furnitureId}`);
+  },
+
+  async getHabitatBuffs() {
+    return minigameRequest<HabitatBuffs>('GET', '/v1/habitat/buffs');
+  },
 };
 
 async function minigameRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -825,4 +877,186 @@ export interface BondingDetail {
   history: BondingHistory;
   decayInfo: BondingDecayInfo;
   unlocks: BondingUnlocks;
+}
+
+// ── Hábitat (feature 019) ───────────────────────────────────────────────────
+export interface HabitatCatalogRoom {
+  id: string;
+  name: string;
+  gridWidth: number;
+  gridHeight: number;
+  unlockStage: string;
+  description: string;
+}
+
+export interface HabitatFurniture {
+  id: string;
+  name: string;
+  room: string;
+  price: number;
+  currency: 'coins' | 'gems';
+  buffs: Record<string, number>;
+  description: string;
+}
+
+export interface HabitatCatalog {
+  rooms: HabitatCatalogRoom[];
+  furniture: HabitatFurniture[];
+  buffCaps: Record<string, number>;
+}
+
+export interface HabitatRoomItem {
+  id: string;
+  furnitureId: string;
+  x: number;
+  y: number;
+}
+
+export interface HabitatRoom {
+  id: string;
+  name: string;
+  description: string;
+  gridWidth: number;
+  gridHeight: number;
+  unlocked: boolean;
+  active: boolean;
+  items: HabitatRoomItem[];
+}
+
+export interface HabitatState {
+  petId: string;
+  habitatSeed: number;
+  rooms: HabitatRoom[];
+}
+
+export interface HabitatBuffs {
+  petId: string;
+  activeBuffs: Record<string, number>;
+  itemCount: number;
+}
+
+// ── Raid Boss (Paso 5, feature 013) ──────────────────────────────────────────
+export interface RaidContribution {
+  damageDealt: number;
+  attacks: number;
+  percentage: number;
+}
+
+export interface RaidCurrent {
+  id: string;
+  theme: string;
+  element: string;
+  level: number;
+  hpGlobal: number;
+  hpRemaining: number;
+  hpPercent: number;
+  status: string;
+  startedAt: string;
+  endsAt: string;
+  participantCount: number;
+  myContribution: RaidContribution | null;
+}
+
+export interface RaidAttackResponse {
+  damage: number;
+  seed: number;
+  rounds: number;
+  result: 'pet won' | 'boss won' | 'draw';
+  hpRemaining: number;
+  hpPercent: number;
+  settled: boolean;
+  replay: unknown;
+}
+
+export interface RaidLeaderboardEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  petId: string;
+  petName: string;
+  petLevel: number;
+  petElement: string;
+  damageDealt: number;
+  percentage: number;
+  attacks: number;
+  mine: boolean;
+}
+
+export interface RaidLeaderboard {
+  raidId: string;
+  totalDamage: number;
+  hpRemaining: number;
+  entries: RaidLeaderboardEntry[];
+}
+
+export interface RaidHistoryEntry {
+  id: string;
+  theme: string;
+  element: string;
+  hpGlobal: number;
+  startedAt: string;
+  endedAt: string | null;
+  status: string;
+}
+
+// ── Torneo Knockout (Paso 5, feature 014) ─────────────────────────────────────
+export interface TournamentCurrent {
+  id: string;
+  status: 'entry' | 'bracket' | 'active' | 'finished';
+  entryFee: number;
+  totalPrizePool: number;
+  entryDeadline: string;
+  startedAt: string | null;
+  endsAt: string;
+  entryCount: number;
+  bracketSize: number;
+  hasEntered: boolean;
+  myPlacement: number | null;
+}
+
+export interface TournamentEnterResponse {
+  tournamentId: string;
+  petId: string;
+  elo: number;
+  feePaid: number;
+}
+
+export interface TournamentBracketParticipant {
+  name: string;
+  elo: number;
+  element: string;
+}
+
+export interface TournamentBracketMatch {
+  id: string;
+  slot: number;
+  status: string;
+  winnerId: string | null;
+  petA: TournamentBracketParticipant | null;
+  petB: TournamentBracketParticipant | null;
+}
+
+export interface TournamentBracket {
+  rounds: Record<string, TournamentBracketMatch[]>;
+  entries: unknown[];
+}
+
+export interface TournamentStandingsEntry {
+  rank: number;
+  userId: string;
+  petId: string;
+  petName: string;
+  elo: number;
+  placement: number | null;
+  mine: boolean;
+}
+
+export interface TournamentStandings {
+  tournamentId: string | null;
+  status: string | null;
+  total: number;
+  limit: number;
+  offset: number;
+  entries: TournamentStandingsEntry[];
+  me: { rank: number; placement: number | null } | null;
 }

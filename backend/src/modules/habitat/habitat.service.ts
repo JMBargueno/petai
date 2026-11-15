@@ -2,11 +2,13 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
+import { GameDataService } from '../game-data/game-data.service';
 
-interface RoomConfig {
+export interface RoomConfig {
   id: string;
   name: string;
   gridWidth: number;
@@ -15,7 +17,7 @@ interface RoomConfig {
   description: string;
 }
 
-interface FurnitureConfig {
+export interface FurnitureConfig {
   id: string;
   name: string;
   room: string;
@@ -25,7 +27,7 @@ interface FurnitureConfig {
   description: string;
 }
 
-interface HabitatData {
+export interface HabitatData {
   rooms: RoomConfig[];
   furniture: FurnitureConfig[];
   buffCaps: Record<string, number>;
@@ -33,10 +35,26 @@ interface HabitatData {
 
 @Injectable()
 export class HabitatService {
-  private habitatData: HabitatData;
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly wallet: WalletService,
+    private readonly gameData: GameDataService,
+  ) {}
 
-  constructor(private readonly prisma: PrismaService, private readonly wallet: WalletService) {
-    this.habitatData = require('../../../../shared/game-data/habitats.json');
+  /**
+   * C-03: el game-data de hábitat se lee de `GameDataService` (snapshot validado con zod y
+   * con hot-reload) en lugar de un `require` directo del JSON en el constructor.
+   */
+  private data(): HabitatData {
+    const data = this.gameData.getHabitats();
+    if (!data) throw new InternalServerErrorException('Game-data de hábitat no cargado');
+    return data as HabitatData;
+  }
+
+  /** Catálogo del hábitat (salas, muebles y topes de buffs) para la interfaz de los clientes. */
+  getCatalog() {
+    const { rooms, furniture, buffCaps } = this.data();
+    return { rooms, furniture, buffCaps };
   }
 
   async getHabitat(userId: string) {
@@ -66,10 +84,10 @@ export class HabitatService {
     const pet = await this.prisma.pet.findFirst({ where: { userId } });
     if (!pet) throw new NotFoundException('No pet found for this user');
 
-    const furniture = this.habitatData.furniture.find((f) => f.id === furnitureId);
+    const furniture = this.data().furniture.find((f) => f.id === furnitureId);
     if (!furniture) throw new NotFoundException('Furniture not found');
 
-    const room = this.habitatData.rooms.find((r) => r.id === furniture.room);
+    const room = this.data().rooms.find((r) => r.id === furniture.room);
     if (!room) throw new BadRequestException('Invalid room for furniture');
 
     const stageOrder = ['baby', 'juvenile', 'adult', 'final'];
@@ -122,9 +140,10 @@ export class HabitatService {
 
     const items = await this.prisma.habitatItem.findMany({ where: { petId: pet.id } });
     const aggregated: Record<string, number> = {};
+    const buffCaps = this.data().buffCaps ?? {};
 
     for (const item of items) {
-      const furn = this.habitatData.furniture.find((f) => f.id === item.furnitureId);
+      const furn = this.data().furniture.find((f) => f.id === item.furnitureId);
       if (furn?.buffs) {
         for (const [k, v] of Object.entries(furn.buffs)) {
           aggregated[k] = (aggregated[k] || 0) + v;
@@ -132,10 +151,12 @@ export class HabitatService {
       }
     }
 
+    // Fix: las claves de `buffCaps` llevan el sufijo `_max` (p. ej. `hygiene_decay_reduction_max`);
+    // antes la lookup usaba la clave cruda y el tope NUNCA se aplicaba.
     const capped: Record<string, number> = {};
     for (const [k, v] of Object.entries(aggregated)) {
-      const cap = this.habitatData.buffCaps[k];
-      capped[k] = cap ? Math.min(v, cap) : v;
+      const cap = buffCaps[k] ?? buffCaps[`${k}_max`];
+      capped[k] = typeof cap === 'number' ? Math.min(v, cap) : v;
     }
 
     return { petId: pet.id, activeBuffs: capped, itemCount: items.length };
@@ -147,7 +168,7 @@ export class HabitatService {
     const habitat = await this.prisma.habitat.findUnique({ where: { petId } });
     if (!habitat) return;
 
-    const newlyUnlocked = this.habitatData.rooms
+    const newlyUnlocked = this.data().rooms
       .filter(
         (r) =>
           stageOrder.indexOf(r.unlockStage) <= newStageIdx &&
@@ -166,7 +187,7 @@ export class HabitatService {
   private async initializeHabitat(petId: string, stage: string) {
     const stageOrder = ['baby', 'juvenile', 'adult', 'final'];
     const stageIdx = stageOrder.indexOf(stage);
-    const unlockedRooms = this.habitatData.rooms
+    const unlockedRooms = this.data().rooms
       .filter((r) => stageOrder.indexOf(r.unlockStage) <= stageIdx)
       .map((r) => r.id);
 
@@ -187,7 +208,7 @@ export class HabitatService {
     const stageOrder = ['baby', 'juvenile', 'adult', 'final'];
     const petStageIdx = stageOrder.indexOf(petStage);
 
-    const rooms = this.habitatData.rooms.map((room) => ({
+    const rooms = this.data().rooms.map((room) => ({
       id: room.id,
       name: room.name,
       description: room.description,

@@ -98,6 +98,33 @@ describe('Hábitat (e2e) — camino feliz', () => {
     });
   });
 
+  describe('GET /v1/habitat/catalog', () => {
+    it('devuelve 200 con salas, muebles y topes de buffs (contrato del game-data)', async () => {
+      const { authH } = await createPetUser();
+      const res = await api().get('/v1/habitat/catalog').set(authH).expect(200);
+      const body = res.body;
+
+      expect(Array.isArray(body.rooms)).toBe(true);
+      expect(body.rooms).toHaveLength(habitatData.rooms.length);
+      expect(Array.isArray(body.furniture)).toBe(true);
+      expect(body.furniture.length).toBeGreaterThanOrEqual(1);
+      for (const f of body.furniture) {
+        expect(f.id).toBeTruthy();
+        expect(f.room).toBeTruthy();
+        expect(f.price).toBeGreaterThanOrEqual(0);
+        expect(['coins', 'gems']).toContain(f.currency);
+      }
+      expect(body.buffCaps).toMatchObject({
+        hygiene_decay_reduction_max: 0.4,
+        happiness_decay_reduction_max: 0.3,
+      });
+    });
+
+    it('exige autenticación (401 sin token)', async () => {
+      await api().get('/v1/habitat/catalog').expect(401);
+    });
+  });
+
   describe('furniture: place → buffs → remove (flujo secuencial)', () => {
     // Un solo usuario atraviesa el flujo completo; cada prueba asume el estado de la anterior.
     let authH: Record<string, string>;
@@ -109,8 +136,9 @@ describe('Hábitat (e2e) — camino feliz', () => {
       authH = u.authH;
       userId = u.userId;
       petId = u.petId;
-      // Saldo suficiente para los 3 muebles que colocamos: fountain_water(400)+soft_bed(600)+toy_ball(400).
-      await prisma.user.update({ where: { id: userId }, data: { coins: 2000, gems: 10 } });
+      // Saldo suficiente para todos los muebles del flujo (incl. el test del cap de buffs):
+      // fountain(400)+soft_bed(600)+toy_ball(400)+3×fountain(1200) = 2600.
+      await prisma.user.update({ where: { id: userId }, data: { coins: 5000, gems: 10 } });
       // Precondición real de `place`: el hábitat debe existir. La raíz lo inicializa.
       await api().get('/v1/habitat').set(authH).expect(200);
     });
@@ -164,13 +192,8 @@ describe('Hábitat (e2e) — camino feliz', () => {
         energy_recovery_boost: 0.2,
         happiness_decay_reduction: 0.1,
       });
-
-      // NOTA BUG DE PRODUCCIÓN (no bloqueante, no se fuerza aquí): los caps de buffs NUNCA se aplican.
-      // `getActiveBuffs` (habitat.service.ts:137) hace `const cap = this.habitatData.buffCaps[k]` donde
-      // `k` es la clave cruda del buff (p. ej. 'hygiene_decay_reduction'), pero `buffCaps` en
-      // shared/game-data/habitats.json usa claves con sufijo `_max` ('hygiene_decay_reduction_max').
-      // La lookup devuelve undefined → `cap ? Math.min(v, cap) : v` siempre toma `v` sin topar.
-      // Esperado: apilar muebles que superen el cap debería topar el valor; Real: se devuelve la suma cruda.
+      // Los valores están por debajo de sus topes (0.40/0.40/0.30), así que se devuelven sin topar.
+      // (El cap sí se aplica cuando se supera: ver el test e).)
     });
 
     it('d) remove: retira un mueble (200) y deja de contarse en el hábitat y en los buffs', async () => {
@@ -197,6 +220,18 @@ describe('Hábitat (e2e) — camino feliz', () => {
       const buffs = (await api().get('/v1/habitat/buffs').set(authH).expect(200)).body;
       expect(buffs.itemCount).toBe(2);
       expect(buffs.activeBuffs).not.toHaveProperty('hygiene_decay_reduction');
+    });
+
+    it('e) buffs: al superar el tope (cap) el valor se limita al máximo del catálogo', async () => {
+      // fountain_water da hygiene_decay_reduction 0.15 por unidad. Colocando 3 (0.45 > cap 0.40),
+      // el buff debe toparse en 0.40 (buffCaps.hygiene_decay_reduction_max) y no en la suma cruda.
+      await api().post('/v1/habitat/furniture/fountain_water/place').set(authH).expect(201);
+      await api().post('/v1/habitat/furniture/fountain_water/place').set(authH).expect(201);
+      await api().post('/v1/habitat/furniture/fountain_water/place').set(authH).expect(201);
+
+      const buffs = (await api().get('/v1/habitat/buffs').set(authH).expect(200)).body;
+      expect(buffs.itemCount).toBe(5); // soft_bed + toy_ball + 3× fountain_water
+      expect(buffs.activeBuffs.hygiene_decay_reduction).toBe(0.4); // topado (sin fix: 0.45)
     });
   });
 });
