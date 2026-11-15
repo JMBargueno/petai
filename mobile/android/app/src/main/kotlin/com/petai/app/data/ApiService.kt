@@ -60,7 +60,11 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
 
     suspend fun pets(): List<Pet> = api.json.decodeFromString(ListSerializer(Pet.serializer()), api.send("GET", "/pets"))
     suspend fun eggs(): List<Egg> = api.json.decodeFromString(ListSerializer(Egg.serializer()), api.send("GET", "/eggs"))
-    suspend fun hatch(eggId: String): Pet = api.request("POST", "/eggs/$eggId/hatch")
+    /** Si `nickname` es en blanco o null no se envía body y el backend asigna un nombre aleatorio. */
+    suspend fun hatch(eggId: String, nickname: String? = null): Pet {
+        val body = nickname?.trim()?.take(16)?.ifBlank { null }?.let { obj("nickname" to it) }
+        return api.request("POST", "/eggs/$eggId/hatch", body)
+    }
     suspend fun buyEgg(): Egg = api.request("POST", "/eggs/buy")
 
     suspend fun feed(petId: String, itemId: String): Pet = api.request("POST", "/pets/$petId/feed", obj("itemId" to itemId))

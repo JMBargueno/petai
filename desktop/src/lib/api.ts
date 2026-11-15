@@ -241,9 +241,12 @@ export const api = {
     return res.data;
   },
 
-  async hatchEgg(eggId: string) {
+  async hatchEgg(eggId: string, nickname?: string) {
+    // Nombre opcional: solo se envía si, tras trim, no queda vacío. El backend lo valida (1-16).
+    const name = typeof nickname === 'string' ? nickname.trim() : '';
     const res = await client.POST('/v1/eggs/{id}/hatch', {
       params: { path: { id: eggId } },
+      ...(name ? { body: { nickname: name.slice(0, 16) } } : {}),
       ...authHeaders(),
     });
     if (res.error) throw apiError(res, 'Error al eclosionar');

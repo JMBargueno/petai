@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import com.petai.app.ui.theme.*
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -34,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.petai.app.AppUiState
@@ -65,7 +70,7 @@ fun PetScreen(
     onClean: () -> Unit,
     onHeal: () -> Unit,
     onToggleSleep: () -> Unit,
-    onHatch: (eggId: String, onHatched: (Pet) -> Unit) -> Unit,
+    onHatch: (eggId: String, nickname: String?, onHatched: (Pet) -> Unit) -> Unit,
     onBuyEgg: () -> Unit,
     onGoToShop: () -> Unit,
     service: ApiService,
@@ -223,7 +228,7 @@ private fun FoodSheet(
 // ======================= Huevos =======================
 
 @Composable
-private fun HatchSection(state: AppUiState, onHatch: (String, (Pet) -> Unit) -> Unit, onBuyEgg: () -> Unit) {
+private fun HatchSection(state: AppUiState, onHatch: (String, String?, (Pet) -> Unit) -> Unit, onBuyEgg: () -> Unit) {
     var revealed by remember { mutableStateOf<Pet?>(null) }
 
     Column(
@@ -242,7 +247,7 @@ private fun HatchSection(state: AppUiState, onHatch: (String, (Pet) -> Unit) -> 
             Text("No tienes huevos. Cómprate uno por 50 monedas.")
         }
         state.eggs.forEach { egg ->
-            EggCard(egg, busy = state.busy, onHatch = { onHatch(egg.id) { revealed = it } })
+            EggCard(egg, busy = state.busy, onHatch = { name -> onHatch(egg.id, name.ifBlank { null }) { revealed = it } })
             Spacer(Modifier.height(8.dp))
         }
         Spacer(Modifier.height(8.dp))
@@ -268,9 +273,11 @@ private fun HatchSection(state: AppUiState, onHatch: (String, (Pet) -> Unit) -> 
 }
 
 @Composable
-private fun EggCard(egg: Egg, busy: Boolean, onHatch: () -> Unit) {
+private fun EggCard(egg: Egg, busy: Boolean, onHatch: (name: String) -> Unit) {
     val hatchesAt = remember(egg.hatchesAt) { runCatching { Instant.parse(egg.hatchesAt).toEpochMilli() }.getOrDefault(0L) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var name by remember { mutableStateOf("") }
+    val focus = LocalFocusManager.current
     LaunchedEffect(egg.id) {
         while (now < hatchesAt) {
             delay(1000)
@@ -278,19 +285,49 @@ private fun EggCard(egg: Egg, busy: Boolean, onHatch: () -> Unit) {
         }
     }
     val remaining = ((hatchesAt - now) / 1000).coerceAtLeast(0)
+    val ready = remaining == 0L
     PockaiCard(Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Sticker(if (remaining > 0) Lucide.Egg else Lucide.Sparkles, size = 56.dp)
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(if (egg.eggType == "starter") "Huevo de bienvenida" else "Huevo", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    if (remaining > 0) "Eclosiona en ${remaining / 60}:${(remaining % 60).toString().padStart(2, '0')}" else "¡Listo para eclosionar!",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Sticker(if (ready) Lucide.Sparkles else Lucide.Egg, size = 56.dp)
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(if (egg.eggType == "starter") "Huevo de bienvenida" else "Huevo", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (ready) "¡Listo para eclosionar!" else "Eclosiona en ${remaining / 60}:${(remaining % 60).toString().padStart(2, '0')}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            if (ready) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(16) },
+                    label = { Text("Nombre (opcional)") },
+                    placeholder = { Text("El servidor elegirá un nombre") },
+                    singleLine = true,
+                    maxLines = 1,
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+                )
+                Spacer(Modifier.height(12.dp))
+                PrimaryButton(
+                    "Eclosionar",
+                    onClick = { onHatch(name) },
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                PrimaryButton(
+                    "Eclosionar",
+                    onClick = { onHatch(name) },
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
-            PrimaryButton("Eclosionar", onClick = onHatch, enabled = remaining == 0L && !busy)
         }
     }
 }

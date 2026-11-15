@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onDestroy } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { api, isTerminalError } from '../lib/api';
   import { petVoice } from '../lib/petVoice';
   import { eggLibrary } from '../lib/sprites';
@@ -88,6 +88,7 @@ import TournamentTab from './TournamentTab.svelte';
   onDestroy(() => {
     endPanelDrag();
     if (panelErrorTimer) clearTimeout(panelErrorTimer);
+    if (hatchClock) clearInterval(hatchClock);
   });
 
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
@@ -130,6 +131,34 @@ import TournamentTab from './TournamentTab.svelte';
   let isShaking = false;
   let isCracking = false;
   let hatchedResult: any = null;
+
+  // Nombre opcional por huevo (objeto { [eggId]: name }) y reloj para el countdown de incubación.
+  let eggNames: Record<string, string> = {};
+  let now = Date.now();
+  let hatchClock: ReturnType<typeof setInterval> | null = null;
+  onMount(() => {
+    // Tick por segundo para el countdown de incubación (solo afecta a la vista de eclosión).
+    hatchClock = setInterval(() => (now = Date.now()), 1000);
+  });
+
+  /** Un huevo está listo cuando su hatchesAt ya venció (o si no lo trae, se considera listo). */
+  function eggReady(egg: any): boolean {
+    const t = new Date(egg?.hatchesAt)?.getTime?.();
+    return t === undefined || Number.isNaN(t) || t <= now;
+  }
+
+  /** Texto de cuenta atrás para un huevo aún en incubación (vacío si ya está listo). */
+  function eggCountdown(egg: any): string {
+    const t = new Date(egg?.hatchesAt)?.getTime?.();
+    if (t === undefined || Number.isNaN(t)) return '';
+    const s = Math.max(0, Math.ceil((t - now) / 1000));
+    if (s <= 0) return '';
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    if (h > 0) return `${h}h ${m % 60}m`;
+    if (m > 0) return `${m}m ${s % 60}s`;
+    return `${s}s`;
+  }
 
   async function handleAuth() {
     authError = '';
@@ -193,7 +222,9 @@ import TournamentTab from './TournamentTab.svelte';
     }
   }
 
-  async function handleHatch(eggId: string) {
+  async function handleHatch(eggId: string, nickname?: string) {
+    // Vacío/espacios → undefined: el backend asigna un nombre aleatorio.
+    const name = (nickname ?? '').trim();
     hatchingEggId = eggId;
     isShaking = true;
 
@@ -203,10 +234,11 @@ import TournamentTab from './TournamentTab.svelte';
 
     setTimeout(async () => {
       try {
-        const newPet = await api.hatchEgg(eggId);
+        const newPet = await api.hatchEgg(eggId, name || undefined);
         hatchedResult = newPet;
         dispatch('petUpdated', newPet);
         dispatch('refreshEggs');
+        delete eggNames[eggId]; // al terminar, limpia el input de ese huevo
       } catch (err: any) {
         reportError(err);
       } finally {
@@ -425,9 +457,31 @@ import TournamentTab from './TournamentTab.svelte';
                 </div>
                 <div class="egg-info">
                   <span class="egg-type">Huevo {egg.eggType}</span>
-                  <button class="btn btn--primary btn--sm" disabled={hatchingEggId === egg.id} on:click={() => handleHatch(egg.id)}>
-                    {hatchingEggId === egg.id ? '¡Eclosionando!' : 'Eclosionar'}
-                  </button>
+                  {#if hatchingEggId === egg.id}
+                    <span class="egg-state">¡Eclosionando…</span>
+                  {:else if eggReady(egg)}
+                    <div class="form-group egg-name-field">
+                      <label for="egg-name-{egg.id}">Nombre (opcional)</label>
+                      <input
+                        class="input"
+                        id="egg-name-{egg.id}"
+                        type="text"
+                        maxlength="16"
+                        spellcheck="false"
+                        autocomplete="off"
+                        bind:value={eggNames[egg.id]}
+                        placeholder="Vacío = nombre al azar"
+                        on:keydown={(e) => e.key === 'Enter' && handleHatch(egg.id, eggNames[egg.id])}
+                      />
+                      <small class="egg-count">{(eggNames[egg.id] ?? '').length}/16</small>
+                    </div>
+                    <button class="btn btn--primary btn--sm" on:click={() => handleHatch(egg.id, eggNames[egg.id])}>
+                      Eclosionar
+                    </button>
+                  {:else}
+                    <span class="egg-state">Incubando · faltan {eggCountdown(egg)}</span>
+                    <button class="btn btn--primary btn--sm" disabled>Incubando…</button>
+                  {/if}
                 </div>
               </div>
             {:else}
@@ -771,9 +825,28 @@ import TournamentTab from './TournamentTab.svelte';
     flex-direction: column;
     gap: 8px;
     align-items: flex-start;
+    flex: 1;
+    min-width: 0;
   }
   .egg-type {
     font-weight: 700;
+  }
+  .egg-state {
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+  .egg-name-field {
+    margin-bottom: 0;
+    gap: 4px;
+    width: 100%;
+  }
+  .egg-name-field .input {
+    width: 100%;
+  }
+  .egg-count {
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-align: right;
   }
   .egg-preview {
     width: 64px;

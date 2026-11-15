@@ -31,13 +31,15 @@ const stat = (key: 'hp' | 'atk' | 'def' | 'vel' | 'esp', label: string): Field<S
       />
       <app-resource-page
         heading="Mascotas de jugadores"
-        intro="Pockais eclosionados (datos generados)."
+        intro="Mascotas eclosionadas por los usuarios: solo el administrador puede cambiar su apodo (máx. 16 caracteres)."
         [headingLevel]="2"
         [repo]="petsRepo"
         [columns]="petColumns"
         [fields]="petFields"
         [filter]="petFilter"
         [nameOf]="petName"
+        [validate]="petValidate"
+        [deletable]="false"
       />
     </div>
   `,
@@ -115,10 +117,18 @@ export class Pockais {
   protected readonly petFields: Field<PetEntry>[] = [
     { key: 'nickname', label: 'Apodo', type: 'text', required: true },
     { key: 'owner', label: 'Dueño', type: 'email', lockedOnEdit: true },
-    { key: 'level', label: 'Nivel', type: 'number', min: 1, max: 100, required: true },
-    { key: 'stage', label: 'Etapa', type: 'select', options: options(STAGES), required: true },
-    { key: 'rarity', label: 'Rareza', type: 'select', options: options(RARITIES), required: true },
-    { key: 'shiny', label: 'Shiny', type: 'checkbox' },
-    { key: 'sick', label: 'Enfermo', type: 'checkbox' },
+    { key: 'level', label: 'Nivel', type: 'number', min: 1, max: 100, required: true, lockedOnEdit: true },
+    { key: 'stage', label: 'Etapa', type: 'select', options: options(STAGES), required: true, lockedOnEdit: true },
+    { key: 'rarity', label: 'Rareza', type: 'select', options: options(RARITIES), required: true, lockedOnEdit: true },
+    { key: 'shiny', label: 'Shiny', type: 'checkbox', lockedOnEdit: true },
+    { key: 'sick', label: 'Enfermo', type: 'checkbox', lockedOnEdit: true },
   ];
+
+  /** El backend solo permite renombre: el apodo es obligatorio y de 1 a 16 caracteres. */
+  protected readonly petValidate = (p: PetEntry): string | null => {
+    const nickname = p.nickname?.trim() ?? '';
+    if (nickname.length === 0) return 'El apodo no puede estar vacío.';
+    if (nickname.length > 16) return 'El apodo no puede superar 16 caracteres.';
+    return null;
+  };
 }

@@ -789,6 +789,23 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "maxLength": 16,
+                    "description": "Nombre de la mascota (trim 1-16). Si se omite o queda vacío, se asigna uno aleatorio."
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -799,7 +816,7 @@
             "bearer": []
           }
         ],
-        "summary": "Eclosionar huevo completado",
+        "summary": "Eclosionar huevo completado (nombre opcional de la mascota)",
         "tags": [
           "Eggs"
         ]
@@ -6508,6 +6525,74 @@
           }
         ],
         "summary": "Revocar un código de invitación (idempotente)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/pets": {
+      "get": {
+        "operationId": "AdminPetsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mascotas (paginado; filtros: rarity, q por nickname o dueño)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/pets/{id}": {
+      "patch": {
+        "operationId": "AdminPetsController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nickname"
+                ],
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "maxLength": 16
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Renombrar una mascota (auditoría: pet_rename)",
         "tags": [
           "Admin"
         ]
