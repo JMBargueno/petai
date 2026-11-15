@@ -7,10 +7,10 @@ import { GLOSSARY } from '../content';
   template: `
     <section id="diccionario" class="band band--gray">
       <div class="band__inner">
-        <h2 class="display section-title reveal" i18n="@@lore.dict.title">
+        <h2 class="display section-title reveal" i18n="@@lore.gloss.title">
           Diccionario del <span class="hl hl--lavender">Éter</span>
         </h2>
-        <p class="lead reveal" i18n="@@lore.dict.lead">
+        <p class="lead reveal" i18n="@@lore.gloss.lead">
           Qué significa cada término técnico cuando lo traduce la mitología del juego.
         </p>
 
