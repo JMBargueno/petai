@@ -162,4 +162,12 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
         api.request("GET", "/raid/leaderboard?limit=$limit")
     suspend fun raidHistory(limit: Int = 10): List<RaidHistoryEntry> =
         api.json.decodeFromString(ListSerializer(RaidHistoryEntry.serializer()), api.send("GET", "/raid/history?limit=$limit"))
+
+    // ── Torneo Knockout (Paso 5, feature 014) ────────────────────────────────────
+    suspend fun tournamentCurrent(): TournamentCurrent = api.request("GET", "/tournament/current")
+    suspend fun tournamentEnter(petId: String): TournamentEnterResponse =
+        api.request("POST", "/tournament/enter", obj("petId" to petId))
+    suspend fun tournamentBracket(): TournamentBracket = api.request("GET", "/tournament/bracket")
+    suspend fun tournamentStandings(limit: Int = 50): TournamentStandings =
+        api.request("GET", "/tournament/standings?limit=$limit")
 }
