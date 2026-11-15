@@ -35,6 +35,8 @@ export interface GameDataSnapshot {
   achievements: any | null;
   /** Layout de constelaciones por categoría (feature 008). `null` si `constellations.json` no existe. */
   constellations: any | null;
+  /** Hábitat (feature 019): salas, muebles y topes de buffs. `null` si `habitats.json` no existe. */
+  habitats: any | null;
   /** ISO de cuando el snapshot se construyó/actualizó. */
   loadedAt: string;
   /** Origen del último cambio aplicado: `disk` (watcher/arranque) o `inline` (hot-reload inline). */
@@ -132,6 +134,7 @@ export class GameDataService implements OnModuleInit {
       missions: (read('missions', false) as any) ?? null,
       achievements: (read('achievements', false) as any) ?? null,
       constellations: (read('constellations', false) as any) ?? null,
+      habitats: (read('habitats', false) as any) ?? null,
       // `festivals` NO es un archivo de hot-reload (no está en GAME_DATA_FILES): se lee directo del disco.
       festivals: (() => {
         const p = path.join(this.dataDir, 'festivals.json');
@@ -208,6 +211,11 @@ export class GameDataService implements OnModuleInit {
     return this.snapshot.constellations ?? null;
   }
 
+  /** Hábitat (feature 019): `habitats.json` (salas, muebles y topes de buffs). O `null`. */
+  getHabitats() {
+    return this.snapshot.habitats ?? null;
+  }
+
   /** Catálogo de juego (los 6 game-data gestionados). Lo sirve el endpoint público `/catalog`. */
   getCatalog() {
     return {
@@ -257,6 +265,7 @@ export class GameDataService implements OnModuleInit {
       missions: file === 'missions' ? (fileCheck.data as any) : this.snapshot.missions,
       achievements: file === 'achievements' ? (fileCheck.data as any) : this.snapshot.achievements,
       constellations: file === 'constellations' ? (fileCheck.data as any) : this.snapshot.constellations,
+      habitats: file === 'habitats' ? (fileCheck.data as any) : this.snapshot.habitats,
     };
     const crossErrors = validateGameData(merged);
     if (crossErrors.length > 0) {

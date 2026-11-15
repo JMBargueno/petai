@@ -591,6 +591,30 @@ export const api = {
   async getBonding(petId: string) {
     return minigameRequest<BondingDetail>('GET', `/v1/pets/${petId}/bonding?limit=20`);
   },
+
+  // Hábitat (feature 019)
+  async getHabitat() {
+    return minigameRequest<HabitatState>('GET', '/v1/habitat');
+  },
+
+  async getHabitatCatalog() {
+    return minigameRequest<HabitatCatalog>('GET', '/v1/habitat/catalog');
+  },
+
+  async placeHabitatFurniture(furnitureId: string) {
+    return minigameRequest<{ message: string; furnitureId: string; room: string }>(
+      'POST',
+      `/v1/habitat/furniture/${furnitureId}/place`,
+    );
+  },
+
+  async removeHabitatFurniture(furnitureId: string) {
+    return minigameRequest<{ message: string; furnitureId: string }>('DELETE', `/v1/habitat/furniture/${furnitureId}`);
+  },
+
+  async getHabitatBuffs() {
+    return minigameRequest<HabitatBuffs>('GET', '/v1/habitat/buffs');
+  },
 };
 
 async function minigameRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -825,4 +849,60 @@ export interface BondingDetail {
   history: BondingHistory;
   decayInfo: BondingDecayInfo;
   unlocks: BondingUnlocks;
+}
+
+// ── Hábitat (feature 019) ───────────────────────────────────────────────────
+export interface HabitatCatalogRoom {
+  id: string;
+  name: string;
+  gridWidth: number;
+  gridHeight: number;
+  unlockStage: string;
+  description: string;
+}
+
+export interface HabitatFurniture {
+  id: string;
+  name: string;
+  room: string;
+  price: number;
+  currency: 'coins' | 'gems';
+  buffs: Record<string, number>;
+  description: string;
+}
+
+export interface HabitatCatalog {
+  rooms: HabitatCatalogRoom[];
+  furniture: HabitatFurniture[];
+  buffCaps: Record<string, number>;
+}
+
+export interface HabitatRoomItem {
+  id: string;
+  furnitureId: string;
+  x: number;
+  y: number;
+}
+
+export interface HabitatRoom {
+  id: string;
+  name: string;
+  description: string;
+  gridWidth: number;
+  gridHeight: number;
+  unlocked: boolean;
+  active: boolean;
+  items: HabitatRoomItem[];
+}
+
+export interface HabitatState {
+  petId: string;
+  habitatSeed: number;
+  rooms: HabitatRoom[];
+}
+
+export interface HabitatBuffs {
+  petId: string;
+  activeBuffs: Record<string, number>;
+  itemCount: number;
 }

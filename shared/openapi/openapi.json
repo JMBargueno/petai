@@ -2559,6 +2559,29 @@
         ]
       }
     },
+    "/v1/habitat/catalog": {
+      "get": {
+        "operationId": "HabitatController_getCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Catálogo completo"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
     "/v1/habitat/buffs": {
       "get": {
         "operationId": "HabitatController_getActiveBuffs",

@@ -139,4 +139,18 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     // ---------- Vínculo (Paso 3, feature 006) ----------
 
     suspend fun bonding(petId: String): BondingDetail = api.request("GET", "/pets/$petId/bonding?limit=20")
+
+    // ---------- Hábitat (feature 019) ----------
+
+    suspend fun habitatCatalog(): HabitatCatalog = api.request("GET", "/habitat/catalog")
+    suspend fun habitat(): HabitatState = api.request("GET", "/habitat")
+    suspend fun habitatBuffs(): HabitatBuffs = api.request("GET", "/habitat/buffs")
+
+    suspend fun placeHabitatFurniture(furnitureId: String) {
+        api.send("POST", "/habitat/furniture/$furnitureId/place")
+    }
+
+    suspend fun removeHabitatFurniture(furnitureId: String) {
+        api.send("DELETE", "/habitat/furniture/$furnitureId")
+    }
 }

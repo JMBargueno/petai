@@ -240,3 +240,54 @@ data class BondingDetail(
     val decayInfo: BondingDecayInfo = BondingDecayInfo(),
     val unlocks: BondingUnlocks = BondingUnlocks(),
 )
+
+// ---------- Hábitat (feature 019) ----------
+
+@Serializable
+data class HabitatItem(val id: String = "", val furnitureId: String = "", val x: Int = 0, val y: Int = 0)
+
+@Serializable
+data class HabitatRoom(
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    val gridWidth: Int = 0,
+    val gridHeight: Int = 0,
+    val unlocked: Boolean = false,
+    val active: Boolean = false,
+    val items: List<HabitatItem> = emptyList(),
+)
+
+@Serializable
+data class HabitatState(val petId: String = "", val habitatSeed: Int = 0, val rooms: List<HabitatRoom> = emptyList())
+
+@Serializable
+data class HabitatCatalogRoom(
+    val id: String = "",
+    val name: String = "",
+    val gridWidth: Int = 0,
+    val gridHeight: Int = 0,
+    val unlockStage: String = "",
+    val description: String = "",
+)
+
+@Serializable
+data class HabitatFurniture(
+    val id: String = "",
+    val name: String = "",
+    val room: String = "",
+    val price: Int = 0,
+    val currency: String = "coins",
+    val buffs: Map<String, Double> = emptyMap(),
+    val description: String = "",
+)
+
+@Serializable
+data class HabitatCatalog(
+    val rooms: List<HabitatCatalogRoom> = emptyList(),
+    val furniture: List<HabitatFurniture> = emptyList(),
+    val buffCaps: Map<String, Double> = emptyMap(),
+)
+
+@Serializable
+data class HabitatBuffs(val petId: String = "", val activeBuffs: Map<String, Double> = emptyMap(), val itemCount: Int = 0)

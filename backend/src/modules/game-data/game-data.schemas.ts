@@ -15,7 +15,7 @@ import { z } from 'zod';
 export const ELEMENTS = ['fire', 'water', 'plant', 'electric', 'shadow', 'light'] as const;
 export type ElementValue = (typeof ELEMENTS)[number];
 
-export const GAME_DATA_FILES = ['balance', 'species', 'patterns', 'foods', 'skills', 'missions', 'achievements', 'constellations'] as const;
+export const GAME_DATA_FILES = ['balance', 'species', 'patterns', 'foods', 'skills', 'missions', 'achievements', 'constellations', 'habitats'] as const;
 export type GameDataFileKey = (typeof GAME_DATA_FILES)[number];
 
 // Categorías y tiers de logros (feature 008). `event` referencia un evento de dominio conocido.
@@ -302,6 +302,34 @@ export const constellationsSchema = z.object({
     }),
   ),
 });
+
+/** habitats.json (feature 019): salas, muebles y topes de buffs del hábitat. */
+export const habitatsSchema = z.object({
+  rooms: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        gridWidth: z.number().int().positive(),
+        gridHeight: z.number().int().positive(),
+        unlockStage: z.enum(['baby', 'juvenile', 'adult', 'final']),
+        description: z.string(),
+      }),
+    )
+    .min(1),
+  furniture: z.array(
+    z.object({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      room: z.string().min(1),
+      price: z.number().int().min(0),
+      currency: z.enum(['coins', 'gems']),
+      buffs: z.record(z.string(), z.number()),
+      description: z.string(),
+    }),
+  ),
+  buffCaps: z.record(z.string(), z.number().min(0)),
+});
 export const GAME_DATA_SCHEMAS: Record<GameDataFileKey, z.ZodType> = {
   balance: balanceSchema,
   species: speciesSchema,
@@ -311,6 +339,7 @@ export const GAME_DATA_SCHEMAS: Record<GameDataFileKey, z.ZodType> = {
   missions: missionsSchema,
   achievements: achievementsSchema,
   constellations: constellationsSchema,
+  habitats: habitatsSchema,
 };
 
 export interface FieldError {
@@ -351,6 +380,7 @@ export interface GameDataBundle {
   missions: any;
   achievements: any | null;
   constellations: any | null;
+  habitats: any | null;
 }
 
 /**
@@ -513,6 +543,28 @@ export function validateGameData(b: GameDataBundle): string[] {
           if (stars[b2] === undefined) errors.push(`Constelación ${cat}: conexión apunta a estrella inexistente '${b2}'`);
         }
       }
+    }
+  }
+
+  // 9. Hábitat (feature 019): los muebles deben apuntar a una sala existente y los ids son únicos.
+  const habitats = b.habitats;
+  if (habitats && typeof habitats === 'object') {
+    const roomIds = new Set<string>();
+    for (const r of (habitats as any).rooms ?? []) {
+      if (roomIds.has(r.id)) {
+        errors.push(`Sala de hábitat duplicada: ${r.id}`);
+        break;
+      }
+      roomIds.add(r.id);
+    }
+    const furnIds = new Set<string>();
+    for (const f of (habitats as any).furniture ?? []) {
+      if (furnIds.has(f.id)) {
+        errors.push(`Mueble de hábitat duplicado: ${f.id}`);
+        break;
+      }
+      furnIds.add(f.id);
+      if (!roomIds.has(f.room)) errors.push(`Mueble ${f.id}: la sala '${f.room}' no existe en habitats.json`);
     }
   }
 
