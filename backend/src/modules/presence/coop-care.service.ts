@@ -37,6 +37,8 @@ export interface FriendshipSummary {
   status: 'pending' | 'accepted' | 'revoked';
   direction: 'incoming' | 'outgoing';
   otherUserId: string;
+  otherDisplayName: string;
+  otherPet: { petId: string; nickname: string; speciesName: string } | null;
   updatedAt: Date;
 }
 
@@ -69,12 +71,23 @@ export class CoopCareService {
 
   // ── Amistad ──────────────────────────────────────────────────────────────────
 
-  async requestFriendship(targetUserId: string, requesterId: string): Promise<FriendshipSummary> {
+  async requestFriendship(target: { targetUserId?: string; email?: string }, requesterId: string): Promise<FriendshipSummary> {
+    let targetUserId = target?.targetUserId;
+    if (!targetUserId && target?.email) {
+      // Identificación por email (no hay un buscador de usuarios; el email es el identificador natural).
+      const byEmail = await this.prisma.user.findUnique({
+        where: { email: target.email.trim().toLowerCase() },
+        select: { id: true },
+      });
+      if (!byEmail) throw new NotFoundException('Usuario no encontrado');
+      targetUserId = byEmail.id;
+    }
+    if (!targetUserId) throw new BadRequestException('Indica targetUserId o email');
     if (targetUserId === requesterId) {
       throw new BadRequestException('No puedes enviarte una petición a ti mismo');
     }
-    const target = await this.prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true } });
-    if (!target) throw new NotFoundException('Usuario no encontrado');
+    const targetUser = await this.prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true } });
+    if (!targetUser) throw new NotFoundException('Usuario no encontrado');
 
     const row = await this.prisma.coopFriendship.upsert({
       where: { ownerId_visitorId: { ownerId: targetUserId, visitorId: requesterId } },
@@ -82,7 +95,7 @@ export class CoopCareService {
       create: { ownerId: targetUserId, visitorId: requesterId, status: 'pending' },
     });
     this.logger.debug(`Friendship request: ${requesterId} → ${targetUserId} (${row.id})`);
-    return this.toSummary(row, requesterId);
+    return (await this.summarizeMany([row], requesterId))[0];
   }
 
   /**
@@ -110,7 +123,7 @@ export class CoopCareService {
     if (claimed.count === 0) throw new BadRequestException('Esta petición ya fue resuelta');
 
     const updated = await this.prisma.coopFriendship.findUniqueOrThrow({ where: { id: friendshipId } });
-    return this.toSummary(updated, actorId);
+    return (await this.summarizeMany([updated], actorId))[0];
   }
 
   /**
@@ -128,7 +141,7 @@ export class CoopCareService {
     });
     if (claimed.count === 0) throw new BadRequestException('Esta petición ya fue resuelta');
     const updated = await this.prisma.coopFriendship.findUniqueOrThrow({ where: { id: friendshipId } });
-    return this.toSummary(updated, actorId);
+    return (await this.summarizeMany([updated], actorId))[0];
   }
 
   /**
@@ -146,23 +159,49 @@ export class CoopCareService {
       const prev = byOther.get(other);
       if (!prev || this.rankStatus(row.status) > this.rankStatus(prev.status)) byOther.set(other, row);
     }
-    return [...byOther.values()].map((row) => this.toSummary(row, userId));
+    return this.summarizeMany([...byOther.values()], userId);
   }
 
-  private toSummary(row: {
-    id: string;
-    ownerId: string;
-    visitorId: string;
-    status: string;
-    updatedAt: Date;
-  }, me: string): FriendshipSummary {
-    return {
-      id: row.id,
-      status: row.status as FriendshipSummary['status'],
-      direction: row.ownerId === me ? 'incoming' : 'outgoing',
-      otherUserId: row.ownerId === me ? row.visitorId : row.ownerId,
-      updatedAt: row.updatedAt,
-    };
+  /**
+   * Enriquece filas de amistad con el nombre del otro usuario y su pet principal (para que la UI
+   * muestre quién es y a qué pet se puede visitar). Devuelve los resúmenes desde la perspectiva de `me`.
+   */
+  private async summarizeMany(
+    rows: Array<{ id: string; ownerId: string; visitorId: string; status: string; updatedAt: Date }>,
+    me: string,
+  ): Promise<FriendshipSummary[]> {
+    if (rows.length === 0) return [];
+    const others = [...new Set(rows.map((r) => (r.ownerId === me ? r.visitorId : r.ownerId)))];
+
+    const names = new Map<string, string>();
+    const us = await this.prisma.user.findMany({
+      where: { id: { in: others } },
+      select: { id: true, displayName: true },
+    });
+    for (const u of us) names.set(u.id, u.displayName);
+
+    const pets = new Map<string, { petId: string; nickname: string; speciesName: string }>();
+    const ps = await this.prisma.pet.findMany({
+      where: { userId: { in: others } },
+      select: { id: true, userId: true, nickname: true, species: { select: { name: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    for (const p of ps) {
+      if (!pets.has(p.userId)) pets.set(p.userId, { petId: p.id, nickname: p.nickname, speciesName: p.species.name });
+    }
+
+    return rows.map((row) => {
+      const other = row.ownerId === me ? row.visitorId : row.ownerId;
+      return {
+        id: row.id,
+        status: row.status as FriendshipSummary['status'],
+        direction: row.ownerId === me ? 'incoming' : 'outgoing',
+        otherUserId: other,
+        otherDisplayName: names.get(other) ?? '—',
+        otherPet: pets.get(other) ?? null,
+        updatedAt: row.updatedAt,
+      };
+    });
   }
 
   private rankStatus(status: string): number {

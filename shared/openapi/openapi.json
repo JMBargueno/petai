@@ -4886,12 +4886,13 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "targetUserId"
-                ],
                 "properties": {
                   "targetUserId": {
                     "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Alternativa a targetUserId: email del destinatario"
                   }
                 }
               }
@@ -4908,7 +4909,7 @@
             "bearer": []
           }
         ],
-        "summary": "Enviar una petición de amistad",
+        "summary": "Enviar una petición de amistad (por id o email del destinatario)",
         "tags": [
           "Presence & Co-op"
         ]
