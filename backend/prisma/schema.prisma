@@ -12,6 +12,7 @@ model User {
   email        String         @unique
   passwordHash String
   displayName  String?
+  title        String?        // Título competitivo de la arena (premio de fin de temporada por liga)
   timezone     String         @default("UTC")
   // Coordenadas opt-in para el clima (privacidad): se guardan redondeadas y solo las usa el servidor.
   latitude     Float?
@@ -49,6 +50,7 @@ model User {
   // Feature 011: Temporadas
   seasonPasses     SeasonPass[]
   seasonProgress   SeasonProgress[]
+  seasonLeagueSettlements SeasonLeagueSettlement[]
   // Feature 012: Breeding
   breedings        Breeding[]
   // Feature 016: Entrenamiento Elemental
@@ -508,6 +510,7 @@ model Season {
   passes    SeasonPass[]
   progress  SeasonProgress[]
   rewards   SeasonReward[]
+  leagueSettlements SeasonLeagueSettlement[]
 }
 
 model SeasonPass {
@@ -546,6 +549,24 @@ model SeasonReward {
   isPremium   Boolean @default(false)
 
   @@unique([seasonId, tier, rewardType, isPremium])
+}
+
+// Premio de fin de temporada de la ARENA por liga/ELO (spec-11 leagueSettle).
+// Un registro por (usuario, temporada): liga alcanzada (por su mejor pet), título y monedas/gemas repartidos.
+model SeasonLeagueSettlement {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seasonId     String
+  season       Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  leagueId     String
+  title        String?
+  gemsAwarded  Int      @default(0)
+  coinsAwarded Int      @default(0)
+  bestElo      Int      @default(1000)
+  settledAt    DateTime @default(now())
+
+  @@unique([userId, seasonId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -428,6 +428,12 @@ export function validateGameData(b: GameDataBundle): string[] {
         errors.push(`balance.combats.rewards.${r} inválido`);
       }
     }
+    // leagueSettle (opcional): premios de fin de temporada de la arena por liga.
+    for (const [id, r] of Object.entries((cb.leagueSettle ?? {}) as Record<string, any>)) {
+      if (typeof r?.gems !== 'number' || r.gems < 0 || typeof r?.coins !== 'number' || r.coins < 0 || typeof r?.title !== 'string' || !r.title) {
+        errors.push(`balance.combats.leagueSettle.${id} inválido (gems/coins >= 0 y title no vacío)`);
+      }
+    }
   }
 
   // 4. Habilidades + elementos

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SeasonRewardsService } from './season-rewards.service';
+import { ArenaSettleService } from './arena-settle.service';
 import { WalletService } from '../wallet/wallet.service';
 import { RedisCacheService } from '../../redis/redis-cache.service';
 import { CronLockService } from '../../redis/cron-lock.service';
@@ -52,6 +53,7 @@ export class SeasonsService {
     private readonly wallet: WalletService,
     private readonly cache: RedisCacheService,
     private readonly cronLock: CronLockService,
+    private readonly arenaSettle: ArenaSettleService,
   ) {
     this.seasonsData = require('../../../../shared/game-data/seasons.json');
     this.allTiers = [
@@ -253,6 +255,9 @@ export class SeasonsService {
       await this.grantSeasonEndReward(p.userId, seasonId, p.currentTier);
     }
 
+    // Premios de fin de temporada de la ARENA por liga/ELO (idempotente por usuario/temporada).
+    await this.arenaSettle.settleSeason(seasonId);
+
     const up = this.seasonsData.upcomingSeason;
     if (up && seasonId === this.seasonsData.currentSeason.id) {
       await this.prisma.season.upsert({
@@ -287,6 +292,11 @@ export class SeasonsService {
       where: { id: userId },
       data: { coins: { increment: coins }, ...(gems > 0 ? { gems: { increment: gems } } : {}) },
     });
+  }
+
+  /** Resultado del settle de arena por liga para el usuario en la temporada (GET /seasons/:id/results). */
+  async getSeasonResults(userId: string, seasonId: string) {
+    return this.arenaSettle.getResult(userId, seasonId);
   }
 
   /**
