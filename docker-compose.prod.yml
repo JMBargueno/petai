@@ -48,6 +48,9 @@ services:
       AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:?define AI_KEY_ENCRYPTION_KEY}
       TRUST_PROXY: ${TRUST_PROXY:-1}
       CORS_ORIGINS: ${CORS_ORIGINS:-tauri://localhost,http://tauri.localhost,https://tauri.localhost}
+      # ---- Updater de la app de escritorio (proxy de los releases del repo privado) ----
+      GITHUB_RELEASES_TOKEN: ${GITHUB_RELEASES_TOKEN:-}
+      GITHUB_RELEASES_REPO: ${GITHUB_RELEASES_REPO:-JMBargueno/petai}
       # ---- Observabilidad (OpenTelemetry) ----
       OTEL_SERVICE_NAME: "petai-backend"
       OTEL_SERVICE_VERSION: "0.1.0"

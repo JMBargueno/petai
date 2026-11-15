@@ -14,6 +14,8 @@
 import RaidTab from './RaidTab.svelte';
 import TournamentTab from './TournamentTab.svelte';
   import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
+  import AboutPanel from './AboutPanel.svelte';
+  import { updateState, hasUpdate } from '../lib/updater';
   import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut } from 'lucide-svelte';
 
   export let user: any = null;
@@ -95,7 +97,7 @@ import TournamentTab from './TournamentTab.svelte';
     { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
     { id: 'progress', label: 'Progreso', icon: Trophy, subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
     { id: 'shop', label: 'Tienda', icon: ShoppingBag, subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
-    { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos']] },
+    { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['about', 'Acerca de']] },
   ];
   let dest: string = 'pet';
   let sub: string = 'home';
@@ -282,6 +284,11 @@ import TournamentTab from './TournamentTab.svelte';
         <button class="btn btn--ghost block" on:click={() => (isLoginMode = !isLoginMode)}>
           {isLoginMode ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
         </button>
+
+        <!-- Sin sesión no hay Ajustes: el estado de la actualización se muestra aquí (aviso automático o bandeja). -->
+        {#if $updateState.status !== 'idle'}
+          <AboutPanel />
+        {/if}
       </div>
     {:else}
       <!-- Destinos principales -->
@@ -291,6 +298,7 @@ import TournamentTab from './TournamentTab.svelte';
             <svelte:component this={n.icon} size={18} />
             <span>{n.label}</span>
             {#if n.id === 'pet' && eggs.length > 0}<span class="tab-badge">{eggs.length}</span>{/if}
+            {#if n.id === 'settings' && hasUpdate($updateState)}<span class="tab-badge" title="Hay una versión nueva">1</span>{/if}
           </button>
         {/each}
       </nav>
@@ -473,6 +481,9 @@ import TournamentTab from './TournamentTab.svelte';
 
         {:else if dest === 'settings' && sub === 'notifications'}
           <NotificationSettingsPanel />
+
+        {:else if dest === 'settings' && sub === 'about'}
+          <AboutPanel />
         {/if}
       </div>
     {/if}

@@ -7,7 +7,7 @@ use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, State,
+    Emitter, Manager, State,
 };
 
 /// Rectángulo interactivo en píxeles CSS (coordenadas del viewport del webview).
@@ -72,6 +72,8 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(HitRegions::default())
         .invoke_handler(tauri::generate_handler![set_hit_regions])
         .setup(|app| {
@@ -88,8 +90,9 @@ fn main() {
 
             // Configurar Menú de la Bandeja del Sistema (System Tray)
             let toggle = MenuItem::with_id(app, "toggle", "Mostrar/Ocultar Mascota", true, None::<&str>)?;
+            let updates = MenuItem::with_id(app, "updates", "Buscar actualizaciones", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Salir de Pockai", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&toggle, &quit])?;
+            let menu = Menu::with_items(app, &[&toggle, &updates, &quit])?;
 
             let _tray = TrayIconBuilder::new()
                 .menu(&menu)
@@ -102,6 +105,13 @@ fn main() {
                             } else {
                                 window.show()
                             };
+                        }
+                    }
+                    "updates" => {
+                        // El frontend hace la comprobación (plugin updater) y la mascota cuenta el resultado.
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.emit("check-updates", ());
                         }
                     }
                     "quit" => {

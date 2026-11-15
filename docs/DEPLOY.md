@@ -172,8 +172,50 @@ pnpm exec tauri build --bundles nsis   # Windows: instalador .exe (NSIS)
 - **Firma de código en Windows**: sin certificado, SmartScreen avisará de «editor desconocido». Con certificado,
   configúralo en `bundle.windows.certificateThumbprint` o firma el `.exe` con `signtool`.
 - La URL del backend se fija **en tiempo de compilación** (`VITE_API_URL`): un instalador por entorno.
-- Actualizaciones automáticas: no están configuradas (haría falta el plugin updater de Tauri, una clave de
-  firma y un servidor de *manifests*).
+
+### Actualizaciones automáticas del escritorio
+
+La app comprueba si hay versión nueva a los 30 s de arrancar y cada 6 h (también desde la bandeja
+› «Buscar actualizaciones» y en Ajustes › Acerca de). Si hay una, la mascota avisa y el usuario la instala con
+«Instalar y reiniciar». Como el repo es **privado**, el backend hace de proxy:
+`GET /v1/desktop/updates/:target/:arch/:version` lee el último release **publicado** de GitHub (los borradores
+no cuentan) y `GET /v1/desktop/updates/download/:assetId` redirige a la descarga firmada de GitHub.
+
+Puesta en marcha (una sola vez):
+
+1. Genera el par de claves del updater **y guarda la privada en un sitio seguro**: si se pierde, las
+   instalaciones existentes no podrán volver a actualizarse.
+   ```bash
+   cd desktop && pnpm tauri signer generate -w ~/.tauri/pockai.key
+   ```
+2. Pega la clave **pública** (`~/.tauri/pockai.key.pub`) en `desktop/src-tauri/tauri.conf.json` ›
+   `plugins.updater.pubkey` y haz commit.
+3. En GitHub › Settings › Secrets › Actions crea `TAURI_SIGNING_PRIVATE_KEY` (contenido de `pockai.key`) y
+   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+4. En el backend de producción define `GITHUB_RELEASES_TOKEN`: un *fine-grained PAT* con permiso de solo
+   lectura **Contents** sobre el repo. Si hace falta, también `GITHUB_RELEASES_REPO`. Sin token el endpoint
+   responde 204 y no se ofrecen actualizaciones.
+
+Publicar una versión:
+
+1. Sube la versión en `desktop/src-tauri/tauri.conf.json`, `desktop/src-tauri/Cargo.toml` y
+   `desktop/package.json`.
+2. Crea y sube la etiqueta: `git tag v0.2.0 && git push origin v0.2.0`. El workflow `release.yml` genera
+   un **borrador** con los instaladores, los `.sig` y `latest.json`.
+3. Revisa el borrador y **publícalo**. A partir de ese momento, en un máximo de 5 min (caché del backend),
+   los clientes ven la versión nueva.
+
+Descarga desde la web: el botón «Descargar» de Windows apunta a `{apiUrl}/v1/desktop/download/windows`
+(también existe `/macos`), que redirige al instalador del último release publicado. No hay que tocar la web en
+cada versión, pero sí poner en `web/src/app/site.json` › `apiUrl` la URL del backend de producción
+(`https://api-pockai.jmbargueno.com`) antes de desplegar la web.
+
+Notas:
+- El endpoint por defecto de `tauri.conf.json` es la API de producción (tiene que ser `https`: el plugin
+  rechaza `http` en builds release y la app no arrancaría). En CI se sustituye por `PETAI_API_URL`.
+- Los builds locales (`tauri build`) no generan artefactos del updater ni necesitan la clave. Eso solo pasa en CI
+  (el workflow activa `createUpdaterArtifacts` y fija el endpoint en el runner).
+- Las instalaciones anteriores a esta función (v0.1.0) no tienen updater: hay que reinstalarlas a mano una vez.
 
 ### Android
 
