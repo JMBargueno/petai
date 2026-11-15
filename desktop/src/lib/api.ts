@@ -643,6 +643,31 @@ export const api = {
   async getHabitatBuffs() {
     return minigameRequest<HabitatBuffs>('GET', '/v1/habitat/buffs');
   },
+
+  // ── Amistad + Co-op (feature 021) ─────────────────────────────────────────
+  async getCoopFriends() {
+    return minigameRequest<CoopFriend[]>('GET', '/v1/coop/friends');
+  },
+  async requestCoopFriend(target: { targetUserId?: string; email?: string }) {
+    return minigameRequest<CoopFriend>('POST', '/v1/coop/friends', target);
+  },
+  async acceptCoopFriend(friendshipId: string) {
+    return minigameRequest<CoopFriend>('POST', `/v1/coop/friends/${friendshipId}/accept`);
+  },
+  async declineCoopFriend(friendshipId: string) {
+    return minigameRequest<CoopFriend>('POST', `/v1/coop/friends/${friendshipId}/decline`);
+  },
+  async coopVisit(body: {
+    ownerId: string;
+    petId: string;
+    action: 'feed' | 'play' | 'clean';
+    itemId?: string;
+  }) {
+    return minigameRequest<CoopVisitResult>('POST', '/v1/coop/visit', body);
+  },
+  async getCoopHistory() {
+    return minigameRequest<{ userId: string; visits: CoopVisitLog[] }>('GET', '/v1/coop/history');
+  },
 };
 
 async function minigameRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -749,6 +774,32 @@ export interface LeaderboardEntry {
   league: string;
   score: number;
   mine: boolean;
+}
+
+// ── Amistad + Co-op ─────────────────────────────────────────────────────────
+export interface CoopFriend {
+  id: string;
+  status: 'pending' | 'accepted' | 'revoked';
+  direction: 'incoming' | 'outgoing';
+  otherUserId: string;
+  otherDisplayName: string;
+  otherPet: { petId: string; nickname: string; speciesName: string } | null;
+  updatedAt: string;
+}
+
+export interface CoopVisitLog {
+  visitorId: string;
+  action: string;
+  petId: string;
+  xpGained: number;
+  createdAt: string;
+}
+
+export interface CoopVisitResult {
+  success: boolean;
+  message: string;
+  xpGained: number;
+  petState: { hunger: number; happiness: number; hygiene: number };
 }
 
 // ── Misiones (Paso 3) ─────────────────────────────────────────────────────
