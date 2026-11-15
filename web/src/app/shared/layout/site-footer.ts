@@ -22,8 +22,8 @@ import { ChangeDetectionStrategy, Component, LOCALE_ID, inject } from '@angular/
             <p class="footer__head" i18n="@@footer.explore">Explora</p>
             <ul>
               <li><a [href]="home + '#funciones'" i18n="@@nav.features">Funciones</a></li>
-              <li><a [href]="home + '#arena-a-fondo'" i18n="@@nav.arena">Arena</a></li>
-              <li><a [href]="home + '#pockais'" i18n="@@nav.species">Pockais</a></li>
+              <li><a [href]="home + 'arena'" i18n="@@nav.arena">Arena</a></li>
+              <li><a [href]="home + 'pockais'" i18n="@@nav.species">Pockais</a></li>
               <li><a [href]="home + '#demo'" i18n="@@nav.demo">Pruébalo</a></li>
               <li><a [href]="home + '#precios'" i18n="@@nav.pricing">Precios</a></li>
               <li><a [href]="home + '#faq'">FAQ</a></li>

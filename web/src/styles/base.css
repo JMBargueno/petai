@@ -504,16 +504,6 @@
     gap: 12px;
     align-content: start;
   }
-  /* Giro alterno (pegatinas). Solo a partir de tableta. */
-  @media (width >= 640px) {
-    .tilt {
-      rotate: -0.8deg;
-    }
-    .tilt:nth-child(even) {
-      rotate: 0.9deg;
-      margin-block-start: 16px;
-    }
-  }
 
   /* ───── Logotipo (cabecera, pie y panel) ───── */
   .logo {
@@ -596,5 +586,36 @@
   }
   .section-head .eyebrow {
     margin-block-end: 20px;
+  }
+}
+
+@layer components {
+  /* Hero corto de las páginas interiores (Pockais, Arena): menos alto que el de la home. */
+  .page-hero {
+    display: grid;
+    justify-items: center;
+    padding-block-end: clamp(48px, 7vw, 88px);
+    text-align: center;
+  }
+  .page-hero .section-title {
+    font-size: clamp(48px, 8vw, 120px);
+  }
+  .page-hero .lead {
+    margin-inline: auto;
+  }
+  .page-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 12px 20px;
+    margin-block-start: 32px;
+  }
+  /* Banda final con llamada a la acción */
+  .page-cta {
+    display: grid;
+    justify-items: center;
+    gap: 20px;
+    text-align: center;
   }
 }

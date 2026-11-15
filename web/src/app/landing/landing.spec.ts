@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Landing } from './landing';
-import { FAQ, FEATURES, SPECIES } from './content';
+import { FAQ, FEATURES } from './content';
 
 describe('Landing', () => {
   it('pinta el titular, las funciones y las especies del catálogo compartido', async () => {
@@ -13,7 +13,6 @@ describe('Landing', () => {
     expect(h1).toContain('Tu yokai de bolsillo');
     expect(el.querySelectorAll('h1').length).toBe(1);
     expect(el.querySelectorAll('.feature').length).toBe(FEATURES.length);
-    expect(el.querySelectorAll('.species__card').length).toBe(SPECIES.length);
     expect(el.querySelectorAll('details').length).toBe(FAQ.length);
   });
 
@@ -25,6 +24,19 @@ describe('Landing', () => {
     expect(el.querySelector('app-site-header .skip-link')?.getAttribute('href')).toBe('#main');
     expect(el.querySelector('main#main')).not.toBeNull();
     expect(el.querySelector('app-site-footer footer')).not.toBeNull();
+  });
+
+  it('es una home corta: 7 bandas y sin especies, rarezas ni Arena', async () => {
+    const fixture = TestBed.createComponent(Landing);
+    await fixture.whenStable();
+    const el: HTMLElement = fixture.nativeElement;
+
+    expect(el.querySelectorAll('main .band').length).toBe(7);
+    expect(el.querySelector('.species__card, #rarezas, #arena-a-fondo')).toBeNull();
+    const links = [...el.querySelectorAll('.feature__link')].map((a) => a.getAttribute('href'));
+    expect(links).toEqual(['/es/pockais', '/es/arena', '/es/lore#despertar']);
+    const pages = [...el.querySelectorAll('.site-menu__page')].map((a) => a.getAttribute('href'));
+    expect(pages).toEqual(['/es/', '/es/pockais', '/es/arena', '/es/lore']);
   });
 
   it('no enlaza el panel de administración', async () => {
@@ -41,7 +53,6 @@ describe('Landing', () => {
 
     expect(el.querySelector('.hero__lore')?.getAttribute('href')).toBe('/es/lore');
     expect(el.querySelector('.hero__lore')?.textContent).toContain('Éter Digital');
-    expect(el.querySelector('.species__lore')?.getAttribute('href')).toBe('/es/lore');
     const footerHrefs = [...el.querySelectorAll('app-site-footer a')].map((a) => a.getAttribute('href'));
     expect(footerHrefs).toContain('/es/lore');
   });

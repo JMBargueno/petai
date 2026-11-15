@@ -23,6 +23,8 @@ export interface Feature {
   color: StickerColor;
   title: string;
   body: string;
+  /** Página con el detalle (ruta sin idioma) y texto del enlace. */
+  link?: { path: string; label: string };
 }
 
 export const FEATURES: Feature[] = [
@@ -31,6 +33,7 @@ export const FEATURES: Feature[] = [
     color: 'sunburst',
     title: $localize`:@@feat.hatch.title:Eclosión`,
     body: $localize`:@@feat.hatch.body:Cada huevo esconde una criatura con rareza, patrón y paleta propios, de normal a mítica. Con suerte, incluso una variante shiny.`,
+    link: { path: 'pockais', label: $localize`:@@feat.link.pockais:Conoce a los pockais →` },
   },
   {
     icon: 'heart',
@@ -49,12 +52,14 @@ export const FEATURES: Feature[] = [
     color: 'electric-blue',
     title: $localize`:@@feat.arena.title:Arena`,
     body: $localize`:@@feat.arena.body:Combates asíncronos contra las mascotas de otros jugadores, con elementos, habilidades, repeticiones animadas y ligas de Bronce a Mítica.`,
+    link: { path: 'arena', label: $localize`:@@feat.link.arena:La Arena a fondo →` },
   },
   {
     icon: 'chat',
     color: 'lavender',
     title: $localize`:@@feat.ai.title:Inteligencia`,
     body: $localize`:@@feat.ai.body:Conecta tu propio modelo de lenguaje y tu pockai conversa, recuerda lo que le cuentas y actúa como un pequeño agente personal.`,
+    link: { path: 'lore#despertar', label: $localize`:@@feat.link.ai:El despertar de la IA →` },
   },
   {
     icon: 'phone',

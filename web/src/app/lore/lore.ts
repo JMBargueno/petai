@@ -8,13 +8,13 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
+import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
 import { SeoService } from '../shared/seo/seo.service';
-import { Marquee } from '../shared/ui/marquee';
 import { Sticker } from '../shared/ui/sticker';
 import { OG_IMAGE, SITE_NAME, SITE_URL, pageUrl } from '../site.config';
-import { MARQUEE, META } from './content';
+import { META } from './content';
 import { Origin } from './sections/origin';
 import { PromiseSection } from './sections/promise';
 import { Appearance } from './sections/appearance';
@@ -26,7 +26,7 @@ import { Glossary } from './sections/glossary';
 
 @Component({
   selector: 'app-lore',
-  imports: [SiteHeader, SiteFooter, Marquee, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Colosseum, Glossary],
+  imports: [SiteHeader, SiteFooter, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Colosseum, Glossary],
   template: `
     <app-site-header
       [pages]="navPages"
@@ -60,8 +60,6 @@ import { Glossary } from './sections/glossary';
           <a class="btn btn--filled" href="#origen" i18n="@@lore.hero.cta">Descender al Éter</a>
         </div>
       </section>
-
-      <app-marquee [text]="marquee" />
 
       <!-- Índice: se queda fijo bajo la cabecera y marca la sección visible (guía scrollspy). -->
       <nav #toc class="toc" aria-label="Secciones" i18n-aria-label="@@lore.nav.label">
@@ -97,7 +95,6 @@ import { Glossary } from './sections/glossary';
 })
 export class Lore {
   protected readonly locale = inject(LOCALE_ID).slice(0, 2);
-  protected readonly marquee = MARQUEE;
   protected readonly home = `/${this.locale}/`;
   protected readonly download = `/${this.locale}/#descargar`;
 
@@ -105,10 +102,7 @@ export class Lore {
   protected readonly navLabel = $localize`:@@nav.label:Principal`;
   protected readonly navCta: NavLink = { href: this.download, label: $localize`:@@nav.cta:Descargar` };
   /** La página del lore no repite las anclas de la home: su índice propio va bajo el hero. */
-  protected readonly navPages: NavLink[] = [
-    { href: this.home, label: $localize`:@@lore.nav.back:Inicio` },
-    { href: `/${this.locale}/lore`, label: $localize`:@@nav.lore:Mundo`, current: true },
-  ];
+  protected readonly navPages = navPages(this.locale, 'lore');
 
   protected readonly sections = [
     { id: 'origen', label: $localize`:@@lore.nav.origin:Origen` },

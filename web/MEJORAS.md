@@ -37,6 +37,8 @@ Listar 33 funciones no sirve: nadie las lee. La propuesta es agruparlas en **his
 
 ### Formato recomendado: landing corta + páginas de detalle
 
+> **Hecho (noviembre de 2026):** la home tiene 7 bandas (hero, cómo funciona, funciones, demo, precios, descarga con la escena de escritorio, FAQ). Especies, rarezas y patrones están en `/pockais`, la Arena en `/arena` y el lore en `/lore`. La cabecera separa las anclas de la página de las páginas del sitio.
+
 Mantener la home como resumen y mover el detalle a páginas prerenderizadas igual que la home: `/funciones`, `/arena`, `/ia`, `/pockais`. Cada tarjeta de la sección "Todo lo que hace" enlazaría a la suya. Así la home no crece sin control y cada tema tiene su propia URL para compartir y posicionar.
 
 Esfuerzo M (la primera página; las siguientes S) · Impacto alto.
@@ -153,6 +155,8 @@ Esfuerzo S si ya existen las capturas · Impacto alto.
 
 ### 2.2 Jerarquía y ritmo
 
+**Hecho:** home más corta, como mucho una banda oscura por página, sin tarjetas giradas y con entradas por scroll reducidas a un fundido corto.
+
 - No todas las secciones a tamaño póster. Alternar dos o tres momentos "grandes" (hero, demo, Arena) con secciones de respiro más pequeñas.
 - Variar la composición: ahora casi todo es titular más rejilla. Probar una sección a dos columnas con texto largo, una fila horizontal, una cita grande, una tabla.
 - Reducir la altura total: once bandas son muchas para una home si el detalle pasa a páginas propias.
@@ -189,7 +193,7 @@ Esfuerzo S · Impacto medio.
 
 - Tarjetas de especie que pasan a `happy` al pasar el cursor (el componente ya lo permite).
 - Transición de página al navegar entre la home y las páginas de detalle.
-- Poner un límite: como mucho un elemento en bucle por pantalla, sin contar el marquee. Ahora el hero tiene cinco pegatinas flotando, la mascota y la cinta a la vez.
+- ~~Poner un límite: como mucho un elemento en bucle por pantalla, sin contar el marquee.~~ **Hecho:** pegatinas quietas, la mascota del hero solo cambia al tocarla y sin cintas animadas.
 
 Esfuerzo S · Impacto medio.
 
@@ -260,12 +264,12 @@ La demo es lo mejor de la página y puede dar más:
 
 | Mejora | Esfuerzo | Impacto |
 |---|---|---|
-| Páginas de detalle por función | M | Alto |
+| ~~Páginas de detalle por función~~ (hecho: Pockais y Arena) | M | Alto |
 | "Un día con tu pockai" | M | Alto |
 | Pokédex pública | M | Alto |
 | "Una IA con memoria" con bloque de confianza | M | Alto |
 | Demo: compartir resultado y mini-combate | M | Alto |
-| Jerarquía y ritmo de la home | M | Alto |
+| ~~Jerarquía y ritmo de la home~~ (hecho) | M | Alto |
 | Privacidad | M | Alto |
 
 **Más adelante:**

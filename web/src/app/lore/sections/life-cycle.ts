@@ -46,7 +46,7 @@ const STAGE_ICONS: StickerIcon[] = ['egg', 'heart', 'leaf', 'shield', 'star'];
 
         <!-- El ritmo del vínculo -->
         <div class="rhythm">
-          <article class="life__card life__card--sleep reveal reveal--left">
+          <article class="life__card life__card--sleep reveal">
             <span class="life__sky" aria-hidden="true">
               <i></i><i></i><i></i><i></i><i></i>
             </span>
@@ -55,7 +55,7 @@ const STAGE_ICONS: StickerIcon[] = ['egg', 'heart', 'leaf', 'shield', 'star'];
             <h3>{{ sleep.title }}</h3>
             <p>{{ sleep.body }}</p>
           </article>
-          <article class="life__card life__card--welcome reveal reveal--right">
+          <article class="life__card life__card--welcome reveal">
             <app-sticker [icon]="welcome.icon" [color]="welcome.color" [size]="64" [rotate]="6" />
             <span class="label-caps life__kicker" i18n="@@lore.life.welcome.k">Si te ausentas</span>
             <h3>{{ welcome.title }}</h3>

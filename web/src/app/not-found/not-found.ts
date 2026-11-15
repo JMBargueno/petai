@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, LOCALE_ID, inject } from '@angular/core';
+import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
 import { SeoService } from '../shared/seo/seo.service';
@@ -159,10 +160,7 @@ export class NotFound {
   protected readonly homeLabel = $localize`:@@nav.home:Pockai, inicio`;
   protected readonly navLabel = $localize`:@@nav.label:Principal`;
   protected readonly navCta: NavLink = { href: `${this.homeUrl}#descargar`, label: $localize`:@@nav.cta:Descargar` };
-  protected readonly navPages: NavLink[] = [
-    { href: this.homeUrl, label: $localize`:@@lore.nav.back:Inicio` },
-    { href: `/${this.locale}/lore`, label: $localize`:@@nav.lore:Mundo` },
-  ];
+  protected readonly navPages = navPages(this.locale);
 
   constructor() {
     inject(SeoService).set({

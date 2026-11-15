@@ -3,21 +3,20 @@ import { PockaiSprite } from '../../shared/ui/pockai-sprite';
 import { Sticker } from '../../shared/ui/sticker';
 import { DESKTOP_POINTS } from '../content';
 
-/** Maqueta de un escritorio con un pockai paseando por la barra de tareas. */
+/** Maqueta de un escritorio con un pockai paseando por la barra de tareas. Va dentro de la banda de Descarga. */
 @Component({
   selector: 'app-desktop-scene',
   imports: [PockaiSprite, Sticker],
   template: `
-    <section id="escritorio" class="band band--lavender">
-      <div class="band__inner layout">
+    <div id="escritorio" class="layout">
         <div>
-          <h2 class="display section-title reveal" i18n="@@desk.title">
+          <h3 class="display section-title reveal" i18n="@@desk.title">
             Vive en tu <span class="hl hl--blue">escritorio</span>
-          </h2>
+          </h3>
           <p class="lead reveal" i18n="@@desk.lead">Mientras trabajas, tu pockai anda por ahí a lo suyo.</p>
           <ul class="points">
             @for (point of points; track point) {
-              <li class="reveal reveal--left">
+              <li class="reveal">
                 <app-sticker icon="star" color="sunburst" [size]="32" />
                 {{ point }}
               </li>
@@ -26,7 +25,7 @@ import { DESKTOP_POINTS } from '../content';
         </div>
 
         <!-- Ilustración: no aporta información que no esté en el texto. -->
-        <div class="screen reveal reveal--pop" aria-hidden="true">
+        <div class="screen reveal" aria-hidden="true">
           <div class="window window--a">
             <span class="bar"><i></i><i></i><i></i></span>
             <span class="line"></span>
@@ -42,13 +41,16 @@ import { DESKTOP_POINTS } from '../content';
           <div class="walker"><app-pockai-sprite class="waddle" species="axolunar" /></div>
           <div class="taskbar"><i></i><i></i><i></i><i></i></div>
         </div>
-      </div>
-    </section>
+    </div>
   `,
   styles: `
     .layout {
       display: grid;
       gap: 48px;
+      margin-block-start: clamp(48px, 7vw, 88px);
+      padding: clamp(24px, 4vw, 48px);
+      border-radius: var(--radius-cards-elevated);
+      background: var(--grad-band), var(--band-lavender);
       align-items: center;
       grid-template-columns: minmax(0, 1fr);
     }
@@ -59,11 +61,12 @@ import { DESKTOP_POINTS } from '../content';
     }
     .section-title {
       /* Comparte fila con la ilustración: más pequeño para que «escritorio» quepa en su columna. */
-      font-size: clamp(40px, 10vw, 96px);
+      margin: 0;
+      font-size: clamp(32px, 7vw, 64px);
     }
     @media (width >= 960px) {
       .section-title {
-        font-size: clamp(40px, 4.6vw, 76px);
+        font-size: clamp(32px, 3.6vw, 56px);
       }
     }
     .points {
@@ -89,7 +92,6 @@ import { DESKTOP_POINTS } from '../content';
       background: var(--grain), var(--grad-hero);
       box-shadow: var(--shadow-4);
       container-type: inline-size;
-      rotate: 1.5deg;
     }
     .window {
       position: absolute;

@@ -38,7 +38,7 @@ const defParts = (body: string) => {
             </header>
             <ul class="patterns">
               @for (p of earth; track p.id) {
-                <li class="pattern reveal reveal--pop">
+                <li class="pattern reveal">
                   <span class="swatch" [style.background]="'var(--color-' + p.color + ')'">
                     @if (p.sprite) {
                       <img [src]="p.sprite" alt="" width="64" height="64" loading="lazy" decoding="async" />
@@ -66,7 +66,7 @@ const defParts = (body: string) => {
             </header>
             <ul class="patterns">
               @for (p of aether; track p.id) {
-                <li class="pattern reveal reveal--pop">
+                <li class="pattern reveal">
                   <span class="swatch" [style.background]="'var(--color-' + p.color + ')'">
                     @if (p.sprite) {
                       <img [src]="p.sprite" alt="" width="64" height="64" loading="lazy" decoding="async" />
@@ -84,14 +84,14 @@ const defParts = (body: string) => {
 
         <div class="appear__defs card-grid">
           @for (def of aetherDefs; track def.key) {
-            <article class="card tilt appear__def reveal">
+            <article class="card appear__def reveal">
               <h3>{{ def.name }}</h3>
               <p>{{ def.body }}</p>
             </article>
           }
         </div>
 
-        <article class="card tilt appear__shiny reveal">
+        <article class="card appear__shiny reveal">
           <app-sticker icon="star" color="sunburst" [size]="56" [rotate]="-8" class="appear__shiny-icon" />
           <p i18n="@@lore.appear.shiny">
             Bendición del Prisma: justo en el instante en que el huevo cristaliza en el Telar, un Rayo Cósmico (un bit

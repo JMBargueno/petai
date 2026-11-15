@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
-import { Ribbon } from '../../shared/ui/ribbon';
 import { Sticker } from '../../shared/ui/sticker';
 import {
   ARENA_LEAGUES,
@@ -14,10 +13,9 @@ type SkillFilter = 'all' | 'attack' | 'guard' | 'heal';
 
 @Component({
   selector: 'app-arena-showcase',
-  imports: [Ribbon, Sticker],
+  imports: [Sticker],
   template: `
     <section id="arena-a-fondo" class="band band--sky">
-      <app-ribbon shape="wave" />
       <div class="band__inner">
         <h2 class="display section-title reveal" i18n="@@arena.title">
           Arena <span class="hl hl--blue">a fondo</span>
@@ -27,7 +25,7 @@ type SkillFilter = 'all' | 'attack' | 'guard' | 'heal';
         </p>
 
         <!-- 1. Rueda Elemental interactiva -->
-        <div class="card element-wheel reveal reveal--pop">
+        <div class="card element-wheel reveal">
           <div class="element-wheel__header">
             <app-sticker icon="shield" color="electric-blue" [size]="64" />
             <div>
@@ -87,7 +85,7 @@ type SkillFilter = 'all' | 'attack' | 'guard' | 'heal';
         <h3 class="label-caps block-title reveal" i18n="@@arena.strategies.title">Elige tu estrategia</h3>
         <div class="strategies-grid">
           @for (s of strategies; track s.id; let i = $index) {
-            <div class="card strategy-card reveal reveal--tilt hover-lift" [style.--i]="i">
+            <div class="card strategy-card reveal" [style.--i]="i">
               <app-sticker [icon]="s.icon" [color]="s.color" [size]="56" />
               <h4>{{ s.title }}</h4>
               <p>{{ s.desc }}</p>
@@ -145,7 +143,7 @@ type SkillFilter = 'all' | 'attack' | 'guard' | 'heal';
 
           <div class="skills-grid">
             @for (skill of filteredSkills(); track skill.id) {
-              <div class="card skill-card hover-lift">
+              <div class="card skill-card">
                 <div class="skill-card__head">
                   <span class="tag" [style.background]="'var(--color-' + skill.color + ')'">{{ skill.elementName }}</span>
                   <span class="tag tag--kind">{{ skill.kindName }}</span>
@@ -281,7 +279,6 @@ type SkillFilter = 'all' | 'attack' | 'guard' | 'heal';
       justify-items: start;
       padding: 28px 24px;
       border-radius: var(--radius-cards-elevated);
-      rotate: calc((var(--i) - 1) * 2deg);
     }
     .strategy-card h4 {
       margin: 0;

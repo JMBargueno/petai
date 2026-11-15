@@ -11,7 +11,7 @@
 
 <main id="main" tabindex="-1">
   <!-- ───── Hero: texto a la izquierda, escenario con la mascota a la derecha ───── -->
-  <section #hero id="inicio" class="band band--hero band--first hero">
+  <section id="inicio" class="band band--hero band--first hero">
     <div class="band__inner hero__inner">
       <div class="hero__copy">
         <p class="eyebrow hero__eyebrow" i18n="@@hero.eyebrow">Mascota virtual con IA · Windows y Android</p>
@@ -66,47 +66,11 @@
 
   <app-how-it-works />
 
-  <!-- ───── Qué es: titular a la izquierda, trío a la derecha ───── -->
-  <section id="que-es" class="band band--white band--compact">
-    <div class="band__inner about">
-      <div class="section-head about__head">
-        <p class="eyebrow" style="--eyebrow-dot: var(--theme-care)">Pocket + Yokai + AI</p>
-        <h2 class="display section-title section-title--sm reveal" i18n="@@about.title">
-          Qué es <span class="hl">Pockai</span>
-        </h2>
-        <p class="lead reveal" i18n="@@about.lead">Tres palabras en un nombre: pocket, yokai y AI.</p>
-      </div>
-
-      <ul class="trio">
-        <li class="card card--pop trio__card tone tone--sunburst reveal hover-lift">
-          <app-sticker icon="phone" color="voltage-violet" [rotate]="-6" [size]="56" />
-          <h3>Pocket</h3>
-          <p i18n="@@about.pocket.body">
-            De bolsillo. Tu mascota te acompaña en el escritorio de Windows y en Android, siempre sincronizada.
-          </p>
-        </li>
-        <li class="card card--pop trio__card tone tone--lavender reveal hover-lift">
-          <app-sticker icon="egg" color="mint-pop" [rotate]="5" [size]="56" />
-          <h3>Yokai</h3>
-          <p i18n="@@about.yokai.body">
-            Criaturas con rareza, patrón y paleta propios. Cada eclosión se decide en el servidor y ninguna sale igual que otra.
-          </p>
-        </li>
-        <li class="card card--pop trio__card tone tone--mint reveal hover-lift">
-          <app-sticker icon="chat" color="sunburst" [rotate]="-4" [size]="56" />
-          <h3>AI</h3>
-          <p i18n="@@about.ai.body">
-            Con un modelo de lenguaje conectado, tu pockai tiene personalidad: charla contigo, recuerda y te echa una mano.
-          </p>
-        </li>
-      </ul>
-    </div>
-  </section>
-
   <!-- ───── Funciones: rejilla bento ───── -->
   <section id="funciones" class="band band--gray">
     <div class="band__inner">
       <div class="section-head">
+        <p class="eyebrow" style="--eyebrow-dot: var(--theme-care)">Pocket + Yokai + AI</p>
         <h2 class="display section-title reveal" i18n="@@features.title">
           Todo lo que <span class="hl hl--lavender">hace</span>
         </h2>
@@ -115,74 +79,18 @@
 
       <ul class="features">
         @for (f of features; track f.title) {
-          <li class="card feature reveal reveal--pop" [style.--feature-color]="'var(--color-' + f.color + ')'">
-            <app-sticker [icon]="f.icon" [color]="f.color" [rotate]="$even ? -5 : 6" [size]="56" />
+          <li class="card feature reveal" [style.--feature-color]="'var(--color-' + f.color + ')'">
+            <app-sticker [icon]="f.icon" [color]="f.color" [size]="56" />
             <h3>{{ f.title }}</h3>
             <p>{{ f.body }}</p>
+            @if (f.link) {
+              <a class="link feature__link" [href]="'/' + locale + '/' + f.link.path">{{ f.link.label }}</a>
+            }
           </li>
         }
       </ul>
     </div>
   </section>
-
-  <app-rarities />
-
-  <!-- ───── Teaser del lore ───── -->
-  <section id="lore" class="band band--ink lore-teaser">
-    <div class="band__inner lore-teaser__inner">
-      <div class="lore-teaser__copy reveal">
-        <p class="eyebrow" style="--eyebrow-dot: var(--color-lavender)" i18n="@@nav.lore">Mundo</p>
-        <h2 class="display section-title section-title--sm" i18n="@@lore.teaser.title">
-          Bajo la <span class="hl hl--lavender">pantalla</span>
-        </h2>
-        <p class="lead">{{ teaser.lead }}</p>
-        <a class="btn btn--filled" [href]="loreHref" i18n="@@lore.teaser.cta">Conocer el mundo</a>
-      </div>
-      <div class="lore-teaser__art" aria-hidden="true">
-        <span class="lore-teaser__ring"></span>
-        <span class="lore-teaser__ring lore-teaser__ring--2"></span>
-        <img src="sprites/egg_closed.svg" alt="" width="200" height="200" loading="lazy" decoding="async" />
-      </div>
-    </div>
-  </section>
-
-  <!-- ───── Especies ───── -->
-  <section id="pockais" class="band band--sky">
-    <app-ribbon shape="dip" />
-    <div class="band__inner">
-      <div class="section-head section-head--center">
-        <h2 class="display section-title reveal" i18n="@@species.title">
-          Los primeros <span class="hl hl--mint">pockais</span>
-        </h2>
-        <p class="lead reveal" i18n="@@species.lead">Las especies con las que empieza el juego. Vendrán más.</p>
-      </div>
-
-      <ul class="species">
-        @for (s of species; track s.id) {
-          <li
-            class="card card--pop species__card reveal reveal--tilt hover-lift"
-            [style.background]="'var(--color-' + s.color + ')'"
-            (pointerenter)="hovered.set(s.id)"
-            (pointerleave)="hovered.set(null)"
-          >
-            <div class="species__art">
-              <app-pockai-sprite [species]="s.spriteKey" [alt]="s.name" [state]="hovered() === s.id ? 'happy' : 'idle'" />
-            </div>
-            <h3>{{ s.name }}</h3>
-            <p class="species__tags">
-              <span class="tag">{{ s.element }}</span>
-              <span class="tag">{{ s.rarity }}</span>
-            </p>
-          </li>
-        }
-      </ul>
-      <p class="species__note">
-        <a class="link species__lore" [href]="loreHref" i18n="@@species.lore">¿De dónde vienen? Conoce el Éter Digital →</a>
-      </p>
-    </div>
-  </section>
-
-  <app-arena-showcase />
 
   <!-- ───── Demo ───── -->
   <section id="demo" class="band band--lavender demo-band">
@@ -207,13 +115,10 @@
     </div>
   </section>
 
-  <app-desktop-scene />
-
   <app-pricing />
 
-  <!-- ───── Descarga ───── -->
-  <section id="descargar" class="band band--white">
-    <app-ribbon shape="loop" />
+  <!-- ───── Descarga, con la escena de escritorio ───── -->
+  <section id="descargar" class="band band--gray">
     <div class="band__inner">
       <div class="section-head">
         <h2 class="display section-title reveal" i18n="@@download.title">Llévatelo</h2>
@@ -221,9 +126,9 @@
       </div>
 
       <div class="download">
-        <aside class="qr tone--violet reveal reveal--left">
+        <aside class="qr tone--violet reveal">
           <div class="qr__panel">
-            <img class="wiggle" src="sprites/egg_closed.svg" alt="" width="160" height="160" loading="lazy" decoding="async" />
+            <img src="sprites/egg_closed.svg" alt="" width="160" height="160" loading="lazy" decoding="async" />
           </div>
           <div class="qr__label">
             <p class="qr__title" i18n="@@download.card.label">Descargar</p>
@@ -233,7 +138,7 @@
 
         <ul class="platforms">
           @for (p of platforms; track p.name) {
-            <li class="card platform reveal reveal--pop hover-lift">
+            <li class="card platform reveal">
               <div class="platform__head">
                 <h3>{{ p.name }}</h3>
                 <span class="tag" [class.tag--ready]="p.url">{{ p.status }}</span>
@@ -248,11 +153,13 @@
           }
         </ul>
       </div>
+
+      <app-desktop-scene />
     </div>
   </section>
 
   <!-- ───── FAQ: titular fijo a la izquierda en escritorio ───── -->
-  <section id="faq" class="band band--gray">
+  <section id="faq" class="band band--white">
     <div class="band__inner faq">
       <div class="section-head faq__head">
         <h2 class="display section-title section-title--sm reveal" i18n="@@faq.title">Preguntas</h2>

@@ -43,11 +43,6 @@ main:focus {
     display: none;
   }
 }
-@media (prefers-reduced-motion: no-preference) {
-  .lore-hero__spot--a {
-    animation: float 6s ease-in-out infinite;
-  }
-}
 
 /* Migas de pan */
 .crumbs ol {

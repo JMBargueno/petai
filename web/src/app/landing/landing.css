@@ -251,50 +251,6 @@ p:where(:not(.lead, .eyebrow)) {
   }
 }
 
-/* ───── Qué es ───── */
-.about {
-  display: grid;
-  gap: 32px 64px;
-  align-items: center;
-}
-@media (width >= 960px) {
-  .about {
-    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
-  }
-  .about__head {
-    margin-block-end: 0;
-  }
-}
-.trio {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-}
-.trio__card {
-  display: grid;
-  gap: 14px;
-  align-content: start;
-  border-radius: var(--radius-cards-elevated);
-}
-.trio__card h3 {
-  font-family: var(--font-lateral);
-  font-size: clamp(30px, 3.4vw, 44px);
-  line-height: 0.85;
-  text-transform: uppercase;
-}
-@media (width >= 640px) {
-  .trio__card:nth-child(1) {
-    rotate: -1.5deg;
-  }
-  .trio__card:nth-child(2) {
-    rotate: 1.5deg;
-    margin-block-start: 28px;
-  }
-  .trio__card:nth-child(3) {
-    rotate: -1deg;
-  }
-}
-
 /* ───── Funciones: bento de 6 piezas ───── */
 .features {
   display: grid;
@@ -352,104 +308,6 @@ p:where(:not(.lead, .eyebrow)) {
   }
 }
 
-/* ───── Teaser del lore ───── */
-.lore-teaser__inner {
-  display: grid;
-  gap: 48px;
-  align-items: center;
-}
-@media (width >= 960px) {
-  .lore-teaser__inner {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-  }
-}
-.lore-teaser__copy {
-  display: grid;
-  justify-items: start;
-}
-.lore-teaser__copy .btn {
-  margin-block-start: 32px;
-}
-.lore-teaser__art {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-block-size: 300px;
-}
-.lore-teaser__art img {
-  position: relative;
-  inline-size: clamp(140px, 16vw, 200px);
-  block-size: auto;
-  filter: drop-shadow(0 0 40px rgb(179 168 255 / 0.65));
-}
-.lore-teaser__ring {
-  position: absolute;
-  inline-size: min(100%, 320px);
-  aspect-ratio: 1;
-  border: 1px solid rgb(179 168 255 / 0.45);
-  border-radius: 50%;
-  box-shadow: 0 0 80px rgb(92 74 222 / 0.45), inset 0 0 60px rgb(92 74 222 / 0.35);
-}
-.lore-teaser__ring--2 {
-  inline-size: min(70%, 220px);
-  border-color: rgb(77 162 255 / 0.5);
-  rotate: 20deg;
-  border-radius: 46% 54% 50% 50%;
-}
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes spin {
-    to {
-      rotate: 380deg;
-    }
-  }
-  .lore-teaser__ring--2 {
-    animation: spin 18s linear infinite;
-  }
-}
-
-/* ───── Especies ───── */
-.species {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-}
-.species__card {
-  display: grid;
-  gap: 12px;
-  border-radius: var(--radius-cards-elevated);
-}
-@media (width >= 640px) {
-  .species__card:nth-child(even) {
-    rotate: 2deg;
-    margin-block-start: 24px;
-  }
-  .species__card:nth-child(odd) {
-    rotate: -1.5deg;
-  }
-}
-.species__art {
-  display: grid;
-  place-items: center;
-  border: var(--outline);
-  border-radius: var(--radius-cards);
-  background:
-    radial-gradient(circle at 50% 70%, rgb(255 255 255 / 1) 0%, rgb(255 255 255 / 0.7) 60%),
-    var(--surface);
-  aspect-ratio: 4 / 3;
-}
-.species__art app-pockai-sprite {
-  --sprite-size: min(62%, 190px);
-}
-.species__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.species__note {
-  margin-block-start: 44px;
-  text-align: center;
-}
-
 /* ───── Demo ───── */
 .demo-frame {
   max-inline-size: 1080px;
@@ -489,7 +347,6 @@ p:where(:not(.lead, .eyebrow)) {
   border-radius: var(--radius-cards-elevated);
   background: var(--grad-accent);
   box-shadow: var(--glow-accent);
-  rotate: -2deg;
 }
 .qr__panel {
   display: grid;
@@ -603,4 +460,11 @@ summary::after {
 .faq__item p {
   padding: 0 20px 20px;
   color: var(--ink-muted);
+}
+
+/* Enlace a la página de detalle, al pie de la tarjeta */
+.feature__link {
+  align-self: end;
+  margin-block-start: 4px;
+  font-size: 15px;
 }

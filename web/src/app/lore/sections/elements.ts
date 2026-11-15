@@ -17,7 +17,7 @@ import { ELEMENTS } from '../content';
 
         <div class="card-grid">
           @for (el of flows; track el.name) {
-            <article class="card tilt element reveal">
+            <article class="card element reveal">
               <app-sticker [icon]="el.icon" [color]="el.color" [size]="64" [rotate]="-5" />
               <div>
                 <span class="label-caps element__sub">{{ el.sub }}</span>

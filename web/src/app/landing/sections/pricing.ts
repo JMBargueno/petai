@@ -1,14 +1,12 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { Ribbon } from '../../shared/ui/ribbon';
 import { Sticker } from '../../shared/ui/sticker';
 import { PRICING_CARDS, PricingCard } from '../content';
 
 @Component({
   selector: 'app-pricing',
-  imports: [Ribbon, Sticker],
+  imports: [Sticker],
   template: `
     <section id="precios" class="band band--white">
-      <app-ribbon shape="arc" />
       <div class="band__inner">
         <h2 class="display section-title reveal" i18n="@@price.title">
           Precios <span class="hl hl--mint">claros</span>
@@ -20,7 +18,7 @@ import { PRICING_CARDS, PricingCard } from '../content';
         <div class="pricing-grid">
           @for (card of cards; track card.title; let i = $index) {
             <div
-              class="card pricing-card reveal reveal--pop hover-lift"
+              class="card pricing-card reveal"
               [style.--i]="i"
               [style.background]="'var(--color-' + card.color + ')'"
             >

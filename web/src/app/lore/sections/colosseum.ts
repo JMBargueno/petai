@@ -17,7 +17,7 @@ import { COLISEUM_CARDS } from '../content';
 
         <div class="card-grid colo__grid">
           @for (c of cards; track c.title) {
-            <article class="card tilt colo__card reveal">
+            <article class="card colo__card reveal">
               <app-sticker [icon]="c.icon" [color]="c.color" [size]="64" [rotate]="-5" />
               <h3>{{ c.title }}</h3>
               <p>{{ c.body }}</p>

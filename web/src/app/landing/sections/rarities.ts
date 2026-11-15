@@ -57,7 +57,7 @@ export function rollBatch(random: () => number, size = BATCH): Egg[] {
           </div>
 
           <!-- Tanda de 100 huevos -->
-          <figure class="batch reveal reveal--pop">
+          <figure class="batch reveal">
             <figcaption class="batch__head">
               <span class="label-caps" i18n="@@rar.batch.title">Una tanda de 100 huevos</span>
               <button class="btn btn--sm batch__roll" type="button" (click)="reroll()">
@@ -96,7 +96,7 @@ export function rollBatch(random: () => number, size = BATCH): Egg[] {
         <!-- Las cinco rarezas -->
         <ul class="odds" role="group" aria-label="Probabilidad de cada rareza" i18n-aria-label="@@rar.odds.label">
           @for (r of odds; track r.id; let i = $index) {
-            <li class="odd reveal reveal--pop" [style.background]="'var(--color-' + r.color + ')'" [style.--i]="i">
+            <li class="odd reveal" [style.background]="'var(--color-' + r.color + ')'" [style.--i]="i">
               <span class="label-caps">{{ r.name }}</span>
               <strong class="display">{{ r.percent }}<small>%</small></strong>
               <span class="odd__bar" aria-hidden="true"><span [style.inline-size.%]="r.percent"></span></span>
@@ -113,7 +113,7 @@ export function rollBatch(random: () => number, size = BATCH): Egg[] {
         <h3 class="label-caps patterns__title" i18n="@@rar.patterns">Patrones</h3>
         <ul class="patterns">
           @for (p of patterns; track p.id) {
-            <li class="pattern reveal reveal--pop">
+            <li class="pattern reveal">
               <span class="swatch" [style.background]="'var(--color-' + p.color + ')'">
                 @if (p.sprite) {
                   <img [src]="p.sprite" alt="" width="64" height="64" loading="lazy" decoding="async" />
@@ -255,11 +255,6 @@ export function rollBatch(random: () => number, size = BATCH): Egg[] {
         0 16px 44px rgb(0 0 0 / 0.35),
         inset 0 1px 0 rgb(255 255 255 / 0.5),
         0 0 calc(var(--i) * 12px) rgb(255 255 255 / calc(var(--i) * 0.07));
-    }
-    @media (width >= 640px) {
-      .odd {
-        rotate: calc((var(--i) - 2) * 1.2deg);
-      }
     }
     .odd strong {
       font-size: clamp(44px, 5.4vw, 84px);

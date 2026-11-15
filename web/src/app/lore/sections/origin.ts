@@ -17,7 +17,7 @@ import { ORIGIN_CARDS } from '../content';
 
         <div class="card-grid">
           @for (card of cards; track card.title) {
-            <article class="card tilt reveal">
+            <article class="card reveal">
               <app-sticker [icon]="card.icon" [color]="card.color" [size]="64" />
               <h3>{{ card.title }}</h3>
               <p>{{ card.body }}</p>

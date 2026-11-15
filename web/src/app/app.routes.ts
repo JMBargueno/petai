@@ -12,6 +12,16 @@ export const routes: Routes = [
     loadComponent: () => import('./lore/lore').then((m) => m.Lore),
   },
   {
+    // Especies, rarezas y patrones (antes eran bandas de la home).
+    path: 'pockais',
+    loadComponent: () => import('./pockais/pockais').then((m) => m.Pockais),
+  },
+  {
+    // La Arena a fondo.
+    path: 'arena',
+    loadComponent: () => import('./arena/arena').then((m) => m.Arena),
+  },
+  {
     // Panel oculto: no se enlaza desde la landing, no se prerenderiza y va en un chunk aparte.
     path: 'admin',
     loadChildren: () => import('./admin/admin.routes'),

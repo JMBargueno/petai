@@ -93,50 +93,13 @@
     animation: pop-in var(--dur-3) var(--ease-bounce) backwards;
   }
 
-  /* Tarjeta girada que se endereza y sube al pasar el cursor */
-  .hover-lift {
-    transition:
-      rotate var(--dur-2) var(--ease-bounce),
-      translate var(--dur-2) var(--ease-bounce),
-      box-shadow var(--dur-2) var(--ease-out);
-  }
-  .hover-lift:hover {
-    rotate: 0deg;
-    translate: 0 -6px;
-    box-shadow: var(--shadow-3);
-  }
-
-  /* Entradas al entrar en pantalla (guía `scroll-entry-exit-effects`) */
+  /* Entradas al entrar en pantalla (guía `scroll-entry-exit-effects`): solo un fundido corto
+     hacia arriba. Nada de giros, saltos ni deslizamientos laterales, que marean al hacer scroll. */
   @supports ((animation-timeline: view()) and (animation-range: entry)) {
     @keyframes reveal-up {
       from {
         opacity: 0;
-        translate: 0 56px;
-      }
-    }
-    @keyframes reveal-left {
-      from {
-        opacity: 0;
-        translate: -72px 0;
-      }
-    }
-    @keyframes reveal-right {
-      from {
-        opacity: 0;
-        translate: 72px 0;
-      }
-    }
-    @keyframes reveal-pop {
-      from {
-        opacity: 0;
-        scale: 0.7;
-      }
-    }
-    @keyframes reveal-tilt {
-      from {
-        opacity: 0;
-        translate: 0 64px;
-        rotate: -10deg;
+        translate: 0 24px;
       }
     }
 
@@ -144,19 +107,7 @@
       animation: reveal-up auto var(--ease-out) backwards;
       /* Después del shorthand, que si no los reinicia. */
       animation-timeline: view();
-      animation-range: entry 0% cover 28%;
-    }
-    .reveal--left {
-      animation-name: reveal-left;
-    }
-    .reveal--right {
-      animation-name: reveal-right;
-    }
-    .reveal--pop {
-      animation-name: reveal-pop;
-    }
-    .reveal--tilt {
-      animation-name: reveal-tilt;
+      animation-range: entry 0% cover 20%;
     }
   }
 }

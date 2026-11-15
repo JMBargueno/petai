@@ -13,10 +13,8 @@
   background: var(--surface);
 }
 .appear__panel--earth {
-  rotate: -0.6deg;
 }
 .appear__panel--aether {
-  rotate: 0.6deg;
 }
 .appear__head {
   display: flex;

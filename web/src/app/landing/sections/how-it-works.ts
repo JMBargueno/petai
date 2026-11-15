@@ -1,25 +1,25 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { Ribbon } from '../../shared/ui/ribbon';
 import { Sticker } from '../../shared/ui/sticker';
 import { STEPS } from '../content';
 
 @Component({
   selector: 'app-how-it-works',
-  imports: [Ribbon, Sticker],
+  imports: [Sticker],
   template: `
     <section id="como-funciona" class="band band--white">
-      <app-ribbon shape="dip" />
       <div class="band__inner">
-        <h2 class="display section-title reveal" i18n="@@how.title">
-          Así <span class="hl hl--mint">funciona</span>
-        </h2>
-        <p class="lead reveal" i18n="@@how.lead">Tres pasos y ya tienes compañía.</p>
+        <div class="section-head">
+          <h2 class="display section-title reveal" i18n="@@how.title">
+            Así <span class="hl hl--mint">funciona</span>
+          </h2>
+          <p class="lead reveal" i18n="@@how.lead">Tres pasos y ya tienes compañía.</p>
+        </div>
 
         <ol class="steps">
           @for (step of steps; track step.title; let i = $index) {
-            <li class="card step reveal reveal--tilt hover-lift" [style.--i]="i">
+            <li class="card step reveal">
               <span class="display step__n" aria-hidden="true">{{ i + 1 }}</span>
-              <app-sticker [class]="step.motion" [icon]="step.icon" [color]="step.color" [size]="88" />
+              <app-sticker [icon]="step.icon" [color]="step.color" [size]="88" />
               <h3>{{ step.title }}</h3>
               <p>{{ step.body }}</p>
             </li>
@@ -31,6 +31,7 @@ import { STEPS } from '../content';
   styles: `
     .steps {
       display: grid;
+      gap: 16px;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
       margin: 0;
       padding: 0;
@@ -45,10 +46,6 @@ import { STEPS } from '../content';
       padding: 32px 24px;
       border-radius: var(--radius-cards-elevated);
       box-shadow: var(--shadow-pop), var(--shadow-3);
-      /* Collage: cada tarjeta gira y pisa a la anterior. */
-      rotate: calc((var(--i) - 1) * 3deg);
-      margin: calc(var(--i) * 20px) -6px 0;
-      z-index: calc(3 - var(--i));
     }
     .step:nth-child(1) {
       background: var(--color-sunburst);
@@ -64,9 +61,6 @@ import { STEPS } from '../content';
       background: var(--color-sky-wash);
       color-scheme: light;
       color: var(--ink);
-    }
-    .step:hover {
-      z-index: 4;
     }
     .step__n {
       position: absolute;
@@ -85,12 +79,6 @@ import { STEPS } from '../content';
     }
     p {
       margin: 0;
-    }
-    @media (width < 640px) {
-      .step {
-        rotate: calc((var(--i) - 1) * 1.5deg);
-        margin: 0 0 -12px;
-      }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
