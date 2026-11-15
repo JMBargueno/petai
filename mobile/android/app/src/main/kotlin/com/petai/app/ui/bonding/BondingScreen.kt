@@ -64,7 +64,7 @@ fun BondingScreen(service: ApiService, petId: String) {
                                 }
                                 Text("${d.value.toInt()}/100", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                             }
-                            val frac = (d.value / 100f).coerceIn(0f, 1f)
+                            val frac = (d.value / 100.0).toFloat().coerceIn(0f, 1f)
                             Box(Modifier.fillMaxWidth().padding(top = 6.dp).height(8.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
                                 Box(Modifier.fillMaxWidth(frac).height(8.dp).background(MaterialTheme.colorScheme.primary))
                             }
