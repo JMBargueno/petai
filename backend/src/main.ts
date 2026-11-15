@@ -1,6 +1,8 @@
+import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { createAdapter } from 'socket.io-redis';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppModule } from './app.module';
@@ -27,6 +29,27 @@ function exportOpenApi(document: unknown) {
     console.log(`[OpenAPI] Contrato exportado en: ${openApiPath}`);
   } catch (err) {
     console.warn('[OpenAPI] No se pudo exportar openapi.json:', (err as Error).message);
+  }
+}
+
+/**
+ * R-02: estado compartido de realtime en Redis para poder escalar a varias réplicas del backend.
+ * Opt-in por env: `REALTIME_REDIS=true` lo activa. En una sola réplica (dev) el adaptador in-memory
+ * por defecto de Socket.IO basta; con N réplicas (prod) se activa para que emits y salas se
+ * sincronicen entre instancias. Usa el mismo Redis (REDIS_URL) y un canal con prefijo de entorno.
+ * Degrada a in-memory si no puede engancharse (nunca rompe el arranque).
+ */
+function applyRealtimeRedisAdapter(app: INestApplication, configService: ConfigService): void {
+  if ((configService.get<string>('REALTIME_REDIS') ?? 'false') !== 'true') return;
+  try {
+    const io = (app.getHttpAdapter() as unknown as { io?: { adapter?: (a: unknown) => unknown } }).io;
+    if (!io?.adapter) return;
+    const uri = configService.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
+    const env = configService.get<string>('NODE_ENV') ?? 'development';
+    io.adapter(createAdapter(uri, { key: `petai:${env}:realtime` }));
+    console.log('[PetAI] Realtime: adaptador de Redis activo (estado compartido entre réplicas)');
+  } catch (err) {
+    console.warn('[PetAI] No se pudo activar el adaptador de Redis de realtime:', (err as Error).message);
   }
 }
 
@@ -74,6 +97,9 @@ async function bootstrap() {
   }
 
   const port = configService.get<number>('PORT', 3000);
+  // Inicializa la app (incluye el servidor de sockets) antes de enganchar el adaptador de Redis (R-02).
+  await app.init();
+  applyRealtimeRedisAdapter(app, configService);
   await app.listen(port, '0.0.0.0');
   console.log(`[PetAI Backend] Servidor iniciado en http://localhost:${port}/${prefix}`);
   if (swaggerEnabled) console.log(`[PetAI Backend] Documentación Swagger en http://localhost:${port}/${prefix}/docs`);
