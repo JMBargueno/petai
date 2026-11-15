@@ -1,6 +1,8 @@
 name: Release (instaladores de escritorio)
 
-# Se ejecuta al subir una etiqueta v* (p. ej. v0.1.0). Crea un borrador de release con los instaladores.
+# Se ejecuta al subir una etiqueta v* (p. ej. v0.1.0) O manualmente (pestaña Actions →
+# "Release (instaladores de escritorio)" → Run workflow, indicando la etiqueta). Crea un
+# borrador de release con los instaladores: PUBLICAR el borrador es lo que lo activa.
 # Requiere la variable de repositorio PETAI_API_URL (https://api.tudominio.com, sin /v1).
 # Sin certificados de firma los instaladores saldrán sin firmar (Windows avisará de «editor desconocido»);
 # para firmar, añade los secretos de Tauri/Apple (ver docs/DEPLOY.md).
@@ -9,6 +11,12 @@ name: Release (instaladores de escritorio)
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Etiqueta de la release (p. ej. v0.1.0). Debe coincidir con la versión de desktop/src-tauri/tauri.conf.json.'
+        required: true
+        default: 'v0.1.0'
 
 permissions:
   contents: write
@@ -69,8 +77,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: desktop
-          tagName: ${{ github.ref_name }}
-          releaseName: 'PetAI ${{ github.ref_name }}'
+          tagName: ${{ github.ref_name || inputs.tag }}
+          releaseName: 'PetAI ${{ github.ref_name || inputs.tag }}'
           # Borrador: los clientes NO ven la versión hasta que lo publiques (el backend lee releases/latest).
           releaseDraft: true
           # Sube latest.json con las firmas de cada plataforma (lo lee el backend).
