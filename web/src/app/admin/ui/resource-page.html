@@ -236,7 +236,7 @@
     <h2 [id]="uid + '-delete-title'">
       ¿Borrar «{{ pendingDelete() ? nameOf()(pendingDelete()!) : '' }}»?
     </h2>
-    <p>Es un dato de demostración: puedes recuperarlo con «Restablecer datos».</p>
+    <p>Se borra en el servidor y no se puede deshacer.</p>
     <form method="dialog" class="dialog__actions">
       <button class="btn" value="cancel" autofocus>Cancelar</button>
       <button class="btn btn--filled" value="delete">Borrar</button>

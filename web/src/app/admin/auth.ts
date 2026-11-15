@@ -1,9 +1,8 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { CanMatchFn, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivateFn, CanMatchFn, Router } from '@angular/router';
 import { AdminApi, ApiError, SessionUser } from './api';
-import { AuditLog } from './data/audit-log';
 
-/** Permiso que da acceso al panel (lo concede el backend según el rol; hoy solo superadmin). */
+/** Permiso que da acceso al panel (lo concede el backend según el rol: superadmin, admin y moderator). */
 export const PANEL_PERMISSION = 'admin:access';
 
 /**
@@ -14,7 +13,6 @@ export const PANEL_PERMISSION = 'admin:access';
 @Injectable({ providedIn: 'root' })
 export class AdminAuth {
   private readonly api = inject(AdminApi);
-  private readonly audit = inject(AuditLog);
   private revalidation: Promise<boolean> | null = null;
 
   readonly user = computed(() => this.api.session()?.user ?? null);
@@ -38,7 +36,6 @@ export class AdminAuth {
         return 'Tu cuenta no tiene acceso al panel.';
       }
       this.revalidation = Promise.resolve(true);
-      this.audit.record('Sesión', 'panel', `Inicio de sesión (${user.email})`);
       return null;
     } catch (e) {
       this.api.setSession(null);
@@ -96,4 +93,14 @@ export const adminGuard: CanMatchFn = async () => {
   const login = inject(Router).parseUrl('/admin/login');
   if (!auth.authenticated()) return login;
   return (await auth.revalidate()) || login;
+};
+
+/**
+ * Guard por sección: la ruta declara `data: { permission }` y sin ese permiso se vuelve al resumen.
+ * Solo evita entrar por URL a una pantalla que no se enseña; el backend responde 403 igualmente.
+ */
+export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
+  const permission = route.data['permission'] as string | undefined;
+  if (!permission || inject(AdminAuth).can(permission)) return true;
+  return inject(Router).parseUrl('/admin/resumen');
 };

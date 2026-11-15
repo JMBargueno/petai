@@ -53,6 +53,7 @@ import { AccessibilityModule } from './modules/accessibility/accessibility.modul
 import { GiftingModule } from './modules/gifting/gifting.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { AuthzModule } from './modules/authz/authz.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { DesktopUpdatesModule } from './modules/desktop-updates/desktop-updates.module';
 
 // DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
@@ -120,6 +121,7 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     WalletModule,
     // Autorización por roles (superadmin | admin | moderator | user) y gestión de usuarios.
     AuthzModule,
+    AdminModule,
     ...(DEV_TOOLS_ENABLED ? [DevModule] : []),
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],

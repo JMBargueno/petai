@@ -9,7 +9,7 @@ import { AuthThrottleService } from '../src/modules/auth/auth-throttle.service';
  * Invitaciones de registro (e2e).
  *   - Con el modo "solo con invitación" desactivado, cualquiera se registra.
  *   - Activado, el registro exige un código válido; los códigos se agotan, caducan y se revocan.
- *   - Solo quien tiene `invites:manage` (hoy superadmin) gestiona códigos y el ajuste.
+ *   - Solo quien tiene `invites:manage` (superadmin y admin) gestiona códigos y el ajuste.
  */
 describe('Invitaciones de registro (e2e)', () => {
   let app: INestApplication;

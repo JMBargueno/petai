@@ -69,7 +69,9 @@ El catálogo (especies, patrones, comidas) lo carga el seed. En producción **no
 docker compose -f docker-compose.prod.yml exec backend pnpm exec ts-node prisma/seed.ts
 ```
 
-Hay que repetirlo cuando cambien los JSON de `shared/game-data/` (es idempotente).
+Hay que repetirlo cuando cambien los JSON de `shared/game-data/` (es idempotente). Los precios de
+`foods.json` solo se aplican a objetos nuevos: los de los objetos existentes se gestionan desde el
+panel de admin (Precios) y el seed no los sobrescribe.
 
 ## 4. Varias réplicas
 

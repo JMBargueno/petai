@@ -13,13 +13,14 @@ type Currency = 'priceCoins' | 'priceGems';
     <app-resource-page
       #page
       heading="Precios"
-      intro="Catálogo de la tienda. Los precios en monedas y gemas se editan en la propia celda."
+      intro="Catálogo real de la tienda. Los precios en monedas y gemas se editan en la propia celda y se aplican al instante en la app. Los objetos se definen en foods.json."
       [repo]="repo"
       [columns]="columns"
       [fields]="fields"
       [filter]="filter"
       [nameOf]="nameOf"
-      [blank]="blank"
+      [editable]="false"
+      [deletable]="false"
     >
       <form toolbar class="bulk" ngNativeValidate (ngSubmit)="applyBulk(page)">
         <label>
@@ -73,48 +74,42 @@ export class Prices {
   protected readonly result = signal('');
 
   protected readonly nameOf = (item: CatalogItem) => item.name;
-  protected readonly blank = (): CatalogItem => ({
-    id: `item_${Date.now().toString(36)}`,
-    name: '',
-    kind: 'food',
-    description: '',
-    priceCoins: 0,
-    priceGems: 0,
-    active: true,
-  });
 
   protected readonly filter: Filter<CatalogItem> = { key: 'kind', label: 'Tipo', options: options(ITEM_KINDS) };
 
   protected readonly columns: Column<CatalogItem>[] = [
     { key: 'name', label: 'Ítem' },
-    { key: 'kind', label: 'Tipo', format: (i) => ITEM_KINDS[i.kind] },
+    { key: 'kind', label: 'Tipo', format: (i) => ITEM_KINDS[i.kind] ?? i.kind },
+    { key: 'id', label: 'Identificador' },
     { key: 'priceCoins', label: 'Monedas', type: 'number', editable: true },
     { key: 'priceGems', label: 'Gemas', type: 'number', editable: true },
-    { key: 'active', label: 'En venta', type: 'bool' },
   ];
 
-  protected readonly fields: Field<CatalogItem>[] = [
-    { key: 'name', label: 'Nombre', type: 'text', required: true },
-    { key: 'id', label: 'Identificador', type: 'text', required: true, lockedOnEdit: true },
-    { key: 'kind', label: 'Tipo', type: 'select', options: options(ITEM_KINDS), required: true },
-    { key: 'description', label: 'Descripción', type: 'textarea' },
-    { key: 'priceCoins', label: 'Precio en monedas', type: 'number', min: 0, required: true },
-    { key: 'priceGems', label: 'Precio en gemas', type: 'number', min: 0, required: true },
-    { key: 'active', label: 'En venta', type: 'checkbox' },
-  ];
+  /** Sin formulario: solo se editan los precios, en la celda. */
+  protected readonly fields: Field<CatalogItem>[] = [];
 
-  /** Aplica el porcentaje a la moneda elegida en todas las filas que pasan el filtro actual. */
+  /** Aplica el porcentaje a la moneda elegida en todas las filas que pasan el filtro actual (una sola petición). */
   protected async applyBulk(page: ResourcePage<CatalogItem>) {
-    const percent = this.percent();
-    if (percent === null) return;
+    const percent = Math.trunc(this.percent() ?? 0);
+    if (!percent) return;
     const key = this.currency();
     const targets = page.visibleRows().filter((item) => item[key] > 0);
-    for (const item of targets) {
-      const price = Math.max(0, Math.round(item[key] * (1 + percent / 100)));
-      await page.store.update(item.id, { [key]: price } as Partial<CatalogItem>);
-    }
     const unit = key === 'priceCoins' ? 'monedas' : 'gemas';
-    this.result.set(`Ajuste del ${percent} % en ${unit} aplicado a ${targets.length} ítems.`);
-    this.percent.set(null);
+    if (!targets.length) {
+      this.result.set(`Ningún ítem visible tiene precio en ${unit}.`);
+      return;
+    }
+    try {
+      const { changed } = await this.repo.bulkAdjust(
+        targets.map((item) => item.id),
+        percent,
+        key,
+      );
+      await page.store.load();
+      this.result.set(`Ajuste del ${percent} % en ${unit}: ${changed} de ${targets.length} ítems cambiados.`);
+      this.percent.set(null);
+    } catch (e) {
+      this.result.set(e instanceof Error ? e.message : 'Error inesperado');
+    }
   }
 }

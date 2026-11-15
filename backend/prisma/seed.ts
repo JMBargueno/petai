@@ -67,13 +67,13 @@ async function main() {
   for (const food of foods) {
     await prisma.item.upsert({
       where: { id: food.id },
+      // Los precios solo se fijan al crear el objeto: después se gestionan desde el panel de admin
+      // y re-ejecutar el seed no debe pisarlos.
       update: {
         kind: food.kind,
         name: food.name,
         description: food.description,
         effects: food.effects,
-        priceCoins: food.priceCoins,
-        priceGems: food.priceGems,
       },
       create: {
         id: food.id,

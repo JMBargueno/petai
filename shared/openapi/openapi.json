@@ -6512,11 +6512,330 @@
           "Admin"
         ]
       }
+    },
+    "/v1/admin/stats": {
+      "get": {
+        "operationId": "AdminController_stats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStatsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Métricas del resumen del panel",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/items": {
+      "get": {
+        "operationId": "AdminController_listItems",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Catálogo de la tienda con sus precios",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/items/prices": {
+      "patch": {
+        "operationId": "AdminController_bulkPrices",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkPriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkPriceResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajustar en bloque un porcentaje el precio de varios objetos (queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/items/{id}": {
+      "patch": {
+        "operationId": "AdminController_updateItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateItemPriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminItemDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el precio de un objeto (queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/species": {
+      "get": {
+        "operationId": "AdminController_listSpecies",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminSpeciesDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Especies que usa el juego (game-data, solo lectura)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/pets": {
+      "get": {
+        "operationId": "AdminController_listPets",
+        "parameters": [
+          {
+            "name": "rarity",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "speciesId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Apodo o correo del dueño",
+            "schema": {}
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPetListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mascotas de los jugadores (paginado; filtros: q, speciesId, rarity)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/events": {
+      "get": {
+        "operationId": "AdminController_listEvents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminEventDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eventos del juego: festividades, temporadas, torneos y raids (solo lectura)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/audit": {
+      "get": {
+        "operationId": "AdminController_listAudit",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "event",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAuditListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registro de auditoría (paginado; filtros: event, userId)",
+        "tags": [
+          "Admin"
+        ]
+      }
     }
   },
   "info": {
     "title": "PetAI API",
-    "description": "API autoritativa para el ecosistema PetAI",
+    "description": "API autoritativa para el ecosistema PetAI (tamagotchi virtual inteligente)",
     "version": "1.0.0",
     "contact": {}
   },
@@ -8222,6 +8541,408 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "AdminStatsUsersDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "byRole": {
+            "type": "object",
+            "example": {
+              "user": 10,
+              "admin": 1
+            }
+          }
+        },
+        "required": [
+          "total",
+          "byRole"
+        ]
+      },
+      "AdminStatsPetsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "byRarity": {
+            "type": "object",
+            "example": {
+              "normal": 8,
+              "rare": 2
+            }
+          }
+        },
+        "required": [
+          "total",
+          "byRarity"
+        ]
+      },
+      "AdminEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "festival:halloween"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "festival",
+              "season",
+              "tournament",
+              "raid"
+            ]
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2026-10-31"
+          },
+          "endDate": {
+            "type": "string",
+            "example": "2026-10-31"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "finished": {
+            "type": "boolean",
+            "description": "Ya terminó por su estado (torneo resuelto, raid liquidada…)"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "source",
+          "startDate",
+          "endDate",
+          "enabled",
+          "finished",
+          "detail"
+        ]
+      },
+      "AdminStatsDto": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "$ref": "#/components/schemas/AdminStatsUsersDto"
+          },
+          "pets": {
+            "$ref": "#/components/schemas/AdminStatsPetsDto"
+          },
+          "items": {
+            "type": "number"
+          },
+          "upcomingEvents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminEventDto"
+            }
+          }
+        },
+        "required": [
+          "users",
+          "pets",
+          "items",
+          "upcomingEvents"
+        ]
+      },
+      "AdminItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "example": "food"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "priceCoins": {
+            "type": "number"
+          },
+          "priceGems": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "description",
+          "priceCoins",
+          "priceGems"
+        ]
+      },
+      "BulkPriceDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "percent": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 500,
+            "description": "Porcentaje entero de ajuste"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "priceCoins",
+              "priceGems"
+            ]
+          }
+        },
+        "required": [
+          "ids",
+          "percent",
+          "currency"
+        ]
+      },
+      "BulkPriceResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminItemDto"
+            }
+          },
+          "changed": {
+            "type": "number",
+            "description": "Objetos cuyo precio cambió"
+          }
+        },
+        "required": [
+          "items",
+          "changed"
+        ]
+      },
+      "UpdateItemPriceDto": {
+        "type": "object",
+        "properties": {
+          "priceCoins": {
+            "type": "number",
+            "minimum": 0
+          },
+          "priceGems": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "AdminSpeciesDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "element": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          },
+          "hp": {
+            "type": "number"
+          },
+          "atk": {
+            "type": "number"
+          },
+          "def": {
+            "type": "number"
+          },
+          "vel": {
+            "type": "number"
+          },
+          "esp": {
+            "type": "number"
+          },
+          "favoriteFood": {
+            "type": "string"
+          },
+          "spriteKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "element",
+          "rarity",
+          "hp",
+          "atk",
+          "def",
+          "vel",
+          "esp",
+          "favoriteFood",
+          "spriteKey"
+        ]
+      },
+      "AdminPetDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "speciesId": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          },
+          "level": {
+            "type": "number"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "shiny": {
+            "type": "boolean"
+          },
+          "sick": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Correo del dueño"
+          }
+        },
+        "required": [
+          "id",
+          "nickname",
+          "speciesId",
+          "rarity",
+          "level",
+          "stage",
+          "shiny",
+          "sick",
+          "createdAt",
+          "owner"
+        ]
+      },
+      "AdminPetListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminPetDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "AdminAuditEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "userEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "event": {
+            "type": "string",
+            "example": "role_change"
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "userEmail",
+          "event",
+          "ip",
+          "metadata",
+          "createdAt"
+        ]
+      },
+      "AdminAuditListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAuditEntryDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
         ]
       }
     }
