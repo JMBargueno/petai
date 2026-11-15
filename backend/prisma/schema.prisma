@@ -1110,7 +1110,7 @@ model WebhookDelivery {
 model AuditLog {
   id          String   @id @default(uuid())
   userId      String
-  event       String   // login | refresh | ip_change | key_created | key_revoked | account_deleted | role_change | invite_create | invite_revoke | registration_settings_change
+  event       String   // login | refresh | ip_change | key_created | key_revoked | account_deleted | role_change | balance_adjust | invite_create | invite_revoke | registration_settings_change
   ip          String?
   userAgent   String?
   fingerprint String?

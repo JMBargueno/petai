@@ -23,8 +23,8 @@ const PAGE_SIZE = 100;
 const toAdminUser = (u: ApiUser): AdminUser => ({ ...u, displayName: u.displayName ?? '' });
 
 /**
- * Usuarios reales del backend (`/v1/admin/users`). Desde el panel solo se cambia el rol:
- * las cuentas no se crean ni se borran aquí, y el saldo no se edita a mano.
+ * Usuarios reales del backend (`/v1/admin/users`). Desde el panel se cambia el rol y se fija el saldo
+ * (monedas y gemas, valor absoluto): las cuentas no se crean ni se borran aquí.
  */
 export class HttpUsersRepository implements Repository<AdminUser> {
   private readonly known = new Map<string, AdminUser>();
@@ -46,16 +46,26 @@ export class HttpUsersRepository implements Repository<AdminUser> {
   async update(id: string, patch: Partial<AdminUser>): Promise<AdminUser> {
     const current = this.known.get(id);
     if (!current) throw new Error(`No existe el registro "${id}"`);
-    if (!patch.role || patch.role === current.role) return current;
+    let result = current;
+    const base = `/v1/admin/users/${encodeURIComponent(id)}`;
 
-    const updated = toAdminUser(
-      await this.api.request<ApiUser>(`/v1/admin/users/${encodeURIComponent(id)}/role`, {
-        method: 'PATCH',
-        body: JSON.stringify({ role: patch.role }),
-      }),
-    );
-    this.known.set(id, updated);
-    return updated;
+    if (patch.role && patch.role !== current.role) {
+      result = toAdminUser(
+        await this.api.request<ApiUser>(`${base}/role`, { method: 'PATCH', body: JSON.stringify({ role: patch.role }) }),
+      );
+      this.known.set(id, result);
+    }
+
+    const balance: { coins?: number; gems?: number } = {};
+    if (patch.coins !== undefined && patch.coins !== current.coins) balance.coins = patch.coins;
+    if (patch.gems !== undefined && patch.gems !== current.gems) balance.gems = patch.gems;
+    if (balance.coins !== undefined || balance.gems !== undefined) {
+      result = toAdminUser(
+        await this.api.request<ApiUser>(`${base}/balance`, { method: 'PATCH', body: JSON.stringify(balance) }),
+      );
+      this.known.set(id, result);
+    }
+    return result;
   }
 
   async create(): Promise<AdminUser> {

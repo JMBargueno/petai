@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { parseOrBadRequest } from '../auth/dto/auth.schemas';
-import { assignRoleSchema, listUsersSchema } from './authz.schemas';
+import { adjustBalanceSchema, assignRoleSchema, listUsersSchema } from './authz.schemas';
 import { isRole, Role, ROLE_RANK } from './roles';
 
 const ADMIN_USER_SELECT = {
@@ -81,5 +81,28 @@ export class AdminUsersService {
       this.logger.log(`Rol cambiado (usuario ${targetId}): ${updated.oldRole} → ${newRole} por ${actor.id}`);
     }
     return updated.user;
+  }
+
+  /** Fija el saldo de monedas y/o gemas de un usuario (valor absoluto) y lo audita con el saldo anterior y el nuevo. */
+  async adjustBalance(actor: { id: string }, targetId: string, raw: unknown) {
+    const { coins, gems } = parseOrBadRequest(adjustBalanceSchema, raw);
+
+    return this.prisma.$transaction(async (tx) => {
+      const target = await tx.user.findUnique({ where: { id: targetId }, select: { id: true, coins: true, gems: true } });
+      if (!target) throw new NotFoundException('Usuario no encontrado');
+
+      const to = { coins: coins ?? target.coins, gems: gems ?? target.gems };
+      const from = { coins: target.coins, gems: target.gems };
+      if (to.coins === from.coins && to.gems === from.gems) {
+        return tx.user.findUniqueOrThrow({ where: { id: targetId }, select: ADMIN_USER_SELECT });
+      }
+
+      const user = await tx.user.update({ where: { id: targetId }, data: to, select: ADMIN_USER_SELECT });
+      await tx.auditLog.create({
+        data: { userId: targetId, event: 'balance_adjust', metadata: { from, to, by: actor.id } },
+      });
+      this.logger.log(`Saldo ajustado (usuario ${targetId}): ${JSON.stringify(from)} → ${JSON.stringify(to)} por ${actor.id}`);
+      return user;
+    });
   }
 }

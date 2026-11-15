@@ -3027,6 +3027,23 @@ export interface paths {
         patch: operations["AdminUsersController_assignRole"];
         trace?: never;
     };
+    "/v1/admin/users/{id}/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado) */
+        patch: operations["AdminUsersController_adjustBalance"];
+        trace?: never;
+    };
     "/v1/admin/registration-settings": {
         parameters: {
             query?: never;
@@ -9055,6 +9072,32 @@ export interface operations {
                 "application/json": {
                     /** @enum {string} */
                     role: "superadmin" | "admin" | "moderator" | "user";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_adjustBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    coins?: number;
+                    gems?: number;
                 };
             };
         };
