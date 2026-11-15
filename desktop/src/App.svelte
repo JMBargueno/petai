@@ -14,6 +14,8 @@
   } from './lib/environmental';
   import PetView from './components/PetView.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
+  import FileDropModal from './components/FileDropModal.svelte';
+  import type { AnalyzedFile } from './lib/fileAnalyzer';
   import { PawPrint, Bell, X } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
@@ -26,6 +28,7 @@
   let inventory: any[] = [];
   let shopItems: any[] = [];
   let isPanelOpen = true;
+  let droppedFile: AnalyzedFile | null = null;
   // Petición de navegación al panel (la campana abre Ajustes › Avisos)
   let panelRequest: { dest: string; sub: string; n: number } | null = null;
   let requestN = 0;
@@ -257,7 +260,13 @@
     }
   }
 
+  function handleFileDropped(e: Event) {
+    const ce = e as CustomEvent<AnalyzedFile>;
+    droppedFile = ce.detail;
+  }
+
   onMount(() => {
+    window.addEventListener('petai:file_dropped', handleFileDropped);
     stopClickThrough = startClickThrough();
     // Refresh token rechazado (caducado o revocado): vuelta a la pantalla de acceso
     stopSessionExpired = onSessionExpired(() => {
@@ -276,6 +285,7 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener('petai:file_dropped', handleFileDropped);
     clearInterval(needsPoll);
     clearTimeout(bubbleTimer);
     stopHeartbeat();
@@ -344,6 +354,20 @@
     on:refreshPet={refreshPet}
     on:logout={clearSessionState}
   />
+
+  {#if droppedFile}
+    <FileDropModal
+      file={droppedFile}
+      on:close={() => (droppedFile = null)}
+      on:sendPrompt={(e) => {
+        const { prompt, file } = e.detail;
+        droppedFile = null;
+        panelRequest = { dest: 'chat', sub: '', n: ++requestN };
+        isPanelOpen = true;
+        showBubble(`Examinando ${file.name} con la IA...`);
+      }}
+    />
+  {/if}
 </main>
 
 <style>

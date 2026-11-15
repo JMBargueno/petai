@@ -493,6 +493,10 @@ export const api = {
     return minigameRequest<any>('PATCH', `/v1/pets/${petId}`, { strategy });
   },
 
+  async updateDesktopSkills(petId: string, skills: Record<string, boolean>) {
+    return minigameRequest<any>('PATCH', `/v1/pets/${petId}/desktop-skills`, { skills });
+  },
+
   async matchmake(petId: string) {
     return minigameRequest<BattleResponse>('POST', '/v1/battles/matchmake', { petId });
   },

@@ -218,6 +218,7 @@ model Pet {
   intelligence  Int       @default(0)
   awakened      Boolean   @default(false)
   personality   Json?
+  desktopSkills Json?     @default("{}")
 
   lastTickAt    DateTime  @default(now())
   createdAt     DateTime  @default(now())

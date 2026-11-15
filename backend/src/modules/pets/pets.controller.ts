@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse, ApiQuery, ApiExtra
 import { PetsService } from './pets.service';
 import { BondingService } from '../bonding/bonding.service';
 import { BondingDetailResponseDto, BondingFieldsDto } from '../bonding/dto/bonding.dto';
+import { UpdateDesktopSkillsDto } from './dto/desktop-skills.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 
@@ -103,5 +104,15 @@ export class PetsController {
     @Body() body: { nickname?: string; strategy?: string },
   ) {
     return this.petsService.updatePet(user.id, petId, body);
+  }
+
+  @Patch(':id/desktop-skills')
+  @ApiOperation({ summary: 'Actualizar las autorizaciones de habilidades de escritorio de la mascota' })
+  updateDesktopSkills(
+    @CurrentUser() user: any,
+    @Param('id') petId: string,
+    @Body() body: UpdateDesktopSkillsDto,
+  ) {
+    return this.petsService.updateDesktopSkills(user.id, petId, body.skills);
   }
 }

@@ -359,4 +359,52 @@ describe('PetsService', () => {
       expect(kept.stage).toBe('final');
     });
   });
+
+  describe('updateDesktopSkills', () => {
+    it('actualiza las habilidades de escritorio y emite actualización en tiempo real', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue({
+        id: 'p1',
+        userId: 'u1',
+        bonding: 50,
+        intelligence: 3,
+        desktopSkills: { drag_throw: true },
+      } as any);
+
+      mockPrismaService.pet.update.mockResolvedValue({
+        id: 'p1',
+        userId: 'u1',
+        bonding: 50,
+        intelligence: 3,
+        desktopSkills: { drag_throw: true, file_analyzer: true },
+      });
+
+      const res = await service.updateDesktopSkills('u1', 'p1', { file_analyzer: true });
+
+      expect(mockPrismaService.pet.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'p1' },
+          data: { desktopSkills: { drag_throw: true, file_analyzer: true } },
+        }),
+      );
+      expect(mockRealtimeGateway.emitPetUpdate).toHaveBeenCalled();
+      expect(res.desktopSkills).toEqual({ drag_throw: true, file_analyzer: true });
+    });
+
+    it('rechaza activar una habilidad si no se cumplen los requisitos de vínculo o inteligencia', async () => {
+      mockPrismaService.pet.update.mockClear();
+      jest.spyOn(service, 'getPetById').mockResolvedValue({
+        id: 'p1',
+        userId: 'u1',
+        bonding: 5,       // menor que 30 requerido para file_analyzer
+        intelligence: 1,  // menor que 3 requerido para file_analyzer
+        desktopSkills: {},
+      } as any);
+
+      await expect(
+        service.updateDesktopSkills('u1', 'p1', { file_analyzer: true }),
+      ).rejects.toThrow('No cumples los requisitos');
+
+      expect(mockPrismaService.pet.update).not.toHaveBeenCalled();
+    });
+  });
 });

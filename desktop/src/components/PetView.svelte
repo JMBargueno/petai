@@ -8,6 +8,16 @@
   } from '../lib/sprites';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
   import type { EnvironmentalStatus } from '../lib/environmental';
+  import { skillAuthorizations, isSkillActive } from '../lib/stores/desktopSkillsStore';
+  import {
+    calculateThrowVelocity,
+    stepPhysics,
+    type PhysicsState,
+    type PointerSample,
+  } from '../lib/physics/petPhysics';
+  import { fetchActiveWindow, calculatePerchTarget } from '../lib/windowPerching';
+  import { categorizeWindowTitle, type AppCategory } from '../lib/contextAwareness';
+  import { analyzeDroppedFile, type AnalyzedFile } from '../lib/fileAnalyzer';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
@@ -40,6 +50,17 @@
   let squashScaleY = 1;
   let recoilOffsetX = 0;
   let isWhiteFlash = false;
+
+  // Fase 2: Estados de Trepar (Climb) y Posarse en Ventanas (Perch)
+  let isClimbing = false;
+  let climbWall: 'left' | 'right' | 'ceiling' | null = null;
+  let climbRotation = 0;
+  let isPerched = false;
+
+  // Fase 3: Drag & Drop de archivos y Conciencia de contexto
+  let isDragOverPet = false;
+  let currentAppCategory: AppCategory = 'generic';
+  let lastContextCheckTime = 0;
 
   $: speciesKey = pet?.species?.id || pet?.species?.spriteKey || 'ignisaur';
   $: patternKey = pet?.pattern?.id || 'plain';
@@ -108,8 +129,23 @@
     }, 80);
   }
 
+  $: petBonding = pet?.bonding?.level ?? pet?.bondingLevel ?? 0;
+  $: petIntelligence = pet?.intelligence ?? 1;
+
   let dragMoved = false;
   const PET_SIZE = 128;
+
+  // Variables para físicas de arrastre, lanzamiento e inercia
+  let pointerSamples: PointerSample[] = [];
+  let physicsState: PhysicsState = {
+    x: posX,
+    y: posY,
+    vx: 0,
+    vy: 0,
+    isAirborne: false,
+    bounceCount: 0,
+  };
+  let lastPhysicsTime = 0;
 
   function handleMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
@@ -117,6 +153,12 @@
     dragMoved = false;
     dragStartX = e.clientX - posX;
     dragStartY = e.clientY - posY;
+    physicsState.isAirborne = false;
+    isClimbing = false;
+    climbWall = null;
+    climbRotation = 0;
+    isPerched = false;
+    pointerSamples = [{ x: e.clientX, y: e.clientY, time: performance.now() }];
     document.body.dataset.dragging = '1';
   }
 
@@ -127,11 +169,44 @@
     if (Math.abs(nx - posX) + Math.abs(ny - posY) > 0) dragMoved = true;
     posX = Math.min(Math.max(0, nx), window.innerWidth - PET_SIZE);
     posY = Math.min(Math.max(0, ny), window.innerHeight - PET_SIZE);
+
+    const now = performance.now();
+    pointerSamples.push({ x: e.clientX, y: e.clientY, time: now });
+    if (pointerSamples.length > 20) pointerSamples.shift();
   }
 
   function handleMouseUp() {
+    if (!isDragging) return;
     isDragging = false;
     delete document.body.dataset.dragging;
+
+    const dragThrowActive = isSkillActive(
+      'drag_throw',
+      $skillAuthorizations,
+      petBonding,
+      petIntelligence
+    );
+
+    if (dragThrowActive && !isSleeping) {
+      const { vx, vy } = calculateThrowVelocity(pointerSamples);
+      const maxY = (window.innerHeight || 600) - PET_SIZE;
+
+      // Si se soltó con impulso o en el aire
+      if (Math.hypot(vx, vy) > 120 || posY < maxY - 15) {
+        physicsState = {
+          x: posX,
+          y: posY,
+          vx,
+          vy,
+          isAirborne: true,
+          bounceCount: 0,
+        };
+        lastPhysicsTime = performance.now();
+        if (Math.abs(vx) > 40) {
+          direction = vx > 0 ? 1 : -1;
+        }
+      }
+    }
   }
 
   function handleClick() {
@@ -205,36 +280,234 @@
         }
       }
     }
+    // Paso de simulación física si la mascota está en el aire o lanzada
+    if (physicsState.isAirborne) {
+      const dt = lastPhysicsTime ? (time - lastPhysicsTime) / 1000 : 0.016;
+      lastPhysicsTime = time;
+
+      const prevBounces = physicsState.bounceCount;
+      const bounds = {
+        minX: 10,
+        maxX: (window.innerWidth || 800) - PET_SIZE - 10,
+        minY: 10,
+        maxY: (window.innerHeight || 600) - PET_SIZE,
+      };
+
+      physicsState = stepPhysics(physicsState, dt, bounds);
+      posX = physicsState.x;
+      posY = physicsState.y;
+
+      // Rebote procedural con squash & stretch
+      if (physicsState.bounceCount > prevBounces) {
+        squashScaleX = 1.25;
+        squashScaleY = 0.75;
+        setTimeout(() => {
+          squashScaleX = 1;
+          squashScaleY = 1;
+        }, 75);
+      }
+
+      // Al posarse definitivamente en el suelo
+      if (!physicsState.isAirborne) {
+        currentAnim = 'idle';
+        squashScaleX = 1.15;
+        squashScaleY = 0.85;
+        setTimeout(() => {
+          squashScaleX = 1;
+          squashScaleY = 1;
+        }, 90);
+      }
+    } else {
+      lastPhysicsTime = time;
+    }
+
     animRafId = requestAnimationFrame(renderLoop);
+  }
+
+  function handleQuickSummon(e: Event) {
+    const customEvent = e as CustomEvent<{ x?: number; y?: number }>;
+    const skillActive = isSkillActive(
+      'quick_summon',
+      $skillAuthorizations,
+      petBonding,
+      petIntelligence
+    );
+    if (!skillActive) return;
+
+    physicsState.isAirborne = false;
+    isClimbing = false;
+    climbWall = null;
+    climbRotation = 0;
+    isPerched = false;
+    const clientX = customEvent.detail?.x ?? (window.innerWidth || 800) / 2;
+    const clientY = customEvent.detail?.y ?? (window.innerHeight || 600) - PET_SIZE;
+
+    posX = Math.min(Math.max(20, clientX - PET_SIZE / 2), (window.innerWidth || 800) - PET_SIZE - 20);
+    posY = Math.min(Math.max(20, clientY - PET_SIZE / 2), (window.innerHeight || 600) - PET_SIZE);
+
+    triggerAnim('happy');
   }
 
   onMount(() => {
     // Inicializar loop de animación
     animRafId = requestAnimationFrame(renderLoop);
 
-    // Ciclo de comportamiento de la mascota en pantalla
-    moveInterval = setInterval(() => {
-      if (isSleeping || isDragging || currentAnim === 'eat') return;
+    window.addEventListener('petai:summon', handleQuickSummon);
 
+    function handlePomodoroEvent(e: Event) {
+      const customEvent = e as CustomEvent<{ eventType: string }>;
+      const eventType = customEvent.detail?.eventType;
+      if (!isSkillActive('pomodoro_companion', $skillAuthorizations, petBonding, petIntelligence)) {
+        return;
+      }
+
+      if (eventType === 'work_start') {
+        currentAnim = 'idle';
+        bubble = '💼 ¡A trabajar! Estaré a tu lado en silencio.';
+      } else if (eventType === 'work_finish') {
+        triggerAnim('happy');
+        bubble = '🎉 ¡Buen trabajo! Tómate una pausa y bebe agua 💧';
+      } else if (eventType === 'break_finish') {
+        triggerAnim('happy');
+        bubble = '⚡ ¡Descanso listo! ¿Volvemos al foco?';
+      }
+
+      setTimeout(() => {
+        if (bubble.startsWith('💼') || bubble.startsWith('🎉') || bubble.startsWith('⚡')) {
+          bubble = '';
+        }
+      }, 6000);
+    }
+
+    window.addEventListener('petai:pomodoro_event', handlePomodoroEvent);
+
+    // Ciclo de comportamiento de la mascota en pantalla
+    moveInterval = setInterval(async () => {
+      if (isSleeping || isDragging || physicsState.isAirborne || currentAnim === 'eat') return;
+
+      const windowWidth = window.innerWidth || 800;
+      const windowHeight = window.innerHeight || 600;
+
+      // 1. Si está trepando por los bordes (climb_walls)
+      if (isClimbing) {
+        currentAnim = 'walk';
+        if (climbWall === 'right' || climbWall === 'left') {
+          posY -= 30;
+          if (posY <= 30) {
+            // Alcanzó el techo
+            climbWall = 'ceiling';
+            climbRotation = 180;
+          }
+        } else if (climbWall === 'ceiling') {
+          posX += 30 * direction;
+          // Si llega a la otra pared o decide soltarse
+          if (posX < 30 || posX > windowWidth - 140 || Math.random() < 0.35) {
+            isClimbing = false;
+            climbWall = null;
+            climbRotation = 0;
+            // Se deja caer con gravedad
+            physicsState = {
+              x: posX,
+              y: posY,
+              vx: 40 * direction,
+              vy: 60,
+              isAirborne: true,
+              bounceCount: 0,
+            };
+          }
+        }
+        return;
+      }
+
+      // 2. Si está posada en la barra de una ventana activa (window_perching)
+      if (isPerched) {
+        if (Math.random() < 0.35) {
+          // Bajar de la ventana hacia el suelo con un salto
+          isPerched = false;
+          physicsState = {
+            x: posX,
+            y: posY,
+            vx: 30 * direction,
+            vy: 40,
+            isAirborne: true,
+            bounceCount: 0,
+          };
+        }
+        return;
+      }
+
+      // 3. Posibilidad de posarse en la ventana activa si la habilidad está autorizada
+      const canPerch = isSkillActive('window_perching', $skillAuthorizations, petBonding, petIntelligence);
+      if (canPerch && Math.random() < 0.2) {
+        const win = await fetchActiveWindow();
+        if (win && win.is_valid) {
+          const target = calculatePerchTarget(win, PET_SIZE);
+          posX = target.x;
+          posY = target.y;
+          isPerched = true;
+          triggerAnim('happy');
+          return;
+        }
+      }
+
+      // 3.5. Conciencia de la App en Foco (context_awareness)
+      const canContext = isSkillActive('context_awareness', $skillAuthorizations, petBonding, petIntelligence);
+      const now = Date.now();
+      if (canContext && now - lastContextCheckTime > 6000) {
+        lastContextCheckTime = now;
+        const win = await fetchActiveWindow();
+        if (win && win.title) {
+          const ctx = categorizeWindowTitle(win.title);
+          if (ctx.category !== currentAppCategory) {
+            currentAppCategory = ctx.category;
+            if (ctx.category !== 'generic') {
+              bubble = `${ctx.accessoryIcon} ${ctx.reactionComment}`;
+              setTimeout(() => {
+                if (bubble.startsWith(ctx.accessoryIcon)) bubble = '';
+              }, 4500);
+            }
+          }
+        }
+      }
+
+      // 4. Movimiento normal y posibilidad de iniciar trepado
       const actionRoll = Math.random();
-      if (actionRoll < 0.45) {
+      if (actionRoll < 0.5) {
         currentAnim = 'walk';
         const step = 25 * direction;
-        const windowWidth = window.innerWidth || 800;
+        const reachedRight = posX + step > windowWidth - 140;
+        const reachedLeft = posX + step < 20;
 
-        if (posX + step > windowWidth - 140) {
+        const canClimb = isSkillActive('climb_walls', $skillAuthorizations, petBonding, petIntelligence);
+
+        if ((reachedRight || reachedLeft) && canClimb && Math.random() < 0.5) {
+          // Iniciar trepado vertical por la pared
+          isClimbing = true;
+          if (reachedRight) {
+            climbWall = 'right';
+            climbRotation = -90;
+            posX = windowWidth - PET_SIZE - 5;
+          } else {
+            climbWall = 'left';
+            climbRotation = 90;
+            posX = 5;
+          }
+          return;
+        }
+
+        if (reachedRight) {
           direction = -1;
-        } else if (posX + step < 20) {
+        } else if (reachedLeft) {
           direction = 1;
         }
         posX += 25 * direction;
 
         setTimeout(() => {
-          if (!isSleeping && currentAnim === 'walk') {
+          if (!isSleeping && currentAnim === 'walk' && !isClimbing) {
             currentAnim = 'idle';
           }
         }, 800);
-      } else if (actionRoll < 0.70) {
+      } else if (actionRoll < 0.75) {
         currentAnim = 'idle';
       }
     }, 3000);
@@ -249,6 +522,8 @@
     clearTimeout(animTimer);
     window.removeEventListener('mousemove', handleMouseMove);
     window.removeEventListener('mouseup', handleMouseUp);
+    window.removeEventListener('petai:summon', handleQuickSummon);
+    window.removeEventListener('petai:pomodoro_event', handlePomodoroEvent);
   });
 </script>
 
@@ -258,14 +533,40 @@
   role="button"
   tabindex="0"
   class:dragging={isDragging}
+  class:drag-over={isDragOverPet}
   style="
     left: {posX + recoilOffsetX}px;
     top: {posY}px;
-    transform: scaleX({direction}) scale({squashScaleX}, {squashScaleY});
+    transform: scaleX({direction}) rotate({climbRotation}deg) scale({squashScaleX}, {squashScaleY});
   "
   on:mousedown={handleMouseDown}
   on:click={handleClick}
   on:keydown={(e) => e.key === 'Enter' && onPetClick()}
+  on:dragover={(e) => {
+    e.preventDefault();
+    isDragOverPet = true;
+  }}
+  on:dragleave={() => {
+    isDragOverPet = false;
+  }}
+  on:drop={async (e) => {
+    e.preventDefault();
+    isDragOverPet = false;
+    const canAnalyze = isSkillActive('file_analyzer', $skillAuthorizations, petBonding, petIntelligence);
+    if (!canAnalyze) {
+      bubble = '📄 Activa la habilidad "Analizador de Archivos" para que pueda leerlo.';
+      setTimeout(() => (bubble = ''), 5000);
+      return;
+    }
+
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const rawFile = e.dataTransfer.files[0];
+      const analyzed = await analyzeDroppedFile(rawFile);
+      triggerAnim('happy');
+      bubble = `¡Atrapé ${analyzed.name}! 📄 ¿Qué quieres saber?`;
+      window.dispatchEvent(new CustomEvent('petai:file_dropped', { detail: analyzed }));
+    }
+  }}
 >
   <div class="sprite-wrapper" class:env={!!envVariant}>
     <!-- Tinte ambiental (feature 005): tramo del día + clima -->
@@ -341,6 +642,10 @@
 
   .pet-container.dragging {
     transition: none;
+  }
+
+  .pet-container.drag-over {
+    filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.9));
   }
 
   .sprite-wrapper {

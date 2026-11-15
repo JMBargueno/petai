@@ -1126,6 +1126,45 @@
         ]
       }
     },
+    "/v1/pets/{id}/desktop-skills": {
+      "patch": {
+        "operationId": "PetsController_updateDesktopSkills",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDesktopSkillsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar las autorizaciones de habilidades de escritorio de la mascota",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
     "/v1/environmental/status": {
       "get": {
         "operationId": "EnvironmentalController_getStatus",
@@ -7661,6 +7700,27 @@
           "history",
           "decayInfo",
           "unlocks"
+        ]
+      },
+      "UpdateDesktopSkillsDto": {
+        "type": "object",
+        "properties": {
+          "skills": {
+            "type": "object",
+            "description": "Diccionario de autorizaciones de habilidades de escritorio (ej: { drag_throw: true, pomodoro_companion: true })",
+            "example": {
+              "drag_throw": true,
+              "climb_walls": true,
+              "window_perching": false,
+              "quick_summon": true,
+              "pomodoro_companion": true,
+              "context_awareness": false,
+              "file_analyzer": false
+            }
+          }
+        },
+        "required": [
+          "skills"
         ]
       },
       "WeatherInfoModel": {

@@ -618,6 +618,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/pets/{id}/desktop-skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualizar las autorizaciones de habilidades de escritorio de la mascota */
+        patch: operations["PetsController_updateDesktopSkills"];
+        trace?: never;
+    };
     "/v1/environmental/status": {
         parameters: {
             query?: never;
@@ -3678,6 +3695,21 @@ export interface components {
             decayInfo: components["schemas"]["DecayInfoDto"];
             unlocks: components["schemas"]["UnlocksDto"];
         };
+        UpdateDesktopSkillsDto: {
+            /**
+             * @description Diccionario de autorizaciones de habilidades de escritorio (ej: { drag_throw: true, pomodoro_companion: true })
+             * @example {
+             *       "drag_throw": true,
+             *       "climb_walls": true,
+             *       "window_perching": false,
+             *       "quick_summon": true,
+             *       "pomodoro_companion": true,
+             *       "context_awareness": false,
+             *       "file_analyzer": false
+             *     }
+             */
+            skills: Record<string, never>;
+        };
         WeatherInfoModel: {
             /**
              * @description Condición mapeada (WMO + temperatura).
@@ -5088,6 +5120,29 @@ export interface operations {
         requestBody?: never;
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PetsController_updateDesktopSkills: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDesktopSkillsDto"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
