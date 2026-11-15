@@ -1,0 +1,109 @@
+# Pendientes de PetAI
+
+> Actualizado: 15/11/2026 — después de cerrar Pasos 1-4 del informe de mejoras.
+> Base: `main` tip `db3ff00`.
+
+## 1. Commits/PRs sin mergear
+
+| Item | Dónde | Descripción |
+|---|---|---|
+| R-07 (load test multi-user) | commit `94d5214` en `feat/r01-bullmq-webhooks` (fuera de main) | `loadtest.sh` ahora soporta `USERS=N` (multi-user write concurrente). Hay que merguear a main (nuevo PR o cherry-pick). |
+
+## 2. Configuración de producción (no es código)
+
+| Item | Qué hacer | Dónde |
+|---|---|---|
+| **Transporte de email real** | Sobrescribir `EMAIL_SENDER` con un sender real (SMTP/Resend/SES). Hoy usa `console` (dev/tests). Sin esto, la recuperación de contraseña no envía el email. | `auth.module.ts` (provider `EMAIL_SENDER`) o `main.ts` |
+| **`REALTIME_REDIS=true`** | En prod, activar el adaptador `socket.io-redis` (R-02). Sin ella, el WS no escala a >1 réplica. | `docker-compose.yml` / `.env.production` |
+| **`CORS_ORIGINS`** | Añadir los orígenes reales de producción. | `.env.production` |
+| **`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`** | Generar secrets 64+ chars aleatorios. | `.env.production` |
+| **`TRUST_PROXY`** | Si hay balanceador (Cloudflare, ALB…), nº de saltos. | `.env.production` |
+
+## 3. Paso 5 — Features oleadas 2/3 (de una en una)
+
+### 3a. Cobertura unit (red de seguridad)
+Módulos sin `*.spec.ts` unit (el e2e ya existe):
+
+habitat, breeding, training, genes, adventure, ai-router, spectator, reengagement, buddies, rituals, mood-theater, accessibility, gifting
+
+> No es urgente: el e2e cubre el happy-path. Unit es red de seguridad (edge cases, race conditions).
+
+### 3b. UI en clientes (escritorio + Android)
+Features sin UI (solo backend + API):
+
+| Feature | Backend | Escritorio | Android |
+|---|---|---|---|
+| Raid (Jefe Comunal) | ✅ | ❌ | ❌ |
+| Torneo (Ladder) | ✅ | ❌ | ❌ |
+| Breeding (Gene Pool) | ✅ | ❌ | ❌ |
+| Genes (Herencia) | ✅ | ❌ | ❌ |
+| Training (Ejercicio) | ✅ | ❌ | ❌ |
+| Hábitat (Salas) | ✅ | ❌ | ❌ |
+| Aventura (Expediciones) | ✅ | ❌ | ❌ |
+| Reengagement (Regreso) | ✅ | ❌ | ❌ |
+| Rituals (Ceremonias) | ✅ | ❌ | ❌ |
+| Mood Theater | ✅ | ❌ | ❌ |
+| Accessibility | ✅ | ❌ | ❌ |
+| Spectator (Ver partidas) | ✅ | ❌ | ❌ |
+
+
+## 4. Ajustes menores señalados en el informe
+
+| Ref | Descripción |
+|---|---|
+| F-08 | `GET /v1/seasons/progress` no verifica que la temporada sea la actual |
+| F-14 | Hot-reload de `balance.json` no valida rango de `xpPerTier` (0 o negativo) |
+
+## 5. Rendimiento / CI
+
+| Item | Detalle |
+|---|---|
+| **R-07 — Ejecutar load test** | Script listo (`backend/scripts/loadtest.sh`). Ejecutar contra env prod-like (`USERS=5 CONNECTIONS=50 DURATION=30`) y documentar p95/RPS/errores. Repetir antes de cada release. |
+| **R-04 — Más cachés** | Solo se cacheó el leaderboard. Candidatos: `GET /v1/seasons/:id` (historial), `GET /v1/pets/:id` (per-user, TTL 5s). Prioridad baja. |
+| **Flakiness e2e** | Suite (~46 specs, 5+ min) a veces falla en CI (handles abiertos). Mejorar: `--testTimeout`, identificar handles, o `retry: 1` en el job. |
+
+## 6. Infraestructura / DevOps
+
+| Item | Detalle |
+|---|---|
+| **Observabilidad** | `prom-client` presente. Faltan: dashboard Grafana, alertas (p95 > 500ms, error > 1%), traces en prod. |
+| **CI: Load test job manual** | GitHub Actions job (dispatch manual) que corra `loadtest.sh` contra staging. |
+| **DEPLOY.md** | Actualizar con env vars nuevas (`REALTIME_REDIS`, `EMAIL_SENDER`, BullMQ queue). |
+
+## 7. Nice-to-have / low priority
+
+| Item | Detalle |
+|---|---|
+| `socket.io-redis` deprecated | Reemplazo: `@socket.io/redis-adapter` (API pub/sub). Migrar en upgrade mayor. |
+| BullMQ: más colas | Futuras: `notifications` (push), `seasons:expire`, `gifts:expire`. |
+| iOS client | No existe. Proyecto nuevo (Swift + OpenAPI). |
+| Web (Angular) | Existe con CI build, sin features oleadas. |
+
+---
+
+## Resumen por prioridad
+
+**Ahora (bloquea prod):**
+- [ ] Merguear R-07 (commit `94d5214`)
+- [ ] Configurar `EMAIL_SENDER` real
+- [ ] Configurar `REALTIME_REDIS=true` en prod
+- [ ] Secrets + CORS + TRUST_PROXY
+- [ ] Actualizar DEPLOY.md
+
+**Próximo sprint:**
+- [ ] Ejecutar load test + documentar resultados
+- [ ] Corregir flakiness e2e en CI
+- [ ] Paso 5: 1-2 features oleadas con UI (ej. Raid, Training)
+
+**Medio plazo:**
+- [ ] Unit specs de 13 módulos
+- [ ] UI de features oleadas 2/3
+- [ ] Dashboard observabilidad
+- [ ] CI: load test manual
+- [ ] Migrar `socket.io-redis` → `@socket.io/redis-adapter`
+
+**Nice-to-have:**
+- [ ] iOS client
+- [ ] Web Angular — features oleadas
+- [ ] Más colas BullMQ
+- [ ] Más endpoints cacheados
