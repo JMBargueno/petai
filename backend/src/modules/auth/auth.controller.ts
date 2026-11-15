@@ -3,9 +3,10 @@ import type { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { DeviceLinkService } from './device-link.service';
+import { PasswordResetService } from './password-reset.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
-import { RegisterDto, LoginDto, RefreshTokenDto, AuthResponseDto, ChangePasswordDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, RefreshTokenDto, AuthResponseDto, ChangePasswordDto, ResetRequestDto, ResetConfirmDto } from './dto/auth.dto';
 
 /** IP del cliente (con TRUST_PROXY configurado respeta X-Forwarded-For del proxy de confianza). */
 const clientIp = (req: Request) => req.ip || req.socket?.remoteAddress || 'unknown';
@@ -16,6 +17,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly deviceLink: DeviceLinkService,
+    private readonly passwordReset: PasswordResetService,
   ) {}
 
   @Post('register')
@@ -63,6 +65,20 @@ export class AuthController {
   @ApiOperation({ summary: 'Cambiar la contraseña: exige la actual, cierra las demás sesiones y devuelve tokens nuevos' })
   changePassword(@CurrentUser() user: any, @Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(user.id, dto);
+  }
+
+  @Post('reset/request')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Solicitar un código de recuperación de contraseña por email (sin enumeración de cuentas)' })
+  resetRequest(@Body() dto: ResetRequestDto, @Req() req: Request) {
+    return this.passwordReset.request(dto, clientIp(req));
+  }
+
+  @Post('reset/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirmar la recuperación: con el código cambia la contraseña, cierra las demás sesiones y emite una sesión nueva' })
+  resetConfirm(@Body() dto: ResetConfirmDto, @Req() req: Request) {
+    return this.passwordReset.confirm(dto, clientIp(req));
   }
 
   @Post('device/start')
