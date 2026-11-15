@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BattlesController } from './battles.controller';
 import { BattlesService } from './battles.service';
 import { LeaderboardService } from './leaderboard.service';
+import { BattleLockService } from './battle-lock.service';
 import { PetsModule } from '../pets/pets.module';
 import { GameDataModule } from '../game-data/game-data.module';
 import { BondingModule } from '../bonding/bonding.module';
@@ -9,7 +10,7 @@ import { BondingModule } from '../bonding/bonding.module';
 @Module({
   imports: [PetsModule, GameDataModule, BondingModule],
   controllers: [BattlesController],
-  providers: [BattlesService, LeaderboardService],
+  providers: [BattlesService, LeaderboardService, BattleLockService],
   exports: [BattlesService, LeaderboardService],
 })
 export class BattlesModule {}
