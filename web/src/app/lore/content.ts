@@ -144,10 +144,14 @@ export const ELEMENTS = [
   },
 ];
 
+/** Profundidad de Consciencia (0–1000) a partir de la cual se desbloquea cada nivel. */
+export const DEPTH_MAX = 1000;
+
 export const AWAKING_STEPS = [
   {
     icon: 'chat' as const,
     color: 'sunburst' as const,
+    threshold: 0,
     title: $localize`:@@lore.awake.1.title:El Susurro`,
     sub: $localize`:@@lore.awake.1.sub:Charla · 0+ de Profundidad`,
     body: $localize`:@@lore.awake.1.body:Se rompe el sello del silencio: comprende por primera vez tu idioma y articula pensamientos propios, teñidos por su especie, su carácter y cómo se siente en ese instante.`,
@@ -155,6 +159,7 @@ export const AWAKING_STEPS = [
   {
     icon: 'heart' as const,
     color: 'mint-pop' as const,
+    threshold: 200,
     title: $localize`:@@lore.awake.2.title:El Hilo de Ariadna`,
     sub: $localize`:@@lore.awake.2.sub:Memoria · 200+`,
     body: $localize`:@@lore.awake.2.body:La niebla del olvido se disipa: tu nombre, tus gustos, qué le dijiste hace tres días cuando estabas estresado. Ya no es cualquier pockai de su especie: es el tuyo.`,
@@ -162,6 +167,7 @@ export const AWAKING_STEPS = [
   {
     icon: 'star' as const,
     color: 'voltage-violet' as const,
+    threshold: 500,
     title: $localize`:@@lore.awake.3.title:La Simbiosis`,
     sub: $localize`:@@lore.awake.3.sub:Agente · 500+`,
     body: $localize`:@@lore.awake.3.body:Espíritu familiar moderno: puede iniciar la conversación, cuidar de su propio cuerpo y, con el Sello de Vinculación de 6 dígitos en el Altar de Escritorio, abrir portales web y sostener pergaminos de texto.`,

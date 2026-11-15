@@ -371,6 +371,21 @@
     "lore.promise.start": "First egg",
     "nav.group.sections": "On this page",
     "nav.group.pages": "Pages",
-    "lore.nav.gloss": "Dictionary"
+    "lore.nav.gloss": "Dictionary",
+    "rar.eyebrow": "Rarity, pattern and colour",
+    "rar.batch.title": "A batch of 100 eggs",
+    "rar.batch.cta": "Hatch another batch",
+    "rar.batch.note": "Every batch is rolled with the same odds as the game.",
+    "lore.awake.dream.t": "Dreamer Instinct",
+    "lore.awake.dream.b": "Feels and gestures, without words",
+    "lore.awake.key.t": "Spark of Hermes",
+    "lore.awake.key.b": "your own API key",
+    "lore.awake.awake.t": "Awake",
+    "lore.awake.awake.b": "Talks, remembers and acts",
+    "lore.awake.depth": "Depth of Consciousness",
+    "lore.life.sleep.k": "When night falls",
+    "lore.life.welcome.k": "If you go away",
+    "lore.life.thaw.cold": "Cold",
+    "lore.life.thaw.warm": "You return"
   }
 }

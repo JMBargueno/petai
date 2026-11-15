@@ -1,56 +1,210 @@
-.life__stages {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 8px;
+/* ───── Camino de crecimiento ───── */
+.growth {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+/* Línea que pasa por el centro de todos los nodos (fila de 124px) */
+.growth::before {
+  content: '';
+  position: absolute;
+  inset: 60px 10% auto;
+  block-size: 4px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-mint-pop), var(--color-electric-blue) 60%, var(--color-sunburst));
+  opacity: 0.6;
+}
 .stage {
+  position: relative;
   display: grid;
-  gap: 4px;
-  align-content: start;
-  min-inline-size: 132px;
+  grid-template-rows: 124px;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
 }
-.stage__n {
-  color: var(--color-ember);
-}
-.stage strong {
-  font-size: var(--text-subheading);
-}
-.stage__arrow {
+.stage__node {
+  align-self: center;
   display: grid;
   place-items: center;
-  font-size: var(--text-heading);
-  color: var(--ink);
+  padding: 10px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-2), 0 0 0 calc(2px + var(--i) * 2px) color-mix(in srgb, var(--color-mint-pop) 20%, transparent);
+}
+.stage:last-child .stage__node {
+  box-shadow: var(--shadow-3), 0 0 0 10px rgb(255 215 49 / 0.25), 0 0 40px rgb(255 215 49 / 0.55);
+}
+.stage__n {
+  margin-block-start: 10px;
+  color: var(--ink-muted);
+}
+.stage__name {
+  font-size: clamp(16px, 1.8vw, 22px);
+  line-height: 1.15;
+}
+.stage__level {
+  border-color: transparent;
+  background: var(--surface-2);
+}
+.stage:last-child .stage__level {
+  background: var(--color-sunburst);
+  color: var(--on-color);
 }
 
 .life__note {
-  margin: 20px 0 0;
   max-inline-size: 60ch;
-  font-size: 16px;
-}
-
-.life__cards {
-  margin-block-start: 24px;
-}
-.life__card {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: 16px;
-}
-.life__card p {
-  margin-block-start: 4px;
-  font-size: 16px;
+  margin: clamp(24px, 4vw, 40px) auto 0;
+  color: var(--ink-muted);
+  font-size: 17px;
+  text-align: center;
 }
 
 @media (width < 640px) {
-  .stage__arrow {
+  .growth {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+  }
+  .growth::before {
+    inset: 20px auto 20px 37px;
+    inline-size: 4px;
+    block-size: auto;
+    background: linear-gradient(180deg, var(--color-mint-pop), var(--color-electric-blue) 60%, var(--color-sunburst));
+  }
+  .stage {
+    grid-template-rows: none;
+    grid-template-columns: 76px auto 1fr;
+    justify-items: start;
+    align-items: center;
+    text-align: start;
+  }
+  .stage__node {
+    justify-self: center;
+  }
+  .stage__n {
     display: none;
   }
-  .life__card {
-    grid-template-columns: 1fr;
+  .stage__level {
+    grid-column: 3;
+    justify-self: end;
   }
+}
+
+/* ───── El ritmo del vínculo: noche y ausencia ───── */
+.rhythm {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  margin-block-start: clamp(48px, 7vw, 88px);
+}
+.life__card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  justify-items: start;
+  padding: clamp(24px, 3vw, 36px);
+  overflow: hidden;
+  border-radius: var(--radius-cards-elevated);
+  box-shadow: var(--shadow-3);
+}
+.life__card h3 {
+  font-family: var(--font-lateral);
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.life__card p {
+  font-size: 16px;
+}
+.life__kicker {
+  margin-block-start: 8px;
+  opacity: 0.8;
+}
+
+/* Noche: siempre oscura, con estrellas */
+.life__card--sleep {
+  color-scheme: dark;
+  background:
+    radial-gradient(80% 90% at 85% 0%, rgb(92 74 222 / 0.6) 0%, transparent 60%),
+    linear-gradient(180deg, #17153a 0%, #0b0a14 100%);
+  color: var(--ink);
+}
+.life__card--sleep p {
+  color: var(--ink-muted);
+}
+.life__sky i {
+  position: absolute;
+  inline-size: 3px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px #fff;
+  opacity: 0.8;
+}
+.life__sky i:nth-child(1) {
+  inset: 18% 22% auto auto;
+}
+.life__sky i:nth-child(2) {
+  inset: 34% 10% auto auto;
+  inline-size: 2px;
+}
+.life__sky i:nth-child(3) {
+  inset: 12% 40% auto auto;
+  inline-size: 2px;
+}
+.life__sky i:nth-child(4) {
+  inset: 48% 30% auto auto;
+}
+.life__sky i:nth-child(5) {
+  inset: 26% 4% auto auto;
+  inline-size: 4px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes twinkle {
+    50% {
+      opacity: 0.2;
+    }
+  }
+  .life__sky i {
+    animation: twinkle 3s ease-in-out infinite;
+  }
+  .life__sky i:nth-child(even) {
+    animation-delay: -1.5s;
+  }
+}
+
+/* Ausencia: del frío al calor cuando vuelves */
+.life__card--welcome {
+  border: 1px solid var(--line-soft);
+  background:
+    radial-gradient(70% 80% at 100% 100%, rgb(255 215 49 / 0.28) 0%, transparent 60%),
+    radial-gradient(70% 80% at 0% 0%, rgb(77 162 255 / 0.22) 0%, transparent 60%),
+    var(--surface);
+}
+.life__card--welcome p {
+  color: var(--ink-muted);
+}
+.life__thaw {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  margin-block-start: 8px;
+  color: var(--ink-muted);
+  font-weight: var(--font-weight-bold);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.life__thaw-bar {
+  flex: 1;
+  block-size: 6px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #7fb6ff, #c9d6ff 40%, var(--color-sunburst) 80%, var(--color-ember));
 }
