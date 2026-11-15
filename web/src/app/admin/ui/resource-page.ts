@@ -80,6 +80,8 @@ export class ResourcePage<T extends Entity> implements OnInit {
   readonly blank = input<(() => T) | null>(null);
   readonly filter = input<Filter<T> | null>(null);
   readonly deletable = input(true);
+  /** Sin permiso de edición se oculta «Editar». */
+  readonly editable = input(true);
   /** Validación propia del recurso; devuelve el mensaje de error o null. */
   readonly validate = input<((entity: T) => string | null) | null>(null);
 

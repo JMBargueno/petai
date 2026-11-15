@@ -1,8 +1,10 @@
 import { InjectionToken, inject } from '@angular/core';
+import { AdminApi } from '../api';
 import { AuditLog } from './audit-log';
 import type { AdminUser, CatalogItem, Entity, GameEvent, PetEntry, SpeciesEntry } from './models';
-import { seedEvents, seedItems, seedPets, seedSpecies, seedUsers } from './seed';
+import { seedEvents, seedItems, seedPets, seedSpecies } from './seed';
 import { MOCK_STORAGE } from './storage';
+import { HttpUsersRepository } from './users-http';
 
 /**
  * Contrato de acceso a datos del panel. Las pantallas solo conocen esta interfaz:
@@ -104,9 +106,10 @@ export const EVENTS = new InjectionToken<Repository<GameEvent>>('EVENTS', {
   providedIn: 'root',
   factory: mock('eventos', seedEvents, (e) => e.name),
 });
+/** Usuarios: datos reales del backend (el resto de secciones siguen siendo de demostración). */
 export const USERS = new InjectionToken<Repository<AdminUser>>('USERS', {
   providedIn: 'root',
-  factory: mock('usuarios', seedUsers, (e) => e.email),
+  factory: () => new HttpUsersRepository(inject(AdminApi), inject(AuditLog)),
 });
 export const SPECIES = new InjectionToken<Repository<SpeciesEntry>>('SPECIES', {
   providedIn: 'root',

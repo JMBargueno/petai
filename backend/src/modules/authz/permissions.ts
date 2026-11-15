@@ -1,0 +1,43 @@
+import { DEFAULT_ROLE, isRole, Role } from './roles';
+
+/**
+ * Catálogo de permisos (`recurso:acción`). Los endpoints declaran lo que necesitan con
+ * `@RequirePermissions(...)`; cada rol recibe su lista en `ROLE_PERMISSIONS`.
+ */
+export const PERMISSIONS = [
+  'admin:access', // entrar en el panel de administración
+  'users:read',
+  'users:update',
+  'users:role:assign',
+  'mods:moderate',
+  'economy:manage',
+  'events:manage',
+  'audit:read',
+] as const;
+export type Permission = (typeof PERMISSIONS)[number];
+
+/** Comodín: concede cualquier permiso, incluidos los que se añadan en el futuro. */
+export const ALL_PERMISSIONS = '*' as const;
+type Grant = Permission | typeof ALL_PERMISSIONS;
+
+/**
+ * Permisos por rol. Por ahora solo SuperAdmin puede hacerlo todo.
+ * TODO: definir los permisos de admin y moderator (p. ej. moderator → 'mods:moderate', 'users:read').
+ */
+export const ROLE_PERMISSIONS: Record<Role, readonly Grant[]> = {
+  superadmin: [ALL_PERMISSIONS],
+  admin: [],
+  moderator: [],
+  user: [],
+};
+
+/** ¿El rol tiene el permiso? Un rol desconocido se trata como `user` (mínimo privilegio). */
+export function hasPermission(role: unknown, permission: Permission): boolean {
+  const grants = ROLE_PERMISSIONS[isRole(role) ? role : DEFAULT_ROLE];
+  return grants.includes(ALL_PERMISSIONS) || grants.includes(permission);
+}
+
+/** Lista de permisos efectivos del rol (el comodín se expande), para que los clientes no dupliquen la tabla. */
+export function permissionsFor(role: unknown): Permission[] {
+  return PERMISSIONS.filter((p) => hasPermission(role, p));
+}

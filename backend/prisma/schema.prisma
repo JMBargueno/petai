@@ -11,8 +11,10 @@ model User {
   id           String         @id @default(uuid())
   email        String         @unique
   passwordHash String
+  // Rol de autorización (RBAC). Los permisos de cada rol viven en código: src/modules/authz/permissions.ts
+  role         String         @default("user") // superadmin | admin | moderator | user
   displayName  String?
-  title        String?        // Título competitivo de la arena (premio de fin de temporada por liga)
+  title       String?        // Título competitivo de la arena (premio de fin de temporada por liga)
   timezone     String         @default("UTC")
   // Coordenadas opt-in para el clima (privacidad): se guardan redondeadas y solo las usa el servidor.
   latitude     Float?
@@ -63,6 +65,8 @@ model User {
   tournamentEntries TournamentEntry[]
   // Feature 015: Cooking
   cookingSessions  CookingSession[]
+
+  @@index([role])
 }
 
 model RefreshToken {
@@ -1065,7 +1069,7 @@ model WebhookDelivery {
 model AuditLog {
   id          String   @id @default(uuid())
   userId      String
-  event       String   // login | refresh | ip_change | key_created | key_revoked | account_deleted
+  event       String   // login | refresh | ip_change | key_created | key_revoked | account_deleted | role_change
   ip          String?
   userAgent   String?
   fingerprint String?

@@ -36,9 +36,12 @@ export interface AdminUser extends Entity {
   coins: number;
   gems: number;
   accountXp: number;
-  status: 'active' | 'suspended';
+  role: AdminRole;
   createdAt: string;
 }
+
+/** Roles del backend (`User.role`). Los permisos de cada uno los decide el servidor. */
+export type AdminRole = 'superadmin' | 'admin' | 'moderator' | 'user';
 
 export interface SpeciesEntry extends Entity {
   name: string;
@@ -104,9 +107,11 @@ export const STAGES: Record<PetEntry['stage'], string> = {
   final: 'Forma final',
 };
 
-export const USER_STATUS: Record<AdminUser['status'], string> = {
-  active: 'Activo',
-  suspended: 'Suspendido',
+export const ROLES: Record<AdminRole, string> = {
+  superadmin: 'SuperAdmin',
+  admin: 'Admin',
+  moderator: 'Moderador',
+  user: 'Usuario',
 };
 
 export const options = (map: Record<string, string>) =>

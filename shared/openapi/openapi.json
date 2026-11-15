@@ -6121,6 +6121,79 @@
           "Gifting"
         ]
       }
+    },
+    "/v1/admin/users": {
+      "get": {
+        "operationId": "AdminUsersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar usuarios (paginado; filtros: role, q)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/role": {
+      "patch": {
+        "operationId": "AdminUsersController_assignRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "superadmin",
+                      "admin",
+                      "moderator",
+                      "user"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el rol de un usuario (cierra sus sesiones y queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
     }
   },
   "info": {
@@ -6272,7 +6345,33 @@
             "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
           },
           "user": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "superadmin",
+                  "admin",
+                  "moderator",
+                  "user"
+                ]
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "coins": {
+                "type": "number"
+              },
+              "gems": {
+                "type": "number"
+              }
+            }
           }
         },
         "required": [

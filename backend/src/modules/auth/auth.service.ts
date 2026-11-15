@@ -61,7 +61,7 @@ export class AuthService {
           gems: 10,
           pityCounter: { create: { sinceSuperRare: 0, sinceLegendary: 0 } },
         },
-        select: { id: true, email: true, displayName: true, coins: true, gems: true },
+        select: { id: true, email: true, role: true, displayName: true, coins: true, gems: true },
       });
     } catch (err: any) {
       // Dos registros simultáneos con el mismo correo: el índice único evita el duplicado
@@ -110,7 +110,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email, user.displayName);
     return {
       ...tokens,
-      user: { id: user.id, email: user.email, displayName: user.displayName, coins: user.coins, gems: user.gems },
+      user: { id: user.id, email: user.email, role: user.role, displayName: user.displayName, coins: user.coins, gems: user.gems },
     };
   }
 
@@ -215,7 +215,7 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Usuario no encontrado');
     return {
       ...(await this.generateTokens(user.id, user.email, user.displayName)),
-      user: { id: user.id, email: user.email, displayName: user.displayName, coins: user.coins, gems: user.gems },
+      user: { id: user.id, email: user.email, role: user.role, displayName: user.displayName, coins: user.coins, gems: user.gems },
     };
   }
 

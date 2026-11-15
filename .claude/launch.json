@@ -19,6 +19,19 @@
         "dev"
       ],
       "port": 5173
+    },
+    {
+      "name": "pockai-web-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "pockai-web", "exec", "ng", "serve", "--port", "4200"],
+      "port": 4200
+    },
+    {
+      "name": "petai-backend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "petai-backend", "exec", "ts-node", "src/main.ts"],
+      "env": { "CORS_ORIGINS": "http://localhost:5173,http://localhost:4200,tauri://localhost" },
+      "port": 3000
     }
   ]
 }

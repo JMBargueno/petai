@@ -55,10 +55,21 @@ export class AuthResponseDto {
   @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   refreshToken: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      email: { type: 'string' },
+      role: { type: 'string', enum: ['superadmin', 'admin', 'moderator', 'user'] },
+      displayName: { type: 'string' },
+      coins: { type: 'number' },
+      gems: { type: 'number' },
+    },
+  })
   user: {
     id: string;
     email: string;
+    role: string;
     displayName?: string;
     coins: number;
     gems: number;

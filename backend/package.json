@@ -16,7 +16,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand --forceExit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "authz:promote": "ts-node prisma/promote-superadmin.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.0",

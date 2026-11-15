@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import { parseEmails, promoteSuperadmins } from './promote-superadmin';
 
 const prisma = new PrismaClient();
 
@@ -150,6 +151,10 @@ async function main() {
   });
 
   console.log('✓ Usuario demo creado/actualizado: demo@petai.local / Password123!');
+  // Bootstrap opcional de SuperAdmin(s) definidos en SUPERADMIN_EMAILS
+  const superadmins = parseEmails(process.env.SUPERADMIN_EMAILS);
+  if (superadmins.length) await promoteSuperadmins(prisma, superadmins);
+
   console.log('✓ Seed completado con éxito.');
 }
 
