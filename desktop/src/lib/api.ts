@@ -497,6 +497,10 @@ export const api = {
     return minigameRequest<any>('PATCH', `/v1/pets/${petId}/desktop-skills`, { skills });
   },
 
+  async setPetInHabitat(petId: string, inHabitat: boolean) {
+    return minigameRequest<any>('PATCH', `/v1/pets/${petId}/in-habitat`, { inHabitat });
+  },
+
   async matchmake(petId: string) {
     return minigameRequest<BattleResponse>('POST', '/v1/battles/matchmake', { petId });
   },

@@ -12,6 +12,7 @@
   import BondingTab from './BondingTab.svelte';
   import HabitatTab from './HabitatTab.svelte';
   import DesktopSkillsPanel from './DesktopSkillsPanel.svelte';
+  import PetMiniAvatar from './PetMiniAvatar.svelte';
 import RaidTab from './RaidTab.svelte';
 import TournamentTab from './TournamentTab.svelte';
 import TrainingTab from './TrainingTab.svelte';
@@ -21,7 +22,7 @@ import AdventureTab from './AdventureTab.svelte';
   import AboutPanel from './AboutPanel.svelte';
   import PockaiMark from './PockaiMark.svelte';
   import { updateState, hasUpdate } from '../lib/updater';
-  import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut, AlertCircle } from 'lucide-svelte';
+  import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut, AlertCircle, Home, ExternalLink } from 'lucide-svelte';
 
   export let user: any = null;
   export let pet: any = null;
@@ -228,6 +229,32 @@ import AdventureTab from './AdventureTab.svelte';
     }
   }
 
+  async function handleToggleHabitat(inHabitat: boolean) {
+    if (!pet) return;
+    try {
+      const updated = await api.setPetInHabitat(pet.id, inHabitat);
+      dispatch('petUpdated', updated);
+      dispatch(
+        'bubble',
+        inHabitat ? '¡Me quedo a descansar en mi casita!' : '¡De vuelta a explorar el escritorio!'
+      );
+    } catch (err: any) {
+      reportError(err);
+    }
+  }
+
+  function handleDragStartFromPanel(e: DragEvent) {
+    if (!e.dataTransfer) return;
+    e.dataTransfer.setData('application/petai-pet', 'exit-habitat');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  async function handlePanelDrop(e: DragEvent) {
+    e.preventDefault();
+    if (!pet || pet.inHabitat) return;
+    await handleToggleHabitat(true);
+  }
+
   async function handleHatch(eggId: string, nickname?: string) {
     // Vacío/espacios → undefined: el backend asigna un nombre aleatorio.
     const name = (nickname ?? '').trim();
@@ -291,8 +318,12 @@ import AdventureTab from './AdventureTab.svelte';
 {#if isOpen}
   <div
     class="panel-card"
+    role="region"
+    aria-label="Panel de Control"
     bind:this={panelEl}
     style={panelPos ? `left: ${panelPos.x}px; top: ${panelPos.y}px; right: auto;` : ''}
+    on:dragover|preventDefault
+    on:drop={handlePanelDrop}
   >
     <div class="panel-header" on:mousedown={startPanelDrag} role="presentation">
       <div class="header-title">
@@ -408,7 +439,14 @@ import AdventureTab from './AdventureTab.svelte';
             <div class="pet-summary">
               <div class="card pet-hero">
                 <div class="pet-hero__info">
-                  <span class="pet-title">{pet.nickname || pet.species?.name}</span>
+                  <div class="pet-hero__title-row">
+                    <span class="pet-title">{pet.nickname || pet.species?.name}</span>
+                    {#if pet.inHabitat}
+                      <span class="chip chip--active in-habitat-pill" title="Descansando en su Hábitat">
+                        <Home size={12} /> En casa
+                      </span>
+                    {/if}
+                  </div>
                   <div class="pet-tags">
                     {#if pet.species?.element}<span class="chip pet-tag">{pet.species.element}</span>{/if}
                     {#if pet.rarity}<span class="chip rarity-pill {pet.rarity}">{pet.rarity}</span>{/if}
@@ -416,6 +454,42 @@ import AdventureTab from './AdventureTab.svelte';
                 </div>
                 <span class="chip level-tag">Nv. {pet.level}</span>
               </div>
+
+              {#if pet.inHabitat}
+                <div class="card habitat-home-card">
+                  <div
+                    class="habitat-home-scene"
+                    role="button"
+                    tabindex="0"
+                    draggable="true"
+                    on:dragstart={handleDragStartFromPanel}
+                    on:keydown={(e) => e.key === 'Enter' && handleToggleHabitat(false)}
+                    title="Arrastra hacia el escritorio o pulsa Enter para sacar a {pet.nickname || pet.species?.name}"
+                  >
+                    <div class="habitat-home-stage">
+                      <PetMiniAvatar {pet} size={88} />
+                    </div>
+                    <span class="habitat-home-draghint">⇄ Arrastra fuera para liberar</span>
+                  </div>
+                  <div class="habitat-home-details">
+                    <div class="habitat-home-header">
+                      <strong class="habitat-home-title">Refugio acogedor</strong>
+                      <span class="habitat-home-status">Seguro dentro del panel</span>
+                    </div>
+                    <p class="subtitle habitat-home-desc">
+                      Tu Pockai descansa plácidamente en su casa. Mientras permanezca aquí no paseará por tu escritorio ni sobre tus ventanas.
+                    </p>
+                    <div class="habitat-home-actions">
+                      <button class="btn btn--sm btn--primary" on:click={() => handleToggleHabitat(false)}>
+                        <ExternalLink size={14} /> Sacar al escritorio
+                      </button>
+                      <button class="btn btn--sm btn--ghost" on:click={() => go('pet', 'habitat')}>
+                        <Home size={14} /> Ver Hábitat
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              {/if}
 
               <div class="vitals-grid">
                 {#each [
@@ -439,6 +513,11 @@ import AdventureTab from './AdventureTab.svelte';
                 <button class="btn action-btn" on:click={handleToggleSleep}>
                   {#if pet.sleeping}<Sun size={18} /> Despertar{:else}<Moon size={18} /> Dormir{/if}
                 </button>
+                {#if !pet.inHabitat}
+                  <button class="btn action-btn habitat-toggle-btn" on:click={() => handleToggleHabitat(true)} title="Llevar al Hábitat">
+                    <Home size={18} /> A casa
+                  </button>
+                {/if}
               </div>
 
               <div class="food-selector">
@@ -524,7 +603,7 @@ import AdventureTab from './AdventureTab.svelte';
           <BondingTab pet={pet} />
 
         {:else if dest === 'pet' && sub === 'habitat'}
-          <HabitatTab {pet} {user} on:refreshUser />
+          <HabitatTab {pet} {user} on:refreshUser on:petUpdated={(e) => dispatch('petUpdated', e.detail)} />
 
         {:else if dest === 'pet' && sub === 'skills'}
           <DesktopSkillsPanel {pet} />
@@ -811,6 +890,104 @@ import AdventureTab from './AdventureTab.svelte';
     flex-direction: column;
     gap: 6px;
     min-width: 0;
+  }
+  .pet-hero__title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .in-habitat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: var(--radius-pills);
+    background: var(--color-mint-pop);
+    color: var(--color-carbon);
+    border: 1px solid var(--color-carbon);
+  }
+
+  .habitat-home-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px;
+    background:
+      linear-gradient(180deg, rgba(255, 230, 160, 0.22) 0%, rgba(200, 240, 220, 0.15) 100%),
+      var(--surface);
+    border: 1.5px solid var(--color-carbon);
+    border-radius: var(--radius-2xl);
+    box-shadow: 2px 3px 0 var(--color-carbon);
+  }
+  .habitat-home-scene {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    padding: 12px;
+    border-radius: var(--radius-xl);
+    background:
+      linear-gradient(180deg, #b8e2f8 0%, #e0f2fe 55%, #c8e6c9 56%, #a5d6a7 100%);
+    border: 1px dashed var(--color-carbon);
+    cursor: grab;
+    user-select: none;
+    overflow: hidden;
+  }
+  .habitat-home-scene:active {
+    cursor: grabbing;
+  }
+  .habitat-home-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+  }
+  .habitat-home-draghint {
+    position: absolute;
+    bottom: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-carbon);
+    background: rgba(255, 255, 255, 0.75);
+    padding: 2px 8px;
+    border-radius: var(--radius-pills);
+    pointer-events: none;
+  }
+  .habitat-home-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .habitat-home-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .habitat-home-title {
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .habitat-home-status {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-mint-pop);
+  }
+  .habitat-home-desc {
+    font-size: 11.5px;
+    line-height: 1.35;
+    margin: 0;
+  }
+  .habitat-home-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
   }
   .pet-title {
     font-family: var(--font-display);

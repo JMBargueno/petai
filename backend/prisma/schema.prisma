@@ -219,6 +219,7 @@ model Pet {
   awakened      Boolean   @default(false)
   personality   Json?
   desktopSkills Json?     @default("{}")
+  inHabitat     Boolean   @default(false)
 
   lastTickAt    DateTime  @default(now())
   createdAt     DateTime  @default(now())

@@ -505,4 +505,20 @@ export class PetsService {
     this.realtimeGateway.emitPetUpdate(userId, result);
     return result;
   }
+
+  async setInHabitat(userId: string, petId: string, inHabitat: boolean) {
+    await this.getPetById(userId, petId);
+
+    const updated = await this.prisma.pet.update({
+      where: { id: petId },
+      data: {
+        inHabitat: Boolean(inHabitat),
+      },
+      include: { species: true, pattern: true },
+    });
+
+    const result = { ...updated, ...this.bonding.bondingFields(updated) };
+    this.realtimeGateway.emitPetUpdate(userId, result);
+    return result;
+  }
 }

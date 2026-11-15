@@ -215,10 +215,19 @@
     if (pointerSamples.length > 20) pointerSamples.shift();
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(e?: MouseEvent) {
     if (!isDragging) return;
     isDragging = false;
     delete document.body.dataset.dragging;
+
+    // Si se suelta sobre el panel de control (.panel-card), enviar al hábitat
+    if (e && typeof document !== 'undefined') {
+      const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+      if (dropTarget && dropTarget.closest('.panel-card')) {
+        window.dispatchEvent(new CustomEvent('petai:move_to_habitat', { detail: { petId: pet.id } }));
+        return;
+      }
+    }
 
     const dragThrowActive = isSkillActive(
       'drag_throw',
