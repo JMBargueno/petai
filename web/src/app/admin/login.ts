@@ -13,26 +13,42 @@ import { AdminAuth } from './auth';
       <form class="card box" ngNativeValidate (ngSubmit)="submit()">
         <app-sticker icon="shield" color="voltage-violet" [rotate]="-6" />
         <h1>Panel de Pockai</h1>
-        <p class="tag">Datos de demostración</p>
+        <p class="tag">Acceso para el equipo</p>
         <div class="field">
-          <label for="code" class="label-caps">Código de acceso</label>
+          <label for="email" class="label-caps">Correo</label>
           <input
-            id="code"
+            id="email"
             class="input"
-            type="password"
-            name="code"
-            autocomplete="off"
+            type="email"
+            name="email"
+            autocomplete="username"
             required
             autofocus
-            [attr.aria-describedby]="failed() ? 'code-error' : null"
-            [ngModel]="code()"
-            (ngModelChange)="code.set($event); failed.set(false)"
+            [attr.aria-describedby]="error() ? 'login-error' : null"
+            [ngModel]="email()"
+            (ngModelChange)="email.set($event); error.set(null)"
           />
         </div>
-        @if (failed()) {
-          <p id="code-error" class="error" role="alert">Código incorrecto.</p>
+        <div class="field">
+          <label for="password" class="label-caps">Contraseña</label>
+          <input
+            id="password"
+            class="input"
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            required
+            [attr.aria-describedby]="error() ? 'login-error' : null"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event); error.set(null)"
+          />
+        </div>
+        @if (error(); as message) {
+          <p id="login-error" class="error" role="alert">{{ message }}</p>
         }
-        <button class="btn btn--filled" type="submit">Entrar</button>
+        <button class="btn btn--filled" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Entrando…' : 'Entrar' }}
+        </button>
       </form>
     </main>
   `,
@@ -79,8 +95,10 @@ import { AdminAuth } from './auth';
 export class Login {
   private readonly auth = inject(AdminAuth);
   private readonly router = inject(Router);
-  protected readonly code = signal('');
-  protected readonly failed = signal(false);
+  protected readonly email = signal('');
+  protected readonly password = signal('');
+  protected readonly error = signal<string | null>(null);
+  protected readonly busy = signal(false);
 
   constructor() {
     inject(Title).setTitle('Acceso · Panel de Pockai');
@@ -88,8 +106,16 @@ export class Login {
     if (this.auth.authenticated()) void this.router.navigateByUrl('/admin');
   }
 
-  protected submit() {
-    if (this.auth.login(this.code())) void this.router.navigateByUrl('/admin');
-    else this.failed.set(true);
+  protected async submit() {
+    if (this.busy()) return;
+    this.busy.set(true);
+    const error = await this.auth.login(this.email(), this.password());
+    this.busy.set(false);
+    if (error) {
+      this.error.set(error);
+      this.password.set('');
+    } else {
+      void this.router.navigateByUrl('/admin');
+    }
   }
 }

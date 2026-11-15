@@ -1,5 +1,6 @@
 {
   "url": "https://pockai.example",
   "name": "Pockai",
-  "locales": ["es", "en"]
+  "locales": ["es", "en"],
+  "apiUrl": "http://localhost:3000"
 }

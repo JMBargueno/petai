@@ -123,7 +123,7 @@ export function seedUsers(): AdminUser[] {
     coins: Math.floor(next() * 5000),
     gems: Math.floor(next() * 120),
     accountXp: Math.floor(next() * 20000),
-    status: next() < 0.1 ? 'suspended' : 'active',
+    role: 'user',
     createdAt: daysFromNow(-Math.floor(next() * 300)),
   }));
 }

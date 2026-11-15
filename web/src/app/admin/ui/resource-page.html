@@ -95,14 +95,16 @@
             }
             <td data-label="Acciones">
               <span class="actions">
-                <button
-                  class="btn btn--sm"
-                  type="button"
-                  [attr.aria-label]="'Editar ' + nameOf()(row)"
-                  (click)="openEdit(row)"
-                >
-                  Editar
-                </button>
+                @if (editable()) {
+                  <button
+                    class="btn btn--sm"
+                    type="button"
+                    [attr.aria-label]="'Editar ' + nameOf()(row)"
+                    (click)="openEdit(row)"
+                  >
+                    Editar
+                  </button>
+                }
                 @if (deletable()) {
                   <button
                     class="btn btn--sm"

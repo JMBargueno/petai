@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { isValidTimeZone } from '../pets/sleep-cycle';
 import { resolveDefaults, NotificationPrefs } from '../notifications/notification-rules';
 import { parseNotificationPrefs } from '../notifications/dto/notification-prefs.dto';
+import { permissionsFor } from '../authz/permissions';
 
 @Injectable()
 export class UsersService {
@@ -19,6 +20,7 @@ export class UsersService {
       select: {
         id: true,
         email: true,
+        role: true,
         displayName: true,
         timezone: true,
         latitude: true,
@@ -42,7 +44,8 @@ export class UsersService {
     const notificationPrefs =
       user.notificationPrefs != null ? resolveDefaults(user.notificationPrefs as Partial<NotificationPrefs>) : null;
 
-    return { ...user, notificationPrefs };
+    // Permisos efectivos del rol: los clientes (panel admin) deciden qué mostrar sin duplicar la tabla de roles.
+    return { ...user, notificationPrefs, permissions: permissionsFor(user.role) };
   }
 
   /**

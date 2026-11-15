@@ -52,6 +52,7 @@ import { MoodTheaterModule } from './modules/mood-theater/mood-theater.module';
 import { AccessibilityModule } from './modules/accessibility/accessibility.module';
 import { GiftingModule } from './modules/gifting/gifting.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { AuthzModule } from './modules/authz/authz.module';
 
 // DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
 // En `NODE_ENV === 'production'` el DevModule no se registra ⇒ 404 (SC-007, constitución I/VIII).
@@ -115,6 +116,8 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     GiftingModule,
     // C-01 (SDD §3.3): primitiva económica compartida (cobro/abono atómicos) — global.
     WalletModule,
+    // Autorización por roles (superadmin | admin | moderator | user) y gestión de usuarios.
+    AuthzModule,
     ...(DEV_TOOLS_ENABLED ? [DevModule] : []),
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],

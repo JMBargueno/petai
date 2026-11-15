@@ -32,7 +32,8 @@ export const envSchema = z.object({
   // Orígenes permitidos para CORS y WebSocket (separados por comas)
   CORS_ORIGINS: z
     .string()
-    .default('http://localhost:5173,http://127.0.0.1:5173,tauri://localhost,http://tauri.localhost,https://tauri.localhost'),
+    // 5173: Vite (desktop) · 4200: Angular (web y panel admin) · tauri: webview de escritorio
+    .default('http://localhost:5173,http://127.0.0.1:5173,http://localhost:4200,http://127.0.0.1:4200,tauri://localhost,http://tauri.localhost,https://tauri.localhost'),
   // Saltos de proxy de confianza (0 = sin proxy). Necesario para que el límite de intentos use la IP real.
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   // Documentación Swagger: por defecto solo fuera de producción
@@ -58,6 +59,8 @@ export const envSchema = z.object({
   DEVKIT_ENABLED: z.enum(['true', 'false']).default('false'),
   // Token opcional de alta entropía para acceso remoto a /dev/* fuera de loopback.
   DEVKIT_TOKEN: z.string().min(16).optional(),
+  // Correos (separados por comas) que el seed / `authz:promote` promueven a superadmin. Solo bootstrap.
+  SUPERADMIN_EMAILS: z.string().optional(),
   // ---- Sync offline (S-07 del SDD de auditoría) ----
   // Estado por usuario en Redis con TTL + topes duros; respaldo en memoria acotado si Redis cae.
   SYNC_STATE_TTL_MS: positiveInt(86400000),

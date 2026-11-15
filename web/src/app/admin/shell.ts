@@ -3,7 +3,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AdminAuth } from './auth';
 import { AuditLog } from './data/audit-log';
-import type { Entity } from './data/models';
+import { ROLES, type AdminRole, type Entity } from './data/models';
 import { ALL_REPOSITORIES, Repository } from './data/repository';
 
 @Component({
@@ -13,9 +13,12 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
     <div class="shell">
       <header class="top">
         <a class="brand" routerLink="/admin"><span class="logo__mark" aria-hidden="true">P</span>Pockai <span>Panel</span></a>
-        <p class="tag demo">Datos de demostración · nada se envía al servidor</p>
+        <p class="tag demo">Usuarios: datos reales · resto de secciones: demostración</p>
         <div class="top__actions">
-          <button class="btn btn--sm" type="button" (click)="resetDialog.showModal()">Restablecer datos</button>
+          @if (auth.user(); as user) {
+            <span class="whoami">{{ user.email }} · {{ roleLabel(user.role) }}</span>
+          }
+          <button class="btn btn--sm" type="button" (click)="resetDialog.showModal()">Restablecer demo</button>
           <button class="btn btn--sm btn--filled" type="button" (click)="logout()">Salir</button>
         </div>
       </header>
@@ -47,7 +50,7 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
       (close)="onResetClose(resetDialog)"
     >
       <h2 id="reset-title">¿Restablecer los datos de demostración?</h2>
-      <p>Se descartan todos los cambios hechos en este navegador y se vuelve a los datos de partida.</p>
+      <p>Se descartan los cambios hechos en este navegador en las secciones de demostración (precios, eventos, pockais). Los usuarios no se tocan.</p>
       <form method="dialog" class="dialog__actions">
         <button class="btn" value="cancel" autofocus>Cancelar</button>
         <button class="btn btn--filled" value="reset">Restablecer</button>
@@ -102,6 +105,11 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
       border-color: transparent;
       background: color-mix(in srgb, var(--color-sunburst) 40%, var(--surface));
       white-space: normal;
+    }
+    .whoami {
+      align-self: center;
+      color: var(--ink-muted);
+      font-size: var(--text-caption);
     }
     .top__actions {
       display: flex;
@@ -184,7 +192,8 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Shell {
-  private readonly auth = inject(AdminAuth);
+  protected readonly auth = inject(AdminAuth);
+  protected readonly roleLabel = (role: string) => ROLES[role as AdminRole] ?? role;
   private readonly audit = inject(AuditLog);
   private readonly router = inject(Router);
   private readonly repositories = ALL_REPOSITORIES.map((token) =>
@@ -205,8 +214,8 @@ export class Shell {
     inject(Meta).updateTag({ name: 'robots', content: 'noindex, nofollow' });
   }
 
-  protected logout() {
-    this.auth.logout();
+  protected async logout() {
+    await this.auth.logout();
     void this.router.navigateByUrl('/admin/login');
   }
 

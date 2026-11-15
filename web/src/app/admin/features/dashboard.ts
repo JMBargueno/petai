@@ -183,7 +183,7 @@ export class Dashboard {
       {
         label: 'Usuarios',
         value: users.length,
-        note: `${users.filter((u) => u.status === 'suspended').length} suspendidos`,
+        note: `${users.filter((u) => u.role !== 'user').length} en el equipo`,
         color: 'lavender',
       },
       {
