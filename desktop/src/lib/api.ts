@@ -561,6 +561,36 @@ export const api = {
       pass: { id: string; seasonId: string; price: number; purchasedAt: string };
     }>('POST', '/v1/seasons/pass/purchase');
   },
+
+  // ── Misiones (Paso 3) ─────────────────────────────────────────────────────
+  async getMissions() {
+    return minigameRequest<MissionList>('GET', '/v1/missions');
+  },
+  async getMissionsSummary() {
+    return minigameRequest<MissionSummary>('GET', '/v1/missions/summary');
+  },
+  async claimMission(id: string) {
+    return minigameRequest<ClaimMissionResponse>('POST', `/v1/missions/${id}/claim`);
+  },
+
+  // ── Cofres (Paso 3) ───────────────────────────────────────────────────────
+  async getChests() {
+    return minigameRequest<ChestList>('GET', '/v1/chests');
+  },
+  async openChest(chestId: string) {
+    return minigameRequest<OpenChestResponse>('POST', '/v1/chests/open', { chestId });
+  },
+  async purchaseChest(type: 'bronze' | 'silver' | 'gold', paymentMethod: 'coins' | 'gems') {
+    return minigameRequest<PurchaseChestResponse>('POST', '/v1/chests/purchase', { type, paymentMethod });
+  },
+  async getChestHistory(limit = 20, offset = 0) {
+    return minigameRequest<ChestHistory>('GET', `/v1/chests/history?limit=${limit}&offset=${offset}`);
+  },
+
+  // ── Vínculo (Paso 3, feature 006) ─────────────────────────────────────────
+  async getBonding(petId: string) {
+    return minigameRequest<BondingDetail>('GET', `/v1/pets/${petId}/bonding?limit=20`);
+  },
 };
 
 async function minigameRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -667,4 +697,132 @@ export interface LeaderboardEntry {
   league: string;
   score: number;
   mine: boolean;
+}
+
+// ── Misiones (Paso 3) ─────────────────────────────────────────────────────
+export interface MissionReward {
+  coins: number;
+  gems: number;
+  xp: number;
+}
+
+export interface Mission {
+  id: string;
+  type: string;
+  description: string;
+  target: number;
+  current: number;
+  completed: boolean;
+  reward: MissionReward;
+  resetsAt: string;
+}
+
+export interface MissionList {
+  timestamp: string;
+  daily: Mission[];
+  weekly: Mission[];
+  dailyChestUnlocked: boolean;
+}
+
+export interface MissionSummary {
+  dailyCompleted: number;
+  dailyTotal: number;
+  weeklyCompleted: number;
+  weeklyTotal: number;
+  streak: number;
+  bestStreak: number;
+}
+
+export interface ClaimMissionResponse {
+  mission: { id: string; type: string; completed: boolean };
+  reward: MissionReward;
+  dailyChestUnlocked: boolean;
+}
+
+// ── Cofres (Paso 3) ───────────────────────────────────────────────────────
+export type ChestType = 'bronze' | 'silver' | 'gold' | 'diamond' | 'mythic';
+export type DropTier = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+export interface Chest {
+  id: string;
+  type: ChestType;
+  source: string;
+  createdAt: string;
+  openedAt?: string | null;
+}
+
+export interface ChestList {
+  chests: Chest[];
+}
+
+export interface ChestDrop {
+  itemId: string;
+  name: string;
+  qty: number;
+  tier: DropTier;
+  isNew: boolean;
+}
+
+export interface PityProgress {
+  count: number;
+  threshold: number;
+  minTier: string;
+}
+
+export interface OpenChestResponse {
+  chest: Chest;
+  drops: ChestDrop[];
+  pityProgress: PityProgress;
+}
+
+export interface PurchaseChestResponse {
+  chest: Chest;
+  coinsRemaining: number;
+  gemsRemaining: number;
+}
+
+export interface ChestHistory {
+  openings: { chestId: string; type: ChestType; drops: ChestDrop[]; openedAt: string }[];
+  total: number;
+}
+
+// ── Vínculo (Paso 3, feature 006) ─────────────────────────────────────────
+export interface BondingEvent {
+  id: string;
+  delta: number;
+  reason: string;
+  value: number;
+  createdAt: string;
+}
+
+export interface BondingHistory {
+  items: BondingEvent[];
+  nextCursor: string | null;
+}
+
+export interface BondingDecayInfo {
+  decayRatePerDay: number;
+  isDecaying: boolean;
+  graceWindowHours: number;
+  decayStartHours: number;
+  hoursSinceInteraction: number;
+  acumulatedDecay: number;
+}
+
+export interface BondingUnlocks {
+  greeting: boolean;
+  memoryRecall: boolean;
+  emotionalReactions: boolean;
+  patternUnlocked: boolean;
+  sleepNearCursor: boolean;
+}
+
+export interface BondingDetail {
+  value: number;
+  tier: string;
+  tierName: string;
+  lastInteractionAt: string;
+  history: BondingHistory;
+  decayInfo: BondingDecayInfo;
+  unlocks: BondingUnlocks;
 }
