@@ -12,6 +12,12 @@ import { ConfigService } from '@nestjs/config';
  * Co-op Care Service — handles visit actions between friends.
  * Feature 021: Multi-Device Presence + Co-op
  *
+ * ⚠️ PRÓXIMAMENTE / no cableado: la amistad se gestiona en memoria (`friendshipStore`) y
+ * `addFriendship` no se llama desde ningún endpoint, por lo que `checkFriendship` siempre
+ * devuelve false y `POST /v1/coop/visit` siempre responde 403; `getVisitHistory` devuelve `[]`
+ * (`friendshipStore`/`visitCountStore` deberían ser Prisma + Redis según la spec). La feature
+ * queda pausada; ver spec-21 para el diseño completo.
+ *
  * Validates friendship, rate limits visits (5/day/pet/visitor),
  * and processes visit actions (feed, play, clean).
  */
