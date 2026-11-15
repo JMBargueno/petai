@@ -10,7 +10,7 @@
   padding: var(--card-padding);
   border: var(--outline);
   border-radius: var(--radius-cards-elevated);
-  background: var(--color-paper-white);
+  background: var(--surface);
 }
 .appear__panel--earth {
   rotate: -0.6deg;
@@ -47,7 +47,7 @@
   padding: 8px 20px 8px 8px;
   border: var(--outline);
   border-radius: var(--radius-pills);
-  background: var(--color-paper-white);
+  background: var(--surface);
 }
 .pattern > span:last-child {
   display: grid;
@@ -96,7 +96,7 @@
   flex: none;
 }
 
-@media (width < 700px) {
+@media (width < 640px) {
   .appear__panel:nth-child(n) {
     rotate: 0deg;
   }

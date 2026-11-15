@@ -136,6 +136,8 @@ import { EVENTS, ITEMS, PETS, USERS } from '../data/repository';
       border: var(--outline);
       border-radius: var(--radius-pills);
       background: var(--color-electric-blue);
+      color-scheme: light;
+      color: var(--ink);
     }
     .plain {
       display: grid;

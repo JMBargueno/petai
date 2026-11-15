@@ -23,9 +23,9 @@ const SHAPES = {
       aria-hidden="true"
       focusable="false"
     >
-      <path class="tube" pathLength="1" [attr.d]="d()" stroke="#000" stroke-width="124" />
+      <path class="tube" pathLength="1" [attr.d]="d()" stroke="var(--line)" stroke-width="124" />
       <path class="tube" pathLength="1" [attr.d]="d()" stroke="#4da2ff" stroke-width="120" />
-      <path class="stitch" [attr.d]="d()" stroke="#000" stroke-width="1.5" transform="translate(0 -34)" />
+      <path class="stitch" [attr.d]="d()" stroke="var(--line)" stroke-width="1.5" transform="translate(0 -34)" />
     </svg>
   `,
   styles: `

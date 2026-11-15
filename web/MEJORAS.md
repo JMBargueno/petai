@@ -143,7 +143,7 @@ Esfuerzo S · Impacto bajo, pero abre el juego a dos públicos que hoy no se sie
 
 ## 2. Estética
 
-Todo lo siguiente respeta las reglas del sistema: color plano, contorno negro de 1 px, radios suaves, sin sombras y sin degradados.
+> **Actualizado (noviembre de 2026):** el sistema v2 cambia las reglas. Se permiten profundidad (sombras tintadas `--shadow-*` y la sombra dura de pegatina `--shadow-pop`) y degradados de marca (`--grad-hero`, `--grad-ether`, `--grad-accent`). El contorno de 1 px se mantiene como firma, con el color de `--line`. La acción principal usa el degradado violeta→azul. Hay modo oscuro con `prefers-color-scheme`. Los tokens están en [`src/styles/tokens.css`](src/styles/tokens.css).
 
 ### 2.1 Enseñar el producto real
 
@@ -177,6 +177,8 @@ Esfuerzo S (decisión) o L (licencias) · Impacto medio.
 
 ### 2.5 Color con significado
 
+**Hecho en parte:** existen los tokens `--theme-*` (Arena azul, IA lavanda, cuidado ámbar, social menta, lore violeta). Queda aplicarlos de forma sistemática en todas las secciones.
+
 Ahora los seis colores se reparten sin criterio. Asignar uno por tema y mantenerlo en toda la web: Arena en azul, IA en lavanda, cuidado en ámbar, social en menta… El color pasaría a orientar además de decorar.
 
 Revisar de paso el contraste del texto sobre Ember y sobre Violet, los dos fondos más oscuros de la paleta.
@@ -194,9 +196,9 @@ Esfuerzo S · Impacto medio.
 ### 2.7 Detalles pendientes
 
 - Logotipo y favicon definitivos (el actual es provisional).
-- Imagen para compartir en redes (`og:image`), una por idioma. Ahora no hay ninguna.
-- Página 404 con personalidad: un pockai dormido.
-- Modo oscuro: no existe. Decidir si encaja con la identidad de "papel pastel" o descartarlo expresamente para no dejarlo a medias.
+- ~~Imagen para compartir en redes (`og:image`), una por idioma.~~ **Hecho:** [`scripts/generate-og.mjs`](scripts/generate-og.mjs) genera la de la home y la del lore en cada idioma.
+- ~~Página 404 con personalidad: un pockai dormido.~~ **Hecho.**
+- ~~Modo oscuro.~~ **Hecho** con `light-dark()` y `color-scheme`; las tarjetas pastel quedan como islas claras.
 
 Esfuerzo S cada uno · Impacto medio (la imagen social es la más rentable).
 
@@ -229,7 +231,8 @@ La demo es lo mejor de la página y puede dar más:
 - **Páginas por función** (ver sección 1), cada una con su título y descripción.
 - **Datos estructurados de la FAQ** para que los buscadores muestren las preguntas.
 - **Revisión del inglés por un nativo:** la traducción actual es correcta pero no está revisada.
-- **Dominio definitivo:** `canonical`, `hreflang` y el sitemap apuntan a un marcador (`https://pockai.example`).
+- **Dominio definitivo:** `canonical`, `hreflang`, JSON-LD, sitemap, robots y `llms.txt` apuntan a un marcador (`https://pockai.example`). Se cambia en un solo sitio: [`src/app/site.json`](src/app/site.json).
+- **Hecho (checklist de claude-seo):** cabecera y pie compartidos, `SeoService` único para el `<head>`, Twitter cards, `og:locale`, x-default en HTML y sitemap, `lastmod`, JSON-LD de Organization, WebSite, SoftwareApplication, Article y BreadcrumbList, 404 con `noindex`, robots con grupos para bots de IA, `llms.txt`, manifest e iconos.
 
 ## 6. Técnica y calidad
 
@@ -279,6 +282,6 @@ La demo es lo mejor de la página y puede dar más:
 
 - No anunciar funciones que un jugador no pueda usar todavía.
 - No inventar cifras de jugadores, valoraciones ni testimonios.
-- No añadir sombras ni degradados, ni usar el azul como color de acción.
+- No usar sombras negras puras ni degradados fuera de los tokens de marca.
 - No dejar que una animación oculte contenido: la página debe leerse entera sin JavaScript.
 - No convertir la home en un catálogo: el detalle va en páginas propias.

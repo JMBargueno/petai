@@ -11,7 +11,15 @@ export type PockaiState = 'idle' | 'happy' | 'eat' | 'sleep';
   selector: 'app-pockai-sprite',
   template: `
     <span class="ground"></span>
-    <img [src]="src()" [alt]="alt()" width="128" height="128" decoding="async" />
+    <img
+      [src]="src()"
+      [alt]="alt()"
+      width="128"
+      height="128"
+      [attr.loading]="priority() ? null : 'lazy'"
+      [attr.fetchpriority]="priority() ? 'high' : null"
+      decoding="async"
+    />
   `,
   styles: `
     :host {
@@ -34,7 +42,7 @@ export type PockaiState = 'idle' | 'happy' | 'eat' | 'sleep';
       inset: auto 22% 3% 22%;
       block-size: 12%;
       border-radius: 50%;
-      background: rgb(0 0 0 / 0.2);
+      background: rgb(11 10 20 / 0.22);
     }
 
     @keyframes breathe {
@@ -92,6 +100,8 @@ export class PockaiSprite {
   readonly alt = input('');
   /** Tamaño en píxeles. Sin él manda la variable CSS `--sprite-size`. */
   readonly size = input<number | null>(null);
+  /** Imagen del primer pantallazo: sin lazy y con prioridad alta (guía optimize-image-priority). */
+  readonly priority = input(false);
 
   protected readonly src = computed(() => `sprites/${this.species()}_${this.state()}.svg`);
 }

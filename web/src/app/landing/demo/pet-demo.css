@@ -4,7 +4,7 @@
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
 }
-@media (width >= 860px) {
+@media (width >= 960px) {
   :host {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -25,10 +25,14 @@ p {
   border: var(--outline);
   border-radius: var(--radius-cards-elevated);
   background: var(--color-sunburst);
+  color-scheme: light;
+  color: var(--ink);
   rotate: -1deg;
 }
 .stage--shiny {
   background: var(--color-lavender);
+  color-scheme: light;
+  color: var(--ink);
 }
 
 .egg {
@@ -60,7 +64,7 @@ p {
   aspect-ratio: 1;
   border: var(--outline);
   border-radius: 50%;
-  background: var(--color-paper-white);
+  background: var(--surface);
 }
 .dots i.on {
   background: var(--color-carbon);
@@ -99,8 +103,8 @@ p {
   padding: 24px;
   border: var(--outline);
   border-radius: var(--radius-cards-elevated);
-  background: var(--color-paper-white);
-  color: var(--color-carbon);
+  background: var(--surface);
+  color: var(--ink);
   rotate: 1deg;
 }
 .pitch {
@@ -120,7 +124,7 @@ p {
   overflow: hidden;
   border: var(--outline);
   border-radius: var(--radius-pills);
-  background: var(--color-soft-mist);
+  background: var(--surface-2);
 }
 .fill {
   display: block;
@@ -130,9 +134,13 @@ p {
 }
 .fill--hunger {
   background: var(--color-ember);
+  color-scheme: light;
+  color: var(--ink);
 }
 .fill--happiness {
   background: var(--color-electric-blue);
+  color-scheme: light;
+  color: var(--ink);
 }
 .actions {
   display: flex;
@@ -141,6 +149,8 @@ p {
 }
 .btn[aria-pressed='true'] {
   background: var(--color-lavender);
+  color-scheme: light;
+  color: var(--ink);
 }
 .status {
   min-block-size: 1.4em; /* reserva la línea: el mensaje no mueve los botones */

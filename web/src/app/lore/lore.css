@@ -1,46 +1,141 @@
 :host {
   display: block;
 }
+main:focus {
+  outline: none;
+}
 
-/* Hero compacto (la landing usa .hero más alta; aquí el lore empieza con prisa). */
+/* ───── Hero: banda "Éter" (degradado violeta sobre carbón) ───── */
 .lore-hero {
-  margin-block-start: -68px; /* la nav flota sobre la banda */
-  padding-block-start: calc(68px + clamp(48px, 8vw, 120px));
-  border: 0;
-  border-radius: 0;
-  min-block-size: min(720px, 85svh);
+  min-block-size: min(780px, 92svh);
   display: grid;
   align-items: center;
 }
 .lore-hero__inner {
-  justify-self: center;
-  text-align: center;
   display: grid;
   justify-items: center;
+  text-align: center;
 }
-.lead--center {
+.lore-hero__title {
+  padding-block-start: 0.14em; /* tilde de la É: no pisa las migas */
+  font-size: clamp(56px, 11vw, 168px);
+}
+.lore-hero__lead {
+  max-inline-size: 48ch;
   margin-inline: auto;
+  margin-block-end: 36px;
 }
 .lore-hero__spot {
   position: absolute;
-  top: 18%;
-  opacity: 0.9;
+  box-shadow: 0 0 40px rgb(179 168 255 / 0.45);
 }
-.lore-hero__spot:nth-of-type(1) {
-  inset-inline-start: 8%;
+.lore-hero__spot--a {
+  inset: 22% auto auto 8%;
 }
-.lore-hero__spot:nth-of-type(2) {
-  inset-inline-end: 10%;
-  top: 26%;
+.lore-hero__spot--b {
+  inset: 26% 9% auto auto;
 }
-.lore-hero__spot:nth-of-type(3) {
-  inset-inline-end: 22%;
-  top: 12%;
+.lore-hero__spot--c {
+  inset: auto 18% 14% auto;
 }
-@media (width < 700px) {
+@media (width < 640px) {
   .lore-hero__spot {
     display: none;
   }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lore-hero__spot--a {
+    animation: float 6s ease-in-out infinite;
+  }
+}
+
+/* Migas de pan */
+.crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-muted);
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+}
+.crumbs li + li::before {
+  content: '/';
+  margin-inline-end: 8px;
+  opacity: 0.5;
+}
+.crumbs a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+.crumbs [aria-current] {
+  color: var(--ink);
+}
+
+/* ───── Índice fijo con scrollspy ───── */
+.toc {
+  position: sticky;
+  inset-block-start: calc(var(--header-h) - 2px);
+  z-index: 15;
+  padding: 8px var(--gutter);
+  pointer-events: none;
+}
+.toc__list {
+  position: relative; /* referencia de offsetLeft para centrar el chip activo */
+  display: flex;
+  gap: 4px;
+  inline-size: fit-content;
+  max-inline-size: min(100%, var(--page-max-width));
+  margin: 0 auto;
+  padding: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  list-style: none;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-pills);
+  background: var(--surface-glass);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: saturate(1.6) blur(14px);
+  pointer-events: auto;
+}
+.toc__link {
+  display: grid;
+  place-items: center;
+  min-block-size: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-pills);
+  color: var(--ink-muted);
+  font-weight: var(--font-weight-bold);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-1),
+    color var(--dur-1);
+}
+.toc__link:hover {
+  color: var(--ink);
+}
+/* Estado activo: no solo color (fondo + peso) */
+.toc__link:is(.target-current) {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+/* ───── CTA final ───── */
+.lore-cta__inner {
+  display: grid;
+  gap: 24px;
+  justify-items: center;
+  text-align: center;
+}
+.lore-cta__egg {
+  inline-size: 120px;
+  block-size: auto;
+  filter: drop-shadow(0 18px 30px rgb(38 30 110 / 0.3));
 }
 
 h3 {
@@ -49,33 +144,12 @@ h3 {
   font-size: var(--text-subheading);
   line-height: var(--leading-subheading);
 }
-/* CTA final: huevo flotando + botón a la descarga. */
-.lore-cta__egg {
-  position: absolute;
-  top: 22%;
-  inset-inline-end: 12%;
-  opacity: 0.9;
-}
-.lore-cta__inner {
-  display: grid;
-  gap: 14px;
-  justify-items: start;
-  max-inline-size: 640px;
-}
-.lore-cta__sub {
-  font-size: var(--text-body-lg);
-}
-@media (width < 700px) {
-  .lore-cta__egg {
-    display: none;
-  }
-}
 ul,
 ol {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-p {
+p:where(:not(.lead, .eyebrow)) {
   margin: 0;
 }

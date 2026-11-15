@@ -11,7 +11,7 @@
   padding: 12px var(--card-padding);
   border: var(--outline);
   border-radius: var(--radius-cards-elevated);
-  background: var(--color-paper-white);
+  background: var(--surface);
 }
 .term:nth-child(odd) {
   rotate: -0.3deg;
@@ -34,7 +34,7 @@
   font-size: var(--text-subheading);
 }
 
-@media (width < 700px) {
+@media (width < 640px) {
   .term {
     grid-template-columns: 1fr;
     gap: 4px;

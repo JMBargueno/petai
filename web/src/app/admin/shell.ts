@@ -12,7 +12,7 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
   template: `
     <div class="shell">
       <header class="top">
-        <a class="brand" routerLink="/admin">Pockai <span>Panel</span></a>
+        <a class="brand" routerLink="/admin"><span class="logo__mark" aria-hidden="true">P</span>Pockai <span>Panel</span></a>
         <p class="tag demo">Datos de demostración · nada se envía al servidor</p>
         <div class="top__actions">
           <button class="btn btn--sm" type="button" (click)="resetDialog.showModal()">Restablecer datos</button>
@@ -21,6 +21,7 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
       </header>
 
       <nav class="side" aria-label="Secciones del panel">
+        <p class="side__brand label-caps">Gestión</p>
         @for (link of links; track link.path) {
           <a
             class="btn"
@@ -56,37 +57,50 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
   styles: `
     .shell {
       display: grid;
-      grid-template: 'top top' auto 'side main' 1fr / 220px minmax(0, 1fr);
+      grid-template: 'side top' auto 'side main' 1fr / 248px minmax(0, 1fr);
       min-block-size: 100dvh;
-      background: var(--color-sky-wash);
+      background:
+        radial-gradient(60% 40% at 100% 0%, light-dark(rgb(233 204 255 / 0.5), rgb(92 74 222 / 0.18)) 0%, transparent 70%),
+        var(--bg);
     }
     .top {
       grid-area: top;
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 5;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 12px;
       padding: 12px 24px;
-      border-block-end: var(--outline);
-      background: var(--color-paper-white);
+      border-block-end: 1px solid var(--line-soft);
+      background: var(--surface-glass);
+      backdrop-filter: saturate(1.6) blur(14px);
     }
     .brand {
-      color: var(--color-carbon);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink);
       font-family: var(--font-lateral);
-      font-size: 28px;
+      font-size: 22px;
       line-height: 1;
       text-decoration: none;
       text-transform: uppercase;
     }
-    .brand span {
+    .brand span:not(.logo__mark) {
+      padding: 4px 8px;
+      border-radius: var(--radius-pills);
+      background: var(--surface-2);
       font-family: var(--font-aeonik-pro);
       font-weight: var(--font-weight-bold);
       font-size: var(--text-caption);
-      letter-spacing: 0.032em;
+      letter-spacing: 0.06em;
     }
     .demo {
       margin: 0;
-      background: var(--color-sunburst);
+      border-color: transparent;
+      background: color-mix(in srgb, var(--color-sunburst) 40%, var(--surface));
       white-space: normal;
     }
     .top__actions {
@@ -96,22 +110,41 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
     }
     .side {
       grid-area: side;
+      position: sticky;
+      inset-block-start: 0;
+      align-self: start;
       display: flex;
       flex-direction: column;
       gap: 4px;
-      padding: 24px 12px 24px 24px;
+      block-size: 100dvh;
+      padding: 20px 14px;
+      border-inline-end: 1px solid var(--line-soft);
+      background: var(--surface);
+    }
+    .side__brand {
+      margin: 0 8px 20px;
     }
     .side .btn {
       justify-content: start;
+      border-color: transparent;
+      box-shadow: none;
+      background: transparent;
+      color: var(--ink-muted);
     }
-    .side .is-active {
-      background: var(--color-carbon);
-      color: var(--color-paper-white);
+    .side .btn:hover {
+      background: var(--surface-2);
+      color: var(--ink);
+    }
+    .side .is-active,
+    .side .is-active:hover {
+      background: var(--grad-accent);
+      color: #fff;
+      box-shadow: var(--shadow-2);
     }
     .main {
       grid-area: main;
       min-inline-size: 0;
-      padding: 24px;
+      padding: 28px;
     }
     h2 {
       margin: 0 0 8px;
@@ -127,14 +160,21 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
       gap: 8px;
       margin-block-start: 24px;
     }
-    @media (width < 860px) {
+    @media (width < 960px) {
       .shell {
         grid-template: 'top' auto 'side' auto 'main' 1fr / minmax(0, 1fr);
       }
       .side {
+        position: static;
         flex-direction: row;
+        block-size: auto;
         overflow-x: auto;
-        padding: 12px 16px;
+        padding: 10px 16px;
+        border-inline-end: 0;
+        border-block-end: 1px solid var(--line-soft);
+      }
+      .side__brand {
+        display: none;
       }
       .main {
         padding: 16px;

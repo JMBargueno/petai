@@ -42,7 +42,7 @@ import { AdminAuth } from './auth';
       place-items: center;
       min-block-size: 100dvh;
       padding: 16px;
-      background: var(--color-sky-wash);
+      background: var(--grain), var(--grad-hero);
     }
     .box {
       display: grid;
@@ -50,6 +50,7 @@ import { AdminAuth } from './auth';
       justify-items: start;
       inline-size: min(420px, 100%);
       border-radius: var(--radius-cards-elevated);
+      box-shadow: var(--shadow-4);
     }
     h1 {
       margin: 0;

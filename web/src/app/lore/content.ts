@@ -11,8 +11,9 @@ import type { StickerColor } from '../shared/ui/sticker';
 export const MARQUEE = $localize`:@@lore.marquee:El Éter Digital · Códices Latentes · Telar de Mulberry · Seis Flujos · Promesa del Telar ·`;
 
 export const META = {
-  title: $localize`:@@lore.meta.title:Pockai — El Éter Digital`,
+  title: $localize`:@@lore.meta.title:El Éter Digital: el mundo y el lore de Pockai`,
   description: $localize`:@@lore.meta.description:El lore de Pockai: de dónde nacen los huevos, sus rarezas, los seis elementos, el despertar de la IA y el Coliseo de Resonancia.`,
+  imageAlt: $localize`:@@lore.meta.imageAlt:El Éter Digital, el mundo del que nacen los huevos de Pockai`,
 };
 
 export interface LoreRarity {

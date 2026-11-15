@@ -1,0 +1,313 @@
+import { NgTemplateOutlet } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  afterNextRender,
+  inject,
+  input,
+  viewChild,
+} from '@angular/core';
+
+export interface NavLink {
+  href: string;
+  label: string;
+}
+
+/**
+ * Cabecera común de la web pública (guía `navbar` de modern-web-guidance).
+ *
+ * Un único árbol de navegación: por defecto (y sin JS) la lista es un `popover` que abre el
+ * botón "Menú"; cuando la fila completa cabe, el script añade `is-wide` y quita el atributo
+ * `popover` para que la misma lista se muestre en línea. No hay breakpoint fijo: se mide.
+ */
+@Component({
+  selector: 'app-site-header',
+  template: `
+    <a class="skip-link" href="#main" i18n="@@nav.skip">Saltar al contenido</a>
+    <header #header class="site-header">
+      <div #inner class="header-inner">
+        <a class="logo" [href]="home()" [attr.aria-label]="homeLabel()">
+          <span class="logo__mark" aria-hidden="true">P</span>
+          <span class="logo__word" aria-hidden="true">Pockai</span>
+        </a>
+
+        <nav class="site-nav" [attr.aria-label]="navLabel()">
+          <button
+            class="menu-button btn btn--sm"
+            type="button"
+            popovertarget="site-menu"
+            popovertargetaction="toggle"
+            aria-controls="site-menu"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 7h16M4 12h16M4 17h10" />
+            </svg>
+            <span i18n="@@nav.menu">Menú</span>
+          </button>
+
+          <ul #menu id="site-menu" class="site-menu" popover="auto" (click)="closeOnLink($event)">
+            @for (link of links(); track link.href) {
+              <li><a class="site-menu__link" [href]="link.href">{{ link.label }}</a></li>
+            }
+            <li class="site-menu__lang">
+              <ng-container *ngTemplateOutlet="lang" />
+            </li>
+          </ul>
+        </nav>
+
+        <div class="header-end">
+          <span class="header-end__lang"><ng-container *ngTemplateOutlet="lang" /></span>
+          <a class="btn btn--filled btn--sm" [href]="cta().href">{{ cta().label }}</a>
+        </div>
+      </div>
+    </header>
+
+    <ng-template #lang>
+      <span class="lang" role="group" aria-label="Idioma" i18n-aria-label="@@nav.lang">
+        <a [href]="langHrefs().es" lang="es" hreflang="es" [attr.aria-current]="locale() === 'es' ? 'true' : null">ES</a>
+        <a [href]="langHrefs().en" lang="en" hreflang="en" [attr.aria-current]="locale() === 'en' ? 'true' : null">EN</a>
+      </span>
+    </ng-template>
+  `,
+  styles: `
+    :host {
+      display: block;
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 20;
+      margin-block-end: calc(-1 * var(--header-h)); /* flota sobre la primera banda */
+      padding: 10px var(--gutter);
+      pointer-events: none;
+    }
+    .site-header {
+      max-inline-size: var(--page-max-width);
+      margin-inline: auto;
+      pointer-events: auto;
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-block-size: calc(var(--header-h) - 20px);
+      padding: 6px 6px 6px 14px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius-pills);
+      background: var(--surface-glass);
+      box-shadow: var(--shadow-2);
+      backdrop-filter: saturate(1.6) blur(14px);
+    }
+    /* Mantener medible el ancho natural de la fila */
+    .header-inner > * {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .site-nav {
+      margin-inline-start: auto;
+    }
+    .header-end {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .menu-button {
+      anchor-name: --menu-button;
+    }
+    .menu-button svg {
+      inline-size: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+
+    /* ── Estrecho: popover anclado al botón ── */
+    .site-menu {
+      position: fixed;
+      inset: auto;
+      inset-block-start: calc(var(--header-h) + 4px);
+      inset-block-start: anchor(--menu-button bottom);
+      inset-inline-end: var(--gutter);
+      inline-size: min(86dvw, 22rem);
+      max-block-size: calc(100dvh - 6rem);
+      margin: 10px 0 0;
+      padding: 10px;
+      overflow: auto;
+      border: var(--outline);
+      border-radius: var(--radius-cards);
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: var(--shadow-4);
+      list-style: none;
+    }
+    .site-menu:is(:popover-open, .\\:popover-open) {
+      display: grid;
+      gap: 2px;
+    }
+    .site-menu__link {
+      display: flex;
+      align-items: center;
+      min-block-size: 48px;
+      padding: 0 14px;
+      border-radius: 12px;
+      color: var(--ink);
+      font-weight: var(--font-weight-bold);
+      font-size: 17px;
+      text-decoration: none;
+    }
+    .site-menu__link:hover {
+      background: var(--surface-2);
+    }
+    .site-menu__lang {
+      padding: 10px 6px 4px;
+      border-block-start: 1px solid var(--line-soft);
+      margin-block-start: 6px;
+    }
+    .header-end__lang {
+      display: none;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .site-menu {
+        opacity: 0;
+        translate: 0 -6px;
+        transition:
+          opacity var(--dur-2) var(--ease-out),
+          translate var(--dur-2) var(--ease-out),
+          display var(--dur-2),
+          overlay var(--dur-2);
+        transition-behavior: allow-discrete;
+      }
+      .site-menu:is(:popover-open, .\\:popover-open) {
+        opacity: 1;
+        translate: 0 0;
+      }
+      @starting-style {
+        .site-menu:is(:popover-open, .\\:popover-open) {
+          opacity: 0;
+          translate: 0 -6px;
+        }
+      }
+    }
+
+    /* ── Ancho: la misma lista en línea ── */
+    .site-header.is-wide {
+      .menu-button,
+      .site-menu__lang {
+        display: none;
+      }
+      .header-end__lang {
+        display: inline-flex;
+      }
+      .site-menu {
+        position: static;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        inline-size: auto;
+        max-block-size: none;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        opacity: 1;
+        translate: none;
+      }
+      .site-menu__link {
+        min-block-size: 40px;
+        padding: 0 12px;
+        border-radius: var(--radius-pills);
+        font-size: 14px;
+      }
+    }
+    .is-measuring * {
+      transition: none !important;
+    }
+
+    @media (width < 420px) {
+      .logo__word {
+        display: none;
+      }
+    }
+  `,
+  imports: [NgTemplateOutlet],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class SiteHeader {
+  readonly links = input.required<NavLink[]>();
+  readonly cta = input.required<NavLink>();
+  readonly home = input.required<string>();
+  readonly homeLabel = input.required<string>();
+  readonly navLabel = input.required<string>();
+  readonly locale = input.required<string>();
+  readonly langHrefs = input.required<{ es: string; en: string }>();
+
+  private readonly header = viewChild.required<ElementRef<HTMLElement>>('header');
+  private readonly inner = viewChild.required<ElementRef<HTMLElement>>('inner');
+  private readonly menu = viewChild.required<ElementRef<HTMLElement>>('menu');
+
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      const header = this.header().nativeElement;
+      const inner = this.inner().nativeElement;
+      const menu = this.menu().nativeElement;
+      let lastWidth = 0;
+      let wide = false;
+
+      const measure = () => {
+        const width = header.clientWidth;
+        // Plegado: solo vuelve a medir si la cabecera ha crecido (evita parpadeos al encoger).
+        if (!wide && width <= lastWidth) {
+          lastWidth = width;
+          return;
+        }
+        lastWidth = width;
+        const wasOpen = menu.matches(':popover-open');
+        header.classList.add('is-measuring', 'is-wide');
+        // Sin caja (sin maquetar, p. ej. en tests) no se despliega: se queda el menú plegado.
+        const fits = inner.clientWidth > 0 && inner.scrollWidth <= inner.clientWidth;
+        header.classList.toggle('is-wide', fits);
+        if (fits) {
+          menu.removeAttribute('popover');
+        } else if (!menu.hasAttribute('popover')) {
+          menu.setAttribute('popover', 'auto');
+          if (wasOpen) menu.showPopover();
+        }
+        wide = fits;
+        requestAnimationFrame(() => header.classList.remove('is-measuring'));
+      };
+
+      lastWidth = -1;
+      measure();
+      if (typeof ResizeObserver === 'undefined') return;
+      // Medir en el siguiente frame: cambiar el layout dentro del callback provoca el aviso de bucle.
+      let frame = 0;
+      const observer = new ResizeObserver(() => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(measure);
+      });
+      observer.observe(header);
+      // El ancho de los enlaces cambia al cargar la tipografía: se vuelve a medir entonces
+      // (observar la propia lista provocaba el aviso de bucle de ResizeObserver).
+      void document.fonts?.ready.then(() => {
+        lastWidth = -1;
+        measure();
+      });
+      destroyRef.onDestroy(() => {
+        cancelAnimationFrame(frame);
+        observer.disconnect();
+      });
+    });
+  }
+
+  /** Al elegir un enlace en el menú plegado, se cierra. */
+  protected closeOnLink(event: MouseEvent) {
+    const menu = this.menu().nativeElement;
+    if ((event.target as HTMLElement).closest('a') && menu.matches(':popover-open')) menu.hidePopover();
+  }
+}

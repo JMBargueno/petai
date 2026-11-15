@@ -1,19 +1,29 @@
 /*
- * Tokens del sistema de diseño (referencia de estilo "Slush").
- * `static` hace que Tailwind emita todas las variables aunque no se usen como utilidad,
- * para poder leerlas con var(--…) desde el CSS de los componentes.
+ * Tokens del sistema de diseño de Pockai (v2).
+ *
+ * Dos capas:
+ *  1. Paleta de marca (`--color-*`, en @theme): valores fijos, iguales en claro y en oscuro.
+ *     Se usan como relleno de pegatinas, tarjetas temáticas y acentos.
+ *  2. Tokens semánticos (`--bg`, `--surface`, `--ink`, `--line`…, en :root): cambian con el
+ *     esquema de color mediante `light-dark()`. Los componentes deben preferirlos.
+ *
+ * Regla de los rellenos pastel: un contenedor con fondo de la paleta de marca fija
+ * `color-scheme: light` (clase `.tone` o el selector de base.css), así sus descendientes
+ * resuelven los tokens semánticos en su versión clara y el texto sigue siendo oscuro.
  *
  * Tipografías: Lateral y Aeonik Pro son comerciales. Si se instalan sus ficheros se usarán
  * automáticamente (van primero en la pila); mientras tanto se cargan los sustitutos
  * Bowlby One (display) e Inter (UI), auto-alojados con @fontsource.
+ *
+ * Breakpoints únicos del sistema: 640px (móvil→tableta), 960px (tableta→escritorio), 1280px.
  */
 @theme static {
-  /* Colors */
-  --color-carbon: #000000;
+  /* Paleta de marca */
+  --color-carbon: #0b0a14;
   --color-paper-white: #ffffff;
   --color-sky-wash: #dceeff;
-  --color-concrete-gray: #cccccc;
-  --color-soft-mist: #e9e9e9;
+  --color-concrete-gray: #d6d4e0;
+  --color-soft-mist: #eeedf4;
   --color-electric-blue: #4da2ff;
   --color-mint-pop: #55db9c;
   --color-lavender: #e9ccff;
@@ -21,88 +31,116 @@
   --color-sunburst: #ffd731;
   --color-voltage-violet: #5c4ade;
 
-  /* Typography */
+  /* Tipografía */
   --font-lateral: 'Lateral', 'Bowlby One', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-aeonik-pro: 'Aeonik Pro', 'Inter Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* Typography — Scale */
+  /* Escala tipográfica (fluida donde importa) */
   --text-caption: 12px;
   --leading-caption: 1.56;
-  --tracking-caption: -0.01px;
-  --text-body-lg: 15px;
-  --leading-body-lg: 1.39;
-  --tracking-body-lg: -0.01px;
-  --text-subheading: 24px;
+  --text-body-lg: 16px;
+  --leading-body-lg: 1.5;
+  --text-subheading: 22px;
   --leading-subheading: 1.2;
-  --tracking-subheading: -0.01px;
   --text-heading-sm: 30px;
   --leading-heading-sm: 1.1;
-  --tracking-heading-sm: -0.01px;
-  --text-heading: 64px;
+  --text-heading: clamp(40px, 6vw, 64px);
   --leading-heading: 1;
-  --tracking-heading: -0.01px;
-  --text-display: 200px;
-  --leading-display: 0.8;
-  --tracking-display: 0px;
-  --text-display-lg: 640px;
-  --leading-display-lg: 0.75;
-  --tracking-display-lg: 0px;
+  --leading-display: 0.86;
 
-  /* Typography — Weights */
   --font-weight-medium: 500;
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
 
-  /* Spacing (nombradas en píxeles: p-24 = 24px) */
+  /* Espaciado (nombrado en píxeles: p-24 = 24px) */
   --spacing-4: 4px;
   --spacing-8: 8px;
   --spacing-12: 12px;
   --spacing-16: 16px;
   --spacing-20: 20px;
   --spacing-24: 24px;
-  --spacing-28: 28px;
   --spacing-32: 32px;
   --spacing-40: 40px;
-  --spacing-44: 44px;
   --spacing-48: 48px;
   --spacing-60: 60px;
   --spacing-80: 80px;
   --spacing-128: 128px;
-  --spacing-180: 180px;
-  --spacing-224: 224px;
 
-  /* Border Radius */
+  /* Radios */
   --radius-2xl: 16px;
-  --radius-2xl-2: 20px;
-  --radius-3xl: 30px;
-  --radius-3xl-2: 40px;
-  --radius-full: 1440px;
-  --radius-full-2: 1500px;
-  --radius-full-3: 1600px;
+  --radius-3xl: 28px;
+  --radius-full: 9999px;
 }
 
 :root {
-  /* Layout */
-  --page-max-width: 1440px;
-  --section-gap: 48px;
-  --card-padding: 24px;
+  color-scheme: light dark;
 
-  /* Named radii */
-  --radius-nav: 1600px;
-  --radius-body: 30px;
+  /* ── Superficies y texto ── */
+  --bg: light-dark(#fbfaff, #0d0c19);
+  --surface: light-dark(#ffffff, #17162a);
+  --surface-2: light-dark(#f2f1f8, #201e37);
+  --surface-glass: light-dark(rgb(255 255 255 / 0.72), rgb(23 22 42 / 0.72));
+  --ink: light-dark(#0b0a14, #f4f2ff);
+  --ink-muted: light-dark(#4b4862, #b9b5d8);
+  --line: light-dark(#0b0a14, #3d3a63);
+  --line-soft: light-dark(rgb(11 10 20 / 0.12), rgb(255 255 255 / 0.1));
+  --on-color: #0b0a14; /* texto sobre la paleta de marca */
+  --on-dark: #ffffff; /* texto sobre carbón / violeta */
+
+  /* ── Bandas ── */
+  --band-sky: light-dark(#dceeff, #0f1d33);
+  --band-white: light-dark(#ffffff, #12111f);
+  --band-gray: light-dark(#ecebf3, #181729);
+  --band-lavender: light-dark(#f1e2ff, #1f1734);
+  --band-ink: #0b0a14;
+
+  /* ── Acentos y color por tema ──
+     Cada tema usa siempre el mismo color en toda la web. */
+  --accent: #5c4ade;
+  --accent-ink: light-dark(#4a39c9, #b3a8ff); /* enlaces y texto de acento con contraste AA */
+  --theme-arena: var(--color-electric-blue);
+  --theme-ai: var(--color-lavender);
+  --theme-care: var(--color-sunburst);
+  --theme-social: var(--color-mint-pop);
+  --theme-lore: var(--color-voltage-violet);
+  --theme-hot: var(--color-ember);
+
+  /* ── Degradados de marca ── */
+  --grad-accent: linear-gradient(135deg, #6d5bff 0%, #5c4ade 45%, #3f8cff 100%);
+  --grad-hero:
+    radial-gradient(60% 70% at 12% 18%, light-dark(#e9ccff, #2c1f55) 0%, transparent 60%),
+    radial-gradient(55% 60% at 88% 12%, light-dark(#c9f3df, #0f3a33) 0%, transparent 62%),
+    radial-gradient(70% 70% at 70% 100%, light-dark(#fff1b3, #3a2a12) 0%, transparent 60%),
+    light-dark(#dceeff, #0f1d33);
+  --grad-ether:
+    radial-gradient(70% 90% at 15% 0%, rgb(92 74 222 / 0.55) 0%, transparent 60%),
+    radial-gradient(60% 80% at 100% 100%, rgb(77 162 255 / 0.35) 0%, transparent 60%),
+    #0b0a14;
+  --grad-band: linear-gradient(180deg, transparent 0%, light-dark(rgb(255 255 255 / 0.5), rgb(255 255 255 / 0.02)) 100%);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* ── Elevación (sombras tintadas, nunca negro puro) ── */
+  --shadow-c: light-dark(#261e6e, #000000); /* light-dark() solo admite colores */
+  --shadow-1: 0 1px 2px color-mix(in srgb, var(--shadow-c) 8%, transparent), 0 2px 8px color-mix(in srgb, var(--shadow-c) 7%, transparent);
+  --shadow-2: 0 2px 4px color-mix(in srgb, var(--shadow-c) 8%, transparent), 0 8px 24px color-mix(in srgb, var(--shadow-c) 12%, transparent);
+  --shadow-3: 0 4px 8px color-mix(in srgb, var(--shadow-c) 9%, transparent), 0 18px 48px color-mix(in srgb, var(--shadow-c) 18%, transparent);
+  --shadow-4: 0 8px 16px color-mix(in srgb, var(--shadow-c) 10%, transparent), 0 32px 80px color-mix(in srgb, var(--shadow-c) 26%, transparent);
+  --shadow-pop: 4px 5px 0 var(--line); /* sombra dura de pegatina */
+  --glow-accent: 0 8px 28px rgb(92 74 222 / 0.45);
+
+  /* ── Layout ── */
+  --page-max-width: 1280px;
+  --gutter: clamp(16px, 4vw, 48px);
+  --header-h: 72px;
+  --card-padding: clamp(20px, 2.4vw, 28px);
+
+  /* ── Radios con nombre ── */
   --radius-cards: 20px;
-  --radius-pills: 1600px;
-  --radius-buttons: 1600px;
-  --radius-wallet-icon: 16px;
-  --radius-cards-elevated: 40px;
+  --radius-cards-elevated: 32px;
+  --radius-pills: 9999px;
+  --radius-buttons: 9999px;
 
-  /* Surfaces */
-  --surface-sky-wash: #dceeff;
-  --surface-paper-white: #ffffff;
-  --surface-concrete-gray: #cccccc;
-  --surface-sticker-surfaces: #e9ccff;
-
-  /* Propios de Pockai */
-  --outline: 1px solid var(--color-carbon);
-  --focus-ring: 3px solid var(--color-voltage-violet);
+  /* ── Contornos y foco ── */
+  --outline: 1px solid var(--line);
+  --focus-ring: 3px solid light-dark(#5c4ade, #b3a8ff);
 }

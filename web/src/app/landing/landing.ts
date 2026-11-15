@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DOCUMENT,
   DestroyRef,
   ElementRef,
   LOCALE_ID,
@@ -11,26 +10,42 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Meta, Title } from '@angular/platform-browser';
+import { NavLink, SiteHeader } from '../shared/layout/site-header';
+import { SiteFooter } from '../shared/layout/site-footer';
+import { SeoService } from '../shared/seo/seo.service';
 import { Marquee } from '../shared/ui/marquee';
 import { PockaiSprite, PockaiState } from '../shared/ui/pockai-sprite';
 import { Ribbon } from '../shared/ui/ribbon';
 import { Sticker } from '../shared/ui/sticker';
-import { SITE_URL } from '../site.config';
+import { OG_IMAGE, SITE_NAME, SITE_URL, pageUrl } from '../site.config';
 import { FAQ, FEATURES, MARQUEE, META, PLATFORMS, SPECIES } from './content';
 import { TEASER } from '../lore/content';
 import { PetDemo } from './demo/pet-demo';
+import { ArenaShowcase } from './sections/arena-showcase';
 import { DesktopScene } from './sections/desktop-scene';
 import { HowItWorks } from './sections/how-it-works';
+import { Pricing } from './sections/pricing';
 import { Rarities } from './sections/rarities';
 
-const LOCALES = ['es', 'en'] as const;
 const HERO_ROTATION_MS = 3800;
 const HERO_GREETING_MS = 1500;
 
 @Component({
   selector: 'app-landing',
-  imports: [Marquee, Ribbon, Sticker, PockaiSprite, HowItWorks, Rarities, DesktopScene, PetDemo],
+  imports: [
+    SiteHeader,
+    SiteFooter,
+    Marquee,
+    Ribbon,
+    Sticker,
+    PockaiSprite,
+    HowItWorks,
+    Rarities,
+    DesktopScene,
+    ArenaShowcase,
+    Pricing,
+    PetDemo,
+  ],
   templateUrl: './landing.html',
   styleUrl: './landing.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,8 +59,23 @@ export class Landing {
   protected readonly faq = FAQ;
   protected readonly teaser = TEASER;
   protected readonly loreHref = `/${this.locale}/lore`;
-  protected readonly year = new Date().getFullYear();
   protected readonly letters = [...'Pockai'];
+
+  protected readonly homeLabel = $localize`:@@nav.home:Pockai, inicio`;
+  protected readonly navLabel = $localize`:@@nav.label:Principal`;
+  protected readonly navCta: NavLink = { href: '#descargar', label: $localize`:@@nav.cta:Descargar` };
+  protected readonly navLinks: NavLink[] = [
+    { href: '#funciones', label: $localize`:@@nav.features:Funciones` },
+    { href: '#arena-a-fondo', label: $localize`:@@nav.arena:Arena` },
+    { href: '#pockais', label: $localize`:@@nav.species:Pockais` },
+    { href: '#demo', label: $localize`:@@nav.demo:Pruébalo` },
+    { href: this.loreHref, label: $localize`:@@nav.lore:Mundo` },
+    { href: '#precios', label: $localize`:@@nav.pricing:Precios` },
+    { href: '#faq', label: 'FAQ' },
+  ];
+
+  /** Especie bajo el cursor en la rejilla: pasa a `happy`. */
+  protected readonly hovered = signal<string | null>(null);
 
   /** Mascota del hero: va cambiando de especie y saluda al tocarla. */
   private readonly heroIndex = signal(0);
@@ -56,7 +86,7 @@ export class Landing {
   private readonly hero = viewChild.required<ElementRef<HTMLElement>>('hero');
 
   constructor() {
-    this.setHead(inject(Title), inject(Meta), inject(DOCUMENT));
+    this.setHead(inject(SeoService));
 
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
@@ -87,40 +117,58 @@ export class Landing {
   }
 
   /** Metadatos por idioma. Se ejecuta en el prerender, así que quedan en el HTML estático. */
-  private setHead(title: Title, meta: Meta, doc: Document) {
-    const url = `${SITE_URL}/${this.locale}/`;
-    title.setTitle(META.title);
-    meta.updateTag({ name: 'description', content: META.description });
-    meta.updateTag({ property: 'og:title', content: META.title });
-    meta.updateTag({ property: 'og:description', content: META.description });
-    meta.updateTag({ property: 'og:type', content: 'website' });
-    meta.updateTag({ property: 'og:url', content: url });
-
-    // En el navegador estos nodos ya vienen en el HTML prerenderizado.
-    if (doc.head.querySelector('link[rel="canonical"]')) return;
-
-    const link = (rel: string, href: string, hreflang?: string) => {
-      const el = doc.createElement('link');
-      el.rel = rel;
-      el.href = href;
-      if (hreflang) el.hreflang = hreflang;
-      doc.head.appendChild(el);
-    };
-    link('canonical', url);
-    for (const l of LOCALES) link('alternate', `${SITE_URL}/${l}/`, l);
-    link('alternate', `${SITE_URL}/es/`, 'x-default');
-
-    const ld = doc.createElement('script');
-    ld.type = 'application/ld+json';
-    ld.textContent = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'SoftwareApplication',
-      name: 'Pockai',
-      applicationCategory: 'GameApplication',
-      operatingSystem: 'Windows, Android',
+  private setHead(seo: SeoService) {
+    const url = pageUrl(this.locale, '');
+    const org = `${SITE_URL}/#organization`;
+    seo.set({
+      title: META.title,
       description: META.description,
-      url,
+      path: '',
+      imageAlt: META.imageAlt,
+      jsonLd: [
+        {
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'Organization',
+              '@id': org,
+              name: SITE_NAME,
+              url: `${SITE_URL}/`,
+              logo: `${SITE_URL}/icon-512.png`,
+            },
+            {
+              '@type': 'WebSite',
+              '@id': `${SITE_URL}/#website`,
+              name: SITE_NAME,
+              url: `${SITE_URL}/`,
+              inLanguage: ['es', 'en'],
+              publisher: { '@id': org },
+            },
+            {
+              '@type': 'SoftwareApplication',
+              '@id': `${url}#app`,
+              name: SITE_NAME,
+              description: META.description,
+              url,
+              image: `${SITE_URL}/${OG_IMAGE(this.locale)}`,
+              applicationCategory: 'GameApplication',
+              operatingSystem: 'Windows 10, Windows 11, Android 8.0+',
+              inLanguage: this.locale,
+              publisher: { '@id': org },
+              offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+            },
+          ],
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: this.faq.map((item) => ({
+            '@type': 'Question',
+            name: item.q,
+            acceptedAnswer: { '@type': 'Answer', text: item.a },
+          })),
+        },
+      ],
     });
-    doc.head.appendChild(ld);
   }
 }

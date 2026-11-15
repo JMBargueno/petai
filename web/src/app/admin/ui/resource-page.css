@@ -44,7 +44,7 @@ p {
   padding: 8px 16px;
   border: 2px solid var(--color-ember);
   border-radius: var(--radius-2xl);
-  background: var(--color-paper-white);
+  background: var(--surface);
   font-weight: var(--font-weight-bold);
 }
 
@@ -53,9 +53,10 @@ p {
   overflow: auto;
   max-inline-size: 100%;
   max-block-size: min(640px, 70vh);
-  border: var(--outline);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--shadow-2);
   border-radius: var(--radius-cards);
-  background: var(--color-paper-white);
+  background: var(--surface);
   container-type: inline-size;
 }
 table {
@@ -79,12 +80,14 @@ thead {
 th,
 td {
   padding: 8px 16px;
-  border-block-start: var(--outline);
+  border-block-start: 1px solid var(--line-soft);
   text-align: start;
   vertical-align: middle;
 }
 thead th {
   background: var(--color-lavender);
+  color-scheme: light;
+  color: var(--ink);
   font-size: var(--text-caption);
   letter-spacing: 0.032em;
   text-transform: uppercase;
@@ -164,6 +167,8 @@ thead th.num button {
   }
   tbody th {
     background: var(--color-lavender);
+    color-scheme: light;
+    color: var(--ink);
   }
   td {
     display: flex;
@@ -199,7 +204,7 @@ thead th.num button {
 }
 .field .input:read-only:not(select),
 .field .input:disabled {
-  background: var(--color-soft-mist);
+  background: var(--surface-2);
 }
 .check {
   display: flex;
@@ -210,7 +215,7 @@ thead th.num button {
 .check input {
   inline-size: 20px;
   block-size: 20px;
-  accent-color: var(--color-carbon);
+  accent-color: var(--accent);
 }
 .dialog__actions {
   display: flex;
@@ -218,4 +223,7 @@ thead th.num button {
   justify-content: end;
   gap: 8px;
   margin-block-start: 12px;
+}
+tbody tr:hover > * {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
 }

@@ -16,5 +16,12 @@ export const routes: Routes = [
     path: 'admin',
     loadChildren: () => import('./admin/admin.routes'),
   },
-  { path: '**', redirectTo: '' },
+  {
+    path: '404',
+    loadComponent: () => import('./not-found/not-found').then((m) => m.NotFound),
+  },
+  {
+    path: '**',
+    loadComponent: () => import('./not-found/not-found').then((m) => m.NotFound),
+  },
 ];

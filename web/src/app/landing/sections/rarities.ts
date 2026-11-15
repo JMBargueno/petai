@@ -65,16 +65,17 @@ import { PATTERNS, RARITY_ODDS, SHINY_NOTE } from '../content';
       padding: 12px 4px 20px;
       overflow-x: auto;
       scroll-snap-type: x mandatory;
-      scrollbar-color: var(--color-paper-white) transparent;
+      scrollbar-color: rgb(255 255 255 / 0.5) transparent;
     }
     .odd {
       flex: 1 0 180px;
       display: grid;
       gap: 12px;
       padding: 24px;
-      border: 1px solid var(--color-paper-white);
+      border: 1px solid rgb(255 255 255 / 0.55);
+      box-shadow: 0 16px 44px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.5);
       border-radius: var(--radius-cards-elevated);
-      color: var(--color-carbon);
+      color: var(--ink);
       scroll-snap-align: start;
       rotate: calc((var(--i) - 2) * 1.5deg);
     }
@@ -102,7 +103,9 @@ import { PATTERNS, RARITY_ODDS, SHINY_NOTE } from '../content';
       align-items: center;
       gap: 12px;
       padding: 8px 20px 8px 8px;
-      border: 1px solid var(--color-paper-white);
+      border: 1px solid rgb(255 255 255 / 0.18);
+      background: rgb(255 255 255 / 0.06);
+      backdrop-filter: blur(8px);
       border-radius: var(--radius-pills);
     }
     .pattern > span:last-child {
@@ -121,7 +124,7 @@ import { PATTERNS, RARITY_ODDS, SHINY_NOTE } from '../content';
       overflow: hidden;
       border: 1px solid var(--color-paper-white);
       border-radius: 50%;
-      color: var(--color-carbon);
+      color: var(--ink);
     }
     .swatch img {
       inline-size: 150%;

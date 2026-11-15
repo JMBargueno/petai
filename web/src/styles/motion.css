@@ -1,10 +1,10 @@
 /*
- * Movimiento. Se aparta a propósito de la guía de estilo original (que solo animaba el marquee),
- * pero respeta el resto: colores planos, contornos, nada de sombras.
+ * Movimiento.
  *
  * Reglas:
- *  - Solo se animan transform, translate, rotate, scale y opacity.
+ *  - Solo se animan transform, translate, rotate, scale, opacity y sombras.
  *  - Todo lo que se mueve va dentro de `prefers-reduced-motion: no-preference`.
+ *  - Como mucho un elemento en bucle por pantalla (sin contar el marquee).
  *  - Las entradas por scroll son decorativas: donde no hay soporte, el contenido está en su sitio.
  */
 :root {
@@ -97,11 +97,13 @@
   .hover-lift {
     transition:
       rotate var(--dur-2) var(--ease-bounce),
-      translate var(--dur-2) var(--ease-bounce);
+      translate var(--dur-2) var(--ease-bounce),
+      box-shadow var(--dur-2) var(--ease-out);
   }
   .hover-lift:hover {
     rotate: 0deg;
     translate: 0 -6px;
+    box-shadow: var(--shadow-3);
   }
 
   /* Entradas al entrar en pantalla (guía `scroll-entry-exit-effects`) */

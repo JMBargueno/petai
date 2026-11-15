@@ -44,6 +44,7 @@ import { STEPS } from '../content';
       justify-items: start;
       padding: 32px 24px;
       border-radius: var(--radius-cards-elevated);
+      box-shadow: var(--shadow-pop), var(--shadow-3);
       /* Collage: cada tarjeta gira y pisa a la anterior. */
       rotate: calc((var(--i) - 1) * 3deg);
       margin: calc(var(--i) * 20px) -6px 0;
@@ -51,12 +52,18 @@ import { STEPS } from '../content';
     }
     .step:nth-child(1) {
       background: var(--color-sunburst);
+      color-scheme: light;
+      color: var(--ink);
     }
     .step:nth-child(2) {
       background: var(--color-lavender);
+      color-scheme: light;
+      color: var(--ink);
     }
     .step:nth-child(3) {
       background: var(--color-sky-wash);
+      color-scheme: light;
+      color: var(--ink);
     }
     .step:hover {
       z-index: 4;
@@ -66,7 +73,7 @@ import { STEPS } from '../content';
       inset: 4px 20px auto auto;
       font-size: 140px;
       line-height: 0.85;
-      -webkit-text-stroke: 1px var(--color-carbon);
+      -webkit-text-stroke: 1px var(--line);
       color: var(--color-paper-white);
     }
     h3 {
@@ -79,7 +86,7 @@ import { STEPS } from '../content';
     p {
       margin: 0;
     }
-    @media (width < 700px) {
+    @media (width < 640px) {
       .step {
         rotate: calc((var(--i) - 1) * 1.5deg);
         margin: 0 0 -12px;

@@ -17,6 +17,8 @@ const TYPES = {
   '.txt': 'text/plain; charset=utf-8',
   '.woff2': 'font/woff2',
   '.woff': 'font/woff',
+  '.png': 'image/png',
+  '.webmanifest': 'application/manifest+json',
 };
 
 if (!existsSync(root)) {
@@ -33,7 +35,11 @@ createServer((req, res) => {
   }
   if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
   if (!existsSync(file)) {
-    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }).end('404');
+    // Como un hosting estático: 404.html con estado 404.
+    const notFound = join(root, '404.html');
+    res.writeHead(404, { 'content-type': TYPES['.html'] });
+    if (existsSync(notFound)) createReadStream(notFound).pipe(res);
+    else res.end('404');
     return;
   }
   res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });

@@ -52,7 +52,7 @@ import { DESKTOP_POINTS } from '../content';
       align-items: center;
       grid-template-columns: minmax(0, 1fr);
     }
-    @media (width >= 1000px) {
+    @media (width >= 960px) {
       .layout {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
       }
@@ -61,7 +61,7 @@ import { DESKTOP_POINTS } from '../content';
       /* Comparte fila con la ilustración: más pequeño para que «escritorio» quepa en su columna. */
       font-size: clamp(40px, 10vw, 96px);
     }
-    @media (width >= 1000px) {
+    @media (width >= 960px) {
       .section-title {
         font-size: clamp(40px, 4.6vw, 76px);
       }
@@ -69,7 +69,7 @@ import { DESKTOP_POINTS } from '../content';
     .points {
       display: grid;
       gap: 12px;
-      margin: 0;
+      margin: 32px 0 0;
       padding: 0;
       list-style: none;
       font-size: 18px;
@@ -86,7 +86,8 @@ import { DESKTOP_POINTS } from '../content';
       overflow: hidden;
       border: var(--outline);
       border-radius: var(--radius-cards-elevated);
-      background: var(--color-sky-wash);
+      background: var(--grain), var(--grad-hero);
+      box-shadow: var(--shadow-4);
       container-type: inline-size;
       rotate: 1.5deg;
     }
@@ -98,7 +99,8 @@ import { DESKTOP_POINTS } from '../content';
       padding: 0 12px 12px;
       border: var(--outline);
       border-radius: var(--radius-2xl);
-      background: var(--color-paper-white);
+      background: var(--surface);
+      box-shadow: var(--shadow-2);
     }
     .window--a {
       inset: 8% auto auto 6%;
@@ -111,6 +113,8 @@ import { DESKTOP_POINTS } from '../content';
       inline-size: 40%;
       block-size: 46%;
       background: var(--color-sunburst);
+      color-scheme: light;
+      color: var(--ink);
     }
     .bar {
       display: flex;
@@ -125,15 +129,15 @@ import { DESKTOP_POINTS } from '../content';
       aspect-ratio: 1;
       border: var(--outline);
       border-radius: 50%;
-      background: var(--color-paper-white);
+      background: var(--surface);
     }
     .line {
       block-size: 8px;
       border-radius: var(--radius-pills);
-      background: var(--color-soft-mist);
+      background: var(--surface-2);
     }
     .window--b .line {
-      background: var(--color-paper-white);
+      background: var(--surface);
     }
     .line--short {
       inline-size: 60%;
