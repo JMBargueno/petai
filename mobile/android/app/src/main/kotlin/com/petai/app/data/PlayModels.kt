@@ -356,3 +356,77 @@ data class RaidHistoryEntry(
     val endedAt: String? = null,
     val status: String = "",
 )
+
+// ── Torneo Knockout (Paso 5, feature 014) ──────────────────────────────────────
+@Serializable
+data class TournamentCurrent(
+    val id: String = "",
+    val status: String = "",
+    val entryFee: Int = 0,
+    val totalPrizePool: Int = 0,
+    val entryDeadline: String = "",
+    val startedAt: String? = null,
+    val endsAt: String = "",
+    val entryCount: Int = 0,
+    val bracketSize: Int = 0,
+    val hasEntered: Boolean = false,
+    val myPlacement: Int? = null,
+)
+
+@Serializable
+data class TournamentEnterResponse(
+    val tournamentId: String = "",
+    val petId: String = "",
+    val elo: Int = 0,
+    val feePaid: Int = 0,
+)
+
+@Serializable
+data class TournamentBracketParticipant(
+    val name: String = "",
+    val elo: Int = 0,
+    val element: String = "",
+)
+
+@Serializable
+data class TournamentBracketMatch(
+    val id: String = "",
+    val slot: Int = 0,
+    val status: String = "",
+    val winnerId: String? = null,
+    val petA: TournamentBracketParticipant? = null,
+    val petB: TournamentBracketParticipant? = null,
+)
+
+@Serializable
+data class TournamentBracket(
+    val rounds: Map<String, List<TournamentBracketMatch>> = emptyMap(),
+)
+
+@Serializable
+data class TournamentStandingsEntry(
+    val rank: Int = 0,
+    val userId: String = "",
+    val petId: String = "",
+    val petName: String = "",
+    val elo: Int = 0,
+    val placement: Int? = null,
+    val mine: Boolean = false,
+)
+
+@Serializable
+data class TournamentStandingsMe(
+    val rank: Int = 0,
+    val placement: Int? = null,
+)
+
+@Serializable
+data class TournamentStandings(
+    val tournamentId: String? = null,
+    val status: String? = null,
+    val total: Int = 0,
+    val limit: Int = 0,
+    val offset: Int = 0,
+    val entries: List<TournamentStandingsEntry> = emptyList(),
+    val me: TournamentStandingsMe? = null,
+)

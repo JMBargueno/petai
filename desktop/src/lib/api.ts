@@ -606,6 +606,20 @@ export const api = {
     return minigameRequest<RaidHistoryEntry[]>('GET', `/v1/raid/history?limit=${limit}`);
   },
 
+  // ── Torneo Knockout (Paso 5, feature 014) ─────────────────────────────────────
+  async getTournamentCurrent() {
+    return minigameRequest<TournamentCurrent>('GET', '/v1/tournament/current');
+  },
+  async tournamentEnter(petId: string) {
+    return minigameRequest<TournamentEnterResponse>('POST', '/v1/tournament/enter', { petId });
+  },
+  async getTournamentBracket() {
+    return minigameRequest<TournamentBracket>('GET', '/v1/tournament/bracket');
+  },
+  async getTournamentStandings(limit = 50) {
+    return minigameRequest<TournamentStandings>('GET', `/v1/tournament/standings?limit=${limit}`);
+  },
+
   // Hábitat (feature 019)
   async getHabitat() {
     return minigameRequest<HabitatState>('GET', '/v1/habitat');
@@ -983,4 +997,66 @@ export interface RaidHistoryEntry {
   startedAt: string;
   endedAt: string | null;
   status: string;
+}
+
+// ── Torneo Knockout (Paso 5, feature 014) ─────────────────────────────────────
+export interface TournamentCurrent {
+  id: string;
+  status: 'entry' | 'bracket' | 'active' | 'finished';
+  entryFee: number;
+  totalPrizePool: number;
+  entryDeadline: string;
+  startedAt: string | null;
+  endsAt: string;
+  entryCount: number;
+  bracketSize: number;
+  hasEntered: boolean;
+  myPlacement: number | null;
+}
+
+export interface TournamentEnterResponse {
+  tournamentId: string;
+  petId: string;
+  elo: number;
+  feePaid: number;
+}
+
+export interface TournamentBracketParticipant {
+  name: string;
+  elo: number;
+  element: string;
+}
+
+export interface TournamentBracketMatch {
+  id: string;
+  slot: number;
+  status: string;
+  winnerId: string | null;
+  petA: TournamentBracketParticipant | null;
+  petB: TournamentBracketParticipant | null;
+}
+
+export interface TournamentBracket {
+  rounds: Record<string, TournamentBracketMatch[]>;
+  entries: unknown[];
+}
+
+export interface TournamentStandingsEntry {
+  rank: number;
+  userId: string;
+  petId: string;
+  petName: string;
+  elo: number;
+  placement: number | null;
+  mine: boolean;
+}
+
+export interface TournamentStandings {
+  tournamentId: string | null;
+  status: string | null;
+  total: number;
+  limit: number;
+  offset: number;
+  entries: TournamentStandingsEntry[];
+  me: { rank: number; placement: number | null } | null;
 }
