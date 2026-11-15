@@ -3,6 +3,16 @@
 ## ID
 23 — Oleada 2 "Meta + IA" (NUEVAS_FUNCIONALIDADES §23)
 
+## Estado: PRÓXIMAMENTE (no implementado / en pausa)
+> ⚠️ Esta feature **aún no está implementada**. Solo existe un *scaffold* REST mínimo
+> (`backend/src/modules/spectator/`) con buffers en memoria que **jamás se poblan**: `addRound`
+> no es llamado desde `BattlesModule` y las peleas son **síncronas** (el motor resuelve todos los
+> rounds en una sola petición), así que la premisa "espectar en vivo con delay de 10s" no aplica.
+> Consecuencia: `GET /v1/spectator/live` devuelve `null` y `GET /v1/spectator/highlights` devuelve
+> `[]`; solo `POST /v1/spectator/subscribe` tiene efecto (contador de espectadores). El diseño
+> completo (streaming, WS namespace, highlights, comentarios LLM) que falta implementar está
+> descrito más abajo.
+
 ## Resumen
 Modo espectación de combates en tiempo real con delay de 10s (evita cheating), sistema de highlights automáticos (críticos, remontadas, >30 rondas) con replay de 30s, y feed semanal de "mejores combates". Comentarios generados por LLM.
 
