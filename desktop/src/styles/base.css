@@ -1,0 +1,215 @@
+/* Componentes base de Pockai (guía §9). Reutilizables en todos los componentes Svelte. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  user-select: none;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  letter-spacing: -0.011em;
+  color: var(--ink);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+
+.label-caps,
+.eyebrow {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border: var(--outline);
+  border-radius: var(--radius-pills);
+  background: var(--surface);
+  color: var(--ink);
+}
+.eyebrow::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Botones */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 18px;
+  border: var(--outline);
+  border-radius: var(--radius-pills);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    transform var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out),
+    background var(--dur-1);
+}
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn--primary {
+  background: var(--grad-accent);
+  color: var(--on-dark);
+  border-color: transparent;
+  box-shadow: var(--shadow-2), inset 0 1px 0 rgb(255 255 255 / 0.35);
+}
+.btn--primary:hover:not(:disabled) {
+  box-shadow: var(--glow-accent), inset 0 1px 0 rgb(255 255 255 / 0.35);
+}
+.btn--ink {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.btn--ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  box-shadow: none;
+}
+.btn--danger {
+  background: var(--danger);
+  color: var(--on-color);
+  border-color: var(--on-color);
+}
+.btn--icon {
+  padding: 8px;
+  min-width: 36px;
+}
+
+/* Tarjetas */
+.card {
+  background: var(--surface);
+  color: var(--ink);
+  border: var(--outline);
+  border-radius: var(--radius-cards);
+  padding: 16px;
+  box-shadow: var(--shadow-1);
+}
+.card--pop {
+  box-shadow: var(--shadow-pop);
+}
+
+/* Chips y etiquetas */
+.chip,
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: var(--outline);
+  border-radius: var(--radius-pills);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.chip--on-color {
+  color: var(--on-color);
+}
+
+/* Entradas */
+.input,
+.select,
+.textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 14px;
+  border: var(--outline);
+  border-radius: var(--radius-2xl);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-body);
+  user-select: text;
+}
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--ink-muted);
+}
+
+/* Vidrio: solo cabeceras y elementos superpuestos al escritorio */
+.glass {
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: var(--outline);
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+
+/* Palabra resaltada: una por titular */
+.hl {
+  display: inline-block;
+  padding: 0 8px;
+  background: var(--color-sunburst);
+  color: var(--on-color);
+  border: 1px solid var(--color-carbon);
+  box-shadow: 3px 3px 0 var(--color-carbon);
+  rotate: -2.5deg;
+}
+
+/* Barra de progreso con el color de la estadística */
+.meter {
+  height: 10px;
+  border: var(--outline);
+  border-radius: var(--radius-pills);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.meter > i {
+  display: block;
+  height: 100%;
+  background: var(--meter-color, var(--accent));
+  transition: width var(--dur-2) var(--ease-out);
+}

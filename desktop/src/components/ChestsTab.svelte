@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from './Ico.svelte';
   import { onMount, createEventDispatcher } from 'svelte';
   import {
     api,
@@ -86,8 +87,8 @@
   <div class="error-msg">{error}</div>
 {:else if chests}
   <div class="balance">
-    <span>🪙 {me?.coins ?? '—'}</span>
-    <span>💎 {me?.gems ?? '—'}</span>
+    <span><Ico n="coin" /> {me?.coins ?? '—'}</span>
+    <span><Ico n="gem" /> {me?.gems ?? '—'}</span>
   </div>
 
   {#if lastOpen}
@@ -165,42 +166,42 @@
 {/if}
 
 <style>
-  .balance { display: flex; gap: 16px; padding: 8px 10px; border-radius: 10px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; font-weight: 700; }
-  .error-msg { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 8px; border-radius: 8px; font-size: 12px; }
-  .empty-msg { font-size: 12px; color: #64748b; text-align: center; padding: 10px 0; }
+  .balance { display: flex; gap: 16px; padding: 8px 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); font-size: 14px; font-weight: 700; }
+  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
+  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 10px 0; }
   .sec-title { font-weight: 700; font-size: 13px; margin: 10px 0 4px; }
-  .open-result { margin-top: 8px; padding: 10px; border-radius: 12px; background: rgba(30, 41, 59, 0.6); border: 1px solid #38bdf8; display: flex; flex-direction: column; gap: 6px; }
+  .open-result { margin-top: 8px; padding: 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--accent); display: flex; flex-direction: column; gap: 6px; }
   .open-head { font-weight: 700; font-size: 14px; }
   .drops { display: flex; flex-wrap: wrap; gap: 6px; }
-  .drop { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 8px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); font-size: 12px; }
-  .drop.legend { border-color: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.35); }
+  .drop { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); font-size: 12px; }
+  .drop.legend { border-color: var(--color-sunburst); box-shadow: 0 0 8px color-mix(in srgb, var(--color-sunburst) 35%, var(--surface)); }
   .drop-name { font-weight: 600; }
-  .drop-qty { color: #38bdf8; }
-  .drop-new { font-size: 9px; font-weight: 700; color: #f43f5e; }
-  .pity { font-size: 11px; color: #94a3b8; }
+  .drop-qty { color: var(--accent-ink); }
+  .drop-new { font-size: 9px; font-weight: 700; color: var(--danger-ink); }
+  .pity { font-size: 11px; color: var(--ink-muted); }
   .chest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
-  .chest-card { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 6px; border-radius: 12px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer; }
-  .chest-card:hover { border-color: #38bdf8; }
+  .chest-card { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 6px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); cursor: pointer; }
+  .chest-card:hover { border-color: var(--accent); }
   .chest-card:disabled { opacity: 0.6; cursor: not-allowed; }
   .chest-big { font-size: 28px; }
   .chest-type { font-size: 12px; font-weight: 700; text-transform: capitalize; }
-  .chest-src { font-size: 9px; color: #94a3b8; }
-  .chest-open { font-size: 11px; font-weight: 700; color: #38bdf8; }
+  .chest-src { font-size: 9px; color: var(--ink-muted); }
+  .chest-open { font-size: 11px; font-weight: 700; color: var(--accent-ink); }
   .buy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .buy-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 12px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); }
+  .buy-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
   .buy-type { font-size: 12px; font-weight: 700; text-transform: capitalize; }
   .buy-actions { display: flex; gap: 4px; }
-  .buy-btn { padding: 4px 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 10px; }
-  .buy-btn.coins { background: #f59e0b; color: #0f172a; }
-  .buy-btn.gems { background: #38bdf8; color: #0f172a; }
+  .buy-btn { padding: 4px 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; font-size: 10px; }
+  .buy-btn.coins { background: var(--color-sunburst); color: var(--on-color); }
+  .buy-btn.gems { background: var(--accent); color: var(--on-color); }
   .buy-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .hist-list { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
-  .hist-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: rgba(15, 23, 42, 0.4); font-size: 12px; }
+  .hist-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); font-size: 12px; }
   .chest-sm { font-size: 18px; }
   .hist-type { font-weight: 700; width: 52px; text-transform: capitalize; }
   .hist-drops { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; }
-  .drop-chip { font-size: 10px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 1px 6px; }
-  .hist-when { color: #94a3b8; white-space: nowrap; }
-  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #38bdf8; color: #0f172a; width: 100%; }
+  .drop-chip { font-size: 10px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--radius-2xl); padding: 1px 6px; }
+  .hist-when { color: var(--ink-muted); white-space: nowrap; }
+  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
 </style>
 

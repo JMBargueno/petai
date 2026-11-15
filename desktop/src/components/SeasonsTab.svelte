@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from './Ico.svelte';
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type SeasonCurrent, type SeasonProgress, type SeasonTier } from '../lib/api';
 
@@ -75,7 +76,7 @@
   <div class="season-card">
     <div class="season-head">
       <div>
-        <h4>🏆 {season.name}</h4>
+        <h4><Ico n="trophy" /> {season.name}</h4>
         <small>Tema: {season.theme}</small>
       </div>
       <span class="badge">{season.isActive ? fmtMs(season.timeRemainingMs) : 'Finalizada'}</span>
@@ -92,7 +93,7 @@
       <div class="progress-block">
         <div class="progress-top">
           <span>Nivel {progress.currentTier} / {progress.maxTier}</span>
-          <span class="muted">{progress.hasPass ? '💎 Pase activo' : 'Sin pase'}</span>
+          <span class="muted">{#if progress.hasPass}<Ico n="gem" /> Pase activo{:else}Sin pase{/if}</span>
         </div>
         <div class="progress-bar"><div class="fill" style="width: {tierPct}%"></div></div>
         {#if progress.nextReward}
@@ -103,7 +104,7 @@
             {/each}
           </p>
         {:else}
-          <p class="next-reward">🎉 Nivel máximo alcanzado</p>
+          <p class="next-reward"><Ico n="party" /> Nivel máximo alcanzado</p>
         {/if}
       </div>
     {/if}
@@ -111,12 +112,12 @@
 
   <div class="pass-block">
     {#if justBought}
-      <p class="ok-msg">🎉 ¡Pase de temporada comprado!</p>
+      <p class="ok-msg"><Ico n="party" /> ¡Pase de temporada comprado!</p>
     {:else if progress?.hasPass}
-      <p class="ok-msg">💎 Ya tienes el pase de esta temporada.</p>
+      <p class="ok-msg"><Ico n="gem" /> Ya tienes el pase de esta temporada.</p>
     {:else if season.isActive}
       <button class="primary big" disabled={busy} on:click={buyPass}>
-        {busy ? 'Comprando…' : `Comprar pase (${season.passPrice} 💎)`}
+        {busy ? 'Comprando…' : `Comprar pase (${season.passPrice} <Ico n="gem" />)`}
       </button>
     {/if}
   </div>
@@ -139,29 +140,29 @@
 {/if}
 
 <style>
-  .season-card { padding: 10px; border-radius: 12px; background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 8px; }
+  .season-card { padding: 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 8px; }
   .season-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
   .season-head h4 { margin: 0 0 2px; font-size: 15px; }
-  .season-head small { color: #94a3b8; font-size: 11px; }
-  .badge { background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-  .season-expired { font-size: 13px; color: #cbd5e1; text-align: center; }
+  .season-head small { color: var(--ink-muted); font-size: 11px; }
+  .badge { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); border: 1px solid var(--accent); border-radius: var(--radius-2xl); padding: 2px 8px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .season-expired { font-size: 13px; color: var(--ink-muted); text-align: center; }
   .progress-block { display: flex; flex-direction: column; gap: 5px; }
   .progress-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
   .muted { opacity: 0.7; font-weight: 400; font-size: 12px; }
-  .progress-bar { height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
-  .progress-bar .fill { height: 100%; background: linear-gradient(90deg, #38bdf8, #22c55e); }
-  .next-reward { font-size: 12px; color: #cbd5e1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .progress-bar { height: 8px; border-radius: var(--radius-2xl); background: color-mix(in srgb, var(--ink) 6%, transparent); overflow: hidden; }
+  .progress-bar .fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); }
+  .next-reward { font-size: 12px; color: var(--ink-muted); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   .pass-block { margin: 8px 0; display: flex; flex-direction: column; gap: 4px; }
-  .primary { padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; background: #38bdf8; color: #0f172a; }
+  .primary { padding: 10px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); }
   .primary.big { width: 100%; padding: 11px; font-size: 14px; }
   .primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .ok-msg { font-size: 13px; color: #4ade80; text-align: center; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.4); border-radius: 10px; padding: 8px; }
-  .error-msg { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 8px; border-radius: 8px; font-size: 12px; }
-  .empty-msg { font-size: 12px; color: #64748b; text-align: center; padding: 12px 0; }
+  .ok-msg { font-size: 13px; color: var(--success-ink); text-align: center; background: color-mix(in srgb, var(--success) 12%, var(--surface)); border: 1px solid var(--success); border-radius: var(--radius-2xl); padding: 8px; }
+  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
+  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 12px 0; }
   .sec-title { font-weight: 700; font-size: 13px; margin: 6px 0; }
   .tiers-list { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
-  .tier-row { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); font-size: 12px; }
+  .tier-row { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); font-size: 12px; }
   .tier-num { font-weight: 700; min-width: 44px; }
   .tier-rewards { display: flex; flex-wrap: wrap; gap: 4px; }
-  .reward-chip { background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 1px 7px; font-size: 11px; }
+  .reward-chip { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--radius-2xl); padding: 1px 7px; font-size: 11px; }
 </style>

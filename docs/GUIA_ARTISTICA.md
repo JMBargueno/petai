@@ -353,16 +353,11 @@ Esta sección lista lo que existe hoy y no sigue esta guía. Corregirlo es traba
 
 | Dónde | Hoy | Según la guía |
 |---|---|---|
-| Nombre | "PetAI" visible en el `productName` de Tauri, el tema Android y los docs | "Pockai" visible; PetAI solo interno |
-| Escritorio: color | Paleta slate/sky de Tailwind en hex sueltos (`#38bdf8`, `#0f172a`…), sin tokens | Tokens de la web (§3) |
-| Escritorio: grises | Mezcla de slate con otra familia (`#8a90a6`, `#cfd3e0`…) | `--ink-muted`, `--line`, `--surface-2` |
-| Escritorio: amarillos | `#fbbf24`, `#ffd93b` y `#f59e0b` a la vez | sunburst `#ffd731` |
-| Escritorio: iconos | Emoji; `lucide-svelte` instalado sin usar | Lucide (§6) |
-| Escritorio: radios | 6–14 px variados | 16 / 20 / 28 / 32 / pastilla |
+| Nombre | "PetAI" visible en el tema Android y los docs (el escritorio ya muestra Pockai) | "Pockai" visible; PetAI solo interno |
 | Android: color | Sky `#38BDF8` / Night `#0F172A`; color dinámico en Android 12+ | Mapeo de §10, sin color dinámico por defecto |
 | Android: tipografía y forma | Sin `Type.kt` ni `Shape.kt`; radios inline de 12–36 dp | §4 y §5 |
 | Android: iconos | Material Icons rellenos | Lucide o equivalente de trazo |
 | Huevo | Icono Android `#FDE68A` con manchas azules; sprite `#FDE047` con manchas `#F59E0B` | Un solo huevo de marca (§2) |
-| Rarezas en apps | Solo "legendario" tiene color en escritorio (`#ffd93b`) | Tabla §3.7 |
+| Emoji de contenido | En el escritorio quedan emoji como contenido de juego (frutas de minijuegos, accesorios y muebles, iconos de elemento) | Pegatinas/Lucide cuando haya arte propio |
 | Elementos | Eléctrico, Sombra y Luz sin color de UI | Completar §3.6 |
 | Docs vs arte | Los docs hablan de 14 estados y 21 especies | Hay 4 estados en SVG y 3 especies con arte |

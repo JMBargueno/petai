@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from './Ico.svelte';
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type TournamentCurrent, type TournamentStandings, type TournamentBracket } from '../lib/api';
 
@@ -50,7 +51,7 @@
     enterMsg = '';
     try {
       const res = await api.tournamentEnter(pet.id);
-      enterMsg = `✅ Inscripción confirmada (pet ELO ${res.elo}, cuota ${res.feePaid} 💎).`;
+      enterMsg = `Inscripción confirmada (pet ELO ${res.elo}, cuota ${res.feePaid} 💎).`;
       await load();
       dispatch('refreshUser');
     } catch (e: any) {
@@ -75,7 +76,7 @@
     <div class="status-head">
       <span class="status-badge">{statusLabel(current.status)}</span>
       <div class="status-info">
-        <small>Premio total: <b>{fmt(current.totalPrizePool)}</b> 💎 · Cuota: {current.entryFee} 💎</small>
+        <small>Premio total: <b>{fmt(current.totalPrizePool)}</b> <Ico n="gem" /> · Cuota: {current.entryFee} <Ico n="gem" /></small>
         <small>{current.entryCount}/{current.bracketSize} inscritos</small>
       </div>
     </div>
@@ -83,19 +84,19 @@
     {#if current.status === 'entry'}
       <div class="deadline">Inscripción cierra: {new Date(current.entryDeadline).toLocaleString()}</div>
       <button class="enter" disabled={!pet || busy} on:click={enter}>
-        {busy ? 'Inscribiendo…' : pet ? `Inscribir a mi mascota (${current.entryFee} 💎)` : 'Sin mascota activa'}
+        {busy ? 'Inscribiendo…' : pet ? `Inscribir a mi mascota (${current.entryFee} <Ico n="gem" />)` : 'Sin mascota activa'}
       </button>
       <small class="req">Requiere ELO ≥ 1700 (liga Diamond)</small>
     {/if}
 
     {#if current.hasEntered}
-      <div class="entered">✅ Estás inscrito{current.myPlacement ? ` · colocación ${current.myPlacement}º` : ''}</div>
+      <div class="entered"><Ico n="check" /> Estás inscrito{current.myPlacement ? ` · colocación ${current.myPlacement}º` : ''}</div>
     {/if}
     {#if enterMsg}<p class="ok-msg">{enterMsg}</p>{/if}
     {#if error}<div class="error-msg">{error}</div>{/if}
   </div>
 
-  <div class="sec-title">📊 Clasificación (por ELO)</div>
+  <div class="sec-title"><Ico n="chart" /> Clasificación (por ELO)</div>
   <div class="stand-list">
     {#each (standings?.entries ?? []) as e (e.rank)}
       <div class="stand-row" class:mine={e.mine}>
@@ -124,32 +125,32 @@
   {/if}
 
   <style>
-    .status-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .status-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
     .status-head { display: flex; gap: 10px; align-items: center; }
-    .status-badge { font-size: 12px; font-weight: 700; color: #0f172a; background: #38bdf8; padding: 4px 10px; border-radius: 8px; white-space: nowrap; }
+    .status-badge { font-size: 12px; font-weight: 700; color: var(--on-color); background: var(--accent); padding: 4px 10px; border-radius: var(--radius-2xl); white-space: nowrap; }
     .status-info { display: flex; flex-direction: column; gap: 2px; }
-    .status-info small { color: #cbd5e1; font-size: 11px; }
-    .deadline { font-size: 12px; color: #eab308; }
-    .enter { padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; background: linear-gradient(90deg, #38bdf8, #818cf8); color: #0f172a; }
+    .status-info small { color: var(--ink-muted); font-size: 11px; }
+    .deadline { font-size: 12px; color: var(--warning-ink); }
+    .enter { padding: 10px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; font-size: 13px; background: linear-gradient(90deg, var(--accent), #818cf8); color: var(--on-color); }
     .enter:disabled { opacity: 0.5; cursor: not-allowed; }
-    .req { color: #94a3b8; font-size: 10px; text-align: center; }
-    .entered { font-size: 13px; color: #4ade80; font-weight: 600; text-align: center; }
-    .ok-msg { font-size: 12px; color: #4ade80; text-align: center; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.4); border-radius: 10px; padding: 8px; margin: 0; }
-    .error-msg { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 8px; border-radius: 8px; font-size: 12px; }
-    .empty-msg { font-size: 12px; color: #64748b; text-align: center; padding: 10px 0; }
+    .req { color: var(--ink-muted); font-size: 10px; text-align: center; }
+    .entered { font-size: 13px; color: var(--success-ink); font-weight: 600; text-align: center; }
+    .ok-msg { font-size: 12px; color: var(--success-ink); text-align: center; background: color-mix(in srgb, var(--success) 12%, var(--surface)); border: 1px solid var(--success); border-radius: var(--radius-2xl); padding: 8px; margin: 0; }
+    .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
+    .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 10px 0; }
     .sec-title { font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
     .stand-list, .match-list { display: flex; flex-direction: column; gap: 5px; }
-    .stand-row { display: flex; gap: 8px; align-items: center; padding: 7px 8px; border-radius: 8px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); }
-    .stand-row.mine { border-color: rgba(56, 189, 248, 0.5); }
-    .stand-rank { width: 34px; text-align: center; font-weight: 700; color: #38bdf8; font-size: 12px; }
+    .stand-row { display: flex; gap: 8px; align-items: center; padding: 7px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
+    .stand-row.mine { border-color: var(--accent); }
+    .stand-rank { width: 34px; text-align: center; font-weight: 700; color: var(--accent-ink); font-size: 12px; }
     .stand-name { flex: 1; font-size: 12px; font-weight: 600; }
-    .stand-elo { font-size: 11px; color: #eab308; }
-    .match-row { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; background: rgba(15, 23, 42, 0.4); }
+    .stand-elo { font-size: 11px; color: var(--warning-ink); }
+    .match-row { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); }
     .match-pet { flex: 1; font-size: 11px; }
     .match-pet.left { text-align: right; }
     .match-pet.right { text-align: left; }
-    .match-vs { font-size: 11px; color: #64748b; }
-    .primary { margin-top: 12px; padding: 8px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #38bdf8; color: #0f172a; width: 100%; }
+    .match-vs { font-size: 11px; color: var(--ink-muted); }
+    .primary { margin-top: 12px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
   </style>
 
   <button class="primary" on:click={load}>↻ Actualizar</button>

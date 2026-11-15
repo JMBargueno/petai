@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from './Ico.svelte';
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type HabitatCatalog, type HabitatState, type HabitatBuffs, type HabitatFurniture, type HabitatRoom } from '../lib/api';
 
@@ -109,8 +110,8 @@
   <div class="error-msg">{error}</div>
 {:else if state && catalog}
   <div class="balance">
-    <span>🪙 {user?.coins ?? 0}</span>
-    <span>💎 {user?.gems ?? 0}</span>
+    <span><Ico n="coin" /> {user?.coins ?? 0}</span>
+    <span><Ico n="gem" /> {user?.gems ?? 0}</span>
     {#if error}<span class="err-inline">{error}</span>{/if}
   </div>
 
@@ -132,7 +133,7 @@
   <div class="rooms">
     {#each state.rooms as room (room.id)}
       <button class="room-chip" class:active={room.id === activeRoomId} on:click={() => (activeRoomId = room.id)}>
-        {room.unlocked ? '🔓' : '🔒'} {room.name}
+        <Ico n={room.unlocked ? 'unlock' : 'lock'} /> {room.name}
       </button>
     {/each}
   </div>
@@ -161,7 +162,7 @@
           <span class="f-name">{f.name}</span>
           <small>{f.description}</small>
         </div>
-        <span class="f-price">{f.price} {f.currency === 'coins' ? '🪙' : '💎'}</span>
+        <span class="f-price">{f.price} <Ico n={f.currency === 'coins' ? 'coin' : 'gem'} /></span>
         <button class="place-btn" disabled={!canPlace(f)} on:click={() => place(f)}>
           {busy === f.id ? '…' : 'Colocar'}
         </button>
@@ -189,34 +190,34 @@
 {/if}
 
 <style>
-  .empty-msg { font-size: 12px; color: #64748b; text-align: center; padding: 12px 0; }
+  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 12px 0; }
   .empty-msg.small { font-size: 11px; padding: 6px 0; }
-  .error-msg { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 8px; border-radius: 8px; font-size: 12px; }
+  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
   .balance { display: flex; gap: 12px; font-size: 13px; font-weight: 700; padding: 6px 2px; }
-  .err-inline { color: #fca5a5; font-size: 11px; margin-left: auto; }
+  .err-inline { color: var(--danger-ink); font-size: 11px; margin-left: auto; }
   .sec-title { font-weight: 700; font-size: 13px; margin: 10px 0 4px; }
   .buffs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
-  .buff { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); }
-  .buff small { font-size: 11px; color: #94a3b8; }
-  .buff span { font-size: 13px; font-weight: 700; color: #4ade80; }
+  .buff { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
+  .buff small { font-size: 11px; color: var(--ink-muted); }
+  .buff span { font-size: 13px; font-weight: 700; color: var(--success-ink); }
   .rooms { display: flex; flex-wrap: wrap; gap: 6px; }
-  .room-chip { padding: 6px 10px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(15, 23, 42, 0.5); color: #cbd5e1; font-size: 12px; font-weight: 600; cursor: pointer; }
-  .room-chip.active { border-color: #38bdf8; color: #38bdf8; background: rgba(56, 189, 248, 0.12); }
-  .room-desc { font-size: 11px; color: #94a3b8; margin: 4px 0 6px; }
+  .room-chip { padding: 6px 10px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface-2); color: var(--ink-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+  .room-chip.active { border-color: var(--accent); color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+  .room-desc { font-size: 11px; color: var(--ink-muted); margin: 4px 0 6px; }
   .grid { display: grid; gap: 2px; margin-bottom: 4px; }
-  .cell { aspect-ratio: 1; border-radius: 4px; background: rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: center; font-size: 11px; }
-  .cell.filled { background: rgba(56, 189, 248, 0.18); }
+  .cell { aspect-ratio: 1; border-radius: var(--radius-2xl); background: color-mix(in srgb, var(--ink) 6%, transparent); display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .cell.filled { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
   .shop { display: flex; flex-direction: column; gap: 6px; }
-  .shop-row { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 10px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); }
+  .shop-row { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
   .f-icon { font-size: 20px; }
   .f-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
   .f-name { font-size: 13px; font-weight: 600; }
-  .f-info small { font-size: 10px; color: #94a3b8; }
+  .f-info small { font-size: 10px; color: var(--ink-muted); }
   .f-price { font-size: 12px; font-weight: 700; white-space: nowrap; }
-  .place-btn, .remove-btn { padding: 6px 10px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; background: #38bdf8; color: #0f172a; }
+  .place-btn, .remove-btn { padding: 6px 10px; border: none; border-radius: var(--radius-2xl); font-size: 12px; font-weight: 700; cursor: pointer; background: var(--accent); color: var(--on-color); }
   .place-btn:disabled, .remove-btn:disabled { opacity: 0.4; cursor: default; }
-  .remove-btn { background: #f87171; color: #450a0a; }
+  .remove-btn { background: var(--danger); color: #450a0a; }
   .placed { display: flex; flex-direction: column; gap: 4px; }
-  .placed-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-radius: 8px; background: rgba(15, 23, 42, 0.4); font-size: 12px; }
-  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #38bdf8; color: #0f172a; width: 100%; }
+  .placed-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); font-size: 12px; }
+  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
 </style>

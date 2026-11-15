@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from '../Ico.svelte';
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { createRng } from '../../lib/rng';
 
@@ -112,7 +113,7 @@
   });
 </script>
 
-<div class="hud"><span>⏱ {Math.ceil(timeLeft)}s</span><span class="score">⭐ {score} <em>{flash}</em></span></div>
+<div class="hud"><span><Ico n="timer" /> {Math.ceil(timeLeft)}s</span><span class="score"><Ico n="star" /> {score} <em>{flash}</em></span></div>
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="arena" style="width:{W}px;height:{H}px" on:mousemove={onMove}>
   {#each items as it (it.id)}
@@ -124,11 +125,11 @@
 
 <style>
   .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
-  .score em { color: #38bdf8; font-style: normal; display: inline-block; min-width: 24px; }
+  .score em { color: var(--accent-ink); font-style: normal; display: inline-block; min-width: 24px; }
   .arena {
-    position: relative; overflow: hidden; border-radius: 12px; cursor: none;
-    background: linear-gradient(180deg, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.6));
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    position: relative; overflow: hidden; border-radius: var(--radius-2xl); cursor: none;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), var(--surface-2));
+    border: 1px solid var(--line-soft);
   }
   .item, .basket { position: absolute; transform: translate(-50%, -50%); font-size: 26px; pointer-events: none; }
   .basket { font-size: 38px; }

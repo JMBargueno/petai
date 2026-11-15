@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from './Ico.svelte';
   import { onMount } from 'svelte';
   import { api } from '../lib/api';
   import { inbox, unreadCount, markAllRead, clearInbox } from '../lib/notification-inbox';
@@ -13,11 +14,11 @@
   }
 
   const CATEGORIES: { key: keyof Omit<Prefs, 'maxPerDay'>; label: string; icon: string }[] = [
-    { key: 'vitals_critical', label: 'Vitales críticas', icon: '⚠️' },
-    { key: 'interaction', label: 'Interacciones', icon: '🐾' },
-    { key: 'achievement', label: 'Logros', icon: '🏆' },
-    { key: 'arena', label: 'Arena', icon: '⚔️' },
-    { key: 'event', label: 'Eventos', icon: '📢' },
+    { key: 'vitals_critical', label: 'Vitales críticas', icon: 'warn' },
+    { key: 'interaction', label: 'Interacciones', icon: 'paw' },
+    { key: 'achievement', label: 'Logros', icon: 'trophy' },
+    { key: 'arena', label: 'Arena', icon: 'swords' },
+    { key: 'event', label: 'Eventos', icon: 'megaphone' },
   ];
 
   const DEFAULTS: Prefs = {
@@ -84,7 +85,7 @@
 
 <section class="notif-panel" aria-label="Ajustes de notificaciones">
   <header>
-    <h2>🔔 Notificaciones</h2>
+    <h2><Ico n="bell" /> Notificaciones</h2>
     {#if $unreadCount > 0}
       <button class="badge" on:click={() => markAllRead()} title="Marcar todo como leído">
         {$unreadCount} sin leer
@@ -100,7 +101,7 @@
         <li>
           <label>
             <input type="checkbox" checked={prefs[c.key]} on:change={() => setPref(c.key, !prefs[c.key])} disabled={saving} />
-            <span class="label">{c.icon} {c.label}</span>
+            <span class="label"><Ico n={c.icon} /> {c.label}</span>
           </label>
         </li>
       {/each}
@@ -150,10 +151,10 @@
     gap: 12px;
     max-width: 320px;
     padding: 14px;
-    background: rgba(15, 23, 42, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 14px;
-    color: #e2e8f0;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-2xl);
+    color: var(--ink);
     backdrop-filter: blur(8px);
   }
   header {
@@ -163,31 +164,31 @@
   }
   h2 { margin: 0; font-size: 15px; }
   .badge {
-    background: #f43f5e;
+    background: var(--danger);
     color: white;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-2xl);
     padding: 2px 8px;
     font-size: 11px;
     cursor: pointer;
   }
-  .muted { color: #94a3b8; font-size: 13px; }
+  .muted { color: var(--ink-muted); font-size: 13px; }
   .toggles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
   .toggles label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
   .slider-row { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
   .slider-row input { width: 100%; }
-  .notice { color: #4ade80; font-size: 12px; margin: 0; }
+  .notice { color: var(--success-ink); font-size: 12px; margin: 0; }
   .inbox { font-size: 12px; }
   .inbox-actions { display: flex; gap: 8px; margin: 6px 0; }
   .inbox-actions button {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e2e8f0;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--ink);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-2xl);
     padding: 2px 8px;
     cursor: pointer;
   }
   .inbox-list { list-style: none; margin: 0; padding: 0; max-height: 160px; overflow-y: auto; }
-  .inbox-list li { padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+  .inbox-list li { padding: 4px 0; border-bottom: 1px solid var(--line-soft); }
   .inbox-list li.read { opacity: 0.5; }
 </style>

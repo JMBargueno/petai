@@ -88,7 +88,7 @@ fn main() {
 
             // Configurar Menú de la Bandeja del Sistema (System Tray)
             let toggle = MenuItem::with_id(app, "toggle", "Mostrar/Ocultar Mascota", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Salir de PetAI", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Salir de Pockai", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&toggle, &quit])?;
 
             let _tray = TrayIconBuilder::new()

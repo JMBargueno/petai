@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from '../Ico.svelte';
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { createRng, shuffle } from '../../lib/rng';
 
@@ -65,7 +66,7 @@
   });
 </script>
 
-<div class="hud"><span>⏱ {Math.ceil(timeLeft)}s</span><span>🃏 {pairs}/8 · fallos {misses}</span></div>
+<div class="hud"><span><Ico n="timer" /> {Math.ceil(timeLeft)}s</span><span><Ico n="cards" /> {pairs}/8 · fallos {misses}</span></div>
 <div class="grid">
   {#each deck as emoji, i}
     <button
@@ -84,12 +85,12 @@
   .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
   .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 340px; }
   .card {
-    aspect-ratio: 1; font-size: 28px; border-radius: 10px; cursor: pointer;
-    background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(255, 255, 255, 0.15); color: inherit;
+    aspect-ratio: 1; font-size: 28px; border-radius: var(--radius-2xl); cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line-soft); color: inherit;
     transition: transform 0.15s, background 0.15s;
   }
   .card:hover { transform: translateY(-2px); }
-  .card.up { background: rgba(56, 189, 248, 0.18); }
-  .card.ok { background: rgba(34, 197, 94, 0.22); border-color: rgba(34, 197, 94, 0.5); }
+  .card.up { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
+  .card.ok { background: color-mix(in srgb, var(--success) 22%, var(--surface)); border-color: var(--success); }
   .hint { font-size: 11px; opacity: 0.65; margin: 8px 0 0; text-align: center; }
 </style>
