@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.SportsMartialArts
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -46,9 +47,10 @@ import com.petai.app.ui.play.PlayViewModelFactory
 import com.petai.app.ui.shop.ShopScreen
 import com.petai.app.ui.rewards.RewardsScreen
 import com.petai.app.ui.raid.RaidScreen
+import com.petai.app.ui.coop.CoopScreen
 import com.petai.app.ui.tournament.TournamentScreen
 
-private enum class Tab(val label: String) { Pet("Mascota"), Chat("Chat"), Play("Jugar"), Rewards("Recompensas"), Habitat("Hábitat"), Raid("Raid"), Tournament("Torneo"), Shop("Tienda"), Account("Cuenta") }
+private enum class Tab(val label: String) { Pet("Mascota"), Chat("Chat"), Play("Jugar"), Rewards("Recompensas"), Habitat("Hábitat"), Raid("Raid"), Tournament("Torneo"), Coop("Amigos"), Shop("Tienda"), Account("Cuenta") }
 
 @Composable
 fun AppRoot(vm: AppViewModel) {
@@ -88,6 +90,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                                     Tab.Habitat -> Icons.Default.Home
                                     Tab.Raid -> Icons.Default.SportsMartialArts
                                     Tab.Tournament -> Icons.Default.Star
+                    Tab.Coop -> Icons.Default.Group
                                     Tab.Shop -> Icons.Default.ShoppingBag
                                     Tab.Account -> Icons.Default.AccountCircle
                                 },
@@ -165,6 +168,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                         TournamentScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
                     }
                 }
+                Tab.Coop -> CoopScreen(app.service, onChanged = { vm.refreshAll() })
                 Tab.Account -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice)
             }
         }

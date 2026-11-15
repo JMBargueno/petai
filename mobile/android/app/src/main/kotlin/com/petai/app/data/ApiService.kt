@@ -170,4 +170,23 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     suspend fun tournamentBracket(): TournamentBracket = api.request("GET", "/tournament/bracket")
     suspend fun tournamentStandings(limit: Int = 50): TournamentStandings =
         api.request("GET", "/tournament/standings?limit=$limit")
+
+    // ── Amistad + Co-op (feature 021) ────────────────────────────────────────
+    suspend fun coopFriends(): List<CoopFriend> =
+        api.json.decodeFromString(ListSerializer(CoopFriend.serializer()), api.send("GET", "/coop/friends"))
+
+    suspend fun requestCoopFriend(targetUserId: String?, email: String?): CoopFriend =
+        api.request(
+            "POST", "/coop/friends",
+            if (targetUserId?.isNotBlank() == true) obj("targetUserId" to targetUserId)
+            else obj("email" to email),
+        )
+
+    suspend fun acceptCoopFriend(id: String): CoopFriend = api.request("POST", "/coop/friends/$id/accept")
+    suspend fun declineCoopFriend(id: String): CoopFriend = api.request("POST", "/coop/friends/$id/decline")
+
+    suspend fun coopVisit(ownerId: String, petId: String, action: String): CoopVisitResult =
+        api.request("POST", "/coop/visit", obj("ownerId" to ownerId, "petId" to petId, "action" to action))
+
+    suspend fun coopHistory(): CoopHistory = api.request("GET", "/coop/history")
 }
