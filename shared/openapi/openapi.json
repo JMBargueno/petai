@@ -2692,6 +2692,41 @@
         ]
       }
     },
+    "/v1/seasons/{id}/results": {
+      "get": {
+        "operationId": "SeasonsController_getSeasonResults",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liquidación de liga (liga, título, gemas/monedas, mejor ELO)"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Sin resultados de arena para esta temporada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Premios de fin de temporada de la arena por liga del usuario (spec-11 leagueSettle)",
+        "tags": [
+          "Seasons"
+        ]
+      }
+    },
     "/v1/breeding/start": {
       "post": {
         "operationId": "BreedingController_startBreeding",

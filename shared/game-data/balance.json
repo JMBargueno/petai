@@ -160,6 +160,14 @@
       "win": 3,
       "draw": 1,
       "loss": 0
+    },
+    "leagueSettle": {
+      "bronze": { "gems": 0, "coins": 100, "title": "Guerrero de Bronce" },
+      "silver": { "gems": 50, "coins": 150, "title": "Guerrero de Plata" },
+      "gold": { "gems": 150, "coins": 200, "title": "Guerrero de Oro" },
+      "platinum": { "gems": 300, "coins": 250, "title": "Guerrero de Platino" },
+      "diamond": { "gems": 300, "coins": 300, "title": "Guerrero de Diamante" },
+      "mythic": { "gems": 500, "coins": 400, "title": "Campeón Mítico" }
     }
   },
   "sleep": {

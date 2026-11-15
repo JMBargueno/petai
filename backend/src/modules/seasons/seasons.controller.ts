@@ -4,6 +4,7 @@ import {
   Post,
   Param,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -50,5 +51,16 @@ export class SeasonsController {
   @ApiResponse({ status: 404, description: 'Temporada no encontrada' })
   getSeasonById(@Param('id') seasonId: string) {
     return this.seasonsService.getSeasonById(seasonId);
+  }
+
+  @Get(':id/results')
+  @ApiOperation({ summary: 'Premios de fin de temporada de la arena por liga del usuario (spec-11 leagueSettle)' })
+  @ApiResponse({ status: 200, description: 'Liquidación de liga (liga, título, gemas/monedas, mejor ELO)' })
+  @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiResponse({ status: 404, description: 'Sin resultados de arena para esta temporada' })
+  async getSeasonResults(@CurrentUser() user: { id: string }, @Param('id') seasonId: string) {
+    const result = await this.seasonsService.getSeasonResults(user.id, seasonId);
+    if (!result) throw new NotFoundException('Sin resultados de arena para esta temporada');
+    return result;
   }
 }

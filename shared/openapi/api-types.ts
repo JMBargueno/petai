@@ -1437,6 +1437,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/seasons/{id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Premios de fin de temporada de la arena por liga del usuario (spec-11 leagueSettle) */
+        get: operations["SeasonsController_getSeasonResults"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/breeding/start": {
         parameters: {
             query?: never;
@@ -5751,6 +5768,40 @@ export interface operations {
                 content?: never;
             };
             /** @description Temporada no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SeasonsController_getSeasonResults: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Liquidación de liga (liga, título, gemas/monedas, mejor ELO) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin resultados de arena para esta temporada */
             404: {
                 headers: {
                     [name: string]: unknown;
