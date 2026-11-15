@@ -592,6 +592,20 @@ export const api = {
     return minigameRequest<BondingDetail>('GET', `/v1/pets/${petId}/bonding?limit=20`);
   },
 
+  // ── Raid Boss (Paso 5, feature 013) ──────────────────────────────────────────
+  async getRaidCurrent() {
+    return minigameRequest<RaidCurrent>('GET', '/v1/raid/current');
+  },
+  async raidAttack(petId: string) {
+    return minigameRequest<RaidAttackResponse>('POST', '/v1/raid/attack', { petId });
+  },
+  async getRaidLeaderboard(limit = 100) {
+    return minigameRequest<RaidLeaderboard>('GET', `/v1/raid/leaderboard?limit=${limit}`);
+  },
+  async getRaidHistory(limit = 10) {
+    return minigameRequest<RaidHistoryEntry[]>('GET', `/v1/raid/history?limit=${limit}`);
+  },
+
   // Hábitat (feature 019)
   async getHabitat() {
     return minigameRequest<HabitatState>('GET', '/v1/habitat');
@@ -905,4 +919,68 @@ export interface HabitatBuffs {
   petId: string;
   activeBuffs: Record<string, number>;
   itemCount: number;
+}
+
+// ── Raid Boss (Paso 5, feature 013) ──────────────────────────────────────────
+export interface RaidContribution {
+  damageDealt: number;
+  attacks: number;
+  percentage: number;
+}
+
+export interface RaidCurrent {
+  id: string;
+  theme: string;
+  element: string;
+  level: number;
+  hpGlobal: number;
+  hpRemaining: number;
+  hpPercent: number;
+  status: string;
+  startedAt: string;
+  endsAt: string;
+  participantCount: number;
+  myContribution: RaidContribution | null;
+}
+
+export interface RaidAttackResponse {
+  damage: number;
+  seed: number;
+  rounds: number;
+  result: 'pet won' | 'boss won' | 'draw';
+  hpRemaining: number;
+  hpPercent: number;
+  settled: boolean;
+  replay: unknown;
+}
+
+export interface RaidLeaderboardEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  petId: string;
+  petName: string;
+  petLevel: number;
+  petElement: string;
+  damageDealt: number;
+  percentage: number;
+  attacks: number;
+  mine: boolean;
+}
+
+export interface RaidLeaderboard {
+  raidId: string;
+  totalDamage: number;
+  hpRemaining: number;
+  entries: RaidLeaderboardEntry[];
+}
+
+export interface RaidHistoryEntry {
+  id: string;
+  theme: string;
+  element: string;
+  hpGlobal: number;
+  startedAt: string;
+  endedAt: string | null;
+  status: string;
 }

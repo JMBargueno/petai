@@ -291,3 +291,68 @@ data class HabitatCatalog(
 
 @Serializable
 data class HabitatBuffs(val petId: String = "", val activeBuffs: Map<String, Double> = emptyMap(), val itemCount: Int = 0)
+
+// ── Raid Boss (Paso 5, feature 013) ───────────────────────────────────────────
+@Serializable
+data class RaidContribution(val damageDealt: Long = 0, val attacks: Int = 0, val percentage: Double = 0.0)
+
+@Serializable
+data class RaidCurrent(
+    val id: String = "",
+    val theme: String = "",
+    val element: String = "",
+    val level: Int = 0,
+    val hpGlobal: Long = 0,
+    val hpRemaining: Long = 0,
+    val hpPercent: Double = 0.0,
+    val status: String = "",
+    val startedAt: String = "",
+    val endsAt: String = "",
+    val participantCount: Int = 0,
+    val myContribution: RaidContribution? = null,
+)
+
+@Serializable
+data class RaidAttackResponse(
+    val damage: Long = 0,
+    val seed: Int = 0,
+    val rounds: Int = 0,
+    val result: String = "",
+    val hpRemaining: Long = 0,
+    val hpPercent: Double = 0.0,
+    val settled: Boolean = false,
+)
+
+@Serializable
+data class RaidLeaderboardEntry(
+    val rank: Int = 0,
+    val userId: String = "",
+    val displayName: String = "",
+    val petId: String = "",
+    val petName: String = "",
+    val petLevel: Int = 0,
+    val petElement: String = "",
+    val damageDealt: Long = 0,
+    val percentage: Double = 0.0,
+    val attacks: Int = 0,
+    val mine: Boolean = false,
+)
+
+@Serializable
+data class RaidLeaderboard(
+    val raidId: String = "",
+    val totalDamage: Long = 0,
+    val hpRemaining: Long = 0,
+    val entries: List<RaidLeaderboardEntry> = emptyList(),
+)
+
+@Serializable
+data class RaidHistoryEntry(
+    val id: String = "",
+    val theme: String = "",
+    val element: String = "",
+    val hpGlobal: Long = 0,
+    val startedAt: String = "",
+    val endedAt: String? = null,
+    val status: String = "",
+)
