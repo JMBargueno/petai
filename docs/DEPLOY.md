@@ -199,3 +199,39 @@ Pendiente (se desarrollará en macOS).
 - [ ] Catálogo cargado con el seed (y sin usuario demo).
 - [ ] Instaladores compilados con la `VITE_API_URL` de producción y firmados.
 - [ ] URL de la API de la release de Android actualizada.
+
+## 11. Producción en jmbargueno.com
+
+Despliegue real (15-11-2026) del stack sobre el servidor Contabo (`185.215.165.254`),
+repositorio en `/home/jmbargueno/scratch/petai`:
+
+- **Dominio público**: `api-pockai.jmbargueno.com` → record A sin proxy en Cloudflare
+  (el TLS lo termina nginx-proxy, no Cloudflare). Postgres y Redis quedan solo en la red
+  interna `petai_default`; Prometheus/Grafana/Alertmanager escuchan en `127.0.0.1`.
+- **Overlay**: `docker-compose.pockai.yml` (commit) añade la red `webproxy` al backend
+  (`networks: [default, webproxy]` — no solo `webproxy`, que cortaría el acceso a
+  postgres/redis), `VIRTUAL_HOST`, `VIRTUAL_PORT=3000`, `VIRTUAL_WEBSOCKETS` (socket.io)
+  y `LETSENCRYPT_HOST` (vhost :80 con webroot para certbot).
+  Comando de despliegue: `docker compose -f docker-compose.prod.yml -f docker-compose.pockai.yml up -d --build`
+- **TLS**: certbot (cuenta LE del volumen compartido `nginx_certs`) + symlinks flat
+  relativos (`api-pockai.jmbargueno.com.crt -> ./live/.../fullchain.pem`, `.key`,
+  `.chain.pem`, `.dhparam.pem -> ./dhparam.pem`). `nginx -t && nginx -s reload` en
+  `nginx-proxy`. La cuenta LE de acme-companion del proxy sigue pausada.
+  Renovación: `~/.hermes/scripts/pockai-cert-renew.sh` (cron `40 3 * * *`; watchdog
+  silencioso, repunta los symlinks flat y recarga nginx solo si renovó).
+- **Secretos**: `.env` (chmod 600, gitignored) con `POSTGRES_USER/PASSWORD`,
+  `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `REDIS_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`.
+  `OPENAI_API_KEY` intencionadamente vacía: el chat de IA degrada sin ella; para
+  activarla se añade al `.env` y `docker compose ... up -d backend` (sin migraciones).
+- **Backups**: `~/.hermes/scripts/petai-backup.sh` (cron `0 3 * * *`) →
+  `~/backups/petai/YYYY-MM-DD/{pg-dumpall.sql.gz, redis.rdb.gz}`. El dumpall va con
+  `--clean --if-exists` y se restaura con `pg_restore`/`psql` sobre un PostgreSQL 17.
+- **Catálogo**: seed idempotente (`upsert`), sin usuario demo en producción:
+  `docker compose -f docker-compose.prod.yml exec backend pnpm exec ts-node prisma/seed.ts`
+- **Fixes de despliegue aplicados** (commits del 15-11):
+  - `PinoNestLogger.emit` usaba el level numérico de Nest como nombre de método de pino
+    (`this.pino[30]`); con Nest 11 (`abortOnError` por defecto) el backend hacía
+    `process.abort()` al bootstrap. Ahora mapea `levelToMethod()` → trace/debug/info/warn/error.
+  - `shared/game-data/*.json` se `require()`a desde `dist/src/modules/<x>/` hacia
+    `/app/backend/shared/`; el Dockerfile copia `shared` también a `/app/backend/shared`
+    (antes solo iba a `/app/shared/`, lo que daba `MODULE_NOT_FOUND` al arrancar).
