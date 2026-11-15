@@ -12,6 +12,9 @@ export-err.txt
 jest*.txt
 jest-sim-*.json
 missions-test-out.txt
+*.out.tmp
+*.err.tmp
+test-results.tmp
 
 # Node / NestJS / Frontend
 node_modules/
