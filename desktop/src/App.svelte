@@ -145,6 +145,11 @@
           notifyNow('Te han retado en la arena', text);
         });
 
+        // Bienvenida: si el jugador vuelve tras una ausencia, el backend emite `pet:action
+        // welcome_back`. Se pide una vez por sesión, con el socket ya conectado para recibirlo.
+        if (socket.connected) checkWelcomeBack();
+        else socket.once('connect', checkWelcomeBack);
+
         // Feature ambiental: hora del día, clima, inactividad y festividades
         socket.on('environmental:changed', (ev: EnvironmentalChangedEvent) => handleEnvironmentalChanged(ev));
         setupCoordinates(); // geolocalización opt-in → clima real
@@ -157,6 +162,31 @@
       console.warn('Sesión no iniciada o servidor no disponible:', err);
       user = null;
     }
+  }
+
+  let welcomeChecked = false;
+
+  /**
+   * Comprueba la bienvenida una sola vez por sesión. El diario se pide antes que el estado,
+   * porque `status` refresca `lastLoginAt` y después la ausencia ya no se podría medir.
+   * El servidor mete el socket en la sala del usuario de forma asíncrona tras `connect`;
+   * la breve espera evita que `welcome_back` se emita antes de que el socket esté en la sala.
+   */
+  function checkWelcomeBack() {
+    if (welcomeChecked) return;
+    welcomeChecked = true;
+    setTimeout(async () => {
+      try {
+        const diary = await api.getReengagementDiary().catch(() => null);
+        const status = await api.getReengagementStatus();
+        if (!status.active) return;
+        const lines = (diary?.entries ?? []).map((e) => `${e.icon} ${e.text}`);
+        const body = [status.plan?.message, ...lines].filter(Boolean).join('\n');
+        if (body) notifyNow(`${status.nickname} te ha echado de menos`, body);
+      } catch (err) {
+        console.warn('No se pudo comprobar la bienvenida:', err);
+      }
+    }, 1000);
   }
 
   // Una misma acción puede llegar dos veces (UI local + `pet:action` del backend): se anima una
@@ -182,6 +212,7 @@
 
   function clearSessionState() {
     closeSocket();
+    welcomeChecked = false;
     stopHeartbeat();
     user = null;
     currentPet = null;

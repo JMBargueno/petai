@@ -33,11 +33,12 @@ export class AdventureService {
 
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
-    const todayCount = await this.prisma.adventure.count({
-      where: { userId, startedAt: { gte: today }, isPremium: { not: premium } },
-    });
-    if (!premium && todayCount >= 1) {
-      throw new BadRequestException('Ya completaste tu aventura gratis de hoy');
+    // Límite de 1 aventura gratis al día: solo cuentan las gratis (las premium no consumen el cupo)
+    if (!premium) {
+      const freeToday = await this.prisma.adventure.count({
+        where: { userId, startedAt: { gte: today }, isPremium: false },
+      });
+      if (freeToday >= 1) throw new BadRequestException('Ya completaste tu aventura gratis de hoy');
     }
 
     const seed = randomInt(1, 2 ** 31 - 1);
@@ -194,6 +195,8 @@ export class AdventureService {
         where: { id: pet.id },
         data: { xp: { increment: rewards.xp }, happiness: { increment: result === 'win' ? 8 : 3 } },
       }),
+      // La felicidad tiene tope 100: el incremento atómico puede pasarse, se recorta aquí
+      this.prisma.pet.updateMany({ where: { id: pet.id, happiness: { gt: 100 } }, data: { happiness: 100 } }),
       this.prisma.user.update({
         where: { id: userId },
         data: { coins: { increment: rewards.coins } },

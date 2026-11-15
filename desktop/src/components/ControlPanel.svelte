@@ -14,6 +14,9 @@
   import DesktopSkillsPanel from './DesktopSkillsPanel.svelte';
 import RaidTab from './RaidTab.svelte';
 import TournamentTab from './TournamentTab.svelte';
+import TrainingTab from './TrainingTab.svelte';
+import CookingTab from './CookingTab.svelte';
+import AdventureTab from './AdventureTab.svelte';
   import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
   import AboutPanel from './AboutPanel.svelte';
   import PockaiMark from './PockaiMark.svelte';
@@ -96,7 +99,7 @@ import TournamentTab from './TournamentTab.svelte';
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
   const NAV = [
     { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['habitat', 'Hábitat'], ['skills', 'Habilidades']] },
-    { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo']] },
+    { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo'], ['training', 'Entrenamiento'], ['cooking', 'Cocina'], ['adventure', 'Aventura']] },
     { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
     { id: 'progress', label: 'Progreso', icon: Trophy, subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
     { id: 'shop', label: 'Tienda', icon: ShoppingBag, subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
@@ -549,6 +552,15 @@ import TournamentTab from './TournamentTab.svelte';
 
         {:else if dest === 'play' && sub === 'tournament'}
           <TournamentTab {pet} on:refreshUser />
+
+        {:else if dest === 'play' && sub === 'training'}
+          <TrainingTab {pet} on:refreshPet on:refreshUser />
+
+        {:else if dest === 'play' && sub === 'cooking'}
+          <CookingTab {pet} on:refreshPet on:refreshUser />
+
+        {:else if dest === 'play' && sub === 'adventure'}
+          <AdventureTab {pet} on:refreshPet on:refreshUser />
 
         {:else if dest === 'chat'}
           <AiTab {pet} on:bubble on:refreshPet />

@@ -6931,11 +6931,12 @@ export interface operations {
     };
     TrainingController_activeBuff: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                petId: string;
+            query?: {
+                /** @description Filtrar por mascota */
+                petId?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

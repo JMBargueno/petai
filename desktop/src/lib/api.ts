@@ -709,7 +709,201 @@ export const api = {
   async getCoopHistory() {
     return minigameRequest<{ userId: string; visits: CoopVisitLog[] }>('GET', '/v1/coop/history');
   },
+
+  // ── Bienvenida (feature 028) ────────────────────────────────────────────────
+  /** Estado de la bienvenida. Si hubo ausencia, el backend emite `pet:action welcome_back`. */
+  async getReengagementStatus() {
+    return minigameRequest<ReengagementStatus>('GET', '/v1/reengagement/status');
+  },
+  async getReengagementDiary() {
+    return minigameRequest<ReengagementDiary>('GET', '/v1/reengagement/diary');
+  },
+
+  // ── Entrenamiento elemental ─────────────────────────────────────────────────
+  async trainingStart(petId: string) {
+    return minigameRequest<TrainingStart>('POST', '/v1/training/start', { petId });
+  },
+  async trainingSubmit(petId: string, element: TrainingElement, prediction?: TrainingElement) {
+    return minigameRequest<TrainingSubmit>('POST', '/v1/training/submit', { petId, element, prediction });
+  },
+  async trainingActiveBuff(petId?: string) {
+    const q = petId ? `?petId=${encodeURIComponent(petId)}` : '';
+    return minigameRequest<TrainingBuff>('GET', `/v1/training/active-buff${q}`);
+  },
+
+  // ── Cocina ──────────────────────────────────────────────────────────────────
+  async cookingDailyMenu() {
+    return minigameRequest<CookingDailyMenu>('GET', '/v1/cooking/daily-menu');
+  },
+  async cookingStart(petId: string) {
+    return minigameRequest<CookingStart>('POST', '/v1/cooking/start', { petId });
+  },
+  async cookingSubmit(sessionId: string, score: number, correctOrder: boolean) {
+    return minigameRequest<CookingSubmit>('POST', '/v1/cooking/submit', { sessionId, score, correctOrder });
+  },
+
+  // ── Aventura ────────────────────────────────────────────────────────────────
+  async adventureStart(petId: string, premium = false) {
+    return minigameRequest<AdventureStart>('POST', '/v1/adventure/start', { petId, premium });
+  },
+  async adventureChoose(adventureId: string, optionIndex: number) {
+    return minigameRequest<AdventureChoose>('POST', '/v1/adventure/choose', { adventureId, optionIndex });
+  },
+  async adventureCurrent() {
+    return minigameRequest<AdventureCurrent>('GET', '/v1/adventure/current');
+  },
+  async adventureHistory(limit = 10) {
+    return minigameRequest<AdventureHistoryEntry[]>('GET', `/v1/adventure/history?limit=${limit}`);
+  },
 };
+
+// ── Bienvenida ────────────────────────────────────────────────────────────────
+export interface ReengagementStatus {
+  petId: string;
+  nickname: string;
+  lastLoginAt: string;
+  absenceMs: number;
+  active: boolean;
+  tier: 'happy' | 'offended' | 'sad' | 'emotional' | null;
+  plan: { tier: string; message: string; requiredActions: string[]; requiredClicks: number; gift: boolean } | null;
+  recoveryBuff: { active: boolean; until: string | null; remainingMs: number };
+  alreadyCompleted: boolean;
+}
+
+export interface ReengagementDiary {
+  petId: string;
+  entries: { category: string; text: string; icon: string }[];
+  generatedAt: string;
+  cached: boolean;
+}
+
+// ── Entrenamiento ─────────────────────────────────────────────────────────────
+export type TrainingElement = 'fire' | 'water' | 'plant' | 'electric' | 'shadow' | 'light';
+
+export interface TrainingFloor {
+  floor: number;
+  enemyElement: TrainingElement;
+  enemyName: string;
+  enemyLevel: number;
+}
+
+export interface TrainingStart {
+  sessionId: string;
+  petId: string;
+  seed: number;
+  floors: TrainingFloor[];
+  hearts: number;
+  currentFloor: number;
+}
+
+export interface TrainingSubmit {
+  floor: number;
+  result: 'advanced' | 'failed' | 'completed' | 'failed_dungeon';
+  enemyElement: TrainingElement;
+  playerElement: TrainingElement;
+  multiplier: number;
+  hearts: number;
+  currentFloor: number;
+  status: string;
+  buff?: { multiplier: number; expiresAt: string };
+  predictionBonus?: boolean;
+  xp?: number;
+  coins?: number;
+}
+
+export interface TrainingBuff {
+  active: boolean;
+  buff: { petId: string; multiplier: number; stats: string[]; expiresAt: string; remainingMs: number } | null;
+}
+
+// ── Cocina ────────────────────────────────────────────────────────────────────
+export interface CookingDailyMenu {
+  date: string;
+  recipeId: string;
+  recipeName: string;
+  difficulty: number;
+  ingredients: string[];
+  buff: { stat: string; value: number };
+  bonus: string;
+}
+
+export interface CookingStart {
+  sessionId: string;
+  recipeId: string;
+  recipeName: string;
+  difficulty: number;
+  /** Orden correcto de la receta. */
+  ingredients: string[];
+  /** Los mismos ingredientes barajados: así se muestran al jugador. */
+  order: string[];
+  hotPotPositions: number[];
+  durationSeconds: number;
+  seed: number;
+  expiresAt: string;
+}
+
+export interface CookingSubmit {
+  score: number;
+  buff: { stat: string; value: number; durationMs: number } | null;
+  coins?: number;
+  correctPct?: number;
+  message?: string;
+}
+
+// ── Aventura ──────────────────────────────────────────────────────────────────
+export interface AdventureScene {
+  order: number;
+  text: string;
+  choices: { label: string; hint: string }[];
+  isFinal?: boolean;
+  chosenOption?: number | null;
+}
+
+export interface AdventureStart {
+  adventureId: string;
+  theme: string;
+  sceneCount: number;
+  currentScene: number;
+  scene: AdventureScene;
+  isPremium: boolean;
+  retriesLeft: number;
+}
+
+export type AdventureChoose =
+  | { advanced: true; scene: AdventureScene }
+  | {
+      completed: true;
+      outcome: 'win' | 'partial' | 'lose';
+      score: number;
+      rewards: { xp: number; coins: number };
+      memory: string;
+    };
+
+export type AdventureCurrent =
+  | { active: false }
+  | {
+      active: true;
+      adventureId: string;
+      theme: string;
+      sceneCount: number;
+      currentScene: number;
+      scene: AdventureScene | null;
+      isPremium: boolean;
+      retriesLeft: number;
+    };
+
+export interface AdventureHistoryEntry {
+  adventureId: string;
+  theme: string;
+  sceneCount: number;
+  outcome: 'win' | 'partial' | 'lose' | null;
+  score: number | null;
+  xpAwarded: number;
+  coinsAwarded: number;
+  isPremium: boolean;
+  startedAt: string;
+  finishedAt: string | null;
+}
 
 async function minigameRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await authFetch(`${API_BASE_URL}${path}`, {
