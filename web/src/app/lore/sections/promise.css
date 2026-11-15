@@ -1,70 +1,257 @@
-.rarities {
+/* ───── Densidad de Compilación ───── */
+.density {
   display: grid;
-  gap: 12px;
-  max-inline-size: 760px;
+  gap: 40px 64px;
+  align-items: start;
+}
+@media (width >= 960px) {
+  .density {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+  .density__head {
+    position: sticky;
+    inset-block-start: calc(var(--header-h) + 72px); /* bajo la cabecera y el índice */
+    margin-block-end: 0;
+  }
 }
 
-.rarity {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-  padding: var(--card-padding);
-  border: var(--outline);
-  border-radius: var(--radius-cards);
-  background: rgb(255 255 255 / 0.06);
+/* Espectro proporcional */
+.spectrum {
+  inline-size: 100%;
+  margin: 36px 0 0;
 }
-.rarity__head {
+.spectrum__bar {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 3px;
+  block-size: 18px;
+  padding: 3px;
+  border-radius: var(--radius-pills);
+  background: rgb(255 255 255 / 0.08);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
 }
-.rarity__swatch {
-  flex: none;
-  inline-size: 20px;
-  block-size: 20px;
-  border: var(--outline);
+.spectrum__seg {
+  flex-basis: 0;
+  min-inline-size: 8px; /* el 1 % mítico sigue viéndose */
   border-radius: var(--radius-pills);
 }
-.rarity__head h3 {
-  font-size: var(--text-subheading);
+.spectrum__seg:last-child {
+  box-shadow: 0 0 14px var(--color-ember);
 }
-.rarity__game {
-  color: rgb(255 255 255 / 0.7);
+.spectrum__caption {
+  display: grid;
+  gap: 6px;
+  margin-block-start: 12px;
+  color: var(--ink-muted);
 }
-.rarity__percent {
-  margin-inline-start: auto;
-  background: var(--surface);
-  color: var(--ink);
-}
-.rarity p {
-  color: rgb(255 255 255 / 0.85);
+.spectrum__ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
 }
 
-/* ───── Promesa del Telar ───── */
+/* Estratos */
+.strata {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rarity {
+  --tone: var(--color-mint-pop);
+  --level: 1;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+  padding: 20px 22px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+  border-radius: var(--radius-cards);
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--tone) calc(var(--level) * 5%), transparent) 0%, transparent 60%),
+    rgb(255 255 255 / 0.04);
+  /* Cuanto más densa, más brilla */
+  box-shadow: 0 0 calc(var(--level) * 9px) color-mix(in srgb, var(--tone) calc(var(--level) * 7%), transparent);
+}
+.rarity::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  inline-size: 4px;
+  background: var(--tone);
+}
+.rarity__meter {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+  padding-block-start: 4px;
+}
+.rarity__pip {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.12);
+}
+.rarity__pip.is-on {
+  background: var(--tone);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tone) 70%, transparent);
+}
+.rarity__body {
+  display: grid;
+  gap: 6px;
+}
+.rarity__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rarity__game {
+  border-color: transparent;
+  background: var(--tone);
+  color: var(--on-color);
+}
+.rarity h3 {
+  font-size: clamp(20px, 2.2vw, 26px);
+  line-height: 1.15;
+}
+.rarity__nature {
+  color: var(--ink-muted);
+}
+.rarity__odds {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  color: var(--tone);
+  white-space: nowrap;
+}
+.rarity__odds strong {
+  font-size: clamp(36px, 4.4vw, 56px);
+  line-height: 0.9;
+}
+.rarity__odds small {
+  font-weight: var(--font-weight-bold);
+  font-size: 18px;
+}
+@media (width < 640px) {
+  .rarity {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .rarity__meter {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    padding: 0;
+  }
+}
+
+/* ───── La Promesa del Telar ───── */
 .promise {
-  margin-block-start: clamp(48px, 8vw, 96px);
+  display: grid;
+  gap: 40px;
+  margin-block-start: clamp(72px, 10vw, 128px);
+  padding: clamp(28px, 4vw, 48px);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: var(--radius-cards-elevated);
+  background:
+    radial-gradient(80% 120% at 0% 0%, rgb(92 74 222 / 0.35) 0%, transparent 60%),
+    rgb(255 255 255 / 0.03);
+}
+.promise__head {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  text-align: center;
 }
 .promise__title {
-  font-size: var(--text-heading);
+  font-size: clamp(32px, 5vw, 64px);
 }
 .promise__quote {
-  margin: 16px 0 0;
-  max-inline-size: 40ch;
-  font-family: var(--font-lateral);
-  font-size: clamp(20px, 3vw, 32px);
-  line-height: 1.1;
-  rotate: -1deg;
+  margin: 0;
+  max-inline-size: 32ch;
+  color: #e9ccff;
+  font-size: clamp(20px, 2.6vw, 28px);
+  font-style: italic;
+  line-height: 1.25;
 }
-.promise__grid {
+
+/* El hilo: una línea que une el primer huevo con los dos hitos */
+.thread {
+  position: relative;
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.promise__milestone {
+.thread::before {
+  content: '';
+  position: absolute;
+  inset: 28px auto 28px 27px;
+  inline-size: 2px;
+  background: linear-gradient(180deg, var(--color-mint-pop), #b3a8ff 50%, var(--color-sunburst));
+  box-shadow: 0 0 12px rgb(179 168 255 / 0.6);
+}
+.thread > li {
+  position: relative;
   display: grid;
-  gap: 12px;
-  align-content: start;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
 }
-.promise__milestone p {
-  color: var(--ink);
+.thread__node {
+  display: grid;
+  place-items: center;
+  inline-size: 56px;
+  aspect-ratio: 1;
+  border: 2px solid #b3a8ff;
+  border-radius: 50%;
+  background: #17162a;
+  box-shadow: 0 0 0 6px rgb(92 74 222 / 0.25), 0 0 24px rgb(92 74 222 / 0.6);
+  font-size: 18px;
+}
+.thread__node--start {
+  border-color: var(--color-mint-pop);
+  box-shadow: 0 0 0 6px rgb(85 219 156 / 0.18);
+}
+.promise__milestone--final .thread__node {
+  border-color: var(--color-sunburst);
+  box-shadow: 0 0 0 6px rgb(255 215 49 / 0.2), 0 0 30px rgb(255 215 49 / 0.55);
+  color: var(--color-sunburst);
+}
+.promise__card {
+  display: grid;
+  gap: 10px;
+  background: rgb(255 255 255 / 0.05);
+  border-color: rgb(255 255 255 / 0.14);
+}
+.promise__kicker {
+  color: #b3a8ff;
+}
+.promise__milestone--final .promise__kicker {
+  color: var(--color-sunburst);
+}
+
+/* En escritorio el hilo va en horizontal */
+@media (width >= 960px) {
+  .thread {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .thread::before {
+    inset: 27px 28px auto 28px;
+    inline-size: auto;
+    block-size: 2px;
+    background: linear-gradient(90deg, var(--color-mint-pop), #b3a8ff 45%, var(--color-sunburst));
+  }
+  .thread > li {
+    grid-template-columns: none;
+    justify-items: start;
+    align-items: start;
+  }
+  .thread__start {
+    justify-items: center !important;
+    text-align: center;
+  }
 }

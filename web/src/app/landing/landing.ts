@@ -69,9 +69,13 @@ export class Landing {
     { href: '#arena-a-fondo', label: $localize`:@@nav.arena:Arena` },
     { href: '#pockais', label: $localize`:@@nav.species:Pockais` },
     { href: '#demo', label: $localize`:@@nav.demo:Pruébalo` },
-    { href: this.loreHref, label: $localize`:@@nav.lore:Mundo` },
     { href: '#precios', label: $localize`:@@nav.pricing:Precios` },
     { href: '#faq', label: 'FAQ' },
+  ];
+  /** Páginas del sitio: van en su propio grupo del menú, separadas de las anclas. */
+  protected readonly navPages: NavLink[] = [
+    { href: `/${this.locale}/`, label: $localize`:@@lore.nav.back:Inicio`, current: true },
+    { href: this.loreHref, label: $localize`:@@nav.lore:Mundo` },
   ];
 
   /** Especie bajo el cursor en la rejilla: pasa a `happy`. */

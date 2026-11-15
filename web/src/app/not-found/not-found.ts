@@ -9,7 +9,7 @@ import { Sticker } from '../shared/ui/sticker';
   imports: [SiteHeader, SiteFooter, Sticker],
   template: `
     <app-site-header
-      [links]="navLinks"
+      [pages]="navPages"
       [cta]="navCta"
       [home]="homeUrl"
       [homeLabel]="homeLabel"
@@ -159,10 +159,9 @@ export class NotFound {
   protected readonly homeLabel = $localize`:@@nav.home:Pockai, inicio`;
   protected readonly navLabel = $localize`:@@nav.label:Principal`;
   protected readonly navCta: NavLink = { href: `${this.homeUrl}#descargar`, label: $localize`:@@nav.cta:Descargar` };
-  protected readonly navLinks: NavLink[] = [
+  protected readonly navPages: NavLink[] = [
     { href: this.homeUrl, label: $localize`:@@lore.nav.back:Inicio` },
     { href: `/${this.locale}/lore`, label: $localize`:@@nav.lore:Mundo` },
-    { href: `${this.homeUrl}#faq`, label: 'FAQ' },
   ];
 
   constructor() {

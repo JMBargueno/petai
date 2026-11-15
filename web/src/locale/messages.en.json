@@ -357,6 +357,20 @@
     "footer.nav": "Site map",
     "footer.explore": "Explore",
     "nav.skip": "Skip to content",
-    "nav.menu": "Menu"
+    "nav.menu": "Menu",
+    "lore.gloss.eyebrow": "Glossary",
+    "lore.gloss.search": "Search the dictionary",
+    "lore.gloss.placeholder": "Egg, shiny, API key…",
+    "lore.gloss.count": " {$INTERPOLATION} of {$INTERPOLATION_1} terms ",
+    "lore.gloss.inApp": "In the app",
+    "lore.gloss.empty": "No term matches. Try another word.",
+    "lore.rare.spectrum": "Real odds for each egg",
+    "lore.rare.common": "Most common",
+    "lore.rare.dense": "Densest",
+    "lore.rare.level": "Density {$INTERPOLATION} of 5",
+    "lore.promise.start": "First egg",
+    "nav.group.sections": "On this page",
+    "nav.group.pages": "Pages",
+    "lore.nav.gloss": "Dictionary"
   }
 }

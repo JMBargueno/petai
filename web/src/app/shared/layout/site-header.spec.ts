@@ -38,3 +38,28 @@ describe('SiteHeader', () => {
     expect(new Set(current)).toEqual(new Set(['ES']));
   });
 });
+
+describe('SiteHeader — páginas', () => {
+  it('separa las páginas del sitio de las anclas y marca la actual', async () => {
+    const fixture = TestBed.createComponent(SiteHeader);
+    fixture.componentRef.setInput('links', [{ href: '#a', label: 'A' }]);
+    fixture.componentRef.setInput('pages', [
+      { href: '/es/', label: 'Inicio' },
+      { href: '/es/lore', label: 'Mundo', current: true },
+    ]);
+    fixture.componentRef.setInput('cta', { href: '#d', label: 'Descargar' });
+    fixture.componentRef.setInput('home', '/es/');
+    fixture.componentRef.setInput('homeLabel', 'Pockai, inicio');
+    fixture.componentRef.setInput('navLabel', 'Principal');
+    fixture.componentRef.setInput('locale', 'es');
+    fixture.componentRef.setInput('langHrefs', { es: '/es/', en: '/en/' });
+    await fixture.whenStable();
+    const el: HTMLElement = fixture.nativeElement;
+
+    const lists = el.querySelectorAll('.site-menu__list');
+    expect(lists.length).toBe(2);
+    expect([...lists[1].querySelectorAll('a')].map((a) => a.textContent?.trim())).toEqual(['Inicio', 'Mundo']);
+    expect(el.querySelector('.site-menu__page[aria-current="page"]')?.textContent?.trim()).toBe('Mundo');
+    expect(lists[0].querySelector('a[aria-current]')).toBeNull();
+  });
+});

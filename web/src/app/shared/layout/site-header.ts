@@ -13,6 +13,8 @@ import {
 export interface NavLink {
   href: string;
   label: string;
+  /** Solo en `pages`: la página en la que estamos. */
+  current?: boolean;
 }
 
 /**
@@ -47,14 +49,37 @@ export interface NavLink {
             <span i18n="@@nav.menu">Menú</span>
           </button>
 
-          <ul #menu id="site-menu" class="site-menu" popover="auto" (click)="closeOnLink($event)">
-            @for (link of links(); track link.href) {
-              <li><a class="site-menu__link" [href]="link.href">{{ link.label }}</a></li>
+          <!-- Dos niveles: secciones de esta página (anclas) y páginas del sitio. -->
+          <div #menu id="site-menu" class="site-menu" popover="auto" (click)="closeOnLink($event)">
+            @if (links().length) {
+              <p id="nav-sections" class="site-menu__label" i18n="@@nav.group.sections">En esta página</p>
+              <ul class="site-menu__list" aria-labelledby="nav-sections">
+                @for (link of links(); track link.href) {
+                  <li><a class="site-menu__link" [href]="link.href">{{ link.label }}</a></li>
+                }
+              </ul>
             }
-            <li class="site-menu__lang">
+            @if (pages().length) {
+              <p id="nav-pages" class="site-menu__label" i18n="@@nav.group.pages">Páginas</p>
+              <ul class="site-menu__list site-menu__pages" aria-labelledby="nav-pages">
+                @for (page of pages(); track page.href) {
+                  <li>
+                    <a
+                      class="site-menu__link site-menu__page"
+                      [href]="page.href"
+                      [attr.aria-current]="page.current ? 'page' : null"
+                    >
+                      <span class="site-menu__page-dot" aria-hidden="true"></span>
+                      {{ page.label }}
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+            <div class="site-menu__lang">
               <ng-container *ngTemplateOutlet="lang" />
-            </li>
-          </ul>
+            </div>
+          </div>
         </nav>
 
         <div class="header-end">
@@ -160,6 +185,49 @@ export interface NavLink {
     .site-menu__link:hover {
       background: var(--surface-2);
     }
+    .site-menu__list {
+      display: grid;
+      gap: 2px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .site-menu__label {
+      margin: 8px 14px 4px;
+      color: var(--ink-muted);
+      font-weight: var(--font-weight-bold);
+      font-size: var(--text-caption);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .site-menu__pages {
+      padding-block-start: 6px;
+    }
+    .site-menu__label + .site-menu__pages {
+      padding-block-start: 0;
+    }
+    .site-menu__list + .site-menu__label {
+      margin-block-start: 12px;
+      padding-block-start: 12px;
+      border-block-start: 1px solid var(--line-soft);
+    }
+    /* Página del sitio: punto de color y estado actual marcado (no solo por color). */
+    .site-menu__page {
+      gap: 10px;
+    }
+    .site-menu__page-dot {
+      inline-size: 8px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--grad-accent);
+    }
+    .site-menu__page[aria-current='page'] {
+      background: var(--ink);
+      color: var(--bg);
+    }
+    .site-menu__page[aria-current='page'] .site-menu__page-dot {
+      background: var(--color-sunburst);
+    }
     .site-menu__lang {
       padding: 10px 6px 4px;
       border-block-start: 1px solid var(--line-soft);
@@ -217,11 +285,34 @@ export interface NavLink {
         opacity: 1;
         translate: none;
       }
+      .site-menu__label {
+        /* En línea las etiquetas sobran visualmente, pero siguen nombrando cada lista. */
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+      }
+      .site-menu__list {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+      /* Las páginas van aparte: separador vertical y botón contorneado. */
+      .site-menu__list + .site-menu__label + .site-menu__pages {
+        margin-inline-start: 10px;
+        padding: 0 0 0 12px;
+        border-inline-start: 1px solid var(--line-soft);
+      }
       .site-menu__link {
         min-block-size: 40px;
         padding: 0 12px;
         border-radius: var(--radius-pills);
         font-size: 14px;
+      }
+      .site-menu__page {
+        padding-inline: 12px 14px;
+        box-shadow: inset 0 0 0 1px var(--line-soft);
       }
     }
     .is-measuring * {
@@ -238,7 +329,10 @@ export interface NavLink {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SiteHeader {
-  readonly links = input.required<NavLink[]>();
+  /** Anclas de la página actual. */
+  readonly links = input<NavLink[]>([]);
+  /** Otras páginas del sitio (Inicio, Mundo…), en un grupo aparte. */
+  readonly pages = input<NavLink[]>([]);
   readonly cta = input.required<NavLink>();
   readonly home = input.required<string>();
   readonly homeLabel = input.required<string>();

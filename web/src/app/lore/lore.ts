@@ -29,7 +29,7 @@ import { Glossary } from './sections/glossary';
   imports: [SiteHeader, SiteFooter, Marquee, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Colosseum, Glossary],
   template: `
     <app-site-header
-      [links]="navLinks"
+      [pages]="navPages"
       [cta]="navCta"
       [home]="home"
       [homeLabel]="homeLabel"
@@ -104,12 +104,10 @@ export class Lore {
   protected readonly homeLabel = $localize`:@@lore.nav.home:Pockai, volver al inicio`;
   protected readonly navLabel = $localize`:@@nav.label:Principal`;
   protected readonly navCta: NavLink = { href: this.download, label: $localize`:@@nav.cta:Descargar` };
-  protected readonly navLinks: NavLink[] = [
+  /** La página del lore no repite las anclas de la home: su índice propio va bajo el hero. */
+  protected readonly navPages: NavLink[] = [
     { href: this.home, label: $localize`:@@lore.nav.back:Inicio` },
-    { href: `${this.home}#funciones`, label: $localize`:@@nav.features:Funciones` },
-    { href: `${this.home}#arena-a-fondo`, label: $localize`:@@nav.arena:Arena` },
-    { href: `${this.home}#pockais`, label: $localize`:@@nav.species:Pockais` },
-    { href: `${this.home}#demo`, label: $localize`:@@nav.demo:Pruébalo` },
+    { href: `/${this.locale}/lore`, label: $localize`:@@nav.lore:Mundo`, current: true },
   ];
 
   protected readonly sections = [
@@ -120,6 +118,7 @@ export class Lore {
     { id: 'despertar', label: $localize`:@@lore.nav.awake:Despertar` },
     { id: 'ciclo', label: $localize`:@@lore.nav.life:Ciclo` },
     { id: 'coliseo', label: $localize`:@@lore.nav.colo:Coliseo` },
+    { id: 'diccionario', label: $localize`:@@lore.nav.gloss:Diccionario` },
   ];
 
   private readonly toc = viewChild.required<ElementRef<HTMLElement>>('toc');
