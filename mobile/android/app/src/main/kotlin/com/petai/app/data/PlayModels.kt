@@ -121,3 +121,122 @@ data class MinigameResult(val score: Int = 0, val rewards: MinigameRewards = Min
 
 @Serializable
 data class DeviceStart(val code: String, val pollToken: String, val expiresInSeconds: Int = 300)
+
+// ---------- Misiones (Paso 3) ----------
+
+@Serializable
+data class MissionReward(val coins: Int = 0, val gems: Int = 0, val xp: Int = 0)
+
+@Serializable
+data class Mission(
+    val id: String = "",
+    val type: String = "",
+    val description: String = "",
+    val target: Int = 0,
+    val current: Int = 0,
+    val completed: Boolean = false,
+    val reward: MissionReward = MissionReward(),
+    val resetsAt: String = "",
+)
+
+@Serializable
+data class MissionList(
+    val timestamp: String = "",
+    val daily: List<Mission> = emptyList(),
+    val weekly: List<Mission> = emptyList(),
+    val dailyChestUnlocked: Boolean = false,
+)
+
+@Serializable
+data class MissionSummary(
+    val dailyCompleted: Int = 0,
+    val dailyTotal: Int = 0,
+    val weeklyCompleted: Int = 0,
+    val weeklyTotal: Int = 0,
+    val streak: Int = 0,
+    val bestStreak: Int = 0,
+)
+
+@Serializable
+data class ClaimedMission(val id: String = "", val type: String = "", val completed: Boolean = false)
+
+@Serializable
+data class ClaimMissionResponse(
+    val mission: ClaimedMission = ClaimedMission(),
+    val reward: MissionReward = MissionReward(),
+    val dailyChestUnlocked: Boolean = false,
+)
+
+// ---------- Cofres (Paso 3) ----------
+
+@Serializable
+data class Chest(
+    val id: String = "",
+    val type: String = "",
+    val source: String = "",
+    val createdAt: String = "",
+    val openedAt: String? = null,
+)
+
+@Serializable
+data class ChestList(val chests: List<Chest> = emptyList())
+
+@Serializable
+data class ChestDrop(val itemId: String = "", val name: String = "", val qty: Int = 0, val tier: String = "", val isNew: Boolean = false)
+
+@Serializable
+data class PityProgress(val count: Int = 0, val threshold: Int = 0, val minTier: String = "")
+
+@Serializable
+data class OpenChestResponse(
+    val chest: Chest = Chest(),
+    val drops: List<ChestDrop> = emptyList(),
+    val pityProgress: PityProgress = PityProgress(),
+)
+
+@Serializable
+data class PurchaseChestResponse(val chest: Chest = Chest(), val coinsRemaining: Int = 0, val gemsRemaining: Int = 0)
+
+@Serializable
+data class ChestHistoryOpening(val chestId: String = "", val type: String = "", val drops: List<ChestDrop> = emptyList(), val openedAt: String = "")
+
+@Serializable
+data class ChestHistory(val openings: List<ChestHistoryOpening> = emptyList(), val total: Int = 0)
+
+// ---------- Vínculo (Paso 3, feature 006) ----------
+
+@Serializable
+data class BondingEvent(val id: String = "", val delta: Double = 0.0, val reason: String = "", val value: Double = 0.0, val createdAt: String = "")
+
+@Serializable
+data class BondingHistory(val items: List<BondingEvent> = emptyList(), val nextCursor: String? = null)
+
+@Serializable
+data class BondingDecayInfo(
+    val decayRatePerDay: Double = 0.0,
+    val isDecaying: Boolean = false,
+    val graceWindowHours: Int = 0,
+    val decayStartHours: Int = 0,
+    val hoursSinceInteraction: Double = 0.0,
+    val acumulatedDecay: Double = 0.0,
+)
+
+@Serializable
+data class BondingUnlocks(
+    val greeting: Boolean = false,
+    val memoryRecall: Boolean = false,
+    val emotionalReactions: Boolean = false,
+    val patternUnlocked: Boolean = false,
+    val sleepNearCursor: Boolean = false,
+)
+
+@Serializable
+data class BondingDetail(
+    val value: Double = 0.0,
+    val tier: String = "",
+    val tierName: String = "",
+    val lastInteractionAt: String = "",
+    val history: BondingHistory = BondingHistory(),
+    val decayInfo: BondingDecayInfo = BondingDecayInfo(),
+    val unlocks: BondingUnlocks = BondingUnlocks(),
+)

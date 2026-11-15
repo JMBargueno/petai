@@ -121,4 +121,22 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
         api.json.decodeFromString(ListSerializer(ChatMessageDto.serializer()), api.send("GET", "/pets/$petId/chat/history"))
 
     fun chatStream(petId: String, message: String): Flow<ChatEvent> = api.chatStream(petId, message)
+
+    // ---------- Misiones (Paso 3) ----------
+
+    suspend fun missions(): MissionList = api.request("GET", "/missions")
+    suspend fun missionSummary(): MissionSummary = api.request("GET", "/missions/summary")
+    suspend fun claimMission(id: String): ClaimMissionResponse = api.request("POST", "/missions/$id/claim")
+
+    // ---------- Cofres (Paso 3) ----------
+
+    suspend fun chests(): ChestList = api.request("GET", "/chests")
+    suspend fun openChest(id: String): OpenChestResponse = api.request("POST", "/chests/open", obj("chestId" to id))
+    suspend fun purchaseChest(type: String, paymentMethod: String): PurchaseChestResponse =
+        api.request("POST", "/chests/purchase", obj("type" to type, "paymentMethod" to paymentMethod))
+    suspend fun chestHistory(limit: Int = 20): ChestHistory = api.request("GET", "/chests/history?limit=$limit")
+
+    // ---------- Vínculo (Paso 3, feature 006) ----------
+
+    suspend fun bonding(petId: String): BondingDetail = api.request("GET", "/pets/$petId/bonding?limit=20")
 }
