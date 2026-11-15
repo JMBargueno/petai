@@ -1,23 +1,21 @@
 package com.petai.app
 
+import androidx.compose.ui.unit.dp
+
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.SportsMartialArts
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -26,12 +24,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.petai.app.ui.account.AccountScreen
@@ -39,18 +39,35 @@ import com.petai.app.ui.auth.AuthScreen
 import com.petai.app.ui.chat.ChatScreen
 import com.petai.app.ui.chat.ChatViewModel
 import com.petai.app.ui.chat.ChatViewModelFactory
+import com.petai.app.ui.chests.ChestsScreen
+import com.petai.app.ui.coop.CoopScreen
 import com.petai.app.ui.habitat.HabitatScreen
+import com.petai.app.ui.missions.MissionsScreen
 import com.petai.app.ui.pet.PetScreen
 import com.petai.app.ui.play.PlayScreen
 import com.petai.app.ui.play.PlayViewModel
 import com.petai.app.ui.play.PlayViewModelFactory
-import com.petai.app.ui.shop.ShopScreen
-import com.petai.app.ui.rewards.RewardsScreen
 import com.petai.app.ui.raid.RaidScreen
-import com.petai.app.ui.coop.CoopScreen
+import com.petai.app.ui.shop.ShopScreen
+import com.petai.app.ui.theme.BalanceHeader
+import com.petai.app.ui.theme.EmptyState
+import com.petai.app.ui.theme.Lucide
+import com.petai.app.ui.theme.PrimaryButton
+import com.petai.app.ui.theme.SubTabs
 import com.petai.app.ui.tournament.TournamentScreen
 
-private enum class Tab(val label: String) { Pet("Mascota"), Chat("Chat"), Play("Jugar"), Rewards("Recompensas"), Habitat("Hábitat"), Raid("Raid"), Tournament("Torneo"), Coop("Amigos"), Shop("Tienda"), Account("Cuenta") }
+/**
+ * Cinco destinos de primer nivel (docs/PANTALLAS.md §3.1) con sub-pestañas:
+ * Mascota (Inicio, Hábitat) · Jugar (Arena, Minijuegos, Raid, Torneo) · Chat · Progreso (Misiones) ·
+ * Más (Tienda, Cofres, Amigos, Cuenta).
+ */
+private enum class Dest(val label: String, val icon: ImageVector, val subs: List<String>) {
+    Pet("Mascota", Lucide.PawPrint, listOf("Inicio", "Hábitat")),
+    Play("Jugar", Lucide.Gamepad2, listOf("Arena", "Minijuegos", "Raid", "Torneo")),
+    Chat("Chat", Lucide.MessageCircle, emptyList()),
+    Progress("Progreso", Lucide.Trophy, emptyList()),
+    More("Más", Lucide.Ellipsis, listOf("Tienda", "Cofres", "Amigos", "Cuenta")),
+}
 
 @Composable
 fun AppRoot(vm: AppViewModel) {
@@ -69,107 +86,107 @@ fun AppRoot(vm: AppViewModel) {
 
 @Composable
 private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: SnackbarHostState) {
-    var tab by rememberSaveable { mutableStateOf(Tab.Pet) }
+    var dest by rememberSaveable { mutableStateOf(Dest.Pet) }
+    // Una sub-pestaña recordada por destino
+    val subStates = Dest.entries.map { d -> rememberSaveable(d.name) { mutableIntStateOf(0) } }
+    val sub = subStates[dest.ordinal].intValue
     val app = LocalContext.current.applicationContext as PetAiApp
 
+    fun go(d: Dest, s: Int = 0) {
+        dest = d
+        subStates[d.ordinal].intValue = s
+    }
+
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
+        topBar = {
+            BalanceHeader(
+                coins = state.user?.coins ?: 0,
+                gems = state.user?.gems ?: 0,
+                onShop = { go(Dest.More, 0) },
+                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
+            )
+        },
         bottomBar = {
-            NavigationBar {
-                Tab.entries.forEach { t ->
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Dest.entries.forEach { d ->
                     NavigationBarItem(
-                        selected = tab == t,
-                        onClick = { tab = t },
-                        icon = {
-                            Icon(
-                                when (t) {
-                                    Tab.Pet -> Icons.Default.Pets
-                                    Tab.Chat -> Icons.Default.Chat
-                                    Tab.Play -> Icons.Default.SportsEsports
-                                    Tab.Rewards -> Icons.Default.EmojiEvents
-                                    Tab.Habitat -> Icons.Default.Home
-                                    Tab.Raid -> Icons.Default.SportsMartialArts
-                                    Tab.Tournament -> Icons.Default.Star
-                    Tab.Coop -> Icons.Default.Group
-                                    Tab.Shop -> Icons.Default.ShoppingBag
-                                    Tab.Account -> Icons.Default.AccountCircle
-                                },
-                                contentDescription = t.label,
-                            )
-                        },
-                        label = { Text(t.label) },
+                        selected = dest == d,
+                        onClick = { dest = d },
+                        icon = { Icon(d.icon, contentDescription = null) },
+                        label = { Text(d.label, style = MaterialTheme.typography.labelMedium) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                            indicatorColor = MaterialTheme.colorScheme.primary,
+                        ),
                     )
                 }
             }
         },
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
-            when (tab) {
-                Tab.Pet -> PetScreen(
-                    state = state,
-                    service = app.service,
-                    onRefresh = vm::refreshAll,
-                    onFeed = vm::feed,
-                    onClean = vm::clean,
-                    onHeal = vm::heal,
-                    onToggleSleep = vm::toggleSleep,
-                    onHatch = vm::hatch,
-                    onBuyEgg = vm::buyEgg,
-                    onGoToShop = { tab = Tab.Shop },
-                )
-                Tab.Chat -> {
-                    val pet = state.pet
-                    if (pet == null) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Eclosiona primero a tu mascota 🥚") }
-                    } else {
-                        val chat: ChatViewModel = viewModel(
-                            key = "chat-${pet.id}",
-                            factory = ChatViewModelFactory(app.service, pet.id) { vm.refreshPet() },
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            if (dest.subs.isNotEmpty()) {
+                SubTabs(dest.subs, sub, { subStates[dest.ordinal].intValue = it })
+            }
+            Box(Modifier.weight(1f).fillMaxSize()) {
+                val pet = state.pet
+                val noPet: @Composable () -> Unit = {
+                    EmptyState(
+                        title = "Eclosiona primero",
+                        body = "Necesitas una mascota para esto. Eclosiona tu primer huevo en Mascota.",
+                        action = { PrimaryButton("Ir a Mascota", onClick = { go(Dest.Pet) }, icon = Lucide.Egg) },
+                    )
+                }
+                when (dest) {
+                    Dest.Pet -> when (sub) {
+                        0 -> PetScreen(
+                            state = state,
+                            service = app.service,
+                            onRefresh = vm::refreshAll,
+                            onFeed = vm::feed,
+                            onClean = vm::clean,
+                            onHeal = vm::heal,
+                            onToggleSleep = vm::toggleSleep,
+                            onHatch = vm::hatch,
+                            onBuyEgg = vm::buyEgg,
+                            onGoToShop = { go(Dest.More, 0) },
                         )
-                        ChatScreen(chat, pet.nickname.ifBlank { pet.species.name })
+                        else -> if (pet == null) noPet() else HabitatScreen(app.service, onChanged = { vm.refreshAll() })
+                    }
+                    Dest.Play ->
+                        if (pet == null) noPet() else when (sub) {
+                            0, 1 -> {
+                                val play: PlayViewModel = viewModel(
+                                    key = "play-${pet.id}",
+                                    factory = PlayViewModelFactory(app.service, pet.id) { vm.refreshAll() },
+                                )
+                                LaunchedEffect(Unit) { play.refresh() }
+                                PlayScreen(play, section = sub)
+                            }
+                            2 -> RaidScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
+                            else -> TournamentScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
+                        }
+                    Dest.Chat ->
+                        if (pet == null) noPet() else {
+                            val chat: ChatViewModel = viewModel(
+                                key = "chat-${pet.id}",
+                                factory = ChatViewModelFactory(app.service, pet.id) { vm.refreshPet() },
+                            )
+                            ChatScreen(chat, pet.nickname.ifBlank { pet.species.name })
+                        }
+                    Dest.Progress -> MissionsScreen(app.service, onChanged = { vm.refreshAll() })
+                    Dest.More -> when (sub) {
+                        0 -> ShopScreen(state, onRefresh = vm::refreshAll, onBuy = vm::buy)
+                        1 -> ChestsScreen(app.service, onChanged = { vm.refreshAll() })
+                        2 -> CoopScreen(app.service, onChanged = { vm.refreshAll() })
+                        else -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice)
                     }
                 }
-                Tab.Play -> {
-                    val pet = state.pet
-                    if (pet == null) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Eclosiona primero a tu mascota 🥚") }
-                    } else {
-                        val play: PlayViewModel = viewModel(
-                            key = "play-${pet.id}",
-                            factory = PlayViewModelFactory(app.service, pet.id) { vm.refreshAll() },
-                        )
-                        LaunchedEffect(Unit) { play.refresh() }
-                        PlayScreen(play)
-                    }
-                }
-                Tab.Shop -> ShopScreen(state, onRefresh = vm::refreshAll, onBuy = vm::buy)
-                Tab.Rewards -> RewardsScreen(app.service, onChanged = { vm.refreshAll() })
-                Tab.Habitat -> {
-                    val pet = state.pet
-                    if (pet == null) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Eclosiona primero a tu mascota 🥚") }
-                    } else {
-                        HabitatScreen(app.service, onChanged = { vm.refreshAll() })
-                    }
-                }
-                Tab.Raid -> {
-                    val pet = state.pet
-                    if (pet == null) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Eclosiona primero a tu mascota 🥚") }
-                    } else {
-                        RaidScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
-                    }
-                }
-                Tab.Tournament -> {
-                    val pet = state.pet
-                    if (pet == null) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Eclosiona primero a tu mascota 🥚") }
-                    } else {
-                        TournamentScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
-                    }
-                }
-                Tab.Coop -> CoopScreen(app.service, onChanged = { vm.refreshAll() })
-                Tab.Account -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice)
             }
         }
     }

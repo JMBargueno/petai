@@ -8,8 +8,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.foundation.layout.Row
+import com.petai.app.ui.theme.CardNoPadding
+import com.petai.app.ui.theme.CoinAmount
+import com.petai.app.ui.theme.GemAmount
+import com.petai.app.ui.theme.PockaiCard
+import com.petai.app.ui.theme.SecondaryButton
+import com.petai.app.ui.theme.PrimaryButton
+import com.petai.app.ui.theme.Tag
+import com.petai.app.ui.theme.Brand
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -97,17 +104,17 @@ fun ChestsScreen(service: ApiService, onChanged: () -> Unit) {
 
     PullToRefreshBox(isRefreshing = loading, onRefresh = { loadAll() }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item { Text("🪙 ${me?.coins ?: 0}   💎 ${me?.gems ?: 0}", style = MaterialTheme.typography.titleLarge) }
+            item { Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) { CoinAmount(me?.coins ?: 0); GemAmount(me?.gems ?: 0) } }
             lastOpen?.let { r ->
                 item {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp)) {
+                    PockaiCard(Modifier.fillMaxWidth(), pop = true, containerColor = Brand.Sunburst, contentColor = Brand.Carbon) {
+                        Column {
                             Text("¡Cofre ${r.chest.type} abierto!", style = MaterialTheme.typography.titleMedium)
                             r.drops.forEach { d ->
                                 Row(Modifier.padding(top = 4.dp)) {
                                     Text(d.name, style = MaterialTheme.typography.bodyMedium)
-                                    Text(" ×${d.qty}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                                    if (d.isNew) Text("  · ¡NUEVO!", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                                    Text(" ×${d.qty}", style = MaterialTheme.typography.labelLarge)
+                                    if (d.isNew) Tag("Nuevo", Modifier.padding(start = 8.dp), Brand.MintPop)
                                 }
                             }
                             Text(
@@ -123,13 +130,13 @@ fun ChestsScreen(service: ApiService, onChanged: () -> Unit) {
             item { Text("Mis cofres (${(chests?.chests?.size ?: 0)})", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
             (chests?.chests ?: emptyList()).forEach { c ->
                 item(key = c.id) {
-                    Card(Modifier.fillMaxWidth()) {
+                    PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(c.type, style = MaterialTheme.typography.titleMedium)
                                 Text(c.source, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Button(onClick = { open(c) }, enabled = busyKey.isEmpty()) { Text("Abrir") }
+                            PrimaryButton("Abrir", onClick = { open(c) }, enabled = busyKey.isEmpty())
                         }
                     }
                 }
@@ -137,11 +144,11 @@ fun ChestsScreen(service: ApiService, onChanged: () -> Unit) {
             item { Text("Comprar", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
             PURCHASABLE.forEach { type ->
                 item(key = "buy:$type") {
-                    Card(Modifier.fillMaxWidth()) {
+                    PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(type, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                            Button(onClick = { buy(type, "coins") }, enabled = busyKey.isEmpty()) { Text("Monedas") }
-                            Button(onClick = { buy(type, "gems") }, enabled = busyKey.isEmpty(), modifier = Modifier.padding(start = 8.dp)) { Text("Gemas") }
+                            SecondaryButton("Monedas", onClick = { buy(type, "coins") }, enabled = busyKey.isEmpty())
+                            SecondaryButton("Gemas", onClick = { buy(type, "gems") }, enabled = busyKey.isEmpty(), modifier = Modifier.padding(start = 8.dp))
                         }
                     }
                 }
@@ -149,7 +156,7 @@ fun ChestsScreen(service: ApiService, onChanged: () -> Unit) {
             item { Text("Historial", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
             (history?.openings ?: emptyList()).forEach { h ->
                 item(key = h.openedAt) {
-                    Card(Modifier.fillMaxWidth()) {
+                    PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                         Column(Modifier.padding(12.dp)) {
                             Text(h.type, style = MaterialTheme.typography.titleSmall)
                             val shown = h.drops.take(4).joinToString(" · ") { "${it.name}×${it.qty}" }

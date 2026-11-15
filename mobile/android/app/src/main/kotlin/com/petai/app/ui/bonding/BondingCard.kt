@@ -1,14 +1,15 @@
 package com.petai.app.ui.bonding
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import com.petai.app.ui.theme.Lucide
+import com.petai.app.ui.theme.PockaiCard
+import com.petai.app.ui.theme.PockaiProgress
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,11 +35,14 @@ fun BondingCard(service: ApiService, petId: String) {
         detail = runCatching { service.bonding(petId) }.getOrNull()
     }
     val d = detail
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp)) {
+    PockaiCard(Modifier.fillMaxWidth()) {
+        Column {
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
-                    Text("💞 Vínculo", style = MaterialTheme.typography.titleMedium)
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Icon(Lucide.HeartHandshake, null, Modifier.size(20.dp))
+                        Text("Vínculo", Modifier.padding(start = 8.dp), style = MaterialTheme.typography.titleMedium)
+                    }
                     Text(
                         "Rango: ${d?.tierName ?: "—"}",
                         style = MaterialTheme.typography.bodySmall,
@@ -53,11 +57,9 @@ fun BondingCard(service: ApiService, petId: String) {
             }
             if (d != null) {
                 val frac = (d.value / 100.0).toFloat().coerceIn(0f, 1f)
-                Box(Modifier.fillMaxWidth().padding(top = 6.dp).height(8.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                    Box(Modifier.fillMaxWidth(frac).height(8.dp).background(MaterialTheme.colorScheme.primary))
-                }
+                PockaiProgress(frac, Modifier.padding(top = 8.dp))
                 Text(
-                    if (d.decayInfo.isDecaying) "🥶 Enfríando ahora" else "🙂 Estable",
+                    if (d.decayInfo.isDecaying) "Enfriándose ahora" else "Estable",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp),
@@ -77,7 +79,7 @@ fun BondingCard(service: ApiService, petId: String) {
 @Composable
 private fun UnlockRow(label: String, on: Boolean) {
     Row {
-        Text(if (on) "✅" else "🔒", style = MaterialTheme.typography.bodyMedium)
+        Icon(if (on) Lucide.Check else Lucide.Lock, if (on) "Desbloqueado" else "Bloqueado", Modifier.size(16.dp), tint = if (on) com.petai.app.ui.theme.PockaiTheme.colors.onSuccessText else MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             label,
             style = MaterialTheme.typography.bodySmall,

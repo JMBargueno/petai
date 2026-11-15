@@ -1,5 +1,7 @@
 package com.petai.app.ui.raid
 
+import androidx.compose.foundation.layout.size
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.petai.app.ui.theme.*
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,11 +35,6 @@ import com.petai.app.data.RaidHistoryEntry
 import com.petai.app.data.RaidLeaderboard
 import kotlinx.coroutines.launch
 
-private val ELEMENT_ICONS = mapOf(
-    "fire" to "🔥", "water" to "💧", "plant" to "🌿", "electric" to "⚡", "shadow" to "🌑", "light" to "☀️",
-)
-
-private fun elIcon(e: String): String = ELEMENT_ICONS[e] ?: "🎭"
 
 /**
  * Pestaña "Raid" (feature 013): ver el boss activo, atacar (consume energía), top de
@@ -80,8 +78,8 @@ fun RaidScreen(service: ApiService, pet: Pet?, onChanged: () -> Unit) {
             settledMsg = ""
             try {
                 val res = service.raidAttack(p.id)
-                lastHit = "⚔️ Infligiste ${res.damage} de daño (${res.rounds} asaltos)."
-                if (res.settled) settledMsg = "🏆 ¡El boss fue derrotado! Se ha repartido el premio."
+                lastHit = "Infligiste ${res.damage} de daño (${res.rounds} asaltos)."
+                if (res.settled) settledMsg = "¡El boss fue derrotado! Se ha repartido el premio."
                 load()
                 onChanged()
             } catch (e: Exception) {
@@ -100,7 +98,7 @@ fun RaidScreen(service: ApiService, pet: Pet?, onChanged: () -> Unit) {
             if (c == null && error.isNotBlank() && !refreshing) {
                 Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(error, color = MaterialTheme.colorScheme.error)
-                    Button(onClick = { load() }) { Text("Reintentar") }
+                    SecondaryButton("Reintentar", onClick = { load() }, icon = Lucide.RefreshCw)
                 }
             } else if (c == null) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Cargando raid…") }
@@ -128,23 +126,21 @@ private fun RaidContent(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PockaiCard(Modifier.fillMaxWidth(), pop = true) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(elIcon(c.element), style = MaterialTheme.typography.displaySmall)
+                        Sticker(elementIcon(c.element), color = elementColor(c.element), size = 56.dp)
                         Column(Modifier.padding(start = 12.dp)) {
                             Text(c.theme, style = MaterialTheme.typography.titleLarge)
                             Text(
-                                "Nv ${c.level} · ${c.element} · ${c.participantCount} participantes",
+                                "Nv ${c.level} · ${c.participantCount} participantes",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
-                    LinearProgressIndicator(
-                        progress = { (c.hpPercent.toFloat() / 100f).coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().height(12.dp),
-                    )
+                    ElementTag(c.element)
+                    PockaiProgress(c.hpPercent.toFloat() / 100f, color = PockaiTheme.colors.danger)
                     Text(
                         "${c.hpRemaining} / ${c.hpGlobal} HP (${c.hpPercent}%)",
                         style = MaterialTheme.typography.bodySmall,
@@ -156,53 +152,56 @@ private fun RaidContent(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     if (c.status == "active") {
-                        Button(
+                        PrimaryButton(
+                            if (busy) "Atacando…" else if (pet != null) "Atacar al boss" else "Sin mascota activa",
                             onClick = onAttack,
                             enabled = pet != null && !busy,
                             modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(if (busy) "Atacando…" else if (pet != null) "⚔️ Atacar al boss" else "Sin mascota activa")
-                        }
+                            icon = Lucide.Swords,
+                        )
                     } else {
-                        Text("🏆 Boss derrotado", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Tag("Boss derrotado", color = Brand.Sunburst, icon = Lucide.Trophy)
                     }
-                    if (lastHit.isNotBlank()) Text(lastHit, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                    if (settledMsg.isNotBlank()) Text(settledMsg, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    if (lastHit.isNotBlank()) Text(lastHit, style = MaterialTheme.typography.bodyMedium, color = PockaiTheme.colors.accentInk)
+                    if (settledMsg.isNotBlank()) Text(settledMsg, style = MaterialTheme.typography.bodyMedium, color = PockaiTheme.colors.accentInk)
                     if (error.isNotBlank()) Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
         }
 
-        item { Text("🏅 Top contribuciones", style = MaterialTheme.typography.titleMedium) }
+        item { Text("Top contribuciones", style = MaterialTheme.typography.titleMedium) }
         (board?.entries ?: emptyList()).forEach { e ->
             item(key = e.rank) {
-                Card(Modifier.fillMaxWidth()) {
+                PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                     Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("#${e.rank}", Modifier.padding(end = 8.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("#${e.rank}", Modifier.padding(end = 8.dp), style = MaterialTheme.typography.titleSmall, color = PockaiTheme.colors.accentInk)
                         Column(Modifier.weight(1f)) {
-                            Text("${elIcon(e.petElement)} ${e.displayName}", style = MaterialTheme.typography.bodyLarge)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(e.displayName, style = MaterialTheme.typography.bodyLarge)
+                                ElementTag(e.petElement, Modifier.padding(start = 8.dp))
+                            }
                             Text("${e.petName} · Nv ${e.petLevel} · ${e.attacks} ataques · ${e.percentage}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Text("${e.damageDealt}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("${e.damageDealt}", style = MaterialTheme.typography.titleSmall, color = PockaiTheme.colors.accentInk)
                     }
                 }
             }
         }
 
-        item { Text("📜 Raids anteriores", style = MaterialTheme.typography.titleMedium) }
+        item { Text("Raids anteriores", style = MaterialTheme.typography.titleMedium) }
         if (history.isEmpty()) {
             item { Text("Sin raids anteriores.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         history.forEach { h ->
             item(key = h.id) {
-                Card(Modifier.fillMaxWidth()) {
+                PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                     Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(elIcon(h.element), style = MaterialTheme.typography.titleLarge)
+                        Icon(elementIcon(h.element), elementLabel(h.element), Modifier.size(24.dp))
                         Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
                             Text(h.theme, style = MaterialTheme.typography.bodyLarge)
                             Text("${h.hpGlobal} HP", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Text(if (h.status == "settled") "✓" else h.status, style = MaterialTheme.typography.bodySmall)
+                        if (h.status == "settled") Icon(Lucide.Check, "Liquidado", Modifier.size(18.dp)) else Text(h.status, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

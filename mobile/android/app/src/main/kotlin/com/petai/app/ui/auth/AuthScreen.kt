@@ -13,13 +13,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import com.petai.app.ui.theme.LogoMark
+import com.petai.app.ui.theme.PrimaryButton
+import com.petai.app.ui.theme.Sticker
+import com.petai.app.ui.theme.Lucide
+import com.petai.app.ui.theme.PockaiChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -61,8 +63,13 @@ fun AuthScreen(busy: Boolean, onSubmit: (register: Boolean, email: String, passw
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("🥚", style = MaterialTheme.typography.displayLarge)
-        Text("PetAI", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+        Sticker(Lucide.Egg, size = 88.dp)
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            LogoMark(size = 36.dp)
+            Spacer(Modifier.padding(horizontal = 6.dp))
+            Text("POCKAI", style = MaterialTheme.typography.displaySmall)
+        }
         Text(
             "Tu mascota virtual inteligente",
             style = MaterialTheme.typography.bodyLarge,
@@ -70,13 +77,9 @@ fun AuthScreen(busy: Boolean, onSubmit: (register: Boolean, email: String, passw
         )
         Spacer(Modifier.height(24.dp))
 
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            SegmentedButton(selected = !register, onClick = { register = false; error = null }, shape = SegmentedButtonDefaults.itemShape(0, 2)) {
-                Text("Entrar")
-            }
-            SegmentedButton(selected = register, onClick = { register = true; error = null }, shape = SegmentedButtonDefaults.itemShape(1, 2)) {
-                Text("Crear cuenta")
-            }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PockaiChip("Entrar", !register, { register = false; error = null }, Modifier.weight(1f))
+            PockaiChip("Crear cuenta", register, { register = true; error = null }, Modifier.weight(1f))
         }
         Spacer(Modifier.height(16.dp))
 
@@ -119,14 +122,13 @@ fun AuthScreen(busy: Boolean, onSubmit: (register: Boolean, email: String, passw
         }
         Spacer(Modifier.height(16.dp))
 
-        Button(
+        if (busy) CircularProgressIndicator(Modifier.height(32.dp), strokeWidth = 3.dp)
+        else PrimaryButton(
+            if (register) "Crear cuenta" else "Entrar",
             onClick = { focus.clearFocus(); submit() },
-            enabled = !busy && email.isNotBlank() && password.isNotEmpty(),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-        ) {
-            if (busy) CircularProgressIndicator(Modifier.height(22.dp), strokeWidth = 2.dp)
-            else Text(if (register) "Crear cuenta" else "Entrar")
-        }
+            enabled = email.isNotBlank() && password.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth(),
+        )
         TextButton(onClick = { register = !register; error = null }) {
             Text(if (register) "¿Ya tienes cuenta? Entra" else "¿No tienes cuenta? Regístrate")
         }
