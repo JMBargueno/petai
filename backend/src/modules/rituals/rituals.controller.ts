@@ -5,6 +5,8 @@ import {
   Body,
   Param,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -58,6 +60,7 @@ export class RitualsController {
   }
 
   @Post(':id/check')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Registrar la completación de hoy del ritual' })
   @ApiResponse({ status: 200, description: 'Progreso actualizado (con gift si aplica)' })
   @ApiResponse({ status: 404, description: 'Ritual no encontrado' })
