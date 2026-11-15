@@ -81,6 +81,19 @@ jobs:
             exit 1
           fi
 
+      # F-09 (completo): además del JSON, los tipos generados que consume el escritorio
+      # (shared/openapi/api-types.ts, vía openapi-typescript) deben coincidir con los regenerados
+      # a partir de openapi.json. Así ningún PR puede desincronizar el contrato de los clientes.
+      - name: Verify generated client types are up to date (no drift)
+        run: |
+          pnpm generate:api
+          if ! git diff --quiet -- shared/openapi/api-types.ts; then
+            echo "::error::shared/openapi/api-types.ts está desfasado respecto a shared/openapi/openapi.json."
+            echo "Ejecuta 'pnpm generate:api' (raíz) y commit el fichero regenerado."
+            git diff -- shared/openapi/api-types.ts
+            exit 1
+          fi
+
       - name: Run unit tests
         run: pnpm --filter petai-backend run test
 
