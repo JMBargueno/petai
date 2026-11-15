@@ -15,7 +15,7 @@ import { PetsService } from '../pets/pets.service';
 import { BondingService } from '../bonding/bonding.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { LeaderboardService, BoardScope } from './leaderboard.service';
-import { BattleLockService } from './battle-lock.service';
+import { ExclusiveLockService } from '../../redis/exclusive-lock.service';
 import { generateBot } from './combat/bots';
 import { simulateBattle } from './combat/engine';
 import { applyElo, leagueFor, pickOpponent } from './combat/ranking';
@@ -50,7 +50,7 @@ export class BattlesService {
     private readonly realtime: RealtimeGateway,
     private readonly bonding: BondingService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly battleLock: BattleLockService,
+    private readonly exclusiveLock: ExclusiveLockService,
   ) {}
 
   private get cfg(): CombatConfig & Record<string, any> {
@@ -164,7 +164,7 @@ export class BattlesService {
   async matchmake(userId: string, petId: string) {
     // Un combate a la vez por usuario (guard distribuido, R-02): evita carreras sobre energía,
     // límite diario y ELO, y lo respeta entre réplicas vía Redis.
-    return this.battleLock.runExclusive(userId, () => this.fight(userId, petId));
+    return this.exclusiveLock.runExclusive('battle', userId, () => this.fight(userId, petId));
   }
 
   private async fight(userId: string, petId: string) {
