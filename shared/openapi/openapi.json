@@ -6379,6 +6379,55 @@
         ]
       }
     },
+    "/v1/admin/users/{id}/balance": {
+      "patch": {
+        "operationId": "AdminUsersController_adjustBalance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "coins": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "gems": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/v1/admin/registration-settings": {
       "get": {
         "operationId": "AdminInvitesController_getSettings",

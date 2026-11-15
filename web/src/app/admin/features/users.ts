@@ -17,18 +17,21 @@ import { Column, Field, Filter, ResourcePage } from '../ui/resource-page';
       [filter]="filter"
       [nameOf]="nameOf"
       [deletable]="false"
-      [editable]="canAssignRoles"
+      [editable]="canEdit"
     />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Users {
   protected readonly repo = inject(USERS);
-  protected readonly canAssignRoles = inject(AdminAuth).can('users:role:assign');
+  private readonly auth = inject(AdminAuth);
+  protected readonly canAssignRoles = this.auth.can('users:role:assign');
+  protected readonly canManageEconomy = this.auth.can('economy:manage');
+  protected readonly canEdit = this.canAssignRoles || this.canManageEconomy;
   protected readonly nameOf = (user: AdminUser) => user.email;
 
-  protected readonly intro = this.canAssignRoles
-    ? 'Cuentas reales del servidor. Desde «Editar» se cambia el rol; el cambio cierra las sesiones de esa cuenta.'
+  protected readonly intro = this.canEdit
+    ? 'Cuentas reales del servidor. Desde «Editar» se cambia el rol (cierra las sesiones de esa cuenta) y se fijan monedas y gemas (queda auditado).'
     : 'Cuentas reales del servidor.';
 
   protected readonly filter: Filter<AdminUser> = { key: 'role', label: 'Rol', options: options(ROLES) };
@@ -43,8 +46,15 @@ export class Users {
     { key: 'createdAt', label: 'Alta', type: 'date' },
   ];
 
+  // Cada campo editable aparece solo si el administrador tiene el permiso que lo respalda en el servidor.
   protected readonly fields: Field<AdminUser>[] = [
     { key: 'email', label: 'Correo', type: 'email', required: true, lockedOnEdit: true },
-    { key: 'role', label: 'Rol', type: 'select', options: options(ROLES), required: true },
+    ...(this.canAssignRoles ? [{ key: 'role', label: 'Rol', type: 'select', options: options(ROLES), required: true } as Field<AdminUser>] : []),
+    ...(this.canManageEconomy
+      ? ([
+          { key: 'coins', label: 'Monedas', type: 'number', required: true, min: 0 },
+          { key: 'gems', label: 'Gemas', type: 'number', required: true, min: 0 },
+        ] as Field<AdminUser>[])
+      : []),
   ];
 }

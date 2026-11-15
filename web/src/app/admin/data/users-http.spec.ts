@@ -17,7 +17,7 @@ type FakeApi = Pick<AdminApi, 'request'> & { request: ReturnType<typeof vi.fn> }
 
 function fakeApi(pages: ReturnType<typeof user>[][], total: number): FakeApi {
   const request = vi.fn(async (path: string, init?: RequestInit) => {
-    if (init?.method === 'PATCH') return { ...user(1), role: JSON.parse(String(init.body)).role };
+    if (init?.method === 'PATCH') return { ...user(1), ...JSON.parse(String(init.body)) };
     const page = Number(new URL(path, 'http://x').searchParams.get('page'));
     return { items: pages[page - 1] ?? [], total };
   });
@@ -49,6 +49,33 @@ describe('HttpUsersRepository', () => {
       method: 'PATCH',
       body: JSON.stringify({ role: 'moderator' }),
     });
+  });
+
+  it('fija monedas y gemas solo con los campos modificados', async () => {
+    const api = fakeApi([[user(1)]], 1);
+    const repo = new HttpUsersRepository(api);
+    await repo.list();
+
+    const updated = await repo.update('id-1', { coins: 900, gems: 5 });
+    expect(updated.coins).toBe(900);
+    expect(api.request).toHaveBeenLastCalledWith('/v1/admin/users/id-1/balance', {
+      method: 'PATCH',
+      body: JSON.stringify({ coins: 900 }),
+    });
+
+    const calls = api.request.mock.calls.length;
+    await repo.update('id-1', { coins: 900, gems: 5 });
+    expect(api.request.mock.calls.length).toBe(calls);
+  });
+
+  it('cambia rol y saldo en dos llamadas cuando ambos cambian', async () => {
+    const api = fakeApi([[user(1)]], 1);
+    const repo = new HttpUsersRepository(api);
+    await repo.list();
+
+    const updated = await repo.update('id-1', { role: 'moderator', gems: 50 });
+    expect(updated.gems).toBe(50);
+    expect(api.request).toHaveBeenCalledTimes(3);
   });
 
   it('no permite crear ni borrar cuentas', async () => {

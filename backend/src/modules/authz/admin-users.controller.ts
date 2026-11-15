@@ -28,4 +28,17 @@ export class AdminUsersController {
   assignRole(@CurrentUser() actor: any, @Param('id', ParseUUIDPipe) id: string, @Body() body: unknown) {
     return this.adminUsers.assignRole(actor, id, body);
   }
+
+  @Patch(':id/balance')
+  @RequirePermissions('economy:manage')
+  @ApiOperation({ summary: 'Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { coins: { type: 'integer', minimum: 0 }, gems: { type: 'integer', minimum: 0 } },
+    },
+  })
+  adjustBalance(@CurrentUser() actor: any, @Param('id', ParseUUIDPipe) id: string, @Body() body: unknown) {
+    return this.adminUsers.adjustBalance(actor, id, body);
+  }
 }
