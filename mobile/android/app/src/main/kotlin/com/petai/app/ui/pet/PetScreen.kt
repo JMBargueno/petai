@@ -39,9 +39,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.petai.app.AppUiState
+import com.petai.app.data.ApiService
 import com.petai.app.data.Egg
 import com.petai.app.data.InventoryEntry
 import com.petai.app.data.Pet
+import com.petai.app.ui.bonding.BondingCard
 import kotlinx.coroutines.delay
 import java.time.Instant
 
@@ -77,13 +79,14 @@ fun PetScreen(
     onHatch: (eggId: String, onHatched: (Pet) -> Unit) -> Unit,
     onBuyEgg: () -> Unit,
     onGoToShop: () -> Unit,
+    service: ApiService,
 ) {
     PullToRefreshBox(isRefreshing = state.loading, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
         val pet = state.pet
         if (pet == null) {
             HatchSection(state, onHatch, onBuyEgg)
         } else {
-            PetContent(state, pet, onFeed, onClean, onHeal, onToggleSleep, onGoToShop)
+            PetContent(state, pet, onFeed, onClean, onHeal, onToggleSleep, onGoToShop, service)
             // Mientras se mira a la mascota, se refresca el estado cada 30 s (el servidor recalcula hambre, energía…)
             LaunchedEffect(pet.id) {
                 while (true) {
@@ -105,6 +108,7 @@ private fun PetContent(
     onHeal: () -> Unit,
     onToggleSleep: () -> Unit,
     onGoToShop: () -> Unit,
+    service: ApiService,
 ) {
     var showFood by remember { mutableStateOf(false) }
     val scheme = MaterialTheme.colorScheme
@@ -181,6 +185,9 @@ private fun PetContent(
             FilledTonalButton(onClick = onToggleSleep, enabled = enabled) { Text(if (pet.sleeping) "☀️ Despertar" else "🌙 Dormir") }
             OutlinedButton(onClick = onHeal, enabled = enabled && (pet.sick || pet.health < 90)) { Text("💊 Curar") }
         }
+
+        Spacer(Modifier.height(16.dp))
+        BondingCard(service, pet.id)
     }
 
     if (showFood) {
