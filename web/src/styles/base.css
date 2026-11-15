@@ -301,4 +301,75 @@
     line-height: 1.15;
     text-wrap: balance;
   }
+
+  /* ───── Nav (compartida por landing y página de lore) ───── */
+  .nav {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px clamp(16px, 4vw, 48px);
+    pointer-events: none; /* la barra es transparente: solo sus controles capturan clics */
+  }
+  .nav > * {
+    pointer-events: auto;
+  }
+  .logo {
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    aspect-ratio: 1;
+    border: var(--outline);
+    border-radius: var(--radius-pills);
+    background: var(--color-paper-white);
+    color: var(--color-carbon);
+    font-family: var(--font-lateral);
+    font-size: 22px;
+    line-height: 1;
+    text-decoration: none;
+  }
+  .nav__links,
+  .nav__end {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .nav__end {
+    gap: 8px;
+  }
+  /* Sobre la banda negra el botón relleno perdería el borde: se le da uno blanco. */
+  .nav .btn--filled {
+    border-color: var(--color-paper-white);
+  }
+  .lang {
+    display: flex;
+    padding: 3px;
+    border: var(--outline);
+    border-radius: var(--radius-pills);
+    background: var(--color-paper-white);
+  }
+  .lang a {
+    display: grid;
+    place-items: center;
+    min-inline-size: 36px;
+    min-block-size: 26px;
+    border-radius: var(--radius-pills);
+    color: var(--color-carbon);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--text-caption);
+    letter-spacing: 0.032em;
+    text-decoration: none;
+  }
+  .lang a[aria-current] {
+    background: var(--color-carbon);
+    color: var(--color-paper-white);
+  }
+  @media (width < 860px) {
+    .nav__links {
+      display: none;
+    }
+  }
 }
