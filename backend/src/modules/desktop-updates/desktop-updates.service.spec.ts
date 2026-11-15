@@ -6,6 +6,9 @@ const RELEASE = {
   assets: [
     { id: 1, name: 'latest.json', url: 'https://api.github.com/repos/o/r/releases/assets/1' },
     { id: 2, name: 'Pockai_0.2.0_x64-setup.exe', url: 'https://api.github.com/repos/o/r/releases/assets/2' },
+    { id: 3, name: 'Pockai_0.2.0_x64.dmg', url: 'https://api.github.com/repos/o/r/releases/assets/3' },
+    { id: 4, name: 'Pockai_0.2.0_aarch64.dmg', url: 'https://api.github.com/repos/o/r/releases/assets/4' },
+    { id: 5, name: 'Pockai_0.2.0_x64-setup.exe.sig', url: 'https://api.github.com/repos/o/r/releases/assets/5' },
   ],
 };
 
@@ -100,6 +103,18 @@ describe('DesktopUpdatesService', () => {
   it('rechaza assets que no son del release actual', async () => {
     mockFetch();
     await expect(makeService().getDownloadUrl(999)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('localiza el instalador de cada plataforma para el enlace de la web', async () => {
+    mockFetch();
+    const svc = makeService();
+    await expect(svc.findInstallerAssetId('windows')).resolves.toBe(2); // no el .sig
+    await expect(svc.findInstallerAssetId('macos')).resolves.toBe(4); // Apple Silicon primero
+  });
+
+  it('404 en el enlace de la web si no hay token o release', async () => {
+    mockFetch();
+    await expect(makeService('').findInstallerAssetId('windows')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('degrada a null si GitHub falla', async () => {

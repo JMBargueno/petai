@@ -2215,6 +2215,37 @@
         ]
       }
     },
+    "/v1/desktop/download/{platform}": {
+      "get": {
+        "operationId": "DesktopDownloadController_download",
+        "parameters": [
+          {
+            "name": "platform",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "windows",
+                "macos"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirección a la descarga del instalador"
+          },
+          "404": {
+            "description": "Plataforma desconocida o sin instalador publicado"
+          }
+        },
+        "summary": "Descarga el instalador más reciente de la app de escritorio. Público.",
+        "tags": [
+          "Desktop updates"
+        ]
+      }
+    },
     "/v1/missions": {
       "get": {
         "operationId": "MissionsController_getMissions",

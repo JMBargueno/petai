@@ -37,6 +37,15 @@ export interface UpdateManifest {
   assetId: number;
 }
 
+export const INSTALLER_PLATFORMS = ['windows', 'macos'] as const;
+export type InstallerPlatform = (typeof INSTALLER_PLATFORMS)[number];
+
+/** Nombre del instalador que genera tauri-action en cada plataforma. */
+const INSTALLER_PATTERNS: Record<InstallerPlatform, RegExp> = {
+  windows: /-setup\.exe$/i,
+  macos: /\.dmg$/i,
+};
+
 const GITHUB_API = 'https://api.github.com';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const TIMEOUT_MS = 8000;
@@ -156,6 +165,20 @@ export class DesktopUpdatesService {
       signature: platform.signature,
       assetId: asset.id,
     };
+  }
+
+  /**
+   * Id del instalador del último release publicado para una plataforma (enlace fijo de la web).
+   * Windows: el `*-setup.exe` (NSIS); macOS: el `.dmg` (Apple Silicon si existe).
+   */
+  async findInstallerAssetId(platform: InstallerPlatform): Promise<number> {
+    const release = await this.getRelease();
+    const assets = release?.assets ?? [];
+    const candidates = assets.filter((a) => INSTALLER_PATTERNS[platform].test(a.name));
+    const asset =
+      platform === 'macos' ? candidates.find((a) => /aarch64/i.test(a.name)) ?? candidates[0] : candidates[0];
+    if (!asset) throw new NotFoundException('Instalador no disponible');
+    return asset.id;
   }
 
   /** URL firmada y temporal de GitHub para descargar un asset del release actual. */

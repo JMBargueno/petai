@@ -205,6 +205,11 @@ Publicar una versión:
 3. Revisa el borrador y **publícalo**. A partir de ese momento, en un máximo de 5 min (caché del backend),
    los clientes ven la versión nueva.
 
+Descarga desde la web: el botón «Descargar» de Windows apunta a `{apiUrl}/v1/desktop/download/windows`
+(también existe `/macos`), que redirige al instalador del último release publicado. No hay que tocar la web en
+cada versión, pero sí poner en `web/src/app/site.json` › `apiUrl` la URL del backend de producción
+(`https://api-pockai.jmbargueno.com`) antes de desplegar la web.
+
 Notas:
 - El endpoint por defecto de `tauri.conf.json` es la API de producción (tiene que ser `https`: el plugin
   rechaza `http` en builds release y la app no arrancaría). En CI se sustituye por `PETAI_API_URL`.
