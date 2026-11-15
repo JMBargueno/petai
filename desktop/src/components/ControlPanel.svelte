@@ -11,6 +11,7 @@
   import ChestsTab from './ChestsTab.svelte';
   import BondingTab from './BondingTab.svelte';
   import HabitatTab from './HabitatTab.svelte';
+  import DesktopSkillsPanel from './DesktopSkillsPanel.svelte';
 import RaidTab from './RaidTab.svelte';
 import TournamentTab from './TournamentTab.svelte';
   import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
@@ -92,7 +93,7 @@ import TournamentTab from './TournamentTab.svelte';
 
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
   const NAV = [
-    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['habitat', 'Hábitat']] },
+    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['habitat', 'Hábitat'], ['skills', 'Habilidades']] },
     { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo']] },
     { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
     { id: 'progress', label: 'Progreso', icon: Trophy, subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
@@ -451,6 +452,9 @@ import TournamentTab from './TournamentTab.svelte';
 
         {:else if dest === 'pet' && sub === 'habitat'}
           <HabitatTab {pet} {user} on:refreshUser />
+
+        {:else if dest === 'pet' && sub === 'skills'}
+          <DesktopSkillsPanel {pet} />
 
         {:else if dest === 'play' && sub === 'games'}
           <MinigamesTab

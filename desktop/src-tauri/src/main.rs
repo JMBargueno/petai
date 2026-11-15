@@ -19,6 +19,16 @@ struct HitRect {
     h: f64,
 }
 
+#[derive(serde::Serialize, Clone, Debug, Default)]
+pub struct ActiveWindowInfo {
+    pub x: f64,
+    pub y: f64,
+    pub w: f64,
+    pub h: f64,
+    pub title: String,
+    pub is_valid: bool,
+}
+
 #[derive(Default)]
 struct HitRegions(Mutex<Vec<HitRect>>);
 
@@ -26,6 +36,93 @@ struct HitRegions(Mutex<Vec<HitRect>>);
 #[tauri::command]
 fn set_hit_regions(state: State<HitRegions>, rects: Vec<HitRect>) {
     *state.0.lock().unwrap() = rects;
+}
+
+/// Detección nativa Win32 de la ventana activa en primer plano.
+#[tauri::command]
+fn get_active_window_info(app: tauri::AppHandle) -> ActiveWindowInfo {
+    #[cfg(target_os = "windows")]
+    {
+        use std::ffi::OsString;
+        use std::os::windows::ffi::OsStringExt;
+
+        #[repr(C)]
+        #[derive(Default, Debug, Clone, Copy)]
+        struct RECT {
+            left: i32,
+            top: i32,
+            right: i32,
+            bottom: i32,
+        }
+
+        extern "system" {
+            fn GetForegroundWindow() -> isize;
+            fn GetWindowRect(hwnd: isize, lp_rect: *mut RECT) -> i32;
+            fn IsWindowVisible(hwnd: isize) -> i32;
+            fn GetWindowTextW(hwnd: isize, lp_string: *mut u16, n_max_count: i32) -> i32;
+        }
+
+        unsafe {
+            let hwnd = GetForegroundWindow();
+            if hwnd == 0 || IsWindowVisible(hwnd) == 0 {
+                return ActiveWindowInfo::default();
+            }
+
+            // Si la ventana activa es nuestra propia ventana de Tauri, no posarse en ella
+            if let Some(main_win) = app.get_webview_window("main") {
+                if let Ok(main_hwnd) = main_win.hwnd() {
+                    if main_hwnd.0 as isize == hwnd {
+                        return ActiveWindowInfo::default();
+                    }
+                }
+            }
+
+            let mut rect = RECT::default();
+            if GetWindowRect(hwnd, &mut rect) == 0 {
+                return ActiveWindowInfo::default();
+            }
+
+            let mut buf = [0u16; 512];
+            let len = GetWindowTextW(hwnd, buf.as_mut_ptr(), 512);
+            let title = if len > 0 {
+                OsString::from_wide(&buf[..len as usize])
+                    .to_string_lossy()
+                    .into_owned()
+            } else {
+                String::new()
+            };
+
+            let Some(main_win) = app.get_webview_window("main") else {
+                return ActiveWindowInfo::default();
+            };
+            let (Ok(origin), Ok(scale)) = (main_win.inner_position(), main_win.scale_factor()) else {
+                return ActiveWindowInfo::default();
+            };
+
+            let x = (rect.left as f64 - origin.x as f64) / scale;
+            let y = (rect.top as f64 - origin.y as f64) / scale;
+            let w = (rect.right - rect.left) as f64 / scale;
+            let h = (rect.bottom - rect.top) as f64 / scale;
+
+            if w < 100.0 || h < 100.0 {
+                return ActiveWindowInfo::default();
+            }
+
+            ActiveWindowInfo {
+                x,
+                y,
+                w,
+                h,
+                title,
+                is_valid: true,
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        ActiveWindowInfo::default()
+    }
 }
 
 /// Bucle de detección de cursor: la ventana ignora los eventos del ratón
@@ -75,7 +172,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(HitRegions::default())
-        .invoke_handler(tauri::generate_handler![set_hit_regions])
+        .invoke_handler(tauri::generate_handler![set_hit_regions, get_active_window_info])
         .setup(|app| {
             // La ventana transparente cubre el área útil del monitor (sin tapar la
             // barra de tareas) para que la mascota pueda moverse por toda la pantalla.
