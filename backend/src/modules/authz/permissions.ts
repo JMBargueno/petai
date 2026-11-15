@@ -13,8 +13,9 @@ export const PERMISSIONS = [
   'economy:manage',
   'events:manage',
   'audit:read',
-  'pets:read', // ver las mascotas de los jugadores (soporte)
   'invites:manage', // invitaciones de registro y ajuste "solo con invitación"
+  'pets:read', // listar mascotas en el panel de administración
+  'pets:rename', // renombrar mascotas desde el panel de administración
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -38,6 +39,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Grant[]> = {
     'events:manage',
     'audit:read',
     'pets:read',
+    'pets:rename',
     'invites:manage',
   ],
   moderator: ['admin:access', 'users:read', 'mods:moderate', 'audit:read', 'pets:read'],

@@ -456,7 +456,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Eclosionar huevo completado */
+        /** Eclosionar huevo completado (nombre opcional de la mascota) */
         post: operations["HatchingController_hatchEgg"];
         delete?: never;
         options?: never;
@@ -3063,6 +3063,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/pets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar mascotas (paginado; filtros: rarity, q por nickname o dueño) */
+        get: operations["AdminPetsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Renombrar una mascota (auditoría: pet_rename) */
+        patch: operations["AdminPetsController_rename"];
+        trace?: never;
+    };
     "/v1/admin/stats": {
         parameters: {
             query?: never;
@@ -3140,23 +3174,6 @@ export interface paths {
         };
         /** Especies que usa el juego (game-data, solo lectura) */
         get: operations["AdminController_listSpecies"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/pets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Mascotas de los jugadores (paginado; filtros: q, speciesId, rarity) */
-        get: operations["AdminController_listPets"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4163,26 +4180,6 @@ export interface components {
             favoriteFood: string;
             spriteKey: string;
         };
-        AdminPetDto: {
-            id: string;
-            nickname: string;
-            speciesId: string;
-            rarity: string;
-            level: number;
-            stage: string;
-            shiny: boolean;
-            sick: boolean;
-            /** Format: date-time */
-            createdAt: string;
-            /** @description Correo del dueño */
-            owner: string;
-        };
-        AdminPetListDto: {
-            items: components["schemas"]["AdminPetDto"][];
-            total: number;
-            page: number;
-            pageSize: number;
-        };
         AdminAuditEntryDto: {
             id: string;
             userId: string;
@@ -4886,7 +4883,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Nombre de la mascota (trim 1-16). Si se omite o queda vacío, se asigna uno aleatorio. */
+                    nickname?: string;
+                };
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -9116,6 +9120,48 @@ export interface operations {
             };
         };
     };
+    AdminPetsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminPetsController_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    nickname: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     AdminController_stats: {
         parameters: {
             query?: never;
@@ -9217,32 +9263,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminSpeciesDto"][];
-                };
-            };
-        };
-    };
-    AdminController_listPets: {
-        parameters: {
-            query?: {
-                rarity?: unknown;
-                speciesId?: unknown;
-                /** @description Apodo o correo del dueño */
-                q?: unknown;
-                pageSize?: number;
-                page?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminPetListDto"];
                 };
             };
         };

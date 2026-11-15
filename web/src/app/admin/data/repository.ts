@@ -1,7 +1,8 @@
 import { InjectionToken, inject } from '@angular/core';
 import { AdminApi } from '../api';
-import { HttpEventsRepository, HttpItemsRepository, HttpPetsRepository, HttpSpeciesRepository } from './catalog-http';
+import { HttpEventsRepository, HttpItemsRepository, HttpSpeciesRepository } from './catalog-http';
 import type { AdminUser, GameEvent, PetEntry, SpeciesEntry } from './models';
+import { HttpPetsRepository } from './pets-http';
 import type { Repository } from './repository-base';
 import { HttpUsersRepository } from './users-http';
 
@@ -24,6 +25,7 @@ export const SPECIES = new InjectionToken<Repository<SpeciesEntry>>('SPECIES', {
   providedIn: 'root',
   factory: () => new HttpSpeciesRepository(inject(AdminApi)),
 });
+/** Mascotas: datos reales del backend (solo se puede cambiar el apodo). */
 export const PETS = new InjectionToken<Repository<PetEntry>>('PETS', {
   providedIn: 'root',
   factory: () => new HttpPetsRepository(inject(AdminApi)),

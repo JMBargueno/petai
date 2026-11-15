@@ -2,44 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { parseOrBadRequest } from '../auth/dto/auth.schemas';
-import { listAuditSchema, listPetsSchema } from './admin.schemas';
+import { listAuditSchema } from './admin.schemas';
 
-/** Consultas paginadas de solo lectura para el panel: mascotas de jugadores y registro de auditoría. */
+/** Registro de auditoría paginado para el panel (solo lectura). Las mascotas viven en authz/admin-pets. */
 @Injectable()
 export class AdminRecordsService {
   constructor(private readonly prisma: PrismaService) {}
-
-  async listPets(rawQuery: unknown) {
-    const { page, pageSize, q, speciesId, rarity } = parseOrBadRequest(listPetsSchema, rawQuery);
-    const where: Prisma.PetWhereInput = {
-      ...(speciesId ? { speciesId } : {}),
-      ...(rarity ? { rarity } : {}),
-      ...(q ? { OR: [{ nickname: { contains: q, mode: 'insensitive' } }, { user: { email: { contains: q, mode: 'insensitive' } } }] } : {}),
-    };
-    const [rows, total] = await this.prisma.$transaction([
-      this.prisma.pet.findMany({
-        where,
-        select: {
-          id: true,
-          nickname: true,
-          speciesId: true,
-          rarity: true,
-          level: true,
-          stage: true,
-          shiny: true,
-          sick: true,
-          createdAt: true,
-          user: { select: { email: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.prisma.pet.count({ where }),
-    ]);
-    const items = rows.map(({ user, ...pet }) => ({ ...pet, owner: user.email }));
-    return { items, total, page, pageSize };
-  }
 
   async listAudit(rawQuery: unknown) {
     const { page, pageSize, event, userId } = parseOrBadRequest(listAuditSchema, rawQuery);

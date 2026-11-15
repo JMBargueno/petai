@@ -17,14 +17,6 @@ export const bulkPriceSchema = z.object({
 const page = z.coerce.number().int().min(1).default(1);
 const pageSize = z.coerce.number().int().min(1).max(100).default(20);
 
-export const listPetsSchema = z.object({
-  page,
-  pageSize,
-  q: z.string().trim().max(100).optional(),
-  speciesId: z.string().trim().max(64).optional(),
-  rarity: z.string().trim().max(32).optional(),
-});
-
 export const listAuditSchema = z.object({
   page,
   pageSize,

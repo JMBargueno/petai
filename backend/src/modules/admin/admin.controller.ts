@@ -11,7 +11,6 @@ import {
   AdminAuditListDto,
   AdminEventDto,
   AdminItemDto,
-  AdminPetListDto,
   AdminSpeciesDto,
   AdminStatsDto,
   BulkPriceDto,
@@ -19,7 +18,7 @@ import {
   UpdateItemPriceDto,
 } from './dto/admin.dto';
 
-/** Endpoints del panel de administración (salvo usuarios e invitaciones, que viven en authz/invites). */
+/** Endpoints del panel de administración (salvo usuarios, mascotas e invitaciones, que viven en authz/invites). */
 @ApiTags('Admin')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -69,19 +68,6 @@ export class AdminController {
   @ApiResponse({ status: HttpStatus.OK, type: [AdminSpeciesDto] })
   listSpecies() {
     return this.catalog.listSpecies();
-  }
-
-  @Get('pets')
-  @RequirePermissions('pets:read')
-  @ApiOperation({ summary: 'Mascotas de los jugadores (paginado; filtros: q, speciesId, rarity)' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'pageSize', required: false, type: Number })
-  @ApiQuery({ name: 'q', required: false, description: 'Apodo o correo del dueño' })
-  @ApiQuery({ name: 'speciesId', required: false })
-  @ApiQuery({ name: 'rarity', required: false })
-  @ApiResponse({ status: HttpStatus.OK, type: AdminPetListDto })
-  listPets(@Query() query: Record<string, string>) {
-    return this.records.listPets(query);
   }
 
   @Get('events')

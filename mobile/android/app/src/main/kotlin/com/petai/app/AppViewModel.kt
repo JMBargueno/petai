@@ -230,8 +230,8 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
 
     // ---------- Huevos y tienda ----------
 
-    fun hatch(eggId: String, onHatched: (Pet) -> Unit) = act {
-        val pet = service.hatch(eggId)
+    fun hatch(eggId: String, nickname: String?, onHatched: (Pet) -> Unit) = act {
+        val pet = service.hatch(eggId, nickname)
         _state.update { it.copy(pets = listOf(pet) + it.pets.filter { p -> p.id != pet.id }, eggs = service.eggs()) }
         onHatched(pet)
     }

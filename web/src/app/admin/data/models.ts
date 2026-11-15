@@ -106,6 +106,7 @@ export const EVENT_SOURCES: Record<EventSource, string> = {
 export const AUDIT_EVENTS: Record<string, string> = {
   login: 'Inicio de sesión',
   role_change: 'Cambio de rol',
+  pet_rename: 'Mascota renombrada',
   item_price_change: 'Cambio de precio',
   item_price_bulk: 'Ajuste de precios',
   invite_create: 'Invitaciones creadas',

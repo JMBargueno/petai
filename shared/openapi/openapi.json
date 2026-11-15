@@ -789,6 +789,23 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "maxLength": 16,
+                    "description": "Nombre de la mascota (trim 1-16). Si se omite o queda vacío, se asigna uno aleatorio."
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -799,7 +816,7 @@
             "bearer": []
           }
         ],
-        "summary": "Eclosionar huevo completado",
+        "summary": "Eclosionar huevo completado (nombre opcional de la mascota)",
         "tags": [
           "Eggs"
         ]
@@ -6513,6 +6530,74 @@
         ]
       }
     },
+    "/v1/admin/pets": {
+      "get": {
+        "operationId": "AdminPetsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mascotas (paginado; filtros: rarity, q por nickname o dueño)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/pets/{id}": {
+      "patch": {
+        "operationId": "AdminPetsController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nickname"
+                ],
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "maxLength": 16
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Renombrar una mascota (auditoría: pet_rename)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/v1/admin/stats": {
       "get": {
         "operationId": "AdminController_stats",
@@ -6678,69 +6763,6 @@
           }
         ],
         "summary": "Especies que usa el juego (game-data, solo lectura)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/pets": {
-      "get": {
-        "operationId": "AdminController_listPets",
-        "parameters": [
-          {
-            "name": "rarity",
-            "required": false,
-            "in": "query",
-            "schema": {}
-          },
-          {
-            "name": "speciesId",
-            "required": false,
-            "in": "query",
-            "schema": {}
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "description": "Apodo o correo del dueño",
-            "schema": {}
-          },
-          {
-            "name": "pageSize",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminPetListDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Mascotas de los jugadores (paginado; filtros: q, speciesId, rarity)",
         "tags": [
           "Admin"
         ]
@@ -8802,81 +8824,6 @@
           "esp",
           "favoriteFood",
           "spriteKey"
-        ]
-      },
-      "AdminPetDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "nickname": {
-            "type": "string"
-          },
-          "speciesId": {
-            "type": "string"
-          },
-          "rarity": {
-            "type": "string"
-          },
-          "level": {
-            "type": "number"
-          },
-          "stage": {
-            "type": "string"
-          },
-          "shiny": {
-            "type": "boolean"
-          },
-          "sick": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "owner": {
-            "type": "string",
-            "description": "Correo del dueño"
-          }
-        },
-        "required": [
-          "id",
-          "nickname",
-          "speciesId",
-          "rarity",
-          "level",
-          "stage",
-          "shiny",
-          "sick",
-          "createdAt",
-          "owner"
-        ]
-      },
-      "AdminPetListDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AdminPetDto"
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "page": {
-            "type": "number"
-          },
-          "pageSize": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "page",
-          "pageSize"
         ]
       },
       "AdminAuditEntryDto": {

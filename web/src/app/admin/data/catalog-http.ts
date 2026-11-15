@@ -1,5 +1,5 @@
 import type { AdminApi } from '../api';
-import type { CatalogItem, GameEvent, PetEntry, SpeciesEntry } from './models';
+import type { CatalogItem, GameEvent, SpeciesEntry } from './models';
 import { ReadOnlyRepository, type Repository } from './repository-base';
 
 type Api = Pick<AdminApi, 'request'>;
@@ -63,28 +63,5 @@ export class HttpEventsRepository extends ReadOnlyRepository<GameEvent> {
 
   list(): Promise<GameEvent[]> {
     return this.api.request<GameEvent[]>('/v1/admin/events');
-  }
-}
-
-const PETS_PAGE_SIZE = 100;
-/** Tope de mascotas que carga la tabla (las más recientes); la búsqueda fina se hace en servidor. */
-export const MAX_PETS = 1000;
-
-/** Mascotas de los jugadores (`/v1/admin/pets`), las más recientes primero. */
-export class HttpPetsRepository extends ReadOnlyRepository<PetEntry> {
-  constructor(private readonly api: Api) {
-    super();
-  }
-
-  async list(): Promise<PetEntry[]> {
-    const rows: PetEntry[] = [];
-    for (let page = 1; rows.length < MAX_PETS; page++) {
-      const res = await this.api.request<{ items: PetEntry[]; total: number }>(
-        `/v1/admin/pets?page=${page}&pageSize=${PETS_PAGE_SIZE}`,
-      );
-      rows.push(...res.items);
-      if (res.items.length < PETS_PAGE_SIZE || rows.length >= res.total) break;
-    }
-    return rows.slice(0, MAX_PETS);
   }
 }

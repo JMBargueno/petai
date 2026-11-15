@@ -43,26 +43,6 @@ export class AdminSpeciesDto {
   @ApiProperty() spriteKey: string;
 }
 
-export class AdminPetDto {
-  @ApiProperty() id: string;
-  @ApiProperty() nickname: string;
-  @ApiProperty() speciesId: string;
-  @ApiProperty() rarity: string;
-  @ApiProperty() level: number;
-  @ApiProperty() stage: string;
-  @ApiProperty() shiny: boolean;
-  @ApiProperty() sick: boolean;
-  @ApiProperty({ type: String, format: 'date-time' }) createdAt: string;
-  @ApiProperty({ description: 'Correo del dueño' }) owner: string;
-}
-
-export class AdminPetListDto {
-  @ApiProperty({ type: [AdminPetDto] }) items: AdminPetDto[];
-  @ApiProperty() total: number;
-  @ApiProperty() page: number;
-  @ApiProperty() pageSize: number;
-}
-
 export class AdminEventDto {
   @ApiProperty({ example: 'festival:halloween' }) id: string;
   @ApiProperty() name: string;

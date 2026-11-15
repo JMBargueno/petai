@@ -1,8 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { MAX_PETS } from '../data/catalog-http';
+import { AdminAuth } from '../auth';
 import { ELEMENTS, PetEntry, RARITIES, STAGES, SpeciesEntry, options } from '../data/models';
 import { PETS, SPECIES } from '../data/repository';
 import { Column, Field, Filter, ResourcePage } from '../ui/resource-page';
+
+/** Longitud máxima del apodo, la misma que valida el backend al eclosionar y al renombrar. */
+const MAX_NICKNAME = 16;
 
 @Component({
   selector: 'app-admin-pockais',
@@ -30,7 +33,8 @@ import { Column, Field, Filter, ResourcePage } from '../ui/resource-page';
         [fields]="petFields"
         [filter]="petFilter"
         [nameOf]="petName"
-        [editable]="false"
+        [validate]="petValidate"
+        [editable]="canRename"
         [deletable]="false"
       />
     </div>
@@ -46,8 +50,8 @@ import { Column, Field, Filter, ResourcePage } from '../ui/resource-page';
 export class Pockais {
   protected readonly speciesRepo = inject(SPECIES);
   protected readonly petsRepo = inject(PETS);
+  protected readonly canRename = inject(AdminAuth).can('pets:rename');
   protected readonly speciesFields: Field<SpeciesEntry>[] = [];
-  protected readonly petFields: Field<PetEntry>[] = [];
 
   // Especies
   protected readonly speciesName = (s: SpeciesEntry) => s.name;
@@ -64,7 +68,9 @@ export class Pockais {
   ];
 
   // Mascotas
-  protected readonly petsIntro = `Pockais de los jugadores, de solo lectura (las ${MAX_PETS} más recientes).`;
+  protected readonly petsIntro = this.canRename
+    ? `Mascotas de los jugadores. Desde «Editar» solo se cambia el apodo (máx. ${MAX_NICKNAME} caracteres); el resto es de solo lectura.`
+    : 'Mascotas de los jugadores (solo lectura).';
   /** Nombre de cada especie para la columna de mascotas; se rellena al cargar las especies. */
   private readonly speciesNames = signal(new Map<string, string>());
   protected readonly petName = (p: PetEntry) => p.nickname;
@@ -81,6 +87,20 @@ export class Pockais {
     { key: 'sick', label: 'Enfermo', type: 'bool' },
     { key: 'createdAt', label: 'Eclosión', type: 'date' },
   ];
+
+  /** Solo el apodo es editable; el dueño se enseña como referencia. */
+  protected readonly petFields: Field<PetEntry>[] = [
+    { key: 'nickname', label: 'Apodo', type: 'text', required: true },
+    { key: 'owner', label: 'Dueño', type: 'text', lockedOnEdit: true },
+  ];
+
+  /** El backend solo permite renombre: el apodo es obligatorio y de 1 a 16 caracteres. */
+  protected readonly petValidate = (p: PetEntry): string | null => {
+    const nickname = p.nickname?.trim() ?? '';
+    if (nickname.length === 0) return 'El apodo no puede estar vacío.';
+    if (nickname.length > MAX_NICKNAME) return `El apodo no puede superar ${MAX_NICKNAME} caracteres.`;
+    return null;
+  };
 
   constructor() {
     void this.speciesRepo

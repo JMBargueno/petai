@@ -12,6 +12,9 @@ export function describeAudit(entry: AuditEntry): string {
   switch (entry.event) {
     case 'role_change':
       return `${m['from']} → ${m['to']}`;
+    case 'pet_rename':
+      // La entrada va a nombre del dueño de la mascota; `by` es quien la renombró.
+      return `apodo «${m['from']}» → «${m['to']}»`;
     case 'item_price_change': {
       const to = m['to'] ?? {};
       const parts = Object.entries(to).map(([k, v]) => `${k === 'priceGems' ? 'gemas' : 'monedas'} ${m['from']?.[k]} → ${v}`);

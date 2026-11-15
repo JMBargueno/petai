@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AdminApi } from '../api';
-import { HttpEventsRepository, HttpItemsRepository, HttpPetsRepository, MAX_PETS } from './catalog-http';
+import { HttpEventsRepository, HttpItemsRepository } from './catalog-http';
 
 type FakeApi = Pick<AdminApi, 'request'> & { request: ReturnType<typeof vi.fn> };
 
@@ -43,23 +43,6 @@ describe('repositorios de solo lectura', () => {
     const repo = new HttpEventsRepository(api);
     expect(await repo.list()).toEqual([{ id: 'festival:x' }]);
     await expect(repo.update()).rejects.toThrow('solo lectura');
-    expect(api.request).toHaveBeenCalledTimes(1);
-  });
-
-  it('mascotas: pagina hasta el tope', async () => {
-    const pet = (i: number) => ({ id: `p${i}` });
-    const api = fakeApi((path) => {
-      const page = Number(new URL(path, 'http://x').searchParams.get('page'));
-      return { items: Array.from({ length: 100 }, (_, i) => pet(page * 100 + i)), total: 5000 };
-    });
-    const rows = await new HttpPetsRepository(api).list();
-    expect(rows).toHaveLength(MAX_PETS);
-    expect(api.request).toHaveBeenCalledTimes(MAX_PETS / 100);
-  });
-
-  it('mascotas: para en la última página', async () => {
-    const api = fakeApi(() => ({ items: [{ id: 'p1' }, { id: 'p2' }], total: 2 }));
-    expect(await new HttpPetsRepository(api).list()).toHaveLength(2);
     expect(api.request).toHaveBeenCalledTimes(1);
   });
 });
