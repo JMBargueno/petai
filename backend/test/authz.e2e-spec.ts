@@ -7,7 +7,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 /**
  * Autorización por roles (e2e).
  *   - Toda cuenta nueva es `user` (y el cliente no puede elegir rol al registrarse).
- *   - GET /v1/admin/users y PATCH /v1/admin/users/:id/role exigen permisos (hoy solo superadmin).
+ *   - GET /v1/admin/users y PATCH /v1/admin/users/:id/role exigen permisos (superadmin, admin y moderator; solo los dos primeros cambian roles).
  *   - Un cambio de rol aplica al instante, cierra las sesiones del afectado y queda auditado.
  */
 describe('Autorización por roles (e2e)', () => {
@@ -66,12 +66,26 @@ describe('Autorización por roles (e2e)', () => {
     await api().get('/v1/admin/users').expect(401);
   });
 
-  it('admin y moderator aún no tienen permisos', async () => {
+  it('admin y moderator entran al panel y listan usuarios', async () => {
     for (const role of ['admin', 'moderator']) {
       const { token, userId } = await signup();
       await prisma.user.update({ where: { id: userId }, data: { role } });
-      await api().get('/v1/admin/users').set(auth(token)).expect(403);
+      await api().get('/v1/admin/users').set(auth(token)).expect(200);
+      const me = await api().get('/v1/me').set(auth(token)).expect(200);
+      expect(me.body.permissions).toContain('admin:access');
     }
+  });
+
+  it('moderator no cambia roles; admin solo por debajo del suyo', async () => {
+    const mod = await signup();
+    await prisma.user.update({ where: { id: mod.userId }, data: { role: 'moderator' } });
+    const target = await signup();
+    await api().patch(`/v1/admin/users/${target.userId}/role`).set(auth(mod.token)).send({ role: 'moderator' }).expect(403);
+
+    const admin = await signup();
+    await prisma.user.update({ where: { id: admin.userId }, data: { role: 'admin' } });
+    await api().patch(`/v1/admin/users/${target.userId}/role`).set(auth(admin.token)).send({ role: 'admin' }).expect(403);
+    await api().patch(`/v1/admin/users/${target.userId}/role`).set(auth(admin.token)).send({ role: 'moderator' }).expect(200);
   });
 
   it('superadmin lista usuarios y filtra por rol', async () => {

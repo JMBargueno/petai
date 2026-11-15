@@ -24,13 +24,25 @@ export const ALL_PERMISSIONS = '*' as const;
 type Grant = Permission | typeof ALL_PERMISSIONS;
 
 /**
- * Permisos por rol. Por ahora solo SuperAdmin puede hacerlo todo.
- * TODO: definir los permisos de admin y moderator (p. ej. moderator → 'mods:moderate', 'users:read').
+ * Permisos por rol. SuperAdmin lo puede todo. Admin gestiona el juego (economía, eventos, invitaciones)
+ * y asigna roles por debajo del suyo (la regla de rango vive en `AdminUsersService.assignRole`).
+ * Moderator solo consulta y modera.
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Grant[]> = {
   superadmin: [ALL_PERMISSIONS],
-  admin: [],
-  moderator: [],
+  admin: [
+    'admin:access',
+    'users:read',
+    'users:role:assign',
+    'mods:moderate',
+    'economy:manage',
+    'events:manage',
+    'audit:read',
+    'pets:read',
+    'pets:rename',
+    'invites:manage',
+  ],
+  moderator: ['admin:access', 'users:read', 'mods:moderate', 'audit:read', 'pets:read'],
   user: [],
 };
 

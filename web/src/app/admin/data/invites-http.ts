@@ -1,6 +1,5 @@
 import { InjectionToken, inject } from '@angular/core';
 import { AdminApi } from '../api';
-import { AuditLog } from './audit-log';
 
 export type InviteStatus = 'active' | 'used' | 'revoked' | 'expired';
 
@@ -44,10 +43,7 @@ const PAGE_SIZE = 100;
  * `/v1/admin/registration-settings`). Los códigos no se borran: se revocan.
  */
 export class InvitesHttp {
-  constructor(
-    private readonly api: Pick<AdminApi, 'request'>,
-    private readonly audit?: Pick<AuditLog, 'record'>,
-  ) {}
+  constructor(private readonly api: Pick<AdminApi, 'request'>) {}
 
   async list(): Promise<Invite[]> {
     const rows: Invite[] = [];
@@ -67,14 +63,11 @@ export class InvitesHttp {
       ...(input.note.trim() ? { note: input.note.trim() } : {}),
     };
     const res = await this.api.request<{ items: Invite[] }>('/v1/admin/invites', { method: 'POST', body: JSON.stringify(body) });
-    this.audit?.record('Alta', 'invitaciones', `${res.items.length} código(s) · ${input.maxUses} uso(s) cada uno`);
     return res.items;
   }
 
-  async revoke(id: string): Promise<Invite> {
-    const invite = await this.api.request<Invite>(`/v1/admin/invites/${encodeURIComponent(id)}/revoke`, { method: 'POST' });
-    this.audit?.record('Baja', 'invitaciones', `${invite.code} revocado`);
-    return invite;
+  revoke(id: string): Promise<Invite> {
+    return this.api.request<Invite>(`/v1/admin/invites/${encodeURIComponent(id)}/revoke`, { method: 'POST' });
   }
 
   async inviteOnly(): Promise<boolean> {
@@ -86,12 +79,11 @@ export class InvitesHttp {
       method: 'PATCH',
       body: JSON.stringify({ inviteOnly }),
     });
-    this.audit?.record('Cambio', 'invitaciones', `Registro solo con invitación: ${res.inviteOnly ? 'activado' : 'desactivado'}`);
     return res.inviteOnly;
   }
 }
 
 export const INVITES = new InjectionToken<InvitesHttp>('INVITES', {
   providedIn: 'root',
-  factory: () => new InvitesHttp(inject(AdminApi), inject(AuditLog)),
+  factory: () => new InvitesHttp(inject(AdminApi)),
 });

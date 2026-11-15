@@ -1,17 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { AdminAuth } from '../auth';
 import { ELEMENTS, PetEntry, RARITIES, STAGES, SpeciesEntry, options } from '../data/models';
 import { PETS, SPECIES } from '../data/repository';
-import { seedSpecies } from '../data/seed';
 import { Column, Field, Filter, ResourcePage } from '../ui/resource-page';
 
-const stat = (key: 'hp' | 'atk' | 'def' | 'vel' | 'esp', label: string): Field<SpeciesEntry> => ({
-  key,
-  label,
-  type: 'number',
-  min: 1,
-  max: 255,
-  required: true,
-});
+/** Longitud máxima del apodo, la misma que valida el backend al eclosionar y al renombrar. */
+const MAX_NICKNAME = 16;
 
 @Component({
   selector: 'app-admin-pockais',
@@ -21,17 +15,18 @@ const stat = (key: 'hp' | 'atk' | 'def' | 'vel' | 'esp', label: string): Field<S
     <div class="stack">
       <app-resource-page
         heading="Especies"
-        intro="Catálogo de especies y sus estadísticas base."
+        intro="Especies que usa el juego (species.json) y sus estadísticas base. Solo lectura: se cambian en game-data."
         [headingLevel]="2"
         [repo]="speciesRepo"
         [columns]="speciesColumns"
         [fields]="speciesFields"
         [nameOf]="speciesName"
-        [blank]="blankSpecies"
+        [editable]="false"
+        [deletable]="false"
       />
       <app-resource-page
         heading="Mascotas de jugadores"
-        intro="Mascotas eclosionadas por los usuarios: solo el administrador puede cambiar su apodo (máx. 16 caracteres)."
+        [intro]="petsIntro"
         [headingLevel]="2"
         [repo]="petsRepo"
         [columns]="petColumns"
@@ -39,6 +34,7 @@ const stat = (key: 'hp' | 'atk' | 'def' | 'vel' | 'esp', label: string): Field<S
         [filter]="petFilter"
         [nameOf]="petName"
         [validate]="petValidate"
+        [editable]="canRename"
         [deletable]="false"
       />
     </div>
@@ -54,24 +50,11 @@ const stat = (key: 'hp' | 'atk' | 'def' | 'vel' | 'esp', label: string): Field<S
 export class Pockais {
   protected readonly speciesRepo = inject(SPECIES);
   protected readonly petsRepo = inject(PETS);
+  protected readonly canRename = inject(AdminAuth).can('pets:rename');
+  protected readonly speciesFields: Field<SpeciesEntry>[] = [];
 
   // Especies
   protected readonly speciesName = (s: SpeciesEntry) => s.name;
-  protected readonly blankSpecies = (): SpeciesEntry => ({
-    id: '',
-    name: '',
-    description: '',
-    element: 'fire',
-    rarity: 'normal',
-    hp: 50,
-    atk: 50,
-    def: 50,
-    vel: 50,
-    esp: 50,
-    favoriteFood: '',
-    spriteKey: '',
-  });
-
   protected readonly speciesColumns: Column<SpeciesEntry>[] = [
     { key: 'name', label: 'Especie' },
     { key: 'element', label: 'Elemento', format: (s) => ELEMENTS[s.element] ?? s.element },
@@ -81,54 +64,48 @@ export class Pockais {
     { key: 'def', label: 'Defensa', type: 'number' },
     { key: 'vel', label: 'Velocidad', type: 'number' },
     { key: 'esp', label: 'Espíritu', type: 'number' },
-  ];
-
-  protected readonly speciesFields: Field<SpeciesEntry>[] = [
-    { key: 'name', label: 'Nombre', type: 'text', required: true },
-    { key: 'id', label: 'Identificador', type: 'text', required: true, lockedOnEdit: true },
-    { key: 'description', label: 'Descripción', type: 'textarea' },
-    { key: 'element', label: 'Elemento', type: 'select', options: options(ELEMENTS), required: true },
-    { key: 'rarity', label: 'Rareza', type: 'select', options: options(RARITIES), required: true },
-    stat('hp', 'Vida'),
-    stat('atk', 'Ataque'),
-    stat('def', 'Defensa'),
-    stat('vel', 'Velocidad'),
-    stat('esp', 'Espíritu'),
-    { key: 'favoriteFood', label: 'Comida favorita (id)', type: 'text' },
-    { key: 'spriteKey', label: 'Clave de sprite', type: 'text' },
+    { key: 'favoriteFood', label: 'Comida favorita' },
   ];
 
   // Mascotas
-  private readonly speciesNames = new Map(seedSpecies().map((s) => [s.id, s.name]));
+  protected readonly petsIntro = this.canRename
+    ? `Mascotas de los jugadores. Desde «Editar» solo se cambia el apodo (máx. ${MAX_NICKNAME} caracteres); el resto es de solo lectura.`
+    : 'Mascotas de los jugadores (solo lectura).';
+  /** Nombre de cada especie para la columna de mascotas; se rellena al cargar las especies. */
+  private readonly speciesNames = signal(new Map<string, string>());
   protected readonly petName = (p: PetEntry) => p.nickname;
   protected readonly petFilter: Filter<PetEntry> = { key: 'rarity', label: 'Rareza', options: options(RARITIES) };
 
   protected readonly petColumns: Column<PetEntry>[] = [
     { key: 'nickname', label: 'Apodo' },
-    { key: 'speciesId', label: 'Especie', format: (p) => this.speciesNames.get(p.speciesId) ?? p.speciesId },
+    { key: 'speciesId', label: 'Especie', format: (p) => this.speciesNames().get(p.speciesId) ?? p.speciesId },
     { key: 'owner', label: 'Dueño' },
     { key: 'rarity', label: 'Rareza', format: (p) => RARITIES[p.rarity] ?? p.rarity },
     { key: 'level', label: 'Nivel', type: 'number' },
-    { key: 'stage', label: 'Etapa', format: (p) => STAGES[p.stage] },
+    { key: 'stage', label: 'Etapa', format: (p) => STAGES[p.stage] ?? p.stage },
     { key: 'shiny', label: 'Shiny', type: 'bool' },
     { key: 'sick', label: 'Enfermo', type: 'bool' },
+    { key: 'createdAt', label: 'Eclosión', type: 'date' },
   ];
 
+  /** Solo el apodo es editable; el dueño se enseña como referencia. */
   protected readonly petFields: Field<PetEntry>[] = [
     { key: 'nickname', label: 'Apodo', type: 'text', required: true },
-    { key: 'owner', label: 'Dueño', type: 'email', lockedOnEdit: true },
-    { key: 'level', label: 'Nivel', type: 'number', min: 1, max: 100, required: true, lockedOnEdit: true },
-    { key: 'stage', label: 'Etapa', type: 'select', options: options(STAGES), required: true, lockedOnEdit: true },
-    { key: 'rarity', label: 'Rareza', type: 'select', options: options(RARITIES), required: true, lockedOnEdit: true },
-    { key: 'shiny', label: 'Shiny', type: 'checkbox', lockedOnEdit: true },
-    { key: 'sick', label: 'Enfermo', type: 'checkbox', lockedOnEdit: true },
+    { key: 'owner', label: 'Dueño', type: 'text', lockedOnEdit: true },
   ];
 
   /** El backend solo permite renombre: el apodo es obligatorio y de 1 a 16 caracteres. */
   protected readonly petValidate = (p: PetEntry): string | null => {
     const nickname = p.nickname?.trim() ?? '';
     if (nickname.length === 0) return 'El apodo no puede estar vacío.';
-    if (nickname.length > 16) return 'El apodo no puede superar 16 caracteres.';
+    if (nickname.length > MAX_NICKNAME) return `El apodo no puede superar ${MAX_NICKNAME} caracteres.`;
     return null;
   };
+
+  constructor() {
+    void this.speciesRepo
+      .list()
+      .then((rows) => this.speciesNames.set(new Map(rows.map((s) => [s.id, s.name]))))
+      .catch(() => undefined); // Sin nombres se muestra el id; el error ya lo enseña la tabla de especies.
+  }
 }

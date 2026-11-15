@@ -34,10 +34,9 @@ describe('InvitesHttp', () => {
     expect(api.request).toHaveBeenCalledTimes(2);
   });
 
-  it('genera códigos enviando solo la nota si no está vacía, y lo audita', async () => {
+  it('genera códigos enviando solo la nota si no está vacía', async () => {
     const api = fakeApi(() => ({ items: [invite(1), invite(2)] }));
-    const audit = { record: vi.fn() };
-    const repo = new InvitesHttp(api, audit);
+    const repo = new InvitesHttp(api);
 
     const items = await repo.create({ count: 2, maxUses: 3, expiresAt: null, note: '   ' });
     expect(items).toHaveLength(2);
@@ -45,7 +44,6 @@ describe('InvitesHttp', () => {
     expect(path).toBe('/v1/admin/invites');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual({ count: 2, maxUses: 3, expiresAt: null });
-    expect(audit.record).toHaveBeenCalledWith('Alta', 'invitaciones', expect.stringContaining('2 código'));
 
     await repo.create({ count: 1, maxUses: 1, expiresAt: '2027-01-01T00:00:00.000Z', note: ' beta ' });
     expect(JSON.parse(api.request.mock.calls[1][1].body)).toEqual({ count: 1, maxUses: 1, expiresAt: '2027-01-01T00:00:00.000Z', note: 'beta' });

@@ -34,10 +34,9 @@ describe('HttpUsersRepository', () => {
     expect(rows[1].displayName).toBe('');
   });
 
-  it('solo llama al servidor si cambia el rol, y lo audita', async () => {
+  it('solo llama al servidor si cambia el rol', async () => {
     const api = fakeApi([[user(1)]], 1);
-    const audit = { record: vi.fn() };
-    const repo = new HttpUsersRepository(api, audit);
+    const repo = new HttpUsersRepository(api);
     await repo.list();
 
     const same = await repo.update('id-1', { ...user(1), displayName: '' } as never);
@@ -50,7 +49,6 @@ describe('HttpUsersRepository', () => {
       method: 'PATCH',
       body: JSON.stringify({ role: 'moderator' }),
     });
-    expect(audit.record).toHaveBeenCalledWith('Cambio', 'usuarios', 'u1@petai.local (rol: user → moderator)');
   });
 
   it('no permite crear ni borrar cuentas', async () => {

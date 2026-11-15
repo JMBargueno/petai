@@ -1,15 +1,20 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AuditLog } from '../data/audit-log';
-import { AdminUser, CatalogItem, GameEvent, PetEntry, RARITIES, eventStatus } from '../data/models';
-import { EVENTS, ITEMS, PETS, USERS } from '../data/repository';
+import { AdminAuth } from '../auth';
+import { AUDIT_EVENTS, AdminStats, AuditEntry, EVENT_SOURCES, RARITIES, ROLES, type AdminRole, eventStatus } from '../data/models';
+import { REPORTS } from '../data/reports-http';
+import { describeAudit } from './audit';
 
 @Component({
   selector: 'app-admin-dashboard',
   imports: [RouterLink, DatePipe],
   template: `
     <h1>Resumen</h1>
+
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
 
     <ul class="kpis">
       @for (kpi of kpis(); track kpi.label) {
@@ -43,30 +48,33 @@ import { EVENTS, ITEMS, PETS, USERS } from '../data/repository';
           @for (event of upcoming(); track event.id) {
             <li>
               <span class="tag">{{ event.status }}</span>
-              {{ event.name }}
+              <span>{{ event.name }} · {{ event.source }}</span>
+              <time [attr.datetime]="event.startDate">{{ event.startDate | date: 'dd/MM' : 'UTC' }}</time>
             </li>
           } @empty {
-            <li>Ninguno.</li>
+            <li>{{ stats() ? 'Ninguno en los próximos 30 días.' : 'Cargando…' }}</li>
           }
         </ul>
         <a class="btn btn--sm" routerLink="../eventos">Ver eventos</a>
       </section>
 
-      <section class="card" aria-labelledby="activity-title">
-        <h2 id="activity-title">Actividad reciente</h2>
-        <ul class="plain">
-          @for (entry of recent(); track entry.at + entry.detail) {
-            <li>
-              <span class="tag">{{ entry.action }}</span>
-              <span>{{ entry.resource }} · {{ entry.detail }}</span>
-              <time [attr.datetime]="entry.at">{{ entry.at | date: 'HH:mm' }}</time>
-            </li>
-          } @empty {
-            <li>Todavía no hay actividad.</li>
-          }
-        </ul>
-        <a class="btn btn--sm" routerLink="../registro">Ver registro</a>
-      </section>
+      @if (canReadAudit) {
+        <section class="card" aria-labelledby="activity-title">
+          <h2 id="activity-title">Actividad reciente</h2>
+          <ul class="plain">
+            @for (entry of recent(); track entry.id) {
+              <li>
+                <span class="tag">{{ auditLabel(entry.event) }}</span>
+                <span>{{ entry.userEmail ?? entry.userId }}{{ describe(entry) ? ' · ' + describe(entry) : '' }}</span>
+                <time [attr.datetime]="entry.createdAt">{{ entry.createdAt | date: 'dd/MM HH:mm' }}</time>
+              </li>
+            } @empty {
+              <li>Todavía no hay actividad.</li>
+            }
+          </ul>
+          <a class="btn btn--sm" routerLink="../registro">Ver registro</a>
+        </section>
+      }
     </div>
   `,
   styles: `
@@ -154,73 +162,77 @@ import { EVENTS, ITEMS, PETS, USERS } from '../data/repository';
       margin-inline-start: auto;
       font-size: var(--text-caption);
     }
+    .error {
+      margin: 0 0 12px;
+      padding: 8px 16px;
+      border: 2px solid var(--color-ember);
+      border-radius: var(--radius-2xl);
+      background: var(--surface);
+      font-weight: var(--font-weight-bold);
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dashboard {
-  private readonly users = signal<AdminUser[]>([]);
-  private readonly pets = signal<PetEntry[]>([]);
-  private readonly items = signal<CatalogItem[]>([]);
-  private readonly events = signal<GameEvent[]>([]);
-  private readonly log = inject(AuditLog);
-
-  protected readonly recent = computed(() => this.log.entries().slice(0, 6));
+  private readonly reports = inject(REPORTS);
+  protected readonly canReadAudit = inject(AdminAuth).can('audit:read');
+  protected readonly stats = signal<AdminStats | null>(null);
+  protected readonly recent = signal<AuditEntry[]>([]);
+  protected readonly error = signal<string | null>(null);
+  protected readonly describe = describeAudit;
+  protected readonly auditLabel = (event: string) => AUDIT_EVENTS[event] ?? event;
 
   protected readonly upcoming = computed(() =>
-    this.events()
-      .map((e) => ({ id: e.id, name: e.name, status: eventStatus(e), startDate: e.startDate }))
-      .filter((e) => e.status === 'Activo' || e.status === 'Programado')
-      .sort((a, b) => a.startDate.localeCompare(b.startDate))
-      .slice(0, 6),
+    (this.stats()?.upcomingEvents ?? []).slice(0, 6).map((e) => ({
+      id: e.id,
+      name: e.name,
+      source: EVENT_SOURCES[e.source] ?? e.source,
+      status: eventStatus(e),
+      startDate: e.startDate,
+    })),
   );
 
   protected readonly kpis = computed(() => {
-    const users = this.users();
-    const pets = this.pets();
-    const events = this.events();
-    const coins = users.reduce((sum, u) => sum + u.coins, 0);
+    const stats = this.stats();
+    const fmt = (n: number | undefined) => (n === undefined ? '…' : new Intl.NumberFormat('es').format(n));
+    const byRole = stats?.users.byRole ?? {};
+    const team = Object.entries(byRole)
+      .filter(([role]) => role !== 'user')
+      .map(([role, n]) => `${n} ${ROLES[role as AdminRole] ?? role}`)
+      .join(' · ');
+    const upcoming = stats?.upcomingEvents ?? [];
     return [
-      {
-        label: 'Usuarios',
-        value: users.length,
-        note: `${users.filter((u) => u.role !== 'user').length} en el equipo`,
-        color: 'lavender',
-      },
-      {
-        label: 'Pockais',
-        value: pets.length,
-        note: `${pets.filter((p) => p.shiny).length} shiny · ${pets.filter((p) => p.sick).length} enfermos`,
-        color: 'sunburst',
-      },
+      { label: 'Usuarios', value: fmt(stats?.users.total), note: team || 'Sin equipo', color: 'lavender' },
+      { label: 'Pockais', value: fmt(stats?.pets.total), note: 'Mascotas eclosionadas', color: 'sunburst' },
       {
         label: 'Eventos activos',
-        value: events.filter((e) => eventStatus(e) === 'Activo').length,
-        note: `${events.length} en total`,
+        value: fmt(stats ? upcoming.filter((e) => eventStatus(e) === 'Activo').length : undefined),
+        note: `${upcoming.length} en los próximos 30 días`,
         color: 'mint-pop',
       },
-      {
-        label: 'Ítems en venta',
-        value: this.items().filter((i) => i.active).length,
-        note: `${new Intl.NumberFormat('es').format(coins)} monedas en circulación`,
-        color: 'paper-white',
-      },
+      { label: 'Ítems en la tienda', value: fmt(stats?.items), note: 'Precios editables en Precios', color: 'paper-white' },
     ];
   });
 
   protected readonly rarityBars = computed(() => {
-    const pets = this.pets();
-    const max = Math.max(1, ...Object.keys(RARITIES).map((r) => pets.filter((p) => p.rarity === r).length));
+    const byRarity = this.stats()?.pets.byRarity ?? {};
+    const max = Math.max(1, ...Object.values(byRarity));
     return Object.entries(RARITIES).map(([id, label]) => {
-      const count = pets.filter((p) => p.rarity === id).length;
+      const count = byRarity[id] ?? 0;
       return { label, count, percent: (count / max) * 85 };
     });
   });
 
   constructor() {
-    const [users, pets, items, events] = [inject(USERS), inject(PETS), inject(ITEMS), inject(EVENTS)];
-    void users.list().then((rows) => this.users.set(rows));
-    void pets.list().then((rows) => this.pets.set(rows));
-    void items.list().then((rows) => this.items.set(rows));
-    void events.list().then((rows) => this.events.set(rows));
+    this.reports
+      .stats()
+      .then((stats) => this.stats.set(stats))
+      .catch((e: unknown) => this.error.set(e instanceof Error ? e.message : 'Error inesperado'));
+    if (this.canReadAudit) {
+      this.reports
+        .audit(1, 6)
+        .then((page) => this.recent.set(page.items))
+        .catch(() => undefined); // El resumen sigue útil sin la actividad.
+    }
   }
 }

@@ -1,7 +1,15 @@
 import { Routes } from '@angular/router';
-import { adminGuard } from './auth';
+import { adminGuard, permissionGuard } from './auth';
+import { permissionFor, type SectionPath } from './sections';
 
-/** Si se añade o quita una sección, actualizar ADMIN_ROUTES en scripts/postbuild.mjs. */
+const section = (path: SectionPath, loadComponent: Routes[number]['loadComponent']) => ({
+  path,
+  loadComponent,
+  canActivate: [permissionGuard],
+  data: { permission: permissionFor(path) },
+});
+
+/** Si se añade o quita una sección, actualizar sections.ts y ADMIN_ROUTES en scripts/postbuild.mjs. */
 export default [
   { path: 'login', loadComponent: () => import('./login').then((m) => m.Login) },
   {
@@ -10,13 +18,13 @@ export default [
     loadComponent: () => import('./shell').then((m) => m.Shell),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'resumen' },
-      { path: 'resumen', loadComponent: () => import('./features/dashboard').then((m) => m.Dashboard) },
-      { path: 'precios', loadComponent: () => import('./features/prices').then((m) => m.Prices) },
-      { path: 'eventos', loadComponent: () => import('./features/events').then((m) => m.Events) },
-      { path: 'usuarios', loadComponent: () => import('./features/users').then((m) => m.Users) },
-      { path: 'invitaciones', loadComponent: () => import('./features/invites').then((m) => m.Invites) },
-      { path: 'pockais', loadComponent: () => import('./features/pockais').then((m) => m.Pockais) },
-      { path: 'registro', loadComponent: () => import('./features/audit').then((m) => m.Audit) },
+      section('resumen', () => import('./features/dashboard').then((m) => m.Dashboard)),
+      section('precios', () => import('./features/prices').then((m) => m.Prices)),
+      section('eventos', () => import('./features/events').then((m) => m.Events)),
+      section('usuarios', () => import('./features/users').then((m) => m.Users)),
+      section('invitaciones', () => import('./features/invites').then((m) => m.Invites)),
+      section('pockais', () => import('./features/pockais').then((m) => m.Pockais)),
+      section('registro', () => import('./features/audit').then((m) => m.Audit)),
     ],
   },
   { path: '**', redirectTo: 'login' },

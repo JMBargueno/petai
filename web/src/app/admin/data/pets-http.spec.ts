@@ -44,10 +44,9 @@ describe('HttpPetsRepository', () => {
     expect(rows[2].owner).toBe('U2'); // displayName presente
   });
 
-  it('renombra solo si el apodo cambia, y lo audita', async () => {
+  it('renombra solo si el apodo cambia', async () => {
     const api = fakeApi([[pet(1)]], 1);
-    const audit = { record: vi.fn() };
-    const repo = new HttpPetsRepository(api, audit);
+    const repo = new HttpPetsRepository(api);
     await repo.list();
 
     const same = await repo.update('pet-1', { ...pet(1), nickname: 'Chispa' } as never);
@@ -60,7 +59,6 @@ describe('HttpPetsRepository', () => {
       method: 'PATCH',
       body: JSON.stringify({ nickname: 'Luna' }),
     });
-    expect(audit.record).toHaveBeenCalledWith('Cambio', 'pockais', 'u1@petai.local · apodo: «Chispa» → «Luna»');
   });
 
   it('ignora un apodo sin cambios o vacío sin llamar al servidor', async () => {

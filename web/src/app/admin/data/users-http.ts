@@ -1,7 +1,6 @@
 import type { AdminApi } from '../api';
-import type { AuditLog } from './audit-log';
 import type { AdminRole, AdminUser } from './models';
-import type { Repository } from './repository';
+import type { Repository } from './repository-base';
 
 interface ApiUser {
   id: string;
@@ -30,10 +29,7 @@ const toAdminUser = (u: ApiUser): AdminUser => ({ ...u, displayName: u.displayNa
 export class HttpUsersRepository implements Repository<AdminUser> {
   private readonly known = new Map<string, AdminUser>();
 
-  constructor(
-    private readonly api: Pick<AdminApi, 'request'>,
-    private readonly audit?: Pick<AuditLog, 'record'>,
-  ) {}
+  constructor(private readonly api: Pick<AdminApi, 'request'>) {}
 
   async list(): Promise<AdminUser[]> {
     const rows: AdminUser[] = [];
@@ -59,7 +55,6 @@ export class HttpUsersRepository implements Repository<AdminUser> {
       }),
     );
     this.known.set(id, updated);
-    this.audit?.record('Cambio', 'usuarios', `${updated.email} (rol: ${current.role} → ${updated.role})`);
     return updated;
   }
 
@@ -70,7 +65,4 @@ export class HttpUsersRepository implements Repository<AdminUser> {
   async remove(): Promise<void> {
     throw new Error('Las cuentas no se borran desde el panel');
   }
-
-  /** Datos reales: no hay nada que restablecer. */
-  async reset(): Promise<void> {}
 }

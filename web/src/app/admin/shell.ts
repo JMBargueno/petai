@@ -1,10 +1,9 @@
-import { ChangeDetectionStrategy, Component, InjectionToken, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AdminAuth } from './auth';
-import { AuditLog } from './data/audit-log';
-import { ROLES, type AdminRole, type Entity } from './data/models';
-import { ALL_REPOSITORIES, Repository } from './data/repository';
+import { ROLES, type AdminRole } from './data/models';
+import { SECTIONS } from './sections';
 
 @Component({
   selector: 'app-admin-shell',
@@ -13,12 +12,10 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
     <div class="shell">
       <header class="top">
         <a class="brand" routerLink="/admin"><span class="logo__mark" aria-hidden="true">P</span>Pockai <span>Panel</span></a>
-        <p class="tag demo">Usuarios e invitaciones: datos reales · resto de secciones: demostración</p>
         <div class="top__actions">
           @if (auth.user(); as user) {
             <span class="whoami">{{ user.email }} · {{ roleLabel(user.role) }}</span>
           }
-          <button class="btn btn--sm" type="button" (click)="resetDialog.showModal()">Restablecer demo</button>
           <button class="btn btn--sm btn--filled" type="button" (click)="logout()">Salir</button>
         </div>
       </header>
@@ -41,21 +38,6 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
         <router-outlet />
       </main>
     </div>
-
-    <dialog
-      #resetDialog
-      class="dialog"
-      closedby="any"
-      aria-labelledby="reset-title"
-      (close)="onResetClose(resetDialog)"
-    >
-      <h2 id="reset-title">¿Restablecer los datos de demostración?</h2>
-      <p>Se descartan los cambios hechos en este navegador en las secciones de demostración (precios, eventos, pockais). Los usuarios no se tocan.</p>
-      <form method="dialog" class="dialog__actions">
-        <button class="btn" value="cancel" autofocus>Cancelar</button>
-        <button class="btn btn--filled" value="reset">Restablecer</button>
-      </form>
-    </dialog>
   `,
   styles: `
     .shell {
@@ -99,12 +81,6 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
       font-weight: var(--font-weight-bold);
       font-size: var(--text-caption);
       letter-spacing: 0.06em;
-    }
-    .demo {
-      margin: 0;
-      border-color: transparent;
-      background: color-mix(in srgb, var(--color-sunburst) 40%, var(--surface));
-      white-space: normal;
     }
     .whoami {
       align-self: center;
@@ -154,20 +130,6 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
       min-inline-size: 0;
       padding: 28px;
     }
-    h2 {
-      margin: 0 0 8px;
-      font-size: var(--text-subheading);
-      line-height: var(--leading-subheading);
-    }
-    p {
-      margin: 0;
-    }
-    .dialog__actions {
-      display: flex;
-      justify-content: end;
-      gap: 8px;
-      margin-block-start: 24px;
-    }
     @media (width < 960px) {
       .shell {
         grid-template: 'top' auto 'side' auto 'main' 1fr / minmax(0, 1fr);
@@ -194,21 +156,9 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
 export class Shell {
   protected readonly auth = inject(AdminAuth);
   protected readonly roleLabel = (role: string) => ROLES[role as AdminRole] ?? role;
-  private readonly audit = inject(AuditLog);
   private readonly router = inject(Router);
-  private readonly repositories = ALL_REPOSITORIES.map((token) =>
-    inject(token as InjectionToken<Repository<Entity>>),
-  );
 
-  protected readonly links = [
-    { path: 'resumen', label: 'Resumen' },
-    { path: 'precios', label: 'Precios' },
-    { path: 'eventos', label: 'Eventos' },
-    { path: 'usuarios', label: 'Usuarios' },
-    { path: 'invitaciones', label: 'Invitaciones', permission: 'invites:manage' },
-    { path: 'pockais', label: 'Pockais' },
-    { path: 'registro', label: 'Registro' },
-  ].filter((link) => !link.permission || this.auth.can(link.permission));
+  protected readonly links = SECTIONS.filter((section) => this.auth.can(section.permission));
 
   constructor() {
     inject(Title).setTitle('Panel de Pockai');
@@ -218,14 +168,5 @@ export class Shell {
   protected async logout() {
     await this.auth.logout();
     void this.router.navigateByUrl('/admin/login');
-  }
-
-  protected async onResetClose(dialog: HTMLDialogElement) {
-    const confirmed = dialog.returnValue === 'reset';
-    dialog.returnValue = '';
-    if (!confirmed) return;
-    await Promise.all(this.repositories.map((r) => r.reset()));
-    this.audit.record('Sistema', 'panel', 'Datos restablecidos');
-    location.reload();
   }
 }

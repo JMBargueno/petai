@@ -1,7 +1,6 @@
 import type { AdminApi } from '../api';
-import type { AuditLog } from './audit-log';
 import type { PetEntry } from './models';
-import type { Repository } from './repository';
+import type { Repository } from './repository-base';
 
 interface ApiPetOwner {
   id: string;
@@ -29,11 +28,6 @@ interface Page {
 
 const PAGE_SIZE = 100;
 
-/** Etapas válidas del backend (`balance.leveling.stages`): mismo alfabeto que `STAGES`. */
-const STAGE_KEYS: readonly PetEntry['stage'][] = ['baby', 'juvenile', 'adult', 'final'];
-const toStage = (stage: string): PetEntry['stage'] =>
-  (STAGE_KEYS as readonly string[]).includes(stage) ? (stage as PetEntry['stage']) : 'baby';
-
 const toPetEntry = (p: ApiPet): PetEntry => ({
   id: p.id,
   nickname: p.nickname,
@@ -41,23 +35,21 @@ const toPetEntry = (p: ApiPet): PetEntry => ({
   owner: p.owner.displayName ?? p.owner.email,
   rarity: p.rarity,
   level: p.level,
-  stage: toStage(p.stage),
+  stage: p.stage,
   shiny: p.shiny,
   sick: p.sick,
+  createdAt: p.createdAt,
 });
 
 /**
  * Mascotas reales del backend (`/v1/admin/pets`). El usuario final no renombra a sus pockais:
- * desde el panel solo se cambia el apodo. No se crean ni se borran mascotas aquí, y el resto
- * de campos (nivel, etapa, rareza…) son de solo lectura.
+ * desde el panel solo se cambia el apodo (el servidor lo audita como `pet_rename`). No se crean
+ * ni se borran mascotas aquí, y el resto de campos son de solo lectura.
  */
 export class HttpPetsRepository implements Repository<PetEntry> {
   private readonly known = new Map<string, PetEntry>();
 
-  constructor(
-    private readonly api: Pick<AdminApi, 'request'>,
-    private readonly audit?: Pick<AuditLog, 'record'>,
-  ) {}
+  constructor(private readonly api: Pick<AdminApi, 'request'>) {}
 
   async list(): Promise<PetEntry[]> {
     const rows: PetEntry[] = [];
@@ -84,7 +76,6 @@ export class HttpPetsRepository implements Repository<PetEntry> {
       }),
     );
     this.known.set(id, updated);
-    this.audit?.record('Cambio', 'pockais', `${updated.owner} · apodo: «${current.nickname}» → «${updated.nickname}»`);
     return updated;
   }
 
@@ -95,7 +86,4 @@ export class HttpPetsRepository implements Repository<PetEntry> {
   async remove(): Promise<void> {
     throw new Error('Las mascotas no se borran desde el panel');
   }
-
-  /** Datos reales: no hay nada que restablecer. */
-  async reset(): Promise<void> {}
 }

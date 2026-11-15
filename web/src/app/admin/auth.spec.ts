@@ -1,9 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { Route, UrlTree, provideRouter } from '@angular/router';
+import { ActivatedRouteSnapshot, Route, UrlTree, provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdminApi, API_BASE_URL, SESSION_STORAGE } from './api';
-import { AdminAuth, adminGuard } from './auth';
-import { MOCK_STORAGE } from './data/storage';
+import { AdminAuth, adminGuard, permissionGuard } from './auth';
 
 function memoryStorage(): Storage {
   const data = new Map<string, string>();
@@ -49,7 +48,6 @@ describe('sesión del panel contra el backend', () => {
         provideRouter([]),
         { provide: API_BASE_URL, useValue: 'http://api.test' },
         { provide: SESSION_STORAGE, useValue: session },
-        { provide: MOCK_STORAGE, useValue: memoryStorage() },
       ],
     });
   });
@@ -144,5 +142,17 @@ describe('sesión del panel contra el backend', () => {
     await auth.logout();
     expect(auth.authenticated()).toBe(false);
     expect(JSON.parse(String(calls[0].init.body))).toEqual({ refreshToken: 'refresh-1' });
+  });
+
+  it('el guard por sección deja pasar con el permiso y si no manda al resumen', () => {
+    session.setItem('pockai.admin.session', JSON.stringify({ ...tokens(), user: me('moderator', ['admin:access', 'audit:read']) }));
+    const run = (permission: string) =>
+      TestBed.runInInjectionContext(() =>
+        (permissionGuard as (...args: unknown[]) => unknown)({ data: { permission } } as unknown as ActivatedRouteSnapshot, {}),
+      );
+    expect(run('audit:read')).toBe(true);
+    const denied = run('economy:manage');
+    expect(denied).toBeInstanceOf(UrlTree);
+    expect(String(denied)).toBe('/admin/resumen');
   });
 });

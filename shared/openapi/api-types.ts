@@ -3097,6 +3097,125 @@ export interface paths {
         patch: operations["AdminPetsController_rename"];
         trace?: never;
     };
+    "/v1/admin/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Métricas del resumen del panel */
+        get: operations["AdminController_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catálogo de la tienda con sus precios */
+        get: operations["AdminController_listItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/items/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Ajustar en bloque un porcentaje el precio de varios objetos (queda auditado) */
+        patch: operations["AdminController_bulkPrices"];
+        trace?: never;
+    };
+    "/v1/admin/items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cambiar el precio de un objeto (queda auditado) */
+        patch: operations["AdminController_updateItem"];
+        trace?: never;
+    };
+    "/v1/admin/species": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Especies que usa el juego (game-data, solo lectura) */
+        get: operations["AdminController_listSpecies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eventos del juego: festividades, temporadas, torneos y raids (solo lectura) */
+        get: operations["AdminController_listEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Registro de auditoría (paginado; filtros: event, userId) */
+        get: operations["AdminController_listAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3980,6 +4099,103 @@ export interface components {
         };
         CreatedInvitesDto: {
             items: components["schemas"]["InviteCodeDto"][];
+        };
+        AdminStatsUsersDto: {
+            total: number;
+            /**
+             * @example {
+             *       "user": 10,
+             *       "admin": 1
+             *     }
+             */
+            byRole: Record<string, never>;
+        };
+        AdminStatsPetsDto: {
+            total: number;
+            /**
+             * @example {
+             *       "normal": 8,
+             *       "rare": 2
+             *     }
+             */
+            byRarity: Record<string, never>;
+        };
+        AdminEventDto: {
+            /** @example festival:halloween */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            source: "festival" | "season" | "tournament" | "raid";
+            /** @example 2026-10-31 */
+            startDate: string;
+            /** @example 2026-10-31 */
+            endDate: string;
+            enabled: boolean;
+            /** @description Ya terminó por su estado (torneo resuelto, raid liquidada…) */
+            finished: boolean;
+            detail: string;
+        };
+        AdminStatsDto: {
+            users: components["schemas"]["AdminStatsUsersDto"];
+            pets: components["schemas"]["AdminStatsPetsDto"];
+            items: number;
+            upcomingEvents: components["schemas"]["AdminEventDto"][];
+        };
+        AdminItemDto: {
+            id: string;
+            /** @example food */
+            kind: string;
+            name: string;
+            description: string;
+            priceCoins: number;
+            priceGems: number;
+        };
+        BulkPriceDto: {
+            ids: string[];
+            /** @description Porcentaje entero de ajuste */
+            percent: number;
+            /** @enum {string} */
+            currency: "priceCoins" | "priceGems";
+        };
+        BulkPriceResultDto: {
+            items: components["schemas"]["AdminItemDto"][];
+            /** @description Objetos cuyo precio cambió */
+            changed: number;
+        };
+        UpdateItemPriceDto: {
+            priceCoins?: number;
+            priceGems?: number;
+        };
+        AdminSpeciesDto: {
+            id: string;
+            name: string;
+            description: string;
+            element: string;
+            rarity: string;
+            hp: number;
+            atk: number;
+            def: number;
+            vel: number;
+            esp: number;
+            favoriteFood: string;
+            spriteKey: string;
+        };
+        AdminAuditEntryDto: {
+            id: string;
+            userId: string;
+            userEmail: string | null;
+            /** @example role_change */
+            event: string;
+            ip: string | null;
+            metadata: Record<string, never> | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminAuditListDto: {
+            items: components["schemas"]["AdminAuditEntryDto"][];
+            total: number;
+            page: number;
+            pageSize: number;
         };
     };
     responses: never;
@@ -8943,6 +9159,154 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AdminController_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminStatsDto"];
+                };
+            };
+        };
+    };
+    AdminController_listItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminItemDto"][];
+                };
+            };
+        };
+    };
+    AdminController_bulkPrices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkPriceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkPriceResultDto"];
+                };
+            };
+        };
+    };
+    AdminController_updateItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateItemPriceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminItemDto"];
+                };
+            };
+        };
+    };
+    AdminController_listSpecies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSpeciesDto"][];
+                };
+            };
+        };
+    };
+    AdminController_listEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEventDto"][];
+                };
+            };
+        };
+    };
+    AdminController_listAudit: {
+        parameters: {
+            query?: {
+                userId?: unknown;
+                event?: unknown;
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAuditListDto"];
+                };
             };
         };
     };
