@@ -82,6 +82,10 @@ export const envSchema = z.object({
   OTEL_METRICS_EXPORTER: z.string().default('prometheus'),
   // Puerto del servidor de métricas (aislado del 3000). 0 = puerto efímero (tests).
   METRICS_PORT: z.coerce.number().int().min(0).default(9464),
+  // ---- Actualizaciones de la app de escritorio ----
+  // PAT de GitHub (solo lectura de Contents) para leer los releases del repo privado. Sin él no hay updates.
+  GITHUB_RELEASES_TOKEN: z.string().optional(),
+  GITHUB_RELEASES_REPO: z.string().default('JMBargueno/petai'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

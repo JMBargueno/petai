@@ -2141,6 +2141,80 @@
         ]
       }
     },
+    "/v1/desktop/updates/download/{assetId}": {
+      "get": {
+        "operationId": "DesktopUpdatesController_download",
+        "parameters": [
+          {
+            "name": "assetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": 123456,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirección a la URL temporal de descarga"
+          },
+          "404": {
+            "description": "El asset no pertenece al release actual"
+          }
+        },
+        "summary": "Redirige a la descarga del instalador de una actualización. Público.",
+        "tags": [
+          "Desktop updates"
+        ]
+      }
+    },
+    "/v1/desktop/updates/{target}/{arch}/{currentVersion}": {
+      "get": {
+        "operationId": "DesktopUpdatesController_check",
+        "parameters": [
+          {
+            "name": "target",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "windows",
+              "type": "string"
+            }
+          },
+          {
+            "name": "arch",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "x86_64",
+              "type": "string"
+            }
+          },
+          {
+            "name": "currentVersion",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "0.1.0",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hay actualización (formato dinámico del updater de Tauri)"
+          },
+          "204": {
+            "description": "No hay actualización"
+          }
+        },
+        "summary": "Comprueba si hay una versión más nueva de la app de escritorio. Público.",
+        "tags": [
+          "Desktop updates"
+        ]
+      }
+    },
     "/v1/missions": {
       "get": {
         "operationId": "MissionsController_getMissions",

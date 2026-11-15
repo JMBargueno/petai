@@ -17,6 +17,7 @@
   import { PawPrint, Bell, X } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
+  import { updateState, startAutoCheck, checkForUpdates } from './lib/updater';
 
   let user: any = null;
   let pets: any[] = [];
@@ -32,6 +33,29 @@
     panelRequest = { dest: 'settings', sub: 'notifications', n: ++requestN };
     isPanelOpen = true;
   }
+  function openAbout() {
+    panelRequest = { dest: 'settings', sub: 'about', n: ++requestN };
+    isPanelOpen = true;
+  }
+
+  // Actualizaciones: la mascota avisa una sola vez por versión nueva.
+  let announcedVersion = '';
+  $: if ($updateState.status === 'available' && $updateState.version !== announcedVersion) {
+    announcedVersion = $updateState.version;
+    const text = `¡Ha salido mi versión ${announcedVersion}! Actualízame en Ajustes › Acerca de.`;
+    showBubble(text);
+    notifyNow('Nueva versión de Pockai', text);
+  }
+
+  /** Comprobación pedida desde la bandeja: la mascota cuenta el resultado. */
+  async function checkUpdatesFromTray() {
+    openAbout();
+    await checkForUpdates();
+    const s = $updateState;
+    if (s.status === 'upToDate') showBubble('¡Ya estoy en la última versión!');
+    else if (s.status === 'error') showBubble(s.message);
+  }
+
   let bubbleText = '';
   let bubbleTimer: any = null;
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
@@ -196,6 +220,8 @@
 
   let stopClickThrough: () => void = () => {};
   let stopSessionExpired: () => void = () => {};
+  let stopAutoUpdate: () => void = () => {};
+  let stopTrayUpdates: () => void = () => {};
   let needsPoll: any = null;
 
   // Las constantes vitales solo se recalculan al consultar al servidor (tick perezoso):
@@ -240,6 +266,13 @@
     });
     needsPoll = setInterval(pollPet, 60_000);
     loadInitialData();
+    stopAutoUpdate = startAutoCheck();
+    if ('__TAURI_INTERNALS__' in window) {
+      import('@tauri-apps/api/event')
+        .then(({ listen }) => listen('check-updates', () => void checkUpdatesFromTray()))
+        .then((unlisten) => (stopTrayUpdates = unlisten))
+        .catch(() => {});
+    }
   });
 
   onDestroy(() => {
@@ -248,6 +281,8 @@
     stopHeartbeat();
     stopClickThrough();
     stopSessionExpired();
+    stopAutoUpdate();
+    stopTrayUpdates();
     stopNotificationHandler();
     closeSocket();
   });

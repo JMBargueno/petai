@@ -4,6 +4,8 @@ name: Release (instaladores de escritorio)
 # Requiere la variable de repositorio PETAI_API_URL (https://api.tudominio.com, sin /v1).
 # Sin certificados de firma los instaladores saldrán sin firmar (Windows avisará de «editor desconocido»);
 # para firmar, añade los secretos de Tauri/Apple (ver docs/DEPLOY.md).
+# Auto-update: requiere los secretos TAURI_SIGNING_PRIVATE_KEY (+ _PASSWORD) y la clave pública en
+# desktop/src-tauri/tauri.conf.json (plugins.updater.pubkey). Al PUBLICAR el borrador, los clientes se actualizan.
 on:
   push:
     tags: ['v*']
@@ -20,7 +22,8 @@ jobs:
           - os: windows-latest
             args: '--bundles nsis'
           - os: macos-latest
-            args: '--bundles dmg'
+            # El updater de macOS usa el .app.tar.gz (bundle «app»).
+            args: '--bundles app,dmg'
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -36,13 +39,40 @@ jobs:
         with:
           workspaces: desktop/src-tauri
       - run: pnpm install --frozen-lockfile
+      # Updater: apunta el endpoint al backend de producción (que hace de proxy de los releases del
+      # repo privado) y genera los artefactos firmados (.sig + latest.json). Solo en CI, para que los
+      # builds locales no exijan la clave privada. Se parchea tauri.conf.json en el runner (efímero)
+      # para que tauri-action lo lea tal cual al decidir qué artefactos subir.
+      - name: Configurar updater para la release
+        shell: bash
+        env:
+          PETAI_API_URL: ${{ vars.PETAI_API_URL }}
+          HAS_SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        run: |
+          if [ -z "$PETAI_API_URL" ]; then echo "::error::Falta la variable de repositorio PETAI_API_URL"; exit 1; fi
+          if [ "$HAS_SIGNING_KEY" != "true" ]; then echo "::error::Falta el secreto TAURI_SIGNING_PRIVATE_KEY (ver docs/DEPLOY.md)"; exit 1; fi
+          node -e '
+            const fs = require("fs");
+            const conf = JSON.parse(fs.readFileSync("desktop/src-tauri/tauri.conf.json", "utf8"));
+            if (!conf.plugins?.updater?.pubkey) { console.error("::error::plugins.updater.pubkey vacío en tauri.conf.json"); process.exit(1); }
+            const api = process.env.PETAI_API_URL.replace(/\/+$/, "");
+            conf.bundle.createUpdaterArtifacts = true;
+            conf.plugins.updater.endpoints = [api + "/v1/desktop/updates/{{target}}/{{arch}}/{{current_version}}"];
+            fs.writeFileSync("desktop/src-tauri/tauri.conf.json", JSON.stringify(conf, null, 2));
+            console.log("Updater:", JSON.stringify({ bundle: { createUpdaterArtifacts: true }, plugins: { updater: conf.plugins.updater } }, null, 2));
+          '
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_API_URL: ${{ vars.PETAI_API_URL }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: desktop
           tagName: ${{ github.ref_name }}
           releaseName: 'PetAI ${{ github.ref_name }}'
+          # Borrador: los clientes NO ven la versión hasta que lo publiques (el backend lee releases/latest).
           releaseDraft: true
+          # Sube latest.json con las firmas de cada plataforma (lo lee el backend).
+          includeUpdaterJson: true
           args: ${{ matrix.args }}

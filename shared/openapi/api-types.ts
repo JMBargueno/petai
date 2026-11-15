@@ -1165,6 +1165,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/desktop/updates/download/{assetId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Redirige a la descarga del instalador de una actualización. Público. */
+        get: operations["DesktopUpdatesController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/desktop/updates/{target}/{arch}/{currentVersion}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comprueba si hay una versión más nueva de la app de escritorio. Público. */
+        get: operations["DesktopUpdatesController_check"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/missions": {
         parameters: {
             query?: never;
@@ -5338,6 +5372,62 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DesktopUpdatesController_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assetId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirección a la URL temporal de descarga */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El asset no pertenece al release actual */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DesktopUpdatesController_check: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                target: string;
+                arch: string;
+                currentVersion: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hay actualización (formato dinámico del updater de Tauri) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay actualización */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
