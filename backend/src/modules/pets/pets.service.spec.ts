@@ -447,4 +447,32 @@ describe('PetsService', () => {
       expect(mockPrismaService.pet.update).not.toHaveBeenCalled();
     });
   });
+
+  describe('setInHabitat', () => {
+    it('actualiza el estado de hábitat y emite actualización en tiempo real', async () => {
+      mockPrismaService.pet.update.mockClear();
+      jest.spyOn(service, 'getPetById').mockResolvedValue({
+        id: 'p1',
+        userId: 'u1',
+        inHabitat: false,
+      } as any);
+
+      mockPrismaService.pet.update.mockResolvedValue({
+        id: 'p1',
+        userId: 'u1',
+        inHabitat: true,
+      });
+
+      const res = await service.setInHabitat('u1', 'p1', true);
+
+      expect(mockPrismaService.pet.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'p1' },
+          data: { inHabitat: true },
+        }),
+      );
+      expect(mockRealtimeGateway.emitPetUpdate).toHaveBeenCalled();
+      expect((res as any).inHabitat).toBe(true);
+    });
+  });
 });

@@ -4,6 +4,7 @@ import { PetsService } from './pets.service';
 import { BondingService } from '../bonding/bonding.service';
 import { BondingDetailResponseDto, BondingFieldsDto } from '../bonding/dto/bonding.dto';
 import { UpdateDesktopSkillsDto } from './dto/desktop-skills.dto';
+import { UpdateInHabitatDto } from './dto/in-habitat.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 
@@ -114,5 +115,15 @@ export class PetsController {
     @Body() body: UpdateDesktopSkillsDto,
   ) {
     return this.petsService.updateDesktopSkills(user.id, petId, body.skills);
+  }
+
+  @Patch(':id/in-habitat')
+  @ApiOperation({ summary: 'Actualizar el estado de reclusión en el hábitat (casa) de la mascota' })
+  updateInHabitat(
+    @CurrentUser() user: any,
+    @Param('id') petId: string,
+    @Body() body: UpdateInHabitatDto,
+  ) {
+    return this.petsService.setInHabitat(user.id, petId, body.inHabitat);
   }
 }

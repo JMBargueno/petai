@@ -319,8 +319,39 @@
     droppedFile = ce.detail;
   }
 
+  async function handleMoveToHabitat(e: Event) {
+    const ce = e as CustomEvent<{ petId: string }>;
+    const petId = ce.detail?.petId;
+    if (!currentPet || currentPet.id !== petId) return;
+    try {
+      const updated = await api.setPetInHabitat(petId, true);
+      currentPet = updated;
+      const idx = pets.findIndex((p) => p.id === petId);
+      if (idx !== -1) pets[idx] = updated;
+      showBubble('¡A descansar a mi casita!');
+    } catch (err: any) {
+      console.error('Error enviando al hábitat:', err);
+    }
+  }
+
+  async function handleViewportDrop(e: DragEvent) {
+    const data = e.dataTransfer?.getData('application/petai-pet');
+    if (data === 'exit-habitat' && currentPet && currentPet.inHabitat) {
+      try {
+        const updated = await api.setPetInHabitat(currentPet.id, false);
+        currentPet = updated;
+        const idx = pets.findIndex((p) => p.id === currentPet.id);
+        if (idx !== -1) pets[idx] = updated;
+        showBubble('¡De vuelta a explorar el escritorio!');
+      } catch (err: any) {
+        console.error('Error sacando del hábitat:', err);
+      }
+    }
+  }
+
   onMount(() => {
     window.addEventListener('petai:file_dropped', handleFileDropped);
+    window.addEventListener('petai:move_to_habitat', handleMoveToHabitat);
     stopClickThrough = startClickThrough();
     // Refresh token rechazado (caducado o revocado): vuelta a la pantalla de acceso
     stopSessionExpired = onSessionExpired(() => {
@@ -340,6 +371,7 @@
 
   onDestroy(() => {
     window.removeEventListener('petai:file_dropped', handleFileDropped);
+    window.removeEventListener('petai:move_to_habitat', handleMoveToHabitat);
     clearInterval(needsPoll);
     clearTimeout(bubbleTimer);
     stopHeartbeat();
@@ -352,7 +384,11 @@
   });
 </script>
 
-<main class="app-viewport">
+<main
+  class="app-viewport"
+  on:dragover|preventDefault
+  on:drop={handleViewportDrop}
+>
   <!-- Botón flotante para alternar panel de control -->
   <button
     class="btn glass toggle-panel-pill"
@@ -373,8 +409,8 @@
     {#if $unreadCount > 0}<span class="notif-badge">{$unreadCount}</span>{/if}
   </button>
 
-  <!-- Mascota Interactiva Flotante -->
-  {#if currentPet}
+  <!-- Mascota Interactiva Flotante (oculta si está en su Hábitat/casa) -->
+  {#if currentPet && !currentPet.inHabitat}
     <PetView
       bind:this={petViewRef}
       pet={currentPet}
