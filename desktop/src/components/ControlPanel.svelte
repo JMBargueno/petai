@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from 'svelte';
-  import { api } from '../lib/api';
+  import { api, isTerminalError } from '../lib/api';
+  import { petVoice } from '../lib/petVoice';
   import { eggLibrary } from '../lib/sprites';
   import MinigamesTab from './MinigamesTab.svelte';
   import AiTab from './AiTab.svelte';
@@ -58,9 +59,34 @@ import TournamentTab from './TournamentTab.svelte';
     window.removeEventListener('mouseup', endPanelDrag);
   }
 
-  onDestroy(endPanelDrag);
-
   const dispatch = createEventDispatcher();
+
+  // Errores de las acciones: nunca con alert()/confirm() nativos (en Tauri abren un diálogo modal
+  // "tauri.localhost dice" que congela la ventana). Los de negocio los dice la mascota en su
+  // bocadillo; los terminales (sin conexión, servidor caído, sesión) van a un aviso en el panel.
+  let panelError = '';
+  let panelErrorTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function showPanelError(message: string) {
+    panelError = message;
+    if (panelErrorTimer) clearTimeout(panelErrorTimer);
+    panelErrorTimer = setTimeout(() => (panelError = ''), 6000);
+  }
+
+  function reportError(err: unknown) {
+    const message = err instanceof Error && err.message ? err.message : 'Algo ha fallado';
+    if (pet && !isTerminalError(err)) {
+      dispatch('bubble', petVoice(message));
+    } else {
+      // fetch lanza TypeError cuando no hay red o el servidor no responde
+      showPanelError(err instanceof TypeError ? 'Sin conexión con el servidor. Inténtalo de nuevo en un momento.' : message);
+    }
+  }
+
+  onDestroy(() => {
+    endPanelDrag();
+    if (panelErrorTimer) clearTimeout(panelErrorTimer);
+  });
 
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
   const NAV = [
@@ -126,7 +152,7 @@ import TournamentTab from './TournamentTab.svelte';
       dispatch('actionTriggered', 'eat');
       refreshInventory();
     } catch (err: any) {
-      alert(err.message);
+      reportError(err);
     }
   }
 
@@ -137,7 +163,7 @@ import TournamentTab from './TournamentTab.svelte';
       dispatch('petUpdated', updated);
       dispatch('actionTriggered', 'happy');
     } catch (err: any) {
-      alert(err.message);
+      reportError(err);
     }
   }
 
@@ -149,7 +175,7 @@ import TournamentTab from './TournamentTab.svelte';
         : await api.sleepPet(pet.id);
       dispatch('petUpdated', updated);
     } catch (err: any) {
-      alert(err.message);
+      reportError(err);
     }
   }
 
@@ -168,7 +194,7 @@ import TournamentTab from './TournamentTab.svelte';
         dispatch('petUpdated', newPet);
         dispatch('refreshEggs');
       } catch (err: any) {
-        alert(err.message);
+        reportError(err);
       } finally {
         isShaking = false;
         isCracking = false;
@@ -183,7 +209,7 @@ import TournamentTab from './TournamentTab.svelte';
       dispatch('refreshEggs');
       dispatch('refreshUser');
     } catch (err: any) {
-      alert(err.message);
+      reportError(err);
     }
   }
 
@@ -193,7 +219,7 @@ import TournamentTab from './TournamentTab.svelte';
       dispatch('refreshUser');
       refreshInventory();
     } catch (err: any) {
-      alert(err.message);
+      reportError(err);
     }
   }
 
@@ -275,6 +301,13 @@ import TournamentTab from './TournamentTab.svelte';
           {#each current.subs as s (s[0])}
             <button role="tab" aria-selected={sub === s[0]} class:active={sub === s[0]} on:click={() => (sub = s[0])}>{s[1]}</button>
           {/each}
+        </div>
+      {/if}
+
+      {#if panelError}
+        <div class="error-msg panel-error" role="alert">
+          <span>{panelError}</span>
+          <button class="btn btn--ghost btn--icon" aria-label="Cerrar aviso" on:click={() => (panelError = '')}><X size={14} /></button>
         </div>
       {/if}
 
@@ -810,6 +843,16 @@ import TournamentTab from './TournamentTab.svelte';
     border-radius: var(--radius-2xl);
     font-size: 12px;
     margin-bottom: 10px;
+  }
+  .panel-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 10px 12px 0;
+  }
+  .panel-error .btn {
+    color: inherit;
   }
   .empty-msg {
     font-size: 12px;

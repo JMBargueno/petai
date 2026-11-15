@@ -181,8 +181,18 @@
     }
   }
 
+  // Confirmación en dos pasos en el propio botón (sin confirm() nativo, que congela la ventana en Tauri)
+  let confirmForgetAll = false;
+  let confirmForgetTimer: ReturnType<typeof setTimeout> | null = null;
+
   async function forgetAll() {
-    if (!confirm('¿Borrar todos los recuerdos de tu mascota? No se puede deshacer.')) return;
+    if (!confirmForgetAll) {
+      confirmForgetAll = true;
+      confirmForgetTimer = setTimeout(() => (confirmForgetAll = false), 4000);
+      return;
+    }
+    confirmForgetAll = false;
+    if (confirmForgetTimer) clearTimeout(confirmForgetTimer);
     try {
       await api.forgetAllMemories(pet.id);
       await loadMemories();
@@ -595,7 +605,7 @@
               </li>
             {/each}
           </ul>
-          <button class="danger small" on:click={forgetAll}>Olvidar todo</button>
+          <button class="danger small" on:click={forgetAll}>{confirmForgetAll ? '¿Seguro? No se puede deshacer: pulsa otra vez' : 'Olvidar todo'}</button>
         {/if}
       {/if}
     </div>
