@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.SportsMartialArts
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -43,8 +44,9 @@ import com.petai.app.ui.play.PlayViewModel
 import com.petai.app.ui.play.PlayViewModelFactory
 import com.petai.app.ui.shop.ShopScreen
 import com.petai.app.ui.rewards.RewardsScreen
+import com.petai.app.ui.raid.RaidScreen
 
-private enum class Tab(val label: String) { Pet("Mascota"), Chat("Chat"), Play("Jugar"), Rewards("Recompensas"), Habitat("Hábitat"), Shop("Tienda"), Account("Cuenta") }
+private enum class Tab(val label: String) { Pet("Mascota"), Chat("Chat"), Play("Jugar"), Rewards("Recompensas"), Habitat("Hábitat"), Raid("Raid"), Shop("Tienda"), Account("Cuenta") }
 
 @Composable
 fun AppRoot(vm: AppViewModel) {
@@ -82,6 +84,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                                     Tab.Play -> Icons.Default.SportsEsports
                                     Tab.Rewards -> Icons.Default.EmojiEvents
                                     Tab.Habitat -> Icons.Default.Home
+                                    Tab.Raid -> Icons.Default.SportsMartialArts
                                     Tab.Shop -> Icons.Default.ShoppingBag
                                     Tab.Account -> Icons.Default.AccountCircle
                                 },
@@ -141,6 +144,14 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Eclosiona primero a tu mascota 🥚") }
                     } else {
                         HabitatScreen(app.service, onChanged = { vm.refreshAll() })
+                    }
+                }
+                Tab.Raid -> {
+                    val pet = state.pet
+                    if (pet == null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Eclosiona primero a tu mascota 🥚") }
+                    } else {
+                        RaidScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
                     }
                 }
                 Tab.Account -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice)

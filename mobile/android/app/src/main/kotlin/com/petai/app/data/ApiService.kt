@@ -153,4 +153,13 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     suspend fun removeHabitatFurniture(furnitureId: String) {
         api.send("DELETE", "/habitat/furniture/$furnitureId")
     }
+
+    // ── Raid Boss (Paso 5, feature 013) ─────────────────────────────────────────
+    suspend fun raidCurrent(): RaidCurrent = api.request("GET", "/raid/current")
+    suspend fun raidAttack(petId: String): RaidAttackResponse =
+        api.request("POST", "/raid/attack", obj("petId" to petId))
+    suspend fun raidLeaderboard(limit: Int = 100): RaidLeaderboard =
+        api.request("GET", "/raid/leaderboard?limit=$limit")
+    suspend fun raidHistory(limit: Int = 10): List<RaidHistoryEntry> =
+        api.json.decodeFromString(ListSerializer(RaidHistoryEntry.serializer()), api.send("GET", "/raid/history?limit=$limit"))
 }
