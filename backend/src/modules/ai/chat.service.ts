@@ -1,5 +1,6 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, Optional } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
+import { ExclusiveLockService } from '../../redis/exclusive-lock.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PetsService } from '../pets/pets.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
@@ -35,14 +36,15 @@ const MAX_TOOL_ROUNDS = 3;
 const LOCAL_TURN_TTL_MS = 5 * 60 * 1000;
 const LOCAL_MAX_TICKETS = 200;
 const LOCAL_MAX_REPLY_CHARS = 4000;
+/** TTL del guard "una respuesta en curso por usuario" (R-02): cubre respuestas de varios turns de
+ * herramientas sin atrapar el guard si el stream se abandona. */
+const INFLIGHT_LOCK_TTL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   // Ventana deslizante: Redis (compartida entre instancias) con respaldo en memoria por instancia.
   private readonly hits = new Map<string, number[]>();
-  // Una respuesta en curso por usuario (evita ráfagas paralelas que disparan el gasto)
-  private readonly active = new Set<string>();
   // Turnos del modo Hermes local pendientes de sincronizar (un solo uso, en memoria)
   private readonly localTurns = new Map<string, { userId: string; petId: string; message: string; expiresAt: number }>();
 
@@ -55,6 +57,7 @@ export class ChatService {
     private readonly agent: AgentService,
     private readonly usage: UsageService,
     private readonly bonding: BondingService,
+    private readonly exclusiveLock: ExclusiveLockService,
     @Optional() private readonly redis?: RedisService,
     @Optional() private readonly environmental?: EnvironmentalService,
   ) {}
@@ -321,11 +324,13 @@ export class ChatService {
     signal?: AbortSignal,
     agentCtx?: AgentContext,
   ): AsyncGenerator<ChatStreamEvent> {
-    if (this.active.has(userId)) {
+    // Una respuesta en curso por usuario (guard distribuido, R-02): evita ráfagas paralelas que
+    // disparan el gasto de LLM, respetado entre réplicas vía Redis (fallback en memoria).
+    const inflightLock = await this.exclusiveLock.acquire('chat', userId, INFLIGHT_LOCK_TTL_MS);
+    if (!inflightLock.ok) {
       yield { type: 'error', message: 'Ya hay una respuesta en curso; espera a que termine' };
       return;
     }
-    this.active.add(userId);
 
     const guard = new OutputGuard();
     let tokens = 0;
@@ -399,7 +404,7 @@ export class ChatService {
       this.logger.warn(`Fallo del proveedor de IA: ${err?.message}`);
       yield { type: 'error', message: err?.message || 'Error del proveedor de IA' };
     } finally {
-      this.active.delete(userId);
+      await this.exclusiveLock.release('chat', userId, inflightLock.token);
       // Cuota: se contabiliza lo consumido aunque la respuesta se bloquee o falle a medias
       const used = tokens > 0 ? tokens : this.estimateTokens(messages, guard.full);
       await this.usage.record(userId, used).catch((e) => this.logger.warn(`No se pudo registrar el uso: ${e?.message}`));
