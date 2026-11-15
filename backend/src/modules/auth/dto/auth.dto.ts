@@ -9,6 +9,9 @@ export class RegisterDto {
 
   @ApiProperty({ example: 'EntrenadorPet', required: false, description: 'Nombre mostrado del jugador' })
   displayName?: string;
+
+  @ApiProperty({ example: 'ABCD-EF23', required: false, description: 'Código de invitación (obligatorio si el registro es solo con invitación)' })
+  inviteCode?: string;
 }
 
 export class LoginDto {

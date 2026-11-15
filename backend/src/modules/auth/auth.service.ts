@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AuthThrottleService } from './auth-throttle.service';
+import { InvitesService } from '../invites/invites.service';
 import { changePasswordSchema, loginSchema, parseOrBadRequest, refreshSchema, registerSchema } from './dto/auth.schemas';
 
 const ARGON_OPTIONS = { type: argon2.argon2id, memoryCost: 65536, timeCost: 3 } as const;
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly throttle: AuthThrottleService,
     private readonly realtime: RealtimeGateway,
+    private readonly invites: InvitesService,
   ) {}
 
   /** Hash de relleno: se verifica cuando el correo no existe para que el tiempo de respuesta no lo delate. */
@@ -43,6 +45,12 @@ export class AuthService {
     await this.throttle.consume(`register:${ip}`, l.registerPerIp, l.registerWindowMs);
     const dto = parseOrBadRequest(registerSchema, raw);
 
+    // Modo "solo con invitación": sin código no se registra. Con el modo desactivado el código se ignora.
+    const inviteOnly = await this.invites.isInviteOnly();
+    if (inviteOnly && !dto.inviteCode) {
+      throw new ForbiddenException('El registro requiere un código de invitación');
+    }
+
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) {
       throw new ConflictException('El correo electrónico ya está registrado');
@@ -50,30 +58,39 @@ export class AuthService {
 
     const passwordHash = await argon2.hash(dto.password, ARGON_OPTIONS);
 
+    // Usuario, huevo inicial y canje de la invitación van en la misma transacción: si el código no
+    // es válido (o se agota en una carrera), no queda ningún usuario a medias.
     let user;
     try {
-      user = await this.prisma.user.create({
-        data: {
-          email: dto.email,
-          passwordHash,
-          displayName: dto.displayName || dto.email.split('@')[0].slice(0, 50),
-          coins: 100,
-          gems: 10,
-          pityCounter: { create: { sinceSuperRare: 0, sinceLegendary: 0 } },
-        },
-        select: { id: true, email: true, role: true, displayName: true, coins: true, gems: true },
+      user = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            email: dto.email,
+            passwordHash,
+            displayName: dto.displayName || dto.email.split('@')[0].slice(0, 50),
+            coins: 100,
+            gems: 10,
+            pityCounter: { create: { sinceSuperRare: 0, sinceLegendary: 0 } },
+          },
+          select: { id: true, email: true, role: true, displayName: true, coins: true, gems: true },
+        });
+
+        if (inviteOnly && dto.inviteCode) {
+          await this.invites.redeem(tx, dto.inviteCode, created.id);
+        }
+
+        // Otorgar un huevo inicial de bienvenida al usuario recién registrado
+        const now = new Date();
+        await tx.egg.create({
+          data: { userId: created.id, eggType: 'starter', startedAt: now, hatchesAt: now },
+        });
+        return created;
       });
     } catch (err: any) {
       // Dos registros simultáneos con el mismo correo: el índice único evita el duplicado
       if (err?.code === 'P2002') throw new ConflictException('El correo electrónico ya está registrado');
       throw err;
     }
-
-    // Otorgar un huevo inicial de bienvenida al usuario recién registrado
-    const now = new Date();
-    await this.prisma.egg.create({
-      data: { userId: user.id, eggType: 'starter', startedAt: now, hatchesAt: now },
-    });
 
     const tokens = await this.generateTokens(user.id, user.email, user.displayName);
     return { ...tokens, user };

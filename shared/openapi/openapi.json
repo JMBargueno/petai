@@ -108,6 +108,28 @@
         ]
       }
     },
+    "/v1/auth/registration-config": {
+      "get": {
+        "operationId": "AuthController_registrationConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationConfigDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Configuración pública del registro (¿hace falta invitación?)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/v1/auth/register": {
       "post": {
         "operationId": "AuthController_register",
@@ -6299,6 +6321,197 @@
           "Admin"
         ]
       }
+    },
+    "/v1/admin/registration-settings": {
+      "get": {
+        "operationId": "AdminInvitesController_getSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajustes del registro (¿solo con invitación?)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminInvitesController_setSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar el registro solo con invitación (queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/invites": {
+      "get": {
+        "operationId": "AdminInvitesController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "active",
+                "used",
+                "revoked",
+                "expired"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar códigos de invitación (paginado; filtro: status)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "operationId": "AdminInvitesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvitesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedInvitesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar códigos de invitación",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/invites/{id}/revoke": {
+      "post": {
+        "operationId": "AdminInvitesController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteCodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revocar un código de invitación (idempotente)",
+        "tags": [
+          "Admin"
+        ]
+      }
     }
   },
   "info": {
@@ -6414,6 +6627,18 @@
           "events"
         ]
       },
+      "RegistrationConfigDto": {
+        "type": "object",
+        "properties": {
+          "inviteRequired": {
+            "type": "boolean",
+            "description": "Si es true, el registro exige un código de invitación"
+          }
+        },
+        "required": [
+          "inviteRequired"
+        ]
+      },
       "RegisterDto": {
         "type": "object",
         "properties": {
@@ -6431,6 +6656,11 @@
             "type": "string",
             "example": "EntrenadorPet",
             "description": "Nombre mostrado del jugador"
+          },
+          "inviteCode": {
+            "type": "string",
+            "example": "ABCD-EF23",
+            "description": "Código de invitación (obligatorio si el registro es solo con invitación)"
           }
         },
         "required": [
@@ -7825,6 +8055,173 @@
         "required": [
           "openings",
           "total"
+        ]
+      },
+      "RegistrationSettingsDto": {
+        "type": "object",
+        "properties": {
+          "inviteOnly": {
+            "type": "boolean",
+            "description": "Si es true, el registro exige un código de invitación válido"
+          }
+        },
+        "required": [
+          "inviteOnly"
+        ]
+      },
+      "InviteCreatorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName"
+        ]
+      },
+      "InviteCodeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "example": "ABCD-EF23"
+          },
+          "maxUses": {
+            "type": "number"
+          },
+          "usedCount": {
+            "type": "number"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InviteCreatorDto"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "used",
+              "revoked",
+              "expired"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "maxUses",
+          "usedCount",
+          "expiresAt",
+          "revokedAt",
+          "note",
+          "createdAt",
+          "createdBy",
+          "status"
+        ]
+      },
+      "InviteListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InviteCodeDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "CreateInvitesDto": {
+        "type": "object",
+        "properties": {
+          "maxUses": {
+            "type": "number",
+            "default": 1,
+            "minimum": 1,
+            "description": "Número de registros que permite cada código"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Caducidad (opcional, futura)"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Nota interna (para quién es la invitación)"
+          },
+          "count": {
+            "type": "number",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Cuántos códigos generar"
+          }
+        }
+      },
+      "CreatedInvitesDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InviteCodeDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       }
     }

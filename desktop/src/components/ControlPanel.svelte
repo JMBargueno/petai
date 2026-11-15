@@ -120,6 +120,8 @@ import TournamentTab from './TournamentTab.svelte';
   let authEmail = '';
   let authPassword = '';
   let authDisplayName = '';
+  let authInviteCode = '';
+  let inviteRequired = false;
   let authError = '';
   let isLoading = false;
 
@@ -136,7 +138,10 @@ import TournamentTab from './TournamentTab.svelte';
       if (isLoginMode) {
         await api.login(authEmail, authPassword);
       } else {
-        await api.register(authEmail, authPassword, authDisplayName || undefined);
+        if (inviteRequired && !authInviteCode.trim()) {
+          throw new Error('El registro requiere un código de invitación');
+        }
+        await api.register(authEmail, authPassword, authDisplayName || undefined, authInviteCode || undefined);
       }
       dispatch('authSuccess');
     } catch (err: any) {
@@ -144,6 +149,13 @@ import TournamentTab from './TournamentTab.svelte';
     } finally {
       isLoading = false;
     }
+  }
+
+  /** Al pasar a "Crear cuenta" se consulta si el registro exige invitación. */
+  async function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    authError = '';
+    if (!isLoginMode) inviteRequired = (await api.getRegistrationConfig()).inviteRequired;
   }
 
   async function handleFeed(itemId: string) {
@@ -277,11 +289,32 @@ import TournamentTab from './TournamentTab.svelte';
           <input class="input" id="auth-pass" type="password" bind:value={authPassword} placeholder="••••••••" />
         </div>
 
+        {#if !isLoginMode}
+          <div class="form-group">
+            <label for="auth-invite">Código de invitación{inviteRequired ? '' : ' (opcional)'}</label>
+            <input
+              class="input"
+              id="auth-invite"
+              type="text"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              maxlength="32"
+              required={inviteRequired}
+              bind:value={authInviteCode}
+              placeholder="ABCD-EF23"
+            />
+            {#if inviteRequired}
+              <small class="subtitle">El registro está limitado: necesitas un código de invitación.</small>
+            {/if}
+          </div>
+        {/if}
+
         <button class="btn btn--primary block" on:click={handleAuth} disabled={isLoading}>
           {isLoading ? 'Cargando…' : isLoginMode ? 'Entrar' : 'Registrarse'}
         </button>
 
-        <button class="btn btn--ghost block" on:click={() => (isLoginMode = !isLoginMode)}>
+        <button class="btn btn--ghost block" on:click={toggleAuthMode}>
           {isLoginMode ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
         </button>
 

@@ -10,11 +10,13 @@ import { PasswordResetService } from './password-reset.service';
 import { AuthThrottleService } from './auth-throttle.service';
 import { RateLimitGuard } from './rate-limit.guard';
 import { ConsoleEmailSender, EMAIL_SENDER } from './email.service';
+import { InvitesModule } from '../invites/invites.module';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({}),
+    InvitesModule,
   ],
   controllers: [AuthController],
   providers: [

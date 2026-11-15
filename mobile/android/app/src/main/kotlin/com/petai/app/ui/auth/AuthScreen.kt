@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,24 +35,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
 /** Pantalla de acceso: iniciar sesión o crear cuenta. */
 @Composable
-fun AuthScreen(busy: Boolean, onSubmit: (register: Boolean, email: String, password: String, name: String, onResult: (String?) -> Unit) -> Unit) {
+fun AuthScreen(
+    busy: Boolean,
+    inviteRequired: Boolean,
+    onRegisterMode: () -> Unit,
+    onSubmit: (register: Boolean, email: String, password: String, name: String, inviteCode: String, onResult: (String?) -> Unit) -> Unit,
+) {
     var register by rememberSaveable { mutableStateOf(false) }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }
+    var inviteCode by rememberSaveable { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     val focus = LocalFocusManager.current
 
     fun submit() {
         error = null
-        onSubmit(register, email, password, name) { error = it }
+        onSubmit(register, email, password, name, inviteCode) { error = it }
     }
+
+    // Al pasar a "Crear cuenta" se consulta si el registro exige invitación.
+    LaunchedEffect(register) { if (register) onRegisterMode() }
 
     Column(
         Modifier
@@ -112,9 +123,31 @@ fun AuthScreen(busy: Boolean, onSubmit: (register: Boolean, email: String, passw
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { focus.clearFocus(); submit() }),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = if (register) ImeAction.Next else ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onNext = { focus.moveFocus(FocusDirection.Down) },
+                onDone = { focus.clearFocus(); submit() },
+            ),
         )
+        if (register) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = inviteCode,
+                onValueChange = { inviteCode = it.take(32) },
+                label = { Text(if (inviteRequired) "Código de invitación" else "Código de invitación (opcional)") },
+                supportingText = if (inviteRequired) {
+                    { Text("El registro está limitado: necesitas un código de invitación.") }
+                } else null,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Characters,
+                    autoCorrectEnabled = false,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { focus.clearFocus(); submit() }),
+            )
+        }
 
         error?.let {
             Spacer(Modifier.height(8.dp))
@@ -126,7 +159,7 @@ fun AuthScreen(busy: Boolean, onSubmit: (register: Boolean, email: String, passw
         else PrimaryButton(
             if (register) "Crear cuenta" else "Entrar",
             onClick = { focus.clearFocus(); submit() },
-            enabled = email.isNotBlank() && password.isNotEmpty(),
+            enabled = email.isNotBlank() && password.isNotEmpty() && !(register && inviteRequired && inviteCode.isBlank()),
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = { register = !register; error = null }) {

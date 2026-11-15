@@ -34,6 +34,9 @@ model User {
   refreshTokens  RefreshToken[]
   deviceLinks    DeviceLink[]
   passwordResetTokens PasswordResetToken[]
+  // Invitaciones de registro: códigos creados por este admin y el canje con el que se registró.
+  invitesCreated   InviteCode[]       @relation("InviteCreatedBy")
+  inviteRedemption InviteRedemption?
   pets           Pet[]
   eggs           Egg[]
   inventory      InventoryItem[]
@@ -103,6 +106,43 @@ model PasswordResetToken {
   createdAt   DateTime  @default(now())
 
   @@index([email])
+}
+
+// Ajustes globales de la app (una sola fila, id = 1). Editables desde el panel admin.
+model AppSettings {
+  id                     Int      @id @default(1)
+  // Si está activo, el registro exige un código de invitación válido.
+  registrationInviteOnly Boolean  @default(false)
+  updatedAt              DateTime @updatedAt
+}
+
+// Código de invitación para el registro. Se canjea de forma atómica (usedCount < maxUses).
+model InviteCode {
+  id          String             @id @default(uuid())
+  code        String             @unique // XXXX-XXXX, en mayúsculas
+  maxUses     Int                @default(1)
+  usedCount   Int                @default(0)
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  note        String?
+  createdById String?
+  createdBy   User?              @relation("InviteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime           @default(now())
+  redemptions InviteRedemption[]
+
+  @@index([createdAt])
+}
+
+// Qué usuario se dio de alta con qué código (cada usuario, como mucho un canje).
+model InviteRedemption {
+  id           String     @id @default(uuid())
+  inviteCodeId String
+  inviteCode   InviteCode @relation(fields: [inviteCodeId], references: [id], onDelete: Cascade)
+  userId       String     @unique
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@index([inviteCodeId])
 }
 
 model Species {
@@ -1069,7 +1109,7 @@ model WebhookDelivery {
 model AuditLog {
   id          String   @id @default(uuid())
   userId      String
-  event       String   // login | refresh | ip_change | key_created | key_revoked | account_deleted | role_change
+  event       String   // login | refresh | ip_change | key_created | key_revoked | account_deleted | role_change | invite_create | invite_revoke | registration_settings_change
   ip          String?
   userAgent   String?
   fingerprint String?

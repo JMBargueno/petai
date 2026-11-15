@@ -16,6 +16,10 @@ data class UserDto(
 @Serializable
 data class AuthResponse(val accessToken: String, val refreshToken: String, val user: UserDto? = null)
 
+/** Configuración pública del registro: si es true, hace falta un código de invitación. */
+@Serializable
+data class RegistrationConfig(val inviteRequired: Boolean = false)
+
 @Serializable
 data class TokenPair(val accessToken: String, val refreshToken: String)
 

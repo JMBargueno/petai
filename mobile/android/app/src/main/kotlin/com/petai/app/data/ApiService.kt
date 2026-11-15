@@ -25,14 +25,22 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
 
     // ---------- Sesión ----------
 
-    suspend fun register(email: String, password: String, displayName: String?): UserDto {
+    suspend fun register(email: String, password: String, displayName: String?, inviteCode: String? = null): UserDto {
         val r: AuthResponse = api.request(
             "POST", "/auth/register",
-            obj("email" to email, "password" to password, "displayName" to displayName?.ifBlank { null }),
+            obj(
+                "email" to email,
+                "password" to password,
+                "displayName" to displayName?.ifBlank { null },
+                "inviteCode" to inviteCode?.trim()?.ifBlank { null },
+            ),
         )
         session.save(r.accessToken, r.refreshToken)
         return r.user ?: me()
     }
+
+    /** ¿El registro exige código de invitación? (endpoint público). */
+    suspend fun registrationConfig(): RegistrationConfig = api.request("GET", "/auth/registration-config")
 
     suspend fun login(email: String, password: String): UserDto {
         val r: AuthResponse = api.request("POST", "/auth/login", obj("email" to email, "password" to password))
