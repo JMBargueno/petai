@@ -1,6 +1,7 @@
 import balance from '../../../../shared/game-data/balance.json';
 import patternData from '../../../../shared/game-data/patterns.json';
-import { PATTERNS, RARITIES } from '../landing/content';
+import { PATTERNS, RARITIES, RARITY_COLORS } from '../landing/content';
+import type { StickerColor } from '../shared/ui/sticker';
 
 /**
  * Textos de la página de lore (canon: docs/LORE.md). Cada cadena lleva un id fijo
@@ -20,6 +21,7 @@ export interface LoreRarity {
   loreName: string;
   nature: string;
   percent: number;
+  color: StickerColor;
 }
 
 const LORE_NAMES: Record<string, { name: string; nature: string }> = {
@@ -45,13 +47,14 @@ const LORE_NAMES: Record<string, { name: string; nature: string }> = {
   },
 };
 
-/** Probabilidades reales (balance.json) + nombre en el lore. */
-export const LORE_RARITIES = Object.entries(balance.rarity).map(([id, r]) => ({
+/** Probabilidades reales (balance.json) + nombre en el lore + color de rareza. */
+export const LORE_RARITIES: LoreRarity[] = Object.entries(balance.rarity).map(([id, r]) => ({
   id,
   gameName: RARITIES[id] ?? id,
   loreName: LORE_NAMES[id]?.name ?? id,
   nature: LORE_NAMES[id]?.nature ?? '',
   percent: Math.round(r.probability * 1000) / 10,
+  color: RARITY_COLORS[id] ?? 'sunburst',
 }));
 
 export const ORIGIN_CARDS = [

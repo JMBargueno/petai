@@ -302,6 +302,32 @@
     text-wrap: balance;
   }
 
+  /* ───── Collage de tarjetas (compartido por las secciones de lore) ─────
+     Rejilla auto-ajustable + giro alterno que se endereza en móvil. */
+  .card-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  }
+  .card-grid .card {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
+  .tilt {
+    rotate: -0.8deg;
+  }
+  .tilt:nth-child(even) {
+    rotate: 0.9deg;
+    margin-block-start: 16px;
+  }
+  @media (width < 700px) {
+    .tilt:nth-child(n) {
+      rotate: 0deg;
+      margin-block-start: 0;
+    }
+  }
+
   /* ───── Nav (compartida por landing y página de lore) ───── */
   .nav {
     position: sticky;

@@ -1,0 +1,70 @@
+.rarities {
+  display: grid;
+  gap: 12px;
+  max-inline-size: 760px;
+}
+
+.rarity {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: var(--card-padding);
+  border: var(--outline);
+  border-radius: var(--radius-cards);
+  background: rgb(255 255 255 / 0.06);
+}
+.rarity__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rarity__swatch {
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  border: var(--outline);
+  border-radius: var(--radius-pills);
+}
+.rarity__head h3 {
+  font-size: var(--text-subheading);
+}
+.rarity__game {
+  color: rgb(255 255 255 / 0.7);
+}
+.rarity__percent {
+  margin-inline-start: auto;
+  background: var(--color-paper-white);
+  color: var(--color-carbon);
+}
+.rarity p {
+  color: rgb(255 255 255 / 0.85);
+}
+
+/* ───── Promesa del Telar ───── */
+.promise {
+  margin-block-start: clamp(48px, 8vw, 96px);
+}
+.promise__title {
+  font-size: var(--text-heading);
+}
+.promise__quote {
+  margin: 16px 0 0;
+  max-inline-size: 40ch;
+  font-family: var(--font-lateral);
+  font-size: clamp(20px, 3vw, 32px);
+  line-height: 1.1;
+  rotate: -1deg;
+}
+.promise__grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+.promise__milestone {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.promise__milestone p {
+  color: var(--color-carbon);
+}

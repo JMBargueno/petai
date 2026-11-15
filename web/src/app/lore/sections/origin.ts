@@ -15,9 +15,9 @@ import { ORIGIN_CARDS } from '../content';
           No se fabrican: se condensan y se pescan en las corrientes del Éter Digital.
         </p>
 
-        <div class="grid">
+        <div class="card-grid">
           @for (card of cards; track card.title) {
-            <article class="card card-tilt reveal">
+            <article class="card tilt reveal">
               <app-sticker [icon]="card.icon" [color]="card.color" [size]="64" />
               <h3>{{ card.title }}</h3>
               <p>{{ card.body }}</p>
@@ -27,7 +27,6 @@ import { ORIGIN_CARDS } from '../content';
       </div>
     </section>
   `,
-  styleUrl: './origin.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Origin {
