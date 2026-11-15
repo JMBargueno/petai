@@ -75,6 +75,21 @@ p {
   gap: 8px;
   margin-block-start: 24px;
 }
+.hero__lore {
+  display: inline-block;
+  margin-block-start: 18px;
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-voltage-violet);
+  text-decoration: none;
+  border-bottom: 2px solid var(--color-voltage-violet);
+  padding-bottom: 2px;
+  transition: color var(--motion-fast, 150ms) ease, border-color var(--motion-fast, 150ms) ease;
+}
+.hero__lore:hover {
+  color: var(--color-ember);
+  border-color: var(--color-ember);
+}
 .cue {
   display: grid;
   place-items: center;
@@ -289,6 +304,23 @@ p {
   flex-wrap: wrap;
   gap: 4px;
 }
+.species__note {
+  margin-block-start: 36px;
+  text-align: center;
+}
+.species__lore {
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-voltage-violet);
+  text-decoration: none;
+  border-bottom: 2px solid var(--color-voltage-violet);
+  padding-bottom: 2px;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+.species__lore:hover {
+  color: var(--color-ember);
+  border-color: var(--color-ember);
+}
 
 .demo-placeholder {
   display: grid;
@@ -391,6 +423,19 @@ details p {
 .footer__mark {
   font-size: clamp(64px, 19vw, 280px);
   color: var(--color-electric-blue);
+}
+.footer__lore {
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-mint-pop);
+  text-decoration: none;
+  border-bottom: 2px solid var(--color-mint-pop);
+  padding-bottom: 2px;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+.footer__lore:hover {
+  color: var(--color-sunburst);
+  border-color: var(--color-sunburst);
 }
 
 /* En móvil, menos giro y sin solapes: prima la lectura. */
