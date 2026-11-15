@@ -15,6 +15,7 @@ import { PetsService } from '../pets/pets.service';
 import { BondingService } from '../bonding/bonding.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { LeaderboardService, BoardScope } from './leaderboard.service';
+import { BattleLockService } from './battle-lock.service';
 import { generateBot } from './combat/bots';
 import { simulateBattle } from './combat/engine';
 import { applyElo, leagueFor, pickOpponent } from './combat/ranking';
@@ -40,8 +41,6 @@ type Outcome = 'win' | 'draw' | 'loss';
 @Injectable()
 export class BattlesService {
   private readonly logger = new Logger(BattlesService.name);
-  // Un combate a la vez por usuario (evita carreras sobre energía, límite diario y ELO)
-  private readonly active = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -51,6 +50,7 @@ export class BattlesService {
     private readonly realtime: RealtimeGateway,
     private readonly bonding: BondingService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly battleLock: BattleLockService,
   ) {}
 
   private get cfg(): CombatConfig & Record<string, any> {
@@ -162,13 +162,9 @@ export class BattlesService {
   // ---------- Pelea ----------
 
   async matchmake(userId: string, petId: string) {
-    if (this.active.has(userId)) throw new HttpException('Ya hay una pelea en curso', HttpStatus.TOO_MANY_REQUESTS);
-    this.active.add(userId);
-    try {
-      return await this.fight(userId, petId);
-    } finally {
-      this.active.delete(userId);
-    }
+    // Un combate a la vez por usuario (guard distribuido, R-02): evita carreras sobre energía,
+    // límite diario y ELO, y lo respeta entre réplicas vía Redis.
+    return this.battleLock.runExclusive(userId, () => this.fight(userId, petId));
   }
 
   private async fight(userId: string, petId: string) {
