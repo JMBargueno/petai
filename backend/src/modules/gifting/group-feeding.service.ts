@@ -140,6 +140,22 @@ export class GroupFeedingService {
       const restCoins = COIN_POOL - hostCoins;
       const perNonHost = nonHost.length > 0 ? Math.floor(restCoins / nonHost.length) : 0;
 
+      // F-13: el ítem de recompensa debe existir en el catálogo (FK
+      // InventoryItem.itemId → Item.id). Lo aseguramos de forma idempotente ANTES de
+      // regalarlo; sin esto el `create` del upsert de inventario violaría la FK
+      // (Prisma P2003 → 409) y la room nunca podría finalizar.
+      await tx.item.upsert({
+        where: { id: itemId },
+        update: {},
+        create: {
+          id: itemId,
+          kind: 'food',
+          name: 'Royal Feast',
+          description: 'Comida especial generada al completar una sesión de comida en grupo.',
+          effects: { type: 'feast', satiety: 25, happiness: 10 },
+        },
+      });
+
       for (const p of completed) {
         const coins = p.userId === hostId ? hostCoins : perNonHost;
         await tx.inventoryItem.upsert({
@@ -208,6 +224,7 @@ export class GroupFeedingService {
   }
 
   private genItemId(): string {
-    return `royal_feast_${randomBytes(4).toString('hex')}`;
+    // F-13: id estable del ítem de recompensa (lo aseguramos en el catálogo en `finalizeRoom`).
+    return 'royal_feast';
   }
 }
