@@ -272,6 +272,56 @@
         ]
       }
     },
+    "/v1/auth/reset/request": {
+      "post": {
+        "operationId": "AuthController_resetRequest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Solicitar un código de recuperación de contraseña por email (sin enumeración de cuentas)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/reset/confirm": {
+      "post": {
+        "operationId": "AuthController_resetConfirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetConfirmDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Confirmar la recuperación: con el código cambia la contraseña, cierra las demás sesiones y emite una sesión nueva",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/v1/auth/device/start": {
       "post": {
         "operationId": "AuthController_deviceStart",
@@ -6103,6 +6153,44 @@
         },
         "required": [
           "currentPassword",
+          "newPassword"
+        ]
+      },
+      "ResetRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "jugador@petai.local",
+            "description": "Correo de la cuenta"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetConfirmDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "jugador@petai.local",
+            "description": "Correo de la cuenta"
+          },
+          "code": {
+            "type": "string",
+            "example": "482913",
+            "description": "Código de 6 dígitos recibido por email"
+          },
+          "newPassword": {
+            "type": "string",
+            "example": "NuevaContrasena123!",
+            "description": "Contraseña nueva (mínimo 8 caracteres)"
+          }
+        },
+        "required": [
+          "email",
+          "code",
           "newPassword"
         ]
       },
