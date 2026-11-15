@@ -49,6 +49,27 @@ h3 {
   font-size: var(--text-subheading);
   line-height: var(--leading-subheading);
 }
+/* CTA final: huevo flotando + botón a la descarga. */
+.lore-cta__egg {
+  position: absolute;
+  top: 22%;
+  inset-inline-end: 12%;
+  opacity: 0.9;
+}
+.lore-cta__inner {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+  max-inline-size: 640px;
+}
+.lore-cta__sub {
+  font-size: var(--text-body-lg);
+}
+@media (width < 700px) {
+  .lore-cta__egg {
+    display: none;
+  }
+}
 ul,
 ol {
   margin: 0;

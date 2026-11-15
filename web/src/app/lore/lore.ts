@@ -70,6 +70,14 @@ const LOCALES = ['es', 'en'] as const;
       <app-life-cycle />
       <app-colosseum />
       <app-glossary />
+
+      <section id="cta" class="band band--sky lore-cta">
+        <app-sticker class="lore-cta__egg float" icon="egg" color="sunburst" [rotate]="-8" [size]="96" />
+        <div class="band__inner lore-cta__inner reveal">
+          <p class="lead lore-cta__sub" i18n="@@lore.cta.sub">El lore se vive, no se lee.</p>
+          <a class="btn btn--filled" [href]="download" i18n="@@lore.cta">Descargar Pockai</a>
+        </div>
+      </section>
     </main>
   `,
   styleUrl: './lore.css',
@@ -79,6 +87,7 @@ export class Lore {
   protected readonly locale = inject(LOCALE_ID).slice(0, 2);
   protected readonly marquee = MARQUEE;
   protected readonly home = `/${this.locale}/`;
+  protected readonly download = `/${this.locale}/#descargar`;
 
   constructor() {
     this.setHead(inject(Title), inject(Meta), inject(DOCUMENT));
