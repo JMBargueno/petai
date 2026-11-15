@@ -1,5 +1,8 @@
 package com.petai.app.ui.missions
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,7 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.petai.app.ui.theme.*
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -78,11 +82,11 @@ fun MissionsScreen(service: ApiService, onChanged: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             summary?.let { s ->
                 item {
-                    Card(Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(12.dp)) {
+                    PockaiCard(Modifier.fillMaxWidth()) {
+                        Row {
                             SummaryChip(Modifier.weight(1f), "${s.dailyCompleted}/${s.dailyTotal}", "diarias")
                             SummaryChip(Modifier.weight(1f), "${s.weeklyCompleted}/${s.weeklyTotal}", "semanales")
-                            SummaryChip(Modifier.weight(1f), "🔥 ${s.streak}", "racha (réc. ${s.bestStreak})")
+                            SummaryChip(Modifier.weight(1f), "${s.streak}", "racha (réc. ${s.bestStreak})", Lucide.Flame)
                         }
                     }
                 }
@@ -103,31 +107,32 @@ fun MissionsScreen(service: ApiService, onChanged: () -> Unit) {
 }
 
 @Composable
-private fun SummaryChip(modifier: Modifier, value: String, label: String) {
+private fun SummaryChip(modifier: Modifier, value: String, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) { Icon(icon, null, Modifier.size(18.dp), tint = PockaiTheme.colors.onDangerText); Spacer(Modifier.size(4.dp)) }
+            Text(value, style = MaterialTheme.typography.titleMedium)
+        }
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun MissionCard(m: Mission, busy: Boolean, onClaim: () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
+    PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(m.description, style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    "${m.current}/${m.target} · ${m.reward.coins}🪙 ${m.reward.gems}💎 ${m.reward.xp}XP",
+                    "${m.current}/${m.target} · ${m.reward.coins} monedas · ${m.reward.gems} gemas · ${m.reward.xp} XP",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 val frac = if (m.target > 0) (m.current.toFloat() / m.target).coerceIn(0f, 1f) else 0f
-                Box(Modifier.fillMaxWidth().padding(top = 6.dp).height(6.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                    Box(Modifier.fillMaxWidth(frac).height(6.dp).background(MaterialTheme.colorScheme.primary))
-                }
+                PockaiProgress(frac, Modifier.padding(top = 8.dp))
             }
             if (m.completed) {
-                Button(onClick = onClaim, enabled = !busy, modifier = Modifier.padding(start = 8.dp)) { Text(if (busy) "…" else "Reclamar") }
+                PrimaryButton(if (busy) "…" else "Reclamar", onClick = onClaim, enabled = !busy, modifier = Modifier.padding(start = 8.dp))
             }
         }
     }

@@ -9,7 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.petai.app.ui.theme.*
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -30,16 +31,17 @@ import com.petai.app.data.TournamentCurrent
 import com.petai.app.data.TournamentStandings
 import kotlinx.coroutines.launch
 
+private fun statusColor(status: String) = when (status) {
+    "entry" -> Brand.MintPop
+    "finished" -> Brand.SoftMist
+    else -> Brand.ElectricBlue
+}
+
 private val STATUS_LABELS = mapOf(
     "entry" to "Inscripción abierta", "bracket" to "Bracket en curso",
     "active" to "En curso", "finished" to "Terminado",
 )
 
-private val ELEMENT_ICONS = mapOf(
-    "fire" to "🔥", "water" to "💧", "plant" to "🌿", "electric" to "⚡", "shadow" to "🌑", "light" to "☀️",
-)
-
-private fun elIcon(e: String): String = ELEMENT_ICONS[e] ?: "🎭"
 
 /**
  * Pestaña "Torneo" (feature 014): estado del torneo, inscripción (requiere ELO≥1700 + cuota),
@@ -83,7 +85,7 @@ fun TournamentScreen(service: ApiService, pet: Pet?, onChanged: () -> Unit) {
             enterMsg = ""
             try {
                 val res = service.tournamentEnter(p.id)
-                enterMsg = "✅ Inscripción confirmada (ELO ${res.elo}, cuota ${res.feePaid} 💎)."
+                enterMsg = "Inscripción confirmada (ELO ${res.elo}, cuota ${res.feePaid} gemas)."
                 load()
                 onChanged()
             } catch (e: Exception) {
@@ -102,7 +104,7 @@ fun TournamentScreen(service: ApiService, pet: Pet?, onChanged: () -> Unit) {
             if (c == null && error.isNotBlank() && !refreshing) {
                 Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(error, color = MaterialTheme.colorScheme.error)
-                    Button(onClick = { load() }) { Text("Reintentar") }
+                    SecondaryButton("Reintentar", onClick = { load() }, icon = Lucide.RefreshCw)
                 }
             } else if (c == null) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Cargando torneo…") }
@@ -130,53 +132,52 @@ private fun TournamentContent(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PockaiCard(Modifier.fillMaxWidth(), pop = true) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
+                        Tag(
                             STATUS_LABELS[c.status] ?: c.status,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(end = 12.dp),
+                            Modifier.padding(end = 12.dp),
+                            color = statusColor(c.status),
                         )
                         Column {
-                            Text("Premio: ${c.totalPrizePool} 💎 · Cuota: ${c.entryFee} 💎", style = MaterialTheme.typography.bodyMedium)
+                            Text("Premio: ${c.totalPrizePool} gemas · Cuota: ${c.entryFee} gemas", style = MaterialTheme.typography.bodyMedium)
                             Text("${c.entryCount}/${c.bracketSize} inscritos", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     if (c.status == "entry") {
-                        Text("Inscripción cierra: ${c.entryDeadline}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
-                        Button(
+                        Text("Inscripción cierra: ${c.entryDeadline}", style = MaterialTheme.typography.bodySmall, color = PockaiTheme.colors.onWarningText)
+                        PrimaryButton(
+                            if (busy) "Inscribiendo…" else if (pet != null) "Inscribir a mi mascota (${c.entryFee} gemas)" else "Sin mascota activa",
                             onClick = onEnter,
                             enabled = pet != null && !busy,
                             modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(if (busy) "Inscribiendo…" else if (pet != null) "Inscribir a mi mascota (${c.entryFee} 💎)" else "Sin mascota activa")
-                        }
+                            icon = Lucide.Trophy,
+                        )
                         Text("Requiere ELO ≥ 1700 (liga Diamond)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (c.hasEntered) {
                         val plac = c.myPlacement?.let { " · colocación ${it}º" } ?: ""
-                        Text("✅ Estás inscrito$plac", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                        Tag("Estás inscrito$plac", color = Brand.MintPop, icon = Lucide.Check)
                     }
-                    if (enterMsg.isNotBlank()) Text(enterMsg, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    if (enterMsg.isNotBlank()) Text(enterMsg, style = MaterialTheme.typography.bodyMedium, color = PockaiTheme.colors.accentInk)
                     if (error.isNotBlank()) Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
         }
 
-        item { Text("📊 Clasificación (por ELO)", style = MaterialTheme.typography.titleMedium) }
+        item { Text("Clasificación (por ELO)", style = MaterialTheme.typography.titleMedium) }
         val entries = standings?.entries ?: emptyList()
         if (entries.isEmpty()) {
             item { Text("Aún sin competidores clasificados.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         entries.forEach { e ->
             item(key = e.rank) {
-                Card(Modifier.fillMaxWidth()) {
+                PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                     Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("#${e.rank}", Modifier.padding(end = 8.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("#${e.rank}", Modifier.padding(end = 8.dp), style = MaterialTheme.typography.titleSmall, color = PockaiTheme.colors.accentInk)
                         Text(e.petName, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        Text("${e.elo} ELO", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
+                        Text("${e.elo} ELO", style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -186,13 +187,13 @@ private fun TournamentContent(
             item { Text("Ronda $round", style = MaterialTheme.typography.titleMedium) }
             matches.forEach { m ->
                 item(key = m.id) {
-                    Card(Modifier.fillMaxWidth()) {
+                    PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                         Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             val a = m.petA
                             val b = m.petB
-                            Text(a?.let { "${elIcon(it.element)} ${it.name} (${it.elo})" } ?: "—", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                            Text(if (m.status == "resolved") "✓" else "vs", Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(b?.let { "${elIcon(it.element)} ${it.name} (${it.elo})" } ?: "—", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                            Text(a?.let { "${it.name} · ${elementLabel(it.element)} (${it.elo})" } ?: "—", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                            Text(if (m.status == "resolved") "Fin" else "vs", Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(b?.let { "${it.name} · ${elementLabel(it.element)} (${it.elo})" } ?: "—", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }

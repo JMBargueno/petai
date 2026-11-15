@@ -128,7 +128,7 @@ class ChatViewModel(private val service: ApiService, private val petId: String, 
             try {
                 val r = service.testAiConfig()
                 _state.update {
-                    if (r.ok) it.copy(settingsBusy = false, settingsMessage = "✅ Conexión correcta")
+                    if (r.ok) it.copy(settingsBusy = false, settingsMessage = "Conexión correcta")
                     else it.copy(settingsBusy = false, settingsError = r.error ?: "No se pudo conectar")
                 }
             } catch (e: ApiException) {

@@ -2,6 +2,8 @@ package com.petai.app.widget
 
 import android.content.Context
 import androidx.core.content.edit
+import androidx.annotation.DrawableRes
+import com.petai.app.R
 import com.petai.app.data.Pet
 
 /** Copia mínima y no sensible del estado de la mascota para el widget y los avisos (sin tokens). */
@@ -17,13 +19,23 @@ data class PetSnapshot(
     val sleeping: Boolean,
     val updatedAt: Long,
 ) {
-    val mood: String
+    /** Icono de trazo (Lucide) del estado de ánimo para el widget. */
+    @get:DrawableRes
+    val moodIcon: Int
         get() = when {
-            sick -> "🤒"
-            sleeping -> "😴"
-            hunger < 25 -> "😋"
-            happiness < 30 -> "😢"
-            else -> "😊"
+            sick -> R.drawable.ic_lucide_thermometer
+            sleeping -> R.drawable.ic_lucide_moon
+            hunger < 25 -> R.drawable.ic_lucide_apple
+            else -> R.drawable.ic_lucide_smile
+        }
+
+    val moodLabel: String
+        get() = when {
+            sick -> "Enfermo"
+            sleeping -> "Durmiendo"
+            hunger < 25 -> "Hambre"
+            happiness < 30 -> "Triste"
+            else -> "Contento"
         }
 
     fun save(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit {

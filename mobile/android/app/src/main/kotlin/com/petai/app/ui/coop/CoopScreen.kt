@@ -12,7 +12,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
+import com.petai.app.ui.theme.CardNoPadding
+import com.petai.app.ui.theme.EmptyState
+import com.petai.app.ui.theme.Lucide
+import com.petai.app.ui.theme.PockaiCard
+import com.petai.app.ui.theme.PockaiChip
+import com.petai.app.ui.theme.PrimaryButton
+import com.petai.app.ui.theme.SecondaryButton
+import com.petai.app.ui.theme.ScreenTitle
+import com.petai.app.ui.theme.PockaiTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -72,7 +80,7 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
 
     PullToRefreshBox(isRefreshing = loading, onRefresh = { scope.launch { load() } }, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Amigos y co-op", style = MaterialTheme.typography.headlineSmall)
+            ScreenTitle("Amigos y co-op", eyebrow = "Social")
             Text(
                 "Solicita amistad, gestiona peticiones y visita el pet de tus amigos.",
                 style = MaterialTheme.typography.bodySmall,
@@ -81,19 +89,20 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(email, { email = it }, label = { Text("Email del amigo") }, singleLine = true, modifier = Modifier.weight(1f))
-                OutlinedButton(
+                SecondaryButton(
+                    "Solicitar",
                     onClick = { act("Solicitud enviada.") { service.requestCoopFriend(null, email.trim()) }; email = "" },
                     enabled = !busy && email.isNotBlank(),
-                ) { Text("Solicitar") }
+                )
             }
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = sel == 0, onClick = { sel = 0 }, label = { Text("Amigos") })
-                FilterChip(selected = sel == 1, onClick = { sel = 1 }, label = { Text("Peticiones") })
-                FilterChip(selected = sel == 2, onClick = { sel = 2 }, label = { Text("Historial") })
+                PockaiChip("Amigos", sel == 0, { sel = 0 }, icon = Lucide.Users)
+                PockaiChip("Peticiones", sel == 1, { sel = 1 })
+                PockaiChip("Historial", sel == 2, { sel = 2 })
             }
             Spacer(Modifier.height(8.dp))
-            msg?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+            msg?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = PockaiTheme.colors.accentInk) }
             Spacer(Modifier.height(8.dp))
             when (sel) {
                 0 -> FriendsSection(friends.filter { it.status == "accepted" }, busy) { f, a ->
@@ -113,11 +122,11 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
 private fun FriendsSection(friends: List<CoopFriend>, busy: Boolean, onVisit: (CoopFriend, String) -> Unit) {
     if (friends.isEmpty()) { Empty("Aún no tienes amigos aceptados. Solicita una amistad arriba."); return }
     friends.forEach { f ->
-        Card(Modifier.fillMaxWidth()) {
+        PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
             Column(Modifier.padding(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(f.otherDisplayName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    Text("Amigo", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    com.petai.app.ui.theme.Tag("Amigo", color = com.petai.app.ui.theme.Brand.MintPop)
                 }
                 f.otherPet?.let {
                     Text("Pet: ${it.nickname.ifBlank { it.speciesName }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -125,9 +134,9 @@ private fun FriendsSection(friends: List<CoopFriend>, busy: Boolean, onVisit: (C
                 Spacer(Modifier.height(8.dp))
                 if (f.otherPet != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { onVisit(f, "feed") }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("🍖 Alimentar") }
-                        OutlinedButton(onClick = { onVisit(f, "play") }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("🎮 Jugar") }
-                        OutlinedButton(onClick = { onVisit(f, "clean") }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("🧼 Limpiar") }
+                        SecondaryButton("Alimentar", { onVisit(f, "feed") }, Modifier.weight(1f), !busy, Lucide.Utensils)
+                        SecondaryButton("Jugar", { onVisit(f, "play") }, Modifier.weight(1f), !busy, Lucide.Gamepad2)
+                        SecondaryButton("Limpiar", { onVisit(f, "clean") }, Modifier.weight(1f), !busy, Lucide.Bath)
                     }
                 } else {
                     Text("Tu amigo aún no tiene un pet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -142,7 +151,7 @@ private fun FriendsSection(friends: List<CoopFriend>, busy: Boolean, onVisit: (C
 private fun RequestsSection(pending: List<CoopFriend>, busy: Boolean, onAccept: (CoopFriend) -> Unit, onDecline: (CoopFriend) -> Unit) {
     if (pending.isEmpty()) { Empty("No hay peticiones de amistad."); return }
     pending.forEach { f ->
-        Card(Modifier.fillMaxWidth()) {
+        PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
             Column(Modifier.padding(12.dp)) {
                 Text(f.otherDisplayName, style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -153,8 +162,8 @@ private fun RequestsSection(pending: List<CoopFriend>, busy: Boolean, onAccept: 
                 Spacer(Modifier.height(8.dp))
                 if (f.direction == "incoming") {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { onAccept(f) }, enabled = !busy) { Text("Aceptar") }
-                        OutlinedButton(onClick = { onDecline(f) }, enabled = !busy) { Text("Rechazar") }
+                        PrimaryButton("Aceptar", { onAccept(f) }, enabled = !busy)
+                        SecondaryButton("Rechazar", { onDecline(f) }, enabled = !busy)
                     }
                 } else {
                     Text("Esperando su respuesta.", style = MaterialTheme.typography.bodySmall)
@@ -169,10 +178,10 @@ private fun RequestsSection(pending: List<CoopFriend>, busy: Boolean, onAccept: 
 private fun HistorySection(visits: List<CoopVisitLog>) {
     if (visits.isEmpty()) { Empty("Aún no hay visitas co-op."); return }
     visits.forEach { v ->
-        Card(Modifier.fillMaxWidth()) {
+        PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(actionLabel(v.action), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Text("+${v.xpGained} XP", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text("+${v.xpGained} XP", style = MaterialTheme.typography.titleSmall, color = PockaiTheme.colors.accentInk)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -185,8 +194,8 @@ private fun Empty(text: String) {
 }
 
 private fun actionLabel(action: String) = when (action) {
-    "feed" -> "🍖 Alimentar"
-    "play" -> "🎮 Jugar"
-    "clean" -> "🧼 Limpiar"
+    "feed" -> "Alimentar"
+    "play" -> "Jugar"
+    "clean" -> "Limpiar"
     else -> action
 }

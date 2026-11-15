@@ -11,22 +11,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.petai.app.ui.theme.*
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,14 +29,11 @@ import androidx.compose.ui.unit.dp
 import com.petai.app.data.BattleOutcome
 import com.petai.app.data.ReplayEvent
 
-private val elementEmoji = mapOf("fire" to "🔥", "water" to "💧", "plant" to "🌿", "earth" to "⛰️", "air" to "🌬️", "electric" to "⚡", "light" to "✨", "dark" to "🌑")
-private fun emoji(element: String) = elementEmoji[element] ?: "⚪"
-
-/** Pestaña «Jugar»: arena y minijuegos. */
+/** «Jugar»: arena (`section` 0) y minijuegos (`section` 1). La navegación entre secciones vive en `AppRoot`. */
 @Composable
-fun PlayScreen(vm: PlayViewModel) {
+fun PlayScreen(vm: PlayViewModel, section: Int) {
     val state by vm.state.collectAsState()
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    val tab = section
 
     // Una partida en curso ocupa toda la pestaña
     state.session?.let { s ->
@@ -54,11 +45,7 @@ fun PlayScreen(vm: PlayViewModel) {
         return
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-            SegmentedButton(selected = tab == 0, onClick = { tab = 0 }, shape = SegmentedButtonDefaults.itemShape(0, 2)) { Text("⚔️ Arena") }
-            SegmentedButton(selected = tab == 1, onClick = { tab = 1 }, shape = SegmentedButtonDefaults.itemShape(1, 2)) { Text("🎮 Minijuegos") }
-        }
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(top = 8.dp)) {
         state.error?.let {
             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(4.dp))
@@ -77,7 +64,7 @@ fun PlayScreen(vm: PlayViewModel) {
         AlertDialog(
             onDismissRequest = vm::dismissGameResult,
             title = { Text("¡Partida terminada!") },
-            text = { Text("Puntuación: ${r.score}\n+${r.rewards.coins} 🪙  +${r.rewards.xp} XP  +${r.rewards.happiness} 😊\nEnergía: −${r.rewards.energyCost}") },
+            text = { Text("Puntuación: ${r.score}\n+${r.rewards.coins} monedas · +${r.rewards.xp} XP · +${r.rewards.happiness} felicidad\nEnergía: −${r.rewards.energyCost}") },
             confirmButton = { TextButton(onClick = vm::dismissGameResult) { Text("Genial") } },
         )
     }
@@ -88,9 +75,10 @@ private fun ArenaTab(state: PlayUiState, vm: PlayViewModel) {
     val p = state.profile
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
         if (p != null) item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("${emoji(p.element)} ${p.name} · Nv. ${p.level}", style = MaterialTheme.typography.titleLarge)
+            PockaiCard(Modifier.fillMaxWidth(), pop = true) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("${p.name} · Nv. ${p.level}", style = MaterialTheme.typography.titleLarge)
+                    ElementTag(p.element)
                     Text("Liga ${p.league.name} · ELO ${p.elo}" + (p.league.next?.let { " · ${p.league.toNext} para ${it.name}" } ?: ""))
                     Text(
                         "HP ${p.stats.hp} · ATK ${p.stats.atk} · DEF ${p.stats.def} · VEL ${p.stats.vel} · ESP ${p.stats.esp}",
@@ -99,18 +87,16 @@ private fun ArenaTab(state: PlayUiState, vm: PlayViewModel) {
                     )
                     Text("Peleas hoy: ${p.battlesToday}/${p.dailyLimit} · coste ${p.energyCost} de energía", style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(8.dp))
-                    Button(onClick = vm::fight, enabled = p.canFight && !state.busy, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (state.busy) "Buscando rival…" else "⚔️ Buscar combate")
-                    }
+                    PrimaryButton(if (state.busy) "Buscando rival…" else "Buscar combate", onClick = vm::fight, enabled = p.canFight && !state.busy, modifier = Modifier.fillMaxWidth(), icon = Lucide.Swords)
                     if (!p.canFight) p.reason?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 }
             }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("🏆 Clasificación", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                FilterChip(state.boardScope == "global", { vm.setBoardScope("global") }, { Text("Global") })
-                FilterChip(state.boardScope == "weekly", { vm.setBoardScope("weekly") }, { Text("Semanal") })
+                Text("Clasificación", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                PockaiChip("Global", state.boardScope == "global", { vm.setBoardScope("global") })
+                PockaiChip("Semanal", state.boardScope == "weekly", { vm.setBoardScope("weekly") })
             }
         }
         val entries = state.board?.entries.orEmpty()
@@ -143,20 +129,21 @@ private fun GamesTab(state: PlayUiState, vm: PlayViewModel) {
             )
         }
         items(state.games, key = { it.id }) { g ->
-            val icon = when (g.id) { "catch_food" -> "🍎"; "memory_match" -> "🧠"; else -> "⚡" }
+            val icon = when (g.id) { "catch_food" -> Lucide.Apple; "memory_match" -> Lucide.Brain; else -> Lucide.Zap }
             val hint = when (g.id) {
-                "catch_food" -> "Toca la comida que cae; evita las bombas 💣."
+                "catch_food" -> "Toca la comida que cae; evita las bombas."
                 "memory_match" -> "Encuentra todas las parejas antes de que acabe el tiempo."
                 else -> "Toca los círculos en cuanto aparezcan."
             }
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("$icon ${g.name}", style = MaterialTheme.typography.titleMedium)
+            PockaiCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Sticker(icon, color = PockaiTheme.colors.themeArena, size = 48.dp)
+                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Text(g.name, style = MaterialTheme.typography.titleMedium)
                         Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("${g.durationSeconds} s · hasta ${g.maxCoins} 🪙 y ${g.maxXp} XP", style = MaterialTheme.typography.labelSmall)
+                        Text("${g.durationSeconds} s · hasta ${g.maxCoins} monedas y ${g.maxXp} XP", style = MaterialTheme.typography.labelMedium)
                     }
-                    OutlinedButton(onClick = { vm.startGame(g.id) }, enabled = !state.busy) { Text("Jugar") }
+                    SecondaryButton("Jugar", onClick = { vm.startGame(g.id) }, enabled = !state.busy)
                 }
             }
         }
@@ -182,7 +169,7 @@ private fun describe(e: ReplayEvent, names: List<String>): String? = when (e.t) 
 
 @Composable
 private fun BattleDialog(b: BattleOutcome, onDismiss: () -> Unit) {
-    val title = when (b.result.outcome) { "win" -> "🏆 ¡Victoria!"; "loss" -> "💥 Derrota"; else -> "🤝 Empate" }
+    val title = when (b.result.outcome) { "win" -> "¡Victoria!"; "loss" -> "Derrota"; else -> "Empate" }
     val names = b.replay.participants.map { it.name }
     val lines = b.replay.events.mapNotNull { describe(it, names) }
     AlertDialog(
@@ -190,9 +177,9 @@ private fun BattleDialog(b: BattleOutcome, onDismiss: () -> Unit) {
         title = { Text(title) },
         text = {
             Column(Modifier.fillMaxWidth()) {
-                Text("Rival: ${b.opponent.name} (${emoji(b.opponent.element)} Nv. ${b.opponent.level})" + if (b.opponent.isBot) " · bot" else "")
+                Text("Rival: ${b.opponent.name} (${elementLabel(b.opponent.element)} · Nv. ${b.opponent.level})" + if (b.opponent.isBot) " · bot" else "")
                 Text("ELO ${b.elo.before} → ${b.elo.after} (${if (b.elo.delta >= 0) "+" else ""}${b.elo.delta}) · Liga ${b.elo.league.name}")
-                Text("+${b.rewards.coins} 🪙  +${b.rewards.xp} XP · ${b.result.rounds} asaltos", style = MaterialTheme.typography.bodySmall)
+                Text("+${b.rewards.coins} monedas · +${b.rewards.xp} XP · ${b.result.rounds} asaltos", style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
                 LazyColumn(Modifier.height(220.dp)) {
                     items(lines.size) { Text(lines[it], style = MaterialTheme.typography.bodySmall) }

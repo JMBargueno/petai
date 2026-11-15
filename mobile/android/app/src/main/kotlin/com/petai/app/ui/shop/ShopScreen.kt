@@ -1,5 +1,7 @@
 package com.petai.app.ui.shop
 
+import androidx.compose.foundation.layout.size
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,8 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.petai.app.ui.theme.*
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -21,15 +24,22 @@ import com.petai.app.AppUiState
 import com.petai.app.data.ItemDto
 
 private fun kindTitle(kind: String) = when (kind) {
-    "food" -> "🍎 Comida"
-    "medicine" -> "💊 Medicina"
-    "evolution" -> "🔮 Evolución"
+    "food" -> "Comida"
+    "medicine" -> "Medicina"
+    "evolution" -> "Evolución"
     else -> kind
 }
 
+private fun kindIcon(kind: String): ImageVector = when (kind) {
+    "food" -> Lucide.Apple
+    "medicine" -> Lucide.Pill
+    "evolution" -> Lucide.Sparkles
+    else -> Lucide.Gift
+}
+
 private fun price(item: ItemDto) = buildString {
-    if (item.priceCoins > 0) append("${item.priceCoins} 🪙")
-    if (item.priceGems > 0) append(if (isNotEmpty()) " + " else "").append("${item.priceGems} 💎")
+    if (item.priceCoins > 0) append("${item.priceCoins} monedas")
+    if (item.priceGems > 0) append(if (isNotEmpty()) " + " else "").append("${item.priceGems} gemas")
     if (isEmpty()) append("Gratis")
 }
 
@@ -46,23 +56,28 @@ fun ShopScreen(state: AppUiState, onRefresh: () -> Unit, onBuy: (ItemDto) -> Uni
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item {
-                Text("🪙 ${user?.coins ?: 0}   💎 ${user?.gems ?: 0}", style = MaterialTheme.typography.titleLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) { CoinAmount(user?.coins ?: 0); GemAmount(user?.gems ?: 0) }
             }
             grouped.forEach { (kind, items) ->
-                item { Text(kindTitle(kind), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
+                item {
+                    Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(kindIcon(kind), null, Modifier.size(20.dp))
+                        Text(kindTitle(kind), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
                 items(items, key = { it.id }) { item ->
                     val canAfford = user != null && user.coins >= item.priceCoins && user.gems >= item.priceGems
-                    Card(Modifier.fillMaxWidth()) {
+                    PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(item.name, style = MaterialTheme.typography.titleMedium)
                                 Text(item.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 val have = owned[item.id] ?: 0
-                                if (have > 0) Text("Tienes $have", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                if (have > 0) Text("Tienes $have", style = MaterialTheme.typography.labelSmall, color = PockaiTheme.colors.accentInk)
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(price(item), style = MaterialTheme.typography.labelLarge)
-                                Button(onClick = { onBuy(item) }, enabled = canAfford && !state.busy) { Text("Comprar") }
+                                SecondaryButton("Comprar", onClick = { onBuy(item) }, enabled = canAfford && !state.busy)
                             }
                         }
                     }
