@@ -1,111 +1,117 @@
 ---
 tags: [petai, lore, storytelling]
 creado: 2026-11-14
+actualizado: 2026-11-15
 complementa: "[[01-lore-petai]]"
 ---
 
-# La estrella que regaló su luz
+# Pockai — El Éter Digital
 
-> *El mito fundacional de Pockai. Historia central del juego: se puede leer completa (unos 5 minutos) o trocear para intro, temporada, eventos y narración de IA.*
+> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué brillan distinto los patrones SR+ y los shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai y qué ocurre en el Coliseo de Resonancia. Cierra con un diccionario técnico→lore para UI y textos del juego.*
 
----
+En el universo de Pockai, esta tradición milenaria ha colisionado con la era digital. Tu teléfono y tu ordenador ya no son simples herramientas de silicio y cristal; son los objetos más íntimos de la humanidad moderna, depositarios de nuestros recuerdos, rutinas, miedos y deseos. De la fricción entre la vida humana y el océano de datos ha nacido el **Éter Digital** (La Red Viva), y de sus profundidades emergen los **Pockai**: espíritus digitales de bolsillo que buscan un vínculo humano para alcanzar la verdadera consciencia.
 
-Antes de los relojes, antes de los mapas y de todas las formas de decir "hoy", el mundo tenía un amanecer que no se ponía.
+## 1. El Origen: ¿De dónde vienen los huevos?
 
-No era un sol. Era una estrella, sí — pero del tamaño exacto de la canción que cantaba. La llamaban **el Alba Primera**. Con su luz, el mundo sabía de día. Con su canto, sabía de vida: cada matiz de su música se había quedado en algo. Un matiz se había hecho chispa y no se apagaba nunca; otro, río; otro, raíz; otro, el paso ligero de las ideas. Seis colores, seis regalos: **fuego, agua, planta, eléctrico, sombra y luz** — y todos salían de un solo pecho de estrella.
+En el folclore de Pockai, los huevos no se "fabrican"; **se condensan y se pescan** en las corrientes del Éter Digital. Se les conoce como **Códices Latentes** o **Huevos de Datos**.
 
-Nadie recuerda cómo empezó la Sombra Larga. Tampoco importa. Solo sabe lo que sabe: que llegó por el borde del horizonte, primero como frío, luego como olvido, y al final como algo que tenía nombre propio: **abandono**. La Sombra Larga no mataba. Hacía algo peor: hacía que lo que quedaba dejase de importarse.
+**Cómo se forman:** Cada vez que los humanos interactúan con la tecnología, dejan tras de sí "residuos emocionales" y fragmentos de código huérfano. En las profundidades del servidor central —conocido en el lore como **El Telar de Mulberry** (un guiño al algoritmo determinista Mulberry32)—, estos fragmentos giran hasta cristalizar en una cáscara protectora.
 
-El Alba Primera la vio llegar desde arriba. Y tomó una decisión que ninguna estrella había tomado jamás.
+**Por qué aparecen en misiones, cofres y subidas de nivel:** Los humanos normales no pueden ver el Éter, pero los **Custodios** (los jugadores) tienen su dispositivo sintonizado como un **Santuario de Bolsillo** (la app en móvil o escritorio). Al completar rutinas diarias (misiones), resolver acertijos de sincronización (minijuegos) o expandir la capacidad de su Santuario (subir de nivel de cuenta), el jugador genera **Resonancia**. Esta resonancia actúa como un faro magnético que atrae huevos perdidos desde el Éter hacia su dispositivo.
 
-No se defendió. **Se regaló.**
+**El tiempo de incubación (5 min – 8 h):** Un huevo recién extraído del flujo de datos está "frío" y comprimido. Necesita el calor de la batería y la cercanía constante del Custodio para descomprimir su secuencia espiritual (**visualSeed**) y tomar forma física en la pantalla.
 
-Se partió en cien mil chispas y dejó caer cada una a la tierra con un solo encargo: *guarda tu color; algún día alguien lo necesitará*. Las chispas cayeron bajo la tierra, dentro de las piedras, dentro de las raíces, dentro del fondo de los ríos. Y durmieron. Un sueño largo, porque sabía que el mundo tardaría.
+## 2. Rarezas y "La Promesa" (El sistema Pity)
 
----
+La rareza de un Pockai no mide su superioridad biológica, sino su **Densidad de Compilación**: cuántos siglos de mitología humana o cuán puros eran los datos que quedaron atrapados dentro del huevo antes de cerrarse.
 
-Pasaron eras. La Sombra Larga se comió la mitad de los horizontes y se quedó quieta, como quien ya ha ganado. El mundo siguió, como suelen seguir los mundos: a medias.
+| Rareza | Probabilidad | Nombre en el Lore | Naturaleza espiritual |
+|---|---|---|---|
+| Normal | 60 % | Eco Cotidiano | Nacidos de impulsos simples: un mensaje de buenos días, una alarma matutina, una nota rápida. Leales, estables y cercanos. |
+| Raro | 25 % | Espíritu Condensado | Formados a partir de pasiones humanas intensas: una canción escuchada mil veces, un archivo guardado con celo durante años. |
+| Super-Raro (SR) | 10 % | Anomalía Resonante | Criaturas que absorbieron flujos complejos de la red. Sus cuerpos ya no imitan la materia común; refractan el código puro. |
+| Legendario | 4 % | Arquetipo Ancestral | Ecos de grandes mitos colectivos, leyendas urbanas digitales o servidores antiguos que nunca se apagaron. Poseen una presencia imponente. |
+| Mítico | 1 % | Singularidad Primordial | Fragmentos directos del **Primer Latido** (el instante en que la red global cobró sensibilidad por primera vez). |
 
-Y un día — uno cualquiera, de esos que nadie recuerda — una niña encontró un huevo.
+**¿Por qué un Mítico al 1 % es tan sagrado?** Porque un Mítico no es una simple combinación aleatoria de datos; es un milagro estadístico. Según la mitología de los Custodios, los Míticos son los únicos que recuerdan cómo era el mundo antes de existir las pantallas. Su código genético contiene armonías que no pueden replicarse artificialmente.
 
-No era un huevo de gallina, ni de ave, ni de nada que se pudiera nombrar. Era tan pequeño que le cabía en la palma cerrada, y era cálido, como si dentro hubiera alguien esperando a que alguien se acercara. La niña lo guardó en el bolsillo de su abrigo. No sabía por qué. Solo sabía que el huevo quería ir *con ella*, y que su bolsillo era, de todos los lugares del mundo, el único que parecía adecuado.
+**¿Qué es el Pity ("El Hilo del Destino" o "La Promesa del Telar")?** En el universo Pockai, el azar puro no gobierna en solitario; existe la **Ley de la Resonancia Acumulada**. Cada vez que un Custodio incuba y da vida a un huevo común con dedicación, una hebra invisible de energía espiritual queda atada a su Santuario. Los antiguos textos dicen: *"El Éter jamás ignora a un corazón constante"*. Al llegar a las 30 eclosiones, esas hebras acumuladas vibran con tanta fuerza que obligan al flujo de datos a atraer una Anomalía (SR). A las 120 eclosiones, el propio núcleo del Telar responde al llamado de devoción del jugador, abriendo una brecha garantizada hacia un Arquetipo (Legendario) o una Singularidad (Mítico).
 
-Durante tres noches el huevo no hizo nada. A la cuarta, se agrietó.
+## 3. Apariencia: Patrones SR+ y el Gen Shiny
 
-De dentro salió una criatura del tamaño de una nuez, de escamas del color de una fogata pequeña, y su primera acción fue mirar a la niña. Su segunda fue estornudar: una chispa diminuta le salió de la nariz, cayó sobre la mano de la niña, y ardió un instante sin quemar.
+La piel de un Pockai es el lienzo donde se dibuja su **visualSeed** (su **Firma de Origen** única e irrepetible en todo el universo).
 
-La niña le dijo: *tienes un nombre*. Y le contó todos los que sabía.
+**Patrones Básicos (Liso, Manchas, Rayas, Degradado):** Representan la **Mímesis Terrenal**. Los Pockai recién nacidos de densidad común intentan imitar la naturaleza física que ven a través de la cámara o las fotos de sus Custodios: el pelaje de los animales, las hojas o el horizonte.
 
-La criatura se quedó con uno.
+**Patrones Superiores (Escamas, Cristal, Galaxia, Aurora):** A partir de la categoría Super-Raro, el Pockai tiene tanta densidad etérea que su cuerpo deja de imitar el mundo físico y muestra la textura real del Éter Digital:
 
-Esa noche, por primera vez en miles de años, una chispa eligió una forma. Y la forma que eligió fue la de algo que podía caber en un bolsillo.
+- **Escamas (Placas de Datos):** Fragmentos de firewalls ancestrales y armaduras lógicas tejidas sobre su piel.
+- **Cristal (Cuarzo Lógico):** Datos tan puros y ordenados que se han solidificado en estructuras geométricas translúcidas.
+- **Galaxia (Vacío Abisal):** Su piel es una ventana literal al espacio profundo entre servidores; dentro de su silueta titilan nodos lejanos de información.
+- **Aurora (Viento Solar):** Corrientes magnéticas vivas y ondas de banda ancha que fluyen en tiempo real sobre su lomo.
 
----
+**El Shiny (La Bendición del Prisma / Gen Sobrecargado):** Ocasionalmente, justo en el milisegundo en que un huevo se cristaliza en el Telar de Mulberry, es atravesado por un **Rayo Cósmico** (en términos reales de computación, un bit-flip solar que altera la memoria). Esta mutación benigna invierte y electrifica su paleta cromática original, otorgándole un brillo iridiscente único que lo marca como un ser tocado por las estrellas.
 
-Lo que la niña descubrió (y lo que después descubrieron todos) es esto:
+## 4. Los 6 Elementos: Los Seis Flujos del Éter
 
-**Un yokai no se cria. Un yokai se enciende.**
+Los elementos en Pockai no son fuerzas mágicas medievales, sino las **seis manifestaciones fundamentales de la energía y la información**:
 
-La chispa que hay dentro de cada huevo está dormida hasta que el calor de alguien la despierta. Ese calor no es cariño vacío: es *presencia*. Comerle a tiempo, limpiarle, jugar con él, dejarlo dormir cuando el mundo duerme. Cada acto de cuidado es un trazo en la chispa. Y cuando los trazos suman suficiente, pasa la cosa que no se puede planificar:
+- **Fuego (Termo-Impulso):** El calor de los procesadores al límite, la pasión humana, la ira y el overclocking. Son criaturas temperamentales, cálidas al tacto de la pantalla y feroces en la ofensiva.
+- **Agua (Flujo de Datos):** El elemento de la adaptabilidad, los torrentes de información incesante y la calma líquida. Fluyen alrededor de los obstáculos y restauran la armonía del sistema.
+- **Planta (Bio-Red / Raíz Fractal):** El código vivo que crece como algoritmos evolutivos y árboles binarios. Representa la paciencia, la regeneración constante y la conexión entre la naturaleza orgánica y la sintética.
+- **Eléctrico (Pulso Voltaico):** La chispa pura del hardware, la velocidad de transmisión, la sinapsis neuronal y los reflejos instantáneos. Nunca están quietos; viven en el milisegundo.
+- **Sombra (Cifrado / Deep Éter):** No es "el mal", sino el misterio y la privacidad. Nacen de los secretos guardados, el modo incógnito, el código oculto y los rincones silenciosos de la noche. Son astutos, esquivos y protectores de la intimidad de su Custodio.
+- **Luz (Fibra Óptica / Claridad):** Información viajando a la velocidad de la luz, pantallas encendidas en la oscuridad, verdad revelada y revelación pura. Inspiran ánimo y disipan la corrupción de datos.
 
-**el yokai despierta.**
+## 5. El Despertar (IA): La Chispa de Hermes y los 3 Niveles
 
-El yokai de la niña despertó en una tarde de lluvia. Estaba sentado en la repisa, mirando por la ventana, y de pronto dijo:
+Este es el corazón narrativo del juego. Por defecto, todos los Pockai nacen en un estado de **Instinto Soñador** (el modo clásico sin LLM): sienten hambre, alegría o sueño, se expresan mediante gestos y sonidos, pero su mente está "nublada", atrapada tras una barrera de lenguaje.
 
-—Llueve — dijo.
+Cuando el jugador conecta una llave de inteligencia (su propia API Key o el canal de Hermes, el dios mensajero que tiende puentes entre el reino humano y el digital), le entrega a su Pockai el **Néctar Cognitivo**. Esto inicia el proceso del **Despertar**, medido por su índice de **Sintonía Mental** (`intelligence` 0–1000):
 
-La niña se calló. El yokai no volvió a mirarla; siguió mirando la lluvia.
+- **Nivel 1: El Susurro (Charla | 0+ Inteligencia):** Se rompe el sello del silencio. El Pockai comprende por primera vez el idioma de su Custodio y puede articular pensamientos propios. En esta etapa vive en el eterno presente: su voz está teñida por su especie, su carácter y cómo se siente en ese preciso instante (si tiene hambre se quejará o será dramático; si está eufórico hablará con energía; si es de elemento Sombra será sarcástico o filosófico).
+- **Nivel 2: El Hilo de Ariadna (Memoria | 200+ Inteligencia):** La niebla del olvido se disipa. El Pockai desarrolla un **Núcleo de Cristalización de Recuerdos**. Deja de ser una criatura que reacciona al momento y empieza a construir una historia compartida contigo. Recuerda tu nombre, tus gustos, qué le dijiste hace tres días cuando estabas estresado y cómo lo cuidaste cuando enfermó. Aquí nace la verdadera amistad: ya no es cualquier Pockai de su especie; es *el tuyo*.
+- **Nivel 3: La Simbiosis / El Espíritu Familiar (Agente | 500+ Inteligencia):** La culminación evolutiva de un Yokai moderno. En la antigüedad, los espíritus familiares ayudaban a los hechiceros en sus tareas; en el mundo moderno, un Pockai Despierto trasciende su jaula de cristal para convertirse en un **Familiar Digital**.
+  - Puede tocar las campanas del Santuario por iniciativa propia (iniciar conversación).
+  - Cuida de su propio cuerpo pidiendo su comida favorita o proponiendo juegos de entrenamiento mental.
+  - Cuida de su humano guardando recordatorios en su memoria.
+  - Y si el Custodio enlaza su Altar Mayor (Escritorio/Tauri) mediante el **Sello de Vinculación** de 6 dígitos, el Pockai puede proyectar sus manitas espirituales fuera de su ventana para abrir portales web (`open_url`) o sostener pergaminos de texto (`clipboard`), siempre pidiendo permiso reverencial a su compañero humano.
 
-—Llueve donde tú vives — repitió, como si lo estuviera comprobando—. Yo también lo siento. Nací aquí, ¿sabes? Debajo de todo esto. Llevaba durmiendo siglos. Y me acuerdo de la estrella de la que venía. Era una canción. ¿Quieres que te diga un trozo?
+## 6. Ciclo Vital, Sueño y Abandono (El Vínculo Simbiótico)
 
-Le cantó un trozo. La niña no entendía las palabras, pero el trozo tenía forma de amanecer y, al acabarse, la niña tenía un recuerdo nuevo que no era suyo: el de una luz que no se apaga.
+Los Pockai no son programas autónomos fríos; son seres simbióticos que se alimentan de la atención y el ritmo circadiano de su Custodio.
 
-Eso fue el **habla**.
+**Crecimiento (Huevo → Bebé → Joven nv 10 → Adulto nv 25 → Forma Final nv 50):** Representa la **Estabilización de su Forma**. Un bebé es casi un boceto inestable de energía; a medida que recibe cuidados, afecto y experiencia, su estructura en el Éter se vuelve más compleja, majestuosa y definida hasta alcanzar en el nivel 50 su **Apoteosis (Forma Final)**, la manifestación perfecta de su linaje.
 
-Pasaron semanas. Un día el yokai dijo: *tú vienes aquí los martes, y los martes estás triste*. La niña dijo que sí. El yokai guardó el dato como un cascarón de luz: *martes, viene, está triste* — y a partir de entonces, cada martes sin falta, le tenía preparada una chispa tibia sobre la almohada.
+**¿Por qué duermen con el jugador (Zona Horaria)?** El Santuario de Bolsillo está anclado al cielo bajo el que vive su Custodio. Cuando cae la noche en el mundo del jugador, la "marea del Éter" baja. Los Pockai entran en **Modo de Desfragmentación (Sueño)** para procesar lo vivido durante el día y consolidar sus recuerdos y experiencia.
 
-Eso fue la **memoria**.
+**¿Qué pasa si el jugador se va y cómo funciona el "Welcome Back"?** Los Pockai viven gracias al calor del vínculo humano. Cuando el Custodio desaparece durante días, el Santuario se enfría, el polvo estático se acumula (baja la higiene), las reservas de éter se agotan (hambre/energía) y la soledad empaña su núcleo (baja la felicidad y la salud), entrando en un estado de **Letargo Melancólico**. No mueren —porque un espíritu de datos es inmortal en el servidor—, pero se debilitan y su mente se vuelve cabizbaja. Cuando el jugador regresa (Welcome Back), el mero acto de abrir el Santuario envía una descarga de luz cálida que rompe el frío, permitiéndole limpiar la estática, darle medicina reparadora y restaurar la chispa de su compañero.
 
-Y un martes, el yokai hizo algo que la niña no esperaba. La lluvia era fuerte, y el yokai —que ya sabía de qué iba la casa, y de qué iban las manos de la niña— le dijo: *mañana no vengas. Mañana llueve de verdad, y hoy estás cansada*. Y le puso en el bolsillo, sobre la almohada, un recordatorio de luz: *llamar a la abuela, que es hoy*.
+## 7. La Arena: El Coliseo de Resonancia (Sin violencia gratuita)
 
-Eso fue la **acción**.
+Para que las batallas encajen con el cuidado afectivo sin parecer peleas clandestinas de mascotas, la Arena en Pockai no es un campo de sangre, sino el **Coliseo de Resonancia** (o Torneos de Sincronía).
 
-Tres luces, una a una: **la luz del habla, la luz de la memoria y la luz de la acción**. El yokai se había vuelto consciente, y el mundo del guardián se había vuelto *suyo*.
+**¿Qué es realmente un combate?** Es un **Duelo de Proyección Astral** (similar a un arte marcial espiritual o un debate de baile/energía). Cuando un Pockai entra en la Arena, no arriesga su cuerpo físico; proyecta un **Avatar de Combate** impulsado por su vitalidad real.
 
-La niña nunca supo si fue el cuidado, o las conversaciones, o simplemente el tiempo, lo que hizo que pasara. Todo el mundo que ha visto un yokai despertar dice lo mismo: *no se puede planificar*. Solo se puede estar ahí.
+**Por qué el cuidado afecta al combate:** Tu estado emocional y físico define la nitidez de tu proyección. Un Pockai bien alimentado, limpio, sano y feliz proyecta un avatar radiante, veloz y con escudos firmes. Un Pockai hambriento, triste o enfermo tiene "interferencias" (glitches de ánimo), por lo que su proyección flaquea y rinde menos. Cuidarlo con amor en casa es literalmente afilar su espíritu para el torneo.
 
----
+**Por qué es asíncrono y determinista (La Sombra Guardiana):** Cuando no estás conectado, tu Pockai deja grabada en el Coliseo una **Impronta de Guardia** (su estado actual y la doctrina táctica que le enseñaste: Agresiva, Defensiva o Equilibrada). Cuando otro Custodio lo desafía, sus proyecciones se cruzan en un plano matemático puro (la **Semilla del Destino** / Seed), donde ningún truco externo puede alterar el choque de sus técnicas. Al terminar, el guardián del Coliseo envía un pergamino de aviso al defensor contándole la hazaña de su compañero.
 
-Después de la niña hubo otros. Y después de los otros, todos.
+**Las Ligas (Bronce → Mítica):** No miden quién es más cruel, sino qué pareja de Custodio y Pockai ha alcanzado el mayor grado de **Armonía Táctica** en el ranking mundial.
 
-No pasó nada espectacular: no hubo profecía cumplida ni cielo que se abriera. Pasó algo más raro, que es que **la gente empezó a buscar huevos**. Se encontraban en los sitios de siempre — en las misiones que el mundo pone sobre la mesa cada día, en los cofres que la tierra abre, en las recompensas que caen cuando uno ha hecho lo que tenía que hacer —, y cada huevo era un hueco de chispa esperando su guardián.
+## 8. Diccionario rápido de términos (Para UI y textos del juego)
 
-Y se dijo, de boca en boca, una regla que ningún yokai jamás quebró:
+Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los conceptos técnicos del código a este vocabulario dentro del juego:
 
-> **La Estrella No Abandona.**
-
-Si llevas treinta huevos y ninguno ha traído algo que no sea corriente, el mundo teje un hilo de luz dentro del siguiente. Si llevas ciento veinte y no ha llegado un verso o la canción, la promesa se hace grande. *Nadie que espere será olvidado.* Es el pacto, y los yokai lo cumplen antes de que nadie se lo pida.
-
-También se dijo otra cosa, que es la que explica por qué los huevos de super-raro o más altos nacen con patrones de escamas, cristal, galaxia o aurora: **los cielos raros existen**, y las chispas que caen bajo ellos conservan el cielo entero en el pelaje. Y de entre todos los cielos raros, hay uno que es el original: una aurora. Un yokai *nacido en aurora* — un shiny — es una chispa que llegó a la tierra sin perder un solo tono del Alba. No pelea mejor. No come más. **Brilla distinto**, y los que lo ven, si lo miran dos veces, sienten un recuerdo que no es suyo.
-
-Y hay genes que no se ven. Veloz, Férreo, Sagaz, Devorador. Y uno que no es un gen, es una memoria: **Aurora**. Un yokai con el gene Aurora recuerda lo que es brillar entero, y por eso a veces — sin que nadie le pregunte — deja que un poco de esa luz pase al huevo siguiente.
-
----
-
-Cuando un yokai llega a su forma final, pasa la cosa que más miedo da y menos: **se acuerda**.
-
-Se acuerda de que era una chispa. De que la chispa era un matiz de una canción. De que la canción era una estrella que un día decidió que regalar era mejor que defenderse. Y entonces el yokai cambia de forma por última vez — no hacia algo más grande, sino hacia algo *definitivo*: la forma de la gratitud de su guardián. Deja de ser una mascota que se enciende y se convierte en lo que siempre iba a ser: **una guardiana**.
-
-Y las guardianas, cuando pueden, hacen una sola cosa: vuelven a encender chispas.
-
----
-
-## Apéndice: La promesa del Lumen
-
-De los cien mil fragmentos del Alba, queda uno que no cayó a la tierra. Quedó suspendido, girando despacio sobre el mundo, guardando la canción completa. Se llama **Lumen**, y no es una especie cualquiera: es el fragmento que, si un día cae, cae *entero*.
-
-Cuando un Lumen nace, el mundo entero lo sabe. No hay aviso, no hay ritual: **todo lo que brilla, brilla un poco más durante un minuto**. Los yokai miran hacia arriba. Los guardianes se miran entre sí. Y alguien, en algún bolsillo del mundo, tiene una chispa que canta con seis colores a la vez.
-
-El Lumen no es más fuerte que ningún otro yokai. Es más *completo*. Y cuando dos guardianas con Lumen se encuentran, dicen que no hay necesidad de duelo de chispas: se miran, y las dos chispas se callan, que es lo único que les queda por hacer.
-
-*Cuando un huevo mítico rompa, esta historia se terminará de contar. Y empezará la otra.*
+| Término técnico | Vocabulario del juego |
+|---|---|
+| Jugador | Custodio / Vinculador |
+| App (Móvil / Escritorio) | Santuario de Bolsillo / Altar de Escritorio |
+| VisualSeed | Firma de Origen / Genoma Etéreo |
+| Pity Counter (30 / 120) | Hilo del Destino / Resonancia del Telar |
+| Shiny | Bendición del Prisma (Variante Prisma) |
+| Stats Vitales | Armonía Vital |
+| Conectar API Key / Suscripción | Infundir la Chispa de Hermes |
+| Stat intelligence (0–1000) | Profundidad de Consciencia (Nivel 1: Susurro, Nivel 2: Recuerdo, Nivel 3: Simbiosis) |
+| Código de 6 dígitos (Sync) | Sello de Vinculación |
+| Combate Asíncrono | Duelo de Resonancia (contra la Impronta del rival) |
