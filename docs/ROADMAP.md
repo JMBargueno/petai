@@ -15,7 +15,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 4** | Peleas Asíncronas | ✅ Completada (falta fin de temporada) | Motor determinista, emparejamiento ELO y repeticiones |
 | **Fase 5** | Clientes Móviles Nativos | ✅ Android (salvo Play Billing/FCM) · ⏳ iOS pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
 | **Fase 6** | Pulido y Lanzamiento | 🚧 Hecho lo técnico; pendiente lo que depende de cuentas externas | Seguridad, balance, optimización, tiendas y despliegue |
-| **Fase 7** | Funcionalidades Expandidas | 🚧 Oleada 1 completada; oleadas 2 y 3 en el backend, sin tests ni clientes | 33 nuevas features (hábito, meta, IA, comunidad y ecosistema) |
+| **Fase 7** | Funcionalidades Expandidas | 🚧 Oleada 1 completada; oleadas 2 y 3 en el backend con tests de backend crecientes, sin consumo desde clientes | 33 nuevas features (hábito, meta, IA, comunidad y ecosistema) |
 
 ---
 
@@ -121,7 +121,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 
 Implementación de 33 nuevas funcionalidades organizadas en tres oleadas. Cada feature tiene SDD completo (spec/plan/tasks en `.specify/memory/features/`) y specs de detalle en `docs/specs/`.
 
-> **Estado real de las oleadas 2 y 3** (ver [`informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md`](informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md), F-03 a F-10): están implementadas en el backend y migradas (`20261114120000_wave2_wave3`), pero la mayoría de sus módulos no tiene tests (excepciones: `cooking`, `modding`, `presence`, `sync` y `webhooks`, con tests unitarios), ningún cliente las consume y varias son prototipos (021 cuidado cooperativo, 023 spectator y 026 E2E); 013 (raid) y 014 (torneo) tienen además defectos de lógica pendientes. En las tablas, ⚠️ = backend implementado, sin tests de backend ni consumo desde los clientes. La oleada 1 tiene tests unitarios y e2e.
+> **Estado real de las oleadas 2 y 3** (ver [`informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md`](informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md), F-03 a F-10): están implementadas en el backend y migradas (`20261114120000_wave2_wave3`). Ya tienen una red de tests de backend (e2e de camino feliz por módulo + specs unit; p. ej. `raid`, `tournament`, `seasons`, `cooking`, `modding`, `sync`, `webhooks`, `presence`, `breeding`, `genes`, `habitat`, `gifting`…) y los defectos de lógica de 013 (raid, F-06) y 014 (torneo, F-05) están corregidos y cubiertos con tests. Lo que **sigue sin cobertura** es el consumo desde los clientes (solo oleada 1, más misiones/cofres/vínculo en escritorio y Android) y varias son aún prototipos (021 cuidado cooperativo, 023 spectator y 026 E2E). En las tablas, ⚠️ = backend implementado (con tests de backend crecientes) pero **sin consumo desde los clientes**. La oleada 1 tiene tests unitarios y e2e.
 
 ### Oleada 1 — Hábito e Infraestructura
 
