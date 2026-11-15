@@ -6516,7 +6516,7 @@
   },
   "info": {
     "title": "PetAI API",
-    "description": "API autoritativa para el ecosistema PetAI (tamagotchi virtual inteligente)",
+    "description": "API autoritativa para el ecosistema PetAI",
     "version": "1.0.0",
     "contact": {}
   },
