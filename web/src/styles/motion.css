@@ -112,9 +112,23 @@
   }
 }
 
-/* Transiciones de vista (cambio de sección del panel y reordenación de tablas) */
+/*
+ * Transiciones de vista:
+ *  - Entre páginas del mismo idioma navega el router (withViewTransitions): fundido sin recarga.
+ *  - Al cambiar de idioma hay una carga completa (otra compilación); @view-transition hace el
+ *    mismo fundido entre documentos donde hay soporte (Chrome, Edge, Safari 18.2+).
+ *  - La cabecera tiene nombre propio: se queda quieta mientras cambia el contenido.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
 ::view-transition-group(*) {
   animation-duration: 0.25s;
+}
+::view-transition-group(site-header) {
+  animation-duration: 0s;
 }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),

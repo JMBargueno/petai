@@ -107,6 +107,7 @@ export interface NavLink {
       pointer-events: none;
     }
     .site-header {
+      view-transition-name: site-header; /* fija durante el fundido entre páginas */
       max-inline-size: var(--page-max-width);
       margin-inline: auto;
       pointer-events: auto;
