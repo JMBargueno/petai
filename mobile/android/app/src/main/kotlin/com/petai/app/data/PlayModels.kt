@@ -430,3 +430,43 @@ data class TournamentStandings(
     val entries: List<TournamentStandingsEntry> = emptyList(),
     val me: TournamentStandingsMe? = null,
 )
+
+// ---------- Amistad + Co-op (feature 021) ----------
+
+@Serializable
+data class CoopFriendPet(val petId: String = "", val nickname: String = "", val speciesName: String = "")
+
+@Serializable
+data class CoopFriend(
+    val id: String = "",
+    val status: String = "",       // pending | accepted | revoked
+    val direction: String = "",    // incoming | outgoing
+    val otherUserId: String = "",
+    val otherDisplayName: String = "",
+    val otherPet: CoopFriendPet? = null,
+    val updatedAt: String = "",
+)
+
+@Serializable
+data class CoopPetState(val hunger: Double = 0.0, val happiness: Double = 0.0, val hygiene: Double = 0.0)
+
+@Serializable
+data class CoopVisitResult(
+    val success: Boolean = false,
+    val message: String = "",
+    val xpGained: Int = 0,
+    val petState: CoopPetState = CoopPetState(),
+)
+
+@Serializable
+data class CoopVisitLog(
+    val visitorId: String = "",
+    val action: String = "",
+    val petId: String = "",
+    val xpGained: Int = 0,
+    val createdAt: String = "",
+)
+
+@Serializable
+data class CoopHistory(val userId: String = "", val visits: List<CoopVisitLog> = emptyList())
+
