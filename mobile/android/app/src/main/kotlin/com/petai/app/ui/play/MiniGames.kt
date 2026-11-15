@@ -68,12 +68,12 @@ private fun GameFrame(
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(title, style = MaterialTheme.typography.titleLarge)
-            Text("⭐ $score", style = MaterialTheme.typography.titleLarge)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.Icon(com.petai.app.ui.theme.Lucide.Star, "Puntos", Modifier.size(22.dp))
+                Text(" $score", style = MaterialTheme.typography.titleLarge)
+            }
         }
-        LinearProgressIndicator(
-            progress = { (elapsed / durationSeconds).coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        )
+        com.petai.app.ui.theme.PockaiProgress((elapsed / durationSeconds).coerceIn(0f, 1f), Modifier.padding(vertical = 8.dp))
         Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
             if (!finished) content(elapsed, score) { score += it }
         }
@@ -176,11 +176,11 @@ fun MemoryGame(seed: Long, durationSeconds: Int, onFinish: (Int) -> Unit) {
                             Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(16.dp))
                                 .background(if (card.id in matched) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer)
                                 .clickable(enabled = !lock && !shown) { open += card.id },
                             contentAlignment = Alignment.Center,
-                        ) { Text(if (shown) card.face else "❔", fontSize = 32.sp) }
+                        ) { Text(if (shown) card.face else "?", fontSize = 32.sp, style = MaterialTheme.typography.headlineMedium) }
                     }
                 }
             }
@@ -218,15 +218,15 @@ fun ReflexGame(seed: Long, durationSeconds: Int, onFinish: (Int) -> Unit) {
                     Modifier
                         .offset { IntOffset((targetX * w).toInt(), (targetY * h).toInt()) }
                         .size(72.dp)
-                        .clip(RoundedCornerShape(36.dp))
-                        .background(MaterialTheme.colorScheme.primary)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(androidx.compose.ui.graphics.Brush.linearGradient(com.petai.app.ui.theme.Brand.GradAccent))
                         .clickable {
                             visible = false
                             nextAt = elapsed + 0.25f + rnd.nextFloat() * 0.5f
                             addScore(1)
                         },
                     contentAlignment = Alignment.Center,
-                ) { Text("⚡", fontSize = 28.sp, textAlign = TextAlign.Center) }
+                ) { androidx.compose.material3.Icon(com.petai.app.ui.theme.Lucide.Zap, "Toca", Modifier.size(32.dp), tint = androidx.compose.ui.graphics.Color.White) }
             }
         }
     }

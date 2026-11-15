@@ -1,5 +1,8 @@
 package com.petai.app.ui.habitat
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.petai.app.ui.theme.*
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,11 +40,20 @@ import com.petai.app.data.HabitatRoom
 import com.petai.app.data.HabitatState
 import kotlinx.coroutines.launch
 
-private val FURN_ICONS = mapOf(
-    "fountain_water" to "⛲", "soft_bed" to "🛏️", "toy_ball" to "⚽", "wall_shelf" to "📚",
-    "flower_pot" to "🌸", "garden_bench" to "🪑", "garden_pond" to "🐟", "shrine_altar" to "⛩️",
-    "crystal_lamp" to "💎", "final_throne" to "👑", "final_garden" to "🌳",
-)
+private fun furnIcon(id: String): ImageVector = when (id) {
+    "fountain_water" -> Lucide.Droplet
+    "soft_bed" -> Lucide.BedDouble
+    "toy_ball" -> Lucide.Volleyball
+    "wall_shelf" -> Lucide.BookOpen
+    "flower_pot" -> Lucide.Flower2
+    "garden_bench" -> Lucide.Armchair
+    "garden_pond" -> Lucide.Fish
+    "shrine_altar" -> Lucide.Sparkles
+    "crystal_lamp" -> Lucide.Lamp
+    "final_throne" -> Lucide.Crown
+    "final_garden" -> Lucide.Leaf
+    else -> Lucide.Armchair
+}
 
 private val BUFF_LABELS = mapOf(
     "hygiene_decay_reduction" to "Higiene decae menos",
@@ -131,8 +145,8 @@ fun HabitatScreen(service: ApiService, onChanged: () -> Unit) {
             if (error.isNotEmpty()) item { Text(error, color = MaterialTheme.colorScheme.error) }
 
             item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                PockaiCard(Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Buffs activos (${buffs?.itemCount ?: 0} muebles)", style = MaterialTheme.typography.titleMedium)
                         val active = buffs?.activeBuffs ?: emptyMap()
                         if (active.isEmpty()) {
@@ -141,7 +155,7 @@ fun HabitatScreen(service: ApiService, onChanged: () -> Unit) {
                             active.forEach { (k, v) ->
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text(BUFF_LABELS[k] ?: k, style = MaterialTheme.typography.bodySmall)
-                                    Text("+${(v * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                    Text("+${(v * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = PockaiTheme.colors.accentInk)
                                 }
                             }
                         }
@@ -152,11 +166,7 @@ fun HabitatScreen(service: ApiService, onChanged: () -> Unit) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     rooms.forEach { r ->
-                        FilterChip(
-                            selected = r.id == activeRoom?.id,
-                            onClick = { activeRoomId = r.id },
-                            label = { Text(if (r.unlocked) r.name else "🔒 ${r.name}") },
-                        )
+                        PockaiChip(r.name, r.id == activeRoom?.id, { activeRoomId = r.id }, icon = if (r.unlocked) null else Lucide.Lock)
                     }
                 }
             }
@@ -178,10 +188,11 @@ fun HabitatScreen(service: ApiService, onChanged: () -> Unit) {
                     item { Text("Colocados aquí", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
                     items.forEach { it ->
                         item(key = it.id) {
-                            Card(Modifier.fillMaxWidth()) {
+                            PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                                 Row(Modifier.padding(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                    Text("${FURN_ICONS[it.furnitureId] ?: "🪑"} ${it.furnitureId}", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                    Button(onClick = { remove(it.id) }, enabled = busyId.isEmpty()) { Text(if (busyId == it.id) "…" else "Quitar") }
+                                    Icon(furnIcon(it.furnitureId), null, Modifier.size(22.dp))
+                                    Text(it.furnitureId, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                                    SecondaryButton(if (busyId == it.id) "…" else "Quitar", onClick = { remove(it.id) }, enabled = busyId.isEmpty())
                                 }
                             }
                         }
@@ -199,10 +210,10 @@ private fun HabitatGrid(room: HabitatRoom, occupied: Map<Pair<Int, Int>, String>
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (x in 0 until room.gridWidth) {
                     val furn = occupied[x to y]
-                    Box(Modifier.size(22.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                    Box(Modifier.size(22.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
                         if (furn != null) {
                             Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                                Text(FURN_ICONS[furn] ?: "🪑", fontSize = 12.sp)
+                                Icon(furnIcon(furn), null, Modifier.size(14.dp))
                             }
                         }
                     }
@@ -214,17 +225,15 @@ private fun HabitatGrid(room: HabitatRoom, occupied: Map<Pair<Int, Int>, String>
 
 @Composable
 private fun FurnitureRow(f: HabitatFurniture, locked: Boolean, busy: Boolean, onPlace: () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
+    PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
         Row(Modifier.padding(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text(FURN_ICONS[f.id] ?: "🪑", style = MaterialTheme.typography.titleLarge)
+            Icon(furnIcon(f.id), null, Modifier.size(26.dp))
             Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
                 Text(f.name, style = MaterialTheme.typography.bodyLarge)
                 Text(f.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("${f.price} ${if (f.currency == "coins") "🪙" else "💎"}", style = MaterialTheme.typography.bodyMedium)
-            Button(onClick = onPlace, enabled = !locked && !busy, modifier = Modifier.padding(start = 8.dp)) {
-                Text(if (busy) "…" else if (locked) "🔒" else "Colocar")
-            }
+            if (f.currency == "coins") CoinAmount(f.price) else GemAmount(f.price)
+            SecondaryButton(if (busy) "…" else if (locked) "Bloqueado" else "Colocar", onClick = onPlace, enabled = !locked && !busy, modifier = Modifier.padding(start = 8.dp), icon = if (locked) Lucide.Lock else null)
         }
     }
 }

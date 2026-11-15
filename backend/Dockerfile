@@ -12,6 +12,9 @@ FROM base AS build
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY backend ./backend
 COPY shared ./shared
+# Runtime: los require() de game-data se resuelven desde dist/src/modules/<x>/ hacia
+# /app/backend/shared/ (4 niveles arriba). Sin esta copia, MODULE_NOT_FOUND al arrancar.
+COPY shared ./backend/shared
 RUN pnpm install --frozen-lockfile --filter petai-backend...
 RUN pnpm --filter petai-backend exec prisma generate && pnpm --filter petai-backend run build
 

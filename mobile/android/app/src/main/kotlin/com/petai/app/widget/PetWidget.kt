@@ -11,6 +11,11 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.ColorFilter
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.layout.size
+import com.petai.app.R
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -35,8 +40,9 @@ import androidx.glance.text.TextStyle
 import com.petai.app.MainActivity
 
 private val widgetColors = ColorProviders(
-    light = lightColorScheme(primary = Color(0xFF4A5C8C), surface = Color(0xFFF3F1FA), onSurface = Color(0xFF1B1B21)),
-    dark = darkColorScheme(primary = Color(0xFFB4C5FF), surface = Color(0xFF1B1B21), onSurface = Color(0xFFE4E1E9)),
+    // Tokens de marca (guía §3.2/§3.4): primary = accent-ink para texto con contraste AA
+    light = lightColorScheme(primary = Color(0xFF4A39C9), surface = Color(0xFFFFFFFF), onSurface = Color(0xFF0B0A14)),
+    dark = darkColorScheme(primary = Color(0xFFB3A8FF), surface = Color(0xFF17162A), onSurface = Color(0xFFF4F2FF)),
 )
 
 /** Widget de pantalla de inicio: estado de la mascota de un vistazo. Abre la app al tocarlo. */
@@ -56,33 +62,33 @@ class PetWidget : GlanceAppWidget() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (s == null) {
-                Text("PetAI", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp, color = GlanceTheme.colors.primary))
+                Text("Pockai", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp, color = GlanceTheme.colors.primary))
                 Text("Abre la app para ver a tu mascota", style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onSurface))
             } else {
                 Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(s.mood, style = TextStyle(fontSize = 28.sp))
+                    Image(ImageProvider(s.moodIcon), s.moodLabel, GlanceModifier.size(32.dp), colorFilter = ColorFilter.tint(GlanceTheme.colors.primary))
                     Spacer(GlanceModifier.width(8.dp))
                     Column {
                         Text(s.name, style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp, color = GlanceTheme.colors.onSurface))
-                        Text("Nv. ${s.level}", style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.primary))
+                        Text("Nv. ${s.level} · ${s.moodLabel}", style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.primary))
                     }
                 }
                 Spacer(GlanceModifier.height(6.dp))
                 Row(modifier = GlanceModifier.fillMaxWidth()) {
-                    Stat("🍎", s.hunger)
-                    Stat("😊", s.happiness)
-                    Stat("⚡", s.energy)
-                    Stat("🛁", s.hygiene)
-                    Stat("❤️", s.health)
+                    Stat(R.drawable.ic_lucide_apple, "Hambre", s.hunger)
+                    Stat(R.drawable.ic_lucide_smile, "Felicidad", s.happiness)
+                    Stat(R.drawable.ic_lucide_zap, "Energía", s.energy)
+                    Stat(R.drawable.ic_lucide_bath, "Higiene", s.hygiene)
+                    Stat(R.drawable.ic_lucide_heart, "Salud", s.health)
                 }
             }
         }
     }
 
     @Composable
-    private fun Stat(icon: String, value: Int) {
+    private fun Stat(icon: Int, label: String, value: Int) {
         Column(modifier = GlanceModifier.padding(end = 10.dp)) {
-            Text(icon, style = TextStyle(fontSize = 14.sp))
+            Image(ImageProvider(icon), label, GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurface))
             Text("$value", style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onSurface))
         }
     }

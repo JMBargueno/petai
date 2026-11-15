@@ -1,4 +1,4 @@
-import { otelLogCustomizer, redact } from './log-serializer';
+import { otelLogCustomizer, PinoNestLogger, redact } from './log-serializer';
 
 /**
  * Tests de la correlación y redacción de logs (T027, US4).
@@ -56,5 +56,44 @@ describe('log-serializer', () => {
   it('otelLogCustomizer redacta secrets presentes en el objeto', () => {
     const log = otelLogCustomizer({ msg: 'auth ok', accessToken: 'tok' });
     expect((log as Record<string, unknown>).accessToken).toBe('[REDACTED]');
+  });
+});
+
+/**
+ * PinoNestLogger: el bridge a pino debe mapear el level numérico de Nest al MÉTODO de pino
+ * ('trace'/'debug'/'info'/'warn'/'error'). Regresión: usar el número como nombre de método
+ * (`this.pino[30]`) es undefined y hace abort() al bootstrap de producción.
+ */
+describe('PinoNestLogger', () => {
+  const methods = ['trace', 'debug', 'info', 'warn', 'error'] as const;
+
+  function makeLogger() {
+    const calls: string[] = [];
+    const fakePino = {} as Record<string, (...args: unknown[]) => void>;
+    for (const m of methods) {
+      fakePino[m] = () => {
+        calls.push(m);
+      };
+    }
+    return { logger: new PinoNestLogger(fakePino), calls };
+  }
+
+  it.each([
+    [10, 'trace'],
+    [20, 'debug'],
+    [30, 'info'],
+    [40, 'warn'],
+    [50, 'error'],
+  ])('emite un level %i de Nest a pino.%s', (level, method) => {
+    const { logger, calls } = makeLogger();
+    (logger as any).emit(level, 'hola');
+    expect(calls).toEqual([method]);
+  });
+
+  it('log() va a info y error() va a error', () => {
+    const { logger, calls } = makeLogger();
+    logger.log('hola', 'Ctx');
+    logger.error('fallo');
+    expect(calls).toEqual(['info', 'error']);
   });
 });

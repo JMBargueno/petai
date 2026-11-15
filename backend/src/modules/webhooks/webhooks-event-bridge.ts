@@ -1,16 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { OnEvent } from '@nestjs/event-emitter';
-import { WebhooksService, WebhookEvent } from './webhooks.service';
+import type { WebhookEvent } from './webhooks.service';
+import { WEBHOOKS_QUEUE } from '../../queues/queue.constants';
 
 /**
  * Puente eventos de dominio → webhooks (R-01).
  *
- * Los webhooks existían (register/list/remove/test, firma, SSRF, tracking) pero `dispatch`
- * **no estaba cableado a ningún evento**, así que nunca se entregaban. Aquí se escucha los
- * eventos reales que ya emiten los módulos (convención `pet:*`) y se dispara `dispatch` en
- * *background* (fire-and-forget): **no retiene la petición** que generó el evento (antes el
- * riesgo R-01 era que los reintentos bloquearan la respuesta) y un fallo de entrega no puede
- * romper el flujo de dominio.
+ * Los módulos emiten eventos (`pet:*`); aquí se mapean al nombre de webhook y se **encolan** en
+ * BullMQ (`webhooks`) en lugar de despacharse inline: la entrega es **durable** (sobrevive a un
+ * reinicio de réplica), **distribuida** (cualquier réplica la procesa) y con **reintento a nivel
+ * de cola**. La réplica que genera el evento no lo retiene, y un fallo de encolado no puede romper
+ * el flujo de dominio (el `add` es fire-and-forget).
  *
  * `season.ended` y `ai.reminder.created` (también en `KNOWN_EVENTS`) aún no se emiten por ningún
  * módulo; se cablean cuando esos flujos añadan su emisión.
@@ -19,15 +21,20 @@ import { WebhooksService, WebhookEvent } from './webhooks.service';
 export class WebhooksEventBridge {
   private readonly logger = new Logger(WebhooksEventBridge.name);
 
-  constructor(private readonly webhooks: WebhooksService) {}
+  constructor(@InjectQueue(WEBHOOKS_QUEUE) private readonly webhooksQueue: Queue) {}
 
-  /** Despacha en background: ni bloquea ni puede hacer fallar al dominio. */
+  /** Encola la entrega: ni bloquea al dominio ni un fallo de encolado lo rompe. */
   private fire(event: string, userId: string | undefined, petId?: string): void {
     if (!userId) return;
     const payload: WebhookEvent = petId ? { event, userId, petId } : { event, userId };
-    this.webhooks.dispatch(payload).catch((err) => {
-      this.logger.warn(`Fallo al despachar webhook ${event}: ${err?.message}`);
-    });
+    this.webhooksQueue
+      .add('webhook', payload, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 10_000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      })
+      .catch((err) => this.logger.warn(`No se pudo encolar el webhook '${event}': ${err?.message}`));
   }
 
   @OnEvent('pet:evolved')
@@ -50,3 +57,4 @@ export class WebhooksEventBridge {
     this.fire('level.up', payload?.userId, payload?.petId);
   }
 }
+

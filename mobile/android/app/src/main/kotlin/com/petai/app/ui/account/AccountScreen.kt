@@ -8,12 +8,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Row
+import com.petai.app.ui.theme.CoinAmount
+import com.petai.app.ui.theme.GemAmount
+import com.petai.app.ui.theme.PockaiCard
+import com.petai.app.ui.theme.PrimaryButton
+import com.petai.app.ui.theme.ScreenTitle
+import com.petai.app.ui.theme.SecondaryButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,23 +40,23 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
     var linkOk by remember { mutableStateOf(false) }
     val user = state.user
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Tu cuenta", style = MaterialTheme.typography.headlineSmall)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        ScreenTitle("Tu cuenta", eyebrow = "Perfil")
         Spacer(Modifier.height(12.dp))
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
+        PockaiCard(Modifier.fillMaxWidth()) {
+            Column {
                 Text(user?.displayName ?: "Entrenador", style = MaterialTheme.typography.titleLarge)
                 Text(user?.email.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
-                Text("🪙 ${user?.coins ?: 0}   💎 ${user?.gems ?: 0}")
+                Row { CoinAmount(user?.coins ?: 0); Spacer(Modifier.padding(horizontal = 8.dp)); GemAmount(user?.gems ?: 0) }
                 user?.timezone?.let {
                     Text("Zona horaria: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
         Spacer(Modifier.height(16.dp))
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
+        PockaiCard(Modifier.fillMaxWidth()) {
+            Column {
                 Text("Vincular escritorio", style = MaterialTheme.typography.titleMedium)
                 Text("Introduce el código de 6 dígitos que muestra la app de escritorio.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
@@ -62,19 +68,20 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                linkMsg?.let { Text(it, color = if (linkOk) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                linkMsg?.let { Text(it, color = if (linkOk) com.petai.app.ui.theme.PockaiTheme.colors.onSuccessText else MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { onLinkDevice(code) { err -> linkOk = err == null; linkMsg = err ?: "Escritorio vinculado ✅"; if (err == null) code = "" } },
+                PrimaryButton(
+                    "Vincular",
+                    onClick = { onLinkDevice(code) { err -> linkOk = err == null; linkMsg = err ?: "Escritorio vinculado"; if (err == null) code = "" } },
                     enabled = code.length == 6,
-                ) { Text("Vincular") }
+                )
             }
         }
         Spacer(Modifier.height(16.dp))
-        OutlinedButton(onClick = { confirm = true }, modifier = Modifier.fillMaxWidth()) { Text("Cerrar sesión") }
+        SecondaryButton("Cerrar sesión", onClick = { confirm = true }, modifier = Modifier.fillMaxWidth(), icon = com.petai.app.ui.theme.Lucide.LogOut)
         Spacer(Modifier.height(24.dp))
         Text(
-            "PetAI ${BuildConfig.VERSION_NAME}",
+            "Pockai ${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

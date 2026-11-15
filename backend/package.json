@@ -20,6 +20,7 @@
     "authz:promote": "ts-node prisma/promote-superadmin.ts"
   },
   "dependencies": {
+    "@nestjs/bullmq": "^11.0.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
@@ -43,6 +44,7 @@
     "@opentelemetry/semantic-conventions": "^1.45.0",
     "@prisma/client": "^6.4.0",
     "argon2": "^0.41.1",
+    "bullmq": "^5.0.0",
     "helmet": "^8.3.0",
     "ioredis": "^5.11.1",
     "passport": "^0.7.0",

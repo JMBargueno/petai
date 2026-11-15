@@ -17,17 +17,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
+import com.petai.app.ui.theme.*
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,7 +57,7 @@ fun ChatScreen(vm: ChatViewModel, petName: String) {
     Column(Modifier.fillMaxSize().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Chat con $petName", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-            IconButton(onClick = { showSettings = true }) { Icon(Icons.Default.Settings, contentDescription = "Ajustes de IA") }
+            IconButton(onClick = { showSettings = true }) { Icon(Lucide.Settings, contentDescription = "Ajustes de IA") }
         }
 
         when {
@@ -72,15 +67,16 @@ fun ChatScreen(vm: ChatViewModel, petName: String) {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("💬", style = MaterialTheme.typography.displayMedium)
+                Sticker(Lucide.MessageCircle, color = PockaiTheme.colors.themeAi, size = 72.dp)
+                Spacer(Modifier.height(16.dp))
                 Text("Configura tu IA para hablar con $petName", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "PetAI usa tu propia clave (OpenAI, Hermes o un endpoint compatible). Se guarda cifrada en el servidor.",
+                    "Pockai usa tu propia clave (OpenAI, Hermes o un endpoint compatible). Se guarda cifrada en el servidor.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = { showSettings = true }) { Text("Configurar") }
+                PrimaryButton("Configurar", onClick = { showSettings = true }, icon = Lucide.Settings)
             }
             else -> LazyColumn(
                 Modifier.weight(1f).fillMaxWidth(),
@@ -89,7 +85,7 @@ fun ChatScreen(vm: ChatViewModel, petName: String) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (state.items.isEmpty()) item {
-                    Text("Escribe algo para saludar a $petName 👋", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Escribe algo para saludar a $petName.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 items(state.items, key = { it.id }) { Bubble(it, typing = state.streaming && it == state.items.last()) }
                 if (state.toolHint) item { Text("$petName está pensando…", style = MaterialTheme.typography.labelSmall) }
@@ -108,12 +104,12 @@ fun ChatScreen(vm: ChatViewModel, petName: String) {
                     placeholder = { Text("Mensaje") },
                     modifier = Modifier.weight(1f),
                     maxLines = 4,
-                    shape = RoundedCornerShape(24.dp),
+                    shape = MaterialTheme.shapes.small,
                 )
                 IconButton(
                     onClick = { vm.send(input); input = "" },
                     enabled = input.isNotBlank() && !state.streaming,
-                ) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar") }
+                ) { Icon(Lucide.Send, contentDescription = "Enviar") }
             }
         }
     }
@@ -128,13 +124,15 @@ private fun Bubble(item: ChatItem, typing: Boolean) {
     val mine = item.role == ChatRole.USER
     val notice = item.role == ChatRole.NOTICE
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
+        // Burbuja (guía §9): superficie casi opaca, contorno de 1 dp y radio 16
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = when {
                 notice -> MaterialTheme.colorScheme.tertiaryContainer
                 mine -> MaterialTheme.colorScheme.primaryContainer
-                else -> MaterialTheme.colorScheme.surfaceVariant
+                else -> MaterialTheme.colorScheme.surface
             },
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier.widthIn(max = 300.dp),
         ) {
             val text = if (item.text.isEmpty() && typing) "…" else item.text
@@ -161,7 +159,7 @@ private fun SettingsSheet(vm: ChatViewModel, onDismiss: () -> Unit) {
             Text("Ajustes de IA", style = MaterialTheme.typography.titleLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("openai" to "OpenAI", "hermes" to "Hermes", "custom" to "Otro").forEach { (id, label) ->
-                    FilterChip(selected = provider == id, onClick = { provider = id }, label = { Text(label) })
+                    PockaiChip(label, provider == id, { provider = id })
                 }
             }
             if (provider != "openai") {
@@ -175,14 +173,15 @@ private fun SettingsSheet(vm: ChatViewModel, onDismiss: () -> Unit) {
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            state.settingsMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            state.settingsMessage?.let { Text(it, color = PockaiTheme.colors.onSuccessText) }
             state.settingsError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
+                PrimaryButton(
+                    "Guardar",
                     onClick = { vm.saveSettings(provider, baseUrl, model, apiKey); apiKey = "" },
                     enabled = !state.settingsBusy,
-                ) { Text("Guardar") }
-                OutlinedButton(onClick = { vm.testSettings() }, enabled = !state.settingsBusy && cfg.configured) { Text("Probar conexión") }
+                )
+                SecondaryButton("Probar conexión", onClick = { vm.testSettings() }, enabled = !state.settingsBusy && cfg.configured)
             }
         }
     }

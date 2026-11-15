@@ -86,6 +86,15 @@ export function buildPinoRedactPaths(): string[] {
   ];
 }
 
+/** Mapea el level numérico de Nest al método de pino (trace=10, debug=20, info=30, warn=40, error=50). */
+function levelToMethod(level: number): 'trace' | 'debug' | 'info' | 'warn' | 'error' {
+  if (level <= 10) return 'trace';
+  if (level <= 20) return 'debug';
+  if (level <= 30) return 'info';
+  if (level <= 40) return 'warn';
+  return 'error';
+}
+
 /**
  * Adapta una instancia de pino al `LoggerService` de Nest para poder hacer
  * `NestFactory.create(AppModule, { logger })`. Cada llamada inyecta `traceId`/`spanId` del
@@ -104,9 +113,7 @@ export class PinoNestLogger {
 
     const redacted = redact(base, 0);
     const msg = typeof message === 'string' ? message : JSON.stringify(message);
-    // pino expone métodos por nombre (info/warn/…), no por nivel numérico.
-    const method = (this.pino.levels?.labels?.[level] as string | undefined) ?? 'info';
-    this.pino[method](redacted, msg);
+    this.pino[levelToMethod(level)](redacted, msg);
   }
 
   log(message: unknown, context?: string): void {

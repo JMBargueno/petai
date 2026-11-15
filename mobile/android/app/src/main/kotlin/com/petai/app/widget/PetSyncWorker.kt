@@ -51,10 +51,10 @@ class PetSyncWorker(context: Context, params: WorkerParameters) : CoroutineWorke
 
     private fun notifyIfNeeded(s: PetSnapshot) {
         val reason = when {
-            s.sick -> "${s.name} está enfermo y necesita medicina 🤒"
-            s.hunger < 20 -> "${s.name} tiene mucha hambre 🍎"
-            s.hygiene < 15 -> "${s.name} necesita un baño 🛁"
-            s.happiness < 20 -> "${s.name} se siente solo, ¡juega con él! 😢"
+            s.sick -> "${s.name} está enfermo y necesita medicina"
+            s.hunger < 20 -> "${s.name} tiene mucha hambre"
+            s.hygiene < 15 -> "${s.name} necesita un baño"
+            s.happiness < 20 -> "${s.name} se siente solo, ¡juega con él!"
             else -> return
         }
         val ctx = applicationContext
@@ -68,7 +68,7 @@ class PetSyncWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         val open = PendingIntent.getActivity(ctx, 0, Intent(ctx, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("PetAI")
+            .setContentTitle("Pockai")
             .setContentText(reason)
             .setContentIntent(open)
             .setAutoCancel(true)

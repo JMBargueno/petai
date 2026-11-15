@@ -28,7 +28,7 @@ describe('Amistad + Co-op (e2e) — cableado real', () => {
 
   const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
-  type U = { token: string; userId: string; petId: string; auth: Record<string, string> };
+  type U = { token: string; userId: string; petId: string; auth: Record<string, string>; email: string };
 
   /** register → hatch un pet (petId) → /v1/me (userId). */
   async function makeUser(): Promise<U> {
@@ -44,7 +44,7 @@ describe('Amistad + Co-op (e2e) — cableado real', () => {
       .id as string;
     const userId = (await api().get('/v1/me').set(a).expect(200)).body.id as string;
     createdUsers.push(userId);
-    return { token, userId, petId, auth: a };
+    return { token, userId, petId, auth: a, email };
   }
 
   /** Devuelve la fila de amistad de `who` hacia `other` (id + status) desde su lista. */
@@ -217,6 +217,34 @@ describe('Amistad + Co-op (e2e) — cableado real', () => {
         .set(a.auth)
         .send({ ownerId: b.userId, petId: b.petId, action: 'feed' })
         .expect(429);
+    });
+  });
+
+  describe('Invitar por email + listado enriquecido', () => {
+    it('invita por email (sin targetUserId) y la respuesta trae el nombre y el pet del otro', async () => {
+      const a = await makeUser();
+      const b = await makeUser();
+
+      const req = await api().post('/v1/coop/friends').set(a.auth).send({ email: b.email }).expect(200);
+      expect(req.body.status).toBe('pending');
+      expect(req.body.otherUserId).toBe(b.userId);
+      expect(req.body.otherDisplayName).toBe('Coop Test');
+      expect(req.body.otherPet).toMatchObject({ petId: b.petId });
+
+      // El listado de a (outgoing) también trae el nombre + pet de b.
+      const list = await api().get('/v1/coop/friends').set(a.auth).expect(200);
+      const entry = list.body.find((f: any) => f.otherUserId === b.userId);
+      expect(entry).toMatchObject({ status: 'pending', direction: 'outgoing', otherDisplayName: 'Coop Test' });
+      expect(entry.otherPet).toMatchObject({ petId: b.petId });
+    });
+
+    it('rechaza invitar a un email inexistente (404)', async () => {
+      const a = await makeUser();
+      await api()
+        .post('/v1/coop/friends')
+        .set(a.auth)
+        .send({ email: `nadie_${Math.random().toString(36).slice(2, 8)}@petai.local` })
+        .expect(404);
     });
   });
 });

@@ -2406,7 +2406,7 @@ export interface paths {
         /** Mis relaciones de amistad (amigos aceptados + peticiones) */
         get: operations["CoopFriendsController_list"];
         put?: never;
-        /** Enviar una petición de amistad */
+        /** Enviar una petición de amistad (por id o email del destinatario) */
         post: operations["CoopFriendsController_request"];
         delete?: never;
         options?: never;
@@ -7445,7 +7445,9 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    targetUserId: string;
+                    targetUserId?: string;
+                    /** @description Alternativa a targetUserId: email del destinatario */
+                    email?: string;
                 };
             };
         };

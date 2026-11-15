@@ -16,6 +16,7 @@ import { BondingService } from '../bonding/bonding.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { LeaderboardService, BoardScope } from './leaderboard.service';
 import { ExclusiveLockService } from '../../redis/exclusive-lock.service';
+import { RedisCacheService } from '../../redis/redis-cache.service';
 import { generateBot } from './combat/bots';
 import { simulateBattle } from './combat/engine';
 import { applyElo, leagueFor, pickOpponent } from './combat/ranking';
@@ -51,6 +52,7 @@ export class BattlesService {
     private readonly bonding: BondingService,
     private readonly eventEmitter: EventEmitter2,
     private readonly exclusiveLock: ExclusiveLockService,
+    private readonly cache: RedisCacheService,
   ) {}
 
   private get cfg(): CombatConfig & Record<string, any> {
@@ -381,10 +383,15 @@ export class BattlesService {
   async leaderboardView(userId: string, scope: BoardScope, limit: number, petId?: string) {
     if (scope !== 'global' && scope !== 'weekly') throw new BadRequestException('scope debe ser global o weekly');
     const rows = await this.leaderboard.top(scope, limit);
-    const pets = await this.prisma.pet.findMany({
-      where: { id: { in: rows.map((r) => r.petId) } },
-      include: { species: true, user: { select: { displayName: true } } },
-    });
+    // R-04: caché de lectura (TTL 10s) — el detalle de las top N pets es global y cambia solo
+    // tras batallas; múltiples lecturas en ese intervalo sirven desde Redis.
+    const cacheKey = `lb:details:${scope}:${limit}`;
+    const pets = await this.cache.getOrSet(cacheKey, 10, () =>
+      this.prisma.pet.findMany({
+        where: { id: { in: rows.map((r) => r.petId) } },
+        include: { species: true, user: { select: { displayName: true } } },
+      }),
+    );
     const byId = new Map(pets.map((p) => [p.id, p]));
     const entries = rows.flatMap((r) => {
       const p = byId.get(r.petId);

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="petai_background">#0F172A</color>
-    <color name="petai_egg">#FDE68A</color>
-    <color name="petai_egg_spot">#38BDF8</color>
+    <!-- Fondo de página (guía §3.2): claro #fbfaff / oscuro #0d0c19 -->
+    <color name="pockai_background">#FBFAFF</color>
+    <color name="pockai_sunburst">#FFD731</color>
 </resources>

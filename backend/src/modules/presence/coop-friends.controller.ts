@@ -40,11 +40,21 @@ export class CoopFriendsController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Enviar una petición de amistad' })
-  @ApiBody({ schema: { type: 'object', required: ['targetUserId'], properties: { targetUserId: { type: 'string' } } } })
-  request(@CurrentUser() user: any, @Body() body: { targetUserId?: string }): Promise<FriendshipSummary> {
-    if (!body?.targetUserId) throw new BadRequestException('targetUserId requerido');
-    return this.coopCareService.requestFriendship(body.targetUserId, user.id);
+  @ApiOperation({ summary: 'Enviar una petición de amistad (por id o email del destinatario)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        targetUserId: { type: 'string' },
+        email: { type: 'string', description: 'Alternativa a targetUserId: email del destinatario' },
+      },
+    },
+  })
+  request(@CurrentUser() user: any, @Body() body: { targetUserId?: string; email?: string }): Promise<FriendshipSummary> {
+    if (!body?.targetUserId && !body?.email) {
+      throw new BadRequestException('Indica targetUserId o email');
+    }
+    return this.coopCareService.requestFriendship(body, user.id);
   }
 
   @Post(':id/accept')
