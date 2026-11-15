@@ -3478,8 +3478,9 @@
         "parameters": [
           {
             "name": "petId",
-            "required": true,
-            "in": "path",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por mascota",
             "schema": {
               "type": "string"
             }

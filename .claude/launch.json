@@ -21,6 +21,12 @@
       "port": 5173
     },
     {
+      "name": "pockai-desktop-dev-alt",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "petai-desktop", "exec", "vite", "--port", "5174"],
+      "port": 5174
+    },
+    {
       "name": "pockai-web-dev",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "pockai-web", "exec", "ng", "serve", "--port", "4200"],

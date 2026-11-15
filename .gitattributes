@@ -1,0 +1,2 @@
+# Hooks de git: siempre LF (con CRLF el shebang falla en macOS/Linux)
+.githooks/* text eol=lf

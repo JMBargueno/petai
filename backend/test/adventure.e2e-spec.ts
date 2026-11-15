@@ -51,7 +51,7 @@ describe('Aventura Narrativa IA (e2e) — camino feliz', () => {
     const eggs = await api().get('/v1/eggs').set(auth(token)).expect(200);
     const petId = (await api().post(`/v1/eggs/${eggs.body[0].id}/hatch`).set(auth(token)).expect(201)).body.id as string;
     // Stats altos para que `resolveOutcome` dé siempre «win» (statsScore=1).
-    await prisma.pet.update({ where: { id: petId }, data: { level: 50, rarity: 'legendary', bonding: 100, sleeping: false } });
+    await prisma.pet.update({ where: { id: petId }, data: { level: 50, rarity: 'legendary', bonding: 100, sleeping: false, happiness: 50 } });
     // Saldo conocido para afirmar deltas.
     await prisma.user.update({ where: { id: userId }, data: { coins: 1000, gems: 50 } });
     return { token, userId, petId };
@@ -169,6 +169,24 @@ describe('Aventura Narrativa IA (e2e) — camino feliz', () => {
     // Ya no hay aventura activa.
     const after = (await api().get('/v1/adventure/current').set(auth(token)).expect(200)).body;
     expect(after.active).toBe(false);
+  });
+
+  it('c2) la felicidad no supera 100 al completar y solo hay una aventura gratis al día', async () => {
+    const { token, petId } = await signupWithPet();
+    await prisma.pet.update({ where: { id: petId }, data: { happiness: 98 } });
+    const started = (await api().post('/v1/adventure/start').set(auth(token)).send({ petId }).expect(201)).body;
+    const adventureId = started.adventureId as string;
+    createdAdventures.push(adventureId);
+
+    for (let i = 0; i < 3; i++) {
+      await api().post('/v1/adventure/choose').set(auth(token)).send({ adventureId, optionIndex: 0 }).expect(201);
+    }
+
+    const pet = await prisma.pet.findUnique({ where: { id: petId } });
+    expect(pet!.happiness).toBe(100);
+
+    // La gratis de hoy ya está gastada
+    await api().post('/v1/adventure/start').set(auth(token)).send({ petId }).expect(400);
   });
 
   it('d) aventura premium: cobra 10 gemas y genera 5 escenas', async () => {

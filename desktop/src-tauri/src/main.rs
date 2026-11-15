@@ -121,6 +121,8 @@ fn get_active_window_info(app: tauri::AppHandle) -> ActiveWindowInfo {
 
     #[cfg(not(target_os = "windows"))]
     {
+        // `app` solo se usa en Windows; evita el warning de variable sin usar en macOS/Linux
+        let _ = app;
         ActiveWindowInfo::default()
     }
 }
@@ -191,7 +193,13 @@ fn main() {
             let quit = MenuItem::with_id(app, "quit", "Salir de Pockai", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&toggle, &updates, &quit])?;
 
-            let _tray = TrayIconBuilder::new()
+            // Sin `.icon(...)` el icono de la bandeja sale vacío: se usa el icono de la app
+            // (bundle.icon de tauri.conf.json).
+            let mut tray_builder = TrayIconBuilder::with_id("main").tooltip("Pockai");
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            }
+            let _tray = tray_builder
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {

@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { TrainingService } from './training.service';
@@ -50,8 +50,9 @@ export class TrainingController {
   }
 
   @Get('active-buff')
+  @ApiQuery({ name: 'petId', required: false, description: 'Filtrar por mascota' })
   @ApiOperation({ summary: 'Ver buff de entrenamiento activo del pet' })
-  activeBuff(@CurrentUser() user: any, @Param('petId') petId?: string) {
+  activeBuff(@CurrentUser() user: any, @Query('petId') petId?: string) {
     return this.training.getActiveBuff(user.id, petId);
   }
 }
