@@ -79,7 +79,12 @@ fun AppRoot(vm: AppViewModel) {
 
     when (signedIn) {
         null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        false -> AuthScreen(busy = state.busy, onSubmit = vm::authenticate)
+        false -> AuthScreen(
+            busy = state.busy,
+            inviteRequired = state.inviteRequired,
+            onRegisterMode = vm::loadRegistrationConfig,
+            onSubmit = vm::authenticate,
+        )
         true -> MainScaffold(vm, state, snackbar)
     }
 }

@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/registration-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configuración pública del registro (¿hace falta invitación?) */
+        get: operations["AuthController_registrationConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/register": {
         parameters: {
             query?: never;
@@ -2993,6 +3010,59 @@ export interface paths {
         patch: operations["AdminUsersController_assignRole"];
         trace?: never;
     };
+    "/v1/admin/registration-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ajustes del registro (¿solo con invitación?) */
+        get: operations["AdminInvitesController_getSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Activar o desactivar el registro solo con invitación (queda auditado) */
+        patch: operations["AdminInvitesController_setSettings"];
+        trace?: never;
+    };
+    "/v1/admin/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar códigos de invitación (paginado; filtro: status) */
+        get: operations["AdminInvitesController_list"];
+        put?: never;
+        /** Generar códigos de invitación */
+        post: operations["AdminInvitesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/invites/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revocar un código de invitación (idempotente) */
+        post: operations["AdminInvitesController_revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3057,6 +3127,10 @@ export interface components {
             /** @description Eventos próximos (0..N). */
             events: components["schemas"]["UpcomingEventDto"][];
         };
+        RegistrationConfigDto: {
+            /** @description Si es true, el registro exige un código de invitación */
+            inviteRequired: boolean;
+        };
         RegisterDto: {
             /**
              * @description Correo electrónico del usuario
@@ -3073,6 +3147,11 @@ export interface components {
              * @example EntrenadorPet
              */
             displayName?: string;
+            /**
+             * @description Código de invitación (obligatorio si el registro es solo con invitación)
+             * @example ABCD-EF23
+             */
+            inviteCode?: string;
         };
         AuthResponseDto: {
             /** @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... */
@@ -3814,6 +3893,60 @@ export interface components {
              */
             total: number;
         };
+        RegistrationSettingsDto: {
+            /** @description Si es true, el registro exige un código de invitación válido */
+            inviteOnly: boolean;
+        };
+        InviteCreatorDto: {
+            id: string;
+            email: string;
+            displayName: string | null;
+        };
+        InviteCodeDto: {
+            id: string;
+            /** @example ABCD-EF23 */
+            code: string;
+            maxUses: number;
+            usedCount: number;
+            /** Format: date-time */
+            expiresAt: string | null;
+            /** Format: date-time */
+            revokedAt: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            createdBy: components["schemas"]["InviteCreatorDto"] | null;
+            /** @enum {string} */
+            status: "active" | "used" | "revoked" | "expired";
+        };
+        InviteListDto: {
+            items: components["schemas"]["InviteCodeDto"][];
+            total: number;
+            page: number;
+            pageSize: number;
+        };
+        CreateInvitesDto: {
+            /**
+             * @description Número de registros que permite cada código
+             * @default 1
+             */
+            maxUses: number;
+            /**
+             * Format: date-time
+             * @description Caducidad (opcional, futura)
+             */
+            expiresAt?: string | null;
+            /** @description Nota interna (para quién es la invitación) */
+            note?: string;
+            /**
+             * @description Cuántos códigos generar
+             * @default 1
+             */
+            count: number;
+        };
+        CreatedInvitesDto: {
+            items: components["schemas"]["InviteCodeDto"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -3940,6 +4073,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AuthController_registrationConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationConfigDto"];
+                };
             };
         };
     };
@@ -8599,6 +8751,115 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AdminInvitesController_getSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationSettingsDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_setSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationSettingsDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_list: {
+        parameters: {
+            query?: {
+                status?: "active" | "used" | "revoked" | "expired";
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteListDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInvitesDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedInvitesDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteCodeDto"];
+                };
             };
         };
     };

@@ -14,6 +14,7 @@ export default [
       { path: 'precios', loadComponent: () => import('./features/prices').then((m) => m.Prices) },
       { path: 'eventos', loadComponent: () => import('./features/events').then((m) => m.Events) },
       { path: 'usuarios', loadComponent: () => import('./features/users').then((m) => m.Users) },
+      { path: 'invitaciones', loadComponent: () => import('./features/invites').then((m) => m.Invites) },
       { path: 'pockais', loadComponent: () => import('./features/pockais').then((m) => m.Pockais) },
       { path: 'registro', loadComponent: () => import('./features/audit').then((m) => m.Audit) },
     ],

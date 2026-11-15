@@ -1,4 +1,6 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
+import { InvitesService } from '../invites/invites.service';
+import { RegistrationConfigDto } from '../invites/dto/invites.dto';
 import type { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -18,7 +20,15 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly deviceLink: DeviceLinkService,
     private readonly passwordReset: PasswordResetService,
+    private readonly invites: InvitesService,
   ) {}
+
+  @Get('registration-config')
+  @ApiOperation({ summary: 'Configuración pública del registro (¿hace falta invitación?)' })
+  @ApiResponse({ status: HttpStatus.OK, type: RegistrationConfigDto })
+  async registrationConfig(): Promise<RegistrationConfigDto> {
+    return { inviteRequired: await this.invites.isInviteOnly() };
+  }
 
   @Post('register')
   @ApiOperation({ summary: 'Registrar nuevo usuario' })

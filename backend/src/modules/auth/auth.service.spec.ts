@@ -17,7 +17,7 @@ function decodePayload(token: string): Record<string, unknown> {
   return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
 }
 
-function buildService(userId: string, email: string, displayName: string) {
+function buildService(userId: string, email: string, displayName: string, opts: { inviteOnly?: boolean } = {}) {
   const user = {
     id: userId,
     email,
@@ -26,12 +26,13 @@ function buildService(userId: string, email: string, displayName: string) {
     gems: 10,
   };
 
-  const prismaMock = {
+  const prismaMock: any = {
     user: {
       findUnique: jest.fn(async (q: any) => (q?.where?.id ? user : null)),
       create: jest.fn(async () => user),
     },
     egg: { create: jest.fn(async () => ({ id: 'egg' })) },
+    $transaction: jest.fn(async (fn: any) => fn(prismaMock)),
     refreshToken: { create: jest.fn(async () => ({})), updateMany: jest.fn(async () => ({ count: 1 })), findFirst: jest.fn(async () => null), deleteMany: jest.fn(async () => ({})) },
   };
 
@@ -44,6 +45,10 @@ function buildService(userId: string, email: string, displayName: string) {
   };
 
   const realtimeMock = { disconnectUser: jest.fn() };
+  const invitesMock = {
+    isInviteOnly: jest.fn(async () => opts.inviteOnly ?? false),
+    redeem: jest.fn(async () => undefined),
+  };
 
   const configService = new ConfigService({
     JWT_ACCESS_SECRET: 'access-secret-minimum-16-characters',
@@ -52,8 +57,8 @@ function buildService(userId: string, email: string, displayName: string) {
     JWT_REFRESH_EXPIRES_IN: '7d',
   });
 
-  const service = new AuthService(prismaMock as never, new JwtService(), configService, throttleMock as never, realtimeMock as never);
-  return { service, prismaMock };
+  const service = new AuthService(prismaMock as never, new JwtService(), configService, throttleMock as never, realtimeMock as never, invitesMock as never);
+  return { service, prismaMock, invitesMock };
 }
 
 describe('AuthService — emisión de tokens (S-01: sin fast-path)', () => {
@@ -85,5 +90,42 @@ describe('AuthService — emisión de tokens (S-01: sin fast-path)', () => {
     expect(decodeHeader(res.accessToken).alg).toBe('HS256');
     expect('refreshFastPath' in res).toBe(false);
     expect(decodePayload(res.refreshToken).sub).toBe(userId);
+  });
+});
+describe('AuthService — registro con invitación', () => {
+  const body = { email: 'nuevo@petai.local', password: 'ContrasenaSegura123!' };
+
+  it('con el modo desactivado registra sin código y no canjea nada', async () => {
+    const { service, invitesMock } = buildService('user-10', body.email, 'Nuevo');
+    await expect(service.register(body, '127.0.0.1')).resolves.toHaveProperty('accessToken');
+    expect(invitesMock.redeem).not.toHaveBeenCalled();
+  });
+
+  it('con el modo desactivado ignora un código enviado', async () => {
+    const { service, invitesMock } = buildService('user-11', body.email, 'Nuevo');
+    await service.register({ ...body, inviteCode: 'ABCD-EFGH' }, '127.0.0.1');
+    expect(invitesMock.redeem).not.toHaveBeenCalled();
+  });
+
+  it('con el modo activo y sin código responde 403 y no crea el usuario', async () => {
+    const { service, prismaMock } = buildService('user-12', body.email, 'Nuevo', { inviteOnly: true });
+    await expect(service.register(body, '127.0.0.1')).rejects.toMatchObject({ status: 403 });
+    await expect(service.register({ ...body, inviteCode: '   ' }, '127.0.0.1')).rejects.toMatchObject({ status: 403 });
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('con el modo activo y código canjea dentro de la transacción del registro', async () => {
+    const { service, prismaMock, invitesMock } = buildService('user-13', body.email, 'Nuevo', { inviteOnly: true });
+    await expect(service.register({ ...body, inviteCode: 'abcd-efgh' }, '127.0.0.1')).resolves.toHaveProperty('accessToken');
+    expect(prismaMock.$transaction).toHaveBeenCalled();
+    expect(invitesMock.redeem).toHaveBeenCalledWith(prismaMock, 'abcd-efgh', 'user-13');
+  });
+
+  it('si el canje falla, el error se propaga (la transacción se deshace)', async () => {
+    const { service, invitesMock, prismaMock } = buildService('user-14', body.email, 'Nuevo', { inviteOnly: true });
+    const { ForbiddenException } = await import('@nestjs/common');
+    invitesMock.redeem.mockRejectedValueOnce(new ForbiddenException('Código de invitación no válido o caducado') as never);
+    await expect(service.register({ ...body, inviteCode: 'MALO-MALO' }, '127.0.0.1')).rejects.toMatchObject({ status: 403 });
+    expect(prismaMock.egg.create).not.toHaveBeenCalled();
   });
 });

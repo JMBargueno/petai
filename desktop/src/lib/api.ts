@@ -162,15 +162,26 @@ export function isTerminalError(err: unknown): boolean {
 export const api = {
   client,
 
-  async register(email: string, password: string, displayName?: string) {
+  async register(email: string, password: string, displayName?: string, inviteCode?: string) {
+    const code = inviteCode?.trim();
     const res = await client.POST('/v1/auth/register', {
-      body: { email, password, displayName },
+      body: { email, password, displayName, ...(code ? { inviteCode: code } : {}) },
     });
     if (res.error) throw new Error((res.error as any)?.message || 'Error en registro');
     if (res.data?.accessToken) {
       setSession(res.data);
     }
     return res.data;
+  },
+
+  /** ¿El registro exige código de invitación? Ante un fallo de red se asume que no (el servidor decide igualmente). */
+  async getRegistrationConfig(): Promise<{ inviteRequired: boolean }> {
+    try {
+      const res = await client.GET('/v1/auth/registration-config');
+      return { inviteRequired: !!res.data?.inviteRequired };
+    } catch {
+      return { inviteRequired: false };
+    }
   },
 
   async login(email: string, password: string) {

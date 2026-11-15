@@ -28,7 +28,16 @@ const displayName = z
   .pipe(z.string().min(1, 'displayName no puede estar vacío').max(50, 'displayName no puede superar los 50 caracteres'))
   .optional();
 
-export const registerSchema = z.object({ email, password, displayName });
+// Código de invitación: opcional en el esquema; si el registro está en modo "solo con invitación",
+// AuthService lo exige. Vacío se trata como ausente.
+const inviteCode = z
+  .string({ error: 'inviteCode debe ser un texto' })
+  .trim()
+  .max(32, 'inviteCode no es válido')
+  .optional()
+  .transform((v) => v || undefined);
+
+export const registerSchema = z.object({ email, password, displayName, inviteCode });
 
 // En el login no se exige la política de contraseña (las cuentas antiguas podrían incumplirla),
 // solo un tope de longitud para no hashear cuerpos enormes.

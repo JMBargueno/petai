@@ -13,7 +13,7 @@ import { ALL_REPOSITORIES, Repository } from './data/repository';
     <div class="shell">
       <header class="top">
         <a class="brand" routerLink="/admin"><span class="logo__mark" aria-hidden="true">P</span>Pockai <span>Panel</span></a>
-        <p class="tag demo">Usuarios: datos reales · resto de secciones: demostración</p>
+        <p class="tag demo">Usuarios e invitaciones: datos reales · resto de secciones: demostración</p>
         <div class="top__actions">
           @if (auth.user(); as user) {
             <span class="whoami">{{ user.email }} · {{ roleLabel(user.role) }}</span>
@@ -205,9 +205,10 @@ export class Shell {
     { path: 'precios', label: 'Precios' },
     { path: 'eventos', label: 'Eventos' },
     { path: 'usuarios', label: 'Usuarios' },
+    { path: 'invitaciones', label: 'Invitaciones', permission: 'invites:manage' },
     { path: 'pockais', label: 'Pockais' },
     { path: 'registro', label: 'Registro' },
-  ];
+  ].filter((link) => !link.permission || this.auth.can(link.permission));
 
   constructor() {
     inject(Title).setTitle('Panel de Pockai');

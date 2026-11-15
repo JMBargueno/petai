@@ -33,6 +33,8 @@ data class AppUiState(
     val shop: List<ItemDto> = emptyList(),
     /** Hay una acción en curso (alimentar, comprar…): los botones se desactivan. */
     val busy: Boolean = false,
+    /** El registro exige código de invitación (se consulta al abrir "Crear cuenta"). */
+    val inviteRequired: Boolean = false,
     /** Animación temporal del sprite tras una acción: "eat" o "happy". */
     val petAnimation: String? = null,
 ) {
@@ -102,11 +104,15 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
     // ---------- Sesión ----------
 
     /** Devuelve el motivo del fallo, o null si todo fue bien. */
-    fun authenticate(register: Boolean, email: String, password: String, displayName: String, onResult: (String?) -> Unit) {
+    fun authenticate(register: Boolean, email: String, password: String, displayName: String, inviteCode: String, onResult: (String?) -> Unit) {
         viewModelScope.launch {
+            if (register && _state.value.inviteRequired && inviteCode.isBlank()) {
+                onResult("El registro requiere un código de invitación")
+                return@launch
+            }
             _state.update { it.copy(busy = true) }
             val error = try {
-                val user = if (register) service.register(email.trim(), password, displayName) else service.login(email.trim(), password)
+                val user = if (register) service.register(email.trim(), password, displayName, inviteCode) else service.login(email.trim(), password)
                 _state.update { it.copy(user = user) }
                 null
             } catch (e: ApiException) {
@@ -117,6 +123,14 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
             _state.update { it.copy(busy = false) }
             if (error == null) refreshAll()
             onResult(error)
+        }
+    }
+
+    /** Consulta si el registro exige invitación. Si falla, se deja como opcional (el servidor decide igualmente). */
+    fun loadRegistrationConfig() {
+        viewModelScope.launch {
+            val required = runCatching { service.registrationConfig().inviteRequired }.getOrDefault(false)
+            _state.update { it.copy(inviteRequired = required) }
         }
     }
 

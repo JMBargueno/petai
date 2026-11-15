@@ -13,6 +13,7 @@ export const PERMISSIONS = [
   'economy:manage',
   'events:manage',
   'audit:read',
+  'invites:manage', // invitaciones de registro y ajuste "solo con invitación"
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
