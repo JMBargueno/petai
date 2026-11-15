@@ -8,7 +8,7 @@ import { ChangeDetectionStrategy, Component, LOCALE_ID, inject } from '@angular/
       <div class="band__inner footer__inner">
         <div class="footer__brand">
           <a class="logo" [href]="home" aria-label="Pockai, inicio" i18n-aria-label="@@nav.home">
-            <span class="logo__mark" aria-hidden="true">P</span>
+            <img class="logo__mark" src="favicon.svg" alt="" aria-hidden="true" />
             <span aria-hidden="true">Pockai</span>
           </a>
           <p class="footer__tagline" i18n="@@footer.tagline">

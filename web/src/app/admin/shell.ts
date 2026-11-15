@@ -11,7 +11,7 @@ import { SECTIONS } from './sections';
   template: `
     <div class="shell">
       <header class="top">
-        <a class="brand" routerLink="/admin"><span class="logo__mark" aria-hidden="true">P</span>Pockai <span>Panel</span></a>
+        <a class="brand" routerLink="/admin"><img class="logo__mark" src="favicon.svg" alt="" aria-hidden="true" />Pockai <span>Panel</span></a>
         <div class="top__actions">
           @if (auth.user(); as user) {
             <span class="whoami">{{ user.email }} · {{ roleLabel(user.role) }}</span>

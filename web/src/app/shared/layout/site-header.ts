@@ -31,7 +31,7 @@ export interface NavLink {
     <header #header class="site-header">
       <div #inner class="header-inner">
         <a class="logo" [href]="home()" [attr.aria-label]="homeLabel()">
-          <span class="logo__mark" aria-hidden="true">P</span>
+          <img class="logo__mark" src="favicon.svg" alt="" aria-hidden="true" />
           <span class="logo__word" aria-hidden="true">Pockai</span>
         </a>
 

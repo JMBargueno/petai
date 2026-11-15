@@ -518,16 +518,23 @@
     text-transform: uppercase;
   }
   .logo__mark {
-    display: grid;
-    place-items: center;
+    display: block;
+    flex-shrink: 0;
     inline-size: 40px;
-    aspect-ratio: 1;
-    border-radius: 14px;
-    background: var(--grad-accent);
-    color: #fff;
-    box-shadow: var(--shadow-1), inset 0 1px 0 rgb(255 255 255 / 0.3);
-    font-size: 20px;
+    block-size: 40px;
     rotate: -6deg;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.18));
+    transition: rotate 0.25s ease, scale 0.25s ease;
+  }
+  .logo:hover .logo__mark,
+  .brand:hover .logo__mark {
+    rotate: 6deg;
+    scale: 1.06;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .logo__mark {
+      transition: none;
+    }
   }
 
   /* Selector de idioma (segmentado, objetivo táctil de 44px) */

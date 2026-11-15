@@ -16,8 +16,9 @@ import RaidTab from './RaidTab.svelte';
 import TournamentTab from './TournamentTab.svelte';
   import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
   import AboutPanel from './AboutPanel.svelte';
+  import PockaiMark from './PockaiMark.svelte';
   import { updateState, hasUpdate } from '../lib/updater';
-  import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut } from 'lucide-svelte';
+  import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut, AlertCircle } from 'lucide-svelte';
 
   export let user: any = null;
   export let pet: any = null;
@@ -252,25 +253,29 @@ import TournamentTab from './TournamentTab.svelte';
   >
     <div class="panel-header" on:mousedown={startPanelDrag} role="presentation">
       <div class="header-title">
-        <span class="logo"><span class="logo__mark">P</span><span class="display">Pockai</span></span>
+        <span class="logo"><PockaiMark size={30} /><span class="display">Pockai</span></span>
         {#if user}
           <div class="user-pill">
-            <span title="Monedas"><Coins size={14} /> {user.coins}</span>
-            <span title="Gemas"><Gem size={14} /> {user.gems}</span>
+            <span class="pill-coins" title="Monedas"><Coins size={14} /> {user.coins}</span>
+            <span class="pill-gems" title="Gemas"><Gem size={14} /> {user.gems}</span>
           </div>
         {/if}
       </div>
-      <button class="btn btn--ghost btn--icon" aria-label="Cerrar panel" on:click={() => dispatch('close')}><X size={18} /></button>
+      <button class="btn btn--ghost btn--icon close-btn" aria-label="Cerrar panel" on:click={() => dispatch('close')}><X size={18} /></button>
     </div>
 
     {#if !user}
       <div class="auth-section">
-        <span class="eyebrow">Pockai</span>
-        <h3 class="display auth-title">{isLoginMode ? 'Iniciar sesión' : 'Crear cuenta'}</h3>
-        <p class="subtitle">Conecta con tu mascota virtual</p>
+        <div class="auth-hero">
+          <div class="auth-halo"><PockaiMark size={72} /></div>
+          <span class="eyebrow">Pockai</span>
+          <h3 class="display auth-title">{isLoginMode ? 'Iniciar sesión' : 'Crear cuenta'}</h3>
+          <p class="subtitle">Conecta con tu mascota virtual</p>
+        </div>
 
+        <form class="card auth-form" on:submit|preventDefault={handleAuth}>
         {#if authError}
-          <div class="error-msg">{authError}</div>
+          <div class="error-msg auth-error" role="alert"><AlertCircle size={16} /> <span>{authError}</span></div>
         {/if}
 
         <div class="form-group">
@@ -311,12 +316,13 @@ import TournamentTab from './TournamentTab.svelte';
           </div>
         {/if}
 
-        <button class="btn btn--primary block" on:click={handleAuth} disabled={isLoading}>
+        <button type="submit" class="btn btn--primary block auth-submit" disabled={isLoading}>
           {isLoading ? 'Cargando…' : isLoginMode ? 'Entrar' : 'Registrarse'}
         </button>
+        </form>
 
-        <button class="btn btn--ghost block" on:click={toggleAuthMode}>
-          {isLoginMode ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+        <button type="button" class="auth-toggle" on:click={toggleAuthMode}>
+          {#if isLoginMode}¿No tienes cuenta? <strong>Regístrate</strong>{:else}¿Ya tienes cuenta? <strong>Inicia sesión</strong>{/if}
         </button>
 
         <!-- Sin sesión no hay Ajustes: el estado de la actualización se muestra aquí (aviso automático o bandeja). -->
@@ -357,37 +363,38 @@ import TournamentTab from './TournamentTab.svelte';
         {#if dest === 'pet' && sub === 'home'}
           {#if pet}
             <div class="pet-summary">
-              <div class="stat-header">
-                <div>
+              <div class="card pet-hero">
+                <div class="pet-hero__info">
                   <span class="pet-title">{pet.nickname || pet.species?.name}</span>
-                  <span class="pet-species-tag">{pet.species?.element} · {pet.rarity}</span>
+                  <div class="pet-tags">
+                    {#if pet.species?.element}<span class="chip pet-tag">{pet.species.element}</span>{/if}
+                    {#if pet.rarity}<span class="chip rarity-pill {pet.rarity}">{pet.rarity}</span>{/if}
+                  </div>
                 </div>
-                <span class="chip level-tag">Nivel {pet.level}</span>
+                <span class="chip level-tag">Nv. {pet.level}</span>
               </div>
 
               <div class="vitals-grid">
-                <div class="vital-item">
-                  <div class="vital-label"><span><Drumstick size={14} /> Hambre</span><span>{Math.round(pet.hunger)}%</span></div>
-                  <div class="meter" style="--meter-color: var(--color-ember)"><i style="width: {pet.hunger}%;"></i></div>
-                </div>
-                <div class="vital-item">
-                  <div class="vital-label"><span><Sparkles size={14} /> Felicidad</span><span>{Math.round(pet.happiness)}%</span></div>
-                  <div class="meter" style="--meter-color: var(--color-sunburst)"><i style="width: {pet.happiness}%;"></i></div>
-                </div>
-                <div class="vital-item">
-                  <div class="vital-label"><span><Zap size={14} /> Energía</span><span>{Math.round(pet.energy)}%</span></div>
-                  <div class="meter" style="--meter-color: var(--color-electric-blue)"><i style="width: {pet.energy}%;"></i></div>
-                </div>
-                <div class="vital-item">
-                  <div class="vital-label"><span><Droplets size={14} /> Higiene</span><span>{Math.round(pet.hygiene)}%</span></div>
-                  <div class="meter" style="--meter-color: var(--color-mint-pop)"><i style="width: {pet.hygiene}%;"></i></div>
-                </div>
+                {#each [
+                  { label: 'Hambre', icon: Drumstick, value: pet.hunger, color: 'var(--color-ember)' },
+                  { label: 'Felicidad', icon: Sparkles, value: pet.happiness, color: 'var(--color-sunburst)' },
+                  { label: 'Energía', icon: Zap, value: pet.energy, color: 'var(--color-electric-blue)' },
+                  { label: 'Higiene', icon: Droplets, value: pet.hygiene, color: 'var(--color-mint-pop)' },
+                ] as v (v.label)}
+                  <div class="vital-item" class:low={v.value < 25} style="--meter-color: {v.color}">
+                    <div class="vital-label">
+                      <span><span class="vital-icon"><svelte:component this={v.icon} size={13} /></span> {v.label}</span>
+                      <span class="vital-value">{Math.round(v.value)}%</span>
+                    </div>
+                    <div class="meter"><i style="width: {v.value}%;"></i></div>
+                  </div>
+                {/each}
               </div>
 
               <div class="actions-row">
-                <button class="btn" on:click={handleClean}><Droplets size={16} /> Bañar</button>
-                <button class="btn" on:click={handleToggleSleep}>
-                  {#if pet.sleeping}<Sun size={16} /> Despertar{:else}<Moon size={16} /> Dormir{/if}
+                <button class="btn action-btn" on:click={handleClean}><Droplets size={18} /> Bañar</button>
+                <button class="btn action-btn" on:click={handleToggleSleep}>
+                  {#if pet.sleeping}<Sun size={18} /> Despertar{:else}<Moon size={18} /> Dormir{/if}
                 </button>
               </div>
 
@@ -396,10 +403,13 @@ import TournamentTab from './TournamentTab.svelte';
                 <div class="food-chips">
                   {#each inventory as item}
                     <button class="chip food-chip" on:click={() => handleFeed(item.itemId)}>
-                      {item.item.name} <span class="chip-qty">×{item.qty}</span>
+                      <Drumstick size={13} /> {item.item.name} <span class="chip-qty">{item.qty}</span>
                     </button>
                   {:else}
-                    <p class="empty-msg">No tienes alimentos. Ve a la tienda a comprar comida.</p>
+                    <div class="food-empty">
+                      <p class="empty-msg">No tienes alimentos.</p>
+                      <button class="btn btn--sm" on:click={() => go('shop', 'store')}><ShoppingBag size={14} /> Ir a la tienda</button>
+                    </div>
                   {/each}
                 </div>
               </div>
@@ -553,59 +563,70 @@ import TournamentTab from './TournamentTab.svelte';
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    gap: 8px;
+    padding: 10px 12px 10px 16px;
+    background: color-mix(in srgb, var(--surface) 45%, transparent);
     border-bottom: 1px solid var(--line-soft);
+  }
+  .panel-header:active {
+    cursor: grabbing;
   }
 
   .header-title {
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
   }
 
   .logo {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
   }
   .logo .display {
-    font-size: 18px;
-  }
-  .logo__mark {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 10px;
-    background: var(--grad-accent);
-    color: var(--on-dark);
     font-family: var(--font-display);
-    font-size: 14px;
-    rotate: -6deg;
-    box-shadow: var(--shadow-1), inset 0 1px 0 rgb(255 255 255 / 0.35);
+    font-size: 18px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1;
   }
 
   .user-pill {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
   }
   .user-pill span {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
+    gap: 5px;
+    padding: 3px 10px 3px 7px;
     border: var(--outline);
     border-radius: var(--radius-pills);
     background: var(--surface);
+  }
+  .pill-coins :global(svg) {
+    color: var(--warning-ink);
+  }
+  .pill-gems :global(svg) {
+    color: var(--color-electric-blue);
+  }
+  .close-btn {
+    transition: background var(--dur-1), rotate var(--dur-1);
+  }
+  .close-btn:hover {
+    background: color-mix(in srgb, var(--danger) 16%, transparent);
+    rotate: 90deg;
   }
 
   .nav-tabs {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 2px;
-    padding: 6px;
+    gap: 4px;
+    padding: 8px;
     border-bottom: 1px solid var(--line-soft);
   }
   .nav-tabs button {
@@ -613,8 +634,8 @@ import TournamentTab from './TournamentTab.svelte';
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: 6px 0;
+    gap: 3px;
+    padding: 7px 0 6px;
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--radius-2xl);
@@ -622,50 +643,76 @@ import TournamentTab from './TournamentTab.svelte';
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
-    transition: background var(--dur-1), color var(--dur-1);
+    transition: background var(--dur-1), color var(--dur-1), box-shadow var(--dur-1), translate var(--dur-1);
+  }
+  .nav-tabs button :global(svg) {
+    transition: translate var(--dur-1);
   }
   .nav-tabs button:hover {
-    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .nav-tabs button:hover :global(svg) {
+    translate: 0 -1px;
   }
   .nav-tabs button.active {
-    color: var(--accent-ink);
-    background: var(--surface);
-    border-color: var(--line);
+    color: var(--on-color);
+    background: var(--color-sunburst);
+    border-color: var(--color-carbon);
+    box-shadow: 2px 3px 0 var(--color-carbon);
+    translate: -1px -1px;
+  }
+  .nav-tabs button:focus-visible,
+  .sub-tabs button:focus-visible,
+  .auth-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .tab-badge {
     position: absolute;
-    top: 2px;
-    right: 8px;
+    top: -4px;
+    right: 4px;
     min-width: 16px;
     padding: 0 4px;
+    border: 1px solid var(--color-carbon);
     border-radius: var(--radius-pills);
     background: var(--danger);
-    color: var(--on-color);
+    color: var(--on-dark);
     font-size: 10px;
-    line-height: 16px;
+    line-height: 14px;
     text-align: center;
   }
 
   .sub-tabs {
     display: flex;
     gap: 6px;
-    padding: 8px 12px 0;
+    padding: 10px 12px 2px;
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .sub-tabs::-webkit-scrollbar {
+    display: none;
   }
   .sub-tabs button {
-    padding: 4px 12px;
-    border: var(--outline);
+    padding: 5px 12px;
+    border: 1px solid var(--line-soft);
     border-radius: var(--radius-pills);
     background: var(--surface);
-    color: var(--ink);
+    color: var(--ink-muted);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
+    transition: background var(--dur-1), color var(--dur-1), border-color var(--dur-1);
+  }
+  .sub-tabs button:hover {
+    color: var(--ink);
+    border-color: var(--line);
   }
   .sub-tabs button.active {
     background: var(--ink);
+    border-color: var(--ink);
     color: var(--bg);
   }
 
@@ -675,49 +722,110 @@ import TournamentTab from './TournamentTab.svelte';
     user-select: text;
   }
 
-  .stat-header {
+  .pet-hero {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    background:
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-sunburst) 28%, transparent), transparent 60%),
+      var(--surface);
+    box-shadow: var(--shadow-pop);
+  }
+  .pet-hero__info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
   }
   .pet-title {
     font-family: var(--font-display);
     text-transform: uppercase;
-    font-size: 20px;
-    display: block;
+    font-size: 22px;
+    line-height: 1.05;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .pet-species-tag {
-    font-size: 11px;
-    font-weight: 700;
+  .pet-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pet-tag {
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ink-muted);
+    font-size: 10px;
+    padding: 2px 8px;
+    background: var(--surface-2);
+  }
+  .pet-tags .rarity-pill {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-color: var(--color-carbon);
   }
   .level-tag {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 800;
     background: var(--color-sunburst);
     color: var(--on-color);
     border-color: var(--color-carbon);
+    box-shadow: 2px 2px 0 var(--color-carbon);
   }
 
   .vitals-grid {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
     margin-bottom: 14px;
+  }
+  .vital-item {
+    padding: 10px 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-2xl);
+    background: var(--surface);
+  }
+  .vital-item.low {
+    border-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 8%, var(--surface));
   }
   .vital-label {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 4px;
+    font-weight: 700;
+    margin-bottom: 8px;
     color: var(--ink-muted);
   }
-  .vital-label span {
+  .vital-label > span {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+  }
+  .vital-icon {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--color-carbon);
+    border-radius: 8px;
+    background: var(--meter-color);
+    color: var(--on-color);
+  }
+  .vital-value {
+    color: var(--ink);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .vital-item.low .vital-value {
+    color: var(--danger-ink);
+  }
+  .vital-item .meter {
+    height: 8px;
   }
 
   .actions-row {
@@ -725,12 +833,14 @@ import TournamentTab from './TournamentTab.svelte';
     gap: 8px;
     margin-bottom: 14px;
   }
-  .actions-row .btn {
+  .action-btn {
     flex: 1;
+    min-height: 44px;
   }
 
   .food-selector {
     background: var(--surface-2);
+    border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
     padding: 12px;
   }
@@ -742,12 +852,36 @@ import TournamentTab from './TournamentTab.svelte';
   }
   .food-chip {
     cursor: pointer;
+    padding: 4px 4px 4px 10px;
     background: var(--color-mint-pop);
     color: var(--on-color);
     border-color: var(--color-carbon);
+    transition: translate var(--dur-1), box-shadow var(--dur-1);
+  }
+  .food-chip:hover {
+    translate: -1px -1px;
+    box-shadow: 2px 2px 0 var(--color-carbon);
   }
   .chip-qty {
+    min-width: 20px;
+    padding: 0 6px;
+    border-radius: var(--radius-pills);
+    background: var(--color-carbon);
+    color: var(--color-paper-white);
     font-weight: 800;
+    font-size: 11px;
+    text-align: center;
+  }
+  .food-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding-bottom: 4px;
+  }
+  .food-empty .empty-msg {
+    padding: 4px 0 0;
   }
 
   .empty-pet {
@@ -844,16 +978,72 @@ import TournamentTab from './TournamentTab.svelte';
   }
 
   .auth-section {
-    padding: 20px;
+    padding: 22px 20px 18px;
+    overflow-y: auto;
+  }
+  .auth-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .auth-halo {
+    display: grid;
+    place-items: center;
+    width: 104px;
+    height: 104px;
+    margin-bottom: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-sunburst) 45%, transparent) 0%, transparent 70%);
   }
   .auth-title {
-    margin: 10px 0 4px;
+    margin: 8px 0 4px;
     font-size: 28px;
   }
   .subtitle {
     font-size: 13px;
     color: var(--ink-muted);
     margin: 0 0 14px;
+  }
+  .auth-hero .subtitle {
+    margin: 0;
+  }
+  .auth-form {
+    padding: 18px;
+    border-radius: var(--radius-cards-elevated);
+  }
+  .auth-form .form-group:last-of-type {
+    margin-bottom: 4px;
+  }
+  .auth-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .auth-error :global(svg) {
+    flex-shrink: 0;
+  }
+  .auth-submit {
+    min-height: 44px;
+    margin-top: 10px;
+  }
+  .auth-toggle {
+    display: block;
+    margin: 14px auto 0;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: var(--radius-pills);
+    background: transparent;
+    color: var(--ink-muted);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .auth-toggle strong {
+    color: var(--accent-ink);
+  }
+  .auth-toggle:hover strong {
+    text-decoration: underline;
   }
   .form-group {
     display: flex;
