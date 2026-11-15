@@ -1,0 +1,13 @@
+# Overlay para pockai.jmbargueno.com: expone el backend vía nginx-proxy (red webproxy).
+# Uso: docker compose -f docker-compose.prod.yml -f docker-compose.pockai.yml up -d --build
+services:
+  backend:
+    networks: [webproxy]
+    environment:
+      VIRTUAL_HOST: api-pockai.jmbargueno.com
+      VIRTUAL_PORT: "3000"
+      VIRTUAL_WEBSOCKETS: "true" # socket.io: upgrade HTTP→WS en el vhost
+
+networks:
+  webproxy:
+    external: true
