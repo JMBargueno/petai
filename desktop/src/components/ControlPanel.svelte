@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { api, isTerminalError } from '../lib/api';
   import { petVoice } from '../lib/petVoice';
-  import { eggLibrary } from '../lib/sprites';
+  import EggSprite from './EggSprite.svelte';
   import MinigamesTab from './MinigamesTab.svelte';
   import AiTab from './AiTab.svelte';
   import ArenaTab from './ArenaTab.svelte';
@@ -132,6 +132,7 @@ import TournamentTab from './TournamentTab.svelte';
   let hatchingEggId: string | null = null;
   let isShaking = false;
   let isCracking = false;
+  let isHatchingOut = false;
   let hatchedResult: any = null;
 
   // Nombre opcional por huevo (objeto { [eggId]: name }) y reloj para el countdown de incubación.
@@ -206,7 +207,7 @@ import TournamentTab from './TournamentTab.svelte';
     try {
       const updated = await api.cleanPet(pet.id);
       dispatch('petUpdated', updated);
-      dispatch('actionTriggered', 'happy');
+      dispatch('actionTriggered', 'clean');
     } catch (err: any) {
       reportError(err);
     }
@@ -215,10 +216,10 @@ import TournamentTab from './TournamentTab.svelte';
   async function handleToggleSleep() {
     if (!pet) return;
     try {
-      const updated = pet.sleeping
-        ? await api.wakePet(pet.id)
-        : await api.sleepPet(pet.id);
+      const waking = pet.sleeping;
+      const updated = waking ? await api.wakePet(pet.id) : await api.sleepPet(pet.id);
       dispatch('petUpdated', updated);
+      if (waking) dispatch('actionTriggered', 'wake');
     } catch (err: any) {
       reportError(err);
     }
@@ -237,8 +238,14 @@ import TournamentTab from './TournamentTab.svelte';
     setTimeout(async () => {
       try {
         const newPet = await api.hatchEgg(eggId, name || undefined);
+        // Animación de eclosión antes de quitar el huevo de la lista
+        isShaking = false;
+        isCracking = false;
+        isHatchingOut = true;
+        await new Promise((r) => setTimeout(r, 900));
         hatchedResult = newPet;
         dispatch('petUpdated', newPet);
+        dispatch('actionTriggered', 'hatched');
         dispatch('refreshEggs');
         delete eggNames[eggId]; // al terminar, limpia el input de ese huevo
       } catch (err: any) {
@@ -246,6 +253,7 @@ import TournamentTab from './TournamentTab.svelte';
       } finally {
         isShaking = false;
         isCracking = false;
+        isHatchingOut = false;
         hatchingEggId = null;
       }
     }, 2800);
@@ -459,12 +467,10 @@ import TournamentTab from './TournamentTab.svelte';
             <span class="label-caps muted">Tus huevos en incubación</span>
             {#each eggs as egg}
               <div class="card egg-card">
-                <div class="egg-preview {isShaking && hatchingEggId === egg.id ? 'shake' : ''}">
-                  {#if isCracking && hatchingEggId === egg.id}
-                    {@html eggLibrary.cracked}
-                  {:else}
-                    {@html eggLibrary.closed}
-                  {/if}
+                <div class="egg-preview">
+                  <EggSprite
+                    anim={hatchingEggId !== egg.id ? 'idle' : isHatchingOut ? 'hatch' : isCracking ? 'crack' : isShaking ? 'shake' : 'idle'}
+                  />
                 </div>
                 <div class="egg-info">
                   <span class="egg-type">Huevo {egg.eggType}</span>
@@ -989,14 +995,6 @@ import TournamentTab from './TournamentTab.svelte';
   .egg-preview {
     width: 64px;
     height: 64px;
-  }
-  .shake {
-    animation: eggShake 0.4s infinite ease-in-out;
-  }
-  @keyframes eggShake {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-8deg); }
-    75% { transform: rotate(8deg); }
   }
   .hatched-announcement {
     padding: 12px;

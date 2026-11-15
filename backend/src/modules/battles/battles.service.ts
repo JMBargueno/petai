@@ -274,8 +274,10 @@ export class BattlesService {
     // Notificación con personalidad (feature 007): victoria/derrota en la arena (el empate no notifica).
     if (outcome === 'win') {
       this.eventEmitter.emit('pet:battle-won', { userId, petId: pet.id, won: true });
+      this.realtime.emitPetAction(userId, pet.id, 'battle_won');
     } else if (outcome === 'loss') {
       this.eventEmitter.emit('pet:battle-lost', { userId, petId: pet.id, won: false });
+      this.realtime.emitPetAction(userId, pet.id, 'battle_lost');
     }
 
     // Clasificaciones (no lanzan si Redis falla)
@@ -296,6 +298,11 @@ export class BattlesService {
         draw: result.winner === null,
         eloDelta: -eloDelta,
         elo: defenderEloAfter,
+      });
+      this.realtime.emitPetAction(defenderRow.userId, defenderRow.id, 'battle_defended', {
+        won: result.winner === 1,
+        draw: result.winner === null,
+        attackerName: attacker.name,
       });
     }
 

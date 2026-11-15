@@ -2,10 +2,12 @@
   import { onMount, onDestroy } from 'svelte';
   import {
     bakePetSpriteSheet,
+    getAnimLibrary,
     getPetSvg,
-    getPatternSvg,
     type BakedPetSheet
   } from '../lib/sprites';
+  import { AnimationController, resolveBaseState } from '../lib/animation/AnimationController';
+  import type { Reaction } from '../lib/animation/eventMap';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
   import type { EnvironmentalStatus } from '../lib/environmental';
   import { skillAuthorizations, isSkillActive } from '../lib/stores/desktopSkillsStore';
@@ -17,7 +19,7 @@
   } from '../lib/physics/petPhysics';
   import { fetchActiveWindow, calculatePerchTarget } from '../lib/windowPerching';
   import { categorizeWindowTitle, type AppCategory } from '../lib/contextAwareness';
-  import { analyzeDroppedFile, type AnalyzedFile } from '../lib/fileAnalyzer';
+  import { analyzeDroppedFile } from '../lib/fileAnalyzer';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
@@ -26,7 +28,12 @@
   /** Estado ambiental (feature 005): hora del día, clima, actividad y festividad. */
   export let environmental: EnvironmentalStatus | null = null;
 
-  let currentAnim = 'idle';
+  /** Animaciones que se permiten mientras duerme (el resto esperan a que despierte). */
+  const ALLOWED_WHILE_SLEEPING = new Set(['wake', 'hit']);
+  /** Una acción con esta prioridad o más "ocupa" a la mascota: no pasea mientras tanto. */
+  const BUSY_PRIORITY = 40;
+  const PET_SIZE = 128;
+
   let posX = 150;
   let posY = 50;
   let direction = 1; // 1: derecha, -1: izquierda
@@ -34,7 +41,6 @@
   let dragStartX = 0;
   let dragStartY = 0;
 
-  let animTimer: any = null;
   let moveInterval: any = null;
   let animRafId: number | null = null;
 
@@ -42,8 +48,20 @@
   let petCanvas: HTMLCanvasElement | null = null;
   let bakedSheet: BakedPetSheet | null = null;
   let isBaking = false;
-  let currentFrameIndex = 0;
-  let lastFrameTime = 0;
+  let bakeAgain = false;
+  let lastRenderTime = 0;
+
+  // Motor de animación: capas base / movimiento / acción
+  const initialLib = getAnimLibrary(pet?.species?.id || 'ignisaur');
+  const controller = new AnimationController(initialLib.library, initialLib.aliases);
+  /** Clip visible ahora mismo (solo para la vista: el canvas lo lee del controller). */
+  let currentAnim = 'idle';
+  /** Hasta cuándo dura el paseo actual (ms de performance.now). */
+  let walkUntil = 0;
+
+  // Partícula flotante opcional (🎁, 🏆…) que acompaña a una reacción
+  let particle = '';
+  let particleTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Transformaciones procedurales
   let squashScaleX = 1;
@@ -69,11 +87,13 @@
   $: visualSeed = pet?.visualSeed ?? 1337;
   $: palette = pet?.palette || { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' };
 
-  $: if (isSleeping) {
-    currentAnim = 'sleep';
-  } else if (currentAnim === 'sleep' && !isSleeping) {
-    currentAnim = 'idle';
+  // Biblioteca de clips de la especie y estado base derivado de la mascota
+  $: {
+    const lib = getAnimLibrary(speciesKey);
+    controller.setLibrary(lib.library, lib.aliases);
   }
+  $: controller.setBase(resolveBaseState(pet));
+  $: if (isSleeping) controller.stop();
 
   // Hornear sprite sheet en memoria al cambiar de mascota, paleta o patrón
   $: if (pet && (speciesKey || patternKey || palette || visualSeed)) {
@@ -81,16 +101,17 @@
   }
 
   async function triggerBake() {
-    if (isBaking) return;
+    if (isBaking) {
+      // Hay un horneado en curso: se repite al terminar con los datos nuevos
+      bakeAgain = true;
+      return;
+    }
     isBaking = true;
     try {
-      bakedSheet = await bakePetSpriteSheet(
-        speciesKey,
-        patternKey,
-        palette,
-        visualSeed,
-        isShiny
-      );
+      do {
+        bakeAgain = false;
+        bakedSheet = await bakePetSpriteSheet(speciesKey, patternKey, palette, visualSeed, isShiny);
+      } while (bakeAgain);
     } catch (err) {
       console.warn('Fallback a SVG: error horneando sprite sheet:', err);
       bakedSheet = null;
@@ -99,28 +120,39 @@
     }
   }
 
-  // Fallback SVG legacy
-  $: baseSvg = getPetSvg(speciesKey, currentAnim);
-  $: patternSvg = getPatternSvg(patternKey);
-  $: accentColor = palette.secondary || palette.accent || '#FFFFFF';
+  // Vista previa SVG de la especie mientras se hornea
+  $: baseSvg = getPetSvg(speciesKey);
 
   // Variantes ambientales (feature 005): un tinte por tramo del día y clima sobre la mascota.
   $: envVariant = environmental
     ? `env--${environmental.timeOfDay} env--weather-${environmental.weather?.condition ?? 'unknown'}`
     : '';
 
+  /** Reproduce una animación de acción. Devuelve `false` si no se pudo (no existe o duerme). */
+  export function play(anim: string): boolean {
+    if (isSleeping && !ALLOWED_WHILE_SLEEPING.has(anim)) return false;
+    return controller.play(anim);
+  }
+
+  /** Compatibilidad: API anterior de PetView. */
   export function triggerAnim(anim: string) {
-    if (isSleeping) return;
-    currentAnim = anim;
-    currentFrameIndex = 0;
-    clearTimeout(animTimer);
-    animTimer = setTimeout(() => {
-      currentAnim = 'idle';
-      currentFrameIndex = 0;
-    }, 2500);
+    play(anim);
+  }
+
+  /** Reacción completa: animaciones en orden y partícula opcional (el bocadillo lo gestiona App). */
+  export function react(reaction: Reaction) {
+    for (const anim of reaction.anims) play(anim);
+    if (reaction.particle) showParticle(reaction.particle);
+  }
+
+  export function showParticle(emoji: string, ms = 1800) {
+    particle = emoji;
+    if (particleTimer) clearTimeout(particleTimer);
+    particleTimer = setTimeout(() => (particle = ''), ms);
   }
 
   export function triggerHurt() {
+    play('hit');
     recoilOffsetX = -12;
     isWhiteFlash = true;
     setTimeout(() => {
@@ -133,7 +165,6 @@
   $: petIntelligence = pet?.intelligence ?? 1;
 
   let dragMoved = false;
-  const PET_SIZE = 128;
 
   // Variables para físicas de arrastre, lanzamiento e inercia
   let pointerSamples: PointerSample[] = [];
@@ -146,6 +177,15 @@
     bounceCount: 0,
   };
   let lastPhysicsTime = 0;
+
+  function squash(sx: number, sy: number, ms: number) {
+    squashScaleX = sx;
+    squashScaleY = sy;
+    setTimeout(() => {
+      squashScaleX = 1;
+      squashScaleY = 1;
+    }, ms);
+  }
 
   function handleMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
@@ -187,9 +227,9 @@
       petIntelligence
     );
 
+    const maxY = (window.innerHeight || 600) - PET_SIZE;
     if (dragThrowActive && !isSleeping) {
       const { vx, vy } = calculateThrowVelocity(pointerSamples);
-      const maxY = (window.innerHeight || 600) - PET_SIZE;
 
       // Si se soltó con impulso o en el aire
       if (Math.hypot(vx, vy) > 120 || posY < maxY - 15) {
@@ -205,8 +245,10 @@
         if (Math.abs(vx) > 40) {
           direction = vx > 0 ? 1 : -1;
         }
+        return;
       }
     }
+    if (dragMoved) play('land');
   }
 
   function handleClick() {
@@ -230,25 +272,36 @@
     onPetClick();
   }
 
+  /** Movimiento visible según lo que esté haciendo la mascota por el escritorio. */
+  function resolveMotion(now: number): string | null {
+    if (isDragging && dragMoved) return 'drag';
+    if (physicsState.isAirborne) return 'fall';
+    if (isClimbing) return 'climb';
+    if (isPerched) return 'perch';
+    if (now < walkUntil) return 'walk';
+    return null;
+  }
+
   // Loop de renderizado del Canvas a 60 FPS
   function renderLoop(time: number) {
+    const dt = lastRenderTime ? Math.min(time - lastRenderTime, 250) : 16;
+    lastRenderTime = time;
+
+    controller.setMotion(resolveMotion(time));
+    const frameState = controller.update(dt);
+    if (frameState.name !== currentAnim) currentAnim = frameState.name;
+
     if (petCanvas && bakedSheet) {
       const ctx = petCanvas.getContext('2d');
       if (ctx) {
-        // Avance de frame cada 150 ms
-        if (time - lastFrameTime > 150) {
-          currentFrameIndex++;
-          lastFrameTime = time;
-        }
-
-        ctx.clearRect(0, 0, 128, 128);
+        ctx.clearRect(0, 0, PET_SIZE, PET_SIZE);
 
         // Recortar frame del sprite sheet horneado
-        const frame = bakedSheet.getFrame(currentAnim, currentFrameIndex);
+        const frame = bakedSheet.getFrame(frameState.name, frameState.frame);
         ctx.drawImage(
           bakedSheet.canvas,
           frame.sx, frame.sy, frame.sw, frame.sh,
-          0, 0, 128, 128
+          0, 0, PET_SIZE, PET_SIZE
         );
 
         // Efecto Flash blanco en daño
@@ -256,7 +309,7 @@
           ctx.save();
           ctx.globalCompositeOperation = 'source-atop';
           ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-          ctx.fillRect(0, 0, 128, 128);
+          ctx.fillRect(0, 0, PET_SIZE, PET_SIZE);
           ctx.restore();
         }
 
@@ -269,12 +322,12 @@
 
             ctx.save();
             ctx.globalCompositeOperation = 'source-atop';
-            const grad = ctx.createLinearGradient(bandX, 0, bandX + 40, 128);
+            const grad = ctx.createLinearGradient(bandX, 0, bandX + 40, PET_SIZE);
             grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
             grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.45)');
             grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
             ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, 128, 128);
+            ctx.fillRect(0, 0, PET_SIZE, PET_SIZE);
             ctx.restore();
           }
         }
@@ -282,7 +335,7 @@
     }
     // Paso de simulación física si la mascota está en el aire o lanzada
     if (physicsState.isAirborne) {
-      const dt = lastPhysicsTime ? (time - lastPhysicsTime) / 1000 : 0.016;
+      const pdt = lastPhysicsTime ? (time - lastPhysicsTime) / 1000 : 0.016;
       lastPhysicsTime = time;
 
       const prevBounces = physicsState.bounceCount;
@@ -293,29 +346,17 @@
         maxY: (window.innerHeight || 600) - PET_SIZE,
       };
 
-      physicsState = stepPhysics(physicsState, dt, bounds);
+      physicsState = stepPhysics(physicsState, pdt, bounds);
       posX = physicsState.x;
       posY = physicsState.y;
 
       // Rebote procedural con squash & stretch
-      if (physicsState.bounceCount > prevBounces) {
-        squashScaleX = 1.25;
-        squashScaleY = 0.75;
-        setTimeout(() => {
-          squashScaleX = 1;
-          squashScaleY = 1;
-        }, 75);
-      }
+      if (physicsState.bounceCount > prevBounces) squash(1.25, 0.75, 75);
 
       // Al posarse definitivamente en el suelo
       if (!physicsState.isAirborne) {
-        currentAnim = 'idle';
-        squashScaleX = 1.15;
-        squashScaleY = 0.85;
-        setTimeout(() => {
-          squashScaleX = 1;
-          squashScaleY = 1;
-        }, 90);
+        play('land');
+        squash(1.15, 0.85, 90);
       }
     } else {
       lastPhysicsTime = time;
@@ -345,7 +386,33 @@
     posX = Math.min(Math.max(20, clientX - PET_SIZE / 2), (window.innerWidth || 800) - PET_SIZE - 20);
     posY = Math.min(Math.max(20, clientY - PET_SIZE / 2), (window.innerHeight || 600) - PET_SIZE);
 
-    triggerAnim('happy');
+    play('summon');
+  }
+
+  // Declarado a nivel de componente para poder quitar el listener en onDestroy
+  function handlePomodoroEvent(e: Event) {
+    const customEvent = e as CustomEvent<{ eventType: string }>;
+    const eventType = customEvent.detail?.eventType;
+    if (!isSkillActive('pomodoro_companion', $skillAuthorizations, petBonding, petIntelligence)) {
+      return;
+    }
+
+    if (eventType === 'work_start') {
+      controller.stop();
+      bubble = '💼 ¡A trabajar! Estaré a tu lado en silencio.';
+    } else if (eventType === 'work_finish') {
+      play('celebrate');
+      bubble = '🎉 ¡Buen trabajo! Tómate una pausa y bebe agua 💧';
+    } else if (eventType === 'break_finish') {
+      play('wake');
+      bubble = '⚡ ¡Descanso listo! ¿Volvemos al foco?';
+    }
+
+    setTimeout(() => {
+      if (bubble.startsWith('💼') || bubble.startsWith('🎉') || bubble.startsWith('⚡')) {
+        bubble = '';
+      }
+    }, 6000);
   }
 
   onMount(() => {
@@ -353,44 +420,16 @@
     animRafId = requestAnimationFrame(renderLoop);
 
     window.addEventListener('petai:summon', handleQuickSummon);
-
-    function handlePomodoroEvent(e: Event) {
-      const customEvent = e as CustomEvent<{ eventType: string }>;
-      const eventType = customEvent.detail?.eventType;
-      if (!isSkillActive('pomodoro_companion', $skillAuthorizations, petBonding, petIntelligence)) {
-        return;
-      }
-
-      if (eventType === 'work_start') {
-        currentAnim = 'idle';
-        bubble = '💼 ¡A trabajar! Estaré a tu lado en silencio.';
-      } else if (eventType === 'work_finish') {
-        triggerAnim('happy');
-        bubble = '🎉 ¡Buen trabajo! Tómate una pausa y bebe agua 💧';
-      } else if (eventType === 'break_finish') {
-        triggerAnim('happy');
-        bubble = '⚡ ¡Descanso listo! ¿Volvemos al foco?';
-      }
-
-      setTimeout(() => {
-        if (bubble.startsWith('💼') || bubble.startsWith('🎉') || bubble.startsWith('⚡')) {
-          bubble = '';
-        }
-      }, 6000);
-    }
-
     window.addEventListener('petai:pomodoro_event', handlePomodoroEvent);
 
     // Ciclo de comportamiento de la mascota en pantalla
     moveInterval = setInterval(async () => {
-      if (isSleeping || isDragging || physicsState.isAirborne || currentAnim === 'eat') return;
+      if (isSleeping || isDragging || physicsState.isAirborne || controller.actionPriority >= BUSY_PRIORITY) return;
 
       const windowWidth = window.innerWidth || 800;
-      const windowHeight = window.innerHeight || 600;
 
       // 1. Si está trepando por los bordes (climb_walls)
       if (isClimbing) {
-        currentAnim = 'walk';
         if (climbWall === 'right' || climbWall === 'left') {
           posY -= 30;
           if (posY <= 30) {
@@ -445,7 +484,7 @@
           posX = target.x;
           posY = target.y;
           isPerched = true;
-          triggerAnim('happy');
+          play('happy');
           return;
         }
       }
@@ -462,6 +501,7 @@
             currentAppCategory = ctx.category;
             if (ctx.category !== 'generic') {
               bubble = `${ctx.accessoryIcon} ${ctx.reactionComment}`;
+              play('talk');
               setTimeout(() => {
                 if (bubble.startsWith(ctx.accessoryIcon)) bubble = '';
               }, 4500);
@@ -473,7 +513,6 @@
       // 4. Movimiento normal y posibilidad de iniciar trepado
       const actionRoll = Math.random();
       if (actionRoll < 0.5) {
-        currentAnim = 'walk';
         const step = 25 * direction;
         const reachedRight = posX + step > windowWidth - 140;
         const reachedLeft = posX + step < 20;
@@ -501,14 +540,10 @@
           direction = 1;
         }
         posX += 25 * direction;
-
-        setTimeout(() => {
-          if (!isSleeping && currentAnim === 'walk' && !isClimbing) {
-            currentAnim = 'idle';
-          }
-        }, 800);
-      } else if (actionRoll < 0.75) {
-        currentAnim = 'idle';
+        walkUntil = performance.now() + 900;
+      } else if (actionRoll < 0.65 && controller.baseName === 'idle') {
+        // De vez en cuando mira alrededor
+        play('idle_alt');
       }
     }, 3000);
 
@@ -519,7 +554,7 @@
   onDestroy(() => {
     if (animRafId !== null) cancelAnimationFrame(animRafId);
     clearInterval(moveInterval);
-    clearTimeout(animTimer);
+    if (particleTimer) clearTimeout(particleTimer);
     window.removeEventListener('mousemove', handleMouseMove);
     window.removeEventListener('mouseup', handleMouseUp);
     window.removeEventListener('petai:summon', handleQuickSummon);
@@ -527,18 +562,19 @@
   });
 </script>
 
-<!-- Contenedor del Sprite con física, arrastre y Squash & Stretch procedural -->
+<!--
+  El contenedor solo posiciona. Giro (scaleX), rotación al trepar y squash & stretch se aplican
+  únicamente a `.pet-body`; el nombre, el bocadillo, las partículas y el texto ambiental quedan
+  fuera de esa transformación para que siempre se lean en horizontal.
+-->
 <div
   class="pet-container"
   role="button"
   tabindex="0"
+  data-anim={currentAnim}
   class:dragging={isDragging}
   class:drag-over={isDragOverPet}
-  style="
-    left: {posX + recoilOffsetX}px;
-    top: {posY}px;
-    transform: scaleX({direction}) rotate({climbRotation}deg) scale({squashScaleX}, {squashScaleY});
-  "
+  style="left: {posX + recoilOffsetX}px; top: {posY}px;"
   on:mousedown={handleMouseDown}
   on:click={handleClick}
   on:keydown={(e) => e.key === 'Enter' && onPetClick()}
@@ -562,13 +598,17 @@
     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const rawFile = e.dataTransfer.files[0];
       const analyzed = await analyzeDroppedFile(rawFile);
-      triggerAnim('happy');
+      play('surprised');
+      play('happy');
       bubble = `¡Atrapé ${analyzed.name}! 📄 ¿Qué quieres saber?`;
       window.dispatchEvent(new CustomEvent('petai:file_dropped', { detail: analyzed }));
     }
   }}
 >
-  <div class="sprite-wrapper" class:env={!!envVariant}>
+  <div
+    class="pet-body"
+    style="transform: scaleX({direction}) rotate({climbRotation}deg) scale({squashScaleX}, {squashScaleY});"
+  >
     <!-- Tinte ambiental (feature 005): tramo del día + clima -->
     {#if envVariant}
       <div class="env-tint {envVariant}" aria-hidden="true"></div>
@@ -583,45 +623,33 @@
         class="pet-canvas"
       ></canvas>
     {:else}
-      <!-- Fallback provisional a SVG mientras se hornea -->
+      <!-- Vista previa SVG de la especie mientras se hornea -->
       <div class="svg-base">
         {@html baseSvg}
       </div>
-      {#if patternSvg}
-        <div class="svg-pattern" style="color: {accentColor};">
-          {@html patternSvg}
-        </div>
-      {/if}
     {/if}
 
-    <!-- Overlay ambiental: accesorios (paraguas, gorro, sombrerito) y micro-momentos -->
-    <EnvironmentalOverlay environmental={environmental} />
-
-    <!-- Burbuja de chat o estado -->
-    {#if bubble}
-      <div class="speech" class:below={posY < 110} style="transform: scaleX({direction});">{bubble}</div>
-    {/if}
-
-    <div class="pet-badge" style="transform: scaleX({direction});">
-      <span class="pet-name">{pet.nickname || pet.species?.name}</span>
-      <span class="pet-lvl">Nv. {pet.level || 1}</span>
-    </div>
-
-    <!-- Indicador de partículas flotantes -->
-    {#if isSleeping}
-      <div class="floating-bubble zzz" style="transform: scaleX({direction});">
-        💤
-      </div>
-    {:else if currentAnim === 'happy'}
-      <div class="floating-bubble heart" style="transform: scaleX({direction});">
-        ✨
-      </div>
-    {:else if currentAnim === 'eat'}
-      <div class="floating-bubble food" style="transform: scaleX({direction});">
-        🍎
-      </div>
-    {/if}
+    <!-- Accesorio ambiental (paraguas, gorro, sombrerito…): se mueve con el cuerpo -->
+    <EnvironmentalOverlay environmental={environmental} part="accessory" />
   </div>
+
+  <!-- Texto ambiental, bocadillo, nombre y partículas: sin girar ni rotar -->
+  <EnvironmentalOverlay environmental={environmental} part="caption" />
+
+  {#if bubble}
+    <div class="speech" class:below={posY < 110}>{bubble}</div>
+  {/if}
+
+  <div class="pet-badge">
+    <span class="pet-name">{pet.nickname || pet.species?.name}</span>
+    <span class="pet-lvl">Nv. {pet.level || 1}</span>
+  </div>
+
+  {#if particle}
+    {#key particle}
+      <div class="floating-bubble" aria-hidden="true">{particle}</div>
+    {/key}
+  {/if}
 </div>
 
 <style>
@@ -630,10 +658,9 @@
     width: 128px;
     height: 128px;
     cursor: grab;
-    transition: left 0.4s ease-out, top 0.4s ease-out, transform 0.08s ease-out;
+    transition: left 0.4s ease-out, top 0.4s ease-out;
     z-index: 50;
     pointer-events: auto;
-    transform-origin: bottom center;
   }
 
   .pet-container:active {
@@ -644,22 +671,28 @@
     transition: none;
   }
 
-  .pet-container.drag-over {
+  .pet-container.drag-over .pet-body {
     filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.9));
   }
 
-  .sprite-wrapper {
+  .pet-body {
     position: relative;
     width: 100%;
     height: 100%;
+    transform-origin: bottom center;
+    transition: transform 0.14s ease-out;
+  }
+
+  .pet-container.dragging .pet-body {
+    transition: none;
   }
 
   .pet-canvas {
+    position: relative;
+    z-index: 1;
     width: 128px;
     height: 128px;
-    image-rendering: pixelated;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: crisp-edges;
+    image-rendering: auto;
     pointer-events: none;
   }
 
@@ -669,16 +702,6 @@
     left: 0;
     width: 128px;
     height: 128px;
-  }
-
-  .svg-pattern {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 128px;
-    height: 128px;
-    pointer-events: none;
-    mix-blend-mode: overlay;
   }
 
   .speech {
@@ -740,6 +763,7 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border: 1px solid var(--line-soft);
     pointer-events: none;
+    z-index: 55;
   }
 
   .pet-lvl {
@@ -749,20 +773,34 @@
   .floating-bubble {
     position: absolute;
     top: -15px;
-    right: 10px;
-    font-size: 20px;
-    animation: floatUp 1.8s infinite ease-in-out;
+    right: 6px;
+    font-size: 22px;
+    animation: floatUp 1.8s ease-out forwards;
     pointer-events: none;
+    z-index: 58;
   }
 
   @keyframes floatUp {
-    0%, 100% {
-      transform: translateY(0);
-      opacity: 0.9;
+    0% {
+      transform: translateY(6px) scale(0.6);
+      opacity: 0;
     }
-    50% {
-      transform: translateY(-8px);
+    20% {
+      transform: translateY(0) scale(1.1);
       opacity: 1;
+    }
+    100% {
+      transform: translateY(-26px) scale(1);
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pet-body {
+      transition: none;
+    }
+    .floating-bubble {
+      animation: none;
     }
   }
 

@@ -127,6 +127,8 @@ export class BuddiesService {
 
     const payload = { type, petAId, petBId, duration: record.duration, effects: effect };
     this.realtime.emitToUser(userId, 'buddy:interaction', payload);
+    this.realtime.emitPetAction(userId, petAId, 'buddy_play', { type });
+    this.realtime.emitPetAction(userId, petBId, 'buddy_play', { type });
 
     return { ...record, effects: effect };
   }
@@ -148,10 +150,12 @@ export class BuddiesService {
     if (effect.energy) {
       const pet = await this.prisma.pet.findUnique({ where: { id: petId } });
       if (pet) {
-        await this.prisma.pet.update({
+        const updated = await this.prisma.pet.update({
           where: { id: petId },
           data: { energy: Math.min(100, pet.energy + effect.energy) },
+          include: { species: true, pattern: true },
         });
+        this.realtime.emitPetUpdate(userId, updated);
       }
     }
     if (effect.bonding && bondingAllowed) {

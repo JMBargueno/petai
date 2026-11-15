@@ -25,7 +25,7 @@ describe('AchievementRewardsService', () => {
     };
     const mockPrisma = { $transaction: jest.fn().mockImplementation((cb) => cb(tx)) };
     const mockGame = { getAchievements: jest.fn().mockReturnValue({ version: 'v1', achievements: DEFS }) };
-    const mockRealtime = { emitToUser: jest.fn() };
+    const mockRealtime = { emitToUser: jest.fn(), emitPetAction: jest.fn() };
     const mockInventory = { grantExclusiveItem: jest.fn().mockResolvedValue({}) };
     const module: TestingModule = await Test.createTestingModule({
       providers: [

@@ -12,6 +12,7 @@ import { socketCorsOrigin } from '../../common/cors';
 import { MetricsService } from '../../observability/metrics.service';
 import { startSpanFromRemoteTrace } from '../../observability/otel-context';
 import { SPAN_HEADER, TRACE_HEADER } from '../../observability/otel.constants';
+import type { PetAction, PetActionEvent } from './pet-action';
 
 /** Conexiones simultáneas por usuario; al superarlas se cierran las más antiguas. */
 const MAX_SOCKETS_PER_USER = 5;
@@ -150,6 +151,14 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   emitPetUpdate(userId: string, pet: any) {
     if (this.server) {
       this.server.to(`user:${userId}`).emit('pet:update', pet);
+    }
+  }
+
+  /** Qué le acaba de pasar a la mascota, para que el cliente la anime (ver `pet-action.ts`). */
+  emitPetAction(userId: string, petId: string | null, action: PetAction, context?: Record<string, unknown>) {
+    if (this.server) {
+      const event: PetActionEvent = { petId, action, ...(context ? { context } : {}) };
+      this.server.to(`user:${userId}`).emit('pet:action', event);
     }
   }
 }

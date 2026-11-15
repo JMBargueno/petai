@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
@@ -28,6 +29,7 @@ export class MinigamesService {
     private readonly gameData: GameDataService,
     private readonly petsService: PetsService,
     private readonly bonding: BondingService,
+    @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
   private get cfg() {
@@ -160,6 +162,7 @@ export class MinigamesService {
     const pet = await this.petsService.applyActivityReward(userId, session.petId, rewards);
     // Vínculo (feature 006): minijuego terminado con premio sube el bonding (+2)
     await this.bonding.recordInteraction(session.petId, userId, 'minigame');
+    this.realtime?.emitPetAction(userId, session.petId, 'minigame_finished', { gameId: session.gameId, score });
 
     return { score, rewards, pet };
   }

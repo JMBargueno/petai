@@ -234,6 +234,7 @@ export class ChestsService {
       type: existing.type,
       drops: drops.map((d) => ({ itemId: d.itemId, name: d.name, qty: d.qty, tier: d.tier })),
     });
+    this.realtime.emitPetAction(userId, null, 'chest_opened', { type: existing.type });
 
     return {
       chest: {

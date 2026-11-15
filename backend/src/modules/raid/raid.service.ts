@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, Optional } from '@nestjs/common';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CronLockService } from '../../redis/cron-lock.service';
@@ -31,6 +32,7 @@ export class RaidService {
     private readonly battlesService: BattlesService,
     private readonly cronLock: CronLockService,
     private readonly cache: RedisCacheService,
+    @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
   private get cfg(): RaidBalance {
@@ -124,6 +126,11 @@ export class RaidService {
       await this.prisma.raidParticipant.create({
         data: { raidId: raid.id, userId, petId, damageDealt: damage, totalAttacks: 1, lastAttackAt: new Date() },
       });
+    }
+    if (this.realtime) {
+      const spent = await this.prisma.pet.findUnique({ where: { id: petId }, include: { species: true, pattern: true } });
+      if (spent) this.realtime.emitPetUpdate(userId, spent);
+      this.realtime.emitPetAction(userId, petId, 'raid_attack', { damage });
     }
     const newHp = await this.prisma.raid.findUnique({ where: { id: raid.id }, select: { hpRemaining: true, status: true } });
     let settled = false;

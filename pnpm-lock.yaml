@@ -172,6 +172,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.750.0
         version: 3.1168.0
+      '@resvg/resvg-js':
+        specifier: ^2.6.2
+        version: 2.6.2
       '@types/node':
         specifier: ^22.13.0
         version: 22.20.5

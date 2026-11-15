@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
@@ -29,6 +30,7 @@ export class TournamentService {
     private readonly cronLock: CronLockService,
     private readonly cache: RedisCacheService,
     private readonly battlesService: BattlesService,
+    @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
   async getCurrent(userId: string) {
@@ -176,6 +178,9 @@ export class TournamentService {
         const fighterA = this.battlesService.fighterFromPet(petA);
         const fighterB = this.battlesService.fighterFromPet(petB);
         const { winnerPetId } = await this.bracketService.resolveMatch(tournament.id, match.id, fighterA, fighterB);
+        for (const p of [petA, petB]) {
+          this.realtime?.emitPetAction(p.userId, p.id, p.id === winnerPetId ? 'tournament_win' : 'tournament_loss', { round: match.round });
+        }
         await this.bracketService.advanceWinner(tournament.id, match.round, match.slot, winnerPetId);
       } else if (a || b) {
         const winnerPetId = a ?? b!;

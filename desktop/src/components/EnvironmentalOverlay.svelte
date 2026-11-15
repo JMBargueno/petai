@@ -9,6 +9,11 @@
    */
   export let environmental: EnvironmentalStatus | null = null;
   export let accessory: string | null = null; // clave de accesorio forzada
+  /**
+   * Qué parte pintar: el accesorio va dentro del cuerpo de la mascota (gira con ella) y el texto
+   * fuera (siempre horizontal y legible).
+   */
+  export let part: 'all' | 'accessory' | 'caption' = 'all';
 
   const ACCESSORY_EMOJI: Record<string, string> = {
     paraguas: '☔',
@@ -63,13 +68,13 @@
   }
 </script>
 
-{#if accEmoji}
+{#if accEmoji && part !== 'caption'}
   <div class="env-overlay" aria-hidden="true">
     <span class="env-accessory">{accEmoji}</span>
   </div>
 {/if}
 
-{#if caption()}
+{#if caption() && part !== 'accessory'}
   <div class="env-caption">{caption()}</div>
 {/if}
 

@@ -115,6 +115,13 @@ export class CarePackageService {
     };
     this.realtime.emitToUser(userId, 'care:sent', payload);
     this.realtime.emitToUser(recipient.id, 'care:package-received', payload);
+    // La salud de la mascota receptora ha cambiado: refresca su estado y la anima
+    const careUpdated = await this.prisma.pet.findUnique({
+      where: { id: pet.id },
+      include: { species: true, pattern: true },
+    });
+    if (careUpdated) this.realtime.emitPetUpdate(recipient.id, careUpdated);
+    this.realtime.emitPetAction(recipient.id, pet.id, 'care_received');
     return payload;
   }
 

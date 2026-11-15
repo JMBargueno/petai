@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException, Optional } from '@nestjs/common';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
@@ -10,6 +11,7 @@ export class HatchingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gameData: GameDataService,
+    @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
   async getEggs(userId: string) {
@@ -68,7 +70,10 @@ export class HatchingService {
     const finalNickname = 'name' in normalized ? normalized.name : randomPetName();
     for (let attempt = 0; ; attempt++) {
       try {
-        return await this.tryHatch(userId, eggId, finalNickname);
+        const pet = await this.tryHatch(userId, eggId, finalNickname);
+        this.realtime?.emitPetUpdate(userId, pet);
+        this.realtime?.emitPetAction(userId, pet.id, 'hatched', { rarity: pet.rarity, shiny: pet.shiny });
+        return pet;
       } catch (err) {
         if (err instanceof ConflictException && attempt < 3) continue;
         throw err;

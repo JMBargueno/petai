@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger, Optional } from '@nestjs/common';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PetsService } from '../pets/pets.service';
@@ -22,6 +23,7 @@ export class AdventureService {
     private readonly aiConfig: AiConfigService,
     private readonly orchestrator: AdventureOrchestratorService,
     private readonly wallet: WalletService,
+    @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
   async startDaily(userId: string, petId: string, premium: boolean) {
@@ -207,6 +209,11 @@ export class AdventureService {
     });
 
     this.logger.log(`Adventure ${adventure.id} finished: outcome=${result} score=${score.toFixed(3)}`);
+    if (this.realtime) {
+      const after = await this.prisma.pet.findUnique({ where: { id: pet.id }, include: { species: true, pattern: true } });
+      if (after) this.realtime.emitPetUpdate(userId, after);
+      this.realtime.emitPetAction(userId, pet.id, 'adventure', { result });
+    }
 
     return {
       completed: true,

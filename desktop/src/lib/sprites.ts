@@ -4,6 +4,7 @@
 import { deriveVisualTraits, hexToRgb, applyHueShiftRgb } from './prng';
 import { AssetLoader } from './asset-loader';
 import { createMemoryAssetCache } from './asset-cache';
+import type { AnimLibrary } from './animation/AnimationController';
 
 // Importación de assets raster y metadatos JSON
 import ignisaurBase from '@shared/assets/species/ignisaur/base.png';
@@ -18,6 +19,10 @@ import florabudBase from '@shared/assets/species/florabud/base.png';
 import florabudMask from '@shared/assets/species/florabud/mask.png';
 import florabudAnim from '@shared/assets/species/florabud/anim.json';
 
+import eggBase from '@shared/assets/species/egg/base.png';
+import eggMask from '@shared/assets/species/egg/mask.png';
+import eggAnim from '@shared/assets/species/egg/anim.json';
+
 // Importación de patrones tileables
 import stripesPng from '@shared/assets/patterns/stripes.png';
 import spotsPng from '@shared/assets/patterns/spots.png';
@@ -27,11 +32,10 @@ import galaxyPng from '@shared/assets/patterns/galaxy.png';
 import gradientPng from '@shared/assets/patterns/gradient.png';
 import auroraPng from '@shared/assets/patterns/aurora.png';
 
-// Fallback legacy SVG (para compatibilidad)
+// Vista previa SVG por especie (generada) mientras se hornea la hoja
 import ignisaurIdleSvg from '@shared/assets/sprites/ignisaur_idle.svg?raw';
-import ignisaurEatSvg from '@shared/assets/sprites/ignisaur_eat.svg?raw';
-import ignisaurHappySvg from '@shared/assets/sprites/ignisaur_happy.svg?raw';
-import ignisaurSleepSvg from '@shared/assets/sprites/ignisaur_sleep.svg?raw';
+import axolunarIdleSvg from '@shared/assets/sprites/axolunar_idle.svg?raw';
+import florabudIdleSvg from '@shared/assets/sprites/florabud_idle.svg?raw';
 import eggClosedSvg from '@shared/assets/sprites/egg_closed.svg?raw';
 import eggCrackedSvg from '@shared/assets/sprites/egg_cracked.svg?raw';
 
@@ -41,6 +45,9 @@ export interface FrameTag {
   to: number;
   direction?: string;
   loop?: boolean;
+  repeat?: number;
+  priority?: number;
+  group?: 'base' | 'motion' | 'action';
 }
 
 export interface FrameData {
@@ -53,6 +60,7 @@ export interface AnimMetadata {
   meta: {
     frameTags: FrameTag[];
     size: { w: number; h: number };
+    aliases?: Record<string, string>;
   };
 }
 
@@ -68,7 +76,40 @@ const SPECIES_REGISTRY: Record<string, { base: string; mask: string; anim: AnimM
   ignisaur: { base: ignisaurBase, mask: ignisaurMask, anim: ignisaurAnim as AnimMetadata },
   axolunar: { base: axolunarBase, mask: axolunarMask, anim: axolunarAnim as AnimMetadata },
   florabud: { base: florabudBase, mask: florabudMask, anim: florabudAnim as AnimMetadata },
+  egg: { base: eggBase, mask: eggMask, anim: eggAnim as AnimMetadata },
 };
+
+const PREVIEW_SVG: Record<string, string> = {
+  ignisaur: ignisaurIdleSvg,
+  axolunar: axolunarIdleSvg,
+  florabud: florabudIdleSvg,
+};
+
+export function normalizeSpecies(speciesId: string): string {
+  return SPECIES_REGISTRY[speciesId] ? speciesId : 'ignisaur';
+}
+
+/**
+ * Clips de animación de una hoja (duración de cada frame, bucle, prioridad y grupo), listos para
+ * el `AnimationController`. No necesita que la hoja esté horneada.
+ */
+export function getAnimLibrary(speciesId: string): { library: AnimLibrary; aliases: Record<string, string> } {
+  const anim = SPECIES_REGISTRY[normalizeSpecies(speciesId)].anim;
+  const library: AnimLibrary = {};
+  for (const tag of anim.meta.frameTags) {
+    const durations: number[] = [];
+    for (let i = tag.from; i <= tag.to; i++) durations.push(anim.frames[i]?.duration ?? 150);
+    library[tag.name] = {
+      name: tag.name,
+      durations,
+      loop: tag.loop ?? tag.group !== 'action',
+      priority: tag.priority ?? 0,
+      group: tag.group ?? 'base',
+      repeat: tag.repeat ?? 1,
+    };
+  }
+  return { library, aliases: { ...ANIM_FALLBACKS, ...(anim.meta.aliases ?? {}) } };
+}
 
 // Registro de patrones
 const PATTERN_REGISTRY: Record<string, string> = {
@@ -81,17 +122,12 @@ const PATTERN_REGISTRY: Record<string, string> = {
   aurora: auroraPng,
 };
 
-// Fallbacks de animaciones recomendadas a críticas
+// Fallbacks: nombres antiguos o que no existan en una hoja → animación existente
 export const ANIM_FALLBACKS: Record<string, string> = {
+  sit: 'perch',
+  hurt: 'hit',
+  faint: 'defeat',
   cast: 'attack',
-  sit: 'idle',
-  idle_alt: 'idle',
-  clean: 'happy',
-  talk: 'happy',
-  sad: 'idle',
-  sick: 'idle',
-  hurt: 'idle',
-  faint: 'sleep',
 };
 
 // Caché de imágenes decodificadas para no recargar de red/disco
@@ -126,7 +162,7 @@ export async function bakePetSpriteSheet(
   visualSeed: number = 1337,
   shiny: boolean = false
 ): Promise<BakedPetSheet> {
-  const normalizedSpecies = SPECIES_REGISTRY[speciesId] ? speciesId : 'ignisaur';
+  const normalizedSpecies = normalizeSpecies(speciesId);
   const cacheKey = `${normalizedSpecies}:${patternId}:${palette.primary}:${palette.secondary}:${visualSeed}:${shiny}`;
 
   if (bakedSheetCache.has(cacheKey)) {
@@ -213,6 +249,15 @@ export async function bakePetSpriteSheet(
     const maskR = maskPixels[px] / 255; // Primario
     const maskG = maskPixels[px + 1] / 255; // Secundario
     const maskB = maskPixels[px + 2] / 255; // Zona patrón
+
+    // Máscara negra = color literal (efectos: lágrimas, corazones, comida…): se copia base.png tal cual
+    if (maskR < 0.04 && maskG < 0.04 && maskB < 0.04) {
+      out[px] = basePixels[px];
+      out[px + 1] = basePixels[px + 1];
+      out[px + 2] = basePixels[px + 2];
+      out[px + 3] = Math.min(maskA, basePixels[px + 3]);
+      continue;
+    }
 
     // 1. Capa Base de Color (Interpolación R / G)
     let colorR = primaryRgb[0] * maskR + secondaryRgb[0] * maskG;
@@ -385,8 +430,8 @@ export async function loadPatternSvg(key: string, rawFallback: string | null = n
  * Sincrono/retrocompatibilidad: devuelve el fallback embebido (`?raw`). Para la carga real desde el
  * CDN usa `loadSpriteSvg(...)`.
  */
-export function getPetSvg(_speciesKey: string, _animation: string): string {
-  return ignisaurIdleSvg;
+export function getPetSvg(speciesKey: string, _animation?: string): string {
+  return PREVIEW_SVG[speciesKey] ?? ignisaurIdleSvg;
 }
 
 export function getPatternSvg(_patternKey: string): string | null {

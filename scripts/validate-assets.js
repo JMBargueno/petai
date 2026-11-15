@@ -86,14 +86,20 @@ const speciesDir = path.join(sharedAssetsDir, 'species');
 const CRITICAL_TAGS = ['idle', 'walk', 'eat', 'happy', 'sleep', 'attack'];
 const RECOMMENDED_TAGS = {
   idle_alt: 'idle',
-  sit: 'idle',
-  clean: 'happy',
   sad: 'idle',
   sick: 'idle',
-  cast: 'attack',
-  hurt: 'idle',
-  faint: 'sleep',
-  talk: 'happy'
+  hungry: 'idle',
+  tired: 'idle',
+  clean: 'happy',
+  talk: 'happy',
+  drag: 'idle',
+  fall: 'idle',
+  land: 'idle',
+  hit: 'idle',
+  victory: 'happy',
+  defeat: 'sad',
+  level_up: 'happy',
+  evolution: 'happy'
 };
 
 for (const sp of speciesData) {
@@ -131,8 +137,8 @@ for (const sp of speciesData) {
       if (baseDim.width !== maskDim.width || baseDim.height !== maskDim.height) {
         console.error(`❌ CRÍTICO [${sp.id}]: Dimensiones discordantes entre base.png (${baseDim.width}x${baseDim.height}) y mask.png (${maskDim.width}x${maskDim.height})`);
         criticalErrors++;
-      } else if (baseDim.height !== 128 || baseDim.width % 128 !== 0) {
-        console.error(`❌ CRÍTICO [${sp.id}]: La altura debe ser 128 px y el ancho múltiplo de 128 px. Actual: ${baseDim.width}x${baseDim.height}`);
+      } else if (baseDim.height % 128 !== 0 || baseDim.width % 128 !== 0) {
+        console.error(`❌ CRÍTICO [${sp.id}]: Alto y ancho deben ser múltiplos de 128 px (cuadrícula de frames). Actual: ${baseDim.width}x${baseDim.height}`);
         criticalErrors++;
       }
     } catch (err) {

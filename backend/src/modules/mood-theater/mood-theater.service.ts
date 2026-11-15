@@ -68,6 +68,7 @@ export class MoodTheaterService {
       momentId: record.id,
     };
     this.realtime.emitToUser(userId, 'pet:moment', payload);
+    this.realtime.emitPetAction(userId, petId, 'mood_moment', { act: result.act, intensity: payload.intensity });
     return { ...payload, createdAt: record.createdAt };
   }
 

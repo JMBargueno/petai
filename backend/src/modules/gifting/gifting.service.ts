@@ -81,6 +81,7 @@ export class GiftingService {
     };
     this.realtime.emitToUser(userId, 'gift:sent', payload);
     this.realtime.emitToUser(recipient.id, 'gift:received', payload);
+    this.realtime.emitPetAction(recipient.id, null, 'gift_received', { item: item.name });
     return payload;
   }
 

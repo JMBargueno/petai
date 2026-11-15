@@ -130,6 +130,7 @@ export class BondingService {
     if (tierChanged) {
       // SC-005: exactamente un `bonding:tier_up` por cruce de umbral
       this.realtime.emitToUser(userId, 'bonding:tier_up', { petId, oldTier, newTier, bonding: newBonding });
+      this.realtime.emitPetAction(userId, petId, 'bonding_up', { tier: newTier });
     }
 
     // Refuerzo del estado al cliente: `pet:update` con los campos de vínculo ya aplicados
@@ -189,6 +190,7 @@ export class BondingService {
         newTier,
         bonding: newBonding,
       });
+      this.realtime.emitPetAction(pet.userId, pet.id, 'bonding_down', { tier: newTier });
     }
     // `bonding:decay` solo con caída > 1 punto (regla de emisión del contrato)
     if (Math.abs(delta) > 1) {

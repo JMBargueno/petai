@@ -22,7 +22,7 @@ describe('MissionTrackingService', () => {
       },
       chest: { count: jest.fn().mockResolvedValue(0) },
     };
-    const mockRealtime = { emitToUser: jest.fn() };
+    const mockRealtime = { emitToUser: jest.fn(), emitPetAction: jest.fn() };
     const mockChestsService = { grantChest: jest.fn().mockResolvedValue(undefined) };
     const mockEvents = { emit: jest.fn(), emitAsync: jest.fn().mockResolvedValue(undefined) };
     const module: TestingModule = await Test.createTestingModule({
