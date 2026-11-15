@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, ConflictException, NotFoundException }
 import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
+import { normalizePetName, PET_NAME_INVALID_MESSAGE } from '../../common/pet-name';
+import { randomPetName } from './pet-names';
 
 @Injectable()
 export class HatchingService {
@@ -54,12 +56,19 @@ export class HatchingService {
    * Eclosiona un huevo. Concurrencia: el huevo se reclama de forma atómica (solo una petición puede
    * crear la mascota) y el contador de pity se actualiza solo si no cambió desde que se leyó; si otra
    * eclosión simultánea lo modificó, se reintenta con el valor actual.
+   *
+   * `nickname` es opcional: se normaliza (trim + sin caracteres de control); si está vacío se genera
+   * un nombre aleatorio del pool de 300, y si supera los 16 caracteres se rechaza con 400.
    */
-  async hatchEgg(userId: string, eggId: string) {
+  async hatchEgg(userId: string, eggId: string, nickname?: string) {
     if (typeof eggId !== 'string' || eggId.length > 64) throw new NotFoundException('Huevo no encontrado o ya eclosionado');
+    const normalized = normalizePetName(nickname);
+    if ('invalid' in normalized) throw new BadRequestException(PET_NAME_INVALID_MESSAGE);
+    // Se resuelve una única vez (fuera del retry) el nombre definitivo que usará la eclosión.
+    const finalNickname = 'name' in normalized ? normalized.name : randomPetName();
     for (let attempt = 0; ; attempt++) {
       try {
-        return await this.tryHatch(userId, eggId);
+        return await this.tryHatch(userId, eggId, finalNickname);
       } catch (err) {
         if (err instanceof ConflictException && attempt < 3) continue;
         throw err;
@@ -67,7 +76,7 @@ export class HatchingService {
     }
   }
 
-  private async tryHatch(userId: string, eggId: string) {
+  private async tryHatch(userId: string, eggId: string, nickname: string) {
     const egg = await this.prisma.egg.findFirst({
       where: { id: eggId, userId, hatchedPetId: null },
     });
@@ -176,7 +185,7 @@ export class HatchingService {
           palette,
           shiny: isShiny,
           visualSeed,
-          nickname: chosenSpecies.name,
+          nickname,
           level: 1,
           xp: 0,
           stage: 'baby',

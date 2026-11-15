@@ -2,8 +2,9 @@ import { InjectionToken, inject } from '@angular/core';
 import { AdminApi } from '../api';
 import { AuditLog } from './audit-log';
 import type { AdminUser, CatalogItem, Entity, GameEvent, PetEntry, SpeciesEntry } from './models';
-import { seedEvents, seedItems, seedPets, seedSpecies } from './seed';
+import { seedEvents, seedItems, seedSpecies } from './seed';
 import { MOCK_STORAGE } from './storage';
+import { HttpPetsRepository } from './pets-http';
 import { HttpUsersRepository } from './users-http';
 
 /**
@@ -115,9 +116,10 @@ export const SPECIES = new InjectionToken<Repository<SpeciesEntry>>('SPECIES', {
   providedIn: 'root',
   factory: mock('especies', seedSpecies, (e) => e.name),
 });
+/** Mascotas: datos reales del backend (solo se puede cambiar el apodo). */
 export const PETS = new InjectionToken<Repository<PetEntry>>('PETS', {
   providedIn: 'root',
-  factory: mock('pockais', seedPets, (e) => e.nickname),
+  factory: () => new HttpPetsRepository(inject(AdminApi), inject(AuditLog)),
 });
 
 export const ALL_REPOSITORIES = [ITEMS, EVENTS, USERS, SPECIES, PETS] as const;
