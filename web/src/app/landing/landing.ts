@@ -18,6 +18,7 @@ import { Ribbon } from '../shared/ui/ribbon';
 import { Sticker } from '../shared/ui/sticker';
 import { SITE_URL } from '../site.config';
 import { FAQ, FEATURES, MARQUEE, META, PLATFORMS, SPECIES } from './content';
+import { TEASER } from '../lore/content';
 import { PetDemo } from './demo/pet-demo';
 import { DesktopScene } from './sections/desktop-scene';
 import { HowItWorks } from './sections/how-it-works';
@@ -41,6 +42,8 @@ export class Landing {
   protected readonly species = SPECIES;
   protected readonly platforms = PLATFORMS;
   protected readonly faq = FAQ;
+  protected readonly teaser = TEASER;
+  protected readonly loreHref = `/${this.locale}/lore`;
   protected readonly year = new Date().getFullYear();
   protected readonly letters = [...'Pockai'];
 

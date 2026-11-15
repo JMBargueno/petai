@@ -1,0 +1,35 @@
+.awake__steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-inline-size: 820px;
+}
+.awake__step {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: start;
+  gap: 16px;
+}
+.awake__num {
+  font-size: clamp(40px, 6vw, 64px);
+  color: var(--color-ember);
+}
+.awake__sub {
+  display: block;
+  margin-block-end: 2px;
+}
+.awake__step p {
+  margin-block-start: 4px;
+  font-size: 16px;
+}
+
+@media (width < 700px) {
+  .awake__step {
+    grid-template-columns: auto 1fr;
+  }
+  .awake__num {
+    grid-column: 1;
+  }
+}

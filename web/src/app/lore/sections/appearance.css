@@ -1,0 +1,103 @@
+.appear__panels {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+.appear__panel {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  padding: var(--card-padding);
+  border: var(--outline);
+  border-radius: var(--radius-cards-elevated);
+  background: var(--color-paper-white);
+}
+.appear__panel--earth {
+  rotate: -0.6deg;
+}
+.appear__panel--aether {
+  rotate: 0.6deg;
+}
+.appear__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.appear__head h3 {
+  font-size: var(--text-subheading);
+}
+.appear__head p {
+  margin-block-start: 4px;
+  font-size: 16px;
+}
+
+/* Chips de patrón: igual que la landing pero con contorno negro (banda clara). */
+.patterns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pattern {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 20px 8px 8px;
+  border: var(--outline);
+  border-radius: var(--radius-pills);
+  background: var(--color-paper-white);
+}
+.pattern > span:last-child {
+  display: grid;
+  line-height: 1.2;
+}
+.pattern small {
+  font-size: var(--text-caption);
+  opacity: 0.7;
+}
+.swatch {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 48px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: var(--outline);
+  border-radius: 50%;
+}
+.swatch img {
+  inline-size: 150%;
+  max-inline-size: none;
+  block-size: auto;
+}
+
+.appear__defs {
+  margin-block-start: 16px;
+}
+.appear__def {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.appear__shiny {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-block-start: 12px;
+  max-inline-size: 760px;
+}
+.appear__shiny p {
+  font-size: 16px;
+}
+.appear__shiny-icon {
+  flex: none;
+}
+
+@media (width < 700px) {
+  .appear__panel:nth-child(n) {
+    rotate: 0deg;
+  }
+}

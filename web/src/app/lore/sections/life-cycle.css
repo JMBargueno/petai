@@ -1,0 +1,56 @@
+.life__stages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stage {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-inline-size: 132px;
+}
+.stage__n {
+  color: var(--color-ember);
+}
+.stage strong {
+  font-size: var(--text-subheading);
+}
+.stage__arrow {
+  display: grid;
+  place-items: center;
+  font-size: var(--text-heading);
+  color: var(--color-carbon);
+}
+
+.life__note {
+  margin: 20px 0 0;
+  max-inline-size: 60ch;
+  font-size: 16px;
+}
+
+.life__cards {
+  margin-block-start: 24px;
+}
+.life__card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 16px;
+}
+.life__card p {
+  margin-block-start: 4px;
+  font-size: 16px;
+}
+
+@media (width < 700px) {
+  .stage__arrow {
+    display: none;
+  }
+  .life__card {
+    grid-template-columns: 1fr;
+  }
+}

@@ -8,6 +8,7 @@
     <a class="btn btn--sm" href="#funciones" i18n="@@nav.features">Funciones</a>
     <a class="btn btn--sm" href="#pockais" i18n="@@nav.species">Pockais</a>
     <a class="btn btn--sm" href="#demo" i18n="@@nav.demo">Pruébalo</a>
+    <a class="btn btn--sm" [href]="loreHref" i18n="@@nav.lore">Mundo</a>
     <a class="btn btn--sm" href="#faq">FAQ</a>
   </nav>
 
@@ -115,6 +116,18 @@
   </section>
 
   <app-rarities />
+
+  <section id="lore" class="band band--ink lore-teaser">
+    <app-sticker class="spot spot--a float lore-teaser__egg" icon="egg" color="sunburst" [rotate]="-10" [size]="128" />
+    <app-sticker class="spot spot--c float lore-teaser__bolt" icon="star" color="voltage-violet" [rotate]="14" [size]="64" />
+    <div class="band__inner lore-teaser__inner reveal">
+      <h2 class="display lore-teaser__title" i18n="@@lore.teaser.title">
+        Bajo la <span class="hl hl--lavender">pantalla</span>
+      </h2>
+      <p class="lead lore-teaser__lead">{{ teaser.lead }}</p>
+      <a class="btn btn--filled" [href]="loreHref" i18n="@@lore.teaser.cta">Conocer el mundo</a>
+    </div>
+  </section>
 
   <section id="pockais" class="band band--sky">
     <app-ribbon shape="dip" />

@@ -3,77 +3,6 @@
   display: block;
 }
 
-/* ───── Nav ───── */
-.nav {
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px clamp(16px, 4vw, 48px);
-  pointer-events: none; /* la barra es transparente: solo sus controles capturan clics */
-}
-.nav > * {
-  pointer-events: auto;
-}
-.logo {
-  display: grid;
-  place-items: center;
-  inline-size: 44px;
-  aspect-ratio: 1;
-  border: var(--outline);
-  border-radius: var(--radius-pills);
-  background: var(--color-paper-white);
-  color: var(--color-carbon);
-  font-family: var(--font-lateral);
-  font-size: 22px;
-  line-height: 1;
-  text-decoration: none;
-}
-.nav__links,
-.nav__end {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.nav__end {
-  gap: 8px;
-}
-/* Sobre la banda negra el botón relleno perdería el borde: se le da uno blanco. */
-.nav .btn--filled {
-  border-color: var(--color-paper-white);
-}
-.lang {
-  display: flex;
-  padding: 3px;
-  border: var(--outline);
-  border-radius: var(--radius-pills);
-  background: var(--color-paper-white);
-}
-.lang a {
-  display: grid;
-  place-items: center;
-  min-inline-size: 36px;
-  min-block-size: 26px;
-  border-radius: var(--radius-pills);
-  color: var(--color-carbon);
-  font-weight: var(--font-weight-bold);
-  font-size: var(--text-caption);
-  letter-spacing: 0.032em;
-  text-decoration: none;
-}
-.lang a[aria-current] {
-  background: var(--color-carbon);
-  color: var(--color-paper-white);
-}
-@media (width < 860px) {
-  .nav__links {
-    display: none;
-  }
-}
-
 h3 {
   margin: 0;
   font-weight: var(--font-weight-bold);
@@ -214,6 +143,39 @@ p {
   .spot--c,
   .spot--d,
   .spot--e {
+    display: none;
+  }
+}
+
+/* — Teaser del lore (banda oscura entre rarezas y especies) — */
+.lore-teaser .band__inner {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+  max-inline-size: 760px;
+}
+.lore-teaser__title {
+  font-size: clamp(40px, 8vw, 112px);
+  text-wrap: balance;
+}
+.lore-teaser__lead {
+  max-inline-size: 54ch;
+  font-size: var(--text-body-lg);
+}
+.lore-teaser__egg {
+  inset: 18% auto auto 72%;
+  --depth: -32px;
+  --float-dur: 5s;
+}
+.lore-teaser__bolt {
+  inset: auto 6% 14% auto;
+  --depth: 28px;
+  --float-dur: 4.4s;
+  --float-delay: -1.2s;
+}
+@media (width < 760px) {
+  .lore-teaser__egg,
+  .lore-teaser__bolt {
     display: none;
   }
 }

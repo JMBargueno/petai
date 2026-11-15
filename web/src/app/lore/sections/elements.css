@@ -1,0 +1,9 @@
+.element {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.element h3 {
+  font-size: var(--text-subheading);
+  margin-block-start: 2px;
+}

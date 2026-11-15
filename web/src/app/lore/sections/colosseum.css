@@ -1,0 +1,8 @@
+.colo__card {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.colo__card p {
+  color: var(--color-carbon);
+}

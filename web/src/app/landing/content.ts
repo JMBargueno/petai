@@ -162,7 +162,7 @@ export const STEPS: { icon: StickerIcon; color: StickerColor; motion: string; ti
   },
 ];
 
-const RARITY_COLORS: Record<string, StickerColor> = {
+export const RARITY_COLORS: Record<string, StickerColor> = {
   normal: 'mint-pop',
   rare: 'electric-blue',
   super_rare: 'lavender',
