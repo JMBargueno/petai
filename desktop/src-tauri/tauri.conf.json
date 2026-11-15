@@ -55,7 +55,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhBNTdEN0FFNzc3RTU0RjUKUldUMVZINTNydGRYaXZMR2tYU3c0Ni9KbnZ2MlA0a1JlRU14YXVWbG9xeWxtMUp1aFJ0MEFQM3UK",
       "endpoints": [
         "https://api-pockai.jmbargueno.com/v1/desktop/updates/{{target}}/{{arch}}/{{current_version}}"
       ],
