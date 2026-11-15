@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from './Ico.svelte';
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type BattleResponse, type BattleSummary, type CombatProfile, type LeaderboardEntry } from '../lib/api';
   import ReplayViewer from './ReplayViewer.svelte';
@@ -8,19 +9,19 @@
   const dispatch = createEventDispatcher();
 
   const STATS = [
-    { key: 'hp', label: 'Vida', icon: '❤️' },
-    { key: 'atk', label: 'Ataque', icon: '⚔️' },
-    { key: 'def', label: 'Defensa', icon: '🛡' },
-    { key: 'vel', label: 'Velocidad', icon: '💨' },
-    { key: 'esp', label: 'Especial', icon: '✨' },
+    { key: 'hp', label: 'Vida', icon: 'heart' },
+    { key: 'atk', label: 'Ataque', icon: 'swords' },
+    { key: 'def', label: 'Defensa', icon: 'shield' },
+    { key: 'vel', label: 'Velocidad', icon: 'energy' },
+    { key: 'esp', label: 'Especial', icon: 'xp' },
   ] as const;
   const STRATEGIES = [
-    { id: 'aggressive', label: '🗡 Agresiva' },
-    { id: 'balanced', label: '⚖️ Equilibrada' },
-    { id: 'defensive', label: '🛡 Defensiva' },
+    { id: 'aggressive', label: 'Agresiva' },
+    { id: 'balanced', label: 'Equilibrada' },
+    { id: 'defensive', label: 'Defensiva' },
   ];
   const ELEMENT_ICON: Record<string, string> = { fire: '🔥', water: '💧', plant: '🌿', electric: '⚡', shadow: '🌑', light: '✨' };
-  const OUTCOME = { win: '🏆 Victoria', loss: '💔 Derrota', draw: '🤝 Empate' } as const;
+  const OUTCOME = { win: 'Victoria', loss: 'Derrota', draw: 'Empate' } as const;
 
   type Skill = { id: string; name: string; element: string; kind: string; power: number; cooldown: number; unlockLevel: number; description?: string };
 
@@ -206,9 +207,9 @@
   <p class="muted">Necesitas una mascota para entrar en la arena. Eclosiona un huevo primero.</p>
 {:else}
   <div class="seg">
-    <button class:active={view === 'fight'} on:click={() => show('fight')}>⚔️ Pelea</button>
-    <button class:active={view === 'history'} on:click={() => show('history')}>📜 Historial</button>
-    <button class:active={view === 'ranking'} on:click={() => show('ranking')}>🏅 Ranking</button>
+    <button class:active={view === 'fight'} on:click={() => show('fight')}><Ico n="swords" /> Pelea</button>
+    <button class:active={view === 'history'} on:click={() => show('history')}><Ico n="log" /> Historial</button>
+    <button class:active={view === 'ranking'} on:click={() => show('ranking')}><Ico n="medal" /> Ranking</button>
   </div>
 
   {#if error}<p class="error">{error}</p>{/if}
@@ -228,11 +229,11 @@
         {#if profile.league.next}
           <small class="muted-line">{profile.league.toNext} para {profile.league.next.name}</small>
         {/if}
-        <small class="muted-line">Peleas 24 h: {profile.battlesToday}/{profile.dailyLimit} · Coste: {profile.energyCost} ⚡ · Ánimo ×{profile.mood.toFixed(2)}</small>
+        <small class="muted-line">Peleas 24 h: {profile.battlesToday}/{profile.dailyLimit} · Coste: {profile.energyCost} <Ico n="energy" /> · Ánimo ×{profile.mood.toFixed(2)}</small>
       </div>
 
       <button class="primary big" disabled={fighting || !profile.canFight} on:click={fight} title={profile.reason ?? ''}>
-        {fighting ? 'Buscando rival…' : '⚔️ Buscar rival'}
+        {#if fighting}Buscando rival…{:else}<Ico n="swords" /> Buscar rival{/if}
       </button>
       {#if profile.reason}<p class="muted">{profile.reason}</p>{/if}
 
@@ -246,13 +247,13 @@
           <span>
             ELO {last.elo.before} → {last.elo.after} ({sign(last.elo.delta)}) · {last.elo.league.name}
           </span>
-          <span>+{last.rewards.xp} XP · +{last.rewards.coins} 🪙 · {sign(last.rewards.happiness)} 😊 · −{last.rewards.energyCost} ⚡</span>
+          <span>+{last.rewards.xp} XP · +{last.rewards.coins} <Ico n="coin" /> · {sign(last.rewards.happiness)} <Ico n="smile" /> · −{last.rewards.energyCost} <Ico n="energy" /></span>
         </div>
       {/if}
 
       {#if replayLog}
         <div class="card">
-          <div class="sec-title">🎬 {replayTitle}</div>
+          <div class="sec-title"><Ico n="replay" /> {replayTitle}</div>
           <ReplayViewer log={replayLog} {skillNames} />
         </div>
       {/if}
@@ -265,7 +266,7 @@
         </div>
         {#each STATS as s}
           <div class="stat-row">
-            <span class="lbl">{s.icon} {s.label}</span>
+            <span class="lbl"><Ico n={s.icon} /> {s.label}</span>
             <span class="val">
               {profile.stats[s.key]}
               {#if draft[s.key]}<em>+{draft[s.key]}</em>{/if}
@@ -302,7 +303,7 @@
                 on:click={() => toggleSkill(id)}
               >
                 {ELEMENT_ICON[sk.element] ?? '⚪'} {sk.name}
-                <small>{sk.kind === 'attack' ? `${sk.power}` : sk.kind === 'heal' ? '❤️' : '🛡'}{sk.cooldown ? ` · ⏳${sk.cooldown}` : ''}</small>
+                <small>{#if sk.kind === 'attack'}{sk.power}{:else if sk.kind === 'heal'}<Ico n="heart" />{:else}<Ico n="shield" />{/if}{#if sk.cooldown} · <Ico n="wait" />{sk.cooldown}{/if}</small>
               </button>
             {/if}
           {/each}
@@ -329,9 +330,9 @@
     {/if}
     {#each history as b (b.id)}
       <button class="row-btn {b.outcome}" on:click={() => openReplay(b)}>
-        <span class="o">{b.outcome === 'win' ? '🏆' : b.outcome === 'loss' ? '💔' : '🤝'}</span>
+        <span class="o">{b.outcome === 'win' ? 'V' : b.outcome === 'loss' ? 'D' : 'E'}</span>
         <span class="who">
-          <strong>{b.role === 'defender' ? '🛡 Te retó ' : 'vs '}{b.opponent.name}</strong>
+          <strong>{b.role === 'defender' ? 'Te retó ' : 'vs '}{b.opponent.name}</strong>
           <small>Nv. {b.opponent.level}{b.opponent.isBot ? ' · bot' : ''} · {fmtDate(b.createdAt)}</small>
         </span>
         <span class="delta" class:pos={b.eloDelta > 0} class:neg={b.eloDelta < 0}>{b.eloDelta ? sign(b.eloDelta) : '–'}</span>
@@ -353,7 +354,7 @@
       {/if}
       {#each board.entries as e (e.petId)}
         <div class="lb-row" class:me={e.mine}>
-          <span class="rk">{e.rank <= 3 ? ['🥇', '🥈', '🥉'][e.rank - 1] : e.rank}</span>
+          <span class="rk">{e.rank}</span>
           <span class="who">
             <strong>{e.name}</strong>
             <small>{e.owner ?? 'Anónimo'} · Nv. {e.level} · {e.league}</small>
@@ -370,73 +371,73 @@
 
 <style>
   .muted { font-size: 12px; opacity: 0.7; margin: 6px 0; }
-  .error { color: #f87171; font-size: 12px; margin: 6px 0; }
+  .error { color: var(--danger-ink); font-size: 12px; margin: 6px 0; }
   .seg { display: flex; gap: 4px; margin-bottom: 8px; }
   .seg button {
-    flex: 1; padding: 6px 4px; font-size: 12px; border-radius: 8px; cursor: pointer; color: inherit;
-    background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.1);
+    flex: 1; padding: 6px 4px; font-size: 12px; border-radius: var(--radius-2xl); cursor: pointer; color: inherit;
+    background: var(--surface-2); border: 1px solid var(--line-soft);
   }
-  .seg button.active { background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; }
+  .seg button.active { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); border-color: var(--accent); }
   .seg.small button { font-size: 11px; padding: 4px; }
   .card {
-    padding: 10px; margin-bottom: 8px; border-radius: 12px; font-size: 13px;
-    background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px; margin-bottom: 8px; border-radius: var(--radius-2xl); font-size: 13px;
+    background: var(--surface-2); border: 1px solid var(--line-soft);
     display: flex; flex-direction: column; gap: 6px;
   }
   .head { gap: 3px; }
   .head > div:first-child { display: flex; justify-content: space-between; align-items: baseline; }
   .league { display: flex; gap: 8px; align-items: center; }
-  .badge { background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 10px; padding: 1px 8px; font-size: 12px; font-weight: 700; }
+  .badge { background: color-mix(in srgb, var(--color-sunburst) 20%, var(--surface)); border: 1px solid var(--color-sunburst); border-radius: var(--radius-2xl); padding: 1px 8px; font-size: 12px; font-weight: 700; }
   .elo { font-weight: 700; }
   .muted-line { opacity: 0.65; font-size: 11px; }
   .primary {
-    padding: 8px 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700;
-    background: #38bdf8; color: #0f172a;
+    padding: 8px 12px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700;
+    background: var(--accent); color: var(--on-color);
   }
   .primary.big { width: 100%; padding: 11px; font-size: 14px; margin-bottom: 8px; }
   .primary:disabled { opacity: 0.5; cursor: not-allowed; }
   .result { gap: 3px; }
-  .result.win { border-color: rgba(34, 197, 94, 0.5); background: rgba(34, 197, 94, 0.1); }
-  .result.loss { border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.1); }
-  .result.draw { border-color: rgba(250, 204, 21, 0.5); background: rgba(250, 204, 21, 0.1); }
+  .result.win { border-color: var(--success); background: color-mix(in srgb, var(--success) 10%, var(--surface)); }
+  .result.loss { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--surface)); }
+  .result.draw { border-color: var(--color-sunburst); background: color-mix(in srgb, var(--color-sunburst) 10%, var(--surface)); }
   .sec-title { font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-  .points { font-size: 11px; color: #fbbf24; font-weight: 600; }
+  .points { font-size: 11px; color: var(--warning-ink); font-weight: 600; }
   .stat-row { display: flex; align-items: center; gap: 6px; }
   .stat-row .lbl { flex: 1; }
   .stat-row .val { min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
-  .stat-row em { color: #4ade80; font-style: normal; margin-left: 3px; }
+  .stat-row em { color: var(--success-ink); font-style: normal; margin-left: 3px; }
   .mini {
-    width: 24px; height: 24px; border-radius: 6px; cursor: pointer; color: inherit; line-height: 1;
-    background: rgba(51, 65, 85, 0.9); border: 1px solid rgba(255, 255, 255, 0.15);
+    width: 24px; height: 24px; border-radius: var(--radius-2xl); cursor: pointer; color: inherit; line-height: 1;
+    background: var(--surface-2); border: 1px solid var(--line-soft);
   }
   .mini:disabled { opacity: 0.35; cursor: not-allowed; }
   select {
-    background: rgba(15, 23, 42, 0.8); color: inherit; border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px; padding: 6px 8px; font: inherit;
+    background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
+    border-radius: var(--radius-2xl); padding: 6px 8px; font: inherit;
   }
   .chips { display: flex; flex-wrap: wrap; gap: 5px; }
   .chip {
-    padding: 4px 8px; border-radius: 14px; font-size: 12px; cursor: pointer; color: inherit;
-    background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 4px 8px; border-radius: var(--radius-2xl); font-size: 12px; cursor: pointer; color: inherit;
+    background: var(--surface-2); border: 1px solid var(--line-soft);
   }
   .chip small { opacity: 0.6; margin-left: 3px; }
-  .chip.on { background: rgba(56, 189, 248, 0.22); border-color: #38bdf8; }
+  .chip.on { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); border-color: var(--accent); }
   .row-btn, .lb-row {
-    display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 9px; margin-bottom: 5px; border-radius: 10px;
-    background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.1); color: inherit; text-align: left; font-size: 13px;
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 9px; margin-bottom: 5px; border-radius: var(--radius-2xl);
+    background: var(--surface-2); border: 1px solid var(--line-soft); color: inherit; text-align: left; font-size: 13px;
   }
   .row-btn { cursor: pointer; }
-  .row-btn:hover { background: rgba(51, 65, 85, 0.7); }
-  .row-btn.win { border-left: 3px solid #22c55e; }
-  .row-btn.loss { border-left: 3px solid #ef4444; }
+  .row-btn:hover { background: var(--surface-2); }
+  .row-btn.win { border-left: 3px solid var(--success); }
+  .row-btn.loss { border-left: 3px solid var(--danger); }
   .row-btn.draw { border-left: 3px solid #facc15; }
   .who { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   .who strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .who small { opacity: 0.6; font-size: 11px; }
   .delta { font-weight: 700; min-width: 34px; text-align: right; }
-  .delta.pos { color: #4ade80; }
-  .delta.neg { color: #f87171; }
-  .lb-row.me { border-color: #38bdf8; background: rgba(56, 189, 248, 0.12); }
+  .delta.pos { color: var(--success-ink); }
+  .delta.neg { color: var(--danger-ink); }
+  .lb-row.me { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
   .rk { width: 26px; text-align: center; font-weight: 700; }
   .score { font-weight: 700; font-variant-numeric: tabular-nums; }
   .mine-line { font-size: 12px; margin: 4px 0 8px; }

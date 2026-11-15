@@ -14,7 +14,7 @@
   } from './lib/environmental';
   import PetView from './components/PetView.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
-  import NotificationSettingsPanel from './components/NotificationSettingsPanel.svelte';
+  import { PawPrint, Bell, X } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
 
@@ -25,7 +25,13 @@
   let inventory: any[] = [];
   let shopItems: any[] = [];
   let isPanelOpen = true;
-  let showNotifPanel = false;
+  // Petición de navegación al panel (la campana abre Ajustes › Avisos)
+  let panelRequest: { dest: string; sub: string; n: number } | null = null;
+  let requestN = 0;
+  function openNotifications() {
+    panelRequest = { dest: 'settings', sub: 'notifications', n: ++requestN };
+    isPanelOpen = true;
+  }
   let bubbleText = '';
   let bubbleTimer: any = null;
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
@@ -40,7 +46,7 @@
 
   // Badge de la bandeja/tray (feature 007 / US3): refleja los avisos no leídos en el título de la app.
   $: if (typeof document !== 'undefined') {
-    document.title = $unreadCount > 0 ? `(${unreadCount}) PetAI` : 'PetAI';
+    document.title = $unreadCount > 0 ? `(${$unreadCount}) Pockai` : 'Pockai';
   }
 
   async function refreshPet() {
@@ -99,7 +105,7 @@
           // Resultado desde el punto de vista de la mascota defensora (la del usuario)
           const outcome = b.draw ? 'empató' : b.won ? 'ganó' : 'perdió';
           const delta = b.eloDelta ? ` (${b.eloDelta > 0 ? '+' : ''}${b.eloDelta} ELO)` : '';
-          const text = `⚔️ ${b.attackerName} retó a ${b.defenderPetName}: tu mascota ${outcome}${delta}`;
+          const text = `${b.attackerName} retó a ${b.defenderPetName}: tu mascota ${outcome}${delta}`;
           showBubble(text);
           notifyNow('Te han retado en la arena', text);
         });
@@ -200,7 +206,7 @@
     try {
       const due = await api.getDueReminders();
       for (const r of due) {
-        showBubble(`⏰ ${r.text}`);
+        showBubble(r.text);
         await notifyNow('Recordatorio', r.text);
         await api.markReminderDelivered(r.id);
       }
@@ -250,27 +256,23 @@
 <main class="app-viewport">
   <!-- Botón flotante para alternar panel de control -->
   <button
-    class="toggle-panel-pill"
+    class="btn glass toggle-panel-pill"
     on:click={() => (isPanelOpen = !isPanelOpen)}
     title="Abrir/Cerrar Panel de Control"
   >
-    {isPanelOpen ? '✕ Ocultar Panel' : '🐾 Abrir Panel'}
+    {#if isPanelOpen}<X size={16} /> Ocultar panel{:else}<PawPrint size={16} /> Abrir panel{/if}
   </button>
 
-  <!-- Botón flotante de ajustes de notificaciones (feature 007 / US3) con badge de no leídas -->
+  <!-- Avisos de la mascota (feature 007 / US3) con badge de no leídas -->
   <button
-    class="notif-toggle-pill"
-    on:click={() => (showNotifPanel = !showNotifPanel)}
+    class="btn glass notif-toggle-pill"
+    on:click={openNotifications}
     title="Ajustes de notificaciones"
+    aria-label="Avisos"
   >
-    🔔 {#if $unreadCount > 0}<span class="notif-badge">{$unreadCount}</span>{/if}
+    <Bell size={16} />
+    {#if $unreadCount > 0}<span class="notif-badge">{$unreadCount}</span>{/if}
   </button>
-
-  {#if showNotifPanel}
-    <div class="notif-panel-host">
-      <NotificationSettingsPanel />
-    </div>
-  {/if}
 
   <!-- Mascota Interactiva Flotante -->
   {#if currentPet}
@@ -286,6 +288,7 @@
   <!-- Panel de Control y Cuidados -->
   <ControlPanel
     isOpen={isPanelOpen}
+    request={panelRequest}
     user={user}
     pet={currentPet}
     eggs={eggs}
@@ -318,71 +321,28 @@
     pointer-events: none;
   }
 
-  .toggle-panel-pill {
-    position: fixed;
-    bottom: 16px;
-    right: 16px;
-    background: rgba(15, 23, 42, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #38bdf8;
-    padding: 8px 14px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    pointer-events: auto;
-    z-index: 90;
-    transition: all 0.2s;
-  }
-
-  .toggle-panel-pill:hover {
-    background: rgba(30, 41, 59, 0.95);
-    transform: translateY(-2px);
-  }
-
+  .toggle-panel-pill,
   .notif-toggle-pill {
     position: fixed;
     bottom: 16px;
-    right: 160px;
-    background: rgba(15, 23, 42, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #38bdf8;
-    padding: 8px 12px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    pointer-events: auto;
     z-index: 90;
-    transition: all 0.2s;
+    box-shadow: var(--shadow-2);
   }
-
-  .notif-toggle-pill:hover {
-    background: rgba(30, 41, 59, 0.95);
-    transform: translateY(-2px);
+  .toggle-panel-pill {
+    right: 16px;
+  }
+  .notif-toggle-pill {
+    right: 170px;
   }
 
   .notif-badge {
-    display: inline-block;
     min-width: 18px;
     padding: 0 5px;
-    margin-left: 4px;
-    background: #f43f5e;
-    color: #fff;
-    border-radius: 9px;
+    background: var(--danger);
+    color: var(--on-color);
+    border-radius: var(--radius-pills);
     font-size: 11px;
     line-height: 18px;
-  }
-
-  .notif-panel-host {
-    position: fixed;
-    bottom: 60px;
-    right: 16px;
-    z-index: 95;
-    pointer-events: auto;
+    text-align: center;
   }
 </style>

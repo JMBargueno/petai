@@ -383,13 +383,14 @@
     margin-left: -110px;
     width: 220px;
     padding: 8px 12px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.96);
-    color: #0f172a;
+    border-radius: var(--radius-2xl);
+    background: var(--surface);
+    color: var(--ink);
+    border: var(--outline);
     font-size: 13px;
     line-height: 1.35;
     text-align: center;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-3);
     pointer-events: none;
     z-index: 60;
   }
@@ -403,7 +404,7 @@
     top: auto;
     bottom: 100%;
     border-top-color: transparent;
-    border-bottom-color: rgba(255, 255, 255, 0.96);
+    border-bottom-color: var(--line-soft);
   }
 
   .speech::after {
@@ -413,7 +414,7 @@
     left: 50%;
     margin-left: -6px;
     border: 6px solid transparent;
-    border-top-color: rgba(255, 255, 255, 0.96);
+    border-top-color: var(--line);
   }
 
   .pet-badge {
@@ -421,23 +422,23 @@
     bottom: -18px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.85);
+    background: var(--surface-2);
     backdrop-filter: blur(8px);
-    color: #f8fafc;
+    color: var(--ink);
     padding: 2px 8px;
-    border-radius: 12px;
+    border-radius: var(--radius-2xl);
     font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
     display: flex;
     gap: 4px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid var(--line-soft);
     pointer-events: none;
   }
 
   .pet-lvl {
-    color: #fbbf24;
+    color: var(--warning-ink);
   }
 
   .floating-bubble {
@@ -473,16 +474,16 @@
 
   /* Tramo del día */
   .env-tint.env--late_night {
-    background: radial-gradient(circle, rgba(30, 41, 90, 0.9) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--surface-2) 0%, transparent 70%);
   }
   .env-tint.env--night {
-    background: radial-gradient(circle, rgba(30, 41, 90, 0.7) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--surface-2) 0%, transparent 70%);
   }
   .env-tint.env--morning {
-    background: radial-gradient(circle, rgba(251, 191, 36, 0.7) 0%, transparent 70%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-sunburst) 70%, var(--surface)) 0%, transparent 70%);
   }
   .env-tint.env--afternoon {
-    background: radial-gradient(circle, rgba(253, 224, 71, 0.6) 0%, transparent 70%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-sunburst) 60%, var(--surface)) 0%, transparent 70%);
   }
   .env-tint.env--evening {
     background: radial-gradient(circle, rgba(244, 114, 182, 0.5) 0%, transparent 70%);
@@ -491,7 +492,7 @@
   /* Clima (refuerza el tinte del tramo) */
   .env-tint.env--weather-rain,
   .env-tint.env--weather-cloud {
-    background: radial-gradient(circle, rgba(71, 85, 105, 0.8) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--surface-2) 0%, transparent 70%);
     opacity: 0.5;
   }
   .env-tint.env--weather-snow,
@@ -500,7 +501,7 @@
     opacity: 0.55;
   }
   .env-tint.env--weather-hot {
-    background: radial-gradient(circle, rgba(251, 146, 60, 0.7) 0%, transparent 70%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-sunburst) 70%, var(--surface)) 0%, transparent 70%);
     opacity: 0.5;
   }
 </style>

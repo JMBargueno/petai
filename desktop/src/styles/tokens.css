@@ -1,0 +1,126 @@
+/*
+ * Tokens del sistema de diseño de Pockai (v2), copia de web/src/styles/tokens.css sin `@theme`.
+ * Guía: docs/GUIA_ARTISTICA.md. Si cambias un valor, cámbialo también en la web.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Paleta de marca (fija en claro y oscuro) */
+  --color-carbon: #0b0a14;
+  --color-paper-white: #ffffff;
+  --color-sky-wash: #dceeff;
+  --color-concrete-gray: #d6d4e0;
+  --color-soft-mist: #eeedf4;
+  --color-electric-blue: #4da2ff;
+  --color-mint-pop: #55db9c;
+  --color-lavender: #e9ccff;
+  --color-ember: #fb4903;
+  --color-sunburst: #ffd731;
+  --color-voltage-violet: #5c4ade;
+
+  /* Tipografía */
+  --font-display: 'Lateral', 'Bowlby One', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-ui: 'Aeonik Pro', 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --text-caption: 12px;
+  --text-body: 14px;
+  --text-body-lg: 16px;
+  --text-subheading: 22px;
+  --text-heading-sm: 30px;
+
+  /* Radios */
+  --radius-2xl: 16px;
+  --radius-cards: 20px;
+  --radius-3xl: 28px;
+  --radius-cards-elevated: 32px;
+  --radius-pills: 9999px;
+
+  /* Superficies y texto */
+  --bg: light-dark(#fbfaff, #0d0c19);
+  --surface: light-dark(#ffffff, #17162a);
+  --surface-2: light-dark(#f2f1f8, #201e37);
+  --surface-glass: light-dark(rgb(255 255 255 / 0.72), rgb(23 22 42 / 0.72));
+  --ink: light-dark(#0b0a14, #f4f2ff);
+  --ink-muted: light-dark(#4b4862, #b9b5d8);
+  --line: light-dark(#0b0a14, #3d3a63);
+  --line-soft: light-dark(rgb(11 10 20 / 0.12), rgb(255 255 255 / 0.1));
+  --on-color: #0b0a14;
+  --on-dark: #ffffff;
+
+  /* Acentos y color por tema */
+  --accent: #5c4ade;
+  --accent-ink: light-dark(#4a39c9, #b3a8ff);
+  --theme-arena: var(--color-electric-blue);
+  --theme-ai: var(--color-lavender);
+  --theme-care: var(--color-sunburst);
+  --theme-social: var(--color-mint-pop);
+  --theme-lore: var(--color-voltage-violet);
+  --theme-hot: var(--color-ember);
+
+  /* Estados (§3.10) */
+  --success: #55db9c;
+  --success-ink: light-dark(#1d7a4f, #55db9c);
+  --warning: #ffd731;
+  --warning-ink: light-dark(#8a6a00, #ffd731);
+  --danger: #fb4903;
+  --danger-ink: light-dark(#b33200, #ff8a5c);
+
+  /* Color de UI por elemento (§3.6) */
+  --elem-fire: var(--color-ember);
+  --elem-water: var(--color-electric-blue);
+  --elem-plant: var(--color-mint-pop);
+  --elem-neutral: var(--color-lavender);
+  --elem-electric: var(--color-sunburst);
+  --elem-shadow: var(--color-voltage-violet);
+  --elem-light: var(--color-soft-mist);
+
+  /* Color por rareza (§3.7) */
+  --rarity-common: var(--color-mint-pop);
+  --rarity-rare: var(--color-electric-blue);
+  --rarity-super-rare: var(--color-lavender);
+  --rarity-legendary: var(--color-sunburst);
+  --rarity-mythic: var(--color-ember);
+
+  /* Degradados */
+  --grad-accent: linear-gradient(135deg, #6d5bff 0%, #5c4ade 45%, #3f8cff 100%);
+  --grad-hero:
+    radial-gradient(60% 70% at 12% 18%, light-dark(#e9ccff, #2c1f55) 0%, transparent 60%),
+    radial-gradient(55% 60% at 88% 12%, light-dark(#c9f3df, #0f3a33) 0%, transparent 62%),
+    radial-gradient(70% 70% at 70% 100%, light-dark(#fff1b3, #3a2a12) 0%, transparent 60%),
+    light-dark(#dceeff, #0f1d33);
+
+  /* Elevación (sombras tintadas) */
+  --shadow-c: light-dark(#261e6e, #000000);
+  --shadow-1: 0 1px 2px color-mix(in srgb, var(--shadow-c) 8%, transparent), 0 2px 8px color-mix(in srgb, var(--shadow-c) 7%, transparent);
+  --shadow-2: 0 2px 4px color-mix(in srgb, var(--shadow-c) 8%, transparent), 0 8px 24px color-mix(in srgb, var(--shadow-c) 12%, transparent);
+  --shadow-3: 0 4px 8px color-mix(in srgb, var(--shadow-c) 9%, transparent), 0 18px 48px color-mix(in srgb, var(--shadow-c) 18%, transparent);
+  --shadow-4: 0 8px 16px color-mix(in srgb, var(--shadow-c) 10%, transparent), 0 32px 80px color-mix(in srgb, var(--shadow-c) 26%, transparent);
+  --shadow-pop: 4px 5px 0 var(--line);
+  --glow-accent: 0 8px 28px rgb(92 74 222 / 0.45);
+
+  /* Contornos y foco */
+  --outline: 1px solid var(--line);
+  --focus-ring: 3px solid light-dark(#5c4ade, #b3a8ff);
+
+  /* Movimiento */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-1: 0.15s;
+  --dur-2: 0.3s;
+  --dur-3: 0.6s;
+}
+
+/* Isla de tono: fondo pastel con texto oscuro aunque el sistema esté en oscuro (§3.9). */
+.tone {
+  color-scheme: light;
+  color: var(--on-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -19,7 +19,7 @@
 
   function starColor(status: string): string {
     if (status === 'unlocked') return '#fff7cc'; // brillante
-    if (status === 'in_progress') return '#ffd93b'; // amarillo
+    if (status === 'in_progress') return '#ffd731'; // sunburst (SVG exportable: valor literal)
     return '#5a5f70'; // gris
   }
 
@@ -87,9 +87,9 @@
   .constellation {
     margin: 0;
     background: radial-gradient(ellipse at center, #10141f 0%, #0a0d15 100%);
-    border-radius: 12px;
+    border-radius: var(--radius-2xl);
     padding: 12px;
-    color: #cfd3e0;
+    color: var(--ink);
     font-family: inherit;
   }
   .constellation__title {
@@ -97,11 +97,11 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     margin-bottom: 8px;
-    color: #e7eaf2;
+    color: var(--ink);
   }
   .constellation__player {
     font-weight: 400;
-    color: #8a90a6;
+    color: var(--ink-muted);
   }
   .constellation__svg {
     width: 100%;

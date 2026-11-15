@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from './Ico.svelte';
   import { onDestroy } from 'svelte';
   import { getPetSvg } from '../lib/sprites';
   import { buildFrames, type Frame, type ReplayLog } from '../lib/replay';
@@ -118,8 +119,8 @@
 
     <div class="controls">
       <button on:click={restart} title="Reiniciar">↺</button>
-      <button class="main" on:click={toggle} title={playing ? 'Pausa' : 'Reproducir'}>{playing ? '⏸' : '▶'}</button>
-      <button on:click={toEnd} title="Ir al final">⏭</button>
+      <button class="main" on:click={toggle} title={playing ? 'Pausa' : 'Reproducir'}>{#if playing}<Ico n="pause" size={16} />{:else}<Ico n="play" size={16} />{/if}</button>
+      <button on:click={toEnd} title="Ir al final"><Ico n="next" /></button>
       <button on:click={setSpeed} title="Velocidad">×{speed}</button>
       <span class="round">{frame.round > 0 ? `Ronda ${frame.round}` : 'Inicio'} · {index + 1}/{frames.length}</span>
     </div>
@@ -130,14 +131,14 @@
   .viewer { display: flex; flex-direction: column; gap: 8px; }
   .arena {
     display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px 8px 4px;
-    border-radius: 12px; background: linear-gradient(180deg, rgba(56, 189, 248, 0.08), rgba(15, 23, 42, 0.6));
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-2xl); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface-2));
+    border: 1px solid var(--line-soft);
   }
   .side { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
   .info { display: flex; flex-direction: column; align-items: center; font-size: 12px; max-width: 100%; }
   .name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
   .info small { opacity: 0.65; font-size: 10px; }
-  .bar { width: 100%; height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+  .bar { width: 100%; height: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); overflow: hidden; }
   .fill { height: 100%; transition: width 0.5s ease, background 0.3s; }
   .hptext { font-size: 10px; opacity: 0.7; }
   .sprite {
@@ -156,23 +157,23 @@
   }
   .float {
     position: absolute; top: -4px; left: 50%; transform: translateX(-50%) scaleX(var(--dir, 1));
-    font-weight: 800; font-size: 18px; color: #f87171; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    font-weight: 800; font-size: 18px; color: var(--danger-ink); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
     animation: rise 1s ease-out forwards; pointer-events: none;
   }
-  .float.crit { color: #fbbf24; font-size: 22px; }
-  .float.heal { color: #4ade80; }
+  .float.crit { color: var(--warning-ink); font-size: 22px; }
+  .float.heal { color: var(--success-ink); }
   @keyframes rise { from { opacity: 1; top: 20px; } to { opacity: 0; top: -22px; } }
   .log {
     min-height: 38px; display: flex; align-items: center; justify-content: center; text-align: center;
-    padding: 6px 10px; border-radius: 10px; font-size: 13px; background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1); user-select: text;
+    padding: 6px 10px; border-radius: var(--radius-2xl); font-size: 13px; background: var(--surface-2);
+    border: 1px solid var(--line-soft); user-select: text;
   }
-  .log.end { background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.5); font-weight: 700; }
+  .log.end { background: color-mix(in srgb, var(--color-sunburst) 15%, var(--surface)); border-color: var(--color-sunburst); font-weight: 700; }
   .controls { display: flex; align-items: center; gap: 6px; }
   .controls button {
-    padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 13px;
-    background: rgba(51, 65, 85, 0.9); color: inherit; border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 5px 10px; border-radius: var(--radius-2xl); cursor: pointer; font-size: 13px;
+    background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
   }
-  .controls button.main { background: #38bdf8; color: #0f172a; border: none; font-weight: 700; min-width: 40px; }
+  .controls button.main { background: var(--accent); color: var(--on-color); border: none; font-weight: 700; min-width: 40px; }
   .round { margin-left: auto; font-size: 11px; opacity: 0.65; }
 </style>

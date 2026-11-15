@@ -4,8 +4,21 @@
     {
       "name": "pockai-web-preview",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["web/scripts/preview.mjs"],
+      "runtimeArgs": [
+        "web/scripts/preview.mjs"
+      ],
       "port": 4300
+    },
+    {
+      "name": "pockai-desktop-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "petai-desktop",
+        "run",
+        "dev"
+      ],
+      "port": 5173
     }
   ]
 }

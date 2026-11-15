@@ -12,6 +12,8 @@
   import HabitatTab from './HabitatTab.svelte';
 import RaidTab from './RaidTab.svelte';
 import TournamentTab from './TournamentTab.svelte';
+  import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
+  import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut } from 'lucide-svelte';
 
   export let user: any = null;
   export let pet: any = null;
@@ -60,7 +62,30 @@ import TournamentTab from './TournamentTab.svelte';
 
   const dispatch = createEventDispatcher();
 
-  let activeTab: 'pet' | 'hatch' | 'games' | 'arena' | 'seasons' | 'missions' | 'chests' | 'bonding' | 'habitat' | 'raid' | 'tournament' | 'ai' | 'shop' | 'account' = 'pet';
+  // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
+  const NAV = [
+    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['habitat', 'Hábitat']] },
+    { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo']] },
+    { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
+    { id: 'progress', label: 'Progreso', icon: Trophy, subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
+    { id: 'shop', label: 'Tienda', icon: ShoppingBag, subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
+    { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos']] },
+  ];
+  let dest: string = 'pet';
+  let sub: string = 'home';
+  /** Petición externa (p. ej. la campana de App.svelte) para abrir una sección concreta. */
+  export let request: { dest: string; sub: string; n: number } | null = null;
+  let lastRequest = 0;
+  $: if (request && request.n !== lastRequest) {
+    lastRequest = request.n;
+    go(request.dest, request.sub);
+  }
+  function go(d: string, s?: string) {
+    dest = d;
+    const entry = NAV.find((n) => n.id === d)!;
+    sub = s ?? (entry.subs[0]?.[0] ?? '');
+  }
+  $: current = NAV.find((n) => n.id === dest)!;
 
   // Auth inputs
   let isLoginMode = true;
@@ -186,120 +211,116 @@ import TournamentTab from './TournamentTab.svelte';
   >
     <div class="panel-header" on:mousedown={startPanelDrag} role="presentation">
       <div class="header-title">
-        <span class="logo">🐾 PetAI</span>
+        <span class="logo"><span class="logo__mark">P</span><span class="display">Pockai</span></span>
         {#if user}
           <div class="user-pill">
-            <span>🪙 {user.coins}</span>
-            <span>💎 {user.gems}</span>
+            <span title="Monedas"><Coins size={14} /> {user.coins}</span>
+            <span title="Gemas"><Gem size={14} /> {user.gems}</span>
           </div>
         {/if}
       </div>
-      <button class="close-btn" on:click={() => dispatch('close')}>✕</button>
+      <button class="btn btn--ghost btn--icon" aria-label="Cerrar panel" on:click={() => dispatch('close')}><X size={18} /></button>
     </div>
 
     {#if !user}
-      <!-- Formulario de Inicio de Sesión / Registro -->
       <div class="auth-section">
-        <h3>{isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta'}</h3>
-        <p class="subtitle">Conecta con tu mascota virtual autoritativa</p>
+        <span class="eyebrow">Pockai</span>
+        <h3 class="display auth-title">{isLoginMode ? 'Iniciar sesión' : 'Crear cuenta'}</h3>
+        <p class="subtitle">Conecta con tu mascota virtual</p>
 
         {#if authError}
           <div class="error-msg">{authError}</div>
         {/if}
 
         <div class="form-group">
-          <label for="auth-email">Correo Electrónico</label>
-          <input id="auth-email" type="email" bind:value={authEmail} placeholder="entrenador@petai.local" />
+          <label for="auth-email">Correo electrónico</label>
+          <input class="input" id="auth-email" type="email" bind:value={authEmail} placeholder="entrenador@pockai.app" />
         </div>
 
         {#if !isLoginMode}
           <div class="form-group">
-            <label for="auth-name">Nombre de Jugador</label>
-            <input id="auth-name" type="text" bind:value={authDisplayName} placeholder="Red" />
+            <label for="auth-name">Nombre de jugador</label>
+            <input class="input" id="auth-name" type="text" bind:value={authDisplayName} placeholder="Red" />
           </div>
         {/if}
 
         <div class="form-group">
           <label for="auth-pass">Contraseña</label>
-          <input id="auth-pass" type="password" bind:value={authPassword} placeholder="••••••••" />
+          <input class="input" id="auth-pass" type="password" bind:value={authPassword} placeholder="••••••••" />
         </div>
 
-        <button class="primary-btn" on:click={handleAuth} disabled={isLoading}>
-          {isLoading ? 'Cargando...' : isLoginMode ? 'Entrar' : 'Registrarse'}
+        <button class="btn btn--primary block" on:click={handleAuth} disabled={isLoading}>
+          {isLoading ? 'Cargando…' : isLoginMode ? 'Entrar' : 'Registrarse'}
         </button>
 
-        <button class="link-btn" on:click={() => (isLoginMode = !isLoginMode)}>
+        <button class="btn btn--ghost block" on:click={() => (isLoginMode = !isLoginMode)}>
           {isLoginMode ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
         </button>
       </div>
     {:else}
-      <!-- Navegación de Pestañas -->
-      <div class="nav-tabs">
-        <button class:active={activeTab === 'pet'} on:click={() => (activeTab = 'pet')}>Mascota</button>
-        <button class:active={activeTab === 'hatch'} on:click={() => (activeTab = 'hatch')}>
-          Eclosión {#if eggs.length > 0}<span class="tab-badge">{eggs.length}</span>{/if}
-        </button>
-        <button class:active={activeTab === 'games'} on:click={() => (activeTab = 'games')}>Juegos</button>
-        <button class:active={activeTab === 'arena'} on:click={() => (activeTab = 'arena')}>Arena</button>
-        <button class:active={activeTab === 'seasons'} on:click={() => (activeTab = 'seasons')}>Temporada</button>
-        <button class:active={activeTab === 'missions'} on:click={() => (activeTab = 'missions')}>Misiones</button>
-        <button class:active={activeTab === 'chests'} on:click={() => (activeTab = 'chests')}>Cofres</button>
-        <button class:active={activeTab === 'bonding'} on:click={() => (activeTab = 'bonding')}>Vínculo</button>
-<button class:active={activeTab === 'habitat'} on:click={() => (activeTab = 'habitat')}>Hábitat</button>
-        <button class:active={activeTab === 'raid'} on:click={() => (activeTab = 'raid')}>Raid</button>
-        <button class:active={activeTab === 'tournament'} on:click={() => (activeTab = 'tournament')}>Torneo</button>
-        <button class:active={activeTab === 'ai'} on:click={() => (activeTab = 'ai')}>IA</button>
-        <button class:active={activeTab === 'shop'} on:click={() => (activeTab = 'shop')}>Tienda</button>
-        <button class:active={activeTab === 'account'} on:click={() => (activeTab = 'account')}>Cuenta</button>
-      </div>
+      <!-- Destinos principales -->
+      <nav class="nav-tabs" aria-label="Secciones">
+        {#each NAV as n (n.id)}
+          <button class:active={dest === n.id} aria-current={dest === n.id ? 'page' : undefined} on:click={() => go(n.id)}>
+            <svelte:component this={n.icon} size={18} />
+            <span>{n.label}</span>
+            {#if n.id === 'pet' && eggs.length > 0}<span class="tab-badge">{eggs.length}</span>{/if}
+          </button>
+        {/each}
+      </nav>
+
+      <!-- Sub-secciones -->
+      {#if current.subs.length > 0}
+        <div class="sub-tabs" role="tablist">
+          {#each current.subs as s (s[0])}
+            <button role="tab" aria-selected={sub === s[0]} class:active={sub === s[0]} on:click={() => (sub = s[0])}>{s[1]}</button>
+          {/each}
+        </div>
+      {/if}
 
       <div class="tab-content">
-        <!-- Pestaña 1: Mascota & Vitalidad -->
-        {#if activeTab === 'pet'}
+        {#if dest === 'pet' && sub === 'home'}
           {#if pet}
             <div class="pet-summary">
               <div class="stat-header">
                 <div>
                   <span class="pet-title">{pet.nickname || pet.species?.name}</span>
-                  <span class="pet-species-tag">{pet.species?.element?.toUpperCase()} · {pet.rarity?.toUpperCase()}</span>
+                  <span class="pet-species-tag">{pet.species?.element} · {pet.rarity}</span>
                 </div>
-                <span class="level-tag">Nivel {pet.level}</span>
+                <span class="chip level-tag">Nivel {pet.level}</span>
               </div>
 
-              <!-- Barras de vitalidad -->
               <div class="vitals-grid">
                 <div class="vital-item">
-                  <div class="vital-label"><span>🍖 Hambre</span><span>{Math.round(pet.hunger)}%</span></div>
-                  <div class="progress-bar"><div class="fill hunger" style="width: {pet.hunger}%;"></div></div>
+                  <div class="vital-label"><span><Drumstick size={14} /> Hambre</span><span>{Math.round(pet.hunger)}%</span></div>
+                  <div class="meter" style="--meter-color: var(--color-ember)"><i style="width: {pet.hunger}%;"></i></div>
                 </div>
                 <div class="vital-item">
-                  <div class="vital-label"><span>✨ Felicidad</span><span>{Math.round(pet.happiness)}%</span></div>
-                  <div class="progress-bar"><div class="fill happiness" style="width: {pet.happiness}%;"></div></div>
+                  <div class="vital-label"><span><Sparkles size={14} /> Felicidad</span><span>{Math.round(pet.happiness)}%</span></div>
+                  <div class="meter" style="--meter-color: var(--color-sunburst)"><i style="width: {pet.happiness}%;"></i></div>
                 </div>
                 <div class="vital-item">
-                  <div class="vital-label"><span>⚡ Energía</span><span>{Math.round(pet.energy)}%</span></div>
-                  <div class="progress-bar"><div class="fill energy" style="width: {pet.energy}%;"></div></div>
+                  <div class="vital-label"><span><Zap size={14} /> Energía</span><span>{Math.round(pet.energy)}%</span></div>
+                  <div class="meter" style="--meter-color: var(--color-electric-blue)"><i style="width: {pet.energy}%;"></i></div>
                 </div>
                 <div class="vital-item">
-                  <div class="vital-label"><span>🫧 Higiene</span><span>{Math.round(pet.hygiene)}%</span></div>
-                  <div class="progress-bar"><div class="fill hygiene" style="width: {pet.hygiene}%;"></div></div>
+                  <div class="vital-label"><span><Droplets size={14} /> Higiene</span><span>{Math.round(pet.hygiene)}%</span></div>
+                  <div class="meter" style="--meter-color: var(--color-mint-pop)"><i style="width: {pet.hygiene}%;"></i></div>
                 </div>
               </div>
 
-              <!-- Acciones de cuidado -->
               <div class="actions-row">
-                <button class="action-btn" on:click={handleClean}>🫧 Bañar</button>
-                <button class="action-btn" on:click={handleToggleSleep}>
-                  {pet.sleeping ? '☀️ Despertar' : '🌙 Dormir'}
+                <button class="btn" on:click={handleClean}><Droplets size={16} /> Bañar</button>
+                <button class="btn" on:click={handleToggleSleep}>
+                  {#if pet.sleeping}<Sun size={16} /> Despertar{:else}<Moon size={16} /> Dormir{/if}
                 </button>
               </div>
 
-              <!-- Menú de alimentación rápida con inventario -->
               <div class="food-selector">
-                <span class="section-label">Alimentar desde inventario:</span>
+                <span class="label-caps muted">Alimentar desde inventario</span>
                 <div class="food-chips">
                   {#each inventory as item}
-                    <button class="food-chip" on:click={() => handleFeed(item.itemId)}>
+                    <button class="chip food-chip" on:click={() => handleFeed(item.itemId)}>
                       {item.item.name} <span class="chip-qty">×{item.qty}</span>
                     </button>
                   {:else}
@@ -310,17 +331,17 @@ import TournamentTab from './TournamentTab.svelte';
             </div>
           {:else}
             <div class="empty-pet">
+              <Egg size={40} />
               <p>No tienes una mascota activa.</p>
-              <button class="primary-btn" on:click={() => (activeTab = 'hatch')}>Ir a Eclosionar Huevo</button>
+              <button class="btn btn--primary" on:click={() => go('pet', 'hatch')}>Ir a eclosionar un huevo</button>
             </div>
           {/if}
 
-        <!-- Pestaña 2: Eclosión -->
-        {:else if activeTab === 'hatch'}
+        {:else if dest === 'pet' && sub === 'hatch'}
           <div class="hatch-section">
-            <h4>Tus Huevos en Incubación</h4>
+            <span class="label-caps muted">Tus huevos en incubación</span>
             {#each eggs as egg}
-              <div class="egg-card">
+              <div class="card egg-card">
                 <div class="egg-preview {isShaking && hatchingEggId === egg.id ? 'shake' : ''}">
                   {#if isCracking && hatchingEggId === egg.id}
                     {@html eggLibrary.cracked}
@@ -330,11 +351,7 @@ import TournamentTab from './TournamentTab.svelte';
                 </div>
                 <div class="egg-info">
                   <span class="egg-type">Huevo {egg.eggType}</span>
-                  <button
-                    class="hatch-btn"
-                    disabled={hatchingEggId === egg.id}
-                    on:click={() => handleHatch(egg.id)}
-                  >
+                  <button class="btn btn--primary btn--sm" disabled={hatchingEggId === egg.id} on:click={() => handleHatch(egg.id)}>
                     {hatchingEggId === egg.id ? '¡Eclosionando!' : 'Eclosionar'}
                   </button>
                 </div>
@@ -344,36 +361,24 @@ import TournamentTab from './TournamentTab.svelte';
             {/each}
 
             <div class="buy-egg-box">
-              <button class="secondary-btn" on:click={handleBuyEgg}>
-                Comprar nuevo huevo (50 🪙)
-              </button>
+              <button class="btn block" on:click={handleBuyEgg}>Comprar nuevo huevo (50 <Coins size={14} />)</button>
             </div>
 
             {#if hatchedResult}
               <div class="hatched-announcement">
-                🎉 ¡Ha nacido un <strong>{hatchedResult.species?.name}</strong>!
-                <span class="rarity-pill {hatchedResult.rarity}">{hatchedResult.rarity}</span>
+                ¡Ha nacido un <strong>{hatchedResult.species?.name}</strong>!
+                <span class="chip rarity-pill {hatchedResult.rarity}">{hatchedResult.rarity}</span>
               </div>
             {/if}
           </div>
 
-        <!-- Pestaña 3: Tienda -->
-        {:else if activeTab === 'shop'}
-          <div class="shop-grid">
-            {#each shopItems as item}
-              <div class="shop-card">
-                <span class="item-name">{item.name}</span>
-                <span class="item-desc">{item.description}</span>
-                <div class="shop-footer">
-                  <span class="price">🪙 {item.priceCoins}</span>
-                  <button class="buy-btn" on:click={() => handleBuyItem(item.id)}>Comprar</button>
-                </div>
-              </div>
-            {/each}
-          </div>
+        {:else if dest === 'pet' && sub === 'bonding'}
+          <BondingTab pet={pet} />
 
-        <!-- Pestaña: Minijuegos -->
-        {:else if activeTab === 'games'}
+        {:else if dest === 'pet' && sub === 'habitat'}
+          <HabitatTab {pet} {user} on:refreshUser />
+
+        {:else if dest === 'play' && sub === 'games'}
           <MinigamesTab
             {pet}
             on:petUpdated={(e) => {
@@ -383,8 +388,7 @@ import TournamentTab from './TournamentTab.svelte';
             on:refreshUser
           />
 
-        <!-- Pestaña: Arena (peleas asíncronas) -->
-        {:else if activeTab === 'arena'}
+        {:else if dest === 'play' && sub === 'arena'}
           <ArenaTab
             {pet}
             on:petUpdated={(e) => dispatch('petUpdated', e.detail)}
@@ -392,48 +396,50 @@ import TournamentTab from './TournamentTab.svelte';
             on:refreshPet
           />
 
-        <!-- Pestaña: Temporada (oleada 3, F-10/F-11) -->
-        {:else if activeTab === 'seasons'}
-          <SeasonsTab on:refreshUser />
-
-        <!-- Pestaña: Misiones (Paso 3) -->
-        {:else if activeTab === 'missions'}
-          <MissionsTab on:refreshUser />
-
-        <!-- Pestaña: Cofres (Paso 3) -->
-        {:else if activeTab === 'chests'}
-          <ChestsTab on:refreshUser />
-
-        <!-- Pestaña: Vínculo (Paso 3, feature 006) -->
-        {:else if activeTab === 'bonding'}
-          <BondingTab pet={pet} />
-
-        <!-- Pestaña: Hábitat (feature 019) -->
-        {:else if activeTab === 'habitat'}
-          <HabitatTab {pet} {user} on:refreshUser />
-
-        <!-- Pestaña: Raid Boss (feature 013) -->
-        {:else if activeTab === 'raid'}
+        {:else if dest === 'play' && sub === 'raid'}
           <RaidTab {pet} on:refreshPet on:refreshUser />
 
-        <!-- Pestaña: Torneo Knockout (feature 014) -->
-        {:else if activeTab === 'tournament'}
+        {:else if dest === 'play' && sub === 'tournament'}
           <TournamentTab {pet} on:refreshUser />
 
-        <!-- Pestaña: IA (ajustes BYOK y chat) -->
-        {:else if activeTab === 'ai'}
+        {:else if dest === 'chat'}
           <AiTab {pet} on:bubble on:refreshPet />
 
-        <!-- Pestaña 4: Cuenta -->
-        {:else if activeTab === 'account'}
-          <div class="account-section">
+        {:else if dest === 'progress' && sub === 'missions'}
+          <MissionsTab on:refreshUser />
+
+        {:else if dest === 'progress' && sub === 'seasons'}
+          <SeasonsTab on:refreshUser />
+
+        {:else if dest === 'shop' && sub === 'store'}
+          <div class="shop-grid">
+            {#each shopItems as item}
+              <div class="card shop-card">
+                <span class="item-name">{item.name}</span>
+                <span class="item-desc">{item.description}</span>
+                <div class="shop-footer">
+                  <span class="price"><Coins size={14} /> {item.priceCoins}</span>
+                  <button class="btn btn--primary btn--sm" on:click={() => handleBuyItem(item.id)}>Comprar</button>
+                </div>
+              </div>
+            {/each}
+          </div>
+
+        {:else if dest === 'shop' && sub === 'chests'}
+          <ChestsTab on:refreshUser />
+
+        {:else if dest === 'settings' && sub === 'account'}
+          <div class="card account-section">
             <p><strong>Jugador:</strong> {user.displayName || user.email}</p>
-            <p><strong>Monedas:</strong> 🪙 {user.coins}</p>
-            <p><strong>Gemas:</strong> 💎 {user.gems}</p>
-            <button class="danger-btn" on:click={() => { api.logout(); dispatch('logout'); }}>
-              Cerrar Sesión
+            <p><strong>Monedas:</strong> <Coins size={14} /> {user.coins}</p>
+            <p><strong>Gemas:</strong> <Gem size={14} /> {user.gems}</p>
+            <button class="btn btn--danger" on:click={() => { api.logout(); dispatch('logout'); }}>
+              <LogOut size={16} /> Cerrar sesión
             </button>
           </div>
+
+        {:else if dest === 'settings' && sub === 'notifications'}
+          <NotificationSettingsPanel />
         {/if}
       </div>
     {/if}
@@ -445,14 +451,15 @@ import TournamentTab from './TournamentTab.svelte';
     position: fixed;
     top: 20px;
     right: 20px;
-    width: 380px;
+    width: 420px;
     max-height: 90vh;
-    background: rgba(15, 23, 42, 0.95);
+    background: var(--surface-glass);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 16px;
-    color: #f8fafc;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    -webkit-backdrop-filter: blur(16px);
+    border: var(--outline);
+    border-radius: var(--radius-3xl);
+    color: var(--ink);
+    box-shadow: var(--shadow-4);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -465,8 +472,8 @@ import TournamentTab from './TournamentTab.svelte';
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft);
   }
 
   .header-title {
@@ -476,91 +483,140 @@ import TournamentTab from './TournamentTab.svelte';
   }
 
   .logo {
-    font-weight: 700;
-    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo .display {
+    font-size: 18px;
+  }
+  .logo__mark {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    background: var(--grad-accent);
+    color: var(--on-dark);
+    font-family: var(--font-display);
+    font-size: 14px;
+    rotate: -6deg;
+    box-shadow: var(--shadow-1), inset 0 1px 0 rgb(255 255 255 / 0.35);
   }
 
   .user-pill {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 4px 8px;
-    border-radius: 20px;
-    font-size: 12px;
     display: flex;
     gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
   }
-
-  .close-btn {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-size: 16px;
-    cursor: pointer;
+  .user-pill span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border: var(--outline);
+    border-radius: var(--radius-pills);
+    background: var(--surface);
   }
 
   .nav-tabs {
-    display: flex;
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2px;
+    padding: 6px;
+    border-bottom: 1px solid var(--line-soft);
   }
-
   .nav-tabs button {
-    flex: 1;
-    padding: 10px 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 0;
     background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-size: 13px;
-    font-weight: 500;
+    border: 1px solid transparent;
+    border-radius: var(--radius-2xl);
+    color: var(--ink-muted);
+    font-size: 11px;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background var(--dur-1), color var(--dur-1);
   }
-
+  .nav-tabs button:hover {
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
   .nav-tabs button.active {
-    color: #38bdf8;
-    border-bottom: 2px solid #38bdf8;
-    background: rgba(56, 189, 248, 0.08);
+    color: var(--accent-ink);
+    background: var(--surface);
+    border-color: var(--line);
   }
 
   .tab-badge {
-    background: #ef4444;
-    color: white;
-    border-radius: 10px;
-    padding: 1px 6px;
+    position: absolute;
+    top: 2px;
+    right: 8px;
+    min-width: 16px;
+    padding: 0 4px;
+    border-radius: var(--radius-pills);
+    background: var(--danger);
+    color: var(--on-color);
     font-size: 10px;
-    margin-left: 4px;
+    line-height: 16px;
+    text-align: center;
+  }
+
+  .sub-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px 0;
+    overflow-x: auto;
+  }
+  .sub-tabs button {
+    padding: 4px 12px;
+    border: var(--outline);
+    border-radius: var(--radius-pills);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .sub-tabs button.active {
+    background: var(--ink);
+    color: var(--bg);
   }
 
   .tab-content {
     padding: 16px;
     overflow-y: auto;
+    user-select: text;
   }
 
-  /* Vitals */
   .stat-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
   }
-
   .pet-title {
-    font-size: 18px;
-    font-weight: 700;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 20px;
     display: block;
   }
-
   .pet-species-tag {
     font-size: 11px;
-    color: #94a3b8;
-  }
-
-  .level-tag {
-    background: #f59e0b;
-    color: #000;
     font-weight: 700;
-    font-size: 12px;
-    padding: 3px 8px;
-    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-muted);
+  }
+  .level-tag {
+    background: var(--color-sunburst);
+    color: var(--on-color);
+    border-color: var(--color-carbon);
   }
 
   .vitals-grid {
@@ -569,275 +625,197 @@ import TournamentTab from './TournamentTab.svelte';
     gap: 10px;
     margin-bottom: 14px;
   }
-
   .vital-label {
     display: flex;
     justify-content: space-between;
     font-size: 12px;
+    font-weight: 600;
     margin-bottom: 4px;
-    color: #cbd5e1;
+    color: var(--ink-muted);
   }
-
-  .progress-bar {
-    width: 100%;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    overflow: hidden;
+  .vital-label span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
-
-  .fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.3s;
-  }
-
-  .fill.hunger { background: #f97316; }
-  .fill.happiness { background: #ec4899; }
-  .fill.energy { background: #eab308; }
-  .fill.hygiene { background: #06b6d4; }
 
   .actions-row {
     display: flex;
     gap: 8px;
     margin-bottom: 14px;
   }
-
-  .action-btn {
+  .actions-row .btn {
     flex: 1;
-    padding: 8px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: white;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    transition: background 0.2s;
-  }
-
-  .action-btn:hover {
-    background: rgba(255, 255, 255, 0.16);
   }
 
   .food-selector {
-    background: rgba(0, 0, 0, 0.25);
-    border-radius: 10px;
-    padding: 10px;
+    background: var(--surface-2);
+    border-radius: var(--radius-2xl);
+    padding: 12px;
   }
-
-  .section-label {
-    font-size: 12px;
-    color: #94a3b8;
-    display: block;
-    margin-bottom: 6px;
-  }
-
   .food-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    margin-top: 8px;
   }
-
   .food-chip {
-    background: rgba(56, 189, 248, 0.15);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    color: #e0f2fe;
-    padding: 4px 8px;
-    border-radius: 8px;
-    font-size: 12px;
     cursor: pointer;
+    background: var(--color-mint-pop);
+    color: var(--on-color);
+    border-color: var(--color-carbon);
   }
-
   .chip-qty {
-    color: #38bdf8;
-    font-weight: 700;
+    font-weight: 800;
   }
 
-  /* Hatching */
+  .empty-pet {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 0;
+    color: var(--ink-muted);
+  }
+
+  .hatch-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
   .egg-card {
     display: flex;
     align-items: center;
     gap: 16px;
-    background: rgba(255, 255, 255, 0.04);
     padding: 12px;
-    border-radius: 12px;
-    margin-bottom: 10px;
   }
-
+  .egg-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .egg-type {
+    font-weight: 700;
+  }
   .egg-preview {
     width: 64px;
     height: 64px;
   }
-
   .shake {
     animation: eggShake 0.4s infinite ease-in-out;
   }
-
   @keyframes eggShake {
     0%, 100% { transform: rotate(0deg); }
     25% { transform: rotate(-8deg); }
     75% { transform: rotate(8deg); }
   }
-
-  .hatch-btn {
-    background: #38bdf8;
-    color: #000;
-    border: none;
-    font-weight: 700;
-    padding: 6px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-
   .hatched-announcement {
-    margin-top: 14px;
     padding: 12px;
-    background: rgba(34, 197, 94, 0.2);
-    border: 1px solid #22c55e;
-    border-radius: 10px;
+    background: var(--color-mint-pop);
+    color: var(--on-color);
+    border: 1px solid var(--color-carbon);
+    border-radius: var(--radius-cards);
+    box-shadow: var(--shadow-pop);
     text-align: center;
     font-size: 14px;
   }
+  .rarity-pill {
+    text-transform: uppercase;
+    color: var(--on-color);
+  }
+  .rarity-pill.common, .rarity-pill.normal { background: var(--rarity-common); }
+  .rarity-pill.rare { background: var(--rarity-rare); }
+  .rarity-pill.super-rare, .rarity-pill.epic { background: var(--rarity-super-rare); }
+  .rarity-pill.legendary { background: var(--rarity-legendary); }
+  .rarity-pill.mythic { background: var(--rarity-mythic); }
 
-  /* Tienda */
   .shop-grid {
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
-
   .shop-card {
-    background: rgba(255, 255, 255, 0.04);
-    padding: 10px 12px;
-    border-radius: 10px;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    padding: 12px 14px;
   }
-
   .item-name {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 14px;
   }
-
   .item-desc {
-    font-size: 11px;
-    color: #94a3b8;
+    font-size: 12px;
+    color: var(--ink-muted);
   }
-
   .shop-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-top: 6px;
   }
-
   .price {
-    font-weight: 700;
-    color: #fbbf24;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 800;
   }
 
-  .buy-btn {
-    background: #38bdf8;
-    color: #000;
-    border: none;
-    font-weight: 600;
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-
-  /* Form / Auth */
   .auth-section {
-    padding: 10px;
+    padding: 20px;
   }
-
+  .auth-title {
+    margin: 10px 0 4px;
+    font-size: 28px;
+  }
   .subtitle {
-    font-size: 12px;
-    color: #94a3b8;
-    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 0 0 14px;
   }
-
   .form-group {
     display: flex;
     flex-direction: column;
     gap: 4px;
     margin-bottom: 12px;
   }
-
   .form-group label {
     font-size: 12px;
-    color: #cbd5e1;
-  }
-
-  .form-group input {
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 8px 12px;
-    border-radius: 8px;
-    color: white;
-  }
-
-  .primary-btn {
-    width: 100%;
-    padding: 10px;
-    background: #38bdf8;
-    color: #000;
-    border: none;
-    border-radius: 8px;
     font-weight: 700;
-    cursor: pointer;
+    color: var(--ink-muted);
+  }
+  .block {
+    width: 100%;
     margin-top: 6px;
   }
 
-  .secondary-btn {
-    width: 100%;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: white;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
+  .account-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-
-  .link-btn {
-    background: transparent;
-    border: none;
-    color: #38bdf8;
-    font-size: 12px;
-    cursor: pointer;
-    margin-top: 10px;
-    width: 100%;
-    text-align: center;
-  }
-
-  .danger-btn {
-    background: #ef4444;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 10px;
+  .account-section p {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
   }
 
   .error-msg {
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid #ef4444;
-    color: #fca5a5;
-    padding: 8px;
-    border-radius: 6px;
+    background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+    border: 1px solid var(--danger);
+    color: var(--danger-ink);
+    padding: 8px 12px;
+    border-radius: var(--radius-2xl);
     font-size: 12px;
     margin-bottom: 10px;
   }
-
   .empty-msg {
     font-size: 12px;
-    color: #64748b;
+    color: var(--ink-muted);
     text-align: center;
     padding: 12px 0;
+    margin: 0;
   }
 </style>

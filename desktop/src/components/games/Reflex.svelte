@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from '../Ico.svelte';
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { createRng } from '../../lib/rng';
 
@@ -71,7 +72,7 @@
   });
 </script>
 
-<div class="hud"><span>⏱ {Math.ceil(timeLeft)}s</span><span>⭐ {score} · aciertos {hits}/{hits + misses}</span></div>
+<div class="hud"><span><Ico n="timer" /> {Math.ceil(timeLeft)}s</span><span><Ico n="star" /> {score} · aciertos {hits}/{hits + misses}</span></div>
 <div class="arena" style="width:{W}px;height:{H}px">
   {#if target}
     <button class="target" style="left:{target.x}px;top:{target.y}px" on:mousedown={hit} aria-label="Objetivo">🎯</button>
@@ -82,9 +83,9 @@
 <style>
   .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
   .arena {
-    position: relative; overflow: hidden; border-radius: 12px;
-    background: radial-gradient(circle at 50% 40%, rgba(244, 114, 182, 0.12), rgba(15, 23, 42, 0.6));
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    position: relative; overflow: hidden; border-radius: var(--radius-2xl);
+    background: radial-gradient(circle at 50% 40%, rgba(244, 114, 182, 0.12), var(--surface-2));
+    border: 1px solid var(--line-soft);
   }
   .target {
     position: absolute; transform: translate(-50%, -50%); font-size: 40px;

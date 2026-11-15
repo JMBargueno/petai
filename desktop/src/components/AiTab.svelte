@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from './Ico.svelte';
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import { api } from '../lib/api';
   import {
@@ -98,20 +99,20 @@
           // Herramienta de escritorio: el servidor solo la validó; se ejecuta aquí, tras la confirmación
           if (res.tool === 'open_url') {
             await openUrl(res.args.url);
-            card.note = 'Abierto en tu navegador ✅';
+            card.note = 'Abierto en tu navegador';
           } else if (res.tool === 'read_clipboard') {
             const text = (await readClipboardText()).trim();
             if (!text) {
               card.note = 'El portapapeles está vacío';
             } else {
-              card.note = 'Compartido con tu mascota ✅';
+              card.note = 'Compartido con tu mascota';
               followUp = `Esto es lo que tengo en el portapapeles:\n"""\n${text.slice(0, 800)}\n"""`;
             }
           }
           card.state = 'done';
         } else {
           card.state = 'done';
-          card.note = 'Hecho ✅';
+          card.note = 'Hecho';
           if (remOpen) loadReminders();
         }
       } else {
@@ -264,7 +265,7 @@
     try {
       const r = await api.testAiConfig();
       if (r.ok) {
-        settingsMsg = '✅ Conexión correcta';
+        settingsMsg = 'Conexión correcta';
         config = await api.getAiConfig();
       } else {
         settingsErr = r.error || 'No se pudo conectar';
@@ -364,7 +365,7 @@
             applyModeration(m, reply, userMsg);
           },
           onTool: () => {
-            toolHint = '🔍 Consultando…';
+            toolHint = 'Consultando…';
           },
           onAction: (a) => {
             actions = [...actions, { id: a.id, summary: a.summary, state: 'pending' }];
@@ -420,7 +421,7 @@
     busy = true;
     try {
       await testLocalHermes(local);
-      localMsg = '✅ Hermes local responde';
+      localMsg = 'Hermes local responde';
     } catch (e: any) {
       localErr = e.message;
     } finally {
@@ -443,16 +444,16 @@
 {:else}
   {#if chatReady}
     <div class="bar">
-      <span class="badge">🧠 {tier} · {pet.intelligence ?? 0}/1000</span>
+      <span class="badge"><Ico n="brain" /> {tier} · {pet.intelligence ?? 0}/1000</span>
       <button class="link" on:click={() => (showSettings = !showSettings)}>
-        {showSettings ? 'Ocultar ajustes' : '⚙ Ajustes'}
+        {#if showSettings}Ocultar ajustes{:else}<Ico n="settings" /> Ajustes{/if}
       </button>
     </div>
   {/if}
 
   {#if config.configured && usage && !local.enabled}
     <p class="usage" class:full={usage.quota !== null && (usage.remaining ?? 1) <= 0}>
-      📊 Este mes: {fmtTokens(usage.tokens)} tokens{usage.quota !== null ? ` de ${fmtTokens(usage.quota)}` : ' (sin límite)'}
+      <Ico n="chart" /> Este mes: {fmtTokens(usage.tokens)} tokens{usage.quota !== null ? ` de ${fmtTokens(usage.quota)}` : ' (sin límite)'}
       {#if usage.quota !== null && (usage.remaining ?? 1) <= 0} — cuota agotada, se renueva el día 1{/if}
     </p>
   {/if}
@@ -494,7 +495,7 @@
       {#if settingsErr}<p class="error">{settingsErr}</p>{/if}
 
       <div class="local-box">
-        <strong>🖥 Hermes local (este equipo)</strong>
+        <strong><Ico n="monitor" /> Hermes local (este equipo)</strong>
         <p class="note">
           Conversa con un Hermes Agent que corre en tu ordenador, sin gastar tu key ni salir a internet. Los ajustes
           se guardan solo aquí. El servidor sigue creando la personalidad, moderando y guardando el historial.
@@ -525,11 +526,11 @@
 
   {#if chatReady && !showSettings}
     {#if local.enabled}
-      <p class="usage">🖥 Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</p>
+      <p class="usage"><Ico n="monitor" /> Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</p>
     {/if}
     <div class="chat" bind:this={scroller}>
       {#if messages.length === 0}
-        <p class="muted">Saluda a {pet.nickname || pet.species?.name} 👋</p>
+        <p class="muted">Saluda a {pet.nickname || pet.species?.name} </p>
       {/if}
       {#each messages as m (m.id)}
         <div class="msg {m.role}" class:notice={m.notice}>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}…{/if}</div>
@@ -537,7 +538,7 @@
       {#if toolHint}<div class="hint">{toolHint}</div>{/if}
       {#each actions as a (a.id)}
         <div class="card" class:done={a.state === 'done'} class:bad={a.state === 'error'}>
-          <div class="card-title">🛠 Tu mascota quiere hacer algo</div>
+          <div class="card-title"><Ico n="tool" /> Tu mascota quiere hacer algo</div>
           <div class="card-body">{a.summary}</div>
           {#if a.state === 'pending' || a.state === 'working'}
             <div class="row">
@@ -553,7 +554,7 @@
     {#if chatErr}<p class="error">{chatErr}</p>{/if}
     {#if (pet.intelligence ?? 0) >= 500}
       <div class="memory">
-        <button class="link" on:click={toggleReminders}>⏰ Recordatorios {remOpen ? '▾' : '▸'}</button>
+        <button class="link" on:click={toggleReminders}><Ico n="alarm" /> Recordatorios {remOpen ? '▾' : '▸'}</button>
         {#if remOpen}
           {#if remErr}<p class="error">{remErr}</p>{/if}
           {#if reminders.length === 0}
@@ -562,7 +563,7 @@
             <ul class="mem-list">
               {#each reminders as r (r.id)}
                 <li>
-                  <span>⏰ {r.text} <em>— {fmt(r.dueAt)}</em></span>
+                  <span><Ico n="alarm" /> {r.text} <em>— {fmt(r.dueAt)}</em></span>
                   <button class="x" title="Eliminar" on:click={() => removeReminder(r.id)}>✕</button>
                 </li>
               {/each}
@@ -571,17 +572,17 @@
         {/if}
       </div>
     {:else}
-      <p class="muted">🔒 Con 500 de inteligencia tu mascota podrá usar herramientas y crear recordatorios.</p>
+      <p class="muted"><Ico n="lock" /> Con 500 de inteligencia tu mascota podrá usar herramientas y crear recordatorios.</p>
     {/if}
     <div class="memory">
       <button class="link" on:click={toggleMemories}>
-        🗂 Recuerdos {memOpen ? '▾' : '▸'}
+        <Ico n="folder" /> Recuerdos {memOpen ? '▾' : '▸'}
       </button>
       {#if memOpen}
         {#if memErr}<p class="error">{memErr}</p>{/if}
         {#if mem && !mem.unlocked}
           <p class="muted">
-            🔒 La memoria se desbloquea con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}). Sigue charlando.
+            <Ico n="lock" /> La memoria se desbloquea con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}). Sigue charlando.
           </p>
         {:else if mem && mem.memories.length === 0}
           <p class="muted">Todavía no recuerda nada. Tras unas cuantas charlas empezará a hacerlo.</p>
@@ -589,7 +590,7 @@
           <ul class="mem-list">
             {#each mem.memories as m (m.id)}
               <li class:summary={m.kind === 'summary'}>
-                <span>{m.kind === 'summary' ? '📝 ' : '💭 '}{m.content}</span>
+                <span><Ico n={m.kind === 'summary' ? 'note' : 'chat'} /> {m.content}</span>
                 <button class="x" title="Olvidar" on:click={() => forget(m.id)}>✕</button>
               </li>
             {/each}
@@ -616,56 +617,56 @@
 
 <style>
   .muted { font-size: 12px; opacity: 0.7; margin: 0 0 8px; }
-  .local-box { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px; border-radius: 10px; border: 1px dashed rgba(255, 255, 255, 0.2); }
+  .local-box { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px; border-radius: var(--radius-2xl); border: 1px dashed var(--line-soft); }
   .check { flex-direction: row; align-items: center; gap: 6px; }
   .note { font-size: 11px; opacity: 0.6; margin: 4px 0; }
-  .ok { color: #4ade80; font-size: 12px; margin: 6px 0 0; }
-  .error { color: #f87171; font-size: 12px; margin: 6px 0 0; }
+  .ok { color: var(--success-ink); font-size: 12px; margin: 6px 0 0; }
+  .error { color: var(--danger-ink); font-size: 12px; margin: 6px 0 0; }
   .bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .badge { font-size: 12px; background: rgba(56, 189, 248, 0.15); padding: 3px 8px; border-radius: 10px; }
-  .link { background: none; border: none; color: #38bdf8; cursor: pointer; font-size: 12px; }
+  .badge { font-size: 12px; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); padding: 3px 8px; border-radius: var(--radius-2xl); }
+  .link { background: none; border: none; color: var(--accent-ink); cursor: pointer; font-size: 12px; }
   .settings { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
   label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
   label small { opacity: 0.6; }
   input, select, textarea {
-    background: rgba(15, 23, 42, 0.8); color: inherit; border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 13px;
+    background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
+    border-radius: var(--radius-2xl); padding: 7px 9px; font: inherit; font-size: 13px;
   }
   textarea { resize: none; flex: 1; }
   .row { display: flex; gap: 6px; flex-wrap: wrap; }
   button {
-    padding: 7px 11px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600;
-    background: rgba(51, 65, 85, 0.9); color: inherit; border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 7px 11px; border-radius: var(--radius-2xl); cursor: pointer; font-size: 12px; font-weight: 600;
+    background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
   }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
-  button.primary { background: #38bdf8; color: #0f172a; border: none; }
-  button.danger { color: #f87171; }
+  button.primary { background: var(--accent); color: var(--on-color); border: none; }
+  button.danger { color: var(--danger-ink); }
   .chat {
     height: 230px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
-    padding: 8px; border-radius: 10px; background: rgba(15, 23, 42, 0.5); margin-bottom: 8px;
+    padding: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); margin-bottom: 8px;
   }
-  .msg { max-width: 85%; padding: 6px 10px; border-radius: 12px; font-size: 13px; line-height: 1.35; white-space: pre-wrap; user-select: text; }
+  .msg { max-width: 85%; padding: 6px 10px; border-radius: var(--radius-2xl); font-size: 13px; line-height: 1.35; white-space: pre-wrap; user-select: text; }
   .msg.user { align-self: flex-end; background: #0369a1; }
-  .msg.assistant { align-self: flex-start; background: rgba(51, 65, 85, 0.9); }
-  .msg.notice { background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.45); }
+  .msg.assistant { align-self: flex-start; background: var(--surface-2); }
+  .msg.notice { background: color-mix(in srgb, var(--color-sunburst) 14%, var(--surface)); border: 1px solid var(--color-sunburst); }
   .usage { font-size: 11px; opacity: 0.7; margin: 0 0 6px; }
-  .usage.full { color: #f87171; opacity: 1; }
+  .usage.full { color: var(--danger-ink); opacity: 1; }
   .composer { display: flex; gap: 6px; align-items: stretch; }
   .memory { margin-bottom: 8px; }
   .hint { align-self: flex-start; font-size: 12px; opacity: 0.7; }
   .card {
-    align-self: stretch; padding: 8px 10px; border-radius: 10px; font-size: 12px;
-    background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.45);
+    align-self: stretch; padding: 8px 10px; border-radius: var(--radius-2xl); font-size: 12px;
+    background: color-mix(in srgb, var(--color-sunburst) 12%, var(--surface)); border: 1px solid var(--color-sunburst);
   }
-  .card.done { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.45); }
-  .card.bad { background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.45); }
+  .card.done { background: color-mix(in srgb, var(--success) 12%, var(--surface)); border-color: var(--success); }
+  .card.bad { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); border-color: var(--danger); }
   .card-title { font-weight: 700; margin-bottom: 3px; }
   .card-body { margin-bottom: 6px; user-select: text; }
   .card-note { opacity: 0.85; }
   .mem-list { list-style: none; margin: 6px 0; padding: 0; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-  .mem-list li { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; background: rgba(15, 23, 42, 0.6); padding: 4px 8px; border-radius: 8px; user-select: text; }
+  .mem-list li { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; background: var(--surface-2); padding: 4px 8px; border-radius: var(--radius-2xl); user-select: text; }
   .mem-list li.summary { opacity: 0.75; font-style: italic; }
   .x { background: none; border: none; padding: 0 4px; opacity: 0.6; }
-  .x:hover { opacity: 1; color: #f87171; }
+  .x:hover { opacity: 1; color: var(--danger-ink); }
   .small { padding: 4px 8px; font-size: 11px; }
 </style>

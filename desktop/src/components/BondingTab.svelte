@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from './Ico.svelte';
   import { onMount } from 'svelte';
   import { api, type BondingDetail } from '../lib/api';
 
@@ -54,7 +55,7 @@
   <div class="bond-card">
     <div class="bond-head">
       <div>
-        <h4>💞 Vínculo</h4>
+        <h4><Ico n="bond" /> Vínculo</h4>
         <small>Rango: {data.tierName}</small>
       </div>
       <span class="bond-value">{data.value.toFixed(0)}/100</span>
@@ -67,7 +68,7 @@
   <div class="unlocks">
     {#each UNLOCKS as u (u.key)}
       <div class="unlock" class:on={data.unlocks[u.key]}>
-        <span>{data.unlocks[u.key] ? '✅' : '🔒'}</span>
+        <span><Ico n={data.unlocks[u.key] ? 'check' : 'lock'} /></span>
         <small>{u.label}</small>
       </div>
     {/each}
@@ -76,7 +77,7 @@
   <div class="sec-title">Decaimiento</div>
   <div class="decay">
     <div class="decay-row">
-      <span>{data.decayInfo.isDecaying ? '🥶 Enfríando ahora' : '🙂 Estable'}</span>
+      <span>{#if data.decayInfo.isDecaying}<Ico n="cold" /> Enfriándose ahora{:else}Estable{/if}</span>
       <small>{data.decayInfo.hoursSinceInteraction.toFixed(0)}h sin interacción</small>
     </div>
     <small class="decay-detail">
@@ -106,32 +107,32 @@
 {/if}
 
 <style>
-  .empty-msg { font-size: 12px; color: #64748b; text-align: center; padding: 12px 0; }
-  .error-msg { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 8px; border-radius: 8px; font-size: 12px; }
-  .bond-card { padding: 10px; border-radius: 12px; background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 6px; }
+  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 12px 0; }
+  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
+  .bond-card { padding: 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 6px; }
   .bond-head { display: flex; justify-content: space-between; align-items: flex-start; }
   .bond-head h4 { margin: 0; font-size: 15px; }
-  .bond-head small { color: #94a3b8; font-size: 11px; }
-  .bond-value { font-size: 20px; font-weight: 700; color: #f472b6; }
-  .bar { height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
-  .bar .fill { height: 100%; background: linear-gradient(90deg, #f472b6, #38bdf8); }
-  .last { font-size: 11px; color: #94a3b8; }
+  .bond-head small { color: var(--ink-muted); font-size: 11px; }
+  .bond-value { font-size: 20px; font-weight: 700; color: var(--color-lavender); }
+  .bar { height: 8px; border-radius: var(--radius-2xl); background: color-mix(in srgb, var(--ink) 6%, transparent); overflow: hidden; }
+  .bar .fill { height: 100%; background: linear-gradient(90deg, var(--color-lavender), var(--accent)); }
+  .last { font-size: 11px; color: var(--ink-muted); }
   .sec-title { font-weight: 700; font-size: 13px; margin: 10px 0 4px; }
   .unlocks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .unlock { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); }
-  .unlock.on { border-color: rgba(34, 197, 94, 0.5); }
-  .unlock small { font-size: 10px; color: #94a3b8; text-align: center; }
-  .decay { padding: 10px; border-radius: 10px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 4px; }
+  .unlock { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
+  .unlock.on { border-color: var(--success); }
+  .unlock small { font-size: 10px; color: var(--ink-muted); text-align: center; }
+  .decay { padding: 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 4px; }
   .decay-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
-  .decay-detail { font-size: 11px; color: #94a3b8; }
+  .decay-detail { font-size: 11px; color: var(--ink-muted); }
   .hist { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
-  .hist-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: rgba(15, 23, 42, 0.4); font-size: 12px; }
+  .hist-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); font-size: 12px; }
   .h-reason { font-size: 16px; }
   .h-reason-txt { font-weight: 600; width: 74px; text-transform: capitalize; }
   .h-delta { font-weight: 700; }
-  .h-delta.pos { color: #4ade80; }
-  .h-delta.dec { color: #f87171; }
-  .h-val { color: #cbd5e1; }
-  .h-when { color: #94a3b8; margin-left: auto; }
-  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #38bdf8; color: #0f172a; width: 100%; }
+  .h-delta.pos { color: var(--success-ink); }
+  .h-delta.dec { color: var(--danger-ink); }
+  .h-val { color: var(--ink-muted); }
+  .h-when { color: var(--ink-muted); margin-left: auto; }
+  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
 </style>

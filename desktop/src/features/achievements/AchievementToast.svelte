@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ico from '../../components/Ico.svelte';
   import { onDestroy } from 'svelte';
   import type { AchievementUnlockedPayload } from './achievements.api';
 
@@ -36,14 +37,14 @@
 
 {#if visible && payload}
   <div class="toast" role="alert" on:click={dismiss}>
-    <div class="toast__badge" data-tier={payload.tier}>🏆</div>
+    <div class="toast__badge" data-tier={payload.tier}><Ico n="trophy" /></div>
     <div class="toast__body">
       <div class="toast__title">¡Logro desbloqueado!</div>
       <div class="toast__name">{payload.name}</div>
       <div class="toast__reward">
-        {#if payload.reward.coins > 0}<span>+{payload.reward.coins} 🪙</span>{/if}
-        {#if payload.reward.gems > 0}<span>+{payload.reward.gems} 💎</span>{/if}
-        {#if payload.reward.xp > 0}<span>+{payload.reward.xp} ✨</span>{/if}
+        {#if payload.reward.coins > 0}<span>+{payload.reward.coins} <Ico n="coin" /></span>{/if}
+        {#if payload.reward.gems > 0}<span>+{payload.reward.gems} <Ico n="gem" /></span>{/if}
+        {#if payload.reward.xp > 0}<span>+{payload.reward.xp} <Ico n="xp" /></span>{/if}
         {#if payload.reward.itemId}<span class="toast__item">+ Item exclusivo</span>{/if}
       </div>
     </div>
@@ -59,26 +60,26 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    background: linear-gradient(135deg, #1c2333 0%, #12151f 100%);
-    border: 1px solid #3a4a70;
-    border-radius: 12px;
+    background: linear-gradient(135deg, #1c2333 0%, var(--surface-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-2xl);
     padding: 12px 18px;
     min-width: 240px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     cursor: pointer;
     animation: slideIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3);
-    color: #e7eaf2;
+    color: var(--ink);
     font-family: inherit;
   }
   .toast__badge {
     font-size: 2rem;
-    filter: drop-shadow(0 0 6px #ffd93b);
+    filter: drop-shadow(0 0 6px var(--color-sunburst));
   }
   .toast__badge[data-tier='legendary'] { filter: drop-shadow(0 0 10px #ff9d3b); }
-  .toast__title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8a90a6; }
+  .toast__title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); }
   .toast__name { font-weight: 700; font-size: 1rem; margin-top: 2px; }
   .toast__reward { display: flex; gap: 8px; margin-top: 6px; font-size: 0.85rem; }
-  .toast__item { color: #b98cff; }
+  .toast__item { color: var(--color-lavender); }
   @keyframes slideIn {
     from { transform: translateX(120%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
