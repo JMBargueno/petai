@@ -54,6 +54,7 @@
         <a class="btn btn--filled" href="#descargar" i18n="@@hero.cta.primary">Descargar Pockai</a>
         <a class="btn" href="#demo" i18n="@@hero.cta.demo">Probar la demo</a>
       </div>
+      <a class="hero__lore" [href]="loreHref" i18n="@@hero.lore">Descubre el Éter Digital →</a>
       <a class="cue bob" href="#como-funciona" aria-label="Seguir bajando" i18n-aria-label="@@hero.cue">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6" /></svg>
       </a>
@@ -151,6 +152,9 @@
           </li>
         }
       </ul>
+      <p class="species__note">
+        <a class="species__lore" [href]="loreHref" i18n="@@species.lore">¿De dónde vienen? Conoce el Éter Digital →</a>
+      </p>
     </div>
   </section>
 
@@ -228,5 +232,6 @@
 <footer class="footer band">
   <p class="display footer__mark reveal reveal--pop" aria-hidden="true">Pockai</p>
   <p class="label-caps">Pocket + Yokai + AI</p>
+  <a class="footer__lore" [href]="loreHref" i18n="@@footer.lore">El Éter Digital · el lore de Pockai</a>
   <p>© {{ year }} Pockai. <span i18n="@@footer.rights">Todos los derechos reservados.</span></p>
 </footer>

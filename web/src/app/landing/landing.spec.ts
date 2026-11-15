@@ -20,4 +20,15 @@ describe('Landing', () => {
     const hrefs = [...fixture.nativeElement.querySelectorAll('a')].map((a: HTMLAnchorElement) => a.getAttribute('href'));
     expect(hrefs.some((href) => href?.includes('admin'))).toBe(false);
   });
+
+  it('guía al lore desde hero, especies y footer', async () => {
+    const fixture = TestBed.createComponent(Landing);
+    await fixture.whenStable();
+    const el: HTMLElement = fixture.nativeElement;
+
+    expect(el.querySelector('.hero__lore')?.getAttribute('href')).toBe('/es/lore');
+    expect(el.querySelector('.hero__lore')?.textContent).toContain('Éter Digital');
+    expect(el.querySelector('.species__lore')?.getAttribute('href')).toBe('/es/lore');
+    expect(el.querySelector('.footer__lore')?.getAttribute('href')).toBe('/es/lore');
+  });
 });
