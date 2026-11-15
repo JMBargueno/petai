@@ -1,6 +1,7 @@
 import { EnvironmentalService } from './environmental.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { RedisService } from '../../redis/redis.service';
 import { WeatherService } from './weather.service';
 import { ActivityTrackerService } from './activity-tracker.service';
 import { FestivalService } from './festival.service';
@@ -13,8 +14,23 @@ describe('EnvironmentalService (orquestador)', () => {
   const mockActivity = { getStatus: jest.fn(), recordHeartbeat: jest.fn() };
   const mockFestival = { getActive: jest.fn(), getUpcoming: jest.fn() };
   const mockRealtime = { emitToUser: jest.fn() };
+  // R-02: estado ambiental en Redis — se emula con un Map in-memory (get/set) que persiste entre llamadas.
+  const envStore = new Map<string, string>();
+  const mockRedis = {
+    key: (name: string) => name,
+    run: jest.fn(async (fn: (c: any) => Promise<unknown>) =>
+      fn({
+        get: async (k: string) => (envStore.has(k) ? envStore.get(k) : null),
+        set: async (k: string, v: string) => {
+          envStore.set(k, v);
+          return 'OK';
+        },
+      }),
+    ),
+  };
 
   beforeEach(() => {
+    envStore.clear();
     mockPrisma.user.findUnique.mockClear().mockResolvedValue({
       timezone: 'America/Mexico_City',
       latitude: 19.4,
@@ -40,6 +56,7 @@ describe('EnvironmentalService (orquestador)', () => {
       mockActivity as unknown as ActivityTrackerService,
       mockFestival as unknown as FestivalService,
       mockRealtime as unknown as RealtimeGateway,
+      mockRedis as unknown as RedisService,
     );
   });
 
@@ -86,7 +103,7 @@ describe('EnvironmentalService (orquestador)', () => {
   it('emite "activity" (retorno active) al reenviar un heartbeat desde solo', async () => {
     // Último estado recordado: solo
     await service.getStatus('u1');
-    (service as any).lastEnv.set('u1', { timeOfDay: 'morning', condition: 'hot', mode: 'solo', festivalId: null });
+    envStore.set('env:last:u1', JSON.stringify({ timeOfDay: 'morning', condition: 'hot', mode: 'solo', festivalId: null }));
     mockActivity.recordHeartbeat.mockResolvedValue({ transitionedToActive: true });
 
     await service.recordActivity('u1', { active: true });
