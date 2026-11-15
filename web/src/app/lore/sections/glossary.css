@@ -1,0 +1,49 @@
+.glossary {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.term {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 12px var(--card-padding);
+  border: var(--outline);
+  border-radius: var(--radius-cards-elevated);
+  background: var(--color-paper-white);
+}
+.term:nth-child(odd) {
+  rotate: -0.3deg;
+}
+.term:nth-child(even) {
+  rotate: 0.3deg;
+}
+.term__app {
+  font-size: 15px;
+  opacity: 0.75;
+  text-align: right;
+}
+.term__app::after {
+  content: '→';
+  display: none;
+  opacity: 0.6;
+}
+.term__lore {
+  margin: 0;
+  font-size: var(--text-subheading);
+}
+
+@media (width < 700px) {
+  .term {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    rotate: 0deg;
+  }
+  .term__app {
+    text-align: start;
+  }
+  .term__app::after {
+    display: block;
+  }
+}
