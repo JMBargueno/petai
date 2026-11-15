@@ -1352,6 +1352,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/habitat/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs */
+        get: operations["HabitatController_getCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/habitat/buffs": {
         parameters: {
             query?: never;
@@ -5621,6 +5638,31 @@ export interface operations {
             };
             /** @description Mueble no encontrado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_getCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catálogo completo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

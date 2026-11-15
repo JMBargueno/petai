@@ -52,6 +52,14 @@ export class HabitatController {
     return this.habitatService.removeFurniture(user.id, furnitureId);
   }
 
+  @Get('catalog')
+  @ApiOperation({ summary: 'Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs' })
+  @ApiResponse({ status: 200, description: 'Catálogo completo' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  getCatalog() {
+    return this.habitatService.getCatalog();
+  }
+
   @Get('buffs')
   @ApiOperation({ summary: 'Obtener los buffs activos del hábitat' })
   @ApiResponse({ status: 200, description: 'Buffs agregados de muebles colocados' })
