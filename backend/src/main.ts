@@ -6,6 +6,7 @@ import { createAdapter } from 'socket.io-redis';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppModule } from './app.module';
+import { RealtimeGateway } from './modules/realtime/realtime.gateway';
 import { applyCors } from './common/cors';
 import { applySecurity } from './common/security';
 import { envSchema } from './config/env.config';
@@ -42,8 +43,9 @@ function exportOpenApi(document: unknown) {
 function applyRealtimeRedisAdapter(app: INestApplication, configService: ConfigService): void {
   if ((configService.get<string>('REALTIME_REDIS') ?? 'false') !== 'true') return;
   try {
-    const io = (app.getHttpAdapter() as unknown as { io?: { adapter?: (a: unknown) => unknown } }).io;
-    if (!io?.adapter) return;
+    const gateway = app.get(RealtimeGateway);
+    const io = gateway.server;
+    if (!io) return;
     const uri = configService.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
     const env = configService.get<string>('NODE_ENV') ?? 'development';
     io.adapter(createAdapter(uri, { key: `petai:${env}:realtime` }));
