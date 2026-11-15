@@ -1,6 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
-export type StickerIcon = 'egg' | 'heart' | 'bolt' | 'star' | 'chat' | 'coin' | 'shield' | 'phone';
+export type StickerIcon =
+  | 'egg'
+  | 'heart'
+  | 'bolt'
+  | 'star'
+  | 'chat'
+  | 'coin'
+  | 'shield'
+  | 'phone'
+  | 'flame'
+  | 'drop'
+  | 'leaf'
+  | 'moon'
+  | 'sun';
 export type StickerColor =
   | 'electric-blue'
   | 'mint-pop'
@@ -19,6 +32,12 @@ const PATHS: Record<StickerIcon, string> = {
   shield: 'M12 3l7 2.5v5.5c0 4.6-3 8.4-7 10-4-1.6-7-5.4-7-10V5.5z',
   phone:
     'M8.5 3h7A1.5 1.5 0 0 1 17 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 19.5v-15A1.5 1.5 0 0 1 8.5 3zm2 14.5h3',
+  flame:
+    'M12 2c1.4 3.2 4.5 5.2 4.5 9a4.5 4.5 0 0 1-9 0c0-1.6.6-2.9 1.4-4.2.5 1 1.2 1.7 2.1 2.1C11 6.7 11.4 4.2 12 2z',
+  drop: 'M12 2.5S6.5 9 6.5 13.5a5.5 5.5 0 0 0 11 0C17.5 9 12 2.5 12 2.5z',
+  leaf: 'M19 5c0 9-5 14-14 14 0-9 5-14 14-14z',
+  moon: 'M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z',
+  sun: 'M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM12 1.5v2.4M12 20.1v2.4M1.5 12h2.4M20.1 12h2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M19.1 4.9l-1.7 1.7M6.6 17.4l-1.7 1.7',
 };
 
 /**
