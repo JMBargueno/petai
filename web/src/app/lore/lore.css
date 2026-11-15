@@ -1,0 +1,60 @@
+:host {
+  display: block;
+}
+
+/* Hero compacto (la landing usa .hero más alta; aquí el lore empieza con prisa). */
+.lore-hero {
+  margin-block-start: -68px; /* la nav flota sobre la banda */
+  padding-block-start: calc(68px + clamp(48px, 8vw, 120px));
+  border: 0;
+  border-radius: 0;
+  min-block-size: min(720px, 85svh);
+  display: grid;
+  align-items: center;
+}
+.lore-hero__inner {
+  justify-self: center;
+  text-align: center;
+  display: grid;
+  justify-items: center;
+}
+.lead--center {
+  margin-inline: auto;
+}
+.lore-hero__spot {
+  position: absolute;
+  top: 18%;
+  opacity: 0.9;
+}
+.lore-hero__spot:nth-of-type(1) {
+  inset-inline-start: 8%;
+}
+.lore-hero__spot:nth-of-type(2) {
+  inset-inline-end: 10%;
+  top: 26%;
+}
+.lore-hero__spot:nth-of-type(3) {
+  inset-inline-end: 22%;
+  top: 12%;
+}
+@media (width < 700px) {
+  .lore-hero__spot {
+    display: none;
+  }
+}
+
+h3 {
+  margin: 0;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-subheading);
+  line-height: var(--leading-subheading);
+}
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+p {
+  margin: 0;
+}
