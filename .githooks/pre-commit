@@ -1,0 +1,20 @@
+#!/bin/sh
+# Mantiene el contrato OpenAPI sincronizado: si el commit toca el backend, regenera
+# shared/openapi/openapi.json y api-types.ts y los añade al commit (CI falla si están desfasados).
+# Se activa con `pnpm install` (script `prepare` → core.hooksPath=.githooks).
+# Saltarlo puntualmente: SKIP_OPENAPI_SYNC=1 git commit ...
+
+[ -n "$SKIP_OPENAPI_SYNC" ] && exit 0
+git diff --cached --name-only | grep -q '^backend/src/' || exit 0
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "[pre-commit] pnpm no está en el PATH: no se regenera OpenAPI (CI lo comprobará)." >&2
+  exit 0
+fi
+
+echo "[pre-commit] Cambios en backend/src: regenerando contrato OpenAPI…"
+if ! pnpm --silent sync:api >/dev/null; then
+  echo "[pre-commit] Falló 'pnpm sync:api'. Corrige el error o usa SKIP_OPENAPI_SYNC=1." >&2
+  exit 1
+fi
+git add shared/openapi/openapi.json shared/openapi/api-types.ts

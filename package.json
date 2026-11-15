@@ -5,6 +5,7 @@
   "packageManager": "pnpm@12.18.0",
   "description": "PetAI — Mascota virtual tamagotchi inteligente multiplataforma",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks || exit 0",
     "validate:data": "node scripts/validate-game-data.js",
     "validate:assets": "node scripts/validate-assets.js",
     "validate:animations": "tsx scripts/validate-animations.ts",
@@ -14,6 +15,7 @@
     "build:assets:dry": "tsx scripts/build-assets.ts --dry-run",
     "test:assets": "vitest run scripts/build-assets.spec.ts",
     "generate:api": "openapi-typescript shared/openapi/openapi.json -o shared/openapi/api-types.ts",
+    "sync:api": "pnpm --filter petai-backend run export:openapi && pnpm generate:api",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "backend:dev": "pnpm --filter petai-backend run start:dev",
