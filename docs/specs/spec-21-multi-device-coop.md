@@ -3,6 +3,14 @@
 ## ID
 21 — Oleada 3 "Comunidad + Ecosistema" (NUEVAS_FUNCIONALIDADES §21)
 
+## Estado: PRÓXIMAMENTE (no implementado / en pausa)
+> ⚠️ La parte **co-op (visitas entre amigos)** aún no es funcional: la amistad se gestiona en
+> memoria (`friendshipStore`) y **no hay endpoint para crear/aceptar una amistad** (`addFriendship`
+> no se llama desde ningún sitio), por lo que `checkFriendship` siempre es false y
+> `POST /v1/coop/visit` siempre responde **403**; `GET /v1/coop/history` devuelve `[]`. La capa de
+> **presencia multi-device** (heartbeat/estado por dispositivo) sí existe pero también en memoria
+> (debería ser Redis). El diseño completo está más abajo.
+
 ## Resumen
 Capa de presencia multi-device con heartbeat y sincronización instantánea de estado del pet, más sistema de "visitas" entre amigos donde un usuario autorizado puede alimentar/jugar con el pet de otro, generando eventos sociales y badges.
 
