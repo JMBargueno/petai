@@ -136,6 +136,29 @@ function authHeaders() {
     : {};
 }
 
+/** Error de la API con el estado HTTP, para distinguir errores de negocio de los terminales. */
+export class ApiError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+/** Construye un ApiError a partir de la respuesta de openapi-fetch. */
+function apiError(res: { error?: unknown; response?: Response }, fallback: string): ApiError {
+  const message = (res.error as any)?.message;
+  return new ApiError(typeof message === 'string' && message ? message : fallback, res.response?.status);
+}
+
+/**
+ * Error terminal: no es culpa de la acción concreta sino del entorno (sin conexión, servidor caído,
+ * sesión inválida). Estos se muestran como aviso en el panel; el resto los dice la mascota.
+ */
+export function isTerminalError(err: unknown): boolean {
+  if (!(err instanceof ApiError) || err.status === undefined) return true;
+  return err.status >= 500 || err.status === 401;
+}
+
 export const api = {
   client,
 
@@ -203,7 +226,7 @@ export const api = {
     const res = await client.POST('/v1/eggs/buy', {
       ...authHeaders(),
     });
-    if (res.error) throw new Error('Error al comprar huevo');
+    if (res.error) throw apiError(res, 'Error al comprar huevo');
     return res.data;
   },
 
@@ -212,7 +235,7 @@ export const api = {
       params: { path: { id: eggId } },
       ...authHeaders(),
     });
-    if (res.error) throw new Error((res.error as any)?.message || 'Error al eclosionar');
+    if (res.error) throw apiError(res, 'Error al eclosionar');
     return res.data;
   },
 
@@ -230,7 +253,7 @@ export const api = {
       body: { itemId },
       ...authHeaders(),
     });
-    if (res.error) throw new Error((res.error as any)?.message || 'Error al alimentar');
+    if (res.error) throw apiError(res, 'Error al alimentar');
     return res.data;
   },
 
@@ -239,7 +262,7 @@ export const api = {
       params: { path: { id: petId } },
       ...authHeaders(),
     });
-    if (res.error) throw new Error((res.error as any)?.message || 'Error al limpiar');
+    if (res.error) throw apiError(res, 'Error al limpiar');
     return res.data;
   },
 
@@ -248,7 +271,7 @@ export const api = {
       params: { path: { id: petId } },
       ...authHeaders(),
     });
-    if (res.error) throw new Error((res.error as any)?.message || 'Error al dormir');
+    if (res.error) throw apiError(res, 'Error al dormir');
     return res.data;
   },
 
@@ -257,7 +280,7 @@ export const api = {
       params: { path: { id: petId } },
       ...authHeaders(),
     });
-    if (res.error) throw new Error((res.error as any)?.message || 'Error al despertar');
+    if (res.error) throw apiError(res, 'Error al despertar');
     return res.data;
   },
 
@@ -267,7 +290,7 @@ export const api = {
       body: { itemId },
       ...authHeaders(),
     });
-    if (res.error) throw new Error((res.error as any)?.message || 'Error al curar');
+    if (res.error) throw apiError(res, 'Error al curar');
     return res.data;
   },
 
@@ -290,7 +313,7 @@ export const api = {
       body: { itemId, quantity },
       ...authHeaders(),
     });
-    if (res.error) throw new Error((res.error as any)?.message || 'Error al comprar');
+    if (res.error) throw apiError(res, 'Error al comprar');
     return res.data;
   },
 
@@ -680,7 +703,7 @@ async function minigameRequest<T>(method: string, path: string, body?: unknown):
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.message || 'Error en la petición');
+  if (!res.ok) throw new ApiError(data?.message || 'Error en la petición', res.status);
   return data as T;
 }
 
