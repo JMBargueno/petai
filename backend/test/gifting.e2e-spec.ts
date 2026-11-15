@@ -406,37 +406,45 @@ describe('Gifting & Care Packages (e2e) — happy path', () => {
       expect(completedIds).toEqual([host.userId, p2.userId].sort());
       expect(parts.find((p) => p.userId === host.userId)!.score).toBe(42);
 
-      // ─────────────────────────────────────────────────────────────────────────────────
-      // BUG REAL DE PRODUCCIÓN — `finalizeRoom` en group-feeding.service.ts:
-      //   · línea 133: `genItemId()` genera un id arbitrario `royal_feast_<hex>`.
-      //   · líneas 145-149: `inventoryItem.upsert({ create: { itemId, ... } })` inserta una
-      //     fila cuyo `itemId` es FK a `Item.id` (schema.prisma:245) PERO ese item NUNCA se
-      //     crea en la tabla `Item`.
-      //   → El `create` del upsert viola la FK (Prisma P2003) y el filtro global
-      //     (app-exception.filter.ts:81) lo mapea a 409 "Conflicto con datos relacionados".
-      // EXPECTADO (happy path): 201 + { progress:1, complete:true, reward } y reparto real
-      //   (room `complete`, `rewardsDistributed:true`, +coins/+item/+bonding a los 3).
-      // REAL: la room NUNCA puede finalizar → el complete final falla con 409 y no hay reparto.
-      // Se asertan los hechos reales (409 + estado inalterado) en lugar de forzar el camino feliz.
-      // ─────────────────────────────────────────────────────────────────────────────────
+      // F-13 (fix): `finalizeRoom` asegura el ítem `royal_feast` en el catálogo (upsert
+      // idempotente) antes de regalarlo, de modo que la room finaliza y reparte el premio
+      // real (1 ítem + coins + bonding) a los 3 participantes.
       const c3 = await api()
         .post(`/v1/group-feeding/${roomId}/complete`)
         .set(auth(p3.token))
-        .send({ gameType: 'reflex', score: 55 });
-      expect(c3.status).toBe(409);
+        .send({ gameType: 'reflex', score: 55 })
+        .expect(201);
+      expect(c3.body).toMatchObject({ progress: 1, complete: true });
+      expect(c3.body.reward).toMatchObject({
+        generatedItemId: 'royal_feast',
+        playerCount: 3,
+        complete: true,
+      });
 
-      // La room queda atrapada: sigue `active`, sin reparto y sin cambios de saldo.
+      // Efecto real en BD: room `complete`, reparto hecho y con timestamp.
       const roomAfter = await prisma.groupSession.findUnique({ where: { id: roomId } });
-      expect(roomAfter!.status).toBe('active');
-      expect(roomAfter!.rewardsDistributed).toBe(false);
+      expect(roomAfter!.status).toBe('complete');
+      expect(roomAfter!.rewardsDistributed).toBe(true);
+      expect(roomAfter!.generatedItemId).toBe('royal_feast');
+      expect(roomAfter!.completedAt).not.toBeNull();
+
+      // El ítem de recompensa existe en el catálogo (FK satisfecha).
+      expect(await prisma.item.findUnique({ where: { id: 'royal_feast' } })).not.toBeNull();
+
+      // Cada participante recibe 1 ítem `royal_feast`.
+      for (const u of [host, p2, p3]) {
+        expect(await invQty(u.userId, 'royal_feast')).toBe(1);
+      }
+
+      // Coins repartidos: host 30 (30% de 100); resto 70/2 = 35 cada uno.
       expect((await prisma.user.findUnique({ where: { id: host.userId } }))!.coins).toBe(
-        coinsBefore[host.userId],
+        coinsBefore[host.userId] + 30,
       );
       expect((await prisma.user.findUnique({ where: { id: p2.userId } }))!.coins).toBe(
-        coinsBefore[p2.userId],
+        coinsBefore[p2.userId] + 35,
       );
       expect((await prisma.user.findUnique({ where: { id: p3.userId } }))!.coins).toBe(
-        coinsBefore[p3.userId],
+        coinsBefore[p3.userId] + 35,
       );
     });
   });
