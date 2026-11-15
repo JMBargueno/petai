@@ -2,11 +2,17 @@
 # Uso: docker compose -f docker-compose.prod.yml -f docker-compose.pockai.yml up -d --build
 services:
   backend:
-    networks: [webproxy]
+    # 'default': red implícita del proyecto (donde están postgres/redis);
+    # 'webproxy': red externa del nginx-proxy para exponer la API.
+    networks: [default, webproxy]
     environment:
       VIRTUAL_HOST: api-pockai.jmbargueno.com
       VIRTUAL_PORT: "3000"
       VIRTUAL_WEBSOCKETS: "true" # socket.io: upgrade HTTP→WS en el vhost
+      # LetsEncrypt: nginx-proxy añade la ruta /.well-known/acme-challenge (webroot
+      # /usr/share/nginx/html del volumen nginx_html) al vhost :80 para certbot.
+      LETSENCRYPT_HOST: api-pockai.jmbargueno.com
+      LETSENCRYPT_EMAIL: contact@jmbargueno.com
 
 networks:
   webproxy:
