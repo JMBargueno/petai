@@ -104,7 +104,9 @@ export class PinoNestLogger {
 
     const redacted = redact(base, 0);
     const msg = typeof message === 'string' ? message : JSON.stringify(message);
-    this.pino[level](redacted, msg);
+    // pino expone métodos por nombre (info/warn/…), no por nivel numérico.
+    const method = (this.pino.levels?.labels?.[level] as string | undefined) ?? 'info';
+    this.pino[method](redacted, msg);
   }
 
   log(message: unknown, context?: string): void {
