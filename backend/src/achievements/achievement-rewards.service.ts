@@ -89,5 +89,6 @@ export class AchievementRewardsService {
   /** Emite `achievement:unlocked` por WebSocket al usuario. */
   emitUnlocked(userId: string, payload: AchievementUnlockedPayload): void {
     this.realtimeGateway.emitToUser(userId, 'achievement:unlocked', payload);
+    this.realtimeGateway.emitPetAction(userId, null, 'achievement', { name: payload.name, tier: payload.tier });
   }
 }

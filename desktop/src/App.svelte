@@ -13,6 +13,8 @@
     type EnvironmentalChangedEvent,
   } from './lib/environmental';
   import PetView from './components/PetView.svelte';
+  import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction } from './lib/animation/eventMap';
+  import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
   import type { AnalyzedFile } from './lib/fileAnalyzer';
@@ -127,13 +129,19 @@
             pets[index] = updatedPet;
           }
         });
+        // Qué le acaba de pasar a la mascota (comer, subir de nivel, ganar…) → animación
+        socket.on('pet:action', (ev: unknown) => {
+          if (!isPetActionEvent(ev) || !currentPet) return;
+          if (ev.petId && ev.petId !== currentPet.id) return;
+          reactToAction(currentPet.id, ev.action, ev.context);
+        });
         // Otro jugador ha retado a tu mascota en la arena (pelea asíncrona)
         socket.on('battle:defended', (b: any) => {
           // Resultado desde el punto de vista de la mascota defensora (la del usuario)
           const outcome = b.draw ? 'empató' : b.won ? 'ganó' : 'perdió';
           const delta = b.eloDelta ? ` (${b.eloDelta > 0 ? '+' : ''}${b.eloDelta} ELO)` : '';
           const text = `${b.attackerName} retó a ${b.defenderPetName}: tu mascota ${outcome}${delta}`;
-          showBubble(text);
+          // La animación y el bocadillo llegan con `pet:action` (battle_defended)
           notifyNow('Te han retado en la arena', text);
         });
 
@@ -151,9 +159,24 @@
     }
   }
 
-  function handlePetAction(action: 'eat' | 'happy') {
-    if (petViewRef && petViewRef.triggerAnim) {
-      petViewRef.triggerAnim(action);
+  // Una misma acción puede llegar dos veces (UI local + `pet:action` del backend): se anima una
+  const reactionDeduper = new ReactionDeduper(1500);
+
+  function reactToAction(petId: string, action: PetAction, context?: Record<string, unknown>) {
+    if (!reactionDeduper.shouldPlay(petId, action)) return;
+    const reaction = reactionForAction({ action, context });
+    if (!reaction) return;
+    petViewRef?.react?.(reaction);
+    if (reaction.bubble) showBubble(reaction.bubble);
+  }
+
+  /** Acción disparada desde el panel (comer, bañar, despertar, minijuego, eclosión). */
+  function handlePetAction(local: string) {
+    const action = LOCAL_ACTIONS[local];
+    if (action && currentPet) {
+      reactToAction(currentPet.id, action);
+    } else {
+      petViewRef?.play?.(local);
     }
   }
 

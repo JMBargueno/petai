@@ -28,6 +28,7 @@ describe('PetsService', () => {
 
   const mockRealtimeGateway = {
     emitPetUpdate: jest.fn(),
+    emitPetAction: jest.fn(),
   };
 
   const mockGameDataService = {
@@ -165,6 +166,45 @@ describe('PetsService', () => {
     expect(leveled.level).toBe(2);
     expect(leveled.xp).toBe(50);
     expect(leveled.statPoints).toBe(3);
+  });
+
+  describe('pet:action (animaciones del cliente)', () => {
+    beforeEach(() => {
+      mockRealtimeGateway.emitPetAction.mockClear();
+      mockEventEmitter.emit.mockClear();
+    });
+
+    it('alimentar emite `fed` indicando si era su comida favorita', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue({
+        id: 'pet-1', userId: 'user-1', hunger: 50, happiness: 50, health: 50, energy: 50, sleeping: false,
+        species: { favoriteFood: 'spicy_berry' }, xp: 0, level: 1, statPoints: 0, stage: 'baby',
+      } as any);
+      mockInventoryService.consumeItem.mockResolvedValue({ id: 'spicy_berry', effects: { hunger: 20 } });
+
+      await service.feed('user-1', 'pet-1', 'spicy_berry');
+
+      expect(mockRealtimeGateway.emitPetAction).toHaveBeenCalledWith('user-1', 'pet-1', 'fed', {
+        favorite: true,
+        itemId: 'spicy_berry',
+      });
+    });
+
+    it('subir de nivel emite `level_up` con el nivel alcanzado', async () => {
+      await (service as any).addXpInternal({ id: 'p', userId: 'u', level: 1, xp: 0, statPoints: 0, stage: 'baby' }, 150);
+      expect(mockRealtimeGateway.emitPetAction).toHaveBeenCalledWith('u', 'p', 'level_up', { level: 2 });
+    });
+
+    it('el cambio de etapa automático se anima como `evolved` sin contar como pet:evolved', async () => {
+      await (service as any).addXpInternal({ id: 'p', userId: 'u', level: 9, xp: 0, statPoints: 0, stage: 'baby' }, 5000);
+      expect(mockRealtimeGateway.emitPetAction).toHaveBeenCalledWith('u', 'p', 'evolved', { stage: 'juvenile' });
+      expect(mockEventEmitter.emit).not.toHaveBeenCalledWith('pet:evolved', expect.anything());
+    });
+
+    it('despertar emite `woke`', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue({ id: 'pet-1', sleeping: true } as any);
+      await service.wake('user-1', 'pet-1');
+      expect(mockRealtimeGateway.emitPetAction).toHaveBeenCalledWith('user-1', 'pet-1', 'woke');
+    });
   });
 
   describe('ciclo de sueño (zona horaria)', () => {

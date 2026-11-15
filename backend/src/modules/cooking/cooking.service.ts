@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
@@ -34,6 +35,7 @@ export class CookingService {
     private readonly prisma: PrismaService,
     private readonly gameData: GameDataService,
     private readonly petsService: PetsService,
+    @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
   async start(userId: string, petId: string) {
@@ -56,7 +58,12 @@ export class CookingService {
     const seed = hashSeed(`${userId}:${petId}:${Date.now().toString(36)}`) & 0x7fffffff;
     const ingredientOrder = this.buildOrder(recipe.ingredients, seed);
     const hotPotPositions = this.buildHotPots(recipe.ingredients.length, seed);
-    await this.prisma.pet.update({ where: { id: petId }, data: { energy: Math.max(0, pet.energy - ENERGY_COST) } });
+    const tired = await this.prisma.pet.update({
+      where: { id: petId },
+      data: { energy: Math.max(0, pet.energy - ENERGY_COST) },
+      include: { species: true, pattern: true },
+    });
+    this.realtime?.emitPetUpdate(userId, tired);
     const session = await this.prisma.cookingSession.create({
       data: { userId, petId, recipeId: recipe.id, seed, ingredients: ingredientOrder, hotPotPositions, startedAt: new Date() },
     });
@@ -103,6 +110,7 @@ export class CookingService {
     }
     const coins = Math.floor(pct * 40);
     if (coins > 0) await this.prisma.user.update({ where: { id: userId }, data: { coins: { increment: coins } } });
+    this.realtime?.emitPetAction(userId, session.petId, 'cooked', { pct: Math.round(pct * 100) });
     return { score: correctCount, buff, coins, correctPct: Math.round(pct * 100) };
   }
 

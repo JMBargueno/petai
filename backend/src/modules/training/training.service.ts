@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger, Optional } from '@nestjs/common';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PetsService } from '../pets/pets.service';
@@ -57,6 +58,7 @@ export class TrainingService {
     private readonly prisma: PrismaService,
     private readonly petsService: PetsService,
     private readonly gameData: GameDataService,
+    @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
   private get combatCfg() {
@@ -175,6 +177,11 @@ export class TrainingService {
       await this.prisma.user.update({ where: { id: userId }, data: { coins: { increment: coins } } });
     } else if (newStatus === 'failed') {
       await this.prisma.pet.update({ where: { id: petId }, data: { xp: { increment: xp } } });
+    }
+    if (this.realtime && newStatus !== 'active') {
+      const trainedPet = await this.prisma.pet.findUnique({ where: { id: petId }, include: { species: true, pattern: true } });
+      if (trainedPet) this.realtime.emitPetUpdate(userId, trainedPet);
+      this.realtime.emitPetAction(userId, petId, 'trained', { status: newStatus });
     }
 
     const response: SubmitResponse = {

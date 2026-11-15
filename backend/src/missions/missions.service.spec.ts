@@ -24,7 +24,7 @@ describe('MissionsService', () => {
   beforeEach(async () => {
     const mockPrisma = { mission: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn(), update: jest.fn(), updateMany: jest.fn(), createMany: jest.fn() }, user: { update: jest.fn() }, $transaction: jest.fn().mockImplementation((fn) => fn(mockPrisma)) };
     const mockGeneration = { ensureMissionsExist: jest.fn().mockResolvedValue(undefined) };
-    const mockRealtime = { emitToUser: jest.fn() };
+    const mockRealtime = { emitToUser: jest.fn(), emitPetAction: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [MissionsService, { provide: PrismaService, useValue: mockPrisma }, { provide: MissionGenerationService, useValue: mockGeneration }, { provide: RealtimeGateway, useValue: mockRealtime }],
     }).compile();

@@ -96,6 +96,7 @@ export class PetsService {
     // propio `pet:update` llega después para que el cliente reciba el vínculo ya aplicado
     await this.bonding.recordInteraction(petId, userId, 'feed');
     this.eventEmitter.emit('pet:fed', { userId, petId });
+    this.realtimeGateway.emitPetAction(userId, petId, 'fed', { favorite: isFavorite, itemId: item.id });
     return withXp;
   }
 
@@ -126,6 +127,7 @@ export class PetsService {
     // Vínculo (feature 006): el baño exitoso sube el bonding (+1 según balance)
     await this.bonding.recordInteraction(petId, userId, 'clean');
     this.eventEmitter.emit('pet:cleaned', { userId, petId });
+    this.realtimeGateway.emitPetAction(userId, petId, 'cleaned');
     return withXp;
   }
 
@@ -145,6 +147,7 @@ export class PetsService {
     // Vínculo (feature 006): dormirlo también cuenta como interacción (+0.5 según balance)
     await this.bonding.recordInteraction(petId, userId, 'sleep');
     this.eventEmitter.emit('pet:slept', { userId, petId });
+    this.realtimeGateway.emitPetAction(userId, petId, 'slept');
     return updated;
   }
 
@@ -161,6 +164,7 @@ export class PetsService {
     });
 
     this.realtimeGateway.emitPetUpdate(userId, updated);
+    this.realtimeGateway.emitPetAction(userId, petId, 'woke');
     return updated;
   }
 
@@ -199,6 +203,7 @@ export class PetsService {
     });
 
     this.realtimeGateway.emitPetUpdate(userId, updated);
+    this.realtimeGateway.emitPetAction(userId, petId, 'healed');
     return updated;
   }
 
@@ -227,6 +232,7 @@ export class PetsService {
     // Vínculo (feature 006): la evolución sube el bonding (+5); el vínculo previo se conserva (FR-015)
     await this.bonding.recordInteraction(petId, userId, 'evolve');
     this.eventEmitter.emit('pet:evolved', { userId, petId });
+    this.realtimeGateway.emitPetAction(userId, petId, 'evolved', { stage: 'final' });
     return updated;
   }
 
@@ -361,6 +367,9 @@ export class PetsService {
     }
 
     const isSick = newHealth < 20.0 ? true : pet.sick;
+    if (isSick && !pet.sick) {
+      this.realtimeGateway.emitPetAction(pet.userId, pet.id, 'sick');
+    }
 
     // Vínculo (feature 006): el decaimiento por abandono vive en el mismo lazy tick que las
     // vitales (Constitución IV, sin cron por pet). Idempotente: al aplicar, `applyDecay`
@@ -443,6 +452,12 @@ export class PetsService {
 
     if (levelChanged) {
       this.eventEmitter.emit('pet:level_up', { userId: pet.userId, petId: pet.id });
+      this.realtimeGateway.emitPetAction(pet.userId, pet.id, 'level_up', { level: currentLevel });
+    }
+    // Cambio de etapa automático por nivel (juvenil/adulto). Solo se anima: no cuenta como
+    // `pet:evolved` (misiones y logros de evolución siguen ligados a evolve()).
+    if (stage !== pet.stage) {
+      this.realtimeGateway.emitPetAction(pet.userId, pet.id, 'evolved', { stage });
     }
 
     return updated;

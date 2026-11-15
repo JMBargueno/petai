@@ -9,6 +9,7 @@
     "validate:assets": "node scripts/validate-assets.js",
     "validate:animations": "tsx scripts/validate-animations.ts",
     "validate:all": "node scripts/validate-game-data.js && node scripts/validate-assets.js && tsx scripts/validate-animations.ts",
+    "generate:sprites": "tsx scripts/generate-pet-sprites.ts",
     "build:assets": "tsx scripts/build-assets.ts",
     "build:assets:dry": "tsx scripts/build-assets.ts --dry-run",
     "test:assets": "vitest run scripts/build-assets.spec.ts",
@@ -26,11 +27,12 @@
     "web:test": "pnpm --filter pockai-web run test"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.750.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^22.13.0",
     "openapi-typescript": "^7.13.0",
     "tsx": "^4.19.0",
     "vitest": "^3.0.0",
-    "zod": "^4.6.7",
-    "@aws-sdk/client-s3": "^3.750.0",
-    "@types/node": "^22.13.0"
+    "zod": "^4.6.7"
   }
 }

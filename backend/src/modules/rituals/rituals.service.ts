@@ -122,6 +122,7 @@ export class RitualsService {
       missCount += 1;
       if (gapDays > MISS_GRACE_DAYS) status = 'active'; // volvió tras pausa → reactiva
       this.realtime.emitToUser(userId, 'ritual:missed', { ritualId, day: gapDays });
+      this.realtime.emitPetAction(userId, null, 'ritual_missed');
     } else if (!progress.lastCompletedAt) {
       streak = 1;
     } else {
@@ -144,6 +145,7 @@ export class RitualsService {
         gift,
         totalStreak: progress.totalCompletions + 1,
       });
+      this.realtime.emitPetAction(userId, null, 'ritual_completed', { type: ritual.type });
     }
 
     const updated = await this.prisma.ritualProgress.update({

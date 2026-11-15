@@ -6,8 +6,10 @@ import {
   NotFoundException,
   HttpException,
   HttpStatus,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 /**
  * Co-op Care Service — amistad + visitas entre amigos.
@@ -51,7 +53,10 @@ const clamp = (v: number): number => Math.max(0, Math.min(100, Math.round(v * 10
 export class CoopCareService {
   private readonly logger = new Logger(CoopCareService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly realtime?: RealtimeGateway,
+  ) {}
 
   /**
    * ¿Tiene `a` una amistad ACEPTADA con `b`? Es recíproca: basta que exista una fila aceptada en
@@ -253,6 +258,12 @@ export class CoopCareService {
         data: { visitorId, ownerId, petId: action.petId, action: action.action, xpGained },
       });
     });
+
+    if (this.realtime) {
+      const visited = await this.prisma.pet.findUnique({ where: { id: pet.id }, include: { species: true, pattern: true } });
+      if (visited) this.realtime.emitPetUpdate(ownerId, visited);
+      this.realtime.emitPetAction(ownerId, pet.id, 'friend_visit', { action: action.action });
+    }
 
     this.logger.debug(
       `Visit: ${visitorId} → pet ${action.petId} de ${ownerId}, action=${action.action}, xp=${xpGained}`,

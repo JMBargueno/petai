@@ -55,7 +55,7 @@ describe('BondingService', () => {
       $transaction: jest.fn(async (cb: any) => cb(tx)),
     };
     gameData = { getBalance: jest.fn(() => ({ bonding: BONDING_BALANCE })) };
-    realtime = { emitToUser: jest.fn(), emitPetUpdate: jest.fn() };
+    realtime = { emitToUser: jest.fn(), emitPetUpdate: jest.fn(), emitPetAction: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

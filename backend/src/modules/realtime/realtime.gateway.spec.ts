@@ -83,4 +83,17 @@ describe('RealtimeGateway', () => {
     expect((gateway.server as any).in).toHaveBeenCalledWith('user:u9');
     expect(disconnectSockets).toHaveBeenCalledWith(true);
   });
+
+  it('emitPetAction envía `pet:action` solo a la sala del usuario', () => {
+    const emit = jest.fn();
+    const to = jest.fn(() => ({ emit }));
+    gateway.server = { to } as any;
+
+    gateway.emitPetAction('u1', 'p1', 'level_up', { level: 3 });
+    gateway.emitPetAction('u1', null, 'achievement');
+
+    expect(to).toHaveBeenCalledWith('user:u1');
+    expect(emit).toHaveBeenNthCalledWith(1, 'pet:action', { petId: 'p1', action: 'level_up', context: { level: 3 } });
+    expect(emit).toHaveBeenNthCalledWith(2, 'pet:action', { petId: null, action: 'achievement' });
+  });
 });

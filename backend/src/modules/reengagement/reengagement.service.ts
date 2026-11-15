@@ -3,7 +3,9 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Optional,
 } from '@nestjs/common';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DiaryService, DiaryEntry } from './diary.service';
 
@@ -34,6 +36,7 @@ export class ReengagementService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly diaryService: DiaryService,
+    @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
   /** Computa la ausencia (ms) y el tramo emocional. */
@@ -70,6 +73,8 @@ export class ReengagementService {
 
     const { absenceMs, tier } = this.computeAbsence(lastLogin, now);
     const active = absenceMs >= MIN_ACTIVE_MS;
+    // Solo al volver tras una ausencia real: la mascota reacciona según cuánto te ha echado de menos
+    if (active) this.realtime?.emitPetAction(userId, pet.id, 'welcome_back', { tier });
 
     const buffUntil = pet.recoveryBuffUntil;
     const buffActive = !!buffUntil && buffUntil.getTime() > now.getTime();

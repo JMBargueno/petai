@@ -213,6 +213,10 @@ export class MissionTrackingService implements OnModuleDestroy {
       dailyCompleted,
       dailyTotal,
     });
+    this.realtimeGateway.emitPetAction(userId, null, 'mission_completed', {
+      type: mission.type,
+      dailyCompleted: mission.period === 'daily' && dailyCompleted === dailyTotal && dailyTotal > 0,
+    });
 
     // Notificación con personalidad (feature 007): logro completado. Sin petId (misiones son por
     // usuario); el dispatcher resuelve el pet principal para el tono/personalidad.
