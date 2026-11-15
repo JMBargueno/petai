@@ -121,7 +121,9 @@
     <app-sticker class="spot spot--a float lore-teaser__egg" icon="egg" color="sunburst" [rotate]="-10" [size]="128" />
     <app-sticker class="spot spot--c float lore-teaser__bolt" icon="star" color="voltage-violet" [rotate]="14" [size]="64" />
     <div class="band__inner lore-teaser__inner reveal">
-      <h2 class="display lore-teaser__title" [innerHTML]="teaser.title"></h2>
+      <h2 class="display lore-teaser__title" i18n="@@lore.teaser.title">
+        Bajo la <span class="hl hl--lavender">pantalla</span>
+      </h2>
       <p class="lead lore-teaser__lead">{{ teaser.lead }}</p>
       <a class="btn btn--filled" [href]="loreHref" i18n="@@lore.teaser.cta">Conocer el mundo</a>
     </div>

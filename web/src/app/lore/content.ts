@@ -231,7 +231,6 @@ export const GLOSSARY = [
 ];
 
 export const TEASER = {
-  title: $localize`:@@lore.teaser.title:Bajo la <span class="hl hl--lavender">pantalla</span>`,
   lead: $localize`:@@lore.teaser.lead:De la fricción entre la vida humana y el océano de datos nace el Éter Digital, y con él los pockai. Su origen, sus rarezas, sus elementos y su despertar tienen un nombre.`,
   cta: $localize`:@@lore.teaser.cta:Conocer el mundo`,
 };

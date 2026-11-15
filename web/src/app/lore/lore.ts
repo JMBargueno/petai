@@ -23,9 +23,9 @@ const LOCALES = ['es', 'en'] as const;
     <app-marquee [text]="marquee" />
 
     <header class="nav">
-      <a class="logo" [href]="home" aria-label i18n-aria-label="@@lore.nav.home">P</a>
+      <a class="logo" [href]="home" aria-label="Inicio" i18n-aria-label="@@lore.nav.home">P</a>
 
-      <nav class="nav__links" aria-label i18n-aria-label="@@lore.nav.label">
+      <nav class="nav__links" aria-label="Secciones" i18n-aria-label="@@lore.nav.label">
         <a class="btn btn--sm" href="#origen" i18n="@@lore.nav.origin">Origen</a>
         <a class="btn btn--sm" href="#rarezas" i18n="@@lore.nav.rare">Rarezas</a>
         <a class="btn btn--sm" href="#apariencia" i18n="@@lore.nav.appear">Apariencia</a>
@@ -36,7 +36,7 @@ const LOCALES = ['es', 'en'] as const;
       </nav>
 
       <div class="nav__end">
-        <div class="lang" role="group" aria-label i18n-aria-label="@@nav.lang">
+        <div class="lang" role="group" aria-label="Idioma" i18n-aria-label="@@nav.lang">
           <a href="/es/lore" lang="es" hreflang="es" [attr.aria-current]="locale === 'es' ? 'true' : null">ES</a>
           <a href="/en/lore" lang="en" hreflang="en" [attr.aria-current]="locale === 'en' ? 'true' : null">EN</a>
         </div>
