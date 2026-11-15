@@ -5,6 +5,12 @@ import { HighlightService, HighlightInfo, BattleLogEntry } from './highlight.ser
  * Spectator Service — manages live combat spectating.
  * Feature 023: Combat Spectator
  *
+ * ⚠️ PRÓXIMAMENTE / no cableado: el buffer de rounds (`battleBuffers`) nunca se puebla porque
+ * `addRound` no es llamado desde `BattlesModule` y las peleas son síncronas (el motor resuelve
+ * todos los rounds en una petición). Por eso `getLiveState` devuelve `null` y `getHighlights`
+ * devuelve `[]`; solo `subscribe`/`unsubscribe` tienen efecto (contador de espectadores). La
+ * spec-23 describe el diseño completo (streaming, WS, highlights, LLM) que falta implementar.
+ *
  * Handles subscriptions, 10s delay buffer, and live state queries.
  */
 
