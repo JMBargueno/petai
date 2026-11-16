@@ -9,6 +9,8 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { ChatService } from '../src/modules/ai/chat.service';
 
 const VALID_KEY = 'sk-test-key-123456';
+/** Key "del servidor" para la IA gestionada (spec-34): el mock la acepta igual que la del usuario. */
+const SERVER_KEY = 'sk-or-server-key-1';
 
 /** Servidor mock compatible con OpenAI Chat Completions (streaming SSE). */
 function startMockLlm() {
@@ -22,7 +24,9 @@ function startMockLlm() {
       seen.push({ auth: req.headers.authorization, body });
       if (req.url !== '/v1/chat/completions') return res.writeHead(404).end();
       if (state.failWith) return res.writeHead(state.failWith).end('nope');
-      if (req.headers.authorization !== `Bearer ${VALID_KEY}`) return res.writeHead(401).end('bad key');
+      if (![`Bearer ${VALID_KEY}`, `Bearer ${SERVER_KEY}`].includes(req.headers.authorization ?? '')) {
+        return res.writeHead(401).end('bad key');
+      }
       res.writeHead(200, { 'Content-Type': 'text/event-stream' });
       // Llamada del extractor de memoria: responde con el JSON esperado
       if (body.messages?.[0]?.content?.includes('extractor de recuerdos')) {
@@ -117,6 +121,9 @@ describe('IA: configuración BYOK y chat (e2e, LLM mock)', () => {
     beforeAll(async () => {
       mock = await startMockLlm();
       app = await createApp('true');
+      // IA gestionada (spec-34) contra el mock, nunca contra OpenRouter real
+      app.get(ConfigService).set('OPENROUTER_BASE_URL', mock.url);
+      app.get(ConfigService).set('OPENROUTER_API_KEY', SERVER_KEY);
       user = await signup(app);
     });
     afterAll(async () => {
@@ -124,10 +131,18 @@ describe('IA: configuración BYOK y chat (e2e, LLM mock)', () => {
       await mock.close();
     });
 
-    it('1. sin configuración: GET indica configured=false y el chat devuelve 404', async () => {
+    it('1. sin configuración: el usuario está en la IA gestionada (Free) y chatea con la key del servidor', async () => {
       const cfg = await api().get('/v1/ai/config').set(user.auth).expect(200);
-      expect(cfg.body).toEqual({ configured: false });
-      await api().post(`/v1/pets/${user.petId}/chat`).set(user.auth).send({ message: 'hola' }).expect(404);
+      expect(cfg.body).toMatchObject({ configured: true, mode: 'managed', provider: 'pockai', hasKey: false, keyMask: null });
+
+      // Otro usuario para no alterar el historial ni la inteligencia que comprueban los pasos siguientes
+      const fresh = await signup(app);
+      const res = await api().post(`/v1/pets/${fresh.petId}/chat`).set(fresh.auth).send({ message: 'hola' })
+        .buffer(true).parse(sseParser).expect(200);
+      expect(res.body.events[res.body.events.length - 1].event).toBe('done');
+      const call = mock.seen[mock.seen.length - 1];
+      expect(call.auth).toBe(`Bearer ${SERVER_KEY}`);
+      expect(call.body.max_tokens).toBe(120); // límite de salida del plan Free
     });
 
     it('2. valida el proveedor y exige apiKey la primera vez', async () => {
@@ -241,13 +256,18 @@ describe('IA: configuración BYOK y chat (e2e, LLM mock)', () => {
       expect(statuses).toContain(429);
     });
 
-    it('11. eliminar la configuración borra la key y desactiva el chat', async () => {
+    it('11. eliminar la configuración borra la key y devuelve al usuario a la IA gestionada', async () => {
       // El test anterior agotó la ventana de mensajes por minuto: se reinicia para probar la configuración
       await app.get(ChatService).resetRateLimits([user.userId]);
       await api().delete('/v1/ai/config').set(user.auth).expect(200);
       const cfg = await api().get('/v1/ai/config').set(user.auth).expect(200);
-      expect(cfg.body).toEqual({ configured: false });
-      await api().post(`/v1/pets/${user.petId}/chat`).set(user.auth).send({ message: 'hola' }).expect(404);
+      expect(cfg.body).toMatchObject({ configured: true, mode: 'managed', hasKey: false });
+      expect(await app.get(PrismaService).aiConfig.findUnique({ where: { userId: user.userId } })).toBeNull();
+
+      await api().post(`/v1/pets/${user.petId}/chat`).set(user.auth).send({ message: 'hola' })
+        .buffer(true).parse(sseParser).expect(200);
+      // Ya no viaja la key del usuario: se usa la del servidor
+      expect(mock.seen[mock.seen.length - 1].auth).toBe(`Bearer ${SERVER_KEY}`);
     });
   });
 

@@ -88,6 +88,8 @@ export const envSchema = z.object({
   GITHUB_RELEASES_REPO: z.string().default('JMBargueno/petai'),
   // ---- Spec-34: Facturación e IA Gestionada ----
   OPENROUTER_API_KEY: z.string().optional(),
+  // Endpoint OpenAI-compatible de la IA gestionada (por defecto OpenRouter). Los e2e lo apuntan a un LLM simulado.
+  OPENROUTER_BASE_URL: z.string().url().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRODUCT_PRO: z.string().optional(),

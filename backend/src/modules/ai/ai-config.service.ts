@@ -149,7 +149,7 @@ export class AiConfigService {
       const managedSettings = this.billingConfig.managedAiSettings();
       const apiKey = this.config.get<string>('OPENROUTER_API_KEY') || 'mock-openrouter-key';
       const provider = new OpenAiCompatibleProvider(
-        OPENROUTER_DEFAULT_BASE_URL,
+        this.config.get<string>('OPENROUTER_BASE_URL') || OPENROUTER_DEFAULT_BASE_URL,
         apiKey,
         fetch,
         {

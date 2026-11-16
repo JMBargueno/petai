@@ -7,6 +7,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ChatService } from '../src/modules/ai/chat.service';
+import { BillingConfigService } from '../src/modules/billing/billing-config.service';
 
 const KEY = 'sk-moderation-test-1';
 
@@ -101,6 +102,9 @@ describe('Moderación, cuota y concurrencia del chat (e2e, LLM mock)', () => {
     config = app.get(ConfigService);
     config.set('AI_ALLOW_INSECURE_URLS', 'true');
     config.set('AI_MONTHLY_TOKEN_QUOTA_BYOK', 0);
+    // IA gestionada (spec-34) contra el mock, nunca contra OpenRouter real
+    config.set('OPENROUTER_BASE_URL', mock.url);
+    config.set('OPENROUTER_API_KEY', KEY);
     app.setGlobalPrefix('v1');
     await app.init();
     prisma = app.get(PrismaService);
@@ -150,9 +154,13 @@ describe('Moderación, cuota y concurrencia del chat (e2e, LLM mock)', () => {
 
     it('4. los recursos de ayuda funcionan incluso sin proveedor de IA configurado', async () => {
       const bare = await signup(false);
+      const before = mock.state.calls;
       const res = await chat(bare, 'quiero acabar con mi vida').expect(200);
       expect(ev(res, 'moderated').data.reason).toBe('self_harm');
-      await chat(bare, 'hola').expect(404); // un mensaje normal sí exige configuración
+      expect(mock.state.calls).toBe(before);
+      // Sin configuración un mensaje normal va a la IA gestionada (plan Free, spec-34)
+      const normal = await chat(bare, 'hola').expect(200);
+      expect(ev(normal, 'done')).toBeTruthy();
     });
 
     it('5. un mensaje normal pasa y se contabiliza el uso', async () => {
@@ -219,15 +227,24 @@ describe('Moderación, cuota y concurrencia del chat (e2e, LLM mock)', () => {
       await chat(other, 'yo no he gastado nada').expect(200);
     });
 
-    it('10. el modo gestionado usa su propia cuota', async () => {
+    it('10. el modo gestionado usa el tope mensual de su plan (panel de facturación)', async () => {
       config.set('AI_MONTHLY_TOKEN_QUOTA_BYOK', 0);
-      config.set('AI_MONTHLY_TOKEN_QUOTA_MANAGED', 50);
-      const m = await signup();
-      await prisma.aiConfig.update({ where: { userId: (await prisma.user.findFirstOrThrow({ where: { aiConfig: { isNot: null }, pets: { some: { id: m.petId } } } })).id }, data: { mode: 'managed' } });
-      await chat(m, 'primero').expect(200); // 100 tokens > 50
-      const second = await chat(m, 'segundo');
-      expect(second.status).toBe(429);
-      config.set('AI_MONTHLY_TOKEN_QUOTA_MANAGED', 500000);
+      // Tope del plan Free bajado a 50 tokens, como si lo cambiara el superadmin en el panel
+      const billing = app.get(BillingConfigService);
+      const realLimits = billing.limits.bind(billing);
+      const spy = jest
+        .spyOn(billing, 'limits')
+        .mockImplementation(async (plan) => ({ ...(await realLimits(plan)), monthlyTokenQuota: 50 }));
+      try {
+        const m = await signup(false); // sin configuración = IA gestionada, plan Free
+        await chat(m, 'primero').expect(200); // 100 tokens > 50
+        const second = await chat(m, 'segundo');
+        expect(second.status).toBe(429);
+        const usage = await api().get('/v1/ai/usage').set(m.auth).expect(200);
+        expect(usage.body).toMatchObject({ mode: 'managed', plan: 'free', quota: 50 });
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 
