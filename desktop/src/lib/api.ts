@@ -185,6 +185,26 @@ export function isTerminalError(err: unknown): boolean {
   return err.status >= 500 || err.status === 401;
 }
 
+/** POST a una ruta pública de /auth/ (sin sesión). Lanza ApiError con el mensaje del servidor. */
+async function authPost(path: string, body: unknown, fallback: string): Promise<any> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError('Sin conexión con el servidor. Inténtalo de nuevo en un momento.');
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const message = Array.isArray(data?.message) ? data.message.join('. ') : data?.message;
+    throw new ApiError(typeof message === 'string' && message ? message : fallback, res.status);
+  }
+  return data;
+}
+
 export const api = {
   client,
 
@@ -219,6 +239,29 @@ export const api = {
       setSession(res.data);
     }
     return res.data;
+  },
+
+  /**
+   * Recuperar contraseña, paso 1: pide un código por correo. El servidor responde igual exista o no
+   * la cuenta (no revela qué correos están registrados).
+   */
+  async requestPasswordReset(email: string) {
+    await authPost('/v1/auth/reset/request', { email: email.trim() }, 'No se pudo enviar el código');
+  },
+
+  /**
+   * Recuperar contraseña, paso 2: con el código cambia la contraseña. El servidor cierra las demás
+   * sesiones y devuelve una nueva, que se guarda: el usuario entra directamente.
+   */
+  async confirmPasswordReset(email: string, code: string, newPassword: string) {
+    const data = await authPost(
+      '/v1/auth/reset/confirm',
+      { email: email.trim(), code: code.trim(), newPassword },
+      'No se pudo cambiar la contraseña',
+    );
+    if (!data?.accessToken || !data?.refreshToken) throw new ApiError('Respuesta inesperada del servidor');
+    setSession(data);
+    return data;
   },
 
   /** Cierra la sesión en este equipo y revoca su refresh token en el servidor (sin esperar la respuesta). */

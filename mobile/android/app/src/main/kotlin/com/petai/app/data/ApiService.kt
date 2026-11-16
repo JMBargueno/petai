@@ -48,6 +48,24 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
         return r.user ?: me()
     }
 
+    /** Recuperar contraseña, paso 1: pide un código por correo (misma respuesta exista o no la cuenta). */
+    suspend fun requestPasswordReset(email: String) {
+        api.send("POST", "/auth/reset/request", obj("email" to email.trim()))
+    }
+
+    /**
+     * Recuperar contraseña, paso 2: con el código cambia la contraseña. El servidor cierra las demás
+     * sesiones y devuelve una nueva, que se guarda (el usuario entra directamente).
+     */
+    suspend fun confirmPasswordReset(email: String, code: String, newPassword: String): UserDto {
+        val r: AuthResponse = api.request(
+            "POST", "/auth/reset/confirm",
+            obj("email" to email.trim(), "code" to code.trim(), "newPassword" to newPassword),
+        )
+        session.save(r.accessToken, r.refreshToken)
+        return r.user ?: me()
+    }
+
     suspend fun logout() {
         session.refreshToken?.let { runCatching { api.send("POST", "/auth/logout", obj("refreshToken" to it)) } }
         session.clear()
