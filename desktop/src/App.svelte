@@ -3,8 +3,10 @@
   import { api, getAccessToken, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
+  import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
   import { initSummonShortcut } from './lib/summonShortcut';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
+  import { speak, clearSpeech, type SpeakOptions } from './lib/speech-queue';
   import {
     fetchStatus,
     startHeartbeat,
@@ -57,7 +59,11 @@
   let announcedVersion = '';
   $: if ($updateLock !== null && $updateLock !== announcedVersion) {
     announcedVersion = $updateLock;
-    notifyNow('Nueva versión de Pockai', `Actualiza Pockai a la versión ${announcedVersion} desde el panel para seguir jugando.`);
+    notifyNow(
+      'Nueva versión de Pockai',
+      `Actualiza Pockai a la versión ${announcedVersion} desde el panel para seguir jugando.`,
+      { key: 'update-available' },
+    );
   }
 
   /** Comprobación pedida desde la bandeja: la mascota cuenta el resultado. */
@@ -68,9 +74,6 @@
     if (s.status === 'upToDate') showBubble('¡Ya estoy en la última versión!');
     else if (s.status === 'error') showBubble(s.message);
   }
-
-  let bubbleText = '';
-  let bubbleTimer: any = null;
 
   // Pelotita de juego interactiva en pantalla
   let showBall = false;
@@ -134,10 +137,9 @@
   let stopHeartbeat: () => void = () => {};
   let stopContextDigest: () => void = () => {};
 
-  function showBubble(text: string) {
-    bubbleText = text.length > 160 ? text.slice(0, 157) + '…' : text;
-    clearTimeout(bubbleTimer);
-    bubbleTimer = setTimeout(() => (bubbleText = ''), 10_000);
+  /** Única vía de habla: todo lo que dice la mascota pasa por la cola de `speech-queue`. */
+  function showBubble(text: string, opts?: SpeakOptions) {
+    speak(text, opts);
   }
 
   // Badge de la bandeja/tray (feature 007 / US3): refleja los avisos no leídos en el título de la app.
@@ -208,8 +210,8 @@
           const outcome = b.draw ? 'empató' : b.won ? 'ganó' : 'perdió';
           const delta = b.eloDelta ? ` (${b.eloDelta > 0 ? '+' : ''}${b.eloDelta} ELO)` : '';
           const text = `${b.attackerName} retó a ${b.defenderPetName}: tu mascota ${outcome}${delta}`;
-          // La animación y el bocadillo llegan con `pet:action` (battle_defended)
-          notifyNow('Te han retado en la arena', text);
+          // La animación y el bocadillo llegan con `pet:action` (battle_defended): solo nativa si está oculta
+          notifyNow('Te han retado en la arena', text, { speech: false });
         });
 
         // Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía.
@@ -237,7 +239,9 @@
         socket.on('clan:goal_completed', (g: ClanGoal | null) => {
           if (!g?.id || !g?.clanId) return;
           upsertClanGoal(g);
-          notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`);
+          notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`, {
+            speech: `¡Objetivo de clan cumplido! «${g.title}» llegó a ${g.progress}/${g.target}. 🎉`,
+          });
         });
         // Rangos del Nexo: borrados en el chat y cambios de roster (la pestaña recarga el clan).
         socket.on('clan:message_deleted', (ev: { id?: string } | null) => {
@@ -333,6 +337,7 @@
     inventory = [];
     environmental = null;
     clearVisitors();
+    clearSpeech();
   }
 
   // ---------- Ambiental (feature 005) ----------
@@ -403,8 +408,7 @@
     try {
       const due = await api.getDueReminders();
       for (const r of due) {
-        showBubble(r.text);
-        await notifyNow('Recordatorio', r.text);
+        await notifyNow('Recordatorio', r.text, { speech: `⏰ ${r.text}`, priority: 'high' });
         await api.markReminderDelivered(r.id);
       }
     } catch {
@@ -448,16 +452,23 @@
     }
   }
 
-  async function handleViewportDrop(e: DragEvent) {
-    const data = e.dataTransfer?.getData('application/petai-pet');
-    if (data === 'exit-habitat' && currentPet && currentPet.inHabitat) {
+  // Punto donde se soltó al sacarlo del Hábitat: PetView aparece ahí al montarse
+  let petSpawnAt: { x: number; y: number } | null = null;
+  // Al volver a casa (por cualquier vía) se olvida: la próxima salida con «Sacar» usa la posición por defecto
+  $: if (currentPet?.inHabitat === true) petSpawnAt = null;
+
+  async function handleExitHabitat(e: Event) {
+    const ce = e as CustomEvent<ExitHabitatDetail>;
+    if (currentPet && currentPet.inHabitat) {
       try {
+        petSpawnAt = ce.detail ?? null;
         const updated = await api.setPetInHabitat(currentPet.id, false);
         currentPet = updated;
         const idx = pets.findIndex((p) => p.id === currentPet.id);
         if (idx !== -1) pets[idx] = updated;
         showBubble('¡De vuelta a explorar el escritorio!');
       } catch (err: any) {
+        petSpawnAt = null;
         console.error('Error sacando del hábitat:', err);
       }
     }
@@ -466,6 +477,7 @@
   onMount(() => {
     window.addEventListener('petai:file_dropped', handleFileDropped);
     window.addEventListener('petai:move_to_habitat', handleMoveToHabitat);
+    window.addEventListener(EXIT_HABITAT_EVENT, handleExitHabitat);
     stopClickThrough = startClickThrough();
     // Refresh token rechazado (caducado o revocado): vuelta a la pantalla de acceso
     stopSessionExpired = onSessionExpired(() => {
@@ -489,8 +501,9 @@
     if (ballRaf) cancelAnimationFrame(ballRaf);
     window.removeEventListener('petai:file_dropped', handleFileDropped);
     window.removeEventListener('petai:move_to_habitat', handleMoveToHabitat);
+    window.removeEventListener(EXIT_HABITAT_EVENT, handleExitHabitat);
     clearInterval(needsPoll);
-    clearTimeout(bubbleTimer);
+    clearSpeech();
     stopHeartbeat();
     stopClickThrough();
     stopSessionExpired();
@@ -505,7 +518,6 @@
 <main
   class="app-viewport"
   on:dragover|preventDefault
-  on:drop={handleViewportDrop}
 >
   {#if !updateLocked}
   <!-- Botón flotante para alternar panel de control -->
@@ -550,7 +562,7 @@
     <PetView
       bind:this={petViewRef}
       pet={currentPet}
-      bubble={bubbleText}
+      spawnAt={petSpawnAt}
       environmental={environmental}
       visitors={$visitorsStore}
       ball={showBall ? ballState : null}
@@ -580,7 +592,8 @@
       else pets = [currentPet, ...pets];
     }}
     on:actionTriggered={(e) => handlePetAction(e.detail)}
-    on:bubble={(e) => showBubble(e.detail)}
+    on:bubble={(e) =>
+      showBubble(e.detail, { overflowNote: '… (sigue en el chat)', onShow: () => petViewRef?.play?.('talk') })}
     on:refreshPet={refreshPet}
     on:logout={clearSessionState}
   />

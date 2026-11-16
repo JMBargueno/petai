@@ -14,6 +14,7 @@
   import { buildClientContext } from '../lib/deskContext';
   import { setSkillAuthorization } from '../lib/stores/desktopSkillsStore';
   import { startPomodoro, stopPomodoro } from '../lib/pomodoro';
+  import { toSpeakable } from '../lib/speech-queue';
 
   export let pet: any = null;
   /** Mensaje a enviar en cuanto el chat esté listo (p. ej. al soltar un archivo sobre la mascota). */
@@ -437,7 +438,9 @@
       reply.thinking = done.message.thinking || undefined;
       reply.thinkingOpen = false;
       messages = messages;
-      dispatch('bubble', done.message.content);
+      // La mascota dice la respuesta (sin el razonamiento) por la cola de habla
+      const spoken = toSpeakable(done.message.content);
+      if (spoken) dispatch('bubble', spoken);
       dispatch('refreshPet');
       if (config.configured && !local.enabled) loadUsage();
       // La extracción de recuerdos se hace en segundo plano en el servidor (no en modo local)

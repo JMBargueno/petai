@@ -26,11 +26,11 @@
   import { BarksEngine } from '../lib/barks';
   import { BehaviorEngine, type BehaviorState } from '../lib/behaviorEngine';
   import { checkPetBallCollision, type BallState } from '../lib/toys/toyPhysics';
+  import { currentSpeech, speak, speechBusy } from '../lib/speech-queue';
+  import { setPetOnScreen } from '../lib/window-visibility';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
-  /** Texto de la burbuja de chat sobre la mascota (vacío = oculta) */
-  export let bubble: string = '';
   /** Estado ambiental (feature 005): hora del día, clima, actividad y festividad. */
   export let environmental: EnvironmentalStatus | null = null;
   /** Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía. */
@@ -46,8 +46,14 @@
   const BUSY_PRIORITY = 40;
   const PET_SIZE = 128;
 
-  let posX = 150;
-  let posY = 50;
+  /** Punto (cursor) donde aparece al montarse, p. ej. al soltarlo fuera del Hábitat. */
+  export let spawnAt: { x: number; y: number } | null = null;
+
+  let posX = spawnAt ? clampSpawn(spawnAt.x, window.innerWidth) : 150;
+  let posY = spawnAt ? clampSpawn(spawnAt.y, window.innerHeight) : 50;
+  function clampSpawn(cursor: number, max: number): number {
+    return Math.min(Math.max(0, cursor - PET_SIZE / 2), Math.max(0, max - PET_SIZE));
+  }
   let direction = 1; // 1: derecha, -1: izquierda
   let isDragging = false;
   let dragStartX = 0;
@@ -294,10 +300,9 @@
         play('happy');
         showParticle('❤️', 2500);
         squash(1.15, 0.85, 200);
-        bubble = '¡Mmmm, qué rico! 🥰❤️';
+        speak('¡Mmmm, qué rico! 🥰❤️', { durationMs: 2800, key: 'petting', maxWaitMs: 3000 });
         setTimeout(() => {
           isPetting = false;
-          if (bubble.startsWith('¡Mmmm')) bubble = '';
         }, 2800);
       }
     }
@@ -367,10 +372,7 @@
       play('celebrate');
       showParticle('🎉✨', 2500);
       squash(1.2, 0.8, 150);
-      bubble = '¡Eso es! ¡Choca esos cinco! 🐾💥';
-      setTimeout(() => {
-        if (bubble.startsWith('¡Eso es!')) bubble = '';
-      }, 3500);
+      speak('¡Eso es! ¡Choca esos cinco! 🐾💥', { durationMs: 3500, key: 'high-five-done', maxWaitMs: 3000 });
       return;
     }
 
@@ -530,23 +532,18 @@
 
     if (eventType === 'work_start') {
       controller.stop();
-      bubble = '💼 ¡A trabajar! Estaré a tu lado en silencio.';
+      speak('💼 ¡A trabajar! Estaré a tu lado en silencio.', { durationMs: 6000, maxWaitMs: 20_000 });
     } else if (eventType === 'work_finish') {
       play('celebrate');
-      bubble = '🎉 ¡Buen trabajo! Tómate una pausa y bebe agua 💧';
+      speak('🎉 ¡Buen trabajo! Tómate una pausa y bebe agua 💧', { durationMs: 6000, maxWaitMs: 20_000 });
     } else if (eventType === 'break_finish') {
       play('wake');
-      bubble = '⚡ ¡Descanso listo! ¿Volvemos al foco?';
+      speak('⚡ ¡Descanso listo! ¿Volvemos al foco?', { durationMs: 6000, maxWaitMs: 20_000 });
     }
-
-    setTimeout(() => {
-      if (bubble.startsWith('💼') || bubble.startsWith('🎉') || bubble.startsWith('⚡')) {
-        bubble = '';
-      }
-    }, 6000);
   }
 
   onMount(() => {
+    setPetOnScreen(true);
     // Inicializar loop de animación
     animRafId = requestAnimationFrame(renderLoop);
 
@@ -633,11 +630,12 @@
           if (ctx.category !== currentAppCategory) {
             currentAppCategory = ctx.category;
             if (ctx.category !== 'generic') {
-              bubble = `${ctx.accessoryIcon} ${ctx.reactionComment}`;
-              play('talk');
-              setTimeout(() => {
-                if (bubble.startsWith(ctx.accessoryIcon)) bubble = '';
-              }, 4500);
+              speak(`${ctx.accessoryIcon} ${ctx.reactionComment}`, {
+                priority: 'low',
+                durationMs: 4500,
+                key: 'app-context',
+                onShow: () => play('talk'),
+              });
             }
           }
         }
@@ -652,12 +650,9 @@
         behaviorEngine.startHighFive();
         play('happy');
         squash(1.15, 0.85, 180);
-        bubble = '¡Choca esos cinco! Haz clic en mi patita 🐾✋';
+        speak('¡Choca esos cinco! Haz clic en mi patita 🐾✋', { priority: 'low', durationMs: 6000, key: 'high-five-offer' });
         setTimeout(() => {
-          if (isHighFiveWaiting) {
-            isHighFiveWaiting = false;
-            if (bubble.includes('Choca esos cinco')) bubble = '';
-          }
+          if (isHighFiveWaiting) isHighFiveWaiting = false;
         }, 6000);
         return;
       }
@@ -762,7 +757,7 @@
 
     // Motor de pensamientos frecuentes (Barks contextuales) cada ~65s
     barkInterval = setInterval(() => {
-      if (isSleeping || isDragging || isHighFiveWaiting || bubble) return;
+      if (isSleeping || isDragging || isHighFiveWaiting || speechBusy()) return;
       const now = performance.now();
       const ctx = {
         appCategory: currentAppCategory,
@@ -776,19 +771,14 @@
         petName: pet?.nickname || pet?.species?.name,
       };
       const text = barksEngine.generateBark(ctx);
-      if (text) {
-        bubble = text;
-        play('talk');
-        setTimeout(() => {
-          if (bubble === text) bubble = '';
-        }, 6500);
-      }
+      if (text) speak(text, { priority: 'low', durationMs: 6500, onShow: () => play('talk') });
     }, 65000);
   });
 
   onDestroy(() => {
     // Fuera del escritorio (p. ej. en su casita) no hay app en foco ni postura que contar
     deskState.set({ appCategory: null, pose: 'walking' });
+    setPetOnScreen(false);
     if (typeof document !== 'undefined') delete document.body.dataset.petOverPanel;
     if (animRafId !== null) cancelAnimationFrame(animRafId);
     clearInterval(moveInterval);
@@ -835,8 +825,7 @@
     isDragOverPet = false;
     const canAnalyze = isSkillActive('file_analyzer', $skillAuthorizations, petBonding, petIntelligence);
     if (!canAnalyze) {
-      bubble = '📄 Activa la habilidad "Analizador de Archivos" para que pueda leerlo.';
-      setTimeout(() => (bubble = ''), 5000);
+      speak('📄 Activa la habilidad "Analizador de Archivos" para que pueda leerlo.', { key: 'file-analyzer-off', maxWaitMs: 5000 });
       return;
     }
 
@@ -845,7 +834,7 @@
       const analyzed = await analyzeDroppedFile(rawFile);
       play('surprised');
       play('happy');
-      bubble = `¡Atrapé ${analyzed.name}! 📄 ¿Qué quieres saber?`;
+      speak(`¡Atrapé ${analyzed.name}! 📄 ¿Qué quieres saber?`, { maxWaitMs: 5000 });
       window.dispatchEvent(new CustomEvent('petai:file_dropped', { detail: analyzed }));
     }
   }}
@@ -886,8 +875,10 @@
   <!-- Texto ambiental, bocadillo, nombre y partículas: sin girar ni rotar -->
   <EnvironmentalOverlay environmental={environmental} part="caption" />
 
-  {#if bubble}
-    <div class="speech" class:below={posY < 110}>{bubble}</div>
+  {#if $currentSpeech}
+    {#key $currentSpeech.id}
+      <div class="speech" class:below={posY < 110} role="status" aria-live="polite">{$currentSpeech.text}</div>
+    {/key}
   {/if}
 
   {#if isHighFiveWaiting}
@@ -1038,6 +1029,24 @@
     box-shadow: var(--shadow-3);
     pointer-events: none;
     z-index: 60;
+    animation: speechIn 180ms ease-out;
+  }
+
+  @keyframes speechIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .speech {
+      animation: none;
+    }
   }
 
   .speech.below {
