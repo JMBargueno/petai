@@ -84,6 +84,20 @@ export interface NavLink {
 
         <div class="header-end">
           <span class="header-end__lang"><ng-container *ngTemplateOutlet="lang" /></span>
+          <a
+            class="contact-link btn btn--sm"
+            [href]="'/' + locale() + '/contact'"
+            [attr.aria-current]="contactCurrent() ? 'page' : null"
+            aria-label="Contacto"
+            i18n-aria-label="@@footer.contact"
+            title="Contacto"
+            i18n-title="@@footer.contact"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="m4 7 8 6 8-6" />
+            </svg>
+          </a>
           <a class="btn btn--filled btn--sm" [href]="cta().href">{{ cta().label }}</a>
         </div>
       </div>
@@ -136,6 +150,26 @@ export interface NavLink {
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    /* Contacto: botón cuadrado solo con el icono de correo (nombre accesible en aria-label). */
+    .contact-link {
+      inline-size: 36px;
+      padding: 0;
+    }
+    /* En la propia página de contacto: resaltado como la página actual del menú. */
+    .contact-link[aria-current='page'] {
+      border-color: transparent;
+      background: var(--ink);
+      color: var(--bg);
+    }
+    .contact-link svg {
+      inline-size: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .menu-button {
@@ -335,6 +369,8 @@ export class SiteHeader {
   /** Otras páginas del sitio (Inicio, Mundo…), en un grupo aparte. */
   readonly pages = input<NavLink[]>([]);
   readonly cta = input.required<NavLink>();
+  /** Estamos en /contact: el icono de correo se marca como página actual. */
+  readonly contactCurrent = input(false);
   readonly home = input.required<string>();
   readonly homeLabel = input.required<string>();
   readonly navLabel = input.required<string>();

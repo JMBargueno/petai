@@ -21,6 +21,7 @@ type Status = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 'invalid';
   template: `
     <app-site-header
       [pages]="pages"
+      [contactCurrent]="true"
       [cta]="cta"
       [home]="home"
       [homeLabel]="homeLabel"
@@ -38,6 +39,16 @@ type Status = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 'invalid';
             <p class="lead" i18n="@@contact.lead">
               ¿Dudas, ideas, un fallo o tu pockai hace cosas raras? Cuéntanoslo y te responderemos por correo.
             </p>
+            <aside class="contact__faq">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01" />
+              </svg>
+              <p>
+                <strong i18n="@@contact.faq.title">¿Antes de escribir?</strong>
+                <span i18n="@@contact.faq.text">Puede que tu duda ya esté resuelta en nuestras <a class="link" [href]="faqHref">preguntas frecuentes</a>.</span>
+              </p>
+            </aside>
             <p class="contact__direct">
               <span i18n="@@contact.direct">También puedes escribir directamente a</span>
               <a class="link" [href]="'mailto:' + email">{{ email }}</a>
@@ -132,6 +143,30 @@ type Status = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 'invalid';
     .contact__intro .lead {
       margin: 0;
     }
+    .contact__faq {
+      display: flex;
+      gap: 12px;
+      align-items: start;
+      padding: 14px 16px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius-cards);
+      background: var(--surface-2);
+    }
+    .contact__faq svg {
+      flex: none;
+      inline-size: 22px;
+      margin-block-start: 1px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .contact__faq p {
+      margin: 0;
+      display: grid;
+      gap: 2px;
+    }
     .contact__direct {
       margin: 0;
       display: flex;
@@ -185,6 +220,7 @@ export class Contact {
   protected readonly locale = inject(LOCALE_ID).slice(0, 2);
   protected readonly home = `/${this.locale}/`;
   protected readonly email = CONTACT_EMAIL;
+  protected readonly faqHref = `${this.home}#faq`;
   protected readonly pages = navPages(this.locale);
   protected readonly cta: NavLink = { href: `${this.home}#descargar`, label: $localize`:@@nav.cta:Descargar` };
   protected readonly homeLabel = $localize`:@@nav.home:Pockai, inicio`;

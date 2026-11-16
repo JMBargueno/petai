@@ -1,16 +1,13 @@
 import {
   ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  ElementRef,
-  LOCALE_ID,
-  afterNextRender,
-  inject,
-  viewChild,
+  Component,
+  LOCALE_ID,
+  inject,
 } from '@angular/core';
 import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
+import { SectionToc } from '../shared/layout/section-toc';
 import { SeoService } from '../shared/seo/seo.service';
 import { Sticker } from '../shared/ui/sticker';
 import { OG_IMAGE, SITE_NAME, SITE_URL, pageUrl } from '../site.config';
@@ -27,9 +24,10 @@ import { Glossary } from './sections/glossary';
 
 @Component({
   selector: 'app-lore',
-  imports: [SiteHeader, SiteFooter, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Colosseum, Nexus, Glossary],
+  imports: [SiteHeader, SiteFooter, SectionToc, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Colosseum, Nexus, Glossary],
   template: `
     <app-site-header
+      [links]="navLinks"
       [pages]="navPages"
       [cta]="navCta"
       [home]="home"
@@ -62,14 +60,8 @@ import { Glossary } from './sections/glossary';
         </div>
       </section>
 
-      <!-- Índice: se queda fijo bajo la cabecera y marca la sección visible (guía scrollspy). -->
-      <nav #toc class="toc" aria-label="Secciones" i18n-aria-label="@@lore.nav.label">
-        <ul class="toc__list">
-          @for (s of sections; track s.id) {
-            <li><a class="toc__link" [href]="'#' + s.id">{{ s.label }}</a></li>
-          }
-        </ul>
-      </nav>
+      <!-- Índice flotante: fijo bajo la cabecera y marca la sección visible. -->
+      <app-section-toc [sections]="sections" />
 
       <app-origin />
       <app-promise-section />
@@ -103,7 +95,6 @@ export class Lore {
   protected readonly homeLabel = $localize`:@@lore.nav.home:Pockai, volver al inicio`;
   protected readonly navLabel = $localize`:@@nav.label:Principal`;
   protected readonly navCta: NavLink = { href: this.download, label: $localize`:@@nav.cta:Descargar` };
-  /** La página del lore no repite las anclas de la home: su índice propio va bajo el hero. */
   protected readonly navPages = navPages(this.locale, 'lore');
 
   protected readonly sections = [
@@ -118,39 +109,14 @@ export class Lore {
     { id: 'diccionario', label: $localize`:@@lore.nav.gloss:Diccionario` },
   ];
 
-  private readonly toc = viewChild.required<ElementRef<HTMLElement>>('toc');
+  /** Anclas principales en la cabecera; el índice completo de secciones va bajo el hero. */
+  protected readonly navLinks: NavLink[] = ['origen', 'elementos', 'ciclo', 'coliseo'].map((id) => {
+    const { label } = this.sections.find((s) => s.id === id)!;
+    return { href: `#${id}`, label };
+  });
 
   constructor() {
     this.setHead(inject(SeoService));
-
-    const destroyRef = inject(DestroyRef);
-    afterNextRender(() => {
-      const nav = this.toc().nativeElement;
-      const list = nav.querySelector('ul')!;
-      const links = [...nav.querySelectorAll<HTMLAnchorElement>('a')];
-      const setCurrent = (id: string | null) => {
-        for (const link of links) {
-          const on = link.hash === `#${id}`;
-          link.classList.toggle('target-current', on);
-          if (on) {
-            link.setAttribute('aria-current', 'true');
-            // Mantener visible el chip activo en el índice desplazable (sin mover la página).
-            list.scrollTo({ left: link.offsetLeft - list.clientWidth / 2 + link.offsetWidth / 2, behavior: 'smooth' });
-          } else link.removeAttribute('aria-current');
-        }
-      };
-      const observer = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) if (entry.isIntersecting) setCurrent(entry.target.id);
-        },
-        { rootMargin: '-45% 0px -50% 0px' },
-      );
-      for (const s of this.sections) {
-        const el = document.getElementById(s.id);
-        if (el) observer.observe(el);
-      }
-      destroyRef.onDestroy(() => observer.disconnect());
-    });
   }
 
   /** Metadatos por idioma; en el prerender quedan en el HTML estático de /lore. */

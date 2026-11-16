@@ -46,6 +46,16 @@ describe('Contact', () => {
     );
   });
 
+  it('antes del formulario remite a las preguntas frecuentes', async () => {
+    const el: HTMLElement = (await render()).nativeElement;
+    expect(el.querySelector('.contact__faq a')?.getAttribute('href')).toBe('/es/#faq');
+  });
+
+  it('resalta el icono de contacto de la cabecera como página actual', async () => {
+    const el: HTMLElement = (await render()).nativeElement;
+    expect(el.querySelector('.contact-link')?.getAttribute('aria-current')).toBe('page');
+  });
+
   it('envía el formulario al backend y muestra la confirmación', async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
     const fixture = await render();

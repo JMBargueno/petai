@@ -18,6 +18,10 @@
     accent-color: var(--accent);
     scrollbar-color: color-mix(in srgb, var(--ink) 35%, transparent) transparent;
   }
+  /* Con índice flotante de secciones bajo la cabecera, las anclas no quedan tapadas por él. */
+  html:has(.toc) {
+    scroll-padding-top: calc(var(--header-h) + 72px);
+  }
 
   body {
     margin: 0;
