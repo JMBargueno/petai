@@ -13,6 +13,7 @@
   import HabitatTab from './HabitatTab.svelte';
   import DesktopSkillsPanel from './DesktopSkillsPanel.svelte';
   import PetMiniAvatar from './PetMiniAvatar.svelte';
+  import { startHabitatExitDrag } from '../lib/habitatExitDrag';
 import RaidTab from './RaidTab.svelte';
 import TournamentTab from './TournamentTab.svelte';
 import TrainingTab from './TrainingTab.svelte';
@@ -248,10 +249,9 @@ import VisitTab from './VisitTab.svelte';
     }
   }
 
-  function handleDragStartFromPanel(e: DragEvent) {
-    if (!e.dataTransfer) return;
-    e.dataTransfer.setData('application/petai-pet', 'exit-habitat');
-    e.dataTransfer.effectAllowed = 'move';
+  function handleExitDragStart(e: MouseEvent) {
+    const host = e.currentTarget as HTMLElement;
+    startHabitatExitDrag(e, host.querySelector<HTMLElement>('.pet-mini-avatar'));
   }
 
   async function handlePanelDrop(e: DragEvent) {
@@ -472,8 +472,7 @@ import VisitTab from './VisitTab.svelte';
                     class:asleep={pet.sleeping}
                     role="button"
                     tabindex="0"
-                    draggable="true"
-                    on:dragstart={handleDragStartFromPanel}
+                    on:mousedown={handleExitDragStart}
                     on:keydown={(e) => e.key === 'Enter' && handleToggleHabitat(false)}
                     aria-label="Casa de {pet.nickname || pet.species?.name}. Arrastra hacia el escritorio o pulsa Enter para sacarlo"
                     title="Arrastra hacia el escritorio o pulsa Enter para sacar a {pet.nickname || pet.species?.name}"

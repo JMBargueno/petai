@@ -3,6 +3,7 @@
   import { api, getAccessToken, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
+  import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
   import { initSummonShortcut } from './lib/summonShortcut';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
   import { speak, clearSpeech, type SpeakOptions } from './lib/speech-queue';
@@ -445,16 +446,23 @@
     }
   }
 
-  async function handleViewportDrop(e: DragEvent) {
-    const data = e.dataTransfer?.getData('application/petai-pet');
-    if (data === 'exit-habitat' && currentPet && currentPet.inHabitat) {
+  // Punto donde se soltó al sacarlo del Hábitat: PetView aparece ahí al montarse
+  let petSpawnAt: { x: number; y: number } | null = null;
+  // Al volver a casa (por cualquier vía) se olvida: la próxima salida con «Sacar» usa la posición por defecto
+  $: if (currentPet?.inHabitat === true) petSpawnAt = null;
+
+  async function handleExitHabitat(e: Event) {
+    const ce = e as CustomEvent<ExitHabitatDetail>;
+    if (currentPet && currentPet.inHabitat) {
       try {
+        petSpawnAt = ce.detail ?? null;
         const updated = await api.setPetInHabitat(currentPet.id, false);
         currentPet = updated;
         const idx = pets.findIndex((p) => p.id === currentPet.id);
         if (idx !== -1) pets[idx] = updated;
         showBubble('¡De vuelta a explorar el escritorio!');
       } catch (err: any) {
+        petSpawnAt = null;
         console.error('Error sacando del hábitat:', err);
       }
     }
@@ -463,6 +471,7 @@
   onMount(() => {
     window.addEventListener('petai:file_dropped', handleFileDropped);
     window.addEventListener('petai:move_to_habitat', handleMoveToHabitat);
+    window.addEventListener(EXIT_HABITAT_EVENT, handleExitHabitat);
     stopClickThrough = startClickThrough();
     // Refresh token rechazado (caducado o revocado): vuelta a la pantalla de acceso
     stopSessionExpired = onSessionExpired(() => {
@@ -486,6 +495,7 @@
     if (ballRaf) cancelAnimationFrame(ballRaf);
     window.removeEventListener('petai:file_dropped', handleFileDropped);
     window.removeEventListener('petai:move_to_habitat', handleMoveToHabitat);
+    window.removeEventListener(EXIT_HABITAT_EVENT, handleExitHabitat);
     clearInterval(needsPoll);
     clearSpeech();
     stopHeartbeat();
@@ -502,7 +512,6 @@
 <main
   class="app-viewport"
   on:dragover|preventDefault
-  on:drop={handleViewportDrop}
 >
   {#if !updateLocked}
   <!-- Botón flotante para alternar panel de control -->
@@ -547,6 +556,7 @@
     <PetView
       bind:this={petViewRef}
       pet={currentPet}
+      spawnAt={petSpawnAt}
       environmental={environmental}
       visitors={$visitorsStore}
       ball={showBall ? ballState : null}
