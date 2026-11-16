@@ -44,6 +44,7 @@ import { ReengagementModule } from './modules/reengagement/reengagement.module';
 import { AiRouterModule } from './modules/ai-router/ai-router.module';
 import { VoiceModule } from './modules/voice/voice.module';
 import { PresenceModule } from './modules/presence/presence.module';
+import { ClansModule } from './modules/clans/clans.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { SpectatorModule } from './modules/spectator/spectator.module';
 import { BuddiesModule } from './modules/buddies/buddies.module';
@@ -109,6 +110,7 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     AiRouterModule,
     VoiceModule,
     PresenceModule,
+    ClansModule,
     SyncModule,
     SpectatorModule,
     // Feature 029-033:

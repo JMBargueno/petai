@@ -24,6 +24,9 @@
   import { PawPrint, Bell, X } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
+  import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
+  import { pushClanMessage, upsertClanGoal } from './lib/clan-store';
+  import type { HabitatVisitor, ClanMessage, ClanGoal } from './lib/api';
   import { updateState, startAutoCheck, checkForUpdates } from './lib/updater';
 
   let user: any = null;
@@ -206,6 +209,34 @@
           notifyNow('Te han retado en la arena', text);
         });
 
+        // Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía.
+        socket.on('habitat:visitor_joined', (v: HabitatVisitor | null) => {
+          if (!v?.visitorId) return;
+          visitorJoined(v);
+          // Reacción reutilizando la acción del backend `friend_visit` (ya existe en eventMap)
+          if (currentPet) reactToAction(currentPet.id, 'friend_visit', { visitorName: v.visitorName });
+        });
+        socket.on('habitat:visitor_left', (ev: { visitorId?: string } | null) => {
+          if (ev?.visitorId) visitorLeft(ev.visitorId);
+        });
+        // Estado inicial: quién visita ahora mismo (por si la app arrancó con visitas en curso)
+        api.getHabitatVisitors()
+          .then((r) => setVisitors(r?.visitors ?? []))
+          .catch(() => {/* sin conexión o endpoint aún no disponible: se reintenta con los eventos */});
+
+        // Chat y objetivos de clan (feature 021): se reflejan en vivo en la pestaña de clanes.
+        socket.on('clan:message', (m: ClanMessage | null) => {
+          if (m?.id && m?.clanId) pushClanMessage(m);
+        });
+        socket.on('clan:goal_progress', (g: ClanGoal | null) => {
+          if (g?.id && g?.clanId) upsertClanGoal(g);
+        });
+        socket.on('clan:goal_completed', (g: ClanGoal | null) => {
+          if (!g?.id || !g?.clanId) return;
+          upsertClanGoal(g);
+          notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`);
+        });
+
         // Bienvenida: si el jugador vuelve tras una ausencia, el backend emite `pet:action
         // welcome_back`. Se pide una vez por sesión, con el socket ya conectado para recibirlo.
         if (socket.connected) checkWelcomeBack();
@@ -287,6 +318,7 @@
     eggs = [];
     inventory = [];
     environmental = null;
+    clearVisitors();
   }
 
   // ---------- Ambiental (feature 005) ----------
@@ -501,6 +533,7 @@
       pet={currentPet}
       bubble={bubbleText}
       environmental={environmental}
+      visitors={$visitorsStore}
       ball={showBall ? ballState : null}
       onBallKick={handleBallKick}
       onPetClick={() => (isPanelOpen = true)}

@@ -12,12 +12,15 @@ import { socketCorsOrigin } from '../../common/cors';
 import { MetricsService } from '../../observability/metrics.service';
 import { startSpanFromRemoteTrace } from '../../observability/otel-context';
 import { SPAN_HEADER, TRACE_HEADER } from '../../observability/otel.constants';
+import { PresenceService } from '../presence/presence.service';
 import type { PetAction, PetActionEvent } from './pet-action';
 
 /** Conexiones simultáneas por usuario; al superarlas se cierran las más antiguas. */
 const MAX_SOCKETS_PER_USER = 5;
 /** setTimeout no admite esperas mayores (≈24,8 días). */
 const MAX_TIMER_MS = 2 ** 31 - 1;
+/** Cadencia del refresco de presencia para mantener el TTL de Redis vivo mientras está conectado. */
+const PRESENCE_REFRESH_MS = 30000;
 
 @WebSocketGateway({
   // Solo los orígenes de CORS_ORIGINS (no '*'); además la conexión exige un JWT válido
@@ -34,6 +37,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   private readonly connSpans = new Map<string, import('@opentelemetry/api').Span>();
   /** Instante de conexión por socket, para medir la duración del stream (métrica SSE, gap G5). */
   private readonly connStart = new Map<string, number>();
+  /** Registro de presencia por socket: userId (del JWT) y deviceId para el heartbeat de Redis. */
+  private readonly presenceRecords = new Map<string, { userId: string; deviceId: string }>();
+  /** Interval de refresco de presencia por socket (mantiene el TTL de Redis vivo). */
+  private readonly presenceRefresh = new Map<string, NodeJS.Timeout>();
 
   @WebSocketServer()
   server: Server;
@@ -42,6 +49,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly metrics: MetricsService,
+    private readonly presence: PresenceService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -70,6 +78,23 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
 
       await client.join(room);
+
+      // Presencia multi-réplica: el gateway es la fuente de heartbeats de PresenceService (Redis).
+      // deviceId/platform vienen del handshake (auth) o del header `x-platform`; si no hay deviceId
+      // se usa el id de socket. Se envía un heartbeat inicial y se refresca cada 30s mientras el
+      // socket sigue conectado para mantener el TTL de 90s vivo en Redis.
+      const deviceId = (client.handshake.auth?.deviceId as string) || client.id;
+      const platform =
+        (client.handshake.auth?.platform as string) ||
+        (client.handshake.headers?.['x-platform'] as string) ||
+        'unknown';
+      this.presenceRecords.set(client.id, { userId: payload.sub, deviceId });
+      await this.presence.heartbeat(payload.sub, deviceId, platform);
+      const refresh = setInterval(() => {
+        void this.presence.heartbeat(payload.sub, deviceId, platform);
+      }, PRESENCE_REFRESH_MS);
+      refresh.unref?.();
+      this.presenceRefresh.set(client.id, refresh);
 
       // Correlación de trace (US3): el cliente puede enviar `x-trace-id`/`x-span-id` en el
       // handshake para enlazar el flujo REST → WebSocket. Si no hay, se abre un nuevo trace.
@@ -100,6 +125,17 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   handleDisconnect(client: Socket) {
+    // Limpieza de presencia: se detiene el refresco y se retira el dispositivo de Redis.
+    const record = this.presenceRecords.get(client.id);
+    if (record) {
+      const refresh = this.presenceRefresh.get(client.id);
+      if (refresh) {
+        clearInterval(refresh);
+        this.presenceRefresh.delete(client.id);
+      }
+      void this.presence.removeDevice(record.userId, record.deviceId);
+      this.presenceRecords.delete(client.id);
+    }
     const timer = this.expiry.get(client.id);
     if (timer) {
       clearTimeout(timer);

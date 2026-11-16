@@ -1,6 +1,8 @@
 package com.petai.app.ui.coop
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -60,11 +64,21 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
     var msg by remember { mutableStateOf<String?>(null) }
     var email by remember { mutableStateOf("") }
     var sel by rememberSaveable { mutableIntStateOf(0) }
+    /** Presencia por amigo (userId -> en línea), vía GET /presence. */
+    var presence by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    /** Dueño del hábitat que ahora mismo estoy visitando en vivo (para alternar Iniciar/Terminar). */
+    var visitingOwner by remember { mutableStateOf<String?>(null) }
 
     suspend fun load() {
         loading = true
         runCatching { friends = service.coopFriends(); visits = service.coopHistory().visits }
             .onFailure { msg = "Error: ${it.message}" }
+        // La presencia es privada: solo se consulta a los amigos aceptados.
+        runCatching {
+            presence = service.coopFriends()
+                .filter { it.status == "accepted" }
+                .associate { f -> f.otherUserId to service.getPresence(f.otherUserId).hasActiveDevices }
+        }
         loading = false
     }
 
@@ -105,9 +119,13 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
             msg?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = PockaiTheme.colors.accentInk) }
             Spacer(Modifier.height(8.dp))
             when (sel) {
-                0 -> FriendsSection(friends.filter { it.status == "accepted" }, busy) { f, a ->
-                    act("Visita hecha.") { service.coopVisit(f.otherUserId, f.otherPet!!.petId, a) }
-                }
+                0 -> FriendsSection(friends.filter { it.status == "accepted" }, presence, visitingOwner, busy,
+                    onVisit = { f, a -> act("Visita hecha.") { service.coopVisit(f.otherUserId, f.otherPet!!.petId, a) } },
+                    onStartVisit = { f ->
+                        act("Visitando en vivo.") { service.startHabitatVisit(f.otherUserId) }; visitingOwner = f.otherUserId
+                    }, onEndVisit = { f ->
+                        act("Visita terminada.") { service.endHabitatVisit() }; visitingOwner = null
+                    })
                 1 -> RequestsSection(friends.filter { it.status == "pending" }, busy,
                     onAccept = { f -> act("Amistad aceptada.") { service.acceptCoopFriend(f.id) } },
                     onDecline = { f -> act("Petición rechazada.") { service.declineCoopFriend(f.id) } })
@@ -119,12 +137,22 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
 }
 
 @Composable
-private fun FriendsSection(friends: List<CoopFriend>, busy: Boolean, onVisit: (CoopFriend, String) -> Unit) {
+private fun FriendsSection(
+    friends: List<CoopFriend>,
+    presence: Map<String, Boolean>,
+    visitingOwner: String?,
+    busy: Boolean,
+    onVisit: (CoopFriend, String) -> Unit,
+    onStartVisit: (CoopFriend) -> Unit,
+    onEndVisit: (CoopFriend) -> Unit,
+) {
     if (friends.isEmpty()) { Empty("Aún no tienes amigos aceptados. Solicita una amistad arriba."); return }
     friends.forEach { f ->
         PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
             Column(Modifier.padding(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    PresenceDot(online = presence[f.otherUserId] == true)
+                    Spacer(Modifier.size(8.dp))
                     Text(f.otherDisplayName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                     com.petai.app.ui.theme.Tag("Amigo", color = com.petai.app.ui.theme.Brand.MintPop)
                 }
@@ -138,6 +166,12 @@ private fun FriendsSection(friends: List<CoopFriend>, busy: Boolean, onVisit: (C
                         SecondaryButton("Jugar", { onVisit(f, "play") }, Modifier.weight(1f), !busy, Lucide.Gamepad2)
                         SecondaryButton("Limpiar", { onVisit(f, "clean") }, Modifier.weight(1f), !busy, Lucide.Bath)
                     }
+                    Spacer(Modifier.height(8.dp))
+                    if (visitingOwner == f.otherUserId) {
+                        PrimaryButton("Terminar visita", { onEndVisit(f) }, enabled = !busy, icon = Lucide.LogOut)
+                    } else {
+                        SecondaryButton("Iniciar visita en vivo", { onStartVisit(f) }, enabled = !busy, icon = Lucide.Users)
+                    }
                 } else {
                     Text("Tu amigo aún no tiene un pet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -145,6 +179,12 @@ private fun FriendsSection(friends: List<CoopFriend>, busy: Boolean, onVisit: (C
         }
         Spacer(Modifier.height(8.dp))
     }
+}
+
+@Composable
+private fun PresenceDot(online: Boolean) {
+    val color = if (online) PockaiTheme.colors.success else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    Box(Modifier.size(9.dp).background(color, CircleShape)) { }
 }
 
 @Composable

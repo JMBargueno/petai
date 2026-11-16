@@ -9,8 +9,8 @@ import { PresenceService } from './presence.service';
  */
 describe('PresenceController.getPresence (S-15)', () => {
   const presenceService = {
-    getPresence: jest.fn(() => [{ platform: 'web' }]),
-    hasActiveDevices: jest.fn(() => true),
+    getPresence: jest.fn().mockResolvedValue([{ platform: 'web' }]),
+    hasActiveDevices: jest.fn().mockResolvedValue(true),
   };
   const checkFriendship = jest.fn();
   const build = () => new PresenceController(presenceService as never, { checkFriendship } as never);

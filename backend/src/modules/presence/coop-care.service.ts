@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Optional,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 
@@ -55,6 +56,7 @@ export class CoopCareService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
     @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
@@ -268,6 +270,11 @@ export class CoopCareService {
     this.logger.debug(
       `Visit: ${visitorId} → pet ${action.petId} de ${ownerId}, action=${action.action}, xp=${xpGained}`,
     );
+
+    // 5. XP compartida al clan del dueño: se emite `clan:activity` y la suma de XP (y el avance de
+    //    las metas del clan) la procesa `ClansService.onClanActivity`. Así la XP no se contabiliza
+    //    en dos sitios y la visita nunca depende de un fallo de clan.
+    this.events.emit('clan:activity', { userId: ownerId, xp: xpGained, visits: 1 });
 
     return { success: true, message: `Successfully ${action.action} the pet`, xpGained, petState };
   }
