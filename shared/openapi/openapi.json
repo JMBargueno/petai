@@ -8080,6 +8080,11 @@
             "description": "Si está completada",
             "example": false
           },
+          "claimed": {
+            "type": "boolean",
+            "description": "Si la recompensa ya fue reclamada",
+            "example": false
+          },
           "reward": {
             "description": "Recompensa",
             "allOf": [
@@ -8101,6 +8106,7 @@
           "target",
           "current",
           "completed",
+          "claimed",
           "reward",
           "resetsAt"
         ]
