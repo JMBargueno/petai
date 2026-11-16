@@ -110,7 +110,7 @@ export function rollBatch(random: () => number, size = BATCH): Egg[] {
         </p>
 
         <!-- Patrones -->
-        <h3 class="label-caps patterns__title" i18n="@@rar.patterns">Patrones</h3>
+        <h3 id="patrones" class="label-caps patterns__title" i18n="@@rar.patterns">Patrones</h3>
         <ul class="patterns">
           @for (p of patterns; track p.id) {
             <li class="pattern reveal">

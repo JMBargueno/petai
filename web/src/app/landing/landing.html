@@ -62,6 +62,8 @@
     </div>
   </section>
 
+  <app-section-toc [sections]="sections" />
+
   <app-marquee [text]="marquee" />
 
   <app-how-it-works />
@@ -164,6 +166,10 @@
       <div class="section-head faq__head">
         <h2 class="display section-title section-title--sm reveal" i18n="@@faq.title">Preguntas</h2>
         <p class="lead" i18n="@@faq.lead">Lo que más nos preguntan antes de eclosionar el primer huevo.</p>
+        <div class="faq__contact">
+          <p i18n="@@faq.contact.prompt">¿No encuentras tu respuesta?</p>
+          <a class="btn btn--filled" [href]="contactHref" i18n="@@faq.contact.cta">Escríbenos</a>
+        </div>
       </div>
       <div class="faq__list">
         @for (item of faq; track item.q) {

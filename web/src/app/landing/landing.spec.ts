@@ -40,6 +40,13 @@ describe('Landing', () => {
     expect(pages).toEqual(['/es/', '/es/pockais', '/es/arena', '/es/lore']);
   });
 
+  it('el FAQ remite al formulario de contacto', async () => {
+    const fixture = TestBed.createComponent(Landing);
+    await fixture.whenStable();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('#faq .faq__contact a')?.getAttribute('href')).toBe('/es/contact');
+  });
+
   it('no enlaza el panel de administración', async () => {
     const fixture = TestBed.createComponent(Landing);
     await fixture.whenStable();
