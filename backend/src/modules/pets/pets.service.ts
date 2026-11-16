@@ -476,15 +476,19 @@ export class PetsService {
       file_analyzer: { bonding: 30, intelligence: 3 },
     };
 
-    const petBonding = pet.bonding ?? 0;
-    const petIntelligence = pet.intelligence ?? 1;
+    const petBonding = typeof pet.bonding === 'number' ? pet.bonding : 0;
+    const petIntelligence = typeof pet.intelligence === 'number' ? pet.intelligence : 0;
+    const petIntelligenceLevel =
+      petIntelligence >= 500 || petIntelligence === 3 ? 3 : petIntelligence >= 200 || petIntelligence === 2 ? 2 : 1;
 
     for (const [skillId, enabled] of Object.entries(skills)) {
       if (enabled && SKILL_REQUIREMENTS[skillId]) {
         const req = SKILL_REQUIREMENTS[skillId];
-        if (petBonding < req.bonding || petIntelligence < req.intelligence) {
+        if (petBonding < req.bonding || petIntelligenceLevel < req.intelligence) {
+          const reqTier =
+            req.intelligence === 3 ? 'Agente (500 pts)' : req.intelligence === 2 ? 'Memoria (200 pts)' : 'Charla';
           throw new BadRequestException(
-            `No cumples los requisitos para activar "${skillId}" (Vínculo: ${req.bonding}, Inteligencia: ${req.intelligence})`,
+            `No cumples los requisitos para activar "${skillId}" (Vínculo requerido: ${req.bonding} pts, IA requerida: ${reqTier})`,
           );
         }
       }

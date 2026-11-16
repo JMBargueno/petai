@@ -10,7 +10,7 @@
   import type { Reaction } from '../lib/animation/eventMap';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
   import type { EnvironmentalStatus } from '../lib/environmental';
-  import { skillAuthorizations, isSkillActive } from '../lib/stores/desktopSkillsStore';
+  import { skillAuthorizations, isSkillActive, getPetBonding } from '../lib/stores/desktopSkillsStore';
   import {
     calculateThrowVelocity,
     stepPhysics,
@@ -186,8 +186,8 @@
     }, 80);
   }
 
-  $: petBonding = pet?.bonding?.level ?? pet?.bondingLevel ?? 0;
-  $: petIntelligence = pet?.intelligence ?? 1;
+  $: petBonding = getPetBonding(pet);
+  $: petIntelligence = typeof pet?.intelligence === 'number' ? pet.intelligence : 0;
 
   let dragMoved = false;
 

@@ -82,10 +82,46 @@ export function setSkillAuthorization(skillId: string, enabled: boolean, petId?:
   });
 }
 
-export function isSkillUnlocked(skill: DesktopSkillDefinition, petBonding = 0, petIntelligence = 1): boolean {
+/** Extrae el valor numérico de vínculo (0..100) desde cualquier variante del objeto pet */
+export function getPetBonding(pet: any): number {
+  if (!pet) return 0;
+  if (typeof pet.bonding === 'number') return Math.round(pet.bonding);
+  if (typeof pet.bonding?.value === 'number') return Math.round(pet.bonding.value);
+  if (typeof pet.bonding?.level === 'number') return Math.round(pet.bonding.level);
+  if (typeof pet.bondingLevel === 'number') return Math.round(pet.bondingLevel);
+  return 0;
+}
+
+/** Convierte puntos de inteligencia (0..1000) o nivel directo (1..3) al nivel de IA (1: Charla, 2: Memoria, 3: Agente) */
+export function getPetIntelligenceLevel(pointsOrLevel = 0): number {
+  if (pointsOrLevel >= 500 || pointsOrLevel === 3) return 3;
+  if (pointsOrLevel >= 200 || pointsOrLevel === 2) return 2;
+  return 1;
+}
+
+/** Nombre legible del tier de IA según el nivel (1: Charla, 2: Memoria, 3: Agente) */
+export function getPetIntelligenceTierName(level: number): string {
+  if (level >= 3) return 'Agente';
+  if (level === 2) return 'Memoria';
+  return 'Charla';
+}
+
+/** Puntos mínimos de inteligencia recomendados para alcanzar un nivel (1 -> 0, 2 -> 200, 3 -> 500) */
+export function getPetIntelligenceRequiredPoints(level: number): number {
+  if (level >= 3) return 500;
+  if (level === 2) return 200;
+  return 0;
+}
+
+export function isSkillUnlocked(
+  skill: DesktopSkillDefinition,
+  petBonding = 0,
+  petIntelligence = 1
+): boolean {
+  const intLevel = getPetIntelligenceLevel(petIntelligence);
   return (
     petBonding >= skill.requiredBonding &&
-    petIntelligence >= skill.requiredIntelligence
+    intLevel >= skill.requiredIntelligence
   );
 }
 

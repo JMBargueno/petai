@@ -315,7 +315,18 @@
         {#if skills.length > 0}
           {@const locked = skills.filter((s) => (s.element === 'neutral' || s.element === profile.element) && s.unlockLevel > profile.level)}
           {#if locked.length}
-            <p class="muted">Próximas: {locked.map((s) => `${s.name} (nv. ${s.unlockLevel})`).join(', ')}</p>
+            <div class="sec-subtitle">Próximas habilidades por desbloquear:</div>
+            <div class="chips locked-chips">
+              {#each locked as sk}
+                <div
+                  class="chip locked-chip"
+                  title="{sk.description ? `${sk.description} — ` : ''}Requiere Nivel {sk.unlockLevel} (tienes Nivel {profile.level})"
+                >
+                  <Ico n="lock" /> {ELEMENT_ICON[sk.element] ?? '⚪'} {sk.name}
+                  <small class="req-lvl">Requiere Nv. {sk.unlockLevel}</small>
+                </div>
+              {/each}
+            </div>
           {/if}
         {/if}
       </div>
@@ -422,6 +433,17 @@
   }
   .chip small { opacity: 0.6; margin-left: 3px; }
   .chip.on { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); border-color: var(--accent); }
+  .sec-subtitle { font-size: 11.5px; color: var(--muted-ink); margin-top: 10px; margin-bottom: 2px; }
+  .locked-chip {
+    opacity: 0.6;
+    background: var(--surface-1);
+    border-style: dashed;
+    cursor: help;
+  }
+  .locked-chip .req-lvl {
+    color: var(--warning-ink);
+    font-weight: 600;
+  }
   .row-btn, .lb-row {
     display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 9px; margin-bottom: 5px; border-radius: var(--radius-2xl);
     background: var(--surface-2); border: 1px solid var(--line-soft); color: inherit; text-align: left; font-size: 13px;
