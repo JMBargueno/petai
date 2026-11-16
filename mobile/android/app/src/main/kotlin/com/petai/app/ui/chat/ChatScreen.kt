@@ -1,6 +1,9 @@
 package com.petai.app.ui.chat
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -123,20 +126,59 @@ fun ChatScreen(vm: ChatViewModel, petName: String) {
 private fun Bubble(item: ChatItem, typing: Boolean) {
     val mine = item.role == ChatRole.USER
     val notice = item.role == ChatRole.NOTICE
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
-        // Burbuja (guía §9): superficie casi opaca, contorno de 1 dp y radio 16
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = when {
-                notice -> MaterialTheme.colorScheme.tertiaryContainer
-                mine -> MaterialTheme.colorScheme.primaryContainer
-                else -> MaterialTheme.colorScheme.surface
-            },
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            modifier = Modifier.widthIn(max = 300.dp),
+    // Un solo hijo raíz: dentro de un item de LazyColumn varios hijos se superpondrían
+    Column(Modifier.fillMaxWidth()) {
+        // Razonamiento del modelo: solo llega al terminar la respuesta y se muestra plegado
+        if (item.role == ChatRole.PET && item.thinking.isNotBlank()) ThinkingBlock(item)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
+            // Burbuja (guía §9): superficie casi opaca, contorno de 1 dp y radio 16
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = when {
+                    notice -> MaterialTheme.colorScheme.tertiaryContainer
+                    mine -> MaterialTheme.colorScheme.primaryContainer
+                    else -> MaterialTheme.colorScheme.surface
+                },
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.widthIn(max = 300.dp),
+            ) {
+                val text = if (item.text.isEmpty() && typing) "…" else item.text
+                Text(text, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThinkingBlock(item: ChatItem) {
+    var open by rememberSaveable(item.id) { mutableStateOf(false) }
+    Column(Modifier.widthIn(max = 300.dp)) {
+        Row(
+            Modifier
+                .clickable(onClickLabel = if (open) "Ocultar razonamiento" else "Ver razonamiento") { open = !open }
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            val text = if (item.text.isEmpty() && typing) "…" else item.text
-            Text(text, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), style = MaterialTheme.typography.bodyLarge)
+            Icon(
+                if (open) Lucide.ChevronDown else Lucide.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                if (open) "Ocultar razonamiento" else "Ver razonamiento",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        }
+        if (open) {
+            Text(
+                item.thinking,
+                style = MaterialTheme.typography.bodySmall.copy(fontStyle = FontStyle.Italic),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp, top = 2.dp, bottom = 4.dp),
+            )
         }
     }
 }

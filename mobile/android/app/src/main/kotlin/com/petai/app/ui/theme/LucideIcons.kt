@@ -444,6 +444,12 @@ object Lucide {
             "m9 18 6-6-6-6",
         )
     }
+    val ChevronDown: ImageVector by lazy {
+        lucide(
+            "ChevronDown",
+            "m6 9 6 6 6-6",
+        )
+    }
     val LogOut: ImageVector by lazy {
         lucide(
             "LogOut",

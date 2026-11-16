@@ -1175,7 +1175,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Conversar con la mascota (streaming SSE: eventos delta, done, error) */
+        /**
+         * Conversar con la mascota (streaming SSE: eventos delta, tool, action, moderated, done, error)
+         * @description El razonamiento del modelo (reasoning_content o bloques <think>) nunca llega en los eventos delta: si existe y supera la moderación, el evento done lo incluye aparte en message.thinking (no se guarda en el historial).
+         */
         post: operations["AiController_chatStream"];
         delete?: never;
         options?: never;

@@ -24,7 +24,8 @@ import VisitTab from './VisitTab.svelte';
   import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
   import AboutPanel from './AboutPanel.svelte';
   import PockaiMark from './PockaiMark.svelte';
-  import { updateState, hasUpdate } from '../lib/updater';
+  import { updateState, updateLock, hasUpdate } from '../lib/updater';
+  import UpdateLockPanel from './UpdateLockPanel.svelte';
   import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut, AlertCircle, Home, ExternalLink, Users } from 'lucide-svelte';
 
   export let user: any = null;
@@ -339,10 +340,15 @@ import VisitTab from './VisitTab.svelte';
           </div>
         {/if}
       </div>
-      <button class="btn btn--ghost btn--icon close-btn" aria-label="Cerrar panel" on:click={() => dispatch('close')}><X size={18} /></button>
+      {#if $updateLock === null}
+        <button class="btn btn--ghost btn--icon close-btn" aria-label="Cerrar panel" on:click={() => dispatch('close')}><X size={18} /></button>
+      {/if}
     </div>
 
-    {#if !user}
+    {#if $updateLock !== null}
+      <!-- Actualización obligatoria: el panel solo muestra el bloqueo hasta que se instale -->
+      <UpdateLockPanel />
+    {:else if !user}
       <div class="auth-section">
         <div class="auth-hero">
           <div class="auth-halo"><PockaiMark size={72} /></div>
@@ -720,6 +726,15 @@ import VisitTab from './VisitTab.svelte';
     overflow: hidden;
     z-index: 100;
     pointer-events: auto;
+    transition: box-shadow 0.15s ease, outline-color 0.15s ease;
+    outline: 3px solid transparent;
+    outline-offset: -3px;
+  }
+
+  /* La mascota se está arrastrando encima: el panel (su casa) se marca como destino */
+  :global(body[data-pet-over-panel]) .panel-card {
+    outline-color: rgba(52, 211, 153, 0.85);
+    box-shadow: var(--shadow-4), 0 0 28px rgba(52, 211, 153, 0.45);
   }
 
   .panel-header {

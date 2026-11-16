@@ -251,6 +251,24 @@
     const now = performance.now();
     pointerSamples.push({ x: e.clientX, y: e.clientY, time: now });
     if (pointerSamples.length > 20) pointerSamples.shift();
+
+    // ¿Está encima del panel (la casa)? Resalta el panel y la mascota como destino
+    setOverHome(isOverPanel(e.clientX, e.clientY));
+  }
+
+  // Arrastre hacia casa: la mascota va por encima del panel mientras se arrastra, así que
+  // elementFromPoint devolvería a la propia mascota; se miran todas las capas bajo el cursor.
+  let isOverHome = false;
+  let isEnteringHome = false;
+  function isOverPanel(x: number, y: number): boolean {
+    if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
+    return document.elementsFromPoint(x, y).some((el) => !!el.closest('.panel-card'));
+  }
+  function setOverHome(over: boolean) {
+    if (over === isOverHome) return;
+    isOverHome = over;
+    if (over) document.body.dataset.petOverPanel = '1';
+    else delete document.body.dataset.petOverPanel;
   }
 
   function handlePetHoverMove(e: MouseEvent) {
@@ -282,13 +300,19 @@
     isDragging = false;
     delete document.body.dataset.dragging;
 
-    // Si se suelta sobre el panel de control (.panel-card), enviar al hábitat
-    if (e && typeof document !== 'undefined') {
-      const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
-      if (dropTarget && dropTarget.closest('.panel-card')) {
-        window.dispatchEvent(new CustomEvent('petai:move_to_habitat', { detail: { petId: pet.id } }));
-        return;
-      }
+    // Si se suelta sobre el panel de control (.panel-card), entra en casa con una
+    // pequeña animación (encoge y se desvanece) y después se envía al hábitat
+    const droppedOnHome = !!e && isOverPanel(e.clientX, e.clientY);
+    setOverHome(false);
+    if (droppedOnHome) {
+      isEnteringHome = true;
+      const petId = pet.id;
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('petai:move_to_habitat', { detail: { petId } }));
+        // Si la petición falla, la mascota sigue montada: que vuelva a verse
+        setTimeout(() => (isEnteringHome = false), 1500);
+      }, 260);
+      return;
     }
 
     const dragThrowActive = isSkillActive(
@@ -738,6 +762,7 @@
 
   onDestroy(() => {
     setPetOnScreen(false);
+    if (typeof document !== 'undefined') delete document.body.dataset.petOverPanel;
     if (animRafId !== null) cancelAnimationFrame(animRafId);
     clearInterval(moveInterval);
     clearInterval(barkInterval);
@@ -761,6 +786,8 @@
   tabindex="0"
   data-anim={currentAnim}
   class:dragging={isDragging}
+  class:over-home={isOverHome}
+  class:entering-home={isEnteringHome}
   class:drag-over={isDragOverPet}
   class:high-five-ready={isHighFiveWaiting}
   class:petting={isPetting}
@@ -872,6 +899,26 @@
 
   .pet-container.dragging {
     transition: none;
+    /* Por encima del panel de control (z-index 100) para "meterla" en casa arrastrando */
+    z-index: 200;
+  }
+
+  .pet-container.over-home .pet-body {
+    filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.95));
+  }
+
+  .pet-container.entering-home {
+    z-index: 200;
+    pointer-events: none;
+    transition: none;
+    animation: enterHome 0.26s ease-in forwards;
+  }
+
+  @keyframes enterHome {
+    to {
+      transform: scale(0.25) translateY(30px);
+      opacity: 0;
+    }
   }
 
   .pet-container.drag-over .pet-body {

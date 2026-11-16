@@ -99,7 +99,6 @@
     error = '';
     try {
       const updated = await api.setPetInHabitat(pet.id, inHabitat);
-      pet = updated;
       dispatch('petUpdated', updated);
     } catch (e: any) {
       error = e.message || 'Error al cambiar estado de hábitat';
@@ -137,7 +136,8 @@
 
   function handleDragStartFromHabitat(e: DragEvent) {
     if (e.dataTransfer) {
-      e.dataTransfer.setData('text/plain', 'petai:exit_habitat');
+      // Mismo contrato que App.handleViewportDrop y la tarjeta de Inicio
+      e.dataTransfer.setData('application/petai-pet', 'exit-habitat');
       e.dataTransfer.effectAllowed = 'move';
     }
   }

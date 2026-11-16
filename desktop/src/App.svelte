@@ -3,6 +3,7 @@
   import { api, getAccessToken, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
+  import { initSummonShortcut } from './lib/summonShortcut';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
   import { speak, clearSpeech, type SpeakOptions } from './lib/speech-queue';
   import {
@@ -20,7 +21,6 @@
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
-  import UpdateLockModal from './components/UpdateLockModal.svelte';
   import type { AnalyzedFile } from './lib/fileAnalyzer';
   import { PawPrint, Bell, X } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
@@ -28,7 +28,7 @@
   import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
   import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster } from './lib/clan-store';
   import type { HabitatVisitor, ClanMessage, ClanGoal } from './lib/api';
-  import { updateState, startAutoCheck, checkForUpdates } from './lib/updater';
+  import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
 
   let user: any = null;
   let pets: any[] = [];
@@ -50,12 +50,18 @@
     isPanelOpen = true;
   }
 
-  // Actualizaciones: la mascota avisa una sola vez por versión nueva.
+  // Actualización obligatoria: se bloquea el panel (muestra solo el aviso) y se oculta la mascota
+  // y los controles flotantes hasta que se instale. Aviso nativo una sola vez por versión.
+  $: updateLocked = $updateLock !== null;
+  $: if (updateLocked) isPanelOpen = true;
   let announcedVersion = '';
-  $: if ($updateState.status === 'available' && $updateState.version !== announcedVersion) {
-    announcedVersion = $updateState.version;
-    const text = `¡Ha salido mi versión ${announcedVersion}! Actualízame en Ajustes › Acerca de.`;
-    notifyNow('Nueva versión de Pockai', text, { key: 'update-available' });
+  $: if ($updateLock !== null && $updateLock !== announcedVersion) {
+    announcedVersion = $updateLock;
+    notifyNow(
+      'Nueva versión de Pockai',
+      `Actualiza Pockai a la versión ${announcedVersion} desde el panel para seguir jugando.`,
+      { key: 'update-available' },
+    );
   }
 
   /** Comprobación pedida desde la bandeja: la mascota cuenta el resultado. */
@@ -384,6 +390,7 @@
   let stopSessionExpired: () => void = () => {};
   let stopAutoUpdate: () => void = () => {};
   let stopTrayUpdates: () => void = () => {};
+  let stopSummonShortcut: () => void = () => {};
   let needsPoll: any = null;
 
   // Las constantes vitales solo se recalculan al consultar al servidor (tick perezoso):
@@ -465,6 +472,8 @@
     needsPoll = setInterval(pollPet, 60_000);
     loadInitialData();
     stopAutoUpdate = startAutoCheck();
+    // Atajo global de «Invocación rápida» (configurable desde Habilidades)
+    stopSummonShortcut = initSummonShortcut();
     if ('__TAURI_INTERNALS__' in window) {
       import('@tauri-apps/api/event')
         .then(({ listen }) => listen('check-updates', () => void checkUpdatesFromTray()))
@@ -484,6 +493,7 @@
     stopSessionExpired();
     stopAutoUpdate();
     stopTrayUpdates();
+    stopSummonShortcut();
     stopNotificationHandler();
     closeSocket();
   });
@@ -494,6 +504,7 @@
   on:dragover|preventDefault
   on:drop={handleViewportDrop}
 >
+  {#if !updateLocked}
   <!-- Botón flotante para alternar panel de control -->
   <button
     class="btn glass toggle-panel-pill"
@@ -543,6 +554,7 @@
       onPetClick={() => (isPanelOpen = true)}
     />
   {/if}
+  {/if}
 
   <!-- Panel de Control y Cuidados -->
   <ControlPanel
@@ -570,7 +582,7 @@
     on:logout={clearSessionState}
   />
 
-  {#if droppedFile}
+  {#if droppedFile && !updateLocked}
     <FileDropModal
       file={droppedFile}
       on:close={() => (droppedFile = null)}
@@ -582,11 +594,6 @@
         showBubble(`Examinando ${file.name} con la IA...`);
       }}
     />
-  {/if}
-
-  <!-- Modal infranqueable de actualización obligatoria -->
-  {#if $updateState.status === 'available' || $updateState.status === 'downloading' || $updateState.status === 'ready'}
-    <UpdateLockModal />
   {/if}
 </main>
 

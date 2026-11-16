@@ -20,15 +20,15 @@ import { AGENT_UNLOCK, INTELLIGENCE_MAX, MEMORY_UNLOCK, buildSystemPrompt, intel
 
 export type ChatStreamEvent =
   | { type: 'delta'; text: string }
-  /** Pensamiento del modelo: se muestra plegado en el chat, pero no se guarda ni lo dice la mascota. */
-  | { type: 'reasoning'; text: string }
   | { type: 'tool'; name: string }
   | { type: 'action'; action: { id: string; tool: string; summary: string; expiresAt: Date; clientSide: boolean } }
   | { type: 'moderated'; reason: string; message: string; hideUserMessage: boolean }
-  | { type: 'done'; message: { id: string; content: string }; intelligence: number; tier: string }
+  | { type: 'done'; message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string }
   | { type: 'error'; message: string };
 
 export const MAX_MESSAGE_CHARS = 1000;
+/** Razonamiento máximo que se devuelve al cliente (no se guarda en el historial). */
+export const MAX_THINKING_CHARS = 8000;
 const HISTORY_MESSAGES = 20;
 const HISTORY_CHAR_BUDGET = 6000;
 const RATE_LIMIT = { max: 20, windowMs: 60_000 };
@@ -335,11 +335,10 @@ export class ChatService {
     }
 
     const guard = new OutputGuard();
-    // El razonamiento también se filtra (puede citar el prompt de sistema); si se bloquea, se deja de mostrar
-    const thoughtGuard = new OutputGuard();
-    let thoughtBlocked = false;
     let tokens = 0;
     let proposed = 0;
+    // Razonamiento del modelo: va aparte de la respuesta, no se emite en streaming ni se guarda
+    let thinking = '';
     const convo = [...messages];
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -355,12 +354,8 @@ export class ChatService {
             const safe = guard.push(ev.text);
             if (safe === null) return yield* this.blockedOutput(guard);
             if (safe) yield { type: 'delta', text: safe };
-          } else if (ev.type === 'reasoning') {
-            // Fuera de la respuesta: no cuenta como texto de la mascota ni se persiste
-            if (thoughtBlocked) continue;
-            const safe = thoughtGuard.push(ev.text);
-            if (safe === null) thoughtBlocked = true;
-            else if (safe) yield { type: 'reasoning', text: safe };
+          } else if (ev.type === 'thinking') {
+            if (thinking.length < MAX_THINKING_CHARS) thinking += ev.text;
           } else if (ev.type === 'tool_call') {
             calls.push({ id: ev.id, name: ev.name, arguments: ev.arguments });
           } else if (ev.type === 'done') {
@@ -380,11 +375,6 @@ export class ChatService {
           }
           convo.push({ role: 'tool', toolCallId: call.id, content: outcome.content });
         }
-      }
-
-      if (!thoughtBlocked) {
-        const thought = thoughtGuard.flush();
-        if (thought) yield { type: 'reasoning', text: thought };
       }
 
       const rest = guard.flush();
@@ -411,7 +401,7 @@ export class ChatService {
 
       yield {
         type: 'done',
-        message: { id: saved.id, content: reply },
+        message: { id: saved.id, content: reply, ...this.visibleThinking(thinking) },
         intelligence,
         tier: intelligenceTier(intelligence),
       };
@@ -425,6 +415,21 @@ export class ChatService {
       const used = tokens > 0 ? tokens : this.estimateTokens(messages, guard.full);
       await this.usage.record(userId, used).catch((e) => this.logger.warn(`No se pudo registrar el uso: ${e?.message}`));
     }
+  }
+
+  /**
+   * El razonamiento suele parafrasear el prompt de sistema: se modera completo y, si no es
+   * seguro, se omite sin afectar a la respuesta.
+   */
+  private visibleThinking(raw: string): { thinking?: string } {
+    const text = raw.trim().slice(0, MAX_THINKING_CHARS);
+    if (!text) return {};
+    const verdict = moderateOutput(text);
+    if (verdict) {
+      this.logger.warn(`Razonamiento del modelo omitido (${verdict.reason})`);
+      return {};
+    }
+    return { thinking: text };
   }
 
   private async *blockedOutput(guard: OutputGuard): AsyncGenerator<ChatStreamEvent> {

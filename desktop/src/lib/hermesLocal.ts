@@ -7,7 +7,8 @@
 // webview) y nunca se envía al backend. En Tauri las peticiones pasan por el plugin HTTP nativo,
 // cuyo permiso está limitado a 127.0.0.1 y localhost (ver capabilities/default.json).
 
-import { ThinkSplitter, type ThinkPiece } from './think-splitter';
+import { ThinkTagSplitter, type SplitChunk } from './thinkTags';
+
 export interface LocalHermesConfig {
   enabled: boolean;
   baseUrl: string;
@@ -70,19 +71,14 @@ async function getFetch(): Promise<typeof fetch> {
   return window.fetch.bind(window);
 }
 
-/**
- * Llama al Hermes local en streaming y devuelve el texto completo de la respuesta. El razonamiento
- * (`reasoning_content` o bloques `<think>…</think>`) va aparte a `onReasoning` y no forma parte
- * del texto devuelto.
- */
+/** Llama al Hermes local en streaming y devuelve el texto completo. */
 export async function streamLocalCompletion(
   cfg: LocalHermesConfig,
   messages: WireMessage[],
   maxTokens: number,
   onDelta: (text: string) => void,
   signal?: AbortSignal,
-  onReasoning?: (text: string) => void,
-): Promise<string> {
+): Promise<LocalCompletion> {
   if (!isLoopbackUrl(cfg.baseUrl)) {
     throw new Error('La URL de Hermes local debe apuntar a 127.0.0.1 o localhost');
   }
@@ -107,19 +103,39 @@ export async function streamLocalCompletion(
     throw new Error(`Hermes local respondió con error ${res.status}`);
   }
 
-  const reader = res.body.getReader();
+  return readCompletionStream(res.body, onDelta);
+}
+
+/** Respuesta del modelo local: el texto en personaje y, aparte, su razonamiento (si lo hay). */
+export interface LocalCompletion {
+  reply: string;
+  thinking: string;
+}
+
+/**
+ * Lee el flujo SSE de Chat Completions separando el razonamiento (reasoning_content, reasoning
+ * o bloques <think>) de la respuesta. onDelta solo recibe texto de la respuesta.
+ */
+export async function readCompletionStream(
+  body: ReadableStream<Uint8Array>,
+  onDelta: (text: string) => void,
+): Promise<LocalCompletion> {
+  const reader = body.getReader();
   const decoder = new TextDecoder();
+  const splitter = new ThinkTagSplitter();
   let buffer = '';
-  let full = '';
-  const think = new ThinkSplitter();
-  const route = (pieces: ThinkPiece[]) => {
-    for (const p of pieces) {
-      if (p.kind === 'reasoning') onReasoning?.(p.text);
-      else {
-        full += p.text;
-        onDelta(p.text);
-      }
+  let reply = '';
+  let thinking = '';
+  const take = (part: SplitChunk) => {
+    thinking += part.thinking;
+    if (part.text) {
+      reply += part.text;
+      onDelta(part.text);
     }
+  };
+  const finish = (): LocalCompletion => {
+    take(splitter.flush());
+    return { reply, thinking: thinking.trim() };
   };
   for (;;) {
     const { value, done } = await reader.read();
@@ -132,35 +148,23 @@ export async function streamLocalCompletion(
       // Se ignoran comentarios y eventos extra (p. ej. hermes.tool.progress)
       if (!line.startsWith('data:')) continue;
       const data = line.slice(5).trim();
-      if (data === '[DONE]') {
-        route(think.flush());
-        return full;
-      }
+      if (data === '[DONE]') return finish();
       try {
         const delta = JSON.parse(data).choices?.[0]?.delta;
         const reasoning = delta?.reasoning_content ?? delta?.reasoning;
-        if (typeof reasoning === 'string' && reasoning) onReasoning?.(reasoning);
-        const text = delta?.content;
-        if (typeof text === 'string' && text) route(think.push(text));
+        if (typeof reasoning === 'string') thinking += reasoning;
+        if (typeof delta?.content === 'string' && delta.content) take(splitter.push(delta.content));
       } catch {
         /* fragmento no JSON */
       }
     }
   }
-  route(think.flush());
-  return full;
+  return finish();
 }
 
 /** Comprueba que el Hermes local responde con la key y el modelo indicados. */
 export async function testLocalHermes(cfg: LocalHermesConfig): Promise<void> {
-  let got = '';
-  await streamLocalCompletion(
-    cfg,
-    [{ role: 'user', content: 'ping' }],
-    5,
-    (d) => (got += d),
-    undefined,
-    (r) => (got += r),
-  );
-  if (!got) throw new Error('Hermes local respondió sin contenido');
+  const { reply, thinking } = await streamLocalCompletion(cfg, [{ role: 'user', content: 'ping' }], 5, () => {});
+  // Un modelo de razonamiento puede gastar los pocos tokens de la prueba solo en pensar
+  if (!reply && !thinking) throw new Error('Hermes local respondió sin contenido');
 }

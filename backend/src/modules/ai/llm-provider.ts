@@ -23,8 +23,8 @@ export interface ToolDefinition {
 
 export type LlmEvent =
   | { type: 'delta'; text: string }
-  /** Pensamiento de los modelos de razonamiento: no forma parte de la respuesta ni se guarda. */
-  | { type: 'reasoning'; text: string }
+  /** Razonamiento del modelo (reasoning_content o bloques <think>): nunca forma parte de la respuesta. */
+  | { type: 'thinking'; text: string }
   | ({ type: 'tool_call' } & ToolCall)
   | { type: 'done'; usage?: { promptTokens?: number; completionTokens?: number } };
 

@@ -1,5 +1,5 @@
 import { ChatMessageInput, ChatOptions, LlmEvent, LlmProvider, ToolCall } from './llm-provider';
-import { ThinkPiece, ThinkSplitter } from './think-splitter';
+import { SplitChunk, ThinkTagSplitter } from './think-tags';
 
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_TOOL_ARGS_CHARS = 10_000;
@@ -119,13 +119,14 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     const decoder = new TextDecoder();
     let buffer = '';
     let usage: { promptTokens?: number; completionTokens?: number } | undefined;
+    // Algunos modelos mezclan el razonamiento en el contenido con etiquetas <think>
+    const splitter = new ThinkTagSplitter();
+    const fromSplit = function* (part: SplitChunk): Generator<LlmEvent> {
+      if (part.thinking) yield { type: 'thinking', text: part.thinking };
+      if (part.text) yield { type: 'delta', text: part.text };
+    };
     // Las llamadas a herramientas llegan fragmentadas por índice: se acumulan
     const calls = new Map<number, { id: string; name: string; args: string }>();
-    // Razonamiento incrustado en el contenido como <think>…</think>
-    const think = new ThinkSplitter();
-    const pieces = function* (list: ThinkPiece[]): Generator<LlmEvent> {
-      for (const p of list) yield p.kind === 'reasoning' ? { type: 'reasoning', text: p.text } : { type: 'delta', text: p.text };
-    };
     const flushCalls = function* (): Generator<LlmEvent> {
       for (const [, c] of [...calls.entries()].sort((a, b) => a[0] - b[0]).slice(0, MAX_TOOL_CALLS)) {
         if (c.name) yield { type: 'tool_call', id: c.id || `call_${Math.random().toString(36).slice(2, 10)}`, name: c.name, arguments: c.args };
@@ -143,7 +144,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         if (!line.startsWith('data:')) continue;
         const data = line.slice(5).trim();
         if (data === '[DONE]') {
-          yield* pieces(think.flush());
+          yield* fromSplit(splitter.flush());
           yield* flushCalls();
           yield { type: 'done', usage };
           return;
@@ -154,12 +155,12 @@ export class OpenAiCompatibleProvider implements LlmProvider {
           const text = delta?.content;
           const reasoning = delta?.reasoning_content ?? delta?.reasoning;
 
-          // Modelos de razonamiento (Qwen/DeepSeek): el pensamiento va aparte, nunca como respuesta
+          // Modelos de razonamiento (Qwen/DeepSeek/o1…): el pensamiento va aparte, nunca en la respuesta
           if (typeof reasoning === 'string' && reasoning.length > 0) {
-            yield { type: 'reasoning', text: reasoning };
+            yield { type: 'thinking', text: reasoning };
           }
           if (typeof text === 'string' && text.length > 0) {
-            yield* pieces(think.push(text));
+            yield* fromSplit(splitter.push(text));
           }
 
           for (const tc of json.choices?.[0]?.delta?.tool_calls ?? []) {
@@ -183,7 +184,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         }
       }
     }
-    yield* pieces(think.flush());
+    yield* fromSplit(splitter.flush());
     yield* flushCalls();
     yield { type: 'done', usage };
   }
@@ -191,7 +192,8 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   async test(model: string): Promise<void> {
     let got = false;
     for await (const ev of this.chat([{ role: 'user', content: 'ping' }], { model, maxTokens: 40 })) {
-      if (ev.type === 'delta' || ev.type === 'reasoning') got = true;
+      // Un modelo de razonamiento puede gastar los pocos tokens de la prueba solo en pensar
+      if (ev.type === 'delta' || ev.type === 'thinking') got = true;
       if (ev.type === 'done' && (ev.usage?.completionTokens ?? 0) > 0) got = true;
     }
     if (!got) throw new Error('El proveedor respondió sin contenido');

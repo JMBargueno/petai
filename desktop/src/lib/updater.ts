@@ -16,6 +16,13 @@ export type UpdateState =
 
 export const updateState = writable<UpdateState>({ status: 'idle' });
 
+/**
+ * Versión obligatoria pendiente de instalar (`null` si no hay ninguna). Mientras tenga valor, el panel
+ * del juego queda bloqueado y la mascota oculta. No se limpia con un `error` (si falla la instalación
+ * sigue bloqueado); solo cuando una comprobación posterior confirma que no hay versión nueva.
+ */
+export const updateLock = writable<string | null>(null);
+
 const STARTUP_DELAY_MS = 10_000; // 10 s tras arrancar
 const INTERVAL_MS = 30 * 60 * 1000; // Cada 30 minutos
 
@@ -50,9 +57,11 @@ export function checkForUpdates({ silent = false } = {}): Promise<void> {
       const update = await check();
       if (update) {
         pending = update;
+        updateLock.set(update.version);
         updateState.set({ status: 'available', version: update.version, notes: update.body ?? '' });
       } else {
         pending = null;
+        updateLock.set(null);
         updateState.set(silent && previous.status === 'idle' ? { status: 'idle' } : { status: 'upToDate' });
       }
     } catch (err) {
@@ -110,6 +119,18 @@ export async function installUpdate(): Promise<void> {
   }
 }
 
+/** Reintento desde el bloqueo: reinstala si ya hay una versión localizada; si no, vuelve a comprobar. */
+export function retryUpdate(): Promise<void> {
+  if (pending) return installUpdate();
+  const lock = get(updateLock);
+  if (!isTauri() && lock) {
+    // Modo navegador (mock): volver a ofrecer la versión simulada.
+    updateState.set({ status: 'available', version: lock, notes: '' });
+    return Promise.resolve();
+  }
+  return checkForUpdates();
+}
+
 /**
  * Comprobación automática: a los 10 s del arranque y cada 30 min. No hace nada en `vite dev`
  * ni fuera de Tauri. Devuelve la función para pararla.
@@ -126,5 +147,6 @@ export function startAutoCheck(): () => void {
 
 /** Helper para pruebas y depuración en DEV / tests. */
 export function mockTriggerUpdate(version: string, notes = 'Actualización obligatoria con mejoras y correcciones de compatibilidad.'): void {
+  updateLock.set(version);
   updateState.set({ status: 'available', version, notes });
 }
