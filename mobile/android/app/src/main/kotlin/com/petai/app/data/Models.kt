@@ -110,7 +110,8 @@ data class AiTestResult(val ok: Boolean = false, val error: String? = null)
 /** Eventos del flujo SSE del chat (`delta`, `done`, `error`, `moderated`, `tool`, `action`). */
 sealed interface ChatEvent {
     data class Delta(val text: String) : ChatEvent
-    data class Done(val content: String, val intelligence: Int, val tier: String) : ChatEvent
+    /** `thinking`: razonamiento del modelo, aparte de la respuesta (vacío si no hay). */
+    data class Done(val content: String, val intelligence: Int, val tier: String, val thinking: String = "") : ChatEvent
     data class Error(val message: String) : ChatEvent
     data class Moderated(val reason: String, val message: String, val hideUserMessage: Boolean) : ChatEvent
     data class Tool(val name: String) : ChatEvent

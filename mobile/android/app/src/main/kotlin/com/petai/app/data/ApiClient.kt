@@ -216,6 +216,7 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
                 content = o["message"]?.jsonObject?.get("content")?.jsonPrimitive?.content.orEmpty(),
                 intelligence = o["intelligence"]?.jsonPrimitive?.intOrNull ?: 0,
                 tier = o["tier"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                thinking = o["message"]?.jsonObject?.get("thinking")?.jsonPrimitive?.contentOrNull.orEmpty(),
             )
             "error" -> ChatEvent.Error(o["message"]?.jsonPrimitive?.content ?: "Error del proveedor de IA")
             "moderated" -> ChatEvent.Moderated(
