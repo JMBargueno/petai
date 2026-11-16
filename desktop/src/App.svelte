@@ -19,6 +19,7 @@
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
+  import UpdateLockModal from './components/UpdateLockModal.svelte';
   import type { AnalyzedFile } from './lib/fileAnalyzer';
   import { PawPrint, Bell, X } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
@@ -212,6 +213,12 @@
 
         // Feature ambiental: hora del día, clima, inactividad y festividades
         socket.on('environmental:changed', (ev: EnvironmentalChangedEvent) => handleEnvironmentalChanged(ev));
+
+        // Aviso en tiempo real de nueva versión disponible
+        socket.on('desktop:update_available', () => {
+          checkForUpdates();
+        });
+
         setupCoordinates(); // geolocalización opt-in → clima real
         loadEnvironmental(); // estado inicial
         stopHeartbeat = startHeartbeat(); // heartbeat cada 60 s
@@ -537,6 +544,11 @@
         showBubble(`Examinando ${file.name} con la IA...`);
       }}
     />
+  {/if}
+
+  <!-- Modal infranqueable de actualización obligatoria -->
+  {#if $updateState.status === 'available' || $updateState.status === 'downloading' || $updateState.status === 'ready'}
+    <UpdateLockModal />
   {/if}
 </main>
 

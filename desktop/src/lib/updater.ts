@@ -16,8 +16,8 @@ export type UpdateState =
 
 export const updateState = writable<UpdateState>({ status: 'idle' });
 
-const STARTUP_DELAY_MS = 30_000;
-const INTERVAL_MS = 6 * 60 * 60 * 1000;
+const STARTUP_DELAY_MS = 10_000; // 10 s tras arrancar
+const INTERVAL_MS = 30 * 60 * 1000; // Cada 30 minutos
 
 const isTauri = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
@@ -68,6 +68,22 @@ export function checkForUpdates({ silent = false } = {}): Promise<void> {
 
 /** Descarga e instala la actualización pendiente y reinicia la app. */
 export async function installUpdate(): Promise<void> {
+  if (!isTauri() && !pending) {
+    const s = get(updateState);
+    if (s.status === 'available') {
+      updateState.set({ status: 'downloading', version: s.version, progress: 0.45 });
+      setTimeout(() => {
+        updateState.set({ status: 'downloading', version: s.version, progress: 0.90 });
+        setTimeout(() => {
+          updateState.set({ status: 'ready', version: s.version });
+          setTimeout(() => {
+            window.location.reload();
+          }, 1200);
+        }, 800);
+      }, 800);
+    }
+    return;
+  }
   if (!pending) return;
   const update = pending;
   let total = 0;
@@ -95,7 +111,7 @@ export async function installUpdate(): Promise<void> {
 }
 
 /**
- * Comprobación automática: a los 30 s del arranque y cada 6 h. No hace nada en `vite dev`
+ * Comprobación automática: a los 10 s del arranque y cada 30 min. No hace nada en `vite dev`
  * ni fuera de Tauri. Devuelve la función para pararla.
  */
 export function startAutoCheck(): () => void {
@@ -106,4 +122,9 @@ export function startAutoCheck(): () => void {
     clearTimeout(first);
     clearInterval(every);
   };
+}
+
+/** Helper para pruebas y depuración en DEV / tests. */
+export function mockTriggerUpdate(version: string, notes = 'Actualización obligatoria con mejoras y correcciones de compatibilidad.'): void {
+  updateState.set({ status: 'available', version, notes });
 }

@@ -1,5 +1,6 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 /** Entrada de plataforma del `latest.json` que genera tauri-action. */
 interface PlatformEntry {
@@ -80,7 +81,10 @@ export class DesktopUpdatesService {
   private readonly logger = new Logger(DesktopUpdatesService.name);
   private cache: CachedRelease | null = null;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    @Optional() private readonly realtime?: RealtimeGateway,
+  ) {}
 
   private get token(): string | undefined {
     return this.config.get<string>('GITHUB_RELEASES_TOKEN') || undefined;
@@ -135,8 +139,13 @@ export class DesktopUpdatesService {
         this.logger.warn(`Descarga de latest.json respondió ${jsonRes.status}`);
         return this.cache;
       }
+      const previousVersion = this.cache?.latest?.version;
       const latest = JSON.parse(await jsonRes.text()) as LatestJson;
       this.cache = { latest, assets, fetchedAt: Date.now() };
+
+      if (latest?.version && (!previousVersion || compareVersions(latest.version, previousVersion) > 0)) {
+        this.realtime?.emitDesktopUpdateAvailable(latest.version, latest.notes);
+      }
       return this.cache;
     } catch (err) {
       this.logger.warn(`No se pudo consultar GitHub: ${(err as Error).message}`);
