@@ -40,6 +40,7 @@ import com.petai.app.ui.chat.ChatScreen
 import com.petai.app.ui.chat.ChatViewModel
 import com.petai.app.ui.chat.ChatViewModelFactory
 import com.petai.app.ui.chests.ChestsScreen
+import com.petai.app.ui.clans.ClanScreen
 import com.petai.app.ui.coop.CoopScreen
 import com.petai.app.ui.habitat.HabitatScreen
 import com.petai.app.ui.missions.MissionsScreen
@@ -66,7 +67,7 @@ private enum class Dest(val label: String, val icon: ImageVector, val subs: List
     Play("Jugar", Lucide.Gamepad2, listOf("Arena", "Minijuegos", "Raid", "Torneo")),
     Chat("Chat", Lucide.MessageCircle, emptyList()),
     Progress("Progreso", Lucide.Trophy, emptyList()),
-    More("Más", Lucide.Ellipsis, listOf("Tienda", "Cofres", "Amigos", "Cuenta")),
+    More("Más", Lucide.Ellipsis, listOf("Tienda", "Cofres", "Amigos", "Clan", "Cuenta")),
 }
 
 @Composable
@@ -161,7 +162,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                             onBuyEgg = vm::buyEgg,
                             onGoToShop = { go(Dest.More, 0) },
                         )
-                        else -> if (pet == null) noPet() else HabitatScreen(app.service, onChanged = { vm.refreshAll() })
+                        else -> if (pet == null) noPet() else HabitatScreen(app.service, app.realtime, onChanged = { vm.refreshAll() })
                     }
                     Dest.Play ->
                         if (pet == null) noPet() else when (sub) {
@@ -189,6 +190,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                         0 -> ShopScreen(state, onRefresh = vm::refreshAll, onBuy = vm::buy)
                         1 -> ChestsScreen(app.service, onChanged = { vm.refreshAll() })
                         2 -> CoopScreen(app.service, onChanged = { vm.refreshAll() })
+                        3 -> ClanScreen(app.service, app.realtime, onChanged = { vm.refreshAll() })
                         else -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice)
                     }
                 }

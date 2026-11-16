@@ -89,6 +89,11 @@ export function normalizeSpecies(speciesId: string): string {
   return SPECIES_REGISTRY[speciesId] ? speciesId : 'ignisaur';
 }
 
+/** ¿La clave es una especie raster conocida en este cliente? (para resolver sprites de terceros). */
+export function isKnownSpecies(speciesId: string): boolean {
+  return !!SPECIES_REGISTRY[speciesId];
+}
+
 /**
  * Clips de animación de una hoja (duración de cada frame, bucle, prioridad y grupo), listos para
  * el `AnimationController`. No necesita que la hoja esté horneada.

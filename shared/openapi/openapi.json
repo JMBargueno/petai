@@ -1,6 +1,323 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/v1/presence/{userId}": {
+      "get": {
+        "operationId": "PresenceController_getPresence",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get device presence for a user (own or accepted friend)",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/visit": {
+      "post": {
+        "operationId": "PresenceController_visit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ownerId",
+                  "petId",
+                  "action"
+                ],
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "Dueño del pet visitado"
+                  },
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet visitado"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "feed",
+                      "play",
+                      "clean"
+                    ],
+                    "description": "Acción de la visita"
+                  },
+                  "itemId": {
+                    "type": "string",
+                    "description": "Item usado (para feed, opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perform a co-op visit action on a friend's pet",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/history": {
+      "get": {
+        "operationId": "PresenceController_getVisitHistory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get visit history for my pets",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/friends": {
+      "get": {
+        "operationId": "CoopFriendsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mis relaciones de amistad (amigos aceptados + peticiones)",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      },
+      "post": {
+        "operationId": "CoopFriendsController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetUserId": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Alternativa a targetUserId: email del destinatario"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar una petición de amistad (por id o email del destinatario)",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/friends/{id}/accept": {
+      "post": {
+        "operationId": "CoopFriendsController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aceptar una petición de amistad recibida",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/friends/{id}/decline": {
+      "post": {
+        "operationId": "CoopFriendsController_decline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rechazar una petición de amistad recibida",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/habitat/visit": {
+      "post": {
+        "operationId": "HabitatVisitController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ownerId"
+                ],
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "Dueño del habitat visitado"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Iniciar una visita en vivo al habitat de un amigo",
+        "tags": [
+          "Habitat · Visita en vivo"
+        ]
+      }
+    },
+    "/v1/habitat/visit/end": {
+      "post": {
+        "operationId": "HabitatVisitController_end",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "Opcional: limitar a un dueño"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Terminar mi visita en vivo activa",
+        "tags": [
+          "Habitat · Visita en vivo"
+        ]
+      }
+    },
+    "/v1/habitat/visitors": {
+      "get": {
+        "operationId": "HabitatVisitController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Visitas activas donde el actor es el dueño del habitat",
+        "tags": [
+          "Habitat · Visita en vivo"
+        ]
+      }
+    },
     "/v1/catalog": {
       "get": {
         "operationId": "GameDataController_getCatalog",
@@ -4935,38 +5252,9 @@
         ]
       }
     },
-    "/v1/presence/{userId}": {
-      "get": {
-        "operationId": "PresenceController_getPresence",
-        "parameters": [
-          {
-            "name": "userId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get device presence for a user (own or accepted friend)",
-        "tags": [
-          "Presence & Co-op"
-        ]
-      }
-    },
-    "/v1/coop/visit": {
+    "/v1/clans": {
       "post": {
-        "operationId": "PresenceController_visit",
+        "operationId": "ClansController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4975,31 +5263,19 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "ownerId",
-                  "petId",
-                  "action"
+                  "name",
+                  "tag"
                 ],
                 "properties": {
-                  "ownerId": {
-                    "type": "string",
-                    "description": "Dueño del pet visitado"
+                  "name": {
+                    "type": "string"
                   },
-                  "petId": {
-                    "type": "string",
-                    "description": "Pet visitado"
+                  "tag": {
+                    "type": "string"
                   },
-                  "action": {
+                  "description": {
                     "type": "string",
-                    "enum": [
-                      "feed",
-                      "play",
-                      "clean"
-                    ],
-                    "description": "Acción de la visita"
-                  },
-                  "itemId": {
-                    "type": "string",
-                    "description": "Item usado (para feed, opcional)"
+                    "description": "Opcional"
                   }
                 }
               }
@@ -5007,7 +5283,7 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": ""
           }
         },
@@ -5016,53 +5292,33 @@
             "bearer": []
           }
         ],
-        "summary": "Perform a co-op visit action on a friend's pet",
+        "summary": "Crear un clan (el actor se convierte en líder)",
         "tags": [
-          "Presence & Co-op"
-        ]
-      }
-    },
-    "/v1/coop/history": {
-      "get": {
-        "operationId": "PresenceController_getVisitHistory",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get visit history for my pets",
-        "tags": [
-          "Presence & Co-op"
-        ]
-      }
-    },
-    "/v1/coop/friends": {
-      "get": {
-        "operationId": "CoopFriendsController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Mis relaciones de amistad (amigos aceptados + peticiones)",
-        "tags": [
-          "Presence & Co-op"
+          "Clans"
         ]
       },
+      "get": {
+        "operationId": "ClansController_getMine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mi clan (o 404 si no perteneces a ninguno)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/join": {
       "post": {
-        "operationId": "CoopFriendsController_request",
+        "operationId": "ClansController_join",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -5070,13 +5326,12 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "tag"
+                ],
                 "properties": {
-                  "targetUserId": {
+                  "tag": {
                     "type": "string"
-                  },
-                  "email": {
-                    "type": "string",
-                    "description": "Alternativa a targetUserId: email del destinatario"
                   }
                 }
               }
@@ -5093,15 +5348,84 @@
             "bearer": []
           }
         ],
-        "summary": "Enviar una petición de amistad (por id o email del destinatario)",
+        "summary": "Unirse a un clan existente por su etiqueta (tag)",
         "tags": [
-          "Presence & Co-op"
+          "Clans"
         ]
       }
     },
-    "/v1/coop/friends/{id}/accept": {
+    "/v1/clans/leave": {
       "post": {
-        "operationId": "CoopFriendsController_accept",
+        "operationId": "ClansController_leave",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Abandonar mi clan",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/invite": {
+      "post": {
+        "operationId": "ClansController_invite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "ID del usuario invitado"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Alternativa a userId: email del invitado"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Invitar a un usuario a unirse directamente (solo el líder)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/members": {
+      "get": {
+        "operationId": "ClansController_getMembers",
         "parameters": [
           {
             "name": "id",
@@ -5122,15 +5446,166 @@
             "bearer": []
           }
         ],
-        "summary": "Aceptar una petición de amistad recibida",
+        "summary": "Roster del clan con presencia en línea por miembro",
         "tags": [
-          "Presence & Co-op"
+          "Clans"
         ]
       }
     },
-    "/v1/coop/friends/{id}/decline": {
+    "/v1/clans/{id}/messages": {
       "post": {
-        "operationId": "CoopFriendsController_decline",
+        "operationId": "ClansController_sendMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "body"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "description": "Texto (máx. 500 caracteres)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar un mensaje al chat del clan",
+        "tags": [
+          "Clans"
+        ]
+      },
+      "get": {
+        "operationId": "ClansController_getMessages",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Máx. 50 (por defecto 20)",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "before",
+            "required": false,
+            "in": "query",
+            "description": "Cursor ISO datetime: anteriores a esta fecha",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial reciente del chat del clan (más reciente primero)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/goals": {
+      "post": {
+        "operationId": "ClansController_createGoal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "target"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Opcional"
+                  },
+                  "metric": {
+                    "type": "string",
+                    "description": "xp | visits | generic (por defecto generic)"
+                  },
+                  "target": {
+                    "type": "number",
+                    "description": "Objetivo (> 0)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una meta compartida del clan",
+        "tags": [
+          "Clans"
+        ]
+      },
+      "get": {
+        "operationId": "ClansController_getGoals",
         "parameters": [
           {
             "name": "id",
@@ -5151,9 +5626,102 @@
             "bearer": []
           }
         ],
-        "summary": "Rechazar una petición de amistad recibida",
+        "summary": "Lista de metas del clan (activas primero, progreso desc)",
         "tags": [
-          "Presence & Co-op"
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/goals/{goalId}/progress": {
+      "post": {
+        "operationId": "ClansController_addGoalProgress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "goalId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "description": "Cantidad a sumar al progreso"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aumentar el progreso de una meta del clan",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/goals/{goalId}": {
+      "delete": {
+        "operationId": "ClansController_deleteGoal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "goalId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar una meta del clan (solo el líder)",
+        "tags": [
+          "Clans"
         ]
       }
     },

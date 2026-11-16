@@ -27,6 +27,9 @@ describe('reactionForAction', () => {
     expect(reactionForAction({ action: 'mood_moment', context: { act: 'cry' } })?.anims).toEqual(['cry']);
     expect(reactionForAction({ action: 'mood_moment', context: { act: 'desconocido' } })).toBeNull();
     expect(reactionForAction({ action: 'slept' })).toBeNull();
+    // friend_visit: el bocadillo usa el nombre del visitante cuando el contexto lo trae
+    expect(reactionForAction({ action: 'friend_visit', context: { visitorName: 'Luis' } })?.bubble).toContain('Luis');
+    expect(reactionForAction({ action: 'friend_visit' })?.bubble).toContain('amigo');
   });
 
   it('las acciones locales apuntan a acciones válidas', () => {

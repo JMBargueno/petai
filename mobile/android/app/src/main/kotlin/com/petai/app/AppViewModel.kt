@@ -61,6 +61,16 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
             if (session.signedIn.value == true) refreshAll()
         }
         viewModelScope.launch {
+            // El socket de tiempo real queda "online" mientras hay sesión (deviceId + platform 'mobile')
+            session.signedIn.collect {
+                when (it) {
+                    true -> app.realtime.connect()
+                    false -> app.realtime.disconnect()
+                    null -> {}
+                }
+            }
+        }
+        viewModelScope.launch {
             // Si el servidor invalida la sesión (refresh caducado), se limpian los datos del usuario
             session.signedIn.collect {
                 if (it == false) {

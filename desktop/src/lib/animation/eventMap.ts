@@ -94,7 +94,13 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     return anim ? { anims: [anim] } : null;
   },
   buddy_play: () => ({ anims: ['dance', 'happy'] }),
-  friend_visit: () => ({ anims: ['surprised', 'happy'], bubble: '¡Ha venido un amigo de visita! 👋' }),
+  friend_visit: (c) => {
+    const name = str(c, 'visitorName');
+    return {
+      anims: ['surprised', 'happy'],
+      bubble: name ? `¡${name} está de visita en mi hábitat! 👋` : '¡Ha venido un amigo de visita! 👋',
+    };
+  },
   welcome_back: (c) => {
     switch (str(c, 'tier')) {
       case 'offended':

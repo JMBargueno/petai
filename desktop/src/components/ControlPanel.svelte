@@ -17,11 +17,14 @@ import TournamentTab from './TournamentTab.svelte';
 import TrainingTab from './TrainingTab.svelte';
 import CookingTab from './CookingTab.svelte';
 import AdventureTab from './AdventureTab.svelte';
+import FriendsTab from './FriendsTab.svelte';
+import ClansTab from './ClansTab.svelte';
+import VisitTab from './VisitTab.svelte';
   import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
   import AboutPanel from './AboutPanel.svelte';
   import PockaiMark from './PockaiMark.svelte';
   import { updateState, hasUpdate } from '../lib/updater';
-  import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut, AlertCircle } from 'lucide-svelte';
+  import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut, AlertCircle, Users } from 'lucide-svelte';
 
   export let user: any = null;
   export let pet: any = null;
@@ -101,6 +104,7 @@ import AdventureTab from './AdventureTab.svelte';
     { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['habitat', 'Hábitat'], ['skills', 'Habilidades']] },
     { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo'], ['training', 'Entrenamiento'], ['cooking', 'Cocina'], ['adventure', 'Aventura']] },
     { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
+    { id: 'social', label: 'Social', icon: Users, subs: [['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
     { id: 'progress', label: 'Progreso', icon: Trophy, subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
     { id: 'shop', label: 'Tienda', icon: ShoppingBag, subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
     { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['about', 'Acerca de']] },
@@ -564,6 +568,15 @@ import AdventureTab from './AdventureTab.svelte';
 
         {:else if dest === 'chat'}
           <AiTab {pet} on:bubble on:refreshPet />
+
+        {:else if dest === 'social' && sub === 'friends'}
+          <FriendsTab />
+
+        {:else if dest === 'social' && sub === 'clans'}
+          <ClansTab />
+
+        {:else if dest === 'social' && sub === 'visits'}
+          <VisitTab on:refreshUser />
 
         {:else if dest === 'progress' && sub === 'missions'}
           <MissionsTab on:refreshUser />

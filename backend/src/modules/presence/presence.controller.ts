@@ -46,8 +46,8 @@ export class PresenceController {
     if (!isSelf && !isFriend) throw new ForbiddenException('No tienes permiso para ver la presencia de este usuario');
     return {
       userId,
-      devices: this.presenceService.getPresence(userId),
-      hasActiveDevices: this.presenceService.hasActiveDevices(userId),
+      devices: await this.presenceService.getPresence(userId),
+      hasActiveDevices: await this.presenceService.hasActiveDevices(userId),
     };
   }
 

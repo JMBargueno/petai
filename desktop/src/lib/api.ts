@@ -710,6 +710,84 @@ export const api = {
     return minigameRequest<{ userId: string; visits: CoopVisitLog[] }>('GET', '/v1/coop/history');
   },
 
+  // ── Presencia (feature 021) ────────────────────────────────────────────────
+  /** Dispositivos de un jugador y si tiene alguno activo (punto de presencia). */
+  async getPresence(userId: string) {
+    return minigameRequest<PresenceInfo>('GET', `/v1/presence/${encodeURIComponent(userId)}`);
+  },
+
+  // ── Clanes (feature 021) ──────────────────────────────────────────────────
+  async createClan({ name, tag, description }: { name: string; tag: string; description?: string }) {
+    return minigameRequest<ClanSummary>('POST', '/v1/clans', { name, tag, description });
+  },
+  /** El clan del usuario; `null` si aún no está en ningún clan (404 del contrato). */
+  async getMyClan(): Promise<ClanSummary | null> {
+    try {
+      return await minigameRequest<ClanSummary>('GET', '/v1/clans');
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
+  async joinClan(tag: string) {
+    return minigameRequest<ClanSummary>('POST', '/v1/clans/join', { tag });
+  },
+  async leaveClan() {
+    return minigameRequest<{ ok: boolean }>('POST', '/v1/clans/leave');
+  },
+  async inviteToClan(clanId: string, target: { userId?: string; email?: string }) {
+    return minigameRequest<{ ok: boolean }>('POST', `/v1/clans/${encodeURIComponent(clanId)}/invite`, target);
+  },
+  async getClanMembers(clanId: string) {
+    return minigameRequest<ClanMember[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/members`);
+  },
+
+  // ── Chat de clan (feature 021) ─────────────────────────────────────────────
+  /** Envía un mensaje al chat del clan. Devuelve el mensaje persistido. */
+  async sendClanMessage(clanId: string, body: string) {
+    return minigameRequest<ClanMessage>('POST', `/v1/clans/${encodeURIComponent(clanId)}/messages`, { body });
+  },
+  /** Historial reciente del chat del clan (más nuevos al final). */
+  async getClanMessages(clanId: string, { limit, before }: { limit?: number; before?: string } = {}) {
+    const params = new URLSearchParams();
+    if (limit != null) params.set('limit', String(limit));
+    if (before) params.set('before', before);
+    const q = params.toString();
+    return minigameRequest<ClanMessage[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/messages${q ? `?${q}` : ''}`);
+  },
+
+  // ── Objetivos de clan (feature 021) ────────────────────────────────────────
+  /** Crea un objetivo de clan. Devuelve el objetivo persistido. */
+  async createClanGoal(clanId: string, goal: { title: string; description?: string; metric: ClanGoalMetric; target: number }) {
+    return minigameRequest<ClanGoal>('POST', `/v1/clans/${encodeURIComponent(clanId)}/goals`, goal);
+  },
+  /** Objetivos del clan (activos y completados). */
+  async getClanGoals(clanId: string) {
+    return minigameRequest<ClanGoal[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/goals`);
+  },
+  /** Añade progreso a un objetivo. Devuelve el objetivo actualizado. */
+  async addClanGoalProgress(clanId: string, goalId: string, amount: number) {
+    return minigameRequest<ClanGoal>('POST', `/v1/clans/${encodeURIComponent(clanId)}/goals/${encodeURIComponent(goalId)}/progress`, { amount });
+  },
+  /** Borra un objetivo del clan (solo el líder, según el contrato). */
+  async deleteClanGoal(clanId: string, goalId: string) {
+    return minigameRequest<{ ok: boolean }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/goals/${encodeURIComponent(goalId)}`);
+  },
+
+  // ── Visitas en vivo al hábitat (feature 021) ───────────────────────────────
+  /** Inicia una visita del jugador a tu hábitat (el backend emite `habitat:visitor_joined`). */
+  async startHabitatVisit(ownerId: string) {
+    return minigameRequest<{ ok: boolean; startedAt: string }>('POST', '/v1/habitat/visit', { ownerId });
+  },
+  /** Cierra tu visita en curso (el backend emite `habitat:visitor_left`). */
+  async endHabitatVisit() {
+    return minigameRequest<{ ok: boolean }>('POST', '/v1/habitat/visit/end');
+  },
+  /** Amigos que ahora mismo están de visita en tu hábitat. */
+  async getHabitatVisitors() {
+    return minigameRequest<{ visitors: HabitatVisitor[] }>('GET', '/v1/habitat/visitors');
+  },
+
   // ── Bienvenida (feature 028) ────────────────────────────────────────────────
   /** Estado de la bienvenida. Si hubo ausencia, el backend emite `pet:action welcome_back`. */
   async getReengagementStatus() {
@@ -1035,6 +1113,86 @@ export interface CoopVisitResult {
   message: string;
   xpGained: number;
   petState: { hunger: number; happiness: number; hygiene: number };
+}
+
+// ── Presencia + Clanes ──────────────────────────────────────────────────────
+/** Dispositivos de un jugador; la forma concreta la decide el backend (lo que importa es `active`). */
+export interface PresenceDevice {
+  deviceId: string;
+  platform?: string;
+  lastSeenAt?: string;
+  active?: boolean;
+}
+
+export interface PresenceInfo {
+  userId: string;
+  devices: PresenceDevice[];
+  hasActiveDevices: boolean;
+}
+
+export interface ClanMember {
+  userId: string;
+  displayName: string;
+  role: 'leader' | 'member' | string;
+  isOnline: boolean;
+  joinedAt: string;
+}
+
+export interface ClanSummary {
+  id: string;
+  name: string;
+  tag: string;
+  description: string;
+  leaderId: string;
+  xp: number;
+  memberCount: number;
+  leader: { userId: string; displayName: string };
+  members: ClanMember[];
+}
+
+/** Mensaje del chat de clan (feature 021). */
+export interface ClanMessage {
+  id: string;
+  clanId: string;
+  userId: string;
+  senderName: string;
+  body: string;
+  createdAt: string;
+}
+
+/** Métrica que alimenta el progreso de un objetivo de clan. */
+export type ClanGoalMetric = 'xp' | 'visits' | 'generic' | string;
+
+/** Estado de un objetivo de clan (feature 021). */
+export interface ClanGoal {
+  id: string;
+  clanId: string;
+  title: string;
+  description: string;
+  metric: ClanGoalMetric;
+  target: number;
+  progress: number;
+  status: 'active' | 'completed' | string;
+  createdAt: string;
+  completedAt?: string | null;
+}
+
+// ── Visitas en vivo al hábitat ─────────────────────────────────────────────
+/** Identidad de la mascota de un amigo (suficiente para dibujar su sprite). */
+export interface PetIdentity {
+  petId: string;
+  nickname: string;
+  speciesName: string;
+  speciesId: string;
+  /** Referencia del sprite del backend (p. ej. `sprites/ignisaur_idle`); puede no resolver. */
+  spriteRef: string;
+}
+
+export interface HabitatVisitor {
+  visitorId: string;
+  visitorName: string;
+  pet: PetIdentity;
+  startedAt: string;
 }
 
 // ── Misiones (Paso 3) ─────────────────────────────────────────────────────

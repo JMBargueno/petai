@@ -9,7 +9,9 @@
   import { AnimationController, resolveBaseState } from '../lib/animation/AnimationController';
   import type { Reaction } from '../lib/animation/eventMap';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
+  import VisitorPet from './VisitorPet.svelte';
   import type { EnvironmentalStatus } from '../lib/environmental';
+  import type { HabitatVisitor } from '../lib/api';
   import { skillAuthorizations, isSkillActive } from '../lib/stores/desktopSkillsStore';
   import {
     calculateThrowVelocity,
@@ -27,6 +29,8 @@
   export let bubble: string = '';
   /** Estado ambiental (feature 005): hora del día, clima, actividad y festividad. */
   export let environmental: EnvironmentalStatus | null = null;
+  /** Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía. */
+  export let visitors: HabitatVisitor[] = [];
 
   /** Animaciones que se permiten mientras duerme (el resto esperan a que despierte). */
   const ALLOWED_WHILE_SLEEPING = new Set(['wake', 'hit']);
@@ -632,6 +636,11 @@
     <!-- Accesorio ambiental (paraguas, gorro, sombrerito…): se mueve con el cuerpo -->
     <EnvironmentalOverlay environmental={environmental} part="accessory" />
   </div>
+
+  <!-- Mascotas de los amigos de visita (feature 021): junto a la mía, sin su transformación -->
+  {#each visitors as v (v.visitorId)}
+    <VisitorPet visitor={v} />
+  {/each}
 
   <!-- Texto ambiental, bocadillo, nombre y partículas: sin girar ni rotar -->
   <EnvironmentalOverlay environmental={environmental} part="caption" />

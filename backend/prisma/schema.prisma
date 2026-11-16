@@ -923,6 +923,85 @@ model CoopVisit {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Clanes + Visita en vivo del habitat
+// (patrón CoopFriendship: ids String planos, SIN relación a `User`)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Clan {
+  id          String            @id @default(uuid())
+  name        String
+  tag         String
+  description String?
+  leaderId    String
+  xp          Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  members     ClanMembership[]
+  messages    ClanMessage[]
+  goals       ClanGoal[]
+
+  @@unique([tag])
+  @@index([leaderId])
+}
+
+model ClanMembership {
+  id       String   @id @default(uuid())
+  clanId   String
+  userId   String
+  role     String   @default("member") // leader | member
+  joinedAt DateTime @default(now())
+  clan     Clan     @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  @@unique([userId]) // un clan activo por usuario
+  @@index([clanId])
+}
+
+// Chat del clan: mensajes internos (userId String plano, sin relación a `User`).
+model ClanMessage {
+  id        String   @id @default(uuid())
+  clanId    String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+  clan      Clan     @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  @@index([clanId, createdAt])
+}
+
+// Metas / objetivos compartidos del clan con progreso y métrica (xp | visits | generic).
+model ClanGoal {
+  id          String    @id @default(uuid())
+  clanId      String
+  title       String
+  description String?
+  metric      String    @default("generic")
+  target      Int
+  progress    Int       @default(0)
+  status      String    @default("active") // active | completed
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  clan        Clan      @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  @@index([clanId, status])
+}
+
+// Visita "en vivo": el pet del visitante aparece en el habitat del dueño en tiempo real.
+model HabitatVisit {
+  id        String    @id @default(uuid())
+  visitorId String
+  ownerId   String
+  petId     String
+  status    String    @default("active") // active | ended
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([ownerId, status])
+  @@index([visitorId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Feature 022: Offline-First CRDT Sync
 // ─────────────────────────────────────────────────────────────────────────────
 

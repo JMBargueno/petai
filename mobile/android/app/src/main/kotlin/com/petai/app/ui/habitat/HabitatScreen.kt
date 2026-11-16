@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,14 +32,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextAlign
 import com.petai.app.data.ApiService
 import com.petai.app.data.HabitatBuffs
 import com.petai.app.data.HabitatCatalog
 import com.petai.app.data.HabitatFurniture
 import com.petai.app.data.HabitatRoom
 import com.petai.app.data.HabitatState
+import com.petai.app.data.HabitatVisitor
+import com.petai.app.data.Pet
+import com.petai.app.data.PetIdentity
+import com.petai.app.data.RealtimeClient
+import com.petai.app.data.SpeciesDto
+import com.petai.app.ui.pet.PetSprite
 import kotlinx.coroutines.launch
 
 private fun furnIcon(id: String): ImageVector = when (id) {
@@ -67,10 +78,11 @@ private val BUFF_LABELS = mapOf(
  * buffs activos. El cobro/colocación lo hace el servidor (cobro atómico por WalletService).
  */
 @Composable
-fun HabitatScreen(service: ApiService, onChanged: () -> Unit) {
+fun HabitatScreen(service: ApiService, realtime: RealtimeClient, onChanged: () -> Unit) {
     var catalog by remember { mutableStateOf<HabitatCatalog?>(null) }
     var state by remember { mutableStateOf<HabitatState?>(null) }
     var buffs by remember { mutableStateOf<HabitatBuffs?>(null) }
+    var visitors by remember { mutableStateOf<List<HabitatVisitor>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf("") }
     var busyId by remember { mutableStateOf("") }
@@ -85,6 +97,7 @@ fun HabitatScreen(service: ApiService, onChanged: () -> Unit) {
                 catalog = service.habitatCatalog()
                 state = service.habitat()
                 buffs = service.habitatBuffs()
+                runCatching { visitors = service.getHabitatVisitors() }
                 val rooms = state?.rooms ?: emptyList()
                 if (rooms.none { it.id == activeRoomId }) {
                     activeRoomId = (rooms.firstOrNull { it.unlocked } ?: rooms.firstOrNull())?.id ?: ""
@@ -98,6 +111,20 @@ fun HabitatScreen(service: ApiService, onChanged: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { loadAll() }
+
+    // Visitas en vivo: un pet de un amigo entra/sale de tu hábitat.
+    LaunchedEffect(Unit) {
+        launch {
+            realtime.visitorJoined().collect { v ->
+                visitors = visitors.filter { it.visitorId != v.visitorId } + v
+            }
+        }
+        launch {
+            realtime.visitorLeft().collect { id ->
+                visitors = visitors.filter { it.visitorId != id }
+            }
+        }
+    }
 
     fun place(f: HabitatFurniture) {
         scope.launch {
@@ -143,6 +170,18 @@ fun HabitatScreen(service: ApiService, onChanged: () -> Unit) {
     PullToRefreshBox(isRefreshing = loading, onRefresh = { loadAll() }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (error.isNotEmpty()) item { Text(error, color = MaterialTheme.colorScheme.error) }
+
+            if (visitors.isNotEmpty()) {
+                item {
+                    PockaiCard(Modifier.fillMaxWidth()) {
+                        Text("De visita en tu hábitat", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            visitors.forEach { v -> VisitorPet(v) }
+                        }
+                    }
+                }
+            }
 
             item {
                 PockaiCard(Modifier.fillMaxWidth()) {
@@ -237,4 +276,46 @@ private fun FurnitureRow(f: HabitatFurniture, locked: Boolean, busy: Boolean, on
         }
     }
 }
+
+/** Pet de un amigo de visita, dibujado con [PetSprite] según su [PetIdentity] (con fallback seguro). */
+@Composable
+private fun VisitorPet(visitor: HabitatVisitor) {
+    Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        PetSprite(pet = visitorPet(visitor), size = 72.dp, bob = true)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "«${visitor.visitorName}» está de visita",
+            style = MaterialTheme.typography.labelSmall,
+            color = PockaiTheme.colors.accentInk,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+private val KNOWN_SPRITE_KEYS = setOf("axolunar", "florabud", "ignisaur")
+
+/** Resuelve la clave del sprite de un visitante con fallback a una especie conocida. */
+private fun resolveSpriteKey(p: PetIdentity): String =
+    if (p.spriteRef in KNOWN_SPRITE_KEYS) p.spriteRef
+    else if (p.speciesId in KNOWN_SPRITE_KEYS) p.speciesId
+    else "ignisaur"
+
+/** Construye un [Pet] mínimamente completo a partir de la identidad del visitante para dibujarlo. */
+private fun visitorPet(v: HabitatVisitor): Pet {
+    val identity = v.pet
+    return Pet(
+        id = identity.petId.ifEmpty { v.visitorId },
+        nickname = identity.nickname.ifBlank { identity.speciesName },
+        species = SpeciesDto(id = identity.speciesId, name = identity.speciesName, spriteKey = resolveSpriteKey(identity)),
+        visualSeed = visitorSeed(v.visitorId),
+    )
+}
+
+/** Semilla visual determinista por visitante (FNV-1a) para que el sprite no cambie entre sesiones. */
+private fun visitorSeed(visitorId: String): Int {
+    var h: Int = 0x811c9dc5.toInt()
+    for (c in visitorId) h = (h xor c.code) * 0x01000193
+    return ((h and 0x7fffffff) % 99991) + 1
+}
+
 
