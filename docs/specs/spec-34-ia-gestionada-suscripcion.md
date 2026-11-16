@@ -15,6 +15,8 @@ Además del modo **BYOK** (el usuario pone su propia API key), Pockai ofrecerá 
 
 La suscripción se cobra con **Stripe** (escritorio/web) y **Google Play Billing** (Android). Ambas fuentes alimentan un único **entitlement** en el backend. Antes de llamar al modelo, el backend valida el plan y un contador diario atómico en Redis.
 
+> **Todos los precios y límites son configurables desde el panel de administración**, y solo el rol **superadmin** puede cambiarlos (permiso nuevo `billing:manage`). Las cifras de esta spec (15/200 mensajes, 240 caracteres, 9,99 $…) son **valores por defecto**, no constantes. Ver §11.
+
 ## Contexto
 
 ### Lo que ya existe
@@ -53,9 +55,13 @@ La suscripción se cobra con **Stripe** (escritorio/web) y **Google Play Billing
 - [ ] AC5: Si el proveedor falla antes de emitir texto, el mensaje se devuelve al contador (`refund`).
 - [ ] AC6: En managed, la entrada se limita a 240 caracteres y la salida a un `maxTokens` corto. En BYOK y Hermes se mantienen los límites actuales.
 - [ ] AC7: Los webhooks de Stripe y las notificaciones de Play son idempotentes (`BillingEvent.eventId` único) y verifican la firma o el token.
-- [ ] AC8: Al superar `AI_MANAGED_DAILY_BUDGET_USD`, managed responde `503 managed_ai_paused` para Free (Pro sigue hasta 1,5× el presupuesto) y BYOK no se ve afectado.
+- [ ] AC8: Al superar `AI_MANAGED_DAILY_BUDGET_USD`, managed responde `503 managed_ai_paused` para Free (Pro sigue hasta el multiplicador configurado, 1,5× por defecto) y BYOK no se ve afectado.
 - [ ] AC9: El cliente de escritorio refleja el paso a Pro sin reiniciar (evento por socket + nueva consulta al recuperar el foco).
 - [ ] AC10: `GET /ai/usage` devuelve también `plan`, `daily.used`, `daily.limit` y `daily.resetsAt`.
+- [ ] AC11: Todos los límites y precios de §11.2 se editan desde el panel admin. Los cambios de límites se aplican en todas las instancias en ≤ 5 s sin redesplegar.
+- [ ] AC12: Solo `superadmin` puede leer y editar la configuración de facturación e IA. `admin` y `moderator` reciben `403` y no ven la sección en el panel.
+- [ ] AC13: Cada cambio queda en `AuditLog` (quién, cuándo, valor anterior y nuevo) y se puede revertir a una versión anterior.
+- [ ] AC14: Cambiar el precio de Pro crea un precio nuevo en Stripe y en Play. Los suscriptores actuales conservan su precio salvo migración explícita (§11.3).
 
 ---
 
@@ -66,12 +72,13 @@ La suscripción se cobra con **Stripe** (escritorio/web) y **Google Play Billing
 | Usuario sin `AiConfig` | Pasa a ser **managed Free** por defecto. Configurar una key = BYOK; borrarla (`DELETE /ai/config`) = vuelta a managed. |
 | Ruta del modo managed | Va por `AiConfigService.resolveProvider` (rama nueva), **no** por `ai-router/`. `ai-router` se marca como deprecado; si en el futuro hace falta routing multi-proveedor, se absorbe en esta rama. Así no conviven dos caminos. |
 | Proveedor | **OpenRouter** (`https://openrouter.ai/api/v1`). Es OpenAI-compatible, así que se reutiliza `OpenAiCompatibleProvider` tal cual. El fallback entre modelos se hace con el parámetro `models` de OpenRouter. |
-| Cuota mensual de tokens | Se **mantiene** `AI_MONTHLY_TOKEN_QUOTA_MANAGED` como tope de seguridad por usuario (cubre sesiones con muchas herramientas). Se puede fijar por plan: `AI_MONTHLY_TOKEN_QUOTA_FREE` / `_PRO`. |
+| Cuota mensual de tokens | Se **mantiene** `AI_MONTHLY_TOKEN_QUOTA_MANAGED` como tope de seguridad por usuario (cubre sesiones con muchas herramientas). Se fija por plan desde el panel admin (§11). |
 | Llamadas "ocultas" | El resumen de memoria (`MemoryService.maybeSummarize`) y las rondas extra de herramientas (hasta 3) **cuentan en coste y en el presupuesto global**, pero **no** en el contador de mensajes del usuario. |
 | Memoria y agente por plan | Free: memoria limitada (recuperación sí, extracción cada 12 mensajes en vez de 6) y **sin herramientas de agente**. Pro: todo, como hoy en BYOK. |
 | Hermes local | Se trata como BYOK: sin cuota diaria y sin límite de 240 caracteres. La cuota diaria se aplica **solo** dentro de `prepare()` en la rama managed, nunca en `localContext/sync`. |
 | Stripe + Play a la vez | Un único entitlement (`pro` si cualquiera de las dos está activa). Si se detectan las dos activas, se avisa al usuario del doble cobro con enlaces al portal de Stripe o a Play para cancelar una. |
 | Reset diario | Medianoche en `User.timezone` (ya existe; por defecto `UTC`). La clave Redis lleva la fecha local. |
+| Configuración de precios y límites | En base de datos (`BillingConfig`, versionada), editable desde el panel admin **solo por superadmin**. Las variables de entorno son solo los valores iniciales (seed) y los secretos. Ver §11. |
 
 ## 2. Planes y reglas de negocio
 
@@ -90,7 +97,7 @@ La suscripción se cobra con **Stripe** (escritorio/web) y **Google Play Billing
 
 > El brief original hablaba de ~240 caracteres ≈ 50-60 tokens por interacción. Eso solo cuenta el texto del usuario y la respuesta. El **system prompt** de Pockai (`personality.ts`: personalidad, estado, entorno, recuerdos) más el historial pesan bastante más, así que en §6 se calcula con valores realistas.
 
-Los límites se definen en código (`backend/src/modules/billing/plans.ts`) y se pueden sobrescribir por variables de entorno (ver §10).
+Estos valores son **los de por defecto**. En ejecución se leen de `BillingConfig` (base de datos + caché) y el superadmin los cambia desde el panel admin (§11). En código (`backend/src/modules/billing/plans.ts`) solo queda el esquema de validación y el seed inicial.
 
 ### 2.2 Ciclo de vida de la suscripción
 
@@ -99,7 +106,7 @@ Los límites se definen en código (`backend/src/modules/billing/plans.ts`) y se
 | Pago inicial correcto | `pro` inmediato hasta `currentPeriodEnd`. |
 | Renovación correcta | Se extiende `currentPeriodEnd`. |
 | Cancelación por el usuario | Sigue `pro` hasta `currentPeriodEnd` (`cancelAtPeriodEnd = true`) y luego `free`. |
-| Pago fallido | Estado `past_due`. **Gracia de 3 días** con `pro` (Stripe Smart Retries; en Play, *grace period* configurado en la consola). Si no se recupera, pasa a `free`. |
+| Pago fallido | Estado `past_due`. **Gracia de 3 días** (configurable, §11) con `pro` (Stripe Smart Retries; en Play, *grace period* configurado en la consola). Si no se recupera, pasa a `free`. |
 | Reembolso / chargeback / revocación en Play | `free` inmediato. |
 | Cambio de plan a mitad de día | Se aplica el nuevo límite al contador del día actual (si ya gastó 15 y pasa a Pro, le quedan 185). |
 
@@ -253,7 +260,8 @@ export interface PlanLimits {
   memoryExtractEvery: number;
 }
 
-export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
+/** Solo valores iniciales (seed de BillingConfig). En ejecución: `await billingConfig.limits(plan)` (§11). */
+export const DEFAULT_PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: { dailyMessages: 15,  maxInputChars: 240, maxOutputTokens: 120, historyMessages: 6,  historyCharBudget: 1500, agentTools: false, memoryExtractEvery: 12 },
   pro:  { dailyMessages: 200, maxInputChars: 240, maxOutputTokens: 160, historyMessages: 10, historyCharBudget: 3000, agentTools: true,  memoryExtractEvery: 6 },
 };
@@ -274,7 +282,7 @@ return used`;
 
 @Injectable()
 export class DailyQuotaService {
-  constructor(private readonly redis: RedisService, private readonly prisma: PrismaService) {}
+  constructor(private readonly redis: RedisService, private readonly prisma: PrismaService, private readonly billingConfig: BillingConfigService) {}
 
   /** Fecha local del usuario (YYYY-MM-DD) y momento del próximo reset. */
   private async day(userId: string) {
@@ -284,7 +292,7 @@ export class DailyQuotaService {
   }
 
   async consume(userId: string, plan: Plan) {
-    const limit = PLAN_LIMITS[plan].dailyMessages;
+    const limit = (await this.billingConfig.limits(plan)).dailyMessages; // configurable (§11)
     const { key, resetsAt } = await this.day(userId);
     const used = Number(await this.redis.client.eval(CONSUME_LUA, 1, key, limit));
     if (used < 0) {
@@ -303,7 +311,7 @@ export class DailyQuotaService {
 
   async peek(userId: string, plan: Plan) {
     const { key, resetsAt } = await this.day(userId);
-    return { used: Number((await this.redis.client.get(key)) ?? 0), limit: PLAN_LIMITS[plan].dailyMessages, resetsAt };
+    return { used: Number((await this.redis.client.get(key)) ?? 0), limit: (await this.billingConfig.limits(plan)).dailyMessages, resetsAt };
   }
 }
 ```
@@ -379,7 +387,7 @@ let limits: PlanLimits | undefined;
 let quotaKey: string | undefined;
 if (mode === 'managed') {
   const plan = await this.entitlements.planFor(userId);
-  limits = PLAN_LIMITS[plan];
+  limits = await this.billingConfig.limits(plan);   // leído de BillingConfig (caché en memoria, §11)
   if (message.length > limits.maxInputChars) {
     throw new BadRequestException({ code: 'message_too_long', max: limits.maxInputChars });
   }
@@ -415,7 +423,7 @@ export class StripeController {
     const session = await this.stripe.checkout.sessions.create({
       mode: 'subscription',
       customer,
-      line_items: [{ price: this.config.getOrThrow('STRIPE_PRICE_PRO'), quantity: 1 }],
+      line_items: [{ price: await this.billingConfig.activeStripePrice(currency), quantity: 1 }], // precio vigente (§11.3)
       client_reference_id: user.id,
       success_url: `${this.config.get('PUBLIC_WEB_URL')}/pro/ok`,
       cancel_url: `${this.config.get('PUBLIC_WEB_URL')}/pro/cancel`,
@@ -562,35 +570,146 @@ Hay mucho margen, así que se puede subir de modelo en Pro sin romper la econom�
 - **Política de Play**: en Android no se enlaza a Stripe. Quien se suscribió en escritorio aparece como Pro igualmente (el entitlement es por cuenta), pero la app no le muestra enlaces de pago externos.
 
 ### 9.3 Web / landing (`web/src/app/landing/content.ts`)
-- Actualizar precios y FAQ: Free con IA incluida (15/día), Pro 9,99 $, BYOK sigue gratis.
+- Actualizar precios y FAQ: Free con IA incluida, Pro de pago y BYOK gratis. Precios y límites leídos de `GET /billing/plans`, nunca fijos en el código.
 - Páginas `/pro/ok` y `/pro/cancel` (redirección de Stripe Checkout), con un "vuelve a la app".
 - Términos de suscripción, política de reembolsos y privacidad (proveedor IA = OpenRouter y subprocesadores).
 
 ## 10. Configuración (variables de entorno)
 
-| Variable | Ejemplo | Uso |
-|---|---|---|
-| `OPENROUTER_API_KEY` | `sk-or-…` | Key del servidor para managed |
-| `AI_MANAGED_MODEL` | `google/gemini-…-flash-lite` | Modelo primario (elegir en la fase 3) |
-| `AI_MANAGED_FALLBACK_MODELS` | `openai/gpt-…-mini,mistralai/mistral-nemo` | Fallback de OpenRouter (CSV) |
-| `AI_MANAGED_DAILY_BUDGET_USD` | `10` | Kill-switch global |
-| `AI_MANAGED_MAX_CONCURRENCY` | `200` | Semáforo de streams |
-| `AI_PLAN_FREE_DAILY` / `AI_PLAN_PRO_DAILY` | `15` / `200` | Sobrescriben `PLAN_LIMITS` |
-| `AI_MONTHLY_TOKEN_QUOTA_FREE` / `_PRO` | `300000` / `3000000` | Tope mensual de seguridad |
-| `STRIPE_SECRET_KEY` | `sk_live_…` | API Stripe |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_…` | Firma de webhooks |
-| `STRIPE_PRICE_PRO` | `price_…` | Precio mensual 9,99 $ |
-| `PUBLIC_WEB_URL` | `https://pockai.app` | URLs de vuelta de Checkout |
-| `GOOGLE_PLAY_PACKAGE` | `app.pockai` | Paquete Android |
-| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | (secreto) | Android Publisher API |
-| `GOOGLE_PUBSUB_AUDIENCE` | `https://api…/billing/google/rtdn` | Verificación OIDC de RTDN |
+Las variables de entorno son de dos tipos:
+- **Secretos e infraestructura**: solo en el entorno, **nunca** editables ni visibles desde el panel.
+- **Seed**: valores iniciales que se copian a `BillingConfig` la primera vez que arranca el backend (si la tabla está vacía). A partir de ahí manda la base de datos y se cambian desde el panel admin (§11).
+
+| Variable | Tipo | Ejemplo | Uso |
+|---|---|---|---|
+| `OPENROUTER_API_KEY` | Secreto | `sk-or-…` | Key del servidor para managed |
+| `STRIPE_SECRET_KEY` | Secreto | `sk_live_…` | API Stripe |
+| `STRIPE_WEBHOOK_SECRET` | Secreto | `whsec_…` | Firma de webhooks |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Secreto | — | Android Publisher API |
+| `GOOGLE_PLAY_PACKAGE` | Infra | `app.pockai` | Paquete Android |
+| `GOOGLE_PUBSUB_AUDIENCE` | Infra | `https://api…/billing/google/rtdn` | Verificación OIDC de RTDN |
+| `PUBLIC_WEB_URL` | Infra | `https://pockai.app` | URLs de vuelta de Checkout |
+| `AI_MANAGED_ENABLED` | Infra | `false` | Interruptor general del despliegue (el panel tiene además su propio interruptor) |
+| `STRIPE_PRODUCT_PRO` | Infra | `prod_…` | Producto Stripe sobre el que el panel crea los precios |
+| `AI_MANAGED_MODEL` / `AI_MANAGED_FALLBACK_MODELS` | Seed | `google/gemini-…-flash-lite` | Modelo inicial |
+| `AI_MANAGED_DAILY_BUDGET_USD` | Seed | `10` | Presupuesto global inicial |
+| `AI_MANAGED_MAX_CONCURRENCY` | Seed | `200` | Concurrencia inicial |
+| `AI_PLAN_FREE_DAILY` / `AI_PLAN_PRO_DAILY` | Seed | `15` / `200` | Límites diarios iniciales |
+| `AI_MONTHLY_TOKEN_QUOTA_FREE` / `_PRO` | Seed | `300000` / `3000000` | Tope mensual inicial |
 
 Hay que añadirlas a `backend/src/config/env.config.ts` (validación), `.env.example` y `docs/DEPLOY.md`.
+
+## 11. Configuración desde el panel admin (solo superadmin)
+
+**Todos los precios y todos los límites** de esta spec se editan desde el panel de administración (`web/src/app/admin`). Solo puede hacerlo el rol **superadmin**.
+
+### 11.1 Permiso
+
+Se añade un permiso nuevo en `backend/src/modules/authz/permissions.ts`:
+
+```ts
+export const PERMISSIONS = [
+  // …
+  'billing:manage', // precios, planes y límites de IA gestionada. SOLO superadmin.
+] as const;
+```
+
+- `superadmin` ya tiene `'*'`, así que lo recibe sin tocar `ROLE_PERMISSIONS`.
+- **No** se añade a `admin` ni a `moderator`. Un test en `permissions.spec.ts` lo fija: `hasPermission('admin', 'billing:manage') === false`.
+- Los endpoints usan `@RequirePermissions('billing:manage')` (el `PermissionsGuard` existente). La lectura también lo exige, porque incluye costes y márgenes.
+- En el panel, la sección "Facturación e IA" solo aparece si `permissionsFor(role)` incluye `billing:manage`. La comprobación real la hace siempre el backend.
+
+### 11.2 Qué se configura
+
+| Grupo | Campo | Defecto | Validación |
+|---|---|---|---|
+| **Precios** | Precio Pro mensual (por moneda: USD, EUR…) | 9,99 $ | 0,99–99,99 |
+| | Prueba gratuita Pro (días) | 0 | 0–30 |
+| **Plan Free** | Mensajes/día | 15 | 0–1.000 (0 = Free sin IA gestionada) |
+| | Caracteres por mensaje | 240 | 50–1.000 |
+| | `maxTokens` de salida | 120 | 32–1.200 |
+| | Historial (mensajes / caracteres) | 6 / 1.500 | 0–20 / 0–6.000 |
+| | Memoria: extraer cada N mensajes | 12 | 0 (off)–50 |
+| | Herramientas de agente | No | sí/no |
+| | Tope tokens/mes | 300k | 0 (∞)–50M |
+| | Mensajes de prueba sin email verificado | 3 | 0–50 |
+| **Plan Pro** | Mismos campos que Free | 200 / 240 / 160 / 10 / 3.000 / 6 / sí / 3M | Mismos rangos (mensajes/día hasta 5.000) |
+| **BYOK / Hermes** | Rate limit (mensajes/min) | 20 | 1–120 |
+| | Caracteres por mensaje | 1.000 | 100–4.000 |
+| **IA gestionada** | Interruptor on/off | on | — |
+| | Modelo primario y fallbacks de OpenRouter | (seed) | Lista de modelos permitidos (§11.4) |
+| | Presupuesto global diario (USD) | 10 | 0–10.000 |
+| | Multiplicador de presupuesto para Pro | 1,5 | 1–5 |
+| | Concurrencia máxima de streams | 200 | 1–5.000 |
+| | Timeout hasta el primer token (s) | 10 | 3–60 |
+| **Suscripción** | Días de gracia por pago fallido | 3 | 0–14 |
+
+Todo se valida con un esquema zod compartido (`backend/src/modules/billing/billing-config.schema.ts`) y la invariante `pro ≥ free` en mensajes/día. Un valor fuera de rango devuelve `400` con el campo culpable.
+
+### 11.3 Precios: cómo se aplica un cambio
+
+En Stripe y Google Play **un precio no se edita: se crea uno nuevo**. El backend lo hace por API al guardar en el panel:
+
+1. **Stripe**: `stripe.prices.create({ product: STRIPE_PRODUCT_PRO, unit_amount, currency, recurring: { interval: 'month' } })`. El nuevo `price_…` se guarda como precio activo en `BillingConfig` y el anterior se archiva (`active: false`). Checkout usa siempre el activo, así que `STRIPE_PRICE_PRO` deja de ser una variable de entorno.
+2. **Google Play**: Android Publisher API `monetization.subscriptions.basePlans` para actualizar los precios regionales del base plan (o crear un base plan nuevo).
+3. **Suscriptores existentes**: por defecto **conservan su precio** (grandfathering). El panel ofrece aparte la acción **"Migrar suscriptores al nuevo precio"**, con confirmación doble:
+   - En Stripe actualiza cada suscripción al nuevo `price` en la siguiente renovación, sin prorrateo.
+   - En Play usa la migración de cohortes de precio, con el aviso al usuario que exige Google (las subidas de precio requieren aceptación del usuario).
+   - Es obligatorio avisar al usuario con antelación (email + aviso en la app). El panel lo recuerda antes de confirmar.
+4. Si falla Stripe o Play, **no se guarda nada**: el cambio es todo o nada y el panel muestra el error.
+5. El precio que se muestra en los clientes y la landing sale de `GET /billing/plans` (público). Así nunca hay un precio fijo en el código de los clientes.
+
+### 11.4 Límites: cómo se aplica un cambio
+
+- **Modelo de datos**: configuración **versionada** (inmutable; cada guardado crea una fila nueva y la activa).
+
+```prisma
+model BillingConfig {
+  id          String   @id @default(uuid())
+  version     Int      @unique
+  active      Boolean  @default(false)
+  data        Json     // validado con billing-config.schema.ts
+  stripePriceIds Json? // { "usd": "price_…", "eur": "price_…" }
+  createdById String
+  note        String?  // motivo del cambio
+  createdAt   DateTime @default(now())
+
+  @@index([active])
+}
+```
+
+- **`BillingConfigService`**: guarda en memoria la versión activa. Al guardar publica `petai:billing:config:changed` por Redis pub/sub y todas las instancias recargan. Como respaldo, también se recarga cada 30 s si Redis falla. Así se cumple "≤ 5 s sin redesplegar" (AC11).
+- **Efecto en usuarios**:
+  - Los cambios de límites diarios se aplican al momento sobre el contador del día. Si se baja el límite por debajo de lo ya usado, el usuario simplemente no puede enviar más hasta mañana.
+  - Los demás límites se aplican al siguiente mensaje.
+  - Los clientes refrescan `GET /ai/usage` y el backend emite `billing:config_updated` por socket para que actualicen el contador y el `maxlength`.
+- **Modelos permitidos**: el panel solo deja elegir modelos de una lista blanca (consultada a `GET https://openrouter.ai/api/v1/models` y filtrada por precio máximo). Muestra el precio por millón de tokens y el **coste estimado por mensaje** con la fórmula de §6.
+- **Ayuda a la decisión**: junto a cada cambio, el panel muestra el impacto estimado: coste/día con los DAU actuales, margen por usuario Pro y gasto de ayer.
+
+### 11.5 Auditoría y reversión
+
+- Cada guardado escribe en `AuditLog` (modelo existente): acción `billing.config.update` o `billing.price.update`, actor, versión anterior y nueva, diff de campos y nota.
+- **Revertir**: el panel lista las versiones y permite activar una anterior. Revertir solo afecta a **límites**: los precios no se revierten, porque en Stripe y Play un precio revertido es en realidad un precio nuevo y debe pasar por §11.3.
+- Las acciones de precio requieren **reautenticación** (pedir de nuevo la contraseña) y muestran confirmación con el resumen del cambio.
+
+### 11.6 Endpoints admin
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| `GET` | `/admin/billing/config` | `billing:manage` | Versión activa + valores por defecto + rangos |
+| `PUT` | `/admin/billing/config` | `billing:manage` | Guarda nueva versión de límites (`{ data, note }`) |
+| `GET` | `/admin/billing/config/versions` | `billing:manage` | Historial de versiones |
+| `POST` | `/admin/billing/config/versions/:version/activate` | `billing:manage` | Revertir límites a una versión |
+| `PUT` | `/admin/billing/prices` | `billing:manage` + reauth | Crea precio nuevo en Stripe y Play |
+| `POST` | `/admin/billing/prices/migrate` | `billing:manage` + reauth | Migra suscriptores existentes al precio activo |
+| `GET` | `/admin/billing/models` | `billing:manage` | Modelos de OpenRouter permitidos con precio |
+| `GET` | `/admin/billing/stats` | `billing:manage` | Gasto IA hoy/ayer, suscriptores activos, MRR, coste por plan |
 
 ## Interfaz de API
 
 | Método | Ruta | Auth | Descripción |
 |---|---|---|---|
+| `GET` | `/billing/plans` | Público | Precios y límites vigentes por plan (de `BillingConfig`) para clientes y landing |
 | `GET` | `/billing/entitlement` | JWT | `{ plan, source?, currentPeriodEnd?, cancelAtPeriodEnd?, duplicateSubscriptions? }` |
 | `POST` | `/billing/stripe/checkout` | JWT | `{ url }` de Stripe Checkout |
 | `POST` | `/billing/stripe/portal` | JWT | `{ url }` del Customer Portal |
@@ -599,6 +718,7 @@ Hay que añadirlas a `backend/src/config/env.config.ts` (validación), `.env.exa
 | `POST` | `/billing/google/rtdn` | OIDC Pub/Sub | Notificaciones en tiempo real de Play |
 | `GET` | `/ai/usage` | JWT | **Ampliado**: `+ plan`, `+ daily: { used, limit, resetsAt }` |
 | `PUT` | `/ai/config` | JWT | **Ampliado**: acepta `{ mode: 'managed' }` |
+| — | `/admin/billing/*` | `billing:manage` (superadmin) | Ver §11.6 |
 
 Nuevos errores del chat (`POST /pets/:id/chat`, antes de abrir el SSE):
 
@@ -611,6 +731,7 @@ Nuevos errores del chat (`POST /pets/:id/chat`, antes de abrir el SSE):
 
 ## Security
 - `OPENROUTER_API_KEY` solo vive en el entorno del servidor y nunca llega al cliente ni a los logs.
+- Precios y límites: solo `superadmin` (`billing:manage`, sin conceder a `admin`). Los cambios de precio requieren reautenticación, todo cambio va a `AuditLog`, y los secretos nunca se exponen ni se editan desde el panel.
 - Webhooks: firma de Stripe (`constructEvent` con raw body) y JWT OIDC de Google para Pub/Sub. Nunca se confía en el body sin verificar.
 - La fuente de verdad es siempre el proveedor de pagos: ante cualquier evento se **vuelve a leer** la suscripción por API, en lugar de fiarse del contenido del webhook.
 - Play: `obfuscatedExternalAccountId` ligado al usuario para que un `purchaseToken` no se pueda canjear en otra cuenta.
@@ -626,15 +747,16 @@ Nuevos errores del chat (`POST /pets/:id/chat`, antes de abrir el SSE):
 | **2** | `DailyQuotaService` (Lua, refund, peek, respaldo sin Redis) + ampliar `GET /ai/usage`. | `modules/billing/daily-quota.service.ts`, `ai/usage.service.ts`, `ai/ai.controller.ts` | 1 día |
 | **3** | Rama managed: `resolveProvider` sin config → OpenRouter. Opciones extra en `OpenAiCompatibleProvider` (headers, `models`, `include_usage`). Límites por plan en `prepare`/`run`/`buildContext`. Refund en errores. `costUsd` en `UsageService.record`. Elegir y probar el modelo concreto. Deprecar `ai-router`. | `ai/ai-config.service.ts`, `ai/openai-compatible.provider.ts`, `ai/chat.service.ts`, `ai/memory.service.ts` | 2,5 días |
 | **4** | Resiliencia: `ManagedBudgetService`, circuit breaker, semáforo de concurrencia, timeouts, métricas OTel. | `modules/billing/managed-budget.service.ts` | 1,5 días |
-| **5** | Stripe: producto/precio en el dashboard, Checkout, Portal, webhook (`rawBody`), `BillingService`, evento `entitlement:updated` por socket. | `modules/billing/stripe.*`, `main.ts`, `realtime` | 2,5 días |
+| **5** | Stripe: producto en el dashboard (los precios los crea el panel, §11.3), Checkout, Portal, webhook (`rawBody`), `BillingService`, evento `entitlement:updated` por socket. | `modules/billing/stripe.*`, `main.ts`, `realtime` | 2,5 días |
 | **6** | Google Play: producto en la consola, cuenta de servicio, `verify`, RTDN + Pub/Sub, acknowledge. | `modules/billing/google-play.*` | 2,5 días |
 | **7** | Escritorio: selector de modo, contador, `maxlength` dinámico, paywall, Checkout/Portal, escucha de socket + foco. OpenAPI regenerado. | `AiTab.svelte`, `lib/api.ts`, `shared/openapi` | 2 días |
 | **8** | Android: Play Billing Library, paywall, contador, límite de caracteres. | `mobile/android/.../chat/*`, `billing/*` | 3 días |
 | **9** | Antiabuso: verificación de email (requiere el transporte real de `EMAIL_SENDER`, ver `PENDIENTES.md`), 3 mensajes de prueba sin verificar. | `modules/auth/*` | 1,5 días |
 | **10** | Landing, FAQ, términos, privacidad, páginas `/pro/ok` y `/pro/cancel`. | `web/src/app/landing/content.ts`, i18n | 1 día |
-| **11** | Tests (unit + e2e + carga), `DEPLOY.md`, `.env.example`, lanzamiento gradual (flag `AI_MANAGED_ENABLED`). | — | 2 días |
+| **11** | Configuración desde el panel admin: permiso `billing:manage` (solo superadmin), `BillingConfig` versionado + seed, `BillingConfigService` con recarga por pub/sub, endpoints `/admin/billing/*`, `GET /billing/plans`, creación de precios en Stripe/Play, migración de suscriptores, auditoría y reversión. UI "Facturación e IA" en el panel. | `authz/permissions.ts`, `modules/billing/billing-config.*`, `web/src/app/admin/*` | 4 días |
+| **12** | Tests (unit + e2e + carga), `DEPLOY.md`, `.env.example`, lanzamiento gradual (flag `AI_MANAGED_ENABLED`). | — | 2 días |
 
-**Total: ~21 días (~4-5 semanas).** Las fases 5–6 y 7–8 pueden ir en paralelo.
+**Total: ~25 días (~5 semanas).** Las fases 5–6 y 7–8 pueden ir en paralelo. `BillingConfig` y `BillingConfigService` (parte de la fase 11) conviene hacerlos en la fase 1, porque las fases 2–4 leen los límites de ahí; la UI del panel y los precios pueden ir después.
 
 ### Orden recomendado de lanzamiento
 1. Fases 1–4 detrás de `AI_MANAGED_ENABLED=false`. Probar en staging con un presupuesto diario bajo (p. ej. 2 $).
@@ -647,7 +769,7 @@ Nuevos errores del chat (`POST /pets/:id/chat`, antes de abrir el SSE):
   - `DailyQuotaService`: límite exacto, refund, cambio de día por zona horaria, Redis caído.
   - `EntitlementService`: todos los estados de §2.2, caché.
   - `ManagedBudgetService`.
-  - `PLAN_LIMITS` aplicados en `prepare`.
+  - Límites de `BillingConfigService` aplicados en `prepare` (y cambio en caliente).
   - Hermes local **no** consume cuota.
 - **Integración**:
   - Webhooks de Stripe con `stripe trigger` / fixtures firmados, idempotencia (mismo evento dos veces).
@@ -658,6 +780,13 @@ Nuevos errores del chat (`POST /pets/:id/chat`, antes de abrir el SSE):
   - Cancelación → sigue Pro hasta fin de periodo.
   - BYOK sin límite diario.
 - **Concurrencia**: 50 peticiones simultáneas del mismo usuario Free → exactamente 15 aceptadas (el lock in-flight y el rate limit también influyen; probar el servicio de cuota aislado).
+- **Panel admin / permisos**:
+  - `admin` y `moderator` reciben `403` en todos los `/admin/billing/*`; `superadmin` accede.
+  - Un valor fuera de rango devuelve `400`.
+  - Cambiar los mensajes/día se refleja en otra instancia en ≤ 5 s.
+  - Revertir una versión restaura los límites.
+  - Un cambio de precio con Stripe en fallo no guarda nada.
+  - Cada cambio genera una entrada en `AuditLog`.
 - **Carga**: 1.000 usuarios virtuales con un mock del proveedor; p95 de la parte previa al stream < 50 ms (Redis). Se puede reutilizar `loadtest.sh` (`USERS=N`).
 
 ## Riesgos y notas
