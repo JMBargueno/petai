@@ -13,6 +13,8 @@
     type EnvironmentalChangedEvent,
   } from './lib/environmental';
   import PetView from './components/PetView.svelte';
+  import DesktopBall from './components/DesktopBall.svelte';
+  import { stepBallPhysics, kickBall, type BallState } from './lib/toys/toyPhysics';
   import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction } from './lib/animation/eventMap';
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
@@ -63,6 +65,64 @@
 
   let bubbleText = '';
   let bubbleTimer: any = null;
+
+  // Pelotita de juego interactiva en pantalla
+  let showBall = false;
+  let ballState: BallState = {
+    x: 350,
+    y: 120,
+    vx: 0,
+    vy: 0,
+    radius: 16,
+    isRolling: false,
+    bounces: 0,
+  };
+  let ballRaf: number | null = null;
+  let lastBallTime = performance.now();
+
+  function runBallLoop(now: number) {
+    if (!showBall) {
+      ballRaf = null;
+      return;
+    }
+    const dt = Math.min(0.04, (now - lastBallTime) / 1000);
+    lastBallTime = now;
+    const bounds = {
+      width: window.innerWidth || 800,
+      height: window.innerHeight || 600,
+    };
+    ballState = stepBallPhysics(ballState, bounds, dt);
+    ballRaf = requestAnimationFrame(runBallLoop);
+  }
+
+  function toggleBall() {
+    showBall = !showBall;
+    if (showBall) {
+      ballState = {
+        x: Math.min(window.innerWidth - 80, Math.max(80, (window.innerWidth || 800) / 2)),
+        y: 120,
+        vx: (Math.random() - 0.5) * 220,
+        vy: -180,
+        radius: 16,
+        isRolling: true,
+        bounces: 0,
+      };
+      lastBallTime = performance.now();
+      if (!ballRaf) ballRaf = requestAnimationFrame(runBallLoop);
+      showBubble('¡Una pelotita! ⚽ ¡Lánzamela con el ratón!');
+    } else {
+      if (ballRaf) cancelAnimationFrame(ballRaf);
+      ballRaf = null;
+    }
+  }
+
+  function handleBallKick(vx: number, vy: number) {
+    ballState = kickBall(ballState, vx, vy);
+    if (!ballRaf && showBall) {
+      lastBallTime = performance.now();
+      ballRaf = requestAnimationFrame(runBallLoop);
+    }
+  }
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
   let environmental: EnvironmentalStatus | null = null;
   let stopHeartbeat: () => void = () => {};
@@ -370,6 +430,7 @@
   });
 
   onDestroy(() => {
+    if (ballRaf) cancelAnimationFrame(ballRaf);
     window.removeEventListener('petai:file_dropped', handleFileDropped);
     window.removeEventListener('petai:move_to_habitat', handleMoveToHabitat);
     clearInterval(needsPoll);
@@ -409,6 +470,23 @@
     {#if $unreadCount > 0}<span class="notif-badge">{$unreadCount}</span>{/if}
   </button>
 
+  <!-- Pelotita interactiva de escritorio -->
+  <button
+    class="btn glass ball-toggle-pill"
+    on:click={toggleBall}
+    title={showBall ? 'Guardar pelota de juego' : 'Sacar pelota de juego'}
+  >
+    <span>⚽</span>
+  </button>
+
+  {#if showBall}
+    <DesktopBall
+      ball={ballState}
+      on:throw={(e) => handleBallKick(e.detail.vx, e.detail.vy)}
+      on:kick={(e) => handleBallKick(e.detail.vx, e.detail.vy)}
+    />
+  {/if}
+
   <!-- Mascota Interactiva Flotante (oculta si está en su Hábitat/casa) -->
   {#if currentPet && !currentPet.inHabitat}
     <PetView
@@ -416,6 +494,8 @@
       pet={currentPet}
       bubble={bubbleText}
       environmental={environmental}
+      ball={showBall ? ballState : null}
+      onBallKick={handleBallKick}
       onPetClick={() => (isPanelOpen = true)}
     />
   {/if}
@@ -471,7 +551,8 @@
   }
 
   .toggle-panel-pill,
-  .notif-toggle-pill {
+  .notif-toggle-pill,
+  .ball-toggle-pill {
     position: fixed;
     bottom: 16px;
     z-index: 90;
@@ -482,6 +563,12 @@
   }
   .notif-toggle-pill {
     right: 170px;
+  }
+  .ball-toggle-pill {
+    right: 228px;
+    font-size: 14px;
+    padding: 0 10px;
+    min-width: 40px;
   }
 
   .notif-badge {
