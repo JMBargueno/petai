@@ -1,11 +1,8 @@
 # Overlay para game-api.pockai.world: gateway nginx (reverse proxy a backend:3000)
-# expuesto vía nginx-proxy (red webproxy). El dominio anterior (api-pockai.jmbargueno.com)
-# sigue servido directamente por el contenedor backend (docker-compose.pockai.yml) como
-# alias — los clientes de escritorio instalados auto-actualizan desde esa URL
-# (endpoint embebido en tauri.conf.json), así que el dominio viejo debe sobrevivir.
+# expuesto vía nginx-proxy (red webproxy). ES la única exposición pública de la
+# API: el dominio anterior (api-pockai.jmbargueno.com) se retiró el 16-11-2026.
 #
-# Uso: docker compose -f docker-compose.prod.yml -f docker-compose.pockai.yml \
-#              -f docker-compose.pockai-world.yml up -d
+# Uso: docker compose -f docker-compose.prod.yml -f docker-compose.pockai-world.yml up -d
 #
 # LETSENCRYPT_HOST se añade al gateway cuando el dominio resuelva y se emita el cert
 # LE (mismo volumen nginx_certs que el resto; watchdog ~/.hermes/scripts/pockai-cert-renew.sh).

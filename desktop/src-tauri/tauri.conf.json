@@ -57,7 +57,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcwMEUyNDA3Q0M4MTVCNkUKUldSdVc0SE1CeVFPY0RHVGR0eVZBbVBaK0FzSVVSQ0JnTm9GUnp4bjdCQUZkNk40Z3g5bVZSVDgK",
       "endpoints": [
-        "https://api-pockai.jmbargueno.com/v1/desktop/updates/{{target}}/{{arch}}/{{current_version}}"
+        "https://game-api.pockai.world/v1/desktop/updates/{{target}}/{{arch}}/{{current_version}}"
       ],
       "windows": {
         "installMode": "passive"
