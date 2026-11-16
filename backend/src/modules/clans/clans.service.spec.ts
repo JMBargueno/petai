@@ -36,6 +36,7 @@ function buildPrisma(): any {
     })),
     count: jest.fn(async () => 1),
     delete: jest.fn(async () => ({})),
+    update: jest.fn(async ({ where, data }: any) => ({ id: where.id, ...data })),
   };
   prisma.clanMessage = {
     create: jest.fn(async ({ data }: any) => ({
@@ -46,6 +47,8 @@ function buildPrisma(): any {
       createdAt: new Date(),
     })),
     findMany: jest.fn(async () => []),
+    findFirst: jest.fn(async () => null),
+    delete: jest.fn(async () => ({})),
   };
   prisma.clanGoal = {
     create: jest.fn(async ({ data }: any) => ({
@@ -95,18 +98,18 @@ const actor = 'actor';
 describe('ClansService', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('createClan crea el clan con el actor como líder y devuelve el resumen', async () => {
+  it('createClan crea el clan con el actor como Forjador (creator) y devuelve el resumen', async () => {
     const prisma = buildPrisma();
     const summary = await build(prisma).createClan(actor, { name: 'Horda', tag: 'horda', description: 'epico' });
     expect(prisma.clan.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ name: 'Horda', tag: 'horda', leaderId: actor }) }),
     );
     expect(prisma.clanMembership.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ userId: actor, role: 'leader' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ userId: actor, role: 'creator' }) }),
     );
     expect(summary.leaderId).toBe(actor);
     expect(summary.memberCount).toBe(1);
-    expect(summary.members[0].role).toBe('leader');
+    expect(summary.members[0].role).toBe('creator');
     expect(summary.members[0].isOnline).toBe(true);
   });
 
@@ -187,7 +190,7 @@ describe('ClansService', () => {
     expect(summary.id).toBe('clan-2');
   });
 
-  it('leaveClan: el líder no puede salir si quedan otros miembros (400)', async () => {
+  it('leaveClan: el Forjador no puede salir si quedan otros miembros (400)', async () => {
     const prisma = buildPrisma();
     prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1' });
     prisma.clan.findUnique.mockResolvedValueOnce({ id: 'clan-1', leaderId: actor, tag: 'horda' });
@@ -215,16 +218,18 @@ describe('ClansService', () => {
   });
 
 
-  it('inviteMember: 403 si el actor no es el líder', async () => {
+  it('inviteMember: 403 si el actor es un simple Hermano (member)', async () => {
     const prisma = buildPrisma();
-    prisma.clan.findUnique.mockResolvedValueOnce({ id: 'clan-1', leaderId: 'otra-persona' });
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'member' });
     await expect(build(prisma).inviteMember(actor, 'clan-1', { userId: 'bob' })).rejects.toMatchObject({
       status: 403,
     });
+    expect(prisma.clanMembership.create).not.toHaveBeenCalled();
   });
 
   it('inviteMember: 404 si el clan no existe', async () => {
     const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'creator' });
     prisma.clan.findUnique.mockResolvedValueOnce(null);
     await expect(build(prisma).inviteMember(actor, 'clan-1', { userId: 'bob' })).rejects.toMatchObject({
       status: 404,
@@ -233,16 +238,18 @@ describe('ClansService', () => {
 
   it('inviteMember: 400 si el destinatario ya pertenece a un clan', async () => {
     const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'creator' });
     prisma.clan.findUnique.mockResolvedValueOnce({ id: 'clan-1', leaderId: actor });
-    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'otro' });
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm2', clanId: 'otro' });
     await expect(build(prisma).inviteMember(actor, 'clan-1', { userId: 'bob' })).rejects.toMatchObject({
       status: 400,
     });
   });
 
-  it('inviteMember: el líder invita por email y crea el miembro', async () => {
+  it('inviteMember: un Vigía (moderator) invita por email y crea el miembro', async () => {
     const prisma = buildPrisma();
-    prisma.clan.findUnique.mockResolvedValue({ id: 'clan-1', leaderId: actor });
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'moderator' });
+    prisma.clan.findUnique.mockResolvedValue({ id: 'clan-1', leaderId: 'otra' });
     // email → usuario, luego verificación por id, luego "sin clan"
     prisma.user.findUnique.mockResolvedValueOnce({ id: 'bob' }); // por email
     prisma.user.findUnique.mockResolvedValueOnce({ id: 'bob' }); // por id
@@ -254,6 +261,144 @@ describe('ClansService', () => {
       }),
     );
     expect(summary.id).toBe('clan-1');
+  });
+
+  it('getMembers: 403 si el actor no pertenece a ese clan', async () => {
+    const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'otro', role: 'member' });
+    await expect(build(prisma).getMembers(actor, 'clan-1')).rejects.toMatchObject({ status: 403 });
+  });
+
+  // ── Rangos del Nexo ─────────────────────────────────────────────────────────
+
+  /** Encola la membresía del actor y la del objetivo (en ese orden) en `clanMembership.findUnique`. */
+  const withRoles = (prisma: any, actorRole: string, targetRole: string, clanId = 'clan-1') => {
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm-actor', clanId: 'clan-1', userId: actor, role: actorRole });
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm-bob', clanId, userId: 'bob', role: targetRole });
+    prisma.clan.findUnique.mockResolvedValue({ id: 'clan-1', name: 'Horda', tag: 'horda', description: null, leaderId: actor, xp: 0 });
+    prisma.clanMembership.findMany.mockResolvedValue([
+      { userId: actor, role: actorRole, joinedAt: new Date(1) },
+      { userId: 'bob', role: targetRole, joinedAt: new Date(2) },
+    ]);
+  };
+
+  it.each([
+    ['moderator', 'member'],
+    ['admin', 'moderator'],
+    ['admin', 'member'],
+    ['creator', 'admin'],
+  ])('kickMember: un %s puede expulsar a un %s', async (actorRole, targetRole) => {
+    const prisma = buildPrisma();
+    withRoles(prisma, actorRole, targetRole);
+    await build(prisma).kickMember(actor, 'clan-1', 'bob');
+    expect(prisma.clanMembership.delete).toHaveBeenCalledWith({ where: { id: 'm-bob' } });
+    expect(realtime.emitToUser).toHaveBeenCalledWith('bob', 'clan:member_kicked', expect.objectContaining({ userId: 'bob' }));
+  });
+
+  it.each([
+    ['member', 'member'],
+    ['moderator', 'moderator'],
+    ['moderator', 'admin'],
+    ['admin', 'admin'],
+    ['admin', 'creator'],
+  ])('kickMember: un %s NO puede expulsar a un %s (403)', async (actorRole, targetRole) => {
+    const prisma = buildPrisma();
+    withRoles(prisma, actorRole, targetRole);
+    await expect(build(prisma).kickMember(actor, 'clan-1', 'bob')).rejects.toMatchObject({ status: 403 });
+    expect(prisma.clanMembership.delete).not.toHaveBeenCalled();
+  });
+
+  it('kickMember: 404 si el objetivo no es de este clan', async () => {
+    const prisma = buildPrisma();
+    withRoles(prisma, 'creator', 'member', 'otro-clan');
+    await expect(build(prisma).kickMember(actor, 'clan-1', 'bob')).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('kickMember: 400 si intenta expulsarse a sí mismo', async () => {
+    const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'creator' });
+    await expect(build(prisma).kickMember(actor, 'clan-1', actor)).rejects.toMatchObject({ status: 400 });
+  });
+
+  it.each([
+    ['admin', 'member', 'moderator'],
+    ['admin', 'moderator', 'member'],
+    ['creator', 'member', 'admin'],
+    ['creator', 'admin', 'member'],
+  ])('setMemberRole: un %s cambia a un %s a %s', async (actorRole, targetRole, newRole) => {
+    const prisma = buildPrisma();
+    withRoles(prisma, actorRole, targetRole);
+    await build(prisma).setMemberRole(actor, 'clan-1', 'bob', newRole);
+    expect(prisma.clanMembership.update).toHaveBeenCalledWith({ where: { id: 'm-bob' }, data: { role: newRole } });
+    expect(realtime.emitToUser).toHaveBeenCalledWith(
+      actor,
+      'clan:role_changed',
+      expect.objectContaining({ userId: 'bob', role: newRole }),
+    );
+  });
+
+  it.each([
+    ['moderator', 'member', 'moderator'],
+    ['admin', 'member', 'admin'],
+    ['admin', 'admin', 'member'],
+  ])('setMemberRole: un %s NO puede cambiar a un %s a %s (403)', async (actorRole, targetRole, newRole) => {
+    const prisma = buildPrisma();
+    withRoles(prisma, actorRole, targetRole);
+    await expect(build(prisma).setMemberRole(actor, 'clan-1', 'bob', newRole)).rejects.toMatchObject({ status: 403 });
+    expect(prisma.clanMembership.update).not.toHaveBeenCalled();
+  });
+
+  it('setMemberRole: 400 si el rango no es asignable (creator o desconocido)', async () => {
+    await expect(build().setMemberRole(actor, 'clan-1', 'bob', 'creator')).rejects.toMatchObject({ status: 400 });
+    await expect(build().setMemberRole(actor, 'clan-1', 'bob', 'leader')).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('transferCreator: el Forjador cede la Forja y queda como Guardián', async () => {
+    const prisma = buildPrisma();
+    withRoles(prisma, 'creator', 'moderator');
+    await build(prisma).transferCreator(actor, 'clan-1', 'bob');
+    expect(prisma.clanMembership.update).toHaveBeenCalledWith({ where: { id: 'm-bob' }, data: { role: 'creator' } });
+    expect(prisma.clanMembership.update).toHaveBeenCalledWith({ where: { id: 'm-actor' }, data: { role: 'admin' } });
+    expect(prisma.clan.update).toHaveBeenCalledWith({ where: { id: 'clan-1' }, data: { leaderId: 'bob' } });
+  });
+
+  it('transferCreator: 403 si el actor no es el Forjador', async () => {
+    const prisma = buildPrisma();
+    withRoles(prisma, 'admin', 'member');
+    await expect(build(prisma).transferCreator(actor, 'clan-1', 'bob')).rejects.toMatchObject({ status: 403 });
+    expect(prisma.clan.update).not.toHaveBeenCalled();
+  });
+
+  it('updateClan: un Guardián renombra el clan; un Vigía no puede', async () => {
+    const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'admin' });
+    prisma.clan.findUnique.mockResolvedValue({ id: 'clan-1', name: 'Nuevo', tag: 'horda', description: null, leaderId: 'x', xp: 0 });
+    await build(prisma).updateClan(actor, 'clan-1', { name: ' Nuevo ', description: '' });
+    expect(prisma.clan.update).toHaveBeenCalledWith({ where: { id: 'clan-1' }, data: { name: 'Nuevo', description: null } });
+
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'moderator' });
+    await expect(build(prisma).updateClan(actor, 'clan-1', { name: 'X' })).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('disbandClan: solo el Forjador disuelve y se avisa a todos', async () => {
+    const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'admin' });
+    await expect(build(prisma).disbandClan(actor, 'clan-1')).rejects.toMatchObject({ status: 403 });
+    expect(prisma.clan.delete).not.toHaveBeenCalled();
+
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'creator' });
+    prisma.clanMembership.findMany.mockResolvedValueOnce([{ userId: actor }, { userId: 'bob' }]);
+    const res = await build(prisma).disbandClan(actor, 'clan-1');
+    expect(prisma.clan.delete).toHaveBeenCalledWith({ where: { id: 'clan-1' } });
+    expect(realtime.emitToUser).toHaveBeenCalledWith('bob', 'clan:disbanded', expect.objectContaining({ clanId: 'clan-1' }));
+    expect(res.success).toBe(true);
+  });
+
+  it('un rol heredado "leader" se trata como Forjador', async () => {
+    const prisma = buildPrisma();
+    withRoles(prisma, 'leader', 'admin');
+    await build(prisma).kickMember(actor, 'clan-1', 'bob');
+    expect(prisma.clanMembership.delete).toHaveBeenCalled();
   });
 
   // ── Chat ────────────────────────────────────────────────────────────────────
@@ -313,6 +458,26 @@ describe('ClansService', () => {
     const prisma = buildPrisma();
     prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'otro-clan' });
     await expect(build(prisma).getMessages(actor, 'clan-1')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('deleteMessage: el autor borra su mensaje aunque sea Hermano', async () => {
+    const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'member' });
+    prisma.clanMessage.findFirst.mockResolvedValueOnce({ id: 'msg-1', clanId: 'clan-1', userId: actor });
+    await build(prisma).deleteMessage(actor, 'clan-1', 'msg-1');
+    expect(prisma.clanMessage.delete).toHaveBeenCalledWith({ where: { id: 'msg-1' } });
+  });
+
+  it('deleteMessage: un Hermano no puede borrar mensajes de otros; un Vigía sí', async () => {
+    const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'member' });
+    prisma.clanMessage.findFirst.mockResolvedValueOnce({ id: 'msg-1', clanId: 'clan-1', userId: 'bob' });
+    await expect(build(prisma).deleteMessage(actor, 'clan-1', 'msg-1')).rejects.toMatchObject({ status: 403 });
+
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'moderator' });
+    prisma.clanMessage.findFirst.mockResolvedValueOnce({ id: 'msg-1', clanId: 'clan-1', userId: 'bob' });
+    await build(prisma).deleteMessage(actor, 'clan-1', 'msg-1');
+    expect(prisma.clanMessage.delete).toHaveBeenCalledTimes(1);
   });
 
   // ── Metas ───────────────────────────────────────────────────────────────────
@@ -377,18 +542,16 @@ describe('ClansService', () => {
     await expect(build(prisma).addGoalProgress(actor, 'clan-1', 'nope', 1)).rejects.toMatchObject({ status: 404 });
   });
 
-  it('deleteGoal: 403 si el actor no es el líder', async () => {
+  it('deleteGoal: 403 si el actor es un simple Hermano', async () => {
     const prisma = buildPrisma();
-    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1' });
-    prisma.clan.findUnique.mockResolvedValueOnce({ id: 'clan-1', leaderId: 'otra' });
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'member' });
     await expect(build(prisma).deleteGoal(actor, 'clan-1', 'goal-1')).rejects.toMatchObject({ status: 403 });
     expect(prisma.clanGoal.delete).not.toHaveBeenCalled();
   });
 
-  it('deleteGoal: el líder elimina la meta', async () => {
+  it('deleteGoal: un Vigía elimina la meta', async () => {
     const prisma = buildPrisma();
-    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1' });
-    prisma.clan.findUnique.mockResolvedValueOnce({ id: 'clan-1', leaderId: actor });
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'moderator' });
     prisma.clanGoal.findFirst.mockResolvedValueOnce({ id: 'goal-1', clanId: 'clan-1', status: 'active', progress: 0, target: 10, metric: 'generic', title: 'M', description: null, createdAt: new Date(), updatedAt: new Date(), completedAt: null });
     const res = await build(prisma).deleteGoal(actor, 'clan-1', 'goal-1');
     expect(prisma.clanGoal.delete).toHaveBeenCalledWith({ where: { id: 'goal-1' } });

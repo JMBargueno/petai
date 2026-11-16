@@ -5331,7 +5331,7 @@
             "bearer": []
           }
         ],
-        "summary": "Crear un clan (el actor se convierte en líder)",
+        "summary": "Crear un clan (el actor se convierte en Forjador)",
         "tags": [
           "Clans"
         ]
@@ -5456,7 +5456,7 @@
             "bearer": []
           }
         ],
-        "summary": "Invitar a un usuario a unirse directamente (solo el líder)",
+        "summary": "Invitar a un usuario a unirse directamente (Vigía o superior)",
         "tags": [
           "Clans"
         ]
@@ -5486,6 +5486,228 @@
           }
         ],
         "summary": "Roster del clan con presencia en línea por miembro",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}": {
+      "patch": {
+        "operationId": "ClansController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Máx. 40 caracteres"
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Máx. 300 caracteres; vacío o null la borra"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar nombre y/o descripción del clan (Guardián o superior)",
+        "tags": [
+          "Clans"
+        ]
+      },
+      "delete": {
+        "operationId": "ClansController_disband",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Disolver el clan (solo el Forjador)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/members/{userId}": {
+      "delete": {
+        "operationId": "ClansController_kick",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Expulsar a un miembro de rango inferior (Vigía o superior)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/members/{userId}/role": {
+      "patch": {
+        "operationId": "ClansController_setRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "moderator",
+                      "member"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el rango de un miembro (Guardián o superior; Guardianes solo el Forjador)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/transfer": {
+      "post": {
+        "operationId": "ClansController_transfer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "ID del nuevo Forjador"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ceder la Forja (rango de creador) a otro miembro (solo el Forjador)",
         "tags": [
           "Clans"
         ]
@@ -5579,6 +5801,43 @@
           }
         ],
         "summary": "Historial reciente del chat del clan (más reciente primero)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/messages/{messageId}": {
+      "delete": {
+        "operationId": "ClansController_deleteMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Borrar un mensaje del chat (su autor o un Vigía o superior)",
         "tags": [
           "Clans"
         ]
@@ -5758,7 +6017,7 @@
             "bearer": []
           }
         ],
-        "summary": "Eliminar una meta del clan (solo el líder)",
+        "summary": "Eliminar una meta del clan (Vigía o superior)",
         "tags": [
           "Clans"
         ]

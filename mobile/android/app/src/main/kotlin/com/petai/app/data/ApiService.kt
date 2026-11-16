@@ -227,6 +227,29 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
 
     suspend fun getClanMembers(clanId: String): ClanSummary = api.request("GET", "/clans/$clanId/members")
 
+    // ── Gestión del Nexo (rangos de clan) ────────────────────────────────────
+    /** Edita nombre y/o descripción (Guardián o superior). */
+    suspend fun updateClan(clanId: String, name: String, description: String?): ClanSummary =
+        api.request("PATCH", "/clans/$clanId", obj("name" to name.trim(), "description" to (description?.trim() ?: ""))) // "" borra la descripción
+
+    /** Disuelve el clan (solo el Forjador). */
+    suspend fun disbandClan(clanId: String) { api.send("DELETE", "/clans/$clanId") }
+
+    /** Expulsa a un miembro de rango inferior (Vigía o superior). */
+    suspend fun kickClanMember(clanId: String, userId: String): ClanSummary =
+        api.request("DELETE", "/clans/$clanId/members/$userId")
+
+    /** Cambia el rango (admin | moderator | member) de un miembro (Guardián o superior). */
+    suspend fun setClanMemberRole(clanId: String, userId: String, role: ClanRank): ClanSummary =
+        api.request("PATCH", "/clans/$clanId/members/$userId/role", obj("role" to role.wire))
+
+    /** Cede la Forja a otro miembro (solo el Forjador; pasa a Guardián). */
+    suspend fun transferClanCreator(clanId: String, userId: String): ClanSummary =
+        api.request("POST", "/clans/$clanId/transfer", obj("userId" to userId))
+
+    /** Borra un mensaje del chat (su autor o un Vigía o superior). */
+    suspend fun deleteClanMessage(clanId: String, messageId: String) { api.send("DELETE", "/clans/$clanId/messages/$messageId") }
+
     suspend fun sendClanMessage(clanId: String, body: String): ClanMessage =
         api.request("POST", "/clans/$clanId/messages", obj("body" to body))
 

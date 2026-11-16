@@ -1,0 +1,52 @@
+.nexus__card {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.nexus__card p {
+  color: var(--ink);
+}
+
+.nexus__ranks-title {
+  margin-top: 56px;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+}
+.nexus__ranks-lead {
+  max-width: 60ch;
+  color: var(--ink-muted);
+}
+
+.nexus__ranks {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 560px) {
+  .nexus__ranks {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1100px) {
+  .nexus__ranks {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.nexus__rank {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.nexus__rank p {
+  margin: 4px 0 0;
+  color: var(--ink);
+}
+.nexus__rank-name {
+  font-size: 1.05rem;
+}

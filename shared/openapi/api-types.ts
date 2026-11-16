@@ -2611,7 +2611,7 @@ export interface paths {
         /** Mi clan (o 404 si no perteneces a ninguno) */
         get: operations["ClansController_getMine"];
         put?: never;
-        /** Crear un clan (el actor se convierte en líder) */
+        /** Crear un clan (el actor se convierte en Forjador) */
         post: operations["ClansController_create"];
         delete?: never;
         options?: never;
@@ -2662,7 +2662,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Invitar a un usuario a unirse directamente (solo el líder) */
+        /** Invitar a un usuario a unirse directamente (Vigía o superior) */
         post: operations["ClansController_invite"];
         delete?: never;
         options?: never;
@@ -2687,6 +2687,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/clans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Disolver el clan (solo el Forjador) */
+        delete: operations["ClansController_disband"];
+        options?: never;
+        head?: never;
+        /** Editar nombre y/o descripción del clan (Guardián o superior) */
+        patch: operations["ClansController_update"];
+        trace?: never;
+    };
+    "/v1/clans/{id}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Expulsar a un miembro de rango inferior (Vigía o superior) */
+        delete: operations["ClansController_kick"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/members/{userId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cambiar el rango de un miembro (Guardián o superior; Guardianes solo el Forjador) */
+        patch: operations["ClansController_setRole"];
+        trace?: never;
+    };
+    "/v1/clans/{id}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ceder la Forja (rango de creador) a otro miembro (solo el Forjador) */
+        post: operations["ClansController_transfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/clans/{id}/messages": {
         parameters: {
             query?: never;
@@ -2700,6 +2769,23 @@ export interface paths {
         /** Enviar un mensaje al chat del clan */
         post: operations["ClansController_sendMessage"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/messages/{messageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Borrar un mensaje del chat (su autor o un Vigía o superior) */
+        delete: operations["ClansController_deleteMessage"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2750,7 +2836,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Eliminar una meta del clan (solo el líder) */
+        /** Eliminar una meta del clan (Vigía o superior) */
         delete: operations["ClansController_deleteGoal"];
         options?: never;
         head?: never;
@@ -8568,6 +8654,126 @@ export interface operations {
             };
         };
     };
+    ClansController_disband: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Máx. 40 caracteres */
+                    name?: string;
+                    /** @description Máx. 300 caracteres; vacío o null la borra */
+                    description?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_kick: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_setRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    role: "admin" | "moderator" | "member";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_transfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description ID del nuevo Forjador */
+                    userId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ClansController_getMessages: {
         parameters: {
             query?: {
@@ -8611,6 +8817,26 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_deleteMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

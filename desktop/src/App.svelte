@@ -25,7 +25,7 @@
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
   import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
-  import { pushClanMessage, upsertClanGoal } from './lib/clan-store';
+  import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster } from './lib/clan-store';
   import type { HabitatVisitor, ClanMessage, ClanGoal } from './lib/api';
   import { updateState, startAutoCheck, checkForUpdates } from './lib/updater';
 
@@ -236,6 +236,13 @@
           upsertClanGoal(g);
           notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`);
         });
+        // Rangos del Nexo: borrados en el chat y cambios de roster (la pestaña recarga el clan).
+        socket.on('clan:message_deleted', (ev: { id?: string } | null) => {
+          if (ev?.id) dropClanMessage(ev.id);
+        });
+        socket.on('clan:role_changed', () => bumpClanRoster());
+        socket.on('clan:member_kicked', () => bumpClanRoster());
+        socket.on('clan:disbanded', () => bumpClanRoster());
 
         // Bienvenida: si el jugador vuelve tras una ausencia, el backend emite `pet:action
         // welcome_back`. Se pide una vez por sesión, con el socket ya conectado para recibirlo.

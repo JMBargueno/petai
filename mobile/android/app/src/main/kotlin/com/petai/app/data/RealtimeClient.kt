@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -176,4 +177,23 @@ class RealtimeClient(private val session: SessionStore, private val api: ApiClie
 
     /** `clan:goal_completed`: un objetivo del clan se completó. */
     fun clanGoalCompleted(): Flow<ClanGoal> = event("clan:goal_completed") { args -> decodeJson<ClanGoal>(args.firstOrNull()) }
+
+    /** `clan:message_deleted`: un Vigía (o el autor) borró un mensaje; emite su `id`. */
+    fun clanMessageDeleted(): Flow<String> = event("clan:message_deleted") { args -> field(args, "id") }
+
+    /**
+     * Cambios de roster del clan (`clan:role_changed`, `clan:member_kicked`, `clan:disbanded`):
+     * emite el `clanId` afectado para que la pantalla recargue el Nexo.
+     */
+    fun clanRosterChanged(): Flow<String> = merge(
+        event("clan:role_changed") { args -> field(args, "clanId") },
+        event("clan:member_kicked") { args -> field(args, "clanId") },
+        event("clan:disbanded") { args -> field(args, "clanId") },
+    )
+
+    private fun field(args: Array<out Any?>, key: String): String? =
+        args.firstOrNull()?.toString()?.let { s ->
+            runCatching { json.parseToJsonElement(s).jsonObject[key]?.jsonPrimitive?.content }
+                .getOrNull()?.takeIf { it.isNotEmpty() }
+        }
 }
