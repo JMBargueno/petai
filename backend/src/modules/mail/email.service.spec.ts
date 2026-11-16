@@ -57,5 +57,30 @@ describe('email.service', () => {
     expect(mail.replyTo).toBe('contact@pockai.world');
     expect(mail.to).toBe('jugador@example.com');
     expect(mail.text).toContain('123456');
+    // Versión HTML con la plantilla de marca
+    expect(mail.html).toContain('123456');
+    expect(mail.html).toContain('<!DOCTYPE html>');
+  });
+
+  it('el correo de verificación lleva código y enlace (HTML y texto)', async () => {
+    const sender = new SmtpEmailSender(config({ SMTP_HOST: 'h', PUBLIC_WEB_URL: 'https://pockai.world' }));
+    const link = 'https://pockai.world/es/verify-email?token=abc';
+    await sender.sendVerification('jugador@example.com', { code: '654321', link, expiresInMinutes: 1440 });
+    const mail = sendMail.mock.calls[0][0];
+    expect(mail.to).toBe('jugador@example.com');
+    expect(mail.subject).toMatch(/Verifica/);
+    expect(mail.text).toContain('654321');
+    expect(mail.text).toContain(link);
+    expect(mail.html).toContain('654321');
+    expect(mail.html).toContain(link);
+    expect(mail.html).toContain('https://pockai.world/icon-512.png');
+  });
+
+  it('sendRaw envía HTML + texto con cabeceras extra y asunto en una línea', async () => {
+    const sender = new SmtpEmailSender(config({ SMTP_HOST: 'h' }));
+    await sender.sendRaw({ to: 'a@b.c', subject: 'Hola\r\nBcc: x', html: '<p>hola</p>', text: 'hola', headers: { 'List-Unsubscribe': '<https://x>' } });
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'a@b.c', subject: 'Hola Bcc: x', html: '<p>hola</p>', text: 'hola', headers: { 'List-Unsubscribe': '<https://x>' } }),
+    );
   });
 });

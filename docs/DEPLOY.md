@@ -33,6 +33,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `SWAGGER_ENABLED` | no | Por defecto `false` en producción. |
 | `RATE_LIMIT_PER_MINUTE` | no | Peticiones por minuto por usuario autenticado o por IP (300 por defecto). Súbelo si muchos usuarios comparten IP sin iniciar sesión. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | recomendada | Transporte de correo (recuperación de contraseña y formulario de contacto). Sin `SMTP_HOST` los correos solo se escriben en el log. |
+| `PUBLIC_WEB_URL`, `PUBLIC_API_URL` | sí con correo | URLs públicas de la web (`https://pockai.world`: enlace de verificación y logo de la plantilla) y de la API (`https://game-api.pockai.world`: enlace de baja y `List-Unsubscribe`). |
+| `EMAIL_VERIFICATION_REQUIRED` | no | `true` bloquea con 403 `EMAIL_NOT_VERIFIED` a las cuentas sin verificar (escritorio y Android muestran la pantalla de verificación). Por defecto `false`; ver «Verificación de correo» en §11 antes de activarlo. |
+| `EMAIL_VERIFICATION_TTL_MINUTES`, `MAIL_UNSUBSCRIBE_SECRET`, `EMAIL_CAMPAIGN_RATE_PER_SECOND` | no | Validez del código/enlace (1440 min), secreto de los enlaces de baja (por defecto derivado de `JWT_ACCESS_SECRET`) y ritmo de la cola de envíos del panel (5 correos/s). |
 | `MAIL_FROM`, `MAIL_REPLY_TO`, `CONTACT_TO` | no | Remitente de sistema (`Pockai <noreply@pockai.world>`, debe ser `SMTP_USER` o un alias suyo), a dónde van las respuestas de los usuarios (`contact@pockai.world`) y buzón que recibe el formulario de contacto (`contact@pockai.world`). |
 | `GITHUB_RELEASES_TOKEN` | recomendada | Token solo-lectura de GitHub para consultar las Releases del escritorio (auto-update). Sin él `GET /v1/desktop/download/*` devuelve 404 «Instalador no disponible». Un PAT con scope `repo` o un fine-grained con lectura de Releases es suficiente. |
 | `AI_ALLOW_INSECURE_URLS`, `AUTH_RATE_LIMIT_DISABLED`, `RATE_LIMIT_DISABLED` | **nunca** | El arranque falla si están activas en producción. |
@@ -291,6 +294,22 @@ Despliegue real (15-11-2026, migrado a `pockai.world` el 16-11) del stack sobre 
   el hostname público no sirve por el camino normal (hairpin bloqueado, resuelve a IPv6)
   y nodemailer no respeta `/etc/hosts` del contenedor (resuelve con su propio DNS), de ahí
   la IP literal + `SMTP_TLS_SERVERNAME`.
+- **Verificación de correo** (código de 6 dígitos en la app o enlace a `/es/verify-email`). La
+  migración `20261116200000_email_verification_and_campaigns` da por verificadas todas las cuentas
+  existentes; solo se exige a las nuevas. Orden de despliegue:
+  1. Backend + web con `EMAIL_VERIFICATION_REQUIRED=false`: las cuentas nuevas reciben el correo
+     pero aún no se bloquea nada. Los envíos del panel (`/es/admin/correos`) ya funcionan.
+  2. Publicar el escritorio (updater) y Android con la pantalla de verificación.
+  3. Cuando la mayoría haya actualizado: `EMAIL_VERIFICATION_REQUIRED=true` en el `.env` y
+     `docker compose -f docker-compose.prod.yml up -d backend`. Las versiones antiguas verían el 403
+     como un error genérico.
+  Soporte: en el panel, «Usuarios → Editar → Correo verificado» marca una cuenta a mano. Recuperar
+  la contraseña también verifica el correo (el código llegó a ese buzón).
+- **Envíos desde el panel**: sección «Correos» (permiso `email:send`: admin y superadmin). HTML libre
+  dentro de la plantilla de marca, a usuarios concretos, a una lista de correos o a un segmento. Nunca
+  se envía a quien se dio de baja (`User.emailOptOutAt`), en ningún modo; los correos a cuentas llevan
+  enlace de baja y `List-Unsubscribe` (un clic). La cola `email-campaigns` (BullMQ, Redis) envía
+  por lotes a `EMAIL_CAMPAIGN_RATE_PER_SECOND`.
 - **Backups**: `~/.hermes/scripts/petai-backup.sh` (cron `0 3 * * *`) →
   `~/backups/petai/YYYY-MM-DD/{pg-dumpall.sql.gz, redis.rdb.gz}`. El dumpall va con
   `--clean --if-exists` y se restaura con `pg_restore`/`psql` sobre un PostgreSQL 17.

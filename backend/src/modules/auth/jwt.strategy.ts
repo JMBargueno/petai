@@ -31,6 +31,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         coins: true,
         gems: true,
         accountXp: true,
+        // Lo usa JwtAuthGuard para bloquear cuentas sin verificar (se lee en cada petición: efecto inmediato).
+        emailVerifiedAt: true,
       },
     });
 

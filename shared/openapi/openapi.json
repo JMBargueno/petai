@@ -611,6 +611,95 @@
         ]
       }
     },
+    "/v1/auth/verify-email/resend": {
+      "post": {
+        "operationId": "AuthController_verifyEmailResend",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reenviar el correo de verificación (código + enlace). Invalida los anteriores",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/verify-email/confirm": {
+      "post": {
+        "operationId": "AuthController_verifyEmailConfirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyEmailResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verificar el correo con el código de 6 dígitos (desde la app)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/verify-email/link": {
+      "post": {
+        "operationId": "AuthController_verifyEmailLink",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyEmailResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verificar el correo con el token del enlace (página web /verify-email, sin sesión)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/v1/auth/reset/request": {
       "post": {
         "operationId": "AuthController_resetRequest",
@@ -3143,6 +3232,677 @@
         "summary": "Descarga el instalador más reciente de la app de escritorio. Público.",
         "tags": [
           "Desktop updates"
+        ]
+      }
+    },
+    "/v1/admin/emails/preview": {
+      "post": {
+        "operationId": "AdminEmailController_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "subject",
+                  "html"
+                ],
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "preheader": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "Cuerpo en HTML libre: se envuelve en la plantilla de marca"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Vista previa: devuelve el HTML final con la plantilla de marca",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/emails/audience/count": {
+      "post": {
+        "operationId": "AdminEmailController_count",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "audience": {
+                    "type": "object",
+                    "description": "{type:'users',userIds[]} | {type:'emails',emails[]} | {type:'segment',role?,verified?:'any'|'verified'|'unverified'}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Número de destinatarios de un público (los segmentos excluyen las bajas)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/emails/test": {
+      "post": {
+        "operationId": "AdminEmailController_test",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "subject",
+                  "html"
+                ],
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "preheader": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "Cuerpo en HTML libre: se envuelve en la plantilla de marca"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar una prueba al correo del propio administrador",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/emails": {
+      "post": {
+        "operationId": "AdminEmailController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "subject",
+                  "html",
+                  "audience"
+                ],
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "preheader": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "Cuerpo en HTML libre: se envuelve en la plantilla de marca"
+                  },
+                  "audience": {
+                    "type": "object",
+                    "description": "{type:'users',userIds[]} | {type:'emails',emails[]} | {type:'segment',role?,verified?:'any'|'verified'|'unverified'}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un envío (se encola y se manda por lotes; queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "get": {
+        "operationId": "AdminEmailController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de envíos (paginado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/emails/{id}": {
+      "get": {
+        "operationId": "AdminEmailController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle y progreso de un envío",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users": {
+      "get": {
+        "operationId": "AdminUsersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar usuarios (paginado; filtros: role, q)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/role": {
+      "patch": {
+        "operationId": "AdminUsersController_assignRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "superadmin",
+                      "admin",
+                      "moderator",
+                      "user"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el rol de un usuario (cierra sus sesiones y queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/balance": {
+      "patch": {
+        "operationId": "AdminUsersController_adjustBalance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "coins": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "gems": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/verify-email": {
+      "post": {
+        "operationId": "AdminUsersController_markVerified",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Marcar el correo de un usuario como verificado (soporte; queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/resend-verification": {
+      "post": {
+        "operationId": "AdminUsersController_resendVerification",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reenviar el correo de verificación a un usuario sin verificar",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/registration-settings": {
+      "get": {
+        "operationId": "AdminInvitesController_getSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajustes del registro (¿solo con invitación?)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminInvitesController_setSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar el registro solo con invitación (queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/invites": {
+      "get": {
+        "operationId": "AdminInvitesController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "active",
+                "used",
+                "revoked",
+                "expired"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar códigos de invitación (paginado; filtro: status)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "operationId": "AdminInvitesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvitesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedInvitesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar códigos de invitación",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/invites/{id}/revoke": {
+      "post": {
+        "operationId": "AdminInvitesController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteCodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revocar un código de invitación (idempotente)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/pets": {
+      "get": {
+        "operationId": "AdminPetsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mascotas (paginado; filtros: rarity, q por nickname o dueño)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/pets/{id}": {
+      "patch": {
+        "operationId": "AdminPetsController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nickname"
+                ],
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "maxLength": 16
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Renombrar una mascota (auditoría: pet_rename)",
+        "tags": [
+          "Admin"
         ]
       }
     },
@@ -7638,387 +8398,6 @@
         ]
       }
     },
-    "/v1/admin/users": {
-      "get": {
-        "operationId": "AdminUsersController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar usuarios (paginado; filtros: role, q)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/users/{id}/role": {
-      "patch": {
-        "operationId": "AdminUsersController_assignRole",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "role"
-                ],
-                "properties": {
-                  "role": {
-                    "type": "string",
-                    "enum": [
-                      "superadmin",
-                      "admin",
-                      "moderator",
-                      "user"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Cambiar el rol de un usuario (cierra sus sesiones y queda auditado)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/users/{id}/balance": {
-      "patch": {
-        "operationId": "AdminUsersController_adjustBalance",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "coins": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "gems": {
-                    "type": "integer",
-                    "minimum": 0
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/registration-settings": {
-      "get": {
-        "operationId": "AdminInvitesController_getSettings",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegistrationSettingsDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Ajustes del registro (¿solo con invitación?)",
-        "tags": [
-          "Admin"
-        ]
-      },
-      "patch": {
-        "operationId": "AdminInvitesController_setSettings",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegistrationSettingsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegistrationSettingsDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Activar o desactivar el registro solo con invitación (queda auditado)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/invites": {
-      "get": {
-        "operationId": "AdminInvitesController_list",
-        "parameters": [
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "active",
-                "used",
-                "revoked",
-                "expired"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "pageSize",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InviteListDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar códigos de invitación (paginado; filtro: status)",
-        "tags": [
-          "Admin"
-        ]
-      },
-      "post": {
-        "operationId": "AdminInvitesController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateInvitesDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatedInvitesDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Generar códigos de invitación",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/invites/{id}/revoke": {
-      "post": {
-        "operationId": "AdminInvitesController_revoke",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InviteCodeDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Revocar un código de invitación (idempotente)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/pets": {
-      "get": {
-        "operationId": "AdminPetsController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar mascotas (paginado; filtros: rarity, q por nickname o dueño)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/pets/{id}": {
-      "patch": {
-        "operationId": "AdminPetsController_rename",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "nickname"
-                ],
-                "properties": {
-                  "nickname": {
-                    "type": "string",
-                    "maxLength": 16
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Renombrar una mascota (auditoría: pet_rename)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
     "/v1/admin/stats": {
       "get": {
         "operationId": "AdminController_stats",
@@ -8467,6 +8846,10 @@
               },
               "gems": {
                 "type": "number"
+              },
+              "emailVerified": {
+                "type": "boolean",
+                "description": "false: la cuenta debe verificar el correo antes de usar las apps"
               }
             }
           }
@@ -8523,6 +8906,48 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "VerifyEmailCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "482913",
+            "description": "Código de 6 dígitos recibido por email"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "VerifyEmailResultDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "ok",
+          "emailVerified"
+        ]
+      },
+      "VerifyEmailLinkDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token del enlace de verificación (parámetro ?token= de la página /verify-email)"
+          }
+        },
+        "required": [
+          "token"
         ]
       },
       "ResetRequestDto": {
@@ -9342,6 +9767,173 @@
           "message"
         ]
       },
+      "RegistrationSettingsDto": {
+        "type": "object",
+        "properties": {
+          "inviteOnly": {
+            "type": "boolean",
+            "description": "Si es true, el registro exige un código de invitación válido"
+          }
+        },
+        "required": [
+          "inviteOnly"
+        ]
+      },
+      "InviteCreatorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName"
+        ]
+      },
+      "InviteCodeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "example": "ABCD-EF23"
+          },
+          "maxUses": {
+            "type": "number"
+          },
+          "usedCount": {
+            "type": "number"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InviteCreatorDto"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "used",
+              "revoked",
+              "expired"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "maxUses",
+          "usedCount",
+          "expiresAt",
+          "revokedAt",
+          "note",
+          "createdAt",
+          "createdBy",
+          "status"
+        ]
+      },
+      "InviteListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InviteCodeDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "CreateInvitesDto": {
+        "type": "object",
+        "properties": {
+          "maxUses": {
+            "type": "number",
+            "default": 1,
+            "minimum": 1,
+            "description": "Número de registros que permite cada código"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Caducidad (opcional, futura)"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Nota interna (para quién es la invitación)"
+          },
+          "count": {
+            "type": "number",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Cuántos códigos generar"
+          }
+        }
+      },
+      "CreatedInvitesDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InviteCodeDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "MissionRewardDto": {
         "type": "object",
         "properties": {
@@ -9896,173 +10488,6 @@
         "required": [
           "openings",
           "total"
-        ]
-      },
-      "RegistrationSettingsDto": {
-        "type": "object",
-        "properties": {
-          "inviteOnly": {
-            "type": "boolean",
-            "description": "Si es true, el registro exige un código de invitación válido"
-          }
-        },
-        "required": [
-          "inviteOnly"
-        ]
-      },
-      "InviteCreatorDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "email",
-          "displayName"
-        ]
-      },
-      "InviteCodeDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string",
-            "example": "ABCD-EF23"
-          },
-          "maxUses": {
-            "type": "number"
-          },
-          "usedCount": {
-            "type": "number"
-          },
-          "expiresAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "revokedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "note": {
-            "type": "string",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "createdBy": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/InviteCreatorDto"
-              }
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "active",
-              "used",
-              "revoked",
-              "expired"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "maxUses",
-          "usedCount",
-          "expiresAt",
-          "revokedAt",
-          "note",
-          "createdAt",
-          "createdBy",
-          "status"
-        ]
-      },
-      "InviteListDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InviteCodeDto"
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "page": {
-            "type": "number"
-          },
-          "pageSize": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "page",
-          "pageSize"
-        ]
-      },
-      "CreateInvitesDto": {
-        "type": "object",
-        "properties": {
-          "maxUses": {
-            "type": "number",
-            "default": 1,
-            "minimum": 1,
-            "description": "Número de registros que permite cada código"
-          },
-          "expiresAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time",
-            "description": "Caducidad (opcional, futura)"
-          },
-          "note": {
-            "type": "string",
-            "maxLength": 200,
-            "description": "Nota interna (para quién es la invitación)"
-          },
-          "count": {
-            "type": "number",
-            "default": 1,
-            "minimum": 1,
-            "maximum": 50,
-            "description": "Cuántos códigos generar"
-          }
-        }
-      },
-      "CreatedInvitesDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InviteCodeDto"
-            }
-          }
-        },
-        "required": [
-          "items"
         ]
       },
       "AdminStatsUsersDto": {

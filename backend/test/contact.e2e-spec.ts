@@ -22,7 +22,7 @@ describe('Contacto (e2e)', () => {
   beforeAll(async () => {
     const mod = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(EMAIL_SENDER)
-      .useValue({ sendPasswordResetCode: jest.fn(), sendContactMessage })
+      .useValue({ sendPasswordResetCode: jest.fn(), sendContactMessage, sendVerification: jest.fn(), sendRaw: jest.fn() })
       .compile();
     app = mod.createNestApplication();
     app.setGlobalPrefix('v1');

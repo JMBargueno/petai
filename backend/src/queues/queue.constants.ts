@@ -6,3 +6,6 @@
  * liquidaciones…) conforme se migren los restantes trabajos lentos fuera de la petición.
  */
 export const WEBHOOKS_QUEUE = 'webhooks';
+
+/** Envíos de correo del panel de administración (una tarea por campaña, procesada por lotes). */
+export const EMAIL_CAMPAIGNS_QUEUE = 'email-campaigns';

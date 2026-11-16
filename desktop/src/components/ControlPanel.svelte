@@ -100,6 +100,7 @@ import VisitTab from './VisitTab.svelte';
     endPanelDrag();
     if (panelErrorTimer) clearTimeout(panelErrorTimer);
     if (hatchClock) clearInterval(hatchClock);
+    if (resendTimer) clearInterval(resendTimer);
   });
 
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
@@ -141,6 +142,72 @@ import VisitTab from './VisitTab.svelte';
   let inviteRequired = false;
   let authError = '';
   let isLoading = false;
+
+  // ---- Verificación del correo (cuenta recién creada) ----
+  let verifyCode = '';
+  let verifyError = '';
+  let verifyNotice = '';
+  let resendIn = 0;
+  let resendTimer: ReturnType<typeof setInterval> | null = null;
+
+  function startResendCooldown(seconds = 60) {
+    resendIn = seconds;
+    if (resendTimer) clearInterval(resendTimer);
+    resendTimer = setInterval(() => {
+      resendIn -= 1;
+      if (resendIn <= 0 && resendTimer) {
+        clearInterval(resendTimer);
+        resendTimer = null;
+      }
+    }, 1000);
+  }
+
+  async function handleVerifyCode() {
+    verifyError = '';
+    verifyNotice = '';
+    if (!/^[0-9]{6}$/.test(verifyCode.trim())) {
+      verifyError = 'El código tiene 6 dígitos';
+      return;
+    }
+    isLoading = true;
+    try {
+      await api.verifyEmail(verifyCode);
+      verifyCode = '';
+      dispatch('authSuccess');
+    } catch (err: any) {
+      verifyError = err?.message || 'No se pudo verificar el código';
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  /** «Ya lo he verificado» (con el enlace de la web): se vuelve a consultar el perfil. */
+  async function handleVerifyRecheck() {
+    verifyError = '';
+    verifyNotice = '';
+    isLoading = true;
+    try {
+      const me = await api.getMe();
+      if (me?.emailVerified) dispatch('authSuccess');
+      else verifyNotice = 'Aún no consta como verificado. Abre el enlace del correo o escribe el código.';
+    } catch {
+      verifyError = 'Sin conexión con el servidor. Inténtalo de nuevo en un momento.';
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function handleResendVerification() {
+    verifyError = '';
+    verifyNotice = '';
+    try {
+      await api.resendVerification();
+      verifyNotice = 'Te hemos enviado un correo nuevo. El código anterior ya no sirve.';
+      startResendCooldown();
+    } catch (err: any) {
+      verifyError = err?.message || 'No se pudo reenviar el correo';
+    }
+  }
 
   // Hatching animation state
   let hatchingEggId: string | null = null;
@@ -417,6 +484,55 @@ import VisitTab from './VisitTab.svelte';
         {#if $updateState.status !== 'idle'}
           <AboutPanel />
         {/if}
+      </div>
+    {:else if user.emailVerified === false}
+      <!-- Cuenta sin verificar: no se puede jugar hasta confirmar el correo -->
+      <div class="auth-section">
+        <div class="auth-hero">
+          <div class="auth-halo"><PockaiMark size={72} /></div>
+          <span class="eyebrow">Un último paso</span>
+          <h3 class="display auth-title">Verifica tu correo</h3>
+          <p class="subtitle">Te hemos enviado un código a <strong>{user.email}</strong>. Escríbelo aquí o pulsa el botón del correo.</p>
+        </div>
+
+        <form class="card auth-form" on:submit|preventDefault={handleVerifyCode}>
+          {#if verifyError}
+            <div class="error-msg auth-error" role="alert"><AlertCircle size={16} /> <span>{verifyError}</span></div>
+          {/if}
+          {#if verifyNotice}
+            <p class="subtitle verify-notice" role="status">{verifyNotice}</p>
+          {/if}
+
+          <div class="form-group">
+            <label for="verify-code">Código de verificación</label>
+            <input
+              class="input verify-code"
+              id="verify-code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              pattern={'[0-9]{6}'}
+              maxlength="6"
+              required
+              bind:value={verifyCode}
+              placeholder="123456"
+            />
+          </div>
+
+          <button type="submit" class="btn btn--primary block auth-submit" disabled={isLoading}>
+            {isLoading ? 'Comprobando…' : 'Verificar'}
+          </button>
+          <button type="button" class="btn block verify-secondary" on:click={handleVerifyRecheck} disabled={isLoading}>
+            Ya lo he verificado con el enlace
+          </button>
+        </form>
+
+        <button type="button" class="auth-toggle" on:click={handleResendVerification} disabled={resendIn > 0}>
+          {#if resendIn > 0}Puedes reenviarlo en {resendIn} s{:else}¿No te ha llegado? <strong>Reenviar correo</strong>{/if}
+        </button>
+        <button type="button" class="auth-toggle" on:click={() => { api.logout(); dispatch('logout'); }}>
+          Usar otra cuenta
+        </button>
       </div>
     {:else}
       <!-- Destinos principales -->
@@ -1474,6 +1590,23 @@ import VisitTab from './VisitTab.svelte';
   .auth-submit {
     min-height: 44px;
     margin-top: 10px;
+  }
+  .verify-code {
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    font-size: 22px;
+    letter-spacing: 0.3em;
+    text-align: center;
+  }
+  .verify-secondary {
+    min-height: 40px;
+    margin-top: 8px;
+  }
+  .verify-notice {
+    margin: 0 0 10px;
+  }
+  .auth-toggle:disabled {
+    cursor: default;
+    opacity: 0.7;
   }
   .auth-toggle {
     display: block;

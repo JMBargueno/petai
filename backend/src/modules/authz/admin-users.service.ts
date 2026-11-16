@@ -13,6 +13,7 @@ const ADMIN_USER_SELECT = {
   coins: true,
   gems: true,
   accountXp: true,
+  emailVerifiedAt: true,
   createdAt: true,
 } as const;
 

@@ -11,6 +11,8 @@ data class UserDto(
     val timezone: String? = null,
     val coins: Int = 0,
     val gems: Int = 0,
+    /** false: hay que verificar el correo antes de usar la app. Por defecto true (backends antiguos). */
+    val emailVerified: Boolean = true,
 )
 
 @Serializable
@@ -118,7 +120,15 @@ sealed interface ChatEvent {
     data class Action(val summary: String) : ChatEvent
 }
 
-class ApiException(val status: Int, override val message: String) : Exception(message)
+/** Error de la API. `code` es el código de negocio del backend (p. ej. EMAIL_NOT_VERIFIED), si lo hay. */
+class ApiException(val status: Int, override val message: String, val code: String? = null) : Exception(message) {
+    /** La cuenta no tiene el correo verificado: la app debe mostrar la pantalla de verificación. */
+    val isEmailUnverified: Boolean get() = status == 403 && code == EMAIL_NOT_VERIFIED
+
+    companion object {
+        const val EMAIL_NOT_VERIFIED = "EMAIL_NOT_VERIFIED"
+    }
+}
 
 // ---------- Social: clanes, presencia y visita en vivo (feature 021) ----------
 

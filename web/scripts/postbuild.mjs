@@ -2,6 +2,7 @@
 //  1. index.html en la raíz que redirige a /es/ o /en/ según el idioma del navegador.
 //  2. Copias del shell CSR en cada ruta del panel, para que /es/admin/… abra en cualquier
 //     hosting estático sin reglas de reescritura.
+//     Igual para las páginas públicas que solo se renderizan en el cliente (CLIENT_ROUTES).
 //  3. robots.txt, sitemap.xml y llms.txt (solo rutas públicas; el panel queda fuera).
 // El dominio y los idiomas salen de src/app/site.json, la misma fuente que usan canonical y hreflang.
 import { execFileSync } from 'node:child_process';
@@ -16,7 +17,9 @@ const SITE_URL = site.url.replace(/\/$/, '');
 const SITE_NAME = site.name;
 const LOCALES = site.locales;
 const ADMIN_LOCALE = 'es';
-const ADMIN_ROUTES = ['', 'login', 'resumen', 'precios', 'eventos', 'usuarios', 'invitaciones', 'pockais', 'facturacion', 'registro'];
+// Páginas públicas sin prerender (leen parámetros de la URL, p. ej. ?token=): shell CSR en cada idioma.
+const CLIENT_ROUTES = ['verify-email'];
+const ADMIN_ROUTES = ['', 'login', 'resumen', 'precios', 'eventos', 'usuarios', 'invitaciones', 'correos', 'pockais', 'facturacion', 'registro'];
 
 for (const locale of LOCALES) {
   if (!existsSync(join(out, locale, 'index.html'))) {
@@ -50,6 +53,15 @@ for (const route of ADMIN_ROUTES) {
   const dir = join(out, ADMIN_LOCALE, 'admin', route);
   mkdirSync(dir, { recursive: true });
   copyFileSync(shell, join(dir, 'index.html'));
+}
+for (const locale of LOCALES) {
+  const localeShell = join(out, locale, 'index.csr.html');
+  if (!existsSync(localeShell)) throw new Error(`postbuild: falta ${locale}/index.csr.html`);
+  for (const route of CLIENT_ROUTES) {
+    const dir = join(out, locale, route);
+    mkdirSync(dir, { recursive: true });
+    copyFileSync(localeShell, join(dir, 'index.html'));
+  }
 }
 
 // Recursos compartidos en la raíz: og:image, iconos y manifest se enlazan con URL absoluta

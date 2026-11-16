@@ -107,6 +107,8 @@ export const envSchema = z.object({
   // Prohibido en producción (productionProblems).
   BILLING_MOCK_ENABLED: z.enum(['true', 'false']).default('false'),
   PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
+  // URL pública de esta API (enlaces de baja de los correos y cabecera List-Unsubscribe). Ej.: https://game-api.pockai.world
+  PUBLIC_API_URL: z.string().default('http://localhost:3000'),
   AI_MANAGED_ENABLED: z.enum(['true', 'false']).default('true'),
   AI_MANAGED_MODEL: z.string().default('google/gemini-2.5-flash-lite'),
   AI_MANAGED_FALLBACK_MODELS: z.string().default('meta-llama/llama-3.3-70b-instruct,deepseek/deepseek-chat'),
@@ -135,6 +137,17 @@ export const envSchema = z.object({
   MAIL_REPLY_TO: z.string().default('contact@pockai.world'),
   // Buzón que RECIBE los mensajes del formulario de contacto (no se usa para enviar).
   CONTACT_TO: z.string().default('contact@pockai.world'),
+  // ---- Verificación de correo ----
+  // Si es true, las cuentas sin verificar no pueden usar la API (403 EMAIL_NOT_VERIFIED) ni el socket.
+  // Despliegue: primero false (se envía el correo pero no se bloquea), publicar escritorio/Android con la
+  // pantalla de verificación y después activarlo. Ver docs/DEPLOY.md.
+  EMAIL_VERIFICATION_REQUIRED: z.enum(['true', 'false']).default('false'),
+  // Validez del código y del enlace de verificación (minutos). Por defecto 24 h.
+  EMAIL_VERIFICATION_TTL_MINUTES: positiveInt(1440),
+  // Secreto para firmar los enlaces de baja de los correos del panel (por defecto se deriva de JWT_ACCESS_SECRET).
+  MAIL_UNSUBSCRIBE_SECRET: z.string().min(16).optional(),
+  // Envíos del panel: correos por segundo que manda la cola (protege la reputación del servidor SMTP).
+  EMAIL_CAMPAIGN_RATE_PER_SECOND: positiveInt(5),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -208,6 +221,9 @@ export function validateEnv(config: Record<string, unknown>) {
     }
     if (!result.data.SMTP_HOST) {
       console.warn('SMTP_HOST no está definido: los correos (recuperación y contacto) solo se escribirán en el log');
+    }
+    if (result.data.EMAIL_VERIFICATION_REQUIRED !== 'true') {
+      console.warn('EMAIL_VERIFICATION_REQUIRED=false: las cuentas sin verificar pueden usar las apps (actívalo cuando escritorio y Android tengan la pantalla de verificación)');
     }
   }
   return result.data;

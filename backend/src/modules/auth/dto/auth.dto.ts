@@ -67,6 +67,7 @@ export class AuthResponseDto {
       displayName: { type: 'string' },
       coins: { type: 'number' },
       gems: { type: 'number' },
+      emailVerified: { type: 'boolean', description: 'false: la cuenta debe verificar el correo antes de usar las apps' },
     },
   })
   user: {
@@ -76,5 +77,24 @@ export class AuthResponseDto {
     displayName?: string;
     coins: number;
     gems: number;
+    emailVerified: boolean;
   };
+}
+
+export class VerifyEmailCodeDto {
+  @ApiProperty({ example: '482913', description: 'Código de 6 dígitos recibido por email' })
+  code: string;
+}
+
+export class VerifyEmailLinkDto {
+  @ApiProperty({ description: 'Token del enlace de verificación (parámetro ?token= de la página /verify-email)' })
+  token: string;
+}
+
+export class VerifyEmailResultDto {
+  @ApiProperty({ example: true })
+  ok: boolean;
+
+  @ApiProperty({ example: true })
+  emailVerified: boolean;
 }

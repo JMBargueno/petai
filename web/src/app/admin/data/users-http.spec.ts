@@ -10,6 +10,7 @@ const user = (i: number, role = 'user') => ({
   coins: 100,
   gems: 5,
   accountXp: 0,
+  emailVerifiedAt: i === 2 ? '2026-11-15T00:00:00.000Z' : null,
   createdAt: '2026-11-15T00:00:00.000Z',
 });
 
@@ -49,6 +50,19 @@ describe('HttpUsersRepository', () => {
       method: 'PATCH',
       body: JSON.stringify({ role: 'moderator' }),
     });
+  });
+
+  it('expone emailVerified y marca la verificación manual con POST', async () => {
+    const api = fakeApi([[user(1), user(2)]], 2);
+    const repo = new HttpUsersRepository(api);
+    const rows = await repo.list();
+    expect(rows.map((r) => r.emailVerified)).toEqual([false, true]);
+    expect(rows[0]).not.toHaveProperty('emailVerifiedAt');
+
+    const updated = await repo.update('id-1', { emailVerified: true });
+    expect(updated.emailVerified).toBe(true);
+    expect(api.request).toHaveBeenLastCalledWith('/v1/admin/users/id-1/verify-email', { method: 'POST' });
+    await expect(repo.update('id-2', { emailVerified: false })).rejects.toThrow(/no se puede/);
   });
 
   it('fija monedas y gemas solo con los campos modificados', async () => {

@@ -54,6 +54,23 @@ export function onTokenRenewed(cb: (token: string) => void): () => void {
   return () => tokenRenewedListeners.delete(cb);
 }
 
+/** Código del 403 que devuelve la API a las cuentas con el correo sin verificar. */
+export const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
+const emailUnverifiedListeners = new Set<() => void>();
+
+/** Avisa cuando la API rechaza una petición porque el correo de la cuenta no está verificado. */
+export function onEmailUnverified(cb: () => void): () => void {
+  emailUnverifiedListeners.add(cb);
+  return () => emailUnverifiedListeners.delete(cb);
+}
+
+/** ¿Es la respuesta un 403 por correo sin verificar? (lee una copia: el cuerpo original queda intacto) */
+async function isEmailUnverified(res: Response): Promise<boolean> {
+  if (res.status !== 403) return false;
+  const body = await res.clone().json().catch(() => null);
+  return body?.code === EMAIL_NOT_VERIFIED;
+}
+
 function expireSession() {
   const hadSession = currentToken !== null || currentRefreshToken !== null;
   setSession(null);
@@ -114,14 +131,22 @@ async function doRefresh(): Promise<string | null> {
 
 /**
  * fetch con renovación de sesión: ante un 401 en una petición autenticada renueva el token y la
- * repite una vez. Las rutas /auth/* (login incorrecto, refresh caducado) no se reintentan.
+ * repite una vez. Las rutas /auth/* (login incorrecto, refresh caducado) no se reintentan, salvo
+ * /auth/verify-email/* (con sesión; el usuario puede volver a la pantalla de verificación horas después).
  */
 async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const req = new Request(input, init);
   const sent = req.headers.get('Authorization')?.replace(/^Bearer /, '') ?? null;
-  if (!sent || new URL(req.url).pathname.includes('/auth/')) return fetch(req);
+  const path = new URL(req.url).pathname;
+  // La verificación del correo va con sesión y se puede completar pasado un rato: sí se renueva.
+  if (!sent || (path.includes('/auth/') && !path.includes('/auth/verify-email/'))) return fetch(req);
   const retry = req.clone();
   const res = await fetch(req);
+  // Cuenta sin verificar: no es un problema de token (no se renueva); la app muestra la verificación.
+  if (await isEmailUnverified(res)) {
+    emailUnverifiedListeners.forEach((cb) => cb());
+    return res;
+  }
   if (res.status !== 401) return res;
   const token = await renewAccessToken(sent);
   if (!token) return res;
@@ -218,6 +243,24 @@ export const api = {
     });
     if (res.error) throw new Error('No autenticado');
     return res.data;
+  },
+
+  /** Verifica el correo con el código de 6 dígitos del email. */
+  async verifyEmail(code: string) {
+    const res = await client.POST('/v1/auth/verify-email/confirm', {
+      body: { code: code.trim() },
+      ...authHeaders(),
+    });
+    if (res.error) throw apiError(res, 'No se pudo verificar el código');
+    return res.data;
+  },
+
+  /** Reenvía el correo de verificación (invalida el código anterior). */
+  async resendVerification() {
+    const res = await client.POST('/v1/auth/verify-email/resend', {
+      ...authHeaders(),
+    });
+    if (res.error) throw apiError(res, 'No se pudo reenviar el correo');
   },
 
   async getCatalog() {

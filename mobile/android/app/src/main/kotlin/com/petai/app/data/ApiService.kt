@@ -108,6 +108,16 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     // ---------- Vinculación de dispositivos ----------
 
     /** Confirma en el servidor el código que muestra otro dispositivo (escritorio) para darle sesión. */
+    /** Verifica el correo con el código de 6 dígitos del email. */
+    suspend fun verifyEmail(code: String) {
+        api.send("POST", "/auth/verify-email/confirm", obj("code" to code.trim()))
+    }
+
+    /** Reenvía el correo de verificación (el código anterior deja de valer). */
+    suspend fun resendVerification() {
+        api.send("POST", "/auth/verify-email/resend")
+    }
+
     suspend fun confirmDeviceCode(code: String) {
         api.send("POST", "/auth/device/confirm", obj("code" to code))
     }

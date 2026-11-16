@@ -27,7 +27,8 @@ export class Users {
   private readonly auth = inject(AdminAuth);
   protected readonly canAssignRoles = this.auth.can('users:role:assign');
   protected readonly canManageEconomy = this.auth.can('economy:manage');
-  protected readonly canEdit = this.canAssignRoles || this.canManageEconomy;
+  protected readonly canVerify = this.auth.can('users:verify');
+  protected readonly canEdit = this.canAssignRoles || this.canManageEconomy || this.canVerify;
   protected readonly nameOf = (user: AdminUser) => user.email;
 
   protected readonly intro = this.canEdit
@@ -43,6 +44,7 @@ export class Users {
     { key: 'coins', label: 'Monedas', type: 'number' },
     { key: 'gems', label: 'Gemas', type: 'number' },
     { key: 'accountXp', label: 'XP de cuenta', type: 'number' },
+    { key: 'emailVerified', label: 'Verificado', type: 'bool' },
     { key: 'createdAt', label: 'Alta', type: 'date' },
   ];
 
@@ -56,5 +58,6 @@ export class Users {
           { key: 'gems', label: 'Gemas', type: 'number', required: true, min: 0 },
         ] as Field<AdminUser>[])
       : []),
+    ...(this.canVerify ? [{ key: 'emailVerified', label: 'Correo verificado', type: 'checkbox' } as Field<AdminUser>] : []),
   ];
 }

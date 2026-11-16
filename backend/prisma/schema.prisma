@@ -30,6 +30,8 @@ model User {
   accountXp    Int            @default(0)
   stripeCustomerId String?    @unique
   emailVerifiedAt  DateTime?
+  // Baja de los correos informativos del panel (segmentos). Los transaccionales se envían siempre.
+  emailOptOutAt    DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -37,6 +39,8 @@ model User {
   subscriptions  Subscription[]
   deviceLinks    DeviceLink[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  emailCampaigns   EmailCampaign[]
   // Invitaciones de registro: códigos creados por este admin y el canje con el que se registró.
   invitesCreated   InviteCode[]       @relation("InviteCreatedBy")
   inviteRedemption InviteRedemption?
@@ -109,6 +113,49 @@ model PasswordResetToken {
   createdAt   DateTime  @default(now())
 
   @@index([email])
+}
+
+// Verificación de correo: un código de 6 dígitos (para la app) y un token largo (enlace a la web),
+// ambos guardados como sha256. Un único token vivo por usuario; `attempts` limita los intentos con
+// código y `consumedAt` marca el uso. Al canjearlo se rellena User.emailVerifiedAt.
+model EmailVerificationToken {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email         String
+  codeHash      String
+  linkTokenHash String    @unique
+  attempts      Int       @default(0)
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Envíos de correo desde el panel de administración. `html` es el cuerpo libre que escribe el staff
+// (se envuelve en la plantilla de marca al enviar) y `audience` el destinatario: usuarios concretos,
+// lista de correos o segmento. Lo procesa la cola email-campaigns por lotes (`cursor` = último
+// destinatario procesado, para reanudar tras un reinicio).
+model EmailCampaign {
+  id          String    @id @default(uuid())
+  subject     String
+  preheader   String?
+  html        String
+  audience    Json
+  status      String    @default("queued") // queued | sending | sent | failed
+  total       Int       @default(0)
+  sent        Int       @default(0)
+  failed      Int       @default(0)
+  cursor      String?
+  lastError   String?
+  createdById String?
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+
+  @@index([createdAt])
 }
 
 // Ajustes globales de la app (una sola fila, id = 1). Editables desde el panel admin.
