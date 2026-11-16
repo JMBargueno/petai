@@ -36,6 +36,9 @@ export class MissionResponseDto {
   @ApiProperty({ description: 'Si está completada', example: false })
   completed: boolean;
 
+  @ApiProperty({ description: 'Si la recompensa ya fue reclamada', example: false })
+  claimed: boolean;
+
   @ApiProperty({ description: 'Recompensa', type: MissionRewardDto })
   reward: MissionRewardDto;
 

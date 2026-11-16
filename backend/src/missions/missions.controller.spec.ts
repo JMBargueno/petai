@@ -12,10 +12,10 @@ describe('MissionsController', () => {
   const mockMissionsResponse = {
     timestamp: '2026-11-13T14:30:00.000Z',
     daily: [
-      { id: 'm1', type: 'feed', description: 'Alimenta a tu pet 2 veces', target: 2, current: 1, completed: false, reward: { coins: 15, gems: 0, xp: 10 }, resetsAt: '2026-11-14T06:00:00.000Z' },
+      { id: 'm1', type: 'feed', description: 'Alimenta a tu pet 2 veces', target: 2, current: 1, completed: false, claimed: false, reward: { coins: 15, gems: 0, xp: 10 }, resetsAt: '2026-11-14T06:00:00.000Z' },
     ],
     weekly: [
-      { id: 'm2', type: 'level_up', description: 'Sube 1 pet de nivel', target: 1, current: 0, completed: false, reward: { coins: 100, gems: 5, xp: 100 }, resetsAt: '2026-11-17T06:00:00.000Z' },
+      { id: 'm2', type: 'level_up', description: 'Sube 1 pet de nivel', target: 1, current: 0, completed: false, claimed: false, reward: { coins: 100, gems: 5, xp: 100 }, resetsAt: '2026-11-17T06:00:00.000Z' },
     ],
     dailyChestUnlocked: false,
   };
