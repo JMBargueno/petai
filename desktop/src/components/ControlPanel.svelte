@@ -726,6 +726,15 @@ import VisitTab from './VisitTab.svelte';
     overflow: hidden;
     z-index: 100;
     pointer-events: auto;
+    transition: box-shadow 0.15s ease, outline-color 0.15s ease;
+    outline: 3px solid transparent;
+    outline-offset: -3px;
+  }
+
+  /* La mascota se está arrastrando encima: el panel (su casa) se marca como destino */
+  :global(body[data-pet-over-panel]) .panel-card {
+    outline-color: rgba(52, 211, 153, 0.85);
+    box-shadow: var(--shadow-4), 0 0 28px rgba(52, 211, 153, 0.45);
   }
 
   .panel-header {
