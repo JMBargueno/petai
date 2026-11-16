@@ -69,6 +69,11 @@ services:
       MAIL_FROM: "${MAIL_FROM:-Pockai <noreply@pockai.world>}"
       MAIL_REPLY_TO: ${MAIL_REPLY_TO:-contact@pockai.world}
       CONTACT_TO: ${CONTACT_TO:-contact@pockai.world}
+      # ---- IA gestionada (spec-34): la key del servidor para servir "IA de Pockai" ----
+      # La base URL es https://openrouter.ai/api/v1 por defecto en el backend
+      # (OPENROUTER_DEFAULT_BASE_URL); solo se sobreescribe definiendo OPENROUTER_BASE_URL
+      # en el .env y pasándola aquí cuando se use otro endpoint.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       # ---- Observabilidad (OpenTelemetry) ----
       OTEL_SERVICE_NAME: "petai-backend"
       OTEL_SERVICE_VERSION: "0.1.0"
