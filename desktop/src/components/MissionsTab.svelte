@@ -97,7 +97,7 @@
   <div class="sec-title">Misiones diarias</div>
   <div class="mission-list">
     {#each data.daily as m (m.id)}
-      <div class="mission-row" class:done={m.completed}>
+      <div class="mission-row" class:done={m.completed} class:claimed={m.claimed}>
         <span class="m-icon">{missionIcon(m)}</span>
         <div class="m-body">
           <div class="m-top">
@@ -108,9 +108,15 @@
           <small class="m-progress">{m.current}/{m.target}</small>
         </div>
         {#if m.completed}
-          <button class="claim" disabled={busyId === m.id} on:click={() => claim(m)}>
-            {busyId === m.id ? '…' : 'Reclamar'}
-          </button>
+          {#if m.claimed}
+            <span class="claimed-badge" title="Recompensa ya reclamada">
+              <Ico n="check" /> Reclamada
+            </span>
+          {:else}
+            <button class="claim" disabled={busyId === m.id} on:click={() => claim(m)}>
+              {busyId === m.id ? '…' : 'Reclamar'}
+            </button>
+          {/if}
         {/if}
       </div>
     {:else}
@@ -121,7 +127,7 @@
   <div class="sec-title">Misiones semanales</div>
   <div class="mission-list">
     {#each data.weekly as m (m.id)}
-      <div class="mission-row" class:done={m.completed}>
+      <div class="mission-row" class:done={m.completed} class:claimed={m.claimed}>
         <span class="m-icon">{missionIcon(m)}</span>
         <div class="m-body">
           <div class="m-top">
@@ -132,9 +138,15 @@
           <small class="m-progress">{m.current}/{m.target}</small>
         </div>
         {#if m.completed}
-          <button class="claim" disabled={busyId === m.id} on:click={() => claim(m)}>
-            {busyId === m.id ? '…' : 'Reclamar'}
-          </button>
+          {#if m.claimed}
+            <span class="claimed-badge" title="Recompensa ya reclamada">
+              <Ico n="check" /> Reclamada
+            </span>
+          {:else}
+            <button class="claim" disabled={busyId === m.id} on:click={() => claim(m)}>
+              {busyId === m.id ? '…' : 'Reclamar'}
+            </button>
+          {/if}
         {/if}
       </div>
     {:else}
@@ -166,6 +178,25 @@
   .m-progress { font-size: 10px; color: var(--ink-muted); }
   .claim { padding: 6px 10px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; font-size: 11px; background: var(--success); color: var(--on-color); white-space: nowrap; }
   .claim:disabled { opacity: 0.5; cursor: not-allowed; }
+  .claimed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 9px;
+    border-radius: var(--radius-2xl);
+    font-weight: 600;
+    font-size: 11px;
+    background: color-mix(in srgb, var(--success) 14%, var(--surface-2));
+    color: var(--success-ink);
+    border: 1px solid color-mix(in srgb, var(--success) 35%, var(--line-soft));
+    white-space: nowrap;
+    cursor: default;
+    user-select: none;
+  }
+  .mission-row.claimed {
+    opacity: 0.72;
+    border-color: color-mix(in srgb, var(--success) 30%, var(--line-soft));
+  }
   .primary { margin-top: 10px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
 </style>
 

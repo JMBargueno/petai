@@ -198,7 +198,7 @@ export class MissionsService {
 
   private formatMission(m: {
     id: string; type: string; description: string;
-    target: number; current: number; completed: boolean;
+    target: number; current: number; completed: boolean; claimed: boolean;
     rewardCoins: number; rewardGems: number; rewardXp: number;
     periodEnd: Date; period: string;
   }) {
@@ -209,6 +209,7 @@ export class MissionsService {
       target: m.target,
       current: m.current,
       completed: m.completed,
+      claimed: m.claimed,
       reward: { coins: m.rewardCoins, gems: m.rewardGems, xp: m.rewardXp },
       resetsAt: m.periodEnd.toISOString(),
     };

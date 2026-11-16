@@ -1056,6 +1056,7 @@ export interface Mission {
   target: number;
   current: number;
   completed: boolean;
+  claimed: boolean;
   reward: MissionReward;
   resetsAt: string;
 }

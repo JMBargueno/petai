@@ -3885,6 +3885,11 @@ export interface components {
              * @example false
              */
             completed: boolean;
+            /**
+             * @description Si la recompensa ya fue reclamada
+             * @example false
+             */
+            claimed: boolean;
             /** @description Recompensa */
             reward: components["schemas"]["MissionRewardDto"];
             /**
