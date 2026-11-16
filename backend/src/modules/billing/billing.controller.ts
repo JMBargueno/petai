@@ -1,18 +1,36 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Post,
+  ServiceUnavailableException,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { BillingConfigService } from './billing-config.service';
 import { EntitlementService } from './entitlement.service';
 import { BillingService } from './billing.service';
+import { GooglePlayClient } from './google-play.client';
 
 @ApiTags('Billing')
 @Controller('billing')
 export class BillingController {
+  private readonly logger = new Logger(BillingController.name);
+
   constructor(
     private readonly billingConfig: BillingConfigService,
     private readonly entitlement: EntitlementService,
     private readonly billing: BillingService,
+    private readonly googlePlay: GooglePlayClient,
+    private readonly config: ConfigService,
   ) {}
 
   @Get('plans')
@@ -84,18 +102,32 @@ export class BillingController {
   @Post('google/rtdn')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Recepción de notificaciones en tiempo real (RTDN) de Google Play Pub/Sub' })
-  async googleRtdn(@Body() body: any) {
-    if (body?.message?.data) {
-      try {
-        const decoded = JSON.parse(Buffer.from(body.message.data, 'base64').toString('utf8'));
-        await this.billing.handleGoogleRtdn({
-          messageId: body.message.messageId,
-          ...decoded,
-        });
-      } catch (err) {
-        // Ignorar mensajes mal formateados con 200 OK para confirmar a Pub/Sub
+  async googleRtdn(@Body() body: any, @Headers('authorization') authorization?: string) {
+    // Solo se aceptan push autenticados de Pub/Sub (JWT OIDC de la cuenta de servicio configurada)
+    if (this.googlePlay.isRtdnAuthConfigured) {
+      if (!(await this.googlePlay.verifyPubSubToken(authorization))) {
+        throw new UnauthorizedException('Push de Pub/Sub no autenticado');
       }
+    } else {
+      const mockAllowed =
+        this.config.get<string>('BILLING_MOCK_ENABLED') === 'true' && this.config.get<string>('NODE_ENV') !== 'production';
+      if (!mockAllowed) throw new ServiceUnavailableException('RTDN de Google Play no configurado');
     }
+
+    let decoded: any;
+    try {
+      decoded = body?.message?.data ? JSON.parse(Buffer.from(body.message.data, 'base64').toString('utf8')) : null;
+    } catch {
+      decoded = null;
+    }
+    // Mensaje mal formado: 200 para que Pub/Sub no lo reintente indefinidamente
+    if (!decoded || typeof body.message.messageId !== 'string') {
+      this.logger.warn('RTDN mal formado; se descarta');
+      return { ok: true };
+    }
+
+    // Errores de procesamiento se propagan (5xx) para que Pub/Sub reintente
+    await this.billing.handleGoogleRtdn({ ...decoded, messageId: body.message.messageId });
     return { ok: true };
   }
 }

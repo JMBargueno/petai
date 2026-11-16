@@ -6,6 +6,7 @@ describe('BillingService', () => {
   let billingConfig: any;
   let entitlement: any;
   let realtime: any;
+  let googlePlay: any;
   let svc: BillingService;
 
   beforeEach(() => {
@@ -19,9 +20,11 @@ describe('BillingService', () => {
         upsert: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
       },
       billingEvent: {
         create: jest.fn(),
+        deleteMany: jest.fn(),
       },
     };
     config = {
@@ -29,6 +32,7 @@ describe('BillingService', () => {
         if (k === 'PUBLIC_WEB_URL') return 'http://localhost:5173';
         if (k === 'STRIPE_SECRET_KEY') return 'mock-stripe-secret';
         if (k === 'STRIPE_PRICE_PRO') return 'price_pro_monthly';
+        if (k === 'NODE_ENV') return 'test';
         return undefined;
       }),
     };
@@ -42,7 +46,14 @@ describe('BillingService', () => {
     realtime = {
       emitToUser: jest.fn(),
     };
-    svc = new BillingService(prisma, config, billingConfig, entitlement, realtime);
+    googlePlay = {
+      isConfigured: true,
+      packageName: 'app.pockai',
+      allowedProductIds: jest.fn(() => new Set(['pockai_pro_monthly'])),
+      getSubscription: jest.fn(),
+      acknowledge: jest.fn(),
+    };
+    svc = new BillingService(prisma, config, billingConfig, entitlement, realtime, googlePlay);
   });
 
   describe('ensureStripeCustomer', () => {
@@ -136,21 +147,89 @@ describe('BillingService', () => {
   });
 
   describe('verifyGooglePlayPurchase', () => {
-    it('guarda la compra de Play y activa el plan Pro', async () => {
+    const expiry = new Date(Date.now() + 20 * 86_400_000).toISOString();
+
+    it('verifica la compra contra Google, la reconoce y activa Pro con la caducidad real', async () => {
+      prisma.subscription.findUnique.mockResolvedValue(null);
+      googlePlay.getSubscription.mockResolvedValue({
+        subscriptionState: 'SUBSCRIPTION_STATE_ACTIVE',
+        acknowledgementState: 'ACKNOWLEDGEMENT_STATE_PENDING',
+        lineItems: [{ productId: 'pockai_pro_monthly', expiryTime: expiry }],
+      });
+
       const res = await svc.verifyGooglePlayPurchase('u-android', 'token_play_123', 'pockai_pro_monthly');
 
       expect(res.plan).toBe('pro');
+      expect(googlePlay.getSubscription).toHaveBeenCalledWith('token_play_123');
+      expect(googlePlay.acknowledge).toHaveBeenCalledWith('pockai_pro_monthly', 'token_play_123');
       expect(prisma.subscription.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { source_externalId: { source: 'google_play', externalId: 'token_play_123' } },
-          create: expect.objectContaining({
-            userId: 'u-android',
-            source: 'google_play',
-            status: 'active',
-          }),
+          create: expect.objectContaining({ userId: 'u-android', status: 'active', currentPeriodEnd: new Date(expiry) }),
         }),
       );
       expect(realtime.emitToUser).toHaveBeenCalledWith('u-android', 'entitlement:updated', { plan: 'pro' });
+    });
+
+    it('rechaza un token que Google no reconoce', async () => {
+      const { PlayPurchaseNotFoundError } = jest.requireActual('./google-play.client');
+      prisma.subscription.findUnique.mockResolvedValue(null);
+      googlePlay.getSubscription.mockRejectedValue(new PlayPurchaseNotFoundError('404'));
+
+      await expect(svc.verifyGooglePlayPurchase('u1', 'inventado', 'pockai_pro_monthly')).rejects.toThrow('no válida');
+      expect(prisma.subscription.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rechaza productos fuera de la lista permitida', async () => {
+      await expect(svc.verifyGooglePlayPurchase('u1', 'tok', 'otro_producto')).rejects.toThrow('productId');
+      expect(googlePlay.getSubscription).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un token ya asociado a otro usuario', async () => {
+      prisma.subscription.findUnique.mockResolvedValue({ userId: 'otro' });
+      await expect(svc.verifyGooglePlayPurchase('u1', 'tok', 'pockai_pro_monthly')).rejects.toThrow('otra cuenta');
+      expect(prisma.subscription.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rechaza la compra si obfuscatedExternalAccountId apunta a otra cuenta', async () => {
+      prisma.subscription.findUnique.mockResolvedValue(null);
+      googlePlay.getSubscription.mockResolvedValue({
+        subscriptionState: 'SUBSCRIPTION_STATE_ACTIVE',
+        lineItems: [{ productId: 'pockai_pro_monthly', expiryTime: expiry }],
+        externalAccountIdentifiers: { obfuscatedExternalAccountId: 'otro' },
+      });
+      await expect(svc.verifyGooglePlayPurchase('u1', 'tok', 'pockai_pro_monthly')).rejects.toThrow('otra cuenta');
+    });
+
+    it('sin Google Play configurado ni modo mock responde 503 en vez de conceder Pro', async () => {
+      googlePlay.isConfigured = false;
+      prisma.subscription.findUnique.mockResolvedValue(null);
+      await expect(svc.verifyGooglePlayPurchase('u1', 'tok', 'pockai_pro_monthly')).rejects.toThrow('no está disponible');
+      expect(prisma.subscription.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleGoogleRtdn', () => {
+    it('relee el estado de Google en lugar de fiarse del tipo de notificación', async () => {
+      prisma.subscription.findUnique.mockResolvedValue({ id: 's1', userId: 'u1', productId: 'pockai_pro_monthly', status: 'active', cancelAtPeriodEnd: false, currentPeriodEnd: new Date() });
+      prisma.billingEvent.create.mockResolvedValue({});
+      googlePlay.getSubscription.mockResolvedValue({
+        subscriptionState: 'SUBSCRIPTION_STATE_EXPIRED',
+        lineItems: [{ productId: 'pockai_pro_monthly', expiryTime: '2026-01-01T00:00:00Z' }],
+      });
+
+      // Un RENEWED (2) falso no reactiva: manda lo que diga Google
+      await svc.handleGoogleRtdn({ messageId: 'm1', packageName: 'app.pockai', subscriptionNotification: { notificationType: 2, purchaseToken: 'tok', subscriptionId: 'pockai_pro_monthly' } });
+
+      expect(prisma.subscription.update).toHaveBeenCalledWith({
+        where: { id: 's1' },
+        data: expect.objectContaining({ status: 'expired' }),
+      });
+    });
+
+    it('ignora notificaciones de otro paquete', async () => {
+      await svc.handleGoogleRtdn({ messageId: 'm1', packageName: 'com.evil', subscriptionNotification: { notificationType: 2, purchaseToken: 'tok', subscriptionId: 'x' } });
+      expect(prisma.subscription.update).not.toHaveBeenCalled();
     });
   });
 });

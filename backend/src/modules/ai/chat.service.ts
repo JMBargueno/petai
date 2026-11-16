@@ -47,6 +47,8 @@ const LOCAL_MAX_REPLY_CHARS = 4000;
 /** TTL del guard "una respuesta en curso por usuario" (R-02): cubre respuestas de varios turns de
  * herramientas sin atrapar el guard si el stream se abandona. */
 const INFLIGHT_LOCK_TTL_MS = 5 * 60 * 1000;
+/** Margen (caracteres) para prompt de sistema, recuerdos y contexto al estimar el coste de una llamada. */
+const PROMPT_OVERHEAD_CHARS = 8000;
 
 @Injectable()
 export class ChatService {
@@ -77,11 +79,14 @@ export class ChatService {
   private async checkRateLimit(userId: string) {
     const tooMany = () => new HttpException('Demasiados mensajes seguidos, espera un momento', HttpStatus.TOO_MANY_REQUESTS);
     const now = Date.now();
+    // Límite por minuto configurable desde el panel (`byok.rateLimitPerMinute`); en managed además
+    // aplican la cuota diaria y el presupuesto global.
+    const max = this.billingConfig.byokSettings()?.rateLimitPerMinute ?? RATE_LIMIT.max;
     if (this.redis) {
       const blocked = await this.redis.run(async (r) => {
         const k = this.redis!.key(`chatrate:${userId}`);
         await r.zremrangebyscore(k, 0, now - RATE_LIMIT.windowMs);
-        if ((await r.zcard(k)) >= RATE_LIMIT.max) return true;
+        if ((await r.zcard(k)) >= max) return true;
         await r.multi().zadd(k, now, `${now}-${Math.random().toString(36).slice(2, 8)}`).pexpire(k, RATE_LIMIT.windowMs).exec();
         return false;
       });
@@ -89,7 +94,7 @@ export class ChatService {
       if (blocked === false) return;
     }
     const recent = (this.hits.get(userId) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
-    if (recent.length >= RATE_LIMIT.max) throw tooMany();
+    if (recent.length >= max) throw tooMany();
     recent.push(now);
     this.hits.set(userId, recent);
   }
@@ -156,6 +161,7 @@ export class ChatService {
 
     let limits: PlanLimits | undefined;
     let quotaKey: string | undefined;
+    let reservedMicro = 0;
 
     if (mode === 'managed') {
       const plan = await this.entitlements.planFor(userId);
@@ -171,16 +177,35 @@ export class ChatService {
       await this.managedBudget.assertOpen(plan);
       const quota = await this.dailyQuota.consume(userId, plan);
       quotaKey = quota.key;
+      try {
+        // Reserva atómica del coste máximo esperado de esta llamada (se ajusta al real al terminar)
+        const promptEstimate = Math.ceil((limits.historyCharBudget + limits.maxInputChars + PROMPT_OVERHEAD_CHARS) / 4);
+        reservedMicro = await this.managedBudget.reserve(
+          plan,
+          this.managedBudget.estimateCostUsd(promptEstimate, limits.maxOutputTokens),
+        );
+      } catch (err) {
+        await this.dailyQuota.refund(quotaKey).catch(() => undefined);
+        throw err;
+      }
     }
 
-    await this.usage.assertWithinQuota(userId, mode);
-
+    let messages: ChatMessageInput[];
+    let timeZone: string;
+    let now: Date;
     const clientTools = sanitizeClientTools(rawClientTools);
-    const { messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent', {
-      clientTools,
-      clientContext: sanitizeClientContext(rawClientContext, pet),
-      limits,
-    });
+    try {
+      await this.usage.assertWithinQuota(userId, mode);
+      ({ messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent', {
+        clientTools,
+        clientContext: sanitizeClientContext(rawClientContext, pet),
+        limits,
+      }));
+    } catch (err) {
+      // No llegó a llamarse al proveedor: se devuelve el mensaje del día y la reserva
+      await this.releaseManaged(quotaKey, reservedMicro);
+      throw err;
+    }
 
     // Agente (intelligence ≥ 500 y habilitado por el plan): puede usar herramientas
     const allowsAgent = limits?.agentTools ?? true;
@@ -189,7 +214,15 @@ export class ChatService {
         ? { userId, petId: pet.id, timeZone, now, clientTools }
         : undefined;
 
-    return { events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx, limits, quotaKey) };
+    return {
+      events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx, limits, quotaKey, reservedMicro),
+    };
+  }
+
+  /** Devuelve el mensaje diario y la reserva de presupuesto de una petición gestionada que no llegó al proveedor. */
+  private async releaseManaged(quotaKey: string | undefined, reservedMicro: number) {
+    if (quotaKey) await this.dailyQuota.refund(quotaKey).catch(() => undefined);
+    if (reservedMicro > 0) await this.managedBudget.settle(reservedMicro, 0).catch(() => undefined);
   }
 
   /**
@@ -376,13 +409,30 @@ export class ChatService {
     agentCtx?: AgentContext,
     limits?: PlanLimits,
     quotaKey?: string,
+    reservedMicro = 0,
   ): AsyncGenerator<ChatStreamEvent> {
+    const managed = mode === 'managed';
     // Una respuesta en curso por usuario (guard distribuido, R-02): evita ráfagas paralelas que
     // disparan el gasto de LLM, respetado entre réplicas vía Redis (fallback en memoria).
     const inflightLock = await this.exclusiveLock.acquire('chat', userId, INFLIGHT_LOCK_TTL_MS);
     if (!inflightLock.ok) {
+      // Rechazado antes de llamar al proveedor: no debe gastar el mensaje del día ni presupuesto
+      await this.releaseManaged(quotaKey, reservedMicro);
       yield { type: 'error', message: 'Ya hay una respuesta en curso; espera a que termine' };
       return;
+    }
+
+    // Semáforo global de streams gestionados (`managedAi.maxConcurrency`)
+    let slot: string | undefined;
+    if (managed) {
+      try {
+        slot = await this.managedBudget.acquireSlot();
+      } catch (err: any) {
+        await this.exclusiveLock.release('chat', userId, inflightLock.token);
+        await this.releaseManaged(quotaKey, reservedMicro);
+        yield { type: 'error', message: err?.response?.message || 'La IA de Pockai está ocupada; reintenta en unos segundos' };
+        return;
+      }
     }
 
     const guard = new OutputGuard();
@@ -391,8 +441,9 @@ export class ChatService {
     // Razonamiento del modelo: va aparte de la respuesta, no se emite en streaming ni se guarda
     let thinking = '';
     let hasEmittedDelta = false;
-    let promptTokens = 0;
-    let completionTokens = 0;
+    // Coste real (OpenRouter `usage.cost`) o, si una vuelta no lo informa, estimación conservadora
+    let costUsd = 0;
+    let costReported = false;
     const convo = [...messages];
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -417,9 +468,18 @@ export class ChatService {
           } else if (ev.type === 'tool_call') {
             calls.push({ id: ev.id, name: ev.name, arguments: ev.arguments });
           } else if (ev.type === 'done') {
-            promptTokens += ev.usage?.promptTokens ?? 0;
-            completionTokens += ev.usage?.completionTokens ?? 0;
-            tokens += (ev.usage?.promptTokens ?? 0) + (ev.usage?.completionTokens ?? 0);
+            const p = ev.usage?.promptTokens ?? 0;
+            const c = ev.usage?.completionTokens ?? 0;
+            if (managed) {
+              if (typeof ev.usage?.costUsd === 'number') {
+                costUsd += ev.usage.costUsd;
+                costReported = true;
+              } else if (p + c > 0) {
+                costUsd += this.managedBudget.estimateCostUsd(p, c);
+                costReported = true;
+              }
+            }
+            tokens += p + c;
           }
         }
         if (calls.length === 0 || !agentCtx) break;
@@ -481,12 +541,16 @@ export class ChatService {
       await this.exclusiveLock.release('chat', userId, inflightLock.token);
       // Cuota: se contabiliza lo consumido aunque la respuesta se bloquee o falle a medias
       const used = tokens > 0 ? tokens : this.estimateTokens(messages, guard.full);
-      const costUsd = mode === 'managed' ? (promptTokens * 0.10 + completionTokens * 0.40) / 1e6 : 0;
-      if (costUsd > 0) {
-        await this.managedBudget.add(costUsd).catch(() => undefined);
-      }
-      if (hasEmittedDelta) {
-        await this.managedBudget.recordSuccess().catch(() => undefined);
+      if (managed) {
+        // Sin `usage` del proveedor (stream cortado, etc.) se cobra la estimación sobre lo enviado
+        if (!costReported) {
+          costUsd = this.managedBudget.estimateCostUsd(used, 0);
+        }
+        await this.managedBudget.settle(reservedMicro, costUsd).catch(() => undefined);
+        if (slot) await this.managedBudget.releaseSlot(slot).catch(() => undefined);
+        if (hasEmittedDelta) {
+          await this.managedBudget.recordSuccess().catch(() => undefined);
+        }
       }
       await this.usage
         .record(userId, used, costUsd, mode === 'managed' ? 'openrouter' : undefined)

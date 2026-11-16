@@ -18,6 +18,19 @@ if used > tonumber(ARGV[1]) then
 end
 return used`;
 
+/**
+ * Fecha de cuota monótona por usuario: nunca retrocede. Cambiar la zona horaria a una más al oeste
+ * no reabre un día ya consumido (se sigue usando el día más reciente hasta que el local lo alcance).
+ */
+const MONOTONIC_DATE_LUA = `
+local last = redis.call('GET', KEYS[1])
+local date = ARGV[1]
+if last and last > date then date = last end
+redis.call('SET', KEYS[1], date, 'EX', 259200)
+return date`;
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 const REFUND_LUA = `
 local val = redis.call('GET', KEYS[1])
 if val and tonumber(val) > 0 then
@@ -62,6 +75,7 @@ export class DailyQuotaService {
   private readonly logger = new Logger(DailyQuotaService.name);
   // Respaldo en memoria por instancia si Redis no está disponible
   private readonly memoryDailyHits = new Map<string, number>();
+  private readonly memoryLastDate = new Map<string, string>();
 
   constructor(
     private readonly redis: RedisService,
@@ -85,9 +99,25 @@ export class DailyQuotaService {
       localDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(new Date());
     }
 
-    const rawKey = `daily:${userId}:${localDate}`;
+    // La fecha efectiva nunca retrocede (antiabuso: cambiar de zona horaria no regala cupos)
+    const lastKey = this.redis.key(`daily:last:${userId}`);
+    const fromRedis = await this.redis
+      .run(async (r) => r.eval(MONOTONIC_DATE_LUA, 1, lastKey, localDate), 'daily_quota_date')
+      .catch(() => null);
+    let date: string;
+    if (typeof fromRedis === 'string' && ISO_DATE.test(fromRedis)) {
+      date = fromRedis;
+    } else {
+      const last = this.memoryLastDate.get(userId);
+      date = last && last > localDate ? last : localDate;
+      this.memoryLastDate.set(userId, date);
+    }
+
+    const rawKey = `daily:${userId}:${date}`;
     const key = this.redis.key(rawKey);
-    const resetsAt = nextLocalMidnight(timezone);
+    // Si la fecha efectiva va por delante de la local, el reseteo llega cuando el día local la alcance
+    const daysAhead = Math.max(0, Math.round((Date.parse(date) - Date.parse(localDate)) / 86_400_000));
+    const resetsAt = new Date(Date.parse(nextLocalMidnight(timezone)) + daysAhead * 86_400_000).toISOString();
     return { key, rawKey, resetsAt };
   }
 

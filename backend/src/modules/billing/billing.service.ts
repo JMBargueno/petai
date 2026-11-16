@@ -1,8 +1,11 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
@@ -12,6 +15,20 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { BillingConfigService } from './billing-config.service';
 import { EntitlementService } from './entitlement.service';
 import { Plan } from './plans';
+import { GooglePlayClient, PlayPurchaseNotFoundError, PlaySubscriptionV2 } from './google-play.client';
+
+/** Estado de `SubscriptionPurchaseV2.subscriptionState` → estado interno de `Subscription`. */
+const PLAY_STATE_TO_STATUS: Record<string, string> = {
+  SUBSCRIPTION_STATE_ACTIVE: 'active',
+  // En periodo de gracia Google sigue concediendo el acceso
+  SUBSCRIPTION_STATE_IN_GRACE_PERIOD: 'active',
+  SUBSCRIPTION_STATE_CANCELED: 'canceled',
+  SUBSCRIPTION_STATE_ON_HOLD: 'on_hold',
+  SUBSCRIPTION_STATE_PAUSED: 'paused',
+  SUBSCRIPTION_STATE_EXPIRED: 'expired',
+  SUBSCRIPTION_STATE_PENDING: 'pending',
+  SUBSCRIPTION_STATE_PENDING_PURCHASE_CANCELED: 'expired',
+};
 
 @Injectable()
 export class BillingService {
@@ -24,6 +41,7 @@ export class BillingService {
     private readonly billingConfig: BillingConfigService,
     private readonly entitlement: EntitlementService,
     private readonly realtime: RealtimeGateway,
+    private readonly googlePlay: GooglePlayClient,
   ) {
     const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY');
     if (stripeKey && stripeKey !== 'mock-stripe-secret') {
@@ -154,6 +172,11 @@ export class BillingService {
     }
   }
 
+  /** Libera un evento reclamado cuyo procesamiento falló, para que el reintento del emisor se procese. */
+  async releaseEvent(source: 'stripe' | 'google_play', eventId: string): Promise<void> {
+    await this.prisma.billingEvent.deleteMany({ where: { source, eventId } });
+  }
+
   /**
    * Sincroniza una suscripción de Stripe en la base de datos (fuente de verdad).
    */
@@ -246,36 +269,95 @@ export class BillingService {
     this.realtime.emitToUser(sub.userId, 'entitlement:updated', { plan });
   }
 
+  /** BILLING_MOCK_ENABLED=true fuera de producción: compras de Play aceptadas sin verificar (solo dev/tests). */
+  private get billingMockAllowed(): boolean {
+    return this.config.get<string>('BILLING_MOCK_ENABLED') === 'true' && this.config.get<string>('NODE_ENV') !== 'production';
+  }
+
   /**
    * Verificación y reconocimiento de compras de Google Play (Android).
+   * El estado y la caducidad se leen SIEMPRE de la Play Developer API; el cliente solo aporta el token.
    */
   async verifyGooglePlayPurchase(
     userId: string,
     purchaseToken: string,
     productId: string,
   ): Promise<{ plan: Plan }> {
-    const now = new Date();
-    const periodEnd = new Date(now.getTime() + 30 * 86_400_000); // 30 días de suscripción
+    if (typeof purchaseToken !== 'string' || !purchaseToken || purchaseToken.length > 4096) {
+      throw new BadRequestException('purchaseToken no válido');
+    }
+    if (typeof productId !== 'string' || !this.googlePlay.allowedProductIds().has(productId)) {
+      throw new BadRequestException('productId no válido');
+    }
+
+    // Un token de compra pertenece a un único usuario
+    const existing = await this.prisma.subscription.findUnique({
+      where: { source_externalId: { source: 'google_play', externalId: purchaseToken } },
+      select: { userId: true },
+    });
+    if (existing && existing.userId !== userId) {
+      throw new ConflictException('Esta compra ya está asociada a otra cuenta');
+    }
+
+    let status: string;
+    let currentPeriodEnd: Date;
+    let linkedPurchaseToken: string | undefined;
+
+    if (this.googlePlay.isConfigured) {
+      let purchase: PlaySubscriptionV2;
+      try {
+        purchase = await this.googlePlay.getSubscription(purchaseToken);
+      } catch (err) {
+        if (err instanceof PlayPurchaseNotFoundError) throw new BadRequestException('Compra de Google Play no válida');
+        throw err;
+      }
+
+      const item = purchase.lineItems?.find((li) => li.productId === productId);
+      if (!item?.expiryTime) throw new BadRequestException('La compra no corresponde a este producto');
+
+      const owner = purchase.externalAccountIdentifiers?.obfuscatedExternalAccountId;
+      if (owner && owner !== userId && owner !== createHash('sha256').update(userId).digest('hex')) {
+        throw new ForbiddenException('La compra pertenece a otra cuenta');
+      }
+
+      status = PLAY_STATE_TO_STATUS[purchase.subscriptionState ?? ''] ?? 'pending';
+      currentPeriodEnd = new Date(item.expiryTime);
+      linkedPurchaseToken = purchase.linkedPurchaseToken;
+
+      if (status === 'active' && purchase.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING') {
+        // Sin acknowledge Google reembolsa la compra a los 3 días
+        await this.googlePlay.acknowledge(productId, purchaseToken);
+      }
+    } else if (this.billingMockAllowed) {
+      this.logger.warn('Google Play no configurado: compra aceptada SIN verificar (BILLING_MOCK_ENABLED)');
+      status = 'active';
+      currentPeriodEnd = new Date(Date.now() + 30 * 86_400_000);
+    } else {
+      throw new ServiceUnavailableException('La verificación de compras de Google Play no está disponible');
+    }
 
     await this.prisma.subscription.upsert({
-      where: {
-        source_externalId: { source: 'google_play', externalId: purchaseToken },
-      },
+      where: { source_externalId: { source: 'google_play', externalId: purchaseToken } },
       create: {
         userId,
         source: 'google_play',
         externalId: purchaseToken,
         productId,
         plan: 'pro',
-        status: 'active',
-        currentPeriodEnd: periodEnd,
+        status,
+        currentPeriodEnd,
+        cancelAtPeriodEnd: status === 'canceled',
       },
-      update: {
-        status: 'active',
-        currentPeriodEnd: periodEnd,
-        productId,
-      },
+      update: { status, currentPeriodEnd, productId, cancelAtPeriodEnd: status === 'canceled' },
     });
+
+    // Una renovación/cambio de plan sustituye al token anterior: ese ya no da acceso
+    if (linkedPurchaseToken) {
+      await this.prisma.subscription.updateMany({
+        where: { source: 'google_play', externalId: linkedPurchaseToken, userId },
+        data: { status: 'expired' },
+      });
+    }
 
     await this.entitlement.invalidate(userId);
     const plan = await this.entitlement.planFor(userId);
@@ -285,10 +367,13 @@ export class BillingService {
   }
 
   /**
-   * Procesa notificaciones en tiempo real de Google Play (RTDN Pub/Sub).
+   * Procesa notificaciones en tiempo real de Google Play (RTDN Pub/Sub). La autenticidad del push
+   * la comprueba el controlador; aun así el estado se relee de la Play Developer API (la notificación
+   * solo indica "algo cambió en este token").
    */
   async handleGoogleRtdn(messageData: {
     messageId: string;
+    packageName?: string;
     subscriptionNotification?: {
       notificationType: number;
       purchaseToken: string;
@@ -296,39 +381,67 @@ export class BillingService {
     };
   }): Promise<void> {
     const notif = messageData.subscriptionNotification;
-    if (!notif) return;
-
-    const claimed = await this.claimEvent(
-      'google_play',
-      messageData.messageId,
-      `rtdn_type_${notif.notificationType}`,
-      messageData,
-    );
-    if (!claimed) return;
+    if (!notif || typeof notif.purchaseToken !== 'string' || typeof messageData.messageId !== 'string') return;
+    if (this.googlePlay.packageName && messageData.packageName !== this.googlePlay.packageName) {
+      this.logger.warn(`RTDN de un paquete inesperado (${messageData.packageName}); se ignora`);
+      return;
+    }
 
     const sub = await this.prisma.subscription.findUnique({
       where: { source_externalId: { source: 'google_play', externalId: notif.purchaseToken } },
     });
     if (!sub) return;
 
-    // Tipos de notificación de Google Play:
-    // 2 = RENEWED, 3 = CANCELED, 5 = ON_HOLD, 12 = REVOKED, 13 = EXPIRED
-    let newStatus = sub.status;
-    let cancelAtPeriodEnd = sub.cancelAtPeriodEnd;
-    if (notif.notificationType === 2) {
-      newStatus = 'active';
-    } else if (notif.notificationType === 3) {
-      cancelAtPeriodEnd = true;
-    } else if (notif.notificationType === 12) {
-      newStatus = 'revoked';
-    } else if (notif.notificationType === 13) {
-      newStatus = 'expired';
-    }
+    const claimed = await this.claimEvent(
+      'google_play',
+      messageData.messageId,
+      `rtdn_type_${notif.notificationType}`,
+      messageData,
+      sub.userId,
+    );
+    if (!claimed) return;
 
-    await this.prisma.subscription.update({
-      where: { id: sub.id },
-      data: { status: newStatus, cancelAtPeriodEnd },
-    });
+    try {
+      let status = sub.status;
+      let currentPeriodEnd = sub.currentPeriodEnd;
+      let cancelAtPeriodEnd = sub.cancelAtPeriodEnd;
+
+      if (this.googlePlay.isConfigured) {
+        const purchase = await this.googlePlay.getSubscription(notif.purchaseToken).catch((err) => {
+          // Token invalidado por Google (p. ej. reembolso/revocación): sin acceso
+          if (err instanceof PlayPurchaseNotFoundError) return null;
+          throw err;
+        });
+        if (!purchase) {
+          status = 'revoked';
+        } else {
+          status = PLAY_STATE_TO_STATUS[purchase.subscriptionState ?? ''] ?? 'pending';
+          const item = purchase.lineItems?.find((li) => li.productId === sub.productId) ?? purchase.lineItems?.[0];
+          if (item?.expiryTime) currentPeriodEnd = new Date(item.expiryTime);
+          cancelAtPeriodEnd = status === 'canceled';
+        }
+        // REVOKED: Google reembolsó y retiró el acceso de inmediato
+        if (notif.notificationType === 12) status = 'revoked';
+      } else if (this.billingMockAllowed) {
+        // Solo dev/tests: mapeo por tipo de notificación
+        // 2 = RENEWED, 3 = CANCELED, 12 = REVOKED, 13 = EXPIRED
+        if (notif.notificationType === 2) status = 'active';
+        else if (notif.notificationType === 3) cancelAtPeriodEnd = true;
+        else if (notif.notificationType === 12) status = 'revoked';
+        else if (notif.notificationType === 13) status = 'expired';
+      } else {
+        throw new ServiceUnavailableException('Google Play no configurado');
+      }
+
+      await this.prisma.subscription.update({
+        where: { id: sub.id },
+        data: { status, currentPeriodEnd, cancelAtPeriodEnd },
+      });
+    } catch (err) {
+      // Pub/Sub reintenta si respondemos error: el evento no debe quedar marcado como procesado
+      await this.releaseEvent('google_play', messageData.messageId).catch(() => undefined);
+      throw err;
+    }
 
     await this.entitlement.invalidate(sub.userId);
     const plan = await this.entitlement.planFor(sub.userId);

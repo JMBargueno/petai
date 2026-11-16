@@ -126,7 +126,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   private async *parseStream(body: AsyncIterable<Uint8Array>): AsyncIterable<LlmEvent> {
     const decoder = new TextDecoder();
     let buffer = '';
-    let usage: { promptTokens?: number; completionTokens?: number } | undefined;
+    let usage: { promptTokens?: number; completionTokens?: number; costUsd?: number } | undefined;
     // Algunos modelos mezclan el razonamiento en el contenido con etiquetas <think>
     const splitter = new ThinkTagSplitter();
     const fromSplit = function* (part: SplitChunk): Generator<LlmEvent> {
@@ -185,6 +185,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
             usage = {
               promptTokens: json.usage.prompt_tokens,
               completionTokens: json.usage.completion_tokens,
+              ...(typeof json.usage.cost === 'number' && json.usage.cost >= 0 ? { costUsd: json.usage.cost } : {}),
             };
           }
         } catch {

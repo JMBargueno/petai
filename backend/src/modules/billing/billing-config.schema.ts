@@ -75,6 +75,10 @@ export const billingConfigSchema = z
         proBudgetMultiplier: z.number().min(1).max(5).default(1.5),
         maxConcurrency: z.number().int().min(1).max(5000).default(200),
         firstTokenTimeoutSeconds: z.number().int().min(3).max(60).default(10),
+        // Precio conservador (USD por millón de tokens) para reservar presupuesto antes de la llamada
+        // y para contabilizar si OpenRouter no devuelve `usage.cost`. Debe cubrir el modelo más caro.
+        estimatePromptUsdPerMTok: z.number().min(0).max(100).default(0.5),
+        estimateCompletionUsdPerMTok: z.number().min(0).max(400).default(2),
       })
       .default({
         enabled: true,
@@ -84,6 +88,8 @@ export const billingConfigSchema = z
         proBudgetMultiplier: 1.5,
         maxConcurrency: 200,
         firstTokenTimeoutSeconds: 10,
+        estimatePromptUsdPerMTok: 0.5,
+        estimateCompletionUsdPerMTok: 2,
       }),
     subscription: z
       .object({

@@ -86,4 +86,17 @@ describe('AiConfigService (Spec-34 Managed AI)', () => {
       );
     });
   });
+
+  describe('test', () => {
+    it('en modo managed no llama al proveedor con la key del servidor ni toca la BD', async () => {
+      prisma.aiConfig.findUnique.mockResolvedValue(null);
+      prisma.aiConfig.update = jest.fn();
+      const fetchSpy = jest.spyOn(globalThis, 'fetch' as any);
+
+      await expect(svc.test('user-new')).resolves.toEqual({ ok: true, mode: 'managed' });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(prisma.aiConfig.update).not.toHaveBeenCalled();
+      fetchSpy.mockRestore();
+    });
+  });
 });

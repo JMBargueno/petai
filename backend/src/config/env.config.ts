@@ -91,6 +91,18 @@ export const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRODUCT_PRO: z.string().optional(),
+  // Price ID de la suscripción Pro en Stripe (price_...). Obligatorio si hay STRIPE_SECRET_KEY en producción.
+  STRIPE_PRICE_PRO: z.string().optional(),
+  // Google Play Billing: cuenta de servicio (JSON o JSON en base64) con acceso a la Play Developer API.
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  GOOGLE_PLAY_PACKAGE_NAME: z.string().optional(),
+  GOOGLE_PLAY_PRODUCT_IDS: z.string().default('pockai_pro_monthly'),
+  // RTDN (push de Pub/Sub autenticado): audiencia del token OIDC y cuenta de servicio emisora.
+  GOOGLE_RTDN_AUDIENCE: z.string().optional(),
+  GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
+  // Solo desarrollo/tests: acepta webhooks de Stripe sin firma y compras de Play sin verificar.
+  // Prohibido en producción (productionProblems).
+  BILLING_MOCK_ENABLED: z.enum(['true', 'false']).default('false'),
   PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
   AI_MANAGED_ENABLED: z.enum(['true', 'false']).default('true'),
   AI_MANAGED_MODEL: z.string().default('google/gemini-2.5-flash-lite'),
@@ -143,6 +155,18 @@ export function productionProblems(env: EnvConfig): string[] {
   }
   if (env.RATE_LIMIT_DISABLED === 'true') {
     problems.push('RATE_LIMIT_DISABLED=true no puede usarse en producción');
+  }
+  if (env.BILLING_MOCK_ENABLED === 'true') {
+    problems.push('BILLING_MOCK_ENABLED=true acepta pagos sin verificar y no puede usarse en producción');
+  }
+  if (env.STRIPE_SECRET_KEY && !env.STRIPE_WEBHOOK_SECRET) {
+    problems.push('STRIPE_WEBHOOK_SECRET es obligatorio cuando STRIPE_SECRET_KEY está definido');
+  }
+  if (env.STRIPE_SECRET_KEY && !env.STRIPE_PRICE_PRO) {
+    problems.push('STRIPE_PRICE_PRO es obligatorio cuando STRIPE_SECRET_KEY está definido');
+  }
+  if (env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON && (!env.GOOGLE_RTDN_AUDIENCE || !env.GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL)) {
+    problems.push('GOOGLE_RTDN_AUDIENCE y GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL son obligatorios con Google Play activo');
   }
   return problems;
 }

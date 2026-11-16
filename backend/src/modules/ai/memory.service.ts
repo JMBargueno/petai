@@ -1,4 +1,5 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { ManagedBudgetService } from '../billing/managed-budget.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LlmProvider } from './llm-provider';
 import {
@@ -40,6 +41,8 @@ export class MemoryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usage: UsageService,
+    // IA gestionada: la extracción también gasta el presupuesto global del servidor
+    @Optional() private readonly managedBudget?: ManagedBudgetService,
   ) {}
 
   /** Bloque de recuerdos para el prompt (vacío si la mascota aún no tiene memoria). */
@@ -108,9 +111,16 @@ export class MemoryService {
       });
       if (recent.filter((m) => m.role === 'user').length < SUMMARIZE_EVERY_USER_MESSAGES) return;
 
+      const managed = mode === 'managed' && !!this.managedBudget;
+      // Gestionada: la extracción es prescindible, así que solo se hace con el presupuesto del plan Free abierto
+      if (managed && !(await this.managedBudget!.assertOpen('free').then(() => true, () => false))) return;
+
       this.lastAttempt.set(petId, Date.now());
       let output = '';
       let reported = 0;
+      let reportedCost: number | undefined;
+      let promptTokens = 0;
+      let completionTokens = 0;
       const transcript = formatTranscript(recent);
       for await (const ev of provider.chat(
         [
@@ -120,9 +130,20 @@ export class MemoryService {
         { model, temperature: 0, maxTokens: 400 },
       )) {
         if (ev.type === 'delta') output += ev.text;
-        else if (ev.type === 'done') reported = (ev.usage?.promptTokens ?? 0) + (ev.usage?.completionTokens ?? 0);
+        else if (ev.type === 'done') {
+          promptTokens = ev.usage?.promptTokens ?? 0;
+          completionTokens = ev.usage?.completionTokens ?? 0;
+          reported = promptTokens + completionTokens;
+          reportedCost = ev.usage?.costUsd;
+        }
       }
-      await this.usage.record(userId, reported || Math.ceil((transcript.length + output.length + EXTRACTION_SYSTEM_PROMPT.length) / 4));
+      const used = reported || Math.ceil((transcript.length + output.length + EXTRACTION_SYSTEM_PROMPT.length) / 4);
+      let costUsd = 0;
+      if (managed) {
+        costUsd = reportedCost ?? (reported ? this.managedBudget!.estimateCostUsd(promptTokens, completionTokens) : this.managedBudget!.estimateCostUsd(used, 0));
+        await this.managedBudget!.add(costUsd).catch(() => undefined);
+      }
+      await this.usage.record(userId, used, costUsd, managed ? 'openrouter' : undefined);
 
       const extraction = parseExtraction(output);
       if (!extraction) {

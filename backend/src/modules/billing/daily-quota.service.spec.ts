@@ -122,4 +122,31 @@ describe('DailyQuotaService', () => {
       expect(res.limit).toBe(15);
     });
   });
+
+  describe('fecha monótona (antiabuso por cambio de zona horaria)', () => {
+    it('usa la fecha más reciente ya consumida aunque la zona horaria local vaya por detrás', async () => {
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date());
+      const ahead = new Date(Date.parse(today) + 86_400_000).toISOString().slice(0, 10);
+      const evalMock = jest
+        .fn()
+        .mockResolvedValueOnce(ahead) // script de fecha monótona: Redis ya vio "mañana"
+        .mockResolvedValueOnce(1); // consumo
+      redis.run.mockImplementation(async (fn: any) => fn({ eval: evalMock }));
+
+      const res = await svc.consume('user-1', 'free');
+      expect(res.key).toBe(`test:daily:user-1:${ahead}`);
+      expect(evalMock.mock.calls[0][3]).toBe(today); // se envía la fecha local real
+      // El reseteo no llega en la próxima medianoche local, sino un día después
+      expect(Date.parse(res.resetsAt) - Date.parse(nextLocalMidnight('Europe/Madrid'))).toBeGreaterThanOrEqual(86_400_000 - 1000);
+    });
+
+    it('con Redis caído tampoco permite volver a una fecha anterior', async () => {
+      redis.run.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValueOnce({ timezone: 'Pacific/Kiritimati' });
+      const first = await svc.day('user-1');
+      prisma.user.findUnique.mockResolvedValueOnce({ timezone: 'Pacific/Pago_Pago' });
+      const second = await svc.day('user-1');
+      expect(second.key).toBe(first.key);
+    });
+  });
 });

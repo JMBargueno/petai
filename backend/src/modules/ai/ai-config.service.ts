@@ -154,7 +154,8 @@ export class AiConfigService {
         fetch,
         {
           extraHeaders: { 'HTTP-Referer': 'https://pockai.app', 'X-Title': 'Pockai' },
-          extraBody: { models: managedSettings.fallbackModels },
+          // `usage.include`: OpenRouter devuelve el coste real en el último chunk (presupuesto exacto)
+          extraBody: { models: managedSettings.fallbackModels, usage: { include: true } },
         },
       );
       return { provider, model: managedSettings.primaryModel, mode: 'managed' };
@@ -186,7 +187,12 @@ export class AiConfigService {
   }
 
   async test(userId: string) {
-    const { provider, model } = await this.resolveProvider(userId);
+    const { provider, model, mode } = await this.resolveProvider(userId);
+    // La IA gestionada no se "prueba": sería una llamada gratis con la key del servidor, fuera de
+    // cuota y presupuesto (y el usuario no tiene nada que validar).
+    if (mode === 'managed') {
+      return { ok: true, mode: 'managed' };
+    }
     try {
       await provider.test(model);
     } catch (err: any) {

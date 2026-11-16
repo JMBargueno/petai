@@ -13,15 +13,17 @@ describe('StripeController', () => {
       syncStripeSubscription: jest.fn(async () => undefined),
       markPastDue: jest.fn(async () => undefined),
       revokeSubscription: jest.fn(async () => undefined),
+      releaseEvent: jest.fn(async () => undefined),
     };
     config = {
       get: jest.fn((k: string) => {
-        if (k === 'STRIPE_SECRET_KEY') return 'mock-key';
-        if (k === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test';
+        if (k === 'BILLING_MOCK_ENABLED') return 'true';
+        if (k === 'NODE_ENV') return 'test';
         return undefined;
       }),
     };
     controller = new StripeController(billing, config);
+    controller.setStripeClientForTest(null);
   });
 
   describe('checkout', () => {
@@ -75,6 +77,57 @@ describe('StripeController', () => {
       expect(res.ok).toBe(true);
       expect(res.duplicate).toBe(true);
       expect(billing.syncStripeSubscription).not.toHaveBeenCalled();
+    });
+    describe('con Stripe configurado', () => {
+      let stripe: any;
+      beforeEach(() => {
+        config.get.mockImplementation((k: string) => (k === 'STRIPE_WEBHOOK_SECRET' ? 'whsec_test' : undefined));
+        stripe = {
+          webhooks: { constructEvent: jest.fn() },
+          subscriptions: { retrieve: jest.fn() },
+        };
+        controller.setStripeClientForTest(stripe);
+      });
+
+      it('rechaza un webhook sin cabecera stripe-signature (no cae al modo mock)', async () => {
+        const req = { body: { id: 'evt_forged', type: 'checkout.session.completed', data: { object: {} } }, rawBody: Buffer.from('{}') };
+        await expect(controller.webhook(req as any)).rejects.toThrow('Falta la firma');
+        expect(billing.claimEvent).not.toHaveBeenCalled();
+        expect(billing.syncStripeSubscription).not.toHaveBeenCalled();
+      });
+
+      it('rechaza un webhook con firma inválida', async () => {
+        stripe.webhooks.constructEvent.mockImplementation(() => {
+          throw new Error('bad sig');
+        });
+        const req = { body: {}, rawBody: Buffer.from('{}') };
+        await expect(controller.webhook(req as any, 't=1,v1=x')).rejects.toThrow('no válida');
+        expect(billing.syncStripeSubscription).not.toHaveBeenCalled();
+      });
+
+      it('no inventa la suscripción si Stripe no la devuelve y libera el evento para el reintento', async () => {
+        stripe.webhooks.constructEvent.mockReturnValue({
+          id: 'evt_1',
+          type: 'checkout.session.completed',
+          data: { object: { subscription: 'sub_fake', client_reference_id: 'u1' } },
+        });
+        stripe.subscriptions.retrieve.mockRejectedValue(new Error('No such subscription'));
+        await expect(controller.webhook({ rawBody: Buffer.from('{}') } as any, 'sig')).rejects.toThrow('No such subscription');
+        expect(billing.syncStripeSubscription).not.toHaveBeenCalled();
+        expect(billing.releaseEvent).toHaveBeenCalledWith('stripe', 'evt_1');
+      });
+    });
+
+    it('sin Stripe configurado y sin BILLING_MOCK_ENABLED rechaza el webhook', async () => {
+      config.get.mockImplementation(() => undefined);
+      const req = { body: { id: 'evt_x', type: 'checkout.session.completed', data: { object: {} } } };
+      await expect(controller.webhook(req as any)).rejects.toThrow('no configurados');
+    });
+
+    it('BILLING_MOCK_ENABLED no tiene efecto en producción', async () => {
+      config.get.mockImplementation((k: string) => (k === 'BILLING_MOCK_ENABLED' ? 'true' : k === 'NODE_ENV' ? 'production' : undefined));
+      const req = { body: { id: 'evt_x', type: 'checkout.session.completed', data: { object: {} } } };
+      await expect(controller.webhook(req as any)).rejects.toThrow('no configurados');
     });
   });
 });
