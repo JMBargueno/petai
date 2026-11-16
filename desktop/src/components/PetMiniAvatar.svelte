@@ -2,11 +2,12 @@
   import { onMount, onDestroy } from 'svelte';
   import {
     bakePetSpriteSheet,
+    getAnimLibrary,
     getPetSvg,
     getPatternSvg,
     type BakedPetSheet,
   } from '../lib/sprites';
-  import { AnimationController } from '../lib/animation/AnimationController';
+  import { AnimationController, resolveBaseState } from '../lib/animation/AnimationController';
 
   export let pet: any;
   export let size: number = 80;
@@ -20,9 +21,17 @@
   let animRafId: number | null = null;
   let lastTime = 0;
 
-  const controller = new AnimationController();
+  // El controlador necesita la biblioteca de clips de la especie (sin ella el constructor lanza
+  // al resolver 'idle' y el componente no llega a montarse).
+  const initialLib = getAnimLibrary(pet?.species?.id || pet?.species?.spriteKey || 'ignisaur');
+  const controller = new AnimationController(initialLib.library, initialLib.aliases);
 
   $: speciesKey = pet?.species?.id || pet?.species?.spriteKey || 'ignisaur';
+  $: {
+    const lib = getAnimLibrary(speciesKey);
+    controller.setLibrary(lib.library, lib.aliases);
+  }
+  $: controller.setBase(resolveBaseState(pet));
   $: patternKey = pet?.pattern?.id || 'plain';
   $: isSleeping = pet?.sleeping || false;
   $: isShiny = pet?.shiny || false;
@@ -35,9 +44,14 @@
     triggerBake();
   }
 
+  let pendingBake = false;
   async function triggerBake() {
-    if (isBaking) return;
+    if (isBaking) {
+      pendingBake = true; // los datos cambiaron mientras se horneaba: repetir al terminar
+      return;
+    }
     isBaking = true;
+    pendingBake = false;
     try {
       bakedSheet = await bakePetSpriteSheet(
         speciesKey,
@@ -51,6 +65,7 @@
       bakedSheet = null;
     } finally {
       isBaking = false;
+      if (pendingBake) triggerBake();
     }
   }
 
@@ -63,7 +78,8 @@
     const dt = lastTime ? Math.min(time - lastTime, 250) : 16;
     lastTime = time;
 
-    controller.setMotion(activeAnim);
+    // 'idle'/'sleep' son estados base; el resto (walk…) se reproduce como movimiento
+    controller.setMotion(isSleeping || anim === 'idle' ? null : anim);
     const frameState = controller.update(dt);
 
     if (canvasEl && bakedSheet) {
