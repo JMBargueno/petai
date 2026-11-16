@@ -19,7 +19,6 @@
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
-  import UpdateLockModal from './components/UpdateLockModal.svelte';
   import type { AnalyzedFile } from './lib/fileAnalyzer';
   import { PawPrint, Bell, X } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
@@ -27,7 +26,7 @@
   import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
   import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster } from './lib/clan-store';
   import type { HabitatVisitor, ClanMessage, ClanGoal } from './lib/api';
-  import { updateState, startAutoCheck, checkForUpdates } from './lib/updater';
+  import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
 
   let user: any = null;
   let pets: any[] = [];
@@ -49,13 +48,14 @@
     isPanelOpen = true;
   }
 
-  // Actualizaciones: la mascota avisa una sola vez por versión nueva.
+  // Actualización obligatoria: se bloquea el panel (muestra solo el aviso) y se oculta la mascota
+  // y los controles flotantes hasta que se instale. Aviso nativo una sola vez por versión.
+  $: updateLocked = $updateLock !== null;
+  $: if (updateLocked) isPanelOpen = true;
   let announcedVersion = '';
-  $: if ($updateState.status === 'available' && $updateState.version !== announcedVersion) {
-    announcedVersion = $updateState.version;
-    const text = `¡Ha salido mi versión ${announcedVersion}! Actualízame en Ajustes › Acerca de.`;
-    showBubble(text);
-    notifyNow('Nueva versión de Pockai', text);
+  $: if ($updateLock !== null && $updateLock !== announcedVersion) {
+    announcedVersion = $updateLock;
+    notifyNow('Nueva versión de Pockai', `Actualiza Pockai a la versión ${announcedVersion} desde el panel para seguir jugando.`);
   }
 
   /** Comprobación pedida desde la bandeja: la mascota cuenta el resultado. */
@@ -496,6 +496,7 @@
   on:dragover|preventDefault
   on:drop={handleViewportDrop}
 >
+  {#if !updateLocked}
   <!-- Botón flotante para alternar panel de control -->
   <button
     class="btn glass toggle-panel-pill"
@@ -546,6 +547,7 @@
       onPetClick={() => (isPanelOpen = true)}
     />
   {/if}
+  {/if}
 
   <!-- Panel de Control y Cuidados -->
   <ControlPanel
@@ -572,7 +574,7 @@
     on:logout={clearSessionState}
   />
 
-  {#if droppedFile}
+  {#if droppedFile && !updateLocked}
     <FileDropModal
       file={droppedFile}
       on:close={() => (droppedFile = null)}
@@ -584,11 +586,6 @@
         showBubble(`Examinando ${file.name} con la IA...`);
       }}
     />
-  {/if}
-
-  <!-- Modal infranqueable de actualización obligatoria -->
-  {#if $updateState.status === 'available' || $updateState.status === 'downloading' || $updateState.status === 'ready'}
-    <UpdateLockModal />
   {/if}
 </main>
 
