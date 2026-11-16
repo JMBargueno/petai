@@ -317,3 +317,26 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("error running PetAI desktop application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Shortcut;
+
+    /// Los aceleradores que genera `captureShortcut` (desktop/src/lib/summonShortcut.ts) deben
+    /// ser válidos para el plugin global-shortcut.
+    #[test]
+    fn acepta_los_atajos_del_frontend() {
+        for a in [
+            "Ctrl+Alt+P",
+            "Shift+Super+1",
+            "Alt+Up",
+            "Ctrl+Alt+Num1",
+            "Ctrl+Alt+-",
+            "Ctrl+Alt+F5",
+            "Ctrl+Shift+Space",
+            "Alt+Shift+K",
+        ] {
+            assert!(a.parse::<Shortcut>().is_ok(), "atajo rechazado: {a}");
+        }
+    }
+}
