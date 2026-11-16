@@ -1,11 +1,15 @@
 <script lang="ts">
-  /** Clanes (feature 021): crear/unirse por tag, roster con presencia y rol, invitar y salir.
-   *  Además: chat del clan y objetivos de clan (con progreso en vivo por socket). */
+  /** Clanes (feature 021): crear/unirse por tag, roster con presencia y rango, invitar y salir.
+   *  Además: chat del clan y objetivos de clan (con progreso en vivo por socket).
+   *  Rangos del Nexo (docs/LORE.md §8): Forjador > Guardián > Vigía > Hermano; las acciones de
+   *  gestión solo se muestran a quien puede hacerlas (el backend las valida igualmente). */
   import Ico from './Ico.svelte';
   import { onMount } from 'svelte';
   import {
     api,
     type ClanMember,
+    type ClanMessage,
+    type ClanRole,
     type ClanSummary,
     type ClanGoal,
     type ClanGoalMetric,
@@ -13,13 +17,19 @@
   import {
     clanMessagesStore,
     clanGoalsStore,
+    clanRosterTick,
     pushClanMessage,
     setClanMessages,
     setClanGoals,
     upsertClanGoal,
     dropClanGoal,
+    dropClanMessage,
     clearClan,
     goalPercent,
+    clanRole,
+    clanMemberActions,
+    hasClanRank,
+    CLAN_ROLE_LABEL,
   } from '../lib/clan-store';
 
   let clan: ClanSummary | null = null;
@@ -43,10 +53,37 @@
   let chatInput = '';
   let chatEl: HTMLDivElement | null = null;
 
-  const ROLE_LABEL: Record<string, string> = { leader: 'Líder', member: 'Miembro' };
+  // Edición del clan (Guardián+)
+  let editing = false;
+  let editName = '';
+  let editDescription = '';
+  /** Confirmación en dos pasos en el propio botón (sin confirm() nativo, que congela Tauri). */
+  let armed = '';
+  let armedTimer: ReturnType<typeof setTimeout> | undefined;
+
   const METRIC_LABEL: Record<string, string> = { xp: 'XP', visits: 'Visitas', generic: 'Progreso' };
-  /** El usuario actual es el líder del clan (puede borrar objetivos). */
-  $: isLeader = !!clan && !!meId && clan.leaderId === meId;
+  /** Mi rango en el clan (derivado del roster). */
+  $: myRole = clanRole(clan?.members.find((m) => m.userId === meId)?.role ?? (clan && clan.leaderId === meId ? 'creator' : 'member'));
+  $: canInvite = hasClanRank(myRole, 'moderator');
+  $: canModerate = hasClanRank(myRole, 'moderator');
+  $: canEdit = hasClanRank(myRole, 'admin');
+  $: isCreator = myRole === 'creator';
+  /** Roster ordenado por rango (Forjador primero) y antigüedad. */
+  $: roster = clan
+    ? [...clan.members].sort(
+        (a, b) =>
+          ['creator', 'admin', 'moderator', 'member'].indexOf(clanRole(a.role)) -
+            ['creator', 'admin', 'moderator', 'member'].indexOf(clanRole(b.role)) ||
+          new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime(),
+      )
+    : [];
+
+  /** Recarga cuando el socket avisa de cambios de roster (rangos, expulsiones, disolución). */
+  let lastTick = 0;
+  $: if ($clanRosterTick !== lastTick) {
+    lastTick = $clanRosterTick;
+    if (!loading) load();
+  }
   /** Objetivos activos primero, luego los completados. */
   $: sortedGoals = [...$clanGoalsStore].sort(
     (a, b) => (a.status === 'completed' ? 1 : 0) - (b.status === 'completed' ? 1 : 0),
@@ -62,8 +99,8 @@
       if (clan) {
         // Roster vivo por el endpoint dedicado (el summary puede traerlo cacheado)
         try {
-          const members: ClanMember[] = await api.getClanMembers(clan.id);
-          if (Array.isArray(members) && members.length > 0) clan = { ...clan, members, memberCount: members.length };
+          const fresh = await api.getClanMembers(clan.id);
+          if (fresh?.members?.length) clan = fresh;
         } catch {
           /* el summary ya trae members; no crítico */
         }
@@ -78,7 +115,7 @@
     }
   }
 
-  /** Quien soy (para saber si soy líder) + objetivos y chat del clan. */
+  /** Quien soy (para saber mi rango) + objetivos y chat del clan. */
   async function loadClanExtras(clanId: string) {
     try {
       const me = await api.getMe();
@@ -170,6 +207,99 @@
     }
   }
 
+  // ── Gestión del Nexo (rangos) ──────────────────────────────────────────────
+  /** Primer clic arma la acción `key`; el segundo (antes de 4 s) la ejecuta. */
+  function confirmTwice(key: string, run: () => void) {
+    if (armed === key) {
+      armed = '';
+      clearTimeout(armedTimer);
+      run();
+      return;
+    }
+    armed = key;
+    clearTimeout(armedTimer);
+    armedTimer = setTimeout(() => (armed = ''), 4000);
+  }
+
+  /** Ejecuta una acción de gestión con estado busy/errores comunes. */
+  async function manage(key: string, action: () => Promise<unknown>, success: string) {
+    busy = key;
+    error = '';
+    ok = '';
+    try {
+      await action();
+      ok = success;
+      await load();
+    } catch (e: any) {
+      error = e.message;
+    } finally {
+      busy = '';
+    }
+  }
+
+  function kick(m: ClanMember) {
+    if (!clan) return;
+    const id = clan.id;
+    confirmTwice(`kick-${m.userId}`, () =>
+      manage(`member-${m.userId}`, () => api.kickClanMember(id, m.userId), `${m.displayName} ha sido expulsado del Nexo.`),
+    );
+  }
+
+  function changeRole(m: ClanMember, role: Exclude<ClanRole, 'creator'>) {
+    if (!clan) return;
+    const id = clan.id;
+    manage(
+      `member-${m.userId}`,
+      () => api.setClanMemberRole(id, m.userId, role),
+      `${m.displayName} ahora es ${CLAN_ROLE_LABEL[role]}.`,
+    );
+  }
+
+  function transfer(m: ClanMember) {
+    if (!clan) return;
+    const id = clan.id;
+    confirmTwice(`transfer-${m.userId}`, () =>
+      manage(`member-${m.userId}`, () => api.transferClanCreator(id, m.userId), `Has cedido la Forja a ${m.displayName}. Ahora eres Guardián.`),
+    );
+  }
+
+  function startEdit() {
+    if (!clan) return;
+    editName = clan.name;
+    editDescription = clan.description ?? '';
+    editing = true;
+  }
+
+  async function saveEdit() {
+    if (!clan || !editName.trim()) return;
+    const id = clan.id;
+    await manage('edit', () => api.updateClan(id, { name: editName.trim(), description: editDescription.trim() || null }), 'Nexo actualizado.');
+    if (!error) editing = false;
+  }
+
+  function disband() {
+    if (!clan) return;
+    const id = clan.id;
+    confirmTwice('disband', async () => {
+      await manage('disband', () => api.disbandClan(id), 'El Nexo se ha deshecho y ha vuelto al Éter.');
+      if (!error) clearClan();
+    });
+  }
+
+  async function deleteMsg(m: ClanMessage) {
+    if (!clan) return;
+    busy = `msg-${m.id}`;
+    error = '';
+    try {
+      await api.deleteClanMessage(clan.id, m.id);
+      dropClanMessage(m.id);
+    } catch (e: any) {
+      error = e.message;
+    } finally {
+      busy = '';
+    }
+  }
+
   // ── Objetivos de clan ──────────────────────────────────────────────────────
   async function createGoal() {
     if (!clan || !goalTitle.trim()) return;
@@ -206,7 +336,7 @@
   }
 
   async function deleteGoal(goal: ClanGoal) {
-    if (!clan || !isLeader) return;
+    if (!clan || !canModerate) return;
     busy = `goal-${goal.id}`;
     error = '';
     try {
@@ -253,28 +383,77 @@
       </div>
       <span class="clan-xp">{(clan.xp ?? 0).toLocaleString()} XP</span>
     </div>
-    <div class="clan-meta">Líder: {clan.leader?.displayName ?? clan.leaderId} · {clan.memberCount} miembro(s)</div>
+    <div class="clan-meta">
+      Forjador: {clan.leader?.displayName ?? clan.leaderId} · {clan.memberCount} hebra(s) · Tu rango:
+      <span class="role-badge role-{myRole}">{CLAN_ROLE_LABEL[myRole]}</span>
+    </div>
+    {#if canEdit && !editing}
+      <button class="btn-sm ghost" on:click={startEdit}>✎ Editar Nexo</button>
+    {/if}
   </div>
+
+  {#if editing}
+    <div class="form-col edit-box">
+      <input class="input" placeholder="Nombre del clan" maxlength="40" bind:value={editName} disabled={busy === 'edit'} />
+      <textarea class="input desc" rows="2" maxlength="300" placeholder="Descripción" bind:value={editDescription} disabled={busy === 'edit'}></textarea>
+      <div class="form-row">
+        <button class="btn-sm primary" disabled={busy === 'edit' || !editName.trim()} on:click={saveEdit}>
+          {busy === 'edit' ? 'Guardando…' : 'Guardar'}
+        </button>
+        <button class="btn-sm ghost" disabled={busy === 'edit'} on:click={() => (editing = false)}>Cancelar</button>
+      </div>
+    </div>
+  {/if}
 
   <div class="sec-title">Miembros</div>
   <div class="list">
-    {#each clan.members as m (m.userId)}
+    {#each roster as m (m.userId)}
+      {@const acts = m.userId === meId ? null : clanMemberActions(myRole, m.role)}
+      {@const role = clanRole(m.role)}
       <div class="member">
-        <span class="p-dot {m.isOnline ? 'online' : 'offline'}" title="Presencia"></span>
-        <span class="member-name">{m.displayName}</span>
-        <span class="member-role">{ROLE_LABEL[m.role] ?? m.role}</span>
-        <small class="member-joined">{new Date(m.joinedAt).toLocaleDateString()}</small>
+        <div class="member-row">
+          <span class="p-dot {m.isOnline ? 'online' : 'offline'}" title="Presencia"></span>
+          <span class="member-name">{m.displayName}{m.userId === meId ? ' (tú)' : ''}</span>
+          <span class="role-badge role-{role}">{CLAN_ROLE_LABEL[role]}</span>
+          <small class="member-joined">{new Date(m.joinedAt).toLocaleDateString()}</small>
+        </div>
+        {#if acts && (acts.kick || acts.promote || acts.demote || acts.transfer)}
+          <div class="member-actions">
+            {#if acts.promote}
+              <button class="btn-sm ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.promote && changeRole(m, acts.promote)}>
+                ↑ {CLAN_ROLE_LABEL[acts.promote]}
+              </button>
+            {/if}
+            {#if acts.demote}
+              <button class="btn-sm ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.demote && changeRole(m, acts.demote)}>
+                ↓ {CLAN_ROLE_LABEL[acts.demote]}
+              </button>
+            {/if}
+            {#if acts.transfer}
+              <button class="btn-sm ghost" disabled={busy === `member-${m.userId}`} on:click={() => transfer(m)}>
+                {armed === `transfer-${m.userId}` ? '¿Seguro? Ceder' : 'Ceder Forja'}
+              </button>
+            {/if}
+            {#if acts.kick}
+              <button class="btn-sm danger" disabled={busy === `member-${m.userId}`} on:click={() => kick(m)}>
+                {armed === `kick-${m.userId}` ? '¿Seguro? Expulsar' : 'Expulsar'}
+              </button>
+            {/if}
+          </div>
+        {/if}
       </div>
     {/each}
   </div>
 
-  <div class="sec-title">Invitar</div>
-  <div class="form-row">
-    <input class="input" placeholder="Email o ID de jugador" bind:value={inviteTarget} disabled={busy === 'invite'} />
-    <button class="btn-sm primary" disabled={busy === 'invite' || !inviteTarget.trim()} on:click={invite}>
-      {busy === 'invite' ? '…' : 'Invitar'}
-    </button>
-  </div>
+  {#if canInvite}
+    <div class="sec-title">Invitar</div>
+    <div class="form-row">
+      <input class="input" placeholder="Email o ID de jugador" bind:value={inviteTarget} disabled={busy === 'invite'} />
+      <button class="btn-sm primary" disabled={busy === 'invite' || !inviteTarget.trim()} on:click={invite}>
+        {busy === 'invite' ? '…' : 'Invitar'}
+      </button>
+    </div>
+  {/if}
 
   <div class="sec-title">Objetivos</div>
   {#if sortedGoals.length === 0}
@@ -298,7 +477,7 @@
                   +1
                 </button>
               {/if}
-              {#if isLeader}
+              {#if canModerate}
                 <button class="btn-sm danger" disabled={busy === `goal-${g.id}`} on:click={() => deleteGoal(g)} title="Borrar objetivo">
                   ✕
                 </button>
@@ -336,6 +515,9 @@
           <div class="chat-meta">
             <span class="chat-sender">{m.senderName}</span>
             <small class="chat-time">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
+            {#if canModerate || m.userId === meId}
+              <button class="chat-del" title="Borrar mensaje" disabled={busy === `msg-${m.id}`} on:click={() => deleteMsg(m)}>✕</button>
+            {/if}
           </div>
           <div class="chat-body">{m.body}</div>
         </div>
@@ -349,7 +531,16 @@
     </button>
   </div>
 
-  <button class="danger" disabled={!!busy} on:click={leave}>{busy === 'leave' ? 'Salendo…' : 'Salir del clan'}</button>
+  {#if isCreator && clan.memberCount > 1}
+    <small class="hint">Como Forjador, cede la Forja a otra hebra antes de salir del Nexo.</small>
+  {:else}
+    <button class="danger" disabled={!!busy} on:click={leave}>{busy === 'leave' ? 'Saliendo…' : 'Salir del clan'}</button>
+  {/if}
+  {#if isCreator}
+    <button class="danger" disabled={!!busy} on:click={disband}>
+      {busy === 'disband' ? 'Deshaciendo…' : armed === 'disband' ? '¿Seguro? Se borrará todo el Nexo' : 'Disolver el Nexo'}
+    </button>
+  {/if}
 
 {:else}
   <div class="empty-msg">No estás en ningún clan todavía.</div>
@@ -390,9 +581,20 @@
   .clan-xp { font-size: 16px; font-weight: 700; color: var(--accent-ink); }
   .clan-meta { font-size: 11px; color: var(--ink-muted); }
   .list { display: flex; flex-direction: column; gap: 4px; }
-  .member { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
+  .member { display: flex; flex-direction: column; gap: 6px; padding: 7px 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
+  .member-row { display: flex; align-items: center; gap: 8px; }
+  .member-actions { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
   .member-name { font-size: 13px; font-weight: 600; }
-  .member-role { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: var(--radius-pills); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent-ink); }
+  .role-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: var(--radius-pills); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent-ink); }
+  .role-badge.role-creator { background: color-mix(in srgb, var(--warning, #f59e0b) 22%, var(--surface)); color: var(--ink); }
+  .role-badge.role-admin { background: color-mix(in srgb, var(--accent) 26%, var(--surface)); }
+  .role-badge.role-member { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--line-soft); }
+  .btn-sm.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line-soft); }
+  .clan-card .btn-sm.ghost { align-self: flex-start; margin-top: 4px; }
+  .edit-box { margin-top: 6px; }
+  .hint { display: block; margin-top: 10px; font-size: 11px; color: var(--ink-muted); text-align: center; }
+  .chat-del { margin-left: auto; border: none; background: none; color: var(--ink-muted); cursor: pointer; font-size: 10px; padding: 0 2px; }
+  .chat-del:hover { color: var(--danger-ink); }
   .member-joined { margin-left: auto; font-size: 10px; color: var(--ink-muted); }
   .p-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .p-dot.online { background: var(--success); }

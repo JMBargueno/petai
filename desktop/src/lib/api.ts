@@ -740,11 +740,39 @@ export const api = {
   async leaveClan() {
     return minigameRequest<{ ok: boolean }>('POST', '/v1/clans/leave');
   },
+  /** Invita a un jugador (Vigía o superior). Devuelve el resumen actualizado. */
   async inviteToClan(clanId: string, target: { userId?: string; email?: string }) {
-    return minigameRequest<{ ok: boolean }>('POST', `/v1/clans/${encodeURIComponent(clanId)}/invite`, target);
+    return minigameRequest<ClanSummary>('POST', `/v1/clans/${encodeURIComponent(clanId)}/invite`, target);
   },
+  /** Roster vivo del clan (el backend devuelve el resumen completo). */
   async getClanMembers(clanId: string) {
-    return minigameRequest<ClanMember[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/members`);
+    return minigameRequest<ClanSummary>('GET', `/v1/clans/${encodeURIComponent(clanId)}/members`);
+  },
+
+  // ── Gestión del Nexo (rangos de clan) ──────────────────────────────────────
+  /** Edita nombre y/o descripción (Guardián o superior). */
+  async updateClan(clanId: string, patch: { name?: string; description?: string | null }) {
+    return minigameRequest<ClanSummary>('PATCH', `/v1/clans/${encodeURIComponent(clanId)}`, patch);
+  },
+  /** Disuelve el clan (solo el Forjador). */
+  async disbandClan(clanId: string) {
+    return minigameRequest<{ success: boolean; message: string }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}`);
+  },
+  /** Expulsa a un miembro de rango inferior (Vigía o superior). */
+  async kickClanMember(clanId: string, userId: string) {
+    return minigameRequest<ClanSummary>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/members/${encodeURIComponent(userId)}`);
+  },
+  /** Cambia el rango de un miembro (Guardián o superior; Guardianes solo el Forjador). */
+  async setClanMemberRole(clanId: string, userId: string, role: Exclude<ClanRole, 'creator'>) {
+    return minigameRequest<ClanSummary>('PATCH', `/v1/clans/${encodeURIComponent(clanId)}/members/${encodeURIComponent(userId)}/role`, { role });
+  },
+  /** Cede la Forja a otro miembro (solo el Forjador; pasa a Guardián). */
+  async transferClanCreator(clanId: string, userId: string) {
+    return minigameRequest<ClanSummary>('POST', `/v1/clans/${encodeURIComponent(clanId)}/transfer`, { userId });
+  },
+  /** Borra un mensaje del chat (el autor o un Vigía o superior). */
+  async deleteClanMessage(clanId: string, messageId: string) {
+    return minigameRequest<{ success: boolean }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/messages/${encodeURIComponent(messageId)}`);
   },
 
   // ── Chat de clan (feature 021) ─────────────────────────────────────────────
@@ -1135,10 +1163,16 @@ export interface PresenceInfo {
   hasActiveDevices: boolean;
 }
 
+/**
+ * Rango dentro del clan (lore: Nexo de Resonancia): creator = Forjador, admin = Guardián,
+ * moderator = Vigía, member = Hermano.
+ */
+export type ClanRole = 'creator' | 'admin' | 'moderator' | 'member';
+
 export interface ClanMember {
   userId: string;
   displayName: string;
-  role: 'leader' | 'member' | string;
+  role: ClanRole;
   isOnline: boolean;
   joinedAt: string;
 }

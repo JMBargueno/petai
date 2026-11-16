@@ -126,10 +126,32 @@ class ApiException(val status: Int, override val message: String) : Exception(me
 data class ClanMember(
     val userId: String = "",
     val displayName: String = "",
-    val role: String = "member", // leader | member
+    val role: String = "member", // creator | admin | moderator | member (ver ClanRank)
     val isOnline: Boolean = false,
     val joinedAt: String = "",
 )
+
+/**
+ * Rangos del clan (lore: Nexo de Resonancia, docs/LORE.md §8). Espejo de
+ * `backend/src/modules/clans/clan-roles.ts`: solo se actúa sobre rangos estrictamente inferiores.
+ */
+enum class ClanRank(val wire: String, val rank: Int, val label: String) {
+    CREATOR("creator", 4, "Forjador"),
+    ADMIN("admin", 3, "Guardián"),
+    MODERATOR("moderator", 2, "Vigía"),
+    MEMBER("member", 1, "Hermano");
+
+    fun atLeast(min: ClanRank) = rank >= min.rank
+    fun outranks(other: ClanRank) = rank > other.rank
+
+    companion object {
+        /** Normaliza el valor del backend (incluye el heredado `leader`). */
+        fun of(role: String?): ClanRank = when (role) {
+            "leader" -> CREATOR
+            else -> entries.firstOrNull { it.wire == role } ?: MEMBER
+        }
+    }
+}
 
 @Serializable
 data class ClanLeader(val userId: String = "", val displayName: String = "")

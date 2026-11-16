@@ -2,6 +2,9 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import {
   appendClanMessage,
+  clanMemberActions,
+  clanRole,
+  hasClanRank,
   clearClan,
   dropClanGoal,
   goalPercent,
@@ -93,5 +96,34 @@ describe('stores', () => {
     clearClan();
     expect(get(clanGoalsStore)).toEqual([]);
     expect(get(clanMessagesStore)).toEqual([]);
+  });
+});
+
+
+describe('rangos del Nexo (clanMemberActions)', () => {
+  it('normaliza el rol heredado leader a creator', () => {
+    expect(clanRole('leader')).toBe('creator');
+    expect(clanRole('raro')).toBe('member');
+    expect(hasClanRank('leader', 'admin')).toBe(true);
+  });
+
+  it('un Hermano no puede gestionar a nadie', () => {
+    expect(clanMemberActions('member', 'member')).toEqual({ kick: false, promote: null, demote: null, transfer: false });
+  });
+
+  it('un Vigía solo expulsa a Hermanos', () => {
+    expect(clanMemberActions('moderator', 'member')).toMatchObject({ kick: true, promote: null, demote: null });
+    expect(clanMemberActions('moderator', 'moderator').kick).toBe(false);
+  });
+
+  it('un Guardián nombra o retira Vigías pero no Guardianes', () => {
+    expect(clanMemberActions('admin', 'member')).toMatchObject({ kick: true, promote: 'moderator', demote: null });
+    expect(clanMemberActions('admin', 'moderator')).toMatchObject({ kick: true, promote: null, demote: 'member' });
+    expect(clanMemberActions('admin', 'admin')).toMatchObject({ kick: false, promote: null, demote: null });
+  });
+
+  it('el Forjador nombra Guardianes y puede ceder la Forja', () => {
+    expect(clanMemberActions('creator', 'moderator')).toMatchObject({ promote: 'admin', demote: 'member', transfer: true });
+    expect(clanMemberActions('creator', 'admin')).toMatchObject({ kick: true, promote: null, demote: 'moderator', transfer: true });
   });
 });

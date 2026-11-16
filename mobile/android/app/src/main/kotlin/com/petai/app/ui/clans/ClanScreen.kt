@@ -1,6 +1,7 @@
 package com.petai.app.ui.clans
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import com.petai.app.data.ApiService
 import com.petai.app.data.ClanGoal
 import com.petai.app.data.ClanMember
 import com.petai.app.data.ClanMessage
+import com.petai.app.data.ClanRank
 import com.petai.app.data.ClanSummary
 import com.petai.app.data.RealtimeClient
 import com.petai.app.ui.theme.CardNoPadding
@@ -49,9 +51,37 @@ import kotlinx.coroutines.launch
 
 private val METRICS = listOf("generic" to "Progreso", "xp" to "XP", "visits" to "Visitas")
 
+/** Qué puede hacer quien tiene el rango `me` sobre un miembro de rango `target` (mismas reglas que el backend). */
+private data class MemberActions(val kick: Boolean, val promote: ClanRank?, val demote: ClanRank?, val transfer: Boolean) {
+    val any get() = kick || promote != null || demote != null || transfer
+}
+
+private fun memberActions(me: ClanRank, target: ClanRank): MemberActions {
+    val outranks = me.outranks(target)
+    val up = when (target) { ClanRank.MEMBER -> ClanRank.MODERATOR; else -> ClanRank.ADMIN }
+    val down = when (target) { ClanRank.ADMIN -> ClanRank.MODERATOR; else -> ClanRank.MEMBER }
+    val manage = me.atLeast(ClanRank.ADMIN) && outranks
+    return MemberActions(
+        kick = me.atLeast(ClanRank.MODERATOR) && outranks,
+        promote = up.takeIf { manage && target != ClanRank.ADMIN && me.outranks(it) },
+        demote = down.takeIf { manage && target != ClanRank.MEMBER },
+        transfer = me == ClanRank.CREATOR && target != ClanRank.CREATOR,
+    )
+}
+
+private fun rankColor(rank: ClanRank) = when (rank) {
+    ClanRank.CREATOR -> com.petai.app.ui.theme.Brand.Ember
+    ClanRank.ADMIN -> com.petai.app.ui.theme.Brand.Sunburst
+    ClanRank.MODERATOR -> com.petai.app.ui.theme.Brand.Lavender
+    ClanRank.MEMBER -> com.petai.app.ui.theme.Brand.MintPop
+}
+
 /**
- * Pestaña "Clan" (feature 021): crear/unirse/salir, roster con presencia y rol, XP compartida,
+ * Pestaña "Clan" (feature 021): crear/unirse/salir, roster con presencia y rango, XP compartida,
  * objetivos compartidos con progreso, y chat del clan en vivo vía [RealtimeClient].
+ *
+ * Rangos del Nexo (docs/LORE.md §8): Forjador > Guardián > Vigía > Hermano. Las acciones de gestión
+ * solo se muestran a quien puede hacerlas; el backend las valida igualmente.
  */
 @Composable
 fun ClanScreen(service: ApiService, realtime: RealtimeClient, onChanged: () -> Unit) {
@@ -72,6 +102,8 @@ fun ClanScreen(service: ApiService, realtime: RealtimeClient, onChanged: () -> U
     var gTitle by remember { mutableStateOf("") }
     var gMetric by remember { mutableStateOf("generic") }
     var gTarget by remember { mutableStateOf("10") }
+    /** Confirmación en dos pasos: la clave de la acción "armada" esperando el segundo toque. */
+    var armed by remember { mutableStateOf<String?>(null) }
 
     suspend fun load() {
         loading = true
@@ -115,6 +147,12 @@ fun ClanScreen(service: ApiService, realtime: RealtimeClient, onChanged: () -> U
                 }
             }
             launch {
+                realtime.clanMessageDeleted().collect { id -> messages = messages.filterNot { it.id == id } }
+            }
+            launch {
+                realtime.clanRosterChanged().collect { changed -> if (changed == cid) load() }
+            }
+            launch {
                 realtime.clanGoalCompleted().collect { g ->
                     if (g.clanId == cid) {
                         goals = goals.map { if (it.id == g.id) g else it }
@@ -145,20 +183,34 @@ fun ClanScreen(service: ApiService, realtime: RealtimeClient, onChanged: () -> U
                 )
             } else {
                 val c = clan!!
-                val isLeader = c.leaderId == myId
+                val myRank = c.members.firstOrNull { it.userId == myId }?.let { ClanRank.of(it.role) }
+                    ?: if (c.leaderId == myId) ClanRank.CREATOR else ClanRank.MEMBER
+                val canModerate = myRank.atLeast(ClanRank.MODERATOR)
+                /** Primer toque arma la acción `key`; el segundo la ejecuta. */
+                fun confirmTwice(key: String, run: () -> Unit) {
+                    if (armed == key) { armed = null; run() } else armed = key
+                }
                 notice?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = PockaiTheme.colors.accentInk) }
                 Spacer(Modifier.height(8.dp))
-                HeaderSection(c = c, isLeader = isLeader, inviteEmail = inviteEmail, inviteSetter = { inviteEmail = it }, busy = busy,
+                HeaderSection(c = c, myRank = myRank, inviteEmail = inviteEmail, inviteSetter = { inviteEmail = it }, busy = busy,
+                    disbandArmed = armed == "disband",
                     onInvite = {
                         if (inviteEmail.isNotBlank()) act("Invitación enviada.") { service.inviteToClan(c.id, email = inviteEmail.trim()) }
                         inviteEmail = ""
                     },
-                    onLeave = { act("Has salido del clan.") { service.leaveClan() } })
+                    onSaveEdit = { n, d -> act("Nexo actualizado.") { service.updateClan(c.id, n, d) } },
+                    onLeave = { act("Has salido del clan.") { service.leaveClan() } },
+                    onDisband = { confirmTwice("disband") { act("El Nexo se ha deshecho y ha vuelto al Éter.") { service.disbandClan(c.id) } } })
                 Spacer(Modifier.height(8.dp))
-                RosterSection(members = c.members, myId = myId)
+                RosterSection(
+                    members = c.members, myId = myId, myRank = myRank, busy = busy, armed = armed,
+                    onRole = { m, r -> act("${m.displayName} ahora es ${r.label}.") { service.setClanMemberRole(c.id, m.userId, r) } },
+                    onKick = { m -> confirmTwice("kick-${m.userId}") { act("${m.displayName} ha sido expulsado del Nexo.") { service.kickClanMember(c.id, m.userId) } } },
+                    onTransfer = { m -> confirmTwice("transfer-${m.userId}") { act("Has cedido la Forja a ${m.displayName}.") { service.transferClanCreator(c.id, m.userId) } } },
+                )
                 Spacer(Modifier.height(8.dp))
                 GoalsSection(
-                    goals = goals, isLeader = isLeader,
+                    goals = goals, canDeleteGoals = canModerate,
                     gTitle = gTitle, gTitleSetter = { gTitle = it }, gMetric = gMetric, gMetricSetter = { gMetric = it },
                     gTarget = gTarget, gTargetSetter = { gTarget = it }, busy = busy,
                     onCreate = {
@@ -172,7 +224,12 @@ fun ClanScreen(service: ApiService, realtime: RealtimeClient, onChanged: () -> U
                     onDelete = { g -> act("Objetivo eliminado.") { service.deleteClanGoal(c.id, g.id) } },
                 )
                 Spacer(Modifier.height(8.dp))
-                ChatSection(messages = messages, onSend = { body -> act("Mensaje enviado.") { service.sendClanMessage(c.id, body) } })
+                ChatSection(
+                    messages = messages,
+                    canDelete = { m -> canModerate || m.userId == myId },
+                    onDelete = { m -> act("Mensaje borrado.") { service.deleteClanMessage(c.id, m.id) } },
+                    onSend = { body -> act("Mensaje enviado.") { service.sendClanMessage(c.id, body) } },
+                )
                 Spacer(Modifier.height(16.dp))
             }
         }
@@ -190,7 +247,7 @@ private fun CreateJoinSection(
 ) {
     PockaiCard(Modifier.fillMaxWidth()) {
         Text("Crear clan", style = MaterialTheme.typography.titleMedium)
-        Text("Eres el líder. La etiqueta es única y permite a otros unirse.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Serás su Forjador. La etiqueta es única y permite a otros unirse.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(cName, cNameSetter, label = { Text("Nombre del clan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(8.dp))
@@ -214,17 +271,26 @@ private fun CreateJoinSection(
 
 @Composable
 private fun HeaderSection(
-    c: ClanSummary, isLeader: Boolean,
+    c: ClanSummary, myRank: ClanRank,
     inviteEmail: String, inviteSetter: (String) -> Unit,
-    busy: Boolean, onInvite: () -> Unit, onLeave: () -> Unit,
+    busy: Boolean, disbandArmed: Boolean,
+    onInvite: () -> Unit, onSaveEdit: (String, String?) -> Unit,
+    onLeave: () -> Unit, onDisband: () -> Unit,
 ) {
+    var editing by remember { mutableStateOf(false) }
+    var eName by remember { mutableStateOf("") }
+    var eDesc by remember { mutableStateOf("") }
     PockaiCard(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(c.name, style = MaterialTheme.typography.titleLarge)
-                Text("#${c.tag}  ·  ${c.memberCount} miembro(s)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("#${c.tag}  ·  ${c.memberCount} hebra(s)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (isLeader) Tag("Líder", color = PockaiTheme.colors.themeHot)
+            Tag(myRank.label, color = rankColor(myRank))
+        }
+        c.description?.takeIf { it.isNotBlank() }?.let {
+            Spacer(Modifier.height(4.dp))
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -233,33 +299,76 @@ private fun HeaderSection(
             Tag("${c.xp} XP", color = PockaiTheme.colors.accentInk)
         }
         Spacer(Modifier.height(8.dp))
-        Text("Líder: ${c.leader.displayName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(inviteEmail, inviteSetter, label = { Text("Email para invitar") }, singleLine = true, modifier = Modifier.weight(1f))
-            SecondaryButton("Invitar", onInvite, enabled = !busy && inviteEmail.isNotBlank(), icon = Lucide.Send)
-        }
-        if (!isLeader) {
+        Text("Forjador: ${c.leader.displayName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (myRank.atLeast(ClanRank.ADMIN)) {
             Spacer(Modifier.height(8.dp))
+            if (editing) {
+                OutlinedTextField(eName, { eName = it.take(40) }, label = { Text("Nombre del clan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(eDesc, { eDesc = it.take(300) }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SecondaryButton("Guardar", { onSaveEdit(eName, eDesc); editing = false }, enabled = !busy && eName.isNotBlank(), icon = Lucide.Check)
+                    SecondaryButton("Cancelar", { editing = false }, enabled = !busy, icon = Lucide.X)
+                }
+            } else {
+                SecondaryButton("Editar Nexo", { eName = c.name; eDesc = c.description.orEmpty(); editing = true }, enabled = !busy, icon = Lucide.Settings)
+            }
+        }
+        if (myRank.atLeast(ClanRank.MODERATOR)) {
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(inviteEmail, inviteSetter, label = { Text("Email para invitar") }, singleLine = true, modifier = Modifier.weight(1f))
+                SecondaryButton("Invitar", onInvite, enabled = !busy && inviteEmail.isNotBlank(), icon = Lucide.Send)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        if (myRank == ClanRank.CREATOR && c.memberCount > 1) {
+            Text("Como Forjador, cede la Forja a otra hebra antes de salir del Nexo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
             SecondaryButton("Salir del clan", onLeave, enabled = !busy, icon = Lucide.LogOut)
+        }
+        if (myRank == ClanRank.CREATOR) {
+            Spacer(Modifier.height(8.dp))
+            SecondaryButton(if (disbandArmed) "¿Seguro? Se borrará todo el Nexo" else "Disolver el Nexo", onDisband, enabled = !busy, icon = Lucide.TriangleAlert)
         }
     }
 }
 
 @Composable
-private fun RosterSection(members: List<ClanMember>, myId: String) {
+private fun RosterSection(
+    members: List<ClanMember>, myId: String, myRank: ClanRank, busy: Boolean, armed: String?,
+    onRole: (ClanMember, ClanRank) -> Unit, onKick: (ClanMember) -> Unit, onTransfer: (ClanMember) -> Unit,
+) {
     PockaiCard(Modifier.fillMaxWidth()) {
         Text("Miembros", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         if (members.isEmpty()) Text("Aún no hay miembros.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        members.forEach { m ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                PresenceDot(online = m.isOnline)
-                Spacer(Modifier.size(8.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(if (m.userId == myId) "${m.displayName} (tú)" else m.displayName, style = MaterialTheme.typography.bodyMedium)
+        members.sortedBy { -ClanRank.of(it.role).rank }.forEach { m ->
+            val rank = ClanRank.of(m.role)
+            val acts = if (m.userId == myId) null else memberActions(myRank, rank)
+            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    PresenceDot(online = m.isOnline)
+                    Spacer(Modifier.size(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (m.userId == myId) "${m.displayName} (tú)" else m.displayName, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Tag(rank.label, color = rankColor(rank))
                 }
-                if (m.role == "leader") Tag("Líder", color = PockaiTheme.colors.themeHot)
+                if (acts != null && acts.any) {
+                    Spacer(Modifier.height(4.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End)) {
+                        acts.promote?.let { r -> SecondaryButton("↑ ${r.label}", { onRole(m, r) }, enabled = !busy) }
+                        acts.demote?.let { r -> SecondaryButton("↓ ${r.label}", { onRole(m, r) }, enabled = !busy) }
+                        if (acts.transfer) {
+                            SecondaryButton(if (armed == "transfer-${m.userId}") "¿Ceder?" else "Forja", { onTransfer(m) }, enabled = !busy, icon = Lucide.Crown)
+                        }
+                        if (acts.kick) {
+                            SecondaryButton(if (armed == "kick-${m.userId}") "¿Expulsar?" else "Expulsar", { onKick(m) }, enabled = !busy, icon = Lucide.X)
+                        }
+                    }
+                }
             }
         }
     }
@@ -273,7 +382,7 @@ private fun PresenceDot(online: Boolean) {
 
 @Composable
 private fun GoalsSection(
-    goals: List<ClanGoal>, isLeader: Boolean,
+    goals: List<ClanGoal>, canDeleteGoals: Boolean,
     gTitle: String, gTitleSetter: (String) -> Unit,
     gMetric: String, gMetricSetter: (String) -> Unit,
     gTarget: String, gTargetSetter: (String) -> Unit,
@@ -286,7 +395,7 @@ private fun GoalsSection(
             Text("No hay objetivos todavía. Crea uno abajo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         goals.forEach { g ->
-            GoalRow(g = g, isLeader = isLeader, busy = busy, onProgress = { onProgress(g) }, onDelete = { onDelete(g) })
+            GoalRow(g = g, canDeleteGoals = canDeleteGoals, busy = busy, onProgress = { onProgress(g) }, onDelete = { onDelete(g) })
             Spacer(Modifier.height(8.dp))
         }
         Text("Nuevo objetivo", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
@@ -307,7 +416,7 @@ private fun GoalsSection(
 }
 
 @Composable
-private fun GoalRow(g: ClanGoal, isLeader: Boolean, busy: Boolean, onProgress: () -> Unit, onDelete: () -> Unit) {
+private fun GoalRow(g: ClanGoal, canDeleteGoals: Boolean, busy: Boolean, onProgress: () -> Unit, onDelete: () -> Unit) {
     val completed = g.status == "completed"
     val metricLabel = METRICS.firstOrNull { it.first == g.metric }?.second ?: g.metric
     Column(Modifier.fillMaxWidth()) {
@@ -324,13 +433,18 @@ private fun GoalRow(g: ClanGoal, isLeader: Boolean, busy: Boolean, onProgress: (
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("$metricLabel: ${g.progress}/${g.target} · ${g.percent}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
             if (!completed) SecondaryButton("+1", onProgress, enabled = !busy, icon = Lucide.Plus)
-            if (isLeader) SecondaryButton("Borrar", onDelete, enabled = !busy, icon = Lucide.X)
+            if (canDeleteGoals) SecondaryButton("Borrar", onDelete, enabled = !busy, icon = Lucide.X)
         }
     }
 }
 
 @Composable
-private fun ChatSection(messages: List<ClanMessage>, onSend: (String) -> Unit) {
+private fun ChatSection(
+    messages: List<ClanMessage>,
+    canDelete: (ClanMessage) -> Boolean,
+    onDelete: (ClanMessage) -> Unit,
+    onSend: (String) -> Unit,
+) {
     var text by remember { mutableStateOf("") }
     PockaiCard(Modifier.fillMaxWidth()) {
         Text("Chat del clan", style = MaterialTheme.typography.titleMedium)
@@ -344,6 +458,14 @@ private fun ChatSection(messages: List<ClanMessage>, onSend: (String) -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(m.senderName, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
                         Text(timeOf(m.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (canDelete(m)) {
+                            Text(
+                                "✕",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 8.dp).clickable { onDelete(m) },
+                            )
+                        }
                     }
                     Text(m.body, style = MaterialTheme.typography.bodyMedium)
                 }

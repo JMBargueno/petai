@@ -949,7 +949,7 @@ model ClanMembership {
   id       String   @id @default(uuid())
   clanId   String
   userId   String
-  role     String   @default("member") // leader | member
+  role     String   @default("member") // creator (Forjador) | admin (Guardián) | moderator (Vigía) | member (Hermano)
   joinedAt DateTime @default(now())
   clan     Clan     @relation(fields: [clanId], references: [id], onDelete: Cascade)
 

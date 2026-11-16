@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Delete,
+  Patch,
   Body,
   Param,
   Query,
@@ -22,14 +23,22 @@ import { CurrentUser } from '../auth/current-user.decorator';
  *   - GET   /v1/clans            → el clan del actor (o 404)
  *   - POST  /v1/clans/join       → unirse a un clan por su etiqueta { tag }
  *   - POST  /v1/clans/leave      → abandonar el propio clan
- *   - POST  /v1/clans/:id/invite → invitar a un usuario (solo el líder) { userId | email }
+ *   - POST  /v1/clans/:id/invite → invitar a un usuario (Vigía+) { userId | email }
  *   - GET   /v1/clans/:id/members → roster con presencia en línea
  *   - POST  /v1/clans/:id/messages → enviar mensaje al chat { body }
  *   - GET   /v1/clans/:id/messages?limit=&before= → historial reciente del chat
  *   - POST  /v1/clans/:id/goals → crear una meta { title, description?, metric, target }
  *   - GET   /v1/clans/:id/goals → lista de metas
  *   - POST  /v1/clans/:id/goals/:goalId/progress → avanzar una meta { amount }
- *   - DELETE /v1/clans/:id/goals/:goalId → eliminar una meta (solo el líder)
+ *   - DELETE /v1/clans/:id/goals/:goalId → eliminar una meta (Vigía+)
+ *   - DELETE /v1/clans/:id/messages/:messageId → borrar un mensaje (autor o Vigía+)
+ *   - DELETE /v1/clans/:id/members/:userId → expulsar (Vigía+, solo rangos inferiores)
+ *   - PATCH /v1/clans/:id/members/:userId/role → cambiar rango { role } (Guardián+)
+ *   - POST  /v1/clans/:id/transfer → ceder la Forja { userId } (Forjador)
+ *   - PATCH /v1/clans/:id → editar nombre/descripción (Guardián+)
+ *   - DELETE /v1/clans/:id → disolver el clan (Forjador)
+ *
+ * Rangos (lore: Nexo de Resonancia): creator (Forjador) > admin (Guardián) > moderator (Vigía) > member (Hermano).
  */
 @ApiTags('Clans')
 @ApiBearerAuth()
@@ -40,7 +49,7 @@ export class ClansController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crear un clan (el actor se convierte en líder)' })
+  @ApiOperation({ summary: 'Crear un clan (el actor se convierte en Forjador)' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -88,7 +97,7 @@ export class ClansController {
 
   @Post(':id/invite')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Invitar a un usuario a unirse directamente (solo el líder)' })
+  @ApiOperation({ summary: 'Invitar a un usuario a unirse directamente (Vigía o superior)' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -108,8 +117,84 @@ export class ClansController {
 
   @Get(':id/members')
   @ApiOperation({ summary: 'Roster del clan con presencia en línea por miembro' })
-  getMembers(@Param('id') clanId: string): Promise<ClanSummary> {
-    return this.clansService.getMembers(clanId);
+  getMembers(@CurrentUser() user: any, @Param('id') clanId: string): Promise<ClanSummary> {
+    return this.clansService.getMembers(user.id, clanId);
+  }
+
+  // ── Gestión del Nexo (rangos) ───────────────────────────────────────────────
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Editar nombre y/o descripción del clan (Guardián o superior)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Máx. 40 caracteres' },
+        description: { type: 'string', nullable: true, description: 'Máx. 300 caracteres; vacío o null la borra' },
+      },
+    },
+  })
+  update(
+    @CurrentUser() user: any,
+    @Param('id') clanId: string,
+    @Body() body: { name?: string; description?: string | null },
+  ): Promise<ClanSummary> {
+    return this.clansService.updateClan(user.id, clanId, body);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Disolver el clan (solo el Forjador)' })
+  disband(
+    @CurrentUser() user: any,
+    @Param('id') clanId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.clansService.disbandClan(user.id, clanId);
+  }
+
+  @Delete(':id/members/:userId')
+  @ApiOperation({ summary: 'Expulsar a un miembro de rango inferior (Vigía o superior)' })
+  kick(
+    @CurrentUser() user: any,
+    @Param('id') clanId: string,
+    @Param('userId') targetUserId: string,
+  ): Promise<ClanSummary> {
+    return this.clansService.kickMember(user.id, clanId, targetUserId);
+  }
+
+  @Patch(':id/members/:userId/role')
+  @ApiOperation({ summary: 'Cambiar el rango de un miembro (Guardián o superior; Guardianes solo el Forjador)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['role'],
+      properties: { role: { type: 'string', enum: ['admin', 'moderator', 'member'] } },
+    },
+  })
+  setRole(
+    @CurrentUser() user: any,
+    @Param('id') clanId: string,
+    @Param('userId') targetUserId: string,
+    @Body() body: { role?: string },
+  ): Promise<ClanSummary> {
+    return this.clansService.setMemberRole(user.id, clanId, targetUserId, body?.role);
+  }
+
+  @Post(':id/transfer')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Ceder la Forja (rango de creador) a otro miembro (solo el Forjador)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['userId'],
+      properties: { userId: { type: 'string', description: 'ID del nuevo Forjador' } },
+    },
+  })
+  transfer(
+    @CurrentUser() user: any,
+    @Param('id') clanId: string,
+    @Body() body: { userId?: string },
+  ): Promise<ClanSummary> {
+    return this.clansService.transferCreator(user.id, clanId, body?.userId);
   }
 
   // ── Chat ────────────────────────────────────────────────────────────────────
@@ -146,6 +231,16 @@ export class ClansController {
       limit: limit ? Number(limit) : undefined,
       before,
     });
+  }
+
+  @Delete(':id/messages/:messageId')
+  @ApiOperation({ summary: 'Borrar un mensaje del chat (su autor o un Vigía o superior)' })
+  deleteMessage(
+    @CurrentUser() user: any,
+    @Param('id') clanId: string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.clansService.deleteMessage(user.id, clanId, messageId);
   }
 
   // ── Metas / objetivos ───────────────────────────────────────────────────────
@@ -199,7 +294,7 @@ export class ClansController {
   }
 
   @Delete(':id/goals/:goalId')
-  @ApiOperation({ summary: 'Eliminar una meta del clan (solo el líder)' })
+  @ApiOperation({ summary: 'Eliminar una meta del clan (Vigía o superior)' })
   deleteGoal(
     @CurrentUser() user: any,
     @Param('id') clanId: string,
