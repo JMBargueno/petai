@@ -34,6 +34,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `RATE_LIMIT_PER_MINUTE` | no | Peticiones por minuto por usuario autenticado o por IP (300 por defecto). Súbelo si muchos usuarios comparten IP sin iniciar sesión. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | recomendada | Transporte de correo (recuperación de contraseña y formulario de contacto). Sin `SMTP_HOST` los correos solo se escriben en el log. |
 | `MAIL_FROM`, `MAIL_REPLY_TO`, `CONTACT_TO` | no | Remitente de sistema (`Pockai <noreply@pockai.world>`, debe ser `SMTP_USER` o un alias suyo), a dónde van las respuestas de los usuarios (`contact@pockai.world`) y buzón que recibe el formulario de contacto (`contact@pockai.world`). |
+| `GITHUB_RELEASES_TOKEN` | recomendada | Token solo-lectura de GitHub para consultar las Releases del escritorio (auto-update). Sin él `GET /v1/desktop/download/*` devuelve 404 «Instalador no disponible». Un PAT con scope `repo` o un fine-grained con lectura de Releases es suficiente. |
 | `AI_ALLOW_INSECURE_URLS`, `AUTH_RATE_LIMIT_DISABLED`, `RATE_LIMIT_DISABLED` | **nunca** | El arranque falla si están activas en producción. |
 
 Los límites de intentos (`AUTH_*`), el límite global (`RATE_LIMIT_PER_MINUTE`) y las cuotas de IA (`AI_MONTHLY_TOKEN_QUOTA_*`) tienen valores por defecto
@@ -302,6 +303,14 @@ Despliegue real (15-11-2026, migrado a `pockai.world` el 16-11) del stack sobre 
   - `shared/game-data/*.json` se `require()`a desde `dist/src/modules/<x>/` hacia
     `/app/backend/shared/`; el Dockerfile copia `shared` también a `/app/backend/shared`
     (antes solo iba a `/app/shared/`, lo que daba `MODULE_NOT_FOUND` al arrancar).
+- **Egress de `mailcow-smtp` — incidente resuelto 16-11-2026**: una regla de aislamiento de
+  nftables en el host (`iifname != "br-mailcow" oifname "br-mailcow" tcp drop`) dropeaba
+  también el tráfico *de retorno* de las conexiones salientes masqueradeadas, sin salida
+  TCP para todo contenedor de esa red — y `petai-backend-1` la usa como default route
+  (cuelga de `mailcow-smtp` para hablar con postfix). Se añadió `ct state new` (solo
+  dropea conexiones nuevas entrantes, conserva el aislamiento), aplicado al ruleset en
+  vivo **y** persistido en `/etc/iptables/rules.v4` (lo carga `netfilter-persistent` al
+  boot). Informe completo: [`docs/informes/INCIDENTE_EGRESS_MAILCOW.md`](informes/INCIDENTE_EGRESS_MAILCOW.md).
 - **pockai.world (migrado el 16-11-2026)**: los dominios antiguos
   `*.jmbargueno.com` se retiraron por completo ese día: overlay `docker-compose.pockai.yml`
   (vhost `api-pockai.jmbargueno.com` del backend) eliminado del repo, contenedor web
