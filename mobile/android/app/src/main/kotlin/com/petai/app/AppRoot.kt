@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.petai.app.ui.account.AccountScreen
 import com.petai.app.ui.auth.AuthScreen
+import com.petai.app.ui.auth.VerifyEmailScreen
 import com.petai.app.ui.chat.ChatScreen
 import com.petai.app.ui.chat.ChatViewModel
 import com.petai.app.ui.chat.ChatViewModelFactory
@@ -86,7 +87,19 @@ fun AppRoot(vm: AppViewModel) {
             onRegisterMode = vm::loadRegistrationConfig,
             onSubmit = vm::authenticate,
         )
-        true -> MainScaffold(vm, state, snackbar)
+        // Cuenta sin verificar: no se puede usar la app hasta confirmar el correo.
+        true -> if (state.user?.emailVerified == false) {
+            VerifyEmailScreen(
+                email = state.user?.email.orEmpty(),
+                busy = state.busy,
+                onVerify = vm::verifyEmail,
+                onResend = vm::resendVerification,
+                onRecheck = vm::recheckVerification,
+                onLogout = vm::logout,
+            )
+        } else {
+            MainScaffold(vm, state, snackbar)
+        }
     }
 }
 

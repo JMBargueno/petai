@@ -467,6 +467,24 @@
     "contact.sending": "Sending…",
     "contact.send": "Send message",
     "contact.meta.title": "Contact · Pockai",
-    "contact.meta.description": "Write to the Pockai team: questions, ideas, bugs or collaborations. We reply by email."
+    "contact.meta.description": "Write to the Pockai team: questions, ideas, bugs or collaborations. We reply by email.",
+    "verifyEmail.done.eyebrow": "Account verified",
+    "verifyEmail.done.title": "Email verified!",
+    "verifyEmail.done.lead": " You can go back to the Pockai app now. If it was open, tap “Ya lo he verificado” (I've verified it) to continue. ",
+    "verifyEmail.done.home": "Go to the website",
+    "verifyEmail.invalid.eyebrow": "Invalid link",
+    "verifyEmail.invalid.title": "This link has expired",
+    "verifyEmail.invalid.lead": " This link is not valid, has been replaced by a newer one or has expired. Request a new email from the Pockai app with “Reenviar correo” (Resend email). ",
+    "verifyEmail.missing.eyebrow": "Missing link",
+    "verifyEmail.missing.title": "Open the link in your email",
+    "verifyEmail.missing.lead": " To verify your account, open the “Verify my email” button in the email we sent you, or type the code in the app. ",
+    "verifyEmail.eyebrow": "Account verification",
+    "verifyEmail.title": "Confirm your email",
+    "verifyEmail.lead": " One last step before your yokai hatches: confirm this email is yours. ",
+    "verifyEmail.limited": "Too many attempts. Wait a few minutes and try again.",
+    "verifyEmail.error": "We couldn't reach the server. Please try again in a moment.",
+    "verifyEmail.sending": "Verifying…",
+    "verifyEmail.button": "Verify my email",
+    "verifyEmail.meta.title": "Verify your email · Pockai"
   }
 }

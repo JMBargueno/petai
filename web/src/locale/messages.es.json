@@ -467,6 +467,24 @@
     "nav.skip": "Saltar al contenido",
     "nav.menu": "Menú",
     "nav.group.sections": "En esta página",
-    "nav.group.pages": "Páginas"
+    "nav.group.pages": "Páginas",
+    "verifyEmail.done.eyebrow": "Cuenta verificada",
+    "verifyEmail.done.title": "¡Correo verificado!",
+    "verifyEmail.done.lead": " Ya puedes volver a la app de Pockai. Si la tenías abierta, pulsa «Ya lo he verificado» para continuar. ",
+    "verifyEmail.done.home": "Ir a la web",
+    "verifyEmail.invalid.eyebrow": "Enlace no válido",
+    "verifyEmail.invalid.title": "Este enlace ha caducado",
+    "verifyEmail.invalid.lead": " El enlace no es válido, ya se ha sustituido por otro o ha caducado. Pide un correo nuevo desde la app de Pockai con «Reenviar correo». ",
+    "verifyEmail.missing.eyebrow": "Falta el enlace",
+    "verifyEmail.missing.title": "Abre el enlace del correo",
+    "verifyEmail.missing.lead": " Para verificar tu cuenta, abre el botón «Verificar mi correo» del email que te enviamos, o escribe el código en la app. ",
+    "verifyEmail.eyebrow": "Verificación de cuenta",
+    "verifyEmail.title": "Confirma tu correo",
+    "verifyEmail.lead": " Un último paso para que tu yokai eclosione: confirma que este correo es tuyo. ",
+    "verifyEmail.limited": "Demasiados intentos. Espera unos minutos y vuelve a probar.",
+    "verifyEmail.error": "No hemos podido conectar con el servidor. Inténtalo de nuevo en un momento.",
+    "verifyEmail.sending": "Verificando…",
+    "verifyEmail.button": "Verificar mi correo",
+    "verifyEmail.meta.title": "Verifica tu correo · Pockai"
   }
 }

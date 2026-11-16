@@ -31,6 +31,7 @@ export class UsersService {
         accountXp: true,
         achievementsPublic: true,
         notificationPrefs: true,
+        emailVerifiedAt: true,
         createdAt: true,
       },
     });
@@ -45,7 +46,9 @@ export class UsersService {
       user.notificationPrefs != null ? resolveDefaults(user.notificationPrefs as Partial<NotificationPrefs>) : null;
 
     // Permisos efectivos del rol: los clientes (panel admin) deciden qué mostrar sin duplicar la tabla de roles.
-    return { ...user, notificationPrefs, permissions: permissionsFor(user.role) };
+    const { emailVerifiedAt, ...rest } = user;
+    // emailVerified=false: las apps muestran la pantalla de verificación (y la API responde 403 al resto).
+    return { ...rest, emailVerified: emailVerifiedAt != null, notificationPrefs, permissions: permissionsFor(user.role) };
   }
 
   /**

@@ -4,7 +4,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
+import { Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
@@ -13,6 +13,7 @@ import { MetricsService } from '../../observability/metrics.service';
 import { startSpanFromRemoteTrace } from '../../observability/otel-context';
 import { SPAN_HEADER, TRACE_HEADER } from '../../observability/otel.constants';
 import { PresenceService } from '../presence/presence.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import type { PetAction, PetActionEvent } from './pet-action';
 
 /** Conexiones simultáneas por usuario; al superarlas se cierran las más antiguas. */
@@ -50,7 +51,18 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly configService: ConfigService,
     private readonly metrics: MetricsService,
     private readonly presence: PresenceService,
+    @Optional() private readonly prisma?: PrismaService,
   ) {}
+
+  /**
+   * Con EMAIL_VERIFICATION_REQUIRED=true, una cuenta sin verificar no abre el canal en tiempo real
+   * (el JWT no lleva el estado: se consulta en la BD). Sin Prisma (tests unitarios) no se comprueba.
+   */
+  private async isBlockedUnverified(userId: string): Promise<boolean> {
+    if (!this.prisma || this.configService.get<string>('EMAIL_VERIFICATION_REQUIRED') !== 'true') return false;
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { emailVerifiedAt: true } });
+    return !!user && !user.emailVerifiedAt;
+  }
 
   async handleConnection(client: Socket) {
     // El usuario se identifica únicamente por el JWT de acceso del handshake;
@@ -65,6 +77,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
         algorithms: ['HS256'],
       });
+      if (await this.isBlockedUnverified(payload.sub)) {
+        client.emit('auth:unverified');
+        client.disconnect(true);
+        return;
+      }
       const room = `user:${payload.sub}`;
 
       // Tope de conexiones por usuario: se cierran las más antiguas para dejar sitio a la nueva

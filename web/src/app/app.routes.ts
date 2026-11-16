@@ -35,6 +35,11 @@ export const routes: Routes = [
     loadComponent: () => import('./contact/contact').then((m) => m.Contact),
   },
   {
+    // Enlace de verificación del correo de la cuenta (solo cliente: lee ?token=).
+    path: 'verify-email',
+    loadComponent: () => import('./verify-email/verify-email').then((m) => m.VerifyEmail),
+  },
+  {
     // Panel oculto: no se enlaza desde la landing, no se prerenderiza y va en un chunk aparte.
     path: 'admin',
     loadChildren: () => import('./admin/admin.routes'),

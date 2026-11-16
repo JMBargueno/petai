@@ -345,6 +345,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reenviar el correo de verificación (código + enlace). Invalida los anteriores */
+        post: operations["AuthController_verifyEmailResend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/verify-email/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verificar el correo con el código de 6 dígitos (desde la app) */
+        post: operations["AuthController_verifyEmailConfirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/verify-email/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verificar el correo con el token del enlace (página web /verify-email, sin sesión) */
+        post: operations["AuthController_verifyEmailLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/reset/request": {
         parameters: {
             query?: never;
@@ -1647,6 +1698,264 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Vista previa: devuelve el HTML final con la plantilla de marca */
+        post: operations["AdminEmailController_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails/audience/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Número de destinatarios de un público (los segmentos excluyen las bajas) */
+        post: operations["AdminEmailController_count"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enviar una prueba al correo del propio administrador */
+        post: operations["AdminEmailController_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historial de envíos (paginado) */
+        get: operations["AdminEmailController_list"];
+        put?: never;
+        /** Crear un envío (se encola y se manda por lotes; queda auditado) */
+        post: operations["AdminEmailController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle y progreso de un envío */
+        get: operations["AdminEmailController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar usuarios (paginado; filtros: role, q) */
+        get: operations["AdminUsersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cambiar el rol de un usuario (cierra sus sesiones y queda auditado) */
+        patch: operations["AdminUsersController_assignRole"];
+        trace?: never;
+    };
+    "/v1/admin/users/{id}/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado) */
+        patch: operations["AdminUsersController_adjustBalance"];
+        trace?: never;
+    };
+    "/v1/admin/users/{id}/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marcar el correo de un usuario como verificado (soporte; queda auditado) */
+        post: operations["AdminUsersController_markVerified"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{id}/resend-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reenviar el correo de verificación a un usuario sin verificar */
+        post: operations["AdminUsersController_resendVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/registration-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ajustes del registro (¿solo con invitación?) */
+        get: operations["AdminInvitesController_getSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Activar o desactivar el registro solo con invitación (queda auditado) */
+        patch: operations["AdminInvitesController_setSettings"];
+        trace?: never;
+    };
+    "/v1/admin/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar códigos de invitación (paginado; filtro: status) */
+        get: operations["AdminInvitesController_list"];
+        put?: never;
+        /** Generar códigos de invitación */
+        post: operations["AdminInvitesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/invites/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revocar un código de invitación (idempotente) */
+        post: operations["AdminInvitesController_revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar mascotas (paginado; filtros: rarity, q por nickname o dueño) */
+        get: operations["AdminPetsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Renombrar una mascota (auditoría: pet_rename) */
+        patch: operations["AdminPetsController_rename"];
         trace?: never;
     };
     "/v1/missions": {
@@ -3531,144 +3840,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listar usuarios (paginado; filtros: role, q) */
-        get: operations["AdminUsersController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/users/{id}/role": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Cambiar el rol de un usuario (cierra sus sesiones y queda auditado) */
-        patch: operations["AdminUsersController_assignRole"];
-        trace?: never;
-    };
-    "/v1/admin/users/{id}/balance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado) */
-        patch: operations["AdminUsersController_adjustBalance"];
-        trace?: never;
-    };
-    "/v1/admin/registration-settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Ajustes del registro (¿solo con invitación?) */
-        get: operations["AdminInvitesController_getSettings"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Activar o desactivar el registro solo con invitación (queda auditado) */
-        patch: operations["AdminInvitesController_setSettings"];
-        trace?: never;
-    };
-    "/v1/admin/invites": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listar códigos de invitación (paginado; filtro: status) */
-        get: operations["AdminInvitesController_list"];
-        put?: never;
-        /** Generar códigos de invitación */
-        post: operations["AdminInvitesController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/invites/{id}/revoke": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Revocar un código de invitación (idempotente) */
-        post: operations["AdminInvitesController_revoke"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/pets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listar mascotas (paginado; filtros: rarity, q por nickname o dueño) */
-        get: operations["AdminPetsController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/pets/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Renombrar una mascota (auditoría: pet_rename) */
-        patch: operations["AdminPetsController_rename"];
-        trace?: never;
-    };
     "/v1/admin/stats": {
         parameters: {
             query?: never;
@@ -3891,6 +4062,8 @@ export interface components {
                 displayName?: string;
                 coins?: number;
                 gems?: number;
+                /** @description false: la cuenta debe verificar el correo antes de usar las apps */
+                emailVerified?: boolean;
             };
         };
         LoginDto: {
@@ -3914,6 +4087,23 @@ export interface components {
             currentPassword: string;
             /** @description Contraseña nueva (mínimo 8 caracteres, distinta de la actual) */
             newPassword: string;
+        };
+        VerifyEmailCodeDto: {
+            /**
+             * @description Código de 6 dígitos recibido por email
+             * @example 482913
+             */
+            code: string;
+        };
+        VerifyEmailResultDto: {
+            /** @example true */
+            ok: boolean;
+            /** @example true */
+            emailVerified: boolean;
+        };
+        VerifyEmailLinkDto: {
+            /** @description Token del enlace de verificación (parámetro ?token= de la página /verify-email) */
+            token: string;
         };
         ResetRequestDto: {
             /**
@@ -4385,6 +4575,60 @@ export interface components {
             /** @description Honeypot anti-spam: debe ir vacío */
             website?: string;
         };
+        RegistrationSettingsDto: {
+            /** @description Si es true, el registro exige un código de invitación válido */
+            inviteOnly: boolean;
+        };
+        InviteCreatorDto: {
+            id: string;
+            email: string;
+            displayName: string | null;
+        };
+        InviteCodeDto: {
+            id: string;
+            /** @example ABCD-EF23 */
+            code: string;
+            maxUses: number;
+            usedCount: number;
+            /** Format: date-time */
+            expiresAt: string | null;
+            /** Format: date-time */
+            revokedAt: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            createdBy: components["schemas"]["InviteCreatorDto"] | null;
+            /** @enum {string} */
+            status: "active" | "used" | "revoked" | "expired";
+        };
+        InviteListDto: {
+            items: components["schemas"]["InviteCodeDto"][];
+            total: number;
+            page: number;
+            pageSize: number;
+        };
+        CreateInvitesDto: {
+            /**
+             * @description Número de registros que permite cada código
+             * @default 1
+             */
+            maxUses: number;
+            /**
+             * Format: date-time
+             * @description Caducidad (opcional, futura)
+             */
+            expiresAt?: string | null;
+            /** @description Nota interna (para quién es la invitación) */
+            note?: string;
+            /**
+             * @description Cuántos códigos generar
+             * @default 1
+             */
+            count: number;
+        };
+        CreatedInvitesDto: {
+            items: components["schemas"]["InviteCodeDto"][];
+        };
         MissionRewardDto: {
             /**
              * @description Monedas de recompensa
@@ -4669,60 +4913,6 @@ export interface components {
              * @example 120
              */
             total: number;
-        };
-        RegistrationSettingsDto: {
-            /** @description Si es true, el registro exige un código de invitación válido */
-            inviteOnly: boolean;
-        };
-        InviteCreatorDto: {
-            id: string;
-            email: string;
-            displayName: string | null;
-        };
-        InviteCodeDto: {
-            id: string;
-            /** @example ABCD-EF23 */
-            code: string;
-            maxUses: number;
-            usedCount: number;
-            /** Format: date-time */
-            expiresAt: string | null;
-            /** Format: date-time */
-            revokedAt: string | null;
-            note: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            createdBy: components["schemas"]["InviteCreatorDto"] | null;
-            /** @enum {string} */
-            status: "active" | "used" | "revoked" | "expired";
-        };
-        InviteListDto: {
-            items: components["schemas"]["InviteCodeDto"][];
-            total: number;
-            page: number;
-            pageSize: number;
-        };
-        CreateInvitesDto: {
-            /**
-             * @description Número de registros que permite cada código
-             * @default 1
-             */
-            maxUses: number;
-            /**
-             * Format: date-time
-             * @description Caducidad (opcional, futura)
-             */
-            expiresAt?: string | null;
-            /** @description Nota interna (para quién es la invitación) */
-            note?: string;
-            /**
-             * @description Cuántos códigos generar
-             * @default 1
-             */
-            count: number;
-        };
-        CreatedInvitesDto: {
-            items: components["schemas"]["InviteCodeDto"][];
         };
         AdminStatsUsersDto: {
             total: number;
@@ -5306,6 +5496,69 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AuthController_verifyEmailResend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_verifyEmailConfirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailCodeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyEmailResultDto"];
+                };
+            };
+        };
+    };
+    AuthController_verifyEmailLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailLinkDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyEmailResultDto"];
+                };
             };
         };
     };
@@ -7090,6 +7343,404 @@ export interface operations {
             };
             /** @description Plataforma desconocida o sin instalador publicado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    subject: string;
+                    preheader?: string;
+                    /** @description Cuerpo en HTML libre: se envuelve en la plantilla de marca */
+                    html: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_count: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description {type:'users',userIds[]} | {type:'emails',emails[]} | {type:'segment',role?,verified?:'any'|'verified'|'unverified'} */
+                    audience?: Record<string, never>;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    subject: string;
+                    preheader?: string;
+                    /** @description Cuerpo en HTML libre: se envuelve en la plantilla de marca */
+                    html: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    subject: string;
+                    preheader?: string;
+                    /** @description Cuerpo en HTML libre: se envuelve en la plantilla de marca */
+                    html: string;
+                    /** @description {type:'users',userIds[]} | {type:'emails',emails[]} | {type:'segment',role?,verified?:'any'|'verified'|'unverified'} */
+                    audience: Record<string, never>;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_assignRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    role: "superadmin" | "admin" | "moderator" | "user";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_adjustBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    coins?: number;
+                    gems?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_markVerified: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_resendVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminInvitesController_getSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationSettingsDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_setSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationSettingsDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_list: {
+        parameters: {
+            query?: {
+                status?: "active" | "used" | "revoked" | "expired";
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteListDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInvitesDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedInvitesDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteCodeDto"];
+                };
+            };
+        };
+    };
+    AdminPetsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminPetsController_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    nickname: string;
+                };
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10439,226 +11090,6 @@ export interface operations {
             };
             /** @description Room no encontrada */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminUsersController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminUsersController_assignRole: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @enum {string} */
-                    role: "superadmin" | "admin" | "moderator" | "user";
-                };
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminUsersController_adjustBalance: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    coins?: number;
-                    gems?: number;
-                };
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminInvitesController_getSettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegistrationSettingsDto"];
-                };
-            };
-        };
-    };
-    AdminInvitesController_setSettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegistrationSettingsDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegistrationSettingsDto"];
-                };
-            };
-        };
-    };
-    AdminInvitesController_list: {
-        parameters: {
-            query?: {
-                status?: "active" | "used" | "revoked" | "expired";
-                pageSize?: number;
-                page?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InviteListDto"];
-                };
-            };
-        };
-    };
-    AdminInvitesController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateInvitesDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreatedInvitesDto"];
-                };
-            };
-        };
-    };
-    AdminInvitesController_revoke: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InviteCodeDto"];
-                };
-            };
-        };
-    };
-    AdminPetsController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminPetsController_rename: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    nickname: string;
-                };
-            };
-        };
-        responses: {
-            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -66,8 +66,10 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
     }
 
     private val authenticator = Authenticator { _, response ->
-        // Los fallos de /auth/* (login incorrecto, refresh caducado) no se reintentan
-        if (response.request.url.encodedPath.contains("/auth/")) return@Authenticator null
+        // Los fallos de /auth/* (login incorrecto, refresh caducado) no se reintentan, salvo la
+        // verificación del correo: va con sesión y el usuario puede volver a la pantalla pasado un rato.
+        val path = response.request.url.encodedPath
+        if (path.contains("/auth/") && !path.contains("/auth/verify-email/")) return@Authenticator null
         if (priorResponses(response) >= 2) return@Authenticator null
         synchronized(refreshLock) {
             val sent = response.request.header("Authorization")?.removePrefix("Bearer ")
@@ -154,6 +156,11 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
         }
     }
 
+    /** Código de negocio (`code`) del cuerpo de error, si lo trae. */
+    private fun errorCode(raw: String): String? = runCatching {
+        (json.parseToJsonElement(raw).jsonObject["code"] as? JsonPrimitive)?.content
+    }.getOrNull()
+
     suspend fun send(method: String, path: String, body: JsonElement? = null): String = withContext(Dispatchers.IO) {
         val rb = when {
             body != null -> body.toString().toRequestBody(jsonType)
@@ -168,7 +175,7 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
         }
         resp.use {
             val text = it.body.string()
-            if (!it.isSuccessful) throw ApiException(it.code, errorMessage(it.code, text))
+            if (!it.isSuccessful) throw ApiException(it.code, errorMessage(it.code, text), errorCode(text))
             text
         }
     }

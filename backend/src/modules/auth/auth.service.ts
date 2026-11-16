@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, Optional, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AuthThrottleService } from './auth-throttle.service';
 import { InvitesService } from '../invites/invites.service';
+import { EmailVerificationService } from './email-verification.service';
 import { changePasswordSchema, loginSchema, parseOrBadRequest, refreshSchema, registerSchema } from './dto/auth.schemas';
 
 const ARGON_OPTIONS = { type: argon2.argon2id, memoryCost: 65536, timeCost: 3 } as const;
@@ -20,6 +21,25 @@ export const JWT_ALGORITHM = 'HS256' as const;
 
 const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
 
+/** Datos del usuario que se devuelven al iniciar sesión (registro, login, vinculación, recuperación). */
+const publicUser = (u: {
+  id: string;
+  email: string;
+  role: string;
+  displayName: string | null;
+  coins: number;
+  gems: number;
+  emailVerifiedAt: Date | null;
+}) => ({
+  id: u.id,
+  email: u.email,
+  role: u.role,
+  displayName: u.displayName,
+  coins: u.coins,
+  gems: u.gems,
+  emailVerified: u.emailVerifiedAt != null,
+});
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -32,6 +52,7 @@ export class AuthService {
     private readonly throttle: AuthThrottleService,
     private readonly realtime: RealtimeGateway,
     private readonly invites: InvitesService,
+    @Optional() private readonly verification?: EmailVerificationService,
   ) {}
 
   /** Hash de relleno: se verifica cuando el correo no existe para que el tiempo de respuesta no lo delate. */
@@ -72,7 +93,7 @@ export class AuthService {
             gems: 10,
             pityCounter: { create: { sinceSuperRare: 0, sinceLegendary: 0 } },
           },
-          select: { id: true, email: true, role: true, displayName: true, coins: true, gems: true },
+          select: { id: true, email: true, role: true, displayName: true, coins: true, gems: true, emailVerifiedAt: true },
         });
 
         if (inviteOnly && dto.inviteCode) {
@@ -93,7 +114,9 @@ export class AuthService {
     }
 
     const tokens = await this.generateTokens(user.id, user.email, user.displayName);
-    return { ...tokens, user };
+    // Correo de verificación (en segundo plano: un fallo del SMTP no rompe el registro).
+    this.verification?.sendAfterRegister(user.id);
+    return { ...tokens, user: publicUser(user) };
   }
 
   async login(raw: unknown, ip: string) {
@@ -127,7 +150,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email, user.displayName);
     return {
       ...tokens,
-      user: { id: user.id, email: user.email, role: user.role, displayName: user.displayName, coins: user.coins, gems: user.gems },
+      user: publicUser(user),
     };
   }
 
@@ -232,7 +255,7 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Usuario no encontrado');
     return {
       ...(await this.generateTokens(user.id, user.email, user.displayName)),
-      user: { id: user.id, email: user.email, role: user.role, displayName: user.displayName, coins: user.coins, gems: user.gems },
+      user: publicUser(user),
     };
   }
 

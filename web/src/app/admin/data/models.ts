@@ -57,6 +57,8 @@ export interface AdminUser extends Entity {
   gems: number;
   accountXp: number;
   role: AdminRole;
+  /** Correo verificado (las cuentas sin verificar no pueden usar las apps). */
+  emailVerified: boolean;
   createdAt: string;
 }
 

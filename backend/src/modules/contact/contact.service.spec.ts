@@ -14,7 +14,12 @@ describe('ContactService', () => {
   let service: ContactService;
 
   beforeEach(() => {
-    email = { sendPasswordResetCode: jest.fn(), sendContactMessage: jest.fn().mockResolvedValue(undefined) };
+    email = {
+      sendPasswordResetCode: jest.fn(),
+      sendContactMessage: jest.fn().mockResolvedValue(undefined),
+      sendVerification: jest.fn(),
+      sendRaw: jest.fn(),
+    };
     throttle = { consume: jest.fn().mockResolvedValue(undefined) };
     service = new ContactService(throttle as any, email);
   });

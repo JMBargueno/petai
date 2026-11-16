@@ -6,9 +6,22 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { AuthService } from './auth.service';
 import { DeviceLinkService } from './device-link.service';
 import { PasswordResetService } from './password-reset.service';
+import { EmailVerificationService } from './email-verification.service';
+import { AllowUnverified } from './allow-unverified.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
-import { RegisterDto, LoginDto, RefreshTokenDto, AuthResponseDto, ChangePasswordDto, ResetRequestDto, ResetConfirmDto } from './dto/auth.dto';
+import {
+  RegisterDto,
+  LoginDto,
+  RefreshTokenDto,
+  AuthResponseDto,
+  ChangePasswordDto,
+  ResetRequestDto,
+  ResetConfirmDto,
+  VerifyEmailCodeDto,
+  VerifyEmailLinkDto,
+  VerifyEmailResultDto,
+} from './dto/auth.dto';
 import { clientIp } from '../../common/client-ip';
 
 @ApiTags('Auth')
@@ -18,6 +31,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly deviceLink: DeviceLinkService,
     private readonly passwordReset: PasswordResetService,
+    private readonly emailVerification: EmailVerificationService,
     private readonly invites: InvitesService,
   ) {}
 
@@ -60,6 +74,7 @@ export class AuthController {
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
+  @AllowUnverified()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cerrar todas las sesiones del usuario en todos sus dispositivos' })
   logoutAll(@CurrentUser() user: any) {
@@ -69,10 +84,40 @@ export class AuthController {
   @Post('password')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
+  @AllowUnverified()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar la contraseña: exige la actual, cierra las demás sesiones y devuelve tokens nuevos' })
   changePassword(@CurrentUser() user: any, @Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(user.id, dto);
+  }
+
+  @Post('verify-email/resend')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @AllowUnverified()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reenviar el correo de verificación (código + enlace). Invalida los anteriores' })
+  verifyEmailResend(@CurrentUser() user: any, @Req() req: Request) {
+    return this.emailVerification.send(user.id, { ip: clientIp(req) });
+  }
+
+  @Post('verify-email/confirm')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @AllowUnverified()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verificar el correo con el código de 6 dígitos (desde la app)' })
+  @ApiResponse({ status: HttpStatus.OK, type: VerifyEmailResultDto })
+  verifyEmailConfirm(@CurrentUser() user: any, @Body() dto: VerifyEmailCodeDto, @Req() req: Request) {
+    return this.emailVerification.confirmCode(user.id, dto, clientIp(req));
+  }
+
+  @Post('verify-email/link')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verificar el correo con el token del enlace (página web /verify-email, sin sesión)' })
+  @ApiResponse({ status: HttpStatus.OK, type: VerifyEmailResultDto })
+  verifyEmailLink(@Body() dto: VerifyEmailLinkDto, @Req() req: Request) {
+    return this.emailVerification.confirmLink(dto, clientIp(req));
   }
 
   @Post('reset/request')

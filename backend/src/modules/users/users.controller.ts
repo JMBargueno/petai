@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiResponse } from '@nes
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { AllowUnverified } from '../auth/allow-unverified.decorator';
 import { AchievementsService } from '../../achievements/achievements.service';
 import { PublicAchievementsDto } from '../../achievements/dto/achievement.dto';
 
@@ -14,6 +15,8 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
+  // Accesible sin verificar: las apps lo usan para saber si deben mostrar la pantalla de verificación.
+  @AllowUnverified()
   @ApiOperation({ summary: 'Obtener perfil del usuario autenticado' })
   getMe(@CurrentUser() user: any) {
     return this.usersService.getMe(user.id);

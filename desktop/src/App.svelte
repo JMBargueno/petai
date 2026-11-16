@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { api, getAccessToken, onSessionExpired } from './lib/api';
+  import { api, getAccessToken, onEmailUnverified, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
   import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
@@ -166,6 +166,12 @@
 
       if (getAccessToken()) {
         user = await api.getMe();
+        // Cuenta sin verificar: solo se muestra la pantalla de verificación del panel (sin mascota,
+        // socket ni datos de juego: la API los rechaza con 403 hasta verificar el correo).
+        if (user?.emailVerified === false) {
+          isPanelOpen = true;
+          return;
+        }
         // El servidor usa la zona horaria del usuario (ciclo de sueño, recordatorios):
         // si sigue en el valor por defecto (UTC), se ajusta a la del equipo.
         const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -395,6 +401,16 @@
 
   let stopClickThrough: () => void = () => {};
   let stopSessionExpired: () => void = () => {};
+  let stopEmailUnverified: () => void = () => {};
+
+  /** La API dice que el correo no está verificado: se para el juego y se pide la verificación. */
+  function lockUnverified() {
+    const current = user;
+    if (current?.emailVerified === false) return;
+    clearSessionState();
+    user = current ? { ...current, emailVerified: false } : null;
+    isPanelOpen = true;
+  }
   let stopAutoUpdate: () => void = () => {};
   let stopTrayUpdates: () => void = () => {};
   let stopSummonShortcut: () => void = () => {};
@@ -484,6 +500,7 @@
       clearSessionState();
       isPanelOpen = true;
     });
+    stopEmailUnverified = onEmailUnverified(lockUnverified);
     needsPoll = setInterval(pollPet, 60_000);
     loadInitialData();
     stopAutoUpdate = startAutoCheck();
@@ -507,6 +524,7 @@
     stopHeartbeat();
     stopClickThrough();
     stopSessionExpired();
+    stopEmailUnverified();
     stopAutoUpdate();
     stopTrayUpdates();
     stopSummonShortcut();

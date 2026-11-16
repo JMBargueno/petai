@@ -85,10 +85,15 @@ export class PasswordResetService {
         data: { consumedAt: now },
       });
       if (claimed.count === 0) return null;
-      const user = await tx.user.findUnique({ where: { email }, select: { id: true } });
+      const user = await tx.user.findUnique({ where: { email }, select: { id: true, emailVerifiedAt: true } });
       if (!user) return null;
       const passwordHash = await argon2.hash(newPassword, ARGON_OPTIONS);
-      await tx.user.update({ where: { email }, data: { passwordHash } });
+      // El código llegó a este correo: prueba que es suyo, así que la cuenta queda verificada. Además
+      // permite al dueño real recuperar una cuenta que otro registró con su correo sin verificarlo.
+      await tx.user.update({
+        where: { email },
+        data: { passwordHash, ...(user.emailVerifiedAt ? {} : { emailVerifiedAt: now }) },
+      });
       return user.id;
     });
 

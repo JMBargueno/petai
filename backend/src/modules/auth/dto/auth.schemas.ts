@@ -74,6 +74,18 @@ export const resetConfirmSchema = z.object({
   newPassword: password,
 });
 
+// Verificación de correo: código de 6 dígitos (app) o token del enlace (web).
+export const verifyEmailCodeSchema = z.object({
+  code: z
+    .string({ error: (issue) => (issue.input === undefined ? 'code es obligatorio' : 'code debe ser un texto') })
+    .trim()
+    .regex(/^\d{6}$/, 'El código debe tener 6 dígitos'),
+});
+
+export const verifyEmailLinkSchema = z.object({
+  token: text('token').trim().min(20, 'token no es válido').max(200, 'token no es válido'),
+});
+
 /** Valida y devuelve los datos tipados; ante un error responde 400 con el primer motivo. */
 export function parseOrBadRequest<T extends z.ZodTypeAny>(schema: T, raw: unknown): z.infer<T> {
   const result = schema.safeParse(raw ?? {});
