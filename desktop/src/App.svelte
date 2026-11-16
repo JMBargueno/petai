@@ -5,6 +5,7 @@
   import { startClickThrough } from './lib/clickthrough';
   import { initSummonShortcut } from './lib/summonShortcut';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
+  import { speak, clearSpeech, type SpeakOptions } from './lib/speech-queue';
   import {
     fetchStatus,
     startHeartbeat,
@@ -56,7 +57,11 @@
   let announcedVersion = '';
   $: if ($updateLock !== null && $updateLock !== announcedVersion) {
     announcedVersion = $updateLock;
-    notifyNow('Nueva versión de Pockai', `Actualiza Pockai a la versión ${announcedVersion} desde el panel para seguir jugando.`);
+    notifyNow(
+      'Nueva versión de Pockai',
+      `Actualiza Pockai a la versión ${announcedVersion} desde el panel para seguir jugando.`,
+      { key: 'update-available' },
+    );
   }
 
   /** Comprobación pedida desde la bandeja: la mascota cuenta el resultado. */
@@ -67,9 +72,6 @@
     if (s.status === 'upToDate') showBubble('¡Ya estoy en la última versión!');
     else if (s.status === 'error') showBubble(s.message);
   }
-
-  let bubbleText = '';
-  let bubbleTimer: any = null;
 
   // Pelotita de juego interactiva en pantalla
   let showBall = false;
@@ -132,10 +134,9 @@
   let environmental: EnvironmentalStatus | null = null;
   let stopHeartbeat: () => void = () => {};
 
-  function showBubble(text: string) {
-    bubbleText = text.length > 160 ? text.slice(0, 157) + '…' : text;
-    clearTimeout(bubbleTimer);
-    bubbleTimer = setTimeout(() => (bubbleText = ''), 10_000);
+  /** Única vía de habla: todo lo que dice la mascota pasa por la cola de `speech-queue`. */
+  function showBubble(text: string, opts?: SpeakOptions) {
+    speak(text, opts);
   }
 
   // Badge de la bandeja/tray (feature 007 / US3): refleja los avisos no leídos en el título de la app.
@@ -206,8 +207,8 @@
           const outcome = b.draw ? 'empató' : b.won ? 'ganó' : 'perdió';
           const delta = b.eloDelta ? ` (${b.eloDelta > 0 ? '+' : ''}${b.eloDelta} ELO)` : '';
           const text = `${b.attackerName} retó a ${b.defenderPetName}: tu mascota ${outcome}${delta}`;
-          // La animación y el bocadillo llegan con `pet:action` (battle_defended)
-          notifyNow('Te han retado en la arena', text);
+          // La animación y el bocadillo llegan con `pet:action` (battle_defended): solo nativa si está oculta
+          notifyNow('Te han retado en la arena', text, { speech: false });
         });
 
         // Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía.
@@ -235,7 +236,9 @@
         socket.on('clan:goal_completed', (g: ClanGoal | null) => {
           if (!g?.id || !g?.clanId) return;
           upsertClanGoal(g);
-          notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`);
+          notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`, {
+            speech: `¡Objetivo de clan cumplido! «${g.title}» llegó a ${g.progress}/${g.target}. 🎉`,
+          });
         });
         // Rangos del Nexo: borrados en el chat y cambios de roster (la pestaña recarga el clan).
         socket.on('clan:message_deleted', (ev: { id?: string } | null) => {
@@ -327,6 +330,7 @@
     inventory = [];
     environmental = null;
     clearVisitors();
+    clearSpeech();
   }
 
   // ---------- Ambiental (feature 005) ----------
@@ -397,8 +401,7 @@
     try {
       const due = await api.getDueReminders();
       for (const r of due) {
-        showBubble(r.text);
-        await notifyNow('Recordatorio', r.text);
+        await notifyNow('Recordatorio', r.text, { speech: `⏰ ${r.text}`, priority: 'high' });
         await api.markReminderDelivered(r.id);
       }
     } catch {
@@ -484,7 +487,7 @@
     window.removeEventListener('petai:file_dropped', handleFileDropped);
     window.removeEventListener('petai:move_to_habitat', handleMoveToHabitat);
     clearInterval(needsPoll);
-    clearTimeout(bubbleTimer);
+    clearSpeech();
     stopHeartbeat();
     stopClickThrough();
     stopSessionExpired();
@@ -544,7 +547,6 @@
     <PetView
       bind:this={petViewRef}
       pet={currentPet}
-      bubble={bubbleText}
       environmental={environmental}
       visitors={$visitorsStore}
       ball={showBall ? ballState : null}
@@ -574,7 +576,8 @@
       else pets = [currentPet, ...pets];
     }}
     on:actionTriggered={(e) => handlePetAction(e.detail)}
-    on:bubble={(e) => showBubble(e.detail)}
+    on:bubble={(e) =>
+      showBubble(e.detail, { overflowNote: '… (sigue en el chat)', onShow: () => petViewRef?.play?.('talk') })}
     on:refreshPet={refreshPet}
     on:logout={clearSessionState}
   />
