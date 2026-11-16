@@ -1581,6 +1581,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enviar un mensaje desde el formulario de contacto público */
+        post: operations["ContactController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/desktop/updates/download/{assetId}": {
         parameters: {
             query?: never;
@@ -4344,6 +4361,30 @@ export interface components {
             daysRemaining: number;
         };
         UpdateBillingConfigDto: Record<string, never>;
+        ContactDto: {
+            /**
+             * @description Nombre (1–100)
+             * @example Ana
+             */
+            name: string;
+            /**
+             * @description Correo al que responder
+             * @example ana@example.com
+             */
+            email: string;
+            /**
+             * @description Asunto (1–150)
+             * @example Duda sobre mi Pockai
+             */
+            subject: string;
+            /**
+             * @description Mensaje (10–5000)
+             * @example Hola, quería preguntar…
+             */
+            message: string;
+            /** @description Honeypot anti-spam: debe ir vacío */
+            website?: string;
+        };
         MissionRewardDto: {
             /**
              * @description Monedas de recompensa
@@ -6923,6 +6964,49 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ContactController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactDto"];
+            };
+        };
+        responses: {
+            /** @description Mensaje aceptado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Datos no válidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiados mensajes; espera un rato */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se pudo enviar el correo */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

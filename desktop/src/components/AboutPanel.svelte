@@ -15,6 +15,16 @@
     }
   });
 
+  /** Buzón de contacto público (el mismo que recibe el formulario de la web). */
+  const CONTACT_EMAIL = 'contact@pockai.world';
+
+  async function openContact(event: MouseEvent) {
+    if (!('__TAURI_INTERNALS__' in window)) return; // en navegador basta el href
+    event.preventDefault();
+    const { open } = await import('@tauri-apps/plugin-shell');
+    await open(`mailto:${CONTACT_EMAIL}`);
+  }
+
   $: s = $updateState;
   $: busy = s.status === 'checking' || s.status === 'downloading' || s.status === 'ready';
 </script>
@@ -49,6 +59,11 @@
       <p class="error" role="alert">{s.message}</p>
     {/if}
   {/if}
+
+  <p class="muted contact">
+    ¿Dudas o algún fallo? Escríbenos a
+    <a href={`mailto:${CONTACT_EMAIL}`} on:click={openContact}>{CONTACT_EMAIL}</a>
+  </p>
 </section>
 
 <style>
@@ -72,4 +87,6 @@
   .update-box { display: flex; flex-direction: column; gap: 8px; width: 100%; }
   .notes { white-space: pre-line; max-height: 120px; overflow-y: auto; color: var(--ink-muted); }
   progress { width: 100%; accent-color: var(--accent); }
+  .contact { padding-top: 6px; border-top: 1px solid var(--line-soft); width: 100%; }
+  .contact a { color: var(--accent); }
 </style>

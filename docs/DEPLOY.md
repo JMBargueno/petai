@@ -32,6 +32,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `CORS_ORIGINS` | no | Orígenes de navegador permitidos. Los clientes nativos y el webview de Tauri no necesitan más. |
 | `SWAGGER_ENABLED` | no | Por defecto `false` en producción. |
 | `RATE_LIMIT_PER_MINUTE` | no | Peticiones por minuto por usuario autenticado o por IP (300 por defecto). Súbelo si muchos usuarios comparten IP sin iniciar sesión. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | recomendada | Transporte de correo (recuperación de contraseña y formulario de contacto). Sin `SMTP_HOST` los correos solo se escriben en el log. |
+| `MAIL_FROM`, `MAIL_REPLY_TO`, `CONTACT_TO` | no | Remitente de sistema (`Pockai <noreply@pockai.world>`, debe ser `SMTP_USER` o un alias suyo), a dónde van las respuestas de los usuarios (`contact@pockai.world`) y buzón que recibe el formulario de contacto (`contact@pockai.world`). |
 | `AI_ALLOW_INSECURE_URLS`, `AUTH_RATE_LIMIT_DISABLED`, `RATE_LIMIT_DISABLED` | **nunca** | El arranque falla si están activas en producción. |
 
 Los límites de intentos (`AUTH_*`), el límite global (`RATE_LIMIT_PER_MINUTE`) y las cuotas de IA (`AI_MONTHLY_TOKEN_QUOTA_*`) tienen valores por defecto
@@ -210,7 +212,7 @@ Publicar una versión:
 Descarga desde la web: el botón «Descargar» de Windows apunta a `{apiUrl}/v1/desktop/download/windows`
 (también existe `/macos`), que redirige al instalador del último release publicado. No hay que tocar la web en
 cada versión, pero sí poner en `web/src/app/site.json` › `apiUrl` la URL del backend de producción
-(`https://api-pockai.jmbargueno.com`) antes de desplegar la web.
+(`https://game-api.pockai.world`) antes de desplegar la web.
 
 Notas:
 - El endpoint por defecto de `tauri.conf.json` es la API de producción (tiene que ser `https`: el plugin
@@ -244,22 +246,26 @@ Pendiente (se desarrollará en macOS).
 - [ ] Instaladores compilados con la `VITE_API_URL` de producción y firmados.
 - [ ] URL de la API de la release de Android actualizada.
 
-## 11. Producción en jmbargueno.com
+## 11. Producción (pockai.world)
 
-Despliegue real (15-11-2026) del stack sobre el servidor Contabo (`185.215.165.254`),
-repositorio en `/home/jmbargueno/scratch/petai`:
+Despliegue real (15-11-2026, migrado a `pockai.world` el 16-11) del stack sobre el servidor Contabo
+(`185.215.165.254`), repositorio en `/home/jmbargueno/scratch/petai`:
 
-- **Dominio público**: `api-pockai.jmbargueno.com` → record A sin proxy en Cloudflare
-  (el TLS lo termina nginx-proxy, no Cloudflare). Postgres y Redis quedan solo en la red
-  interna `petai_default`; Prometheus/Grafana/Alertmanager escuchan en `127.0.0.1`.
-- **Overlay**: `docker-compose.pockai.yml` (commit) añade la red `webproxy` al backend
-  (`networks: [default, webproxy]` — no solo `webproxy`, que cortaría el acceso a
-  postgres/redis), `VIRTUAL_HOST`, `VIRTUAL_PORT=3000`, `VIRTUAL_WEBSOCKETS` (socket.io)
-  y `LETSENCRYPT_HOST` (vhost :80 con webroot para certbot).
-  Comando de despliegue: `docker compose -f docker-compose.prod.yml -f docker-compose.pockai.yml up -d --build`
+- **Dominios canónicos**: web `https://pockai.world`, API `https://game-api.pockai.world`
+  (zone CF `256697893672517ce1ec13a65743d22e`, A records unproxied → nginx-proxy; el TLS lo
+  termina nginx, no Cloudflare). Los dominios antiguos (`pockai.jmbargueno.com` web,
+  `api-pockai.jmbargueno.com` API) se **retiraron el 16-11-2026**: vhosts, contenedores, A records
+  y certs eliminados. Postgres y Redis quedan solo en la red interna `petai_default`;
+  Prometheus/Grafana/Alertmanager escuchan en `127.0.0.1`.
+- **Gateway API**: overlay `docker-compose.pockai-world.yml` (commit) añade `api-world-gw`
+  (nginx:alpine, contenedor `pockai-world-api`, red `webproxy` + `default`): la ÚNICA exposición
+  pública de la API. Reverse proxy a `petai-backend-1:3000` (vhost interno
+  `/data/compose/30/nginx/vhost.d/game-api.pockai.world.conf`), upgrade socket.io,
+  `resolver 127.0.0.11` (re-resuelve el backend y sobrevive a sus redeploys).
+  Comando de despliegue: `docker compose -f docker-compose.prod.yml -f docker-compose.pockai-world.yml up -d --build`
 - **TLS**: certbot (cuenta LE del volumen compartido `nginx_certs`) + symlinks flat
-  relativos (`api-pockai.jmbargueno.com.crt -> ./live/.../fullchain.pem`, `.key`,
-  `.chain.pem`, `.dhparam.pem -> ./dhparam.pem`). `nginx -t && nginx -s reload` en
+  relativos (`<dominio>.crt -> ./live/.../fullchain.pem`, `.key`, `.chain.pem`,
+  `.dhparam.pem -> ./dhparam.pem`). `nginx -t && nginx -s reload` en
   `nginx-proxy`. La cuenta LE de acme-companion del proxy sigue pausada.
   Renovación: `~/.hermes/scripts/pockai-cert-renew.sh` (cron `40 3 * * *`; watchdog
   silencioso, repunta los symlinks flat y recarga nginx solo si renovó).
@@ -267,6 +273,16 @@ repositorio en `/home/jmbargueno/scratch/petai`:
   `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `REDIS_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`.
   `OPENAI_API_KEY` intencionadamente vacía: el chat de IA degrada sin ella; para
   activarla se añade al `.env` y `docker compose ... up -d backend` (sin migraciones).
+- **Correo**: mailcow (`mail.jmbargueno.com`; MX, SPF, DKIM selector `dkim` y DMARC
+  `p=none` en la zona CF de `pockai.world`) con dos buzones:
+  - `noreply@pockai.world` — **sistema**: es la cuenta SMTP del backend y el remitente de
+    todo lo que envía (códigos de recuperación, notificaciones y el reenvío del formulario).
+  - `contact@pockai.world` — **contacto**: solo recibe (formulario y respuestas de los
+    usuarios a los correos de sistema, vía `MAIL_REPLY_TO`). El backend no usa su contraseña.
+
+  El `.env` lleva `SMTP_HOST=mail.jmbargueno.com`, `SMTP_PORT=465`,
+  `SMTP_USER=noreply@pockai.world` y `SMTP_PASS` (la contraseña de noreply@; nunca en el repo). Lo usan la recuperación de
+  contraseña y `POST /v1/contact` (formulario de la web).
 - **Backups**: `~/.hermes/scripts/petai-backup.sh` (cron `0 3 * * *`) →
   `~/backups/petai/YYYY-MM-DD/{pg-dumpall.sql.gz, redis.rdb.gz}`. El dumpall va con
   `--clean --if-exists` y se restaura con `pg_restore`/`psql` sobre un PostgreSQL 17.
@@ -279,3 +295,32 @@ repositorio en `/home/jmbargueno/scratch/petai`:
   - `shared/game-data/*.json` se `require()`a desde `dist/src/modules/<x>/` hacia
     `/app/backend/shared/`; el Dockerfile copia `shared` también a `/app/backend/shared`
     (antes solo iba a `/app/shared/`, lo que daba `MODULE_NOT_FOUND` al arrancar).
+- **pockai.world (migrado el 16-11-2026)**: los dominios antiguos
+  `*.jmbargueno.com` se retiraron por completo ese día: overlay `docker-compose.pockai.yml`
+  (vhost `api-pockai.jmbargueno.com` del backend) eliminado del repo, contenedor web
+  `pockai-web` retirado, A records de Cloudflare borrados y certs antiguos sacados de
+  `nginx_certs` (el cron de renovación solo cubre `pockai.world` + `game-api.pockai.world`).
+  **nginx-proxy NO soporta `VIRTUAL_HOST` multi-host** (genera
+  `upstream a.com b.com` y la config deja de validar; el proxy mantiene la config vieja
+  pero ningún reload posterior funciona): un contenedor por dominio.
+  - **Web**: contenedor `pockai-world-web` (compose `~/pockai-web/docker-compose.yml`,
+    servicio `world`, puerto debug 8182). Vhost
+    `/data/compose/30/nginx/vhost.d/pockai.world.conf`.
+  - **API**: overlay `docker-compose.pockai-world.yml` (commiteado) añade `api-world-gw`
+    (`pockai-world-api`, nginx:alpine, puerto debug 8183, redes `default` + `webproxy`):
+    reverse proxy a `petai-backend-1:3000` con upgrade socket.io y `resolver 127.0.0.11`
+    (re-resuelve el nombre del backend y sobrevive a sus redeploys). Config:
+    `/data/compose/30/nginx/vhost.d/game-api.pockai.world.conf`.
+  - **Pendiente — DNS**: a fecha 16-11-2026 `pockai.world` **no tiene delegación en el
+    registry `.world`** (NXDOMAIN a nivel registry; los A records ya existen en CF:
+    apex y `game-api`, unproxied, TTL 120). Hasta que resuelva, la web/API públicas solo
+    son alcanzables por IP/Host directo. Cuando resuelva: (1) añadir `LETSENCRYPT_HOST`
+    a `pockai-world-web` / `pockai-world-api` y recreate, (2) certbot webroot (volumen
+    `nginx_certs`), (3) symlinks flat relativos, (4) `nginx -t && nginx -s reload`.
+  - **Corte canónico ya aplicado**: `site.json` del build de producción →
+    `apiUrl: https://game-api.pockai.world`; variable de GitHub `PETAI_API_URL` (builds
+    de escritorio) y el endpoint del updater de `desktop/src-tauri/tauri.conf.json`
+    apuntan a la API nueva desde la próxima release. Los clientes de escritorio ya
+    instalados (v0.2.0) llevan embebido el endpoint antiguo: con la retirada de ese
+    dominio su auto-update deja de llegar; se sanan al actualizar al siguiente instalador.
+    `CORS_ORIGINS` = `https://pockai.world` + orígenes tauri.

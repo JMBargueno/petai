@@ -114,6 +114,21 @@ export const envSchema = z.object({
   AI_PLAN_PRO_DAILY: positiveInt(200),
   AI_MONTHLY_TOKEN_QUOTA_FREE: z.coerce.number().int().min(0).default(300000),
   AI_MONTHLY_TOKEN_QUOTA_PRO: z.coerce.number().int().min(0).default(3000000),
+  // ---- Correo (recuperación de contraseña, notificaciones y formulario de contacto) ----
+  // Sin SMTP_HOST los correos solo se escriben en el log (transporte de consola).
+  // La cuenta SMTP es la del buzón de SISTEMA (noreply@): es el remitente de todo lo que envía el backend.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(465),
+  // true = TLS implícito (465); false = STARTTLS (587).
+  SMTP_SECURE: z.enum(['true', 'false']).default('true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  // Remitente de sistema (debe coincidir con SMTP_USER o ser un alias suyo en mailcow).
+  MAIL_FROM: z.string().default('Pockai <noreply@pockai.world>'),
+  // A dónde van las respuestas de los usuarios a los correos de sistema (vacío = sin Reply-To).
+  MAIL_REPLY_TO: z.string().default('contact@pockai.world'),
+  // Buzón que RECIBE los mensajes del formulario de contacto (no se usa para enviar).
+  CONTACT_TO: z.string().default('contact@pockai.world'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -184,6 +199,9 @@ export function validateEnv(config: Record<string, unknown>) {
       const message = `Configuración insegura para producción:\n - ${problems.join('\n - ')}`;
       console.error(message);
       throw new Error(message);
+    }
+    if (!result.data.SMTP_HOST) {
+      console.warn('SMTP_HOST no está definido: los correos (recuperación y contacto) solo se escribirán en el log');
     }
   }
   return result.data;
