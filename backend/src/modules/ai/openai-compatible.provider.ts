@@ -26,11 +26,15 @@ function toWire(m: ChatMessageInput) {
  * OpenAI, Hermes Agent (API server), OpenRouter, Ollama…
  */
 export class OpenAiCompatibleProvider implements LlmProvider {
+  private readonly normalizedBaseUrl: string;
+
   constructor(
     private readonly baseUrl: string,
     private readonly apiKey: string | null,
     private readonly fetchImpl: typeof fetch = fetch,
-  ) {}
+  ) {
+    this.normalizedBaseUrl = baseUrl.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
+  }
 
   private headers() {
     return {
@@ -43,7 +47,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
     const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
 
-    const res = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
+    const res = await this.fetchImpl(`${this.normalizedBaseUrl}/chat/completions`, {
       method: 'POST',
       headers: this.headers(),
       // redirect: 'error' evita que un endpoint redirija a una dirección interna (SSRF)
@@ -71,6 +75,13 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   }
 
   private requestBody(messages: ChatMessageInput[], opts: ChatOptions): string {
+    const isReasoning =
+      opts.model.toLowerCase().includes('qwen') ||
+      opts.model.toLowerCase().includes('deepseek') ||
+      opts.model.toLowerCase().includes('o1') ||
+      opts.model.toLowerCase().includes('o3') ||
+      opts.model.toLowerCase().includes('r1');
+
     return JSON.stringify({
         model: opts.model,
         messages: messages.map(toWire),
@@ -85,8 +96,10 @@ export class OpenAiCompatibleProvider implements LlmProvider {
           : {}),
         stream: true,
         stream_options: { include_usage: true },
-        temperature: opts.temperature ?? 0.8,
+        // Modelos de razonamiento (como Qwen o1/o3/DeepSeek) no admiten temperature != 1 o custom
+        ...(isReasoning ? {} : { temperature: opts.temperature ?? 0.8 }),
         ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
+        ...(isReasoning ? { reasoning_effort: 'medium' } : {}),
     });
   }
 
@@ -130,8 +143,17 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         }
         try {
           const json = JSON.parse(data);
-          const text = json.choices?.[0]?.delta?.content;
-          if (typeof text === 'string' && text.length > 0) yield { type: 'delta', text };
+          const delta = json.choices?.[0]?.delta;
+          const text = delta?.content;
+          const reasoning = delta?.reasoning_content ?? delta?.reasoning;
+
+          if (typeof text === 'string' && text.length > 0) {
+            yield { type: 'delta', text };
+          } else if (typeof reasoning === 'string' && reasoning.length > 0) {
+            // Soporte para modelos de razonamiento (Qwen/DeepSeek): el texto de pensamiento se emite
+            yield { type: 'delta', text: reasoning };
+          }
+
           for (const tc of json.choices?.[0]?.delta?.tool_calls ?? []) {
             const idx = typeof tc.index === 'number' ? tc.index : 0;
             const cur = calls.get(idx) ?? { id: '', name: '', args: '' };
@@ -159,14 +181,16 @@ export class OpenAiCompatibleProvider implements LlmProvider {
 
   async test(model: string): Promise<void> {
     let got = false;
-    for await (const ev of this.chat([{ role: 'user', content: 'ping' }], { model, maxTokens: 5 })) {
+    for await (const ev of this.chat([{ role: 'user', content: 'ping' }], { model, maxTokens: 40 })) {
       if (ev.type === 'delta') got = true;
+      if (ev.type === 'done' && (ev.usage?.completionTokens ?? 0) > 0) got = true;
     }
     if (!got) throw new Error('El proveedor respondió sin contenido');
   }
 }
 
 function describeError(res: Response): string {
+  if (res.status === 400) return 'Parámetros o modelo no soportado por el proveedor (400)';
   if (res.status === 401 || res.status === 403) return 'Key rechazada por el proveedor (401/403)';
   if (res.status === 404) return 'Endpoint o modelo no encontrado (404)';
   if (res.status === 429) return 'Límite de peticiones del proveedor alcanzado (429)';

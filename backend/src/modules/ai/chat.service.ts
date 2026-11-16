@@ -343,7 +343,7 @@ export class ChatService {
           agentCtx && round < MAX_TOOL_ROUNDS - 1 ? toolDefinitions(agentCtx.clientTools) : undefined;
         let text = '';
         const calls: ToolCall[] = [];
-        for await (const ev of provider.chat(convo, { model, maxTokens: 300, tools, signal })) {
+        for await (const ev of provider.chat(convo, { model, maxTokens: 1200, tools, signal })) {
           if (ev.type === 'delta') {
             text += ev.text;
             // Moderación de salida en streaming: se retiene el final hasta confirmar que es seguro

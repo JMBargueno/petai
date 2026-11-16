@@ -252,12 +252,14 @@
     settingsMsg = '';
     busy = true;
     try {
+      const cleanUrl = baseUrl?.trim().replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
       config = await api.saveAiConfig({
         provider,
-        baseUrl: needsUrl ? baseUrl : undefined,
-        model: model || undefined,
-        apiKey: apiKey || undefined,
+        baseUrl: needsUrl ? cleanUrl : undefined,
+        model: model?.trim() || undefined,
+        apiKey: apiKey?.trim() || undefined,
       });
+      if (needsUrl) baseUrl = cleanUrl;
       apiKey = ''; // la key ya no se conserva en el cliente
       settingsMsg = 'Guardado. Pulsa "Probar conexión" para comprobarlo.';
       if (pet) await loadHistory();
