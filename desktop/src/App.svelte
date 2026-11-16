@@ -3,6 +3,7 @@
   import { api, getAccessToken, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
+  import { initSummonShortcut } from './lib/summonShortcut';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
   import {
     fetchStatus,
@@ -385,6 +386,7 @@
   let stopSessionExpired: () => void = () => {};
   let stopAutoUpdate: () => void = () => {};
   let stopTrayUpdates: () => void = () => {};
+  let stopSummonShortcut: () => void = () => {};
   let needsPoll: any = null;
 
   // Las constantes vitales solo se recalculan al consultar al servidor (tick perezoso):
@@ -467,6 +469,8 @@
     needsPoll = setInterval(pollPet, 60_000);
     loadInitialData();
     stopAutoUpdate = startAutoCheck();
+    // Atajo global de «Invocación rápida» (configurable desde Habilidades)
+    stopSummonShortcut = initSummonShortcut();
     if ('__TAURI_INTERNALS__' in window) {
       import('@tauri-apps/api/event')
         .then(({ listen }) => listen('check-updates', () => void checkUpdatesFromTray()))
@@ -486,6 +490,7 @@
     stopSessionExpired();
     stopAutoUpdate();
     stopTrayUpdates();
+    stopSummonShortcut();
     stopNotificationHandler();
     closeSocket();
   });
