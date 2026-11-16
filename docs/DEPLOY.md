@@ -280,9 +280,16 @@ Despliegue real (15-11-2026, migrado a `pockai.world` el 16-11) del stack sobre 
   - `contact@pockai.world` — **contacto**: solo recibe (formulario y respuestas de los
     usuarios a los correos de sistema, vía `MAIL_REPLY_TO`). El backend no usa su contraseña.
 
-  El `.env` lleva `SMTP_HOST=mail.jmbargueno.com`, `SMTP_PORT=465`,
-  `SMTP_USER=noreply@pockai.world` y `SMTP_PASS` (la contraseña de noreply@; nunca en el repo). Lo usan la recuperación de
+  El `.env` lleva `SMTP_HOST=172.22.1.253` (IP fija del contenedor postfix, declarada en
+  su compose como `ipv4_address`; el backend la alcanza por la red compartida `mailcow-smtp`)
+  y `SMTP_TLS_SERVERNAME=mail.jmbargueno.com` (SNI/verificación del cert, que va para el
+  nombre público), `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER=noreply@pockai.world` y
+  `SMTP_PASS` (la contraseña de noreply@; nunca en el repo). Lo usan la recuperación de
   contraseña y `POST /v1/contact` (formulario de la web).
+  **Nota de ruta SMTP**: desde los contenedores el host solo admite 22/80/443 (nftables);
+  el hostname público no sirve por el camino normal (hairpin bloqueado, resuelve a IPv6)
+  y nodemailer no respeta `/etc/hosts` del contenedor (resuelve con su propio DNS), de ahí
+  la IP literal + `SMTP_TLS_SERVERNAME`.
 - **Backups**: `~/.hermes/scripts/petai-backup.sh` (cron `0 3 * * *`) →
   `~/backups/petai/YYYY-MM-DD/{pg-dumpall.sql.gz, redis.rdb.gz}`. El dumpall va con
   `--clean --if-exists` y se restaura con `pg_restore`/`psql` sobre un PostgreSQL 17.
@@ -311,12 +318,11 @@ Despliegue real (15-11-2026, migrado a `pockai.world` el 16-11) del stack sobre 
     reverse proxy a `petai-backend-1:3000` con upgrade socket.io y `resolver 127.0.0.11`
     (re-resuelve el nombre del backend y sobrevive a sus redeploys). Config:
     `/data/compose/30/nginx/vhost.d/game-api.pockai.world.conf`.
-  - **Pendiente — DNS**: a fecha 16-11-2026 `pockai.world` **no tiene delegación en el
-    registry `.world`** (NXDOMAIN a nivel registry; los A records ya existen en CF:
-    apex y `game-api`, unproxied, TTL 120). Hasta que resuelva, la web/API públicas solo
-    son alcanzables por IP/Host directo. Cuando resuelva: (1) añadir `LETSENCRYPT_HOST`
-    a `pockai-world-web` / `pockai-world-api` y recreate, (2) certbot webroot (volumen
-    `nginx_certs`), (3) symlinks flat relativos, (4) `nginx -t && nginx -s reload`.
+  - **DNS resuelto (16-11-2026)**: la delegación del registry `.world` quedó activa
+    (A records → `185.215.165.254`, sin AAAA; verificado desde 4 resolvers públicos).
+    Cert LE emitido con certbot webroot + symlinks flat para `pockai.world` y
+    `game-api.pockai.world` (caducan 2027-02-14; los cubre el watchdog de renovación).
+    TLS verificado server-side (openssl, resolvers y navegador real).
   - **Corte canónico ya aplicado**: `site.json` del build de producción →
     `apiUrl: https://game-api.pockai.world`; variable de GitHub `PETAI_API_URL` (builds
     de escritorio) y el endpoint del updater de `desktop/src-tauri/tauri.conf.json`

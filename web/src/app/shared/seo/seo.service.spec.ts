@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { SeoService } from './seo.service';
+import { SITE_URL } from '../../site.config';
 
 describe('SeoService', () => {
   const head = () => document.head;
@@ -11,7 +12,7 @@ describe('SeoService', () => {
     seo.set({ title: 'Lore', description: 'Descripción', path: 'lore' });
 
     expect(canonical().length).toBe(1);
-    expect(canonical()[0].getAttribute('href')).toBe('https://pockai.example/es/lore');
+    expect(canonical()[0].getAttribute('href')).toBe(`${SITE_URL}/es/lore`);
   });
 
   it('escribe hreflang de todos los idiomas más x-default', () => {
@@ -21,9 +22,9 @@ describe('SeoService', () => {
       l.getAttribute('href'),
     ]);
     expect(alternates).toEqual([
-      ['es', 'https://pockai.example/es/lore'],
-      ['en', 'https://pockai.example/en/lore'],
-      ['x-default', 'https://pockai.example/es/lore'],
+      ['es', `${SITE_URL}/es/lore`],
+      ['en', `${SITE_URL}/en/lore`],
+      ['x-default', `${SITE_URL}/es/lore`],
     ]);
   });
 
@@ -51,7 +52,7 @@ describe('SeoService', () => {
   it('rellena Open Graph y Twitter con la imagen por defecto del idioma', () => {
     TestBed.inject(SeoService).set({ title: 'Título', description: 'd', path: '' });
     const prop = (p: string) => head().querySelector(`meta[property="${p}"]`)?.getAttribute('content');
-    expect(prop('og:image')).toBe('https://pockai.example/og/home-es.png');
+    expect(prop('og:image')).toBe(`${SITE_URL}/og/home-es.png`);
     expect(prop('og:locale')).toBe('es_ES');
     expect(prop('og:locale:alternate')).toBe('en_US');
     expect(head().querySelector('meta[name="twitter:card"]')?.getAttribute('content')).toBe('summary_large_image');

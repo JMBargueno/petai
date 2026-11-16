@@ -69,6 +69,9 @@ export class SmtpEmailSender implements EmailSender {
       host: config.get<string>('SMTP_HOST'),
       port: Number(config.get('SMTP_PORT') ?? 465),
       secure: config.get<string>('SMTP_SECURE') !== 'false',
+      // Si SMTP_HOST es una IP (red interna), nodemailer la usa sin resolverla y
+      // fallaría el chequeo de host del cert; se verifica contra el nombre público.
+      servername: config.get<string>('SMTP_TLS_SERVERNAME') || undefined,
       auth: config.get<string>('SMTP_USER')
         ? { user: config.get<string>('SMTP_USER'), pass: config.get<string>('SMTP_PASS') }
         : undefined,

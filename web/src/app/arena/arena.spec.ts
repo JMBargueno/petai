@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Arena } from './arena';
+import { SITE_URL } from '../site.config';
 
 describe('Arena', () => {
   it('muestra la Arena a fondo en su propia página', async () => {
@@ -18,7 +19,7 @@ describe('Arena', () => {
     await fixture.whenStable();
 
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
-      'https://pockai.example/es/arena',
+      `${SITE_URL}/es/arena`,
     );
     const types = [...document.head.querySelectorAll('script[type="application/ld+json"]')].map(
       (s) => JSON.parse(s.textContent!)['@type'],

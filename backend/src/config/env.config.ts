@@ -125,6 +125,10 @@ export const envSchema = z.object({
   SMTP_SECURE: z.enum(['true', 'false']).default('true'),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+  // Nombre para SNI y verificación del certificado cuando SMTP_HOST es una IP
+  // (red interna, p. ej. el contenedor postfix de mailcow): el cert va para el
+  // nombre público (p. ej. mail.jmbargueno.com). Opcional; por defecto se usa SMTP_HOST.
+  SMTP_TLS_SERVERNAME: z.string().optional(),
   // Remitente de sistema (debe coincidir con SMTP_USER o ser un alias suyo en mailcow).
   MAIL_FROM: z.string().default('Pockai <noreply@pockai.world>'),
   // A dónde van las respuestas de los usuarios a los correos de sistema (vacío = sin Reply-To).

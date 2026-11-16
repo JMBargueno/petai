@@ -38,6 +38,12 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+    networks:
+      # default: red del proyecto (postgres/redis).
+      # mailcow-smtp: red compartida con mailcow, para llegar al contenedor postfix
+      # (el firewall de la VPS no deja a los contenedores tocar puertos del host).
+      - default
+      - mailcow-smtp
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -58,6 +64,8 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-true}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      # Nombre de verificación TLS cuando SMTP_HOST es una IP interna (cert del hostname público).
+      SMTP_TLS_SERVERNAME: ${SMTP_TLS_SERVERNAME:-}
       MAIL_FROM: "${MAIL_FROM:-Pockai <noreply@pockai.world>}"
       MAIL_REPLY_TO: ${MAIL_REPLY_TO:-contact@pockai.world}
       CONTACT_TO: ${CONTACT_TO:-contact@pockai.world}
@@ -131,3 +139,10 @@ volumes:
   redis_data:
   prometheus_data:
   grafana_data:
+
+networks:
+  # Red externa de mailcow: el backend se une a ella para entregar el SMTP al
+  # contenedor postfix (172.22.1.x) sin pasar por puertos del host bloqueados.
+  mailcow-smtp:
+    external: true
+    name: mailcowdockerized_mailcow-network

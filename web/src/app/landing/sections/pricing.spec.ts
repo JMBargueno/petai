@@ -1,9 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 import { Pricing } from './pricing';
 import { PRICING_CARDS } from '../content';
 
 describe('Pricing', () => {
+  // Nunca se llama al API real desde los tests (site.json apunta a producción)
+  beforeEach(() => vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, json: async () => ({}) }))));
+
   it('pinta los tres planes de precios transparentes', async () => {
     const fixture = TestBed.createComponent(Pricing);
     await fixture.whenStable();
