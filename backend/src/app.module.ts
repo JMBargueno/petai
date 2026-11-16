@@ -20,6 +20,8 @@ import { MinigamesModule } from './modules/minigames/minigames.module';
 import { AiModule } from './modules/ai/ai.module';
 import { BattlesModule } from './modules/battles/battles.module';
 import { HealthModule } from './modules/health/health.module';
+import { MailModule } from './modules/mail/mail.module';
+import { ContactModule } from './modules/contact/contact.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { MissionsModule } from './missions/missions.module';
@@ -73,6 +75,7 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     ObservabilityModule.forRoot(),
     PrismaModule,
     RedisModule,
+    MailModule,
     RealtimeModule,
     GameDataModule,
     AssetsModule,
@@ -87,6 +90,7 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     AiModule,
     BattlesModule,
     HealthModule,
+    ContactModule,
     DesktopUpdatesModule,
     MissionsModule,
     AchievementsModule,

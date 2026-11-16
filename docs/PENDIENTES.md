@@ -13,7 +13,7 @@
 
 | Item | Qué hacer | Dónde |
 |---|---|---|
-| **Transporte de email real** | Sobrescribir `EMAIL_SENDER` con un sender real (SMTP/Resend/SES). Hoy usa `console` (dev/tests). Sin esto, la recuperación de contraseña no envía el email. | `auth.module.ts` (provider `EMAIL_SENDER`) o `main.ts` |
+| **Transporte de email real** | Definir `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS` en el `.env` del servidor (mailcow, `contact@pockai.world`). El código ya está (`modules/mail`); sin estas variables los correos solo van al log. | `.env` del servidor |
 | **`REALTIME_REDIS=true`** | En prod, activar el adaptador `socket.io-redis` (R-02). Sin ella, el WS no escala a >1 réplica. | `docker-compose.yml` / `.env.production` |
 | **`CORS_ORIGINS`** | Añadir los orígenes reales de producción. | `.env.production` |
 | **`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`** | Generar secrets 64+ chars aleatorios. | `.env.production` |

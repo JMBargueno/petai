@@ -27,6 +27,7 @@ import { ChangeDetectionStrategy, Component, LOCALE_ID, inject } from '@angular/
               <li><a [href]="home + '#demo'" i18n="@@nav.demo">Pruébalo</a></li>
               <li><a [href]="home + '#precios'" i18n="@@nav.pricing">Precios</a></li>
               <li><a [href]="home + '#faq'">FAQ</a></li>
+              <li><a [href]="home + 'contact'" i18n="@@footer.contact">Contacto</a></li>
             </ul>
           </div>
           <div>

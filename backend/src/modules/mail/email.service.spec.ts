@@ -1,0 +1,58 @@
+import { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
+import { ConsoleEmailSender, SmtpEmailSender, emailSenderFactory } from './email.service';
+
+jest.mock('nodemailer', () => ({ createTransport: jest.fn() }));
+
+const config = (values: Record<string, unknown>) => ({ get: (k: string) => values[k] }) as unknown as ConfigService;
+
+describe('email.service', () => {
+  const sendMail = jest.fn().mockResolvedValue({});
+
+  beforeEach(() => {
+    sendMail.mockClear();
+    (nodemailer.createTransport as jest.Mock).mockReset().mockReturnValue({ sendMail });
+  });
+
+  it('sin SMTP_HOST usa el transporte de consola', () => {
+    expect(emailSenderFactory(config({}))).toBeInstanceOf(ConsoleEmailSender);
+    expect(nodemailer.createTransport).not.toHaveBeenCalled();
+  });
+
+  it('con SMTP_HOST crea un transporte SMTP autenticado', () => {
+    const sender = emailSenderFactory(
+      config({ SMTP_HOST: 'mail.example.test', SMTP_PORT: 587, SMTP_SECURE: 'false', SMTP_USER: 'u', SMTP_PASS: 'p' }),
+    );
+    expect(sender).toBeInstanceOf(SmtpEmailSender);
+    expect(nodemailer.createTransport).toHaveBeenCalledWith({
+      host: 'mail.example.test',
+      port: 587,
+      secure: false,
+      auth: { user: 'u', pass: 'p' },
+    });
+  });
+
+  it('el mensaje de contacto va al buzón con Reply-To del remitente y asunto en una línea', async () => {
+    const sender = new SmtpEmailSender(
+      config({ SMTP_HOST: 'h', MAIL_FROM: 'Pockai <contact@pockai.world>', CONTACT_TO: 'contact@pockai.world' }),
+    );
+    await sender.sendContactMessage({ name: 'Ana', email: 'ana@example.com', subject: 'a\r\nb', message: 'hola', ip: '1.2.3.4' });
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: 'Pockai <contact@pockai.world>',
+        to: 'contact@pockai.world',
+        replyTo: { name: 'Ana', address: 'ana@example.com' },
+        subject: '[Contacto] a b',
+      }),
+    );
+    expect(sendMail.mock.calls[0][0].text).toContain('hola');
+  });
+
+  it('el código de recuperación va al usuario', async () => {
+    const sender = new SmtpEmailSender(config({ SMTP_HOST: 'h' }));
+    await sender.sendPasswordResetCode('jugador@example.com', '123456', 15);
+    const mail = sendMail.mock.calls[0][0];
+    expect(mail.to).toBe('jugador@example.com');
+    expect(mail.text).toContain('123456');
+  });
+});

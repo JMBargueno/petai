@@ -1,0 +1,56 @@
+import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import { ContactService } from './contact.service';
+import type { EmailSender } from '../mail/email.service';
+
+describe('ContactService', () => {
+  const valid = {
+    name: 'Ana',
+    email: '  Ana@Example.com ',
+    subject: 'Hola\r\nBcc: spam@evil.test',
+    message: 'Un mensaje lo bastante largo.\nSegunda línea.',
+  };
+  let email: jest.Mocked<EmailSender>;
+  let throttle: { consume: jest.Mock };
+  let service: ContactService;
+
+  beforeEach(() => {
+    email = { sendPasswordResetCode: jest.fn(), sendContactMessage: jest.fn().mockResolvedValue(undefined) };
+    throttle = { consume: jest.fn().mockResolvedValue(undefined) };
+    service = new ContactService(throttle as any, email);
+  });
+
+  it('envía el mensaje saneado y limita por IP y por email', async () => {
+    await service.submit(valid, '1.2.3.4');
+    expect(email.sendContactMessage).toHaveBeenCalledWith({
+      name: 'Ana',
+      email: 'ana@example.com',
+      subject: 'Hola  Bcc: spam@evil.test',
+      message: 'Un mensaje lo bastante largo.\nSegunda línea.',
+      ip: '1.2.3.4',
+    });
+    expect(throttle.consume).toHaveBeenCalledWith('contact-ip:1.2.3.4', 5, 3_600_000);
+    expect(throttle.consume).toHaveBeenCalledWith('contact-email:ana@example.com', 5, 3_600_000);
+  });
+
+  it('honeypot relleno: responde sin enviar ni consumir cupo', async () => {
+    await service.submit({ ...valid, website: 'http://spam' }, '1.2.3.4');
+    expect(email.sendContactMessage).not.toHaveBeenCalled();
+    expect(throttle.consume).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ ...valid, email: 'no-es-email' }],
+    [{ ...valid, message: 'corto' }],
+    [{ ...valid, name: '   ' }],
+    [{ ...valid, subject: undefined }],
+    [{ ...valid, message: 'x'.repeat(5001) }],
+  ])('rechaza datos no válidos con 400', async (body) => {
+    await expect(service.submit(body, '1.2.3.4')).rejects.toBeInstanceOf(BadRequestException);
+    expect(email.sendContactMessage).not.toHaveBeenCalled();
+  });
+
+  it('si el transporte falla responde 503', async () => {
+    email.sendContactMessage.mockRejectedValue(new Error('smtp caído'));
+    await expect(service.submit(valid, '1.2.3.4')).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+});

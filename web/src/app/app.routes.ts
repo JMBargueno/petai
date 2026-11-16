@@ -22,6 +22,11 @@ export const routes: Routes = [
     loadComponent: () => import('./arena/arena').then((m) => m.Arena),
   },
   {
+    // Formulario de contacto (llega a contact@pockai.world vía POST /v1/contact).
+    path: 'contact',
+    loadComponent: () => import('./contact/contact').then((m) => m.Contact),
+  },
+  {
     // Panel oculto: no se enlaza desde la landing, no se prerenderiza y va en un chunk aparte.
     path: 'admin',
     loadChildren: () => import('./admin/admin.routes'),

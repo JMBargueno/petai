@@ -86,6 +86,17 @@ export const envSchema = z.object({
   // PAT de GitHub (solo lectura de Contents) para leer los releases del repo privado. Sin él no hay updates.
   GITHUB_RELEASES_TOKEN: z.string().optional(),
   GITHUB_RELEASES_REPO: z.string().default('JMBargueno/petai'),
+  // ---- Correo (recuperación de contraseña y formulario de contacto) ----
+  // Sin SMTP_HOST los correos solo se escriben en el log (transporte de consola).
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(465),
+  // true = TLS implícito (465); false = STARTTLS (587).
+  SMTP_SECURE: z.enum(['true', 'false']).default('true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM: z.string().default('Pockai <contact@pockai.world>'),
+  // Buzón que recibe los mensajes del formulario de contacto.
+  CONTACT_TO: z.string().default('contact@pockai.world'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -144,6 +155,9 @@ export function validateEnv(config: Record<string, unknown>) {
       const message = `Configuración insegura para producción:\n - ${problems.join('\n - ')}`;
       console.error(message);
       throw new Error(message);
+    }
+    if (!result.data.SMTP_HOST) {
+      console.warn('SMTP_HOST no está definido: los correos (recuperación y contacto) solo se escribirán en el log');
     }
   }
   return result.data;

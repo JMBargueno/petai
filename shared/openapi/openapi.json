@@ -2725,6 +2725,40 @@
         ]
       }
     },
+    "/v1/contact": {
+      "post": {
+        "operationId": "ContactController_submit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Mensaje aceptado"
+          },
+          "400": {
+            "description": "Datos no válidos"
+          },
+          "429": {
+            "description": "Demasiados mensajes; espera un rato"
+          },
+          "503": {
+            "description": "No se pudo enviar el correo"
+          }
+        },
+        "summary": "Enviar un mensaje desde el formulario de contacto público",
+        "tags": [
+          "Contact"
+        ]
+      }
+    },
     "/v1/desktop/updates/download/{assetId}": {
       "get": {
         "operationId": "DesktopUpdatesController_download",
@@ -8985,6 +9019,41 @@
           "name",
           "date",
           "daysRemaining"
+        ]
+      },
+      "ContactDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Ana",
+            "description": "Nombre (1–100)"
+          },
+          "email": {
+            "type": "string",
+            "example": "ana@example.com",
+            "description": "Correo al que responder"
+          },
+          "subject": {
+            "type": "string",
+            "example": "Duda sobre mi Pockai",
+            "description": "Asunto (1–150)"
+          },
+          "message": {
+            "type": "string",
+            "example": "Hola, quería preguntar…",
+            "description": "Mensaje (10–5000)"
+          },
+          "website": {
+            "type": "string",
+            "description": "Honeypot anti-spam: debe ir vacío"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "subject",
+          "message"
         ]
       },
       "MissionRewardDto": {
