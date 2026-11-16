@@ -46,7 +46,12 @@
           "Spanish",
           "English"
         ],
-        "displayLanguageSelector": true
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "sidebarImage": "icons/installer/sidebar.bmp",
+        "headerImage": "icons/installer/header.bmp",
+        "uninstallerHeaderImage": "icons/installer/header.bmp"
       }
     },
     "macOS": {
