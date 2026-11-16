@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { EnvironmentalStatus, FestivalInfo, WeatherInfo, TimeOfDay, ActivityInfo } from '../lib/environmental';
+  import { speak } from '../lib/speech-queue';
 
   /**
    * Overlay ambiental (feature 005): dibuja un accesorio sobre la mascota según el clima real
@@ -10,8 +11,8 @@
   export let environmental: EnvironmentalStatus | null = null;
   export let accessory: string | null = null; // clave de accesorio forzada
   /**
-   * Qué parte pintar: el accesorio va dentro del cuerpo de la mascota (gira con ella) y el texto
-   * fuera (siempre horizontal y legible).
+   * Qué parte gestionar: el accesorio va dentro del cuerpo de la mascota (gira con ella); el texto
+   * ambiental no se pinta aquí, se dice por la cola de habla (ver `caption` abajo).
    */
   export let part: 'all' | 'accessory' | 'caption' = 'all';
 
@@ -61,10 +62,13 @@
   $: isSolo = (environmental?.activity as ActivityInfo | undefined)?.mode === 'solo';
   $: soloLabel = isSolo ? 'Estás un poco aburrido aquí… 🥺' : '';
 
-  function caption(): string {
-    if (festMessage) return festMessage;
-    if (soloLabel) return soloLabel;
-    return timeLabel;
+  $: caption = festMessage || soloLabel || timeLabel;
+
+  // El texto ambiental se dice una vez, por la cola de habla, cuando cambia; no es un bocadillo fijo.
+  let lastSaid = '';
+  $: if (part !== 'accessory' && caption && caption !== lastSaid) {
+    lastSaid = caption;
+    speak(caption, { key: 'env-caption', durationMs: 4000, maxWaitMs: 60_000 });
   }
 </script>
 
@@ -72,10 +76,6 @@
   <div class="env-overlay" aria-hidden="true">
     <span class="env-accessory">{accEmoji}</span>
   </div>
-{/if}
-
-{#if caption() && part !== 'accessory'}
-  <div class="env-caption">{caption()}</div>
 {/if}
 
 <style>
@@ -94,25 +94,6 @@
     line-height: 1;
     filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
     animation: bob 3.2s ease-in-out infinite;
-  }
-
-  .env-caption {
-    position: absolute;
-    top: -52px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 29;
-    pointer-events: none;
-    max-width: 260px;
-    padding: 6px 12px;
-    background: rgba(15, 23, 42, 0.85);
-    border: 1px solid rgba(56, 189, 248, 0.35);
-    color: #e0f2fe;
-    border-radius: 14px;
-    font-size: 13px;
-    font-weight: 600;
-    white-space: nowrap;
-    backdrop-filter: blur(6px);
   }
 
   @keyframes bob {
