@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONTACT_ENDPOINT, Contact } from './contact';
+import { SITE_URL } from '../site.config';
 
 describe('Contact', () => {
   const fetchMock = vi.fn();
@@ -41,7 +42,7 @@ describe('Contact', () => {
     expect(el.querySelector('form')).not.toBeNull();
     expect(el.querySelector('a[href="mailto:contact@pockai.world"]')).not.toBeNull();
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
-      'https://pockai.example/es/contact',
+      `${SITE_URL}/es/contact`,
     );
   });
 

@@ -18,6 +18,11 @@ import { EnvironmentalService } from '../environmental/environmental.service';
 import { BondingService } from '../bonding/bonding.service';
 import { isBondingTierAtLeast } from '../bonding/bonding';
 import { AGENT_UNLOCK, INTELLIGENCE_MAX, MEMORY_UNLOCK, buildSystemPrompt, intelligenceTier } from './personality';
+import { EntitlementService } from '../billing/entitlement.service';
+import { DailyQuotaService } from '../billing/daily-quota.service';
+import { BillingConfigService } from '../billing/billing-config.service';
+import { ManagedBudgetService } from '../billing/managed-budget.service';
+import { PlanLimits } from '../billing/plans';
 
 export type ChatStreamEvent =
   | { type: 'delta'; text: string }
@@ -42,6 +47,8 @@ const LOCAL_MAX_REPLY_CHARS = 4000;
 /** TTL del guard "una respuesta en curso por usuario" (R-02): cubre respuestas de varios turns de
  * herramientas sin atrapar el guard si el stream se abandona. */
 const INFLIGHT_LOCK_TTL_MS = 5 * 60 * 1000;
+/** Margen (caracteres) para prompt de sistema, recuerdos y contexto al estimar el coste de una llamada. */
+const PROMPT_OVERHEAD_CHARS = 8000;
 
 @Injectable()
 export class ChatService {
@@ -61,6 +68,10 @@ export class ChatService {
     private readonly usage: UsageService,
     private readonly bonding: BondingService,
     private readonly exclusiveLock: ExclusiveLockService,
+    private readonly entitlements: EntitlementService,
+    private readonly dailyQuota: DailyQuotaService,
+    private readonly billingConfig: BillingConfigService,
+    private readonly managedBudget: ManagedBudgetService,
     @Optional() private readonly redis?: RedisService,
     @Optional() private readonly environmental?: EnvironmentalService,
   ) {}
@@ -68,11 +79,14 @@ export class ChatService {
   private async checkRateLimit(userId: string) {
     const tooMany = () => new HttpException('Demasiados mensajes seguidos, espera un momento', HttpStatus.TOO_MANY_REQUESTS);
     const now = Date.now();
+    // Límite por minuto configurable desde el panel (`byok.rateLimitPerMinute`); en managed además
+    // aplican la cuota diaria y el presupuesto global.
+    const max = this.billingConfig.byokSettings()?.rateLimitPerMinute ?? RATE_LIMIT.max;
     if (this.redis) {
       const blocked = await this.redis.run(async (r) => {
         const k = this.redis!.key(`chatrate:${userId}`);
         await r.zremrangebyscore(k, 0, now - RATE_LIMIT.windowMs);
-        if ((await r.zcard(k)) >= RATE_LIMIT.max) return true;
+        if ((await r.zcard(k)) >= max) return true;
         await r.multi().zadd(k, now, `${now}-${Math.random().toString(36).slice(2, 8)}`).pexpire(k, RATE_LIMIT.windowMs).exec();
         return false;
       });
@@ -80,7 +94,7 @@ export class ChatService {
       if (blocked === false) return;
     }
     const recent = (this.hits.get(userId) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
-    if (recent.length >= RATE_LIMIT.max) throw tooMany();
+    if (recent.length >= max) throw tooMany();
     recent.push(now);
     this.hits.set(userId, recent);
   }
@@ -144,21 +158,71 @@ export class ChatService {
     }
 
     const { provider, model, mode } = await this.aiConfig.resolveProvider(userId);
-    await this.usage.assertWithinQuota(userId, mode);
 
+    let limits: PlanLimits | undefined;
+    let quotaKey: string | undefined;
+    let reservedMicro = 0;
+
+    if (mode === 'managed') {
+      const plan = await this.entitlements.planFor(userId);
+      limits = await this.billingConfig.limits(plan);
+      if (message.length > limits.maxInputChars) {
+        throw new BadRequestException({
+          statusCode: 400,
+          code: 'message_too_long',
+          max: limits.maxInputChars,
+          message: `El mensaje supera los ${limits.maxInputChars} caracteres`,
+        });
+      }
+      await this.managedBudget.assertOpen(plan);
+      const quota = await this.dailyQuota.consume(userId, plan);
+      quotaKey = quota.key;
+      try {
+        // Reserva atómica del coste máximo esperado de esta llamada (se ajusta al real al terminar)
+        const promptEstimate = Math.ceil((limits.historyCharBudget + limits.maxInputChars + PROMPT_OVERHEAD_CHARS) / 4);
+        reservedMicro = await this.managedBudget.reserve(
+          plan,
+          this.managedBudget.estimateCostUsd(promptEstimate, limits.maxOutputTokens),
+        );
+      } catch (err) {
+        await this.dailyQuota.refund(quotaKey).catch(() => undefined);
+        throw err;
+      }
+    }
+
+    let messages: ChatMessageInput[];
+    let timeZone: string;
+    let now: Date;
     const clientTools = sanitizeClientTools(rawClientTools);
-    const { messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent', {
-      clientTools,
-      clientContext: sanitizeClientContext(rawClientContext, pet),
-    });
+    try {
+      await this.usage.assertWithinQuota(userId, mode);
+      ({ messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent', {
+        clientTools,
+        clientContext: sanitizeClientContext(rawClientContext, pet),
+        limits,
+      }));
+    } catch (err) {
+      // No llegó a llamarse al proveedor: se devuelve el mensaje del día y la reserva
+      await this.releaseManaged(quotaKey, reservedMicro);
+      throw err;
+    }
 
-    // Agente (intelligence ≥ 500): puede usar herramientas; los efectos requieren confirmación
+    // Agente (intelligence ≥ 500 y habilitado por el plan): puede usar herramientas
+    const allowsAgent = limits?.agentTools ?? true;
     const agentCtx: AgentContext | undefined =
-      (pet.intelligence ?? 0) >= AGENT_UNLOCK
+      allowsAgent && (pet.intelligence ?? 0) >= AGENT_UNLOCK
         ? { userId, petId: pet.id, timeZone, now, clientTools }
         : undefined;
 
-    return { events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx) };
+    return {
+      events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx, limits, quotaKey, reservedMicro),
+    };
+  }
+
+  /** Devuelve el mensaje diario y la reserva de presupuesto de una petición gestionada que no llegó al proveedor. */
+  private async releaseManaged(quotaKey: string | undefined, reservedMicro: number) {
+    if (quotaKey) await this.dailyQuota.refund(quotaKey).catch(() => undefined);
+    if (reservedMicro > 0) await this.managedBudget.settle(reservedMicro, 0).catch(() => undefined);
   }
 
   /**
@@ -170,7 +234,11 @@ export class ChatService {
     pet: any,
     message: string,
     maxTier: 'chat' | 'memory' | 'agent',
-    extra: { clientTools?: string[]; clientContext?: ReturnType<typeof sanitizeClientContext> } = {},
+    extra: {
+      clientTools?: string[];
+      clientContext?: ReturnType<typeof sanitizeClientContext>;
+      limits?: PlanLimits;
+    } = {},
   ) {
     const owner = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -182,13 +250,16 @@ export class ChatService {
     const timeZone = safeTimeZone(owner?.timezone);
     const now = new Date();
 
+    const historyTake = extra.limits ? extra.limits.historyMessages : HISTORY_MESSAGES;
+    const historyBudget = extra.limits ? extra.limits.historyCharBudget : HISTORY_CHAR_BUDGET;
+
     const past = await this.prisma.chatMessage.findMany({
       where: { petId: pet.id, role: { in: ['user', 'assistant'] } },
       orderBy: { createdAt: 'desc' },
-      take: HISTORY_MESSAGES,
+      take: historyTake,
     });
     const history: ChatMessageInput[] = [];
-    let budget = HISTORY_CHAR_BUDGET;
+    let budget = historyBudget;
     for (const m of past) {
       budget -= m.content.length;
       if (budget < 0) break;
@@ -336,13 +407,32 @@ export class ChatService {
     mode: string,
     signal?: AbortSignal,
     agentCtx?: AgentContext,
+    limits?: PlanLimits,
+    quotaKey?: string,
+    reservedMicro = 0,
   ): AsyncGenerator<ChatStreamEvent> {
+    const managed = mode === 'managed';
     // Una respuesta en curso por usuario (guard distribuido, R-02): evita ráfagas paralelas que
     // disparan el gasto de LLM, respetado entre réplicas vía Redis (fallback en memoria).
     const inflightLock = await this.exclusiveLock.acquire('chat', userId, INFLIGHT_LOCK_TTL_MS);
     if (!inflightLock.ok) {
+      // Rechazado antes de llamar al proveedor: no debe gastar el mensaje del día ni presupuesto
+      await this.releaseManaged(quotaKey, reservedMicro);
       yield { type: 'error', message: 'Ya hay una respuesta en curso; espera a que termine' };
       return;
+    }
+
+    // Semáforo global de streams gestionados (`managedAi.maxConcurrency`)
+    let slot: string | undefined;
+    if (managed) {
+      try {
+        slot = await this.managedBudget.acquireSlot();
+      } catch (err: any) {
+        await this.exclusiveLock.release('chat', userId, inflightLock.token);
+        await this.releaseManaged(quotaKey, reservedMicro);
+        yield { type: 'error', message: err?.response?.message || 'La IA de Pockai está ocupada; reintenta en unos segundos' };
+        return;
+      }
     }
 
     const guard = new OutputGuard();
@@ -350,6 +440,10 @@ export class ChatService {
     let proposed = 0;
     // Razonamiento del modelo: va aparte de la respuesta, no se emite en streaming ni se guarda
     let thinking = '';
+    let hasEmittedDelta = false;
+    // Coste real (OpenRouter `usage.cost`) o, si una vuelta no lo informa, estimación conservadora
+    let costUsd = 0;
+    let costReported = false;
     const convo = [...messages];
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -358,19 +452,34 @@ export class ChatService {
           agentCtx && round < MAX_TOOL_ROUNDS - 1 ? toolDefinitions(agentCtx.clientTools) : undefined;
         let text = '';
         const calls: ToolCall[] = [];
-        for await (const ev of provider.chat(convo, { model, maxTokens: 1200, tools, signal })) {
+        const maxTokens = limits?.maxOutputTokens ?? 1200;
+        for await (const ev of provider.chat(convo, { model, maxTokens, tools, signal })) {
           if (ev.type === 'delta') {
             text += ev.text;
             // Moderación de salida en streaming: se retiene el final hasta confirmar que es seguro
             const safe = guard.push(ev.text);
             if (safe === null) return yield* this.blockedOutput(guard);
-            if (safe) yield { type: 'delta', text: safe };
+            if (safe) {
+              hasEmittedDelta = true;
+              yield { type: 'delta', text: safe };
+            }
           } else if (ev.type === 'thinking') {
             if (thinking.length < MAX_THINKING_CHARS) thinking += ev.text;
           } else if (ev.type === 'tool_call') {
             calls.push({ id: ev.id, name: ev.name, arguments: ev.arguments });
           } else if (ev.type === 'done') {
-            tokens += (ev.usage?.promptTokens ?? 0) + (ev.usage?.completionTokens ?? 0);
+            const p = ev.usage?.promptTokens ?? 0;
+            const c = ev.usage?.completionTokens ?? 0;
+            if (managed) {
+              if (typeof ev.usage?.costUsd === 'number') {
+                costUsd += ev.usage.costUsd;
+                costReported = true;
+              } else if (p + c > 0) {
+                costUsd += this.managedBudget.estimateCostUsd(p, c);
+                costReported = true;
+              }
+            }
+            tokens += p + c;
           }
         }
         if (calls.length === 0 || !agentCtx) break;
@@ -390,12 +499,16 @@ export class ChatService {
 
       const rest = guard.flush();
       if (rest === null) return yield* this.blockedOutput(guard);
-      if (rest) yield { type: 'delta', text: rest };
+      if (rest) {
+        hasEmittedDelta = true;
+        yield { type: 'delta', text: rest };
+      }
 
       let reply = guard.full;
       // Si solo se propusieron acciones y el modelo no dijo nada, se avisa al usuario
       if (!reply.trim() && proposed > 0) {
         reply = 'Necesito tu confirmación para seguir. 👆';
+        hasEmittedDelta = true;
         yield { type: 'delta', text: reply };
       }
       if (!reply.trim()) {
@@ -408,7 +521,7 @@ export class ChatService {
       const intelligence = saved.intelligence;
 
       // En segundo plano: no retrasa la respuesta ni puede romper el chat
-      void this.memory.maybeSummarize(pet.id, intelligence, provider, model, userId, mode);
+      void this.memory.maybeSummarize(pet.id, intelligence, provider, model, userId, mode, limits?.memoryExtractEvery);
 
       yield {
         type: 'done',
@@ -418,13 +531,30 @@ export class ChatService {
       };
     } catch (err: any) {
       if (signal?.aborted) return; // el cliente cerró la conexión
+      if (!hasEmittedDelta && quotaKey) {
+        await this.dailyQuota.refund(quotaKey).catch(() => undefined);
+        await this.managedBudget.recordFailure().catch(() => undefined);
+      }
       this.logger.warn(`Fallo del proveedor de IA: ${err?.message}`);
       yield { type: 'error', message: err?.message || 'Error del proveedor de IA' };
     } finally {
       await this.exclusiveLock.release('chat', userId, inflightLock.token);
       // Cuota: se contabiliza lo consumido aunque la respuesta se bloquee o falle a medias
       const used = tokens > 0 ? tokens : this.estimateTokens(messages, guard.full);
-      await this.usage.record(userId, used).catch((e) => this.logger.warn(`No se pudo registrar el uso: ${e?.message}`));
+      if (managed) {
+        // Sin `usage` del proveedor (stream cortado, etc.) se cobra la estimación sobre lo enviado
+        if (!costReported) {
+          costUsd = this.managedBudget.estimateCostUsd(used, 0);
+        }
+        await this.managedBudget.settle(reservedMicro, costUsd).catch(() => undefined);
+        if (slot) await this.managedBudget.releaseSlot(slot).catch(() => undefined);
+        if (hasEmittedDelta) {
+          await this.managedBudget.recordSuccess().catch(() => undefined);
+        }
+      }
+      await this.usage
+        .record(userId, used, costUsd, mode === 'managed' ? 'openrouter' : undefined)
+        .catch((e) => this.logger.warn(`No se pudo registrar el uso: ${e?.message}`));
     }
   }
 

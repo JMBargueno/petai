@@ -63,7 +63,7 @@ async function bootstrap() {
   initOtel(otelConfig);
   const logger = createNestLogger(env.NODE_ENV);
 
-  const app = await NestFactory.create(AppModule, { logger });
+  const app = await NestFactory.create(AppModule, { logger, rawBody: true });
   const configService = app.get(ConfigService);
 
   // Detrás de un proxy/balanceador hay que declarar cuántos saltos son de confianza para que req.ip

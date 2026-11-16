@@ -22,6 +22,13 @@ function toWire(m: ChatMessageInput) {
   return { role: m.role, content: m.content };
 }
 
+export interface OpenAiCompatibleOptions {
+  extraHeaders?: Record<string, string>;
+  extraBody?: Record<string, any>;
+  /** Corta la llamada si no llega ningún evento en este tiempo (IA gestionada: `firstTokenTimeoutSeconds`). */
+  firstTokenTimeoutMs?: number;
+}
+
 /**
  * Proveedor para cualquier API compatible con OpenAI Chat Completions:
  * OpenAI, Hermes Agent (API server), OpenRouter, Ollama…
@@ -33,6 +40,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     private readonly baseUrl: string,
     private readonly apiKey: string | null,
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly options?: OpenAiCompatibleOptions,
   ) {
     this.normalizedBaseUrl = baseUrl.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
   }
@@ -41,12 +49,35 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     return {
       'Content-Type': 'application/json',
       ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+      ...(this.options?.extraHeaders ?? {}),
     };
   }
 
   async *chat(messages: ChatMessageInput[], opts: ChatOptions): AsyncIterable<LlmEvent> {
-    const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    // Plazo total de la petición y, si se configura, plazo hasta el primer evento del stream
+    const firstToken = new AbortController();
+    const firstTokenMs = this.options?.firstTokenTimeoutMs;
+    const firstTokenTimer = firstTokenMs && firstTokenMs > 0 ? setTimeout(() => firstToken.abort(), firstTokenMs) : undefined;
+    const timeout = AbortSignal.any([AbortSignal.timeout(REQUEST_TIMEOUT_MS), firstToken.signal]);
     const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
+    try {
+      let first = true;
+      for await (const ev of this.chatStream(messages, opts, signal, timeout)) {
+        if (first && firstTokenTimer) clearTimeout(firstTokenTimer);
+        first = false;
+        yield ev;
+      }
+    } finally {
+      if (firstTokenTimer) clearTimeout(firstTokenTimer);
+    }
+  }
+
+  private async *chatStream(
+    messages: ChatMessageInput[],
+    opts: ChatOptions,
+    signal: AbortSignal,
+    timeout: AbortSignal,
+  ): AsyncIterable<LlmEvent> {
 
     const res = await this.fetchImpl(`${this.normalizedBaseUrl}/chat/completions`, {
       method: 'POST',
@@ -86,6 +117,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     return JSON.stringify({
         model: opts.model,
         messages: messages.map(toWire),
+        ...(this.options?.extraBody ?? {}),
         ...(opts.tools?.length
           ? {
               tools: opts.tools.map((t) => ({
@@ -118,7 +150,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   private async *parseStream(body: AsyncIterable<Uint8Array>): AsyncIterable<LlmEvent> {
     const decoder = new TextDecoder();
     let buffer = '';
-    let usage: { promptTokens?: number; completionTokens?: number } | undefined;
+    let usage: { promptTokens?: number; completionTokens?: number; costUsd?: number } | undefined;
     // Algunos modelos mezclan el razonamiento en el contenido con etiquetas <think>
     const splitter = new ThinkTagSplitter();
     const fromSplit = function* (part: SplitChunk): Generator<LlmEvent> {
@@ -177,6 +209,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
             usage = {
               promptTokens: json.usage.prompt_tokens,
               completionTokens: json.usage.completion_tokens,
+              ...(typeof json.usage.cost === 'number' && json.usage.cost >= 0 ? { costUsd: json.usage.cost } : {}),
             };
           }
         } catch {

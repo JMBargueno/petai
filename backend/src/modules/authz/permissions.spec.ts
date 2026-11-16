@@ -10,10 +10,12 @@ describe('hasPermission', () => {
       expect(hasPermission('admin', p)).toBe(true);
     }
     expect(hasPermission('admin', 'users:update')).toBe(false);
+    expect(hasPermission('admin', 'billing:manage')).toBe(false);
   });
 
   it('moderator solo consulta y modera', () => {
     expect(permissionsFor('moderator').sort()).toEqual(['admin:access', 'audit:read', 'mods:moderate', 'pets:read', 'users:read']);
+    expect(hasPermission('moderator', 'billing:manage')).toBe(false);
   });
 
   it('user no tiene permisos', () => {

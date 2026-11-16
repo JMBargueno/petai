@@ -26,7 +26,8 @@ export type LlmEvent =
   /** Razonamiento del modelo (reasoning_content o bloques <think>): nunca forma parte de la respuesta. */
   | { type: 'thinking'; text: string }
   | ({ type: 'tool_call' } & ToolCall)
-  | { type: 'done'; usage?: { promptTokens?: number; completionTokens?: number } };
+  // `costUsd`: coste real de la llamada si el proveedor lo informa (OpenRouter con `usage.include`)
+  | { type: 'done'; usage?: { promptTokens?: number; completionTokens?: number; costUsd?: number } };
 
 export interface ChatOptions {
   model: string;

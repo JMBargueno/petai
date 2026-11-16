@@ -22,6 +22,14 @@ export const routes: Routes = [
     loadComponent: () => import('./arena/arena').then((m) => m.Arena),
   },
   {
+    path: 'pro/ok',
+    loadComponent: () => import('./pro/pro-success').then((m) => m.ProSuccess),
+  },
+  {
+    path: 'pro/cancel',
+    loadComponent: () => import('./pro/pro-cancel').then((m) => m.ProCancel),
+  },
+  {
     // Formulario de contacto (llega a contact@pockai.world vía POST /v1/contact).
     path: 'contact',
     loadComponent: () => import('./contact/contact').then((m) => m.Contact),

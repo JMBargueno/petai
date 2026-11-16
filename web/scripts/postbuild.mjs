@@ -16,7 +16,7 @@ const SITE_URL = site.url.replace(/\/$/, '');
 const SITE_NAME = site.name;
 const LOCALES = site.locales;
 const ADMIN_LOCALE = 'es';
-const ADMIN_ROUTES = ['', 'login', 'resumen', 'precios', 'eventos', 'usuarios', 'invitaciones', 'pockais', 'registro'];
+const ADMIN_ROUTES = ['', 'login', 'resumen', 'precios', 'eventos', 'usuarios', 'invitaciones', 'pockais', 'facturacion', 'registro'];
 
 for (const locale of LOCALES) {
   if (!existsSync(join(out, locale, 'index.html'))) {

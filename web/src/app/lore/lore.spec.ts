@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Lore } from './lore';
+import { SITE_URL } from '../site.config';
 
 describe('Lore', () => {
   it('pinta el hero, el índice con los 9 anclajes y el selector de idioma', async () => {
@@ -24,7 +25,7 @@ describe('Lore', () => {
     );
     expect(types).toEqual(['Article', 'BreadcrumbList']);
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
-      'https://pockai.example/es/lore',
+      `${SITE_URL}/es/lore`,
     );
   });
 });

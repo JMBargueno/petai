@@ -28,10 +28,13 @@ model User {
   coins        Int            @default(100)
   gems         Int            @default(5)
   accountXp    Int            @default(0)
+  stripeCustomerId String?    @unique
+  emailVerifiedAt  DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
   refreshTokens  RefreshToken[]
+  subscriptions  Subscription[]
   deviceLinks    DeviceLink[]
   passwordResetTokens PasswordResetToken[]
   // Invitaciones de registro: códigos creados por este admin y el canje con el que se registró.
@@ -1395,3 +1398,51 @@ model GroupSession {
   @@index([hostId])
   @@index([status, expiresAt])
 }
+
+// Spec-34: IA Gestionada (Pockai AI) + Suscripción Pro
+model Subscription {
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source            String    // stripe | google_play
+  externalId        String    // sub_xxx (Stripe) | purchaseToken (Play)
+  productId         String    // price_xxx | pockai_pro_monthly
+  plan              String    @default("pro")
+  status            String    // active | trialing | past_due | canceled | expired | revoked
+  currentPeriodEnd  DateTime
+  cancelAtPeriodEnd Boolean   @default(false)
+  graceUntil        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([source, externalId])
+  @@index([userId, status])
+}
+
+/// Idempotencia y auditoría de eventos de pago (webhooks Stripe, RTDN Play).
+model BillingEvent {
+  id          String   @id @default(uuid())
+  source      String   // stripe | google_play
+  eventId     String   // evt_xxx | messageId de Pub/Sub
+  type        String
+  userId      String?
+  payloadHash String   // SHA-256; nunca se guarda el payload con datos de tarjeta
+  processedAt DateTime @default(now())
+
+  @@unique([source, eventId])
+}
+
+/// Configuración versionada de precios y límites de IA/facturación (solo superadmin).
+model BillingConfig {
+  id             String   @id @default(uuid())
+  version        Int      @unique
+  active         Boolean  @default(false)
+  data           Json     // validado con billing-config.schema.ts
+  stripePriceIds Json?    // { "usd": "price_…", "eur": "price_…" }
+  createdById    String
+  note           String?  // motivo del cambio
+  createdAt      DateTime @default(now())
+
+  @@index([active])
+}
+

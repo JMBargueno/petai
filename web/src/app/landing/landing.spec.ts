@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Landing } from './landing';
 import { FAQ, FEATURES } from './content';
+import { SITE_URL } from '../site.config';
 
 describe('Landing', () => {
   it('pinta el titular, las funciones y las especies del catálogo compartido', async () => {
@@ -62,7 +63,7 @@ describe('Landing', () => {
     await fixture.whenStable();
     const head = document.head;
 
-    expect(head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://pockai.example/es/');
+    expect(head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${SITE_URL}/es/`);
     const langs = [...head.querySelectorAll('link[rel="alternate"][hreflang]')].map((l) => l.getAttribute('hreflang'));
     expect(langs).toEqual(['es', 'en', 'x-default']);
     expect(head.querySelector('meta[name="twitter:card"]')?.getAttribute('content')).toBe('summary_large_image');

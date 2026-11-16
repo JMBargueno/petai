@@ -86,6 +86,36 @@ export const envSchema = z.object({
   // PAT de GitHub (solo lectura de Contents) para leer los releases del repo privado. Sin él no hay updates.
   GITHUB_RELEASES_TOKEN: z.string().optional(),
   GITHUB_RELEASES_REPO: z.string().default('JMBargueno/petai'),
+  // ---- Spec-34: Facturación e IA Gestionada ----
+  OPENROUTER_API_KEY: z.string().optional(),
+  // Endpoint OpenAI-compatible de la IA gestionada (por defecto OpenRouter). Los e2e lo apuntan a un LLM simulado.
+  OPENROUTER_BASE_URL: z.string().url().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRODUCT_PRO: z.string().optional(),
+  // Respaldo: Price ID fijo de Pro (price_...). Con STRIPE_PRODUCT_PRO el precio lo gestiona el panel
+  // (se crea un Price nuevo en Stripe al cambiarlo) y esta variable solo se usa si no hay ninguno.
+  STRIPE_PRICE_PRO: z.string().optional(),
+  // Google Play Billing: cuenta de servicio (JSON o JSON en base64) con acceso a la Play Developer API.
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  GOOGLE_PLAY_PACKAGE_NAME: z.string().optional(),
+  GOOGLE_PLAY_PRODUCT_IDS: z.string().default('pockai_pro_monthly'),
+  // RTDN (push de Pub/Sub autenticado): audiencia del token OIDC y cuenta de servicio emisora.
+  GOOGLE_RTDN_AUDIENCE: z.string().optional(),
+  GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
+  // Solo desarrollo/tests: acepta webhooks de Stripe sin firma y compras de Play sin verificar.
+  // Prohibido en producción (productionProblems).
+  BILLING_MOCK_ENABLED: z.enum(['true', 'false']).default('false'),
+  PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
+  AI_MANAGED_ENABLED: z.enum(['true', 'false']).default('true'),
+  AI_MANAGED_MODEL: z.string().default('google/gemini-2.5-flash-lite'),
+  AI_MANAGED_FALLBACK_MODELS: z.string().default('meta-llama/llama-3.3-70b-instruct,deepseek/deepseek-chat'),
+  AI_MANAGED_DAILY_BUDGET_USD: z.coerce.number().min(0).default(10),
+  AI_MANAGED_MAX_CONCURRENCY: positiveInt(200),
+  AI_PLAN_FREE_DAILY: positiveInt(15),
+  AI_PLAN_PRO_DAILY: positiveInt(200),
+  AI_MONTHLY_TOKEN_QUOTA_FREE: z.coerce.number().int().min(0).default(300000),
+  AI_MONTHLY_TOKEN_QUOTA_PRO: z.coerce.number().int().min(0).default(3000000),
   // ---- Correo (recuperación de contraseña, notificaciones y formulario de contacto) ----
   // Sin SMTP_HOST los correos solo se escriben en el log (transporte de consola).
   // La cuenta SMTP es la del buzón de SISTEMA (noreply@): es el remitente de todo lo que envía el backend.
@@ -147,6 +177,18 @@ export function productionProblems(env: EnvConfig): string[] {
   }
   if (env.RATE_LIMIT_DISABLED === 'true') {
     problems.push('RATE_LIMIT_DISABLED=true no puede usarse en producción');
+  }
+  if (env.BILLING_MOCK_ENABLED === 'true') {
+    problems.push('BILLING_MOCK_ENABLED=true acepta pagos sin verificar y no puede usarse en producción');
+  }
+  if (env.STRIPE_SECRET_KEY && !env.STRIPE_WEBHOOK_SECRET) {
+    problems.push('STRIPE_WEBHOOK_SECRET es obligatorio cuando STRIPE_SECRET_KEY está definido');
+  }
+  if (env.STRIPE_SECRET_KEY && !env.STRIPE_PRODUCT_PRO && !env.STRIPE_PRICE_PRO) {
+    problems.push('STRIPE_PRODUCT_PRO (precio gestionado desde el panel) o STRIPE_PRICE_PRO es obligatorio con STRIPE_SECRET_KEY');
+  }
+  if (env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON && (!env.GOOGLE_RTDN_AUDIENCE || !env.GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL)) {
+    problems.push('GOOGLE_RTDN_AUDIENCE y GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL son obligatorios con Google Play activo');
   }
   return problems;
 }

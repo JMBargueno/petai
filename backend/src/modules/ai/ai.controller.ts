@@ -10,6 +10,8 @@ import { MemoryService } from './memory.service';
 import { AgentService } from './agent.service';
 import { UsageService } from './usage.service';
 import { APP_CATEGORIES } from './client-context';
+import { EntitlementService } from '../billing/entitlement.service';
+import { DailyQuotaService } from '../billing/daily-quota.service';
 
 /** Contexto en vivo del escritorio (opcional). Solo listas cerradas: nunca títulos de ventana. */
 const CLIENT_CONTEXT_SCHEMA: SchemaObject = {
@@ -40,6 +42,8 @@ export class AiController {
     private readonly memory: MemoryService,
     private readonly agent: AgentService,
     private readonly usage: UsageService,
+    private readonly entitlements: EntitlementService,
+    private readonly dailyQuota: DailyQuotaService,
   ) {}
 
   @Get('ai/config')
@@ -75,7 +79,16 @@ export class AiController {
   @ApiOperation({ summary: 'Consumo de tokens de IA del mes en curso y cuota' })
   async getUsage(@CurrentUser() user: any) {
     const cfg = await this.aiConfig.getView(user.id);
-    return this.usage.summary(user.id, cfg.configured ? (cfg as any).mode : 'byok');
+    const mode = cfg.configured ? (cfg as any).mode : 'managed';
+    const plan = await this.entitlements.planFor(user.id);
+    const baseSummary = await this.usage.summary(user.id, mode);
+    const daily = await this.dailyQuota.peek(user.id, plan);
+    return {
+      ...baseSummary,
+      plan,
+      mode,
+      daily,
+    };
   }
 
   @Post('ai/config/test')
