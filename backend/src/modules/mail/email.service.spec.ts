@@ -34,12 +34,13 @@ describe('email.service', () => {
 
   it('el mensaje de contacto va al buzón con Reply-To del remitente y asunto en una línea', async () => {
     const sender = new SmtpEmailSender(
-      config({ SMTP_HOST: 'h', MAIL_FROM: 'Pockai <contact@pockai.world>', CONTACT_TO: 'contact@pockai.world' }),
+      config({ SMTP_HOST: 'h', CONTACT_TO: 'contact@pockai.world' }),
     );
     await sender.sendContactMessage({ name: 'Ana', email: 'ana@example.com', subject: 'a\r\nb', message: 'hola', ip: '1.2.3.4' });
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: 'Pockai <contact@pockai.world>',
+        // Lo envía el buzón de sistema; contact@ solo recibe.
+        from: 'Pockai <noreply@pockai.world>',
         to: 'contact@pockai.world',
         replyTo: { name: 'Ana', address: 'ana@example.com' },
         subject: '[Contacto] a b',
@@ -49,9 +50,11 @@ describe('email.service', () => {
   });
 
   it('el código de recuperación va al usuario', async () => {
-    const sender = new SmtpEmailSender(config({ SMTP_HOST: 'h' }));
+    const sender = new SmtpEmailSender(config({ SMTP_HOST: 'h', MAIL_REPLY_TO: 'contact@pockai.world' }));
     await sender.sendPasswordResetCode('jugador@example.com', '123456', 15);
     const mail = sendMail.mock.calls[0][0];
+    expect(mail.from).toBe('Pockai <noreply@pockai.world>');
+    expect(mail.replyTo).toBe('contact@pockai.world');
     expect(mail.to).toBe('jugador@example.com');
     expect(mail.text).toContain('123456');
   });

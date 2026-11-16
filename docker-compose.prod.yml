@@ -58,7 +58,8 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-true}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      MAIL_FROM: "${MAIL_FROM:-Pockai <contact@pockai.world>}"
+      MAIL_FROM: "${MAIL_FROM:-Pockai <noreply@pockai.world>}"
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-contact@pockai.world}
       CONTACT_TO: ${CONTACT_TO:-contact@pockai.world}
       # ---- Observabilidad (OpenTelemetry) ----
       OTEL_SERVICE_NAME: "petai-backend"

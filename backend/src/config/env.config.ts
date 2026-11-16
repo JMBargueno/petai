@@ -86,16 +86,20 @@ export const envSchema = z.object({
   // PAT de GitHub (solo lectura de Contents) para leer los releases del repo privado. Sin él no hay updates.
   GITHUB_RELEASES_TOKEN: z.string().optional(),
   GITHUB_RELEASES_REPO: z.string().default('JMBargueno/petai'),
-  // ---- Correo (recuperación de contraseña y formulario de contacto) ----
+  // ---- Correo (recuperación de contraseña, notificaciones y formulario de contacto) ----
   // Sin SMTP_HOST los correos solo se escriben en el log (transporte de consola).
+  // La cuenta SMTP es la del buzón de SISTEMA (noreply@): es el remitente de todo lo que envía el backend.
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(465),
   // true = TLS implícito (465); false = STARTTLS (587).
   SMTP_SECURE: z.enum(['true', 'false']).default('true'),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  MAIL_FROM: z.string().default('Pockai <contact@pockai.world>'),
-  // Buzón que recibe los mensajes del formulario de contacto.
+  // Remitente de sistema (debe coincidir con SMTP_USER o ser un alias suyo en mailcow).
+  MAIL_FROM: z.string().default('Pockai <noreply@pockai.world>'),
+  // A dónde van las respuestas de los usuarios a los correos de sistema (vacío = sin Reply-To).
+  MAIL_REPLY_TO: z.string().default('contact@pockai.world'),
+  // Buzón que RECIBE los mensajes del formulario de contacto (no se usa para enviar).
   CONTACT_TO: z.string().default('contact@pockai.world'),
 });
 

@@ -61,6 +61,7 @@ export class ConsoleEmailSender implements EmailSender {
 export class SmtpEmailSender implements EmailSender {
   private readonly transporter: Transporter;
   private readonly from: string;
+  private readonly replyTo: string | undefined;
   private readonly contactTo: string;
 
   constructor(config: ConfigService) {
@@ -72,13 +73,17 @@ export class SmtpEmailSender implements EmailSender {
         ? { user: config.get<string>('SMTP_USER'), pass: config.get<string>('SMTP_PASS') }
         : undefined,
     });
-    this.from = config.get<string>('MAIL_FROM') ?? 'Pockai <contact@pockai.world>';
+    // Todo sale desde el buzón de sistema (noreply@); contact@ solo recibe.
+    this.from = config.get<string>('MAIL_FROM') ?? 'Pockai <noreply@pockai.world>';
+    this.replyTo = config.get<string>('MAIL_REPLY_TO') || undefined;
     this.contactTo = config.get<string>('CONTACT_TO') ?? 'contact@pockai.world';
   }
 
   async sendPasswordResetCode(email: string, code: string, expiresInMinutes: number): Promise<void> {
     await this.transporter.sendMail({
       from: this.from,
+      // Si el usuario responde, llega a soporte en vez de perderse en noreply@.
+      replyTo: this.replyTo,
       to: email,
       subject: 'Tu código de recuperación de Pockai',
       text: resetBody(code, expiresInMinutes),
