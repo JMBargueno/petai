@@ -30,7 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.petai.app.AppUiState
+import androidx.compose.ui.platform.LocalUriHandler
 import com.petai.app.BuildConfig
+
+/** Buzón de contacto público (el mismo que recibe el formulario de la web). */
+const val CONTACT_EMAIL = "contact@pockai.world"
 
 @Composable
 fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: String, onResult: (String?) -> Unit) -> Unit) {
@@ -39,6 +43,7 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
     var linkMsg by remember { mutableStateOf<String?>(null) }
     var linkOk by remember { mutableStateOf(false) }
     val user = state.user
+    val uriHandler = LocalUriHandler.current
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         ScreenTitle("Tu cuenta", eyebrow = "Perfil")
@@ -75,6 +80,17 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
                     onClick = { onLinkDevice(code) { err -> linkOk = err == null; linkMsg = err ?: "Escritorio vinculado"; if (err == null) code = "" } },
                     enabled = code.length == 6,
                 )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        PockaiCard(Modifier.fillMaxWidth()) {
+            Column {
+                Text("Contacto", style = MaterialTheme.typography.titleMedium)
+                Text("¿Dudas, ideas o algún fallo? Escríbenos y te responderemos por correo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
+                TextButton(onClick = { runCatching { uriHandler.openUri("mailto:$CONTACT_EMAIL") } }) {
+                    Text(CONTACT_EMAIL)
+                }
             }
         }
         Spacer(Modifier.height(16.dp))

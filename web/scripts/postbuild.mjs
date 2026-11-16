@@ -85,7 +85,7 @@ writeFileSync(
 );
 
 // ── sitemap.xml ── (solo rutas públicas e indexables; hreflang completo con x-default)
-const SITEMAP_ROUTES = ['', 'pockais', 'arena', 'lore'];
+const SITEMAP_ROUTES = ['', 'pockais', 'arena', 'lore', 'contact'];
 let lastmod = new Date().toISOString().slice(0, 10);
 try {
   lastmod = execFileSync('git', ['log', '-1', '--format=%cs', '--', 'src'], { cwd: web, encoding: 'utf8' }).trim() || lastmod;
@@ -121,6 +121,7 @@ writeFileSync(
 - [Pockais](${routeUrl('es', 'pockais')}): especies, probabilidades reales de cada rareza, variante shiny y patrones.
 - [Arena](${routeUrl('es', 'arena')}): combates asíncronos, ventajas elementales, estrategias, ligas y habilidades.
 - [El Éter Digital](${routeUrl('es', 'lore')}): el lore del juego: origen de los huevos, rarezas, elementos, despertar de la IA y Coliseo.
+- [Contacto](${routeUrl('es', 'contact')}): formulario de contacto y correo contact@pockai.world.
 
 ## English
 
@@ -128,6 +129,7 @@ writeFileSync(
 - [Pockais](${routeUrl('en', 'pockais')}): species, real odds for each rarity, the shiny variant and patterns.
 - [Arena](${routeUrl('en', 'arena')}): asynchronous battles, elemental advantages, strategies, leagues and skills.
 - [The Digital Aether](${routeUrl('en', 'lore')}): the game's lore: where eggs come from, rarities, elements, AI awakening and the Colosseum.
+- [Contact](${routeUrl('en', 'contact')}): contact form and the contact@pockai.world email.
 
 ## Optional
 

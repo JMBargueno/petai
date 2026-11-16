@@ -51,6 +51,16 @@ services:
       # ---- Updater de la app de escritorio (proxy de los releases del repo privado) ----
       GITHUB_RELEASES_TOKEN: ${GITHUB_RELEASES_TOKEN:-}
       GITHUB_RELEASES_REPO: ${GITHUB_RELEASES_REPO:-JMBargueno/petai}
+      # ---- Correo (recuperación de contraseña y formulario de contacto) ----
+      # Sin SMTP_HOST los correos solo van al log. SMTP_PASS vive solo en el .env del servidor.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: "${MAIL_FROM:-Pockai <noreply@pockai.world>}"
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-contact@pockai.world}
+      CONTACT_TO: ${CONTACT_TO:-contact@pockai.world}
       # ---- Observabilidad (OpenTelemetry) ----
       OTEL_SERVICE_NAME: "petai-backend"
       OTEL_SERVICE_VERSION: "0.1.0"

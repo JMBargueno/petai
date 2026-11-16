@@ -32,6 +32,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `CORS_ORIGINS` | no | Orígenes de navegador permitidos. Los clientes nativos y el webview de Tauri no necesitan más. |
 | `SWAGGER_ENABLED` | no | Por defecto `false` en producción. |
 | `RATE_LIMIT_PER_MINUTE` | no | Peticiones por minuto por usuario autenticado o por IP (300 por defecto). Súbelo si muchos usuarios comparten IP sin iniciar sesión. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | recomendada | Transporte de correo (recuperación de contraseña y formulario de contacto). Sin `SMTP_HOST` los correos solo se escriben en el log. |
+| `MAIL_FROM`, `MAIL_REPLY_TO`, `CONTACT_TO` | no | Remitente de sistema (`Pockai <noreply@pockai.world>`, debe ser `SMTP_USER` o un alias suyo), a dónde van las respuestas de los usuarios (`contact@pockai.world`) y buzón que recibe el formulario de contacto (`contact@pockai.world`). |
 | `AI_ALLOW_INSECURE_URLS`, `AUTH_RATE_LIMIT_DISABLED`, `RATE_LIMIT_DISABLED` | **nunca** | El arranque falla si están activas en producción. |
 
 Los límites de intentos (`AUTH_*`), el límite global (`RATE_LIMIT_PER_MINUTE`) y las cuotas de IA (`AI_MONTHLY_TOKEN_QUOTA_*`) tienen valores por defecto
@@ -271,6 +273,16 @@ Despliegue real (15-11-2026, migrado a `pockai.world` el 16-11) del stack sobre 
   `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `REDIS_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`.
   `OPENAI_API_KEY` intencionadamente vacía: el chat de IA degrada sin ella; para
   activarla se añade al `.env` y `docker compose ... up -d backend` (sin migraciones).
+- **Correo**: mailcow (`mail.jmbargueno.com`; MX, SPF, DKIM selector `dkim` y DMARC
+  `p=none` en la zona CF de `pockai.world`) con dos buzones:
+  - `noreply@pockai.world` — **sistema**: es la cuenta SMTP del backend y el remitente de
+    todo lo que envía (códigos de recuperación, notificaciones y el reenvío del formulario).
+  - `contact@pockai.world` — **contacto**: solo recibe (formulario y respuestas de los
+    usuarios a los correos de sistema, vía `MAIL_REPLY_TO`). El backend no usa su contraseña.
+
+  El `.env` lleva `SMTP_HOST=mail.jmbargueno.com`, `SMTP_PORT=465`,
+  `SMTP_USER=noreply@pockai.world` y `SMTP_PASS` (la contraseña de noreply@; nunca en el repo). Lo usan la recuperación de
+  contraseña y `POST /v1/contact` (formulario de la web).
 - **Backups**: `~/.hermes/scripts/petai-backup.sh` (cron `0 3 * * *`) →
   `~/backups/petai/YYYY-MM-DD/{pg-dumpall.sql.gz, redis.rdb.gz}`. El dumpall va con
   `--clean --if-exists` y se restaura con `pg_restore`/`psql` sobre un PostgreSQL 17.

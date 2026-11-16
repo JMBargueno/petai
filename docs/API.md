@@ -28,6 +28,9 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `POST /auth/device/confirm` `{ code }` (con sesión): vincula el código mostrado en otro dispositivo. 10 intentos por IP y por usuario cada 15 min; código inexistente o caducado → 404; código ya confirmado (por cualquier cuenta) → 409: la primera confirmación es la que vale.
 - `POST /auth/device/poll` `{ pollToken }` (sin sesión): `{ status: "pending" }` o, una sola vez, `{ status: "confirmed", accessToken, refreshToken, user }`. 120 por IP y minuto. Estado en Redis con caducidad de 5 min (respaldo en memoria si Redis no responde).
 
+### 2.1b Contacto (`/contact`)
+- `POST /contact` `{ name, email, subject, message, website? }` (sin sesión): envía el mensaje al buzón de contacto (`CONTACT_TO`, por defecto `contact@pockai.world`) con `Reply-To` del remitente. `name` 1–100, `subject` 1–150, `message` 10–5000 caracteres; `email` válido. `website` es un honeypot: si llega relleno se responde 204 sin enviar nada. Respuestas: 204 aceptado, 400 datos no válidos, 429 (5 mensajes por IP y 5 por email cada hora), 503 si el SMTP falla.
+
 ### 2.2 Usuario y Perfil (`/users` y `/me`)
 - `GET /me`: Obtener perfil del usuario actual (monedas, gemas, nivel de cuenta, zona horaria).
 - `PATCH /me`: Actualizar preferencias (zona horaria, ajustes de notificación).
