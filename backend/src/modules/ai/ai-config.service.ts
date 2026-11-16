@@ -71,6 +71,8 @@ export class AiConfigService {
     if (!baseUrl) {
       throw new BadRequestException('baseUrl es obligatoria para este proveedor');
     }
+    // Tolerancia: si el usuario pegó la URL de completions completa, se extrae la URL base
+    baseUrl = baseUrl.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
     baseUrl = await assertSafeBaseUrl(baseUrl, { allowInsecure: this.allowInsecure });
 
     const model = body.model?.trim() || existing?.model || (provider === 'openai' ? OPENAI_DEFAULT_MODEL : '');

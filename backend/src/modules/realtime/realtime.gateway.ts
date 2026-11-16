@@ -161,4 +161,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       this.server.to(`user:${userId}`).emit('pet:action', event);
     }
   }
+
+  /** Aviso global en tiempo real: nueva versión de escritorio publicada en el servidor */
+  emitDesktopUpdateAvailable(version: string, notes?: string) {
+    if (this.server) {
+      this.server.emit('desktop:update_available', { version, notes });
+    }
+  }
 }

@@ -120,4 +120,38 @@ describe('OpenAiCompatibleProvider', () => {
       expect(body.tool_choice).toBeUndefined();
     });
   });
+
+  describe('soporte de modelos de razonamiento y tolerancia de URL', () => {
+    it('normaliza la URL si el usuario pegó el endpoint completo con /chat/completions', async () => {
+      const fetchMock = jest.fn().mockResolvedValue(sse(['data: [DONE]\n']));
+      await drain(new OpenAiCompatibleProvider('https://api.nodeclub.ai/v1/chat/completions', 'k', fetchMock as any));
+      const [url] = fetchMock.mock.calls[0];
+      expect(url).toBe('https://api.nodeclub.ai/v1/chat/completions');
+    });
+
+    it('emite delta a partir de reasoning_content para modelos de razonamiento (Qwen/DeepSeek)', async () => {
+      const fetchMock = jest.fn().mockResolvedValue(
+        sse([
+          `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: 'Pensando la respuesta...' } }] })}\n`,
+          delta('¡Hola!'),
+          'data: [DONE]\n',
+        ]),
+      );
+      const out = await drain(new OpenAiCompatibleProvider('https://api.nodeclub.ai/v1', 'k', fetchMock as any), 'qwen3.8-27b');
+      const deltas = out.filter((e) => e.type === 'delta').map((e) => e.text);
+      expect(deltas).toContain('Pensando la respuesta...');
+      expect(deltas).toContain('¡Hola!');
+    });
+
+    it('test() pasa con éxito si el modelo responde con tokens de razonamiento', async () => {
+      const fetchMock = jest.fn().mockResolvedValue(
+        sse([
+          `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: 'ok' } }], usage: { prompt_tokens: 3, completion_tokens: 2 } })}\n`,
+          'data: [DONE]\n',
+        ]),
+      );
+      const p = new OpenAiCompatibleProvider('https://api.nodeclub.ai/v1', 'k', fetchMock as any);
+      await expect(p.test('qwen3.8-27b')).resolves.toBeUndefined();
+    });
+  });
 });
