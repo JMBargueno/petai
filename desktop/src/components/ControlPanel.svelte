@@ -466,35 +466,48 @@ import VisitTab from './VisitTab.svelte';
               </div>
 
               {#if pet.inHabitat}
-                <div class="card habitat-home-card">
+                <div class="habitat-home-card">
                   <div
                     class="habitat-home-scene"
+                    class:asleep={pet.sleeping}
                     role="button"
                     tabindex="0"
                     draggable="true"
                     on:dragstart={handleDragStartFromPanel}
                     on:keydown={(e) => e.key === 'Enter' && handleToggleHabitat(false)}
+                    aria-label="Casa de {pet.nickname || pet.species?.name}. Arrastra hacia el escritorio o pulsa Enter para sacarlo"
                     title="Arrastra hacia el escritorio o pulsa Enter para sacar a {pet.nickname || pet.species?.name}"
                   >
+                    <!-- Pared: cartel, ventana y cuadro -->
+                    <span class="home-sign">Casa de {pet.nickname || pet.species?.name}</span>
+                    <span class="home-window" aria-hidden="true"><i></i></span>
+                    <span class="home-frame" aria-hidden="true">🌿</span>
+                    <!-- Suelo de madera con alfombra -->
+                    <span class="home-floor" aria-hidden="true"></span>
+                    <span class="home-rug" aria-hidden="true"></span>
+
                     <div class="habitat-home-stage">
-                      <PetMiniAvatar {pet} size={88} />
+                      <span class="home-pet-shadow" aria-hidden="true"></span>
+                      <div class="home-pet">
+                        <PetMiniAvatar {pet} size={104} interactive={false} />
+                      </div>
+                      <span class="home-mood" aria-hidden="true">{pet.sleeping ? 'z' : '♥'}</span>
                     </div>
                     <span class="habitat-home-draghint">⇄ Arrastra fuera para liberar</span>
                   </div>
                   <div class="habitat-home-details">
                     <div class="habitat-home-header">
-                      <strong class="habitat-home-title">Refugio acogedor</strong>
-                      <span class="habitat-home-status">Seguro dentro del panel</span>
+                      <span class="habitat-home-status" class:asleep={pet.sleeping}>
+                        {#if pet.sleeping}<Moon size={12} /> Durmiendo en casa{:else}<Home size={12} /> Descansando en casa{/if}
+                      </span>
                     </div>
-                    <p class="subtitle habitat-home-desc">
-                      Tu Pockai descansa plácidamente en su casa. Mientras permanezca aquí no paseará por tu escritorio ni sobre tus ventanas.
-                    </p>
+                    <p class="habitat-home-desc">No paseará por tu escritorio mientras esté dentro.</p>
                     <div class="habitat-home-actions">
                       <button class="btn btn--sm btn--primary" on:click={() => handleToggleHabitat(false)}>
                         <ExternalLink size={14} /> Sacar al escritorio
                       </button>
                       <button class="btn btn--sm btn--ghost" on:click={() => go('pet', 'habitat')}>
-                        <Home size={14} /> Ver Hábitat
+                        <Home size={14} /> Decorar casa
                       </button>
                     </div>
                   </div>
@@ -938,84 +951,221 @@ import VisitTab from './VisitTab.svelte';
     border: 1px solid var(--color-carbon);
   }
 
+  /* --- Inicio con el Pockai en casa: una "ventana" a su salita --- */
   .habitat-home-card {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 14px;
-    padding: 12px;
-    background:
-      linear-gradient(180deg, rgba(255, 230, 160, 0.22) 0%, rgba(200, 240, 220, 0.15) 100%),
-      var(--surface);
-    border: 1.5px solid var(--color-carbon);
-    border-radius: var(--radius-2xl);
-    box-shadow: 2px 3px 0 var(--color-carbon);
+    padding: 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-cards);
+    box-shadow: var(--shadow-pop);
   }
   .habitat-home-scene {
+    /* La escena es una isla de tono: colores cálidos fijos en claro y oscuro */
+    color-scheme: light;
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 120px;
-    padding: 12px;
-    border-radius: var(--radius-xl);
+    height: 168px;
+    border-radius: var(--radius-2xl);
+    border: 1.5px solid var(--color-carbon);
     background:
-      linear-gradient(180deg, #b8e2f8 0%, #e0f2fe 55%, #c8e6c9 56%, #a5d6a7 100%);
-    border: 1px dashed var(--color-carbon);
+      radial-gradient(70% 60% at 50% 30%, rgb(255 236 179 / 0.9), transparent 70%),
+      repeating-linear-gradient(90deg, transparent 0 22px, rgb(160 110 60 / 0.07) 22px 24px),
+      linear-gradient(180deg, #fff3d6 0%, #ffe3b0 100%);
     cursor: grab;
     user-select: none;
     overflow: hidden;
+    transition: filter var(--dur-2) var(--ease-out);
   }
   .habitat-home-scene:active {
     cursor: grabbing;
   }
+  .habitat-home-scene.asleep {
+    background:
+      radial-gradient(70% 60% at 50% 30%, rgb(140 130 220 / 0.55), transparent 70%),
+      repeating-linear-gradient(90deg, transparent 0 22px, rgb(30 20 80 / 0.12) 22px 24px),
+      linear-gradient(180deg, #3b3570 0%, #2a2552 100%);
+  }
+  .home-sign {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    max-width: 60%;
+    padding: 3px 10px;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--color-carbon);
+    background: var(--color-sunburst);
+    border: 1.5px solid var(--color-carbon);
+    border-radius: var(--radius-pills);
+    box-shadow: 2px 2px 0 var(--color-carbon);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .home-window {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 46px;
+    height: 46px;
+    border: 3px solid #fffaf0;
+    outline: 1.5px solid var(--color-carbon);
+    border-radius: 10px;
+    background: linear-gradient(180deg, #8fd0ff 0%, #dceeff 100%);
+    overflow: hidden;
+  }
+  .home-window i {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, transparent calc(50% - 1.5px), #fffaf0 calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+      linear-gradient(0deg, transparent calc(50% - 1.5px), #fffaf0 calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px));
+  }
+  .habitat-home-scene.asleep .home-window {
+    background: radial-gradient(circle at 70% 30%, #fff6c8 0 5px, transparent 6px), linear-gradient(180deg, #1b1846 0%, #3a2f7a 100%);
+  }
+  .home-frame {
+    position: absolute;
+    top: 50px;
+    left: 18px;
+    font-size: 20px;
+    opacity: 0.85;
+  }
+  .home-floor {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 46px;
+    border-top: 1.5px solid var(--color-carbon);
+    background:
+      repeating-linear-gradient(90deg, transparent 0 38px, rgb(0 0 0 / 0.12) 38px 40px),
+      linear-gradient(180deg, #c98a4b 0%, #a86a33 100%);
+  }
+  .habitat-home-scene.asleep .home-floor {
+    background:
+      repeating-linear-gradient(90deg, transparent 0 38px, rgb(0 0 0 / 0.18) 38px 40px),
+      linear-gradient(180deg, #6b4a2c 0%, #4f361f 100%);
+  }
+  .home-rug {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    width: 150px;
+    height: 26px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(closest-side, #ffb3c7 0 55%, #ff8fab 56% 75%, #ffb3c7 76%);
+    border: 1.5px solid rgb(11 10 20 / 0.35);
+  }
   .habitat-home-stage {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
     display: flex;
-    align-items: center;
     justify-content: center;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+  }
+  .home-pet {
+    position: relative;
+    z-index: 1;
+    transform-origin: 50% 100%;
+    animation: homeBreathe 3.2s ease-in-out infinite;
+  }
+  .home-pet-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    width: 64px;
+    height: 12px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: rgb(11 10 20 / 0.28);
+    filter: blur(1px);
+  }
+  .home-mood {
+    position: absolute;
+    top: 4px;
+    right: -6px;
+    z-index: 2;
+    font-family: var(--font-display);
+    font-size: 16px;
+    color: #ff5c8a;
+    animation: homeFloat 2.6s ease-in-out infinite;
+  }
+  .habitat-home-scene.asleep .home-mood {
+    color: #e9ccff;
+  }
+  @keyframes homeBreathe {
+    0%, 100% { transform: scale(1, 1); }
+    50% { transform: scale(1.03, 0.97); }
+  }
+  @keyframes homeFloat {
+    0% { transform: translateY(6px); opacity: 0; }
+    30% { opacity: 1; }
+    100% { transform: translateY(-14px); opacity: 0; }
   }
   .habitat-home-draghint {
     position: absolute;
-    bottom: 6px;
+    right: 8px;
+    bottom: 8px;
+    z-index: 2;
     font-size: 10px;
     font-weight: 700;
     color: var(--color-carbon);
-    background: rgba(255, 255, 255, 0.75);
+    background: rgb(255 255 255 / 0.8);
     padding: 2px 8px;
     border-radius: var(--radius-pills);
     pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-1) ease;
+  }
+  .habitat-home-scene:hover .habitat-home-draghint,
+  .habitat-home-scene:focus-visible .habitat-home-draghint {
+    opacity: 1;
   }
   .habitat-home-details {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    padding: 0 4px 2px;
   }
   .habitat-home-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     gap: 8px;
   }
-  .habitat-home-title {
-    font-size: 13px;
-    font-weight: 800;
-  }
   .habitat-home-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 11px;
     font-weight: 700;
-    color: var(--color-mint-pop);
+    padding: 3px 9px;
+    border-radius: var(--radius-pills);
+    color: var(--on-color);
+    background: var(--color-mint-pop);
+    border: 1px solid var(--color-carbon);
+  }
+  .habitat-home-status.asleep {
+    background: var(--color-lavender);
   }
   .habitat-home-desc {
-    font-size: 11.5px;
+    font-size: 12px;
     line-height: 1.35;
     margin: 0;
+    color: var(--ink-muted);
   }
   .habitat-home-actions {
     display: flex;
     gap: 8px;
-    margin-top: 4px;
+    margin-top: 2px;
   }
   .pet-title {
     font-family: var(--font-display);

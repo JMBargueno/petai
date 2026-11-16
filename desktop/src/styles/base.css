@@ -120,6 +120,12 @@ textarea {
   color: var(--on-color);
   border-color: var(--on-color);
 }
+.btn--sm {
+  min-height: 30px;
+  padding: 5px 12px;
+  gap: 6px;
+  font-size: 12px;
+}
 .btn--icon {
   padding: 8px;
   min-width: 36px;
