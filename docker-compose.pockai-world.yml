@@ -4,8 +4,8 @@
 #
 # Uso: docker compose -f docker-compose.prod.yml -f docker-compose.pockai-world.yml up -d
 #
-# LETSENCRYPT_HOST se añade al gateway cuando el dominio resuelva y se emita el cert
-# LE (mismo volumen nginx_certs que el resto; watchdog ~/.hermes/scripts/pockai-cert-renew.sh).
+# TLS: LETSENCRYPT_HOST emite el cert en el volumen nginx_certs (mismo que el
+# resto de la red); watchdog de renovacion: ~/.hermes/scripts/pockai-cert-renew.sh.
 services:
   api-world-gw:
     image: nginx:alpine
@@ -19,6 +19,7 @@ services:
       VIRTUAL_HOST: game-api.pockai.world
       VIRTUAL_PORT: "80"
       VIRTUAL_WEBSOCKETS: "true" # el vhost generado por nginx-proxy necesita upgrade para socket.io
+      LETSENCRYPT_HOST: game-api.pockai.world
       LETSENCRYPT_EMAIL: contact@jmbargueno.com
     networks:
       # default: red del proyecto (llega a petai-backend-1:3000)
