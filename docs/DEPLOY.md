@@ -279,3 +279,32 @@ repositorio en `/home/jmbargueno/scratch/petai`:
   - `shared/game-data/*.json` se `require()`a desde `dist/src/modules/<x>/` hacia
     `/app/backend/shared/`; el Dockerfile copia `shared` también a `/app/backend/shared`
     (antes solo iba a `/app/shared/`, lo que daba `MODULE_NOT_FOUND` al arrancar).
+- **pockai.world (16-11-2026)**: dominios canónicos de la web y la API pasan a
+  `pockai.world` (zone CF `256697893672517ce1ec13a65743d22e`). Los dominios antiguos
+  (`pockai.jmbargueno.com` web, `api-pockai.jmbargueno.com` API) siguen sirviendo los
+  mismos servicios como alias — los clientes de escritorio instalados se
+  auto-actualizan desde el endpoint antiguo (embebido en `tauri.conf.json`), así que
+  el dominio de la API no puede retirarse sin publicar una release de escritorio.
+  **nginx-proxy NO soporta `VIRTUAL_HOST` multi-host** (genera
+  `upstream a.com b.com` y la config deja de validar; el proxy mantiene la config vieja
+  pero ningún reload posterior funciona): un contenedor por dominio.
+  - **Web**: segundo contenedor `pockai-world-web` (compose `~/pockai-web/docker-compose.yml`,
+    servicio `world`, puerto debug 8182) montando el mismo `dist/` que `pockai-web`.
+    Vhost interno `/data/compose/30/nginx/vhost.d/pockai.world.conf`.
+  - **API**: overlay `docker-compose.pockai-world.yml` (commiteado) añade `api-world-gw`
+    (`pockai-world-api`, nginx:alpine, puerto debug 8183, redes `default` + `webproxy`):
+    reverse proxy a `petai-backend-1:3000` con upgrade socket.io y `resolver 127.0.0.11`
+    (re-resuelve el nombre del backend y sobrevive a sus redeploys). Config:
+    `/data/compose/30/nginx/vhost.d/game-api.pockai.world.conf`.
+    Despliegue: `docker compose -f docker-compose.prod.yml -f docker-compose.pockai.yml -f docker-compose.pockai-world.yml up -d`
+  - **Pendiente — DNS**: a fecha 16-11-2026 `pockai.world` **no tiene delegación en el
+    registry `.world`** (NXDOMAIN a nivel registry; el A record ya existe en CF: apex y
+    `game-api`, unproxied, TTL 120). Cuando el dominio resuelva: (1) añadir
+    `LETSENCRYPT_HOST: pockai.world` / `game-api.pockai.world` a `pockai-world-web` /
+    `pockai-world-api` y recreate, (2) certbot webroot (volumen `nginx_certs`, mismo
+    flujo que el resto), (3) symlinks flat relativos, (4) `nginx -t && nginx -s reload`.
+    Con TLS en sitio, el corte a las URLs canónicas: `web/src/app/site.json` →
+    `apiUrl: https://game-api.pockai.world` (rebuild web), variable de GitHub
+    `PETAI_API_URL` (builds de escritorio) y el endpoint del updater en
+    `desktop/src-tauri/tauri.conf.json` (próxima release). `CORS_ORIGINS` ya incluye
+    `https://pockai.world`.
