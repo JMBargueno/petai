@@ -12,7 +12,7 @@
   import VisitorPet from './VisitorPet.svelte';
   import type { EnvironmentalStatus } from '../lib/environmental';
   import type { HabitatVisitor } from '../lib/api';
-  import { skillAuthorizations, isSkillActive } from '../lib/stores/desktopSkillsStore';
+  import { skillAuthorizations, isSkillActive, getPetBonding } from '../lib/stores/desktopSkillsStore';
   import {
     calculateThrowVelocity,
     stepPhysics,
@@ -22,6 +22,9 @@
   import { fetchActiveWindow, calculatePerchTarget } from '../lib/windowPerching';
   import { categorizeWindowTitle, type AppCategory } from '../lib/contextAwareness';
   import { analyzeDroppedFile } from '../lib/fileAnalyzer';
+  import { BarksEngine } from '../lib/barks';
+  import { BehaviorEngine, type BehaviorState } from '../lib/behaviorEngine';
+  import { checkPetBallCollision, type BallState } from '../lib/toys/toyPhysics';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
@@ -31,6 +34,10 @@
   export let environmental: EnvironmentalStatus | null = null;
   /** Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía. */
   export let visitors: HabitatVisitor[] = [];
+  /** Pelota de juguete opcional en el escritorio */
+  export let ball: BallState | null = null;
+  /** Callback cuando la mascota patea o cabecea la pelota */
+  export let onBallKick: ((vx: number, vy: number) => void) | null = null;
 
   /** Animaciones que se permiten mientras duerme (el resto esperan a que despierte). */
   const ALLOWED_WHILE_SLEEPING = new Set(['wake', 'hit']);
@@ -83,6 +90,24 @@
   let isDragOverPet = false;
   let currentAppCategory: AppCategory = 'generic';
   let lastContextCheckTime = 0;
+
+  // Motores de interactividad avanzada (Barks & Comportamientos dinámicos)
+  const barksEngine = new BarksEngine();
+  const behaviorEngine = new BehaviorEngine();
+  let barkInterval: any = null;
+
+  // Detección del cursor del ratón
+  let cursorX = 0;
+  let cursorY = 0;
+  let cursorLastMove = performance.now();
+  let isCursorMoving = false;
+  let cursorStopTimer: any = null;
+
+  // Caricias (hover petting) y Chocar patita
+  let lastHoverX = 0;
+  let lastHoverY = 0;
+  let isPetting = false;
+  let isHighFiveWaiting = false;
 
   $: speciesKey = pet?.species?.id || pet?.species?.spriteKey || 'ignisaur';
   $: patternKey = pet?.pattern?.id || 'plain';
@@ -165,8 +190,8 @@
     }, 80);
   }
 
-  $: petBonding = pet?.bonding?.level ?? pet?.bondingLevel ?? 0;
-  $: petIntelligence = pet?.intelligence ?? 1;
+  $: petBonding = getPetBonding(pet);
+  $: petIntelligence = typeof pet?.intelligence === 'number' ? pet.intelligence : 0;
 
   let dragMoved = false;
 
@@ -207,6 +232,15 @@
   }
 
   function handleMouseMove(e: MouseEvent) {
+    cursorX = e.clientX;
+    cursorY = e.clientY;
+    isCursorMoving = true;
+    cursorLastMove = performance.now();
+    clearTimeout(cursorStopTimer);
+    cursorStopTimer = setTimeout(() => {
+      isCursorMoving = false;
+    }, 250);
+
     if (!isDragging) return;
     const nx = e.clientX - dragStartX;
     const ny = e.clientY - dragStartY;
@@ -219,10 +253,44 @@
     if (pointerSamples.length > 20) pointerSamples.shift();
   }
 
-  function handleMouseUp() {
+  function handlePetHoverMove(e: MouseEvent) {
+    if (isDragging || isSleeping) return;
+    const dx = Math.abs(e.clientX - lastHoverX);
+    const dy = Math.abs(e.clientY - lastHoverY);
+    lastHoverX = e.clientX;
+    lastHoverY = e.clientY;
+    const delta = Math.hypot(dx, dy);
+
+    // Caricias sobre la criatura (frotar con el cursor)
+    if (delta > 2 && delta < 65) {
+      const entered = behaviorEngine.recordStroke(delta);
+      if (entered) {
+        isPetting = true;
+        play('happy');
+        showParticle('❤️', 2500);
+        squash(1.15, 0.85, 200);
+        bubble = '¡Mmmm, qué rico! 🥰❤️';
+        setTimeout(() => {
+          isPetting = false;
+          if (bubble.startsWith('¡Mmmm')) bubble = '';
+        }, 2800);
+      }
+    }
+  }
+
+  function handleMouseUp(e?: MouseEvent) {
     if (!isDragging) return;
     isDragging = false;
     delete document.body.dataset.dragging;
+
+    // Si se suelta sobre el panel de control (.panel-card), enviar al hábitat
+    if (e && typeof document !== 'undefined') {
+      const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+      if (dropTarget && dropTarget.closest('.panel-card')) {
+        window.dispatchEvent(new CustomEvent('petai:move_to_habitat', { detail: { petId: pet.id } }));
+        return;
+      }
+    }
 
     const dragThrowActive = isSkillActive(
       'drag_throw',
@@ -258,6 +326,20 @@
   function handleClick() {
     if (dragMoved) {
       dragMoved = false;
+      return;
+    }
+
+    // Si estaba ofreciendo la patita para chocar los cinco
+    if (isHighFiveWaiting) {
+      isHighFiveWaiting = false;
+      behaviorEngine.completeHighFive();
+      play('celebrate');
+      showParticle('🎉✨', 2500);
+      squash(1.2, 0.8, 150);
+      bubble = '¡Eso es! ¡Choca esos cinco! 🐾💥';
+      setTimeout(() => {
+        if (bubble.startsWith('¡Eso es!')) bubble = '';
+      }, 3500);
       return;
     }
 
@@ -337,6 +419,20 @@
         }
       }
     }
+    // Colisión e interacción con la pelota de juego en el escritorio
+    if (ball && onBallKick && !isSleeping && !isDragging) {
+      const col = checkPetBallCollision(
+        { x: posX, y: posY, width: PET_SIZE, height: PET_SIZE },
+        ball
+      );
+      if (col.collides) {
+        onBallKick(col.kickX, col.kickY);
+        play('happy');
+        squash(1.18, 0.82, 120);
+        showParticle('⚽', 1200);
+      }
+    }
+
     // Paso de simulación física si la mascota está en el aire o lanzada
     if (physicsState.isAirborne) {
       const pdt = lastPhysicsTime ? (time - lastPhysicsTime) / 1000 : 0.016;
@@ -516,6 +612,83 @@
 
       // 4. Movimiento normal y posibilidad de iniciar trepado
       const actionRoll = Math.random();
+
+      // 4.1. Evento espontáneo "Choca esos cinco" (High Five)
+      if (actionRoll < 0.08 && !isHighFiveWaiting && !isPerched && !isClimbing) {
+        isHighFiveWaiting = true;
+        behaviorEngine.startHighFive();
+        play('happy');
+        squash(1.15, 0.85, 180);
+        bubble = '¡Choca esos cinco! Haz clic en mi patita 🐾✋';
+        setTimeout(() => {
+          if (isHighFiveWaiting) {
+            isHighFiveWaiting = false;
+            if (bubble.includes('Choca esos cinco')) bubble = '';
+          }
+        }, 6000);
+        return;
+      }
+
+      // 4.2. Evaluación del motor de comportamientos (Stalking, Zoomies, Peeking, Orientación)
+      const nowMs = performance.now();
+      const cursorIdleDuration = nowMs - cursorLastMove;
+      const beh = behaviorEngine.update(
+        3.0,
+        {
+          x: cursorX,
+          y: cursorY,
+          isMoving: isCursorMoving,
+          idleDurationMs: cursorIdleDuration,
+        },
+        {
+          x: posX,
+          y: posY,
+          size: PET_SIZE,
+          direction,
+        },
+        windowWidth
+      );
+
+      if (beh.shouldTurnToCursor && !isClimbing && !isPerched) {
+        direction = cursorX > posX + PET_SIZE / 2 ? 1 : -1;
+      }
+
+      // Si hay una pelota rodando en el suelo, curiosear e intentar interceptarla
+      if (ball && ball.isRolling && Math.abs(ball.vx) > 10 && !isClimbing && !isPerched) {
+        const distToBall = ball.x - posX;
+        direction = distToBall > 0 ? 1 : -1;
+        posX += Math.min(Math.abs(distToBall), 40) * direction;
+        walkUntil = performance.now() + 800;
+        return;
+      }
+
+      if (beh.state === 'stalking' && beh.targetX !== undefined) {
+        const diff = beh.targetX - posX;
+        if (Math.abs(diff) > 15) {
+          direction = diff > 0 ? 1 : -1;
+          posX += Math.min(Math.abs(diff), 22) * direction;
+          walkUntil = performance.now() + 800;
+        }
+        return;
+      }
+
+      if (beh.state === 'zoomies' && beh.targetX !== undefined) {
+        const diff = beh.targetX - posX;
+        direction = diff > 0 ? 1 : -1;
+        posX += Math.min(Math.abs(diff), 60) * direction;
+        walkUntil = performance.now() + 900;
+        play('run');
+        showParticle('💨✨', 1200);
+        return;
+      }
+
+      if (beh.state === 'peeking' && beh.targetX !== undefined) {
+        const diff = beh.targetX - posX;
+        direction = diff > 0 ? 1 : -1;
+        posX += Math.min(Math.abs(diff), 28) * direction;
+        walkUntil = performance.now() + 800;
+        return;
+      }
       if (actionRoll < 0.5) {
         const step = 25 * direction;
         const reachedRight = posX + step > windowWidth - 140;
@@ -553,11 +726,38 @@
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+
+    // Motor de pensamientos frecuentes (Barks contextuales) cada ~65s
+    barkInterval = setInterval(() => {
+      if (isSleeping || isDragging || isHighFiveWaiting || bubble) return;
+      const now = performance.now();
+      const ctx = {
+        appCategory: currentAppCategory,
+        hunger: pet?.hunger,
+        energy: pet?.energy,
+        hygiene: pet?.hygiene,
+        happiness: pet?.happiness,
+        timeOfDay: environmental?.timeOfDay,
+        weatherCondition: environmental?.weather?.condition,
+        isUserIdle: now - cursorLastMove > 35000,
+        petName: pet?.nickname || pet?.species?.name,
+      };
+      const text = barksEngine.generateBark(ctx);
+      if (text) {
+        bubble = text;
+        play('talk');
+        setTimeout(() => {
+          if (bubble === text) bubble = '';
+        }, 6500);
+      }
+    }, 65000);
   });
 
   onDestroy(() => {
     if (animRafId !== null) cancelAnimationFrame(animRafId);
     clearInterval(moveInterval);
+    clearInterval(barkInterval);
+    clearTimeout(cursorStopTimer);
     if (particleTimer) clearTimeout(particleTimer);
     window.removeEventListener('mousemove', handleMouseMove);
     window.removeEventListener('mouseup', handleMouseUp);
@@ -578,8 +778,11 @@
   data-anim={currentAnim}
   class:dragging={isDragging}
   class:drag-over={isDragOverPet}
+  class:high-five-ready={isHighFiveWaiting}
+  class:petting={isPetting}
   style="left: {posX + recoilOffsetX}px; top: {posY}px;"
   on:mousedown={handleMouseDown}
+  on:mousemove={handlePetHoverMove}
   on:click={handleClick}
   on:keydown={(e) => e.key === 'Enter' && onPetClick()}
   on:dragover={(e) => {
@@ -649,6 +852,12 @@
     <div class="speech" class:below={posY < 110}>{bubble}</div>
   {/if}
 
+  {#if isHighFiveWaiting}
+    <div class="high-five-badge" title="¡Haz clic para chocar los cinco!">
+      <span>🐾✋ ¡Choca!</span>
+    </div>
+  {/if}
+
   <div class="pet-badge">
     <span class="pet-name">{pet.nickname || pet.species?.name}</span>
     <span class="pet-lvl">Nv. {pet.level || 1}</span>
@@ -682,6 +891,47 @@
 
   .pet-container.drag-over .pet-body {
     filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.9));
+  }
+
+  .high-five-badge {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-sunburst);
+    color: var(--on-color);
+    padding: 3px 10px;
+    border-radius: var(--radius-pills);
+    border: 1.5px solid var(--color-carbon);
+    font-size: 11px;
+    font-weight: 800;
+    box-shadow: 2px 2px 0 var(--color-carbon);
+    animation: highFiveBounce 0.5s infinite alternate ease-in-out;
+    cursor: pointer;
+    white-space: nowrap;
+    z-index: 60;
+  }
+
+  @keyframes highFiveBounce {
+    from {
+      transform: translateX(-50%) translateY(0);
+    }
+    to {
+      transform: translateX(-50%) translateY(-6px);
+    }
+  }
+
+  .pet-container.petting .pet-body {
+    animation: pettingPurr 0.14s infinite alternate ease-in-out;
+  }
+
+  @keyframes pettingPurr {
+    from {
+      transform: scaleX(var(--pet-dir, 1)) rotate(0deg);
+    }
+    to {
+      transform: scaleX(var(--pet-dir, 1)) rotate(1.2deg);
+    }
   }
 
   .pet-body {

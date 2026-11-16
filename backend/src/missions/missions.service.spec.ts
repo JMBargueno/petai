@@ -44,7 +44,7 @@ describe('MissionsService', () => {
       const r = await service.getMissions(userId, timezone);
       expect(r.daily).toHaveLength(4);
       expect(r.weekly).toHaveLength(1);
-      expect(r.daily[0]).toEqual({ id: 'd1', type: 'feed', description: 'Alimenta 2 veces', target: 2, current: 1, completed: false, reward: { coins: 15, gems: 0, xp: 10 }, resetsAt: dailyMissions[0].periodEnd.toISOString() });
+      expect(r.daily[0]).toEqual({ id: 'd1', type: 'feed', description: 'Alimenta 2 veces', target: 2, current: 1, completed: false, claimed: false, reward: { coins: 15, gems: 0, xp: 10 }, resetsAt: dailyMissions[0].periodEnd.toISOString() });
     });
     it('dailyChestUnlocked=false when not all completed', async () => {
       (prisma.mission.findMany as jest.Mock).mockResolvedValueOnce(dailyMissions).mockResolvedValueOnce(weeklyMissions);

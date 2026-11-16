@@ -1482,6 +1482,45 @@
         ]
       }
     },
+    "/v1/pets/{id}/in-habitat": {
+      "patch": {
+        "operationId": "PetsController_updateInHabitat",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInHabitatDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar el estado de reclusión en el hábitat (casa) de la mascota",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
     "/v1/environmental/status": {
       "get": {
         "operationId": "EnvironmentalController_getStatus",
@@ -8341,6 +8380,19 @@
           "skills"
         ]
       },
+      "UpdateInHabitatDto": {
+        "type": "object",
+        "properties": {
+          "inHabitat": {
+            "type": "boolean",
+            "description": "Indica si la mascota se encuentra dentro de su hábitat (casa) en el cliente de escritorio",
+            "example": true
+          }
+        },
+        "required": [
+          "inHabitat"
+        ]
+      },
       "WeatherInfoModel": {
         "type": "object",
         "properties": {
@@ -8596,6 +8648,11 @@
             "description": "Si está completada",
             "example": false
           },
+          "claimed": {
+            "type": "boolean",
+            "description": "Si la recompensa ya fue reclamada",
+            "example": false
+          },
           "reward": {
             "description": "Recompensa",
             "allOf": [
@@ -8617,6 +8674,7 @@
           "target",
           "current",
           "completed",
+          "claimed",
           "reward",
           "resetsAt"
         ]

@@ -5,8 +5,12 @@
     toggleSkillAuthorization,
     syncSkillsFromBackend,
     isSkillUnlocked,
+    getPetBonding,
+    getPetIntelligenceLevel,
+    getPetIntelligenceTierName,
+    getPetIntelligenceRequiredPoints,
   } from '../lib/stores/desktopSkillsStore';
-  import { ShieldCheck, Sparkles, AlertCircle, Info, Lock } from 'lucide-svelte';
+  import { ShieldCheck, Sparkles, Check, Info, Lock } from 'lucide-svelte';
   import PomodoroWidget from './PomodoroWidget.svelte';
 
   export let pet: any = null;
@@ -15,8 +19,9 @@
     syncSkillsFromBackend(pet.desktopSkills);
   }
 
-  $: petBonding = pet?.bonding?.level ?? pet?.bondingLevel ?? 0;
-  $: petIntelligence = pet?.intelligence ?? 1;
+  $: petBonding = getPetBonding(pet);
+  $: petIntelligencePoints = typeof pet?.intelligence === 'number' ? pet.intelligence : 0;
+  $: petIntelligenceLevel = getPetIntelligenceLevel(petIntelligencePoints);
 
   let activeCategory: 'all' | 'playful' | 'productivity' = 'all';
 
@@ -67,8 +72,12 @@
   <!-- Lista de Habilidades -->
   <div class="skills-list">
     {#each filteredSkills as skill (skill.id)}
-      {@const unlocked = isSkillUnlocked(skill, petBonding, petIntelligence)}
+      {@const unlocked = isSkillUnlocked(skill, petBonding, petIntelligencePoints)}
       {@const enabled = !!$skillAuthorizations[skill.id]}
+      {@const bondMet = petBonding >= skill.requiredBonding}
+      {@const reqTierPoints = getPetIntelligenceRequiredPoints(skill.requiredIntelligence)}
+      {@const reqTierName = getPetIntelligenceTierName(skill.requiredIntelligence)}
+      {@const intMet = petIntelligenceLevel >= skill.requiredIntelligence}
 
       <div
         class="skill-card"
@@ -94,16 +103,50 @@
           <p class="skill-desc">{skill.description}</p>
 
           {#if !unlocked}
-            <div class="requirement-box">
-              <AlertCircle size={14} />
-              <span>
-                Desbloqueo: Requiere
+            <div class="requirements-container">
+              <div class="req-header">
+                <Lock size={12} class="text-amber-400" />
+                <span>Requisitos de desbloqueo:</span>
+              </div>
+              <div class="req-chips-list">
                 {#if skill.requiredBonding > 0}
-                  Vínculo Nivel {skill.requiredBonding} (tienes {petBonding})
+                  <div class="req-chip" class:met={bondMet} class:missing={!bondMet}>
+                    {#if bondMet}
+                      <Check size={12} class="text-emerald-400" />
+                    {:else}
+                      <Lock size={12} class="text-amber-400" />
+                    {/if}
+                    <span>Vínculo: <strong>{skill.requiredBonding} pts</strong></span>
+                    <span class="curr-val">({petBonding}/{skill.requiredBonding})</span>
+                  </div>
                 {/if}
-                {#if skill.requiredBonding > 0 && skill.requiredIntelligence > 1} y {/if}
+
                 {#if skill.requiredIntelligence > 1}
-                  IA Nivel {skill.requiredIntelligence} (tienes {petIntelligence})
+                  <div class="req-chip" class:met={intMet} class:missing={!intMet}>
+                    {#if intMet}
+                      <Check size={12} class="text-emerald-400" />
+                    {:else}
+                      <Lock size={12} class="text-amber-400" />
+                    {/if}
+                    <span>IA: <strong>{reqTierName}</strong></span>
+                    <span class="curr-val">({petIntelligencePoints}/{reqTierPoints} pts)</span>
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {:else}
+            <!-- Requisitos cumplidos -->
+            <div class="unlocked-reqs-meta">
+              <Check size={11} class="text-emerald-400" />
+              <span>
+                {#if skill.requiredBonding > 0 && skill.requiredIntelligence > 1}
+                  Vínculo {skill.requiredBonding}+ pts · IA {reqTierName}
+                {:else if skill.requiredBonding > 0}
+                  Vínculo {skill.requiredBonding}+ pts
+                {:else if skill.requiredIntelligence > 1}
+                  IA {reqTierName} ({reqTierPoints}+ pts)
+                {:else}
+                  Habilidad básica disponible
                 {/if}
               </span>
             </div>
@@ -290,15 +333,68 @@
     border: 1px solid rgba(245, 158, 11, 0.25);
   }
 
-  .requirement-box {
+  .requirements-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 4px;
+  }
+
+  .req-header {
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 11px;
-    color: #f59e0b;
-    background: rgba(245, 158, 11, 0.08);
-    padding: 4px 8px;
+    font-weight: 600;
+    color: #fbbf24;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .req-chips-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .req-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    padding: 3px 8px;
     border-radius: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .req-chip.met {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #a7f3d0;
+  }
+
+  .req-chip.missing {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fde68a;
+  }
+
+  .curr-val {
+    font-size: 10.5px;
+    opacity: 0.85;
+  }
+
+  .unlocked-reqs-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
   }
 
   .privacy-note {

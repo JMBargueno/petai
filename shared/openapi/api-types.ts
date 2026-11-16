@@ -789,6 +789,23 @@ export interface paths {
         patch: operations["PetsController_updateDesktopSkills"];
         trace?: never;
     };
+    "/v1/pets/{id}/in-habitat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualizar el estado de reclusión en el hábitat (casa) de la mascota */
+        patch: operations["PetsController_updateInHabitat"];
+        trace?: never;
+    };
     "/v1/environmental/status": {
         parameters: {
             query?: never;
@@ -3934,6 +3951,13 @@ export interface components {
              */
             skills: Record<string, never>;
         };
+        UpdateInHabitatDto: {
+            /**
+             * @description Indica si la mascota se encuentra dentro de su hábitat (casa) en el cliente de escritorio
+             * @example true
+             */
+            inHabitat: boolean;
+        };
         WeatherInfoModel: {
             /**
              * @description Condición mapeada (WMO + temperatura).
@@ -4068,6 +4092,11 @@ export interface components {
              * @example false
              */
             completed: boolean;
+            /**
+             * @description Si la recompensa ya fue reclamada
+             * @example false
+             */
+            claimed: boolean;
             /** @description Recompensa */
             reward: components["schemas"]["MissionRewardDto"];
             /**
@@ -5577,6 +5606,29 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateDesktopSkillsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PetsController_updateInHabitat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateInHabitatDto"];
             };
         };
         responses: {

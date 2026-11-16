@@ -24,9 +24,9 @@ const LATEST = {
   },
 };
 
-function makeService(token: string | undefined = 'tok') {
+function makeService(token: string | undefined = 'tok', realtime?: any) {
   const config = { get: (k: string) => (k === 'GITHUB_RELEASES_TOKEN' ? token : undefined) } as unknown as ConfigService;
-  return new DesktopUpdatesService(config);
+  return new DesktopUpdatesService(config, realtime);
 }
 
 function mockFetch() {
@@ -122,5 +122,15 @@ describe('DesktopUpdatesService', () => {
       throw new Error('ECONNRESET');
     }) as unknown as typeof fetch;
     await expect(makeService().findUpdate('windows', 'x86_64', '0.1.0')).resolves.toBeNull();
+  });
+
+  it('notifica por websocket al detectar una versión nueva', async () => {
+    mockFetch();
+    const emitUpdateMock = jest.fn();
+    const realtimeMock = { emitDesktopUpdateAvailable: emitUpdateMock };
+    const svc = makeService('tok', realtimeMock);
+
+    await svc.findUpdate('windows', 'x86_64', '0.1.0');
+    expect(emitUpdateMock).toHaveBeenCalledWith('0.2.0', 'Novedades');
   });
 });

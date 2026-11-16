@@ -1,7 +1,16 @@
 <script lang="ts">
   import Ico from './Ico.svelte';
   import { onMount, createEventDispatcher } from 'svelte';
-  import { api, type HabitatCatalog, type HabitatState, type HabitatBuffs, type HabitatFurniture, type HabitatRoom } from '../lib/api';
+  import {
+    api,
+    type HabitatCatalog,
+    type HabitatState,
+    type HabitatBuffs,
+    type HabitatFurniture,
+    type HabitatRoom,
+  } from '../lib/api';
+  import PetMiniAvatar from './PetMiniAvatar.svelte';
+  import { Home, ExternalLink, Sparkles, Check, ArrowRight } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -14,7 +23,12 @@
   let error = '';
   let loading = true;
   let busy = ''; // furnitureId en acción (colocar/quitar)
+  let habitatBusy = false;
   let activeRoomId = '';
+
+  // Animación del Pockai dentro del diorama
+  let petRoomX = 45; // Porcentaje horizontal 15% a 75%
+  let petRoomDir = 1;
 
   const FURN_ICON: Record<string, string> = {
     fountain_water: '⛲', soft_bed: '🛏️', toy_ball: '⚽', wall_shelf: '📚',
@@ -43,7 +57,6 @@
         api.getHabitat(),
         api.getHabitatBuffs(),
       ]);
-      // Conserva la sala activa si sigue existiendo; si no, la primera desbloqueada.
       const rooms = state.rooms;
       if (!rooms.some((r) => r.id === activeRoomId)) {
         activeRoomId = rooms.find((r) => r.unlocked)?.id ?? rooms[0]?.id ?? '';
@@ -56,8 +69,20 @@
   }
 
   $: petId = pet?.id;
+  $: isInHabitat = !!pet?.inHabitat;
   $: if (petId && !loading) load();
-  onMount(load);
+  onMount(() => {
+    load();
+    const walkTimer = setInterval(() => {
+      if (!isInHabitat) return;
+      if (Math.random() < 0.4) {
+        petRoomX = Math.min(75, Math.max(15, petRoomX + 12 * petRoomDir));
+        if (petRoomX >= 75) petRoomDir = -1;
+        else if (petRoomX <= 15) petRoomDir = 1;
+      }
+    }, 2800);
+    return () => clearInterval(walkTimer);
+  });
 
   let activeRoom: HabitatRoom | null = null;
   let furnitureByRoom: HabitatFurniture[] = [];
@@ -67,6 +92,21 @@
     (f.currency === 'coins' ? user?.coins ?? 0 : user?.gems ?? 0) >= f.price;
   const canPlace = (f: HabitatFurniture): boolean =>
     !!activeRoom?.unlocked && activeRoom.active && canAfford(f) && !busy;
+
+  async function toggleHabitat(inHabitat: boolean) {
+    if (habitatBusy || !pet?.id) return;
+    habitatBusy = true;
+    error = '';
+    try {
+      const updated = await api.setPetInHabitat(pet.id, inHabitat);
+      pet = updated;
+      dispatch('petUpdated', updated);
+    } catch (e: any) {
+      error = e.message || 'Error al cambiar estado de hábitat';
+    } finally {
+      habitatBusy = false;
+    }
+  }
 
   async function place(f: HabitatFurniture) {
     if (!canPlace(f)) return;
@@ -95,10 +135,11 @@
     }
   }
 
-  /** Celda (x, y) → id de mueble que la ocupa en la sala activa. */
-  function occupant(x: number, y: number): string | null {
-    const it = activeRoom?.items.find((i) => i.x === x && i.y === y);
-    return it ? it.furnitureId : null;
+  function handleDragStartFromHabitat(e: DragEvent) {
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', 'petai:exit_habitat');
+      e.dataTransfer.effectAllowed = 'move';
+    }
   }
 </script>
 
@@ -109,13 +150,124 @@
 {:else if error && !state}
   <div class="error-msg">{error}</div>
 {:else if state && catalog}
-  <div class="balance">
-    <span><Ico n="coin" /> {user?.coins ?? 0}</span>
-    <span><Ico n="gem" /> {user?.gems ?? 0}</span>
-    {#if error}<span class="err-inline">{error}</span>{/if}
+  <!-- Cabecera de estado: En Casa vs En Escritorio -->
+  <div class="habitat-status-card" class:in-house={isInHabitat}>
+    <div class="status-left">
+      <div class="status-icon-circle">
+        <Home size={18} />
+      </div>
+      <div>
+        <div class="status-title">
+          {#if isInHabitat}
+            <span class="badge in-badge">En Casa</span> {pet.nickname || pet.species?.name} está en el hábitat
+          {:else}
+            <span class="badge out-badge">En Escritorio</span> {pet.nickname || pet.species?.name} está libre
+          {/if}
+        </div>
+        <p class="status-subtitle">
+          {#if isInHabitat}
+            Vive dentro del panel. No se moverá por el escritorio hasta que lo saques.
+          {:else}
+            Pasea libremente por tus ventanas y pantalla.
+          {/if}
+        </p>
+      </div>
+    </div>
+
+    <div class="status-action">
+      {#if isInHabitat}
+        <button
+          class="btn-portal btn-out"
+          disabled={habitatBusy}
+          on:click={() => toggleHabitat(false)}
+        >
+          <ExternalLink size={15} /> Sacar al Escritorio
+        </button>
+      {:else}
+        <button
+          class="btn-portal btn-in"
+          disabled={habitatBusy}
+          on:click={() => toggleHabitat(true)}
+        >
+          <Home size={15} /> Llevar a Casa
+        </button>
+      {/if}
+    </div>
   </div>
 
-  <div class="sec-title">Buffs activos {buffs ? `(de ${buffs.itemCount} muebles)` : ''}</div>
+  <!-- Selector de Salas -->
+  <div class="rooms-nav">
+    {#each state.rooms as room (room.id)}
+      <button
+        class="room-tab"
+        class:active={room.id === activeRoomId}
+        on:click={() => (activeRoomId = room.id)}
+      >
+        <Ico n={room.unlocked ? 'unlock' : 'lock'} /> {room.name}
+      </button>
+    {/each}
+  </div>
+
+  <!-- DIORAMA VISUAL DE LA HABITACIÓN -->
+  {#if activeRoom}
+    <div
+      class="diorama-stage stage--{activeRoom.id}"
+      role="region"
+      aria-label="Diorama de la habitación"
+      on:dragover|preventDefault
+      on:drop|preventDefault={() => !isInHabitat && toggleHabitat(true)}
+    >
+      <!-- Pared y ventana decorativa -->
+      <div class="diorama-wall">
+        <div class="diorama-window">
+          <div class="window-sky"></div>
+        </div>
+      </div>
+
+      <!-- Muebles colocados en la sala -->
+      <div class="diorama-furniture-layer">
+        {#each activeRoom.items as it, idx (it.id)}
+          <div
+            class="furniture-prop"
+            style="left: {15 + (idx % 4) * 22}%; bottom: {18 + Math.floor(idx / 4) * 16}px;"
+            title={catalog.furniture.find((f) => f.id === it.furnitureId)?.name ?? it.furnitureId}
+          >
+            <span class="furn-sprite">{icon(it.furnitureId)}</span>
+          </div>
+        {/each}
+      </div>
+
+      <!-- El Pockai dentro de la habitación -->
+      {#if isInHabitat}
+        <div
+          class="pet-in-room"
+          style="left: {petRoomX}%; transform: scaleX({petRoomDir});"
+          title="Arrastra para sacarlo al escritorio o pulsa el botón"
+        >
+          <PetMiniAvatar
+            {pet}
+            size={76}
+            anim="walk"
+            draggable={true}
+            on:dragstart={handleDragStartFromHabitat}
+          />
+        </div>
+      {:else}
+        <div class="pet-absent-overlay">
+          <span>🐾 {pet.nickname || 'Tu Pockai'} está fuera explorando tu pantalla</span>
+          <button class="btn-call-home" on:click={() => toggleHabitat(true)}>
+            Llamar a casa
+          </button>
+        </div>
+      {/if}
+
+      <!-- Suelo de la habitación -->
+      <div class="diorama-floor"></div>
+    </div>
+  {/if}
+
+  <!-- Buffs activos -->
+  <div class="sec-title">Buffs activos {buffs ? `(${buffs.itemCount} muebles)` : ''}</div>
   <div class="buffs">
     {#if buffs && Object.keys(buffs.activeBuffs).length > 0}
       {#each Object.entries(buffs.activeBuffs) as [k, v] (k)}
@@ -125,34 +277,11 @@
         </div>
       {/each}
     {:else}
-      <div class="empty-msg small">Aún no hay buffs: coloca muebles para activarlos.</div>
+      <div class="empty-msg small">Coloca muebles en tu casa para activar bonificaciones pasivas.</div>
     {/if}
   </div>
 
-  <div class="sec-title">Salas</div>
-  <div class="rooms">
-    {#each state.rooms as room (room.id)}
-      <button class="room-chip" class:active={room.id === activeRoomId} on:click={() => (activeRoomId = room.id)}>
-        <Ico n={room.unlocked ? 'unlock' : 'lock'} /> {room.name}
-      </button>
-    {/each}
-  </div>
-
-  {#if activeRoom}
-    <div class="room-desc">{activeRoom.description}</div>
-
-    <div class="grid" style="grid-template-columns: repeat({activeRoom.gridWidth}, 1fr);">
-      {#each Array.from({ length: activeRoom.gridWidth * activeRoom.gridHeight }) as _, i (i)}
-        {@const x = i % activeRoom.gridWidth}
-        {@const y = Math.floor(i / activeRoom.gridWidth)}
-        {@const furn = occupant(x, y)}
-        <div class="cell" class:filled={!!furn} title={furn ?? 'celda libre'}>
-          {#if furn}{icon(furn)}{/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
-
+  <!-- Catálogo de Muebles -->
   <div class="sec-title">Muebles de {activeRoom?.name ?? ''}</div>
   <div class="shop">
     {#each furnitureByRoom as f (f.id)}
@@ -172,8 +301,9 @@
     {/each}
   </div>
 
+  <!-- Muebles colocados -->
   {#if activeRoom && activeRoom.items.length > 0}
-    <div class="sec-title">Colocados aquí</div>
+    <div class="sec-title">Muebles colocados aquí</div>
     <div class="placed">
       {#each activeRoom.items as it (it.id)}
         <div class="placed-row">
@@ -185,39 +315,317 @@
       {/each}
     </div>
   {/if}
-
-  <button class="primary" on:click={load}>↻ Actualizar</button>
 {/if}
 
 <style>
-  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 12px 0; }
+  .empty-msg { font-size: 12px; color: #94a3b8; text-align: center; padding: 12px 0; }
   .empty-msg.small { font-size: 11px; padding: 6px 0; }
-  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
-  .balance { display: flex; gap: 12px; font-size: 13px; font-weight: 700; padding: 6px 2px; }
-  .err-inline { color: var(--danger-ink); font-size: 11px; margin-left: auto; }
-  .sec-title { font-weight: 700; font-size: 13px; margin: 10px 0 4px; }
+  .error-msg { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 8px; border-radius: 8px; font-size: 12px; margin-bottom: 8px; }
+
+  /* Tarjeta de Estado */
+  .habitat-status-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+  }
+
+  .habitat-status-card.in-house {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+
+  .status-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status-icon-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+  }
+
+  .habitat-status-card.in-house .status-icon-circle {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .status-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-subtitle {
+    font-size: 11px;
+    color: #94a3b8;
+    margin: 2px 0 0;
+    line-height: 1.3;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+
+  .in-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+  }
+
+  .out-badge {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+  }
+
+  .btn-portal {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btn-in {
+    background: #4f46e5;
+    color: #ffffff;
+  }
+
+  .btn-in:hover {
+    background: #4338ca;
+  }
+
+  .btn-out {
+    background: #059669;
+    color: #ffffff;
+  }
+
+  .btn-out:hover {
+    background: #047857;
+  }
+
+  /* Selector de Salas */
+  .rooms-nav {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .room-tab {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.6);
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .room-tab.active {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #c7d2fe;
+  }
+
+  /* DIORAMA ESCÉNICO */
+  .diorama-stage {
+    position: relative;
+    width: 100%;
+    height: 190px;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  /* Temas de Salas */
+  .stage--sala {
+    background: linear-gradient(180deg, #1e1b4b 0%, #312e81 60%, #1e1b4b 100%);
+  }
+
+  .stage--sala .diorama-floor {
+    background: linear-gradient(180deg, #78350f 0%, #451a03 100%);
+    border-top: 3px solid #92400e;
+  }
+
+  .stage--jardin {
+    background: linear-gradient(180deg, #075985 0%, #0284c7 60%, #0369a1 100%);
+  }
+
+  .stage--jardin .diorama-floor {
+    background: linear-gradient(180deg, #15803d 0%, #166534 100%);
+    border-top: 3px solid #22c55e;
+  }
+
+  .stage--templo {
+    background: linear-gradient(180deg, #3f3f46 0%, #52525b 60%, #27272a 100%);
+  }
+
+  .stage--templo .diorama-floor {
+    background: linear-gradient(180deg, #a16207 0%, #713f12 100%);
+    border-top: 3px solid #ca8a04;
+  }
+
+  .stage--cristal {
+    background: linear-gradient(180deg, #311042 0%, #581c87 60%, #3b0764 100%);
+  }
+
+  .stage--cristal .diorama-floor {
+    background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+    border-top: 3px solid #8b5cf6;
+  }
+
+  .diorama-floor {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 52px;
+    z-index: 1;
+  }
+
+  .diorama-wall {
+    position: absolute;
+    top: 14px;
+    right: 20px;
+    z-index: 2;
+  }
+
+  .diorama-window {
+    width: 44px;
+    height: 48px;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(2px);
+    overflow: hidden;
+  }
+
+  .window-sky {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #38bdf8 0%, #818cf8 100%);
+    opacity: 0.7;
+  }
+
+  .diorama-furniture-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .furniture-prop {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+  }
+
+  .furn-sprite {
+    font-size: 26px;
+  }
+
+  .pet-in-room {
+    position: absolute;
+    bottom: 18px;
+    z-index: 10;
+    transition: left 0.8s ease-in-out;
+  }
+
+  .pet-absent-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(2px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .btn-call-home {
+    background: rgba(99, 102, 241, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .btn-call-home:hover {
+    background: #4f46e5;
+  }
+
+  /* Buffs y compras */
+  .sec-title { font-weight: 700; font-size: 13px; margin: 12px 0 6px; color: #f1f5f9; }
   .buffs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
-  .buff { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .buff small { font-size: 11px; color: var(--ink-muted); }
-  .buff span { font-size: 13px; font-weight: 700; color: var(--success-ink); }
-  .rooms { display: flex; flex-wrap: wrap; gap: 6px; }
-  .room-chip { padding: 6px 10px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface-2); color: var(--ink-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
-  .room-chip.active { border-color: var(--accent); color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
-  .room-desc { font-size: 11px; color: var(--ink-muted); margin: 4px 0 6px; }
-  .grid { display: grid; gap: 2px; margin-bottom: 4px; }
-  .cell { aspect-ratio: 1; border-radius: var(--radius-2xl); background: color-mix(in srgb, var(--ink) 6%, transparent); display: flex; align-items: center; justify-content: center; font-size: 11px; }
-  .cell.filled { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
+  .buff { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); }
+  .buff small { font-size: 11px; color: #94a3b8; }
+  .buff span { font-size: 13px; font-weight: 700; color: #34d399; }
+
   .shop { display: flex; flex-direction: column; gap: 6px; }
-  .shop-row { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
+  .shop-row { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); }
   .f-icon { font-size: 20px; }
   .f-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-  .f-name { font-size: 13px; font-weight: 600; }
-  .f-info small { font-size: 10px; color: var(--ink-muted); }
-  .f-price { font-size: 12px; font-weight: 700; white-space: nowrap; }
-  .place-btn, .remove-btn { padding: 6px 10px; border: none; border-radius: var(--radius-2xl); font-size: 12px; font-weight: 700; cursor: pointer; background: var(--accent); color: var(--on-color); }
+  .f-name { font-size: 13px; font-weight: 600; color: #f8fafc; }
+  .f-info small { font-size: 10px; color: #94a3b8; }
+  .f-price { font-size: 12px; font-weight: 700; white-space: nowrap; color: #e2e8f0; }
+  .place-btn, .remove-btn { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; background: #6366f1; color: #ffffff; }
   .place-btn:disabled, .remove-btn:disabled { opacity: 0.4; cursor: default; }
-  .remove-btn { background: var(--danger); color: #450a0a; }
+  .remove-btn { background: #dc2626; color: #ffffff; }
   .placed { display: flex; flex-direction: column; gap: 4px; }
-  .placed-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); font-size: 12px; }
-  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
+  .placed-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-radius: 8px; background: rgba(30, 41, 59, 0.4); font-size: 12px; color: #cbd5e1; }
 </style>
