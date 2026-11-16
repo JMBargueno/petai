@@ -143,6 +143,96 @@ import VisitTab from './VisitTab.svelte';
   let authError = '';
   let isLoading = false;
 
+  // ---- Recuperar contraseña (sin sesión) ----
+  let authView: 'login' | 'forgot' | 'reset' = 'login';
+  let resetEmail = '';
+  let resetCode = '';
+  let resetPassword = '';
+  let resetPassword2 = '';
+  let showResetPassword = false;
+  let resetError = '';
+  let resetNotice = '';
+
+  function openForgot() {
+    resetEmail = authEmail.trim();
+    resetCode = '';
+    resetPassword = '';
+    resetPassword2 = '';
+    resetError = '';
+    resetNotice = '';
+    authView = 'forgot';
+  }
+
+  function backToLogin() {
+    authView = 'login';
+    isLoginMode = true;
+    resetError = '';
+    resetNotice = '';
+  }
+
+  async function handleResetRequest() {
+    resetError = '';
+    resetNotice = '';
+    if (!resetEmail.trim()) {
+      resetError = 'Escribe el correo de tu cuenta';
+      return;
+    }
+    isLoading = true;
+    try {
+      await api.requestPasswordReset(resetEmail);
+      authView = 'reset';
+      startResendCooldown();
+    } catch (err: any) {
+      resetError = err?.message || 'No se pudo enviar el código';
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function handleResetResend() {
+    resetError = '';
+    resetNotice = '';
+    try {
+      await api.requestPasswordReset(resetEmail);
+      resetNotice = 'Te hemos enviado un código nuevo. El anterior ya no sirve.';
+      startResendCooldown();
+    } catch (err: any) {
+      resetError = err?.message || 'No se pudo reenviar el código';
+    }
+  }
+
+  async function handleResetConfirm() {
+    resetError = '';
+    resetNotice = '';
+    if (!/^[0-9]{6}$/.test(resetCode.trim())) {
+      resetError = 'El código tiene 6 dígitos';
+      return;
+    }
+    if (resetPassword.length < 8) {
+      resetError = 'La contraseña debe tener al menos 8 caracteres';
+      return;
+    }
+    if (resetPassword !== resetPassword2) {
+      resetError = 'Las contraseñas no coinciden';
+      return;
+    }
+    isLoading = true;
+    try {
+      await api.confirmPasswordReset(resetEmail, resetCode, resetPassword);
+      authEmail = resetEmail;
+      authPassword = '';
+      resetPassword = '';
+      resetPassword2 = '';
+      authView = 'login';
+      dispatch('authSuccess');
+      dispatch('bubble', 'Contraseña cambiada. Se ha cerrado la sesión en tus otros dispositivos.');
+    } catch (err: any) {
+      resetError = err?.message || 'No se pudo cambiar la contraseña';
+    } finally {
+      isLoading = false;
+    }
+  }
+
   // ---- Verificación del correo (cuenta recién creada) ----
   let verifyCode = '';
   let verifyError = '';
@@ -419,6 +509,87 @@ import VisitTab from './VisitTab.svelte';
     {#if $updateLock !== null}
       <!-- Actualización obligatoria: el panel solo muestra el bloqueo hasta que se instale -->
       <UpdateLockPanel />
+    {:else if !user && authView !== 'login'}
+      <!-- Recuperar contraseña: 1) correo → código; 2) código + contraseña nueva -->
+      <div class="auth-section">
+        <div class="auth-hero">
+          <div class="auth-halo"><PockaiMark size={72} /></div>
+          <span class="eyebrow">Recuperar contraseña</span>
+          <h3 class="display auth-title">{authView === 'forgot' ? '¿Has olvidado tu contraseña?' : 'Nueva contraseña'}</h3>
+          <p class="subtitle">
+            {#if authView === 'forgot'}
+              Te enviaremos un código de 6 dígitos para crear una contraseña nueva.
+            {:else}
+              Si existe una cuenta con <strong>{resetEmail}</strong>, te hemos enviado un código. Caduca en 15 minutos.
+            {/if}
+          </p>
+        </div>
+
+        {#if authView === 'forgot'}
+          <form class="card auth-form" on:submit|preventDefault={handleResetRequest}>
+            {#if resetError}
+              <div class="error-msg auth-error" role="alert"><AlertCircle size={16} /> <span>{resetError}</span></div>
+            {/if}
+            <div class="form-group">
+              <label for="reset-email">Correo electrónico</label>
+              <input class="input" id="reset-email" type="email" autocomplete="email" required bind:value={resetEmail} placeholder="entrenador@pockai.app" />
+            </div>
+            <button type="submit" class="btn btn--primary block auth-submit" disabled={isLoading}>
+              {isLoading ? 'Enviando…' : 'Enviar código'}
+            </button>
+          </form>
+        {:else}
+          <form class="card auth-form" on:submit|preventDefault={handleResetConfirm}>
+            {#if resetError}
+              <div class="error-msg auth-error" role="alert"><AlertCircle size={16} /> <span>{resetError}</span></div>
+            {/if}
+            {#if resetNotice}
+              <p class="subtitle verify-notice" role="status">{resetNotice}</p>
+            {/if}
+            <div class="form-group">
+              <label for="reset-code">Código</label>
+              <input
+                class="input verify-code"
+                id="reset-code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                pattern={'[0-9]{6}'}
+                maxlength="6"
+                required
+                bind:value={resetCode}
+                placeholder="123456"
+              />
+            </div>
+            <div class="form-group">
+              <label for="reset-pass">Contraseña nueva</label>
+              {#if showResetPassword}
+                <input class="input" id="reset-pass" type="text" autocomplete="new-password" minlength="8" required bind:value={resetPassword} placeholder="Mínimo 8 caracteres" />
+              {:else}
+                <input class="input" id="reset-pass" type="password" autocomplete="new-password" minlength="8" required bind:value={resetPassword} placeholder="Mínimo 8 caracteres" />
+              {/if}
+            </div>
+            <div class="form-group">
+              <label for="reset-pass2">Repite la contraseña</label>
+              {#if showResetPassword}
+                <input class="input" id="reset-pass2" type="text" autocomplete="new-password" required bind:value={resetPassword2} />
+              {:else}
+                <input class="input" id="reset-pass2" type="password" autocomplete="new-password" required bind:value={resetPassword2} />
+              {/if}
+            </div>
+            <label class="show-pass"><input type="checkbox" bind:checked={showResetPassword} /> Mostrar contraseña</label>
+            <button type="submit" class="btn btn--primary block auth-submit" disabled={isLoading}>
+              {isLoading ? 'Cambiando…' : 'Cambiar contraseña'}
+            </button>
+          </form>
+
+          <button type="button" class="auth-toggle" on:click={handleResetResend} disabled={resendIn > 0}>
+            {#if resendIn > 0}Puedes pedir otro código en {resendIn} s{:else}¿No te ha llegado? <strong>Reenviar código</strong>{/if}
+          </button>
+        {/if}
+
+        <button type="button" class="auth-toggle" on:click={backToLogin}>Volver a iniciar sesión</button>
+      </div>
     {:else if !user}
       <div class="auth-section">
         <div class="auth-hero">
@@ -448,6 +619,9 @@ import VisitTab from './VisitTab.svelte';
         <div class="form-group">
           <label for="auth-pass">Contraseña</label>
           <input class="input" id="auth-pass" type="password" bind:value={authPassword} placeholder="••••••••" />
+          {#if isLoginMode}
+            <button type="button" class="forgot-link" on:click={openForgot}>¿Has olvidado tu contraseña?</button>
+          {/if}
         </div>
 
         {#if !isLoginMode}
@@ -1603,6 +1777,32 @@ import VisitTab from './VisitTab.svelte';
   }
   .verify-notice {
     margin: 0 0 10px;
+  }
+  .forgot-link {
+    display: block;
+    margin: 6px 0 0 auto;
+    padding: 2px 4px;
+    border: 0;
+    background: transparent;
+    color: var(--accent-ink);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .forgot-link:hover {
+    text-decoration: underline;
+  }
+  .forgot-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .show-pass {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--ink-muted);
+    cursor: pointer;
   }
   .auth-toggle:disabled {
     cursor: default;

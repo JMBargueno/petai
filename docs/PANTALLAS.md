@@ -110,9 +110,19 @@ Indicadores en la barra: punto en **Progreso** cuando hay recompensas por reclam
 - Estados: error de validación por campo, cuenta bloqueada temporalmente con cuenta atrás (`retryAfterSeconds` del 429), sin conexión.
 - Rutas: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`.
 
-**Recuperar contraseña** · ⛔ · P1
+**Recuperar contraseña** · ✅ · P1
 
-- No existe en el backend. Hoy una contraseña olvidada supone perder la cuenta. Requiere verificación de correo y un flujo de restablecimiento antes de diseñar la pantalla.
+- Acceso: enlace «¿Has olvidado tu contraseña?» en el modo «Entrar» (escritorio y Android); el correo escrito se rellena solo.
+- Paso 1: correo → «Enviar código». La respuesta es la misma exista o no la cuenta (no revela correos registrados).
+- Paso 2: código de 6 dígitos (caduca en 15 min) + contraseña nueva (mín. 8) + repetirla; «Mostrar contraseña»; «Reenviar código» con espera de 60 s (el código anterior deja de valer); «Volver a iniciar sesión».
+- Al confirmar: se cierran las demás sesiones, la app entra con la sesión nueva y avisa de ello. Canjear el código también verifica el correo.
+- Estados: código inválido o caducado (400), demasiados intentos (429), contraseñas que no coinciden (cliente), sin conexión.
+- Rutas: `POST /auth/reset/request`, `POST /auth/reset/confirm`.
+
+**Verificar el correo** · ✅ · P1
+
+- Tras registrarse (o si la API responde 403 `EMAIL_NOT_VERIFIED`): código de 6 dígitos del correo, «Ya lo he verificado con el enlace» (el enlace abre `/verify-email` en la web), reenviar con espera de 60 s y «Usar otra cuenta».
+- Rutas: `POST /auth/verify-email/confirm`, `POST /auth/verify-email/resend`, `GET /me` (`emailVerified`).
 
 **Primera vez** · ⬜ · P1
 
