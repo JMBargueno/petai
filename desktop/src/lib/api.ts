@@ -380,7 +380,10 @@ export const api = {
     );
   },
 
-  /** Chat en streaming (SSE). Llama a onDelta con cada fragmento y devuelve el evento final. */
+  /**
+   * Chat en streaming (SSE). Llama a onDelta con cada fragmento de la respuesta y devuelve el evento
+   * final. El razonamiento del modelo nunca llega en los delta: viene aparte en message.thinking.
+   */
   async chatStream(
     petId: string,
     message: string,
@@ -392,7 +395,7 @@ export const api = {
       onModerated?: (info: { reason: string; message: string; hideUserMessage: boolean }) => void;
     },
     signal?: AbortSignal,
-  ): Promise<{ message: { id: string; content: string }; intelligence: number; tier: string } | { moderated: true }> {
+  ): Promise<{ message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string } | { moderated: true }> {
     const res = await authFetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
       method: 'POST',
       signal,
