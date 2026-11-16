@@ -170,7 +170,12 @@ export class AiController {
   }
 
   @Post('pets/:id/chat')
-  @ApiOperation({ summary: 'Conversar con la mascota (streaming SSE: eventos delta, done, error)' })
+  @ApiOperation({
+    summary: 'Conversar con la mascota (streaming SSE: eventos delta, tool, action, moderated, done, error)',
+    description:
+      'El razonamiento del modelo (reasoning_content o bloques <think>) nunca llega en los eventos delta: ' +
+      'si existe y supera la moderación, el evento done lo incluye aparte en message.thinking (no se guarda en el historial).',
+  })
   @ApiBody({
     schema: {
       type: 'object',

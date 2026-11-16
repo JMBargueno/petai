@@ -1,4 +1,5 @@
 import { ChatMessageInput, ChatOptions, LlmEvent, LlmProvider, ToolCall } from './llm-provider';
+import { SplitChunk, ThinkTagSplitter } from './think-tags';
 
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_TOOL_ARGS_CHARS = 10_000;
@@ -118,6 +119,12 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     const decoder = new TextDecoder();
     let buffer = '';
     let usage: { promptTokens?: number; completionTokens?: number } | undefined;
+    // Algunos modelos mezclan el razonamiento en el contenido con etiquetas <think>
+    const splitter = new ThinkTagSplitter();
+    const fromSplit = function* (part: SplitChunk): Generator<LlmEvent> {
+      if (part.thinking) yield { type: 'thinking', text: part.thinking };
+      if (part.text) yield { type: 'delta', text: part.text };
+    };
     // Las llamadas a herramientas llegan fragmentadas por índice: se acumulan
     const calls = new Map<number, { id: string; name: string; args: string }>();
     const flushCalls = function* (): Generator<LlmEvent> {
@@ -137,6 +144,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         if (!line.startsWith('data:')) continue;
         const data = line.slice(5).trim();
         if (data === '[DONE]') {
+          yield* fromSplit(splitter.flush());
           yield* flushCalls();
           yield { type: 'done', usage };
           return;
@@ -147,11 +155,12 @@ export class OpenAiCompatibleProvider implements LlmProvider {
           const text = delta?.content;
           const reasoning = delta?.reasoning_content ?? delta?.reasoning;
 
+          // Modelos de razonamiento (Qwen/DeepSeek/o1…): el pensamiento va aparte, nunca en la respuesta
+          if (typeof reasoning === 'string' && reasoning.length > 0) {
+            yield { type: 'thinking', text: reasoning };
+          }
           if (typeof text === 'string' && text.length > 0) {
-            yield { type: 'delta', text };
-          } else if (typeof reasoning === 'string' && reasoning.length > 0) {
-            // Soporte para modelos de razonamiento (Qwen/DeepSeek): el texto de pensamiento se emite
-            yield { type: 'delta', text: reasoning };
+            yield* fromSplit(splitter.push(text));
           }
 
           for (const tc of json.choices?.[0]?.delta?.tool_calls ?? []) {
@@ -175,6 +184,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         }
       }
     }
+    yield* fromSplit(splitter.flush());
     yield* flushCalls();
     yield { type: 'done', usage };
   }
@@ -182,7 +192,8 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   async test(model: string): Promise<void> {
     let got = false;
     for await (const ev of this.chat([{ role: 'user', content: 'ping' }], { model, maxTokens: 40 })) {
-      if (ev.type === 'delta') got = true;
+      // Un modelo de razonamiento puede gastar los pocos tokens de la prueba solo en pensar
+      if (ev.type === 'delta' || ev.type === 'thinking') got = true;
       if (ev.type === 'done' && (ev.usage?.completionTokens ?? 0) > 0) got = true;
     }
     if (!got) throw new Error('El proveedor respondió sin contenido');
