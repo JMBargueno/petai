@@ -45,8 +45,14 @@
   const BUSY_PRIORITY = 40;
   const PET_SIZE = 128;
 
-  let posX = 150;
-  let posY = 50;
+  /** Punto (cursor) donde aparece al montarse, p. ej. al soltarlo fuera del Hábitat. */
+  export let spawnAt: { x: number; y: number } | null = null;
+
+  let posX = spawnAt ? clampSpawn(spawnAt.x, window.innerWidth) : 150;
+  let posY = spawnAt ? clampSpawn(spawnAt.y, window.innerHeight) : 50;
+  function clampSpawn(cursor: number, max: number): number {
+    return Math.min(Math.max(0, cursor - PET_SIZE / 2), Math.max(0, max - PET_SIZE));
+  }
   let direction = 1; // 1: derecha, -1: izquierda
   let isDragging = false;
   let dragStartX = 0;

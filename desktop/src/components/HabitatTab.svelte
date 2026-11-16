@@ -10,6 +10,7 @@
     type HabitatRoom,
   } from '../lib/api';
   import PetMiniAvatar from './PetMiniAvatar.svelte';
+  import { startHabitatExitDrag } from '../lib/habitatExitDrag';
   import { Home, ExternalLink } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
@@ -169,12 +170,10 @@
     }
   }
 
-  function handleDragStartFromHabitat(e: DragEvent) {
-    if (e.dataTransfer) {
-      // Mismo contrato que App.handleViewportDrop y la tarjeta de Inicio
-      e.dataTransfer.setData('application/petai-pet', 'exit-habitat');
-      e.dataTransfer.effectAllowed = 'move';
-    }
+  function handleExitDragStart(e: MouseEvent) {
+    if (habitatBusy) return;
+    const host = e.currentTarget as HTMLElement;
+    startHabitatExitDrag(e, host.querySelector<HTMLElement>('.pet-mini-avatar'));
   }
 
   function handleStageDrop() {
@@ -276,6 +275,9 @@
           class="pet-in-room"
           style="left: {petRoomX}%; --walk-ms: {WALK_MS}ms;"
           title="Arrastra para sacarlo al escritorio"
+          role="button"
+          tabindex="-1"
+          on:mousedown={handleExitDragStart}
         >
           <span class="pet-shadow" aria-hidden="true"></span>
           <div class="pet-facing" style="transform: scaleX({petRoomDir});">
@@ -284,8 +286,6 @@
               size={80}
               anim={petWalking ? 'walk' : 'idle'}
               interactive={false}
-              draggable={true}
-              on:dragstart={handleDragStartFromHabitat}
             />
           </div>
           {#if isSleeping}<span class="pet-zzz" aria-hidden="true">z</span>{/if}
