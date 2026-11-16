@@ -9,6 +9,7 @@ export const SECTIONS = [
   { path: 'usuarios', label: 'Usuarios', permission: 'users:read' },
   { path: 'invitaciones', label: 'Invitaciones', permission: 'invites:manage' },
   { path: 'pockais', label: 'Pockais', permission: 'pets:read' },
+  { path: 'facturacion', label: 'Facturación e IA', permission: 'billing:manage' },
   { path: 'registro', label: 'Registro', permission: 'audit:read' },
 ] as const;
 

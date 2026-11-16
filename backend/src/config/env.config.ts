@@ -86,6 +86,21 @@ export const envSchema = z.object({
   // PAT de GitHub (solo lectura de Contents) para leer los releases del repo privado. Sin él no hay updates.
   GITHUB_RELEASES_TOKEN: z.string().optional(),
   GITHUB_RELEASES_REPO: z.string().default('JMBargueno/petai'),
+  // ---- Spec-34: Facturación e IA Gestionada ----
+  OPENROUTER_API_KEY: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRODUCT_PRO: z.string().optional(),
+  PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
+  AI_MANAGED_ENABLED: z.enum(['true', 'false']).default('true'),
+  AI_MANAGED_MODEL: z.string().default('google/gemini-2.5-flash-lite'),
+  AI_MANAGED_FALLBACK_MODELS: z.string().default('meta-llama/llama-3.3-70b-instruct,deepseek/deepseek-chat'),
+  AI_MANAGED_DAILY_BUDGET_USD: z.coerce.number().min(0).default(10),
+  AI_MANAGED_MAX_CONCURRENCY: positiveInt(200),
+  AI_PLAN_FREE_DAILY: positiveInt(15),
+  AI_PLAN_PRO_DAILY: positiveInt(200),
+  AI_MONTHLY_TOKEN_QUOTA_FREE: z.coerce.number().int().min(0).default(300000),
+  AI_MONTHLY_TOKEN_QUOTA_PRO: z.coerce.number().int().min(0).default(3000000),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

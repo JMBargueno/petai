@@ -15,6 +15,7 @@
   import { setSkillAuthorization } from '../lib/stores/desktopSkillsStore';
   import { startPomodoro, stopPomodoro } from '../lib/pomodoro';
   import { toSpeakable } from '../lib/speech-queue';
+  import { getSocket } from '../lib/socket';
 
   export let pet: any = null;
   /** Mensaje a enviar en cuanto el chat esté listo (p. ej. al soltar un archivo sobre la mascota). */
@@ -38,10 +39,19 @@
   }
 
   let loaded = false;
-  let config: any = { configured: false };
+  let config: any = { configured: false, mode: 'managed' };
   let showSettings = false;
 
-  // Formulario de ajustes
+  // Modos: 'managed' (IA de Pockai), 'byok' (Mi propia clave), 'local' (Hermes local)
+  let activeMode: 'managed' | 'byok' | 'local' = 'managed';
+
+  // Suscripción y cuota
+  let entitlement: Awaited<ReturnType<typeof api.getBillingEntitlement>> | null = null;
+  let showPaywall = false;
+  let paywallBusy = false;
+  let paywallErr = '';
+
+  // Formulario de ajustes BYOK
   let provider = 'openai';
   let baseUrl = '';
   let model = '';
@@ -54,7 +64,18 @@
   let local: LocalHermesConfig = loadLocalConfig();
   let localMsg = '';
   let localErr = '';
-  $: chatReady = config.configured || local.enabled;
+
+  // Uso mensual y cuota diaria
+  let usage: Awaited<ReturnType<typeof api.getAiUsage>> | null = null;
+
+  $: isManaged = activeMode === 'managed';
+  $: isPro = (usage?.plan === 'pro') || (entitlement?.plan === 'pro');
+  $: dailyLimit = usage?.daily?.limit ?? (isPro ? 200 : 15);
+  $: dailyUsed = usage?.daily?.used ?? 0;
+  $: dailyRemaining = Math.max(0, dailyLimit - dailyUsed);
+  $: maxChars = isManaged ? 240 : 1000;
+  $: quotaExceeded = isManaged && dailyRemaining <= 0;
+  $: chatReady = isManaged || (activeMode === 'byok' && config.configured) || (activeMode === 'local' && local.enabled);
 
   // Chat
   let messages: Msg[] = [];
@@ -64,9 +85,6 @@
   let scroller: HTMLElement;
   let abort: AbortController | null = null;
 
-  // Uso mensual de tokens y cuota
-  let usage: Awaited<ReturnType<typeof api.getAiUsage>> | null = null;
-
   const fmtTokens = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 
   async function loadUsage() {
@@ -74,6 +92,44 @@
       usage = await api.getAiUsage();
     } catch {
       usage = null;
+    }
+  }
+
+  async function loadEntitlement() {
+    try {
+      entitlement = await api.getBillingEntitlement();
+    } catch {
+      entitlement = null;
+    }
+  }
+
+  async function subscribePro() {
+    paywallBusy = true;
+    paywallErr = '';
+    try {
+      const res = await api.createStripeCheckout();
+      if (res?.url) {
+        await openUrl(res.url);
+      }
+    } catch (e: any) {
+      paywallErr = e.message || 'Error iniciando suscripción';
+    } finally {
+      paywallBusy = false;
+    }
+  }
+
+  async function openPortal() {
+    paywallBusy = true;
+    paywallErr = '';
+    try {
+      const res = await api.createStripePortal();
+      if (res?.url) {
+        await openUrl(res.url);
+      }
+    } catch (e: any) {
+      paywallErr = e.message || 'Error abriendo portal de facturación';
+    } finally {
+      paywallBusy = false;
     }
   }
 
@@ -115,12 +171,10 @@
       if (accept) {
         const res = await api.confirmAction(pet.id, card.id);
         if (res.clientSide) {
-          // Herramienta de escritorio: el servidor solo la validó; se ejecuta aquí, tras la confirmación
           if (res.tool === 'open_url') {
             await openUrl(res.args.url);
             card.note = 'Abierto en tu navegador';
           } else if (res.tool === 'toggle_desktop_skill') {
-            // set (no toggle): el valor lo decide el servidor ya validado, no el estado local
             setSkillAuthorization(res.args.skill_id, !!res.args.enabled, pet.id);
             card.note = res.args.enabled ? 'Habilidad activada' : 'Habilidad desactivada';
           } else if (res.tool === 'start_pomodoro') {
@@ -143,7 +197,6 @@
           card.state = 'done';
           card.note = 'Hecho';
           if (remOpen) loadReminders();
-          // Acciones del servidor que cambian a la mascota (p. ej. ir a su casita)
           dispatch('refreshPet');
         }
       } else {
@@ -156,7 +209,6 @@
       card.note = e.message;
     }
     actions = actions;
-    // El contenido del portapapeles viaja como un mensaje normal: el usuario lo ve y se modera igual
     if (followUp) await send(followUp);
   }
 
@@ -212,7 +264,6 @@
     }
   }
 
-  // Confirmación en dos pasos en el propio botón (sin confirm() nativo, que congela la ventana en Tauri)
   let confirmForgetAll = false;
   let confirmForgetTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -232,9 +283,6 @@
     }
   }
 
-  // Mensaje pedido desde fuera (archivo soltado sobre la mascota): se envía una sola vez.
-  // Sin IA configurada se deja escrito en la caja para que el usuario lo vea y decida.
-  // El panel lo marca como consumido (promptConsumed) para no reenviarlo si la pestaña se vuelve a montar.
   let lastPromptN = 0;
   $: if (pendingPrompt && pendingPrompt.n !== lastPromptN && loaded && pet && !streaming) {
     lastPromptN = pendingPrompt.n;
@@ -246,32 +294,83 @@
   $: needsUrl = provider !== 'openai';
   $: tier = (pet?.intelligence ?? 0) >= 500 ? 'Agente' : (pet?.intelligence ?? 0) >= 200 ? 'Memoria' : 'Charla';
 
+  function handleEntitlementUpdated() {
+    loadEntitlement();
+    loadUsage();
+    loadConfig();
+  }
+
+  function handleFocus() {
+    loadEntitlement();
+    loadUsage();
+  }
+
   onMount(async () => {
     await loadConfig();
+    await loadEntitlement();
     if (chatReady && pet) {
       await loadHistory();
-      if (config.configured) {
+      if (!local.enabled) {
         await loadPending();
-        loadUsage();
+        await loadUsage();
       }
     }
     loaded = true;
+
+    const s = getSocket();
+    s?.on('entitlement:updated', handleEntitlementUpdated);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleFocus);
+    }
   });
-  onDestroy(() => abort?.abort());
+
+  onDestroy(() => {
+    abort?.abort();
+    const s = getSocket();
+    s?.off('entitlement:updated', handleEntitlementUpdated);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('focus', handleFocus);
+    }
+  });
 
   async function loadConfig() {
     try {
       config = await api.getAiConfig();
-      if (config.configured) {
-        provider = config.provider;
+      if (local.enabled) {
+        activeMode = 'local';
+      } else if (config.mode === 'byok' && config.configured) {
+        activeMode = 'byok';
+        provider = config.provider || 'openai';
         baseUrl = config.baseUrl || '';
         model = config.model || '';
       } else {
-        // Sin proveedor en el servidor, los ajustes se muestran salvo que se use el Hermes local
-        showSettings = !local.enabled;
+        activeMode = 'managed';
       }
     } catch (e: any) {
       settingsErr = e.message;
+    }
+  }
+
+  async function setMode(mode: 'managed' | 'byok' | 'local') {
+    activeMode = mode;
+    if (mode === 'managed') {
+      local.enabled = false;
+      saveLocalConfig(local);
+      try {
+        await api.saveAiConfig({ mode: 'managed' });
+        await loadConfig();
+        await loadUsage();
+      } catch (e: any) {
+        settingsErr = e.message;
+      }
+    } else if (mode === 'local') {
+      local.enabled = true;
+      saveLocalConfig(local);
+      showSettings = true;
+    } else if (mode === 'byok') {
+      local.enabled = false;
+      saveLocalConfig(local);
+      showSettings = true;
     }
   }
 
@@ -296,15 +395,18 @@
     try {
       const cleanUrl = baseUrl?.trim().replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
       config = await api.saveAiConfig({
+        mode: 'byok',
         provider,
         baseUrl: needsUrl ? cleanUrl : undefined,
         model: model?.trim() || undefined,
         apiKey: apiKey?.trim() || undefined,
       });
+      activeMode = 'byok';
       if (needsUrl) baseUrl = cleanUrl;
-      apiKey = ''; // la key ya no se conserva en el cliente
+      apiKey = '';
       settingsMsg = 'Guardado. Pulsa "Probar conexión" para comprobarlo.';
       if (pet) await loadHistory();
+      await loadUsage();
     } catch (e: any) {
       settingsErr = e.message;
     } finally {
@@ -335,11 +437,11 @@
     busy = true;
     try {
       await api.deleteAiConfig();
-      config = { configured: false };
-      messages = [];
+      config = { configured: false, mode: 'managed' };
+      activeMode = 'managed';
       apiKey = '';
-      settingsMsg = 'Configuración eliminada';
-      showSettings = true;
+      settingsMsg = 'Se volvió a la IA de Pockai';
+      await loadUsage();
     } catch (e: any) {
       settingsErr = e.message;
     } finally {
@@ -355,7 +457,6 @@
     reply.content = m.message;
     reply.notice = true;
     if (m.hideUserMessage) {
-      // El texto con datos sensibles no se conserva ni en pantalla
       messages = messages.filter((x) => x.id !== userMsg.id);
       input = '';
     }
@@ -363,7 +464,6 @@
     scrollDown();
   }
 
-  /** Modo Hermes local: contexto del servidor → inferencia en este equipo → sincronización. */
   async function runLocal(text: string, reply: Msg, userMsg: Msg, signal: AbortSignal) {
     const ctx = await api.localChatContext(pet.id, text, buildClientContext());
     if ('moderated' in ctx) {
@@ -377,10 +477,8 @@
       messages = messages;
       scrollDown();
     }, signal);
-    // Solo se sincroniza (y guarda) la respuesta en personaje; el razonamiento se queda en este equipo
     const synced = await api.localChatSync(pet.id, ctx.turnId, result.reply);
     if ('moderated' in synced) {
-      // La respuesta local se modera al sincronizar: si se bloquea, se sustituye y no se guarda
       applyModeration(synced.moderated, reply, userMsg);
       return { moderated: true as const };
     }
@@ -390,13 +488,17 @@
   async function send(override?: string) {
     const text = (typeof override === 'string' ? override : input).trim();
     if (!text || streaming || !pet) return;
+
+    if (isManaged && quotaExceeded) {
+      showPaywall = true;
+      return;
+    }
+
     chatErr = '';
     input = '';
     streaming = true;
-    // Id único por respuesta: los avisos de moderación se quedan en pantalla y no deben chocar entre sí
     const reply: Msg = { id: `tmp-reply-${Date.now()}`, role: 'assistant', content: '' };
     const userMsg: Msg = { id: `tmp-${Date.now()}`, role: 'user', content: text };
-    let moderated = false;
     messages = [...messages, userMsg, reply];
     await scrollDown();
     abort = new AbortController();
@@ -416,7 +518,6 @@
             scrollDown();
           },
           onModerated: (m) => {
-            moderated = true;
             applyModeration(m, reply, userMsg);
           },
           onTool: () => {
@@ -431,26 +532,25 @@
         buildClientContext(),
       );
       if ('moderated' in done) {
-        // Aviso de moderación: no es una respuesta de la mascota ni queda en el historial
         return;
       }
       reply.content = done.message.content;
       reply.thinking = done.message.thinking || undefined;
       reply.thinkingOpen = false;
       messages = messages;
-      // La mascota dice la respuesta (sin el razonamiento) por la cola de habla
       const spoken = toSpeakable(done.message.content);
       if (spoken) dispatch('bubble', spoken);
       dispatch('refreshPet');
-      if (config.configured && !local.enabled) loadUsage();
-      // La extracción de recuerdos se hace en segundo plano en el servidor (no en modo local)
+      if (!local.enabled) loadUsage();
       if (memOpen && !local.enabled) setTimeout(loadMemories, 3000);
     } catch (e: any) {
       if (e.name !== 'AbortError') chatErr = e.message;
-      // Se retira el intercambio incompleto: el servidor no lo guardó
       messages = messages.filter((m) => m !== reply && m !== userMsg);
       input = text;
-      if (/cuota/i.test(e.message)) loadUsage();
+      if (/cuota|quota|429/i.test(e.message)) {
+        loadUsage();
+        showPaywall = true;
+      }
     } finally {
       streaming = false;
       toolHint = '';
@@ -504,83 +604,130 @@
 {:else}
   {#if chatReady}
     <div class="bar">
-      <span class="badge"><Ico n="brain" /> {tier} · {pet.intelligence ?? 0}/1000</span>
-      <button class="link" on:click={() => (showSettings = !showSettings)}>
-        {#if showSettings}Ocultar ajustes{:else}<Ico n="settings" /> Ajustes{/if}
-      </button>
+      <div class="bar-left">
+        <span class="badge"><Ico n="brain" /> {tier} · {pet.intelligence ?? 0}/1000</span>
+        <select
+          class="mode-select"
+          value={activeMode}
+          on:change={(e) => setMode(e.currentTarget.value)}
+        >
+          <option value="managed">IA de Pockai</option>
+          <option value="byok">Mi propia clave</option>
+          <option value="local">Hermes local</option>
+        </select>
+      </div>
+
+      <div class="bar-right">
+        {#if isManaged}
+          {#if isPro}
+            <span class="badge pro-badge" title="Suscripción Pro activa"><Ico n="star" /> Pro · {dailyRemaining}/{dailyLimit}</span>
+            <button class="link-btn" title="Gestionar suscripción" on:click={openPortal}>Gestionar</button>
+          {:else}
+            <span class="badge quota-badge" class:quota-empty={dailyRemaining <= 0} title="Mensajes restantes hoy (se renuevan a medianoche)">
+              {dailyRemaining}/{dailyLimit} hoy
+            </span>
+            <button class="link-btn pro-btn" on:click={() => (showPaywall = true)}>⭐ Hazte Pro</button>
+          {/if}
+        {/if}
+
+        <button class="link" on:click={() => (showSettings = !showSettings)}>
+          {#if showSettings}Ocultar{:else}<Ico n="settings" /> Ajustes{/if}
+        </button>
+      </div>
     </div>
   {/if}
 
-  {#if config.configured && usage && !local.enabled}
-    <p class="usage" class:full={usage.quota !== null && (usage.remaining ?? 1) <= 0}>
-      <Ico n="chart" /> Este mes: {fmtTokens(usage.tokens)} tokens{usage.quota !== null ? ` de ${fmtTokens(usage.quota)}` : ' (sin límite)'}
-      {#if usage.quota !== null && (usage.remaining ?? 1) <= 0} — cuota agotada, se renueva el día 1{/if}
-    </p>
+  {#if isManaged && !showSettings}
+    <div class="managed-info-bar">
+      <span>Te quedan <strong>{dailyRemaining} de {dailyLimit}</strong> mensajes hoy · se renuevan a medianoche.</span>
+      {#if !isPro}
+        <button class="upgrade-chip" on:click={() => (showPaywall = true)}>Subir a 200/día con Pro</button>
+      {/if}
+    </div>
   {/if}
 
   {#if showSettings}
     <div class="settings">
-      <label>Proveedor
-        <select bind:value={provider}>
-          <option value="openai">OpenAI</option>
-          <option value="hermes">Hermes Agent (remoto, HTTPS)</option>
-          <option value="custom">Otro compatible con OpenAI</option>
-        </select>
-      </label>
-      {#if needsUrl}
-        <label>URL base (HTTPS)
-          <input type="url" bind:value={baseUrl} placeholder="https://mi-servidor.com/v1" autocomplete="off" />
-        </label>
-      {/if}
-      <label>Modelo {#if provider === 'openai'}<small>(vacío = gpt-4o-mini)</small>{/if}
-        <input type="text" bind:value={model} placeholder="gpt-4o-mini" autocomplete="off" />
-      </label>
-      <label>API key
-        <input
-          type="password"
-          bind:value={apiKey}
-          autocomplete="off"
-          placeholder={config.hasKey ? `Guardada (${config.keyMask ?? '••••'}) — déjalo vacío para conservarla` : 'sk-…'}
-        />
-      </label>
-      <p class="note">Tu key se cifra en el servidor (AES-256-GCM) y nunca se vuelve a mostrar completa.</p>
-      <div class="row">
-        <button class="primary" disabled={busy} on:click={save}>Guardar</button>
-        {#if config.configured}
-          <button disabled={busy} on:click={test}>Probar conexión</button>
-          <button class="danger" disabled={busy} on:click={remove}>Eliminar</button>
-        {/if}
-      </div>
-      {#if settingsMsg}<p class="ok">{settingsMsg}</p>{/if}
-      {#if settingsErr}<p class="error">{settingsErr}</p>{/if}
-
-      <div class="local-box">
-        <strong><Ico n="monitor" /> Hermes local (este equipo)</strong>
-        <p class="note">
-          Conversa con un Hermes Agent que corre en tu ordenador, sin gastar tu key ni salir a internet. Los ajustes
-          se guardan solo aquí. El servidor sigue creando la personalidad, moderando y guardando el historial.
-          Limitaciones: sin herramientas de agente y sin nuevos recuerdos automáticos.
-        </p>
-        <label class="check">
-          <input type="checkbox" bind:checked={local.enabled} />
-          Usar mi Hermes local para conversar
-        </label>
-        <label>URL (127.0.0.1 o localhost)
-          <input type="url" bind:value={local.baseUrl} placeholder="http://127.0.0.1:8642/v1" autocomplete="off" />
-        </label>
-        <label>Modelo
-          <input type="text" bind:value={local.model} placeholder="hermes-agent" autocomplete="off" />
-        </label>
-        <label>API_SERVER_KEY <small>(si tu Hermes la exige)</small>
-          <input type="password" bind:value={local.apiKey} autocomplete="off" placeholder="opcional" />
-        </label>
-        <div class="row">
-          <button class="primary" on:click={saveLocal}>Guardar local</button>
-          <button disabled={busy} on:click={testLocal}>Probar Hermes local</button>
+      {#if activeMode === 'managed'}
+        <div class="managed-settings-box">
+          <strong><Ico n="star" /> IA de Pockai (Gestionada)</strong>
+          <p class="note">
+            Conversa directamente con tu mascota sin necesidad de crear cuentas externas ni introducir claves.
+            El servidor gestiona la IA con OpenRouter y optimización automática.
+          </p>
+          <div class="managed-plan-status">
+            {#if isPro}
+              <p class="ok"><strong>Plan Pro activo:</strong> 200 mensajes diarios y herramientas de agente habilitadas.</p>
+              <button class="primary" on:click={openPortal}>Gestionar suscripción en Stripe</button>
+            {:else}
+              <p><strong>Plan Gratuito:</strong> 15 mensajes diarios con respuestas concisas.</p>
+              <button class="primary" on:click={() => (showPaywall = true)}>⭐ Hazte Pro (200 mensajes/día)</button>
+            {/if}
+          </div>
         </div>
-        {#if localMsg}<p class="ok">{localMsg}</p>{/if}
-        {#if localErr}<p class="error">{localErr}</p>{/if}
-      </div>
+      {:else if activeMode === 'byok'}
+        <label>Proveedor
+          <select bind:value={provider}>
+            <option value="openai">OpenAI</option>
+            <option value="hermes">Hermes Agent (remoto, HTTPS)</option>
+            <option value="custom">Otro compatible con OpenAI</option>
+          </select>
+        </label>
+        {#if needsUrl}
+          <label>URL base (HTTPS)
+            <input type="url" bind:value={baseUrl} placeholder="https://mi-servidor.com/v1" autocomplete="off" />
+          </label>
+        {/if}
+        <label>Modelo {#if provider === 'openai'}<small>(vacío = gpt-4o-mini)</small>{/if}
+          <input type="text" bind:value={model} placeholder="gpt-4o-mini" autocomplete="off" />
+        </label>
+        <label>API key
+          <input
+            type="password"
+            bind:value={apiKey}
+            autocomplete="off"
+            placeholder={config.hasKey ? `Guardada (${config.keyMask ?? '••••'}) — déjalo vacío para conservarla` : 'sk-…'}
+          />
+        </label>
+        <p class="note">Tu key se cifra en el servidor (AES-256-GCM) y nunca se vuelve a mostrar completa. Sin límites diarios en Pockai.</p>
+        <div class="row">
+          <button class="primary" disabled={busy} on:click={save}>Guardar</button>
+          {#if config.configured}
+            <button disabled={busy} on:click={test}>Probar conexión</button>
+            <button class="danger" disabled={busy} on:click={remove}>Volver a IA de Pockai</button>
+          {/if}
+        </div>
+        {#if settingsMsg}<p class="ok">{settingsMsg}</p>{/if}
+        {#if settingsErr}<p class="error">{settingsErr}</p>{/if}
+      {:else}
+        <div class="local-box">
+          <strong><Ico n="monitor" /> Hermes local (este equipo)</strong>
+          <p class="note">
+            Conversa con un Hermes Agent que corre en tu ordenador, sin gastar tu key ni salir a internet. Los ajustes
+            se guardan solo aquí. El servidor sigue creando la personalidad, moderando y guardando el historial.
+            Limitaciones: sin herramientas de agente y sin nuevos recuerdos automáticos.
+          </p>
+          <label class="check">
+            <input type="checkbox" bind:checked={local.enabled} />
+            Usar mi Hermes local para conversar
+          </label>
+          <label>URL (127.0.0.1 o localhost)
+            <input type="url" bind:value={local.baseUrl} placeholder="http://127.0.0.1:8642/v1" autocomplete="off" />
+          </label>
+          <label>Modelo
+            <input type="text" bind:value={local.model} placeholder="hermes-agent" autocomplete="off" />
+          </label>
+          <label>API_SERVER_KEY <small>(si tu Hermes la exige)</small>
+            <input type="password" bind:value={local.apiKey} autocomplete="off" placeholder="opcional" />
+          </label>
+          <div class="row">
+            <button class="primary" on:click={saveLocal}>Guardar local</button>
+            <button disabled={busy} on:click={testLocal}>Probar Hermes local</button>
+          </div>
+          {#if localMsg}<p class="ok">{localMsg}</p>{/if}
+          {#if localErr}<p class="error">{localErr}</p>{/if}
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -675,32 +822,110 @@
         {/if}
       {/if}
     </div>
-    <div class="composer">
-      <textarea
-        rows="2"
-        maxlength="1000"
-        bind:value={input}
-        on:keydown={onKey}
-        placeholder="Escribe un mensaje… (Enter para enviar)"
-        disabled={streaming}
-      ></textarea>
-      <button class="primary" disabled={streaming || !input.trim()} on:click={() => send()}>
-        {streaming ? '…' : 'Enviar'}
-      </button>
+
+    <!-- Compositor de mensajes y Paywall -->
+    <div class="composer-container">
+      {#if isManaged && quotaExceeded}
+        <div class="paywall-banner">
+          <p><strong>Límite diario alcanzado ({dailyLimit} mensajes).</strong> Se renueva a medianoche.</p>
+          <div class="row">
+            <button class="primary" on:click={() => (showPaywall = true)}>⭐ Hazte Pro (200 mensajes/día)</button>
+            <button on:click={() => setMode('byok')}>Usar mi clave gratis</button>
+          </div>
+        </div>
+      {:else}
+        <div class="composer">
+          <div class="textarea-wrapper">
+            <textarea
+              rows="2"
+              maxlength={maxChars}
+              bind:value={input}
+              on:keydown={onKey}
+              placeholder={isManaged ? "Escribe un mensaje… (máx. 240 caracteres)" : "Escribe un mensaje… (Enter para enviar)"}
+              disabled={streaming}
+            ></textarea>
+            {#if isManaged}
+              <span class="char-count" class:near-limit={input.length >= maxChars - 20}>
+                {input.length}/{maxChars}
+              </span>
+            {/if}
+          </div>
+          <button class="primary send-btn" disabled={streaming || !input.trim() || (isManaged && quotaExceeded)} on:click={() => send()}>
+            {streaming ? '…' : 'Enviar'}
+          </button>
+        </div>
+      {/if}
     </div>
   {/if}
 {/if}
 
+<!-- Modal de Paywall / Suscripción Pro -->
+{#if showPaywall}
+  <div
+    class="paywall-overlay"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    on:click|self={() => (showPaywall = false)}
+    on:keydown={(e) => e.key === 'Escape' && (showPaywall = false)}
+  >
+    <div class="paywall-modal">
+      <div class="paywall-top">
+        <h3>⭐ Pockai Pro</h3>
+        <button class="x" on:click={() => (showPaywall = false)}>✕</button>
+      </div>
+      <p class="paywall-desc">
+        Desbloquea el máximo potencial de tu mascota sin interrupciones con Pockai Pro:
+      </p>
+      <ul class="paywall-perks">
+        <li>✨ <strong>200 mensajes diarios</strong> de IA de alta calidad (vs 15 en Free).</li>
+        <li>🛠️ <strong>Herramientas de agente desbloqueadas:</strong> recordatorios, abrir enlaces y más.</li>
+        <li>🧠 <strong>Respuestas y memoria ampliadas:</strong> contexto más profundo y mayor riqueza de personalidad.</li>
+        <li>⚡ <strong>Prioridad de servicio:</strong> menor latencia y modelos de reserva automáticos.</li>
+      </ul>
+
+      {#if paywallErr}
+        <p class="error">{paywallErr}</p>
+      {/if}
+
+      <div class="paywall-cta">
+        {#if isPro}
+          <button class="primary btn-large" disabled={paywallBusy} on:click={openPortal}>
+            {paywallBusy ? 'Cargando portal…' : 'Gestionar suscripción en Stripe'}
+          </button>
+        {:else}
+          <button class="primary btn-large" disabled={paywallBusy} on:click={subscribePro}>
+            {paywallBusy ? 'Abriendo Stripe Checkout…' : 'Hazte Pro por 9,99 $/mes'}
+          </button>
+        {/if}
+        <button class="btn-secondary" on:click={() => { showPaywall = false; setMode('byok'); }}>
+          Prefiero usar mi propia API key gratis
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
   .muted { font-size: 12px; opacity: 0.7; margin: 0 0 8px; }
-  .local-box { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px; border-radius: var(--radius-2xl); border: 1px dashed var(--line-soft); }
+  .local-box, .managed-settings-box { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px; border-radius: var(--radius-2xl); border: 1px dashed var(--line-soft); }
+  .managed-plan-status { margin-top: 8px; }
   .check { flex-direction: row; align-items: center; gap: 6px; }
   .note { font-size: 11px; opacity: 0.6; margin: 4px 0; }
   .ok { color: var(--success-ink); font-size: 12px; margin: 6px 0 0; }
   .error { color: var(--danger-ink); font-size: 12px; margin: 6px 0 0; }
-  .bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .badge { font-size: 12px; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); padding: 3px 8px; border-radius: var(--radius-2xl); }
+  .bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 6px; }
+  .bar-left, .bar-right { display: flex; align-items: center; gap: 6px; }
+  .badge { font-size: 11px; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); padding: 3px 8px; border-radius: var(--radius-2xl); white-space: nowrap; }
+  .pro-badge { background: #1e1b4b; color: #a5b4fc; border: 1px solid #4338ca; font-weight: 600; }
+  .quota-badge { background: var(--surface-2); border: 1px solid var(--line-soft); }
+  .quota-empty { border-color: var(--danger-ink); color: var(--danger-ink); }
   .link { background: none; border: none; color: var(--accent-ink); cursor: pointer; font-size: 12px; }
+  .link-btn { background: none; border: none; font-size: 11px; cursor: pointer; color: var(--accent-ink); text-decoration: underline; padding: 2px 4px; }
+  .pro-btn { color: #f59e0b; font-weight: 600; }
+  .mode-select { font-size: 11px; padding: 2px 6px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface-2); color: inherit; }
+  .managed-info-bar { font-size: 11px; padding: 4px 8px; background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border-radius: var(--radius-2xl); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .upgrade-chip { font-size: 10px; font-weight: 600; background: #4f46e5; color: white; border: none; border-radius: 999px; padding: 2px 8px; cursor: pointer; }
   .settings { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
   label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
   label small { opacity: 0.6; }
@@ -708,7 +933,7 @@
     background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl); padding: 7px 9px; font: inherit; font-size: 13px;
   }
-  textarea { resize: none; flex: 1; }
+  textarea { resize: none; width: 100%; box-sizing: border-box; }
   .row { display: flex; gap: 6px; flex-wrap: wrap; }
   button {
     padding: 7px 11px; border-radius: var(--radius-2xl); cursor: pointer; font-size: 12px; font-weight: 600;
@@ -737,8 +962,18 @@
     opacity: 0.75; font-style: italic; border-left: 2px solid var(--line-soft); max-height: 160px; overflow-y: auto;
   }
   .usage { font-size: 11px; opacity: 0.7; margin: 0 0 6px; }
-  .usage.full { color: var(--danger-ink); opacity: 1; }
+  .composer-container { margin-top: 4px; }
   .composer { display: flex; gap: 6px; align-items: stretch; }
+  .textarea-wrapper { flex: 1; position: relative; display: flex; }
+  .char-count { position: absolute; right: 8px; bottom: 4px; font-size: 10px; opacity: 0.5; pointer-events: none; }
+  .char-count.near-limit { color: var(--danger-ink); opacity: 1; font-weight: bold; }
+  .send-btn { min-width: 60px; }
+  .paywall-banner {
+    padding: 10px; background: color-mix(in srgb, var(--color-sunburst) 12%, var(--surface));
+    border: 1px solid var(--color-sunburst); border-radius: var(--radius-2xl); font-size: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .paywall-banner p { margin: 0; }
   .memory { margin-bottom: 8px; }
   .hint { align-self: flex-start; font-size: 12px; opacity: 0.7; }
   .card {
@@ -753,7 +988,27 @@
   .mem-list { list-style: none; margin: 6px 0; padding: 0; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
   .mem-list li { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; background: var(--surface-2); padding: 4px 8px; border-radius: var(--radius-2xl); user-select: text; }
   .mem-list li.summary { opacity: 0.75; font-style: italic; }
-  .x { background: none; border: none; padding: 0 4px; opacity: 0.6; }
+  .x { background: none; border: none; padding: 0 4px; opacity: 0.6; cursor: pointer; }
   .x:hover { opacity: 1; color: var(--danger-ink); }
   .small { padding: 4px 8px; font-size: 11px; }
+
+  /* Modal Paywall */
+  .paywall-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center;
+    z-index: 999; padding: 16px;
+  }
+  .paywall-modal {
+    background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-2xl);
+    max-width: 380px; width: 100%; padding: 18px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .paywall-top { display: flex; justify-content: space-between; align-items: center; }
+  .paywall-top h3 { margin: 0; font-size: 16px; font-weight: 700; color: #f59e0b; }
+  .paywall-desc { font-size: 12px; opacity: 0.8; margin: 0; }
+  .paywall-perks { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+  .paywall-perks li { line-height: 1.4; }
+  .paywall-cta { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+  .btn-large { padding: 10px 14px; font-size: 13px; font-weight: 700; }
+  .btn-secondary { background: none; border: none; font-size: 11px; opacity: 0.7; cursor: pointer; text-decoration: underline; }
 </style>

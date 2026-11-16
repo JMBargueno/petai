@@ -24,6 +24,7 @@ export default [
       section('usuarios', () => import('./features/users').then((m) => m.Users)),
       section('invitaciones', () => import('./features/invites').then((m) => m.Invites)),
       section('pockais', () => import('./features/pockais').then((m) => m.Pockais)),
+      section('facturacion', () => import('./features/billing').then((m) => m.Billing)),
       section('registro', () => import('./features/audit').then((m) => m.Audit)),
     ],
   },

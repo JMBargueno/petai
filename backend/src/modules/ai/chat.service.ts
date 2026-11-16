@@ -18,6 +18,11 @@ import { EnvironmentalService } from '../environmental/environmental.service';
 import { BondingService } from '../bonding/bonding.service';
 import { isBondingTierAtLeast } from '../bonding/bonding';
 import { AGENT_UNLOCK, INTELLIGENCE_MAX, MEMORY_UNLOCK, buildSystemPrompt, intelligenceTier } from './personality';
+import { EntitlementService } from '../billing/entitlement.service';
+import { DailyQuotaService } from '../billing/daily-quota.service';
+import { BillingConfigService } from '../billing/billing-config.service';
+import { ManagedBudgetService } from '../billing/managed-budget.service';
+import { PlanLimits } from '../billing/plans';
 
 export type ChatStreamEvent =
   | { type: 'delta'; text: string }
@@ -61,6 +66,10 @@ export class ChatService {
     private readonly usage: UsageService,
     private readonly bonding: BondingService,
     private readonly exclusiveLock: ExclusiveLockService,
+    private readonly entitlements: EntitlementService,
+    private readonly dailyQuota: DailyQuotaService,
+    private readonly billingConfig: BillingConfigService,
+    private readonly managedBudget: ManagedBudgetService,
     @Optional() private readonly redis?: RedisService,
     @Optional() private readonly environmental?: EnvironmentalService,
   ) {}
@@ -144,21 +153,43 @@ export class ChatService {
     }
 
     const { provider, model, mode } = await this.aiConfig.resolveProvider(userId);
+
+    let limits: PlanLimits | undefined;
+    let quotaKey: string | undefined;
+
+    if (mode === 'managed') {
+      const plan = await this.entitlements.planFor(userId);
+      limits = await this.billingConfig.limits(plan);
+      if (message.length > limits.maxInputChars) {
+        throw new BadRequestException({
+          statusCode: 400,
+          code: 'message_too_long',
+          max: limits.maxInputChars,
+          message: `El mensaje supera los ${limits.maxInputChars} caracteres`,
+        });
+      }
+      await this.managedBudget.assertOpen(plan);
+      const quota = await this.dailyQuota.consume(userId, plan);
+      quotaKey = quota.key;
+    }
+
     await this.usage.assertWithinQuota(userId, mode);
 
     const clientTools = sanitizeClientTools(rawClientTools);
     const { messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent', {
       clientTools,
       clientContext: sanitizeClientContext(rawClientContext, pet),
+      limits,
     });
 
-    // Agente (intelligence ≥ 500): puede usar herramientas; los efectos requieren confirmación
+    // Agente (intelligence ≥ 500 y habilitado por el plan): puede usar herramientas
+    const allowsAgent = limits?.agentTools ?? true;
     const agentCtx: AgentContext | undefined =
-      (pet.intelligence ?? 0) >= AGENT_UNLOCK
+      allowsAgent && (pet.intelligence ?? 0) >= AGENT_UNLOCK
         ? { userId, petId: pet.id, timeZone, now, clientTools }
         : undefined;
 
-    return { events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx) };
+    return { events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx, limits, quotaKey) };
   }
 
   /**
@@ -170,7 +201,11 @@ export class ChatService {
     pet: any,
     message: string,
     maxTier: 'chat' | 'memory' | 'agent',
-    extra: { clientTools?: string[]; clientContext?: ReturnType<typeof sanitizeClientContext> } = {},
+    extra: {
+      clientTools?: string[];
+      clientContext?: ReturnType<typeof sanitizeClientContext>;
+      limits?: PlanLimits;
+    } = {},
   ) {
     const owner = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -182,13 +217,16 @@ export class ChatService {
     const timeZone = safeTimeZone(owner?.timezone);
     const now = new Date();
 
+    const historyTake = extra.limits ? extra.limits.historyMessages : HISTORY_MESSAGES;
+    const historyBudget = extra.limits ? extra.limits.historyCharBudget : HISTORY_CHAR_BUDGET;
+
     const past = await this.prisma.chatMessage.findMany({
       where: { petId: pet.id, role: { in: ['user', 'assistant'] } },
       orderBy: { createdAt: 'desc' },
-      take: HISTORY_MESSAGES,
+      take: historyTake,
     });
     const history: ChatMessageInput[] = [];
-    let budget = HISTORY_CHAR_BUDGET;
+    let budget = historyBudget;
     for (const m of past) {
       budget -= m.content.length;
       if (budget < 0) break;
@@ -336,6 +374,8 @@ export class ChatService {
     mode: string,
     signal?: AbortSignal,
     agentCtx?: AgentContext,
+    limits?: PlanLimits,
+    quotaKey?: string,
   ): AsyncGenerator<ChatStreamEvent> {
     // Una respuesta en curso por usuario (guard distribuido, R-02): evita ráfagas paralelas que
     // disparan el gasto de LLM, respetado entre réplicas vía Redis (fallback en memoria).
@@ -350,6 +390,9 @@ export class ChatService {
     let proposed = 0;
     // Razonamiento del modelo: va aparte de la respuesta, no se emite en streaming ni se guarda
     let thinking = '';
+    let hasEmittedDelta = false;
+    let promptTokens = 0;
+    let completionTokens = 0;
     const convo = [...messages];
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -358,18 +401,24 @@ export class ChatService {
           agentCtx && round < MAX_TOOL_ROUNDS - 1 ? toolDefinitions(agentCtx.clientTools) : undefined;
         let text = '';
         const calls: ToolCall[] = [];
-        for await (const ev of provider.chat(convo, { model, maxTokens: 1200, tools, signal })) {
+        const maxTokens = limits?.maxOutputTokens ?? 1200;
+        for await (const ev of provider.chat(convo, { model, maxTokens, tools, signal })) {
           if (ev.type === 'delta') {
             text += ev.text;
             // Moderación de salida en streaming: se retiene el final hasta confirmar que es seguro
             const safe = guard.push(ev.text);
             if (safe === null) return yield* this.blockedOutput(guard);
-            if (safe) yield { type: 'delta', text: safe };
+            if (safe) {
+              hasEmittedDelta = true;
+              yield { type: 'delta', text: safe };
+            }
           } else if (ev.type === 'thinking') {
             if (thinking.length < MAX_THINKING_CHARS) thinking += ev.text;
           } else if (ev.type === 'tool_call') {
             calls.push({ id: ev.id, name: ev.name, arguments: ev.arguments });
           } else if (ev.type === 'done') {
+            promptTokens += ev.usage?.promptTokens ?? 0;
+            completionTokens += ev.usage?.completionTokens ?? 0;
             tokens += (ev.usage?.promptTokens ?? 0) + (ev.usage?.completionTokens ?? 0);
           }
         }
@@ -390,12 +439,16 @@ export class ChatService {
 
       const rest = guard.flush();
       if (rest === null) return yield* this.blockedOutput(guard);
-      if (rest) yield { type: 'delta', text: rest };
+      if (rest) {
+        hasEmittedDelta = true;
+        yield { type: 'delta', text: rest };
+      }
 
       let reply = guard.full;
       // Si solo se propusieron acciones y el modelo no dijo nada, se avisa al usuario
       if (!reply.trim() && proposed > 0) {
         reply = 'Necesito tu confirmación para seguir. 👆';
+        hasEmittedDelta = true;
         yield { type: 'delta', text: reply };
       }
       if (!reply.trim()) {
@@ -418,13 +471,26 @@ export class ChatService {
       };
     } catch (err: any) {
       if (signal?.aborted) return; // el cliente cerró la conexión
+      if (!hasEmittedDelta && quotaKey) {
+        await this.dailyQuota.refund(quotaKey).catch(() => undefined);
+        await this.managedBudget.recordFailure().catch(() => undefined);
+      }
       this.logger.warn(`Fallo del proveedor de IA: ${err?.message}`);
       yield { type: 'error', message: err?.message || 'Error del proveedor de IA' };
     } finally {
       await this.exclusiveLock.release('chat', userId, inflightLock.token);
       // Cuota: se contabiliza lo consumido aunque la respuesta se bloquee o falle a medias
       const used = tokens > 0 ? tokens : this.estimateTokens(messages, guard.full);
-      await this.usage.record(userId, used).catch((e) => this.logger.warn(`No se pudo registrar el uso: ${e?.message}`));
+      const costUsd = mode === 'managed' ? (promptTokens * 0.10 + completionTokens * 0.40) / 1e6 : 0;
+      if (costUsd > 0) {
+        await this.managedBudget.add(costUsd).catch(() => undefined);
+      }
+      if (hasEmittedDelta) {
+        await this.managedBudget.recordSuccess().catch(() => undefined);
+      }
+      await this.usage
+        .record(userId, used, costUsd, mode === 'managed' ? 'openrouter' : undefined)
+        .catch((e) => this.logger.warn(`No se pudo registrar el uso: ${e?.message}`));
     }
   }
 

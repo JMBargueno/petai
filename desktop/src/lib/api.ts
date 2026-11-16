@@ -361,7 +361,7 @@ export const api = {
     return minigameRequest<any>('GET', '/v1/ai/config');
   },
 
-  async saveAiConfig(cfg: { provider: string; baseUrl?: string; model?: string; apiKey?: string }) {
+  async saveAiConfig(cfg: { mode?: 'byok' | 'managed'; provider?: string; baseUrl?: string; model?: string; apiKey?: string }) {
     return minigameRequest<any>('PUT', '/v1/ai/config', cfg);
   },
 
@@ -465,7 +465,45 @@ export const api = {
       requests: number;
       quota: number | null;
       remaining: number | null;
+      mode?: string;
+      plan?: 'free' | 'pro';
+      daily?: {
+        used: number;
+        limit: number;
+        resetsAt: string;
+      };
     }>('GET', '/v1/ai/usage');
+  },
+
+  // ---- Facturación y Suscripción Pro (Spec-34) ----
+  async getBillingPlans() {
+    return minigameRequest<{
+      pricing: { monthlyPriceUsd: number; monthlyPriceEur: number; trialDays: number };
+      plans: {
+        free: { name: string; priceUsd: number; priceEur: number; dailyMessages: number; maxInputChars: number; maxOutputTokens: number; agentTools: boolean };
+        pro: { name: string; priceUsd: number; priceEur: number; dailyMessages: number; maxInputChars: number; maxOutputTokens: number; agentTools: boolean };
+        byok: { name: string; priceUsd: number; priceEur: number; dailyMessages: null; maxInputChars: number; rateLimitPerMinute: number };
+      };
+    }>('GET', '/v1/billing/plans');
+  },
+
+  async getBillingEntitlement() {
+    return minigameRequest<{
+      plan: 'free' | 'pro';
+      source?: 'stripe' | 'google_play' | null;
+      currentPeriodEnd?: string | null;
+      cancelAtPeriodEnd?: boolean;
+      status?: string | null;
+      duplicateSubscriptions?: boolean;
+    }>('GET', '/v1/billing/entitlement');
+  },
+
+  async createStripeCheckout() {
+    return minigameRequest<{ url: string }>('POST', '/v1/billing/stripe/checkout');
+  },
+
+  async createStripePortal() {
+    return minigameRequest<{ url: string }>('POST', '/v1/billing/stripe/portal');
   },
 
   /** Modo Hermes local, paso 1: el servidor valida, modera y devuelve los mensajes a enviar al modelo local. */

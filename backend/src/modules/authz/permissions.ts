@@ -16,6 +16,7 @@ export const PERMISSIONS = [
   'invites:manage', // invitaciones de registro y ajuste "solo con invitación"
   'pets:read', // listar mascotas en el panel de administración
   'pets:rename', // renombrar mascotas desde el panel de administración
+  'billing:manage', // precios, planes y límites de IA gestionada. SOLO superadmin.
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

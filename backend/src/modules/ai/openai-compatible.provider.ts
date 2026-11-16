@@ -22,6 +22,11 @@ function toWire(m: ChatMessageInput) {
   return { role: m.role, content: m.content };
 }
 
+export interface OpenAiCompatibleOptions {
+  extraHeaders?: Record<string, string>;
+  extraBody?: Record<string, any>;
+}
+
 /**
  * Proveedor para cualquier API compatible con OpenAI Chat Completions:
  * OpenAI, Hermes Agent (API server), OpenRouter, Ollama…
@@ -33,6 +38,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     private readonly baseUrl: string,
     private readonly apiKey: string | null,
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly options?: OpenAiCompatibleOptions,
   ) {
     this.normalizedBaseUrl = baseUrl.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
   }
@@ -41,6 +47,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     return {
       'Content-Type': 'application/json',
       ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+      ...(this.options?.extraHeaders ?? {}),
     };
   }
 
@@ -86,6 +93,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     return JSON.stringify({
         model: opts.model,
         messages: messages.map(toWire),
+        ...(this.options?.extraBody ?? {}),
         ...(opts.tools?.length
           ? {
               tools: opts.tools.map((t) => ({

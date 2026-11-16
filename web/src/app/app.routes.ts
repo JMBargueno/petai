@@ -22,6 +22,14 @@ export const routes: Routes = [
     loadComponent: () => import('./arena/arena').then((m) => m.Arena),
   },
   {
+    path: 'pro/ok',
+    loadComponent: () => import('./pro/pro-success').then((m) => m.ProSuccess),
+  },
+  {
+    path: 'pro/cancel',
+    loadComponent: () => import('./pro/pro-cancel').then((m) => m.ProCancel),
+  },
+  {
     // Panel oculto: no se enlaza desde la landing, no se prerenderiza y va en un chunk aparte.
     path: 'admin',
     loadChildren: () => import('./admin/admin.routes'),

@@ -56,6 +56,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { AuthzModule } from './modules/authz/authz.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { DesktopUpdatesModule } from './modules/desktop-updates/desktop-updates.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 // DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
 // En `NODE_ENV === 'production'` el DevModule no se registra ⇒ 404 (SC-007, constitución I/VIII).
@@ -88,6 +89,7 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     BattlesModule,
     HealthModule,
     DesktopUpdatesModule,
+    BillingModule,
     MissionsModule,
     AchievementsModule,
     ChestsModule,

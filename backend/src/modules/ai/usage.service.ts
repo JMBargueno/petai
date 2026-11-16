@@ -34,13 +34,18 @@ export class UsageService {
     return { month, tokens: row?.tokens ?? 0, requests: row?.requests ?? 0 };
   }
 
-  async record(userId: string, tokens: number) {
+  async record(userId: string, tokens: number, costUsd = 0, provider?: string) {
     const amount = Math.max(0, Math.floor(tokens));
     const month = UsageService.monthKey();
     await this.prisma.aiUsage.upsert({
       where: { userId_month: { userId, month } },
-      create: { userId, month, tokens: amount, requests: 1 },
-      update: { tokens: { increment: amount }, requests: { increment: 1 } },
+      create: { userId, month, tokens: amount, requests: 1, ...(costUsd > 0 ? { costUsd } : {}), ...(provider ? { provider } : {}) },
+      update: {
+        tokens: { increment: amount },
+        requests: { increment: 1 },
+        ...(costUsd > 0 ? { costUsd: { increment: costUsd } } : {}),
+        ...(provider ? { provider } : {}),
+      },
     });
   }
 
