@@ -521,7 +521,7 @@ export class ChatService {
       const intelligence = saved.intelligence;
 
       // En segundo plano: no retrasa la respuesta ni puede romper el chat
-      void this.memory.maybeSummarize(pet.id, intelligence, provider, model, userId, mode);
+      void this.memory.maybeSummarize(pet.id, intelligence, provider, model, userId, mode, limits?.memoryExtractEvery);
 
       yield {
         type: 'done',

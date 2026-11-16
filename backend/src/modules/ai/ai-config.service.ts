@@ -156,6 +156,7 @@ export class AiConfigService {
           extraHeaders: { 'HTTP-Referer': 'https://pockai.app', 'X-Title': 'Pockai' },
           // `usage.include`: OpenRouter devuelve el coste real en el último chunk (presupuesto exacto)
           extraBody: { models: managedSettings.fallbackModels, usage: { include: true } },
+          firstTokenTimeoutMs: (managedSettings.firstTokenTimeoutSeconds ?? 10) * 1000,
         },
       );
       return { provider, model: managedSettings.primaryModel, mode: 'managed' };

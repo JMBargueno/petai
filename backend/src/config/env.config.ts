@@ -91,7 +91,8 @@ export const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRODUCT_PRO: z.string().optional(),
-  // Price ID de la suscripción Pro en Stripe (price_...). Obligatorio si hay STRIPE_SECRET_KEY en producción.
+  // Respaldo: Price ID fijo de Pro (price_...). Con STRIPE_PRODUCT_PRO el precio lo gestiona el panel
+  // (se crea un Price nuevo en Stripe al cambiarlo) y esta variable solo se usa si no hay ninguno.
   STRIPE_PRICE_PRO: z.string().optional(),
   // Google Play Billing: cuenta de servicio (JSON o JSON en base64) con acceso a la Play Developer API.
   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: z.string().optional(),
@@ -162,8 +163,8 @@ export function productionProblems(env: EnvConfig): string[] {
   if (env.STRIPE_SECRET_KEY && !env.STRIPE_WEBHOOK_SECRET) {
     problems.push('STRIPE_WEBHOOK_SECRET es obligatorio cuando STRIPE_SECRET_KEY está definido');
   }
-  if (env.STRIPE_SECRET_KEY && !env.STRIPE_PRICE_PRO) {
-    problems.push('STRIPE_PRICE_PRO es obligatorio cuando STRIPE_SECRET_KEY está definido');
+  if (env.STRIPE_SECRET_KEY && !env.STRIPE_PRODUCT_PRO && !env.STRIPE_PRICE_PRO) {
+    problems.push('STRIPE_PRODUCT_PRO (precio gestionado desde el panel) o STRIPE_PRICE_PRO es obligatorio con STRIPE_SECRET_KEY');
   }
   if (env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON && (!env.GOOGLE_RTDN_AUDIENCE || !env.GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL)) {
     problems.push('GOOGLE_RTDN_AUDIENCE y GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL son obligatorios con Google Play activo');

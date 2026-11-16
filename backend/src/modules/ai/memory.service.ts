@@ -88,7 +88,10 @@ export class MemoryService {
     model: string,
     userId: string,
     mode: string,
+    // Gestionada: "extraer cada N mensajes" del plan (panel de facturación); 0 = extracción desactivada
+    everyUserMessages = SUMMARIZE_EVERY_USER_MESSAGES,
   ) {
+    if (everyUserMessages <= 0) return;
     if (intelligence < MEMORY_UNLOCK || this.inflight.has(petId)) return;
     const last = this.lastAttempt.get(petId) ?? 0;
     if (Date.now() - last < RETRY_COOLDOWN_MS) return;
@@ -109,7 +112,7 @@ export class MemoryService {
         orderBy: { createdAt: 'asc' },
         take: 40,
       });
-      if (recent.filter((m) => m.role === 'user').length < SUMMARIZE_EVERY_USER_MESSAGES) return;
+      if (recent.filter((m) => m.role === 'user').length < everyUserMessages) return;
 
       const managed = mode === 'managed' && !!this.managedBudget;
       // Gestionada: la extracción es prescindible, así que solo se hace con el presupuesto del plan Free abierto

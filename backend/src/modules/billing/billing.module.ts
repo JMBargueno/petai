@@ -11,6 +11,7 @@ import { BillingController } from './billing.controller';
 import { StripeController } from './stripe.controller';
 import { AdminBillingController } from './admin-billing.controller';
 import { GooglePlayClient } from './google-play.client';
+import { StripePriceSync } from './stripe-price.sync';
 
 @Module({
   imports: [PrismaModule, RedisModule, RealtimeModule],
@@ -22,6 +23,7 @@ import { GooglePlayClient } from './google-play.client';
     ManagedBudgetService,
     BillingService,
     GooglePlayClient,
+    StripePriceSync,
   ],
   exports: [
     BillingConfigService,

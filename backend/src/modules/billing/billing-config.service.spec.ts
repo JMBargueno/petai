@@ -103,4 +103,56 @@ describe('BillingConfigService', () => {
       await expect(svc.saveNewVersion(invalidConfig, 'admin-1')).rejects.toThrow();
     });
   });
+
+  describe('precio de Stripe gestionado desde el panel', () => {
+    let stripePrices: any;
+    const withPrice = (eur: number, usd: number) => ({
+      ...DEFAULT_BILLING_CONFIG,
+      pricing: { ...DEFAULT_BILLING_CONFIG.pricing, monthlyPriceEur: eur, monthlyPriceUsd: usd },
+    });
+
+    beforeEach(() => {
+      stripePrices = {
+        enabled: true,
+        createProPrice: jest.fn(async () => 'price_new'),
+        setActive: jest.fn(async () => undefined),
+      };
+      svc = new BillingConfigService(prisma, redis, config, stripePrices);
+      (svc as any).activeStripePriceIds = { pro: 'price_old' };
+      prisma.billingConfig.findFirst.mockResolvedValue({ version: 3 });
+    });
+
+    it('al cambiar el precio crea uno nuevo en Stripe, lo guarda en la versión y archiva el anterior', async () => {
+      await svc.saveNewVersion(withPrice(12.99, 13.99), 'admin-1');
+
+      expect(stripePrices.createProPrice).toHaveBeenCalledWith(expect.objectContaining({ monthlyPriceEur: 12.99, monthlyPriceUsd: 13.99 }));
+      expect(prisma.billingConfig.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ stripePriceIds: { pro: 'price_new' } }) }),
+      );
+      expect(stripePrices.setActive).toHaveBeenCalledWith('price_old', false);
+      expect(await svc.proStripePriceId()).toBe('price_new');
+    });
+
+    it('si el precio no cambia no toca Stripe', async () => {
+      await svc.saveNewVersion(DEFAULT_BILLING_CONFIG, 'admin-1');
+      expect(stripePrices.createProPrice).not.toHaveBeenCalled();
+      expect(prisma.billingConfig.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ stripePriceIds: { pro: 'price_old' } }) }),
+      );
+    });
+
+    it('si Stripe rechaza el precio no se guarda nada', async () => {
+      stripePrices.createProPrice.mockRejectedValue(new Error('stripe down'));
+      await expect(svc.saveNewVersion(withPrice(12.99, 13.99), 'admin-1')).rejects.toThrow('stripe down');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(await svc.proStripePriceId()).toBe('price_old');
+    });
+
+    it('si falla la base de datos archiva el precio recién creado', async () => {
+      prisma.$transaction.mockRejectedValueOnce(new Error('db down'));
+      await expect(svc.saveNewVersion(withPrice(12.99, 13.99), 'admin-1')).rejects.toThrow('db down');
+      expect(stripePrices.setActive).toHaveBeenCalledWith('price_new', false);
+      expect(stripePrices.setActive).not.toHaveBeenCalledWith('price_old', false);
+    });
+  });
 });

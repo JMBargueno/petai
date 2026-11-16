@@ -102,6 +102,10 @@ interface BillingConfigVersion {
                     <input type="number" [(ngModel)]="formConfig.pricing.trialDays" name="trialDays" min="0" />
                   </label>
                 </div>
+                <p class="section-desc">
+                  Al cambiar el precio se crea un precio nuevo en Stripe para las altas nuevas; los suscriptores
+                  actuales mantienen el suyo. En Google Play el precio y la prueba se cambian en Play Console.
+                </p>
               </div>
 
               <div class="fieldset-group">

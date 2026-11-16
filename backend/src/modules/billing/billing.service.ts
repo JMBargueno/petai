@@ -99,15 +99,22 @@ export class BillingService {
 
     if (!this.stripe) {
       this.logger.warn('STRIPE_SECRET_KEY no configurada; devolviendo URL de prueba de Checkout');
-      return { url: `${this.publicWebUrl}/pro/ok?mock=true&user=${userId}` };
+      return { url: `${this.publicWebUrl}/pro/ok?mock=true` };
     }
 
-    const priceId = this.config.get<string>('STRIPE_PRICE_PRO') || 'price_mock_pro';
+    // El precio lo decide el panel (versión activa de BillingConfig); la variable de entorno es solo respaldo
+    const priceId = (await this.billingConfig.proStripePriceId()) || this.config.get<string>('STRIPE_PRICE_PRO');
+    if (!priceId) {
+      this.logger.error('No hay precio de Stripe para Pro: configura STRIPE_PRODUCT_PRO o STRIPE_PRICE_PRO');
+      throw new ServiceUnavailableException('La suscripción Pro no está disponible ahora mismo');
+    }
+    const trialDays = this.billingConfig.pricingSettings().trialDays ?? 0;
 
     const session = await this.stripe.checkout.sessions.create({
       mode: 'subscription',
       customer,
       line_items: [{ price: priceId, quantity: 1 }],
+      ...(trialDays > 0 ? { subscription_data: { trial_period_days: trialDays } } : {}),
       client_reference_id: userId,
       success_url: `${this.publicWebUrl}/pro/ok?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${this.publicWebUrl}/pro/cancel`,

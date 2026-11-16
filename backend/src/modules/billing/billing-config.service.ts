@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import { StripePriceIds, StripePriceSync } from './stripe-price.sync';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
@@ -16,12 +17,14 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BillingConfigService.name);
   private activeConfig: BillingConfigData = DEFAULT_BILLING_CONFIG;
   private activeVersion = 1;
+  private activeStripePriceIds: StripePriceIds = {};
   private refreshInterval: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly config: ConfigService,
+    @Optional() private readonly stripePrices?: StripePriceSync,
   ) {}
 
   async onModuleInit() {
@@ -52,6 +55,7 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
         if (parsed.success) {
           this.activeConfig = parsed.data;
           this.activeVersion = activeRow.version;
+          this.activeStripePriceIds = ((activeRow as any).stripePriceIds as StripePriceIds | null) ?? {};
           return;
         }
         this.logger.error(`Error parseando BillingConfig versión ${activeRow.version}: ${parsed.error.message}`);
@@ -143,6 +147,21 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Price ID de Stripe que cobra el precio de Pro de la versión activa. Si la versión aún no tiene
+   * (primer arranque con Stripe), se crea a partir del precio del panel y se guarda en esa versión.
+   */
+  async proStripePriceId(): Promise<string | undefined> {
+    if (this.activeStripePriceIds.pro) return this.activeStripePriceIds.pro;
+    if (!this.stripePrices?.enabled) return undefined;
+    const pro = await this.stripePrices.createProPrice(this.activeConfig.pricing);
+    this.activeStripePriceIds = { ...this.activeStripePriceIds, pro };
+    await this.prisma.billingConfig
+      .update({ where: { version: this.activeVersion }, data: { stripePriceIds: this.activeStripePriceIds as any } })
+      .catch((err: any) => this.logger.warn(`No se pudo guardar el precio de Stripe en la versión activa: ${err?.message}`));
+    return pro;
+  }
+
+  /**
    * Guarda una nueva versión inmutable de configuración y la activa.
    * Publica en Redis pub/sub para que otras instancias se actualicen en <= 5 s.
    */
@@ -159,38 +178,63 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
     });
     const nextVersion = (latest?.version ?? 0) + 1;
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.billingConfig.updateMany({
-        where: { active: true },
-        data: { active: false },
-      });
+    // Precio de Pro: si cambia, se crea uno nuevo en Stripe ANTES de guardar (todo o nada, §11.3)
+    const previousPriceIds = this.activeStripePriceIds;
+    const priceChanged =
+      validated.pricing.monthlyPriceEur !== this.activeConfig.pricing.monthlyPriceEur ||
+      validated.pricing.monthlyPriceUsd !== this.activeConfig.pricing.monthlyPriceUsd;
+    let stripePriceIds: StripePriceIds = previousPriceIds;
+    let createdPriceId: string | undefined;
+    if (this.stripePrices?.enabled && (priceChanged || !previousPriceIds.pro)) {
+      createdPriceId = await this.stripePrices.createProPrice(validated.pricing);
+      stripePriceIds = { ...previousPriceIds, pro: createdPriceId };
+    }
 
-      await tx.billingConfig.create({
-        data: {
-          version: nextVersion,
-          active: true,
-          data: validated as any,
-          createdById: userId,
-          note: note ?? null,
-        },
-      });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.billingConfig.updateMany({
+          where: { active: true },
+          data: { active: false },
+        });
 
-      // Registrar en AuditLog
-      await tx.auditLog.create({
-        data: {
-          userId,
-          event: 'billing.config.update',
-          metadata: {
-            previousVersion: this.activeVersion,
-            newVersion: nextVersion,
-            note,
+        await tx.billingConfig.create({
+          data: {
+            version: nextVersion,
+            active: true,
+            data: validated as any,
+            stripePriceIds: stripePriceIds as any,
+            createdById: userId,
+            note: note ?? null,
           },
-        },
+        });
+
+        // Registrar en AuditLog
+        await tx.auditLog.create({
+          data: {
+            userId,
+            event: priceChanged ? 'billing.price.update' : 'billing.config.update',
+            metadata: {
+              previousVersion: this.activeVersion,
+              newVersion: nextVersion,
+              note,
+              ...(createdPriceId ? { previousStripePrice: previousPriceIds.pro ?? null, newStripePrice: createdPriceId } : {}),
+            },
+          },
+        });
       });
-    });
+    } catch (err) {
+      // No se guardó: el precio recién creado no debe quedar vendible
+      if (createdPriceId) await this.stripePrices!.setActive(createdPriceId, false);
+      throw err;
+    }
+
+    if (createdPriceId && previousPriceIds.pro && previousPriceIds.pro !== createdPriceId) {
+      await this.stripePrices!.setActive(previousPriceIds.pro, false);
+    }
 
     this.activeConfig = validated;
     this.activeVersion = nextVersion;
+    this.activeStripePriceIds = stripePriceIds;
 
     // Notificar a otras instancias vía Redis pub/sub
     await this.redis.run(async (r) => {
@@ -225,6 +269,19 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
 
     const parsed = billingConfigSchema.parse(target.data);
 
+    // El precio de Stripe vuelve con la versión: se reactiva el suyo (o se crea si no tenía) y se archiva el actual
+    const previousPriceIds = this.activeStripePriceIds;
+    let stripePriceIds: StripePriceIds = ((target as any).stripePriceIds as StripePriceIds | null) ?? {};
+    let createdPriceId: string | undefined;
+    if (this.stripePrices?.enabled) {
+      if (stripePriceIds.pro) {
+        await this.stripePrices.setActive(stripePriceIds.pro, true);
+      } else {
+        createdPriceId = await this.stripePrices.createProPrice(parsed.pricing);
+        stripePriceIds = { ...stripePriceIds, pro: createdPriceId };
+      }
+    }
+
     await this.prisma.$transaction(async (tx) => {
       await tx.billingConfig.updateMany({
         where: { active: true },
@@ -233,7 +290,7 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
 
       await tx.billingConfig.update({
         where: { version },
-        data: { active: true },
+        data: { active: true, ...(createdPriceId ? { stripePriceIds: stripePriceIds as any } : {}) },
       });
 
       await tx.auditLog.create({
@@ -248,8 +305,13 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
       });
     });
 
+    if (previousPriceIds.pro && previousPriceIds.pro !== stripePriceIds.pro) {
+      await this.stripePrices?.setActive(previousPriceIds.pro, false);
+    }
+
     this.activeConfig = parsed;
     this.activeVersion = version;
+    this.activeStripePriceIds = stripePriceIds;
 
     await this.redis.run(async (r) => {
       await r.publish(this.redis.key(REDIS_CHANNEL_BILLING_CONFIG_CHANGED), String(version));

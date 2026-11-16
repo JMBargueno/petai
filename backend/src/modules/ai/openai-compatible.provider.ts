@@ -25,6 +25,8 @@ function toWire(m: ChatMessageInput) {
 export interface OpenAiCompatibleOptions {
   extraHeaders?: Record<string, string>;
   extraBody?: Record<string, any>;
+  /** Corta la llamada si no llega ningún evento en este tiempo (IA gestionada: `firstTokenTimeoutSeconds`). */
+  firstTokenTimeoutMs?: number;
 }
 
 /**
@@ -52,8 +54,30 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   }
 
   async *chat(messages: ChatMessageInput[], opts: ChatOptions): AsyncIterable<LlmEvent> {
-    const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    // Plazo total de la petición y, si se configura, plazo hasta el primer evento del stream
+    const firstToken = new AbortController();
+    const firstTokenMs = this.options?.firstTokenTimeoutMs;
+    const firstTokenTimer = firstTokenMs && firstTokenMs > 0 ? setTimeout(() => firstToken.abort(), firstTokenMs) : undefined;
+    const timeout = AbortSignal.any([AbortSignal.timeout(REQUEST_TIMEOUT_MS), firstToken.signal]);
     const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
+    try {
+      let first = true;
+      for await (const ev of this.chatStream(messages, opts, signal, timeout)) {
+        if (first && firstTokenTimer) clearTimeout(firstTokenTimer);
+        first = false;
+        yield ev;
+      }
+    } finally {
+      if (firstTokenTimer) clearTimeout(firstTokenTimer);
+    }
+  }
+
+  private async *chatStream(
+    messages: ChatMessageInput[],
+    opts: ChatOptions,
+    signal: AbortSignal,
+    timeout: AbortSignal,
+  ): AsyncIterable<LlmEvent> {
 
     const res = await this.fetchImpl(`${this.normalizedBaseUrl}/chat/completions`, {
       method: 'POST',

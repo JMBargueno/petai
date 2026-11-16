@@ -232,4 +232,23 @@ describe('BillingService', () => {
       expect(prisma.subscription.update).not.toHaveBeenCalled();
     });
   });
+
+  describe('createStripeCheckoutSession', () => {
+    it('cobra el precio del panel y aplica los días de prueba configurados', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1', stripeCustomerId: 'cus_1' });
+      billingConfig.proStripePriceId = jest.fn(async () => 'price_panel');
+      billingConfig.pricingSettings = jest.fn(() => ({ trialDays: 7 }));
+      const create = jest.fn(async () => ({ url: 'https://checkout.stripe.com/x' }));
+      svc.setStripeClientForTest({ checkout: { sessions: { create } } } as any);
+
+      await svc.createStripeCheckoutSession('u1');
+
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          line_items: [{ price: 'price_panel', quantity: 1 }],
+          subscription_data: { trial_period_days: 7 },
+        }),
+      );
+    });
+  });
 });

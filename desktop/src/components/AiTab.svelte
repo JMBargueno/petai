@@ -103,6 +103,20 @@
     }
   }
 
+  // Precio de Pro configurado en el panel de facturación (nunca fijo en el cliente)
+  let proPriceLabel = '';
+  async function loadProPrice() {
+    try {
+      const plans = await api.getBillingPlans();
+      const usd = plans?.plans?.pro?.priceUsd;
+      if (typeof usd === 'number' && usd > 0) {
+        proPriceLabel = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(usd);
+      }
+    } catch {
+      proPriceLabel = '';
+    }
+  }
+
   async function subscribePro() {
     paywallBusy = true;
     paywallErr = '';
@@ -308,6 +322,7 @@
   onMount(async () => {
     await loadConfig();
     await loadEntitlement();
+    void loadProPrice();
     if (chatReady && pet) {
       await loadHistory();
       if (!local.enabled) {
@@ -895,7 +910,7 @@
           </button>
         {:else}
           <button class="primary btn-large" disabled={paywallBusy} on:click={subscribePro}>
-            {paywallBusy ? 'Abriendo Stripe Checkout…' : 'Hazte Pro por 9,99 $/mes'}
+            {paywallBusy ? 'Abriendo Stripe Checkout…' : (proPriceLabel ? `Hazte Pro por ${proPriceLabel}/mes` : 'Hazte Pro')}
           </button>
         {/if}
         <button class="btn-secondary" on:click={() => { showPaywall = false; setMode('byok'); }}>
