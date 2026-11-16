@@ -86,7 +86,7 @@ export class ProCancel {
   readonly homeUrl = `/${this.locale}/`;
   readonly homeLabel = 'Inicio';
   readonly navLabel = 'Navegación principal';
-  readonly navPages = navPages;
+  readonly navPages = navPages(this.locale);
   readonly navCta: NavLink = {
     label: 'Descargar',
     href: `${this.homeUrl}#descargas`,

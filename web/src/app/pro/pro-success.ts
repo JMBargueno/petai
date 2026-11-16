@@ -21,7 +21,7 @@ import { Sticker } from '../shared/ui/sticker';
 
     <main id="main" tabindex="-1" class="band band--hero band--first pro-status-page">
       <app-sticker class="spot spot--a" icon="star" color="sunburst" [size]="72" [rotate]="-12" />
-      <app-sticker class="spot spot--b" icon="heart" color="cherry" [size]="60" [rotate]="10" />
+      <app-sticker class="spot spot--b" icon="heart" color="ember" [size]="60" [rotate]="10" />
 
       <div class="band__inner pro-status">
         <div class="status-badge">⭐ Pockai Pro</div>
@@ -99,7 +99,7 @@ export class ProSuccess {
   readonly homeUrl = `/${this.locale}/`;
   readonly homeLabel = 'Inicio';
   readonly navLabel = 'Navegación principal';
-  readonly navPages = navPages;
+  readonly navPages = navPages(this.locale);
   readonly navCta: NavLink = {
     label: 'Descargar',
     href: `${this.homeUrl}#descargas`,
