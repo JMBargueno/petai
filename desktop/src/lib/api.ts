@@ -14,10 +14,11 @@ export const API_BASE_URL = typeof window !== 'undefined' && window.location.ori
 const ACCESS_KEY = 'petai_access_token';
 const REFRESH_KEY = 'petai_refresh_token';
 
-let currentToken: string | null = localStorage.getItem(ACCESS_KEY);
-let currentRefreshToken: string | null = localStorage.getItem(REFRESH_KEY);
+let currentToken: string | null = typeof localStorage !== 'undefined' ? localStorage.getItem(ACCESS_KEY) : null;
+let currentRefreshToken: string | null = typeof localStorage !== 'undefined' ? localStorage.getItem(REFRESH_KEY) : null;
 
 function store(key: string, value: string | null) {
+  if (typeof localStorage === 'undefined') return;
   if (value) localStorage.setItem(key, value);
   else localStorage.removeItem(key);
 }
