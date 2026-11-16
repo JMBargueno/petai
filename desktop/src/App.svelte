@@ -28,6 +28,7 @@
   import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster } from './lib/clan-store';
   import type { HabitatVisitor, ClanMessage, ClanGoal } from './lib/api';
   import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
+  import { startContextDigest } from './lib/contextDigest';
 
   let user: any = null;
   let pets: any[] = [];
@@ -38,7 +39,7 @@
   let isPanelOpen = true;
   let droppedFile: AnalyzedFile | null = null;
   // Petición de navegación al panel (la campana abre Ajustes › Avisos)
-  let panelRequest: { dest: string; sub: string; n: number } | null = null;
+  let panelRequest: { dest: string; sub: string; n: number; prompt?: string } | null = null;
   let requestN = 0;
   function openNotifications() {
     panelRequest = { dest: 'settings', sub: 'notifications', n: ++requestN };
@@ -131,6 +132,7 @@
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
   let environmental: EnvironmentalStatus | null = null;
   let stopHeartbeat: () => void = () => {};
+  let stopContextDigest: () => void = () => {};
 
   function showBubble(text: string) {
     bubbleText = text.length > 160 ? text.slice(0, 157) + '…' : text;
@@ -261,6 +263,9 @@
         setupCoordinates(); // geolocalización opt-in → clima real
         loadEnvironmental(); // estado inicial
         stopHeartbeat = startHeartbeat(); // heartbeat cada 60 s
+        stopContextDigest();
+        // Hábitos de escritorio: contador local y resumen diario al servidor (lib/contextDigest.ts)
+        stopContextDigest = startContextDigest(() => currentPet?.id ?? null, api.sendContextDigest);
       }
     } catch (err) {
       // Si la sesión ya no es válida, la capa de API la cierra (onSessionExpired). Un fallo de
@@ -320,6 +325,7 @@
     closeSocket();
     welcomeChecked = false;
     stopHeartbeat();
+    stopContextDigest();
     user = null;
     currentPet = null;
     pets = [];
@@ -586,7 +592,7 @@
       on:sendPrompt={(e) => {
         const { prompt, file } = e.detail;
         droppedFile = null;
-        panelRequest = { dest: 'chat', sub: '', n: ++requestN };
+        panelRequest = { dest: 'chat', sub: '', n: ++requestN, prompt };
         isPanelOpen = true;
         showBubble(`Examinando ${file.name} con la IA...`);
       }}

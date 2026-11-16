@@ -11,8 +11,13 @@
     type LocalHermesConfig,
   } from '../lib/hermesLocal';
   import { CLIENT_TOOLS, openUrl, readClipboardText } from '../lib/clientTools';
+  import { buildClientContext } from '../lib/deskContext';
+  import { setSkillAuthorization } from '../lib/stores/desktopSkillsStore';
+  import { startPomodoro, stopPomodoro } from '../lib/pomodoro';
 
   export let pet: any = null;
+  /** Mensaje a enviar en cuanto el chat esté listo (p. ej. al soltar un archivo sobre la mascota). */
+  export let pendingPrompt: { text: string; n: number } | null = null;
 
   const dispatch = createEventDispatcher();
 
@@ -113,6 +118,16 @@
           if (res.tool === 'open_url') {
             await openUrl(res.args.url);
             card.note = 'Abierto en tu navegador';
+          } else if (res.tool === 'toggle_desktop_skill') {
+            // set (no toggle): el valor lo decide el servidor ya validado, no el estado local
+            setSkillAuthorization(res.args.skill_id, !!res.args.enabled, pet.id);
+            card.note = res.args.enabled ? 'Habilidad activada' : 'Habilidad desactivada';
+          } else if (res.tool === 'start_pomodoro') {
+            startPomodoro(res.args.work_minutes, res.args.break_minutes);
+            card.note = `Pomodoro de ${res.args.work_minutes} min en marcha`;
+          } else if (res.tool === 'stop_pomodoro') {
+            stopPomodoro();
+            card.note = 'Pomodoro detenido';
           } else if (res.tool === 'read_clipboard') {
             const text = (await readClipboardText()).trim();
             if (!text) {
@@ -127,6 +142,8 @@
           card.state = 'done';
           card.note = 'Hecho';
           if (remOpen) loadReminders();
+          // Acciones del servidor que cambian a la mascota (p. ej. ir a su casita)
+          dispatch('refreshPet');
         }
       } else {
         await api.rejectAction(pet.id, card.id);
@@ -212,6 +229,17 @@
     } catch (e: any) {
       memErr = e.message;
     }
+  }
+
+  // Mensaje pedido desde fuera (archivo soltado sobre la mascota): se envía una sola vez.
+  // Sin IA configurada se deja escrito en la caja para que el usuario lo vea y decida.
+  // El panel lo marca como consumido (promptConsumed) para no reenviarlo si la pestaña se vuelve a montar.
+  let lastPromptN = 0;
+  $: if (pendingPrompt && pendingPrompt.n !== lastPromptN && loaded && pet && !streaming) {
+    lastPromptN = pendingPrompt.n;
+    dispatch('promptConsumed', pendingPrompt.n);
+    if (chatReady) send(pendingPrompt.text);
+    else input = pendingPrompt.text;
   }
 
   $: needsUrl = provider !== 'openai';
@@ -336,7 +364,7 @@
 
   /** Modo Hermes local: contexto del servidor → inferencia en este equipo → sincronización. */
   async function runLocal(text: string, reply: Msg, userMsg: Msg, signal: AbortSignal) {
-    const ctx = await api.localChatContext(pet.id, text);
+    const ctx = await api.localChatContext(pet.id, text, buildClientContext());
     if ('moderated' in ctx) {
       applyModeration(ctx.moderated, reply, userMsg);
       return { moderated: true as const };
@@ -399,6 +427,7 @@
           },
         },
         abort.signal,
+        buildClientContext(),
       );
       if ('moderated' in done) {
         // Aviso de moderación: no es una respuesta de la mascota ni queda en el historial
@@ -634,7 +663,7 @@
           <ul class="mem-list">
             {#each mem.memories as m (m.id)}
               <li class:summary={m.kind === 'summary'}>
-                <span><Ico n={m.kind === 'summary' ? 'note' : 'chat'} /> {m.content}</span>
+                <span><Ico n={m.kind === 'summary' ? 'note' : m.kind === 'habit' ? 'monitor' : 'chat'} /> {m.kind === 'habit' ? 'Hábito: ' : ''}{m.content}</span>
                 <button class="x" title="Olvidar" on:click={() => forget(m.id)}>✕</button>
               </li>
             {/each}

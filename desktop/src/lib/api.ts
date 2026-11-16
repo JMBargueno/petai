@@ -395,6 +395,7 @@ export const api = {
       onModerated?: (info: { reason: string; message: string; hideUserMessage: boolean }) => void;
     },
     signal?: AbortSignal,
+    clientContext?: unknown,
   ): Promise<{ message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string } | { moderated: true }> {
     const res = await authFetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
       method: 'POST',
@@ -403,7 +404,7 @@ export const api = {
         'Content-Type': 'application/json',
         ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
       },
-      body: JSON.stringify({ message, clientTools }),
+      body: JSON.stringify({ message, clientTools, clientContext }),
     });
     if (!res.ok || !res.body) {
       const data = await res.json().catch(() => ({}));
@@ -465,11 +466,11 @@ export const api = {
   },
 
   /** Modo Hermes local, paso 1: el servidor valida, modera y devuelve los mensajes a enviar al modelo local. */
-  async localChatContext(petId: string, message: string) {
+  async localChatContext(petId: string, message: string, clientContext?: unknown) {
     return minigameRequest<
       | { turnId: string; messages: { role: 'system' | 'user' | 'assistant'; content: string }[]; maxTokens: number }
       | { moderated: { reason: string; message: string; hideUserMessage: boolean } }
-    >('POST', `/v1/pets/${petId}/chat/local/context`, { message });
+    >('POST', `/v1/pets/${petId}/chat/local/context`, { message, clientContext });
   },
 
   /** Modo Hermes local, paso 2: entrega la respuesta generada para moderarla y guardarla. */
@@ -581,7 +582,7 @@ export const api = {
       unlocked: boolean;
       unlockAt: number;
       intelligence: number;
-      memories: { id: string; kind: 'fact' | 'summary'; content: string; createdAt: string }[];
+      memories: { id: string; kind: 'fact' | 'summary' | 'habit'; content: string; createdAt: string }[];
     }>('GET', `/v1/pets/${petId}/memories`);
   },
 
@@ -591,6 +592,11 @@ export const api = {
 
   async forgetAllMemories(petId: string) {
     return minigameRequest<{ deleted: number }>('DELETE', `/v1/pets/${petId}/memories`);
+  },
+
+  /** Resumen diario de hábitos de escritorio (solo categorías y minutos; ver lib/contextDigest.ts). */
+  async sendContextDigest(petId: string, body: unknown) {
+    return minigameRequest<{ habits: number; stored: boolean }>('POST', `/v1/pets/${petId}/context-digest`, body);
   },
 
   async evolvePet(petId: string) {

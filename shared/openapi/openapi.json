@@ -1910,7 +1910,7 @@
             "bearer": []
           }
         ],
-        "summary": "Borrar toda la memoria de la mascota",
+        "summary": "Borrar toda la memoria de la mascota (también el perfil de hábitos)",
         "tags": [
           "AI"
         ]
@@ -1948,6 +1948,65 @@
           }
         ],
         "summary": "Olvidar un recuerdo concreto",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/pets/{id}/context-digest": {
+      "post": {
+        "description": "Solo categorías de app y minutos por franja de 4 h, y duraciones de Pomodoro. Nunca títulos de ventana. El servidor descarta las partes cuya habilidad (context_awareness, pomodoro_companion) no está activa.",
+        "operationId": "AiController_contextDigest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "appMinutes": {
+                    "type": "object",
+                    "description": "Por categoría (coding, music, video, gaming, reading): 6 números (minutos por franja de 4 h)",
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "pomodoros": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Minutos de foco de cada Pomodoro completado"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resumen diario del escritorio para los hábitos de la mascota (máx. 2 KB, uno cada 12 h)",
         "tags": [
           "AI"
         ]
@@ -2177,6 +2236,51 @@
                   "message": {
                     "type": "string",
                     "description": "Mensaje del usuario"
+                  },
+                  "clientContext": {
+                    "type": "object",
+                    "description": "Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente",
+                    "properties": {
+                      "appCategory": {
+                        "type": "string",
+                        "enum": [
+                          "coding",
+                          "music",
+                          "video",
+                          "gaming",
+                          "reading",
+                          "generic"
+                        ]
+                      },
+                      "pose": {
+                        "type": "string",
+                        "enum": [
+                          "walking",
+                          "climbing",
+                          "perched",
+                          "sleeping"
+                        ]
+                      },
+                      "pomodoro": {
+                        "type": "object",
+                        "properties": {
+                          "phase": {
+                            "type": "string",
+                            "enum": [
+                              "idle",
+                              "work",
+                              "break"
+                            ]
+                          },
+                          "minutesLeft": {
+                            "type": "number"
+                          },
+                          "sessionsToday": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -2279,6 +2383,51 @@
                       "type": "string"
                     },
                     "description": "Herramientas del cliente (opcional)"
+                  },
+                  "clientContext": {
+                    "type": "object",
+                    "description": "Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente",
+                    "properties": {
+                      "appCategory": {
+                        "type": "string",
+                        "enum": [
+                          "coding",
+                          "music",
+                          "video",
+                          "gaming",
+                          "reading",
+                          "generic"
+                        ]
+                      },
+                      "pose": {
+                        "type": "string",
+                        "enum": [
+                          "walking",
+                          "climbing",
+                          "perched",
+                          "sleeping"
+                        ]
+                      },
+                      "pomodoro": {
+                        "type": "object",
+                        "properties": {
+                          "phase": {
+                            "type": "string",
+                            "enum": [
+                              "idle",
+                              "work",
+                              "break"
+                            ]
+                          },
+                          "minutesLeft": {
+                            "type": "number"
+                          },
+                          "sessionsToday": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }

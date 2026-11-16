@@ -114,7 +114,11 @@ import VisitTab from './VisitTab.svelte';
   let dest: string = 'pet';
   let sub: string = 'home';
   /** Petición externa (p. ej. la campana de App.svelte) para abrir una sección concreta. */
-  export let request: { dest: string; sub: string; n: number } | null = null;
+  export let request: { dest: string; sub: string; n: number; prompt?: string } | null = null;
+  // Mensaje para el chat que acompaña a la petición (p. ej. un archivo soltado sobre la mascota)
+  // Se recuerda aquí (no en AiTab, que se desmonta al cambiar de sección) para enviarlo una sola vez
+  let consumedPromptN = 0;
+  $: chatPrompt = request?.prompt && request.n > consumedPromptN ? { text: request.prompt, n: request.n } : null;
   let lastRequest = 0;
   $: if (request && request.n !== lastRequest) {
     lastRequest = request.n;
@@ -652,7 +656,13 @@ import VisitTab from './VisitTab.svelte';
           <AdventureTab {pet} on:refreshPet on:refreshUser />
 
         {:else if dest === 'chat'}
-          <AiTab {pet} on:bubble on:refreshPet />
+          <AiTab
+            {pet}
+            pendingPrompt={chatPrompt}
+            on:promptConsumed={(e) => (consumedPromptN = Math.max(consumedPromptN, e.detail))}
+            on:bubble
+            on:refreshPet
+          />
 
         {:else if dest === 'social' && sub === 'friends'}
           <FriendsTab />

@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
+import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -8,6 +9,25 @@ import { ChatService } from './chat.service';
 import { MemoryService } from './memory.service';
 import { AgentService } from './agent.service';
 import { UsageService } from './usage.service';
+import { APP_CATEGORIES } from './client-context';
+
+/** Contexto en vivo del escritorio (opcional). Solo listas cerradas: nunca títulos de ventana. */
+const CLIENT_CONTEXT_SCHEMA: SchemaObject = {
+  type: 'object',
+  description: 'Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente',
+  properties: {
+    appCategory: { type: 'string', enum: [...APP_CATEGORIES] },
+    pose: { type: 'string', enum: ['walking', 'climbing', 'perched', 'sleeping'] },
+    pomodoro: {
+      type: 'object',
+      properties: {
+        phase: { type: 'string', enum: ['idle', 'work', 'break'] },
+        minutesLeft: { type: 'number' },
+        sessionsToday: { type: 'number' },
+      },
+    },
+  },
+};
 
 @ApiTags('AI')
 @ApiBearerAuth()
@@ -83,9 +103,33 @@ export class AiController {
   }
 
   @Delete('pets/:id/memories')
-  @ApiOperation({ summary: 'Borrar toda la memoria de la mascota' })
+  @ApiOperation({ summary: 'Borrar toda la memoria de la mascota (también el perfil de hábitos)' })
   forgetAll(@CurrentUser() user: any, @Param('id') petId: string) {
     return this.memory.clear(user.id, petId);
+  }
+
+  @Post('pets/:id/context-digest')
+  @ApiOperation({
+    summary: 'Resumen diario del escritorio para los hábitos de la mascota (máx. 2 KB, uno cada 12 h)',
+    description:
+      'Solo categorías de app y minutos por franja de 4 h, y duraciones de Pomodoro. Nunca títulos de ventana. ' +
+      'El servidor descarta las partes cuya habilidad (context_awareness, pomodoro_companion) no está activa.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        appMinutes: {
+          type: 'object',
+          description: 'Por categoría (coding, music, video, gaming, reading): 6 números (minutos por franja de 4 h)',
+          additionalProperties: { type: 'array', items: { type: 'number' } },
+        },
+        pomodoros: { type: 'array', items: { type: 'number' }, description: 'Minutos de foco de cada Pomodoro completado' },
+      },
+    },
+  })
+  contextDigest(@CurrentUser() user: any, @Param('id') petId: string, @Body() body: unknown) {
+    return this.memory.ingestDigest(user.id, petId, body);
   }
 
   // ---------- Acciones del agente (requieren confirmación del usuario) ----------
@@ -143,11 +187,16 @@ export class AiController {
       type: 'object',
       properties: {
         message: { type: 'string', description: 'Mensaje del usuario' },
+        clientContext: CLIENT_CONTEXT_SCHEMA,
       },
     },
   })
-  localContext(@CurrentUser() user: any, @Param('id') petId: string, @Body() body: { message?: string } | undefined) {
-    return this.chat.prepareLocal(user.id, petId, body?.message);
+  localContext(
+    @CurrentUser() user: any,
+    @Param('id') petId: string,
+    @Body() body: { message?: string; clientContext?: unknown } | undefined,
+  ) {
+    return this.chat.prepareLocal(user.id, petId, body?.message, body?.clientContext);
   }
 
   @Post('pets/:id/chat/local/sync')
@@ -182,13 +231,14 @@ export class AiController {
       properties: {
         message: { type: 'string', description: 'Mensaje del usuario' },
         clientTools: { type: 'array', items: { type: 'string' }, description: 'Herramientas del cliente (opcional)' },
+        clientContext: CLIENT_CONTEXT_SCHEMA,
       },
     },
   })
   async chatStream(
     @CurrentUser() user: any,
     @Param('id') petId: string,
-    @Body() body: { message?: string; clientTools?: string[] } | undefined,
+    @Body() body: { message?: string; clientTools?: string[]; clientContext?: unknown } | undefined,
     @Req() req: Request,
     @Res() res: Response,
   ) {
@@ -202,6 +252,7 @@ export class AiController {
       body?.message,
       abort.signal,
       body?.clientTools,
+      body?.clientContext,
     );
 
     res.status(200).set({

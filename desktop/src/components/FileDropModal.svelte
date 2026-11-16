@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import type { AnalyzedFile } from '../lib/fileAnalyzer';
+  import { buildFilePrompt, type AnalyzedFile } from '../lib/fileAnalyzer';
   import { FileText, Code2, Database, Image, File, X, Sparkles, Send } from 'lucide-svelte';
 
   export let file: AnalyzedFile;
@@ -12,19 +12,14 @@
 
   let customQuestion = '';
 
+  // El mensaje se recorta para caber en el límite del chat (si no, el servidor lo rechazaría)
   function handleActionClick(action: string) {
-    const prompt = `Sobre el archivo "${file.name}" (${file.typeLabel}):\n${action}${
-      file.snippet ? `\n\nContenido:\n\`\`\`\n${file.snippet}\n\`\`\`` : ''
-    }`;
-    dispatch('sendPrompt', { prompt, file });
+    dispatch('sendPrompt', { prompt: buildFilePrompt(file, action), file });
   }
 
   function handleCustomSend() {
     if (!customQuestion.trim()) return;
-    const prompt = `Sobre el archivo "${file.name}" (${file.typeLabel}):\n${customQuestion.trim()}${
-      file.snippet ? `\n\nContenido:\n\`\`\`\n${file.snippet}\n\`\`\`` : ''
-    }`;
-    dispatch('sendPrompt', { prompt, file });
+    dispatch('sendPrompt', { prompt: buildFilePrompt(file, customQuestion), file });
   }
 </script>
 

@@ -240,6 +240,7 @@ model Pet {
 
   chatMessages  ChatMessage[]
   memories      PetMemory[]
+  contextProfile PetContextProfile?
   reminders     Reminder[]
   pendingActions PendingAction[]
   minigames     MinigameSession[]
@@ -382,11 +383,24 @@ model PetMemory {
   id        String   @id @default(uuid())
   petId     String
   pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
-  kind      String   // fact | summary
+  kind      String   // fact | summary | habit
   content   String
+  /// Clave estable de los hábitos (habit:coding_time…): se reemplazan por upsert, no se acumulan
+  key       String?
   createdAt DateTime @default(now())
 
+  @@unique([petId, key])
   @@index([petId, createdAt])
+}
+
+/// Perfil de hábitos de escritorio (una fila por mascota, tamaño fijo). Se alimenta con un
+/// resumen diario del escritorio (solo categorías y minutos) y decae con el tiempo.
+model PetContextProfile {
+  petId        String   @id
+  pet          Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  data         Json
+  lastDigestAt DateTime
+  updatedAt    DateTime @updatedAt
 }
 
 model Reminder {
