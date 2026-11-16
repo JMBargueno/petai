@@ -989,7 +989,7 @@ export interface paths {
         get: operations["AiController_memories"];
         put?: never;
         post?: never;
-        /** Borrar toda la memoria de la mascota */
+        /** Borrar toda la memoria de la mascota (también el perfil de hábitos) */
         delete: operations["AiController_forgetAll"];
         options?: never;
         head?: never;
@@ -1008,6 +1008,26 @@ export interface paths {
         post?: never;
         /** Olvidar un recuerdo concreto */
         delete: operations["AiController_forget"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pets/{id}/context-digest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resumen diario del escritorio para los hábitos de la mascota (máx. 2 KB, uno cada 12 h)
+         * @description Solo categorías de app y minutos por franja de 4 h, y duraciones de Pomodoro. Nunca títulos de ventana. El servidor descarta las partes cuya habilidad (context_awareness, pomodoro_companion) no está activa.
+         */
+        post: operations["AiController_contextDigest"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6025,6 +6045,36 @@ export interface operations {
             };
         };
     };
+    AiController_contextDigest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Por categoría (coding, music, video, gaming, reading): 6 números (minutos por franja de 4 h) */
+                    appMinutes?: {
+                        [key: string]: number[];
+                    };
+                    /** @description Minutos de foco de cada Pomodoro completado */
+                    pomodoros?: number[];
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     AiController_pendingActions: {
         parameters: {
             query?: never;
@@ -6170,6 +6220,19 @@ export interface operations {
                 "application/json": {
                     /** @description Mensaje del usuario */
                     message?: string;
+                    /** @description Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente */
+                    clientContext?: {
+                        /** @enum {string} */
+                        appCategory?: "coding" | "music" | "video" | "gaming" | "reading" | "generic";
+                        /** @enum {string} */
+                        pose?: "walking" | "climbing" | "perched" | "sleeping";
+                        pomodoro?: {
+                            /** @enum {string} */
+                            phase?: "idle" | "work" | "break";
+                            minutesLeft?: number;
+                            sessionsToday?: number;
+                        };
+                    };
                 };
             };
         };
@@ -6226,6 +6289,19 @@ export interface operations {
                     message?: string;
                     /** @description Herramientas del cliente (opcional) */
                     clientTools?: string[];
+                    /** @description Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente */
+                    clientContext?: {
+                        /** @enum {string} */
+                        appCategory?: "coding" | "music" | "video" | "gaming" | "reading" | "generic";
+                        /** @enum {string} */
+                        pose?: "walking" | "climbing" | "perched" | "sleeping";
+                        pomodoro?: {
+                            /** @enum {string} */
+                            phase?: "idle" | "work" | "break";
+                            minutesLeft?: number;
+                            sessionsToday?: number;
+                        };
+                    };
                 };
             };
         };

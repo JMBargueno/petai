@@ -14,11 +14,11 @@ const reminder = TOOL_BY_NAME.get('create_reminder')!;
 describe('agent-tools', () => {
   it('las herramientas con efectos (servidor o escritorio) siempre requieren confirmación; el resto son de lectura', () => {
     expect(TOOLS.filter((t) => t.requiresConfirmation).map((t) => t.name).sort()).toEqual([
-      'create_reminder', 'open_url', 'read_clipboard',
+      'create_reminder', 'open_url', 'read_clipboard', 'set_in_habitat', 'start_pomodoro', 'stop_pomodoro', 'toggle_desktop_skill',
     ]);
     expect(TOOLS.filter((t) => t.clientSide).every((t) => t.requiresConfirmation)).toBe(true);
     expect(toolDefinitions().map((t) => t.name).sort()).toEqual([
-      'create_reminder', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'suggest_minigame',
+      'create_reminder', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'set_in_habitat', 'suggest_minigame',
     ]);
   });
 
@@ -65,12 +65,46 @@ describe('agent-tools', () => {
     });
   });
 
+  describe('herramientas sobre la propia mascota', () => {
+    const toggle = TOOL_BY_NAME.get('toggle_desktop_skill')!;
+    const pomo = TOOL_BY_NAME.get('start_pomodoro')!;
+    const habitat = TOOL_BY_NAME.get('set_in_habitat')!;
+
+    it('toggle_desktop_skill solo acepta ids del registro y un booleano', () => {
+      expect(toggle.validate({ skill_id: 'climb_walls', enabled: true }, NOW)).toEqual({ ok: true, args: { skill_id: 'climb_walls', enabled: true } });
+      expect(toggle.validate({ skill_id: 'rm_rf', enabled: true }, NOW).ok).toBe(false);
+      expect(toggle.validate({ skill_id: 'climb_walls', enabled: 'yes' }, NOW).ok).toBe(false);
+      expect((toggle.parameters as any).properties.skill_id.enum).toContain('file_analyzer');
+    });
+
+    it('la tarjeta de una habilidad sensible avisa del permiso', () => {
+      expect(toggle.describe!({ skill_id: 'context_awareness', enabled: true }, 'UTC')).toContain('permiso');
+      expect(toggle.describe!({ skill_id: 'context_awareness', enabled: false }, 'UTC')).not.toContain('permiso');
+    });
+
+    it('start_pomodoro aplica valores por defecto y acota los minutos', () => {
+      expect(pomo.validate({}, NOW)).toEqual({ ok: true, args: { work_minutes: 25, break_minutes: 5 } });
+      expect(pomo.validate(undefined, NOW)).toEqual({ ok: true, args: { work_minutes: 25, break_minutes: 5 } });
+      expect(pomo.validate({ work_minutes: 50, break_minutes: 10 }, NOW)).toEqual({ ok: true, args: { work_minutes: 50, break_minutes: 10 } });
+      expect(pomo.validate({ work_minutes: 2 }, NOW).ok).toBe(false);
+      expect(pomo.validate({ work_minutes: 500 }, NOW).ok).toBe(false);
+      expect(pomo.validate({ work_minutes: 25.5 }, NOW).ok).toBe(false);
+      expect(pomo.validate({ break_minutes: 0 }, NOW).ok).toBe(false);
+    });
+
+    it('set_in_habitat lo ejecuta el servidor y exige un booleano', () => {
+      expect(habitat.clientSide).toBeFalsy();
+      expect(habitat.validate({ in_habitat: true }, NOW)).toEqual({ ok: true, args: { in_habitat: true } });
+      expect(habitat.validate({ in_habitat: 1 }, NOW).ok).toBe(false);
+    });
+  });
+
   describe('herramientas del escritorio', () => {
     const open = TOOL_BY_NAME.get('open_url')!;
     const v = (url: unknown) => open.validate({ url }, NOW);
 
     it('solo se ofrecen al modelo si el cliente las declara', () => {
-      expect(CLIENT_TOOL_NAMES.sort()).toEqual(['open_url', 'read_clipboard']);
+      expect([...CLIENT_TOOL_NAMES].sort()).toEqual(['open_url', 'read_clipboard', 'start_pomodoro', 'stop_pomodoro', 'toggle_desktop_skill']);
       expect(toolDefinitions().map((t) => t.name)).not.toContain('open_url');
       expect(toolDefinitions(['open_url']).map((t) => t.name)).toContain('open_url');
       expect(toolDefinitions(['open_url']).map((t) => t.name)).not.toContain('read_clipboard');

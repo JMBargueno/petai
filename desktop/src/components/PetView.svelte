@@ -21,6 +21,7 @@
   } from '../lib/physics/petPhysics';
   import { fetchActiveWindow, calculatePerchTarget } from '../lib/windowPerching';
   import { categorizeWindowTitle, type AppCategory } from '../lib/contextAwareness';
+  import { deskState } from '../lib/deskContext';
   import { analyzeDroppedFile } from '../lib/fileAnalyzer';
   import { BarksEngine } from '../lib/barks';
   import { BehaviorEngine, type BehaviorState } from '../lib/behaviorEngine';
@@ -118,6 +119,12 @@
   $: speciesKey = pet?.species?.id || pet?.species?.spriteKey || 'ignisaur';
   $: patternKey = pet?.pattern?.id || 'plain';
   $: isSleeping = pet?.sleeping || false;
+
+  // Contexto en vivo para el chat (solo categoría y postura; el servidor filtra según las habilidades)
+  $: deskState.set({
+    appCategory: currentAppCategory,
+    pose: isSleeping ? 'sleeping' : isPerched ? 'perched' : isClimbing ? 'climbing' : 'walking',
+  });
   $: isShiny = pet?.shiny || false;
   $: visualSeed = pet?.visualSeed ?? 1337;
   $: palette = pet?.palette || { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' };
@@ -613,6 +620,8 @@
       // 3.5. Conciencia de la App en Foco (context_awareness)
       const canContext = isSkillActive('context_awareness', $skillAuthorizations, petBonding, petIntelligence);
       const now = Date.now();
+      // Sin la habilidad no se conserva la última categoría (no debe llegar al chat ni a los hábitos)
+      if (!canContext && currentAppCategory !== 'generic') currentAppCategory = 'generic';
       if (canContext && now - lastContextCheckTime > 6000) {
         lastContextCheckTime = now;
         const win = await fetchActiveWindow();
@@ -767,6 +776,8 @@
   });
 
   onDestroy(() => {
+    // Fuera del escritorio (p. ej. en su casita) no hay app en foco ni postura que contar
+    deskState.set({ appCategory: null, pose: 'walking' });
     setPetOnScreen(false);
     if (typeof document !== 'undefined') delete document.body.dataset.petOverPanel;
     if (animRafId !== null) cancelAnimationFrame(animRafId);

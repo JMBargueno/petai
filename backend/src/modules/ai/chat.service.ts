@@ -9,6 +9,7 @@ import { MemoryService } from './memory.service';
 import { AgentContext, AgentService } from './agent.service';
 import { UsageService } from './usage.service';
 import { sanitizeClientTools, toolDefinitions } from './agent-tools';
+import { sanitizeClientContext } from './client-context';
 import { ChatMessageInput, LlmProvider, ToolCall } from './llm-provider';
 import { ModerationVerdict, OutputGuard, moderateInput, moderateOutput } from './moderation';
 import { randomUUID } from 'crypto';
@@ -129,6 +130,7 @@ export class ChatService {
     rawMessage: unknown,
     signal?: AbortSignal,
     rawClientTools?: unknown,
+    rawClientContext?: unknown,
   ) {
     const message = this.sanitizeInput(rawMessage);
     const pet = await this.petsService.getPetById(userId, petId);
@@ -144,12 +146,16 @@ export class ChatService {
     const { provider, model, mode } = await this.aiConfig.resolveProvider(userId);
     await this.usage.assertWithinQuota(userId, mode);
 
-    const { messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent');
+    const clientTools = sanitizeClientTools(rawClientTools);
+    const { messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent', {
+      clientTools,
+      clientContext: sanitizeClientContext(rawClientContext, pet),
+    });
 
     // Agente (intelligence ≥ 500): puede usar herramientas; los efectos requieren confirmación
     const agentCtx: AgentContext | undefined =
       (pet.intelligence ?? 0) >= AGENT_UNLOCK
-        ? { userId, petId: pet.id, timeZone, now, clientTools: sanitizeClientTools(rawClientTools) }
+        ? { userId, petId: pet.id, timeZone, now, clientTools }
         : undefined;
 
     return { events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx) };
@@ -164,6 +170,7 @@ export class ChatService {
     pet: any,
     message: string,
     maxTier: 'chat' | 'memory' | 'agent',
+    extra: { clientTools?: string[]; clientContext?: ReturnType<typeof sanitizeClientContext> } = {},
   ) {
     const owner = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -219,6 +226,8 @@ export class ChatService {
       timeZone,
       environment,
       bondingTier: pet.bondingTier,
+      clientContext: extra.clientContext,
+      clientTools: extra.clientTools,
     });
     if ((pet.intelligence ?? 0) >= MEMORY_UNLOCK || isBondingTierAtLeast(pet.bondingTier, 'ally')) {
       const block = await this.memory.recall(pet.id, message);
@@ -240,7 +249,7 @@ export class ChatService {
   // Límites: sin herramientas ni extracción de memoria, y la respuesta la afirma el cliente.
 
   /** Paso 1: valida y devuelve los mensajes a enviar al Hermes local, con un turno de un solo uso. */
-  async prepareLocal(userId: string, petId: string, rawMessage: unknown) {
+  async prepareLocal(userId: string, petId: string, rawMessage: unknown, rawClientContext?: unknown) {
     const message = this.sanitizeInput(rawMessage);
     const pet = await this.petsService.getPetById(userId, petId);
     await this.checkRateLimit(userId);
@@ -251,7 +260,9 @@ export class ChatService {
       return { moderated: verdict };
     }
 
-    const { messages } = await this.buildContext(userId, pet, message, 'memory');
+    const { messages } = await this.buildContext(userId, pet, message, 'memory', {
+      clientContext: sanitizeClientContext(rawClientContext, pet),
+    });
 
     const now = Date.now();
     for (const [id, t] of this.localTurns) if (t.expiresAt < now) this.localTurns.delete(id);
