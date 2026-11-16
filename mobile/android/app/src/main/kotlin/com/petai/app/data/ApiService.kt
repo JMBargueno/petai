@@ -201,4 +201,97 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
         api.request("POST", "/coop/visit", obj("ownerId" to ownerId, "petId" to petId, "action" to action))
 
     suspend fun coopHistory(): CoopHistory = api.request("GET", "/coop/history")
+
+    // ── Presencia (feature 021) ──────────────────────────────────────────────
+    /** Dispositivos de un jugador y si tiene alguno activo (punto de presencia). */
+    suspend fun getPresence(userId: String): PresenceInfo = api.request("GET", "/presence/$userId")
+
+    // ── Clanes (feature 021) ─────────────────────────────────────────────────
+    suspend fun createClan(name: String, tag: String, description: String? = null): ClanSummary =
+        api.request("POST", "/clans", obj("name" to name, "tag" to tag, "description" to description?.trim()?.ifBlank { null }))
+
+    /** El clan del usuario; `null` si aún no está en ningún clan (404 del contrato). */
+    suspend fun getMyClan(): ClanSummary? = try {
+        api.request<ClanSummary>("GET", "/clans")
+    } catch (e: ApiException) {
+        if (e.status == 404) null else throw e
+    }
+
+    suspend fun joinClan(tag: String): ClanSummary = api.request("POST", "/clans/join", obj("tag" to tag.trim()))
+
+    suspend fun leaveClan() { api.send("POST", "/clans/leave") }
+
+    suspend fun inviteToClan(clanId: String, userId: String? = null, email: String? = null) {
+        api.send("POST", "/clans/$clanId/invite", if (userId?.isNotBlank() == true) obj("userId" to userId) else obj("email" to email))
+    }
+
+    suspend fun getClanMembers(clanId: String): ClanSummary = api.request("GET", "/clans/$clanId/members")
+
+    // ── Gestión del Nexo (rangos de clan) ────────────────────────────────────
+    /** Edita nombre y/o descripción (Guardián o superior). */
+    suspend fun updateClan(clanId: String, name: String, description: String?): ClanSummary =
+        api.request("PATCH", "/clans/$clanId", obj("name" to name.trim(), "description" to (description?.trim() ?: ""))) // "" borra la descripción
+
+    /** Disuelve el clan (solo el Forjador). */
+    suspend fun disbandClan(clanId: String) { api.send("DELETE", "/clans/$clanId") }
+
+    /** Expulsa a un miembro de rango inferior (Vigía o superior). */
+    suspend fun kickClanMember(clanId: String, userId: String): ClanSummary =
+        api.request("DELETE", "/clans/$clanId/members/$userId")
+
+    /** Cambia el rango (admin | moderator | member) de un miembro (Guardián o superior). */
+    suspend fun setClanMemberRole(clanId: String, userId: String, role: ClanRank): ClanSummary =
+        api.request("PATCH", "/clans/$clanId/members/$userId/role", obj("role" to role.wire))
+
+    /** Cede la Forja a otro miembro (solo el Forjador; pasa a Guardián). */
+    suspend fun transferClanCreator(clanId: String, userId: String): ClanSummary =
+        api.request("POST", "/clans/$clanId/transfer", obj("userId" to userId))
+
+    /** Borra un mensaje del chat (su autor o un Vigía o superior). */
+    suspend fun deleteClanMessage(clanId: String, messageId: String) { api.send("DELETE", "/clans/$clanId/messages/$messageId") }
+
+    suspend fun sendClanMessage(clanId: String, body: String): ClanMessage =
+        api.request("POST", "/clans/$clanId/messages", obj("body" to body))
+
+    suspend fun getClanMessages(clanId: String, limit: Int? = null, before: String? = null): List<ClanMessage> {
+        val q = buildList {
+            limit?.let { add("limit=$it") }
+            before?.let { add("before=$it") }
+        }.joinToString("&")
+        return api.json.decodeFromString(
+            ListSerializer(ClanMessage.serializer()),
+            api.send("GET", "/clans/$clanId/messages${if (q.isEmpty()) "" else "?$q"}"),
+        )
+    }
+
+    suspend fun createClanGoal(clanId: String, title: String, description: String? = null, metric: String = "generic", target: Int): ClanGoal =
+        api.request("POST", "/clans/$clanId/goals", obj("title" to title, "description" to description?.trim()?.ifBlank { null }, "metric" to metric, "target" to target))
+
+    suspend fun getClanGoals(clanId: String): List<ClanGoal> =
+        api.json.decodeFromString(ListSerializer(ClanGoal.serializer()), api.send("GET", "/clans/$clanId/goals"))
+
+    suspend fun addClanGoalProgress(clanId: String, goalId: String, amount: Int): ClanGoal =
+        api.request("POST", "/clans/$clanId/goals/$goalId/progress", obj("amount" to amount))
+
+    suspend fun deleteClanGoal(clanId: String, goalId: String) { api.send("DELETE", "/clans/$clanId/goals/$goalId") }
+
+    // ── Visita en vivo al hábitat (feature 021) ───────────────────────────────
+    suspend fun startHabitatVisit(ownerId: String): HabitatVisitor =
+        api.request<VisitStartResponse>("POST", "/habitat/visit", obj("ownerId" to ownerId)).visit
+
+    suspend fun endHabitatVisit(): Int = api.request<VisitEndResponse>("POST", "/habitat/visit/end").ended
+
+    suspend fun getHabitatVisitors(): List<HabitatVisitor> = api.request<VisitorsResponse>("GET", "/habitat/visitors").visitors
 }
+
+/** Respuesta de POST /habitat/visit: `{ success, visit }`. */
+@kotlinx.serialization.Serializable
+private data class VisitStartResponse(val success: Boolean = false, val visit: HabitatVisitor = HabitatVisitor())
+
+/** Respuesta de POST /habitat/visit/end: `{ success, ended }`. */
+@kotlinx.serialization.Serializable
+private data class VisitEndResponse(val success: Boolean = false, val ended: Int = 0)
+
+/** Respuesta de GET /habitat/visitors: `{ visitors }`. */
+@kotlinx.serialization.Serializable
+private data class VisitorsResponse(val visitors: List<HabitatVisitor> = emptyList())

@@ -77,8 +77,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: desktop
-          tagName: ${{ github.ref_name || inputs.tag }}
-          releaseName: 'PetAI ${{ github.ref_name || inputs.tag }}'
+          # En push de etiqueta, inputs.tag no existe y gana github.ref_name (la etiqueta).
+          # En workflow_dispatch, ref_name es la rama (main), así que debe ganar inputs.tag.
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: 'PetAI ${{ inputs.tag || github.ref_name }}'
           # Borrador: los clientes NO ven la versión hasta que lo publiques (el backend lee releases/latest).
           releaseDraft: true
           # Sube latest.json con las firmas de cada plataforma (lo lee el backend).

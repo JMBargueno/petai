@@ -3,7 +3,7 @@ import { Glossary } from './glossary';
 import { GLOSSARY } from '../content';
 
 describe('Lore Glossary', () => {
-  it('pinta los catorce términos técnicos con su nombre de lore', async () => {
+  it('pinta todos los términos técnicos con su nombre de lore', async () => {
     const fixture = TestBed.createComponent(Glossary);
     await fixture.whenStable();
     const el: HTMLElement = fixture.nativeElement;

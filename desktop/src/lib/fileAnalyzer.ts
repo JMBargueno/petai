@@ -137,3 +137,23 @@ export async function analyzeDroppedFile(file: File): Promise<AnalyzedFile> {
     suggestedActions: meta.suggestedActions,
   };
 }
+
+/** Límite del mensaje de chat en el servidor (MAX_MESSAGE_CHARS en backend/src/modules/ai/chat.service.ts). */
+export const CHAT_MESSAGE_MAX = 1000;
+
+/**
+ * Mensaje para el chat sobre un archivo soltado. Cabe siempre en el límite del servidor:
+ * la pregunta y el nombre van enteros (acotados) y el contenido se recorta para encajar.
+ */
+export function buildFilePrompt(file: Pick<AnalyzedFile, 'name' | 'typeLabel' | 'snippet'>, question: string, max = CHAT_MESSAGE_MAX): string {
+  const name = file.name.length > 80 ? `${file.name.slice(0, 77)}...` : file.name;
+  const head = `Sobre el archivo "${name}" (${file.typeLabel}):\n${question.trim().slice(0, 300)}`;
+  if (!file.snippet) return head.slice(0, max);
+  const open = '\n\nContenido:\n```\n';
+  const close = '\n```';
+  const cut = '\n... [recortado]';
+  const room = max - head.length - open.length - close.length;
+  if (room < 80) return head.slice(0, max);
+  const body = file.snippet.length <= room ? file.snippet : file.snippet.slice(0, room - cut.length) + cut;
+  return head + open + body + close;
+}

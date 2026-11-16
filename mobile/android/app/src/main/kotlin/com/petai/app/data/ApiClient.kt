@@ -110,6 +110,18 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
         }
     }
 
+    /**
+     * Renueva el access token con el refresh token vigente y lo guarda en [SessionStore].
+     * Devuelve true si la renovación salió bien; el [RealtimeClient] lo usa para reconectar el
+     * socket cuando el servidor corta la conexión por caducidad del token (`auth:expired`).
+     */
+    suspend fun refreshAccessToken(): Boolean {
+        val refresh = session.refreshToken ?: return false
+        val renewed = withContext(Dispatchers.IO) { refreshBlocking(refresh) } ?: return false
+        session.save(renewed.accessToken, renewed.refreshToken)
+        return true
+    }
+
     private suspend fun exec(req: Request, client: OkHttpClient = http): Response =
         suspendCancellableCoroutine { cont: CancellableContinuation<Response> ->
             val call = client.newCall(req)
@@ -204,6 +216,7 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
                 content = o["message"]?.jsonObject?.get("content")?.jsonPrimitive?.content.orEmpty(),
                 intelligence = o["intelligence"]?.jsonPrimitive?.intOrNull ?: 0,
                 tier = o["tier"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                thinking = o["message"]?.jsonObject?.get("thinking")?.jsonPrimitive?.contentOrNull.orEmpty(),
             )
             "error" -> ChatEvent.Error(o["message"]?.jsonPrimitive?.content ?: "Error del proveedor de IA")
             "moderated" -> ChatEvent.Moderated(

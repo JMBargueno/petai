@@ -4,6 +4,160 @@
  */
 
 export interface paths {
+    "/v1/presence/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get device presence for a user (own or accepted friend) */
+        get: operations["PresenceController_getPresence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Perform a co-op visit action on a friend's pet */
+        post: operations["PresenceController_visit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get visit history for my pets */
+        get: operations["PresenceController_getVisitHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/friends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mis relaciones de amistad (amigos aceptados + peticiones) */
+        get: operations["CoopFriendsController_list"];
+        put?: never;
+        /** Enviar una petición de amistad (por id o email del destinatario) */
+        post: operations["CoopFriendsController_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/friends/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aceptar una petición de amistad recibida */
+        post: operations["CoopFriendsController_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/friends/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rechazar una petición de amistad recibida */
+        post: operations["CoopFriendsController_decline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Iniciar una visita en vivo al habitat de un amigo */
+        post: operations["HabitatVisitController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/visit/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Terminar mi visita en vivo activa */
+        post: operations["HabitatVisitController_end"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/visitors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Visitas activas donde el actor es el dueño del habitat */
+        get: operations["HabitatVisitController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/catalog": {
         parameters: {
             query?: never;
@@ -835,7 +989,7 @@ export interface paths {
         get: operations["AiController_memories"];
         put?: never;
         post?: never;
-        /** Borrar toda la memoria de la mascota */
+        /** Borrar toda la memoria de la mascota (también el perfil de hábitos) */
         delete: operations["AiController_forgetAll"];
         options?: never;
         head?: never;
@@ -854,6 +1008,26 @@ export interface paths {
         post?: never;
         /** Olvidar un recuerdo concreto */
         delete: operations["AiController_forget"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pets/{id}/context-digest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resumen diario del escritorio para los hábitos de la mascota (máx. 2 KB, uno cada 12 h)
+         * @description Solo categorías de app y minutos por franja de 4 h, y duraciones de Pomodoro. Nunca títulos de ventana. El servidor descarta las partes cuya habilidad (context_awareness, pomodoro_companion) no está activa.
+         */
+        post: operations["AiController_contextDigest"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1021,7 +1195,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Conversar con la mascota (streaming SSE: eventos delta, done, error) */
+        /**
+         * Conversar con la mascota (streaming SSE: eventos delta, tool, action, moderated, done, error)
+         * @description El razonamiento del modelo (reasoning_content o bloques <think>) nunca llega en los eventos delta: si existe y supera la moderación, el evento done lo incluye aparte en message.thinking (no se guarda en el historial).
+         */
         post: operations["AiController_chatStream"];
         delete?: never;
         options?: never;
@@ -2447,15 +2624,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/presence/{userId}": {
+    "/v1/clans": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get device presence for a user (own or accepted friend) */
-        get: operations["PresenceController_getPresence"];
+        /** Mi clan (o 404 si no perteneces a ninguno) */
+        get: operations["ClansController_getMine"];
+        put?: never;
+        /** Crear un clan (el actor se convierte en Forjador) */
+        post: operations["ClansController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unirse a un clan existente por su etiqueta (tag) */
+        post: operations["ClansController_join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Abandonar mi clan */
+        post: operations["ClansController_leave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Invitar a un usuario a unirse directamente (Vigía o superior) */
+        post: operations["ClansController_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Roster del clan con presencia en línea por miembro */
+        get: operations["ClansController_getMembers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2464,7 +2710,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/coop/visit": {
+    "/v1/clans/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2473,50 +2719,50 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Perform a co-op visit action on a friend's pet */
-        post: operations["PresenceController_visit"];
-        delete?: never;
+        post?: never;
+        /** Disolver el clan (solo el Forjador) */
+        delete: operations["ClansController_disband"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Editar nombre y/o descripción del clan (Guardián o superior) */
+        patch: operations["ClansController_update"];
         trace?: never;
     };
-    "/v1/coop/history": {
+    "/v1/clans/{id}/members/{userId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get visit history for my pets */
-        get: operations["PresenceController_getVisitHistory"];
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Expulsar a un miembro de rango inferior (Vigía o superior) */
+        delete: operations["ClansController_kick"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/members/{userId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Cambiar el rango de un miembro (Guardián o superior; Guardianes solo el Forjador) */
+        patch: operations["ClansController_setRole"];
         trace?: never;
     };
-    "/v1/coop/friends": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Mis relaciones de amistad (amigos aceptados + peticiones) */
-        get: operations["CoopFriendsController_list"];
-        put?: never;
-        /** Enviar una petición de amistad (por id o email del destinatario) */
-        post: operations["CoopFriendsController_request"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/coop/friends/{id}/accept": {
+    "/v1/clans/{id}/transfer": {
         parameters: {
             query?: never;
             header?: never;
@@ -2525,15 +2771,33 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Aceptar una petición de amistad recibida */
-        post: operations["CoopFriendsController_accept"];
+        /** Ceder la Forja (rango de creador) a otro miembro (solo el Forjador) */
+        post: operations["ClansController_transfer"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/coop/friends/{id}/decline": {
+    "/v1/clans/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historial reciente del chat del clan (más reciente primero) */
+        get: operations["ClansController_getMessages"];
+        put?: never;
+        /** Enviar un mensaje al chat del clan */
+        post: operations["ClansController_sendMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/messages/{messageId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2542,9 +2806,61 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rechazar una petición de amistad recibida */
-        post: operations["CoopFriendsController_decline"];
+        post?: never;
+        /** Borrar un mensaje del chat (su autor o un Vigía o superior) */
+        delete: operations["ClansController_deleteMessage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista de metas del clan (activas primero, progreso desc) */
+        get: operations["ClansController_getGoals"];
+        put?: never;
+        /** Crear una meta compartida del clan */
+        post: operations["ClansController_createGoal"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/goals/{goalId}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aumentar el progreso de una meta del clan */
+        post: operations["ClansController_addGoalProgress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/goals/{goalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Eliminar una meta del clan (Vigía o superior) */
+        delete: operations["ClansController_deleteGoal"];
         options?: never;
         head?: never;
         patch?: never;
@@ -4284,6 +4600,220 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    PresenceController_getPresence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PresenceController_visit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Dueño del pet visitado */
+                    ownerId: string;
+                    /** @description Pet visitado */
+                    petId: string;
+                    /**
+                     * @description Acción de la visita
+                     * @enum {string}
+                     */
+                    action: "feed" | "play" | "clean";
+                    /** @description Item usado (para feed, opcional) */
+                    itemId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PresenceController_getVisitHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CoopFriendsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CoopFriendsController_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    targetUserId?: string;
+                    /** @description Alternativa a targetUserId: email del destinatario */
+                    email?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CoopFriendsController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CoopFriendsController_decline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatVisitController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Dueño del habitat visitado */
+                    ownerId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatVisitController_end: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Opcional: limitar a un dueño */
+                    ownerId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatVisitController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     GameDataController_getCatalog: {
         parameters: {
             query?: never;
@@ -5515,6 +6045,36 @@ export interface operations {
             };
         };
     };
+    AiController_contextDigest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Por categoría (coding, music, video, gaming, reading): 6 números (minutos por franja de 4 h) */
+                    appMinutes?: {
+                        [key: string]: number[];
+                    };
+                    /** @description Minutos de foco de cada Pomodoro completado */
+                    pomodoros?: number[];
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     AiController_pendingActions: {
         parameters: {
             query?: never;
@@ -5660,6 +6220,19 @@ export interface operations {
                 "application/json": {
                     /** @description Mensaje del usuario */
                     message?: string;
+                    /** @description Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente */
+                    clientContext?: {
+                        /** @enum {string} */
+                        appCategory?: "coding" | "music" | "video" | "gaming" | "reading" | "generic";
+                        /** @enum {string} */
+                        pose?: "walking" | "climbing" | "perched" | "sleeping";
+                        pomodoro?: {
+                            /** @enum {string} */
+                            phase?: "idle" | "work" | "break";
+                            minutesLeft?: number;
+                            sessionsToday?: number;
+                        };
+                    };
                 };
             };
         };
@@ -5716,6 +6289,19 @@ export interface operations {
                     message?: string;
                     /** @description Herramientas del cliente (opcional) */
                     clientTools?: string[];
+                    /** @description Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente */
+                    clientContext?: {
+                        /** @enum {string} */
+                        appCategory?: "coding" | "music" | "video" | "gaming" | "reading" | "generic";
+                        /** @enum {string} */
+                        pose?: "walking" | "climbing" | "perched" | "sleeping";
+                        pomodoro?: {
+                            /** @enum {string} */
+                            phase?: "idle" | "work" | "break";
+                            minutesLeft?: number;
+                            sessionsToday?: number;
+                        };
+                    };
                 };
             };
         };
@@ -8017,11 +8603,189 @@ export interface operations {
             };
         };
     };
-    PresenceController_getPresence: {
+    ClansController_getMine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    tag: string;
+                    /** @description Opcional */
+                    description?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    tag: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_leave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_invite: {
         parameters: {
             query?: never;
             header?: never;
             path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description ID del usuario invitado */
+                    userId?: string;
+                    /** @description Alternativa a userId: email del invitado */
+                    email?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_getMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_disband: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Máx. 40 caracteres */
+                    name?: string;
+                    /** @description Máx. 300 caracteres; vacío o null la borra */
+                    description?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_kick: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
                 userId: string;
             };
             cookie?: never;
@@ -8036,27 +8800,21 @@ export interface operations {
             };
         };
     };
-    PresenceController_visit: {
+    ClansController_setRole: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Dueño del pet visitado */
-                    ownerId: string;
-                    /** @description Pet visitado */
-                    petId: string;
-                    /**
-                     * @description Acción de la visita
-                     * @enum {string}
-                     */
-                    action: "feed" | "play" | "clean";
-                    /** @description Item usado (para feed, opcional) */
-                    itemId?: string;
+                    /** @enum {string} */
+                    role: "admin" | "moderator" | "member";
                 };
             };
         };
@@ -8069,11 +8827,44 @@ export interface operations {
             };
         };
     };
-    PresenceController_getVisitHistory: {
+    ClansController_transfer: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description ID del nuevo Forjador */
+                    userId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_getMessages: {
+        parameters: {
+            query?: {
+                /** @description Máx. 50 (por defecto 20) */
+                limit?: number;
+                /** @description Cursor ISO datetime: anteriores a esta fecha */
+                before?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -8086,11 +8877,40 @@ export interface operations {
             };
         };
     };
-    CoopFriendsController_list: {
+    ClansController_sendMessage: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Texto (máx. 500 caracteres) */
+                    body: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_deleteMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                messageId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -8103,32 +8923,7 @@ export interface operations {
             };
         };
     };
-    CoopFriendsController_request: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    targetUserId?: string;
-                    /** @description Alternativa a targetUserId: email del destinatario */
-                    email?: string;
-                };
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    CoopFriendsController_accept: {
+    ClansController_getGoals: {
         parameters: {
             query?: never;
             header?: never;
@@ -8147,12 +8942,71 @@ export interface operations {
             };
         };
     };
-    CoopFriendsController_decline: {
+    ClansController_createGoal: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                    /** @description Opcional */
+                    description?: string;
+                    /** @description xp | visits | generic (por defecto generic) */
+                    metric?: string;
+                    /** @description Objetivo (> 0) */
+                    target: number;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_addGoalProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                goalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Cantidad a sumar al progreso */
+                    amount: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_deleteGoal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                goalId: string;
             };
             cookie?: never;
         };

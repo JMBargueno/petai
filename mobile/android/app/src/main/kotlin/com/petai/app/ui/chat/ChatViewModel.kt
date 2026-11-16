@@ -17,7 +17,8 @@ import kotlinx.coroutines.launch
 
 enum class ChatRole { USER, PET, NOTICE }
 
-data class ChatItem(val id: Long, val role: ChatRole, val text: String)
+/** `thinking`: razonamiento del modelo; solo llega al terminar y se muestra plegado. */
+data class ChatItem(val id: Long, val role: ChatRole, val text: String, val thinking: String = "")
 
 data class ChatUiState(
     val loaded: Boolean = false,
@@ -100,7 +101,12 @@ class ChatViewModel(private val service: ApiService, private val petId: String, 
                         is ChatEvent.Error -> {
                             _state.update { s -> s.copy(items = s.items.filterNot { it.id == replyId || it.id == userItem.id }, error = ev.message) }
                         }
-                        is ChatEvent.Done -> { setReply { ev.content }; onExchangeDone() }
+                        is ChatEvent.Done -> {
+                            _state.update { s ->
+                                s.copy(items = s.items.map { if (it.id == replyId) it.copy(text = ev.content, thinking = ev.thinking) else it })
+                            }
+                            onExchangeDone()
+                        }
                     }
                 }
             _state.update { it.copy(streaming = false, toolHint = false) }

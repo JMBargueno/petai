@@ -132,7 +132,7 @@ describe('Agente: herramientas y confirmación (e2e, LLM mock)', () => {
     await chat('hola');
     const req = mock.seen[mock.seen.length - 1];
     expect(req.tools.map((t: any) => t.function.name).sort()).toEqual([
-      'create_reminder', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'suggest_minigame',
+      'create_reminder', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'set_in_habitat', 'suggest_minigame',
     ]);
     expect(req.messages[0].content).toContain('La hora actual es');
     expect(req.messages[0].content).toContain('NO se ejecutan hasta que el entrenador las confirma');

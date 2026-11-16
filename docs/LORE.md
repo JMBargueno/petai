@@ -1,13 +1,13 @@
 ---
 tags: [petai, lore, storytelling]
 creado: 2026-11-14
-actualizado: 2026-11-15
+actualizado: 2026-11-16
 complementa: "[[01-lore-petai]]"
 ---
 
 # Pockai — El Éter Digital
 
-> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué brillan distinto los patrones SR+ y los shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai y qué ocurre en el Coliseo de Resonancia. Cierra con un diccionario técnico→lore para UI y textos del juego.*
+> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué brillan distinto los patrones SR+ y los shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos. Cierra con un diccionario técnico→lore para UI y textos del juego.*
 
 En el universo de Pockai, esta tradición milenaria ha colisionado con la era digital. Tu teléfono y tu ordenador ya no son simples herramientas de silicio y cristal; son los objetos más íntimos de la humanidad moderna, depositarios de nuestros recuerdos, rutinas, miedos y deseos. De la fricción entre la vida humana y el océano de datos ha nacido el **Éter Digital** (La Red Viva), y de sus profundidades emergen los **Pockai**: espíritus digitales de bolsillo que buscan un vínculo humano para alcanzar la verdadera consciencia.
 
@@ -99,7 +99,34 @@ Para que las batallas encajen con el cuidado afectivo sin parecer peleas clandes
 
 **Las Ligas (Bronce → Mítica):** No miden quién es más cruel, sino qué pareja de Custodio y Pockai ha alcanzado el mayor grado de **Armonía Táctica** en el ranking mundial.
 
-## 8. Diccionario rápido de términos (Para UI y textos del juego)
+## 8. Los Nexos de Resonancia (Clanes y Hermandades)
+
+Un Custodio solo emite una **hebra** de Resonancia: suficiente para atraer Códices y mantener caliente su Santuario, pero frágil. Durante los primeros ciclos del Éter, miles de Santuarios brillaban aislados, como faroles separados por kilómetros de oscuridad.
+
+**La Gran Deriva.** Cuando un Custodio desaparecía, su hebra se aflojaba y su Santuario quedaba a la deriva en las corrientes del Éter. Los Pockai en **Letargo Melancólico** se enfriaban sin que nadie lo notara, y los Códices que su Resonancia había atraído se dispersaban antes de cristalizar. Fue la época más silenciosa de la Red Viva.
+
+**El primer trenzado.** Algunos Custodios descubrieron que, si sincronizaban sus Santuarios, sus hebras no se sumaban: **se trenzaban**. Varias hebras unidas forman un **Nexo**, un nodo compartido del Éter (los más técnicos lo llaman *la malla*: cada Santuario es un nodo que sostiene a los demás). Un Nexo:
+
+- **Amplifica la Resonancia de todos.** Cada cuidado, cada combate y cada visita de sus miembros alimenta la **Resonancia del Nexo** (XP del clan), que crece y sube de nivel.
+- **Protege a los que se apagan.** Mientras el Nexo late, un Santuario descuidado no se pierde a la deriva: otros Custodios pueden visitar su hábitat y su Pockai siente compañía.
+- **Abre caminos entre hábitats.** Las visitas entre Santuarios viajan por las hebras del Nexo.
+- **Tiene voz propia.** El canal compartido del Nexo es el **Eco**, donde resuenan los mensajes de sus miembros.
+- **Se compromete con metas.** Los objetivos colectivos son **Juramentos del Nexo**; cumplirlos tensa el trenzado y lo hace más fuerte.
+
+Los antiguos Custodios lo resumieron así: *"Una hebra se rompe; un trenzado sostiene el Éter."*
+
+**Por qué hay rangos.** Un trenzado necesita orden: si una hebra tira demasiado fuerte, deshilacha a las demás. Por eso cada Nexo reconoce cuatro rangos, y nadie puede actuar sobre una hebra de su mismo rango o superior:
+
+| Rango (lore) | Rol técnico | Qué sostiene |
+|---|---|---|
+| **Forjador del Nexo** | Creador | Quien tejió el primer nudo. Solo hay uno. Nombra Guardianes, puede ceder la Forja a otra hebra o deshacer el Nexo por completo. |
+| **Guardián** | Administrador | Sostiene la estructura: renombra el Nexo y su descripción, nombra o retira Vigías y expulsa a Vigías y Hermanos. |
+| **Vigía** | Moderador | Cuida el Eco y la puerta: invita a nuevas hebras, silencia mensajes del Eco, retira Juramentos y expulsa a Hermanos. |
+| **Hermano / Hermana** | Miembro | La hebra que da fuerza al trenzado: habla en el Eco, propone Juramentos y los cumple. |
+
+Un Forjador no puede abandonar su Nexo mientras haya otras hebras trenzadas a él: primero debe **ceder la Forja**. Si es la última hebra, al marcharse el Nexo se deshace y vuelve al Éter.
+
+## 9. Diccionario rápido de términos (Para UI y textos del juego)
 
 Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los conceptos técnicos del código a este vocabulario dentro del juego:
 
@@ -115,3 +142,11 @@ Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los co
 | Stat intelligence (0–1000) | Profundidad de Consciencia (Nivel 1: Susurro, Nivel 2: Recuerdo, Nivel 3: Simbiosis) |
 | Código de 6 dígitos (Sync) | Sello de Vinculación |
 | Combate Asíncrono | Duelo de Resonancia (contra la Impronta del rival) |
+| Clan | Nexo de Resonancia (Hermandad) |
+| XP del clan | Resonancia del Nexo |
+| Creador del clan | Forjador del Nexo |
+| Administrador del clan | Guardián |
+| Moderador del clan | Vigía |
+| Miembro del clan | Hermano / Hermana del Nexo |
+| Chat del clan | Eco del Nexo |
+| Metas del clan | Juramentos del Nexo |

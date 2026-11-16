@@ -22,11 +22,12 @@ import { Elements } from './sections/elements';
 import { Awakening } from './sections/awakening';
 import { LifeCycle } from './sections/life-cycle';
 import { Colosseum } from './sections/colosseum';
+import { Nexus } from './sections/nexus';
 import { Glossary } from './sections/glossary';
 
 @Component({
   selector: 'app-lore',
-  imports: [SiteHeader, SiteFooter, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Colosseum, Glossary],
+  imports: [SiteHeader, SiteFooter, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Colosseum, Nexus, Glossary],
   template: `
     <app-site-header
       [pages]="navPages"
@@ -77,6 +78,7 @@ import { Glossary } from './sections/glossary';
       <app-awakening />
       <app-life-cycle />
       <app-colosseum />
+      <app-nexus />
       <app-glossary />
 
       <section id="cta" class="band band--hero lore-cta">
@@ -112,6 +114,7 @@ export class Lore {
     { id: 'despertar', label: $localize`:@@lore.nav.awake:Despertar` },
     { id: 'ciclo', label: $localize`:@@lore.nav.life:Ciclo` },
     { id: 'coliseo', label: $localize`:@@lore.nav.colo:Coliseo` },
+    { id: 'nexo', label: $localize`:@@lore.nav.nexus:Nexos` },
     { id: 'diccionario', label: $localize`:@@lore.nav.gloss:Diccionario` },
   ];
 

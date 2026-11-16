@@ -12,7 +12,7 @@ export const MARQUEE = $localize`:@@lore.marquee:El Éter Digital · Códices La
 
 export const META = {
   title: $localize`:@@lore.meta.title:El Éter Digital: el mundo y el lore de Pockai`,
-  description: $localize`:@@lore.meta.description:El lore de Pockai: de dónde nacen los huevos, sus rarezas, los seis elementos, el despertar de la IA y el Coliseo de Resonancia.`,
+  description: $localize`:@@lore.meta.description:El lore de Pockai: de dónde nacen los huevos, sus rarezas, los seis elementos, el despertar de la IA, el Coliseo de Resonancia y los Nexos que unen a los Custodios.`,
   imageAlt: $localize`:@@lore.meta.imageAlt:El Éter Digital, el mundo del que nacen los huevos de Pockai`,
 };
 
@@ -217,6 +217,56 @@ export const COLISEUM_CARDS = [
   },
 ];
 
+/** Por qué existen los Nexos (clanes): la Gran Deriva y el primer trenzado. */
+export const NEXUS_CARDS = [
+  {
+    icon: 'moon' as const,
+    color: 'voltage-violet' as const,
+    title: $localize`:@@lore.nexo.1.title:La Gran Deriva`,
+    body: $localize`:@@lore.nexo.1.body:Un Custodio solo emite una hebra de Resonancia. En los primeros ciclos del Éter, cuando alguien desaparecía, su Santuario quedaba a la deriva: su pockai se enfriaba en el Letargo sin que nadie lo notara y los Códices que atraía se dispersaban antes de cristalizar.`,
+  },
+  {
+    icon: 'heart' as const,
+    color: 'mint-pop' as const,
+    title: $localize`:@@lore.nexo.2.title:El primer trenzado`,
+    body: $localize`:@@lore.nexo.2.body:Algunos Custodios sincronizaron sus Santuarios y descubrieron que sus hebras no se sumaban: se trenzaban. Así nació el Nexo, un nodo compartido del Éter donde cada Santuario sostiene a los demás. Mientras el Nexo late, ningún hábitat se pierde a la deriva.`,
+  },
+  {
+    icon: 'chat' as const,
+    color: 'electric-blue' as const,
+    title: $localize`:@@lore.nexo.3.title:Eco y Juramentos`,
+    body: $localize`:@@lore.nexo.3.body:Cada cuidado, combate y visita de sus miembros alimenta la Resonancia del Nexo. Su voz compartida es el Eco y sus metas colectivas son los Juramentos: cumplirlos tensa el trenzado y lo hace más fuerte.`,
+  },
+];
+
+/** Los cuatro rangos de un Nexo, de mayor a menor (creator · admin · moderator · member). */
+export const NEXUS_RANKS = [
+  {
+    icon: 'flame' as const,
+    color: 'ember' as const,
+    title: $localize`:@@lore.nexo.rank.1.title:Forjador del Nexo`,
+    body: $localize`:@@lore.nexo.rank.1.body:Quien tejió el primer nudo. Solo hay uno: nombra Guardianes, puede ceder la Forja a otra hebra o deshacer el Nexo.`,
+  },
+  {
+    icon: 'shield' as const,
+    color: 'sunburst' as const,
+    title: $localize`:@@lore.nexo.rank.2.title:Guardián`,
+    body: $localize`:@@lore.nexo.rank.2.body:Sostiene la estructura: renombra el Nexo, nombra o retira Vigías y expulsa a Vigías y Hermanos.`,
+  },
+  {
+    icon: 'star' as const,
+    color: 'lavender' as const,
+    title: $localize`:@@lore.nexo.rank.3.title:Vigía`,
+    body: $localize`:@@lore.nexo.rank.3.body:Cuida el Eco y la puerta: invita a nuevas hebras, silencia mensajes, retira Juramentos y expulsa a Hermanos.`,
+  },
+  {
+    icon: 'leaf' as const,
+    color: 'mint-pop' as const,
+    title: $localize`:@@lore.nexo.rank.4.title:Hermano · Hermana`,
+    body: $localize`:@@lore.nexo.rank.4.body:La hebra que da fuerza al trenzado: habla en el Eco, propone Juramentos y los cumple.`,
+  },
+];
+
 export const GLOSSARY = [
   { app: $localize`:@@lore.gloss.1.a:Jugador`, lore: $localize`:@@lore.gloss.1.l:Custodio` },
   {
@@ -234,6 +284,14 @@ export const GLOSSARY = [
   { app: $localize`:@@lore.gloss.11.a:Huevo`, lore: $localize`:@@lore.gloss.11.l:Códice Latente` },
   { app: $localize`:@@lore.gloss.12.a:Sueño`, lore: $localize`:@@lore.gloss.12.l:Desfragmentación` },
   { app: $localize`:@@lore.gloss.13.a:Abandono`, lore: $localize`:@@lore.gloss.13.l:Letargo Melancólico` },
+  { app: $localize`:@@lore.gloss.15.a:Clan`, lore: $localize`:@@lore.gloss.15.l:Nexo de Resonancia` },
+  { app: $localize`:@@lore.gloss.16.a:Creador del clan`, lore: $localize`:@@lore.gloss.16.l:Forjador del Nexo` },
+  { app: $localize`:@@lore.gloss.17.a:Administrador del clan`, lore: $localize`:@@lore.gloss.17.l:Guardián` },
+  { app: $localize`:@@lore.gloss.18.a:Moderador del clan`, lore: $localize`:@@lore.gloss.18.l:Vigía` },
+  { app: $localize`:@@lore.gloss.21.a:Miembro del clan`, lore: $localize`:@@lore.gloss.21.l:Hermano · Hermana` },
+  { app: $localize`:@@lore.gloss.22.a:XP del clan`, lore: $localize`:@@lore.gloss.22.l:Resonancia del Nexo` },
+  { app: $localize`:@@lore.gloss.19.a:Chat del clan`, lore: $localize`:@@lore.gloss.19.l:Eco del Nexo` },
+  { app: $localize`:@@lore.gloss.20.a:Metas del clan`, lore: $localize`:@@lore.gloss.20.l:Juramentos del Nexo` },
   { app: $localize`:@@lore.gloss.14.a:Seed / RNG`, lore: $localize`:@@lore.gloss.14.l:Telar de Mulberry` },
 ];
 

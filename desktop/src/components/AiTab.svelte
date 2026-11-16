@@ -11,12 +11,31 @@
     type LocalHermesConfig,
   } from '../lib/hermesLocal';
   import { CLIENT_TOOLS, openUrl, readClipboardText } from '../lib/clientTools';
+  import { buildClientContext } from '../lib/deskContext';
+  import { setSkillAuthorization } from '../lib/stores/desktopSkillsStore';
+  import { startPomodoro, stopPomodoro } from '../lib/pomodoro';
+  import { toSpeakable } from '../lib/speech-queue';
 
   export let pet: any = null;
+  /** Mensaje a enviar en cuanto el chat esté listo (p. ej. al soltar un archivo sobre la mascota). */
+  export let pendingPrompt: { text: string; n: number } | null = null;
 
   const dispatch = createEventDispatcher();
 
-  type Msg = { id: string; role: 'user' | 'assistant'; content: string; notice?: boolean };
+  // `thinking`: razonamiento del modelo, aparte de la respuesta; solo se muestra plegado al terminar
+  type Msg = {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    notice?: boolean;
+    thinking?: string;
+    thinkingOpen?: boolean;
+  };
+
+  function toggleThinking(m: Msg) {
+    m.thinkingOpen = !m.thinkingOpen;
+    messages = messages;
+  }
 
   let loaded = false;
   let config: any = { configured: false };
@@ -100,6 +119,16 @@
           if (res.tool === 'open_url') {
             await openUrl(res.args.url);
             card.note = 'Abierto en tu navegador';
+          } else if (res.tool === 'toggle_desktop_skill') {
+            // set (no toggle): el valor lo decide el servidor ya validado, no el estado local
+            setSkillAuthorization(res.args.skill_id, !!res.args.enabled, pet.id);
+            card.note = res.args.enabled ? 'Habilidad activada' : 'Habilidad desactivada';
+          } else if (res.tool === 'start_pomodoro') {
+            startPomodoro(res.args.work_minutes, res.args.break_minutes);
+            card.note = `Pomodoro de ${res.args.work_minutes} min en marcha`;
+          } else if (res.tool === 'stop_pomodoro') {
+            stopPomodoro();
+            card.note = 'Pomodoro detenido';
           } else if (res.tool === 'read_clipboard') {
             const text = (await readClipboardText()).trim();
             if (!text) {
@@ -114,6 +143,8 @@
           card.state = 'done';
           card.note = 'Hecho';
           if (remOpen) loadReminders();
+          // Acciones del servidor que cambian a la mascota (p. ej. ir a su casita)
+          dispatch('refreshPet');
         }
       } else {
         await api.rejectAction(pet.id, card.id);
@@ -199,6 +230,17 @@
     } catch (e: any) {
       memErr = e.message;
     }
+  }
+
+  // Mensaje pedido desde fuera (archivo soltado sobre la mascota): se envía una sola vez.
+  // Sin IA configurada se deja escrito en la caja para que el usuario lo vea y decida.
+  // El panel lo marca como consumido (promptConsumed) para no reenviarlo si la pestaña se vuelve a montar.
+  let lastPromptN = 0;
+  $: if (pendingPrompt && pendingPrompt.n !== lastPromptN && loaded && pet && !streaming) {
+    lastPromptN = pendingPrompt.n;
+    dispatch('promptConsumed', pendingPrompt.n);
+    if (chatReady) send(pendingPrompt.text);
+    else input = pendingPrompt.text;
   }
 
   $: needsUrl = provider !== 'openai';
@@ -323,25 +365,26 @@
 
   /** Modo Hermes local: contexto del servidor → inferencia en este equipo → sincronización. */
   async function runLocal(text: string, reply: Msg, userMsg: Msg, signal: AbortSignal) {
-    const ctx = await api.localChatContext(pet.id, text);
+    const ctx = await api.localChatContext(pet.id, text, buildClientContext());
     if ('moderated' in ctx) {
       applyModeration(ctx.moderated, reply, userMsg);
       return { moderated: true as const };
     }
     let acc = '';
-    await streamLocalCompletion(local, ctx.messages, ctx.maxTokens, (d) => {
+    const result = await streamLocalCompletion(local, ctx.messages, ctx.maxTokens, (d) => {
       acc += d;
       reply.content = acc;
       messages = messages;
       scrollDown();
     }, signal);
-    const synced = await api.localChatSync(pet.id, ctx.turnId, acc);
+    // Solo se sincroniza (y guarda) la respuesta en personaje; el razonamiento se queda en este equipo
+    const synced = await api.localChatSync(pet.id, ctx.turnId, result.reply);
     if ('moderated' in synced) {
       // La respuesta local se modera al sincronizar: si se bloquea, se sustituye y no se guarda
       applyModeration(synced.moderated, reply, userMsg);
       return { moderated: true as const };
     }
-    return synced;
+    return { ...synced, message: { ...synced.message, thinking: result.thinking || undefined } };
   }
 
   async function send(override?: string) {
@@ -385,14 +428,19 @@
           },
         },
         abort.signal,
+        buildClientContext(),
       );
       if ('moderated' in done) {
         // Aviso de moderación: no es una respuesta de la mascota ni queda en el historial
         return;
       }
       reply.content = done.message.content;
+      reply.thinking = done.message.thinking || undefined;
+      reply.thinkingOpen = false;
       messages = messages;
-      dispatch('bubble', done.message.content);
+      // La mascota dice la respuesta (sin el razonamiento) por la cola de habla
+      const spoken = toSpeakable(done.message.content);
+      if (spoken) dispatch('bubble', spoken);
       dispatch('refreshPet');
       if (config.configured && !local.enabled) loadUsage();
       // La extracción de recuerdos se hace en segundo plano en el servidor (no en modo local)
@@ -545,6 +593,22 @@
         <p class="muted">Saluda a {pet.nickname || pet.species?.name} </p>
       {/if}
       {#each messages as m (m.id)}
+        {#if m.role === 'assistant' && m.thinking}
+          <div class="thinking" data-testid="thinking">
+            <button
+              type="button"
+              class="thinking-toggle"
+              aria-expanded={!!m.thinkingOpen}
+              on:click={() => toggleThinking(m)}
+            >
+              <Ico n={m.thinkingOpen ? 'down' : 'right'} size={12} />
+              {m.thinkingOpen ? 'Ocultar razonamiento' : 'Ver razonamiento'}
+            </button>
+            {#if m.thinkingOpen}
+              <div class="thinking-body">{m.thinking}</div>
+            {/if}
+          </div>
+        {/if}
         <div class="msg {m.role}" class:notice={m.notice}>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}…{/if}</div>
       {/each}
       {#if toolHint}<div class="hint">{toolHint}</div>{/if}
@@ -602,7 +666,7 @@
           <ul class="mem-list">
             {#each mem.memories as m (m.id)}
               <li class:summary={m.kind === 'summary'}>
-                <span><Ico n={m.kind === 'summary' ? 'note' : 'chat'} /> {m.content}</span>
+                <span><Ico n={m.kind === 'summary' ? 'note' : m.kind === 'habit' ? 'monitor' : 'chat'} /> {m.kind === 'habit' ? 'Hábito: ' : ''}{m.content}</span>
                 <button class="x" title="Olvidar" on:click={() => forget(m.id)}>✕</button>
               </li>
             {/each}
@@ -661,6 +725,17 @@
   .msg.user { align-self: flex-end; background: #0369a1; }
   .msg.assistant { align-self: flex-start; background: var(--surface-2); }
   .msg.notice { background: color-mix(in srgb, var(--color-sunburst) 14%, var(--surface)); border: 1px solid var(--color-sunburst); }
+  .thinking { align-self: flex-start; max-width: 85%; display: flex; flex-direction: column; gap: 4px; margin-bottom: -2px; }
+  .thinking-toggle {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 6px; font-size: 11px; font-weight: 500; opacity: 0.7;
+    background: none; border: none; color: inherit;
+  }
+  .thinking-toggle:hover { opacity: 1; }
+  .thinking-body {
+    padding: 6px 10px; font-size: 12px; line-height: 1.35; white-space: pre-wrap; user-select: text;
+    opacity: 0.75; font-style: italic; border-left: 2px solid var(--line-soft); max-height: 160px; overflow-y: auto;
+  }
   .usage { font-size: 11px; opacity: 0.7; margin: 0 0 6px; }
   .usage.full { color: var(--danger-ink); opacity: 1; }
   .composer { display: flex; gap: 6px; align-items: stretch; }

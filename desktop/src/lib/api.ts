@@ -380,19 +380,25 @@ export const api = {
     );
   },
 
-  /** Chat en streaming (SSE). Llama a onDelta con cada fragmento y devuelve el evento final. */
+  /**
+   * Chat en streaming (SSE). Llama a onDelta con cada fragmento de la respuesta y devuelve el evento
+   * final. El razonamiento del modelo nunca llega en los delta: viene aparte en message.thinking.
+   */
   async chatStream(
     petId: string,
     message: string,
     clientTools: readonly string[],
     handlers: {
       onDelta: (text: string) => void;
+      /** Pensamiento del modelo de razonamiento: se muestra plegado, nunca como respuesta. */
+      onReasoning?: (text: string) => void;
       onTool?: (name: string) => void;
       onAction?: (action: { id: string; tool: string; summary: string; expiresAt: string; clientSide?: boolean }) => void;
       onModerated?: (info: { reason: string; message: string; hideUserMessage: boolean }) => void;
     },
     signal?: AbortSignal,
-  ): Promise<{ message: { id: string; content: string }; intelligence: number; tier: string } | { moderated: true }> {
+    clientContext?: unknown,
+  ): Promise<{ message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string } | { moderated: true }> {
     const res = await authFetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
       method: 'POST',
       signal,
@@ -400,7 +406,7 @@ export const api = {
         'Content-Type': 'application/json',
         ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
       },
-      body: JSON.stringify({ message, clientTools }),
+      body: JSON.stringify({ message, clientTools, clientContext }),
     });
     if (!res.ok || !res.body) {
       const data = await res.json().catch(() => ({}));
@@ -423,6 +429,7 @@ export const api = {
         if (!event || !raw) continue;
         const data = JSON.parse(raw);
         if (event === 'delta') handlers.onDelta(data.text);
+        else if (event === 'reasoning') handlers.onReasoning?.(data.text);
         else if (event === 'tool') handlers.onTool?.(data.name);
         else if (event === 'action') handlers.onAction?.(data.action);
         else if (event === 'moderated') {
@@ -462,11 +469,11 @@ export const api = {
   },
 
   /** Modo Hermes local, paso 1: el servidor valida, modera y devuelve los mensajes a enviar al modelo local. */
-  async localChatContext(petId: string, message: string) {
+  async localChatContext(petId: string, message: string, clientContext?: unknown) {
     return minigameRequest<
       | { turnId: string; messages: { role: 'system' | 'user' | 'assistant'; content: string }[]; maxTokens: number }
       | { moderated: { reason: string; message: string; hideUserMessage: boolean } }
-    >('POST', `/v1/pets/${petId}/chat/local/context`, { message });
+    >('POST', `/v1/pets/${petId}/chat/local/context`, { message, clientContext });
   },
 
   /** Modo Hermes local, paso 2: entrega la respuesta generada para moderarla y guardarla. */
@@ -578,7 +585,7 @@ export const api = {
       unlocked: boolean;
       unlockAt: number;
       intelligence: number;
-      memories: { id: string; kind: 'fact' | 'summary'; content: string; createdAt: string }[];
+      memories: { id: string; kind: 'fact' | 'summary' | 'habit'; content: string; createdAt: string }[];
     }>('GET', `/v1/pets/${petId}/memories`);
   },
 
@@ -588,6 +595,11 @@ export const api = {
 
   async forgetAllMemories(petId: string) {
     return minigameRequest<{ deleted: number }>('DELETE', `/v1/pets/${petId}/memories`);
+  },
+
+  /** Resumen diario de hábitos de escritorio (solo categorías y minutos; ver lib/contextDigest.ts). */
+  async sendContextDigest(petId: string, body: unknown) {
+    return minigameRequest<{ habits: number; stored: boolean }>('POST', `/v1/pets/${petId}/context-digest`, body);
   },
 
   async evolvePet(petId: string) {
@@ -713,6 +725,112 @@ export const api = {
   },
   async getCoopHistory() {
     return minigameRequest<{ userId: string; visits: CoopVisitLog[] }>('GET', '/v1/coop/history');
+  },
+
+  // ── Presencia (feature 021) ────────────────────────────────────────────────
+  /** Dispositivos de un jugador y si tiene alguno activo (punto de presencia). */
+  async getPresence(userId: string) {
+    return minigameRequest<PresenceInfo>('GET', `/v1/presence/${encodeURIComponent(userId)}`);
+  },
+
+  // ── Clanes (feature 021) ──────────────────────────────────────────────────
+  async createClan({ name, tag, description }: { name: string; tag: string; description?: string }) {
+    return minigameRequest<ClanSummary>('POST', '/v1/clans', { name, tag, description });
+  },
+  /** El clan del usuario; `null` si aún no está en ningún clan (404 del contrato). */
+  async getMyClan(): Promise<ClanSummary | null> {
+    try {
+      return await minigameRequest<ClanSummary>('GET', '/v1/clans');
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
+  async joinClan(tag: string) {
+    return minigameRequest<ClanSummary>('POST', '/v1/clans/join', { tag });
+  },
+  async leaveClan() {
+    return minigameRequest<{ ok: boolean }>('POST', '/v1/clans/leave');
+  },
+  /** Invita a un jugador (Vigía o superior). Devuelve el resumen actualizado. */
+  async inviteToClan(clanId: string, target: { userId?: string; email?: string }) {
+    return minigameRequest<ClanSummary>('POST', `/v1/clans/${encodeURIComponent(clanId)}/invite`, target);
+  },
+  /** Roster vivo del clan (el backend devuelve el resumen completo). */
+  async getClanMembers(clanId: string) {
+    return minigameRequest<ClanSummary>('GET', `/v1/clans/${encodeURIComponent(clanId)}/members`);
+  },
+
+  // ── Gestión del Nexo (rangos de clan) ──────────────────────────────────────
+  /** Edita nombre y/o descripción (Guardián o superior). */
+  async updateClan(clanId: string, patch: { name?: string; description?: string | null }) {
+    return minigameRequest<ClanSummary>('PATCH', `/v1/clans/${encodeURIComponent(clanId)}`, patch);
+  },
+  /** Disuelve el clan (solo el Forjador). */
+  async disbandClan(clanId: string) {
+    return minigameRequest<{ success: boolean; message: string }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}`);
+  },
+  /** Expulsa a un miembro de rango inferior (Vigía o superior). */
+  async kickClanMember(clanId: string, userId: string) {
+    return minigameRequest<ClanSummary>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/members/${encodeURIComponent(userId)}`);
+  },
+  /** Cambia el rango de un miembro (Guardián o superior; Guardianes solo el Forjador). */
+  async setClanMemberRole(clanId: string, userId: string, role: Exclude<ClanRole, 'creator'>) {
+    return minigameRequest<ClanSummary>('PATCH', `/v1/clans/${encodeURIComponent(clanId)}/members/${encodeURIComponent(userId)}/role`, { role });
+  },
+  /** Cede la Forja a otro miembro (solo el Forjador; pasa a Guardián). */
+  async transferClanCreator(clanId: string, userId: string) {
+    return minigameRequest<ClanSummary>('POST', `/v1/clans/${encodeURIComponent(clanId)}/transfer`, { userId });
+  },
+  /** Borra un mensaje del chat (el autor o un Vigía o superior). */
+  async deleteClanMessage(clanId: string, messageId: string) {
+    return minigameRequest<{ success: boolean }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/messages/${encodeURIComponent(messageId)}`);
+  },
+
+  // ── Chat de clan (feature 021) ─────────────────────────────────────────────
+  /** Envía un mensaje al chat del clan. Devuelve el mensaje persistido. */
+  async sendClanMessage(clanId: string, body: string) {
+    return minigameRequest<ClanMessage>('POST', `/v1/clans/${encodeURIComponent(clanId)}/messages`, { body });
+  },
+  /** Historial reciente del chat del clan (más nuevos al final). */
+  async getClanMessages(clanId: string, { limit, before }: { limit?: number; before?: string } = {}) {
+    const params = new URLSearchParams();
+    if (limit != null) params.set('limit', String(limit));
+    if (before) params.set('before', before);
+    const q = params.toString();
+    return minigameRequest<ClanMessage[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/messages${q ? `?${q}` : ''}`);
+  },
+
+  // ── Objetivos de clan (feature 021) ────────────────────────────────────────
+  /** Crea un objetivo de clan. Devuelve el objetivo persistido. */
+  async createClanGoal(clanId: string, goal: { title: string; description?: string; metric: ClanGoalMetric; target: number }) {
+    return minigameRequest<ClanGoal>('POST', `/v1/clans/${encodeURIComponent(clanId)}/goals`, goal);
+  },
+  /** Objetivos del clan (activos y completados). */
+  async getClanGoals(clanId: string) {
+    return minigameRequest<ClanGoal[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/goals`);
+  },
+  /** Añade progreso a un objetivo. Devuelve el objetivo actualizado. */
+  async addClanGoalProgress(clanId: string, goalId: string, amount: number) {
+    return minigameRequest<ClanGoal>('POST', `/v1/clans/${encodeURIComponent(clanId)}/goals/${encodeURIComponent(goalId)}/progress`, { amount });
+  },
+  /** Borra un objetivo del clan (solo el líder, según el contrato). */
+  async deleteClanGoal(clanId: string, goalId: string) {
+    return minigameRequest<{ ok: boolean }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/goals/${encodeURIComponent(goalId)}`);
+  },
+
+  // ── Visitas en vivo al hábitat (feature 021) ───────────────────────────────
+  /** Inicia una visita del jugador a tu hábitat (el backend emite `habitat:visitor_joined`). */
+  async startHabitatVisit(ownerId: string) {
+    return minigameRequest<{ ok: boolean; startedAt: string }>('POST', '/v1/habitat/visit', { ownerId });
+  },
+  /** Cierra tu visita en curso (el backend emite `habitat:visitor_left`). */
+  async endHabitatVisit() {
+    return minigameRequest<{ ok: boolean }>('POST', '/v1/habitat/visit/end');
+  },
+  /** Amigos que ahora mismo están de visita en tu hábitat. */
+  async getHabitatVisitors() {
+    return minigameRequest<{ visitors: HabitatVisitor[] }>('GET', '/v1/habitat/visitors');
   },
 
   // ── Bienvenida (feature 028) ────────────────────────────────────────────────
@@ -1040,6 +1158,92 @@ export interface CoopVisitResult {
   message: string;
   xpGained: number;
   petState: { hunger: number; happiness: number; hygiene: number };
+}
+
+// ── Presencia + Clanes ──────────────────────────────────────────────────────
+/** Dispositivos de un jugador; la forma concreta la decide el backend (lo que importa es `active`). */
+export interface PresenceDevice {
+  deviceId: string;
+  platform?: string;
+  lastSeenAt?: string;
+  active?: boolean;
+}
+
+export interface PresenceInfo {
+  userId: string;
+  devices: PresenceDevice[];
+  hasActiveDevices: boolean;
+}
+
+/**
+ * Rango dentro del clan (lore: Nexo de Resonancia): creator = Forjador, admin = Guardián,
+ * moderator = Vigía, member = Hermano.
+ */
+export type ClanRole = 'creator' | 'admin' | 'moderator' | 'member';
+
+export interface ClanMember {
+  userId: string;
+  displayName: string;
+  role: ClanRole;
+  isOnline: boolean;
+  joinedAt: string;
+}
+
+export interface ClanSummary {
+  id: string;
+  name: string;
+  tag: string;
+  description: string;
+  leaderId: string;
+  xp: number;
+  memberCount: number;
+  leader: { userId: string; displayName: string };
+  members: ClanMember[];
+}
+
+/** Mensaje del chat de clan (feature 021). */
+export interface ClanMessage {
+  id: string;
+  clanId: string;
+  userId: string;
+  senderName: string;
+  body: string;
+  createdAt: string;
+}
+
+/** Métrica que alimenta el progreso de un objetivo de clan. */
+export type ClanGoalMetric = 'xp' | 'visits' | 'generic' | string;
+
+/** Estado de un objetivo de clan (feature 021). */
+export interface ClanGoal {
+  id: string;
+  clanId: string;
+  title: string;
+  description: string;
+  metric: ClanGoalMetric;
+  target: number;
+  progress: number;
+  status: 'active' | 'completed' | string;
+  createdAt: string;
+  completedAt?: string | null;
+}
+
+// ── Visitas en vivo al hábitat ─────────────────────────────────────────────
+/** Identidad de la mascota de un amigo (suficiente para dibujar su sprite). */
+export interface PetIdentity {
+  petId: string;
+  nickname: string;
+  speciesName: string;
+  speciesId: string;
+  /** Referencia del sprite del backend (p. ej. `sprites/ignisaur_idle`); puede no resolver. */
+  spriteRef: string;
+}
+
+export interface HabitatVisitor {
+  visitorId: string;
+  visitorName: string;
+  pet: PetIdentity;
+  startedAt: string;
 }
 
 // ── Misiones (Paso 3) ─────────────────────────────────────────────────────

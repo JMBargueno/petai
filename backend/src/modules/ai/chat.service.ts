@@ -9,6 +9,7 @@ import { MemoryService } from './memory.service';
 import { AgentContext, AgentService } from './agent.service';
 import { UsageService } from './usage.service';
 import { sanitizeClientTools, toolDefinitions } from './agent-tools';
+import { sanitizeClientContext } from './client-context';
 import { ChatMessageInput, LlmProvider, ToolCall } from './llm-provider';
 import { ModerationVerdict, OutputGuard, moderateInput, moderateOutput } from './moderation';
 import { randomUUID } from 'crypto';
@@ -23,10 +24,12 @@ export type ChatStreamEvent =
   | { type: 'tool'; name: string }
   | { type: 'action'; action: { id: string; tool: string; summary: string; expiresAt: Date; clientSide: boolean } }
   | { type: 'moderated'; reason: string; message: string; hideUserMessage: boolean }
-  | { type: 'done'; message: { id: string; content: string }; intelligence: number; tier: string }
+  | { type: 'done'; message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string }
   | { type: 'error'; message: string };
 
 export const MAX_MESSAGE_CHARS = 1000;
+/** Razonamiento máximo que se devuelve al cliente (no se guarda en el historial). */
+export const MAX_THINKING_CHARS = 8000;
 const HISTORY_MESSAGES = 20;
 const HISTORY_CHAR_BUDGET = 6000;
 const RATE_LIMIT = { max: 20, windowMs: 60_000 };
@@ -127,6 +130,7 @@ export class ChatService {
     rawMessage: unknown,
     signal?: AbortSignal,
     rawClientTools?: unknown,
+    rawClientContext?: unknown,
   ) {
     const message = this.sanitizeInput(rawMessage);
     const pet = await this.petsService.getPetById(userId, petId);
@@ -142,12 +146,16 @@ export class ChatService {
     const { provider, model, mode } = await this.aiConfig.resolveProvider(userId);
     await this.usage.assertWithinQuota(userId, mode);
 
-    const { messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent');
+    const clientTools = sanitizeClientTools(rawClientTools);
+    const { messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent', {
+      clientTools,
+      clientContext: sanitizeClientContext(rawClientContext, pet),
+    });
 
     // Agente (intelligence ≥ 500): puede usar herramientas; los efectos requieren confirmación
     const agentCtx: AgentContext | undefined =
       (pet.intelligence ?? 0) >= AGENT_UNLOCK
-        ? { userId, petId: pet.id, timeZone, now, clientTools: sanitizeClientTools(rawClientTools) }
+        ? { userId, petId: pet.id, timeZone, now, clientTools }
         : undefined;
 
     return { events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx) };
@@ -162,6 +170,7 @@ export class ChatService {
     pet: any,
     message: string,
     maxTier: 'chat' | 'memory' | 'agent',
+    extra: { clientTools?: string[]; clientContext?: ReturnType<typeof sanitizeClientContext> } = {},
   ) {
     const owner = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -217,6 +226,8 @@ export class ChatService {
       timeZone,
       environment,
       bondingTier: pet.bondingTier,
+      clientContext: extra.clientContext,
+      clientTools: extra.clientTools,
     });
     if ((pet.intelligence ?? 0) >= MEMORY_UNLOCK || isBondingTierAtLeast(pet.bondingTier, 'ally')) {
       const block = await this.memory.recall(pet.id, message);
@@ -238,7 +249,7 @@ export class ChatService {
   // Límites: sin herramientas ni extracción de memoria, y la respuesta la afirma el cliente.
 
   /** Paso 1: valida y devuelve los mensajes a enviar al Hermes local, con un turno de un solo uso. */
-  async prepareLocal(userId: string, petId: string, rawMessage: unknown) {
+  async prepareLocal(userId: string, petId: string, rawMessage: unknown, rawClientContext?: unknown) {
     const message = this.sanitizeInput(rawMessage);
     const pet = await this.petsService.getPetById(userId, petId);
     await this.checkRateLimit(userId);
@@ -249,7 +260,9 @@ export class ChatService {
       return { moderated: verdict };
     }
 
-    const { messages } = await this.buildContext(userId, pet, message, 'memory');
+    const { messages } = await this.buildContext(userId, pet, message, 'memory', {
+      clientContext: sanitizeClientContext(rawClientContext, pet),
+    });
 
     const now = Date.now();
     for (const [id, t] of this.localTurns) if (t.expiresAt < now) this.localTurns.delete(id);
@@ -335,6 +348,8 @@ export class ChatService {
     const guard = new OutputGuard();
     let tokens = 0;
     let proposed = 0;
+    // Razonamiento del modelo: va aparte de la respuesta, no se emite en streaming ni se guarda
+    let thinking = '';
     const convo = [...messages];
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -350,6 +365,8 @@ export class ChatService {
             const safe = guard.push(ev.text);
             if (safe === null) return yield* this.blockedOutput(guard);
             if (safe) yield { type: 'delta', text: safe };
+          } else if (ev.type === 'thinking') {
+            if (thinking.length < MAX_THINKING_CHARS) thinking += ev.text;
           } else if (ev.type === 'tool_call') {
             calls.push({ id: ev.id, name: ev.name, arguments: ev.arguments });
           } else if (ev.type === 'done') {
@@ -395,7 +412,7 @@ export class ChatService {
 
       yield {
         type: 'done',
-        message: { id: saved.id, content: reply },
+        message: { id: saved.id, content: reply, ...this.visibleThinking(thinking) },
         intelligence,
         tier: intelligenceTier(intelligence),
       };
@@ -409,6 +426,21 @@ export class ChatService {
       const used = tokens > 0 ? tokens : this.estimateTokens(messages, guard.full);
       await this.usage.record(userId, used).catch((e) => this.logger.warn(`No se pudo registrar el uso: ${e?.message}`));
     }
+  }
+
+  /**
+   * El razonamiento suele parafrasear el prompt de sistema: se modera completo y, si no es
+   * seguro, se omite sin afectar a la respuesta.
+   */
+  private visibleThinking(raw: string): { thinking?: string } {
+    const text = raw.trim().slice(0, MAX_THINKING_CHARS);
+    if (!text) return {};
+    const verdict = moderateOutput(text);
+    if (verdict) {
+      this.logger.warn(`Razonamiento del modelo omitido (${verdict.reason})`);
+      return {};
+    }
+    return { thinking: text };
   }
 
   private async *blockedOutput(guard: OutputGuard): AsyncGenerator<ChatStreamEvent> {

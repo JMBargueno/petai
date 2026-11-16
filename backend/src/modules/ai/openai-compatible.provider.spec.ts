@@ -139,8 +139,41 @@ describe('OpenAiCompatibleProvider', () => {
       );
       const out = await drain(new OpenAiCompatibleProvider('https://api.nodeclub.ai/v1', 'k', fetchMock as any), 'qwen3.8-27b');
       const deltas = out.filter((e) => e.type === 'delta').map((e) => e.text);
-      expect(deltas).toContain('Pensando la respuesta...');
-      expect(deltas).toContain('¡Hola!');
+      const thinking = out.filter((e) => e.type === 'thinking').map((e) => e.text);
+      // El razonamiento va en su propio evento y nunca se mezcla con la respuesta
+      expect(deltas.join('')).toBe('¡Hola!');
+      expect(thinking.join('')).toBe('Pensando la respuesta...');
+    });
+
+    it('acepta también el campo reasoning (OpenRouter) como razonamiento', async () => {
+      const fetchMock = jest.fn().mockResolvedValue(
+        sse([
+          `data: ${JSON.stringify({ choices: [{ delta: { reasoning: 'The trainer says hola' } }] })}\n`,
+          delta('¡Hola!'),
+          'data: [DONE]\n',
+        ]),
+      );
+      const out = await drain(new OpenAiCompatibleProvider('https://x/v1', 'k', fetchMock as any), 'deepseek-r1');
+      expect(out.filter((e) => e.type === 'delta').map((e) => e.text).join('')).toBe('¡Hola!');
+      expect(out.filter((e) => e.type === 'thinking').map((e) => e.text).join('')).toBe('The trainer says hola');
+    });
+
+    it('separa los bloques <think> mezclados en el contenido, aunque lleguen partidos', async () => {
+      const fetchMock = jest.fn().mockResolvedValue(
+        sse([
+          delta('<thi'),
+          delta('nk>The trainer says "hola!". Let me consider'),
+          delta('...</th'),
+          delta('ink>\n\n¡Hola, jmbargueno!'),
+          delta(' Qué gusto saludarte'),
+          'data: [DONE]\n',
+        ]),
+      );
+      const out = await drain(new OpenAiCompatibleProvider('https://x/v1', 'k', fetchMock as any), 'qwen3');
+      expect(out.filter((e) => e.type === 'delta').map((e) => e.text).join('')).toBe('¡Hola, jmbargueno! Qué gusto saludarte');
+      expect(out.filter((e) => e.type === 'thinking').map((e) => e.text).join('')).toBe(
+        'The trainer says "hola!". Let me consider...',
+      );
     });
 
     it('test() pasa con éxito si el modelo responde con tokens de razonamiento', async () => {

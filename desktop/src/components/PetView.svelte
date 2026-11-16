@@ -9,7 +9,9 @@
   import { AnimationController, resolveBaseState } from '../lib/animation/AnimationController';
   import type { Reaction } from '../lib/animation/eventMap';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
+  import VisitorPet from './VisitorPet.svelte';
   import type { EnvironmentalStatus } from '../lib/environmental';
+  import type { HabitatVisitor } from '../lib/api';
   import { skillAuthorizations, isSkillActive, getPetBonding } from '../lib/stores/desktopSkillsStore';
   import {
     calculateThrowVelocity,
@@ -19,17 +21,20 @@
   } from '../lib/physics/petPhysics';
   import { fetchActiveWindow, calculatePerchTarget } from '../lib/windowPerching';
   import { categorizeWindowTitle, type AppCategory } from '../lib/contextAwareness';
+  import { deskState } from '../lib/deskContext';
   import { analyzeDroppedFile } from '../lib/fileAnalyzer';
   import { BarksEngine } from '../lib/barks';
   import { BehaviorEngine, type BehaviorState } from '../lib/behaviorEngine';
   import { checkPetBallCollision, type BallState } from '../lib/toys/toyPhysics';
+  import { currentSpeech, speak, speechBusy } from '../lib/speech-queue';
+  import { setPetOnScreen } from '../lib/window-visibility';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
-  /** Texto de la burbuja de chat sobre la mascota (vacío = oculta) */
-  export let bubble: string = '';
   /** Estado ambiental (feature 005): hora del día, clima, actividad y festividad. */
   export let environmental: EnvironmentalStatus | null = null;
+  /** Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía. */
+  export let visitors: HabitatVisitor[] = [];
   /** Pelota de juguete opcional en el escritorio */
   export let ball: BallState | null = null;
   /** Callback cuando la mascota patea o cabecea la pelota */
@@ -41,8 +46,14 @@
   const BUSY_PRIORITY = 40;
   const PET_SIZE = 128;
 
-  let posX = 150;
-  let posY = 50;
+  /** Punto (cursor) donde aparece al montarse, p. ej. al soltarlo fuera del Hábitat. */
+  export let spawnAt: { x: number; y: number } | null = null;
+
+  let posX = spawnAt ? clampSpawn(spawnAt.x, window.innerWidth) : 150;
+  let posY = spawnAt ? clampSpawn(spawnAt.y, window.innerHeight) : 50;
+  function clampSpawn(cursor: number, max: number): number {
+    return Math.min(Math.max(0, cursor - PET_SIZE / 2), Math.max(0, max - PET_SIZE));
+  }
   let direction = 1; // 1: derecha, -1: izquierda
   let isDragging = false;
   let dragStartX = 0;
@@ -108,6 +119,12 @@
   $: speciesKey = pet?.species?.id || pet?.species?.spriteKey || 'ignisaur';
   $: patternKey = pet?.pattern?.id || 'plain';
   $: isSleeping = pet?.sleeping || false;
+
+  // Contexto en vivo para el chat (solo categoría y postura; el servidor filtra según las habilidades)
+  $: deskState.set({
+    appCategory: currentAppCategory,
+    pose: isSleeping ? 'sleeping' : isPerched ? 'perched' : isClimbing ? 'climbing' : 'walking',
+  });
   $: isShiny = pet?.shiny || false;
   $: visualSeed = pet?.visualSeed ?? 1337;
   $: palette = pet?.palette || { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' };
@@ -247,6 +264,24 @@
     const now = performance.now();
     pointerSamples.push({ x: e.clientX, y: e.clientY, time: now });
     if (pointerSamples.length > 20) pointerSamples.shift();
+
+    // ¿Está encima del panel (la casa)? Resalta el panel y la mascota como destino
+    setOverHome(isOverPanel(e.clientX, e.clientY));
+  }
+
+  // Arrastre hacia casa: la mascota va por encima del panel mientras se arrastra, así que
+  // elementFromPoint devolvería a la propia mascota; se miran todas las capas bajo el cursor.
+  let isOverHome = false;
+  let isEnteringHome = false;
+  function isOverPanel(x: number, y: number): boolean {
+    if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
+    return document.elementsFromPoint(x, y).some((el) => !!el.closest('.panel-card'));
+  }
+  function setOverHome(over: boolean) {
+    if (over === isOverHome) return;
+    isOverHome = over;
+    if (over) document.body.dataset.petOverPanel = '1';
+    else delete document.body.dataset.petOverPanel;
   }
 
   function handlePetHoverMove(e: MouseEvent) {
@@ -265,10 +300,9 @@
         play('happy');
         showParticle('❤️', 2500);
         squash(1.15, 0.85, 200);
-        bubble = '¡Mmmm, qué rico! 🥰❤️';
+        speak('¡Mmmm, qué rico! 🥰❤️', { durationMs: 2800, key: 'petting', maxWaitMs: 3000 });
         setTimeout(() => {
           isPetting = false;
-          if (bubble.startsWith('¡Mmmm')) bubble = '';
         }, 2800);
       }
     }
@@ -279,13 +313,19 @@
     isDragging = false;
     delete document.body.dataset.dragging;
 
-    // Si se suelta sobre el panel de control (.panel-card), enviar al hábitat
-    if (e && typeof document !== 'undefined') {
-      const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
-      if (dropTarget && dropTarget.closest('.panel-card')) {
-        window.dispatchEvent(new CustomEvent('petai:move_to_habitat', { detail: { petId: pet.id } }));
-        return;
-      }
+    // Si se suelta sobre el panel de control (.panel-card), entra en casa con una
+    // pequeña animación (encoge y se desvanece) y después se envía al hábitat
+    const droppedOnHome = !!e && isOverPanel(e.clientX, e.clientY);
+    setOverHome(false);
+    if (droppedOnHome) {
+      isEnteringHome = true;
+      const petId = pet.id;
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('petai:move_to_habitat', { detail: { petId } }));
+        // Si la petición falla, la mascota sigue montada: que vuelva a verse
+        setTimeout(() => (isEnteringHome = false), 1500);
+      }, 260);
+      return;
     }
 
     const dragThrowActive = isSkillActive(
@@ -332,10 +372,7 @@
       play('celebrate');
       showParticle('🎉✨', 2500);
       squash(1.2, 0.8, 150);
-      bubble = '¡Eso es! ¡Choca esos cinco! 🐾💥';
-      setTimeout(() => {
-        if (bubble.startsWith('¡Eso es!')) bubble = '';
-      }, 3500);
+      speak('¡Eso es! ¡Choca esos cinco! 🐾💥', { durationMs: 3500, key: 'high-five-done', maxWaitMs: 3000 });
       return;
     }
 
@@ -495,23 +532,18 @@
 
     if (eventType === 'work_start') {
       controller.stop();
-      bubble = '💼 ¡A trabajar! Estaré a tu lado en silencio.';
+      speak('💼 ¡A trabajar! Estaré a tu lado en silencio.', { durationMs: 6000, maxWaitMs: 20_000 });
     } else if (eventType === 'work_finish') {
       play('celebrate');
-      bubble = '🎉 ¡Buen trabajo! Tómate una pausa y bebe agua 💧';
+      speak('🎉 ¡Buen trabajo! Tómate una pausa y bebe agua 💧', { durationMs: 6000, maxWaitMs: 20_000 });
     } else if (eventType === 'break_finish') {
       play('wake');
-      bubble = '⚡ ¡Descanso listo! ¿Volvemos al foco?';
+      speak('⚡ ¡Descanso listo! ¿Volvemos al foco?', { durationMs: 6000, maxWaitMs: 20_000 });
     }
-
-    setTimeout(() => {
-      if (bubble.startsWith('💼') || bubble.startsWith('🎉') || bubble.startsWith('⚡')) {
-        bubble = '';
-      }
-    }, 6000);
   }
 
   onMount(() => {
+    setPetOnScreen(true);
     // Inicializar loop de animación
     animRafId = requestAnimationFrame(renderLoop);
 
@@ -588,6 +620,8 @@
       // 3.5. Conciencia de la App en Foco (context_awareness)
       const canContext = isSkillActive('context_awareness', $skillAuthorizations, petBonding, petIntelligence);
       const now = Date.now();
+      // Sin la habilidad no se conserva la última categoría (no debe llegar al chat ni a los hábitos)
+      if (!canContext && currentAppCategory !== 'generic') currentAppCategory = 'generic';
       if (canContext && now - lastContextCheckTime > 6000) {
         lastContextCheckTime = now;
         const win = await fetchActiveWindow();
@@ -596,11 +630,12 @@
           if (ctx.category !== currentAppCategory) {
             currentAppCategory = ctx.category;
             if (ctx.category !== 'generic') {
-              bubble = `${ctx.accessoryIcon} ${ctx.reactionComment}`;
-              play('talk');
-              setTimeout(() => {
-                if (bubble.startsWith(ctx.accessoryIcon)) bubble = '';
-              }, 4500);
+              speak(`${ctx.accessoryIcon} ${ctx.reactionComment}`, {
+                priority: 'low',
+                durationMs: 4500,
+                key: 'app-context',
+                onShow: () => play('talk'),
+              });
             }
           }
         }
@@ -615,12 +650,9 @@
         behaviorEngine.startHighFive();
         play('happy');
         squash(1.15, 0.85, 180);
-        bubble = '¡Choca esos cinco! Haz clic en mi patita 🐾✋';
+        speak('¡Choca esos cinco! Haz clic en mi patita 🐾✋', { priority: 'low', durationMs: 6000, key: 'high-five-offer' });
         setTimeout(() => {
-          if (isHighFiveWaiting) {
-            isHighFiveWaiting = false;
-            if (bubble.includes('Choca esos cinco')) bubble = '';
-          }
+          if (isHighFiveWaiting) isHighFiveWaiting = false;
         }, 6000);
         return;
       }
@@ -725,7 +757,7 @@
 
     // Motor de pensamientos frecuentes (Barks contextuales) cada ~65s
     barkInterval = setInterval(() => {
-      if (isSleeping || isDragging || isHighFiveWaiting || bubble) return;
+      if (isSleeping || isDragging || isHighFiveWaiting || speechBusy()) return;
       const now = performance.now();
       const ctx = {
         appCategory: currentAppCategory,
@@ -739,17 +771,15 @@
         petName: pet?.nickname || pet?.species?.name,
       };
       const text = barksEngine.generateBark(ctx);
-      if (text) {
-        bubble = text;
-        play('talk');
-        setTimeout(() => {
-          if (bubble === text) bubble = '';
-        }, 6500);
-      }
+      if (text) speak(text, { priority: 'low', durationMs: 6500, onShow: () => play('talk') });
     }, 65000);
   });
 
   onDestroy(() => {
+    // Fuera del escritorio (p. ej. en su casita) no hay app en foco ni postura que contar
+    deskState.set({ appCategory: null, pose: 'walking' });
+    setPetOnScreen(false);
+    if (typeof document !== 'undefined') delete document.body.dataset.petOverPanel;
     if (animRafId !== null) cancelAnimationFrame(animRafId);
     clearInterval(moveInterval);
     clearInterval(barkInterval);
@@ -773,6 +803,8 @@
   tabindex="0"
   data-anim={currentAnim}
   class:dragging={isDragging}
+  class:over-home={isOverHome}
+  class:entering-home={isEnteringHome}
   class:drag-over={isDragOverPet}
   class:high-five-ready={isHighFiveWaiting}
   class:petting={isPetting}
@@ -793,8 +825,7 @@
     isDragOverPet = false;
     const canAnalyze = isSkillActive('file_analyzer', $skillAuthorizations, petBonding, petIntelligence);
     if (!canAnalyze) {
-      bubble = '📄 Activa la habilidad "Analizador de Archivos" para que pueda leerlo.';
-      setTimeout(() => (bubble = ''), 5000);
+      speak('📄 Activa la habilidad "Analizador de Archivos" para que pueda leerlo.', { key: 'file-analyzer-off', maxWaitMs: 5000 });
       return;
     }
 
@@ -803,7 +834,7 @@
       const analyzed = await analyzeDroppedFile(rawFile);
       play('surprised');
       play('happy');
-      bubble = `¡Atrapé ${analyzed.name}! 📄 ¿Qué quieres saber?`;
+      speak(`¡Atrapé ${analyzed.name}! 📄 ¿Qué quieres saber?`, { maxWaitMs: 5000 });
       window.dispatchEvent(new CustomEvent('petai:file_dropped', { detail: analyzed }));
     }
   }}
@@ -836,11 +867,18 @@
     <EnvironmentalOverlay environmental={environmental} part="accessory" />
   </div>
 
+  <!-- Mascotas de los amigos de visita (feature 021): junto a la mía, sin su transformación -->
+  {#each visitors as v (v.visitorId)}
+    <VisitorPet visitor={v} />
+  {/each}
+
   <!-- Texto ambiental, bocadillo, nombre y partículas: sin girar ni rotar -->
   <EnvironmentalOverlay environmental={environmental} part="caption" />
 
-  {#if bubble}
-    <div class="speech" class:below={posY < 110}>{bubble}</div>
+  {#if $currentSpeech}
+    {#key $currentSpeech.id}
+      <div class="speech" class:below={posY < 110} role="status" aria-live="polite">{$currentSpeech.text}</div>
+    {/key}
   {/if}
 
   {#if isHighFiveWaiting}
@@ -878,6 +916,26 @@
 
   .pet-container.dragging {
     transition: none;
+    /* Por encima del panel de control (z-index 100) para "meterla" en casa arrastrando */
+    z-index: 200;
+  }
+
+  .pet-container.over-home .pet-body {
+    filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.95));
+  }
+
+  .pet-container.entering-home {
+    z-index: 200;
+    pointer-events: none;
+    transition: none;
+    animation: enterHome 0.26s ease-in forwards;
+  }
+
+  @keyframes enterHome {
+    to {
+      transform: scale(0.25) translateY(30px);
+      opacity: 0;
+    }
   }
 
   .pet-container.drag-over .pet-body {
@@ -971,6 +1029,24 @@
     box-shadow: var(--shadow-3);
     pointer-events: none;
     z-index: 60;
+    animation: speechIn 180ms ease-out;
+  }
+
+  @keyframes speechIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .speech {
+      animation: none;
+    }
   }
 
   .speech.below {
