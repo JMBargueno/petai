@@ -7,6 +7,7 @@
 // webview) y nunca se envía al backend. En Tauri las peticiones pasan por el plugin HTTP nativo,
 // cuyo permiso está limitado a 127.0.0.1 y localhost (ver capabilities/default.json).
 
+import { ThinkSplitter, type ThinkPiece } from './think-splitter';
 export interface LocalHermesConfig {
   enabled: boolean;
   baseUrl: string;
@@ -69,13 +70,18 @@ async function getFetch(): Promise<typeof fetch> {
   return window.fetch.bind(window);
 }
 
-/** Llama al Hermes local en streaming y devuelve el texto completo. */
+/**
+ * Llama al Hermes local en streaming y devuelve el texto completo de la respuesta. El razonamiento
+ * (`reasoning_content` o bloques `<think>…</think>`) va aparte a `onReasoning` y no forma parte
+ * del texto devuelto.
+ */
 export async function streamLocalCompletion(
   cfg: LocalHermesConfig,
   messages: WireMessage[],
   maxTokens: number,
   onDelta: (text: string) => void,
   signal?: AbortSignal,
+  onReasoning?: (text: string) => void,
 ): Promise<string> {
   if (!isLoopbackUrl(cfg.baseUrl)) {
     throw new Error('La URL de Hermes local debe apuntar a 127.0.0.1 o localhost');
@@ -105,6 +111,16 @@ export async function streamLocalCompletion(
   const decoder = new TextDecoder();
   let buffer = '';
   let full = '';
+  const think = new ThinkSplitter();
+  const route = (pieces: ThinkPiece[]) => {
+    for (const p of pieces) {
+      if (p.kind === 'reasoning') onReasoning?.(p.text);
+      else {
+        full += p.text;
+        onDelta(p.text);
+      }
+    }
+  };
   for (;;) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -116,24 +132,35 @@ export async function streamLocalCompletion(
       // Se ignoran comentarios y eventos extra (p. ej. hermes.tool.progress)
       if (!line.startsWith('data:')) continue;
       const data = line.slice(5).trim();
-      if (data === '[DONE]') return full;
+      if (data === '[DONE]') {
+        route(think.flush());
+        return full;
+      }
       try {
-        const text = JSON.parse(data).choices?.[0]?.delta?.content;
-        if (typeof text === 'string' && text) {
-          full += text;
-          onDelta(text);
-        }
+        const delta = JSON.parse(data).choices?.[0]?.delta;
+        const reasoning = delta?.reasoning_content ?? delta?.reasoning;
+        if (typeof reasoning === 'string' && reasoning) onReasoning?.(reasoning);
+        const text = delta?.content;
+        if (typeof text === 'string' && text) route(think.push(text));
       } catch {
         /* fragmento no JSON */
       }
     }
   }
+  route(think.flush());
   return full;
 }
 
 /** Comprueba que el Hermes local responde con la key y el modelo indicados. */
 export async function testLocalHermes(cfg: LocalHermesConfig): Promise<void> {
   let got = '';
-  await streamLocalCompletion(cfg, [{ role: 'user', content: 'ping' }], 5, (d) => (got += d));
+  await streamLocalCompletion(
+    cfg,
+    [{ role: 'user', content: 'ping' }],
+    5,
+    (d) => (got += d),
+    undefined,
+    (r) => (got += r),
+  );
   if (!got) throw new Error('Hermes local respondió sin contenido');
 }

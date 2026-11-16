@@ -129,7 +129,7 @@ describe('OpenAiCompatibleProvider', () => {
       expect(url).toBe('https://api.nodeclub.ai/v1/chat/completions');
     });
 
-    it('emite delta a partir de reasoning_content para modelos de razonamiento (Qwen/DeepSeek)', async () => {
+    it('emite reasoning_content como evento reasoning aparte, nunca como delta (Qwen/DeepSeek)', async () => {
       const fetchMock = jest.fn().mockResolvedValue(
         sse([
           `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: 'Pensando la respuesta...' } }] })}\n`,
@@ -139,8 +139,20 @@ describe('OpenAiCompatibleProvider', () => {
       );
       const out = await drain(new OpenAiCompatibleProvider('https://api.nodeclub.ai/v1', 'k', fetchMock as any), 'qwen3.8-27b');
       const deltas = out.filter((e) => e.type === 'delta').map((e) => e.text);
-      expect(deltas).toContain('Pensando la respuesta...');
-      expect(deltas).toContain('¡Hola!');
+      const thoughts = out.filter((e) => e.type === 'reasoning').map((e) => e.text);
+      expect(deltas).toEqual(['¡Hola!']);
+      expect(thoughts).toEqual(['Pensando la respuesta...']);
+    });
+
+    it('separa el razonamiento incrustado como <think>…</think> aunque llegue partido', async () => {
+      const fetchMock = jest.fn().mockResolvedValue(
+        sse([delta('<thi'), delta('nk>pienso'), delta(' mucho</th'), delta('ink>¡Hola'), delta('!'), 'data: [DONE]\n']),
+      );
+      const out = await drain(new OpenAiCompatibleProvider('https://api.nodeclub.ai/v1', 'k', fetchMock as any));
+      const text = out.filter((e) => e.type === 'delta').map((e) => e.text).join('');
+      const thought = out.filter((e) => e.type === 'reasoning').map((e) => e.text).join('');
+      expect(text).toBe('¡Hola!');
+      expect(thought).toBe('pienso mucho');
     });
 
     it('test() pasa con éxito si el modelo responde con tokens de razonamiento', async () => {

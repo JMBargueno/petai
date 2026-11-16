@@ -20,6 +20,8 @@ import { AGENT_UNLOCK, INTELLIGENCE_MAX, MEMORY_UNLOCK, buildSystemPrompt, intel
 
 export type ChatStreamEvent =
   | { type: 'delta'; text: string }
+  /** Pensamiento del modelo: se muestra plegado en el chat, pero no se guarda ni lo dice la mascota. */
+  | { type: 'reasoning'; text: string }
   | { type: 'tool'; name: string }
   | { type: 'action'; action: { id: string; tool: string; summary: string; expiresAt: Date; clientSide: boolean } }
   | { type: 'moderated'; reason: string; message: string; hideUserMessage: boolean }
@@ -333,6 +335,9 @@ export class ChatService {
     }
 
     const guard = new OutputGuard();
+    // El razonamiento también se filtra (puede citar el prompt de sistema); si se bloquea, se deja de mostrar
+    const thoughtGuard = new OutputGuard();
+    let thoughtBlocked = false;
     let tokens = 0;
     let proposed = 0;
     const convo = [...messages];
@@ -350,6 +355,12 @@ export class ChatService {
             const safe = guard.push(ev.text);
             if (safe === null) return yield* this.blockedOutput(guard);
             if (safe) yield { type: 'delta', text: safe };
+          } else if (ev.type === 'reasoning') {
+            // Fuera de la respuesta: no cuenta como texto de la mascota ni se persiste
+            if (thoughtBlocked) continue;
+            const safe = thoughtGuard.push(ev.text);
+            if (safe === null) thoughtBlocked = true;
+            else if (safe) yield { type: 'reasoning', text: safe };
           } else if (ev.type === 'tool_call') {
             calls.push({ id: ev.id, name: ev.name, arguments: ev.arguments });
           } else if (ev.type === 'done') {
@@ -369,6 +380,11 @@ export class ChatService {
           }
           convo.push({ role: 'tool', toolCallId: call.id, content: outcome.content });
         }
+      }
+
+      if (!thoughtBlocked) {
+        const thought = thoughtGuard.flush();
+        if (thought) yield { type: 'reasoning', text: thought };
       }
 
       const rest = guard.flush();

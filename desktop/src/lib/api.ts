@@ -387,6 +387,8 @@ export const api = {
     clientTools: readonly string[],
     handlers: {
       onDelta: (text: string) => void;
+      /** Pensamiento del modelo de razonamiento: se muestra plegado, nunca como respuesta. */
+      onReasoning?: (text: string) => void;
       onTool?: (name: string) => void;
       onAction?: (action: { id: string; tool: string; summary: string; expiresAt: string; clientSide?: boolean }) => void;
       onModerated?: (info: { reason: string; message: string; hideUserMessage: boolean }) => void;
@@ -423,6 +425,7 @@ export const api = {
         if (!event || !raw) continue;
         const data = JSON.parse(raw);
         if (event === 'delta') handlers.onDelta(data.text);
+        else if (event === 'reasoning') handlers.onReasoning?.(data.text);
         else if (event === 'tool') handlers.onTool?.(data.name);
         else if (event === 'action') handlers.onAction?.(data.action);
         else if (event === 'moderated') {

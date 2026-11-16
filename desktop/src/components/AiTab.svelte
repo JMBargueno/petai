@@ -11,12 +11,14 @@
     type LocalHermesConfig,
   } from '../lib/hermesLocal';
   import { CLIENT_TOOLS, openUrl, readClipboardText } from '../lib/clientTools';
+  import { toSpeakable } from '../lib/speech-queue';
 
   export let pet: any = null;
 
   const dispatch = createEventDispatcher();
 
-  type Msg = { id: string; role: 'user' | 'assistant'; content: string; notice?: boolean };
+  /** `reasoning`: pensamiento del modelo (solo en la sesión; no se guarda ni lo dice la mascota). */
+  type Msg = { id: string; role: 'user' | 'assistant'; content: string; notice?: boolean; reasoning?: string };
 
   let loaded = false;
   let config: any = { configured: false };
@@ -321,6 +323,12 @@
     scrollDown();
   }
 
+  function appendReasoning(reply: Msg, text: string) {
+    reply.reasoning = (reply.reasoning ?? '') + text;
+    messages = messages;
+    scrollDown();
+  }
+
   /** Modo Hermes local: contexto del servidor → inferencia en este equipo → sincronización. */
   async function runLocal(text: string, reply: Msg, userMsg: Msg, signal: AbortSignal) {
     const ctx = await api.localChatContext(pet.id, text);
@@ -329,12 +337,19 @@
       return { moderated: true as const };
     }
     let acc = '';
-    await streamLocalCompletion(local, ctx.messages, ctx.maxTokens, (d) => {
-      acc += d;
-      reply.content = acc;
-      messages = messages;
-      scrollDown();
-    }, signal);
+    await streamLocalCompletion(
+      local,
+      ctx.messages,
+      ctx.maxTokens,
+      (d) => {
+        acc += d;
+        reply.content = acc;
+        messages = messages;
+        scrollDown();
+      },
+      signal,
+      (r) => appendReasoning(reply, r),
+    );
     const synced = await api.localChatSync(pet.id, ctx.turnId, acc);
     if ('moderated' in synced) {
       // La respuesta local se modera al sincronizar: si se bloquea, se sustituye y no se guarda
@@ -372,6 +387,7 @@
             messages = messages;
             scrollDown();
           },
+          onReasoning: (r) => appendReasoning(reply, r),
           onModerated: (m) => {
             moderated = true;
             applyModeration(m, reply, userMsg);
@@ -392,7 +408,9 @@
       }
       reply.content = done.message.content;
       messages = messages;
-      dispatch('bubble', done.message.content);
+      // La mascota dice la respuesta (sin el razonamiento) por la cola de habla
+      const spoken = toSpeakable(done.message.content);
+      if (spoken) dispatch('bubble', spoken);
       dispatch('refreshPet');
       if (config.configured && !local.enabled) loadUsage();
       // La extracción de recuerdos se hace en segundo plano en el servidor (no en modo local)
@@ -545,7 +563,8 @@
         <p class="muted">Saluda a {pet.nickname || pet.species?.name} </p>
       {/if}
       {#each messages as m (m.id)}
-        <div class="msg {m.role}" class:notice={m.notice}>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}…{/if}</div>
+        <!-- .msg usa white-space: pre-wrap: sin espacios entre etiquetas -->
+        <div class="msg {m.role}" class:notice={m.notice}>{#if m.reasoning}<details class="reasoning"><summary>{streaming && m.id.startsWith('tmp-reply') && !m.content ? 'Pensando…' : 'Razonamiento'}</summary><div class="reasoning-body">{m.reasoning.trim()}</div></details>{/if}{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content && !m.reasoning}…{/if}</div>
       {/each}
       {#if toolHint}<div class="hint">{toolHint}</div>{/if}
       {#each actions as a (a.id)}
@@ -660,6 +679,12 @@
   .msg { max-width: 85%; padding: 6px 10px; border-radius: var(--radius-2xl); font-size: 13px; line-height: 1.35; white-space: pre-wrap; user-select: text; }
   .msg.user { align-self: flex-end; background: #0369a1; }
   .msg.assistant { align-self: flex-start; background: var(--surface-2); }
+  .reasoning { margin-bottom: 4px; font-size: 11.5px; opacity: 0.75; }
+  .reasoning summary { cursor: pointer; font-style: italic; user-select: none; }
+  .reasoning-body {
+    margin-top: 3px; padding-left: 8px; border-left: 2px solid var(--line-soft, currentColor);
+    max-height: 160px; overflow-y: auto; font-style: italic;
+  }
   .msg.notice { background: color-mix(in srgb, var(--color-sunburst) 14%, var(--surface)); border: 1px solid var(--color-sunburst); }
   .usage { font-size: 11px; opacity: 0.7; margin: 0 0 6px; }
   .usage.full { color: var(--danger-ink); opacity: 1; }
