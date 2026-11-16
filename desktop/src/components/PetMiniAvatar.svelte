@@ -176,8 +176,21 @@
     touch-action: none;
   }
 
+  /* Sin reset, el WebView pinta el fondo/borde nativo del <button> (el "cuadrado gris") */
   .pet-mini-avatar.interactive {
+    appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    border-radius: 50%;
     cursor: pointer;
+  }
+
+  .pet-mini-avatar.interactive:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
   }
 
   .pet-mini-avatar.draggable {
