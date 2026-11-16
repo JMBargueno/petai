@@ -10,8 +10,74 @@
     getPetIntelligenceTierName,
     getPetIntelligenceRequiredPoints,
   } from '../lib/stores/desktopSkillsStore';
-  import { ShieldCheck, Sparkles, Check, Info, Lock } from 'lucide-svelte';
+  import { ShieldCheck, Sparkles, Check, Info, Lock, Settings, Keyboard } from 'lucide-svelte';
   import PomodoroWidget from './PomodoroWidget.svelte';
+  import {
+    DEFAULT_SUMMON_SHORTCUT,
+    SUMMON_SKILL_ID,
+    captureShortcut,
+    changeSummonShortcut,
+    formatShortcut,
+    summonShortcut,
+  } from '../lib/summonShortcut';
+
+  // Ajuste del atajo de «Invocación rápida» (engranaje de su tarjeta)
+  let shortcutOpen = false;
+  let shortcutDraft = $summonShortcut;
+  let recording = false;
+  let recordingPreview = '';
+  let shortcutErr = '';
+  let shortcutMsg = '';
+  let shortcutBusy = false;
+
+  function toggleShortcutConfig() {
+    shortcutOpen = !shortcutOpen;
+    shortcutDraft = $summonShortcut;
+    recording = false;
+    shortcutErr = '';
+    shortcutMsg = '';
+  }
+
+  function startRecording() {
+    recording = true;
+    recordingPreview = '';
+    shortcutErr = '';
+    shortcutMsg = '';
+  }
+
+  function onCaptureKey(e: KeyboardEvent) {
+    if (!recording) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'Escape' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+      recording = false;
+      return;
+    }
+    const r = captureShortcut(e);
+    if (r.kind === 'pending') {
+      recordingPreview = r.preview;
+    } else if (r.kind === 'invalid') {
+      shortcutErr = r.reason;
+    } else {
+      shortcutDraft = r.accelerator;
+      shortcutErr = '';
+      recording = false;
+    }
+  }
+
+  async function saveShortcut() {
+    shortcutBusy = true;
+    shortcutErr = '';
+    shortcutMsg = '';
+    try {
+      await changeSummonShortcut(shortcutDraft);
+      shortcutMsg = 'Atajo guardado';
+    } catch (e: any) {
+      shortcutErr = e?.message || 'No se pudo guardar el atajo';
+    } finally {
+      shortcutBusy = false;
+    }
+  }
 
   export let pet: any = null;
 
@@ -159,6 +225,56 @@
             </div>
           {/if}
 
+          {#if skill.id === SUMMON_SKILL_ID && unlocked}
+            <div class="shortcut-current">
+              <Keyboard size={12} />
+              <span>Atajo: <kbd>{formatShortcut($summonShortcut)}</kbd></span>
+            </div>
+            {#if shortcutOpen}
+              <div class="shortcut-config" data-testid="summon-shortcut-config">
+                <span class="shortcut-label">Atajo de teclado global</span>
+                <button
+                  type="button"
+                  class="shortcut-capture"
+                  class:recording
+                  on:click={startRecording}
+                  on:keydown={onCaptureKey}
+                  on:blur={() => (recording = false)}
+                >
+                  {#if recording}
+                    {recordingPreview ? formatShortcut(recordingPreview) + ' + …' : 'Pulsa la combinación… (Esc cancela)'}
+                  {:else}
+                    {formatShortcut(shortcutDraft)}
+                  {/if}
+                </button>
+                <span class="shortcut-hint">Haz clic y pulsa la nueva combinación (con Ctrl, Alt o Win).</span>
+                {#if shortcutErr}<p class="shortcut-err">{shortcutErr}</p>{/if}
+                {#if shortcutMsg}<p class="shortcut-ok">{shortcutMsg}</p>{/if}
+                <div class="shortcut-actions">
+                  <button
+                    type="button"
+                    class="shortcut-btn primary"
+                    disabled={shortcutBusy || recording || shortcutDraft === $summonShortcut}
+                    on:click={saveShortcut}
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    type="button"
+                    class="shortcut-btn"
+                    disabled={shortcutBusy || shortcutDraft === DEFAULT_SUMMON_SHORTCUT}
+                    on:click={() => {
+                      shortcutDraft = DEFAULT_SUMMON_SHORTCUT;
+                      recording = false;
+                    }}
+                  >
+                    Restablecer
+                  </button>
+                </div>
+              </div>
+            {/if}
+          {/if}
+
           {#if skill.id === 'pomodoro_companion' && unlocked && enabled}
             <div class="embedded-widget">
               <PomodoroWidget />
@@ -167,6 +283,19 @@
         </div>
 
         <div class="skill-action">
+          {#if skill.id === SUMMON_SKILL_ID && unlocked}
+            <button
+              type="button"
+              class="gear-btn"
+              class:active={shortcutOpen}
+              title="Configurar atajo de teclado"
+              aria-label="Configurar atajo de teclado"
+              aria-expanded={shortcutOpen}
+              on:click={toggleShortcutConfig}
+            >
+              <Settings size={15} />
+            </button>
+          {/if}
           <label class="switch" class:disabled={!unlocked} title={unlocked ? (enabled ? 'Desactivar' : 'Activar') : 'Bloqueada'}>
             <input
               type="checkbox"
@@ -409,7 +538,131 @@
   .skill-action {
     display: flex;
     align-items: center;
+    gap: 8px;
     padding-top: 2px;
+  }
+
+  .gear-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .gear-btn:hover,
+  .gear-btn.active {
+    color: #c7d2fe;
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.35);
+  }
+
+  .shortcut-current {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  kbd {
+    font-family: inherit;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+  }
+
+  .shortcut-config {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+  }
+
+  .shortcut-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #c7d2fe;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .shortcut-capture {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(30, 41, 59, 0.8);
+    color: #f1f5f9;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .shortcut-capture.recording {
+    border-color: #6366f1;
+    color: #c7d2fe;
+    font-weight: 500;
+  }
+
+  .shortcut-hint {
+    font-size: 11px;
+    color: #64748b;
+  }
+
+  .shortcut-err,
+  .shortcut-ok {
+    font-size: 11.5px;
+    margin: 0;
+  }
+
+  .shortcut-err {
+    color: #fca5a5;
+  }
+
+  .shortcut-ok {
+    color: #4ade80;
+  }
+
+  .shortcut-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .shortcut-btn {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(30, 41, 59, 0.8);
+    color: #e2e8f0;
+    cursor: pointer;
+  }
+
+  .shortcut-btn.primary {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: #fff;
+  }
+
+  .shortcut-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   /* Switch Toggle */
