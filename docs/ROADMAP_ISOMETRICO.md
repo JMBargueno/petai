@@ -65,7 +65,7 @@ Entrega **por fases, un PR por fase**. Cada fase se puede revisar y fusionar por
 
 ## Fase 2: núcleo `shared/scene` (PixiJS) y bake compartido (PR 2)
 - Paquete nuevo `shared/scene` (`@pockai/scene`): PixiJS v8 y TypeScript, build en modo librería con Vite. Se consume como ESM desde el escritorio y como bundle IIFE autocontenido (`dist/embed/index.html` + JS + assets) para los WebView.
-- `src/bake/`: el bake de máscara, paleta y patrón (hoy en `desktop/src/lib/sprites.ts`) se porta a un **filtro o shader de Pixi**. Mismas reglas: R/G mezclan primario y secundario, B proyecta el patrón con desplazamiento por `visualSeed` (Mulberry32), y se respetan las líneas negras y los brillos blancos. Se compara píxel a píxel con el bake de CPU actual (tolerancia < 2 %).
+- `src/bake/`: el bake de máscara, paleta y patrón (antes en `desktop/src/lib/sprites.ts`) pasa a ser una **función pura compartida** (`bakePixels`) que corre en CPU una vez por mascota (~60 ms) y se sube como textura. Es exacta en todas las plataformas; un filtro WebGL queda como optimización si el perfilado en gama baja lo pide. Mismas reglas: R/G mezclan primario y secundario, B proyecta el patrón con desplazamiento por `visualSeed` (Mulberry32), y se respetan las líneas negras y los brillos blancos. El escritorio ya usa esta misma función, así que la paridad está garantizada por construcción.
 - `src/pet/PetSprite.ts`: lee `anim.json` (frameTags), reproduce clips con su `ms` y loop, y aplica espejo.
 - `src/protocol.ts`: tipos de los mensajes de entrada y salida.
   - Entrada: `setPet`, `setHabitat`, `setTheme`, `setMode`, `playClip`.
