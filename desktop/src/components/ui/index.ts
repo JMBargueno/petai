@@ -14,4 +14,5 @@ export { default as SectionHeader } from './SectionHeader.svelte';
 export { default as Segmented } from './Segmented.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
 export { default as StatTile } from './StatTile.svelte';
+export { default as Switch } from './Switch.svelte';
 export { default as TileButton } from './TileButton.svelte';

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import Ico from './Ico.svelte';
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type Mission, type MissionList, type MissionSummary } from '../lib/api';
+  import { reasonIcon } from '../lib/ui/maps';
+  import { AsyncState, Badge, Button, EmptyState, ListRow, Notice, ProgressBar, SectionHeader, StatTile } from './ui';
 
   const dispatch = createEventDispatcher();
 
@@ -11,15 +12,6 @@
   let loading = true;
   let busyId = '';
   let claimedMsg = '';
-
-  const REASON_ICON: Record<string, string> = {
-    feed: '🍎', battle: '⚔️', minigame: '🎮', chat: '💬', clean: '🧼',
-    sleep: '😴', evolve: '✨', hatch: '🥚', level_up: '⬆️', battle_win: '🏆', hatch_rare: '🎲',
-  };
-
-  function missionIcon(m: Mission): string {
-    return REASON_ICON[m.type] ?? '🎯';
-  }
 
   function rewardLabel(m: Mission): string {
     const parts: string[] = [];
@@ -61,142 +53,67 @@
 
   onMount(load);
 
-  function pct(m: Mission): number {
-    return m.target > 0 ? Math.min(100, Math.round((m.current / m.target) * 100)) : 0;
-  }
+  $: groups = data
+    ? [
+        { title: 'Misiones diarias', icon: 'clock', items: data.daily, empty: 'Sin misiones diarias activas.' },
+        { title: 'Misiones semanales', icon: 'target', items: data.weekly, empty: 'Sin misiones semanales activas.' },
+      ]
+    : [];
 </script>
-{#if loading}
-  <div class="empty-msg">Cargando misiones…</div>
-{:else if error}
-  <div class="error-msg">{error}</div>
-{:else if data}
-  {#if summary}
-    <div class="summary">
-      <div class="summary-item">
-        <span class="s-num">{summary.dailyCompleted}/{summary.dailyTotal}</span>
-        <small>diarias</small>
-      </div>
-      <div class="summary-item">
-        <span class="s-num">{summary.weeklyCompleted}/{summary.weeklyTotal}</span>
-        <small>semanales</small>
-      </div>
-      <div class="summary-item">
-        <span class="s-num"><Ico n="flame" /> {summary.streak}</span>
-        <small>días (récord {summary.bestStreak})</small>
-      </div>
-      <div class="summary-item">
-        <span class="s-num"><Ico n={data.dailyChestUnlocked ? 'gift' : 'lock'} /></span>
-        <small>cofre diario</small>
-      </div>
-    </div>
-    {#if claimedMsg}
-      <p class="ok-msg">{claimedMsg}</p>
+
+<div class="ui-stack">
+  <AsyncState {loading} {error} onRetry={load} rows={4}>
+    {#if data}
+      {#if summary}
+        <div class="ui-stats">
+          <StatTile value="{summary.dailyCompleted}/{summary.dailyTotal}" label="diarias" />
+          <StatTile value="{summary.weeklyCompleted}/{summary.weeklyTotal}" label="semanales" />
+          <StatTile icon="flame" value={summary.streak} label="días (récord {summary.bestStreak})" />
+          <StatTile icon={data.dailyChestUnlocked ? 'gift' : 'lock'} value="" label="cofre diario" />
+        </div>
+      {/if}
+      {#if claimedMsg}<Notice tone="ok" icon="party">{claimedMsg}</Notice>{/if}
+
+      {#each groups as g, i (g.title)}
+        <SectionHeader title={g.title} icon={g.icon} count={g.items.length} onRefresh={i === 0 ? load : null} {loading} />
+        <div class="ui-list">
+          {#each g.items as m (m.id)}
+            <ListRow icon={reasonIcon(m.type)} title={m.description} done={m.completed && !m.claimed} muted={m.claimed} wrap>
+              <div class="m-meta">
+                <ProgressBar value={m.current} max={m.target} size="sm" />
+                <small>{m.current}/{m.target} · {rewardLabel(m)}</small>
+              </div>
+              <svelte:fragment slot="end">
+                {#if m.completed}
+                  {#if m.claimed}
+                    <Badge tone="success" icon="check" title="Recompensa ya reclamada">Reclamada</Badge>
+                  {:else}
+                    <Button variant="success" size="sm" loading={busyId === m.id} on:click={() => claim(m)}>Reclamar</Button>
+                  {/if}
+                {/if}
+              </svelte:fragment>
+            </ListRow>
+          {:else}
+            <EmptyState compact icon={g.icon} text={g.empty} />
+          {/each}
+        </div>
+      {/each}
     {/if}
-  {/if}
+  </AsyncState>
+</div>
 
-  <div class="sec-title">Misiones diarias</div>
-  <div class="mission-list">
-    {#each data.daily as m (m.id)}
-      <div class="mission-row" class:done={m.completed} class:claimed={m.claimed}>
-        <span class="m-icon">{missionIcon(m)}</span>
-        <div class="m-body">
-          <div class="m-top">
-            <span class="m-desc">{m.description}</span>
-            <span class="m-reward">{rewardLabel(m)}</span>
-          </div>
-          <div class="m-prog"><div class="fill" style="width: {pct(m)}%"></div></div>
-          <small class="m-progress">{m.current}/{m.target}</small>
-        </div>
-        {#if m.completed}
-          {#if m.claimed}
-            <span class="claimed-badge" title="Recompensa ya reclamada">
-              <Ico n="check" /> Reclamada
-            </span>
-          {:else}
-            <button class="claim" disabled={busyId === m.id} on:click={() => claim(m)}>
-              {busyId === m.id ? '…' : 'Reclamar'}
-            </button>
-          {/if}
-        {/if}
-      </div>
-    {:else}
-      <div class="empty-msg">Sin misiones diarias activas.</div>
-    {/each}
-  </div>
-
-  <div class="sec-title">Misiones semanales</div>
-  <div class="mission-list">
-    {#each data.weekly as m (m.id)}
-      <div class="mission-row" class:done={m.completed} class:claimed={m.claimed}>
-        <span class="m-icon">{missionIcon(m)}</span>
-        <div class="m-body">
-          <div class="m-top">
-            <span class="m-desc">{m.description}</span>
-            <span class="m-reward">{rewardLabel(m)}</span>
-          </div>
-          <div class="m-prog"><div class="fill" style="width: {pct(m)}%"></div></div>
-          <small class="m-progress">{m.current}/{m.target}</small>
-        </div>
-        {#if m.completed}
-          {#if m.claimed}
-            <span class="claimed-badge" title="Recompensa ya reclamada">
-              <Ico n="check" /> Reclamada
-            </span>
-          {:else}
-            <button class="claim" disabled={busyId === m.id} on:click={() => claim(m)}>
-              {busyId === m.id ? '…' : 'Reclamar'}
-            </button>
-          {/if}
-        {/if}
-      </div>
-    {:else}
-      <div class="empty-msg">Sin misiones semanales activas.</div>
-    {/each}
-  </div>
-
-  <button class="primary" on:click={load}>↻ Actualizar</button>
-{/if}
 <style>
-  .summary { display: flex; gap: 8px; margin-bottom: 8px; }
-  .summary-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .s-num { font-size: 15px; font-weight: 700; }
-  .summary-item small { color: var(--ink-muted); font-size: 10px; }
-  .ok-msg { font-size: 13px; color: var(--success-ink); text-align: center; background: color-mix(in srgb, var(--success) 12%, var(--surface)); border: 1px solid var(--success); border-radius: var(--radius-2xl); padding: 8px; margin-bottom: 8px; }
-  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
-  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 10px 0; }
-  .sec-title { font-weight: 700; font-size: 13px; margin: 8px 0 4px; }
-  .mission-list { display: flex; flex-direction: column; gap: 6px; }
-  .mission-row { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .mission-row.done { border-color: var(--success); }
-  .m-icon { font-size: 22px; }
-  .m-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-  .m-top { display: flex; justify-content: space-between; gap: 8px; }
-  .m-desc { font-size: 12px; font-weight: 600; }
-  .m-reward { font-size: 11px; color: var(--accent-ink); white-space: nowrap; }
-  .m-prog { height: 6px; border-radius: var(--radius-2xl); background: color-mix(in srgb, var(--ink) 6%, transparent); overflow: hidden; }
-  .m-prog .fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); }
-  .m-progress { font-size: 10px; color: var(--ink-muted); }
-  .claim { padding: 6px 10px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; font-size: 11px; background: var(--success); color: var(--on-color); white-space: nowrap; }
-  .claim:disabled { opacity: 0.5; cursor: not-allowed; }
-  .claimed-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 9px;
-    border-radius: var(--radius-2xl);
-    font-weight: 600;
-    font-size: 11px;
-    background: color-mix(in srgb, var(--success) 14%, var(--surface-2));
-    color: var(--success-ink);
-    border: 1px solid color-mix(in srgb, var(--success) 35%, var(--line-soft));
-    white-space: nowrap;
-    cursor: default;
-    user-select: none;
+  .m-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 4px;
   }
-  .mission-row.claimed {
-    opacity: 0.72;
-    border-color: color-mix(in srgb, var(--success) 30%, var(--line-soft));
+  .m-meta small {
+    font-size: 10px;
+    color: var(--ink-muted);
   }
-  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
+  .ui-list :global(.ui-row__title) {
+    white-space: normal;
+  }
 </style>
-

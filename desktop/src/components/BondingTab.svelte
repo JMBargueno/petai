@@ -2,6 +2,8 @@
   import Ico from './Ico.svelte';
   import { onMount } from 'svelte';
   import { api, type BondingDetail } from '../lib/api';
+  import { reasonIcon } from '../lib/ui/maps';
+  import { AsyncState, Badge, Card, EmptyState, FeatureHeader, ListRow, ProgressBar, SectionHeader } from './ui';
 
   export let pet: any = null;
 
@@ -9,18 +11,13 @@
   let error = '';
   let loading = true;
 
-  const UNLOCKS: { key: keyof BondingDetail['unlocks']; label: string }[] = [
-    { key: 'greeting', label: 'Saludo' },
-    { key: 'memoryRecall', label: 'Memoria' },
-    { key: 'emotionalReactions', label: 'Emociones' },
-    { key: 'patternUnlocked', label: 'Patrón exclusivo' },
-    { key: 'sleepNearCursor', label: 'Duerme cerca' },
+  const UNLOCKS: { key: keyof BondingDetail['unlocks']; label: string; icon: string }[] = [
+    { key: 'greeting', label: 'Saludo', icon: 'hand' },
+    { key: 'memoryRecall', label: 'Memoria', icon: 'brain' },
+    { key: 'emotionalReactions', label: 'Emociones', icon: 'smile' },
+    { key: 'patternUnlocked', label: 'Patrón exclusivo', icon: 'xp' },
+    { key: 'sleepNearCursor', label: 'Duerme cerca', icon: 'moon' },
   ];
-
-  const REASON_ICON: Record<string, string> = {
-    feed: '🍎', battle: '⚔️', minigame: '🎮', chat: '💬',
-    clean: '🧼', sleep: '😴', evolve: '✨', decay: '❄️',
-  };
 
   async function load() {
     if (!pet?.id) return;
@@ -39,100 +36,125 @@
   $: if (petId && !loading) load();
 
   onMount(load);
-
-  function pct(v: number): number {
-    return Math.min(100, Math.max(0, Math.round(v)));
-  }
 </script>
 
-{#if !pet?.id}
-  <div class="empty-msg">Necesitas una mascota para ver el vínculo.</div>
-{:else if loading && !data}
-  <div class="empty-msg">Cargando vínculo…</div>
-{:else if error}
-  <div class="error-msg">{error}</div>
-{:else if data}
-  <div class="bond-card">
-    <div class="bond-head">
-      <div>
-        <h4><Ico n="bond" /> Vínculo</h4>
-        <small>Rango: {data.tierName}</small>
-      </div>
-      <span class="bond-value">{data.value.toFixed(0)}/100</span>
-    </div>
-    <div class="bar"><div class="fill" style="width: {pct(data.value)}%"></div></div>
-    <small class="last">Última interacción: {new Date(data.lastInteractionAt).toLocaleString()}</small>
-  </div>
+<div class="ui-stack">
+  {#if !pet?.id}
+    <EmptyState icon="bond" title="Sin mascota" text="Necesitas una mascota para ver el vínculo." />
+  {:else}
+    <AsyncState loading={loading && !data} {error} onRetry={load} rows={3} height={64}>
+      {#if data}
+        <Card variant="hero">
+          <FeatureHeader icon="bond" title="Vínculo" sub="Rango: {data.tierName}" tint="var(--color-lavender)">
+            <svelte:fragment slot="end"><span class="bond-value">{data.value.toFixed(0)}<small>/100</small></span></svelte:fragment>
+          </FeatureHeader>
+          <ProgressBar value={data.value} color="linear-gradient(90deg, var(--color-lavender), var(--accent))" />
+          <p class="ui-card__hint">Última interacción: {new Date(data.lastInteractionAt).toLocaleString()}</p>
+        </Card>
 
-  <div class="sec-title">Desbloqueos</div>
-  <div class="unlocks">
-    {#each UNLOCKS as u (u.key)}
-      <div class="unlock" class:on={data.unlocks[u.key]}>
-        <span><Ico n={data.unlocks[u.key] ? 'check' : 'lock'} /></span>
-        <small>{u.label}</small>
-      </div>
-    {/each}
-  </div>
+        <SectionHeader title="Desbloqueos" icon="unlock" count="{UNLOCKS.filter((u) => data?.unlocks[u.key]).length}/{UNLOCKS.length}" />
+        <div class="unlocks">
+          {#each UNLOCKS as u (u.key)}
+            <div class="unlock" class:on={data.unlocks[u.key]} title={data.unlocks[u.key] ? 'Desbloqueado' : 'Bloqueado'}>
+              <span class="ui-tile__icon"><Ico n={data.unlocks[u.key] ? u.icon : 'lock'} size={16} /></span>
+              <small>{u.label}</small>
+            </div>
+          {/each}
+        </div>
 
-  <div class="sec-title">Decaimiento</div>
-  <div class="decay">
-    <div class="decay-row">
-      <span>{#if data.decayInfo.isDecaying}<Ico n="cold" /> Enfriándose ahora{:else}Estable{/if}</span>
-      <small>{data.decayInfo.hoursSinceInteraction.toFixed(0)}h sin interacción</small>
-    </div>
-    <small class="decay-detail">
-      Gracia: {data.decayInfo.graceWindowHours}h · decae desde {data.decayInfo.decayStartHours}h
-      · {data.decayInfo.decayRatePerDay}/día · acumulado -{data.decayInfo.acumulatedDecay.toFixed(2)}
-    </small>
-  </div>
+        <SectionHeader title="Decaimiento" icon="cold" />
+        <ListRow
+          icon={data.decayInfo.isDecaying ? 'cold' : 'shield'}
+          iconTint={data.decayInfo.isDecaying ? 'var(--color-electric-blue)' : 'var(--success)'}
+          title={data.decayInfo.isDecaying ? 'Enfriándose ahora' : 'Estable'}
+          sub="Gracia {data.decayInfo.graceWindowHours}h · decae desde {data.decayInfo.decayStartHours}h · {data.decayInfo.decayRatePerDay}/día · acumulado -{data.decayInfo.acumulatedDecay.toFixed(2)}"
+          wrap
+        >
+          <svelte:fragment slot="end">
+            <Badge size="sm" icon="clock">{data.decayInfo.hoursSinceInteraction.toFixed(0)}h</Badge>
+          </svelte:fragment>
+        </ListRow>
 
-  <div class="sec-title">Historial</div>
-  <div class="hist">
-    {#each data.history.items as ev (ev.id)}
-      <div class="hist-row">
-        <span class="h-reason">{REASON_ICON[ev.reason] ?? '•'}</span>
-        <span class="h-reason-txt">{ev.reason}</span>
-        <span class="h-delta" class:pos={ev.delta > 0} class:dec={ev.delta < 0}>
-          {ev.delta > 0 ? '+' : ''}{ev.delta.toFixed(2)}
-        </span>
-        <span class="h-val">→ {ev.value.toFixed(0)}</span>
-        <small class="h-when">{new Date(ev.createdAt).toLocaleDateString()}</small>
-      </div>
-    {:else}
-      <div class="empty-msg">Sin cambios registrados.</div>
-    {/each}
-  </div>
-
-  <button class="primary" on:click={load}>↻ Actualizar</button>
-{/if}
+        <SectionHeader title="Historial" icon="log" onRefresh={load} {loading} />
+        <div class="ui-list ui-list--scroll">
+          {#each data.history.items as ev (ev.id)}
+            <ListRow icon={reasonIcon(ev.reason)} title={ev.reason} sub={new Date(ev.createdAt).toLocaleDateString()}>
+              <svelte:fragment slot="end">
+                <span class="delta" class:pos={ev.delta > 0} class:neg={ev.delta < 0}>
+                  {ev.delta > 0 ? '+' : ''}{ev.delta.toFixed(2)}
+                </span>
+                <span class="muted">→ {ev.value.toFixed(0)}</span>
+              </svelte:fragment>
+            </ListRow>
+          {:else}
+            <EmptyState compact icon="log" text="Sin cambios registrados." />
+          {/each}
+        </div>
+      {/if}
+    </AsyncState>
+  {/if}
+</div>
 
 <style>
-  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 12px 0; }
-  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
-  .bond-card { padding: 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 6px; }
-  .bond-head { display: flex; justify-content: space-between; align-items: flex-start; }
-  .bond-head h4 { margin: 0; font-size: 15px; }
-  .bond-head small { color: var(--ink-muted); font-size: 11px; }
-  .bond-value { font-size: 20px; font-weight: 700; color: var(--color-lavender); }
-  .bar { height: 8px; border-radius: var(--radius-2xl); background: color-mix(in srgb, var(--ink) 6%, transparent); overflow: hidden; }
-  .bar .fill { height: 100%; background: linear-gradient(90deg, var(--color-lavender), var(--accent)); }
-  .last { font-size: 11px; color: var(--ink-muted); }
-  .sec-title { font-weight: 700; font-size: 13px; margin: 10px 0 4px; }
-  .unlocks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .unlock { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .unlock.on { border-color: var(--success); }
-  .unlock small { font-size: 10px; color: var(--ink-muted); text-align: center; }
-  .decay { padding: 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 4px; }
-  .decay-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
-  .decay-detail { font-size: 11px; color: var(--ink-muted); }
-  .hist { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
-  .hist-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); font-size: 12px; }
-  .h-reason { font-size: 16px; }
-  .h-reason-txt { font-weight: 600; width: 74px; text-transform: capitalize; }
-  .h-delta { font-weight: 700; }
-  .h-delta.pos { color: var(--success-ink); }
-  .h-delta.dec { color: var(--danger-ink); }
-  .h-val { color: var(--ink-muted); }
-  .h-when { color: var(--ink-muted); margin-left: auto; }
-  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
+  .bond-value {
+    font-family: var(--font-display);
+    font-size: 24px;
+  }
+  .bond-value small {
+    font-family: var(--font-ui);
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .unlocks {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .unlock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-2xl);
+    background: var(--surface);
+    --tile-c: var(--surface-2);
+  }
+  .unlock .ui-tile__icon {
+    width: 30px;
+    height: 30px;
+    color: var(--ink-muted);
+  }
+  .unlock.on {
+    border-color: var(--color-carbon);
+    --tile-c: var(--color-lavender);
+  }
+  .unlock.on .ui-tile__icon {
+    color: var(--on-color);
+  }
+  .unlock small {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    text-align: center;
+    line-height: 1.15;
+  }
+  .ui-stack :global(.ui-row__title) {
+    text-transform: capitalize;
+  }
+  .delta {
+    font-weight: 800;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .delta.pos {
+    color: var(--success-ink);
+  }
+  .delta.neg {
+    color: var(--danger-ink);
+  }
+  .muted {
+    font-size: 11px;
+  }
 </style>
