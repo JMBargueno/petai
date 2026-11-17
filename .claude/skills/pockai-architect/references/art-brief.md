@@ -8,15 +8,10 @@ Toma como referencia de código `ignisaur`, `axolunar` y `florabud` en ese archi
 - **Frame:** 128×128, con el suelo en **y = 120**, mirando **abajo-derecha** en 3/4. La otra diagonal sale por espejo, así que **no dibujes asimetrías que delaten el espejo** (textos, cicatrices en un solo lado con significado).
 - **Firma:** `SpeciesArt { id, face: FaceAnchors | (stage) => FaceAnchors, top, draw(ctx, pose, stage) }`.
   - `FaceAnchors { l: [x,y], r: [x,y], er, mouth: [x,y] }`.
-  - En 3/4, `l` es el **ojo lejano**: va más hacia el centro y algo más alto, y `face()` lo estrecha.
-  - `r` es el ojo cercano y la boca va desplazada hacia la derecha.
-- **Etapas:** `stage ∈ baby | juvenile | adult | final`. Usa `stageParams(stage)` → `{ headRatio, appScale, accessory }` (valores en `iso-style.md`). **Un único `draw` parametrizado**, no cuatro dibujos.
-- **Transición:** mientras el generador no tenga soporte de etapas, comprueba con grep si existe `stageParams` en `scripts/sprites/species.ts`. Si no existe:
-  - Define la tabla de etapas de `iso-style.md` dentro de tu `SpeciesArt`.
-  - Usa `draw(ctx, p, stage = 'adult')`.
-  - Deja `face` como un `FaceAnchors` simple.
-
-  El generador actual llama `draw(ctx, p)` y solo produce la hoja adult. `contact_sheet.ts` ya pasa la etapa, así que puedes revisar las 4.
+  - En 3/4, `l` es el **ojo cercano** (izquierda de la pantalla, tamaño completo) y `r` el **ojo lejano** (derecha, junto al contorno de la cara). Pon `far: 0.74` en las anclas: `face()` estrecha el ojo `r` y, en la máscara, pinta la zona de cara sin patrón.
+  - La boca va bajo el punto medio de los ojos.
+- **Etapas:** `stage ∈ baby | juvenile | adult | final`. Usa `stageParams(stage)` → `{ size, head, app, eye, accessory }` (valores en `iso-style.md`). **Un único `draw` parametrizado**, no cuatro dibujos.
+- **Patrón a seguir:** envuelve la cabeza en `scaleAt(st.head, cuelloX, cuelloY, …)` y todo el dibujo en `scaleAt(st.size, 64, 120, …)`; multiplica `p.app` por `st.app` y usa `stageFace()` para el ojo. Mira `ignisaur` como referencia.
 - **Roles de color (máscara):** `body` (primario, canal R), `limb` (extremidades), `accent` (accesorios) y `mix`. El patrón va en el canal B, **nunca sobre la cara ni los ojos**.
 - **Contorno:** el principal es `#1A1A1A` (`LINE`). Los accesorios llevan 2 px en el accent (GUIA_ARTISTICA §7.1).
 - **Partes móviles:** las 31 animaciones (idle, walk, eat, happy, sleep, attack, evolution…) salen de las poses de `scripts/sprites/poses.ts`, así que las partes deben poder moverse con los campos de `Pose`:

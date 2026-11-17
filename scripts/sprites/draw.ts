@@ -28,7 +28,8 @@ export const LINE = '#1e1e1e';
 const BASE_FILL: Record<Role, string> = {
   body: '#efefef',
   limb: '#e2e2e2',
-  accent: '#f4f4f4',
+  // ≤ 240: el bake trata > 240 como brillo blanco literal y no lo colorea (antes salía blanco).
+  accent: '#e9e9e9',
   mix: '#ebebeb',
 };
 
@@ -71,14 +72,20 @@ export function litStroke(ctx: Ctx, color: string, width: number, opacity = 1): 
   }`;
 }
 
-/** Trazo de rasgo facial (lineart). En la máscara usa el color del cuerpo para no romper la silueta. */
+/**
+ * Color de máscara de la cara: primario SIN canal B, para que el patrón no se proyecte sobre ojos,
+ * boca ni la zona que los rodea (GUIA_ARTISTICA §7.3).
+ */
+export const MASK_FACE = 'rgb(255,0,0)';
+
+/** Trazo de rasgo facial (lineart). En la máscara usa el color de cara (sin patrón). */
 export function featureStroke(ctx: Ctx, width: number): string {
-  const stroke = ctx.mode === 'mask' ? MASK_FILL.body : LINE;
+  const stroke = ctx.mode === 'mask' ? MASK_FACE : LINE;
   return `fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"`;
 }
 
 export function featureFill(ctx: Ctx, color: 'line' | 'white'): string {
-  if (ctx.mode === 'mask') return `fill="${MASK_FILL.body}"`;
+  if (ctx.mode === 'mask') return `fill="${MASK_FACE}"`;
   return `fill="${color === 'line' ? LINE : '#ffffff'}"`;
 }
 
@@ -153,6 +160,22 @@ export interface FaceAnchors {
   /** Radio del ojo. */
   er: number;
   mouth: [number, number];
+  /**
+   * Vista 3/4 (GUIA_ARTISTICA §7.4): escala horizontal del ojo lejano `r`, que es el de la derecha
+   * de la pantalla, junto al contorno de la cara. Sin definir = vista antigua (perfil/frontal).
+   */
+  far?: number;
+}
+
+/** Zona de cara sin patrón (en la máscara): elipse que envuelve ojos y boca. */
+export function facePatch(a: FaceAnchors): { cx: number; cy: number; rx: number; ry: number } {
+  const eyeY = (a.l[1] + a.r[1]) / 2;
+  return {
+    cx: (a.l[0] + a.r[0]) / 2,
+    cy: (eyeY + a.mouth[1]) / 2,
+    rx: Math.abs(a.r[0] - a.l[0]) / 2 + a.er * 1.5,
+    ry: Math.abs(a.mouth[1] - eyeY) / 2 + a.er * 1.5,
+  };
 }
 
 const PINK = '#ff6f91';
@@ -261,12 +284,20 @@ export interface FaceOpts {
 
 export function face(ctx: Ctx, a: FaceAnchors, o: FaceOpts): string {
   let out = '';
+  if (ctx.mode === 'mask' && a.far !== undefined) {
+    const f = facePatch(a);
+    out += `<ellipse cx="${f.cx}" cy="${f.cy}" rx="${f.rx}" ry="${f.ry}" fill="${MASK_FACE}"/>`;
+  }
   if (o.blush) {
     out += `<ellipse cx="${a.l[0] - a.er * 0.6}" cy="${a.l[1] + a.er * 1.7}" rx="${a.er * 0.9}" ry="${a.er * 0.5}" ${lit(ctx, '#ff9db5')}/>`;
     out += `<ellipse cx="${a.r[0] + a.er * 0.6}" cy="${a.r[1] + a.er * 1.7}" rx="${a.er * 0.9}" ry="${a.er * 0.5}" ${lit(ctx, '#ff9db5')}/>`;
   }
   out += eye(ctx, a.l[0], a.l[1], a.er, o.eyes, o.look, 'l');
-  out += eye(ctx, a.r[0], a.r[1], a.er, o.eyes, o.look, 'r');
+  const farEye = eye(ctx, a.r[0], a.r[1], a.er, o.eyes, o.look, 'r');
+  out +=
+    a.far !== undefined
+      ? `<g transform="translate(${a.r[0]} ${a.r[1]}) scale(${a.far} 1) translate(${-a.r[0]} ${-a.r[1]})">${farEye}</g>`
+      : farEye;
   out += mouth(ctx, a.mouth[0], a.mouth[1], o.mouth, a.er * 0.9);
   if (o.tears > 0) {
     for (const [ex, ey] of [a.l, a.r]) {

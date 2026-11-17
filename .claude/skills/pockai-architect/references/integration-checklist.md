@@ -33,7 +33,7 @@ Rutas relativas a la raíz del repo. Marca cada paso en el resumen final.
 ## Arte real (paso 5b de SKILL.md)
 9. `scripts/sprites/species.ts`: añade el `SpeciesArt` en 3/4 con `stage` y regístralo en `SPECIES` (ver `art-brief.md` e `iso-style.md`).
 9a. `npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>`: **lee el PNG** y pasa la checklist de `art-brief.md`. Itera hasta que pase.
-9b. `pnpm generate:sprites` → `shared/assets/species/<id>/` (alias adult). Cuando el generador lo soporte, también `species/<id>/<stage>/` para las 4 etapas, y `sprites/<id>_idle.svg`.
+9b. `pnpm generate:sprites` → `shared/assets/species/<id>/` (adult), `species/<id>/{baby,juvenile,final}/` y `sprites/<id>_idle.svg`.
     Luego borra los placeholders `sprites/<id>_{eat,happy,sleep}.svg` solo si el generador ya los produce; si no, regénéralos con `placeholder_svgs.mjs <id> --force` (plantilla 3/4).
 
 ## Personalidad

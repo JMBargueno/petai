@@ -37,10 +37,12 @@
   $: isShiny = pet?.shiny || false;
   $: visualSeed = pet?.visualSeed ?? 1337;
   $: palette = pet?.palette || { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' };
+  /** Etapa evolutiva: cada una tiene su hoja (baby, juvenile, adult, final). */
+  $: stage = pet?.stage ?? null;
 
   $: activeAnim = isSleeping ? 'sleep' : anim;
 
-  $: if (pet && (speciesKey || patternKey || palette || visualSeed)) {
+  $: if (pet && (speciesKey || patternKey || palette || visualSeed || stage)) {
     triggerBake();
   }
 
@@ -58,7 +60,8 @@
         patternKey,
         palette,
         visualSeed,
-        isShiny
+        isShiny,
+        stage
       );
     } catch (err) {
       console.warn('[PetMiniAvatar] Error horneando sprite:', err);

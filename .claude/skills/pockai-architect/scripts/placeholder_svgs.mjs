@@ -25,11 +25,11 @@ if (!sp) {
 const { primary, secondary, accent } = sp.defaultPalette;
 const key = sp.spriteKey ?? id;
 
-// 3/4: la cara se desplaza hacia el lado visible (derecha); el ojo lejano es más estrecho y algo más alto.
-const eyesOpen = `<ellipse cx="62" cy="58" rx="4.5" ry="6" fill="#1A1A1A"/>
-    <circle cx="61" cy="56" r="1.6" fill="#FFFFFF"/>
-    <circle cx="84" cy="60" r="6" fill="#1A1A1A"/>
-    <circle cx="82" cy="58" r="2" fill="#FFFFFF"/>`;
+// 3/4: el ojo cercano (izquierda) a tamaño completo y el lejano (derecha, junto al contorno) estrecho.
+const eyesOpen = `<circle cx="64" cy="60" r="6" fill="#1A1A1A"/>
+    <circle cx="66" cy="58" r="2" fill="#FFFFFF"/>
+    <ellipse cx="85" cy="59" rx="4.5" ry="6" fill="#1A1A1A"/>
+    <circle cx="86" cy="57" r="1.6" fill="#FFFFFF"/>`;
 const eyesHappy = `<path d="M 58 60 Q 62 53 66 60" stroke="#1A1A1A" stroke-width="3" fill="none" stroke-linecap="round"/>
     <path d="M 78 62 Q 84 54 90 62" stroke="#1A1A1A" stroke-width="3" fill="none" stroke-linecap="round"/>`;
 const eyesClosed = `<path d="M 58 60 Q 62 65 66 60" stroke="#1A1A1A" stroke-width="3" fill="none" stroke-linecap="round"/>

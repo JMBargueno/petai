@@ -5,7 +5,8 @@
  *   pnpm generate:sprites
  *
  * Salida (determinista, se commitea):
- *  - shared/assets/species/<especie>/{base.png, mask.png, anim.json}
+ *  - shared/assets/species/<especie>/{base.png, mask.png, anim.json}            (etapa adult)
+ *  - shared/assets/species/<especie>/<baby|juvenile|final>/{base.png, mask.png, anim.json}
  *  - shared/assets/species/egg/{base.png, mask.png, anim.json}
  *  - shared/assets/sprites/<especie>_idle.svg (vista previa a color para el fallback)
  *  - shared/assets/animation-specs.json (estados, frames, fps y transiciones)
@@ -19,7 +20,10 @@ import { AnimDef, ANIMATION_ALIASES, EGG_ANIMATIONS, PET_ANIMATIONS } from './sp
 import { Ctx, fx, Mode, Palette } from './sprites/draw';
 import { EGG_POSES, drawEgg } from './sprites/egg';
 import { POSES } from './sprites/poses';
-import { SPECIES, SpeciesArt } from './sprites/species';
+import { SPECIES, SpeciesArt, Stage, STAGES } from './sprites/species';
+
+/** La etapa adult vive en la raíz de la especie (alias histórico que leen todos los clientes). */
+const stageDir = (id: string, stage: Stage) => (stage === 'adult' ? id : `${id}/${stage}`);
 
 const ROOT = resolve(__dirname, '..');
 const ASSETS = join(ROOT, 'shared', 'assets');
@@ -33,7 +37,7 @@ function ctxFor(mode: Mode, palette: Palette, frame: number): Ctx {
   return { mode, palette, uid: () => `f${frame}c${n++}` };
 }
 
-function characterFrame(sp: SpeciesArt, anim: AnimDef): FrameDrawer {
+function characterFrame(sp: SpeciesArt, anim: AnimDef, stage: Stage = 'adult'): FrameDrawer {
   const poseFn = POSES[anim.name];
   if (!poseFn) throw new Error(`Falta la pose de "${anim.name}"`);
   return (ctx, i, n) => {
@@ -41,7 +45,7 @@ function characterFrame(sp: SpeciesArt, anim: AnimDef): FrameDrawer {
     const t = `translate(${64 + p.dx} ${120 + p.dy}) rotate(${p.rot}) scale(${p.sx} ${p.sy}) translate(-64 -120)`;
     const behind = p.fx.filter((f) => f.b).map((f) => fx(ctx, f)).join('');
     const front = p.fx.filter((f) => !f.b).map((f) => fx(ctx, f)).join('');
-    return behind + `<g transform="${t}">${sp.draw(ctx, p)}</g>` + front;
+    return behind + `<g transform="${t}">${sp.draw(ctx, p, stage)}</g>` + front;
   };
 }
 
@@ -133,7 +137,7 @@ function writeSheet(id: string, anims: AnimDef[], drawerFor: (a: AnimDef) => Fra
   const mask = sheetSvg(frames, 'mask', palette);
   writeFileSync(join(dir, 'base.png'), renderPng(base.svg));
   writeFileSync(join(dir, 'mask.png'), renderPng(mask.svg));
-  writeFileSync(join(dir, 'anim.json'), JSON.stringify(animJson(id, frames, anims, base.w, base.h), null, 2) + '\n');
+  writeFileSync(join(dir, 'anim.json'), JSON.stringify(animJson(id.replace('/', '_'), frames, anims, base.w, base.h), null, 2) + '\n');
   return frames.length;
 }
 
@@ -197,8 +201,10 @@ function writePreviews(dir: string, speciesData: { id: string; defaultPalette: P
   mkdirSync(dir, { recursive: true });
   for (const sp of SPECIES) {
     const palette = speciesData.find((s) => s.id === sp.id)!.defaultPalette;
-    const frames = layout(PET_ANIMATIONS, (a) => characterFrame(sp, a));
-    writeFileSync(join(dir, `${sp.id}-preview.png`), renderPng(sheetSvg(frames, 'color', palette).svg));
+    for (const stage of STAGES) {
+      const frames = layout(PET_ANIMATIONS, (a) => characterFrame(sp, a, stage));
+      writeFileSync(join(dir, `${sp.id}-${stage}-preview.png`), renderPng(sheetSvg(frames, 'color', palette).svg));
+    }
   }
   const eggFrames = layout(EGG_ANIMATIONS, eggFrame);
   writeFileSync(join(dir, 'egg-preview.png'), renderPng(sheetSvg(eggFrames, 'color', { primary: '#fff', secondary: '#fff' }).svg));
@@ -221,9 +227,12 @@ function main() {
   for (const sp of SPECIES) {
     const data = speciesData.find((s) => s.id === sp.id);
     if (!data) throw new Error(`Especie ${sp.id} no está en species.json`);
-    const count = writeSheet(sp.id, PET_ANIMATIONS, (a) => characterFrame(sp, a), data.defaultPalette);
+    let count = 0;
+    for (const stage of STAGES) {
+      count = writeSheet(stageDir(sp.id, stage), PET_ANIMATIONS, (a) => characterFrame(sp, a, stage), data.defaultPalette);
+    }
     writePreviewSvg(sp, data.defaultPalette);
-    console.log(`✓ ${sp.id}: ${count} frames en ${PET_ANIMATIONS.length} animaciones`);
+    console.log(`✓ ${sp.id}: ${count} frames × ${STAGES.length} etapas (${STAGES.join(', ')})`);
   }
 
   const eggCount = writeSheet('egg', EGG_ANIMATIONS, eggFrame, { primary: '#fff4d6', secondary: '#ffc94d' });

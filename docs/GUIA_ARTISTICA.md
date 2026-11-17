@@ -275,7 +275,7 @@ El mundo de Pockai pasa a una **vista isométrica cozy**: las salas son dioramas
 
 **Pockai en 3/4**
 - Frame de 128×128, suelo en y = 120. Mira **abajo-derecha**; la dirección abajo-izquierda se consigue con espejo (`scaleX(-1)`), así que el dibujo no lleva textos ni asimetrías que delaten el espejo.
-- Cuerpo girado unos 30°: se ven la cara y el costado derecho. Las anclas de la cara se desplazan hacia el lado visible. El **ojo lejano** es más estrecho (unos 0,75 en ancho) y está algo más alto. Patas: las cercanas más grandes y bajas; las lejanas asoman.
+- Cuerpo girado unos 30°: se ven la cara y el costado derecho. Las anclas de la cara se desplazan hacia el lado visible. El **ojo lejano** es el de la **derecha de la pantalla**, junto al contorno de la cara: más estrecho (unos 0,75 en ancho). La boca queda bajo el punto medio de los ojos. Las patas lejanas asoman detrás del cuerpo, desplazadas a la derecha y arriba. Patas: las cercanas más grandes y bajas; las lejanas asoman.
 - Sombra: elipse 2:1 centrada en (64, 114), con radios de 24×12 (no debe pasar de y ≈ 126 para no recortarse en el frame).
 - **Etapas** (baby, juvenile, adult, final): mismo dibujo con parámetros.
 
