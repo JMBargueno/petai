@@ -122,6 +122,46 @@ export function reactionForAction(event: Pick<PetActionEvent, 'action' | 'contex
   return fn ? fn(event.context) : null;
 }
 
+/**
+ * Reacción de chat (spec 36): `behavior` del evento `done` → animación de una pasada + emote.
+ * Solo se usan clips de acción: `idle`, `sleep` y `tired` son bucles de la capa base y, lanzados
+ * como acción, no terminarían nunca. `sleep` (bostezo) se resuelve con el estiramiento de `wake`.
+ */
+const BEHAVIOR_ANIMS: Record<string, string[]> = {
+  idle: [],
+  happy: ['happy'],
+  sleep: ['wake'],
+};
+
+/** Acciones con un clip más expresivo que el genérico de su animación. */
+const BEHAVIOR_ACTION_ANIMS: Record<string, string[]> = {
+  celebrate: ['celebrate'],
+  cuddle: ['love'],
+};
+
+export const EMOTE_EMOJI: Record<string, string> = {
+  heart: '❤️',
+  sparkle: '✨',
+  note: '🎵',
+  question: '❓',
+  tear: '💧',
+  zzz: '💤',
+  wave: '👋',
+  star: '⭐',
+};
+
+/** Tolerante: `behavior` ausente, nulo o con valores desconocidos no rompe el chat. */
+export function reactionForBehavior(raw: unknown): Reaction | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const b = raw as { action?: unknown; animation?: unknown; emote?: unknown };
+  const base = typeof b.animation === 'string' ? BEHAVIOR_ANIMS[b.animation] : undefined;
+  const override = typeof b.action === 'string' ? BEHAVIOR_ACTION_ANIMS[b.action] : undefined;
+  const anims = base ? (override ?? base) : [];
+  const particle = typeof b.emote === 'string' ? EMOTE_EMOJI[b.emote] : undefined;
+  if (!anims.length && !particle) return null;
+  return particle ? { anims, particle } : { anims };
+}
+
 /** Acciones locales de la UI (ControlPanel) → acción equivalente del backend. */
 export const LOCAL_ACTIONS: Record<string, PetAction> = {
   eat: 'fed',
