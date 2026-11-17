@@ -11,6 +11,16 @@
     testLocalHermes,
     type LocalHermesConfig,
   } from '../lib/hermesLocal';
+  import {
+    CLI_COMMANDS,
+    CLI_LABELS,
+    loadCliConfig,
+    saveCliConfig,
+    streamCliCompletion,
+    testCli,
+    type CliConfig,
+    type CliEngine,
+  } from '../lib/aiCli';
   import { CLIENT_TOOLS, openUrl, readClipboardText } from '../lib/clientTools';
   import { buildClientContext } from '../lib/deskContext';
   import { setSkillAuthorization } from '../lib/stores/desktopSkillsStore';
@@ -43,8 +53,10 @@
   let config: any = { configured: false, mode: 'managed' };
   let showSettings = false;
 
-  // Modos: 'managed' (IA de Pockai), 'byok' (Mi propia clave), 'local' (Hermes local)
-  let activeMode: 'managed' | 'byok' | 'local' = 'managed';
+  // Modos: 'managed' (IA de Pockai), 'byok' (Mi propia clave), 'local' (Hermes local),
+  // 'claude-cli' y 'antigravity-cli' (un CLI de IA instalado en este equipo; ver lib/aiCli.ts)
+  type Mode = 'managed' | 'byok' | 'local' | 'claude-cli' | 'antigravity-cli';
+  let activeMode: Mode = 'managed';
 
   // Suscripción y cuota
   let entitlement: Awaited<ReturnType<typeof api.getBillingEntitlement>> | null = null;
@@ -65,6 +77,10 @@
   let local: LocalHermesConfig = loadLocalConfig();
   let localMsg = '';
   let localErr = '';
+  // Modos CLI (Claude CLI / Antigravity CLI): excluyentes con Hermes local
+  let cli: CliConfig = loadCliConfig();
+  let cliMsg = '';
+  let cliErr = '';
 
   // Uso mensual y cuota diaria
   let usage: Awaited<ReturnType<typeof api.getAiUsage>> | null = null;
@@ -76,7 +92,10 @@
   $: dailyRemaining = Math.max(0, dailyLimit - dailyUsed);
   $: maxChars = isManaged ? 240 : 1000;
   $: quotaExceeded = isManaged && dailyRemaining <= 0;
-  $: chatReady = isManaged || (activeMode === 'byok' && config.configured) || (activeMode === 'local' && local.enabled);
+  // Modos en los que la respuesta se genera en este equipo (flujo /chat/local/*)
+  $: cliEngine = (activeMode === 'claude-cli' ? 'claude' : activeMode === 'antigravity-cli' ? 'antigravity' : null) as CliEngine | null;
+  $: isLocalLike = (activeMode === 'local' && local.enabled) || (cliEngine !== null && cli.engine === cliEngine);
+  $: chatReady = isManaged || (activeMode === 'byok' && config.configured) || isLocalLike;
 
   // Chat
   let messages: Msg[] = [];
@@ -326,7 +345,7 @@
     void loadProPrice();
     if (chatReady && pet) {
       await loadHistory();
-      if (!local.enabled) {
+      if (!isLocalLike) {
         await loadPending();
         await loadUsage();
       }
@@ -352,7 +371,9 @@
   async function loadConfig() {
     try {
       config = await api.getAiConfig();
-      if (local.enabled) {
+      if (cli.engine) {
+        activeMode = cli.engine === 'claude' ? 'claude-cli' : 'antigravity-cli';
+      } else if (local.enabled) {
         activeMode = 'local';
       } else if (config.mode === 'byok' && config.configured) {
         activeMode = 'byok';
@@ -367,8 +388,22 @@
     }
   }
 
-  async function setMode(mode: 'managed' | 'byok' | 'local') {
+  async function setMode(mode: Mode) {
     activeMode = mode;
+    cliMsg = '';
+    cliErr = '';
+    // Solo un modo «en este equipo» a la vez: elegir cualquier otro desactiva el CLI
+    const engine: CliEngine | null = mode === 'claude-cli' ? 'claude' : mode === 'antigravity-cli' ? 'antigravity' : null;
+    cli.engine = engine;
+    saveCliConfig(cli);
+    cli = cli;
+    if (engine) {
+      local.enabled = false;
+      saveLocalConfig(local);
+      showSettings = true;
+      if (pet && messages.length === 0) loadHistory();
+      return;
+    }
     if (mode === 'managed') {
       local.enabled = false;
       saveLocalConfig(local);
@@ -487,12 +522,15 @@
       return { moderated: true as const };
     }
     let acc = '';
-    const result = await streamLocalCompletion(local, ctx.messages, ctx.maxTokens, (d) => {
+    const onDelta = (d: string) => {
       acc += d;
       reply.content = acc;
       messages = messages;
       scrollDown();
-    }, signal);
+    };
+    const result = cliEngine
+      ? await streamCliCompletion(cli, ctx.messages, ctx.maxTokens, onDelta, signal)
+      : await streamLocalCompletion(local, ctx.messages, ctx.maxTokens, onDelta, signal);
     const synced = await api.localChatSync(pet.id, ctx.turnId, result.reply);
     if ('moderated' in synced) {
       applyModeration(synced.moderated, reply, userMsg);
@@ -520,7 +558,7 @@
     abort = new AbortController();
     toolHint = '';
     try {
-      const done = local.enabled
+      const done = isLocalLike
         ? await runLocal(text, reply, userMsg, abort.signal)
         : await api.chatStream(
         pet.id,
@@ -557,8 +595,8 @@
       const spoken = toSpeakable(done.message.content);
       if (spoken) dispatch('bubble', spoken);
       dispatch('refreshPet');
-      if (!local.enabled) loadUsage();
-      if (memOpen && !local.enabled) setTimeout(loadMemories, 3000);
+      if (!isLocalLike) loadUsage();
+      if (memOpen && !isLocalLike) setTimeout(loadMemories, 3000);
     } catch (e: any) {
       if (e.name !== 'AbortError') chatErr = e.message;
       messages = messages.filter((m) => m !== reply && m !== userMsg);
@@ -605,6 +643,28 @@
     }
   }
 
+  function saveCli() {
+    cliErr = '';
+    cliMsg = '';
+    cli.engine = cliEngine;
+    saveCliConfig(cli);
+    cli = cli;
+    cliMsg = cliEngine ? `Guardado. El chat usará ${CLI_LABELS[cliEngine]}.` : 'Guardado.';
+  }
+
+  async function testCliConnection() {
+    cliErr = '';
+    cliMsg = '';
+    busy = true;
+    try {
+      cliMsg = `Encontrado: ${await testCli({ ...cli, engine: cliEngine })}`;
+    } catch (e: any) {
+      cliErr = e.message;
+    } finally {
+      busy = false;
+    }
+  }
+
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -623,10 +683,12 @@
     {#if chatReady}
       <div class="bar">
         <Badge tone="tint" icon="brain" title="Inteligencia">{tier} · {pet.intelligence ?? 0}/1000</Badge>
-        <select class="select mode-select" value={activeMode} aria-label="Motor de IA" on:change={(e) => setMode(e.currentTarget.value)}>
+        <select class="select mode-select" value={activeMode} aria-label="Motor de IA" on:change={(e) => setMode(e.currentTarget.value as Mode)}>
           <option value="managed">IA de Pockai</option>
           <option value="byok">Mi propia clave</option>
           <option value="local">Hermes local</option>
+          <option value="claude-cli">Claude CLI</option>
+          <option value="antigravity-cli">Antigravity CLI</option>
         </select>
         <span class="bar-end">
           {#if isManaged && isPro}
@@ -714,6 +776,50 @@
           {#if settingsMsg}<Notice tone="ok">{settingsMsg}</Notice>{/if}
           {#if settingsErr}<Notice tone="error">{settingsErr}</Notice>{/if}
         </Card>
+      {:else if cliEngine}
+        <Card title="{CLI_LABELS[cliEngine]} (este equipo)" icon="monitor">
+          <p class="ui-card__hint">
+            Tu mascota responde con el {CLI_LABELS[cliEngine]} instalado en este ordenador, usando la sesión que ya
+            tienes iniciada (tu suscripción, sin claves en Pockai). Antes, abre una terminal y ejecuta
+            <code>{CLI_COMMANDS[cliEngine]}</code> una vez para iniciar sesión.
+            {#if cliEngine === 'claude'}
+              Se lanza en una carpeta temporal vacía, sin herramientas, sin tus servidores MCP y sin guardar la sesión.
+            {:else}
+              Se lanza en una carpeta temporal vacía, en modo headless con <code>--sandbox</code>: las herramientas que
+              no hayas permitido en tu configuración de Antigravity quedan denegadas.
+            {/if}
+            El servidor sigue creando la personalidad, moderando y guardando el historial.
+            Limitaciones: sin herramientas de agente y sin nuevos recuerdos automáticos.
+          </p>
+          <div class="form-group">
+            <label for="ai-cli-model">Modelo <small class="form-hint">(vacío = el predeterminado del CLI)</small></label>
+            <input
+              id="ai-cli-model"
+              class="input"
+              type="text"
+              bind:value={cli.model}
+              placeholder={cliEngine === 'claude' ? 'sonnet, haiku…' : 'opcional'}
+              autocomplete="off"
+            />
+          </div>
+          <div class="form-group">
+            <label for="ai-cli-path">Ruta del ejecutable <small class="form-hint">(solo si no está en el PATH)</small></label>
+            <input
+              id="ai-cli-path"
+              class="input"
+              type="text"
+              bind:value={cli.binPath}
+              placeholder={cliEngine === 'claude' ? 'C:\\Users\\tú\\.local\\bin\\claude.exe' : 'C:\\ruta\\a\\agy.exe'}
+              autocomplete="off"
+            />
+          </div>
+          <div class="row">
+            <Button variant="primary" on:click={saveCli}>Guardar</Button>
+            <Button disabled={busy} loading={busy} on:click={testCliConnection}>Probar conexión</Button>
+          </div>
+          {#if cliMsg}<Notice tone="ok">{cliMsg}</Notice>{/if}
+          {#if cliErr}<Notice tone="error">{cliErr}</Notice>{/if}
+        </Card>
       {:else}
         <Card title="Hermes local (este equipo)" icon="monitor">
           <p class="ui-card__hint">
@@ -745,7 +851,9 @@
     {/if}
 
     {#if chatReady && !showSettings}
-      {#if local.enabled}
+      {#if cliEngine}
+        <Notice tone="info" icon="monitor">Modo {CLI_LABELS[cliEngine]}: tu mascota responde con el CLI de este equipo (sin herramientas ni recordatorios nuevos).</Notice>
+      {:else if isLocalLike}
         <Notice tone="info" icon="monitor">Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</Notice>
       {/if}
       <div class="chat" bind:this={scroller}>

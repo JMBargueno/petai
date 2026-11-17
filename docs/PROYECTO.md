@@ -238,6 +238,7 @@ PushToken(userId, platform, token)
   - Las keys se cifran con AES-256-GCM. La clave maestra está en `AI_KEY_ENCRYPTION_KEY` o en un KMS. Las keys **nunca se devuelven** al cliente; solo se muestra `sk-…abcd`.
   - Protección SSRF en `baseUrl`: solo HTTPS y se bloquean rangos privados/loopback.
   - Un Hermes **local** se conecta desde la app de escritorio, que hace de proxy en local.
+  - **Claude CLI** y **Antigravity CLI**: la app de escritorio lanza `claude -p` o `agy -p` con la sesión del usuario (mismo flujo `/chat/local/*` que Hermes local). El motor es una lista cerrada, sin shell y en un directorio temporal vacío. Claude va sin herramientas ni MCP; Antigravity va con `--sandbox` y con sus permisos headless por defecto.
   - Moderación de entrada y salida, límites de peticiones por usuario y cuota mensual de tokens para el modo suscripción (contador en Redis).
   - Las herramientas con efectos requieren confirmación explícita del usuario.
 

@@ -1,6 +1,8 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ai_cli;
+
 use serde::Deserialize;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -242,10 +244,14 @@ fn main() {
         )
         .manage(HitRegions::default())
         .manage(SummonShortcut::default())
+        .manage(ai_cli::CliProcs::default())
         .invoke_handler(tauri::generate_handler![
             set_hit_regions,
             get_active_window_info,
-            set_summon_shortcut
+            set_summon_shortcut,
+            ai_cli::run_ai_cli,
+            ai_cli::cancel_ai_cli,
+            ai_cli::detect_ai_cli
         ])
         .setup(|app| {
             // La ventana transparente cubre el área útil del monitor (sin tapar la

@@ -111,6 +111,8 @@ Para un Hermes Agent en el propio equipo (el backend no puede alcanzar un loopba
 - `POST /pets/:id/chat/local/sync` `{ turnId, reply }`: el turno es de un solo uso, caduca a los 5 min y es del usuario y mascota que lo pidieron. La respuesta (máx. 4000 caracteres) se modera; si pasa se guarda y sube la inteligencia, si no devuelve `{ moderated }` y no se guarda.
 Límites: la respuesta la afirma el cliente (no debe usarse para nada competitivo), no hay herramientas de agente ni extracción de memoria, y la moderación de salida ocurre al sincronizar (el texto ya se mostró en local). La URL, el modelo y la key de Hermes se guardan solo en el equipo.
 
+Los modos **Claude CLI** y **Antigravity CLI** del escritorio usan estos mismos dos endpoints: entre `context` y `sync`, la app lanza `claude -p` o `agy -p` (comando nativo `run_ai_cli`, `desktop/src-tauri/src/ai_cli.rs`) con la sesión que el usuario ya tiene iniciada en ese CLI. El proceso corre en un directorio temporal vacío y sin shell. Claude se lanza con `--tools "" --strict-mcp-config --no-session-persistence`. Antigravity se lanza con `--sandbox`; en headless deniega las herramientas que el usuario no haya permitido en su `settings.json`. Al cancelar o agotar el tiempo se mata el proceso lanzado; si es un `.cmd` de npm, su proceso hijo de Node puede terminar por su cuenta. El backend no distingue estos modos de Hermes local.
+
 #### Moderación
 Evento SSE `moderated` `{reason, message, hideUserMessage}` (el mensaje no se guarda y no gasta tokens salvo `output_leak`):
 - `sensitive_data`: el mensaje contiene claves/tokens, contraseñas, tarjetas (Luhn) o IBAN; no se envía al proveedor ni se muestra.

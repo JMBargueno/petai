@@ -483,6 +483,12 @@ Estado actual de lo ya construido en el panel:
 - Avisar de sus límites: sin herramientas de agente ni memoria nueva.
 - Rutas: `POST /pets/:id/chat/local/context`, `POST /pets/:id/chat/local/sync`.
 
+**Claude CLI y Antigravity CLI** · ✅ · P2
+
+- En el selector de motor del chat: «Claude CLI» o «Antigravity CLI». Usan el CLI instalado en el equipo con la sesión que el usuario ya inició (`claude` / `agy`).
+- Campos opcionales: modelo y ruta del ejecutable (si no está en el PATH), guardados solo en el equipo. «Probar conexión» muestra la versión del CLI.
+- Mismos límites y rutas que Hermes local; solo un modo local activo a la vez.
+
 **Herramientas del agente en el equipo** · ✅ · P2
 
 - Permitir a la mascota proponer **abrir un enlace** y **leer el portapapeles**. Cada uso muestra una tarjeta de confirmación con el destino exacto.
