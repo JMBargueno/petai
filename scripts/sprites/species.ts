@@ -79,7 +79,9 @@ const STAGE_PARAMS: Record<Stage, StageParams> = {
   baby: { size: 0.78, head: 1.26, app: 0.55, eye: 1.18, accessory: false },
   juvenile: { size: 0.9, head: 1.12, app: 0.8, eye: 1.08, accessory: false },
   adult: { size: 1, head: 1, app: 1, eye: 1, accessory: false },
-  final: { size: 1.05, head: 0.97, app: 1.15, eye: 1, accessory: true },
+  // final no crece en tamaño (se saldría del frame en las poses con desplazamiento): destaca por
+  // apéndices y accesorio.
+  final: { size: 1, head: 0.97, app: 1.12, eye: 1, accessory: true },
 };
 
 export const stageParams = (stage: Stage = 'adult'): StageParams => STAGE_PARAMS[stage] ?? STAGE_PARAMS.adult;
@@ -196,8 +198,8 @@ const axolunar: SpeciesArt = {
     head += foodAndFace(ctx, stageFace(axolunarFace, st), p);
     if (st.accessory) {
       // Final: media luna flotante con destellos
-      head += part(ctx, 'accent', (a) => `<path d="M70 22A12 12 0 1 0 90 30A9 9 0 1 1 70 22Z" ${a}/>`, { stroke: 2 });
-      head += twinkle(ctx, 98, 22, 0.9, '#fff3b0') + twinkle(ctx, 62, 30, 0.7, '#fff3b0');
+      head += part(ctx, 'accent', (a) => `<path d="M72 30A10 10 0 1 0 89 37A7.5 7.5 0 1 1 72 30Z" ${a}/>`, { stroke: 2 });
+      head += twinkle(ctx, 97, 32, 0.8, '#fff3b0') + twinkle(ctx, 64, 36, 0.6, '#fff3b0');
     }
     out += scaleAt(st.head, 76, 84, head);
     // Patas y brazo cercanos

@@ -29,7 +29,7 @@ Valores reales en `STAGE_PARAMS` (`scripts/sprites/species.ts`):
 | baby | 0,78 | 1,26 | 0,55 | 1,18 | — | cabezón, apéndices pequeños |
 | juvenile | 0,9 | 1,12 | 0,8 | 1,08 | — | |
 | adult | 1 | 1 | 1 | 1 | — | rasgo icónico completo |
-| final | 1,05 | 0,97 | 1,15 | 1 | sí | accesorio que lea el elemento (cresta de fuego, media luna, corona de pétalos) |
+| final | 1 | 0,97 | 1,12 | 1 | sí | accesorio que lea el elemento (cresta de fuego, media luna, corona de pétalos) |
 
 El rasgo icónico **crece** con la etapa, pero no cambia de forma. Si un baby y un final no parecen de la misma especie, está mal.
 

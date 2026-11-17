@@ -286,6 +286,8 @@ El mundo de Pockai pasa a una **vista isométrica cozy**: las salas son dioramas
 | Adult | 1,0 | 1,0 | rasgo icónico completo |
 | Final | 0,95 | 1,15 | un accesorio de etapa final (cresta, aura, corona) |
 
+Tabla orientativa: los valores exactos (escala total, cabeza, apéndices y ojos) están en `STAGE_PARAMS` de `scripts/sprites/species.ts`. La etapa final **no crece de tamaño**, para no salirse del frame en las poses con desplazamiento; destaca por sus apéndices y su accesorio.
+
 - Dentro de una sala, el Pockai se muestra a unos **72 px** de alto (escala ≈ 0,56); en la mascota flotante, a 128 px.
 
 **Salas** (se renderizan con el núcleo compartido de PixiJS en `shared/scene`: ver `ART_PIPELINE.md` §9)

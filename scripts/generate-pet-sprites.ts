@@ -141,11 +141,25 @@ function writeSheet(id: string, anims: AnimDef[], drawerFor: (a: AnimDef) => Fra
   return frames.length;
 }
 
+/**
+ * SVG a color de los 4 estados que usan la web (`pockai-sprite.ts`, 404) y el fallback de los
+ * clientes: idle (frame 0) y el frame central de happy, eat y sleep. Etapa adult.
+ */
+const PREVIEW_STATES: [state: string, frame: 'first' | 'mid'][] = [
+  ['idle', 'first'],
+  ['happy', 'mid'],
+  ['eat', 'mid'],
+  ['sleep', 'mid'],
+];
+
 function writePreviewSvg(sp: SpeciesArt, palette: Palette) {
-  const idle = PET_ANIMATIONS.find((a) => a.name === 'idle')!;
-  const ctx = ctxFor('color', palette, 0);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">${characterFrame(sp, idle)(ctx, 0, idle.frames)}</svg>\n`;
-  writeFileSync(join(ASSETS, 'sprites', `${sp.id}_idle.svg`), svg);
+  for (const [state, which] of PREVIEW_STATES) {
+    const anim = PET_ANIMATIONS.find((a) => a.name === state)!;
+    const i = which === 'first' ? 0 : Math.floor(anim.frames / 2);
+    const ctx = ctxFor('color', palette, 0);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">${characterFrame(sp, anim)(ctx, i, anim.frames)}</svg>\n`;
+    writeFileSync(join(ASSETS, 'sprites', `${sp.id}_${state}.svg`), svg);
+  }
 }
 
 function writeAnimationSpecs(species: { id: string; element: string }[]) {
