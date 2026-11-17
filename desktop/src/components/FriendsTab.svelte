@@ -115,11 +115,11 @@
   onMount(load);
 </script>
 
-<div class="soc">
+<div class="ui-stack">
   <!-- Añadir amigo -->
-  <form class="soc-card" on:submit|preventDefault={requestFriend}>
-    <span class="soc-card__title"><UserPlus size={15} /> Añadir amigo</span>
-    <div class="soc-inline">
+  <form class="ui-card" on:submit|preventDefault={requestFriend}>
+    <span class="ui-card__title"><UserPlus size={15} /> Añadir amigo</span>
+    <div class="ui-inline">
       <input
         class="input"
         type="text"
@@ -136,61 +136,61 @@
     </div>
   </form>
 
-  {#if error}<div class="soc-notice soc-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="soc-notice soc-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
+  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
 
   {#if loading && !friends.length}
-    <div class="soc-loading" aria-label="Cargando amigos">
-      <div class="soc-skel"></div>
-      <div class="soc-skel"></div>
-      <div class="soc-skel"></div>
+    <div class="ui-loading" aria-label="Cargando amigos">
+      <div class="ui-skel"></div>
+      <div class="ui-skel"></div>
+      <div class="ui-skel"></div>
     </div>
   {:else}
     <!-- Solicitudes -->
     {#if pending.length}
-      <section class="soc-list">
-        <div class="soc-head">
+      <section class="ui-list">
+        <div class="ui-head">
           <span class="label-caps">Solicitudes</span>
-          <span class="chip soc-count">{pending.length}</span>
+          <span class="chip ui-count">{pending.length}</span>
         </div>
         {#each incoming as f (f.id)}
-          <div class="soc-row request">
+          <div class="ui-row request">
             <SocialAvatar name={f.otherDisplayName} presence={presence[f.otherUserId] ?? 'unknown'} />
-            <div class="soc-row__body">
-              <span class="soc-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
-              <span class="soc-row__sub">Quiere ser tu amigo · {friendPetLabel(f)}</span>
+            <div class="ui-row__body">
+              <span class="ui-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
+              <span class="ui-row__sub">Quiere ser tu amigo · {friendPetLabel(f)}</span>
             </div>
-            <div class="soc-row__actions">
-              <button class="btn btn--icon soc-ibtn soc-ibtn--ok" title="Aceptar" aria-label="Aceptar a {f.otherDisplayName}" disabled={!!busy} on:click={() => accept(f)}>
+            <div class="ui-row__actions">
+              <button class="btn btn--icon ui-ibtn ui-ibtn--ok" title="Aceptar" aria-label="Aceptar a {f.otherDisplayName}" disabled={!!busy} on:click={() => accept(f)}>
                 <Check size={16} />
               </button>
-              <button class="btn btn--ghost btn--icon soc-ibtn soc-ibtn--no" title="Rechazar" aria-label="Rechazar a {f.otherDisplayName}" disabled={!!busy} on:click={() => decline(f)}>
+              <button class="btn btn--ghost btn--icon ui-ibtn ui-ibtn--no" title="Rechazar" aria-label="Rechazar a {f.otherDisplayName}" disabled={!!busy} on:click={() => decline(f)}>
                 <X size={16} />
               </button>
             </div>
           </div>
         {/each}
         {#each outgoing as f (f.id)}
-          <div class="soc-row">
+          <div class="ui-row">
             <SocialAvatar name={f.otherDisplayName} />
-            <div class="soc-row__body">
-              <span class="soc-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
-              <span class="soc-row__sub">Esperando su respuesta</span>
+            <div class="ui-row__body">
+              <span class="ui-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
+              <span class="ui-row__sub">Esperando su respuesta</span>
             </div>
-            <span class="chip soc-chip soc-chip--pending">Pendiente</span>
+            <span class="chip ui-chip ui-chip--pending">Pendiente</span>
           </div>
         {/each}
       </section>
     {/if}
 
     <!-- Amigos -->
-    <section class="soc-list">
-      <div class="soc-head">
+    <section class="ui-list">
+      <div class="ui-head">
         <span class="label-caps">Amigos</span>
-        <span class="chip soc-count">{accepted.length}</span>
+        <span class="chip ui-count">{accepted.length}</span>
         {#if onlineCount > 0}<span class="online-sum"><i></i>{onlineCount} en línea</span>{/if}
-        <div class="soc-head__end">
-          <button class="btn btn--ghost btn--icon soc-ibtn soc-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar amigos" on:click={load}>
+        <div class="ui-head__end">
+          <button class="btn btn--ghost btn--icon ui-ibtn ui-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar amigos" on:click={load}>
             <RefreshCw size={15} />
           </button>
         </div>
@@ -198,15 +198,15 @@
 
       {#each accepted as f (f.id)}
         {@const st = presence[f.otherUserId] ?? 'unknown'}
-        <div class="soc-row">
+        <div class="ui-row">
           <SocialAvatar name={f.otherDisplayName} presence={st} />
-          <div class="soc-row__body">
-            <span class="soc-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
-            <span class="soc-row__sub">{friendPetLabel(f)}</span>
+          <div class="ui-row__body">
+            <span class="ui-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
+            <span class="ui-row__sub">{friendPetLabel(f)}</span>
           </div>
-          {#if st === 'online'}<span class="chip soc-chip soc-chip--online">En línea</span>{/if}
+          {#if st === 'online'}<span class="chip ui-chip ui-chip--online">En línea</span>{/if}
           <button
-            class="btn btn--ghost btn--icon soc-ibtn"
+            class="btn btn--ghost btn--icon ui-ibtn"
             title="Visitar a {f.otherDisplayName}"
             aria-label="Visitar a {f.otherDisplayName}"
             on:click={() => dispatch('visit', f.otherUserId)}
@@ -215,8 +215,8 @@
           </button>
         </div>
       {:else}
-        <div class="soc-empty">
-          <span class="soc-empty__icon"><Users size={22} /></span>
+        <div class="ui-empty">
+          <span class="ui-empty__icon"><Users size={22} /></span>
           <strong>Aún no tienes amigos</strong>
           <p>Escribe arriba el @nickname de alguien para enviarle una petición.</p>
         </div>

@@ -135,18 +135,18 @@
   onMount(load);
 </script>
 
-<div class="soc">
-  {#if error}<div class="soc-notice soc-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="soc-notice soc-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+<div class="ui-stack">
+  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
+  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
 
   {#if loading && !friends.length}
-    <div class="soc-loading" aria-label="Cargando visitas">
-      <div class="soc-skel"></div>
-      <div class="soc-skel tall"></div>
+    <div class="ui-loading" aria-label="Cargando visitas">
+      <div class="ui-skel"></div>
+      <div class="ui-skel tall"></div>
     </div>
   {:else if accepted.length === 0}
-    <div class="soc-empty">
-      <span class="soc-empty__icon"><Users size={22} /></span>
+    <div class="ui-empty">
+      <span class="ui-empty__icon"><Users size={22} /></span>
       <strong>Nadie a quien visitar todavía</strong>
       <p>Cuando aceptéis una amistad podrás cuidar de su mascota y visitar su hábitat.</p>
       <button class="btn btn--sm btn--primary" on:click={() => dispatch('goFriends')}>Ir a Amigos</button>
@@ -154,10 +154,10 @@
   {:else}
     <!-- Selector de amigo -->
     <section>
-      <div class="soc-head">
+      <div class="ui-head">
         <span class="label-caps">¿A quién visitas?</span>
-        <div class="soc-head__end">
-          <button class="btn btn--ghost btn--icon soc-ibtn soc-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar visitas" on:click={load}>
+        <div class="ui-head__end">
+          <button class="btn btn--ghost btn--icon ui-ibtn ui-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar visitas" on:click={load}>
             <RefreshCw size={15} />
           </button>
         </div>
@@ -192,7 +192,7 @@
         <div class="visit-body">
           <div class="visit-title">
             <span class="pet-name">{pet ? pet.nickname || pet.speciesName : 'Sin mascota'}</span>
-            {#if pet?.nickname && pet.speciesName}<span class="chip soc-chip">{pet.speciesName}</span>{/if}
+            {#if pet?.nickname && pet.speciesName}<span class="chip ui-chip">{pet.speciesName}</span>{/if}
           </div>
 
           <div class="care-row">
@@ -225,7 +225,7 @@
               <Home size={16} /> {busy === 'start' ? 'Iniciando…' : `Iniciar visita · ⚡${VISIT_ENERGY_COST}`}
             </button>
           {/if}
-          <p class="soc-card__hint">
+          <p class="ui-card__hint">
             Tu pockai aparecerá en la pantalla de tu amigo con tu mensaje. Gasta ⚡{VISIT_ENERGY_COST} de energía y
             puedes volver a visitar al mismo amigo cada 10 min.
           </p>
@@ -236,10 +236,10 @@
 
   {#if !(loading && !friends.length)}
     <!-- Historial -->
-    <section class="soc-list">
-      <div class="soc-head">
+    <section class="ui-list">
+      <div class="ui-head">
         <span class="label-caps">Historial</span>
-        {#if history.length}<span class="chip soc-count">{history.length}</span>{/if}
+        {#if history.length}<span class="chip ui-count">{history.length}</span>{/if}
       </div>
       {#each history.slice(0, 15) as h (h.createdAt + h.petId + h.visitorId)}
         {@const a = ACTION_BY_ID[h.action]}
@@ -247,11 +247,11 @@
           <span class="hist-ico" style="--c: {a?.color ?? 'var(--theme-social)'}">
             <svelte:component this={a?.icon ?? PawPrint} size={14} />
           </span>
-          <div class="soc-row__body">
+          <div class="ui-row__body">
             <span class="hist-title">{friendName(h.visitorId)} · {a?.label ?? h.action}</span>
-            <span class="soc-row__sub">{when(h.createdAt)}</span>
+            <span class="ui-row__sub">{when(h.createdAt)}</span>
           </div>
-          <span class="chip soc-chip hist-xp">+{h.xpGained} XP</span>
+          <span class="chip ui-chip hist-xp">+{h.xpGained} XP</span>
         </div>
       {:else}
         <div class="hist-empty"><History size={16} /> Todavía no hay visitas.</div>
@@ -261,7 +261,7 @@
 </div>
 
 <style>
-  .soc-skel.tall {
+  .ui-skel.tall {
     height: 200px;
   }
 
