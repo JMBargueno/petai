@@ -1,8 +1,12 @@
 <script lang="ts">
   /** Amigos (feature 021): lista con presencia, pendientes a aceptar/rechazar y petición por email. */
-  import { onMount } from 'svelte';
+  import { onMount, createEventDispatcher } from 'svelte';
   import { api, type CoopFriend, type PresenceInfo } from '../lib/api';
-  import { pendingFriends, presenceState, friendPetLabel, type PresenceState } from '../lib/visitors';
+  import { pendingFriends, acceptedFriends, presenceState, friendPetLabel, type PresenceState } from '../lib/visitors';
+  import SocialAvatar from './SocialAvatar.svelte';
+  import { UserPlus, Check, X, Home, RefreshCw, Users, AlertCircle, CircleCheck, Send } from 'lucide-svelte';
+
+  const dispatch = createEventDispatcher<{ visit: string }>();
 
   let friends: CoopFriend[] = [];
   /** Presencia por userId ('unknown' = no se pudo cargar: punto gris). */
@@ -12,6 +16,17 @@
   let loading = true;
   let busy = '';
   let requestEmail = '';
+
+  $: pending = pendingFriends(friends);
+  $: incoming = pending.filter((f) => f.direction === 'incoming');
+  $: outgoing = pending.filter((f) => f.direction !== 'incoming');
+  /** Amigos en línea primero; luego por nombre. */
+  $: accepted = [...acceptedFriends(friends)].sort(
+    (a, b) =>
+      Number(presence[b.otherUserId] === 'online') - Number(presence[a.otherUserId] === 'online') ||
+      a.otherDisplayName.localeCompare(b.otherDisplayName),
+  );
+  $: onlineCount = accepted.filter((f) => presence[f.otherUserId] === 'online').length;
 
   async function load() {
     loading = true;
@@ -47,7 +62,7 @@
     ok = '';
     try {
       await api.acceptCoopFriend(f.id);
-      ok = `Ahora sois amigos con ${f.otherDisplayName} 🤝`;
+      ok = `Ahora sois amigos con ${f.otherDisplayName}.`;
       await load();
     } catch (e: any) {
       error = e.message;
@@ -92,91 +107,131 @@
   onMount(load);
 </script>
 
-{#if loading && !friends.length}
-  <div class="empty-msg">Cargando amigos…</div>
-{:else}
-  {#if error}<div class="error-msg">{error}</div>{/if}
-  {#if ok}<div class="ok-msg">{ok}</div>{/if}
-
-  {#each pendingFriends(friends) as f (f.id)}
-    <div class="friend-card pending">
-      <div class="friend-main">
-        <span class="p-dot {presence[f.otherUserId] ?? 'unknown'}" title="Presencia"></span>
-        <div class="friend-body">
-          <span class="friend-name">{f.otherDisplayName}</span>
-          <small>{friendPetLabel(f)} · {f.direction === 'incoming' ? 'quiere ser tu amigo' : 'esperando respuesta'}</small>
-        </div>
-      </div>
-      <div class="friend-actions">
-        <button class="btn-sm ok" disabled={!!busy} on:click={() => accept(f)}>
-          {busy === `accept-${f.id}` ? '…' : 'Aceptar'}
-        </button>
-        <button class="btn-sm no" disabled={!!busy} on:click={() => decline(f)}>
-          {busy === `decline-${f.id}` ? '…' : 'Rechazar'}
-        </button>
-      </div>
+<div class="soc">
+  <!-- Añadir amigo -->
+  <form class="soc-card" on:submit|preventDefault={requestFriend}>
+    <span class="soc-card__title"><UserPlus size={15} /> Añadir amigo</span>
+    <div class="soc-inline">
+      <input
+        class="input"
+        type="email"
+        placeholder="Email de tu amigo"
+        aria-label="Email de tu amigo"
+        bind:value={requestEmail}
+        disabled={busy === 'request'}
+      />
+      <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'request' || !requestEmail.trim()}>
+        <Send size={14} /> {busy === 'request' ? 'Enviando…' : 'Pedir'}
+      </button>
     </div>
-  {/each}
+  </form>
 
-  <div class="sec-title">Amigos ({friends.filter((f) => f.status === 'accepted').length})</div>
-  <div class="list">
-    {#each friends.filter((f) => f.status === 'accepted') as f (f.id)}
-      <div class="friend-card">
-        <div class="friend-main">
-          <span class="p-dot {presence[f.otherUserId] ?? 'unknown'}" title="Presencia"></span>
-          <div class="friend-body">
-            <span class="friend-name">{f.otherDisplayName}</span>
-            <small>{friendPetLabel(f)}</small>
-          </div>
+  {#if error}<div class="soc-notice soc-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
+  {#if ok}<div class="soc-notice soc-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+
+  {#if loading && !friends.length}
+    <div class="soc-loading" aria-label="Cargando amigos">
+      <div class="soc-skel"></div>
+      <div class="soc-skel"></div>
+      <div class="soc-skel"></div>
+    </div>
+  {:else}
+    <!-- Solicitudes -->
+    {#if pending.length}
+      <section class="soc-list">
+        <div class="soc-head">
+          <span class="label-caps">Solicitudes</span>
+          <span class="chip soc-count">{pending.length}</span>
         </div>
-        <span class="p-state">{presence[f.otherUserId] === 'online' ? 'En línea' : presence[f.otherUserId] === 'offline' ? 'Ausente' : ''}</span>
+        {#each incoming as f (f.id)}
+          <div class="soc-row request">
+            <SocialAvatar name={f.otherDisplayName} presence={presence[f.otherUserId] ?? 'unknown'} />
+            <div class="soc-row__body">
+              <span class="soc-row__title">{f.otherDisplayName}</span>
+              <span class="soc-row__sub">Quiere ser tu amigo · {friendPetLabel(f)}</span>
+            </div>
+            <div class="soc-row__actions">
+              <button class="btn btn--icon soc-ibtn soc-ibtn--ok" title="Aceptar" aria-label="Aceptar a {f.otherDisplayName}" disabled={!!busy} on:click={() => accept(f)}>
+                <Check size={16} />
+              </button>
+              <button class="btn btn--ghost btn--icon soc-ibtn soc-ibtn--no" title="Rechazar" aria-label="Rechazar a {f.otherDisplayName}" disabled={!!busy} on:click={() => decline(f)}>
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        {/each}
+        {#each outgoing as f (f.id)}
+          <div class="soc-row">
+            <SocialAvatar name={f.otherDisplayName} />
+            <div class="soc-row__body">
+              <span class="soc-row__title">{f.otherDisplayName}</span>
+              <span class="soc-row__sub">Esperando su respuesta</span>
+            </div>
+            <span class="chip soc-chip soc-chip--pending">Pendiente</span>
+          </div>
+        {/each}
+      </section>
+    {/if}
+
+    <!-- Amigos -->
+    <section class="soc-list">
+      <div class="soc-head">
+        <span class="label-caps">Amigos</span>
+        <span class="chip soc-count">{accepted.length}</span>
+        {#if onlineCount > 0}<span class="online-sum"><i></i>{onlineCount} en línea</span>{/if}
+        <div class="soc-head__end">
+          <button class="btn btn--ghost btn--icon soc-ibtn soc-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar amigos" on:click={load}>
+            <RefreshCw size={15} />
+          </button>
+        </div>
       </div>
-    {:else}
-      <div class="empty-msg">Aún no tienes amigos. Pide una amistad abajo 👇</div>
-    {/each}
-  </div>
 
-  <div class="sec-title">Pedir amistad</div>
-  <div class="form-row">
-    <input
-      class="input"
-      type="email"
-      placeholder="Email de tu amigo"
-      bind:value={requestEmail}
-      disabled={busy === 'request'}
-    />
-    <button class="btn-sm primary" disabled={busy === 'request' || !requestEmail.trim()} on:click={requestFriend}>
-      {busy === 'request' ? '…' : 'Pedir'}
-    </button>
-  </div>
-
-  <button class="primary" on:click={load}>↻ Actualizar</button>
-{/if}
+      {#each accepted as f (f.id)}
+        {@const st = presence[f.otherUserId] ?? 'unknown'}
+        <div class="soc-row">
+          <SocialAvatar name={f.otherDisplayName} presence={st} />
+          <div class="soc-row__body">
+            <span class="soc-row__title">{f.otherDisplayName}</span>
+            <span class="soc-row__sub">{friendPetLabel(f)}</span>
+          </div>
+          {#if st === 'online'}<span class="chip soc-chip soc-chip--online">En línea</span>{/if}
+          <button
+            class="btn btn--ghost btn--icon soc-ibtn"
+            title="Visitar a {f.otherDisplayName}"
+            aria-label="Visitar a {f.otherDisplayName}"
+            on:click={() => dispatch('visit', f.otherUserId)}
+          >
+            <Home size={16} />
+          </button>
+        </div>
+      {:else}
+        <div class="soc-empty">
+          <span class="soc-empty__icon"><Users size={22} /></span>
+          <strong>Aún no tienes amigos</strong>
+          <p>Escribe arriba el email de alguien para enviarle una petición.</p>
+        </div>
+      {/each}
+    </section>
+  {/if}
+</div>
 
 <style>
-  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 12px 0; }
-  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
-  .ok-msg { font-size: 12px; color: var(--success-ink); text-align: center; background: color-mix(in srgb, var(--success) 12%, var(--surface)); border: 1px solid var(--success); border-radius: var(--radius-2xl); padding: 8px; margin: 0; }
-  .sec-title { font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
-  .list { display: flex; flex-direction: column; gap: 6px; }
-  .friend-card { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .friend-card.pending { border-color: color-mix(in srgb, var(--color-sunburst) 60%, transparent); }
-  .friend-main { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
-  .friend-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-  .friend-name { font-size: 13px; font-weight: 600; }
-  .friend-body small { font-size: 11px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .p-state { font-size: 10px; color: var(--ink-muted); white-space: nowrap; }
-  .p-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--ink-muted); opacity: 0.5; }
-  .p-dot.online { background: var(--success); opacity: 1; }
-  .p-dot.offline { background: var(--ink-muted); opacity: 0.7; }
-  .p-dot.unknown { opacity: 0.4; }
-  .friend-actions { display: flex; gap: 4px; }
-  .btn-sm { padding: 5px 9px; border: none; border-radius: var(--radius-2xl); font-size: 12px; font-weight: 700; cursor: pointer; }
-  .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-sm.ok { background: var(--success); color: var(--success-ink); }
-  .btn-sm.no { background: color-mix(in srgb, var(--danger) 18%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); }
-  .btn-sm.primary { background: var(--accent); color: var(--on-color); white-space: nowrap; }
-  .form-row { display: flex; gap: 6px; }
-  .input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface); font-size: 13px; color: var(--ink); }
-  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
+  .request {
+    border-color: color-mix(in srgb, var(--color-sunburst) 70%, var(--line));
+    background: color-mix(in srgb, var(--color-sunburst) 10%, var(--surface));
+  }
+  .online-sum {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .online-sum i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--theme-social);
+  }
 </style>
