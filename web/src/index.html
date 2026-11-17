@@ -11,6 +11,29 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!--
+      Landing «Coming soon»: si la última configuración conocida la tiene activa (o aún no se conoce)
+      y no hay sesión verificada, se oculta la página prerenderizada hasta que la app decida.
+      Mismas rutas exentas que src/app/coming-soon/gate.ts. A los 5 s se muestra igualmente.
+    -->
+    <style>
+      html.gate-pending body { background: #0b0a14; }
+      html.gate-pending app-root { visibility: hidden; }
+    </style>
+    <script>
+      (function () {
+        try {
+          if (/^\/[a-z]{2}\/(login|register|forgot-password|verify-email|admin)(\/|$)/.test(location.pathname)) return;
+          var config = JSON.parse(localStorage.getItem('pockai.siteConfig') || 'null');
+          var session = JSON.parse(localStorage.getItem('pockai.session') || 'null');
+          if (config && !(config.comingSoon && config.comingSoon.enabled)) return;
+          if (config && session && session.user && session.user.emailVerified) return;
+          var root = document.documentElement;
+          root.classList.add('gate-pending');
+          setTimeout(function () { root.classList.remove('gate-pending'); }, 5000);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

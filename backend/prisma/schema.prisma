@@ -171,6 +171,11 @@ model AppSettings {
   id                     Int      @id @default(1)
   // Si está activo, el registro exige un código de invitación válido.
   registrationInviteOnly Boolean  @default(false)
+  // Landing "Coming soon": tapa toda la web a quien no tenga sesión con el correo verificado.
+  comingSoonEnabled          Boolean   @default(false)
+  // Cuenta atrás de la landing (solo se muestra si está activa y hay fecha futura).
+  comingSoonCountdownEnabled Boolean   @default(false)
+  comingSoonLaunchAt         DateTime?
   updatedAt              DateTime @updatedAt
 }
 

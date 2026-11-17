@@ -23,6 +23,7 @@ export default [
       section('eventos', () => import('./features/events').then((m) => m.Events)),
       section('usuarios', () => import('./features/users').then((m) => m.Users)),
       section('invitaciones', () => import('./features/invites').then((m) => m.Invites)),
+      section('sitio', () => import('./features/site').then((m) => m.Site)),
       section('correos', () => import('./features/emails').then((m) => m.Emails)),
       section('pockais', () => import('./features/pockais').then((m) => m.Pockais)),
       section('facturacion', () => import('./features/billing').then((m) => m.Billing)),
