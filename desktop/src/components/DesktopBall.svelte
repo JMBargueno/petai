@@ -1,64 +1,99 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  import type { BallState } from '../lib/toys/toyPhysics';
+  import { createEventDispatcher, onDestroy } from 'svelte';
+  import { calculateThrowVelocity, type PointerSample } from '../lib/physics/petPhysics';
+  import { BALL_MAX_THROW_SPEED, type BallState } from '../lib/toys/toyPhysics';
 
   export let ball: BallState;
-  export let isGrabbed: boolean = false;
 
-  const dispatch = createEventDispatcher();
+  /**
+   * Eventos: `grab` al agarrarla, `drag {x,y}` mientras se arrastra, `throw {vx,vy}` al soltarla
+   * y `kick {vx,vy}` con un clic simple. El padre es el dueño del estado de la pelota.
+   */
+  const dispatch = createEventDispatcher<{
+    grab: void;
+    drag: { x: number; y: number };
+    throw: { vx: number; vy: number };
+    kick: { vx: number; vy: number };
+  }>();
 
+  /** Píxeles de movimiento a partir de los cuales el gesto es un arrastre y no un clic. */
+  const DRAG_THRESHOLD = 4;
+
+  let isGrabbed = false;
+  let dragMoved = false;
+  let downX = 0;
+  let downY = 0;
   let dragStartX = 0;
   let dragStartY = 0;
-  let lastX = 0;
-  let lastY = 0;
-  let lastTime = 0;
-  let rotation = 0;
+  let samples: PointerSample[] = [];
 
-  $: if (ball.vx !== 0) {
-    rotation += (ball.vx * 0.05);
+  // Rotación según la distancia recorrida (rodar sin deslizar): Δx / r radianes
+  let rotation = 0;
+  let prevX = ball.x;
+  $: {
+    const dx = ball.x - prevX;
+    prevX = ball.x;
+    rotation += (dx / ball.radius) * (180 / Math.PI);
   }
 
   function handleMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
     isGrabbed = true;
+    dragMoved = false;
+    downX = e.clientX;
+    downY = e.clientY;
     dragStartX = e.clientX - ball.x;
     dragStartY = e.clientY - ball.y;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    lastTime = performance.now();
+    samples = [{ x: e.clientX, y: e.clientY, time: performance.now() }];
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    dispatch('grab');
     e.stopPropagation();
   }
 
   function handleMouseMove(e: MouseEvent) {
     if (!isGrabbed) return;
-    ball.x = e.clientX - dragStartX;
-    ball.y = e.clientY - dragStartY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    lastTime = performance.now();
+    if (Math.hypot(e.clientX - downX, e.clientY - downY) > DRAG_THRESHOLD) dragMoved = true;
+    samples.push({ x: e.clientX, y: e.clientY, time: performance.now() });
+    if (samples.length > 20) samples.shift();
+    dispatch('drag', { x: e.clientX - dragStartX, y: e.clientY - dragStartY });
   }
 
-  function handleMouseUp(e: MouseEvent) {
-    if (!isGrabbed) return;
-    isGrabbed = false;
+  function stopListening() {
     window.removeEventListener('mousemove', handleMouseMove);
     window.removeEventListener('mouseup', handleMouseUp);
+  }
 
-    const now = performance.now();
-    const dt = Math.max(0.016, (now - lastTime) / 1000);
-    const vx = (e.clientX - lastX) / dt;
-    const vy = (e.clientY - lastY) / dt;
+  function handleMouseUp() {
+    if (!isGrabbed) return;
+    isGrabbed = false;
+    stopListening();
 
-    dispatch('throw', { vx: vx * 0.7, vy: vy * 0.7 });
+    const { vx, vy } = dragMoved
+      ? calculateThrowVelocity(samples, {
+          releaseTime: performance.now(),
+          maxSpeed: BALL_MAX_THROW_SPEED,
+        })
+      : { vx: 0, vy: 0 };
+    dispatch('throw', { vx, vy });
+  }
+
+  function kickRandom() {
+    // Clic simple: un saltito simpático
+    dispatch('kick', { vx: (Math.random() - 0.5) * 200, vy: -320 });
   }
 
   function handleClick(e: MouseEvent) {
-    // Si se hace clic simple, darle un saltito simpático
-    dispatch('kick', { vx: (Math.random() - 0.5) * 200, vy: -320 });
     e.stopPropagation();
+    // El clic que sigue a un arrastre no es una patada
+    if (dragMoved) {
+      dragMoved = false;
+      return;
+    }
+    kickRandom();
   }
+
+  onDestroy(stopListening);
 </script>
 
 <div
@@ -69,7 +104,7 @@
   style="left: {ball.x}px; top: {ball.y}px; width: {ball.radius * 2}px; height: {ball.radius * 2}px;"
   on:mousedown={handleMouseDown}
   on:click={handleClick}
-  on:keydown={(e) => e.key === 'Enter' && handleClick(e as any)}
+  on:keydown={(e) => e.key === 'Enter' && kickRandom()}
   title="Pelotita de juego (arrástrala para lanzar o haz clic para patear)"
 >
   <div class="ball-sphere" style="transform: rotate({rotation}deg);">
@@ -102,7 +137,6 @@
     border: 1.5px solid #222;
     box-shadow: inset -2px -3px 5px rgba(0, 0, 0, 0.35);
     overflow: hidden;
-    transition: transform 0.05s linear;
   }
 
   .ball-pattern {
