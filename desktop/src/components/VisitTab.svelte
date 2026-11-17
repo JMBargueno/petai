@@ -1,7 +1,14 @@
 <script lang="ts">
   /** Visitas (feature 021): cuidar la mascota de un amigo, visitar su hábitat en vivo y ver el historial. */
   import { onMount, createEventDispatcher } from 'svelte';
-  import { api, type CoopFriend, type CoopVisitLog, type CoopVisitResult } from '../lib/api';
+  import {
+    api,
+    VISIT_ENERGY_COST,
+    VISIT_MESSAGE_MAX,
+    type CoopFriend,
+    type CoopVisitLog,
+    type CoopVisitResult,
+  } from '../lib/api';
   import { acceptedFriends, friendPetLabel } from '../lib/visitors';
 
   const dispatch = createEventDispatcher();
@@ -16,6 +23,8 @@
   let selected: string = '';
   /** Visita en vivo en curso: otherUserId del amigo visitado (estado local). */
   let visiting: string = '';
+  /** Mensaje opcional que lleva tu pockai a la visita. */
+  let visitMessage = '';
 
   $: selectedFriend = friends.find((f) => f.otherUserId === selected) ?? null;
 
@@ -74,10 +83,12 @@
     error = '';
     ok = '';
     try {
-      await api.startHabitatVisit(f.otherUserId);
+      await api.startHabitatVisit(f.otherUserId, visitMessage);
       visiting = f.otherUserId;
-      ok = `¡Visitando el hábitat de ${f.otherDisplayName}! Su mascota aparecerá en tu pantalla. 🏡`;
+      visitMessage = '';
+      ok = `¡Tu pockai está de visita en el hábitat de ${f.otherDisplayName}! 🏡`;
       await load();
+      dispatch('refreshUser');
     } catch (e: any) {
       error = e.message;
     } finally {
@@ -141,11 +152,24 @@
           {busy === 'end' ? 'Terminando…' : 'Terminar visita'}
         </button>
       {:else}
+        <label class="msg-field">
+          <input
+            type="text"
+            bind:value={visitMessage}
+            maxlength={VISIT_MESSAGE_MAX}
+            placeholder="Deja un mensaje (opcional)"
+            disabled={!!busy}
+          />
+          <small class="msg-count">{visitMessage.length}/{VISIT_MESSAGE_MAX}</small>
+        </label>
         <button class="visit-btn" disabled={!!busy} on:click={startVisit}>
-          {busy === 'start' ? 'Iniciando…' : '🏡 Iniciar visita'}
+          {busy === 'start' ? 'Iniciando…' : `🏡 Iniciar visita · ⚡${VISIT_ENERGY_COST}`}
         </button>
       {/if}
-      <small class="visit-hint">Al iniciar la visita, su mascota aparecerá en tu escritorio junto a la tuya.</small>
+      <small class="visit-hint">
+        Tu pockai aparecerá en la pantalla de tu amigo con tu mensaje. Gasta ⚡{VISIT_ENERGY_COST} de energía y
+        puedes volver a visitar al mismo amigo cada 10 min.
+      </small>
     </div>
   {/if}
 
@@ -187,6 +211,10 @@
   .visit-btn { padding: 9px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: linear-gradient(90deg, var(--color-electric-blue), var(--accent)); color: var(--on-color); }
   .visit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .visit-btn.end { background: color-mix(in srgb, var(--danger) 15%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); }
+  .msg-field { display: flex; flex-direction: column; gap: 2px; }
+  .msg-field input { padding: 8px 10px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface); color: var(--ink); font-size: 12px; }
+  .msg-field input:focus { outline: none; border-color: var(--accent); }
+  .msg-count { align-self: flex-end; font-size: 10px; color: var(--ink-muted); }
   .visit-hint { font-size: 11px; color: var(--ink-muted); margin: 0; }
   .hist { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
   .hist-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-2xl); background: var(--surface-2); font-size: 12px; }

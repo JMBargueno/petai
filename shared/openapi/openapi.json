@@ -227,6 +227,7 @@
     },
     "/v1/habitat/visit": {
       "post": {
+        "description": "Gasta 10 de energía del pet visitante. Cooldown de 10 min por amigo y máx. 10 visitas en 24 h. Si ya hay una visita activa con ese amigo, la devuelve sin cobrar ni volver a notificar.",
         "operationId": "HabitatVisitController_start",
         "parameters": [],
         "requestBody": {
@@ -242,6 +243,11 @@
                   "ownerId": {
                     "type": "string",
                     "description": "Dueño del habitat visitado"
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 140,
+                    "description": "Mensaje corto opcional para el amigo"
                   }
                 }
               }

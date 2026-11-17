@@ -252,8 +252,14 @@ data class HabitatVisitor(
     val visitorName: String = "",
     val visitorHandle: String? = null,
     val pet: PetIdentity = PetIdentity(),
+    /** Mensaje corto que trae el visitante (≤140), si dejó alguno. */
+    val message: String? = null,
     val startedAt: String = "",
 )
+
+/** Límites de la visita en vivo (deben coincidir con el backend: habitat-visit.service.ts). */
+const val VISIT_MESSAGE_MAX = 140
+const val VISIT_ENERGY_COST = 10
 
 /** Evento `pet:action`: qué le acaba de pasar a la mascota para animarla. */
 @Serializable

@@ -46,6 +46,8 @@ import com.petai.app.data.ApiService
 import com.petai.app.data.CoopFriend
 import com.petai.app.data.CoopVisitLog
 import com.petai.app.data.Handle
+import com.petai.app.data.VISIT_ENERGY_COST
+import com.petai.app.data.VISIT_MESSAGE_MAX
 import kotlinx.coroutines.launch
 
 /**
@@ -122,10 +124,12 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
             when (sel) {
                 0 -> FriendsSection(friends.filter { it.status == "accepted" }, presence, visitingOwner, busy,
                     onVisit = { f, a -> act("Visita hecha.") { service.coopVisit(f.otherUserId, f.otherPet!!.petId, a) } },
-                    onStartVisit = { f ->
-                        act("Visitando en vivo.") { service.startHabitatVisit(f.otherUserId) }; visitingOwner = f.otherUserId
+                    onStartVisit = { f, message ->
+                        act("¡Tu pockai está de visita en el hábitat de ${f.otherDisplayName}!") {
+                            service.startHabitatVisit(f.otherUserId, message); visitingOwner = f.otherUserId
+                        }
                     }, onEndVisit = { f ->
-                        act("Visita terminada.") { service.endHabitatVisit() }; visitingOwner = null
+                        act("Visita terminada.") { service.endHabitatVisit(); visitingOwner = null }
                     })
                 1 -> RequestsSection(friends.filter { it.status == "pending" }, busy,
                     onAccept = { f -> act("Amistad aceptada.") { service.acceptCoopFriend(f.id) } },
@@ -144,7 +148,7 @@ private fun FriendsSection(
     visitingOwner: String?,
     busy: Boolean,
     onVisit: (CoopFriend, String) -> Unit,
-    onStartVisit: (CoopFriend) -> Unit,
+    onStartVisit: (CoopFriend, String) -> Unit,
     onEndVisit: (CoopFriend) -> Unit,
 ) {
     if (friends.isEmpty()) { Empty("Aún no tienes amigos aceptados. Solicita una amistad arriba."); return }
@@ -171,7 +175,23 @@ private fun FriendsSection(
                     if (visitingOwner == f.otherUserId) {
                         PrimaryButton("Terminar visita", { onEndVisit(f) }, enabled = !busy, icon = Lucide.LogOut)
                     } else {
-                        SecondaryButton("Iniciar visita en vivo", { onStartVisit(f) }, enabled = !busy, icon = Lucide.Users)
+                        var visitMessage by remember(f.otherUserId) { mutableStateOf("") }
+                        OutlinedTextField(
+                            visitMessage,
+                            { visitMessage = it.take(VISIT_MESSAGE_MAX) },
+                            label = { Text("Mensaje para tu amigo (opcional)") },
+                            supportingText = { Text("${visitMessage.length}/$VISIT_MESSAGE_MAX") },
+                            singleLine = true,
+                            enabled = !busy,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        SecondaryButton(
+                            "Iniciar visita en vivo · ⚡$VISIT_ENERGY_COST",
+                            { onStartVisit(f, visitMessage) },
+                            enabled = !busy,
+                            icon = Lucide.Users,
+                        )
                     }
                 } else {
                     Text("Tu amigo aún no tiene un pet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
