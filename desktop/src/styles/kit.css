@@ -722,6 +722,7 @@
 }
 .ui-switch__track {
   position: relative;
+  display: block;
   flex-shrink: 0;
   width: 36px;
   height: 20px;

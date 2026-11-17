@@ -25,6 +25,7 @@ export function elementMeta(el: string | null | undefined): Meta {
 
 export const RARITIES: Record<string, Meta> = {
   common: { label: 'Común', icon: 'circle', color: 'var(--rarity-common)' },
+  normal: { label: 'Común', icon: 'circle', color: 'var(--rarity-common)' },
   rare: { label: 'Rara', icon: 'star', color: 'var(--rarity-rare)' },
   super_rare: { label: 'Súper rara', icon: 'xp', color: 'var(--rarity-super-rare)' },
   'super-rare': { label: 'Súper rara', icon: 'xp', color: 'var(--rarity-super-rare)' },
