@@ -193,8 +193,33 @@ export const LIFE_WELCOME = {
   icon: 'heart' as const,
   color: 'mint-pop' as const,
   title: $localize`:@@lore.life.welcome.t:Letargo Melancólico`,
-  body: $localize`:@@lore.life.welcome.b:Si desapareces días, el Santuario se enfría: se acumula estática, se agota el éter y la soledad opaca su núcleo. No muere —un espíritu de datos es inmortal en el servidor— pero se debilita. Cuando vuelves, el propio acto de abrir el Santuario le envía un destello cálido que rompe el frío.`,
+  body: $localize`:@@lore.life.welcome.b:Si desapareces días, el Santuario se enfría: se acumula estática, se agota el éter y la soledad opaca su núcleo. No muere —un espíritu de datos es inmortal en el servidor— pero se debilita. Cuando vuelves, el propio acto de abrir el Santuario le envía un destello cálido que rompe el frío… y te cuenta lo que ha vivido mientras tanto.`,
 };
+
+/** La Huella del Custodio: carácter, recuerdos y vida en el Éter (sin mecánica interna). */
+export const MARK_CARDS = [
+  {
+    icon: 'leaf' as const,
+    color: 'mint-pop' as const,
+    kicker: $localize`:@@lore.mark.1.k:Cómo lo crías`,
+    title: $localize`:@@lore.mark.1.t:El Carácter`,
+    body: $localize`:@@lore.mark.1.b:El que juega y sale de aventura contigo se vuelve curioso y atrevido; el que crece tranquilo en su Santuario, reservado y cariñoso. Su carácter tiñe cómo habla, cómo te consuela y hasta cómo se planta en el Coliseo.`,
+  },
+  {
+    icon: 'heart' as const,
+    color: 'lavender' as const,
+    kicker: $localize`:@@lore.mark.2.k:Lo que atesora`,
+    title: $localize`:@@lore.mark.2.t:El Cristal de Recuerdos`,
+    body: $localize`:@@lore.mark.2.b:No lo guarda todo: atesora lo que le importa. Momentos concretos, lo que aprende de ti y del mundo, y lo que siente por ti, por otros Custodios y por otros pockai. Lo que no deja huella se disuelve en el Éter.`,
+  },
+  {
+    icon: 'moon' as const,
+    color: 'electric-blue' as const,
+    kicker: $localize`:@@lore.mark.3.k:Cuando no estás`,
+    title: $localize`:@@lore.mark.3.t:La Vida en el Éter`,
+    body: $localize`:@@lore.mark.3.b:Al cerrar el Santuario no se queda congelado: duerme, juega, explora, a veces encuentra pequeños tesoros y visita los Santuarios de tus amigos. Cuando vuelves, te lo cuenta a su manera.`,
+  },
+];
 
 export const COLISEUM_CARDS = [
   {
@@ -284,6 +309,9 @@ export const GLOSSARY = [
   { app: $localize`:@@lore.gloss.11.a:Huevo`, lore: $localize`:@@lore.gloss.11.l:Códice Latente` },
   { app: $localize`:@@lore.gloss.12.a:Sueño`, lore: $localize`:@@lore.gloss.12.l:Desfragmentación` },
   { app: $localize`:@@lore.gloss.13.a:Abandono`, lore: $localize`:@@lore.gloss.13.l:Letargo Melancólico` },
+  { app: $localize`:@@lore.gloss.23.a:Personalidad`, lore: $localize`:@@lore.gloss.23.l:Carácter · Huella del Custodio` },
+  { app: $localize`:@@lore.gloss.24.a:Memoria`, lore: $localize`:@@lore.gloss.24.l:Cristal de Recuerdos` },
+  { app: $localize`:@@lore.gloss.25.a:Vida mientras no estás`, lore: $localize`:@@lore.gloss.25.l:Vida en el Éter` },
   { app: $localize`:@@lore.gloss.15.a:Clan`, lore: $localize`:@@lore.gloss.15.l:Nexo de Resonancia` },
   { app: $localize`:@@lore.gloss.16.a:Creador del clan`, lore: $localize`:@@lore.gloss.16.l:Forjador del Nexo` },
   { app: $localize`:@@lore.gloss.17.a:Administrador del clan`, lore: $localize`:@@lore.gloss.17.l:Guardián` },

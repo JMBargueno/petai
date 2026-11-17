@@ -35,7 +35,7 @@ describe('Landing', () => {
     expect(el.querySelectorAll('main .band').length).toBe(7);
     expect(el.querySelector('.species__card, #rarezas, #arena-a-fondo')).toBeNull();
     const links = [...el.querySelectorAll('.feature__link')].map((a) => a.getAttribute('href'));
-    expect(links).toEqual(['/es/pockais', '/es/arena', '/es/lore#despertar']);
+    expect(links).toEqual(['/es/pockais', '/es/arena', '/es/lore#despertar', '/es/lore#huella']);
     const pages = [...el.querySelectorAll('.site-menu__page')].map((a) => a.getAttribute('href'));
     expect(pages).toEqual(['/es/', '/es/pockais', '/es/arena', '/es/lore']);
   });

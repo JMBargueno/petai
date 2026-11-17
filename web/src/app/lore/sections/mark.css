@@ -1,0 +1,46 @@
+/* ───── La Huella del Custodio: carácter, recuerdos y vida en el Éter ───── */
+.mark {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mark__card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  justify-items: start;
+  padding: clamp(24px, 3vw, 36px);
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-cards-elevated);
+  background:
+    radial-gradient(70% 80% at 100% 0%, color-mix(in srgb, var(--color-mint-pop) 18%, transparent) 0%, transparent 60%),
+    var(--surface);
+  box-shadow: var(--shadow-3);
+}
+.mark__card h3 {
+  font-family: var(--font-lateral);
+  font-size: clamp(24px, 2.6vw, 32px);
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.mark__card p {
+  color: var(--ink-muted);
+  font-size: 16px;
+}
+.mark__kicker {
+  margin-block-start: 8px;
+  opacity: 0.8;
+}
+.mark__saying {
+  max-inline-size: 60ch;
+  margin: clamp(24px, 4vw, 40px) auto 0;
+  color: var(--ink-muted);
+  font-size: 17px;
+  font-style: italic;
+  text-align: center;
+}

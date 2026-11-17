@@ -41,10 +41,7 @@ La app es multiplataforma: un backend autoritativo y varios clientes que muestra
 
 ### Inteligencia (IA)
 - Conecta tu propia API key (BYOK) o un Hermes Agent. Las keys se cifran en el servidor y nunca vuelven a la app; solo se muestra una máscara.
-- **Personalidad viva** (spec 36): cinco dimensiones de 0 a 100 —Curiosidad, Sociabilidad, Valentía, Afectividad y Temperamento—, cada rango con su keyword (p. ej. temperamento 0-19 *calm*, 20-39 *energetic*). Nacen del sesgo de la especie y cambian con lo que vive la mascota: dos criaturas iguales acaban siendo distintas según cómo se las cuide. Influyen en la conversación, las reacciones (acción + animación), la vida autónoma y las decisiones en combate.
-- **Memoria en tres capas**: episódica (acontecimientos), semántica (lo que aprende de ti y del mundo) y emocional (relaciones contigo, con otros entrenadores y con otros Pockai), con capacidad según inteligencia y plan. El backend elige solo los recuerdos relevantes para cada mensaje.
-- **Vida autónoma** sin IA permanente: mientras no estás, descansa, juega, explora, encuentra objetos y visita a las mascotas de tus amigos, simulado por intervalos de forma determinista y sin coste de LLM. Luego te lo cuenta.
-- Cada mensaje pasa por un orquestador: contexto + memoria + personalidad → LLM → validación con reglas de juego → efectos → respuesta, animación y memoria. Detalle en [`docs/specs/spec-36-cerebro-pockai.md`](docs/specs/spec-36-cerebro-pockai.md).
+- **Carácter propio**: cada Pockai nace con el temperamento de su especie, pero cambia según cómo lo cuides. Recuerda lo que vivís juntos y lo que siente por ti y por otros Pockai, y cuando no estás sigue a lo suyo: descansa, juega, explora y visita a las mascotas de tus amigos. Al volver, te lo cuenta. Detalle técnico (equipo) en [`docs/specs/spec-36-cerebro-pockai.md`](docs/specs/spec-36-cerebro-pockai.md).
 - Su estadística `intelligence` sube al conversar y desbloquea tres niveles:
   1. **Charla**: conversación en streaming.
   2. **Memoria**: resume conversaciones y recuerda hechos. Puedes ver y borrar cada recuerdo.
