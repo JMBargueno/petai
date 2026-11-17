@@ -263,7 +263,8 @@ Entrada del usuario
   └─ Respuesta + animación + memoria
        ├─ evento `done` del stream incluye `behavior: { action, animation, emote }`
        └─ episodio si merece la pena (mal día, buena noticia, cariño, regañina) + relación con el
-          entrenador según el sentimiento
+          entrenador según el sentimiento, solo en mensajes significativos (con episodio o
+          |sentimiento| ≥ 0.5): un saludo o una charla neutra no crean ni mueven recuerdos
 ```
 
 ### 6.1 Ejemplo: «Hoy he tenido un día bastante malo»
