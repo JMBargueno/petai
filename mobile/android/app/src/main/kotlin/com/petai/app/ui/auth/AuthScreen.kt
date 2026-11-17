@@ -49,6 +49,8 @@ fun AuthScreen(
     onRegisterMode: () -> Unit,
     onCheckHandle: suspend (String) -> HandleAvailability,
     onSubmit: (register: Boolean, email: String, password: String, name: String, inviteCode: String, handle: String, onResult: (String?) -> Unit) -> Unit,
+    /** «¿Has olvidado tu contraseña?»: recibe el correo escrito para rellenar la recuperación. */
+    onForgot: (email: String) -> Unit = {},
 ) {
     var register by rememberSaveable { mutableStateOf(false) }
     var email by rememberSaveable { mutableStateOf("") }
@@ -142,6 +144,11 @@ fun AuthScreen(
                 onDone = { focus.clearFocus(); submit() },
             ),
         )
+        if (!register) {
+            TextButton(onClick = { onForgot(email.trim()) }, modifier = Modifier.align(Alignment.End)) {
+                Text("¿Has olvidado tu contraseña?")
+            }
+        }
         if (register) {
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(

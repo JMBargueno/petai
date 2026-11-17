@@ -35,8 +35,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.petai.app.ui.account.AccountScreen
+import androidx.activity.compose.BackHandler
 import com.petai.app.ui.auth.AuthScreen
 import com.petai.app.ui.auth.ChooseHandleScreen
+import com.petai.app.ui.auth.ForgotPasswordScreen
 import com.petai.app.ui.auth.VerifyEmailScreen
 import com.petai.app.ui.chat.ChatScreen
 import com.petai.app.ui.chat.ChatViewModel
@@ -82,13 +84,30 @@ fun AppRoot(vm: AppViewModel) {
 
     when (signedIn) {
         null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        false -> AuthScreen(
-            busy = state.busy,
-            inviteRequired = state.inviteRequired,
-            onRegisterMode = vm::loadRegistrationConfig,
-            onCheckHandle = vm::checkHandle,
-            onSubmit = vm::authenticate,
-        )
+        false -> {
+            // Sin sesión: acceso o, desde «¿Has olvidado tu contraseña?», la recuperación.
+            var forgotEmail by rememberSaveable { mutableStateOf<String?>(null) }
+            val email = forgotEmail
+            if (email != null) {
+                BackHandler { forgotEmail = null }
+                ForgotPasswordScreen(
+                    initialEmail = email,
+                    busy = state.busy,
+                    onRequest = vm::requestPasswordReset,
+                    onConfirm = vm::confirmPasswordReset,
+                    onBack = { forgotEmail = null },
+                )
+            } else {
+                AuthScreen(
+                    busy = state.busy,
+                    inviteRequired = state.inviteRequired,
+                    onRegisterMode = vm::loadRegistrationConfig,
+                    onCheckHandle = vm::checkHandle,
+                    onSubmit = vm::authenticate,
+                    onForgot = { forgotEmail = it },
+                )
+            }
+        }
         // Cuenta sin verificar: no se puede usar la app hasta confirmar el correo.
         true -> if (state.user?.emailVerified == false) {
             VerifyEmailScreen(

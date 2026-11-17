@@ -214,6 +214,47 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
         }
     }
 
+    // ---------- Recuperar contraseña ----------
+
+    /** Pide el código de recuperación. `onResult(null)` si se envió (o si la cuenta no existe: no se revela). */
+    fun requestPasswordReset(email: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true) }
+            val error = try {
+                service.requestPasswordReset(email)
+                null
+            } catch (e: ApiException) {
+                errorText(e)
+            } catch (e: Exception) {
+                "Algo salió mal. Inténtalo de nuevo."
+            }
+            _state.update { it.copy(busy = false) }
+            onResult(error)
+        }
+    }
+
+    /** Cambia la contraseña con el código y entra en la app. `onResult(null)` si fue bien. */
+    fun confirmPasswordReset(email: String, code: String, newPassword: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true) }
+            val error = try {
+                val user = service.confirmPasswordReset(email, code, newPassword)
+                _state.update { it.copy(user = user) }
+                null
+            } catch (e: ApiException) {
+                errorText(e)
+            } catch (e: Exception) {
+                "Algo salió mal. Inténtalo de nuevo."
+            }
+            _state.update { it.copy(busy = false) }
+            if (error == null) {
+                refreshAll()
+                message("Contraseña cambiada. Se ha cerrado la sesión en tus otros dispositivos.")
+            }
+            onResult(error)
+        }
+    }
+
     // ---------- Verificación del correo ----------
 
     /** La API ha respondido 403 EMAIL_NOT_VERIFIED: se muestra la pantalla de verificación. */
