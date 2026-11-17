@@ -890,13 +890,22 @@ export const api = {
     return minigameRequest<HabitatCatalog>('GET', '/v1/habitat/catalog');
   },
 
-  async placeHabitatFurniture(furnitureId: string) {
-    return minigameRequest<{ message: string; furnitureId: string; room: string }>(
-      'POST',
-      `/v1/habitat/furniture/${furnitureId}/place`,
-    );
+  /** Compra y coloca un mueble. Sin `at`, el servidor lo pone en el primer hueco donde quepa. */
+  async placeHabitatFurniture(furnitureId: string, at?: HabitatPlacement) {
+    return minigameRequest<HabitatPlaceResult>('POST', `/v1/habitat/furniture/${furnitureId}/place`, at);
   },
 
+  /** Mueve y/o gira un mueble ya colocado (sin coste). */
+  async moveHabitatItem(itemId: string, to: Partial<HabitatPlacement>) {
+    return minigameRequest<HabitatPlaceResult>('PATCH', `/v1/habitat/items/${itemId}`, to);
+  },
+
+  /** Quita un mueble concreto (por id de item). */
+  async removeHabitatItem(itemId: string) {
+    return minigameRequest<{ message: string; itemId: string; furnitureId: string }>('DELETE', `/v1/habitat/items/${itemId}`);
+  },
+
+  /** Quita el mueble más reciente de ese tipo. Preferible `removeHabitatItem`. */
   async removeHabitatFurniture(furnitureId: string) {
     return minigameRequest<{ message: string; furnitureId: string }>('DELETE', `/v1/habitat/furniture/${furnitureId}`);
   },
@@ -1690,7 +1699,21 @@ export interface HabitatCatalogRoom {
   gridHeight: number;
   unlockStage: string;
   description: string;
+  theme?: HabitatTheme;
 }
+
+/** Colores de la sala isométrica (habitats.json → theme). */
+export interface HabitatTheme {
+  wall: string;
+  wallShade: string;
+  floor: string;
+  floorAlt: string;
+  trim: string;
+  sky: string;
+  light: string;
+}
+
+export type HabitatInteraction = 'sleep' | 'eat' | 'play' | 'bathe' | 'sit';
 
 export interface HabitatFurniture {
   id: string;
@@ -1700,6 +1723,27 @@ export interface HabitatFurniture {
   currency: 'coins' | 'gems';
   buffs: Record<string, number>;
   description: string;
+  /** Huella [ancho (x), fondo (y)] con rotación 0. */
+  footprint?: [number, number];
+  mount?: 'floor' | 'wall';
+  interaction?: HabitatInteraction;
+}
+
+/** Celda ancla y giro (0–3, pasos de 90°) de un mueble. */
+export interface HabitatPlacement {
+  x: number;
+  y: number;
+  rotation?: number;
+}
+
+export interface HabitatPlaceResult {
+  message: string;
+  furnitureId: string;
+  room: string;
+  itemId: string;
+  x: number;
+  y: number;
+  rotation: number;
 }
 
 export interface HabitatCatalog {
@@ -1713,6 +1757,7 @@ export interface HabitatRoomItem {
   furnitureId: string;
   x: number;
   y: number;
+  rotation: number;
 }
 
 export interface HabitatRoom {
@@ -1723,6 +1768,7 @@ export interface HabitatRoom {
   gridHeight: number;
   unlocked: boolean;
   active: boolean;
+  theme: HabitatTheme | null;
   items: HabitatRoomItem[];
 }
 

@@ -80,7 +80,7 @@ Entrega **por fases, un PR por fase**. Cada fase se puede revisar y fusionar por
 - `generate-pet-sprites.ts`: adult en la raíz `species/<id>/` (sin duplicar) y `species/<id>/{baby,juvenile,final}/`; `validate-assets.js` valida cada etapa y `build-assets` las descubre solo. **Hecho (fase 3).**
 - `shared/scene` y los clientes cargan la hoja por `(especie, etapa)`, con caída a adult y luego a `ignisaur`.
 
-## Fase 4: backend de colocación (PR 4)
+## Fase 4: backend de colocación (PR 4) — hecha
 Sin cambios respecto a la "Fase 3" anterior:
 - `footprint`, `mount`, `interaction` y `theme` en `habitats.json` y en su esquema zod.
 - `rotation` en Prisma y validación de huella.

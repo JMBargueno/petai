@@ -643,12 +643,16 @@ model HabitatItem {
   habitatId   String
   furnitureId String
   roomId      String
+  /// Celda ancla (vértice superior de la huella en la vista isométrica).
   x           Int
   y           Int
+  /// Giro en pasos de 90° (0–3). Con 1 y 3 la huella [ancho, fondo] se intercambia.
+  rotation    Int      @default(0)
   purchasedAt DateTime @default(now())
   habitat     Habitat  @relation(fields: [habitatId], references: [id], onDelete: Cascade)
 
-  @@unique([petId, x, y, roomId])
+  // Sin @@unique por celda: un mueble ocupa varias celdas y los de pared no ocupan suelo. Las
+  // colisiones las valida HabitatService (con bloqueo de fila del hábitat).
   @@index([petId, roomId])
 }
 

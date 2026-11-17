@@ -10,7 +10,7 @@ El validador es `habitatsSchema` en `backend/src/modules/game-data/game-data.sch
 | `gridWidth`, `gridHeight` | int | hoy 14×10 en todas |
 | `unlockStage` | `baby \| juvenile \| adult \| final` | la sala se desbloquea con la etapa del Pockai |
 | `description` | string | |
-| `theme` *(migración)* | objeto | `{ wall, wallShade, floor, floorAlt, trim, sky, light }` en hex; hoy viven en el CSS de `desktop/src/components/HabitatTab.svelte` |
+| `theme` | objeto | `{ wall, wallShade, floor, floorAlt, trim, sky, light }` en hex (opcional; los clientes tienen uno por defecto) |
 
 ## Muebles (`furniture[]`)
 | Campo | Tipo | Notas |
@@ -22,16 +22,20 @@ El validador es `habitatsSchema` en `backend/src/modules/game-data/game-data.sch
 | `currency` | `coins \| gems` | |
 | `buffs` | `{ clave: número }` | claves válidas abajo; `{}` si es decorativo |
 | `description` | string | 1 frase; cita el buff |
-| `footprint` *(migración)* | `[w, d]` | celdas en x e y con rotación 0; al girar 90° se intercambian |
-| `mount` *(migración)* | `floor \| wall` | los de pared van en la fila `y = 0` (pared izquierda) o la columna `x = 0` (pared derecha) |
-| `interaction` *(migración)* | `sleep \| eat \| play \| bathe \| sit` | opcional; el Pockai lo usa según sus necesidades |
+| `footprint` | `[w, d]` | celdas en x e y con rotación 0; al girar 90° se intercambian |
+| `mount` | `floor \| wall` | los de pared van en la fila `y = 0` (pared izquierda) o la columna `x = 0` (pared derecha) |
+| `interaction` | `sleep \| eat \| play \| bathe \| sit` | opcional; el Pockai lo usa según sus necesidades |
 
 **Claves de buff:** `hygiene_decay_reduction`, `happiness_decay_reduction`, `energy_recovery_boost` y `combat_mood_bonus`. Los topes están en `buffCaps` con el sufijo `_max`. El cálculo está en `HabitatService.getActiveBuffs`: suma y recorta al tope.
 
 ## Colocación (backend)
-- `HabitatItem { roomId, x, y, rotation* }`: `(x, y)` es la celda ancla, el vértice superior de la huella en pantalla.
-- Hoy el servidor coloca cada mueble en la primera celda libre y existe `@@unique([petId, x, y, roomId])`.
-- Con la migración, se valida la huella completa y se añade `PATCH /habitat/items/:id` para mover y girar.
+- `HabitatItem { roomId, x, y, rotation }`: `(x, y)` es la celda ancla, el vértice superior de la huella en pantalla; `rotation` va de 0 a 3.
+- La geometría está en `backend/src/modules/habitat/habitat-layout.ts`. Los muebles de suelo chocan entre sí. Los de pared no ocupan suelo; van en `y = 0` con rotación par o en `x = 0` con impar.
+- API:
+  - `POST /habitat/furniture/:id/place` acepta `{ x, y, rotation }`; sin cuerpo, usa el primer hueco donde quepa.
+  - `PATCH /habitat/items/:itemId` mueve o gira sin coste.
+  - `DELETE /habitat/items/:itemId` quita un mueble concreto.
+- Si cambias la huella de un mueble ya vendido, `getHabitat` recoloca una vez los que dejen de ser válidos.
 
 ## Huellas habituales
 | Tipo | Huella | Montaje |

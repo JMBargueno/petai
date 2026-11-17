@@ -1,12 +1,23 @@
 import {
+  Body,
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Param,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ZodPipe } from '../../common/zod.pipe';
+import {
+  MoveFurnitureDto,
+  PlaceFurnitureDto,
+  moveFurnitureSchema,
+  placeFurnitureSchema,
+  type MoveFurnitureInput,
+  type PlaceFurnitureInput,
+} from './habitat.schemas';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { HabitatService } from './habitat.service';
@@ -28,20 +39,50 @@ export class HabitatController {
   }
 
   @Post('furniture/:id/place')
-  @ApiOperation({ summary: 'Colocar un mueble en una celda del hábitat' })
-  @ApiResponse({ status: 201, description: 'Mueble colocado' })
-  @ApiResponse({ status: 400, description: 'Celda ocupada o sala bloqueada' })
+  @ApiOperation({
+    summary: 'Comprar y colocar un mueble',
+    description:
+      'Con x/y (y rotation opcional) lo coloca en esa celda si cabe su huella; sin cuerpo, en el primer hueco libre.',
+  })
+  @ApiBody({ type: PlaceFurnitureDto, required: false })
+  @ApiResponse({ status: 201, description: 'Mueble colocado (incluye itemId, x, y y rotation)' })
+  @ApiResponse({ status: 400, description: 'Posición no válida, sin hueco, sin saldo o sala bloqueada' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
   @ApiResponse({ status: 404, description: 'Mueble o pet no encontrado' })
   placeFurniture(
     @CurrentUser() user: { id: string },
     @Param('id') furnitureId: string,
+    @Body(new ZodPipe(placeFurnitureSchema)) body: PlaceFurnitureInput,
   ) {
-    return this.habitatService.placeFurniture(user.id, furnitureId);
+    return this.habitatService.placeFurniture(user.id, furnitureId, body);
+  }
+
+  @Patch('items/:itemId')
+  @ApiOperation({ summary: 'Mover y/o girar un mueble ya colocado (sin coste)' })
+  @ApiBody({ type: MoveFurnitureDto })
+  @ApiResponse({ status: 200, description: 'Mueble movido' })
+  @ApiResponse({ status: 400, description: 'Posición no válida (fuera de la sala, ocupada o lejos de la pared)' })
+  @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiResponse({ status: 404, description: 'Mueble no encontrado en el hábitat' })
+  moveFurniture(
+    @CurrentUser() user: { id: string },
+    @Param('itemId') itemId: string,
+    @Body(new ZodPipe(moveFurnitureSchema)) body: MoveFurnitureInput,
+  ) {
+    return this.habitatService.moveFurniture(user.id, itemId, body);
+  }
+
+  @Delete('items/:itemId')
+  @ApiOperation({ summary: 'Quitar un mueble concreto del hábitat (por id de item)' })
+  @ApiResponse({ status: 200, description: 'Mueble removido' })
+  @ApiResponse({ status: 401, description: 'Token inválido' })
+  @ApiResponse({ status: 404, description: 'Mueble no encontrado en el hábitat' })
+  removeItem(@CurrentUser() user: { id: string }, @Param('itemId') itemId: string) {
+    return this.habitatService.removeItem(user.id, itemId);
   }
 
   @Delete('furniture/:id')
-  @ApiOperation({ summary: 'Quitar un mueble del hábitat' })
+  @ApiOperation({ summary: 'Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId' })
   @ApiResponse({ status: 200, description: 'Mueble removido' })
   @ApiResponse({ status: 401, description: 'Token inválido' })
   @ApiResponse({ status: 404, description: 'Mueble no encontrado' })

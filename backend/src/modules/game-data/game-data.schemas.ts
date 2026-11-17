@@ -350,6 +350,18 @@ export const habitatsSchema = z.object({
         gridHeight: z.number().int().positive(),
         unlockStage: z.enum(['baby', 'juvenile', 'adult', 'final']),
         description: z.string(),
+        /** Colores de la sala isométrica (GUIA_ARTISTICA §7.4). Opcional: los clientes tienen uno por defecto. */
+        theme: z
+          .object({
+            wall: hexColor,
+            wallShade: hexColor,
+            floor: hexColor,
+            floorAlt: hexColor,
+            trim: hexColor,
+            sky: hexColor,
+            light: hexColor,
+          })
+          .optional(),
       }),
     )
     .min(1),
@@ -362,6 +374,12 @@ export const habitatsSchema = z.object({
       currency: z.enum(['coins', 'gems']),
       buffs: z.record(z.string(), z.number()),
       description: z.string(),
+      /** Huella en celdas `[ancho (x), fondo (y)]` con rotación 0. Por defecto 1×1. */
+      footprint: z.tuple([z.number().int().min(1).max(4), z.number().int().min(1).max(4)]).default([1, 1]),
+      /** `floor`: ocupa celdas del suelo. `wall`: va pegado a una pared y no bloquea el suelo. */
+      mount: z.enum(['floor', 'wall']).default('floor'),
+      /** Uso que le da el Pockai (cama → dormir…). */
+      interaction: z.enum(['sleep', 'eat', 'play', 'bathe', 'sit']).optional(),
     }),
   ),
   buffCaps: z.record(z.string(), z.number().min(0)),
@@ -614,6 +632,11 @@ export function validateGameData(b: GameDataBundle): string[] {
       }
       furnIds.add(f.id);
       if (!roomIds.has(f.room)) errors.push(`Mueble ${f.id}: la sala '${f.room}' no existe en habitats.json`);
+      const room = ((habitats as any).rooms ?? []).find((r: any) => r.id === f.room);
+      const [fw, fd] = Array.isArray(f.footprint) ? f.footprint : [1, 1];
+      if (room && (Math.max(fw, fd) > Math.min(room.gridWidth, room.gridHeight))) {
+        errors.push(`Mueble ${f.id}: la huella ${fw}×${fd} no cabe girada en la sala '${f.room}'`);
+      }
     }
   }
 

@@ -6,7 +6,16 @@
       "gridWidth": 14,
       "gridHeight": 10,
       "unlockStage": "baby",
-      "description": "La primera sala de tu pet. Cozy y funcional."
+      "description": "La primera sala de tu pet. Cozy y funcional.",
+      "theme": {
+        "wall": "#fff3d6",
+        "wallShade": "#ffe0a8",
+        "floor": "#c98a4b",
+        "floorAlt": "#a26431",
+        "trim": "#8a5a2b",
+        "sky": "#8fd0ff",
+        "light": "#fff0be"
+      }
     },
     {
       "id": "jardin",
@@ -14,7 +23,16 @@
       "gridWidth": 14,
       "gridHeight": 10,
       "unlockStage": "juvenile",
-      "description": "Un espacio exterior con césped y flores."
+      "description": "Un espacio exterior con césped y flores.",
+      "theme": {
+        "wall": "#bfe8ff",
+        "wallShade": "#e2f6ff",
+        "floor": "#6cc56a",
+        "floorAlt": "#3f9a45",
+        "trim": "#2f7a35",
+        "sky": "#8fd0ff",
+        "light": "#ffffdc"
+      }
     },
     {
       "id": "santuario",
@@ -22,7 +40,16 @@
       "gridWidth": 14,
       "gridHeight": 10,
       "unlockStage": "adult",
-      "description": "Un lugar místico para la meditación y el descanso."
+      "description": "Un lugar místico para la meditación y el descanso.",
+      "theme": {
+        "wall": "#f4e7d1",
+        "wallShade": "#e2cfae",
+        "floor": "#b8834a",
+        "floorAlt": "#7e5426",
+        "trim": "#c0392b",
+        "sky": "#8fd0ff",
+        "light": "#ffd296"
+      }
     },
     {
       "id": "citafinal",
@@ -30,7 +57,16 @@
       "gridWidth": 14,
       "gridHeight": 10,
       "unlockStage": "final",
-      "description": "El espacio definitivo de tu pet, un legendario."
+      "description": "El espacio definitivo de tu pet, un legendario.",
+      "theme": {
+        "wall": "#e9ccff",
+        "wallShade": "#cdb4ff",
+        "floor": "#6d5bff",
+        "floorAlt": "#3d2fa8",
+        "trim": "#5c4ade",
+        "sky": "#3a2f7a",
+        "light": "#c8f0ff"
+      }
     }
   ],
   "furniture": [
@@ -40,8 +76,13 @@
       "room": "sala",
       "price": 400,
       "currency": "coins",
-      "buffs": { "hygiene_decay_reduction": 0.15 },
-      "description": "Reduce el decaimiento de higiene un 15%."
+      "buffs": {
+        "hygiene_decay_reduction": 0.15
+      },
+      "description": "Reduce el decaimiento de higiene un 15%.",
+      "footprint": [1, 1],
+      "mount": "floor",
+      "interaction": "bathe"
     },
     {
       "id": "soft_bed",
@@ -49,8 +90,13 @@
       "room": "sala",
       "price": 600,
       "currency": "coins",
-      "buffs": { "energy_recovery_boost": 0.20 },
-      "description": "Aumenta la recuperación de energía un 20% durante el sueño."
+      "buffs": {
+        "energy_recovery_boost": 0.2
+      },
+      "description": "Aumenta la recuperación de energía un 20% durante el sueño.",
+      "footprint": [2, 1],
+      "mount": "floor",
+      "interaction": "sleep"
     },
     {
       "id": "toy_ball",
@@ -58,8 +104,13 @@
       "room": "sala",
       "price": 400,
       "currency": "coins",
-      "buffs": { "happiness_decay_reduction": 0.10 },
-      "description": "Reduce el decaimiento de felicidad un 10%."
+      "buffs": {
+        "happiness_decay_reduction": 0.1
+      },
+      "description": "Reduce el decaimiento de felicidad un 10%.",
+      "footprint": [1, 1],
+      "mount": "floor",
+      "interaction": "play"
     },
     {
       "id": "wall_shelf",
@@ -68,7 +119,9 @@
       "price": 150,
       "currency": "coins",
       "buffs": {},
-      "description": "Decoración pura. Un rincón para tus recuerdos."
+      "description": "Decoración pura. Un rincón para tus recuerdos.",
+      "footprint": [2, 1],
+      "mount": "wall"
     },
     {
       "id": "flower_pot",
@@ -77,7 +130,9 @@
       "price": 100,
       "currency": "coins",
       "buffs": {},
-      "description": "Una planta decorativa para el jardín."
+      "description": "Una planta decorativa para el jardín.",
+      "footprint": [1, 1],
+      "mount": "floor"
     },
     {
       "id": "garden_bench",
@@ -85,8 +140,13 @@
       "room": "jardin",
       "price": 500,
       "currency": "coins",
-      "buffs": { "happiness_decay_reduction": 0.15 },
-      "description": "Un lugar tranquilo para descansar. Reduce el decaimiento de felicidad un 15%."
+      "buffs": {
+        "happiness_decay_reduction": 0.15
+      },
+      "description": "Un lugar tranquilo para descansar. Reduce el decaimiento de felicidad un 15%.",
+      "footprint": [2, 1],
+      "mount": "floor",
+      "interaction": "sit"
     },
     {
       "id": "garden_pond",
@@ -94,8 +154,13 @@
       "room": "jardin",
       "price": 800,
       "currency": "coins",
-      "buffs": { "hygiene_decay_reduction": 0.20 },
-      "description": "Un estanque sereno. Reduce el decaimiento de higiene un 20%."
+      "buffs": {
+        "hygiene_decay_reduction": 0.2
+      },
+      "description": "Un estanque sereno. Reduce el decaimiento de higiene un 20%.",
+      "footprint": [2, 2],
+      "mount": "floor",
+      "interaction": "bathe"
     },
     {
       "id": "shrine_altar",
@@ -103,8 +168,12 @@
       "room": "santuario",
       "price": 1,
       "currency": "gems",
-      "buffs": { "combat_mood_bonus": 0.05 },
-      "description": "Un altar místico que mejora el ánimo de combate un 5%."
+      "buffs": {
+        "combat_mood_bonus": 0.05
+      },
+      "description": "Un altar místico que mejora el ánimo de combate un 5%.",
+      "footprint": [2, 2],
+      "mount": "floor"
     },
     {
       "id": "crystal_lamp",
@@ -112,8 +181,13 @@
       "room": "santuario",
       "price": 900,
       "currency": "coins",
-      "buffs": { "energy_recovery_boost": 0.15, "happiness_decay_reduction": 0.10 },
-      "description": "Ilumina el santuario. +15% recuperación de energía, -10% decaimiento de felicidad."
+      "buffs": {
+        "energy_recovery_boost": 0.15,
+        "happiness_decay_reduction": 0.1
+      },
+      "description": "Ilumina el santuario. +15% recuperación de energía, -10% decaimiento de felicidad.",
+      "footprint": [1, 1],
+      "mount": "floor"
     },
     {
       "id": "final_throne",
@@ -121,8 +195,13 @@
       "room": "citafinal",
       "price": 2,
       "currency": "gems",
-      "buffs": { "combat_mood_bonus": 0.10 },
-      "description": "El trono de un legendario. +10% de ánimo de combate."
+      "buffs": {
+        "combat_mood_bonus": 0.1
+      },
+      "description": "El trono de un legendario. +10% de ánimo de combate.",
+      "footprint": [2, 2],
+      "mount": "floor",
+      "interaction": "sit"
     },
     {
       "id": "final_garden",
@@ -130,14 +209,19 @@
       "room": "citafinal",
       "price": 700,
       "currency": "coins",
-      "buffs": { "happiness_decay_reduction": 0.20, "hygiene_decay_reduction": 0.15 },
-      "description": "Un jardín extraordinario. Reduce decaimiento de felicidad 20% y higiene 15%."
+      "buffs": {
+        "happiness_decay_reduction": 0.2,
+        "hygiene_decay_reduction": 0.15
+      },
+      "description": "Un jardín extraordinario. Reduce decaimiento de felicidad 20% y higiene 15%.",
+      "footprint": [2, 2],
+      "mount": "floor"
     }
   ],
   "buffCaps": {
-    "hygiene_decay_reduction_max": 0.40,
-    "happiness_decay_reduction_max": 0.30,
-    "energy_recovery_boost_max": 0.40,
-    "combat_mood_bonus_max": 0.10
+    "hygiene_decay_reduction_max": 0.4,
+    "happiness_decay_reduction_max": 0.3,
+    "energy_recovery_boost_max": 0.4,
+    "combat_mood_bonus_max": 0.1
   }
 }
