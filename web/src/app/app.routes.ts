@@ -39,6 +39,23 @@ export const routes: Routes = [
     path: 'verify-email',
     loadComponent: () => import('./verify-email/verify-email').then((m) => m.VerifyEmail),
   },
+  // Cuenta del visitante (solo cliente): entrar, crear cuenta, recuperar la contraseña y su cuenta.
+  {
+    path: 'login',
+    loadComponent: () => import('./account/login').then((m) => m.Login),
+  },
+  {
+    path: 'register',
+    loadComponent: () => import('./account/register').then((m) => m.Register),
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./account/forgot-password').then((m) => m.ForgotPassword),
+  },
+  {
+    path: 'account',
+    loadComponent: () => import('./account/account').then((m) => m.Account),
+  },
   {
     // Panel oculto: no se enlaza desde la landing, no se prerenderiza y va en un chunk aparte.
     path: 'admin',

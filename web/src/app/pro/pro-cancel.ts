@@ -89,6 +89,6 @@ export class ProCancel {
   readonly navPages = navPages(this.locale);
   readonly navCta: NavLink = {
     label: 'Descargar',
-    href: `${this.homeUrl}#descargas`,
+    href: `${this.homeUrl}#descargar`,
   };
 }

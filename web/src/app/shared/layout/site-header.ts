@@ -1,4 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
+import { UserAuth } from '../auth/user-auth';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -7,6 +8,7 @@ import {
   afterNextRender,
   inject,
   input,
+  signal,
   viewChild,
 } from '@angular/core';
 
@@ -98,6 +100,51 @@ export interface NavLink {
               <path d="m4 7 8 6 8-6" />
             </svg>
           </a>
+          @if (mounted()) {
+            @if (auth.loggedIn()) {
+              @if (auth.isAdmin()) {
+                <!-- El panel solo existe en español (/es/admin). -->
+                <a
+                  class="icon-link btn btn--sm"
+                  href="/es/admin/"
+                  aria-label="Panel de administración"
+                  i18n-aria-label="@@nav.admin"
+                  title="Panel de administración"
+                  i18n-title="@@nav.admin"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                </a>
+              }
+              <a
+                class="icon-link btn btn--sm"
+                [href]="'/' + locale() + '/account'"
+                [attr.aria-current]="accountCurrent() ? 'page' : null"
+                aria-label="Tu cuenta"
+                i18n-aria-label="@@nav.account"
+                title="Tu cuenta"
+                i18n-title="@@nav.account"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+                </svg>
+                @if (!auth.verified()) {
+                  <span class="icon-link__dot" aria-hidden="true"></span>
+                }
+              </a>
+            } @else {
+              <a class="login-link btn btn--sm" [href]="'/' + locale() + '/login'">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+                </svg>
+                <span class="login-link__text" i18n="@@nav.login">Entrar</span>
+              </a>
+            }
+          }
           <a class="btn btn--filled btn--sm" [href]="cta().href">{{ cta().label }}</a>
         </div>
       </div>
@@ -162,6 +209,64 @@ export interface NavLink {
       border-color: transparent;
       background: var(--ink);
       color: var(--bg);
+    }
+    /* Cuenta y panel: mismos botones cuadrados con icono. */
+    .icon-link {
+      position: relative;
+      inline-size: 36px;
+      padding: 0;
+    }
+    .icon-link[aria-current='page'] {
+      border-color: transparent;
+      background: var(--ink);
+      color: var(--bg);
+    }
+    .icon-link svg {
+      inline-size: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .login-link svg {
+      display: none;
+      inline-size: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+    /* Móvil: «Entrar» se queda en icono y el correo de contacto (también en el pie) se oculta. */
+    @media (width < 480px) {
+      .contact-link {
+        display: none;
+      }
+      .login-link {
+        inline-size: 36px;
+        padding: 0;
+      }
+      .login-link svg {
+        display: block;
+      }
+      .login-link__text {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+    }
+    /* Aviso de correo sin verificar. */
+    .icon-link__dot {
+      position: absolute;
+      inset: 2px 2px auto auto;
+      inline-size: 9px;
+      aspect-ratio: 1;
+      border: 2px solid var(--surface);
+      border-radius: 50%;
+      background: var(--color-ember);
     }
     .contact-link svg {
       inline-size: 18px;
@@ -377,6 +482,13 @@ export class SiteHeader {
   readonly locale = input.required<string>();
   readonly langHrefs = input.required<{ es: string; en: string }>();
 
+  /** Estamos en /account: el icono de cuenta se marca como página actual. */
+  readonly accountCurrent = input(false);
+
+  protected readonly auth = inject(UserAuth);
+  /** La parte de la cuenta depende del navegador: no se prerenderiza (evita desajustes al hidratar). */
+  protected readonly mounted = signal(false);
+
   private readonly header = viewChild.required<ElementRef<HTMLElement>>('header');
   private readonly inner = viewChild.required<ElementRef<HTMLElement>>('inner');
   private readonly menu = viewChild.required<ElementRef<HTMLElement>>('menu');
@@ -384,6 +496,8 @@ export class SiteHeader {
   constructor() {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
+      this.mounted.set(true);
+      void this.auth.revalidate();
       const header = this.header().nativeElement;
       const inner = this.inner().nativeElement;
       const menu = this.menu().nativeElement;

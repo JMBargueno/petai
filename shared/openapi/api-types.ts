@@ -1798,7 +1798,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Descarga el instalador más reciente de la app de escritorio. Público. */
+        /** URL de descarga del instalador más reciente. Requiere sesión con el correo verificado. */
         get: operations["DesktopDownloadController_download"];
         put?: never;
         post?: never;
@@ -2064,6 +2064,41 @@ export interface paths {
         head?: never;
         /** Renombrar una mascota (auditoría: pet_rename) */
         patch: operations["AdminPetsController_rename"];
+        trace?: never;
+    };
+    "/v1/admin/site-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ajustes de la web pública (landing «Coming soon») */
+        get: operations["AdminSiteController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cambiar los ajustes de la web pública (queda auditado) */
+        patch: operations["AdminSiteController_set"];
+        trace?: never;
+    };
+    "/v1/site/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configuración pública de la web (registro y landing «Coming soon») */
+        get: operations["SiteController_config"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/missions": {
@@ -4902,6 +4937,10 @@ export interface components {
             /** @description Honeypot anti-spam: debe ir vacío */
             website?: string;
         };
+        DesktopDownloadDto: {
+            /** @description URL firmada y temporal (unos minutos) del instalador en GitHub */
+            url: string;
+        };
         RegistrationSettingsDto: {
             /** @description Si es true, el registro exige un código de invitación válido */
             inviteOnly: boolean;
@@ -4955,6 +4994,37 @@ export interface components {
         };
         CreatedInvitesDto: {
             items: components["schemas"]["InviteCodeDto"][];
+        };
+        SiteSettingsDto: {
+            /** @description Landing «Coming soon» activa: tapa la web a quien no tenga sesión verificada */
+            comingSoonEnabled: boolean;
+            /** @description Mostrar la cuenta atrás en la landing */
+            comingSoonCountdownEnabled: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de lanzamiento de la cuenta atrás
+             */
+            comingSoonLaunchAt: string | null;
+        };
+        UpdateSiteSettingsDto: {
+            comingSoonEnabled?: boolean;
+            comingSoonCountdownEnabled?: boolean;
+            /** Format: date-time */
+            comingSoonLaunchAt?: string | null;
+        };
+        SiteCountdownDto: {
+            enabled: boolean;
+            /** Format: date-time */
+            launchAt: string | null;
+        };
+        SiteComingSoonDto: {
+            enabled: boolean;
+            countdown: components["schemas"]["SiteCountdownDto"];
+        };
+        SiteConfigDto: {
+            /** @description Si es true, el registro exige un código de invitación */
+            inviteRequired: boolean;
+            comingSoon: components["schemas"]["SiteComingSoonDto"];
         };
         MissionRewardDto: {
             /**
@@ -7830,8 +7900,23 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Redirección a la descarga del instalador */
-            302: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DesktopDownloadDto"];
+                };
+            };
+            /** @description Sin sesión */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Correo sin verificar (code: EMAIL_NOT_VERIFIED) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8241,6 +8326,67 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AdminSiteController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSettingsDto"];
+                };
+            };
+        };
+    };
+    AdminSiteController_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSiteSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSettingsDto"];
+                };
+            };
+        };
+    };
+    SiteController_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteConfigDto"];
+                };
             };
         };
     };

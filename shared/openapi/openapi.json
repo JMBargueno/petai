@@ -3439,14 +3439,32 @@
           }
         ],
         "responses": {
-          "302": {
-            "description": "Redirección a la descarga del instalador"
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesktopDownloadDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión"
+          },
+          "403": {
+            "description": "Correo sin verificar (code: EMAIL_NOT_VERIFIED)"
           },
           "404": {
             "description": "Plataforma desconocida o sin instalador publicado"
           }
         },
-        "summary": "Descarga el instalador más reciente de la app de escritorio. Público.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "URL de descarga del instalador más reciente. Requiere sesión con el correo verificado.",
         "tags": [
           "Desktop updates"
         ]
@@ -4120,6 +4138,90 @@
         "summary": "Renombrar una mascota (auditoría: pet_rename)",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/v1/admin/site-settings": {
+      "get": {
+        "operationId": "AdminSiteController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajustes de la web pública (landing «Coming soon»)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminSiteController_set",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSiteSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar los ajustes de la web pública (queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/site/config": {
+      "get": {
+        "operationId": "SiteController_config",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteConfigDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Configuración pública de la web (registro y landing «Coming soon»)",
+        "tags": [
+          "Site"
         ]
       }
     },
@@ -10451,6 +10553,18 @@
           "message"
         ]
       },
+      "DesktopDownloadDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL firmada y temporal (unos minutos) del instalador en GitHub"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
       "RegistrationSettingsDto": {
         "type": "object",
         "properties": {
@@ -10616,6 +10730,94 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "SiteSettingsDto": {
+        "type": "object",
+        "properties": {
+          "comingSoonEnabled": {
+            "type": "boolean",
+            "description": "Landing «Coming soon» activa: tapa la web a quien no tenga sesión verificada"
+          },
+          "comingSoonCountdownEnabled": {
+            "type": "boolean",
+            "description": "Mostrar la cuenta atrás en la landing"
+          },
+          "comingSoonLaunchAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Fecha de lanzamiento de la cuenta atrás"
+          }
+        },
+        "required": [
+          "comingSoonEnabled",
+          "comingSoonCountdownEnabled",
+          "comingSoonLaunchAt"
+        ]
+      },
+      "UpdateSiteSettingsDto": {
+        "type": "object",
+        "properties": {
+          "comingSoonEnabled": {
+            "type": "boolean"
+          },
+          "comingSoonCountdownEnabled": {
+            "type": "boolean"
+          },
+          "comingSoonLaunchAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        }
+      },
+      "SiteCountdownDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "launchAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "enabled",
+          "launchAt"
+        ]
+      },
+      "SiteComingSoonDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "countdown": {
+            "$ref": "#/components/schemas/SiteCountdownDto"
+          }
+        },
+        "required": [
+          "enabled",
+          "countdown"
+        ]
+      },
+      "SiteConfigDto": {
+        "type": "object",
+        "properties": {
+          "inviteRequired": {
+            "type": "boolean",
+            "description": "Si es true, el registro exige un código de invitación"
+          },
+          "comingSoon": {
+            "$ref": "#/components/schemas/SiteComingSoonDto"
+          }
+        },
+        "required": [
+          "inviteRequired",
+          "comingSoon"
         ]
       },
       "MissionRewardDto": {

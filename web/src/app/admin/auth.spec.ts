@@ -69,7 +69,7 @@ describe('sesión del panel contra el backend', () => {
     expect(auth.can('users:role:assign')).toBe(true);
     expect(JSON.parse(String(calls[0].init.body))).toEqual({ email: 'sa@petai.local', password: 'Password123!' });
     expect(calls[1].init.headers['Authorization']).toBe('Bearer access-1');
-    expect(session.getItem('pockai.admin.session')).toContain('access-1');
+    expect(session.getItem('pockai.session')).toContain('access-1');
   });
 
   it('rechaza credenciales incorrectas', async () => {
@@ -89,7 +89,7 @@ describe('sesión del panel contra el backend', () => {
     expect(await auth.login('u@petai.local', 'Password123!')).toBe('Tu cuenta no tiene acceso al panel.');
     expect(auth.authenticated()).toBe(false);
     expect(calls.map((c) => c.key)).toContain('POST /v1/auth/logout');
-    expect(session.getItem('pockai.admin.session')).toBeNull();
+    expect(session.getItem('pockai.session')).toBeNull();
   });
 
   it('el guard manda al login sin sesión', async () => {
@@ -100,19 +100,19 @@ describe('sesión del panel contra el backend', () => {
   });
 
   it('el guard revalida el rol: si lo han degradado, fuera', async () => {
-    session.setItem('pockai.admin.session', JSON.stringify({ ...tokens(), user: SUPERADMIN }));
+    session.setItem('pockai.session', JSON.stringify({ ...tokens(), user: SUPERADMIN }));
     fakeServer({ 'GET /v1/me': () => [200, me('user', [])] });
     expect(String(await runGuard())).toBe('/admin/login');
   });
 
   it('el guard deja pasar si el rol sigue teniendo acceso', async () => {
-    session.setItem('pockai.admin.session', JSON.stringify({ ...tokens(), user: SUPERADMIN }));
+    session.setItem('pockai.session', JSON.stringify({ ...tokens(), user: SUPERADMIN }));
     fakeServer({ 'GET /v1/me': () => [200, SUPERADMIN] });
     expect(await runGuard()).toBe(true);
   });
 
   it('renueva el access token ante un 401 y repite la petición', async () => {
-    session.setItem('pockai.admin.session', JSON.stringify({ ...tokens(1), user: SUPERADMIN }));
+    session.setItem('pockai.session', JSON.stringify({ ...tokens(1), user: SUPERADMIN }));
     let meCalls = 0;
     fakeServer({
       'GET /v1/me': (init) => {
@@ -124,11 +124,11 @@ describe('sesión del panel contra el backend', () => {
     });
     expect(await TestBed.inject(AdminApi).request('/v1/me')).toEqual(SUPERADMIN);
     expect(meCalls).toBe(2);
-    expect(session.getItem('pockai.admin.session')).toContain('refresh-2');
+    expect(session.getItem('pockai.session')).toContain('refresh-2');
   });
 
   it('si el refresh falla, cierra la sesión local', async () => {
-    session.setItem('pockai.admin.session', JSON.stringify({ ...tokens(1), user: SUPERADMIN }));
+    session.setItem('pockai.session', JSON.stringify({ ...tokens(1), user: SUPERADMIN }));
     fakeServer({ 'GET /v1/me': () => [401, {}], 'POST /v1/auth/refresh': () => [401, {}] });
     const api = TestBed.inject(AdminApi);
     await expect(api.request('/v1/me')).rejects.toThrow('La sesión ha caducado');
@@ -136,7 +136,7 @@ describe('sesión del panel contra el backend', () => {
   });
 
   it('cerrar sesión revoca el refresh token', async () => {
-    session.setItem('pockai.admin.session', JSON.stringify({ ...tokens(), user: SUPERADMIN }));
+    session.setItem('pockai.session', JSON.stringify({ ...tokens(), user: SUPERADMIN }));
     const calls = fakeServer({ 'POST /v1/auth/logout': () => [200, { ok: true }] });
     const auth = TestBed.inject(AdminAuth);
     await auth.logout();
@@ -145,7 +145,7 @@ describe('sesión del panel contra el backend', () => {
   });
 
   it('el guard por sección deja pasar con el permiso y si no manda al resumen', () => {
-    session.setItem('pockai.admin.session', JSON.stringify({ ...tokens(), user: me('moderator', ['admin:access', 'audit:read']) }));
+    session.setItem('pockai.session', JSON.stringify({ ...tokens(), user: me('moderator', ['admin:access', 'audit:read']) }));
     const run = (permission: string) =>
       TestBed.runInInjectionContext(() =>
         (permissionGuard as (...args: unknown[]) => unknown)({ data: { permission } } as unknown as ActivatedRouteSnapshot, {}),
