@@ -98,9 +98,12 @@ Sin cambios respecto a la "Fase 3" anterior:
 - `PetWidget` sigue nativo, con la PNG adult/idle pre-horneada.
 - La tarea de Gradle copia `shared/scene/dist/embed` a los assets.
 
-## Fase 7: iOS (PR 7)
-- `WKWebView` + `WKScriptMessageHandler` con el mismo bundle. WidgetKit y Live Activity nativos con PNG.
-- Marcar `027-ios-skia` como **sustituida** (spec, plan y tasks).
+## Fase 7: iOS (PR 7) — pendiente (aplazada el 2026-11-17)
+No hay cliente iOS todavía; se hará cuando exista (ver `docs/PENDIENTES.md`, ISO-IOS). Lo necesario:
+- Un `WKWebView` con el mismo bundle (`shared/scene/dist/embed`) servido desde la app, sin red. Por ejemplo, con un `WKURLSchemeHandler` propio, porque `file://` no admite módulos ES.
+- `WKScriptMessageHandler` con el nombre `pockai` (la escena ya lo detecta en `shared/scene/src/bridge.ts`) y el envío con `evaluateJavaScript("window.pockaiScene.receive(...)")`. Como modelo, `SceneController` y `SceneMessages` de Android.
+- WidgetKit y Live Activity nativos con PNG (no admiten WebView).
+- La spec `027-ios-skia` ya está marcada como sustituida.
 
 ---
 

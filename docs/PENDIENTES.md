@@ -78,6 +78,7 @@ Features sin UI (solo backend + API):
 | `socket.io-redis` deprecated | Reemplazo: `@socket.io/redis-adapter` (API pub/sub). Migrar en upgrade mayor. |
 | BullMQ: más colas | Futuras: `notifications` (push), `seasons:expire`, `gifts:expire`. |
 | iOS client | No existe. Proyecto nuevo (Swift + OpenAPI). |
+| ISO-IOS | **Sala isométrica en iOS** (fase 7 de `docs/ROADMAP_ISOMETRICO.md`). Incrustar `@pockai/scene` en un `WKWebView` con el puente `pockai`, igual que Android (`mobile/android/.../ui/scene/`). Depende del cliente iOS. |
 | Web (Angular) | Existe con CI build, sin features oleadas. |
 
 ---
@@ -106,6 +107,7 @@ Features sin UI (solo backend + API):
 
 **Nice-to-have:**
 - [ ] iOS client
+- [ ] Sala isométrica en iOS (ISO-IOS, §7)
 - [ ] Web Angular — features oleadas
 - [ ] Más colas BullMQ
 - [ ] Más endpoints cacheados
