@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EMAIL_LOOKUP_REMOVED_MESSAGE, findUserIdByHandle } from '../../common/user-handle';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 /**
@@ -41,6 +42,8 @@ export interface FriendshipSummary {
   direction: 'incoming' | 'outgoing';
   otherUserId: string;
   otherDisplayName: string;
+  /** Nickname público del otro jugador (null si su cuenta aún no lo ha elegido). */
+  otherHandle: string | null;
   otherPet: { petId: string; nickname: string; speciesName: string } | null;
   updatedAt: Date;
 }
@@ -78,18 +81,19 @@ export class CoopCareService {
 
   // ── Amistad ──────────────────────────────────────────────────────────────────
 
-  async requestFriendship(target: { targetUserId?: string; email?: string }, requesterId: string): Promise<FriendshipSummary> {
+  async requestFriendship(
+    target: { targetUserId?: string; handle?: string; email?: string },
+    requesterId: string,
+  ): Promise<FriendshipSummary> {
     let targetUserId = target?.targetUserId;
-    if (!targetUserId && target?.email) {
-      // Identificación por email (no hay un buscador de usuarios; el email es el identificador natural).
-      const byEmail = await this.prisma.user.findUnique({
-        where: { email: target.email.trim().toLowerCase() },
-        select: { id: true },
-      });
-      if (!byEmail) throw new NotFoundException('Usuario no encontrado');
-      targetUserId = byEmail.id;
+    if (!targetUserId && target?.handle) {
+      // Los jugadores se identifican por su @nickname público (nunca por email: no se filtran correos).
+      const byHandle = await findUserIdByHandle(this.prisma, target.handle);
+      if (!byHandle) throw new NotFoundException('No hay ningún jugador con ese nickname');
+      targetUserId = byHandle;
     }
-    if (!targetUserId) throw new BadRequestException('Indica targetUserId o email');
+    if (!targetUserId && target?.email) throw new BadRequestException(EMAIL_LOOKUP_REMOVED_MESSAGE);
+    if (!targetUserId) throw new BadRequestException('Indica el @nickname del jugador');
     if (targetUserId === requesterId) {
       throw new BadRequestException('No puedes enviarte una petición a ti mismo');
     }
@@ -181,11 +185,15 @@ export class CoopCareService {
     const others = [...new Set(rows.map((r) => (r.ownerId === me ? r.visitorId : r.ownerId)))];
 
     const names = new Map<string, string>();
+    const handles = new Map<string, string | null>();
     const us = await this.prisma.user.findMany({
       where: { id: { in: others } },
-      select: { id: true, displayName: true },
+      select: { id: true, displayName: true, handle: true },
     });
-    for (const u of us) names.set(u.id, u.displayName);
+    for (const u of us) {
+      names.set(u.id, u.displayName);
+      handles.set(u.id, u.handle ?? null);
+    }
 
     const pets = new Map<string, { petId: string; nickname: string; speciesName: string }>();
     const ps = await this.prisma.pet.findMany({
@@ -205,6 +213,7 @@ export class CoopCareService {
         direction: row.ownerId === me ? 'incoming' : 'outgoing',
         otherUserId: other,
         otherDisplayName: names.get(other) ?? '—',
+        otherHandle: handles.get(other) ?? null,
         otherPet: pets.get(other) ?? null,
         updatedAt: row.updatedAt,
       };

@@ -98,7 +98,7 @@ fun ClanScreen(service: ApiService, realtime: RealtimeClient, onChanged: () -> U
     var cTag by remember { mutableStateOf("") }
     var cDesc by remember { mutableStateOf("") }
     var joinTag by remember { mutableStateOf("") }
-    var inviteEmail by remember { mutableStateOf("") }
+    var inviteHandle by remember { mutableStateOf("") }
     var gTitle by remember { mutableStateOf("") }
     var gMetric by remember { mutableStateOf("generic") }
     var gTarget by remember { mutableStateOf("10") }
@@ -192,11 +192,11 @@ fun ClanScreen(service: ApiService, realtime: RealtimeClient, onChanged: () -> U
                 }
                 notice?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = PockaiTheme.colors.accentInk) }
                 Spacer(Modifier.height(8.dp))
-                HeaderSection(c = c, myRank = myRank, inviteEmail = inviteEmail, inviteSetter = { inviteEmail = it }, busy = busy,
+                HeaderSection(c = c, myRank = myRank, inviteHandle = inviteHandle, inviteSetter = { inviteHandle = it }, busy = busy,
                     disbandArmed = armed == "disband",
                     onInvite = {
-                        if (inviteEmail.isNotBlank()) act("Invitación enviada.") { service.inviteToClan(c.id, email = inviteEmail.trim()) }
-                        inviteEmail = ""
+                        if (inviteHandle.isNotBlank()) act("Invitación enviada.") { service.inviteToClan(c.id, handle = inviteHandle.trim()) }
+                        inviteHandle = ""
                     },
                     onSaveEdit = { n, d -> act("Nexo actualizado.") { service.updateClan(c.id, n, d) } },
                     onLeave = { act("Has salido del clan.") { service.leaveClan() } },
@@ -272,7 +272,7 @@ private fun CreateJoinSection(
 @Composable
 private fun HeaderSection(
     c: ClanSummary, myRank: ClanRank,
-    inviteEmail: String, inviteSetter: (String) -> Unit,
+    inviteHandle: String, inviteSetter: (String) -> Unit,
     busy: Boolean, disbandArmed: Boolean,
     onInvite: () -> Unit, onSaveEdit: (String, String?) -> Unit,
     onLeave: () -> Unit, onDisband: () -> Unit,
@@ -299,7 +299,7 @@ private fun HeaderSection(
             Tag("${c.xp} XP", color = PockaiTheme.colors.accentInk)
         }
         Spacer(Modifier.height(8.dp))
-        Text("Forjador: ${c.leader.displayName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Forjador: ${c.leader.displayName}" + (c.leader.handle?.let { " (@$it)" } ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (myRank.atLeast(ClanRank.ADMIN)) {
             Spacer(Modifier.height(8.dp))
             if (editing) {
@@ -318,8 +318,8 @@ private fun HeaderSection(
         if (myRank.atLeast(ClanRank.MODERATOR)) {
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(inviteEmail, inviteSetter, label = { Text("Email para invitar") }, singleLine = true, modifier = Modifier.weight(1f))
-                SecondaryButton("Invitar", onInvite, enabled = !busy && inviteEmail.isNotBlank(), icon = Lucide.Send)
+                OutlinedTextField(inviteHandle, inviteSetter, label = { Text("@nickname para invitar") }, singleLine = true, modifier = Modifier.weight(1f))
+                SecondaryButton("Invitar", onInvite, enabled = !busy && inviteHandle.isNotBlank(), icon = Lucide.Send)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -352,7 +352,7 @@ private fun RosterSection(
                     PresenceDot(online = m.isOnline)
                     Spacer(Modifier.size(8.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(if (m.userId == myId) "${m.displayName} (tú)" else m.displayName, style = MaterialTheme.typography.bodyMedium)
+                        Text((if (m.userId == myId) "${m.displayName} (tú)" else m.displayName) + (m.handle?.let { "  @$it" } ?: ""), style = MaterialTheme.typography.bodyMedium)
                     }
                     Tag(rank.label, color = rankColor(rank))
                 }

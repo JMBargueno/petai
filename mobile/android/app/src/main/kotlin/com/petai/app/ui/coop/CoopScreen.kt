@@ -45,11 +45,12 @@ import androidx.compose.ui.unit.dp
 import com.petai.app.data.ApiService
 import com.petai.app.data.CoopFriend
 import com.petai.app.data.CoopVisitLog
+import com.petai.app.data.Handle
 import kotlinx.coroutines.launch
 
 /**
  * Pestaña "Amigos" (feature 021 / spec-21): amistad + co-op.
- *  - Solicitar amistad por email
+ *  - Solicitar amistad por @nickname
  *  - Peticiones (aceptar/rechazar entrantes; ver las enviadas)
  *  - Amigos (visitar el pet del amigo: feed/play/clean)
  *  - Historial de visitas
@@ -62,7 +63,7 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var msg by remember { mutableStateOf<String?>(null) }
-    var email by remember { mutableStateOf("") }
+    var friendHandle by remember { mutableStateOf("") }
     var sel by rememberSaveable { mutableIntStateOf(0) }
     /** Presencia por amigo (userId -> en línea), vía GET /presence. */
     var presence by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
@@ -102,11 +103,11 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
             )
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(email, { email = it }, label = { Text("Email del amigo") }, singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(friendHandle, { friendHandle = it.trim() }, label = { Text("@nickname del amigo") }, singleLine = true, modifier = Modifier.weight(1f))
                 SecondaryButton(
                     "Solicitar",
-                    onClick = { act("Solicitud enviada.") { service.requestCoopFriend(null, email.trim()) }; email = "" },
-                    enabled = !busy && email.isNotBlank(),
+                    onClick = { val h = friendHandle; act("Solicitud enviada a @${Handle.normalize(h)}.") { service.requestCoopFriend(null, h) }; friendHandle = "" },
+                    enabled = !busy && friendHandle.isNotBlank(),
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -153,7 +154,7 @@ private fun FriendsSection(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     PresenceDot(online = presence[f.otherUserId] == true)
                     Spacer(Modifier.size(8.dp))
-                    Text(f.otherDisplayName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text(f.otherDisplayName + (f.otherHandle?.let { "  @$it" } ?: ""), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                     com.petai.app.ui.theme.Tag("Amigo", color = com.petai.app.ui.theme.Brand.MintPop)
                 }
                 f.otherPet?.let {
@@ -193,7 +194,7 @@ private fun RequestsSection(pending: List<CoopFriend>, busy: Boolean, onAccept: 
     pending.forEach { f ->
         PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
             Column(Modifier.padding(12.dp)) {
-                Text(f.otherDisplayName, style = MaterialTheme.typography.titleMedium)
+                Text(f.otherDisplayName + (f.otherHandle?.let { "  @$it" } ?: ""), style = MaterialTheme.typography.titleMedium)
                 Text(
                     if (f.direction == "incoming") "Te ha solicitado amistad" else "Solicitud enviada",
                     style = MaterialTheme.typography.bodySmall,

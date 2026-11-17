@@ -121,6 +121,7 @@ describe('HabitatVisitService', () => {
     expect(res.visitors[0]).toEqual({
       visitorId: actor,
       visitorName: 'n-visitor',
+      visitorHandle: null,
       pet: { petId: 'pet-1', nickname: 'Rex', speciesName: 'Lobo', speciesId: 'sp-1', spriteRef: 'sp-1' },
       startedAt: started,
     });

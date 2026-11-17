@@ -18,7 +18,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
  * Amistad + Co-op (feature 021 / spec-21) — endpoints para gestionar la amistad entre usuarios.
  *
  *   - GET   /v1/coop/friends            → mis relaciones (amigos + peticiones)
- *   - POST  /v1/coop/friends            → enviar petición de amistad { targetUserId }
+ *   - POST  /v1/coop/friends            → enviar petición de amistad { handle | targetUserId }
  *   - POST  /v1/coop/friends/:id/accept → aceptar (solo quien recibió la petición)
  *   - POST  /v1/coop/friends/:id/decline → rechazar (solo quien recibió la petición)
  *
@@ -40,19 +40,22 @@ export class CoopFriendsController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Enviar una petición de amistad (por id o email del destinatario)' })
+  @ApiOperation({ summary: 'Enviar una petición de amistad (por @nickname o id del destinatario)' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        targetUserId: { type: 'string' },
-        email: { type: 'string', description: 'Alternativa a targetUserId: email del destinatario' },
+        handle: { type: 'string', example: 'jmbargueno', description: 'Nickname del destinatario (con o sin "@")' },
+        targetUserId: { type: 'string', description: 'Alternativa a handle: id del destinatario' },
       },
     },
   })
-  request(@CurrentUser() user: any, @Body() body: { targetUserId?: string; email?: string }): Promise<FriendshipSummary> {
-    if (!body?.targetUserId && !body?.email) {
-      throw new BadRequestException('Indica targetUserId o email');
+  request(
+    @CurrentUser() user: any,
+    @Body() body: { targetUserId?: string; handle?: string; email?: string },
+  ): Promise<FriendshipSummary> {
+    if (!body?.targetUserId && !body?.handle && !body?.email) {
+      throw new BadRequestException('Indica el @nickname del jugador');
     }
     return this.coopCareService.requestFriendship(body, user.id);
   }

@@ -5,6 +5,7 @@
    *  gestión solo se muestran a quien puede hacerlas (el backend las valida igualmente). */
   import Ico from './Ico.svelte';
   import { onMount } from 'svelte';
+  import { handleFormatError, normalizeHandle } from '../lib/handle';
   import {
     api,
     type ClanMember,
@@ -176,11 +177,17 @@
     busy = 'invite';
     error = '';
     ok = '';
-    const t = inviteTarget.trim();
+    // Se invita por @nickname (con o sin la @); el email ya no identifica a nadie.
+    const handle = normalizeHandle(inviteTarget);
+    const formatError = handleFormatError(handle);
+    if (formatError) {
+      error = `Ese no es un nickname válido: ${formatError.toLowerCase()}`;
+      busy = '';
+      return;
+    }
     try {
-      // Si se parece a un email se manda por email; si no, se interpreta como id de jugador
-      await api.inviteToClan(clan.id, t.includes('@') ? { email: t } : { userId: t });
-      ok = `Invitación enviada a ${t}.`;
+      await api.inviteToClan(clan.id, { handle });
+      ok = `Invitación enviada a @${handle}.`;
       inviteTarget = '';
       await load();
     } catch (e: any) {
@@ -384,7 +391,7 @@
       <span class="clan-xp">{(clan.xp ?? 0).toLocaleString()} XP</span>
     </div>
     <div class="clan-meta">
-      Forjador: {clan.leader?.displayName ?? clan.leaderId} · {clan.memberCount} hebra(s) · Tu rango:
+      Forjador: {clan.leader?.displayName ?? clan.leaderId}{clan.leader?.handle ? ` (@${clan.leader.handle})` : ''} · {clan.memberCount} hebra(s) · Tu rango:
       <span class="role-badge role-{myRole}">{CLAN_ROLE_LABEL[myRole]}</span>
     </div>
     {#if canEdit && !editing}
@@ -413,7 +420,7 @@
       <div class="member">
         <div class="member-row">
           <span class="p-dot {m.isOnline ? 'online' : 'offline'}" title="Presencia"></span>
-          <span class="member-name">{m.displayName}{m.userId === meId ? ' (tú)' : ''}</span>
+          <span class="member-name">{m.displayName}{#if m.handle} <span class="member-handle">@{m.handle}</span>{/if}{m.userId === meId ? ' (tú)' : ''}</span>
           <span class="role-badge role-{role}">{CLAN_ROLE_LABEL[role]}</span>
           <small class="member-joined">{new Date(m.joinedAt).toLocaleDateString()}</small>
         </div>
@@ -448,7 +455,7 @@
   {#if canInvite}
     <div class="sec-title">Invitar</div>
     <div class="form-row">
-      <input class="input" placeholder="Email o ID de jugador" bind:value={inviteTarget} disabled={busy === 'invite'} />
+      <input class="input" placeholder="@nickname del jugador" autocapitalize="none" spellcheck="false" bind:value={inviteTarget} disabled={busy === 'invite'} />
       <button class="btn-sm primary" disabled={busy === 'invite' || !inviteTarget.trim()} on:click={invite}>
         {busy === 'invite' ? '…' : 'Invitar'}
       </button>
@@ -585,6 +592,7 @@
   .member-row { display: flex; align-items: center; gap: 8px; }
   .member-actions { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
   .member-name { font-size: 13px; font-weight: 600; }
+  .member-handle { font-weight: 400; color: var(--ink-muted); }
   .role-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: var(--radius-pills); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent-ink); }
   .role-badge.role-creator { background: color-mix(in srgb, var(--warning, #f59e0b) 22%, var(--surface)); color: var(--ink); }
   .role-badge.role-admin { background: color-mix(in srgb, var(--accent) 26%, var(--surface)); }

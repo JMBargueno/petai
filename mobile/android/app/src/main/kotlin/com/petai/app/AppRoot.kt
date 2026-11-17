@@ -37,6 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.petai.app.ui.account.AccountScreen
 import androidx.activity.compose.BackHandler
 import com.petai.app.ui.auth.AuthScreen
+import com.petai.app.ui.auth.ChooseHandleScreen
 import com.petai.app.ui.auth.ForgotPasswordScreen
 import com.petai.app.ui.auth.VerifyEmailScreen
 import com.petai.app.ui.chat.ChatScreen
@@ -101,6 +102,7 @@ fun AppRoot(vm: AppViewModel) {
                     busy = state.busy,
                     inviteRequired = state.inviteRequired,
                     onRegisterMode = vm::loadRegistrationConfig,
+                    onCheckHandle = vm::checkHandle,
                     onSubmit = vm::authenticate,
                     onForgot = { forgotEmail = it },
                 )
@@ -114,6 +116,14 @@ fun AppRoot(vm: AppViewModel) {
                 onVerify = vm::verifyEmail,
                 onResend = vm::resendVerification,
                 onRecheck = vm::recheckVerification,
+                onLogout = vm::logout,
+            )
+        } else if (state.user?.needsHandle == true) {
+            // Cuenta sin nickname: hay que elegirlo (único e inmutable) antes de jugar.
+            ChooseHandleScreen(
+                busy = state.busy,
+                onCheck = vm::checkHandle,
+                onChoose = vm::chooseHandle,
                 onLogout = vm::logout,
             )
         } else {

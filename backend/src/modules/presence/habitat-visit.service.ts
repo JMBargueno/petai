@@ -33,6 +33,8 @@ export interface PetIdentity {
 export interface ActiveVisitor {
   visitorId: string;
   visitorName: string;
+  /** Nickname público del visitante (null si aún no lo ha elegido). */
+  visitorHandle: string | null;
   pet: PetIdentity;
   startedAt: Date;
 }
@@ -90,18 +92,19 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
       });
     }
 
-    const visitorName = await this.resolveName(actorId);
+    const { name: visitorName, handle: visitorHandle } = await this.resolveIdentity(actorId);
     if (this.realtime) {
       this.realtime.emitToUser(ownerId, 'habitat:visitor_joined', {
         visitorId: actorId,
         visitorName,
+        visitorHandle,
         pet,
         startedAt,
       });
     }
 
     this.logger.debug(`Visita en vivo: ${actorId} → habitat de ${ownerId}`);
-    return { success: true, visit: { visitorId: actorId, visitorName, pet, startedAt } };
+    return { success: true, visit: { visitorId: actorId, visitorName, visitorHandle, pet, startedAt } };
   }
 
   /**
@@ -122,7 +125,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
     );
 
     if (this.realtime) {
-      const visitorName = await this.resolveName(actorId);
+      const { name: visitorName } = await this.resolveIdentity(actorId);
       for (const v of visits) {
         this.realtime.emitToUser(v.ownerId, 'habitat:visitor_left', {
           visitorId: actorId,
@@ -148,9 +151,10 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
     const visitorIds = [...new Set(visits.map((v) => v.visitorId))];
     const users = await this.prisma.user.findMany({
       where: { id: { in: visitorIds } },
-      select: { id: true, displayName: true },
+      select: { id: true, displayName: true, handle: true },
     });
     const nameById = new Map(users.map((u) => [u.id, u.displayName] as const));
+    const handleById = new Map(users.map((u) => [u.id, u.handle ?? null] as const));
 
     const petRows = await this.prisma.pet.findMany({
       where: { id: { in: visits.map((v) => v.petId) } },
@@ -172,6 +176,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
       return {
         visitorId: v.visitorId,
         visitorName: nameById.get(v.visitorId) ?? '—',
+        visitorHandle: handleById.get(v.visitorId) ?? null,
         pet,
         startedAt: v.startedAt,
       };
@@ -244,11 +249,11 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  private async resolveName(userId: string): Promise<string> {
+  private async resolveIdentity(userId: string): Promise<{ name: string; handle: string | null }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { displayName: true },
+      select: { displayName: true, handle: true },
     });
-    return user?.displayName ?? '—';
+    return { name: user?.displayName ?? '—', handle: user?.handle ?? null };
   }
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { api, getAccessToken, onEmailUnverified, onSessionExpired } from './lib/api';
+  import { api, getAccessToken, onEmailUnverified, onHandleRequired, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
   import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
@@ -169,6 +169,11 @@
         // Cuenta sin verificar: solo se muestra la pantalla de verificación del panel (sin mascota,
         // socket ni datos de juego: la API los rechaza con 403 hasta verificar el correo).
         if (user?.emailVerified === false) {
+          isPanelOpen = true;
+          return;
+        }
+        // Cuenta sin nickname (anterior a él o creada desde una app antigua): primero se elige.
+        if (user && user.handle === null) {
           isPanelOpen = true;
           return;
         }
@@ -411,6 +416,17 @@
     user = current ? { ...current, emailVerified: false } : null;
     isPanelOpen = true;
   }
+
+  let stopHandleRequired: () => void = () => {};
+
+  /** La API exige nickname (403 HANDLE_REQUIRED): se para el juego y se muestra "Elige tu nickname". */
+  function lockNoHandle() {
+    const current = user;
+    if (current && current.handle === null) return;
+    clearSessionState();
+    user = current ? { ...current, handle: null } : null;
+    isPanelOpen = true;
+  }
   let stopAutoUpdate: () => void = () => {};
   let stopTrayUpdates: () => void = () => {};
   let stopSummonShortcut: () => void = () => {};
@@ -501,6 +517,7 @@
       isPanelOpen = true;
     });
     stopEmailUnverified = onEmailUnverified(lockUnverified);
+    stopHandleRequired = onHandleRequired(lockNoHandle);
     needsPoll = setInterval(pollPet, 60_000);
     loadInitialData();
     stopAutoUpdate = startAutoCheck();
@@ -525,6 +542,7 @@
     stopClickThrough();
     stopSessionExpired();
     stopEmailUnverified();
+    stopHandleRequired();
     stopAutoUpdate();
     stopTrayUpdates();
     stopSummonShortcut();

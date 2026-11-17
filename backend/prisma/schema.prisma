@@ -14,7 +14,10 @@ model User {
   // Rol de autorización (RBAC). Los permisos de cada rol viven en código: src/modules/authz/permissions.ts
   role         String         @default("user") // superadmin | admin | moderator | user
   displayName  String?
-  title       String?        // Título competitivo de la arena (premio de fin de temporada por liga)
+  // Nickname público (@handle): único, en minúsculas, sin '@' e INMUTABLE una vez fijado (lo garantiza
+  // un trigger de la migración 20261117000000_user_handle). null = la cuenta aún debe elegirlo.
+  handle       String?        @unique
+  title      String?        // Título competitivo de la arena (premio de fin de temporada por liga)
   timezone     String         @default("UTC")
   // Coordenadas opt-in para el clima (privacidad): se guardan redondeadas y solo las usa el servidor.
   latitude     Float?

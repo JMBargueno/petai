@@ -23,7 +23,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
  *   - GET   /v1/clans            → el clan del actor (o 404)
  *   - POST  /v1/clans/join       → unirse a un clan por su etiqueta { tag }
  *   - POST  /v1/clans/leave      → abandonar el propio clan
- *   - POST  /v1/clans/:id/invite → invitar a un usuario (Vigía+) { userId | email }
+ *   - POST  /v1/clans/:id/invite → invitar a un usuario (Vigía+) { handle | userId }
  *   - GET   /v1/clans/:id/members → roster con presencia en línea
  *   - POST  /v1/clans/:id/messages → enviar mensaje al chat { body }
  *   - GET   /v1/clans/:id/messages?limit=&before= → historial reciente del chat
@@ -102,15 +102,15 @@ export class ClansController {
     schema: {
       type: 'object',
       properties: {
-        userId: { type: 'string', description: 'ID del usuario invitado' },
-        email: { type: 'string', description: 'Alternativa a userId: email del invitado' },
+        handle: { type: 'string', example: 'jmbargueno', description: 'Nickname del invitado (con o sin "@")' },
+        userId: { type: 'string', description: 'Alternativa a handle: ID del usuario invitado' },
       },
     },
   })
   invite(
     @CurrentUser() user: any,
     @Param('id') clanId: string,
-    @Body() body: { userId?: string; email?: string },
+    @Body() body: { userId?: string; handle?: string; email?: string },
   ): Promise<ClanSummary> {
     return this.clansService.inviteMember(user.id, clanId, body);
   }
