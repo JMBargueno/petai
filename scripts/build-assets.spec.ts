@@ -73,6 +73,16 @@ describe('build-assets: keys y urls', () => {
   });
 
   it('toVersionedUrl versiona el archivo y preserva la ruta relativa', () => {
+    expect(toVersionedUrl('assets/sprites/ignisaur_idle.svg', 'a3b2f1c9')).toBe(
+      'sprites/ignisaur_idle-a3b2f1c9.svg',
+    );
+    expect(toVersionedUrl('assets/species/ignisaur/base.png', 'b1b2b3b4')).toBe(
+      'species/ignisaur/base-b1b2b3b4.png',
+    );
+    expect(toVersionedUrl('game-data/balance.json', 'c5c6c7c8')).toBe('game-data/balance-c5c6c7c8.json');
+  });
+});
+
 describe('build-assets: discoverAssets', () => {
   it('descubre sprites, patterns, species y game-data con hash/type/size', () => {
     const assets = discoverAssets(tmpRoot);
@@ -166,14 +176,5 @@ describe('build-assets: cabeceras y env R2', () => {
     };
     await expect(validateR2Env(good)).resolves.toMatchObject({ CDN_BASE_URL: good.CDN_BASE_URL });
     await expect(validateR2Env({ ...good, CLOUDFLARE_R2_ENDPOINT: 'no-url' })).rejects.toThrow();
-  });
-});
-    expect(toVersionedUrl('assets/sprites/ignisaur_idle.svg', 'a3b2f1c9')).toBe(
-      'sprites/ignisaur_idle-a3b2f1c9.svg',
-    );
-    expect(toVersionedUrl('assets/species/ignisaur/base.png', 'b1b2b3b4')).toBe(
-      'species/ignisaur/base-b1b2b3b4.png',
-    );
-    expect(toVersionedUrl('game-data/balance.json', 'c5c6c7c8')).toBe('game-data/balance-c5c6c7c8.json');
   });
 });
