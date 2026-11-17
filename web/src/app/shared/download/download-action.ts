@@ -94,7 +94,7 @@ export class DownloadAction {
 
   constructor() {
     // Solo en el navegador: el prerender no sabe nada del visitante.
-    afterNextRender(() => this.device.set(detectDevice()));
+    afterNextRender(() => this.device.set(detectDevice(navigator)));
   }
 
   protected async download() {

@@ -24,7 +24,7 @@ export interface NavigatorLike {
  * se distingue porque un Mac no tiene pantalla táctil (`maxTouchPoints > 1`).
  * Solo sirve para elegir qué botón destacar: nunca es una medida de seguridad.
  */
-export function detectDevice(nav: NavigatorLike | undefined = globalThis.navigator): DeviceInfo {
+export function detectDevice(nav: NavigatorLike | null | undefined): DeviceInfo {
   if (!nav) return { os: 'unknown', mobile: false };
   const ua = nav.userAgent ?? '';
   const hint = nav.userAgentData?.platform?.toLowerCase() ?? '';
