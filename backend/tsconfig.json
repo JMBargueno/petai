@@ -20,5 +20,9 @@
     "paths": {
       "@/*": ["src/*"]
     }
-  }
+  },
+  // En Docker, `shared/` se copia dentro de `backend/shared` (ver Dockerfile) y, sin `include`,
+  // tsc compilaría también el núcleo de escena del cliente (PixiJS, imports de PNG). No es código
+  // del backend. Al declarar `exclude` se pierden los valores por defecto: se repiten aquí.
+  "exclude": ["node_modules", "dist", "shared/scene"]
 }
