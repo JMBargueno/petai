@@ -148,6 +148,20 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     });
 
     it('6. emparejamiento por ELO: rival real, ELO de suma cero, recompensas y energía', async () => {
+      // Una pelea terminada alimenta logros (p. ej. "Primera victoria", +80 monedas) cuya recompensa se
+      // acredita de forma asíncrona. Aquí se mide solo la recompensa del combate: se dan por
+      // conseguidos de antemano todos los logros del atacante para que ninguno sume monedas a mitad.
+      const allAchIds: string[] = JSON.parse(
+        fs.readFileSync(path.join(dataDir, 'achievements.json'), 'utf8'),
+      ).achievements.map((x: any) => x.id);
+      await prisma.achievement.updateMany({
+        where: { userId: a.userId, unlockedAt: null },
+        data: { unlockedAt: new Date() },
+      });
+      await prisma.achievement.createMany({
+        data: allAchIds.map((achId) => ({ userId: a.userId, achId, current: 0, unlockedAt: new Date(), claimed: true })),
+        skipDuplicates: true,
+      });
       const coinsBefore = (await api().get('/v1/me').set(a.auth)).body.coins;
       const petBefore = await profile(a);
       const r = await fight(a).expect(201);
