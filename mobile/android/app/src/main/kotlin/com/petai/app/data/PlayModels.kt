@@ -443,6 +443,8 @@ data class CoopFriend(
     val direction: String = "",    // incoming | outgoing
     val otherUserId: String = "",
     val otherDisplayName: String = "",
+    /** Nickname público del otro jugador (null si aún no lo ha elegido). */
+    val otherHandle: String? = null,
     val otherPet: CoopFriendPet? = null,
     val updatedAt: String = "",
 )

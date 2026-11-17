@@ -64,11 +64,22 @@ export function onEmailUnverified(cb: () => void): () => void {
   return () => emailUnverifiedListeners.delete(cb);
 }
 
-/** ¿Es la respuesta un 403 por correo sin verificar? (lee una copia: el cuerpo original queda intacto) */
-async function isEmailUnverified(res: Response): Promise<boolean> {
-  if (res.status !== 403) return false;
+/** Código del 403 que devuelve la API (con HANDLE_REQUIRED=true) a las cuentas sin nickname. */
+export const HANDLE_REQUIRED = 'HANDLE_REQUIRED';
+const handleRequiredListeners = new Set<() => void>();
+
+/** Avisa cuando la API rechaza una petición porque la cuenta aún no ha elegido su nickname. */
+export function onHandleRequired(cb: () => void): () => void {
+  handleRequiredListeners.add(cb);
+  return () => handleRequiredListeners.delete(cb);
+}
+
+/** Código del 403 de "falta un paso de alta" (lee una copia: el cuerpo original queda intacto). */
+async function blockedCode(res: Response): Promise<string | null> {
+  if (res.status !== 403) return null;
   const body = await res.clone().json().catch(() => null);
-  return body?.code === EMAIL_NOT_VERIFIED;
+  const code = body?.code;
+  return code === EMAIL_NOT_VERIFIED || code === HANDLE_REQUIRED ? code : null;
 }
 
 function expireSession() {
@@ -142,9 +153,15 @@ async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
   if (!sent || (path.includes('/auth/') && !path.includes('/auth/verify-email/'))) return fetch(req);
   const retry = req.clone();
   const res = await fetch(req);
-  // Cuenta sin verificar: no es un problema de token (no se renueva); la app muestra la verificación.
-  if (await isEmailUnverified(res)) {
+  // Cuenta sin verificar o sin nickname: no es un problema de token (no se renueva); la app
+  // muestra la pantalla que falta (verificación o "elige tu nickname").
+  const blocked = await blockedCode(res);
+  if (blocked === EMAIL_NOT_VERIFIED) {
     emailUnverifiedListeners.forEach((cb) => cb());
+    return res;
+  }
+  if (blocked === HANDLE_REQUIRED) {
+    handleRequiredListeners.forEach((cb) => cb());
     return res;
   }
   if (res.status !== 401) return res;
@@ -188,10 +205,10 @@ export function isTerminalError(err: unknown): boolean {
 export const api = {
   client,
 
-  async register(email: string, password: string, displayName?: string, inviteCode?: string) {
+  async register(email: string, password: string, displayName?: string, inviteCode?: string, handle?: string) {
     const code = inviteCode?.trim();
     const res = await client.POST('/v1/auth/register', {
-      body: { email, password, displayName, ...(code ? { inviteCode: code } : {}) },
+      body: { email, password, displayName, ...(code ? { inviteCode: code } : {}), ...(handle ? { handle } : {}) },
     });
     if (res.error) throw new Error((res.error as any)?.message || 'Error en registro');
     if (res.data?.accessToken) {
@@ -253,6 +270,37 @@ export const api = {
     });
     if (res.error) throw apiError(res, 'No se pudo verificar el código');
     return res.data;
+  },
+
+  /**
+   * ¿Está libre este nickname? Público (sirve en el registro). Ante un fallo de red se responde
+   * "no disponible" con el motivo, para no dejar seguir con un nickname sin comprobar.
+   */
+  async checkHandleAvailable(handle: string): Promise<{ handle: string; available: boolean; reason?: string }> {
+    try {
+      const res = await client.GET('/v1/auth/handle-available', { params: { query: { handle } } });
+      if (res.error || !res.data) return { handle, available: false, reason: (res.error as any)?.message || 'No se pudo comprobar' };
+      return res.data;
+    } catch {
+      return { handle, available: false, reason: 'Sin conexión con el servidor' };
+    }
+  },
+
+  /** Fija el nickname de la cuenta (una sola vez: es inmutable). Devuelve el perfil actualizado. */
+  async setMyHandle(handle: string) {
+    const res = await client.POST('/v1/me/handle', { body: { handle }, ...authHeaders() });
+    if (res.error) throw apiError(res, 'No se pudo guardar el nickname');
+    return res.data as any;
+  },
+
+  /** Perfil público mínimo de un jugador por su nickname (con o sin "@"). */
+  async getUserByHandle(handle: string) {
+    const res = await client.GET('/v1/users/by-handle/{handle}', {
+      params: { path: { handle: handle.trim().replace(/^@/, '') } },
+      ...authHeaders(),
+    });
+    if (res.error) throw apiError(res, 'No hay ningún jugador con ese nickname');
+    return res.data as { id: string; handle: string; displayName: string | null; title: string | null; accountXp: number };
   },
 
   /** Reenvía el correo de verificación (invalida el código anterior). */
@@ -787,7 +835,7 @@ export const api = {
   async getCoopFriends() {
     return minigameRequest<CoopFriend[]>('GET', '/v1/coop/friends');
   },
-  async requestCoopFriend(target: { targetUserId?: string; email?: string }) {
+  async requestCoopFriend(target: { targetUserId?: string; handle?: string }) {
     return minigameRequest<CoopFriend>('POST', '/v1/coop/friends', target);
   },
   async acceptCoopFriend(friendshipId: string) {
@@ -834,7 +882,7 @@ export const api = {
     return minigameRequest<{ ok: boolean }>('POST', '/v1/clans/leave');
   },
   /** Invita a un jugador (Vigía o superior). Devuelve el resumen actualizado. */
-  async inviteToClan(clanId: string, target: { userId?: string; email?: string }) {
+  async inviteToClan(clanId: string, target: { userId?: string; handle?: string }) {
     return minigameRequest<ClanSummary>('POST', `/v1/clans/${encodeURIComponent(clanId)}/invite`, target);
   },
   /** Roster vivo del clan (el backend devuelve el resumen completo). */
@@ -1222,6 +1270,8 @@ export interface CoopFriend {
   direction: 'incoming' | 'outgoing';
   otherUserId: string;
   otherDisplayName: string;
+  /** Nickname público del otro jugador (null si aún no lo ha elegido). */
+  otherHandle?: string | null;
   otherPet: { petId: string; nickname: string; speciesName: string } | null;
   updatedAt: string;
 }
@@ -1265,6 +1315,7 @@ export type ClanRole = 'creator' | 'admin' | 'moderator' | 'member';
 export interface ClanMember {
   userId: string;
   displayName: string;
+  handle?: string | null;
   role: ClanRole;
   isOnline: boolean;
   joinedAt: string;
@@ -1278,7 +1329,7 @@ export interface ClanSummary {
   leaderId: string;
   xp: number;
   memberCount: number;
-  leader: { userId: string; displayName: string };
+  leader: { userId: string; displayName: string; handle?: string | null };
   members: ClanMember[];
 }
 
@@ -1323,6 +1374,7 @@ export interface PetIdentity {
 export interface HabitatVisitor {
   visitorId: string;
   visitorName: string;
+  visitorHandle?: string | null;
   pet: PetIdentity;
   startedAt: string;
 }

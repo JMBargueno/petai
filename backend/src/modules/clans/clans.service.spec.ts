@@ -246,21 +246,38 @@ describe('ClansService', () => {
     });
   });
 
-  it('inviteMember: un Vigía (moderator) invita por email y crea el miembro', async () => {
+  it('inviteMember: un Vigía (moderator) invita por @nickname y crea el miembro', async () => {
     const prisma = buildPrisma();
     prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'moderator' });
     prisma.clan.findUnique.mockResolvedValue({ id: 'clan-1', leaderId: 'otra' });
-    // email → usuario, luego verificación por id, luego "sin clan"
-    prisma.user.findUnique.mockResolvedValueOnce({ id: 'bob' }); // por email
+    // nickname → usuario, luego verificación por id, luego "sin clan"
+    prisma.user.findUnique.mockResolvedValueOnce({ id: 'bob' }); // por nickname
     prisma.user.findUnique.mockResolvedValueOnce({ id: 'bob' }); // por id
     prisma.clanMembership.findUnique.mockResolvedValueOnce(null);
-    const summary = await build(prisma).inviteMember(actor, 'clan-1', { email: 'bob@x.com' });
+    const summary = await build(prisma).inviteMember(actor, 'clan-1', { handle: '@Bob_99' });
+    expect(prisma.user.findUnique).toHaveBeenNthCalledWith(1, { where: { handle: 'bob_99' }, select: { id: true } });
     expect(prisma.clanMembership.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ clanId: 'clan-1', userId: 'bob', role: 'member' }),
       }),
     );
     expect(summary.id).toBe('clan-1');
+  });
+
+  it('inviteMember: 404 si nadie tiene ese nickname', async () => {
+    const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'moderator' });
+    prisma.clan.findUnique.mockResolvedValue({ id: 'clan-1', leaderId: 'otra' });
+    prisma.user.findUnique.mockResolvedValueOnce(null);
+    await expect(build(prisma).inviteMember(actor, 'clan-1', { handle: 'nadie' })).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('inviteMember: ya no se invita por email (400 y sin buscar el correo)', async () => {
+    const prisma = buildPrisma();
+    prisma.clanMembership.findUnique.mockResolvedValueOnce({ id: 'm', clanId: 'clan-1', role: 'moderator' });
+    prisma.clan.findUnique.mockResolvedValue({ id: 'clan-1', leaderId: 'otra' });
+    await expect(build(prisma).inviteMember(actor, 'clan-1', { email: 'bob@x.com' })).rejects.toMatchObject({ status: 400 });
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 
   it('getMembers: 403 si el actor no pertenece a ese clan', async () => {

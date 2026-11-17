@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { api, type CoopFriend, type PresenceInfo } from '../lib/api';
   import { pendingFriends, presenceState, friendPetLabel, type PresenceState } from '../lib/visitors';
+  import { handleFormatError, normalizeHandle } from '../lib/handle';
 
   let friends: CoopFriend[] = [];
   /** Presencia por userId ('unknown' = no se pudo cargar: punto gris). */
@@ -11,7 +12,7 @@
   let ok = '';
   let loading = true;
   let busy = '';
-  let requestEmail = '';
+  let requestHandle = '';
 
   async function load() {
     loading = true;
@@ -72,15 +73,21 @@
   }
 
   async function requestFriend() {
-    const email = requestEmail.trim();
-    if (!email) return;
+    const handle = normalizeHandle(requestHandle);
+    if (!handle) return;
+    const formatError = handleFormatError(handle);
+    if (formatError) {
+      error = `Ese no es un nickname válido: ${formatError.toLowerCase()}`;
+      ok = '';
+      return;
+    }
     busy = 'request';
     error = '';
     ok = '';
     try {
-      await api.requestCoopFriend({ email });
-      ok = `Petición de amistad enviada a ${email}.`;
-      requestEmail = '';
+      await api.requestCoopFriend({ handle });
+      ok = `Petición de amistad enviada a @${handle}.`;
+      requestHandle = '';
       await load();
     } catch (e: any) {
       error = e.message;
@@ -103,7 +110,7 @@
       <div class="friend-main">
         <span class="p-dot {presence[f.otherUserId] ?? 'unknown'}" title="Presencia"></span>
         <div class="friend-body">
-          <span class="friend-name">{f.otherDisplayName}</span>
+          <span class="friend-name">{f.otherDisplayName}{#if f.otherHandle} <span class="friend-handle">@{f.otherHandle}</span>{/if}</span>
           <small>{friendPetLabel(f)} · {f.direction === 'incoming' ? 'quiere ser tu amigo' : 'esperando respuesta'}</small>
         </div>
       </div>
@@ -125,7 +132,7 @@
         <div class="friend-main">
           <span class="p-dot {presence[f.otherUserId] ?? 'unknown'}" title="Presencia"></span>
           <div class="friend-body">
-            <span class="friend-name">{f.otherDisplayName}</span>
+            <span class="friend-name">{f.otherDisplayName}{#if f.otherHandle} <span class="friend-handle">@{f.otherHandle}</span>{/if}</span>
             <small>{friendPetLabel(f)}</small>
           </div>
         </div>
@@ -140,12 +147,15 @@
   <div class="form-row">
     <input
       class="input"
-      type="email"
-      placeholder="Email de tu amigo"
-      bind:value={requestEmail}
+      type="text"
+      autocapitalize="none"
+      spellcheck="false"
+      placeholder="@nickname de tu amigo"
+      bind:value={requestHandle}
+      on:keydown={(e) => e.key === 'Enter' && requestFriend()}
       disabled={busy === 'request'}
     />
-    <button class="btn-sm primary" disabled={busy === 'request' || !requestEmail.trim()} on:click={requestFriend}>
+    <button class="btn-sm primary" disabled={busy === 'request' || !requestHandle.trim()} on:click={requestFriend}>
       {busy === 'request' ? '…' : 'Pedir'}
     </button>
   </div>
@@ -164,6 +174,7 @@
   .friend-main { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
   .friend-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .friend-name { font-size: 13px; font-weight: 600; }
+  .friend-handle { font-weight: 400; color: var(--ink-muted); }
   .friend-body small { font-size: 11px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .p-state { font-size: 10px; color: var(--ink-muted); white-space: nowrap; }
   .p-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--ink-muted); opacity: 0.5; }

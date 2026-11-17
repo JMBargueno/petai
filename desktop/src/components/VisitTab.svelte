@@ -113,7 +113,7 @@
   {#each friends as f (f.id)}
     <div class="friend-pick" class:selected={selected === f.otherUserId} role="button" tabindex="0"
       on:click={() => (selected = f.otherUserId)} on:keydown={(e) => e.key === 'Enter' && (selected = f.otherUserId)}>
-      <span class="fp-name">{f.otherDisplayName}</span>
+      <span class="fp-name">{f.otherDisplayName}{#if f.otherHandle} <small>@{f.otherHandle}</small>{/if}</span>
       <small>{f.status === 'accepted' ? friendPetLabel(f) : f.status === 'pending' ? 'Aún no sois amigos' : '—'}</small>
     </div>
   {:else}

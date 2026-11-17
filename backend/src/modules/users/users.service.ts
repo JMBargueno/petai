@@ -1,5 +1,7 @@
 import { Prisma } from '@prisma/client';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { isHandleValid, isUniqueViolationOn, normalizeHandle } from '../../common/user-handle';
+import { parseOrBadRequest, setHandleSchema } from '../auth/dto/auth.schemas';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isValidTimeZone } from '../pets/sleep-cycle';
@@ -22,6 +24,7 @@ export class UsersService {
         email: true,
         role: true,
         displayName: true,
+        handle: true,
         timezone: true,
         latitude: true,
         longitude: true,
@@ -67,6 +70,11 @@ export class UsersService {
       achievementsPublic?: boolean;
       notificationPrefs?: Prisma.InputJsonValue | null;
     } = {};
+
+    // El nickname es inmutable: no se edita aquí (se fija una sola vez con POST /me/handle).
+    if (input.handle !== undefined) {
+      throw new BadRequestException('El nickname no se puede cambiar');
+    }
 
     if (input.displayName !== undefined) {
       if (typeof input.displayName !== 'string') {
@@ -145,6 +153,7 @@ export class UsersService {
         id: true,
         email: true,
         displayName: true,
+        handle: true,
         timezone: true,
         latitude: true,
         longitude: true,
@@ -166,6 +175,40 @@ export class UsersService {
     }
 
     return updated;
+  }
+
+  /**
+   * Fija el nickname de una cuenta que aún no lo tiene. Solo funciona una vez: el `where handle: null`
+   * hace la operación atómica (dos peticiones a la vez no pueden fijar dos nicknames distintos) y,
+   * además, un trigger de la base de datos impide cambiarlo después.
+   */
+  async setHandle(userId: string, raw: unknown) {
+    const { handle } = parseOrBadRequest(setHandleSchema, raw);
+    let count: number;
+    try {
+      ({ count } = await this.prisma.user.updateMany({ where: { id: userId, handle: null }, data: { handle } }));
+    } catch (err) {
+      if (isUniqueViolationOn(err, 'handle')) throw new ConflictException('Ese nickname ya está en uso');
+      throw err;
+    }
+    if (count === 0) {
+      const exists = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (!exists) throw new NotFoundException('Usuario no encontrado');
+      throw new ConflictException('Tu nickname ya está fijado y no se puede cambiar');
+    }
+    return this.getMe(userId);
+  }
+
+  /** Perfil público mínimo de un jugador por su nickname (buscar a alguien antes de añadirlo). */
+  async findByHandle(raw: unknown) {
+    const handle = normalizeHandle(raw);
+    if (!isHandleValid(handle)) throw new NotFoundException('No hay ningún jugador con ese nickname');
+    const user = await this.prisma.user.findUnique({
+      where: { handle },
+      select: { id: true, handle: true, displayName: true, title: true, accountXp: true },
+    });
+    if (!user) throw new NotFoundException('No hay ningún jugador con ese nickname');
+    return user;
   }
 
   /** Valida y redondea una coordenada; `null` borra el valor (opt-out). */

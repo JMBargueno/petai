@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.petai.app.data.ApiException
 import com.petai.app.data.Egg
+import com.petai.app.data.Handle
+import com.petai.app.data.HandleAvailability
 import com.petai.app.data.InventoryEntry
 import com.petai.app.data.ItemDto
 import com.petai.app.data.Pet
@@ -106,7 +108,11 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
             try {
                 block()
             } catch (e: ApiException) {
-                if (e.isEmailUnverified) markUnverified() else message(errorText(e))
+                when {
+                    e.isEmailUnverified -> markUnverified()
+                    e.isHandleRequired -> markNoHandle()
+                    else -> message(errorText(e))
+                }
             } catch (e: Exception) {
                 message("Algo salió mal. Inténtalo de nuevo.")
             } finally {
@@ -118,15 +124,21 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
     // ---------- Sesión ----------
 
     /** Devuelve el motivo del fallo, o null si todo fue bien. */
-    fun authenticate(register: Boolean, email: String, password: String, displayName: String, inviteCode: String, onResult: (String?) -> Unit) {
+    fun authenticate(register: Boolean, email: String, password: String, displayName: String, inviteCode: String, handle: String, onResult: (String?) -> Unit) {
         viewModelScope.launch {
             if (register && _state.value.inviteRequired && inviteCode.isBlank()) {
                 onResult("El registro requiere un código de invitación")
                 return@launch
             }
+            if (register) {
+                Handle.formatError(Handle.normalize(handle))?.let {
+                    onResult("Nickname no válido: ${it.lowercase()}")
+                    return@launch
+                }
+            }
             _state.update { it.copy(busy = true) }
             val error = try {
-                val user = if (register) service.register(email.trim(), password, displayName, inviteCode) else service.login(email.trim(), password)
+                val user = if (register) service.register(email.trim(), password, displayName, inviteCode, handle) else service.login(email.trim(), password)
                 _state.update { it.copy(user = user) }
                 null
             } catch (e: ApiException) {
@@ -165,6 +177,41 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
 
     fun logout() {
         viewModelScope.launch { service.logout() }
+    }
+
+    // ---------- Nickname ----------
+
+    /** La API ha respondido 403 HANDLE_REQUIRED: se muestra la pantalla "Elige tu nickname". */
+    private fun markNoHandle() {
+        _state.update { it.copy(user = (it.user ?: UserDto()).copy(handle = null)) }
+    }
+
+    /** ¿Está libre? Ante un fallo de red se responde "no disponible" con el motivo. */
+    suspend fun checkHandle(handle: String): HandleAvailability = try {
+        service.checkHandle(handle)
+    } catch (e: ApiException) {
+        HandleAvailability(handle, false, errorText(e))
+    } catch (e: Exception) {
+        HandleAvailability(handle, false, "Sin conexión con el servidor")
+    }
+
+    /** Fija el nickname (una sola vez). `onResult(null)` si fue bien (y se cargan los datos). */
+    fun chooseHandle(handle: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true) }
+            val error = try {
+                val user = service.setHandle(handle)
+                _state.update { it.copy(user = user) }
+                null
+            } catch (e: ApiException) {
+                errorText(e)
+            } catch (e: Exception) {
+                "Algo salió mal. Inténtalo de nuevo."
+            }
+            _state.update { it.copy(busy = false) }
+            if (error == null) refreshAll()
+            onResult(error)
+        }
     }
 
     // ---------- Verificación del correo ----------
@@ -234,6 +281,8 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
                 _state.update { it.copy(user = user) }
                 // Sin verificar: solo la pantalla de verificación (el resto de la API responde 403).
                 if (!user.emailVerified) return@launch
+                // Sin nickname: solo la pantalla "Elige tu nickname".
+                if (user.needsHandle) return@launch
                 syncTimezone(user)
                 val pets = service.pets()
                 val eggs = service.eggs()

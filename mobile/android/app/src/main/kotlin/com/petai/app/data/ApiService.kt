@@ -25,7 +25,7 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
 
     // ---------- Sesión ----------
 
-    suspend fun register(email: String, password: String, displayName: String?, inviteCode: String? = null): UserDto {
+    suspend fun register(email: String, password: String, displayName: String?, inviteCode: String? = null, handle: String? = null): UserDto {
         val r: AuthResponse = api.request(
             "POST", "/auth/register",
             obj(
@@ -33,11 +33,19 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
                 "password" to password,
                 "displayName" to displayName?.ifBlank { null },
                 "inviteCode" to inviteCode?.trim()?.ifBlank { null },
+                "handle" to handle?.let { Handle.normalize(it) }?.ifBlank { null },
             ),
         )
         session.save(r.accessToken, r.refreshToken)
         return r.user ?: me()
     }
+
+    /** ¿Está libre este nickname? (endpoint público, sirve en el registro). */
+    suspend fun checkHandle(handle: String): HandleAvailability =
+        api.request("GET", "/auth/handle-available?handle=" + java.net.URLEncoder.encode(Handle.normalize(handle), "UTF-8"))
+
+    /** Fija el nickname de la cuenta (una sola vez: es inmutable). Devuelve el perfil actualizado. */
+    suspend fun setHandle(handle: String): UserDto = api.request("POST", "/me/handle", obj("handle" to Handle.normalize(handle)))
 
     /** ¿El registro exige código de invitación? (endpoint público). */
     suspend fun registrationConfig(): RegistrationConfig = api.request("GET", "/auth/registration-config")
@@ -197,11 +205,12 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     suspend fun coopFriends(): List<CoopFriend> =
         api.json.decodeFromString(ListSerializer(CoopFriend.serializer()), api.send("GET", "/coop/friends"))
 
-    suspend fun requestCoopFriend(targetUserId: String?, email: String?): CoopFriend =
+    /** Petición de amistad por id o por @nickname (con o sin la @). */
+    suspend fun requestCoopFriend(targetUserId: String?, handle: String?): CoopFriend =
         api.request(
             "POST", "/coop/friends",
             if (targetUserId?.isNotBlank() == true) obj("targetUserId" to targetUserId)
-            else obj("email" to email),
+            else obj("handle" to handle?.let { Handle.normalize(it) }),
         )
 
     suspend fun acceptCoopFriend(id: String): CoopFriend = api.request("POST", "/coop/friends/$id/accept")
@@ -231,8 +240,11 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
 
     suspend fun leaveClan() { api.send("POST", "/clans/leave") }
 
-    suspend fun inviteToClan(clanId: String, userId: String? = null, email: String? = null) {
-        api.send("POST", "/clans/$clanId/invite", if (userId?.isNotBlank() == true) obj("userId" to userId) else obj("email" to email))
+    suspend fun inviteToClan(clanId: String, userId: String? = null, handle: String? = null) {
+        api.send(
+            "POST", "/clans/$clanId/invite",
+            if (userId?.isNotBlank() == true) obj("userId" to userId) else obj("handle" to handle?.let { Handle.normalize(it) }),
+        )
     }
 
     suspend fun getClanMembers(clanId: String): ClanSummary = api.request("GET", "/clans/$clanId/members")

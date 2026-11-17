@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { z } from 'zod';
+import { handleSchema } from '../../../common/user-handle';
 
 /**
  * Validación estricta de las entradas de autenticación. Los DTO de dto/auth.dto.ts solo documentan
@@ -37,7 +38,14 @@ const inviteCode = z
   .optional()
   .transform((v) => v || undefined);
 
-export const registerSchema = z.object({ email, password, displayName, inviteCode });
+// Nickname: opcional en la API para no romper apps antiguas (esas cuentas lo eligen al entrar);
+// las apps actuales lo exigen en el formulario. Vacío se trata como ausente.
+const handle = z.preprocess((v) => (v === '' || v === null ? undefined : v), handleSchema.optional());
+
+export const registerSchema = z.object({ email, password, displayName, inviteCode, handle });
+
+/** Fijar el nickname de una cuenta que aún no lo tiene (una sola vez). */
+export const setHandleSchema = z.object({ handle: handleSchema });
 
 // En el login no se exige la política de contraseña (las cuentas antiguas podrían incumplirla),
 // solo un tope de longitud para no hashear cuerpos enormes.

@@ -142,6 +142,10 @@ export const envSchema = z.object({
   // Despliegue: primero false (se envía el correo pero no se bloquea), publicar escritorio/Android con la
   // pantalla de verificación y después activarlo. Ver docs/DEPLOY.md.
   EMAIL_VERIFICATION_REQUIRED: z.enum(['true', 'false']).default('false'),
+  // ---- Nickname obligatorio ----
+  // Si es true, las cuentas sin nickname (anteriores a él o creadas desde apps antiguas) reciben
+  // 403 HANDLE_REQUIRED hasta elegirlo con POST /me/handle. Mismo despliegue que la verificación de correo.
+  HANDLE_REQUIRED: z.enum(['true', 'false']).default('false'),
   // Validez del código y del enlace de verificación (minutos). Por defecto 24 h.
   EMAIL_VERIFICATION_TTL_MINUTES: positiveInt(1440),
   // Secreto para firmar los enlaces de baja de los correos del panel (por defecto se deriva de JWT_ACCESS_SECRET).

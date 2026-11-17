@@ -76,6 +76,7 @@ services:
       # false: se envía el correo pero no se bloquea. Activar (true) solo cuando escritorio y Android
       # con la pantalla de verificación estén publicados (docs/DEPLOY.md §11, «Verificación de correo»).
       EMAIL_VERIFICATION_REQUIRED: ${EMAIL_VERIFICATION_REQUIRED:-false}
+      HANDLE_REQUIRED: ${HANDLE_REQUIRED:-false}
       EMAIL_VERIFICATION_TTL_MINUTES: ${EMAIL_VERIFICATION_TTL_MINUTES:-1440}
       MAIL_UNSUBSCRIBE_SECRET: ${MAIL_UNSUBSCRIBE_SECRET:-}
       EMAIL_CAMPAIGN_RATE_PER_SECOND: ${EMAIL_CAMPAIGN_RATE_PER_SECOND:-5}
