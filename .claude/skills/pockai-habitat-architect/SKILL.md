@@ -54,10 +54,11 @@ Muestra al usuario: nombre, sala, huella y montaje, interacción, precio, buffs 
 Sigue `references/integration-checklist.md`:
 1. Añade la entrada a `habitats.json` con `footprint`, `mount` e `interaction` (esquema en `game-data.schemas.ts`).
 2. Dibuja el mueble en `scripts/sprites/furniture.ts`, con orientación `a` y `b`, según `iso-furniture-brief.md`.
-3. Genera la hoja de contactos de muebles (el script llega con la fase 4, junto a `furniture.ts`) y **mírala** (Read del PNG). Corrige hasta que pase la checklist.
-4. Genera los SVG finales.
+3. Genera la hoja de contactos con `pnpm generate:furniture --preview` y **mírala** (Read de `sprite-previews/furniture-contact.png`). Corrige hasta que pase la checklist.
+4. Genera los SVG finales y el manifiesto con `pnpm generate:furniture`. El script falla si el arte y `habitats.json` no tienen la misma huella.
+5. Pruébalo en la sala: `pnpm --filter @pockai/scene dev` y abre `/?demo=room` (añádelo a la sala de ejemplo en `shared/scene/src/embed/demoRoom.ts`).
 
-Si `scripts/sprites/furniture.ts` aún no existe (antes de la fase 4 de la migración), no lo inventes a medias. Deja el brief en la propuesta y avisa de que el arte queda pendiente de esa fase.
+El arte se escribe en `scripts/sprites/furniture.ts` con el lápiz isométrico `Pen` (`box`, `cyl`, `flat`, `ball`, `raw`), usando las coordenadas propias del mueble (u a lo largo, v a lo ancho, z en px): la orientación `b` sale sola.
 
 ### 6. Validar
 ```bash

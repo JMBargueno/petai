@@ -7,7 +7,7 @@
  *  - `footprint` = `[ancho (x), fondo (y)]` con rotación 0. Con rotación 1 y 3 se intercambia.
  *  - Muebles de suelo (`floor`) ocupan celdas del suelo y chocan entre sí.
  *  - Muebles de pared (`wall`) no ocupan suelo (debajo puede ir otro mueble): solo chocan con otros
- *    de pared. Van pegados a la pared izquierda (`y = 0`, rotación par) o a la derecha (`x = 0`,
+ *    de pared. Van pegados a la pared del fondo-derecha (`y = 0`, rotación par) o a la del fondo-izquierda (`x = 0`,
  *    rotación impar).
  */
 export type Mount = 'floor' | 'wall';

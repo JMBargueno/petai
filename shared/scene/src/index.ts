@@ -1,7 +1,11 @@
 export { PockaiScene, type SceneOptions } from './PockaiScene';
 export { PetSprite } from './pet/PetSprite';
+export { IsoRoom } from './room/IsoRoom';
+export { furnitureUrl } from './room/furnitureAssets';
 export * from './protocol';
 export { createBridge, detectTransport, type Transport } from './bridge';
 export { resolveSheet, isKnownSpecies, PATTERNS } from './assets';
 export * from './bake';
 export { bakeToCanvas } from './bake/bakeTexture';
+export * from './iso/projection';
+export * from './iso/layout';

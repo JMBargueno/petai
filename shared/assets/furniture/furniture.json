@@ -1,0 +1,211 @@
+{
+  "fountain_water": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 60
+    },
+    "b": {
+      "width": 40,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 60
+    }
+  },
+  "soft_bed": {
+    "footprint": [
+      2,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 56,
+      "height": 78,
+      "anchorX": 20,
+      "anchorY": 50
+    },
+    "b": {
+      "width": 56,
+      "height": 78,
+      "anchorX": 36,
+      "anchorY": 50
+    }
+  },
+  "toy_ball": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 62,
+      "anchorX": 20,
+      "anchorY": 42
+    },
+    "b": {
+      "width": 40,
+      "height": 62,
+      "anchorX": 20,
+      "anchorY": 42
+    }
+  },
+  "wall_shelf": {
+    "footprint": [
+      2,
+      1
+    ],
+    "wall": true,
+    "a": {
+      "width": 56,
+      "height": 114,
+      "anchorX": 20,
+      "anchorY": 86
+    },
+    "b": {
+      "width": 56,
+      "height": 114,
+      "anchorX": 36,
+      "anchorY": 86
+    }
+  },
+  "flower_pot": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 60
+    },
+    "b": {
+      "width": 40,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 60
+    }
+  },
+  "garden_bench": {
+    "footprint": [
+      2,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 56,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 52
+    },
+    "b": {
+      "width": 56,
+      "height": 80,
+      "anchorX": 36,
+      "anchorY": 52
+    }
+  },
+  "garden_pond": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 74,
+      "anchorX": 36,
+      "anchorY": 38
+    },
+    "b": {
+      "width": 72,
+      "height": 74,
+      "anchorX": 36,
+      "anchorY": 38
+    }
+  },
+  "shrine_altar": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 112,
+      "anchorX": 36,
+      "anchorY": 76
+    },
+    "b": {
+      "width": 72,
+      "height": 112,
+      "anchorX": 36,
+      "anchorY": 76
+    }
+  },
+  "crystal_lamp": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 90,
+      "anchorX": 20,
+      "anchorY": 70
+    },
+    "b": {
+      "width": 40,
+      "height": 90,
+      "anchorX": 20,
+      "anchorY": 70
+    }
+  },
+  "final_throne": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 116,
+      "anchorX": 36,
+      "anchorY": 80
+    },
+    "b": {
+      "width": 72,
+      "height": 116,
+      "anchorX": 36,
+      "anchorY": 80
+    }
+  },
+  "final_garden": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 116,
+      "anchorX": 36,
+      "anchorY": 80
+    },
+    "b": {
+      "width": 72,
+      "height": 116,
+      "anchorX": 36,
+      "anchorY": 80
+    }
+  }
+}

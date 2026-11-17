@@ -5,8 +5,7 @@
    */
   import { createEventDispatcher } from 'svelte';
   import Ico from '../Ico.svelte';
-  import PetMiniAvatar from '../PetMiniAvatar.svelte';
-  import HomeScene from '../HomeScene.svelte';
+  import PetHouse from '../PetHouse.svelte';
   import { startHabitatExitDrag } from '../../lib/habitatExitDrag';
   import { elementMeta, rarityMeta } from '../../lib/ui/maps';
   import { Badge, Button, Card, EmptyState, ProgressBar, SectionHeader } from '../ui';
@@ -32,9 +31,9 @@
       ]
     : [];
 
-  function handleExitDragStart(e: MouseEvent) {
-    const host = e.currentTarget as HTMLElement;
-    startHabitatExitDrag(e, host.querySelector<HTMLElement>('.pet-mini-avatar'));
+  /** Arrastrar al Pockai fuera de su casa lo saca al escritorio (como en Mascota › Hábitat). */
+  function handlePetPress(e: CustomEvent<{ event: MouseEvent; ghost: HTMLElement }>) {
+    startHabitatExitDrag(e.detail.event, e.detail.ghost);
   }
 </script>
 
@@ -60,22 +59,24 @@
 
     {#if pet.inHabitat}
       <Card variant="pop" size="sm">
-        <HomeScene
-          label="Casa de {name}"
-          mood={pet.sleeping ? 'night' : 'day'}
-          class="draggable"
-          role="button"
-          tabindex="0"
-          aria-label="Casa de {name}. Arrastra hacia el escritorio o pulsa Enter para sacarlo"
-          title="Arrastra hacia el escritorio o pulsa Enter para sacar a {name}"
-          on:mousedown={handleExitDragStart}
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <div
+          class="home-house"
+          title="Arrastra a {name} hacia el escritorio o pulsa Enter para sacarlo"
           on:keydown={(e) => e.key === 'Enter' && dispatch('toggleHabitat', false)}
         >
-          <span class="pet-shadow" aria-hidden="true"></span>
-          <div class="home-pet"><PetMiniAvatar {pet} size={104} interactive={false} /></div>
-          <span class="home-mood" class:asleep={pet.sleeping} aria-hidden="true">{pet.sleeping ? 'z' : '♥'}</span>
-          <span slot="overlay" class="drag-hint">⇄ Arrastra fuera para liberar</span>
-        </HomeScene>
+          <PetHouse
+            {pet}
+            height={210}
+            label="Casa de {name}. Arrastra a {name} hacia el escritorio o pulsa Enter para sacarlo"
+            on:petPress={handlePetPress}
+          >
+            <svelte:fragment slot="overlay">
+              <span class="house-sign">Casa de {name}</span>
+              <span class="drag-hint">⇄ Arrastra a {name} fuera para liberarlo</span>
+            </svelte:fragment>
+          </PetHouse>
+        </div>
         <div class="home-details">
           <Badge color={pet.sleeping ? 'var(--color-lavender)' : 'var(--color-mint-pop)'} icon={pet.sleeping ? 'moon' : 'home'}>
             {pet.sleeping ? 'Durmiendo en casa' : 'Descansando en casa'}
@@ -176,41 +177,29 @@
     font-size: 13px;
     font-weight: 800;
   }
-  :global(.home-scene.draggable) {
-    cursor: grab;
-  }
-  :global(.home-scene.draggable:active) {
-    cursor: grabbing;
-  }
-  .home-pet {
+  .home-house {
     position: relative;
-    z-index: 1;
-    transform-origin: 50% 100%;
-    animation: homeBreathe 3.2s ease-in-out infinite;
   }
-  .pet-shadow {
+  .house-sign {
     position: absolute;
-    left: 50%;
-    bottom: 2px;
-    width: 64px;
-    height: 12px;
-    transform: translateX(-50%);
-    border-radius: 50%;
-    background: rgb(11 10 20 / 0.28);
-    filter: blur(1px);
-  }
-  .home-mood {
-    position: absolute;
-    top: 4px;
-    right: -6px;
+    top: 8px;
+    left: 8px;
     z-index: 2;
-    color: #ff5c8a;
+    max-width: 62%;
+    padding: 3px 10px;
+    border: 1.5px solid var(--color-carbon);
+    border-radius: var(--radius-pills);
+    background: var(--color-sunburst);
+    box-shadow: 2px 2px 0 var(--color-carbon);
+    color: var(--color-carbon);
     font-family: var(--font-display);
-    font-size: 16px;
-    animation: homeFloat 2.6s ease-in-out infinite;
-  }
-  .home-mood.asleep {
-    color: #e9ccff;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
   }
   .drag-hint {
     position: absolute;
@@ -227,31 +216,9 @@
     opacity: 0;
     transition: opacity var(--dur-1) ease;
   }
-  :global(.home-scene:hover) .drag-hint,
-  :global(.home-scene:focus-visible) .drag-hint {
+  .home-house:hover .drag-hint,
+  .home-house:focus-within .drag-hint {
     opacity: 1;
-  }
-  @keyframes homeBreathe {
-    0%,
-    100% {
-      transform: scale(1, 1);
-    }
-    50% {
-      transform: scale(1.03, 0.97);
-    }
-  }
-  @keyframes homeFloat {
-    0% {
-      transform: translateY(6px);
-      opacity: 0;
-    }
-    30% {
-      opacity: 1;
-    }
-    100% {
-      transform: translateY(-14px);
-      opacity: 0;
-    }
   }
   .home-details {
     display: flex;
