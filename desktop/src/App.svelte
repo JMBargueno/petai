@@ -38,6 +38,7 @@
   import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster } from './lib/clan-store';
   import type { HabitatVisitor, ClanMessage, ClanGoal } from './lib/api';
   import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
+  import { maintenanceLock } from './lib/maintenance';
   import { startContextDigest } from './lib/contextDigest';
 
   let user: any = null;
@@ -65,7 +66,16 @@
   // Actualización obligatoria: se bloquea el panel (muestra solo el aviso) y se oculta la mascota
   // y los controles flotantes hasta que se instale. Aviso nativo una sola vez por versión.
   $: updateLocked = $updateLock !== null;
-  $: if (updateLocked) isPanelOpen = true;
+  // Mantenimiento del servidor: mismo bloqueo (panel con el aviso, sin mascota).
+  $: maintenanceLocked = $maintenanceLock !== null;
+  $: locked = updateLocked || maintenanceLocked;
+  $: if (locked) isPanelOpen = true;
+  // Al terminar el mantenimiento se recarga: sesión, socket y datos vuelven a empezar limpios.
+  let wasInMaintenance = false;
+  $: {
+    if (wasInMaintenance && !maintenanceLocked) window.location.reload();
+    wasInMaintenance = maintenanceLocked;
+  }
   let announcedVersion = '';
   $: if ($updateLock !== null && $updateLock !== announcedVersion) {
     announcedVersion = $updateLock;
@@ -615,7 +625,7 @@
   class="app-viewport"
   on:dragover|preventDefault
 >
-  {#if !updateLocked}
+  {#if !locked}
   <!-- Botón flotante para alternar panel de control -->
   <button
     class="btn glass toggle-panel-pill"
@@ -698,7 +708,7 @@
 
   <AchievementToast payload={unlockedAchievement} onDismiss={() => (unlockedAchievement = null)} />
 
-  {#if droppedFile && !updateLocked}
+  {#if droppedFile && !locked}
     <FileDropModal
       file={droppedFile}
       on:close={() => (droppedFile = null)}

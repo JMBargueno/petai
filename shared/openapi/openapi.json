@@ -566,6 +566,28 @@
         ]
       }
     },
+    "/v1/site/config": {
+      "get": {
+        "operationId": "SiteController_config",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteConfigDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Configuración pública de la web (registro y landing «Coming soon»)",
+        "tags": [
+          "Site"
+        ]
+      }
+    },
     "/v1/shop": {
       "get": {
         "operationId": "InventoryController_getShop",
@@ -4229,28 +4251,6 @@
         "summary": "Cambiar los ajustes de la web pública (queda auditado)",
         "tags": [
           "Admin"
-        ]
-      }
-    },
-    "/v1/site/config": {
-      "get": {
-        "operationId": "SiteController_config",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SiteConfigDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Configuración pública de la web (registro y landing «Coming soon»)",
-        "tags": [
-          "Site"
         ]
       }
     },
@@ -9653,6 +9653,99 @@
           "dailyChestUnlocked"
         ]
       },
+      "SiteCountdownDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "launchAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "enabled",
+          "launchAt"
+        ]
+      },
+      "SiteComingSoonDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "countdown": {
+            "$ref": "#/components/schemas/SiteCountdownDto"
+          }
+        },
+        "required": [
+          "enabled",
+          "countdown"
+        ]
+      },
+      "SiteMaintenanceMessageDto": {
+        "type": "object",
+        "properties": {
+          "es": {
+            "type": "string",
+            "nullable": true
+          },
+          "en": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "es",
+          "en"
+        ]
+      },
+      "SiteMaintenanceDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "web",
+              "apps",
+              "all"
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/SiteMaintenanceMessageDto"
+          }
+        },
+        "required": [
+          "enabled",
+          "scope",
+          "message"
+        ]
+      },
+      "SiteConfigDto": {
+        "type": "object",
+        "properties": {
+          "inviteRequired": {
+            "type": "boolean",
+            "description": "Si es true, el registro exige un código de invitación"
+          },
+          "comingSoon": {
+            "$ref": "#/components/schemas/SiteComingSoonDto"
+          },
+          "maintenance": {
+            "$ref": "#/components/schemas/SiteMaintenanceDto"
+          }
+        },
+        "required": [
+          "inviteRequired",
+          "comingSoon",
+          "maintenance"
+        ]
+      },
       "ManifestDto": {
         "type": "object",
         "properties": {
@@ -10777,12 +10870,39 @@
             "nullable": true,
             "format": "date-time",
             "description": "Fecha de lanzamiento de la cuenta atrás"
+          },
+          "maintenanceEnabled": {
+            "type": "boolean",
+            "description": "Modo mantenimiento manual: solo pasan admins, login y contacto"
+          },
+          "maintenanceScope": {
+            "type": "string",
+            "enum": [
+              "web",
+              "apps",
+              "all"
+            ],
+            "description": "A quién afecta: solo la web, solo las apps o todo"
+          },
+          "maintenanceMessageEs": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mensaje en castellano (vacío = texto por defecto)"
+          },
+          "maintenanceMessageEn": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mensaje en inglés (vacío = texto por defecto)"
           }
         },
         "required": [
           "comingSoonEnabled",
           "comingSoonCountdownEnabled",
-          "comingSoonLaunchAt"
+          "comingSoonLaunchAt",
+          "maintenanceEnabled",
+          "maintenanceScope",
+          "maintenanceMessageEs",
+          "maintenanceMessageEn"
         ]
       },
       "UpdateSiteSettingsDto": {
@@ -10798,56 +10918,29 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
-          }
-        }
-      },
-      "SiteCountdownDto": {
-        "type": "object",
-        "properties": {
-          "enabled": {
+          },
+          "maintenanceEnabled": {
             "type": "boolean"
           },
-          "launchAt": {
+          "maintenanceScope": {
+            "type": "string",
+            "enum": [
+              "web",
+              "apps",
+              "all"
+            ]
+          },
+          "maintenanceMessageEs": {
             "type": "string",
             "nullable": true,
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "enabled",
-          "launchAt"
-        ]
-      },
-      "SiteComingSoonDto": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
+            "maxLength": 1000
           },
-          "countdown": {
-            "$ref": "#/components/schemas/SiteCountdownDto"
+          "maintenanceMessageEn": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
           }
-        },
-        "required": [
-          "enabled",
-          "countdown"
-        ]
-      },
-      "SiteConfigDto": {
-        "type": "object",
-        "properties": {
-          "inviteRequired": {
-            "type": "boolean",
-            "description": "Si es true, el registro exige un código de invitación"
-          },
-          "comingSoon": {
-            "$ref": "#/components/schemas/SiteComingSoonDto"
-          }
-        },
-        "required": [
-          "inviteRequired",
-          "comingSoon"
-        ]
+        }
       },
       "MissionRewardDto": {
         "type": "object",

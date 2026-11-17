@@ -3,6 +3,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { safeNext } from '../account/auth-shell';
+import { WEB_CLIENT_HEADERS } from '../shared/auth/api';
 import { UserAuth } from '../shared/auth/user-auth';
 import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
@@ -279,7 +280,7 @@ export class VerifyEmail {
     try {
       const res = await fetch(VERIFY_EMAIL_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...WEB_CLIENT_HEADERS },
         body: JSON.stringify({ token: this.token }),
       });
       this.status.set(statusFromResponse(res.status));

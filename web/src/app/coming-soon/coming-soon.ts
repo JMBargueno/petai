@@ -13,10 +13,9 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HANDLE_MAX_LENGTH, handleFormatError, normalizeHandle } from '../account/handle';
-import { CONTACT_EMAIL, CONTACT_ENDPOINT } from '../contact/contact';
 import { UserAuth } from '../shared/auth/user-auth';
 import { SiteConfigService } from '../shared/site-config/site-config';
-import { SOCIAL_LINKS } from '../shared/social';
+import { ContactFooter } from '../shared/layout/contact-footer';
 import { PockaiSprite } from '../shared/ui/pockai-sprite';
 
 export interface Countdown {
@@ -51,7 +50,7 @@ export type AuthMode = 'login' | 'register' | 'forgot' | 'verify';
  */
 @Component({
   selector: 'app-coming-soon',
-  imports: [FormsModule, PockaiSprite],
+  imports: [FormsModule, PockaiSprite, ContactFooter],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="sky" aria-hidden="true">
@@ -131,22 +130,7 @@ export type AuthMode = 'login' | 'register' | 'forgot' | 'verify';
       </div>
     </main>
 
-    <footer class="bottom">
-      <div class="bottom__contact">
-        <a class="bottom__email" [href]="'mailto:' + contactEmail">{{ contactEmail }}</a>
-        <button type="button" class="bottom__contact-btn" (click)="openContactDialog()" i18n="@@soon.contactBtn">Contacto</button>
-      </div>
-      <ul class="social" aria-label="Redes sociales" i18n-aria-label="@@soon.social">
-        @for (s of social; track s.id) {
-          <li>
-            <a class="social__link" [href]="s.url" target="_blank" rel="noopener" [attr.aria-label]="s.name" [title]="s.name">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path [attr.d]="s.path" /></svg>
-            </a>
-          </li>
-        }
-      </ul>
-      <p class="handle">&#64;pockais</p>
-    </footer>
+    <app-contact-footer (closed)="cleanUrlIfSubroute()" />
 
     <!-- Diálogo Modal de Autenticación (Login, Registro, Recuperación, Verificación) -->
     <dialog #authDialog class="dialog dialog--dark" (close)="onAuthDialogClose()">
@@ -430,81 +414,6 @@ export type AuthMode = 'login' | 'register' | 'forgot' | 'verify';
       }
     </dialog>
 
-    <!-- Diálogo Modal de Formulario de Contacto -->
-    <dialog #contactDialog class="dialog dialog--dark" (close)="onContactDialogClose()">
-      <button type="button" class="dialog__close" aria-label="Cerrar" (click)="closeContactDialog()" i18n-aria-label="@@dialog.close">✕</button>
-      <h2 class="dialog__title" i18n="@@contact.title">Escríbenos</h2>
-      <p class="dialog__eyebrow" i18n="@@contact.eyebrow">Contacto</p>
-      <p class="dialog__lead" i18n="@@contact.lead">
-        ¿Dudas, ideas, un fallo o tu pockai hace cosas raras? Cuéntanoslo y te responderemos por correo.
-      </p>
-      <p class="contact__direct-notice">
-        <span i18n="@@contact.direct">También puedes escribir directamente a</span>
-        <a class="contact__direct-link" [href]="'mailto:' + contactEmail">{{ contactEmail }}</a>
-      </p>
-
-      @if (contactStatus() === 'sent') {
-        <div class="dialog__done" role="status">
-          <h3 class="dialog__done-title" i18n="@@contact.sent.title">¡Mensaje enviado!</h3>
-          <p class="dialog__done-text" i18n="@@contact.sent.text">Gracias por escribirnos. Te responderemos a tu correo lo antes posible.</p>
-          <div class="dialog__actions">
-            <button type="button" class="btn btn--filled btn--glow" (click)="resetContactForm()" i18n="@@contact.sent.again">Enviar otro mensaje</button>
-            <button type="button" class="btn btn--ghost-light" (click)="closeContactDialog()" i18n="@@contact.close">Cerrar</button>
-          </div>
-        </div>
-      } @else {
-        <form class="dialog__form" method="post" (submit)="submitContact($event)" [attr.aria-busy]="contactStatus() === 'sending'">
-          <div class="dialog__field">
-            <label for="soon-contact-name" i18n="@@contact.name">Nombre</label>
-            <input class="dialog__input" id="soon-contact-name" name="name" type="text" autocomplete="name" required maxlength="100" />
-          </div>
-          <div class="dialog__field">
-            <label for="soon-contact-email" i18n="@@contact.email">Correo electrónico</label>
-            <input class="dialog__input" id="soon-contact-email" name="email" type="email" autocomplete="email" required maxlength="254" />
-          </div>
-          <div class="dialog__field">
-            <label for="soon-contact-subject" i18n="@@contact.subject">Asunto</label>
-            <input class="dialog__input" id="soon-contact-subject" name="subject" type="text" required maxlength="150" />
-          </div>
-          <div class="dialog__field">
-            <label for="soon-contact-message" i18n="@@contact.message">Mensaje</label>
-            <textarea class="dialog__input dialog__textarea" id="soon-contact-message" name="message" rows="5" required minlength="10" maxlength="5000"></textarea>
-          </div>
-          <div class="hp" aria-hidden="true">
-            <label for="soon-contact-website">Website</label>
-            <input id="soon-contact-website" name="website" type="text" tabindex="-1" autocomplete="off" />
-          </div>
-
-          @switch (contactStatus()) {
-            @case ('error') {
-              <p class="dialog__error" role="alert" i18n="@@contact.error">
-                No hemos podido enviar el mensaje. Inténtalo más tarde o escríbenos por correo.
-              </p>
-            }
-            @case ('limited') {
-              <p class="dialog__error" role="alert" i18n="@@contact.limited">
-                Has enviado demasiados mensajes seguidos. Espera un rato y vuelve a intentarlo.
-              </p>
-            }
-            @case ('invalid') {
-              <p class="dialog__error" role="alert" i18n="@@contact.invalid">
-                Revisa los datos: el correo debe ser válido y el mensaje tener al menos 10 caracteres.
-              </p>
-            }
-          }
-
-          <div class="dialog__actions">
-            <button class="btn btn--filled btn--glow" type="submit" [disabled]="contactStatus() === 'sending'">
-              @if (contactStatus() === 'sending') {
-                <span i18n="@@contact.sending">Enviando…</span>
-              } @else {
-                <span i18n="@@contact.send">Enviar mensaje</span>
-              }
-            </button>
-          </div>
-        </form>
-      }
-    </dialog>
   `,
   styles: `
     :host {
@@ -777,82 +686,6 @@ export type AuthMode = 'login' | 'register' | 'forgot' | 'verify';
       background: rgb(255 255 255 / 0.14);
     }
 
-    /* ── Pie: contacto y redes ── */
-    .bottom {
-      display: grid;
-      justify-items: center;
-      gap: 12px;
-      padding: 12px 16px 28px;
-    }
-    .bottom__contact {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 14px;
-    }
-    .bottom__email {
-      color: rgb(255 255 255 / 0.85);
-      text-decoration: underline;
-      text-underline-offset: 3px;
-      font-weight: var(--font-weight-bold);
-      transition: color var(--dur-2) var(--ease-out);
-    }
-    .bottom__email:hover {
-      color: #ffd731;
-    }
-    .bottom__contact-btn {
-      padding: 5px 14px;
-      border: 1px solid rgb(255 255 255 / 0.25);
-      border-radius: var(--radius-pills);
-      background: rgb(255 255 255 / 0.08);
-      color: #fff;
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: var(--font-weight-bold);
-      cursor: pointer;
-      transition:
-        background var(--dur-2) var(--ease-out),
-        border-color var(--dur-2) var(--ease-out);
-    }
-    .bottom__contact-btn:hover {
-      background: rgb(255 255 255 / 0.18);
-      border-color: #ffd731;
-    }
-    .social {
-      display: flex;
-      gap: 10px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-    .social__link {
-      display: grid;
-      place-items: center;
-      inline-size: 44px;
-      aspect-ratio: 1;
-      border: 1px solid rgb(255 255 255 / 0.22);
-      border-radius: 50%;
-      background: rgb(255 255 255 / 0.06);
-      color: #fff;
-      transition:
-        background var(--dur-2) var(--ease-out),
-        scale var(--dur-2) var(--ease-bounce);
-    }
-    .social__link:hover {
-      background: rgb(255 255 255 / 0.16);
-      scale: 1.08;
-    }
-    .social__link svg {
-      inline-size: 18px;
-      fill: currentColor;
-    }
-    .handle {
-      margin: 0;
-      color: rgb(255 255 255 / 0.55);
-      font-size: 13px;
-      letter-spacing: 0.06em;
-    }
-
     /* ── Modales oscuros en modo Coming Soon ── */
     dialog.dialog--dark {
       position: fixed;
@@ -1006,40 +839,6 @@ export type AuthMode = 'login' | 'register' | 'forgot' | 'verify';
     .btn--link:hover {
       color: #fff;
     }
-    .contact__direct-notice {
-      margin: 8px 0 0;
-      font-size: 13px;
-      color: rgb(255 255 255 / 0.65);
-    }
-    .contact__direct-link {
-      color: #ffd731;
-      text-decoration: underline;
-      font-weight: 600;
-      margin-inline-start: 4px;
-    }
-    .dialog__done {
-      display: grid;
-      gap: 12px;
-      margin-block-start: 16px;
-    }
-    .dialog__done-title {
-      margin: 0;
-      font-size: 22px;
-      color: #55db9c;
-    }
-    .dialog__done-text {
-      margin: 0;
-      font-size: 15px;
-      color: rgb(255 255 255 / 0.85);
-    }
-    .hp {
-      position: absolute;
-      inset-inline-start: -10000px;
-      inline-size: 1px;
-      block-size: 1px;
-      overflow: hidden;
-    }
-
     /* ── Movimiento (solo si el sistema lo permite) ── */
     @keyframes drift {
       50% {
@@ -1163,11 +962,9 @@ export class ComingSoon {
   private readonly router = inject(Router);
   protected readonly locale = inject(LOCALE_ID).slice(0, 2);
   protected readonly orbit = ORBIT;
-  protected readonly social = SOCIAL_LINKS;
-  protected readonly contactEmail = CONTACT_EMAIL;
 
   private readonly authDialog = viewChild<ElementRef<HTMLDialogElement>>('authDialog');
-  private readonly contactDialog = viewChild<ElementRef<HTMLDialogElement>>('contactDialog');
+  private readonly contactFooter = viewChild(ContactFooter);
 
   protected readonly authMode = signal<AuthMode>('login');
 
@@ -1204,9 +1001,6 @@ export class ComingSoon {
   protected readonly verifyError = signal<string | null>(null);
   protected readonly verifyBusy = signal(false);
   protected readonly verifyResent = signal(false);
-
-  // Estado formulario de Contacto
-  protected readonly contactStatus = signal<'idle' | 'sending' | 'sent' | 'error' | 'limited' | 'invalid'>('idle');
 
   private readonly now = signal(Date.now());
   protected readonly countdown = computed(() => {
@@ -1249,11 +1043,11 @@ export class ComingSoon {
     } else if (path === 'verify-email') {
       this.openAuth('verify');
     } else if (path === 'contact') {
-      this.openContactDialog();
+      this.contactFooter()?.openContactDialog();
     }
   }
 
-  private cleanUrlIfSubroute() {
+  protected cleanUrlIfSubroute() {
     if (typeof window === 'undefined') return;
     const path = this.router.url.split(/[?#]/)[0].replace(/^\/+[a-z]{2}\/?/, '').replace(/^\/+/, '');
     if (['login', 'register', 'forgot-password', 'verify-email', 'contact'].includes(path)) {
@@ -1430,46 +1224,5 @@ export class ComingSoon {
   protected async logoutFromVerify() {
     await this.auth.logout();
     this.setAuthMode('login');
-  }
-
-  // ── Gestión del Diálogo de Contacto ──
-  protected openContactDialog() {
-    this.contactStatus.set('idle');
-    this.contactDialog()?.nativeElement.showModal();
-  }
-
-  protected closeContactDialog() {
-    this.contactDialog()?.nativeElement.close();
-  }
-
-  protected onContactDialogClose() {
-    this.cleanUrlIfSubroute();
-  }
-
-  protected async submitContact(event: SubmitEvent) {
-    event.preventDefault();
-    if (this.contactStatus() === 'sending') return;
-    const form = event.target as HTMLFormElement;
-    const data = Object.fromEntries(new FormData(form)) as Record<string, string>;
-    this.contactStatus.set('sending');
-    try {
-      const res = await fetch(CONTACT_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        form.reset();
-        this.contactStatus.set('sent');
-      } else {
-        this.contactStatus.set(res.status === 429 ? 'limited' : res.status === 400 ? 'invalid' : 'error');
-      }
-    } catch {
-      this.contactStatus.set('error');
-    }
-  }
-
-  protected resetContactForm() {
-    this.contactStatus.set('idle');
   }
 }

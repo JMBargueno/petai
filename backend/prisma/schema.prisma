@@ -176,6 +176,13 @@ model AppSettings {
   // Cuenta atrás de la landing (solo se muestra si está activa y hay fecha futura).
   comingSoonCountdownEnabled Boolean   @default(false)
   comingSoonLaunchAt         DateTime?
+  // Modo mantenimiento manual: bloquea la web y/o las apps salvo admins, login y contacto.
+  maintenanceEnabled         Boolean   @default(false)
+  // Alcance: 'web' | 'apps' | 'all' (validado en site.schemas.ts).
+  maintenanceScope           String    @default("all")
+  // Mensaje opcional para los usuarios (vacío = texto por defecto de cada cliente).
+  maintenanceMessageEs       String?
+  maintenanceMessageEn       String?
   updatedAt              DateTime @updatedAt
 }
 

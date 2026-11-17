@@ -33,7 +33,7 @@ export function applyCors(app: INestApplication, corsOrigins?: string | null) {
     // La autenticación va en la cabecera Authorization, no en cookies: no se necesitan credenciales
     credentials: false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Client'],
     maxAge: 600,
   });
 }

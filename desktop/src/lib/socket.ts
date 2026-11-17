@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { API_BASE_URL, getAccessToken, onTokenRenewed, renewAccessToken } from './api';
+import { enterMaintenance } from './maintenance';
 
 let socket: Socket | null = null;
 /** Token enviado en el último handshake. */
@@ -81,7 +82,8 @@ export function initSocket() {
     auth: (cb) => {
       handshakeToken = getAccessToken();
       // El backend usa `deviceId` + `platform` como señal de presencia del dispositivo.
-      cb({ token: handshakeToken, deviceId: getDeviceId(), platform: 'desktop' });
+      // `client`: el backend distingue web y apps para el modo mantenimiento.
+      cb({ token: handshakeToken, deviceId: getDeviceId(), platform: 'desktop', client: 'desktop' });
     },
     transports: ['websocket', 'polling'],
   });
@@ -97,6 +99,9 @@ export function initSocket() {
   s.on('auth:expired', () => {
     expiredNotice = true;
   });
+
+  // Mantenimiento manual: el servidor cierra el canal; la app se bloquea con el aviso.
+  s.on('maintenance', (body: unknown) => enterMaintenance(body));
 
   s.on('disconnect', (reason) => {
     console.log('[WebSocket] Desconectado:', reason);

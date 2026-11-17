@@ -601,6 +601,13 @@
     "verifyEmail.error": "No hemos podido conectar con el servidor. Inténtalo de nuevo en un momento.",
     "verifyEmail.sending": "Verificando…",
     "verifyEmail.button": "Verificar mi correo",
-    "verifyEmail.meta.title": "Verifica tu correo · Pockai"
+    "verifyEmail.meta.title": "Verifica tu correo · Pockai",
+    "maintenance.kicker": "Mantenimiento",
+    "maintenance.title": "Estamos haciendo unos ajustes",
+    "maintenance.down.lead": "Ahora mismo no podemos conectar con Pockai. Volvemos enseguida: esta página se actualizará sola.",
+    "maintenance.retry": "Reintentar",
+    "maintenance.retrying": "Comprobando…",
+    "maintenance.staff": "Acceso del equipo",
+    "maintenance.default": "Estamos mejorando Pockai. Volvemos muy pronto, ¡gracias por la paciencia!"
   }
 }

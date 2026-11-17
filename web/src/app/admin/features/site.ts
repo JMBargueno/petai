@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SITE, SiteSettings } from '../data/site-http';
+import { MaintenanceScope, SITE, SiteSettings } from '../data/site-http';
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'full', timeStyle: 'short' });
 
 /**
  * Ajustes de la web pública: landing «Coming soon» (tapa toda la web a quien no tenga sesión con el
- * correo verificado) y su cuenta atrás opcional. Los cambios se ven en la web en la siguiente visita.
+ * correo verificado), su cuenta atrás opcional y el modo mantenimiento (web, apps o todo, con mensaje
+ * en castellano e inglés). Los cambios se ven en la web en la siguiente visita.
  */
 @Component({
   selector: 'app-admin-site',
@@ -59,6 +60,36 @@ const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'full', timeStyle:
       display: inline-flex;
       align-items: center;
       gap: 8px;
+    }
+    .section-title {
+      margin: 28px 0 0;
+    }
+    .section-lead {
+      margin: 6px 0 12px;
+      color: var(--ink-muted);
+    }
+    .settings--alert {
+      border-color: #fb4903;
+    }
+    .scope {
+      justify-content: flex-start;
+      margin: 0;
+      padding-inline: 0;
+      padding-block-end: 0;
+      border-inline: 0;
+      border-block-end: 0;
+    }
+    .scope legend {
+      float: left;
+      margin-inline-end: 12px;
+    }
+    .messages {
+      display: grid;
+      justify-content: stretch;
+    }
+    .messages textarea {
+      inline-size: 100%;
+      resize: vertical;
     }
   `,
   template: `
@@ -129,6 +160,58 @@ const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'full', timeStyle:
             </div>
           </form>
         </div>
+
+        <h2 class="section-title">Modo mantenimiento</h2>
+        <p class="section-lead">
+          Bloquea la web y/o las apps con un aviso. Siguen funcionando el login y este panel, el formulario de contacto y cualquier
+          cuenta con acceso al panel (para comprobar todo antes de reabrir). Si el servidor deja de responder, la web muestra un aviso
+          de mantenimiento automáticamente, sin tocar nada aquí.
+        </p>
+        <div class="settings" [class.settings--alert]="s.maintenanceEnabled">
+          <div class="settings__row">
+            <div>
+              <strong>Mantenimiento</strong>
+              <p>{{ s.maintenanceEnabled ? 'Activo: ' + scopeText(s.maintenanceScope) + '.' : 'Desactivado: todo funciona con normalidad.' }}</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" role="switch" [checked]="s.maintenanceEnabled" [disabled]="saving()" (change)="toggle('maintenanceEnabled', $event)" />
+              {{ s.maintenanceEnabled ? 'Activado' : 'Desactivado' }}
+            </label>
+          </div>
+
+          <fieldset class="settings__row scope">
+            <legend><strong>Alcance</strong></legend>
+            @for (opt of scopes; track opt.value) {
+              <label class="check">
+                <input
+                  type="radio"
+                  name="maintenanceScope"
+                  [value]="opt.value"
+                  [checked]="s.maintenanceScope === opt.value"
+                  [disabled]="saving()"
+                  (change)="save({ maintenanceScope: opt.value })"
+                />
+                {{ opt.label }}
+              </label>
+            }
+          </fieldset>
+
+          <form class="settings__row messages" (ngSubmit)="saveMessages()">
+            <div class="field">
+              <label for="maintenance-es">Mensaje en castellano</label>
+              <textarea id="maintenance-es" class="input" name="messageEs" rows="3" maxlength="1000" [(ngModel)]="messageEs"
+                placeholder="Vacío: «Estamos mejorando Pockai. Volvemos muy pronto, ¡gracias por la paciencia!»"></textarea>
+            </div>
+            <div class="field">
+              <label for="maintenance-en">Mensaje en inglés</label>
+              <textarea id="maintenance-en" class="input" name="messageEn" rows="3" maxlength="1000" [(ngModel)]="messageEn"
+                placeholder="Empty: “We're improving Pockai. We'll be back very soon, thanks for your patience!”"></textarea>
+            </div>
+            <div>
+              <button class="btn btn--filled btn--sm" type="submit" [disabled]="saving()">Guardar mensajes</button>
+            </div>
+          </form>
+        </div>
       } @else if (!error()) {
         <p>Cargando…</p>
       }
@@ -146,6 +229,22 @@ export class Site implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly status = signal('');
   protected launchAt = '';
+  protected messageEs = '';
+  protected messageEn = '';
+
+  protected readonly scopes: { value: MaintenanceScope; label: string }[] = [
+    { value: 'web', label: 'Solo la web' },
+    { value: 'apps', label: 'Solo las apps' },
+    { value: 'all', label: 'Web y apps' },
+  ];
+
+  protected scopeText(scope: MaintenanceScope) {
+    return { web: 'solo la web está bloqueada', apps: 'solo las apps están bloqueadas', all: 'la web y las apps están bloqueadas' }[scope];
+  }
+
+  protected async saveMessages() {
+    await this.save({ maintenanceMessageEs: this.messageEs.trim() || null, maintenanceMessageEn: this.messageEn.trim() || null });
+  }
 
   async ngOnInit() {
     try {
@@ -159,7 +258,7 @@ export class Site implements OnInit {
     return iso ? dateFormat.format(new Date(iso)) : '';
   }
 
-  protected async toggle(field: 'comingSoonEnabled' | 'comingSoonCountdownEnabled', event: Event) {
+  protected async toggle(field: 'comingSoonEnabled' | 'comingSoonCountdownEnabled' | 'maintenanceEnabled', event: Event) {
     const input = event.target as HTMLInputElement;
     const wanted = input.checked;
     const ok = await this.save({ [field]: wanted });
@@ -183,7 +282,7 @@ export class Site implements OnInit {
     await this.save({ comingSoonLaunchAt: null });
   }
 
-  private async save(patch: Partial<SiteSettings>): Promise<boolean> {
+  protected async save(patch: Partial<SiteSettings>): Promise<boolean> {
     this.saving.set(true);
     this.error.set(null);
     try {
@@ -201,6 +300,8 @@ export class Site implements OnInit {
   private apply(s: SiteSettings) {
     this.settings.set(s);
     this.launchAt = s.comingSoonLaunchAt ? toLocalInput(new Date(s.comingSoonLaunchAt)) : '';
+    this.messageEs = s.maintenanceMessageEs ?? '';
+    this.messageEn = s.maintenanceMessageEn ?? '';
   }
 }
 

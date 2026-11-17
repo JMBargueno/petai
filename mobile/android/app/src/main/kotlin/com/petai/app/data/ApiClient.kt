@@ -49,6 +49,8 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
     private val refreshLock = Any()
 
     private val plain: OkHttpClient = OkHttpClient.Builder()
+        // El backend distingue web y apps para el modo mantenimiento (503 MAINTENANCE por alcance).
+        .addInterceptor { chain -> chain.proceed(chain.request().newBuilder().header("X-Client", "android").build()) }
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()

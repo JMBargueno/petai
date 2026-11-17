@@ -12,8 +12,9 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <!--
-      Landing «Coming soon»: si la última configuración conocida la tiene activa (o aún no se conoce)
-      y no hay sesión verificada, se oculta la página prerenderizada hasta que la app decida.
+      Landing «Coming soon» y mantenimiento: si la última configuración conocida tiene activa la
+      landing (sin sesión verificada) o el mantenimiento de la web (sin sesión de admin), o aún no se
+      conoce, se oculta la página prerenderizada hasta que la app decida.
       Mismas rutas exentas que src/app/coming-soon/gate.ts. A los 5 s se muestra igualmente.
     -->
     <style>
@@ -26,8 +27,14 @@
           if (/^\/[a-z]{2}\/admin(\/|$)/.test(location.pathname)) return;
           var config = JSON.parse(localStorage.getItem('pockai.siteConfig') || 'null');
           var session = JSON.parse(localStorage.getItem('pockai.session') || 'null');
-          if (config && !(config.comingSoon && config.comingSoon.enabled)) return;
-          if (config && session && session.user && session.user.emailVerified) return;
+          var user = session && session.user;
+          if (config) {
+            var m = config.maintenance;
+            var admin = !!(user && user.permissions && user.permissions.indexOf('admin:access') >= 0);
+            var maintenance = !!(m && m.enabled && m.scope !== 'apps') && !admin;
+            var soon = !!(config.comingSoon && config.comingSoon.enabled) && !(user && user.emailVerified);
+            if (!maintenance && !soon) return;
+          }
           var root = document.documentElement;
           root.classList.add('gate-pending');
           setTimeout(function () { root.classList.remove('gate-pending'); }, 5000);

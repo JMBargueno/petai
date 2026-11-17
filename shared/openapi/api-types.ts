@@ -280,6 +280,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/site/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configuración pública de la web (registro y landing «Coming soon») */
+        get: operations["SiteController_config"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/shop": {
         parameters: {
             query?: never;
@@ -2099,23 +2116,6 @@ export interface paths {
         head?: never;
         /** Cambiar los ajustes de la web pública (queda auditado) */
         patch: operations["AdminSiteController_set"];
-        trace?: never;
-    };
-    "/v1/site/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Configuración pública de la web (registro y landing «Coming soon») */
-        get: operations["SiteController_config"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/v1/missions": {
@@ -4434,6 +4434,31 @@ export interface components {
              */
             dailyChestUnlocked: boolean;
         };
+        SiteCountdownDto: {
+            enabled: boolean;
+            /** Format: date-time */
+            launchAt: string | null;
+        };
+        SiteComingSoonDto: {
+            enabled: boolean;
+            countdown: components["schemas"]["SiteCountdownDto"];
+        };
+        SiteMaintenanceMessageDto: {
+            es: string | null;
+            en: string | null;
+        };
+        SiteMaintenanceDto: {
+            enabled: boolean;
+            /** @enum {string} */
+            scope: "web" | "apps" | "all";
+            message: components["schemas"]["SiteMaintenanceMessageDto"];
+        };
+        SiteConfigDto: {
+            /** @description Si es true, el registro exige un código de invitación */
+            inviteRequired: boolean;
+            comingSoon: components["schemas"]["SiteComingSoonDto"];
+            maintenance: components["schemas"]["SiteMaintenanceDto"];
+        };
         ManifestDto: {
             /**
              * @description Versión del manifest (fecha + hash corto) — cambia con cada deploy.
@@ -5022,26 +5047,28 @@ export interface components {
              * @description Fecha de lanzamiento de la cuenta atrás
              */
             comingSoonLaunchAt: string | null;
+            /** @description Modo mantenimiento manual: solo pasan admins, login y contacto */
+            maintenanceEnabled: boolean;
+            /**
+             * @description A quién afecta: solo la web, solo las apps o todo
+             * @enum {string}
+             */
+            maintenanceScope: "web" | "apps" | "all";
+            /** @description Mensaje en castellano (vacío = texto por defecto) */
+            maintenanceMessageEs: string | null;
+            /** @description Mensaje en inglés (vacío = texto por defecto) */
+            maintenanceMessageEn: string | null;
         };
         UpdateSiteSettingsDto: {
             comingSoonEnabled?: boolean;
             comingSoonCountdownEnabled?: boolean;
             /** Format: date-time */
             comingSoonLaunchAt?: string | null;
-        };
-        SiteCountdownDto: {
-            enabled: boolean;
-            /** Format: date-time */
-            launchAt: string | null;
-        };
-        SiteComingSoonDto: {
-            enabled: boolean;
-            countdown: components["schemas"]["SiteCountdownDto"];
-        };
-        SiteConfigDto: {
-            /** @description Si es true, el registro exige un código de invitación */
-            inviteRequired: boolean;
-            comingSoon: components["schemas"]["SiteComingSoonDto"];
+            maintenanceEnabled?: boolean;
+            /** @enum {string} */
+            maintenanceScope?: "web" | "apps" | "all";
+            maintenanceMessageEs?: string | null;
+            maintenanceMessageEn?: string | null;
         };
         MissionRewardDto: {
             /**
@@ -5871,6 +5898,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    SiteController_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteConfigDto"];
+                };
             };
         };
     };
@@ -8403,25 +8449,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SiteSettingsDto"];
-                };
-            };
-        };
-    };
-    SiteController_config: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SiteConfigDto"];
                 };
             };
         };

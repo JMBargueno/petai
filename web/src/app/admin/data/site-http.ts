@@ -1,10 +1,17 @@
 import { InjectionToken, inject } from '@angular/core';
 import { AdminApi } from '../api';
 
+/** A quién afecta el mantenimiento: solo la web, solo las apps (escritorio y móvil) o todo. */
+export type MaintenanceScope = 'web' | 'apps' | 'all';
+
 export interface SiteSettings {
   comingSoonEnabled: boolean;
   comingSoonCountdownEnabled: boolean;
   comingSoonLaunchAt: string | null;
+  maintenanceEnabled: boolean;
+  maintenanceScope: MaintenanceScope;
+  maintenanceMessageEs: string | null;
+  maintenanceMessageEn: string | null;
 }
 
 /** Ajustes de la web pública (`/v1/admin/site-settings`, permiso `site:manage`). */

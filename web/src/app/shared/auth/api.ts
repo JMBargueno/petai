@@ -1,11 +1,21 @@
 import { Injectable, InjectionToken, inject, signal } from '@angular/core';
 import site from '../../site.json';
+import { BackendStatus } from '../site-config/backend-status';
 
 /** Origen del backend (sin `/v1`). Se configura en site.json → `apiUrl`. */
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
   providedIn: 'root',
   factory: () => site.apiUrl.replace(/\/$/, ''),
 });
+
+/**
+ * Identifica a la web ante el backend: el modo mantenimiento puede afectar solo a la web, solo a las
+ * apps o a todo. Va en todas las peticiones de la web y del panel (también en los `fetch` sueltos).
+ */
+export const WEB_CLIENT_HEADERS = { 'X-Client': 'web' } as const;
+
+/** Código con el que el backend responde 503 mientras dura el mantenimiento manual. */
+export const MAINTENANCE_CODE = 'MAINTENANCE';
 
 /**
  * Dónde se guarda la sesión de la web (y del panel): localStorage, para que siga abierta entre visitas.
@@ -83,6 +93,7 @@ export const SESSION_KEY = 'pockai.session';
 export class ApiClient {
   private readonly base = inject(API_BASE_URL);
   private readonly storage = inject(SESSION_STORAGE);
+  private readonly status = inject(BackendStatus);
   private readonly _session = signal<UserSession | null>(this.read());
   readonly session = this._session.asReadonly();
   private refreshing: Promise<boolean> | null = null;
@@ -105,11 +116,13 @@ export class ApiClient {
         ...init,
         headers: {
           'Content-Type': 'application/json',
+          ...WEB_CLIENT_HEADERS,
           ...(session ? { Authorization: `Bearer ${session.accessToken}` } : {}),
           ...init.headers,
         },
       });
     } catch {
+      this.status.report('offline');
       throw new ApiError(0, $localize`:@@api.offline:No se puede conectar con el servidor`);
     }
 
@@ -120,6 +133,8 @@ export class ApiClient {
     }
     if (!res.ok) {
       const { message, code } = await errorBody(res);
+      if (res.status === 503 && code === MAINTENANCE_CODE) this.status.report('maintenance');
+      else if (res.status === 502 || res.status === 504) this.status.report('offline');
       throw new ApiError(res.status, message, code);
     }
     return (res.status === 204 ? undefined : await res.json()) as T;

@@ -610,6 +610,13 @@
     "verifyEmail.code.submit": "Verify",
     "verifyEmail.resend": "Resend email",
     "verifyEmail.otherAccount": "Use another account",
-    "verifyEmail.login": "Log in to enter the code"
+    "verifyEmail.login": "Log in to enter the code",
+    "maintenance.kicker": "Maintenance",
+    "maintenance.title": "We're making a few tweaks",
+    "maintenance.down.lead": "We can't reach Pockai right now. We'll be back soon: this page will refresh on its own.",
+    "maintenance.retry": "Try again",
+    "maintenance.retrying": "Checking…",
+    "maintenance.staff": "Team access",
+    "maintenance.default": "We're improving Pockai. We'll be back very soon, thanks for your patience!"
   }
 }
