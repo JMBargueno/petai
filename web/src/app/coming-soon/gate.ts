@@ -1,8 +1,9 @@
 /**
- * Rutas que la landing «Coming soon» nunca tapa: sin ellas nadie podría entrar, registrarse,
- * verificar el correo ni llegar al panel para desactivarla.
+ * Rutas que la landing «Coming soon» nunca tapa: solo el panel de administración
+ * para el equipo (/admin). El login y registro de usuarios se atienden en modales
+ * directamente sobre la landing.
  */
-export const GATE_EXEMPT = ['login', 'register', 'forgot-password', 'verify-email', 'admin'] as const;
+export const GATE_EXEMPT = ['admin'] as const;
 
 /** ¿La ruta (del router, sin idioma: `/login?next=…`) queda fuera de la landing? */
 export function isGateExempt(url: string): boolean {

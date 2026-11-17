@@ -23,7 +23,7 @@
     <script>
       (function () {
         try {
-          if (/^\/[a-z]{2}\/(login|register|forgot-password|verify-email|admin)(\/|$)/.test(location.pathname)) return;
+          if (/^\/[a-z]{2}\/admin(\/|$)/.test(location.pathname)) return;
           var config = JSON.parse(localStorage.getItem('pockai.siteConfig') || 'null');
           var session = JSON.parse(localStorage.getItem('pockai.session') || 'null');
           if (config && !(config.comingSoon && config.comingSoon.enabled)) return;

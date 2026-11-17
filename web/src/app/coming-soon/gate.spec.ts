@@ -3,13 +3,13 @@ import { countdownTo } from './coming-soon';
 import { isGateExempt, shouldGate } from './gate';
 
 describe('isGateExempt', () => {
-  it('deja pasar las páginas de cuenta y el panel', () => {
-    for (const url of ['/login', '/login?next=%2F', '/register', '/forgot-password', '/verify-email?token=x', '/admin', '/admin/sitio']) {
+  it('deja pasar únicamente el panel de administración', () => {
+    for (const url of ['/admin', '/admin/sitio', '/admin/login']) {
       expect(isGateExempt(url)).toBe(true);
     }
   });
-  it('tapa el resto', () => {
-    for (const url of ['/', '/lore', '/pockais', '/arena', '/contact', '/account', '/#descargar', '/loginx']) {
+  it('tapa las páginas de cuenta, contacto y el resto de la web', () => {
+    for (const url of ['/', '/login', '/login?next=%2F', '/register', '/forgot-password', '/verify-email?token=x', '/lore', '/pockais', '/arena', '/contact', '/account', '/#descargar', '/loginx']) {
       expect(isGateExempt(url)).toBe(false);
     }
   });
@@ -21,7 +21,8 @@ describe('shouldGate', () => {
   it('sin sesión: tapa', () => expect(shouldGate(base)).toBe(true));
   it('con sesión sin verificar: tapa', () => expect(shouldGate({ ...base, loggedIn: true })).toBe(true));
   it('con sesión verificada: pasa', () => expect(shouldGate({ ...base, loggedIn: true, verified: true })).toBe(false));
-  it('rutas exentas: pasa aunque no haya sesión', () => expect(shouldGate({ ...base, url: '/login' })).toBe(false));
+  it('panel admin: pasa aunque no haya sesión', () => expect(shouldGate({ ...base, url: '/admin' })).toBe(false));
+  it('login directo: tapa para abrirse en modal', () => expect(shouldGate({ ...base, url: '/login' })).toBe(true));
 });
 
 describe('countdownTo', () => {
