@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CONTACT_ENDPOINT, Contact } from './contact';
+import { CONTACT_ENDPOINT, Contact, readContactParams } from './contact';
 import { SITE_URL } from '../site.config';
 
 describe('Contact', () => {
@@ -10,7 +10,11 @@ describe('Contact', () => {
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
   });
-  afterEach(() => vi.unstubAllGlobals());
+  const initialUrl = location.href;
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    history.replaceState(null, '', initialUrl);
+  });
 
   async function render() {
     const fixture = TestBed.createComponent(Contact);
@@ -24,6 +28,7 @@ describe('Contact', () => {
     };
     set('name', 'Ana');
     set('email', 'ana@example.com');
+    set('type', 'question');
     set('subject', 'Duda');
     set('message', 'Hola, tengo una duda sobre mi Pockai.');
   }
@@ -64,8 +69,23 @@ describe('Contact', () => {
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(CONTACT_ENDPOINT);
-    expect(JSON.parse(init.body)).toMatchObject({ name: 'Ana', email: 'ana@example.com', subject: 'Duda', website: '' });
+    expect(JSON.parse(init.body)).toMatchObject({ name: 'Ana', email: 'ana@example.com', subject: 'Duda', type: 'question', source: 'web', website: '' });
     await vi.waitFor(() => expect(fixture.nativeElement.querySelector('[role="status"]')).not.toBeNull());
+  });
+
+  it('preselecciona el tipo y el origen desde la URL (enlaces de las apps)', async () => {
+    history.replaceState(null, '', '/es/contact?type=improvement&from=desktop');
+    const fixture = await render();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect((el.querySelector('select[name="type"]') as HTMLSelectElement).value).toBe('improvement');
+    expect((el.querySelector('input[name="source"]') as HTMLInputElement).value).toBe('desktop');
+    expect(el.querySelector('a[href="mailto:contact@pockai.world"]')).not.toBeNull();
+  });
+
+  it('ignora tipos u orígenes desconocidos en la URL', () => {
+    expect(readContactParams('?type=spam&from=ios')).toEqual({ type: '', source: 'web' });
+    expect(readContactParams('?type=legal')).toEqual({ type: 'legal', source: 'web' });
   });
 
   it('avisa si se supera el límite de envíos (429)', async () => {

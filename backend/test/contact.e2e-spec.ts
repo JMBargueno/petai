@@ -38,7 +38,17 @@ describe('Contacto (e2e)', () => {
   it('acepta un mensaje válido (204) y lo envía', async () => {
     await api().post('/v1/contact').send(body).expect(204);
     expect(sendContactMessage).toHaveBeenCalledTimes(1);
-    expect(sendContactMessage.mock.calls[0][0]).toMatchObject({ email: 'ana@example.com', subject: 'Duda' });
+    expect(sendContactMessage.mock.calls[0][0]).toMatchObject({ email: 'ana@example.com', subject: 'Duda', type: 'other', source: 'web' });
+  });
+
+  it('acepta el tipo y el origen del mensaje', async () => {
+    await api().post('/v1/contact').send({ ...body, type: 'improvement', source: 'desktop' }).expect(204);
+    expect(sendContactMessage.mock.calls[0][0]).toMatchObject({ type: 'improvement', source: 'desktop' });
+  });
+
+  it('rechaza un tipo desconocido (400)', async () => {
+    await api().post('/v1/contact').send({ ...body, type: 'spam' }).expect(400);
+    expect(sendContactMessage).not.toHaveBeenCalled();
   });
 
   it('rechaza datos no válidos (400) sin enviar', async () => {

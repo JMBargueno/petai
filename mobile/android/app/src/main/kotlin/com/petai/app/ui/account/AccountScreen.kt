@@ -40,6 +40,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 /** Buzón de contacto público (el mismo que recibe el formulario de la web). */
 const val CONTACT_EMAIL = "contact@pockai.world"
 
+/** Formulario de contacto de la web (vía preferente). Si la web está en mantenimiento, se abre en un modal. */
+const val CONTACT_FORM_URL = "https://pockai.world/es/contact"
+
+/** Enlace al formulario con el tipo de mensaje ya elegido (`bug`, `improvement`…) y el origen. */
+fun contactFormUrl(type: String) = "$CONTACT_FORM_URL?type=$type&from=android"
+
 /** Perfiles oficiales de Pockai (mismo usuario en todas las redes). */
 const val SOCIAL_HANDLE = "pockais"
 
@@ -106,8 +112,21 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
         PockaiCard(Modifier.fillMaxWidth()) {
             Column {
                 Text("Contacto", style = MaterialTheme.typography.titleMedium)
-                Text("¿Dudas, ideas o algún fallo? Escríbenos y te responderemos por correo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(4.dp))
+                Text("¿Has visto un fallo o tienes una idea? La vía preferente es el formulario de contacto: nos llega ordenado y te respondemos por correo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(12.dp))
+                SecondaryButton(
+                    "Informar de un fallo",
+                    onClick = { runCatching { uriHandler.openUri(contactFormUrl("bug")) } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                SecondaryButton(
+                    "Sugerir una mejora",
+                    onClick = { runCatching { uriHandler.openUri(contactFormUrl("improvement")) } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("Si lo prefieres, también puedes escribirnos a:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = { runCatching { uriHandler.openUri("mailto:$CONTACT_EMAIL") } }) {
                     Text(CONTACT_EMAIL)
                 }

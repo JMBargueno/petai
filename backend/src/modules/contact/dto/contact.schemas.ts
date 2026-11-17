@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CONTACT_SOURCES, CONTACT_TYPES } from '../contact-types';
 
 const required = (name: string) =>
   z.string({ error: (issue) => (issue.input === undefined ? `${name} es obligatorio` : `${name} debe ser un texto`) });
@@ -28,6 +29,9 @@ export const contactSchema = z.object({
     .refine((v) => z.email().safeParse(v).success, 'email no es válido'),
   subject: field('subject', 1, 150),
   message: field('message', 10, 5000, true),
+  // Opcionales para no romper clientes antiguos: sin tipo ⇒ «otro»; sin origen ⇒ la web.
+  type: z.enum(CONTACT_TYPES, { error: 'type no es válido' }).default('other'),
+  source: z.enum(CONTACT_SOURCES, { error: 'source no es válido' }).default('web'),
   website: z.string().max(500).optional(),
 });
 

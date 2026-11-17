@@ -356,6 +356,7 @@ Pantalla de entrada con dos bloques: **Actividades** (minijuegos, cocina, entren
 | Seguridad | Cambiar contraseña, cerrar todas las sesiones, actividad reciente de la cuenta | `POST /auth/password`, `POST /auth/logout-all`, `GET /security/audit` | ⬜ |
 | Dispositivos | Vincular el escritorio introduciendo su código de 6 dígitos | `POST /auth/device/confirm` | ✅ |
 | Sesión | Cerrar sesión | `POST /auth/logout` | ✅ |
+| Contacto | «Informar de un fallo» y «Sugerir una mejora» abren el formulario de la web con el tipo elegido (`/es/contact?type=bug&from=android`; en mantenimiento, el modal). Vía preferente; el correo `contact@pockai.world` queda como alternativa | `POST /contact` (desde la web) | ✅ |
 | Legal | Probabilidades de huevos y cofres, términos, privacidad, versión de la app | — | ⬜ |
 | Borrar cuenta | Eliminar la cuenta y sus datos | sin backend | ⛔ |
 
@@ -468,6 +469,7 @@ Estado actual de lo ya construido en el panel:
 | Logros y constelación (con exportación a imagen) | ✅ |
 | Ajustes de notificaciones | ✅ |
 | Cuenta con código de vinculación | ✅ |
+| Acerca de: «Informar de un fallo» y «Sugerir una mejora» (formulario de la web con `from=desktop`) y el correo como alternativa | ✅ |
 | Misiones, cofres, vínculo, temporada, rituales, hábitat y el resto de la Fase 7 | ⬜ |
 
 ### 4.4 Opciones exclusivas del ordenador

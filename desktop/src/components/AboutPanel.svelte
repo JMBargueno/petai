@@ -18,6 +18,11 @@
 
   /** Buzón de contacto público (el mismo que recibe el formulario de la web). */
   const CONTACT_EMAIL = 'contact@pockai.world';
+  /** Formulario de contacto de la web (vía preferente; en mantenimiento se abre en un modal). */
+  const contactFormUrl = (type: 'bug' | 'improvement') =>
+    `https://pockai.world/es/contact?type=${type}&from=desktop`;
+  const BUG_URL = contactFormUrl('bug');
+  const IDEA_URL = contactFormUrl('improvement');
 
   /** Abre un enlace externo con el navegador/cliente del sistema (en navegador basta el href). */
   async function openExternal(event: MouseEvent, url: string) {
@@ -62,10 +67,17 @@
     {/if}
   {/if}
 
-  <p class="muted contact">
-    ¿Dudas o algún fallo? Escríbenos a
-    <a href={`mailto:${CONTACT_EMAIL}`} on:click={(e) => openExternal(e, `mailto:${CONTACT_EMAIL}`)}>{CONTACT_EMAIL}</a>
-  </p>
+  <div class="contact">
+    <p class="muted">¿Has visto un fallo o tienes una idea? La vía preferente es el formulario de contacto.</p>
+    <div class="contact__links">
+      <a class="btn" href={BUG_URL} target="_blank" rel="noopener" on:click={(e) => openExternal(e, BUG_URL)}>Informar de un fallo</a>
+      <a class="btn" href={IDEA_URL} target="_blank" rel="noopener" on:click={(e) => openExternal(e, IDEA_URL)}>Sugerir una mejora</a>
+    </div>
+    <p class="muted">
+      Si lo prefieres, escríbenos a
+      <a href={`mailto:${CONTACT_EMAIL}`} on:click={(e) => openExternal(e, `mailto:${CONTACT_EMAIL}`)}>{CONTACT_EMAIL}</a>
+    </p>
+  </div>
 
   <div class="social">
     <p class="muted">Síguenos</p>
@@ -110,8 +122,11 @@
   .update-box { display: flex; flex-direction: column; gap: 8px; width: 100%; }
   .notes { white-space: pre-line; max-height: 120px; overflow-y: auto; color: var(--ink-muted); }
   progress { width: 100%; accent-color: var(--accent); }
-  .contact { padding-top: 6px; border-top: 1px solid var(--line-soft); width: 100%; }
-  .contact a { color: var(--accent); }
+  .contact { display: grid; gap: 8px; justify-items: start; padding-top: 6px; border-top: 1px solid var(--line-soft); width: 100%; }
+  .contact p { margin: 0; }
+  .contact p a { color: var(--accent); }
+  .contact__links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .contact__links .btn { text-decoration: none; }
   .social { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
   .social ul { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
   .social a {
