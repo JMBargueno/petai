@@ -291,7 +291,7 @@ Tabla orientativa: los valores exactos (escala total, cabeza, apéndices y ojos)
 - Dentro de una sala, el Pockai se muestra a unos **72 px** de alto (escala ≈ 0,56); en la mascota flotante, a 128 px.
 
 **Salas** (se renderizan con el núcleo compartido de PixiJS en `shared/scene`: ver `ART_PIPELINE.md` §9)
-- Corte tipo "casa de muñecas": suelo de 14×10 celdas y **dos paredes al fondo** (la izquierda sobre `y = 0` y la derecha sobre `x = 0`), sin paredes delanteras.
+- Corte tipo "casa de muñecas": suelo de 14×10 celdas y **dos paredes al fondo** (la derecha a lo largo de `y = 0` y la izquierda a lo largo de `x = 0`), sin paredes delanteras.
 - Cada sala tiene su tema (pared, suelo, zócalo, ventana y luz) y su variante de noche.
 - **Muebles:** SVG isométrico con huella `W×D` en celdas, de suelo o de pared, con 2 orientaciones dibujadas (las otras 2 salen por espejo). El punto de anclaje es el vértice superior de la celda (x, y) de la huella.
 - **Ni emoji ni iconos** como muebles.

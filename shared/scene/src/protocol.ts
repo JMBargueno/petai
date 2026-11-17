@@ -6,7 +6,7 @@
  * Versionado: si cambias un mensaje de forma incompatible, sube `PROTOCOL_VERSION`. La escena lo
  * anuncia en `ready` para que la app nativa compruebe que habla el mismo idioma.
  */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export type Stage = 'egg' | 'baby' | 'juvenile' | 'adult' | 'final';
 export type ThemeMode = 'light' | 'dark';
@@ -21,13 +21,63 @@ export interface PetState {
   shiny?: boolean;
 }
 
+export type Interaction = 'sleep' | 'eat' | 'play' | 'bathe' | 'sit';
+
+/** Mueble del catálogo (solo lo que la escena necesita para dibujarlo y colocarlo). */
+export interface RoomFurniture {
+  id: string;
+  name?: string;
+  footprint?: [number, number];
+  mount?: 'floor' | 'wall';
+  interaction?: Interaction;
+}
+
+/** Mueble colocado en la sala. */
+export interface RoomItem {
+  id: string;
+  furnitureId: string;
+  x: number;
+  y: number;
+  rotation: number;
+}
+
+export interface RoomTheme {
+  wall: string;
+  wallShade: string;
+  floor: string;
+  floorAlt: string;
+  trim: string;
+  sky: string;
+  light: string;
+}
+
+/** Sala isométrica a mostrar (null = solo el Pockai, sin sala). */
+export interface RoomState {
+  id: string;
+  gridWidth: number;
+  gridHeight: number;
+  theme?: RoomTheme | null;
+  items: RoomItem[];
+  furniture: RoomFurniture[];
+}
+
+/** Qué hace el Pockai en la sala: pasear, dormir (va a la cama si hay) o no estar. */
+export type Activity = 'idle' | 'sleep' | 'away';
+
 /** Anfitrión → escena. */
 export type HostMessage =
   | { type: 'setPet'; pet: PetState }
   | { type: 'playClip'; clip: string; once?: boolean }
   | { type: 'setTheme'; mode: ThemeMode }
   | { type: 'setPaused'; paused: boolean }
-  | { type: 'setFacing'; facing: 1 | -1 };
+  | { type: 'setFacing'; facing: 1 | -1 }
+  | { type: 'setRoom'; room: RoomState | null }
+  /** `rest`: clip de reposo según el estado del Pockai (idle, sick, hungry, tired, sad…). */
+  | { type: 'setActivity'; activity: Activity; rest?: string }
+  | { type: 'setNight'; night: boolean }
+  | { type: 'setEditMode'; edit: boolean }
+  | { type: 'selectItem'; itemId: string | null }
+  | { type: 'rotateSelected' };
 
 /** Escena → anfitrión. */
 export type SceneEvent =
@@ -35,9 +85,64 @@ export type SceneEvent =
   | { type: 'petLoaded'; species: string; stage: Stage }
   | { type: 'petTapped' }
   | { type: 'clipEnded'; clip: string }
+  | { type: 'itemSelected'; itemId: string | null }
+  /** El usuario movió o giró un mueble a una posición válida (la escena ya lo muestra ahí). */
+  | { type: 'furnitureMoved'; itemId: string; x: number; y: number; rotation: number }
   | { type: 'error'; message: string };
 
-const HOST_TYPES = new Set<HostMessage['type']>(['setPet', 'playClip', 'setTheme', 'setPaused', 'setFacing']);
+const HOST_TYPES = new Set<HostMessage['type']>([
+  'setPet',
+  'playClip',
+  'setTheme',
+  'setPaused',
+  'setFacing',
+  'setRoom',
+  'setActivity',
+  'setNight',
+  'setEditMode',
+  'selectItem',
+  'rotateSelected',
+]);
+
+const INTERACTIONS: Interaction[] = ['sleep', 'eat', 'play', 'bathe', 'sit'];
+const int = (v: unknown, min = 0, max = 63) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+const isPair = (v: unknown): v is [number, number] =>
+  Array.isArray(v) && v.length === 2 && v.every((n) => int(n, 1, 8));
+
+/** Sala validada; undefined si está mal formada. */
+function parseRoom(raw: unknown): RoomState | null | undefined {
+  if (raw === null) return null;
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.id !== 'string' || !int(r.gridWidth, 1) || !int(r.gridHeight, 1)) return undefined;
+  if (!Array.isArray(r.items) || !Array.isArray(r.furniture)) return undefined;
+  const items: RoomItem[] = [];
+  for (const it of r.items as Record<string, unknown>[]) {
+    if (!it || typeof it.id !== 'string' || typeof it.furnitureId !== 'string' || !int(it.x) || !int(it.y)) {
+      return undefined;
+    }
+    items.push({
+      id: it.id,
+      furnitureId: it.furnitureId,
+      x: it.x as number,
+      y: it.y as number,
+      rotation: int(it.rotation, 0, 3) ? (it.rotation as number) : 0,
+    });
+  }
+  const furniture: RoomFurniture[] = [];
+  for (const f of r.furniture as Record<string, unknown>[]) {
+    if (!f || typeof f.id !== 'string') return undefined;
+    furniture.push({
+      id: f.id,
+      name: typeof f.name === 'string' ? f.name : undefined,
+      footprint: isPair(f.footprint) ? f.footprint : undefined,
+      mount: f.mount === 'wall' ? 'wall' : 'floor',
+      interaction: INTERACTIONS.includes(f.interaction as Interaction) ? (f.interaction as Interaction) : undefined,
+    });
+  }
+  const theme = r.theme && typeof r.theme === 'object' ? (r.theme as RoomTheme) : null;
+  return { id: r.id, gridWidth: r.gridWidth as number, gridHeight: r.gridHeight as number, theme, items, furniture };
+}
 
 /** Valida y normaliza un mensaje del anfitrión (llega como JSON sin tipar desde el WebView). */
 export function parseHostMessage(raw: unknown): HostMessage | null {
@@ -77,6 +182,25 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
       return typeof m.paused === 'boolean' ? { type: 'setPaused', paused: m.paused } : null;
     case 'setFacing':
       return m.facing === 1 || m.facing === -1 ? { type: 'setFacing', facing: m.facing } : null;
+    case 'setRoom': {
+      const room = parseRoom(m.room);
+      return room === undefined ? null : { type: 'setRoom', room };
+    }
+    case 'setActivity':
+      if (m.activity !== 'idle' && m.activity !== 'sleep' && m.activity !== 'away') return null;
+      return typeof m.rest === 'string' && /^[a-z_]{1,24}$/.test(m.rest)
+        ? { type: 'setActivity', activity: m.activity, rest: m.rest }
+        : { type: 'setActivity', activity: m.activity };
+    case 'setNight':
+      return typeof m.night === 'boolean' ? { type: 'setNight', night: m.night } : null;
+    case 'setEditMode':
+      return typeof m.edit === 'boolean' ? { type: 'setEditMode', edit: m.edit } : null;
+    case 'selectItem':
+      return m.itemId === null || typeof m.itemId === 'string'
+        ? { type: 'selectItem', itemId: m.itemId as string | null }
+        : null;
+    case 'rotateSelected':
+      return { type: 'rotateSelected' };
   }
   return null;
 }

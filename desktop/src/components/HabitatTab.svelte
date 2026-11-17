@@ -1,6 +1,6 @@
 <script lang="ts">
   import Ico from './Ico.svelte';
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { onDestroy, createEventDispatcher } from 'svelte';
   import {
     api,
     type HabitatCatalog,
@@ -9,10 +9,11 @@
     type HabitatFurniture,
     type HabitatRoom,
   } from '../lib/api';
-  import PetMiniAvatar from './PetMiniAvatar.svelte';
+  import { furnitureUrl } from '@pockai/scene';
+  import IsoRoomView from './IsoRoomView.svelte';
   import { AsyncState, EmptyState, Notice, SectionHeader, Segmented } from './ui';
   import { startHabitatExitDrag } from '../lib/habitatExitDrag';
-  import { Home, ExternalLink } from 'lucide-svelte';
+  import { Home, ExternalLink, Pencil, Check, RotateCw, Trash2 } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -24,26 +25,18 @@
   let buffs: HabitatBuffs | null = null;
   let error = '';
   let loading = true;
-  let busy = ''; // furnitureId en acción (colocar/quitar)
+  let busy = ''; // furnitureId / itemId en acción (colocar/quitar)
   let habitatBusy = false;
   let activeRoomId = '';
 
-  // Paseo del Pockai dentro del diorama: camina (anim walk) y se para (idle) a ratos
-  const WALK_MS = 1600;
-  let petRoomX = 45; // % horizontal, entre 14% y 80%
-  let petRoomDir = 1;
-  let petWalking = false;
-  let walkStopTimer: ReturnType<typeof setTimeout> | null = null;
+  // Modo edición de la sala: seleccionar, arrastrar y girar muebles
+  let editing = false;
+  let selectedId: string | null = null;
+  let roomView: IsoRoomView;
 
-  // Resaltado del diorama cuando se arrastra algo encima
+  // Resaltado de la sala cuando se arrastra algo encima
   let dragDepth = 0;
   $: isDropTarget = dragDepth > 0 && !isInHabitat;
-
-  const FURN_ICON: Record<string, string> = {
-    fountain_water: '⛲', soft_bed: '🛏️', toy_ball: '⚽', wall_shelf: '📚',
-    flower_pot: '🌸', garden_bench: '🪑', garden_pond: '🐟', shrine_altar: '⛩️',
-    crystal_lamp: '💎', final_throne: '👑', final_garden: '🌳',
-  };
 
   const BUFF_LABEL: Record<string, string> = {
     hygiene_decay_reduction: 'Higiene decae menos',
@@ -51,23 +44,6 @@
     energy_recovery_boost: 'Recupera energía',
     combat_mood_bonus: 'Bonus de ánimo en combate',
   };
-
-  // Huecos de la sala con profundidad: fila del fondo (más pequeña, detrás del Pockai)
-  // y fila delantera (más grande, delante). Se rellenan alternando para que quede equilibrado.
-  const SLOTS: { x: number; back: boolean }[] = [
-    { x: 14, back: true }, { x: 86, back: true }, { x: 34, back: true }, { x: 66, back: true },
-    { x: 11, back: false }, { x: 89, back: false }, { x: 50, back: true }, { x: 24, back: false },
-    { x: 76, back: false },
-  ];
-  function slot(idx: number) {
-    const s = SLOTS[idx % SLOTS.length];
-    const lap = Math.floor(idx / SLOTS.length);
-    return { x: Math.min(94, s.x + lap * 5), back: s.back };
-  }
-
-  function icon(id: string): string {
-    return FURN_ICON[id] ?? '🪑';
-  }
 
   function furnName(id: string): string {
     return catalog?.furniture.find((f) => f.id === id)?.name ?? id;
@@ -99,36 +75,25 @@
   $: isSleeping = !!pet?.sleeping;
   $: petName = pet?.nickname || pet?.species?.name || 'Tu Pockai';
   $: if (petId && !loading) load();
-  onMount(() => {
-    load();
-    const walkTimer = setInterval(() => {
-      if (!isInHabitat || isSleeping || petWalking) return;
-      if (Math.random() < 0.5) {
-        const step = 10 + Math.random() * 16;
-        let next = petRoomX + step * petRoomDir;
-        if (next > 80 || next < 14) {
-          petRoomDir = -petRoomDir;
-          next = petRoomX + step * petRoomDir;
-        }
-        petRoomX = Math.min(80, Math.max(14, next));
-        petWalking = true;
-        walkStopTimer = setTimeout(() => (petWalking = false), WALK_MS);
-      }
-    }, 2600);
-    return () => {
-      clearInterval(walkTimer);
-      if (walkStopTimer) clearTimeout(walkStopTimer);
-    };
-  });
+  load();
 
   let activeRoom: HabitatRoom | null = null;
   let furnitureByRoom: HabitatFurniture[] = [];
   $: activeRoom = state?.rooms.find((r) => r.id === activeRoomId) ?? null;
   $: furnitureByRoom = catalog ? catalog.furniture.filter((f) => f.room === activeRoomId) : [];
+  $: canEdit = !!activeRoom?.unlocked && !!activeRoom?.active && activeRoom.items.length > 0;
+  $: if (!canEdit && editing) editing = false;
+  $: activity = !isInHabitat ? 'away' : isSleeping ? 'sleep' : 'idle';
+  $: selectedItem = activeRoom?.items.find((i) => i.id === selectedId) ?? null;
   const canAfford = (f: HabitatFurniture): boolean =>
     (f.currency === 'coins' ? user?.coins ?? 0 : user?.gems ?? 0) >= f.price;
   const canPlace = (f: HabitatFurniture): boolean =>
     !!activeRoom?.unlocked && activeRoom.active && canAfford(f) && !busy;
+
+  function changeRoom(id: string) {
+    activeRoomId = id;
+    selectedId = null;
+  }
 
   async function toggleHabitat(inHabitat: boolean) {
     if (habitatBusy || !pet?.id) return;
@@ -144,13 +109,16 @@
     }
   }
 
+  /** Compra: el servidor lo pone en el primer hueco y se abre la edición para colocarlo a gusto. */
   async function place(f: HabitatFurniture) {
     if (!canPlace(f)) return;
     busy = f.id;
     try {
-      await api.placeHabitatFurniture(f.id);
+      const res = await api.placeHabitatFurniture(f.id);
       await load();
       dispatch('refreshUser');
+      editing = true;
+      selectedId = res.itemId ?? null;
     } catch (e: any) {
       error = e.message;
     } finally {
@@ -158,11 +126,12 @@
     }
   }
 
-  async function remove(furnitureId: string) {
+  async function remove(itemId: string) {
     if (busy) return;
-    busy = furnitureId;
+    busy = itemId;
     try {
-      await api.removeHabitatFurniture(furnitureId);
+      await api.removeHabitatItem(itemId);
+      if (selectedId === itemId) selectedId = null;
       await load();
     } catch (e: any) {
       error = e.message;
@@ -171,10 +140,40 @@
     }
   }
 
-  function handleExitDragStart(e: MouseEvent) {
+  // Movimientos desde la sala: la escena ya los muestra; se guardan con un pequeño retardo para no
+  // lanzar una petición por cada flecha pulsada. Si el servidor lo rechaza, se recarga la sala.
+  const pendingMoves = new Map<string, { x: number; y: number; rotation: number }>();
+  let moveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function onMove(e: CustomEvent<{ itemId: string; x: number; y: number; rotation: number }>) {
+    const { itemId, ...to } = e.detail;
+    pendingMoves.set(itemId, to);
+    if (moveTimer) clearTimeout(moveTimer);
+    moveTimer = setTimeout(flushMoves, 350);
+  }
+
+  async function flushMoves() {
+    moveTimer = null;
+    const moves = [...pendingMoves];
+    pendingMoves.clear();
+    try {
+      for (const [itemId, to] of moves) await api.moveHabitatItem(itemId, to);
+    } catch (e: any) {
+      error = e.message || 'No se pudo mover el mueble';
+      await load();
+    }
+  }
+
+  onDestroy(() => {
+    if (moveTimer) {
+      clearTimeout(moveTimer);
+      void flushMoves();
+    }
+  });
+
+  function onPetPress(e: CustomEvent<{ event: MouseEvent; ghost: HTMLElement }>) {
     if (habitatBusy) return;
-    const host = e.currentTarget as HTMLElement;
-    startHabitatExitDrag(e, host.querySelector<HTMLElement>('.pet-mini-avatar'));
+    startHabitatExitDrag(e.detail.event, e.detail.ghost);
   }
 
   function handleStageDrop() {
@@ -226,15 +225,15 @@
     label="Salas"
     value={activeRoomId ?? ''}
     options={state.rooms.map((r) => ({ value: r.id, label: r.name, icon: r.unlocked ? 'home' : 'lock' }))}
-    on:change={(e) => (activeRoomId = e.detail)}
+    on:change={(e) => changeRoom(e.detail)}
   />
 
-  <!-- DIORAMA DE LA SALA -->
+  <!-- SALA ISOMÉTRICA -->
   {#if activeRoom}
     <div
-      class="diorama-stage stage--{activeRoom.id}"
-      class:night={isInHabitat && isSleeping}
+      class="room-stage"
       class:drop-target={isDropTarget}
+      class:editing
       role="region"
       aria-label="Sala {activeRoom.name}"
       on:dragenter={() => dragDepth++}
@@ -242,48 +241,41 @@
       on:dragover|preventDefault
       on:drop|preventDefault={handleStageDrop}
     >
-      <!-- Pared: zócalo, ventana y luz -->
-      <div class="diorama-light" aria-hidden="true"></div>
-      <div class="diorama-window" aria-hidden="true"><div class="window-sky"></div></div>
-      <div class="diorama-baseboard" aria-hidden="true"></div>
-      <!-- Suelo -->
-      <div class="diorama-floor" aria-hidden="true"></div>
+      <IsoRoomView
+        bind:this={roomView}
+        bind:selectedId
+        {pet}
+        room={activeRoom}
+        furniture={catalog.furniture}
+        {activity}
+        night={isInHabitat && isSleeping}
+        edit={editing}
+        label="Sala {activeRoom.name}{editing ? ': modo edición. Flechas para mover, R para girar, Escape para soltar' : ''}"
+        height={340}
+        on:move={onMove}
+        on:petPress={onPetPress}
+      />
 
-      <!-- Muebles colocados (fondo y delante) -->
-      {#each activeRoom.items as it, idx (it.id)}
-        {@const s = slot(idx)}
-        <div
-          class="furniture-prop"
-          class:back={s.back}
-          style="left: {s.x}%;"
-          title={furnName(it.furnitureId)}
-        >
-          <span class="furn-sprite">{icon(it.furnitureId)}</span>
+      {#if canEdit}
+        <div class="room-tools">
+          {#if editing && selectedItem}
+            <span class="sel-name">{furnName(selectedItem.furnitureId)}</span>
+            <button class="btn btn--sm" title="Girar (R)" on:click={() => roomView?.rotate()}>
+              <RotateCw size={14} /> Girar
+            </button>
+            <button class="btn btn--sm btn--ghost remove-btn" disabled={!!busy} on:click={() => remove(selectedItem.id)}>
+              <Trash2 size={14} /> Quitar
+            </button>
+          {:else if editing}
+            <span class="sel-hint">Pulsa un mueble para moverlo</span>
+          {/if}
+          <button class="btn btn--sm" class:btn--primary={editing} on:click={() => (editing = !editing)}>
+            {#if editing}<Check size={14} /> Listo{:else}<Pencil size={14} /> Editar{/if}
+          </button>
         </div>
-      {/each}
+      {/if}
 
-      <!-- El Pockai en la sala -->
-      {#if isInHabitat}
-        <div
-          class="pet-in-room"
-          style="left: {petRoomX}%; --walk-ms: {WALK_MS}ms;"
-          title="Arrastra para sacarlo al escritorio"
-          role="button"
-          tabindex="-1"
-          on:mousedown={handleExitDragStart}
-        >
-          <span class="pet-shadow" aria-hidden="true"></span>
-          <div class="pet-facing" style="transform: scaleX({petRoomDir});">
-            <PetMiniAvatar
-              {pet}
-              size={80}
-              anim={petWalking ? 'walk' : 'idle'}
-              interactive={false}
-            />
-          </div>
-          {#if isSleeping}<span class="pet-zzz" aria-hidden="true">z</span>{/if}
-        </div>
-      {:else}
+      {#if !isInHabitat && !editing}
         <div class="pet-absent-overlay">
           <span class="absent-text">🐾 {petName} está fuera explorando tu pantalla</span>
           <button class="btn btn--sm btn--primary" disabled={habitatBusy} on:click={() => toggleHabitat(true)}>
@@ -319,7 +311,9 @@
   <div class="shop">
     {#each furnitureByRoom as f (f.id)}
       <div class="shop-row">
-        <span class="f-icon">{icon(f.id)}</span>
+        <span class="f-icon">
+          {#if furnitureUrl(f.id)}<img src={furnitureUrl(f.id)} alt="" />{:else}<Ico n="home" />{/if}
+        </span>
         <div class="f-info">
           <span class="f-name">{f.name}</span>
           <small>{f.description}</small>
@@ -339,10 +333,20 @@
     <SectionHeader title="Muebles colocados aquí" icon="home" count={activeRoom.items.length} />
     <div class="placed">
       {#each activeRoom.items as it (it.id)}
-        <div class="placed-row">
-          <span>{icon(it.furnitureId)} {furnName(it.furnitureId)}</span>
-          <button class="btn btn--sm btn--ghost remove-btn" disabled={!!busy} on:click={() => remove(it.furnitureId)}>
-            {busy === it.furnitureId ? '…' : 'Quitar'}
+        <div class="placed-row" class:selected={it.id === selectedId}>
+          <button
+            class="placed-name"
+            title="Seleccionar en la sala"
+            on:click={() => {
+              editing = true;
+              selectedId = it.id;
+            }}
+          >
+            {#if furnitureUrl(it.furnitureId)}<img src={furnitureUrl(it.furnitureId)} alt="" />{/if}
+            {furnName(it.furnitureId)}
+          </button>
+          <button class="btn btn--sm btn--ghost remove-btn" disabled={!!busy} on:click={() => remove(it.id)}>
+            {busy === it.id ? '…' : 'Quitar'}
           </button>
         </div>
       {/each}
@@ -401,195 +405,55 @@
   .in-house .status-badge { background: var(--color-mint-pop); }
   .status-subtitle { font-size: 11.5px; color: var(--ink-muted); margin: 0; line-height: 1.3; }
 
-  /* --- DIORAMA ---
-     Isla de tono: paleta fija por sala, igual en claro y oscuro. */
-  .diorama-stage {
+  /* --- SALA ISOMÉTRICA ---
+     Isla de tono: los colores de la sala vienen de habitats.json (theme), iguales en claro y oscuro. */
+  .room-stage {
     color-scheme: light;
-    --wall-top: #fff3d6;
-    --wall-bottom: #ffe0a8;
-    --wall-stripe: rgb(160 110 60 / 0.08);
-    --floor-top: #c98a4b;
-    --floor-bottom: #a26431;
-    --plank: rgb(0 0 0 / 0.12);
-    --trim: #8a5a2b;
-    --sky-top: #8fd0ff;
-    --sky-bottom: #dceeff;
-    --light: rgb(255 240 190 / 0.75);
-    --floor-h: 66px;
-
     position: relative;
     width: 100%;
-    height: 220px;
     border-radius: var(--radius-cards);
     overflow: hidden;
     border: 1.5px solid var(--color-carbon);
     box-shadow: var(--shadow-pop);
     background:
-      repeating-linear-gradient(90deg, transparent 0 26px, var(--wall-stripe) 26px 28px),
-      linear-gradient(180deg, var(--wall-top) 0%, var(--wall-bottom) 100%);
+      radial-gradient(80% 70% at 50% 35%, rgb(255 255 255 / 0.65), transparent 75%),
+      var(--band-sky, #dceeff);
     transition: outline-color var(--dur-1), box-shadow var(--dur-1);
     outline: 3px solid transparent;
     outline-offset: 2px;
   }
-  .diorama-stage.drop-target {
+  .room-stage.drop-target {
     outline-color: var(--color-mint-pop);
     box-shadow: var(--shadow-pop), 0 0 24px rgb(85 219 156 / 0.55);
   }
-
-  .stage--jardin {
-    --wall-top: #bfe8ff;
-    --wall-bottom: #e2f6ff;
-    --wall-stripe: transparent;
-    --floor-top: #6cc56a;
-    --floor-bottom: #3f9a45;
-    --plank: rgb(0 60 0 / 0.1);
-    --trim: #2f7a35;
-    --light: rgb(255 255 220 / 0.85);
-  }
-  .stage--santuario {
-    --wall-top: #f4e7d1;
-    --wall-bottom: #e2cfae;
-    --wall-stripe: rgb(120 80 30 / 0.1);
-    --floor-top: #b8834a;
-    --floor-bottom: #7e5426;
-    --trim: #c0392b;
-    --light: rgb(255 210 150 / 0.7);
-  }
-  .stage--citafinal {
-    --wall-top: #e9ccff;
-    --wall-bottom: #cdb4ff;
-    --wall-stripe: rgb(92 74 222 / 0.1);
-    --floor-top: #6d5bff;
-    --floor-bottom: #3d2fa8;
-    --plank: rgb(255 255 255 / 0.12);
-    --trim: #5c4ade;
-    --sky-top: #3a2f7a;
-    --sky-bottom: #b3a8ff;
-    --light: rgb(200 240 255 / 0.7);
-  }
-  /* De noche, si duerme */
-  .diorama-stage.night {
-    --wall-top: #3b3570;
-    --wall-bottom: #2a2552;
-    --wall-stripe: rgb(0 0 0 / 0.12);
-    --floor-top: #5a3f27;
-    --floor-bottom: #3f2b19;
-    --sky-top: #1b1846;
-    --sky-bottom: #3a2f7a;
-    --light: rgb(150 140 255 / 0.35);
+  .room-stage.editing {
+    outline-color: var(--accent);
   }
 
-  .diorama-light {
+  .room-tools {
     position: absolute;
-    inset: 0;
-    background: radial-gradient(60% 55% at 78% 22%, var(--light), transparent 70%);
-    pointer-events: none;
+    right: 8px;
+    bottom: 8px;
+    z-index: 12;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border-radius: var(--radius-pills);
+    background: rgb(255 255 255 / 0.9);
+    border: 1px solid var(--color-carbon);
+    color: var(--color-carbon);
   }
-  .diorama-window {
-    position: absolute;
-    top: 16px;
-    right: 22px;
-    width: 54px;
-    height: 58px;
-    border: 4px solid #fffaf0;
-    outline: 1.5px solid var(--color-carbon);
-    border-radius: 12px 12px 6px 6px;
-    overflow: hidden;
+  .sel-name,
+  .sel-hint {
+    padding: 0 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
   }
-  .window-sky {
-    width: 100%;
-    height: 100%;
-    background:
-      linear-gradient(90deg, transparent calc(50% - 2px), #fffaf0 calc(50% - 2px) calc(50% + 2px), transparent calc(50% + 2px)),
-      linear-gradient(0deg, transparent calc(50% - 2px), #fffaf0 calc(50% - 2px) calc(50% + 2px), transparent calc(50% + 2px)),
-      linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 100%);
-  }
-  .night .window-sky {
-    background:
-      linear-gradient(90deg, transparent calc(50% - 2px), #fffaf0 calc(50% - 2px) calc(50% + 2px), transparent calc(50% + 2px)),
-      linear-gradient(0deg, transparent calc(50% - 2px), #fffaf0 calc(50% - 2px) calc(50% + 2px), transparent calc(50% + 2px)),
-      radial-gradient(circle at 70% 30%, #fff6c8 0 6px, transparent 7px),
-      linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 100%);
-  }
-  .diorama-baseboard {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: var(--floor-h);
-    height: 8px;
-    background: var(--trim);
-    border-top: 1.5px solid rgb(11 10 20 / 0.35);
-  }
-  .diorama-floor {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: var(--floor-h);
-    border-top: 1.5px solid var(--color-carbon);
-    background:
-      linear-gradient(180deg, rgb(0 0 0 / 0.14), transparent 40%),
-      repeating-linear-gradient(90deg, transparent 0 44px, var(--plank) 44px 46px),
-      linear-gradient(180deg, var(--floor-top) 0%, var(--floor-bottom) 100%);
-  }
-
-  /* Muebles con profundidad */
-  .furniture-prop {
-    position: absolute;
-    bottom: 6px;
-    z-index: 6;
-    transform: translateX(-50%);
-    pointer-events: auto;
-    filter: drop-shadow(0 5px 3px rgb(0 0 0 / 0.3));
-  }
-  .furniture-prop.back {
-    bottom: calc(var(--floor-h) - 22px);
-    z-index: 2;
-    filter: drop-shadow(0 3px 2px rgb(0 0 0 / 0.22)) saturate(0.9);
-  }
-  .furn-sprite { font-size: 34px; line-height: 1; }
-  .back .furn-sprite { font-size: 26px; }
-
-  /* Pockai */
-  .pet-in-room {
-    position: absolute;
-    bottom: 14px;
-    z-index: 4;
-    transform: translateX(-50%);
-    transition: left var(--walk-ms, 1.6s) linear;
-    cursor: grab;
-  }
-  .pet-in-room:active { cursor: grabbing; }
-  .pet-facing {
-    position: relative;
-    z-index: 1;
-    transition: transform var(--dur-2) var(--ease-out);
-  }
-  .pet-shadow {
-    position: absolute;
-    left: 50%;
-    bottom: 2px;
-    width: 56px;
-    height: 11px;
-    transform: translateX(-50%);
-    border-radius: 50%;
-    background: rgb(11 10 20 / 0.3);
-    filter: blur(1px);
-  }
-  .pet-zzz {
-    position: absolute;
-    top: 0;
-    right: -4px;
-    z-index: 2;
-    font-family: var(--font-display);
-    font-size: 16px;
-    color: #e9ccff;
-    animation: zzz 2.6s ease-in-out infinite;
-  }
-  @keyframes zzz {
-    0% { transform: translateY(6px); opacity: 0; }
-    30% { opacity: 1; }
-    100% { transform: translate(6px, -16px); opacity: 0; }
+  .sel-hint {
+    font-weight: 600;
+    color: var(--ink-muted);
   }
 
   .pet-absent-overlay {
@@ -664,11 +528,15 @@
     flex: none;
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
-    font-size: 20px;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
     background: var(--surface-2);
+    overflow: hidden;
+  }
+  .f-icon img {
+    max-width: 36px;
+    max-height: 36px;
   }
   .f-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
   .f-name { font-size: 13px; font-weight: 700; color: var(--ink); }
@@ -684,6 +552,27 @@
     background: var(--surface-2);
     font-size: 12px;
     color: var(--ink);
+    border: 1px solid transparent;
+  }
+  .placed-row.selected {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+  }
+  .placed-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .placed-name img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
   }
   .remove-btn { color: var(--danger-ink); }
 </style>

@@ -23,7 +23,7 @@ El validador es `habitatsSchema` en `backend/src/modules/game-data/game-data.sch
 | `buffs` | `{ clave: número }` | claves válidas abajo; `{}` si es decorativo |
 | `description` | string | 1 frase; cita el buff |
 | `footprint` | `[w, d]` | celdas en x e y con rotación 0; al girar 90° se intercambian |
-| `mount` | `floor \| wall` | los de pared van en la fila `y = 0` (pared izquierda) o la columna `x = 0` (pared derecha) |
+| `mount` | `floor \| wall` | los de pared van en la fila `y = 0` (pared del fondo-derecha) o la columna `x = 0` (pared del fondo-izquierda) |
 | `interaction` | `sleep \| eat \| play \| bathe \| sit` | opcional; el Pockai lo usa según sus necesidades |
 
 **Claves de buff:** `hygiene_decay_reduction`, `happiness_decay_reduction`, `energy_recovery_boost` y `combat_mood_bonus`. Los topes están en `buffCaps` con el sufijo `_max`. El cálculo está en `HabitatService.getActiveBuffs`: suma y recorta al tope.

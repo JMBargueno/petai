@@ -86,7 +86,7 @@ Sin cambios respecto a la "Fase 3" anterior:
 - `rotation` en Prisma y validación de huella.
 - `PATCH /habitat/items/:id`, OpenAPI y tests.
 
-## Fase 5: sala isométrica en `shared/scene` + escritorio (PR 5)
+## Fase 5: sala isométrica en `shared/scene` + escritorio (PR 5) — hecha
 - En `shared/scene/src/iso/`: `projection.ts`, `pathfind.ts` (A*) y `petWander.ts` (necesidades → mueble con `interaction`).
 - `src/room/IsoRoom.ts`: paredes, suelo con el tema, contenedor con `sortableChildren` ordenado por `isoDepth`, modo edición (arrastrar, giro con R o botón, huella verde/roja), modo noche y `prefers-reduced-motion`. Además, un culling de bucle: `ticker.stop()` cuando la escena no se ve.
 - Arte de muebles: `scripts/sprites/furniture.ts` → `shared/assets/furniture/<id>_{a,b}.svg`, rasterizado a un atlas, más la hoja de contactos de muebles.

@@ -27,6 +27,7 @@ const ready = PockaiScene.create({ host: root, onEvent: bridge.send }).then((s) 
 });
 window.pockaiScene = { receive: bridge.receive, ready: ready.then(() => undefined) };
 
-if (new URLSearchParams(location.search).has('demo')) {
-  void import('./demo').then((m) => m.mountDemo(window.pockaiScene!.receive));
+const demo = new URLSearchParams(location.search).get('demo');
+if (demo !== null) {
+  void import('./demo').then((m) => m.mountDemo(window.pockaiScene!.receive, demo === 'room'));
 }

@@ -68,6 +68,11 @@ export class PetSprite extends Container {
     this.showFrame();
   }
 
+  /** Textura del frame actual (`null` hasta que se carga la hoja). */
+  get texture(): Texture | null {
+    return this.source ? this.body.texture : null;
+  }
+
   get currentClip(): string | null {
     return this.clip?.name ?? null;
   }
