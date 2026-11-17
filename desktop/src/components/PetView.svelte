@@ -15,7 +15,8 @@
   import { skillAuthorizations, isSkillActive, getPetBonding } from '../lib/stores/desktopSkillsStore';
   import {
     calculateThrowVelocity,
-    stepPhysics,
+    advancePhysics,
+    DEFAULT_PHYSICS_CONFIG,
     type PhysicsState,
     type PointerSample,
   } from '../lib/physics/petPhysics';
@@ -219,14 +220,28 @@
     bounceCount: 0,
   };
   let lastPhysicsTime = 0;
+  let physicsAccumulator = 0;
+  // Enfriamiento entre golpes a la pelota para no repetir sonido/partículas cada frame
+  const BALL_KICK_COOLDOWN_MS = 250;
+  let lastBallKickTime = 0;
 
+  // Un solo temporizador: un squash nuevo no deja que el anterior lo corte a medias
+  let squashTimer: ReturnType<typeof setTimeout> | undefined;
   function squash(sx: number, sy: number, ms: number) {
     squashScaleX = sx;
     squashScaleY = sy;
-    setTimeout(() => {
+    clearTimeout(squashTimer);
+    squashTimer = setTimeout(() => {
       squashScaleX = 1;
       squashScaleY = 1;
     }, ms);
+  }
+
+  /** Squash & stretch proporcional a la fuerza del impacto (px/s). */
+  function impactSquash(speed: number) {
+    const k = Math.min(1, speed / 1600);
+    if (k < 0.04) return;
+    squash(1 + 0.3 * k, 1 - 0.3 * k, 60 + 50 * k);
   }
 
   function handleMouseDown(e: MouseEvent) {
@@ -337,7 +352,10 @@
 
     const maxY = (window.innerHeight || 600) - PET_SIZE;
     if (dragThrowActive && !isSleeping) {
-      const { vx, vy } = calculateThrowVelocity(pointerSamples);
+      const { vx, vy } = calculateThrowVelocity(pointerSamples, {
+        releaseTime: performance.now(),
+        maxSpeed: DEFAULT_PHYSICS_CONFIG.maxThrowSpeed,
+      });
 
       // Si se soltó con impulso o en el aire
       if (Math.hypot(vx, vy) > 120 || posY < maxY - 15) {
@@ -350,6 +368,7 @@
           bounceCount: 0,
         };
         lastPhysicsTime = performance.now();
+        physicsAccumulator = 0;
         if (Math.abs(vx) > 40) {
           direction = vx > 0 ? 1 : -1;
         }
@@ -453,12 +472,13 @@
       }
     }
     // Colisión e interacción con la pelota de juego en el escritorio
-    if (ball && onBallKick && !isSleeping && !isDragging) {
+    if (ball && onBallKick && !isSleeping && !isDragging && time - lastBallKickTime > BALL_KICK_COOLDOWN_MS) {
       const col = checkPetBallCollision(
         { x: posX, y: posY, width: PET_SIZE, height: PET_SIZE },
         ball
       );
       if (col.collides) {
+        lastBallKickTime = time;
         onBallKick(col.kickX, col.kickY);
         play('happy');
         squash(1.18, 0.82, 120);
@@ -468,10 +488,9 @@
 
     // Paso de simulación física si la mascota está en el aire o lanzada
     if (physicsState.isAirborne) {
-      const pdt = lastPhysicsTime ? (time - lastPhysicsTime) / 1000 : 0.016;
+      const pdt = lastPhysicsTime ? (time - lastPhysicsTime) / 1000 : 1 / 60;
       lastPhysicsTime = time;
 
-      const prevBounces = physicsState.bounceCount;
       const bounds = {
         minX: 10,
         maxX: (window.innerWidth || 800) - PET_SIZE - 10,
@@ -479,20 +498,23 @@
         maxY: (window.innerHeight || 600) - PET_SIZE,
       };
 
-      physicsState = stepPhysics(physicsState, pdt, bounds);
+      const step = advancePhysics(physicsState, pdt, bounds, DEFAULT_PHYSICS_CONFIG, physicsAccumulator);
+      physicsState = step.state;
+      physicsAccumulator = step.accumulator;
       posX = physicsState.x;
       posY = physicsState.y;
 
-      // Rebote procedural con squash & stretch
-      if (physicsState.bounceCount > prevBounces) squash(1.25, 0.75, 75);
+      // Rebote procedural con squash & stretch según la fuerza del golpe
+      if (step.impactSpeed > 0) impactSquash(step.impactSpeed);
 
       // Al posarse definitivamente en el suelo
       if (!physicsState.isAirborne) {
         play('land');
-        squash(1.15, 0.85, 90);
+        squash(1.12, 0.88, 90);
       }
     } else {
       lastPhysicsTime = time;
+      physicsAccumulator = 0;
     }
 
     animRafId = requestAnimationFrame(renderLoop);

@@ -17,7 +17,13 @@
   } from './lib/environmental';
   import PetView from './components/PetView.svelte';
   import DesktopBall from './components/DesktopBall.svelte';
-  import { stepBallPhysics, kickBall, type BallState } from './lib/toys/toyPhysics';
+  import {
+    advanceBallPhysics,
+    kickBall,
+    throwBall,
+    BALL_MAX_THROW_SPEED,
+    type BallState,
+  } from './lib/toys/toyPhysics';
   import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction } from './lib/animation/eventMap';
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
@@ -88,20 +94,65 @@
   };
   let ballRaf: number | null = null;
   let lastBallTime = performance.now();
+  let ballAccumulator = 0;
+  // Mientras se sujeta con el ratón la pelota no simula (ni cae ni acumula velocidad)
+  let ballGrabbed = false;
 
   function runBallLoop(now: number) {
     if (!showBall) {
       ballRaf = null;
       return;
     }
-    const dt = Math.min(0.04, (now - lastBallTime) / 1000);
+    const frameDt = (now - lastBallTime) / 1000;
     lastBallTime = now;
-    const bounds = {
-      width: window.innerWidth || 800,
-      height: window.innerHeight || 600,
-    };
-    ballState = stepBallPhysics(ballState, bounds, dt);
+    if (!ballGrabbed) {
+      const bounds = {
+        width: window.innerWidth || 800,
+        height: window.innerHeight || 600,
+      };
+      const r = advanceBallPhysics(ballState, bounds, frameDt, {}, ballAccumulator);
+      ballAccumulator = r.accumulator;
+      if (r.ball !== ballState) ballState = r.ball;
+    }
     ballRaf = requestAnimationFrame(runBallLoop);
+  }
+
+  function ensureBallLoop() {
+    if (!ballRaf && showBall) {
+      lastBallTime = performance.now();
+      ballAccumulator = 0;
+      ballRaf = requestAnimationFrame(runBallLoop);
+    }
+  }
+
+  function handleBallGrab() {
+    ballGrabbed = true;
+    ballState = { ...ballState, vx: 0, vy: 0, isRolling: false };
+  }
+
+  function handleBallDrag(x: number, y: number) {
+    const size = ballState.radius * 2;
+    ballState = {
+      ...ballState,
+      x: Math.min(Math.max(0, x), (window.innerWidth || 800) - size),
+      y: Math.min(Math.max(0, y), (window.innerHeight || 600) - size),
+    };
+  }
+
+  /** Soltar tras arrastrar: la velocidad del gesto sustituye a la que tuviera. */
+  function handleBallThrow(vx: number, vy: number) {
+    ballGrabbed = false;
+    ballState = throwBall(ballState, vx, vy, BALL_MAX_THROW_SPEED);
+    ballAccumulator = 0;
+    lastBallTime = performance.now();
+    ensureBallLoop();
+  }
+
+  /** Golpe de la mascota: la colisión ya calcula la velocidad resultante. */
+  function handleBallHit(vx: number, vy: number) {
+    if (ballGrabbed) return;
+    ballState = throwBall(ballState, vx, vy);
+    ensureBallLoop();
   }
 
   function toggleBall() {
@@ -116,8 +167,8 @@
         isRolling: true,
         bounces: 0,
       };
-      lastBallTime = performance.now();
-      if (!ballRaf) ballRaf = requestAnimationFrame(runBallLoop);
+      ballGrabbed = false;
+      ensureBallLoop();
       showBubble('¡Una pelotita! ⚽ ¡Lánzamela con el ratón!');
     } else {
       if (ballRaf) cancelAnimationFrame(ballRaf);
@@ -125,12 +176,10 @@
     }
   }
 
+  /** Clic simple sobre la pelota: impulso que se suma a su velocidad. */
   function handleBallKick(vx: number, vy: number) {
     ballState = kickBall(ballState, vx, vy);
-    if (!ballRaf && showBall) {
-      lastBallTime = performance.now();
-      ballRaf = requestAnimationFrame(runBallLoop);
-    }
+    ensureBallLoop();
   }
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
   let environmental: EnvironmentalStatus | null = null;
@@ -588,7 +637,9 @@
   {#if showBall}
     <DesktopBall
       ball={ballState}
-      on:throw={(e) => handleBallKick(e.detail.vx, e.detail.vy)}
+      on:grab={handleBallGrab}
+      on:drag={(e) => handleBallDrag(e.detail.x, e.detail.y)}
+      on:throw={(e) => handleBallThrow(e.detail.vx, e.detail.vy)}
       on:kick={(e) => handleBallKick(e.detail.vx, e.detail.vy)}
     />
   {/if}
@@ -601,8 +652,8 @@
       spawnAt={petSpawnAt}
       environmental={environmental}
       visitors={$visitorsStore}
-      ball={showBall ? ballState : null}
-      onBallKick={handleBallKick}
+      ball={showBall && !ballGrabbed ? ballState : null}
+      onBallKick={handleBallHit}
       onPetClick={() => (isPanelOpen = true)}
     />
   {/if}
