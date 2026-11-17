@@ -1,6 +1,7 @@
 import { DOCUMENT, Injectable, LOCALE_ID, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { LOCALES, OG_IMAGE, SITE_NAME, SITE_URL, pageUrl } from '../../site.config';
+import { SOCIAL_HANDLE } from '../social';
 
 export interface SeoConfig {
   /** 30–60 caracteres (checklist seo-page). */
@@ -58,6 +59,7 @@ export class SeoService {
     }
 
     this.name('twitter:card', 'summary_large_image');
+    this.name('twitter:site', `@${SOCIAL_HANDLE}`);
     this.name('twitter:title', config.title);
     this.name('twitter:description', config.description);
     this.name('twitter:image', image);

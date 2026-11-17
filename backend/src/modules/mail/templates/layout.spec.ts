@@ -25,6 +25,14 @@ describe('plantilla de correo', () => {
     expect(text).toContain('https://api/unsub?t=1');
   });
 
+  it('enlaza las redes sociales de Pockai en el pie (HTML y texto)', () => {
+    const { html, text } = renderEmailLayout(base);
+    expect(html).toContain('href="https://www.instagram.com/pockais/"');
+    expect(html).toContain('href="https://www.tiktok.com/@pockais"');
+    expect(html).toContain('href="https://x.com/pockais"');
+    expect(text).toContain('Síguenos: instagram.com/pockais · tiktok.com/@pockais · x.com/pockais');
+  });
+
   it('la parte de texto no lleva etiquetas', () => {
     const { text } = renderEmailLayout({ ...base, title: 'Título' });
     expect(text).toContain('TÍTULO');

@@ -32,9 +32,26 @@ import androidx.compose.ui.unit.dp
 import com.petai.app.AppUiState
 import androidx.compose.ui.platform.LocalUriHandler
 import com.petai.app.BuildConfig
+import com.petai.app.ui.theme.BrandIcons
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.vector.ImageVector
 
 /** Buzón de contacto público (el mismo que recibe el formulario de la web). */
 const val CONTACT_EMAIL = "contact@pockai.world"
+
+/** Perfiles oficiales de Pockai (mismo usuario en todas las redes). */
+const val SOCIAL_HANDLE = "pockais"
+
+private data class SocialLink(val name: String, val url: String, val icon: ImageVector)
+
+private val SOCIAL_LINKS by lazy {
+    listOf(
+        SocialLink("Instagram", "https://www.instagram.com/pockais/", BrandIcons.Instagram),
+        SocialLink("TikTok", "https://www.tiktok.com/@pockais", BrandIcons.TikTok),
+        SocialLink("X", "https://x.com/pockais", BrandIcons.X),
+    )
+}
 
 @Composable
 fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: String, onResult: (String?) -> Unit) -> Unit) {
@@ -90,6 +107,21 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
                 Spacer(Modifier.height(4.dp))
                 TextButton(onClick = { runCatching { uriHandler.openUri("mailto:$CONTACT_EMAIL") } }) {
                     Text(CONTACT_EMAIL)
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        PockaiCard(Modifier.fillMaxWidth()) {
+            Column {
+                Text("Síguenos", style = MaterialTheme.typography.titleMedium)
+                Text("Novedades, pockais nuevos y avances: @$SOCIAL_HANDLE en todas las redes.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
+                Row {
+                    SOCIAL_LINKS.forEach { link ->
+                        IconButton(onClick = { runCatching { uriHandler.openUri(link.url) } }) {
+                            Icon(link.icon, contentDescription = "Pockai en ${link.name}", tint = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
                 }
             }
         }

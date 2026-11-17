@@ -78,5 +78,7 @@ describe('Landing', () => {
     const blocks = [...head.querySelectorAll('script[type="application/ld+json"]')].map((s) => JSON.parse(s.textContent!));
     const types = blocks.flatMap((b) => (b['@graph'] ?? [b]).map((n: { '@type': string }) => n['@type']));
     expect(types).toEqual(expect.arrayContaining(['Organization', 'WebSite', 'SoftwareApplication', 'FAQPage']));
+    const org = blocks.flatMap((b) => b['@graph'] ?? [b]).find((n: { '@type': string }) => n['@type'] === 'Organization');
+    expect(org.sameAs).toEqual(['https://www.instagram.com/pockais/', 'https://www.tiktok.com/@pockais', 'https://x.com/pockais']);
   });
 });

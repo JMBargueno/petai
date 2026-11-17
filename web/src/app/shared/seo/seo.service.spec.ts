@@ -56,5 +56,6 @@ describe('SeoService', () => {
     expect(prop('og:locale')).toBe('es_ES');
     expect(prop('og:locale:alternate')).toBe('en_US');
     expect(head().querySelector('meta[name="twitter:card"]')?.getAttribute('content')).toBe('summary_large_image');
+    expect(head().querySelector('meta[name="twitter:site"]')?.getAttribute('content')).toBe('@pockais');
   });
 });

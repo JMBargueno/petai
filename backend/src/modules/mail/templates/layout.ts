@@ -52,7 +52,14 @@ export interface RenderedEmail {
   text: string;
 }
 
-const trimSlash = (u: string) => u.replace(/\/+$/, '');
+/** Perfiles oficiales de Pockai (usuario «pockais» en todas). */
+export const SOCIAL_LINKS = [
+  { name: 'Instagram', url: 'https://www.instagram.com/pockais/' },
+  { name: 'TikTok', url: 'https://www.tiktok.com/@pockais' },
+  { name: 'X', url: 'https://x.com/pockais' },
+] as const;
+
+const trimSlash =(u: string) => u.replace(/\/+$/, '');
 
 /** Botón píldora "a prueba de balas" (VML para Outlook de escritorio). */
 function button(label: string, url: string): string {
@@ -98,6 +105,10 @@ export function renderEmailLayout(opts: EmailLayoutOptions): RenderedEmail {
   const unsubscribe = opts.unsubscribeUrl
     ? `<br><a href="${escapeHtml(opts.unsubscribeUrl)}" style="color:${BRAND.muted};text-decoration:underline;">Darme de baja de estos correos</a>`
     : '';
+
+  const social = SOCIAL_LINKS.map(
+    (s) => `<a href="${escapeHtml(s.url)}" target="_blank" style="color:${BRAND.muted};text-decoration:underline;">${s.name}</a>`,
+  ).join(' &nbsp;·&nbsp; ');
 
   const html = `<!DOCTYPE html>
 <html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -156,7 +167,8 @@ ${opts.bodyHtml}
           <td align="center" style="padding:26px 12px 0;font-family:${UI_FONT};font-size:12px;line-height:1.6;color:${BRAND.muted};">
             <strong style="font-family:${DISPLAY_FONT};font-weight:400;letter-spacing:0.04em;text-transform:uppercase;color:${BRAND.carbon};">Pockai</strong>
             &nbsp;·&nbsp; <a href="${escapeHtml(web)}" style="color:${BRAND.muted};text-decoration:underline;">${escapeHtml(web.replace(/^https?:\/\//, ''))}</a>
-            <br>Tu yokai de bolsillo con IA.${unsubscribe}
+            <br>Tu yokai de bolsillo con IA.
+            <br>Síguenos: ${social}${unsubscribe}
           </td>
         </tr>
       </table>
@@ -172,6 +184,7 @@ ${opts.bodyHtml}
     opts.cta ? `${opts.cta.label}: ${opts.cta.url}` : '',
     opts.footerNote ?? '',
     '— Pockai',
+    `Síguenos: ${SOCIAL_LINKS.map((s) => s.url.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '')).join(' · ')}`,
     opts.unsubscribeUrl ? `Darte de baja: ${opts.unsubscribeUrl}` : '',
   ].filter(Boolean);
 

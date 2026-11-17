@@ -3,6 +3,7 @@ import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
 import { SeoService } from '../shared/seo/seo.service';
+import { SOCIAL_LINKS } from '../shared/social';
 import { Marquee } from '../shared/ui/marquee';
 import { PockaiSprite, PockaiState } from '../shared/ui/pockai-sprite';
 import { Sticker } from '../shared/ui/sticker';
@@ -97,6 +98,7 @@ export class Landing {
               name: SITE_NAME,
               url: `${SITE_URL}/`,
               logo: `${SITE_URL}/icon-512.png`,
+              sameAs: SOCIAL_LINKS.map((s) => s.url),
             },
             {
               '@type': 'WebSite',

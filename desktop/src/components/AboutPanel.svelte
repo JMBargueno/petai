@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { RefreshCw, Download } from 'lucide-svelte';
   import { updateState, checkForUpdates, installUpdate } from '../lib/updater';
+  import { SOCIAL_HANDLE, SOCIAL_LINKS } from '../lib/social';
 
   let version = '';
 
@@ -18,11 +19,12 @@
   /** Buzón de contacto público (el mismo que recibe el formulario de la web). */
   const CONTACT_EMAIL = 'contact@pockai.world';
 
-  async function openContact(event: MouseEvent) {
-    if (!('__TAURI_INTERNALS__' in window)) return; // en navegador basta el href
+  /** Abre un enlace externo con el navegador/cliente del sistema (en navegador basta el href). */
+  async function openExternal(event: MouseEvent, url: string) {
+    if (!('__TAURI_INTERNALS__' in window)) return;
     event.preventDefault();
     const { open } = await import('@tauri-apps/plugin-shell');
-    await open(`mailto:${CONTACT_EMAIL}`);
+    await open(url);
   }
 
   $: s = $updateState;
@@ -62,8 +64,30 @@
 
   <p class="muted contact">
     ¿Dudas o algún fallo? Escríbenos a
-    <a href={`mailto:${CONTACT_EMAIL}`} on:click={openContact}>{CONTACT_EMAIL}</a>
+    <a href={`mailto:${CONTACT_EMAIL}`} on:click={(e) => openExternal(e, `mailto:${CONTACT_EMAIL}`)}>{CONTACT_EMAIL}</a>
   </p>
+
+  <div class="social">
+    <p class="muted">Síguenos</p>
+    <ul aria-label="Redes sociales">
+      {#each SOCIAL_LINKS as s (s.id)}
+        <li>
+          <a
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Pockai en ${s.name}`}
+            title={`@${SOCIAL_HANDLE} en ${s.name}`}
+            on:click={(e) => openExternal(e, s.url)}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+              <path d={s.path} fill="currentColor" />
+            </svg>
+          </a>
+        </li>
+      {/each}
+    </ul>
+  </div>
 </section>
 
 <style>
@@ -89,4 +113,16 @@
   progress { width: 100%; accent-color: var(--accent); }
   .contact { padding-top: 6px; border-top: 1px solid var(--line-soft); width: 100%; }
   .contact a { color: var(--accent); }
+  .social { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+  .social ul { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .social a {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--line-soft);
+    border-radius: 9999px;
+    color: var(--ink);
+  }
+  .social a:hover, .social a:focus-visible { border-color: var(--accent); color: var(--accent); }
 </style>
