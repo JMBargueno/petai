@@ -71,13 +71,37 @@ export interface BakedPetSheet {
   getFrame: (tag: string, relativeIndex: number) => { sx: number; sy: number; sw: number; sh: number; totalFrames: number };
 }
 
-// Registro de especies raster
+// Registro de especies raster (etapa adult = raíz de la especie)
 const SPECIES_REGISTRY: Record<string, { base: string; mask: string; anim: AnimMetadata }> = {
   ignisaur: { base: ignisaurBase, mask: ignisaurMask, anim: ignisaurAnim as AnimMetadata },
   axolunar: { base: axolunarBase, mask: axolunarMask, anim: axolunarAnim as AnimMetadata },
   florabud: { base: florabudBase, mask: florabudMask, anim: florabudAnim as AnimMetadata },
   egg: { base: eggBase, mask: eggMask, anim: eggAnim as AnimMetadata },
 };
+
+// Hojas por etapa (GUIA_ARTISTICA §7.4): species/<id>/<baby|juvenile|final>/. Se descubren solas.
+const STAGE_PNGS = import.meta.glob('@shared/assets/species/*/{baby,juvenile,final}/{base,mask}.png', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>;
+const STAGE_ANIMS = import.meta.glob('@shared/assets/species/*/{baby,juvenile,final}/anim.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, AnimMetadata>;
+for (const [file, anim] of Object.entries(STAGE_ANIMS)) {
+  const m = file.match(/species\/([^/]+)\/([^/]+)\/anim\.json$/);
+  const dir = file.slice(0, -'anim.json'.length);
+  const base = STAGE_PNGS[`${dir}base.png`];
+  const mask = STAGE_PNGS[`${dir}mask.png`];
+  if (m && base && mask) SPECIES_REGISTRY[`${m[1]}/${m[2]}`] = { base, mask, anim };
+}
+
+/** Clave de hoja para `(especie, etapa)`: la etapa si existe; si no, la hoja adult de la especie. */
+export function sheetKey(speciesId: string, stage?: string | null): string {
+  const id = normalizeSpecies(speciesId);
+  return stage && SPECIES_REGISTRY[`${id}/${stage}`] ? `${id}/${stage}` : id;
+}
 
 const PREVIEW_SVG: Record<string, string> = {
   ignisaur: ignisaurIdleSvg,
@@ -86,7 +110,7 @@ const PREVIEW_SVG: Record<string, string> = {
 };
 
 export function normalizeSpecies(speciesId: string): string {
-  return SPECIES_REGISTRY[speciesId] ? speciesId : 'ignisaur';
+  return SPECIES_REGISTRY[speciesId] && !speciesId.includes('/') ? speciesId : 'ignisaur';
 }
 
 /** ¿La clave es una especie raster conocida en este cliente? (para resolver sprites de terceros). */
@@ -176,9 +200,10 @@ export async function bakePetSpriteSheet(
   patternId: string,
   palette: { primary: string; secondary: string; accent?: string },
   visualSeed: number = 1337,
-  shiny: boolean = false
+  shiny: boolean = false,
+  stage?: string | null
 ): Promise<BakedPetSheet> {
-  const normalizedSpecies = normalizeSpecies(speciesId);
+  const normalizedSpecies = sheetKey(speciesId, stage);
   const cacheKey = `${normalizedSpecies}:${patternId}:${palette.primary}:${palette.secondary}:${visualSeed}:${shiny}`;
 
   if (bakedSheetCache.has(cacheKey)) {

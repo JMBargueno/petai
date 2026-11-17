@@ -2,24 +2,16 @@
  * Registro de assets de la escena. Vite los copia/inyecta como URLs, así el bundle embed funciona
  * offline desde los assets de la app (Android/iOS) y desde el servidor de Vite en escritorio.
  *
- * Hojas por etapa: cuando existan `species/<id>/<stage>/…` (fase 3) se registran aquí; mientras,
- * todas las etapas usan la hoja alias (adult).
+ * Hojas por etapa: adult = `species/<id>/` (alias histórico); baby/juvenile/final =
+ * `species/<id>/<etapa>/`. Si falta una etapa se usa adult.
  */
 import type { AnimMetadata } from './bake/anim';
 import type { Stage } from './protocol';
 
-import ignisaurBase from '../../assets/species/ignisaur/base.png';
-import ignisaurMask from '../../assets/species/ignisaur/mask.png';
-import ignisaurAnim from '../../assets/species/ignisaur/anim.json';
-import axolunarBase from '../../assets/species/axolunar/base.png';
-import axolunarMask from '../../assets/species/axolunar/mask.png';
-import axolunarAnim from '../../assets/species/axolunar/anim.json';
-import florabudBase from '../../assets/species/florabud/base.png';
-import florabudMask from '../../assets/species/florabud/mask.png';
-import florabudAnim from '../../assets/species/florabud/anim.json';
-import eggBase from '../../assets/species/egg/base.png';
-import eggMask from '../../assets/species/egg/mask.png';
-import eggAnim from '../../assets/species/egg/anim.json';
+// Todas las hojas (adult en la raíz de la especie; baby/juvenile/final en subcarpetas). Vite las
+// resuelve en build: añadir una especie o etapa solo requiere generar sus archivos.
+const PNGS = import.meta.glob('../../assets/species/**/{base,mask}.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const ANIMS = import.meta.glob('../../assets/species/**/anim.json', { eager: true, import: 'default' }) as Record<string, AnimMetadata>;
 
 import stripesPng from '../../assets/patterns/stripes.png';
 import spotsPng from '../../assets/patterns/spots.png';
@@ -35,12 +27,26 @@ export interface SheetAssets {
   anim: AnimMetadata;
 }
 
-const SHEETS: Record<string, Partial<Record<Stage | 'default', SheetAssets>>> = {
-  ignisaur: { default: { base: ignisaurBase, mask: ignisaurMask, anim: ignisaurAnim as AnimMetadata } },
-  axolunar: { default: { base: axolunarBase, mask: axolunarMask, anim: axolunarAnim as AnimMetadata } },
-  florabud: { default: { base: florabudBase, mask: florabudMask, anim: florabudAnim as AnimMetadata } },
-  egg: { default: { base: eggBase, mask: eggMask, anim: eggAnim as AnimMetadata } },
-};
+const STAGE_KEYS: (Stage | 'default')[] = ['baby', 'juvenile', 'final'];
+
+function buildSheets(): Record<string, Partial<Record<Stage | 'default', SheetAssets>>> {
+  const out: Record<string, Partial<Record<Stage | 'default', SheetAssets>>> = {};
+  for (const [file, anim] of Object.entries(ANIMS)) {
+    const m = file.match(/species\/([^/]+)\/(?:([^/]+)\/)?anim\.json$/);
+    if (!m) continue;
+    const [, id, sub] = m;
+    const stage = (sub ?? 'default') as Stage | 'default';
+    if (sub && !STAGE_KEYS.includes(stage)) continue;
+    const dir = file.slice(0, -'anim.json'.length);
+    const base = PNGS[`${dir}base.png`];
+    const mask = PNGS[`${dir}mask.png`];
+    if (!base || !mask) continue;
+    (out[id] ??= {})[stage] = { base, mask, anim };
+  }
+  return out;
+}
+
+const SHEETS = buildSheets();
 
 export const PATTERNS: Record<string, string> = {
   stripes: stripesPng,
@@ -58,7 +64,7 @@ export const FALLBACK_SPECIES = 'ignisaur';
 export function resolveSheet(species: string, stage: Stage): { key: string; sheet: SheetAssets } {
   const id = stage === 'egg' ? 'egg' : SHEETS[species] ? species : FALLBACK_SPECIES;
   const entry = SHEETS[id];
-  const sheet = entry[stage] ?? entry.adult ?? entry.default!;
+  const sheet = entry[stage] ?? entry.default!;
   const key = entry[stage] ? `${id}/${stage}` : id;
   return { key, sheet };
 }

@@ -228,9 +228,9 @@ El script de validación se ejecuta en GitHub Actions (`npm run validate:assets`
 Reglas visuales en [`GUIA_ARTISTICA.md` §7.4](GUIA_ARTISTICA.md#74-isométrico-objetivo-sustituye-a-la-vista-de-perfil).
 
 ### Hojas por etapa
-- `SpeciesArt.draw(ctx, pose, stage)` recibe la etapa (`baby | juvenile | adult | final`), y un helper `stageParams(stage)` da las proporciones (cabeza/cuerpo, escala de apéndices, accesorio).
-- `pnpm generate:sprites` escribe `shared/assets/species/<id>/<stage>/{base.png, mask.png, anim.json}`.
-- `species/<id>/{base,mask,anim}` se mantiene como **alias de `adult`** para los clientes antiguos y el manifiesto del CDN.
+- `SpeciesArt.draw(ctx, pose, stage)` recibe la etapa (`baby | juvenile | adult | final`), y `stageParams(stage)` (en `scripts/sprites/species.ts`) da `{ size, head, app, eye, accessory }`: escala total, escala extra de la cabeza, apéndices, ojos y accesorio final.
+- `pnpm generate:sprites` escribe la etapa **adult en la raíz** `shared/assets/species/<id>/{base.png, mask.png, anim.json}` (así los clientes antiguos y el manifiesto del CDN siguen funcionando sin duplicar bytes) y `baby`, `juvenile` y `final` en `species/<id>/<etapa>/`.
+- La cara se pinta en la máscara con primario **sin canal B** (`MASK_FACE` en `draw.ts`), así que el patrón nunca la pisa.
 - Los clientes piden `(especie, etapa)`. Si no existe, usan `adult` y, si tampoco existe, `ignisaur`.
 
 ### Muebles

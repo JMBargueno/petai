@@ -107,7 +107,8 @@ for (const s of species) {
   const dir = path.join(root, 'shared/assets/species', s.spriteKey ?? s.id);
   const missingAlias = SHEET.filter((f) => !fs.existsSync(path.join(dir, f)));
   if (missingAlias.length) errors.push(`${tag} faltan ${missingAlias.join(', ')} en ${path.relative(root, dir)}`);
-  const missingStages = STAGES.filter((st) => SHEET.some((f) => !fs.existsSync(path.join(dir, st, f))));
+  // adult vive en la raíz de la especie; el resto en subcarpetas.
+  const missingStages = STAGES.filter((st) => st !== 'adult' && SHEET.some((f) => !fs.existsSync(path.join(dir, st, f))));
   if (missingStages.length) warnings.push(`${tag} sin hojas por etapa (${missingStages.join(', ')}): los clientes usarán la hoja adult/alias`);
   const hasArt = new RegExp(`id:\\s*['"]${s.id}['"]`).test(speciesTs);
   if (!hasArt) warnings.push(`${tag} sin SpeciesArt en scripts/sprites/species.ts: sigue con placeholder`);

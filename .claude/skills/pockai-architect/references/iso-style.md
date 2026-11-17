@@ -17,17 +17,19 @@ Es un resumen práctico de `docs/GUIA_ARTISTICA.md` §7.4. Si hay conflicto, man
 ## Cara en 3/4
 | Ancla | Perfil (antes) | 3/4 (ahora) |
 |---|---|---|
-| Ojo lejano `l` | — | a ~22 px del cercano, 2 px más alto, ancho ×0,75 |
-| Ojo cercano `r` | delante | ligeramente a la derecha del centro de la cabeza |
+| Ojo cercano `l` | — | izquierda de la cara, tamaño completo |
+| Ojo lejano `r` | — | a ~18–21 px del cercano, junto al contorno derecho, ancho ×0,74 (`far`) |
 | Boca | en el borde | bajo el punto medio entre los dos ojos, desplazada 4–6 px a la derecha |
 
 ## Etapas (`stageParams`)
-| Etapa | `headRatio` | `appScale` | `accessory` | Notas |
-|---|---|---|---|---|
-| baby | 1,4 | 0,6 | — | ojos +20 %, extremidades cortas |
-| juvenile | 1,15 | 0,85 | — | |
-| adult | 1,0 | 1,0 | — | rasgo icónico completo |
-| final | 0,95 | 1,15 | sí | un accesorio que lea el elemento (cresta, aura, corona de hojas…) |
+Valores reales en `STAGE_PARAMS` (`scripts/sprites/species.ts`):
+
+| Etapa | `size` | `head` | `app` | `eye` | `accessory` | Notas |
+|---|---|---|---|---|---|---|
+| baby | 0,78 | 1,26 | 0,55 | 1,18 | — | cabezón, apéndices pequeños |
+| juvenile | 0,9 | 1,12 | 0,8 | 1,08 | — | |
+| adult | 1 | 1 | 1 | 1 | — | rasgo icónico completo |
+| final | 1 | 0,97 | 1,12 | 1 | sí | accesorio que lea el elemento (cresta de fuego, media luna, corona de pétalos) |
 
 El rasgo icónico **crece** con la etapa, pero no cambia de forma. Si un baby y un final no parecen de la misma especie, está mal.
 

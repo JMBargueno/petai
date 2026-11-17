@@ -77,7 +77,7 @@ Entrega **por fases, un PR por fase**. Cada fase se puede revisar y fusionar por
 ## Fase 3: sprites 3/4 y etapas (PR 3)
 - `scripts/sprites/species.ts`: redibujar `axolunar`, `florabud` e `ignisaur` en 3/4 con `draw(ctx, pose, stage)` y `stageParams`. La cara va con un rol sin canal B, para que el patrón no la pise.
 - `scripts/sprites/egg.ts`, `draw.ts`: sombra isométrica (24×12 en y = 114) y ojo lejano más estrecho.
-- `generate-pet-sprites.ts`: escribir `species/<id>/<stage>/…`, mantener el alias de adult y actualizar el manifiesto, `validate-assets` y `build-assets`.
+- `generate-pet-sprites.ts`: adult en la raíz `species/<id>/` (sin duplicar) y `species/<id>/{baby,juvenile,final}/`; `validate-assets.js` valida cada etapa y `build-assets` las descubre solo. **Hecho (fase 3).**
 - `shared/scene` y los clientes cargan la hoja por `(especie, etapa)`, con caída a adult y luego a `ignisaur`.
 
 ## Fase 4: backend de colocación (PR 4)

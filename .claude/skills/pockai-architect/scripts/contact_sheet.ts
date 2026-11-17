@@ -57,7 +57,7 @@ const clips = (arg('--clips')?.split(',') ?? DEFAULT_CLIPS).filter((c) => {
   if (!ok) console.warn(`⚠ clip desconocido: ${c}`);
   return ok;
 });
-const stageAware = sp.draw.length >= 3;
+const stageAware = /stage/.test(sp.draw.toString());
 if (!stageAware) console.warn('⚠ draw(ctx, pose) no recibe `stage`: las filas de etapa saldrán iguales.');
 
 let uidN = 0;

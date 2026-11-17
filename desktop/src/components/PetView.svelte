@@ -139,7 +139,8 @@
   $: if (isSleeping) controller.stop();
 
   // Hornear sprite sheet en memoria al cambiar de mascota, paleta o patrón
-  $: if (pet && (speciesKey || patternKey || palette || visualSeed)) {
+  $: stage = pet?.stage ?? null;
+  $: if (pet && (speciesKey || patternKey || palette || visualSeed || stage)) {
     triggerBake();
   }
 
@@ -153,7 +154,7 @@
     try {
       do {
         bakeAgain = false;
-        bakedSheet = await bakePetSpriteSheet(speciesKey, patternKey, palette, visualSeed, isShiny);
+        bakedSheet = await bakePetSpriteSheet(speciesKey, patternKey, palette, visualSeed, isShiny, stage);
       } while (bakeAgain);
     } catch (err) {
       console.warn('Fallback a SVG: error horneando sprite sheet:', err);
