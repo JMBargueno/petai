@@ -53,7 +53,7 @@ Features sin UI (solo backend + API):
 |---|---|
 | F-08 | `GET /v1/seasons/progress` no verifica que la temporada sea la actual |
 | F-14 | Hot-reload de `balance.json` no valida rango de `xpPerTier` (0 o negativo) |
-| HAB-BUFFS | **Rebalancear los buffs del hábitat** (`shared/game-data/habitats.json`). Hoy el catálogo completo suma más que los topes: felicidad 0,55 / 0,30, higiene 0,50 / 0,40 y combate 0,15 / 0,10 (energía 0,35 / 0,40 sí cabe). `getActiveBuffs` recorta al tope, así que el jugador que compra de más paga muebles que no aportan, y `final_throne` da él solo todo el tope de combate. Decidir entre subir topes, bajar buffs por mueble o limitar la suma por sala. `node .claude/skills/pockai-habitat-architect/scripts/check_habitats.mjs` muestra las sumas y las reglas están en `.claude/skills/pockai-habitat-architect/references/balance.md`. Ajustar el e2e de topes (`backend/test/habitat.e2e-spec.ts`, test e) si cambian. |
+| HAB-BUFFS | **Hecho** (2026-11-17): el catálogo completo suma exactamente cada tope y `check_habitats.mjs` lo exige; reparto en `.claude/skills/pockai-habitat-architect/references/balance.md`. Problema original: **Rebalancear los buffs del hábitat** (`shared/game-data/habitats.json`). Hoy el catálogo completo suma más que los topes: felicidad 0,55 / 0,30, higiene 0,50 / 0,40 y combate 0,15 / 0,10 (energía 0,35 / 0,40 sí cabe). `getActiveBuffs` recorta al tope, así que el jugador que compra de más paga muebles que no aportan, y `final_throne` da él solo todo el tope de combate. Decidir entre subir topes, bajar buffs por mueble o limitar la suma por sala. `node .claude/skills/pockai-habitat-architect/scripts/check_habitats.mjs` muestra las sumas y las reglas están en `.claude/skills/pockai-habitat-architect/references/balance.md`. Ajustar el e2e de topes (`backend/test/habitat.e2e-spec.ts`, test e) si cambian. |
 
 ## 5. Rendimiento / CI
 
@@ -92,7 +92,7 @@ Features sin UI (solo backend + API):
 - [ ] Actualizar DEPLOY.md
 
 **Próximo sprint:**
-- [ ] Rebalancear los buffs del hábitat (HAB-BUFFS, §4)
+- [x] Rebalancear los buffs del hábitat (HAB-BUFFS, §4) — hecho: el catálogo completo suma cada tope
 - [ ] Ejecutar load test + documentar resultados
 - [ ] Corregir flakiness e2e en CI
 - [ ] Paso 5: 1-2 features oleadas con UI (ej. Raid, Training)

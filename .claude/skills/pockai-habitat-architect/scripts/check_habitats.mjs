@@ -58,7 +58,9 @@ for (const f of data.furniture) {
 const totals = Object.fromEntries(BUFFS.map((k) => [k, data.furniture.reduce((a, f) => a + (f.buffs?.[k] ?? 0), 0)]));
 for (const [k, v] of Object.entries(totals)) {
   const cap = capOf(k);
-  if (typeof cap === 'number' && v > cap * 2) warnings.push(`Catálogo: ${k} suma ${v.toFixed(2)}, más del doble del tope ${cap}: los muebles nuevos con este buff casi no aportan`);
+  // Regla (references/balance.md): un mueble de cada tipo suma exactamente el tope.
+  if (typeof cap === 'number' && v > cap + 1e-9) errors.push(`Catálogo: ${k} suma ${v.toFixed(2)} > tope ${cap}: rebalancea (un mueble de cada tipo debe sumar el tope)`);
+  else if (typeof cap === 'number' && v > 0 && v < cap - 1e-9) warnings.push(`Catálogo: ${k} suma ${v.toFixed(2)} < tope ${cap}: el tope no se alcanza ni con el catálogo completo`);
 }
 
 for (const r of data.rooms) {
