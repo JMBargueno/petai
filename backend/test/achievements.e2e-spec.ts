@@ -137,7 +137,8 @@ describe('Achievements E2E', () => {
         .expect(201);
     }
 
-    const unlocked = await waitForAchievement('care_feed_10', (a) => a.status === 'unlocked');
+    // `status` ya es «unlocked» al llegar al objetivo, pero el reclamo exige `unlockedAt` persistido
+    const unlocked = await waitForAchievement('care_feed_10', (a) => a.status === 'unlocked' && !!a.unlockedAt);
     expect(unlocked.status).toBe('unlocked');
 
     await request(app.getHttpServer())

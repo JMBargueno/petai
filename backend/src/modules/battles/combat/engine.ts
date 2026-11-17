@@ -155,6 +155,8 @@ function participantLog(s: Side): ParticipantLog {
     strategy: s.f.strategy,
     isBot: s.f.isBot,
     petId: s.f.petId,
+    // Solo si existe: los luchadores sin personalidad (bots) dejan el log exactamente igual que antes
+    ...(s.f.personality ? { personality: { ...s.f.personality } } : {}),
   };
 }
 

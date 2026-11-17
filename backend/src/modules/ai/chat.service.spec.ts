@@ -278,4 +278,14 @@ describe('ChatService: orquestador del cerebro (spec 36)', () => {
     expect(s.mindMemory.feel).toHaveBeenCalledWith('pet-1', 'owner', 'Mi entrenador', expect.any(Number));
     expect(s.mind.applyExperience).toHaveBeenCalledWith('pet-1', ['talk_comfort']);
   });
+
+  it('un mensaje trivial no crea recuerdos ni mueve la relación con el entrenador', async () => {
+    const s = setup([[{ type: 'delta', text: '¡Hola!' }, { type: 'done' }]]);
+    s.pet.energy = 80;
+    s.turn.interpretation = interpretMessage('mensaje 0');
+    s.turn.behavior = viewOf('listen');
+    await drive(s);
+    expect(s.mindMemory.remember).not.toHaveBeenCalled();
+    expect(s.mindMemory.feel).not.toHaveBeenCalled();
+  });
 });

@@ -70,6 +70,8 @@ export interface ParticipantLog {
   strategy: Strategy;
   isBot: boolean;
   petId?: string;
+  /** Sesgo de personalidad congelado (spec 36): necesario para reproducir el combate desde el log. */
+  personality?: { heal: number; guard: number };
 }
 
 export type BattleEvent =

@@ -419,7 +419,10 @@ export class ChatService {
             { layer: 'episodic', kind: 'event', content: ep.content, importance: ep.importance, valence: ep.valence, subject: 'owner' },
           ]);
         }
-        await this.mindMemory.feel(pet.id, 'owner', 'Mi entrenador', 0.02 + turn.interpretation.sentiment * 0.08);
+        // La relación con el entrenador solo se mueve con mensajes significativos (no con cada «hola»)
+        if (ep || Math.abs(turn.interpretation.sentiment) >= 0.5) {
+          await this.mindMemory.feel(pet.id, 'owner', 'Mi entrenador', 0.02 + turn.interpretation.sentiment * 0.08);
+        }
       }
     } catch (e: any) {
       this.logger.warn(`No se pudieron aplicar los efectos del turno (${userId}): ${e?.message}`);

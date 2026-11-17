@@ -251,7 +251,7 @@ p:where(:not(.lead, .eyebrow)) {
   }
 }
 
-/* ───── Funciones: bento de 6 piezas ───── */
+/* ───── Funciones: bento de 6 piezas + una pieza final a todo lo ancho ───── */
 .features {
   display: grid;
   gap: 16px;
@@ -272,6 +272,9 @@ p:where(:not(.lead, .eyebrow)) {
   .feature:nth-child(5),
   .feature:nth-child(6) {
     grid-column: span 3;
+  }
+  .feature:nth-child(7) {
+    grid-column: span 6;
   }
 }
 .feature {

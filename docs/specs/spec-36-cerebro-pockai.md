@@ -263,7 +263,8 @@ Entrada del usuario
   └─ Respuesta + animación + memoria
        ├─ evento `done` del stream incluye `behavior: { action, animation, emote }`
        └─ episodio si merece la pena (mal día, buena noticia, cariño, regañina) + relación con el
-          entrenador según el sentimiento
+          entrenador según el sentimiento, solo en mensajes significativos (con episodio o
+          |sentimiento| ≥ 0.5): un saludo o una charla neutra no crean ni mueven recuerdos
 ```
 
 ### 6.1 Ejemplo: «Hoy he tenido un día bastante malo»
@@ -303,7 +304,9 @@ pasa por `validateBehavior` antes de aplicarse.
 
 ## 7. Combate
 `Fighter.personality = { heal, guard }` se calcula en `BattlesService.fighterFromPet` con
-`combatBias(dims)` y queda **congelado en la instantánea** del combate. En `chooseSkill` desplaza los
+`combatBias(dims)` y queda **congelado en la instantánea** del combate. El sesgo también se guarda
+en el participante del log (`ParticipantLog.personality`) para que la repetición sea reproducible
+desde el propio log; sin personalidad (bots), el log no cambia. En `chooseSkill` desplaza los
 umbrales de curar y protegerse (±5 % como mucho): valentía alta → cura y se protege más tarde;
 temperamento alto → se protege menos. La estrategia agresiva sigue sin protegerse nunca.
 No añade ninguna llamada al PRNG: un luchador sin personalidad (bots) produce exactamente el mismo
