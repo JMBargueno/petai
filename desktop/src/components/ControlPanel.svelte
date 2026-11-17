@@ -116,6 +116,8 @@ import VisitTab from './VisitTab.svelte';
   ];
   let dest: string = 'pet';
   let sub: string = 'home';
+  /** Amigo elegido en Social › Amigos para abrir directamente su visita. */
+  let visitFriend = '';
   /** Petición externa (p. ej. la campana de App.svelte) para abrir una sección concreta. */
   export let request: { dest: string; sub: string; n: number; prompt?: string } | null = null;
   // Mensaje para el chat que acompaña a la petición (p. ej. un archivo soltado sobre la mascota)
@@ -539,7 +541,22 @@ import VisitTab from './VisitTab.svelte';
         {/if}
       </div>
       {#if $updateLock === null}
-        <button class="btn btn--ghost btn--icon close-btn" aria-label="Cerrar panel" on:click={() => dispatch('close')}><X size={18} /></button>
+        <div class="header-actions">
+          {#if user && user.emailVerified !== false}
+            <button
+              class="btn btn--ghost btn--icon settings-btn"
+              class:active={dest === 'settings'}
+              aria-label="Ajustes"
+              aria-pressed={dest === 'settings'}
+              title="Ajustes"
+              on:click={() => (dest === 'settings' ? go('pet') : go('settings'))}
+            >
+              <Settings size={18} />
+              {#if hasUpdate($updateState)}<span class="dot-badge" title="Hay una versión nueva"></span>{/if}
+            </button>
+          {/if}
+          <button class="btn btn--ghost btn--icon close-btn" aria-label="Cerrar panel" on:click={() => dispatch('close')}><X size={18} /></button>
+        </div>
       {/if}
     </div>
 
@@ -777,12 +794,12 @@ import VisitTab from './VisitTab.svelte';
     {:else}
       <!-- Destinos principales -->
       <nav class="nav-tabs" aria-label="Secciones">
-        {#each NAV as n (n.id)}
+        <!-- Ajustes no va en la barra: es el engranaje de la cabecera, junto a la X -->
+        {#each NAV.filter((n) => n.id !== 'settings') as n (n.id)}
           <button class:active={dest === n.id} aria-current={dest === n.id ? 'page' : undefined} on:click={() => go(n.id)}>
             <svelte:component this={n.icon} size={18} />
             <span>{n.label}</span>
             {#if n.id === 'pet' && eggs.length > 0}<span class="tab-badge">{eggs.length}</span>{/if}
-            {#if n.id === 'settings' && hasUpdate($updateState)}<span class="tab-badge" title="Hay una versión nueva">1</span>{/if}
           </button>
         {/each}
       </nav>
@@ -1033,13 +1050,13 @@ import VisitTab from './VisitTab.svelte';
           />
 
         {:else if dest === 'social' && sub === 'friends'}
-          <FriendsTab />
+          <FriendsTab on:visit={(e) => { visitFriend = e.detail; go('social', 'visits'); }} />
 
         {:else if dest === 'social' && sub === 'clans'}
           <ClansTab />
 
         {:else if dest === 'social' && sub === 'visits'}
-          <VisitTab on:refreshUser />
+          <VisitTab initialFriend={visitFriend} on:refreshUser on:goFriends={() => go('social', 'friends')} />
 
         {:else if dest === 'progress' && sub === 'missions'}
           <MissionsTab on:refreshUser />
@@ -1172,6 +1189,41 @@ import VisitTab from './VisitTab.svelte';
   .pill-gems :global(svg) {
     color: var(--color-electric-blue);
   }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .settings-btn {
+    position: relative;
+    border: 1px solid transparent;
+  }
+  .settings-btn :global(svg) {
+    transition: rotate var(--dur-2) var(--ease-out);
+  }
+  .settings-btn:hover :global(svg) {
+    rotate: 60deg;
+  }
+  .settings-btn.active {
+    background: var(--color-sunburst);
+    color: var(--on-color);
+    border-color: var(--color-carbon);
+    box-shadow: 2px 2px 0 var(--color-carbon);
+  }
+  .settings-btn.active:hover {
+    background: var(--color-sunburst);
+  }
+  .dot-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+    border: 1px solid var(--color-carbon);
+  }
   .close-btn {
     transition: background var(--dur-1), rotate var(--dur-1);
   }
@@ -1181,6 +1233,7 @@ import VisitTab from './VisitTab.svelte';
   }
 
   .nav-tabs {
+    flex-shrink: 0;
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 4px;
@@ -1243,6 +1296,7 @@ import VisitTab from './VisitTab.svelte';
   }
 
   .sub-tabs {
+    flex-shrink: 0; /* con contenido largo el flex la recortaba */
     display: flex;
     gap: 6px;
     padding: 10px 12px 2px;
