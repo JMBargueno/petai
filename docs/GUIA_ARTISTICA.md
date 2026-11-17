@@ -257,6 +257,43 @@ Especies con arte: **Axolunar** (agua, `#38A3A5`), **Florabud** (planta, `#57CC9
 - Cada patrón tiene una rareza mínima (`shared/game-data/patterns.json`).
 - **Variación por mascota:** la semilla `visualSeed` decide el desplazamiento, la escala (0,85–1,15), el giro (±0,15 rad) y el tono (±8°). Nunca se colorea sobre la cara ni los ojos (canal B de la máscara).
 
+### 7.4 Isométrico (objetivo; sustituye a la vista de perfil)
+
+El mundo de Pockai pasa a una **vista isométrica cozy**: las salas son dioramas vistos desde arriba en diagonal y los Pockais se dibujan en **3/4**. Mientras se migra, el arte de perfil (§7.1) sigue siendo válido; todo arte **nuevo** se hace con estas reglas.
+
+**Proyección**
+- **Dimétrica 2:1** (la "isométrica" de los juegos): cada celda del suelo es un rombo de **32×16 px** a escala 1.
+- De rejilla a pantalla: `sx = (x − y) · 16`, `sy = (x + y) · 8`. El eje `x` va hacia abajo-derecha y el `y` hacia abajo-izquierda.
+- Altura: 1 unidad vertical = 1 px hacia arriba. Una pared mide 120 px y un mueble bajo, de 16 a 32 px.
+- **Orden de profundidad:** se pinta antes lo que tiene menor `x + y` (del vértice más cercano a la cámara de su huella). Si empatan, va antes lo más bajo. Muebles y Pockai comparten **una sola lista** ordenada.
+
+**Luz y color**
+- Luz fija desde **arriba a la izquierda**.
+- Cada volumen tiene **tres tonos del mismo color**: cara superior = color base +12 % de luz, cara izquierda = base, cara derecha = base −18 % de luz. Nada de degradados realistas.
+- Se mantiene la firma de pegatina: contorno exterior `#1A1A1A` de 3 px en Pockais y de 2 px en muebles; las aristas interiores van a 1–1,5 px y al 60 % de opacidad.
+- Las sombras de suelo son **elipses 2:1** (rx = 2·ry), negras al 20 %, nunca circulares.
+
+**Pockai en 3/4**
+- Frame de 128×128, suelo en y = 120. Mira **abajo-derecha**; la dirección abajo-izquierda se consigue con espejo (`scaleX(-1)`), así que el dibujo no lleva textos ni asimetrías que delaten el espejo.
+- Cuerpo girado unos 30°: se ven la cara y el costado derecho. Las anclas de la cara se desplazan hacia el lado visible. El **ojo lejano** es más estrecho (unos 0,75 en ancho) y está algo más alto. Patas: las cercanas más grandes y bajas; las lejanas asoman.
+- Sombra: elipse 2:1 centrada en (64, 114), con radios de 24×12 (no debe pasar de y ≈ 126 para no recortarse en el frame).
+- **Etapas** (baby, juvenile, adult, final): mismo dibujo con parámetros.
+
+| Etapa | Cabeza/cuerpo | Apéndices | Extras |
+|---|---|---|---|
+| Baby | 1,4 (cabezón) | 0,6 | ojos más grandes |
+| Juvenile | 1,15 | 0,85 | — |
+| Adult | 1,0 | 1,0 | rasgo icónico completo |
+| Final | 0,95 | 1,15 | un accesorio de etapa final (cresta, aura, corona) |
+
+- Dentro de una sala, el Pockai se muestra a unos **72 px** de alto (escala ≈ 0,56); en la mascota flotante, a 128 px.
+
+**Salas**
+- Corte tipo "casa de muñecas": suelo de 14×10 celdas y **dos paredes al fondo** (la izquierda sobre `y = 0` y la derecha sobre `x = 0`), sin paredes delanteras.
+- Cada sala tiene su tema (pared, suelo, zócalo, ventana y luz) y su variante de noche.
+- **Muebles:** SVG isométrico con huella `W×D` en celdas, de suelo o de pared, con 2 orientaciones dibujadas (las otras 2 salen por espejo). El punto de anclaje es el vértice superior de la celda (x, y) de la huella.
+- **Ni emoji ni iconos** como muebles.
+
 ## 8 · Movimiento
 
 Tokens en [`web/src/styles/motion.css`](../web/src/styles/motion.css):
@@ -358,6 +395,7 @@ Esta sección lista lo que existe hoy y no sigue esta guía. Corregirlo es traba
 | Android: tipografía y forma | Sin `Type.kt` ni `Shape.kt`; radios inline de 12–36 dp | §4 y §5 |
 | Android: iconos | Material Icons rellenos | Lucide o equivalente de trazo |
 | Huevo | Icono Android `#FDE68A` con manchas azules; sprite `#FDE047` con manchas `#F59E0B` | Un solo huevo de marca (§2) |
-| Emoji de contenido | En el escritorio quedan emoji como contenido de juego (frutas de minijuegos, accesorios y muebles, iconos de elemento) | Pegatinas/Lucide cuando haya arte propio |
+| Emoji de contenido | En el escritorio quedan emoji como contenido de juego (frutas de minijuegos, accesorios y muebles, iconos de elemento) | Pegatinas/Lucide cuando haya arte propio; los muebles, en SVG isométrico (§7.4) |
+| Vista | Pockais de perfil y hábitat en diorama lateral (CSS) | Pockais en 3/4 por etapa y salas isométricas (§7.4) |
 | Elementos | Eléctrico, Sombra y Luz sin color de UI | Completar §3.6 |
 | Docs vs arte | Los docs hablan de 14 estados y 21 especies | Hay 4 estados en SVG y 3 especies con arte |

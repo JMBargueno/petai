@@ -96,6 +96,23 @@ for (const s of species) {
   }
 }
 
+// Arte: hojas por etapa (GUIA_ARTISTICA §7.4, ART_PIPELINE §8). Mientras dure la migración
+// solo avisa; el alias species/<id>/{base,mask,anim} sí es obligatorio (lo exige validate-assets).
+const STAGES = ['baby', 'juvenile', 'adult', 'final'];
+const SHEET = ['base.png', 'mask.png', 'anim.json'];
+const speciesTs = fs.readFileSync(path.join(root, 'scripts/sprites/species.ts'), 'utf8');
+for (const s of species) {
+  if (only && s.id !== only) continue;
+  const tag = `[${s.id}]`;
+  const dir = path.join(root, 'shared/assets/species', s.spriteKey ?? s.id);
+  const missingAlias = SHEET.filter((f) => !fs.existsSync(path.join(dir, f)));
+  if (missingAlias.length) errors.push(`${tag} faltan ${missingAlias.join(', ')} en ${path.relative(root, dir)}`);
+  const missingStages = STAGES.filter((st) => SHEET.some((f) => !fs.existsSync(path.join(dir, st, f))));
+  if (missingStages.length) warnings.push(`${tag} sin hojas por etapa (${missingStages.join(', ')}): los clientes usarán la hoja adult/alias`);
+  const hasArt = new RegExp(`id:\\s*['"]${s.id}['"]`).test(speciesTs);
+  if (!hasArt) warnings.push(`${tag} sin SpeciesArt en scripts/sprites/species.ts: sigue con placeholder`);
+}
+
 // Avisos de catálogo (fallback de eclosión)
 const byRarity = Object.fromEntries(Object.keys(balance.rarity ?? {}).map((r) => [r, species.filter((s) => s.rarity === r).length]));
 const empty = Object.entries(byRarity).filter(([, n]) => n === 0).map(([r]) => r);

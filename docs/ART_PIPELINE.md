@@ -218,3 +218,22 @@ El script de validación se ejecuta en GitHub Actions (`npm run validate:assets`
   - Archivos de patrón inexistentes en `shared/assets/patterns/`.
 - **Advertencias Recomendadas (Warnings con fallback activo)**:
   - Ausencia de tags recomendados (`idle_alt`, `sit`, `clean`, `sad`, `sick`, `cast`, `hurt`, `faint`, `talk`). El validador notifica qué animación de respaldo se utilizará en su lugar.
+
+---
+
+## 8. Migración isométrica (3/4 por etapa y muebles)
+
+Reglas visuales en [`GUIA_ARTISTICA.md` §7.4](GUIA_ARTISTICA.md#74-isométrico-objetivo-sustituye-a-la-vista-de-perfil).
+
+### Hojas por etapa
+- `SpeciesArt.draw(ctx, pose, stage)` recibe la etapa (`baby | juvenile | adult | final`), y un helper `stageParams(stage)` da las proporciones (cabeza/cuerpo, escala de apéndices, accesorio).
+- `pnpm generate:sprites` escribe `shared/assets/species/<id>/<stage>/{base.png, mask.png, anim.json}`.
+- `species/<id>/{base,mask,anim}` se mantiene como **alias de `adult`** para los clientes antiguos y el manifiesto del CDN.
+- Los clientes piden `(especie, etapa)`. Si no existe, usan `adult` y, si tampoco existe, `ignisaur`.
+
+### Muebles
+- `scripts/sprites/furniture.ts` dibuja cada mueble en SVG isométrico con 2 orientaciones (`a` = rotación 0 y `b` = rotación 1). Las rotaciones 2 y 3 son el espejo de `b` y `a`.
+- Salida: `shared/assets/furniture/<id>_{a,b}.svg`. Los datos (huella, montaje, interacción) están en `shared/game-data/habitats.json`.
+
+### Revisión visual
+- `npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>` compone una hoja de contactos PNG (clips clave × etapas) a color con la paleta por defecto, para revisarla antes de commitear.

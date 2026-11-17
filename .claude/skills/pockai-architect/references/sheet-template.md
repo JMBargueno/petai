@@ -39,11 +39,13 @@ Escribe en español. Sustituye lo que va entre `<>`.
 **Cómo puede evolucionar:** <2 ejemplos: qué crianza la vuelve, p. ej., aventurera y cuál reservada/cariñosa.>
 **Vida autónoma típica:** <qué hará cuando el entrenador no está, según sus dimensiones (explorar, descansar en el hábitat, buscar a otros Pockai, esperar en la puerta).>
 
-## Evolución narrativa *(mismo sprite en todas las etapas)*
-- **Baby (1):** <…>
-- **Juvenile (10):** <…>
-- **Adult (25):** <…>
-- **Final (50, Piedra de Evolución):** <…>
+## Evolución *(un único `SpeciesArt` parametrizado por etapa)*
+| Etapa | Narrativa | Cambio visual (`stageParams` + rasgo) |
+|---|---|---|
+| **Baby (1)** | <…> | <cabezón, apéndices al 60 %, …> |
+| **Juvenile (10)** | <…> | <…> |
+| **Adult (25)** | <…> | <rasgo icónico completo> |
+| **Final (50, Piedra de Evolución)** | <…> | <accesorio de etapa final y por qué lee el elemento> |
 
 ## Frases de chat de ejemplo
 1. «<…>»
@@ -52,9 +54,9 @@ Escribe en español. Sustituye lo que va entre `<>`.
 *(Coherentes con la description y la personalidad de partida; frases cortas, de mascota. Incluye una reacción a «Hoy he tenido un día malo».)*
 
 ## Brief de arte
-<Brief según references/art-brief.md>
+<Brief según references/art-brief.md (3/4, mira abajo-derecha)>
 
-**TODO:** sustituir los placeholders dibujando el `SpeciesArt` en `scripts/sprites/species.ts` y ejecutar `pnpm generate:sprites`.
+**Estado del arte:** <dibujado y revisado con la hoja de contactos | placeholder (motivo)>
 
 ## Datos (`shared/game-data/species.json`)
 ```json

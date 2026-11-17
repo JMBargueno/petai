@@ -79,3 +79,6 @@ Thumbs.db
 *.sln
 *.sw?
 .hermes/
+
+# Hojas de contactos y vistas previas de sprites (revisión local)
+sprite-previews/
