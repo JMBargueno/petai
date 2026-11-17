@@ -36,17 +36,19 @@ describe('email.service', () => {
     const sender = new SmtpEmailSender(
       config({ SMTP_HOST: 'h', CONTACT_TO: 'contact@pockai.world' }),
     );
-    await sender.sendContactMessage({ name: 'Ana', email: 'ana@example.com', subject: 'a\r\nb', message: 'hola', ip: '1.2.3.4' });
+    await sender.sendContactMessage({ name: 'Ana', email: 'ana@example.com', subject: 'a\r\nb', message: 'hola', type: 'bug', source: 'android', ip: '1.2.3.4' });
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
         // Lo envía el buzón de sistema; contact@ solo recibe.
         from: 'Pockai <noreply@pockai.world>',
         to: 'contact@pockai.world',
         replyTo: { name: 'Ana', address: 'ana@example.com' },
-        subject: '[Contacto] a b',
+        subject: '[Contacto][Fallo] a b',
       }),
     );
     expect(sendMail.mock.calls[0][0].text).toContain('hola');
+    expect(sendMail.mock.calls[0][0].text).toContain('Tipo: Fallo');
+    expect(sendMail.mock.calls[0][0].text).toContain('Origen: App Android');
   });
 
   it('el código de recuperación va al usuario', async () => {

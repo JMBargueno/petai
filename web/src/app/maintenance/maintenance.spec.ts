@@ -1,10 +1,13 @@
 import { LOCALE_ID, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_SITE_CONFIG, SiteConfig, SiteConfigService } from '../shared/site-config/site-config';
 import { Maintenance, MaintenanceMode } from './maintenance';
 
 describe('Maintenance', () => {
+  const initialUrl = location.href;
+  afterEach(() => history.replaceState(null, '', initialUrl));
+
   async function render(mode: MaintenanceMode, message: { es: string | null; en: string | null }, locale = 'es') {
     const config = signal<SiteConfig>({
       ...DEFAULT_SITE_CONFIG,
@@ -29,6 +32,19 @@ describe('Maintenance', () => {
     expect(el.querySelector('.bottom__contact-btn')).not.toBeNull();
     expect(el.querySelector('dialog')).not.toBeNull();
     expect(el.querySelector('.staff')?.getAttribute('href')).toBe('admin/login');
+  });
+
+  it('entrando por /contact?type=bug abre el formulario con el tipo elegido', async () => {
+    history.replaceState(null, '', '/es/contact?type=bug&from=android');
+    // jsdom no implementa <dialog>.showModal().
+    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+    };
+    const el = await render('maintenance', { es: null, en: null });
+    const dialog = el.querySelector('dialog') as HTMLDialogElement;
+    expect(dialog.open).toBe(true);
+    expect((el.querySelector('select[name="type"]') as HTMLSelectElement).value).toBe('bug');
+    expect((el.querySelector('input[name="source"]') as HTMLInputElement).value).toBe('android');
   });
 
   it('sin mensaje en ese idioma: texto por defecto', async () => {

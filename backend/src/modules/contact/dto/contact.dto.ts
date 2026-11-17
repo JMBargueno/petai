@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { CONTACT_SOURCES, CONTACT_TYPES } from '../contact-types';
 
 /** Solo documenta Swagger; la validación real está en contact.schemas.ts (zod). */
 export class ContactDto {
@@ -13,6 +14,12 @@ export class ContactDto {
 
   @ApiProperty({ example: 'Hola, quería preguntar…', description: 'Mensaje (10–5000)' })
   message: string;
+
+  @ApiPropertyOptional({ enum: CONTACT_TYPES, default: 'other', description: 'Tipo de mensaje; va en el asunto del correo' })
+  type?: string;
+
+  @ApiPropertyOptional({ enum: CONTACT_SOURCES, default: 'web', description: 'Desde dónde se llegó al formulario' })
+  source?: string;
 
   @ApiPropertyOptional({ description: 'Honeypot anti-spam: debe ir vacío' })
   website?: string;

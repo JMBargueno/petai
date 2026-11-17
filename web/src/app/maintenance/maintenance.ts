@@ -1,15 +1,19 @@
-import { ChangeDetectionStrategy, Component, LOCALE_ID, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, LOCALE_ID, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
 import { ContactFooter } from '../shared/layout/contact-footer';
 import { SiteConfigService } from '../shared/site-config/site-config';
 
 export type MaintenanceMode = 'down' | 'maintenance';
+
+/** ¿La página pedida es la de contacto (`/es/contact`, `/en/contact/`…)? */
+const isContactPath = () => typeof location !== 'undefined' && /\/contact\/?$/.test(location.pathname);
 
 /**
  * Pantalla de mantenimiento que tapa toda la web.
  * - `down`: el backend no responde (automático). Correo y redes; sin formulario, que no podría
  *   enviarse. La web se vuelve a comprobar sola y se puede reintentar a mano.
  * - `maintenance`: activado desde el panel. Mensaje del panel en el idioma de la página (o el texto
- *   por defecto), formulario de contacto y un acceso discreto al panel para el equipo.
+ *   por defecto), formulario de contacto y un acceso discreto al panel para el equipo. Si se entra por
+ *   `/contact` (p. ej. desde el enlace de las apps) el formulario se abre solo.
  */
 @Component({
   selector: 'app-maintenance',
@@ -59,7 +63,7 @@ export type MaintenanceMode = 'down' | 'maintenance';
       }
     </main>
 
-    <app-contact-footer [form]="mode() === 'maintenance'" />
+    <app-contact-footer [form]="mode() === 'maintenance'" (closed)="cleanContactUrl()" />
 
     @if (mode() === 'maintenance') {
       <a class="staff" href="admin/login" i18n="@@maintenance.staff">Acceso del equipo</a>
@@ -242,6 +246,18 @@ export class Maintenance {
   private readonly site = inject(SiteConfigService);
   protected readonly locale = inject(LOCALE_ID).slice(0, 2);
   protected readonly retrying = signal(false);
+  private readonly contactFooter = viewChild(ContactFooter);
+
+  constructor() {
+    afterNextRender(() => {
+      if (this.mode() === 'maintenance' && isContactPath()) this.contactFooter()?.openContactDialog();
+    });
+  }
+
+  /** Al cerrar el formulario abierto desde `/contact`, la URL vuelve a la portada del idioma. */
+  protected cleanContactUrl() {
+    if (isContactPath()) window.history.replaceState(window.history.state, '', `/${this.locale}/`);
+  }
 
   /** Mensaje del panel en el idioma de la página; si no hay, el texto por defecto. */
   protected readonly message = computed(() => {

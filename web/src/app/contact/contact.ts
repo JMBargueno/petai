@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, LOCALE_ID, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, LOCALE_ID, afterNextRender, inject, signal } from '@angular/core';
 import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
@@ -12,6 +12,43 @@ export const CONTACT_EMAIL = 'contact@pockai.world';
 
 /** Endpoint del formulario: `POST {apiUrl}/v1/contact`. */
 export const CONTACT_ENDPOINT = `${site.apiUrl.replace(/\/$/, '')}/v1/contact`;
+
+/** Tipos de mensaje (mismos ids que valida el backend: van en el asunto del correo). */
+export const CONTACT_TYPE_IDS = ['bug', 'improvement', 'question', 'account', 'legal', 'other'] as const;
+export type ContactType = (typeof CONTACT_TYPE_IDS)[number];
+
+/** Desde dónde se llega al formulario (`?from=` lo ponen las apps). */
+export const CONTACT_SOURCES = ['web', 'android', 'desktop'] as const;
+export type ContactSource = (typeof CONTACT_SOURCES)[number];
+
+/** Opciones del selector de tipo, con su texto en el idioma de la página. */
+export function contactTypeOptions(): { id: ContactType; label: string }[] {
+  return [
+    { id: 'bug', label: $localize`:@@contact.type.bug:Informar de un fallo` },
+    { id: 'improvement', label: $localize`:@@contact.type.improvement:Sugerir una mejora` },
+    { id: 'question', label: $localize`:@@contact.type.question:Pregunta o duda` },
+    { id: 'account', label: $localize`:@@contact.type.account:Mi cuenta o mis datos` },
+    { id: 'legal', label: $localize`:@@contact.type.legal:Legal y privacidad` },
+    { id: 'other', label: $localize`:@@contact.type.other:Otro` },
+  ];
+}
+
+/**
+ * Lee `?type=` y `?from=` de la URL (los enlaces de las apps: `/es/contact?type=bug&from=android`).
+ * Valores desconocidos se ignoran: sin tipo hay que elegirlo; sin origen, la web.
+ */
+export function readContactParams(search = typeof location === 'undefined' ? '' : location.search): {
+  type: ContactType | '';
+  source: ContactSource;
+} {
+  const params = new URLSearchParams(search);
+  const type = params.get('type') as ContactType;
+  const source = params.get('from') as ContactSource;
+  return {
+    type: CONTACT_TYPE_IDS.includes(type) ? type : '',
+    source: CONTACT_SOURCES.includes(source) ? source : 'web',
+  };
+}
 
 type Status = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 'invalid';
 
@@ -50,8 +87,11 @@ type Status = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 'invalid';
                 <span i18n="@@contact.faq.text">Puede que tu duda ya esté resuelta en nuestras <a class="link" [href]="faqHref">preguntas frecuentes</a>.</span>
               </p>
             </aside>
+            <p class="contact__preferred" i18n="@@contact.preferred">
+              El formulario es la vía preferente: elige el tipo de mensaje y nos llegará ya ordenado.
+            </p>
             <p class="contact__direct">
-              <span i18n="@@contact.direct">También puedes escribir directamente a</span>
+              <span i18n="@@contact.direct">Si lo prefieres, también puedes escribirnos a</span>
               <a class="link" [href]="'mailto:' + email">{{ email }}</a>
             </p>
           </div>
@@ -73,6 +113,15 @@ type Status = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 'invalid';
                 <input class="input" id="contact-email" name="email" type="email" autocomplete="email" required maxlength="254" />
               </div>
               <div class="field">
+                <label for="contact-type" i18n="@@contact.type">¿Sobre qué nos escribes?</label>
+                <select class="input" id="contact-type" name="type" required>
+                  <option value="" disabled [selected]="!type()" i18n="@@contact.type.choose">Elige una opción</option>
+                  @for (t of types; track t.id) {
+                    <option [value]="t.id" [selected]="t.id === type()">{{ t.label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="field">
                 <label for="contact-subject" i18n="@@contact.subject">Asunto</label>
                 <input class="input" id="contact-subject" name="subject" type="text" required maxlength="150" />
               </div>
@@ -80,6 +129,7 @@ type Status = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 'invalid';
                 <label for="contact-message" i18n="@@contact.message">Mensaje</label>
                 <textarea class="input" id="contact-message" name="message" rows="7" required minlength="10" maxlength="5000"></textarea>
               </div>
+              <input type="hidden" name="source" [value]="source()" />
               <!-- Honeypot anti-spam: invisible para personas, los bots lo rellenan. -->
               <div class="hp" aria-hidden="true">
                 <label for="contact-website">Website</label>
@@ -168,6 +218,10 @@ type Status = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 'invalid';
       display: grid;
       gap: 2px;
     }
+    .contact__preferred {
+      margin: 0;
+      font-weight: var(--font-weight-bold);
+    }
     .contact__direct {
       margin: 0;
       display: flex;
@@ -227,8 +281,17 @@ export class Contact {
   protected readonly homeLabel = $localize`:@@nav.home:Pockai, inicio`;
   protected readonly navLabel = $localize`:@@nav.label:Principal`;
   protected readonly status = signal<Status>('idle');
+  protected readonly types = contactTypeOptions();
+  /** Tipo preseleccionado y origen, desde la URL (solo en el navegador, tras hidratar). */
+  protected readonly type = signal<ContactType | ''>('');
+  protected readonly source = signal<ContactSource>('web');
 
   constructor() {
+    afterNextRender(() => {
+      const { type, source } = readContactParams();
+      this.type.set(type);
+      this.source.set(source);
+    });
     const title = $localize`:@@contact.meta.title:Contacto · Pockai`;
     const description = $localize`:@@contact.meta.description:Escribe al equipo de Pockai: dudas, ideas, fallos o colaboraciones. Te respondemos por correo.`;
     const url = pageUrl(this.locale, 'contact');
@@ -264,6 +327,7 @@ export class Contact {
       });
       if (res.ok) {
         form.reset();
+        this.type.set('');
         this.status.set('sent');
       } else {
         this.status.set(res.status === 429 ? 'limited' : res.status === 400 ? 'invalid' : 'error');

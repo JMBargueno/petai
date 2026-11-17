@@ -11,7 +11,7 @@ const PER_EMAIL = 5;
 
 /**
  * Formulario de contacto público: valida, limita y reenvía el mensaje al buzón de contacto
- * (contact@pockai.world) con Reply-To del remitente.
+ * (contact@pockai.world) con Reply-To del remitente y el tipo de mensaje en el asunto.
  */
 @Injectable()
 export class ContactService {
@@ -38,6 +38,8 @@ export class ContactService {
         email: input.email,
         subject: input.subject,
         message: input.message,
+        type: input.type,
+        source: input.source,
         ip,
       });
     } catch (err) {

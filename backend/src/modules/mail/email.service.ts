@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import { CONTACT_TYPE_LABELS, ContactSource, ContactType, contactSourceLabel, contactSubject } from '../contact/contact-types';
 import { passwordResetEmail, verificationEmail } from './templates/transactional';
 
 /** Mensaje recibido desde el formulario de contacto público. */
@@ -10,6 +11,8 @@ export interface ContactMessage {
   email: string;
   subject: string;
   message: string;
+  type: ContactType;
+  source: ContactSource;
   ip: string;
 }
 
@@ -48,7 +51,15 @@ export interface EmailSender {
 export const EMAIL_SENDER = 'EMAIL_SENDER';
 
 const contactBody = (m: ContactMessage) =>
-  [`Nombre: ${m.name}`, `Email: ${m.email}`, `IP: ${m.ip}`, '', m.message].join('\n');
+  [
+    `Tipo: ${CONTACT_TYPE_LABELS[m.type]}`,
+    `Origen: ${contactSourceLabel(m.source)}`,
+    `Nombre: ${m.name}`,
+    `Email: ${m.email}`,
+    `IP: ${m.ip}`,
+    '',
+    m.message,
+  ].join('\n');
 
 /** Quita saltos de línea de valores que van en cabeceras (asunto). */
 const oneLine = (s: string) => s.replace(/[\r\n]+/g, ' ').trim();
@@ -63,7 +74,7 @@ export class ConsoleEmailSender implements EmailSender {
   }
 
   async sendContactMessage(msg: ContactMessage): Promise<void> {
-    this.logger.log(`[contact] de ${msg.name} <${msg.email}> (${msg.ip}): ${oneLine(msg.subject)}\n${msg.message}`);
+    this.logger.log(`[contact] de ${msg.name} <${msg.email}> (${msg.ip}, ${msg.source}): ${contactSubject(msg.type, msg.subject)}\n${msg.message}`);
   }
 
   async sendVerification(email: string, data: VerificationMail): Promise<void> {
@@ -124,7 +135,7 @@ export class SmtpEmailSender implements EmailSender {
       to: this.contactTo,
       // Responder desde el buzón contesta directamente a quien escribió.
       replyTo: { name: oneLine(msg.name), address: msg.email },
-      subject: `[Contacto] ${oneLine(msg.subject)}`,
+      subject: contactSubject(msg.type, msg.subject),
       text: contactBody(msg),
     });
   }

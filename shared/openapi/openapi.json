@@ -10673,6 +10673,29 @@
             "example": "Hola, quería preguntar…",
             "description": "Mensaje (10–5000)"
           },
+          "type": {
+            "type": "string",
+            "enum": [
+              "bug",
+              "improvement",
+              "question",
+              "legal",
+              "account",
+              "other"
+            ],
+            "default": "other",
+            "description": "Tipo de mensaje; va en el asunto del correo"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "web",
+              "android",
+              "desktop"
+            ],
+            "default": "web",
+            "description": "Desde dónde se llegó al formulario"
+          },
           "website": {
             "type": "string",
             "description": "Honeypot anti-spam: debe ir vacío"

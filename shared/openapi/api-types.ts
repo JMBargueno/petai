@@ -4979,6 +4979,18 @@ export interface components {
              * @example Hola, quería preguntar…
              */
             message: string;
+            /**
+             * @description Tipo de mensaje; va en el asunto del correo
+             * @default other
+             * @enum {string}
+             */
+            type: "bug" | "improvement" | "question" | "legal" | "account" | "other";
+            /**
+             * @description Desde dónde se llegó al formulario
+             * @default web
+             * @enum {string}
+             */
+            source: "web" | "android" | "desktop";
             /** @description Honeypot anti-spam: debe ir vacío */
             website?: string;
         };

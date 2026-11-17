@@ -31,10 +31,17 @@ describe('ContactService', () => {
       email: 'ana@example.com',
       subject: 'Hola  Bcc: spam@evil.test',
       message: 'Un mensaje lo bastante largo.\nSegunda línea.',
+      type: 'other',
+      source: 'web',
       ip: '1.2.3.4',
     });
     expect(throttle.consume).toHaveBeenCalledWith('contact-ip:1.2.3.4', 5, 3_600_000);
     expect(throttle.consume).toHaveBeenCalledWith('contact-email:ana@example.com', 5, 3_600_000);
+  });
+
+  it('pasa el tipo y el origen al correo', async () => {
+    await service.submit({ ...valid, type: 'bug', source: 'android' }, '1.2.3.4');
+    expect(email.sendContactMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'bug', source: 'android' }));
   });
 
   it('honeypot relleno: responde sin enviar ni consumir cupo', async () => {
@@ -49,6 +56,8 @@ describe('ContactService', () => {
     [{ ...valid, name: '   ' }],
     [{ ...valid, subject: undefined }],
     [{ ...valid, message: 'x'.repeat(5001) }],
+    [{ ...valid, type: 'spam' }],
+    [{ ...valid, source: 'ios' }],
   ])('rechaza datos no válidos con 400', async (body) => {
     await expect(service.submit(body, '1.2.3.4')).rejects.toBeInstanceOf(BadRequestException);
     expect(email.sendContactMessage).not.toHaveBeenCalled();

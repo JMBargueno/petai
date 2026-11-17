@@ -1,5 +1,12 @@
 import { ChangeDetectionStrategy, Component, ElementRef, input, output, signal, viewChild } from '@angular/core';
-import { CONTACT_EMAIL, CONTACT_ENDPOINT } from '../../contact/contact';
+import {
+  CONTACT_EMAIL,
+  CONTACT_ENDPOINT,
+  ContactSource,
+  ContactType,
+  contactTypeOptions,
+  readContactParams,
+} from '../../contact/contact';
 import { WEB_CLIENT_HEADERS } from '../auth/api';
 import { SOCIAL_LINKS } from '../social';
 
@@ -40,8 +47,11 @@ export type ContactStatus = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 
         <p class="dialog__lead" i18n="@@contact.lead">
           ¿Dudas, ideas, un fallo o tu pockai hace cosas raras? Cuéntanoslo y te responderemos por correo.
         </p>
+        <p class="dialog__preferred" i18n="@@contact.preferred">
+          El formulario es la vía preferente: elige el tipo de mensaje y nos llegará ya ordenado.
+        </p>
         <p class="contact__direct-notice">
-          <span i18n="@@contact.direct">También puedes escribir directamente a</span>
+          <span i18n="@@contact.direct">Si lo prefieres, también puedes escribirnos a</span>
           <a class="contact__direct-link" [href]="'mailto:' + contactEmail">{{ contactEmail }}</a>
         </p>
 
@@ -65,6 +75,15 @@ export type ContactStatus = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 
               <input class="dialog__input" id="cf-contact-email" name="email" type="email" autocomplete="email" required maxlength="254" />
             </div>
             <div class="dialog__field">
+              <label for="cf-contact-type" i18n="@@contact.type">¿Sobre qué nos escribes?</label>
+              <select class="dialog__input" id="cf-contact-type" name="type" required>
+                <option value="" disabled [selected]="!contactType()" i18n="@@contact.type.choose">Elige una opción</option>
+                @for (t of types; track t.id) {
+                  <option [value]="t.id" [selected]="t.id === contactType()">{{ t.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="dialog__field">
               <label for="cf-contact-subject" i18n="@@contact.subject">Asunto</label>
               <input class="dialog__input" id="cf-contact-subject" name="subject" type="text" required maxlength="150" />
             </div>
@@ -72,6 +91,7 @@ export type ContactStatus = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 
               <label for="cf-contact-message" i18n="@@contact.message">Mensaje</label>
               <textarea class="dialog__input dialog__textarea" id="cf-contact-message" name="message" rows="5" required minlength="10" maxlength="5000"></textarea>
             </div>
+            <input type="hidden" name="source" [value]="contactSource()" />
             <div class="hp" aria-hidden="true">
               <label for="cf-contact-website">Website</label>
               <input id="cf-contact-website" name="website" type="text" tabindex="-1" autocomplete="off" />
@@ -320,6 +340,10 @@ export type ContactStatus = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 
       outline: none;
       transition: border-color 0.15s, background-color 0.15s;
     }
+    select.dialog__input {
+      /* Desplegable nativo legible sobre el fondo oscuro del diálogo. */
+      color-scheme: dark;
+    }
     .dialog__input:focus {
       border-color: #ffd731;
       background: rgb(255 255 255 / 0.12);
@@ -340,6 +364,12 @@ export type ContactStatus = 'idle' | 'sending' | 'sent' | 'error' | 'limited' | 
       align-items: center;
       gap: 12px;
       margin-block-start: 6px;
+    }
+    .dialog__preferred {
+      margin: 10px 0 0;
+      font-size: 14px;
+      font-weight: var(--font-weight-bold);
+      color: #fff;
     }
     .contact__direct-notice {
       margin: 8px 0 0;
@@ -386,9 +416,16 @@ export class ContactFooter {
   protected readonly social = SOCIAL_LINKS;
   protected readonly contactEmail = CONTACT_EMAIL;
   protected readonly contactStatus = signal<ContactStatus>('idle');
+  protected readonly types = contactTypeOptions();
+  protected readonly contactType = signal<ContactType | ''>('');
+  protected readonly contactSource = signal<ContactSource>('web');
   private readonly contactDialog = viewChild<ElementRef<HTMLDialogElement>>('contactDialog');
 
+  /** Abre el formulario; `?type=`/`?from=` de la URL (enlaces de las apps) preseleccionan el tipo. */
   openContactDialog() {
+    const { type, source } = readContactParams();
+    this.contactType.set(type);
+    this.contactSource.set(source);
     this.contactStatus.set('idle');
     this.contactDialog()?.nativeElement.showModal();
   }
@@ -411,6 +448,7 @@ export class ContactFooter {
       });
       if (res.ok) {
         form.reset();
+        this.contactType.set('');
         this.contactStatus.set('sent');
       } else {
         this.contactStatus.set(res.status === 429 ? 'limited' : res.status === 400 ? 'invalid' : 'error');
