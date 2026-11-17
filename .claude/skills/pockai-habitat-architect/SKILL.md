@@ -52,7 +52,7 @@ Muestra al usuario: nombre, sala, huella y montaje, interacción, precio, buffs 
 
 ### 5. Integrar y dibujar
 Sigue `references/integration-checklist.md`:
-1. Añade la entrada a `habitats.json`. Si el esquema aún no admite `footprint`, `mount` o `interaction`, ponlos igualmente: zod descarta las claves desconocidas. Avisa de que no tendrán efecto hasta la migración isométrica.
+1. Añade la entrada a `habitats.json` con `footprint`, `mount` e `interaction` (esquema en `game-data.schemas.ts`).
 2. Dibuja el mueble en `scripts/sprites/furniture.ts`, con orientación `a` y `b`, según `iso-furniture-brief.md`.
 3. Genera la hoja de contactos de muebles (el script llega con la fase 4, junto a `furniture.ts`) y **mírala** (Read del PNG). Corrige hasta que pase la checklist.
 4. Genera los SVG finales.

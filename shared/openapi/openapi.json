@@ -4611,6 +4611,7 @@
     },
     "/v1/habitat/furniture/{id}/place": {
       "post": {
+        "description": "Con x/y (y rotation opcional) lo coloca en esa celda si cabe su huella; sin cuerpo, en el primer hueco libre.",
         "operationId": "HabitatController_placeFurniture",
         "parameters": [
           {
@@ -4622,12 +4623,22 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceFurnitureDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
-            "description": "Mueble colocado"
+            "description": "Mueble colocado (incluye itemId, x, y y rotation)"
           },
           "400": {
-            "description": "Celda ocupada o sala bloqueada"
+            "description": "Posición no válida, sin hueco, sin saldo o sala bloqueada"
           },
           "401": {
             "description": "Token inválido"
@@ -4641,7 +4652,88 @@
             "bearer": []
           }
         ],
-        "summary": "Colocar un mueble en una celda del hábitat",
+        "summary": "Comprar y colocar un mueble",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/items/{itemId}": {
+      "patch": {
+        "operationId": "HabitatController_moveFurniture",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveFurnitureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mueble movido"
+          },
+          "400": {
+            "description": "Posición no válida (fuera de la sala, ocupada o lejos de la pared)"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble no encontrado en el hábitat"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mover y/o girar un mueble ya colocado (sin coste)",
+        "tags": [
+          "Habitat"
+        ]
+      },
+      "delete": {
+        "operationId": "HabitatController_removeItem",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mueble removido"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble no encontrado en el hábitat"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quitar un mueble concreto del hábitat (por id de item)",
         "tags": [
           "Habitat"
         ]
@@ -4676,7 +4768,7 @@
             "bearer": []
           }
         ],
-        "summary": "Quitar un mueble del hábitat",
+        "summary": "Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId",
         "tags": [
           "Habitat"
         ]
@@ -11530,6 +11622,48 @@
           "openings",
           "total"
         ]
+      },
+      "PlaceFurnitureDto": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla x (con y)"
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla y (con x)"
+          },
+          "rotation": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "Giro en pasos de 90°"
+          }
+        }
+      },
+      "MoveFurnitureDto": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla x (con y)"
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla y (con x)"
+          },
+          "rotation": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "Giro en pasos de 90°"
+          }
+        }
       },
       "AdminStatsUsersDto": {
         "type": "object",

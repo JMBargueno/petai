@@ -2283,12 +2283,33 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Colocar un mueble en una celda del hábitat */
+        /**
+         * Comprar y colocar un mueble
+         * @description Con x/y (y rotation opcional) lo coloca en esa celda si cabe su huella; sin cuerpo, en el primer hueco libre.
+         */
         post: operations["HabitatController_placeFurniture"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quitar un mueble concreto del hábitat (por id de item) */
+        delete: operations["HabitatController_removeItem"];
+        options?: never;
+        head?: never;
+        /** Mover y/o girar un mueble ya colocado (sin coste) */
+        patch: operations["HabitatController_moveFurniture"];
         trace?: never;
     };
     "/v1/habitat/furniture/{id}": {
@@ -2301,7 +2322,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Quitar un mueble del hábitat */
+        /** Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId */
         delete: operations["HabitatController_removeFurniture"];
         options?: never;
         head?: never;
@@ -5369,6 +5390,22 @@ export interface components {
              * @example 120
              */
             total: number;
+        };
+        PlaceFurnitureDto: {
+            /** @description Celda ancla x (con y) */
+            x?: number;
+            /** @description Celda ancla y (con x) */
+            y?: number;
+            /** @description Giro en pasos de 90° */
+            rotation?: number;
+        };
+        MoveFurnitureDto: {
+            /** @description Celda ancla x (con y) */
+            x?: number;
+            /** @description Celda ancla y (con x) */
+            y?: number;
+            /** @description Giro en pasos de 90° */
+            rotation?: number;
         };
         AdminStatsUsersDto: {
             total: number;
@@ -8798,16 +8835,20 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlaceFurnitureDto"];
+            };
+        };
         responses: {
-            /** @description Mueble colocado */
+            /** @description Mueble colocado (incluye itemId, x, y y rotation) */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Celda ocupada o sala bloqueada */
+            /** @description Posición no válida, sin hueco, sin saldo o sala bloqueada */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8822,6 +8863,85 @@ export interface operations {
                 content?: never;
             };
             /** @description Mueble o pet no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_removeItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mueble removido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble no encontrado en el hábitat */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_moveFurniture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveFurnitureDto"];
+            };
+        };
+        responses: {
+            /** @description Mueble movido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posición no válida (fuera de la sala, ocupada o lejos de la pared) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble no encontrado en el hábitat */
             404: {
                 headers: {
                     [name: string]: unknown;
