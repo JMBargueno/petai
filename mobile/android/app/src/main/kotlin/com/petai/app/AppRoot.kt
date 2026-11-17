@@ -204,7 +204,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                             onBuyEgg = vm::buyEgg,
                             onGoToShop = { go(Dest.More, 0) },
                         )
-                        else -> if (pet == null) noPet() else HabitatScreen(app.service, app.realtime, onChanged = { vm.refreshAll() })
+                        else -> if (pet == null) noPet() else HabitatScreen(app.service, app.realtime, pet = pet, onChanged = { vm.refreshAll() })
                     }
                     Dest.Play ->
                         if (pet == null) noPet() else when (sub) {

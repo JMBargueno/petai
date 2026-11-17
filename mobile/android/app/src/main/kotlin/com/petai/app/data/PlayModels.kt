@@ -243,8 +243,39 @@ data class BondingDetail(
 
 // ---------- Hábitat (feature 019) ----------
 
+/** Mueble colocado: celda ancla (x, y) y giro en pasos de 90° (0–3). */
 @Serializable
-data class HabitatItem(val id: String = "", val furnitureId: String = "", val x: Int = 0, val y: Int = 0)
+data class HabitatItem(
+    val id: String = "",
+    val furnitureId: String = "",
+    val x: Int = 0,
+    val y: Int = 0,
+    val rotation: Int = 0,
+)
+
+/** Colores de la sala isométrica (habitats.json → theme). */
+@Serializable
+data class HabitatTheme(
+    val wall: String = "#fff3d6",
+    val wallShade: String = "#ffe0a8",
+    val floor: String = "#c98a4b",
+    val floorAlt: String = "#a26431",
+    val trim: String = "#8a5a2b",
+    val sky: String = "#8fd0ff",
+    val light: String = "#fff0be",
+)
+
+/** Respuesta de colocar o mover un mueble. */
+@Serializable
+data class HabitatPlaceResult(
+    val message: String = "",
+    val furnitureId: String = "",
+    val room: String = "",
+    val itemId: String = "",
+    val x: Int = 0,
+    val y: Int = 0,
+    val rotation: Int = 0,
+)
 
 @Serializable
 data class HabitatRoom(
@@ -255,6 +286,7 @@ data class HabitatRoom(
     val gridHeight: Int = 0,
     val unlocked: Boolean = false,
     val active: Boolean = false,
+    val theme: HabitatTheme? = null,
     val items: List<HabitatItem> = emptyList(),
 )
 
@@ -280,6 +312,12 @@ data class HabitatFurniture(
     val currency: String = "coins",
     val buffs: Map<String, Double> = emptyMap(),
     val description: String = "",
+    /** Huella [ancho (x), fondo (y)] con giro 0. */
+    val footprint: List<Int> = listOf(1, 1),
+    /** "floor" o "wall". */
+    val mount: String = "floor",
+    /** sleep | eat | play | bathe | sit (lo que hace el Pockai con él). */
+    val interaction: String? = null,
 )
 
 @Serializable

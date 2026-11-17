@@ -265,6 +265,15 @@ Un único renderizador para escritorio, Android e iOS, que sustituye a la spec `
 - Entrada: `setPet`, `setHabitat`, `setTheme`, `setMode`, `playClip`.
 - Salida: `ready`, `petTapped`, `furnitureMoved`, `petDraggedOut`.
 
+**Android** (`mobile/android`):
+- `pnpm --filter @pockai/scene build:embed` genera `shared/scene/dist/embed/`. La tarea Gradle `syncPockaiScene` (en `preBuild`) lo copia a `assets/scene/` y falla con un mensaje claro si falta.
+- `ui/scene/PockaiSceneView.kt`: un `WebView` que sirve el bundle con `WebViewAssetLoader` desde `https://appassets.androidplatform.net/assets/scene/` y bloquea cualquier otra navegación.
+  - Los eventos llegan por `AndroidBridge.postMessage`.
+  - `SceneController` encola los mensajes hasta `ready` y, si la página se recarga, repite el último estado.
+  - Se pausa en `ON_PAUSE`.
+- `ui/scene/SceneMessages.kt` construye los mensajes del protocolo (v2); `restClip` es el equivalente de `resolveBaseState`.
+- En builds debug, `adb shell am start -n com.petai.app/.debug.SceneDebugActivity` abre la sala con datos de ejemplo, sin backend (eventos en logcat con la etiqueta `PockaiScene`).
+
 **Reglas:**
 - El bundle se carga desde los assets de la app, sin red.
 - La escena para su ticker cuando no se ve.

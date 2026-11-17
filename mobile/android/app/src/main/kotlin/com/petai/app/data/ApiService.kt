@@ -194,10 +194,36 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     suspend fun habitat(): HabitatState = api.request("GET", "/habitat")
     suspend fun habitatBuffs(): HabitatBuffs = api.request("GET", "/habitat/buffs")
 
-    suspend fun placeHabitatFurniture(furnitureId: String) {
-        api.send("POST", "/habitat/furniture/$furnitureId/place")
+    /** Compra y coloca un mueble. Sin posición, el servidor lo pone en el primer hueco donde quepa. */
+    suspend fun placeHabitatFurniture(furnitureId: String, x: Int? = null, y: Int? = null, rotation: Int? = null): HabitatPlaceResult {
+        val body = if (x != null && y != null) {
+            buildJsonObject {
+                put("x", x)
+                put("y", y)
+                if (rotation != null) put("rotation", rotation)
+            }
+        } else null
+        return api.request("POST", "/habitat/furniture/$furnitureId/place", body)
     }
 
+    /** Mueve y/o gira un mueble ya colocado (sin coste). */
+    suspend fun moveHabitatItem(itemId: String, x: Int, y: Int, rotation: Int): HabitatPlaceResult =
+        api.request(
+            "PATCH",
+            "/habitat/items/$itemId",
+            buildJsonObject {
+                put("x", x)
+                put("y", y)
+                put("rotation", rotation)
+            },
+        )
+
+    /** Quita un mueble concreto (por id de item). */
+    suspend fun removeHabitatItem(itemId: String) {
+        api.send("DELETE", "/habitat/items/$itemId")
+    }
+
+    /** Quita el mueble más reciente de ese tipo. Preferible [removeHabitatItem]. */
     suspend fun removeHabitatFurniture(furnitureId: String) {
         api.send("DELETE", "/habitat/furniture/$furnitureId")
     }
