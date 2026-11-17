@@ -9,6 +9,7 @@
   import MissionsTab from './MissionsTab.svelte';
   import ChestsTab from './ChestsTab.svelte';
   import BondingTab from './BondingTab.svelte';
+  import MindTab from './MindTab.svelte';
   import HabitatTab from './HabitatTab.svelte';
   import DesktopSkillsPanel from './DesktopSkillsPanel.svelte';
   import RaidTab from './RaidTab.svelte';
@@ -111,7 +112,7 @@
 
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
   const NAV = [
-    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['habitat', 'Hábitat'], ['skills', 'Habilidades']] },
+    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['mind', 'Mente'], ['habitat', 'Hábitat'], ['skills', 'Habilidades']] },
     { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo'], ['training', 'Entrenamiento'], ['cooking', 'Cocina'], ['adventure', 'Aventura']] },
     { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
     { id: 'social', label: 'Social', icon: Users, subs: [['profile', 'Mi Perfil'], ['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
@@ -777,6 +778,9 @@
         {:else if dest === 'pet' && sub === 'bonding'}
           <BondingTab pet={pet} />
 
+        {:else if dest === 'pet' && sub === 'mind'}
+          <MindTab {pet} />
+
         {:else if dest === 'pet' && sub === 'habitat'}
           <HabitatTab {pet} {user} on:refreshUser on:petUpdated={(e) => dispatch('petUpdated', e.detail)} />
 
@@ -822,6 +826,7 @@
             pendingPrompt={chatPrompt}
             on:promptConsumed={(e) => (consumedPromptN = Math.max(consumedPromptN, e.detail))}
             on:bubble
+            on:behavior
             on:refreshPet
           />
 

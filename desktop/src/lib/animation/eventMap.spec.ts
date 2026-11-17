@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction } from './eventMap';
+import { EMOTE_EMOJI, LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior } from './eventMap';
 import { PET_ACTIONS, isPetActionEvent } from './petActions';
 import { getAnimLibrary } from '../sprites';
 
@@ -34,6 +34,45 @@ describe('reactionForAction', () => {
 
   it('las acciones locales apuntan a acciones válidas', () => {
     for (const a of Object.values(LOCAL_ACTIONS)) expect(PET_ACTIONS).toContain(a);
+  });
+});
+
+describe('reactionForBehavior', () => {
+  const ACTIONS = ['comfort', 'celebrate', 'cuddle', 'invite_play', 'propose_explore', 'greet', 'wave_goodbye', 'listen', 'ask_back', 'sulk', 'show_off', 'yawn'];
+  const ANIMATIONS = ['idle', 'happy', 'sleep'];
+
+  it('solo lanza clips de acción que terminan, en todas las especies', () => {
+    for (const species of ['axolunar', 'ignisaur', 'florabud']) {
+      const { library, aliases } = getAnimLibrary(species);
+      for (const action of ACTIONS) {
+        for (const animation of ANIMATIONS) {
+          for (const anim of reactionForBehavior({ action, animation, emote: null })?.anims ?? []) {
+            const clip = library[anim] ?? library[aliases[anim]];
+            expect(clip, `${species}: ${action}/${animation} → ${anim}`).toBeTruthy();
+            expect(clip.loop, `${species}: ${anim} no debe ser un bucle`).toBe(false);
+          }
+        }
+      }
+    }
+  });
+
+  it('traduce animación y emote', () => {
+    expect(reactionForBehavior({ action: 'greet', animation: 'happy', emote: 'wave' })).toEqual({ anims: ['happy'], particle: '👋' });
+    expect(reactionForBehavior({ action: 'cuddle', animation: 'happy', emote: 'heart' })).toEqual({ anims: ['love'], particle: '❤️' });
+    expect(reactionForBehavior({ action: 'yawn', animation: 'sleep', emote: 'zzz' })).toEqual({ anims: ['wake'], particle: '💤' });
+    expect(reactionForBehavior({ action: 'sulk', animation: 'idle', emote: 'tear' })).toEqual({ anims: [], particle: '💧' });
+    for (const emote of Object.keys(EMOTE_EMOJI)) {
+      expect(reactionForBehavior({ action: 'x', animation: 'idle', emote })?.particle).toBe(EMOTE_EMOJI[emote]);
+    }
+  });
+
+  it('no rompe si behavior no viene o trae valores desconocidos', () => {
+    expect(reactionForBehavior(undefined)).toBeNull();
+    expect(reactionForBehavior(null)).toBeNull();
+    expect(reactionForBehavior('happy')).toBeNull();
+    expect(reactionForBehavior({ action: 'listen', animation: 'idle', emote: null })).toBeNull();
+    expect(reactionForBehavior({ animation: 'bailar', emote: 'fuego' })).toBeNull();
+    expect(reactionForBehavior({ animation: 'happy' })).toEqual({ anims: ['happy'] });
   });
 });
 

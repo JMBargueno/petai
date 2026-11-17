@@ -17,6 +17,7 @@
   import { startPomodoro, stopPomodoro } from '../lib/pomodoro';
   import { toSpeakable } from '../lib/speech-queue';
   import { getSocket } from '../lib/socket';
+  import { MEMORY_LAYERS, groupMemoriesByLayer, memoryIcon, valenceView } from '../lib/mind';
 
   export let pet: any = null;
   /** Mensaje a enviar en cuanto el chat esté listo (p. ej. al soltar un archivo sobre la mascota). */
@@ -254,6 +255,8 @@
   let memOpen = false;
   let mem: Awaited<ReturnType<typeof api.getMemories>> | null = null;
   let memErr = '';
+  // Spec 36: episódica, semántica y emocional (los recuerdos antiguos se clasifican por tipo)
+  $: memByLayer = groupMemoriesByLayer(mem?.memories ?? []);
 
   async function loadMemories() {
     if (!pet) return;
@@ -556,6 +559,8 @@
       messages = messages;
       const spoken = toSpeakable(done.message.content);
       if (spoken) dispatch('bubble', spoken);
+      // Reacción del Pockai (spec 36): opcional; servidores anteriores no la envían
+      if (done.behavior) dispatch('behavior', done.behavior);
       dispatch('refreshPet');
       if (!local.enabled) loadUsage();
       if (memOpen && !local.enabled) setTimeout(loadMemories, 3000);
@@ -862,18 +867,34 @@
           {:else if mem && mem.memories.length === 0}
             <EmptyState compact icon="folder" text="Todavía no recuerda nada. Tras unas cuantas charlas empezará a hacerlo." />
           {:else if mem}
-            <div class="ui-list ui-list--scroll">
-              {#each mem.memories as m (m.id)}
-                <ListRow
-                  icon={m.kind === 'summary' ? 'note' : m.kind === 'habit' ? 'monitor' : 'chat'}
-                  sub={(m.kind === 'habit' ? 'Hábito: ' : '') + m.content}
-                  wrap
-                  muted={m.kind === 'summary'}
-                >
-                  <svelte:fragment slot="end">
-                    <Button variant="ghost" size="sm" iconOnly icon="x" label="Olvidar" class="ui-ibtn ui-ibtn--no" on:click={() => forget(m.id)} />
-                  </svelte:fragment>
-                </ListRow>
+            <div class="mem-layers ui-list--scroll">
+              {#each MEMORY_LAYERS as l (l.id)}
+                {#if memByLayer[l.id].length}
+                  <section class="mem-layer" aria-label="Memoria {l.label.toLowerCase()}">
+                    <h4 class="mem-layer__head" title={l.hint}>
+                      <Ico n={l.icon} size={12} /> <span class="label-caps">{l.label}</span>
+                      <small>{memByLayer[l.id].length}</small>
+                    </h4>
+                    <div class="ui-list">
+                      {#each memByLayer[l.id] as m (m.id)}
+                        {@const v = l.id === 'emotional' ? valenceView(m.valence) : null}
+                        <ListRow
+                          icon={memoryIcon(m.kind)}
+                          sub={(m.kind === 'habit' ? 'Hábito: ' : '') + (m.subject && l.id === 'emotional' ? `${m.subject}: ` : '') + m.content}
+                          wrap
+                          muted={m.kind === 'summary'}
+                        >
+                          <svelte:fragment slot="end">
+                            {#if v}
+                              <span class="valence valence--{v.tone}" title="Valencia {v.text}">{v.label} <small>{v.text}</small></span>
+                            {/if}
+                            <Button variant="ghost" size="sm" iconOnly icon="x" label="Olvidar" class="ui-ibtn ui-ibtn--no" on:click={() => forget(m.id)} />
+                          </svelte:fragment>
+                        </ListRow>
+                      {/each}
+                    </div>
+                  </section>
+                {/if}
               {/each}
             </div>
             <Button variant={confirmForgetAll ? 'danger' : 'ghost'} size="sm" icon="trash" on:click={forgetAll}>
@@ -1096,5 +1117,47 @@
   }
   .fold-head:hover {
     color: var(--ink);
+  }
+  .mem-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .mem-layer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mem-layer__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: inherit;
+  }
+  .mem-layer__head small {
+    margin-left: auto;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .valence {
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .valence small {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.8;
+  }
+  .valence--pos {
+    color: var(--success-ink);
+  }
+  .valence--neg {
+    color: var(--danger-ink);
+  }
+  .valence--neutral {
+    color: var(--ink-muted);
   }
 </style>

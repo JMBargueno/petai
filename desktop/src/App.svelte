@@ -24,7 +24,7 @@
     BALL_MAX_THROW_SPEED,
     type BallState,
   } from './lib/toys/toyPhysics';
-  import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction } from './lib/animation/eventMap';
+  import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior } from './lib/animation/eventMap';
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
@@ -386,6 +386,12 @@
     if (reaction.bubble) showBubble(reaction.bubble);
   }
 
+  /** Reacción del Pockai al terminar un turno de chat (`behavior` del evento `done`, spec 36). */
+  function reactToBehavior(behavior: unknown) {
+    const reaction = reactionForBehavior(behavior);
+    if (reaction) petViewRef?.react?.(reaction);
+  }
+
   /** Acción disparada desde el panel (comer, bañar, despertar, minijuego, eclosión). */
   function handlePetAction(local: string) {
     const action = LOCAL_ACTIONS[local];
@@ -692,6 +698,7 @@
     on:actionTriggered={(e) => handlePetAction(e.detail)}
     on:bubble={(e) =>
       showBubble(e.detail, { overflowNote: '… (sigue en el chat)', onShow: () => petViewRef?.play?.('talk') })}
+    on:behavior={(e) => reactToBehavior(e.detail)}
     on:refreshPet={refreshPet}
     on:logout={clearSessionState}
   />

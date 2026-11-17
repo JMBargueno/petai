@@ -532,7 +532,7 @@ export const api = {
     },
     signal?: AbortSignal,
     clientContext?: unknown,
-  ): Promise<{ message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string } | { moderated: true }> {
+  ): Promise<{ message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string; behavior?: PetBehavior } | { moderated: true }> {
     const res = await authFetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
       method: 'POST',
       signal,
@@ -652,7 +652,7 @@ export const api = {
   /** Modo Hermes local, paso 2: entrega la respuesta generada para moderarla y guardarla. */
   async localChatSync(petId: string, turnId: string, reply: string) {
     return minigameRequest<
-      | { message: { id: string; content: string }; intelligence: number; tier: string }
+      | { message: { id: string; content: string }; intelligence: number; tier: string; behavior?: PetBehavior }
       | { moderated: { reason: string; message: string; hideUserMessage: boolean } }
     >('POST', `/v1/pets/${petId}/chat/local/sync`, { turnId, reply });
   },
@@ -758,8 +758,13 @@ export const api = {
       unlocked: boolean;
       unlockAt: number;
       intelligence: number;
-      memories: { id: string; kind: 'fact' | 'summary' | 'habit'; content: string; createdAt: string }[];
+      memories: PetMemoryItem[];
     }>('GET', `/v1/pets/${petId}/memories`);
+  },
+
+  /** Cerebro del Pockai (spec 36): 5 dimensiones, memoria por capas y vida autónoma reciente. */
+  async getMind(petId: string) {
+    return minigameRequest<PetMind>('GET', `/v1/pets/${petId}/mind`);
   },
 
   async forgetMemory(petId: string, memoryId: string) {
@@ -1574,6 +1579,60 @@ export interface BondingUnlocks {
   emotionalReactions: boolean;
   patternUnlocked: boolean;
   sleepNearCursor: boolean;
+}
+
+// ── Cerebro del Pockai (spec 36) ────────────────────────────────────────────
+// `GET /v1/pets/{id}/mind` no declara esquema de respuesta en OpenAPI: se refleja aquí a mano
+// desde `backend/src/modules/mind/mind.controller.ts`.
+export type MindDimension = 'curiosity' | 'sociability' | 'bravery' | 'affection' | 'temper';
+export type MemoryLayer = 'episodic' | 'semantic' | 'emotional';
+
+export interface MindDimensionView {
+  /** 0-100. */
+  value: number;
+  /** Tramo de 20 puntos (p. ej. `curious`). */
+  keyword: string;
+  /** Nombre del tramo en castellano (p. ej. `Curioso`). */
+  label: string;
+}
+
+export interface MindLifeEntry {
+  id: string;
+  kind: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface PetMind {
+  petId: string;
+  dimensions: Record<MindDimension, MindDimensionView>;
+  legacy: { trait: string; temperament: string };
+  mood: string;
+  bondingTier: string;
+  intelligenceTier: 'chat' | 'memory' | 'agent';
+  memory: { counts: Record<MemoryLayer, number>; capacity: Record<MemoryLayer, number> | null };
+  recentLife: MindLifeEntry[];
+}
+
+export interface PetMemoryItem {
+  id: string;
+  /** fact, summary, habit, event, encounter, relation… */
+  kind: string;
+  /** Recuerdos anteriores a la spec 36 pueden no traerla: se deduce de `kind`. */
+  layer?: string | null;
+  importance?: number;
+  /** -1 (negativo) … 1 (positivo); solo tiene sentido en la capa emocional. */
+  valence?: number | null;
+  subject?: string | null;
+  content: string;
+  createdAt: string;
+}
+
+/** Reacción del Pockai al final de un turno de chat (evento SSE `done`). */
+export interface PetBehavior {
+  action: string;
+  animation: 'idle' | 'happy' | 'sleep';
+  emote: 'heart' | 'sparkle' | 'note' | 'question' | 'tear' | 'zzz' | 'wave' | 'star' | null;
 }
 
 export interface BondingDetail {
