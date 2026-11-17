@@ -1,6 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { isHandleValid, isUniqueViolationOn, normalizeHandle } from '../../common/user-handle';
+import {
+  DEFAULT_DISPLAY_NAME,
+  isHandleValid,
+  isUniqueViolationOn,
+  legacyEmailDisplayName,
+  normalizeHandle,
+} from '../../common/user-handle';
 import { parseOrBadRequest, setHandleSchema } from '../auth/dto/auth.schemas';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -195,6 +201,12 @@ export class UsersService {
       const exists = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
       if (!exists) throw new NotFoundException('Usuario no encontrado');
       throw new ConflictException('Tu nickname ya está fijado y no se puede cambiar');
+    }
+    // Cuentas antiguas: el nombre por defecto era la parte local del correo (dato privado). Al
+    // elegir nickname se sustituye por él, salvo que el jugador ya hubiera puesto otro nombre.
+    const me = await this.prisma.user.findUnique({ where: { id: userId }, select: { email: true, displayName: true } });
+    if (me && (!me.displayName || me.displayName === legacyEmailDisplayName(me.email) || me.displayName === DEFAULT_DISPLAY_NAME)) {
+      await this.prisma.user.update({ where: { id: userId }, data: { displayName: handle } });
     }
     return this.getMe(userId);
   }

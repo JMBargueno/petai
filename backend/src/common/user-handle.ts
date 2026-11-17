@@ -80,6 +80,17 @@ export const handleSchema = z
     if (reason) ctx.addIssue({ code: 'custom', message: reason });
   });
 
+/** Nombre visible por defecto si la cuenta no da ni nombre ni nickname. Nunca se deriva del correo (es privado). */
+export const DEFAULT_DISPLAY_NAME = 'Entrenador';
+
+/**
+ * Nombre que el registro antiguo ponía por defecto (parte local del correo, máx. 50). Sirve para
+ * detectar cuentas que aún lo tienen y sustituirlo, porque filtra el correo a amigos y clanes.
+ */
+export function legacyEmailDisplayName(email: string): string {
+  return email.split('@')[0].slice(0, 50);
+}
+
 /** Mensaje para clientes antiguos que aún buscan jugadores por email (amigos, clanes). */
 export const EMAIL_LOOKUP_REMOVED_MESSAGE = 'Ahora se busca a los jugadores por su @nickname. Actualiza la app';
 

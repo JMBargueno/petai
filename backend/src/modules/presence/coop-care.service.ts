@@ -48,6 +48,25 @@ export interface FriendshipSummary {
   updatedAt: Date;
 }
 
+/** Entrada del historial de visitas (cuidado o hábitat), vista desde el usuario que lo pide. */
+export interface VisitHistoryEntry {
+  id: string;
+  kind: 'care' | 'habitat';
+  /** `in` = visitaron a mis pets; `out` = visité yo a otro. */
+  direction: 'in' | 'out';
+  otherUserId: string;
+  otherName: string;
+  otherHandle: string | null;
+  visitorId: string;
+  ownerId: string;
+  petId: string;
+  /** feed | play | clean para cuidado; `habitat` para visitas en vivo. */
+  action: string;
+  xpGained: number;
+  createdAt: Date;
+  endedAt: Date | null;
+}
+
 const MAX_VISITS_PER_DAY = 5;
 const MAX_FRIENDS = 10;
 
@@ -291,9 +310,11 @@ export class CoopCareService {
   }
 
   /**
-   * Historial de visitas sobre los pets de `ownerId` (opcionalmente filtrado por `petId`).
+   * Formato antiguo del historial (apps sin `scope=all`): solo visitas de cuidado recibidas por los
+   * pets de `ownerId`. Se mantiene para que Android y escritorios ya publicados no muestren como
+   * recibidas las visitas que hizo el propio usuario.
    */
-  async getVisitHistory(
+  async getReceivedCareVisits(
     ownerId: string,
     petId?: string,
   ): Promise<Array<{ visitorId: string; action: string; petId: string; xpGained: number; createdAt: Date }>> {
@@ -302,6 +323,71 @@ export class CoopCareService {
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+  }
+
+  /**
+   * Historial de visitas de `userId` en ambos sentidos (`scope=all`): las que recibieron sus pets y las que hizo él,
+   * tanto de cuidado (`CoopVisit`) como en vivo al hábitat (`HabitatVisit`). Antes solo devolvía las
+   * de cuidado recibidas, así que quien visitaba (o usaba el hábitat) veía el historial vacío.
+   * Incluye el nombre del otro jugador para no depender de que siga siendo amigo.
+   */
+  async getVisitHistory(userId: string, petId?: string): Promise<VisitHistoryEntry[]> {
+    const LIMIT = 100;
+    const petFilter = petId ? { petId } : {};
+    const [care, habitat] = await Promise.all([
+      this.prisma.coopVisit.findMany({
+        where: { OR: [{ ownerId: userId }, { visitorId: userId }], ...petFilter },
+        orderBy: { createdAt: 'desc' },
+        take: LIMIT,
+      }),
+      this.prisma.habitatVisit.findMany({
+        where: { OR: [{ ownerId: userId }, { visitorId: userId }], ...petFilter },
+        orderBy: { startedAt: 'desc' },
+        take: LIMIT,
+      }),
+    ]);
+
+    const entries: Array<Omit<VisitHistoryEntry, 'otherName' | 'otherHandle'>> = [
+      ...care.map((v) => ({
+        id: v.id,
+        kind: 'care' as const,
+        direction: v.ownerId === userId ? ('in' as const) : ('out' as const),
+        otherUserId: v.ownerId === userId ? v.visitorId : v.ownerId,
+        visitorId: v.visitorId,
+        ownerId: v.ownerId,
+        petId: v.petId,
+        action: v.action,
+        xpGained: v.xpGained,
+        createdAt: v.createdAt,
+        endedAt: null,
+      })),
+      ...habitat.map((v) => ({
+        id: v.id,
+        kind: 'habitat' as const,
+        direction: v.ownerId === userId ? ('in' as const) : ('out' as const),
+        otherUserId: v.ownerId === userId ? v.visitorId : v.ownerId,
+        visitorId: v.visitorId,
+        ownerId: v.ownerId,
+        petId: v.petId,
+        action: 'habitat',
+        xpGained: 0,
+        createdAt: v.startedAt,
+        endedAt: v.endedAt,
+      })),
+    ]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, LIMIT);
+
+    const otherIds = [...new Set(entries.map((e) => e.otherUserId))];
+    const users = otherIds.length
+      ? await this.prisma.user.findMany({ where: { id: { in: otherIds } }, select: { id: true, displayName: true, handle: true } })
+      : [];
+    const byId = new Map(users.map((u) => [u.id, u]));
+    return entries.map((e) => ({
+      ...e,
+      otherName: byId.get(e.otherUserId)?.displayName ?? '—',
+      otherHandle: byId.get(e.otherUserId)?.handle ?? null,
+    }));
   }
 
   /**

@@ -8,7 +8,7 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AuthThrottleService } from './auth-throttle.service';
 import { InvitesService } from '../invites/invites.service';
 import { EmailVerificationService } from './email-verification.service';
-import { handleInvalidReason, isUniqueViolationOn, normalizeHandle } from '../../common/user-handle';
+import { DEFAULT_DISPLAY_NAME, handleInvalidReason, isUniqueViolationOn, normalizeHandle } from '../../common/user-handle';
 import { changePasswordSchema, loginSchema, parseOrBadRequest, refreshSchema, registerSchema } from './dto/auth.schemas';
 
 const ARGON_OPTIONS = { type: argon2.argon2id, memoryCost: 65536, timeCost: 3 } as const;
@@ -95,7 +95,8 @@ export class AuthService {
           data: {
             email: dto.email,
             passwordHash,
-            displayName: dto.displayName || dto.email.split('@')[0].slice(0, 50),
+            // Nunca derivar el nombre del correo: el nombre es público (amigos, clanes) y el correo, privado.
+            displayName: dto.displayName || dto.handle || DEFAULT_DISPLAY_NAME,
             // Opcional en la API (apps antiguas): sin él, la cuenta elige nickname al entrar.
             handle: dto.handle ?? null,
             coins: 100,

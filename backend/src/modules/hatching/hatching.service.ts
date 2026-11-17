@@ -19,11 +19,18 @@ export class HatchingService {
     @Optional() private readonly mind?: MindService,
   ) {}
 
+  /**
+   * Huevos sin eclosionar. `remainingMs` es el tiempo de incubación restante según el reloj del
+   * servidor: el cliente debe usarlo para la cuenta atrás en vez de comparar `hatchesAt` con su
+   * propio reloj (si el del PC va desfasado, el contador mentía y "Eclosionar" fallaba).
+   */
   async getEggs(userId: string) {
-    return this.prisma.egg.findMany({
+    const eggs = await this.prisma.egg.findMany({
       where: { userId, hatchedPetId: null },
       orderBy: { startedAt: 'asc' },
     });
+    const now = Date.now();
+    return eggs.map((egg) => ({ ...egg, remainingMs: Math.max(0, egg.hatchesAt.getTime() - now) }));
   }
 
   async buyEgg(userId: string, eggType: string = 'standard') {

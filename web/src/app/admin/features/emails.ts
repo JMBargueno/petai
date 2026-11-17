@@ -171,6 +171,10 @@ const SAMPLE_HTML = `<h2>¡Llega el evento de invierno!</h2>
       justify-content: end;
       gap: 8px;
     }
+    .just-sent .input:user-invalid {
+      border-width: 1px;
+      border-color: var(--line-soft);
+    }
     .preview-head {
       display: flex;
       flex-wrap: wrap;
@@ -239,7 +243,7 @@ const SAMPLE_HTML = `<h2>¡Llega el evento de invierno!</h2>
       }
 
       <div class="composer">
-        <form class="panel form" ngNativeValidate (ngSubmit)="askSend()">
+        <form class="panel form" ngNativeValidate [class.just-sent]="justSent()" (input)="justSent.set(false)" (ngSubmit)="askSend()">
           <h2>Nuevo envío</h2>
 
           <div class="field">
@@ -428,6 +432,16 @@ const SAMPLE_HTML = `<h2>¡Llega el evento de invierno!</h2>
           <button class="btn btn--filled" value="send">Enviar</button>
         </form>
       </dialog>
+
+      <dialog #resultDialog class="dialog" closedby="any" aria-labelledby="emails-result-title">
+        @if (result(); as r) {
+          <h2 id="emails-result-title">{{ r.ok ? 'Envío creado' : 'No se pudo enviar' }}</h2>
+          <p>{{ r.text }}</p>
+        }
+        <form method="dialog" class="dialog__actions">
+          <button class="btn btn--filled" value="ok" autofocus>Aceptar</button>
+        </form>
+      </dialog>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -436,6 +450,7 @@ export class Emails implements OnInit {
   private readonly emails = inject(EMAILS);
   private readonly previewFrame = viewChild.required<ElementRef<HTMLIFrameElement>>('previewFrame');
   private readonly confirmDialog = viewChild.required<ElementRef<HTMLDialogElement>>('confirmDialog');
+  private readonly resultDialog = viewChild.required<ElementRef<HTMLDialogElement>>('resultDialog');
 
   protected readonly modes: [AudienceMode, string][] = [
     ['segment', 'Segmento'],
@@ -464,6 +479,10 @@ export class Emails implements OnInit {
   protected readonly status = signal('');
   /** Aviso visible (y anunciado) tras una acción correcta. */
   protected readonly notice = signal('');
+  /** Resultado del último envío masivo, mostrado en un diálogo. */
+  protected readonly result = signal<{ ok: boolean; text: string } | null>(null);
+  /** Tras un envío correcto, los campos vacíos no se marcan como inválidos hasta que se vuelva a escribir. */
+  protected readonly justSent = signal(false);
   protected readonly campaigns = signal<Campaign[]>([]);
   protected readonly loadingHistory = signal(false);
 
@@ -615,18 +634,30 @@ export class Emails implements OnInit {
     try {
       const campaign = await this.emails.send(this.content(), audience);
       this.campaigns.update((list) => [campaign, ...list.filter((c) => c.id !== campaign.id)]);
-      this.notice.set(`Envío creado: ${campaign.total} destinatario(s). Puedes seguir el progreso en el historial.`);
+      const text = `Envío creado: ${campaign.total} destinatario(s). Puedes seguir el progreso en el historial.`;
+      this.notice.set(text);
+      // Al vaciar Asunto y Cuerpo tras un envío correcto quedaban en :user-invalid (ya tocados) y se
+      // pintaban en rojo. No se usa form.reset(): NgForm pondría a null también audiencia y filtros.
+      this.justSent.set(true);
       this.subject.set('');
       this.preheader.set('');
       this.html.set('');
       this.selected.set([]);
       this.emailList.set('');
       this.startPolling();
+      this.showResult(true, text);
     } catch (e) {
       this.formError.set(message(e));
+      this.showResult(false, message(e));
     } finally {
       this.busy.set(false);
     }
+  }
+
+  private showResult(ok: boolean, text: string) {
+    this.result.set({ ok, text });
+    const dialog = this.resultDialog().nativeElement;
+    if (!dialog.open) dialog.showModal();
   }
 
   async loadHistory() {

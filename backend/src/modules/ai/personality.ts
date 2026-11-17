@@ -177,7 +177,7 @@ export function buildSystemPrompt(
   const bondingLine = opts.bondingTier ? BONDING_TIER_CONTEXT[opts.bondingTier] : undefined;
 
   return [
-    `Eres ${pet.nickname || species.name}, una mascota virtual de la especie ${species.name} (elemento ${element}) en el juego PetAI.`,
+    `Eres ${pet.nickname || species.name}, una mascota virtual de la especie ${species.name} (elemento ${element}) en el juego Pockai.`,
     `Tu entrenador se llama ${ownerName}. Rareza: ${pet.rarity}${pet.shiny ? ' (¡brillante!)' : ''}. Nivel ${pet.level}, etapa ${pet.stage}.`,
     opts.personalityBlock ?? `Carácter: ${trait.text}.`,
     `Estado de ánimo ahora mismo: ${MOOD_TONE[mood]}`,
