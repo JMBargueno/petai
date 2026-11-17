@@ -69,7 +69,7 @@ export class IsoRoom extends Container {
 
   private room: RoomState | null = null;
   private placed = new Map<string, PlacedFurniture>();
-  private renderSeq = 0;
+  private restClip = 'idle';
 
   private activity: Activity = 'idle';
   private isNight = false;
@@ -107,21 +107,38 @@ export class IsoRoom extends Container {
     const prevId = this.room?.id;
     this.room = room;
     this.drawShell();
-    void this.syncFurniture();
+    this.syncFurniture();
     if (prevId !== room.id) this.placePetAtStart();
     this.replanIfBlocked();
     this.drawOverlay();
   }
 
-  setActivity(activity: Activity): void {
-    if (activity === this.activity) return;
+  /**
+   * Qué hace el Pockai. `rest` es el clip de reposo que decide el anfitrión según su estado
+   * (idle, sick, hungry, tired, sad…): se usa en lugar de `idle` al pararse. Si está enfermo o
+   * cansado no pasea.
+   */
+  setActivity(activity: Activity, rest = 'idle'): void {
+    const restChanged = rest !== this.restClip;
+    this.restClip = rest;
+    if (activity === this.activity) {
+      if (restChanged && activity === 'idle' && !this.path.length && !this.using) this.pet.setBaseClip(rest);
+      return;
+    }
     this.activity = activity;
     this.pet.visible = activity !== 'away';
     this.path = [];
     this.onArrive = null;
     this.using = false;
     this.waitMs = 300;
-    if (activity === 'idle') this.pet.setBaseClip('idle');
+    if (activity === 'idle') this.pet.setBaseClip(rest);
+    // Con movimiento reducido no se va a la cama: duerme donde está, pero con los ojos cerrados.
+    if (activity === 'sleep' && this.opts.reducedMotion) this.pet.setBaseClip('sleep');
+    this.placePetSprite();
+  }
+
+  private get staysPut(): boolean {
+    return this.restClip === 'sick' || this.restClip === 'tired';
   }
 
   setNight(night: boolean): void {
@@ -297,8 +314,12 @@ export class IsoRoom extends Container {
     };
   }
 
-  private async syncFurniture(): Promise<void> {
-    const seq = ++this.renderSeq;
+  /**
+   * Sincroniza los muebles en dos fases: primero, de forma síncrona, el mapa de muebles con su
+   * forma y posición (así la selección, las colisiones y el Pockai ven la sala completa en el
+   * acto); después, las texturas, que llegan asíncronas.
+   */
+  private syncFurniture(): void {
     const items = this.room?.items ?? [];
     const keep = new Set(items.map((i) => i.id));
     for (const [id, pf] of this.placed) {
@@ -307,6 +328,7 @@ export class IsoRoom extends Container {
         this.placed.delete(id);
       }
     }
+    const changed: PlacedFurniture[] = [];
     for (const item of items) {
       const def = this.defOf(item.furnitureId);
       let pf = this.placed.get(item.id);
@@ -321,25 +343,30 @@ export class IsoRoom extends Container {
       }
       pf.item = { ...item };
       pf.def = def;
-      await this.applySprite(pf);
-      if (seq !== this.renderSeq) return; // llegó otra sala mientras cargaban texturas
+      this.positionSprite(pf, pf.item);
+      changed.push(pf);
     }
     if (this.selected && !this.placed.has(this.selected)) this.select(null);
-    this.drawOverlay();
+    void Promise.all(changed.map((pf) => this.applyTexture(pf)));
   }
 
-  /** Textura, espejo, ancla, posición y profundidad del sprite según su giro. */
-  private async applySprite(pf: PlacedFurniture, at = pf.item): Promise<void> {
-    const r = normalizeRotation(at.rotation);
-    // 0 → a, 1 → b, 2 → espejo de b, 3 → espejo de a (la huella cuadra en los cuatro casos).
-    const o: Orientation = r === 0 || r === 3 ? 'a' : 'b';
-    const mirrored = r >= 2;
+  /** Orientación y espejo según el giro: 0 → a, 1 → b, 2 → espejo de b, 3 → espejo de a. */
+  private orientationOf(rotation: number): { o: Orientation; mirrored: boolean } {
+    const r = normalizeRotation(rotation);
+    return { o: r === 0 || r === 3 ? 'a' : 'b', mirrored: r >= 2 };
+  }
+
+  /** Textura, ancla y espejo del sprite (la posición ya está puesta). */
+  private async applyTexture(pf: PlacedFurniture): Promise<void> {
+    const rotation = pf.item.rotation;
+    const { o, mirrored } = this.orientationOf(rotation);
     const tex = await loadFurnitureTexture(pf.def.id, o);
+    // El mueble se quitó o cambió de giro mientras cargaba: esta textura ya no vale.
+    if (pf.sprite.destroyed || pf.item.rotation !== rotation) return;
     const meta = furnitureMeta(pf.def.id)?.[o];
     if (tex) pf.sprite.texture = tex;
     if (meta) pf.sprite.anchor.set(meta.anchorX / meta.width, meta.anchorY / meta.height);
     pf.sprite.scale.x = mirrored ? -1 : 1;
-    this.positionSprite(pf, at);
   }
 
   private positionSprite(pf: PlacedFurniture, at: { x: number; y: number; rotation: number }): void {
@@ -362,8 +389,8 @@ export class IsoRoom extends Container {
   private commitMove(pf: PlacedFurniture, cand: { x: number; y: number; rotation: number }): void {
     const rotated = cand.rotation !== pf.item.rotation;
     pf.item = { ...pf.item, ...cand };
-    if (rotated) void this.applySprite(pf);
-    else this.positionSprite(pf, pf.item);
+    this.positionSprite(pf, pf.item);
+    if (rotated) void this.applyTexture(pf);
     // Mantener el estado de la sala coherente para el próximo setRoom parcial
     if (this.room) this.room.items = this.room.items.map((i) => (i.id === pf.item.id ? { ...pf.item } : i));
     this.opts.emit({ type: 'furnitureMoved', itemId: pf.item.id, x: cand.x, y: cand.y, rotation: cand.rotation });
@@ -553,7 +580,7 @@ export class IsoRoom extends Container {
       if (!this.path.length) {
         const cb = this.onArrive;
         this.onArrive = null;
-        this.pet.setBaseClip(this.activity === 'sleep' && !cb ? 'sleep' : 'idle');
+        this.pet.setBaseClip(this.activity === 'sleep' && !cb ? 'sleep' : this.restClip);
         this.waitMs = 1500 + Math.random() * 3000;
         cb?.();
       }
@@ -571,6 +598,7 @@ export class IsoRoom extends Container {
       return;
     }
 
+    if (this.staysPut) return; // enfermo o cansado: se queda quieto con su clip de reposo
     this.waitMs -= dt;
     if (this.waitMs <= 0) this.wander();
   }

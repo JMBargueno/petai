@@ -46,6 +46,7 @@ export class PockaiScene {
   private reducedMotion = false;
   // Estado de sala que puede llegar antes que la propia sala
   private activity: Activity = 'idle';
+  private rest = 'idle';
   private night = false;
   private edit = false;
   private disposers: (() => void)[] = [];
@@ -137,7 +138,8 @@ export class PockaiScene {
         break;
       case 'setActivity':
         this.activity = msg.activity;
-        this.room?.setActivity(msg.activity);
+        this.rest = msg.rest ?? 'idle';
+        this.room?.setActivity(msg.activity, this.rest);
         if (!this.room) this.pet.visible = msg.activity !== 'away';
         break;
       case 'setNight':
@@ -180,7 +182,7 @@ export class PockaiScene {
       this.room = new IsoRoom({ pet: this.pet, emit: (e) => this.emit(e), reducedMotion: this.reducedMotion });
       this.app.stage.addChildAt(this.room, 0);
       this.room.setRoom(state);
-      this.room.setActivity(this.activity);
+      this.room.setActivity(this.activity, this.rest);
       this.room.setNight(this.night);
       this.room.setEditMode(this.edit);
     } else {

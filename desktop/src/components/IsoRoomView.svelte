@@ -10,6 +10,7 @@
   import { onDestroy, onMount, createEventDispatcher } from 'svelte';
   import { PockaiScene, type Activity, type HostMessage, type RoomState, type SceneEvent } from '@pockai/scene';
   import type { HabitatFurniture, HabitatRoom } from '../lib/api';
+  import { resolveBaseState } from '../lib/animation/AnimationController';
 
   export let pet: any = null;
   export let room: HabitatRoom | null = null;
@@ -96,7 +97,12 @@
       }
     : null;
   $: if (scene) send({ type: 'setRoom', room: roomState });
-  $: if (scene) send({ type: 'setActivity', activity });
+  // Clip de reposo según el estado (enfermo, hambriento, cansado, triste…), como PetMiniAvatar.
+  $: rest = (() => {
+    const s = resolveBaseState(pet);
+    return s === 'sleep' ? 'idle' : s;
+  })();
+  $: if (scene) send({ type: 'setActivity', activity, rest });
   $: if (scene) send({ type: 'setNight', night });
   $: if (scene) send({ type: 'setEditMode', edit });
   $: if (scene) send({ type: 'selectItem', itemId: selectedId });

@@ -53,6 +53,16 @@ describe('parseHostMessage (sala)', () => {
   it('valida actividad, noche, edición y selección', () => {
     expect(parseHostMessage({ type: 'setActivity', activity: 'sleep' })).toEqual({ type: 'setActivity', activity: 'sleep' });
     expect(parseHostMessage({ type: 'setActivity', activity: 'bailar' })).toBeNull();
+    expect(parseHostMessage({ type: 'setActivity', activity: 'idle', rest: 'sick' })).toEqual({
+      type: 'setActivity',
+      activity: 'idle',
+      rest: 'sick',
+    });
+    // Un `rest` raro se ignora (no rompe el mensaje)
+    expect(parseHostMessage({ type: 'setActivity', activity: 'idle', rest: '<script>' })).toEqual({
+      type: 'setActivity',
+      activity: 'idle',
+    });
     expect(parseHostMessage({ type: 'setNight', night: true })).toEqual({ type: 'setNight', night: true });
     expect(parseHostMessage({ type: 'setEditMode', edit: true })).toEqual({ type: 'setEditMode', edit: true });
     expect(parseHostMessage({ type: 'selectItem', itemId: null })).toEqual({ type: 'selectItem', itemId: null });

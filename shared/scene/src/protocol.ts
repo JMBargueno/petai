@@ -72,7 +72,8 @@ export type HostMessage =
   | { type: 'setPaused'; paused: boolean }
   | { type: 'setFacing'; facing: 1 | -1 }
   | { type: 'setRoom'; room: RoomState | null }
-  | { type: 'setActivity'; activity: Activity }
+  /** `rest`: clip de reposo según el estado del Pockai (idle, sick, hungry, tired, sad…). */
+  | { type: 'setActivity'; activity: Activity; rest?: string }
   | { type: 'setNight'; night: boolean }
   | { type: 'setEditMode'; edit: boolean }
   | { type: 'selectItem'; itemId: string | null }
@@ -186,9 +187,10 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
       return room === undefined ? null : { type: 'setRoom', room };
     }
     case 'setActivity':
-      return m.activity === 'idle' || m.activity === 'sleep' || m.activity === 'away'
-        ? { type: 'setActivity', activity: m.activity }
-        : null;
+      if (m.activity !== 'idle' && m.activity !== 'sleep' && m.activity !== 'away') return null;
+      return typeof m.rest === 'string' && /^[a-z_]{1,24}$/.test(m.rest)
+        ? { type: 'setActivity', activity: m.activity, rest: m.rest }
+        : { type: 'setActivity', activity: m.activity };
     case 'setNight':
       return typeof m.night === 'boolean' ? { type: 'setNight', night: m.night } : null;
     case 'setEditMode':
