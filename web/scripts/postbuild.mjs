@@ -18,8 +18,8 @@ const SITE_NAME = site.name;
 const LOCALES = site.locales;
 const ADMIN_LOCALE = 'es';
 // Páginas públicas sin prerender (leen parámetros de la URL, p. ej. ?token=): shell CSR en cada idioma.
-const CLIENT_ROUTES = ['verify-email'];
-const ADMIN_ROUTES = ['', 'login', 'resumen', 'precios', 'eventos', 'usuarios', 'invitaciones', 'correos', 'pockais', 'facturacion', 'registro'];
+const CLIENT_ROUTES = ['verify-email', 'login', 'register', 'forgot-password', 'account'];
+const ADMIN_ROUTES = ['', 'login', 'resumen', 'precios', 'eventos', 'usuarios', 'invitaciones', 'sitio', 'correos', 'pockais', 'facturacion', 'registro'];
 
 for (const locale of LOCALES) {
   if (!existsSync(join(out, locale, 'index.html'))) {

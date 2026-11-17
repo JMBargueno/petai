@@ -3,6 +3,7 @@ import patternData from '../../../../shared/game-data/patterns.json';
 import skillsData from '../../../../shared/game-data/skills.json';
 import speciesData from '../../../../shared/game-data/species.json';
 import { DOWNLOADS } from '../site.config';
+import type { DesktopPlatform } from '../shared/device/device';
 import type { StickerColor, StickerIcon } from '../shared/ui/sticker';
 
 /**
@@ -108,12 +109,28 @@ export const SPECIES = speciesData.map((s, i) => ({
 const READY = $localize`:@@plat.status.ready:Disponible`;
 const IN_PROGRESS = $localize`:@@plat.status.wip:En desarrollo`;
 
-export const PLATFORMS = [
+export interface Platform {
+  name: string;
+  status: string;
+  /** Instalador de escritorio: se descarga con sesión (DownloadAction). */
+  desktop?: DesktopPlatform;
+  /** Enlace de tienda de las apps móviles (null mientras no exista). */
+  url?: string | null;
+  body: string;
+}
+
+export const PLATFORMS: Platform[] = [
   {
     name: 'Windows',
     status: READY,
-    url: DOWNLOADS.windows,
+    desktop: 'windows',
     body: $localize`:@@plat.windows.body:Tu pockai vive sobre el escritorio: camina, duerme y come en una ventana transparente, con chat flotante y avisos nativos.`,
+  },
+  {
+    name: 'macOS',
+    status: READY,
+    desktop: 'macos',
+    body: $localize`:@@plat.macos.body:La misma mascota de escritorio, ahora también en tu Mac.`,
   },
   {
     name: 'Android',
@@ -132,7 +149,7 @@ export const PLATFORMS = [
 export const FAQ = [
   {
     q: $localize`:@@faq.1.q:¿En qué plataformas está Pockai?`,
-    a: $localize`:@@faq.1.a:En Windows y Android. La versión para iOS está en desarrollo.`,
+    a: $localize`:@@faq.1.a:En Windows, macOS y Android. La versión para iOS está en desarrollo.`,
   },
   {
     q: $localize`:@@faq.2.q:¿Necesito una API key para jugar?`,

@@ -14,6 +14,7 @@ import { DesktopScene } from './sections/desktop-scene';
 import { HowItWorks } from './sections/how-it-works';
 import { Pricing } from './sections/pricing';
 import { SectionToc, TocSection } from '../shared/layout/section-toc';
+import { DownloadAction } from '../shared/download/download-action';
 
 const HERO_GREETING_MS = 1500;
 
@@ -23,7 +24,7 @@ const HERO_GREETING_MS = 1500;
  */
 @Component({
   selector: 'app-landing',
-  imports: [SiteHeader, SiteFooter, SectionToc, Marquee, Sticker, PockaiSprite, HowItWorks, DesktopScene, Pricing, PetDemo],
+  imports: [SiteHeader, SiteFooter, SectionToc, Marquee, Sticker, PockaiSprite, HowItWorks, DesktopScene, Pricing, PetDemo, DownloadAction],
   templateUrl: './landing.html',
   styleUrl: './landing.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

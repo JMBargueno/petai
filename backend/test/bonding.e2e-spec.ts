@@ -76,11 +76,14 @@ describe('Bonding Meter E2E (feature 006)', () => {
   afterEach(async () => {
     // Limpieza de los datos de la prueba (cascadas por FK)
     if (!petId) return;
-    await prisma.bondingEvent.deleteMany({ where: { petId } });
-    await prisma.petMemory.deleteMany({ where: { petId } });
-    await prisma.chatMessage.deleteMany({ where: { petId } });
-    await prisma.pet.deleteMany({ where: { id: petId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.bondingEvent.deleteMany({ where: { petId } }).catch(() => {});
+    await prisma.petMemory.deleteMany({ where: { petId } }).catch(() => {});
+    await prisma.chatMessage.deleteMany({ where: { petId } }).catch(() => {});
+    await prisma.pet.deleteMany({ where: { id: petId } }).catch(() => {});
+    if (userId) {
+      await prisma.egg.deleteMany({ where: { userId } }).catch(() => {});
+      await prisma.user.deleteMany({ where: { id: userId } }).catch(() => {});
+    }
   });
 
   /** Registro + eclosión del pet de bienvenida. */
@@ -287,11 +290,14 @@ describe('Bonding Meter E2E: integración con la IA (feature 006, LLM mock)', ()
 
   afterAll(async () => {
     // Limpieza antes de cerrar la app (el PrismaService se desconecta en el shutdown)
-    await prisma.bondingEvent.deleteMany({ where: { petId } });
-    await prisma.petMemory.deleteMany({ where: { petId } });
-    await prisma.chatMessage.deleteMany({ where: { petId } });
-    await prisma.pet.deleteMany({ where: { id: petId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.bondingEvent.deleteMany({ where: { petId } }).catch(() => {});
+    await prisma.petMemory.deleteMany({ where: { petId } }).catch(() => {});
+    await prisma.chatMessage.deleteMany({ where: { petId } }).catch(() => {});
+    await prisma.pet.deleteMany({ where: { id: petId } }).catch(() => {});
+    if (userId) {
+      await prisma.egg.deleteMany({ where: { userId } }).catch(() => {});
+      await prisma.user.deleteMany({ where: { id: userId } }).catch(() => {});
+    }
     await app.close();
     await mock.close();
   });

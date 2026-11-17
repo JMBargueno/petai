@@ -31,11 +31,11 @@ describe('Achievements E2E', () => {
 
   afterEach(async () => {
     if (!userId) return;
-    await prisma.achievement.deleteMany({ where: { userId } });
-    await prisma.inventoryItem.deleteMany({ where: { userId } });
-    await prisma.pet.deleteMany({ where: { userId } });
-    await prisma.egg.deleteMany({ where: { userId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.achievement.deleteMany({ where: { userId } }).catch(() => {});
+    await prisma.inventoryItem.deleteMany({ where: { userId } }).catch(() => {});
+    await prisma.pet.deleteMany({ where: { userId } }).catch(() => {});
+    await prisma.egg.deleteMany({ where: { userId } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { id: userId } }).catch(() => {});
     userId = '';
     petId = '';
   });

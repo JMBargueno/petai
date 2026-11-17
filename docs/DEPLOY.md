@@ -214,10 +214,18 @@ Publicar una versión:
 3. Revisa el borrador y **publícalo**. A partir de ese momento, en un máximo de 5 min (caché del backend),
    los clientes ven la versión nueva.
 
-Descarga desde la web: el botón «Descargar» de Windows apunta a `{apiUrl}/v1/desktop/download/windows`
-(también existe `/macos`), que redirige al instalador del último release publicado. No hay que tocar la web en
-cada versión, pero sí poner en `web/src/app/site.json` › `apiUrl` la URL del backend de producción
-(`https://game-api.pockai.world`) antes de desplegar la web.
+Descarga desde la web: solo con sesión y el correo verificado. Los botones de Windows y macOS piden
+`GET {apiUrl}/v1/desktop/download/{windows|macos}` con el Bearer de la sesión, que responde `{ url }` con la URL
+firmada y temporal del instalador del último release publicado (401 sin sesión, 403 `EMAIL_NOT_VERIFIED` sin
+verificar, aunque `EMAIL_VERIFICATION_REQUIRED=false`). La web detecta el dispositivo: en móviles y Linux el
+escritorio aparece como «Disponible en escritorio», deshabilitado. No hay que tocar la web en cada versión, pero
+sí poner en `web/src/app/site.json` › `apiUrl` la URL del backend de producción (`https://game-api.pockai.world`)
+y añadir el origen de la web a `CORS_ORIGINS` antes de desplegarla.
+
+Landing «Coming soon»: se activa en el panel (`/es/admin/sitio`, permiso `site:manage`, admin y superadmin), con
+cuenta atrás opcional. Tapa toda la web pública salvo `/login`, `/register`, `/forgot-password`, `/verify-email` y
+`/admin`; solo la pasa quien entra con una cuenta con el correo verificado. Es un gate de cliente: el HTML
+prerenderizado sigue siendo accesible para quien lo pida directamente (no es una medida de seguridad).
 
 Notas:
 - El endpoint por defecto de `tauri.conf.json` es la API de producción (tiene que ser `https`: el plugin
