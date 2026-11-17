@@ -1,0 +1,284 @@
+/* Piezas comunes de Social (Amigos · Clanes · Visitas). Prefijo .soc- para no chocar con otras vistas. */
+.soc {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Cabecera de sección: título en versalitas + contador + acción a la derecha */
+.soc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+.soc-head .label-caps {
+  color: var(--ink-muted);
+}
+.soc-head__end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.soc-count {
+  padding: 1px 8px;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--theme-social) 30%, var(--surface));
+  border-color: var(--color-carbon);
+  color: var(--ink);
+}
+
+/* Botón de recargar (icono que gira mientras carga) */
+.soc-refresh svg {
+  transition: rotate var(--dur-2) var(--ease-out);
+}
+.soc-refresh.spinning svg {
+  animation: soc-spin 0.9s linear infinite;
+}
+@keyframes soc-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Lista y filas */
+.soc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.soc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-2xl);
+  background: var(--surface);
+  transition: border-color var(--dur-1), background var(--dur-1);
+}
+.soc-row:hover {
+  border-color: var(--line);
+}
+.soc-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.soc-row__title {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.soc-row__sub {
+  font-size: 11px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.soc-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Tarjeta de formulario compacta */
+.soc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: var(--outline);
+  border-radius: var(--radius-cards);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+.soc-card__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.soc-card__hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-muted);
+  line-height: 1.35;
+}
+.soc-inline {
+  display: flex;
+  gap: 6px;
+}
+.soc-inline .input {
+  flex: 1;
+  min-width: 0;
+}
+.soc .input {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* Botones de icono pequeños en filas */
+.soc-ibtn {
+  min-height: 30px;
+  min-width: 30px;
+  padding: 5px;
+}
+.soc-ibtn--ok {
+  background: var(--success);
+  color: var(--on-color);
+  border-color: var(--color-carbon);
+}
+.soc-ibtn--no:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger-ink);
+}
+
+/* Chip de estado */
+.soc-chip {
+  padding: 2px 8px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.soc-chip--online {
+  background: color-mix(in srgb, var(--theme-social) 30%, var(--surface));
+  border-color: var(--color-carbon);
+}
+.soc-chip--pending {
+  background: color-mix(in srgb, var(--color-sunburst) 35%, var(--surface));
+  border-color: var(--color-carbon);
+}
+
+/* Estado vacío */
+.soc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 12px;
+  text-align: center;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-cards);
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+.soc-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-carbon);
+  background: color-mix(in srgb, var(--theme-social) 40%, var(--surface));
+  color: var(--on-color);
+}
+.soc-empty strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.soc-empty p {
+  margin: 0;
+}
+
+/* Avisos */
+.soc-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-2xl);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.soc-notice svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.soc-notice--error {
+  background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+  border: 1px solid var(--danger);
+  color: var(--danger-ink);
+}
+.soc-notice--ok {
+  background: color-mix(in srgb, var(--success) 14%, var(--surface));
+  border: 1px solid var(--success);
+  color: var(--success-ink);
+}
+
+/* Cargando */
+.soc-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.soc-skel {
+  height: 52px;
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    color-mix(in srgb, var(--surface) 70%, var(--surface-2)) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: soc-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes soc-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* Segmentos (sub-navegación interna) */
+.soc-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-pills);
+  background: var(--surface-2);
+}
+.soc-seg button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pills);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-1), color var(--dur-1);
+}
+.soc-seg button:hover {
+  color: var(--ink);
+}
+.soc-seg button.active {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--color-carbon);
+  box-shadow: 1px 2px 0 var(--color-carbon);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .soc-refresh.spinning svg,
+  .soc-skel {
+    animation: none;
+  }
+}

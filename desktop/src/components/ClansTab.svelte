@@ -3,9 +3,13 @@
    *  Además: chat del clan y objetivos de clan (con progreso en vivo por socket).
    *  Rangos del Nexo (docs/LORE.md §8): Forjador > Guardián > Vigía > Hermano; las acciones de
    *  gestión solo se muestran a quien puede hacerlas (el backend las valida igualmente). */
-  import Ico from './Ico.svelte';
+  import SocialAvatar from './SocialAvatar.svelte';
   import { onMount } from 'svelte';
   import { handleFormatError, normalizeHandle } from '../lib/handle';
+  import {
+    Shield, Crown, Eye, Users, Target, MessageCircle, Pencil, Plus, Trash2, Send, RefreshCw, UserPlus,
+    AlertCircle, CircleCheck, LogOut, Sparkles, ChevronUp, ChevronDown, X,
+  } from 'lucide-svelte';
   import {
     api,
     type ClanMember,
@@ -63,7 +67,12 @@
   let armedTimer: ReturnType<typeof setTimeout> | undefined;
 
   const METRIC_LABEL: Record<string, string> = { xp: 'XP', visits: 'Visitas', generic: 'Progreso' };
-  /** Mi rango en el clan (derivado del roster). */
+  const ROLE_ICON: Record<string, any> = { creator: Crown, admin: Shield, moderator: Eye };
+  /** Sección visible dentro del clan (en vez de apilarlo todo). */
+  let section: 'members' | 'goals' | 'chat' = 'members';
+  let showGoalForm = false;
+  $: onlineMembers = clan ? clan.members.filter((m) => m.isOnline).length : 0;
+  $: activeGoals = $clanGoalsStore.filter((g) => g.status !== 'completed' && goalPercent(g) < 100).length;  /** Mi rango en el clan (derivado del roster). */
   $: myRole = clanRole(clan?.members.find((m) => m.userId === meId)?.role ?? (clan && clan.leaderId === meId ? 'creator' : 'member'));
   $: canInvite = hasClanRank(myRole, 'moderator');
   $: canModerate = hasClanRank(myRole, 'moderator');
@@ -90,7 +99,10 @@
     (a, b) => (a.status === 'completed' ? 1 : 0) - (b.status === 'completed' ? 1 : 0),
   );
   /** El chat siempre queda pegado al final al llegar mensajes. */
-  $: if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
+  $: if (chatEl && $clanMessagesStore) {
+    const el = chatEl;
+    queueMicrotask(() => (el.scrollTop = el.scrollHeight));
+  }
 
   async function load() {
     loading = true;
@@ -321,6 +333,7 @@
       goalTitle = '';
       goalTarget = '';
       ok = 'Objetivo creado.';
+      showGoalForm = false;
     } catch (e: any) {
       error = e.message;
     } finally {
@@ -379,267 +392,601 @@
   onMount(load);
 </script>
 
-{#if loading && !clan}
-  <div class="empty-msg">Cargando clan…</div>
-{:else if clan}
-  <div class="clan-card">
-    <div class="clan-head">
-      <div>
-        <h4><Ico n="trophy" /> {clan.name} <span class="tag">[{clan.tag}]</span></h4>
-        <small>{clan.description || 'Sin descripción'}</small>
-      </div>
-      <span class="clan-xp">{(clan.xp ?? 0).toLocaleString()} XP</span>
-    </div>
-    <div class="clan-meta">
-      Forjador: {clan.leader?.displayName ?? clan.leaderId}{clan.leader?.handle ? ` (@${clan.leader.handle})` : ''} · {clan.memberCount} hebra(s) · Tu rango:
-      <span class="role-badge role-{myRole}">{CLAN_ROLE_LABEL[myRole]}</span>
-    </div>
-    {#if canEdit && !editing}
-      <button class="btn-sm ghost" on:click={startEdit}>✎ Editar Nexo</button>
-    {/if}
-  </div>
+<div class="soc">
+  {#if error}<div class="soc-notice soc-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
+  {#if ok}<div class="soc-notice soc-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
 
-  {#if editing}
-    <div class="form-col edit-box">
-      <input class="input" placeholder="Nombre del clan" maxlength="40" bind:value={editName} disabled={busy === 'edit'} />
-      <textarea class="input desc" rows="2" maxlength="300" placeholder="Descripción" bind:value={editDescription} disabled={busy === 'edit'}></textarea>
-      <div class="form-row">
-        <button class="btn-sm primary" disabled={busy === 'edit' || !editName.trim()} on:click={saveEdit}>
-          {busy === 'edit' ? 'Guardando…' : 'Guardar'}
-        </button>
-        <button class="btn-sm ghost" disabled={busy === 'edit'} on:click={() => (editing = false)}>Cancelar</button>
-      </div>
+  {#if loading && !clan}
+    <div class="soc-loading" aria-label="Cargando clan">
+      <div class="soc-skel tall"></div>
+      <div class="soc-skel"></div>
+      <div class="soc-skel"></div>
     </div>
-  {/if}
-
-  <div class="sec-title">Miembros</div>
-  <div class="list">
-    {#each roster as m (m.userId)}
-      {@const acts = m.userId === meId ? null : clanMemberActions(myRole, m.role)}
-      {@const role = clanRole(m.role)}
-      <div class="member">
-        <div class="member-row">
-          <span class="p-dot {m.isOnline ? 'online' : 'offline'}" title="Presencia"></span>
-          <span class="member-name">{m.displayName}{#if m.handle} <span class="member-handle">@{m.handle}</span>{/if}{m.userId === meId ? ' (tú)' : ''}</span>
-          <span class="role-badge role-{role}">{CLAN_ROLE_LABEL[role]}</span>
-          <small class="member-joined">{new Date(m.joinedAt).toLocaleDateString()}</small>
+  {:else if clan}
+    <!-- Cabecera del Nexo -->
+    <div class="clan-hero">
+      <div class="clan-hero__crest" aria-hidden="true"><Shield size={26} /></div>
+      <div class="clan-hero__info">
+        <div class="clan-hero__title">
+          <span class="clan-name">{clan.name}</span>
+          <span class="chip clan-tag">[{clan.tag}]</span>
         </div>
-        {#if acts && (acts.kick || acts.promote || acts.demote || acts.transfer)}
-          <div class="member-actions">
-            {#if acts.promote}
-              <button class="btn-sm ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.promote && changeRole(m, acts.promote)}>
-                ↑ {CLAN_ROLE_LABEL[acts.promote]}
-              </button>
-            {/if}
-            {#if acts.demote}
-              <button class="btn-sm ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.demote && changeRole(m, acts.demote)}>
-                ↓ {CLAN_ROLE_LABEL[acts.demote]}
-              </button>
-            {/if}
-            {#if acts.transfer}
-              <button class="btn-sm ghost" disabled={busy === `member-${m.userId}`} on:click={() => transfer(m)}>
-                {armed === `transfer-${m.userId}` ? '¿Seguro? Ceder' : 'Ceder Forja'}
-              </button>
-            {/if}
-            {#if acts.kick}
-              <button class="btn-sm danger" disabled={busy === `member-${m.userId}`} on:click={() => kick(m)}>
-                {armed === `kick-${m.userId}` ? '¿Seguro? Expulsar' : 'Expulsar'}
-              </button>
-            {/if}
-          </div>
-        {/if}
+        <p class="clan-desc">{clan.description || 'Sin descripción'}</p>
+        <span class="clan-leader">Forjador: {clan.leader?.displayName ?? clan.leaderId}{clan.leader?.handle ? ` · @${clan.leader.handle}` : ''}</span>
+        <div class="clan-stats">
+          <span class="chip clan-stat"><Sparkles size={12} /> {(clan.xp ?? 0).toLocaleString()} XP</span>
+          <span class="chip clan-stat" title="Hebras"><Users size={12} /> {clan.memberCount}</span>
+          <span class="chip clan-stat role-chip role-{myRole}" title="Tu rango">
+            {#if ROLE_ICON[myRole]}<svelte:component this={ROLE_ICON[myRole]} size={12} />{/if}
+            {CLAN_ROLE_LABEL[myRole]}
+          </span>
+        </div>
       </div>
-    {/each}
-  </div>
+      <div class="clan-hero__tools">
+        {#if canEdit && !editing}
+          <button class="btn btn--ghost btn--icon soc-ibtn" title="Editar Nexo" aria-label="Editar Nexo" on:click={startEdit}><Pencil size={15} /></button>
+        {/if}
+        <button class="btn btn--ghost btn--icon soc-ibtn soc-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar clan" on:click={load}>
+          <RefreshCw size={15} />
+        </button>
+      </div>
+    </div>
 
-  {#if canInvite}
-    <div class="sec-title">Invitar</div>
-    <div class="form-row">
-      <input class="input" placeholder="@nickname del jugador" autocapitalize="none" spellcheck="false" bind:value={inviteTarget} disabled={busy === 'invite'} />
-      <button class="btn-sm primary" disabled={busy === 'invite' || !inviteTarget.trim()} on:click={invite}>
-        {busy === 'invite' ? '…' : 'Invitar'}
+    {#if editing}
+      <form class="soc-card" on:submit|preventDefault={saveEdit}>
+        <span class="soc-card__title"><Pencil size={14} /> Editar Nexo</span>
+        <input class="input" placeholder="Nombre del clan" aria-label="Nombre del clan" maxlength="40" bind:value={editName} disabled={busy === 'edit'} />
+        <textarea class="input desc" rows="2" maxlength="300" placeholder="Descripción" aria-label="Descripción" bind:value={editDescription} disabled={busy === 'edit'}></textarea>
+        <div class="soc-inline end">
+          <button type="button" class="btn btn--sm btn--ghost" disabled={busy === 'edit'} on:click={() => (editing = false)}>Cancelar</button>
+          <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'edit' || !editName.trim()}>
+            {busy === 'edit' ? 'Guardando…' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    {/if}
+
+    <div class="soc-seg" role="tablist" aria-label="Secciones del clan">
+      <button role="tab" aria-selected={section === 'members'} class:active={section === 'members'} on:click={() => (section = 'members')}>
+        <Users size={14} /> Miembros <span class="seg-n" title="En línea / total">{onlineMembers}/{clan.members.length}</span>
+      </button>
+      <button role="tab" aria-selected={section === 'goals'} class:active={section === 'goals'} on:click={() => (section = 'goals')}>
+        <Target size={14} /> Objetivos {#if activeGoals}<span class="seg-n">{activeGoals}</span>{/if}
+      </button>
+      <button role="tab" aria-selected={section === 'chat'} class:active={section === 'chat'} on:click={() => (section = 'chat')}>
+        <MessageCircle size={14} /> Chat
       </button>
     </div>
-  {/if}
 
-  <div class="sec-title">Objetivos</div>
-  {#if sortedGoals.length === 0}
-    <div class="empty-msg">Sin objetivos todavía.</div>
-  {:else}
-    <div class="list">
-      {#each sortedGoals as g (g.id)}
-        {@const done = g.status === 'completed' || goalPercent(g) >= 100}
-        <div class="goal" class:done={done}>
-          <div class="goal-top">
-            <span class="goal-title">{g.title}</span>
-            <span class="goal-status">{done ? 'Cumplido' : METRIC_LABEL[g.metric] ?? g.metric}</span>
+    {#if section === 'members'}
+      <section class="soc-list">
+        {#each roster as m (m.userId)}
+          {@const acts = m.userId === meId ? null : clanMemberActions(myRole, m.role)}
+          {@const role = clanRole(m.role)}
+          <div class="soc-row member" class:me={m.userId === meId}>
+            <div class="member-main">
+              <SocialAvatar name={m.displayName} presence={m.isOnline ? 'online' : 'offline'} />
+              <div class="soc-row__body">
+                <span class="soc-row__title">{m.displayName}{#if m.handle} <span class="handle">@{m.handle}</span>{/if}{m.userId === meId ? ' (tú)' : ''}</span>
+                <span class="soc-row__sub">Desde {new Date(m.joinedAt).toLocaleDateString()}</span>
+              </div>
+              <span class="chip soc-chip role-chip role-{role}">
+                {#if ROLE_ICON[role]}<svelte:component this={ROLE_ICON[role]} size={11} />{/if}
+                {CLAN_ROLE_LABEL[role]}
+              </span>
+            </div>
+            {#if acts && (acts.kick || acts.promote || acts.demote || acts.transfer)}
+              <div class="member-actions">
+                {#if acts.promote}
+                  <button class="btn btn--sm btn--ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.promote && changeRole(m, acts.promote)}>
+                    <ChevronUp size={14} /> {CLAN_ROLE_LABEL[acts.promote]}
+                  </button>
+                {/if}
+                {#if acts.demote}
+                  <button class="btn btn--sm btn--ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.demote && changeRole(m, acts.demote)}>
+                    <ChevronDown size={14} /> {CLAN_ROLE_LABEL[acts.demote]}
+                  </button>
+                {/if}
+                {#if acts.transfer}
+                  <button class="btn btn--sm btn--ghost" class:armed={armed === `transfer-${m.userId}`} disabled={busy === `member-${m.userId}`} on:click={() => transfer(m)}>
+                    <Crown size={14} /> {armed === `transfer-${m.userId}` ? '¿Seguro? Ceder' : 'Ceder Forja'}
+                  </button>
+                {/if}
+                {#if acts.kick}
+                  <button class="btn btn--sm btn--ghost danger-ghost" class:armed={armed === `kick-${m.userId}`} disabled={busy === `member-${m.userId}`} on:click={() => kick(m)}>
+                    {armed === `kick-${m.userId}` ? '¿Seguro? Expulsar' : 'Expulsar'}
+                  </button>
+                {/if}
+              </div>
+            {/if}
           </div>
-          {#if g.description}<small class="goal-desc">{g.description}</small>{/if}
-          <div class="goal-bar"><div class="goal-fill" style="width:{goalPercent(g)}%"></div></div>
-          <div class="goal-foot">
-            <small class="goal-num">{Math.min(g.progress, g.target)}/{g.target}</small>
-            <div class="goal-actions">
+        {/each}
+      </section>
+
+      {#if canInvite}
+        <form class="soc-card" on:submit|preventDefault={invite}>
+          <span class="soc-card__title"><UserPlus size={15} /> Invitar al Nexo</span>
+          <div class="soc-inline">
+            <input class="input" placeholder="@nickname del jugador" aria-label="Nickname del jugador" autocapitalize="none" spellcheck="false" bind:value={inviteTarget} disabled={busy === 'invite'} />
+            <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'invite' || !inviteTarget.trim()}>
+              {busy === 'invite' ? 'Enviando…' : 'Invitar'}
+            </button>
+          </div>
+        </form>
+      {/if}
+
+      <!-- Zona de peligro -->
+      <div class="danger-zone">
+        {#if isCreator && clan.memberCount > 1}
+          <p class="soc-card__hint">Como Forjador, cede la Forja a otra hebra antes de salir del Nexo.</p>
+        {:else}
+          <button class="btn btn--sm btn--ghost danger-ghost" disabled={!!busy} on:click={leave}>
+            <LogOut size={14} /> {busy === 'leave' ? 'Saliendo…' : 'Salir del clan'}
+          </button>
+        {/if}
+        {#if isCreator}
+          <button class="btn btn--sm btn--ghost danger-ghost" class:armed={armed === 'disband'} disabled={!!busy} on:click={disband}>
+            <Trash2 size={14} /> {busy === 'disband' ? 'Deshaciendo…' : armed === 'disband' ? '¿Seguro? Se borrará todo' : 'Disolver el Nexo'}
+          </button>
+        {/if}
+      </div>
+
+    {:else if section === 'goals'}
+      <section class="soc-list">
+        <div class="soc-head">
+          <span class="label-caps">Objetivos del Nexo</span>
+          <div class="soc-head__end">
+            <button class="btn btn--sm" class:btn--ink={showGoalForm} on:click={() => (showGoalForm = !showGoalForm)} aria-expanded={showGoalForm}>
+              {#if showGoalForm}<X size={14} /> Cerrar{:else}<Plus size={14} /> Nuevo{/if}
+            </button>
+          </div>
+        </div>
+
+        {#if showGoalForm}
+          <form class="soc-card" on:submit|preventDefault={createGoal}>
+            <input class="input" placeholder="Título del objetivo" aria-label="Título del objetivo" bind:value={goalTitle} disabled={busy === 'goal-create'} />
+            <div class="soc-inline">
+              <select class="input" aria-label="Métrica" bind:value={goalMetric} disabled={busy === 'goal-create'}>
+                <option value="xp">XP</option>
+                <option value="visits">Visitas</option>
+                <option value="generic">Progreso</option>
+              </select>
+              <input class="input goal-target" type="number" min="1" placeholder="Meta" aria-label="Meta" bind:value={goalTarget} disabled={busy === 'goal-create'} />
+              <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'goal-create' || !goalTitle.trim() || !(parseInt(goalTarget, 10) > 0)}>
+                {busy === 'goal-create' ? 'Creando…' : 'Crear'}
+              </button>
+            </div>
+          </form>
+        {/if}
+
+        {#each sortedGoals as g (g.id)}
+          {@const done = g.status === 'completed' || goalPercent(g) >= 100}
+          <div class="goal" class:done>
+            <div class="goal-top">
+              <span class="goal-title">{g.title}</span>
+              <span class="chip soc-chip goal-status">{done ? 'Cumplido' : METRIC_LABEL[g.metric] ?? g.metric}</span>
+            </div>
+            {#if g.description}<span class="soc-row__sub">{g.description}</span>{/if}
+            <div class="goal-foot">
+              <div class="meter goal-meter" style="--meter-color: {done ? 'var(--success)' : 'var(--theme-social)'}">
+                <i style="width: {goalPercent(g)}%"></i>
+              </div>
+              <span class="goal-num">{Math.min(g.progress, g.target)}/{g.target}</span>
               {#if !done}
-                <button class="btn-sm primary" disabled={busy === `goal-${g.id}`} on:click={() => addProgress(g)}>
-                  +1
-                </button>
+                <button class="btn btn--sm soc-ibtn" title="Sumar 1" aria-label="Sumar 1 a {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => addProgress(g)}>+1</button>
               {/if}
               {#if canModerate}
-                <button class="btn-sm danger" disabled={busy === `goal-${g.id}`} on:click={() => deleteGoal(g)} title="Borrar objetivo">
-                  ✕
+                <button class="btn btn--ghost btn--icon soc-ibtn soc-ibtn--no" title="Borrar objetivo" aria-label="Borrar {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => deleteGoal(g)}>
+                  <Trash2 size={14} />
                 </button>
               {/if}
             </div>
           </div>
-        </div>
-      {/each}
-    </div>
-  {/if}
+        {:else}
+          {#if !showGoalForm}
+            <div class="soc-empty">
+              <span class="soc-empty__icon"><Target size={22} /></span>
+              <strong>Sin objetivos todavía</strong>
+              <p>Proponed una meta común y sumad progreso entre todos.</p>
+            </div>
+          {/if}
+        {/each}
+      </section>
 
-  <div class="sec-title">Nuevo objetivo</div>
-  <div class="form-col">
-    <div class="form-row">
-      <input class="input" placeholder="Título del objetivo" bind:value={goalTitle} disabled={busy === 'goal-create'} />
-      <select class="input" bind:value={goalMetric} disabled={busy === 'goal-create'}>
-        <option value="xp">XP</option>
-        <option value="visits">Visitas</option>
-        <option value="generic">Progreso</option>
-      </select>
-      <input class="input goal-target" type="number" min="1" placeholder="Meta" bind:value={goalTarget} disabled={busy === 'goal-create'} />
-    </div>
-    <button class="btn-sm primary" disabled={busy === 'goal-create' || !goalTitle.trim() || !(parseInt(goalTarget, 10) > 0)} on:click={createGoal}>
-      {busy === 'goal-create' ? 'Creando…' : '+ Nuevo objetivo'}
-    </button>
-  </div>
-
-  <div class="sec-title">Chat</div>
-  <div class="chat" bind:this={chatEl}>
-    {#if $clanMessagesStore.length === 0}
-      <div class="empty-msg">Sé el primero en escribir.</div>
     {:else}
-      {#each $clanMessagesStore as m (m.id)}
-        <div class="chat-msg">
-          <div class="chat-meta">
-            <span class="chat-sender">{m.senderName}</span>
-            <small class="chat-time">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
-            {#if canModerate || m.userId === meId}
-              <button class="chat-del" title="Borrar mensaje" disabled={busy === `msg-${m.id}`} on:click={() => deleteMsg(m)}>✕</button>
-            {/if}
-          </div>
-          <div class="chat-body">{m.body}</div>
+      <section class="chat-box">
+        <div class="chat" bind:this={chatEl}>
+          {#each $clanMessagesStore as m (m.id)}
+            {@const mine = m.userId === meId}
+            <div class="msg" class:mine>
+              {#if !mine}<SocialAvatar name={m.senderName} size={26} />{/if}
+              <div class="bubble">
+                <div class="bubble-meta">
+                  {#if !mine}<span class="sender">{m.senderName}</span>{/if}
+                  <span class="time">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  {#if canModerate || mine}
+                    <button class="msg-del" title="Borrar mensaje" aria-label="Borrar mensaje" disabled={busy === `msg-${m.id}`} on:click={() => deleteMsg(m)}><X size={11} /></button>
+                  {/if}
+                </div>
+                <div class="bubble-body">{m.body}</div>
+              </div>
+            </div>
+          {:else}
+            <div class="chat-empty">
+              <MessageCircle size={22} />
+              <span>Sé el primero en escribir.</span>
+            </div>
+          {/each}
         </div>
-      {/each}
+        <form class="chat-input" on:submit|preventDefault={sendMsg}>
+          <input class="input" placeholder="Escribe un mensaje…" aria-label="Mensaje" bind:value={chatInput} disabled={busy === 'chat'} />
+          <button type="submit" class="btn btn--primary btn--icon soc-ibtn" title="Enviar" aria-label="Enviar" disabled={busy === 'chat' || !chatInput.trim()}>
+            <Send size={15} />
+          </button>
+        </form>
+      </section>
     {/if}
-  </div>
-  <div class="form-row">
-    <input class="input" placeholder="Escribe un mensaje…" bind:value={chatInput} disabled={busy === 'chat'} on:keydown={(e) => e.key === 'Enter' && sendMsg()} />
-    <button class="btn-sm primary" disabled={busy === 'chat' || !chatInput.trim()} on:click={sendMsg}>
-      {busy === 'chat' ? '…' : 'Enviar'}
-    </button>
-  </div>
 
-  {#if isCreator && clan.memberCount > 1}
-    <small class="hint">Como Forjador, cede la Forja a otra hebra antes de salir del Nexo.</small>
   {:else}
-    <button class="danger" disabled={!!busy} on:click={leave}>{busy === 'leave' ? 'Saliendo…' : 'Salir del clan'}</button>
+    <!-- Sin clan -->
+    <div class="soc-empty no-clan">
+      <span class="soc-empty__icon"><Shield size={24} /></span>
+      <strong>Aún no perteneces a ningún Nexo</strong>
+      <p>Funda el tuyo o únete al de tus amigos con su tag.</p>
+    </div>
+
+    <form class="soc-card" on:submit|preventDefault={join}>
+      <span class="soc-card__title"><Users size={15} /> Unirse por tag</span>
+      <div class="soc-inline">
+        <input class="input tag-input" placeholder="TAG" aria-label="Tag del clan" bind:value={joinTag} disabled={busy === 'join'} />
+        <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'join' || !joinTag.trim()}>
+          {busy === 'join' ? 'Uniéndote…' : 'Unirse'}
+        </button>
+      </div>
+    </form>
+
+    <form class="soc-card" on:submit|preventDefault={create}>
+      <span class="soc-card__title"><Plus size={15} /> Fundar un Nexo</span>
+      <div class="soc-inline">
+        <input class="input" placeholder="Nombre del clan" aria-label="Nombre del clan" bind:value={name} disabled={busy === 'create'} />
+        <input class="input tag-input short" placeholder="TAG" aria-label="Tag (p. ej. PCK)" bind:value={tag} disabled={busy === 'create'} />
+      </div>
+      <textarea class="input desc" rows="2" placeholder="Descripción (opcional)" aria-label="Descripción" bind:value={description} disabled={busy === 'create'}></textarea>
+      <button type="submit" class="btn btn--primary" disabled={busy === 'create' || !name.trim() || !tag.trim()}>
+        {busy === 'create' ? 'Creando…' : 'Crear clan'}
+      </button>
+    </form>
   {/if}
-  {#if isCreator}
-    <button class="danger" disabled={!!busy} on:click={disband}>
-      {busy === 'disband' ? 'Deshaciendo…' : armed === 'disband' ? '¿Seguro? Se borrará todo el Nexo' : 'Disolver el Nexo'}
-    </button>
-  {/if}
-
-{:else}
-  <div class="empty-msg">No estás en ningún clan todavía.</div>
-
-  <div class="sec-title">Crear clan</div>
-  <div class="form-col">
-    <input class="input" placeholder="Nombre del clan" bind:value={name} disabled={busy === 'create'} />
-    <input class="input" placeholder="Tag (p. ej. PCK)" bind:value={tag} disabled={busy === 'create'} />
-    <textarea class="input desc" rows="2" placeholder="Descripción (opcional)" bind:value={description} disabled={busy === 'create'}></textarea>
-    <button class="btn primary" disabled={busy === 'create' || !name.trim() || !tag.trim()} on:click={create}>
-      {busy === 'create' ? 'Creando…' : 'Crear clan'}
-    </button>
-  </div>
-
-  <div class="sec-title">Unirse por tag</div>
-  <div class="form-row">
-    <input class="input" placeholder="Tag del clan" bind:value={joinTag} disabled={busy === 'join'} />
-    <button class="btn-sm primary" disabled={busy === 'join' || !joinTag.trim()} on:click={join}>
-      {busy === 'join' ? '…' : 'Unirse'}
-    </button>
-  </div>
-{/if}
-
-{#if error}<div class="error-msg">{error}</div>{/if}
-{#if ok}<div class="ok-msg">{ok}</div>{/if}
-<button class="primary" on:click={load}>↻ Actualizar</button>
+</div>
 
 <style>
-  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 12px 0; }
-  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
-  .ok-msg { font-size: 12px; color: var(--success-ink); text-align: center; background: color-mix(in srgb, var(--success) 12%, var(--surface)); border: 1px solid var(--success); border-radius: var(--radius-2xl); padding: 8px; margin: 0; }
-  .sec-title { font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
-  .clan-card { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .clan-head { display: flex; justify-content: space-between; align-items: flex-start; }
-  .clan-head h4 { margin: 0; font-size: 15px; }
-  .clan-head .tag { color: var(--accent-ink); font-size: 12px; }
-  .clan-head small { color: var(--ink-muted); font-size: 11px; }
-  .clan-xp { font-size: 16px; font-weight: 700; color: var(--accent-ink); }
-  .clan-meta { font-size: 11px; color: var(--ink-muted); }
-  .list { display: flex; flex-direction: column; gap: 4px; }
-  .member { display: flex; flex-direction: column; gap: 6px; padding: 7px 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .member-row { display: flex; align-items: center; gap: 8px; }
-  .member-actions { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
-  .member-name { font-size: 13px; font-weight: 600; }
-  .member-handle { font-weight: 400; color: var(--ink-muted); }
-  .role-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: var(--radius-pills); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent-ink); }
-  .role-badge.role-creator { background: color-mix(in srgb, var(--warning, #f59e0b) 22%, var(--surface)); color: var(--ink); }
-  .role-badge.role-admin { background: color-mix(in srgb, var(--accent) 26%, var(--surface)); }
-  .role-badge.role-member { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--line-soft); }
-  .btn-sm.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line-soft); }
-  .clan-card .btn-sm.ghost { align-self: flex-start; margin-top: 4px; }
-  .edit-box { margin-top: 6px; }
-  .hint { display: block; margin-top: 10px; font-size: 11px; color: var(--ink-muted); text-align: center; }
-  .chat-del { margin-left: auto; border: none; background: none; color: var(--ink-muted); cursor: pointer; font-size: 10px; padding: 0 2px; }
-  .chat-del:hover { color: var(--danger-ink); }
-  .member-joined { margin-left: auto; font-size: 10px; color: var(--ink-muted); }
-  .p-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .p-dot.online { background: var(--success); }
-  .p-dot.offline { background: var(--ink-muted); opacity: 0.5; }
-  .form-row { display: flex; gap: 6px; }
-  .form-col { display: flex; flex-direction: column; gap: 6px; }
-  .input { width: 100%; padding: 8px 10px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface); font-size: 13px; color: var(--ink); }
-  .form-row .input { flex: 1; min-width: 0; width: auto; }
-  .input.desc { resize: none; }
-  .btn { padding: 9px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn.primary { background: var(--accent); color: var(--on-color); }
-  .btn-sm { padding: 5px 10px; border: none; border-radius: var(--radius-2xl); font-size: 12px; font-weight: 700; cursor: pointer; }
-  .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-sm.primary { background: var(--accent); color: var(--on-color); white-space: nowrap; }
-  .danger { margin-top: 10px; width: 100%; padding: 8px; border: 1px solid var(--danger); border-radius: var(--radius-2xl); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--danger-ink); font-weight: 700; cursor: pointer; }
-  .danger:disabled { opacity: 0.5; cursor: not-allowed; }
-  .primary { margin-top: 10px; padding: 8px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
-  .goal-target { flex: 0 0 70px; width: 70px; }
-  .goal { padding: 8px 10px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 4px; }
-  .goal.done { border-color: var(--success); }
-  .goal-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-  .goal-title { font-size: 13px; font-weight: 600; }
-  .goal-status { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: var(--radius-pills); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent-ink); }
-  .goal.done .goal-status { background: color-mix(in srgb, var(--success) 14%, var(--surface)); color: var(--success-ink); }
-  .goal-desc { font-size: 11px; color: var(--ink-muted); }
-  .goal-bar { height: 6px; border-radius: 999px; background: var(--surface); overflow: hidden; }
-  .goal-fill { height: 100%; background: var(--accent); transition: width .25s ease; }
-  .goal.done .goal-fill { background: var(--success); }
-  .goal-foot { display: flex; justify-content: space-between; align-items: center; }
-  .goal-num { font-size: 11px; color: var(--ink-muted); }
-  .goal-actions { display: flex; gap: 4px; }
-  .btn-sm.danger { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger-ink); }
-  .chat { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: var(--radius-2xl); background: var(--surface); border: 1px solid var(--line-soft); }
-  .chat-msg { display: flex; flex-direction: column; gap: 1px; }
-  .chat-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-  .chat-sender { font-size: 12px; font-weight: 700; color: var(--accent-ink); }
-  .chat-time { font-size: 10px; color: var(--ink-muted); }
-  .chat-body { font-size: 13px; color: var(--ink); word-break: break-word; }
+  .soc-skel.tall {
+    height: 110px;
+  }
+
+  /* Cabecera del Nexo */
+  .clan-hero {
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    border: var(--outline);
+    border-radius: var(--radius-cards);
+    background:
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--theme-social) 34%, transparent), transparent 62%),
+      var(--surface);
+    box-shadow: var(--shadow-pop);
+  }
+  .clan-hero__crest {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    border: 1.5px solid var(--color-carbon);
+    background: var(--theme-social);
+    color: var(--on-color);
+    box-shadow: 2px 3px 0 var(--color-carbon);
+    rotate: -4deg;
+  }
+  .clan-hero__info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+  }
+  .clan-hero__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .clan-name {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 19px;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+  .clan-tag {
+    padding: 1px 8px;
+    font-size: 11px;
+    background: var(--surface-2);
+  }
+  .clan-desc {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--ink-muted);
+  }
+  .clan-leader {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .handle {
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+  .clan-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .clan-stat {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .clan-hero__tools {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: -6px -6px 0 0;
+  }
+
+  /* Rangos */
+  .role-chip {
+    gap: 4px;
+  }
+  .role-chip.role-creator {
+    background: color-mix(in srgb, var(--color-sunburst) 55%, var(--surface));
+    border-color: var(--color-carbon);
+  }
+  .role-chip.role-admin {
+    background: color-mix(in srgb, var(--color-electric-blue) 30%, var(--surface));
+    border-color: var(--color-carbon);
+  }
+  .role-chip.role-moderator {
+    background: color-mix(in srgb, var(--color-lavender) 40%, var(--surface));
+  }
+  .role-chip.role-member {
+    color: var(--ink-muted);
+  }
+
+  .seg-n {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 0 6px;
+    border-radius: var(--radius-pills);
+    background: color-mix(in srgb, var(--theme-social) 40%, var(--surface));
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Miembros */
+  .member {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .member.me {
+    border-color: color-mix(in srgb, var(--theme-social) 70%, var(--line));
+  }
+  .member-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .member-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+    padding-top: 6px;
+    border-top: 1px dashed var(--line-soft);
+  }
+  .danger-ghost {
+    color: var(--danger-ink);
+  }
+  .danger-ghost:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+  }
+  .armed {
+    background: color-mix(in srgb, var(--danger) 18%, transparent);
+    border-color: var(--danger);
+    color: var(--danger-ink);
+  }
+  .danger-zone {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .danger-zone .soc-card__hint {
+    text-align: center;
+  }
+
+  /* Objetivos */
+  .goal {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-2xl);
+    background: var(--surface);
+  }
+  .goal.done {
+    border-color: var(--success);
+    background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  }
+  .goal-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .goal-title {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .goal.done .goal-status {
+    background: var(--success);
+    color: var(--on-color);
+    border-color: var(--color-carbon);
+  }
+  .goal-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .goal-meter {
+    flex: 1;
+    height: 8px;
+  }
+  .goal-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .soc-inline .goal-target {
+    flex: 0 0 72px;
+  }
+
+  /* Chat */
+  .chat-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .chat {
+    min-height: 160px;
+    max-height: 280px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-cards);
+    background: var(--surface-2);
+  }
+  .chat-empty {
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+  .msg {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    max-width: 88%;
+  }
+  .msg.mine {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+  .bubble {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    border: 1px solid var(--line-soft);
+    border-radius: 14px 14px 14px 4px;
+    background: var(--surface);
+    min-width: 0;
+  }
+  .msg.mine .bubble {
+    border-radius: 14px 14px 4px 14px;
+    background: color-mix(in srgb, var(--theme-social) 28%, var(--surface));
+    border-color: color-mix(in srgb, var(--theme-social) 60%, var(--line-soft));
+  }
+  .bubble-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--ink-muted);
+  }
+  .sender {
+    font-weight: 800;
+    color: var(--accent-ink);
+  }
+  .bubble-body {
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--ink);
+    word-break: break-word;
+    user-select: text;
+  }
+  .msg-del {
+    display: inline-grid;
+    place-items: center;
+    margin-left: auto;
+    padding: 1px;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--ink-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--dur-1);
+  }
+  .msg:hover .msg-del,
+  .msg-del:focus-visible {
+    opacity: 1;
+  }
+  .msg-del:hover {
+    color: var(--danger-ink);
+  }
+  .chat-input {
+    display: flex;
+    gap: 6px;
+  }
+  .chat-input .input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Formularios */
+  .desc {
+    resize: none;
+  }
+  .soc-inline.end {
+    justify-content: flex-end;
+  }
+  .tag-input {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+  }
+  .soc-inline .tag-input.short {
+    flex: 0 0 84px;
+  }
+  .no-clan {
+    border-style: solid;
+    background:
+      radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--theme-social) 22%, transparent), transparent 70%),
+      var(--surface);
+  }
 </style>
