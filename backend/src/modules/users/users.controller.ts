@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards, Param, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, Param, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -22,8 +22,24 @@ export class UsersController {
     return this.usersService.getMe(user.id);
   }
 
+  @Post('handle')
+  @HttpCode(HttpStatus.OK)
+  // Accesible sin verificar ni nickname: es justo el paso que desbloquea la cuenta.
+  @AllowUnverified()
+  @ApiOperation({
+    summary: 'Elegir el nickname (@handle) de una cuenta que aún no lo tiene',
+    description: 'Solo se puede hacer una vez: el nickname es inmutable. 409 si ya está en uso o si la cuenta ya tenía uno.',
+  })
+  @ApiBody({ schema: { type: 'object', required: ['handle'], properties: { handle: { type: 'string', example: 'jmbargueno' } } } })
+  @ApiResponse({ status: 200, description: 'Perfil actualizado (igual que GET /me)' })
+  @ApiResponse({ status: 400, description: 'Formato no válido o nickname reservado' })
+  @ApiResponse({ status: 409, description: 'Nickname en uso o ya fijado' })
+  setHandle(@CurrentUser() user: any, @Body() body: { handle: string }) {
+    return this.usersService.setHandle(user.id, body);
+  }
+
   @Patch()
-  @ApiOperation({ summary: 'Actualizar preferencias del usuario' })
+  @ApiOperation({ summary: 'Actualizar preferencias del usuario (el nickname no se puede cambiar)' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -85,7 +101,18 @@ export class UsersController {
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersAchievementsController {
-  constructor(private readonly achievementsService: AchievementsService) {}
+  constructor(
+    private readonly achievementsService: AchievementsService,
+    private readonly usersService: UsersService,
+  ) {}
+
+  @Get('by-handle/:handle')
+  @ApiOperation({ summary: 'Perfil público mínimo de un jugador por su nickname (con o sin "@")' })
+  @ApiResponse({ status: 200, description: '{ id, handle, displayName, title, accountXp }' })
+  @ApiResponse({ status: 404, description: 'No hay ningún jugador con ese nickname' })
+  getByHandle(@Param('handle') handle: string) {
+    return this.usersService.findByHandle(handle);
+  }
 
   @Get(':id/achievements')
   @ApiOperation({ summary: 'Logros públicos de un usuario (solo si ha activado la visibilidad)' })

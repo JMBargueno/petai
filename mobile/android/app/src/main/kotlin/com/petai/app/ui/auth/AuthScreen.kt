@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.petai.app.data.HandleAvailability
 
 /** Pantalla de acceso: iniciar sesión o crear cuenta. */
 @Composable
@@ -46,7 +47,8 @@ fun AuthScreen(
     busy: Boolean,
     inviteRequired: Boolean,
     onRegisterMode: () -> Unit,
-    onSubmit: (register: Boolean, email: String, password: String, name: String, inviteCode: String, onResult: (String?) -> Unit) -> Unit,
+    onCheckHandle: suspend (String) -> HandleAvailability,
+    onSubmit: (register: Boolean, email: String, password: String, name: String, inviteCode: String, handle: String, onResult: (String?) -> Unit) -> Unit,
     /** «¿Has olvidado tu contraseña?»: recibe el correo escrito para rellenar la recuperación. */
     onForgot: (email: String) -> Unit = {},
 ) {
@@ -55,12 +57,14 @@ fun AuthScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }
     var inviteCode by rememberSaveable { mutableStateOf("") }
+    var handle by rememberSaveable { mutableStateOf("") }
+    var handleValid by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     val focus = LocalFocusManager.current
 
     fun submit() {
         error = null
-        onSubmit(register, email, password, name, inviteCode) { error = it }
+        onSubmit(register, email, password, name, inviteCode, handle) { error = it }
     }
 
     // Al pasar a "Crear cuenta" se consulta si el registro exige invitación.
@@ -97,10 +101,19 @@ fun AuthScreen(
         Spacer(Modifier.height(16.dp))
 
         if (register) {
+            HandleField(
+                value = handle,
+                onValueChange = { handle = it },
+                onValidChange = { handleValid = it },
+                onCheck = onCheckHandle,
+                keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }),
+            )
+            Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it.take(50) },
                 label = { Text("Nombre (opcional)") },
+                supportingText = { Text("El nombre sí podrás cambiarlo.") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -166,7 +179,7 @@ fun AuthScreen(
         else PrimaryButton(
             if (register) "Crear cuenta" else "Entrar",
             onClick = { focus.clearFocus(); submit() },
-            enabled = email.isNotBlank() && password.isNotEmpty() && !(register && inviteRequired && inviteCode.isBlank()),
+            enabled = email.isNotBlank() && password.isNotEmpty() && !(register && inviteRequired && inviteCode.isBlank()) && !(register && !handleValid),
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = { register = !register; error = null }) {

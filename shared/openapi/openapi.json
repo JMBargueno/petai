@@ -137,12 +137,14 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "targetUserId": {
-                    "type": "string"
-                  },
-                  "email": {
+                  "handle": {
                     "type": "string",
-                    "description": "Alternativa a targetUserId: email del destinatario"
+                    "example": "jmbargueno",
+                    "description": "Nickname del destinatario (con o sin \"@\")"
+                  },
+                  "targetUserId": {
+                    "type": "string",
+                    "description": "Alternativa a handle: id del destinatario"
                   }
                 }
               }
@@ -159,7 +161,7 @@
             "bearer": []
           }
         ],
-        "summary": "Enviar una petición de amistad (por id o email del destinatario)",
+        "summary": "Enviar una petición de amistad (por @nickname o id del destinatario)",
         "tags": [
           "Presence & Co-op"
         ]
@@ -442,6 +444,38 @@
           }
         },
         "summary": "Configuración pública del registro (¿hace falta invitación?)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/handle-available": {
+      "get": {
+        "operationId": "AuthController_handleAvailable",
+        "parameters": [
+          {
+            "name": "handle",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "jmbargueno",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandleAvailabilityDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Comprueba si un nickname es válido y está libre (público, con límite por IP)",
         "tags": [
           "Auth"
         ]
@@ -896,7 +930,85 @@
             "bearer": []
           }
         ],
-        "summary": "Actualizar preferencias del usuario",
+        "summary": "Actualizar preferencias del usuario (el nickname no se puede cambiar)",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/me/handle": {
+      "post": {
+        "description": "Solo se puede hacer una vez: el nickname es inmutable. 409 si ya está en uso o si la cuenta ya tenía uno.",
+        "operationId": "UsersController_setHandle",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "handle"
+                ],
+                "properties": {
+                  "handle": {
+                    "type": "string",
+                    "example": "jmbargueno"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil actualizado (igual que GET /me)"
+          },
+          "400": {
+            "description": "Formato no válido o nickname reservado"
+          },
+          "409": {
+            "description": "Nickname en uso o ya fijado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir el nickname (@handle) de una cuenta que aún no lo tiene",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/users/by-handle/{handle}": {
+      "get": {
+        "operationId": "UsersAchievementsController_getByHandle",
+        "parameters": [
+          {
+            "name": "handle",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ id, handle, displayName, title, accountXp }"
+          },
+          "404": {
+            "description": "No hay ningún jugador con ese nickname"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perfil público mínimo de un jugador por su nickname (con o sin \"@\")",
         "tags": [
           "Users"
         ]
@@ -6659,13 +6771,14 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "handle": {
+                    "type": "string",
+                    "example": "jmbargueno",
+                    "description": "Nickname del invitado (con o sin \"@\")"
+                  },
                   "userId": {
                     "type": "string",
-                    "description": "ID del usuario invitado"
-                  },
-                  "email": {
-                    "type": "string",
-                    "description": "Alternativa a userId: email del invitado"
+                    "description": "Alternativa a handle: ID del usuario invitado"
                   }
                 }
               }
@@ -8780,6 +8893,29 @@
           "inviteRequired"
         ]
       },
+      "HandleAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": "string",
+            "example": "jmbargueno",
+            "description": "Nickname normalizado (minúsculas, sin \"@\")"
+          },
+          "available": {
+            "type": "boolean",
+            "example": true
+          },
+          "reason": {
+            "type": "string",
+            "example": "Ese nickname ya está en uso",
+            "description": "Motivo cuando no está disponible"
+          }
+        },
+        "required": [
+          "handle",
+          "available"
+        ]
+      },
       "RegisterDto": {
         "type": "object",
         "properties": {
@@ -8802,6 +8938,11 @@
             "type": "string",
             "example": "ABCD-EF23",
             "description": "Código de invitación (obligatorio si el registro es solo con invitación)"
+          },
+          "handle": {
+            "type": "string",
+            "example": "jmbargueno",
+            "description": "Nickname público, único e inmutable (3-20: a-z, 0-9, \"_\" y \".\"; empieza por letra; sin distinguir mayúsculas; se acepta con o sin \"@\"). Si falta, la cuenta tendrá que elegirlo con POST /me/handle."
           }
         },
         "required": [
@@ -8840,6 +8981,11 @@
               },
               "displayName": {
                 "type": "string"
+              },
+              "handle": {
+                "type": "string",
+                "nullable": true,
+                "description": "Nickname público e inmutable; null = debe elegirlo (POST /me/handle)"
               },
               "coins": {
                 "type": "number"

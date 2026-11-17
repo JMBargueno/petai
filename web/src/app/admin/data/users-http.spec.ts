@@ -6,6 +6,7 @@ const user = (i: number, role = 'user') => ({
   id: `id-${i}`,
   email: `u${i}@petai.local`,
   displayName: i % 2 ? null : `U${i}`,
+  handle: i % 2 ? null : `u${i}`,
   role,
   coins: 100,
   gems: 5,
@@ -33,6 +34,12 @@ describe('HttpUsersRepository', () => {
     expect(rows).toHaveLength(101);
     expect(api.request).toHaveBeenCalledTimes(2);
     expect(rows[1].displayName).toBe('');
+  });
+
+  it('muestra el nickname con su @ (vacío si la cuenta aún no lo tiene)', async () => {
+    const rows = await new HttpUsersRepository(fakeApi([[user(0), user(1)]], 2)).list();
+    expect(rows[0].handle).toBe('@u0');
+    expect(rows[1].handle).toBe('');
   });
 
   it('solo llama al servidor si cambia el rol', async () => {

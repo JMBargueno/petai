@@ -6,6 +6,7 @@ interface ApiUser {
   id: string;
   email: string;
   displayName: string | null;
+  handle?: string | null;
   role: AdminRole;
   coins: number;
   gems: number;
@@ -24,6 +25,8 @@ const PAGE_SIZE = 100;
 const toAdminUser = ({ emailVerifiedAt, ...u }: ApiUser): AdminUser => ({
   ...u,
   displayName: u.displayName ?? '',
+  // Sin nickname todavía: cadena vacía (la cuenta lo elegirá al entrar).
+  handle: u.handle ? `@${u.handle}` : '',
   emailVerified: emailVerifiedAt != null,
 });
 

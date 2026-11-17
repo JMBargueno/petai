@@ -12,6 +12,25 @@ export class RegisterDto {
 
   @ApiProperty({ example: 'ABCD-EF23', required: false, description: 'Código de invitación (obligatorio si el registro es solo con invitación)' })
   inviteCode?: string;
+
+  @ApiProperty({
+    example: 'jmbargueno',
+    required: false,
+    description:
+      'Nickname público, único e inmutable (3-20: a-z, 0-9, "_" y "."; empieza por letra; sin distinguir mayúsculas; se acepta con o sin "@"). Si falta, la cuenta tendrá que elegirlo con POST /me/handle.',
+  })
+  handle?: string;
+}
+
+export class HandleAvailabilityDto {
+  @ApiProperty({ example: 'jmbargueno', description: 'Nickname normalizado (minúsculas, sin "@")' })
+  handle: string;
+
+  @ApiProperty({ example: true })
+  available: boolean;
+
+  @ApiProperty({ required: false, example: 'Ese nickname ya está en uso', description: 'Motivo cuando no está disponible' })
+  reason?: string;
 }
 
 export class LoginDto {
@@ -65,6 +84,7 @@ export class AuthResponseDto {
       email: { type: 'string' },
       role: { type: 'string', enum: ['superadmin', 'admin', 'moderator', 'user'] },
       displayName: { type: 'string' },
+      handle: { type: 'string', nullable: true, description: 'Nickname público e inmutable; null = debe elegirlo (POST /me/handle)' },
       coins: { type: 'number' },
       gems: { type: 'number' },
       emailVerified: { type: 'boolean', description: 'false: la cuenta debe verificar el correo antes de usar las apps' },
@@ -75,6 +95,7 @@ export class AuthResponseDto {
     email: string;
     role: string;
     displayName?: string;
+    handle: string | null;
     coins: number;
     gems: number;
     emailVerified: boolean;

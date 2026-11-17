@@ -5,6 +5,7 @@
    *  gestión solo se muestran a quien puede hacerlas (el backend las valida igualmente). */
   import SocialAvatar from './SocialAvatar.svelte';
   import { onMount } from 'svelte';
+  import { handleFormatError, normalizeHandle } from '../lib/handle';
   import {
     Shield, Crown, Eye, Users, Target, MessageCircle, Pencil, Plus, Trash2, Send, RefreshCw, UserPlus,
     AlertCircle, CircleCheck, LogOut, Sparkles, ChevronUp, ChevronDown, X,
@@ -188,11 +189,17 @@
     busy = 'invite';
     error = '';
     ok = '';
-    const t = inviteTarget.trim();
+    // Se invita por @nickname (con o sin la @); el email ya no identifica a nadie.
+    const handle = normalizeHandle(inviteTarget);
+    const formatError = handleFormatError(handle);
+    if (formatError) {
+      error = `Ese no es un nickname válido: ${formatError.toLowerCase()}`;
+      busy = '';
+      return;
+    }
     try {
-      // Si se parece a un email se manda por email; si no, se interpreta como id de jugador
-      await api.inviteToClan(clan.id, t.includes('@') ? { email: t } : { userId: t });
-      ok = `Invitación enviada a ${t}.`;
+      await api.inviteToClan(clan.id, { handle });
+      ok = `Invitación enviada a @${handle}.`;
       inviteTarget = '';
       await load();
     } catch (e: any) {
@@ -405,6 +412,7 @@
           <span class="chip clan-tag">[{clan.tag}]</span>
         </div>
         <p class="clan-desc">{clan.description || 'Sin descripción'}</p>
+        <span class="clan-leader">Forjador: {clan.leader?.displayName ?? clan.leaderId}{clan.leader?.handle ? ` · @${clan.leader.handle}` : ''}</span>
         <div class="clan-stats">
           <span class="chip clan-stat"><Sparkles size={12} /> {(clan.xp ?? 0).toLocaleString()} XP</span>
           <span class="chip clan-stat" title="Hebras"><Users size={12} /> {clan.memberCount}</span>
@@ -459,7 +467,7 @@
             <div class="member-main">
               <SocialAvatar name={m.displayName} presence={m.isOnline ? 'online' : 'offline'} />
               <div class="soc-row__body">
-                <span class="soc-row__title">{m.displayName}{m.userId === meId ? ' (tú)' : ''}</span>
+                <span class="soc-row__title">{m.displayName}{#if m.handle} <span class="handle">@{m.handle}</span>{/if}{m.userId === meId ? ' (tú)' : ''}</span>
                 <span class="soc-row__sub">Desde {new Date(m.joinedAt).toLocaleDateString()}</span>
               </div>
               <span class="chip soc-chip role-chip role-{role}">
@@ -499,7 +507,7 @@
         <form class="soc-card" on:submit|preventDefault={invite}>
           <span class="soc-card__title"><UserPlus size={15} /> Invitar al Nexo</span>
           <div class="soc-inline">
-            <input class="input" placeholder="Email o ID de jugador" aria-label="Email o ID de jugador" bind:value={inviteTarget} disabled={busy === 'invite'} />
+            <input class="input" placeholder="@nickname del jugador" aria-label="Nickname del jugador" autocapitalize="none" spellcheck="false" bind:value={inviteTarget} disabled={busy === 'invite'} />
             <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'invite' || !inviteTarget.trim()}>
               {busy === 'invite' ? 'Enviando…' : 'Invitar'}
             </button>
@@ -710,6 +718,15 @@
     margin: 0;
     font-size: 12px;
     line-height: 1.35;
+    color: var(--ink-muted);
+  }
+  .clan-leader {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .handle {
+    font-weight: 500;
     color: var(--ink-muted);
   }
   .clan-stats {

@@ -52,6 +52,9 @@ export class AuthThrottleService {
       registerWindowMs: 60 * MINUTE,
       refreshPerIp: this.num('AUTH_REFRESH_MAX_PER_MINUTE', 60),
       refreshWindowMs: MINUTE,
+      // Comprobación pública de disponibilidad de nickname: frena la enumeración a lo bruto.
+      handleCheckPerIp: this.num('AUTH_HANDLE_CHECK_MAX_PER_MINUTE', 60),
+      handleCheckWindowMs: MINUTE,
     };
   }
 

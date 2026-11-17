@@ -35,6 +35,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | recomendada | Transporte de correo (recuperación de contraseña y formulario de contacto). Sin `SMTP_HOST` los correos solo se escriben en el log. |
 | `PUBLIC_WEB_URL`, `PUBLIC_API_URL` | sí con correo | URLs públicas de la web (`https://pockai.world`: enlace de verificación y logo de la plantilla) y de la API (`https://game-api.pockai.world`: enlace de baja y `List-Unsubscribe`). |
 | `EMAIL_VERIFICATION_REQUIRED` | no | `true` bloquea con 403 `EMAIL_NOT_VERIFIED` a las cuentas sin verificar (escritorio y Android muestran la pantalla de verificación). Por defecto `false`; ver «Verificación de correo» en §11 antes de activarlo. |
+| `HANDLE_REQUIRED` | no | `true` bloquea con 403 `HANDLE_REQUIRED` a las cuentas sin nickname hasta que lo elijan (escritorio y Android muestran «Elige tu nickname»). Por defecto `false`; ver «Nickname» en §11. |
 | `EMAIL_VERIFICATION_TTL_MINUTES`, `MAIL_UNSUBSCRIBE_SECRET`, `EMAIL_CAMPAIGN_RATE_PER_SECOND` | no | Validez del código/enlace (1440 min), secreto de los enlaces de baja (por defecto derivado de `JWT_ACCESS_SECRET`) y ritmo de la cola de envíos del panel (5 correos/s). |
 | `MAIL_FROM`, `MAIL_REPLY_TO`, `CONTACT_TO` | no | Remitente de sistema (`Pockai <noreply@pockai.world>`, debe ser `SMTP_USER` o un alias suyo), a dónde van las respuestas de los usuarios (`contact@pockai.world`) y buzón que recibe el formulario de contacto (`contact@pockai.world`). |
 | `GITHUB_RELEASES_TOKEN` | recomendada | Token solo-lectura de GitHub para consultar las Releases del escritorio (auto-update). Sin él `GET /v1/desktop/download/*` devuelve 404 «Instalador no disponible». Un PAT con scope `repo` o un fine-grained con lectura de Releases es suficiente. |
@@ -305,6 +306,15 @@ Despliegue real (15-11-2026, migrado a `pockai.world` el 16-11) del stack sobre 
      como un error genérico.
   Soporte: en el panel, «Usuarios → Editar → Correo verificado» marca una cuenta a mano. Recuperar
   la contraseña también verifica el correo (el código llegó a ese buzón).
+- **Nickname (@handle, spec-35)**. La migración `20261117000000_user_handle` añade `User.handle`
+  (único, con CHECK de formato y un trigger que impide cambiarlo) y deja a las cuentas existentes sin
+  nickname: lo eligen al entrar. Las funciones sociales ya no buscan por email. Orden de despliegue:
+  1. Backend + web con `HANDLE_REQUIRED=false`. Las apps antiguas siguen funcionando, salvo añadir
+     amigos o invitar a clanes por email (400 pidiendo actualizar).
+  2. Publicar el escritorio (updater) y Android con el campo de nickname y la pantalla «Elige tu nickname».
+  3. Cuando la mayoría haya actualizado: `HANDLE_REQUIRED=true` en el `.env` y
+     `docker compose -f docker-compose.prod.yml up -d backend`.
+  El nickname no se puede cambiar ni desde el panel (lo impide la base de datos).
 - **Envíos desde el panel**: sección «Correos» (permiso `email:send`: admin y superadmin). HTML libre
   dentro de la plantilla de marca, a usuarios concretos, a una lista de correos o a un segmento. Nunca
   se envía a quien se dio de baja (`User.emailOptOutAt`), en ningún modo; los correos a cuentas llevan

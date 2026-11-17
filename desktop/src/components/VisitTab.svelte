@@ -163,6 +163,7 @@
           >
             <SocialAvatar name={f.otherDisplayName} size={44} selected={selected === f.otherUserId} />
             <span class="pick-name">{f.otherDisplayName}</span>
+            {#if f.otherHandle}<span class="pick-handle">@{f.otherHandle}</span>{/if}
             {#if visiting === f.otherUserId}<span class="pick-live">En visita</span>{/if}
           </button>
         {/each}
@@ -272,6 +273,15 @@
     max-width: 100%;
     font-size: 11px;
     font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pick-handle {
+    max-width: 100%;
+    margin-top: -5px;
+    font-size: 10px;
+    color: var(--ink-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

@@ -1,8 +1,9 @@
 <script lang="ts">
-  /** Amigos (feature 021): lista con presencia, pendientes a aceptar/rechazar y petición por email. */
+  /** Amigos (feature 021): lista con presencia, pendientes a aceptar/rechazar y petición por @nickname. */
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type CoopFriend, type PresenceInfo } from '../lib/api';
   import { pendingFriends, acceptedFriends, presenceState, friendPetLabel, type PresenceState } from '../lib/visitors';
+  import { handleFormatError, normalizeHandle } from '../lib/handle';
   import SocialAvatar from './SocialAvatar.svelte';
   import { UserPlus, Check, X, Home, RefreshCw, Users, AlertCircle, CircleCheck, Send } from 'lucide-svelte';
 
@@ -15,7 +16,7 @@
   let ok = '';
   let loading = true;
   let busy = '';
-  let requestEmail = '';
+  let requestHandle = '';
 
   $: pending = pendingFriends(friends);
   $: incoming = pending.filter((f) => f.direction === 'incoming');
@@ -87,15 +88,22 @@
   }
 
   async function requestFriend() {
-    const email = requestEmail.trim();
-    if (!email) return;
+    // Se pide amistad por @nickname (con o sin la @); el email ya no identifica a nadie.
+    const handle = normalizeHandle(requestHandle);
+    if (!handle) return;
+    const formatError = handleFormatError(handle);
+    if (formatError) {
+      error = `Ese no es un nickname válido: ${formatError.toLowerCase()}`;
+      ok = '';
+      return;
+    }
     busy = 'request';
     error = '';
     ok = '';
     try {
-      await api.requestCoopFriend({ email });
-      ok = `Petición de amistad enviada a ${email}.`;
-      requestEmail = '';
+      await api.requestCoopFriend({ handle });
+      ok = `Petición de amistad enviada a @${handle}.`;
+      requestHandle = '';
       await load();
     } catch (e: any) {
       error = e.message;
@@ -114,13 +122,15 @@
     <div class="soc-inline">
       <input
         class="input"
-        type="email"
-        placeholder="Email de tu amigo"
-        aria-label="Email de tu amigo"
-        bind:value={requestEmail}
+        type="text"
+        autocapitalize="none"
+        spellcheck="false"
+        placeholder="@nickname de tu amigo"
+        aria-label="Nickname de tu amigo"
+        bind:value={requestHandle}
         disabled={busy === 'request'}
       />
-      <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'request' || !requestEmail.trim()}>
+      <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'request' || !requestHandle.trim()}>
         <Send size={14} /> {busy === 'request' ? 'Enviando…' : 'Pedir'}
       </button>
     </div>
@@ -147,7 +157,7 @@
           <div class="soc-row request">
             <SocialAvatar name={f.otherDisplayName} presence={presence[f.otherUserId] ?? 'unknown'} />
             <div class="soc-row__body">
-              <span class="soc-row__title">{f.otherDisplayName}</span>
+              <span class="soc-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
               <span class="soc-row__sub">Quiere ser tu amigo · {friendPetLabel(f)}</span>
             </div>
             <div class="soc-row__actions">
@@ -164,7 +174,7 @@
           <div class="soc-row">
             <SocialAvatar name={f.otherDisplayName} />
             <div class="soc-row__body">
-              <span class="soc-row__title">{f.otherDisplayName}</span>
+              <span class="soc-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
               <span class="soc-row__sub">Esperando su respuesta</span>
             </div>
             <span class="chip soc-chip soc-chip--pending">Pendiente</span>
@@ -191,7 +201,7 @@
         <div class="soc-row">
           <SocialAvatar name={f.otherDisplayName} presence={st} />
           <div class="soc-row__body">
-            <span class="soc-row__title">{f.otherDisplayName}</span>
+            <span class="soc-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
             <span class="soc-row__sub">{friendPetLabel(f)}</span>
           </div>
           {#if st === 'online'}<span class="chip soc-chip soc-chip--online">En línea</span>{/if}
@@ -208,7 +218,7 @@
         <div class="soc-empty">
           <span class="soc-empty__icon"><Users size={22} /></span>
           <strong>Aún no tienes amigos</strong>
-          <p>Escribe arriba el email de alguien para enviarle una petición.</p>
+          <p>Escribe arriba el @nickname de alguien para enviarle una petición.</p>
         </div>
       {/each}
     </section>
@@ -216,6 +226,10 @@
 </div>
 
 <style>
+  .handle {
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
   .request {
     border-color: color-mix(in srgb, var(--color-sunburst) 70%, var(--line));
     background: color-mix(in srgb, var(--color-sunburst) 10%, var(--surface));

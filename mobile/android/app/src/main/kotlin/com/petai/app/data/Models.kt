@@ -13,7 +13,19 @@ data class UserDto(
     val gems: Int = 0,
     /** false: hay que verificar el correo antes de usar la app. Por defecto true (backends antiguos). */
     val emailVerified: Boolean = true,
-)
+    /**
+     * Nickname público e inmutable. `null` (explícito en la respuesta) = la cuenta debe elegirlo.
+     * Si el campo no llega (backend antiguo) queda en "" y no se pide nada.
+     */
+    val handle: String? = "",
+) {
+    /** La cuenta aún no ha elegido nickname: la app muestra la pantalla "Elige tu nickname". */
+    val needsHandle: Boolean get() = handle == null
+}
+
+/** Respuesta de GET /auth/handle-available. */
+@Serializable
+data class HandleAvailability(val handle: String = "", val available: Boolean = false, val reason: String? = null)
 
 @Serializable
 data class AuthResponse(val accessToken: String, val refreshToken: String, val user: UserDto? = null)
@@ -125,8 +137,12 @@ class ApiException(val status: Int, override val message: String, val code: Stri
     /** La cuenta no tiene el correo verificado: la app debe mostrar la pantalla de verificación. */
     val isEmailUnverified: Boolean get() = status == 403 && code == EMAIL_NOT_VERIFIED
 
+    /** La cuenta aún no tiene nickname (HANDLE_REQUIRED=true en el servidor): hay que elegirlo. */
+    val isHandleRequired: Boolean get() = status == 403 && code == HANDLE_REQUIRED
+
     companion object {
         const val EMAIL_NOT_VERIFIED = "EMAIL_NOT_VERIFIED"
+        const val HANDLE_REQUIRED = "HANDLE_REQUIRED"
     }
 }
 
@@ -137,6 +153,7 @@ class ApiException(val status: Int, override val message: String, val code: Stri
 data class ClanMember(
     val userId: String = "",
     val displayName: String = "",
+    val handle: String? = null,
     val role: String = "member", // creator | admin | moderator | member (ver ClanRank)
     val isOnline: Boolean = false,
     val joinedAt: String = "",
@@ -165,7 +182,7 @@ enum class ClanRank(val wire: String, val rank: Int, val label: String) {
 }
 
 @Serializable
-data class ClanLeader(val userId: String = "", val displayName: String = "")
+data class ClanLeader(val userId: String = "", val displayName: String = "", val handle: String? = null)
 
 /** Resumen del clan: datos del clan + roster con presencia. Devuelto por GET /clans y por las mutaciones. */
 @Serializable
@@ -233,6 +250,7 @@ data class PetIdentity(
 data class HabitatVisitor(
     val visitorId: String = "",
     val visitorName: String = "",
+    val visitorHandle: String? = null,
     val pet: PetIdentity = PetIdentity(),
     val startedAt: String = "",
 )

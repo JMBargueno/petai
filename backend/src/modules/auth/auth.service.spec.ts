@@ -37,7 +37,7 @@ function buildService(userId: string, email: string, displayName: string, opts: 
   };
 
   const throttleMock = {
-    limits: { registerPerIp: 10, registerWindowMs: 60000, loginFailsPerAccount: 10, loginWindowMs: 900000, loginFailsPerIp: 100, loginFailsPerAccountGlobal: 50, refreshPerIp: 60, refreshWindowMs: 60000 },
+    limits: { registerPerIp: 10, registerWindowMs: 60000, loginFailsPerAccount: 10, loginWindowMs: 900000, loginFailsPerIp: 100, loginFailsPerAccountGlobal: 50, refreshPerIp: 60, refreshWindowMs: 60000, handleCheckPerIp: 60, handleCheckWindowMs: 60000 },
     consume: jest.fn(async () => undefined),
     assertBelow: jest.fn(async () => undefined),
     add: jest.fn(async () => undefined),
@@ -127,5 +127,59 @@ describe('AuthService — registro con invitación', () => {
     invitesMock.redeem.mockRejectedValueOnce(new ForbiddenException('Código de invitación no válido o caducado') as never);
     await expect(service.register({ ...body, inviteCode: 'MALO-MALO' }, '127.0.0.1')).rejects.toMatchObject({ status: 403 });
     expect(prismaMock.egg.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('AuthService — nickname en el registro', () => {
+  const body = { email: 'nuevo@petai.local', password: 'ContrasenaSegura123!' };
+
+  it('guarda el nickname normalizado (sin @ y en minúsculas)', async () => {
+    const { service, prismaMock } = buildService('user-20', body.email, 'Nuevo');
+    await service.register({ ...body, handle: '@JMBargueno' }, '127.0.0.1');
+    expect(prismaMock.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ handle: 'jmbargueno' }) }),
+    );
+  });
+
+  it('sin nickname (apps antiguas) crea la cuenta con handle null', async () => {
+    const { service, prismaMock } = buildService('user-21', body.email, 'Nuevo');
+    await service.register(body, '127.0.0.1');
+    expect(prismaMock.user.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ handle: null }) }));
+  });
+
+  it('400 con un nickname reservado o mal formado', async () => {
+    const { service } = buildService('user-22', body.email, 'Nuevo');
+    await expect(service.register({ ...body, handle: 'admin' }, '127.0.0.1')).rejects.toMatchObject({ status: 400 });
+    await expect(service.register({ ...body, handle: '1abc' }, '127.0.0.1')).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('409 "nickname en uso" si ya existe o si la carrera choca con el índice único', async () => {
+    const { service, prismaMock } = buildService('user-23', body.email, 'Nuevo');
+    prismaMock.user.findUnique.mockImplementation(async (q: any) => (q?.where?.handle ? { id: 'otro' } : null));
+    await expect(service.register({ ...body, handle: 'dada' }, '127.0.0.1')).rejects.toMatchObject({
+      status: 409,
+      message: 'Ese nickname ya está en uso',
+    });
+
+    prismaMock.user.findUnique.mockImplementation(async () => null);
+    prismaMock.user.create.mockRejectedValueOnce({ code: 'P2002', meta: { target: ['handle'] } });
+    await expect(service.register({ ...body, handle: 'dada' }, '127.0.0.1')).rejects.toMatchObject({
+      status: 409,
+      message: 'Ese nickname ya está en uso',
+    });
+
+    prismaMock.user.create.mockRejectedValueOnce({ code: 'P2002', meta: { target: ['email'] } });
+    await expect(service.register({ ...body, handle: 'dada' }, '127.0.0.1')).rejects.toMatchObject({
+      status: 409,
+      message: 'El correo electrónico ya está registrado',
+    });
+  });
+
+  it('handleAvailability: libre, en uso o con el motivo del formato', async () => {
+    const { service, prismaMock } = buildService('user-24', body.email, 'Nuevo');
+    await expect(service.handleAvailability('@Libre', '1.1.1.1')).resolves.toEqual({ handle: 'libre', available: true });
+    prismaMock.user.findUnique.mockImplementation(async () => ({ id: 'x' }));
+    await expect(service.handleAvailability('ocupado', '1.1.1.1')).resolves.toMatchObject({ available: false, reason: 'Ese nickname ya está en uso' });
+    await expect(service.handleAvailability('ab', '1.1.1.1')).resolves.toMatchObject({ available: false, reason: expect.stringContaining('al menos 3') });
   });
 });

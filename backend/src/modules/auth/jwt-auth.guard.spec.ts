@@ -45,3 +45,50 @@ describe('JwtAuthGuard (verificación de correo)', () => {
     await expect(guard(true).canActivate(context(undefined))).resolves.toBe(false);
   });
 });
+
+describe('JwtAuthGuard (nickname obligatorio)', () => {
+  // El espía se crea aquí (no al definir el describe): el bloque anterior restaura el suyo en afterAll.
+  let parentCanActivate: jest.SpyInstance;
+  beforeAll(() => {
+    parentCanActivate = jest.spyOn(AuthGuard('jwt').prototype, 'canActivate');
+  });
+  const context = (user: unknown, allow = false) => {
+    const handler = () => undefined;
+    if (allow) Reflect.defineMetadata(ALLOW_UNVERIFIED_KEY, true, handler);
+    return {
+      switchToHttp: () => ({ getRequest: () => ({ user }) }),
+      getHandler: () => handler,
+      getClass: () => class {},
+    } as any;
+  };
+  const guard = (flags: Record<string, string>) => new JwtAuthGuard(new Reflector(), { get: (k: string) => flags[k] } as any);
+  const verified = new Date();
+
+  beforeEach(() => parentCanActivate.mockResolvedValue(true));
+  afterAll(() => parentCanActivate.mockRestore());
+
+  it('con HANDLE_REQUIRED desactivado deja pasar a cuentas sin nickname', async () => {
+    await expect(guard({}).canActivate(context({ emailVerifiedAt: verified, handle: null }))).resolves.toBe(true);
+  });
+
+  it('con HANDLE_REQUIRED=true bloquea con 403 HANDLE_REQUIRED', async () => {
+    const err = await guard({ HANDLE_REQUIRED: 'true' })
+      .canActivate(context({ emailVerifiedAt: verified, handle: null }))
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(err.getResponse()).toMatchObject({ statusCode: 403, code: 'HANDLE_REQUIRED' });
+  });
+
+  it('deja pasar a cuentas con nickname y respeta @AllowUnverified', async () => {
+    const g = guard({ HANDLE_REQUIRED: 'true' });
+    await expect(g.canActivate(context({ emailVerifiedAt: verified, handle: 'dada' }))).resolves.toBe(true);
+    await expect(g.canActivate(context({ emailVerifiedAt: verified, handle: null }, true))).resolves.toBe(true);
+  });
+
+  it('con ambos flags, primero se pide verificar el correo', async () => {
+    const err = await guard({ HANDLE_REQUIRED: 'true', EMAIL_VERIFICATION_REQUIRED: 'true' })
+      .canActivate(context({ emailVerifiedAt: null, handle: null }))
+      .catch((e) => e);
+    expect(err.getResponse()).toMatchObject({ code: 'EMAIL_NOT_VERIFIED' });
+  });
+});

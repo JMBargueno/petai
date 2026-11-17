@@ -51,6 +51,9 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
         PockaiCard(Modifier.fillMaxWidth()) {
             Column {
                 Text(user?.displayName ?: "Entrenador", style = MaterialTheme.typography.titleLarge)
+                user?.handle?.takeIf { it.isNotEmpty() }?.let {
+                    Text("@$it · no se puede cambiar", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Text(user?.email.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
                 Row { CoinAmount(user?.coins ?: 0); Spacer(Modifier.padding(horizontal = 8.dp)); GemAmount(user?.gems ?: 0) }

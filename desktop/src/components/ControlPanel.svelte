@@ -27,6 +27,7 @@ import VisitTab from './VisitTab.svelte';
   import PockaiMark from './PockaiMark.svelte';
   import { updateState, updateLock, hasUpdate } from '../lib/updater';
   import UpdateLockPanel from './UpdateLockPanel.svelte';
+  import HandleField from './HandleField.svelte';
   import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, Coins, Gem, X, Drumstick, Sparkles, Zap, Droplets, Moon, Sun, Egg, LogOut, AlertCircle, Home, ExternalLink, Users } from 'lucide-svelte';
 
   export let user: any = null;
@@ -141,7 +142,40 @@ import VisitTab from './VisitTab.svelte';
   let authPassword = '';
   let authDisplayName = '';
   let authInviteCode = '';
+  let authHandle = '';
+  let authHandleValid = false;
   let inviteRequired = false;
+
+  // ---- Elegir nickname (cuentas sin él: anteriores al nickname o creadas desde apps antiguas) ----
+  let chooseHandle = '';
+  let chooseHandleValid = false;
+  let chooseHandleConfirm = false;
+  let chooseHandleError = '';
+
+  async function handleChooseHandle() {
+    chooseHandleError = '';
+    if (!chooseHandleValid) {
+      chooseHandleError = 'Elige un nickname válido y libre';
+      return;
+    }
+    // Es inmutable: se pide una confirmación explícita antes de guardarlo.
+    if (!chooseHandleConfirm) {
+      chooseHandleConfirm = true;
+      return;
+    }
+    isLoading = true;
+    try {
+      await api.setMyHandle(chooseHandle);
+      dispatch('authSuccess');
+    } catch (err: any) {
+      chooseHandleError = err?.message || 'No se pudo guardar el nickname';
+      chooseHandleConfirm = false;
+    } finally {
+      isLoading = false;
+    }
+  }
+  // Si cambia el texto tras pedir confirmación, se vuelve a pedir.
+  $: chooseHandle, (chooseHandleConfirm = false);
   let authError = '';
   let isLoading = false;
 
@@ -346,7 +380,10 @@ import VisitTab from './VisitTab.svelte';
         if (inviteRequired && !authInviteCode.trim()) {
           throw new Error('El registro requiere un código de invitación');
         }
-        await api.register(authEmail, authPassword, authDisplayName || undefined, authInviteCode || undefined);
+        if (!authHandleValid) {
+          throw new Error('Elige un nickname válido y libre');
+        }
+        await api.register(authEmail, authPassword, authDisplayName || undefined, authInviteCode || undefined, authHandle);
       }
       dispatch('authSuccess');
     } catch (err: any) {
@@ -627,9 +664,11 @@ import VisitTab from './VisitTab.svelte';
         </div>
 
         {#if !isLoginMode}
+          <HandleField id="auth-handle" bind:value={authHandle} bind:valid={authHandleValid} />
           <div class="form-group">
             <label for="auth-name">Nombre de jugador</label>
             <input class="input" id="auth-name" type="text" bind:value={authDisplayName} placeholder="Red" />
+            <small class="subtitle">El nombre sí podrás cambiarlo cuando quieras.</small>
           </div>
         {/if}
 
@@ -721,6 +760,33 @@ import VisitTab from './VisitTab.svelte';
         <button type="button" class="auth-toggle" on:click={handleResendVerification} disabled={resendIn > 0}>
           {#if resendIn > 0}Puedes reenviarlo en {resendIn} s{:else}¿No te ha llegado? <strong>Reenviar correo</strong>{/if}
         </button>
+        <button type="button" class="auth-toggle" on:click={() => { api.logout(); dispatch('logout'); }}>
+          Usar otra cuenta
+        </button>
+      </div>
+    {:else if user.handle === null}
+      <!-- Cuenta sin nickname: hay que elegirlo antes de jugar (es único y no se podrá cambiar) -->
+      <div class="auth-section">
+        <div class="auth-hero">
+          <div class="auth-halo"><PockaiMark size={72} /></div>
+          <span class="eyebrow">Un último paso</span>
+          <h3 class="display auth-title">Elige tu nickname</h3>
+          <p class="subtitle">Es tu @ en Pockai: con él te añadirán como amigo, te invitarán a clanes y te mandarán pockais de visita. <strong>Es único y no se podrá cambiar.</strong></p>
+        </div>
+
+        <form class="card auth-form" on:submit|preventDefault={handleChooseHandle}>
+          {#if chooseHandleError}
+            <div class="error-msg auth-error" role="alert"><AlertCircle size={16} /> <span>{chooseHandleError}</span></div>
+          {/if}
+          <HandleField id="choose-handle" bind:value={chooseHandle} bind:valid={chooseHandleValid} />
+          {#if chooseHandleConfirm}
+            <p class="subtitle verify-notice" role="status">¿Seguro que quieres ser <strong>@{chooseHandle}</strong>? No podrás cambiarlo nunca.</p>
+          {/if}
+          <button type="submit" class="btn btn--primary block auth-submit" disabled={isLoading || !chooseHandleValid}>
+            {isLoading ? 'Guardando…' : chooseHandleConfirm ? `Sí, quiero ser @${chooseHandle}` : 'Continuar'}
+          </button>
+        </form>
+
         <button type="button" class="auth-toggle" on:click={() => { api.logout(); dispatch('logout'); }}>
           Usar otra cuenta
         </button>
@@ -1018,6 +1084,7 @@ import VisitTab from './VisitTab.svelte';
         {:else if dest === 'settings' && sub === 'account'}
           <div class="card account-section">
             <p><strong>Jugador:</strong> {user.displayName || user.email}</p>
+            {#if user.handle}<p><strong>Nickname:</strong> @{user.handle} <small class="subtitle">(no se puede cambiar)</small></p>{/if}
             <p><strong>Monedas:</strong> <Coins size={14} /> {user.coins}</p>
             <p><strong>Gemas:</strong> <Gem size={14} /> {user.gems}</p>
             <button class="btn btn--danger" on:click={() => { api.logout(); dispatch('logout'); }}>

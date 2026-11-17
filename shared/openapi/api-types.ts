@@ -65,7 +65,7 @@ export interface paths {
         /** Mis relaciones de amistad (amigos aceptados + peticiones) */
         get: operations["CoopFriendsController_list"];
         put?: never;
-        /** Enviar una petición de amistad (por id o email del destinatario) */
+        /** Enviar una petición de amistad (por @nickname o id del destinatario) */
         post: operations["CoopFriendsController_request"];
         delete?: never;
         options?: never;
@@ -235,6 +235,23 @@ export interface paths {
         };
         /** Configuración pública del registro (¿hace falta invitación?) */
         get: operations["AuthController_registrationConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/handle-available": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comprueba si un nickname es válido y está libre (público, con límite por IP) */
+        get: operations["AuthController_handleAvailable"];
         put?: never;
         post?: never;
         delete?: never;
@@ -495,8 +512,45 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Actualizar preferencias del usuario */
+        /** Actualizar preferencias del usuario (el nickname no se puede cambiar) */
         patch: operations["UsersController_updateMe"];
+        trace?: never;
+    };
+    "/v1/me/handle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Elegir el nickname (@handle) de una cuenta que aún no lo tiene
+         * @description Solo se puede hacer una vez: el nickname es inmutable. 409 si ya está en uso o si la cuenta ya tenía uno.
+         */
+        post: operations["UsersController_setHandle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/by-handle/{handle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Perfil público mínimo de un jugador por su nickname (con o sin "@") */
+        get: operations["UsersAchievementsController_getByHandle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/users/{id}/achievements": {
@@ -4027,6 +4081,20 @@ export interface components {
             /** @description Si es true, el registro exige un código de invitación */
             inviteRequired: boolean;
         };
+        HandleAvailabilityDto: {
+            /**
+             * @description Nickname normalizado (minúsculas, sin "@")
+             * @example jmbargueno
+             */
+            handle: string;
+            /** @example true */
+            available: boolean;
+            /**
+             * @description Motivo cuando no está disponible
+             * @example Ese nickname ya está en uso
+             */
+            reason?: string;
+        };
         RegisterDto: {
             /**
              * @description Correo electrónico del usuario
@@ -4048,6 +4116,11 @@ export interface components {
              * @example ABCD-EF23
              */
             inviteCode?: string;
+            /**
+             * @description Nickname público, único e inmutable (3-20: a-z, 0-9, "_" y "."; empieza por letra; sin distinguir mayúsculas; se acepta con o sin "@"). Si falta, la cuenta tendrá que elegirlo con POST /me/handle.
+             * @example jmbargueno
+             */
+            handle?: string;
         };
         AuthResponseDto: {
             /** @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... */
@@ -4060,6 +4133,8 @@ export interface components {
                 /** @enum {string} */
                 role?: "superadmin" | "admin" | "moderator" | "user";
                 displayName?: string;
+                /** @description Nickname público e inmutable; null = debe elegirlo (POST /me/handle) */
+                handle?: string | null;
                 coins?: number;
                 gems?: number;
                 /** @description false: la cuenta debe verificar el correo antes de usar las apps */
@@ -5116,9 +5191,13 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /**
+                     * @description Nickname del destinatario (con o sin "@")
+                     * @example jmbargueno
+                     */
+                    handle?: string;
+                    /** @description Alternativa a handle: id del destinatario */
                     targetUserId?: string;
-                    /** @description Alternativa a targetUserId: email del destinatario */
-                    email?: string;
                 };
             };
         };
@@ -5369,6 +5448,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RegistrationConfigDto"];
+                };
+            };
+        };
+    };
+    AuthController_handleAvailable: {
+        parameters: {
+            query: {
+                handle: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandleAvailabilityDto"];
                 };
             };
         };
@@ -5706,6 +5806,72 @@ export interface operations {
         };
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersController_setHandle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @example jmbargueno */
+                    handle: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Perfil actualizado (igual que GET /me) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Formato no válido o nickname reservado */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nickname en uso o ya fijado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersAchievementsController_getByHandle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { id, handle, displayName, title, accountXp } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay ningún jugador con ese nickname */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9848,10 +10014,13 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description ID del usuario invitado */
+                    /**
+                     * @description Nickname del invitado (con o sin "@")
+                     * @example jmbargueno
+                     */
+                    handle?: string;
+                    /** @description Alternativa a handle: ID del usuario invitado */
                     userId?: string;
-                    /** @description Alternativa a userId: email del invitado */
-                    email?: string;
                 };
             };
         };

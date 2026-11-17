@@ -108,11 +108,14 @@ async function main() {
       passwordHash,
       coins: 500,
       gems: 25,
+      // Nickname fijo: si ya lo tiene, reescribir el mismo valor no choca con el trigger de inmutabilidad.
+      handle: 'entrenador_demo',
     },
     create: {
       email: demoEmail,
       passwordHash,
       displayName: 'Entrenador Demo',
+      handle: 'entrenador_demo',
       coins: 500,
       gems: 25,
       pityCounter: {

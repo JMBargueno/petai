@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpCode, HttpStatus, Query, Req, UseGuards } from '@nestjs/common';
 import { InvitesService } from '../invites/invites.service';
 import { RegistrationConfigDto } from '../invites/dto/invites.dto';
 import type { Request } from 'express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { DeviceLinkService } from './device-link.service';
 import { PasswordResetService } from './password-reset.service';
@@ -21,6 +21,7 @@ import {
   VerifyEmailCodeDto,
   VerifyEmailLinkDto,
   VerifyEmailResultDto,
+  HandleAvailabilityDto,
 } from './dto/auth.dto';
 import { clientIp } from '../../common/client-ip';
 
@@ -40,6 +41,14 @@ export class AuthController {
   @ApiResponse({ status: HttpStatus.OK, type: RegistrationConfigDto })
   async registrationConfig(): Promise<RegistrationConfigDto> {
     return { inviteRequired: await this.invites.isInviteOnly() };
+  }
+
+  @Get('handle-available')
+  @ApiOperation({ summary: 'Comprueba si un nickname es válido y está libre (público, con límite por IP)' })
+  @ApiQuery({ name: 'handle', required: true, example: 'jmbargueno' })
+  @ApiResponse({ status: HttpStatus.OK, type: HandleAvailabilityDto })
+  handleAvailable(@Query('handle') handle: string, @Req() req: Request): Promise<HandleAvailabilityDto> {
+    return this.authService.handleAvailability(handle, clientIp(req));
   }
 
   @Post('register')

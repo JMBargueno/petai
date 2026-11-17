@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EMAIL_LOOKUP_REMOVED_MESSAGE, findUserIdByHandle } from '../../common/user-handle';
 import { PresenceService } from '../presence/presence.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import {
@@ -34,6 +35,8 @@ import {
 export interface ClanMember {
   userId: string;
   displayName: string;
+  /** Nickname público (null si la cuenta aún no lo ha elegido). */
+  handle: string | null;
   role: ClanRole;
   isOnline: boolean;
   joinedAt: Date;
@@ -42,6 +45,7 @@ export interface ClanMember {
 export interface ClanLeader {
   userId: string;
   displayName: string;
+  handle: string | null;
 }
 
 export interface ClanSummary {
@@ -213,22 +217,21 @@ export class ClansService {
   async inviteMember(
     actorId: string,
     clanId: string,
-    input: { userId?: string; email?: string },
+    input: { userId?: string; handle?: string; email?: string },
   ): Promise<ClanSummary> {
     await this.requireRank(actorId, clanId, 'moderator', 'invitar miembros');
     const clan = await this.prisma.clan.findUnique({ where: { id: clanId } });
     if (!clan) throw new NotFoundException('Clan no encontrado');
 
     let targetUserId = input?.userId;
-    if (!targetUserId && input?.email) {
-      const byEmail = await this.prisma.user.findUnique({
-        where: { email: input.email.trim().toLowerCase() },
-        select: { id: true },
-      });
-      if (!byEmail) throw new NotFoundException('Usuario no encontrado');
-      targetUserId = byEmail.id;
+    if (!targetUserId && input?.handle) {
+      // Se invita por @nickname público (nunca por email: no se filtran correos).
+      const byHandle = await findUserIdByHandle(this.prisma, input.handle);
+      if (!byHandle) throw new NotFoundException('No hay ningún jugador con ese nickname');
+      targetUserId = byHandle;
     }
-    if (!targetUserId) throw new BadRequestException('Indica userId o email');
+    if (!targetUserId && input?.email) throw new BadRequestException(EMAIL_LOOKUP_REMOVED_MESSAGE);
+    if (!targetUserId) throw new BadRequestException('Indica el @nickname del jugador');
 
     const target = await this.prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true } });
     if (!target) throw new NotFoundException('Usuario no encontrado');
@@ -709,9 +712,10 @@ export class ClansService {
     const userIds = memberships.map((m) => m.userId);
     const users = await this.prisma.user.findMany({
       where: { id: { in: userIds } },
-      select: { id: true, displayName: true },
+      select: { id: true, displayName: true, handle: true },
     });
     const nameById = new Map(users.map((u) => [u.id, u.displayName] as const));
+    const handleById = new Map(users.map((u) => [u.id, u.handle ?? null] as const));
 
     const members: ClanMember[] = await Promise.all(
       memberships
@@ -720,6 +724,7 @@ export class ClansService {
         .map(async (m) => ({
           userId: m.userId,
           displayName: nameById.get(m.userId) ?? '—',
+          handle: handleById.get(m.userId) ?? null,
           role: normalizeClanRole(m.role),
           isOnline: await this.presenceService.hasActiveDevices(m.userId),
           joinedAt: m.joinedAt,
@@ -734,7 +739,11 @@ export class ClansService {
       leaderId: clan.leaderId,
       xp: clan.xp,
       memberCount: memberships.length,
-      leader: { userId: clan.leaderId, displayName: nameById.get(clan.leaderId) ?? '—' },
+      leader: {
+        userId: clan.leaderId,
+        displayName: nameById.get(clan.leaderId) ?? '—',
+        handle: handleById.get(clan.leaderId) ?? null,
+      },
       members,
     };
   }
