@@ -1,7 +1,7 @@
 // Sistema de Composición y Baking en Memoria para Sprites de PetAI
 // Conforme a la especificación técnica en docs/ART_PIPELINE.md
 
-import { deriveVisualTraits, hexToRgb, applyHueShiftRgb } from './prng';
+import { bakePixels, type RgbaImage } from '@pockai/scene/bake';
 import { AssetLoader } from './asset-loader';
 import { createMemoryAssetCache } from './asset-cache';
 import type { AnimLibrary } from './animation/AnimationController';
@@ -153,6 +153,17 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+function readPixels(img: HTMLImageElement): RgbaImage {
+  const width = img.naturalWidth || img.width;
+  const height = img.naturalHeight || img.height;
+  const c = document.createElement('canvas');
+  c.width = width;
+  c.height = height;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0);
+  return { width, height, data: ctx.getImageData(0, 0, width, height).data };
+}
+
 // Caché de hojas de sprites horneadas en memoria (In-Memory Baking)
 const bakedSheetCache = new Map<string, BakedPetSheet>();
 
@@ -186,138 +197,18 @@ export async function bakePetSpriteSheet(
   const width = baseImg.naturalWidth || baseImg.width;
   const height = baseImg.naturalHeight || baseImg.height;
 
-  // Derivación determinista mediante Mulberry32
-  const traits = deriveVisualTraits(visualSeed);
+  // Algoritmo único compartido con la escena de PixiJS (Android/iOS): @pockai/scene/bake.
+  const out = bakePixels(readPixels(baseImg), readPixels(maskImg), {
+    palette: { primary: palette.primary, secondary: palette.secondary },
+    visualSeed,
+    pattern: patternImg ? readPixels(patternImg) : null,
+  });
 
-  // Colores primario y secundario con hueShift sutil (±8 grados)
-  const basePrimaryRgb = hexToRgb(palette.primary || '#E25822');
-  const baseSecondaryRgb = hexToRgb(palette.secondary || '#F3C544');
-  const primaryRgb = applyHueShiftRgb(basePrimaryRgb, traits.hueShiftDeg);
-  const secondaryRgb = applyHueShiftRgb(baseSecondaryRgb, traits.hueShiftDeg);
-
-  // Canvas auxiliar para leer píxeles de mask.png
-  const offCanvas = document.createElement('canvas');
-  offCanvas.width = width;
-  offCanvas.height = height;
-  const offCtx = offCanvas.getContext('2d', { willReadFrequently: true })!;
-
-  offCtx.drawImage(maskImg, 0, 0);
-  const maskData = offCtx.getImageData(0, 0, width, height);
-  const maskPixels = maskData.data;
-
-  // Canvas auxiliar para leer píxeles de base.png
-  offCtx.clearRect(0, 0, width, height);
-  offCtx.drawImage(baseImg, 0, 0);
-  const baseData = offCtx.getImageData(0, 0, width, height);
-  const basePixels = baseData.data;
-
-  // Preparar píxeles del patrón tileable si existe
-  let patternPixels: Uint8ClampedArray | null = null;
-  let patW = 256;
-  let patH = 256;
-  if (patternImg) {
-    const patCanvas = document.createElement('canvas');
-    patW = patternImg.naturalWidth || 256;
-    patH = patternImg.naturalHeight || 256;
-    patCanvas.width = patW;
-    patCanvas.height = patH;
-    const patCtx = patCanvas.getContext('2d', { willReadFrequently: true })!;
-    patCtx.drawImage(patternImg, 0, 0);
-    patternPixels = patCtx.getImageData(0, 0, patW, patH).data;
-  }
-
-  // Canvas final horneado
   const bakedCanvas = document.createElement('canvas');
   bakedCanvas.width = width;
   bakedCanvas.height = height;
   const bakedCtx = bakedCanvas.getContext('2d')!;
-  const outImgData = bakedCtx.createImageData(width, height);
-  const out = outImgData.data;
-
-  const totalPixels = width * height;
-  const offX = traits.patternOffsetX;
-  const offY = traits.patternOffsetY;
-
-  for (let i = 0; i < totalPixels; i++) {
-    const px = i * 4;
-    const maskA = maskPixels[px + 3];
-
-    // Si está fuera de la silueta total
-    if (maskA === 0) {
-      out[px] = 0;
-      out[px + 1] = 0;
-      out[px + 2] = 0;
-      out[px + 3] = 0;
-      continue;
-    }
-
-    const maskR = maskPixels[px] / 255; // Primario
-    const maskG = maskPixels[px + 1] / 255; // Secundario
-    const maskB = maskPixels[px + 2] / 255; // Zona patrón
-
-    // Máscara negra = color literal (efectos: lágrimas, corazones, comida…): se copia base.png tal cual
-    if (maskR < 0.04 && maskG < 0.04 && maskB < 0.04) {
-      out[px] = basePixels[px];
-      out[px + 1] = basePixels[px + 1];
-      out[px + 2] = basePixels[px + 2];
-      out[px + 3] = Math.min(maskA, basePixels[px + 3]);
-      continue;
-    }
-
-    // 1. Capa Base de Color (Interpolación R / G)
-    let colorR = primaryRgb[0] * maskR + secondaryRgb[0] * maskG;
-    let colorG = primaryRgb[1] * maskR + secondaryRgb[1] * maskG;
-    let colorB = primaryRgb[2] * maskR + secondaryRgb[2] * maskG;
-
-    // 2. Proyección de Patrón (multiplicado por Canal B)
-    if (patternPixels && maskB > 0.05) {
-      const x = i % width;
-      const y = Math.floor(i / width);
-      // Muestreo tileable con offset derivado de visualSeed
-      const u = (x + offX) % patW;
-      const v = (y + offY) % patH;
-      const patIdx = (v * patW + u) * 4;
-      const patAlpha = (patternPixels[patIdx + 3] / 255) * maskB;
-
-      if (patAlpha > 0) {
-        // El patrón es blanco/luz sobre la base
-        colorR = colorR * (1 - patAlpha) + 255 * patAlpha;
-        colorG = colorG * (1 - patAlpha) + 255 * patAlpha;
-        colorB = colorB * (1 - patAlpha) + 255 * patAlpha;
-      }
-    }
-
-    // 3. Sombreado y Lineart (base.png)
-    const baseR = basePixels[px];
-    const baseG = basePixels[px + 1];
-    const baseB = basePixels[px + 2];
-    const baseA = basePixels[px + 3] / 255;
-
-    if (baseA > 0) {
-      // Si es un contorno negro u ojo puro (< 40), dibujar directamente
-      if (baseR < 40 && baseG < 40 && baseB < 40) {
-        colorR = baseR;
-        colorG = baseG;
-        colorB = baseB;
-      } else if (baseR > 240 && baseG > 240 && baseB > 240) {
-        // Reflejo blanco puro de ojos
-        colorR = baseR;
-        colorG = baseG;
-        colorB = baseB;
-      } else {
-        // Sombra neutra en escala de grises: modo de fusión Multiply
-        colorR = (colorR * baseR) / 255;
-        colorG = (colorG * baseG) / 255;
-        colorB = (colorB * baseB) / 255;
-      }
-    }
-
-    out[px] = Math.min(255, Math.max(0, Math.round(colorR)));
-    out[px + 1] = Math.min(255, Math.max(0, Math.round(colorG)));
-    out[px + 2] = Math.min(255, Math.max(0, Math.round(colorB)));
-    out[px + 3] = maskA;
-  }
-
+  const outImgData = new ImageData(out as Uint8ClampedArray<ArrayBuffer>, width, height);
   bakedCtx.putImageData(outImgData, 0, 0);
 
   // Mapa de tags de animación
