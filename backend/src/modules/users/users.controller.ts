@@ -25,11 +25,18 @@ export class UsersController {
   @AllowUnverified()
   @ApiOperation({ summary: 'Obtener perfil del usuario autenticado' })
   async getMe(@CurrentUser() user: any) {
+    // Logros derivados (beta tester, días PRO, amigos...), con throttle. Se espera ANTES de leer el
+    // usuario: si desbloquea algo, la recompensa ya va incluida en el saldo que se devuelve y no llega
+    // después en segundo plano (los clientes y los tests leen el saldo de esta respuesta).
+    await this.achievementEngine?.evaluateThrottled(user.id);
     const me = await this.usersService.getMe(user.id);
     // Abrir la app cuenta como día jugado (racha, también en clientes sin WebSocket; idempotente por
-    // día) y evalúa con throttle los logros derivados (beta tester, días PRO, amigos...).
-    void this.stats?.touchPlayDay(user.id, me.timezone).catch(() => undefined);
-    void this.achievementEngine?.evaluateThrottled(user.id);
+    // día). También se espera: no deja escrituras pendientes tras la respuesta.
+    try {
+      await this.stats?.touchPlayDay(user.id, me.timezone);
+    } catch {
+      /* la racha es best-effort: nunca rompe /me */
+    }
     return me;
   }
 
