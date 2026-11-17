@@ -11,6 +11,7 @@
   } from '../lib/api';
   import { acceptedFriends } from '../lib/visitors';
   import SocialAvatar from './SocialAvatar.svelte';
+  import HomeScene from './HomeScene.svelte';
   import { Drumstick, Gamepad2, Droplets, Home, LogOut, PawPrint, RefreshCw, Users, AlertCircle, CircleCheck, History } from 'lucide-svelte';
 
   /** Amigo a preseleccionar (otherUserId), p. ej. al pulsar «Visitar» en Amigos. */
@@ -184,11 +185,16 @@
     {#if selectedFriend}
       {@const pet = selectedFriend.otherPet}
       <div class="visit-card">
-        <div class="scene" class:live={visiting === selectedFriend.otherUserId}>
-          <span class="scene-sign">Casa de {selectedFriend.otherDisplayName}</span>
-          <span class="scene-floor" aria-hidden="true"></span>
+        <HomeScene
+          class="visit-scene"
+          label="Casa de {selectedFriend.otherDisplayName}"
+          mood={visiting === selectedFriend.otherUserId ? 'live' : 'day'}
+          height={110}
+          showRug={false}
+          decor={false}
+        >
           <span class="scene-pet" aria-hidden="true"><PawPrint size={34} /></span>
-        </div>
+        </HomeScene>
         <div class="visit-body">
           <div class="visit-title">
             <span class="pet-name">{pet ? pet.nickname || pet.speciesName : 'Sin mascota'}</span>
@@ -333,54 +339,12 @@
     box-shadow: var(--shadow-pop);
     overflow: hidden;
   }
-  .scene {
-    color-scheme: light;
-    position: relative;
-    height: 96px;
-    background:
-      radial-gradient(70% 70% at 50% 20%, rgb(255 236 179 / 0.9), transparent 70%),
-      linear-gradient(180deg, #fff3d6 0%, #ffe3b0 100%);
-    border-bottom: 1.5px solid var(--color-carbon);
-  }
-  .scene.live {
-    background:
-      radial-gradient(70% 70% at 50% 20%, rgb(85 219 156 / 0.55), transparent 70%),
-      linear-gradient(180deg, #e9fff4 0%, #c9f5df 100%);
-  }
-  .scene-sign {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    max-width: 70%;
-    padding: 3px 10px;
-    font-family: var(--font-display);
-    text-transform: uppercase;
-    font-size: 11px;
-    color: var(--color-carbon);
-    background: var(--color-sunburst);
-    border: 1.5px solid var(--color-carbon);
-    border-radius: var(--radius-pills);
-    box-shadow: 2px 2px 0 var(--color-carbon);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .scene-floor {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 28px;
-    border-top: 1.5px solid var(--color-carbon);
-    background:
-      repeating-linear-gradient(90deg, transparent 0 38px, rgb(0 0 0 / 0.12) 38px 40px),
-      linear-gradient(180deg, #c98a4b 0%, #a86a33 100%);
+  .ui-stack :global(.visit-scene) {
+    border-width: 0 0 1.5px;
+    border-radius: 0;
   }
   .scene-pet {
-    position: absolute;
-    left: 50%;
-    bottom: 16px;
-    translate: -50% 0;
+    position: relative;
     display: grid;
     place-items: center;
     width: 54px;
@@ -393,7 +357,7 @@
   }
   @keyframes bob {
     50% {
-      translate: -50% -4px;
+      translate: 0 -4px;
     }
   }
   .visit-body {
