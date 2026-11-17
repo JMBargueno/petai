@@ -9,7 +9,7 @@
  *
  * Usa el token de la sesión del módulo `api` y renueva el access token ante un 401.
  */
-import { API_BASE_URL, getAccessToken, renewAccessToken } from './api';
+import { API_BASE_URL, apiFetch, getAccessToken, renewAccessToken } from './api';
 
 export type TimeOfDay = 'late_night' | 'morning' | 'afternoon' | 'evening' | 'night';
 export type WeatherCondition = 'clear' | 'cloud' | 'rain' | 'snow' | 'hot' | 'cold' | 'unknown';
@@ -64,7 +64,7 @@ export interface EnvironmentalChangedEvent {
 async function authedFetch(path: string, init?: RequestInit): Promise<Response> {
   const base = `${API_BASE_URL}${path}`;
   const doFetch = (token: string | null) =>
-    fetch(base, {
+    apiFetch(base, {
       ...init,
       headers: {
         'Content-Type': 'application/json',

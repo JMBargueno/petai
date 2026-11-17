@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, LOCALE_ID, afterNextRender, inject, signal } from '@angular/core';
 import { Sticker } from '../../shared/ui/sticker';
 import site from '../../site.json';
+import { WEB_CLIENT_HEADERS } from '../../shared/auth/api';
 import { PRICING_CARDS, PricingCard } from '../content';
 
 /** Índice de la tarjeta Pro en PRICING_CARDS (su precio sale del panel de facturación). */
@@ -163,7 +164,7 @@ export class Pricing {
   /** Precio de Pro configurado en el panel (`GET /v1/billing/plans`, público). Si falla, se queda el estático. */
   private async loadLivePrice() {
     try {
-      const res = await fetch(`${site.apiUrl.replace(/\/$/, '')}/v1/billing/plans`);
+      const res = await fetch(`${site.apiUrl.replace(/\/$/, '')}/v1/billing/plans`, { headers: WEB_CLIENT_HEADERS });
       if (!res.ok) return;
       const body = (await res.json()) as { plans?: { pro?: { priceEur?: number } } };
       const eur = body.plans?.pro?.priceEur;

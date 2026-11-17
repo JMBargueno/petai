@@ -19,8 +19,17 @@ describe('SiteSettingsService', () => {
     expect(await service.getPublicConfig()).toEqual({
       inviteRequired: false,
       comingSoon: { enabled: false, countdown: { enabled: false, launchAt: null } },
+      maintenance: { enabled: false, scope: 'all', message: { es: null, en: null } },
     });
-    expect(await service.getSettings()).toEqual({ comingSoonEnabled: false, comingSoonCountdownEnabled: false, comingSoonLaunchAt: null });
+    expect(await service.getSettings()).toEqual({
+      comingSoonEnabled: false,
+      comingSoonCountdownEnabled: false,
+      comingSoonLaunchAt: null,
+      maintenanceEnabled: false,
+      maintenanceScope: 'all',
+      maintenanceMessageEs: null,
+      maintenanceMessageEn: null,
+    });
   });
 
   it('la config pública refleja la fila', async () => {
@@ -30,10 +39,15 @@ describe('SiteSettingsService', () => {
       comingSoonEnabled: true,
       comingSoonCountdownEnabled: true,
       comingSoonLaunchAt: launchAt,
+      maintenanceEnabled: true,
+      maintenanceScope: 'web',
+      maintenanceMessageEs: 'Volvemos pronto',
+      maintenanceMessageEn: null,
     });
     expect(await service.getPublicConfig()).toEqual({
       inviteRequired: true,
       comingSoon: { enabled: true, countdown: { enabled: true, launchAt: launchAt.toISOString() } },
+      maintenance: { enabled: true, scope: 'web', message: { es: 'Volvemos pronto', en: null } },
     });
   });
 
@@ -56,5 +70,38 @@ describe('SiteSettingsService', () => {
     expect(prismaMock.appSettings.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { comingSoonLaunchAt: null } }));
     await expect(service.setSettings({ id: 'a' }, { comingSoonEnabled: 'sí' })).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.setSettings({ id: 'a' }, { otro: true })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('valida el mantenimiento: alcance conocido, mensajes recortados y con tope', async () => {
+    const { service, prismaMock } = buildService(null);
+    await service.setSettings(
+      { id: 'a' },
+      { maintenanceEnabled: true, maintenanceScope: 'apps', maintenanceMessageEs: '  Hola  ', maintenanceMessageEn: '   ' },
+    );
+    expect(prismaMock.appSettings.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: { maintenanceEnabled: true, maintenanceScope: 'apps', maintenanceMessageEs: 'Hola', maintenanceMessageEn: null },
+      }),
+    );
+    await expect(service.setSettings({ id: 'a' }, { maintenanceScope: 'todo' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.setSettings({ id: 'a' }, { maintenanceMessageEs: 'x'.repeat(1001) })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('el estado del mantenimiento se cachea y un cambio lo invalida', async () => {
+    const { service, prismaMock } = buildService({ maintenanceEnabled: true, maintenanceScope: 'all' });
+    await service.getMaintenance();
+    await service.getMaintenance();
+    expect(prismaMock.appSettings.findUnique).toHaveBeenCalledTimes(1);
+    // Tras un cambio se vuelve a leer la fila (no se sirve la copia anterior).
+    prismaMock.appSettings.findUnique.mockResolvedValue({ maintenanceEnabled: false, maintenanceScope: 'all' });
+    await service.setSettings({ id: 'a' }, { maintenanceEnabled: false });
+    expect((await service.getMaintenance()).enabled).toBe(false);
+  });
+
+  it('un alcance desconocido en la fila se trata como todo', async () => {
+    const { service } = buildService({ maintenanceEnabled: true, maintenanceScope: 'raro' });
+    expect((await service.getMaintenance()).scope).toBe('all');
   });
 });

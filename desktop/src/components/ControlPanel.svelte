@@ -26,6 +26,8 @@
   import PockaiMark from './PockaiMark.svelte';
   import { updateState, updateLock, hasUpdate } from '../lib/updater';
   import UpdateLockPanel from './UpdateLockPanel.svelte';
+  import MaintenanceLockPanel from './MaintenanceLockPanel.svelte';
+  import { maintenanceLock } from '../lib/maintenance';
   import HandleField from './HandleField.svelte';
   import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, X, Users } from 'lucide-svelte';
   import HomeView from './views/HomeView.svelte';
@@ -533,7 +535,7 @@
           </div>
         {/if}
       </div>
-      {#if $updateLock === null}
+      {#if $updateLock === null && $maintenanceLock === null}
         <div class="header-actions">
           {#if user && user.emailVerified !== false}
             <button
@@ -556,6 +558,9 @@
     {#if $updateLock !== null}
       <!-- Actualización obligatoria: el panel solo muestra el bloqueo hasta que se instale -->
       <UpdateLockPanel />
+    {:else if $maintenanceLock !== null}
+      <!-- Mantenimiento del servidor: solo el aviso hasta que termine -->
+      <MaintenanceLockPanel />
     {:else if !user && authView !== 'login'}
       <!-- Recuperar contraseña: 1) correo → código; 2) código + contraseña nueva -->
       <AuthLayout eyebrow="Recuperar contraseña" title={authView === 'forgot' ? '¿Has olvidado tu contraseña?' : 'Nueva contraseña'}>

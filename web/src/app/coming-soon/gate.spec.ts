@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { countdownTo } from './coming-soon';
-import { isGateExempt, shouldGate } from './gate';
+import { isGateExempt, resolveGate, shouldGate } from './gate';
 
 describe('isGateExempt', () => {
   it('deja pasar únicamente el panel de administración', () => {
@@ -33,5 +33,43 @@ describe('countdownTo', () => {
     expect(countdownTo('2026-11-18T09:00:00Z', now)).toBeNull();
     expect(countdownTo(null, now)).toBeNull();
     expect(countdownTo('mañana', now)).toBeNull();
+  });
+});
+
+describe('resolveGate', () => {
+  const base = {
+    down: false,
+    maintenance: false,
+    maintenanceScope: 'all' as const,
+    isAdmin: false,
+    comingSoon: false,
+    loggedIn: false,
+    verified: false,
+    url: '/',
+  };
+  it('todo desactivado: no tapa', () => expect(resolveGate(base)).toBeNull());
+  it('backend caído: tapa todo, incluido el panel y a los admins', () => {
+    expect(resolveGate({ ...base, down: true })).toBe('down');
+    expect(resolveGate({ ...base, down: true, url: '/admin/login' })).toBe('down');
+    expect(resolveGate({ ...base, down: true, isAdmin: true, maintenance: true, comingSoon: true })).toBe('down');
+  });
+  it('mantenimiento con alcance web o todo: tapa', () => {
+    expect(resolveGate({ ...base, maintenance: true })).toBe('maintenance');
+    expect(resolveGate({ ...base, maintenance: true, maintenanceScope: 'web', url: '/contact' })).toBe('maintenance');
+  });
+  it('mantenimiento solo de apps: la web sigue abierta', () =>
+    expect(resolveGate({ ...base, maintenance: true, maintenanceScope: 'apps' })).toBeNull());
+  it('mantenimiento: pasan el panel y los admins', () => {
+    expect(resolveGate({ ...base, maintenance: true, url: '/admin' })).toBeNull();
+    expect(resolveGate({ ...base, maintenance: true, url: '/admin/sitio' })).toBeNull();
+    expect(resolveGate({ ...base, maintenance: true, isAdmin: true, loggedIn: true, verified: true })).toBeNull();
+  });
+  it('mantenimiento manda sobre «Coming soon»', () =>
+    expect(resolveGate({ ...base, maintenance: true, comingSoon: true })).toBe('maintenance'));
+  it('un admin en mantenimiento sigue viendo «Coming soon» si no ha verificado el correo', () =>
+    expect(resolveGate({ ...base, maintenance: true, comingSoon: true, isAdmin: true, loggedIn: true })).toBe('coming-soon'));
+  it('sin mantenimiento: «Coming soon» como siempre', () => {
+    expect(resolveGate({ ...base, comingSoon: true })).toBe('coming-soon');
+    expect(resolveGate({ ...base, comingSoon: true, loggedIn: true, verified: true })).toBeNull();
   });
 });

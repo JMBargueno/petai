@@ -5,6 +5,7 @@ import { SiteFooter } from '../shared/layout/site-footer';
 import { SeoService } from '../shared/seo/seo.service';
 import { SITE_NAME, pageUrl } from '../site.config';
 import site from '../site.json';
+import { WEB_CLIENT_HEADERS } from '../shared/auth/api';
 
 /** Buzón de contacto público (mailcow, pockai.world). */
 export const CONTACT_EMAIL = 'contact@pockai.world';
@@ -258,7 +259,7 @@ export class Contact {
     try {
       const res = await fetch(CONTACT_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...WEB_CLIENT_HEADERS },
         body: JSON.stringify(data),
       });
       if (res.ok) {

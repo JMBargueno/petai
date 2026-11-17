@@ -16,6 +16,7 @@ import { PresenceService } from '../presence/presence.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { PetAction, PetActionEvent } from './pet-action';
+import { MaintenanceService } from '../site/maintenance.service';
 
 /** Conexiones simultáneas por usuario; al superarlas se cierran las más antiguas. */
 const MAX_SOCKETS_PER_USER = 5;
@@ -54,6 +55,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly presence: PresenceService,
     @Optional() private readonly prisma?: PrismaService,
     @Optional() private readonly events?: EventEmitter2,
+    @Optional() private readonly maintenance?: MaintenanceService,
   ) {}
 
   /**
@@ -81,6 +83,17 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       });
       if (await this.isBlockedUnverified(payload.sub)) {
         client.emit('auth:unverified');
+        client.disconnect(true);
+        return;
+      }
+      // Mantenimiento manual con alcance que incluye a este cliente: no se abre el canal (salvo admins).
+      const blocked = await this.maintenance?.check({
+        client: client.handshake.headers?.['x-client'] ?? client.handshake.auth?.client,
+        origin: client.handshake.headers?.origin,
+        authorization: token,
+      });
+      if (blocked) {
+        client.emit('maintenance', blocked);
         client.disconnect(true);
         return;
       }

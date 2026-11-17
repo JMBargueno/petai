@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch';
 import type { paths } from '@shared/openapi/api-types';
+import { CLIENT_HEADERS, inspectMaintenance, setMaintenanceBaseUrl } from './maintenance';
 
 /**
  * URL del backend. En el servidor de desarrollo de Vite se usa el proxy (misma origin); en una
@@ -10,6 +11,23 @@ const configuredUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim
 export const API_BASE_URL = typeof window !== 'undefined' && window.location.origin.includes('localhost:')
   ? ''
   : configuredUrl || 'http://127.0.0.1:3000';
+
+setMaintenanceBaseUrl(API_BASE_URL);
+
+/**
+ * fetch de la app contra el backend: se identifica como escritorio (`X-Client`, el mantenimiento
+ * puede afectar solo a la web o solo a las apps) y, si la API responde 503 `MAINTENANCE`, bloquea la
+ * app con el aviso hasta que termine.
+ */
+export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const req = new Request(input, init);
+  for (const [name, value] of Object.entries(CLIENT_HEADERS)) {
+    if (!req.headers.has(name)) req.headers.set(name, value);
+  }
+  const res = await fetch(req);
+  await inspectMaintenance(res);
+  return res;
+}
 
 const ACCESS_KEY = 'petai_access_token';
 const REFRESH_KEY = 'petai_refresh_token';
@@ -118,7 +136,7 @@ async function doRefresh(): Promise<string | null> {
   // S-01: el fast-path del edge se eliminó; el refresh siempre va al origin autoritativo.
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+    res = await apiFetch(`${API_BASE_URL}/v1/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
@@ -150,9 +168,9 @@ async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
   const sent = req.headers.get('Authorization')?.replace(/^Bearer /, '') ?? null;
   const path = new URL(req.url).pathname;
   // La verificación del correo va con sesión y se puede completar pasado un rato: sí se renueva.
-  if (!sent || (path.includes('/auth/') && !path.includes('/auth/verify-email/'))) return fetch(req);
+  if (!sent || (path.includes('/auth/') && !path.includes('/auth/verify-email/'))) return apiFetch(req);
   const retry = req.clone();
-  const res = await fetch(req);
+  const res = await apiFetch(req);
   // Cuenta sin verificar o sin nickname: no es un problema de token (no se renueva); la app
   // muestra la pantalla que falta (verificación o "elige tu nickname").
   const blocked = await blockedCode(res);
@@ -168,7 +186,7 @@ async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
   const token = await renewAccessToken(sent);
   if (!token) return res;
   retry.headers.set('Authorization', `Bearer ${token}`);
-  return fetch(retry);
+  return apiFetch(retry);
 }
 
 const client = createClient<paths>({ baseUrl: API_BASE_URL, fetch: authFetch });
@@ -206,7 +224,7 @@ export function isTerminalError(err: unknown): boolean {
 async function authPost(path: string, body: unknown, fallback: string): Promise<any> {
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
+    res = await apiFetch(`${API_BASE_URL}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -286,7 +304,7 @@ export const api = {
     const refreshToken = currentRefreshToken;
     setSession(null);
     if (refreshToken) {
-      void fetch(`${API_BASE_URL}/v1/auth/logout`, {
+      void apiFetch(`${API_BASE_URL}/v1/auth/logout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
