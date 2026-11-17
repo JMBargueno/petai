@@ -20,19 +20,27 @@ export class HabitatVisitController {
 
   @Post('visit')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Iniciar una visita en vivo al habitat de un amigo' })
+  @ApiOperation({
+    summary: 'Iniciar una visita en vivo al habitat de un amigo',
+    description:
+      'Gasta 10 de energía del pet visitante. Cooldown de 10 min por amigo y máx. 10 visitas en 24 h. ' +
+      'Si ya hay una visita activa con ese amigo, la devuelve sin cobrar ni volver a notificar.',
+  })
   @ApiBody({
     schema: {
       type: 'object',
       required: ['ownerId'],
-      properties: { ownerId: { type: 'string', description: 'Dueño del habitat visitado' } },
+      properties: {
+        ownerId: { type: 'string', description: 'Dueño del habitat visitado' },
+        message: { type: 'string', maxLength: 140, description: 'Mensaje corto opcional para el amigo' },
+      },
     },
   })
   start(
     @CurrentUser() user: any,
-    @Body() body: { ownerId?: string },
-  ): Promise<{ success: boolean; visit: ActiveVisitor }> {
-    return this.habitatVisitService.startVisit(user.id, body?.ownerId);
+    @Body() body: { ownerId?: string; message?: string | null },
+  ): Promise<{ success: boolean; visit: ActiveVisitor; energy: number }> {
+    return this.habitatVisitService.startVisit(user.id, body?.ownerId, body?.message);
   }
 
   @Post('visit/end')

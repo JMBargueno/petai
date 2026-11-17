@@ -1061,12 +1061,14 @@ model HabitatVisit {
   ownerId   String
   petId     String
   status    String    @default("active") // active | ended
+  message   String?   // mensaje corto opcional del visitante (≤140)
   startedAt DateTime  @default(now())
   endedAt   DateTime?
   createdAt DateTime  @default(now())
 
   @@index([ownerId, status])
   @@index([visitorId, status])
+  @@index([visitorId, startedAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

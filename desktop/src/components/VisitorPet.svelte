@@ -73,6 +73,10 @@
 
 <!-- Entrada suave (cae desde arriba) y salida con fundido al dejar el hábitat -->
 <div class="visitor" in:fly={{ y: 20, duration: 550, delay: 150 }} out:fade={{ duration: 400 }}>
+  {#if visitor.message}
+    <!-- Texto plano (sin {@html}): Svelte lo escapa -->
+    <div class="v-bubble">{visitor.message}</div>
+  {/if}
   {#if sheet}
     <canvas bind:this={canvas} width={SIZE} height={SIZE} class="v-canvas" aria-hidden="true"></canvas>
   {:else}
@@ -92,6 +96,26 @@
     flex-direction: column;
     align-items: center;
     pointer-events: none;
+  }
+  .v-bubble {
+    position: relative;
+    margin-bottom: 6px;
+    width: max-content;
+    max-width: 160px;
+    padding: 4px 8px;
+    border-radius: var(--radius-2xl);
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    font-size: 11px;
+    line-height: 1.3;
+    color: var(--ink);
+    text-align: center;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .v-canvas {
     width: 72px;

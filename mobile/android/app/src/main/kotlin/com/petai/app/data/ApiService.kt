@@ -316,8 +316,12 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     suspend fun deleteClanGoal(clanId: String, goalId: String) { api.send("DELETE", "/clans/$clanId/goals/$goalId") }
 
     // ── Visita en vivo al hábitat (feature 021) ───────────────────────────────
-    suspend fun startHabitatVisit(ownerId: String): HabitatVisitor =
-        api.request<VisitStartResponse>("POST", "/habitat/visit", obj("ownerId" to ownerId)).visit
+    /** Gasta energía del pet; el backend aplica cooldown por amigo y límite diario (errores 400). */
+    suspend fun startHabitatVisit(ownerId: String, message: String? = null): HabitatVisitor =
+        api.request<VisitStartResponse>(
+            "POST", "/habitat/visit",
+            obj("ownerId" to ownerId, "message" to message?.trim()?.takeIf { it.isNotEmpty() }),
+        ).visit
 
     suspend fun endHabitatVisit(): Int = api.request<VisitEndResponse>("POST", "/habitat/visit/end").ended
 
@@ -326,7 +330,12 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
 
 /** Respuesta de POST /habitat/visit: `{ success, visit }`. */
 @kotlinx.serialization.Serializable
-private data class VisitStartResponse(val success: Boolean = false, val visit: HabitatVisitor = HabitatVisitor())
+private data class VisitStartResponse(
+    val success: Boolean = false,
+    val visit: HabitatVisitor = HabitatVisitor(),
+    /** Energía restante del pet tras pagar la visita. */
+    val energy: Double = 0.0,
+)
 
 /** Respuesta de POST /habitat/visit/end: `{ success, ended }`. */
 @kotlinx.serialization.Serializable

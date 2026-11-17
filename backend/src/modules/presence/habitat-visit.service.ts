@@ -8,9 +8,11 @@ import {
   OnModuleDestroy,
   Optional,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { CoopCareService } from './coop-care.service';
+import { PetsService } from '../pets/pets.service';
 
 /**
  * HabitatVisitService — "visita en vivo": el pet del visitante aparece en el habitat del dueño.
@@ -21,6 +23,9 @@ import { CoopCareService } from './coop-care.service';
  * - Emite en tiempo real al dueño `habitat:visitor_joined` / `habitat:visitor_left` vía
  *   `RealtimeGateway.emitToUser`.
  * - Cleanup: cada ~60s finaliza las visitas activas con más de 15 min y emite `visitor_left`.
+ * - La visita puede llevar un mensaje corto opcional (≤140) que el dueño ve como bocadillo.
+ * - Anti-spam: visitar gasta energía del pet, hay cooldown por amigo y límite diario. Repetir el
+ *   start con una visita ya activa es idempotente (no re-notifica ni cobra).
  */
 export interface PetIdentity {
   petId: string;
@@ -36,11 +41,18 @@ export interface ActiveVisitor {
   /** Nickname público del visitante (null si aún no lo ha elegido). */
   visitorHandle: string | null;
   pet: PetIdentity;
+  /** Mensaje corto que trae el visitante (null si no dejó ninguno). */
+  message: string | null;
   startedAt: Date;
 }
 
 const VISIT_MAX_AGE_MS = 15 * 60 * 1000; // 15 min
 const CLEANUP_INTERVAL_MS = 60 * 1000; // 60s
+export const VISIT_MESSAGE_MAX = 140;
+export const VISIT_ENERGY_COST = 10;
+export const VISIT_COOLDOWN_MS = 10 * 60 * 1000; // 10 min por amigo
+export const VISITS_DAILY_LIMIT = 10; // visitas iniciadas en 24 h (a cualquier amigo)
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
@@ -52,6 +64,8 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly coopCare: CoopCareService,
     @Optional() private readonly realtime?: RealtimeGateway,
+    /** Resuelve PetsService en runtime: importar PetsModule crearía un ciclo (Pets→Bonding→Realtime→Presence). */
+    @Optional() private readonly moduleRef?: ModuleRef,
   ) {}
 
   onModuleInit(): void {
@@ -66,45 +80,82 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Inicia la visita en vivo del actor al habitat de `ownerId`. Requiere amistad aceptada y un pet
-   * activo del actor. Upsert de UNA visita activa por par y emisión de `habitat:visitor_joined`.
+   * activo del actor. Si ya hay una visita activa con ese dueño la devuelve tal cual (sin cobrar
+   * ni re-emitir). Si no: valida sueño/energía, límite diario y cooldown por amigo, descuenta la
+   * energía, crea la visita (con el mensaje opcional) y emite `habitat:visitor_joined`.
    */
   async startVisit(
     actorId: string,
     ownerId: string,
-  ): Promise<{ success: boolean; visit: ActiveVisitor }> {
+    rawMessage?: string | null,
+  ): Promise<{ success: boolean; visit: ActiveVisitor; energy: number }> {
     if (!ownerId) throw new BadRequestException('Indica el ownerId del amigo');
     if (ownerId === actorId) throw new BadRequestException('No puedes visitar tu propio habitat');
+    const message = this.normalizeMessage(rawMessage);
 
     const isFriend = await this.coopCare.checkFriendship(actorId, ownerId);
     if (!isFriend) throw new ForbiddenException('No tienes una amistad aceptada con el dueño del pet');
 
-    const pet = await this.resolvePetIdentity(actorId);
-    if (!pet) throw new NotFoundException('No tienes un pet activo para la visita');
+    const active = await this.resolveActivePet(actorId);
+    if (!active) throw new NotFoundException('No tienes un pet activo para la visita');
+    const { pet } = active;
 
-    // UNA sola visita activa por (visitorId, ownerId): reutiliza la existente si hay.
+    const { name: visitorName, handle: visitorHandle } = await this.resolveIdentity(actorId);
+
+    // UNA sola visita activa por (visitorId, ownerId): si ya existe, la llamada es idempotente.
     const existing = await this.prisma.habitatVisit.findFirst({
       where: { visitorId: actorId, ownerId, status: 'active' },
     });
-    const startedAt = existing?.startedAt ?? new Date();
-    if (!existing) {
-      await this.prisma.habitatVisit.create({
-        data: { visitorId: actorId, ownerId, petId: pet.petId, status: 'active', startedAt },
-      });
+    if (existing) {
+      return {
+        success: true,
+        visit: {
+          visitorId: actorId,
+          visitorName,
+          visitorHandle,
+          pet,
+          message: existing.message ?? null,
+          startedAt: existing.startedAt,
+        },
+        energy: active.energy,
+      };
     }
 
-    const { name: visitorName, handle: visitorHandle } = await this.resolveIdentity(actorId);
-    if (this.realtime) {
-      this.realtime.emitToUser(ownerId, 'habitat:visitor_joined', {
-        visitorId: actorId,
-        visitorName,
-        visitorHandle,
-        pet,
-        startedAt,
-      });
+    if (active.sleeping) throw new BadRequestException('Tu pockai está durmiendo');
+    if (active.energy < VISIT_ENERGY_COST) {
+      throw new BadRequestException('Tu pockai está demasiado cansado para ir de visita');
     }
+
+    const now = Date.now();
+    const visitsToday = await this.prisma.habitatVisit.count({
+      where: { visitorId: actorId, startedAt: { gte: new Date(now - DAY_MS) } },
+    });
+    if (visitsToday >= VISITS_DAILY_LIMIT) {
+      throw new BadRequestException('Límite diario de visitas alcanzado');
+    }
+
+    const last = await this.prisma.habitatVisit.findFirst({
+      where: { visitorId: actorId, ownerId },
+      orderBy: { startedAt: 'desc' },
+    });
+    if (last && now - last.startedAt.getTime() < VISIT_COOLDOWN_MS) {
+      const mins = Math.max(1, Math.ceil((VISIT_COOLDOWN_MS - (now - last.startedAt.getTime())) / 60000));
+      throw new BadRequestException(`Podrás volver a visitar a este amigo en ${mins} min`);
+    }
+
+    const energy = Math.max(0, active.energy - VISIT_ENERGY_COST);
+    await this.prisma.pet.update({ where: { id: pet.petId }, data: { energy } });
+
+    const startedAt = new Date(now);
+    await this.prisma.habitatVisit.create({
+      data: { visitorId: actorId, ownerId, petId: pet.petId, status: 'active', startedAt, message },
+    });
+
+    const visit: ActiveVisitor = { visitorId: actorId, visitorName, visitorHandle, pet, message, startedAt };
+    if (this.realtime) this.realtime.emitToUser(ownerId, 'habitat:visitor_joined', visit);
 
     this.logger.debug(`Visita en vivo: ${actorId} → habitat de ${ownerId}`);
-    return { success: true, visit: { visitorId: actorId, visitorName, visitorHandle, pet, startedAt } };
+    return { success: true, visit, energy };
   }
 
   /**
@@ -178,6 +229,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
         visitorName: nameById.get(v.visitorId) ?? '—',
         visitorHandle: handleById.get(v.visitorId) ?? null,
         pet,
+        message: v.message ?? null,
         startedAt: v.startedAt,
       };
     });
@@ -232,21 +284,62 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
 
   // ── Internos ──────────────────────────────────────────────────────────────
 
-  /** Pet activo del usuario: el más antiguo (primero por createdAt), como `summarizeMany`. */
-  private async resolvePetIdentity(userId: string): Promise<PetIdentity | null> {
-    const pet = await this.prisma.pet.findFirst({
+  /** Mensaje opcional: recortado, vacío → null, máx. VISIT_MESSAGE_MAX caracteres. */
+  private normalizeMessage(raw?: string | null): string | null {
+    if (raw === undefined || raw === null) return null;
+    if (typeof raw !== 'string') throw new BadRequestException('El mensaje debe ser texto');
+    const text = raw.trim();
+    if (!text) return null;
+    if (text.length > VISIT_MESSAGE_MAX) {
+      throw new BadRequestException(`El mensaje no puede superar los ${VISIT_MESSAGE_MAX} caracteres`);
+    }
+    return text;
+  }
+
+  /**
+   * Pet activo del usuario: el más antiguo (primero por createdAt), como `summarizeMany`. La energía
+   * y el sueño se leen tras el tick perezoso de PetsService cuando está disponible.
+   */
+  private async resolveActivePet(
+    userId: string,
+  ): Promise<{ pet: PetIdentity; energy: number; sleeping: boolean } | null> {
+    const row = await this.prisma.pet.findFirst({
       where: { userId },
       orderBy: { createdAt: 'asc' },
       include: { species: { select: { id: true, name: true } } },
     });
-    if (!pet) return null;
+    if (!row) return null;
+    let energy = row.energy ?? 0;
+    let sleeping = !!row.sleeping;
+    const pets = this.petsService();
+    if (pets) {
+      try {
+        const ticked = await pets.getPetById(userId, row.id);
+        energy = ticked.energy;
+        sleeping = ticked.sleeping;
+      } catch (err) {
+        this.logger.warn(`Visita: sin tick del pet ${row.id}: ${(err as Error)?.message}`);
+      }
+    }
     return {
-      petId: pet.id,
-      nickname: pet.nickname,
-      speciesName: pet.species.name,
-      speciesId: pet.species.id,
-      spriteRef: pet.species.id || 'default',
+      pet: {
+        petId: row.id,
+        nickname: row.nickname,
+        speciesName: row.species.name,
+        speciesId: row.species.id,
+        spriteRef: row.species.id || 'default',
+      },
+      energy,
+      sleeping,
     };
+  }
+
+  private petsService(): PetsService | null {
+    try {
+      return this.moduleRef?.get(PetsService, { strict: false }) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   private async resolveIdentity(userId: string): Promise<{ name: string; handle: string | null }> {

@@ -12,6 +12,7 @@ function buildPrisma(): any {
       findMany: jest.fn(async () => []),
       create: jest.fn(async ({ data }: any) => ({ id: 'hv-1', ...data })),
       update: jest.fn(async () => ({})),
+      count: jest.fn(async () => 0),
     },
     user: {
       findUnique: jest.fn(async ({ where }: any) => ({ id: where.id, displayName: 'Alice' })),
@@ -24,8 +25,11 @@ function buildPrisma(): any {
         id: 'pet-1',
         nickname: 'Rex',
         species: { id: 'sp-1', name: 'Lobo' },
+        energy: 80,
+        sleeping: false,
         createdAt: new Date(),
       })),
+      update: jest.fn(async () => ({})),
       findMany: jest.fn(async ({ where }: any) =>
         (where?.id?.in ?? []).map((id: string) => ({
           id,
@@ -38,11 +42,12 @@ function buildPrisma(): any {
   return prisma;
 }
 
-const build = (prisma: any, realtime?: any, friend = true) =>
+const build = (prisma: any, realtime?: any, friend = true, moduleRef?: any) =>
   new HabitatVisitService(
     prisma as never,
     { checkFriendship: jest.fn(async () => friend) } as never,
     realtime as never,
+    moduleRef as never,
   );
 
 const actor = 'visitor';
@@ -82,13 +87,109 @@ describe('HabitatVisitService', () => {
     );
   });
 
-  it('startVisit reutiliza la visita activa existente (una por par)', async () => {
+  it('startVisit con visita activa es idempotente: no crea, no cobra, no re-emite', async () => {
     const prisma = buildPrisma();
+    const realtime = { emitToUser: jest.fn() };
     const started = new Date();
-    prisma.habitatVisit.findFirst.mockResolvedValueOnce({ id: 'hv-1', startedAt: started });
-    const res = await build(prisma).startVisit(actor, owner);
+    prisma.habitatVisit.findFirst.mockResolvedValueOnce({ id: 'hv-1', startedAt: started, message: 'hola' });
+    const res = await build(prisma, realtime).startVisit(actor, owner, 'otro mensaje');
     expect(prisma.habitatVisit.create).not.toHaveBeenCalled();
+    expect(prisma.pet.update).not.toHaveBeenCalled();
+    expect(realtime.emitToUser).not.toHaveBeenCalled();
     expect(res.visit.startedAt).toBe(started);
+    expect(res.visit.message).toBe('hola');
+  });
+
+  describe('mensaje', () => {
+    it('se guarda recortado y viaja en el evento', async () => {
+      const prisma = buildPrisma();
+      const realtime = { emitToUser: jest.fn() };
+      const res = await build(prisma, realtime).startVisit(actor, owner, '  ¡Hola amigo!  ');
+      expect(prisma.habitatVisit.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ message: '¡Hola amigo!' }) }),
+      );
+      expect(res.visit.message).toBe('¡Hola amigo!');
+      expect(realtime.emitToUser).toHaveBeenCalledWith(
+        owner,
+        'habitat:visitor_joined',
+        expect.objectContaining({ message: '¡Hola amigo!' }),
+      );
+    });
+
+    it('solo espacios → null', async () => {
+      const prisma = buildPrisma();
+      const res = await build(prisma).startVisit(actor, owner, '   ');
+      expect(res.visit.message).toBeNull();
+    });
+
+    it('más de 140 caracteres → 400 sin crear ni cobrar', async () => {
+      const prisma = buildPrisma();
+      await expect(build(prisma).startVisit(actor, owner, 'x'.repeat(141))).rejects.toMatchObject({ status: 400 });
+      expect(prisma.habitatVisit.create).not.toHaveBeenCalled();
+      expect(prisma.pet.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('anti-spam', () => {
+    it('descuenta 10 de energía al visitar y devuelve la energía restante', async () => {
+      const prisma = buildPrisma();
+      const res = await build(prisma).startVisit(actor, owner);
+      expect(prisma.pet.update).toHaveBeenCalledWith({ where: { id: 'pet-1' }, data: { energy: 70 } });
+      expect(res.energy).toBe(70);
+    });
+
+    it('usa la energía tras el tick de PetsService si está disponible', async () => {
+      const prisma = buildPrisma();
+      const pets = { getPetById: jest.fn(async () => ({ energy: 15, sleeping: false })) };
+      const moduleRef = { get: jest.fn(() => pets) };
+      const res = await build(prisma, undefined, true, moduleRef).startVisit(actor, owner);
+      expect(pets.getPetById).toHaveBeenCalledWith(actor, 'pet-1');
+      expect(res.energy).toBe(5);
+    });
+
+    it('400 si el pet duerme', async () => {
+      const prisma = buildPrisma();
+      prisma.pet.findFirst.mockResolvedValueOnce({
+        id: 'pet-1', nickname: 'Rex', species: { id: 'sp-1', name: 'Lobo' }, energy: 80, sleeping: true,
+      });
+      await expect(build(prisma).startVisit(actor, owner)).rejects.toMatchObject({ status: 400 });
+      expect(prisma.habitatVisit.create).not.toHaveBeenCalled();
+    });
+
+    it('400 si no tiene energía suficiente', async () => {
+      const prisma = buildPrisma();
+      prisma.pet.findFirst.mockResolvedValueOnce({
+        id: 'pet-1', nickname: 'Rex', species: { id: 'sp-1', name: 'Lobo' }, energy: 9, sleeping: false,
+      });
+      await expect(build(prisma).startVisit(actor, owner)).rejects.toThrow(/cansado/);
+      expect(prisma.pet.update).not.toHaveBeenCalled();
+    });
+
+    it('400 al alcanzar el límite diario', async () => {
+      const prisma = buildPrisma();
+      prisma.habitatVisit.count.mockResolvedValueOnce(10);
+      await expect(build(prisma).startVisit(actor, owner)).rejects.toThrow(/Límite diario/);
+      expect(prisma.habitatVisit.create).not.toHaveBeenCalled();
+    });
+
+    it('400 por cooldown si visitó a ese amigo hace menos de 10 min', async () => {
+      const prisma = buildPrisma();
+      prisma.habitatVisit.findFirst
+        .mockResolvedValueOnce(null) // sin visita activa
+        .mockResolvedValueOnce({ id: 'hv-0', startedAt: new Date(Date.now() - 5 * 60 * 1000) });
+      await expect(build(prisma).startVisit(actor, owner)).rejects.toThrow(/en 5 min/);
+      expect(prisma.pet.update).not.toHaveBeenCalled();
+      expect(prisma.habitatVisit.create).not.toHaveBeenCalled();
+    });
+
+    it('sin cooldown si la última visita a ese amigo fue hace más de 10 min', async () => {
+      const prisma = buildPrisma();
+      prisma.habitatVisit.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'hv-0', startedAt: new Date(Date.now() - 11 * 60 * 1000) });
+      await expect(build(prisma).startVisit(actor, owner)).resolves.toMatchObject({ success: true });
+      expect(prisma.habitatVisit.create).toHaveBeenCalled();
+    });
   });
 
   it('endVisit finaliza las visitas activas y emite habitat:visitor_left', async () => {
@@ -115,7 +216,9 @@ describe('HabitatVisitService', () => {
   it('listVisitors devuelve los visitantes activos con PetIdentity (siendo el actor el dueño)', async () => {
     const prisma = buildPrisma();
     const started = new Date();
-    prisma.habitatVisit.findMany.mockResolvedValueOnce([{ visitorId: actor, petId: 'pet-1', startedAt: started }]);
+    prisma.habitatVisit.findMany.mockResolvedValueOnce([
+      { visitorId: actor, petId: 'pet-1', startedAt: started, message: '¡Hola!' },
+    ]);
     const res = await build(prisma).listVisitors(owner);
     expect(res.visitors).toHaveLength(1);
     expect(res.visitors[0]).toEqual({
@@ -123,6 +226,7 @@ describe('HabitatVisitService', () => {
       visitorName: 'n-visitor',
       visitorHandle: null,
       pet: { petId: 'pet-1', nickname: 'Rex', speciesName: 'Lobo', speciesId: 'sp-1', spriteRef: 'sp-1' },
+      message: '¡Hola!',
       startedAt: started,
     });
   });

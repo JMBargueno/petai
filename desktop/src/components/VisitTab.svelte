@@ -1,7 +1,14 @@
 <script lang="ts">
   /** Visitas (feature 021): cuidar la mascota de un amigo, visitar su hábitat en vivo y ver el historial. */
   import { onMount, createEventDispatcher } from 'svelte';
-  import { api, type CoopFriend, type CoopVisitLog, type CoopVisitResult } from '../lib/api';
+  import {
+    api,
+    VISIT_ENERGY_COST,
+    VISIT_MESSAGE_MAX,
+    type CoopFriend,
+    type CoopVisitLog,
+    type CoopVisitResult,
+  } from '../lib/api';
   import { acceptedFriends } from '../lib/visitors';
   import SocialAvatar from './SocialAvatar.svelte';
   import { Drumstick, Gamepad2, Droplets, Home, LogOut, PawPrint, RefreshCw, Users, AlertCircle, CircleCheck, History } from 'lucide-svelte';
@@ -21,6 +28,8 @@
   let selected: string = initialFriend;
   /** Visita en vivo en curso: otherUserId del amigo visitado (estado local). */
   let visiting: string = '';
+  /** Mensaje opcional que lleva tu pockai a la visita. */
+  let visitMessage = '';
 
   $: accepted = acceptedFriends(friends);
   $: selectedFriend = accepted.find((f) => f.otherUserId === selected) ?? null;
@@ -95,10 +104,12 @@
     error = '';
     ok = '';
     try {
-      await api.startHabitatVisit(f.otherUserId);
+      await api.startHabitatVisit(f.otherUserId, visitMessage);
       visiting = f.otherUserId;
-      ok = `¡Visitando el hábitat de ${f.otherDisplayName}! Su mascota aparecerá en tu pantalla.`;
+      visitMessage = '';
+      ok = `¡Tu pockai está de visita en el hábitat de ${f.otherDisplayName}!`;
       await load();
+      dispatch('refreshUser');
     } catch (e: any) {
       error = e.message;
     } finally {
@@ -198,11 +209,26 @@
               <LogOut size={16} /> {busy === 'end' ? 'Terminando…' : 'Terminar visita'}
             </button>
           {:else}
+            <label class="msg-field">
+              <input
+                class="input"
+                type="text"
+                bind:value={visitMessage}
+                maxlength={VISIT_MESSAGE_MAX}
+                placeholder="Deja un mensaje (opcional)"
+                aria-label="Mensaje para tu amigo"
+                disabled={!!busy}
+              />
+              <span class="msg-count">{visitMessage.length}/{VISIT_MESSAGE_MAX}</span>
+            </label>
             <button class="btn btn--primary block" disabled={!!busy} on:click={startVisit}>
-              <Home size={16} /> {busy === 'start' ? 'Iniciando…' : 'Iniciar visita'}
+              <Home size={16} /> {busy === 'start' ? 'Iniciando…' : `Iniciar visita · ⚡${VISIT_ENERGY_COST}`}
             </button>
           {/if}
-          <p class="soc-card__hint">Al iniciar la visita, su mascota aparecerá en tu escritorio junto a la tuya.</p>
+          <p class="soc-card__hint">
+            Tu pockai aparecerá en la pantalla de tu amigo con tu mensaje. Gasta ⚡{VISIT_ENERGY_COST} de energía y
+            puedes volver a visitar al mismo amigo cada 10 min.
+          </p>
         </div>
       </div>
     {/if}
@@ -426,6 +452,16 @@
     border: 1px solid var(--color-carbon);
     background: var(--c);
     color: var(--on-color);
+  }
+  .msg-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .msg-count {
+    align-self: flex-end;
+    font-size: 10px;
+    color: var(--ink-muted);
   }
   .block {
     width: 100%;

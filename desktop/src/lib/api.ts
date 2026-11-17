@@ -993,8 +993,13 @@ export const api = {
 
   // ── Visitas en vivo al hábitat (feature 021) ───────────────────────────────
   /** Inicia una visita del jugador a tu hábitat (el backend emite `habitat:visitor_joined`). */
-  async startHabitatVisit(ownerId: string) {
-    return minigameRequest<{ ok: boolean; startedAt: string }>('POST', '/v1/habitat/visit', { ownerId });
+  async startHabitatVisit(ownerId: string, message?: string) {
+    const text = message?.trim();
+    return minigameRequest<{ success: boolean; visit: HabitatVisitor; energy: number }>(
+      'POST',
+      '/v1/habitat/visit',
+      text ? { ownerId, message: text } : { ownerId },
+    );
   },
   /** Cierra tu visita en curso (el backend emite `habitat:visitor_left`). */
   async endHabitatVisit() {
@@ -1419,8 +1424,14 @@ export interface HabitatVisitor {
   visitorName: string;
   visitorHandle?: string | null;
   pet: PetIdentity;
+  /** Mensaje corto que trae el visitante (≤140), si dejó alguno. */
+  message?: string | null;
   startedAt: string;
 }
+
+/** Límites de la visita en vivo (deben coincidir con el backend: habitat-visit.service.ts). */
+export const VISIT_MESSAGE_MAX = 140;
+export const VISIT_ENERGY_COST = 10;
 
 // ── Misiones (Paso 3) ─────────────────────────────────────────────────────
 export interface MissionReward {

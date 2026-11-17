@@ -280,7 +280,23 @@ private fun FurnitureRow(f: HabitatFurniture, locked: Boolean, busy: Boolean, on
 /** Pet de un amigo de visita, dibujado con [PetSprite] según su [PetIdentity] (con fallback seguro). */
 @Composable
 private fun VisitorPet(visitor: HabitatVisitor) {
-    Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.width(140.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        visitor.message?.takeIf { it.isNotBlank() }?.let { text ->
+            androidx.compose.material3.Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+            ) {
+                Text(
+                    text,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    maxLines = 8,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+        }
         PetSprite(pet = visitorPet(visitor), size = 72.dp, bob = true)
         Spacer(Modifier.height(4.dp))
         Text(

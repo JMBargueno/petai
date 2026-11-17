@@ -116,7 +116,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Iniciar una visita en vivo al habitat de un amigo */
+        /**
+         * Iniciar una visita en vivo al habitat de un amigo
+         * @description Gasta 10 de energía del pet visitante. Cooldown de 10 min por amigo y máx. 10 visitas en 24 h. Si ya hay una visita activa con ese amigo, la devuelve sin cobrar ni volver a notificar.
+         */
         post: operations["HabitatVisitController_start"];
         delete?: never;
         options?: never;
@@ -5260,6 +5263,8 @@ export interface operations {
                 "application/json": {
                     /** @description Dueño del habitat visitado */
                     ownerId: string;
+                    /** @description Mensaje corto opcional para el amigo */
+                    message?: string;
                 };
             };
         };
