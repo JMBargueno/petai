@@ -66,7 +66,7 @@ function button(label: string, url: string): string {
   const l = escapeHtml(label);
   const u = escapeHtml(url);
   return `
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 8px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 8px;border-collapse:separate;">
   <tr>
     <td align="center" bgcolor="${BRAND.violet}" style="border-radius:9999px;border:1px solid ${BRAND.carbon};box-shadow:3px 4px 0 ${BRAND.carbon};">
       <!--[if mso]>
@@ -126,6 +126,8 @@ export function renderEmailLayout(opts: EmailLayoutOptions): RenderedEmail {
   body { margin:0; padding:0; width:100% !important; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
   img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
   table { border-collapse:collapse; mso-table-lspace:0; mso-table-rspace:0; }
+  /* Con border-collapse:collapse los navegadores ignoran border-radius en las celdas: la tarjeta
+     y los bloques redondeados se pintaban como un recuadro negro cuadrado. */
   .pk-body a { color:${BRAND.violetInk}; font-weight:600; }
   .pk-body p { margin:0 0 14px; }
   .pk-body h2 { font-family:${DISPLAY_FONT}; font-weight:400; text-transform:uppercase; font-size:22px; line-height:1.1; margin:22px 0 10px; color:${BRAND.carbon}; }
@@ -142,7 +144,7 @@ export function renderEmailLayout(opts: EmailLayoutOptions): RenderedEmail {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BRAND.sky}" style="background:${BRAND.sky};">
   <tr>
     <td align="center" style="padding:32px 16px 40px;">
-      <table role="presentation" class="pk-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+      <table role="presentation" class="pk-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;border-collapse:separate;">
         <tr>
           <td style="padding:0 4px 20px;">
             <a href="${escapeHtml(web)}" target="_blank" style="text-decoration:none;">

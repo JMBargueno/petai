@@ -183,3 +183,26 @@ describe('AuthService — nickname en el registro', () => {
     await expect(service.handleAvailability('ab', '1.1.1.1')).resolves.toMatchObject({ available: false, reason: expect.stringContaining('al menos 3') });
   });
 });
+
+describe('AuthService — nombre visible por defecto (B1: no filtrar el correo)', () => {
+  const nameOf = (prismaMock: any) => prismaMock.user.create.mock.calls[0][0].data.displayName;
+
+  it('sin displayName ni nickname no usa la parte local del correo', async () => {
+    const { service, prismaMock } = buildService('user-1', 'ana.garcia@example.com', 'x');
+    await service.register({ email: 'ana.garcia@example.com', password: 'ContrasenaSegura123!' }, '127.0.0.1');
+    expect(nameOf(prismaMock)).not.toContain('ana.garcia');
+    expect(nameOf(prismaMock)).toBe('Entrenador');
+  });
+
+  it('sin displayName usa el nickname', async () => {
+    const { service, prismaMock } = buildService('user-1', 'ana.garcia@example.com', 'x');
+    await service.register({ email: 'ana.garcia@example.com', password: 'ContrasenaSegura123!', handle: 'astro_ana' }, '127.0.0.1');
+    expect(nameOf(prismaMock)).toBe('astro_ana');
+  });
+
+  it('respeta el displayName elegido', async () => {
+    const { service, prismaMock } = buildService('user-1', 'ana.garcia@example.com', 'x');
+    await service.register({ email: 'ana.garcia@example.com', password: 'ContrasenaSegura123!', displayName: 'Ana' }, '127.0.0.1');
+    expect(nameOf(prismaMock)).toBe('Ana');
+  });
+});

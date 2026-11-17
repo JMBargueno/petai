@@ -80,7 +80,7 @@ export function detectFileType(filename: string): {
       isText: false,
       suggestedActions: [
         'Analizar dimensiones y formato',
-        '¿Cómo usar este asset en PetAI?',
+        '¿Cómo usar este asset en Pockai?',
       ],
     };
   }

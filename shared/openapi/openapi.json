@@ -330,8 +330,18 @@
     },
     "/v1/coop/history": {
       "get": {
+        "description": "Por defecto, solo las visitas de cuidado que recibieron mis pets (formato de las apps antiguas). Con `scope=all`, también las que hice yo y las visitas en vivo al hábitat, con `direction`, `kind` y el nombre del otro jugador.",
         "operationId": "PresenceController_getVisitHistory",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "scope",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""

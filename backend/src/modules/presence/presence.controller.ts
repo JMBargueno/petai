@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   ForbiddenException,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { PresenceService } from './presence.service';
@@ -85,13 +86,22 @@ export class PresenceController {
   }
 
   @Get('coop/history')
-  @ApiOperation({ summary: 'Get visit history for my pets' })
+  @ApiOperation({
+    summary: 'Get visit history for my pets',
+    description:
+      'Por defecto, solo las visitas de cuidado que recibieron mis pets (formato de las apps antiguas). ' +
+      'Con `scope=all`, también las que hice yo y las visitas en vivo al hábitat, con `direction`, `kind` y el nombre del otro jugador.',
+  })
   async getVisitHistory(
     @CurrentUser() user: any,
+    @Query('scope') scope?: string,
   ) {
     return {
       userId: user.id,
-      visits: await this.coopCareService.getVisitHistory(user.id),
+      visits:
+        scope === 'all'
+          ? await this.coopCareService.getVisitHistory(user.id)
+          : await this.coopCareService.getReceivedCareVisits(user.id),
     };
   }
 }

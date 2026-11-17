@@ -33,7 +33,7 @@
     if (s <= 0) return '';
     const m = Math.floor(s / 60);
     const h = Math.floor(m / 60);
-    if (h > 0) return `${h}h ${m % 60}m`;
+    if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
     if (m > 0) return `${m}m ${s % 60}s`;
     return `${s}s`;
   }

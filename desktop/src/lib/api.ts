@@ -383,7 +383,14 @@ export const api = {
       ...authHeaders(),
     });
     if (res.error) throw new Error('Error al listar huevos');
-    return res.data;
+    // El servidor manda `remainingMs` (su reloj). Se traduce a un `hatchesAt` en el reloj local para
+    // que la cuenta atrás sea correcta aunque el reloj del PC esté desfasado.
+    const receivedAt = Date.now();
+    return ((res.data ?? []) as any[]).map((egg) =>
+      typeof egg?.remainingMs === 'number'
+        ? { ...egg, hatchesAt: new Date(receivedAt + egg.remainingMs).toISOString() }
+        : egg,
+    ) as typeof res.data;
   },
 
   async buyEgg() {
@@ -943,7 +950,8 @@ export const api = {
     return minigameRequest<CoopVisitResult>('POST', '/v1/coop/visit', body);
   },
   async getCoopHistory() {
-    return minigameRequest<{ userId: string; visits: CoopVisitLog[] }>('GET', '/v1/coop/history');
+    // scope=all: visitas en ambos sentidos y de hábitat (sin él, el formato antiguo).
+    return minigameRequest<{ userId: string; visits: CoopVisitLog[] }>('GET', '/v1/coop/history?scope=all');
   },
 
   // ── Presencia (feature 021) ────────────────────────────────────────────────
@@ -1372,7 +1380,18 @@ export interface CoopFriend {
 }
 
 export interface CoopVisitLog {
+  /** Campos nuevos (backend ≥ 0.24): opcionales para tolerar un backend antiguo. */
+  id?: string;
+  kind?: 'care' | 'habitat';
+  /** `in` = visitaron a mis pets; `out` = visité yo. */
+  direction?: 'in' | 'out';
+  otherUserId?: string;
+  otherName?: string;
+  otherHandle?: string | null;
+  ownerId?: string;
+  endedAt?: string | null;
   visitorId: string;
+  /** feed | play | clean, o `habitat` para visitas en vivo. */
   action: string;
   petId: string;
   xpGained: number;

@@ -152,7 +152,7 @@ export class AdventureOrchestratorService {
     const temperamentPrompt = temperamentToSystemPrompt(temperament as any);
     const element = pet.species?.element ?? 'neutral';
     const name = pet.nickname || 'mi mascota';
-    return `Eres un narrador de aventuras para el juego PetAI. Estás contando la historia "${theme}" desde la perspectiva de ${name}, una mascota de elemento ${element}.
+    return `Eres un narrador de aventuras para el juego Pockai. Estás contando la historia "${theme}" desde la perspectiva de ${name}, una mascota de elemento ${element}.
 ${temperamentPrompt}
 Debes responder ÚNICAMENTE con JSON válido:
 {"text": "narración (2-4 frases)", "choices": [{"label": "opción", "hint": "consecuencia"}, {"label": "opción", "hint": "consecuencia"}]}

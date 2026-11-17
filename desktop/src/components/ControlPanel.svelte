@@ -1042,6 +1042,10 @@
   .panel-card :global(.sub-tabs) {
     flex-shrink: 0; /* con contenido largo el flex la recortaba */
     padding: 10px 12px 2px;
+    /* Las pastillas desplazables ocultaban la última (p. ej. "Habilidades") sin barra ni pista de
+       scroll: en el panel se reparten en varias filas para que todas se vean siempre. */
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 
   .panel-error {

@@ -253,17 +253,21 @@
         <span class="label-caps">Historial</span>
         {#if history.length}<span class="chip ui-count">{history.length}</span>{/if}
       </div>
-      {#each history.slice(0, 15) as h (h.createdAt + h.petId + h.visitorId)}
+      {#each history.slice(0, 15) as h (h.id ?? h.createdAt + h.petId + h.visitorId)}
         {@const a = ACTION_BY_ID[h.action]}
+        {@const who = h.otherName ?? friendName(h.visitorId)}
         <div class="hist-row">
           <span class="hist-ico" style="--c: {a?.color ?? 'var(--theme-social)'}">
-            <svelte:component this={a?.icon ?? PawPrint} size={14} />
+            <svelte:component this={h.kind === 'habitat' ? Home : (a?.icon ?? PawPrint)} size={14} />
           </span>
           <div class="ui-row__body">
-            <span class="hist-title">{friendName(h.visitorId)} · {a?.label ?? h.action}</span>
+            <span class="hist-title">
+              {#if h.direction === 'out'}Visitaste a {who}{:else}{who}{/if}
+              · {h.kind === 'habitat' ? 'Visita al hábitat' : (a?.label ?? h.action)}
+            </span>
             <span class="ui-row__sub">{when(h.createdAt)}</span>
           </div>
-          <span class="chip ui-chip hist-xp">+{h.xpGained} XP</span>
+          {#if h.xpGained > 0}<span class="chip ui-chip hist-xp">+{h.xpGained} XP</span>{/if}
         </div>
       {:else}
         <div class="hist-empty"><History size={16} /> Todavía no hay visitas.</div>

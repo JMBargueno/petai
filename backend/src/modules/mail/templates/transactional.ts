@@ -3,7 +3,7 @@ import { escapeHtml } from './html';
 
 /** Bloque destacado con un código de 6 dígitos (estilo "sticker" de la web). */
 function codeBlock(code: string): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 6px;">
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 6px;border-collapse:separate;">
   <tr>
     <td bgcolor="${BRAND.sunburst}" style="background:${BRAND.sunburst};border:1px solid ${BRAND.carbon};border-radius:16px;box-shadow:3px 4px 0 ${BRAND.carbon};padding:14px 26px;font-family:'Courier New',Courier,monospace;font-size:34px;line-height:1;font-weight:700;letter-spacing:0.28em;color:${BRAND.carbon};">${escapeHtml(code)}</td>
   </tr>

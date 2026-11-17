@@ -164,7 +164,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get visit history for my pets */
+        /**
+         * Get visit history for my pets
+         * @description Por defecto, solo las visitas de cuidado que recibieron mis pets (formato de las apps antiguas). Con `scope=all`, también las que hice yo y las visitas en vivo al hábitat, con `direction`, `kind` y el nombre del otro jugador.
+         */
         get: operations["PresenceController_getVisitHistory"];
         put?: never;
         post?: never;
@@ -5735,7 +5738,9 @@ export interface operations {
     };
     PresenceController_getVisitHistory: {
         parameters: {
-            query?: never;
+            query: {
+                scope: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
