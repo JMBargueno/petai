@@ -1,26 +1,29 @@
 <script lang="ts">
   import Ico from '../../components/Ico.svelte';
+  import Badge from '../profile/Badge.svelte';
   import { onDestroy } from 'svelte';
   import type { AchievementUnlockedPayload } from './achievements.api';
 
   /**
-   * Toast de desbloqueo de logro (feature 008 / US6). Al recibir `achievement:unlocked` (emitido
-   * por el backend vía WebSocket) muestra una tarjeta con el nombre, tier y recompensa, con una
-   * animación de aparición que se autodisipa tras unos segundos.
+   * Aviso de logro desbloqueado. Al recibir `achievement:unlocked` (WebSocket) muestra la insignia,
+   * el nombre y la recompensa; se cierra solo a los pocos segundos o al pulsarlo. Cada payload nuevo
+   * reinicia el temporizador.
    */
   export let payload: AchievementUnlockedPayload | null = null;
-  export let visible: boolean = false;
   export let onDismiss: () => void = () => {};
 
+  const HIDE_MS = 5000;
+  let visible = false;
   let hideTimer: ReturnType<typeof setTimeout> | null = null;
+  let shown: AchievementUnlockedPayload | null = null;
 
-  function show() {
+  $: if (payload && payload !== shown) show(payload);
+
+  function show(p: AchievementUnlockedPayload) {
+    shown = p;
     visible = true;
     if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => {
-      visible = false;
-      onDismiss();
-    }, 4500);
+    hideTimer = setTimeout(dismiss, HIDE_MS);
   }
 
   function dismiss() {
@@ -35,21 +38,23 @@
   });
 </script>
 
-{#if visible && payload}
-  <div class="toast" role="alert" on:click={dismiss}>
-    <div class="toast__badge" data-tier={payload.tier}><Ico n="trophy" /></div>
-    <div class="toast__body">
-      <div class="toast__title">¡Logro desbloqueado!</div>
-      <div class="toast__name">{payload.name}</div>
-      <div class="toast__reward">
-        {#if payload.reward.coins > 0}<span>+{payload.reward.coins} <Ico n="coin" /></span>{/if}
-        {#if payload.reward.gems > 0}<span>+{payload.reward.gems} <Ico n="gem" /></span>{/if}
-        {#if payload.reward.xp > 0}<span>+{payload.reward.xp} <Ico n="xp" /></span>{/if}
-        {#if payload.reward.itemId}<span class="toast__item">+ Item exclusivo</span>{/if}
-      </div>
-    </div>
-  </div>
+<div role="status" aria-live="polite">
+{#if visible && shown}
+  <button type="button" class="toast" on:click={dismiss}>
+    <Badge icon={shown.badgeIcon ?? 'trophy'} tier={shown.tier} size={48} />
+    <span class="toast__body">
+      <span class="toast__title">¡Insignia desbloqueada!</span>
+      <span class="toast__name">{shown.name}</span>
+      <span class="toast__reward">
+        {#if shown.reward.coins > 0}<span>+{shown.reward.coins} <Ico n="coin" /></span>{/if}
+        {#if shown.reward.gems > 0}<span>+{shown.reward.gems} <Ico n="gem" /></span>{/if}
+        {#if shown.reward.xp > 0}<span>+{shown.reward.xp} <Ico n="xp" /></span>{/if}
+        {#if shown.reward.itemId}<span class="toast__item">+ Objeto exclusivo</span>{/if}
+      </span>
+    </span>
+  </button>
 {/if}
+</div>
 
 <style>
   .toast {
@@ -60,28 +65,48 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    background: linear-gradient(135deg, #1c2333 0%, var(--surface-2) 100%);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-2xl);
-    padding: 12px 18px;
+    padding: 10px 16px 10px 12px;
     min-width: 240px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 1.5px solid var(--color-carbon);
+    border-radius: var(--radius-2xl);
+    background: var(--surface);
+    box-shadow: 3px 4px 0 var(--color-carbon);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
     cursor: pointer;
     animation: slideIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3);
-    color: var(--ink);
-    font-family: inherit;
   }
-  .toast__badge {
-    font-size: 2rem;
-    filter: drop-shadow(0 0 6px var(--color-sunburst));
+  .toast__body {
+    display: flex;
+    flex-direction: column;
   }
-  .toast__badge[data-tier='legendary'] { filter: drop-shadow(0 0 10px #ff9d3b); }
-  .toast__title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); }
-  .toast__name { font-weight: 700; font-size: 1rem; margin-top: 2px; }
-  .toast__reward { display: flex; gap: 8px; margin-top: 6px; font-size: 0.85rem; }
-  .toast__item { color: var(--color-lavender); }
+  .toast__title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+  }
+  .toast__name {
+    font-weight: 800;
+    font-size: 1rem;
+    margin-top: 1px;
+  }
+  .toast__reward {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 0.8rem;
+  }
+  .toast__item {
+    color: var(--color-voltage-violet);
+  }
   @keyframes slideIn {
     from { transform: translateX(120%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toast { animation: none; }
   }
 </style>

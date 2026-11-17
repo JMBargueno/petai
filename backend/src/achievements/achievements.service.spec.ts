@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException, ConflictException } from '@nest
 import { AchievementsService } from './achievements.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { GameDataService } from '../modules/game-data/game-data.service';
+import { AchievementEngineService } from './achievement-engine.service';
 
 const DEFS = [
   { id: 'care_feed_10', name: 'A', desc: 'A', category: 'care', target: 10, event: 'pet:fed', tier: 'common', reward: { coins: 50, gems: 0, xp: 20, itemId: null } },
@@ -35,6 +36,10 @@ describe('AchievementsService', () => {
         AchievementsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: GameDataService, useValue: mockGame },
+        {
+          provide: AchievementEngineService,
+          useValue: { loadContext: jest.fn().mockResolvedValue({ stats: {}, createdAt: null }) },
+        },
       ],
     }).compile();
     service = module.get(AchievementsService);

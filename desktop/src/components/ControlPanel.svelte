@@ -22,6 +22,7 @@ import AdventureTab from './AdventureTab.svelte';
 import FriendsTab from './FriendsTab.svelte';
 import ClansTab from './ClansTab.svelte';
 import VisitTab from './VisitTab.svelte';
+import ProfileTab from '../features/profile/ProfileTab.svelte';
   import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
   import AboutPanel from './AboutPanel.svelte';
   import PockaiMark from './PockaiMark.svelte';
@@ -109,7 +110,7 @@ import VisitTab from './VisitTab.svelte';
     { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['habitat', 'Hábitat'], ['skills', 'Habilidades']] },
     { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo'], ['training', 'Entrenamiento'], ['cooking', 'Cocina'], ['adventure', 'Aventura']] },
     { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
-    { id: 'social', label: 'Social', icon: Users, subs: [['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
+    { id: 'social', label: 'Social', icon: Users, subs: [['profile', 'Mi Perfil'], ['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
     { id: 'progress', label: 'Progreso', icon: Trophy, subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
     { id: 'shop', label: 'Tienda', icon: ShoppingBag, subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
     { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['about', 'Acerca de']] },
@@ -1048,6 +1049,9 @@ import VisitTab from './VisitTab.svelte';
             on:bubble
             on:refreshPet
           />
+
+        {:else if dest === 'social' && sub === 'profile'}
+          <ProfileTab />
 
         {:else if dest === 'social' && sub === 'friends'}
           <FriendsTab on:visit={(e) => { visitFriend = e.detail; go('social', 'visits'); }} />

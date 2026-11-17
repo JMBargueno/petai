@@ -134,6 +134,8 @@ export class CoopCareService {
     if (claimed.count === 0) throw new BadRequestException('Esta petición ya fue resuelta');
 
     const updated = await this.prisma.coopFriendship.findUniqueOrThrow({ where: { id: friendshipId } });
+    // Logros de amistad (`friends` es una estadística derivada: se re-evalúa a ambos).
+    this.events.emit('coop:friendship_accepted', { userIds: [updated.ownerId, updated.visitorId] });
     return (await this.summarizeMany([updated], actorId))[0];
   }
 

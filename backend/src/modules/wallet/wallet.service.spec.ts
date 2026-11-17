@@ -14,6 +14,7 @@ describe('WalletService', () => {
   let service: WalletService;
   const prisma: any = {
     user: { updateMany: jest.fn(), update: jest.fn() },
+    userStat: { upsert: jest.fn() },
   };
 
   beforeEach(async () => {

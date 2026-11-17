@@ -60,8 +60,13 @@ model User {
   chests         Chest[]
   chestPity      ChestPity[]
    achievements   Achievement[]
-   // Opt-in de visibilidad pública de logros (feature 008): por defecto false (privacidad por defecto).
-   achievementsPublic Boolean @default(false)
+   // Visibilidad pública de logros/insignias en el perfil. Por defecto true: las insignias se ven en
+   // el perfil público y el usuario puede ocultarlas (en feature 008 era opt-in).
+   achievementsPublic Boolean @default(true)
+   // Insignias destacadas en la vitrina del perfil (máx. 3 ids de logros desbloqueados).
+   featuredBadges String[] @default([])
+   // Estadísticas acumuladas (comidas, tiempo de juego, rachas, gasto...) del perfil y los logros.
+   stats          UserStat[]
   // Feature 011: Temporadas
   seasonPasses     SeasonPass[]
   seasonProgress   SeasonProgress[]
@@ -575,6 +580,18 @@ model Achievement {
 
   @@unique([userId, achId])
   @@index([userId])
+}
+
+/// Estadística acumulada por usuario (clave/valor). Fuente única del progreso de los logros de tipo
+/// `stat` y de los datos del perfil. Claves: ver `backend/src/stats/stat-keys.ts`.
+model UserStat {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, key])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

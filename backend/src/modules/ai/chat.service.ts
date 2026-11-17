@@ -23,6 +23,7 @@ import { DailyQuotaService } from '../billing/daily-quota.service';
 import { BillingConfigService } from '../billing/billing-config.service';
 import { ManagedBudgetService } from '../billing/managed-budget.service';
 import { PlanLimits } from '../billing/plans';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 export type ChatStreamEvent =
   | { type: 'delta'; text: string }
@@ -74,6 +75,7 @@ export class ChatService {
     private readonly managedBudget: ManagedBudgetService,
     @Optional() private readonly redis?: RedisService,
     @Optional() private readonly environmental?: EnvironmentalService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   private async checkRateLimit(userId: string) {
@@ -385,6 +387,8 @@ export class ChatService {
       include: { species: true, pattern: true },
     });
     this.realtime.emitPetUpdate(userId, updated);
+    // Misiones y logros de conversación (un turno de chat completado).
+    this.events?.emit('chat:message_sent', { userId, petId: pet.id });
     // Vínculo (feature 006): cada turno de chat completado sube el bonding (+1). El intercambio
     // ya está persistido: si el registro de vínculo falla, no rompe la respuesta del chat.
     await this.bonding

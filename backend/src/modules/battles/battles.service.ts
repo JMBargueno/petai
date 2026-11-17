@@ -271,6 +271,9 @@ export class BattlesService {
     // Vínculo (feature 006): cualquier pelea terminada (victoria, empate o derrota) sube el bonding (+3)
     await this.bonding.recordInteraction(pet.id, userId, 'battle');
 
+    // Misiones y logros de combate: cualquier pelea terminada cuenta; `won` suma a los de victorias.
+    this.eventEmitter.emit('battle:finished', { userId, petId: pet.id, won: outcome === 'win' });
+
     // Notificación con personalidad (feature 007): victoria/derrota en la arena (el empate no notifica).
     if (outcome === 'win') {
       this.eventEmitter.emit('pet:battle-won', { userId, petId: pet.id, won: true });
