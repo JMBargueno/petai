@@ -51,6 +51,11 @@ export interface Fighter {
   isBot: boolean;
   petId?: string;
   ownerId?: string;
+  /**
+   * Sesgo de personalidad (spec 36), congelado en la instantánea: desplaza los umbrales de
+   * curar/protegerse de la IA de reglas. No usa azar; ausente (bots) = comportamiento original.
+   */
+  personality?: { heal: number; guard: number };
 }
 
 export interface ParticipantLog {

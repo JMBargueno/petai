@@ -200,3 +200,82 @@ describe('ChatService (Spec-34 Managed Mode)', () => {
     expect((svc as any).managedBudget.acquireSlot).not.toHaveBeenCalled();
   });
 });
+
+describe('ChatService: orquestador del cerebro (spec 36)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const cfg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../shared/game-data/balance.json'), 'utf8')).personality;
+  const { interpretMessage } = require('../mind/conversation.engine');
+  const { viewOf } = require('../mind/behavior.engine');
+  const { neutralDims } = require('../mind/personality.engine');
+
+  function setup(rounds: LlmEvent[][]) {
+    const { svc, created } = makeService();
+    const mind = { config: () => cfg, applyExperience: jest.fn(async () => null) };
+    const mindMemory = { remember: jest.fn(async () => 1), feel: jest.fn(async () => undefined) };
+    const agent = { handle: jest.fn(async () => ({ kind: 'result', content: '{}' })) };
+    Object.assign(svc as any, { mind, mindMemory, agent });
+    let calls = 0;
+    const provider: LlmProvider = {
+      async *chat() {
+        const evs = rounds[Math.min(calls, rounds.length - 1)];
+        calls++;
+        for (const ev of evs) yield ev;
+      },
+      test: async () => undefined,
+    };
+    const turn = { interpretation: interpretMessage('Hoy he tenido un día bastante malo'), behavior: viewOf('comfort'), dims: neutralDims() };
+    const agentCtx = { userId: 'user-1', petId: 'pet-1', timeZone: 'UTC', now: new Date(), clientTools: [] };
+    const pet = { id: 'pet-1', intelligence: 600, energy: 5, sleeping: false, sick: false, happiness: 50 };
+    return { svc, created, mind, mindMemory, agent, provider, turn, agentCtx, pet, calls: () => calls };
+  }
+
+  async function drive(s: ReturnType<typeof setup>) {
+    const out: ChatStreamEvent[] = [];
+    const gen = (s.svc as any).run('user-1', s.pet, 'Hoy he tenido un día bastante malo', [{ role: 'user', content: 'x' }], s.provider, 'm', 'byok', undefined, s.agentCtx, undefined, undefined, 0, s.turn) as AsyncGenerator<ChatStreamEvent>;
+    for await (const ev of gen) out.push(ev);
+    await new Promise((r) => setImmediate(r)); // efectos del turno en segundo plano
+    return out;
+  }
+
+  it('texto + express_behavior: una sola llamada al proveedor y done con la reacción validada', async () => {
+    const s = setup([
+      [
+        { type: 'delta', text: 'Puedes quedarte conmigo.' },
+        { type: 'tool_call', id: 't1', name: 'express_behavior', arguments: '{"action":"invite_play"}' } as any,
+        { type: 'done' },
+      ],
+    ]);
+    const out = await drive(s);
+    expect(s.calls()).toBe(1);
+    const done = out[out.length - 1] as Extract<ChatStreamEvent, { type: 'done' }>;
+    expect(done.message.content).toBe('Puedes quedarte conmigo.');
+    // energía 5: las reglas sustituyen invite_play por yawn
+    expect(done.behavior?.action).toBe('yawn');
+    expect(s.agent.handle).not.toHaveBeenCalled();
+  });
+
+  it('una acción fuera de catálogo se rechaza y nunca llega al agente', async () => {
+    const s = setup([
+      [{ type: 'tool_call', id: 't1', name: 'express_behavior', arguments: '{"action":"delete_account"}' } as any, { type: 'done' }],
+      [{ type: 'delta', text: 'Estoy aquí.' }, { type: 'done' }],
+    ]);
+    s.pet.energy = 80;
+    const out = await drive(s);
+    expect(s.calls()).toBe(2);
+    const done = out[out.length - 1] as Extract<ChatStreamEvent, { type: 'done' }>;
+    expect(done.behavior?.action).toBe('listen');
+    expect(s.agent.handle).not.toHaveBeenCalled();
+  });
+
+  it('tras responder registra el episodio, la relación y la deriva de personalidad', async () => {
+    const s = setup([[{ type: 'delta', text: 'Ánimo.' }, { type: 'done' }]]);
+    s.pet.energy = 80;
+    const out = await drive(s);
+    const done = out[out.length - 1] as Extract<ChatStreamEvent, { type: 'done' }>;
+    expect(done.behavior).toEqual(viewOf('comfort'));
+    expect(s.mindMemory.remember).toHaveBeenCalledWith('pet-1', [expect.objectContaining({ layer: 'episodic', subject: 'owner' })]);
+    expect(s.mindMemory.feel).toHaveBeenCalledWith('pet-1', 'owner', 'Mi entrenador', expect.any(Number));
+    expect(s.mind.applyExperience).toHaveBeenCalledWith('pet-1', ['talk_comfort']);
+  });
+});

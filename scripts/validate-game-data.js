@@ -58,6 +58,34 @@ for (const [id, g] of Object.entries(mg.games)) {
 }
 console.log(`✓ balance.json: sueño, evolución y ${Object.keys(mg.games).length} minijuegos validados`);
 
+// 1c. Personalidad: 5 dimensiones con bandas contiguas 0-100 y keyword única
+const PERSONALITY_DIMS = ['curiosity', 'sociability', 'bravery', 'affection', 'temper'];
+const pers = balance.personality;
+if (pers) {
+  for (const dim of PERSONALITY_DIMS) {
+    const bands = pers.dimensions?.[dim]?.bands;
+    if (!Array.isArray(bands) || bands.length === 0) throw new Error(`balance.personality.dimensions.${dim}.bands vacío`);
+    let prev = -1;
+    const kws = new Set();
+    for (const b of bands) {
+      if (!Number.isInteger(b.max) || b.max <= prev) throw new Error(`balance.personality.${dim}: bandas no crecientes en max=${b.max}`);
+      if (!b.keyword || kws.has(b.keyword)) throw new Error(`balance.personality.${dim}: keyword vacía o repetida (${b.keyword})`);
+      kws.add(b.keyword);
+      prev = b.max;
+    }
+    if (prev !== 100) throw new Error(`balance.personality.${dim}: la última banda debe terminar en 100`);
+  }
+  for (const [ev, deltas] of Object.entries(pers.evolution?.events ?? {})) {
+    for (const k of Object.keys(deltas)) {
+      if (!PERSONALITY_DIMS.includes(k)) throw new Error(`balance.personality.evolution.events.${ev}: dimensión desconocida ${k}`);
+    }
+  }
+  for (const id of pers.autonomy?.itemFind?.items ?? []) {
+    if (!foods.some((f) => f.id === id)) throw new Error(`balance.personality.autonomy.itemFind: ${id} no existe en foods.json`);
+  }
+  console.log('✓ balance.json: personalidad (5 dimensiones, evolución y autonomía) validada');
+}
+
 // 1c. Combate (Fase 4): balance, ligas y habilidades
 const cb = balance.combats;
 for (const k of ['dailyFreeBattles', 'energyCostPerBattle', 'maxRounds', 'hpMultiplier', 'damageScale', 'critChance', 'critMultiplier', 'elementAdvantage', 'elementDisadvantage', 'burnPctPerTurn', 'guardDefMultiplier']) {
@@ -107,6 +135,13 @@ for (const sp of species) {
   }
   if (!rarities[sp.rarity]) {
     throw new Error(`Rareza '${sp.rarity}' en especie ${sp.id} no está en balance.json`);
+  }
+  // Sesgo de personalidad (opcional): 5 dimensiones enteras 0-100
+  if (sp.personalityBias !== undefined) {
+    for (const [k, v] of Object.entries(sp.personalityBias)) {
+      if (!PERSONALITY_DIMS.includes(k)) throw new Error(`personalityBias.${k} en especie ${sp.id} no es una dimensión válida`);
+      if (!Number.isInteger(v) || v < 0 || v > 100) throw new Error(`personalityBias.${k} en especie ${sp.id} debe ser entero 0-100`);
+    }
   }
 }
 console.log(`✓ species.json: ${species.length} especies validadas con relaciones cruzadas`);

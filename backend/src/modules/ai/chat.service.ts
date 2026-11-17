@@ -24,13 +24,36 @@ import { BillingConfigService } from '../billing/billing-config.service';
 import { ManagedBudgetService } from '../billing/managed-budget.service';
 import { PlanLimits } from '../billing/plans';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MindService } from '../mind/mind.service';
+import { MindMemoryService } from '../mind/mind-memory.service';
+import { Interpretation, interpretMessage } from '../mind/conversation.engine';
+import {
+  BehaviorView,
+  EXPRESS_BEHAVIOR_TOOL,
+  decideBehavior,
+  effectsOf,
+  promptHint,
+  validateBehavior,
+} from '../mind/behavior.engine';
+import { Dims } from '../mind/mind.types';
+
+/**
+ * Plan del turno (spec 36), calculado por el orquestador ANTES del LLM: interpretación del
+ * mensaje (Conversation Engine), personalidad (Personality Engine) y reacción (Behavior Engine).
+ * El LLM puede proponer otra reacción con la herramienta express_behavior; las reglas la validan.
+ */
+interface TurnPlan {
+  interpretation: Interpretation;
+  behavior: BehaviorView;
+  dims: Dims;
+}
 
 export type ChatStreamEvent =
   | { type: 'delta'; text: string }
   | { type: 'tool'; name: string }
   | { type: 'action'; action: { id: string; tool: string; summary: string; expiresAt: Date; clientSide: boolean } }
   | { type: 'moderated'; reason: string; message: string; hideUserMessage: boolean }
-  | { type: 'done'; message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string }
+  | { type: 'done'; message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string; behavior?: BehaviorView }
   | { type: 'error'; message: string };
 
 export const MAX_MESSAGE_CHARS = 1000;
@@ -76,6 +99,9 @@ export class ChatService {
     @Optional() private readonly redis?: RedisService,
     @Optional() private readonly environmental?: EnvironmentalService,
     @Optional() private readonly events?: EventEmitter2,
+    // Spec 36: cerebro del Pockai (personalidad, memoria en capas, comportamiento)
+    @Optional() private readonly mind?: MindService,
+    @Optional() private readonly mindMemory?: MindMemoryService,
   ) {}
 
   private async checkRateLimit(userId: string) {
@@ -162,12 +188,14 @@ export class ChatService {
     const { provider, model, mode } = await this.aiConfig.resolveProvider(userId);
 
     let limits: PlanLimits | undefined;
+    let plan: string | undefined;
     let quotaKey: string | undefined;
     let reservedMicro = 0;
 
     if (mode === 'managed') {
-      const plan = await this.entitlements.planFor(userId);
-      limits = await this.billingConfig.limits(plan);
+      const userPlan = await this.entitlements.planFor(userId);
+      plan = userPlan;
+      limits = await this.billingConfig.limits(userPlan);
       if (message.length > limits.maxInputChars) {
         throw new BadRequestException({
           statusCode: 400,
@@ -176,14 +204,14 @@ export class ChatService {
           message: `El mensaje supera los ${limits.maxInputChars} caracteres`,
         });
       }
-      await this.managedBudget.assertOpen(plan);
-      const quota = await this.dailyQuota.consume(userId, plan);
+      await this.managedBudget.assertOpen(userPlan);
+      const quota = await this.dailyQuota.consume(userId, userPlan);
       quotaKey = quota.key;
       try {
         // Reserva atómica del coste máximo esperado de esta llamada (se ajusta al real al terminar)
         const promptEstimate = Math.ceil((limits.historyCharBudget + limits.maxInputChars + PROMPT_OVERHEAD_CHARS) / 4);
         reservedMicro = await this.managedBudget.reserve(
-          plan,
+          userPlan,
           this.managedBudget.estimateCostUsd(promptEstimate, limits.maxOutputTokens),
         );
       } catch (err) {
@@ -195,13 +223,15 @@ export class ChatService {
     let messages: ChatMessageInput[];
     let timeZone: string;
     let now: Date;
+    let turn: TurnPlan | undefined;
     const clientTools = sanitizeClientTools(rawClientTools);
     try {
       await this.usage.assertWithinQuota(userId, mode);
-      ({ messages, timeZone, now } = await this.buildContext(userId, pet, message, 'agent', {
+      ({ messages, timeZone, now, turn } = await this.buildContext(userId, pet, message, 'agent', {
         clientTools,
         clientContext: sanitizeClientContext(rawClientContext, pet),
         limits,
+        plan,
       }));
     } catch (err) {
       // No llegó a llamarse al proveedor: se devuelve el mensaje del día y la reserva
@@ -217,7 +247,7 @@ export class ChatService {
         : undefined;
 
     return {
-      events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx, limits, quotaKey, reservedMicro),
+      events: this.run(userId, pet, message, messages, provider, model, mode, signal, agentCtx, limits, quotaKey, reservedMicro, turn),
     };
   }
 
@@ -240,6 +270,8 @@ export class ChatService {
       clientTools?: string[];
       clientContext?: ReturnType<typeof sanitizeClientContext>;
       limits?: PlanLimits;
+      /** Plan del usuario en modo gestionado (presupuesto de memoria en el prompt). */
+      plan?: string;
     } = {},
   ) {
     const owner = await this.prisma.user.findUnique({
@@ -293,7 +325,12 @@ export class ChatService {
     // Memoria (feature 006): recuerdos relevantes en el prompt de sistema cuando el
     // `intelligence` lo desbloquea (≥ MEMORY_UNLOCK) O el vínculo alcanza `ally` (60+).
     // Es idempotente: un solo bloque aunque ambas condiciones se cumplan.
+    // Orquestador (spec 36): contexto + personalidad + reacción antes de llamar al LLM
+    const turn = await this.planTurn(pet, message);
+
     let systemPrompt = buildSystemPrompt(pet, owner ?? {}, {
+      personalityBlock: turn ? this.mind!.personalityBlock(turn.dims) : undefined,
+      behaviorHint: turn ? promptHint(turn.behavior) : undefined,
       tier,
       now,
       timeZone,
@@ -302,17 +339,92 @@ export class ChatService {
       clientContext: extra.clientContext,
       clientTools: extra.clientTools,
     });
-    if ((pet.intelligence ?? 0) >= MEMORY_UNLOCK || isBondingTierAtLeast(pet.bondingTier, 'ally')) {
-      const block = await this.memory.recall(pet.id, message);
-      if (block) systemPrompt += `\n\n${block}`;
+    // Spec 36: memoria en 3 capas para todos los niveles (la capacidad crece con la inteligencia y el
+    // plan); el backend elige solo lo relevante dentro del presupuesto de caracteres del plan.
+    let memoryBlock = '';
+    if (this.mindMemory) {
+      memoryBlock = await this.mindMemory
+        .recallBlock(pet.id, message, extra.limits ? (extra.plan ?? 'free') : 'byok', now)
+        .catch((e) => {
+          this.logger.debug(`Memoria por capas no disponible: ${(e as Error).message}`);
+          return '';
+        });
+    } else if ((pet.intelligence ?? 0) >= MEMORY_UNLOCK || isBondingTierAtLeast(pet.bondingTier, 'ally')) {
+      memoryBlock = await this.memory.recall(pet.id, message);
     }
+    if (memoryBlock) systemPrompt += `\n\n${memoryBlock}`;
 
     const messages: ChatMessageInput[] = [
       { role: 'system', content: systemPrompt },
       ...history,
       { role: 'user', content: message },
     ];
-    return { messages, timeZone, now };
+    return { messages, timeZone, now, turn };
+  }
+
+  /** Conversation + Personality + Behavior Engine: plan del turno (tolerante a fallos). */
+  private async planTurn(pet: any, message: string): Promise<TurnPlan | undefined> {
+    if (!this.mind) return undefined;
+    try {
+      const profile = await this.mind.profile(pet);
+      const interpretation = interpretMessage(message);
+      const behavior = decideBehavior(interpretation.intent, profile.dims, this.behaviorState(pet), this.mind.config());
+      return { interpretation, behavior, dims: profile.dims };
+    } catch (e) {
+      this.logger.debug(`Plan de turno no disponible: ${(e as Error).message}`);
+      return undefined;
+    }
+  }
+
+  private behaviorState(pet: any) {
+    return { sleeping: !!pet.sleeping, sick: !!pet.sick, energy: pet.energy ?? 100 };
+  }
+
+  /**
+   * Validación de reglas de la acción estructurada que propone el LLM (express_behavior):
+   * catálogo, estado y coherencia con la personalidad. Si no pasa, se sustituye.
+   */
+  private proposeBehavior(turn: TurnPlan, pet: any, rawArgs: string): string {
+    let action: unknown;
+    try {
+      action = JSON.parse(rawArgs || '{}')?.action;
+    } catch {
+      action = undefined;
+    }
+    const v = validateBehavior(action, turn.dims, this.behaviorState(pet), this.mind!.config());
+    turn.behavior = v.view;
+    return v.ok ? `ok: ${v.view.action}` : `no permitido (${v.reason}); se usará ${v.view.action}`;
+  }
+
+  /**
+   * Game engine + Memory Engine tras la respuesta: aplica los efectos autorizados (acotados),
+   * la deriva de personalidad y registra el acontecimiento si merece la pena. Nunca rompe el chat.
+   */
+  private async afterTurn(userId: string, pet: any, turn: TurnPlan | undefined): Promise<BehaviorView | undefined> {
+    if (!turn || !this.mind) return undefined;
+    try {
+      const effects = effectsOf(turn.behavior.action);
+      if (effects.happiness > 0 && !pet.sleeping) {
+        await this.prisma.pet.update({
+          where: { id: pet.id },
+          data: { happiness: Math.min(100, (pet.happiness ?? 0) + effects.happiness) },
+        });
+      }
+      const events = [...new Set([turn.interpretation.evolutionEvent, effects.evolutionEvent].filter(Boolean) as string[])];
+      await this.mind.applyExperience(pet.id, events);
+      if (this.mindMemory) {
+        const ep = turn.interpretation.episode;
+        if (ep) {
+          await this.mindMemory.remember(pet.id, [
+            { layer: 'episodic', kind: 'event', content: ep.content, importance: ep.importance, valence: ep.valence, subject: 'owner' },
+          ]);
+        }
+        await this.mindMemory.feel(pet.id, 'owner', 'Mi entrenador', 0.02 + turn.interpretation.sentiment * 0.08);
+      }
+    } catch (e: any) {
+      this.logger.warn(`No se pudieron aplicar los efectos del turno (${userId}): ${e?.message}`);
+    }
+    return turn.behavior;
   }
 
   // ---------- Modo Hermes local ----------
@@ -367,7 +479,9 @@ export class ChatService {
 
     const pet = await this.petsService.getPetById(userId, petId);
     const saved = await this.persistExchange(userId, pet, ticket.message, reply, 0);
-    return { message: { id: saved.id, content: reply }, intelligence: saved.intelligence, tier: intelligenceTier(saved.intelligence) };
+    // Modo local: sin herramientas, la reacción la decide el Behavior Engine por reglas
+    const behavior = await this.afterTurn(userId, pet, await this.planTurn(pet, ticket.message));
+    return { message: { id: saved.id, content: reply }, intelligence: saved.intelligence, tier: intelligenceTier(saved.intelligence), behavior };
   }
 
   /** Guarda el intercambio, sube la inteligencia y avisa por WebSocket. */
@@ -414,6 +528,7 @@ export class ChatService {
     limits?: PlanLimits,
     quotaKey?: string,
     reservedMicro = 0,
+    turn?: TurnPlan,
   ): AsyncGenerator<ChatStreamEvent> {
     const managed = mode === 'managed';
     // Una respuesta en curso por usuario (guard distribuido, R-02): evita ráfagas paralelas que
@@ -450,10 +565,14 @@ export class ChatService {
     let costReported = false;
     const convo = [...messages];
     try {
+      // express_behavior se ofrece una sola vez por turno
+      let behaviorChosen = false;
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
         // En la última vuelta no se ofrecen herramientas para forzar una respuesta de texto
         const tools =
-          agentCtx && round < MAX_TOOL_ROUNDS - 1 ? toolDefinitions(agentCtx.clientTools) : undefined;
+          agentCtx && round < MAX_TOOL_ROUNDS - 1
+            ? [...toolDefinitions(agentCtx.clientTools), ...(turn && !behaviorChosen ? [EXPRESS_BEHAVIOR_TOOL as any] : [])]
+            : undefined;
         let text = '';
         const calls: ToolCall[] = [];
         const maxTokens = limits?.maxOutputTokens ?? 1200;
@@ -488,8 +607,23 @@ export class ChatService {
         }
         if (calls.length === 0 || !agentCtx) break;
 
+        // Acción estructurada del LLM (spec 36): se valida con las reglas del juego, no se ejecuta a ciegas.
+        // Si solo propuso la reacción y ya respondió con texto, no hace falta otra vuelta al proveedor
+        // (evita duplicar la respuesta y el coste).
+        const behaviorCalls = turn ? calls.filter((c) => c.name === EXPRESS_BEHAVIOR_TOOL.name) : [];
+        let behaviorMsg = '';
+        if (behaviorCalls.length) {
+          behaviorMsg = this.proposeBehavior(turn!, pet, behaviorCalls[0].arguments);
+          behaviorChosen = true;
+        }
+        if (behaviorCalls.length === calls.length && text.trim()) break;
+
         convo.push({ role: 'assistant', content: text, toolCalls: calls });
         for (const call of calls) {
+          if (turn && call.name === EXPRESS_BEHAVIOR_TOOL.name) {
+            convo.push({ role: 'tool', toolCallId: call.id, content: behaviorMsg || `reacción registrada: ${turn.behavior.action}` });
+            continue;
+          }
           const outcome = await this.agent.handle({ ...agentCtx, now: new Date() }, call);
           if (outcome.kind === 'confirm') {
             proposed++;
@@ -523,6 +657,9 @@ export class ChatService {
       // Solo se persiste el intercambio si se completó
       const saved = await this.persistExchange(userId, pet, userMessage, reply, tokens);
       const intelligence = saved.intelligence;
+      // Efectos y memoria del turno en segundo plano: la reacción ya está decidida y no retrasa `done`
+      const behavior = turn?.behavior;
+      void this.afterTurn(userId, pet, turn);
 
       // En segundo plano: no retrasa la respuesta ni puede romper el chat
       void this.memory.maybeSummarize(pet.id, intelligence, provider, model, userId, mode, limits?.memoryExtractEvery);
@@ -532,6 +669,7 @@ export class ChatService {
         message: { id: saved.id, content: reply, ...this.visibleThinking(thinking) },
         intelligence,
         tier: intelligenceTier(intelligence),
+        ...(behavior ? { behavior } : {}),
       };
     } catch (err: any) {
       if (signal?.aborted) return; // el cliente cerró la conexión

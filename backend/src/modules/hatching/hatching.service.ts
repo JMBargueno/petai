@@ -1,3 +1,4 @@
+import { MindService } from '../mind/mind.service';
 import { Injectable, BadRequestException, ConflictException, NotFoundException, Optional } from '@nestjs/common';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import * as crypto from 'crypto';
@@ -15,6 +16,7 @@ export class HatchingService {
     private readonly gameData: GameDataService,
     @Optional() private readonly realtime?: RealtimeGateway,
     @Optional() private readonly events?: EventEmitter2,
+    @Optional() private readonly mind?: MindService,
   ) {}
 
   async getEggs(userId: string) {
@@ -214,10 +216,9 @@ export class HatchingService {
           combatStats: initialCombatStats,
           statPoints: 0,
           skills: [],
-          personality: {
-            trait: 'curioso',
-            temperament: 'alegre',
-          },
+          // Spec 36: 5 dimensiones (sesgo de especie ± variación determinista por visualSeed);
+          // trait y temperament se derivan de ellas
+          personality: (this.mind?.initialPersonality(chosenSpecies.id, visualSeed) ?? { trait: 'curioso', temperament: 'curioso' }) as any,
           lastTickAt: new Date(),
         },
         include: {
