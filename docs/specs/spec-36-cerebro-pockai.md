@@ -304,7 +304,9 @@ pasa por `validateBehavior` antes de aplicarse.
 
 ## 7. Combate
 `Fighter.personality = { heal, guard }` se calcula en `BattlesService.fighterFromPet` con
-`combatBias(dims)` y queda **congelado en la instantánea** del combate. En `chooseSkill` desplaza los
+`combatBias(dims)` y queda **congelado en la instantánea** del combate. El sesgo también se guarda
+en el participante del log (`ParticipantLog.personality`) para que la repetición sea reproducible
+desde el propio log; sin personalidad (bots), el log no cambia. En `chooseSkill` desplaza los
 umbrales de curar y protegerse (±5 % como mucho): valentía alta → cura y se protege más tarde;
 temperamento alto → se protege menos. La estrategia agresiva sigue sin protegerse nunca.
 No añade ninguna llamada al PRNG: un luchador sin personalidad (bots) produce exactamente el mismo

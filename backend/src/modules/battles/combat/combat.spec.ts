@@ -447,3 +447,27 @@ describe('ranking', () => {
     expect(isoWeekKey(new Date('2026-11-16T00:00:00Z'))).toBe('2026-W47');
   });
 });
+
+describe('Personalidad en combate (spec 36)', () => {
+  const toFighter = (p: any): Fighter => ({
+    name: p.name, speciesId: p.speciesId, element: p.element, level: p.level, stats: p.stats, mood: p.mood,
+    skills: p.skills.map((id: string) => skills.find((s) => s.id === id)!), strategy: p.strategy, isBot: p.isBot,
+    petId: p.petId, personality: p.personality,
+  });
+
+  it('el log guarda el sesgo y la repetición desde el log es idéntica', () => {
+    const a = { ...fighter('water', { strategy: 'defensive' }), personality: { heal: -0.05, guard: -0.04 } };
+    const b = { ...fighter('water', { strategy: 'defensive' }), personality: { heal: 0.05, guard: 0.05 } };
+    for (let seed = 1; seed <= 30; seed++) {
+      const first = simulateBattle(a, b, seed, cfg);
+      expect(first.log.participants[0].personality).toEqual(a.personality);
+      const [pa, pb] = first.log.participants;
+      expect(simulateBattle(toFighter(pa), toFighter(pb), seed, cfg).log.events).toEqual(first.log.events);
+    }
+  });
+
+  it('sin personalidad el participante del log no cambia', () => {
+    const res = simulateBattle(fighter('fire'), fighter('water'), 7, cfg);
+    expect(res.log.participants[0]).not.toHaveProperty('personality');
+  });
+});
