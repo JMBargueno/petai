@@ -72,6 +72,15 @@ function createPngBuffer(width, height, pixelFn) {
   return Buffer.concat([signature, ihdrChunk, idatChunk, iendChunk]);
 }
 
+// Uso:
+//   node scripts/generate-placeholder-assets.js             -> regenera patrones y las 3 especies base
+//   node scripts/generate-placeholder-assets.js <id> [...]  -> solo placeholders de esas especies
+//     (no toca los patrones ni el arte de otras especies)
+const CLI_IDS = process.argv.slice(2).filter((a) => !a.startsWith('-'));
+for (const id of CLI_IDS) {
+  if (!/^[a-z][a-z0-9_]*$/.test(id)) throw new Error(`Id de especie inválido: ${id}`);
+}
+
 const sharedDir = path.resolve(__dirname, '..', 'shared', 'assets');
 const patternsDir = path.join(sharedDir, 'patterns');
 const speciesDir = path.join(sharedDir, 'species');
@@ -130,7 +139,7 @@ const PATTERNS = {
   }
 };
 
-for (const [name, fn] of Object.entries(PATTERNS)) {
+for (const [name, fn] of CLI_IDS.length ? [] : Object.entries(PATTERNS)) {
   const filePath = path.join(patternsDir, `${name}.png`);
   const buf = createPngBuffer(256, 256, fn);
   fs.writeFileSync(filePath, buf);
@@ -187,7 +196,7 @@ function generateAnimJson(speciesId) {
   };
 }
 
-const SPECIES_LIST = ['ignisaur', 'axolunar', 'florabud'];
+const SPECIES_LIST = CLI_IDS.length ? CLI_IDS : ['ignisaur', 'axolunar', 'florabud'];
 
 for (const speciesId of SPECIES_LIST) {
   const targetDir = path.join(speciesDir, speciesId);
