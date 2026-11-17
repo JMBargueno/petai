@@ -27,12 +27,12 @@ describe('Missions E2E', () => {
   afterEach(async () => {
     if (!userId) return;
     // Clean up test data (delete in FK dependency order)
-    await prisma.mission.deleteMany({ where: { userId } });
+    await prisma.mission.deleteMany({ where: { userId } }).catch(() => {});
     await prisma.battle.deleteMany({
       where: { OR: [{ attackerPet: { userId } }, { defenderPet: { userId } }] },
-    });
-    await prisma.pet.deleteMany({ where: { userId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    }).catch(() => {});
+    await prisma.pet.deleteMany({ where: { userId } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { id: userId } }).catch(() => {});
   });
 
   /** Helper: register + login to get a token */
