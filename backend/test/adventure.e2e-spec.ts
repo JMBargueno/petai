@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { StatsService } from '../src/stats/stats.service';
+import { AchievementEngineService } from '../src/achievements/achievement-engine.service';
 
 /**
  * Aventura Narrativa IA (e2e) — camino feliz.
@@ -45,11 +47,28 @@ describe('Aventura Narrativa IA (e2e) — camino feliz', () => {
     return { token, userId };
   }
 
+  /**
+   * Eclosionar dispara en segundo plano `egg:hatched` → estadísticas → `stats:changed` → logros,
+   * y un súper raro (~10 %) desbloquea `rarity_super_rare` (+2 gemas). Si esa recompensa llega
+   * después de fijar el saldo, el delta de gemas sale mal. Se espera a que la estadística esté
+   * apuntada y se evalúan los logros ya (la recompensa se concede una sola vez, de forma atómica).
+   */
+  async function settleHatchAchievements(userId: string) {
+    const stats = app.get(StatsService);
+    const deadline = Date.now() + 5000;
+    while (!((await stats.getAll(userId)).eggs_hatched >= 1)) {
+      if (Date.now() > deadline) throw new Error('La estadística eggs_hatched no se registró tras eclosionar');
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    await app.get(AchievementEngineService).evaluate(userId);
+  }
+
   /** Registra un usuario y le crea una mascota (vía huevos), ya preparada para forzar «win». */
   async function signupWithPet(): Promise<{ token: string; userId: string; petId: string }> {
     const { token, userId } = await signup();
     const eggs = await api().get('/v1/eggs').set(auth(token)).expect(200);
     const petId = (await api().post(`/v1/eggs/${eggs.body[0].id}/hatch`).set(auth(token)).expect(201)).body.id as string;
+    await settleHatchAchievements(userId);
     // Stats altos para que `resolveOutcome` dé siempre «win» (statsScore=1).
     await prisma.pet.update({ where: { id: petId }, data: { level: 50, rarity: 'legendary', bonding: 100, sleeping: false, happiness: 50 } });
     // Saldo conocido para afirmar deltas.
