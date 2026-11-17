@@ -461,6 +461,8 @@
     "footer.nav": "Mapa del sitio",
     "footer.explore": "Explora",
     "footer.contact": "Contacto",
+    "footer.social": "Redes sociales",
+    "footer.social.link": "Pockai en {$INTERPOLATION}",
     "footer.lore": "El Éter Digital · el lore de Pockai",
     "nav.lang": "Idioma",
     "footer.rights": "Todos los derechos reservados.",

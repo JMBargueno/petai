@@ -450,6 +450,8 @@
     "pockais.meta.title": "The pockais: species, rarities and patterns",
     "pockais.meta.description": "Meet the pockais: their species, the real odds for each rarity, the shiny variant and the patterns that can hatch from every egg.",
     "footer.contact": "Contact",
+    "footer.social": "Social media",
+    "footer.social.link": "Pockai on {$INTERPOLATION}",
     "contact.eyebrow": "Contact",
     "contact.title": "Write to us",
     "contact.lead": "Questions, ideas, a bug, or is your pockai acting strange? Tell us and we will reply by email.",
