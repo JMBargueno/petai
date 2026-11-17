@@ -154,7 +154,7 @@ Riesgos conocidos y aceptados:
 - El registro responde 409 si el correo ya existe (permite saber si una cuenta está registrada; el límite de registros por IP lo acota).
 - El límite de fallos por cuenta desde cualquier IP permite que un atacante con muchas direcciones bloquee temporalmente el inicio de sesión de un tercero (no sus sesiones ya abiertas).
 - Tras `logout-all` o un cambio de contraseña, los access tokens ya emitidos siguen valiendo hasta caducar (15 min).
-- En el modo Hermes local la respuesta la afirma el cliente: sube la inteligencia sin pasar por un proveedor (limitado a 20 mensajes por minuto y sin efecto en el combate).
+- En los modos Hermes local, Claude CLI y Antigravity CLI la respuesta la afirma el cliente: sube la inteligencia sin pasar por un proveedor (limitado a 20 mensajes por minuto y sin efecto en el combate).
 - La imagen de producción incluye las dependencias de desarrollo (necesita el CLI de Prisma y ts-node para migraciones y seed).
 
 Pendiente o fuera de alcance de esta revisión (no se ha hecho una auditoría externa ni un pentest):
