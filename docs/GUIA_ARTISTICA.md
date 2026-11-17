@@ -288,7 +288,7 @@ El mundo de Pockai pasa a una **vista isométrica cozy**: las salas son dioramas
 
 - Dentro de una sala, el Pockai se muestra a unos **72 px** de alto (escala ≈ 0,56); en la mascota flotante, a 128 px.
 
-**Salas**
+**Salas** (se renderizan con el núcleo compartido de PixiJS en `shared/scene`: ver `ART_PIPELINE.md` §9)
 - Corte tipo "casa de muñecas": suelo de 14×10 celdas y **dos paredes al fondo** (la izquierda sobre `y = 0` y la derecha sobre `x = 0`), sin paredes delanteras.
 - Cada sala tiene su tema (pared, suelo, zócalo, ventana y luz) y su variante de noche.
 - **Muebles:** SVG isométrico con huella `W×D` en celdas, de suelo o de pared, con 2 orientaciones dibujadas (las otras 2 salen por espejo). El punto de anclaje es el vértice superior de la celda (x, y) de la huella.

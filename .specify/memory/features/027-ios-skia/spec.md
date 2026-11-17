@@ -1,10 +1,13 @@
 # Feature Specification: iOS Support + Cross-Platform Animation (Skia)
 
+> **Estado: SUSTITUIDA (2026-11-17).** El motor Rust/Skia compartido se reemplaza por el núcleo de escena con PixiJS incrustado en las tres plataformas (`shared/scene`, ver docs/ART_PIPELINE.md §9). Se conservan el formato `AnimationSpec` (`animation-specs.json`) y `validate-animations.ts`.
+
+
 **Feature Branch**: `027-ios-skia`
 
 **Created**: 2025-01-14
 
-**Status**: Approved
+**Status**: Superseded
 
 **Input**: User description: "App iOS nativa (SwiftUI) con Live Activity en Dynamic Island y WidgetKit, más motor de animación unificado en Rust (Skia/wgpu) que compila para Tauri, Android (JNI) e iOS (MTKView). Un AnimationSpec JSON controla las animaciones en las 3 plataformas con pixel diff < 2%."
 

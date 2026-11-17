@@ -142,6 +142,8 @@ Para componer un cuadro o la hoja de sprites completa:
 
 ## 5. Implementación Técnica por Plataforma
 
+> **Decisión 2026-11:** la escena (sala, Pockai y bake) pasa a ser un **núcleo compartido con PixiJS** en `shared/scene`. Ver §9. El bake por plataforma de §5.1–5.3 queda como referencia histórica y como fallback de los widgets nativos, que no pueden alojar un WebView.
+
 ### 5.1 Escritorio (Tauri 2 / Svelte / Canvas)
 - **Modo Producción**: Un `<canvas>` offscreen en memoria ejecuta la composición de los 4 pasos una sola vez al cargar la mascota (`bakeSpriteSheet()`).
 - El resultado se almacena en una imagen `ImageBitmap` o `HTMLCanvasElement` en RAM.
@@ -237,3 +239,33 @@ Reglas visuales en [`GUIA_ARTISTICA.md` §7.4](GUIA_ARTISTICA.md#74-isométrico-
 
 ### Revisión visual
 - `npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>` compone una hoja de contactos PNG (clips clave × etapas) a color con la paleta por defecto, para revisarla antes de commitear.
+
+---
+
+## 9. Núcleo de escena compartido (`shared/scene`, PixiJS)
+
+Un único renderizador para escritorio, Android e iOS, que sustituye a la spec `027-ios-skia`.
+
+| Plataforma | Cómo se monta |
+|---|---|
+| Escritorio (Tauri + Svelte) | Import ESM directo de `@pockai/scene` en los componentes |
+| Android (Compose) | `WebView` + `WebViewAssetLoader` con el bundle `dist/embed/` en `assets/scene/`, y puente `AndroidBridge` |
+| iOS (SwiftUI) | `WKWebView` con el mismo bundle y `WKScriptMessageHandler` |
+| Widgets (PetWidget, WidgetKit, Live Activity) | Nativos, con PNG pre-horneado (no admiten WebView) |
+
+**Qué vive en el núcleo:**
+- El bake (máscara + paleta + patrón) como filtro de Pixi.
+- El reproductor de clips (`anim.json`).
+- La sala isométrica: proyección, orden de profundidad, A*, paseo y modo edición.
+- Las partículas.
+
+**Qué queda nativo:** menús, pantallas, compras y llamadas a la API. La app nativa traduce los eventos de la escena a la API.
+
+**Protocolo** (`shared/scene/src/protocol.ts`): mensajes JSON tipados.
+- Entrada: `setPet`, `setHabitat`, `setTheme`, `setMode`, `playClip`.
+- Salida: `ready`, `petTapped`, `furnitureMoved`, `petDraggedOut`.
+
+**Reglas:**
+- El bundle se carga desde los assets de la app, sin red.
+- La escena para su ticker cuando no se ve.
+- Hay modo de calidad baja para gamas bajas.
