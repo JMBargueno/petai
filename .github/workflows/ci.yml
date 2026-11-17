@@ -229,6 +229,17 @@ jobs:
       - name: Check Tauri (Rust)
         run: cargo check --manifest-path desktop/src-tauri/Cargo.toml --locked
 
+      - name: Test Tauri (Rust)
+        run: cargo test --manifest-path desktop/src-tauri/Cargo.toml --locked
+
+      # Las devtools del webview solo existen en debug salvo que se active la feature `devtools`
+      # de tauri. Si alguna dependencia la activa, el instalador de producción las tendría.
+      - name: Devtools disabled in release
+        run: |
+          if cargo tree --manifest-path desktop/src-tauri/Cargo.toml --locked -e features -i tauri | grep -q 'tauri feature "devtools"'; then
+            echo "::error::La feature devtools de tauri está activa: las builds de producción tendrían DevTools"; exit 1
+          fi
+
   android:
     name: Android build (Compose)
     runs-on: ubuntu-latest

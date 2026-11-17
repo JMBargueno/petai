@@ -18,3 +18,13 @@ tauri-plugin-http = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-global-shortcut = "2"
+
+# Perfil de release endurecido (docs/specs/spec-38-endurecimiento-desktop.md):
+# binario más pequeño, sin símbolos y con el código optimizado como una sola unidad,
+# lo que dificulta la ingeniería inversa. No afecta a `cargo check`/`cargo test` (perfil dev).
+[profile.release]
+opt-level = "z"     # optimiza por tamaño
+lto = true          # Link-Time Optimization entre crates
+codegen-units = 1   # una sola unidad de generación: mejor optimización (build más lento)
+panic = "abort"     # sin tablas de unwinding; un panic termina el proceso
+strip = true        # elimina símbolos y nombres de funciones del binario

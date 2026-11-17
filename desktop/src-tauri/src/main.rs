@@ -339,4 +339,60 @@ mod tests {
             assert!(a.parse::<Shortcut>().is_ok(), "atajo rechazado: {a}");
         }
     }
+
+    /// Endurecimiento (docs/specs/spec-38-endurecimiento-desktop.md): la configuración que viaja
+    /// en el binario no puede relajarse sin que falle un test.
+    mod endurecimiento {
+        use serde_json::Value;
+
+        fn conf() -> Value {
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap()
+        }
+
+        fn capability() -> Value {
+            serde_json::from_str(include_str!("../capabilities/default.json")).unwrap()
+        }
+
+        #[test]
+        fn la_csp_de_produccion_es_restrictiva() {
+            let csp = &conf()["app"]["security"]["csp"];
+            assert!(csp.is_object(), "app.security.csp debe estar definida");
+            for (directiva, valor) in csp.as_object().unwrap() {
+                let v = valor.as_str().unwrap();
+                assert!(!v.contains("'unsafe-eval'"), "{directiva} no puede permitir 'unsafe-eval'");
+                assert!(
+                    !v.split_whitespace().any(|s| s == "*" || s.starts_with("https://*") || s == "https:" || s == "http:"),
+                    "{directiva} no puede usar comodines de origen: {v}"
+                );
+            }
+            assert_eq!(csp["script-src"], "'self'", "script-src solo admite 'self'");
+            assert_eq!(csp["object-src"], "'none'");
+        }
+
+        #[test]
+        fn ninguna_ventana_activa_devtools() {
+            for w in conf()["app"]["windows"].as_array().unwrap() {
+                assert_ne!(w["devtools"], Value::Bool(true), "devtools no puede activarse en tauri.conf.json");
+            }
+        }
+
+        #[test]
+        fn el_plugin_http_solo_llega_a_loopback() {
+            let cap = capability();
+            let http = cap["permissions"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|p| p["identifier"] == "http:default")
+                .expect("permiso http:default");
+            for entry in http["allow"].as_array().unwrap() {
+                let url = entry["url"].as_str().unwrap();
+                let host = url.split("://").nth(1).unwrap_or("");
+                assert!(
+                    host.starts_with("127.0.0.1:") || host.starts_with("localhost:") || host.starts_with("[::1]:"),
+                    "el plugin http solo debe permitir loopback (Hermes local): {url}"
+                );
+            }
+        }
+    }
 }

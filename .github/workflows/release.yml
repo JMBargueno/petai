@@ -68,6 +68,11 @@ jobs:
             let api = process.env.PETAI_API_URL.trim().replace(/\/+$/, "");
             if (!/^https?:\/\//i.test(api)) api = "https://" + api;
             try { new URL(api); } catch { console.error("::error::PETAI_API_URL no es una URL válida: " + api); process.exit(1); }
+            // La CSP de producción (app.security.csp) solo deja conectar con la API declarada: si
+            // PETAI_API_URL apunta a otro origen, la app publicada no podría hablar con el backend.
+            const origin = new URL(api).origin;
+            const connect = String(conf.app?.security?.csp?.["connect-src"] ?? "").split(/\s+/);
+            if (!connect.includes(origin)) { console.error("::error::La CSP (connect-src) de tauri.conf.json no incluye " + origin + " (ver docs/specs/spec-38-endurecimiento-desktop.md)"); process.exit(1); }
             fs.appendFileSync(process.env.GITHUB_ENV, "PETAI_API_URL_NORMALIZED=" + api + "\n");
             conf.bundle.createUpdaterArtifacts = true;
             conf.plugins.updater.endpoints = [api + "/v1/desktop/updates/{{target}}/{{arch}}/{{current_version}}"];

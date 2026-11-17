@@ -23,7 +23,33 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob: https://game-api.pockai.world",
+        "font-src": "'self' data:",
+        "connect-src": "'self' ipc: http://ipc.localhost https://game-api.pockai.world wss://game-api.pockai.world",
+        "media-src": "'self'",
+        "object-src": "'none'",
+        "frame-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob: http://localhost:5173 http://127.0.0.1:3000",
+        "font-src": "'self' data:",
+        "connect-src": "'self' ipc: http://ipc.localhost http://localhost:5173 ws://localhost:5173 http://127.0.0.1:3000 ws://127.0.0.1:3000",
+        "media-src": "'self'",
+        "object-src": "'none'",
+        "frame-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'"
+      },
+      "dangerousDisableAssetCspModification": ["style-src"]
     }
   },
   "bundle": {
