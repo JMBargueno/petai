@@ -580,6 +580,7 @@ export const api = {
   async updateMe(data: {
     displayName?: string;
     timezone?: string;
+    achievementsPublic?: boolean;
     notificationPrefs?: {
       vitals_critical?: boolean;
       interaction?: boolean;
@@ -872,6 +873,29 @@ export const api = {
 
   async getHabitatBuffs() {
     return minigameRequest<HabitatBuffs>('GET', '/v1/habitat/buffs');
+  },
+
+  // ── Perfil social e insignias ─────────────────────────────────────────────
+  async getMyProfile() {
+    return minigameRequest<MyProfile>('GET', '/v1/me/profile');
+  },
+  async getUserProfile(userId: string) {
+    return minigameRequest<PublicProfile>('GET', `/v1/users/${encodeURIComponent(userId)}/profile`);
+  },
+  async setFeaturedBadges(achIds: string[]) {
+    return minigameRequest<{ featuredBadges: string[] }>('PUT', '/v1/me/featured-badges', { achIds });
+  },
+  async getAchievements() {
+    return minigameRequest<AchievementListResponse>('GET', '/v1/achievements');
+  },
+  async getConstellation(category: string) {
+    return minigameRequest<ConstellationResponse>('GET', `/v1/achievements/constellation/${encodeURIComponent(category)}`);
+  },
+  async claimAchievement(id: string) {
+    return minigameRequest<{ achievement: { claimed: boolean }; reward: AchievementReward }>(
+      'POST',
+      `/v1/achievements/${encodeURIComponent(id)}/claim`,
+    );
   },
 
   // ── Amistad + Co-op (feature 021) ─────────────────────────────────────────
@@ -1742,4 +1766,119 @@ export interface TournamentStandings {
   offset: number;
   entries: TournamentStandingsEntry[];
   me: { rank: number; placement: number | null } | null;
+}
+
+// ── Perfil social, logros e insignias ─────────────────────────────────────────
+export type AchievementStatus = 'locked' | 'in_progress' | 'unlocked';
+export type AchievementTier = 'common' | 'rare' | 'epic' | 'legendary';
+
+export interface AchievementReward {
+  coins: number;
+  gems: number;
+  xp: number;
+  itemId: string | null;
+}
+
+export interface Achievement {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  /** Icono lucide (kebab-case) de la insignia. */
+  badgeIcon: string;
+  hidden: boolean;
+  tier: AchievementTier | string;
+  target: number;
+  current: number;
+  status: AchievementStatus;
+  unlockedAt: string | null;
+  claimed: boolean;
+  reward: AchievementReward;
+}
+
+export interface AchievementListResponse {
+  timestamp: string;
+  achievementsPublic: boolean;
+  categories: Record<string, Achievement[]>;
+}
+
+export interface ConstellationStar {
+  id: string;
+  x: number;
+  y: number;
+  status: AchievementStatus;
+  name: string;
+  tier: string;
+}
+
+export interface ConstellationResponse {
+  category: string;
+  name: string;
+  stars: ConstellationStar[];
+  connections: [string, string][];
+}
+
+/** Insignia (logro desbloqueado) en un perfil. */
+export interface ProfileBadge {
+  id: string;
+  name: string;
+  description: string;
+  badgeIcon: string;
+  category: string;
+  tier: AchievementTier | string;
+  unlockedAt: string;
+}
+
+export interface ProfileStats {
+  playMinutes: number;
+  feeds: number;
+  cleans: number;
+  sleeps: number;
+  eggsHatched: number;
+  byRarity: Record<string, number>;
+  shinies: number;
+  habitatVisits: number;
+  friends: number;
+  streakCurrent: number;
+  streakBest: number;
+  proDays: number;
+  coinsSpent?: number;
+  gemsSpent?: number;
+}
+
+export interface ProfilePet {
+  id: string;
+  nickname: string;
+  speciesName: string;
+  element: string;
+  rarity: string;
+  level: number;
+  stage: string;
+  shiny: boolean;
+}
+
+export interface ProfileBase {
+  id: string;
+  displayName: string;
+  handle: string | null;
+  title: string | null;
+  accountXp: number;
+  createdAt: string;
+  isPro: boolean;
+  achievementsPublic: boolean;
+  pet: ProfilePet | null;
+  /** null si el dueño oculta sus insignias y estadísticas. */
+  stats: ProfileStats | null;
+  badges: ProfileBadge[];
+  featuredBadges: string[];
+  achievementCount: { unlocked: number; total: number };
+}
+
+export interface MyProfile extends ProfileBase {
+  proSince: string | null;
+}
+
+export interface PublicProfile extends ProfileBase {
+  isFriend: boolean;
+  isSelf: boolean;
 }

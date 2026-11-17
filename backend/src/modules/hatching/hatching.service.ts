@@ -5,6 +5,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { normalizePetName, PET_NAME_INVALID_MESSAGE } from '../../common/pet-name';
 import { randomPetName } from './pet-names';
+import { recordSpend } from '../../stats/spend';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class HatchingService {
@@ -12,6 +14,7 @@ export class HatchingService {
     private readonly prisma: PrismaService,
     private readonly gameData: GameDataService,
     @Optional() private readonly realtime?: RealtimeGateway,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   async getEggs(userId: string) {
@@ -42,6 +45,7 @@ export class HatchingService {
       if (charged.count === 0) {
         throw new BadRequestException('Monedas insuficientes para comprar un huevo');
       }
+      await recordSpend(tx, userId, 'coins', costCoins);
 
       return tx.egg.create({
         data: {
@@ -73,6 +77,14 @@ export class HatchingService {
         const pet = await this.tryHatch(userId, eggId, finalNickname);
         this.realtime?.emitPetUpdate(userId, pet);
         this.realtime?.emitPetAction(userId, pet.id, 'hatched', { rarity: pet.rarity, shiny: pet.shiny });
+        // Estadísticas de colección, misiones y logros (huevos abiertos, rareza, elemento, shiny).
+        this.events?.emit('egg:hatched', {
+          userId,
+          petId: pet.id,
+          rarity: pet.rarity,
+          element: (pet as any).species?.element,
+          shiny: pet.shiny,
+        });
         return pet;
       } catch (err) {
         if (err instanceof ConflictException && attempt < 3) continue;

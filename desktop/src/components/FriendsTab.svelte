@@ -5,7 +5,8 @@
   import { pendingFriends, acceptedFriends, presenceState, friendPetLabel, type PresenceState } from '../lib/visitors';
   import { handleFormatError, normalizeHandle } from '../lib/handle';
   import SocialAvatar from './SocialAvatar.svelte';
-  import { UserPlus, Check, X, Home, RefreshCw, Users, AlertCircle, CircleCheck, Send } from 'lucide-svelte';
+  import UserProfileModal from '../features/profile/UserProfileModal.svelte';
+  import { UserPlus, Check, X, Home, RefreshCw, Users, AlertCircle, CircleCheck, Send, IdCard } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher<{ visit: string }>();
 
@@ -17,6 +18,8 @@
   let loading = true;
   let busy = '';
   let requestHandle = '';
+  /** Jugador cuyo perfil está abierto (userId). */
+  let profileOf = '';
 
   $: pending = pendingFriends(friends);
   $: incoming = pending.filter((f) => f.direction === 'incoming');
@@ -156,10 +159,10 @@
         {#each incoming as f (f.id)}
           <div class="ui-row request">
             <SocialAvatar name={f.otherDisplayName} presence={presence[f.otherUserId] ?? 'unknown'} />
-            <div class="ui-row__body">
+            <button class="ui-row__body profile-link" title="Ver perfil de {f.otherDisplayName}" on:click={() => (profileOf = f.otherUserId)}>
               <span class="ui-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
               <span class="ui-row__sub">Quiere ser tu amigo · {friendPetLabel(f)}</span>
-            </div>
+            </button>
             <div class="ui-row__actions">
               <button class="btn btn--icon ui-ibtn ui-ibtn--ok" title="Aceptar" aria-label="Aceptar a {f.otherDisplayName}" disabled={!!busy} on:click={() => accept(f)}>
                 <Check size={16} />
@@ -200,11 +203,19 @@
         {@const st = presence[f.otherUserId] ?? 'unknown'}
         <div class="ui-row">
           <SocialAvatar name={f.otherDisplayName} presence={st} />
-          <div class="ui-row__body">
+          <button class="ui-row__body profile-link" title="Ver perfil de {f.otherDisplayName}" on:click={() => (profileOf = f.otherUserId)}>
             <span class="ui-row__title">{f.otherDisplayName}{#if f.otherHandle} <span class="handle">@{f.otherHandle}</span>{/if}</span>
             <span class="ui-row__sub">{friendPetLabel(f)}</span>
-          </div>
+          </button>
           {#if st === 'online'}<span class="chip ui-chip ui-chip--online">En línea</span>{/if}
+          <button
+            class="btn btn--ghost btn--icon ui-ibtn"
+            title="Perfil de {f.otherDisplayName}"
+            aria-label="Ver perfil de {f.otherDisplayName}"
+            on:click={() => (profileOf = f.otherUserId)}
+          >
+            <IdCard size={16} />
+          </button>
           <button
             class="btn btn--ghost btn--icon ui-ibtn"
             title="Visitar a {f.otherDisplayName}"
@@ -225,10 +236,31 @@
   {/if}
 </div>
 
+{#if profileOf}
+  <UserProfileModal
+    userId={profileOf}
+    canVisit
+    on:close={() => (profileOf = '')}
+    on:visit={(e) => { profileOf = ''; dispatch('visit', e.detail); }}
+  />
+{/if}
+
 <style>
   .handle {
     font-weight: 500;
     color: var(--ink-muted);
+  }
+  .profile-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .profile-link:hover .ui-row__title {
+    text-decoration: underline;
   }
   .request {
     border-color: color-mix(in srgb, var(--color-sunburst) 70%, var(--line));

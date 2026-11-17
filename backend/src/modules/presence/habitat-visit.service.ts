@@ -9,6 +9,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { CoopCareService } from './coop-care.service';
@@ -66,6 +67,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
     @Optional() private readonly realtime?: RealtimeGateway,
     /** Resuelve PetsService en runtime: importar PetsModule crearía un ciclo (Pets→Bonding→Realtime→Presence). */
     @Optional() private readonly moduleRef?: ModuleRef,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   onModuleInit(): void {
@@ -153,6 +155,8 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
 
     const visit: ActiveVisitor = { visitorId: actorId, visitorName, visitorHandle, pet, message, startedAt };
     if (this.realtime) this.realtime.emitToUser(ownerId, 'habitat:visitor_joined', visit);
+    // Estadística de visitas (logros "Visitante"/"Trotamundos").
+    this.events?.emit('habitat:visited', { userId: actorId, ownerId });
 
     this.logger.debug(`Visita en vivo: ${actorId} → habitat de ${ownerId}`);
     return { success: true, visit, energy };

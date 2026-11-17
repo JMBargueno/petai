@@ -11,6 +11,7 @@
  * que el hot-reload y el CLI `validate` comparten la misma fuente de verdad de integridad.
  */
 import { z } from 'zod';
+import { isKnownStatKey } from '../../stats/stat-keys';
 
 export const ELEMENTS = ['fire', 'water', 'plant', 'electric', 'shadow', 'light'] as const;
 export type ElementValue = (typeof ELEMENTS)[number];
@@ -19,7 +20,7 @@ export const GAME_DATA_FILES = ['balance', 'species', 'patterns', 'foods', 'skil
 export type GameDataFileKey = (typeof GAME_DATA_FILES)[number];
 
 // Categorías y tiers de logros (feature 008). `event` referencia un evento de dominio conocido.
-export const ACHIEVEMENT_CATEGORIES = ['care', 'battle', 'ai', 'collection', 'social'] as const;
+export const ACHIEVEMENT_CATEGORIES = ['care', 'battle', 'ai', 'collection', 'social', 'activity', 'special'] as const;
 export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
 export const ACHIEVEMENT_TIERS = ['common', 'rare', 'epic', 'legendary'] as const;
 export type AchievementTier = (typeof ACHIEVEMENT_TIERS)[number];
@@ -29,7 +30,25 @@ export const ACHIEVEMENT_EVENTS = [
   'chat:message_sent', 'social:constellation_shared', 'social:public_profile',
 ] as const;
 
-const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color hex #RRGGBB');
+/**
+ * Disparador de un logro (motor centralizado, `AchievementEngineService`). Sin `trigger` se usa el
+ * formato original `event` (contador de eventos de dominio).
+ * - `stat`: progreso = valor de una estadística de `UserStat` (o derivada).
+ * - `all_stats`: progreso = cuántas de esas estadísticas valen al menos `min` (1 por defecto).
+ * - `account_before`: se cumple si la cuenta se creó antes de `date` (p. ej. beta tester).
+ */
+const achievementTriggerSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('event'), event: z.string().min(1) }),
+  z.object({ type: z.literal('stat'), stat: z.string().min(1) }),
+  z.object({
+    type: z.literal('all_stats'),
+    stats: z.array(z.string().min(1)).min(1),
+    min: z.number().int().positive().optional(),
+  }),
+  z.object({ type: z.literal('account_before'), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'fecha YYYY-MM-DD') }),
+]);
+
+const hexColor =z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color hex #RRGGBB');
 
 const baseStatsSchema = z.object({
   hp: z.number().nonnegative(),
@@ -276,8 +295,14 @@ export const achievementsSchema = z.object({
           desc: z.string().min(1),
           category: z.enum(ACHIEVEMENT_CATEGORIES),
           target: z.number().int().positive(),
-          event: z.string().min(1),
+          // Contador por evento de dominio (formato original). Opcional si hay `trigger`.
+          event: z.string().min(1).optional(),
+          trigger: achievementTriggerSchema.optional(),
           tier: z.enum(ACHIEVEMENT_TIERS),
+          // Insignia del logro: icono (nombre lucide) que se dibuja dentro del marco de su tier.
+          badge: z.object({ icon: z.string().regex(/^[a-z0-9-]+$/, 'icono lucide en kebab-case') }),
+          // Logro secreto: no se muestra (ni su nombre) hasta desbloquearlo.
+          hidden: z.boolean().optional(),
           reward: z.object({
             coins: z.number().int().nonnegative(),
             gems: z.number().int().nonnegative(),
@@ -285,7 +310,8 @@ export const achievementsSchema = z.object({
             itemId: z.string().nullable(),
           }),
         })
-        .passthrough(),
+        .passthrough()
+        .refine((a) => !!a.event || !!a.trigger, { message: 'cada logro necesita `event` o `trigger`' }),
     )
     .min(1),
 });
@@ -293,7 +319,7 @@ export const achievementsSchema = z.object({
 /** constellations.json (feature 008): layout SVG de estrellas por categoría. */
 export const constellationsSchema = z.object({
   version: z.string(),
-  categories: z.record(
+  categories: z.partialRecord(
     z.enum(ACHIEVEMENT_CATEGORIES),
     z.object({
       name: z.string().min(1),
@@ -523,8 +549,21 @@ export function validateGameData(b: GameDataBundle): string[] {
       }
       achIds.add(a.id);
       knownAchIds.add(a.id);
-      if (!ACHIEVEMENT_EVENTS.includes(a.event as (typeof ACHIEVEMENT_EVENTS)[number])) {
-        errors.push(`Logro ${a.id}: evento de dominio desconocido '${a.event}'`);
+      const trig = a.trigger ?? { type: 'event', event: a.event };
+      if (trig.type === 'event' && !ACHIEVEMENT_EVENTS.includes(trig.event as (typeof ACHIEVEMENT_EVENTS)[number])) {
+        errors.push(`Logro ${a.id}: evento de dominio desconocido '${trig.event}'`);
+      }
+      if (trig.type === 'stat' && !isKnownStatKey(trig.stat)) {
+        errors.push(`Logro ${a.id}: estadística desconocida '${trig.stat}'`);
+      }
+      if (trig.type === 'all_stats') {
+        const stats: string[] = trig.stats ?? [];
+        for (const st of stats) {
+          if (!isKnownStatKey(st)) errors.push(`Logro ${a.id}: estadística desconocida '${st}'`);
+        }
+        if (a.target !== stats.length) {
+          errors.push(`Logro ${a.id}: con 'all_stats' el target debe ser el número de estadísticas (${stats.length})`);
+        }
       }
       // Los logros epic/legendary pueden llevar item; los otros deben dejarlo nulo.
       if (a.reward?.itemId && !['epic', 'legendary'].includes(a.tier)) {

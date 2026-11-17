@@ -11,6 +11,7 @@
   } from '../lib/api';
   import { acceptedFriends } from '../lib/visitors';
   import SocialAvatar from './SocialAvatar.svelte';
+  import UserProfileModal from '../features/profile/UserProfileModal.svelte';
   import HomeScene from './HomeScene.svelte';
   import { Drumstick, Gamepad2, Droplets, Home, LogOut, PawPrint, RefreshCw, Users, AlertCircle, CircleCheck, History } from 'lucide-svelte';
 
@@ -31,6 +32,8 @@
   let visiting: string = '';
   /** Mensaje opcional que lleva tu pockai a la visita. */
   let visitMessage = '';
+  /** Perfil abierto (userId del amigo). */
+  let profileOf = '';
 
   $: accepted = acceptedFriends(friends);
   $: selectedFriend = accepted.find((f) => f.otherUserId === selected) ?? null;
@@ -199,6 +202,9 @@
           <div class="visit-title">
             <span class="pet-name">{pet ? pet.nickname || pet.speciesName : 'Sin mascota'}</span>
             {#if pet?.nickname && pet.speciesName}<span class="chip ui-chip">{pet.speciesName}</span>{/if}
+            <button class="btn btn--ghost btn--sm profile-btn" on:click={() => (profileOf = selectedFriend?.otherUserId ?? '')}>
+              Ver perfil
+            </button>
           </div>
 
           <div class="care-row">
@@ -266,7 +272,14 @@
   {/if}
 </div>
 
+{#if profileOf}
+  <UserProfileModal userId={profileOf} on:close={() => (profileOf = '')} />
+{/if}
+
 <style>
+  .profile-btn {
+    margin-left: auto;
+  }
   .ui-skel.tall {
     height: 200px;
   }

@@ -28,6 +28,8 @@
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
+  import AchievementToast from './features/achievements/AchievementToast.svelte';
+  import type { AchievementUnlockedPayload } from './features/achievements/achievements.api';
   import type { AnalyzedFile } from './lib/fileAnalyzer';
   import { PawPrint, Bell, X } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
@@ -46,6 +48,8 @@
   let shopItems: any[] = [];
   let isPanelOpen = true;
   let droppedFile: AnalyzedFile | null = null;
+  /** Último logro desbloqueado (aviso con la insignia). */
+  let unlockedAchievement: AchievementUnlockedPayload | null = null;
   // Petición de navegación al panel (la campana abre Ajustes › Avisos)
   let panelRequest: { dest: string; sub: string; n: number; prompt?: string } | null = null;
   let requestN = 0;
@@ -318,6 +322,13 @@
 
         // Feature ambiental: hora del día, clima, inactividad y festividades
         socket.on('environmental:changed', (ev: EnvironmentalChangedEvent) => handleEnvironmentalChanged(ev));
+
+        // Logro desbloqueado → aviso con la insignia (la recompensa ya está acreditada: refresca saldo).
+        socket.on('achievement:unlocked', (p: AchievementUnlockedPayload | null) => {
+          if (!p) return;
+          unlockedAchievement = p;
+          api.getMe().then((u) => (user = u)).catch(() => {});
+        });
 
         // Aviso en tiempo real de nueva versión disponible
         socket.on('desktop:update_available', () => {
@@ -684,6 +695,8 @@
     on:refreshPet={refreshPet}
     on:logout={clearSessionState}
   />
+
+  <AchievementToast payload={unlockedAchievement} onDismiss={() => (unlockedAchievement = null)} />
 
   {#if droppedFile && !updateLocked}
     <FileDropModal

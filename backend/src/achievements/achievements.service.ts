@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException, NotFoundException, ConflictExc
 import { PrismaService } from '../prisma/prisma.service';
 import { GameDataService } from '../modules/game-data/game-data.service';
 import { ACHIEVEMENT_CATEGORY_VALUES } from './dto/achievement.dto';
+import { AchievementDef, AchievementEngineService, ProgressContext, computeProgress, triggerOf } from './achievement-engine.service';
 import {
   AchievementDto,
   AchievementListResponseDto,
@@ -9,17 +10,6 @@ import {
   PublicAchievementDto,
   PublicAchievementsDto,
 } from './dto/achievement.dto';
-
-interface AchievementDef {
-  id: string;
-  name: string;
-  desc: string;
-  category: string;
-  target: number;
-  event: string;
-  tier: string;
-  reward: { coins: number; gems: number; xp: number; itemId: string | null };
-}
 
 interface AchievementRow {
   id: string;
@@ -42,6 +32,7 @@ export class AchievementsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gameData: GameDataService,
+    private readonly engine: AchievementEngineService,
   ) {}
 
   /** Lista de definiciones de logros vigentes (snapshot de `achievements.json`). */
@@ -71,6 +62,7 @@ export class AchievementsService {
     const defs = this.getDefs();
     const rows = await this.prisma.achievement.findMany({ where: { userId } });
     const rowByAchId = new Map<string, AchievementRow>(rows.map((r) => [r.achId, r]));
+    const ctx = await this.engine.loadContext(userId);
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -82,11 +74,11 @@ export class AchievementsService {
 
     for (const def of defs) {
       const row = rowByAchId.get(def.id);
-      const current = row?.current ?? 0;
       const unlockedAt = row?.unlockedAt ?? null;
+      const current = unlockedAt ? def.target : this.progressOf(def, row, ctx);
       const claimed = row?.claimed ?? false;
       const status = this.computeStatus(current, def.target, unlockedAt);
-      categories[def.category].push(this.toDto(def, current, status, unlockedAt, claimed));
+      (categories[def.category] ??= []).push(this.toDto(def, current, status, unlockedAt, claimed));
     }
 
     return {
@@ -96,6 +88,11 @@ export class AchievementsService {
     };
   }
 
+  /** Progreso actual: contador de la fila (logros de evento) o estadística (resto). */
+  progressOf(def: AchievementDef, row: { current: number } | undefined, ctx: ProgressContext): number {
+    return triggerOf(def).type === 'event' ? (row?.current ?? 0) : computeProgress(def, ctx);
+  }
+
   private toDto(
     def: AchievementDef,
     current: number,
@@ -103,11 +100,15 @@ export class AchievementsService {
     unlockedAt: Date | null,
     claimed: boolean,
   ): AchievementDto {
+    // Logro secreto: no se revela hasta desbloquearlo.
+    const secret = !!def.hidden && status !== 'unlocked';
     return {
       id: def.id,
       category: def.category,
-      name: def.name,
-      description: def.desc,
+      name: secret ? '???' : def.name,
+      description: secret ? 'Logro secreto' : def.desc,
+      badgeIcon: secret ? 'circle-help' : (def.badge?.icon ?? 'star'),
+      hidden: !!def.hidden,
       tier: def.tier,
       target: def.target,
       current: Math.min(current, def.target),
@@ -194,6 +195,8 @@ export class AchievementsService {
       achievements.push({
         id: def.id,
         name: def.name,
+        description: def.desc,
+        badgeIcon: def.badge?.icon ?? 'star',
         category: def.category,
         tier: def.tier,
         unlockedAt: row.unlockedAt?.toISOString() ?? null,

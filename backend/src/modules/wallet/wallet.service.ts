@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { recordSpend } from '../../stats/spend';
 
 /**
  * C-01 / SDD §3.3 — Primitiva económica compartida (cobro y abono atómicos de `coins`/`gems`).
@@ -37,7 +38,10 @@ export class WalletService {
             where: { id: userId, gems: { gte: amount } },
             data: { gems: { decrement: amount } },
           });
-    return { ok: res.count === 1 };
+    const ok = res.count === 1;
+    // Estadística de gasto (logros "Comprador", "Joyero"...) en la misma transacción del cobro.
+    if (ok) await recordSpend(tx, userId, currency, amount);
+    return { ok };
   }
 
   /** Abono atómico (increment). Mismo criterio de validación que `debit` (entero > 0). */

@@ -2,9 +2,11 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GeneticsEngineService, PetGenes } from './genetics-engine.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const BREEDING_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MAX_SIMULTANEOUS = 3;
@@ -15,6 +17,7 @@ export class BreedingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geneticsEngine: GeneticsEngineService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   async startBreeding(userId: string, parent1Id: string, parent2Id: string) {
@@ -173,6 +176,15 @@ export class BreedingService {
         stage: 'baby',
         combatStats: result.offspringGenes.baseStats,
       },
+    });
+
+    // Colección (logros de rareza/elemento/shiny): una cría también es un pockai conseguido.
+    this.events?.emit('pet:bred', {
+      userId: breeding.userId,
+      petId: offspring.id,
+      rarity: offspring.rarity,
+      element: parent1.species?.element,
+      shiny: offspring.shiny,
     });
 
     const breedingResult = await this.prisma.breedingResult.create({

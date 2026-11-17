@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { recordSpend } from '../../stats/spend';
 
 const MAX_PURCHASE_QTY = 99;
 
@@ -51,6 +52,9 @@ export class InventoryService {
       if (charged.count === 0) {
         throw new BadRequestException('Fondos insuficientes (monedas o gemas)');
       }
+      // Estadísticas de gasto (logros de gasto) en la misma transacción del cobro.
+      await recordSpend(tx, userId, 'coins', totalCoins);
+      await recordSpend(tx, userId, 'gems', totalGems);
 
       return tx.inventoryItem.upsert({
         where: {

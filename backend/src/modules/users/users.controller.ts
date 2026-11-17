@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, Body, UseGuards, Param, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, Param, Query, HttpCode, HttpStatus, Optional } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -6,20 +6,38 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { AllowUnverified } from '../auth/allow-unverified.decorator';
 import { AchievementsService } from '../../achievements/achievements.service';
 import { PublicAchievementsDto } from '../../achievements/dto/achievement.dto';
+import { AchievementEngineService } from '../../achievements/achievement-engine.service';
+import { StatsService } from '../../stats/stats.service';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('me')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    @Optional() private readonly achievementEngine?: AchievementEngineService,
+    @Optional() private readonly stats?: StatsService,
+  ) {}
 
   @Get()
   // Accesible sin verificar: las apps lo usan para saber si deben mostrar la pantalla de verificación.
   @AllowUnverified()
   @ApiOperation({ summary: 'Obtener perfil del usuario autenticado' })
-  getMe(@CurrentUser() user: any) {
-    return this.usersService.getMe(user.id);
+  async getMe(@CurrentUser() user: any) {
+    // Logros derivados (beta tester, días PRO, amigos...), con throttle. Se espera ANTES de leer el
+    // usuario: si desbloquea algo, la recompensa ya va incluida en el saldo que se devuelve y no llega
+    // después en segundo plano (los clientes y los tests leen el saldo de esta respuesta).
+    await this.achievementEngine?.evaluateThrottled(user.id);
+    const me = await this.usersService.getMe(user.id);
+    // Abrir la app cuenta como día jugado (racha, también en clientes sin WebSocket; idempotente por
+    // día). También se espera: no deja escrituras pendientes tras la respuesta.
+    try {
+      await this.stats?.touchPlayDay(user.id, me.timezone);
+    } catch {
+      /* la racha es best-effort: nunca rompe /me */
+    }
+    return me;
   }
 
   @Post('handle')

@@ -26,6 +26,8 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { MissionsModule } from './missions/missions.module';
 import { AchievementsModule } from './achievements/achievements.module';
+import { StatsModule } from './stats/stats.module';
+import { ProfileModule } from './profile/profile.module';
 import { ChestsModule } from './modules/chests/chests.module';
 import { EnvironmentalModule } from './modules/environmental/environmental.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -77,6 +79,8 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     ObservabilityModule.forRoot(),
     PrismaModule,
     RedisModule,
+    StatsModule,
+    ProfileModule,
     MailModule,
     RealtimeModule,
     GameDataModule,

@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
 import { BondingService } from '../bonding/bonding.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 export interface MinigameRewards {
   coins: number;
@@ -30,6 +31,7 @@ export class MinigamesService {
     private readonly petsService: PetsService,
     private readonly bonding: BondingService,
     @Optional() private readonly realtime?: RealtimeGateway,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   private get cfg() {
@@ -163,6 +165,8 @@ export class MinigamesService {
     // Vínculo (feature 006): minijuego terminado con premio sube el bonding (+2)
     await this.bonding.recordInteraction(session.petId, userId, 'minigame');
     this.realtime?.emitPetAction(userId, session.petId, 'minigame_finished', { gameId: session.gameId, score });
+    // Misiones y logros de minijuegos.
+    this.events?.emit('minigame:finished', { userId, petId: session.petId, score });
 
     return { score, rewards, pet };
   }

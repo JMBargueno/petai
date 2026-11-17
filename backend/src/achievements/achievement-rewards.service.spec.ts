@@ -46,7 +46,7 @@ describe('AchievementRewardsService', () => {
     (tx.achievement.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
     const payload = await service.unlockAndGrant(userId, 'battle_50_wins');
     expect(payload).toEqual(
-      expect.objectContaining({ id: 'battle_50_wins', reward: expect.objectContaining({ itemId: 'ach_item_battle_trophy' }) }),
+      expect.objectContaining({ id: 'battle_50_wins', badgeIcon: 'star', reward: expect.objectContaining({ itemId: 'ach_item_battle_trophy' }) }),
     );
     expect(tx.achievement.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { userId, achId: 'battle_50_wins', unlockedAt: null, current: { gte: 50 } } }),
@@ -97,7 +97,7 @@ describe('AchievementRewardsService', () => {
 
   it('emits the unlocked payload to the user via WebSocket', async () => {
     (tx.achievement.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
-    const payload = { id: 'care_feed_10', name: 'Primer bocadillo', category: 'care', tier: 'common', reward: DEFS[1].reward };
+    const payload = { id: 'care_feed_10', name: 'Primer bocadillo', category: 'care', tier: 'common', badgeIcon: 'cookie', reward: DEFS[1].reward };
     service.emitUnlocked(userId, payload);
     expect(realtime.emitToUser).toHaveBeenCalledWith(userId, 'achievement:unlocked', expect.objectContaining({ id: 'care_feed_10' }));
   });

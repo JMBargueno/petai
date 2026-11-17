@@ -1,6 +1,246 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/v1/me/profile": {
+      "get": {
+        "operationId": "MyProfileController_getMyProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyProfileDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mi perfil: datos de la cuenta, mascota principal, estadísticas e insignias",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/v1/me/featured-badges": {
+      "put": {
+        "operationId": "MyProfileController_setFeaturedBadges",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetFeaturedBadgesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ featuredBadges: string[] }"
+          },
+          "400": {
+            "description": "Más de 3, o alguna no está desbloqueada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fijar las insignias destacadas del perfil (máx. 3, solo desbloqueadas)",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/v1/users/{id}/profile": {
+      "get": {
+        "operationId": "PublicProfileController_getPublicProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicProfileDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perfil público de un jugador (insignias y estadísticas si las muestra)",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/v1/achievements": {
+      "get": {
+        "operationId": "AchievementsController_getAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Logros del usuario por categoría",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AchievementListResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "500": {
+            "description": "Game-data de logros no cargado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener todos los logros del usuario con su estado",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/v1/achievements/constellation/{cat}": {
+      "get": {
+        "operationId": "AchievementsController_getConstellation",
+        "parameters": [
+          {
+            "name": "cat",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Constelación de la categoría",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConstellationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Categoría inválida"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "500": {
+            "description": "Game-data de constelaciones no cargado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Constelación (layout SVG + estado) de una categoría",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/v1/achievements/{id}/claim": {
+      "post": {
+        "operationId": "AchievementsController_claim",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logro reclamado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimRewardResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Logro no desbloqueado"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "404": {
+            "description": "Logro no encontrado o no pertenece al usuario"
+          },
+          "409": {
+            "description": "Logro ya reclamado (race condition)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reclamar el estado de recompensa de un logro desbloqueado",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/v1/catalog": {
+      "get": {
+        "operationId": "GameDataController_getCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener catálogo general de juego (especies, balance, patrones y alimentos)",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/v1/presence/{userId}": {
       "get": {
         "operationId": "PresenceController_getPresence",
@@ -326,18 +566,67 @@
         ]
       }
     },
-    "/v1/catalog": {
+    "/v1/shop": {
       "get": {
-        "operationId": "GameDataController_getCatalog",
+        "operationId": "InventoryController_getShop",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar artículos de la tienda",
+        "tags": [
+          "Inventory & Shop"
+        ]
+      }
+    },
+    "/v1/inventory": {
+      "get": {
+        "operationId": "InventoryController_getInventory",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
-        "summary": "Obtener catálogo general de juego (especies, balance, patrones y alimentos)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener inventario del usuario",
         "tags": [
-          "Catalog"
+          "Inventory & Shop"
+        ]
+      }
+    },
+    "/v1/shop/buy": {
+      "post": {
+        "operationId": "InventoryController_buyItem",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprar artículo de la tienda",
+        "tags": [
+          "Inventory & Shop"
         ]
       }
     },
@@ -1067,196 +1356,6 @@
         "summary": "Logros públicos de un usuario (solo si ha activado la visibilidad)",
         "tags": [
           "Users"
-        ]
-      }
-    },
-    "/v1/achievements": {
-      "get": {
-        "operationId": "AchievementsController_getAll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Logros del usuario por categoría",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AchievementListResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          },
-          "500": {
-            "description": "Game-data de logros no cargado"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener todos los logros del usuario con su estado",
-        "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/v1/achievements/constellation/{cat}": {
-      "get": {
-        "operationId": "AchievementsController_getConstellation",
-        "parameters": [
-          {
-            "name": "cat",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Constelación de la categoría",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConstellationResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Categoría inválida"
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          },
-          "500": {
-            "description": "Game-data de constelaciones no cargado"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Constelación (layout SVG + estado) de una categoría",
-        "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/v1/achievements/{id}/claim": {
-      "post": {
-        "operationId": "AchievementsController_claim",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Logro reclamado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClaimRewardResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Logro no desbloqueado"
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          },
-          "404": {
-            "description": "Logro no encontrado o no pertenece al usuario"
-          },
-          "409": {
-            "description": "Logro ya reclamado (race condition)"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Reclamar el estado de recompensa de un logro desbloqueado",
-        "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/v1/shop": {
-      "get": {
-        "operationId": "InventoryController_getShop",
-        "parameters": [
-          {
-            "name": "kind",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Listar artículos de la tienda",
-        "tags": [
-          "Inventory & Shop"
-        ]
-      }
-    },
-    "/v1/inventory": {
-      "get": {
-        "operationId": "InventoryController_getInventory",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener inventario del usuario",
-        "tags": [
-          "Inventory & Shop"
-        ]
-      }
-    },
-    "/v1/shop/buy": {
-      "post": {
-        "operationId": "InventoryController_buyItem",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Comprar artículo de la tienda",
-        "tags": [
-          "Inventory & Shop"
         ]
       }
     },
@@ -8791,6 +8890,638 @@
       }
     },
     "schemas": {
+      "ProfilePetDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string",
+            "example": "Chispa"
+          },
+          "speciesName": {
+            "type": "string",
+            "example": "Flamín"
+          },
+          "element": {
+            "type": "string",
+            "example": "fire"
+          },
+          "rarity": {
+            "type": "string",
+            "example": "rare"
+          },
+          "level": {
+            "type": "number",
+            "example": 12
+          },
+          "stage": {
+            "type": "string",
+            "example": "juvenile"
+          },
+          "shiny": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "id",
+          "nickname",
+          "speciesName",
+          "element",
+          "rarity",
+          "level",
+          "stage",
+          "shiny"
+        ]
+      },
+      "ProfileStatsDto": {
+        "type": "object",
+        "properties": {
+          "playMinutes": {
+            "type": "number",
+            "description": "Minutos de juego",
+            "example": 754
+          },
+          "feeds": {
+            "type": "number",
+            "description": "Veces que ha alimentado a sus mascotas",
+            "example": 132
+          },
+          "cleans": {
+            "type": "number",
+            "example": 40
+          },
+          "sleeps": {
+            "type": "number",
+            "example": 25
+          },
+          "eggsHatched": {
+            "type": "number",
+            "description": "Huevos abiertos",
+            "example": 6
+          },
+          "byRarity": {
+            "type": "object",
+            "description": "Pockais por rareza",
+            "example": {
+              "normal": 4,
+              "rare": 2
+            }
+          },
+          "shinies": {
+            "type": "number",
+            "description": "Pockais shiny conseguidos",
+            "example": 0
+          },
+          "habitatVisits": {
+            "type": "number",
+            "description": "Visitas a hábitats de amigos",
+            "example": 9
+          },
+          "friends": {
+            "type": "number",
+            "description": "Amigos aceptados",
+            "example": 3
+          },
+          "streakCurrent": {
+            "type": "number",
+            "description": "Racha actual de días seguidos",
+            "example": 4
+          },
+          "streakBest": {
+            "type": "number",
+            "description": "Mejor racha de días seguidos",
+            "example": 12
+          },
+          "proDays": {
+            "type": "number",
+            "description": "Días siendo PRO",
+            "example": 45
+          },
+          "coinsSpent": {
+            "type": "number",
+            "description": "Monedas gastadas (solo en el perfil propio)",
+            "example": 3400
+          },
+          "gemsSpent": {
+            "type": "number",
+            "description": "Gemas gastadas (solo en el perfil propio)",
+            "example": 20
+          }
+        },
+        "required": [
+          "playMinutes",
+          "feeds",
+          "cleans",
+          "sleeps",
+          "eggsHatched",
+          "byRarity",
+          "shinies",
+          "habitatVisits",
+          "friends",
+          "streakCurrent",
+          "streakBest",
+          "proDays"
+        ]
+      },
+      "ProfileBadgeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID lógico del logro",
+            "example": "special_beta_tester"
+          },
+          "name": {
+            "type": "string",
+            "example": "Beta Tester"
+          },
+          "description": {
+            "type": "string",
+            "example": "Te uniste a PockAI antes de 2027"
+          },
+          "badgeIcon": {
+            "type": "string",
+            "description": "Icono lucide (kebab-case) de la insignia",
+            "example": "flask-conical"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "care",
+              "battle",
+              "ai",
+              "collection",
+              "social",
+              "activity",
+              "special"
+            ],
+            "example": "special"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "common",
+              "rare",
+              "epic",
+              "legendary"
+            ],
+            "example": "legendary"
+          },
+          "unlockedAt": {
+            "type": "string",
+            "description": "Fecha de desbloqueo (ISO 8601)",
+            "example": "2026-11-17T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "badgeIcon",
+          "category",
+          "tier",
+          "unlockedAt"
+        ]
+      },
+      "ProfileAchievementCountDto": {
+        "type": "object",
+        "properties": {
+          "unlocked": {
+            "type": "number",
+            "example": 14
+          },
+          "total": {
+            "type": "number",
+            "example": 78
+          }
+        },
+        "required": [
+          "unlocked",
+          "total"
+        ]
+      },
+      "MyProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Jose"
+          },
+          "handle": {
+            "type": "string",
+            "nullable": true,
+            "example": "jose"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "example": "Cuidador novato"
+          },
+          "accountXp": {
+            "type": "number",
+            "example": 1200
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Fecha de alta (ISO 8601)"
+          },
+          "isPro": {
+            "type": "boolean",
+            "description": "Si ahora mismo es PRO"
+          },
+          "achievementsPublic": {
+            "type": "boolean",
+            "description": "Si el dueño muestra sus insignias y estadísticas"
+          },
+          "pet": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProfilePetDto"
+              }
+            ]
+          },
+          "stats": {
+            "nullable": true,
+            "description": "null si el dueño las oculta",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProfileStatsDto"
+              }
+            ]
+          },
+          "badges": {
+            "description": "Insignias desbloqueadas (vacío si las oculta)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileBadgeDto"
+            }
+          },
+          "featuredBadges": {
+            "description": "Ids de las insignias destacadas (máx. 3)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "achievementCount": {
+            "$ref": "#/components/schemas/ProfileAchievementCountDto"
+          },
+          "proSince": {
+            "type": "string",
+            "nullable": true,
+            "description": "Inicio del tramo PRO actual (ISO 8601)"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "accountXp",
+          "createdAt",
+          "isPro",
+          "achievementsPublic",
+          "badges",
+          "featuredBadges",
+          "achievementCount"
+        ]
+      },
+      "SetFeaturedBadgesDto": {
+        "type": "object",
+        "properties": {
+          "achIds": {
+            "maxItems": 3,
+            "example": [
+              "special_beta_tester",
+              "care_feed_50"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "achIds"
+        ]
+      },
+      "PublicProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Jose"
+          },
+          "handle": {
+            "type": "string",
+            "nullable": true,
+            "example": "jose"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "example": "Cuidador novato"
+          },
+          "accountXp": {
+            "type": "number",
+            "example": 1200
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Fecha de alta (ISO 8601)"
+          },
+          "isPro": {
+            "type": "boolean",
+            "description": "Si ahora mismo es PRO"
+          },
+          "achievementsPublic": {
+            "type": "boolean",
+            "description": "Si el dueño muestra sus insignias y estadísticas"
+          },
+          "pet": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProfilePetDto"
+              }
+            ]
+          },
+          "stats": {
+            "nullable": true,
+            "description": "null si el dueño las oculta",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProfileStatsDto"
+              }
+            ]
+          },
+          "badges": {
+            "description": "Insignias desbloqueadas (vacío si las oculta)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileBadgeDto"
+            }
+          },
+          "featuredBadges": {
+            "description": "Ids de las insignias destacadas (máx. 3)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "achievementCount": {
+            "$ref": "#/components/schemas/ProfileAchievementCountDto"
+          },
+          "isFriend": {
+            "type": "boolean",
+            "description": "Si el visitante y el dueño son amigos"
+          },
+          "isSelf": {
+            "type": "boolean",
+            "description": "Si es el perfil del propio visitante"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "accountXp",
+          "createdAt",
+          "isPro",
+          "achievementsPublic",
+          "badges",
+          "featuredBadges",
+          "achievementCount",
+          "isFriend",
+          "isSelf"
+        ]
+      },
+      "AchievementListResponseDto": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp de la respuesta (ISO 8601)",
+            "example": "2026-11-13T14:30:00.000Z"
+          },
+          "achievementsPublic": {
+            "type": "boolean",
+            "description": "Estado del opt-in de visibilidad pública",
+            "example": false
+          },
+          "categories": {
+            "type": "object",
+            "description": "Logros por categoría (care, battle, ai, collection, social, activity, special)"
+          }
+        },
+        "required": [
+          "timestamp",
+          "achievementsPublic",
+          "categories"
+        ]
+      },
+      "StarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID lógico del logro",
+            "example": "battle_10_wins"
+          },
+          "x": {
+            "type": "number",
+            "description": "Coordenada X normalizada [0,1]",
+            "example": 0.45
+          },
+          "y": {
+            "type": "number",
+            "description": "Coordenada Y normalizada [0,1]",
+            "example": 0.45
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado del logro",
+            "enum": [
+              "locked",
+              "in_progress",
+              "unlocked"
+            ],
+            "example": "unlocked"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del logro",
+            "example": "Guerrero"
+          },
+          "tier": {
+            "type": "string",
+            "description": "Tier del logro",
+            "enum": [
+              "common",
+              "rare",
+              "epic",
+              "legendary"
+            ],
+            "example": "rare"
+          }
+        },
+        "required": [
+          "id",
+          "x",
+          "y",
+          "status",
+          "name",
+          "tier"
+        ]
+      },
+      "ConstellationResponseDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Categoría/constelación",
+            "enum": [
+              "care",
+              "battle",
+              "ai",
+              "collection",
+              "social",
+              "activity",
+              "special"
+            ],
+            "example": "battle"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la constelación",
+            "example": "Batalla"
+          },
+          "stars": {
+            "description": "Estrellas de la constelación",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StarDto"
+            }
+          },
+          "connections": {
+            "description": "Conexiones entre estrellas (pares de ids)",
+            "example": [
+              [
+                "battle_5_fights",
+                "battle_1_wins"
+              ]
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "category",
+          "name",
+          "stars",
+          "connections"
+        ]
+      },
+      "ClaimedAchievementDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID lógico del logro",
+            "example": "battle_10_wins"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría",
+            "example": "battle"
+          },
+          "claimed": {
+            "type": "boolean",
+            "description": "Si fue reclamado",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "claimed"
+        ]
+      },
+      "AchievementRewardDto": {
+        "type": "object",
+        "properties": {
+          "coins": {
+            "type": "number",
+            "description": "Monedas de recompensa",
+            "example": 100
+          },
+          "gems": {
+            "type": "number",
+            "description": "Gemas de recompensa",
+            "example": 0
+          },
+          "xp": {
+            "type": "number",
+            "description": "XP de recompensa",
+            "example": 40
+          },
+          "itemId": {
+            "type": "string",
+            "description": "Item exclusivo (solo epic/legendary)",
+            "nullable": true,
+            "example": null
+          }
+        },
+        "required": [
+          "coins",
+          "gems",
+          "xp"
+        ]
+      },
+      "ClaimRewardResponseDto": {
+        "type": "object",
+        "properties": {
+          "mission": {
+            "description": "Misión reclamada",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClaimedMissionDto"
+              }
+            ]
+          },
+          "reward": {
+            "description": "Recompensa acreditada",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MissionRewardDto"
+              }
+            ]
+          },
+          "dailyChestUnlocked": {
+            "type": "boolean",
+            "description": "Si todas las diarias están completadas (desbloquea cofre)",
+            "example": true
+          }
+        },
+        "required": [
+          "mission",
+          "reward",
+          "dailyChestUnlocked"
+        ]
+      },
       "ManifestDto": {
         "type": "object",
         "properties": {
@@ -9140,37 +9871,6 @@
           "newPassword"
         ]
       },
-      "AchievementRewardDto": {
-        "type": "object",
-        "properties": {
-          "coins": {
-            "type": "number",
-            "description": "Monedas de recompensa",
-            "example": 100
-          },
-          "gems": {
-            "type": "number",
-            "description": "Gemas de recompensa",
-            "example": 0
-          },
-          "xp": {
-            "type": "number",
-            "description": "XP de recompensa",
-            "example": 40
-          },
-          "itemId": {
-            "type": "string",
-            "description": "Item exclusivo (solo epic/legendary)",
-            "nullable": true,
-            "example": null
-          }
-        },
-        "required": [
-          "coins",
-          "gems",
-          "xp"
-        ]
-      },
       "PublicAchievementDto": {
         "type": "object",
         "properties": {
@@ -9184,6 +9884,16 @@
             "description": "Nombre",
             "example": "Guerrero"
           },
+          "description": {
+            "type": "string",
+            "description": "Descripción del logro",
+            "example": "Gana 10 combates"
+          },
+          "badgeIcon": {
+            "type": "string",
+            "description": "Icono de la insignia (nombre lucide, kebab-case)",
+            "example": "sword"
+          },
           "category": {
             "type": "string",
             "description": "Categoría",
@@ -9192,7 +9902,9 @@
               "battle",
               "ai",
               "collection",
-              "social"
+              "social",
+              "activity",
+              "special"
             ],
             "example": "battle"
           },
@@ -9224,6 +9936,8 @@
         "required": [
           "id",
           "name",
+          "description",
+          "badgeIcon",
           "category",
           "tier",
           "unlockedAt",
@@ -9262,188 +9976,6 @@
           "displayName",
           "achievementsPublic",
           "achievements"
-        ]
-      },
-      "AchievementListResponseDto": {
-        "type": "object",
-        "properties": {
-          "timestamp": {
-            "type": "string",
-            "description": "Timestamp de la respuesta (ISO 8601)",
-            "example": "2026-11-13T14:30:00.000Z"
-          },
-          "achievementsPublic": {
-            "type": "boolean",
-            "description": "Estado del opt-in de visibilidad pública",
-            "example": false
-          },
-          "categories": {
-            "type": "object",
-            "description": "Logros por categoría (5: care, battle, ai, collection, social)"
-          }
-        },
-        "required": [
-          "timestamp",
-          "achievementsPublic",
-          "categories"
-        ]
-      },
-      "StarDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "ID lógico del logro",
-            "example": "battle_10_wins"
-          },
-          "x": {
-            "type": "number",
-            "description": "Coordenada X normalizada [0,1]",
-            "example": 0.45
-          },
-          "y": {
-            "type": "number",
-            "description": "Coordenada Y normalizada [0,1]",
-            "example": 0.45
-          },
-          "status": {
-            "type": "string",
-            "description": "Estado del logro",
-            "enum": [
-              "locked",
-              "in_progress",
-              "unlocked"
-            ],
-            "example": "unlocked"
-          },
-          "name": {
-            "type": "string",
-            "description": "Nombre del logro",
-            "example": "Guerrero"
-          },
-          "tier": {
-            "type": "string",
-            "description": "Tier del logro",
-            "enum": [
-              "common",
-              "rare",
-              "epic",
-              "legendary"
-            ],
-            "example": "rare"
-          }
-        },
-        "required": [
-          "id",
-          "x",
-          "y",
-          "status",
-          "name",
-          "tier"
-        ]
-      },
-      "ConstellationResponseDto": {
-        "type": "object",
-        "properties": {
-          "category": {
-            "type": "string",
-            "description": "Categoría/constelación",
-            "enum": [
-              "care",
-              "battle",
-              "ai",
-              "collection",
-              "social"
-            ],
-            "example": "battle"
-          },
-          "name": {
-            "type": "string",
-            "description": "Nombre de la constelación",
-            "example": "Batalla"
-          },
-          "stars": {
-            "description": "Estrellas de la constelación",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/StarDto"
-            }
-          },
-          "connections": {
-            "description": "Conexiones entre estrellas (pares de ids)",
-            "example": [
-              [
-                "battle_5_fights",
-                "battle_1_wins"
-              ]
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "category",
-          "name",
-          "stars",
-          "connections"
-        ]
-      },
-      "ClaimedAchievementDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "ID lógico del logro",
-            "example": "battle_10_wins"
-          },
-          "category": {
-            "type": "string",
-            "description": "Categoría",
-            "example": "battle"
-          },
-          "claimed": {
-            "type": "boolean",
-            "description": "Si fue reclamado",
-            "example": true
-          }
-        },
-        "required": [
-          "id",
-          "category",
-          "claimed"
-        ]
-      },
-      "ClaimRewardResponseDto": {
-        "type": "object",
-        "properties": {
-          "mission": {
-            "description": "Misión reclamada",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ClaimedMissionDto"
-              }
-            ]
-          },
-          "reward": {
-            "description": "Recompensa acreditada",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MissionRewardDto"
-              }
-            ]
-          },
-          "dailyChestUnlocked": {
-            "type": "boolean",
-            "description": "Si todas las diarias están completadas (desbloquea cofre)",
-            "example": true
-          }
-        },
-        "required": [
-          "mission",
-          "reward",
-          "dailyChestUnlocked"
         ]
       },
       "BondingFieldsDto": {

@@ -10,6 +10,8 @@ export interface AchievementUnlockedPayload {
   name: string;
   category: string;
   tier: string;
+  /** Icono lucide de la insignia (para el aviso de desbloqueo). */
+  badgeIcon: string;
   reward: { coins: number; gems: number; xp: number; itemId: string | null };
 }
 
@@ -47,6 +49,7 @@ export class AchievementRewardsService {
     }
 
     const { target, name, category, tier, reward } = def;
+    const badgeIcon: string = def.badge?.icon ?? 'star';
 
     const result = await this.prisma.$transaction(async (tx) => {
       // Condición atómica: solo desbloquea si aún no lo está y ya alcanzó el objetivo.
@@ -76,6 +79,7 @@ export class AchievementRewardsService {
         name,
         category,
         tier,
+        badgeIcon,
         reward,
       } as AchievementUnlockedPayload;
     });

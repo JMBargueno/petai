@@ -14,6 +14,7 @@ import { startSpanFromRemoteTrace } from '../../observability/otel-context';
 import { SPAN_HEADER, TRACE_HEADER } from '../../observability/otel.constants';
 import { PresenceService } from '../presence/presence.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { PetAction, PetActionEvent } from './pet-action';
 
 /** Conexiones simultáneas por usuario; al superarlas se cierran las más antiguas. */
@@ -52,6 +53,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly metrics: MetricsService,
     private readonly presence: PresenceService,
     @Optional() private readonly prisma?: PrismaService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   /**
@@ -107,8 +109,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
         'unknown';
       this.presenceRecords.set(client.id, { userId: payload.sub, deviceId });
       await this.presence.heartbeat(payload.sub, deviceId, platform);
+      // `presence:tick`: tiempo de juego y racha de días (StatsListener). Uno por heartbeat.
+      this.events?.emit('presence:tick', { userId: payload.sub });
       const refresh = setInterval(() => {
         void this.presence.heartbeat(payload.sub, deviceId, platform);
+        this.events?.emit('presence:tick', { userId: payload.sub });
       }, PRESENCE_REFRESH_MS);
       refresh.unref?.();
       this.presenceRefresh.set(client.id, refresh);
