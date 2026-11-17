@@ -1,5 +1,8 @@
 # Tasks: iOS + Cross-Platform Animation (Skia)
 
+> **Estado: SUSTITUIDA (2026-11-17).** El motor Rust/Skia compartido se reemplaza por el núcleo de escena con PixiJS incrustado en las tres plataformas (`shared/scene`, ver docs/ART_PIPELINE.md §9). Se conservan el formato `AnimationSpec` (`animation-specs.json`) y `validate-animations.ts`.
+
+
 ## Asset Pipeline (entregado)
 
 - [x] T1: Crear `shared/assets/animation-specs.json` (formato AnimationSpec: frames, fps, easing, triggers) para los 3 species.

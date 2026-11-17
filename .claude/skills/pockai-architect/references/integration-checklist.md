@@ -30,18 +30,21 @@ Rutas relativas a la raíz del repo. Marca cada paso en el resumen final.
    - **Ejemplo/decorado** (landing, 404, lore, OG, fallbacks a `ignisaur`, scripts de sprites): no lo toques.
    Indica en el resumen qué clasificaste como cada cosa.
 
-## Arte real (TODO, no lo hace la skill)
-9. `scripts/sprites/species.ts` — `SpeciesArt` y añadirlo a `SPECIES`; `pnpm generate:sprites`.
+## Arte real (paso 5b de SKILL.md)
+9. `scripts/sprites/species.ts`: añade el `SpeciesArt` en 3/4 con `stage` y regístralo en `SPECIES` (ver `art-brief.md` e `iso-style.md`).
+9a. `npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>`: **lee el PNG** y pasa la checklist de `art-brief.md`. Itera hasta que pase.
+9b. `pnpm generate:sprites` → `shared/assets/species/<id>/` (alias adult). Cuando el generador lo soporte, también `species/<id>/<stage>/` para las 4 etapas, y `sprites/<id>_idle.svg`.
+    Luego borra los placeholders `sprites/<id>_{eat,happy,sleep}.svg` solo si el generador ya los produce; si no, regénéralos con `placeholder_svgs.mjs <id> --force` (plantilla 3/4).
 
 ## Personalidad
-9b. `personalityBias` presente con las 5 dimensiones (reglas en `personality.md`). No toques `balance.json → personality` por una especie: es global.
+9c. `personalityBias` presente con las 5 dimensiones (reglas en `personality.md`). No toques `balance.json → personality` por una especie: es global.
 
 ## Validación
 10. `node .claude/skills/pockai-architect/scripts/check_species.mjs` (también comprueba `personalityBias`)
 11. `node scripts/validate-game-data.js`
 12. `node scripts/validate-assets.js`
 13. Tests backend: desde `backend/`, `npx jest src/modules/game-data src/modules/battles src/modules/hatching src/modules/mind` (ajusta al runner de `backend/package.json`).
-14. `git status` / `git diff --stat`: solo deben cambiar los archivos de la nueva especie; **nada en `shared/assets/species/{ignisaur,axolunar,florabud}` ni `shared/assets/patterns`**.
+14. `git status` / `git diff --stat`: solo deben cambiar los archivos de la nueva especie (y `animation-specs.json`, que lista todas). **Nada en las carpetas de otras especies de `shared/assets/species/` ni en `shared/assets/patterns`**, salvo que hayas tocado a propósito código común de `scripts/sprites/` (dilo en el resumen).
 
 ## Después (recordar al usuario)
 15. Seed de BD: `backend/prisma/seed.ts` (upsert de species). Sin él, eclosionar la especie falla por la FK `Pet.speciesId`.
