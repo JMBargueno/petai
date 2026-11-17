@@ -18,13 +18,14 @@ import { Appearance } from './sections/appearance';
 import { Elements } from './sections/elements';
 import { Awakening } from './sections/awakening';
 import { LifeCycle } from './sections/life-cycle';
+import { Mark } from './sections/mark';
 import { Colosseum } from './sections/colosseum';
 import { Nexus } from './sections/nexus';
 import { Glossary } from './sections/glossary';
 
 @Component({
   selector: 'app-lore',
-  imports: [SiteHeader, SiteFooter, SectionToc, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Colosseum, Nexus, Glossary],
+  imports: [SiteHeader, SiteFooter, SectionToc, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Mark, Colosseum, Nexus, Glossary],
   template: `
     <app-site-header
       [links]="navLinks"
@@ -69,6 +70,7 @@ import { Glossary } from './sections/glossary';
       <app-elements />
       <app-awakening />
       <app-life-cycle />
+      <app-mark />
       <app-colosseum />
       <app-nexus />
       <app-glossary />
@@ -104,6 +106,7 @@ export class Lore {
     { id: 'elementos', label: $localize`:@@lore.nav.elem:Elementos` },
     { id: 'despertar', label: $localize`:@@lore.nav.awake:Despertar` },
     { id: 'ciclo', label: $localize`:@@lore.nav.life:Ciclo` },
+    { id: 'huella', label: $localize`:@@lore.nav.mark:Huella` },
     { id: 'coliseo', label: $localize`:@@lore.nav.colo:Coliseo` },
     { id: 'nexo', label: $localize`:@@lore.nav.nexus:Nexos` },
     { id: 'diccionario', label: $localize`:@@lore.nav.gloss:Diccionario` },

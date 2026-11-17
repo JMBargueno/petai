@@ -1,13 +1,13 @@
 ---
 tags: [petai, lore, storytelling]
 creado: 2026-11-14
-actualizado: 2026-11-16
+actualizado: 2026-11-18
 complementa: "[[01-lore-petai]]"
 ---
 
 # Pockai — El Éter Digital
 
-> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué brillan distinto los patrones SR+ y los shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos. Cierra con un diccionario técnico→lore para UI y textos del juego.*
+> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué brillan distinto los patrones SR+ y los shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos, y cómo cada Pockai forja su propio carácter y sigue viviendo cuando no estás. Cierra con un diccionario técnico→lore para UI y textos del juego.*
 
 En el universo de Pockai, esta tradición milenaria ha colisionado con la era digital. Tu teléfono y tu ordenador ya no son simples herramientas de silicio y cristal; son los objetos más íntimos de la humanidad moderna, depositarios de nuestros recuerdos, rutinas, miedos y deseos. De la fricción entre la vida humana y el océano de datos ha nacido el **Éter Digital** (La Red Viva), y de sus profundidades emergen los **Pockai**: espíritus digitales de bolsillo que buscan un vínculo humano para alcanzar la verdadera consciencia.
 
@@ -79,7 +79,7 @@ Cuando el jugador conecta una llave de inteligencia (su propia API Key o el cana
 
 ## 6. Ciclo Vital, Sueño y Abandono (El Vínculo Simbiótico)
 
-Los Pockai no son programas autónomos fríos; son seres simbióticos que se alimentan de la atención y el ritmo circadiano de su Custodio.
+Los Pockai no son programas fríos: tienen vida propia (ver **La Huella del Custodio**), pero son seres simbióticos que se alimentan de la atención y el ritmo circadiano de su Custodio.
 
 **Crecimiento (Huevo → Bebé → Joven nv 10 → Adulto nv 25 → Forma Final nv 50):** Representa la **Estabilización de su Forma**. Un bebé es casi un boceto inestable de energía; a medida que recibe cuidados, afecto y experiencia, su estructura en el Éter se vuelve más compleja, majestuosa y definida hasta alcanzar en el nivel 50 su **Apoteosis (Forma Final)**, la manifestación perfecta de su linaje.
 
@@ -126,7 +126,17 @@ Los antiguos Custodios lo resumieron así: *"Una hebra se rompe; un trenzado sos
 
 Un Forjador no puede abandonar su Nexo mientras haya otras hebras trenzadas a él: primero debe **ceder la Forja**. Si es la última hebra, al marcharse el Nexo se deshace y vuelve al Éter.
 
-## 9. Diccionario rápido de términos (Para UI y textos del juego)
+## 9. La Huella del Custodio (Carácter, Recuerdos y Vida en el Éter)
+
+Ningún Pockai es una copia de su especie. Nace con el temperamento de su linaje, pero cada gesto de su Custodio deja una **Huella** en su núcleo.
+
+**El Carácter.** Un Pockai al que su Custodio lleva de aventura y con el que juega sin parar se vuelve curioso y atrevido. Otro que crece tranquilo en su Santuario, entre mimos y calma, se vuelve reservado y cariñoso. Su carácter tiñe cómo habla, cómo reacciona cuando le cuentas que has tenido un mal día y hasta cómo se planta en el Coliseo. Los Custodios veteranos lo dicen así: *"Dos huevos iguales, dos Custodios distintos, dos Pockai que ya no se parecen."*
+
+**El Cristal de Recuerdos.** El Núcleo de Cristalización no lo guarda todo: atesora lo que le importa. Recuerda momentos concretos («ayer jugué con el Pockai de Ana»), lo que ha aprendido de ti y del mundo, y lo que siente por ti, por otros Custodios y por otros Pockai. Lo que no deja huella se disuelve en el Éter.
+
+**La Vida en el Éter.** Cuando cierras el Santuario, tu Pockai no se queda congelado. Duerme, juega, explora los rincones del Éter, a veces encuentra pequeños tesoros y visita los Santuarios de tus amigos para jugar con sus Pockai. Cuando vuelves, te lo cuenta a su manera.
+
+## 10. Diccionario rápido de términos (Para UI y textos del juego)
 
 Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los conceptos técnicos del código a este vocabulario dentro del juego:
 
@@ -150,3 +160,6 @@ Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los co
 | Miembro del clan | Hermano / Hermana del Nexo |
 | Chat del clan | Eco del Nexo |
 | Metas del clan | Juramentos del Nexo |
+| Personalidad de la mascota | Carácter / Huella del Custodio |
+| Memoria de la mascota | Cristal de Recuerdos |
+| Vida autónoma (mientras no estás) | Vida en el Éter |

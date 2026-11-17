@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { AutonomyService } from '../mind/autonomy.service';
+import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -22,6 +23,8 @@ export class PetsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly weatherService: WeatherService,
     private readonly bonding: BondingService,
+    // Vida autónoma (spec 36): opcional para no romper tests que construyen el servicio a mano
+    @Optional() private readonly autonomy?: AutonomyService,
   ) {}
 
   async getPets(userId: string) {
@@ -33,7 +36,9 @@ export class PetsService {
 
     const updatedPets = [];
     for (const pet of pets) {
-      const updated = await this.applyLazyTick(pet);
+      const ticked = await this.applyLazyTick(pet);
+      // Vida autónoma (spec 36): los clientes cargan la lista al abrir; como mucho una simulación por hora y mascota
+      const updated = this.autonomy ? await this.autonomy.catchUp(ticked) : ticked;
       // Campos de vínculo (feature 006): el cliente recibe el rango sin calcular nada
       updatedPets.push({ ...updated, ...this.bonding.bondingFields(updated) });
     }
@@ -48,7 +53,9 @@ export class PetsService {
     if (!pet) {
       throw new NotFoundException('Mascota no encontrada');
     }
-    const updated = await this.applyLazyTick(pet);
+    const ticked = await this.applyLazyTick(pet);
+    // Vida autónoma (spec 36): simula lo que hizo mientras no estabas (perezoso, sin LLM)
+    const updated = this.autonomy ? await this.autonomy.catchUp(ticked) : ticked;
     return { ...updated, ...this.bonding.bondingFields(updated) };
   }
 

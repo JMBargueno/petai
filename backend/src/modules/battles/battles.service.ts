@@ -1,3 +1,4 @@
+import { combatBias, isValidDims } from '../mind/personality.engine';
 import {
   BadRequestException,
   ConflictException,
@@ -78,7 +79,15 @@ export class BattlesService {
       isBot: false,
       petId: pet.id,
       ownerId: pet.userId,
+      // Spec 36: la valentía y el temperamento sesgan las decisiones (no las stats)
+      ...(this.personalityBias(pet) ? { personality: this.personalityBias(pet) } : {}),
     };
+  }
+
+  private personalityBias(pet: any) {
+    const cfg = this.gameData.getBalance().personality;
+    const dims = (pet.personality as any)?.dims;
+    return cfg && isValidDims(dims) ? combatBias(dims, cfg) : undefined;
   }
 
   private async ownPet(userId: string, petId: string) {

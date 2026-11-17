@@ -14,6 +14,13 @@
     },
     "favoriteFood": "spicy_berry",
     "spriteKey": "ignisaur",
+    "personalityBias": {
+      "curiosity": 60,
+      "sociability": 55,
+      "bravery": 65,
+      "affection": 45,
+      "temper": 65
+    },
     "defaultPalette": {
       "primary": "#E25822",
       "secondary": "#F3C544",
@@ -35,6 +42,13 @@
     },
     "favoriteFood": "sweet_coral",
     "spriteKey": "axolunar",
+    "personalityBias": {
+      "curiosity": 45,
+      "sociability": 50,
+      "bravery": 40,
+      "affection": 65,
+      "temper": 20
+    },
     "defaultPalette": {
       "primary": "#38A3A5",
       "secondary": "#80ED99",
@@ -56,6 +70,13 @@
     },
     "favoriteFood": "sun_seed",
     "spriteKey": "florabud",
+    "personalityBias": {
+      "curiosity": 65,
+      "sociability": 60,
+      "bravery": 35,
+      "affection": 60,
+      "temper": 35
+    },
     "defaultPalette": {
       "primary": "#57CC99",
       "secondary": "#C7F9CC",

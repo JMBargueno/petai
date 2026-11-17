@@ -197,6 +197,16 @@ export const speciesSchema = z.array(
       favoriteFood: z.string(),
       spriteKey: z.string(),
       defaultPalette: z.object({ primary: hexColor, secondary: hexColor, accent: hexColor }),
+      /** Sesgo de personalidad al nacer (spec 36). Opcional: sin él, todas las dimensiones parten de 50. */
+      personalityBias: z
+        .object({
+          curiosity: z.number().int().min(0).max(100),
+          sociability: z.number().int().min(0).max(100),
+          bravery: z.number().int().min(0).max(100),
+          affection: z.number().int().min(0).max(100),
+          temper: z.number().int().min(0).max(100),
+        })
+        .optional(),
     })
     .passthrough(),
 );

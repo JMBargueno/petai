@@ -68,6 +68,26 @@ for (const s of species) {
     }
   }
 
+  // Sesgo de personalidad (5 dimensiones, 0-100). Ver references/personality.md
+  const DIMS = ['curiosity', 'sociability', 'bravery', 'affection', 'temper'];
+  const pb = s.personalityBias;
+  if (!pb) {
+    warnings.push(`${tag} sin personalityBias: nacerá con todas las dimensiones a ${balance.personality?.birth?.defaultBias ?? 50}`);
+  } else {
+    for (const k of Object.keys(pb)) if (!DIMS.includes(k)) errors.push(`${tag} personalityBias.${k} no es una dimensión válida`);
+    for (const k of DIMS) {
+      if (!Number.isInteger(pb[k]) || pb[k] < 15 || pb[k] > 85) errors.push(`${tag} personalityBias.${k} debe ser entero en [15, 85] (deja margen a la experiencia)`);
+    }
+    const vals = DIMS.map((k) => pb[k] ?? 50);
+    const spread = Math.max(...vals) - Math.min(...vals);
+    if (spread < 20) warnings.push(`${tag} personalityBias muy plano (rango ${spread}); da a la especie al menos un rasgo marcado`);
+    for (const o of species) {
+      if (o.id === s.id || !o.personalityBias) continue;
+      const dist = DIMS.reduce((a, k) => a + Math.abs((o.personalityBias[k] ?? 50) - (pb[k] ?? 50)), 0);
+      if (dist < 25) warnings.push(`${tag} personalityBias casi igual al de ${o.id} (distancia ${dist})`);
+    }
+  }
+
   // Diferenciación con especies del mismo elemento: mismo stat dominante
   const top = (b) => STATS.reduce((m, k) => (b[k] > b[m] ? k : m), STATS[0]);
   for (const o of species) {

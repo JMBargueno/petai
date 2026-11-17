@@ -3,13 +3,13 @@ import { Lore } from './lore';
 import { SITE_URL } from '../site.config';
 
 describe('Lore', () => {
-  it('pinta el hero, el índice con los 9 anclajes y el selector de idioma', async () => {
+  it('pinta el hero, el índice con los 10 anclajes y el selector de idioma', async () => {
     const fixture = TestBed.createComponent(Lore);
     await fixture.whenStable();
     const el: HTMLElement = fixture.nativeElement;
 
     expect(el.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('El Éter Digital');
-    expect(el.querySelectorAll('.toc a').length).toBe(9);
+    expect(el.querySelectorAll('.toc a').length).toBe(10);
     const hrefs = [...el.querySelectorAll('a')].map((a: HTMLAnchorElement) => a.getAttribute('href'));
     expect(hrefs).toContain('/es/lore');
     expect(hrefs).toContain('/en/lore');

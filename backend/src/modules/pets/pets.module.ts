@@ -1,3 +1,4 @@
+import { MindModule } from '../mind/mind.module';
 import { Module } from '@nestjs/common';
 import { PetsService } from './pets.service';
 import { PetsController } from './pets.controller';
@@ -7,7 +8,7 @@ import { EnvironmentalModule } from '../environmental/environmental.module';
 import { BondingModule } from '../bonding/bonding.module';
 
 @Module({
-  imports: [InventoryModule, GameDataModule, EnvironmentalModule, BondingModule],
+  imports: [InventoryModule, GameDataModule, EnvironmentalModule, BondingModule, MindModule],
   controllers: [PetsController],
   providers: [PetsService],
   exports: [PetsService],

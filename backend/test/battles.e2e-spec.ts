@@ -202,7 +202,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
       const toFighter = (p: any): Fighter => ({
         name: p.name, speciesId: p.speciesId, element: p.element, level: p.level, stats: p.stats, mood: p.mood,
         skills: p.skills.map((id: string) => skills.find((s) => s.id === id)!), strategy: p.strategy, isBot: p.isBot,
-        petId: p.petId,
+        petId: p.petId, personality: p.personality,
       });
       const [pa, pb] = detail.replay.participants;
       const again = simulateBattle(toFighter(pa), toFighter(pb), detail.seed, balance.combats);

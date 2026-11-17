@@ -59,7 +59,7 @@ export const FEATURES: Feature[] = [
     icon: 'chat',
     color: 'lavender',
     title: $localize`:@@feat.ai.title:Inteligencia`,
-    body: $localize`:@@feat.ai.body:Conecta tu propio modelo de lenguaje y tu pockai conversa, recuerda lo que le cuentas y actúa como un pequeño agente personal.`,
+    body: $localize`:@@feat.ai.body:Conecta tu propio modelo de lenguaje y tu pockai conversa contigo con su propia voz y actúa como un pequeño agente personal.`,
     link: { path: 'lore#despertar', label: $localize`:@@feat.link.ai:El despertar de la IA →` },
   },
   {
@@ -67,6 +67,13 @@ export const FEATURES: Feature[] = [
     color: 'voltage-violet',
     title: $localize`:@@feat.sync.title:Sincronización`,
     body: $localize`:@@feat.sync.body:La misma mascota en el escritorio y en el móvil. Vinculas los dispositivos con un código y los cambios llegan al momento.`,
+  },
+  {
+    icon: 'leaf',
+    color: 'mint-pop',
+    title: $localize`:@@feat.mind.title:Carácter propio`,
+    body: $localize`:@@feat.mind.body:Tu pockai cambia según cómo lo cuidas, recuerda lo que vivís juntos y, cuando no estás, sigue a lo suyo: explora, juega y visita a sus amigos.`,
+    link: { path: 'lore#huella', label: $localize`:@@feat.link.mind:La huella del Custodio →` },
   },
 ];
 
@@ -159,6 +166,10 @@ export const FAQ = [
   {
     q: $localize`:@@faq.5.q:¿Qué pasa si no cuido a mi pockai?`,
     a: $localize`:@@faq.5.a:Si una estadística se queda baja mucho tiempo puede enfermar y habrá que curarla, o ponerse triste y rendir menos en combate.`,
+  },
+  {
+    q: $localize`:@@faq.mind.q:¿Qué hace mi pockai cuando no estoy?`,
+    a: $localize`:@@faq.mind.a:Sigue con su vida: descansa, juega, explora, a veces encuentra algún tesoro y visita a los pockais de tus amigos. Cuando vuelves, te cuenta lo que ha vivido a su manera.`,
   },
   {
     q: $localize`:@@faq.6.q:¿Tiene algún coste o suscripción mensual?`,

@@ -29,8 +29,15 @@ Escribe en español. Sustituye lo que va entre `<>`.
 - **Skills recomendadas (4):** <id> (<por qué>), …  *(solo neutrales o de su elemento, ya existentes o creadas en este cambio)*
 - **Ventajas / debilidades:** <según la tabla de tipos>
 
-## Temperamento sugerido *(lore; el juego no lo asigna por especie)*
-<valiente | timido | arribista | curioso> — <por qué encaja>
+## Personalidad de partida (`personalityBias`)
+| Curiosidad | Sociabilidad | Valentía | Afectividad | Temperamento |
+|---|---|---|---|---|
+| <n> (<keyword>) | <n> (<keyword>) | <n> (<keyword>) | <n> (<keyword>) | <n> (<keyword>) |
+
+<Por qué encaja con su concepto, elemento y description. Keywords según `references/personality.md`.>
+
+**Cómo puede evolucionar:** <2 ejemplos: qué crianza la vuelve, p. ej., aventurera y cuál reservada/cariñosa.>
+**Vida autónoma típica:** <qué hará cuando el entrenador no está, según sus dimensiones (explorar, descansar en el hábitat, buscar a otros Pockai, esperar en la puerta).>
 
 ## Evolución narrativa *(mismo sprite en todas las etapas)*
 - **Baby (1):** <…>
@@ -42,7 +49,7 @@ Escribe en español. Sustituye lo que va entre `<>`.
 1. «<…>»
 2. «<…>»
 3. «<…>»
-*(Coherentes con la description y el temperamento; frases cortas, de mascota.)*
+*(Coherentes con la description y la personalidad de partida; frases cortas, de mascota. Incluye una reacción a «Hoy he tenido un día malo».)*
 
 ## Brief de arte
 <Brief según references/art-brief.md>

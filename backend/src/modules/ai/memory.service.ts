@@ -174,13 +174,17 @@ export class MemoryService {
       data: {
         petId,
         kind: 'summary',
+        // Spec 36: los resúmenes de conversación son memoria episódica
+        layer: 'episodic',
+        importance: summary ? 0.45 : 0.1,
         content: summary || 'Conversación sin datos relevantes.',
         // Marca del último mensaje procesado: los llegados durante la extracción no se pierden
         createdAt: processedUpTo,
       },
     });
     for (const content of fresh) {
-      await this.prisma.petMemory.create({ data: { petId, kind: 'fact', content } });
+      // Spec 36: lo aprendido del entrenador es memoria semántica
+      await this.prisma.petMemory.create({ data: { petId, kind: 'fact', layer: 'semantic', importance: 0.6, content } });
     }
 
     // Tope de hechos: se descartan los más antiguos
@@ -263,7 +267,16 @@ export class MemoryService {
       unlocked: pet.intelligence >= MEMORY_UNLOCK,
       unlockAt: MEMORY_UNLOCK,
       intelligence: pet.intelligence,
-      memories: items.map((m) => ({ id: m.id, kind: m.kind, content: m.content, createdAt: m.createdAt })),
+      memories: items.map((m) => ({
+        id: m.id,
+        kind: m.kind,
+        layer: m.layer,
+        importance: m.importance,
+        valence: m.valence,
+        subject: m.subject,
+        content: m.content,
+        createdAt: m.createdAt,
+      })),
     };
   }
 
