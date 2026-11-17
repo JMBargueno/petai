@@ -92,7 +92,7 @@ Sin cambios respecto a la "Fase 3" anterior:
 - Arte de muebles: `scripts/sprites/furniture.ts` → `shared/assets/furniture/<id>_{a,b}.svg`, rasterizado a un atlas, más la hoja de contactos de muebles.
 - Escritorio: `HabitatTab.svelte` y `HomeScene.svelte` montan la escena y traducen los eventos a la API (`moveFurniture`). Se mantiene el arrastre del Pockai al escritorio. Se elimina `FURN_ICON`.
 
-## Fase 6: Android con escena incrustada (PR 6)
+## Fase 6: Android con escena incrustada (PR 6) — hecha
 - `PockaiSceneView` (Compose `AndroidView`) con `WebView`, `WebViewAssetLoader` (bundle en `assets/scene/`) y `addJavascriptInterface("AndroidBridge")`.
 - `HabitatScreen.kt` y Home la usan. La escena se pausa en `onPause`, y se usa un modo de calidad baja según la RAM disponible.
 - `PetWidget` sigue nativo, con la PNG adult/idle pre-horneada.
