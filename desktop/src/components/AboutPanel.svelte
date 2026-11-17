@@ -96,7 +96,6 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
-    max-width: 320px;
     padding: 14px;
     background: var(--surface-2);
     border: 1px solid var(--line-soft);

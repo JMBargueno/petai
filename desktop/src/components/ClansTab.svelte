@@ -392,15 +392,15 @@
   onMount(load);
 </script>
 
-<div class="soc">
-  {#if error}<div class="soc-notice soc-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="soc-notice soc-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+<div class="ui-stack">
+  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
+  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
 
   {#if loading && !clan}
-    <div class="soc-loading" aria-label="Cargando clan">
-      <div class="soc-skel tall"></div>
-      <div class="soc-skel"></div>
-      <div class="soc-skel"></div>
+    <div class="ui-loading" aria-label="Cargando clan">
+      <div class="ui-skel tall"></div>
+      <div class="ui-skel"></div>
+      <div class="ui-skel"></div>
     </div>
   {:else if clan}
     <!-- Cabecera del Nexo -->
@@ -424,20 +424,20 @@
       </div>
       <div class="clan-hero__tools">
         {#if canEdit && !editing}
-          <button class="btn btn--ghost btn--icon soc-ibtn" title="Editar Nexo" aria-label="Editar Nexo" on:click={startEdit}><Pencil size={15} /></button>
+          <button class="btn btn--ghost btn--icon ui-ibtn" title="Editar Nexo" aria-label="Editar Nexo" on:click={startEdit}><Pencil size={15} /></button>
         {/if}
-        <button class="btn btn--ghost btn--icon soc-ibtn soc-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar clan" on:click={load}>
+        <button class="btn btn--ghost btn--icon ui-ibtn ui-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar clan" on:click={load}>
           <RefreshCw size={15} />
         </button>
       </div>
     </div>
 
     {#if editing}
-      <form class="soc-card" on:submit|preventDefault={saveEdit}>
-        <span class="soc-card__title"><Pencil size={14} /> Editar Nexo</span>
+      <form class="ui-card" on:submit|preventDefault={saveEdit}>
+        <span class="ui-card__title"><Pencil size={14} /> Editar Nexo</span>
         <input class="input" placeholder="Nombre del clan" aria-label="Nombre del clan" maxlength="40" bind:value={editName} disabled={busy === 'edit'} />
         <textarea class="input desc" rows="2" maxlength="300" placeholder="Descripción" aria-label="Descripción" bind:value={editDescription} disabled={busy === 'edit'}></textarea>
-        <div class="soc-inline end">
+        <div class="ui-inline end">
           <button type="button" class="btn btn--sm btn--ghost" disabled={busy === 'edit'} on:click={() => (editing = false)}>Cancelar</button>
           <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'edit' || !editName.trim()}>
             {busy === 'edit' ? 'Guardando…' : 'Guardar'}
@@ -446,7 +446,7 @@
       </form>
     {/if}
 
-    <div class="soc-seg" role="tablist" aria-label="Secciones del clan">
+    <div class="ui-seg" role="tablist" aria-label="Secciones del clan">
       <button role="tab" aria-selected={section === 'members'} class:active={section === 'members'} on:click={() => (section = 'members')}>
         <Users size={14} /> Miembros <span class="seg-n" title="En línea / total">{onlineMembers}/{clan.members.length}</span>
       </button>
@@ -459,18 +459,18 @@
     </div>
 
     {#if section === 'members'}
-      <section class="soc-list">
+      <section class="ui-list">
         {#each roster as m (m.userId)}
           {@const acts = m.userId === meId ? null : clanMemberActions(myRole, m.role)}
           {@const role = clanRole(m.role)}
-          <div class="soc-row member" class:me={m.userId === meId}>
+          <div class="ui-row member" class:me={m.userId === meId}>
             <div class="member-main">
               <SocialAvatar name={m.displayName} presence={m.isOnline ? 'online' : 'offline'} />
-              <div class="soc-row__body">
-                <span class="soc-row__title">{m.displayName}{#if m.handle} <span class="handle">@{m.handle}</span>{/if}{m.userId === meId ? ' (tú)' : ''}</span>
-                <span class="soc-row__sub">Desde {new Date(m.joinedAt).toLocaleDateString()}</span>
+              <div class="ui-row__body">
+                <span class="ui-row__title">{m.displayName}{#if m.handle} <span class="handle">@{m.handle}</span>{/if}{m.userId === meId ? ' (tú)' : ''}</span>
+                <span class="ui-row__sub">Desde {new Date(m.joinedAt).toLocaleDateString()}</span>
               </div>
-              <span class="chip soc-chip role-chip role-{role}">
+              <span class="chip ui-chip role-chip role-{role}">
                 {#if ROLE_ICON[role]}<svelte:component this={ROLE_ICON[role]} size={11} />{/if}
                 {CLAN_ROLE_LABEL[role]}
               </span>
@@ -504,9 +504,9 @@
       </section>
 
       {#if canInvite}
-        <form class="soc-card" on:submit|preventDefault={invite}>
-          <span class="soc-card__title"><UserPlus size={15} /> Invitar al Nexo</span>
-          <div class="soc-inline">
+        <form class="ui-card" on:submit|preventDefault={invite}>
+          <span class="ui-card__title"><UserPlus size={15} /> Invitar al Nexo</span>
+          <div class="ui-inline">
             <input class="input" placeholder="@nickname del jugador" aria-label="Nickname del jugador" autocapitalize="none" spellcheck="false" bind:value={inviteTarget} disabled={busy === 'invite'} />
             <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'invite' || !inviteTarget.trim()}>
               {busy === 'invite' ? 'Enviando…' : 'Invitar'}
@@ -518,7 +518,7 @@
       <!-- Zona de peligro -->
       <div class="danger-zone">
         {#if isCreator && clan.memberCount > 1}
-          <p class="soc-card__hint">Como Forjador, cede la Forja a otra hebra antes de salir del Nexo.</p>
+          <p class="ui-card__hint">Como Forjador, cede la Forja a otra hebra antes de salir del Nexo.</p>
         {:else}
           <button class="btn btn--sm btn--ghost danger-ghost" disabled={!!busy} on:click={leave}>
             <LogOut size={14} /> {busy === 'leave' ? 'Saliendo…' : 'Salir del clan'}
@@ -532,10 +532,10 @@
       </div>
 
     {:else if section === 'goals'}
-      <section class="soc-list">
-        <div class="soc-head">
+      <section class="ui-list">
+        <div class="ui-head">
           <span class="label-caps">Objetivos del Nexo</span>
-          <div class="soc-head__end">
+          <div class="ui-head__end">
             <button class="btn btn--sm" class:btn--ink={showGoalForm} on:click={() => (showGoalForm = !showGoalForm)} aria-expanded={showGoalForm}>
               {#if showGoalForm}<X size={14} /> Cerrar{:else}<Plus size={14} /> Nuevo{/if}
             </button>
@@ -543,9 +543,9 @@
         </div>
 
         {#if showGoalForm}
-          <form class="soc-card" on:submit|preventDefault={createGoal}>
+          <form class="ui-card" on:submit|preventDefault={createGoal}>
             <input class="input" placeholder="Título del objetivo" aria-label="Título del objetivo" bind:value={goalTitle} disabled={busy === 'goal-create'} />
-            <div class="soc-inline">
+            <div class="ui-inline">
               <select class="input" aria-label="Métrica" bind:value={goalMetric} disabled={busy === 'goal-create'}>
                 <option value="xp">XP</option>
                 <option value="visits">Visitas</option>
@@ -564,19 +564,19 @@
           <div class="goal" class:done>
             <div class="goal-top">
               <span class="goal-title">{g.title}</span>
-              <span class="chip soc-chip goal-status">{done ? 'Cumplido' : METRIC_LABEL[g.metric] ?? g.metric}</span>
+              <span class="chip ui-chip goal-status">{done ? 'Cumplido' : METRIC_LABEL[g.metric] ?? g.metric}</span>
             </div>
-            {#if g.description}<span class="soc-row__sub">{g.description}</span>{/if}
+            {#if g.description}<span class="ui-row__sub">{g.description}</span>{/if}
             <div class="goal-foot">
               <div class="meter goal-meter" style="--meter-color: {done ? 'var(--success)' : 'var(--theme-social)'}">
                 <i style="width: {goalPercent(g)}%"></i>
               </div>
               <span class="goal-num">{Math.min(g.progress, g.target)}/{g.target}</span>
               {#if !done}
-                <button class="btn btn--sm soc-ibtn" title="Sumar 1" aria-label="Sumar 1 a {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => addProgress(g)}>+1</button>
+                <button class="btn btn--sm ui-ibtn" title="Sumar 1" aria-label="Sumar 1 a {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => addProgress(g)}>+1</button>
               {/if}
               {#if canModerate}
-                <button class="btn btn--ghost btn--icon soc-ibtn soc-ibtn--no" title="Borrar objetivo" aria-label="Borrar {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => deleteGoal(g)}>
+                <button class="btn btn--ghost btn--icon ui-ibtn ui-ibtn--no" title="Borrar objetivo" aria-label="Borrar {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => deleteGoal(g)}>
                   <Trash2 size={14} />
                 </button>
               {/if}
@@ -584,8 +584,8 @@
           </div>
         {:else}
           {#if !showGoalForm}
-            <div class="soc-empty">
-              <span class="soc-empty__icon"><Target size={22} /></span>
+            <div class="ui-empty">
+              <span class="ui-empty__icon"><Target size={22} /></span>
               <strong>Sin objetivos todavía</strong>
               <p>Proponed una meta común y sumad progreso entre todos.</p>
             </div>
@@ -620,7 +620,7 @@
         </div>
         <form class="chat-input" on:submit|preventDefault={sendMsg}>
           <input class="input" placeholder="Escribe un mensaje…" aria-label="Mensaje" bind:value={chatInput} disabled={busy === 'chat'} />
-          <button type="submit" class="btn btn--primary btn--icon soc-ibtn" title="Enviar" aria-label="Enviar" disabled={busy === 'chat' || !chatInput.trim()}>
+          <button type="submit" class="btn btn--primary btn--icon ui-ibtn" title="Enviar" aria-label="Enviar" disabled={busy === 'chat' || !chatInput.trim()}>
             <Send size={15} />
           </button>
         </form>
@@ -629,15 +629,15 @@
 
   {:else}
     <!-- Sin clan -->
-    <div class="soc-empty no-clan">
-      <span class="soc-empty__icon"><Shield size={24} /></span>
+    <div class="ui-empty no-clan">
+      <span class="ui-empty__icon"><Shield size={24} /></span>
       <strong>Aún no perteneces a ningún Nexo</strong>
       <p>Funda el tuyo o únete al de tus amigos con su tag.</p>
     </div>
 
-    <form class="soc-card" on:submit|preventDefault={join}>
-      <span class="soc-card__title"><Users size={15} /> Unirse por tag</span>
-      <div class="soc-inline">
+    <form class="ui-card" on:submit|preventDefault={join}>
+      <span class="ui-card__title"><Users size={15} /> Unirse por tag</span>
+      <div class="ui-inline">
         <input class="input tag-input" placeholder="TAG" aria-label="Tag del clan" bind:value={joinTag} disabled={busy === 'join'} />
         <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'join' || !joinTag.trim()}>
           {busy === 'join' ? 'Uniéndote…' : 'Unirse'}
@@ -645,9 +645,9 @@
       </div>
     </form>
 
-    <form class="soc-card" on:submit|preventDefault={create}>
-      <span class="soc-card__title"><Plus size={15} /> Fundar un Nexo</span>
-      <div class="soc-inline">
+    <form class="ui-card" on:submit|preventDefault={create}>
+      <span class="ui-card__title"><Plus size={15} /> Fundar un Nexo</span>
+      <div class="ui-inline">
         <input class="input" placeholder="Nombre del clan" aria-label="Nombre del clan" bind:value={name} disabled={busy === 'create'} />
         <input class="input tag-input short" placeholder="TAG" aria-label="Tag (p. ej. PCK)" bind:value={tag} disabled={busy === 'create'} />
       </div>
@@ -660,7 +660,7 @@
 </div>
 
 <style>
-  .soc-skel.tall {
+  .ui-skel.tall {
     height: 110px;
   }
 
@@ -817,7 +817,7 @@
     padding-top: 10px;
     border-top: 1px solid var(--line-soft);
   }
-  .danger-zone .soc-card__hint {
+  .danger-zone .ui-card__hint {
     text-align: center;
   }
 
@@ -865,7 +865,7 @@
     color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
-  .soc-inline .goal-target {
+  .ui-inline .goal-target {
     flex: 0 0 72px;
   }
 
@@ -972,7 +972,7 @@
   .desc {
     resize: none;
   }
-  .soc-inline.end {
+  .ui-inline.end {
     justify-content: flex-end;
   }
   .tag-input {
@@ -980,7 +980,7 @@
     letter-spacing: 0.08em;
     font-weight: 700;
   }
-  .soc-inline .tag-input.short {
+  .ui-inline .tag-input.short {
     flex: 0 0 84px;
   }
   .no-clan {

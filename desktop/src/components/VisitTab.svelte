@@ -11,6 +11,7 @@
   } from '../lib/api';
   import { acceptedFriends } from '../lib/visitors';
   import SocialAvatar from './SocialAvatar.svelte';
+  import HomeScene from './HomeScene.svelte';
   import { Drumstick, Gamepad2, Droplets, Home, LogOut, PawPrint, RefreshCw, Users, AlertCircle, CircleCheck, History } from 'lucide-svelte';
 
   /** Amigo a preseleccionar (otherUserId), p. ej. al pulsar «Visitar» en Amigos. */
@@ -135,18 +136,18 @@
   onMount(load);
 </script>
 
-<div class="soc">
-  {#if error}<div class="soc-notice soc-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="soc-notice soc-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+<div class="ui-stack">
+  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
+  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
 
   {#if loading && !friends.length}
-    <div class="soc-loading" aria-label="Cargando visitas">
-      <div class="soc-skel"></div>
-      <div class="soc-skel tall"></div>
+    <div class="ui-loading" aria-label="Cargando visitas">
+      <div class="ui-skel"></div>
+      <div class="ui-skel tall"></div>
     </div>
   {:else if accepted.length === 0}
-    <div class="soc-empty">
-      <span class="soc-empty__icon"><Users size={22} /></span>
+    <div class="ui-empty">
+      <span class="ui-empty__icon"><Users size={22} /></span>
       <strong>Nadie a quien visitar todavía</strong>
       <p>Cuando aceptéis una amistad podrás cuidar de su mascota y visitar su hábitat.</p>
       <button class="btn btn--sm btn--primary" on:click={() => dispatch('goFriends')}>Ir a Amigos</button>
@@ -154,10 +155,10 @@
   {:else}
     <!-- Selector de amigo -->
     <section>
-      <div class="soc-head">
+      <div class="ui-head">
         <span class="label-caps">¿A quién visitas?</span>
-        <div class="soc-head__end">
-          <button class="btn btn--ghost btn--icon soc-ibtn soc-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar visitas" on:click={load}>
+        <div class="ui-head__end">
+          <button class="btn btn--ghost btn--icon ui-ibtn ui-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar visitas" on:click={load}>
             <RefreshCw size={15} />
           </button>
         </div>
@@ -184,15 +185,20 @@
     {#if selectedFriend}
       {@const pet = selectedFriend.otherPet}
       <div class="visit-card">
-        <div class="scene" class:live={visiting === selectedFriend.otherUserId}>
-          <span class="scene-sign">Casa de {selectedFriend.otherDisplayName}</span>
-          <span class="scene-floor" aria-hidden="true"></span>
+        <HomeScene
+          class="visit-scene"
+          label="Casa de {selectedFriend.otherDisplayName}"
+          mood={visiting === selectedFriend.otherUserId ? 'live' : 'day'}
+          height={110}
+          showRug={false}
+          decor={false}
+        >
           <span class="scene-pet" aria-hidden="true"><PawPrint size={34} /></span>
-        </div>
+        </HomeScene>
         <div class="visit-body">
           <div class="visit-title">
             <span class="pet-name">{pet ? pet.nickname || pet.speciesName : 'Sin mascota'}</span>
-            {#if pet?.nickname && pet.speciesName}<span class="chip soc-chip">{pet.speciesName}</span>{/if}
+            {#if pet?.nickname && pet.speciesName}<span class="chip ui-chip">{pet.speciesName}</span>{/if}
           </div>
 
           <div class="care-row">
@@ -225,7 +231,7 @@
               <Home size={16} /> {busy === 'start' ? 'Iniciando…' : `Iniciar visita · ⚡${VISIT_ENERGY_COST}`}
             </button>
           {/if}
-          <p class="soc-card__hint">
+          <p class="ui-card__hint">
             Tu pockai aparecerá en la pantalla de tu amigo con tu mensaje. Gasta ⚡{VISIT_ENERGY_COST} de energía y
             puedes volver a visitar al mismo amigo cada 10 min.
           </p>
@@ -236,10 +242,10 @@
 
   {#if !(loading && !friends.length)}
     <!-- Historial -->
-    <section class="soc-list">
-      <div class="soc-head">
+    <section class="ui-list">
+      <div class="ui-head">
         <span class="label-caps">Historial</span>
-        {#if history.length}<span class="chip soc-count">{history.length}</span>{/if}
+        {#if history.length}<span class="chip ui-count">{history.length}</span>{/if}
       </div>
       {#each history.slice(0, 15) as h (h.createdAt + h.petId + h.visitorId)}
         {@const a = ACTION_BY_ID[h.action]}
@@ -247,11 +253,11 @@
           <span class="hist-ico" style="--c: {a?.color ?? 'var(--theme-social)'}">
             <svelte:component this={a?.icon ?? PawPrint} size={14} />
           </span>
-          <div class="soc-row__body">
+          <div class="ui-row__body">
             <span class="hist-title">{friendName(h.visitorId)} · {a?.label ?? h.action}</span>
-            <span class="soc-row__sub">{when(h.createdAt)}</span>
+            <span class="ui-row__sub">{when(h.createdAt)}</span>
           </div>
-          <span class="chip soc-chip hist-xp">+{h.xpGained} XP</span>
+          <span class="chip ui-chip hist-xp">+{h.xpGained} XP</span>
         </div>
       {:else}
         <div class="hist-empty"><History size={16} /> Todavía no hay visitas.</div>
@@ -261,7 +267,7 @@
 </div>
 
 <style>
-  .soc-skel.tall {
+  .ui-skel.tall {
     height: 200px;
   }
 
@@ -333,54 +339,12 @@
     box-shadow: var(--shadow-pop);
     overflow: hidden;
   }
-  .scene {
-    color-scheme: light;
-    position: relative;
-    height: 96px;
-    background:
-      radial-gradient(70% 70% at 50% 20%, rgb(255 236 179 / 0.9), transparent 70%),
-      linear-gradient(180deg, #fff3d6 0%, #ffe3b0 100%);
-    border-bottom: 1.5px solid var(--color-carbon);
-  }
-  .scene.live {
-    background:
-      radial-gradient(70% 70% at 50% 20%, rgb(85 219 156 / 0.55), transparent 70%),
-      linear-gradient(180deg, #e9fff4 0%, #c9f5df 100%);
-  }
-  .scene-sign {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    max-width: 70%;
-    padding: 3px 10px;
-    font-family: var(--font-display);
-    text-transform: uppercase;
-    font-size: 11px;
-    color: var(--color-carbon);
-    background: var(--color-sunburst);
-    border: 1.5px solid var(--color-carbon);
-    border-radius: var(--radius-pills);
-    box-shadow: 2px 2px 0 var(--color-carbon);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .scene-floor {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 28px;
-    border-top: 1.5px solid var(--color-carbon);
-    background:
-      repeating-linear-gradient(90deg, transparent 0 38px, rgb(0 0 0 / 0.12) 38px 40px),
-      linear-gradient(180deg, #c98a4b 0%, #a86a33 100%);
+  .ui-stack :global(.visit-scene) {
+    border-width: 0 0 1.5px;
+    border-radius: 0;
   }
   .scene-pet {
-    position: absolute;
-    left: 50%;
-    bottom: 16px;
-    translate: -50% 0;
+    position: relative;
     display: grid;
     place-items: center;
     width: 54px;
@@ -393,7 +357,7 @@
   }
   @keyframes bob {
     50% {
-      translate: -50% -4px;
+      translate: 0 -4px;
     }
   }
   .visit-body {

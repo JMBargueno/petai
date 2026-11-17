@@ -4,6 +4,7 @@
   // Va dentro de `.panel-card`, que es zona interactiva del click-through: así los botones reciben clics.
   import { Download, RefreshCw, AlertTriangle, Sparkles, CheckCircle2 } from 'lucide-svelte';
   import { updateState, updateLock, installUpdate, retryUpdate } from '../lib/updater';
+  import { Notice } from './ui';
 
   $: state = $updateState;
   $: version = ('version' in state && state.version) ? state.version : ($updateLock ?? '');
@@ -70,7 +71,7 @@
     {:else if isChecking}
       <p class="muted-note">Comprobando actualización…</p>
     {:else if isError}
-      <p class="error-msg">{state.message}</p>
+      <Notice tone="error">{state.message}</Notice>
       <button class="btn btn--primary block" on:click={() => retryUpdate()}>
         <RefreshCw size={16} /> Reintentar
       </button>
@@ -266,9 +267,4 @@
     font-weight: 500;
   }
 
-  .error-msg {
-    margin: 0;
-    color: var(--danger-ink);
-    font-size: 13px;
-  }
 </style>

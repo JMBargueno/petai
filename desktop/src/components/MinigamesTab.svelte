@@ -2,6 +2,7 @@
   import Ico from './Ico.svelte';
   import { onMount, createEventDispatcher } from 'svelte';
   import { api } from '../lib/api';
+  import { Button, Card, EmptyState, ListRow, Notice, SectionHeader, Skeleton, StatTile } from './ui';
   import CatchFood from './games/CatchFood.svelte';
   import MemoryMatch from './games/MemoryMatch.svelte';
   import Reflex from './games/Reflex.svelte';
@@ -10,7 +11,8 @@
 
   const dispatch = createEventDispatcher();
 
-  const ICONS: Record<string, string> = { catch_food: '🧺', memory_match: '🃏', reflex: '🎯' };
+  const ICONS: Record<string, string> = { catch_food: 'apple', memory_match: 'cards', reflex: 'target' };
+  let loadingGames = true;
   const COMPONENTS: Record<string, any> = {
     catch_food: CatchFood,
     memory_match: MemoryMatch,
@@ -28,8 +30,10 @@
   onMount(async () => {
     try {
       games = await api.listMinigames();
+      loadingGames = false;
     } catch (e: any) {
       error = e.message;
+      loadingGames = false;
     }
   });
 
@@ -73,59 +77,91 @@
   }
 </script>
 
-{#if !pet}
-  <p class="muted">Necesitas una mascota para jugar. Eclosiona un huevo primero.</p>
-{:else if phase === 'list'}
-  <p class="muted">Juega con {pet.nickname || pet.species?.name} para ganar monedas y XP. Cada partida cuesta energía.</p>
-  {#each games as g}
-    <button class="game-card" disabled={busy || pet.sleeping} on:click={() => play(g.id)}>
-      <span class="icon">{ICONS[g.id] || '🎮'}</span>
-      <span class="info">
-        <strong>{g.name}</strong>
-        <small>{g.durationSeconds}s · hasta {g.maxCoins} <Ico n="coin" /> y {g.maxXp} XP</small>
-      </span>
-    </button>
-  {/each}
-  {#if pet.sleeping}<p class="muted">Tu mascota está durmiendo.</p>{/if}
-  {#if error}<p class="error">{error}</p>{/if}
-{:else if phase === 'playing' && session}
-  <svelte:component
-    this={COMPONENTS[session.gameId]}
-    seed={session.seed}
-    durationSeconds={session.durationSeconds}
-    on:finish={onFinish}
-  />
-{:else}
-  <div class="result">
-    {#if result}
-      <h3>¡Partida terminada!</h3>
-      <p class="big"><Ico n="star" /> {result.score} puntos</p>
-      <p>+{result.rewards.coins} <Ico n="coin" /> · +{result.rewards.xp} XP · +{result.rewards.happiness} <Ico n="smile" /> · −{result.rewards.energyCost} <Ico n="energy" /></p>
+<div class="ui-stack">
+  {#if !pet}
+    <EmptyState icon="gamepad" title="Sin mascota" text="Necesitas una mascota para jugar. Eclosiona un huevo primero." />
+  {:else if phase === 'list'}
+    <SectionHeader title="Minijuegos" icon="gamepad" count={games.length || null} />
+    <p class="ui-card__hint">Juega con {pet.nickname || pet.species?.name} para ganar monedas y XP. Cada partida cuesta energía.</p>
+    {#if pet.sleeping}<Notice tone="info" icon="moon">Tu mascota está durmiendo.</Notice>{/if}
+    {#if loadingGames}
+      <Skeleton rows={3} />
     {:else}
-      <h3>Partida no válida</h3>
-      <p class="error">{error}</p>
+      <div class="ui-list">
+        {#each games as g (g.id)}
+          <button class="ui-row game" disabled={busy || pet.sleeping} on:click={() => play(g.id)}>
+            <span class="ui-feature__icon game-icon" aria-hidden="true"><Ico n={ICONS[g.id] || 'gamepad'} size={20} /></span>
+            <span class="ui-row__body">
+              <span class="ui-row__title">{g.name}</span>
+              <span class="ui-row__sub">{g.durationSeconds}s · hasta {g.maxCoins} monedas y {g.maxXp} XP</span>
+            </span>
+            <Ico n="play" size={16} />
+          </button>
+        {:else}
+          <EmptyState compact icon="gamepad" text="No hay minijuegos disponibles." />
+        {/each}
+      </div>
     {/if}
-    <button class="primary-btn" on:click={back}>Volver a los juegos</button>
-  </div>
-{/if}
+    {#if error}<Notice tone="error">{error}</Notice>{/if}
+  {:else if phase === 'playing' && session}
+    <svelte:component
+      this={COMPONENTS[session.gameId]}
+      seed={session.seed}
+      durationSeconds={session.durationSeconds}
+      on:finish={onFinish}
+    />
+  {:else}
+    <Card variant="hero" class="result">
+      {#if result}
+        <h3 class="ui-feature__title">¡Partida terminada!</h3>
+        <p class="score"><Ico n="star" size={22} /> {result.score} <small>puntos</small></p>
+        <div class="ui-stats">
+          <StatTile icon="coin" value="+{result.rewards.coins}" label="monedas" />
+          <StatTile icon="xp" value="+{result.rewards.xp}" label="XP" />
+          <StatTile icon="smile" value="+{result.rewards.happiness}" label="felicidad" />
+          <StatTile icon="energy" value="−{result.rewards.energyCost}" label="energía" />
+        </div>
+      {:else}
+        <h3 class="ui-feature__title">Partida no válida</h3>
+        <Notice tone="error">{error}</Notice>
+      {/if}
+      <Button variant="primary" block icon="gamepad" on:click={back}>Volver a los juegos</Button>
+    </Card>
+  {/if}
+</div>
 
 <style>
-  .muted { font-size: 12px; opacity: 0.7; margin: 0 0 10px; }
-  .error { color: var(--danger-ink); font-size: 12px; }
-  .game-card {
-    display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 8px; padding: 10px 12px;
-    background: var(--surface-2); border: 1px solid var(--line-soft);
-    border-radius: var(--radius-2xl); color: inherit; cursor: pointer; text-align: left;
+  .game {
+    width: 100%;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
-  .game-card:hover:not(:disabled) { background: var(--surface-2); }
-  .game-card:disabled { opacity: 0.5; cursor: not-allowed; }
-  .icon { font-size: 28px; }
-  .info { display: flex; flex-direction: column; gap: 2px; }
-  .info small { opacity: 0.65; }
-  .result { text-align: center; }
-  .big { font-size: 22px; font-weight: 800; margin: 4px 0; }
-  .primary-btn {
-    margin-top: 10px; padding: 9px 14px; border: none; border-radius: var(--radius-2xl); cursor: pointer;
-    background: var(--accent); color: var(--on-color); font-weight: 700;
+  .game:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .game-icon {
+    width: 38px;
+    height: 38px;
+  }
+  :global(.ui-card.result) {
+    align-items: stretch;
+    text-align: center;
+  }
+  .score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 30px;
+  }
+  .score small {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--ink-muted);
   }
 </style>

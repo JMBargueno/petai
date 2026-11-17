@@ -2,6 +2,7 @@
   import Ico from './Ico.svelte';
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import { api } from '../lib/api';
+  import { Badge, Button, Card, EmptyState, ListRow, Modal, Notice, Skeleton, Switch } from './ui';
   import {
     isLoopbackUrl,
     loadLocalConfig,
@@ -612,418 +613,488 @@
   }
 </script>
 
-{#if !pet}
-  <p class="muted">Necesitas una mascota para conversar. Eclosiona un huevo primero.</p>
-{:else if !loaded}
-  <p class="muted">Cargando…</p>
-{:else}
-  {#if chatReady}
-    <div class="bar">
-      <div class="bar-left">
-        <span class="badge"><Ico n="brain" /> {tier} · {pet.intelligence ?? 0}/1000</span>
-        <select
-          class="mode-select"
-          value={activeMode}
-          on:change={(e) => setMode(e.currentTarget.value)}
-        >
+<div class="ui-stack ai">
+  {#if !pet}
+    <EmptyState icon="chat" title="Sin mascota" text="Necesitas una mascota para conversar. Eclosiona un huevo primero." />
+  {:else if !loaded}
+    <Skeleton rows={1} height={36} />
+    <Skeleton rows={1} height={230} />
+  {:else}
+    {#if chatReady}
+      <div class="bar">
+        <Badge tone="tint" icon="brain" title="Inteligencia">{tier} · {pet.intelligence ?? 0}/1000</Badge>
+        <select class="select mode-select" value={activeMode} aria-label="Motor de IA" on:change={(e) => setMode(e.currentTarget.value)}>
           <option value="managed">IA de Pockai</option>
           <option value="byok">Mi propia clave</option>
           <option value="local">Hermes local</option>
         </select>
-      </div>
-
-      <div class="bar-right">
-        {#if isManaged}
-          {#if isPro}
-            <span class="badge pro-badge" title="Suscripción Pro activa"><Ico n="star" /> Pro · {dailyRemaining}/{dailyLimit}</span>
-            <button class="link-btn" title="Gestionar suscripción" on:click={openPortal}>Gestionar</button>
-          {:else}
-            <span class="badge quota-badge" class:quota-empty={dailyRemaining <= 0} title="Mensajes restantes hoy (se renuevan a medianoche)">
-              {dailyRemaining}/{dailyLimit} hoy
-            </span>
-            <button class="link-btn pro-btn" on:click={() => (showPaywall = true)}>⭐ Hazte Pro</button>
+        <span class="bar-end">
+          {#if isManaged && isPro}
+            <Badge tone="accent" icon="star" title="Suscripción Pro activa">Pro</Badge>
           {/if}
-        {/if}
-
-        <button class="link" on:click={() => (showSettings = !showSettings)}>
-          {#if showSettings}Ocultar{:else}<Ico n="settings" /> Ajustes{/if}
-        </button>
+          <Button
+            variant={showSettings ? 'ink' : 'ghost'}
+            size="sm"
+            iconOnly
+            icon="settings"
+            label={showSettings ? 'Ocultar ajustes' : 'Ajustes del chat'}
+            on:click={() => (showSettings = !showSettings)}
+          />
+        </span>
       </div>
-    </div>
-  {/if}
+    {/if}
 
-  {#if isManaged && !showSettings}
-    <div class="managed-info-bar">
-      <span>Te quedan <strong>{dailyRemaining} de {dailyLimit}</strong> mensajes hoy · se renuevan a medianoche.</span>
-      {#if !isPro}
-        <button class="upgrade-chip" on:click={() => (showPaywall = true)}>Subir a 200/día con Pro</button>
-      {/if}
-    </div>
-  {/if}
+    {#if isManaged && !showSettings}
+      <Notice tone={dailyRemaining <= 0 ? 'warning' : 'info'} icon="chat">
+        Te quedan <strong>{dailyRemaining} de {dailyLimit}</strong> mensajes hoy · se renuevan a medianoche.
+        <svelte:fragment slot="end">
+          {#if isPro}
+            <Button variant="ghost" size="sm" on:click={openPortal}>Gestionar</Button>
+          {:else}
+            <Button variant="ghost" size="sm" icon="star" on:click={() => (showPaywall = true)}>Pro</Button>
+          {/if}
+        </svelte:fragment>
+      </Notice>
+    {/if}
 
-  {#if showSettings}
-    <div class="settings">
+    {#if showSettings}
       {#if activeMode === 'managed'}
-        <div class="managed-settings-box">
-          <strong><Ico n="star" /> IA de Pockai (Gestionada)</strong>
-          <p class="note">
+        <Card title="IA de Pockai (gestionada)" icon="star">
+          <p class="ui-card__hint">
             Conversa directamente con tu mascota sin necesidad de crear cuentas externas ni introducir claves.
             El servidor gestiona la IA con OpenRouter y optimización automática.
           </p>
-          <div class="managed-plan-status">
-            {#if isPro}
-              <p class="ok"><strong>Plan Pro activo:</strong> 200 mensajes diarios y herramientas de agente habilitadas.</p>
-              <button class="primary" on:click={openPortal}>Gestionar suscripción en Stripe</button>
-            {:else}
-              <p><strong>Plan Gratuito:</strong> 15 mensajes diarios con respuestas concisas.</p>
-              <button class="primary" on:click={() => (showPaywall = true)}>⭐ Hazte Pro (200 mensajes/día)</button>
+          {#if isPro}
+            <Notice tone="ok"><strong>Plan Pro activo:</strong> 200 mensajes diarios y herramientas de agente habilitadas.</Notice>
+            <Button variant="primary" block on:click={openPortal}>Gestionar suscripción en Stripe</Button>
+          {:else}
+            <Notice tone="info"><strong>Plan gratuito:</strong> 15 mensajes diarios con respuestas concisas.</Notice>
+            <Button variant="primary" block icon="star" on:click={() => (showPaywall = true)}>Hazte Pro (200 mensajes/día)</Button>
+          {/if}
+        </Card>
+      {:else if activeMode === 'byok'}
+        <Card title="Mi propia clave" icon="lock">
+          <div class="form-group">
+            <label for="ai-provider">Proveedor</label>
+            <select id="ai-provider" class="select" bind:value={provider}>
+              <option value="openai">OpenAI</option>
+              <option value="hermes">Hermes Agent (remoto, HTTPS)</option>
+              <option value="custom">Otro compatible con OpenAI</option>
+            </select>
+          </div>
+          {#if needsUrl}
+            <div class="form-group">
+              <label for="ai-url">URL base (HTTPS)</label>
+              <input id="ai-url" class="input" type="url" bind:value={baseUrl} placeholder="https://mi-servidor.com/v1" autocomplete="off" />
+            </div>
+          {/if}
+          <div class="form-group">
+            <label for="ai-model">Modelo {#if provider === 'openai'}<small class="form-hint">(vacío = gpt-4o-mini)</small>{/if}</label>
+            <input id="ai-model" class="input" type="text" bind:value={model} placeholder="gpt-4o-mini" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="ai-key">API key</label>
+            <input
+              id="ai-key"
+              class="input"
+              type="password"
+              bind:value={apiKey}
+              autocomplete="off"
+              placeholder={config.hasKey ? 'Guardada (' + (config.keyMask ?? '••••') + ') — déjalo vacío para conservarla' : 'sk-…'}
+            />
+          </div>
+          <p class="ui-card__hint">Tu key se cifra en el servidor (AES-256-GCM) y nunca se vuelve a mostrar completa. Sin límites diarios en Pockai.</p>
+          <div class="row">
+            <Button variant="primary" loading={busy} on:click={save}>Guardar</Button>
+            {#if config.configured}
+              <Button disabled={busy} on:click={test}>Probar conexión</Button>
+              <Button variant="ghost" disabled={busy} on:click={remove}>Volver a IA de Pockai</Button>
             {/if}
           </div>
-        </div>
-      {:else if activeMode === 'byok'}
-        <label>Proveedor
-          <select bind:value={provider}>
-            <option value="openai">OpenAI</option>
-            <option value="hermes">Hermes Agent (remoto, HTTPS)</option>
-            <option value="custom">Otro compatible con OpenAI</option>
-          </select>
-        </label>
-        {#if needsUrl}
-          <label>URL base (HTTPS)
-            <input type="url" bind:value={baseUrl} placeholder="https://mi-servidor.com/v1" autocomplete="off" />
-          </label>
-        {/if}
-        <label>Modelo {#if provider === 'openai'}<small>(vacío = gpt-4o-mini)</small>{/if}
-          <input type="text" bind:value={model} placeholder="gpt-4o-mini" autocomplete="off" />
-        </label>
-        <label>API key
-          <input
-            type="password"
-            bind:value={apiKey}
-            autocomplete="off"
-            placeholder={config.hasKey ? `Guardada (${config.keyMask ?? '••••'}) — déjalo vacío para conservarla` : 'sk-…'}
-          />
-        </label>
-        <p class="note">Tu key se cifra en el servidor (AES-256-GCM) y nunca se vuelve a mostrar completa. Sin límites diarios en Pockai.</p>
-        <div class="row">
-          <button class="primary" disabled={busy} on:click={save}>Guardar</button>
-          {#if config.configured}
-            <button disabled={busy} on:click={test}>Probar conexión</button>
-            <button class="danger" disabled={busy} on:click={remove}>Volver a IA de Pockai</button>
-          {/if}
-        </div>
-        {#if settingsMsg}<p class="ok">{settingsMsg}</p>{/if}
-        {#if settingsErr}<p class="error">{settingsErr}</p>{/if}
+          {#if settingsMsg}<Notice tone="ok">{settingsMsg}</Notice>{/if}
+          {#if settingsErr}<Notice tone="error">{settingsErr}</Notice>{/if}
+        </Card>
       {:else}
-        <div class="local-box">
-          <strong><Ico n="monitor" /> Hermes local (este equipo)</strong>
-          <p class="note">
+        <Card title="Hermes local (este equipo)" icon="monitor">
+          <p class="ui-card__hint">
             Conversa con un Hermes Agent que corre en tu ordenador, sin gastar tu key ni salir a internet. Los ajustes
             se guardan solo aquí. El servidor sigue creando la personalidad, moderando y guardando el historial.
             Limitaciones: sin herramientas de agente y sin nuevos recuerdos automáticos.
           </p>
-          <label class="check">
-            <input type="checkbox" bind:checked={local.enabled} />
-            Usar mi Hermes local para conversar
-          </label>
-          <label>URL (127.0.0.1 o localhost)
-            <input type="url" bind:value={local.baseUrl} placeholder="http://127.0.0.1:8642/v1" autocomplete="off" />
-          </label>
-          <label>Modelo
-            <input type="text" bind:value={local.model} placeholder="hermes-agent" autocomplete="off" />
-          </label>
-          <label>API_SERVER_KEY <small>(si tu Hermes la exige)</small>
-            <input type="password" bind:value={local.apiKey} autocomplete="off" placeholder="opcional" />
-          </label>
-          <div class="row">
-            <button class="primary" on:click={saveLocal}>Guardar local</button>
-            <button disabled={busy} on:click={testLocal}>Probar Hermes local</button>
+          <Switch label="Usar mi Hermes local para conversar" bind:checked={local.enabled} />
+          <div class="form-group">
+            <label for="ai-local-url">URL (127.0.0.1 o localhost)</label>
+            <input id="ai-local-url" class="input" type="url" bind:value={local.baseUrl} placeholder="http://127.0.0.1:8642/v1" autocomplete="off" />
           </div>
-          {#if localMsg}<p class="ok">{localMsg}</p>{/if}
-          {#if localErr}<p class="error">{localErr}</p>{/if}
-        </div>
+          <div class="form-group">
+            <label for="ai-local-model">Modelo</label>
+            <input id="ai-local-model" class="input" type="text" bind:value={local.model} placeholder="hermes-agent" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="ai-local-key">API_SERVER_KEY <small class="form-hint">(si tu Hermes la exige)</small></label>
+            <input id="ai-local-key" class="input" type="password" bind:value={local.apiKey} autocomplete="off" placeholder="opcional" />
+          </div>
+          <div class="row">
+            <Button variant="primary" on:click={saveLocal}>Guardar local</Button>
+            <Button disabled={busy} on:click={testLocal}>Probar Hermes local</Button>
+          </div>
+          {#if localMsg}<Notice tone="ok">{localMsg}</Notice>{/if}
+          {#if localErr}<Notice tone="error">{localErr}</Notice>{/if}
+        </Card>
       {/if}
-    </div>
-  {/if}
-
-  {#if chatReady && !showSettings}
-    {#if local.enabled}
-      <p class="usage"><Ico n="monitor" /> Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</p>
     {/if}
-    <div class="chat" bind:this={scroller}>
-      {#if messages.length === 0}
-        <p class="muted">Saluda a {pet.nickname || pet.species?.name} </p>
+
+    {#if chatReady && !showSettings}
+      {#if local.enabled}
+        <Notice tone="info" icon="monitor">Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</Notice>
       {/if}
-      {#each messages as m (m.id)}
-        {#if m.role === 'assistant' && m.thinking}
-          <div class="thinking" data-testid="thinking">
-            <button
-              type="button"
-              class="thinking-toggle"
-              aria-expanded={!!m.thinkingOpen}
-              on:click={() => toggleThinking(m)}
-            >
-              <Ico n={m.thinkingOpen ? 'down' : 'right'} size={12} />
-              {m.thinkingOpen ? 'Ocultar razonamiento' : 'Ver razonamiento'}
-            </button>
-            {#if m.thinkingOpen}
-              <div class="thinking-body">{m.thinking}</div>
+      <div class="chat" bind:this={scroller}>
+        {#if messages.length === 0}
+          <p class="chat-empty">Saluda a {pet.nickname || pet.species?.name}</p>
+        {/if}
+        {#each messages as m (m.id)}
+          {#if m.role === 'assistant' && m.thinking}
+            <div class="thinking" data-testid="thinking">
+              <button type="button" class="thinking-toggle" aria-expanded={!!m.thinkingOpen} on:click={() => toggleThinking(m)}>
+                <Ico n={m.thinkingOpen ? 'down' : 'right'} size={12} />
+                {m.thinkingOpen ? 'Ocultar razonamiento' : 'Ver razonamiento'}
+              </button>
+              {#if m.thinkingOpen}
+                <div class="thinking-body">{m.thinking}</div>
+              {/if}
+            </div>
+          {/if}
+          <div class="msg {m.role}" class:notice={m.notice}>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}…{/if}</div>
+        {/each}
+        {#if toolHint}<div class="hint">{toolHint}</div>{/if}
+        {#each actions as a (a.id)}
+          <div class="action" class:done={a.state === 'done'} class:bad={a.state === 'error'}>
+            <div class="action-title"><Ico n="tool" /> Tu mascota quiere hacer algo</div>
+            <div class="action-body">{a.summary}</div>
+            {#if a.state === 'pending' || a.state === 'working'}
+              <div class="row">
+                <Button variant="primary" size="sm" loading={a.state === 'working'} on:click={() => decide(a, true)}>Confirmar</Button>
+                <Button size="sm" disabled={a.state === 'working'} on:click={() => decide(a, false)}>Rechazar</Button>
+              </div>
+            {:else}
+              <div class="action-note">{a.note}</div>
             {/if}
           </div>
-        {/if}
-        <div class="msg {m.role}" class:notice={m.notice}>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}…{/if}</div>
-      {/each}
-      {#if toolHint}<div class="hint">{toolHint}</div>{/if}
-      {#each actions as a (a.id)}
-        <div class="card" class:done={a.state === 'done'} class:bad={a.state === 'error'}>
-          <div class="card-title"><Ico n="tool" /> Tu mascota quiere hacer algo</div>
-          <div class="card-body">{a.summary}</div>
-          {#if a.state === 'pending' || a.state === 'working'}
-            <div class="row">
-              <button class="primary" disabled={a.state === 'working'} on:click={() => decide(a, true)}>Confirmar</button>
-              <button disabled={a.state === 'working'} on:click={() => decide(a, false)}>Rechazar</button>
-            </div>
-          {:else}
-            <div class="card-note">{a.note}</div>
-          {/if}
-        </div>
-      {/each}
-    </div>
-    {#if chatErr}<p class="error">{chatErr}</p>{/if}
-    {#if (pet.intelligence ?? 0) >= 500}
-      <div class="memory">
-        <button class="link" on:click={toggleReminders}><Ico n="alarm" /> Recordatorios {remOpen ? '▾' : '▸'}</button>
-        {#if remOpen}
-          {#if remErr}<p class="error">{remErr}</p>{/if}
-          {#if reminders.length === 0}
-            <p class="muted">No hay recordatorios pendientes. Pídele a tu mascota que te recuerde algo.</p>
-          {:else}
-            <ul class="mem-list">
-              {#each reminders as r (r.id)}
-                <li>
-                  <span><Ico n="alarm" /> {r.text} <em>— {fmt(r.dueAt)}</em></span>
-                  <button class="x" title="Eliminar" on:click={() => removeReminder(r.id)}>✕</button>
-                </li>
-              {/each}
-            </ul>
-          {/if}
-        {/if}
+        {/each}
       </div>
-    {:else}
-      <p class="muted"><Ico n="lock" /> Con 500 de inteligencia tu mascota podrá usar herramientas y crear recordatorios.</p>
-    {/if}
-    <div class="memory">
-      <button class="link" on:click={toggleMemories}>
-        <Ico n="folder" /> Recuerdos {memOpen ? '▾' : '▸'}
-      </button>
-      {#if memOpen}
-        {#if memErr}<p class="error">{memErr}</p>{/if}
-        {#if mem && !mem.unlocked}
-          <p class="muted">
-            <Ico n="lock" /> La memoria se desbloquea con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}). Sigue charlando.
-          </p>
-        {:else if mem && mem.memories.length === 0}
-          <p class="muted">Todavía no recuerda nada. Tras unas cuantas charlas empezará a hacerlo.</p>
-        {:else if mem}
-          <ul class="mem-list">
-            {#each mem.memories as m (m.id)}
-              <li class:summary={m.kind === 'summary'}>
-                <span><Ico n={m.kind === 'summary' ? 'note' : m.kind === 'habit' ? 'monitor' : 'chat'} /> {m.kind === 'habit' ? 'Hábito: ' : ''}{m.content}</span>
-                <button class="x" title="Olvidar" on:click={() => forget(m.id)}>✕</button>
-              </li>
-            {/each}
-          </ul>
-          <button class="danger small" on:click={forgetAll}>{confirmForgetAll ? '¿Seguro? No se puede deshacer: pulsa otra vez' : 'Olvidar todo'}</button>
-        {/if}
-      {/if}
-    </div>
+      {#if chatErr}<Notice tone="error">{chatErr}</Notice>{/if}
 
-    <!-- Compositor de mensajes y Paywall -->
-    <div class="composer-container">
+      <!-- Compositor de mensajes -->
       {#if isManaged && quotaExceeded}
-        <div class="paywall-banner">
-          <p><strong>Límite diario alcanzado ({dailyLimit} mensajes).</strong> Se renueva a medianoche.</p>
-          <div class="row">
-            <button class="primary" on:click={() => (showPaywall = true)}>⭐ Hazte Pro (200 mensajes/día)</button>
-            <button on:click={() => setMode('byok')}>Usar mi clave gratis</button>
+        <Notice tone="warning" icon="lock">
+          <strong>Límite diario alcanzado ({dailyLimit} mensajes).</strong> Se renueva a medianoche.
+          <div class="row quota-actions">
+            <Button variant="primary" size="sm" icon="star" on:click={() => (showPaywall = true)}>Hazte Pro</Button>
+            <Button size="sm" on:click={() => setMode('byok')}>Usar mi clave gratis</Button>
           </div>
-        </div>
+        </Notice>
       {:else}
         <div class="composer">
           <div class="textarea-wrapper">
             <textarea
+              class="textarea"
               rows="2"
               maxlength={maxChars}
               bind:value={input}
               on:keydown={onKey}
-              placeholder={isManaged ? "Escribe un mensaje… (máx. 240 caracteres)" : "Escribe un mensaje… (Enter para enviar)"}
+              placeholder={isManaged ? 'Escribe un mensaje… (máx. 240 caracteres)' : 'Escribe un mensaje… (Enter para enviar)'}
               disabled={streaming}
             ></textarea>
             {#if isManaged}
-              <span class="char-count" class:near-limit={input.length >= maxChars - 20}>
-                {input.length}/{maxChars}
-              </span>
+              <span class="char-count" class:near-limit={input.length >= maxChars - 20}>{input.length}/{maxChars}</span>
             {/if}
           </div>
-          <button class="primary send-btn" disabled={streaming || !input.trim() || (isManaged && quotaExceeded)} on:click={() => send()}>
-            {streaming ? '…' : 'Enviar'}
-          </button>
+          <Button
+            variant="primary"
+            iconOnly
+            icon="send"
+            label="Enviar"
+            class="send-btn"
+            loading={streaming}
+            disabled={!input.trim() || (isManaged && quotaExceeded)}
+            on:click={() => send()}
+          />
         </div>
       {/if}
-    </div>
-  {/if}
-{/if}
 
-<!-- Modal de Paywall / Suscripción Pro -->
-{#if showPaywall}
-  <div
-    class="paywall-overlay"
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-    on:click|self={() => (showPaywall = false)}
-    on:keydown={(e) => e.key === 'Escape' && (showPaywall = false)}
-  >
-    <div class="paywall-modal">
-      <div class="paywall-top">
-        <h3>⭐ Pockai Pro</h3>
-        <button class="x" on:click={() => (showPaywall = false)}>✕</button>
-      </div>
-      <p class="paywall-desc">
-        Desbloquea el máximo potencial de tu mascota sin interrupciones con Pockai Pro:
-      </p>
-      <ul class="paywall-perks">
-        <li>✨ <strong>200 mensajes diarios</strong> de IA de alta calidad (vs 15 en Free).</li>
-        <li>🛠️ <strong>Herramientas de agente desbloqueadas:</strong> recordatorios, abrir enlaces y más.</li>
-        <li>🧠 <strong>Respuestas y memoria ampliadas:</strong> contexto más profundo y mayor riqueza de personalidad.</li>
-        <li>⚡ <strong>Prioridad de servicio:</strong> menor latencia y modelos de reserva automáticos.</li>
-      </ul>
-
-      {#if paywallErr}
-        <p class="error">{paywallErr}</p>
+      <!-- Recordatorios y recuerdos -->
+      {#if (pet.intelligence ?? 0) >= 500}
+        <div class="fold">
+          <button class="fold-head" aria-expanded={remOpen} on:click={toggleReminders}>
+            <Ico n="alarm" /> <span class="label-caps">Recordatorios</span>
+            <Ico n={remOpen ? 'down' : 'right'} size={13} />
+          </button>
+          {#if remOpen}
+            {#if remErr}<Notice tone="error">{remErr}</Notice>{/if}
+            <div class="ui-list ui-list--scroll">
+              {#each reminders as r (r.id)}
+                <ListRow icon="alarm" title={r.text} sub={fmt(r.dueAt)}>
+                  <svelte:fragment slot="end">
+                    <Button variant="ghost" size="sm" iconOnly icon="x" label="Eliminar recordatorio" class="ui-ibtn ui-ibtn--no" on:click={() => removeReminder(r.id)} />
+                  </svelte:fragment>
+                </ListRow>
+              {:else}
+                <EmptyState compact icon="alarm" text="No hay recordatorios pendientes. Pídele a tu mascota que te recuerde algo." />
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {:else}
+        <Notice tone="info" icon="lock">Con 500 de inteligencia tu mascota podrá usar herramientas y crear recordatorios.</Notice>
       {/if}
 
-      <div class="paywall-cta">
-        {#if isPro}
-          <button class="primary btn-large" disabled={paywallBusy} on:click={openPortal}>
-            {paywallBusy ? 'Cargando portal…' : 'Gestionar suscripción en Stripe'}
-          </button>
-        {:else}
-          <button class="primary btn-large" disabled={paywallBusy} on:click={subscribePro}>
-            {paywallBusy ? 'Abriendo Stripe Checkout…' : (proPriceLabel ? `Hazte Pro por ${proPriceLabel}/mes` : 'Hazte Pro')}
-          </button>
-        {/if}
-        <button class="btn-secondary" on:click={() => { showPaywall = false; setMode('byok'); }}>
-          Prefiero usar mi propia API key gratis
+      <div class="fold">
+        <button class="fold-head" aria-expanded={memOpen} on:click={toggleMemories}>
+          <Ico n="folder" /> <span class="label-caps">Recuerdos</span>
+          <Ico n={memOpen ? 'down' : 'right'} size={13} />
         </button>
+        {#if memOpen}
+          {#if memErr}<Notice tone="error">{memErr}</Notice>{/if}
+          {#if mem && !mem.unlocked}
+            <Notice tone="info" icon="lock">
+              La memoria se desbloquea con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}). Sigue charlando.
+            </Notice>
+          {:else if mem && mem.memories.length === 0}
+            <EmptyState compact icon="folder" text="Todavía no recuerda nada. Tras unas cuantas charlas empezará a hacerlo." />
+          {:else if mem}
+            <div class="ui-list ui-list--scroll">
+              {#each mem.memories as m (m.id)}
+                <ListRow
+                  icon={m.kind === 'summary' ? 'note' : m.kind === 'habit' ? 'monitor' : 'chat'}
+                  sub={(m.kind === 'habit' ? 'Hábito: ' : '') + m.content}
+                  wrap
+                  muted={m.kind === 'summary'}
+                >
+                  <svelte:fragment slot="end">
+                    <Button variant="ghost" size="sm" iconOnly icon="x" label="Olvidar" class="ui-ibtn ui-ibtn--no" on:click={() => forget(m.id)} />
+                  </svelte:fragment>
+                </ListRow>
+              {/each}
+            </div>
+            <Button variant={confirmForgetAll ? 'danger' : 'ghost'} size="sm" icon="trash" on:click={forgetAll}>
+              {confirmForgetAll ? '¿Seguro? No se puede deshacer: pulsa otra vez' : 'Olvidar todo'}
+            </Button>
+          {/if}
+        {/if}
       </div>
-    </div>
+    {/if}
+  {/if}
+</div>
+
+<!-- Modal de suscripción Pro -->
+<Modal open={showPaywall} title="Pockai Pro" icon="star" on:close={() => (showPaywall = false)}>
+  <p class="ui-card__hint">Desbloquea el máximo potencial de tu mascota sin interrupciones con Pockai Pro:</p>
+  <div class="ui-list">
+    <ListRow icon="chat" iconTint="var(--color-lavender)" title="200 mensajes diarios" sub="IA de alta calidad (vs 15 en Free)" wrap />
+    <ListRow icon="tool" iconTint="var(--color-mint-pop)" title="Herramientas de agente" sub="Recordatorios, abrir enlaces y más" wrap />
+    <ListRow icon="brain" iconTint="var(--color-electric-blue)" title="Respuestas y memoria ampliadas" sub="Contexto más profundo y más personalidad" wrap />
+    <ListRow icon="energy" iconTint="var(--color-sunburst)" title="Prioridad de servicio" sub="Menor latencia y modelos de reserva automáticos" wrap />
   </div>
-{/if}
+
+  {#if paywallErr}<Notice tone="error">{paywallErr}</Notice>{/if}
+
+  {#if isPro}
+    <Button variant="primary" size="lg" block loading={paywallBusy} on:click={openPortal}>Gestionar suscripción en Stripe</Button>
+  {:else}
+    <Button variant="primary" size="lg" block icon="star" loading={paywallBusy} on:click={subscribePro}>
+      {proPriceLabel ? 'Hazte Pro por ' + proPriceLabel + '/mes' : 'Hazte Pro'}
+    </Button>
+  {/if}
+  <Button variant="ghost" size="sm" block on:click={() => { showPaywall = false; setMode('byok'); }}>
+    Prefiero usar mi propia API key gratis
+  </Button>
+</Modal>
 
 <style>
-  .muted { font-size: 12px; opacity: 0.7; margin: 0 0 8px; }
-  .local-box, .managed-settings-box { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px; border-radius: var(--radius-2xl); border: 1px dashed var(--line-soft); }
-  .managed-plan-status { margin-top: 8px; }
-  .check { flex-direction: row; align-items: center; gap: 6px; }
-  .note { font-size: 11px; opacity: 0.6; margin: 4px 0; }
-  .ok { color: var(--success-ink); font-size: 12px; margin: 6px 0 0; }
-  .error { color: var(--danger-ink); font-size: 12px; margin: 6px 0 0; }
-  .bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 6px; }
-  .bar-left, .bar-right { display: flex; align-items: center; gap: 6px; }
-  .badge { font-size: 11px; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); padding: 3px 8px; border-radius: var(--radius-2xl); white-space: nowrap; }
-  .pro-badge { background: #1e1b4b; color: #a5b4fc; border: 1px solid #4338ca; font-weight: 600; }
-  .quota-badge { background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .quota-empty { border-color: var(--danger-ink); color: var(--danger-ink); }
-  .link { background: none; border: none; color: var(--accent-ink); cursor: pointer; font-size: 12px; }
-  .link-btn { background: none; border: none; font-size: 11px; cursor: pointer; color: var(--accent-ink); text-decoration: underline; padding: 2px 4px; }
-  .pro-btn { color: #f59e0b; font-weight: 600; }
-  .mode-select { font-size: 11px; padding: 2px 6px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface-2); color: inherit; }
-  .managed-info-bar { font-size: 11px; padding: 4px 8px; background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border-radius: var(--radius-2xl); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-  .upgrade-chip { font-size: 10px; font-weight: 600; background: #4f46e5; color: white; border: none; border-radius: 999px; padding: 2px 8px; cursor: pointer; }
-  .settings { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-  label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
-  label small { opacity: 0.6; }
-  input, select, textarea {
-    background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
-    border-radius: var(--radius-2xl); padding: 7px 9px; font: inherit; font-size: 13px;
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
-  textarea { resize: none; width: 100%; box-sizing: border-box; }
-  .row { display: flex; gap: 6px; flex-wrap: wrap; }
-  button {
-    padding: 7px 11px; border-radius: var(--radius-2xl); cursor: pointer; font-size: 12px; font-weight: 600;
-    background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
+  .bar-end {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
   }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  button.primary { background: var(--accent); color: var(--on-color); border: none; }
-  button.danger { color: var(--danger-ink); }
+  .mode-select {
+    width: auto;
+    padding: 4px 10px;
+    border-radius: var(--radius-pills);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .quota-actions {
+    margin-top: 6px;
+  }
   .chat {
-    height: 230px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
-    padding: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: 240px;
+    padding: 10px;
+    overflow-y: auto;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-cards);
+    background: var(--surface-2);
   }
-  .msg { max-width: 85%; padding: 6px 10px; border-radius: var(--radius-2xl); font-size: 13px; line-height: 1.35; white-space: pre-wrap; user-select: text; }
-  .msg.user { align-self: flex-end; background: #0369a1; }
-  .msg.assistant { align-self: flex-start; background: var(--surface-2); }
-  .msg.notice { background: color-mix(in srgb, var(--color-sunburst) 14%, var(--surface)); border: 1px solid var(--color-sunburst); }
-  .thinking { align-self: flex-start; max-width: 85%; display: flex; flex-direction: column; gap: 4px; margin-bottom: -2px; }
+  .chat-empty {
+    margin: auto;
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+  .msg {
+    max-width: 85%;
+    padding: 7px 11px;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    user-select: text;
+  }
+  .msg.user {
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    background: var(--accent);
+    color: var(--on-dark);
+  }
+  .msg.assistant {
+    align-self: flex-start;
+    border: 1px solid var(--line-soft);
+    border-bottom-left-radius: 4px;
+    background: var(--surface);
+  }
+  .msg.notice {
+    border: 1px solid var(--warning);
+    background: color-mix(in srgb, var(--warning) 16%, var(--surface));
+    color: var(--ink);
+  }
+  .thinking {
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 85%;
+    margin-bottom: -2px;
+  }
   .thinking-toggle {
-    align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
-    padding: 2px 6px; font-size: 11px; font-weight: 500; opacity: 0.7;
-    background: none; border: none; color: inherit;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border: none;
+    background: none;
+    color: var(--ink-muted);
+    font-size: 11px;
+    cursor: pointer;
   }
-  .thinking-toggle:hover { opacity: 1; }
+  .thinking-toggle:hover {
+    color: var(--ink);
+  }
   .thinking-body {
-    padding: 6px 10px; font-size: 12px; line-height: 1.35; white-space: pre-wrap; user-select: text;
-    opacity: 0.75; font-style: italic; border-left: 2px solid var(--line-soft); max-height: 160px; overflow-y: auto;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 6px 10px;
+    border-left: 2px solid var(--line-soft);
+    color: var(--ink-muted);
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    user-select: text;
   }
-  .usage { font-size: 11px; opacity: 0.7; margin: 0 0 6px; }
-  .composer-container { margin-top: 4px; }
-  .composer { display: flex; gap: 6px; align-items: stretch; }
-  .textarea-wrapper { flex: 1; position: relative; display: flex; }
-  .char-count { position: absolute; right: 8px; bottom: 4px; font-size: 10px; opacity: 0.5; pointer-events: none; }
-  .char-count.near-limit { color: var(--danger-ink); opacity: 1; font-weight: bold; }
-  .send-btn { min-width: 60px; }
-  .paywall-banner {
-    padding: 10px; background: color-mix(in srgb, var(--color-sunburst) 12%, var(--surface));
-    border: 1px solid var(--color-sunburst); border-radius: var(--radius-2xl); font-size: 12px;
-    display: flex; flex-direction: column; gap: 8px;
+  .hint {
+    align-self: flex-start;
+    font-size: 12px;
+    color: var(--ink-muted);
   }
-  .paywall-banner p { margin: 0; }
-  .memory { margin-bottom: 8px; }
-  .hint { align-self: flex-start; font-size: 12px; opacity: 0.7; }
-  .card {
-    align-self: stretch; padding: 8px 10px; border-radius: var(--radius-2xl); font-size: 12px;
-    background: color-mix(in srgb, var(--color-sunburst) 12%, var(--surface)); border: 1px solid var(--color-sunburst);
+  .action {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-2xl);
+    background: color-mix(in srgb, var(--warning) 14%, var(--surface));
+    font-size: 12px;
   }
-  .card.done { background: color-mix(in srgb, var(--success) 12%, var(--surface)); border-color: var(--success); }
-  .card.bad { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); border-color: var(--danger); }
-  .card-title { font-weight: 700; margin-bottom: 3px; }
-  .card-body { margin-bottom: 6px; user-select: text; }
-  .card-note { opacity: 0.85; }
-  .mem-list { list-style: none; margin: 6px 0; padding: 0; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-  .mem-list li { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; background: var(--surface-2); padding: 4px 8px; border-radius: var(--radius-2xl); user-select: text; }
-  .mem-list li.summary { opacity: 0.75; font-style: italic; }
-  .x { background: none; border: none; padding: 0 4px; opacity: 0.6; cursor: pointer; }
-  .x:hover { opacity: 1; color: var(--danger-ink); }
-  .small { padding: 4px 8px; font-size: 11px; }
-
-  /* Modal Paywall */
-  .paywall-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center;
-    z-index: 999; padding: 16px;
+  .action.done {
+    border-color: var(--success);
+    background: color-mix(in srgb, var(--success) 14%, var(--surface));
   }
-  .paywall-modal {
-    background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-2xl);
-    max-width: 380px; width: 100%; padding: 18px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    display: flex; flex-direction: column; gap: 12px;
+  .action.bad {
+    border-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 14%, var(--surface));
   }
-  .paywall-top { display: flex; justify-content: space-between; align-items: center; }
-  .paywall-top h3 { margin: 0; font-size: 16px; font-weight: 700; color: #f59e0b; }
-  .paywall-desc { font-size: 12px; opacity: 0.8; margin: 0; }
-  .paywall-perks { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
-  .paywall-perks li { line-height: 1.4; }
-  .paywall-cta { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
-  .btn-large { padding: 10px 14px; font-size: 13px; font-weight: 700; }
-  .btn-secondary { background: none; border: none; font-size: 11px; opacity: 0.7; cursor: pointer; text-decoration: underline; }
+  .action-title {
+    font-weight: 700;
+  }
+  .action-body {
+    user-select: text;
+  }
+  .action-note {
+    color: var(--ink-muted);
+  }
+  .composer {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .textarea-wrapper {
+    position: relative;
+    display: flex;
+    flex: 1;
+  }
+  .textarea {
+    resize: none;
+    font-size: 13px;
+    border-radius: var(--radius-cards);
+  }
+  .composer :global(.send-btn) {
+    align-self: stretch;
+    min-width: 46px;
+    border-radius: var(--radius-cards);
+  }
+  .char-count {
+    position: absolute;
+    right: 10px;
+    bottom: 6px;
+    font-size: 10px;
+    color: var(--ink-muted);
+    pointer-events: none;
+  }
+  .char-count.near-limit {
+    color: var(--danger-ink);
+    font-weight: 700;
+  }
+  .fold {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .fold-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    border: none;
+    background: none;
+    color: var(--ink-muted);
+    cursor: pointer;
+  }
+  .fold-head:hover {
+    color: var(--ink);
+  }
 </style>
