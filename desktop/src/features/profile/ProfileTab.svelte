@@ -106,15 +106,15 @@
   onDestroy(() => stopUnlocked());
 </script>
 
-<div class="soc">
-  {#if error}<div class="soc-notice soc-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="soc-notice soc-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+<div class="ui">
+  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
+  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
 
   {#if loading && !profile}
-    <div class="soc-loading" aria-label="Cargando perfil">
-      <div class="soc-skel"></div>
-      <div class="soc-skel"></div>
-      <div class="soc-skel"></div>
+    <div class="ui-loading" aria-label="Cargando perfil">
+      <div class="ui-skel"></div>
+      <div class="ui-skel"></div>
+      <div class="ui-skel"></div>
     </div>
   {:else if profile}
     <ProfileView
@@ -130,12 +130,12 @@
     />
 
     <!-- Privacidad -->
-    <div class="soc-card pr-privacy">
-      <span class="soc-card__title">
+    <div class="ui-card pr-privacy">
+      <span class="ui-card__title">
         {#if profile.achievementsPublic}<Eye size={15} />{:else}<EyeOff size={15} />{/if}
         {profile.achievementsPublic ? 'Perfil visible' : 'Perfil privado'}
       </span>
-      <p class="soc-card__hint">
+      <p class="ui-card__hint">
         {profile.achievementsPublic
           ? 'Tus amigos y otros jugadores ven tus insignias y estadísticas.'
           : 'Los demás solo ven tu nombre y tu mascota.'}
@@ -146,12 +146,12 @@
     </div>
 
     <!-- Colección completa -->
-    <section class="soc-list">
-      <div class="soc-head">
+    <section class="ui-list">
+      <div class="ui-head">
         <span class="label-caps">Logros</span>
-        <div class="soc-head__end">
+        <div class="ui-head__end">
           <label class="pr-check"><input type="checkbox" bind:checked={showUnlocked} /> Conseguidos</label>
-          <button class="btn btn--ghost btn--icon soc-ibtn soc-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar perfil" on:click={load}>
+          <button class="btn btn--ghost btn--icon ui-ibtn ui-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar perfil" on:click={load}>
             <RefreshCw size={15} />
           </button>
         </div>
@@ -164,11 +164,11 @@
       </div>
       {#each visible as a (a.id)}
         {@const done = a.status === 'unlocked'}
-        <div class="soc-row pr-ach" class:done>
+        <div class="ui-row pr-ach" class:done>
           <Badge icon={a.badgeIcon} tier={a.tier} size={40} locked={!done} label={a.name} />
-          <div class="soc-row__body">
-            <span class="soc-row__title">{a.name}</span>
-            <span class="soc-row__sub">{a.description}</span>
+          <div class="ui-row__body">
+            <span class="ui-row__title">{a.name}</span>
+            <span class="ui-row__sub">{a.description}</span>
             {#if !done}
               <div class="pr-bar" aria-label="Progreso {formatProgress(a.id, a.current, a.target)}">
                 <i style="width: {progressRatio(a.current, a.target) * 100}%"></i>
@@ -181,7 +181,7 @@
           </div>
         </div>
       {:else}
-        <div class="soc-empty"><strong>Nada por aquí</strong><p>No hay logros con este filtro.</p></div>
+        <div class="ui-empty"><strong>Nada por aquí</strong><p>No hay logros con este filtro.</p></div>
       {/each}
     </section>
   {/if}
@@ -222,10 +222,10 @@
   .pr-ach.done {
     border-color: var(--line);
   }
-  .pr-ach:not(.done) .soc-row__title {
+  .pr-ach:not(.done) .ui-row__title {
     color: var(--ink-muted);
   }
-  .pr-ach .soc-row__sub {
+  .pr-ach .ui-row__sub {
     white-space: normal;
   }
   .pr-bar {

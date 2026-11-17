@@ -10,6 +10,7 @@
     type HabitatRoom,
   } from '../lib/api';
   import PetMiniAvatar from './PetMiniAvatar.svelte';
+  import { AsyncState, EmptyState, Notice, SectionHeader, Segmented } from './ui';
   import { startHabitatExitDrag } from '../lib/habitatExitDrag';
   import { Home, ExternalLink } from 'lucide-svelte';
 
@@ -182,15 +183,14 @@
   }
 </script>
 
+<div class="ui-stack">
 {#if !pet?.id}
-  <div class="empty-msg">Necesitas una mascota para ver su hábitat.</div>
-{:else if loading && !state}
-  <div class="empty-msg">Cargando hábitat…</div>
-{:else if error && !state}
-  <div class="error-msg">{error}</div>
+  <EmptyState icon="home" title="Sin mascota" text="Necesitas una mascota para ver su hábitat." />
+{:else if (loading && !state) || (error && !state)}
+  <AsyncState loading={loading && !state} error={state ? '' : error} rows={3} height={64} />
 {:else if state && catalog}
   {#if error}
-    <div class="error-msg" role="alert">{error}</div>
+    <Notice tone="error">{error}</Notice>
   {/if}
 
   <!-- Cabecera de estado: En casa vs En escritorio -->
@@ -221,20 +221,13 @@
   </div>
 
   <!-- Selector de salas -->
-  <div class="rooms-nav" role="tablist" aria-label="Salas">
-    {#each state.rooms as room (room.id)}
-      <button
-        class="room-tab"
-        role="tab"
-        aria-selected={room.id === activeRoomId}
-        class:active={room.id === activeRoomId}
-        class:locked={!room.unlocked}
-        on:click={() => (activeRoomId = room.id)}
-      >
-        <Ico n={room.unlocked ? 'unlock' : 'lock'} /> {room.name}
-      </button>
-    {/each}
-  </div>
+  <Segmented
+    variant="pills"
+    label="Salas"
+    value={activeRoomId ?? ''}
+    options={state.rooms.map((r) => ({ value: r.id, label: r.name, icon: r.unlocked ? 'home' : 'lock' }))}
+    on:change={(e) => (activeRoomId = e.detail)}
+  />
 
   <!-- DIORAMA DE LA SALA -->
   {#if activeRoom}
@@ -307,10 +300,7 @@
   {/if}
 
   <!-- Buffs activos -->
-  <div class="sec-title">
-    Buffs activos
-    {#if buffs}<span class="sec-count">{buffs.itemCount} muebles</span>{/if}
-  </div>
+  <SectionHeader title="Buffs activos" icon="energy" count={buffs ? `${buffs.itemCount} muebles` : null} />
   <div class="buffs">
     {#if buffs && Object.keys(buffs.activeBuffs).length > 0}
       {#each Object.entries(buffs.activeBuffs) as [k, v] (k)}
@@ -320,12 +310,12 @@
         </div>
       {/each}
     {:else}
-      <div class="empty-msg small">Coloca muebles en tu casa para activar bonificaciones pasivas.</div>
+      <EmptyState compact icon="energy" text="Coloca muebles en tu casa para activar bonificaciones pasivas." />
     {/if}
   </div>
 
   <!-- Catálogo de muebles -->
-  <div class="sec-title">Muebles de {activeRoom?.name ?? ''}</div>
+  <SectionHeader title="Muebles de {activeRoom?.name ?? ''}" icon="shop" />
   <div class="shop">
     {#each furnitureByRoom as f (f.id)}
       <div class="shop-row">
@@ -340,13 +330,13 @@
         </button>
       </div>
     {:else}
-      <div class="empty-msg small">Esta sala no tiene muebles en el catálogo.</div>
+      <EmptyState compact icon="shop" text="Esta sala no tiene muebles en el catálogo." />
     {/each}
   </div>
 
   <!-- Muebles colocados -->
   {#if activeRoom && activeRoom.items.length > 0}
-    <div class="sec-title">Muebles colocados aquí</div>
+    <SectionHeader title="Muebles colocados aquí" icon="home" count={activeRoom.items.length} />
     <div class="placed">
       {#each activeRoom.items as it (it.id)}
         <div class="placed-row">
@@ -359,19 +349,9 @@
     </div>
   {/if}
 {/if}
+</div>
 
 <style>
-  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 12px 0; }
-  .empty-msg.small { font-size: 11px; padding: 6px 0; }
-  .error-msg {
-    background: color-mix(in srgb, var(--danger) 14%, var(--surface));
-    border: 1px solid var(--danger);
-    color: var(--danger-ink);
-    padding: 8px 10px;
-    border-radius: var(--radius-2xl);
-    font-size: 12px;
-    margin-bottom: 8px;
-  }
 
   /* Tarjeta de estado */
   .habitat-status-card {
@@ -384,7 +364,6 @@
     border: var(--outline);
     border-radius: var(--radius-cards);
     padding: 10px 12px;
-    margin-bottom: 10px;
     box-shadow: var(--shadow-1);
     transition: background var(--dur-2) var(--ease-out);
   }
@@ -422,32 +401,6 @@
   .in-house .status-badge { background: var(--color-mint-pop); }
   .status-subtitle { font-size: 11.5px; color: var(--ink-muted); margin: 0; line-height: 1.3; }
 
-  /* Selector de salas */
-  .rooms-nav { display: flex; gap: 6px; margin-bottom: 10px; }
-  .room-tab {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 6px 8px;
-    border-radius: var(--radius-pills);
-    border: 1px solid var(--line-soft);
-    background: var(--surface-2);
-    color: var(--ink-muted);
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background var(--dur-1), color var(--dur-1), border-color var(--dur-1);
-  }
-  .room-tab:hover { color: var(--ink); }
-  .room-tab.active {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: var(--bg);
-  }
-  .room-tab.locked:not(.active) { opacity: 0.6; }
-
   /* --- DIORAMA ---
      Isla de tono: paleta fija por sala, igual en claro y oscuro. */
   .diorama-stage {
@@ -469,7 +422,6 @@
     height: 220px;
     border-radius: var(--radius-cards);
     overflow: hidden;
-    margin-bottom: 14px;
     border: 1.5px solid var(--color-carbon);
     box-shadow: var(--shadow-pop);
     background:
@@ -684,17 +636,8 @@
   }
 
   /* Buffs y compras */
-  .sec-title {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-weight: 800;
-    font-size: 13px;
-    margin: 14px 0 6px;
-    color: var(--ink);
-  }
-  .sec-count { font-size: 11px; font-weight: 600; color: var(--ink-muted); }
   .buffs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .buffs :global(.ui-empty) { grid-column: 1 / -1; }
   .buff {
     display: flex;
     justify-content: space-between;

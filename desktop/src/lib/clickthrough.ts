@@ -2,7 +2,8 @@
 // interactivas. Fuera de ellas, la ventana deja pasar los clics al escritorio.
 // En el navegador (sin Tauri) no hace nada.
 
-const INTERACTIVE_SELECTOR = '.pet-container, .toggle-panel-pill, .panel-card';
+// .ui-modal-backdrop: los diálogos (components/ui/Modal.svelte) bloquean el escritorio mientras están abiertos.
+const INTERACTIVE_SELECTOR = '.pet-container, .toggle-panel-pill, .panel-card, .ui-modal-backdrop';
 const REFRESH_MS = 50;
 
 type Rect = { x: number; y: number; w: number; h: number };

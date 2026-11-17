@@ -5,7 +5,10 @@
     ScrollText, Medal, Clapperboard, ChartColumn, HeartHandshake, Bell, PartyPopper, Brain, Settings,
     Monitor, Wrench, AlarmClock, FolderOpen, FileText, MessageCircle, Layers, Pause, Play, SkipForward,
     Heart, Shield, ChevronDown, ChevronRight, Search, TriangleAlert, Megaphone, PawPrint, Snowflake,
-    Hourglass, Target,
+    Hourglass, Target, RotateCw, X, House, Info, CircleAlert, CircleCheck, Leaf, Droplets, Sun, Moon,
+    Circle, Egg, Gamepad2, Crown, Dices, Apple, Bath, ArrowUp, Users, ChefHat, Map, BookOpen, Skull,
+    Dumbbell, ShoppingBag, Package, WandSparkles, Clock, Plus, Send, Trash2, ExternalLink, LogOut, User,
+    Castle, Ghost, CircleHelp, Mountain, Utensils, Drumstick, Hand, Cookie,
   } from 'lucide-svelte';
 
   const ICONS: Record<string, any> = {
@@ -17,6 +20,13 @@
     chat: MessageCircle, cards: Layers, pause: Pause, play: Play, next: SkipForward, heart: Heart,
     shield: Shield, down: ChevronDown, right: ChevronRight, search: Search, warn: TriangleAlert,
     megaphone: Megaphone, paw: PawPrint, cold: Snowflake, wait: Hourglass, target: Target,
+    refresh: RotateCw, x: X, home: House, info: Info, alert: CircleAlert, ok: CircleCheck,
+    leaf: Leaf, water: Droplets, sun: Sun, moon: Moon, circle: Circle, egg: Egg, gamepad: Gamepad2,
+    crown: Crown, dice: Dices, apple: Apple, bath: Bath, up: ArrowUp, users: Users, chef: ChefHat,
+    map: Map, book: BookOpen, skull: Skull, dumbbell: Dumbbell, shop: ShoppingBag, package: Package,
+    magic: WandSparkles, clock: Clock, plus: Plus, send: Send, trash: Trash2, external: ExternalLink,
+    logout: LogOut, user: User, castle: Castle, ghost: Ghost, help: CircleHelp, mountain: Mountain,
+    food: Utensils, drumstick: Drumstick, hand: Hand, cookie: Cookie,
   };
 
   export let n: string;

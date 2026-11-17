@@ -62,19 +62,19 @@
   </header>
 
   {#if !s && !own}
-    <div class="soc-empty">
-      <span class="soc-empty__icon"><EyeOff size={22} /></span>
+    <div class="ui-empty">
+      <span class="ui-empty__icon"><EyeOff size={22} /></span>
       <strong>Perfil privado</strong>
       <p>{profile.displayName} ha decidido no mostrar sus insignias ni estadísticas.</p>
     </div>
   {:else}
     <!-- Vitrina -->
-    <section class="soc-card pf-showcase">
-      <div class="soc-head">
+    <section class="ui-card pf-showcase">
+      <div class="ui-head">
         <span class="label-caps">Vitrina</span>
-        <span class="chip soc-count">{profile.achievementCount.unlocked}/{profile.achievementCount.total}</span>
+        <span class="chip ui-count">{profile.achievementCount.unlocked}/{profile.achievementCount.total}</span>
         {#if own}
-          <div class="soc-head__end">
+          <div class="ui-head__end">
             {#if editing}
               <button class="btn btn--ghost btn--sm" on:click={() => dispatch('cancel')} disabled={saving}>Cancelar</button>
               <button class="btn btn--primary btn--sm" on:click={() => dispatch('save')} disabled={saving}>
@@ -100,7 +100,7 @@
           </div>
         {/each}
       </div>
-      {#if editing}<p class="soc-card__hint">Pulsa tus insignias para destacarlas (máximo 3).</p>{/if}
+      {#if editing}<p class="ui-card__hint">Pulsa tus insignias para destacarlas (máximo 3).</p>{/if}
     </section>
 
     <!-- Estadísticas -->
@@ -127,10 +127,10 @@
     {/if}
 
     <!-- Insignias -->
-    <section class="soc-list">
-      <div class="soc-head">
+    <section class="ui-list">
+      <div class="ui-head">
         <span class="label-caps">Insignias</span>
-        <span class="chip soc-count">{badges.length}</span>
+        <span class="chip ui-count">{badges.length}</span>
       </div>
       {#if badges.length}
         <div class="pf-badges">
@@ -151,8 +151,8 @@
           {/each}
         </div>
       {:else}
-        <div class="soc-empty">
-          <span class="soc-empty__icon"><Award size={22} /></span>
+        <div class="ui-empty">
+          <span class="ui-empty__icon"><Award size={22} /></span>
           <strong>Sin insignias todavía</strong>
           <p>{own ? 'Cuida a tu mascota, juega y haz amigos para conseguir las primeras.' : 'Aún no ha conseguido ninguna.'}</p>
         </div>

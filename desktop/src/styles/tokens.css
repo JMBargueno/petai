@@ -27,6 +27,19 @@
   --text-subheading: 22px;
   --text-heading-sm: 30px;
 
+  /* Espaciado (guía §5): escala de 4 px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --card-padding: 14px;
+
+  /* Color de la sección activa del panel (lo fija ControlPanel por destino) */
+  --view-tint: var(--theme-social);
+
   /* Radios */
   --radius-2xl: 16px;
   --radius-cards: 20px;

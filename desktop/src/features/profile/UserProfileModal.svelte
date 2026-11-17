@@ -65,13 +65,13 @@
         <button class="btn btn--ghost btn--icon" aria-label="Cerrar perfil" on:click={() => dispatch('close')}><X size={16} /></button>
       </div>
     </div>
-    <div class="upm-body soc">
+    <div class="upm-body ui">
       {#if error}
-        <div class="soc-notice soc-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>
+        <div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>
       {:else if loading || !profile}
-        <div class="soc-loading" aria-label="Cargando perfil">
-          <div class="soc-skel"></div>
-          <div class="soc-skel"></div>
+        <div class="ui-loading" aria-label="Cargando perfil">
+          <div class="ui-skel"></div>
+          <div class="ui-skel"></div>
         </div>
       {:else}
         <ProfileView {profile} own={false} />
