@@ -278,6 +278,9 @@ model Pet {
   personality   Json?
   desktopSkills Json?     @default("{}")
   inHabitat     Boolean   @default(false)
+  /// Vida autónoma (spec 36): último intervalo simulado (índice absoluto = epoch / intervalo).
+  /// Cursor propio, independiente de lastTickAt: la simulación es determinista por (pet, índice).
+  autonomyCursor Int?
 
   lastTickAt    DateTime  @default(now())
   createdAt     DateTime  @default(now())
@@ -441,14 +444,26 @@ model PetMemory {
   id        String   @id @default(uuid())
   petId     String
   pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
-  kind      String   // fact | summary | habit
+  kind      String   // fact | summary | habit | event | encounter | relation | ...
+  /// Capa de memoria (spec 36): episodic (acontecimientos) | semantic (conocimiento) | emotional (relaciones)
+  layer     String   @default("semantic")
   content   String
-  /// Clave estable de los hábitos (habit:coding_time…): se reemplazan por upsert, no se acumulan
+  /// Clave estable de hábitos (habit:coding_time…) y relaciones (emo:owner, emo:pet:<id>…): upsert, no se acumulan
   key       String?
+  /// 0-1: cuánto importa el recuerdo (decide qué se olvida al llenarse la capacidad)
+  importance Float   @default(0.5)
+  /// -1..1: valoración emocional simulada (sobre todo en la capa emotional)
+  valence   Float    @default(0)
+  /// Sujeto del recuerdo: owner | user:<id> | pet:<id> (null = general)
+  subject   String?
+  /// Última vez que se usó en un prompt (refuerza la retención)
+  lastRecalledAt DateTime?
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@unique([petId, key])
   @@index([petId, createdAt])
+  @@index([petId, layer])
 }
 
 /// Perfil de hábitos de escritorio (una fila por mascota, tamaño fijo). Se alimenta con un

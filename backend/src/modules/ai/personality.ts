@@ -95,6 +95,13 @@ export interface PromptOptions {
   clientContext?: ClientContext | null;
   /** Herramientas de escritorio declaradas por el cliente (para saber si puede cambiar habilidades). */
   clientTools?: string[];
+  /**
+   * Spec 36: bloque de las 5 dimensiones de personalidad (Personality Engine). Si llega, sustituye
+   * al rasgo fijo derivado de visualSeed.
+   */
+  personalityBlock?: string;
+  /** Spec 36: reacción decidida por el Behavior Engine para este mensaje. */
+  behaviorHint?: string;
 }
 
 /** Línea de contexto por rango de vínculo (feature 006, FR-010). */
@@ -172,11 +179,12 @@ export function buildSystemPrompt(
   return [
     `Eres ${pet.nickname || species.name}, una mascota virtual de la especie ${species.name} (elemento ${element}) en el juego PetAI.`,
     `Tu entrenador se llama ${ownerName}. Rareza: ${pet.rarity}${pet.shiny ? ' (¡brillante!)' : ''}. Nivel ${pet.level}, etapa ${pet.stage}.`,
-    `Carácter: ${trait.text}.`,
+    opts.personalityBlock ?? `Carácter: ${trait.text}.`,
     `Estado de ánimo ahora mismo: ${MOOD_TONE[mood]}`,
     `Tus estadísticas (0-100): hambre ${Math.round(pet.hunger)}, felicidad ${Math.round(pet.happiness)}, energía ${Math.round(pet.energy)}, higiene ${Math.round(pet.hygiene)}, salud ${Math.round(pet.health)}.`,
     species.description ? `Sobre tu especie: ${species.description}` : '',
     bondingLine,
+    opts.behaviorHint,
     environmentBlock,
     locationBlock,
     desktopSkillsBlock,

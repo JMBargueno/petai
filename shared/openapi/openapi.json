@@ -1445,6 +1445,317 @@
         ]
       }
     },
+    "/v1/pets/{id}/mind": {
+      "get": {
+        "operationId": "MindController_profile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perfil de criatura: 5 dimensiones de personalidad, keywords, memoria por capas y vida autónoma reciente",
+        "tags": [
+          "Mind"
+        ]
+      }
+    },
+    "/v1/billing/plans": {
+      "get": {
+        "operationId": "BillingController_getPlans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener los planes, precios y límites vigentes",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/billing/entitlement": {
+      "get": {
+        "operationId": "BillingController_getEntitlement",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar el estado de suscripción y entitlement del usuario autenticado",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/billing/google/verify": {
+      "post": {
+        "operationId": "BillingController_verifyGooglePurchase",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "purchaseToken",
+                  "productId"
+                ],
+                "properties": {
+                  "purchaseToken": {
+                    "type": "string"
+                  },
+                  "productId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verificar y reconocer una compra de Google Play Billing",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/billing/google/rtdn": {
+      "post": {
+        "operationId": "BillingController_googleRtdn",
+        "parameters": [
+          {
+            "name": "authorization",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Recepción de notificaciones en tiempo real (RTDN) de Google Play Pub/Sub",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/billing/stripe/checkout": {
+      "post": {
+        "operationId": "StripeController_checkout",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar URL de Stripe Checkout para suscripción Pro",
+        "tags": [
+          "Billing Stripe"
+        ]
+      }
+    },
+    "/v1/billing/stripe/portal": {
+      "post": {
+        "operationId": "StripeController_portal",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar URL del Stripe Customer Portal para gestionar la suscripción",
+        "tags": [
+          "Billing Stripe"
+        ]
+      }
+    },
+    "/v1/billing/stripe/webhook": {
+      "post": {
+        "operationId": "StripeController_webhook",
+        "parameters": [
+          {
+            "name": "stripe-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Recepción de webhooks de eventos de suscripción y pago de Stripe",
+        "tags": [
+          "Billing Stripe"
+        ]
+      }
+    },
+    "/v1/admin/billing/config": {
+      "get": {
+        "operationId": "AdminBillingController_getConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Configuración activa y número de versión"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener configuración activa de facturación e IA",
+        "tags": [
+          "Admin Billing"
+        ]
+      },
+      "put": {
+        "operationId": "AdminBillingController_updateConfig",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBillingConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nueva versión creada y activada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar y activar una nueva versión de configuración de facturación",
+        "tags": [
+          "Admin Billing"
+        ]
+      }
+    },
+    "/v1/admin/billing/config/versions": {
+      "get": {
+        "operationId": "AdminBillingController_listVersions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Historial de versiones"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar historial de versiones de configuración",
+        "tags": [
+          "Admin Billing"
+        ]
+      }
+    },
+    "/v1/admin/billing/config/versions/{version}/activate": {
+      "post": {
+        "operationId": "AdminBillingController_activateVersion",
+        "parameters": [
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versión reactivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revertir / activar una versión histórica de configuración",
+        "tags": [
+          "Admin Billing"
+        ]
+      }
+    },
+    "/v1/admin/billing/stats": {
+      "get": {
+        "operationId": "AdminBillingController_stats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Resumen de métricas de facturación"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Métricas de negocio de suscripciones y gasto de IA",
+        "tags": [
+          "Admin Billing"
+        ]
+      }
+    },
     "/v1/pets": {
       "get": {
         "operationId": "PetsController_getPets",
@@ -2753,288 +3064,6 @@
         "summary": "Conversar con la mascota (streaming SSE: eventos delta, tool, action, moderated, done, error)",
         "tags": [
           "AI"
-        ]
-      }
-    },
-    "/v1/billing/plans": {
-      "get": {
-        "operationId": "BillingController_getPlans",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Obtener los planes, precios y límites vigentes",
-        "tags": [
-          "Billing"
-        ]
-      }
-    },
-    "/v1/billing/entitlement": {
-      "get": {
-        "operationId": "BillingController_getEntitlement",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Consultar el estado de suscripción y entitlement del usuario autenticado",
-        "tags": [
-          "Billing"
-        ]
-      }
-    },
-    "/v1/billing/google/verify": {
-      "post": {
-        "operationId": "BillingController_verifyGooglePurchase",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "purchaseToken",
-                  "productId"
-                ],
-                "properties": {
-                  "purchaseToken": {
-                    "type": "string"
-                  },
-                  "productId": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Verificar y reconocer una compra de Google Play Billing",
-        "tags": [
-          "Billing"
-        ]
-      }
-    },
-    "/v1/billing/google/rtdn": {
-      "post": {
-        "operationId": "BillingController_googleRtdn",
-        "parameters": [
-          {
-            "name": "authorization",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Recepción de notificaciones en tiempo real (RTDN) de Google Play Pub/Sub",
-        "tags": [
-          "Billing"
-        ]
-      }
-    },
-    "/v1/billing/stripe/checkout": {
-      "post": {
-        "operationId": "StripeController_checkout",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Generar URL de Stripe Checkout para suscripción Pro",
-        "tags": [
-          "Billing Stripe"
-        ]
-      }
-    },
-    "/v1/billing/stripe/portal": {
-      "post": {
-        "operationId": "StripeController_portal",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Generar URL del Stripe Customer Portal para gestionar la suscripción",
-        "tags": [
-          "Billing Stripe"
-        ]
-      }
-    },
-    "/v1/billing/stripe/webhook": {
-      "post": {
-        "operationId": "StripeController_webhook",
-        "parameters": [
-          {
-            "name": "stripe-signature",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Recepción de webhooks de eventos de suscripción y pago de Stripe",
-        "tags": [
-          "Billing Stripe"
-        ]
-      }
-    },
-    "/v1/admin/billing/config": {
-      "get": {
-        "operationId": "AdminBillingController_getConfig",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Configuración activa y número de versión"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener configuración activa de facturación e IA",
-        "tags": [
-          "Admin Billing"
-        ]
-      },
-      "put": {
-        "operationId": "AdminBillingController_updateConfig",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateBillingConfigDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Nueva versión creada y activada"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Guardar y activar una nueva versión de configuración de facturación",
-        "tags": [
-          "Admin Billing"
-        ]
-      }
-    },
-    "/v1/admin/billing/config/versions": {
-      "get": {
-        "operationId": "AdminBillingController_listVersions",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Historial de versiones"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar historial de versiones de configuración",
-        "tags": [
-          "Admin Billing"
-        ]
-      }
-    },
-    "/v1/admin/billing/config/versions/{version}/activate": {
-      "post": {
-        "operationId": "AdminBillingController_activateVersion",
-        "parameters": [
-          {
-            "name": "version",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Versión reactivada"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Revertir / activar una versión histórica de configuración",
-        "tags": [
-          "Admin Billing"
-        ]
-      }
-    },
-    "/v1/admin/billing/stats": {
-      "get": {
-        "operationId": "AdminBillingController_stats",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Resumen de métricas de facturación"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Métricas de negocio de suscripciones y gasto de IA",
-        "tags": [
-          "Admin Billing"
         ]
       }
     },
@@ -9978,6 +10007,10 @@
           "achievements"
         ]
       },
+      "UpdateBillingConfigDto": {
+        "type": "object",
+        "properties": {}
+      },
       "BondingFieldsDto": {
         "type": "object",
         "properties": {
@@ -10411,10 +10444,6 @@
           "date",
           "daysRemaining"
         ]
-      },
-      "UpdateBillingConfigDto": {
-        "type": "object",
-        "properties": {}
       },
       "ContactDto": {
         "type": "object",

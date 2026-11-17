@@ -1,7 +1,7 @@
 # Modelo de datos de un Pockai
 
 ## Entrada de `shared/game-data/species.json`
-Validada por `speciesSchema` en `backend/src/modules/game-data/game-data.schemas.ts` y por `scripts/validate-game-data.js`. **No añadas campos**: lo extra va en la ficha.
+Validada por `speciesSchema` en `backend/src/modules/game-data/game-data.schemas.ts` y por `scripts/validate-game-data.js`. **No añadas campos fuera de esta tabla**: lo extra va en la ficha.
 
 ```json
 {
@@ -13,6 +13,7 @@ Validada por `speciesSchema` en `backend/src/modules/game-data/game-data.schemas
   "baseStats": { "hp": 50, "atk": 55, "def": 45, "vel": 48, "esp": 52 },
   "favoriteFood": "spicy_berry",
   "spriteKey": "ignisaur",
+  "personalityBias": { "curiosity": 60, "sociability": 55, "bravery": 65, "affection": 45, "temper": 65 },
   "defaultPalette": { "primary": "#E25822", "secondary": "#F3C544", "accent": "#6D1600" }
 }
 ```
@@ -27,6 +28,7 @@ Validada por `speciesSchema` en `backend/src/modules/game-data/game-data.schemas
 | `baseStats` | `hp` `atk` `def` `vel` `esp`, enteros ≥ 0; total según `balance.md` |
 | `favoriteFood` | Id existente en `foods.json` (×1.5 hambre/felicidad al comerla) |
 | `spriteKey` | = `id`. Requiere `shared/assets/sprites/<spriteKey>_{idle,eat,happy,sleep}.svg` |
+| `personalityBias` | Punto de partida de las 5 dimensiones de personalidad (`curiosity` `sociability` `bravery` `affection` `temper`), enteros en [15, 85]. Ver `personality.md`. Opcional para el motor (sin él, todo 50) pero **obligatorio en especies nuevas** |
 | `defaultPalette` | `primary` `secondary` `accent` en `#RRGGBB` |
 
 Roles de paleta: `primary` = cuerpo (canal R de la máscara), `secondary` = vientre/zonas claras (canal G), `accent` = accesorios y contornos de 2 px.
@@ -59,4 +61,4 @@ El shiny NO depende de la especie (lo pone la eclosión). No hay que definirlo.
 - **Estados disponibles** (`StatusKind`): `burn` (6 % HP/ronda), `slow` (−value a VEL), `sap` (−value a DEF), `guard` (DEF ×1.5). **No inventes otros** (parálisis, sueño, confusión…): el motor no los gestiona.
 
 ## Lo que NO existe (no lo generes como datos)
-Movimientos propios de especie, evoluciones a otra especie (la evolución es solo `stage`: baby 1 → juvenile 10 → adult 25 → final 50 con `evolution_stone`; mismo sprite), resistencias/inmunidades, loot, tamaño/hábitat como campo. Todo eso puede vivir **solo en la ficha** como lore.
+Movimientos propios de especie, keywords o bandas de personalidad propias (son globales en `balance.json → personality`), temperamento fijo (se deriva de las dimensiones), evoluciones a otra especie (la evolución es solo `stage`: baby 1 → juvenile 10 → adult 25 → final 50 con `evolution_stone`; mismo sprite), resistencias/inmunidades, loot, tamaño/hábitat como campo. Todo eso puede vivir **solo en la ficha** como lore.

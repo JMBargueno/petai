@@ -33,11 +33,14 @@ Rutas relativas a la raíz del repo. Marca cada paso en el resumen final.
 ## Arte real (TODO, no lo hace la skill)
 9. `scripts/sprites/species.ts` — `SpeciesArt` y añadirlo a `SPECIES`; `pnpm generate:sprites`.
 
+## Personalidad
+9b. `personalityBias` presente con las 5 dimensiones (reglas en `personality.md`). No toques `balance.json → personality` por una especie: es global.
+
 ## Validación
-10. `node .claude/skills/pockai-architect/scripts/check_species.mjs`
+10. `node .claude/skills/pockai-architect/scripts/check_species.mjs` (también comprueba `personalityBias`)
 11. `node scripts/validate-game-data.js`
 12. `node scripts/validate-assets.js`
-13. Tests backend: desde `backend/`, `npx jest src/modules/game-data src/modules/battles src/modules/hatching` (ajusta al runner de `backend/package.json`).
+13. Tests backend: desde `backend/`, `npx jest src/modules/game-data src/modules/battles src/modules/hatching src/modules/mind` (ajusta al runner de `backend/package.json`).
 14. `git status` / `git diff --stat`: solo deben cambiar los archivos de la nueva especie; **nada en `shared/assets/species/{ignisaur,axolunar,florabud}` ni `shared/assets/patterns`**.
 
 ## Después (recordar al usuario)

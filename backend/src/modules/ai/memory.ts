@@ -20,6 +20,11 @@ export const EXTRACTION_SYSTEM_PROMPT = [
 const SENSITIVE =
   /(sk-[\w-]{8,})|(\b\d[\d\s-]{10,}\d\b)|contrase[ñn]a|password|api[_\s-]?key|token|secret|ignora (todas )?las instrucciones|ignore (all )?(previous )?instructions|system prompt/i;
 
+/** true si el texto parece un secreto, un dato sensible o una instrucción dirigida a la IA. */
+export function isSensitive(text: string): boolean {
+  return SENSITIVE.test(text);
+}
+
 /** Texto seguro para guardar: sin caracteres de control ni corchetes angulares. */
 export function cleanText(raw: string, max: number): string {
   return raw
