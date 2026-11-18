@@ -347,9 +347,9 @@ export function rollBatch(random: () => number, size = BATCH): Egg[] {
       box-shadow: 0 8px 20px rgb(0 0 0 / 0.35);
     }
     .swatch img {
-      inline-size: 150%;
-      max-inline-size: none;
-      block-size: auto;
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
     }
     .pattern__min {
       padding: 2px 10px;

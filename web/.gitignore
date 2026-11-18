@@ -43,5 +43,6 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-# Sprites copiados desde shared/assets/sprites (scripts/sync-assets.mjs)
+# Sprites copiados desde shared/assets/sprites (scripts/sync-assets.mjs).
+# Incluye las previews de patrones que genera scripts/generate-pattern-previews.mjs.
 /public/sprites
