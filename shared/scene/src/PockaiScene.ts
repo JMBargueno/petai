@@ -16,9 +16,11 @@ import { PetSprite, FRAME } from './pet/PetSprite';
 import { IsoRoom } from './room/IsoRoom';
 import { styleFor } from './room/roomStyles';
 import { Ambience, NO_AMBIENCE, type AmbienceState } from './ambience/Ambience';
+import { loadBackdrop } from './ambience/backdrops';
 import {
   PROTOCOL_VERSION,
   type Activity,
+  type BackdropMode,
   type HostMessage,
   type PetState,
   type RoomState,
@@ -58,6 +60,10 @@ export class PockaiScene {
   /** Cielo y clima de la sala; solo existe mientras hay sala (el Pockai suelto va sin fondo). */
   private ambience: Ambience | null = null;
   private ambienceState: AmbienceState = NO_AMBIENCE;
+  /** Modo híbrido: paisaje pintado detrás de la sala (si la sala lo tiene). */
+  private backdropMode: BackdropMode = 'painted';
+  private backdropRoom: string | null = null;
+  private backdropSeq = 0;
   private disposers: (() => void)[] = [];
 
   private constructor(private readonly opts: SceneOptions) {}
@@ -163,6 +169,10 @@ export class PockaiScene {
           clock: msg.clock === undefined ? this.ambienceState.clock : msg.clock,
         };
         this.ambience?.set(this.ambienceState);
+        if (msg.backdrop && msg.backdrop !== this.backdropMode) {
+          this.backdropMode = msg.backdrop;
+          void this.syncBackdrop();
+        }
         break;
       case 'setEditMode':
         this.edit = msg.edit;
@@ -191,6 +201,7 @@ export class PockaiScene {
         this.room = null;
         this.ambience?.destroy();
         this.ambience = null;
+        this.backdropRoom = null;
         this.app.stage.addChild(this.pet);
         this.pet.zIndex = 0;
         this.pet.visible = this.activity !== 'away';
@@ -211,7 +222,7 @@ export class PockaiScene {
       this.ambience = new Ambience({
         reducedMotion: this.reducedMotion,
         onSky: (sky, look) => room.setSky(sky, look),
-        onLightning: () => room.startle(),
+        onLightning: () => room.lightning(),
       });
       this.app.stage.addChildAt(this.ambience.back, 0);
       this.app.stage.addChild(this.ambience.front);
@@ -221,7 +232,21 @@ export class PockaiScene {
       this.room.setRoom(state);
     }
     this.ambience?.setExterior(!!styleFor(state.id).exterior);
+    if (state.id !== this.backdropRoom) {
+      this.backdropRoom = state.id;
+      void this.syncBackdrop();
+    }
     this.layout();
+  }
+
+  /** Pone (o quita) el fondo pintado de la sala actual según el modo elegido por el anfitrión. */
+  private async syncBackdrop(): Promise<void> {
+    const seq = ++this.backdropSeq;
+    const roomId = this.backdropRoom;
+    const texture = this.backdropMode === 'painted' ? await loadBackdrop(roomId) : null;
+    if (seq !== this.backdropSeq || !this.ambience || !this.room) return; // cambió la sala mientras cargaba
+    this.ambience.setBackdrop(texture);
+    this.room.setGrounded(!!texture);
   }
 
   private async setPet(state: PetState): Promise<void> {

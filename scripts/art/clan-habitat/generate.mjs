@@ -4,6 +4,8 @@
 //   node scripts/art/clan-habitat/generate.mjs <nivel 1-5> [--ref <nivel-anterior.png>] [--model …] [--ratio 4:3]
 //        → sprite-previews/clan-habitat/tier-<n>.<ext>   (revisar antes de copiarlo a shared/assets/clan-habitat/)
 //   node scripts/art/clan-habitat/generate.mjs --list      modelos de imagen disponibles con la clave
+//   node scripts/art/clan-habitat/generate.mjs <n> --keyed --ref shared/assets/clan-habitat/tier-<n>.webp
+//        → el mismo nivel con el cielo en croma magenta; luego scripts/art/habitat-backdrops/import.mjs
 //
 // Cada llamada genera UNA imagen y se cobra. Empieza por el nivel 1, enséñaselo al usuario y pasa
 // la imagen aprobada como --ref al siguiente: así el lugar es el mismo y solo crece.
@@ -20,6 +22,8 @@ function envFiles() {
   try {
     const common = execSync('git rev-parse --path-format=absolute --git-common-dir', { encoding: 'utf8' }).trim();
     files.push(path.join(path.dirname(common), '.env.local'));
+    const list = execSync('git worktree list --porcelain', { encoding: 'utf8' });
+    for (const m of list.matchAll(/^worktree (.+)$/gm)) files.push(path.join(m[1].trim(), '.env.local'));
   } catch {
     /* fuera de git: solo el de aquí */
   }
@@ -82,6 +86,9 @@ rests on a floating island with waterfalls falling into clouds, a huge violet ae
 central tower, a big aurora fills the night sky, constellations and shooting stars. Epic and awe-inspiring.`,
 };
 
+/** `--keyed`: redibuja el nivel con el cielo en croma magenta (lo recorta habitat-backdrops/import.mjs). */
+const KEYED = args.includes('--keyed');
+
 const prompt = `Pixel art game background for a cute virtual-pet game (style: low-poly pixel art, big chunky pixels,
 simple angular shapes, flat shading with three tones per material, around 24 colours, no dithering noise,
 no fine texture, crisp edges). It is the home of a clan of small creatures.
@@ -95,7 +102,24 @@ Composition rules (very important):
 - The UPPER 35% is mostly sky: a UI panel will cover the top, so keep important details in the middle band.
 - Props and buildings sit at the far left, far right and in the background, framing the empty ground.
 - No creatures, no people, no animals, no text, no logos, no UI, no frame or border.
-${args.includes('--ref') ? '- The reference image is the previous level of this SAME place: keep the same layout, horizon line, ground shape and camera, and upgrade it as described. It must clearly look like the same location, grown more magnificent.' : ''}`;
+${
+  KEYED
+    ? '- The reference image is THIS SAME level: redraw it faithfully with the same layout, buildings, trees, ground, horizon line and camera. Only the sky and the lighting change, as described below.'
+    : args.includes('--ref')
+      ? '- The reference image is the previous level of this SAME place: keep the same layout, horizon line, ground shape and camera, and upgrade it as described. It must clearly look like the same location, grown more magnificent.'
+      : ''
+}
+${
+  KEYED
+    ? `- The SKY must be ONE perfectly flat solid colour: pure magenta #FF00FF (RGB 255,0,255). No gradient, no sun,
+  no moon, no stars, no aurora, no clouds, no light beams, no glow, no haze in the sky: the game draws the real sky
+  (time of day and weather) behind the picture, plus the aurora and light beams.
+- Never use magenta, pink-purple or violet anywhere else in the picture (no pink flowers, no violet crystals).
+- Everything that stands up has a clean hard silhouette against the magenta sky.
+- Neutral, even daylight lighting with no strong time of day (the game tints it for dawn, dusk and night).
+  Glowing elements (runes, lanterns, crystals, the campfire) may still glow softly.`
+    : ''
+}`;
 
 const ref = opt('ref');
 const mime = (f) => (/\.jpe?g$/i.test(f) ? 'image/jpeg' : /\.webp$/i.test(f) ? 'image/webp' : 'image/png');
@@ -134,6 +158,6 @@ if (!img) {
   process.exit(1);
 }
 const ext = /jpe?g/.test(img.mime_type ?? img.mimeType ?? '') ? 'jpg' : 'png';
-const out = path.join(outDir, `tier-${level}.${ext}`);
+const out = path.join(outDir, `tier-${level}${KEYED ? ".keyed" : ""}.${ext}`);
 fs.writeFileSync(out, Buffer.from(img.data, 'base64'));
 console.log('✓', out, '· 1 imagen generada');

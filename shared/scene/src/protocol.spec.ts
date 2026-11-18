@@ -99,6 +99,9 @@ describe('parseHostMessage (sala)', () => {
       weather: null,
       clock: null,
     });
+    // Fondo pintado o liso; un valor desconocido se ignora.
+    expect(parseHostMessage({ type: 'setAmbience', backdrop: 'plain' })).toEqual({ type: 'setAmbience', backdrop: 'plain' });
+    expect(parseHostMessage({ type: 'setAmbience', backdrop: 'neon' })).toEqual({ type: 'setAmbience' });
     // Datos raros se degradan a "sin dato" en vez de romper el mensaje.
     expect(parseHostMessage({ type: 'setAmbience', weather: { code: 'x' }, sun: { sunrise: '25:00', sunset: '20:00' } })).toEqual({
       type: 'setAmbience',
