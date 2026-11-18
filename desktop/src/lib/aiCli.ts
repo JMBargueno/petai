@@ -3,6 +3,11 @@
 // flujo que Hermes local: el backend construye el prompt (/chat/local/context), el escritorio
 // genera la respuesta y el backend la modera y la guarda (/chat/local/sync).
 //
+// El CLI se lanza sin herramientas a propósito: no puede crear recordatorios ni ejecutar acciones
+// (eso exigiría darle credenciales del backend y las tarjetas de confirmación). A cambio, el prompt
+// que prepara el backend ya lleva los recuerdos y el lore, y al sincronizar el servidor resume la
+// conversación en recuerdos igual que en un turno nativo.
+//
 // El proceso lo lanza el comando nativo `run_ai_cli` (src-tauri/src/ai_cli.rs). La configuración
 // se guarda solo en este equipo y nunca se envía al backend.
 

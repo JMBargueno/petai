@@ -10,6 +10,11 @@ describe('AgentService', () => {
   let svc: AgentService;
   const memory: any = { search: jest.fn().mockResolvedValue(['A Ana le gusta pescar']) };
   const gameData: any = {
+    getLore: () => ({
+      topics: [
+        { id: 'elementos', title: 'Los Seis Flujos del Éter', keywords: ['elementos', 'fuego'], text: 'Seis formas de la energía.' },
+      ],
+    }),
     getBalance: () => ({
       minigames: { minEnergy: 10, energyCost: 10, games: { catch_food: { name: 'A' }, reflex: { name: 'R' }, memory_match: { name: 'M' } } },
     }),
@@ -63,6 +68,16 @@ describe('AgentService', () => {
     expect(parse(await svc.handle(ctx, call('suggest_minigame'))).recomendado).toBe('catch_food'); // triste
     pets.getPetById.mockResolvedValue({ happiness: 90, energy: 5, sleeping: false });
     expect(parse(await svc.handle(ctx, call('suggest_minigame'))).recomendado).toBeNull(); // cansado
+  });
+
+  it('get_lore devuelve el tema pedido o la lista de temas si no lo conoce', async () => {
+    expect(parse(await svc.handle(ctx, call('get_lore', { topic: 'los elementos' })))).toEqual({
+      tema: 'Los Seis Flujos del Éter',
+      lore: 'Seis formas de la energía.',
+    });
+    const miss = parse(await svc.handle(ctx, call('get_lore', { topic: 'recetas de cocina' })));
+    expect(miss.error).toBeDefined();
+    expect(miss.temas_disponibles).toEqual(['Los Seis Flujos del Éter']);
   });
 
   it('search_memory y list_reminders delegan en sus fuentes', async () => {

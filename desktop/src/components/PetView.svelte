@@ -29,7 +29,7 @@
   import { BarksEngine } from '../lib/barks';
   import { BehaviorEngine, type BehaviorState } from '../lib/behaviorEngine';
   import { checkPetBallCollision, type BallState } from '../lib/toys/toyPhysics';
-  import { currentSpeech, speak, speechBusy } from '../lib/speech-queue';
+  import { currentSpeech, parseBold, speak, speechBusy } from '../lib/speech-queue';
   import { setPetOnScreen } from '../lib/window-visibility';
 
   export let pet: any;
@@ -921,7 +921,7 @@
 
   {#if $currentSpeech}
     {#key $currentSpeech.id}
-      <div class="speech" class:below={posY < 110} role="status" aria-live="polite">{$currentSpeech.text}</div>
+      <div class="speech" class:below={posY < 110} role="status" aria-live="polite">{#each parseBold($currentSpeech.text) as part}{#if part.bold}<strong>{part.text}</strong>{:else}{part.text}{/if}{/each}</div>
     {/key}
   {/if}
 

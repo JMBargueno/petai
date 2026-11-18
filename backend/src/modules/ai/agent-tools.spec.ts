@@ -18,7 +18,7 @@ describe('agent-tools', () => {
     ]);
     expect(TOOLS.filter((t) => t.clientSide).every((t) => t.requiresConfirmation)).toBe(true);
     expect(toolDefinitions().map((t) => t.name).sort()).toEqual([
-      'create_reminder', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'set_in_habitat', 'suggest_minigame',
+      'create_reminder', 'get_lore', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'set_in_habitat', 'suggest_minigame',
     ]);
   });
 
@@ -153,6 +153,14 @@ describe('agent-tools', () => {
       expect(open.describe!({ url: 'https://example.com/a' }, 'UTC')).toContain('https://example.com/a');
       expect(TOOL_BY_NAME.get('read_clipboard')!.describe!({}, 'UTC')).toContain('portapapeles');
     });
+  });
+
+  it('get_lore exige un tema de texto y lo limpia', () => {
+    const s = TOOL_BY_NAME.get('get_lore')!;
+    expect(s.requiresConfirmation).toBe(false);
+    expect(s.validate({}, new Date()).ok).toBe(false);
+    expect(s.validate({ topic: 'x' }, new Date()).ok).toBe(false);
+    expect(s.validate({ topic: '  elementos <b> ' }, new Date())).toEqual({ ok: true, args: { topic: 'elementos b' } });
   });
 
   it('search_memory exige una consulta de texto', () => {

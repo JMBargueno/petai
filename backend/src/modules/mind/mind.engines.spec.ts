@@ -59,6 +59,16 @@ describe('Personality Engine', () => {
     for (const d of DIMENSIONS) expect(block).toContain(cfg.dimensions[d].label);
   });
 
+  it('cada rasgo va con su porcentaje y una frase en primera persona según la banda', () => {
+    const block = buildPersonalityBlock({ ...neutralDims(), sociability: 52, bravery: 5, curiosity: 95 }, cfg);
+    expect(block).toContain('- Sociabilidad 52 % — soy amistoso: Soy amable con todos');
+    expect(block).toContain('- Valentía 5 % — soy miedoso: Me asusto con facilidad');
+    expect(block).toContain('- Curiosidad 95 % — soy aventurero: Todo me parece una expedición');
+    expect(block).not.toContain('/100');
+    // Todas las bandas tienen su frase en primera persona
+    for (const d of DIMENSIONS) for (const b of cfg.dimensions[d].bands) expect(b.self).toBeTruthy();
+  });
+
   it('sesgo de combate acotado y nulo sin dimensiones', () => {
     expect(combatBias(undefined, cfg)).toBeUndefined();
     const b = combatBias({ ...neutralDims(), bravery: 100, temper: 100 }, cfg)!;

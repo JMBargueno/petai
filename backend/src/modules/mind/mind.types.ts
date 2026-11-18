@@ -20,6 +20,8 @@ export interface Band {
   label: string;
   /** Frase que se inyecta en el prompt cuando la dimensión cae en esta banda. */
   prompt: string;
+  /** La misma idea en primera persona («Hago preguntas…»); si falta, se usa `prompt`. */
+  self?: string;
 }
 
 export interface PersonalityConfig {

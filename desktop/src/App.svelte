@@ -6,7 +6,7 @@
   import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
   import { initSummonShortcut } from './lib/summonShortcut';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
-  import { speak, clearSpeech, type SpeakOptions } from './lib/speech-queue';
+  import { speak, clearSpeech, MAX_AI_CHUNKS, type SpeakOptions } from './lib/speech-queue';
   import {
     fetchStatus,
     startHeartbeat,
@@ -710,7 +710,7 @@
     }}
     on:actionTriggered={(e) => handlePetAction(e.detail)}
     on:bubble={(e) =>
-      showBubble(e.detail, { overflowNote: '… (sigue en el chat)', onShow: () => petViewRef?.play?.('talk') })}
+      showBubble(e.detail, { maxChunks: MAX_AI_CHUNKS, overflowNote: '… (sigue en el chat)', onShow: () => petViewRef?.play?.('talk') })}
     on:behavior={(e) => reactToBehavior(e.detail)}
     on:refreshPet={refreshPet}
     on:logout={clearSessionState}
