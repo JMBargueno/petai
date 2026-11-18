@@ -35,6 +35,11 @@ export class ProfilePetDto {
   @ApiProperty({ example: 12 }) level: number;
   @ApiProperty({ example: 'juvenile' }) stage: string;
   @ApiProperty({ example: false }) shiny: boolean;
+  @ApiProperty({
+    description: 'Prendas equipadas por ranura (head, face, neck, back): itemId de accessories.json',
+    example: { head: 'acc_gorro_lana_azul' },
+  })
+  accessories: Record<string, string>;
 }
 
 /** Estadísticas del perfil (en el perfil público solo se envían si el dueño las muestra). */

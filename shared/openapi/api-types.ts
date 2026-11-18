@@ -4218,6 +4218,13 @@ export interface components {
             stage: string;
             /** @example false */
             shiny: boolean;
+            /**
+             * @description Prendas equipadas por ranura (head, face, neck, back): itemId de accessories.json
+             * @example {
+             *       "head": "acc_gorro_lana_azul"
+             *     }
+             */
+            accessories: Record<string, never>;
         };
         ProfileStatsDto: {
             /**

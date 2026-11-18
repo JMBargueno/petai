@@ -237,8 +237,8 @@ propio del lote 2.
 - Regalos: `GiftingService` rechaza prendas y premios de logro.
 
 Hecho, en `backend/src/modules/accessories/`. Las reglas puras están en `accessories.engine.ts`.
-Queda pendiente: los tests e2e contra base de datos y que las vistas públicas de mascota que
-eligen campos a mano expongan `accessories`; se revisa al hacer el render (lote 3).
+El perfil público (`ProfileService`) expone ya `pet.accessories`. La API pública de webhooks no,
+porque tampoco expone el aspecto de la mascota. Queda pendiente: los tests e2e contra base de datos.
 
 **Lote 3: anclas y render** (tras la migración a pixel art)
 - `anchors.json` para las especies existentes, en las cuatro etapas.

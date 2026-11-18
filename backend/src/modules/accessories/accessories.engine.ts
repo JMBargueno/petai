@@ -50,6 +50,20 @@ export function sanitizeEquipped(raw: unknown, catalog: Map<string, AccessoryDef
   return out;
 }
 
+/**
+ * Lo equipado tal como se enseña a otros jugadores (perfil público): solo las cuatro ranuras con un
+ * id de texto. No consulta el catálogo; el cliente ignora los ids que no conozca.
+ */
+export function publicEquipped(raw: unknown): EquippedAccessories {
+  const out: EquippedAccessories = {};
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return out;
+  for (const slot of ACCESSORY_SLOTS) {
+    const id = (raw as Record<string, unknown>)[slot];
+    if (typeof id === 'string' && id.length > 0 && id.length <= 64) out[slot] = id;
+  }
+  return out;
+}
+
 export type EquipResult = { ok: true; next: EquippedAccessories } | { ok: false; error: string };
 
 /**
