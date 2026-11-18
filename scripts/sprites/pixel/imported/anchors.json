@@ -1,0 +1,92 @@
+{
+  "ignisaur": {
+    "baby": { "size": "S", "head": [33, 38], "face": [37, 44], "neck": [33, 50], "back": [24, 46] },
+    "juvenile": { "size": "S", "head": [38, 35], "face": [40, 41], "neck": [34, 45], "back": [26, 46] },
+    "adult": { "size": "S", "head": [45, 38], "face": [46, 43], "neck": [40, 48], "back": [28, 42] },
+    "final": { "size": "S", "head": [44, 31], "face": [45, 38], "neck": [41, 46], "back": [26, 40] }
+  },
+  "axolunar": {
+    "baby": { "size": "S", "head": [32, 39], "face": [37, 45], "neck": [33, 52], "back": [22, 48] },
+    "juvenile": { "size": "M", "head": [34, 29], "face": [40, 38], "neck": [36, 48], "back": [24, 44] },
+    "adult": { "size": "L", "head": [38, 19], "face": [44, 28], "neck": [38, 38], "back": [28, 44] },
+    "final": { "size": "M", "head": [38, 17], "face": [42, 24], "neck": [38, 34], "back": [28, 42] }
+  },
+  "florabud": {
+    "baby": { "size": "S", "head": [31, 42], "face": [34, 49], "neck": [32, 54], "back": [25, 50] },
+    "juvenile": { "size": "M", "head": [34, 35], "face": [39, 41], "neck": [35, 47], "back": [29, 50] },
+    "adult": { "size": "M", "head": [35, 27], "face": [39, 33], "neck": [35, 41], "back": [28, 46] },
+    "final": { "size": "M", "head": [36, 9], "face": [39, 28], "neck": [36, 36], "back": [26, 44] }
+  },
+  "livolt": {
+    "baby": { "size": "S", "head": [32, 42], "face": [34, 48], "neck": [32, 54], "back": [22, 46] },
+    "juvenile": { "size": "M", "head": [34, 30], "face": [34, 38], "neck": [34, 46], "back": [22, 42] },
+    "adult": { "size": "L", "head": [37, 23], "face": [43, 33], "neck": [38, 43], "back": [22, 36] },
+    "final": { "size": "L", "head": [34, 15], "face": [40, 28], "neck": [38, 36], "back": [22, 30] }
+  },
+  "inktopus": {
+    "baby": { "size": "S", "head": [32, 37], "face": [35, 46], "neck": [32, 52], "back": [24, 48] },
+    "juvenile": { "size": "M", "head": [32, 27], "face": [34, 38], "neck": [33, 48], "back": [22, 42] },
+    "adult": { "size": "L", "head": [32, 16], "face": [37, 29], "neck": [33, 40], "back": [22, 34] },
+    "final": { "size": "L", "head": [32, 13], "face": [37, 25], "neck": [33, 36], "back": [22, 34] }
+  },
+  "solarejo": {
+    "baby": { "size": "S", "head": [33, 41], "face": [38, 47], "neck": [33, 53], "back": [23, 50] },
+    "juvenile": { "size": "M", "head": [34, 37], "face": [37, 43], "neck": [33, 49], "back": [27, 52] },
+    "adult": { "size": "M", "head": [38, 27], "face": [42, 34], "neck": [36, 42], "back": [26, 46] },
+    "final": { "size": "M", "head": [35, 22], "face": [39, 29], "neck": [35, 36], "back": [24, 42] }
+  },
+  "magmadillo": {
+    "baby": { "size": "S", "head": [36, 37], "face": [39, 46], "neck": [34, 53], "back": [22, 46] },
+    "juvenile": { "size": "S", "head": [42, 37], "face": [42, 45], "neck": [37, 50], "back": [26, 42] },
+    "adult": { "size": "S", "head": [46, 31], "face": [44, 39], "neck": [40, 46], "back": [28, 36] },
+    "final": { "size": "M", "head": [46, 28], "face": [45, 37], "neck": [40, 44], "back": [26, 34] }
+  },
+  "nubeballena": {
+    "baby": { "size": "S", "head": [33, 43], "face": [38, 50], "neck": [32, 55], "back": [22, 50] },
+    "juvenile": { "size": "M", "head": [38, 40], "face": [43, 48], "neck": [30, 50], "back": [24, 46] },
+    "adult": { "size": "L", "head": [42, 37], "face": [44, 48], "neck": [32, 48], "back": [22, 44] },
+    "final": { "size": "M", "head": [44, 31], "face": [47, 40], "neck": [38, 44], "back": [24, 40] }
+  },
+  "cactuerno": {
+    "baby": { "size": "S", "head": [31, 41], "face": [35, 50], "neck": [32, 55], "back": [22, 50] },
+    "juvenile": { "size": "M", "head": [35, 32], "face": [37, 41], "neck": [35, 47], "back": [24, 46] },
+    "adult": { "size": "M", "head": [33, 22], "face": [34, 31], "neck": [33, 38], "back": [25, 40] },
+    "final": { "size": "L", "head": [34, 17], "face": [37, 26], "neck": [35, 33], "back": [24, 38] }
+  },
+  "fenixel": {
+    "baby": { "size": "S", "head": [31, 39], "face": [33, 46], "neck": [32, 51], "back": [24, 48] },
+    "juvenile": { "size": "M", "head": [40, 32], "face": [41, 39], "neck": [38, 45], "back": [28, 42] },
+    "adult": { "size": "M", "head": [44, 20], "face": [45, 26], "neck": [41, 34], "back": [30, 40] },
+    "final": { "size": "M", "head": [44, 14], "face": [44, 20], "neck": [38, 28], "back": [28, 38] }
+  },
+  "cerbito": {
+    "baby": { "size": "S", "head": [32, 41], "face": [36, 46], "neck": [32, 52], "back": [22, 48] },
+    "juvenile": { "size": "S", "head": [35, 30], "face": [37, 37], "neck": [35, 44], "back": [24, 48] },
+    "adult": { "size": "S", "head": [38, 19], "face": [40, 27], "neck": [38, 36], "back": [26, 44] },
+    "final": { "size": "M", "head": [36, 11], "face": [37, 19], "neck": [36, 29], "back": [24, 36] }
+  },
+  "kirisol": {
+    "baby": { "size": "S", "head": [35, 38], "face": [39, 45], "neck": [34, 50], "back": [26, 50] },
+    "juvenile": { "size": "M", "head": [36, 27], "face": [42, 37], "neck": [34, 42], "back": [26, 42] },
+    "adult": { "size": "M", "head": [42, 18], "face": [45, 27], "neck": [38, 36], "back": [28, 38] },
+    "final": { "size": "M", "head": [41, 13], "face": [44, 23], "neck": [38, 32], "back": [26, 36] }
+  },
+  "leviatin": {
+    "baby": { "size": "S", "head": [38, 39], "face": [40, 47], "neck": [34, 54], "back": [20, 48] },
+    "juvenile": { "size": "S", "head": [41, 30], "face": [42, 37], "neck": [38, 44], "back": [22, 46] },
+    "adult": { "size": "M", "head": [46, 19], "face": [48, 26], "neck": [40, 36], "back": [24, 44] },
+    "final": { "size": "M", "head": [46, 12], "face": [46, 21], "neck": [44, 32], "back": [28, 40] }
+  },
+  "yggdrito": {
+    "baby": { "size": "S", "head": [32, 42], "face": [33, 48], "neck": [32, 54], "back": [24, 50] },
+    "juvenile": { "size": "M", "head": [32, 26], "face": [33, 45], "neck": [33, 52], "back": [24, 50] },
+    "adult": { "size": "M", "head": [32, 15], "face": [33, 43], "neck": [32, 50], "back": [22, 46] },
+    "final": { "size": "M", "head": [34, 9], "face": [34, 42], "neck": [34, 50], "back": [24, 44] }
+  },
+  "primpulso": {
+    "baby": { "size": "S", "head": [35, 39], "face": [40, 46], "neck": [34, 53], "back": [22, 46] },
+    "juvenile": { "size": "S", "head": [38, 28], "face": [38, 33], "neck": [35, 39], "back": [28, 40] },
+    "adult": { "size": "S", "head": [44, 19], "face": [44, 25], "neck": [40, 32], "back": [30, 34] },
+    "final": { "size": "M", "head": [44, 12], "face": [44, 19], "neck": [40, 26], "back": [30, 30] }
+  }
+}

@@ -30,8 +30,10 @@ describe('anchorAt', () => {
 
 describe('placeAccessory', () => {
   it('coloca el punto de anclaje de la prenda sobre el ancla, en la talla de la etapa', () => {
+    // La talla la fija la hoja de la etapa: una especie de cabeza pequeña no lleva la L de adulta.
+    const big = gorro.sizes[adult.size.toLowerCase() as 's' | 'm' | 'l'];
     const l = placeAccessory(adult, gorro, 'idle', 0);
-    expect(l).toMatchObject({ x: adult.base.head[0] - gorro.sizes.l.anchor[0], y: adult.base.head[1] - gorro.sizes.l.anchor[1], w: gorro.sizes.l.w, h: gorro.sizes.l.h });
+    expect(l).toMatchObject({ x: adult.base.head[0] - big.anchor[0], y: adult.base.head[1] - big.anchor[1], w: big.w, h: big.h });
     const s = placeAccessory(baby, gorro, 'idle', 0);
     expect(baby.size).toBe('S');
     expect(s).toMatchObject({ w: gorro.sizes.s.w, h: gorro.sizes.s.h });

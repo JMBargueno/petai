@@ -28,7 +28,7 @@ import { writeTextKeepEol } from './sprites/io';
 import { drawEggFrame } from './sprites/pixel/egg';
 import { Grid, N, SCALE } from './sprites/pixel/raster';
 import { bakeSheet, composeSheet, FRAME, frameSvg, pngOf, Sheet, upscale } from './sprites/pixel/sheet';
-import { Anchors, drawPockai, PIXEL_SPECIES, PixelSpecies, poseArt, Slot } from './sprites/pixel/species';
+import { accessorySize, Anchors, drawPockai, PIXEL_SPECIES, PixelSpecies, poseArt, Slot } from './sprites/pixel/species';
 
 /** La etapa adult vive en la raíz de la especie (alias histórico que leen todos los clientes). */
 const stageDir = (id: string, stage: Stage) => (stage === 'adult' ? id : `${id}/${stage}`);
@@ -129,7 +129,7 @@ function anchorsJson(sp: PixelSpecies, stage: Stage, frames: Frame[]) {
     if (zero) continue; // sin entrada = [0, 0] en todos los frames
     out[anim.name] = same ? per.head : per;
   }
-  return { size: s.size, base, eyeGap: s.eye.x2 - (s.eye.x1 + s.eye.w1), frames: out };
+  return { size: accessorySize(sp, stage), base, eyeGap: s.eye.x2 - (s.eye.x1 + s.eye.w1), frames: out };
 }
 
 /** JSON con las listas de números en una línea (las anclas serían ilegibles con una por línea). */

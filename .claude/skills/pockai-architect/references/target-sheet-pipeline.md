@@ -107,7 +107,23 @@ Imprime el reparto. Es normal que la línea ronde el 25–35 % (el contorno pesa
 
 Propone la paleta por defecto de la especie para que el horneado reproduzca la hoja; `set-palette.mjs` la pone en `species.json`. Actualiza también el bloque JSON de la ficha.
 
+## Anclas de accesorio
+La silueta no dice dónde está la cabeza: lo más alto puede ser una llama, una flor, la copa de un árbol o el chorro de una ballena. Por eso las anclas del arte importado se anotan a mano en `scripts/sprites/pixel/imported/anchors.json`, una línea por etapa:
+
+```json
+"adult": { "size": "S", "head": [45, 38], "face": [46, 43], "neck": [40, 48], "back": [28, 42] }
+```
+
+- Coordenadas nativas (0–63) sobre la **pose de reposo**. `head`: donde se posa el gorro (centro de lo alto de la cabeza). `face`: entre los ojos. `neck`: donde cruza la bufanda. `back`: de donde cuelga la capa.
+- `size`: talla de las prendas en esa etapa. Por defecto la del boceto (S, M, L, L); bájala si la cabeza es pequeña (hasta 14 px de ancho, S; hasta 20, M). Un cuadrúpedo de cabeza pequeña con un gorro L queda tapado.
+- En una especie de tres cabezas, las anclas van en la central.
+- Para verlas, hace falta una rejilla de coordenadas: amplía el reposo de cada etapa ×8 con líneas cada 4 píxeles y lee las posiciones.
+
+**En las otras nueve poses** las anclas se calculan solas (`poseAnchorsOf` en `species.ts`): se busca el recorte de la cara del reposo cerca de donde caería si la silueta entera se hubiera movido, y gorro, gafas y bufanda se desplazan lo mismo. Si no aparece y la criatura se ha tumbado, el gorro se posa en lo más alto de la silueta. No es infalible: **revisa las diez poses de las cuatro etapas con un conjunto puesto** (capa, bufanda, gafas y gorro) antes de dar una especie por buena, y corrige el ancla del reposo si una pose se va.
+
 ## Cómo se anima
+Los ojos cerrados sueltos (un parpadeo) no cambian de pose: solo la pose con «zzz» es la de dormir. Si un parpadeo usara la pose de dormir, la criatura se tumbaría un frame en mitad del reposo.
+
 Una especie con `imported/<id>.json` se dibuja con sus píxeles (`drawImported` en `species.ts`). Cada frame de las 31 animaciones usa la pose clave que le toca (reposo, andar, comer, alegre, dormir, atacar, triste, celebrar, golpe) y la desplaza en **píxeles enteros**. No hay deformación ni frames intermedios, y la cara va dibujada en la pose.
 
 El `PixelSpecies` de formas sigue haciendo falta: da el boceto de disposición y la posición de los efectos.
@@ -130,7 +146,7 @@ Para varias especies seguidas, un script que recorra especies y etapas llamando 
 ## Límites conocidos
 - **Piezas sueltas:** lo que no toca a la criatura se descarta como partícula. Un aura de esquirlas o de hojas flotantes no se puede importar; no la pidas en el prompt.
 - **Animación pobre:** 10 poses por etapa. Si una animación necesita una pose que no está, hay que pedir una hoja más.
-- **Accesorios:** las anclas de gorro, gafas, bufanda y capa se estiman desde la silueta. Revisa `pnpm generate:accessories --preview`.
+- **Accesorios:** las anclas del reposo se anotan a mano (véase «Anclas de accesorio»); en el resto de poses se siguen solas y pueden fallar. Revisa siempre las diez poses con un conjunto puesto.
 - **Color:** al pasar por la paleta, los tonos salen algo más saturados que en la hoja.
 - **No es determinista:** no se puede regenerar una hoja idéntica. Lo que queda versionado es el resultado importado, no la imagen.
 - **Las imágenes del modelo no se versionan:** son intermedias y viven en `sprite-previews/nano/`.
