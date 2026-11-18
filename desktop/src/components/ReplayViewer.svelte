@@ -113,15 +113,17 @@
       {/each}
     </div>
 
-    <div class="log" class:end={frame.kind === 'end'}>
+    <div class="log" class:end={frame.kind === 'end'} aria-hidden="true">
       {#key index}<span>{frame.text}</span>{/key}
     </div>
+    <!-- Región viva estable: la visual se recrea en cada jugada y no se anunciaría -->
+    <div class="sr-only" role="status" aria-live="polite">{frame.text}</div>
 
     <div class="controls">
-      <button on:click={restart} title="Reiniciar">↺</button>
-      <button class="main" on:click={toggle} title={playing ? 'Pausa' : 'Reproducir'}>{#if playing}<Ico n="pause" size={16} />{:else}<Ico n="play" size={16} />{/if}</button>
-      <button on:click={toEnd} title="Ir al final"><Ico n="next" /></button>
-      <button on:click={setSpeed} title="Velocidad">×{speed}</button>
+      <button on:click={restart} title="Volver al principio" aria-label="Volver al principio"><Ico n="refresh" size={14} /></button>
+      <button class="main" on:click={toggle} title={playing ? 'Pausa' : 'Reproducir'} aria-label={playing ? 'Pausa' : 'Reproducir'}>{#if playing}<Ico n="pause" size={16} />{:else}<Ico n="play" size={16} />{/if}</button>
+      <button on:click={toEnd} title="Ir al final" aria-label="Ir al final"><Ico n="next" /></button>
+      <button on:click={setSpeed} title="Cambiar velocidad" aria-label="Velocidad ×{speed}. Pulsa para cambiarla">×{speed}</button>
       <span class="round">{frame.round > 0 ? `Ronda ${frame.round}` : 'Inicio'} · {index + 1}/{frames.length}</span>
     </div>
   </div>

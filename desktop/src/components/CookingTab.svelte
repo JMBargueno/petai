@@ -35,19 +35,29 @@
   let error = '';
   let busy = false;
   let timer: ReturnType<typeof setInterval> | null = null;
+  /** Segundos que quedan para memorizar la receta antes de que se oculte. */
+  let memorizeLeft = 0;
+  let menuError = false;
+
+  // El servidor manda las estadísticas en inglés.
+  const STAT_LABEL: Record<string, string> = { energy: 'energía', happiness: 'felicidad', hunger: 'saciedad', hygiene: 'higiene', atk: 'ataque', def: 'defensa', vel: 'velocidad', hp: 'vida', esp: 'especial' };
+  const stat = (s: string) => STAT_LABEL[s] ?? s;
 
   function stopTimer() {
     if (timer) clearInterval(timer);
     timer = null;
   }
 
-  onMount(async () => {
+  async function loadMenu() {
+    menuError = false;
     try {
       menu = await api.cookingDailyMenu();
     } catch {
       menu = null;
+      menuError = true;
     }
-  });
+  }
+  onMount(loadMenu);
   onDestroy(stopTimer);
 
   async function start() {
@@ -64,13 +74,15 @@
       const memorizeUntil = Date.now() + MEMORIZE_SECONDS * 1000;
       // Reloj local (no `expiresAt`) para no depender del desfase con el servidor
       const deadline = Date.now() + session.durationSeconds * 1000;
+      memorizeLeft = MEMORIZE_SECONDS;
       timer = setInterval(() => {
         secondsLeft = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+        memorizeLeft = Math.max(0, Math.ceil((memorizeUntil - Date.now()) / 1000));
         if (phase === 'memorize' && Date.now() >= memorizeUntil) phase = 'cook';
         if (secondsLeft === 0 && phase !== 'done') void submit();
       }, 250);
     } catch (e: any) {
-      error = e.message;
+      error = e instanceof TypeError ? 'Sin conexión con el servidor. Inténtalo de nuevo en un momento.' : e?.message || 'No se pudo empezar a cocinar.';
     } finally {
       busy = false;
     }
@@ -115,7 +127,7 @@
     <FeatureHeader icon="chef" title="Cocina" sub="Memoriza la receta y añade los ingredientes en orden · cuesta 10 de energía">
       <svelte:fragment slot="end">
         {#if session && (phase === 'memorize' || phase === 'cook')}
-          <Badge tone={secondsLeft <= 10 ? 'danger' : 'tint'} icon="timer">{secondsLeft}s</Badge>
+          <Badge tone={secondsLeft <= 10 ? 'danger' : 'tint'} icon="timer" title="Tiempo total">{secondsLeft} s</Badge>
         {/if}
       </svelte:fragment>
     </FeatureHeader>
@@ -123,10 +135,16 @@
     {#if menu && phase === 'idle'}
       <div class="menu">
         <span class="label-caps muted">Menú del día</span>
-        <strong>{menu.recipeName} <small class="muted">· dificultad {menu.difficulty}</small></strong>
+        <strong>{menu.recipeName} <small class="muted">· dificultad {menu.difficulty} de 5</small></strong>
         <div class="chips">{#each menu.ingredients as ing}<span class="ing">{icon(ing)} {label(ing)}</span>{/each}</div>
-        <p class="ui-card__hint">+{menu.buff.value} {menu.buff.stat} · {menu.bonus}</p>
+        <p class="ui-card__hint">Si sale bien: +{menu.buff.value} de {stat(menu.buff.stat)} · {menu.bonus}</p>
       </div>
+    {/if}
+
+    {#if menuError && phase === 'idle'}
+      <Notice tone="warning">No se pudo cargar el menú del día.
+        <svelte:fragment slot="end"><button class="btn btn--ghost btn--sm" on:click={loadMenu}>Reintentar</button></svelte:fragment>
+      </Notice>
     {/if}
 
     {#if !(session && (phase === 'memorize' || phase === 'cook'))}
@@ -139,7 +157,8 @@
   {#if session && (phase === 'memorize' || phase === 'cook')}
     <strong class="recipe">{session.recipeName}</strong>
     {#if phase === 'memorize'}
-      <SectionHeader title="Memoriza el orden…" icon="brain" />
+      <SectionHeader title="Memoriza el orden" icon="brain" count="{memorizeLeft} s" />
+      <p class="sr-only" role="status">Tienes {MEMORIZE_SECONDS} segundos para memorizar la receta.</p>
       <div class="chips">
         {#each session.ingredients as ing, i}<span class="ing ing--big"><b>{i + 1}.</b> {icon(ing)} {label(ing)}</span>{/each}
       </div>
@@ -165,9 +184,11 @@
     {#if result.message}
       <Notice tone="info">{result.message}</Notice>
     {:else}
-      <Notice tone="ok" icon="party">
-        {result.correctPct}% correcto · +{result.coins ?? 0} monedas
-        {#if result.buff} · buff +{result.buff.value} {result.buff.stat} (24 h){/if}
+      {@const pct = result.correctPct ?? 0}
+      <Notice tone={pct >= 75 ? 'ok' : pct >= 25 ? 'info' : 'warning'} icon={pct >= 75 ? 'party' : 'chef'}>
+        {pct >= 75 ? '¡Te ha salido muy bien!' : pct >= 25 ? 'No está mal.' : 'Se te ha quemado un poco.'}
+        {pct}% en su sitio · +{result.coins ?? 0} monedas
+        {#if result.buff} · +{result.buff.value} de {stat(result.buff.stat)} durante 24 h{/if}
       </Notice>
     {/if}
   {/if}

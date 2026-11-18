@@ -56,8 +56,16 @@
     dispatch('finish', { score });
   }
 
+  /** Espacio o Enter cuentan como pulsar el objetivo: el juego también se puede jugar con teclado. */
+  function onKey(e: KeyboardEvent) {
+    if (e.key !== ' ' && e.key !== 'Enter') return;
+    e.preventDefault();
+    hit();
+  }
+
   onMount(() => {
     start = Date.now();
+    window.addEventListener('keydown', onKey);
     scheduleSpawn();
     timer = setInterval(() => {
       timeLeft = Math.max(0, durationSeconds - (Date.now() - start) / 1000);
@@ -66,25 +74,27 @@
   });
   onDestroy(() => {
     done = true;
+    window.removeEventListener('keydown', onKey);
     clearInterval(timer);
     clearTimeout(spawnTimer);
     clearTimeout(hideTimer);
   });
 </script>
 
-<div class="hud"><span><Ico n="timer" /> {Math.ceil(timeLeft)}s</span><span><Ico n="star" /> {score} · aciertos {hits}/{hits + misses}</span></div>
+<div class="hud"><span><Ico n="timer" /> {Math.ceil(timeLeft)} s</span><span><Ico n="star" /> {score} · aciertos {hits}/{hits + misses}</span></div>
+<div class="sr-only" role="status" aria-live="assertive">{target ? '¡Objetivo!' : ''}</div>
 <div class="arena" style="width:{W}px;height:{H}px">
   {#if target}
-    <button class="target" style="left:{target.x}px;top:{target.y}px" on:mousedown={hit} aria-label="Objetivo">🎯</button>
+    <button class="target" tabindex="-1" style="left:{target.x}px;top:{target.y}px" on:pointerdown={hit} aria-label="Objetivo">🎯</button>
   {/if}
 </div>
-<p class="hint">Pulsa el objetivo en cuanto aparezca. Menos de 0,4 s = ¡doble puntuación!</p>
+<p class="hint">Pulsa el objetivo en cuanto aparezca, con el ratón o con Espacio. En menos de 0,4 s puntúa doble.</p>
 
 <style>
   .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: var(--space-2); }
   .arena {
     position: relative; overflow: hidden; border-radius: var(--radius-2xl);
-    background: radial-gradient(circle at 50% 40%, rgba(244, 114, 182, 0.12), var(--surface-2));
+    background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--theme-arena) 14%, transparent), var(--surface-2));
     border: 1px solid var(--line-soft);
   }
   .target {
