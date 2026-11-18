@@ -14,7 +14,9 @@ const dataDir = path.resolve(__dirname, '../../shared/game-data');
 const balance = JSON.parse(fs.readFileSync(path.join(dataDir, 'balance.json'), 'utf8'));
 const skills: SkillDef[] = JSON.parse(fs.readFileSync(path.join(dataDir, 'skills.json'), 'utf8'));
 
-const BASIC: Record<string, string> = { fire: 'ember', water: 'bubble', plant: 'vine_whip' };
+const BASIC: Record<string, string> = {
+  fire: 'ember', water: 'bubble', plant: 'vine_whip', electric: 'spark', shadow: 'shade_touch', light: 'glimmer',
+};
 
 describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () => {
   let app: INestApplication;
