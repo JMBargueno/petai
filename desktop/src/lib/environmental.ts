@@ -9,7 +9,8 @@
  *
  * Usa el token de la sesión del módulo `api` y renueva el access token ante un 401.
  */
-import { API_BASE_URL, getAccessToken, renewAccessToken } from './api';
+import { writable } from 'svelte/store';
+import { API_BASE_URL, apiFetch, getAccessToken, renewAccessToken } from './api';
 
 export type TimeOfDay = 'late_night' | 'morning' | 'afternoon' | 'evening' | 'night';
 export type WeatherCondition = 'clear' | 'cloud' | 'rain' | 'snow' | 'hot' | 'cold' | 'unknown';
@@ -22,6 +23,9 @@ export interface WeatherInfo {
   weatherCode: number | null;
   cached: boolean;
   fetchedAt: string | null;
+  /** Salida y puesta de sol de hoy, hora local ("HH:MM"); null sin ubicación. */
+  sunrise: string | null;
+  sunset: string | null;
 }
 
 export interface ActivityInfo {
@@ -61,10 +65,19 @@ export interface EnvironmentalChangedEvent {
     | null;
 }
 
+/**
+ * Último estado ambiental conocido. Lo mantiene `App.svelte`; lo leen las salas del hábitat
+ * (`IsoRoomView`) para pintar el clima y el sol reales sin pasar la prop por medio panel.
+ */
+export const environmentalStatus = writable<EnvironmentalStatus | null>(null);
+
+/** Cada cuánto se vuelve a pedir el estado (el servidor cachea el clima 30 min). */
+export const STATUS_REFRESH_MS = 15 * 60_000;
+
 async function authedFetch(path: string, init?: RequestInit): Promise<Response> {
   const base = `${API_BASE_URL}${path}`;
   const doFetch = (token: string | null) =>
-    fetch(base, {
+    apiFetch(base, {
       ...init,
       headers: {
         'Content-Type': 'application/json',

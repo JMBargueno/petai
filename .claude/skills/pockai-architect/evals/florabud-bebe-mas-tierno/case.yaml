@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: florabud-bebe-mas-tierno
+expected_outcome: |
+  Modo solo arte: cambia el dibujo procedural de florabud en etapa baby (scripts/sprites/species.ts) sin
+  alterar a las demás especies ni a florabud adulto más allá de lo inevitable, revisa el resultado con la hoja de
+  contactos (contact_sheet.ts) leyendo el PNG, regenera las hojas y no toca species.json.

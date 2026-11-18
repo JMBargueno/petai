@@ -46,6 +46,8 @@ Para condensar todas las capas en un único archivo de máscara y ahorrar memori
 - **Canal Rojo (R)**: Máscara para la zona del **color primario** (ej. pelaje/cuerpo principal).
 - **Canal Verde (G)**: Máscara para la zona del **color secundario** (ej. vientre, puntas de orejas, cola).
 - **Canal Azul (B)**: Máscara para la zona de **proyección del patrón** (lomo, alas, hombros, respetando cara y ojos).
+- **Azul puro (R = 0, G = 0, B = 255)**: zona del **color de acento** (`palette.accent`): cuernos, garras, caparazones. No recibe patrón. Si la paleta no trae acento, se usa el primario oscurecido.
+- **Negro puro**: color literal; se copia `base.png` tal cual (ojos, boca, efectos, brillos).
 - **Canal Alfa (A)**: **Silueta total** de la criatura para recorte duro y recorte del patrón.
 
 ---
@@ -133,14 +135,17 @@ Para componer un cuadro o la hoja de sprites completa:
 [ Pase Shiny (Banda especular 4s + Destellos) ] ───> [ Sprite Final Compuesto ]
 ```
 
-1. **Capa Base de Color**: Se evalúa `mask.png`. Cada píxel se colorea interpolando `palette.primary` (ponderado por el canal R) y `palette.secondary` (ponderado por el canal G).
-2. **Proyección del Patrón**: Se muestrea `patterns/{patternId}.png` aplicando el transform `(offsetX, offsetY, scale, rotation)`. El valor se multiplica por el canal `B` de `mask.png` y se combina con la capa base. De esta forma, el patrón solo cubre las zonas permitidas y nunca mancha los ojos, boca o vientre.
+1. **Capa Base de Color**: Se evalúa `mask.png`. Cada píxel se colorea interpolando `palette.primary` (ponderado por el canal R) y `palette.secondary` (ponderado por el canal G); el azul puro se pinta con `palette.accent`.
+   - **Giro de tono en la sombra**: al multiplicar por el gris de `base.png`, el color gira hacia el violeta y se satura en proporción a lo oscuro que sea ese gris (`shadeShift` en `shared/scene/src/bake/bakePixels.ts`). Solo se aplica cuando `base.png` es un gris; un `base.png` con color propio multiplica tal cual.
+2. **Proyección del Patrón**: `patterns/{patternId}.png` es pixel art en **píxeles nativos**: cada píxel del patrón cubre un píxel nativo del sprite (2×2 píxeles de hoja), desplazado por `(offsetX, offsetY)`. Solo actúa donde el canal `B` de `mask.png` lo permite (el primario; nunca el vientre, el acento ni los colores literales). No pinta blanco: un píxel blanco del patrón es una **marca de tono** del propio color (más clara si el primario es oscuro, más oscura si es claro) y un píxel de otro color es un **destello** casi blanco. No hay alfas intermedios; los degradados van con tramado. Los patrones se generan con `pnpm generate:patterns` (`scripts/sprites/pixel/patterns.mjs`). La escala y la rotación por semilla no se aplican: romperían la rejilla.
 3. **Sombreado y Lineart**: Se superpone `base.png`. Las sombras en escala de grises actúan en modo de fusión `Multiply`, oscureciendo el color y el patrón subyacente. Los contornos negros y los reflejos blancos de los ojos se dibujan en modo `Normal`.
 4. **Efecto Shiny (si `shiny == true`)**: Se aplica un shader con una banda diagonal blanca semitransparente que recorre la silueta (máscara canal A) cada 4 segundos, acompañado de un emisor de partículas de estrellas o chispas.
 
 ---
 
 ## 5. Implementación Técnica por Plataforma
+
+> **Decisión 2026-11:** la escena (sala, Pockai y bake) pasa a ser un **núcleo compartido con PixiJS** en `shared/scene`. Ver §9. El bake por plataforma de §5.1–5.3 queda como referencia histórica y como fallback de los widgets nativos, que no pueden alojar un WebView.
 
 ### 5.1 Escritorio (Tauri 2 / Svelte / Canvas)
 - **Modo Producción**: Un `<canvas>` offscreen en memoria ejecuta la composición de los 4 pasos una sola vez al cargar la mascota (`bakeSpriteSheet()`).
@@ -218,3 +223,74 @@ El script de validación se ejecuta en GitHub Actions (`npm run validate:assets`
   - Archivos de patrón inexistentes en `shared/assets/patterns/`.
 - **Advertencias Recomendadas (Warnings con fallback activo)**:
   - Ausencia de tags recomendados (`idle_alt`, `sit`, `clean`, `sad`, `sick`, `cast`, `hurt`, `faint`, `talk`). El validador notifica qué animación de respaldo se utilizará en su lugar.
+
+---
+
+## 8. Migración isométrica (3/4 por etapa y muebles)
+
+Reglas visuales en [`GUIA_ARTISTICA.md` §7.4](GUIA_ARTISTICA.md#74-isométrico-objetivo-sustituye-a-la-vista-de-perfil).
+
+### Hojas por etapa
+- Cada especie es un `PixelSpecies` en `scripts/sprites/pixel/species.ts`, con una geometría por etapa (`baby | juvenile | adult | final`). No hay un dibujo escalado: cada etapa tiene su propio plan corporal ([`GUIA_ARTISTICA.md` §7.5](GUIA_ARTISTICA.md)).
+- `pnpm generate:sprites` escribe la etapa **adult en la raíz** `shared/assets/species/<id>/{base.png, mask.png, anim.json, anchors.json}` (así los clientes antiguos y el manifiesto del CDN siguen funcionando sin duplicar bytes) y `baby`, `juvenile` y `final` en `species/<id>/<etapa>/`.
+- La cara se pinta en la máscara con primario **sin canal B** (papel `skin`), así que el patrón nunca la pisa.
+- Los clientes piden `(especie, etapa)`. Si no existe, usan `adult` y, si tampoco existe, `ignisaur`.
+
+### Muebles
+- `scripts/sprites/furniture.ts` dibuja cada mueble en SVG isométrico con 2 orientaciones (`a` = rotación 0 y `b` = rotación 1). Las rotaciones 2 y 3 son el espejo de `b` y `a`.
+- Salida: `shared/assets/furniture/<id>_{a,b}.svg`. Los datos (huella, montaje, interacción) están en `shared/game-data/habitats.json`.
+
+### Pixel art
+- El generador no rasteriza SVG: `scripts/sprites/pixel/raster.ts` dibuja cada frame desde cero en una rejilla de **64×64** a partir de elipses y polígonos ya transformados por la pose, y guarda la hoja a ×2 (frames de 128×128). Nunca se escala ni se gira un mapa de bits.
+- El formato de `base.png` y `mask.png` no cambia, así que el horneado de los clientes (§4) es el mismo. Tonos en `base.png`: contorno 62, sombra 172, base y luz 239. El tono de luz se consigue sumando en la máscara una parte del secundario (G = 64; brillo, G = 128).
+- `anim.json` lleva `meta.pixelArt = { native: 64, scale: 2 }`. Los clientes escalan por enteros y con vecino más próximo.
+- `anchors.json` (junto a cada `anim.json`): anclas de accesorio por ranura y su desplazamiento por frame ([spec 38 §5](specs/spec-38-accesorios-pockai.md)).
+- Los `sprites/<id>_*.svg` de vista previa son el mismo pixel art, hecho de rectángulos.
+
+### Revisión visual
+- `npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>` compone una hoja de contactos PNG (poses clave × etapas, más las cuatro siluetas) a color con la paleta por defecto, para revisarla antes de commitear.
+
+---
+
+## 9. Núcleo de escena compartido (`shared/scene`, PixiJS)
+
+Un único renderizador para escritorio, Android e iOS, que sustituye a la spec `027-ios-skia`.
+
+| Plataforma | Cómo se monta |
+|---|---|
+| Escritorio (Tauri + Svelte) | Import ESM directo de `@pockai/scene` en los componentes |
+| Android (Compose) | `WebView` + `WebViewAssetLoader` con el bundle `dist/embed/` en `assets/scene/`, y puente `AndroidBridge` |
+| iOS (SwiftUI) | `WKWebView` con el mismo bundle y `WKScriptMessageHandler` |
+| Widgets (PetWidget, WidgetKit, Live Activity) | Nativos, con PNG pre-horneado (no admiten WebView) |
+
+**Qué vive en el núcleo:**
+- El bake (máscara + paleta + patrón) como filtro de Pixi.
+- El reproductor de clips (`anim.json`).
+- La sala isométrica: proyección, orden de profundidad, A*, paseo y modo edición.
+- Las partículas.
+- El ambiente de la sala (`src/ambience/`): ciclo amanecer → día → tarde → atardecer → anochecer → noche y clima real, dibujados por código.
+  - `sunClock.ts`: de la hora local y la salida/puesta de sol sale un `SkyState` continuo (colores interpolados entre fotogramas clave). La hora la da el reloj del dispositivo; sin sol real usa 07:30 / 20:00.
+  - `weather.ts`: del código WMO de Open-Meteo sale el aspecto (nubes, lluvia, nieve, niebla, tormenta).
+  - `Ambience.ts`: cielo, sol, luna, estrellas y nubes detrás de la sala; en las salas exteriores (`exterior` en `roomStyles.ts`) la lluvia y la nieve caen también por delante. La sala recibe un velo de luz y sus ventanas toman el color del cielo. Con movimiento reducido todo queda estático.
+  - Solo se dibuja cuando hay sala: el Pockai suelto sigue con fondo transparente.
+
+**Qué queda nativo:** menús, pantallas, compras y llamadas a la API. La app nativa traduce los eventos de la escena a la API.
+
+**Protocolo** (`shared/scene/src/protocol.ts`): mensajes JSON tipados.
+- Entrada: `setPet`, `setHabitat`, `setTheme`, `setMode`, `playClip`.
+- `setAmbience { weather: { code, temperature }, sun: { sunrise, sunset }, clock }`: clima y sol reales (de `GET /environmental/status`). Todos los campos son opcionales; `clock` fuerza la hora (demo y pruebas). `setNight` queda para "luces apagadas porque duerme".
+- Salida: `ready`, `petTapped`, `furnitureMoved`, `petDraggedOut`.
+
+**Android** (`mobile/android`):
+- `pnpm --filter @pockai/scene build:embed` genera `shared/scene/dist/embed/`. La tarea Gradle `syncPockaiScene` (en `preBuild`) lo copia a `assets/scene/` y falla con un mensaje claro si falta.
+- `ui/scene/PockaiSceneView.kt`: un `WebView` que sirve el bundle con `WebViewAssetLoader` desde `https://appassets.androidplatform.net/assets/scene/` y bloquea cualquier otra navegación.
+  - Los eventos llegan por `AndroidBridge.postMessage`.
+  - `SceneController` encola los mensajes hasta `ready` y, si la página se recarga, repite el último estado.
+  - Se pausa en `ON_PAUSE`.
+- `ui/scene/SceneMessages.kt` construye los mensajes del protocolo (v2); `restClip` es el equivalente de `resolveBaseState`.
+- En builds debug, `adb shell am start -n com.petai.app/.debug.SceneDebugActivity` abre la sala con datos de ejemplo, sin backend (eventos en logcat con la etiqueta `PockaiScene`).
+
+**Reglas:**
+- El bundle se carga desde los assets de la app, sin red.
+- La escena para su ticker cuando no se ve.
+- Hay modo de calidad baja para gamas bajas.

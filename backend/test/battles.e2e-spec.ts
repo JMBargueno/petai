@@ -14,7 +14,9 @@ const dataDir = path.resolve(__dirname, '../../shared/game-data');
 const balance = JSON.parse(fs.readFileSync(path.join(dataDir, 'balance.json'), 'utf8'));
 const skills: SkillDef[] = JSON.parse(fs.readFileSync(path.join(dataDir, 'skills.json'), 'utf8'));
 
-const BASIC: Record<string, string> = { fire: 'ember', water: 'bubble', plant: 'vine_whip' };
+const BASIC: Record<string, string> = {
+  fire: 'ember', water: 'bubble', plant: 'vine_whip', electric: 'spark', shadow: 'shade_touch', light: 'glimmer',
+};
 
 describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () => {
   let app: INestApplication;
@@ -148,6 +150,20 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
     });
 
     it('6. emparejamiento por ELO: rival real, ELO de suma cero, recompensas y energía', async () => {
+      // Una pelea terminada alimenta logros (p. ej. "Primera victoria", +80 monedas) cuya recompensa se
+      // acredita de forma asíncrona. Aquí se mide solo la recompensa del combate: se dan por
+      // conseguidos de antemano todos los logros del atacante para que ninguno sume monedas a mitad.
+      const allAchIds: string[] = JSON.parse(
+        fs.readFileSync(path.join(dataDir, 'achievements.json'), 'utf8'),
+      ).achievements.map((x: any) => x.id);
+      await prisma.achievement.updateMany({
+        where: { userId: a.userId, unlockedAt: null },
+        data: { unlockedAt: new Date() },
+      });
+      await prisma.achievement.createMany({
+        data: allAchIds.map((achId) => ({ userId: a.userId, achId, current: 0, unlockedAt: new Date(), claimed: true })),
+        skipDuplicates: true,
+      });
       const coinsBefore = (await api().get('/v1/me').set(a.auth)).body.coins;
       const petBefore = await profile(a);
       const r = await fight(a).expect(201);
@@ -188,7 +204,7 @@ describe('Arena: combate determinista, ELO, ligas y clasificación (e2e)', () =>
       const toFighter = (p: any): Fighter => ({
         name: p.name, speciesId: p.speciesId, element: p.element, level: p.level, stats: p.stats, mood: p.mood,
         skills: p.skills.map((id: string) => skills.find((s) => s.id === id)!), strategy: p.strategy, isBot: p.isBot,
-        petId: p.petId,
+        petId: p.petId, personality: p.personality,
       });
       const [pa, pb] = detail.replay.participants;
       const again = simulateBattle(toFighter(pa), toFighter(pb), detail.seed, balance.combats);

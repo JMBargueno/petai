@@ -3,6 +3,7 @@ import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
 import { SeoService } from '../shared/seo/seo.service';
+import { SOCIAL_LINKS } from '../shared/social';
 import { Marquee } from '../shared/ui/marquee';
 import { PockaiSprite, PockaiState } from '../shared/ui/pockai-sprite';
 import { Sticker } from '../shared/ui/sticker';
@@ -12,6 +13,8 @@ import { PetDemo } from './demo/pet-demo';
 import { DesktopScene } from './sections/desktop-scene';
 import { HowItWorks } from './sections/how-it-works';
 import { Pricing } from './sections/pricing';
+import { SectionToc, TocSection } from '../shared/layout/section-toc';
+import { DownloadAction } from '../shared/download/download-action';
 
 const HERO_GREETING_MS = 1500;
 
@@ -21,7 +24,7 @@ const HERO_GREETING_MS = 1500;
  */
 @Component({
   selector: 'app-landing',
-  imports: [SiteHeader, SiteFooter, Marquee, Sticker, PockaiSprite, HowItWorks, DesktopScene, Pricing, PetDemo],
+  imports: [SiteHeader, SiteFooter, SectionToc, Marquee, Sticker, PockaiSprite, HowItWorks, DesktopScene, Pricing, PetDemo, DownloadAction],
   templateUrl: './landing.html',
   styleUrl: './landing.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,6 +36,7 @@ export class Landing {
   protected readonly platforms = PLATFORMS;
   protected readonly faq = FAQ;
   protected readonly loreHref = `/${this.locale}/lore`;
+  protected readonly contactHref = `/${this.locale}/contact`;
   protected readonly letters = [...'Pockai'];
 
   protected readonly homeLabel = $localize`:@@nav.home:Pockai, inicio`;
@@ -46,6 +50,15 @@ export class Landing {
     { href: '#faq', label: 'FAQ' },
   ];
   protected readonly navPages = navPages(this.locale, 'home');
+  /** Índice flotante: todas las bandas de la home, en orden. */
+  protected readonly sections: TocSection[] = [
+    { id: 'como-funciona', label: $localize`:@@nav.how:Cómo funciona` },
+    { id: 'funciones', label: $localize`:@@nav.features:Funciones` },
+    { id: 'demo', label: $localize`:@@nav.demo:Pruébalo` },
+    { id: 'precios', label: $localize`:@@nav.pricing:Precios` },
+    { id: 'descargar', label: $localize`:@@nav.cta:Descargar` },
+    { id: 'faq', label: 'FAQ' },
+  ];
 
   /** Mascota del hero: quieta hasta que la tocas; entonces saluda y cambia de especie. */
   private readonly heroIndex = signal(0);
@@ -86,6 +99,7 @@ export class Landing {
               name: SITE_NAME,
               url: `${SITE_URL}/`,
               logo: `${SITE_URL}/icon-512.png`,
+              sameAs: SOCIAL_LINKS.map((s) => s.url),
             },
             {
               '@type': 'WebSite',

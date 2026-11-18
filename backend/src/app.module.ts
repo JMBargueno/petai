@@ -20,14 +20,19 @@ import { MinigamesModule } from './modules/minigames/minigames.module';
 import { AiModule } from './modules/ai/ai.module';
 import { BattlesModule } from './modules/battles/battles.module';
 import { HealthModule } from './modules/health/health.module';
+import { MailModule } from './modules/mail/mail.module';
+import { ContactModule } from './modules/contact/contact.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { MissionsModule } from './missions/missions.module';
 import { AchievementsModule } from './achievements/achievements.module';
+import { StatsModule } from './stats/stats.module';
+import { ProfileModule } from './profile/profile.module';
 import { ChestsModule } from './modules/chests/chests.module';
 import { EnvironmentalModule } from './modules/environmental/environmental.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HabitatModule } from './modules/habitat/habitat.module';
+import { AccessoriesModule } from './modules/accessories/accessories.module';
 import { SeasonsModule } from './modules/seasons/seasons.module';
 import { BreedingModule } from './modules/breeding/breeding.module';
 import { TrainingModule } from './modules/training/training.module';
@@ -44,6 +49,7 @@ import { ReengagementModule } from './modules/reengagement/reengagement.module';
 import { AiRouterModule } from './modules/ai-router/ai-router.module';
 import { VoiceModule } from './modules/voice/voice.module';
 import { PresenceModule } from './modules/presence/presence.module';
+import { ClansModule } from './modules/clans/clans.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { SpectatorModule } from './modules/spectator/spectator.module';
 import { BuddiesModule } from './modules/buddies/buddies.module';
@@ -55,6 +61,8 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { AuthzModule } from './modules/authz/authz.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { DesktopUpdatesModule } from './modules/desktop-updates/desktop-updates.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { AdminEmailModule } from './modules/admin-email/admin-email.module';
 
 // DevKit: las rutas `/dev/*` (hot-reload, seed, action) solo existen fuera de producción.
 // En `NODE_ENV === 'production'` el DevModule no se registra ⇒ 404 (SC-007, constitución I/VIII).
@@ -72,6 +80,9 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     ObservabilityModule.forRoot(),
     PrismaModule,
     RedisModule,
+    StatsModule,
+    ProfileModule,
+    MailModule,
     RealtimeModule,
     GameDataModule,
     AssetsModule,
@@ -86,13 +97,17 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     AiModule,
     BattlesModule,
     HealthModule,
+    ContactModule,
     DesktopUpdatesModule,
+    BillingModule,
+    AdminEmailModule,
     MissionsModule,
     AchievementsModule,
     ChestsModule,
     EnvironmentalModule,
     NotificationsModule,
     HabitatModule,
+    AccessoriesModule,
     SeasonsModule,
     BreedingModule,
     RaidModule,
@@ -109,6 +124,7 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     AiRouterModule,
     VoiceModule,
     PresenceModule,
+    ClansModule,
     SyncModule,
     SpectatorModule,
     // Feature 029-033:

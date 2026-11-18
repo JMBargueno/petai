@@ -50,7 +50,7 @@ export class ConstellationService {
     const stars: StarDto[] = [];
     const starsLayout = (layout.stars ?? {}) as Record<string, { x: number; y: number }>;
     for (const [achId, coords] of Object.entries(starsLayout)) {
-      const def = defsById.get(achId) as { name?: string; tier?: string; target?: number } | undefined;
+      const def = defsById.get(achId) as { name?: string; tier?: string; target?: number; hidden?: boolean } | undefined;
       const row = rowsById.get(achId);
       const current = row?.current ?? 0;
       const target = def?.target ?? 0;
@@ -60,7 +60,7 @@ export class ConstellationService {
         x: coords.x,
         y: coords.y,
         status,
-        name: def?.name ?? achId,
+        name: def?.hidden && status !== 'unlocked' ? '???' : (def?.name ?? achId),
         tier: def?.tier ?? 'common',
       });
     }

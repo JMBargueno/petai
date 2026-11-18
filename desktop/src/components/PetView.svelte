@@ -7,29 +7,55 @@
     type BakedPetSheet
   } from '../lib/sprites';
   import { AnimationController, resolveBaseState } from '../lib/animation/AnimationController';
+  import { parseEquipped } from '@pockai/scene/bake';
+  import { drawWorn, loadWornSet, type WornSet } from '../lib/accessories';
   import type { Reaction } from '../lib/animation/eventMap';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
+  import VisitorPet from './VisitorPet.svelte';
+  import { dropGoneVisitor, syncShownVisitors, type ShownVisitor } from '../lib/effects/visitorsShown';
   import type { EnvironmentalStatus } from '../lib/environmental';
+  import type { HabitatVisitor } from '../lib/api';
   import { skillAuthorizations, isSkillActive, getPetBonding } from '../lib/stores/desktopSkillsStore';
   import {
     calculateThrowVelocity,
-    stepPhysics,
+    advancePhysics,
+    DEFAULT_PHYSICS_CONFIG,
     type PhysicsState,
     type PointerSample,
   } from '../lib/physics/petPhysics';
   import { fetchActiveWindow, calculatePerchTarget } from '../lib/windowPerching';
   import { categorizeWindowTitle, type AppCategory } from '../lib/contextAwareness';
+  import { deskState } from '../lib/deskContext';
   import { analyzeDroppedFile } from '../lib/fileAnalyzer';
   import { BarksEngine } from '../lib/barks';
   import { BehaviorEngine, type BehaviorState } from '../lib/behaviorEngine';
   import { checkPetBallCollision, type BallState } from '../lib/toys/toyPhysics';
+  import { currentSpeech, parseBold, speak, speechBusy } from '../lib/speech-queue';
+  import { setPetOnScreen } from '../lib/window-visibility';
+  import Ico from './Ico.svelte';
+  import EffectLayer from './EffectLayer.svelte';
+  import { EFFECTS, EffectPlayer, flowPalette, portalNexo, type EffectDef } from '../lib/effects';
+  import { admitMoment } from '../lib/effects/momentQueue';
+  import { registerTravelPresenter, travel, travelArrived, type TravelState } from '../lib/visitTravel';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
-  /** Texto de la burbuja de chat sobre la mascota (vacío = oculta) */
-  export let bubble: string = '';
   /** Estado ambiental (feature 005): hora del día, clima, actividad y festividad. */
   export let environmental: EnvironmentalStatus | null = null;
+  /** Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía. */
+  export let visitors: HabitatVisitor[] = [];
+  /**
+   * Visitantes pintados: los que se van siguen aquí (con `leaving`) hasta cruzar su portal; el
+   * store ya los ha quitado. Lógica pura en lib/effects/visitorsShown.
+   */
+  let shownVisitors: ShownVisitor[] = [];
+  $: syncVisitors(visitors);
+  function syncVisitors(list: HabitatVisitor[]) {
+    shownVisitors = syncShownVisitors(shownVisitors, list);
+  }
+  function visitorGone(id: string) {
+    shownVisitors = dropGoneVisitor(shownVisitors, id);
+  }
   /** Pelota de juguete opcional en el escritorio */
   export let ball: BallState | null = null;
   /** Callback cuando la mascota patea o cabecea la pelota */
@@ -40,9 +66,25 @@
   /** Una acción con esta prioridad o más "ocupa" a la mascota: no pasea mientras tanto. */
   const BUSY_PRIORITY = 40;
   const PET_SIZE = 128;
+  const SPEECH_HALF = 110 + 8; // media burbuja + margen con el borde
+  /** Con movimiento reducido las prendas animadas se quedan en su primer frame. */
+  const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-  let posX = 150;
-  let posY = 50;
+  /** Punto (cursor) donde aparece al montarse, p. ej. al soltarlo fuera del Hábitat. */
+  export let spawnAt: { x: number; y: number } | null = null;
+
+  /** Desplazamiento horizontal de la burbuja para que no se salga por un borde de la pantalla. */
+  $: speechShift = (() => {
+    const cx = posX + PET_SIZE / 2;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    return Math.max(0, SPEECH_HALF - cx) - Math.max(0, cx + SPEECH_HALF - vw);
+  })();
+
+  let posX = spawnAt ? clampSpawn(spawnAt.x, window.innerWidth) : 150;
+  let posY = spawnAt ? clampSpawn(spawnAt.y, window.innerHeight) : 50;
+  function clampSpawn(cursor: number, max: number): number {
+    return Math.min(Math.max(0, cursor - PET_SIZE / 2), Math.max(0, max - PET_SIZE));
+  }
   let direction = 1; // 1: derecha, -1: izquierda
   let isDragging = false;
   let dragStartX = 0;
@@ -108,6 +150,12 @@
   $: speciesKey = pet?.species?.id || pet?.species?.spriteKey || 'ignisaur';
   $: patternKey = pet?.pattern?.id || 'plain';
   $: isSleeping = pet?.sleeping || false;
+
+  // Contexto en vivo para el chat (solo categoría y postura; el servidor filtra según las habilidades)
+  $: deskState.set({
+    appCategory: currentAppCategory,
+    pose: isSleeping ? 'sleeping' : isPerched ? 'perched' : isClimbing ? 'climbing' : 'walking',
+  });
   $: isShiny = pet?.shiny || false;
   $: visualSeed = pet?.visualSeed ?? 1337;
   $: palette = pet?.palette || { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' };
@@ -121,8 +169,39 @@
   $: if (isSleeping) controller.stop();
 
   // Hornear sprite sheet en memoria al cambiar de mascota, paleta o patrón
-  $: if (pet && (speciesKey || patternKey || palette || visualSeed)) {
+  /**
+   * Etapa congelada mientras el capullo del Telar aún no tapa a la mascota: el backend avisa de
+   * `evolved` antes de mandar el `pet:update` con la etapa nueva, y el re-horneado (sprite y
+   * prendas) debe ocurrir dentro del capullo, no a la vista. Flag aparte porque `null` es etapa válida.
+   */
+  let stageFrozen = false;
+  let frozenStage: string | null = null;
+  $: stage = stageFrozen ? frozenStage : (pet?.stage ?? null);
+  // Si la etapa nueva llega antes que el aviso `evolved` (o sin él), el capullo sale igual;
+  // el `evolved` que llegue después se descarta (mismo peso en admitMoment).
+  let lastSeenStage: string | null | undefined = undefined;
+  $: watchStage(pet?.stage ?? null);
+  function watchStage(next: string | null) {
+    const prev = lastSeenStage;
+    lastSeenStage = next;
+    if (prev === undefined || prev === next || stageFrozen) return;
+    if (STAGE_RANK.indexOf(next ?? '') > STAGE_RANK.indexOf(prev ?? '')) {
+      playMoment('capullo-telar', next ? { stage: next } : {}, prev);
+    }
+  }
+  $: if (pet && (speciesKey || patternKey || palette || visualSeed || stage)) {
     triggerBake();
+  }
+
+  // Prendas equipadas (spec 38): se recargan al cambiar de especie, de etapa o de prendas.
+  let wornSet: WornSet | null = null;
+  let wornSeq = 0;
+  $: equippedKey = JSON.stringify(parseEquipped(pet?.accessories));
+  $: void refreshWorn(speciesKey, stage, equippedKey);
+  async function refreshWorn(species: string, petStage: string | null, key: string) {
+    const seq = ++wornSeq;
+    const next = await loadWornSet(species, petStage, JSON.parse(key));
+    if (seq === wornSeq) wornSet = next;
   }
 
   async function triggerBake() {
@@ -135,7 +214,7 @@
     try {
       do {
         bakeAgain = false;
-        bakedSheet = await bakePetSpriteSheet(speciesKey, patternKey, palette, visualSeed, isShiny);
+        bakedSheet = await bakePetSpriteSheet(speciesKey, patternKey, palette, visualSeed, isShiny, stage);
       } while (bakeAgain);
     } catch (err) {
       console.warn('Fallback a SVG: error horneando sprite sheet:', err);
@@ -166,6 +245,7 @@
 
   /** Reacción completa: animaciones en orden y partícula opcional (el bocadillo lo gestiona App). */
   export function react(reaction: Reaction) {
+    if (reaction.effect) playMoment(reaction.effect.id, reaction.effect.params ?? {});
     for (const anim of reaction.anims) play(anim);
     if (reaction.particle) showParticle(reaction.particle);
   }
@@ -202,18 +282,32 @@
     bounceCount: 0,
   };
   let lastPhysicsTime = 0;
+  let physicsAccumulator = 0;
+  // Enfriamiento entre golpes a la pelota para no repetir sonido/partículas cada frame
+  const BALL_KICK_COOLDOWN_MS = 250;
+  let lastBallKickTime = 0;
 
+  // Un solo temporizador: un squash nuevo no deja que el anterior lo corte a medias
+  let squashTimer: ReturnType<typeof setTimeout> | undefined;
   function squash(sx: number, sy: number, ms: number) {
     squashScaleX = sx;
     squashScaleY = sy;
-    setTimeout(() => {
+    clearTimeout(squashTimer);
+    squashTimer = setTimeout(() => {
       squashScaleX = 1;
       squashScaleY = 1;
     }, ms);
   }
 
+  /** Squash & stretch proporcional a la fuerza del impacto (px/s). */
+  function impactSquash(speed: number) {
+    const k = Math.min(1, speed / 1600);
+    if (k < 0.04) return;
+    squash(1 + 0.3 * k, 1 - 0.3 * k, 60 + 50 * k);
+  }
+
   function handleMouseDown(e: MouseEvent) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || petAway || travelBusy || fxLock) return;
     isDragging = true;
     dragMoved = false;
     dragStartX = e.clientX - posX;
@@ -247,6 +341,240 @@
     const now = performance.now();
     pointerSamples.push({ x: e.clientX, y: e.clientY, time: now });
     if (pointerSamples.length > 20) pointerSamples.shift();
+
+    // ¿Está encima del panel (la casa)? Resalta el panel y la mascota como destino
+    setOverHome(isOverPanel(e.clientX, e.clientY));
+  }
+
+  // ---------- Viaje de visita por las hebras del Nexo (lib/visitTravel, skill pockai-effect-architect) ----------
+  /** Píxeles desde el borde inferior del frame hasta los pies del sprite. */
+  const FEET_INSET = 4;
+  /** Distancia entre el centro de la mascota y el del portal al abrirse. */
+  const PORTAL_GAP = 104;
+  const WALK_TO_PORTAL_MS = reducedMotion ? 0 : 760;
+  const THROUGH_PORTAL_MS = reducedMotion ? 220 : 440;
+  /** Fuera de casa: invisible y sin zona de clic (el click-through ignora lo oculto). */
+  let petAway = false;
+  /** Entrando o saliendo por el portal: no pasea, no habla sola y no se puede arrastrar. */
+  let travelBusy = false;
+  let portalAnim: '' | 'entering' | 'exiting' | 'sprouting' = '';
+  let portal: { x: number; y: number; player: EffectPlayer; id: number } | null = null;
+  let portalSeq = 0;
+  let travelHandled: TravelState = 'home';
+  let unregisterTravel: () => void = () => {};
+  $: portalPalette = flowPalette(pet?.species?.element);
+  $: portalSeed = [...String(pet?.id ?? 'pockai')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
+  $: onTravel($travel.state);
+  $: setPetOnScreen(!petAway);
+
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const friendLabel = () => $travel.friendName || 'tu amigo';
+
+  function onTravel(state: TravelState) {
+    if (state === travelHandled) return;
+    travelHandled = state;
+    if (state === 'departing') void departThroughPortal();
+    else if (state === 'returning') void returnThroughPortal();
+    else if (!portal) {
+      // Sin animación (visita restaurada, o vuelta mientras estaba en su hábitat)
+      petAway = state === 'away';
+      travelBusy = false;
+    }
+  }
+
+  /** Deja a la mascota quieta y en horizontal antes de viajar. */
+  function settleForTravel() {
+    isClimbing = false;
+    climbWall = null;
+    climbRotation = 0;
+    physicsState.isAirborne = false;
+    isHighFiveWaiting = false;
+    walkUntil = 0;
+  }
+
+  /** Pies del portal: a un lado de la mascota (hacia donde mira, si cabe) y a la altura de sus pies. */
+  function portalSpot(): { x: number; y: number } {
+    const w = window.innerWidth || 800;
+    const half = (portalNexo.width * portalNexo.scale) / 2 + 8;
+    const center = posX + PET_SIZE / 2;
+    // Ni fuera de la pantalla ni tapado por el panel de control abierto
+    const panel = document.querySelector('.panel-card')?.getBoundingClientRect();
+    const feetY = posY + PET_SIZE - FEET_INSET;
+    const blocked = (cx: number) =>
+      cx < half || cx > w - half || (!!panel && cx + half > panel.left && cx - half < panel.right && feetY > panel.top);
+    let x = center + direction * PORTAL_GAP;
+    if (blocked(x)) x = center - direction * PORTAL_GAP;
+    x = Math.min(Math.max(half, x), w - half);
+    return { x, y: feetY };
+  }
+
+  function launchPortal(spot: { x: number; y: number }, onHold: (p: EffectPlayer) => Promise<void>): void {
+    const player = new EffectPlayer(reducedMotion ? portalNexo.reducedPhases : portalNexo.phases, (phase) => {
+      if (phase === 'hold') void onHold(player);
+      if (phase === 'done') {
+        portal = null;
+        travelBusy = false;
+        travelArrived();
+      }
+    });
+    player.start(performance.now());
+    portal = { ...spot, player, id: ++portalSeq };
+  }
+
+  async function departThroughPortal() {
+    travelBusy = true;
+    settleForTravel();
+    const spot = portalSpot();
+    direction = spot.x > posX + PET_SIZE / 2 ? 1 : -1;
+    // Dormida, al menos se despereza antes de cruzar (el resto de clips esperan a que despierte)
+    play(isSleeping ? 'wake' : 'surprised');
+    speak(`¡Me voy al Santuario de ${friendLabel()}! 🧵`, { key: 'travel', durationMs: 2400, maxWaitMs: 400 });
+    launchPortal(spot, async (player) => {
+      // Camina hasta la boca del portal…
+      if (WALK_TO_PORTAL_MS > 0) {
+        walkUntil = performance.now() + WALK_TO_PORTAL_MS;
+        posX = spot.x - PET_SIZE / 2;
+        await wait(WALK_TO_PORTAL_MS);
+      } else {
+        posX = spot.x - PET_SIZE / 2;
+      }
+      // …y se lo traga el Éter.
+      portalAnim = 'entering';
+      await wait(THROUGH_PORTAL_MS);
+      petAway = true;
+      portalAnim = '';
+      player.release(performance.now());
+    });
+  }
+
+  async function returnThroughPortal() {
+    travelBusy = true;
+    settleForTravel();
+    const w = window.innerWidth || 800;
+    posX = Math.min(Math.max(0, posX), w - PET_SIZE);
+    // Vuelve al suelo aunque se fuera desde el techo, una pared o una ventana: mientras estaba
+    // fuera no se veía, así que elegir dónde reaparece no es un teletransporte.
+    posY = (window.innerHeight || 600) - PET_SIZE;
+    isPerched = false;
+    const spot = { x: posX + PET_SIZE / 2, y: posY + PET_SIZE - FEET_INSET };
+    launchPortal(spot, async (player) => {
+      // Sale del Éter…
+      petAway = false;
+      portalAnim = 'exiting';
+      await wait(THROUGH_PORTAL_MS);
+      portalAnim = '';
+      // …da unos pasos hacia el centro de la pantalla y cuenta de dónde viene.
+      direction = posX + PET_SIZE / 2 < w / 2 ? 1 : -1;
+      if (WALK_TO_PORTAL_MS > 0) {
+        walkUntil = performance.now() + WALK_TO_PORTAL_MS;
+        posX = Math.min(Math.max(0, posX + direction * PORTAL_GAP * 0.8), w - PET_SIZE);
+        await wait(WALK_TO_PORTAL_MS);
+      }
+      play('happy');
+      speak(`¡Ya volví del Santuario de ${friendLabel()}! ✨`, { key: 'travel', durationMs: 3200, maxWaitMs: 1500 });
+      player.release(performance.now());
+    });
+  }
+
+  // ---------- Efectos de momento (evolución, nivel, invocación…; skill pockai-effect-architect) ----------
+  type MomentFx = {
+    id: number;
+    def: EffectDef;
+    player: EffectPlayer;
+    params: Record<string, string | number>;
+    /** Sigue a la mascota (pies) o se queda en un punto fijo de la pantalla. */
+    at: { x: number; y: number } | null;
+  };
+  let moments: MomentFx[] = [];
+  let momentSeq = 0;
+  /** La mascota está tapada por un efecto (dentro del capullo, aún sin brotar de la hebra…). */
+  let fxHidden = false;
+  /** Un efecto la tiene quieta: no pasea ni se puede arrastrar. */
+  let fxLock = false;
+  /** Tope de la espera del capullo si el re-horneado no llega (p. ej. sin cambio de etapa). */
+  const COCOON_MAX_HOLD_MS = 2600;
+  const COCOON_MIN_HOLD_MS = 700;
+  const STAGE_RANK = ['baby', 'juvenile', 'adult', 'final'];
+
+  /**
+   * Lanza un efecto de momento junto a la mascota. Solo cabe uno grande a la vez (`admitMoment`).
+   * `onHold` se llama al llegar a la fase de espera y debe soltarla (`player.release`).
+   */
+  function startMoment(
+    effectId: string,
+    params: Record<string, string | number>,
+    opts: { at?: { x: number; y: number }; onHold?: (p: EffectPlayer) => void; onDone?: () => void } = {},
+  ): boolean {
+    const def = EFFECTS[effectId];
+    if (!def || petAway || travelBusy) return false;
+    const verdict = admitMoment(moments, def);
+    if (!verdict.play) return false;
+    if (verdict.replace.length) moments = moments.filter((_, i) => !verdict.replace.includes(i));
+    const id = ++momentSeq;
+    const player = new EffectPlayer(reducedMotion ? def.reducedPhases : def.phases, (phase) => {
+      if (phase === 'hold') opts.onHold ? opts.onHold(player) : player.release(performance.now());
+      if (phase === 'done') {
+        moments = moments.filter((m) => m.id !== id);
+        opts.onDone?.();
+      }
+    });
+    player.start(performance.now());
+    moments = [...moments, { id, def, player, params, at: opts.at ?? null }];
+    return true;
+  }
+
+  /** Efecto que llega con una reacción (`eventMap`): capullo o resonancia. */
+  function playMoment(effectId: string, params: Record<string, string | number>, fromStage?: string | null) {
+    if (effectId === 'capullo-telar') {
+      // Se sigue dibujando la etapa de antes hasta que el capullo la tape
+      const stageAtStart = fromStage !== undefined ? fromStage : stage;
+      const started = startMoment(effectId, params, {
+        onHold: (player) => {
+          // Dentro del capullo se re-hornea la nueva etapa: el cambio ya no es un corte en seco.
+          fxHidden = true;
+          stageFrozen = false;
+          const holdAt = performance.now();
+          const tick = setInterval(() => {
+            const held = performance.now() - holdAt;
+            const rebaked = stage !== stageAtStart && !isBaking && !!bakedSheet;
+            if ((held >= COCOON_MIN_HOLD_MS && rebaked) || held >= COCOON_MAX_HOLD_MS) {
+              clearInterval(tick);
+              fxHidden = false;
+              play('celebrate');
+              player.release(performance.now());
+            }
+          }, 100);
+        },
+        onDone: () => {
+          fxLock = false;
+          fxHidden = false;
+          stageFrozen = false;
+        },
+      });
+      if (started) {
+        frozenStage = stageAtStart;
+        stageFrozen = true;
+        fxLock = true;
+        settleForTravel();
+      }
+      return;
+    }
+    startMoment(effectId, params);
+  }
+
+  // Arrastre hacia casa: la mascota va por encima del panel mientras se arrastra, así que
+  // elementFromPoint devolvería a la propia mascota; se miran todas las capas bajo el cursor.
+  let isOverHome = false;
+  let isEnteringHome = false;
+  function isOverPanel(x: number, y: number): boolean {
+    if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
+    return document.elementsFromPoint(x, y).some((el) => !!el.closest('.panel-card'));
+  }
+  function setOverHome(over: boolean) {
+    if (over === isOverHome) return;
+    isOverHome = over;
+    if (over) document.body.dataset.petOverPanel = '1';
+    else delete document.body.dataset.petOverPanel;
   }
 
   function handlePetHoverMove(e: MouseEvent) {
@@ -265,10 +593,9 @@
         play('happy');
         showParticle('❤️', 2500);
         squash(1.15, 0.85, 200);
-        bubble = '¡Mmmm, qué rico! 🥰❤️';
+        speak('¡Mmmm, qué rico! 🥰❤️', { durationMs: 2800, key: 'petting', maxWaitMs: 3000 });
         setTimeout(() => {
           isPetting = false;
-          if (bubble.startsWith('¡Mmmm')) bubble = '';
         }, 2800);
       }
     }
@@ -279,13 +606,19 @@
     isDragging = false;
     delete document.body.dataset.dragging;
 
-    // Si se suelta sobre el panel de control (.panel-card), enviar al hábitat
-    if (e && typeof document !== 'undefined') {
-      const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
-      if (dropTarget && dropTarget.closest('.panel-card')) {
-        window.dispatchEvent(new CustomEvent('petai:move_to_habitat', { detail: { petId: pet.id } }));
-        return;
-      }
+    // Si se suelta sobre el panel de control (.panel-card), entra en casa con una
+    // pequeña animación (encoge y se desvanece) y después se envía al hábitat
+    const droppedOnHome = !!e && isOverPanel(e.clientX, e.clientY);
+    setOverHome(false);
+    if (droppedOnHome) {
+      isEnteringHome = true;
+      const petId = pet.id;
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('petai:move_to_habitat', { detail: { petId } }));
+        // Si la petición falla, la mascota sigue montada: que vuelva a verse
+        setTimeout(() => (isEnteringHome = false), 1500);
+      }, 260);
+      return;
     }
 
     const dragThrowActive = isSkillActive(
@@ -297,7 +630,10 @@
 
     const maxY = (window.innerHeight || 600) - PET_SIZE;
     if (dragThrowActive && !isSleeping) {
-      const { vx, vy } = calculateThrowVelocity(pointerSamples);
+      const { vx, vy } = calculateThrowVelocity(pointerSamples, {
+        releaseTime: performance.now(),
+        maxSpeed: DEFAULT_PHYSICS_CONFIG.maxThrowSpeed,
+      });
 
       // Si se soltó con impulso o en el aire
       if (Math.hypot(vx, vy) > 120 || posY < maxY - 15) {
@@ -310,6 +646,7 @@
           bounceCount: 0,
         };
         lastPhysicsTime = performance.now();
+        physicsAccumulator = 0;
         if (Math.abs(vx) > 40) {
           direction = vx > 0 ? 1 : -1;
         }
@@ -332,10 +669,7 @@
       play('celebrate');
       showParticle('🎉✨', 2500);
       squash(1.2, 0.8, 150);
-      bubble = '¡Eso es! ¡Choca esos cinco! 🐾💥';
-      setTimeout(() => {
-        if (bubble.startsWith('¡Eso es!')) bubble = '';
-      }, 3500);
+      speak('¡Eso es! ¡Choca esos cinco! 🐾💥', { durationMs: 3500, key: 'high-five-done', maxWaitMs: 3000 });
       return;
     }
 
@@ -378,6 +712,11 @@
       if (ctx) {
         ctx.clearRect(0, 0, PET_SIZE, PET_SIZE);
 
+        // Pixel art: sin suavizado. Las prendas de espalda van antes que el cuerpo; el resto, después.
+        ctx.imageSmoothingEnabled = false;
+        const wornTime = reducedMotion ? 0 : time;
+        drawWorn(ctx, wornSet, 'behind', frameState.name, frameState.frame, wornTime);
+
         // Recortar frame del sprite sheet horneado
         const frame = bakedSheet.getFrame(frameState.name, frameState.frame);
         ctx.drawImage(
@@ -385,6 +724,10 @@
           frame.sx, frame.sy, frame.sw, frame.sh,
           0, 0, PET_SIZE, PET_SIZE
         );
+        // Efectos del patrón (Textura del Éter) y de la variante shiny, sobre el cuerpo y bajo las prendas.
+        const fxLayer = reducedMotion ? null : bakedSheet.fxFrame(frame, time);
+        if (fxLayer) ctx.drawImage(fxLayer, 0, 0, PET_SIZE, PET_SIZE);
+        drawWorn(ctx, wornSet, 'front', frameState.name, frameState.frame, wornTime);
 
         // Efecto Flash blanco en daño
         if (isWhiteFlash) {
@@ -394,34 +737,16 @@
           ctx.fillRect(0, 0, PET_SIZE, PET_SIZE);
           ctx.restore();
         }
-
-        // Efecto Shiny: Franja especular animada cada 4s
-        if (isShiny) {
-          const shinyPeriod = (time % 4000) / 4000; // 0.0 a 1.0 cada 4s
-          if (shinyPeriod < 0.35) { // La franja cruza en 1.4s
-            const progress = shinyPeriod / 0.35;
-            const bandX = progress * 240 - 60;
-
-            ctx.save();
-            ctx.globalCompositeOperation = 'source-atop';
-            const grad = ctx.createLinearGradient(bandX, 0, bandX + 40, PET_SIZE);
-            grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-            grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.45)');
-            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, PET_SIZE, PET_SIZE);
-            ctx.restore();
-          }
-        }
       }
     }
     // Colisión e interacción con la pelota de juego en el escritorio
-    if (ball && onBallKick && !isSleeping && !isDragging) {
+    if (ball && onBallKick && !isSleeping && !isDragging && time - lastBallKickTime > BALL_KICK_COOLDOWN_MS) {
       const col = checkPetBallCollision(
         { x: posX, y: posY, width: PET_SIZE, height: PET_SIZE },
         ball
       );
       if (col.collides) {
+        lastBallKickTime = time;
         onBallKick(col.kickX, col.kickY);
         play('happy');
         squash(1.18, 0.82, 120);
@@ -431,10 +756,9 @@
 
     // Paso de simulación física si la mascota está en el aire o lanzada
     if (physicsState.isAirborne) {
-      const pdt = lastPhysicsTime ? (time - lastPhysicsTime) / 1000 : 0.016;
+      const pdt = lastPhysicsTime ? (time - lastPhysicsTime) / 1000 : 1 / 60;
       lastPhysicsTime = time;
 
-      const prevBounces = physicsState.bounceCount;
       const bounds = {
         minX: 10,
         maxX: (window.innerWidth || 800) - PET_SIZE - 10,
@@ -442,20 +766,23 @@
         maxY: (window.innerHeight || 600) - PET_SIZE,
       };
 
-      physicsState = stepPhysics(physicsState, pdt, bounds);
+      const step = advancePhysics(physicsState, pdt, bounds, DEFAULT_PHYSICS_CONFIG, physicsAccumulator);
+      physicsState = step.state;
+      physicsAccumulator = step.accumulator;
       posX = physicsState.x;
       posY = physicsState.y;
 
-      // Rebote procedural con squash & stretch
-      if (physicsState.bounceCount > prevBounces) squash(1.25, 0.75, 75);
+      // Rebote procedural con squash & stretch según la fuerza del golpe
+      if (step.impactSpeed > 0) impactSquash(step.impactSpeed);
 
       // Al posarse definitivamente en el suelo
       if (!physicsState.isAirborne) {
         play('land');
-        squash(1.15, 0.85, 90);
+        squash(1.12, 0.88, 90);
       }
     } else {
       lastPhysicsTime = time;
+      physicsAccumulator = 0;
     }
 
     animRafId = requestAnimationFrame(renderLoop);
@@ -469,7 +796,7 @@
       petBonding,
       petIntelligence
     );
-    if (!skillActive) return;
+    if (!skillActive || petAway || travelBusy || fxLock) return;
 
     physicsState.isAirborne = false;
     isClimbing = false;
@@ -479,10 +806,33 @@
     const clientX = customEvent.detail?.x ?? (window.innerWidth || 800) / 2;
     const clientY = customEvent.detail?.y ?? (window.innerHeight || 600) - PET_SIZE;
 
-    posX = Math.min(Math.max(20, clientX - PET_SIZE / 2), (window.innerWidth || 800) - PET_SIZE - 20);
-    posY = Math.min(Math.max(20, clientY - PET_SIZE / 2), (window.innerHeight || 600) - PET_SIZE);
+    const nextX = Math.min(Math.max(20, clientX - PET_SIZE / 2), (window.innerWidth || 800) - PET_SIZE - 20);
+    const nextY = Math.min(Math.max(20, clientY - PET_SIZE / 2), (window.innerHeight || 600) - PET_SIZE);
+    const feet = { x: nextX + PET_SIZE / 2, y: nextY + PET_SIZE - FEET_INSET };
 
-    play('summon');
+    // Su hebra baja del Nexo hasta el cursor y de su ovillo brota: nunca aparece de golpe.
+    // Mientras la hebra cae, la mascota ya está oculta en su sitio nuevo.
+    const started = startMoment('hebra-invocacion', {}, {
+      at: feet,
+      onHold: async (player) => {
+        fxHidden = false;
+        portalAnim = 'sprouting';
+        play('summon');
+        await wait(THROUGH_PORTAL_MS);
+        portalAnim = '';
+        player.release(performance.now());
+      },
+      onDone: () => {
+        fxLock = false;
+      },
+    });
+    if (started) {
+      fxLock = true;
+      fxHidden = true;
+    }
+    posX = nextX;
+    posY = nextY;
+    if (!started) play('summon');
   }
 
   // Declarado a nivel de componente para poder quitar el listener en onDestroy
@@ -495,23 +845,19 @@
 
     if (eventType === 'work_start') {
       controller.stop();
-      bubble = '💼 ¡A trabajar! Estaré a tu lado en silencio.';
+      speak('💼 ¡A trabajar! Estaré a tu lado en silencio.', { durationMs: 6000, maxWaitMs: 20_000 });
     } else if (eventType === 'work_finish') {
       play('celebrate');
-      bubble = '🎉 ¡Buen trabajo! Tómate una pausa y bebe agua 💧';
+      speak('🎉 ¡Buen trabajo! Tómate una pausa y bebe agua 💧', { durationMs: 6000, maxWaitMs: 20_000 });
     } else if (eventType === 'break_finish') {
       play('wake');
-      bubble = '⚡ ¡Descanso listo! ¿Volvemos al foco?';
+      speak('⚡ ¡Descanso listo! ¿Volvemos al foco?', { durationMs: 6000, maxWaitMs: 20_000 });
     }
-
-    setTimeout(() => {
-      if (bubble.startsWith('💼') || bubble.startsWith('🎉') || bubble.startsWith('⚡')) {
-        bubble = '';
-      }
-    }, 6000);
   }
 
   onMount(() => {
+    setPetOnScreen(!petAway);
+    unregisterTravel = registerTravelPresenter();
     // Inicializar loop de animación
     animRafId = requestAnimationFrame(renderLoop);
 
@@ -520,6 +866,7 @@
 
     // Ciclo de comportamiento de la mascota en pantalla
     moveInterval = setInterval(async () => {
+      if (petAway || travelBusy || fxLock) return;
       if (isSleeping || isDragging || physicsState.isAirborne || controller.actionPriority >= BUSY_PRIORITY) return;
 
       const windowWidth = window.innerWidth || 800;
@@ -588,6 +935,8 @@
       // 3.5. Conciencia de la App en Foco (context_awareness)
       const canContext = isSkillActive('context_awareness', $skillAuthorizations, petBonding, petIntelligence);
       const now = Date.now();
+      // Sin la habilidad no se conserva la última categoría (no debe llegar al chat ni a los hábitos)
+      if (!canContext && currentAppCategory !== 'generic') currentAppCategory = 'generic';
       if (canContext && now - lastContextCheckTime > 6000) {
         lastContextCheckTime = now;
         const win = await fetchActiveWindow();
@@ -596,11 +945,12 @@
           if (ctx.category !== currentAppCategory) {
             currentAppCategory = ctx.category;
             if (ctx.category !== 'generic') {
-              bubble = `${ctx.accessoryIcon} ${ctx.reactionComment}`;
-              play('talk');
-              setTimeout(() => {
-                if (bubble.startsWith(ctx.accessoryIcon)) bubble = '';
-              }, 4500);
+              speak(`${ctx.accessoryIcon} ${ctx.reactionComment}`, {
+                priority: 'low',
+                durationMs: 4500,
+                key: 'app-context',
+                onShow: () => play('talk'),
+              });
             }
           }
         }
@@ -615,12 +965,9 @@
         behaviorEngine.startHighFive();
         play('happy');
         squash(1.15, 0.85, 180);
-        bubble = '¡Choca esos cinco! Haz clic en mi patita 🐾✋';
+        speak('¡Choca esos cinco! Haz clic en mi patita 🐾✋', { priority: 'low', durationMs: 6000, key: 'high-five-offer' });
         setTimeout(() => {
-          if (isHighFiveWaiting) {
-            isHighFiveWaiting = false;
-            if (bubble.includes('Choca esos cinco')) bubble = '';
-          }
+          if (isHighFiveWaiting) isHighFiveWaiting = false;
         }, 6000);
         return;
       }
@@ -725,7 +1072,7 @@
 
     // Motor de pensamientos frecuentes (Barks contextuales) cada ~65s
     barkInterval = setInterval(() => {
-      if (isSleeping || isDragging || isHighFiveWaiting || bubble) return;
+      if (petAway || travelBusy || isSleeping || isDragging || isHighFiveWaiting || speechBusy()) return;
       const now = performance.now();
       const ctx = {
         appCategory: currentAppCategory,
@@ -739,20 +1086,19 @@
         petName: pet?.nickname || pet?.species?.name,
       };
       const text = barksEngine.generateBark(ctx);
-      if (text) {
-        bubble = text;
-        play('talk');
-        setTimeout(() => {
-          if (bubble === text) bubble = '';
-        }, 6500);
-      }
+      if (text) speak(text, { priority: 'low', durationMs: 6500, onShow: () => play('talk') });
     }, 65000);
   });
 
   onDestroy(() => {
+    // Fuera del escritorio (p. ej. en su casita) no hay app en foco ni postura que contar
+    deskState.set({ appCategory: null, pose: 'walking' });
+    setPetOnScreen(false);
+    if (typeof document !== 'undefined') delete document.body.dataset.petOverPanel;
     if (animRafId !== null) cancelAnimationFrame(animRafId);
     clearInterval(moveInterval);
     clearInterval(barkInterval);
+    unregisterTravel();
     clearTimeout(cursorStopTimer);
     if (particleTimer) clearTimeout(particleTimer);
     window.removeEventListener('mousemove', handleMouseMove);
@@ -767,12 +1113,52 @@
   únicamente a `.pet-body`; el nombre, el bocadillo, las partículas y el texto ambiental quedan
   fuera de esa transformación para que siempre se lean en horizontal.
 -->
+<!-- Portal de hebras del Nexo: por él se va de visita y vuelve (detrás de la mascota) -->
+{#if portal}
+  {#key portal.id}
+    <EffectLayer
+      def={portalNexo}
+      player={portal.player}
+      x={portal.x}
+      y={portal.y}
+      palette={portalPalette}
+      seed={portalSeed}
+      reduced={reducedMotion}
+    />
+  {/key}
+{/if}
+
+<!-- Efectos de momento: siguen los pies de la mascota salvo que tengan un punto fijo -->
+{#each moments as m (m.id)}
+  <EffectLayer
+    def={m.def}
+    player={m.player}
+    x={m.at ? m.at.x : posX + recoilOffsetX + PET_SIZE / 2}
+    y={m.at ? m.at.y : posY + PET_SIZE - FEET_INSET}
+    palette={portalPalette}
+    seed={portalSeed}
+    params={m.params}
+    reduced={reducedMotion}
+  />
+{/each}
+
 <div
   class="pet-container"
   role="button"
-  tabindex="0"
+  tabindex={petAway ? -1 : 0}
+  class:fx-hidden={fxHidden}
+  class:fx-lock={fxLock}
+  aria-hidden={petAway}
+  class:away={petAway}
+  class:traveling={travelBusy}
+  class:entering-portal={portalAnim === 'entering'}
+  class:exiting-portal={portalAnim === 'exiting'}
+  class:sprouting={portalAnim === 'sprouting'}
+  aria-label="{pet.nickname || pet.species?.name || 'Tu Pockai'}, nivel {pet.level}. {isHighFiveWaiting ? 'Pulsa Enter para chocar los cinco' : 'Pulsa Enter para abrir su panel'}"
   data-anim={currentAnim}
   class:dragging={isDragging}
+  class:over-home={isOverHome}
+  class:entering-home={isEnteringHome}
   class:drag-over={isDragOverPet}
   class:high-five-ready={isHighFiveWaiting}
   class:petting={isPetting}
@@ -780,7 +1166,7 @@
   on:mousedown={handleMouseDown}
   on:mousemove={handlePetHoverMove}
   on:click={handleClick}
-  on:keydown={(e) => e.key === 'Enter' && onPetClick()}
+  on:keydown={(e) => e.key === 'Enter' && (isHighFiveWaiting ? handleClick() : onPetClick())}
   on:dragover={(e) => {
     e.preventDefault();
     isDragOverPet = true;
@@ -793,8 +1179,7 @@
     isDragOverPet = false;
     const canAnalyze = isSkillActive('file_analyzer', $skillAuthorizations, petBonding, petIntelligence);
     if (!canAnalyze) {
-      bubble = '📄 Activa la habilidad "Analizador de Archivos" para que pueda leerlo.';
-      setTimeout(() => (bubble = ''), 5000);
+      speak('📄 Activa la habilidad "Analizador de Archivos" para que pueda leerlo.', { key: 'file-analyzer-off', maxWaitMs: 5000 });
       return;
     }
 
@@ -803,14 +1188,14 @@
       const analyzed = await analyzeDroppedFile(rawFile);
       play('surprised');
       play('happy');
-      bubble = `¡Atrapé ${analyzed.name}! 📄 ¿Qué quieres saber?`;
+      speak(`¡Atrapé ${analyzed.name}! 📄 ¿Qué quieres saber?`, { maxWaitMs: 5000 });
       window.dispatchEvent(new CustomEvent('petai:file_dropped', { detail: analyzed }));
     }
   }}
 >
   <div
     class="pet-body"
-    style="transform: scaleX({direction}) rotate({climbRotation}deg) scale({squashScaleX}, {squashScaleY});"
+    style="--dir: {direction}; transform: scaleX({direction}) rotate({climbRotation}deg) scale({squashScaleX}, {squashScaleY});"
   >
     <!-- Tinte ambiental (feature 005): tramo del día + clima -->
     {#if envVariant}
@@ -836,16 +1221,25 @@
     <EnvironmentalOverlay environmental={environmental} part="accessory" />
   </div>
 
+  <!-- Mascotas de los amigos de visita (feature 021): junto a la mía, sin su transformación -->
+  {#each shownVisitors as s (s.v.visitorId)}
+    <VisitorPet visitor={s.v} leaving={s.leaving} on:gone={(e) => visitorGone(e.detail)} />
+  {/each}
+
   <!-- Texto ambiental, bocadillo, nombre y partículas: sin girar ni rotar -->
   <EnvironmentalOverlay environmental={environmental} part="caption" />
 
-  {#if bubble}
-    <div class="speech" class:below={posY < 110}>{bubble}</div>
+  {#if $currentSpeech}
+    {#key $currentSpeech.id}
+      <div class="speech" class:below={posY < 110} style="--speech-shift: {speechShift}px" aria-hidden="true">{#each parseBold($currentSpeech.text) as part}{#if part.bold}<strong>{part.text}</strong>{:else}{part.text}{/if}{/each}</div>
+    {/key}
   {/if}
+  <!-- Región viva estable: si se recreara con cada mensaje, los lectores de pantalla no lo anunciarían -->
+  <div class="sr-only" role="status" aria-live="polite">{($currentSpeech?.text ?? '').split('**').join('')}</div>
 
   {#if isHighFiveWaiting}
     <div class="high-five-badge" title="¡Haz clic para chocar los cinco!">
-      <span>🐾✋ ¡Choca!</span>
+      <Ico n="hand" size={13} /> <span>¡Choca!</span>
     </div>
   {/if}
 
@@ -867,8 +1261,8 @@
     width: 128px;
     height: 128px;
     cursor: grab;
-    transition: left 0.4s ease-out, top 0.4s ease-out;
-    z-index: 50;
+    transition: left var(--dur-2) ease-out, top var(--dur-2) ease-out;
+    z-index: var(--z-pet);
     pointer-events: auto;
   }
 
@@ -878,6 +1272,120 @@
 
   .pet-container.dragging {
     transition: none;
+    /* Por encima del panel de control (z-index 100) para "meterla" en casa arrastrando */
+    z-index: var(--z-popover);
+  }
+
+  .pet-container.over-home .pet-body {
+    filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.95));
+  }
+
+  .pet-container.entering-home {
+    z-index: var(--z-popover);
+    pointer-events: none;
+    transition: none;
+    animation: enterHome 0.26s ease-in forwards;
+  }
+
+  @keyframes enterHome {
+    to {
+      transform: scale(0.25) translateY(30px);
+      opacity: 0;
+    }
+  }
+
+  /* Brota del ovillo de la hebra de invocación: crece desde los pies */
+  .pet-container.sprouting .pet-body {
+    transform-origin: 50% 96%;
+    animation: sprout 0.44s ease-out both;
+  }
+  .pet-container.sprouting .pet-badge {
+    opacity: 0;
+  }
+  @keyframes sprout {
+    from {
+      transform: scaleX(calc(var(--dir, 1) * 0.3)) scaleY(0.05);
+      filter: brightness(2.4);
+      opacity: 0;
+    }
+    55% {
+      transform: scaleX(calc(var(--dir, 1) * 0.9)) scaleY(1.15);
+      filter: brightness(1.5);
+      opacity: 1;
+    }
+    to {
+      transform: scaleX(var(--dir, 1)) scaleY(1);
+      filter: brightness(1);
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pet-container.sprouting .pet-body {
+      animation: none;
+    }
+  }
+
+  /* De visita por las hebras del Nexo: fuera de pantalla, sin zona de clic. */
+  .pet-container.away {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  /* Tapada por un efecto (capullo, hebra que aún cae): ni se ve ni recibe clics */
+  .pet-container.fx-hidden {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .pet-container.fx-lock {
+    pointer-events: none;
+  }
+  .pet-container.traveling {
+    pointer-events: none;
+    /* El paseo hasta el portal: paso constante, no el deslizamiento corto de siempre */
+    transition: left 0.76s linear, top 0.76s linear;
+  }
+  /* Encoge hacia la boca del portal (unos 40 px por encima de los pies) y se funde con el Éter */
+  .pet-container.entering-portal .pet-body {
+    transform-origin: 50% 70%;
+    animation: enterPortal 0.44s ease-in forwards;
+  }
+  .pet-container.exiting-portal .pet-body {
+    transform-origin: 50% 70%;
+    animation: enterPortal 0.44s ease-out reverse both;
+  }
+  .pet-container.entering-portal .pet-badge,
+  .pet-container.exiting-portal .pet-badge {
+    opacity: 0;
+  }
+  /* La animación pisa el transform en línea: se repite el giro (--dir) para que no mire al revés */
+  @keyframes enterPortal {
+    from {
+      transform: scaleX(var(--dir, 1)) translateY(0) scale(1);
+      filter: brightness(1);
+      opacity: 1;
+    }
+    60% {
+      filter: brightness(1.6);
+      opacity: 1;
+    }
+    to {
+      transform: scaleX(var(--dir, 1)) translateY(-30px) scale(0.12);
+      filter: brightness(2.4);
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pet-container.entering-portal .pet-body,
+    .pet-container.exiting-portal .pet-body {
+      animation: fadePortal 0.22s linear forwards;
+    }
+    .pet-container.exiting-portal .pet-body {
+      animation-direction: reverse;
+    }
+    @keyframes fadePortal {
+      to {
+        opacity: 0;
+      }
+    }
   }
 
   .pet-container.drag-over .pet-body {
@@ -891,16 +1399,16 @@
     transform: translateX(-50%);
     background: var(--color-sunburst);
     color: var(--on-color);
-    padding: 3px 10px;
+    padding: 3px var(--space-2);
     border-radius: var(--radius-pills);
-    border: 1.5px solid var(--color-carbon);
-    font-size: 11px;
+    border: 1.5px solid var(--on-color);
+    font-size: var(--text-caption);
     font-weight: 800;
-    box-shadow: 2px 2px 0 var(--color-carbon);
+    box-shadow: 2px 2px 0 var(--on-color);
     animation: highFiveBounce 0.5s infinite alternate ease-in-out;
     cursor: pointer;
     white-space: nowrap;
-    z-index: 60;
+    z-index: calc(var(--z-pet) + 10);
   }
 
   @keyframes highFiveBounce {
@@ -930,7 +1438,7 @@
     width: 100%;
     height: 100%;
     transform-origin: bottom center;
-    transition: transform 0.14s ease-out;
+    transition: transform var(--dur-1) ease-out;
   }
 
   .pet-container.dragging .pet-body {
@@ -939,10 +1447,11 @@
 
   .pet-canvas {
     position: relative;
-    z-index: 1;
+    z-index: var(--z-raised);
     width: 128px;
     height: 128px;
-    image-rendering: auto;
+    /* Pixel art (GUIA_ARTISTICA §7.5): escala entera y sin suavizado. */
+    image-rendering: pixelated;
     pointer-events: none;
   }
 
@@ -960,17 +1469,38 @@
     left: 50%;
     margin-left: -110px;
     width: 220px;
-    padding: 8px 12px;
+    /* Cerca de un borde de la pantalla se desplaza para no salirse */
+    translate: var(--speech-shift, 0px) 0;
+    overflow-wrap: anywhere;
+    padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-2xl);
     background: var(--surface);
     color: var(--ink);
     border: var(--outline);
-    font-size: 13px;
+    font-size: var(--text-label);
     line-height: 1.35;
     text-align: center;
     box-shadow: var(--shadow-3);
     pointer-events: none;
-    z-index: 60;
+    z-index: calc(var(--z-pet) + 10);
+    animation: speechIn 180ms ease-out;
+  }
+
+  @keyframes speechIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .speech {
+      animation: none;
+    }
   }
 
   .speech.below {
@@ -989,7 +1519,7 @@
     content: '';
     position: absolute;
     top: 100%;
-    left: 50%;
+    left: calc(50% - var(--speech-shift, 0px));
     margin-left: -6px;
     border: 6px solid transparent;
     border-top-color: var(--line);
@@ -1003,17 +1533,17 @@
     background: var(--surface-2);
     backdrop-filter: blur(8px);
     color: var(--ink);
-    padding: 2px 8px;
+    padding: 2px var(--space-2);
     border-radius: var(--radius-2xl);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 600;
     white-space: nowrap;
     display: flex;
-    gap: 4px;
+    gap: var(--space-1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border: 1px solid var(--line-soft);
     pointer-events: none;
-    z-index: 55;
+    z-index: calc(var(--z-pet) + 5);
   }
 
   .pet-lvl {
@@ -1024,10 +1554,10 @@
     position: absolute;
     top: -15px;
     right: 6px;
-    font-size: 22px;
+    font-size: var(--text-subheading);
     animation: floatUp 1.8s ease-out forwards;
     pointer-events: none;
-    z-index: 58;
+    z-index: calc(var(--z-pet) + 8);
   }
 
   @keyframes floatUp {
@@ -1060,7 +1590,7 @@
     inset: -20px;
     border-radius: 50%;
     pointer-events: none;
-    z-index: 0;
+    z-index: var(--z-base);
     opacity: 0.35;
     transition: background 1.2s ease;
   }

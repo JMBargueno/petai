@@ -5,7 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuthThrottleService } from './auth-throttle.service';
 import { AuthService } from './auth.service';
 import { parseOrBadRequest, resetConfirmSchema, resetRequestSchema } from './dto/auth.schemas';
-import { EMAIL_SENDER, EmailSender } from './email.service';
+import { EMAIL_SENDER, EmailSender } from '../mail/email.service';
 
 const ARGON_OPTIONS = { type: argon2.argon2id, memoryCost: 65536, timeCost: 3 } as const;
 const MINUTE = 60_000;
@@ -62,7 +62,12 @@ export class PasswordResetService {
       data: { code, userId: user.id, email, expiresAt: new Date(Date.now() + CODE_TTL_MS), requestedIp: ip },
     });
 
-    await this.email.sendPasswordResetCode(email, code, CODE_TTL_MS / MINUTE);
+    try {
+      await this.email.sendPasswordResetCode(email, code, CODE_TTL_MS / MINUTE);
+    } catch (err) {
+      // Un fallo del transporte no debe cambiar la respuesta (revelaría que la cuenta existe).
+      this.logger.error(`No se pudo enviar el código de recuperación a ${email}: ${(err as Error).message}`);
+    }
     this.logger.log(`Código de recuperación solicitado para ${email}`);
     return { ok: true };
   }
@@ -80,10 +85,15 @@ export class PasswordResetService {
         data: { consumedAt: now },
       });
       if (claimed.count === 0) return null;
-      const user = await tx.user.findUnique({ where: { email }, select: { id: true } });
+      const user = await tx.user.findUnique({ where: { email }, select: { id: true, emailVerifiedAt: true } });
       if (!user) return null;
       const passwordHash = await argon2.hash(newPassword, ARGON_OPTIONS);
-      await tx.user.update({ where: { email }, data: { passwordHash } });
+      // El código llegó a este correo: prueba que es suyo, así que la cuenta queda verificada. Además
+      // permite al dueño real recuperar una cuenta que otro registró con su correo sin verificarlo.
+      await tx.user.update({
+        where: { email },
+        data: { passwordHash, ...(user.emailVerifiedAt ? {} : { emailVerifiedAt: now }) },
+      });
       return user.id;
     });
 

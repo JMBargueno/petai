@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   ForbiddenException,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { PresenceService } from './presence.service';
@@ -46,8 +47,8 @@ export class PresenceController {
     if (!isSelf && !isFriend) throw new ForbiddenException('No tienes permiso para ver la presencia de este usuario');
     return {
       userId,
-      devices: this.presenceService.getPresence(userId),
-      hasActiveDevices: this.presenceService.hasActiveDevices(userId),
+      devices: await this.presenceService.getPresence(userId),
+      hasActiveDevices: await this.presenceService.hasActiveDevices(userId),
     };
   }
 
@@ -85,13 +86,22 @@ export class PresenceController {
   }
 
   @Get('coop/history')
-  @ApiOperation({ summary: 'Get visit history for my pets' })
+  @ApiOperation({
+    summary: 'Get visit history for my pets',
+    description:
+      'Por defecto, solo las visitas de cuidado que recibieron mis pets (formato de las apps antiguas). ' +
+      'Con `scope=all`, también las que hice yo y las visitas en vivo al hábitat, con `direction`, `kind` y el nombre del otro jugador.',
+  })
   async getVisitHistory(
     @CurrentUser() user: any,
+    @Query('scope') scope?: string,
   ) {
     return {
       userId: user.id,
-      visits: await this.coopCareService.getVisitHistory(user.id),
+      visits:
+        scope === 'all'
+          ? await this.coopCareService.getVisitHistory(user.id)
+          : await this.coopCareService.getReceivedCareVisits(user.id),
     };
   }
 }

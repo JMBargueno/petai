@@ -86,6 +86,72 @@ export const envSchema = z.object({
   // PAT de GitHub (solo lectura de Contents) para leer los releases del repo privado. Sin él no hay updates.
   GITHUB_RELEASES_TOKEN: z.string().optional(),
   GITHUB_RELEASES_REPO: z.string().default('JMBargueno/petai'),
+  // ---- Spec-34: Facturación e IA Gestionada ----
+  OPENROUTER_API_KEY: z.string().optional(),
+  // Endpoint OpenAI-compatible de la IA gestionada (por defecto OpenRouter). Los e2e lo apuntan a un LLM simulado.
+  OPENROUTER_BASE_URL: z.string().url().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRODUCT_PRO: z.string().optional(),
+  // Respaldo: Price ID fijo de Pro (price_...). Con STRIPE_PRODUCT_PRO el precio lo gestiona el panel
+  // (se crea un Price nuevo en Stripe al cambiarlo) y esta variable solo se usa si no hay ninguno.
+  STRIPE_PRICE_PRO: z.string().optional(),
+  // Google Play Billing: cuenta de servicio (JSON o JSON en base64) con acceso a la Play Developer API.
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  GOOGLE_PLAY_PACKAGE_NAME: z.string().optional(),
+  GOOGLE_PLAY_PRODUCT_IDS: z.string().default('pockai_pro_monthly'),
+  // RTDN (push de Pub/Sub autenticado): audiencia del token OIDC y cuenta de servicio emisora.
+  GOOGLE_RTDN_AUDIENCE: z.string().optional(),
+  GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
+  // Solo desarrollo/tests: acepta webhooks de Stripe sin firma y compras de Play sin verificar.
+  // Prohibido en producción (productionProblems).
+  BILLING_MOCK_ENABLED: z.enum(['true', 'false']).default('false'),
+  PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
+  // URL pública de esta API (enlaces de baja de los correos y cabecera List-Unsubscribe). Ej.: https://game-api.pockai.world
+  PUBLIC_API_URL: z.string().default('http://localhost:3000'),
+  AI_MANAGED_ENABLED: z.enum(['true', 'false']).default('true'),
+  AI_MANAGED_MODEL: z.string().default('google/gemini-2.5-flash-lite'),
+  AI_MANAGED_FALLBACK_MODELS: z.string().default('meta-llama/llama-3.3-70b-instruct,deepseek/deepseek-chat'),
+  AI_MANAGED_DAILY_BUDGET_USD: z.coerce.number().min(0).default(10),
+  AI_MANAGED_MAX_CONCURRENCY: positiveInt(200),
+  AI_PLAN_FREE_DAILY: positiveInt(15),
+  AI_PLAN_PRO_DAILY: positiveInt(200),
+  AI_MONTHLY_TOKEN_QUOTA_FREE: z.coerce.number().int().min(0).default(300000),
+  AI_MONTHLY_TOKEN_QUOTA_PRO: z.coerce.number().int().min(0).default(3000000),
+  // ---- Correo (recuperación de contraseña, notificaciones y formulario de contacto) ----
+  // Sin SMTP_HOST los correos solo se escriben en el log (transporte de consola).
+  // La cuenta SMTP es la del buzón de SISTEMA (noreply@): es el remitente de todo lo que envía el backend.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(465),
+  // true = TLS implícito (465); false = STARTTLS (587).
+  SMTP_SECURE: z.enum(['true', 'false']).default('true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  // Nombre para SNI y verificación del certificado cuando SMTP_HOST es una IP
+  // (red interna, p. ej. el contenedor postfix de mailcow): el cert va para el
+  // nombre público (p. ej. mail.jmbargueno.com). Opcional; por defecto se usa SMTP_HOST.
+  SMTP_TLS_SERVERNAME: z.string().optional(),
+  // Remitente de sistema (debe coincidir con SMTP_USER o ser un alias suyo en mailcow).
+  MAIL_FROM: z.string().default('Pockai <noreply@pockai.world>'),
+  // A dónde van las respuestas de los usuarios a los correos de sistema (vacío = sin Reply-To).
+  MAIL_REPLY_TO: z.string().default('contact@pockai.world'),
+  // Buzón que RECIBE los mensajes del formulario de contacto (no se usa para enviar).
+  CONTACT_TO: z.string().default('contact@pockai.world'),
+  // ---- Verificación de correo ----
+  // Si es true, las cuentas sin verificar no pueden usar la API (403 EMAIL_NOT_VERIFIED) ni el socket.
+  // Despliegue: primero false (se envía el correo pero no se bloquea), publicar escritorio/Android con la
+  // pantalla de verificación y después activarlo. Ver docs/DEPLOY.md.
+  EMAIL_VERIFICATION_REQUIRED: z.enum(['true', 'false']).default('false'),
+  // ---- Nickname obligatorio ----
+  // Si es true, las cuentas sin nickname (anteriores a él o creadas desde apps antiguas) reciben
+  // 403 HANDLE_REQUIRED hasta elegirlo con POST /me/handle. Mismo despliegue que la verificación de correo.
+  HANDLE_REQUIRED: z.enum(['true', 'false']).default('false'),
+  // Validez del código y del enlace de verificación (minutos). Por defecto 24 h.
+  EMAIL_VERIFICATION_TTL_MINUTES: positiveInt(1440),
+  // Secreto para firmar los enlaces de baja de los correos del panel (por defecto se deriva de JWT_ACCESS_SECRET).
+  MAIL_UNSUBSCRIBE_SECRET: z.string().min(16).optional(),
+  // Envíos del panel: correos por segundo que manda la cola (protege la reputación del servidor SMTP).
+  EMAIL_CAMPAIGN_RATE_PER_SECOND: positiveInt(5),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -129,6 +195,18 @@ export function productionProblems(env: EnvConfig): string[] {
   if (env.RATE_LIMIT_DISABLED === 'true') {
     problems.push('RATE_LIMIT_DISABLED=true no puede usarse en producción');
   }
+  if (env.BILLING_MOCK_ENABLED === 'true') {
+    problems.push('BILLING_MOCK_ENABLED=true acepta pagos sin verificar y no puede usarse en producción');
+  }
+  if (env.STRIPE_SECRET_KEY && !env.STRIPE_WEBHOOK_SECRET) {
+    problems.push('STRIPE_WEBHOOK_SECRET es obligatorio cuando STRIPE_SECRET_KEY está definido');
+  }
+  if (env.STRIPE_SECRET_KEY && !env.STRIPE_PRODUCT_PRO && !env.STRIPE_PRICE_PRO) {
+    problems.push('STRIPE_PRODUCT_PRO (precio gestionado desde el panel) o STRIPE_PRICE_PRO es obligatorio con STRIPE_SECRET_KEY');
+  }
+  if (env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON && (!env.GOOGLE_RTDN_AUDIENCE || !env.GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL)) {
+    problems.push('GOOGLE_RTDN_AUDIENCE y GOOGLE_RTDN_SERVICE_ACCOUNT_EMAIL son obligatorios con Google Play activo');
+  }
   return problems;
 }
 
@@ -144,6 +222,12 @@ export function validateEnv(config: Record<string, unknown>) {
       const message = `Configuración insegura para producción:\n - ${problems.join('\n - ')}`;
       console.error(message);
       throw new Error(message);
+    }
+    if (!result.data.SMTP_HOST) {
+      console.warn('SMTP_HOST no está definido: los correos (recuperación y contacto) solo se escribirán en el log');
+    }
+    if (result.data.EMAIL_VERIFICATION_REQUIRED !== 'true') {
+      console.warn('EMAIL_VERIFICATION_REQUIRED=false: las cuentas sin verificar pueden usar las apps (actívalo cuando escritorio y Android tengan la pantalla de verificación)');
     }
   }
   return result.data;

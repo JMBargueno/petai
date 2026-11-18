@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Pockais } from './pockais';
 import { SPECIES } from '../landing/content';
+import { SITE_URL } from '../site.config';
 
 describe('Pockais', () => {
   it('reúne especies, rarezas y patrones bajo un único h1', async () => {
@@ -20,7 +21,7 @@ describe('Pockais', () => {
     await fixture.whenStable();
 
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
-      'https://pockai.example/es/pockais',
+      `${SITE_URL}/es/pockais`,
     );
     const types = [...document.head.querySelectorAll('script[type="application/ld+json"]')].map(
       (s) => JSON.parse(s.textContent!)['@type'],

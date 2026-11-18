@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, Optional, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
@@ -7,6 +7,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AuthThrottleService } from './auth-throttle.service';
 import { InvitesService } from '../invites/invites.service';
+import { EmailVerificationService } from './email-verification.service';
+import { DEFAULT_DISPLAY_NAME, handleInvalidReason, isUniqueViolationOn, normalizeHandle } from '../../common/user-handle';
 import { changePasswordSchema, loginSchema, parseOrBadRequest, refreshSchema, registerSchema } from './dto/auth.schemas';
 
 const ARGON_OPTIONS = { type: argon2.argon2id, memoryCost: 65536, timeCost: 3 } as const;
@@ -20,6 +22,28 @@ export const JWT_ALGORITHM = 'HS256' as const;
 
 const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
 
+/** Datos del usuario que se devuelven al iniciar sesión (registro, login, vinculación, recuperación). */
+const publicUser = (u: {
+  id: string;
+  email: string;
+  role: string;
+  displayName: string | null;
+  handle: string | null;
+  coins: number;
+  gems: number;
+  emailVerifiedAt: Date | null;
+}) => ({
+  id: u.id,
+  email: u.email,
+  role: u.role,
+  displayName: u.displayName,
+  // Nickname público e inmutable; null = la cuenta aún debe elegirlo (pantalla "elige tu nickname").
+  handle: u.handle,
+  coins: u.coins,
+  gems: u.gems,
+  emailVerified: u.emailVerifiedAt != null,
+});
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -32,6 +56,7 @@ export class AuthService {
     private readonly throttle: AuthThrottleService,
     private readonly realtime: RealtimeGateway,
     private readonly invites: InvitesService,
+    @Optional() private readonly verification?: EmailVerificationService,
   ) {}
 
   /** Hash de relleno: se verifica cuando el correo no existe para que el tiempo de respuesta no lo delate. */
@@ -55,6 +80,9 @@ export class AuthService {
     if (existing) {
       throw new ConflictException('El correo electrónico ya está registrado');
     }
+    if (dto.handle && (await this.prisma.user.findUnique({ where: { handle: dto.handle }, select: { id: true } }))) {
+      throw new ConflictException('Ese nickname ya está en uso');
+    }
 
     const passwordHash = await argon2.hash(dto.password, ARGON_OPTIONS);
 
@@ -67,12 +95,15 @@ export class AuthService {
           data: {
             email: dto.email,
             passwordHash,
-            displayName: dto.displayName || dto.email.split('@')[0].slice(0, 50),
+            // Nunca derivar el nombre del correo: el nombre es público (amigos, clanes) y el correo, privado.
+            displayName: dto.displayName || dto.handle || DEFAULT_DISPLAY_NAME,
+            // Opcional en la API (apps antiguas): sin él, la cuenta elige nickname al entrar.
+            handle: dto.handle ?? null,
             coins: 100,
             gems: 10,
             pityCounter: { create: { sinceSuperRare: 0, sinceLegendary: 0 } },
           },
-          select: { id: true, email: true, role: true, displayName: true, coins: true, gems: true },
+          select: { id: true, email: true, role: true, displayName: true, handle: true, coins: true, gems: true, emailVerifiedAt: true },
         });
 
         if (inviteOnly && dto.inviteCode) {
@@ -87,13 +118,27 @@ export class AuthService {
         return created;
       });
     } catch (err: any) {
-      // Dos registros simultáneos con el mismo correo: el índice único evita el duplicado
+      // Dos registros simultáneos con el mismo correo o nickname: el índice único evita el duplicado
+      if (isUniqueViolationOn(err, 'handle')) throw new ConflictException('Ese nickname ya está en uso');
       if (err?.code === 'P2002') throw new ConflictException('El correo electrónico ya está registrado');
       throw err;
     }
 
     const tokens = await this.generateTokens(user.id, user.email, user.displayName);
-    return { ...tokens, user };
+    // Correo de verificación (en segundo plano: un fallo del SMTP no rompe el registro).
+    this.verification?.sendAfterRegister(user.id);
+    return { ...tokens, user: publicUser(user) };
+  }
+
+  /** ¿Está libre este nickname? Público (formulario de registro), con límite por IP. */
+  async handleAvailability(raw: unknown, ip: string): Promise<{ handle: string; available: boolean; reason?: string }> {
+    const l = this.throttle.limits;
+    await this.throttle.consume(`handle-check:${ip}`, l.handleCheckPerIp, l.handleCheckWindowMs);
+    const handle = normalizeHandle(raw);
+    const reason = handleInvalidReason(handle);
+    if (reason) return { handle, available: false, reason };
+    const taken = await this.prisma.user.findUnique({ where: { handle }, select: { id: true } });
+    return taken ? { handle, available: false, reason: 'Ese nickname ya está en uso' } : { handle, available: true };
   }
 
   async login(raw: unknown, ip: string) {
@@ -127,7 +172,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email, user.displayName);
     return {
       ...tokens,
-      user: { id: user.id, email: user.email, role: user.role, displayName: user.displayName, coins: user.coins, gems: user.gems },
+      user: publicUser(user),
     };
   }
 
@@ -232,7 +277,7 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Usuario no encontrado');
     return {
       ...(await this.generateTokens(user.id, user.email, user.displayName)),
-      user: { id: user.id, email: user.email, role: user.role, displayName: user.displayName, coins: user.coins, gems: user.gems },
+      user: publicUser(user),
     };
   }
 

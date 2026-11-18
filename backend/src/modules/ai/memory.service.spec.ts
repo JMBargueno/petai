@@ -33,9 +33,16 @@ describe('MemoryService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn(({ data }) => { created.push(data); return Promise.resolve(data); }),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        upsert: jest.fn().mockResolvedValue({}),
       },
       chatMessage: { findMany: jest.fn().mockResolvedValue(userMsgs(6)) },
       pet: { findFirst: jest.fn() },
+      petContextProfile: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        upsert: jest.fn().mockResolvedValue({}),
+        update: jest.fn().mockResolvedValue({}),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
     };
     usage = { hasQuota: jest.fn().mockResolvedValue(true), record: jest.fn().mockResolvedValue(undefined) };
     svc = new MemoryService(prisma, usage);
@@ -124,6 +131,71 @@ describe('MemoryService', () => {
     const block = await svc.recall('p1', '¿vamos a pescar?');
     expect(block).toContain('- Le gusta pescar');
     expect(block).toContain('(resumen) Hablaron de peces');
+  });
+
+  it('poda los resúmenes antiguos: conserva los 20 más recientes (incluida la marca de procesado)', async () => {
+    prisma.petMemory.findMany.mockImplementation((args: any) =>
+      Promise.resolve(args.where.kind === 'summary' && args.skip === 20 ? [{ id: 's-old-1' }, { id: 's-old-2' }] : []));
+    await svc.maybeSummarize('p1', 250, makeProvider(JSON_OK), 'm', 'u1', 'byok');
+    const pruneQuery = prisma.petMemory.findMany.mock.calls.find((c: any) => c[0].skip === 20)[0];
+    expect(pruneQuery).toMatchObject({ where: { petId: 'p1', kind: 'summary' }, orderBy: { createdAt: 'desc' } });
+    expect(prisma.petMemory.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['s-old-1', 's-old-2'] } } });
+  });
+
+  it('recall añade los hábitos del escritorio al bloque', async () => {
+    prisma.petMemory.findMany.mockImplementation(({ where }: any) =>
+      Promise.resolve(where.kind === 'habit' ? [{ content: 'Suele programar por la tarde' }] : []));
+    expect(await svc.recall('p1', 'hola')).toContain('(hábito en el ordenador) Suele programar por la tarde');
+  });
+
+  describe('ingestDigest (hábitos de escritorio)', () => {
+    const NOW = new Date('2026-11-16T10:00:00Z');
+    const coding = { coding: [0, 0, 0, 0, 240, 0], reading: [0, 0, 100, 0, 0, 0] };
+    const petOk = { id: 'p1', intelligence: 300, bonding: 80, desktopSkills: { context_awareness: true } };
+
+    it('guarda el perfil y hace upsert de los hábitos por clave; borra los que ya no se cumplen', async () => {
+      prisma.pet.findFirst.mockResolvedValue(petOk);
+      const r = await svc.ingestDigest('u1', 'p1', { appMinutes: coding }, NOW);
+      expect(r.stored).toBe(true);
+      expect(prisma.petContextProfile.upsert.mock.calls[0][0].create.lastDigestAt).toEqual(NOW);
+      const keys = prisma.petMemory.upsert.mock.calls.map((c: any) => c[0].where.petId_key.key);
+      expect(keys).toEqual(expect.arrayContaining(['habit:coding_time', 'habit:main_activity']));
+      expect(prisma.petMemory.deleteMany).toHaveBeenCalledWith({
+        where: { petId: 'p1', kind: 'habit', key: { notIn: keys } },
+      });
+    });
+
+    it('sin context_awareness activa ignora las apps (el servidor decide, no el cliente)', async () => {
+      prisma.pet.findFirst.mockResolvedValue({ ...petOk, desktopSkills: {} });
+      const r = await svc.ingestDigest('u1', 'p1', { appMinutes: coding }, NOW);
+      expect(r.stored).toBe(false);
+      expect(prisma.petContextProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('un digest cada 12 h como mucho y nunca de una mascota ajena', async () => {
+      prisma.pet.findFirst.mockResolvedValue(petOk);
+      prisma.petContextProfile.findUnique.mockResolvedValue({ data: {}, lastDigestAt: new Date(NOW.getTime() - 3600_000) });
+      await expect(svc.ingestDigest('u1', 'p1', { appMinutes: coding }, NOW)).rejects.toThrow('hace poco');
+      prisma.pet.findFirst.mockResolvedValue(null);
+      await expect(svc.ingestDigest('u1', 'p1', { appMinutes: coding }, NOW)).rejects.toThrow('no encontrada');
+    });
+
+    it('rechaza un digest malformado o demasiado grande', async () => {
+      prisma.pet.findFirst.mockResolvedValue(petOk);
+      await expect(svc.ingestDigest('u1', 'p1', { appMinutes: { coding: [1] } }, NOW)).rejects.toThrow('franjas');
+      await expect(svc.ingestDigest('u1', 'p1', { pad: 'x'.repeat(5000) }, NOW)).rejects.toThrow('demasiado grande');
+    });
+
+    it('borrar un hábito lo silencia para que no vuelva; olvidar todo borra el perfil', async () => {
+      prisma.pet.findFirst.mockResolvedValue({ id: 'p1', intelligence: 300 });
+      prisma.petMemory.findFirst.mockResolvedValue({ kind: 'habit', key: 'habit:coding_time' });
+      prisma.petMemory.deleteMany.mockResolvedValue({ count: 1 });
+      prisma.petContextProfile.findUnique.mockResolvedValue({ data: { muted: [] }, lastDigestAt: NOW });
+      await svc.remove('u1', 'p1', 'h1');
+      expect(prisma.petContextProfile.update.mock.calls[0][0].data.data.muted).toEqual(['habit:coding_time']);
+      await svc.clear('u1', 'p1');
+      expect(prisma.petContextProfile.deleteMany).toHaveBeenCalledWith({ where: { petId: 'p1' } });
+    });
   });
 
   it('list/remove/clear exigen que la mascota sea del usuario', async () => {

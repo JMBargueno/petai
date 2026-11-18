@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: buho-electrico-raro
+expected_outcome: |
+  Diseña la especie sin integrarla todavía: lee el catálogo, pregunta en una sola tanda solo lo que falta
+  (no elemento ni rareza, que ya los da), escribe la ficha docs/pockais/<id>.md con el JSON exacto, stats que suman
+  265 dentro de [42, 65], personalityBias válido y una tabla de evolución visual por etapa, y se detiene a pedir
+  confirmación antes de tocar species.json.

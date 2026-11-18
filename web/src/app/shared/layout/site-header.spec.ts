@@ -32,6 +32,15 @@ describe('SiteHeader', () => {
     expect(el.querySelectorAll('.site-menu__link').length).toBe(2);
   });
 
+  it('enlaza el formulario de contacto con un icono de correo junto al CTA', async () => {
+    const el = await render();
+    const link = el.querySelector('.header-end a.contact-link');
+    expect(link?.getAttribute('href')).toBe('/es/contact');
+    expect(link?.getAttribute('aria-label')).toBe('Contacto');
+    expect(link?.querySelector('svg')).not.toBeNull();
+    expect(link?.hasAttribute('aria-current')).toBe(false);
+  });
+
   it('marca el idioma actual', async () => {
     const el = await render();
     const current = [...el.querySelectorAll('.lang a[aria-current]')].map((a) => a.textContent?.trim());

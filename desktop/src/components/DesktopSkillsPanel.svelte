@@ -3,6 +3,7 @@
   import {
     skillAuthorizations,
     toggleSkillAuthorization,
+    skillSyncFailed,
     syncSkillsFromBackend,
     isSkillUnlocked,
     getPetBonding,
@@ -10,8 +11,75 @@
     getPetIntelligenceTierName,
     getPetIntelligenceRequiredPoints,
   } from '../lib/stores/desktopSkillsStore';
-  import { ShieldCheck, Sparkles, Check, Info, Lock } from 'lucide-svelte';
+  import Ico from './Ico.svelte';
+  import { Badge, Button, FeatureHeader, Notice, Segmented } from './ui';
   import PomodoroWidget from './PomodoroWidget.svelte';
+  import {
+    DEFAULT_SUMMON_SHORTCUT,
+    SUMMON_SKILL_ID,
+    captureShortcut,
+    changeSummonShortcut,
+    formatShortcut,
+    summonShortcut,
+  } from '../lib/summonShortcut';
+
+  // Ajuste del atajo de «Invocación rápida» (engranaje de su tarjeta)
+  let shortcutOpen = false;
+  let shortcutDraft = $summonShortcut;
+  let recording = false;
+  let recordingPreview = '';
+  let shortcutErr = '';
+  let shortcutMsg = '';
+  let shortcutBusy = false;
+
+  function toggleShortcutConfig() {
+    shortcutOpen = !shortcutOpen;
+    shortcutDraft = $summonShortcut;
+    recording = false;
+    shortcutErr = '';
+    shortcutMsg = '';
+  }
+
+  function startRecording() {
+    recording = true;
+    recordingPreview = '';
+    shortcutErr = '';
+    shortcutMsg = '';
+  }
+
+  function onCaptureKey(e: KeyboardEvent) {
+    if (!recording) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'Escape' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+      recording = false;
+      return;
+    }
+    const r = captureShortcut(e);
+    if (r.kind === 'pending') {
+      recordingPreview = r.preview;
+    } else if (r.kind === 'invalid') {
+      shortcutErr = r.reason;
+    } else {
+      shortcutDraft = r.accelerator;
+      shortcutErr = '';
+      recording = false;
+    }
+  }
+
+  async function saveShortcut() {
+    shortcutBusy = true;
+    shortcutErr = '';
+    shortcutMsg = '';
+    try {
+      await changeSummonShortcut(shortcutDraft);
+      shortcutMsg = 'Atajo guardado';
+    } catch (e: any) {
+      shortcutErr = e?.message || 'No se pudo guardar el atajo';
+    } finally {
+      shortcutBusy = false;
+    }
+  }
 
   export let pet: any = null;
 
@@ -31,46 +99,27 @@
   });
 </script>
 
-<div class="skills-panel">
-  <div class="header-desc">
-    <div class="header-icon">
-      <ShieldCheck size={20} class="text-indigo-400" />
-    </div>
-    <div>
-      <h3 class="panel-title">Habilidades y Autorizaciones</h3>
-      <p class="panel-subtitle">
-        Tu mascota aprende nuevas capacidades según su vínculo e inteligencia. Autoriza cuáles permites que use en tu pantalla.
-      </p>
-    </div>
-  </div>
+<div class="ui-stack">
+  <FeatureHeader
+    icon="shield"
+    title="Habilidades"
+    sub="Tu mascota aprende nuevas capacidades según su vínculo e inteligencia. Autoriza cuáles permites que use en tu pantalla."
+  />
+  {#if $skillSyncFailed}
+    <Notice tone="warning">El cambio se ha guardado en este equipo, pero no se pudo enviar al servidor. Se reintentará la próxima vez que cambies una habilidad.</Notice>
+  {/if}
 
-  <!-- Filtro por categoría -->
-  <div class="category-tabs">
-    <button
-      class="tab-btn"
-      class:active={activeCategory === 'all'}
-      on:click={() => (activeCategory = 'all')}
-    >
-      Todas
-    </button>
-    <button
-      class="tab-btn"
-      class:active={activeCategory === 'playful'}
-      on:click={() => (activeCategory = 'playful')}
-    >
-      🎮 Pantalla & Juego
-    </button>
-    <button
-      class="tab-btn"
-      class:active={activeCategory === 'productivity'}
-      on:click={() => (activeCategory = 'productivity')}
-    >
-      💼 Productividad & IA
-    </button>
-  </div>
+  <Segmented
+    bind:value={activeCategory}
+    label="Categoría"
+    options={[
+      { value: 'all', label: 'Todas' },
+      { value: 'playful', label: 'Pantalla y juego', icon: 'gamepad' },
+      { value: 'productivity', label: 'Productividad', icon: 'brain' },
+    ]}
+  />
 
-  <!-- Lista de Habilidades -->
-  <div class="skills-list">
+  <div class="ui-list">
     {#each filteredSkills as skill (skill.id)}
       {@const unlocked = isSkillUnlocked(skill, petBonding, petIntelligencePoints)}
       {@const enabled = !!$skillAuthorizations[skill.id]}
@@ -79,392 +128,226 @@
       {@const reqTierName = getPetIntelligenceTierName(skill.requiredIntelligence)}
       {@const intMet = petIntelligenceLevel >= skill.requiredIntelligence}
 
-      <div
-        class="skill-card"
-        class:locked={!unlocked}
-        class:enabled={unlocked && enabled}
-      >
-        <div class="skill-info">
-          <div class="skill-title-row">
-            <span class="skill-name">{skill.name}</span>
+      <div class="ui-card ui-card--sm skill" class:locked={!unlocked} class:enabled={unlocked && enabled}>
+        <div class="skill-top">
+          <div class="skill-title">
+            <span class="ui-card__title">{skill.name}</span>
             {#if !unlocked}
-              <span class="badge locked-badge">
-                <Lock size={12} /> Bloqueada
-              </span>
+              <Badge size="sm" icon="lock">Bloqueada</Badge>
             {:else if enabled}
-              <span class="badge active-badge">
-                <Sparkles size={12} /> Activa
-              </span>
+              <Badge size="sm" tone="success" icon="xp">Activa</Badge>
             {:else}
-              <span class="badge inactive-badge">Pausada</span>
+              <Badge size="sm" tone="neutral">Pausada</Badge>
             {/if}
           </div>
-
-          <p class="skill-desc">{skill.description}</p>
-
-          {#if !unlocked}
-            <div class="requirements-container">
-              <div class="req-header">
-                <Lock size={12} class="text-amber-400" />
-                <span>Requisitos de desbloqueo:</span>
-              </div>
-              <div class="req-chips-list">
-                {#if skill.requiredBonding > 0}
-                  <div class="req-chip" class:met={bondMet} class:missing={!bondMet}>
-                    {#if bondMet}
-                      <Check size={12} class="text-emerald-400" />
-                    {:else}
-                      <Lock size={12} class="text-amber-400" />
-                    {/if}
-                    <span>Vínculo: <strong>{skill.requiredBonding} pts</strong></span>
-                    <span class="curr-val">({petBonding}/{skill.requiredBonding})</span>
-                  </div>
-                {/if}
-
-                {#if skill.requiredIntelligence > 1}
-                  <div class="req-chip" class:met={intMet} class:missing={!intMet}>
-                    {#if intMet}
-                      <Check size={12} class="text-emerald-400" />
-                    {:else}
-                      <Lock size={12} class="text-amber-400" />
-                    {/if}
-                    <span>IA: <strong>{reqTierName}</strong></span>
-                    <span class="curr-val">({petIntelligencePoints}/{reqTierPoints} pts)</span>
-                  </div>
-                {/if}
-              </div>
-            </div>
-          {:else}
-            <!-- Requisitos cumplidos -->
-            <div class="unlocked-reqs-meta">
-              <Check size={11} class="text-emerald-400" />
-              <span>
-                {#if skill.requiredBonding > 0 && skill.requiredIntelligence > 1}
-                  Vínculo {skill.requiredBonding}+ pts · IA {reqTierName}
-                {:else if skill.requiredBonding > 0}
-                  Vínculo {skill.requiredBonding}+ pts
-                {:else if skill.requiredIntelligence > 1}
-                  IA {reqTierName} ({reqTierPoints}+ pts)
-                {:else}
-                  Habilidad básica disponible
-                {/if}
-              </span>
-            </div>
-          {/if}
-
-          {#if skill.permissionNotice}
-            <div class="privacy-note">
-              <Info size={13} />
-              <span>{skill.permissionNotice}</span>
-            </div>
-          {/if}
-
-          {#if skill.id === 'pomodoro_companion' && unlocked && enabled}
-            <div class="embedded-widget">
-              <PomodoroWidget />
-            </div>
-          {/if}
-        </div>
-
-        <div class="skill-action">
-          <label class="switch" class:disabled={!unlocked} title={unlocked ? (enabled ? 'Desactivar' : 'Activar') : 'Bloqueada'}>
-            <input
-              type="checkbox"
-              checked={enabled}
+          <div class="skill-action">
+            {#if skill.id === SUMMON_SKILL_ID && unlocked}
+              <Button
+                variant={shortcutOpen ? 'ink' : 'ghost'}
+                size="sm"
+                iconOnly
+                icon="settings"
+                label="Configurar atajo de teclado"
+                class="ui-ibtn"
+                on:click={toggleShortcutConfig}
+              />
+            {/if}
+            <button
+              type="button"
+              class="toggle"
+              role="switch"
+              aria-checked={unlocked && enabled}
+              aria-label={(enabled ? 'Desactivar ' : 'Activar ') + skill.name}
+              title={unlocked ? (enabled ? 'Desactivar' : 'Activar') : 'Bloqueada'}
               disabled={!unlocked}
-              on:change={() => toggleSkillAuthorization(skill.id, pet?.id)}
-            />
-            <span class="slider"></span>
-          </label>
+              on:click={() => toggleSkillAuthorization(skill.id, pet?.id)}
+            >
+              <span class="ui-switch__track"><i></i></span>
+            </button>
+          </div>
         </div>
+
+        <p class="ui-card__hint">{skill.description}</p>
+
+        {#if !unlocked}
+          <div class="reqs">
+            <span class="label-caps muted">Requisitos</span>
+            {#if skill.requiredBonding > 0}
+              <Badge size="sm" tone={bondMet ? 'success' : 'warning'} icon={bondMet ? 'check' : 'lock'}>
+                Vínculo {skill.requiredBonding} · {petBonding}/{skill.requiredBonding}
+              </Badge>
+            {/if}
+            {#if skill.requiredIntelligence > 1}
+              <Badge size="sm" tone={intMet ? 'success' : 'warning'} icon={intMet ? 'check' : 'lock'}>
+                IA {reqTierName} · {petIntelligencePoints}/{reqTierPoints}
+              </Badge>
+            {/if}
+          </div>
+        {:else}
+          <p class="met"><Ico n="check" size={12} />
+            {#if skill.requiredBonding > 0 && skill.requiredIntelligence > 1}
+              Vínculo {skill.requiredBonding}+ pts · IA {reqTierName}
+            {:else if skill.requiredBonding > 0}
+              Vínculo {skill.requiredBonding}+ pts
+            {:else if skill.requiredIntelligence > 1}
+              IA {reqTierName} ({reqTierPoints}+ pts)
+            {:else}
+              Habilidad básica disponible
+            {/if}
+          </p>
+        {/if}
+
+        {#if skill.permissionNotice}
+          <Notice tone="info" icon="info">{skill.permissionNotice}</Notice>
+        {/if}
+
+        {#if skill.id === SUMMON_SKILL_ID && unlocked}
+          <p class="met"><Ico n="tool" size={12} /> Atajo: <kbd>{formatShortcut($summonShortcut)}</kbd></p>
+          {#if shortcutOpen}
+            <div class="shortcut" data-testid="summon-shortcut-config">
+              <span class="form-label">Atajo de teclado global</span>
+              <button
+                type="button"
+                class="input shortcut-capture"
+                class:recording
+                on:click={startRecording}
+                on:keydown={onCaptureKey}
+                on:blur={() => (recording = false)}
+              >
+                {#if recording}
+                  {recordingPreview ? formatShortcut(recordingPreview) + ' + …' : 'Pulsa la combinación… (Esc cancela)'}
+                {:else}
+                  {formatShortcut(shortcutDraft)}
+                {/if}
+              </button>
+              <span class="form-hint">Haz clic y pulsa la nueva combinación (con Ctrl, Alt o Win).</span>
+              {#if shortcutErr}<Notice tone="error">{shortcutErr}</Notice>{/if}
+              {#if shortcutMsg}<Notice tone="ok">{shortcutMsg}</Notice>{/if}
+              <div class="row">
+                <Button variant="primary" size="sm" disabled={shortcutBusy || recording || shortcutDraft === $summonShortcut} on:click={saveShortcut}>
+                  Guardar
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={shortcutBusy || shortcutDraft === DEFAULT_SUMMON_SHORTCUT}
+                  on:click={() => {
+                    shortcutDraft = DEFAULT_SUMMON_SHORTCUT;
+                    recording = false;
+                  }}
+                >
+                  Restablecer
+                </Button>
+              </div>
+            </div>
+          {/if}
+        {/if}
+
+        {#if skill.id === 'pomodoro_companion' && unlocked && enabled}
+          <PomodoroWidget />
+        {/if}
       </div>
     {/each}
   </div>
 </div>
 
 <style>
-  .skills-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 16px;
-    color: #e2e8f0;
+  .skill.locked {
+    border-style: dashed;
+    border-color: var(--line-soft);
+    box-shadow: none;
+    background: color-mix(in srgb, var(--surface-2) 60%, var(--surface));
   }
-
-  .header-desc {
+  .skill.enabled {
+    border-color: var(--line);
+    box-shadow: var(--shadow-pop);
+  }
+  .skill-top {
     display: flex;
-    gap: 12px;
     align-items: flex-start;
-    background: rgba(30, 41, 59, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 12px 14px;
+    gap: var(--space-2);
   }
-
-  .header-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(99, 102, 241, 0.15);
-    border-radius: 8px;
-    padding: 6px;
-    color: #818cf8;
-  }
-
-  .panel-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0;
-    color: #f8fafc;
-  }
-
-  .panel-subtitle {
-    font-size: 12px;
-    color: #94a3b8;
-    margin: 3px 0 0;
-    line-height: 1.4;
-  }
-
-  .category-tabs {
-    display: flex;
-    gap: 6px;
-    background: rgba(15, 23, 42, 0.6);
-    padding: 4px;
-    border-radius: 8px;
-  }
-
-  .tab-btn {
-    flex: 1;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 6px 10px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: #94a3b8;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .tab-btn.active {
-    background: rgba(99, 102, 241, 0.25);
-    color: #c7d2fe;
-    font-weight: 600;
-  }
-
-  .skills-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .skill-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 12px 14px;
-    background: rgba(30, 41, 59, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
-    transition: all 0.2s ease;
-  }
-
-  .skill-card.enabled {
-    border-color: rgba(99, 102, 241, 0.35);
-    background: rgba(30, 41, 59, 0.7);
-  }
-
-  .skill-card.locked {
-    opacity: 0.6;
-    background: rgba(15, 23, 42, 0.4);
-  }
-
-  .skill-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .skill-title-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .skill-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: #f1f5f9;
-  }
-
-  .skill-desc {
-    font-size: 12px;
-    color: #94a3b8;
-    margin: 0;
-    line-height: 1.4;
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 7px;
-    border-radius: 999px;
-  }
-
-  .active-badge {
-    background: rgba(34, 197, 94, 0.15);
-    color: #4ade80;
-    border: 1px solid rgba(34, 197, 94, 0.3);
-  }
-
-  .inactive-badge {
-    background: rgba(148, 163, 184, 0.15);
-    color: #94a3b8;
-  }
-
-  .locked-badge {
-    background: rgba(245, 158, 11, 0.15);
-    color: #fbbf24;
-    border: 1px solid rgba(245, 158, 11, 0.25);
-  }
-
-  .requirements-container {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(245, 158, 11, 0.2);
-    border-radius: 8px;
-    padding: 8px 10px;
-    margin-top: 4px;
-  }
-
-  .req-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #fbbf24;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .req-chips-list {
+  .skill-title {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .req-chip {
-    display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 11.5px;
-    padding: 3px 8px;
-    border-radius: 6px;
-    transition: all 0.15s ease;
+    gap: var(--space-2);
+    flex: 1;
+    min-width: 0;
   }
-
-  .req-chip.met {
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    color: #a7f3d0;
-  }
-
-  .req-chip.missing {
-    background: rgba(245, 158, 11, 0.1);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    color: #fde68a;
-  }
-
-  .curr-val {
-    font-size: 10.5px;
-    opacity: 0.85;
-  }
-
-  .unlocked-reqs-meta {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    color: #94a3b8;
-    margin-top: 2px;
-  }
-
-  .privacy-note {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    color: #64748b;
-    font-style: italic;
-  }
-
   .skill-action {
     display: flex;
     align-items: center;
-    padding-top: 2px;
+    gap: var(--space-1);
+    flex-shrink: 0;
   }
-
-  /* Switch Toggle */
-  .switch {
-    position: relative;
-    display: inline-block;
-    width: 38px;
-    height: 22px;
-  }
-
-  .switch.disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  .switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .slider {
-    position: absolute;
+  .toggle {
+    min-width: var(--hit-min);
+    min-height: var(--control-h-icon);
+    display: grid;
+    place-items: center;
+    padding: var(--space-1);
+    border: none;
+    background: none;
     cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #334155;
-    transition: 0.2s;
-    border-radius: 22px;
   }
-
-  .slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 3px;
-    bottom: 3px;
-    background-color: #ffffff;
-    transition: 0.2s;
-    border-radius: 50%;
+  .toggle:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
-
-  input:checked + .slider {
-    background-color: #6366f1;
+  .toggle[aria-checked='true'] .ui-switch__track {
+    background: var(--success);
   }
-
-  input:checked + .slider:before {
-    transform: translateX(16px);
+  .toggle[aria-checked='true'] .ui-switch__track i {
+    translate: 16px 0;
   }
-
-  .embedded-widget {
-    margin-top: 10px;
-    width: 100%;
+  .reqs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .reqs .label-caps {
+    font-size: var(--text-caption);
+    margin-right: 2px;
+  }
+  .met {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+    font-size: var(--text-caption);
+    color: var(--success-ink);
+  }
+  kbd {
+    padding: 1px var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: var(--text-caption);
+    font-weight: 700;
+  }
+  .shortcut {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-2xl);
+    background: var(--surface-2);
+  }
+  .shortcut-capture {
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+  }
+  .shortcut-capture.recording {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  .row {
+    display: flex;
+    gap: var(--space-2);
   }
 </style>

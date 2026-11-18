@@ -35,11 +35,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.petai.app.ui.account.AccountScreen
+import androidx.activity.compose.BackHandler
 import com.petai.app.ui.auth.AuthScreen
+import com.petai.app.ui.auth.ChooseHandleScreen
+import com.petai.app.ui.auth.ForgotPasswordScreen
+import com.petai.app.ui.auth.VerifyEmailScreen
 import com.petai.app.ui.chat.ChatScreen
 import com.petai.app.ui.chat.ChatViewModel
 import com.petai.app.ui.chat.ChatViewModelFactory
 import com.petai.app.ui.chests.ChestsScreen
+import com.petai.app.ui.clans.ClanScreen
 import com.petai.app.ui.coop.CoopScreen
 import com.petai.app.ui.habitat.HabitatScreen
 import com.petai.app.ui.missions.MissionsScreen
@@ -66,7 +71,7 @@ private enum class Dest(val label: String, val icon: ImageVector, val subs: List
     Play("Jugar", Lucide.Gamepad2, listOf("Arena", "Minijuegos", "Raid", "Torneo")),
     Chat("Chat", Lucide.MessageCircle, emptyList()),
     Progress("Progreso", Lucide.Trophy, emptyList()),
-    More("Más", Lucide.Ellipsis, listOf("Tienda", "Cofres", "Amigos", "Cuenta")),
+    More("Más", Lucide.Ellipsis, listOf("Tienda", "Cofres", "Amigos", "Clan", "Cuenta")),
 }
 
 @Composable
@@ -79,13 +84,51 @@ fun AppRoot(vm: AppViewModel) {
 
     when (signedIn) {
         null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        false -> AuthScreen(
-            busy = state.busy,
-            inviteRequired = state.inviteRequired,
-            onRegisterMode = vm::loadRegistrationConfig,
-            onSubmit = vm::authenticate,
-        )
-        true -> MainScaffold(vm, state, snackbar)
+        false -> {
+            // Sin sesión: acceso o, desde «¿Has olvidado tu contraseña?», la recuperación.
+            var forgotEmail by rememberSaveable { mutableStateOf<String?>(null) }
+            val email = forgotEmail
+            if (email != null) {
+                BackHandler { forgotEmail = null }
+                ForgotPasswordScreen(
+                    initialEmail = email,
+                    busy = state.busy,
+                    onRequest = vm::requestPasswordReset,
+                    onConfirm = vm::confirmPasswordReset,
+                    onBack = { forgotEmail = null },
+                )
+            } else {
+                AuthScreen(
+                    busy = state.busy,
+                    inviteRequired = state.inviteRequired,
+                    onRegisterMode = vm::loadRegistrationConfig,
+                    onCheckHandle = vm::checkHandle,
+                    onSubmit = vm::authenticate,
+                    onForgot = { forgotEmail = it },
+                )
+            }
+        }
+        // Cuenta sin verificar: no se puede usar la app hasta confirmar el correo.
+        true -> if (state.user?.emailVerified == false) {
+            VerifyEmailScreen(
+                email = state.user?.email.orEmpty(),
+                busy = state.busy,
+                onVerify = vm::verifyEmail,
+                onResend = vm::resendVerification,
+                onRecheck = vm::recheckVerification,
+                onLogout = vm::logout,
+            )
+        } else if (state.user?.needsHandle == true) {
+            // Cuenta sin nickname: hay que elegirlo (único e inmutable) antes de jugar.
+            ChooseHandleScreen(
+                busy = state.busy,
+                onCheck = vm::checkHandle,
+                onChoose = vm::chooseHandle,
+                onLogout = vm::logout,
+            )
+        } else {
+            MainScaffold(vm, state, snackbar)
+        }
     }
 }
 
@@ -161,7 +204,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                             onBuyEgg = vm::buyEgg,
                             onGoToShop = { go(Dest.More, 0) },
                         )
-                        else -> if (pet == null) noPet() else HabitatScreen(app.service, onChanged = { vm.refreshAll() })
+                        else -> if (pet == null) noPet() else HabitatScreen(app.service, app.realtime, pet = pet, onChanged = { vm.refreshAll() })
                     }
                     Dest.Play ->
                         if (pet == null) noPet() else when (sub) {
@@ -189,6 +232,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                         0 -> ShopScreen(state, onRefresh = vm::refreshAll, onBuy = vm::buy)
                         1 -> ChestsScreen(app.service, onChanged = { vm.refreshAll() })
                         2 -> CoopScreen(app.service, onChanged = { vm.refreshAll() })
+                        3 -> ClanScreen(app.service, app.realtime, onChanged = { vm.refreshAll() })
                         else -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice)
                     }
                 }

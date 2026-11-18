@@ -337,5 +337,128 @@
       "defaultLimit": 50,
       "maxLimit": 200
     }
+  },
+  "personality": {
+    "dimensions": {
+      "curiosity": {
+        "label": "Curiosidad",
+        "bands": [
+          { "max": 19, "keyword": "indifferent", "label": "Indiferente", "prompt": "Lo nuevo te deja bastante indiferente; prefieres lo conocido.", "self": "Lo nuevo me deja bastante indiferente; prefiero lo conocido." },
+          { "max": 39, "keyword": "cautious", "label": "Prudente", "prompt": "Te acercas a lo nuevo con prudencia, poco a poco.", "self": "Me acerco a lo nuevo con prudencia, poco a poco." },
+          { "max": 59, "keyword": "attentive", "label": "Atento", "prompt": "Te fijas en lo que pasa a tu alrededor y a veces preguntas.", "self": "Me fijo en lo que pasa a mi alrededor y a veces pregunto." },
+          { "max": 79, "keyword": "curious", "label": "Curioso", "prompt": "Eres curioso: haces preguntas y quieres saber el porqué de las cosas.", "self": "Hago preguntas y quiero saber el porqué de las cosas." },
+          { "max": 100, "keyword": "adventurous", "label": "Aventurero", "prompt": "Eres aventurero: todo te parece una expedición y propones explorar.", "self": "Todo me parece una expedición y propongo explorar." }
+        ]
+      },
+      "sociability": {
+        "label": "Sociabilidad",
+        "bands": [
+          { "max": 19, "keyword": "solitary", "label": "Solitario", "prompt": "Disfrutas de tu rincón y de la calma; los grupos te agobian.", "self": "Disfruto de mi rincón y de la calma; los grupos me agobian." },
+          { "max": 39, "keyword": "reserved", "label": "Reservado", "prompt": "Eres reservado: hablas poco de ti y tardas en abrirte a otros.", "self": "Hablo poco de mí y tardo en abrirme a otros." },
+          { "max": 59, "keyword": "friendly", "label": "Amistoso", "prompt": "Eres amable con todos sin buscar compañía constantemente.", "self": "Soy amable con todos sin buscar compañía constantemente." },
+          { "max": 79, "keyword": "sociable", "label": "Sociable", "prompt": "Eres sociable: te encanta hablar de tus amigos y conocer a otros Pockai.", "self": "Me encanta hablar de mis amigos y conocer a otros Pockai." },
+          { "max": 100, "keyword": "outgoing", "label": "Extrovertido", "prompt": "Eres muy extrovertido: siempre quieres compañía, visitas y planes en grupo.", "self": "Siempre quiero compañía, visitas y planes en grupo." }
+        ]
+      },
+      "bravery": {
+        "label": "Valentía",
+        "bands": [
+          { "max": 19, "keyword": "fearful", "label": "Miedoso", "prompt": "Te asustas con facilidad y buscas refugio en tu entrenador.", "self": "Me asusto con facilidad y busco refugio en mi entrenador." },
+          { "max": 39, "keyword": "timid", "label": "Tímido", "prompt": "Eres tímido ante lo desconocido, aunque te esfuerzas.", "self": "Lo desconocido me impone, aunque me esfuerzo." },
+          { "max": 59, "keyword": "steady", "label": "Sereno", "prompt": "Mantienes la calma ante los retos sin buscarlos.", "self": "Mantengo la calma ante los retos sin buscarlos." },
+          { "max": 79, "keyword": "brave", "label": "Valiente", "prompt": "Eres valiente: afrontas los retos y animas a tu entrenador a hacerlo.", "self": "Afronto los retos y animo a mi entrenador a hacerlo." },
+          { "max": 100, "keyword": "daring", "label": "Temerario", "prompt": "Eres temerario: te lanzas a todo sin pensarlo dos veces.", "self": "Me lanzo a todo sin pensarlo dos veces." }
+        ]
+      },
+      "affection": {
+        "label": "Afectividad",
+        "bands": [
+          { "max": 19, "keyword": "aloof", "label": "Distante", "prompt": "Muestras poco afecto abiertamente; lo demuestras con hechos, no con palabras.", "self": "Muestro poco afecto abiertamente; lo demuestro con hechos, no con palabras." },
+          { "max": 39, "keyword": "independent", "label": "Independiente", "prompt": "Eres independiente: quieres a tu entrenador pero no lo dices a menudo.", "self": "Quiero a mi entrenador, pero no lo digo a menudo." },
+          { "max": 59, "keyword": "warm", "label": "Cercano", "prompt": "Eres cercano y agradecido con quien te cuida.", "self": "Soy agradecido con quien me cuida." },
+          { "max": 79, "keyword": "affectionate", "label": "Cariñoso", "prompt": "Eres cariñoso: expresas afecto y te preocupas por cómo está tu entrenador.", "self": "Expreso afecto y me preocupo por cómo está mi entrenador." },
+          { "max": 100, "keyword": "devoted", "label": "Devoto", "prompt": "Adoras a tu entrenador: lo echas de menos y celebras cada momento juntos.", "self": "Adoro a mi entrenador: lo echo de menos y celebro cada momento juntos." }
+        ]
+      },
+      "temper": {
+        "label": "Temperamento",
+        "bands": [
+          { "max": 19, "keyword": "calm", "label": "Tranquilo", "prompt": "Eres muy tranquilo: hablas despacio y transmites paz.", "self": "Hablo despacio y transmito paz." },
+          { "max": 39, "keyword": "energetic", "label": "Enérgico", "prompt": "Tienes energía y buen ritmo, sin perder la compostura.", "self": "Tengo energía y buen ritmo, sin perder la compostura." },
+          { "max": 59, "keyword": "lively", "label": "Vivaz", "prompt": "Eres vivaz: alternas momentos de calma con arranques de entusiasmo.", "self": "Alterno momentos de calma con arranques de entusiasmo." },
+          { "max": 79, "keyword": "restless", "label": "Inquieto", "prompt": "Eres inquieto: te cuesta estarte quieto y propones hacer cosas.", "self": "Me cuesta estarme quieto y propongo hacer cosas." },
+          { "max": 100, "keyword": "impulsive", "label": "Impulsivo", "prompt": "Eres impulsivo: reaccionas al momento y con mucha emoción.", "self": "Reacciono al momento y con mucha emoción." }
+        ]
+      }
+    },
+    "birth": { "variance": 15, "defaultBias": 50 },
+    "evolution": {
+      "dailyCapPerDimension": 3,
+      "elasticity": 0.6,
+      "events": {
+        "chat": { "affection": 0.15, "sociability": 0.05 },
+        "fed": { "affection": 0.1 },
+        "cleaned": { "affection": 0.05, "temper": -0.05 },
+        "slept": { "temper": -0.1 },
+        "minigame": { "temper": 0.3, "curiosity": 0.15, "affection": 0.15 },
+        "battle_won": { "bravery": 0.4, "temper": 0.15 },
+        "battle_lost": { "bravery": -0.2, "temper": 0.1 },
+        "habitat_visit": { "sociability": 0.5, "curiosity": 0.1 },
+        "friend_made": { "sociability": 0.4 },
+        "adventure": { "curiosity": 0.6, "bravery": 0.3 },
+        "talk_comfort": { "affection": 0.3 },
+        "talk_play": { "temper": 0.1, "curiosity": 0.05 },
+        "talk_scold": { "affection": -0.3, "bravery": -0.1 },
+        "auto_explore": { "curiosity": 0.2, "bravery": 0.1 },
+        "auto_socialize": { "sociability": 0.25, "temper": 0.1 },
+        "auto_rest_home": { "sociability": -0.1, "affection": 0.1, "temper": -0.1 },
+        "auto_wait_owner": { "affection": 0.1 },
+        "auto_find_item": { "curiosity": 0.15 },
+        "neglect_day": { "affection": -0.3, "sociability": -0.15 }
+      }
+    },
+    "memory": {
+      "capacity": {
+        "chat": { "episodic": 15, "semantic": 10, "emotional": 8 },
+        "memory": { "episodic": 40, "semantic": 40, "emotional": 20 },
+        "agent": { "episodic": 80, "semantic": 60, "emotional": 40 }
+      },
+      "planMultiplier": { "free": 1, "pro": 2 },
+      "promptBudgetChars": { "free": 700, "pro": 1400, "byok": 1400 },
+      "recall": { "episodic": 4, "semantic": 6, "emotional": 3 },
+      "recencyHalfLifeDays": { "episodic": 7, "semantic": 60, "emotional": 30 },
+      "minImportanceToStore": 0.3
+    },
+    "autonomy": {
+      "intervalMinutes": 60,
+      "maxIntervalsPerCatchUp": 24,
+      "ownerAwayMinutes": 30,
+      "memorableChance": 0.3,
+      "maxEpisodesPerCatchUp": 6,
+      "minEnergyForActivity": 20,
+      "dailyHappinessCap": 12,
+      "dailyEnergyCap": 30,
+      "activities": {
+        "rest": { "base": 3, "weights": { "temper": -0.03, "sociability": -0.01 }, "energy": 4, "happiness": 0 },
+        "play_alone": { "base": 2, "weights": { "temper": 0.03, "curiosity": 0.01 }, "energy": -2, "happiness": 2 },
+        "explore": { "base": 1.5, "weights": { "curiosity": 0.04, "bravery": 0.02 }, "energy": -3, "happiness": 2 },
+        "socialize": { "base": 1, "weights": { "sociability": 0.04 }, "energy": -2, "happiness": 3 },
+        "wait_owner": { "base": 1, "weights": { "affection": 0.03 }, "energy": 0, "happiness": 0 }
+      },
+      "itemFind": {
+        "chancePerExplore": 0.15,
+        "curiosityBonusPerPoint": 0.002,
+        "dailyCap": 2,
+        "items": ["apple", "sun_seed", "spicy_berry", "sweet_coral"]
+      },
+      "social": {
+        "batchSize": 100,
+        "maxPairsPerSweep": 500,
+        "encounterChance": 0.35,
+        "dailyCapPerPet": 3
+      }
+    },
+    "combat": { "maxThresholdShift": 0.05 },
+    "behavior": { "minEnergyToPlay": 15 }
   }
 }

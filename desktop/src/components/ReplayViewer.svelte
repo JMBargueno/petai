@@ -113,37 +113,39 @@
       {/each}
     </div>
 
-    <div class="log" class:end={frame.kind === 'end'}>
+    <div class="log" class:end={frame.kind === 'end'} aria-hidden="true">
       {#key index}<span>{frame.text}</span>{/key}
     </div>
+    <!-- Región viva estable: la visual se recrea en cada jugada y no se anunciaría -->
+    <div class="sr-only" role="status" aria-live="polite">{frame.text}</div>
 
     <div class="controls">
-      <button on:click={restart} title="Reiniciar">↺</button>
-      <button class="main" on:click={toggle} title={playing ? 'Pausa' : 'Reproducir'}>{#if playing}<Ico n="pause" size={16} />{:else}<Ico n="play" size={16} />{/if}</button>
-      <button on:click={toEnd} title="Ir al final"><Ico n="next" /></button>
-      <button on:click={setSpeed} title="Velocidad">×{speed}</button>
+      <button on:click={restart} title="Volver al principio" aria-label="Volver al principio"><Ico n="refresh" size={14} /></button>
+      <button class="main" on:click={toggle} title={playing ? 'Pausa' : 'Reproducir'} aria-label={playing ? 'Pausa' : 'Reproducir'}>{#if playing}<Ico n="pause" size={16} />{:else}<Ico n="play" size={16} />{/if}</button>
+      <button on:click={toEnd} title="Ir al final" aria-label="Ir al final"><Ico n="next" /></button>
+      <button on:click={setSpeed} title="Cambiar velocidad" aria-label="Velocidad ×{speed}. Pulsa para cambiarla">×{speed}</button>
       <span class="round">{frame.round > 0 ? `Ronda ${frame.round}` : 'Inicio'} · {index + 1}/{frames.length}</span>
     </div>
   </div>
 {/if}
 
 <style>
-  .viewer { display: flex; flex-direction: column; gap: 8px; }
+  .viewer { display: flex; flex-direction: column; gap: var(--space-2); }
   .arena {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px 8px 4px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); padding: var(--space-2) var(--space-2) var(--space-1);
     border-radius: var(--radius-2xl); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface-2));
     border: 1px solid var(--line-soft);
   }
   .side { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
-  .info { display: flex; flex-direction: column; align-items: center; font-size: 12px; max-width: 100%; }
+  .info { display: flex; flex-direction: column; align-items: center; font-size: var(--text-caption); max-width: 100%; }
   .name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-  .info small { opacity: 0.65; font-size: 10px; }
+  .info small { opacity: 0.65; font-size: var(--text-caption); }
   .bar { width: 100%; height: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); overflow: hidden; }
-  .fill { height: 100%; transition: width 0.5s ease, background 0.3s; }
-  .hptext { font-size: 10px; opacity: 0.7; }
+  .fill { height: 100%; transition: width var(--dur-3) ease, background var(--dur-2); }
+  .hptext { font-size: var(--text-caption); opacity: 0.7; }
   .sprite {
     position: relative; width: 96px; height: 96px; margin-top: 2px;
-    transition: transform 0.25s ease, filter 0.2s;
+    transition: transform var(--dur-2) ease, filter var(--dur-1);
   }
   .sprite :global(svg) { width: 100%; height: 100%; }
   .sprite.lunge { animation: lunge 0.5s ease; }
@@ -157,23 +159,23 @@
   }
   .float {
     position: absolute; top: -4px; left: 50%; transform: translateX(-50%) scaleX(var(--dir, 1));
-    font-weight: 800; font-size: 18px; color: var(--danger-ink); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    font-weight: 800; font-size: var(--text-title); color: var(--danger-ink); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
     animation: rise 1s ease-out forwards; pointer-events: none;
   }
-  .float.crit { color: var(--warning-ink); font-size: 22px; }
+  .float.crit { color: var(--warning-ink); font-size: var(--text-subheading); }
   .float.heal { color: var(--success-ink); }
   @keyframes rise { from { opacity: 1; top: 20px; } to { opacity: 0; top: -22px; } }
   .log {
     min-height: 38px; display: flex; align-items: center; justify-content: center; text-align: center;
-    padding: 6px 10px; border-radius: var(--radius-2xl); font-size: 13px; background: var(--surface-2);
+    padding: var(--space-2) var(--space-2); border-radius: var(--radius-2xl); font-size: var(--text-label); background: var(--surface-2);
     border: 1px solid var(--line-soft); user-select: text;
   }
   .log.end { background: color-mix(in srgb, var(--color-sunburst) 15%, var(--surface)); border-color: var(--color-sunburst); font-weight: 700; }
-  .controls { display: flex; align-items: center; gap: 6px; }
+  .controls { display: flex; align-items: center; gap: var(--space-2); }
   .controls button {
-    padding: 5px 10px; border-radius: var(--radius-2xl); cursor: pointer; font-size: 13px;
+    padding: var(--space-1) var(--space-2); border-radius: var(--radius-2xl); cursor: pointer; font-size: var(--text-label);
     background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
   }
   .controls button.main { background: var(--accent); color: var(--on-color); border: none; font-weight: 700; min-width: 40px; }
-  .round { margin-left: auto; font-size: 11px; opacity: 0.65; }
+  .round { margin-left: auto; font-size: var(--text-caption); opacity: 0.65; }
 </style>

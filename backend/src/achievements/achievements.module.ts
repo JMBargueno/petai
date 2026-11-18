@@ -4,6 +4,7 @@ import { AchievementsService } from './achievements.service';
 import { AchievementTrackingService } from './achievement-tracking.service';
 import { AchievementRewardsService } from './achievement-rewards.service';
 import { ConstellationService } from './constellation.service';
+import { AchievementEngineService } from './achievement-engine.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RedisModule } from '../redis/redis.module';
 import { GameDataModule } from '../modules/game-data/game-data.module';
@@ -25,7 +26,13 @@ import { InventoryModule } from '../modules/inventory/inventory.module';
 @Module({
   imports: [PrismaModule, RedisModule, GameDataModule, RealtimeModule, InventoryModule],
   controllers: [AchievementsController],
-  providers: [AchievementsService, AchievementTrackingService, AchievementRewardsService, ConstellationService],
-  exports: [AchievementsService, ConstellationService],
+  providers: [
+    AchievementsService,
+    AchievementTrackingService,
+    AchievementRewardsService,
+    ConstellationService,
+    AchievementEngineService,
+  ],
+  exports: [AchievementsService, ConstellationService, AchievementEngineService],
 })
 export class AchievementsModule {}

@@ -24,3 +24,11 @@ allowBuilds:
 
 overrides:
   deepmerge-ts: '>=8.0.0'  
+
+# Avisos de `pnpm audit` aceptados a sabiendas. Revisar cada uno cuando salga un parche y quitarlo.
+auditConfig:
+  ignoreGhsas:
+    # picomatch <=4.0.7, ReDoS con extglobs repetidos. Sin versión parcheada (2026-11-18). Solo llega
+    # vía web > @angular/localize > tinyglobby, en tiempo de build, con patrones propios y no del
+    # usuario, así que no es explotable aquí.
+    - GHSA-fc5q-39xc-vjpf

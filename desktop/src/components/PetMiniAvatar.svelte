@@ -2,17 +2,21 @@
   import { onMount, onDestroy } from 'svelte';
   import {
     bakePetSpriteSheet,
+    getAnimLibrary,
     getPetSvg,
     getPatternSvg,
     type BakedPetSheet,
   } from '../lib/sprites';
-  import { AnimationController } from '../lib/animation/AnimationController';
+  import { AnimationController, resolveBaseState } from '../lib/animation/AnimationController';
 
   export let pet: any;
   export let size: number = 80;
   export let anim: string = 'idle';
   export let interactive: boolean = true;
   export let draggable: boolean = false;
+  /** Acción puntual (celebrate, level_up…): se reproduce una vez cada vez que cambia `actionKey`. */
+  export let action: string | null = null;
+  export let actionKey: number = 0;
 
   let canvasEl: HTMLCanvasElement | null = null;
   let bakedSheet: BakedPetSheet | null = null;
@@ -20,37 +24,60 @@
   let animRafId: number | null = null;
   let lastTime = 0;
 
-  const controller = new AnimationController();
+  // El controlador necesita la biblioteca de clips de la especie (sin ella el constructor lanza
+  // al resolver 'idle' y el componente no llega a montarse).
+  const initialLib = getAnimLibrary(pet?.species?.id || pet?.species?.spriteKey || 'ignisaur');
+  const controller = new AnimationController(initialLib.library, initialLib.aliases);
 
   $: speciesKey = pet?.species?.id || pet?.species?.spriteKey || 'ignisaur';
+  $: {
+    const lib = getAnimLibrary(speciesKey);
+    controller.setLibrary(lib.library, lib.aliases);
+  }
+  $: controller.setBase(resolveBaseState(pet));
   $: patternKey = pet?.pattern?.id || 'plain';
   $: isSleeping = pet?.sleeping || false;
   $: isShiny = pet?.shiny || false;
   $: visualSeed = pet?.visualSeed ?? 1337;
   $: palette = pet?.palette || { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' };
+  /** Etapa evolutiva: cada una tiene su hoja (baby, juvenile, adult, final). */
+  $: stage = pet?.stage ?? null;
 
   $: activeAnim = isSleeping ? 'sleep' : anim;
 
-  $: if (pet && (speciesKey || patternKey || palette || visualSeed)) {
+  let playedActionKey = 0;
+  $: if (action && actionKey && actionKey !== playedActionKey && !isSleeping) {
+    playedActionKey = actionKey;
+    controller.play(action);
+  }
+
+  $: if (pet && (speciesKey || patternKey || palette || visualSeed || stage)) {
     triggerBake();
   }
 
+  let pendingBake = false;
   async function triggerBake() {
-    if (isBaking) return;
+    if (isBaking) {
+      pendingBake = true; // los datos cambiaron mientras se horneaba: repetir al terminar
+      return;
+    }
     isBaking = true;
+    pendingBake = false;
     try {
       bakedSheet = await bakePetSpriteSheet(
         speciesKey,
         patternKey,
         palette,
         visualSeed,
-        isShiny
+        isShiny,
+        stage
       );
     } catch (err) {
       console.warn('[PetMiniAvatar] Error horneando sprite:', err);
       bakedSheet = null;
     } finally {
       isBaking = false;
+      if (pendingBake) triggerBake();
     }
   }
 
@@ -63,7 +90,8 @@
     const dt = lastTime ? Math.min(time - lastTime, 250) : 16;
     lastTime = time;
 
-    controller.setMotion(activeAnim);
+    // 'idle'/'sleep' son estados base; el resto (walk…) se reproduce como movimiento
+    controller.setMotion(isSleeping || anim === 'idle' ? null : anim);
     const frameState = controller.update(dt);
 
     if (canvasEl && bakedSheet) {
@@ -160,8 +188,21 @@
     touch-action: none;
   }
 
+  /* Sin reset, el WebView pinta el fondo/borde nativo del <button> (el "cuadrado gris") */
   .pet-mini-avatar.interactive {
+    appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    border-radius: 50%;
     cursor: pointer;
+  }
+
+  .pet-mini-avatar.interactive:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
   }
 
   .pet-mini-avatar.draggable {

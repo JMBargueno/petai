@@ -110,9 +110,19 @@ Indicadores en la barra: punto en **Progreso** cuando hay recompensas por reclam
 - Estados: error de validación por campo, cuenta bloqueada temporalmente con cuenta atrás (`retryAfterSeconds` del 429), sin conexión.
 - Rutas: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`.
 
-**Recuperar contraseña** · ⛔ · P1
+**Recuperar contraseña** · ✅ · P1
 
-- No existe en el backend. Hoy una contraseña olvidada supone perder la cuenta. Requiere verificación de correo y un flujo de restablecimiento antes de diseñar la pantalla.
+- Acceso: enlace «¿Has olvidado tu contraseña?» en el modo «Entrar» (escritorio y Android); el correo escrito se rellena solo.
+- Paso 1: correo → «Enviar código». La respuesta es la misma exista o no la cuenta (no revela correos registrados).
+- Paso 2: código de 6 dígitos (caduca en 15 min) + contraseña nueva (mín. 8) + repetirla; «Mostrar contraseña»; «Reenviar código» con espera de 60 s (el código anterior deja de valer); «Volver a iniciar sesión».
+- Al confirmar: se cierran las demás sesiones, la app entra con la sesión nueva y avisa de ello. Canjear el código también verifica el correo.
+- Estados: código inválido o caducado (400), demasiados intentos (429), contraseñas que no coinciden (cliente), sin conexión.
+- Rutas: `POST /auth/reset/request`, `POST /auth/reset/confirm`.
+
+**Verificar el correo** · ✅ · P1
+
+- Tras registrarse (o si la API responde 403 `EMAIL_NOT_VERIFIED`): código de 6 dígitos del correo, «Ya lo he verificado con el enlace» (el enlace abre `/verify-email` en la web), reenviar con espera de 60 s y «Usar otra cuenta».
+- Rutas: `POST /auth/verify-email/confirm`, `POST /auth/verify-email/resend`, `GET /me` (`emailVerified`).
 
 **Primera vez** · ⬜ · P1
 
@@ -346,6 +356,7 @@ Pantalla de entrada con dos bloques: **Actividades** (minijuegos, cocina, entren
 | Seguridad | Cambiar contraseña, cerrar todas las sesiones, actividad reciente de la cuenta | `POST /auth/password`, `POST /auth/logout-all`, `GET /security/audit` | ⬜ |
 | Dispositivos | Vincular el escritorio introduciendo su código de 6 dígitos | `POST /auth/device/confirm` | ✅ |
 | Sesión | Cerrar sesión | `POST /auth/logout` | ✅ |
+| Contacto | «Informar de un fallo» y «Sugerir una mejora» abren el formulario de la web con el tipo elegido (`/es/contact?type=bug&from=android`; en mantenimiento, el modal). Vía preferente; el correo `contact@pockai.world` queda como alternativa | `POST /contact` (desde la web) | ✅ |
 | Legal | Probabilidades de huevos y cofres, términos, privacidad, versión de la app | — | ⬜ |
 | Borrar cuenta | Eliminar la cuenta y sus datos | sin backend | ⛔ |
 
@@ -457,7 +468,14 @@ Estado actual de lo ya construido en el panel:
 | IA: ajustes BYOK, chat, recuerdos, tarjetas de confirmación, recordatorios | ✅ |
 | Logros y constelación (con exportación a imagen) | ✅ |
 | Ajustes de notificaciones | ✅ |
+| Guía de primer uso (4 pasos, una vez, cuando ya hay mascota; se repite desde Acerca de) | ✅ |
+| Navegación del panel: recuerda la sub-sección de cada destino, sub-pestañas en una fila con scroll, atajos Esc y Ctrl+1…6 | ✅ |
+| Selector de mascota activa en Mascota › Inicio (con más de una; se recuerda en el equipo) | ✅ |
+| Confirmación con coste y saldo antes de gastar gemas (torneo, aventura premium, pase, cofres) y antes de acciones que no se deshacen | ✅ |
+| Modo demo para revisar la interfaz sin backend: `pnpm desktop:demo` (datos en `desktop/vite.mock.ts`) | ✅ |
+| Tema Sistema / Claro / Oscuro en Ajustes › Escritorio | ✅ |
 | Cuenta con código de vinculación | ✅ |
+| Acerca de: «Informar de un fallo» y «Sugerir una mejora» (formulario de la web con `from=desktop`) y el correo como alternativa | ✅ |
 | Misiones, cofres, vínculo, temporada, rituales, hábitat y el resto de la Fase 7 | ⬜ |
 
 ### 4.4 Opciones exclusivas del ordenador
@@ -473,16 +491,22 @@ Estado actual de lo ya construido en el panel:
 - Avisar de sus límites: sin herramientas de agente ni memoria nueva.
 - Rutas: `POST /pets/:id/chat/local/context`, `POST /pets/:id/chat/local/sync`.
 
+**Claude CLI y Antigravity CLI** · ✅ · P2
+
+- En el selector de motor del chat: «Claude CLI» o «Antigravity CLI». Usan el CLI instalado en el equipo con la sesión que el usuario ya inició (`claude` / `agy`).
+- Campos opcionales: modelo y ruta del ejecutable (si no está en el PATH), guardados solo en el equipo. «Probar conexión» muestra la versión del CLI.
+- Mismos límites y rutas que Hermes local; solo un modo local activo a la vez.
+
 **Herramientas del agente en el equipo** · ✅ · P2
 
 - Permitir a la mascota proponer **abrir un enlace** y **leer el portapapeles**. Cada uso muestra una tarjeta de confirmación con el destino exacto.
 - En Ajustes: interruptor independiente para cada herramienta, desactivadas por defecto.
 
-**Ajustes › Escritorio** · ⬜ · P1
+**Ajustes › Escritorio** · 🟡 · P1 (hecho: iniciar con el sistema; al cerrar la ventana la app sigue en la bandeja; tema Sistema / Claro / Oscuro)
 
 | Opción | Descripción |
 |---|---|
-| Iniciar con el sistema | Arranque automático |
+| Iniciar con el sistema | Arranque automático (✅ activado por defecto la primera vez) |
 | Monitor | En cuál vive la mascota cuando hay varios |
 | Tamaño de la mascota | Pequeño, mediano, grande |
 | Siempre visible | Mantener por encima de las demás ventanas |

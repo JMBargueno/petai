@@ -58,6 +58,34 @@ for (const [id, g] of Object.entries(mg.games)) {
 }
 console.log(`✓ balance.json: sueño, evolución y ${Object.keys(mg.games).length} minijuegos validados`);
 
+// 1c. Personalidad: 5 dimensiones con bandas contiguas 0-100 y keyword única
+const PERSONALITY_DIMS = ['curiosity', 'sociability', 'bravery', 'affection', 'temper'];
+const pers = balance.personality;
+if (pers) {
+  for (const dim of PERSONALITY_DIMS) {
+    const bands = pers.dimensions?.[dim]?.bands;
+    if (!Array.isArray(bands) || bands.length === 0) throw new Error(`balance.personality.dimensions.${dim}.bands vacío`);
+    let prev = -1;
+    const kws = new Set();
+    for (const b of bands) {
+      if (!Number.isInteger(b.max) || b.max <= prev) throw new Error(`balance.personality.${dim}: bandas no crecientes en max=${b.max}`);
+      if (!b.keyword || kws.has(b.keyword)) throw new Error(`balance.personality.${dim}: keyword vacía o repetida (${b.keyword})`);
+      kws.add(b.keyword);
+      prev = b.max;
+    }
+    if (prev !== 100) throw new Error(`balance.personality.${dim}: la última banda debe terminar en 100`);
+  }
+  for (const [ev, deltas] of Object.entries(pers.evolution?.events ?? {})) {
+    for (const k of Object.keys(deltas)) {
+      if (!PERSONALITY_DIMS.includes(k)) throw new Error(`balance.personality.evolution.events.${ev}: dimensión desconocida ${k}`);
+    }
+  }
+  for (const id of pers.autonomy?.itemFind?.items ?? []) {
+    if (!foods.some((f) => f.id === id)) throw new Error(`balance.personality.autonomy.itemFind: ${id} no existe en foods.json`);
+  }
+  console.log('✓ balance.json: personalidad (5 dimensiones, evolución y autonomía) validada');
+}
+
 // 1c. Combate (Fase 4): balance, ligas y habilidades
 const cb = balance.combats;
 for (const k of ['dailyFreeBattles', 'energyCostPerBattle', 'maxRounds', 'hpMultiplier', 'damageScale', 'critChance', 'critMultiplier', 'elementAdvantage', 'elementDisadvantage', 'burnPctPerTurn', 'guardDefMultiplier']) {
@@ -108,16 +136,77 @@ for (const sp of species) {
   if (!rarities[sp.rarity]) {
     throw new Error(`Rareza '${sp.rarity}' en especie ${sp.id} no está en balance.json`);
   }
+  // Sesgo de personalidad (opcional): 5 dimensiones enteras 0-100
+  if (sp.personalityBias !== undefined) {
+    for (const [k, v] of Object.entries(sp.personalityBias)) {
+      if (!PERSONALITY_DIMS.includes(k)) throw new Error(`personalityBias.${k} en especie ${sp.id} no es una dimensión válida`);
+      if (!Number.isInteger(v) || v < 0 || v > 100) throw new Error(`personalityBias.${k} en especie ${sp.id} debe ser entero 0-100`);
+    }
+  }
 }
 console.log(`✓ species.json: ${species.length} especies validadas con relaciones cruzadas`);
 
 // 4. Validar patrones
 for (const pat of patterns) {
-  if (!rarities[pat.minRarity]) {
-    throw new Error(`minRarity '${pat.minRarity}' en patrón ${pat.id} no está en balance.json`);
+  if (!rarities[pat.rarity]) {
+    throw new Error(`Rareza '${pat.rarity}' en patrón ${pat.id} no está en balance.json`);
   }
 }
 console.log(`✓ patterns.json: ${patterns.length} patrones validados`);
+
+// 4b. Validar accesorios (spec 38): ranura, rareza, color y vía de desbloqueo
+const accessoriesData = readJson('shared/game-data/accessories.json');
+const achievements = readJson('shared/game-data/achievements.json').achievements;
+const ACCESSORY_SLOTS = ['head', 'face', 'neck', 'back'];
+const ACCESSORY_COLORS = new Set(['ember', 'sunburst', 'mint', 'blue', 'violet', 'lavender', 'white', 'carbon']);
+const ACCESSORY_FX = new Set(['heart', 'zzz', 'sparkle', 'drop']);
+if (JSON.stringify(accessoriesData.slots) !== JSON.stringify(ACCESSORY_SLOTS)) {
+  throw new Error(`accessories.json: slots debe ser ${JSON.stringify(ACCESSORY_SLOTS)}`);
+}
+if (!Array.isArray(accessoriesData.accessories)) {
+  throw new Error('accessories.json: falta la lista accessories');
+}
+const accessoryIds = new Set();
+const achievementById = new Map(achievements.map((a) => [a.id, a]));
+for (const acc of accessoriesData.accessories) {
+  const where = `accesorio ${acc.id}`;
+  if (typeof acc.id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(acc.id) || acc.id.length > 64) {
+    throw new Error(`accessories.json: id inválido '${acc.id}'`);
+  }
+  if (accessoryIds.has(acc.id)) throw new Error(`accessories.json: id duplicado '${acc.id}'`);
+  if (foodIds.has(acc.id)) throw new Error(`${where}: el id ya existe en foods.json`);
+  accessoryIds.add(acc.id);
+  for (const k of ['name', 'description']) {
+    if (typeof acc[k] !== 'string' || acc[k].trim() === '') throw new Error(`${where}: falta ${k}`);
+  }
+  if (!ACCESSORY_SLOTS.includes(acc.slot)) throw new Error(`${where}: ranura '${acc.slot}' no reconocida`);
+  if (!rarities[acc.rarity]) throw new Error(`${where}: rareza '${acc.rarity}' no está en balance.json`);
+  if (!ACCESSORY_COLORS.has(acc.color)) throw new Error(`${where}: color '${acc.color}' no es una rampa de accesorio`);
+  if (acc.animated !== undefined && typeof acc.animated !== 'boolean') throw new Error(`${where}: animated debe ser booleano`);
+  if (acc.fx !== undefined && !ACCESSORY_FX.has(acc.fx)) throw new Error(`${where}: fx '${acc.fx}' no reconocida`);
+  const unlock = acc.unlock || {};
+  const isAchievementId = acc.id.startsWith('ach_item_');
+  if (unlock.type === 'coins' || unlock.type === 'gems') {
+    if (!Number.isInteger(unlock.price) || unlock.price <= 0) throw new Error(`${where}: unlock.price debe ser un entero mayor que 0`);
+    if (!acc.id.startsWith('acc_')) throw new Error(`${where}: una prenda de compra lleva el prefijo acc_`);
+  } else if (unlock.type === 'achievement') {
+    const ach = achievementById.get(unlock.achievementId);
+    if (!ach) throw new Error(`${where}: el logro '${unlock.achievementId}' no existe en achievements.json`);
+    if (!ach.reward || ach.reward.itemId !== acc.id) {
+      throw new Error(`${where}: el logro '${ach.id}' no entrega esta prenda (reward.itemId = ${ach.reward && ach.reward.itemId})`);
+    }
+    if (unlock.price !== undefined) throw new Error(`${where}: una prenda de logro no lleva precio`);
+  } else {
+    throw new Error(`${where}: unlock.type debe ser coins, gems o achievement`);
+  }
+  if (isAchievementId && unlock.type !== 'achievement') {
+    throw new Error(`${where}: un id ach_item_* solo se desbloquea por logro`);
+  }
+}
+for (const slot of ACCESSORY_SLOTS) {
+  if (!accessoriesData.accessories.some((a) => a.slot === slot)) throw new Error(`accessories.json: ninguna prenda en la ranura '${slot}'`);
+}
+console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesorios validados con sus logros`);
 
 // 5. Validar existencia de sprites base
 const spritesDir = path.resolve(__dirname, '..', 'shared/assets/sprites');

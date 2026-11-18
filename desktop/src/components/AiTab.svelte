@@ -2,6 +2,7 @@
   import Ico from './Ico.svelte';
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import { api } from '../lib/api';
+  import { Badge, Button, Card, ConfirmDialog, EmptyState, ListRow, Modal, Notice, Skeleton, Switch } from './ui';
   import {
     isLoopbackUrl,
     loadLocalConfig,
@@ -10,19 +11,62 @@
     testLocalHermes,
     type LocalHermesConfig,
   } from '../lib/hermesLocal';
+  import {
+    CLI_COMMANDS,
+    CLI_LABELS,
+    loadCliConfig,
+    saveCliConfig,
+    streamCliCompletion,
+    testCli,
+    type CliConfig,
+    type CliEngine,
+  } from '../lib/aiCli';
   import { CLIENT_TOOLS, openUrl, readClipboardText } from '../lib/clientTools';
+  import { buildClientContext } from '../lib/deskContext';
+  import { setSkillAuthorization } from '../lib/stores/desktopSkillsStore';
+  import { startPomodoro, stopPomodoro } from '../lib/pomodoro';
+  import { parseBold, toSpeakable } from '../lib/speech-queue';
+  import { getSocket } from '../lib/socket';
+  import { MEMORY_LAYERS, groupMemoriesByLayer, memoryIcon, valenceView } from '../lib/mind';
+  import { stickToBottom } from '../lib/ui/chatScroll';
 
   export let pet: any = null;
+  /** Mensaje a enviar en cuanto el chat esté listo (p. ej. al soltar un archivo sobre la mascota). */
+  export let pendingPrompt: { text: string; n: number } | null = null;
 
   const dispatch = createEventDispatcher();
 
-  type Msg = { id: string; role: 'user' | 'assistant'; content: string; notice?: boolean };
+  // `thinking`: razonamiento del modelo, aparte de la respuesta; solo se muestra plegado al terminar
+  type Msg = {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    notice?: boolean;
+    thinking?: string;
+    thinkingOpen?: boolean;
+  };
+
+  function toggleThinking(m: Msg) {
+    m.thinkingOpen = !m.thinkingOpen;
+    messages = messages;
+  }
 
   let loaded = false;
-  let config: any = { configured: false };
+  let config: any = { configured: false, mode: 'managed' };
   let showSettings = false;
 
-  // Formulario de ajustes
+  // Modos: 'managed' (IA de Pockai), 'byok' (Mi propia clave), 'local' (Hermes local),
+  // 'claude-cli' y 'antigravity-cli' (un CLI de IA instalado en este equipo; ver lib/aiCli.ts)
+  type Mode = 'managed' | 'byok' | 'local' | 'claude-cli' | 'antigravity-cli';
+  let activeMode: Mode = 'managed';
+
+  // Suscripción y cuota
+  let entitlement: Awaited<ReturnType<typeof api.getBillingEntitlement>> | null = null;
+  let showPaywall = false;
+  let paywallBusy = false;
+  let paywallErr = '';
+
+  // Formulario de ajustes BYOK
   let provider = 'openai';
   let baseUrl = '';
   let model = '';
@@ -35,7 +79,25 @@
   let local: LocalHermesConfig = loadLocalConfig();
   let localMsg = '';
   let localErr = '';
-  $: chatReady = config.configured || local.enabled;
+  // Modos CLI (Claude CLI / Antigravity CLI): excluyentes con Hermes local
+  let cli: CliConfig = loadCliConfig();
+  let cliMsg = '';
+  let cliErr = '';
+
+  // Uso mensual y cuota diaria
+  let usage: Awaited<ReturnType<typeof api.getAiUsage>> | null = null;
+
+  $: isManaged = activeMode === 'managed';
+  $: isPro = (usage?.plan === 'pro') || (entitlement?.plan === 'pro');
+  $: dailyLimit = usage?.daily?.limit ?? (isPro ? 200 : 15);
+  $: dailyUsed = usage?.daily?.used ?? 0;
+  $: dailyRemaining = Math.max(0, dailyLimit - dailyUsed);
+  $: maxChars = isManaged ? 240 : 1000;
+  $: quotaExceeded = isManaged && dailyRemaining <= 0;
+  // Modos en los que la respuesta se genera en este equipo (flujo /chat/local/*)
+  $: cliEngine = (activeMode === 'claude-cli' ? 'claude' : activeMode === 'antigravity-cli' ? 'antigravity' : null) as CliEngine | null;
+  $: isLocalLike = (activeMode === 'local' && local.enabled) || (cliEngine !== null && cli.engine === cliEngine);
+  $: chatReady = isManaged || (activeMode === 'byok' && config.configured) || isLocalLike;
 
   // Chat
   let messages: Msg[] = [];
@@ -45,9 +107,6 @@
   let scroller: HTMLElement;
   let abort: AbortController | null = null;
 
-  // Uso mensual de tokens y cuota
-  let usage: Awaited<ReturnType<typeof api.getAiUsage>> | null = null;
-
   const fmtTokens = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 
   async function loadUsage() {
@@ -55,6 +114,58 @@
       usage = await api.getAiUsage();
     } catch {
       usage = null;
+    }
+  }
+
+  async function loadEntitlement() {
+    try {
+      entitlement = await api.getBillingEntitlement();
+    } catch {
+      entitlement = null;
+    }
+  }
+
+  // Precio de Pro configurado en el panel de facturación (nunca fijo en el cliente)
+  let proPriceLabel = '';
+  async function loadProPrice() {
+    try {
+      const plans = await api.getBillingPlans();
+      const usd = plans?.plans?.pro?.priceUsd;
+      if (typeof usd === 'number' && usd > 0) {
+        proPriceLabel = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(usd);
+      }
+    } catch {
+      proPriceLabel = '';
+    }
+  }
+
+  async function subscribePro() {
+    paywallBusy = true;
+    paywallErr = '';
+    try {
+      const res = await api.createStripeCheckout();
+      if (res?.url) {
+        await openUrl(res.url);
+      }
+    } catch (e: any) {
+      paywallErr = e.message || 'Error iniciando suscripción';
+    } finally {
+      paywallBusy = false;
+    }
+  }
+
+  async function openPortal() {
+    paywallBusy = true;
+    paywallErr = '';
+    try {
+      const res = await api.createStripePortal();
+      if (res?.url) {
+        await openUrl(res.url);
+      }
+    } catch (e: any) {
+      paywallErr = e.message || 'Error abriendo portal de facturación';
+    } finally {
+      paywallBusy = false;
     }
   }
 
@@ -96,10 +207,18 @@
       if (accept) {
         const res = await api.confirmAction(pet.id, card.id);
         if (res.clientSide) {
-          // Herramienta de escritorio: el servidor solo la validó; se ejecuta aquí, tras la confirmación
           if (res.tool === 'open_url') {
             await openUrl(res.args.url);
             card.note = 'Abierto en tu navegador';
+          } else if (res.tool === 'toggle_desktop_skill') {
+            setSkillAuthorization(res.args.skill_id, !!res.args.enabled, pet.id);
+            card.note = res.args.enabled ? 'Habilidad activada' : 'Habilidad desactivada';
+          } else if (res.tool === 'start_pomodoro') {
+            startPomodoro(res.args.work_minutes, res.args.break_minutes);
+            card.note = `Pomodoro de ${res.args.work_minutes} min en marcha`;
+          } else if (res.tool === 'stop_pomodoro') {
+            stopPomodoro();
+            card.note = 'Pomodoro detenido';
           } else if (res.tool === 'read_clipboard') {
             const text = (await readClipboardText()).trim();
             if (!text) {
@@ -114,6 +233,7 @@
           card.state = 'done';
           card.note = 'Hecho';
           if (remOpen) loadReminders();
+          dispatch('refreshPet');
         }
       } else {
         await api.rejectAction(pet.id, card.id);
@@ -125,7 +245,6 @@
       card.note = e.message;
     }
     actions = actions;
-    // El contenido del portapapeles viaja como un mensaje normal: el usuario lo ve y se modera igual
     if (followUp) await send(followUp);
   }
 
@@ -156,6 +275,8 @@
   let memOpen = false;
   let mem: Awaited<ReturnType<typeof api.getMemories>> | null = null;
   let memErr = '';
+  // Spec 36: episódica, semántica y emocional (los recuerdos antiguos se clasifican por tipo)
+  $: memByLayer = groupMemoriesByLayer(mem?.memories ?? []);
 
   async function loadMemories() {
     if (!pet) return;
@@ -181,7 +302,6 @@
     }
   }
 
-  // Confirmación en dos pasos en el propio botón (sin confirm() nativo, que congela la ventana en Tauri)
   let confirmForgetAll = false;
   let confirmForgetTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -201,50 +321,144 @@
     }
   }
 
+  let lastPromptN = 0;
+  $: if (pendingPrompt && pendingPrompt.n !== lastPromptN && loaded && pet && !streaming) {
+    lastPromptN = pendingPrompt.n;
+    dispatch('promptConsumed', pendingPrompt.n);
+    if (chatReady) send(pendingPrompt.text);
+    else input = pendingPrompt.text;
+  }
+
   $: needsUrl = provider !== 'openai';
   $: tier = (pet?.intelligence ?? 0) >= 500 ? 'Agente' : (pet?.intelligence ?? 0) >= 200 ? 'Memoria' : 'Charla';
 
+  function handleEntitlementUpdated() {
+    loadEntitlement();
+    loadUsage();
+    loadConfig();
+  }
+
+  function handleFocus() {
+    loadEntitlement();
+    loadUsage();
+  }
+
   onMount(async () => {
     await loadConfig();
+    await loadEntitlement();
+    void loadProPrice();
     if (chatReady && pet) {
       await loadHistory();
-      if (config.configured) {
+      if (!isLocalLike) {
         await loadPending();
-        loadUsage();
+        await loadUsage();
       }
     }
     loaded = true;
+
+    const s = getSocket();
+    s?.on('entitlement:updated', handleEntitlementUpdated);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleFocus);
+    }
   });
-  onDestroy(() => abort?.abort());
+
+  onDestroy(() => {
+    abort?.abort();
+    const s = getSocket();
+    s?.off('entitlement:updated', handleEntitlementUpdated);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('focus', handleFocus);
+    }
+  });
 
   async function loadConfig() {
     try {
       config = await api.getAiConfig();
-      if (config.configured) {
-        provider = config.provider;
+      if (cli.engine) {
+        activeMode = cli.engine === 'claude' ? 'claude-cli' : 'antigravity-cli';
+      } else if (local.enabled) {
+        activeMode = 'local';
+      } else if (config.mode === 'byok' && config.configured) {
+        activeMode = 'byok';
+        provider = config.provider || 'openai';
         baseUrl = config.baseUrl || '';
         model = config.model || '';
       } else {
-        // Sin proveedor en el servidor, los ajustes se muestran salvo que se use el Hermes local
-        showSettings = !local.enabled;
+        activeMode = 'managed';
       }
     } catch (e: any) {
       settingsErr = e.message;
     }
   }
 
+  async function setMode(mode: Mode) {
+    activeMode = mode;
+    cliMsg = '';
+    cliErr = '';
+    // Solo un modo «en este equipo» a la vez: elegir cualquier otro desactiva el CLI
+    const engine: CliEngine | null = mode === 'claude-cli' ? 'claude' : mode === 'antigravity-cli' ? 'antigravity' : null;
+    cli.engine = engine;
+    saveCliConfig(cli);
+    cli = cli;
+    if (engine) {
+      local.enabled = false;
+      saveLocalConfig(local);
+      showSettings = true;
+      if (pet && messages.length === 0) loadHistory();
+      return;
+    }
+    if (mode === 'managed') {
+      local.enabled = false;
+      saveLocalConfig(local);
+      try {
+        await api.saveAiConfig({ mode: 'managed' });
+        await loadConfig();
+        await loadUsage();
+      } catch (e: any) {
+        settingsErr = e.message;
+      }
+    } else if (mode === 'local') {
+      local.enabled = true;
+      saveLocalConfig(local);
+      showSettings = true;
+    } else if (mode === 'byok') {
+      local.enabled = false;
+      saveLocalConfig(local);
+      showSettings = true;
+    }
+  }
+
   async function loadHistory() {
     try {
       messages = await api.getChatHistory(pet.id);
-      await scrollDown();
+      await scrollDown(true);
     } catch (e: any) {
       chatErr = e.message;
     }
   }
 
-  async function scrollDown() {
+  /** Baja al final del hilo. Sin `force`, solo si el jugador ya estaba abajo (no le quita el sitio si está leyendo). */
+  async function scrollDown(force = false) {
+    const settle = stickToBottom(scroller, force);
     await tick();
-    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    settle();
+  }
+
+  let composer: HTMLTextAreaElement | null = null;
+  /** Pendiente de confirmar: borrar un recuerdo o un recordatorio. */
+  let pendingDelete: { kind: 'memory' | 'reminder'; id: string; text: string } | null = null;
+  let deleting = false;
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    deleting = true;
+    try {
+      if (pendingDelete.kind === 'memory') await forget(pendingDelete.id);
+      else await removeReminder(pendingDelete.id);
+    } finally {
+      deleting = false;
+      pendingDelete = null;
+    }
   }
 
   async function save() {
@@ -254,15 +468,18 @@
     try {
       const cleanUrl = baseUrl?.trim().replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
       config = await api.saveAiConfig({
+        mode: 'byok',
         provider,
         baseUrl: needsUrl ? cleanUrl : undefined,
         model: model?.trim() || undefined,
         apiKey: apiKey?.trim() || undefined,
       });
+      activeMode = 'byok';
       if (needsUrl) baseUrl = cleanUrl;
-      apiKey = ''; // la key ya no se conserva en el cliente
+      apiKey = '';
       settingsMsg = 'Guardado. Pulsa "Probar conexión" para comprobarlo.';
       if (pet) await loadHistory();
+      await loadUsage();
     } catch (e: any) {
       settingsErr = e.message;
     } finally {
@@ -293,11 +510,11 @@
     busy = true;
     try {
       await api.deleteAiConfig();
-      config = { configured: false };
-      messages = [];
+      config = { configured: false, mode: 'managed' };
+      activeMode = 'managed';
       apiKey = '';
-      settingsMsg = 'Configuración eliminada';
-      showSettings = true;
+      settingsMsg = 'Se volvió a la IA de Pockai';
+      await loadUsage();
     } catch (e: any) {
       settingsErr = e.message;
     } finally {
@@ -313,7 +530,6 @@
     reply.content = m.message;
     reply.notice = true;
     if (m.hideUserMessage) {
-      // El texto con datos sensibles no se conserva ni en pantalla
       messages = messages.filter((x) => x.id !== userMsg.id);
       input = '';
     }
@@ -321,45 +537,50 @@
     scrollDown();
   }
 
-  /** Modo Hermes local: contexto del servidor → inferencia en este equipo → sincronización. */
   async function runLocal(text: string, reply: Msg, userMsg: Msg, signal: AbortSignal) {
-    const ctx = await api.localChatContext(pet.id, text);
+    const ctx = await api.localChatContext(pet.id, text, buildClientContext());
     if ('moderated' in ctx) {
       applyModeration(ctx.moderated, reply, userMsg);
       return { moderated: true as const };
     }
     let acc = '';
-    await streamLocalCompletion(local, ctx.messages, ctx.maxTokens, (d) => {
+    const onDelta = (d: string) => {
       acc += d;
       reply.content = acc;
       messages = messages;
       scrollDown();
-    }, signal);
-    const synced = await api.localChatSync(pet.id, ctx.turnId, acc);
+    };
+    const result = cliEngine
+      ? await streamCliCompletion(cli, ctx.messages, ctx.maxTokens, onDelta, signal)
+      : await streamLocalCompletion(local, ctx.messages, ctx.maxTokens, onDelta, signal);
+    const synced = await api.localChatSync(pet.id, ctx.turnId, result.reply);
     if ('moderated' in synced) {
-      // La respuesta local se modera al sincronizar: si se bloquea, se sustituye y no se guarda
       applyModeration(synced.moderated, reply, userMsg);
       return { moderated: true as const };
     }
-    return synced;
+    return { ...synced, message: { ...synced.message, thinking: result.thinking || undefined } };
   }
 
   async function send(override?: string) {
     const text = (typeof override === 'string' ? override : input).trim();
     if (!text || streaming || !pet) return;
+
+    if (isManaged && quotaExceeded) {
+      showPaywall = true;
+      return;
+    }
+
     chatErr = '';
     input = '';
     streaming = true;
-    // Id único por respuesta: los avisos de moderación se quedan en pantalla y no deben chocar entre sí
     const reply: Msg = { id: `tmp-reply-${Date.now()}`, role: 'assistant', content: '' };
     const userMsg: Msg = { id: `tmp-${Date.now()}`, role: 'user', content: text };
-    let moderated = false;
     messages = [...messages, userMsg, reply];
-    await scrollDown();
+    await scrollDown(true);
     abort = new AbortController();
     toolHint = '';
     try {
-      const done = local.enabled
+      const done = isLocalLike
         ? await runLocal(text, reply, userMsg, abort.signal)
         : await api.chatStream(
         pet.id,
@@ -373,7 +594,6 @@
             scrollDown();
           },
           onModerated: (m) => {
-            moderated = true;
             applyModeration(m, reply, userMsg);
           },
           onTool: () => {
@@ -385,28 +605,36 @@
           },
         },
         abort.signal,
+        buildClientContext(),
       );
       if ('moderated' in done) {
-        // Aviso de moderación: no es una respuesta de la mascota ni queda en el historial
         return;
       }
       reply.content = done.message.content;
+      reply.thinking = done.message.thinking || undefined;
+      reply.thinkingOpen = false;
       messages = messages;
-      dispatch('bubble', done.message.content);
+      const spoken = toSpeakable(done.message.content);
+      if (spoken) dispatch('bubble', spoken);
+      // Reacción del Pockai (spec 36): opcional; servidores anteriores no la envían
+      if (done.behavior) dispatch('behavior', done.behavior);
       dispatch('refreshPet');
-      if (config.configured && !local.enabled) loadUsage();
-      // La extracción de recuerdos se hace en segundo plano en el servidor (no en modo local)
-      if (memOpen && !local.enabled) setTimeout(loadMemories, 3000);
+      if (!isLocalLike) loadUsage();
+      if (memOpen && !isLocalLike) setTimeout(loadMemories, 3000);
     } catch (e: any) {
       if (e.name !== 'AbortError') chatErr = e.message;
-      // Se retira el intercambio incompleto: el servidor no lo guardó
       messages = messages.filter((m) => m !== reply && m !== userMsg);
       input = text;
-      if (/cuota/i.test(e.message)) loadUsage();
+      if (/cuota|quota|429/i.test(e.message)) {
+        loadUsage();
+        showPaywall = true;
+      }
     } finally {
       streaming = false;
       toolHint = '';
       abort = null;
+      // El campo no se desactiva mientras responde, pero por si el foco se fue a «Detener».
+      tick().then(() => composer?.focus());
     }
   }
 
@@ -441,7 +669,31 @@
     }
   }
 
+  function saveCli() {
+    cliErr = '';
+    cliMsg = '';
+    cli.engine = cliEngine;
+    saveCliConfig(cli);
+    cli = cli;
+    cliMsg = cliEngine ? `Guardado. El chat usará ${CLI_LABELS[cliEngine]}.` : 'Guardado.';
+  }
+
+  async function testCliConnection() {
+    cliErr = '';
+    cliMsg = '';
+    busy = true;
+    try {
+      cliMsg = `Encontrado: ${await testCli({ ...cli, engine: cliEngine })}`;
+    } catch (e: any) {
+      cliErr = e.message;
+    } finally {
+      busy = false;
+    }
+  }
+
   function onKey(e: KeyboardEvent) {
+    // Durante una composición IME (japonés, chino, acentos muertos) Enter confirma el texto, no envía.
+    if (e.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
@@ -449,236 +701,647 @@
   }
 </script>
 
-{#if !pet}
-  <p class="muted">Necesitas una mascota para conversar. Eclosiona un huevo primero.</p>
-{:else if !loaded}
-  <p class="muted">Cargando…</p>
-{:else}
-  {#if chatReady}
-    <div class="bar">
-      <span class="badge"><Ico n="brain" /> {tier} · {pet.intelligence ?? 0}/1000</span>
-      <button class="link" on:click={() => (showSettings = !showSettings)}>
-        {#if showSettings}Ocultar ajustes{:else}<Ico n="settings" /> Ajustes{/if}
-      </button>
-    </div>
-  {/if}
-
-  {#if config.configured && usage && !local.enabled}
-    <p class="usage" class:full={usage.quota !== null && (usage.remaining ?? 1) <= 0}>
-      <Ico n="chart" /> Este mes: {fmtTokens(usage.tokens)} tokens{usage.quota !== null ? ` de ${fmtTokens(usage.quota)}` : ' (sin límite)'}
-      {#if usage.quota !== null && (usage.remaining ?? 1) <= 0} — cuota agotada, se renueva el día 1{/if}
-    </p>
-  {/if}
-
-  {#if showSettings}
-    <div class="settings">
-      <label>Proveedor
-        <select bind:value={provider}>
-          <option value="openai">OpenAI</option>
-          <option value="hermes">Hermes Agent (remoto, HTTPS)</option>
-          <option value="custom">Otro compatible con OpenAI</option>
+<div class="ui-stack ai">
+  {#if !pet}
+    <EmptyState icon="chat" title="Sin mascota" text="Necesitas una mascota para conversar. Eclosiona un huevo primero." />
+  {:else if !loaded}
+    <Skeleton rows={1} height={36} />
+    <Skeleton rows={1} height={230} />
+  {:else}
+    {#if true}
+      <div class="bar">
+        <Badge tone="tint" icon="brain" title="Inteligencia">{tier} · {pet.intelligence ?? 0}/1000</Badge>
+        <select class="select mode-select" value={activeMode} aria-label="Motor de IA" on:change={(e) => setMode(e.currentTarget.value as Mode)}>
+          <option value="managed">IA de Pockai</option>
+          <option value="byok">Mi propia clave</option>
+          <option value="local">Hermes local</option>
+          <option value="claude-cli">Claude CLI</option>
+          <option value="antigravity-cli">Antigravity CLI</option>
         </select>
-      </label>
-      {#if needsUrl}
-        <label>URL base (HTTPS)
-          <input type="url" bind:value={baseUrl} placeholder="https://mi-servidor.com/v1" autocomplete="off" />
-        </label>
-      {/if}
-      <label>Modelo {#if provider === 'openai'}<small>(vacío = gpt-4o-mini)</small>{/if}
-        <input type="text" bind:value={model} placeholder="gpt-4o-mini" autocomplete="off" />
-      </label>
-      <label>API key
-        <input
-          type="password"
-          bind:value={apiKey}
-          autocomplete="off"
-          placeholder={config.hasKey ? `Guardada (${config.keyMask ?? '••••'}) — déjalo vacío para conservarla` : 'sk-…'}
-        />
-      </label>
-      <p class="note">Tu key se cifra en el servidor (AES-256-GCM) y nunca se vuelve a mostrar completa.</p>
-      <div class="row">
-        <button class="primary" disabled={busy} on:click={save}>Guardar</button>
-        {#if config.configured}
-          <button disabled={busy} on:click={test}>Probar conexión</button>
-          <button class="danger" disabled={busy} on:click={remove}>Eliminar</button>
-        {/if}
-      </div>
-      {#if settingsMsg}<p class="ok">{settingsMsg}</p>{/if}
-      {#if settingsErr}<p class="error">{settingsErr}</p>{/if}
-
-      <div class="local-box">
-        <strong><Ico n="monitor" /> Hermes local (este equipo)</strong>
-        <p class="note">
-          Conversa con un Hermes Agent que corre en tu ordenador, sin gastar tu key ni salir a internet. Los ajustes
-          se guardan solo aquí. El servidor sigue creando la personalidad, moderando y guardando el historial.
-          Limitaciones: sin herramientas de agente y sin nuevos recuerdos automáticos.
-        </p>
-        <label class="check">
-          <input type="checkbox" bind:checked={local.enabled} />
-          Usar mi Hermes local para conversar
-        </label>
-        <label>URL (127.0.0.1 o localhost)
-          <input type="url" bind:value={local.baseUrl} placeholder="http://127.0.0.1:8642/v1" autocomplete="off" />
-        </label>
-        <label>Modelo
-          <input type="text" bind:value={local.model} placeholder="hermes-agent" autocomplete="off" />
-        </label>
-        <label>API_SERVER_KEY <small>(si tu Hermes la exige)</small>
-          <input type="password" bind:value={local.apiKey} autocomplete="off" placeholder="opcional" />
-        </label>
-        <div class="row">
-          <button class="primary" on:click={saveLocal}>Guardar local</button>
-          <button disabled={busy} on:click={testLocal}>Probar Hermes local</button>
-        </div>
-        {#if localMsg}<p class="ok">{localMsg}</p>{/if}
-        {#if localErr}<p class="error">{localErr}</p>{/if}
-      </div>
-    </div>
-  {/if}
-
-  {#if chatReady && !showSettings}
-    {#if local.enabled}
-      <p class="usage"><Ico n="monitor" /> Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</p>
-    {/if}
-    <div class="chat" bind:this={scroller}>
-      {#if messages.length === 0}
-        <p class="muted">Saluda a {pet.nickname || pet.species?.name} </p>
-      {/if}
-      {#each messages as m (m.id)}
-        <div class="msg {m.role}" class:notice={m.notice}>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}…{/if}</div>
-      {/each}
-      {#if toolHint}<div class="hint">{toolHint}</div>{/if}
-      {#each actions as a (a.id)}
-        <div class="card" class:done={a.state === 'done'} class:bad={a.state === 'error'}>
-          <div class="card-title"><Ico n="tool" /> Tu mascota quiere hacer algo</div>
-          <div class="card-body">{a.summary}</div>
-          {#if a.state === 'pending' || a.state === 'working'}
-            <div class="row">
-              <button class="primary" disabled={a.state === 'working'} on:click={() => decide(a, true)}>Confirmar</button>
-              <button disabled={a.state === 'working'} on:click={() => decide(a, false)}>Rechazar</button>
-            </div>
-          {:else}
-            <div class="card-note">{a.note}</div>
+        <span class="bar-end">
+          {#if isManaged && isPro}
+            <Badge tone="accent" icon="star" title="Suscripción Pro activa">Pro</Badge>
           {/if}
-        </div>
-      {/each}
-    </div>
-    {#if chatErr}<p class="error">{chatErr}</p>{/if}
-    {#if (pet.intelligence ?? 0) >= 500}
-      <div class="memory">
-        <button class="link" on:click={toggleReminders}><Ico n="alarm" /> Recordatorios {remOpen ? '▾' : '▸'}</button>
-        {#if remOpen}
-          {#if remErr}<p class="error">{remErr}</p>{/if}
-          {#if reminders.length === 0}
-            <p class="muted">No hay recordatorios pendientes. Pídele a tu mascota que te recuerde algo.</p>
-          {:else}
-            <ul class="mem-list">
-              {#each reminders as r (r.id)}
-                <li>
-                  <span><Ico n="alarm" /> {r.text} <em>— {fmt(r.dueAt)}</em></span>
-                  <button class="x" title="Eliminar" on:click={() => removeReminder(r.id)}>✕</button>
-                </li>
-              {/each}
-            </ul>
-          {/if}
-        {/if}
+          <Button
+            variant={showSettings ? 'ink' : 'ghost'}
+            size="sm"
+            iconOnly
+            icon="settings"
+            label={showSettings ? 'Ocultar ajustes' : 'Ajustes del chat'}
+            on:click={() => (showSettings = !showSettings)}
+          />
+        </span>
       </div>
-    {:else}
-      <p class="muted"><Ico n="lock" /> Con 500 de inteligencia tu mascota podrá usar herramientas y crear recordatorios.</p>
     {/if}
-    <div class="memory">
-      <button class="link" on:click={toggleMemories}>
-        <Ico n="folder" /> Recuerdos {memOpen ? '▾' : '▸'}
-      </button>
-      {#if memOpen}
-        {#if memErr}<p class="error">{memErr}</p>{/if}
-        {#if mem && !mem.unlocked}
-          <p class="muted">
-            <Ico n="lock" /> La memoria se desbloquea con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}). Sigue charlando.
+
+    {#if isManaged && !showSettings && usage && !quotaExceeded}
+      <Notice tone="info" icon="chat">
+        Te quedan <strong>{dailyRemaining} de {dailyLimit}</strong> mensajes hoy · se renuevan a medianoche.
+        <svelte:fragment slot="end">
+          {#if isPro}
+            <Button variant="ghost" size="sm" on:click={openPortal}>Gestionar</Button>
+          {:else}
+            <Button variant="ghost" size="sm" icon="star" on:click={() => (showPaywall = true)}>Pro</Button>
+          {/if}
+        </svelte:fragment>
+      </Notice>
+    {/if}
+
+    {#if showSettings}
+      {#if activeMode === 'managed'}
+        <Card title="IA de Pockai (gestionada)" icon="star">
+          <p class="ui-card__hint">
+            Conversa directamente con tu mascota sin necesidad de crear cuentas externas ni introducir claves.
+            El servidor gestiona la IA con OpenRouter y optimización automática.
           </p>
-        {:else if mem && mem.memories.length === 0}
-          <p class="muted">Todavía no recuerda nada. Tras unas cuantas charlas empezará a hacerlo.</p>
-        {:else if mem}
-          <ul class="mem-list">
-            {#each mem.memories as m (m.id)}
-              <li class:summary={m.kind === 'summary'}>
-                <span><Ico n={m.kind === 'summary' ? 'note' : 'chat'} /> {m.content}</span>
-                <button class="x" title="Olvidar" on:click={() => forget(m.id)}>✕</button>
-              </li>
-            {/each}
-          </ul>
-          <button class="danger small" on:click={forgetAll}>{confirmForgetAll ? '¿Seguro? No se puede deshacer: pulsa otra vez' : 'Olvidar todo'}</button>
-        {/if}
+          {#if isPro}
+            <Notice tone="ok"><strong>Plan Pro activo:</strong> 200 mensajes diarios y herramientas de agente habilitadas.</Notice>
+            <Button variant="primary" block on:click={openPortal}>Gestionar suscripción en Stripe</Button>
+          {:else}
+            <Notice tone="info"><strong>Plan gratuito:</strong> 15 mensajes diarios con respuestas concisas.</Notice>
+            <Button variant="primary" block icon="star" on:click={() => (showPaywall = true)}>Hazte Pro (200 mensajes/día)</Button>
+          {/if}
+        </Card>
+      {:else if activeMode === 'byok'}
+        <Card title="Mi propia clave" icon="lock">
+          <div class="form-group">
+            <label for="ai-provider">Proveedor</label>
+            <select id="ai-provider" class="select" bind:value={provider}>
+              <option value="openai">OpenAI</option>
+              <option value="hermes">Hermes Agent (remoto, HTTPS)</option>
+              <option value="custom">Otro compatible con OpenAI</option>
+            </select>
+          </div>
+          {#if needsUrl}
+            <div class="form-group">
+              <label for="ai-url">URL base (HTTPS)</label>
+              <input id="ai-url" class="input" type="url" bind:value={baseUrl} placeholder="https://mi-servidor.com/v1" autocomplete="off" />
+            </div>
+          {/if}
+          <div class="form-group">
+            <label for="ai-model">Modelo {#if provider === 'openai'}<small class="form-hint">(vacío = gpt-4o-mini)</small>{/if}</label>
+            <input id="ai-model" class="input" type="text" bind:value={model} placeholder="gpt-4o-mini" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="ai-key">API key</label>
+            <input
+              id="ai-key"
+              class="input"
+              type="password"
+              bind:value={apiKey}
+              autocomplete="off"
+              placeholder={config.hasKey ? 'Guardada (' + (config.keyMask ?? '••••') + ') — déjalo vacío para conservarla' : 'sk-…'}
+            />
+          </div>
+          <p class="ui-card__hint">Tu key se cifra en el servidor (AES-256-GCM) y nunca se vuelve a mostrar completa. Sin límites diarios en Pockai.</p>
+          <div class="row">
+            <Button variant="primary" loading={busy} on:click={save}>Guardar</Button>
+            {#if config.configured}
+              <Button disabled={busy} on:click={test}>Probar conexión</Button>
+              <Button variant="ghost" disabled={busy} on:click={remove}>Volver a IA de Pockai</Button>
+            {:else}
+              <Button variant="ghost" disabled={busy} on:click={() => setMode('managed')}>Cancelar</Button>
+            {/if}
+          </div>
+          {#if settingsMsg}<Notice tone="ok">{settingsMsg}</Notice>{/if}
+          {#if settingsErr}<Notice tone="error">{settingsErr}</Notice>{/if}
+        </Card>
+      {:else if cliEngine}
+        <Card title="{CLI_LABELS[cliEngine]} (este equipo)" icon="monitor">
+          <p class="ui-card__hint">
+            Tu mascota responde con el {CLI_LABELS[cliEngine]} instalado en este ordenador, usando la sesión que ya
+            tienes iniciada (tu suscripción, sin claves en Pockai). Antes, abre una terminal y ejecuta
+            <code>{CLI_COMMANDS[cliEngine]}</code> una vez para iniciar sesión.
+            {#if cliEngine === 'claude'}
+              Se lanza en una carpeta temporal vacía, sin herramientas, sin tus servidores MCP y sin guardar la sesión.
+            {:else}
+              Se lanza en una carpeta temporal vacía, en modo headless con <code>--sandbox</code>: las herramientas que
+              no hayas permitido en tu configuración de Antigravity quedan denegadas.
+            {/if}
+            El servidor sigue creando la personalidad, moderando y guardando el historial.
+            Limitaciones: sin herramientas de agente (recordatorios y acciones solo con la IA de Pockai o con tu
+            propia key). Los recuerdos se siguen resumiendo en el servidor.
+          </p>
+          <div class="form-group">
+            <label for="ai-cli-model">Modelo <small class="form-hint">(vacío = el predeterminado del CLI)</small></label>
+            <input
+              id="ai-cli-model"
+              class="input"
+              type="text"
+              bind:value={cli.model}
+              placeholder={cliEngine === 'claude' ? 'sonnet, haiku…' : 'opcional'}
+              autocomplete="off"
+            />
+          </div>
+          <div class="form-group">
+            <label for="ai-cli-path">Ruta del ejecutable <small class="form-hint">(solo si no está en el PATH)</small></label>
+            <input
+              id="ai-cli-path"
+              class="input"
+              type="text"
+              bind:value={cli.binPath}
+              placeholder={cliEngine === 'claude' ? 'C:\\Users\\tú\\.local\\bin\\claude.exe' : 'C:\\ruta\\a\\agy.exe'}
+              autocomplete="off"
+            />
+          </div>
+          <div class="row">
+            <Button variant="primary" on:click={saveCli}>Guardar</Button>
+            <Button disabled={busy} loading={busy} on:click={testCliConnection}>Probar conexión</Button>
+          </div>
+          {#if cliMsg}<Notice tone="ok">{cliMsg}</Notice>{/if}
+          {#if cliErr}<Notice tone="error">{cliErr}</Notice>{/if}
+        </Card>
+      {:else}
+        <Card title="Hermes local (este equipo)" icon="monitor">
+          <p class="ui-card__hint">
+            Conversa con un Hermes Agent que corre en tu ordenador, sin gastar tu key ni salir a internet. Los ajustes
+            se guardan solo aquí. El servidor sigue creando la personalidad, moderando y guardando el historial.
+            Limitaciones: sin herramientas de agente (recordatorios y acciones solo con la IA de Pockai o con tu
+            propia key). Los recuerdos se siguen resumiendo en el servidor.
+          </p>
+          <Switch label="Usar mi Hermes local para conversar" bind:checked={local.enabled} />
+          <div class="form-group">
+            <label for="ai-local-url">URL (127.0.0.1 o localhost)</label>
+            <input id="ai-local-url" class="input" type="url" bind:value={local.baseUrl} placeholder="http://127.0.0.1:8642/v1" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="ai-local-model">Modelo</label>
+            <input id="ai-local-model" class="input" type="text" bind:value={local.model} placeholder="hermes-agent" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="ai-local-key">API_SERVER_KEY <small class="form-hint">(si tu Hermes la exige)</small></label>
+            <input id="ai-local-key" class="input" type="password" bind:value={local.apiKey} autocomplete="off" placeholder="opcional" />
+          </div>
+          <div class="row">
+            <Button variant="primary" on:click={saveLocal}>Guardar local</Button>
+            <Button disabled={busy} on:click={testLocal}>Probar Hermes local</Button>
+          </div>
+          {#if localMsg}<Notice tone="ok">{localMsg}</Notice>{/if}
+          {#if localErr}<Notice tone="error">{localErr}</Notice>{/if}
+        </Card>
       {/if}
-    </div>
-    <div class="composer">
-      <textarea
-        rows="2"
-        maxlength="1000"
-        bind:value={input}
-        on:keydown={onKey}
-        placeholder="Escribe un mensaje… (Enter para enviar)"
-        disabled={streaming}
-      ></textarea>
-      <button class="primary" disabled={streaming || !input.trim()} on:click={() => send()}>
-        {streaming ? '…' : 'Enviar'}
-      </button>
-    </div>
+    {/if}
+
+    {#if chatReady && !showSettings}
+      {#if cliEngine}
+        <Notice tone="info" icon="monitor">Modo {CLI_LABELS[cliEngine]}: tu mascota responde con el CLI de este equipo (sin herramientas ni recordatorios nuevos).</Notice>
+      {:else if isLocalLike}
+        <Notice tone="info" icon="monitor">Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</Notice>
+      {/if}
+      <div class="chat" bind:this={scroller} role="log" aria-live="polite" aria-label="Conversación con {pet.nickname || pet.species?.name}">
+        {#if messages.length === 0}
+          <p class="chat-empty">Saluda a {pet.nickname || pet.species?.name}: escribe abajo y pulsa Enter.</p>
+        {/if}
+        {#each messages as m (m.id)}
+          {#if m.role === 'assistant' && m.thinking}
+            <div class="thinking" data-testid="thinking">
+              <button type="button" class="thinking-toggle" aria-expanded={!!m.thinkingOpen} on:click={() => toggleThinking(m)}>
+                <Ico n={m.thinkingOpen ? 'down' : 'right'} size={12} />
+                {m.thinkingOpen ? 'Ocultar razonamiento' : 'Ver razonamiento'}
+              </button>
+              {#if m.thinkingOpen}
+                <div class="thinking-body">{m.thinking}</div>
+              {/if}
+            </div>
+          {/if}
+          <div class="msg {m.role}" class:notice={m.notice}><span class="sr-only">{m.role === 'user' ? 'Tú: ' : `${pet.nickname || pet.species?.name}: `}</span>{#if m.role === 'assistant'}{#each parseBold(m.content) as part}{#if part.bold}<strong>{part.text}</strong>{:else}{part.text}{/if}{/each}{:else}{m.content}{/if}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}<span class="typing" role="status" aria-label="Está escribiendo"><i></i><i></i><i></i></span>{/if}</div>
+        {/each}
+        {#if toolHint}<div class="hint">{toolHint}</div>{/if}
+        {#each actions as a (a.id)}
+          <div class="action" class:done={a.state === 'done'} class:bad={a.state === 'error'}>
+            <div class="action-title"><Ico n="tool" /> Tu mascota quiere hacer algo</div>
+            <div class="action-body">{a.summary}</div>
+            {#if a.state === 'pending' || a.state === 'working'}
+              <div class="row">
+                <Button variant="primary" size="sm" loading={a.state === 'working'} on:click={() => decide(a, true)}>Confirmar</Button>
+                <Button size="sm" disabled={a.state === 'working'} on:click={() => decide(a, false)}>Rechazar</Button>
+              </div>
+            {:else}
+              <div class="action-note">{a.note}</div>
+            {/if}
+          </div>
+        {/each}
+      </div>
+      {#if chatErr}<Notice tone="error">{chatErr}</Notice>{/if}
+
+      <!-- Compositor de mensajes -->
+      {#if isManaged && quotaExceeded}
+        <Notice tone="warning" icon="lock">
+          <strong>Límite diario alcanzado ({dailyLimit} mensajes).</strong> Se renueva a medianoche.
+          <div class="row quota-actions">
+            <Button variant="primary" size="sm" icon="star" on:click={() => (showPaywall = true)}>Hazte Pro</Button>
+            <Button size="sm" on:click={() => setMode('byok')}>Usar mi clave gratis</Button>
+          </div>
+        </Notice>
+      {:else}
+        <div class="composer">
+          <div class="textarea-wrapper">
+            <textarea
+              class="textarea"
+              rows="2"
+              maxlength={maxChars}
+              bind:value={input}
+              bind:this={composer}
+              on:keydown={onKey}
+              aria-label="Mensaje para {pet.nickname || pet.species?.name}"
+              placeholder="Escribe un mensaje… (Enter envía, Mayús+Enter salta de línea)"
+              readonly={streaming}
+            ></textarea>
+            <span class="char-count" class:near-limit={input.length >= maxChars - 20} aria-hidden="true">{input.length}/{maxChars}</span>
+          </div>
+          {#if streaming}
+            <Button iconOnly icon="x" label="Detener la respuesta" class="send-btn" on:click={() => abort?.abort()} />
+          {:else}
+            <Button
+              variant="primary"
+              iconOnly
+              icon="send"
+              label="Enviar"
+              class="send-btn"
+              disabled={!input.trim() || (isManaged && quotaExceeded)}
+              on:click={() => send()}
+            />
+          {/if}
+        </div>
+      {/if}
+
+      <!-- Recordatorios y recuerdos -->
+      {#if (pet.intelligence ?? 0) >= 500}
+        <div class="fold">
+          <button class="fold-head" aria-expanded={remOpen} on:click={toggleReminders}>
+            <Ico n="alarm" /> <span class="label-caps">Recordatorios</span>
+            <Ico n={remOpen ? 'down' : 'right'} size={13} />
+          </button>
+          {#if remOpen}
+            {#if remErr}<Notice tone="error">{remErr}</Notice>{/if}
+            <div class="ui-list ui-list--scroll">
+              {#each reminders as r (r.id)}
+                <ListRow icon="alarm" title={r.text} sub={fmt(r.dueAt)}>
+                  <svelte:fragment slot="end">
+                    <Button variant="ghost" size="sm" iconOnly icon="x" label="Eliminar el recordatorio: {r.text}" class="ui-ibtn ui-ibtn--no" on:click={() => (pendingDelete = { kind: 'reminder', id: r.id, text: r.text })} />
+                  </svelte:fragment>
+                </ListRow>
+              {:else}
+                <EmptyState compact icon="alarm" text="No hay recordatorios pendientes. Pídele a tu mascota que te recuerde algo." />
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {:else}
+        <Notice tone="info" icon="lock">Con 500 de inteligencia tu mascota podrá usar herramientas y crear recordatorios.</Notice>
+      {/if}
+
+      <div class="fold">
+        <button class="fold-head" aria-expanded={memOpen} on:click={toggleMemories}>
+          <Ico n="folder" /> <span class="label-caps">Recuerdos</span>
+          <Ico n={memOpen ? 'down' : 'right'} size={13} />
+        </button>
+        {#if memOpen}
+          {#if memErr}<Notice tone="error">{memErr}</Notice>{/if}
+          {#if mem && !mem.unlocked}
+            <Notice tone="info" icon="lock">
+              La memoria se desbloquea con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}). Sigue charlando.
+            </Notice>
+          {:else if mem && mem.memories.length === 0}
+            <EmptyState compact icon="folder" text="Todavía no recuerda nada. Tras unas cuantas charlas empezará a hacerlo." />
+          {:else if mem}
+            <div class="mem-layers ui-list--scroll">
+              {#each MEMORY_LAYERS as l (l.id)}
+                {#if memByLayer[l.id].length}
+                  <section class="mem-layer" aria-label="Memoria {l.label.toLowerCase()}">
+                    <h4 class="mem-layer__head" title={l.hint}>
+                      <Ico n={l.icon} size={12} /> <span class="label-caps">{l.label}</span>
+                      <small>{memByLayer[l.id].length}</small>
+                    </h4>
+                    <div class="ui-list">
+                      {#each memByLayer[l.id] as m (m.id)}
+                        {@const v = l.id === 'emotional' ? valenceView(m.valence) : null}
+                        <ListRow
+                          icon={memoryIcon(m.kind)}
+                          sub={(m.kind === 'habit' ? 'Hábito: ' : '') + (m.subject && l.id === 'emotional' ? `${m.subject}: ` : '') + m.content}
+                          wrap
+                          muted={m.kind === 'summary'}
+                        >
+                          <svelte:fragment slot="end">
+                            {#if v}
+                              <span class="valence valence--{v.tone}" title="Valencia {v.text}">{v.label} <small>{v.text}</small></span>
+                            {/if}
+                            <Button variant="ghost" size="sm" iconOnly icon="x" label="Olvidar este recuerdo" class="ui-ibtn ui-ibtn--no" on:click={() => (pendingDelete = { kind: 'memory', id: m.id, text: m.content })} />
+                          </svelte:fragment>
+                        </ListRow>
+                      {/each}
+                    </div>
+                  </section>
+                {/if}
+              {/each}
+            </div>
+            <Button variant={confirmForgetAll ? 'danger' : 'ghost'} size="sm" icon="trash" on:click={forgetAll}>
+              {confirmForgetAll ? '¿Seguro? No se puede deshacer: pulsa otra vez' : 'Olvidar todo'}
+            </Button>
+          {/if}
+        {/if}
+      </div>
+    {/if}
   {/if}
-{/if}
+
+  {#if pendingDelete}
+    <ConfirmDialog
+      title={pendingDelete.kind === 'memory' ? 'Olvidar este recuerdo' : 'Eliminar el recordatorio'}
+      icon="trash"
+      danger
+      confirmLabel={pendingDelete.kind === 'memory' ? 'Olvidar' : 'Eliminar'}
+      loading={deleting}
+      on:confirm={confirmDelete}
+      on:cancel={() => (pendingDelete = null)}
+    >
+      <p class="ui-usertext">«{pendingDelete.text}»</p>
+      <p>{pendingDelete.kind === 'memory' ? 'Tu Pockai dejará de recordarlo. No se puede deshacer.' : 'No te lo recordará. No se puede deshacer.'}</p>
+    </ConfirmDialog>
+  {/if}
+</div>
+
+<!-- Modal de suscripción Pro -->
+<Modal open={showPaywall} title="Pockai Pro" icon="star" on:close={() => (showPaywall = false)}>
+  <p class="ui-card__hint">Desbloquea el máximo potencial de tu mascota sin interrupciones con Pockai Pro:</p>
+  <div class="ui-list">
+    <ListRow icon="chat" iconTint="var(--color-lavender)" title="200 mensajes diarios" sub="IA de alta calidad (vs 15 en Free)" wrap />
+    <ListRow icon="tool" iconTint="var(--color-mint-pop)" title="Herramientas de agente" sub="Recordatorios, abrir enlaces y más" wrap />
+    <ListRow icon="brain" iconTint="var(--color-electric-blue)" title="Respuestas y memoria ampliadas" sub="Contexto más profundo y más personalidad" wrap />
+    <ListRow icon="energy" iconTint="var(--color-sunburst)" title="Prioridad de servicio" sub="Menor latencia y modelos de reserva automáticos" wrap />
+  </div>
+
+  {#if paywallErr}<Notice tone="error">{paywallErr}</Notice>{/if}
+
+  {#if isPro}
+    <Button variant="primary" size="lg" block loading={paywallBusy} on:click={openPortal}>Gestionar suscripción en Stripe</Button>
+  {:else}
+    <Button variant="primary" size="lg" block icon="star" loading={paywallBusy} on:click={subscribePro}>
+      {proPriceLabel ? 'Hazte Pro por ' + proPriceLabel + '/mes' : 'Hazte Pro'}
+    </Button>
+  {/if}
+  <Button variant="ghost" size="sm" block on:click={() => { showPaywall = false; setMode('byok'); }}>
+    Prefiero usar mi propia API key gratis
+  </Button>
+</Modal>
 
 <style>
-  .muted { font-size: 12px; opacity: 0.7; margin: 0 0 8px; }
-  .local-box { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px; border-radius: var(--radius-2xl); border: 1px dashed var(--line-soft); }
-  .check { flex-direction: row; align-items: center; gap: 6px; }
-  .note { font-size: 11px; opacity: 0.6; margin: 4px 0; }
-  .ok { color: var(--success-ink); font-size: 12px; margin: 6px 0 0; }
-  .error { color: var(--danger-ink); font-size: 12px; margin: 6px 0 0; }
-  .bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .badge { font-size: 12px; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); padding: 3px 8px; border-radius: var(--radius-2xl); }
-  .link { background: none; border: none; color: var(--accent-ink); cursor: pointer; font-size: 12px; }
-  .settings { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-  label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
-  label small { opacity: 0.6; }
-  input, select, textarea {
-    background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
-    border-radius: var(--radius-2xl); padding: 7px 9px; font: inherit; font-size: 13px;
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
-  textarea { resize: none; flex: 1; }
-  .row { display: flex; gap: 6px; flex-wrap: wrap; }
-  button {
-    padding: 7px 11px; border-radius: var(--radius-2xl); cursor: pointer; font-size: 12px; font-weight: 600;
-    background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
+  .bar-end {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: auto;
   }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  button.primary { background: var(--accent); color: var(--on-color); border: none; }
-  button.danger { color: var(--danger-ink); }
+  .mode-select {
+    width: auto;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-pills);
+    font-size: var(--text-caption);
+    font-weight: 700;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .quota-actions {
+    margin-top: var(--space-2);
+  }
   .chat {
-    height: 230px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
-    padding: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    height: 240px;
+    padding: var(--space-2);
+    overflow-y: auto;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-cards);
+    background: var(--surface-2);
   }
-  .msg { max-width: 85%; padding: 6px 10px; border-radius: var(--radius-2xl); font-size: 13px; line-height: 1.35; white-space: pre-wrap; user-select: text; }
-  .msg.user { align-self: flex-end; background: #0369a1; }
-  .msg.assistant { align-self: flex-start; background: var(--surface-2); }
-  .msg.notice { background: color-mix(in srgb, var(--color-sunburst) 14%, var(--surface)); border: 1px solid var(--color-sunburst); }
-  .usage { font-size: 11px; opacity: 0.7; margin: 0 0 6px; }
-  .usage.full { color: var(--danger-ink); opacity: 1; }
-  .composer { display: flex; gap: 6px; align-items: stretch; }
-  .memory { margin-bottom: 8px; }
-  .hint { align-self: flex-start; font-size: 12px; opacity: 0.7; }
-  .card {
-    align-self: stretch; padding: 8px 10px; border-radius: var(--radius-2xl); font-size: 12px;
-    background: color-mix(in srgb, var(--color-sunburst) 12%, var(--surface)); border: 1px solid var(--color-sunburst);
+  .chat-empty {
+    margin: auto;
+    font-size: var(--text-caption);
+    color: var(--ink-muted);
   }
-  .card.done { background: color-mix(in srgb, var(--success) 12%, var(--surface)); border-color: var(--success); }
-  .card.bad { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); border-color: var(--danger); }
-  .card-title { font-weight: 700; margin-bottom: 3px; }
-  .card-body { margin-bottom: 6px; user-select: text; }
-  .card-note { opacity: 0.85; }
-  .mem-list { list-style: none; margin: 6px 0; padding: 0; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-  .mem-list li { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; background: var(--surface-2); padding: 4px 8px; border-radius: var(--radius-2xl); user-select: text; }
-  .mem-list li.summary { opacity: 0.75; font-style: italic; }
-  .x { background: none; border: none; padding: 0 4px; opacity: 0.6; }
-  .x:hover { opacity: 1; color: var(--danger-ink); }
-  .small { padding: 4px 8px; font-size: 11px; }
+  .msg {
+    max-width: 85%;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-2xl);
+    font-size: var(--text-label);
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    user-select: text;
+  }
+  .typing {
+    display: inline-flex;
+    gap: 3px;
+    vertical-align: middle;
+  }
+  .typing i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.35;
+    animation: typing 1s ease-in-out infinite;
+  }
+  .typing i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .typing i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  @keyframes typing {
+    40% {
+      opacity: 1;
+      translate: 0 -2px;
+    }
+  }
+  .msg.user {
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    background: var(--accent);
+    color: var(--on-dark);
+  }
+  .msg.assistant {
+    align-self: flex-start;
+    border: 1px solid var(--line-soft);
+    border-bottom-left-radius: 4px;
+    background: var(--surface);
+  }
+  .msg.notice {
+    border: 1px solid var(--warning);
+    background: color-mix(in srgb, var(--warning) 16%, var(--surface));
+    color: var(--ink);
+  }
+  .thinking {
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-width: 85%;
+    margin-bottom: -2px;
+  }
+  .thinking-toggle {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px var(--space-2);
+    border: none;
+    background: none;
+    color: var(--ink-muted);
+    font-size: var(--text-caption);
+    cursor: pointer;
+  }
+  .thinking-toggle:hover {
+    color: var(--ink);
+  }
+  .thinking-body {
+    max-height: 160px;
+    overflow-y: auto;
+    padding: var(--space-2) var(--space-2);
+    border-left: 2px solid var(--line-soft);
+    color: var(--ink-muted);
+    font-size: var(--text-caption);
+    font-style: italic;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    user-select: text;
+  }
+  .hint {
+    align-self: flex-start;
+    font-size: var(--text-caption);
+    color: var(--ink-muted);
+  }
+  .action {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-2);
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-2xl);
+    background: color-mix(in srgb, var(--warning) 14%, var(--surface));
+    font-size: var(--text-caption);
+  }
+  .action.done {
+    border-color: var(--success);
+    background: color-mix(in srgb, var(--success) 14%, var(--surface));
+  }
+  .action.bad {
+    border-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+  }
+  .action-title {
+    font-weight: 700;
+  }
+  .action-body {
+    user-select: text;
+  }
+  .action-note {
+    color: var(--ink-muted);
+  }
+  .composer {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+  .textarea-wrapper {
+    position: relative;
+    display: flex;
+    flex: 1;
+  }
+  .textarea {
+    /* Hueco para el contador, que va superpuesto abajo a la derecha */
+    padding-bottom: var(--space-5);
+    resize: none;
+    font-size: var(--text-label);
+    border-radius: var(--radius-cards);
+  }
+  .composer :global(.send-btn) {
+    align-self: stretch;
+    min-width: 46px;
+    border-radius: var(--radius-cards);
+  }
+  .char-count {
+    position: absolute;
+    right: 10px;
+    bottom: 4px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-size: var(--text-caption);
+    color: var(--ink-muted);
+    pointer-events: none;
+  }
+  .char-count.near-limit {
+    color: var(--danger-ink);
+    font-weight: 700;
+  }
+  .fold {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .fold-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+    border: none;
+    background: none;
+    color: var(--ink-muted);
+    cursor: pointer;
+  }
+  .fold-head:hover {
+    color: var(--ink);
+  }
+  .mem-layers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .mem-layer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .mem-layer__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: inherit;
+  }
+  .mem-layer__head small {
+    margin-left: auto;
+    font-size: var(--text-caption);
+    font-variant-numeric: tabular-nums;
+  }
+  .valence {
+    font-size: var(--text-caption);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .valence small {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.8;
+  }
+  .valence--pos {
+    color: var(--success-ink);
+  }
+  .valence--neg {
+    color: var(--danger-ink);
+  }
+  .valence--neutral {
+    color: var(--ink-muted);
+  }
 </style>

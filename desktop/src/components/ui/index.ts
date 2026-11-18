@@ -1,0 +1,19 @@
+/** Kit de componentes del panel. Estilos en styles/kit.css. */
+export { default as AsyncState } from './AsyncState.svelte';
+export { default as Badge } from './Badge.svelte';
+export { default as Button } from './Button.svelte';
+export { default as Card } from './Card.svelte';
+export { default as ConfirmDialog } from './ConfirmDialog.svelte';
+export { default as CurrencyPill } from './CurrencyPill.svelte';
+export { default as EmptyState } from './EmptyState.svelte';
+export { default as FeatureHeader } from './FeatureHeader.svelte';
+export { default as ListRow } from './ListRow.svelte';
+export { default as Modal } from './Modal.svelte';
+export { default as Notice } from './Notice.svelte';
+export { default as ProgressBar } from './ProgressBar.svelte';
+export { default as SectionHeader } from './SectionHeader.svelte';
+export { default as Segmented } from './Segmented.svelte';
+export { default as Skeleton } from './Skeleton.svelte';
+export { default as StatTile } from './StatTile.svelte';
+export { default as Switch } from './Switch.svelte';
+export { default as TileButton } from './TileButton.svelte';

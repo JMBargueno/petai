@@ -85,7 +85,9 @@ export class GenesService {
       await tx.pet.update({
         where: { id: petId },
         data: {
+          // Se fusiona con el JSON existente: guarda también las dimensiones de personalidad (spec 36)
           personality: {
+            ...personality,
             temperament: personality.temperament ?? 'curioso',
             genes: updatedGenes,
           },

@@ -53,10 +53,14 @@ export interface AdminStats {
 export interface AdminUser extends Entity {
   email: string;
   displayName: string;
+  /** Nickname público con su @ (vacío si aún no lo ha elegido). Es inmutable: el panel no lo cambia. */
+  handle: string;
   coins: number;
   gems: number;
   accountXp: number;
   role: AdminRole;
+  /** Correo verificado (las cuentas sin verificar no pueden usar las apps). */
+  emailVerified: boolean;
   createdAt: string;
 }
 

@@ -6,10 +6,12 @@ interface ApiUser {
   id: string;
   email: string;
   displayName: string | null;
+  handle?: string | null;
   role: AdminRole;
   coins: number;
   gems: number;
   accountXp: number;
+  emailVerifiedAt: string | null;
   createdAt: string;
 }
 
@@ -20,7 +22,13 @@ interface Page {
 
 const PAGE_SIZE = 100;
 
-const toAdminUser = (u: ApiUser): AdminUser => ({ ...u, displayName: u.displayName ?? '' });
+const toAdminUser = ({ emailVerifiedAt, ...u }: ApiUser): AdminUser => ({
+  ...u,
+  displayName: u.displayName ?? '',
+  // Sin nickname todavía: cadena vacía (la cuenta lo elegirá al entrar).
+  handle: u.handle ? `@${u.handle}` : '',
+  emailVerified: emailVerifiedAt != null,
+});
 
 /**
  * Usuarios reales del backend (`/v1/admin/users`). Desde el panel se cambia el rol y se fija el saldo
@@ -53,6 +61,14 @@ export class HttpUsersRepository implements Repository<AdminUser> {
       result = toAdminUser(
         await this.api.request<ApiUser>(`${base}/role`, { method: 'PATCH', body: JSON.stringify({ role: patch.role }) }),
       );
+      this.known.set(id, result);
+    }
+
+    // Verificación manual (soporte). Desde el panel no se puede quitar la verificación.
+    if (patch.emailVerified !== undefined && patch.emailVerified !== current.emailVerified) {
+      if (!patch.emailVerified) throw new Error('Un correo verificado no se puede marcar como no verificado');
+      await this.api.request(`${base}/verify-email`, { method: 'POST' });
+      result = { ...result, emailVerified: true };
       this.known.set(id, result);
     }
 

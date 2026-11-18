@@ -6,14 +6,17 @@ import { assertSafeBaseUrl, resolveSafeBaseUrl } from './ssrf';
 import { pinnedFetch } from './pinned-fetch';
 import { LlmProvider } from './llm-provider';
 import { OpenAiCompatibleProvider } from './openai-compatible.provider';
+import { BillingConfigService } from '../billing/billing-config.service';
 
 const PROVIDERS = ['openai', 'hermes', 'custom'] as const;
 type ProviderId = (typeof PROVIDERS)[number];
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
+const OPENROUTER_DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 
 export interface AiConfigInput {
+  mode?: 'byok' | 'managed';
   provider?: string;
   baseUrl?: string;
   model?: string;
@@ -26,6 +29,7 @@ export class AiConfigService {
     private readonly prisma: PrismaService,
     private readonly crypto: KeyCryptoService,
     private readonly config: ConfigService,
+    private readonly billingConfig: BillingConfigService,
   ) {}
 
   private get allowInsecure() {
@@ -35,7 +39,19 @@ export class AiConfigService {
   /** Vista segura para el cliente: la key nunca se devuelve, solo una máscara. */
   async getView(userId: string) {
     const cfg = await this.prisma.aiConfig.findUnique({ where: { userId } });
-    if (!cfg) return { configured: false };
+    if (!cfg || cfg.mode === 'managed') {
+      const managedSettings = this.billingConfig.managedAiSettings();
+      return {
+        configured: true,
+        mode: 'managed',
+        provider: 'pockai',
+        baseUrl: null,
+        model: managedSettings.primaryModel,
+        hasKey: false,
+        keyMask: null,
+        lastTestedAt: cfg?.lastTestedAt ?? null,
+      };
+    }
     let keyMask: string | null = null;
     if (cfg.encryptedKey && cfg.keyIv && cfg.keyTag) {
       try {
@@ -60,6 +76,24 @@ export class AiConfigService {
 
   async upsert(userId: string, input: AiConfigInput | undefined) {
     const body = input ?? {};
+    if (body.mode === 'managed') {
+      await this.prisma.aiConfig.upsert({
+        where: { userId },
+        create: { userId, mode: 'managed', provider: 'pockai' },
+        update: {
+          mode: 'managed',
+          provider: 'pockai',
+          encryptedKey: null,
+          keyIv: null,
+          keyTag: null,
+          baseUrl: null,
+          model: null,
+          lastTestedAt: null,
+        },
+      });
+      return this.getView(userId);
+    }
+
     const provider = (body.provider ?? 'openai') as ProviderId;
     if (!PROVIDERS.includes(provider)) {
       throw new BadRequestException(`Proveedor no soportado. Usa: ${PROVIDERS.join(', ')}`);
@@ -96,20 +130,40 @@ export class AiConfigService {
       where: { userId },
       create: { userId, mode: 'byok', provider, baseUrl, model, ...secret },
       // Al cambiar de endpoint/modelo se invalida la última comprobación
-      update: { provider, baseUrl, model, lastTestedAt: null, ...secret },
+      update: { mode: 'byok', provider, baseUrl, model, lastTestedAt: null, ...secret },
     });
     return this.getView(userId);
   }
 
   async remove(userId: string) {
     await this.prisma.aiConfig.deleteMany({ where: { userId } });
-    return { configured: false };
+    return this.getView(userId);
   }
 
-  /** Prepara el proveedor del usuario (descifra la key solo en memoria). */
+  /** Prepara el proveedor del usuario (descifra la key solo en memoria o usa OpenRouter en modo managed). */
   async resolveProvider(userId: string): Promise<{ provider: LlmProvider; model: string; mode: string }> {
     const cfg = await this.prisma.aiConfig.findUnique({ where: { userId } });
-    if (!cfg || !cfg.encryptedKey || !cfg.keyIv || !cfg.keyTag || !cfg.baseUrl || !cfg.model) {
+
+    // Sin config o mode=managed -> Rama MANAGED (IA de Pockai, OpenRouter con key del servidor)
+    if (!cfg || cfg.mode === 'managed') {
+      const managedSettings = this.billingConfig.managedAiSettings();
+      const apiKey = this.config.get<string>('OPENROUTER_API_KEY') || 'mock-openrouter-key';
+      const provider = new OpenAiCompatibleProvider(
+        this.config.get<string>('OPENROUTER_BASE_URL') || OPENROUTER_DEFAULT_BASE_URL,
+        apiKey,
+        fetch,
+        {
+          extraHeaders: { 'HTTP-Referer': 'https://pockai.app', 'X-Title': 'Pockai' },
+          // `usage.include`: OpenRouter devuelve el coste real en el último chunk (presupuesto exacto)
+          extraBody: { models: managedSettings.fallbackModels, usage: { include: true } },
+          firstTokenTimeoutMs: (managedSettings.firstTokenTimeoutSeconds ?? 10) * 1000,
+        },
+      );
+      return { provider, model: managedSettings.primaryModel, mode: 'managed' };
+    }
+
+    // Rama BYOK
+    if (!cfg.encryptedKey || !cfg.keyIv || !cfg.keyTag || !cfg.baseUrl || !cfg.model) {
       throw new NotFoundException('Configura primero tu proveedor de IA');
     }
     // Se revalida en cada uso: la URL pudo cambiar de destino (DNS) desde que se guardó
@@ -134,7 +188,12 @@ export class AiConfigService {
   }
 
   async test(userId: string) {
-    const { provider, model } = await this.resolveProvider(userId);
+    const { provider, model, mode } = await this.resolveProvider(userId);
+    // La IA gestionada no se "prueba": sería una llamada gratis con la key del servidor, fuera de
+    // cuota y presupuesto (y el usuario no tiene nada que validar).
+    if (mode === 'managed') {
+      return { ok: true, mode: 'managed' };
+    }
     try {
       await provider.test(model);
     } catch (err: any) {

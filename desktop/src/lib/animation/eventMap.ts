@@ -9,6 +9,8 @@ export interface Reaction {
   anims: string[];
   bubble?: string;
   particle?: string;
+  /** Efecto del escritorio (lib/effects) que acompaña al momento, con sus datos. */
+  effect?: { id: string; params?: Record<string, string | number> };
 }
 
 type Ctx = Record<string, unknown> | undefined;
@@ -41,11 +43,19 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
   healed: () => ({ anims: ['heal', 'happy'], bubble: '¡Ya me encuentro mejor! 💚' }),
   level_up: (c) => {
     const level = num(c, 'level');
-    return { anims: ['level_up'], bubble: level ? `¡Nivel ${level}! ⬆️` : '¡He subido de nivel! ⬆️' };
+    return {
+      anims: ['level_up'],
+      bubble: level ? `¡Nivel ${level}! ⬆️` : '¡He subido de nivel! ⬆️',
+      effect: { id: 'resonancia', params: level ? { level } : {} },
+    };
   },
   evolved: (c) => {
     const stage = str(c, 'stage');
-    return { anims: ['evolution', 'celebrate'], bubble: stage ? `¡He evolucionado (${stage})! ✨` : '¡He evolucionado! ✨' };
+    return {
+      anims: ['evolution', 'celebrate'],
+      bubble: stage ? `¡He evolucionado (${stage})! ✨` : '¡He evolucionado! ✨',
+      effect: { id: 'capullo-telar', params: stage ? { stage } : {} },
+    };
   },
   hatched: () => ({ anims: ['summon', 'happy'], bubble: '¡Hola! Encantado de conocerte 🐣' }),
   battle_won: () => ({ anims: ['attack', 'victory'], bubble: '¡Victoria! 🏆' }),
@@ -94,7 +104,13 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     return anim ? { anims: [anim] } : null;
   },
   buddy_play: () => ({ anims: ['dance', 'happy'] }),
-  friend_visit: () => ({ anims: ['surprised', 'happy'], bubble: '¡Ha venido un amigo de visita! 👋' }),
+  friend_visit: (c) => {
+    const name = str(c, 'visitorName');
+    return {
+      anims: ['surprised', 'happy'],
+      bubble: name ? `¡${name} está de visita en mi hábitat! 👋` : '¡Ha venido un amigo de visita! 👋',
+    };
+  },
   welcome_back: (c) => {
     switch (str(c, 'tier')) {
       case 'offended':
@@ -114,6 +130,46 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
 export function reactionForAction(event: Pick<PetActionEvent, 'action' | 'context'>): Reaction | null {
   const fn = REACTIONS[event.action];
   return fn ? fn(event.context) : null;
+}
+
+/**
+ * Reacción de chat (spec 36): `behavior` del evento `done` → animación de una pasada + emote.
+ * Solo se usan clips de acción: `idle`, `sleep` y `tired` son bucles de la capa base y, lanzados
+ * como acción, no terminarían nunca. `sleep` (bostezo) se resuelve con el estiramiento de `wake`.
+ */
+const BEHAVIOR_ANIMS: Record<string, string[]> = {
+  idle: [],
+  happy: ['happy'],
+  sleep: ['wake'],
+};
+
+/** Acciones con un clip más expresivo que el genérico de su animación. */
+const BEHAVIOR_ACTION_ANIMS: Record<string, string[]> = {
+  celebrate: ['celebrate'],
+  cuddle: ['love'],
+};
+
+export const EMOTE_EMOJI: Record<string, string> = {
+  heart: '❤️',
+  sparkle: '✨',
+  note: '🎵',
+  question: '❓',
+  tear: '💧',
+  zzz: '💤',
+  wave: '👋',
+  star: '⭐',
+};
+
+/** Tolerante: `behavior` ausente, nulo o con valores desconocidos no rompe el chat. */
+export function reactionForBehavior(raw: unknown): Reaction | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const b = raw as { action?: unknown; animation?: unknown; emote?: unknown };
+  const base = typeof b.animation === 'string' ? BEHAVIOR_ANIMS[b.animation] : undefined;
+  const override = typeof b.action === 'string' ? BEHAVIOR_ACTION_ANIMS[b.action] : undefined;
+  const anims = base ? (override ?? base) : [];
+  const particle = typeof b.emote === 'string' ? EMOTE_EMOJI[b.emote] : undefined;
+  if (!anims.length && !particle) return null;
+  return particle ? { anims, particle } : { anims };
 }
 
 /** Acciones locales de la UI (ControlPanel) → acción equivalente del backend. */

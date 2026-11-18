@@ -49,6 +49,8 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
     private val refreshLock = Any()
 
     private val plain: OkHttpClient = OkHttpClient.Builder()
+        // El backend distingue web y apps para el modo mantenimiento (503 MAINTENANCE por alcance).
+        .addInterceptor { chain -> chain.proceed(chain.request().newBuilder().header("X-Client", "android").build()) }
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
@@ -66,8 +68,10 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
     }
 
     private val authenticator = Authenticator { _, response ->
-        // Los fallos de /auth/* (login incorrecto, refresh caducado) no se reintentan
-        if (response.request.url.encodedPath.contains("/auth/")) return@Authenticator null
+        // Los fallos de /auth/* (login incorrecto, refresh caducado) no se reintentan, salvo la
+        // verificación del correo: va con sesión y el usuario puede volver a la pantalla pasado un rato.
+        val path = response.request.url.encodedPath
+        if (path.contains("/auth/") && !path.contains("/auth/verify-email/")) return@Authenticator null
         if (priorResponses(response) >= 2) return@Authenticator null
         synchronized(refreshLock) {
             val sent = response.request.header("Authorization")?.removePrefix("Bearer ")
@@ -110,6 +114,18 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
         }
     }
 
+    /**
+     * Renueva el access token con el refresh token vigente y lo guarda en [SessionStore].
+     * Devuelve true si la renovación salió bien; el [RealtimeClient] lo usa para reconectar el
+     * socket cuando el servidor corta la conexión por caducidad del token (`auth:expired`).
+     */
+    suspend fun refreshAccessToken(): Boolean {
+        val refresh = session.refreshToken ?: return false
+        val renewed = withContext(Dispatchers.IO) { refreshBlocking(refresh) } ?: return false
+        session.save(renewed.accessToken, renewed.refreshToken)
+        return true
+    }
+
     private suspend fun exec(req: Request, client: OkHttpClient = http): Response =
         suspendCancellableCoroutine { cont: CancellableContinuation<Response> ->
             val call = client.newCall(req)
@@ -142,6 +158,11 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
         }
     }
 
+    /** Código de negocio (`code`) del cuerpo de error, si lo trae. */
+    private fun errorCode(raw: String): String? = runCatching {
+        (json.parseToJsonElement(raw).jsonObject["code"] as? JsonPrimitive)?.content
+    }.getOrNull()
+
     suspend fun send(method: String, path: String, body: JsonElement? = null): String = withContext(Dispatchers.IO) {
         val rb = when {
             body != null -> body.toString().toRequestBody(jsonType)
@@ -156,7 +177,7 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
         }
         resp.use {
             val text = it.body.string()
-            if (!it.isSuccessful) throw ApiException(it.code, errorMessage(it.code, text))
+            if (!it.isSuccessful) throw ApiException(it.code, errorMessage(it.code, text), errorCode(text))
             text
         }
     }
@@ -204,6 +225,7 @@ class ApiClient(private val session: SessionStore, private val baseUrl: String) 
                 content = o["message"]?.jsonObject?.get("content")?.jsonPrimitive?.content.orEmpty(),
                 intelligence = o["intelligence"]?.jsonPrimitive?.intOrNull ?: 0,
                 tier = o["tier"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                thinking = o["message"]?.jsonObject?.get("thinking")?.jsonPrimitive?.contentOrNull.orEmpty(),
             )
             "error" -> ChatEvent.Error(o["message"]?.jsonPrimitive?.content ?: "Error del proveedor de IA")
             "moderated" -> ChatEvent.Moderated(

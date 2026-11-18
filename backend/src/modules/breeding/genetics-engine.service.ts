@@ -3,7 +3,6 @@ import * as crypto from 'crypto';
 
 export interface PetGenes {
   element: string;
-  rarity: string;
   patternId: string;
   palette: Record<string, string>;
   baseStats: Record<string, number>;
@@ -25,7 +24,6 @@ export interface BreedingResult {
 }
 
 const ELEMENTS = ['fire', 'water', 'grass', 'electric', 'wind', 'earth', 'ice', 'shadow'];
-const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 @Injectable()
 export class GeneticsEngineService {
@@ -35,6 +33,7 @@ export class GeneticsEngineService {
    * Compute the offspring genes from two parent pets.
    * - 50% of genes from each parent (random per gene)
    * - 10% mutation chance per gene using crypto.randomInt
+   * La rareza no es un gen: es de la especie, y la cría lleva la de la suya.
    */
   computeOffspring(parent1: PetGenes, parent2: PetGenes): BreedingResult {
     const inheritedFrom: { fromParent1: string[]; fromParent2: string[] } = {
@@ -45,7 +44,6 @@ export class GeneticsEngineService {
 
     // Each gene is inherited from one parent (50/50 random)
     const elementFromP1 = this.randomBool();
-    const rarityFromP1 = this.randomBool();
     const patternFromP1 = this.randomBool();
     const paletteFromP1 = this.randomBool();
     const statsFromP1 = this.randomBool();
@@ -53,7 +51,6 @@ export class GeneticsEngineService {
 
     // Determine base values
     let element = elementFromP1 ? parent1.element : parent2.element;
-    let rarity = rarityFromP1 ? parent1.rarity : parent2.rarity;
     let patternId = patternFromP1 ? parent1.patternId : parent2.patternId;
     let palette = paletteFromP1
       ? { ...parent1.palette }
@@ -66,8 +63,6 @@ export class GeneticsEngineService {
     // Track inheritance
     if (elementFromP1) inheritedFrom.fromParent1.push('element');
     else inheritedFrom.fromParent2.push('element');
-    if (rarityFromP1) inheritedFrom.fromParent1.push('rarity');
-    else inheritedFrom.fromParent2.push('rarity');
     if (patternFromP1) inheritedFrom.fromParent1.push('patternId');
     else inheritedFrom.fromParent2.push('patternId');
     if (paletteFromP1) inheritedFrom.fromParent1.push('palette');
@@ -85,16 +80,6 @@ export class GeneticsEngineService {
         gene: 'element',
         originalValue: originalElement,
         mutatedValue: element,
-      });
-    }
-
-    if (this.shouldMutate()) {
-      const originalRarity = rarity;
-      rarity = this.mutateRarity(rarity);
-      mutations.push({
-        gene: 'rarity',
-        originalValue: originalRarity,
-        mutatedValue: rarity,
       });
     }
 
@@ -125,7 +110,6 @@ export class GeneticsEngineService {
     return {
       offspringGenes: {
         element,
-        rarity,
         patternId,
         palette,
         baseStats,
@@ -149,11 +133,4 @@ export class GeneticsEngineService {
     return ELEMENTS[crypto.randomInt(0, ELEMENTS.length)];
   }
 
-  private mutateRarity(currentRarity: string): string {
-    const idx = RARITIES.indexOf(currentRarity);
-    // Mutation can go up or down by 1 tier
-    const direction = crypto.randomInt(0, 2) === 0 ? 1 : -1;
-    const newIdx = Math.max(0, Math.min(RARITIES.length - 1, idx + direction));
-    return RARITIES[newIdx];
-  }
 }

@@ -1,6 +1,6 @@
 import balance from '../../../../shared/game-data/balance.json';
 import patternData from '../../../../shared/game-data/patterns.json';
-import { PATTERNS, RARITIES, RARITY_COLORS } from '../landing/content';
+import { PATTERNS, RARITIES, RARITY_COLORS, SPECIES } from '../landing/content';
 import type { StickerColor } from '../shared/ui/sticker';
 
 /**
@@ -12,7 +12,7 @@ export const MARQUEE = $localize`:@@lore.marquee:El Éter Digital · Códices La
 
 export const META = {
   title: $localize`:@@lore.meta.title:El Éter Digital: el mundo y el lore de Pockai`,
-  description: $localize`:@@lore.meta.description:El lore de Pockai: de dónde nacen los huevos, sus rarezas, los seis elementos, el despertar de la IA y el Coliseo de Resonancia.`,
+  description: $localize`:@@lore.meta.description:El lore de Pockai: de dónde nacen los huevos, sus rarezas, los seis elementos, el despertar de la IA, el Coliseo de Resonancia y los Nexos que unen a los Custodios.`,
   imageAlt: $localize`:@@lore.meta.imageAlt:El Éter Digital, el mundo del que nacen los huevos de Pockai`,
 };
 
@@ -88,16 +88,18 @@ export const ORIGIN_CARDS = [
 export const PATTERN_DEFS: Record<string, string> = {
   scales: $localize`:@@lore.appear.def.scales:Placas de Datos: firewalls ancestrales y armaduras lógicas tejidas en la piel.`,
   crystal: $localize`:@@lore.appear.def.crystal:Cuarzo Lógico: datos tan puros que se solidifican en estructuras geométricas translúcidas.`,
+  circuit: $localize`:@@lore.appear.def.circuit:Trazas Vivas: las pistas por las que viajaba el código que lo formó, aún con corriente.`,
+  storm: $localize`:@@lore.appear.def.storm:Sobrecarga: la tormenta eléctrica de un servidor al límite, atrapada bajo la piel.`,
   galaxy: $localize`:@@lore.appear.def.galaxy:Vacío Abisal: una ventana literal al espacio profundo entre servidores.`,
   aurora: $localize`:@@lore.appear.def.aurora:Viento Solar: corrientes magnéticas vivas que fluyen en tiempo real sobre su lomo.`,
 };
 
 /**
- * PATTERNS ya traduce minRarity a nombre de rareza; para filtrar por densidad usamos
+ * PATTERNS ya traduce rarity a nombre de rareza; para filtrar por densidad usamos
  * el id crudo de patterns.json (mismo orden y longitud, filtrado por índice).
  */
-export const EARTH_PATTERNS = PATTERNS.filter((_, i) => patternData[i].minRarity !== 'super_rare' && patternData[i].minRarity !== 'legendary' && patternData[i].minRarity !== 'mythic');
-export const AETHER_PATTERNS = PATTERNS.filter((_, i) => ['super_rare', 'legendary', 'mythic'].includes(patternData[i].minRarity));
+export const EARTH_PATTERNS = PATTERNS.filter((_, i) => patternData[i].rarity !== 'super_rare' && patternData[i].rarity !== 'legendary' && patternData[i].rarity !== 'mythic');
+export const AETHER_PATTERNS = PATTERNS.filter((_, i) => ['super_rare', 'legendary', 'mythic'].includes(patternData[i].rarity));
 
 export const ELEMENTS = [
   {
@@ -193,8 +195,33 @@ export const LIFE_WELCOME = {
   icon: 'heart' as const,
   color: 'mint-pop' as const,
   title: $localize`:@@lore.life.welcome.t:Letargo Melancólico`,
-  body: $localize`:@@lore.life.welcome.b:Si desapareces días, el Santuario se enfría: se acumula estática, se agota el éter y la soledad opaca su núcleo. No muere —un espíritu de datos es inmortal en el servidor— pero se debilita. Cuando vuelves, el propio acto de abrir el Santuario le envía un destello cálido que rompe el frío.`,
+  body: $localize`:@@lore.life.welcome.b:Si desapareces días, el Santuario se enfría: se acumula estática, se agota el éter y la soledad opaca su núcleo. No muere —un espíritu de datos es inmortal en el servidor— pero se debilita. Cuando vuelves, el propio acto de abrir el Santuario le envía un destello cálido que rompe el frío… y te cuenta lo que ha vivido mientras tanto.`,
 };
+
+/** La Huella del Custodio: carácter, recuerdos y vida en el Éter (sin mecánica interna). */
+export const MARK_CARDS = [
+  {
+    icon: 'leaf' as const,
+    color: 'mint-pop' as const,
+    kicker: $localize`:@@lore.mark.1.k:Cómo lo crías`,
+    title: $localize`:@@lore.mark.1.t:El Carácter`,
+    body: $localize`:@@lore.mark.1.b:El que juega y sale de aventura contigo se vuelve curioso y atrevido; el que crece tranquilo en su Santuario, reservado y cariñoso. Su carácter tiñe cómo habla, cómo te consuela y hasta cómo se planta en el Coliseo.`,
+  },
+  {
+    icon: 'heart' as const,
+    color: 'lavender' as const,
+    kicker: $localize`:@@lore.mark.2.k:Lo que atesora`,
+    title: $localize`:@@lore.mark.2.t:El Cristal de Recuerdos`,
+    body: $localize`:@@lore.mark.2.b:No lo guarda todo: atesora lo que le importa. Momentos concretos, lo que aprende de ti y del mundo, y lo que siente por ti, por otros Custodios y por otros pockai. Lo que no deja huella se disuelve en el Éter.`,
+  },
+  {
+    icon: 'moon' as const,
+    color: 'electric-blue' as const,
+    kicker: $localize`:@@lore.mark.3.k:Cuando no estás`,
+    title: $localize`:@@lore.mark.3.t:La Vida en el Éter`,
+    body: $localize`:@@lore.mark.3.b:Al cerrar el Santuario no se queda congelado: duerme, juega, explora, a veces encuentra pequeños tesoros y visita los Santuarios de tus amigos. Cuando vuelves, te lo cuenta a su manera.`,
+  },
+];
 
 export const COLISEUM_CARDS = [
   {
@@ -217,6 +244,56 @@ export const COLISEUM_CARDS = [
   },
 ];
 
+/** Por qué existen los Nexos (clanes): la Gran Deriva y el primer trenzado. */
+export const NEXUS_CARDS = [
+  {
+    icon: 'moon' as const,
+    color: 'voltage-violet' as const,
+    title: $localize`:@@lore.nexo.1.title:La Gran Deriva`,
+    body: $localize`:@@lore.nexo.1.body:Un Custodio solo emite una hebra de Resonancia. En los primeros ciclos del Éter, cuando alguien desaparecía, su Santuario quedaba a la deriva: su pockai se enfriaba en el Letargo sin que nadie lo notara y los Códices que atraía se dispersaban antes de cristalizar.`,
+  },
+  {
+    icon: 'heart' as const,
+    color: 'mint-pop' as const,
+    title: $localize`:@@lore.nexo.2.title:El primer trenzado`,
+    body: $localize`:@@lore.nexo.2.body:Algunos Custodios sincronizaron sus Santuarios y descubrieron que sus hebras no se sumaban: se trenzaban. Así nació el Nexo, un nodo compartido del Éter donde cada Santuario sostiene a los demás. Mientras el Nexo late, ningún hábitat se pierde a la deriva.`,
+  },
+  {
+    icon: 'chat' as const,
+    color: 'electric-blue' as const,
+    title: $localize`:@@lore.nexo.3.title:Eco y Juramentos`,
+    body: $localize`:@@lore.nexo.3.body:Cada cuidado, combate y visita de sus miembros alimenta la Resonancia del Nexo. Su voz compartida es el Eco y sus metas colectivas son los Juramentos: cumplirlos tensa el trenzado y lo hace más fuerte.`,
+  },
+];
+
+/** Los cuatro rangos de un Nexo, de mayor a menor (creator · admin · moderator · member). */
+export const NEXUS_RANKS = [
+  {
+    icon: 'flame' as const,
+    color: 'ember' as const,
+    title: $localize`:@@lore.nexo.rank.1.title:Forjador del Nexo`,
+    body: $localize`:@@lore.nexo.rank.1.body:Quien tejió el primer nudo. Solo hay uno: nombra Guardianes, puede ceder la Forja a otra hebra o deshacer el Nexo.`,
+  },
+  {
+    icon: 'shield' as const,
+    color: 'sunburst' as const,
+    title: $localize`:@@lore.nexo.rank.2.title:Guardián`,
+    body: $localize`:@@lore.nexo.rank.2.body:Sostiene la estructura: renombra el Nexo, nombra o retira Vigías y expulsa a Vigías y Hermanos.`,
+  },
+  {
+    icon: 'star' as const,
+    color: 'lavender' as const,
+    title: $localize`:@@lore.nexo.rank.3.title:Vigía`,
+    body: $localize`:@@lore.nexo.rank.3.body:Cuida el Eco y la puerta: invita a nuevas hebras, silencia mensajes, retira Juramentos y expulsa a Hermanos.`,
+  },
+  {
+    icon: 'leaf' as const,
+    color: 'mint-pop' as const,
+    title: $localize`:@@lore.nexo.rank.4.title:Hermano · Hermana`,
+    body: $localize`:@@lore.nexo.rank.4.body:La hebra que da fuerza al trenzado: habla en el Eco, propone Juramentos y los cumple.`,
+  },
+];
+
 export const GLOSSARY = [
   { app: $localize`:@@lore.gloss.1.a:Jugador`, lore: $localize`:@@lore.gloss.1.l:Custodio` },
   {
@@ -234,6 +311,17 @@ export const GLOSSARY = [
   { app: $localize`:@@lore.gloss.11.a:Huevo`, lore: $localize`:@@lore.gloss.11.l:Códice Latente` },
   { app: $localize`:@@lore.gloss.12.a:Sueño`, lore: $localize`:@@lore.gloss.12.l:Desfragmentación` },
   { app: $localize`:@@lore.gloss.13.a:Abandono`, lore: $localize`:@@lore.gloss.13.l:Letargo Melancólico` },
+  { app: $localize`:@@lore.gloss.23.a:Personalidad`, lore: $localize`:@@lore.gloss.23.l:Carácter · Huella del Custodio` },
+  { app: $localize`:@@lore.gloss.24.a:Memoria`, lore: $localize`:@@lore.gloss.24.l:Cristal de Recuerdos` },
+  { app: $localize`:@@lore.gloss.25.a:Vida mientras no estás`, lore: $localize`:@@lore.gloss.25.l:Vida en el Éter` },
+  { app: $localize`:@@lore.gloss.15.a:Clan`, lore: $localize`:@@lore.gloss.15.l:Nexo de Resonancia` },
+  { app: $localize`:@@lore.gloss.16.a:Creador del clan`, lore: $localize`:@@lore.gloss.16.l:Forjador del Nexo` },
+  { app: $localize`:@@lore.gloss.17.a:Administrador del clan`, lore: $localize`:@@lore.gloss.17.l:Guardián` },
+  { app: $localize`:@@lore.gloss.18.a:Moderador del clan`, lore: $localize`:@@lore.gloss.18.l:Vigía` },
+  { app: $localize`:@@lore.gloss.21.a:Miembro del clan`, lore: $localize`:@@lore.gloss.21.l:Hermano · Hermana` },
+  { app: $localize`:@@lore.gloss.22.a:XP del clan`, lore: $localize`:@@lore.gloss.22.l:Resonancia del Nexo` },
+  { app: $localize`:@@lore.gloss.19.a:Chat del clan`, lore: $localize`:@@lore.gloss.19.l:Eco del Nexo` },
+  { app: $localize`:@@lore.gloss.20.a:Metas del clan`, lore: $localize`:@@lore.gloss.20.l:Juramentos del Nexo` },
   { app: $localize`:@@lore.gloss.14.a:Seed / RNG`, lore: $localize`:@@lore.gloss.14.l:Telar de Mulberry` },
 ];
 
@@ -243,4 +331,4 @@ export const TEASER = {
 };
 
 /** `PATTERNS` y `RARITIES` se reutilizan directamente de ../landing/content (datos, no copy). */
-export { PATTERNS, RARITIES };
+export { PATTERNS, RARITIES, SPECIES };

@@ -2,9 +2,11 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GeneticsEngineService, PetGenes } from './genetics-engine.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const BREEDING_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MAX_SIMULTANEOUS = 3;
@@ -15,6 +17,7 @@ export class BreedingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geneticsEngine: GeneticsEngineService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   async startBreeding(userId: string, parent1Id: string, parent2Id: string) {
@@ -141,7 +144,6 @@ export class BreedingService {
 
     const g1: PetGenes = {
       element: parent1.species?.element || 'fire',
-      rarity: parent1.rarity,
       patternId: parent1.patternId,
       palette: parent1.palette as Record<string, string>,
       baseStats: (parent1.species?.baseStats as Record<string, number>) || {},
@@ -149,7 +151,6 @@ export class BreedingService {
     };
     const g2: PetGenes = {
       element: parent2.species?.element || 'fire',
-      rarity: parent2.rarity,
       patternId: parent2.patternId,
       palette: parent2.palette as Record<string, string>,
       baseStats: (parent2.species?.baseStats as Record<string, number>) || {},
@@ -162,7 +163,8 @@ export class BreedingService {
       data: {
         userId: breeding.userId,
         speciesId: parent1.speciesId,
-        rarity: result.offspringGenes.rarity,
+        // La cría es de la especie del primer progenitor y lleva la rareza de esa especie.
+        rarity: parent1.species?.rarity ?? parent1.rarity,
         patternId: result.offspringGenes.patternId,
         palette: result.offspringGenes.palette,
         shiny: result.offspringGenes.shiny,
@@ -173,6 +175,15 @@ export class BreedingService {
         stage: 'baby',
         combatStats: result.offspringGenes.baseStats,
       },
+    });
+
+    // Colección (logros de rareza/elemento/shiny): una cría también es un pockai conseguido.
+    this.events?.emit('pet:bred', {
+      userId: breeding.userId,
+      petId: offspring.id,
+      rarity: offspring.rarity,
+      element: parent1.species?.element,
+      shiny: offspring.shiny,
     });
 
     const breedingResult = await this.prisma.breedingResult.create({

@@ -102,30 +102,26 @@ const RECOMMENDED_TAGS = {
   evolution: 'happy'
 };
 
-for (const sp of speciesData) {
-  const spDir = path.join(speciesDir, sp.id);
-  if (!fs.existsSync(spDir)) {
-    console.error(`❌ CRÍTICO: Carpeta no encontrada para especie "${sp.id}" en shared/assets/species/${sp.id}/`);
-    criticalErrors++;
-    continue;
-  }
+// Hojas por etapa (GUIA_ARTISTICA §7.4): adult vive en la raíz; baby/juvenile/final en subcarpetas.
+const STAGE_DIRS = ['baby', 'juvenile', 'final'];
 
-  const basePath = path.join(spDir, 'base.png');
-  const maskPath = path.join(spDir, 'mask.png');
-  const animPath = path.join(spDir, 'anim.json');
+function validateSheet(label, dir) {
+  const basePath = path.join(dir, 'base.png');
+  const maskPath = path.join(dir, 'mask.png');
+  const animPath = path.join(dir, 'anim.json');
 
   if (!fs.existsSync(basePath)) {
-    console.error(`❌ CRÍTICO: Falta base.png en species/${sp.id}/`);
+    console.error(`❌ CRÍTICO: Falta base.png en species/${label}/`);
     criticalErrors++;
   }
   if (!fs.existsSync(maskPath)) {
-    console.error(`❌ CRÍTICO: Falta mask.png en species/${sp.id}/`);
+    console.error(`❌ CRÍTICO: Falta mask.png en species/${label}/`);
     criticalErrors++;
   }
   if (!fs.existsSync(animPath)) {
-    console.error(`❌ CRÍTICO: Falta anim.json en species/${sp.id}/`);
+    console.error(`❌ CRÍTICO: Falta anim.json en species/${label}/`);
     criticalErrors++;
-    continue;
+    return;
   }
 
   // Comprobar dimensiones idénticas
@@ -135,14 +131,14 @@ for (const sp of speciesData) {
       const maskDim = readPngDimensions(maskPath);
 
       if (baseDim.width !== maskDim.width || baseDim.height !== maskDim.height) {
-        console.error(`❌ CRÍTICO [${sp.id}]: Dimensiones discordantes entre base.png (${baseDim.width}x${baseDim.height}) y mask.png (${maskDim.width}x${maskDim.height})`);
+        console.error(`❌ CRÍTICO [${label}]: Dimensiones discordantes entre base.png (${baseDim.width}x${baseDim.height}) y mask.png (${maskDim.width}x${maskDim.height})`);
         criticalErrors++;
       } else if (baseDim.height % 128 !== 0 || baseDim.width % 128 !== 0) {
-        console.error(`❌ CRÍTICO [${sp.id}]: Alto y ancho deben ser múltiplos de 128 px (cuadrícula de frames). Actual: ${baseDim.width}x${baseDim.height}`);
+        console.error(`❌ CRÍTICO [${label}]: Alto y ancho deben ser múltiplos de 128 px (cuadrícula de frames). Actual: ${baseDim.width}x${baseDim.height}`);
         criticalErrors++;
       }
     } catch (err) {
-      console.error(`❌ CRÍTICO [${sp.id}]: Error leyendo PNG: ${err.message}`);
+      console.error(`❌ CRÍTICO [${label}]: Error leyendo PNG: ${err.message}`);
       criticalErrors++;
     }
   }
@@ -155,7 +151,7 @@ for (const sp of speciesData) {
   // Chequeo de tags críticos
   for (const crit of CRITICAL_TAGS) {
     if (!tagNames.has(crit)) {
-      console.error(`❌ CRÍTICO [${sp.id}]: Falta tag crítico "${crit}" en anim.json`);
+      console.error(`❌ CRÍTICO [${label}]: Falta tag crítico "${crit}" en anim.json`);
       criticalErrors++;
     }
   }
@@ -163,13 +159,118 @@ for (const sp of speciesData) {
   // Chequeo de tags recomendados
   for (const [rec, fallback] of Object.entries(RECOMMENDED_TAGS)) {
     if (!tagNames.has(rec)) {
-      console.warn(`⚠️ ADVERTENCIA [${sp.id}]: Tag recomendado "${rec}" no definido. Usará fallback automático -> "${fallback}"`);
+      console.warn(`⚠️ ADVERTENCIA [${label}]: Tag recomendado "${rec}" no definido. Usará fallback automático -> "${fallback}"`);
       warnings++;
     }
   }
 
-  console.log(`✓ species/${sp.id}/: base.png, mask.png y anim.json validados`);
+  validateAnchors(label, dir, animData);
+  console.log(`✓ species/${label}/: base.png, mask.png, anim.json y anchors.json validados`);
 }
+
+// Anclas de accesorio (spec 38 §5): cuatro ranuras dentro del frame nativo de 64×64 y, por
+// animación, tantos desplazamientos como frames tiene en anim.json.
+const ANCHOR_SLOTS = ['head', 'face', 'neck', 'back'];
+const ANCHOR_SIZES = ['S', 'M', 'L'];
+
+function validateAnchors(label, dir, animData) {
+  const anchorsPath = path.join(dir, 'anchors.json');
+  if (!fs.existsSync(anchorsPath)) {
+    console.error(`❌ CRÍTICO: Falta anchors.json en species/${label}/`);
+    criticalErrors++;
+    return;
+  }
+  const anchors = readJson(anchorsPath);
+  const fail = (msg) => {
+    console.error(`❌ CRÍTICO [${label}]: anchors.json: ${msg}`);
+    criticalErrors++;
+  };
+  const isPoint = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isInteger);
+  if (!ANCHOR_SIZES.includes(anchors.size)) fail(`size debe ser ${ANCHOR_SIZES.join(', ')}`);
+  if (!Number.isInteger(anchors.eyeGap) || anchors.eyeGap < 1) fail('eyeGap debe ser un entero mayor que 0');
+  for (const slot of ANCHOR_SLOTS) {
+    const p = anchors.base?.[slot];
+    if (!isPoint(p)) fail(`falta el ancla base '${slot}'`);
+    else if (p.some((v) => v < 2 || v > 61)) fail(`el ancla '${slot}' (${p}) se sale del frame (2–61)`);
+  }
+  const frameCount = new Map((animData?.meta?.frameTags || []).map((t) => [t.name, t.to - t.from + 1]));
+  for (const [anim, value] of Object.entries(anchors.frames || {})) {
+    const expected = frameCount.get(anim);
+    if (expected === undefined) {
+      fail(`la animación '${anim}' no existe en anim.json`);
+      continue;
+    }
+    const lists = Array.isArray(value) ? [['*', value]] : ANCHOR_SLOTS.map((slot) => [slot, value[slot]]);
+    for (const [slot, list] of lists) {
+      if (!Array.isArray(list) || list.length !== expected || !list.every(isPoint)) {
+        fail(`'${anim}' (${slot}) debe tener ${expected} desplazamientos [dx, dy]`);
+      }
+    }
+  }
+}
+
+for (const sp of speciesData) {
+  const spDir = path.join(speciesDir, sp.id);
+  if (!fs.existsSync(spDir)) {
+    console.error(`❌ CRÍTICO: Carpeta no encontrada para especie "${sp.id}" en shared/assets/species/${sp.id}/`);
+    criticalErrors++;
+    continue;
+  }
+  validateSheet(sp.id, spDir);
+  for (const stage of STAGE_DIRS) {
+    const stageDir = path.join(spDir, stage);
+    if (fs.existsSync(stageDir)) {
+      validateSheet(`${sp.id}/${stage}`, stageDir);
+    } else {
+      console.warn(`⚠️ ADVERTENCIA [${sp.id}]: Sin hoja de etapa "${stage}". Los clientes usarán la de adult.`);
+      warnings++;
+    }
+  }
+}
+
+// Accesorios (spec 38 §6): cada prenda del catálogo tiene su arte en tres tallas y un meta.json
+// coherente con los PNG (que van a ×2 y con los frames en horizontal).
+const accessoriesData = readJson(path.join(sharedGameDataDir, 'accessories.json'));
+const accessoriesDir = path.join(sharedAssetsDir, 'accessories');
+// Lienzo máximo por talla, en px nativos: [ancho, alto] (scripts/sprites/pixel/accessories.ts).
+const ACC_CANVAS = { s: [40, 24], m: [48, 32], l: [56, 40] };
+for (const acc of accessoriesData?.accessories || []) {
+  const dir = path.join(accessoriesDir, acc.id);
+  const fail = (msg) => {
+    console.error(`❌ CRÍTICO [accessories/${acc.id}]: ${msg}`);
+    criticalErrors++;
+  };
+  const metaPath = path.join(dir, 'meta.json');
+  if (!fs.existsSync(metaPath)) {
+    fail('falta meta.json (ejecuta pnpm generate:accessories)');
+    continue;
+  }
+  const meta = readJson(metaPath);
+  if (meta.slot !== acc.slot) fail(`meta.slot es '${meta.slot}' y el catálogo dice '${acc.slot}'`);
+  if (!Number.isInteger(meta.frames) || meta.frames < 1) fail('frames debe ser un entero mayor que 0');
+  if (!!acc.animated !== meta.frames > 1) fail('"animated" del catálogo no coincide con los frames del arte');
+  for (const size of Object.keys(ACC_CANVAS)) {
+    const s = meta.sizes?.[size];
+    const pngPath = path.join(dir, `${size}.png`);
+    if (!s || !fs.existsSync(pngPath)) {
+      fail(`falta la talla ${size.toUpperCase()}`);
+      continue;
+    }
+    const [maxW, maxH] = ACC_CANVAS[size];
+    if (s.w > maxW || s.h > maxH) fail(`talla ${size.toUpperCase()}: ${s.w}×${s.h} no cabe en el lienzo (${maxW}×${maxH})`);
+    const a = s.anchor;
+    if (!Array.isArray(a) || a.length !== 2 || !a.every(Number.isInteger)) fail(`talla ${size.toUpperCase()}: anchor debe ser [x, y]`);
+    try {
+      const dim = readPngDimensions(pngPath);
+      if (dim.width !== s.w * meta.scale * meta.frames || dim.height !== s.h * meta.scale) {
+        fail(`talla ${size.toUpperCase()}: el PNG mide ${dim.width}×${dim.height} y meta.json dice ${s.w * meta.scale * meta.frames}×${s.h * meta.scale}`);
+      }
+    } catch (err) {
+      fail(`error leyendo ${size}.png: ${err.message}`);
+    }
+  }
+}
+console.log(`✓ accessories/: ${(accessoriesData?.accessories || []).length} prendas con arte en tres tallas`);
 
 console.log('\n=== Resumen de Validación ===');
 console.log(`Errores críticos: ${criticalErrors}`);

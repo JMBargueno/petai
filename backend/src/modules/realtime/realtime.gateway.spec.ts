@@ -16,16 +16,22 @@ describe('RealtimeGateway', () => {
   let disconnectSockets: jest.Mock;
   let gateway: RealtimeGateway;
   let verifyAsync: jest.Mock;
+  let presence: any;
 
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(NOW);
     open = [];
     disconnectSockets = jest.fn();
     verifyAsync = jest.fn(async () => ({ sub: 'u1', exp: NOW / 1000 + 900 }));
+    presence = {
+      heartbeat: jest.fn(async () => undefined),
+      removeDevice: jest.fn(async () => undefined),
+    };
     gateway = new RealtimeGateway(
       { verifyAsync } as any,
       { get: () => 'secreto' } as any,
       { incSocketConnections: jest.fn(), recordSseStream: jest.fn() } as any,
+      presence,
     );
     gateway.server = { in: jest.fn(() => ({ fetchSockets: async () => open, disconnectSockets })) } as any;
   });
@@ -76,6 +82,21 @@ describe('RealtimeGateway', () => {
     const closed = open.filter((o) => o.disconnect.mock.calls.length > 0).map((o) => o.id);
     expect(closed.sort()).toEqual(['old5', 'old6']); // quedan 4 + la nueva = 5
     expect(s.join).toHaveBeenCalled();
+  });
+
+  it('registra la presencia (heartbeat) al conectar y la retira (removeDevice) al desconectar', async () => {
+    const s = fakeSocket('a', 'tok');
+    s.handshake.auth.deviceId = 'dev-1';
+    s.handshake.auth.platform = 'web';
+    await gateway.handleConnection(s);
+    expect(presence.heartbeat).toHaveBeenCalledWith('u1', 'dev-1', 'web');
+
+    gateway.handleDisconnect(s);
+    expect(presence.removeDevice).toHaveBeenCalledWith('u1', 'dev-1');
+    // Tras el desconecte el refresco queda detenido: avanzar el reloj no repite heartbeats.
+    const callsAfterDisconnect = presence.heartbeat.mock.calls.length;
+    jest.advanceTimersByTime(31_000);
+    expect(presence.heartbeat.mock.calls.length).toBe(callsAfterDisconnect);
   });
 
   it('disconnectUser corta todas las conexiones del usuario', () => {

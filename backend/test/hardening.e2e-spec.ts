@@ -53,7 +53,8 @@ describe('Endurecimiento: SSRF, abuso de recompensas, sesiones y límites (e2e)'
         const res = await api().put('/v1/ai/config').set(auth).send({ provider: 'custom', baseUrl, model: 'm', apiKey: 'sk-test-12345678' });
         expect({ baseUrl, status: res.status }).toEqual({ baseUrl, status: 400 });
       }
-      expect((await api().get('/v1/ai/config').set(auth).expect(200)).body.configured).toBe(false);
+      // Ninguna URL se guardó: el usuario sigue en la IA gestionada, sin key propia (spec-34)
+      expect((await api().get('/v1/ai/config').set(auth).expect(200)).body).toMatchObject({ mode: 'managed', hasKey: false });
     });
   });
 

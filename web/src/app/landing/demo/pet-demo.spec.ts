@@ -1,8 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { RARITY_ODDS, SPECIES } from '../content';
+import { PATTERNS, RARITY_ODDS, SPECIES } from '../content';
 import { DEMO_RANDOM, PetDemo } from './pet-demo';
 
-/** Crea la demo con una secuencia fija de "azar": rareza, especie y shiny, en ese orden. */
+/**
+ * Crea la demo con una secuencia fija de "azar": rareza de especie, especie, rareza de patrón,
+ * patrón y shiny, en ese orden.
+ */
 function setup(...rolls: number[]) {
   const queue = [...rolls];
   TestBed.configureTestingModule({
@@ -24,7 +27,7 @@ describe('PetDemo', () => {
   afterEach(() => vi.useRealTimers());
 
   it('el huevo eclosiona al tercer toque, no antes', () => {
-    const { demo } = setup(0, 0, 0.9);
+    const { demo } = setup(0, 0, 0, 0, 0.9);
     demo.tapEgg();
     demo.tapEgg();
     expect(demo.pet()).toBeNull();
@@ -32,21 +35,27 @@ describe('PetDemo', () => {
     expect(demo.pet()).not.toBeNull();
   });
 
-  it('sortea rareza, especie y shiny con las probabilidades del juego', () => {
-    const common = setup(0, 0, 0.9).demo;
+  it('la rareza es la de la especie y el patrón se sortea aparte', () => {
+    const common = setup(0, 0, 0, 0, 0.9).demo;
     hatch(common);
+    const plain = PATTERNS.filter((p) => p.rarityId === RARITY_ODDS[0].id)[0];
     expect(common.pet()).toEqual({
       name: SPECIES[0].name,
       spriteKey: SPECIES[0].spriteKey,
-      rarity: RARITY_ODDS[0].name,
+      rarity: SPECIES[0].rarity,
+      pattern: plain.name,
+      patternRarity: plain.rarity,
       shiny: false,
     });
 
+    // Tirada de especie mítica y de patrón mítico: sale una especie de las que existen, con SU
+    // rareza, y un patrón mítico de verdad.
     TestBed.resetTestingModule();
-    const lucky = setup(0.999, 0.99, 0).demo;
+    const lucky = setup(0.999, 0.99, 0.999, 0, 0).demo;
     hatch(lucky);
-    expect(lucky.pet()?.rarity).toBe(RARITY_ODDS.at(-1)!.name);
-    expect(lucky.pet()?.spriteKey).toBe(SPECIES.at(-1)!.spriteKey);
+    const got = SPECIES.find((s) => s.spriteKey === lucky.pet()?.spriteKey)!;
+    expect(lucky.pet()?.rarity).toBe(got.rarity);
+    expect(lucky.pet()?.patternRarity).toBe(RARITY_ODDS.at(-1)!.name);
     expect(lucky.pet()?.shiny).toBe(true);
   });
 
@@ -55,7 +64,7 @@ describe('PetDemo', () => {
   });
 
   it('cuidar cambia las barras y el estado, y la reacción termina sola', () => {
-    const { demo } = setup(0, 0, 0.9);
+    const { demo } = setup(0, 0, 0, 0, 0.9);
     hatch(demo);
 
     demo.feed();

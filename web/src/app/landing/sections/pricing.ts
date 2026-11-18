@@ -1,6 +1,11 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, LOCALE_ID, afterNextRender, inject, signal } from '@angular/core';
 import { Sticker } from '../../shared/ui/sticker';
+import site from '../../site.json';
+import { WEB_CLIENT_HEADERS } from '../../shared/auth/api';
 import { PRICING_CARDS, PricingCard } from '../content';
+
+/** Índice de la tarjeta Pro en PRICING_CARDS (su precio sale del panel de facturación). */
+const PRO_CARD_INDEX = 1;
 
 @Component({
   selector: 'app-pricing',
@@ -16,7 +21,7 @@ import { PRICING_CARDS, PricingCard } from '../content';
         </p>
 
         <div class="pricing-grid">
-          @for (card of cards; track card.title; let i = $index) {
+          @for (card of cards(); track card.title; let i = $index) {
             <div
               class="card pricing-card reveal"
               [style.--i]="i"
@@ -148,5 +153,26 @@ import { PRICING_CARDS, PricingCard } from '../content';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Pricing {
-  protected readonly cards: PricingCard[] = PRICING_CARDS;
+  private readonly locale = inject(LOCALE_ID);
+  /** El HTML prerenderizado lleva el precio de content.ts; en el navegador se sustituye por el vigente. */
+  protected readonly cards = signal<PricingCard[]>(PRICING_CARDS);
+
+  constructor() {
+    afterNextRender(() => void this.loadLivePrice());
+  }
+
+  /** Precio de Pro configurado en el panel (`GET /v1/billing/plans`, público). Si falla, se queda el estático. */
+  private async loadLivePrice() {
+    try {
+      const res = await fetch(`${site.apiUrl.replace(/\/$/, '')}/v1/billing/plans`, { headers: WEB_CLIENT_HEADERS });
+      if (!res.ok) return;
+      const body = (await res.json()) as { plans?: { pro?: { priceEur?: number } } };
+      const eur = body.plans?.pro?.priceEur;
+      if (typeof eur !== 'number' || !(eur > 0)) return;
+      const price = new Intl.NumberFormat(this.locale, { style: 'currency', currency: 'EUR' }).format(eur);
+      this.cards.update((cards) => cards.map((c, i) => (i === PRO_CARD_INDEX ? { ...c, price } : c)));
+    } catch {
+      // Sin conexión con el API: se mantiene el precio del HTML estático
+    }
+  }
 }

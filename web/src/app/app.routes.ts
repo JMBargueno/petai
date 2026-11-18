@@ -22,6 +22,41 @@ export const routes: Routes = [
     loadComponent: () => import('./arena/arena').then((m) => m.Arena),
   },
   {
+    path: 'pro/ok',
+    loadComponent: () => import('./pro/pro-success').then((m) => m.ProSuccess),
+  },
+  {
+    path: 'pro/cancel',
+    loadComponent: () => import('./pro/pro-cancel').then((m) => m.ProCancel),
+  },
+  {
+    // Formulario de contacto (llega a contact@pockai.world vía POST /v1/contact).
+    path: 'contact',
+    loadComponent: () => import('./contact/contact').then((m) => m.Contact),
+  },
+  {
+    // Enlace de verificación del correo de la cuenta (solo cliente: lee ?token=).
+    path: 'verify-email',
+    loadComponent: () => import('./verify-email/verify-email').then((m) => m.VerifyEmail),
+  },
+  // Cuenta del visitante (solo cliente): entrar, crear cuenta, recuperar la contraseña y su cuenta.
+  {
+    path: 'login',
+    loadComponent: () => import('./account/login').then((m) => m.Login),
+  },
+  {
+    path: 'register',
+    loadComponent: () => import('./account/register').then((m) => m.Register),
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./account/forgot-password').then((m) => m.ForgotPassword),
+  },
+  {
+    path: 'account',
+    loadComponent: () => import('./account/account').then((m) => m.Account),
+  },
+  {
     // Panel oculto: no se enlaza desde la landing, no se prerenderiza y va en un chunk aparte.
     path: 'admin',
     loadChildren: () => import('./admin/admin.routes'),

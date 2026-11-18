@@ -66,6 +66,8 @@ describe('Environmental Awareness (e2e)', () => {
         weatherCode: null,
         cached: false,
         fetchedAt: null,
+        sunrise: null,
+        sunset: null,
       });
       expect(res.body.activity).toHaveProperty('mode');
       expect(res.body).toHaveProperty('festival');

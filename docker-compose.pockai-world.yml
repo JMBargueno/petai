@@ -1,0 +1,32 @@
+# Overlay para game-api.pockai.world: gateway nginx (reverse proxy a backend:3000)
+# expuesto vía nginx-proxy (red webproxy). ES la única exposición pública de la
+# API: el dominio anterior (api-pockai.jmbargueno.com) se retiró el 16-11-2026.
+#
+# Uso: docker compose -f docker-compose.prod.yml -f docker-compose.pockai-world.yml up -d
+#
+# TLS: LETSENCRYPT_HOST emite el cert en el volumen nginx_certs (mismo que el
+# resto de la red); watchdog de renovacion: ~/.hermes/scripts/pockai-cert-renew.sh.
+services:
+  api-world-gw:
+    image: nginx:alpine
+    container_name: pockai-world-api
+    restart: unless-stopped
+    ports:
+      - "8183:80" # debug directo al gateway (misma convención que 8181/8182 de la web)
+    volumes:
+      - /data/compose/30/nginx/vhost.d/game-api.pockai.world.conf:/etc/nginx/conf.d/default.conf:ro
+    environment:
+      VIRTUAL_HOST: game-api.pockai.world
+      VIRTUAL_PORT: "80"
+      VIRTUAL_WEBSOCKETS: "true" # el vhost generado por nginx-proxy necesita upgrade para socket.io
+      LETSENCRYPT_HOST: game-api.pockai.world
+      LETSENCRYPT_EMAIL: contact@jmbargueno.com
+    networks:
+      # default: red del proyecto (llega a petai-backend-1:3000)
+      # webproxy: red externa del nginx-proxy
+      - default
+      - webproxy
+
+networks:
+  webproxy:
+    external: true

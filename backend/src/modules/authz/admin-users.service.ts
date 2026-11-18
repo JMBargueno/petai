@@ -9,10 +9,13 @@ const ADMIN_USER_SELECT = {
   id: true,
   email: true,
   displayName: true,
+  // Nickname público (solo lectura: es inmutable, ni el panel lo puede cambiar).
+  handle: true,
   role: true,
   coins: true,
   gems: true,
   accountXp: true,
+  emailVerifiedAt: true,
   createdAt: true,
 } as const;
 
@@ -31,7 +34,14 @@ export class AdminUsersService {
     const where = {
       ...(role ? { role } : {}),
       ...(q
-        ? { OR: [{ email: { contains: q, mode: 'insensitive' as const } }, { displayName: { contains: q, mode: 'insensitive' as const } }] }
+        ? {
+            OR: [
+              { email: { contains: q, mode: 'insensitive' as const } },
+              { displayName: { contains: q, mode: 'insensitive' as const } },
+              // Se admite buscar "@nick": la '@' no forma parte del nickname guardado.
+              { handle: { contains: q.replace(/^@/, '').toLowerCase() } },
+            ],
+          }
         : {}),
     };
     const [items, total] = await this.prisma.$transaction([

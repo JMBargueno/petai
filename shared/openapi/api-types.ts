@@ -4,6 +4,108 @@
  */
 
 export interface paths {
+    "/v1/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mi perfil: datos de la cuenta, mascota principal, estadísticas e insignias */
+        get: operations["MyProfileController_getMyProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/featured-badges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Fijar las insignias destacadas del perfil (máx. 3, solo desbloqueadas) */
+        put: operations["MyProfileController_setFeaturedBadges"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Perfil público de un jugador (insignias y estadísticas si las muestra) */
+        get: operations["PublicProfileController_getPublicProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/achievements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener todos los logros del usuario con su estado */
+        get: operations["AchievementsController_getAll"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/achievements/constellation/{cat}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Constelación (layout SVG + estado) de una categoría */
+        get: operations["AchievementsController_getConstellation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/achievements/{id}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reclamar el estado de recompensa de un logro desbloqueado */
+        post: operations["AchievementsController_claim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/catalog": {
         parameters: {
             query?: never;
@@ -15,6 +117,234 @@ export interface paths {
         get: operations["GameDataController_getCatalog"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/presence/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get device presence for a user (own or accepted friend) */
+        get: operations["PresenceController_getPresence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Perform a co-op visit action on a friend's pet */
+        post: operations["PresenceController_visit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get visit history for my pets
+         * @description Por defecto, solo las visitas de cuidado que recibieron mis pets (formato de las apps antiguas). Con `scope=all`, también las que hice yo y las visitas en vivo al hábitat, con `direction`, `kind` y el nombre del otro jugador.
+         */
+        get: operations["PresenceController_getVisitHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/friends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mis relaciones de amistad (amigos aceptados + peticiones) */
+        get: operations["CoopFriendsController_list"];
+        put?: never;
+        /** Enviar una petición de amistad (por @nickname o id del destinatario) */
+        post: operations["CoopFriendsController_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/friends/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aceptar una petición de amistad recibida */
+        post: operations["CoopFriendsController_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coop/friends/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rechazar una petición de amistad recibida */
+        post: operations["CoopFriendsController_decline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Iniciar una visita en vivo al habitat de un amigo
+         * @description Gasta 10 de energía del pet visitante. Cooldown de 10 min por amigo y máx. 10 visitas en 24 h. Si ya hay una visita activa con ese amigo, la devuelve sin cobrar ni volver a notificar.
+         */
+        post: operations["HabitatVisitController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/visit/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Terminar mi visita en vivo activa */
+        post: operations["HabitatVisitController_end"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/visitors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Visitas activas donde el actor es el dueño del habitat */
+        get: operations["HabitatVisitController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/site/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configuración pública de la web (registro y landing «Coming soon») */
+        get: operations["SiteController_config"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar artículos de la tienda */
+        get: operations["InventoryController_getShop"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener inventario del usuario */
+        get: operations["InventoryController_getInventory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shop/buy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Comprar artículo de la tienda */
+        post: operations["InventoryController_buyItem"];
         delete?: never;
         options?: never;
         head?: never;
@@ -81,6 +411,23 @@ export interface paths {
         };
         /** Configuración pública del registro (¿hace falta invitación?) */
         get: operations["AuthController_registrationConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/handle-available": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comprueba si un nickname es válido y está libre (público, con límite por IP) */
+        get: operations["AuthController_handleAvailable"];
         put?: never;
         post?: never;
         delete?: never;
@@ -191,6 +538,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reenviar el correo de verificación (código + enlace). Invalida los anteriores */
+        post: operations["AuthController_verifyEmailResend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/verify-email/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verificar el correo con el código de 6 dígitos (desde la app) */
+        post: operations["AuthController_verifyEmailConfirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/verify-email/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verificar el correo con el token del enlace (página web /verify-email, sin sesión) */
+        post: operations["AuthController_verifyEmailLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/reset/request": {
         parameters: {
             query?: never;
@@ -290,8 +688,45 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Actualizar preferencias del usuario */
+        /** Actualizar preferencias del usuario (el nickname no se puede cambiar) */
         patch: operations["UsersController_updateMe"];
+        trace?: never;
+    };
+    "/v1/me/handle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Elegir el nickname (@handle) de una cuenta que aún no lo tiene
+         * @description Solo se puede hacer una vez: el nickname es inmutable. 409 si ya está en uso o si la cuenta ya tenía uno.
+         */
+        post: operations["UsersController_setHandle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/by-handle/{handle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Perfil público mínimo de un jugador por su nickname (con o sin "@") */
+        get: operations["UsersAchievementsController_getByHandle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/users/{id}/achievements": {
@@ -305,108 +740,6 @@ export interface paths {
         get: operations["UsersAchievementsController_getPublicAchievements"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/achievements": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Obtener todos los logros del usuario con su estado */
-        get: operations["AchievementsController_getAll"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/achievements/constellation/{cat}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Constelación (layout SVG + estado) de una categoría */
-        get: operations["AchievementsController_getConstellation"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/achievements/{id}/claim": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reclamar el estado de recompensa de un logro desbloqueado */
-        post: operations["AchievementsController_claim"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/shop": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listar artículos de la tienda */
-        get: operations["InventoryController_getShop"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/inventory": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Obtener inventario del usuario */
-        get: operations["InventoryController_getInventory"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/shop/buy": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Comprar artículo de la tienda */
-        post: operations["InventoryController_buyItem"];
         delete?: never;
         options?: never;
         head?: never;
@@ -458,6 +791,211 @@ export interface paths {
         put?: never;
         /** Eclosionar huevo completado (nombre opcional de la mascota) */
         post: operations["HatchingController_hatchEgg"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pets/{id}/mind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Perfil de criatura: 5 dimensiones de personalidad, keywords, memoria por capas y vida autónoma reciente */
+        get: operations["MindController_profile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener los planes, precios y límites vigentes */
+        get: operations["BillingController_getPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/entitlement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consultar el estado de suscripción y entitlement del usuario autenticado */
+        get: operations["BillingController_getEntitlement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/google/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verificar y reconocer una compra de Google Play Billing */
+        post: operations["BillingController_verifyGooglePurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/google/rtdn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recepción de notificaciones en tiempo real (RTDN) de Google Play Pub/Sub */
+        post: operations["BillingController_googleRtdn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/stripe/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generar URL de Stripe Checkout para suscripción Pro */
+        post: operations["StripeController_checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/stripe/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generar URL del Stripe Customer Portal para gestionar la suscripción */
+        post: operations["StripeController_portal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/stripe/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recepción de webhooks de eventos de suscripción y pago de Stripe */
+        post: operations["StripeController_webhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/billing/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener configuración activa de facturación e IA */
+        get: operations["AdminBillingController_getConfig"];
+        /** Guardar y activar una nueva versión de configuración de facturación */
+        put: operations["AdminBillingController_updateConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/billing/config/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar historial de versiones de configuración */
+        get: operations["AdminBillingController_listVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/billing/config/versions/{version}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revertir / activar una versión histórica de configuración */
+        post: operations["AdminBillingController_activateVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/billing/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Métricas de negocio de suscripciones y gasto de IA */
+        get: operations["AdminBillingController_stats"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -652,6 +1190,23 @@ export interface paths {
         patch: operations["PetsController_updateInHabitat"];
         trace?: never;
     };
+    "/v1/pets/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Elegir esta mascota como pockai activo (la que representa al jugador en su clan y visitas) */
+        post: operations["PetsController_activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/environmental/status": {
         parameters: {
             query?: never;
@@ -695,6 +1250,112 @@ export interface paths {
         };
         /** Festividades próximas (incluida la de hoy), con días restantes */
         get: operations["EnvironmentalController_getUpcomingFestivals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener el hábitat del usuario (salas, layout, buffs) */
+        get: operations["HabitatController_getHabitat"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/furniture/{id}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Comprar y colocar un mueble
+         * @description Con x/y (y rotation opcional) lo coloca en esa celda si cabe su huella; sin cuerpo, en el primer hueco libre.
+         */
+        post: operations["HabitatController_placeFurniture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quitar un mueble concreto del hábitat (por id de item) */
+        delete: operations["HabitatController_removeItem"];
+        options?: never;
+        head?: never;
+        /** Mover y/o girar un mueble ya colocado (sin coste) */
+        patch: operations["HabitatController_moveFurniture"];
+        trace?: never;
+    };
+    "/v1/habitat/furniture/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId */
+        delete: operations["HabitatController_removeFurniture"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs */
+        get: operations["HabitatController_getCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/buffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener los buffs activos del hábitat */
+        get: operations["HabitatController_getActiveBuffs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -835,7 +1496,7 @@ export interface paths {
         get: operations["AiController_memories"];
         put?: never;
         post?: never;
-        /** Borrar toda la memoria de la mascota */
+        /** Borrar toda la memoria de la mascota (también el perfil de hábitos) */
         delete: operations["AiController_forgetAll"];
         options?: never;
         head?: never;
@@ -854,6 +1515,26 @@ export interface paths {
         post?: never;
         /** Olvidar un recuerdo concreto */
         delete: operations["AiController_forget"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pets/{id}/context-digest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resumen diario del escritorio para los hábitos de la mascota (máx. 2 KB, uno cada 12 h)
+         * @description Solo categorías de app y minutos por franja de 4 h, y duraciones de Pomodoro. Nunca títulos de ventana. El servidor descarta las partes cuya habilidad (context_awareness, pomodoro_companion) no está activa.
+         */
+        post: operations["AiController_contextDigest"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1021,7 +1702,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Conversar con la mascota (streaming SSE: eventos delta, done, error) */
+        /**
+         * Conversar con la mascota (streaming SSE: eventos delta, tool, action, moderated, done, error)
+         * @description El razonamiento del modelo (reasoning_content o bloques <think>) nunca llega en los eventos delta: si existe y supera la moderación, el evento done lo incluye aparte en message.thinking (no se guarda en el historial).
+         */
         post: operations["AiController_chatStream"];
         delete?: never;
         options?: never;
@@ -1216,6 +1900,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enviar un mensaje desde el formulario de contacto público */
+        post: operations["ContactController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/desktop/updates/download/{assetId}": {
         parameters: {
             query?: never;
@@ -1257,7 +1958,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Descarga el instalador más reciente de la app de escritorio. Público. */
+        /** URL de descarga del instalador más reciente. Requiere sesión con el correo verificado. */
         get: operations["DesktopDownloadController_download"];
         put?: never;
         post?: never;
@@ -1265,6 +1966,282 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Vista previa: devuelve el HTML final con la plantilla de marca */
+        post: operations["AdminEmailController_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails/audience/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Número de destinatarios de un público (los segmentos excluyen las bajas) */
+        post: operations["AdminEmailController_count"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enviar una prueba al correo del propio administrador */
+        post: operations["AdminEmailController_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historial de envíos (paginado) */
+        get: operations["AdminEmailController_list"];
+        put?: never;
+        /** Crear un envío (se encola y se manda por lotes; queda auditado) */
+        post: operations["AdminEmailController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/emails/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle y progreso de un envío */
+        get: operations["AdminEmailController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar usuarios (paginado; filtros: role, q) */
+        get: operations["AdminUsersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cambiar el rol de un usuario (cierra sus sesiones y queda auditado) */
+        patch: operations["AdminUsersController_assignRole"];
+        trace?: never;
+    };
+    "/v1/admin/users/{id}/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado) */
+        patch: operations["AdminUsersController_adjustBalance"];
+        trace?: never;
+    };
+    "/v1/admin/users/{id}/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marcar el correo de un usuario como verificado (soporte; queda auditado) */
+        post: operations["AdminUsersController_markVerified"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{id}/resend-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reenviar el correo de verificación a un usuario sin verificar */
+        post: operations["AdminUsersController_resendVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/registration-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ajustes del registro (¿solo con invitación?) */
+        get: operations["AdminInvitesController_getSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Activar o desactivar el registro solo con invitación (queda auditado) */
+        patch: operations["AdminInvitesController_setSettings"];
+        trace?: never;
+    };
+    "/v1/admin/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar códigos de invitación (paginado; filtro: status) */
+        get: operations["AdminInvitesController_list"];
+        put?: never;
+        /** Generar códigos de invitación */
+        post: operations["AdminInvitesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/invites/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revocar un código de invitación (idempotente) */
+        post: operations["AdminInvitesController_revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar mascotas (paginado; filtros: rarity, q por nickname o dueño) */
+        get: operations["AdminPetsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Renombrar una mascota (auditoría: pet_rename) */
+        patch: operations["AdminPetsController_rename"];
+        trace?: never;
+    };
+    "/v1/admin/site-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ajustes de la web pública (landing «Coming soon») */
+        get: operations["AdminSiteController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cambiar los ajustes de la web pública (queda auditado) */
+        patch: operations["AdminSiteController_set"];
         trace?: never;
     };
     "/v1/missions": {
@@ -1403,15 +2380,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/habitat": {
+    "/v1/accessories": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Obtener el hábitat del usuario (salas, layout, buffs) */
-        get: operations["HabitatController_getHabitat"];
+        /** Catálogo de accesorios con el estado de cada prenda para el usuario */
+        get: operations["AccessoriesController_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1420,7 +2397,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/habitat/furniture/{id}/place": {
+    "/v1/accessories/{id}/buy": {
         parameters: {
             query?: never;
             header?: never;
@@ -1429,58 +2406,28 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Colocar un mueble en una celda del hábitat */
-        post: operations["HabitatController_placeFurniture"];
+        /** Comprar una prenda con monedas o gemas */
+        post: operations["AccessoriesController_buy"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/habitat/furniture/{id}": {
+    "/v1/pets/{petId}/accessories": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Quitar un mueble del hábitat */
-        delete: operations["HabitatController_removeFurniture"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/habitat/catalog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs */
-        get: operations["HabitatController_getCatalog"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/habitat/buffs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Obtener los buffs activos del hábitat */
-        get: operations["HabitatController_getActiveBuffs"];
-        put?: never;
+        /** Prendas equipadas de una mascota */
+        get: operations["AccessoriesController_getEquipped"];
+        /**
+         * Equipar o quitar prendas por ranura
+         * @description Cada ranura admite un itemId (equipar) o null (quitar). Lo que no se envía se conserva.
+         */
+        put: operations["AccessoriesController_equip"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2447,15 +3394,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/presence/{userId}": {
+    "/v1/clans": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get device presence for a user (own or accepted friend) */
-        get: operations["PresenceController_getPresence"];
+        /** Mi clan (o 404 si no perteneces a ninguno) */
+        get: operations["ClansController_getMine"];
+        put?: never;
+        /** Crear un clan (el actor se convierte en Forjador) */
+        post: operations["ClansController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unirse a un clan existente por su etiqueta (tag) */
+        post: operations["ClansController_join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Abandonar mi clan */
+        post: operations["ClansController_leave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Invitar a un usuario a unirse directamente (Vigía o superior) */
+        post: operations["ClansController_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Roster del clan con presencia en línea por miembro */
+        get: operations["ClansController_getMembers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2464,32 +3480,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/coop/visit": {
+    "/v1/clans/{id}/habitat": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /** Perform a co-op visit action on a friend's pet */
-        post: operations["PresenceController_visit"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/coop/history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get visit history for my pets */
-        get: operations["PresenceController_getVisitHistory"];
+        /** Hábitat del Nexo: nivel visual por XP y hasta 5 pockais activos (uno por miembro, el tuyo siempre), sorteados en cada llamada */
+        get: operations["ClansController_getHabitat"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2498,25 +3497,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/coop/friends": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Mis relaciones de amistad (amigos aceptados + peticiones) */
-        get: operations["CoopFriendsController_list"];
-        put?: never;
-        /** Enviar una petición de amistad (por id o email del destinatario) */
-        post: operations["CoopFriendsController_request"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/coop/friends/{id}/accept": {
+    "/v1/clans/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2525,15 +3506,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Aceptar una petición de amistad recibida */
-        post: operations["CoopFriendsController_accept"];
-        delete?: never;
+        post?: never;
+        /** Disolver el clan (solo el Forjador) */
+        delete: operations["ClansController_disband"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Editar nombre y/o descripción del clan (Guardián o superior) */
+        patch: operations["ClansController_update"];
         trace?: never;
     };
-    "/v1/coop/friends/{id}/decline": {
+    "/v1/clans/{id}/members/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2542,9 +3524,130 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rechazar una petición de amistad recibida */
-        post: operations["CoopFriendsController_decline"];
+        post?: never;
+        /** Expulsar a un miembro de rango inferior (Vigía o superior) */
+        delete: operations["ClansController_kick"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/members/{userId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        /** Cambiar el rango de un miembro (Guardián o superior; Guardianes solo el Forjador) */
+        patch: operations["ClansController_setRole"];
+        trace?: never;
+    };
+    "/v1/clans/{id}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ceder la Forja (rango de creador) a otro miembro (solo el Forjador) */
+        post: operations["ClansController_transfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historial reciente del chat del clan (más reciente primero) */
+        get: operations["ClansController_getMessages"];
+        put?: never;
+        /** Enviar un mensaje al chat del clan */
+        post: operations["ClansController_sendMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/messages/{messageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Borrar un mensaje del chat (su autor o un Vigía o superior) */
+        delete: operations["ClansController_deleteMessage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista de metas del clan (activas primero, progreso desc) */
+        get: operations["ClansController_getGoals"];
+        put?: never;
+        /** Crear una meta compartida del clan */
+        post: operations["ClansController_createGoal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/goals/{goalId}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aumentar el progreso de una meta del clan */
+        post: operations["ClansController_addGoalProgress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/goals/{goalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Eliminar una meta del clan (Vigía o superior) */
+        delete: operations["ClansController_deleteGoal"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3010,144 +4113,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listar usuarios (paginado; filtros: role, q) */
-        get: operations["AdminUsersController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/users/{id}/role": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Cambiar el rol de un usuario (cierra sus sesiones y queda auditado) */
-        patch: operations["AdminUsersController_assignRole"];
-        trace?: never;
-    };
-    "/v1/admin/users/{id}/balance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado) */
-        patch: operations["AdminUsersController_adjustBalance"];
-        trace?: never;
-    };
-    "/v1/admin/registration-settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Ajustes del registro (¿solo con invitación?) */
-        get: operations["AdminInvitesController_getSettings"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Activar o desactivar el registro solo con invitación (queda auditado) */
-        patch: operations["AdminInvitesController_setSettings"];
-        trace?: never;
-    };
-    "/v1/admin/invites": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listar códigos de invitación (paginado; filtro: status) */
-        get: operations["AdminInvitesController_list"];
-        put?: never;
-        /** Generar códigos de invitación */
-        post: operations["AdminInvitesController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/invites/{id}/revoke": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Revocar un código de invitación (idempotente) */
-        post: operations["AdminInvitesController_revoke"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/pets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listar mascotas (paginado; filtros: rarity, q por nickname o dueño) */
-        get: operations["AdminPetsController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/pets/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Renombrar una mascota (auditoría: pet_rename) */
-        patch: operations["AdminPetsController_rename"];
-        trace?: never;
-    };
     "/v1/admin/stats": {
         parameters: {
             query?: never;
@@ -3271,6 +4236,349 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ProfilePetDto: {
+            id: string;
+            /** @example Chispa */
+            nickname: string;
+            /** @example Flamín */
+            speciesName: string;
+            /** @example fire */
+            element: string;
+            /** @example rare */
+            rarity: string;
+            /** @example 12 */
+            level: number;
+            /** @example juvenile */
+            stage: string;
+            /** @example false */
+            shiny: boolean;
+            /**
+             * @description Prendas equipadas por ranura (head, face, neck, back): itemId de accessories.json
+             * @example {
+             *       "head": "acc_gorro_lana_azul"
+             *     }
+             */
+            accessories: Record<string, never>;
+        };
+        ProfileStatsDto: {
+            /**
+             * @description Minutos de juego
+             * @example 754
+             */
+            playMinutes: number;
+            /**
+             * @description Veces que ha alimentado a sus mascotas
+             * @example 132
+             */
+            feeds: number;
+            /** @example 40 */
+            cleans: number;
+            /** @example 25 */
+            sleeps: number;
+            /**
+             * @description Huevos abiertos
+             * @example 6
+             */
+            eggsHatched: number;
+            /**
+             * @description Pockais por rareza
+             * @example {
+             *       "normal": 4,
+             *       "rare": 2
+             *     }
+             */
+            byRarity: Record<string, never>;
+            /**
+             * @description Pockais shiny conseguidos
+             * @example 0
+             */
+            shinies: number;
+            /**
+             * @description Visitas a hábitats de amigos
+             * @example 9
+             */
+            habitatVisits: number;
+            /**
+             * @description Amigos aceptados
+             * @example 3
+             */
+            friends: number;
+            /**
+             * @description Racha actual de días seguidos
+             * @example 4
+             */
+            streakCurrent: number;
+            /**
+             * @description Mejor racha de días seguidos
+             * @example 12
+             */
+            streakBest: number;
+            /**
+             * @description Días siendo PRO
+             * @example 45
+             */
+            proDays: number;
+            /**
+             * @description Monedas gastadas (solo en el perfil propio)
+             * @example 3400
+             */
+            coinsSpent?: number;
+            /**
+             * @description Gemas gastadas (solo en el perfil propio)
+             * @example 20
+             */
+            gemsSpent?: number;
+        };
+        ProfileBadgeDto: {
+            /**
+             * @description ID lógico del logro
+             * @example special_beta_tester
+             */
+            id: string;
+            /** @example Beta Tester */
+            name: string;
+            /** @example Te uniste a PockAI antes de 2027 */
+            description: string;
+            /**
+             * @description Icono lucide (kebab-case) de la insignia
+             * @example flask-conical
+             */
+            badgeIcon: string;
+            /**
+             * @example special
+             * @enum {string}
+             */
+            category: "care" | "battle" | "ai" | "collection" | "social" | "activity" | "special";
+            /**
+             * @example legendary
+             * @enum {string}
+             */
+            tier: "common" | "rare" | "epic" | "legendary";
+            /**
+             * @description Fecha de desbloqueo (ISO 8601)
+             * @example 2026-11-17T10:00:00.000Z
+             */
+            unlockedAt: string;
+        };
+        ProfileAchievementCountDto: {
+            /** @example 14 */
+            unlocked: number;
+            /** @example 78 */
+            total: number;
+        };
+        MyProfileDto: {
+            id: string;
+            /** @example Jose */
+            displayName: string;
+            /** @example jose */
+            handle?: string | null;
+            /** @example Cuidador novato */
+            title?: string | null;
+            /** @example 1200 */
+            accountXp: number;
+            /** @description Fecha de alta (ISO 8601) */
+            createdAt: string;
+            /** @description Si ahora mismo es PRO */
+            isPro: boolean;
+            /** @description Si el dueño muestra sus insignias y estadísticas */
+            achievementsPublic: boolean;
+            pet?: components["schemas"]["ProfilePetDto"] | null;
+            /** @description null si el dueño las oculta */
+            stats?: components["schemas"]["ProfileStatsDto"] | null;
+            /** @description Insignias desbloqueadas (vacío si las oculta) */
+            badges: components["schemas"]["ProfileBadgeDto"][];
+            /** @description Ids de las insignias destacadas (máx. 3) */
+            featuredBadges: string[];
+            achievementCount: components["schemas"]["ProfileAchievementCountDto"];
+            /** @description Inicio del tramo PRO actual (ISO 8601) */
+            proSince?: string | null;
+        };
+        SetFeaturedBadgesDto: {
+            /**
+             * @example [
+             *       "special_beta_tester",
+             *       "care_feed_50"
+             *     ]
+             */
+            achIds: string[];
+        };
+        PublicProfileDto: {
+            id: string;
+            /** @example Jose */
+            displayName: string;
+            /** @example jose */
+            handle?: string | null;
+            /** @example Cuidador novato */
+            title?: string | null;
+            /** @example 1200 */
+            accountXp: number;
+            /** @description Fecha de alta (ISO 8601) */
+            createdAt: string;
+            /** @description Si ahora mismo es PRO */
+            isPro: boolean;
+            /** @description Si el dueño muestra sus insignias y estadísticas */
+            achievementsPublic: boolean;
+            pet?: components["schemas"]["ProfilePetDto"] | null;
+            /** @description null si el dueño las oculta */
+            stats?: components["schemas"]["ProfileStatsDto"] | null;
+            /** @description Insignias desbloqueadas (vacío si las oculta) */
+            badges: components["schemas"]["ProfileBadgeDto"][];
+            /** @description Ids de las insignias destacadas (máx. 3) */
+            featuredBadges: string[];
+            achievementCount: components["schemas"]["ProfileAchievementCountDto"];
+            /** @description Si el visitante y el dueño son amigos */
+            isFriend: boolean;
+            /** @description Si es el perfil del propio visitante */
+            isSelf: boolean;
+        };
+        AchievementListResponseDto: {
+            /**
+             * @description Timestamp de la respuesta (ISO 8601)
+             * @example 2026-11-13T14:30:00.000Z
+             */
+            timestamp: string;
+            /**
+             * @description Estado del opt-in de visibilidad pública
+             * @example false
+             */
+            achievementsPublic: boolean;
+            /** @description Logros por categoría (care, battle, ai, collection, social, activity, special) */
+            categories: Record<string, never>;
+        };
+        StarDto: {
+            /**
+             * @description ID lógico del logro
+             * @example battle_10_wins
+             */
+            id: string;
+            /**
+             * @description Coordenada X normalizada [0,1]
+             * @example 0.45
+             */
+            x: number;
+            /**
+             * @description Coordenada Y normalizada [0,1]
+             * @example 0.45
+             */
+            y: number;
+            /**
+             * @description Estado del logro
+             * @example unlocked
+             * @enum {string}
+             */
+            status: "locked" | "in_progress" | "unlocked";
+            /**
+             * @description Nombre del logro
+             * @example Guerrero
+             */
+            name: string;
+            /**
+             * @description Tier del logro
+             * @example rare
+             * @enum {string}
+             */
+            tier: "common" | "rare" | "epic" | "legendary";
+        };
+        ConstellationResponseDto: {
+            /**
+             * @description Categoría/constelación
+             * @example battle
+             * @enum {string}
+             */
+            category: "care" | "battle" | "ai" | "collection" | "social" | "activity" | "special";
+            /**
+             * @description Nombre de la constelación
+             * @example Batalla
+             */
+            name: string;
+            /** @description Estrellas de la constelación */
+            stars: components["schemas"]["StarDto"][];
+            /**
+             * @description Conexiones entre estrellas (pares de ids)
+             * @example [
+             *       [
+             *         "battle_5_fights",
+             *         "battle_1_wins"
+             *       ]
+             *     ]
+             */
+            connections: string[];
+        };
+        ClaimedAchievementDto: {
+            /**
+             * @description ID lógico del logro
+             * @example battle_10_wins
+             */
+            id: string;
+            /**
+             * @description Categoría
+             * @example battle
+             */
+            category: string;
+            /**
+             * @description Si fue reclamado
+             * @example true
+             */
+            claimed: boolean;
+        };
+        AchievementRewardDto: {
+            /**
+             * @description Monedas de recompensa
+             * @example 100
+             */
+            coins: number;
+            /**
+             * @description Gemas de recompensa
+             * @example 0
+             */
+            gems: number;
+            /**
+             * @description XP de recompensa
+             * @example 40
+             */
+            xp: number;
+            /**
+             * @description Item exclusivo (solo epic/legendary)
+             * @example null
+             */
+            itemId?: string | null;
+        };
+        ClaimRewardResponseDto: {
+            /** @description Misión reclamada */
+            mission: components["schemas"]["ClaimedMissionDto"];
+            /** @description Recompensa acreditada */
+            reward: components["schemas"]["MissionRewardDto"];
+            /**
+             * @description Si todas las diarias están completadas (desbloquea cofre)
+             * @example true
+             */
+            dailyChestUnlocked: boolean;
+        };
+        SiteCountdownDto: {
+            enabled: boolean;
+            /** Format: date-time */
+            launchAt: string | null;
+        };
+        SiteComingSoonDto: {
+            enabled: boolean;
+            countdown: components["schemas"]["SiteCountdownDto"];
+        };
+        SiteMaintenanceMessageDto: {
+            es: string | null;
+            en: string | null;
+        };
+        SiteMaintenanceDto: {
+            enabled: boolean;
+            /** @enum {string} */
+            scope: "web" | "apps" | "all";
+            message: components["schemas"]["SiteMaintenanceMessageDto"];
+        };
+        SiteConfigDto: {
+            /** @description Si es true, el registro exige un código de invitación */
+            inviteRequired: boolean;
+            comingSoon: components["schemas"]["SiteComingSoonDto"];
+            maintenance: components["schemas"]["SiteMaintenanceDto"];
+        };
         ManifestDto: {
             /**
              * @description Versión del manifest (fecha + hash corto) — cambia con cada deploy.
@@ -3335,6 +4643,20 @@ export interface components {
             /** @description Si es true, el registro exige un código de invitación */
             inviteRequired: boolean;
         };
+        HandleAvailabilityDto: {
+            /**
+             * @description Nickname normalizado (minúsculas, sin "@")
+             * @example jmbargueno
+             */
+            handle: string;
+            /** @example true */
+            available: boolean;
+            /**
+             * @description Motivo cuando no está disponible
+             * @example Ese nickname ya está en uso
+             */
+            reason?: string;
+        };
         RegisterDto: {
             /**
              * @description Correo electrónico del usuario
@@ -3356,6 +4678,11 @@ export interface components {
              * @example ABCD-EF23
              */
             inviteCode?: string;
+            /**
+             * @description Nickname público, único e inmutable (3-20: a-z, 0-9, "_" y "."; empieza por letra; sin distinguir mayúsculas; se acepta con o sin "@"). Si falta, la cuenta tendrá que elegirlo con POST /me/handle.
+             * @example jmbargueno
+             */
+            handle?: string;
         };
         AuthResponseDto: {
             /** @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... */
@@ -3368,8 +4695,12 @@ export interface components {
                 /** @enum {string} */
                 role?: "superadmin" | "admin" | "moderator" | "user";
                 displayName?: string;
+                /** @description Nickname público e inmutable; null = debe elegirlo (POST /me/handle) */
+                handle?: string | null;
                 coins?: number;
                 gems?: number;
+                /** @description false: la cuenta debe verificar el correo antes de usar las apps */
+                emailVerified?: boolean;
             };
         };
         LoginDto: {
@@ -3393,6 +4724,23 @@ export interface components {
             currentPassword: string;
             /** @description Contraseña nueva (mínimo 8 caracteres, distinta de la actual) */
             newPassword: string;
+        };
+        VerifyEmailCodeDto: {
+            /**
+             * @description Código de 6 dígitos recibido por email
+             * @example 482913
+             */
+            code: string;
+        };
+        VerifyEmailResultDto: {
+            /** @example true */
+            ok: boolean;
+            /** @example true */
+            emailVerified: boolean;
+        };
+        VerifyEmailLinkDto: {
+            /** @description Token del enlace de verificación (parámetro ?token= de la página /verify-email) */
+            token: string;
         };
         ResetRequestDto: {
             /**
@@ -3418,28 +4766,6 @@ export interface components {
              */
             newPassword: string;
         };
-        AchievementRewardDto: {
-            /**
-             * @description Monedas de recompensa
-             * @example 100
-             */
-            coins: number;
-            /**
-             * @description Gemas de recompensa
-             * @example 0
-             */
-            gems: number;
-            /**
-             * @description XP de recompensa
-             * @example 40
-             */
-            xp: number;
-            /**
-             * @description Item exclusivo (solo epic/legendary)
-             * @example null
-             */
-            itemId?: string | null;
-        };
         PublicAchievementDto: {
             /**
              * @description ID lógico del logro
@@ -3452,11 +4778,21 @@ export interface components {
              */
             name: string;
             /**
+             * @description Descripción del logro
+             * @example Gana 10 combates
+             */
+            description: string;
+            /**
+             * @description Icono de la insignia (nombre lucide, kebab-case)
+             * @example sword
+             */
+            badgeIcon: string;
+            /**
              * @description Categoría
              * @example battle
              * @enum {string}
              */
-            category: "care" | "battle" | "ai" | "collection" | "social";
+            category: "care" | "battle" | "ai" | "collection" | "social" | "activity" | "special";
             /**
              * @description Tier
              * @example rare
@@ -3490,107 +4826,7 @@ export interface components {
             /** @description Solo logros desbloqueados (sin progreso no desbloqueado) */
             achievements: components["schemas"]["PublicAchievementDto"][];
         };
-        AchievementListResponseDto: {
-            /**
-             * @description Timestamp de la respuesta (ISO 8601)
-             * @example 2026-11-13T14:30:00.000Z
-             */
-            timestamp: string;
-            /**
-             * @description Estado del opt-in de visibilidad pública
-             * @example false
-             */
-            achievementsPublic: boolean;
-            /** @description Logros por categoría (5: care, battle, ai, collection, social) */
-            categories: Record<string, never>;
-        };
-        StarDto: {
-            /**
-             * @description ID lógico del logro
-             * @example battle_10_wins
-             */
-            id: string;
-            /**
-             * @description Coordenada X normalizada [0,1]
-             * @example 0.45
-             */
-            x: number;
-            /**
-             * @description Coordenada Y normalizada [0,1]
-             * @example 0.45
-             */
-            y: number;
-            /**
-             * @description Estado del logro
-             * @example unlocked
-             * @enum {string}
-             */
-            status: "locked" | "in_progress" | "unlocked";
-            /**
-             * @description Nombre del logro
-             * @example Guerrero
-             */
-            name: string;
-            /**
-             * @description Tier del logro
-             * @example rare
-             * @enum {string}
-             */
-            tier: "common" | "rare" | "epic" | "legendary";
-        };
-        ConstellationResponseDto: {
-            /**
-             * @description Categoría/constelación
-             * @example battle
-             * @enum {string}
-             */
-            category: "care" | "battle" | "ai" | "collection" | "social";
-            /**
-             * @description Nombre de la constelación
-             * @example Batalla
-             */
-            name: string;
-            /** @description Estrellas de la constelación */
-            stars: components["schemas"]["StarDto"][];
-            /**
-             * @description Conexiones entre estrellas (pares de ids)
-             * @example [
-             *       [
-             *         "battle_5_fights",
-             *         "battle_1_wins"
-             *       ]
-             *     ]
-             */
-            connections: string[];
-        };
-        ClaimedAchievementDto: {
-            /**
-             * @description ID lógico del logro
-             * @example battle_10_wins
-             */
-            id: string;
-            /**
-             * @description Categoría
-             * @example battle
-             */
-            category: string;
-            /**
-             * @description Si fue reclamado
-             * @example true
-             */
-            claimed: boolean;
-        };
-        ClaimRewardResponseDto: {
-            /** @description Misión reclamada */
-            mission: components["schemas"]["ClaimedMissionDto"];
-            /** @description Recompensa acreditada */
-            reward: components["schemas"]["MissionRewardDto"];
-            /**
-             * @description Si todas las diarias están completadas (desbloquea cofre)
-             * @example true
-             */
-            dailyChestUnlocked: boolean;
-        };
+        UpdateBillingConfigDto: Record<string, never>;
         BondingFieldsDto: {
             /**
              * @description Valor del vínculo, acotado a [0,100], 2 decimales
@@ -3772,6 +5008,16 @@ export interface components {
             cached: boolean;
             /** @description ISO 8601 del último (re)obtenimiento */
             fetchedAt: string | null;
+            /**
+             * @description Salida del sol de hoy, hora local ("HH:MM")
+             * @example 07:58
+             */
+            sunrise: string | null;
+            /**
+             * @description Puesta de sol de hoy, hora local ("HH:MM")
+             * @example 17:54
+             */
+            sunset: string | null;
         };
         ActivityInfoModel: {
             /** @description ¿Hay un heartbeat reciente? */
@@ -3838,6 +5084,149 @@ export interface components {
              * @example 42
              */
             daysRemaining: number;
+        };
+        PlaceFurnitureDto: {
+            /** @description Celda ancla x (con y) */
+            x?: number;
+            /** @description Celda ancla y (con x) */
+            y?: number;
+            /** @description Giro en pasos de 90° */
+            rotation?: number;
+        };
+        MoveFurnitureDto: {
+            /** @description Celda ancla x (con y) */
+            x?: number;
+            /** @description Celda ancla y (con x) */
+            y?: number;
+            /** @description Giro en pasos de 90° */
+            rotation?: number;
+        };
+        ContactDto: {
+            /**
+             * @description Nombre (1–100)
+             * @example Ana
+             */
+            name: string;
+            /**
+             * @description Correo al que responder
+             * @example ana@example.com
+             */
+            email: string;
+            /**
+             * @description Asunto (1–150)
+             * @example Duda sobre mi Pockai
+             */
+            subject: string;
+            /**
+             * @description Mensaje (10–5000)
+             * @example Hola, quería preguntar…
+             */
+            message: string;
+            /**
+             * @description Tipo de mensaje; va en el asunto del correo
+             * @default other
+             * @enum {string}
+             */
+            type: "bug" | "improvement" | "question" | "legal" | "account" | "other";
+            /**
+             * @description Desde dónde se llegó al formulario
+             * @default web
+             * @enum {string}
+             */
+            source: "web" | "android" | "desktop";
+            /** @description Honeypot anti-spam: debe ir vacío */
+            website?: string;
+        };
+        DesktopDownloadDto: {
+            /** @description URL firmada y temporal (unos minutos) del instalador en GitHub */
+            url: string;
+        };
+        RegistrationSettingsDto: {
+            /** @description Si es true, el registro exige un código de invitación válido */
+            inviteOnly: boolean;
+        };
+        InviteCreatorDto: {
+            id: string;
+            email: string;
+            displayName: string | null;
+        };
+        InviteCodeDto: {
+            id: string;
+            /** @example ABCD-EF23 */
+            code: string;
+            maxUses: number;
+            usedCount: number;
+            /** Format: date-time */
+            expiresAt: string | null;
+            /** Format: date-time */
+            revokedAt: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            createdBy: components["schemas"]["InviteCreatorDto"] | null;
+            /** @enum {string} */
+            status: "active" | "used" | "revoked" | "expired";
+        };
+        InviteListDto: {
+            items: components["schemas"]["InviteCodeDto"][];
+            total: number;
+            page: number;
+            pageSize: number;
+        };
+        CreateInvitesDto: {
+            /**
+             * @description Número de registros que permite cada código
+             * @default 1
+             */
+            maxUses: number;
+            /**
+             * Format: date-time
+             * @description Caducidad (opcional, futura)
+             */
+            expiresAt?: string | null;
+            /** @description Nota interna (para quién es la invitación) */
+            note?: string;
+            /**
+             * @description Cuántos códigos generar
+             * @default 1
+             */
+            count: number;
+        };
+        CreatedInvitesDto: {
+            items: components["schemas"]["InviteCodeDto"][];
+        };
+        SiteSettingsDto: {
+            /** @description Landing «Coming soon» activa: tapa la web a quien no tenga sesión verificada */
+            comingSoonEnabled: boolean;
+            /** @description Mostrar la cuenta atrás en la landing */
+            comingSoonCountdownEnabled: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de lanzamiento de la cuenta atrás
+             */
+            comingSoonLaunchAt: string | null;
+            /** @description Modo mantenimiento manual: solo pasan admins, login y contacto */
+            maintenanceEnabled: boolean;
+            /**
+             * @description A quién afecta: solo la web, solo las apps o todo
+             * @enum {string}
+             */
+            maintenanceScope: "web" | "apps" | "all";
+            /** @description Mensaje en castellano (vacío = texto por defecto) */
+            maintenanceMessageEs: string | null;
+            /** @description Mensaje en inglés (vacío = texto por defecto) */
+            maintenanceMessageEn: string | null;
+        };
+        UpdateSiteSettingsDto: {
+            comingSoonEnabled?: boolean;
+            comingSoonCountdownEnabled?: boolean;
+            /** Format: date-time */
+            comingSoonLaunchAt?: string | null;
+            maintenanceEnabled?: boolean;
+            /** @enum {string} */
+            maintenanceScope?: "web" | "apps" | "all";
+            maintenanceMessageEs?: string | null;
+            maintenanceMessageEn?: string | null;
         };
         MissionRewardDto: {
             /**
@@ -4124,59 +5513,15 @@ export interface components {
              */
             total: number;
         };
-        RegistrationSettingsDto: {
-            /** @description Si es true, el registro exige un código de invitación válido */
-            inviteOnly: boolean;
-        };
-        InviteCreatorDto: {
-            id: string;
-            email: string;
-            displayName: string | null;
-        };
-        InviteCodeDto: {
-            id: string;
-            /** @example ABCD-EF23 */
-            code: string;
-            maxUses: number;
-            usedCount: number;
-            /** Format: date-time */
-            expiresAt: string | null;
-            /** Format: date-time */
-            revokedAt: string | null;
-            note: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            createdBy: components["schemas"]["InviteCreatorDto"] | null;
-            /** @enum {string} */
-            status: "active" | "used" | "revoked" | "expired";
-        };
-        InviteListDto: {
-            items: components["schemas"]["InviteCodeDto"][];
-            total: number;
-            page: number;
-            pageSize: number;
-        };
-        CreateInvitesDto: {
-            /**
-             * @description Número de registros que permite cada código
-             * @default 1
-             */
-            maxUses: number;
-            /**
-             * Format: date-time
-             * @description Caducidad (opcional, futura)
-             */
-            expiresAt?: string | null;
-            /** @description Nota interna (para quién es la invitación) */
-            note?: string;
-            /**
-             * @description Cuántos códigos generar
-             * @default 1
-             */
-            count: number;
-        };
-        CreatedInvitesDto: {
-            items: components["schemas"]["InviteCodeDto"][];
+        EquipAccessoriesDto: {
+            /** @description Prenda de cabeza; null la quita */
+            head?: string | null;
+            /** @description Prenda de cara; null la quita */
+            face?: string | null;
+            /** @description Prenda de cuello; null la quita */
+            neck?: string | null;
+            /** @description Prenda de espalda; null la quita */
+            back?: string | null;
         };
         AdminStatsUsersDto: {
             total: number;
@@ -4284,6 +5629,209 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    MyProfileController_getMyProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyProfileDto"];
+                };
+            };
+        };
+    };
+    MyProfileController_setFeaturedBadges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetFeaturedBadgesDto"];
+            };
+        };
+        responses: {
+            /** @description { featuredBadges: string[] } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Más de 3, o alguna no está desbloqueada */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicProfileController_getPublicProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicProfileDto"];
+                };
+            };
+            /** @description Usuario no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AchievementsController_getAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logros del usuario por categoría */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AchievementListResponseDto"];
+                };
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Game-data de logros no cargado */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AchievementsController_getConstellation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cat: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Constelación de la categoría */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConstellationResponseDto"];
+                };
+            };
+            /** @description Categoría inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Game-data de constelaciones no cargado */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AchievementsController_claim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logro reclamado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimRewardResponseDto"];
+                };
+            };
+            /** @description Logro no desbloqueado */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Logro no encontrado o no pertenece al usuario */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Logro ya reclamado (race condition) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     GameDataController_getCatalog: {
         parameters: {
             query?: never;
@@ -4294,6 +5842,300 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PresenceController_getPresence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PresenceController_visit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Dueño del pet visitado */
+                    ownerId: string;
+                    /** @description Pet visitado */
+                    petId: string;
+                    /**
+                     * @description Acción de la visita
+                     * @enum {string}
+                     */
+                    action: "feed" | "play" | "clean";
+                    /** @description Item usado (para feed, opcional) */
+                    itemId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PresenceController_getVisitHistory: {
+        parameters: {
+            query: {
+                scope: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CoopFriendsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CoopFriendsController_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Nickname del destinatario (con o sin "@")
+                     * @example jmbargueno
+                     */
+                    handle?: string;
+                    /** @description Alternativa a handle: id del destinatario */
+                    targetUserId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CoopFriendsController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CoopFriendsController_decline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatVisitController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Dueño del habitat visitado */
+                    ownerId: string;
+                    /** @description Mensaje corto opcional para el amigo */
+                    message?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatVisitController_end: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Opcional: limitar a un dueño */
+                    ownerId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatVisitController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SiteController_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteConfigDto"];
+                };
+            };
+        };
+    };
+    InventoryController_getShop: {
+        parameters: {
+            query: {
+                kind: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InventoryController_getInventory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InventoryController_buyItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4423,6 +6265,27 @@ export interface operations {
             };
         };
     };
+    AuthController_handleAvailable: {
+        parameters: {
+            query: {
+                handle: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandleAvailabilityDto"];
+                };
+            };
+        };
+    };
     AuthController_register: {
         parameters: {
             query?: never;
@@ -4546,6 +6409,69 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AuthController_verifyEmailResend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_verifyEmailConfirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailCodeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyEmailResultDto"];
+                };
+            };
+        };
+    };
+    AuthController_verifyEmailLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailLinkDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyEmailResultDto"];
+                };
             };
         };
     };
@@ -4700,6 +6626,72 @@ export interface operations {
             };
         };
     };
+    UsersController_setHandle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @example jmbargueno */
+                    handle: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Perfil actualizado (igual que GET /me) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Formato no válido o nickname reservado */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nickname en uso o ya fijado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersAchievementsController_getByHandle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { id, handle, displayName, title, accountXp } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay ningún jugador con ese nickname */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     UsersAchievementsController_getPublicAchievements: {
         parameters: {
             query: {
@@ -4731,186 +6723,6 @@ export interface operations {
             };
             /** @description Usuario no encontrado */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AchievementsController_getAll: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Logros del usuario por categoría */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AchievementListResponseDto"];
-                };
-            };
-            /** @description Token inválido o ausente */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Game-data de logros no cargado */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AchievementsController_getConstellation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                cat: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Constelación de la categoría */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConstellationResponseDto"];
-                };
-            };
-            /** @description Categoría inválida */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido o ausente */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Game-data de constelaciones no cargado */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AchievementsController_claim: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Logro reclamado */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ClaimRewardResponseDto"];
-                };
-            };
-            /** @description Logro no desbloqueado */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido o ausente */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Logro no encontrado o no pertenece al usuario */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Logro ya reclamado (race condition) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InventoryController_getShop: {
-        parameters: {
-            query: {
-                kind: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InventoryController_getInventory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InventoryController_buyItem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4971,6 +6783,251 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MindController_profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_getPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_getEntitlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_verifyGooglePurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    purchaseToken: string;
+                    productId: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_googleRtdn: {
+        parameters: {
+            query?: never;
+            header: {
+                authorization: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StripeController_checkout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StripeController_portal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StripeController_webhook: {
+        parameters: {
+            query?: never;
+            header: {
+                "stripe-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminBillingController_getConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Configuración activa y número de versión */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminBillingController_updateConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBillingConfigDto"];
+            };
+        };
+        responses: {
+            /** @description Nueva versión creada y activada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminBillingController_listVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Historial de versiones */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminBillingController_activateVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versión reactivada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminBillingController_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen de métricas de facturación */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5219,6 +7276,25 @@ export interface operations {
             };
         };
     };
+    PetsController_activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     EnvironmentalController_getStatus: {
         parameters: {
             query?: never;
@@ -5280,6 +7356,246 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UpcomingFestivalModel"][];
                 };
+            };
+        };
+    };
+    HabitatController_getHabitat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hábitat completo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pet no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_placeFurniture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlaceFurnitureDto"];
+            };
+        };
+        responses: {
+            /** @description Mueble colocado (incluye itemId, x, y y rotation) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posición no válida, sin hueco, sin saldo o sala bloqueada */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble o pet no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_removeItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mueble removido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble no encontrado en el hábitat */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_moveFurniture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveFurnitureDto"];
+            };
+        };
+        responses: {
+            /** @description Mueble movido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posición no válida (fuera de la sala, ocupada o lejos de la pared) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble no encontrado en el hábitat */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_removeFurniture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mueble removido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_getCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catálogo completo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_getActiveBuffs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Buffs agregados de muebles colocados */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5515,6 +7831,36 @@ export interface operations {
             };
         };
     };
+    AiController_contextDigest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Por categoría (coding, music, video, gaming, reading): 6 números (minutos por franja de 4 h) */
+                    appMinutes?: {
+                        [key: string]: number[];
+                    };
+                    /** @description Minutos de foco de cada Pomodoro completado */
+                    pomodoros?: number[];
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     AiController_pendingActions: {
         parameters: {
             query?: never;
@@ -5660,6 +8006,19 @@ export interface operations {
                 "application/json": {
                     /** @description Mensaje del usuario */
                     message?: string;
+                    /** @description Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente */
+                    clientContext?: {
+                        /** @enum {string} */
+                        appCategory?: "coding" | "music" | "video" | "gaming" | "reading" | "generic";
+                        /** @enum {string} */
+                        pose?: "walking" | "climbing" | "perched" | "sleeping";
+                        pomodoro?: {
+                            /** @enum {string} */
+                            phase?: "idle" | "work" | "break";
+                            minutesLeft?: number;
+                            sessionsToday?: number;
+                        };
+                    };
                 };
             };
         };
@@ -5716,6 +8075,19 @@ export interface operations {
                     message?: string;
                     /** @description Herramientas del cliente (opcional) */
                     clientTools?: string[];
+                    /** @description Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente */
+                    clientContext?: {
+                        /** @enum {string} */
+                        appCategory?: "coding" | "music" | "video" | "gaming" | "reading" | "generic";
+                        /** @enum {string} */
+                        pose?: "walking" | "climbing" | "perched" | "sleeping";
+                        pomodoro?: {
+                            /** @enum {string} */
+                            phase?: "idle" | "work" | "break";
+                            minutesLeft?: number;
+                            sessionsToday?: number;
+                        };
+                    };
                 };
             };
         };
@@ -5929,6 +8301,49 @@ export interface operations {
             };
         };
     };
+    ContactController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactDto"];
+            };
+        };
+        responses: {
+            /** @description Mensaje aceptado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Datos no válidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiados mensajes; espera un rato */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se pudo enviar el correo */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     DesktopUpdatesController_download: {
         parameters: {
             query?: never;
@@ -5996,8 +8411,23 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Redirección a la descarga del instalador */
-            302: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DesktopDownloadDto"];
+                };
+            };
+            /** @description Sin sesión */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Correo sin verificar (code: EMAIL_NOT_VERIFIED) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6009,6 +8439,446 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AdminEmailController_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    subject: string;
+                    preheader?: string;
+                    /** @description Cuerpo en HTML libre: se envuelve en la plantilla de marca */
+                    html: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_count: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description {type:'users',userIds[]} | {type:'emails',emails[]} | {type:'segment',role?,verified?:'any'|'verified'|'unverified'} */
+                    audience?: Record<string, never>;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    subject: string;
+                    preheader?: string;
+                    /** @description Cuerpo en HTML libre: se envuelve en la plantilla de marca */
+                    html: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    subject: string;
+                    preheader?: string;
+                    /** @description Cuerpo en HTML libre: se envuelve en la plantilla de marca */
+                    html: string;
+                    /** @description {type:'users',userIds[]} | {type:'emails',emails[]} | {type:'segment',role?,verified?:'any'|'verified'|'unverified'} */
+                    audience: Record<string, never>;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminEmailController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_assignRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    role: "superadmin" | "admin" | "moderator" | "user";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_adjustBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    coins?: number;
+                    gems?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_markVerified: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_resendVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminInvitesController_getSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationSettingsDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_setSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationSettingsDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_list: {
+        parameters: {
+            query?: {
+                status?: "active" | "used" | "revoked" | "expired";
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteListDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInvitesDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedInvitesDto"];
+                };
+            };
+        };
+    };
+    AdminInvitesController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteCodeDto"];
+                };
+            };
+        };
+    };
+    AdminPetsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminPetsController_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    nickname: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminSiteController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSettingsDto"];
+                };
+            };
+        };
+    };
+    AdminSiteController_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSiteSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSettingsDto"];
+                };
             };
         };
     };
@@ -6299,7 +9169,7 @@ export interface operations {
             };
         };
     };
-    HabitatController_getHabitat: {
+    AccessoriesController_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -6308,20 +9178,60 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Hábitat completo */
+            /** @description Ranuras y prendas, cada una locked, available u owned */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Token inválido o ausente */
-            401: {
+        };
+    };
+    AccessoriesController_buy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Prenda comprada */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
+            /** @description Sin saldo, ya en propiedad o prenda de logro */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Prenda no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AccessoriesController_getEquipped: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                petId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
             /** @description Pet no encontrado */
             404: {
                 headers: {
@@ -6331,124 +9241,37 @@ export interface operations {
             };
         };
     };
-    HabitatController_placeFurniture: {
+    AccessoriesController_equip: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                petId: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipAccessoriesDto"];
+            };
+        };
         responses: {
-            /** @description Mueble colocado */
-            201: {
+            /** @description Prendas equipadas tras el cambio */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Celda ocupada o sala bloqueada */
+            /** @description Prenda inexistente, de otra ranura o que no es del usuario */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Token inválido */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Mueble o pet no encontrado */
+            /** @description Pet no encontrado */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_removeFurniture: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Mueble removido */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Mueble no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_getCatalog: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Catálogo completo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido o ausente */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_getActiveBuffs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Buffs agregados de muebles colocados */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido */
-            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8017,11 +10840,211 @@ export interface operations {
             };
         };
     };
-    PresenceController_getPresence: {
+    ClansController_getMine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    tag: string;
+                    /** @description Opcional */
+                    description?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    tag: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_leave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_invite: {
         parameters: {
             query?: never;
             header?: never;
             path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Nickname del invitado (con o sin "@")
+                     * @example jmbargueno
+                     */
+                    handle?: string;
+                    /** @description Alternativa a handle: ID del usuario invitado */
+                    userId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_getMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_getHabitat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_disband: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Máx. 40 caracteres */
+                    name?: string;
+                    /** @description Máx. 300 caracteres; vacío o null la borra */
+                    description?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_kick: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
                 userId: string;
             };
             cookie?: never;
@@ -8036,27 +11059,21 @@ export interface operations {
             };
         };
     };
-    PresenceController_visit: {
+    ClansController_setRole: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Dueño del pet visitado */
-                    ownerId: string;
-                    /** @description Pet visitado */
-                    petId: string;
-                    /**
-                     * @description Acción de la visita
-                     * @enum {string}
-                     */
-                    action: "feed" | "play" | "clean";
-                    /** @description Item usado (para feed, opcional) */
-                    itemId?: string;
+                    /** @enum {string} */
+                    role: "admin" | "moderator" | "member";
                 };
             };
         };
@@ -8069,11 +11086,44 @@ export interface operations {
             };
         };
     };
-    PresenceController_getVisitHistory: {
+    ClansController_transfer: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description ID del nuevo Forjador */
+                    userId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_getMessages: {
+        parameters: {
+            query?: {
+                /** @description Máx. 50 (por defecto 20) */
+                limit?: number;
+                /** @description Cursor ISO datetime: anteriores a esta fecha */
+                before?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -8086,11 +11136,40 @@ export interface operations {
             };
         };
     };
-    CoopFriendsController_list: {
+    ClansController_sendMessage: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Texto (máx. 500 caracteres) */
+                    body: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_deleteMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                messageId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -8103,32 +11182,7 @@ export interface operations {
             };
         };
     };
-    CoopFriendsController_request: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    targetUserId?: string;
-                    /** @description Alternativa a targetUserId: email del destinatario */
-                    email?: string;
-                };
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    CoopFriendsController_accept: {
+    ClansController_getGoals: {
         parameters: {
             query?: never;
             header?: never;
@@ -8147,12 +11201,71 @@ export interface operations {
             };
         };
     };
-    CoopFriendsController_decline: {
+    ClansController_createGoal: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                    /** @description Opcional */
+                    description?: string;
+                    /** @description xp | visits | generic (por defecto generic) */
+                    metric?: string;
+                    /** @description Objetivo (> 0) */
+                    target: number;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_addGoalProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                goalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Cantidad a sumar al progreso */
+                    amount: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_deleteGoal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                goalId: string;
             };
             cookie?: never;
         };
@@ -9086,226 +12199,6 @@ export interface operations {
             };
             /** @description Room no encontrada */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminUsersController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminUsersController_assignRole: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @enum {string} */
-                    role: "superadmin" | "admin" | "moderator" | "user";
-                };
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminUsersController_adjustBalance: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    coins?: number;
-                    gems?: number;
-                };
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminInvitesController_getSettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegistrationSettingsDto"];
-                };
-            };
-        };
-    };
-    AdminInvitesController_setSettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegistrationSettingsDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegistrationSettingsDto"];
-                };
-            };
-        };
-    };
-    AdminInvitesController_list: {
-        parameters: {
-            query?: {
-                status?: "active" | "used" | "revoked" | "expired";
-                pageSize?: number;
-                page?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InviteListDto"];
-                };
-            };
-        };
-    };
-    AdminInvitesController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateInvitesDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreatedInvitesDto"];
-                };
-            };
-        };
-    };
-    AdminInvitesController_revoke: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InviteCodeDto"];
-                };
-            };
-        };
-    };
-    AdminPetsController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AdminPetsController_rename: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    nickname: string;
-                };
-            };
-        };
-        responses: {
-            200: {
                 headers: {
                     [name: string]: unknown;
                 };

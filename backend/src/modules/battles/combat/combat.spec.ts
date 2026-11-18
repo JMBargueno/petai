@@ -353,16 +353,22 @@ describe('motor de combate', () => {
       expect(a.skills.every((s) => s.element === 'neutral' || s.element === a.element)).toBe(true);
       const levels = new Set(Array.from({ length: 60 }, (_, i) => generateBot(i, 10, species, skills, cfg).level));
       expect(levels.size).toBe(3);
-      const species2 = new Set(Array.from({ length: 60 }, (_, i) => generateBot(i, 10, species, skills, cfg).speciesId));
-      expect(species2.size).toBe(3);
+      // Con semillas suficientes salen todas las especies del catálogo, sea cual sea su tamaño.
+      const species2 = new Set(Array.from({ length: 600 }, (_, i) => generateBot(i, 10, species, skills, cfg).speciesId));
+      expect(species2.size).toBe(species.length);
     });
 
     it('nunca baja del nivel 1 y es un rival justo frente a un jugador del mismo nivel', () => {
       expect(generateBot(1, 1, species, skills, cfg).level).toBeGreaterThanOrEqual(1);
+      // El jugador de la prueba lleva una especie normal, así que se mide contra bots de especie normal:
+      // un bot de una especie más rara tiene mejores stats base y no es un rival «del mismo nivel».
+      const normal = new Set(species.filter((sp) => sp.rarity === 'normal').map((sp) => sp.id));
       let wins = 0;
       const n = 150;
-      for (let i = 0; i < n; i++) {
+      for (let i = 0, seen = 0; seen < n; i++) {
         const bot = generateBot(i + 5, 10, species, skills, cfg);
+        if (!normal.has(bot.speciesId)) continue;
+        seen++;
         const me = fighter(bot.element === 'fire' ? 'plant' : 'fire', { level: 10 });
         if (simulateBattle(me, bot, i, cfg).winner === 0) wins++;
       }
@@ -445,5 +451,29 @@ describe('ranking', () => {
     expect(isoWeekKey(new Date('2025-12-29T00:00:00Z'))).toBe('2026-W01');
     expect(isoWeekKey(new Date('2027-01-03T23:59:59Z'))).toBe('2026-W53');
     expect(isoWeekKey(new Date('2026-11-16T00:00:00Z'))).toBe('2026-W47');
+  });
+});
+
+describe('Personalidad en combate (spec 36)', () => {
+  const toFighter = (p: any): Fighter => ({
+    name: p.name, speciesId: p.speciesId, element: p.element, level: p.level, stats: p.stats, mood: p.mood,
+    skills: p.skills.map((id: string) => skills.find((s) => s.id === id)!), strategy: p.strategy, isBot: p.isBot,
+    petId: p.petId, personality: p.personality,
+  });
+
+  it('el log guarda el sesgo y la repetición desde el log es idéntica', () => {
+    const a = { ...fighter('water', { strategy: 'defensive' }), personality: { heal: -0.05, guard: -0.04 } };
+    const b = { ...fighter('water', { strategy: 'defensive' }), personality: { heal: 0.05, guard: 0.05 } };
+    for (let seed = 1; seed <= 30; seed++) {
+      const first = simulateBattle(a, b, seed, cfg);
+      expect(first.log.participants[0].personality).toEqual(a.personality);
+      const [pa, pb] = first.log.participants;
+      expect(simulateBattle(toFighter(pa), toFighter(pb), seed, cfg).log.events).toEqual(first.log.events);
+    }
+  });
+
+  it('sin personalidad el participante del log no cambia', () => {
+    const res = simulateBattle(fighter('fire'), fighter('water'), 7, cfg);
+    expect(res.log.participants[0]).not.toHaveProperty('personality');
   });
 });

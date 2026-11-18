@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: evolucion-capullo
+expected_outcome: |
+  Diseña un efecto nuevo para la evolución sin integrarlo todavía: ejecuta check_effects.mjs, lee el portal de
+  referencia y lore-effects.md, propone 2 o 3 ideas con su frase de lore (citando LORE.md), pregunta en una sola
+  tanda solo lo que falta (disparador, sincronía con la mascota) con una opción recomendada, enseña el guion por
+  fases con duraciones (≤2,5 s sin hold) y variante de movimiento reducido, y se detiene a pedir confirmación antes
+  de escribir código en desktop/src/lib/effects. No llama a Nano Banana sin confirmar el coste.
