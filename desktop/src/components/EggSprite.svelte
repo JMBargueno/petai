@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { bakePetSpriteSheet, getAnimLibrary, eggLibrary, type BakedPetSheet } from '../lib/sprites';
+  import { bakePetSpriteSheet, getAnimLibrary, type BakedPetSheet } from '../lib/sprites';
   import { AnimationController } from '../lib/animation/AnimationController';
 
   /** Huevo animado: `idle` (balanceo), `shake` (temblor), `crack` (grietas), `hatch` (eclosión). */
@@ -49,10 +49,9 @@
 </script>
 
 <div class="egg" style="width: {size}px; height: {size}px;">
+  <!-- Mientras se hornea la hoja el hueco queda vacío (el huevo SVG antiguo ya no existe) -->
   {#if sheet}
     <canvas bind:this={canvas} width="128" height="128" aria-hidden="true"></canvas>
-  {:else}
-    {@html anim === 'crack' || anim === 'hatch' ? eggLibrary.cracked : eggLibrary.closed}
   {/if}
 </div>
 
@@ -61,8 +60,7 @@
     display: grid;
     place-items: center;
   }
-  canvas,
-  .egg :global(svg) {
+  canvas {
     width: 100%;
     height: 100%;
   }

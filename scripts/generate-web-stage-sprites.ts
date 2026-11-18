@@ -11,6 +11,8 @@
  *
  *   shared/assets/sprites/<especie>_<etapa>_{idle,happy,eat,sleep}.png   (se commitean)
  *
+ * Bebé de todas las especies (tarjetas y demo); joven solo de las iniciales (hero de la home).
+ *
  * Todos los frames se recortan al mismo cuadrado (la caja que cubre el contenido de todas las
  * especies y estados de la etapa), con el suelo a la misma altura: así salen a la misma escala en
  * las tarjetas y ninguno pierde los pies ni los efectos (las Z de dormir). El recorte cae en la
@@ -27,7 +29,9 @@ import { decodePng } from './lib/png.mjs';
 const ROOT = resolve(__dirname, '..');
 const SPECIES_DIR = join(ROOT, 'shared', 'assets', 'species');
 const OUT_DIR = join(ROOT, 'shared', 'assets', 'sprites');
-const STAGES = ['baby'] as const;
+const STAGES = ['baby', 'juvenile'] as const;
+/** Etapas que la web solo enseña de las especies iniciales (rareza normal): el joven del hero de la home. */
+const STARTERS_ONLY: ReadonlySet<string> = new Set(['juvenile']);
 const WEB_STATES = ['idle', 'happy', 'eat', 'sleep'] as const;
 /** Píxeles de hoja por píxel nativo: el recorte se alinea a esta rejilla. */
 const CELL = 2;
@@ -81,7 +85,7 @@ for (const stage of STAGES) {
   let frameW = 0;
   let frameH = 0;
 
-  for (const s of species) {
+  for (const s of species.filter((x) => !STARTERS_ONLY.has(stage) || x.rarity === 'normal')) {
     const dir = join(SPECIES_DIR, s.spriteKey, stage);
     if (!existsSync(join(dir, 'anim.json'))) {
       console.warn(`  ${s.spriteKey}: sin etapa ${stage}, se omite`);

@@ -30,8 +30,6 @@ const PATTERN_PNGS = import.meta.glob('@shared/assets/patterns/*.png', { eager: 
 import ignisaurIdleSvg from '@shared/assets/sprites/ignisaur_idle.svg?raw';
 import axolunarIdleSvg from '@shared/assets/sprites/axolunar_idle.svg?raw';
 import florabudIdleSvg from '@shared/assets/sprites/florabud_idle.svg?raw';
-import eggClosedSvg from '@shared/assets/sprites/egg_closed.svg?raw';
-import eggCrackedSvg from '@shared/assets/sprites/egg_cracked.svg?raw';
 
 export interface FrameTag {
   name: string;
@@ -325,12 +323,6 @@ export async function bakePetSpriteSheet(
   bakedSheetCache.set(cacheKey, bakedSheet);
   return bakedSheet;
 }
-
-// --- Soporte Legacy SVG (Retrocompatibilidad) ---
-export const eggLibrary = {
-  closed: eggClosedSvg,
-  cracked: eggCrackedSvg,
-};
 
 /**
  * Integración con el `AssetLoader` (feature 009-edge-cdn, T013).

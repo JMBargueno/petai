@@ -21,11 +21,11 @@ if (previews.status !== 0) {
 }
 
 // Estados de cada especie (idle, happy, eat, sleep), huevos, previews de patrones y los PNG por etapa
-// (<especie>_baby_<estado>.png, de scripts/generate-web-stage-sprites.ts) y las bobinas de evolución
+// (<especie>_baby_<estado>.png y, de las iniciales, <especie>_juvenile_<estado>.png, de scripts/generate-web-stage-sprites.ts) y las bobinas de evolución
 // (evolution_<especie>.png + .json, de scripts/generate-web-evolution-reels.ts).
 const wanted = (name) =>
   name.endsWith('.svg') ||
-  ((name.includes('pattern_') || name.includes('_baby_') || name.startsWith('evolution_')) && name.endsWith('.png')) ||
+  ((name.includes('pattern_') || name.includes('_baby_') || name.includes('_juvenile_') || name.startsWith('evolution_')) && name.endsWith('.png')) ||
   (name.startsWith('evolution_') && name.endsWith('.json'));
 
 rmSync(target, { recursive: true, force: true });

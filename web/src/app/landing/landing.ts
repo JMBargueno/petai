@@ -8,7 +8,7 @@ import { Marquee } from '../shared/ui/marquee';
 import { PockaiSprite, PockaiState } from '../shared/ui/pockai-sprite';
 import { Sticker } from '../shared/ui/sticker';
 import { OG_IMAGE, SITE_NAME, SITE_URL, pageUrl } from '../site.config';
-import { FAQ, FEATURES, MARQUEE, META, PLATFORMS, SPECIES } from './content';
+import { FAQ, FEATURES, MARQUEE, META, PLATFORMS, STARTER_SPECIES } from './content';
 import { PetDemo } from './demo/pet-demo';
 import { DesktopScene } from './sections/desktop-scene';
 import { HowItWorks } from './sections/how-it-works';
@@ -60,9 +60,9 @@ export class Landing {
     { id: 'faq', label: 'FAQ' },
   ];
 
-  /** Mascota del hero: quieta hasta que la tocas; entonces saluda y cambia de especie. */
+  /** Mascota del hero: una inicial (rareza normal) en etapa joven; al tocarla saluda y cambia de especie. */
   private readonly heroIndex = signal(0);
-  protected readonly heroPet = computed(() => SPECIES[this.heroIndex() % SPECIES.length]);
+  protected readonly heroPet = computed(() => STARTER_SPECIES[this.heroIndex() % STARTER_SPECIES.length]);
   protected readonly heroState = signal<PockaiState>('idle');
   private greeting?: ReturnType<typeof setTimeout>;
 

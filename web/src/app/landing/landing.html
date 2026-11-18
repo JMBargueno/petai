@@ -46,7 +46,7 @@
           (click)="greet()"
         >
           @for (s of [heroPet()]; track s.id) {
-            <app-pockai-sprite class="pop-in" [species]="s.spriteKey" [state]="heroState()" [priority]="true" />
+            <app-pockai-sprite class="pop-in" [species]="s.spriteKey" stage="juvenile" [state]="heroState()" [priority]="true" />
           }
         </button>
 
@@ -110,7 +110,7 @@
           <app-pet-demo />
         } @placeholder {
           <div class="demo-placeholder">
-            <img src="sprites/egg_closed.svg" alt="" width="128" height="128" loading="lazy" decoding="async" />
+            <!-- El huevo de verdad es el efecto huevo-grietas: se pinta al cargar la demo. -->
           </div>
         }
       </div>
@@ -131,7 +131,7 @@
       <div class="download">
         <aside class="qr tone--violet reveal">
           <div class="qr__panel">
-            <img src="sprites/egg_closed.svg" alt="" width="160" height="160" loading="lazy" decoding="async" />
+            <img src="favicon.svg" alt="" width="160" height="160" loading="lazy" decoding="async" />
           </div>
           <div class="qr__label">
             <p class="qr__title" i18n="@@download.card.label">Descargar</p>

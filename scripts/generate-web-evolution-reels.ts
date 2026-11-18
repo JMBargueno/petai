@@ -8,14 +8,15 @@
  * cada especie de rareza normal (las tres iniciales) se compone, frame a frame y en la rejilla
  * nativa (64×80, como los efectos), la misma secuencia que vive el Custodio en el escritorio:
  *
- *  1. El Códice Latente (huevo) late, tiembla y se agrieta.
- *  2. Eclosión con la Revelación de densidad (`revelacionDensidad`, detrás): nace el bebé.
+ *  1. El huevo con grietas de luz (`huevoGrietas`, el mismo del escritorio) se zarandea, la luz del
+ *     Flujo de la especie se cuela por las grietas y estalla.
+ *  2. Al estallar sube la Revelación de densidad (`revelacionDensidad`, detrás): nace el bebé.
  *  3. En cada salto de etapa, el Capullo del Telar (`capulloTelar`, delante) envuelve al Pockai y lo
  *     vuelve a tejer en su nueva forma; en la Apoteosis (forma final) lleva corona de destellos.
  *
  * Los sprites salen de las hojas reales (shared/assets/species/<id>/<etapa>/ y la etapa adulta en la
- * raíz), horneadas con `bakePixels` y la paleta por defecto; los efectos, de desktop/src/lib/effects
- * con la rampa del Flujo del elemento de la especie. Salida (se commitea):
+ * raíz), horneadas con `bakePixels` y la paleta por defecto; los efectos, del paquete común
+ * (shared/scene/src/effects: los mismos del escritorio y de la escena móvil) con la rampa del Flujo del elemento de la especie. Salida (se commitea):
  *
  *   shared/assets/sprites/evolution_<especie>.png   hoja de frames únicos (nativos, 64×80)
  *   shared/assets/sprites/evolution_<especie>.json  línea de tiempo: frames, inicio de cada etapa y retratos
@@ -25,11 +26,12 @@ import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { bakePixels } from '../shared/scene/src/bake/bakePixels';
 import { deriveVisualTraits } from '../shared/scene/src/prng';
-import { capulloTelar, inCocoon } from '../desktop/src/lib/effects/capulloTelar';
-import { revelacionDensidad } from '../desktop/src/lib/effects/revelacionDensidad';
-import { flowPalette } from '../desktop/src/lib/effects/palettes';
-import { renderFrame } from '../desktop/src/lib/effects/render';
-import type { EffectDef, FxPhase, PixelSink } from '../desktop/src/lib/effects/types';
+import { capulloTelar, inCocoon } from '../shared/scene/src/effects/capulloTelar';
+import { huevoGrietas } from '../shared/scene/src/effects/huevoGrietas';
+import { revelacionDensidad } from '../shared/scene/src/effects/revelacionDensidad';
+import { flowPalette } from '../shared/scene/src/effects/palettes';
+import { renderFrame } from '../shared/scene/src/effects/render';
+import type { EffectDef, FxPhase, PixelSink } from '../shared/scene/src/effects/types';
 import { encodePng } from './sprites/pixel/raster';
 // @ts-expect-error: módulo JS sin tipos (códec PNG compartido con generate-pattern-previews.mjs)
 import { decodePng } from './lib/png.mjs';
@@ -51,6 +53,8 @@ const COLS = 16;
 
 type StageId = 'egg' | 'baby' | 'juvenile' | 'adult' | 'final';
 const STAGES: StageId[] = ['egg', 'baby', 'juvenile', 'adult', 'final'];
+type PetStage = Exclude<StageId, 'egg'>;
+const PET_STAGES: PetStage[] = ['baby', 'juvenile', 'adult', 'final'];
 
 interface SpeciesEntry {
   spriteKey: string;
@@ -243,8 +247,7 @@ const total = (phases: FxPhase[]) => phases.reduce((n, p) => n + (p.ms as number
 const framesFor = (ms: number) => Math.round(ms / FRAME_MS);
 
 function buildReel(s: SpeciesEntry) {
-  const sheets: Record<StageId, Sheet> = {
-    egg: loadSheet(join(SPECIES_DIR, 'egg'), s.defaultPalette),
+  const sheets: Record<PetStage, Sheet> = {
     baby: loadSheet(join(SPECIES_DIR, s.spriteKey, 'baby'), s.defaultPalette),
     juvenile: loadSheet(join(SPECIES_DIR, s.spriteKey, 'juvenile'), s.defaultPalette),
     adult: loadSheet(join(SPECIES_DIR, s.spriteKey), s.defaultPalette),
@@ -256,14 +259,14 @@ function buildReel(s: SpeciesEntry) {
   /** Contador por etapa para que las animaciones en bucle sigan su ciclo entre tramos. */
   const loopIdx = new Map<string, number>();
 
-  const anim = (stage: StageId, tag: string) => sheets[stage].tags.get(tag) ?? sheets[stage].tags.get('idle')!;
-  const nextLoop = (stage: StageId, tag: string) => {
+  const anim = (stage: PetStage, tag: string) => sheets[stage].tags.get(tag) ?? sheets[stage].tags.get('idle')!;
+  const nextLoop = (stage: PetStage, tag: string) => {
     const frames = anim(stage, tag);
     const k = loopIdx.get(stage + tag) ?? 0;
     loopIdx.set(stage + tag, k + 1);
     return frames[k % frames.length];
   };
-  const play = (stage: StageId, tag: string, count: number, loop = true) => {
+  const play = (stage: PetStage, tag: string, count: number, loop = true) => {
     const frames = anim(stage, tag);
     for (let i = 0; i < count; i++) {
       const frame = loop ? nextLoop(stage, tag) : frames[Math.min(i, frames.length - 1)];
@@ -275,31 +278,31 @@ function buildReel(s: SpeciesEntry) {
     portraits[stage] = shots.length; // se corrige al primer frame idle de la etapa
   };
 
-  // 1. Huevo: late, tiembla y se agrieta.
+  // 1. Huevo con grietas de luz: se zarandea (la espera), se agrieta con la luz del Flujo y estalla.
   mark('egg');
-  play('egg', 'idle', 12);
-  play('egg', 'shake', anim('egg', 'shake').length, false);
-  play('egg', 'crack', anim('egg', 'crack').length, false);
-
-  // 2. Eclosión: la Revelación de densidad sube detrás mientras el huevo se abre y aparece el bebé.
+  const EGG_HOLD_MS = 1500;
+  const egg = withHold(huevoGrietas, EGG_HOLD_MS, {});
+  const eggFrames = framesFor(total(egg));
+  const burstStart = framesFor(total(egg.slice(0, 2)));
+  // 2. Eclosión: al estallar sube la Revelación de densidad detrás y, ya sin cáscara, aparece el bebé.
   const birthParams = { rarity: s.rarity, shiny: 0 };
   const birth = withHold(revelacionDensidad, 0, birthParams);
-  const hatch = anim('egg', 'hatch');
-  const birthFrames = framesFor(total(birth));
-  for (let i = 0; i < birthFrames; i++) {
-    const fx: FxLayer[] = [{ def: revelacionDensidad, phases: birth, elapsed: i * FRAME_MS, params: birthParams }];
-    if (i < hatch.length) shots.push({ pet: { sheet: sheets.egg, frame: hatch[i] }, fx });
-    else {
-      if (i === hatch.length) mark('baby');
-      shots.push({ pet: { sheet: sheets.baby, frame: nextLoop('baby', 'idle') }, fx });
+  const birthEnd = burstStart + framesFor(total(birth));
+  for (let i = 0; i < Math.max(eggFrames, birthEnd); i++) {
+    const fx: FxLayer[] = [];
+    if (i >= burstStart && i < birthEnd) {
+      fx.push({ def: revelacionDensidad, phases: birth, elapsed: (i - burstStart) * FRAME_MS, params: birthParams });
     }
+    if (i < eggFrames) fx.push({ def: huevoGrietas, phases: egg, elapsed: i * FRAME_MS, params: {} });
+    if (i === eggFrames) mark('baby');
+    shots.push({ pet: i < eggFrames ? null : { sheet: sheets.baby, frame: nextLoop('baby', 'idle') }, fx });
   }
   play('baby', 'idle', 18);
 
   // 3. Cada salto: el Pockai se encoge hasta caber en el capullo mientras llegan las hebras, el
   //    Capullo del Telar lo envuelve y late (aquí cambia la forma), y al estallar crece a su tamaño.
   const HOLD_MS = 500;
-  const evolve = (from: StageId, to: StageId) => {
+  const evolve = (from: PetStage, to: PetStage) => {
     const params = to === 'final' ? { stage: 'final' } : { stage: to };
     const phases = withHold(capulloTelar, HOLD_MS, params);
     const gatherEnd = framesFor(total(phases.slice(0, 1)));
@@ -332,7 +335,9 @@ function buildReel(s: SpeciesEntry) {
   play('final', 'idle', 24);
 
   // Retratos: un frame idle sin efectos de cada etapa (para movimiento reducido y el selector).
-  for (const st of STAGES) {
+  portraits.egg = shots.length;
+  shots.push({ pet: null, fx: [{ def: huevoGrietas, phases: egg, elapsed: 0, params: {} }] });
+  for (const st of PET_STAGES) {
     const sheet = sheets[st];
     const idle = sheet.tags.get('idle')![0];
     portraits[st] = shots.length;

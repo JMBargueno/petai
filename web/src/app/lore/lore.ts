@@ -1,14 +1,15 @@
 import {
   ChangeDetectionStrategy,
-  Component,
-  LOCALE_ID,
-  inject,
+  Component,
+  LOCALE_ID,
+  inject,
 } from '@angular/core';
 import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
 import { SectionToc } from '../shared/layout/section-toc';
 import { SeoService } from '../shared/seo/seo.service';
+import { FxCanvas } from '../shared/effects/fx-canvas';
 import { Sticker } from '../shared/ui/sticker';
 import { OG_IMAGE, SITE_NAME, SITE_URL, pageUrl } from '../site.config';
 import { META } from './content';
@@ -25,7 +26,7 @@ import { Glossary } from './sections/glossary';
 
 @Component({
   selector: 'app-lore',
-  imports: [SiteHeader, SiteFooter, SectionToc, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Mark, Colosseum, Nexus, Glossary],
+  imports: [SiteHeader, SiteFooter, SectionToc, FxCanvas, Sticker, Origin, PromiseSection, Appearance, Elements, Awakening, LifeCycle, Mark, Colosseum, Nexus, Glossary],
   template: `
     <app-site-header
       [links]="navLinks"
@@ -77,7 +78,7 @@ import { Glossary } from './sections/glossary';
 
       <section id="cta" class="band band--hero lore-cta">
         <div class="band__inner lore-cta__inner reveal">
-          <img class="lore-cta__egg" src="sprites/egg_cracked.svg" alt="" width="140" height="140" loading="lazy" decoding="async" />
+          <app-fx-canvas class="lore-cta__egg" effect="huevo-grietas" />
           <p class="display section-title section-title--sm lore-cta__sub" i18n="@@lore.cta.sub">El lore se vive, no se lee.</p>
           <a class="btn btn--filled" [href]="download" i18n="@@lore.cta">Descargar Pockai</a>
         </div>

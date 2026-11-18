@@ -34,19 +34,18 @@ p {
   color: var(--ink);
 }
 
+/* El huevo es el efecto `huevo-grietas` (rejilla 40×56): se zarandea solo y estalla al soltarlo. */
 .egg {
-  inline-size: clamp(150px, 22vw, 220px);
+  inline-size: clamp(190px, 28vw, 280px);
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 40%;
   background: none;
   cursor: pointer;
-  transform-origin: 50% 85%;
+  transform-origin: 50% 90%;
 }
-.egg img {
-  display: block;
-  inline-size: 100%;
-  block-size: auto;
+.egg:disabled {
+  cursor: default;
 }
 .hint {
   display: grid;
@@ -85,14 +84,18 @@ p {
   color: var(--color-paper-white);
 }
 
-.burst {
-  position: absolute;
-  inset: 50% auto auto 50%;
+/* La Revelación de densidad (64×80, pies en la fila 76) sube detrás, con sus pies en los del pockai. */
+.born {
+  position: relative;
+  display: grid;
+  justify-items: center;
 }
-.burst app-sticker {
+.reveal {
   position: absolute;
-  inset: -22px auto auto -22px;
-  opacity: 0;
+  inset-block-end: -6%;
+  inset-inline-start: 50%;
+  inline-size: 150%;
+  translate: -50% 0;
 }
 
 .panel {
@@ -158,11 +161,6 @@ p {
   font-size: var(--text-caption);
 }
 
-@keyframes egg-idle {
-  50% {
-    transform: rotate(2deg) translateY(-3px);
-  }
-}
 /* Dos nombres para el mismo temblor: alternarlos reinicia la animación en cada toque. */
 @keyframes shake-a {
   20% {
@@ -186,27 +184,11 @@ p {
     transform: rotate(6deg);
   }
 }
-@keyframes burst {
-  from {
-    opacity: 1;
-    transform: rotate(calc(var(--n) * 60deg)) translateY(0) scale(0.4);
-  }
-  to {
-    opacity: 0;
-    transform: rotate(calc(var(--n) * 60deg)) translateY(-190px) scale(1);
-  }
-}
 @media (prefers-reduced-motion: no-preference) {
-  .egg {
-    animation: egg-idle 2.4s ease-in-out infinite;
-  }
   .egg--a {
     animation: shake-a 0.45s ease-in-out;
   }
   .egg--b {
     animation: shake-b 0.45s ease-in-out;
-  }
-  .burst app-sticker {
-    animation: burst 0.9s var(--ease-out) both;
   }
 }
