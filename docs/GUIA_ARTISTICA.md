@@ -347,13 +347,13 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Cada una parte de u
 | Bípedo alado | Bípedo con alas que doblan su anchura | Livolt |
 | Tentacular | Manto y apoyos múltiples, sin brazos | Inktopus |
 | Cuadrúpedo bajo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas cortas | Magmadillo |
-| Cuadrúpedo sentado | Grupa en el suelo, patas delanteras rectas y cabeza grande encima | Cerbito |
+| Cuadrúpedo sentado de tres cabezas | Grupa en el suelo, patas delanteras rectas y tres cabezas en abanico; solo la central lleva cara y accesorios | Cerbito |
 | Cuadrúpedo esbelto | Patas largas y finas, cuello alto y hocico; el cuerpo queda lejos del suelo | Kirisol |
-| Ave | Sin brazos: alas. Pico, patas finas y plumas | Fénixel |
+| Ave de cuello largo | Sin brazos: alas. Cabeza pequeña, cuello largo, pico y patas finas con garras | Fénixel |
 | Flotante | Sin patas ni apoyos: el cuerpo queda en el aire | Nubeballena |
 | Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | Cactuerno |
 
-Frente a cualquier otra especie, una nueva cambia en al menos cuatro de estos siete rasgos: apoyo (dos pies, cuatro patas, flota, repta), proporción (alto, ancho o cuadrado), cabeza (fundida, encima o delante), extremidades (brazos, aletas, alas, ramas o ninguna), rasgo icónico (dónde sale y qué forma tiene), contorno (liso, dentado, lobulado o con placas) y cara (forma, tamaño y sitio de los ojos: altos y redondeados, de cuenta, de párpado caído, de gruñón, rasgados, de cachorro o con pestaña).
+Frente a cualquier otra especie, una nueva cambia en al menos cuatro de estos siete rasgos: apoyo (dos pies, cuatro patas, flota, repta), proporción (alto, ancho o cuadrado), cabeza (fundida, encima o delante), extremidades (brazos, aletas, alas, ramas o ninguna), rasgo icónico (dónde sale y qué forma tiene), contorno (liso, dentado, lobulado o con placas) y cara (forma, tamaño y sitio de los ojos: altos y redondeados, de cuenta, de párpado caído, de gruñón, rasgados, de cachorro, fieros o con pestaña).
 
 La anatomía tiene que tener sentido para el animal que es: una ballena no tiene pies ni nada bajo el cuerpo que se lea como tal, un pulpo no tiene brazos y un cactus no tiene cola. La prueba es poner en negro los adultos de todas las especies: ninguno se confunde con otro.
 

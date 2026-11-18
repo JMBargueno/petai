@@ -8,14 +8,14 @@
 
 ## Clasificación y hábitat
 - **Tipo:** ave de fuego.
-- **Plan corporal:** ave: sin brazos, con alas, pico y patas finas. Es la única especie con pico y la única que nace dentro de un cascarón (`references/pixel-style.md`).
+- **Plan corporal:** ave de cuello largo: cabeza pequeña, cuerpo esbelto, patas finas con garras y alas en lugar de brazos. Es la única especie con pico y la única que nace dentro de un cascarón (`references/pixel-style.md`).
 - **Tamaño aparente:** mediano.
 - **Hábitat en el Éter:** donde algo se ha reiniciado muchas veces y ha vuelto a arrancar.
 - **Comportamiento social:** en pareja; se posa cerca de quien no se rinde.
 
 ## Anatomía y rasgos distintivos
-Cuerpo de ave con el pecho dorado, pico corto y ojos rasgados. Las plumas de la cresta, las alas y la cola son llamas que no queman. Cuando se cansa, se apaga un momento y vuelve a prenderse sola.
-- **Rasgos icónicos (silueta):** 1) la cola y la cresta de llamas; 2) las alas, que acaban abiertas y ardiendo.
+Cabeza pequeña sobre un cuello largo, pecho dorado, pico corto y ojos rasgados. Las plumas de la cresta, las alas y la cola son llamas en punta que no queman; de adulta, las alas abiertas le sobrepasan la cabeza. Cuando se cansa, se apaga un momento y vuelve a prenderse sola.
+- **Rasgos icónicos (silueta):** 1) las alas y la cola de plumas de fuego; 2) el cuello largo con la cresta en estela.
 
 ## Ecología y lore
 El mito del ave que renace de sus cenizas es más viejo que cualquier pantalla, y en el Éter encontró dónde anidar: un servidor que se cayó y volvió a levantarse mil veces. Es un Arquetipo Ancestral porque no nació de un Custodio concreto, sino de una historia que la humanidad lleva siglos contándose. Dicen que nadie ha visto nunca a un Fénixel apagarse del todo.
@@ -39,13 +39,13 @@ Valiente y curiosa: prueba, falla y vuelve a probar.
 | Etapa | Narrativa | Plan corporal y silueta | Rasgo icónico y piezas | Color, marcas y cara |
 |---|---|---|---|---|
 | **Baby (1)** | Aún no ha salido del todo | Medio cuerpo dentro del cascarón, sin patas | Una chispa en la cabeza y el pico | Cascarón dorado, mofletes |
-| **Juvenile (10)** | Polluelo | Una bola con patas finas | Muñones de ala, cresta de dos llamas y una pluma de cola | Pecho dorado |
-| **Adult (25)** | Ave joven | Cabeza y cuerpo aparte | Ala plegada al costado, cola de tres plumas, cresta de tres llamas | Punta de las alas en dorado |
-| **Final (50, Piedra de Evolución)** | Fénix | Alas abiertas que rompen el contorno | Alas de llama, cola larga y cresta alta, que leen el elemento | Emblema, garras oscuras, mirada decidida |
+| **Juvenile (10)** | Volantón | Cuerpo de gota sobre patas finas con garras | Alas ya alzadas, cresta de tres plumas y tres plumas de cola | Pecho dorado, ojos más pequeños |
+| **Adult (25)** | Fénix joven | Cabeza pequeña sobre un cuello largo; cuerpo esbelto | Alas a medio abrir de cuatro plumas, cola de cuatro, cresta echada hacia atrás | Ceja: mirada decidida |
+| **Final (50, Piedra de Evolución)** | Fénix | Alas enormes que le sobrepasan la cabeza y rompen el contorno | Alas de seis plumas de fuego, cola de cinco y cresta en estela, que leen el elemento | Emblema en el pecho |
 
 **No cambia:** la paleta roja y dorada, los ojos rasgados, el pico y la cresta en lo alto de la cabeza.
 
-**Anclas de accesorios:** `head` en lo alto de la cabeza (el gorro tapa la cresta); `neck` entre cabeza y cuerpo; `back` en el arranque de la cola.
+**Anclas de accesorios:** `head` en lo alto de la cabeza (el gorro tapa la cresta); `neck` en la base del cuello; `back` en el arranque de la cola. De volantón en adelante tiene los ojos más pequeños que el resto, así que las gafas le quedan grandes.
 
 ## Frases de chat de ejemplo
 1. «¿Otra vez? Otra vez. Venga.»
@@ -53,7 +53,7 @@ Valiente y curiosa: prueba, falla y vuelve a probar.
 3. «¿Un día malo? Yo de esos tengo muchos. Mañana se vuelve a prender.»
 
 ## Brief de arte
-Pixel art en 3/4. Cuerpo en primario; pecho, pico, cascarón, cresta, punta de las alas y plumas de cola en secundario. La cola gira con la pose y cresta y alas laten con los apéndices.
+Pixel art en 3/4. Cuerpo, cuello y plumón del arranque de las alas en primario; pecho, pico, patas, cascarón y todas las plumas en secundario; garras en primario oscurecido. Cada pluma es una pieza con su contorno. La cola gira con la pose, cresta y alas laten con los apéndices y las patas dan el paso.
 
 **Estado del arte:** dibujado y revisado con la hoja de contactos.
 

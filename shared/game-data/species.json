@@ -282,7 +282,7 @@
   {
     "id": "cerbito",
     "name": "Cerbito",
-    "description": "Un cachorro guardián de orejas caídas y tres colas de sombra que mueve a la vez. Es leal hasta la médula y se sienta en la puerta a esperar.",
+    "description": "Un cachorro guardián de tres cabezas y tres colas de sombra, con colmillos y cara de pocos amigos. Gruñe a todo el que se acerca, menos a su Custodio.",
     "element": "shadow",
     "rarity": "legendary",
     "baseStats": {
@@ -296,10 +296,10 @@
     "spriteKey": "cerbito",
     "personalityBias": {
       "curiosity": 45,
-      "sociability": 60,
-      "bravery": 80,
-      "affection": 85,
-      "temper": 40
+      "sociability": 30,
+      "bravery": 85,
+      "affection": 75,
+      "temper": 75
     },
     "defaultPalette": {
       "primary": "#6A5C9E",
