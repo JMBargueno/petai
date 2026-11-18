@@ -262,7 +262,7 @@ Especies con arte: **Axolunar** (agua, `#38A3A5`), **Florabud** (planta, `#57CC9
 ### 7.3 Huevos y patrones
 
 - **Huevo:** relleno `#FDE047`, contorno `#1A1A1A` de 3 px, manchas `#F59E0B` al 60 %. El huevo agrietado añade una grieta en zigzag de 3 px.
-- **Patrones:** puntos, rayas, escamas y degradado en SVG con `currentColor`. Aurora, cristal y galaxia existen como PNG mosaico en `shared/assets/patterns/`.
+- **Patrones de piel:** los siete (motas, rayas, degradado, escamas, cristal, galaxia y aurora) son mosaicos de pixel art en `shared/assets/patterns/`, dibujados en píxeles nativos por `scripts/sprites/pixel/patterns.mjs`. Se hornean como un tono del color de la mascota, no en blanco, y solo sobre el primario. Los de más rareza añaden destellos.
 - Cada patrón tiene su propia rareza (`shared/game-data/patterns.json`), que se tira por ejemplar y no depende de la rareza de la especie.
 - **Variación por mascota:** la semilla `visualSeed` decide el desplazamiento, la escala (0,85–1,15), el giro (±0,15 rad) y el tono (±8°). Nunca se colorea sobre la cara ni los ojos (canal B de la máscara).
 
