@@ -25,7 +25,7 @@ El generador es `scripts/sprites/concept/generate.mjs`. Llama a la API de Gemini
 
 `sprite-previews/` está ignorado por git: los conceptos no se suben. Si uno define el diseño, descríbelo con palabras en el comentario de cabecera del efecto.
 
-## Arte final por roles (cofre, huevo, paquete, sello, altar, jefe de raid, manitas)
+## Arte final por roles (cofre, huevo, paquete, sello, altar, jefe de raid, manitas, capullo, portal)
 Para los efectos figurativos, la lámina de Nano Banana ES el arte, importado **por roles de color** para que el motor lo siga tiñendo (Flujo, metal, tier):
 1. **Prompt:**
    - Pide una tira de frames sobre fondo magenta `#ff00ff`, todos al mismo tamaño y sobre la misma línea de suelo.
@@ -43,6 +43,8 @@ Para los efectos figurativos, la lámina de Nano Banana ES el arte, importado **
 4. **Pinta** con `paintSheetFrame(c, sheet, frame, { rol: color }, { x, bottom })` (`effects/sheet.ts`), en un `Canvas2` propio que se vuelca con `flush(sink, null)`: la lámina ya trae su contorno. Las partículas, haces y anillos siguen siendo procedurales, en otra capa con contorno.
 5. **Tamaño:** NB dibuja a ~70 px nativos aunque pidas 24. Por debajo de ~22 px de ancho se emborrona. La rejilla máxima es 64×80, así que lo que vaya junto a la mascota cabe hasta ~26 px.
 
-Coste real: 8 imágenes para 7 efectos (~0,50 $). Por debajo de ~12 px (una mano) el arte de NB se vuelve una mancha: dale a esas piezas su propia anchura con `--widths`.
+Coste real: 10 imágenes para 9 efectos (~0,63 $). Por debajo de ~12 px (una mano) el arte de NB se vuelve una mancha: dale a esas piezas su propia anchura con `--widths`.
 
 `paintSheetFrame` también refleja (`flipX`), estrecha desde el centro (`scaleX`, un portal que se abre), recorta bajo el suelo (`clipBottom`) y acepta un color por rol y fila (runas que se encienden de abajo arriba).
+
+**Mixto (capullo, portal):** cuando el efecto vive de animación procedural (la trenza que fluye, la trama que se teje, el remolino del vacío), NB dibuja solo la pieza física: el capullo o el arco con su clave. Las formas que antes eran geometría se sacan de la lámina: `inCocoon` lee la máscara del frame, y la boca del portal es el hueco interior del arco, fila a fila.

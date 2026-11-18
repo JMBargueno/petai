@@ -1,10 +1,13 @@
 import type { EffectDef, FxFrame, PixelSink } from './types';
 import { Canvas2, easeIn, easeOut, hash, span } from './fxMath';
+import { frameOrigin, frameSize, paintSheetFrame, type FrameSheet } from './sheet';
+import COCOON_FRAMES from './frames/capullo-telar.json';
 
 /**
  * Capullo del Telar: la evolución (LORE §1 el Telar de Mulberry; §6 crecimiento y Apoteosis).
  *
- * Seis hebras del Flujo llegan en espiral y envuelven a la mascota; el capullo se teje de abajo
+ * Seis hebras del Flujo llegan en espiral y envuelven a la mascota; el capullo (seda dibujada con
+ * Nano Banana) se teje de abajo
  * arriba hasta taparla. Mientras late (fase `hold`), la mascota se re-hornea con su nueva etapa
  * —antes era un corte en seco—; después el capullo se agrieta de luz, estalla en jirones y la
  * nueva forma queda a la vista entre motas que suben.
@@ -19,53 +22,54 @@ const W = 64;
 const H = 78;
 const CX = 32;
 const FEET = 74;
-/** Capullo: elipse que cubre la etapa más alta (54 px nativos). */
-const CY = 47;
-const RX = 19;
-const RY = 27;
-const TOP = CY - RY;
+/**
+ * Capullo dibujado con Nano Banana (`frames/capullo-telar.json`, por roles): 0 la seda tejida ·
+ * 1 la misma, agrietada de luz. Mide 42×55 (cubre la etapa más alta, 54 px nativos) y se apoya en
+ * los pies. La seda se tiñe con el Flujo del Pockai.
+ */
+const SHEET = COCOON_FRAMES as FrameSheet;
+const WOVEN = 0;
+const CRACKED = 1;
+const POS = { x: CX, bottom: FEET };
+const ORIGIN = frameOrigin(SHEET, WOVEN, POS);
+const SIZE = frameSize(SHEET, WOVEN);
+const TOP = ORIGIN.y;
+const RX = SIZE.w / 2;
+const CY = Math.round(TOP + SIZE.h / 2);
 const THREADS = 6;
 
 /** ¿Cae el píxel nativo (x, y) dentro del capullo? (La web lo usa para encoger a la mascota dentro.) */
 export function inCocoon(x: number, y: number): boolean {
-  const dx = (x + 0.5 - CX) / RX;
-  const dy = (y + 0.5 - CY) / RY;
-  // Algo más ancho abajo: un capullo, no un huevo perfecto
-  const widen = y > CY ? 1 + (y - CY) / (RY * 6) : 1;
-  return dx * dx * (1 / (widen * widen)) + dy * dy <= 1 && y <= FEET;
+  const row = SHEET.frames[WOVEN]![y - ORIGIN.y];
+  const ch = row?.[x - ORIGIN.x];
+  return ch !== undefined && ch !== '.';
 }
 
-/** Textura de seda enrollada: bandas diagonales que se cruzan, con luz arriba a la izquierda. */
-function silk(f: FxFrame, x: number, y: number, pulse: number): string {
+function silkColors(f: FxFrame): Record<string, string> {
   const { palette } = f;
-  const band = (((x - CX) * 0.55 + y) | 0) % 5;
-  const cross = (((CX - x) * 0.55 + y + 2) | 0) % 7;
-  const lightSide = x - CX + (y - CY) * 0.6 < -6;
-  let c = band === 0 ? palette.light : band === 1 || band === 4 ? palette.mid : palette.deep;
-  if (cross === 0) c = palette.mid;
-  if (lightSide && band <= 1) c = palette.light;
-  if (lightSide && band === 0 && cross === 0) c = palette.glow;
-  // Latido: un anillo de luz recorre el capullo de abajo arriba
-  if (pulse >= 0) {
-    const ry = FEET - pulse * (FEET - TOP);
-    if (Math.abs(y - ry) < 1.5 && band !== 2) c = palette.glow;
-  }
-  return c;
+  return { outline: palette.outline, silkDeep: palette.deep, silkMid: palette.mid, silkLight: palette.light, glow: palette.glow, core: palette.glow };
 }
 
+/**
+ * El capullo tejido hasta la fracción `fill` (de abajo arriba). `pulse` (0..1, o -1): un anillo de
+ * luz que recorre la seda de abajo arriba mientras late.
+ */
 function paintCocoon(c: Canvas2, f: FxFrame, fill: number, pulse: number) {
+  const tmp = new Canvas2(W, H);
+  paintSheetFrame(tmp, SHEET, WOVEN, silkColors(f), POS);
   const cut = FEET - fill * (FEET - TOP + 1);
-  for (let y = TOP - 1; y <= FEET; y++) {
-    for (let x = CX - RX - 4; x <= CX + RX + 4; x++) {
-      if (!inCocoon(x, y)) continue;
-      if (y < cut) continue;
-      c.set(x, y, silk(f, x, y, pulse));
+  const ry = pulse >= 0 ? FEET - pulse * (FEET - TOP) : -99;
+  for (let y = Math.max(0, Math.floor(cut)); y <= FEET; y++) {
+    for (let x = ORIGIN.x; x < ORIGIN.x + SIZE.w; x++) {
+      const col = tmp.get(x, y);
+      if (!col) continue;
+      c.set(x, y, Math.abs(y - ry) < 1.5 && col !== f.palette.outline ? f.palette.glow : col);
     }
   }
   // Frente del tejido: la hebra que está dando la vuelta
   if (fill > 0 && fill < 1) {
     const yy = Math.round(cut);
-    for (let x = CX - RX - 2; x <= CX + RX + 2; x++) {
+    for (let x = ORIGIN.x - 1; x <= ORIGIN.x + SIZE.w; x++) {
       if (inCocoon(x, yy) || inCocoon(x, yy + 1)) c.set(x, yy - 1, hash(x, yy, f.seed) < 0.5 ? f.palette.glow : f.palette.light);
     }
   }
@@ -148,20 +152,22 @@ function draw(sink: PixelSink, f: FxFrame): void {
     }
     case 'burst': {
       // Grietas de luz desde el centro (primer tercio), luego los jirones salen despedidos.
+      // Las grietas de la lámina se abren desde el centro y, luego, los jirones salen despedidos
       const crack = span(f.t, 0, 0.35);
       const fly = span(f.t, 0.35, 1);
-      for (let y = TOP - 1; y <= FEET; y++) {
-        for (let x = CX - RX - 4; x <= CX + RX + 4; x++) {
-          if (!inCocoon(x, y)) continue;
+      const woven = new Canvas2(W, H);
+      const cracked = new Canvas2(W, H);
+      paintSheetFrame(woven, SHEET, WOVEN, silkColors(f), POS);
+      paintSheetFrame(cracked, SHEET, CRACKED, silkColors(f), POS);
+      for (let y = TOP; y <= FEET; y++) {
+        for (let x = ORIGIN.x; x < ORIGIN.x + SIZE.w; x++) {
+          const base = woven.get(x, y);
+          if (!base) continue;
           const bx = Math.floor(x / 5);
           const by = Math.floor(y / 6);
           const h = hash(bx, by, f.seed);
-          let color = silk(f, x, y, -1);
-          // Grietas: líneas en zigzag que parten del centro
-          const ang = Math.atan2(y - CY, x - CX);
-          const rr = Math.hypot((x - CX) / RX, (y - CY) / RY);
-          const ray = Math.abs(Math.sin(ang * 3 + Math.floor(rr * 4) * 0.6));
-          if (ray < 0.12 && rr < crack * 1.1) color = f.palette.glow;
+          const rr = Math.hypot((x - CX) / RX, (y - CY) / (SIZE.h / 2));
+          const color = rr < crack * 1.2 ? (cracked.get(x, y) ?? base) : base;
           if (fly <= 0) {
             c.set(x, y, color);
             continue;
@@ -186,7 +192,7 @@ function draw(sink: PixelSink, f: FxFrame): void {
       // Motas del Flujo que suben y se apagan alrededor de la nueva forma
       for (let k = 0; k < 16; k++) {
         if (hash(k, 9, f.seed) < f.t * 1.1) continue;
-        const x = CX - RX - 2 + hash(k, 2, f.seed) * (RX * 2 + 4);
+        const x = CX - RX + hash(k, 2, f.seed) * RX * 2;
         const y = FEET - 6 - hash(k, 3, f.seed) * (FEET - TOP) - easeOut(f.t) * 18;
         const blink = Math.floor(f.time / 120 + k) % 3 === 0;
         c.set(x, y, blink ? f.palette.glow : f.palette.light);
