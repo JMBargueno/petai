@@ -1,22 +1,28 @@
 import type { EffectDef, FxFrame, PixelSink } from './types';
+import { paintSheetFrame, type FrameSheet } from './sheet';
+import CHEST_FRAMES from './frames/cofre-tier.json';
+
+const CHEST = CHEST_FRAMES as FrameSheet;
 import { Canvas2, easeIn, easeOut, hash } from './fxMath';
 
 /**
  * Cofre por tier: se abre un cofre (spec 02: brillo por tier y revelación; LORE §2, la densidad).
  *
- * Un cofre cae junto a la mascota, brilla con el color de su tipo (`params.type`: bronce, plata,
+ * El cofre está dibujado con Nano Banana (lámina importada por roles, ver `paintChest`). Cae junto a la mascota, brilla con el color de su tipo (`params.type`: bronce, plata,
  * oro, diamante o mítico) y tiembla; la tapa salta y sube una columna de luz del color del mejor
  * drop (`params.bestTier`) con tantos destellos como su rango.
  *
  * Los metales y los tiers tienen rampas fijas: son el cofre y su botín, no el Pockai.
- * Rejilla 64×80 ×2; pies en la fila 76; el cofre cae a la derecha (x≈52). Va DELANTE.
+ * Rejilla 64×80 ×2; pies en la fila 76; el cofre (26 px) cae pegado al borde derecho. Va DELANTE.
  */
 
 const W = 64;
 const H = 80;
 const CX = 32;
 const FEET = 76;
-const BX = 52;
+/** Centro de la boca del cofre (de ahí sale la columna) y su altura. */
+const BX = 49;
+const MOUTH_Y = FEET - 14;
 
 type Ramp = { outline: string; deep: string; mid: string; light: string };
 const METAL: Record<string, Ramp> = {
@@ -35,77 +41,80 @@ const TIER: Record<string, { color: string; rank: number }> = {
 };
 const WOOD = { deep: '#5a3a22', mid: '#8a5a32' };
 
-function paintChest(c: Canvas2, m: Ramp, bottom: number, lid: number, glow: boolean, shake: number) {
-  const x0 = BX - 6 + shake;
-  // Cuerpo: madera con flejes del metal del tipo
-  for (let y = bottom - 6; y <= bottom; y++) {
-    for (let x = x0; x < x0 + 12; x++) {
-      const band = x === x0 || x === x0 + 11 || x === x0 + 5 || x === x0 + 6 || y === bottom - 6;
-      c.set(x, y, band ? (glow ? m.light : m.mid) : (x + y) % 4 === 0 ? WOOD.deep : WOOD.mid);
-    }
-  }
-  // Cerradura
-  c.set(x0 + 5, bottom - 4, m.light);
-  c.set(x0 + 6, bottom - 4, m.light);
-  // Tapa (sube y se separa al abrirse)
-  const ly = bottom - 7 - Math.round(lid * 8);
-  const lx = x0 + Math.round(lid * 3);
-  for (let y = ly - 3; y <= ly; y++) {
-    for (let x = lx; x < lx + 12; x++) {
-      const band = y === ly - 3 || x === lx || x === lx + 11;
-      c.set(x, y, band ? (glow ? m.light : m.mid) : WOOD.mid);
-    }
-  }
+/**
+ * Frames del cofre dibujados con Nano Banana e importados POR ROLES (`scripts/sprites/effects/
+ * import.mjs`): cada letra es un rol de `CHEST.roles` (a = outline, b = woodDeep…), así el metal
+ * se tiñe con la rampa del tipo y la luz interior con el color del mejor drop.
+ * 0 cerrado · 1 cerradura brillando · 2 tapa entreabierta · 3 abierto con luz · 4 abierto vacío.
+ */
+const SHUT = 0;
+const SHINE = 1;
+const AJAR = 2;
+const OPEN_LIT = 3;
+const OPEN = 4;
+/** Borde izquierdo del cofre (pegado al borde derecho de la rejilla, junto a la mascota). */
+const CHEST_X = 36;
+
+function paintChest(c: Canvas2, m: Ramp, frame: number, bottom: number, shake: number, light: string) {
+  paintSheetFrame(
+    c,
+    CHEST,
+    frame,
+    { outline: m.outline, woodDeep: WOOD.deep, woodMid: WOOD.mid, metalDeep: m.deep, metalMid: m.mid, metalLight: m.light, glow: light },
+    { x: CHEST_X + shake, bottom, align: 'left' },
+  );
 }
 
 function draw(sink: PixelSink, f: FxFrame): void {
-  const c = new Canvas2(W, H);
+  // Dos capas: la luz y los destellos llevan contorno; el cofre ya trae el suyo de la lámina
+  const fx = new Canvas2(W, H);
+  const chest = new Canvas2(W, H);
   const m = METAL[String(f.params['type'] ?? 'bronze')] ?? METAL['bronze']!;
   const tier = TIER[String(f.params['bestTier'] ?? 'common')] ?? TIER['common']!;
 
   if (f.reduced) {
-    paintChest(c, m, FEET, 1, true, 0);
-    c.flush(sink, m.outline);
-    return;
-  }
-
-  switch (f.phase) {
-    case 'drop':
-      paintChest(c, m, Math.round(10 + easeIn(f.t) * (FEET - 10)), 0, false, 0);
-      break;
-    case 'glow': {
-      const pulse = Math.floor(f.time / 125) % 2 === 0;
-      paintChest(c, m, FEET, 0, pulse, f.t > 0.4 ? (pulse ? 1 : -1) : 0);
-      break;
+    paintChest(chest, m, OPEN_LIT, FEET, 0, tier.color);
+  } else {
+    switch (f.phase) {
+      case 'drop':
+        paintChest(chest, m, SHUT, Math.round(24 + easeIn(f.t) * (FEET - 24)), 0, '#ffffff');
+        break;
+      case 'glow': {
+        // La cerradura destella con el metal del tipo y el cofre tiembla
+        const pulse = Math.floor(f.time / 125) % 2 === 0;
+        paintChest(chest, pulse ? { ...m, mid: m.light } : m, pulse ? SHINE : SHUT, FEET, f.t > 0.4 ? (pulse ? 1 : -1) : 0, '#ffffff');
+        break;
+      }
+      case 'open': {
+        paintChest(chest, m, f.t < 0.25 ? AJAR : OPEN_LIT, FEET, 0, tier.color);
+        // Columna del color del mejor drop, con un destello por rango
+        const top = MOUTH_Y - easeOut(f.t) * 46;
+        for (let y = Math.round(top); y < MOUTH_Y; y++) {
+          for (let x = BX - 3; x <= BX + 2; x++) fx.set(x, y, Math.abs(x + 0.5 - BX) < 1.5 ? '#ffffff' : tier.color);
+        }
+        for (let k = 0; k < tier.rank; k++) {
+          const y = top + k * 7 + 2;
+          const side = k % 2 ? 1 : -1;
+          const x = BX + side * (6 + hash(k, 1, f.seed) * 4);
+          fx.set(x, y, '#ffffff');
+          fx.set(x - 1, y, tier.color);
+          fx.set(x + 1, y, tier.color);
+          fx.set(x, y - 1, tier.color);
+          fx.set(x, y + 1, tier.color);
+        }
+        break;
+      }
+      case 'fade':
+        if (hash(2, Math.floor(f.t * 6), f.seed) > f.t) paintChest(chest, m, OPEN, FEET, 0, tier.color);
+        for (let k = 0; k < tier.rank * 2; k++) {
+          if (hash(k, 5, f.seed) < f.t) continue;
+          fx.set(BX - 10 + hash(k, 2, f.seed) * 20, MOUTH_Y - 6 - hash(k, 3, f.seed) * 30 - f.t * 8, tier.color);
+        }
+        break;
     }
-    case 'open': {
-      paintChest(c, m, FEET, easeOut(f.t), true, 0);
-      // Columna del color del mejor drop, con un destello por rango
-      const top = FEET - 7 - easeOut(f.t) * 50;
-      for (let y = Math.round(top); y < FEET - 7; y++) {
-        for (let x = BX - 2; x <= BX + 1; x++) c.set(x, y, Math.abs(x + 0.5 - BX) < 1 ? '#ffffff' : tier.color);
-      }
-      for (let k = 0; k < tier.rank; k++) {
-        const y = top + k * 7 + 2;
-        const side = k % 2 ? 1 : -1;
-        const x = BX + side * (4 + hash(k, 1, f.seed) * 4);
-        c.set(x, y, '#ffffff');
-        c.set(x - 1, y, tier.color);
-        c.set(x + 1, y, tier.color);
-        c.set(x, y - 1, tier.color);
-        c.set(x, y + 1, tier.color);
-      }
-      break;
-    }
-    case 'fade':
-      if (hash(2, Math.floor(f.t * 6), f.seed) > f.t) paintChest(c, m, FEET, 1, false, 0);
-      for (let k = 0; k < tier.rank * 2; k++) {
-        if (hash(k, 5, f.seed) < f.t) continue;
-        c.set(BX - 8 + hash(k, 2, f.seed) * 16, FEET - 20 - hash(k, 3, f.seed) * 30 - f.t * 8, tier.color);
-      }
-      break;
   }
-  c.flush(sink, m.outline);
+  fx.flush(sink, m.outline);
+  chest.flush(sink, null);
 }
 
 export const cofreTier: EffectDef = {
