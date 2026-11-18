@@ -11,6 +11,8 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { EntitlementService } from '../src/modules/billing/entitlement.service';
 import { DecisionStoryGenerator } from '../src/modules/decision-story/decision-story.generator';
 import { STORY_PROMPT_MARKER } from '../src/modules/decision-story/prompt';
+import { StatsService } from '../src/stats/stats.service';
+import { AchievementEngineService } from '../src/achievements/achievement-engine.service';
 
 /**
  * Aventura diaria (e2e): DecisionStoryGenerator + partidas.
@@ -71,6 +73,21 @@ describe('Aventura diaria: DecisionStoryGenerator (e2e)', () => {
     const pet = await api().post(`/v1/eggs/${eggs.body[0].id}/hatch`).set(auth).expect(201);
     users.push(reg.body.user.id);
     return { auth, userId: reg.body.user.id as string, petId: pet.body.id as string };
+  }
+
+  /**
+   * Eclosionar dispara en segundo plano `egg:hatched` → estadísticas → logros, que también dan
+   * monedas. Si esa recompensa llega después de leer el saldo, el delta de la historia sale mal: se
+   * espera a que la estadística esté apuntada y se evalúan los logros ya (se conceden una sola vez).
+   */
+  async function settleHatchRewards(userId: string) {
+    const stats = app.get(StatsService);
+    const deadline = Date.now() + 5000;
+    while (!((await stats.getAll(userId)).eggs_hatched >= 1)) {
+      if (Date.now() > deadline) throw new Error('La estadística eggs_hatched no se registró tras eclosionar');
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    await app.get(AchievementEngineService).evaluate(userId);
   }
 
   /** Juega una historia entera eligiendo siempre la opción indicada por `pick`. */
@@ -138,7 +155,11 @@ describe('Aventura diaria: DecisionStoryGenerator (e2e)', () => {
 
   it('c. flujo completo: empezar, responder las 3 escenas, recompensa, recuerdo e historial', async () => {
     const u = await signup();
-    await prisma.pet.update({ where: { id: u.petId }, data: { happiness: 50 } });
+    await settleHatchRewards(u.userId);
+    // Nivel máximo: los 30 XP de la historia no suben de nivel (que tendría sus propios premios)
+    await prisma.pet.update({ where: { id: u.petId }, data: { happiness: 50, level: 50, sleeping: false } });
+    // Saldo conocido para afirmar el delta
+    await prisma.user.update({ where: { id: u.userId }, data: { coins: 1000 } });
     const before = await prisma.user.findUnique({ where: { id: u.userId }, select: { coins: true } });
     const story = await prisma.decisionStory.findFirst({ where: { day: DAY1, slot: 1 } });
     const scenes = (story.scenes as any).scenes;
@@ -170,6 +191,12 @@ describe('Aventura diaria: DecisionStoryGenerator (e2e)', () => {
 
     const after = await prisma.user.findUnique({ where: { id: u.userId }, select: { coins: true } });
     expect(after.coins - before.coins).toBe(20);
+    expect(await prisma.decisionStoryPlay.findUnique({ where: { userId_storyId: { userId: u.userId, storyId: story.id } } })).toMatchObject({
+      status: 'completed',
+      outcome: 'win',
+      xpAwarded: 30,
+      coinsAwarded: 20,
+    });
     expect((await prisma.pet.findUnique({ where: { id: u.petId } })).happiness).toBe(58);
     const tallies = await prisma.decisionStoryTally.findMany({ where: { storyId: story.id } });
     expect(tallies.reduce((a, t) => a + t.count, 0)).toBe(3);
