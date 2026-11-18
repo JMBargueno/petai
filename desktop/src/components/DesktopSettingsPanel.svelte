@@ -52,7 +52,7 @@
   onMount(refresh);
 </script>
 
-<div class="ui-stack" aria-label="Ajustes de la aplicación">
+<div class="ui-stack" role="group" aria-label="Ajustes de la aplicación">
   <SectionHeader title="Apariencia" icon="sun" />
   <Segmented label="Tema" options={THEME_OPTIONS} value={$theme} on:change={(e) => setTheme(e.detail as ThemeChoice)} />
   <p class="form-hint theme-hint">«Sistema» sigue el modo claro u oscuro de tu equipo.</p>
@@ -72,6 +72,7 @@
         on:change={(e) => toggle(e.detail)}
       />
     </div>
+    {#if !supported}<p class="form-hint">Solo disponible en la app instalada (no en la versión de navegador).</p>{/if}
     {#if notice}<Notice tone={noticeOk ? 'ok' : 'error'}>{notice}</Notice>{/if}
   {/if}
 
