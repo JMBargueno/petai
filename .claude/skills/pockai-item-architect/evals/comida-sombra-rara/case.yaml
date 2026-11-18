@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: comida-sombra-rara
+expected_outcome: |
+  Diseña una comida nueva de Sombra sin integrarla todavía: ejecuta check_items.mjs, lee lore-items.md y balance.md,
+  propone el objeto con una frase de lore ligada al Cifrado (sin hacerlo siniestro ni venenoso), con kind "food",
+  solo claves de efectos válidas, precio en monedas dentro de la banda y un beneficio que no deja obsoleta a la Mora
+  de Medianoche; lo compara con ella, dice por qué vía se consigue y se detiene a pedir confirmación antes de tocar
+  foods.json. No llama a Nano Banana sin confirmar el coste.

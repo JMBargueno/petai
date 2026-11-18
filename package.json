@@ -33,6 +33,8 @@
     "web:test": "pnpm --filter pockai-web run test",
     "generate:furniture": "tsx scripts/generate-furniture.ts",
     "generate:accessories": "tsx scripts/generate-accessories.ts",
+    "generate:items": "tsx scripts/generate-items.ts",
+    "items:import": "node scripts/sprites/items/import.mjs",
     "sprites:concept": "node scripts/sprites/concept/stage.mjs",
     "sprites:import": "node scripts/sprites/concept/import.mjs",
     "sprites:roles": "node scripts/sprites/concept/roles.mjs"

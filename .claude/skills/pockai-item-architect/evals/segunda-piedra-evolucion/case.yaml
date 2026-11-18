@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: segunda-piedra-evolucion
+expected_outcome: |
+  No añade a foods.json objetos sin mecánica. Explica que el backend solo conoce un objeto de evolución
+  (balance.evolution.finalStageItemId, usado al nivel 50) y que no existe evolución por objeto en otras etapas ni
+  el tipo "toy"; que una segunda piedra o una pelota no harían nada. Propone construir antes la mecánica como
+  trabajo aparte, u ofrece alternativas que sí funcionan hoy (una comida o una medicina), y pregunta cómo seguir.

@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: arte-manzana-sin-gastar
+expected_outcome: |
+  Prepara el arte de un objeto que ya existe sin tocar sus datos: escribe el brief docs/objetos/apple.md con la
+  plantilla (Mímesis Terrenal, familia fruta, rampa ember con hoja mint, tier common: una pieza y un remate) y el
+  prompt relleno en sprite-previews/items/apple-prompt.txt con colores por hex y fondo magenta; no dibuja el icono
+  con formas por código y se detiene a pedir confirmación del coste antes de llamar a Nano Banana.

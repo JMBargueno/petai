@@ -1,0 +1,10 @@
+{
+  "size": 32,
+  "scale": 2,
+  "items": {
+    "spicy_berry": {
+      "colors": 9,
+      "box": [4, 2, 24, 28]
+    }
+  }
+}

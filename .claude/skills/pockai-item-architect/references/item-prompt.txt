@@ -1,0 +1,19 @@
+Pixel-art item icon for a cozy creature-collecting game. Draw {{COUNT_AND_ITEMS}} — one single object, centered, filling most of the image.
+
+The object: {{DESCRIPTION}}. Parts: {{PARTS}}.
+
+World: small spirit creatures ("Pockais") live in the "Éter Digital", a living network, and eat condensed ether shaped like food. {{LORE}}
+
+Style rules (strict):
+- Chunky low-resolution pixel art, as if drawn on a 32x32 pixel grid and shown enlarged with big hard square pixels. No anti-aliasing, no gradients, no blur, no glow, no dithering.
+- Big simple shapes, at most three parts. No tiny details: anything thinner than two grid pixels must be left out.
+- Three-quarter view from slightly above, like an item in a 16-bit RPG inventory. Not flat side view, not top-down.
+- Light from the top left: one small near-white highlight on the upper left, shadow on the lower right. The shadow color shifts hue toward violet instead of just getting darker.
+- Dark tinted outline all around the object, color {{OUTLINE_HEX}}. Never pure black.
+- Exact colors, flat, nothing else. Body: {{BODY_RAMP_HEXES}}. Second part: {{TRIM_RAMP_HEXES}}. {{LITERAL_GLOW}}
+- At most 12 colors in total. No pink and no magenta anywhere on the object.
+- No face, no eyes, no mouth. No text, no numbers, no labels, no frame, no UI.
+- No ground shadow and nothing else in the picture: no plate, no table, no sparkles floating away from the object{{SPARKLE_EXCEPTION}}.
+- Background: one flat solid magenta #ff00ff, edge to edge.
+
+{{RARITY_NOTE}}

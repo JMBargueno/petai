@@ -57,6 +57,12 @@
       "text": "Ningún Pockai es una copia de su especie. Nace con el temperamento de su linaje, pero cada gesto de su Custodio deja una Huella en su núcleo. Uno al que llevan de aventura y con el que juegan sin parar se vuelve curioso y atrevido; otro que crece entre mimos y calma se vuelve reservado y cariñoso. «Dos huevos iguales, dos Custodios distintos, dos Pockai que ya no se parecen». Su Cristal de Recuerdos no lo guarda todo: atesora lo que le importa, lo que ha aprendido de su Custodio y del mundo y lo que siente por los demás; lo que no deja huella se disuelve en el Éter. Y cuando el Santuario se cierra no se queda congelado: duerme, juega, explora rincones del Éter, a veces encuentra pequeños tesoros y visita los Santuarios de los amigos. Al volver, lo cuenta a su manera."
     },
     {
+      "id": "alimento",
+      "title": "El alimento del Éter",
+      "keywords": ["alimento", "alimentos", "que comes", "que comeis", "que comen", "comida del eter", "comida favorita", "eter condensado", "reservas de eter", "baya ignea", "coral glaseado", "semilla solar", "caramelo de chispa", "mora de medianoche", "miel de alba", "elixir", "elixir reparador", "piedra de evolucion"],
+      "text": "Un espíritu de datos no come materia: repone sus reservas de éter. La comida es éter condensado, que ha tomado forma para que un Pockai pueda morderlo. Hay dos clases. Las neutras son Mímesis Terrenal: el Santuario imita la comida humana que ve a través de su Custodio, como una manzana, un pastel o una ensalada, y le sirve a cualquiera. Las demás son frutos de un Flujo: cristalizan dentro de una de las seis corrientes y saben a ella. La Baya Ígnea madura junto al calor de un procesador al límite; la Mora de Medianoche solo lo hace sin luz. Por eso cada Pockai tiene una favorita, la de su Flujo, que le sacia y le alegra más que a nadie. La medicina es código reparador: deshace la corrupción de datos y el polvo estático que lo enferman, y ninguno la toma por gusto. La Piedra de Evolución es un nudo cristalizado del Telar de Mulberry: la hebra que le falta a un Pockai ya crecido para cerrar su forma en la Apoteosis. La despensa del Santuario guarda lo de cada día, los cofres traen lo que arrastra la corriente y, a veces, es el propio Pockai quien vuelve con algo de sus paseos por el Éter."
+    },
+    {
       "id": "glosario",
       "title": "Palabras del Éter",
       "keywords": ["glosario", "diccionario", "vocabulario", "sello de vinculacion", "armonia vital", "vinculador"],
