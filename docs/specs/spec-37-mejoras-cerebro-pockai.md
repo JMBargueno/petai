@@ -704,10 +704,26 @@ tres capas, las mismas de la sección 7:
   reescribir `personality`; mood-theater lee el rasgo derivado (`trait`) en vez de `type`, que
   nadie escribe; el recuerdo de aventura lo escribe la mente (`EvolutionListener.onAdventure`) con
   sus filtros y su capacidad; y `ELEMENTS` traduce todos los elementos de `species.json`.
-- **Fase 3 — pendiente.** El lote 2 (memoria v2) y dos hallazgos que piden decisión de diseño, no
-  un arreglo: la cría no hereda personalidad (`breeding.service.ts` crea la mascota sin ella) y la
-  vida autónoma aplica el estado del momento de la lectura (`sleeping`, `energy`, `sick`) a todos
-  los intervalos pasados. Y que el backend importe `@pockai/mind` en lugar de su copia.
+- **Fase 3 — lote 2 (hecho, salvo 2.4).**
+  - 2.1: `MemoryService.store` e `ingestDigest` terminan en `MindMemoryService.enforceCapacity`: el
+    olvido es por retención, con la capacidad del nivel y del plan. Los topes fijos (`MAX_FACTS`,
+    `MAX_SUMMARIES`) solo quedan como respaldo si la memoria por capas no está inyectada. Los
+    hábitos se guardan con importancia explícita. Ojo: en el nivel «memoria» del plan gratuito la
+    capa semántica admite 40 recuerdos y el tope fijo era de 50 hechos, así que una mascota que
+    estuviera al límite olvidará los de menor retención en su siguiente extracción.
+  - 2.2: el extractor recibe los hechos conocidos numerados (`buildExtractionInput`) y devuelve
+    operaciones `add` | `update` | `delete` con importancia, más hasta dos episodios en primera
+    persona. `parseExtraction` lo valida todo en servidor; los hechos como texto suelto del formato
+    anterior siguen valiendo como altas. `maxTokens` sube de 400 a 600.
+  - 2.3: los episodios de plantilla se guardan con clave `ep:<intención>` y `bump`: se actualiza
+    el mismo recuerdo, vuelve a ser de hoy y gana importancia hasta un tope
+    (`personality.memory.repeatBoost` y `repeatCap`).
+  - 2.4 **no está hecho**: necesita la decisión de producto de la sección 12 (cadencia de extracción
+    en el plan gratuito). La extracción sigue bloqueada por debajo de inteligencia 200.
+- **Fase 3 — pendiente.** El punto 2.4 y dos hallazgos que piden decisión de diseño, no un arreglo:
+  la cría no hereda personalidad (`breeding.service.ts` crea la mascota sin ella) y la vida
+  autónoma aplica el estado del momento de la lectura (`sleeping`, `energy`, `sick`) a todos los
+  intervalos pasados. Y que el backend importe `@pockai/mind` en lugar de su copia.
 - **Fase 4 — visitas con escena compartida.** Depende de las fases 2 y 3 (1.7). El visitante entra en
   la sala del anfitrión y ambos se resuelven con `resolveScene` (6.3) y la relación por etapas (6.1).
 - **Fase 5 — lotes 3 a 6 restantes**, incluido el menú del dueño visitante (6.2).

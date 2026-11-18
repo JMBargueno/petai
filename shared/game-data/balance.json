@@ -505,7 +505,9 @@
       "minImportanceToStore": 0.3,
       "minRecallScore": 0.15,
       "recentRecallMinutes": 60,
-      "recentRecallPenalty": 0.5
+      "recentRecallPenalty": 0.5,
+      "repeatBoost": 0.05,
+      "repeatCap": 0.8
     },
     "autonomy": {
       "intervalMinutes": 60,

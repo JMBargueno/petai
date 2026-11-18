@@ -430,7 +430,17 @@ export class ChatService {
         const ep = turn.interpretation.episode;
         if (ep) {
           await this.mindMemory.remember(pet.id, [
-            { layer: 'episodic', kind: 'event', content: ep.content, importance: ep.importance, valence: ep.valence, subject: 'owner' },
+            {
+              layer: 'episodic',
+              kind: 'event',
+              // Clave por intención: el mismo episodio de plantilla se refresca en vez de acumularse
+              key: `ep:${turn.interpretation.intent}`,
+              bump: true,
+              content: ep.content,
+              importance: ep.importance,
+              valence: ep.valence,
+              subject: 'owner',
+            },
           ]);
         }
         // La relación con el entrenador solo se mueve con mensajes significativos (no con cada «hola»)
