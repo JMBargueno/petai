@@ -109,6 +109,9 @@ export const SPECIES = speciesData.map((s, i) => ({
   color: CARD_COLORS[i % CARD_COLORS.length],
 }));
 
+/** Las especies con las que empieza el juego: las de rareza normal. */
+export const STARTER_SPECIES = SPECIES.filter((s) => s.rarityId === 'normal');
+
 const READY = $localize`:@@plat.status.ready:Disponible`;
 const IN_PROGRESS = $localize`:@@plat.status.wip:En desarrollo`;
 

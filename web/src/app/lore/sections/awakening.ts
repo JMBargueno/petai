@@ -28,7 +28,7 @@ import { AWAKING_STEPS, DEPTH_MAX } from '../content';
         <div class="spark reveal" aria-hidden="true">
           <figure class="spark__state spark__state--dream">
             <span class="spark__bubble spark__bubble--dream">· · ·</span>
-            <app-pockai-sprite species="axolunar" state="sleep" [size]="132" />
+            <app-pockai-sprite species="axolunar" stage="baby" state="sleep" [size]="132" />
             <figcaption>
               <strong i18n="@@lore.awake.dream.t">Instinto Soñador</strong>
               <span i18n="@@lore.awake.dream.b">Siente y gesticula, sin palabras</span>
@@ -50,7 +50,7 @@ import { AWAKING_STEPS, DEPTH_MAX } from '../content';
             <span class="spark__bubble spark__bubble--awake">
               <app-sticker icon="chat" color="lavender" [size]="34" />
             </span>
-            <app-pockai-sprite species="axolunar" state="happy" [size]="132" />
+            <app-pockai-sprite species="axolunar" stage="baby" state="happy" [size]="132" />
             <figcaption>
               <strong i18n="@@lore.awake.awake.t">Despierto</strong>
               <span i18n="@@lore.awake.awake.b">Habla, recuerda y actúa</span>

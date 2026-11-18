@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, LOCALE_ID, inject } from '@angular/core';
 import { Rarities } from '../landing/sections/rarities';
 import { Species } from '../landing/sections/species';
+import { Evolution } from './evolution';
 import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
@@ -8,10 +9,10 @@ import { SectionToc, TocSection } from '../shared/layout/section-toc';
 import { SeoService } from '../shared/seo/seo.service';
 import { SITE_NAME, pageUrl } from '../site.config';
 
-/** Especies, rarezas y patrones: todo lo que puede salir de un huevo, en una página. */
+/** Especies iniciales, cómo evolucionan, rarezas y patrones: todo lo que puede salir de un huevo, en una página. */
 @Component({
   selector: 'app-pockais',
-  imports: [SiteHeader, SiteFooter, SectionToc, Species, Rarities],
+  imports: [SiteHeader, SiteFooter, SectionToc, Species, Evolution, Rarities],
   template: `
     <app-site-header
       [links]="links"
@@ -40,6 +41,7 @@ import { SITE_NAME, pageUrl } from '../site.config';
 
       <app-section-toc [sections]="sections" />
       <app-species />
+      <app-evolution />
       <app-rarities />
 
       <section class="band band--gray band--compact">
@@ -68,6 +70,7 @@ export class Pockais {
   /** Secciones de esta página: índice flotante y anclas de la cabecera. */
   protected readonly sections: TocSection[] = [
     { id: 'especies', label: $localize`:@@pockais.nav.species:Especies` },
+    { id: 'evolucion', label: $localize`:@@pockais.nav.evolution:Evolución` },
     { id: 'rarezas', label: $localize`:@@lore.nav.rare:Rarezas` },
     { id: 'patrones', label: $localize`:@@rar.patterns:Patrones` },
   ];

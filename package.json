@@ -11,6 +11,8 @@
     "validate:animations": "tsx scripts/validate-animations.ts",
     "validate:all": "node scripts/validate-game-data.js && node scripts/validate-assets.js && tsx scripts/validate-animations.ts",
     "generate:sprites": "tsx scripts/generate-pet-sprites.ts",
+    "generate:web-sprites": "tsx scripts/generate-web-stage-sprites.ts",
+    "generate:web-evolution": "tsx scripts/generate-web-evolution-reels.ts",
     "generate:patterns": "node scripts/sprites/pixel/patterns.mjs",
     "build:assets": "tsx scripts/build-assets.ts",
     "build:assets:dry": "tsx scripts/build-assets.ts --dry-run",
