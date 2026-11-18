@@ -20,8 +20,13 @@ if (previews.status !== 0) {
   throw new Error('generate-pattern-previews falló; no se puede sincronizar public/sprites');
 }
 
-// Estados de cada especie (idle, happy, eat, sleep), huevos y previews de patrones.
-const wanted = (name) => name.endsWith('.svg') || name.includes('pattern_') && name.endsWith('.png');
+// Estados de cada especie (idle, happy, eat, sleep), huevos, previews de patrones y los PNG por etapa
+// (<especie>_baby_<estado>.png, de scripts/generate-web-stage-sprites.ts) y las bobinas de evolución
+// (evolution_<especie>.png + .json, de scripts/generate-web-evolution-reels.ts).
+const wanted = (name) =>
+  name.endsWith('.svg') ||
+  ((name.includes('pattern_') || name.includes('_baby_') || name.startsWith('evolution_')) && name.endsWith('.png')) ||
+  (name.startsWith('evolution_') && name.endsWith('.json'));
 
 rmSync(target, { recursive: true, force: true });
 mkdirSync(target, { recursive: true });

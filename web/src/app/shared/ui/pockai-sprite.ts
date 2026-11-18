@@ -2,10 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 
 export type PockaiState = 'idle' | 'happy' | 'eat' | 'sleep';
 
+/** Etapa evolutiva con sprites propios para la web (scripts/generate-web-stage-sprites.ts). */
+export type PockaiStage = 'baby';
+
 /**
  * Un pockai con vida, a partir de los sprites reales del juego (uno por estado).
- * El SVG trae su propia sombra dibujada; se recorta y se sustituye por una elipse aparte
- * para que el cuerpo pueda saltar sin llevarse la sombra consigo.
+ * La sombra es una elipse aparte para que el cuerpo pueda saltar sin llevársela consigo.
+ * Sin `stage` usa los SVG de vista previa; con `stage` usa el PNG horneado de esa etapa.
  */
 @Component({
   selector: 'app-pockai-sprite',
@@ -34,8 +37,12 @@ export type PockaiState = 'idle' | 'happy' | 'eat' | 'sleep';
       display: block;
       inline-size: 100%;
       block-size: 100%;
-      clip-path: inset(0 0 13.5% 0); /* fuera la sombra del propio sprite */
       transform-origin: 50% 86%;
+    }
+    /* Pixel art a 92 px ampliado: sin suavizado, y los pies tocan el borde inferior. */
+    :host([data-stage]) img {
+      image-rendering: pixelated;
+      transform-origin: 50% 96%;
     }
     .ground {
       position: absolute;
@@ -89,7 +96,11 @@ export type PockaiState = 'idle' | 'happy' | 'eat' | 'sleep';
       }
     }
   `,
-  host: { '[attr.data-state]': 'state()', '[style.--sprite-size]': 'size() ? size() + "px" : null' },
+  host: {
+    '[attr.data-state]': 'state()',
+    '[attr.data-stage]': 'stage()',
+    '[style.--sprite-size]': 'size() ? size() + "px" : null',
+  },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PockaiSprite {
@@ -103,5 +114,13 @@ export class PockaiSprite {
   /** Imagen del primer pantallazo: sin lazy y con prioridad alta (guía optimize-image-priority). */
   readonly priority = input(false);
 
-  protected readonly src = computed(() => `sprites/${this.species()}_${this.state()}.svg`);
+  /** Etapa a mostrar; `null` = vista previa SVG sin etapa. */
+  readonly stage = input<PockaiStage | null>(null);
+
+  protected readonly src = computed(() => {
+    const stage = this.stage();
+    return stage
+      ? `sprites/${this.species()}_${stage}_${this.state()}.png`
+      : `sprites/${this.species()}_${this.state()}.svg`;
+  });
 }

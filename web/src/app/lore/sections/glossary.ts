@@ -101,7 +101,7 @@ const fold = (s: string) =>
               @for (s of shownSpecies(); track s.id) {
                 <article class="codex__card">
                   <div class="codex__card-art">
-                    <app-pockai-sprite [species]="s.spriteKey" [alt]="s.name" />
+                    <app-pockai-sprite [species]="s.spriteKey" stage="baby" [alt]="s.name" />
                   </div>
                   <h3 class="codex__card-name">{{ s.name }}</h3>
                   <p class="codex__card-desc">{{ s.description }}</p>

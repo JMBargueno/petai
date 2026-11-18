@@ -1,8 +1,11 @@
 import { ChangeDetectionStrategy, Component, LOCALE_ID, inject, signal } from '@angular/core';
 import { PockaiSprite } from '../../shared/ui/pockai-sprite';
-import { SPECIES } from '../content';
+import { STARTER_SPECIES } from '../content';
 
-/** Las especies del catálogo compartido. Al pasar el ratón por una tarjeta, su pockai se alegra. */
+/**
+ * Las especies iniciales (rareza normal) del catálogo compartido, en etapa bebé. Al pasar el ratón por
+ * una tarjeta, su pockai se alegra. Las raras y superiores salen en el códice del lore.
+ */
 @Component({
   selector: 'app-species',
   imports: [PockaiSprite],
@@ -27,6 +30,7 @@ import { SPECIES } from '../content';
               <div class="species__art">
                 <app-pockai-sprite
                   [species]="s.spriteKey"
+                  stage="baby"
                   [alt]="s.name"
                   [state]="hovered() === s.id ? 'happy' : 'idle'"
                 />
@@ -85,7 +89,8 @@ import { SPECIES } from '../content';
       aspect-ratio: 4 / 3;
     }
     .species__art app-pockai-sprite {
-      --sprite-size: min(62%, 190px);
+      /* El PNG de bebé deja aire para las especies más anchas: algo más grande que el SVG. Cabe en el 4:3. */
+      --sprite-size: min(72%, 220px);
     }
     .species__tags {
       display: flex;
@@ -100,7 +105,7 @@ import { SPECIES } from '../content';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Species {
-  protected readonly species = SPECIES;
+  protected readonly species = STARTER_SPECIES;
   protected readonly loreHref = `/${inject(LOCALE_ID).slice(0, 2)}/lore`;
   protected readonly hovered = signal<string | null>(null);
 }
