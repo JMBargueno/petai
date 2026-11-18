@@ -94,13 +94,10 @@ const ELEMENTS: Record<string, string> = {
   water: 'agua',
   plant: 'planta',
   grass: 'planta',
+  electric: 'eléctrico',
+  light: 'luz',
+  shadow: 'sombra',
 };
-
-export interface PromptOptions {
-  tier?: 'chat' | 'memory' | 'agent';
-  now?: Date;
-  timeZone?: string;
-}
 
 export interface PromptOptions {
   tier?: 'chat' | 'memory' | 'agent';

@@ -3,6 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MindService } from './mind.service';
 import { MindMemoryService } from './mind-memory.service';
+import { adventureEpisode } from './memory.engine';
 
 /**
  * Evolution Engine — entrada de experiencias (spec 36).
@@ -75,9 +76,20 @@ export class EvolutionListener {
   }
 
   @OnEvent('adventure:finished', { async: true })
-  onAdventure(p: { petId: string }) {
-    // El recuerdo episódico lo escribe AdventureService; aquí solo la deriva de personalidad
-    return this.safe(() => this.mind.applyExperience(p.petId, ['adventure']));
+  onAdventure(p: { petId: string; theme?: string; outcome?: string }) {
+    return this.safe(async () => {
+      await this.mind.applyExperience(p.petId, ['adventure']);
+      // El tema lo escribe un modelo: pasa por el filtro de textos de `remember` como cualquier recuerdo
+      await this.memory.remember(p.petId, [
+        {
+          layer: 'episodic',
+          kind: 'adventure',
+          content: adventureEpisode(p.theme, p.outcome),
+          importance: 0.6,
+          valence: p.outcome === 'lose' ? 0 : 0.6,
+        },
+      ]);
+    });
   }
 
   /** Visita en vivo a un hábitat: las mascotas de ambos entrenadores la recuerdan. */

@@ -80,7 +80,9 @@ export class GeneRevealService {
       await this.prisma.pet.update({
         where: { id: petId },
         data: {
+          // Fusiona: `personality` guarda también las dimensiones, la deriva y la vida autónoma (spec 36)
           personality: {
+            ...personality,
             temperament: personality.temperament ?? 'curioso',
             genes,
           },

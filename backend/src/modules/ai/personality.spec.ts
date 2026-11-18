@@ -121,3 +121,21 @@ describe('spec 37 §1.4: hora local para el agente', () => {
     expect(prompt).not.toContain('2026-11-18T12:00:45.000Z');
   });
 });
+
+describe('el elemento de la mascota llega al prompt en castellano', () => {
+  const { buildSystemPrompt } = require('./personality');
+  const speciesData = JSON.parse(
+    require('fs').readFileSync(require('path').resolve(__dirname, '../../../../shared/game-data/species.json'), 'utf8'),
+  );
+
+  it('todos los elementos de species.json tienen traducción', () => {
+    const elements = [...new Set(speciesData.map((s: any) => s.element))] as string[];
+    expect(elements.length).toBeGreaterThan(3);
+    for (const element of elements) {
+      const pet = { nickname: 'X', species: { name: 'Y', element }, intelligence: 0, hunger: 80, energy: 80, hygiene: 80, happiness: 80, health: 100, level: 1, stage: 'baby', rarity: 'common', visualSeed: 1 };
+      const prompt = buildSystemPrompt(pet, {}, { tier: 'chat' });
+      // Ningún elemento debe aparecer con su id en inglés
+      expect({ element, leaked: new RegExp('\\b' + element + '\\b').test(prompt) }).toEqual({ element, leaked: false });
+    }
+  });
+});

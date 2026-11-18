@@ -215,6 +215,17 @@ export function buildLayeredMemoryBlock(sel: RecallSelection, now: Date): string
   return lines.join('\n');
 }
 
+/** Recuerdo en primera persona de una aventura terminada (lo devuelve la aventura y lo guarda la mente). */
+export function adventureEpisode(theme: string | null | undefined, outcome: string | null | undefined): string {
+  const ending =
+    outcome === 'win'
+      ? 'Lo conseguí y fue emocionante.'
+      : outcome === 'partial'
+        ? 'Hubo obstáculos, pero salió a medias bien.'
+        : 'No salió bien, pero aprendí mucho.';
+  return `Viví una aventura: ${theme || 'un paseo por lo desconocido'}. ${ending}`;
+}
+
 /** Nueva valencia de una relación: media móvil acotada (los vínculos cambian despacio). */
 export function nextValence(prev: number, delta: number): number {
   const v = prev * 0.9 + delta;

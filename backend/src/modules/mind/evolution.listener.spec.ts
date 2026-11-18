@@ -78,3 +78,26 @@ describe('EvolutionListener', () => {
     });
   });
 });
+
+describe('EvolutionListener: la aventura deja su recuerdo a través de la mente', () => {
+  it('escribe un episodio con el tema y el desenlace, y mueve la personalidad', async () => {
+    const mind: any = { applyExperience: jest.fn(async () => null) };
+    const memory: any = { remember: jest.fn(async () => 1), feel: jest.fn() };
+    const listener = new EvolutionListener({} as any, mind, memory);
+    await listener.onAdventure({ petId: 'p', theme: 'La cueva de los ecos', outcome: 'win' });
+    expect(mind.applyExperience).toHaveBeenCalledWith('p', ['adventure']);
+    const [petId, [episode]] = memory.remember.mock.calls[0];
+    expect(petId).toBe('p');
+    expect(episode).toMatchObject({ layer: 'episodic', kind: 'adventure', valence: 0.6 });
+    expect(episode.content).toContain('La cueva de los ecos');
+    // Sin la fecha metida en el texto: la edad del recuerdo ya la da su `createdAt`
+    expect(episode.content).not.toMatch(/\d{1,2}\/\d{1,2}\/\d{4}/);
+  });
+
+  it('una derrota no deja buen sabor', async () => {
+    const memory: any = { remember: jest.fn(async () => 1), feel: jest.fn() };
+    const listener = new EvolutionListener({} as any, { applyExperience: jest.fn(async () => null) } as any, memory);
+    await listener.onAdventure({ petId: 'p', theme: 'El pantano', outcome: 'lose' });
+    expect(memory.remember.mock.calls[0][1][0].valence).toBe(0);
+  });
+});

@@ -679,11 +679,30 @@ tres capas, las mismas de la sección 7:
 - **Fase 2 — sala del hábitat.** `IsoRoom.wander()` pasa a un `petWander.ts` puro que usa
   `selectByUtility` con `personality.room`: come con hambre, se baña sucio, duerme cansado. El mensaje
   `setActivity` gana un campo opcional `mind { dims, needs, seed }` y la sala admite varios actores.
-- **Fase 3 — lotes 1 y 2**, más lo que la revisión encontró fuera de ellos: `gene-reveal.service.ts`
-  reescribe `personality` sin fusionar; la cría no hereda personalidad; mood-theater lee
-  `personality.type`, que nadie escribe; la aventura guarda recuerdos sin pasar por el motor de
-  memoria; `ELEMENTS` no traduce `electric`, `light` ni `shadow`; la vida autónoma aplica el estado
-  actual (`sleeping`, `energy`) a todos los intervalos pasados.
+- **Fase 3 — lote 1 (hecho).** Los siete puntos de la sección 4, cada uno con un test que fallaba
+  antes del arreglo:
+  - 1.1: `MindService` bloquea la fila (`SELECT … FOR UPDATE`) en `applyExperience` y
+    `patchStored`. Un turno de chat hace una sola escritura (`afterTurn` incluye `chat` y el evento
+    `chat:message_sent` lleva `mindHandled`) y la vida autónoma otra (`applyExperience` admite un
+    parche). El test de concurrencia con base de datos real es `backend/test/mind.e2e-spec.ts`.
+  - 1.2: `clampDim` guarda 3 decimales (también en `@pockai/mind`).
+  - 1.3: la retención cuenta la edad desde `updatedAt`, no desde `lastRecalledAt`. Lo que coincide
+    con el mensaje se refuerza; lo demás solo anota cuándo salió, con SQL directo para no tocar
+    `updatedAt`. Claves nuevas en `balance.json → personality.memory`: `minRecallScore`,
+    `recentRecallMinutes` y `recentRecallPenalty`.
+  - 1.4: `localTimeLabel` en `ai/personality.ts`. 1.5: incremento atómico con `updateMany`.
+  - 1.6: `hintForTurn` en `mind/behavior.engine.ts` (provisional hasta 4.4).
+  - 1.7: `habitat:visited` lleva `visitorPetId` y `hostPetId`. Al escribir el test salió que el
+    hallazgo se quedaba corto: `resolveActivePet` ya usaba `User.activePetId` y el listener la más
+    antigua, así que los recuerdos ya iban a otra mascota en cuanto el jugador elegía una activa.
+  Con el lote van cuatro arreglos de fuera de la spec: `gene-reveal.service.ts` fusiona en vez de
+  reescribir `personality`; mood-theater lee el rasgo derivado (`trait`) en vez de `type`, que
+  nadie escribe; el recuerdo de aventura lo escribe la mente (`EvolutionListener.onAdventure`) con
+  sus filtros y su capacidad; y `ELEMENTS` traduce todos los elementos de `species.json`.
+- **Fase 3 — pendiente.** El lote 2 (memoria v2) y dos hallazgos que piden decisión de diseño, no
+  un arreglo: la cría no hereda personalidad (`breeding.service.ts` crea la mascota sin ella) y la
+  vida autónoma aplica el estado del momento de la lectura (`sleeping`, `energy`, `sick`) a todos
+  los intervalos pasados. Y que el backend importe `@pockai/mind` en lugar de su copia.
 - **Fase 4 — visitas con escena compartida.** Depende de las fases 2 y 3 (1.7). El visitante entra en
   la sala del anfitrión y ambos se resuelven con `resolveScene` (6.3) y la relación por etapas (6.1).
 - **Fase 5 — lotes 3 a 6 restantes**, incluido el menú del dueño visitante (6.2).
