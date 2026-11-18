@@ -2,7 +2,7 @@
 
 Es un resumen práctico de `docs/GUIA_ARTISTICA.md` §7.5 y §7.6. Si hay conflicto, manda la guía. La cámara, la luz y la cara en 3/4 siguen en `iso-style.md`.
 
-**Estado:** los Pockais ya se generan en pixel art (`scripts/sprites/pixel/`). El render de accesorios sobre la mascota sigue pendiente (spec 38, lote 3).
+**Estado:** los Pockais se generan en pixel art (`scripts/sprites/pixel/`) y llevan sus accesorios puestos (spec 38).
 
 ## Reglas de diseño
 - **Evolucionar es cambiar.** Cada etapa tiene su propio plan corporal y su propia geometría.
@@ -10,6 +10,32 @@ Es un resumen práctico de `docs/GUIA_ARTISTICA.md` §7.5 y §7.6. Si hay confli
 - **Tres tonos por volumen**, sin degradados: luz arriba a la izquierda, base, sombra abajo a la derecha. Los pone el rasterizador.
 - **Dos colores de paleta:** primario (cuerpo, y oscurecido para las marcas) y secundario (barriga y rasgo icónico).
 - **Sitio para accesorios.** La especie debe poder llevar gorro, gafas, bufanda y capa en todas las etapas.
+
+## Planes corporales: cada especie, un cuerpo distinto
+Dos especies no pueden ser el mismo muñeco con otro adorno. Antes de pensar en el rasgo icónico, elige el **plan corporal** de la especie y comprueba que no lo usa ya otra del mismo elemento ni de la misma rareza. Si se repite, la especie nueva tiene que diferenciarse en proporciones y en cómo se apoya.
+
+| Plan | Cómo es | Qué cambia en la geometría | Especies |
+|---|---|---|---|
+| Bípedo redondo | De pie, cabeza grande sobre torso, brazos cortos | La geometría común de `stage()` tal cual | Ignisaurio, Axolunar, Florabrote, Solarejo |
+| Bípedo alado | Bípedo con alas que doblan su anchura | `lowered()` y alas en `behind` | Livolt |
+| Tentacular | Cuerpo con manto y apoyos múltiples, sin brazos | `arm: undefined` y tentáculos en `behind` | Inktopus |
+| Cuadrúpedo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas | `torso` horizontal, `head` a la derecha, patas traseras con `hindFar` (en `behind`) y `hindNear` (en `front`) | Magmadillo |
+| Flotante | Sin patas: cuerpo de gota tumbada sobre un apoyo que no es suyo | `feet: undefined`, `head: undefined`, apoyos en `behind` y `front`, ancla `hat` | Nubeballena |
+| Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | `head: undefined` en las 4 etapas, ramas con la pieza del tronco | Cactuerno |
+| Serpentino, ave, insecto, etc. | Libres | Combina lo anterior | — |
+
+Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo tres**):
+
+- **Apoyo:** dos pies, cuatro patas, flota, repta, raíces.
+- **Proporción:** más alto que ancho, más ancho que alto, o cuadrado. Mira la fila de siluetas de las dos especies una junto a otra.
+- **Cabeza:** fundida con el cuerpo, aparte y encima, o aparte y delante.
+- **Extremidades:** brazos, aletas, alas, ramas o ninguna.
+- **Rasgo icónico:** dónde sale (cabeza, lomo, cola, costados) y qué forma tiene.
+- **Contorno:** liso, dentado, lobulado o con placas.
+
+Con un plan que no es bípedo, la tabla de etapas se lee por su intención y no al pie de la letra: «un volumen» en baby significa la forma más simple de ese plan (el Magmadillo enroscado, la Nubeballena posada), y «dos volúmenes» en adult significa su forma completa. Las alturas son máximos: un cuadrúpedo puede quedarse muy por debajo y crecer a lo ancho.
+
+**Prueba entre especies:** pon en negro el adulto de la especie nueva junto a los adultos de las demás. Si alguien puede confundirlo con otro, falta diferencia.
 
 ## Etapas
 Las alturas van en px nativos; en la hoja de 128 son el doble.
@@ -50,6 +76,7 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta.
 - En sala se muestra a 64 px (×1); en la mascota flotante, a 128 px (×2). Siempre sin suavizado.
 
 ## Errores típicos
+- Una especie que es el bípedo redondo de siempre con otro adorno en la cabeza.
 - Etapas que solo cambian de tamaño o de proporción de cabeza.
 - Un baby que ya tiene todas las piezas del adulto en pequeño.
 - Una etapa final cuyo extra queda dentro del cuerpo y no altera la silueta.

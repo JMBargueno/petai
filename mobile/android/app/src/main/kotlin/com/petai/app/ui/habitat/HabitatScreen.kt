@@ -411,7 +411,9 @@ private fun VisitorPet(visitor: HabitatVisitor) {
     }
 }
 
-private val KNOWN_SPRITE_KEYS = setOf("axolunar", "florabud", "ignisaur", "inktopus", "livolt", "solarejo")
+private val KNOWN_SPRITE_KEYS = setOf(
+    "axolunar", "cactuerno", "florabud", "ignisaur", "inktopus", "livolt", "magmadillo", "nubeballena", "solarejo",
+)
 
 /** Resuelve la clave del sprite de un visitante con fallback a una especie conocida. */
 private fun resolveSpriteKey(p: PetIdentity): String =

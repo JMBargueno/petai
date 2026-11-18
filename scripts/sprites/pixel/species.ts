@@ -23,7 +23,8 @@ export interface StageSpec {
   torso: E;
   /** Con cabeza aparte el plan corporal es de dos volúmenes. */
   head?: E;
-  feet: { near: E; far: E };
+  /** Sin pies: la criatura flota o repta, y la especie pinta sus apoyos en los ganchos. */
+  feet?: { near: E; far: E };
   /** Pies y manos en tono de marca (etapa final). */
   boots?: boolean;
   arm?: E;
@@ -38,6 +39,8 @@ export interface StageSpec {
   size: 'S' | 'M' | 'L';
   neck: [number, number];
   back: [number, number];
+  /** Ancla `head` propia, si lo alto de la cabeza no es el sitio del gorro (ballena, cuadrúpedos). */
+  hat?: [number, number];
 }
 
 /** Lo que una especie pinta además del cuerpo común: su rasgo icónico y sus piezas propias. */
@@ -46,6 +49,8 @@ interface Hooks {
   behind?: (g: Grid, s: StageSpec, p: Pose) => void;
   /** Sobre la cabeza, después de pintarla: cuernos, hojas, crestas. */
   onHead?: (g: Grid, s: StageSpec, p: Pose) => void;
+  /** Por delante de todo el cuerpo: patas cercanas de un cuadrúpedo, aletas, hocico. */
+  front?: (g: Grid, s: StageSpec, p: Pose) => void;
 }
 
 export interface PixelSpecies {
@@ -59,6 +64,9 @@ const headOf = (s: StageSpec): E => s.head ?? s.torso;
 /** Giro y escala de apéndices (branquias, hojas, llama) alrededor de su base. */
 const appendage = (g: Grid, p: Pose, x: number, y: number, fn: () => void) =>
   g.with(mul(rotateAt(q(p.appRot, 3), x, y), scaleAt(q(p.app, 0.05), q(p.app, 0.05), x, y)), fn);
+
+/** Apoyo que da el paso con la pose: las patas que la geometría común no pinta (cuadrúpedos, nubes). */
+const step = (p: Pose, e: E, phase: number): E => [e[0] + Math.round(phase * 2) + (p.sit ? 3 : 0), e[1] - Math.round(Math.max(0, phase) * 2) - (p.sit ? 1 : 0), e[2], e[3]];
 
 /** Cola que gira desde su base con la pose. */
 const tail = (g: Grid, p: Pose, x: number, y: number, fn: () => void) => g.with(rotateAt(q(-p.tail * 0.6, 3), x, y), fn);
@@ -531,7 +539,381 @@ const SOLAREJO: PixelSpecies = {
   },
 };
 
-export const PIXEL_SPECIES: PixelSpecies[] = [IGNISAUR, AXOLUNAR, FLORABUD, LIVOLT, INKTOPUS, SOLAREJO];
+// ───────────────────────── Magmadillo (fuego, super-raro) ─────────────────────────
+// Plan corporal: CUADRÚPEDO bajo y largo. Rasgo icónico: la coraza de placas con grietas
+// incandescentes. Segundo rasgo: las orejas en punta y la cola acorazada.
+
+/** Coraza: franjas oscuras que separan las placas y, entre ellas, grietas que brillan. */
+function plates(g: Grid, t: E, xs: number[], cracks: number[] = []): void {
+  const [cx, cy, , ry] = t;
+  // La panza queda sin acorazar.
+  g.ellipse(4, 'belly', cx + 2, cy + ry + 1.5, t[2] * 0.75, ry * 0.5, { flat: true, clip: 4, keep: true, tone: 'shade' });
+  xs.forEach((x) => {
+    const lean = (x - cx) * 0.3;
+    g.poly(4, 'mark', [[x - 0.9, cy - ry], [x + 0.9, cy - ry], [x + lean + 0.9, cy + ry * 0.55], [x + lean - 0.9, cy + ry * 0.55]], { flat: true, clip: 4, keep: true });
+  });
+  cracks.forEach((x, i) => {
+    const y = cy - ry * (i % 2 ? 0.15 : 0.6);
+    g.poly(4, 'belly', [[x - 1.2, y], [x + 0.4, y + 1.5], [x - 0.6, y + 3], [x + 1.1, y + 5.5], [x + 1.4, y + 3], [x + 2, y + 1.4], [x + 0.6, y]], { flat: true, clip: 4, keep: true });
+  });
+}
+
+const pointEar = (g: Grid, part: number, x: number, y: number, w: number, h: number, lean = 0) =>
+  g.poly(part, 'skin', [[x - w / 2, y], [x + lean, y - h], [x + w / 2, y]]);
+
+/** Patas traseras de un cuadrúpedo: la lejana va detrás del cuerpo y la cercana, delante. */
+function hindFar(g: Grid, p: Pose, e: E, dark = false): void {
+  const f = step(p, e, p.leg);
+  g.ellipse(2, dark ? 'mark' : 'skin', f[0], f[1], f[2], f[3], dark ? { flat: true } : { tone: 'shade' });
+}
+function hindNear(g: Grid, p: Pose, e: E, dark = false): void {
+  const f = step(p, e, -p.leg);
+  g.ellipse(16, dark ? 'mark' : 'skin', f[0], f[1], f[2], f[3], dark ? { flat: true } : {});
+}
+
+const QUAD = { arm: undefined, farArm: undefined, belly: undefined, emblem: undefined, marks: undefined };
+
+const MAGMADILLO: PixelSpecies = {
+  id: 'magmadillo',
+  stages: {
+    // Enroscado: una bola acorazada de la que solo asoman la cara y las orejas.
+    baby: stage('baby', {
+      torso: [31.5, 49, 12.5, 10],
+      eye: { ...BASE.baby.eye, y: 45, x1: 32, x2: 40 },
+      cheek: [29, 52],
+      behind: (g) => {
+        pointEar(g, 22, 30, 41.5, 4, 4.5, -0.5);
+        pointEar(g, 23, 39, 42, 3.6, 4, 0.5);
+      },
+      onHead: (g) => {
+        g.ellipse(4, 'mark', 24, 46, 10, 11, { clip: 4, keep: true, within: [[0, 0], [29, 0], [27, 47], [31, 64], [0, 64]] });
+        g.poly(4, 'belly', [[21.5, 43], [23, 45], [22, 47], [23.6, 50], [24.2, 47.2], [24.8, 45], [23.2, 43]], { flat: true, clip: 4, keep: true });
+      },
+    }),
+    // Se desenrosca: cuatro patas, cabeza aparte y las primeras placas.
+    juvenile: stage('juvenile', {
+      ...QUAD,
+      torso: [27, 46.5, 14, 10],
+      head: [45, 45, 9.5, 8.5],
+      feet: { near: [38.5, 57.6, 3.4, 2.5], far: [33, 57.2, 3, 2.3] },
+      eye: { ...BASE.juvenile.eye, y: 41, x1: 41, x2: 50 },
+      neck: [39, 51],
+      back: [22, 38],
+      behind: (g, _s, p) => {
+        tail(g, p, 14, 50, () => g.poly(1, 'skin', [[15, 46.5], [15.5, 52.5], [6, 54.5]]));
+        hindFar(g, p, [18.5, 57.2, 3, 2.3]);
+        pointEar(g, 22, 41, 39, 4, 6, -0.5);
+        pointEar(g, 23, 49.5, 39, 3.6, 5.5, 0.8);
+      },
+      onHead: (g, s) => plates(g, s.torso, [21, 29]),
+      front: (g, _s, p) => hindNear(g, p, [23.5, 57.6, 3.6, 2.5]),
+    }),
+    // Coraza alta de cuatro placas con grietas, placa en la frente y cola anillada.
+    adult: stage('adult', {
+      ...QUAD,
+      torso: [26, 43.5, 17, 13],
+      head: [46.5, 41.5, 10.5, 10],
+      feet: { near: [40, 57.5, 4, 2.8], far: [34, 57, 3.6, 2.6] },
+      eye: { ...BASE.adult.eye, y: 37, x1: 41, x2: 52 },
+      neck: [39, 49],
+      back: [20, 32],
+      behind: (g, _s, p) => {
+        tail(g, p, 11, 48, () => {
+          g.poly(1, 'skin', [[12, 43.5], [13, 51], [1.5, 54]]);
+          [[9.5, 47.5], [6, 50]].forEach(([x, y]) => g.ellipse(1, 'mark', x, y, 0.9, 2.2, { flat: true, clip: 1, keep: true, rot: 15 }));
+        });
+        hindFar(g, p, [14.5, 57, 3.6, 2.6]);
+        pointEar(g, 22, 42, 34, 5, 9, -1);
+        pointEar(g, 23, 51.5, 34, 4.4, 8, 1.5);
+      },
+      onHead: (g, s) => {
+        plates(g, s.torso, [15, 22, 29], [17.5, 24.5, 32]);
+        g.ellipse(10, 'mark', 46, 32.5, 6, 2.6, { flat: true, clip: 10, keep: true });
+      },
+      front: (g, _s, p) => hindNear(g, p, [20, 57.5, 4.2, 2.8]),
+    }),
+    // Un pequeño volcán: chimeneas con llama en el lomo, cuerno en la frente y cola con ascua.
+    final: stage('final', {
+      ...QUAD,
+      torso: [25.5, 42, 18.5, 14.5],
+      head: [47, 39.5, 11, 10.5],
+      feet: { near: [41, 57.5, 4.6, 2.9], far: [34.5, 57, 4, 2.6] },
+      eye: { ...BASE.final.eye, y: 35, x1: 42, x2: 53 },
+      neck: [40, 48],
+      back: [18, 30],
+      behind: (g, _s, p) => {
+        tail(g, p, 9, 47, () => {
+          g.poly(1, 'skin', [[10.5, 42], [11.5, 50.5], [2, 50]]);
+          appendage(g, p, 3, 48, () => flame(g, 12, 3.5, 48.5, 6, 8));
+        });
+        // Accesorio de etapa final: tres chimeneas encendidas, la central más alta.
+        g.poly(15, 'mark', [[11, 34], [14.5, 25], [18, 25], [20, 32]]);
+        g.poly(17, 'mark', [[20.5, 30], [24, 18.5], [29, 18.5], [32, 29]]);
+        g.poly(18, 'mark', [[32, 31], [34.5, 23.5], [38, 23.5], [40, 33]]);
+        appendage(g, p, 26.5, 19, () => flame(g, 6, 26.5, 19.5, 6, 8));
+        appendage(g, p, 16, 25, () => flame(g, 19, 16.2, 25.5, 4, 4.5));
+        appendage(g, p, 36, 24, () => flame(g, 20, 36.2, 24, 4, 4.5));
+        hindFar(g, p, [13, 57, 4, 2.6], true);
+        pointEar(g, 22, 42.5, 31, 5, 8, -1.5);
+        pointEar(g, 23, 53, 31.5, 4.4, 7, 1.5);
+      },
+      onHead: (g, s) => {
+        plates(g, s.torso, [13, 20, 27, 34], [15.5, 22.5, 29.5, 36]);
+        g.ellipse(10, 'mark', 46.5, 30, 7, 2.8, { flat: true, clip: 10, keep: true });
+        g.poly(21, 'mark', [[45, 30], [48, 22.5], [50.5, 30]], { flat: true });
+      },
+      front: (g, _s, p) => hindNear(g, p, [19, 57.5, 4.8, 2.9], true),
+    }),
+  },
+};
+
+// ───────────────────────── Nubeballena (agua, super-raro) ─────────────────────────
+// Plan corporal: FLOTANTE sin patas, cuerpo de gota tumbada. Rasgo icónico: el chorro en forma de
+// nube. Segundo rasgo: la cola de aleta doble y los puntos de luz del lomo.
+
+/** Nube: tres lóbulos fundidos. */
+function puff(g: Grid, part: number, x: number, y: number, r: number): void {
+  g.ellipse(part, 'trait', x - r * 0.85, y + r * 0.25, r * 0.7, r * 0.65);
+  g.ellipse(part, 'trait', x + r * 0.85, y + r * 0.3, r * 0.65, r * 0.6);
+  g.ellipse(part, 'trait', x, y - r * 0.15, r, r * 0.9);
+}
+
+/** Cola de ballena: pedúnculo que sube desde el cuerpo y dos lóbulos abiertos en V. */
+function fluke(g: Grid, part: number, x0: number, y0: number, x: number, y: number, s: number): void {
+  g.poly(part, 'body', [[x0, y0 - 2.5], [x0, y0 + 3], [x - 0.5, y + 1.5], [x + 1.5, y - 1]]);
+  g.ellipse(part, 'body', x - s * 0.55, y - s * 0.05, s * 0.75, s * 0.33, { rot: 25 });
+  g.ellipse(part, 'body', x + s * 0.25, y - s * 0.6, s * 0.7, s * 0.33, { rot: -65 });
+}
+
+const dots = (g: Grid, pts: [number, number, number][]) => pts.forEach(([x, y, r]) => g.ellipse(4, 'belly', x, y, r, r, { flat: true, clip: 4, keep: true }));
+
+/** Nubes sobre las que flota: hacen de pies y dan el paso al andar. */
+function cloudFar(g: Grid, p: Pose, e: E): void {
+  const f = step(p, e, -p.leg);
+  g.ellipse(2, 'trait', f[0], f[1], f[2], f[3], { flat: true });
+}
+function cloudNear(g: Grid, p: Pose, e: E): void {
+  const f = step(p, e, p.leg);
+  g.ellipse(7, 'trait', f[0], f[1], f[2], f[3], { flat: true });
+  g.ellipse(7, 'trait', f[0] - f[2] * 0.7, f[1] - 0.8, f[2] * 0.55, f[3] * 0.9, { flat: true });
+}
+
+const FLOAT = { head: undefined, feet: undefined, farArm: undefined, marks: undefined };
+
+const NUBEBALLENA: PixelSpecies = {
+  id: 'nubeballena',
+  stages: {
+    // Una gota posada en el suelo, con un brote de aleta y una nubecita.
+    baby: stage('baby', {
+      ...FLOAT,
+      torso: [32, 50, 14, 9.5],
+      eye: { ...BASE.baby.eye, y: 45, x1: 32, x2: 40 },
+      cheek: [28, 53],
+      hat: [34, 41],
+      behind: (g, _s, p) => tail(g, p, 19, 52, () => g.ellipse(1, 'body', 17, 50, 3.6, 2.2, { rot: 30 })),
+      onHead: (g, _s, p) => appendage(g, p, 26, 41, () => puff(g, 5, 26, 39, 2.2)),
+    }),
+    // Despega: flota sobre una nube, con aletas y cola de dos lóbulos.
+    juvenile: stage('juvenile', {
+      ...FLOAT,
+      torso: [31, 43.5, 16, 10.5],
+      belly: [35, 49, 11, 5.5],
+      arm: [27, 52, 2.4, 3.8],
+      eye: { ...BASE.juvenile.eye, y: 38, x1: 32, x2: 41 },
+      hat: [34, 33.5],
+      neck: [36, 51],
+      back: [19, 38],
+      behind: (g, _s, p) => {
+        tail(g, p, 17, 44, () => fluke(g, 1, 17, 44, 11, 38, 5));
+        cloudFar(g, p, [24.5, 57.3, 4.5, 2.3]);
+      },
+      onHead: (g, _s, p) => appendage(g, p, 25, 33, () => puff(g, 5, 25, 30.5, 3)),
+      front: (g, _s, p) => cloudNear(g, p, [37.5, 57.6, 5.5, 2.4]),
+    }),
+    // Cuerpo grande con puntos de luz, chorro de nube sobre un tallo y cola alzada.
+    adult: stage('adult', {
+      ...FLOAT,
+      torso: [31, 40.5, 19, 13],
+      belly: [36, 47.5, 13.5, 6.5],
+      arm: [27, 51, 2.8, 5.5],
+      eye: { ...BASE.adult.eye, y: 35, x1: 34, x2: 45 },
+      hat: [36, 28],
+      neck: [38, 51],
+      back: [16, 33],
+      behind: (g, _s, p) => {
+        tail(g, p, 14, 40, () => fluke(g, 1, 14, 40, 7, 30, 7));
+        g.ellipse(14, 'skin', 21, 51.5, 2.6, 5, { rot: 30, tone: 'shade' });
+        cloudFar(g, p, [22, 57.2, 6, 2.5]);
+      },
+      onHead: (g, _s, p) => {
+        dots(g, [[19, 34, 1.3], [24, 30.5, 1.1], [17, 40, 1.1], [28.5, 29, 0.9]]);
+        appendage(g, p, 25, 28, () => {
+          g.poly(5, 'trait', [[23.8, 28.5], [26.2, 28.5], [25.8, 24], [24.2, 24]], { flat: true });
+          puff(g, 5, 25, 21, 4);
+        });
+      },
+      front: (g, _s, p) => cloudNear(g, p, [38, 57.6, 7, 2.5]),
+    }),
+    // Lleva el cielo encima: crin de nubes en el lomo, cola doble y un chorro alto con gotas.
+    final: stage('final', {
+      ...FLOAT,
+      torso: [31, 39, 20.5, 13.5],
+      belly: [36.5, 46.5, 15, 6.5],
+      emblem: [38, 46.5, 2, 2],
+      arm: [27, 50, 3.2, 7],
+      eye: { ...BASE.final.eye, y: 33, x1: 35, x2: 46 },
+      hat: [37, 26],
+      neck: [39, 50.5],
+      back: [15, 31],
+      behind: (g, _s, p) => {
+        tail(g, p, 13, 38, () => {
+          fluke(g, 1, 13, 38, 6, 26, 8);
+          fluke(g, 9, 12, 41, 4.5, 36, 5);
+        });
+        // Accesorio de etapa final: crin de nubes que asoma sobre el lomo.
+        [[13.5, 31.5, 3.2], [18, 27, 3.6], [24, 24.5, 3.2], [45.5, 28.5, 2.6]].forEach(([x, y, r]) => g.ellipse(6, 'trait', x, y, r, r));
+        g.ellipse(14, 'skin', 20, 51, 3, 6.5, { rot: 35, tone: 'shade' });
+        cloudFar(g, p, [21, 57.2, 7, 2.5]);
+      },
+      onHead: (g, _s, p) => {
+        dots(g, [[19, 33.5, 1.4], [25, 29.5, 1.2], [16.5, 39.5, 1.2], [30, 28, 1], [22, 38.5, 0.9]]);
+        g.ellipse(4, 'mark', 15.5, 44.5, 3.2, 1.1, { flat: true, clip: 4, keep: true });
+        g.ellipse(4, 'mark', 17.5, 48.5, 3, 1.1, { flat: true, clip: 4, keep: true });
+        appendage(g, p, 27, 25, () => {
+          g.poly(5, 'trait', [[25.6, 26], [28.4, 26], [27.8, 17], [26.2, 17]], { flat: true });
+          puff(g, 5, 27, 13, 5);
+          g.ellipse(22, 'trait', 19, 15.5, 1.3, 1.8, { flat: true });
+          g.ellipse(23, 'trait', 35.5, 16.5, 1.3, 1.8, { flat: true });
+        });
+      },
+      front: (g, _s, p) => cloudNear(g, p, [38.5, 57.6, 8, 2.5]),
+    }),
+  },
+};
+
+// ───────────────────────── Cactuerno (planta, super-raro) ─────────────────────────
+// Plan corporal: COLUMNA de un solo volumen que crece en vertical, con brazos de cactus. Rasgo
+// icónico: las púas, que dentan la silueta. Segundo rasgo: la flor, ladeada en lo alto.
+
+/** Púas: triángulos que salen del cuerpo en un ángulo (grados, 0 = derecha, 90 = abajo). */
+const thorns = (g: Grid, pts: [number, number, number][], len = 3) =>
+  pts.forEach(([x, y, deg]) => {
+    const a = (deg * Math.PI) / 180;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    g.poly(11, 'mark', [[x - s * 1.3, y + c * 1.3], [x + s * 1.3, y - c * 1.3], [x + c * len, y + s * len]], { flat: true });
+  });
+
+/** Brazo de cactus: sale hacia un lado y dobla hacia arriba. Con la pieza del tronco, se funde con él. */
+function cactusArm(g: Grid, x: number, y: number, dir: 1 | -1, reach: number, up: number, w: number, bloom = 0): void {
+  g.ellipse(4, 'body', x + (dir * reach) / 2, y, reach / 2 + w, w);
+  g.ellipse(4, 'body', x + dir * reach, y - up / 2, w, up / 2 + w);
+  if (bloom) g.ellipse(dir > 0 ? 25 : 24, 'trait', x + dir * reach, y - up - w, bloom, bloom * 0.9);
+}
+
+/** Flor: capullo cerrado o corola abierta de cuatro pétalos. */
+function flower(g: Grid, x: number, y: number, r: number, open: boolean): void {
+  if (!open) {
+    g.ellipse(5, 'trait', x, y, r * 0.8, r);
+    return;
+  }
+  [[-1, -0.25], [1, -0.25], [0, -1], [0, 0.45]].forEach(([dx, dy]) => g.ellipse(5, 'trait', x + dx * r * 0.75, y + dy * r * 0.75, r * 0.62, r * 0.62));
+  g.ellipse(5, 'mark', x, y - r * 0.2, r * 0.38, r * 0.38, { flat: true, clip: 5, keep: true });
+}
+
+/** Hocico de erizo: un pico que sobresale por el lado de la cara, con la nariz oscura. */
+const snoutBack = (g: Grid, x: number, y: number) => g.ellipse(4, 'body', x, y, 3, 2.1);
+const snoutNose = (g: Grid, x: number, y: number) => g.ellipse(4, 'mark', x + 1.6, y - 0.2, 1.2, 1.2, { flat: true, clip: 4, keep: true });
+
+const COLUMN = { head: undefined, arm: undefined, farArm: undefined, marks: undefined };
+
+const CACTUERNO: PixelSpecies = {
+  id: 'cactuerno',
+  stages: {
+    // Un cactus bola: ancho y bajo, con cuatro púas y un capullo.
+    baby: stage('baby', {
+      torso: [32, 50.5, 12, 8.5],
+      feet: { near: [36, 58.2, 3, 1.8], far: [28, 57.8, 2.6, 1.6] },
+      eye: { ...BASE.baby.eye, y: 46, x1: 30, x2: 38 },
+      cheek: [26, 53],
+      neck: [32, 55],
+      behind: (g, _s, p) => {
+        thorns(g, [[21.5, 48, 195], [24, 44.5, 230], [40, 44, 310], [43, 47.5, 345]], 3.6);
+        appendage(g, p, 30, 43, () => flower(g, 30, 41, 2.4, false));
+      },
+    }),
+    // Se estira: tronco alto con costillas, un brazo y la flor a punto de abrir.
+    juvenile: stage('juvenile', {
+      ...COLUMN,
+      torso: [32, 44.5, 11.5, 14],
+      feet: { near: [36.5, 58, 3.8, 2.2], far: [27.5, 57.6, 3.2, 2] },
+      belly: [35, 51, 6, 5.5],
+      eye: { ...BASE.juvenile.eye, y: 37, x1: 29, x2: 38 },
+      neck: [32, 47],
+      back: [21, 44],
+      behind: (g, _s, p) => {
+        cactusArm(g, 21.5, 47, -1, 4, 5, 2.4);
+        thorns(g, [[21, 38, 200], [23.5, 33.5, 230], [41.5, 34, 315], [20.5, 53, 170], [20.5, 43, 185]], 4.2);
+        snoutBack(g, 43, 45.5);
+        appendage(g, p, 28, 31, () => flower(g, 28, 29.5, 2.8, false));
+      },
+      onHead: (g) => {
+        snoutNose(g, 43, 45.5);
+        g.ellipse(4, 'mark', 24.5, 45, 0.8, 8, { flat: true, clip: 4, keep: true });
+      },
+    }),
+    // Saguaro: columna alta con dos brazos a distinta altura y la flor abierta.
+    adult: stage('adult', {
+      ...COLUMN,
+      torso: [32, 40, 13, 19],
+      feet: { near: [37, 58, 4.4, 2.3], far: [27, 57.6, 3.8, 2.1] },
+      belly: [35, 49.5, 7, 7.5],
+      eye: { ...BASE.adult.eye, y: 29, x1: 28, x2: 39 },
+      neck: [32, 40.5],
+      back: [19, 38],
+      behind: (g, _s, p) => {
+        cactusArm(g, 20, 38, -1, 5, 8, 2.8);
+        cactusArm(g, 44, 46, 1, 4.5, 6, 2.6);
+        thorns(g, [[20, 29, 205], [23, 24, 235], [42, 24.5, 310], [19.5, 47, 180], [20.5, 53, 165], [19, 34, 190]], 4.6);
+        snoutBack(g, 44.5, 38);
+        appendage(g, p, 27, 22, () => flower(g, 27, 19.5, 3.4, true));
+      },
+      onHead: (g) => {
+        snoutNose(g, 44.5, 38);
+        g.ellipse(4, 'mark', 23.5, 42, 0.8, 12, { flat: true, clip: 4, keep: true });
+        g.ellipse(4, 'mark', 27, 47, 0.7, 8, { flat: true, clip: 4, keep: true });
+      },
+    }),
+    // Cactus centenario: tres brazos en flor, corona de pétalos y una crin de púas.
+    final: stage('final', {
+      ...COLUMN,
+      torso: [32, 37.5, 14.5, 22],
+      feet: { near: [37.5, 58, 5, 2.4], far: [26.5, 57.6, 4.2, 2.2] },
+      belly: [35.5, 47.5, 8.5, 9],
+      emblem: [35.5, 47, 2, 2],
+      eye: { ...BASE.final.eye, y: 23, x1: 28, x2: 39 },
+      neck: [32, 34.5],
+      back: [18, 34],
+      behind: (g, _s, p) => {
+        cactusArm(g, 18.5, 34, -1, 6, 10, 3, 2.2);
+        cactusArm(g, 45.5, 41, 1, 5.5, 8, 2.8, 2);
+        cactusArm(g, 19, 48, -1, 4, 3.5, 2.2);
+        thorns(g, [[19, 24, 205], [22, 18.5, 235], [26.5, 15.5, 255], [42.5, 19, 310], [45.5, 25, 335], [18, 42, 185], [19.5, 54, 165], [17.5, 30, 195]], 5);
+        snoutBack(g, 46, 33);
+        // Accesorio de etapa final: flor grande en corona, ladeada para dejar sitio al gorro.
+        appendage(g, p, 37, 16, () => flower(g, 37.5, 12.5, 4.2, true));
+      },
+      onHead: (g) => {
+        snoutNose(g, 46, 33);
+        g.ellipse(4, 'mark', 22.5, 38, 0.9, 15, { flat: true, clip: 4, keep: true });
+        g.ellipse(4, 'mark', 26, 45, 0.8, 11, { flat: true, clip: 4, keep: true });
+        g.ellipse(4, 'mark', 41.5, 44, 0.8, 9, { flat: true, clip: 4, keep: true });
+      },
+    }),
+  },
+};
+
+export const PIXEL_SPECIES: PixelSpecies[] = [IGNISAUR, AXOLUNAR, FLORABUD, LIVOLT, INKTOPUS, SOLAREJO, MAGMADILLO, NUBEBALLENA, CACTUERNO];
 
 // ───────────────────────── Dibujo ─────────────────────────
 
@@ -568,7 +950,7 @@ function drawOnce(sp: PixelSpecies, st: Stage, p: Pose, shiftX: number, shiftY: 
     translate(Math.round(p.dx / 2) + shiftX, Math.round(p.dy / 2) + shiftY),
     mul(rotateAt(q(p.rot, 2), 32, FLOOR), scaleAt(q(p.sx, 0.025), q(p.sy, 0.025), 32, FLOOR)),
   );
-  const foot = (e: E, phase: number): E => [e[0] + Math.round(phase * 2) + (p.sit ? 3 : 0), e[1] - Math.round(Math.max(0, phase) * 2) - (p.sit ? 1 : 0), e[2], e[3]];
+  const foot = (e: E, phase: number): E => step(p, e, phase);
   let anchors!: Anchors;
   let height = 0;
   let box: [number, number, number, number] = [0, 0, 0, 0];
@@ -581,7 +963,7 @@ function drawOnce(sp: PixelSpecies, st: Stage, p: Pose, shiftX: number, shiftY: 
     };
     // Sentado, el cuerpo baja 2 px y los pies se adelantan.
     g.with(translate(0, sit), upper);
-    ell(2, s.boots ? 'mark' : 'skin', foot(s.feet.far, -p.leg), s.boots ? { flat: true } : { tone: 'shade' });
+    if (s.feet) ell(2, s.boots ? 'mark' : 'skin', foot(s.feet.far, -p.leg), s.boots ? { flat: true } : { tone: 'shade' });
     g.with(translate(0, sit), () => {
       ell(4, 'body', s.torso, { hi: !two });
       if (s.belly) ell(4, 'belly', s.belly, { flat: true, clip: 4, keep: true });
@@ -596,7 +978,7 @@ function drawOnce(sp: PixelSpecies, st: Stage, p: Pose, shiftX: number, shiftY: 
       g.face(two ? 10 : 4, (e.x1 + e.x2 + e.w2) / 2, e.y + e.h / 2 + 1, (e.x2 + e.w2 - e.x1) / 2 + 3, e.h / 2 + 4);
       s.onHead?.(g, s, p);
     });
-    ell(7, s.boots ? 'mark' : 'skin', foot(s.feet.near, p.leg), s.boots ? { flat: true } : {});
+    if (s.feet) ell(7, s.boots ? 'mark' : 'skin', foot(s.feet.near, p.leg), s.boots ? { flat: true } : {});
     g.with(translate(0, sit), () => {
       if (s.arm) {
         g.with(rotateAt(q(-p.armR, 10), s.arm[0] - 1, s.arm[1] - s.arm[3]), () => {
@@ -604,6 +986,7 @@ function drawOnce(sp: PixelSpecies, st: Stage, p: Pose, shiftX: number, shiftY: 
           if (s.boots) g.ellipse(8, 'mark', s.arm![0] + 0.5, s.arm![1] + s.arm![3] * 0.6, s.arm![2] * 0.8, s.arm![3] * 0.5, { flat: true, clip: 8, keep: true });
         });
       }
+      s.front?.(g, s, p);
     });
 
     g.outline();
@@ -620,7 +1003,7 @@ function drawOnce(sp: PixelSpecies, st: Stage, p: Pose, shiftX: number, shiftY: 
         brow: !!s.brow, browColor: hex('#1e1e1e'),
       });
       const r = (x: number, y: number) => g.point(x, y).map(Math.round) as [number, number];
-      anchors = { head: r(H[0], H[1] - H[3]), face, neck: r(s.neck[0], s.neck[1]), back: r(s.back[0], s.back[1]) };
+      anchors = { head: s.hat ? r(s.hat[0], s.hat[1]) : r(H[0], H[1] - H[3]), face, neck: r(s.neck[0], s.neck[1]), back: r(s.back[0], s.back[1]) };
     });
   });
 

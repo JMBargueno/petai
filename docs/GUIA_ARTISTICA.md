@@ -337,6 +337,23 @@ Esta tabla es la referencia de diseño. En el juego la hoja no guarda colores, s
 
 La variante shiny se construye con el mismo método a partir del trío shiny; aún no tiene valores fijados. Un sprite nunca se coloca sobre el color de interfaz de su propio elemento (§3.6): el fondo de escena es `--surface-2` o sky-wash.
 
+**Planes corporales: cada especie, un cuerpo distinto**
+
+Dos especies no pueden ser el mismo muñeco con otro adorno. Cada una parte de un **plan corporal** y no repite el de otra especie del mismo elemento ni de la misma rareza.
+
+| Plan | Cómo es | Especies |
+|---|---|---|
+| Bípedo redondo | De pie, cabeza grande sobre torso, brazos cortos | Ignisaurio, Axolunar, Florabrote, Solarejo |
+| Bípedo alado | Bípedo con alas que doblan su anchura | Livolt |
+| Tentacular | Manto y apoyos múltiples, sin brazos | Inktopus |
+| Cuadrúpedo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas | Magmadillo |
+| Flotante | Sin patas: cuerpo de gota tumbada sobre una nube | Nubeballena |
+| Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | Cactuerno |
+
+Frente a cualquier otra especie, una nueva cambia en al menos tres de estos seis rasgos: apoyo (dos pies, cuatro patas, flota, repta), proporción (alto, ancho o cuadrado), cabeza (fundida, encima o delante), extremidades (brazos, aletas, alas, ramas o ninguna), rasgo icónico (dónde sale y qué forma tiene) y contorno (liso, dentado, lobulado o con placas). La prueba es poner en negro los adultos de todas las especies: ninguno se confunde con otro.
+
+Con un plan que no es bípedo, la tabla de etapas siguiente se lee por su intención: «un volumen» es la forma más simple de ese plan y «dos volúmenes», su forma completa. Las alturas son máximos.
+
 **Etapas: evolucionar es cambiar**
 
 Cada etapa es un **dibujo distinto, con su propio plan corporal**, no la anterior ampliada. Esta tabla sustituye a la de §7.4.
