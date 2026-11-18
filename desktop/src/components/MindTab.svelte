@@ -13,6 +13,10 @@
   let now = new Date();
 
   const TIER_LABEL: Record<string, string> = { chat: 'Charla', memory: 'Memoria', agent: 'Agente' };
+  // El servidor manda claves en inglés para el ánimo y el rango de vínculo.
+  const MOOD_LABEL: Record<string, string> = { happy: 'Contento', content: 'A gusto', neutral: 'Tranquilo', sad: 'Triste', angry: 'Enfadado', tired: 'Cansado', excited: 'Emocionado', lonely: 'Solo', anxious: 'Inquieto' };
+  const BOND_LABEL: Record<string, string> = { stranger: 'Desconocido', acquaintance: 'Conocido', friend: 'Amigo', close_friend: 'Amigo íntimo', best_friend: 'Mejor amigo', soulmate: 'Alma gemela' };
+  const pretty = (map: Record<string, string>, key: string) => map[key?.toLowerCase?.()] ?? key;
 
   async function load() {
     if (!pet?.id) return;
@@ -22,7 +26,7 @@
       data = await api.getMind(pet.id);
       now = new Date();
     } catch (e: any) {
-      error = e.message;
+      error = e instanceof TypeError ? 'Sin conexión con el servidor. Inténtalo de nuevo en un momento.' : 'No se pudo cargar la mente de tu Pockai.';
     } finally {
       loading = false;
     }
@@ -50,14 +54,14 @@
     <AsyncState loading={loading && !data} {error} onRetry={load} rows={4} height={56}>
       {#if data}
         <Card variant="hero">
-          <FeatureHeader icon="brain" title="Mente de {pet.name ?? 'tu Pockai'}" sub="Así es y así recuerda" tint="var(--theme-ai)">
+          <FeatureHeader icon="brain" title="Mente de {pet.nickname || pet.species?.name || 'tu Pockai'}" sub="Así es y así recuerda" tint="var(--theme-ai)">
             <svelte:fragment slot="end">
               <Badge size="sm" icon="brain" tone="tint">{TIER_LABEL[data.intelligenceTier] ?? data.intelligenceTier}</Badge>
             </svelte:fragment>
           </FeatureHeader>
           <div class="chips">
-            {#if data.mood}<Badge size="sm" icon="smile">{data.mood}</Badge>{/if}
-            {#if data.bondingTier}<Badge size="sm" icon="bond">{data.bondingTier}</Badge>{/if}
+            {#if data.mood}<Badge size="sm" icon="smile" title="Ánimo">{pretty(MOOD_LABEL, data.mood)}</Badge>{/if}
+            {#if data.bondingTier}<Badge size="sm" icon="bond" title="Vínculo">{pretty(BOND_LABEL, data.bondingTier)}</Badge>{/if}
           </div>
         </Card>
 
@@ -71,7 +75,7 @@
                   value={dim.value}
                   color={d.tint}
                   label={d.label}
-                  detail="{dim.label} · {Math.round(dim.value)}"
+                  detail="{dim.label} · {Math.round(dim.value)}/100"
                 />
               </div>
             {/if}

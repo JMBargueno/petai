@@ -11,9 +11,10 @@
   } from '../lib/api';
   import { furnitureUrl } from '@pockai/scene';
   import IsoRoomView from './IsoRoomView.svelte';
-  import { AsyncState, EmptyState, Notice, SectionHeader, Segmented } from './ui';
+  import { AsyncState, Badge, Button, ConfirmDialog, EmptyState, Notice, SectionHeader, Segmented } from './ui';
+  import { friendlyError } from '../lib/ui/errors';
   import { startHabitatExitDrag } from '../lib/habitatExitDrag';
-  import { Home, ExternalLink, Pencil, Check, RotateCw, Trash2 } from 'lucide-svelte';
+  import { Home, Pencil, Check, RotateCw, Trash2 } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -27,6 +28,9 @@
   let loading = true;
   let busy = ''; // furnitureId / itemId en acción (colocar/quitar)
   let habitatBusy = false;
+  /** Mueble pendiente de confirmar su compra / objeto colocado pendiente de confirmar que se quita. */
+  let buying: HabitatFurniture | null = null;
+  let removing: { id: string; name: string } | null = null;
   let activeRoomId = '';
 
   // Modo edición de la sala: seleccionar, arrastrar y girar muebles
@@ -64,7 +68,7 @@
         activeRoomId = rooms.find((r) => r.unlocked)?.id ?? rooms[0]?.id ?? '';
       }
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo cargar el hábitat.');
     } finally {
       loading = false;
     }
@@ -74,8 +78,12 @@
   $: isInHabitat = !!pet?.inHabitat;
   $: isSleeping = !!pet?.sleeping;
   $: petName = pet?.nickname || pet?.species?.name || 'Tu Pockai';
-  $: if (petId && !loading) load();
-  load();
+  // Carga al montar y al cambiar de mascota (no en cada actualización de `pet` ni de `loading`).
+  let loadedFor = '';
+  $: if (petId && petId !== loadedFor) {
+    loadedFor = petId;
+    load();
+  }
 
   let activeRoom: HabitatRoom | null = null;
   let furnitureByRoom: HabitatFurniture[] = [];
@@ -89,6 +97,16 @@
     (f.currency === 'coins' ? user?.coins ?? 0 : user?.gems ?? 0) >= f.price;
   const canPlace = (f: HabitatFurniture): boolean =>
     !!activeRoom?.unlocked && activeRoom.active && canAfford(f) && !busy;
+  /** Por qué no se puede comprar un mueble (vacío si se puede). */
+  const blockedReason = (f: HabitatFurniture, room: HabitatRoom | null, _user: any): string => {
+    if (!room?.unlocked) return 'Sala bloqueada';
+    if (!room.active) return 'Activa esta sala para amueblarla';
+    if (!canAfford(f)) return f.currency === 'coins' ? 'No te alcanzan las monedas' : 'No te alcanzan las gemas';
+    return '';
+  };
+  const STAGE_LABEL: Record<string, string> = { baby: 'bebé', juvenile: 'joven', adult: 'adulto', final: 'forma final' };
+  $: roomUnlock = catalog?.rooms.find((r) => r.id === activeRoomId)?.unlockStage;
+  const askRemove = (id: string, furnitureId: string) => (removing = { id, name: furnName(furnitureId) });
 
   function changeRoom(id: string) {
     activeRoomId = id;
@@ -103,7 +121,7 @@
       const updated = await api.setPetInHabitat(pet.id, inHabitat);
       dispatch('petUpdated', updated);
     } catch (e: any) {
-      error = e.message || 'Error al cambiar estado de hábitat';
+      error = friendlyError(e, 'No se pudo cambiar dónde está tu Pockai.');
     } finally {
       habitatBusy = false;
     }
@@ -113,14 +131,17 @@
   async function place(f: HabitatFurniture) {
     if (!canPlace(f)) return;
     busy = f.id;
+    error = '';
     try {
       const res = await api.placeHabitatFurniture(f.id);
       await load();
       dispatch('refreshUser');
       editing = true;
       selectedId = res.itemId ?? null;
+      buying = null;
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo comprar el mueble.');
+      buying = null;
     } finally {
       busy = '';
     }
@@ -134,8 +155,9 @@
       if (selectedId === itemId) selectedId = null;
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo quitar el mueble.');
     } finally {
+      removing = null;
       busy = '';
     }
   }
@@ -159,7 +181,7 @@
     try {
       for (const [itemId, to] of moves) await api.moveHabitatItem(itemId, to);
     } catch (e: any) {
-      error = e.message || 'No se pudo mover el mueble';
+      error = friendlyError(e, 'No se pudo mover el mueble.');
       await load();
     }
   }
@@ -186,10 +208,10 @@
 {#if !pet?.id}
   <EmptyState icon="home" title="Sin mascota" text="Necesitas una mascota para ver su hábitat." />
 {:else if (loading && !state) || (error && !state)}
-  <AsyncState loading={loading && !state} error={state ? '' : error} rows={3} height={64} />
+  <AsyncState loading={loading && !state} error={state ? '' : error} onRetry={load} rows={3} height={64} />
 {:else if state && catalog}
   {#if error}
-    <Notice tone="error">{error}</Notice>
+    <Notice tone="error" dismissible on:dismiss={() => (error = '')}>{error}</Notice>
   {/if}
 
   <!-- Cabecera de estado: En casa vs En escritorio -->
@@ -209,13 +231,9 @@
     </div>
 
     {#if isInHabitat}
-      <button class="btn btn--sm" disabled={habitatBusy} on:click={() => toggleHabitat(false)}>
-        <ExternalLink size={14} /> Sacar
-      </button>
+      <Button size="sm" icon="external" loading={habitatBusy} on:click={() => toggleHabitat(false)}>Sacar al escritorio</Button>
     {:else}
-      <button class="btn btn--sm btn--primary" disabled={habitatBusy} on:click={() => toggleHabitat(true)}>
-        <Home size={14} /> Llevar a casa
-      </button>
+      <Button size="sm" icon="home" loading={habitatBusy} on:click={() => toggleHabitat(true)}>Llevar a casa</Button>
     {/if}
   </div>
 
@@ -263,7 +281,7 @@
             <button class="btn btn--sm" title="Girar (R)" on:click={() => roomView?.rotate()}>
               <RotateCw size={14} /> Girar
             </button>
-            <button class="btn btn--sm btn--ghost remove-btn" disabled={!!busy} on:click={() => remove(selectedItem.id)}>
+            <button class="btn btn--sm btn--ghost remove-btn" disabled={!!busy} on:click={() => askRemove(selectedItem.id, selectedItem.furnitureId)}>
               <Trash2 size={14} /> Quitar
             </button>
           {:else if editing}
@@ -277,22 +295,20 @@
 
       {#if !isInHabitat && !editing}
         <div class="pet-absent-overlay">
-          <span class="absent-text">🐾 {petName} está fuera explorando tu pantalla</span>
-          <button class="btn btn--sm btn--primary" disabled={habitatBusy} on:click={() => toggleHabitat(true)}>
-            <Home size={14} /> Llamar a casa
-          </button>
+          <span class="absent-text">{petName} está fuera, explorando tu pantalla</span>
+          <Button variant="primary" size="sm" icon="home" loading={habitatBusy} on:click={() => toggleHabitat(true)}>Llevar a casa</Button>
           <small class="absent-hint">o arrástralo hasta aquí</small>
         </div>
       {/if}
 
       {#if !activeRoom.unlocked}
-        <div class="room-locked-badge"><Ico n="lock" /> Sala bloqueada</div>
+        <div class="room-locked-badge"><Ico n="lock" /> Sala bloqueada{#if roomUnlock} · se abre cuando {petName} sea {STAGE_LABEL[roomUnlock] ?? roomUnlock}{/if}</div>
       {/if}
     </div>
   {/if}
 
   <!-- Buffs activos -->
-  <SectionHeader title="Buffs activos" icon="energy" count={buffs ? `${buffs.itemCount} muebles` : null} />
+  <SectionHeader title="Bonificaciones activas" icon="energy" count={buffs ? `${buffs.itemCount} muebles` : null} />
   <div class="buffs">
     {#if buffs && Object.keys(buffs.activeBuffs).length > 0}
       {#each Object.entries(buffs.activeBuffs) as [k, v] (k)}
@@ -310,6 +326,7 @@
   <SectionHeader title="Muebles de {activeRoom?.name ?? ''}" icon="shop" />
   <div class="shop">
     {#each furnitureByRoom as f (f.id)}
+      {@const why = blockedReason(f, activeRoom, user)}
       <div class="shop-row">
         <span class="f-icon">
           {#if furnitureUrl(f.id)}<img src={furnitureUrl(f.id)} alt="" />{:else}<Ico n="home" />{/if}
@@ -318,10 +335,10 @@
           <span class="f-name">{f.name}</span>
           <small>{f.description}</small>
         </div>
-        <span class="f-price" class:short={!canAfford(f)}>{f.price} <Ico n={f.currency === 'coins' ? 'coin' : 'gem'} /></span>
-        <button class="btn btn--sm btn--primary" disabled={!canPlace(f)} on:click={() => place(f)}>
-          {busy === f.id ? '…' : 'Colocar'}
-        </button>
+        <span class="f-price" class:short={!canAfford(f)} aria-label="{f.price} {f.currency === 'coins' ? 'monedas' : 'gemas'}">{f.price} <Ico n={f.currency === 'coins' ? 'coin' : 'gem'} /></span>
+        <Button size="sm" loading={busy === f.id} disabled={!canPlace(f)} title={why || undefined} label="Comprar {f.name}" on:click={() => (buying = f)}>
+          {why === 'No te alcanzan las monedas' || why === 'No te alcanzan las gemas' ? 'No alcanza' : 'Comprar'}
+        </Button>
       </div>
     {:else}
       <EmptyState compact icon="shop" text="Esta sala no tiene muebles en el catálogo." />
@@ -345,9 +362,7 @@
             {#if furnitureUrl(it.furnitureId)}<img src={furnitureUrl(it.furnitureId)} alt="" />{/if}
             {furnName(it.furnitureId)}
           </button>
-          <button class="btn btn--sm btn--ghost remove-btn" disabled={!!busy} on:click={() => remove(it.id)}>
-            {busy === it.id ? '…' : 'Quitar'}
-          </button>
+          <Button variant="ghost" size="sm" class="remove-btn" loading={busy === it.id} disabled={!!busy} label="Quitar {furnName(it.furnitureId)}" on:click={() => askRemove(it.id, it.furnitureId)}>Quitar</Button>
         </div>
       {/each}
     </div>
@@ -355,9 +370,44 @@
 {/if}
 </div>
 
+{#if buying}
+  <ConfirmDialog
+    title="Comprar {buying.name}"
+    icon="shop"
+    confirmLabel="Comprar"
+    cost={buying.price}
+    currency={buying.currency}
+    balance={buying.currency === 'coins' ? (user?.coins ?? 0) : (user?.gems ?? 0)}
+    loading={busy === buying.id}
+    on:confirm={() => buying && place(buying)}
+    on:cancel={() => (buying = null)}
+  >
+    <p>{buying.description}</p>
+    <p>Se coloca en la sala y se abre la edición para que lo pongas donde quieras.</p>
+  </ConfirmDialog>
+{/if}
+
+{#if removing}
+  <ConfirmDialog
+    title="Quitar {removing.name}"
+    icon="trash"
+    danger
+    confirmLabel="Quitar"
+    loading={busy === removing.id}
+    on:confirm={() => removing && remove(removing.id)}
+    on:cancel={() => (removing = null)}
+  >
+    <p>El mueble desaparece de la sala y <strong>no se devuelve lo que costó</strong>. Si lo quieres otra vez, tendrás que comprarlo de nuevo.</p>
+  </ConfirmDialog>
+{/if}
+
 <style>
 
   /* Tarjeta de estado */
+  .habitat-status-card :global(.btn) {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
   .habitat-status-card {
     display: flex;
     justify-content: space-between;

@@ -112,6 +112,8 @@
 
   /** Acción en curso (`feed:apple`, `clean`, `buy:apple`…): bloquea su botón y evita dobles envíos. */
   let busyAction: string | null = null;
+  /** La guía se cerró sin terminarla: no molesta más en esta sesión, pero volverá a salir. */
+  let onboardingLater = false;
   async function runAction(key: string, fn: () => Promise<void>) {
     if (busyAction) return;
     busyAction = key;
@@ -806,8 +808,8 @@
       </AuthLayout>
     {:else}
       <!-- Guía de primer uso: una vez, cuando ya hay mascota y no se está en plena eclosión -->
-      {#if pet && !$onboardingDone && !(dest === 'pet' && sub === 'hatch')}
-        <Onboarding on:done={() => completeOnboarding()} on:go={(e) => go(e.detail.dest, e.detail.sub)} />
+      {#if pet && !$onboardingDone && !onboardingLater && !(dest === 'pet' && sub === 'hatch')}
+        <Onboarding on:done={() => completeOnboarding()} on:later={() => (onboardingLater = true)} on:go={(e) => go(e.detail.dest, e.detail.sub)} />
       {/if}
 
       <!-- Destinos principales -->
