@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { StatsService } from '../stats/stats.service';
 import { AchievementEngineService } from '../achievements/achievement-engine.service';
+import { publicEquipped } from '../modules/accessories/accessories.engine';
 import { MyProfileDto, ProfileBadgeDto, ProfileBaseDto, ProfileStatsDto, PublicProfileDto } from './dto/profile.dto';
 
 export const MAX_FEATURED_BADGES = 3;
@@ -107,6 +108,7 @@ export class ProfileService {
           level: true,
           stage: true,
           shiny: true,
+          accessories: true,
           species: { select: { name: true, element: true } },
         },
       }),
@@ -154,6 +156,7 @@ export class ProfileService {
             level: pet.level,
             stage: pet.stage,
             shiny: pet.shiny,
+            accessories: publicEquipped(pet.accessories),
           }
         : null,
       stats: showDetails ? this.toStatsDto(stats, own) : null,

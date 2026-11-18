@@ -14,6 +14,7 @@ Lee las referencias cuando las necesites:
 - `references/sheet-template.md`: plantilla de la ficha `docs/pockais/<id>.md`.
 - `references/art-brief.md`: brief de arte, restricciones del `SpeciesArt`, proceso de dibujo y checklist visual.
 - `references/iso-style.md`: reglas 3/4 isométricas (cámara, luz, cara, etapas y errores típicos).
+- `references/pixel-style.md`: estilo pixel art objetivo, evolución por etapas (plan corporal propio y regla de los cuatro ejes) y anclas de accesorios.
 - `references/integration-checklist.md`: todos los archivos que hay que tocar, en orden.
 
 ## Modos
@@ -36,7 +37,7 @@ El usuario puede dar una idea libre, como "un búho eléctrico, raro". Pregunta 
 - Elemento y rareza.
 - Arquetipo de combate.
 - Carácter de partida (propónlo tú desde el concepto).
-- **Rasgo que crece con la evolución**: qué distingue a su forma final.
+- **Rasgo que crece con la evolución**: qué distingue a su forma final y qué pieza nueva gana.
 - Si quiere **arte real ya** (recomendado) o placeholders.
 
 Si no da nada, propón 2-3 conceptos que cubran huecos del catálogo (elementos o rarezas sin especies) y explica el aviso de eclosión si aplica (ver balance.md).
@@ -47,10 +48,11 @@ Si no da nada, propón 2-3 conceptos que cubran huecos del catálogo (elementos 
 3. **Coherencia elemento → paleta → comida.** La paleta es `palettes.json[element].default` o una variación cercana (mismo tono, ±luminosidad). La comida favorita tiene sentido con el elemento y la descripción.
 4. **Stats según `balance.md`**: total exacto por rareza, perfil de arquetipo y distinto de las especies del mismo elemento.
 5. **Personalidad de partida (`personalityBias`).** Las 5 dimensiones con las reglas de `references/personality.md`: enteros en [15, 85], al menos un rasgo marcado, coherente con la descripción y el concepto, y distinta de las demás especies. Es solo el punto de partida: piensa también cómo puede evolucionar con distintas crianzas y qué hará en su vida autónoma (va en la ficha).
-6. **Evolución visual.** Un único dibujo parametrizado por etapa (`iso-style.md`): baby cabezón, final con accesorio. La silueta se reconoce en las 4 etapas.
-7. **`description` = semilla del chat.** Se inyecta en el prompt de personalidad (`backend/src/modules/ai/personality.ts`). Son 1–2 frases en español, en tono cálido, con un rasgo físico y uno de carácter, sin stats ni jerga de juego.
-8. **Nombres:** `name` en español, evocador, con juego de palabras animal + elemento (Ignisaurio, Axolunar, Florabrote). `id` en minúsculas y sin espacios (`^[a-z][a-z0-9_]*$`), único; `spriteKey` = `id`.
-9. **Solo mecánicas existentes.** No inventes:
+6. **Evolución visual: evolucionar es cambiar.** Cada etapa tiene su propio plan corporal (`pixel-style.md`): baby es una bola sin brazos ni cola con el rasgo en brote; juvenile, un cuerpo con brazos, cola y barriga; adult separa cabeza y torso, completa el rasgo y gana manchas; final suma piezas que rompen el contorno (segunda cola, púas, alas), su accesorio de elemento, franjas y una mirada más decidida. En cada salto cambian al menos cuatro de cinco ejes: plan corporal, rasgo icónico, piezas, color y marcas, cara. Se mantienen la paleta, la forma del ojo y el sitio del rasgo icónico, para que las 4 etapas sigan siendo la misma especie. En el generador actual esto se hace con `stageParams` más ramas y helpers propios de etapa (`art-brief.md`).
+7. **Sitio para accesorios.** La especie debe poder llevar gorro, gafas, bufanda y capa en las 4 etapas sin tapar ojos, boca ni rasgo icónico. Define sus anclas `head`, `face`, `neck` y `back` por etapa en la ficha (`pixel-style.md`).
+8. **`description` = semilla del chat.** Se inyecta en el prompt de personalidad (`backend/src/modules/ai/personality.ts`). Son 1–2 frases en español, en tono cálido, con un rasgo físico y uno de carácter, sin stats ni jerga de juego.
+9. **Nombres:** `name` en español, evocador, con juego de palabras animal + elemento (Ignisaurio, Axolunar, Florabrote). `id` en minúsculas y sin espacios (`^[a-z][a-z0-9_]*$`), único; `spriteKey` = `id`.
+10. **Solo mecánicas existentes.** No inventes:
    - Campos en species.json (los válidos están en schema.md, `personalityBias` incluido).
    - Estados nuevos (solo burn, slow, sap y guard).
    - Habilidades propias de especie (los movimientos son por elemento).
@@ -69,7 +71,7 @@ Sigue `references/integration-checklist.md` paso a paso. Puntos críticos:
 
 ### 5b. Dibujar el arte (salvo que el usuario pida placeholders)
 Sigue la sección "Dibujar" de `references/art-brief.md`:
-1. Escribe el `SpeciesArt` 3/4 con `stage`.
+1. Escribe el `SpeciesArt` 3/4 con `stage`, con las diferencias por etapa de `pixel-style.md`.
 2. Genera la hoja de contactos con `contact_sheet.ts <id>` y **mírala** leyendo el PNG.
 3. Pasa la checklist y corrige hasta que todo pase. Normalmente hacen falta 2-3 iteraciones; no te quedes en la primera.
 4. Ejecuta `pnpm generate:sprites`.

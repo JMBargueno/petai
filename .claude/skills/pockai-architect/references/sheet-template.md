@@ -39,13 +39,17 @@ Escribe en español. Sustituye lo que va entre `<>`.
 **Cómo puede evolucionar:** <2 ejemplos: qué crianza la vuelve, p. ej., aventurera y cuál reservada/cariñosa.>
 **Vida autónoma típica:** <qué hará cuando el entrenador no está, según sus dimensiones (explorar, descansar en el hábitat, buscar a otros Pockai, esperar en la puerta).>
 
-## Evolución *(un único `SpeciesArt` parametrizado por etapa)*
-| Etapa | Narrativa | Cambio visual (`stageParams` + rasgo) |
-|---|---|---|
-| **Baby (1)** | <…> | <cabezón, apéndices al 60 %, …> |
-| **Juvenile (10)** | <…> | <…> |
-| **Adult (25)** | <…> | <rasgo icónico completo> |
-| **Final (50, Piedra de Evolución)** | <…> | <accesorio de etapa final y por qué lee el elemento> |
+## Evolución *(cada etapa con su plan corporal; en cada salto cambian 4 de 5 ejes: `references/pixel-style.md`)*
+| Etapa | Narrativa | Plan corporal y silueta | Rasgo icónico y piezas | Color, marcas y cara |
+|---|---|---|---|---|
+| **Baby (1)** | <…> | <una bola, sin brazos ni cola> | <rasgo en brote> | <sin barriga, mofletes, ojos enormes> |
+| **Juvenile (10)** | <…> | <cuerpo alargado con extremidades> | <rasgo pequeño; brazos, cola con punta> | <barriga> |
+| **Adult (25)** | <…> | <cabeza y torso separados> | <rasgo completo; cola grande> | <manchas en cabeza y lomo> |
+| **Final (50, Piedra de Evolución)** | <…> | <más ancha, con piezas que rompen el contorno> | <rasgo alargado, pieza nueva (segunda cola / alas / melena) y accesorio que lee el elemento> | <franjas, emblema, mirada decidida> |
+
+**No cambia:** <paleta, forma del ojo, sitio del rasgo icónico>
+
+**Anclas de accesorios:** <por etapa, `head`, `face`, `neck` y `back`; salvedades si el rasgo icónico estorba a un gorro o a unas gafas>
 
 ## Frases de chat de ejemplo
 1. «<…>»
