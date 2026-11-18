@@ -2270,6 +2270,243 @@
         ]
       }
     },
+    "/v1/habitat": {
+      "get": {
+        "operationId": "HabitatController_getHabitat",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Hábitat completo"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "404": {
+            "description": "Pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener el hábitat del usuario (salas, layout, buffs)",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/furniture/{id}/place": {
+      "post": {
+        "description": "Con x/y (y rotation opcional) lo coloca en esa celda si cabe su huella; sin cuerpo, en el primer hueco libre.",
+        "operationId": "HabitatController_placeFurniture",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceFurnitureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mueble colocado (incluye itemId, x, y y rotation)"
+          },
+          "400": {
+            "description": "Posición no válida, sin hueco, sin saldo o sala bloqueada"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble o pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprar y colocar un mueble",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/items/{itemId}": {
+      "patch": {
+        "operationId": "HabitatController_moveFurniture",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveFurnitureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mueble movido"
+          },
+          "400": {
+            "description": "Posición no válida (fuera de la sala, ocupada o lejos de la pared)"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble no encontrado en el hábitat"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mover y/o girar un mueble ya colocado (sin coste)",
+        "tags": [
+          "Habitat"
+        ]
+      },
+      "delete": {
+        "operationId": "HabitatController_removeItem",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mueble removido"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble no encontrado en el hábitat"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quitar un mueble concreto del hábitat (por id de item)",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/furniture/{id}": {
+      "delete": {
+        "operationId": "HabitatController_removeFurniture",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mueble removido"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/catalog": {
+      "get": {
+        "operationId": "HabitatController_getCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Catálogo completo"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/buffs": {
+      "get": {
+        "operationId": "HabitatController_getActiveBuffs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Buffs agregados de muebles colocados"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener los buffs activos del hábitat",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
     "/v1/minigames": {
       "get": {
         "operationId": "MinigamesController_list",
@@ -4580,243 +4817,6 @@
         "summary": "Historial paginado de aperturas (ordenado por fecha desc)",
         "tags": [
           "Chests"
-        ]
-      }
-    },
-    "/v1/habitat": {
-      "get": {
-        "operationId": "HabitatController_getHabitat",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Hábitat completo"
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          },
-          "404": {
-            "description": "Pet no encontrado"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener el hábitat del usuario (salas, layout, buffs)",
-        "tags": [
-          "Habitat"
-        ]
-      }
-    },
-    "/v1/habitat/furniture/{id}/place": {
-      "post": {
-        "description": "Con x/y (y rotation opcional) lo coloca en esa celda si cabe su huella; sin cuerpo, en el primer hueco libre.",
-        "operationId": "HabitatController_placeFurniture",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceFurnitureDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Mueble colocado (incluye itemId, x, y y rotation)"
-          },
-          "400": {
-            "description": "Posición no válida, sin hueco, sin saldo o sala bloqueada"
-          },
-          "401": {
-            "description": "Token inválido"
-          },
-          "404": {
-            "description": "Mueble o pet no encontrado"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Comprar y colocar un mueble",
-        "tags": [
-          "Habitat"
-        ]
-      }
-    },
-    "/v1/habitat/items/{itemId}": {
-      "patch": {
-        "operationId": "HabitatController_moveFurniture",
-        "parameters": [
-          {
-            "name": "itemId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MoveFurnitureDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Mueble movido"
-          },
-          "400": {
-            "description": "Posición no válida (fuera de la sala, ocupada o lejos de la pared)"
-          },
-          "401": {
-            "description": "Token inválido"
-          },
-          "404": {
-            "description": "Mueble no encontrado en el hábitat"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Mover y/o girar un mueble ya colocado (sin coste)",
-        "tags": [
-          "Habitat"
-        ]
-      },
-      "delete": {
-        "operationId": "HabitatController_removeItem",
-        "parameters": [
-          {
-            "name": "itemId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Mueble removido"
-          },
-          "401": {
-            "description": "Token inválido"
-          },
-          "404": {
-            "description": "Mueble no encontrado en el hábitat"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Quitar un mueble concreto del hábitat (por id de item)",
-        "tags": [
-          "Habitat"
-        ]
-      }
-    },
-    "/v1/habitat/furniture/{id}": {
-      "delete": {
-        "operationId": "HabitatController_removeFurniture",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Mueble removido"
-          },
-          "401": {
-            "description": "Token inválido"
-          },
-          "404": {
-            "description": "Mueble no encontrado"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId",
-        "tags": [
-          "Habitat"
-        ]
-      }
-    },
-    "/v1/habitat/catalog": {
-      "get": {
-        "operationId": "HabitatController_getCatalog",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Catálogo completo"
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs",
-        "tags": [
-          "Habitat"
-        ]
-      }
-    },
-    "/v1/habitat/buffs": {
-      "get": {
-        "operationId": "HabitatController_getActiveBuffs",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Buffs agregados de muebles colocados"
-          },
-          "401": {
-            "description": "Token inválido"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener los buffs activos del hábitat",
-        "tags": [
-          "Habitat"
         ]
       }
     },
@@ -10742,6 +10742,48 @@
           "daysRemaining"
         ]
       },
+      "PlaceFurnitureDto": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla x (con y)"
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla y (con x)"
+          },
+          "rotation": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "Giro en pasos de 90°"
+          }
+        }
+      },
+      "MoveFurnitureDto": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla x (con y)"
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla y (con x)"
+          },
+          "rotation": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "Giro en pasos de 90°"
+          }
+        }
+      },
       "ContactDto": {
         "type": "object",
         "properties": {
@@ -11622,48 +11664,6 @@
           "openings",
           "total"
         ]
-      },
-      "PlaceFurnitureDto": {
-        "type": "object",
-        "properties": {
-          "x": {
-            "type": "number",
-            "minimum": 0,
-            "description": "Celda ancla x (con y)"
-          },
-          "y": {
-            "type": "number",
-            "minimum": 0,
-            "description": "Celda ancla y (con x)"
-          },
-          "rotation": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 3,
-            "description": "Giro en pasos de 90°"
-          }
-        }
-      },
-      "MoveFurnitureDto": {
-        "type": "object",
-        "properties": {
-          "x": {
-            "type": "number",
-            "minimum": 0,
-            "description": "Celda ancla x (con y)"
-          },
-          "y": {
-            "type": "number",
-            "minimum": 0,
-            "description": "Celda ancla y (con x)"
-          },
-          "rotation": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 3,
-            "description": "Giro en pasos de 90°"
-          }
-        }
       },
       "AdminStatsUsersDto": {
         "type": "object",

@@ -6,9 +6,10 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { GameDataModule } from '../game-data/game-data.module';
 import { EnvironmentalModule } from '../environmental/environmental.module';
 import { BondingModule } from '../bonding/bonding.module';
+import { HabitatModule } from '../habitat/habitat.module';
 
 @Module({
-  imports: [InventoryModule, GameDataModule, EnvironmentalModule, BondingModule, MindModule],
+  imports: [InventoryModule, GameDataModule, EnvironmentalModule, BondingModule, MindModule, HabitatModule],
   controllers: [PetsController],
   providers: [PetsService],
   exports: [PetsService],

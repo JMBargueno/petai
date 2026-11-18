@@ -1241,6 +1241,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/habitat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener el hábitat del usuario (salas, layout, buffs) */
+        get: operations["HabitatController_getHabitat"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/furniture/{id}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Comprar y colocar un mueble
+         * @description Con x/y (y rotation opcional) lo coloca en esa celda si cabe su huella; sin cuerpo, en el primer hueco libre.
+         */
+        post: operations["HabitatController_placeFurniture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quitar un mueble concreto del hábitat (por id de item) */
+        delete: operations["HabitatController_removeItem"];
+        options?: never;
+        head?: never;
+        /** Mover y/o girar un mueble ya colocado (sin coste) */
+        patch: operations["HabitatController_moveFurniture"];
+        trace?: never;
+    };
+    "/v1/habitat/furniture/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId */
+        delete: operations["HabitatController_removeFurniture"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs */
+        get: operations["HabitatController_getCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/habitat/buffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener los buffs activos del hábitat */
+        get: operations["HabitatController_getActiveBuffs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/minigames": {
         parameters: {
             query?: never;
@@ -2249,112 +2355,6 @@ export interface paths {
         };
         /** Historial paginado de aperturas (ordenado por fecha desc) */
         get: operations["ChestsController_getChestHistory"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/habitat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Obtener el hábitat del usuario (salas, layout, buffs) */
-        get: operations["HabitatController_getHabitat"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/habitat/furniture/{id}/place": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Comprar y colocar un mueble
-         * @description Con x/y (y rotation opcional) lo coloca en esa celda si cabe su huella; sin cuerpo, en el primer hueco libre.
-         */
-        post: operations["HabitatController_placeFurniture"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/habitat/items/{itemId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Quitar un mueble concreto del hábitat (por id de item) */
-        delete: operations["HabitatController_removeItem"];
-        options?: never;
-        head?: never;
-        /** Mover y/o girar un mueble ya colocado (sin coste) */
-        patch: operations["HabitatController_moveFurniture"];
-        trace?: never;
-    };
-    "/v1/habitat/furniture/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId */
-        delete: operations["HabitatController_removeFurniture"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/habitat/catalog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs */
-        get: operations["HabitatController_getCatalog"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/habitat/buffs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Obtener los buffs activos del hábitat */
-        get: operations["HabitatController_getActiveBuffs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4979,6 +4979,22 @@ export interface components {
              */
             daysRemaining: number;
         };
+        PlaceFurnitureDto: {
+            /** @description Celda ancla x (con y) */
+            x?: number;
+            /** @description Celda ancla y (con x) */
+            y?: number;
+            /** @description Giro en pasos de 90° */
+            rotation?: number;
+        };
+        MoveFurnitureDto: {
+            /** @description Celda ancla x (con y) */
+            x?: number;
+            /** @description Celda ancla y (con x) */
+            y?: number;
+            /** @description Giro en pasos de 90° */
+            rotation?: number;
+        };
         ContactDto: {
             /**
              * @description Nombre (1–100)
@@ -5390,22 +5406,6 @@ export interface components {
              * @example 120
              */
             total: number;
-        };
-        PlaceFurnitureDto: {
-            /** @description Celda ancla x (con y) */
-            x?: number;
-            /** @description Celda ancla y (con x) */
-            y?: number;
-            /** @description Giro en pasos de 90° */
-            rotation?: number;
-        };
-        MoveFurnitureDto: {
-            /** @description Celda ancla x (con y) */
-            x?: number;
-            /** @description Celda ancla y (con x) */
-            y?: number;
-            /** @description Giro en pasos de 90° */
-            rotation?: number;
         };
         AdminStatsUsersDto: {
             total: number;
@@ -7224,6 +7224,246 @@ export interface operations {
             };
         };
     };
+    HabitatController_getHabitat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hábitat completo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pet no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_placeFurniture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlaceFurnitureDto"];
+            };
+        };
+        responses: {
+            /** @description Mueble colocado (incluye itemId, x, y y rotation) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posición no válida, sin hueco, sin saldo o sala bloqueada */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble o pet no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_removeItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mueble removido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble no encontrado en el hábitat */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_moveFurniture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveFurnitureDto"];
+            };
+        };
+        responses: {
+            /** @description Mueble movido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posición no válida (fuera de la sala, ocupada o lejos de la pared) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble no encontrado en el hábitat */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_removeFurniture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mueble removido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_getCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catálogo completo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido o ausente */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_getActiveBuffs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Buffs agregados de muebles colocados */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token inválido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     MinigamesController_list: {
         parameters: {
             query?: never;
@@ -8786,246 +9026,6 @@ export interface operations {
                 };
             };
             /** @description Token ausente o inválido */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_getHabitat: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Hábitat completo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido o ausente */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pet no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_placeFurniture: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PlaceFurnitureDto"];
-            };
-        };
-        responses: {
-            /** @description Mueble colocado (incluye itemId, x, y y rotation) */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Posición no válida, sin hueco, sin saldo o sala bloqueada */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Mueble o pet no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_removeItem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                itemId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Mueble removido */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Mueble no encontrado en el hábitat */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_moveFurniture: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                itemId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MoveFurnitureDto"];
-            };
-        };
-        responses: {
-            /** @description Mueble movido */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Posición no válida (fuera de la sala, ocupada o lejos de la pared) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Mueble no encontrado en el hábitat */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_removeFurniture: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Mueble removido */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Mueble no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_getCatalog: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Catálogo completo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido o ausente */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    HabitatController_getActiveBuffs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Buffs agregados de muebles colocados */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token inválido */
             401: {
                 headers: {
                     [name: string]: unknown;
