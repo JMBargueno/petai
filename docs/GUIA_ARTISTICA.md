@@ -164,6 +164,9 @@ Lateral y Aeonik Pro son comerciales. Si se instalan, la pila las coge sola; mie
 | Token | Tamaño | Interlineado |
 |---|---|---|
 | `--text-caption` | 12 px | 1,56 |
+| `--text-label` | 13 px | 1,35 (botones y texto denso de la app) |
+| `--text-body` | 14 px | 1,5 (cuerpo en el escritorio) |
+| `--text-title` | 18 px | 1,1 (títulos de sección dentro del panel) |
 | `--text-body-lg` | 16 px | 1,5 |
 | `--text-subheading` | 22 px | 1,2 |
 | `--text-heading-sm` | 30 px | 1,1 |
@@ -171,6 +174,8 @@ Lateral y Aeonik Pro son comerciales. Si se instalan, la pila las coge sola; mie
 | display | hasta el ancho disponible | 0,86 |
 
 Pesos: 500 (medio), 700 (negrita) y 800 (extra).
+
+**Mínimo de 12 px:** ningún texto de interfaz baja de `--text-caption`. En el escritorio los `font-size` van siempre con token; solo quedan en píxeles los glifos que hacen de ilustración (emoji de minijuegos, el reloj del pomodoro).
 
 **Etiquetas:** el eyebrow y `.label-caps` van a 12 px, en negrita, en MAYÚSCULAS y con tracking 0,08 em. El eyebrow es una pastilla con un punto de color `--accent`. Los `.tag` usan tracking 0,04 em.
 
@@ -186,12 +191,14 @@ Pesos: 500 (medio), 700 (negrita) y 800 (extra).
 
 | Concepto | Valor |
 |---|---|
-| Radios | 16 px (`--radius-2xl`: chips grandes, inputs), **20 px** (`--radius-cards`: tarjetas), 28 px (`--radius-3xl`), 32 px (`--radius-cards-elevated`: tarjetas destacadas), 9999 px (botones y pastillas) |
+| Radios | 8 px (`--radius-sm`) y 12 px (`--radius-md`) para controles y miniaturas dentro de tarjetas, 16 px (`--radius-2xl`: chips grandes, inputs), **20 px** (`--radius-cards`: tarjetas), 28 px (`--radius-3xl`), 32 px (`--radius-cards-elevated`: tarjetas destacadas), 9999 px (botones y pastillas) |
 | Espaciado | Escala 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 60 · 80 · 128 px. El token `--spacing-24` vale 24 px |
 | Relleno de tarjeta | clamp(20 px, 2,4vw, 28 px) |
 | Márgenes laterales | `--gutter` = clamp(16 px, 4vw, 48 px); ancho máximo 1280 px |
 | Breakpoints | 640 px (móvil → tableta), 960 px (tableta → escritorio), 1280 px |
-| Contorno | `--outline` = 1 px sólido `--line` |
+| Contorno | `--outline` = 1 px sólido `--line`. Sobre un relleno de la paleta de marca el contorno es `--on-color`; `--color-carbon` no se usa directamente en componentes |
+| Controles | `--control-h` = 36 px (botones), `--control-h-icon` = 32 px (botones de icono en filas) y `--hit-min` = 44 px (zona de clic mínima) |
+| Capas | Escala `--z-*`: `below` −1, `base` 0, `raised` 1, `sticky` 10, `overlay` 30, `pet` 50, `dock` 90, `panel` 100, `popover` 200, `modal` 900, `toast` 1000. Las capas locales de un componente se expresan con `calc()` sobre la más cercana |
 | Foco | `--focus-ring` = 3 px sólido `#5c4ade` en claro y `#b3a8ff` en oscuro; siempre visible con teclado |
 
 **Elevación** (sombras tintadas con `--shadow-c`, que es `#261e6e` en claro y negro en oscuro):
@@ -331,7 +338,7 @@ Reglas:
 | Botón secundario | Pastilla con `--surface`, contorno de 1 px y texto `--ink`. |
 | Botón ink | Pastilla con fondo `--ink` y texto `--bg`, para contraste máximo sobre bandas claras. |
 | Botón ghost | Transparente. En hover, `--ink` al 8 %. |
-| Tamaños | Normal y `--sm`: alto mínimo de 36 px, 13 px de texto. Área táctil mínima de 44×44 en apps. |
+| Tamaños | Normal y `--sm`: alto mínimo de 36 px, 13 px de texto (12 px en `--sm`). Los botones de icono en filas miden 32 px. Área de clic mínima de 44×44: en el escritorio el botón la amplía con un `::after` invisible, sin cambiar su tamaño visual. |
 | Tarjeta | `--surface`, contorno de 1 px, radio de 20 px, `--shadow-1`/`2`. `.card--pop` usa la sombra dura. Si es temática, va sobre un pastel con isla de tono. |
 | Eyebrow / tag | §4. Pastillas con contorno. |
 | Cabecera de sección | Eyebrow + titular display + entradilla (`.section-head`). En secciones secundarias, titular más pequeño (`.section-title--sm`). |
@@ -349,6 +356,8 @@ Es la referencia: aplica todo lo anterior con tokens en `tokens.css`, componente
 - Crear un fichero de tokens con las **mismas variables CSS** que la web (copiar `tokens.css` sin `@theme`) y sustituir los hex sueltos.
 - Los elementos superpuestos (burbuja, chip de estado, panel de control) usan vidrio y la tipografía Inter/Aeonik.
 - Los iconos de interfaz usan `lucide-svelte` (§6), y el nombre visible es **Pockai**.
+- **Tema:** por defecto sigue al sistema. En Ajustes › Escritorio se puede forzar claro u oscuro; se aplica con `data-theme` en `<html>`, que solo cambia `color-scheme` (los tokens `light-dark()` hacen el resto).
+- **Diálogos:** usan `Modal` (o la acción `focusTrap`): el foco entra al abrir, no sale con Tab y vuelve al cerrar.
 
 ### Android (`mobile/android`, Compose)
 - `MaterialExpressiveTheme` con la paleta de marca. El **color dinámico va desactivado por defecto** (como mucho, una opción en Ajustes).

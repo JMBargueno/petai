@@ -568,7 +568,7 @@
             </div>
             {#if g.description}<span class="ui-row__sub">{g.description}</span>{/if}
             <div class="goal-foot">
-              <div class="meter goal-meter" style="--meter-color: {done ? 'var(--success)' : 'var(--theme-social)'}">
+              <div class="ui-progress goal-meter" style="--progress-c: {done ? 'var(--success)' : 'var(--theme-social)'}">
                 <i style="width: {goalPercent(g)}%"></i>
               </div>
               <span class="goal-num">{Math.min(g.progress, g.target)}/{g.target}</span>
@@ -667,8 +667,8 @@
   /* Cabecera del Nexo */
   .clan-hero {
     display: flex;
-    gap: 12px;
-    padding: 14px;
+    gap: var(--space-3);
+    padding: var(--space-4);
     border: var(--outline);
     border-radius: var(--radius-cards);
     background:
@@ -682,46 +682,46 @@
     place-items: center;
     width: 52px;
     height: 52px;
-    border-radius: 16px;
-    border: 1.5px solid var(--color-carbon);
+    border-radius: var(--radius-2xl);
+    border: 1.5px solid var(--on-color);
     background: var(--theme-social);
     color: var(--on-color);
-    box-shadow: 2px 3px 0 var(--color-carbon);
+    box-shadow: 2px 3px 0 var(--on-color);
     rotate: -4deg;
   }
   .clan-hero__info {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
     min-width: 0;
     flex: 1;
   }
   .clan-hero__title {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     flex-wrap: wrap;
   }
   .clan-name {
     font-family: var(--font-display);
     text-transform: uppercase;
-    font-size: 19px;
+    font-size: var(--text-title);
     line-height: 1.05;
     overflow-wrap: anywhere;
   }
   .clan-tag {
-    padding: 1px 8px;
-    font-size: 11px;
+    padding: 1px var(--space-2);
+    font-size: var(--text-caption);
     background: var(--surface-2);
   }
   .clan-desc {
     margin: 0;
-    font-size: 12px;
+    font-size: var(--text-caption);
     line-height: 1.35;
     color: var(--ink-muted);
   }
   .clan-leader {
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 600;
     color: var(--ink-muted);
   }
@@ -732,11 +732,11 @@
   .clan-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: var(--space-1);
   }
   .clan-stat {
-    padding: 2px 8px;
-    font-size: 11px;
+    padding: 2px var(--space-2);
+    font-size: var(--text-caption);
     font-variant-numeric: tabular-nums;
   }
   .clan-hero__tools {
@@ -748,15 +748,15 @@
 
   /* Rangos */
   .role-chip {
-    gap: 4px;
+    gap: var(--space-1);
   }
   .role-chip.role-creator {
     background: color-mix(in srgb, var(--color-sunburst) 55%, var(--surface));
-    border-color: var(--color-carbon);
+    border-color: var(--line);
   }
   .role-chip.role-admin {
     background: color-mix(in srgb, var(--color-electric-blue) 30%, var(--surface));
-    border-color: var(--color-carbon);
+    border-color: var(--line);
   }
   .role-chip.role-moderator {
     background: color-mix(in srgb, var(--color-lavender) 40%, var(--surface));
@@ -766,9 +766,9 @@
   }
 
   .seg-n {
-    font-size: 10px;
+    font-size: var(--text-caption);
     font-weight: 800;
-    padding: 0 6px;
+    padding: 0 var(--space-2);
     border-radius: var(--radius-pills);
     background: color-mix(in srgb, var(--theme-social) 40%, var(--surface));
     color: var(--ink);
@@ -779,7 +779,7 @@
   .member {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .member.me {
     border-color: color-mix(in srgb, var(--theme-social) 70%, var(--line));
@@ -787,15 +787,15 @@
   .member-main {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-2);
     min-width: 0;
   }
   .member-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--space-1);
     justify-content: flex-end;
-    padding-top: 6px;
+    padding-top: var(--space-2);
     border-top: 1px dashed var(--line-soft);
   }
   .danger-ghost {
@@ -813,8 +813,8 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 6px;
-    padding-top: 10px;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
     border-top: 1px solid var(--line-soft);
   }
   .danger-zone .ui-card__hint {
@@ -825,8 +825,8 @@
   .goal {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 10px 12px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
     background: var(--surface);
@@ -839,28 +839,28 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .goal-title {
-    font-size: 13px;
+    font-size: var(--text-label);
     font-weight: 700;
   }
   .goal.done .goal-status {
     background: var(--success);
     color: var(--on-color);
-    border-color: var(--color-carbon);
+    border-color: var(--on-color);
   }
   .goal-foot {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .goal-meter {
     flex: 1;
     height: 8px;
   }
   .goal-num {
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
@@ -873,7 +873,7 @@
   .chat-box {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .chat {
     min-height: 160px;
@@ -881,8 +881,8 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: var(--space-2);
+    padding: var(--space-2);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-cards);
     background: var(--surface-2);
@@ -892,14 +892,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    gap: var(--space-2);
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .msg {
     display: flex;
     align-items: flex-end;
-    gap: 6px;
+    gap: var(--space-2);
     max-width: 88%;
   }
   .msg.mine {
@@ -910,22 +910,22 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 6px 10px;
+    padding: var(--space-2) var(--space-2);
     border: 1px solid var(--line-soft);
-    border-radius: 14px 14px 14px 4px;
+    border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px;
     background: var(--surface);
     min-width: 0;
   }
   .msg.mine .bubble {
-    border-radius: 14px 14px 4px 14px;
+    border-radius: var(--radius-md) var(--radius-md) 4px var(--radius-md);
     background: color-mix(in srgb, var(--theme-social) 28%, var(--surface));
     border-color: color-mix(in srgb, var(--theme-social) 60%, var(--line-soft));
   }
   .bubble-meta {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 10px;
+    gap: var(--space-2);
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .sender {
@@ -933,7 +933,7 @@
     color: var(--accent-ink);
   }
   .bubble-body {
-    font-size: 13px;
+    font-size: var(--text-label);
     line-height: 1.35;
     color: var(--ink);
     word-break: break-word;
@@ -961,7 +961,7 @@
   }
   .chat-input {
     display: flex;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .chat-input .input {
     flex: 1;

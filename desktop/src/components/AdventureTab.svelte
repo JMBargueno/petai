@@ -154,7 +154,7 @@
 <style>
   .scene-text {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--text-label);
     line-height: 1.55;
     white-space: pre-line;
   }
@@ -180,8 +180,8 @@
     flex: 1;
   }
   .memory {
-    margin: 6px 0 0;
-    font-size: 11px;
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-caption);
     font-style: italic;
   }
   .center {

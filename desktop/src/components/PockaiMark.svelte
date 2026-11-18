@@ -25,7 +25,7 @@
     display: block;
     flex-shrink: 0;
     filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.18));
-    transition: rotate 0.25s ease, scale 0.25s ease;
+    transition: rotate var(--dur-2) ease, scale var(--dur-2) ease;
   }
   .pockai-mark.tilt {
     rotate: -6deg;

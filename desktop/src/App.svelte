@@ -637,6 +637,7 @@
     class="btn glass toggle-panel-pill"
     on:click={() => (isPanelOpen = !isPanelOpen)}
     title="Abrir/Cerrar Panel de Control"
+    aria-expanded={isPanelOpen}
   >
     {#if isPanelOpen}<X size={16} /> Ocultar panel{:else}<PawPrint size={16} /> Abrir panel{/if}
   </button>
@@ -646,7 +647,7 @@
     class="btn glass notif-toggle-pill"
     on:click={openNotifications}
     title="Ajustes de notificaciones"
-    aria-label="Avisos"
+    aria-label={$unreadCount > 0 ? `Avisos: ${$unreadCount} sin leer` : 'Avisos'}
   >
     <Bell size={16} />
     {#if $unreadCount > 0}<span class="notif-badge">{$unreadCount}</span>{/if}
@@ -657,8 +658,10 @@
     class="btn glass ball-toggle-pill"
     on:click={toggleBall}
     title={showBall ? 'Guardar pelota de juego' : 'Sacar pelota de juego'}
+    aria-label={showBall ? 'Guardar pelota de juego' : 'Sacar pelota de juego'}
+    aria-pressed={showBall}
   >
-    <span>⚽</span>
+    <span aria-hidden="true">⚽</span>
   </button>
 
   {#if showBall}
@@ -745,7 +748,7 @@
   .ball-toggle-pill {
     position: fixed;
     bottom: 16px;
-    z-index: 90;
+    z-index: var(--z-dock);
     box-shadow: var(--shadow-2);
   }
   .toggle-panel-pill {
@@ -756,18 +759,18 @@
   }
   .ball-toggle-pill {
     right: 228px;
-    font-size: 14px;
-    padding: 0 10px;
+    font-size: var(--text-body);
+    padding: 0 var(--space-2);
     min-width: 40px;
   }
 
   .notif-badge {
     min-width: 18px;
-    padding: 0 5px;
+    padding: 0 var(--space-1);
     background: var(--danger);
     color: var(--on-color);
     border-radius: var(--radius-pills);
-    font-size: 11px;
+    font-size: var(--text-caption);
     line-height: 18px;
     text-align: center;
   }

@@ -3,7 +3,8 @@
    * Perfil público de otro jugador (desde Amigos o Visitas): cabecera, vitrina, estadísticas e
    * insignias, si el jugador las muestra. Se cierra con Esc, con la X o pulsando fuera.
    */
-  import { createEventDispatcher, onMount, tick } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
+  import { focusTrap } from '../../lib/ui/focusTrap';
   import { api, type PublicProfile } from '../../lib/api';
   import ProfileView from './ProfileView.svelte';
   import { X, AlertCircle, Home } from 'lucide-svelte';
@@ -17,7 +18,6 @@
   let profile: PublicProfile | null = null;
   let loading = true;
   let error = '';
-  let dialogEl: HTMLDivElement;
 
   async function load(id: string) {
     loading = true;
@@ -37,24 +37,18 @@
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape') dispatch('close');
   }
-
-  onMount(async () => {
-    await tick();
-    dialogEl?.focus();
-  });
 </script>
 
 <svelte:window on:keydown={onKey} />
 
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="upm-backdrop" on:click|self={() => dispatch('close')}>
+<div class="upm-backdrop" role="presentation" on:click|self={() => dispatch('close')}>
   <div
     class="upm"
     role="dialog"
     aria-modal="true"
     aria-label={profile ? `Perfil de ${profile.displayName}` : 'Perfil de jugador'}
     tabindex="-1"
-    bind:this={dialogEl}
+    use:focusTrap
   >
     <div class="upm-bar">
       <span class="label-caps">Perfil</span>
@@ -84,10 +78,10 @@
   .upm-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 900;
+    z-index: var(--z-modal);
     display: grid;
     place-items: center;
-    padding: 16px;
+    padding: var(--space-4);
     background: color-mix(in srgb, var(--color-carbon) 45%, transparent);
   }
   .upm {
@@ -95,17 +89,17 @@
     flex-direction: column;
     width: min(460px, 100%);
     max-height: min(640px, 100%);
-    border: 1.5px solid var(--color-carbon);
+    border: 1.5px solid var(--line);
     border-radius: var(--radius-3xl);
     background: var(--surface);
-    box-shadow: 3px 5px 0 var(--color-carbon);
+    box-shadow: 3px 5px 0 var(--line);
     outline: none;
     overflow: hidden;
   }
   .upm-bar {
     display: flex;
     align-items: center;
-    padding: 8px 10px 8px 14px;
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
     border-bottom: 1px solid var(--line-soft);
   }
   .upm-bar .label-caps {
@@ -115,10 +109,10 @@
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .upm-body {
-    padding: 12px 14px 16px;
+    padding: var(--space-3) var(--space-4) var(--space-4);
     overflow-y: auto;
   }
 </style>

@@ -1043,35 +1043,35 @@
   .bar {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .bar-end {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-1);
     margin-left: auto;
   }
   .mode-select {
     width: auto;
-    padding: 4px 10px;
+    padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-pills);
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 700;
   }
   .row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .quota-actions {
-    margin-top: 6px;
+    margin-top: var(--space-2);
   }
   .chat {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
     height: 240px;
-    padding: 10px;
+    padding: var(--space-2);
     overflow-y: auto;
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-cards);
@@ -1079,14 +1079,14 @@
   }
   .chat-empty {
     margin: auto;
-    font-size: 12px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .msg {
     max-width: 85%;
-    padding: 7px 11px;
-    border-radius: 16px;
-    font-size: 13px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-2xl);
+    font-size: var(--text-label);
     line-height: 1.4;
     white-space: pre-wrap;
     user-select: text;
@@ -1112,7 +1112,7 @@
     align-self: flex-start;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
     max-width: 85%;
     margin-bottom: -2px;
   }
@@ -1120,12 +1120,12 @@
     align-self: flex-start;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 6px;
+    gap: var(--space-1);
+    padding: 2px var(--space-2);
     border: none;
     background: none;
     color: var(--ink-muted);
-    font-size: 11px;
+    font-size: var(--text-caption);
     cursor: pointer;
   }
   .thinking-toggle:hover {
@@ -1134,10 +1134,10 @@
   .thinking-body {
     max-height: 160px;
     overflow-y: auto;
-    padding: 6px 10px;
+    padding: var(--space-2) var(--space-2);
     border-left: 2px solid var(--line-soft);
     color: var(--ink-muted);
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-style: italic;
     line-height: 1.35;
     white-space: pre-wrap;
@@ -1145,19 +1145,19 @@
   }
   .hint {
     align-self: flex-start;
-    font-size: 12px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .action {
     align-self: stretch;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 8px 10px;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-2);
     border: 1px solid var(--warning);
     border-radius: var(--radius-2xl);
     background: color-mix(in srgb, var(--warning) 14%, var(--surface));
-    font-size: 12px;
+    font-size: var(--text-caption);
   }
   .action.done {
     border-color: var(--success);
@@ -1179,7 +1179,7 @@
   .composer {
     display: flex;
     align-items: stretch;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .textarea-wrapper {
     position: relative;
@@ -1188,7 +1188,7 @@
   }
   .textarea {
     resize: none;
-    font-size: 13px;
+    font-size: var(--text-label);
     border-radius: var(--radius-cards);
   }
   .composer :global(.send-btn) {
@@ -1200,7 +1200,7 @@
     position: absolute;
     right: 10px;
     bottom: 6px;
-    font-size: 10px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
     pointer-events: none;
   }
@@ -1211,13 +1211,13 @@
   .fold {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .fold-head {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 0;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
     border: none;
     background: none;
     color: var(--ink-muted);
@@ -1229,28 +1229,28 @@
   .mem-layers {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-2);
   }
   .mem-layer {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
   }
   .mem-layer__head {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     margin: 0;
     color: var(--ink-muted);
     font-size: inherit;
   }
   .mem-layer__head small {
     margin-left: auto;
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-variant-numeric: tabular-nums;
   }
   .valence {
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     white-space: nowrap;
   }

@@ -183,7 +183,7 @@
   .drops {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--space-1);
     margin-top: 2px;
   }
   .buy-grid {
@@ -194,8 +194,8 @@
   .buy-head {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
+    gap: var(--space-2);
+    font-size: var(--text-label);
   }
   .buy-head .ui-row__lead {
     width: 26px;

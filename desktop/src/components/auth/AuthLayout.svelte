@@ -25,7 +25,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    padding: 22px 20px 18px;
+    padding: var(--space-6) var(--space-5) var(--space-4);
     overflow-y: auto;
   }
   .auth-hero {
@@ -40,36 +40,36 @@
     place-items: center;
     width: 104px;
     height: 104px;
-    margin-bottom: 10px;
+    margin-bottom: var(--space-2);
     border-radius: 50%;
     background: radial-gradient(circle, color-mix(in srgb, var(--color-sunburst) 45%, transparent) 0%, transparent 70%);
   }
   .auth-title {
-    margin: 8px 0 4px;
+    margin: var(--space-2) 0 var(--space-1);
     font-size: 28px;
   }
   .auth-subtitle {
     margin: 0;
     color: var(--ink-muted);
-    font-size: 13px;
+    font-size: var(--text-label);
   }
   /* Piezas compartidas por los formularios de auth (marcado en ControlPanel) */
   .auth :global(.auth-form) {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    padding: 18px;
+    padding: var(--space-4);
     border-radius: var(--radius-cards-elevated);
   }
   .auth :global(.auth-link) {
     display: block;
     margin: 0 auto;
-    padding: 6px 10px;
+    padding: var(--space-2) var(--space-2);
     border: 0;
     border-radius: var(--radius-pills);
     background: transparent;
     color: var(--ink-muted);
-    font-size: 13px;
+    font-size: var(--text-label);
     cursor: pointer;
   }
   .auth :global(.auth-link strong) {
@@ -88,11 +88,11 @@
   }
   .auth :global(.forgot-link) {
     align-self: flex-end;
-    padding: 2px 4px;
+    padding: 2px var(--space-1);
     border: 0;
     background: transparent;
     color: var(--accent-ink);
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 600;
     cursor: pointer;
   }
@@ -102,9 +102,9 @@
   .auth :global(.show-pass) {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     color: var(--ink-muted);
-    font-size: 13px;
+    font-size: var(--text-label);
     cursor: pointer;
   }
 </style>

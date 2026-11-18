@@ -115,7 +115,7 @@
   .chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .chips :global(.ui-badge) {
     text-transform: capitalize;
@@ -123,13 +123,13 @@
   .dims {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-2);
   }
   .cap {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: var(--space-1);
     min-width: 64px;
   }
   .cap :global(.ui-progress) {
@@ -137,16 +137,16 @@
   }
   .cap-num {
     font-weight: 800;
-    font-size: 13px;
+    font-size: var(--text-label);
     font-variant-numeric: tabular-nums;
   }
   .cap-num small {
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 600;
     color: var(--ink-muted);
   }
   .when {
-    font-size: 11px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
     white-space: nowrap;
   }

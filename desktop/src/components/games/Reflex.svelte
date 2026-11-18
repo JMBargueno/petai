@@ -81,7 +81,7 @@
 <p class="hint">Pulsa el objetivo en cuanto aparezca. Menos de 0,4 s = ¡doble puntuación!</p>
 
 <style>
-  .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
+  .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: var(--space-2); }
   .arena {
     position: relative; overflow: hidden; border-radius: var(--radius-2xl);
     background: radial-gradient(circle at 50% 40%, rgba(244, 114, 182, 0.12), var(--surface-2));
@@ -95,5 +95,5 @@
     from { transform: translate(-50%, -50%) scale(0.4); }
     to { transform: translate(-50%, -50%) scale(1); }
   }
-  .hint { font-size: 11px; opacity: 0.65; margin: 6px 0 0; text-align: center; }
+  .hint { font-size: var(--text-caption); opacity: 0.65; margin: var(--space-2) 0 0; text-align: center; }
 </style>

@@ -129,7 +129,7 @@
   .facts {
     display: flex;
     gap: var(--space-4);
-    font-size: 12px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .facts b {
@@ -139,7 +139,7 @@
     text-align: center;
   }
   .match {
-    font-size: 12px;
+    font-size: var(--text-caption);
   }
   .side {
     flex: 1;
