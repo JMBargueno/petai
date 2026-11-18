@@ -10,6 +10,10 @@
     type CoopVisitResult,
   } from '../lib/api';
   import { acceptedFriends } from '../lib/visitors';
+  import { activeVisit, ongoingVisitFrom } from '../lib/activeVisit';
+  import { friendlyError } from '../lib/ui/errors';
+  import Ico from './Ico.svelte';
+  import { Button, Notice } from './ui';
   import SocialAvatar from './SocialAvatar.svelte';
   import UserProfileModal from '../features/profile/UserProfileModal.svelte';
   import HomeScene from './HomeScene.svelte';
@@ -28,9 +32,9 @@
   let busy = '';
   /** Amigo seleccionado (otherUserId). */
   let selected: string = initialFriend;
-  /** Visita en vivo en curso: otherUserId del amigo visitado (estado local). */
-  let visiting: string = '';
-  /** Mensaje opcional que lleva tu pockai a la visita. */
+  /** Visita en vivo en curso: otherUserId del amigo visitado. Vive en un store para no perderla al cambiar de pestaña. */
+  $: visiting = $activeVisit;
+  /** Mensaje opcional que lleva tu Pockai a la visita. */
   let visitMessage = '';
   /** Perfil abierto (userId del amigo). */
   let profileOf = '';
@@ -68,12 +72,15 @@
       const [fr, hist] = await Promise.all([api.getCoopFriends(), api.getCoopHistory()]);
       friends = fr;
       history = hist?.visits ?? [];
+      // Si la app se reinició con una visita abierta, se recupera del historial.
+      if (!$activeVisit) activeVisit.set(ongoingVisitFrom(history));
       const acc = acceptedFriends(friends);
+      if ($activeVisit && acc.some((f) => f.otherUserId === $activeVisit) && !initialFriend) selected = $activeVisit;
       if (acc.length && !acc.some((f) => f.otherUserId === selected)) {
         selected = acc[0].otherUserId;
       }
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudieron cargar las visitas.');
     } finally {
       loading = false;
     }
@@ -95,7 +102,7 @@
       await load();
       dispatch('refreshUser');
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo hacer el cuidado.');
     } finally {
       busy = '';
     }
@@ -109,13 +116,13 @@
     ok = '';
     try {
       await api.startHabitatVisit(f.otherUserId, visitMessage);
-      visiting = f.otherUserId;
+      activeVisit.set(f.otherUserId);
       visitMessage = '';
-      ok = `¡Tu pockai está de visita en el hábitat de ${f.otherDisplayName}!`;
+      ok = `¡Tu Pockai está de visita en el hábitat de ${f.otherDisplayName}!`;
       await load();
       dispatch('refreshUser');
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo iniciar la visita.');
     } finally {
       busy = '';
     }
@@ -127,10 +134,10 @@
     ok = '';
     try {
       await api.endHabitatVisit();
-      visiting = '';
+      activeVisit.set('');
       ok = 'Visita terminada. ¡Hasta la próxima!';
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo terminar la visita.');
     } finally {
       busy = '';
     }
@@ -140,8 +147,14 @@
 </script>
 
 <div class="ui-stack">
-  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+  {#if error}<Notice tone="error" dismissible on:dismiss={() => (error = '')}>{error}</Notice>{/if}
+  {#if ok}<Notice tone="ok">{ok}</Notice>{/if}
+  {#if visiting && selectedFriend && visiting !== selectedFriend.otherUserId}
+    <Notice tone="info" icon="home">
+      Tu Pockai sigue de visita en casa de {friendName(visiting)}.
+      <svelte:fragment slot="end"><button class="btn btn--ghost btn--sm" disabled={!!busy} on:click={endVisit}>Terminar</button></svelte:fragment>
+    </Notice>
+  {/if}
 
   {#if loading && !friends.length}
     <div class="ui-loading" aria-label="Cargando visitas">
@@ -209,17 +222,15 @@
 
           <div class="care-row">
             {#each ACTIONS as a (a.id)}
-              <button class="care" style="--c: {a.color}" disabled={!pet?.petId || !!busy} on:click={() => care(a.id)}>
-                <span class="care-ico"><svelte:component this={a.icon} size={16} /></span>
-                {busy === a.id ? '…' : a.label}
+              <button class="care" style="--c: {a.color}" disabled={!pet?.petId || !!busy} aria-busy={busy === a.id || undefined} on:click={() => care(a.id)}>
+                <span class="care-ico">{#if busy === a.id}<span class="ui-spinner" aria-hidden="true"></span>{:else}<svelte:component this={a.icon} size={16} />{/if}</span>
+                {a.label}
               </button>
             {/each}
           </div>
 
           {#if visiting === selectedFriend.otherUserId}
-            <button class="btn btn--danger block" disabled={!!busy} on:click={endVisit}>
-              <LogOut size={16} /> {busy === 'end' ? 'Terminando…' : 'Terminar visita'}
-            </button>
+            <Button block icon="logout" loading={busy === 'end'} disabled={!!busy} on:click={endVisit}>Terminar visita</Button>
           {:else}
             <label class="msg-field">
               <input
@@ -233,13 +244,13 @@
               />
               <span class="msg-count">{visitMessage.length}/{VISIT_MESSAGE_MAX}</span>
             </label>
-            <button class="btn btn--primary block" disabled={!!busy} on:click={startVisit}>
-              <Home size={16} /> {busy === 'start' ? 'Iniciando…' : `Iniciar visita · ⚡${VISIT_ENERGY_COST}`}
-            </button>
+            <Button variant="primary" block icon="home" loading={busy === 'start'} disabled={!!busy || !!visiting} title={visiting ? 'Termina antes la visita en curso' : undefined} on:click={startVisit}>
+              Iniciar visita · −{VISIT_ENERGY_COST} <Ico n="energy" size={14} />
+            </Button>
           {/if}
           <p class="ui-card__hint">
-            Tu pockai aparecerá en la pantalla de tu amigo con tu mensaje. Gasta ⚡{VISIT_ENERGY_COST} de energía y
-            puedes volver a visitar al mismo amigo cada 10 min.
+            Tu Pockai aparecerá en la pantalla de tu amigo con tu mensaje. Gasta {VISIT_ENERGY_COST} de energía y
+            puedes volver a visitar al mismo amigo cada 10 minutos.
           </p>
         </div>
       </div>
@@ -261,7 +272,7 @@
             <svelte:component this={h.kind === 'habitat' ? Home : (a?.icon ?? PawPrint)} size={14} />
           </span>
           <div class="ui-row__body">
-            <span class="hist-title">
+            <span class="hist-title" title="{h.direction === 'out' ? `Visitaste a ${who}` : who}">
               {#if h.direction === 'out'}Visitaste a {who}{:else}{who}{/if}
               · {h.kind === 'habitat' ? 'Visita al hábitat' : (a?.label ?? h.action)}
             </span>

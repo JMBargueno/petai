@@ -886,7 +886,7 @@
       {:else if isLocalLike}
         <Notice tone="info" icon="monitor">Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</Notice>
       {/if}
-      <div class="chat" bind:this={scroller} role="log" aria-live="polite" aria-label="Conversación con {pet.nickname || pet.species?.name}" tabindex="0">
+      <div class="chat" bind:this={scroller} role="log" aria-live="polite" aria-label="Conversación con {pet.nickname || pet.species?.name}">
         {#if messages.length === 0}
           <p class="chat-empty">Saluda a {pet.nickname || pet.species?.name}: escribe abajo y pulsa Enter.</p>
         {/if}
