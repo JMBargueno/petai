@@ -28,6 +28,8 @@ import { blockedOf } from './roomShape';
 import { FURNITURE_LIGHTS, RoomLife } from './roomLife';
 import { toHexString, type SkyState } from '../ambience/sunClock';
 import { isWet, type WeatherLook } from '../ambience/weather';
+import { createRng, pushRecent, type Rng } from '@pockai/mind';
+import { ROOM_CONFIG, byNearest, cellsByDistance, chooseRoomAction, type RoomMind } from './petWander';
 
 export { WALL_H } from './roomStyles';
 // Pixel art (GUIA_ARTISTICA §7.5): la hoja va a ×2, así que 0,5 deja 1 px nativo = 1 px de sala.
@@ -121,6 +123,14 @@ export class IsoRoom extends Container {
   private waitMs = 1200;
   private using = false;
 
+  // Decisión del paseo (petWander): personalidad y necesidades, azar sembrado y memoria corta
+  private mind: RoomMind | null = null;
+  private rng: Rng = createRng((Math.random() * 0xffffffff) >>> 0);
+  private recent: string[] = [];
+  private lastAt: Record<string, number> = {};
+  /** Reloj propio de las decisiones (ms que la sala lleva viva). */
+  private lifeMs = 0;
+
   // Arrastre en modo edición
   private drag: { id: string; grabDx: number; grabDy: number; cand: { x: number; y: number }; valid: boolean } | null = null;
 
@@ -191,6 +201,15 @@ export class IsoRoom extends Container {
     // Con movimiento reducido no se va a la cama: duerme donde está, pero con los ojos cerrados.
     if (activity === 'sleep' && this.opts.reducedMotion) this.pet.setBaseClip('sleep');
     this.placePetSprite();
+  }
+
+  /**
+   * Personalidad y necesidades del Pockai, para que elija qué hacer en la sala. Sin ellas se porta
+   * de forma neutra. La semilla solo se aplica al cambiar: así las decisiones son reproducibles.
+   */
+  setMind(mind: RoomMind | null): void {
+    if (mind && mind.seed !== this.mind?.seed) this.rng = createRng(mind.seed);
+    this.mind = mind;
   }
 
   private get staysPut(): boolean {
@@ -654,19 +673,26 @@ export class IsoRoom extends Container {
   private useFurniture(interaction: Interaction, stay: boolean): boolean {
     const candidates = [...this.placed.values()].filter((p) => p.def.interaction === interaction && p.def.mount !== 'wall');
     if (!candidates.length) return false;
-    const pf = candidates[Math.floor(Math.random() * candidates.length)];
-    const cells = footprintCells(pf.def, pf.item);
-    const [tx, ty] = cells[0].split(',').map(Number);
-    return this.goTo({ x: tx, y: ty }, new Set(cells), () => {
-      this.using = true;
-      this.placePetSprite();
-      const clip = USE_CLIP[interaction];
-      if (stay) this.pet.setBaseClip(clip);
-      else {
-        this.pet.play(clip, true);
-        this.waitMs = 2600;
+    // Va al mueble que le pilla más a mano y, dentro de él, a la celda más cercana a la que llegue
+    const here = this.petCell();
+    const options = candidates.map((pf) => ({ pf, cells: footprintCells(pf.def, pf.item) }));
+    for (const { cells } of byNearest(options, here)) {
+      const allowed = new Set(cells);
+      for (const target of cellsByDistance(cells, here)) {
+        const ok = this.goTo(target, allowed, () => {
+          this.using = true;
+          this.placePetSprite();
+          const clip = USE_CLIP[interaction];
+          if (stay) this.pet.setBaseClip(clip);
+          else {
+            this.pet.play(clip, true);
+            this.waitMs = 2600;
+          }
+        });
+        if (ok) return true;
       }
-    });
+    }
+    return false;
   }
 
   private wander(): void {
@@ -677,29 +703,41 @@ export class IsoRoom extends Container {
     if (this.sheltering) {
       // Llueve o nieva en el jardín: se queda al fondo, bajo el árbol.
       for (let tries = 0; tries < 12; tries++) {
-        const x = Math.min(this.room.gridWidth - 1, Math.floor(Math.random() * SHELTER));
-        const y = Math.min(this.room.gridHeight - 1, Math.floor(Math.random() * SHELTER));
+        const x = Math.min(this.room.gridWidth - 1, Math.floor(this.rng() * SHELTER));
+        const y = Math.min(this.room.gridHeight - 1, Math.floor(this.rng() * SHELTER));
         if ((x !== here.x || y !== here.y) && !blocked.has(`${x},${y}`) && this.goTo({ x, y })) return;
       }
       this.waitMs = 3000;
       return;
     }
-    // Con buen tiempo y de día, de vez en cuando se alegra.
+    // Elige según cómo es y cómo está: con hambre va al comedero, sucio a la fuente, cansado se
+    // sienta; con buen tiempo y de día a veces se alegra. Si no, pasea a una celda libre cercana.
     const sunny = !!this.sky && !!this.look && this.sky.daylight > 0.8 && this.look.cover < 0.5 && this.look.feel !== 'hot';
-    if (sunny && Math.random() < 0.15) {
-      this.pet.play('happy', true);
-      this.waitMs = 2400;
-      return;
-    }
-    // A veces usa un mueble (jugar, sentarse, bañarse); si no, pasea a una celda libre cercana.
-    if (Math.random() < 0.3) {
-      const kinds: Interaction[] = ['play', 'sit', 'bathe', 'eat'];
-      const kind = kinds[Math.floor(Math.random() * kinds.length)];
-      if (this.useFurniture(kind, false)) return;
+    const available = new Set<Interaction>();
+    for (const p of this.placed.values()) if (p.def.interaction && p.def.mount !== 'wall') available.add(p.def.interaction);
+    const action = chooseRoomAction({
+      mind: this.mind,
+      available,
+      sunny,
+      recent: this.recent,
+      lastAt: this.lastAt,
+      now: this.lifeMs,
+      rng: this.rng,
+    });
+    if (action) {
+      this.recent = pushRecent(this.recent, action.id, ROOM_CONFIG.antiRepeat.window);
+      this.lastAt[action.id] = this.lifeMs;
+      if (action.id === 'cheer') {
+        this.pet.play('happy', true);
+        this.waitMs = 2400;
+        return;
+      }
+      // Si no llega al mueble (camino tapado), se queda en un paseo
+      if (action.interaction && this.useFurniture(action.interaction, false)) return;
     }
     for (let tries = 0; tries < 12; tries++) {
-      const x = Math.max(0, Math.min(this.room.gridWidth - 1, here.x + Math.round((Math.random() - 0.5) * 8)));
-      const y = Math.max(0, Math.min(this.room.gridHeight - 1, here.y + Math.round((Math.random() - 0.5) * 8)));
+      const x = Math.max(0, Math.min(this.room.gridWidth - 1, here.x + Math.round((this.rng() - 0.5) * 8)));
+      const y = Math.max(0, Math.min(this.room.gridHeight - 1, here.y + Math.round((this.rng() - 0.5) * 8)));
       if ((x !== here.x || y !== here.y) && !blocked.has(`${x},${y}`) && this.goTo({ x, y })) return;
     }
     this.waitMs = 1500;
@@ -707,6 +745,7 @@ export class IsoRoom extends Container {
 
   update(ticker: Ticker): void {
     const dt = ticker.deltaMS;
+    this.lifeMs += dt;
     if (this.startleMs > 0) this.startleMs -= dt;
     if (this.room) {
       this.drawAmbient(dt);
@@ -737,7 +776,7 @@ export class IsoRoom extends Container {
         const cb = this.onArrive;
         this.onArrive = null;
         this.pet.setBaseClip(this.activity === 'sleep' && !cb ? 'sleep' : this.restClip);
-        this.waitMs = (1500 + Math.random() * 3000) * this.calm;
+        this.waitMs = (1500 + this.rng() * 3000) * this.calm;
         cb?.();
       }
       return;

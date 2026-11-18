@@ -87,7 +87,7 @@ Sin cambios respecto a la "Fase 3" anterior:
 - `PATCH /habitat/items/:id`, OpenAPI y tests.
 
 ## Fase 5: sala isométrica en `shared/scene` + escritorio (PR 5) — hecha
-- En `shared/scene/src/iso/`: `projection.ts`, `pathfind.ts` (A*). El `petWander.ts` previsto (necesidades → mueble con `interaction`) no llegó a existir: el paseo vive en `IsoRoom.wander()` y elige al azar. Queda pendiente en la fase 2 del anexo A de `docs/specs/spec-37-mejoras-cerebro-pockai.md`.
+- En `shared/scene/src/iso/`: `projection.ts`, `pathfind.ts` (A*). El paseo lo decide `src/room/petWander.ts` (necesidades y personalidad → mueble con `interaction`); ver el anexo A de `docs/specs/spec-37-mejoras-cerebro-pockai.md`.
 - `src/room/IsoRoom.ts`: paredes, suelo con el tema, contenedor con `sortableChildren` ordenado por `isoDepth`, modo edición (arrastrar, giro con R o botón, huella verde/roja), modo noche y `prefers-reduced-motion`. Además, un culling de bucle: `ticker.stop()` cuando la escena no se ve.
 - Arte de muebles: `scripts/sprites/furniture.ts` → `shared/assets/furniture/<id>_{a,b}.svg`, rasterizado a un atlas, más la hoja de contactos de muebles.
 - Escritorio: `HabitatTab.svelte` y `HomeScene.svelte` montan la escena y traducen los eventos a la API (`moveFurniture`). Se mantiene el arrastre del Pockai al escritorio. Se elimina `FURN_ICON`.

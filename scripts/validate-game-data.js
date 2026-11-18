@@ -101,6 +101,36 @@ if (pers) {
   }
   console.log('✓ balance.json: personalidad (5 dimensiones, evolución y autonomía) validada');
 
+  // 1c-ter. Sala del hábitat: acciones con pesos por dimensión y empuje por necesidades
+  const roomCfg = pers.room;
+  if (roomCfg) {
+    const where = 'balance.personality.room';
+    const INTERACTIONS = ['sleep', 'eat', 'play', 'bathe', 'sit'];
+    const ROOM_BOOSTS = ['lowHunger', 'highHunger', 'lowHygiene', 'highHygiene', 'lowEnergy', 'highEnergy', 'lowHappiness', 'highHappiness'];
+    const ar = roomCfg.antiRepeat;
+    if (!ar || !Number.isInteger(ar.window) || ar.window < 1 || !(ar.penalty > 0 && ar.penalty <= 1) || !Number.isInteger(ar.top) || ar.top < 1 || !(ar.margin >= 0)) {
+      throw new Error(`${where}.antiRepeat inválido`);
+    }
+    if (!(roomCfg.needs?.low >= 0 && roomCfg.needs.high > roomCfg.needs.low && roomCfg.needs.high <= 100)) throw new Error(`${where}.needs inválido`);
+    const actions = Object.entries(roomCfg.actions ?? {});
+    for (const [id, a] of actions) {
+      const at = `${where}.actions.${id}`;
+      if (!(typeof a.base === 'number' && a.base > 0)) throw new Error(`${at}.base debe ser > 0`);
+      for (const [k, v] of Object.entries(a.weights ?? {})) {
+        if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${at}.weights.${k} inválido`);
+      }
+      if (a.interaction !== undefined && !INTERACTIONS.includes(a.interaction)) throw new Error(`${at}.interaction desconocida: ${a.interaction}`);
+      if (a.cooldownMs !== undefined && !(a.cooldownMs > 0)) throw new Error(`${at}.cooldownMs inválido`);
+      for (const [k, v] of Object.entries(a.boost ?? {})) {
+        if (!ROOM_BOOSTS.includes(k) || !(typeof v === 'number' && v > 0)) throw new Error(`${at}.boost.${k} inválido`);
+      }
+      for (const k of Object.keys(a.requires ?? {})) if (k !== 'sunny') throw new Error(`${at}.requires.${k}: requisito desconocido`);
+    }
+    // Sin muebles ni buen tiempo tiene que quedar algo que hacer
+    if (!actions.some(([, a]) => !a.interaction && !a.requires)) throw new Error(`${where}.actions: hace falta una acción sin mueble ni requisitos`);
+    console.log(`✓ balance.json: sala del hábitat (${actions.length} acciones) validada`);
+  }
+
   // 1c-bis. Cerebro del escritorio: conductas con pesos por dimensión y requisitos declarativos
   const desk = pers.desktop;
   if (desk) {

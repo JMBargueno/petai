@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.effects.json"
   },
   "dependencies": {
+    "@pockai/mind": "workspace:*",
     "pixi.js": "8.22.0"
   },
   "devDependencies": {
