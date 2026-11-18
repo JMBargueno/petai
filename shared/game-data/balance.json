@@ -225,7 +225,7 @@
         "name": "Parejas de memoria",
         "durationSeconds": 90,
         "minDurationSeconds": 15,
-        "maxScorePerSecond": 1,
+        "maxScorePerSecond": 2,
         "coinsPerPoint": 0.8,
         "maxCoins": 40,
         "xpPerPoint": 1.5,

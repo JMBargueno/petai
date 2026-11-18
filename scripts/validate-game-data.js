@@ -56,6 +56,13 @@ for (const [id, g] of Object.entries(mg.games)) {
     throw new Error(`minijuego ${id}: minDurationSeconds no puede superar durationSeconds`);
   }
 }
+// Spec 39: todo minijuego tiene variante accesible.
+const a11y = readJson('shared/game-data/accessibility.json');
+for (const id of Object.keys(mg.games)) {
+  if (!a11y.minigames || !a11y.minigames[id]) {
+    throw new Error(`minijuego ${id}: falta su variante accesible en accessibility.json (minigames.${id})`);
+  }
+}
 console.log(`✓ balance.json: sueño, evolución y ${Object.keys(mg.games).length} minijuegos validados`);
 
 // 1c. Personalidad: 5 dimensiones con bandas contiguas 0-100 y keyword única

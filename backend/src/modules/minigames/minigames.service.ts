@@ -46,6 +46,7 @@ export class MinigamesService {
       maxScorePerSecond: g.maxScorePerSecond,
       maxCoins: g.maxCoins,
       maxXp: g.maxXp,
+      energyCost: this.cfg.energyCost,
     }));
   }
 
@@ -166,7 +167,7 @@ export class MinigamesService {
     await this.bonding.recordInteraction(session.petId, userId, 'minigame');
     this.realtime?.emitPetAction(userId, session.petId, 'minigame_finished', { gameId: session.gameId, score });
     // Misiones y logros de minijuegos.
-    this.events?.emit('minigame:finished', { userId, petId: session.petId, score });
+    this.events?.emit('minigame:finished', { userId, petId: session.petId, gameId: session.gameId, score });
 
     return { score, rewards, pet };
   }

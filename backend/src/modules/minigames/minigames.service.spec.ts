@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
 import { BondingService } from '../bonding/bonding.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const CFG = {
   minigames: {
@@ -27,6 +28,7 @@ describe('MinigamesService', () => {
     user: { update: jest.fn() },
   };
   const pets: any = { getPetById: jest.fn(), applyActivityReward: jest.fn() };
+  const events: any = { emit: jest.fn() };
   const bonding: any = { recordInteraction: jest.fn().mockResolvedValue({ bonding: 2, bondingTier: 'acquainted', tierChanged: null }) };
 
   beforeEach(async () => {
@@ -38,9 +40,14 @@ describe('MinigamesService', () => {
         { provide: GameDataService, useValue: { getBalance: () => CFG } },
         { provide: PetsService, useValue: pets },
         { provide: BondingService, useValue: bonding },
+        { provide: EventEmitter2, useValue: events },
       ],
     }).compile();
     service = mod.get(MinigamesService);
+  });
+
+  it('el listado incluye el coste de energía (el cliente avisa si no llega)', () => {
+    expect(service.listGames()).toEqual([expect.objectContaining({ id: 'reflex', energyCost: 10 })]);
   });
 
   describe('start', () => {
@@ -96,6 +103,8 @@ describe('MinigamesService', () => {
       expect(prisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ coins: { increment: 30 } }) }));
       expect(pets.applyActivityReward).toHaveBeenCalled();
+      // Spec 39: el evento lleva el juego, para misiones y logros por juego.
+      expect(events.emit).toHaveBeenCalledWith('minigame:finished', { userId: 'u', petId: 'p', gameId: 'reflex', score: 50 });
     });
 
     it('limita la recompensa al máximo del juego', async () => {
