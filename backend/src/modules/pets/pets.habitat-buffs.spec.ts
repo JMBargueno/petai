@@ -80,9 +80,12 @@ describe('PetsService · buffs del hábitat en el lazy tick (spec 10)', () => {
     });
 
     it('con muebles el decaimiento se reduce en el porcentaje del buff (solo higiene y felicidad)', async () => {
-      // higiene 0.1 + 0.15 + 0.15 = 0.4; felicidad 0.05 + 0.08 + 0.07 + 0.1 = 0.3
+      // higiene 0.08 + 0.12 + 0.1 + 0.1 = 0.4; felicidad 0.05 + 0.06 + 0.05 + 0.08 + 0.03 + 0.03 = 0.3
       const { service } = makeServices({
-        p1: ['fountain_water', 'garden_pond', 'final_garden', 'toy_ball', 'garden_bench', 'crystal_lamp'],
+        p1: [
+          'fountain_water', 'garden_pond', 'final_garden', 'star_fountain',
+          'toy_ball', 'garden_bench', 'crystal_lamp', 'food_bowl', 'garden_swing',
+        ],
       });
       const updated = await (service as any).applyLazyTick(awakePet());
       expect(updated.hygiene).toBe(97); // 100 − 2.5·2·(1 − 0.4)
@@ -93,11 +96,11 @@ describe('PetsService · buffs del hábitat en el lazy tick (spec 10)', () => {
     });
 
     it('usa el valor recortado al tope, no la suma cruda', async () => {
-      // higiene cruda 2×0.15 + 2×0.15 = 0.6 → tope 0.4
+      // higiene cruda 2×0.1 + 2×0.12 = 0.44 → tope 0.4
       const { service } = makeServices({ p1: ['final_garden', 'final_garden', 'garden_pond', 'garden_pond'] });
       const updated = await (service as any).applyLazyTick(awakePet());
-      expect(updated.hygiene).toBe(97); // con la suma cruda sería 100 − 5·0.4 = 98
-      expect(updated.happiness).toBe(93.6); // felicidad 0.2 (bajo el tope 0.3): 100 − 8·0.8
+      expect(updated.hygiene).toBe(97); // con la suma cruda sería 100 − 5·0.56 = 97.2
+      expect(updated.happiness).toBe(93.28); // felicidad 0.16 (bajo el tope 0.3): 100 − 8·0.84
     });
   });
 
@@ -108,16 +111,16 @@ describe('PetsService · buffs del hábitat en el lazy tick (spec 10)', () => {
       expect(updated.energy).toBe(40); // 20 + 20·1
     });
 
-    it('con la cama dormir recupera un 20 % más', async () => {
+    it('con la cama dormir recupera un 15 % más', async () => {
       const { service } = makeServices({ p1: ['soft_bed'] });
       const updated = await (service as any).applyLazyTick(sleepingPet());
-      expect(updated.energy).toBe(44); // 20 + 20·1.2
+      expect(updated.energy).toBe(43); // 20 + 20·1.15
     });
 
-    it('recorta al tope (3 camas = 0.6 → 0.4)', async () => {
+    it('recorta al tope (3 camas = 0.45 → 0.4)', async () => {
       const { service } = makeServices({ p1: ['soft_bed', 'soft_bed', 'soft_bed'] });
       const updated = await (service as any).applyLazyTick(sleepingPet());
-      expect(updated.energy).toBe(48); // 20 + 20·1.4 (con la suma cruda serían 52)
+      expect(updated.energy).toBe(48); // 20 + 20·1.4 (con la suma cruda serían 49)
     });
 
     it('despierto no afecta al gasto de energía', async () => {
@@ -133,8 +136,8 @@ describe('PetsService · buffs del hábitat en el lazy tick (spec 10)', () => {
       prisma.pet.findMany.mockResolvedValue([awakePet('p1'), sleepingPet('p2')]);
       const pets = await service.getPets('u1');
       expect(prisma.habitatItem.findMany).toHaveBeenCalledTimes(1);
-      expect(pets.find((p: any) => p.id === 'p1')!.hygiene).toBe(95.5); // 100 − 2.5·2·0.9
-      expect(pets.find((p: any) => p.id === 'p2')!.energy).toBe(44);
+      expect(pets.find((p: any) => p.id === 'p1')!.hygiene).toBe(95.4); // 100 − 2.5·2·0.92
+      expect(pets.find((p: any) => p.id === 'p2')!.energy).toBe(43);
     });
 
     it('un tick sin cambios (<36 s) no consulta el hábitat', async () => {

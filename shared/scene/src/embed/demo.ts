@@ -12,6 +12,9 @@ const PALETTES: Record<string, { primary: string; secondary: string }> = {
   ignisaur: { primary: '#E25822', secondary: '#F3C544' },
   axolunar: { primary: '#38A3A5', secondary: '#80ED99' },
   florabud: { primary: '#57CC99', secondary: '#C7F9CC' },
+  livolt: { primary: '#FFD166', secondary: '#FFEBB3' },
+  inktopus: { primary: '#4A4E69', secondary: '#9A8C98' },
+  solarejo: { primary: '#F4F1DE', secondary: '#E07A5F' },
 };
 /** Prendas de ejemplo por ranura (ids de shared/game-data/accessories.json). */
 const DEMO_ACCESSORIES: Record<string, string[]> = {

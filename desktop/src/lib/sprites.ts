@@ -79,6 +79,18 @@ const SPECIES_REGISTRY: Record<string, { base: string; mask: string; anim: AnimM
   egg: { base: eggBase, mask: eggMask, anim: eggAnim as AnimMetadata },
 };
 
+// Hojas adult del resto de especies: se descubren solas, así que una especie nueva no requiere
+// tocar este archivo (las cuatro de arriba se importan a mano por compatibilidad).
+const ADULT_PNGS = import.meta.glob('@shared/assets/species/*/{base,mask}.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const ADULT_ANIMS = import.meta.glob('@shared/assets/species/*/anim.json', { eager: true, import: 'default' }) as Record<string, AnimMetadata>;
+for (const [file, anim] of Object.entries(ADULT_ANIMS)) {
+  const m = file.match(/species\/([^/]+)\/anim\.json$/);
+  const dir = file.slice(0, -'anim.json'.length);
+  const base = ADULT_PNGS[`${dir}base.png`];
+  const mask = ADULT_PNGS[`${dir}mask.png`];
+  if (m && base && mask && !SPECIES_REGISTRY[m[1]]) SPECIES_REGISTRY[m[1]] = { base, mask, anim };
+}
+
 // Hojas por etapa (GUIA_ARTISTICA §7.4): species/<id>/<baby|juvenile|final>/. Se descubren solas.
 const STAGE_PNGS = import.meta.glob('@shared/assets/species/*/{baby,juvenile,final}/{base,mask}.png', {
   eager: true,
@@ -108,6 +120,13 @@ const PREVIEW_SVG: Record<string, string> = {
   axolunar: axolunarIdleSvg,
   florabud: florabudIdleSvg,
 };
+
+// Vistas previas del resto de especies (sprites/<id>_idle.svg): también se descubren solas.
+const IDLE_SVGS = import.meta.glob('@shared/assets/sprites/*_idle.svg', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+for (const [file, svg] of Object.entries(IDLE_SVGS)) {
+  const m = file.match(/sprites\/([^/]+)_idle\.svg$/);
+  if (m && !PREVIEW_SVG[m[1]]) PREVIEW_SVG[m[1]] = svg;
+}
 
 export function normalizeSpecies(speciesId: string): string {
   return SPECIES_REGISTRY[speciesId] && !speciesId.includes('/') ? speciesId : 'ignisaur';

@@ -56,6 +56,48 @@
     }
   },
   {
+    "id": "spark_candy",
+    "name": "Caramelo de Chispa",
+    "kind": "food",
+    "description": "Un caramelo que cosquillea en la lengua y deja un zumbido alegre. Favorita de las criaturas de electricidad.",
+    "priceCoins": 25,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 20,
+      "happiness": 15,
+      "energy": 5,
+      "health": 5
+    }
+  },
+  {
+    "id": "midnight_berry",
+    "name": "Mora de Medianoche",
+    "kind": "food",
+    "description": "Una mora oscura y dulce que solo madura sin luz. Favorita de las criaturas de sombra.",
+    "priceCoins": 25,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 20,
+      "happiness": 15,
+      "energy": 5,
+      "health": 5
+    }
+  },
+  {
+    "id": "dawn_honey",
+    "name": "Miel de Alba",
+    "kind": "food",
+    "description": "Miel dorada recogida con el primer rayo del día. Favorita de las criaturas de luz.",
+    "priceCoins": 25,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 20,
+      "happiness": 15,
+      "energy": 5,
+      "health": 5
+    }
+  },
+  {
     "id": "cake",
     "name": "Pastel de Fresas",
     "kind": "food",

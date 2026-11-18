@@ -82,5 +82,89 @@
       "secondary": "#C7F9CC",
       "accent": "#22577A"
     }
+  },
+  {
+    "id": "livolt",
+    "name": "Livolt",
+    "description": "Una polilla inquieta de alas chispeantes que nació cuando una bombilla la electrificó. Revolotea hacia todo lo que brilla y le encanta que le hagan caso.",
+    "element": "electric",
+    "rarity": "rare",
+    "baseStats": {
+      "hp": 46,
+      "atk": 54,
+      "def": 44,
+      "vel": 65,
+      "esp": 56
+    },
+    "favoriteFood": "spark_candy",
+    "spriteKey": "livolt",
+    "personalityBias": {
+      "curiosity": 70,
+      "sociability": 75,
+      "bravery": 45,
+      "affection": 55,
+      "temper": 80
+    },
+    "defaultPalette": {
+      "primary": "#FFD166",
+      "secondary": "#FFEBB3",
+      "accent": "#FF9F1C"
+    }
+  },
+  {
+    "id": "inktopus",
+    "name": "Inktopus",
+    "description": "Un pulpito reservado que guarda secretos en gotas de tinta. Observa todo con curiosidad desde su rincón y solo se abre con quien se gana su confianza.",
+    "element": "shadow",
+    "rarity": "rare",
+    "baseStats": {
+      "hp": 53,
+      "atk": 44,
+      "def": 55,
+      "vel": 48,
+      "esp": 65
+    },
+    "favoriteFood": "midnight_berry",
+    "spriteKey": "inktopus",
+    "personalityBias": {
+      "curiosity": 75,
+      "sociability": 30,
+      "bravery": 40,
+      "affection": 60,
+      "temper": 25
+    },
+    "defaultPalette": {
+      "primary": "#4A4E69",
+      "secondary": "#9A8C98",
+      "accent": "#22223B"
+    }
+  },
+  {
+    "id": "solarejo",
+    "name": "Solarejo",
+    "description": "Un conejo risueño con las puntas de las orejas encendidas como un amanecer. Se acerca a todo el mundo y contagia su buen humor.",
+    "element": "light",
+    "rarity": "rare",
+    "baseStats": {
+      "hp": 54,
+      "atk": 51,
+      "def": 52,
+      "vel": 56,
+      "esp": 52
+    },
+    "favoriteFood": "dawn_honey",
+    "spriteKey": "solarejo",
+    "personalityBias": {
+      "curiosity": 55,
+      "sociability": 80,
+      "bravery": 50,
+      "affection": 75,
+      "temper": 55
+    },
+    "defaultPalette": {
+      "primary": "#F4F1DE",
+      "secondary": "#E07A5F",
+      "accent": "#F2CC8F"
+    }
   }
 ]

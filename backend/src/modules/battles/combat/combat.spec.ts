@@ -353,8 +353,9 @@ describe('motor de combate', () => {
       expect(a.skills.every((s) => s.element === 'neutral' || s.element === a.element)).toBe(true);
       const levels = new Set(Array.from({ length: 60 }, (_, i) => generateBot(i, 10, species, skills, cfg).level));
       expect(levels.size).toBe(3);
-      const species2 = new Set(Array.from({ length: 60 }, (_, i) => generateBot(i, 10, species, skills, cfg).speciesId));
-      expect(species2.size).toBe(3);
+      // Con semillas suficientes salen todas las especies del catálogo, sea cual sea su tamaño.
+      const species2 = new Set(Array.from({ length: 600 }, (_, i) => generateBot(i, 10, species, skills, cfg).speciesId));
+      expect(species2.size).toBe(species.length);
     });
 
     it('nunca baja del nivel 1 y es un rival justo frente a un jugador del mismo nivel', () => {

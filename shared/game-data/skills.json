@@ -209,5 +209,158 @@
       "turns": 3,
       "value": 0.25
     }
+  },
+  {
+    "id": "spark",
+    "name": "Chispa",
+    "element": "electric",
+    "kind": "attack",
+    "power": 45,
+    "accuracy": 100,
+    "cooldown": 0,
+    "unlockLevel": 1,
+    "description": "Un chispazo rápido. Puede entumecer.",
+    "inflicts": {
+      "kind": "slow",
+      "chance": 0.15,
+      "turns": 2,
+      "value": 0.3
+    }
+  },
+  {
+    "id": "volt_surge",
+    "name": "Descarga",
+    "element": "electric",
+    "kind": "attack",
+    "power": 80,
+    "accuracy": 90,
+    "cooldown": 2,
+    "unlockLevel": 10,
+    "description": "Una descarga que recorre al rival. Suele entumecer.",
+    "inflicts": {
+      "kind": "slow",
+      "chance": 0.4,
+      "turns": 2,
+      "value": 0.3
+    }
+  },
+  {
+    "id": "thunderclap",
+    "name": "Trueno",
+    "element": "electric",
+    "kind": "attack",
+    "power": 105,
+    "accuracy": 80,
+    "cooldown": 3,
+    "unlockLevel": 25,
+    "description": "El rayo más potente. Casi siempre entumece.",
+    "inflicts": {
+      "kind": "slow",
+      "chance": 0.6,
+      "turns": 2,
+      "value": 0.3
+    }
+  },
+  {
+    "id": "shade_touch",
+    "name": "Roce Sombrío",
+    "element": "shadow",
+    "kind": "attack",
+    "power": 45,
+    "accuracy": 100,
+    "cooldown": 0,
+    "unlockLevel": 1,
+    "description": "Un toque de sombra. Puede debilitar la defensa.",
+    "inflicts": {
+      "kind": "sap",
+      "chance": 0.15,
+      "turns": 3,
+      "value": 0.25
+    }
+  },
+  {
+    "id": "umbral_wave",
+    "name": "Ola Umbría",
+    "element": "shadow",
+    "kind": "attack",
+    "power": 80,
+    "accuracy": 90,
+    "cooldown": 2,
+    "unlockLevel": 10,
+    "description": "Una ola de oscuridad. Suele debilitar la defensa.",
+    "inflicts": {
+      "kind": "sap",
+      "chance": 0.4,
+      "turns": 3,
+      "value": 0.25
+    }
+  },
+  {
+    "id": "eclipse",
+    "name": "Eclipse",
+    "element": "shadow",
+    "kind": "attack",
+    "power": 105,
+    "accuracy": 80,
+    "cooldown": 3,
+    "unlockLevel": 25,
+    "description": "La sombra lo cubre todo. Casi siempre debilita la defensa.",
+    "inflicts": {
+      "kind": "sap",
+      "chance": 0.6,
+      "turns": 3,
+      "value": 0.25
+    }
+  },
+  {
+    "id": "glimmer",
+    "name": "Destello",
+    "element": "light",
+    "kind": "attack",
+    "power": 45,
+    "accuracy": 100,
+    "cooldown": 0,
+    "unlockLevel": 1,
+    "description": "Un destello de luz. Puede quemar.",
+    "inflicts": {
+      "kind": "burn",
+      "chance": 0.15,
+      "turns": 3,
+      "value": 0
+    }
+  },
+  {
+    "id": "radiant_beam",
+    "name": "Rayo Radiante",
+    "element": "light",
+    "kind": "attack",
+    "power": 80,
+    "accuracy": 90,
+    "cooldown": 2,
+    "unlockLevel": 10,
+    "description": "Un haz de luz concentrada. Suele quemar.",
+    "inflicts": {
+      "kind": "burn",
+      "chance": 0.4,
+      "turns": 3,
+      "value": 0
+    }
+  },
+  {
+    "id": "solar_flare",
+    "name": "Fulgor Solar",
+    "element": "light",
+    "kind": "attack",
+    "power": 105,
+    "accuracy": 80,
+    "cooldown": 3,
+    "unlockLevel": 25,
+    "description": "La luz más intensa. Casi siempre quema.",
+    "inflicts": {
+      "kind": "burn",
+      "chance": 0.6,
+      "turns": 3,
+      "value": 0
+    }
   }
 ]

@@ -21,15 +21,15 @@ describe('habitat-buffs (spec 10, cálculo puro con el game-data real)', () => {
   });
 
   it('recorta al tope de buffCaps (claves con sufijo _max) cuando se repiten muebles', () => {
-    // 3 × soft_bed = 0.6 de energy_recovery_boost (tope 0.4); 2 × final_garden + 2 × garden_pond = 0.6 de higiene (tope 0.4)
+    // 3 × soft_bed = 0.45 de energy_recovery_boost (tope 0.4); 2 × final_garden + 2 × garden_pond = 0.44 de higiene (tope 0.4)
     const buffs = computeActiveBuffs(
       ['soft_bed', 'soft_bed', 'soft_bed', 'final_garden', 'final_garden', 'garden_pond', 'garden_pond'],
       habitats,
     );
     expect(buffs.energy_recovery_boost).toBe(0.4);
     expect(buffs.hygiene_decay_reduction).toBe(0.4);
-    // happiness: 2 × 0.1 = 0.2, por debajo del tope 0.3 → sin recortar
-    expect(buffs.happiness_decay_reduction).toBeCloseTo(0.2, 10);
+    // happiness: 2 × 0.08 = 0.16, por debajo del tope 0.3 → sin recortar
+    expect(buffs.happiness_decay_reduction).toBeCloseTo(0.16, 10);
     // 3 × final_throne = 0.18 de combat_mood_bonus (tope 0.1)
     expect(computeActiveBuffs(['final_throne', 'final_throne', 'final_throne'], habitats).combat_mood_bonus).toBe(0.1);
   });

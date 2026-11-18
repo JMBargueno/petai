@@ -122,6 +122,28 @@ const BASE: Record<Stage, StageSpec> = {
 
 const stage = (st: Stage, patch: Partial<StageSpec> & Hooks = {}): StageSpec & Hooks => ({ ...BASE[st], ...patch });
 
+/**
+ * Como `stage`, pero con la cabeza `dy` px más baja: deja sitio a orejas, antenas o capuchas sin
+ * pasarse de la altura máxima de la etapa. Con un solo volumen se aplasta el cuerpo; con dos, se
+ * acorta el cuello.
+ */
+function lowered(st: Stage, dy: number, patch: Partial<StageSpec> & Hooks = {}): StageSpec & Hooks {
+  const b = BASE[st];
+  const down = (e: E): E => [e[0], e[1] + dy, e[2], e[3]];
+  if (b.head) {
+    return {
+      ...b,
+      head: down(b.head),
+      eye: { ...b.eye, y: b.eye.y + dy },
+      marks: { ...b.marks, head: (b.marks?.head ?? []).map(down) },
+      neck: [b.neck[0], b.neck[1] + Math.round(dy / 2)],
+      ...patch,
+    };
+  }
+  const half = dy / 2;
+  return { ...b, torso: [b.torso[0], b.torso[1] + half, b.torso[2], b.torso[3] - half], eye: { ...b.eye, y: b.eye.y + Math.round(half) }, ...patch };
+}
+
 // ───────────────────────── Ignisaurio (fuego) ─────────────────────────
 // Rasgo icónico: la llama de la cola. Segundo rasgo: las púas del lomo.
 
@@ -307,7 +329,209 @@ const FLORABUD: PixelSpecies = {
   },
 };
 
-export const PIXEL_SPECIES: PixelSpecies[] = [IGNISAUR, AXOLUNAR, FLORABUD];
+// ───────────────────────── Livolt (eléctrico, raro) ─────────────────────────
+// Rasgo icónico: las alas con la marca de corazón. Segundo rasgo: las antenas en zigzag.
+
+/** Ala: lóbulo girado que sale de la espalda. `heart` le pinta la marca de corazón. */
+function wing(g: Grid, part: number, x: number, y: number, rx: number, ry: number, deg: number, heart = false): void {
+  g.ellipse(part, 'trait', x, y, rx, ry, { rot: deg });
+  if (heart) {
+    const r = Math.max(1.2, rx * 0.2);
+    g.ellipse(part, 'mark', x - r * 0.8, y - r * 0.4, r, r, { flat: true, clip: part, keep: true });
+    g.ellipse(part, 'mark', x + r * 0.8, y - r * 0.4, r, r, { flat: true, clip: part, keep: true });
+    g.poly(part, 'mark', [[x - r * 1.8, y], [x + r * 1.8, y], [x, y + r * 2.2]], { flat: true, clip: part, keep: true });
+  }
+}
+
+/** Antena recta con bolita, o en forma de rayo en la etapa final. */
+function antenna(g: Grid, part: number, x: number, y: number, len: number, lean: number, bolt = false): void {
+  if (bolt) {
+    g.poly(part, 'mark', [[x - 1, y], [x + lean * 0.5 - 1.5, y - len * 0.5], [x + lean * 0.5 + 0.5, y - len * 0.5], [x + lean - 1, y - len], [x + lean + 2, y - len * 0.4], [x + lean * 0.5 + 1, y - len * 0.4], [x + 1.5, y]], { flat: true });
+    return;
+  }
+  g.poly(part, 'mark', [[x - 0.9, y], [x + 0.9, y], [x + lean + 0.9, y - len], [x + lean - 0.9, y - len]], { flat: true });
+  g.ellipse(part, 'trait', x + lean, y - len, 1.7, 1.7, { flat: true });
+}
+
+const LIVOLT: PixelSpecies = {
+  id: 'livolt',
+  stages: {
+    baby: lowered('baby', 3, {
+      behind: (g, _s, p) => {
+        appendage(g, p, 20, 46, () => wing(g, 20, 17.5, 45, 4.5, 3.6, -20));
+        appendage(g, p, 44, 46, () => wing(g, 21, 45.5, 45.5, 3.5, 3, 20));
+      },
+      onHead: (g, _s, p) => appendage(g, p, 31, 40, () => { antenna(g, 22, 28.5, 40, 3, -1); antenna(g, 23, 34.5, 40, 3, 1); }),
+    }),
+    juvenile: lowered('juvenile', 4, {
+      behind: (g, _s, p) => {
+        appendage(g, p, 18, 42, () => wing(g, 20, 12.5, 39, 8, 6, -25));
+        appendage(g, p, 45, 42, () => wing(g, 21, 48.5, 40, 5, 5.5, 25));
+      },
+      onHead: (g, _s, p) => appendage(g, p, 31, 32, () => { antenna(g, 22, 27.5, 32.5, 5, -2); antenna(g, 23, 35, 32.5, 5, 2); }),
+    }),
+    adult: lowered('adult', 5, {
+      belly: [34, 50, 7.5, 5],
+      behind: (g, _s, p) => {
+        appendage(g, p, 18, 40, () => { wing(g, 20, 11.5, 33.5, 9.5, 7.5, -28, true); wing(g, 24, 12.5, 45, 7, 5.5, 20); });
+        appendage(g, p, 46, 40, () => { wing(g, 21, 50.5, 34.5, 6, 7, 28); wing(g, 25, 50, 45, 4.5, 4.5, -20); });
+      },
+      onHead: (g, _s, p) => {
+        // Collar de pelusa en el cuello.
+        g.ellipse(13, 'belly', 32, 44.5, 9.5, 3, { flat: true });
+        appendage(g, p, 32, 22, () => { antenna(g, 22, 27, 22.5, 6, -3); antenna(g, 23, 37, 22.5, 6, 3); });
+      },
+    }),
+    final: lowered('final', 5, {
+      belly: [34.5, 50, 8.5, 5.5],
+      emblem: [34.5, 50, 2, 2],
+      behind: (g, _s, p) => {
+        appendage(g, p, 18, 37, () => {
+          wing(g, 20, 10.5, 27.5, 9.5, 8.5, -30, true);
+          wing(g, 24, 10.5, 42.5, 8, 6, 22);
+          // Colas de ala: la pieza nueva de la etapa final.
+          g.poly(26, 'trait', [[6, 46], [11, 46.5], [5.5, 55]], { flat: true });
+        });
+        appendage(g, p, 47, 37, () => { wing(g, 21, 52.5, 29, 6.5, 8, 30); wing(g, 25, 53, 42, 5, 5, -22); g.poly(27, 'trait', [[52, 45.5], [56.5, 45], [57, 53]], { flat: true }); });
+      },
+      onHead: (g, _s, p) => {
+        g.ellipse(13, 'belly', 32.5, 40.5, 10.5, 3.2, { flat: true });
+        appendage(g, p, 32.5, 18, () => { antenna(g, 22, 27, 18.5, 9.5, -4, true); antenna(g, 23, 38, 18.5, 9.5, 2, true); });
+      },
+    }),
+  },
+};
+
+// ───────────────────────── Inktopus (sombra, raro) ─────────────────────────
+// Rasgo icónico: los tentáculos que gotean tinta. Segundo rasgo: el manto en punta, como una capucha.
+
+/** Tentáculo: lóbulo que sale de la base del cuerpo, con la punta enroscada. */
+function tentacle(g: Grid, part: number, x: number, y: number, len: number, deg: number, drip = false): void {
+  const r = (deg * Math.PI) / 180;
+  const ex = x + Math.cos(r) * len;
+  const ey = y + Math.sin(r) * len;
+  g.ellipse(part, 'body', (x + ex) / 2, (y + ey) / 2, len / 2 + 1, 2.3, { rot: deg });
+  g.ellipse(part, 'body', ex, ey - 1.2, 2.2, 2.2);
+  if (drip) g.ellipse(part + 40, 'mark', ex, ey + 3.2, 1.3, 1.9, { flat: true });
+}
+
+/** Punta del manto: convierte la cabeza redonda en capucha. */
+const hood = (g: Grid, part: number, x: number, base: number, w: number, h: number) =>
+  g.poly(part, 'body', [[x - w, base], [x - w * 0.35, base - h * 0.75], [x + 0.5, base - h], [x + w * 0.5, base - h * 0.7], [x + w, base]], { keep: true });
+
+const INKTOPUS: PixelSpecies = {
+  id: 'inktopus',
+  stages: {
+    baby: stage('baby', {
+      feet: { near: [37, 58, 4, 1.9], far: [26.5, 57.8, 3.6, 1.8] },
+      behind: (g) => { tentacle(g, 25, 21, 55, 4, 165); tentacle(g, 26, 43, 55.5, 3.5, 15); },
+      onHead: (g) => hood(g, 4, 31, 41.5, 6, 6.5),
+    }),
+    juvenile: stage('juvenile', {
+      arm: undefined,
+      farArm: undefined,
+      feet: { near: [37.5, 57.8, 5.5, 2.3], far: [25, 57.5, 4.8, 2.2] },
+      behind: (g, _s, p) => {
+        tail(g, p, 19, 53, () => tentacle(g, 25, 19.5, 53, 7.5, 170, true));
+        tentacle(g, 26, 44, 53.5, 6, 12);
+        tentacle(g, 27, 19, 48, 5.5, 200);
+      },
+      onHead: (g) => hood(g, 4, 31, 31.5, 7.5, 6.5),
+    }),
+    adult: stage('adult', {
+      head: [32, 29, 14, 12.5],
+      torso: [30.5, 48, 12, 8.5],
+      arm: undefined,
+      farArm: undefined,
+      belly: [34, 50, 6.5, 4.5],
+      feet: { near: [37.5, 57.8, 6, 2.4], far: [25, 57.5, 5.2, 2.3] },
+      behind: (g, _s, p) => {
+        tail(g, p, 19, 53, () => { tentacle(g, 25, 19, 53.5, 9.5, 172, true); tentacle(g, 27, 18.5, 48.5, 8, 205); });
+        tentacle(g, 26, 43.5, 54, 8, 10, true);
+        tentacle(g, 28, 44, 49, 6.5, -25);
+      },
+      onHead: (g) => hood(g, 10, 32, 20, 8.5, 5),
+    }),
+    final: stage('final', {
+      head: [32.5, 26.5, 15, 13],
+      torso: [30.5, 47.5, 13, 9],
+      arm: undefined,
+      farArm: undefined,
+      belly: [34.5, 49.5, 7.5, 5],
+      emblem: [34.5, 49.5, 1.8, 1.8],
+      feet: { near: [38, 57.8, 6.5, 2.5], far: [24.5, 57.5, 5.6, 2.4] },
+      behind: (g, _s, p) => {
+        tail(g, p, 19, 53, () => {
+          tentacle(g, 25, 18.5, 54, 11.5, 174, true);
+          tentacle(g, 27, 18, 49, 10.5, 200, true);
+          tentacle(g, 29, 19.5, 44, 8, 225);
+        });
+        tentacle(g, 26, 43.5, 54.5, 10, 8, true);
+        tentacle(g, 28, 44.5, 49.5, 9, -20, true);
+        tentacle(g, 30, 44, 44.5, 6.5, -45);
+      },
+      onHead: (g, _s, p) => {
+        hood(g, 10, 32.5, 17, 9, 3.2);
+        // Accesorio de etapa final: corona de gotas de tinta suspendidas.
+        appendage(g, p, 32.5, 9, () => [[23.5, 14.5, 1.4], [32.5, 11.4, 1.7], [41.5, 14.5, 1.4]].forEach(([x, y, r]) => {
+          g.ellipse(6, 'mark', x, y, r, r * 1.25, { flat: true });
+          g.poly(6, 'mark', [[x - r * 0.8, y - r * 0.6], [x + r * 0.8, y - r * 0.6], [x, y - r * 2.3]], { flat: true });
+        }));
+      },
+    }),
+  },
+};
+
+// ───────────────────────── Solarejo (luz, raro) ─────────────────────────
+// Rasgo icónico: las orejas largas con la punta encendida. Segundo rasgo: la cola de pompón luminoso.
+
+/** Oreja: lóbulo del color del cuerpo con el interior claro y la punta encendida. */
+function ear(g: Grid, part: number, x: number, y: number, len: number, deg: number, w = 2.6): void {
+  const r = (deg * Math.PI) / 180;
+  const cx = x - (Math.cos(r) * len) / 2;
+  const cy = y - (Math.sin(r) * len) / 2;
+  g.ellipse(part, 'body', cx, cy, len / 2 + 0.6, w, { rot: deg });
+  g.ellipse(part, 'belly', cx, cy, len / 2 - 1.2, Math.max(0.9, w - 1.5), { rot: deg, flat: true, clip: part, keep: true });
+  g.ellipse(part, 'trait', x - Math.cos(r) * (len - 1), y - Math.sin(r) * (len - 1), w * 0.8, w * 0.8, { flat: true, clip: part, keep: true });
+}
+
+const pompom = (g: Grid, x: number, y: number, r: number) => g.ellipse(1, 'trait', x, y, r, r);
+
+const SOLAREJO: PixelSpecies = {
+  id: 'solarejo',
+  stages: {
+    baby: lowered('baby', 4, {
+      onHead: (g, _s, p) => appendage(g, p, 31, 42, () => { ear(g, 23, 27.5, 43, 5.5, 80, 2); ear(g, 24, 35, 43, 5, 100, 1.8); }),
+    }),
+    juvenile: lowered('juvenile', 6, {
+      belly: [35, 50, 7, 5],
+      behind: (g, _s, p) => tail(g, p, 19, 52, () => pompom(g, 16.5, 52, 3.4)),
+      onHead: (g, _s, p) => appendage(g, p, 31, 35, () => { ear(g, 23, 26.5, 35.5, 10, 82, 2.4); ear(g, 24, 35.5, 35.5, 9, 98, 2.1); }),
+    }),
+    adult: lowered('adult', 7, {
+      belly: [34, 51.5, 7, 4],
+      behind: (g, _s, p) => tail(g, p, 18, 52, () => pompom(g, 14.5, 52, 4.3)),
+      onHead: (g, _s, p) => appendage(g, p, 32, 25, () => { ear(g, 23, 26, 25.5, 10, 78, 2.8); ear(g, 24, 38, 25.5, 9, 104, 2.5); }),
+    }),
+    final: lowered('final', 7, {
+      belly: [34.5, 51, 8, 4.5],
+      emblem: [34.5, 51, 1.8, 1.8],
+      behind: (g, _s, p) => {
+        tail(g, p, 17, 51, () => { pompom(g, 13, 51.5, 5); pompom(g, 10, 46.5, 2.6); });
+        // Accesorio de etapa final: rayos de sol detrás de la cabeza.
+        appendage(g, p, 32.5, 30, () =>
+          [[15.5, 31, 198], [16.5, 23.5, 215], [49.5, 23.5, 325], [50.5, 31, 342]].forEach(([x, y, deg]) => {
+            const a = (deg * Math.PI) / 180;
+            g.poly(6, 'trait', [[x - Math.sin(a) * 1.8, y + Math.cos(a) * 1.8], [x + Math.sin(a) * 1.8, y - Math.cos(a) * 1.8], [x + Math.cos(a) * 5, y + Math.sin(a) * 5]], { flat: true });
+          }),
+        );
+      },
+      onHead: (g, _s, p) => appendage(g, p, 32.5, 21, () => { ear(g, 23, 26, 21.5, 14.5, 76, 3); ear(g, 24, 39, 21.5, 13.5, 106, 2.7); }),
+    }),
+  },
+};
+
+export const PIXEL_SPECIES: PixelSpecies[] = [IGNISAUR, AXOLUNAR, FLORABUD, LIVOLT, INKTOPUS, SOLAREJO];
 
 // ───────────────────────── Dibujo ─────────────────────────
 
