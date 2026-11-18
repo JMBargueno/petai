@@ -193,9 +193,10 @@ export class AdventureService {
         where: { id: adventure.id },
         data: { status: 'completed', outcome: result, score, xpAwarded: rewards.xp, coinsAwarded: rewards.coins, finishedAt: new Date() },
       }),
+      // La XP va aparte (grantXp): debe subir nivel y etapa, no solo acumularse
       this.prisma.pet.update({
         where: { id: pet.id },
-        data: { xp: { increment: rewards.xp }, happiness: { increment: result === 'win' ? 8 : 3 } },
+        data: { happiness: { increment: result === 'win' ? 8 : 3 } },
       }),
       // La felicidad tiene tope 100: el incremento atómico puede pasarse, se recorta aquí
       this.prisma.pet.updateMany({ where: { id: pet.id, happiness: { gt: 100 } }, data: { happiness: 100 } }),
@@ -204,6 +205,7 @@ export class AdventureService {
         data: { coins: { increment: rewards.coins } },
       }),
     ]);
+    await this.petsService.grantXp(userId, pet.id, rewards.xp);
 
     const memoryContent = `Adventuré "${adventure.theme}" el ${new Date().toLocaleDateString('es-ES')}. ` +
       `Resultado: ${result === 'win' ? '¡victoria!' : result === 'partial' ? 'logro parcial' : 'derrota valiente'}. ` +

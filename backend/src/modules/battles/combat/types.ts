@@ -40,6 +40,8 @@ export interface CombatConfig {
 export interface Fighter {
   name: string;
   speciesId: string;
+  /** Etapa evolutiva en el momento del combate (la repetición dibuja esa forma). */
+  stage?: string;
   element: Element;
   level: number;
   /** Estadísticas efectivas (nivel, rareza y puntos repartidos ya aplicados). */
@@ -61,6 +63,8 @@ export interface Fighter {
 export interface ParticipantLog {
   name: string;
   speciesId: string;
+  /** Etapa evolutiva en el momento del combate (la repetición dibuja esa forma). */
+  stage?: string;
   element: Element;
   level: number;
   stats: Stats;

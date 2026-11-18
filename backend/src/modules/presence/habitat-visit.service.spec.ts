@@ -35,6 +35,7 @@ function buildPrisma(): any {
           id,
           nickname: 'Rex',
           species: { id: 'sp-1', name: 'Lobo' },
+          stage: 'juvenile',
         })),
       ),
     },
@@ -225,7 +226,7 @@ describe('HabitatVisitService', () => {
       visitorId: actor,
       visitorName: 'n-visitor',
       visitorHandle: null,
-      pet: { petId: 'pet-1', nickname: 'Rex', speciesName: 'Lobo', speciesId: 'sp-1', spriteRef: 'sp-1' },
+      pet: { petId: 'pet-1', nickname: 'Rex', speciesName: 'Lobo', speciesId: 'sp-1', spriteRef: 'sp-1', stage: 'juvenile' },
       message: '¡Hola!',
       startedAt: started,
     });

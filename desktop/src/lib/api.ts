@@ -1568,6 +1568,8 @@ export interface PetIdentity {
   speciesId: string;
   /** Referencia del sprite del backend (p. ej. `sprites/ignisaur_idle`); puede no resolver. */
   spriteRef: string;
+  /** Etapa evolutiva; si falta (backend antiguo) se dibuja la de bebé. */
+  stage?: string;
 }
 
 export interface HabitatVisitor {

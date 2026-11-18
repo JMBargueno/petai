@@ -105,10 +105,17 @@ for (const [file, anim] of Object.entries(STAGE_ANIMS)) {
   if (m && base && mask) SPECIES_REGISTRY[`${m[1]}/${m[2]}`] = { base, mask, anim };
 }
 
-/** Clave de hoja para `(especie, etapa)`: la etapa si existe; si no, la hoja adult de la especie. */
+/** Etapa que se dibuja cuando no llega ninguna (payloads antiguos, repeticiones viejas…). */
+export const DEFAULT_STAGE = 'baby';
+
+/**
+ * Clave de hoja para `(especie, etapa)`: la etapa si existe; sin etapa, la de bebé; y si la
+ * especie no tiene hoja para esa etapa, la hoja adult (base) de la especie.
+ */
 export function sheetKey(speciesId: string, stage?: string | null): string {
   const id = normalizeSpecies(speciesId);
-  return stage && SPECIES_REGISTRY[`${id}/${stage}`] ? `${id}/${stage}` : id;
+  const s = stage || DEFAULT_STAGE;
+  return SPECIES_REGISTRY[`${id}/${s}`] ? `${id}/${s}` : id;
 }
 
 const PREVIEW_SVG: Record<string, string> = {
