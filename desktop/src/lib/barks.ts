@@ -10,11 +10,14 @@ export type BarkCategory =
   | 'chat'
   | 'gaming'
   | 'media'
+  | 'reading'
   | 'hunger'
   | 'sleepy'
   | 'dirty'
   | 'lonely'
   | 'morning'
+  | 'afternoon'
+  | 'evening'
   | 'night'
   | 'late_night'
   | 'rain'
@@ -26,8 +29,15 @@ export type BarkCategory =
   | 'high_five'
   | 'generic';
 
+/** Tema local de la ventana (navegador, mensajería). Nunca sale del equipo. */
+export type LocalTopic = 'browser' | 'chat';
+
 export interface BarkContext {
+  /** Categoría de `contextAwareness` (`coding`, `music`…) o directamente una de frases. */
   appCategory?: string;
+  localTopic?: LocalTopic | null;
+  /** Hay entrada reciente del usuario con el cursor quieto: está tecleando. */
+  isTyping?: boolean;
   hunger?: number;
   energy?: number;
   hygiene?: number;
@@ -73,6 +83,11 @@ export const BARKS_CATALOG: Record<BarkCategory, string[]> = {
     'Palomitas y buena música, el mejor plan. 🍿',
     'Mis orejitas bailan con este ritmo. 🐾🎧',
   ],
+  reading: [
+    'Shhh... modo lectura. Yo paso las páginas con la mirada. 📖',
+    '¿Qué estás aprendiendo? Luego me lo cuentas. 📚✨',
+    'Tomar notas es de sabios. Yo tomo nota de ti. 📝',
+  ],
   hunger: [
     '¡Ñam ñam! Mi barriguita ruge como un volcán... ¿hay algo rico? 🍗',
     'Oye... ¿te sobró algo de tu comida? Tengo hambrita. 🤤',
@@ -95,6 +110,16 @@ export const BARKS_CATALOG: Record<BarkCategory, string[]> = {
     '¡Buenos días, madrugador! Que hoy tengas un día increíble. ☀️',
     'El sol brilla y el escritorio está lleno de energía. 🌅',
     '¿Ya te tomaste tu primer vaso de agua mañanero? 💧',
+  ],
+  afternoon: [
+    'Ya es por la tarde... ¿has parado a comer algo? 🥪',
+    'La tarde se pasa volando contigo, {name} lo confirma. 🌤️',
+    'Buen momento para estirar las piernas un minuto. 🚶',
+  ],
+  evening: [
+    'Se va haciendo de noche... ¿cerramos ya por hoy? 🌇',
+    'El atardecer tiñe el escritorio de naranja. Qué bonito. 🧡',
+    'Hoy has trabajado mucho. {name} está orgulloso de ti. ✨',
   ],
   night: [
     'La noche está tranquila... buen momento para reflexionar. 🌙',
@@ -139,12 +164,52 @@ export const BARKS_CATALOG: Record<BarkCategory, string[]> = {
     'Todo en orden por aquí. ¡Sigue así! ✨',
     'Me encanta ver cómo trabajas. ¡Eres un crack! 🌟',
     '¡Estirando las patitas! 🤸‍♂️',
+    '{name} de guardia en el escritorio. Todo tranquilo. 🛡️',
   ],
 };
+
+/** Categoría de app de `contextAwareness` → categoría de frases. */
+const APP_TO_BARK: Record<string, BarkCategory> = {
+  coding: 'code',
+  music: 'media',
+  video: 'media',
+  gaming: 'gaming',
+  reading: 'reading',
+};
+
+/**
+ * Traduce la categoría de la app en foco a la de frases. Acepta también una categoría de
+ * frases ya resuelta (`code`, `media`…) para no romper a quien la pase directamente.
+ */
+export function barkCategoryForApp(appCategory: string | null | undefined): BarkCategory | null {
+  if (!appCategory || appCategory === 'generic') return null;
+  if (appCategory in APP_TO_BARK) return APP_TO_BARK[appCategory];
+  return appCategory in BARKS_CATALOG ? (appCategory as BarkCategory) : null;
+}
+
+const TIME_TO_BARK: Record<string, BarkCategory> = {
+  late_night: 'late_night',
+  morning: 'morning',
+  afternoon: 'afternoon',
+  evening: 'evening',
+  night: 'night',
+};
+
+/** Sustituye `{name}` por el nombre de la mascota (o un genérico si no se conoce). */
+export function fillBark(text: string, petName?: string | null): string {
+  return text.replace(/\{name\}/g, petName?.trim() || 'tu Pockai');
+}
+
+function pick<T>(items: readonly T[], rng: () => number): T {
+  return items[Math.min(items.length - 1, Math.floor(rng() * items.length))];
+}
 
 export class BarksEngine {
   private recentBarks: string[] = [];
   private maxRecent = 15;
+
+  /** `rng` devuelve un número en [0, 1); se inyecta para poder sembrarlo en tests y en el cerebro. */
+  constructor(private readonly rng: () => number = Math.random) {}
 
   /** Determina las categorías relevantes basadas en el contexto actual */
   getCandidateCategories(ctx: BarkContext): BarkCategory[] {
@@ -156,18 +221,18 @@ export class BarksEngine {
     if (ctx.hygiene !== undefined && ctx.hygiene < 25) categories.push('dirty');
     if (ctx.happiness !== undefined && ctx.happiness < 25) categories.push('lonely');
 
-    // Prioridad 2: Usuario inactivo
+    // Prioridad 2: Usuario inactivo o tecleando
     if (ctx.isUserIdle) categories.push('idle_user');
+    else if (ctx.isTyping) categories.push('typing');
 
-    // Prioridad 3: Contexto de ventana
-    if (ctx.appCategory && ctx.appCategory in BARKS_CATALOG) {
-      categories.push(ctx.appCategory as BarkCategory);
-    }
+    // Prioridad 3: Contexto de ventana (la categoría de la app y, si lo hay, el tema local)
+    const appBark = barkCategoryForApp(ctx.appCategory);
+    if (appBark) categories.push(appBark);
+    if (ctx.localTopic && !categories.includes(ctx.localTopic)) categories.push(ctx.localTopic);
 
     // Prioridad 4: Clima y hora
-    if (ctx.timeOfDay === 'late_night') categories.push('late_night');
-    else if (ctx.timeOfDay === 'night') categories.push('night');
-    else if (ctx.timeOfDay === 'morning') categories.push('morning');
+    const timeBark = ctx.timeOfDay ? TIME_TO_BARK[ctx.timeOfDay] : undefined;
+    if (timeBark) categories.push(timeBark);
 
     if (ctx.weatherCondition === 'rain') categories.push('rain');
     else if (ctx.weatherCondition === 'snow') categories.push('snow');
@@ -183,28 +248,28 @@ export class BarksEngine {
   /**
    * Genera un pensamiento contextual evitando frases recientemente dichas.
    */
-  generateBark(ctx: BarkContext): string {
+  generateBark(ctx: BarkContext, rng: () => number = this.rng): string {
     const candidates = this.getCandidateCategories(ctx);
 
-    // Ponderación: 70% de probabilidad de elegir una categoría contextual específica
+    // Ponderación: 75 % de probabilidad de elegir una categoría contextual específica
     // frente a 'generic'
     const nonGeneric = candidates.filter((c) => c !== 'generic');
     const selectedCategory =
-      nonGeneric.length > 0 && Math.random() < 0.75
-        ? nonGeneric[Math.floor(Math.random() * nonGeneric.length)]
-        : 'generic';
+      nonGeneric.length > 0 && rng() < 0.75 ? pick(nonGeneric, rng) : 'generic';
 
-    const pool = BARKS_CATALOG[selectedCategory] || BARKS_CATALOG.generic;
+    return this.barkFrom(selectedCategory, ctx.petName, rng);
+  }
 
-    // Filtrar los que no estén en recentBarks
+  /** Frase de una categoría concreta (p. ej. `high_five`), con el mismo control de repetición. */
+  barkFrom(category: BarkCategory, petName?: string | null, rng: () => number = this.rng): string {
+    const pool = BARKS_CATALOG[category] || BARKS_CATALOG.generic;
+
+    // El historial guarda la plantilla, no el texto con el nombre ya puesto
     const available = pool.filter((bark) => !this.recentBarks.includes(bark));
-    const chosen =
-      available.length > 0
-        ? available[Math.floor(Math.random() * available.length)]
-        : pool[Math.floor(Math.random() * pool.length)];
+    const chosen = pick(available.length > 0 ? available : pool, rng);
 
     this.recordBark(chosen);
-    return chosen;
+    return fillBark(chosen, petName);
   }
 
   private recordBark(bark: string) {

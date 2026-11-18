@@ -24,7 +24,7 @@
     type PointerSample,
   } from '../lib/physics/petPhysics';
   import { fetchActiveWindow, calculatePerchTarget } from '../lib/windowPerching';
-  import { categorizeWindowTitle, type AppCategory } from '../lib/contextAwareness';
+  import { categorizeWindowTitle, localTopicOf, type AppCategory } from '../lib/contextAwareness';
   import { deskState } from '../lib/deskContext';
   import { analyzeDroppedFile } from '../lib/fileAnalyzer';
   import { BarksEngine } from '../lib/barks';
@@ -128,6 +128,8 @@
   // Fase 3: Drag & Drop de archivos y Conciencia de contexto
   let isDragOverPet = false;
   let currentAppCategory: AppCategory = 'generic';
+  // Tema de la ventana solo para elegir frases; se queda en el equipo (no va en deskState)
+  let currentLocalTopic: 'browser' | 'chat' | null = null;
   let lastContextCheckTime = 0;
 
   // Motores de interactividad avanzada (Barks & Comportamientos dinámicos)
@@ -1147,11 +1149,13 @@
       const now = Date.now();
       // Sin la habilidad no se conserva la última categoría (no debe llegar al chat ni a los hábitos)
       if (!canContext && currentAppCategory !== 'generic') currentAppCategory = 'generic';
+      if (!canContext) currentLocalTopic = null;
       if (canContext && now - lastContextCheckTime > 6000) {
         lastContextCheckTime = now;
         const win = await fetchActiveWindow();
         if (win && win.title) {
           const ctx = categorizeWindowTitle(win.title);
+          currentLocalTopic = localTopicOf(win.title);
           if (ctx.category !== currentAppCategory) {
             currentAppCategory = ctx.category;
             if (ctx.category !== 'generic') {
@@ -1287,6 +1291,7 @@
       const now = performance.now();
       const ctx = {
         appCategory: currentAppCategory,
+        localTopic: currentLocalTopic,
         hunger: pet?.hunger,
         energy: pet?.energy,
         hygiene: pet?.hygiene,

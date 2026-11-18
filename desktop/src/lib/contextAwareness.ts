@@ -88,6 +88,21 @@ const READING_KEYWORDS = [
   'stack overflow',
 ];
 
+const BROWSER_KEYWORDS = ['google chrome', 'mozilla firefox', 'microsoft edge', 'brave', 'opera', 'vivaldi', 'safari'];
+
+const CHAT_KEYWORDS = ['discord', 'slack', 'whatsapp', 'telegram', 'microsoft teams', 'signal', 'messenger'];
+
+/**
+ * Tema local de la ventana para elegir frases (navegador o mensajería). Se usa solo en el
+ * escritorio: no forma parte de `AppCategory`, que es lo que viaja al servidor.
+ */
+export function localTopicOf(title: string): 'browser' | 'chat' | null {
+  const lower = title.toLowerCase();
+  if (CHAT_KEYWORDS.some((kw) => lower.includes(kw))) return 'chat';
+  if (BROWSER_KEYWORDS.some((kw) => lower.includes(kw))) return 'browser';
+  return null;
+}
+
 export function categorizeWindowTitle(title: string): ContextCategoryInfo {
   const lower = title.toLowerCase();
 
