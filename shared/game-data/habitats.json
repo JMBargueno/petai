@@ -77,9 +77,9 @@
       "price": 400,
       "currency": "coins",
       "buffs": {
-        "hygiene_decay_reduction": 0.15
+        "hygiene_decay_reduction": 0.1
       },
-      "description": "Reduce el decaimiento de higiene un 15%.",
+      "description": "Reduce el decaimiento de higiene un 10%.",
       "footprint": [1, 1],
       "mount": "floor",
       "interaction": "bathe"
@@ -105,9 +105,9 @@
       "price": 400,
       "currency": "coins",
       "buffs": {
-        "happiness_decay_reduction": 0.1
+        "happiness_decay_reduction": 0.05
       },
-      "description": "Reduce el decaimiento de felicidad un 10%.",
+      "description": "Reduce el decaimiento de felicidad un 5%.",
       "footprint": [1, 1],
       "mount": "floor",
       "interaction": "play"
@@ -141,9 +141,9 @@
       "price": 500,
       "currency": "coins",
       "buffs": {
-        "happiness_decay_reduction": 0.15
+        "happiness_decay_reduction": 0.08
       },
-      "description": "Un lugar tranquilo para descansar. Reduce el decaimiento de felicidad un 15%.",
+      "description": "Un lugar tranquilo para descansar. Reduce el decaimiento de felicidad un 8%.",
       "footprint": [2, 1],
       "mount": "floor",
       "interaction": "sit"
@@ -155,9 +155,9 @@
       "price": 800,
       "currency": "coins",
       "buffs": {
-        "hygiene_decay_reduction": 0.2
+        "hygiene_decay_reduction": 0.15
       },
-      "description": "Un estanque sereno. Reduce el decaimiento de higiene un 20%.",
+      "description": "Un estanque sereno. Reduce el decaimiento de higiene un 15%.",
       "footprint": [2, 2],
       "mount": "floor",
       "interaction": "bathe"
@@ -169,9 +169,9 @@
       "price": 1,
       "currency": "gems",
       "buffs": {
-        "combat_mood_bonus": 0.05
+        "combat_mood_bonus": 0.04
       },
-      "description": "Un altar místico que mejora el ánimo de combate un 5%.",
+      "description": "Un altar místico que mejora el ánimo de combate un 4%.",
       "footprint": [2, 2],
       "mount": "floor"
     },
@@ -182,10 +182,10 @@
       "price": 900,
       "currency": "coins",
       "buffs": {
-        "energy_recovery_boost": 0.15,
-        "happiness_decay_reduction": 0.1
+        "energy_recovery_boost": 0.2,
+        "happiness_decay_reduction": 0.07
       },
-      "description": "Ilumina el santuario. +15% recuperación de energía, -10% decaimiento de felicidad.",
+      "description": "Ilumina el santuario. +20% recuperación de energía, -7% decaimiento de felicidad.",
       "footprint": [1, 1],
       "mount": "floor"
     },
@@ -196,9 +196,9 @@
       "price": 2,
       "currency": "gems",
       "buffs": {
-        "combat_mood_bonus": 0.1
+        "combat_mood_bonus": 0.06
       },
-      "description": "El trono de un legendario. +10% de ánimo de combate.",
+      "description": "El trono de un legendario. +6% de ánimo de combate.",
       "footprint": [2, 2],
       "mount": "floor",
       "interaction": "sit"
@@ -210,10 +210,10 @@
       "price": 700,
       "currency": "coins",
       "buffs": {
-        "happiness_decay_reduction": 0.2,
+        "happiness_decay_reduction": 0.1,
         "hygiene_decay_reduction": 0.15
       },
-      "description": "Un jardín extraordinario. Reduce decaimiento de felicidad 20% y higiene 15%.",
+      "description": "Un jardín extraordinario. Reduce decaimiento de felicidad 10% e higiene 15%.",
       "footprint": [2, 2],
       "mount": "floor"
     }

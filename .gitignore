@@ -82,3 +82,6 @@ Thumbs.db
 
 # Hojas de contactos y vistas previas de sprites (revisión local)
 sprite-previews/
+
+# Resultados de las evals de skills (skill-creator)
+.claude/skills/*-workspace/

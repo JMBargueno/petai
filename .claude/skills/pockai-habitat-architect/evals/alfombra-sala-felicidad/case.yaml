@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: alfombra-sala-felicidad
+expected_outcome: |
+  Diseña e integra el mueble: entrada en habitats.json en la sala "sala", de suelo, con huella razonable
+  (p. ej. 2×2) y un buff de felicidad; como el catálogo ya suma exactamente el tope de felicidad (0,30), reparte el
+  buff bajando otros para que la suma siga siendo 0,30; dibuja su arte en scripts/sprites/furniture.ts, revisa la hoja
+  de contactos y genera los SVG; check_habitats.mjs pasa.
