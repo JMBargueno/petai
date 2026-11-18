@@ -52,7 +52,7 @@ export function rollBatch(random: () => number, size = BATCH): Egg[] {
               Ninguno sale <span class="hl hl--ember">igual</span>
             </h2>
             <p class="lead reveal" i18n="@@rar.lead">
-              Cada huevo tira rareza, patrón y color. Estas son las probabilidades reales del juego.
+              La rareza es de la especie. El patrón y el color se tiran en cada huevo, con estas mismas probabilidades.
             </p>
           </div>
 
@@ -89,7 +89,7 @@ export function rollBatch(random: () => number, size = BATCH): Egg[] {
                 Shiny <strong>{{ shinies() }}</strong>
               </li>
             </ul>
-            <p class="batch__note" i18n="@@rar.batch.note">Cada tanda se tira con las mismas probabilidades que el juego.</p>
+            <p class="batch__note" i18n="@@rar.batch.note">Cada huevo se colorea por la rareza de su patrón, con las probabilidades del juego.</p>
           </figure>
         </div>
 

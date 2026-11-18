@@ -33,7 +33,7 @@ export const FEATURES: Feature[] = [
     icon: 'egg',
     color: 'sunburst',
     title: $localize`:@@feat.hatch.title:Eclosión`,
-    body: $localize`:@@feat.hatch.body:Cada huevo esconde una criatura con rareza, patrón y paleta propios, de normal a mítica. Con suerte, incluso una variante shiny.`,
+    body: $localize`:@@feat.hatch.body:Cada huevo esconde una especie, de normal a mítica, y cada ejemplar nace con patrón y paleta propios. Con suerte, incluso una variante shiny.`,
     link: { path: 'pockais', label: $localize`:@@feat.link.pockais:Conoce a los pockais →` },
   },
   {
@@ -102,7 +102,9 @@ export const SPECIES = speciesData.map((s, i) => ({
   name: s.name,
   spriteKey: s.spriteKey,
   element: ELEMENTS[s.element] ?? s.element,
+  /** Rareza de la especie: todos sus ejemplares la comparten. */
   rarity: RARITIES[s.rarity] ?? s.rarity,
+  rarityId: s.rarity,
   color: CARD_COLORS[i % CARD_COLORS.length],
 }));
 
@@ -236,6 +238,21 @@ export const RARITY_ODDS = Object.entries(balance.rarity).map(([id, r]) => ({
   color: RARITY_COLORS[id] ?? 'sunburst',
 }));
 
+/**
+ * De entre `items`, los de la rareza tirada; si no hay ninguno, los de la rareza más cercana por
+ * debajo (y, si tampoco, por encima). Es la misma regla que usa el servidor al eclosionar.
+ */
+export function ofRolledRarity<T extends { rarityId: string }>(items: T[], rolledId: string): T[] {
+  const order = RARITY_ODDS.map((r) => r.id);
+  const at = order.indexOf(rolledId);
+  const tryIds = [rolledId, ...order.slice(0, Math.max(at, 0)).reverse(), ...order.slice(at + 1)];
+  for (const id of tryIds) {
+    const found = items.filter((i) => i.rarityId === id);
+    if (found.length) return found;
+  }
+  return items;
+}
+
 export const SHINY_PROBABILITY = balance.shinyProbability;
 export const SHINY_NOTE = $localize`:@@rar.shiny:Y además, un ${percent(balance.shinyProbability)}:PERCENT: % de las eclosiones sale en variante shiny.`;
 
@@ -254,7 +271,9 @@ const PATTERN_SPRITES = new Set(['spots', 'stripes', 'gradient', 'scales']);
 export const PATTERNS = patternData.map((p) => ({
   id: p.id,
   name: PATTERN_NAMES[p.id] ?? p.name,
+  /** Rareza propia del patrón: se tira por ejemplar, aparte de la de su especie. */
   rarity: RARITIES[p.rarity] ?? p.rarity,
+  rarityId: p.rarity,
   sprite: PATTERN_SPRITES.has(p.id) ? `sprites/pattern_${p.id}.svg` : null,
   color: RARITY_COLORS[p.rarity] ?? 'sunburst',
 }));
