@@ -2,7 +2,7 @@
   import Ico from './Ico.svelte';
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import { api } from '../lib/api';
-  import { Badge, Button, Card, EmptyState, ListRow, Modal, Notice, Skeleton, Switch } from './ui';
+  import { Badge, Button, Card, ConfirmDialog, EmptyState, ListRow, Modal, Notice, Skeleton, Switch } from './ui';
   import {
     isLoopbackUrl,
     loadLocalConfig,
@@ -28,6 +28,7 @@
   import { toSpeakable } from '../lib/speech-queue';
   import { getSocket } from '../lib/socket';
   import { MEMORY_LAYERS, groupMemoriesByLayer, memoryIcon, valenceView } from '../lib/mind';
+  import { stickToBottom } from '../lib/ui/chatScroll';
 
   export let pet: any = null;
   /** Mensaje a enviar en cuanto el chat esté listo (p. ej. al soltar un archivo sobre la mascota). */
@@ -431,15 +432,33 @@
   async function loadHistory() {
     try {
       messages = await api.getChatHistory(pet.id);
-      await scrollDown();
+      await scrollDown(true);
     } catch (e: any) {
       chatErr = e.message;
     }
   }
 
-  async function scrollDown() {
+  /** Baja al final del hilo. Sin `force`, solo si el jugador ya estaba abajo (no le quita el sitio si está leyendo). */
+  async function scrollDown(force = false) {
+    const settle = stickToBottom(scroller, force);
     await tick();
-    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    settle();
+  }
+
+  let composer: HTMLTextAreaElement | null = null;
+  /** Pendiente de confirmar: borrar un recuerdo o un recordatorio. */
+  let pendingDelete: { kind: 'memory' | 'reminder'; id: string; text: string } | null = null;
+  let deleting = false;
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    deleting = true;
+    try {
+      if (pendingDelete.kind === 'memory') await forget(pendingDelete.id);
+      else await removeReminder(pendingDelete.id);
+    } finally {
+      deleting = false;
+      pendingDelete = null;
+    }
   }
 
   async function save() {
@@ -557,7 +576,7 @@
     const reply: Msg = { id: `tmp-reply-${Date.now()}`, role: 'assistant', content: '' };
     const userMsg: Msg = { id: `tmp-${Date.now()}`, role: 'user', content: text };
     messages = [...messages, userMsg, reply];
-    await scrollDown();
+    await scrollDown(true);
     abort = new AbortController();
     toolHint = '';
     try {
@@ -614,6 +633,8 @@
       streaming = false;
       toolHint = '';
       abort = null;
+      // El campo no se desactiva mientras responde, pero por si el foco se fue a «Detener».
+      tick().then(() => composer?.focus());
     }
   }
 
@@ -671,6 +692,8 @@
   }
 
   function onKey(e: KeyboardEvent) {
+    // Durante una composición IME (japonés, chino, acentos muertos) Enter confirma el texto, no envía.
+    if (e.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
@@ -685,7 +708,7 @@
     <Skeleton rows={1} height={36} />
     <Skeleton rows={1} height={230} />
   {:else}
-    {#if chatReady}
+    {#if true}
       <div class="bar">
         <Badge tone="tint" icon="brain" title="Inteligencia">{tier} · {pet.intelligence ?? 0}/1000</Badge>
         <select class="select mode-select" value={activeMode} aria-label="Motor de IA" on:change={(e) => setMode(e.currentTarget.value as Mode)}>
@@ -711,8 +734,8 @@
       </div>
     {/if}
 
-    {#if isManaged && !showSettings}
-      <Notice tone={dailyRemaining <= 0 ? 'warning' : 'info'} icon="chat">
+    {#if isManaged && !showSettings && usage && !quotaExceeded}
+      <Notice tone="info" icon="chat">
         Te quedan <strong>{dailyRemaining} de {dailyLimit}</strong> mensajes hoy · se renuevan a medianoche.
         <svelte:fragment slot="end">
           {#if isPro}
@@ -776,6 +799,8 @@
             {#if config.configured}
               <Button disabled={busy} on:click={test}>Probar conexión</Button>
               <Button variant="ghost" disabled={busy} on:click={remove}>Volver a IA de Pockai</Button>
+            {:else}
+              <Button variant="ghost" disabled={busy} on:click={() => setMode('managed')}>Cancelar</Button>
             {/if}
           </div>
           {#if settingsMsg}<Notice tone="ok">{settingsMsg}</Notice>{/if}
@@ -861,9 +886,9 @@
       {:else if isLocalLike}
         <Notice tone="info" icon="monitor">Modo Hermes local: tu mascota responde con el modelo de este equipo (sin herramientas ni recordatorios nuevos).</Notice>
       {/if}
-      <div class="chat" bind:this={scroller}>
+      <div class="chat" bind:this={scroller} role="log" aria-live="polite" aria-label="Conversación con {pet.nickname || pet.species?.name}">
         {#if messages.length === 0}
-          <p class="chat-empty">Saluda a {pet.nickname || pet.species?.name}</p>
+          <p class="chat-empty">Saluda a {pet.nickname || pet.species?.name}: escribe abajo y pulsa Enter.</p>
         {/if}
         {#each messages as m (m.id)}
           {#if m.role === 'assistant' && m.thinking}
@@ -877,7 +902,7 @@
               {/if}
             </div>
           {/if}
-          <div class="msg {m.role}" class:notice={m.notice}>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}…{/if}</div>
+          <div class="msg {m.role}" class:notice={m.notice}><span class="sr-only">{m.role === 'user' ? 'Tú: ' : `${pet.nickname || pet.species?.name}: `}</span>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}<span class="typing" role="status" aria-label="Está escribiendo"><i></i><i></i><i></i></span>{/if}</div>
         {/each}
         {#if toolHint}<div class="hint">{toolHint}</div>{/if}
         {#each actions as a (a.id)}
@@ -914,24 +939,27 @@
               rows="2"
               maxlength={maxChars}
               bind:value={input}
+              bind:this={composer}
               on:keydown={onKey}
-              placeholder={isManaged ? 'Escribe un mensaje… (máx. 240 caracteres)' : 'Escribe un mensaje… (Enter para enviar)'}
-              disabled={streaming}
+              aria-label="Mensaje para {pet.nickname || pet.species?.name}"
+              placeholder="Escribe un mensaje… (Enter envía, Mayús+Enter salta de línea)"
+              readonly={streaming}
             ></textarea>
-            {#if isManaged}
-              <span class="char-count" class:near-limit={input.length >= maxChars - 20}>{input.length}/{maxChars}</span>
-            {/if}
+            <span class="char-count" class:near-limit={input.length >= maxChars - 20} aria-hidden="true">{input.length}/{maxChars}</span>
           </div>
-          <Button
-            variant="primary"
-            iconOnly
-            icon="send"
-            label="Enviar"
-            class="send-btn"
-            loading={streaming}
-            disabled={!input.trim() || (isManaged && quotaExceeded)}
-            on:click={() => send()}
-          />
+          {#if streaming}
+            <Button iconOnly icon="x" label="Detener la respuesta" class="send-btn" on:click={() => abort?.abort()} />
+          {:else}
+            <Button
+              variant="primary"
+              iconOnly
+              icon="send"
+              label="Enviar"
+              class="send-btn"
+              disabled={!input.trim() || (isManaged && quotaExceeded)}
+              on:click={() => send()}
+            />
+          {/if}
         </div>
       {/if}
 
@@ -948,7 +976,7 @@
               {#each reminders as r (r.id)}
                 <ListRow icon="alarm" title={r.text} sub={fmt(r.dueAt)}>
                   <svelte:fragment slot="end">
-                    <Button variant="ghost" size="sm" iconOnly icon="x" label="Eliminar recordatorio" class="ui-ibtn ui-ibtn--no" on:click={() => removeReminder(r.id)} />
+                    <Button variant="ghost" size="sm" iconOnly icon="x" label="Eliminar el recordatorio: {r.text}" class="ui-ibtn ui-ibtn--no" on:click={() => (pendingDelete = { kind: 'reminder', id: r.id, text: r.text })} />
                   </svelte:fragment>
                 </ListRow>
               {:else}
@@ -996,7 +1024,7 @@
                             {#if v}
                               <span class="valence valence--{v.tone}" title="Valencia {v.text}">{v.label} <small>{v.text}</small></span>
                             {/if}
-                            <Button variant="ghost" size="sm" iconOnly icon="x" label="Olvidar" class="ui-ibtn ui-ibtn--no" on:click={() => forget(m.id)} />
+                            <Button variant="ghost" size="sm" iconOnly icon="x" label="Olvidar este recuerdo" class="ui-ibtn ui-ibtn--no" on:click={() => (pendingDelete = { kind: 'memory', id: m.id, text: m.content })} />
                           </svelte:fragment>
                         </ListRow>
                       {/each}
@@ -1012,6 +1040,21 @@
         {/if}
       </div>
     {/if}
+  {/if}
+
+  {#if pendingDelete}
+    <ConfirmDialog
+      title={pendingDelete.kind === 'memory' ? 'Olvidar este recuerdo' : 'Eliminar el recordatorio'}
+      icon="trash"
+      danger
+      confirmLabel={pendingDelete.kind === 'memory' ? 'Olvidar' : 'Eliminar'}
+      loading={deleting}
+      on:confirm={confirmDelete}
+      on:cancel={() => (pendingDelete = null)}
+    >
+      <p class="ui-usertext">«{pendingDelete.text}»</p>
+      <p>{pendingDelete.kind === 'memory' ? 'Tu Pockai dejará de recordarlo. No se puede deshacer.' : 'No te lo recordará. No se puede deshacer.'}</p>
+    </ConfirmDialog>
   {/if}
 </div>
 
@@ -1089,7 +1132,33 @@
     font-size: var(--text-label);
     line-height: 1.4;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
     user-select: text;
+  }
+  .typing {
+    display: inline-flex;
+    gap: 3px;
+    vertical-align: middle;
+  }
+  .typing i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.35;
+    animation: typing 1s ease-in-out infinite;
+  }
+  .typing i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .typing i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  @keyframes typing {
+    40% {
+      opacity: 1;
+      translate: 0 -2px;
+    }
   }
   .msg.user {
     align-self: flex-end;
@@ -1187,6 +1256,8 @@
     flex: 1;
   }
   .textarea {
+    /* Hueco para el contador, que va superpuesto abajo a la derecha */
+    padding-bottom: var(--space-5);
     resize: none;
     font-size: var(--text-label);
     border-radius: var(--radius-cards);
@@ -1199,7 +1270,10 @@
   .char-count {
     position: absolute;
     right: 10px;
-    bottom: 6px;
+    bottom: 4px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
     font-size: var(--text-caption);
     color: var(--ink-muted);
     pointer-events: none;

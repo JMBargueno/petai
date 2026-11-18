@@ -469,6 +469,10 @@ Estado actual de lo ya construido en el panel:
 | Logros y constelación (con exportación a imagen) | ✅ |
 | Ajustes de notificaciones | ✅ |
 | Guía de primer uso (4 pasos, una vez, cuando ya hay mascota; se repite desde Acerca de) | ✅ |
+| Navegación del panel: recuerda la sub-sección de cada destino, sub-pestañas en una fila con scroll, atajos Esc y Ctrl+1…6 | ✅ |
+| Selector de mascota activa en Mascota › Inicio (con más de una; se recuerda en el equipo) | ✅ |
+| Confirmación con coste y saldo antes de gastar gemas (torneo, aventura premium, pase, cofres) y antes de acciones que no se deshacen | ✅ |
+| Modo demo para revisar la interfaz sin backend: `pnpm desktop:demo` (datos en `desktop/vite.mock.ts`) | ✅ |
 | Tema Sistema / Claro / Oscuro en Ajustes › Escritorio | ✅ |
 | Cuenta con código de vinculación | ✅ |
 | Acerca de: «Informar de un fallo» y «Sugerir una mejora» (formulario de la web con `from=desktop`) y el correo como alternativa | ✅ |

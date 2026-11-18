@@ -7,20 +7,20 @@
   import Ico from './Ico.svelte';
   import { Button, Modal } from './ui';
 
-  const dispatch = createEventDispatcher<{ done: void; go: { dest: string; sub?: string } }>();
+  const dispatch = createEventDispatcher<{ done: void; later: void; go: { dest: string; sub?: string } }>();
 
   const STEPS = [
     {
       icon: 'paw',
       tint: 'var(--theme-care)',
-      title: 'Cuida de tu pockai',
+      title: 'Cuida de tu Pockai',
       text: 'En Mascota ves cómo está: dale de comer, límpialo y déjalo dormir. También puedes arrastrarlo por el escritorio.',
     },
     {
       icon: 'chat',
       tint: 'var(--theme-ai)',
       title: 'Habla con él',
-      text: 'En Chat puedes escribirle lo que quieras. Si sueltas un archivo sobre tu pockai, te lo comenta.',
+      text: 'En Chat puedes escribirle lo que quieras. Si sueltas un archivo sobre tu Pockai, te lo comenta.',
     },
     {
       icon: 'gamepad',
@@ -53,7 +53,8 @@
   }
 </script>
 
-<Modal label="Guía de primer uso" on:close={finish}>
+<!-- Esc o un clic fuera solo la cierran por ahora: vuelve a salir la próxima vez. Se da por vista con «Saltar» o al terminar. -->
+<Modal label="Guía de primer uso" on:close={() => dispatch('later')}>
   <div class="ob" aria-live="polite">
     <span class="ob-icon" style="--ob-tint: {step.tint}" aria-hidden="true"><Ico n={step.icon} size={28} /></span>
     <p class="label-caps ob-count">Paso {i + 1} de {STEPS.length}</p>
@@ -69,16 +70,11 @@
   </div>
 
   <svelte:fragment slot="footer">
-    {#if i > 0}
-      <Button variant="ghost" on:click={() => (i -= 1)}>Atrás</Button>
-    {:else}
-      <Button variant="ghost" on:click={finish}>Saltar</Button>
-    {/if}
+    {#if !last}<Button variant="ghost" on:click={finish}>Saltar</Button>{/if}
     <span class="ob-spacer"></span>
-    {#if last}
-      <Button on:click={openSettings}>Abrir Ajustes</Button>
-    {/if}
-    <button type="button" class="btn btn--primary" data-autofocus on:click={next}>{last ? 'Empezar' : 'Siguiente'}</button>
+    {#if i > 0}<Button variant="ghost" on:click={() => (i -= 1)}>Atrás</Button>{/if}
+    {#if last}<Button on:click={openSettings}>Abrir Ajustes</Button>{/if}
+    <span data-autofocus-wrap><Button variant="primary" on:click={next}>{last ? 'Empezar' : 'Siguiente'}</Button></span>
   </svelte:fragment>
 </Modal>
 

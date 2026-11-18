@@ -14,7 +14,8 @@ export function focusTrap(node: HTMLElement) {
   const previous = document.activeElement as HTMLElement | null;
 
   // Foco inicial: el elemento marcado con `data-autofocus`, o el propio diálogo.
-  const initial = node.querySelector<HTMLElement>('[data-autofocus]') ?? node;
+  const initial =
+    node.querySelector<HTMLElement>('[data-autofocus]') ?? node.querySelector<HTMLElement>('[data-autofocus-wrap] button') ?? node;
   queueMicrotask(() => initial.focus({ preventScroll: true }));
 
   function onKeydown(e: KeyboardEvent) {

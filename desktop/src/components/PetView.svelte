@@ -31,6 +31,7 @@
   import { checkPetBallCollision, type BallState } from '../lib/toys/toyPhysics';
   import { currentSpeech, speak, speechBusy } from '../lib/speech-queue';
   import { setPetOnScreen } from '../lib/window-visibility';
+  import Ico from './Ico.svelte';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
@@ -48,11 +49,19 @@
   /** Una acción con esta prioridad o más "ocupa" a la mascota: no pasea mientras tanto. */
   const BUSY_PRIORITY = 40;
   const PET_SIZE = 128;
+  const SPEECH_HALF = 110 + 8; // media burbuja + margen con el borde
   /** Con movimiento reducido las prendas animadas se quedan en su primer frame. */
   const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   /** Punto (cursor) donde aparece al montarse, p. ej. al soltarlo fuera del Hábitat. */
   export let spawnAt: { x: number; y: number } | null = null;
+
+  /** Desplazamiento horizontal de la burbuja para que no se salga por un borde de la pantalla. */
+  $: speechShift = (() => {
+    const cx = posX + PET_SIZE / 2;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    return Math.max(0, SPEECH_HALF - cx) - Math.max(0, cx + SPEECH_HALF - vw);
+  })();
 
   let posX = spawnAt ? clampSpawn(spawnAt.x, window.innerWidth) : 150;
   let posY = spawnAt ? clampSpawn(spawnAt.y, window.innerHeight) : 50;
@@ -845,6 +854,7 @@
   class="pet-container"
   role="button"
   tabindex="0"
+  aria-label="{pet.nickname || pet.species?.name || 'Tu Pockai'}, nivel {pet.level}. {isHighFiveWaiting ? 'Pulsa Enter para chocar los cinco' : 'Pulsa Enter para abrir su panel'}"
   data-anim={currentAnim}
   class:dragging={isDragging}
   class:over-home={isOverHome}
@@ -856,7 +866,7 @@
   on:mousedown={handleMouseDown}
   on:mousemove={handlePetHoverMove}
   on:click={handleClick}
-  on:keydown={(e) => e.key === 'Enter' && onPetClick()}
+  on:keydown={(e) => e.key === 'Enter' && (isHighFiveWaiting ? handleClick() : onPetClick())}
   on:dragover={(e) => {
     e.preventDefault();
     isDragOverPet = true;
@@ -921,13 +931,15 @@
 
   {#if $currentSpeech}
     {#key $currentSpeech.id}
-      <div class="speech" class:below={posY < 110} role="status" aria-live="polite">{$currentSpeech.text}</div>
+      <div class="speech" class:below={posY < 110} style="--speech-shift: {speechShift}px" aria-hidden="true">{$currentSpeech.text}</div>
     {/key}
   {/if}
+  <!-- Región viva estable: si se recreara con cada mensaje, los lectores de pantalla no lo anunciarían -->
+  <div class="sr-only" role="status" aria-live="polite">{$currentSpeech?.text ?? ''}</div>
 
   {#if isHighFiveWaiting}
     <div class="high-five-badge" title="¡Haz clic para chocar los cinco!">
-      <span>🐾✋ ¡Choca!</span>
+      <Ico n="hand" size={13} /> <span>¡Choca!</span>
     </div>
   {/if}
 
@@ -1063,6 +1075,9 @@
     left: 50%;
     margin-left: -110px;
     width: 220px;
+    /* Cerca de un borde de la pantalla se desplaza para no salirse */
+    translate: var(--speech-shift, 0px) 0;
+    overflow-wrap: anywhere;
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-2xl);
     background: var(--surface);
@@ -1110,7 +1125,7 @@
     content: '';
     position: absolute;
     top: 100%;
-    left: 50%;
+    left: calc(50% - var(--speech-shift, 0px));
     margin-left: -6px;
     border: 6px solid transparent;
     border-top-color: var(--line);

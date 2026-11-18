@@ -19,6 +19,7 @@
   let misses = 0;
   let done = false;
   let timer: any;
+  let flipBack: ReturnType<typeof setTimeout> | null = null;
   let start = 0;
 
   $: pairs = matched.size / 2;
@@ -35,7 +36,7 @@
       } else {
         misses += 1;
         locked = true;
-        setTimeout(() => {
+        flipBack = setTimeout(() => {
           flipped = [];
           locked = false;
         }, 700);
@@ -63,16 +64,19 @@
   onDestroy(() => {
     done = true;
     clearInterval(timer);
+    if (flipBack) clearTimeout(flipBack);
   });
 </script>
 
-<div class="hud"><span><Ico n="timer" /> {Math.ceil(timeLeft)}s</span><span><Ico n="cards" /> {pairs}/8 · fallos {misses}</span></div>
+<div class="hud"><span><Ico n="timer" /> {Math.ceil(timeLeft)} s</span><span role="status"><Ico n="cards" /> {pairs}/8 parejas · fallos {misses}</span></div>
 <div class="grid">
   {#each deck as emoji, i}
     <button
       class="card"
       class:up={flipped.includes(i) || matched.has(i)}
       class:ok={matched.has(i)}
+      disabled={matched.has(i)}
+      aria-label="Carta {i + 1}: {matched.has(i) ? `${emoji}, emparejada` : flipped.includes(i) ? emoji : 'boca abajo'}"
       on:click={() => flip(i)}
     >
       {#if flipped.includes(i) || matched.has(i)}{emoji}{:else}❔{/if}

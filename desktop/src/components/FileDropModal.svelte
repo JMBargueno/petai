@@ -58,9 +58,10 @@
     <input
       class="input"
       type="text"
+      aria-label="Tu pregunta sobre el archivo"
       placeholder="O hazle cualquier pregunta sobre el archivo…"
       bind:value={customQuestion}
-      on:keydown={(e) => e.key === 'Enter' && handleCustomSend()}
+      on:keydown={(e) => e.key === 'Enter' && !e.isComposing && e.keyCode !== 229 && handleCustomSend()}
     />
     <Button variant="primary" iconOnly icon="send" label="Enviar pregunta" disabled={!customQuestion.trim()} on:click={handleCustomSend} />
   </div>

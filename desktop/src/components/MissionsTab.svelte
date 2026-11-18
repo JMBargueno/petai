@@ -2,6 +2,7 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type Mission, type MissionList, type MissionSummary } from '../lib/api';
   import { reasonIcon } from '../lib/ui/maps';
+  import { friendlyError } from '../lib/ui/errors';
   import { AsyncState, Badge, Button, EmptyState, ListRow, Notice, ProgressBar, SectionHeader, StatTile } from './ui';
 
   const dispatch = createEventDispatcher();
@@ -21,14 +22,15 @@
     return parts.join(' · ') || '—';
   }
 
-  async function load() {
+  /** `keepMsg`: recarga tras reclamar, sin borrar el aviso de la recompensa. */
+  async function load(keepMsg = false) {
     loading = true;
     error = '';
-    claimedMsg = '';
+    if (!keepMsg) claimedMsg = '';
     try {
       [data, summary] = await Promise.all([api.getMissions(), api.getMissionsSummary()]);
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudieron cargar las misiones.');
     } finally {
       loading = false;
     }
@@ -40,18 +42,17 @@
     claimedMsg = '';
     try {
       const res = await api.claimMission(m.id);
-      claimedMsg = `¡Recibiste ${rewardLabel(m)}!`;
-      await load();
+      claimedMsg = `Has recibido ${rewardLabel(m)}.` + (res.dailyChestUnlocked ? ' ¡Y has desbloqueado el cofre diario! Ábrelo en Tienda › Cofres.' : '');
+      await load(true);
       dispatch('refreshUser');
-      if (res.dailyChestUnlocked) claimedMsg += ' · Cofre diario desbloqueado';
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo reclamar la recompensa.');
     } finally {
       busyId = '';
     }
   }
 
-  onMount(load);
+  onMount(() => load());
 
   $: groups = data
     ? [
@@ -62,26 +63,26 @@
 </script>
 
 <div class="ui-stack">
-  <AsyncState {loading} {error} onRetry={load} rows={4}>
+  <AsyncState {loading} {error} onRetry={() => load()} rows={4}>
     {#if data}
       {#if summary}
         <div class="ui-stats">
           <StatTile value="{summary.dailyCompleted}/{summary.dailyTotal}" label="diarias" />
           <StatTile value="{summary.weeklyCompleted}/{summary.weeklyTotal}" label="semanales" />
           <StatTile icon="flame" value={summary.streak} label="días (récord {summary.bestStreak})" />
-          <StatTile icon={data.dailyChestUnlocked ? 'gift' : 'lock'} value="" label="cofre diario" />
+          <StatTile icon={data.dailyChestUnlocked ? 'gift' : 'lock'} value={data.dailyChestUnlocked ? 'Listo' : 'Bloqueado'} label="cofre diario" />
         </div>
       {/if}
       {#if claimedMsg}<Notice tone="ok" icon="party">{claimedMsg}</Notice>{/if}
 
       {#each groups as g, i (g.title)}
-        <SectionHeader title={g.title} icon={g.icon} count={g.items.length} onRefresh={i === 0 ? load : null} {loading} />
+        <SectionHeader title={g.title} icon={g.icon} count={g.items.length} onRefresh={i === 0 ? () => load() : null} {loading} />
         <div class="ui-list">
           {#each g.items as m (m.id)}
             <ListRow icon={reasonIcon(m.type)} title={m.description} done={m.completed && !m.claimed} muted={m.claimed} wrap>
               <div class="m-meta">
                 <ProgressBar value={m.current} max={m.target} size="sm" />
-                <small>{m.current}/{m.target} · {rewardLabel(m)}</small>
+                <small>{Math.min(m.current, m.target)}/{m.target} · Recompensa: {rewardLabel(m)}</small>
               </div>
               <svelte:fragment slot="end">
                 {#if m.completed}

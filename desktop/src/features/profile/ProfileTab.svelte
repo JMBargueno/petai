@@ -8,8 +8,10 @@
   import { onAchievementUnlocked } from '../achievements/achievements.api';
   import { CATEGORY_LABELS, TIER_LABELS, formatProgress, progressRatio, toggleFeatured } from '../../lib/profile-format';
   import ProfileView from './ProfileView.svelte';
+  import { friendlyError } from '../../lib/ui/errors';
+  import { Button, Notice } from '../../components/ui';
   import Badge from './Badge.svelte';
-  import { AlertCircle, RefreshCw, Eye, EyeOff, CircleCheck } from 'lucide-svelte';
+  import { RefreshCw, Eye, EyeOff } from 'lucide-svelte';
 
   let profile: MyProfile | null = null;
   let achievements: Achievement[] = [];
@@ -43,7 +45,7 @@
       profile = p;
       achievements = Object.values(list.categories).flat();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       loading = false;
     }
@@ -58,6 +60,7 @@
 
   function toggle(id: string) {
     const next = toggleFeatured(draft, id);
+    error = '';
     if (next) draft = next;
     else error = 'La vitrina ya tiene 3 insignias: quita una antes de añadir otra.';
   }
@@ -72,7 +75,7 @@
       editing = false;
       ok = 'Vitrina actualizada.';
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       saving = false;
     }
@@ -89,7 +92,7 @@
       profile = { ...profile, achievementsPublic: next };
       ok = next ? 'Tus insignias y estadísticas son visibles para los demás.' : 'Tus insignias y estadísticas ahora son privadas.';
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       savingPrivacy = false;
     }
@@ -107,8 +110,13 @@
 </script>
 
 <div class="ui">
-  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+  {#if error}
+    <Notice tone="error" dismissible={!!profile} on:dismiss={() => (error = '')}>
+      {error}
+      <svelte:fragment slot="end">{#if !profile}<Button variant="ghost" size="sm" on:click={load}>Reintentar</Button>{/if}</svelte:fragment>
+    </Notice>
+  {/if}
+  {#if ok}<Notice tone="ok">{ok}</Notice>{/if}
 
   {#if loading && !profile}
     <div class="ui-loading" aria-label="Cargando perfil">

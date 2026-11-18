@@ -75,7 +75,8 @@
           score += 1;
           flash = '+1';
         }
-        setTimeout(() => (flash = ''), 250);
+        if (flashTimer) clearTimeout(flashTimer);
+        flashTimer = setTimeout(() => (flash = ''), 250);
       } else if (it.y < H + 20) {
         remaining.push(it);
       }
@@ -85,6 +86,8 @@
     if (elapsed >= durationSeconds) return end();
     raf = requestAnimationFrame(frame);
   }
+
+  let flashTimer: ReturnType<typeof setTimeout> | null = null;
 
   function end() {
     if (done) return;
@@ -97,12 +100,20 @@
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     basketX = e.clientX - r.left;
   }
-  const down = (e: KeyboardEvent) => keys.add(e.key);
+  const MOVE_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D']);
+  const down = (e: KeyboardEvent) => {
+    // Las flechas mueven la cesta, no el scroll del panel.
+    if (MOVE_KEYS.has(e.key)) e.preventDefault();
+    keys.add(e.key);
+  };
   const up = (e: KeyboardEvent) => keys.delete(e.key);
+  // Si la ventana pierde el foco con una tecla pulsada, el `keyup` no llega: se sueltan todas.
+  const releaseAll = () => keys.clear();
 
   onMount(() => {
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
+    window.addEventListener('blur', releaseAll);
     raf = requestAnimationFrame(frame);
   });
   onDestroy(() => {
@@ -110,6 +121,8 @@
     cancelAnimationFrame(raf);
     window.removeEventListener('keydown', down);
     window.removeEventListener('keyup', up);
+    window.removeEventListener('blur', releaseAll);
+    if (flashTimer) clearTimeout(flashTimer);
   });
 </script>
 

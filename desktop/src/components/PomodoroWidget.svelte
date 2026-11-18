@@ -10,6 +10,9 @@
 
   export let compact: boolean = false;
 
+  /** «Detener» pide confirmación en línea: pierde el tiempo de la ronda en curso. */
+  let confirmStop = false;
+
   $: state = $pomodoroStore;
   $: minutes = Math.floor(state.timeLeft / 60);
   $: seconds = state.timeLeft % 60;
@@ -39,19 +42,32 @@
 
   <div class="controls">
     {#if !state.isRunning && state.phase === 'idle'}
-      <Button variant="primary" size="sm" icon="play" class="grow" on:click={() => startPomodoro(25, 5)}>Empezar 25m</Button>
-      <Button size="sm" on:click={() => startPomodoro(45, 10)}>45m</Button>
+      <Button variant="primary" size="sm" icon="play" class="grow" title="25 minutos de foco y 5 de descanso" on:click={() => startPomodoro(25, 5)}>25 + 5 min</Button>
+      <Button size="sm" title="45 minutos de foco y 10 de descanso" on:click={() => startPomodoro(45, 10)}>45 + 10 min</Button>
+    {:else if confirmStop}
+      <span class="stop-ask" role="alert">¿Detener la sesión? Se pierde el tiempo de esta ronda.</span>
+      <Button variant="danger" size="sm" on:click={() => { confirmStop = false; stopPomodoro(); }}>Detener</Button>
+      <Button variant="ghost" size="sm" on:click={() => (confirmStop = false)}>Seguir</Button>
     {:else if state.isRunning}
       <Button size="sm" icon="pause" class="grow" on:click={pausePomodoro}>Pausar</Button>
-      <Button variant="ghost" size="sm" icon="refresh" on:click={stopPomodoro}>Reiniciar</Button>
+      <Button variant="ghost" size="sm" icon="x" on:click={() => (confirmStop = true)}>Detener</Button>
     {:else}
       <Button variant="primary" size="sm" icon="play" class="grow" on:click={resumePomodoro}>Reanudar</Button>
-      <Button variant="ghost" size="sm" icon="refresh" on:click={stopPomodoro}>Reiniciar</Button>
+      <Button variant="ghost" size="sm" icon="x" on:click={() => (confirmStop = true)}>Detener</Button>
     {/if}
   </div>
+  {#if state.phase === 'idle'}
+    <p class="form-hint">Minutos de foco + minutos de descanso.</p>
+  {/if}
 </div>
 
 <style>
+  .stop-ask {
+    flex: 1 1 100%;
+    font-size: var(--text-caption);
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
   .pomodoro {
     display: flex;
     flex-direction: column;

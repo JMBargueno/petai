@@ -1,8 +1,8 @@
 <script lang="ts">
   import Ico from './Ico.svelte';
-  import { onMount } from 'svelte';
   import { api, type BondingDetail } from '../lib/api';
   import { reasonIcon } from '../lib/ui/maps';
+  import { friendlyError } from '../lib/ui/errors';
   import { AsyncState, Badge, Card, EmptyState, FeatureHeader, ListRow, ProgressBar, SectionHeader } from './ui';
 
   export let pet: any = null;
@@ -26,16 +26,41 @@
     try {
       data = await api.getBonding(pet.id);
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo cargar el vínculo.');
     } finally {
       loading = false;
     }
   }
 
-  $: petId = pet?.id;
-  $: if (petId && !loading) load();
+  // Recarga solo al cambiar de mascota. (Antes dependía de `loading` y cada respuesta volvía a
+  // lanzar la petición: un bucle infinito.)
+  let loadedFor = '';
+  $: if (pet?.id && pet.id !== loadedFor) {
+    loadedFor = pet.id;
+    data = null;
+    load();
+  }
 
-  onMount(load);
+  const REASONS: Record<string, string> = {
+    feed: 'Le diste de comer',
+    clean: 'Lo bañaste',
+    play: 'Jugasteis juntos',
+    chat: 'Hablasteis',
+    sleep: 'Durmió bien',
+    visit: 'Recibió una visita',
+    battle: 'Combatisteis juntos',
+    decay: 'Se enfrió por falta de trato',
+    login: 'Volviste a verlo',
+  };
+  const reasonLabel = (r: string) => REASONS[r] ?? r.replace(/_/g, ' ');
+  const signed = (n: number) => `${n > 0 ? '+' : ''}${Math.abs(n) < 10 ? n.toFixed(1).replace('.', ',') : n.toFixed(0)}`;
+
+  $: decay = data?.decayInfo;
+  $: decayText = !decay
+    ? ''
+    : decay.isDecaying
+      ? `Lleva ${decay.hoursSinceInteraction.toFixed(0)} h sin trato y pierde ${decay.decayRatePerDay} puntos al día. Cualquier cuidado lo detiene.`
+      : `Empezará a enfriarse si pasan ${decay.decayStartHours} h sin que lo cuides o habléis.`;
 </script>
 
 <div class="ui-stack">
@@ -55,35 +80,36 @@
         <SectionHeader title="Desbloqueos" icon="unlock" count="{UNLOCKS.filter((u) => data?.unlocks[u.key]).length}/{UNLOCKS.length}" />
         <div class="unlocks">
           {#each UNLOCKS as u (u.key)}
-            <div class="unlock" class:on={data.unlocks[u.key]} title={data.unlocks[u.key] ? 'Desbloqueado' : 'Bloqueado'}>
-              <span class="ui-tile__icon"><Ico n={data.unlocks[u.key] ? u.icon : 'lock'} size={16} /></span>
+            <div class="unlock" class:on={data.unlocks[u.key]}>
+              <span class="ui-tile__icon" aria-hidden="true"><Ico n={data.unlocks[u.key] ? u.icon : 'lock'} size={16} /></span>
               <small>{u.label}</small>
+              <small class="unlock-state">{data.unlocks[u.key] ? 'Activo' : 'Bloqueado'}</small>
             </div>
           {/each}
         </div>
 
-        <SectionHeader title="Decaimiento" icon="cold" />
+        <SectionHeader title="Estado del vínculo" icon="cold" />
         <ListRow
           icon={data.decayInfo.isDecaying ? 'cold' : 'shield'}
           iconTint={data.decayInfo.isDecaying ? 'var(--color-electric-blue)' : 'var(--success)'}
           title={data.decayInfo.isDecaying ? 'Enfriándose ahora' : 'Estable'}
-          sub="Gracia {data.decayInfo.graceWindowHours}h · decae desde {data.decayInfo.decayStartHours}h · {data.decayInfo.decayRatePerDay}/día · acumulado -{data.decayInfo.acumulatedDecay.toFixed(2)}"
+          sub={decayText}
           wrap
         >
           <svelte:fragment slot="end">
-            <Badge size="sm" icon="clock">{data.decayInfo.hoursSinceInteraction.toFixed(0)}h</Badge>
+            <Badge size="sm" icon="clock" title="Tiempo desde la última interacción">hace {data.decayInfo.hoursSinceInteraction.toFixed(0)} h</Badge>
           </svelte:fragment>
         </ListRow>
 
         <SectionHeader title="Historial" icon="log" onRefresh={load} {loading} />
         <div class="ui-list ui-list--scroll">
           {#each data.history.items as ev (ev.id)}
-            <ListRow icon={reasonIcon(ev.reason)} title={ev.reason} sub={new Date(ev.createdAt).toLocaleDateString()}>
+            <ListRow icon={reasonIcon(ev.reason)} title={reasonLabel(ev.reason)} sub={new Date(ev.createdAt).toLocaleDateString()}>
               <svelte:fragment slot="end">
                 <span class="delta" class:pos={ev.delta > 0} class:neg={ev.delta < 0}>
-                  {ev.delta > 0 ? '+' : ''}{ev.delta.toFixed(2)}
+                  {signed(ev.delta)}
                 </span>
-                <span class="muted">→ {ev.value.toFixed(0)}</span>
+                <span class="muted" title="Vínculo tras el cambio">→ {ev.value.toFixed(0)}</span>
               </svelte:fragment>
             </ListRow>
           {:else}
@@ -96,6 +122,10 @@
 </div>
 
 <style>
+  .unlock-state {
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
   .bond-value {
     font-family: var(--font-display);
     font-size: 24px;
@@ -139,9 +169,6 @@
     color: var(--ink-muted);
     text-align: center;
     line-height: 1.15;
-  }
-  .ui-stack :global(.ui-row__title) {
-    text-transform: capitalize;
   }
   .delta {
     font-weight: 800;

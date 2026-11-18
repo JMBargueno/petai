@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { RefreshCw, Download } from 'lucide-svelte';
+  import { ExternalLink } from 'lucide-svelte';
+  import { Button, Notice, ProgressBar, SectionHeader } from './ui';
   import { updateState, checkForUpdates, installUpdate } from '../lib/updater';
   import { SOCIAL_HANDLE, SOCIAL_LINKS } from '../lib/social';
   import { restartOnboarding } from '../lib/onboarding';
@@ -34,112 +35,116 @@
   }
 
   $: s = $updateState;
+  /** El mensaje técnico del actualizador no se enseña tal cual. */
+  const UPDATE_ERROR = 'No se pudo comprobar o instalar la actualización. Revisa tu conexión e inténtalo de nuevo.';
+
   $: busy = s.status === 'checking' || s.status === 'downloading' || s.status === 'ready';
 </script>
 
-<section class="about-panel" aria-label="Acerca de Pockai">
-  <h2>Pockai</h2>
-  <p class="muted">Versión {version || '—'}</p>
+<div class="ui-stack" role="group" aria-label="Acerca de Pockai">
+  <SectionHeader title="Versión" icon="info" />
+  <p class="about-version">Pockai <strong>{version || '—'}</strong></p>
 
   {#if s.status === 'available'}
-    <div class="update-box">
-      <p><strong>¡Hay una versión nueva: {s.version}!</strong></p>
+    <Notice tone="info" icon="gift">
+      <strong>Hay una versión nueva: {s.version}</strong>
       {#if s.notes}<p class="notes">{s.notes}</p>{/if}
-      <button class="btn btn--primary" on:click={installUpdate}>
-        <Download size={16} /> Instalar y reiniciar
-      </button>
-    </div>
+    </Notice>
+    <Button variant="primary" block icon="refresh" on:click={installUpdate}>Instalar y reiniciar</Button>
   {:else if s.status === 'downloading'}
-    <div class="update-box">
-      <p>Descargando la versión {s.version}…</p>
-      <progress max="1" value={s.progress ?? undefined} aria-label="Progreso de la descarga"></progress>
-    </div>
+    <ProgressBar value={(s.progress ?? 0) * 100} label="Descargando la versión {s.version}…" detail={s.progress != null ? `${Math.round(s.progress * 100)}%` : ''} />
   {:else if s.status === 'ready'}
-    <p class="notice">Versión {s.version} instalada. Reiniciando…</p>
+    <Notice tone="ok">Versión {s.version} instalada. Reiniciando…</Notice>
   {:else}
-    <button class="btn" on:click={() => checkForUpdates()} disabled={busy}>
-      <RefreshCw size={16} />
+    <Button icon="refresh" loading={s.status === 'checking'} disabled={busy} on:click={() => checkForUpdates()}>
       {s.status === 'checking' ? 'Buscando…' : 'Buscar actualizaciones'}
-    </button>
+    </Button>
     {#if s.status === 'upToDate'}
-      <p class="notice">Estás en la última versión.</p>
+      <Notice tone="ok">Tienes la última versión.</Notice>
     {:else if s.status === 'error'}
-      <p class="error" role="alert">{s.message}</p>
+      <Notice tone="error">{UPDATE_ERROR}</Notice>
     {/if}
   {/if}
 
-  <button class="btn btn--ghost" on:click={() => restartOnboarding()}>Ver la guía de inicio otra vez</button>
-
-  <div class="contact">
-    <p class="muted">¿Has visto un fallo o tienes una idea? La vía preferente es el formulario de contacto.</p>
-    <div class="contact__links">
-      <a class="btn" href={BUG_URL} target="_blank" rel="noopener" on:click={(e) => openExternal(e, BUG_URL)}>Informar de un fallo</a>
-      <a class="btn" href={IDEA_URL} target="_blank" rel="noopener" on:click={(e) => openExternal(e, IDEA_URL)}>Sugerir una mejora</a>
-    </div>
-    <p class="muted">
-      Si lo prefieres, escríbenos a
-      <a href={`mailto:${CONTACT_EMAIL}`} on:click={(e) => openExternal(e, `mailto:${CONTACT_EMAIL}`)}>{CONTACT_EMAIL}</a>
-    </p>
+  <SectionHeader title="Ayuda" icon="help" />
+  <Button variant="ghost" icon="book" on:click={() => restartOnboarding()}>Ver la guía de inicio otra vez</Button>
+  <p class="form-hint">¿Has visto un fallo o tienes una idea? Cuéntanoslo con el formulario de contacto (se abre en tu navegador).</p>
+  <div class="links">
+    <a class="btn" href={BUG_URL} target="_blank" rel="noopener" on:click={(e) => openExternal(e, BUG_URL)}>
+      Informar de un fallo <ExternalLink size={14} aria-hidden="true" /><span class="sr-only">(se abre en el navegador)</span>
+    </a>
+    <a class="btn" href={IDEA_URL} target="_blank" rel="noopener" on:click={(e) => openExternal(e, IDEA_URL)}>
+      Sugerir una mejora <ExternalLink size={14} aria-hidden="true" /><span class="sr-only">(se abre en el navegador)</span>
+    </a>
   </div>
+  <p class="form-hint">
+    Si lo prefieres, escríbenos a
+    <a class="mail" href={`mailto:${CONTACT_EMAIL}`} on:click={(e) => openExternal(e, `mailto:${CONTACT_EMAIL}`)}>{CONTACT_EMAIL}</a>
+  </p>
 
-  <div class="social">
-    <p class="muted">Síguenos</p>
-    <ul aria-label="Redes sociales">
-      {#each SOCIAL_LINKS as s (s.id)}
-        <li>
-          <a
-            href={s.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Pockai en ${s.name}`}
-            title={`@${SOCIAL_HANDLE} en ${s.name}`}
-            on:click={(e) => openExternal(e, s.url)}
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-              <path d={s.path} fill="currentColor" />
-            </svg>
-          </a>
-        </li>
-      {/each}
-    </ul>
-  </div>
-</section>
+  <SectionHeader title="Síguenos" icon="megaphone" />
+  <ul class="social" aria-label="Redes sociales">
+    {#each SOCIAL_LINKS as link (link.id)}
+      <li>
+        <a
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Pockai en ${link.name} (se abre en el navegador)`}
+          title={`@${SOCIAL_HANDLE} en ${link.name}`}
+          on:click={(e) => openExternal(e, link.url)}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+            <path d={link.path} fill="currentColor" />
+          </svg>
+        </a>
+      </li>
+    {/each}
+  </ul>
+</div>
 
 <style>
-  .about-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-2);
-    padding: var(--space-4);
-    background: var(--surface-2);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius-2xl);
-    color: var(--ink);
+  .about-version {
+    margin: 0;
+    font-size: var(--text-body);
   }
-  h2 { margin: 0; font-size: var(--text-body); }
-  p { margin: 0; font-size: var(--text-label); }
-  .muted { color: var(--ink-muted); }
-  .notice { color: var(--success-ink); }
-  .error { color: var(--danger-ink); }
-  .update-box { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
-  .notes { white-space: pre-line; max-height: 120px; overflow-y: auto; color: var(--ink-muted); }
-  progress { width: 100%; accent-color: var(--accent); }
-  .contact { display: grid; gap: var(--space-2); justify-items: start; padding-top: var(--space-2); border-top: 1px solid var(--line-soft); width: 100%; }
-  .contact p { margin: 0; }
-  .contact p a { color: var(--accent-ink); }
-  .contact__links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-  .contact__links .btn { text-decoration: none; }
-  .social { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; }
-  .social ul { display: flex; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+  .notes {
+    margin: var(--space-1) 0 0;
+    white-space: pre-line;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .links .btn {
+    text-decoration: none;
+  }
+  .mail {
+    color: var(--accent-ink);
+  }
+  .social {
+    display: flex;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
   .social a {
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
+    width: var(--control-h);
+    height: var(--control-h);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-pills);
     color: var(--ink);
+    transition: border-color var(--dur-1), color var(--dur-1);
   }
-  .social a:hover, .social a:focus-visible { border-color: var(--accent); color: var(--accent-ink); }
+  .social a:hover,
+  .social a:focus-visible {
+    border-color: var(--line);
+    color: var(--accent-ink);
+  }
 </style>

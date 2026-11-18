@@ -1,6 +1,7 @@
 <script lang="ts">
   import Ico from './Ico.svelte';
   import { elementMeta } from '../lib/ui/maps';
+  import { friendlyError } from '../lib/ui/errors';
   import { Badge, Button, Card, FeatureHeader, ListRow, Notice, SectionHeader, TileButton } from './ui';
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type TrainingElement, type TrainingFloor, type TrainingSubmit, type TrainingBuff } from '../lib/api';
@@ -24,6 +25,11 @@
   let prediction: TrainingElement | '' = '';
   let last: TrainingSubmit | null = null;
   let finalMsg = '';
+  let finalOk = true;
+  /** Aviso informativo (no es un error): p. ej. que se retoma una sesión a medias. */
+  let info = '';
+  /** Al retomar una sesión no se conocen corazones ni piso hasta jugar un turno. */
+  let unknownState = false;
   let buff: TrainingBuff | null = null;
   let error = '';
   let busy = false;
@@ -44,6 +50,8 @@
     busy = true;
     error = '';
     finalMsg = '';
+    info = '';
+    unknownState = false;
     last = null;
     try {
       const res = await api.trainingStart(pet.id);
@@ -59,9 +67,10 @@
         // Hay una sesión a medias: se puede seguir eligiendo, aunque sin datos de los pisos.
         floors = null;
         active = true;
-        error = 'Tienes un entrenamiento a medias: continúa donde lo dejaste.';
+        unknownState = true;
+        info = 'Tienes un entrenamiento a medias: sigue donde lo dejaste. Verás tus corazones y el piso en cuanto elijas un elemento.';
       } else {
-        error = e.message;
+        error = friendlyError(e, 'No se pudo empezar el entrenamiento.');
       }
     } finally {
       busy = false;
@@ -73,17 +82,20 @@
     busy = true;
     error = '';
     try {
-      const res = await api.trainingSubmit(pet.id, element, isLastFloor && prediction ? prediction : undefined);
+      const res = await api.trainingSubmit(pet.id, element, (isLastFloor || unknownState) && prediction ? prediction : undefined);
       last = res;
       revealed = { ...revealed, [res.floor]: res.enemyElement };
       hearts = res.hearts;
       currentFloor = res.currentFloor;
+      unknownState = false;
+      info = '';
       if (res.status !== 'active') {
         active = false;
+        finalOk = res.status === 'completed';
         finalMsg =
           res.status === 'completed'
             ? `¡Mazmorra superada! +${res.xp ?? 0} XP, +${res.coins ?? 0} monedas` +
-              (res.buff ? ` · buff ×${(1 + res.buff.multiplier).toFixed(2)} durante 24 h` : '') +
+              (res.buff ? ` · bonificación ×${(1 + res.buff.multiplier).toFixed(2)} durante 24 h` : '') +
               (res.predictionBonus ? ' · ¡predicción acertada!' : '')
             : `Te has quedado sin corazones en el piso ${res.floor + 1}.` +
               (res.xp ? ` +${res.xp} XP, +${res.coins ?? 0} monedas` : '');
@@ -92,7 +104,7 @@
         dispatch('refreshUser');
       }
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo enviar tu elección.');
       if (/no hay sesión|expirado/i.test(e.message ?? '')) active = false;
     } finally {
       busy = false;
@@ -117,16 +129,20 @@
     />
     {#if buff?.active && buff.buff}
       <Notice tone="ok" icon="energy">
-        Buff activo: ×{(1 + buff.buff.multiplier).toFixed(2)} a {buff.buff.stats.join(' y ')}
+        Bonificación activa: ×{(1 + buff.buff.multiplier).toFixed(2)} a {buff.buff.stats.join(' y ')}
         · {Math.ceil(buff.buff.remainingMs / 3_600_000)} h restantes
       </Notice>
     {/if}
 
     {#if active}
-      <div class="hearts" aria-label="{hearts} corazones">
-        {#each Array(3) as _, i}<span class:lost={i >= hearts}><Ico n="heart" size={16} /></span>{/each}
-        <Badge size="sm" tone="tint">Piso {Math.min(currentFloor + 1, TOTAL_FLOORS)} de {TOTAL_FLOORS}</Badge>
-      </div>
+      {#if unknownState}
+        <Badge size="sm" tone="neutral" icon="wait">Sesión retomada</Badge>
+      {:else}
+        <div class="hearts" role="img" aria-label="Te quedan {hearts} de 3 corazones">
+          {#each Array(3) as _, i}<span class:lost={i >= hearts} aria-hidden="true"><Ico n="heart" size={16} /></span>{/each}
+          <Badge size="sm" tone="tint">Piso {Math.min(currentFloor + 1, TOTAL_FLOORS)} de {TOTAL_FLOORS}</Badge>
+        </div>
+      {/if}
     {:else}
       <Button variant="primary" size="lg" block icon="swords" loading={busy} disabled={!pet} on:click={start}>
         {pet ? 'Entrar en la mazmorra' : 'Sin mascota activa'}
@@ -152,9 +168,9 @@
       </div>
     {/if}
 
-    {#if isLastFloor}
+    {#if isLastFloor || unknownState}
       <div class="form-group">
-        <label for="train-pred">Predicción (bonus de buff si aciertas el elemento del jefe)</label>
+        <label for="train-pred">Predicción para el jefe final (si aciertas su elemento, la bonificación es mayor)</label>
         <select id="train-pred" class="select" bind:value={prediction}>
           <option value="">Sin predicción</option>
           {#each ELEMENTS as el}<option value={el.id}>{el.label}</option>{/each}
@@ -171,7 +187,8 @@
   {/if}
 
   {#if last && active}<Notice tone={last.result === 'advanced' || last.result === 'completed' ? 'ok' : 'warning'}>{resultText(last)}</Notice>{/if}
-  {#if finalMsg}<Notice tone="ok" icon="party">{finalMsg}</Notice>{/if}
+  {#if info}<Notice tone="info">{info}</Notice>{/if}
+  {#if finalMsg}<Notice tone={finalOk ? 'ok' : 'warning'} icon={finalOk ? 'party' : 'heart'}>{finalMsg}</Notice>{/if}
   {#if error}<Notice tone="error">{error}</Notice>{/if}
 </div>
 

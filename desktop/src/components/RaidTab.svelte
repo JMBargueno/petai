@@ -27,7 +27,7 @@
         api.getRaidHistory(5),
       ]);
     } catch (e: any) {
-      error = e.message;
+      error = e instanceof TypeError ? 'Sin conexión con el servidor. Inténtalo de nuevo en un momento.' : 'No se pudo cargar la raid.';
     } finally {
       loading = false;
     }
@@ -42,16 +42,18 @@
     try {
       const res = await api.raidAttack(pet.id);
       lastHit = `Infligiste ${res.damage.toLocaleString()} de daño (${res.rounds} asaltos).`;
-      if (res.settled) settledMsg = '¡El boss fue derrotado! Se ha repartido el premio entre los participantes.';
+      if (res.settled) settledMsg = '¡Jefe derrotado! El premio se ha repartido entre quienes participaron.';
       await load();
       dispatch('refreshPet');
       dispatch('refreshUser');
     } catch (e: any) {
-      error = e.message;
+      error = e instanceof TypeError ? 'Sin conexión con el servidor. Inténtalo de nuevo en un momento.' : e?.message || 'No se pudo atacar.';
     } finally {
       busy = false;
     }
   }
+
+  const RAID_STATUS: Record<string, string> = { active: 'En curso', expired: 'Escapó', failed: 'Escapó', cancelled: 'Cancelado' };
 
   onMount(load);
 
@@ -77,7 +79,7 @@
           value={current.hpRemaining}
           max={current.hpGlobal}
           color={hpColor(current.hpPercent)}
-          label="Vida del boss"
+          label="Vida del jefe"
           detail="{fmt(current.hpRemaining)} / {fmt(current.hpGlobal)} ({current.hpPercent}%)"
         />
         <p class="ui-card__hint">
@@ -85,15 +87,17 @@
             Tu contribución: <b>{fmt(current.myContribution.damageDealt)}</b> de daño · {current.myContribution.attacks} ataques ·
             {current.myContribution.percentage}%
           {:else}
-            Aún no has atacado a este boss.
+            Aún no has atacado a este jefe.
           {/if}
         </p>
         {#if current.status === 'active'}
-          <Button variant="danger" size="lg" block icon="swords" loading={busy} disabled={!pet} on:click={attack}>
-            {pet ? 'Atacar al boss' : 'Sin mascota activa'}
+          {#if pet?.sleeping}<Notice tone="info" icon="moon">Tu mascota está durmiendo. Despiértala para atacar.</Notice>{/if}
+          <Button variant="primary" size="lg" block icon="swords" loading={busy} disabled={!pet || pet.sleeping} on:click={attack}>
+            {pet ? 'Atacar al jefe' : 'Sin mascota activa'}
           </Button>
+          <p class="ui-card__hint center">Cada ataque es un combate completo y gasta energía.</p>
         {:else}
-          <Notice tone="ok" icon="trophy">Boss derrotado</Notice>
+          <Notice tone="ok" icon="trophy">Jefe derrotado</Notice>
         {/if}
       </Card>
 
@@ -108,7 +112,7 @@
             rank={e.rank}
             highlight={e.mine}
             title={e.displayName}
-            sub="{e.petName} · Nv {e.petLevel} · {e.attacks} ataques · {e.percentage}%"
+            sub="{e.petName} · Nv. {e.petLevel} · {e.attacks} ataques · {e.percentage}% del daño"
             value={fmt(e.damageDealt)}
           />
         {:else}
@@ -119,12 +123,12 @@
       <SectionHeader title="Raids anteriores" icon="log" />
       <div class="ui-list">
         {#each history as h (h.id)}
-          <ListRow icon={elementMeta(h.element).icon} iconTint={elementMeta(h.element).color} title={h.theme} sub="{fmt(h.hpGlobal)} HP">
+          <ListRow icon={elementMeta(h.element).icon} iconTint={elementMeta(h.element).color} title={h.theme} sub="{elementMeta(h.element).label} · {fmt(h.hpGlobal)} de vida">
             <svelte:fragment slot="end">
-              {#if h.status === 'settled'}
-                <Badge tone="success" size="sm" icon="check">Liquidado</Badge>
+              {#if h.status === 'settled' || h.status === 'defeated'}
+                <Badge tone="success" size="sm" icon="check">Derrotado</Badge>
               {:else}
-                <Badge size="sm">{h.status}</Badge>
+                <Badge size="sm">{RAID_STATUS[h.status] ?? h.status}</Badge>
               {/if}
             </svelte:fragment>
           </ListRow>

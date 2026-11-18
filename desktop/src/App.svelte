@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from './components/ui';
   import { onMount, onDestroy } from 'svelte';
   import { api, getAccessToken, onEmailUnverified, onHandleRequired, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
@@ -31,12 +32,13 @@
   import AchievementToast from './features/achievements/AchievementToast.svelte';
   import type { AchievementUnlockedPayload } from './features/achievements/achievements.api';
   import type { AnalyzedFile } from './lib/fileAnalyzer';
-  import { PawPrint, Bell, X } from 'lucide-svelte';
+  import { PawPrint, Bell, X, Volleyball } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
   import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
   import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster } from './lib/clan-store';
   import type { HabitatVisitor, ClanMessage, ClanGoal } from './lib/api';
+  import { loadActivePetId, pickActivePet, saveActivePetId } from './lib/activePet';
   import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
   import { maintenanceLock } from './lib/maintenance';
   import { startContextDigest } from './lib/contextDigest';
@@ -54,6 +56,14 @@
   // Petición de navegación al panel (la campana abre Ajustes › Avisos)
   let panelRequest: { dest: string; sub: string; n: number; prompt?: string } | null = null;
   let requestN = 0;
+  /** Cambia la mascota activa (la que pasea por el escritorio) y lo recuerda en este equipo. */
+  function selectPet(id: string) {
+    const next = pets.find((p) => p.id === id);
+    if (!next || next.id === currentPet?.id) return;
+    currentPet = next;
+    saveActivePetId(next.id);
+  }
+
   function openNotifications() {
     panelRequest = { dest: 'settings', sub: 'notifications', n: ++requestN };
     isPanelOpen = true;
@@ -251,7 +261,7 @@
           }
         }
         pets = await api.getPets();
-        currentPet = pets.length > 0 ? pets[0] : null;
+        currentPet = pickActivePet(pets, loadActivePetId());
         eggs = await api.getEggs();
         inventory = await api.getInventory();
 
@@ -632,37 +642,38 @@
   on:dragover|preventDefault
 >
   {#if !locked}
-  <!-- Botón flotante para alternar panel de control -->
+  <div class="dock">
+  <!-- Pelotita interactiva de escritorio -->
   <button
-    class="btn glass toggle-panel-pill"
-    on:click={() => (isPanelOpen = !isPanelOpen)}
-    title="Abrir/Cerrar Panel de Control"
-    aria-expanded={isPanelOpen}
+    class="btn glass btn--icon"
+    on:click={toggleBall}
+    title={showBall ? 'Guardar la pelota' : 'Sacar la pelota'}
+    aria-label={showBall ? 'Guardar la pelota' : 'Sacar la pelota'}
+    aria-pressed={showBall}
   >
-    {#if isPanelOpen}<X size={16} /> Ocultar panel{:else}<PawPrint size={16} /> Abrir panel{/if}
+    <Volleyball size={16} />
   </button>
 
   <!-- Avisos de la mascota (feature 007 / US3) con badge de no leídas -->
   <button
-    class="btn glass notif-toggle-pill"
+    class="btn glass"
+    class:btn--icon={$unreadCount === 0}
     on:click={openNotifications}
-    title="Ajustes de notificaciones"
+    title="Avisos"
     aria-label={$unreadCount > 0 ? `Avisos: ${$unreadCount} sin leer` : 'Avisos'}
   >
     <Bell size={16} />
     {#if $unreadCount > 0}<span class="notif-badge">{$unreadCount}</span>{/if}
   </button>
 
-  <!-- Pelotita interactiva de escritorio -->
-  <button
-    class="btn glass ball-toggle-pill"
-    on:click={toggleBall}
-    title={showBall ? 'Guardar pelota de juego' : 'Sacar pelota de juego'}
-    aria-label={showBall ? 'Guardar pelota de juego' : 'Sacar pelota de juego'}
-    aria-pressed={showBall}
+  <!-- Botón flotante para alternar panel de control -->
+  <Button class="glass" on:click={() => (isPanelOpen = !isPanelOpen)}
+    title="Abrir/Cerrar Panel de Control"
+    aria-expanded={isPanelOpen}
   >
-    <span aria-hidden="true">⚽</span>
-  </button>
+    {#if isPanelOpen}<X size={16} /> Ocultar panel{:else}<PawPrint size={16} /> Abrir panel{/if}
+  </Button>
+  </div>
 
   {#if showBall}
     <DesktopBall
@@ -684,7 +695,10 @@
       visitors={$visitorsStore}
       ball={showBall && !ballGrabbed ? ballState : null}
       onBallKick={handleBallHit}
-      onPetClick={() => (isPanelOpen = true)}
+      onPetClick={() => {
+        isPanelOpen = true;
+        panelRequest = { dest: 'pet', sub: 'home', n: ++requestN };
+      }}
     />
   {/if}
   {/if}
@@ -695,6 +709,7 @@
     request={panelRequest}
     user={user}
     pet={currentPet}
+    {pets}
     eggs={eggs}
     inventory={inventory}
     shopItems={shopItems}
@@ -708,6 +723,12 @@
       if (idx !== -1) pets[idx] = currentPet;
       else pets = [currentPet, ...pets];
     }}
+    on:petHatched={(e) => {
+      // La recién nacida se añade a la colección; solo pasa a ser la activa si no había ninguna.
+      pets = [...pets.filter((p) => p.id !== e.detail.id), e.detail];
+      if (!currentPet) selectPet(e.detail.id);
+    }}
+    on:selectPet={(e) => selectPet(e.detail)}
     on:actionTriggered={(e) => handlePetAction(e.detail)}
     on:bubble={(e) =>
       showBubble(e.detail, { overflowNote: '… (sigue en el chat)', onShow: () => petViewRef?.play?.('talk') })}
@@ -743,25 +764,17 @@
     pointer-events: none;
   }
 
-  .toggle-panel-pill,
-  .notif-toggle-pill,
-  .ball-toggle-pill {
+  .dock {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    right: 16px;
     position: fixed;
     bottom: 16px;
     z-index: var(--z-dock);
+  }
+  .dock :global(.btn) {
     box-shadow: var(--shadow-2);
-  }
-  .toggle-panel-pill {
-    right: 16px;
-  }
-  .notif-toggle-pill {
-    right: 170px;
-  }
-  .ball-toggle-pill {
-    right: 228px;
-    font-size: var(--text-body);
-    padding: 0 var(--space-2);
-    min-width: 40px;
   }
 
   .notif-badge {

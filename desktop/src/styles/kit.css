@@ -650,6 +650,16 @@
 .ui-pills::-webkit-scrollbar {
   display: none;
 }
+/* Pista de que hay más pastillas a un lado: el borde se difumina. */
+.ui-pills[data-more='end'] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+.ui-pills[data-more='start'] {
+  mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent);
+}
+.ui-pills[data-more='both'] {
+  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+}
 .ui-pills button {
   display: inline-flex;
   align-items: center;
@@ -771,6 +781,66 @@
   margin: 0;
   font-size: var(--text-caption);
   color: var(--ink-muted);
+}
+
+/* Contenido que se refresca: se queda a la vista, atenuado, en vez de volver al esqueleto */
+.ui-async {
+  transition: opacity var(--dur-1);
+}
+.ui-async--busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Texto escrito por jugadores o por la IA: las URL y palabras largas no desbordan */
+.ui-usertext {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* Diálogo de confirmación */
+.ui-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
+  color: var(--ink-muted);
+}
+.ui-confirm :where(p) {
+  margin: 0;
+}
+.ui-confirm :where(strong) {
+  color: var(--ink);
+}
+.ui-confirm__cost {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+}
+.ui-confirm__cost > div {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-2xl);
+  background: var(--surface-2);
+}
+.ui-confirm__cost dt {
+  font-size: var(--text-caption);
+  font-weight: 700;
+}
+.ui-confirm__cost dd {
+  margin: 0;
+  color: var(--ink);
+}
+.ui-confirm__short {
+  color: var(--danger-ink);
+  font-size: var(--text-label);
+  font-weight: 700;
 }
 
 /* Modal */
