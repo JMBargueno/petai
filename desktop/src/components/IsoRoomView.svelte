@@ -11,6 +11,7 @@
   import { PockaiScene, parseClock, type Activity, type HostMessage, type RoomState, type SceneEvent } from '@pockai/scene';
   import type { HabitatFurniture, HabitatRoom } from '../lib/api';
   import { environmentalStatus } from '../lib/environmental';
+  import { habitatBackdrop } from '../lib/habitatBackdrop';
   import { resolveBaseState } from '../lib/animation/AnimationController';
 
   export let pet: any = null;
@@ -117,6 +118,8 @@
       type: 'setAmbience',
       weather: weather ? { code: weather.weatherCode ?? null, temperature: weather.temperature ?? null } : null,
       sun: sunrise !== null && sunset !== null ? { sunrise, sunset } : null,
+      // Modo híbrido: paisaje pintado detrás de la sala (preferencia del equipo).
+      backdrop: $habitatBackdrop,
     });
   $: if (scene) send({ type: 'setEditMode', edit });
   $: if (scene) send({ type: 'selectItem', itemId: selectedId });

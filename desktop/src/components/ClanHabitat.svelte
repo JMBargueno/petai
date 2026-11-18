@@ -6,6 +6,9 @@
    *   2. Efectos que crecen con el nivel (luciérnagas, brasas, runas, rayos, aurora, estrellas fugaces).
    *   3. Hasta 5 pockais activos, uno por Custodio, paseando (lib/clan-habitat.ts).
    *   4. La información del clan (slot) y la barra de Resonancia hacia el siguiente nivel.
+   * El cielo, la luz y el clima son los reales (hora del equipo y Open-Meteo), con las mismas
+   * funciones que las salas isométricas (lib/ambience-2d.ts): cielo vivo detrás, velo de la hora
+   * sobre el escenario y lluvia, nieve, niebla y rayos delante.
    * Reacciona en vivo a `clan:xp` (celebración, +XP y, al cruzar un umbral, la transformación del
    * escenario) y a `clan:goal_completed`.
    */
@@ -15,6 +18,9 @@
   import PetMiniAvatar from './PetMiniAvatar.svelte';
   import { api, type ClanHabitat, type ClanHabitatResident } from '../lib/api';
   import { clanHabitatEvents, CLAN_ROLE_LABEL } from '../lib/clan-store';
+  import { environmentalStatus } from '../lib/environmental';
+  import { localMinute } from '@pockai/scene';
+  import { calmOf, drawSky, fireflyShare, outsideAt, veilOf, Weather2D } from '../lib/ambience-2d';
   import {
     tierProgress,
     habitatTier,
@@ -72,6 +78,18 @@
     }, ms);
     timers.add(t);
   };
+
+  // ── Cielo, hora y clima reales ─────────────────────────────────────────────
+  let minuteTick = 0;
+  /** Minuto del día de ahora; `tick` solo sirve para que Svelte lo recalcule cada 20 s. */
+  const nowMinute = (_tick: number) => localMinute();
+  $: outside = outsideAt($environmentalStatus?.weather, nowMinute(minuteTick));
+  $: veil = veilOf(outside);
+  /** Cuánto se ve el cielo de noche (aurora del nivel 5): nada de día ni con el cielo cubierto. */
+  $: nightSky = Math.max(0, 1 - outside.sky.daylight * 1.4) * (1 - outside.look.cover * 0.85);
+  const weatherFx = new Weather2D();
+  let skyCanvas: HTMLCanvasElement;
+  let clock = 0;
 
   const reducedMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -155,10 +173,11 @@
   function ambientBudget(level: number) {
     const m = reducedMotion ? 0.35 : 1;
     return {
-      firefly: Math.round((6 + level * 3) * m),
+      firefly: Math.round((6 + level * 3) * m * fireflyShare(outside)),
       ember: level >= 2 ? Math.round((4 + level * 2) * m) : 0,
       mote: level >= 3 ? Math.round((6 + level * 2) * m) : 0,
-      star: level >= 4 ? Math.round((10 + (level - 4) * 18) * m) : 0,
+      // Las estrellas del nivel solo de noche (de día el cielo vivo no las tiene)
+      star: level >= 4 ? Math.round((10 + (level - 4) * 18) * m * nightSky) : 0,
     };
   }
 
@@ -202,11 +221,13 @@
   function tick(time: number) {
     const dt = last ? Math.min(time - last, 100) : 16;
     last = time;
+    if (!reducedMotion) clock += dt;
+    weatherFx.step(dt, outside.look);
 
     // Paseo
     if (walkers.length) {
       const sleeping = new Set(residents.filter((r) => r.pet.sleeping).map((r) => r.userId));
-      walkers = stepWalkers(walkers, dt, sleeping);
+      walkers = stepWalkers(walkers, dt, sleeping, Math.random, calmOf(outside));
     }
 
     // Partículas ambientales: se reponen hasta el presupuesto del nivel
@@ -215,7 +236,7 @@
       const have = particles.reduce((n, p) => n + (p.kind === kind ? 1 : 0), 0);
       if (have < budget[kind] && Math.random() < 0.08) particles.push(spawn(kind));
     }
-    if (shownLevel >= 5 && !reducedMotion && Math.random() < dt / 7000) particles.push(spawn('shoot'));
+    if (shownLevel >= 5 && !reducedMotion && nightSky > 0.3 && Math.random() < dt / 7000) particles.push(spawn('shoot'));
 
     const s = dt / 1000;
     particles = particles.filter((p) => (p.life += dt) < p.max);
@@ -273,6 +294,9 @@
       ctx.fillRect(Math.round(p.x - sz / 2), Math.round(p.y - sz / 2), sz, sz);
     }
     ctx.globalAlpha = 1;
+    weatherFx.draw(ctx, width, height, outside, clock);
+    const sctx = skyCanvas?.getContext('2d');
+    if (sctx) drawSky(sctx, width, height, outside, clock, reducedMotion);
   }
 
   /** Posición en píxeles de un residente (los pies tocan la franja de suelo). */
@@ -297,14 +321,18 @@
     ro = new ResizeObserver(() => {
       width = sceneEl.clientWidth;
       height = sceneEl.clientHeight;
-      if (canvas) {
-        canvas.width = width;
-        canvas.height = height;
+      for (const c of [canvas, skyCanvas]) {
+        if (!c) continue;
+        c.width = width;
+        c.height = height;
       }
     });
     ro.observe(sceneEl);
     document.addEventListener('visibilitychange', onVisibility);
     raf = requestAnimationFrame(tick);
+    // La hora avanza: el cielo se recalcula cada 20 s, como en las salas.
+    const iv = setInterval(() => minuteTick++, 20_000);
+    return () => clearInterval(iv);
   });
 
   onDestroy(() => {
@@ -328,14 +356,18 @@
   role="group"
   aria-label="Hábitat del Nexo: {progress.tier.name}"
 >
+  <!-- 0. Cielo vivo (se ve donde el fondo no tiene cielo propio) -->
+  <canvas class="sky-live" bind:this={skyCanvas} aria-hidden="true"></canvas>
+  {#if shownLevel >= 5 && nightSky > 0.02}
+    <!-- La aurora del Nexo Celestial vive en el cielo: de noche y con el cielo despejado -->
+    <div class="aurora-sky" style="opacity:{nightSky.toFixed(3)}" aria-hidden="true"><div class="aurora"></div></div>
+  {/if}
+
   <!-- 1. Fondo -->
   {#if painted}
     <img class="backdrop" src={painted} alt="" aria-hidden="true" draggable="false" />
   {:else}
     <div class="diorama" aria-hidden="true">
-      <div class="sky"></div>
-      {#if shownLevel >= 5}<div class="aurora"></div>{/if}
-      <div class="moon"></div>
       <svg class="ridge far" viewBox="0 0 400 100" preserveAspectRatio="none">
         <path d="M0 70 L30 48 L60 62 L95 30 L130 55 L170 38 L205 60 L245 26 L285 52 L320 40 L360 58 L400 44 L400 100 L0 100 Z" />
       </svg>
@@ -363,6 +395,9 @@
       {/if}
     </div>
   {/if}
+  <!-- Luz de la hora (el mismo velo que las salas) y nieve sobre el escenario -->
+  {#if veil.snow > 0.05}<div class="snowcover" style="opacity:{(veil.snow * 0.55).toFixed(3)}" aria-hidden="true"></div>{/if}
+  {#if veil.alpha > 0.005}<div class="daylight" style="background:{veil.color}; opacity:{veil.alpha}" aria-hidden="true"></div>{/if}
   {#if shownLevel >= 4}<div class="rays" aria-hidden="true"></div>{/if}
   <div class="vignette" aria-hidden="true"></div>
 
@@ -503,23 +538,10 @@
   }
   @keyframes fade-in { from { opacity: 0; } }
   .diorama { position: absolute; inset: 0; animation: fade-in 0.9s ease; }
-  .sky {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 62%);
-  }
-  .moon {
-    position: absolute;
-    top: 14%;
-    right: 12%;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: #fff6d6;
-    box-shadow: 0 0 24px 6px color-mix(in srgb, #fff6d6 45%, transparent);
-    opacity: 0.85;
-  }
-  .tier-1 .moon, .tier-2 .moon { background: #ffd28a; box-shadow: 0 0 30px 10px rgba(255, 190, 120, 0.4); top: 30%; right: 18%; }
+  .sky-live { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .daylight, .snowcover { position: absolute; inset: 0; pointer-events: none; transition: opacity 2s ease, background-color 2s ease; }
+  .snowcover { background: linear-gradient(180deg, rgba(244, 248, 255, 0.35) 0%, rgba(244, 248, 255, 0.35) 45%, #f4f8ff 60%); }
+  .aurora-sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; transition: opacity 2s ease; }
   .aurora {
     position: absolute;
     inset: -10% -20% 40% -20%;

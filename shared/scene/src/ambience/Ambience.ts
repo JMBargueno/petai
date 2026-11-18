@@ -5,11 +5,16 @@
  * Dos capas en coordenadas del lienzo: `back` va detrás de la sala y `front` encima. En las salas
  * interiores la lluvia solo cae fuera (detrás); en las exteriores cae también por delante.
  *
+ * Modo híbrido: si la sala tiene fondo pintado (`backdrops.ts`), el paisaje va dentro de `back`
+ * entre las nubes y la precipitación, con el cielo transparente para que se vea el de verdad. Se
+ * ilumina con el mismo velo que la sala (`IsoRoom.drawNight`: color `tint` con `tintAlpha`), no con
+ * un tinte multiplicativo: así sala y paisaje casan a cualquier hora.
+ *
  * La hora sale del reloj del dispositivo (o de `clock`, para la demo) y se recalcula cada
  * `RECALC_MS`; el clima se funde en unos dos segundos. Cada vez que el cielo cambia se avisa con
  * `onSky` para que la sala ajuste su luz y sus ventanas.
  */
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { cellHash, sparkle } from '../room/roomStyles';
 import { localMinute, mix, skyAt, type SkyState } from './sunClock';
 import { applyWeather, blendLook, CLEAR, lookFromWmo, type WeatherLook } from './weather';
@@ -49,6 +54,11 @@ export class Ambience {
   private readonly starsG = new Graphics();
   private readonly orbG = new Graphics();
   private readonly cloudsG = new Graphics();
+  /** Fondo pintado: el paisaje, su silueta (máscara del velo) y el velo de la hora. */
+  private readonly backdrop = new Container();
+  private readonly backdropS = new Sprite();
+  private readonly backdropMask = new Sprite();
+  private readonly backdropVeil = new Graphics();
   private readonly backFx = new Graphics();
   private readonly frontFx = new Graphics();
 
@@ -73,7 +83,10 @@ export class Ambience {
   constructor(private readonly opts: AmbienceOptions) {
     this.back.eventMode = 'none';
     this.front.eventMode = 'none';
-    this.back.addChild(this.skyG, this.starsG, this.orbG, this.cloudsG, this.backFx);
+    this.backdrop.addChild(this.backdropS, this.backdropMask, this.backdropVeil);
+    this.backdropVeil.mask = this.backdropMask;
+    this.backdrop.visible = false;
+    this.back.addChild(this.skyG, this.starsG, this.orbG, this.cloudsG, this.backdrop, this.backFx);
     this.front.addChild(this.frontFx);
   }
 
@@ -98,6 +111,55 @@ export class Ambience {
     this.exterior = exterior;
   }
 
+  /**
+   * Fondo pintado de la sala (`null` = sin fondo, solo cielo). Recibe siempre el velo entero de
+   * la hora: aunque una sala traiga su propio cielo (Cita Final), el paisaje no, y a medias se
+   * vería de día bajo un cielo de noche.
+   */
+  setBackdrop(texture: Texture | null): void {
+    const tex = texture ?? Texture.EMPTY;
+    this.backdropS.texture = tex;
+    this.backdropMask.texture = tex;
+    this.backdrop.visible = !!texture;
+    this.layoutBackdrop();
+    this.drawVeil();
+  }
+
+  get hasBackdrop(): boolean {
+    return this.backdrop.visible;
+  }
+
+  /** Encaje «cover» anclado abajo y al centro: el horizonte queda detrás de la sala. */
+  private layoutBackdrop(): void {
+    if (!this.backdrop.visible || !this.w || !this.h) return;
+    const { width: tw, height: th } = this.backdropS.texture;
+    if (!tw || !th) return;
+    const s = Math.max(this.w / tw, this.h / th);
+    for (const sp of [this.backdropS, this.backdropMask]) {
+      sp.scale.set(s);
+      sp.position.set((this.w - tw * s) / 2, this.h - th * s);
+    }
+  }
+
+  /** Luz de la hora sobre el paisaje: el mismo velo que la sala, más una bruma de lejanía. */
+  private drawVeil(): void {
+    const g = this.backdropVeil;
+    g.clear();
+    if (!this.backdrop.visible || !this.w || !this.h) return;
+    const { sky, look } = this;
+    const lit = sky.tintAlpha;
+    // Bruma del color del horizonte: más arriba (lejos) que abajo (cerca), y más con niebla.
+    const haze = 0.1 + look.fog * 0.25 + look.cover * 0.05;
+    g.rect(0, 0, this.w, this.h).fill({ color: sky.skyBottom, alpha: haze * 0.5 });
+    g.rect(0, 0, this.w, this.h * 0.55).fill({ color: sky.skyBottom, alpha: haze * 0.6 });
+    // Con nieve el paisaje se cubre de blanco, más en el suelo que en lo alto.
+    if (look.snow > 0.05) {
+      g.rect(0, this.h * 0.5, this.w, this.h * 0.5).fill({ color: 0xf4f8ff, alpha: 0.6 * look.snow });
+      g.rect(0, 0, this.w, this.h).fill({ color: 0xf4f8ff, alpha: 0.3 * look.snow });
+    }
+    if (lit > 0.005) g.rect(0, 0, this.w, this.h).fill({ color: sky.tint, alpha: lit });
+  }
+
   /** En modo edición no se dibuja nada por delante: estorbaría al colocar muebles. */
   setEdit(edit: boolean): void {
     this.edit = edit;
@@ -109,6 +171,8 @@ export class Ambience {
     this.h = h;
     this.drawSky();
     this.drawOrbs();
+    this.layoutBackdrop();
+    this.drawVeil();
     if (this.opts.reducedMotion) this.drawMoving();
   }
 
@@ -140,6 +204,7 @@ export class Ambience {
     this.sky = applyWeather(skyAt(minute, this.state.sun?.sunrise, this.state.sun?.sunset), this.look);
     this.drawSky();
     this.drawOrbs();
+    this.drawVeil();
     if (this.opts.reducedMotion) this.drawMoving();
     this.opts.onSky(this.sky, this.look);
   }

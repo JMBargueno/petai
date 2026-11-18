@@ -25,6 +25,7 @@ import { PetSprite } from '../pet/PetSprite';
 import { furnitureMeta, loadFurnitureTexture, type Orientation } from './furnitureAssets';
 import { SLAB, sparkle, styleFor, WALL_H, type Twinkle } from './roomStyles';
 import { blockedOf } from './roomShape';
+import { FURNITURE_LIGHTS, RoomLife } from './roomLife';
 import { toHexString, type SkyState } from '../ambience/sunClock';
 import { isWet, type WeatherLook } from '../ambience/weather';
 
@@ -80,6 +81,8 @@ interface IsoRoomOptions {
 }
 
 export class IsoRoom extends Container {
+  /** Sombra de la losa sobre el paisaje pintado (solo en modo híbrido). */
+  private readonly groundShadow = new Graphics();
   private readonly shell = new Graphics();
   /** Misma geometría que la carcasa: recorta el tinte de noche a la silueta de cada sala. */
   private readonly shellMask = new Graphics(this.shell.context);
@@ -89,6 +92,8 @@ export class IsoRoom extends Container {
   private readonly overlay = new Graphics();
   private readonly night = new Graphics();
   private readonly pet: PetSprite;
+  /** Luces, clima dentro y partículas (roomLife.ts). */
+  private readonly life: RoomLife;
 
   private room: RoomState | null = null;
   /** Celdas sin suelo de la sala actual (su forma): ni muebles de suelo ni paseos. */
@@ -100,6 +105,7 @@ export class IsoRoom extends Container {
 
   private activity: Activity = 'idle';
   private isNight = false;
+  private grounded = false;
   /** Cielo y clima actuales (los pone `Ambience`); sin ellos la sala se ve como de día. */
   private sky: SkyState | null = null;
   private look: WeatherLook | null = null;
@@ -122,7 +128,20 @@ export class IsoRoom extends Container {
     super();
     this.pet = opts.pet;
     this.objects.sortableChildren = true;
-    this.addChild(this.shell, this.shellMask, this.ambient, this.objects, this.overlay, this.night);
+    this.groundShadow.eventMode = 'none';
+    this.life = new RoomLife(opts.reducedMotion);
+    this.addChild(
+      this.groundShadow,
+      this.shell,
+      this.shellMask,
+      this.ambient,
+      this.life.under,
+      this.objects,
+      this.life.mid,
+      this.overlay,
+      this.night,
+      this.life.over,
+    );
     this.night.mask = this.shellMask;
     this.ambient.eventMode = 'none';
     this.night.eventMode = 'none';
@@ -141,7 +160,9 @@ export class IsoRoom extends Container {
     const prevId = this.room?.id;
     this.room = { ...room, blocked: blockedOf(room) };
     this.holes = roomBlockedCells(this.room);
+    this.life.setRoom(room.id, room.gridWidth, room.gridHeight, this.holes);
     this.drawShell();
+    this.drawGroundShadow();
     this.syncFurniture();
     if (prevId !== room.id) this.placePetAtStart();
     this.replanIfBlocked();
@@ -176,8 +197,34 @@ export class IsoRoom extends Container {
     return this.restClip === 'sick' || this.restClip === 'tired';
   }
 
+  /**
+   * Modo híbrido: la sala se posa sobre un paisaje pintado y le proyecta una sombra suave, para
+   * que no parezca flotar delante del fondo.
+   */
+  setGrounded(grounded: boolean): void {
+    this.grounded = grounded;
+    this.drawGroundShadow();
+  }
+
+  private drawGroundShadow(): void {
+    const g = this.groundShadow;
+    g.clear();
+    if (!this.grounded || !this.room) return;
+    const W = this.room.gridWidth;
+    const H = this.room.gridHeight;
+    const c = toScreen(W / 2, H / 2);
+    const rx = (W + H) * (TILE_W / 2) * 0.56;
+    for (const [k, a] of [
+      [1.12, 0.1],
+      [1, 0.16],
+    ]) {
+      g.ellipse(c.x, c.y + SLAB + (W + H) * 2.2, rx * k, rx * 0.36 * k).fill({ color: 0x0b1020, alpha: a });
+    }
+  }
+
   setNight(night: boolean): void {
     this.isNight = night;
+    this.life.set({ sleeping: night });
     this.drawNight();
   }
 
@@ -188,12 +235,19 @@ export class IsoRoom extends Container {
   setSky(sky: SkyState, look: WeatherLook): void {
     this.sky = sky;
     this.look = look;
+    this.life.set({ sky, look });
     const q = (c: number) => c & 0xf8f8f8;
     const key = `${q(sky.glass)}:${q(sky.light)}`;
     if (key !== this.skyKey) {
       this.skyKey = key;
       this.drawShell();
     } else this.drawNight();
+  }
+
+  /** Un rayo: destello en los cristales y, si toca, susto del Pockai. */
+  lightning(): void {
+    this.life.lightning();
+    this.startle();
   }
 
   /** Un rayo: si el Pockai está quieto y despierto, se asusta (como mucho cada 20 s). */
@@ -206,6 +260,7 @@ export class IsoRoom extends Container {
 
   setEditMode(edit: boolean): void {
     this.edit = edit;
+    this.life.set({ edit });
     for (const pf of this.placed.values()) {
       pf.sprite.eventMode = edit ? 'static' : 'none';
       pf.sprite.cursor = edit ? 'grab' : 'default';
@@ -435,6 +490,18 @@ export class IsoRoom extends Container {
     pf.sprite.scale.x = mirrored ? -1 : 1;
   }
 
+  /** Luces de los muebles colocados que dan luz (lámparas, faroles). */
+  private furnitureGlows() {
+    const out = [];
+    for (const pf of this.placed.values()) {
+      const l = FURNITURE_LIGHTS[pf.def.id];
+      if (!l) continue;
+      const { x, y } = pf.sprite.position;
+      out.push({ x, y: y + l.dy, r: l.r, color: l.color, kind: 'lamp' as const, pool: { x, y, rx: l.r * 0.8 } });
+    }
+    return out;
+  }
+
   private positionSprite(pf: PlacedFurniture, at: { x: number; y: number; rotation: number }): void {
     const s = toScreen(at.x, at.y);
     pf.sprite.position.set(s.x, s.y);
@@ -641,7 +708,11 @@ export class IsoRoom extends Container {
   update(ticker: Ticker): void {
     const dt = ticker.deltaMS;
     if (this.startleMs > 0) this.startleMs -= dt;
-    if (this.room) this.drawAmbient(dt);
+    if (this.room) {
+      this.drawAmbient(dt);
+      this.life.setFurnitureGlows(this.furnitureGlows());
+      this.life.update(dt);
+    }
     if (!this.room || this.activity === 'away') return;
 
     if (this.path.length) {

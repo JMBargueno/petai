@@ -87,7 +87,14 @@ export interface AmbienceMessage {
   sun?: { sunrise: number; sunset: number } | null;
   /** Minuto del día forzado (demo y pruebas). `null` = reloj del dispositivo. */
   clock?: number | null;
+  /**
+   * Fondo de la sala: `painted` (modo híbrido, paisaje pintado detrás de la sala si la sala lo
+   * tiene) o `plain` (solo cielo). Por defecto, `painted`.
+   */
+  backdrop?: BackdropMode;
 }
+
+export type BackdropMode = 'painted' | 'plain';
 
 /** Anfitrión → escena. */
 export type HostMessage =
@@ -275,6 +282,7 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
         out.sun = sunrise !== null && sunset !== null ? { sunrise, sunset } : null;
       }
       if ('clock' in m) out.clock = parseClock(m.clock);
+      if (m.backdrop === 'painted' || m.backdrop === 'plain') out.backdrop = m.backdrop;
       return out;
     }
     case 'setEditMode':

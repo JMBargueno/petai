@@ -82,6 +82,7 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
     <label>Hora <input name="clock" type="range" min="0" max="1439" step="5" value="720"> <output name="clockOut">reloj</output></label>
     <label>Clima <select name="weather">${WEATHERS.map(([label, code]) => `<option value="${code}">${label}</option>`).join('')}</select></label>
     <label>Temp °C <input name="temp" type="number" value="18"></label>
+    <label>Fondo <select name="backdrop"><option value="painted">pintado (híbrido)</option><option value="plain">clásico</option></select></label>
     <div class="row"><button type="button" data-realclock>hora real</button></div>
     <div class="row"><button type="button" data-edit>editar</button><button type="button" data-rotate>girar (R)</button></div>`
         : `<div class="row">${CLIPS.map((c) => `<button type="button" data-clip="${c}">${c}</button>`).join('')}</div>
@@ -125,6 +126,7 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
       type: 'setAmbience',
       clock,
       weather: { code: Number(field('weather')), temperature: Number(field('temp')) },
+      backdrop: field('backdrop') === 'plain' ? 'plain' : 'painted',
     });
   };
   panel.addEventListener('input', (e) => {
@@ -135,7 +137,7 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
   panel.addEventListener('change', (e) => {
     const name = (e.target as HTMLElement).getAttribute('name');
     if (name === 'room') sendRoom();
-    else if (name === 'weather' || name === 'temp') sendAmbience();
+    else if (name === 'weather' || name === 'temp' || name === 'backdrop') sendAmbience();
     else if (name !== 'clock') setPet();
   });
 

@@ -26,7 +26,8 @@ const RY = 27;
 const TOP = CY - RY;
 const THREADS = 6;
 
-function inCocoon(x: number, y: number): boolean {
+/** ¿Cae el píxel nativo (x, y) dentro del capullo? (La web lo usa para encoger a la mascota dentro.) */
+export function inCocoon(x: number, y: number): boolean {
   const dx = (x + 0.5 - CX) / RX;
   const dy = (y + 0.5 - CY) / RY;
   // Algo más ancho abajo: un capullo, no un huevo perfecto

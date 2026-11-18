@@ -109,7 +109,14 @@ function pickTarget(w: Walker, rng: Rng): Walker {
  * Avanza `dt` ms a todos los residentes. `sleeping` marca a los que su dueño tiene dormidos: no se
  * mueven. Cuando dos se cruzan, se paran y se saludan (`love` o `happy`).
  */
-export function stepWalkers(walkers: Walker[], dt: number, sleeping: Set<string> = new Set(), rng: Rng = Math.random): Walker[] {
+export function stepWalkers(
+  walkers: Walker[],
+  dt: number,
+  sleeping: Set<string> = new Set(),
+  rng: Rng = Math.random,
+  /** Multiplica los reposos: de noche o con lluvia pasean menos (`calmOf` en ambience-2d.ts). */
+  calm = 1,
+): Walker[] {
   const step = Math.max(0, Math.min(dt, 250));
   let next = walkers.map((w): Walker => {
     if (sleeping.has(w.id)) return { ...w, mode: 'sleep', tx: w.x, ty: w.y };
@@ -121,7 +128,7 @@ export function stepWalkers(walkers: Walker[], dt: number, sleeping: Set<string>
       const dist = Math.hypot(dx, dy);
       const move = (WALK_SPEED * step) / 1000;
       if (dist <= move) {
-        const rest: Walker = { ...w, x: w.tx, y: w.ty, mode: 'idle', timer: 1500 + rng() * 3500 };
+        const rest: Walker = { ...w, x: w.tx, y: w.ty, mode: 'idle', timer: (1500 + rng() * 3500) * calm };
         // A veces, al llegar, hace algo de ilusión.
         return rng() < 0.35 ? { ...rest, mode: 'emote', timer: 1600, emote: IDLE_EMOTES[Math.floor(rng() * IDLE_EMOTES.length)], emoteKey: w.emoteKey + 1 } : rest;
       }

@@ -25,7 +25,7 @@ import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { bakePixels } from '../shared/scene/src/bake/bakePixels';
 import { deriveVisualTraits } from '../shared/scene/src/prng';
-import { capulloTelar } from '../desktop/src/lib/effects/capulloTelar';
+import { capulloTelar, inCocoon } from '../desktop/src/lib/effects/capulloTelar';
 import { revelacionDensidad } from '../desktop/src/lib/effects/revelacionDensidad';
 import { flowPalette } from '../desktop/src/lib/effects/palettes';
 import { renderFrame } from '../desktop/src/lib/effects/render';
@@ -151,9 +151,58 @@ interface FxLayer {
   params: Record<string, string | number>;
 }
 interface Shot {
-  pet: { sheet: Sheet; frame: number } | null;
+  /** `scale` < 1 encoge a la mascota hacia sus pies (para que quepa en el capullo). */
+  pet: { sheet: Sheet; frame: number; scale?: number } | null;
   fx: FxLayer[];
 }
+
+/** Desfase entre el lienzo y la rejilla del capullo (sus pies están en `anchor.y`). */
+const COCOON_DY = FEET - capulloTelar.anchor.y;
+const COCOON_DX = Math.round(W / 2 - capulloTelar.anchor.x);
+/**
+ * Centro del capullo en el lienzo. La mascota se encoge hacia él, no hacia sus pies: el capullo se
+ * estrecha abajo y acaba por encima de los pies, así que al encogerse sube y queda en su centro.
+ */
+const PIVOT = { x: capulloTelar.points.center.x + COCOON_DX, y: capulloTelar.points.center.y + COCOON_DY };
+
+/**
+ * La mascota colocada en el lienzo (pies en FEET) y escalada `scale` hacia PIVOT, con vecino más
+ * próximo: sigue siendo pixel art. Llama a `put` por cada píxel opaco.
+ */
+function placePet(sheet: Sheet, frame: number, scale: number, put: (x: number, y: number, s: number) => void): void {
+  const src = sheet.frames[frame];
+  const oy = FEET - sheet.feet;
+  for (let y = 0; y < H; y++) {
+    const sy = Math.floor(PIVOT.y + (y + 0.5 - PIVOT.y) / scale) - oy;
+    if (sy < 0 || sy >= W) continue;
+    for (let x = 0; x < W; x++) {
+      const sx = Math.floor(PIVOT.x + (x + 0.5 - PIVOT.x) / scale);
+      if (sx < 0 || sx >= W) continue;
+      const s = (sy * W + sx) * 4;
+      if (src[s + 3] > 0) put(x, y, s);
+    }
+  }
+}
+
+/**
+ * Mayor escala a la que todos los frames idle de una etapa caben dentro del capullo, con un píxel de
+ * margen alrededor, para que no asome nada mientras se teje.
+ */
+function cocoonScale(sheet: Sheet): number {
+  const inside = (x: number, y: number) => inCocoon(x - COCOON_DX, y - COCOON_DY);
+  const fits = (scale: number) =>
+    (sheet.tags.get('idle') ?? [0]).every((frame) => {
+      let ok = true;
+      placePet(sheet, frame, scale, (x, y) => {
+        if (ok && !(inside(x, y) && inside(x - 1, y) && inside(x + 1, y) && inside(x, y - 1) && inside(x, y + 1))) ok = false;
+      });
+      return ok;
+    });
+  for (let s = 1; s > 0.2; s -= 0.02) if (fits(s)) return Math.round(s * 100) / 100;
+  return 0.2;
+}
+
+const smooth = (t: number) => t * t * (3 - 2 * t);
 
 /** Fase y progreso de un efecto a `elapsed` ms (las fases `hold` ya llevan duración fija). */
 function phaseAt(phases: FxPhase[], elapsed: number): { phase: string; t: number } {
@@ -176,18 +225,9 @@ function compose(shot: Shot, element: string): Uint8Array {
   };
   for (const l of shot.fx) if (l.def.layer !== 'front') drawFx(l);
   if (shot.pet) {
-    const { sheet, frame } = shot.pet;
+    const { sheet, frame, scale = 1 } = shot.pet;
     const src = sheet.frames[frame];
-    const oy = FEET - sheet.feet;
-    for (let y = 0; y < W; y++) {
-      const cy = y + oy;
-      if (cy < 0 || cy >= H) continue;
-      for (let x = 0; x < W; x++) {
-        const s = (y * W + x) * 4;
-        if (src[s + 3] === 0) continue;
-        out.set(src.subarray(s, s + 4), (cy * W + x) * 4);
-      }
-    }
+    placePet(sheet, frame, scale, (x, y, s) => out.set(src.subarray(s, s + 4), (y * W + x) * 4));
   }
   for (const l of shot.fx) if (l.def.layer === 'front') drawFx(l);
   return out;
@@ -256,22 +296,32 @@ function buildReel(s: SpeciesEntry) {
   }
   play('baby', 'idle', 18);
 
-  // 3. Cada salto: el Capullo del Telar envuelve, late (aquí cambia la forma) y estalla.
+  // 3. Cada salto: el Pockai se encoge hasta caber en el capullo mientras llegan las hebras, el
+  //    Capullo del Telar lo envuelve y late (aquí cambia la forma), y al estallar crece a su tamaño.
   const HOLD_MS = 500;
   const evolve = (from: StageId, to: StageId) => {
     const params = to === 'final' ? { stage: 'final' } : { stage: to };
     const phases = withHold(capulloTelar, HOLD_MS, params);
+    const gatherEnd = framesFor(total(phases.slice(0, 1)));
     const swapAt = framesFor(total(phases.slice(0, 2)) + HOLD_MS / 2);
     const burstAt = framesFor(total(phases.slice(0, 3)));
+    const burstEnd = framesFor(total(phases.slice(0, 4)));
     const n = framesFor(total(phases));
+    const small = { from: cocoonScale(sheets[from]), to: cocoonScale(sheets[to]) };
     for (let i = 0; i < n; i++) {
       const stage = i < swapAt ? from : to;
       if (i === burstAt) mark(to);
+      let scale: number;
+      if (i < gatherEnd) scale = 1 + (small.from - 1) * smooth(i / Math.max(1, gatherEnd - 1));
+      else if (i < burstAt) scale = stage === from ? small.from : small.to;
+      else if (i < burstEnd) scale = small.to + (1 - small.to) * smooth((i - burstAt + 1) / Math.max(1, burstEnd - burstAt));
+      else scale = 1;
       shots.push({
-        pet: { sheet: sheets[stage], frame: nextLoop(stage, 'idle') },
+        pet: { sheet: sheets[stage], frame: nextLoop(stage, 'idle'), scale },
         fx: [{ def: capulloTelar, phases, elapsed: i * FRAME_MS, params }],
       });
     }
+    console.log(`  ${s.spriteKey} ${from}→${to}: escala en el capullo ${small.from} → ${small.to}`);
   };
   evolve('baby', 'juvenile');
   play('juvenile', 'idle', 18);
