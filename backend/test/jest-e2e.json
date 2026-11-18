@@ -5,5 +5,8 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@pockai/minigames/logic$": "<rootDir>/../../shared/minigames/src/logic.ts"
   }
 }

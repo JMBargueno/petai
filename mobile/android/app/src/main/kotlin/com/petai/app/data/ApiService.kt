@@ -125,11 +125,12 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     suspend fun minigames(): List<MinigameInfo> =
         api.json.decodeFromString(ListSerializer(MinigameInfo.serializer()), api.send("GET", "/minigames"))
 
-    suspend fun startMinigame(gameId: String, petId: String): MinigameSession =
-        api.request("POST", "/minigames/$gameId/start", obj("petId" to petId))
+    suspend fun startMinigame(gameId: String, petId: String, variant: String = "standard"): MinigameSession =
+        api.request("POST", "/minigames/$gameId/start", obj("petId" to petId, "variant" to variant))
 
-    suspend fun finishMinigame(sessionId: String, score: Int): MinigameResult =
-        api.request("POST", "/minigames/sessions/$sessionId/finish", obj("score" to score))
+    /** `ticks` y `log` (spec 39): el servidor repite la partida y solo la acepta si da la misma puntuación. */
+    suspend fun finishMinigame(sessionId: String, score: Int, ticks: Int, log: JsonElement): MinigameResult =
+        api.request("POST", "/minigames/sessions/$sessionId/finish", obj("score" to score, "ticks" to ticks, "log" to log))
 
     // ---------- Vinculación de dispositivos ----------
 

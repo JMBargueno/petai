@@ -4,7 +4,13 @@
   "minigames": {
     "catch_food": { "speedMul": 0.5, "zoneMul": 3, "timeMul": 2, "variant": "catch_food_easy" },
     "memory_match": { "pairs": 4, "timeout": null, "hints": true, "variant": "memory_match_easy" },
-    "reflex": { "timing": false, "penalty": 0, "variant": "reflex_easy" }
+    "reflex": { "timing": false, "penalty": 0, "variant": "reflex_easy" },
+    "pulso_voltaico": { "speedMul": 0.67, "windowMul": 3, "variant": "pulso_voltaico_easy" },
+    "corriente_datos": { "speedMul": 0.5, "stun": false, "variant": "corriente_datos_easy" },
+    "raiz_fractal": { "hints": true, "variant": "raiz_fractal_easy" },
+    "cifrado": { "playbackMul": 1.5, "replay": true, "variant": "cifrado_easy" },
+    "faro_claridad": { "spreadMul": 0.5, "variant": "faro_claridad_easy" },
+    "forja_termica": { "zoneMul": 2, "coolMul": 0.5, "variant": "forja_termica_easy" }
   },
   "shortcuts": { "feed": "F", "clean": "C", "play": "J", "sleep": "S" },
   "fontSize": { "min": 50, "max": 200, "default": 100 },

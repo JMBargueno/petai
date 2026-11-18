@@ -3,26 +3,48 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { friendlyError } from '../lib/ui/errors';
   import { api } from '../lib/api';
-  import { AsyncState, Button, Card, EmptyState, Notice, SectionHeader, StatTile } from './ui';
-  import { MINIGAMES } from '@pockai/minigames';
+  import { AsyncState, Badge, Button, Card, EmptyState, Notice, SectionHeader, StatTile, Switch } from './ui';
+  import { MINIGAMES, type PackedEntry } from '@pockai/minigames';
+  import foods from '@shared/game-data/foods.json';
+  import { elementMeta } from '../lib/ui/maps';
   import MinigameHost from './MinigameHost.svelte';
 
   export let pet: any = null;
 
   const dispatch = createEventDispatcher();
 
+  const ACCESSIBLE_KEY = 'pockai.minigames.accessible';
+  const FOOD_NAMES: Record<string, string> = Object.fromEntries((foods as { id: string; name: string }[]).map((f) => [f.id, f.name]));
+
   let loadingGames = true;
   let games: any[] = [];
   let phase: 'list' | 'countdown' | 'playing' | 'saving' | 'result' = 'list';
-  /** Cuenta atrás antes de empezar (3, 2, 1) y aviso si el servidor recortó la puntuación. */
+  /** Cuenta atrás antes de empezar (3, 2, 1). */
   let countdown = 3;
   let countdownTimer: ReturnType<typeof setInterval> | null = null;
   let lastGameId = '';
-  let clipped = false;
   let listError = '';
   let session: Awaited<ReturnType<typeof api.startMinigame>> | null = null;
-  let startedAt = 0;
   let result: any = null;
+  /** Variante accesible (accessibility.json): preferencia de este equipo, no de la cuenta. */
+  let accessible = readAccessible();
+
+  function readAccessible() {
+    try {
+      return localStorage.getItem(ACCESSIBLE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+  function setAccessible(v: boolean) {
+    accessible = v;
+    try {
+      localStorage.setItem(ACCESSIBLE_KEY, v ? '1' : '0');
+    } catch {
+      /* sin almacenamiento: vale para esta sesión */
+    }
+  }
+  $: petElement = (pet?.species?.element ?? '').toLowerCase();
   let error = '';
   let busy = false;
 
@@ -52,7 +74,7 @@
     busy = true;
     try {
       lastGameId = gameId;
-      session = await api.startMinigame(gameId, pet.id);
+      session = await api.startMinigame(gameId, pet.id, accessible ? 'easy' : 'standard');
       // 3, 2, 1: da tiempo a poner las manos en el teclado o el ratón antes de que corra el reloj.
       countdown = 3;
       phase = 'countdown';
@@ -61,7 +83,6 @@
         countdown -= 1;
         if (countdown > 0) return;
         stopCountdown();
-        startedAt = Date.now();
         phase = 'playing';
       }, 800);
     } catch (e: any) {
@@ -71,15 +92,14 @@
     }
   }
 
-  async function onFinish(e: CustomEvent<{ score: number }>) {
+  async function onFinish(e: CustomEvent<{ score: number; ticks: number; log: PackedEntry[] }>) {
     if (!session) return;
-    // El servidor rechaza puntuaciones por encima de su techo: se acota igual en cliente
-    const elapsed = (Date.now() - startedAt) / 1000;
-    const score = Math.min(e.detail.score, Math.floor(session.maxScorePerSecond * elapsed));
-    clipped = score < e.detail.score;
+    // Se envía la puntuación tal cual con su registro: el servidor repite la partida y la valida.
+    // (Recortarla aquí haría que no coincidiera con la repetición.)
+    const { score, ticks, log } = e.detail;
     phase = 'saving';
     try {
-      result = await api.finishMinigame(session.sessionId, Math.max(0, score));
+      result = await api.finishMinigame(session.sessionId, score, { ticks, log });
       dispatch('petUpdated', result.pet);
       dispatch('refreshUser');
       error = '';
@@ -106,6 +126,13 @@
     <SectionHeader title="Minijuegos" icon="gamepad" count={games.length || null} />
     <p class="ui-card__hint">Juega con {pet.nickname || pet.species?.name} para ganar monedas y XP. Cada partida gasta energía (ahora tiene {Math.round(pet.energy ?? 0)}%).</p>
     {#if pet.sleeping}<Notice tone="info" icon="moon">Tu mascota está durmiendo. Despiértala en Mascota › Inicio para jugar.</Notice>{/if}
+    <Switch
+      checked={accessible}
+      icon="smile"
+      label="Modo accesible"
+      sub="Más tiempo para reaccionar, zonas más grandes y pistas."
+      on:change={(e) => setAccessible(e.detail)}
+    />
     <AsyncState loading={loadingGames} error={listError} onRetry={loadGames}>
       <div class="ui-list">
         {#each games as g (g.id)}
@@ -113,7 +140,15 @@
           <button class="ui-row game" disabled={busy || pet.sleeping || noEnergy} on:click={() => play(g.id)}>
             <span class="ui-feature__icon game-icon" aria-hidden="true"><Ico n={MINIGAMES[g.id]?.icon || 'gamepad'} size={20} /></span>
             <span class="ui-row__body">
-              <span class="ui-row__title">{g.name}</span>
+              <span class="ui-row__title">
+                {g.name}
+                {#if g.element}
+                  {@const el = elementMeta(g.element)}
+                  <Badge size="sm" color={el.color} icon={el.icon} title={g.element === petElement ? 'Afinidad: más felicidad al jugar' : `Prueba de ${el.label}`}>
+                    {el.label}{#if g.element === petElement} · afín{/if}
+                  </Badge>
+                {/if}
+              </span>
               <span class="ui-row__sub ui-row__sub--wrap">
                 {g.durationSeconds} s · hasta {g.maxCoins} monedas y {g.maxXp} XP{#if g.energyCost != null} · −{g.energyCost} de energía{/if}
                 {#if noEnergy}<strong class="game-block"> · Sin energía suficiente</strong>{/if}
@@ -143,6 +178,7 @@
       gameId={session.gameId}
       seed={session.seed}
       durationSeconds={session.durationSeconds}
+      variant={session.variant ?? (accessible ? 'easy' : 'standard')}
       on:finish={onFinish}
       on:error={(e) => {
         back();
@@ -165,8 +201,11 @@
           <StatTile icon="smile" value="+{result.rewards.happiness}" label="felicidad" />
           {#if result.rewards.energyCost != null}<StatTile icon="energy" value="−{result.rewards.energyCost}" label="energía" />{/if}
         </div>
-        {#if clipped}
-          <p class="ui-card__hint">La puntuación se ajustó al máximo que admite la duración de la partida.</p>
+        {#if result.item}
+          <Notice tone="success" icon="gift">¡La partida ha dejado {result.item.qty} × {FOOD_NAMES[result.item.itemId] ?? result.item.itemId} en tu inventario!</Notice>
+        {/if}
+        {#if result.affinity}
+          <p class="ui-card__hint">Prueba de su elemento: {pet.nickname || pet.species?.name} lo ha disfrutado más.</p>
         {/if}
       {:else}
         <h3 class="ui-feature__title">Partida no válida</h3>

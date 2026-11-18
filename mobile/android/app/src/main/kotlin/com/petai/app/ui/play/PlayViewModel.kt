@@ -28,6 +28,8 @@ data class PlayUiState(
     /** Partida en curso (el juego está en pantalla). */
     val session: MinigameSession? = null,
     val gameResult: MinigameResult? = null,
+    /** Variante accesible de los minijuegos (más tiempo, zonas grandes, pistas). */
+    val accessible: Boolean = false,
     val error: String? = null,
 )
 
@@ -83,17 +85,27 @@ class PlayViewModel(
         viewModelScope.launch {
             _state.update { it.copy(busy = true, error = null) }
             try {
-                val s = service.startMinigame(gameId, petId)
+                val variant = if (_state.value.accessible) "easy" else "standard"
+                val s = service.startMinigame(gameId, petId, variant)
                 _state.update { it.copy(busy = false, session = s) }
             } catch (e: Exception) { fail(e) }
         }
     }
 
-    fun finishGame(score: Int) {
+    fun setAccessible(on: Boolean) = _state.update { it.copy(accessible = on) }
+
+    /** Salir de la partida sin terminarla: no da recompensa (la sesión caduca en el servidor). */
+    fun abandonGame() = _state.update { it.copy(session = null) }
+
+    /** El juego compartido no pudo arrancar (versión incompatible, juego desconocido…). */
+    fun gameError(message: String) = _state.update { it.copy(session = null, error = message.ifBlank { "No se pudo cargar el minijuego" }) }
+
+    /** Fin de partida: se envía la puntuación con su registro para que el servidor la repita. */
+    fun finishGame(result: MinigameEvent.Finished) {
         val session = _state.value.session ?: return
         viewModelScope.launch {
             try {
-                val r = service.finishMinigame(session.sessionId, score.coerceAtLeast(0))
+                val r = service.finishMinigame(session.sessionId, result.score.coerceAtLeast(0), result.ticks, result.log)
                 _state.update { it.copy(session = null, gameResult = r) }
                 onChanged()
                 refresh()

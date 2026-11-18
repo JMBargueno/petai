@@ -399,6 +399,8 @@ model MinigameSession {
   petId      String
   pet        Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
   gameId     String
+  /// Variante de reglas (`standard` | `easy`, la accesible). El servidor la usa al repetir la partida (spec 39).
+  variant    String    @default("standard")
   seed       Int
   startedAt  DateTime  @default(now())
   finishedAt DateTime?

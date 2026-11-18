@@ -26,6 +26,9 @@ export interface FallingItem {
 }
 
 export interface CatchFoodState {
+  speedMul: number;
+  /** Media anchura de la zona de captura (más ancha en la variante accesible). */
+  catchHalf: number;
   rng: () => number;
   durationTicks: number;
   tick: number;
@@ -48,8 +51,13 @@ const clampBasket = (x: number) => Math.min(C.W - C.BASKET_W / 2, Math.max(C.BAS
 export const catchFood: GameDefinition<CatchFoodState, CatchFoodInput> = {
   id: 'catch_food',
   coalesce: ['move'],
-  init({ seed, durationSeconds }: GameOptions) {
+  inputKeys: { move: ['x'], dir: ['d'] },
+  init({ seed, durationSeconds, variant }: GameOptions) {
+    const easy = variant === 'easy';
     return {
+      // Variante accesible (accessibility.json): caída a la mitad y zona de captura ×3.
+      speedMul: easy ? 0.5 : 1,
+      catchHalf: easy ? (C.BASKET_W / 2 + 6) * 3 : C.BASKET_W / 2 + 6,
       rng: createRng(seed),
       durationTicks: secondsToTicks(durationSeconds),
       tick: 0,
@@ -84,7 +92,7 @@ export const catchFood: GameDefinition<CatchFoodState, CatchFoodInput> = {
       s.spawnAcc = 0;
       const bad = s.rng() < C.BAD_CHANCE;
       const x = 16 + s.rng() * (C.W - 32);
-      const vy = 90 + s.rng() * 70;
+      const vy = (90 + s.rng() * 70) * s.speedMul;
       const kind = bad ? -1 : Math.floor(s.rng() * C.GOOD_KINDS);
       s.items.push({ id: s.nextId++, x, y: -16, vy, kind });
     }
@@ -92,7 +100,7 @@ export const catchFood: GameDefinition<CatchFoodState, CatchFoodInput> = {
     const remaining: FallingItem[] = [];
     for (const it of s.items) {
       it.y += it.vy * dt;
-      const caught = it.y >= C.BASKET_Y - 8 && it.y <= C.BASKET_Y + 18 && Math.abs(it.x - s.basketX) < C.BASKET_W / 2 + 6;
+      const caught = it.y >= C.BASKET_Y - 8 && it.y <= C.BASKET_Y + 18 && Math.abs(it.x - s.basketX) < s.catchHalf;
       if (caught) {
         if (it.kind < 0) {
           s.score = Math.max(0, s.score - 1);

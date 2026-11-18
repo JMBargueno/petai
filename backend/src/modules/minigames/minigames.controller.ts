@@ -22,9 +22,10 @@ export class MinigamesController {
   finish(
     @CurrentUser() user: any,
     @Param('id') sessionId: string,
-    @Body() body: { score: number } | undefined,
+    @Body() body: { score: number; ticks?: number; log?: unknown } | undefined,
   ) {
-    return this.minigamesService.finish(user.id, sessionId, body?.score as number);
+    // `ticks` y `log` (spec 39): el servidor repite la partida y la acepta solo si da la misma puntuación.
+    return this.minigamesService.finish(user.id, sessionId, body?.score as number, { ticks: body?.ticks, log: body?.log });
   }
 
   @Post(':gameId/start')
@@ -32,8 +33,8 @@ export class MinigamesController {
   start(
     @CurrentUser() user: any,
     @Param('gameId') gameId: string,
-    @Body() body: { petId: string } | undefined,
+    @Body() body: { petId: string; variant?: 'standard' | 'easy' } | undefined,
   ) {
-    return this.minigamesService.start(user.id, gameId, body?.petId as string);
+    return this.minigamesService.start(user.id, gameId, body?.petId as string, body?.variant);
   }
 }

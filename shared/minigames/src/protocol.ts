@@ -5,10 +5,13 @@
  *
  * Versionado: si cambias un mensaje de forma incompatible, sube `MINIGAME_PROTOCOL_VERSION`. Es
  * independiente del protocolo de la escena.
+ *  - v2: `finished` lleva el registro empaquetado (`log`) para que el servidor repita la partida;
+ *    `start` admite `variant`; nuevos `pause`/`resume` y evento `paused`.
  */
-import type { GameVariant, LoggedInput } from './core/types';
+import type { PackedEntry } from './core/log';
+import type { GameVariant } from './core/types';
 
-export const MINIGAME_PROTOCOL_VERSION = 1;
+export const MINIGAME_PROTOCOL_VERSION = 2;
 
 export interface StartMessage {
   type: 'start';
@@ -19,12 +22,13 @@ export interface StartMessage {
   reducedMotion?: boolean;
 }
 
-export type HostMessage = StartMessage | { type: 'dispose' };
+export type HostMessage = StartMessage | { type: 'dispose' } | { type: 'pause' } | { type: 'resume' };
 
 export type MinigameEvent =
   | { type: 'ready'; protocol: number }
   | { type: 'score'; score: number }
-  | { type: 'finished'; gameId: string; score: number; ticks: number; inputLog: LoggedInput[] }
+  | { type: 'paused'; paused: boolean }
+  | { type: 'finished'; gameId: string; score: number; ticks: number; log: PackedEntry[] }
   | { type: 'error'; message: string };
 
 /** Valida un mensaje del anfitrión sin confiar en él. */
@@ -39,7 +43,7 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
   }
   if (!v || typeof v !== 'object') return null;
   const m = v as Record<string, unknown>;
-  if (m.type === 'dispose') return { type: 'dispose' };
+  if (m.type === 'dispose' || m.type === 'pause' || m.type === 'resume') return { type: m.type };
   if (m.type !== 'start') return null;
   if (typeof m.gameId !== 'string' || !Number.isInteger(m.seed)) return null;
   if (typeof m.durationSeconds !== 'number' || !(m.durationSeconds > 0) || m.durationSeconds > 600) return null;

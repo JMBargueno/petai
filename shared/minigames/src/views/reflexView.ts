@@ -1,5 +1,5 @@
-import { REFLEX as R, type ReflexState } from '../games/reflex';
-import { el, pct, type GameView } from './types';
+import { REFLEX as R, meanReactionMs, type ReflexState } from '../games/reflex';
+import { el, pct, typing, type GameView } from './types';
 
 export function createReflexView(): GameView<ReflexState> {
   let target: HTMLButtonElement;
@@ -28,7 +28,7 @@ export function createReflexView(): GameView<ReflexState> {
       };
       // Espacio o Enter cuentan como pulsar el objetivo: el juego también se puede jugar con teclado.
       const onKey = (e: KeyboardEvent) => {
-        if (e.key !== ' ' && e.key !== 'Enter') return;
+        if ((e.key !== ' ' && e.key !== 'Enter') || typing(e)) return;
         e.preventDefault();
         hit();
       };
@@ -54,7 +54,10 @@ export function createReflexView(): GameView<ReflexState> {
       const msg = t ? '¡Objetivo!' : '';
       if (live.textContent !== msg) live.textContent = msg;
     },
-    status: (s) => `★ ${s.score} · aciertos ${s.hits}/${s.hits + s.misses}`,
+    status: (s) => {
+      const ms = meanReactionMs(s);
+      return `★ ${s.score} · aciertos ${s.hits}/${s.hits + s.misses}${ms ? ` · ${ms} ms` : ''}`;
+    },
     dispose() {
       cleanups.splice(0).forEach((fn) => fn());
     },

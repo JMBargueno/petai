@@ -1,14 +1,15 @@
 /**
  * Contrato de un minijuego. La lógica es pura y determinista: no toca el DOM, no lee el reloj y
  * todo su azar sale de la semilla. El tiempo avanza en ticks fijos (ver `TICK_MS`), así una
- * partida se reproduce exactamente a partir de `seed + inputLog` (spec 39 §2.1).
+ * partida se reproduce exactamente a partir de `seed + inputLog` (spec 39 §2.1). El servidor la
+ * repite para validar la puntuación (fase 3).
  */
 
 /** Ticks por segundo del tiempo de juego. */
 export const TICKS_PER_SECOND = 60;
 export const TICK_MS = 1000 / TICKS_PER_SECOND;
 
-/** Variante de reglas. `easy` es la accesible (accessibility.json); hoy solo se transporta. */
+/** Variante de reglas. `easy` es la accesible (accessibility.json). */
 export type GameVariant = 'standard' | 'easy';
 
 export interface GameOptions {
@@ -35,8 +36,13 @@ export interface GameDefinition<S, I extends GameInput = GameInput> {
   step(state: S): void;
   score(state: S): number;
   over(state: S): boolean;
-  /** Valida una entrada sin confiar en ella (llega del puente o del registro). */
+  /** Valida una entrada sin confiar en ella (llega del puente, del registro o del servidor). */
   parseInput(raw: unknown): I | null;
+  /**
+   * Campos numéricos de cada tipo de entrada, en orden. Sirven para empaquetar el registro
+   * (`[Δtick, kind, ...valores]`) y que viaje pequeño al servidor.
+   */
+  inputKeys: Readonly<Record<string, readonly string[]>>;
   /**
    * Tipos de entrada que se funden dentro del mismo tick (solo cuenta la última), p. ej. la
    * posición del puntero. Así el registro no crece con cada `pointermove`.
@@ -46,3 +52,6 @@ export interface GameDefinition<S, I extends GameInput = GameInput> {
 
 /** Utilidad para las definiciones: segundos de duración → ticks. */
 export const secondsToTicks = (s: number) => Math.round(s * TICKS_PER_SECOND);
+
+/** Entero aleatorio en [0, n) a partir de un generador. */
+export const randInt = (rng: () => number, n: number) => Math.floor(rng() * n);

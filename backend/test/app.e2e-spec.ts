@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { GAME_DEFINITIONS, TICK_MS, createRunner, packLog } from '@pockai/minigames/logic';
 
 describe('PetAI End-to-End API Flow (e2e)', () => {
   let app: INestApplication;
@@ -163,7 +164,7 @@ describe('PetAI End-to-End API Flow (e2e)', () => {
 
     it('12. Lista los minijuegos y exige petId para empezar', async () => {
       const list = await http().get('/v1/minigames').set(auth()).expect(200);
-      expect(list.body.map((g: any) => g.id).sort()).toEqual(['catch_food', 'memory_match', 'reflex']);
+      expect(list.body.map((g: any) => g.id).sort()).toEqual(['catch_food', 'cifrado', 'corriente_datos', 'faro_claridad', 'forja_termica', 'memory_match', 'pulso_voltaico', 'raiz_fractal', 'reflex']);
       await http().post('/v1/minigames/reflex/start').set(auth()).send({}).expect(400);
       await http().post('/v1/minigames/nope/start').set(auth()).send({ petId }).expect(404);
     });
@@ -200,6 +201,35 @@ describe('PetAI End-to-End API Flow (e2e)', () => {
         where: { id: cheat.body.sessionId }, data: { startedAt: new Date(Date.now() - 25_000) } });
       await http().post(`/v1/minigames/sessions/${cheat.body.sessionId}/finish`)
         .set(auth()).send({ score: 9999 }).expect(400);
+    });
+
+    it('15. El servidor repite la partida: acepta el registro real y rechaza uno que no cuadra', async () => {
+      // Juega Reflejos con la semilla que da el servidor (acierta cada objetivo al tick siguiente).
+      const play = (seed: number, durationSeconds: number) => {
+        const def = GAME_DEFINITIONS.reflex;
+        const runner = createRunner(def, { seed, durationSeconds });
+        while (!runner.over()) {
+          if ((runner.state as any).target) runner.push({ kind: 'hit' });
+          runner.advance(TICK_MS);
+        }
+        return { score: runner.score(), ticks: runner.tick, log: packLog(def, runner.log) };
+      };
+
+      // Energía llena: esta prueba es de la repetición, no de lo que gastaron las anteriores.
+      await prisma.pet.update({ where: { id: petId }, data: { energy: 100, sleeping: false } });
+      await backdateAll(120);
+      const s = await http().post('/v1/minigames/reflex/start').set(auth()).send({ petId }).expect(201);
+      await prisma.minigameSession.update({ where: { id: s.body.sessionId }, data: { startedAt: new Date(Date.now() - 32_000) } });
+      const ok = play(s.body.seed, s.body.durationSeconds);
+      const done = await http().post(`/v1/minigames/sessions/${s.body.sessionId}/finish`).set(auth()).send(ok).expect(201);
+      expect(done.body.verified).toBe(true);
+      expect(done.body.score).toBe(ok.score);
+
+      await backdateAll(120);
+      const t = await http().post('/v1/minigames/reflex/start').set(auth()).send({ petId }).expect(201);
+      await prisma.minigameSession.update({ where: { id: t.body.sessionId }, data: { startedAt: new Date(Date.now() - 32_000) } });
+      const real = play(t.body.seed, t.body.durationSeconds);
+      await http().post(`/v1/minigames/sessions/${t.body.sessionId}/finish`).set(auth()).send({ ...real, score: real.score + 2 }).expect(400);
     });
   });
 });

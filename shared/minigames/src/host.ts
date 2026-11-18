@@ -1,10 +1,11 @@
+import { packLog } from './core/log';
 import { createRunner } from './core/runner';
 import type { GameVariant } from './core/types';
 import { TICKS_PER_SECOND } from './core/types';
 import type { MinigameEvent } from './protocol';
 import { getMinigame } from './registry';
 import { ensureStyles } from './styles';
-import { el } from './views/types';
+import { button, el } from './views/types';
 
 export interface MountOptions {
   gameId: string;
@@ -12,24 +13,37 @@ export interface MountOptions {
   durationSeconds: number;
   variant?: GameVariant;
   reducedMotion?: boolean;
+  /** Pausar solo al perder el foco u ocultar la ventana (por defecto, sí). */
+  autoPause?: boolean;
   onEvent: (event: MinigameEvent) => void;
 }
 
 export interface MountedMinigame {
+  pause(): void;
+  resume(): void;
   dispose(): void;
 }
 
 /**
+ * Pausa máxima. La sesión del servidor caduca a los 300 s (`sessionTtlSeconds`) aunque el juego esté
+ * parado: pasado este tiempo la partida se da por terminada con lo conseguido, para no perderla.
+ */
+export const MAX_PAUSE_MS = 120_000;
+
+/**
  * Monta un minijuego en `host` y lo ejecuta hasta que termina. Emite `score` cuando cambia la
- * puntuación y `finished` (una sola vez) con la puntuación y el registro de entradas.
+ * puntuación, `paused` al pausar o seguir y `finished` (una sola vez) con la puntuación, los ticks
+ * jugados y el registro empaquetado que el servidor repite para validarla.
  */
 export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMinigame {
   const entry = getMinigame(opts.gameId);
   if (!entry) {
     opts.onEvent({ type: 'error', message: `Minijuego desconocido: ${opts.gameId}` });
-    return { dispose() {} };
+    return { pause() {}, resume() {}, dispose() {} };
   }
-  ensureStyles(host.ownerDocument);
+  const doc = host.ownerDocument;
+  const win = doc.defaultView ?? window;
+  ensureStyles(doc);
 
   const runner = createRunner(entry.definition, {
     seed: opts.seed,
@@ -44,14 +58,22 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
   const status = el('span');
   status.setAttribute('role', 'status');
   hud.append(time, status);
-  root.append(hud);
+  const stage = el('div', 'pmg-stage');
+  const overlay = el('div', 'pmg-pause');
+  overlay.hidden = true;
+  const resumeBtn = button('pmg-btn pmg-btn--big', '▶ Seguir', 'Seguir jugando', false);
+  overlay.append(el('strong', '', 'En pausa'), resumeBtn);
+  root.append(hud, stage);
   host.append(root);
-  view.mount(root, { push: (i) => runner.push(i), reducedMotion: !!opts.reducedMotion });
+  view.mount(stage, { push: (i) => !paused && runner.push(i), reducedMotion: !!opts.reducedMotion }, runner.state);
+  stage.append(overlay);
 
   let raf = 0;
   let last = 0;
   let lastScore = -1;
   let done = false;
+  let paused = false;
+  let pauseTimer: ReturnType<typeof setTimeout> | null = null;
   const durationTicks = Math.round(opts.durationSeconds * TICKS_PER_SECOND);
 
   const paint = () => {
@@ -68,25 +90,70 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
     }
   };
 
-  const frame = (ts: number) => {
+  const finish = () => {
     if (done) return;
+    done = true;
+    cancelAnimationFrame(raf);
+    if (pauseTimer) clearTimeout(pauseTimer);
+    opts.onEvent({
+      type: 'finished',
+      gameId: entry.id,
+      score: runner.score(),
+      ticks: runner.tick,
+      log: packLog(entry.definition, runner.log),
+    });
+  };
+
+  const frame = (ts: number) => {
+    if (done || paused) return;
     if (last) runner.advance(ts - last);
     last = ts;
     paint();
-    if (runner.over()) {
-      done = true;
-      opts.onEvent({ type: 'finished', gameId: entry.id, score: runner.score(), ticks: runner.tick, inputLog: [...runner.log] });
-      return;
-    }
+    if (runner.over()) return finish();
     raf = requestAnimationFrame(frame);
   };
+
+  const pause = () => {
+    if (done || paused) return;
+    paused = true;
+    cancelAnimationFrame(raf);
+    overlay.hidden = false;
+    opts.onEvent({ type: 'paused', paused: true });
+    pauseTimer = setTimeout(finish, MAX_PAUSE_MS);
+  };
+  const resume = () => {
+    if (done || !paused) return;
+    paused = false;
+    overlay.hidden = true;
+    if (pauseTimer) clearTimeout(pauseTimer);
+    pauseTimer = null;
+    last = 0;
+    opts.onEvent({ type: 'paused', paused: false });
+    raf = requestAnimationFrame(frame);
+  };
+
+  resumeBtn.addEventListener('click', resume);
+  const onVisibility = () => doc.visibilityState === 'hidden' && pause();
+  const autoPause = opts.autoPause !== false;
+  if (autoPause) {
+    win.addEventListener('blur', pause);
+    doc.addEventListener('visibilitychange', onVisibility);
+  }
+
   paint();
   raf = requestAnimationFrame(frame);
 
   return {
+    pause,
+    resume,
     dispose() {
       done = true;
       cancelAnimationFrame(raf);
+      if (pauseTimer) clearTimeout(pauseTimer);
+      if (autoPause) {
+        win.removeEventListener('blur', pause);
+        doc.removeEventListener('visibilitychange', onVisibility);
+      }
       view.dispose();
       root.remove();
     },

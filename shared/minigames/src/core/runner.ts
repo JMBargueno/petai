@@ -16,6 +16,10 @@ export interface Runner<S> {
   over(): boolean;
 }
 
+/** Variante de `def` sin genéricos, para los mapas de juegos. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyGameDefinition = GameDefinition<any, any>;
+
 /** Máximo de tiempo real que se simula por llamada (p. ej. al volver de otra pestaña). */
 const MAX_ADVANCE_MS = 250;
 
@@ -63,11 +67,14 @@ export function createRunner<S, I extends GameInput>(def: GameDefinition<S, I>, 
 /**
  * Repite una partida a partir de la semilla y el registro de entradas. Devuelve la puntuación y los
  * ticks jugados. Las entradas no válidas, desordenadas o posteriores al final se descartan.
+ * `maxTicks`: la partida terminó antes de tiempo en el cliente (pausa demasiado larga); se repite
+ * solo hasta ahí, porque en algunos juegos la puntuación sigue cambiando sin entradas.
  */
 export function replay<S, I extends GameInput>(
   def: GameDefinition<S, I>,
   opts: GameOptions,
   log: readonly unknown[],
+  maxTicks = Infinity,
 ): { score: number; ticks: number } {
   const state = def.init(opts);
   let tick = 0;
@@ -76,7 +83,7 @@ export function replay<S, I extends GameInput>(
     (e): e is LoggedInput =>
       !!e && typeof e === 'object' && Number.isInteger((e as LoggedInput).tick) && (e as LoggedInput).tick >= 0,
   );
-  while (!def.over(state)) {
+  while (!def.over(state) && tick < maxTicks) {
     while (i < entries.length && entries[i].tick <= tick) {
       if (entries[i].tick === tick) {
         const input = def.parseInput(entries[i]);
