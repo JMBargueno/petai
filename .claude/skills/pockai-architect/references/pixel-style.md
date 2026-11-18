@@ -25,7 +25,10 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Antes de pensar en 
 | Ave de cuello largo | Sin brazos: alas. Cabeza pequeña, cuello largo, pico y patas finas con garras | `arm` y `feet` en `undefined`, `beak()`, `longNeck()`, `talon()` y `fan()` de plumas en punta | Fénixel |
 | Flotante | Sin patas ni apoyos: el cuerpo queda en el aire, a unos 6 px del suelo | `feet: undefined`, `head: undefined`, `arm: undefined`, aleta al costado en `front`, ancla `hat` | Nubeballena |
 | Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | `head: undefined` en las 4 etapas, ramas con la pieza del tronco | Cactuerno |
-| Serpentino, árbol, insecto, etc. | Libres | Combina lo anterior | — |
+| Serpentino | Sin patas ni brazos: anillos enroscados en el suelo, cuello alzado y cola en alto | `feet` y `arm` en `undefined`, `coil()` con la pieza del tronco para cuello, anillos y cola | Leviatín |
+| Árbol | Tronco con la cara, copa por cabeza, ramas y raíces. El cuerpo va en el secundario | `bark()` cubre el tronco, `head` es la copa, `eye` cae en el `torso`, `root()` y `branch()` | Yggdrito |
+| Dragón bípedo inclinado | De terópodo: cuerpo tumbado hacia delante sobre dos patas, cuello que avanza, hocico y cola de contrapeso | `torso` horizontal, `head` arriba a la derecha, `longNeck()`, `snout()`, `thigh()` en `front` y `boltTail()` | Primpulso |
+| Insecto, medusa, etc. | Libres | Combina lo anterior | — |
 
 Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo cuatro de siete**):
 
@@ -35,7 +38,7 @@ Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo cuatro de s
 - **Extremidades:** brazos, aletas, alas, ramas o ninguna.
 - **Rasgo icónico:** dónde sale (cabeza, lomo, cola, costados) y qué forma tiene.
 - **Contorno:** liso, dentado, lobulado o con placas.
-- **Cara:** la forma del ojo (`eye.style`), su tamaño y dónde cae en el cuerpo. Estilos: por defecto (alto y redondeado), `bead` (cuenta de 3 px: criaturas grandes de ojo diminuto, como la Nubeballena), `lid` (párpado caído y tranquilo, como el Magmadillo) `grumpy` (párpado caído con ceja inclinada, como el Cactuerno), `almond` (rasgado, de ave, como Fénixel), `shine` (doble brillo de cachorro, como el Cerbito de cría), `fierce` (borde caído hacia el centro y ceja gruesa, como el Cerbito adulto) y `lash` (con pestaña, como Kirisol). Elige el que cuente su carácter y no repitas el de las especies de su misma rareza. Si ninguno encaja, añade un estilo en `scripts/sprites/pixel/face.ts`.
+- **Cara:** la forma del ojo (`eye.style`), su tamaño y dónde cae en el cuerpo. Estilos: por defecto (alto y redondeado), `bead` (cuenta de 3 px: criaturas grandes de ojo diminuto, como la Nubeballena), `lid` (párpado caído y tranquilo, como el Magmadillo) `grumpy` (párpado caído con ceja inclinada, como el Cactuerno), `almond` (rasgado, de ave, como Fénixel), `shine` (doble brillo de cachorro, como el Cerbito de cría), `fierce` (borde caído hacia el centro y ceja gruesa, como el Cerbito adulto) `lash` (con pestaña, como Kirisol), `slit` (rendija de reptil, como Leviatín), `ring` (hueco con luz dentro, como Yggdrito) y `spark` (inclinado con chispa amarilla, como Primpulso). Elige el que cuente su carácter y no repitas el de las especies de su misma rareza. Si ninguno encaja, añade un estilo en `scripts/sprites/pixel/face.ts`.
 
 **La anatomía tiene que tener sentido.** Cada pieza responde a qué animal es: una ballena no tiene pies ni nada que cuelgue bajo el cuerpo y se lea como tal; un pulpo no tiene brazos; un cactus no tiene cola. Antes de dar por buena una hoja, pregúntate por cada pieza: «¿esto lo tendría el animal de verdad?». Lo que la geometría común trae y la criatura no tendría, se quita con `undefined`.
 

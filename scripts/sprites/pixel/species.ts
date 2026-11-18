@@ -1340,7 +1340,392 @@ const KIRISOL: PixelSpecies = {
   },
 };
 
-export const PIXEL_SPECIES: PixelSpecies[] = [IGNISAUR, AXOLUNAR, FLORABUD, LIVOLT, INKTOPUS, SOLAREJO, MAGMADILLO, NUBEBALLENA, CACTUERNO, FENIXEL, CERBITO, KIRISOL];
+// ───────────────────────── Leviatín (agua, mítico) ─────────────────────────
+// Plan corporal: SERPENTINO. Sin patas ni brazos: un cuerpo de anillos que se enrosca en el suelo,
+// se alza en un cuello y acaba en una cola levantada. Rasgo icónico: las aletas de velo a los
+// lados de la cabeza. Segundo rasgo: la perla de la frente y la cola de abanico.
+
+/** Tramo de cuerpo de serpiente: cadena de anillos de la pieza del tronco, que se funden entre sí. */
+const coil = (g: Grid, segs: [number, number, number][]) => segs.forEach(([x, y, r]) => g.ellipse(4, 'body', x, y, r, r));
+
+/** Aleta dorsal en punta, mirando hacia atrás. */
+const finSpike = (g: Grid, part: number, x: number, y: number, s: number) =>
+  g.poly(part, 'trait', [[x + 1, y - s], [x - s * 1.7, y - s * 0.2], [x + 1, y + s]], { flat: true });
+
+/** Vientre claro a lo largo del cuello y perla en la frente. */
+function underside(g: Grid, pts: [number, number, number, number][]): void {
+  pts.forEach(([x, y, rx, ry]) => g.ellipse(4, 'belly', x, y, rx, ry, { flat: true, clip: 4, keep: true }));
+}
+const pearl = (g: Grid, x: number, y: number, r: number) => g.ellipse(10, 'belly', x, y, r, r * 0.9, { flat: true, clip: 10, keep: true });
+
+const SERPENT = { feet: undefined, arm: undefined, farArm: undefined, belly: undefined, marks: undefined, emblem: undefined };
+
+const LEVIATIN: PixelSpecies = {
+  id: 'leviatin',
+  stages: {
+    // Renacuajo: un cuerpo de judía tumbado, con la punta de la cola alzada.
+    baby: stage('baby', {
+      ...SERPENT,
+      torso: [32, 51.5, 12, 7.5],
+      eye: { ...BASE.baby.eye, y: 47, x1: 31, x2: 39, style: 'slit' },
+      cheek: [28, 55],
+      hat: [35, 44.5],
+      neck: [34, 56],
+      back: [22, 49],
+      behind: (g, _s, p) =>
+        tail(g, p, 21, 51, () => {
+          coil(g, [[20, 50, 4], [16.5, 46.5, 3], [15, 43, 2.2]]);
+          plumes(g, 12, 15, 42, [[4, 70], [4, 120]]);
+        }),
+      onHead: (g) => g.ellipse(4, 'belly', 36, 45.8, 1.5, 1.3, { flat: true, clip: 4, keep: true }),
+    }),
+    // Se alza: un anillo en el suelo, cuello corto, cabeza aparte y las primeras aletas.
+    juvenile: stage('juvenile', {
+      ...SERPENT,
+      torso: [27, 52.5, 13, 6.5],
+      head: [38.5, 34.5, 8.5, 7.5],
+      eye: { ...BASE.juvenile.eye, y: 32, x1: 34, x2: 43, style: 'slit' },
+      neck: [37, 44],
+      back: [20, 48],
+      behind: (g, _s, p) => {
+        tail(g, p, 15, 51, () => {
+          coil(g, [[15, 50.5, 4], [11.5, 46, 3.2], [10, 41.5, 2.4]]);
+          plumes(g, 12, 10, 40.5, [[5, 65], [5, 110]]);
+        });
+        coil(g, [[35, 49.5, 5.2], [37, 44.5, 4.9], [38, 40, 4.6]]);
+        appendage(g, p, 31, 34, () => plumes(g, 5, 31, 34.5, [[6, 22], [5, -12]], true));
+        appendage(g, p, 46, 35, () => plumes(g, 3, 46, 35, [[4.5, 160], [4, 195]], true));
+      },
+      onHead: (g) => {
+        underside(g, [[38.5, 46, 2.4, 6]]);
+        pearl(g, 38.5, 29, 1.6);
+      },
+    }),
+    // Serpiente marina: dos anillos, cuello alto con aletas dorsales, velos anchos y cola de abanico.
+    adult: stage('adult', {
+      ...SERPENT,
+      torso: [27, 53, 15, 6],
+      head: [40, 27.5, 9.5, 8.5],
+      eye: { ...BASE.adult.eye, y: 25, x1: 34, x2: 45, style: 'slit' },
+      neck: [39.5, 37.5],
+      back: [20, 43],
+      behind: (g, _s, p) => {
+        tail(g, p, 11, 50, () => {
+          coil(g, [[11.5, 49.5, 4.5], [7.5, 44.5, 3.6], [6, 39, 2.8]]);
+          plumes(g, 12, 6, 37.5, [[7, 58], [7, 92], [6, 126]], true);
+        });
+        coil(g, [[20, 47, 7.5], [36.5, 49, 6], [39, 43.5, 5.7], [40, 38, 5.4], [40, 33, 5.2]]);
+        finSpike(g, 14, 33.5, 42, 2.2);
+        finSpike(g, 15, 33.5, 36, 2);
+        appendage(g, p, 31.5, 27, () => plumes(g, 5, 31.5, 27.5, [[9, 28], [8, 2], [6, -24]], true));
+        appendage(g, p, 48.5, 28, () => plumes(g, 3, 48.5, 28, [[6, 152], [5.5, 178], [4.5, 204]], true));
+      },
+      onHead: (g) => {
+        underside(g, [[41, 42, 2.8, 8], [30, 55, 9, 2.4]]);
+        g.ellipse(4, 'mark', 18, 46, 1, 5, { flat: true, clip: 4, keep: true, rot: 20 });
+        g.ellipse(4, 'mark', 23, 44.5, 1, 4.5, { flat: true, clip: 4, keep: true, rot: 10 });
+        pearl(g, 40, 21.5, 2);
+      },
+    }),
+    // Leviatán: tres anillos, cuello muy alto, velos enormes, corona de aletas y la perla encendida.
+    final: stage('final', {
+      ...SERPENT,
+      torso: [28, 53, 16, 6],
+      head: [41, 20.5, 10, 9],
+      eye: { ...BASE.final.eye, y: 18, x1: 35, x2: 46, style: 'slit' },
+      neck: [41, 31],
+      back: [19, 40],
+      behind: (g, _s, p) => {
+        tail(g, p, 9, 47, () => {
+          coil(g, [[8.5, 46, 4.5], [5.5, 40, 3.6], [5, 34, 2.8]]);
+          plumes(g, 12, 5, 32.5, [[9, 55], [9, 85], [8, 115], [7, 145]], true);
+        });
+        coil(g, [[19.5, 45.5, 8.5], [10, 51, 5.5], [37, 49.5, 6.5], [40, 43.5, 6.2], [41.5, 37.5, 5.9], [41.5, 31.5, 5.6], [41.5, 26.5, 5.4]]);
+        finSpike(g, 14, 34.5, 43.5, 2.6);
+        finSpike(g, 15, 35, 37, 2.5);
+        finSpike(g, 16, 35.5, 30.5, 2.3);
+        finSpike(g, 17, 12.5, 41, 2.6);
+        // Accesorio de etapa final: velos de aleta abiertos y corona sobre la perla.
+        appendage(g, p, 32.5, 20, () => plumes(g, 5, 32.5, 20.5, [[12, 32], [11, 8], [9, -16], [7, -40]], true));
+        appendage(g, p, 50, 21, () => plumes(g, 3, 50, 21, [[7.5, 148], [7, 174], [6, 200]], true));
+        appendage(g, p, 40, 12, () => plumes(g, 6, 40, 13, [[5, 66], [4.6, 100], [4, 134]]));
+      },
+      onHead: (g) => {
+        underside(g, [[42.5, 39, 3, 11], [31, 55, 10, 2.4]]);
+        [[16, 44.5, 20], [21, 42.5, 10], [26, 43.5, 0]].forEach(([x, y, rot]) => g.ellipse(4, 'mark', x, y, 1, 5, { flat: true, clip: 4, keep: true, rot }));
+        pearl(g, 41, 14.5, 2.4);
+      },
+    }),
+  },
+};
+
+// ───────────────────────── Yggdrito (planta, mítico) ─────────────────────────
+// Plan corporal: ÁRBOL. Tronco de corteza con la cara, copa de hojas por cabeza, ramas por brazos y
+// raíces por pies. Es la única especie cuyo cuerpo va en el color secundario (la corteza): el
+// primario y el patrón son de la copa. Rasgo icónico: la copa. Segundo rasgo: las raíces.
+
+/** Corteza: cubre el tronco entero con el secundario. */
+const bark = (g: Grid, t: E) => g.ellipse(4, 'trait', t[0], t[1], t[2] + 1, t[3] + 1, { clip: 4, keep: true });
+
+const greenLeaf = (g: Grid, part: number, x: number, y: number, len: number, deg: number) => {
+  const r = (deg * Math.PI) / 180;
+  g.ellipse(part, 'body', x - (Math.cos(r) * len) / 2, y - (Math.sin(r) * len) / 2, len / 2 + 0.5, Math.max(1.5, len * 0.32), { rot: deg });
+};
+
+/** Raíz: sale de la base del tronco y se abre hacia el suelo; da el paso con la pose. */
+function root(g: Grid, part: number, p: Pose, x0: number, y0: number, tipX: number, phase: number, w = 1.8): void {
+  const dx = Math.round(phase * 2);
+  g.poly(part, 'trait', [[x0 - w, y0], [x0 + w, y0], [tipX + dx + w * 0.7, 59], [tipX + dx - w * 1.3, 59]]);
+}
+
+/** Rama con su mata de hojas en la punta. */
+function branch(g: Grid, part: number, x0: number, y0: number, x1: number, y1: number, r: number): void {
+  g.poly(part, 'trait', [[x0, y0 - 1.4], [x0, y0 + 1.4], [x1, y1 + 1.1], [x1, y1 - 1.1]]);
+  g.ellipse(part + 1, 'body', x1 + (x1 < x0 ? -r * 0.5 : r * 0.5), y1 - r * 0.4, r, r * 0.85);
+}
+
+/** Lóbulos de la copa: se funden con la cabeza. */
+const lobes = (g: Grid, pts: [number, number, number, number][]) => pts.forEach(([x, y, rx, ry]) => g.ellipse(10, 'body', x, y, rx, ry, { keep: true }));
+
+/** Fruto de luz colgando de la copa. */
+function lantern(g: Grid, part: number, x: number, y0: number, drop: number): void {
+  g.poly(part, 'mark', [[x - 0.5, y0], [x + 0.5, y0], [x + 0.5, y0 + drop], [x - 0.5, y0 + drop]], { flat: true });
+  g.ellipse(part, 'belly', x, y0 + drop + 1.6, 1.8, 1.9, { flat: true });
+}
+
+const TREE = { feet: undefined, arm: undefined, farArm: undefined, belly: undefined, marks: undefined };
+
+const YGGDRITO: PixelSpecies = {
+  id: 'yggdrito',
+  stages: {
+    // Semilla: una bellota con dos hojitas recién brotadas y dos raicillas.
+    baby: stage('baby', {
+      ...TREE,
+      torso: [32, 50, 10, 8.5],
+      eye: { ...BASE.baby.eye, y: 46, x1: 27, x2: 35, style: 'ring' },
+      cheek: [24, 53],
+      neck: [32, 55],
+      back: [23, 50],
+      behind: (g, _s, p) => {
+        root(g, 2, p, 28, 56, 26, -p.leg, 1.4);
+        appendage(g, p, 32, 42, () => {
+          g.poly(5, 'trait', [[31.3, 42.5], [32.7, 42.5], [32.5, 38.5], [31.5, 38.5]], { flat: true });
+          greenLeaf(g, 20, 32, 38.5, 5, 25);
+          greenLeaf(g, 21, 32, 38.5, 4.5, 150);
+        });
+      },
+      onHead: (g, s) => {
+        bark(g, s.torso);
+        // Capuchón de la bellota.
+        g.ellipse(4, 'mark', 32, 43.5, 9, 3, { flat: true, clip: 4, keep: true });
+      },
+      front: (g, _s, p) => root(g, 7, p, 36, 56.5, 38.5, p.leg, 1.4),
+    }),
+    // Plantón: un tronquito con una copa pequeña y dos ramitas de una hoja.
+    juvenile: stage('juvenile', {
+      ...TREE,
+      torso: [32, 47.5, 8.5, 10.5],
+      head: [32, 31.5, 11, 7],
+      eye: { ...BASE.juvenile.eye, y: 43, x1: 26, x2: 35, style: 'ring' },
+      neck: [32, 40],
+      back: [23, 46],
+      behind: (g, _s, p) => {
+        root(g, 2, p, 28, 55, 24, -p.leg);
+        greenLeaf(g, 20, 24.5, 45, 6, 25);
+        greenLeaf(g, 21, 39.5, 46, 5, 155);
+      },
+      onHead: (g, s) => bark(g, s.torso),
+      front: (g, _s, p) => root(g, 7, p, 36, 55.5, 40.5, p.leg),
+    }),
+    // Árbol joven: copa ancha de tres lóbulos, dos ramas con su mata de hojas y tres raíces.
+    adult: stage('adult', {
+      ...TREE,
+      torso: [32, 46.5, 9.5, 12],
+      head: [32, 25, 15, 10.5],
+      eye: { ...BASE.adult.eye, y: 41, x1: 25, x2: 36, style: 'ring' },
+      neck: [32, 37.5],
+      back: [22, 45],
+      behind: (g, _s, p) => {
+        root(g, 2, p, 27, 55, 20.5, -p.leg, 2);
+        root(g, 3, p, 32, 56, 30, 0, 1.6);
+        branch(g, 20, 24.5, 44.5, 16, 40, 4.4);
+        branch(g, 22, 39.5, 45.5, 47.5, 41.5, 4);
+      },
+      onHead: (g, s, p) => {
+        bark(g, s.torso);
+        lobes(g, [[19.5, 28, 6.5, 6], [44.5, 28.5, 6, 5.5]]);
+        [[24, 22, 3, 1.6], [37, 19.5, 2.6, 1.4], [42, 27, 2.4, 1.3]].forEach(([x, y, rx, ry]) => g.ellipse(10, 'mark', x, y, rx, ry, { flat: true, clip: 10, keep: true }));
+        void p;
+      },
+      front: (g, _s, p) => root(g, 7, p, 37, 55.5, 43.5, p.leg, 2),
+    }),
+    // Árbol del mundo: copa enorme con faroles de luz, ramas altas, runa en el tronco y cuatro raíces.
+    final: stage('final', {
+      ...TREE,
+      torso: [32, 46, 10.5, 13],
+      head: [32, 20.5, 19.5, 11.5],
+      emblem: [32, 54, 2, 2.4],
+      eye: { ...BASE.final.eye, y: 40, x1: 25, x2: 36, style: 'ring' },
+      neck: [32, 35.5],
+      back: [21, 44],
+      behind: (g, _s, p) => {
+        root(g, 2, p, 26, 54.5, 16.5, -p.leg, 2.3);
+        root(g, 3, p, 30, 56, 25, 0, 1.8);
+        root(g, 18, p, 35, 56, 37, 0, 1.8);
+        branch(g, 20, 23.5, 43.5, 13, 38, 5);
+        branch(g, 22, 40.5, 44.5, 51, 39.5, 4.6);
+      },
+      onHead: (g, s, p) => {
+        bark(g, s.torso);
+        lobes(g, [[14.5, 24.5, 7, 6.5], [49.5, 25, 6.5, 6], [23, 12.5, 7.5, 5.5], [41, 12, 7, 5]]);
+        [[21, 18, 3.4, 1.7], [34, 13.5, 3, 1.5], [44, 21, 2.8, 1.4], [28, 25.5, 2.6, 1.3]].forEach(([x, y, rx, ry]) => g.ellipse(10, 'mark', x, y, rx, ry, { flat: true, clip: 10, keep: true }));
+        // Accesorio de etapa final: faroles de luz colgando de la copa.
+        appendage(g, p, 32, 30, () => {
+          lantern(g, 30, 17, 30.5, 3);
+          lantern(g, 31, 47.5, 30.5, 2.5);
+        });
+        g.ellipse(4, 'mark', 24.5, 47, 0.8, 7, { flat: true, clip: 4, keep: true });
+        g.ellipse(4, 'mark', 40, 49, 0.8, 6, { flat: true, clip: 4, keep: true });
+      },
+      front: (g, _s, p) => root(g, 7, p, 38.5, 54.5, 47.5, p.leg, 2.3),
+    }),
+  },
+};
+
+// ───────────────────────── Primpulso (eléctrico, mítico) ─────────────────────────
+// Plan corporal: DRAGÓN BÍPEDO INCLINADO, de terópodo: cuerpo tumbado hacia delante sobre dos patas
+// fuertes, cuello que avanza, bracitos y una cola larga de contrapeso. Rasgo icónico: los cuernos
+// de rayo. Segundo rasgo: la línea de latido que le cruza el cuerpo y la cola acabada en rayo.
+
+/** Rayo: zigzag que sale de un punto (grados como `gill`: 0 = izquierda, 90 = arriba). */
+function bolt(g: Grid, part: number, x: number, y: number, len: number, deg: number, w: number): void {
+  const r = (deg * Math.PI) / 180;
+  const dx = -Math.cos(r);
+  const dy = -Math.sin(r);
+  const nx = -dy;
+  const ny = dx;
+  const shape: [number, number][] = [[0, -0.55], [0.5, -0.95], [0.42, -0.1], [1, -0.3], [0.48, 0.75], [0.56, 0.05], [0, 0.55]];
+  g.poly(part, 'trait', shape.map(([a, b]) => [x + dx * a * len + nx * b * w, y + dy * a * len + ny * b * w] as [number, number]), { flat: true });
+}
+
+/** Línea de latido: un electro que cruza el cuerpo. */
+function heartbeat(g: Grid, x0: number, y: number, w: number, amp: number): void {
+  const path: [number, number][] = [[0, 0], [0.28, 0], [0.38, -1], [0.5, 1], [0.6, -0.5], [0.7, 0], [1, 0]];
+  const up = path.map(([a, b]) => [x0 + a * w, y + b * amp] as [number, number]);
+  const down = [...up].reverse().map(([px, py]) => [px, py + 1.4] as [number, number]);
+  g.poly(4, 'belly', [...up, ...down], { flat: true, clip: 4, keep: true });
+}
+
+/** Muslo de la pata cercana, por delante del cuerpo. */
+const thigh = (g: Grid, x: number, y: number, rx: number, ry: number) => g.ellipse(16, 'skin', x, y, rx, ry, { rot: -15 });
+
+/** Cola de contrapeso: cuña larga hacia atrás, acabada en rayo. */
+function boltTail(g: Grid, p: Pose, x: number, y: number, len: number, w: number, tip: number): void {
+  tail(g, p, x, y, () => {
+    g.poly(1, 'skin', [[x + 1, y - w], [x + 1, y + w], [x - len, y + w * 0.5], [x - len, y - w * 0.2]]);
+    bolt(g, 12, x - len + 1, y + w * 0.2, tip, 12, tip * 0.42);
+  });
+}
+
+/** Hocico de dragón: alarga la cabeza hacia delante, sin línea de separación. */
+const snout = (g: Grid, h: E, k = 1) => g.ellipse(10, 'body', h[0] + h[2] * 0.6, h[1] + h[3] * 0.45, h[2] * 0.62 * k, h[3] * 0.55 * k, { keep: true });
+
+const DRAGON = { farArm: undefined, marks: undefined, belly: undefined };
+
+const PRIMPULSO: PixelSpecies = {
+  id: 'primpulso',
+  stages: {
+    // Chispa: una bola con dos cuernecillos de rayo, una cola corta y el primer latido.
+    baby: stage('baby', {
+      torso: [32.5, 48.5, 11.5, 10],
+      eye: { ...BASE.baby.eye, y: 44, x1: 31, x2: 39, style: 'spark' },
+      cheek: [27, 51],
+      behind: (g, _s, p) => {
+        boltTail(g, p, 22, 51, 5, 2.4, 4.5);
+        appendage(g, p, 32, 40, () => { bolt(g, 22, 29, 40.5, 5, 104, 2); bolt(g, 23, 37, 40.5, 4.5, 78, 1.8); });
+      },
+      onHead: (g) => heartbeat(g, 21.5, 53.5, 9, 1.8),
+    }),
+    // Cría: ya se inclina hacia delante, con cabeza aparte, hocico, muslos y cola de contrapeso.
+    juvenile: stage('juvenile', {
+      ...DRAGON,
+      torso: [28.5, 46, 10.5, 7.5],
+      head: [39.5, 35.5, 8.5, 7.5],
+      feet: { near: [34, 57.6, 4, 2.3], far: [26, 57.3, 3.4, 2.1] },
+      arm: [39, 47, 1.8, 2.6],
+      eye: { ...BASE.juvenile.eye, y: 33, x1: 35, x2: 44, style: 'spark' },
+      neck: [36.5, 43.5],
+      back: [20, 41],
+      behind: (g, _s, p) => {
+        boltTail(g, p, 20, 46.5, 13, 2.8, 6);
+        appendage(g, p, 40, 29, () => { bolt(g, 22, 36, 29.5, 5, 106, 1.9); bolt(g, 23, 43.5, 29.5, 4.5, 78, 1.7); });
+        appendage(g, p, 25, 40, () => bolt(g, 14, 25.5, 40, 4.5, 78, 2));
+      },
+      onHead: (g, s) => {
+        snout(g, s.head!, 0.9);
+        heartbeat(g, 19.5, 44.5, 12, 2);
+      },
+      front: (g) => thigh(g, 31, 51, 3.8, 4.6),
+    }),
+    // Dragón joven: cabeza pequeña sobre un cuello largo, cuernos de rayo, púas de chispa y alas cortas.
+    adult: stage('adult', {
+      ...DRAGON,
+      torso: [27, 42.5, 11.5, 7.5],
+      head: [42, 27.5, 8, 7],
+      feet: { near: [33.5, 57.5, 4.8, 2.5], far: [24.5, 57, 4, 2.3] },
+      arm: [38.5, 44.5, 2, 3.2],
+      brow: true,
+      eye: { ...BASE.adult.eye, y: 24, x1: 37, x2: 45, w1: 4, w2: 3, h: 5, style: 'spark' },
+      neck: [38, 36],
+      back: [18, 37],
+      behind: (g, _s, p) => {
+        boltTail(g, p, 17, 43, 15, 3.2, 8);
+        appendage(g, p, 25, 36, () => { bolt(g, 20, 24.5, 36.5, 14, 72, 3.6); bolt(g, 24, 22, 38, 9, 40, 2.8); });
+        longNeck(g, 34.5, 38.5, 40.5, 31.5, 3.4);
+        appendage(g, p, 42, 21, () => { bolt(g, 22, 38.5, 22, 7.5, 110, 2.2); bolt(g, 23, 45.5, 22, 7, 76, 2); });
+      },
+      onHead: (g, s) => {
+        snout(g, s.head!);
+        heartbeat(g, 17, 40.5, 15, 2.6);
+      },
+      front: (g) => thigh(g, 30, 49.5, 4.6, 5.8),
+    }),
+    // Dragón de pulso: alas enormes de rayo, cuernos altos, núcleo en el pecho y cola de tridente.
+    final: stage('final', {
+      ...DRAGON,
+      torso: [27, 42, 12.5, 8],
+      head: [43, 22.5, 8.5, 7.5],
+      feet: { near: [34, 57.5, 5.4, 2.7], far: [24, 57, 4.4, 2.4] },
+      arm: [39.5, 44.5, 2.2, 3.6],
+      emblem: [36, 43, 2, 2],
+      eye: { ...BASE.final.eye, y: 19, x1: 38, x2: 46, w1: 4, w2: 3, h: 5, style: 'spark' },
+      neck: [38.5, 33],
+      back: [17, 37],
+      behind: (g, _s, p) => {
+        tail(g, p, 16, 42.5, () => {
+          g.poly(1, 'skin', [[17, 39], [17, 46], [4, 44.5], [4, 42]]);
+          bolt(g, 12, 6, 43.5, 6, 30, 2.2);
+          bolt(g, 13, 6, 43.5, 6, -24, 2.2);
+        });
+        // Accesorio de etapa final: alas hechas de rayo, más altas que la cabeza.
+        appendage(g, p, 31, 35, () => { bolt(g, 21, 30, 35.5, 22, 104, 4.2); bolt(g, 26, 31.5, 36.5, 14, 128, 3.2); });
+        appendage(g, p, 24, 36, () => { bolt(g, 20, 23.5, 36, 29, 80, 5.4); bolt(g, 24, 21, 37.5, 23, 56, 4.8); bolt(g, 25, 19.5, 39.5, 15, 30, 3.6); });
+        longNeck(g, 35, 38, 41.5, 27, 3.8);
+        appendage(g, p, 43, 16, () => { bolt(g, 22, 39.5, 17, 10.5, 110, 2.6); bolt(g, 23, 46.5, 17, 9.5, 76, 2.4); });
+      },
+      onHead: (g, s) => {
+        snout(g, s.head!);
+        heartbeat(g, 15.5, 40, 17, 3);
+      },
+      front: (g) => thigh(g, 30.5, 49.5, 5, 6.2),
+    }),
+  },
+};
+
+export const PIXEL_SPECIES: PixelSpecies[] = [
+  IGNISAUR, AXOLUNAR, FLORABUD, LIVOLT, INKTOPUS, SOLAREJO, MAGMADILLO, NUBEBALLENA, CACTUERNO, FENIXEL, CERBITO, KIRISOL,
+  LEVIATIN, YGGDRITO, PRIMPULSO,
+];
 
 // ───────────────────────── Dibujo ─────────────────────────
 

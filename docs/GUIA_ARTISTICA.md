@@ -352,8 +352,11 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Cada una parte de u
 | Ave de cuello largo | Sin brazos: alas. Cabeza pequeña, cuello largo, pico y patas finas con garras | Fénixel |
 | Flotante | Sin patas ni apoyos: el cuerpo queda en el aire | Nubeballena |
 | Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | Cactuerno |
+| Serpentino | Sin patas ni brazos: anillos enroscados en el suelo, cuello alzado y cola en alto | Leviatín |
+| Árbol | Tronco con la cara, copa por cabeza, ramas y raíces; el cuerpo va en el secundario | Yggdrito |
+| Dragón bípedo inclinado | De terópodo: cuerpo tumbado hacia delante sobre dos patas, cuello que avanza, hocico y cola de contrapeso | Primpulso |
 
-Frente a cualquier otra especie, una nueva cambia en al menos cuatro de estos siete rasgos: apoyo (dos pies, cuatro patas, flota, repta), proporción (alto, ancho o cuadrado), cabeza (fundida, encima o delante), extremidades (brazos, aletas, alas, ramas o ninguna), rasgo icónico (dónde sale y qué forma tiene), contorno (liso, dentado, lobulado o con placas) y cara (forma, tamaño y sitio de los ojos: altos y redondeados, de cuenta, de párpado caído, de gruñón, rasgados, de cachorro, fieros o con pestaña).
+Frente a cualquier otra especie, una nueva cambia en al menos cuatro de estos siete rasgos: apoyo (dos pies, cuatro patas, flota, repta), proporción (alto, ancho o cuadrado), cabeza (fundida, encima o delante), extremidades (brazos, aletas, alas, ramas o ninguna), rasgo icónico (dónde sale y qué forma tiene), contorno (liso, dentado, lobulado o con placas) y cara (forma, tamaño y sitio de los ojos: altos y redondeados, de cuenta, de párpado caído, de gruñón, rasgados, de cachorro, fieros, con pestaña, de rendija, huecos o con chispa).
 
 La anatomía tiene que tener sentido para el animal que es: una ballena no tiene pies ni nada bajo el cuerpo que se lea como tal, un pulpo no tiene brazos y un cactus no tiene cola. La prueba es poner en negro los adultos de todas las especies: ninguno se confunde con otro.
 
