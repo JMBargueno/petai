@@ -8,23 +8,28 @@
   import PetHouse from '../PetHouse.svelte';
   import { startHabitatExitDrag } from '../../lib/habitatExitDrag';
   import { elementMeta, rarityMeta } from '../../lib/ui/maps';
-  import { Badge, Button, Card, EmptyState, ProgressBar, SectionHeader } from '../ui';
+  import { Badge, Button, Card, EmptyState, ProgressBar, SectionHeader, Segmented } from '../ui';
 
   export let pet: any = null;
   export let inventory: any[] = [];
+  /** Todas las mascotas: con más de una aparece el selector de mascota activa. */
+  export let pets: any[] = [];
+  /** Acción en curso en el panel (`clean`, `sleep`, `habitat`, `feed:<id>`), para bloquear su botón. */
+  export let busy: string | null = null;
 
   const dispatch = createEventDispatcher<{
     clean: void;
     toggleSleep: void;
     toggleHabitat: boolean;
     feed: string;
+    selectPet: string;
     go: { dest: string; sub?: string };
   }>();
 
   $: name = pet?.nickname || pet?.species?.name;
   $: vitals = pet
     ? [
-        { label: 'Hambre', icon: 'drumstick', value: pet.hunger, color: 'var(--color-ember)' },
+        { label: 'Saciedad', icon: 'drumstick', value: pet.hunger, color: 'var(--color-ember)' },
         { label: 'Felicidad', icon: 'xp', value: pet.happiness, color: 'var(--color-sunburst)' },
         { label: 'Energía', icon: 'energy', value: pet.energy, color: 'var(--color-electric-blue)' },
         { label: 'Higiene', icon: 'water', value: pet.hygiene, color: 'var(--color-mint-pop)' },
@@ -38,6 +43,15 @@
 </script>
 
 <div class="ui-stack">
+  {#if pets.length > 1 && pet}
+    <Segmented
+      variant="pills"
+      label="Mascota activa"
+      value={pet.id}
+      options={pets.map((p) => ({ value: p.id, label: p.nickname || p.species?.name || 'Pockai', icon: 'paw' }))}
+      on:change={(e) => dispatch('selectPet', e.detail)}
+    />
+  {/if}
   {#if pet}
     {@const el = elementMeta(pet.species?.element)}
     {@const rar = rarityMeta(pet.rarity)}
@@ -45,7 +59,7 @@
       <div class="hero-row">
         <div class="hero-info">
           <div class="hero-title">
-            <span class="pet-title">{name}</span>
+            <span class="pet-title" title={name}>{name}</span>
             {#if pet.inHabitat}<Badge color="var(--color-mint-pop)" icon="home" title="Descansando en su Hábitat">En casa</Badge>{/if}
           </div>
           <div class="hero-tags">
@@ -103,12 +117,12 @@
     </div>
 
     <div class="row">
-      <Button size="lg" icon="water" class="grow" on:click={() => dispatch('clean')}>Bañar</Button>
-      <Button size="lg" icon={pet.sleeping ? 'sun' : 'moon'} class="grow" on:click={() => dispatch('toggleSleep')}>
+      <Button size="lg" icon="water" class="grow" loading={busy === 'clean'} disabled={!!busy} on:click={() => dispatch('clean')}>Bañar</Button>
+      <Button size="lg" icon={pet.sleeping ? 'sun' : 'moon'} class="grow" loading={busy === 'sleep'} disabled={!!busy} on:click={() => dispatch('toggleSleep')}>
         {pet.sleeping ? 'Despertar' : 'Dormir'}
       </Button>
       {#if !pet.inHabitat}
-        <Button size="lg" icon="home" class="grow" title="Llevar al Hábitat" on:click={() => dispatch('toggleHabitat', true)}>A casa</Button>
+        <Button size="lg" icon="home" class="grow" title="Llevar a casa (su Hábitat)" loading={busy === 'habitat'} disabled={!!busy} on:click={() => dispatch('toggleHabitat', true)}>A casa</Button>
       {/if}
     </div>
 
@@ -116,8 +130,15 @@
     {#if inventory.length}
       <div class="food">
         {#each inventory as item}
-          <button class="food-chip" on:click={() => dispatch('feed', item.itemId)}>
-            <Ico n="drumstick" size={13} /> {item.item.name} <span class="qty">{item.qty}</span>
+          <button
+            class="food-chip"
+            disabled={!!busy}
+            aria-busy={busy === `feed:${item.itemId}` || undefined}
+            aria-label="Dar {item.item.name} (te quedan {item.qty})"
+            title="Dar {item.item.name}"
+            on:click={() => dispatch('feed', item.itemId)}
+          >
+            <Ico n="drumstick" size={13} /> {item.item.name} <span class="qty" aria-hidden="true">{item.qty}</span>
           </button>
         {/each}
       </div>
@@ -300,9 +321,16 @@
     cursor: pointer;
     transition: translate var(--dur-1), box-shadow var(--dur-1);
   }
-  .food-chip:hover {
+  .food-chip:hover:not(:disabled) {
     translate: -1px -1px;
     box-shadow: 2px 2px 0 var(--line);
+  }
+  .food-chip:disabled {
+    opacity: 0.55;
+    cursor: progress;
+  }
+  .food-chip {
+    min-height: var(--control-h-icon);
   }
   .qty {
     min-width: 20px;

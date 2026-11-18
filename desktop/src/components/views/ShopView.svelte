@@ -4,18 +4,36 @@
   import { Button, CurrencyPill, EmptyState, ListRow, SectionHeader } from '../ui';
 
   export let shopItems: any[] = [];
+  /** Inventario actual, para decir cuántos tienes ya de cada objeto. */
+  export let inventory: any[] = [];
+  export let coins = 0;
+  /** Objeto cuya compra está en curso (bloquea todos los botones para evitar dobles compras). */
+  export let busyItem: string | null = null;
 
   const dispatch = createEventDispatcher<{ buy: string }>();
+
+  const owned = (id: string, inv: any[]) => inv.find((i) => i.itemId === id)?.qty ?? 0;
 </script>
 
 <div class="ui-stack">
   <SectionHeader title="Objetos" icon="shop" count={shopItems.length} />
   <div class="ui-list">
     {#each shopItems as item (item.id)}
-      <ListRow icon="food" title={item.name} sub={item.description} wrap>
+      {@const have = owned(item.id, inventory)}
+      {@const short = coins < item.priceCoins}
+      <ListRow icon="food" title={item.name} sub="{item.description}{have ? ` · Tienes ${have}` : ''}" wrap>
         <svelte:fragment slot="end">
           <CurrencyPill kind="coins" amount={item.priceCoins} plain />
-          <Button variant="primary" size="sm" on:click={() => dispatch('buy', item.id)}>Comprar</Button>
+          <Button
+            size="sm"
+            loading={busyItem === item.id}
+            disabled={short || busyItem !== null}
+            label="Comprar {item.name} por {item.priceCoins} monedas"
+            title={short ? `Te faltan ${item.priceCoins - coins} monedas` : undefined}
+            on:click={() => dispatch('buy', item.id)}
+          >
+            {short ? 'No alcanza' : 'Comprar'}
+          </Button>
         </svelte:fragment>
       </ListRow>
     {:else}

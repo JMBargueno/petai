@@ -454,7 +454,10 @@ const routes: [string, RegExp, Handler][] = [
     },
   })],
   ['GET', /^\/billing\/entitlement$/, () => ({ plan: 'free', source: null })],
-  ['GET', /^\/reminders/, () => [{ id: 'rem-1', text: 'Beber agua', dueAt: iso(2 * HOUR) }].filter(() => true)],
+  ['GET', /^\/reminders\/due$/, () => []],
+  ['GET', /^\/reminders$/, () => [{ id: 'rem-1', text: 'Beber agua', dueAt: iso(2 * HOUR) }]],
+  ['DELETE', /^\/reminders\/[^/]+$/, () => ({ ok: true })],
+  ['GET', /^\/environmental\/status$/, () => ({})],
   ['GET', /^\/minigames$/, () => [
     { id: 'catch_food', name: 'Atrapa la comida', durationSeconds: 30, maxCoins: 60, maxXp: 40, energyCost: 5 },
     { id: 'memory_match', name: 'Parejas', durationSeconds: 45, maxCoins: 80, maxXp: 50, energyCost: 5 },
