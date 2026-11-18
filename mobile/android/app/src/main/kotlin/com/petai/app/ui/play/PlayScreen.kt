@@ -84,6 +84,8 @@ fun PlayScreen(vm: PlayViewModel, section: Int) {
     state.gameResult?.let { r ->
         AlertDialog(
             onDismissRequest = vm::dismissGameResult,
+            // Si la partida ha dejado un objeto, su icono encabeza el diálogo.
+            icon = r.item?.let { drop -> @Composable { ItemIcon(drop.itemId, size = 64.dp) } },
             title = { Text("¡Partida terminada!") },
             text = {
                 val extra = buildString {

@@ -69,6 +69,7 @@ fun ShopScreen(state: AppUiState, onRefresh: () -> Unit, onBuy: (ItemDto) -> Uni
                     val canAfford = user != null && user.coins >= item.priceCoins && user.gems >= item.priceGems
                     PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            ItemIcon(item.id, Modifier.padding(end = 12.dp), fallback = kindIcon(item.kind))
                             Column(Modifier.weight(1f)) {
                                 Text(item.name, style = MaterialTheme.typography.titleMedium)
                                 Text(item.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

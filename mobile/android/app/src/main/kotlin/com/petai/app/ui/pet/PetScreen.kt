@@ -209,6 +209,7 @@ private fun FoodSheet(
                     val item = entry.item!!
                     PockaiCard(onClick = { onPick(entry.itemId) }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), contentPadding = CardNoPadding) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            ItemIcon(entry.itemId, Modifier.padding(end = 12.dp), fallback = Lucide.Apple)
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(item.name, style = MaterialTheme.typography.titleMedium)

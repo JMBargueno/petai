@@ -304,3 +304,49 @@ Versión actual: **3** (`PROTOCOL_VERSION`, anunciada en `ready`).
 - El bundle se carga desde los assets de la app, sin red.
 - La escena para su ticker cuando no se ve.
 - Hay modo de calidad baja para gamas bajas.
+
+## 10. Iconos de objetos (contrato para todos los clientes)
+
+Los consumibles de `shared/game-data/foods.json` tienen un icono en pixel art (norma visual en `GUIA_ARTISTICA.md` §7.7). El arte es compartido; cada cliente solo pone el componente que lo pinta.
+
+**Lo compartido**
+- `shared/assets/items/<id>.png`: un PNG por objeto, con el `id` de `foods.json` (el mismo `itemId` que devuelve la API en tienda, inventario, cofres y minijuegos).
+- 64×64 px, RGBA, fondo transparente, sin transparencias parciales: son **32×32 px nativos a ×2**.
+- `shared/assets/items/manifest.json`: `{ size, scale, items: { <id>: { colors, box } } }`. `items` lista los objetos que tienen icono; `box` es `[x, y, ancho, alto]` de lo dibujado, en px nativos.
+- Los genera `pnpm items:import` desde una lámina y los comprueba `pnpm generate:items`; `validate-assets.js` falla si un PNG no corresponde a un objeto o no mide 64×64.
+
+**Lo que hace cada cliente**
+1. **Resolver el icono por id:** `items/<id>.png`. No hay tabla que mantener: un objeto nuevo con arte aparece solo.
+2. **Pintarlo sin suavizado** (vecino más próximo), a un múltiplo entero de 32 unidades: 32 en listas y chips, 64 en tarjetas y premios, 128 en detalle.
+3. **Tratarlo como decorativo:** el nombre del objeto va siempre escrito al lado; el icono no lleva texto alternativo.
+4. **Caer al icono de interfaz** del tipo de objeto cuando no hay PNG: una prenda, un mueble o un objeto más nuevo que la versión de la app.
+5. No aplicarle `border-radius`, sombras, filtros, opacidad intermedia ni giros.
+
+| Cliente | Cómo llega el arte | Componente | Sin suavizado |
+|---|---|---|---|
+| Escritorio | `import.meta.glob` sobre `@shared/assets/items/*.png` (`desktop/src/lib/items.ts`) | `ItemIcon.svelte` | `image-rendering: pixelated` |
+| Android | `shared/assets` se empaqueta entero en el APK: `assets/items/<id>.png` | `ui/theme/ItemIcon.kt` | `FilterQuality.None` |
+| iOS (pendiente) | Añadir `shared/assets/items` al bundle como *folder reference* (carpeta azul), para que conserve los nombres por id | Una vista `ItemIcon(id:size:fallback:)` | `.interpolation(.none)` |
+| Web | Hoy solo lista objetos en el panel de admin; cuando los enseñe, copiar la carpeta a los assets del build | — | `image-rendering: pixelated` |
+
+**iOS, en concreto.** No uses el catálogo de assets (`.xcassets`): obligaría a registrar cada objeto a mano. Con la carpeta referenciada, el icono se carga por ruta y no hay nada que tocar al añadir objetos:
+
+```swift
+struct ItemIcon: View {
+    let id: String
+    var size: CGFloat = 32
+    var fallback = "gift"
+
+    var body: some View {
+        if let url = Bundle.main.url(forResource: id, withExtension: "png", subdirectory: "items"),
+           let image = UIImage(contentsOfFile: url.path) {
+            Image(uiImage: image).interpolation(.none).resizable().frame(width: size, height: size)
+                .accessibilityHidden(true)
+        } else {
+            Image(systemName: fallback).frame(width: size, height: size).accessibilityHidden(true)
+        }
+    }
+}
+```
+
+**Pendiente:** el CDN (`scripts/build-assets.ts`) no publica todavía `items/`. Mientras no lo haga, un icono nuevo llega a los móviles con la siguiente versión de la app, y hasta entonces se ve el icono de interfaz.
