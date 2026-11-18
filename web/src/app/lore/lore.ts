@@ -109,7 +109,7 @@ export class Lore {
     { id: 'huella', label: $localize`:@@lore.nav.mark:Huella` },
     { id: 'coliseo', label: $localize`:@@lore.nav.colo:Coliseo` },
     { id: 'nexo', label: $localize`:@@lore.nav.nexus:Nexos` },
-    { id: 'diccionario', label: $localize`:@@lore.nav.gloss:Diccionario` },
+    { id: 'codice', label: $localize`:@@lore.nav.gloss:Códice` },
   ];
 
   /** Anclas principales en la cabecera; el índice completo de secciones va bajo el hero. */

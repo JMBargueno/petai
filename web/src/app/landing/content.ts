@@ -104,6 +104,7 @@ export const SPECIES = speciesData.map((s, i) => ({
   element: ELEMENTS[s.element] ?? s.element,
   /** Rareza de la especie: todos sus ejemplares la comparten. */
   rarity: RARITIES[s.rarity] ?? s.rarity,
+  description: s.description,
   rarityId: s.rarity,
   color: CARD_COLORS[i % CARD_COLORS.length],
 }));

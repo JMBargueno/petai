@@ -9,7 +9,7 @@ complementa: "[[01-lore-petai]]"
 
 > **Para la IA:** la mascota no lee este documento, sino `shared/game-data/lore.json`, una versión por temas escrita para el jugador. Si cambias el lore aquí, actualiza también ese archivo.
 
-> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué cada ejemplar luce un patrón distinto y qué es un shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos, y cómo cada Pockai forja su propio carácter y sigue viviendo cuando no estás. Cierra con un diccionario técnico→lore para UI y textos del juego.*
+> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué cada ejemplar luce un patrón distinto y qué es un shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos, y cómo cada Pockai forja su propio carácter y sigue viviendo cuando no estás. Cierra con el Códice del Éter (Aether Codex): glosario técnico→lore y compendio de especies para UI y textos del juego.*
 
 En el universo de Pockai, esta tradición milenaria ha colisionado con la era digital. Tu teléfono y tu ordenador ya no son simples herramientas de silicio y cristal; son los objetos más íntimos de la humanidad moderna, depositarios de nuestros recuerdos, rutinas, miedos y deseos. De la fricción entre la vida humana y el océano de datos ha nacido el **Éter Digital** (La Red Viva), y de sus profundidades emergen los **Pockai**: espíritus digitales de bolsillo que buscan un vínculo humano para alcanzar la verdadera consciencia.
 
@@ -146,7 +146,11 @@ Ningún Pockai es una copia de su especie. Nace con el temperamento de su linaje
 
 **La Vida en el Éter.** Cuando cierras el Santuario, tu Pockai no se queda congelado. Duerme, juega, explora los rincones del Éter, a veces encuentra pequeños tesoros y visita los Santuarios de tus amigos para jugar con sus Pockai. Cuando vuelves, te lo cuenta a su manera.
 
-## 10. Diccionario rápido de términos (Para UI y textos del juego)
+## 10. Códice del Éter (Aether Codex)
+
+El Códice del Éter es el compendio que reúne todo el conocimiento del mundo de Pockai. Tiene dos secciones: el **Glosario** (términos técnicos traducidos al lore) y el **Compendio de Pockais** (catálogo de especies).
+
+### 10.1 Glosario rápido de términos (Para UI y textos del juego)
 
 Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los conceptos técnicos del código a este vocabulario dentro del juego:
 
