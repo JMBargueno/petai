@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: cama-cita-final-energia
+expected_outcome: |
+  Un mueble nuevo en la sala "citafinal", de suelo, con huella de cama (2x1 o 2x2), interaction "sleep" y un buff
+  energy_recovery_boost mayor que el de la cama normal. Como la energía ya suma exactamente su tope (0,40), reparte
+  el buff bajando otros (o sube el tope y lo dice) para que check_habitats.mjs siga pasando. Precio de sala avanzada.

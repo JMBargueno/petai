@@ -11,6 +11,7 @@ Toma como referencia de código `ignisaur`, `axolunar` y `florabud` en ese archi
   - En 3/4, `l` es el **ojo cercano** (izquierda de la pantalla, tamaño completo) y `r` el **ojo lejano** (derecha, junto al contorno de la cara). Pon `far: 0.74` en las anclas: `face()` estrecha el ojo `r` y, en la máscara, pinta la zona de cara sin patrón.
   - La boca va bajo el punto medio de los ojos.
 - **Etapas:** `stage ∈ baby | juvenile | adult | final`. Usa `stageParams(stage)` → `{ size, head, app, eye, accessory }` (valores en `iso-style.md`). **Un único `draw` parametrizado**, no cuatro dibujos.
+- **Formas propias de una etapa:** el punto de partida es un único `draw` con `stageParams`. Si una etapa necesita una forma distinta, por ejemplo un capullo cerrado en el bebé de una planta, dibújala con un helper propio que solo se use en esa etapa (`if (stage === 'baby')`) y anclas de cara propias si hace falta. Úsalo solo si la silueta sigue reconociéndose como la misma especie, y no toques `STAGE_PARAMS`, que comparten todas las especies.
 - **Patrón a seguir:** envuelve la cabeza en `scaleAt(st.head, cuelloX, cuelloY, …)` y todo el dibujo en `scaleAt(st.size, 64, 120, …)`; multiplica `p.app` por `st.app` y usa `stageFace()` para el ojo. Mira `ignisaur` como referencia.
 - **Roles de color (máscara):** `body` (primario, canal R), `limb` (extremidades), `accent` (accesorios) y `mix`. El patrón va en el canal B, **nunca sobre la cara ni los ojos**.
 - **Contorno:** el principal es `#1A1A1A` (`LINE`). Los accesorios llevan 2 px en el accent (GUIA_ARTISTICA §7.1).
@@ -35,7 +36,7 @@ Toma como referencia de código `ignisaur`, `axolunar` y `florabud` en ese archi
    ```bash
    npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>
    ```
-   Escribe `sprite-previews/<id>-contact.png`, que está ignorado por git. Tiene 4 filas de etapa, una a escala de sala (~72 px), una de espejo y una de máscara.
+   Escribe `sprite-previews/<id>-contact.png`, que está ignorado por git. Tiene 4 filas de etapa y otras tres (a escala de sala, a ~72 px; en espejo; y la máscara) de la etapa adult. Si estás retocando otra etapa, añade `--stage baby` (o la que sea) para que esas tres filas sean de esa etapa: la máscara y la lectura a 72 px son donde se ven los fallos.
 3. Revísala con esta checklist y corrige hasta que todo pase:
    - [ ] La silueta y los 2 rasgos icónicos se reconocen en la fila de ~72 px.
    - [ ] Es 3/4 de verdad: se ven la cara y el costado derecho, el ojo lejano es más estrecho y las patas lejanas asoman detrás.

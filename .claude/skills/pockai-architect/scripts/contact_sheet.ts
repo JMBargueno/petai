@@ -4,7 +4,10 @@
  * paleta por defecto, más una fila a escala de sala (≈72 px) y una de máscara para ver la zona de
  * patrón (azul) y comprobar que no pisa la cara.
  *
- *   npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id> [--out <png>] [--clips idle,walk,…]
+ *   npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id> [--stage baby] [--out <png>] [--clips idle,walk,…]
+ *
+ * `--stage` elige la etapa de las filas de sala (~72 px), espejo y máscara (por defecto adult): úsalo
+ * al retocar una etapa concreta, para ver su máscara y su lectura a tamaño de sala.
  *
  * Por defecto escribe `sprite-previews/<id>-contact.png` (está en .gitignore; no se commitea).
  * Ábrelo con la herramienta de leer imágenes y revísalo con la checklist de references/art-brief.md.
@@ -34,7 +37,7 @@ function arg(name: string): string | undefined {
 
 const id = process.argv[2];
 if (!id || id.startsWith('-')) {
-  console.error('Uso: contact_sheet.ts <id> [--out <png>] [--clips idle,walk,…]');
+  console.error('Uso: contact_sheet.ts <id> [--stage baby|juvenile|adult|final] [--out <png>] [--clips idle,walk,…]');
   process.exit(1);
 }
 const sp = SPECIES.find((s) => s.id === id) as SpeciesArt | undefined;
@@ -81,11 +84,16 @@ const text = (x: number, y: number, s: string, size = 12, weight = 700) =>
   `<text x="${x}" y="${y}" font-family="sans-serif" font-size="${size}" font-weight="${weight}" fill="#0b0a14">${s}</text>`;
 
 type Row = { label: string; render: (clip: string) => string; size?: number };
+const focus = (arg('--stage') ?? 'adult') as (typeof STAGES)[number];
+if (!(STAGES as readonly string[]).includes(focus)) {
+  console.error(`--stage debe ser una de: ${STAGES.join(', ')}`);
+  process.exit(1);
+}
 const rows: Row[] = [
   ...STAGES.map((st) => ({ label: st, render: (c: string) => frameSvg(c, st, 'color') })),
-  { label: 'sala ~72px', render: (c: string) => frameSvg(c, 'adult', 'color'), size: 72 },
-  { label: 'espejo', render: (c: string) => `<g transform="translate(128 0) scale(-1 1)">${frameSvg(c, 'adult', 'color')}</g>` },
-  { label: 'máscara', render: (c: string) => frameSvg(c, 'adult', 'mask') },
+  { label: `sala ~72px (${focus})`, render: (c: string) => frameSvg(c, focus, 'color'), size: 72 },
+  { label: `espejo (${focus})`, render: (c: string) => `<g transform="translate(128 0) scale(-1 1)">${frameSvg(c, focus, 'color')}</g>` },
+  { label: `máscara (${focus})`, render: (c: string) => frameSvg(c, focus, 'mask') },
 ];
 
 const W = LABEL_W + clips.length * CELL;
