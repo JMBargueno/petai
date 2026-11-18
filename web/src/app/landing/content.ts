@@ -271,15 +271,19 @@ const PATTERN_NAMES: Record<string, string> = {
   storm: $localize`:@@pat.storm:Tormenta`,
   aurora: $localize`:@@pat.aurora:Aurora`,
 };
-const PATTERN_SPRITES = new Set(['spots', 'stripes', 'gradient', 'scales']);
 
+/**
+ * Preview de cada patrón: composición PNG de la textura tileable real
+ * (shared/assets/patterns) generada por scripts/generate-pattern-previews.mjs.
+ * `plain` (Liso) no tiene textura en el juego, así que se muestra con su color sólido.
+ */
 export const PATTERNS = patternData.map((p) => ({
   id: p.id,
   name: PATTERN_NAMES[p.id] ?? p.name,
   /** Rareza propia del patrón: se tira por ejemplar, aparte de la de su especie. */
   rarity: RARITIES[p.rarity] ?? p.rarity,
   rarityId: p.rarity,
-  sprite: PATTERN_SPRITES.has(p.id) ? `sprites/pattern_${p.id}.svg` : null,
+  sprite: p.id === 'plain' ? null : `sprites/pattern_${p.id}_preview.png`,
   color: RARITY_COLORS[p.rarity] ?? 'sunburst',
 }));
 
