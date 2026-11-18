@@ -55,7 +55,7 @@ Fiero con todos y blando con uno: gruñe primero y pregunta después, pero a su 
 ## Brief de arte
 Pixel art en 3/4. Cuerpo y cabezas en primario; pecho, colmillos, púas del collar, ojos de las cabezas laterales y punta de las colas en secundario; orejas, collar, manchas y púas del lomo en primario oscurecido. Las colas giran con la pose. Las cabezas laterales no cambian de expresión: solo la central tiene cara animada.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Pelaje con trama, cabezas laterales en segundo plano y garras en el acento en la etapa final.
 
 ## Datos (`shared/game-data/species.json`)
 ```json

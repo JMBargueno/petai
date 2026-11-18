@@ -55,7 +55,7 @@ Puro impulso: va el primero, pregunta después y no soporta aburrirse.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo, cuello y cola en primario, dibujados como una curva lisa con su propia luz y sombra y placas más claras en el vientre; membrana de las alas, cuernos, cresta y hoja de la cola en secundario, con los huesos del ala en primario; garras en primario oscurecido. El núcleo del pecho y la línea de latido son brillos en color literal: no cambian con la paleta. La cola gira con la pose y cuernos y alas laten con los apéndices.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Garras en el acento, ala lejana en segundo plano y segundo par de cuernos oscuros en la etapa final.
 
 ## Datos (`shared/game-data/species.json`)
 ```json

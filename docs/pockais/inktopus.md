@@ -40,9 +40,9 @@ Lo mira todo y no se acerca a casi nadie: curiosidad alta con sociabilidad baja.
 | **Baby (1)** | Una gota recién caída | Una gota: bola con el manto en punta | Dos muñones de tentáculo | Sin barriga, mofletes, ojos enormes |
 | **Juvenile (10)** | Empieza a guardar cosas | Manto alargado | Cuatro tentáculos; el primero ya gotea tinta | Barriga |
 | **Adult (25)** | Ya tiene secretos propios | Cabeza encapuchada y torso | Seis tentáculos abiertos, dos con gota | Manchas de tinta |
-| **Final (50, Piedra de Evolución)** | Custodio de mil secretos | Más ancho, con tentáculos a tres alturas | Ocho tentáculos y una corona de gotas suspendidas, que lee el elemento | Franjas, emblema, mirada decidida |
+| **Final (50, Piedra de Evolución)** | Custodio de mil secretos | Cúpula grande sobre un abdomen bulboso, con tentáculos a tres alturas | Ocho tentáculos con ventosas y tres crestas en el acento, que leen el elemento | Marcas tribales, anillo en el abdomen, párpado caído |
 
-**No cambia:** la paleta pizarra, la forma del ojo, el manto en punta y los tentáculos saliendo de la base.
+**No cambia:** la paleta pizarra, el manto en cúpula y los tentáculos curvos saliendo de la base.
 
 **Anclas de accesorios:** `head` en la punta del manto (un gorro la cubre); no tiene brazos, así que la bufanda queda bien visible.
 
@@ -54,7 +54,7 @@ Lo mira todo y no se acerca a casi nadie: curiosidad alta con sociabilidad baja.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo y tentáculos en primario; barriga en secundario; gotas, manchas y corona en primario oscurecido. Los tentáculos traseros giran con la cola; los delanteros hacen de pies.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Los tentáculos son ahora curvas gruesas con la punta enroscada (rectos parecía una araña). La adulta tiene marcas en la frente y la final, tres crestas en el acento, un anillo en el abdomen y ventosas.
 
 ## Datos (`shared/game-data/species.json`)
 ```json

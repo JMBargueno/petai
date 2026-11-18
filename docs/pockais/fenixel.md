@@ -55,7 +55,7 @@ Valiente y curiosa: prueba, falla y vuelve a probar.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo, cuello y plumón del arranque de las alas en primario; pecho, pico, patas, cascarón y todas las plumas en secundario; garras en primario oscurecido. Cada pluma es una pieza con su contorno. La cola gira con la pose, cresta y alas laten con los apéndices y las patas dan el paso.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Las plumas van en degradado de la base a la punta, las patas y garras en el acento, y la etapa final tiene el lomo oscuro y un anillo en el pecho.
 
 ## Datos (`shared/game-data/species.json`)
 ```json

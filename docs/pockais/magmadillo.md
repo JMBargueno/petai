@@ -55,7 +55,7 @@ Valiente y calmado: no busca pelea, pero no se aparta.
 ## Brief de arte
 Pixel art en 3/4. Coraza en primario (lleva el patrón), franjas de placa y chimeneas en primario oscurecido, grietas, panza y llamas en secundario. La cola gira con la pose y las llamas laten con los apéndices; las cuatro patas dan el paso en diagonal.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Coraza con escamas y, en la etapa final, chimeneas y cuerno en el acento.
 
 ## Datos (`shared/game-data/species.json`)
 ```json

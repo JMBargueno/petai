@@ -41,7 +41,7 @@ Impulsivo y valiente: primero corre y luego pregunta adónde.
 | **Baby (1)** | Recién nacido | Tumbado, con las patas recogidas y la cabeza erguida | Un botón de cuerno y un mechón de cola | Mofletes, ojos enormes con pestaña |
 | **Juvenile (10)** | Se pone en pie | De pie sobre cuatro patas largas; cuerpo pequeño | Cuerno corto, crin corta y cola | Cascos dorados, hocico |
 | **Adult (25)** | Potro | Cuello alto, cuerpo más largo | Cuerno mayor, crin que cae por el cuello y cola de dos mechones | Motas de luz en el flanco |
-| **Final (50, Piedra de Evolución)** | Unicornio del alba | Más grande, con crin y cola que rompen el contorno | Cuerno largo, crin en estela y cola de tres mechones, que leen el elemento | Estrella en el flanco, cascos oscuros, mirada decidida |
+| **Final (50, Piedra de Evolución)** | Alicornio del alba | Más grande, con ala, crin y cola que rompen el contorno | Cuerno largo, un ala sobre la grupa, crin en mechones y cola de tres, que leen el elemento | Motas grandes, cascos en el acento con mechón, ceja |
 
 **No cambia:** el pelaje crema con dorado, los ojos con pestaña, el cuerno en la frente y la cola saliendo de la grupa.
 
@@ -55,7 +55,7 @@ Impulsivo y valiente: primero corre y luego pregunta adónde.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo, cuello y patas en primario; cuerno, crin, cola, cascos y motas en secundario; cascos de la etapa final en primario oscurecido. La cola gira con la pose, cuerno y crin laten con los apéndices y las cuatro patas dan el paso en diagonal.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Patas con rodilla y casco, crin en mechones separados y, en la etapa final, un ala sobre la grupa: el potro pasa a alicornio.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
