@@ -13,7 +13,17 @@ import {
   withDims,
 } from './personality.engine';
 import { applyDrift, applyEvents } from './evolution.engine';
-import { buildLayeredMemoryBlock, capacityFor, MemoryRow, pickEvictions, relativeAge, safeMemoryText, selectForPrompt } from './memory.engine';
+import {
+  buildLayeredMemoryBlock,
+  capacityFor,
+  EMPTY_SUMMARY,
+  MemoryRow,
+  pickEvictions,
+  relativeAge,
+  retention,
+  safeMemoryText,
+  selectForPrompt,
+} from './memory.engine';
 import { interpretMessage } from './conversation.engine';
 import { decideBehavior, validateBehavior } from './behavior.engine';
 import { encounterRoll, intervalIndex, simulate } from './autonomy.engine';
@@ -254,5 +264,115 @@ describe('Vida autónoma', () => {
       if (encounterRoll('pair', s, 95, 95, cfg.autonomy)) high++;
     }
     expect(high).toBeGreaterThan(low);
+  });
+});
+
+describe('Spec 37 §1.2 — cuantización de la deriva', () => {
+  const drift = (dims: Dims, delta: number, times: number) => {
+    let res = { dims, drift: undefined as any };
+    for (let i = 0; i < times; i++) res = applyDrift(res.dims, { temper: delta }, res.drift, NOW, cfg);
+    return res.dims.temper;
+  };
+
+  it('veinte eventos de −0,05 bajan 1,0', () => {
+    expect(50 - drift(neutralDims(), -0.05, 20)).toBeCloseTo(1, 2);
+  });
+
+  it('+0,05 y −0,05 son simétricos', () => {
+    const up = drift(neutralDims(), 0.05, 10) - 50;
+    const down = 50 - drift(neutralDims(), -0.05, 10);
+    expect(up).toBeGreaterThan(0);
+    expect(up).toBeCloseTo(down, 5);
+  });
+
+  it('en valores extremos los deltas pequeños no se pierden', () => {
+    expect(drift({ ...neutralDims(), temper: 95 }, 0.05, 5)).toBeGreaterThan(95);
+  });
+
+  it('nacer sigue dando enteros y lo que se presenta se redondea', () => {
+    for (const v of Object.values(rollBirthDims(undefined, 77, cfg))) expect(Number.isInteger(v)).toBe(true);
+    expect(describeDims({ ...neutralDims(), temper: 49.95 }, cfg).temper.value).toBe(50);
+  });
+});
+
+describe('Spec 37 §1.3 — refuerzo y ruido en el recuerdo', () => {
+  const row = (over: Partial<MemoryRow>): MemoryRow => ({
+    id: Math.random().toString(36).slice(2),
+    kind: 'event',
+    layer: 'episodic',
+    content: 'algo',
+    importance: 0.5,
+    valence: 0,
+    createdAt: NOW,
+    ...over,
+  });
+  const WEEK_AGO = new Date(NOW.getTime() - 7 * 86_400_000);
+
+  it('inyectar un recuerdo no reinicia su olvido', () => {
+    const base = row({ createdAt: WEEK_AGO, updatedAt: WEEK_AGO });
+    expect(retention({ ...base, lastRecalledAt: NOW }, NOW, cfg)).toBe(retention(base, NOW, cfg));
+  });
+
+  it('reforzarlo (coincidió con el mensaje) sí lo refresca', () => {
+    const base = row({ createdAt: WEEK_AGO, updatedAt: WEEK_AGO });
+    expect(retention({ ...base, updatedAt: NOW }, NOW, cfg)).toBeGreaterThan(retention(base, NOW, cfg));
+  });
+
+  it('devuelve qué recuerdos coincidieron con el mensaje', () => {
+    const rows = [row({ id: 'brasa', content: 'Jugué con Brasa en el jardín.' }), row({ id: 'siesta', content: 'Dormí una siesta.' })];
+    const sel = selectForPrompt(rows, '¿te acuerdas de Brasa?', NOW, cfg, 1000);
+    expect(sel.matched).toEqual(['brasa']);
+    expect(selectForPrompt(rows, 'hola', NOW, cfg, 1000).matched).toEqual([]);
+  });
+
+  it('el marcador de conversación vacía nunca llega al prompt', () => {
+    const rows = [row({ kind: 'summary', content: EMPTY_SUMMARY, importance: 0.1 }), row({ content: 'Encontré una semilla solar.' })];
+    const block = buildLayeredMemoryBlock(selectForPrompt(rows, 'hola', NOW, cfg, 1000), NOW);
+    expect(block).not.toContain(EMPTY_SUMMARY);
+    expect(block).toContain('semilla solar');
+  });
+
+  it('un recuerdo casi olvidado y sin relación con el mensaje no entra', () => {
+    const old = new Date(NOW.getTime() - 90 * 86_400_000);
+    const rows = [row({ content: 'Vi llover por la ventana.', importance: 0.35, createdAt: old, updatedAt: old })];
+    expect(selectForPrompt(rows, 'hola', NOW, cfg, 1000).episodic).toEqual([]);
+    // …pero si el mensaje habla de ello, sí
+    expect(selectForPrompt(rows, '¿te gusta llover?', NOW, cfg, 1000).episodic).toHaveLength(1);
+  });
+
+  it('dos selecciones seguidas sin coincidencia no devuelven el mismo conjunto', () => {
+    const rows = Array.from({ length: 10 }, (_, i) =>
+      row({ id: `e${i}`, content: `Episodio número ${i}.`, importance: 0.5 + i * 0.001 }),
+    );
+    const first = selectForPrompt(rows, 'hola', NOW, cfg, 5000).episodic.map((m) => m.id);
+    expect(first).toHaveLength(cfg.memory.recall.episodic);
+    // Lo que hace recallBlock: anota cuándo se inyectó cada uno
+    const after = rows.map((r) => (first.includes(r.id) ? { ...r, lastRecalledAt: NOW } : r));
+    const later = new Date(NOW.getTime() + 60_000);
+    const second = selectForPrompt(after, 'hola', later, cfg, 5000).episodic.map((m) => m.id);
+    expect(second).toHaveLength(cfg.memory.recall.episodic);
+    expect(second.some((id) => first.includes(id))).toBe(false);
+  });
+
+  it('la relación con el entrenador sigue saliendo siempre', () => {
+    const owner = row({ id: 'o', layer: 'emotional', kind: 'relation', key: 'emo:owner', content: 'Mi entrenador', importance: 0.4, lastRecalledAt: NOW });
+    expect(selectForPrompt([owner], 'hola', NOW, cfg, 1000).emotional).toHaveLength(1);
+  });
+});
+
+describe('Spec 37 §1.6 — la pista de reacción solo va cuando el mensaje la merece', () => {
+  const { hintForTurn, viewOf } = require('./behavior.engine');
+
+  it('un mensaje corriente o una pregunta no dictan la reacción al modelo', () => {
+    for (const text of ['pues hoy ha hecho sol', '¿cuánto es dos más dos?']) {
+      const intent = interpretMessage(text).intent;
+      expect(['chat', 'question']).toContain(intent);
+      expect(hintForTurn(intent, viewOf('ask_back'))).toBeUndefined();
+    }
+  });
+
+  it('un mensaje con carga emocional sí lleva la pista', () => {
+    const intent = interpretMessage('He tenido un día bastante malo').intent;
+    expect(hintForTurn(intent, viewOf('comfort'))).toContain('Reacción decidida');
   });
 });

@@ -32,7 +32,7 @@ import {
   EXPRESS_BEHAVIOR_TOOL,
   decideBehavior,
   effectsOf,
-  promptHint,
+  hintForTurn,
   validateBehavior,
 } from '../mind/behavior.engine';
 import { Dims } from '../mind/mind.types';
@@ -333,7 +333,7 @@ export class ChatService {
 
     let systemPrompt = buildSystemPrompt(pet, owner ?? {}, {
       personalityBlock: turn ? this.mind!.personalityBlock(turn.dims) : undefined,
-      behaviorHint: turn ? promptHint(turn.behavior) : undefined,
+      behaviorHint: turn ? hintForTurn(turn.interpretation.intent, turn.behavior) : undefined,
       tier,
       now,
       timeZone,
@@ -415,12 +415,16 @@ export class ChatService {
     try {
       const effects = effectsOf(turn.behavior.action);
       if (effects.happiness > 0 && !pet.sleeping) {
-        await this.prisma.pet.update({
-          where: { id: pet.id },
-          data: { happiness: Math.min(100, (pet.happiness ?? 0) + effects.happiness) },
+        // Incremento atómico: `pet` se leyó antes de la respuesta y su felicidad puede haber cambiado
+        const bumped = await this.prisma.pet.updateMany({
+          where: { id: pet.id, happiness: { lte: 100 - effects.happiness } },
+          data: { happiness: { increment: effects.happiness } },
         });
+        // No cabía entero: se deja en el tope, sin pasarse
+        if (bumped.count === 0) await this.prisma.pet.updateMany({ where: { id: pet.id }, data: { happiness: 100 } });
       }
-      const events = [...new Set([turn.interpretation.evolutionEvent, effects.evolutionEvent].filter(Boolean) as string[])];
+      // «chat» va aquí, junto a la deriva del turno, y no en el listener: una sola escritura
+      const events = [...new Set(['chat', turn.interpretation.evolutionEvent, effects.evolutionEvent].filter(Boolean) as string[])];
       await this.mind.applyExperience(pet.id, events);
       if (this.mindMemory) {
         const ep = turn.interpretation.episode;
@@ -492,9 +496,10 @@ export class ChatService {
     }
 
     const pet = await this.petsService.getPetById(userId, petId);
-    const saved = await this.persistExchange(userId, pet, ticket.message, reply, 0);
     // Modo local: sin herramientas, la reacción la decide el Behavior Engine por reglas
-    const behavior = await this.afterTurn(userId, pet, await this.planTurn(pet, ticket.message));
+    const localTurn = await this.planTurn(pet, ticket.message);
+    const saved = await this.persistExchange(userId, pet, ticket.message, reply, 0, !!localTurn && !!this.mind);
+    const behavior = await this.afterTurn(userId, pet, localTurn);
     // En segundo plano, como en un turno nativo: no retrasa la respuesta ni puede romper el chat
     void this.summarizeLocal(userId, pet.id, saved.intelligence);
     return { message: { id: saved.id, content: reply }, intelligence: saved.intelligence, tier: intelligenceTier(saved.intelligence), behavior };
@@ -519,7 +524,7 @@ export class ChatService {
   }
 
   /** Guarda el intercambio, sube la inteligencia y avisa por WebSocket. */
-  private async persistExchange(userId: string, pet: any, userMessage: string, reply: string, tokens: number) {
+  private async persistExchange(userId: string, pet: any, userMessage: string, reply: string, tokens: number, mindHandled = false) {
     // Marcas de tiempo explícitas y distintas para que el historial conserve el orden
     const at = Date.now();
     await this.prisma.chatMessage.create({
@@ -536,7 +541,8 @@ export class ChatService {
     });
     this.realtime.emitPetUpdate(userId, updated);
     // Misiones y logros de conversación (un turno de chat completado).
-    this.events?.emit('chat:message_sent', { userId, petId: pet.id });
+    // `mindHandled`: afterTurn aplicará la deriva del chat; el listener de la mente no debe repetirla
+    this.events?.emit('chat:message_sent', { userId, petId: pet.id, mindHandled });
     // Vínculo (feature 006): cada turno de chat completado sube el bonding (+1). El intercambio
     // ya está persistido: si el registro de vínculo falla, no rompe la respuesta del chat.
     await this.bonding
@@ -689,7 +695,7 @@ export class ChatService {
       }
 
       // Solo se persiste el intercambio si se completó
-      const saved = await this.persistExchange(userId, pet, userMessage, reply, tokens);
+      const saved = await this.persistExchange(userId, pet, userMessage, reply, tokens, !!turn && !!this.mind);
       const intelligence = saved.intelligence;
       // Efectos y memoria del turno en segundo plano: la reacción ya está decidida y no retrasa `done`
       const behavior = turn?.behavior;

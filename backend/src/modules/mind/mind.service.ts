@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { intelligenceTier, moodOf, traitOf } from '../ai/personality';
@@ -89,14 +90,30 @@ export class MindService {
   }
 
   /**
-   * Evolution Engine: aplica experiencias a la personalidad. Lee y escribe dentro de una
-   * transacción para no pisar cambios concurrentes de otras claves (genes…).
+   * Bloquea la fila de la mascota hasta el final de la transacción. `Pet.personality` es un JSON
+   * que se lee, se modifica y se reescribe entero: sin bloqueo, dos escrituras simultáneas (pasa en
+   * cada turno de chat) se pisan y una de las dos se pierde.
    */
-  async applyExperience(petId: string, events: string[], now = new Date()): Promise<Dims | null> {
-    if (!events.length) return null;
+  private lockPet(tx: Prisma.TransactionClient, petId: string) {
+    return tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Pet" WHERE "id" = ${petId} FOR UPDATE`);
+  }
+
+  /**
+   * Evolution Engine: aplica experiencias a la personalidad, fusionando con lo que ya hubiera
+   * (genes…). `patch` permite guardar en la misma escritura otras claves del JSON (contadores de
+   * la vida autónoma), para no hacer dos lecturas y dos escrituras seguidas.
+   */
+  async applyExperience(
+    petId: string,
+    events: string[],
+    now = new Date(),
+    patch?: Partial<StoredPersonality>,
+  ): Promise<Dims | null> {
+    if (!events.length && !patch) return null;
     const cfg = this.config();
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await this.lockPet(tx, petId);
         const pet = await tx.pet.findUnique({
           where: { id: petId },
           select: { id: true, personality: true, speciesId: true, visualSeed: true },
@@ -107,8 +124,8 @@ export class MindService {
           ? stored.dims
           : legacyDims(rollBirthDims(this.speciesBias(pet.speciesId), pet.visualSeed ?? 0, cfg), traitOf(pet.visualSeed ?? 0).id, stored.temperament);
         const res = applyEvents(base, events, stored.drift, now, cfg);
-        if (!res.changed && isValidDims(stored.dims)) return base;
-        const next = { ...withDims(stored, res.dims), drift: res.drift };
+        if (!res.changed && isValidDims(stored.dims) && !patch) return base;
+        const next = { ...withDims(stored, res.dims), drift: res.drift, ...(patch ?? {}) };
         await tx.pet.update({ where: { id: petId }, data: { personality: next as any } });
         return res.dims;
       });
@@ -121,6 +138,7 @@ export class MindService {
   /** Guarda claves auxiliares del JSON de personalidad (contadores de autonomía…) sin pisar el resto. */
   async patchStored(petId: string, patch: Partial<StoredPersonality>) {
     await this.prisma.$transaction(async (tx) => {
+      await this.lockPet(tx, petId);
       const pet = await tx.pet.findUnique({ where: { id: petId }, select: { personality: true } });
       if (!pet) return;
       await tx.pet.update({ where: { id: petId }, data: { personality: { ...((pet.personality as any) ?? {}), ...patch } } });

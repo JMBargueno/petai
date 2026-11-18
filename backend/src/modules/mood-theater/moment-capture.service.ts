@@ -18,7 +18,7 @@ export interface MoodPetLike {
   sick: boolean;
   sleeping: boolean;
   bonding: number;
-  personality?: { type?: string } | null;
+  personality?: { type?: string; trait?: string } | null;
 }
 
 export interface MoodContext {
@@ -99,10 +99,12 @@ export class MomentCaptureService {
 
   /** Acto más "expresivo" según personalidad (AC9) — para hints de intensidad. */
   intensityFor(pet: MoodPetLike, act: MoodAct): 'soft' | 'normal' | 'exaggerated' {
-    const t = pet.personality?.type;
-    if (act === 'dance') return t === 'travieso' ? 'exaggerated' : t === 'tímido' ? 'soft' : 'normal';
-    if (act === 'sing') return t === 'tímido' ? 'soft' : 'normal';
-    if (act === 'glow') return t === 'orgullososo' || t === 'orgullosa' ? 'exaggerated' : 'normal';
+    // `trait` es el rasgo que la mente deriva de las dimensiones (valiente, timido, travieso, dulce,
+    // curioso, neutral); `type` es el nombre antiguo, que ya no escribe nadie. Sin tildes para comparar.
+    const t = (pet.personality?.trait ?? pet.personality?.type ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (act === 'dance') return t === 'travieso' ? 'exaggerated' : t === 'timido' ? 'soft' : 'normal';
+    if (act === 'sing') return t === 'timido' ? 'soft' : 'normal';
+    if (act === 'glow') return t === 'orgulloso' || t === 'orgullosa' || t === 'valiente' ? 'exaggerated' : 'normal';
     return 'normal';
   }
 

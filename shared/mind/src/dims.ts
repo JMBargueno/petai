@@ -18,7 +18,11 @@ export interface Band {
 
 export type BandTable = Record<Dimension, { bands: Band[] }>;
 
-export const clampDim = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
+/**
+ * Acota a 0-100 y guarda con 3 decimales. Con un solo decimal los deltas de 0,05 de balance.json se
+ * perdían o se duplicaban al redondear; quien presenta el valor lo redondea a entero.
+ */
+export const clampDim = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 1000) / 1000;
 
 export function neutralDims(value = 50): Dims {
   return { curiosity: value, sociability: value, bravery: value, affection: value, temper: value };

@@ -8,6 +8,7 @@ import { GameDataService } from '../game-data/game-data.service';
 import { AiConfigService } from '../ai/ai-config.service';
 import { AdventureOrchestratorService } from './adventure-orchestrator.service';
 import { WalletService } from '../wallet/wallet.service';
+import { adventureEpisode } from '../mind/memory.engine';
 
 const PREMIUM_COST_GEMS = 10;
 
@@ -207,15 +208,8 @@ export class AdventureService {
     ]);
     await this.petsService.grantXp(userId, pet.id, rewards.xp);
 
-    const memoryContent = `Adventuré "${adventure.theme}" el ${new Date().toLocaleDateString('es-ES')}. ` +
-      `Resultado: ${result === 'win' ? '¡victoria!' : result === 'partial' ? 'logro parcial' : 'derrota valiente'}. ` +
-      `Fue una experiencia ${result === 'win' ? 'incrediblemente emocionante' : result === 'partial' ? 'interesante con obstáculos' : 'difícil pero aprendí mucho'}.`;
-
-    await this.prisma.petMemory.create({
-      data: { petId: pet.id, kind: 'adventure', layer: 'episodic', importance: 0.6, valence: result === 'lose' ? 0 : 0.6, content: memoryContent },
-    });
-
-    // Spec 36: la aventura es una experiencia que mueve la personalidad (curiosidad, valentía)
+    // Spec 36: la aventura mueve la personalidad (curiosidad, valentía) y deja un recuerdo. Los dos
+    // los escribe la mente al recibir este evento, con sus filtros y su límite de capacidad.
     this.events?.emit('adventure:finished', { userId, petId: pet.id, theme: adventure.theme, outcome: result });
 
     this.logger.log(`Adventure ${adventure.id} finished: outcome=${result} score=${score.toFixed(3)}`);
@@ -230,7 +224,7 @@ export class AdventureService {
       outcome: result,
       score,
       rewards: { xp: rewards.xp, coins: rewards.coins },
-      memory: memoryContent,
+      memory: adventureEpisode(adventure.theme, result),
     };
   }
 

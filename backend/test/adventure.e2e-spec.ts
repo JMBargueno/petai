@@ -156,9 +156,14 @@ describe('Aventura Narrativa IA (e2e) — camino feliz', () => {
     expect(record!.finishedAt).not.toBeNull();
 
     // Se crea una memoria de tipo «adventure» para el pet.
-    const memory = await prisma.petMemory.findFirst({ where: { petId, kind: 'adventure' } });
+    // La escribe la mente al recibir `adventure:finished` (en segundo plano), así que se espera un poco.
+    let memory = await prisma.petMemory.findFirst({ where: { petId, kind: 'adventure' } });
+    for (let i = 0; i < 20 && !memory; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      memory = await prisma.petMemory.findFirst({ where: { petId, kind: 'adventure' } });
+    }
     expect(memory).not.toBeNull();
-    expect(memory!.content).toContain('Adventuré');
+    expect(memory!.content).toContain('Viví una aventura');
 
     // El historial ya incluye la aventura completada.
     const history = (await api().get('/v1/adventure/history').set(auth(token)).expect(200)).body;

@@ -135,7 +135,8 @@ describe('Agente: herramientas y confirmación (e2e, LLM mock)', () => {
       // express_behavior (spec 36): reacción estructurada que propone el LLM, validada por reglas de juego
       'create_reminder', 'express_behavior', 'get_lore', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'set_in_habitat', 'suggest_minigame',
     ]);
-    expect(req.messages[0].content).toContain('La hora actual es');
+    // Hora local con desfase y día de la semana, sin segundos (spec 37 §1.4)
+    expect(req.messages[0].content).toMatch(/La hora actual del entrenador es \d{4}-\d{2}-\d{2}T\d{2}:\d{2}[+-]\d{2}:\d{2}, \S+/);
     expect(req.messages[0].content).toContain('NO se ejecutan hasta que el entrenador las confirma');
   });
 

@@ -123,8 +123,8 @@ export class AutonomyService {
         await this.recordEncounterForFriend(pet, enc.friend, intervalStart(enc.index, cfg));
       }
 
-      await this.mind.applyExperience(pet.id, events, now);
-      await this.mind.patchStored(pet.id, { autonomy: sim.daily, lastNeglectDay } as Partial<StoredPersonality>);
+      // Deriva y contadores del día en una sola escritura del JSON de personalidad
+      await this.mind.applyExperience(pet.id, events, now, { autonomy: sim.daily, lastNeglectDay } as Partial<StoredPersonality>);
       return { ...updated, autonomyCursor: current };
     } catch (e: any) {
       this.logger.warn(`Vida autónoma de ${pet?.id} no simulada: ${e?.message}`);
