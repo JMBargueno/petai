@@ -9,13 +9,14 @@
   "exports": {
     ".": "./src/index.ts",
     "./bake": "./src/bake/index.ts",
-    "./protocol": "./src/protocol.ts"
+    "./protocol": "./src/protocol.ts",
+    "./effects": "./src/effects/index.ts"
   },
   "scripts": {
     "dev": "vite",
     "build:embed": "vite build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.effects.json"
   },
   "dependencies": {
     "pixi.js": "8.22.0"

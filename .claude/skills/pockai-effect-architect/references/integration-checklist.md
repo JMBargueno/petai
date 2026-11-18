@@ -3,9 +3,9 @@
 ## Archivos
 | Paso | Archivo | Qué |
 |---|---|---|
-| 1 | `desktop/src/lib/effects/<nombre>.ts` | `EffectDef` con `lore`, `phases` y `reducedPhases`, `draw` y (si hay fundido) `opacity`. |
-| 2 | `desktop/src/lib/effects/index.ts` | Añadir a `EFFECTS` y exportarlo. |
-| 3 | `desktop/src/lib/effects/<nombre>.spec.ts` | Duración ≤2,5 s, ≤12 colores en los siete Flujos, dibujo quieto con `reduced`, vacío al final y lo propio del efecto. |
+| 1 | `shared/scene/src/effects/<nombre>.ts` | `EffectDef` con `lore`, `phases` y `reducedPhases`, `draw` y (si hay fundido) `opacity`. |
+| 2 | `shared/scene/src/effects/index.ts` | Añadir a `EFFECTS` y exportarlo. |
+| 3 | `shared/scene/src/effects/<nombre>.spec.ts` | Duración ≤2,5 s, ≤12 colores en los siete Flujos, dibujo quieto con `reduced`, vacío al final y lo propio del efecto. |
 | 4 | `desktop/src/lib/<estado>.ts` + spec | Solo si hace falta un estado nuevo (patrón `visitTravel.ts`: presentador, transición solo con mascota en pantalla, temporizadores probados con fake timers). |
 | 5 | `desktop/src/components/PetView.svelte` | Reproductor, `<EffectLayer>`, flags de bloqueo (que no pasee, hable, se arrastre ni se invoque) y clases CSS de la mascota. |
 | 6 | Quien dispara | La pestaña, el socket o el store que llama al estado (`VisitTab.svelte` llama a `startTravel` y `endTravel`; `App.svelte` restaura y caduca). |
@@ -38,6 +38,8 @@ cd desktop && npx svelte-check --threshold error   # filtra por tus archivos: el
    __pockaiFx.weather('rain')                           // rain | snow | clear
    __pockaiFx.gift('care')                              // gift | care
    __pockaiFx.react('sick' | 'cleaned' | 'slept')
+   __pockaiFx.eggHatch('water')                         // huevo: tiembla, se agrieta con ese Flujo y estalla
+   __pockaiFx.dailyMissions() / chest('mythic', 'legendary') / ritual() / raidVictory('fire')
    __pockaiFx.visitorJoin({ visitorId: 'u-9', visitorName: 'Marta', pet: { petId: 'p-9', nickname: 'Luna', speciesName: 'Axolunar', speciesId: 'axolunar', spriteRef: '' }, startedAt: new Date().toISOString() })
    __pockaiFx.visitorLeave('u-9')
    ```

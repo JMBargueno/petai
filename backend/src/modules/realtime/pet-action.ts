@@ -17,6 +17,8 @@ export const PET_ACTIONS = [
   'battle_lost',
   'battle_defended',
   'raid_attack',
+  /** El jefe de raid cayó: va a cada participante con su Pockai y sus gemas (`theme`, `element`, `gems`). */
+  'raid_victory',
   'tournament_win',
   'tournament_loss',
   'trained',

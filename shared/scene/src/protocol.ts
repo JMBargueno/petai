@@ -6,7 +6,8 @@
  * Versionado: si cambias un mensaje de forma incompatible, sube `PROTOCOL_VERSION`. La escena lo
  * anuncia en `ready` para que la app nativa compruebe que habla el mismo idioma.
  */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
+// v3: efectos compartidos (`playEffect`, `petAction` → `effectEnded`), ver src/effects.
 
 import { parseEquipped, type EquippedAccessories } from './bake/accessories';
 import { parseClock } from './ambience/sunClock';
@@ -110,7 +111,17 @@ export type HostMessage =
   | AmbienceMessage
   | { type: 'setEditMode'; edit: boolean }
   | { type: 'selectItem'; itemId: string | null }
-  | { type: 'rotateSelected' };
+  | { type: 'rotateSelected' }
+  /** Pinta un efecto de @pockai/scene/effects junto al Pockai (con la paleta de su elemento). */
+  | { type: 'playEffect'; id: string; params?: EffectParams }
+  /**
+   * Reenvía un aviso `pet:action` del backend tal cual: la escena decide el efecto con la misma
+   * tabla que el escritorio (`effectForPetAction`). Así la app nativa no repite la lógica.
+   */
+  | { type: 'petAction'; action: string; context?: Record<string, unknown> };
+
+/** Datos de un efecto: solo textos y números (viajan por el puente como JSON). */
+export type EffectParams = Record<string, string | number>;
 
 /** Escena → anfitrión. */
 export type SceneEvent =
@@ -121,6 +132,8 @@ export type SceneEvent =
   | { type: 'itemSelected'; itemId: string | null }
   /** El usuario movió o giró un mueble a una posición válida (la escena ya lo muestra ahí). */
   | { type: 'furnitureMoved'; itemId: string; x: number; y: number; rotation: number }
+  /** Un efecto pedido con `playEffect` o `petAction` terminó (o se descartó por otro más importante). */
+  | { type: 'effectEnded'; id: string }
   | { type: 'error'; message: string };
 
 const HOST_TYPES = new Set<HostMessage['type']>([
@@ -136,7 +149,21 @@ const HOST_TYPES = new Set<HostMessage['type']>([
   'setEditMode',
   'selectItem',
   'rotateSelected',
+  'playEffect',
+  'petAction',
 ]);
+
+/** Datos de efecto validados: claves cortas y valores texto/número finitos; el resto se descarta. */
+function parseEffectParams(raw: unknown): EffectParams {
+  const out: EffectParams = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^[a-zA-Z_]{1,24}$/.test(k)) continue;
+    if (typeof v === 'string' && v.length <= 40) out[k] = v;
+    else if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+  }
+  return out;
+}
 
 const INTERACTIONS: Interaction[] = ['sleep', 'eat', 'play', 'bathe', 'sit'];
 const int = (v: unknown, min = 0, max = 63) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
@@ -266,6 +293,15 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
         : null;
     case 'rotateSelected':
       return { type: 'rotateSelected' };
+    case 'playEffect':
+      return typeof m.id === 'string' && /^[a-z-]{1,40}$/.test(m.id)
+        ? { type: 'playEffect', id: m.id, params: parseEffectParams(m.params) }
+        : null;
+    case 'petAction': {
+      if (typeof m.action !== 'string' || !/^[a-z_]{1,40}$/.test(m.action)) return null;
+      const ctx = m.context && typeof m.context === 'object' && !Array.isArray(m.context) ? (m.context as Record<string, unknown>) : undefined;
+      return ctx ? { type: 'petAction', action: m.action, context: ctx } : { type: 'petAction', action: m.action };
+    }
   }
   return null;
 }

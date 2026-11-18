@@ -17,6 +17,10 @@ import { IsoRoom } from './room/IsoRoom';
 import { styleFor } from './room/roomStyles';
 import { Ambience, NO_AMBIENCE, type AmbienceState } from './ambience/Ambience';
 import { loadBackdrop } from './ambience/backdrops';
+import { PixiEffects } from './effects/pixiLayer';
+import { effectForPetAction } from './effects/reactions';
+import { flowPalette } from './effects/palettes';
+import { speciesElement } from './effects/speciesElement';
 import {
   PROTOCOL_VERSION,
   type Activity,
@@ -65,6 +69,8 @@ export class PockaiScene {
   private backdropRoom: string | null = null;
   private backdropSeq = 0;
   private disposers: (() => void)[] = [];
+  /** Efectos compartidos (@pockai/scene/effects) colgados del Pockai. */
+  private effects!: PixiEffects;
 
   private constructor(private readonly opts: SceneOptions) {}
 
@@ -104,6 +110,12 @@ export class PockaiScene {
     this.pet.cursor = 'pointer';
     this.pet.on('pointertap', () => this.emit({ type: 'petTapped' }));
     this.app.stage.addChild(this.pet);
+    this.effects = new PixiEffects(this.pet, {
+      reducedMotion: this.reducedMotion,
+      palette: () => flowPalette(speciesElement(this.petState?.species)),
+      seed: () => this.petState?.visualSeed ?? 1,
+      onEnded: (id) => this.emit({ type: 'effectEnded', id }),
+    });
     // Escenario interactivo en toda su área: arrastres de muebles y clics en vacío.
     this.app.stage.eventMode = 'static';
     this.app.stage.hitArea = new Rectangle(0, 0, 1e6, 1e6);
@@ -112,6 +124,7 @@ export class PockaiScene {
     });
     this.app.ticker.add((t) => {
       this.pet.update(t);
+      this.effects.update(t.deltaMS);
       this.ambience?.update(t.deltaMS);
       this.room?.update(t);
     });
@@ -185,6 +198,15 @@ export class PockaiScene {
       case 'rotateSelected':
         this.room?.rotateSelected();
         break;
+      case 'playEffect':
+        this.effects.play(msg.id, msg.params ?? {});
+        break;
+      case 'petAction': {
+        // La misma tabla que el escritorio decide el efecto de cada aviso del backend
+        const req = effectForPetAction(msg.action, msg.context);
+        if (req) this.effects.play(req.id, req.params);
+        break;
+      }
     }
   }
 
@@ -358,6 +380,7 @@ export class PockaiScene {
   }
 
   destroy(): void {
+    this.effects?.destroy();
     this.disposers.forEach((d) => d());
     this.app.destroy(true, { children: true });
   }

@@ -10,7 +10,7 @@
   import { resolveVisitorSpriteKey, visitorSeed } from '../lib/visitors';
   import type { HabitatVisitor } from '../lib/api';
   import EffectLayer from './EffectLayer.svelte';
-  import { EffectPlayer, flowPalette, portalNexo, speciesElement } from '../lib/effects';
+  import { EffectPlayer, flowPalette, portalNexo, speciesElement } from '@pockai/scene/effects';
 
   export let visitor: HabitatVisitor;
   /** Se va del hábitat: vuelve a cruzar su portal y avisa con `gone` al terminar. */

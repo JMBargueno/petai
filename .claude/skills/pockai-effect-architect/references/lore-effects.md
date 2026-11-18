@@ -15,7 +15,7 @@ Fuente: `docs/LORE.md` (espejo en `web/src/app/lore/content.ts`). Cita la secci�
 
 ## Los Seis Flujos del Éter (§4) → rampa del efecto
 
-La rampa sale de `desktop/src/lib/effects/palettes.ts`, con 5 tonos (`outline`, `deep`, `mid`, `light`, `glow`) más el vacío (`void0`, `void1`). El tono medio es el color de UI del elemento (GUIA §3.6).
+La rampa sale de `shared/scene/src/effects/palettes.ts`, con 5 tonos (`outline`, `deep`, `mid`, `light`, `glow`) más el vacío (`void0`, `void1`). El tono medio es el color de UI del elemento (GUIA §3.6).
 
 | Elemento | Flujo | Tono medio | Carácter para animar |
 |---|---|---|---|
@@ -55,14 +55,17 @@ Un mismo efecto sirve para todos los Flujos cambiando la rampa. Si un Flujo pide
 | `destello-prisma` (menor) | Shiny, cada 6 s (renderLoop) | §3: estrellitas en paleta invertida alrededor de la cabeza; complementan el brillo de la variante que la hoja horneada pinta sobre el cuerpo (`fxFrame`). |
 | `clima` (ambiente) | `environmental.weather.condition` = `rain` / `snow` | Lluvia o nieve en pixel art (rampa fija) en vez del emoji; se queda mientras dure. |
 
-## Ideas pendientes (propón desde aquí)
+| `huevo-grietas` | Eclosión desde el panel (`ControlPanel` → `hatchProgress` shake/crack/abort → `PetView.hatchEgg`) | §1: huevo que tiembla en su fase `hold`, se agrieta con la luz del Flujo de quien nace y estalla justo antes de la revelación. Solo escritorio. |
+| `confeti-codices` | `mission_completed {dailyCompleted: true}` | §1: lluvia de rombos-Códice (spec 01). |
+| `cofre-tier` | `chest_opened {type, bestTier}` (`bestTier` lo añade el backend) | §2: cofre del metal de su tipo; columna del color del mejor drop con un destello por rango (spec 02). |
+| `destello-ritual` (menor) | `ritual_completed` | §9: anillo de luz de 1 s y motas (spec 30). |
+| `triunfo-raid` | `raid_victory {theme, element, gems}` (evento nuevo, `RaidService.settle`) | §4: el jefe en el Flujo de SU elemento se resquebraja; corona de laurel para el Pockai (spec 13). |
 
-Del catálogo inicial no queda nada. Ideas para seguir:
+## Ideas pendientes (propón desde aquí)
 
 | Evento (código) | Idea |
 |---|---|
-| Eclosión en el panel (`HatchView`, `EggSprite`) | Grietas del huevo con luz del Flujo, en el escritorio y no solo en el panel. |
-| Misiones del día completas (`mission_completed {dailyCompleted}`) | Confeti de Códices (spec 01). |
-| Cofre abierto (`chest_opened {type}`) | Brillo por tier y revelación (spec 02). |
-| Ritual cumplido (`ritual_completed`) | Destello de 1 s y mini confeti (spec 30). |
-| Jefe de raid derrotado (no llega al cliente) | Celebración (spec 13); requiere evento del backend. |
+| Subida de bonding (`bonding_up {tier}`) | Hilo del Destino que une al Pockai con el cursor (§2). |
+| Torneo ganado (`tournament_win`) | Estandarte del Coliseo (§7). |
+| Aventura completada (`adventure {result}`) | Mapa que se despliega con la ruta del Éter (§9). |
+| Cocinar (`cooked`) | Vapor del Flujo que sube de la olla. |

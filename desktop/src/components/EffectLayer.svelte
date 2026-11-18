@@ -1,15 +1,13 @@
 <script lang="ts">
   /**
-   * Pinta un efecto del escritorio (lib/effects) en un canvas pixel art. No recibe clics ni entra
+   * Pinta un efecto (@pockai/scene/effects) en un canvas pixel art. No recibe clics ni entra
    * en las zonas interactivas del click-through: es solo decorado.
    *
    * Quien lo lanza crea el `EffectPlayer` (decide cuándo soltar la fase `hold`) y quita el
    * componente cuando el reproductor avisa de `done`.
    */
   import { onDestroy, onMount } from 'svelte';
-  import type { EffectDef, FxPalette } from '../lib/effects/types';
-  import { CanvasSink, renderFrame } from '../lib/effects/render';
-  import { quantize, type EffectPlayer } from '../lib/effects/timeline';
+  import { CanvasSink, quantize, renderFrame, type EffectDef, type EffectPlayer, type FxPalette } from '@pockai/scene/effects';
 
   export let def: EffectDef;
   export let player: EffectPlayer;

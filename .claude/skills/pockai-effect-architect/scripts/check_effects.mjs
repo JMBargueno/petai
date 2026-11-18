@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Inventario y comprobaciones de los efectos del escritorio (desktop/src/lib/effects).
+ * Inventario y comprobaciones de los efectos del escritorio (shared/scene/src/effects).
  *
  *   node .claude/skills/pockai-effect-architect/scripts/check_effects.mjs [id]
  *
@@ -14,9 +14,21 @@ import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../../..');
-const dir = join(root, 'desktop/src/lib/effects');
-const srcDir = join(root, 'desktop/src');
-const ENGINE = new Set(['index.ts', 'types.ts', 'timeline.ts', 'palettes.ts', 'render.ts']);
+const dir = join(root, 'shared/scene/src/effects');
+// Dónde se usan los efectos: el escritorio y la escena compartida (Android, iOS)
+const srcDirs = [join(root, 'desktop/src'), join(root, 'shared/scene/src')];
+const ENGINE = new Set([
+  'index.ts',
+  'types.ts',
+  'timeline.ts',
+  'palettes.ts',
+  'render.ts',
+  'fxMath.ts',
+  'momentQueue.ts',
+  'speciesElement.ts',
+  'reactions.ts',
+  'pixiLayer.ts',
+]);
 const only = process.argv[2];
 
 if (!existsSync(dir)) {
@@ -35,7 +47,9 @@ function walk(d, out = []) {
   }
   return out;
 }
-const appFiles = walk(srcDir).map((p) => [p, readFileSync(p, 'utf8')]);
+const appFiles = srcDirs.flatMap((d) => walk(d)).map((p) => [p, readFileSync(p, 'utf8')]);
+// La tabla compartida de reacciones (pet:action → efecto) también cuenta como uso: la leen todas las plataformas
+appFiles.push([join(dir, '..', 'reactions (pet:action)'), readFileSync(join(dir, 'reactions.ts'), 'utf8')]);
 
 function phasesOf(src, key) {
   const m = src.match(new RegExp(`${key}:\\s*\\[([\\s\\S]*?)\\]`));
@@ -92,6 +106,8 @@ for (const f of files) {
   if (!reduced?.length) err('falta reducedPhases (prefers-reduced-motion)');
   else if (reduced.map((p) => p.name).join() !== phases.map((p) => p.name).join()) warn('reducedPhases no tiene las mismas fases que phases');
   if (!/reduced/.test(src.split('export const')[0])) warn('el dibujo no mira frame.reduced: con movimiento reducido debe quedarse quieto');
+  // El motor (PetView y la escena) suelta la espera por su NOMBRE: debe llamarse 'hold'
+  if (phases.some((p) => p.ms === 'hold' && p.name !== 'hold')) err("la fase de espera (ms: 'hold') debe llamarse 'hold'");
   if (total > 2500) err(`dura ${total} ms sin contar el hold (máx. 2500)`);
   if (!(w <= 64 && h <= 80)) err(`rejilla ${w}×${h} (máx. 64×80)`);
   if (!Number.isInteger(scale) || scale < 1) err(`escala ${scale}: debe ser entera`);

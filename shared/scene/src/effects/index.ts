@@ -1,5 +1,5 @@
 /**
- * Registro de efectos del escritorio. Cada efecto nuevo se añade aquí (lo lee
+ * Registro de efectos compartidos (escritorio, web y escena incrustada en Android/iOS). Cada efecto nuevo se añade aquí (lo lee
  * `.claude/skills/pockai-effect-architect/scripts/check_effects.mjs` y la hoja de frames).
  */
 import { portalNexo } from './portalNexo';
@@ -22,6 +22,11 @@ import { polvoImpacto } from './polvoImpacto';
 import { estelaFlujo } from './estelaFlujo';
 import { destelloPrisma } from './destelloPrisma';
 import { clima } from './clima';
+import { huevoGrietas } from './huevoGrietas';
+import { confetiCodices } from './confetiCodices';
+import { cofreTier } from './cofreTier';
+import { destelloRitual } from './destelloRitual';
+import { triunfoRaid } from './triunfoRaid';
 import type { EffectDef, FxPhase } from './types';
 
 export const EFFECTS: Record<string, EffectDef> = {
@@ -45,6 +50,11 @@ export const EFFECTS: Record<string, EffectDef> = {
   [estelaFlujo.id]: estelaFlujo,
   [destelloPrisma.id]: destelloPrisma,
   [clima.id]: clima,
+  [huevoGrietas.id]: huevoGrietas,
+  [confetiCodices.id]: confetiCodices,
+  [cofreTier.id]: cofreTier,
+  [destelloRitual.id]: destelloRitual,
+  [triunfoRaid.id]: triunfoRaid,
 };
 
 /** Fases que tocan para estos datos (algunos efectos se saltan fases según el momento). */
@@ -73,10 +83,18 @@ export {
   estelaFlujo,
   destelloPrisma,
   clima,
+  huevoGrietas,
+  confetiCodices,
+  cofreTier,
+  destelloRitual,
+  triunfoRaid,
 };
 export { prismColors } from './destelloPrisma';
 export { EffectPlayer, fixedDuration, quantize } from './timeline';
 export { flowPalette, FLOW_PALETTES, FLOW_NAMES } from './palettes';
-export { renderFrame, GridSink } from './render';
+export { renderFrame, GridSink, CanvasSink } from './render';
+export { admitMoment } from './momentQueue';
+export { hash, invert } from './fxMath';
 export { speciesElement } from './speciesElement';
+export { effectForPetAction, birthParams, ACTIONS_WITH_EFFECT, type EffectRequest } from './reactions';
 export type { EffectDef, FxFrame, FxPalette, FxPhase, PixelSink } from './types';

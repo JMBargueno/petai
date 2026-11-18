@@ -17,8 +17,9 @@ describe('RaidService.settle (F-06: liquidación idempotente y proporcional)', (
     };
     const gameData: any = { getBalance: () => ({ raids: { totalGems: 1000 } }) };
     // constructor: (prisma, gameData, petsService, battlesService, cronLock, cache)
-    const svc = new RaidService(prisma, gameData, {} as any, {} as any, {} as any, {} as any);
-    return { svc, prisma };
+    const realtime: any = { emitPetAction: jest.fn() };
+    const svc = new RaidService(prisma, gameData, {} as any, {} as any, {} as any, {} as any, realtime);
+    return { svc, prisma, realtime };
   }
 
   function txMock(count: number) {
@@ -65,5 +66,29 @@ describe('RaidService.settle (F-06: liquidación idempotente y proporcional)', (
     prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
     await (svc as any).settle('r');
     expect(tx.user.update).not.toHaveBeenCalled();
+  });
+
+  it('avisa de la victoria (raid_victory) a cada participante con sus gemas (a su mascota activa)', async () => {
+    const { svc, prisma, realtime } = build();
+    prisma.raid.findUnique.mockResolvedValue({ id: 'r', status: 'active', theme: 'Inferno Dragon', element: 'fire' });
+    prisma.raidParticipant.findMany.mockResolvedValue([
+      { userId: 'u1', petId: 'p1', damageDealt: 900 },
+      { userId: 'u2', petId: 'p2', damageDealt: 100 },
+    ]);
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(txMock(1)));
+    await (svc as any).settle('r');
+    expect(realtime.emitPetAction.mock.calls).toEqual([
+      ['u1', null, 'raid_victory', { theme: 'Inferno Dragon', element: 'fire', gems: 500 }],
+      ['u2', null, 'raid_victory', { theme: 'Inferno Dragon', element: 'fire', gems: 100 }],
+    ]);
+  });
+
+  it('si otra réplica liquidó el raid, esta no avisa', async () => {
+    const { svc, prisma, realtime } = build();
+    prisma.raid.findUnique.mockResolvedValue({ id: 'r', status: 'active', theme: 'X', element: 'fire' });
+    prisma.raidParticipant.findMany.mockResolvedValue([{ userId: 'u1', petId: 'p1', damageDealt: 100 }]);
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(txMock(0)));
+    await (svc as any).settle('r');
+    expect(realtime.emitPetAction).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 # Motor de efectos del escritorio
 
-Código: `desktop/src/lib/effects/` y `desktop/src/components/EffectLayer.svelte`. No depende del navegador salvo `CanvasSink` y el componente: se prueba en Node (vitest, entorno `node`) y la hoja de frames se pinta con `sharp`.
+Código: `shared/scene/src/effects/` y `desktop/src/components/EffectLayer.svelte`. No depende del navegador salvo `CanvasSink` y el componente: se prueba en Node (vitest, entorno `node`) y la hoja de frames se pinta con `sharp`.
 
 ## Piezas
 
@@ -72,6 +72,22 @@ PetView tiene, para el viaje:
 - `portalAnim` (`entering`/`exiting`): keyframe `enterPortal` sobre `.pet-body`, que encoge hacia la boca, se ilumina y se funde. La salida es el mismo keyframe al revés.
 
 Antes de mover a la mascota, déjala quieta y horizontal (`settleForTravel`): sin trepar, sin física en el aire, sin choca-esos-cinco. Para andar, pon `walkUntil = now + ms` (el controlador pinta `walk`) y cambia `posX`.
+
+## Plataformas
+
+Los efectos viven en `shared/scene/src/effects` (export `@pockai/scene/effects`) y son TypeScript puro:
+
+| Plataforma | Cómo los pinta |
+|---|---|
+| Escritorio | `desktop/src/components/EffectLayer.svelte` (canvas DOM) desde `PetView`. |
+| Escena incrustada (Android hoy, iOS cuando exista) | `effects/pixiLayer.ts`, colgados del Pockai. Llegan por el protocolo v3: `playEffect` o `petAction` (la escena aplica `effectForPetAction`). |
+| Web | Solo importable por ahora (`web/src/app/shared/effects/effects.spec.ts`). |
+
+Reglas para que un efecto funcione en todas:
+- Sin DOM ni Pixi en el efecto. Solo `PixelSink`.
+- Accede a `params` con corchetes (`f.params['tier']`): la web compila con `noPropertyAccessFromIndexSignature`. Lo comprueba `tsc -p tsconfig.effects.json` (`pnpm --filter @pockai/scene typecheck`).
+- La fase de espera se llama `hold`: el escritorio y la escena la sueltan por su nombre (`check_effects` lo exige).
+- Si el efecto acompaña a un aviso `pet:action`, va en `effects/reactions.ts` y no en el `eventMap` del escritorio, para que también salga en Android.
 
 ## Canales (PetView)
 

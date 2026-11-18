@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -93,6 +94,7 @@ private val BUFF_LABELS = mapOf(
  */
 @Composable
 fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onChanged: () -> Unit) {
+    val currentPet by rememberUpdatedState(pet)
     var catalog by remember { mutableStateOf<HabitatCatalog?>(null) }
     var state by remember { mutableStateOf<HabitatState?>(null) }
     var buffs by remember { mutableStateOf<HabitatBuffs?>(null) }
@@ -152,6 +154,16 @@ fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onCha
         launch {
             realtime.visitorLeft().collect { id ->
                 visitors = visitors.filter { it.visitorId != id }
+            }
+        }
+        // Lo que le pasa a tu Pockai (sube de nivel, evoluciona, gana un logro…): la escena pinta
+        // el mismo efecto que el escritorio (@pockai/scene/effects). Solo los de este Pockai
+        // (el de ahora: el colector vive toda la pantalla y la mascota puede cambiar).
+        launch {
+            realtime.petAction().collect { ev ->
+                if (ev.action.isNotBlank() && (ev.petId == null || ev.petId == currentPet.id)) {
+                    scene.send(SceneMessages.petAction(ev.action, ev.context))
+                }
             }
         }
     }

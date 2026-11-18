@@ -44,7 +44,7 @@ function paintGhost(c: Canvas2, f: FxFrame, cx: number, cy: number, scale: numbe
 
 function draw(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(W, H);
-  const outcome = String(f.params.outcome ?? 'won');
+  const outcome = String(f.params['outcome'] ?? 'won');
   const lost = outcome === 'lost';
   const from = hash(1, 1, f.seed) < 0.5 ? -1 : 1;
 

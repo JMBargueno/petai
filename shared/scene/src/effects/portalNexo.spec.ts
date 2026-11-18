@@ -29,8 +29,8 @@ describe('portal de hebras del Nexo', () => {
   it('abierto, la boca muestra el vacío del Éter y no la trama', () => {
     const hold = render('hold', 0);
     const { x, y } = portalNexo.points.mouth;
-    expect([FLOW_PALETTES.fire.glow, FLOW_PALETTES.fire.light]).toContain(hold.get(x, y));
-    expect(hold.colors()).toContain(FLOW_PALETTES.fire.void0);
+    expect([FLOW_PALETTES['fire'].glow, FLOW_PALETTES['fire'].light]).toContain(hold.get(x, y));
+    expect(hold.colors()).toContain(FLOW_PALETTES['fire'].void0);
   });
 
   it('cerrado del todo, la boca vuelve a ser transparente', () => {
@@ -50,10 +50,10 @@ describe('portal de hebras del Nexo', () => {
     const a = render('hold', 0, { reduced: true, elapsedMs: 0 });
     const b = render('hold', 0, { reduced: true, elapsedMs: 900 });
     expect(a.cells).toEqual(b.cells);
-    expect(portalNexo.opacity?.({ phase: 'appear', t: 0.5, time: 0, palette: FLOW_PALETTES.fire, seed: 1, params: {}, reduced: true })).toBe(0.5);
+    expect(portalNexo.opacity?.({ phase: 'appear', t: 0.5, time: 0, palette: FLOW_PALETTES['fire'], seed: 1, params: {}, reduced: true })).toBe(0.5);
   });
 
   it('un elemento desconocido usa las hebras neutras del Nexo', () => {
-    expect(flowPalette('???')).toBe(FLOW_PALETTES.neutral);
+    expect(flowPalette('???')).toBe(FLOW_PALETTES['neutral']);
   });
 });

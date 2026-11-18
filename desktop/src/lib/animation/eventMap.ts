@@ -2,6 +2,7 @@
  * Traduce lo que le pasa a la mascota (acciones del backend o de la propia UI) a una reacción:
  * una secuencia de animaciones, un bocadillo opcional y una partícula opcional.
  */
+import { birthParams, effectForPetAction } from '@pockai/scene/effects';
 import type { PetAction, PetActionEvent } from './petActions';
 
 export interface Reaction {
@@ -9,7 +10,7 @@ export interface Reaction {
   anims: string[];
   bubble?: string;
   particle?: string;
-  /** Efecto del escritorio (lib/effects) que acompaña al momento, con sus datos. */
+  /** Efecto (@pockai/scene/effects) que acompaña al momento, con sus datos. */
   effect?: { id: string; params?: Record<string, string | number> };
   /** Momento exagerado (Mood Theater): PetView añade un squash marcado. */
   emphasis?: boolean;
@@ -50,9 +51,9 @@ const MOOD_ACTS: Record<string, string> = {
 
 const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
   fed: (c) => (c?.favorite ? { anims: ['eat', 'love'], bubble: '¡Mi comida favorita! 😋' } : { anims: ['eat'] }),
-  cleaned: () => ({ anims: ['clean', 'happy'], effect: { id: 'polvo-estatico' } }),
-  // El estado base `sleep` ya pone el clip; aquí solo la desfragmentación al dormirse
-  slept: () => ({ anims: [], effect: { id: 'desfragmentacion' } }),
+  cleaned: () => ({ anims: ['clean', 'happy'] }),
+  // El estado base `sleep` ya pone el clip; la reacción solo existe para llevar su efecto
+  slept: () => ({ anims: [] }),
   woke: () => ({ anims: ['wake'] }),
   healed: () => ({ anims: ['heal', 'happy'], bubble: '¡Ya me encuentro mejor! 💚' }),
   level_up: (c) => {
@@ -60,7 +61,6 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     return {
       anims: ['level_up'],
       bubble: level ? `¡Nivel ${level}! ⬆️` : '¡He subido de nivel! ⬆️',
-      effect: { id: 'resonancia', params: level ? { level } : {} },
     };
   },
   evolved: (c) => {
@@ -68,23 +68,29 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     return {
       anims: ['evolution', 'celebrate'],
       bubble: stage ? `¡He evolucionado (${stage})! ✨` : '¡He evolucionado! ✨',
-      effect: { id: 'capullo-telar', params: stage ? { stage } : {} },
     };
   },
   hatched: (c) => ({
     anims: ['summon', 'happy'],
     bubble: c?.shiny === true ? '¡Hola! Nací con la Bendición del Prisma ✨' : '¡Hola! Encantado de conocerte 🐣',
-    effect: { id: 'revelacion-densidad', params: birthParams(c) },
   }),
-  battle_won: () => ({ anims: ['attack', 'victory'], bubble: '¡Victoria! 🏆', effect: astral('won') }),
-  battle_lost: () => ({ anims: ['hit', 'defeat'], bubble: 'Uf… la próxima ganaré.', effect: astral('lost') }),
+  battle_won: () => ({ anims: ['attack', 'victory'], bubble: '¡Victoria! 🏆' }),
+  battle_lost: () => ({ anims: ['hit', 'defeat'], bubble: 'Uf… la próxima ganaré.' }),
   battle_defended: (c) => {
     const attacker = str(c, 'attackerName');
-    if (c?.draw) return { anims: ['surprised'], bubble: attacker ? `Empate contra ${attacker} 🤝` : 'Empate 🤝', effect: astral('draw') };
-    if (c?.won) return { anims: ['hit', 'victory'], bubble: attacker ? `¡He defendido contra ${attacker}! 🛡️` : '¡He defendido mi puesto! 🛡️', effect: astral('won') };
-    return { anims: ['hit', 'defeat'], bubble: attacker ? `${attacker} me ha ganado…` : 'Me han ganado en la arena…', effect: astral('lost') };
+    if (c?.draw) return { anims: ['surprised'], bubble: attacker ? `Empate contra ${attacker} 🤝` : 'Empate 🤝' };
+    if (c?.won) return { anims: ['hit', 'victory'], bubble: attacker ? `¡He defendido contra ${attacker}! 🛡️` : '¡He defendido mi puesto! 🛡️' };
+    return { anims: ['hit', 'defeat'], bubble: attacker ? `${attacker} me ha ganado…` : 'Me han ganado en la arena…' };
   },
   raid_attack: () => ({ anims: ['attack'] }),
+  raid_victory: (c) => {
+    const theme = str(c, 'theme');
+    const gems = num(c, 'gems');
+    return {
+      anims: ['victory', 'celebrate'],
+      bubble: `¡Hemos derrotado a ${theme ?? 'el jefe'}!${gems ? ` +${gems} 💎` : ''}`,
+    };
+  },
   tournament_win: () => ({ anims: ['victory', 'celebrate'], bubble: '¡Ronda de torneo ganada! 🏅' }),
   tournament_loss: () => ({ anims: ['defeat'], bubble: 'Me han eliminado del torneo…' }),
   trained: (c) =>
@@ -103,23 +109,18 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     }
   },
   minigame_finished: () => ({ anims: ['happy'] }),
-  gift_received: () => ({ anims: ['surprised', 'love'], bubble: '¡Me han hecho un regalo! 🎁', effect: { id: 'paquete-hebra', params: { kind: 'gift' } } }),
-  care_received: () => ({ anims: ['love'], bubble: '¡Alguien me ha mandado cariño! 💌', effect: { id: 'paquete-hebra', params: { kind: 'care' } } }),
-  chest_opened: () => ({ anims: ['surprised', 'celebrate'], particle: '🎁' }),
+  gift_received: () => ({ anims: ['surprised', 'love'], bubble: '¡Me han hecho un regalo! 🎁' }),
+  care_received: () => ({ anims: ['love'], bubble: '¡Alguien me ha mandado cariño! 💌' }),
+  chest_opened: () => ({ anims: ['surprised', 'celebrate'] }),
   mission_completed: (c) =>
     c?.dailyCompleted ? { anims: ['celebrate'], bubble: '¡Misiones del día completadas! 🎉' } : { anims: ['happy'], particle: '✅' },
   achievement: (c) => {
     const name = str(c, 'name');
-    // El sello crece con el rango del logro (común … legendario)
-    return {
-      anims: ['victory'],
-      bubble: name ? `¡Logro: ${name}! 🏆` : '¡Nuevo logro! 🏆',
-      effect: { id: 'sello-logro', params: { tier: str(c, 'tier') ?? 'common' } },
-    };
+    return { anims: ['victory'], bubble: name ? `¡Logro: ${name}! 🏆` : '¡Nuevo logro! 🏆' };
   },
   bonding_up: () => ({ anims: ['love'], bubble: 'Siento que estamos más unidos 💞' }),
   bonding_down: () => ({ anims: ['sad'] }),
-  ritual_completed: () => ({ anims: ['celebrate'], particle: '🌟' }),
+  ritual_completed: () => ({ anims: ['celebrate'] }),
   ritual_missed: () => ({ anims: ['sad'] }),
   mood_moment: (c) => {
     const act = str(c, 'act');
@@ -143,18 +144,10 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
       bubble: name ? `¡${name} está de visita en mi hábitat! 👋` : '¡Ha venido un amigo de visita! 👋',
     };
   },
-  welcome_back: (c) => {
-    const r = welcomeReaction(str(c, 'tier'));
-    return { ...r, effect: { id: 'descarga-calida', params: { tier: str(c, 'tier') ?? 'happy' } } };
-  },
-  sick: () => ({ anims: ['sad'], bubble: 'No me encuentro muy bien… 🤒', effect: { id: 'glitch-animo' } }),
+  welcome_back: (c) => welcomeReaction(str(c, 'tier')),
+  sick: () => ({ anims: ['sad'], bubble: 'No me encuentro muy bien… 🤒' }),
   vitals_critical: () => null, // el estado base (hungry/tired/sad) ya lo refleja
 };
-
-/** Proyección astral del Coliseo (LORE §7): la Sombra Guardiana vuelve con el resultado. */
-function astral(outcome: 'won' | 'lost' | 'draw') {
-  return { id: 'proyeccion-astral', params: { outcome } };
-}
 
 /** Juramento de clan cumplido (LORE §8): la trenza del Nexo se tensa sobre la mascota. */
 export function reactionForClanGoal(title?: string | null): Reaction {
@@ -163,12 +156,6 @@ export function reactionForClanGoal(title?: string | null): Reaction {
     bubble: title ? `¡Juramento cumplido: ${title}! 🤝` : '¡Hemos cumplido el juramento del clan! 🤝',
     effect: { id: 'trenza-juramento' },
   };
-}
-
-/** Datos del nacimiento para la revelación: densidad, Bendición del Prisma y Promesa del Telar. */
-function birthParams(c: Ctx): Record<string, string | number> {
-  const pity = str(c, 'pity');
-  return { rarity: str(c, 'rarity') ?? 'normal', shiny: c?.shiny === true ? 1 : 0, ...(pity ? { pity } : {}) };
 }
 
 function welcomeReaction(tier: string | undefined): Reaction {
@@ -204,9 +191,16 @@ export function reactionForSiblingHatch(newborn: {
   };
 }
 
+/**
+ * Reacción a un aviso `pet:action`: animaciones y bocadillo del escritorio, más el efecto que decide
+ * la tabla compartida (`effectForPetAction`, la misma que usa la escena en Android e iOS).
+ */
 export function reactionForAction(event: Pick<PetActionEvent, 'action' | 'context'>): Reaction | null {
   const fn = REACTIONS[event.action];
-  return fn ? fn(event.context) : null;
+  const reaction = fn ? fn(event.context) : null;
+  if (!reaction) return null;
+  const effect = effectForPetAction(event.action, event.context);
+  return effect ? { ...reaction, effect } : reaction;
 }
 
 /**

@@ -59,7 +59,7 @@ function paintSnow(c: Canvas2, f: FxFrame, density: number, time: number) {
 
 function draw(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(W, H);
-  const kind = String(f.params.kind ?? 'rain');
+  const kind = String(f.params['kind'] ?? 'rain');
   const time = f.reduced ? 0 : f.time;
   // Entra y sale poco a poco
   const density = f.phase === 'start' ? f.t : f.phase === 'stop' ? 1 - f.t : 1;

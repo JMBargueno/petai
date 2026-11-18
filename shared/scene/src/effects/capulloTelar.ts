@@ -94,7 +94,7 @@ function paintThreads(c: Canvas2, f: FxFrame, t: number) {
 }
 
 function paintCrown(c: Canvas2, f: FxFrame, lit: boolean) {
-  if (f.params.stage !== 'final') return;
+  if (f.params['stage'] !== 'final') return;
   for (let k = 0; k < 5; k++) {
     const x = CX - 10 + k * 5;
     const y = TOP - 4 - (k === 2 ? 3 : k % 2 === 0 ? 0 : 1);

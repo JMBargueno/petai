@@ -765,6 +765,16 @@
         weather: (condition: string) =>
           (environmental = { ...(environmental ?? {}), weather: { condition, temperature: 12, weatherCode: 0 } } as any),
         gift: (kind: 'gift' | 'care' = 'gift') => currentPet && reactToAction(currentPet.id, kind === 'gift' ? 'gift_received' : 'care_received'),
+        // Eclosión vista en el escritorio: el huevo tiembla, se agrieta con el Flujo de quien nace y estalla
+        eggHatch: (element = 'water') => {
+          petViewRef?.hatchEgg?.('shake');
+          setTimeout(() => petViewRef?.hatchEgg?.('crack', { species: { element } }), 1500);
+        },
+        dailyMissions: () => currentPet && reactToAction(currentPet.id, 'mission_completed', { dailyCompleted: true }),
+        chest: (type = 'mythic', bestTier = 'legendary') => currentPet && reactToAction(currentPet.id, 'chest_opened', { type, bestTier }),
+        ritual: () => currentPet && reactToAction(currentPet.id, 'ritual_completed', { type: 'feed' }),
+        raidVictory: (element = 'fire') =>
+          currentPet && reactToAction(currentPet.id, 'raid_victory', { theme: 'Inferno Dragon', element, gems: 120 }),
         visitorJoin: (v: HabitatVisitor) => visitorJoined(v),
         visitorLeave: (visitorId: string) => visitorLeft(visitorId),
         summon: (x?: number, y?: number) => window.dispatchEvent(new CustomEvent('petai:summon', { detail: { x, y } })),
@@ -903,6 +913,7 @@
       else pets = [currentPet, ...pets];
     }}
     on:petHatched={(e) => celebrateHatch(e.detail)}
+    on:hatchProgress={(e) => petViewRef?.hatchEgg?.(e.detail.stage, e.detail.newborn)}
     on:selectPet={(e) => selectPet(e.detail)}
     on:actionTriggered={(e) => handlePetAction(e.detail)}
     on:bubble={(e) =>

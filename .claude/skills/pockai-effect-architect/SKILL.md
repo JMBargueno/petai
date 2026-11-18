@@ -1,6 +1,6 @@
 ---
 name: pockai-effect-architect
-description: Diseña, dibuja y cablea efectos especiales del escritorio de PetAI con sentido de lore, como portales, puertas, apariciones, desapariciones, transiciones o destellos que acompañan a la mascota cuando hace algo (irse de visita, volver, entrar en su hábitat, evolucionar, ser invocada, recibir a un amigo). Cubre el motor de efectos procedurales en pixel art (desktop/src/lib/effects), la rampa de color por Flujo del Éter, la sincronía con la mascota en PetView, el movimiento reducido, la hoja de frames para revisarlo a simple vista y, si hace falta, un concepto previo con Nano Banana. Úsala cuando el usuario pida "un efecto", "una animación de entrada o salida", "que aparezca una puerta/portal", "que el pockai desaparezca o aparezca con estilo", "un efecto para cuando evoluciona/se va/vuelve" o "más vistosidad en el escritorio". Para criaturas usa pockai-architect; para muebles y salas, pockai-habitat-architect; para prendas, pockai-accessory-architect.
+description: Diseña, dibuja y cablea efectos especiales del escritorio de PetAI con sentido de lore, como portales, puertas, apariciones, desapariciones, transiciones o destellos que acompañan a la mascota cuando hace algo (irse de visita, volver, entrar en su hábitat, evolucionar, ser invocada, recibir a un amigo). Cubre el motor de efectos procedurales en pixel art (shared/scene/src/effects), la rampa de color por Flujo del Éter, la sincronía con la mascota en PetView, el movimiento reducido, la hoja de frames para revisarlo a simple vista y, si hace falta, un concepto previo con Nano Banana. Úsala cuando el usuario pida "un efecto", "una animación de entrada o salida", "que aparezca una puerta/portal", "que el pockai desaparezca o aparezca con estilo", "un efecto para cuando evoluciona/se va/vuelve" o "más vistosidad en el escritorio". Para criaturas usa pockai-architect; para muebles y salas, pockai-habitat-architect; para prendas, pockai-accessory-architect.
 ---
 
 # Pockai Effect Architect
@@ -14,7 +14,7 @@ Diseñas lo que **pasa alrededor** de la mascota cuando hace algo importante en 
 - tener una versión quieta para `prefers-reduced-motion`.
 
 Lee las referencias cuando las necesites:
-- `references/effect-engine.md`: API de `desktop/src/lib/effects` (EffectDef, fases, `hold`, EffectPlayer, EffectLayer) y cómo se sincroniza con PetView.
+- `references/effect-engine.md`: API de `shared/scene/src/effects` (EffectDef, fases, `hold`, EffectPlayer, EffectLayer) y cómo se sincroniza con PetView.
 - `references/lore-effects.md`: qué lugar del lore encaja con cada evento, los Seis Flujos y sus rampas, y la lista de efectos hechos y pendientes.
 - `references/pixel-fx-style.md`: reglas visuales (rejilla, contorno, colores, cadencia, duración) y la checklist de la hoja de frames.
 - `references/nano-banana-effects.md`: cuándo y cómo pedir un concepto a Nano Banana, el coste y la confirmación.
@@ -46,7 +46,7 @@ En `lore-effects.md` está la lista priorizada de lo pendiente.
 ```bash
 node .claude/skills/pockai-effect-architect/scripts/check_effects.mjs
 ```
-Lista los efectos registrados, su lore, fases, duración y si tienen test y variante reducida, y avisa de lo que falte. Lee también el efecto de referencia (`desktop/src/lib/effects/portalNexo.ts`) antes de escribir uno nuevo.
+Lista los efectos registrados, su lore, fases, duración y si tienen test y variante reducida, y avisa de lo que falte. Lee también el efecto de referencia (`shared/scene/src/effects/portalNexo.ts`) antes de escribir uno nuevo.
 
 ### 2. Completar la petición
 Pregunta en **una sola tanda** y solo lo que falte, con una opción recomendada en cada pregunta:
@@ -77,8 +77,8 @@ Enseña al usuario: lore en una frase, disparador, guion por fases con la mascot
 
 ### 6. Implementar
 Sigue `integration-checklist.md`:
-1. `desktop/src/lib/effects/<nombre>.ts`: un `EffectDef` con `draw` sobre un `PixelSink`. Regístralo en `effects/index.ts`.
-2. Test `desktop/src/lib/effects/<nombre>.spec.ts` como `portalNexo.spec.ts`: duración, ≤12 colores en los siete Flujos, quieto con movimiento reducido y las comprobaciones propias del efecto.
+1. `shared/scene/src/effects/<nombre>.ts`: un `EffectDef` con `draw` sobre un `PixelSink`. Regístralo en `effects/index.ts`.
+2. Test `shared/scene/src/effects/<nombre>.spec.ts` como `portalNexo.spec.ts`: duración, ≤12 colores en los siete Flujos, quieto con movimiento reducido y las comprobaciones propias del efecto.
 3. Hoja de frames (abajo). **Mírala** y corrige hasta que pase la checklist de `pixel-fx-style.md`.
 4. Cablea con `EffectPlayer` + `<EffectLayer>`, y en `hold` mueve a la mascota (patrón de `departThroughPortal` en PetView). Si hay estado nuevo, va en `desktop/src/lib/` con su spec y un presentador, como `visitTravel.ts`.
 

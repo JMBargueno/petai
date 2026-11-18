@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseHostMessage } from './protocol';
+import { PROTOCOL_VERSION, parseHostMessage } from './protocol';
 
 describe('parseHostMessage', () => {
   it('acepta setPet como objeto o JSON y normaliza los campos opcionales', () => {
@@ -108,5 +108,22 @@ describe('parseHostMessage (sala)', () => {
       weather: { code: null, temperature: null },
       sun: null,
     });
+  });
+
+  it('v3: valida playEffect y petAction (efectos compartidos)', () => {
+    expect(PROTOCOL_VERSION).toBe(3);
+    expect(parseHostMessage({ type: 'playEffect', id: 'resonancia', params: { level: 12, kind: 'gift', bad: { x: 1 }, 'no válido': 1 } })).toEqual({
+      type: 'playEffect',
+      id: 'resonancia',
+      params: { level: 12, kind: 'gift' },
+    });
+    expect(parseHostMessage({ type: 'playEffect', id: 'Mal Id' })).toBeNull();
+    expect(parseHostMessage({ type: 'petAction', action: 'level_up', context: { level: 3 } })).toEqual({
+      type: 'petAction',
+      action: 'level_up',
+      context: { level: 3 },
+    });
+    expect(parseHostMessage({ type: 'petAction', action: 'level_up', context: [1] })).toEqual({ type: 'petAction', action: 'level_up' });
+    expect(parseHostMessage({ type: 'petAction', action: 'DROP TABLE' })).toBeNull();
   });
 });

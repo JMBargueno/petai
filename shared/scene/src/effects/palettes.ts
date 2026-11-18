@@ -36,5 +36,5 @@ export const FLOW_NAMES: Record<string, string> = {
 };
 
 export function flowPalette(element: string | null | undefined): FxPalette {
-  return FLOW_PALETTES[(element ?? '').toLowerCase()] ?? FLOW_PALETTES.neutral;
+  return FLOW_PALETTES[(element ?? '').toLowerCase()] ?? FLOW_PALETTES['neutral'];
 }
