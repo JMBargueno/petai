@@ -3,7 +3,8 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type TournamentCurrent, type TournamentStandings, type TournamentBracket } from '../lib/api';
   import { elementMeta } from '../lib/ui/maps';
-  import { AsyncState, Badge, Button, Card, EmptyState, FeatureHeader, ListRow, Notice, SectionHeader } from './ui';
+  import { AsyncState, Badge, Button, Card, ConfirmDialog, EmptyState, FeatureHeader, ListRow, Notice, SectionHeader } from './ui';
+  import { friendlyError } from '../lib/ui/errors';
 
   const dispatch = createEventDispatcher();
 
@@ -15,10 +16,13 @@
   let error = '';
   let loading = true;
   let busy = false;
+  let bracketError = false;
   let enterMsg = '';
+  /** Diálogo de confirmación de la inscripción (gasta gemas). */
+  let confirming = false;
 
   const STATUS_LABEL: Record<string, string> = {
-    entry: 'Inscripción abierta', bracket: 'Bracket en curso', active: 'En curso', finished: 'Terminado',
+    entry: 'Inscripción abierta', bracket: 'Cuadro en curso', active: 'En curso', finished: 'Terminado',
   };
 
   function statusLabel(s: string): string { return STATUS_LABEL[s] ?? s; }
@@ -28,14 +32,14 @@
     loading = true;
     error = '';
     try {
-      current = await api.getTournamentCurrent();
-      standings = await api.getTournamentStandings(20);
-      // El bracket solo existe cuando el torneo ya pasó la fase de inscripción.
+      [current, standings] = await Promise.all([api.getTournamentCurrent(), api.getTournamentStandings(20)]);
+      // El cuadro solo existe cuando el torneo ya pasó la fase de inscripción.
+      bracketError = false;
       bracket = current.status !== 'entry'
-        ? await api.getTournamentBracket().catch(() => null)
+        ? await api.getTournamentBracket().catch(() => ((bracketError = true), null))
         : null;
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo cargar el torneo.');
     } finally {
       loading = false;
     }
@@ -48,13 +52,14 @@
     enterMsg = '';
     try {
       const res = await api.tournamentEnter(pet.id);
-      enterMsg = `Inscripción confirmada (ELO ${res.elo}, cuota ${res.feePaid} gemas).`;
+      enterMsg = `Inscripción confirmada. Entras con ${res.elo} de ELO y has pagado ${res.feePaid} gemas.`;
       await load();
       dispatch('refreshUser');
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo completar la inscripción.');
     } finally {
       busy = false;
+      confirming = false;
     }
   }
 
@@ -79,16 +84,18 @@
         </div>
 
         {#if current.status === 'entry'}
-          <Notice tone="warning" icon="clock">Inscripción cierra: {new Date(current.entryDeadline).toLocaleString()}</Notice>
-          <Button variant="primary" size="lg" block loading={busy} disabled={!pet || current.hasEntered} on:click={enter}>
-            {#if pet}Inscribir a mi mascota · {current.entryFee} <Ico n="gem" />{:else}Sin mascota activa{/if}
-          </Button>
-          <p class="ui-card__hint center">Requiere ELO ≥ 1700 (liga Diamond)</p>
+          <Notice tone="warning" icon="clock">La inscripción cierra el {new Date(current.entryDeadline).toLocaleString()}</Notice>
+          {#if !current.hasEntered}
+            <p class="ui-card__hint center">Hace falta un ELO de 1700 o más (liga Diamante). Se consigue ganando en la Arena.</p>
+            <Button variant="primary" size="lg" block loading={busy} disabled={!pet} on:click={() => (confirming = true)}>
+              {#if pet}Inscribir a mi mascota · {current.entryFee} <Ico n="gem" />{:else}Sin mascota activa{/if}
+            </Button>
+          {/if}
         {/if}
 
         {#if current.hasEntered}
           <Notice tone="ok" icon="check">
-            Estás inscrito{current.myPlacement ? ` · colocación ${current.myPlacement}º` : ''}
+            Ya estás inscrito{current.myPlacement ? ` · puesto ${current.myPlacement}.º` : ''}
           </Notice>
         {/if}
       </Card>
@@ -111,18 +118,38 @@
           {#each matches as m (m.id)}
             <div class="ui-row match">
               <span class="side left">
-                {#if m.petA}<b>{m.petA.name}</b> <small>{m.petA.elo}</small> <span style="color: {elementMeta(m.petA.element).color}"><Ico n={elementMeta(m.petA.element).icon} /></span>{:else}—{/if}
+                {#if m.petA}<b title={m.petA.name}>{m.petA.name}</b> <small>{m.petA.elo}</small> <span style="color: {elementMeta(m.petA.element).color}" title={elementMeta(m.petA.element).label} role="img" aria-label={elementMeta(m.petA.element).label}><Ico n={elementMeta(m.petA.element).icon} /></span>{:else}<span class="muted">Por decidir</span>{/if}
               </span>
-              <Badge size="sm" tone={m.status === 'resolved' ? 'success' : 'neutral'}>{m.status === 'resolved' ? 'Fin' : 'vs'}</Badge>
+              <Badge size="sm" tone={m.status === 'resolved' ? 'success' : 'neutral'}>{m.status === 'resolved' || m.status === 'finished' ? 'Jugado' : 'vs'}</Badge>
               <span class="side">
-                {#if m.petB}<span style="color: {elementMeta(m.petB.element).color}"><Ico n={elementMeta(m.petB.element).icon} /></span> <b>{m.petB.name}</b> <small>{m.petB.elo}</small>{:else}—{/if}
+                {#if m.petB}<span style="color: {elementMeta(m.petB.element).color}" title={elementMeta(m.petB.element).label} role="img" aria-label={elementMeta(m.petB.element).label}><Ico n={elementMeta(m.petB.element).icon} /></span> <b title={m.petB.name}>{m.petB.name}</b> <small>{m.petB.elo}</small>{:else}<span class="muted">Por decidir</span>{/if}
               </span>
             </div>
           {/each}
         </div>
       {/each}
+      {#if bracketError}
+        <Notice tone="warning">No se pudo cargar el cuadro de enfrentamientos.
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={load}>Reintentar</Button></svelte:fragment>
+        </Notice>
+      {/if}
     {/if}
   </AsyncState>
+
+  {#if confirming && current}
+    <ConfirmDialog
+      title="Inscribirse en el torneo"
+      icon="trophy"
+      confirmLabel="Inscribirme"
+      cost={current.entryFee}
+      currency="gems"
+      loading={busy}
+      on:confirm={enter}
+      on:cancel={() => (confirming = false)}
+    >
+      <p>Inscribes a <strong>{pet?.nickname || pet?.species?.name}</strong>. La cuota no se devuelve si te eliminan o si te retiras.</p>
+    </ConfirmDialog>
+  {/if}
 </div>
 
 <style>

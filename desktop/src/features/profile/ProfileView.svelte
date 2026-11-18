@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from '../../components/ui';
   /**
    * Vista de un perfil (propio o de otro jugador): cabecera, vitrina de insignias destacadas,
    * estadísticas e insignias desbloqueadas. En el perfil propio (`own`) la vitrina se puede editar:
@@ -28,6 +29,9 @@
   /** Vitrina en edición (ids). */
   export let draftFeatured: string[] = [];
   export let saving = false;
+  /** Insignia cuyo detalle está abierto (fuera del modo edición, pulsar una insignia lo muestra). */
+  let detailId = '';
+  $: detail = badges.find((b) => b.id === detailId) ?? null;
 
   const dispatch = createEventDispatcher<{ edit: void; save: void; cancel: void; toggle: string }>();
 
@@ -76,12 +80,12 @@
         {#if own}
           <div class="ui-head__end">
             {#if editing}
-              <button class="btn btn--ghost btn--sm" on:click={() => dispatch('cancel')} disabled={saving}>Cancelar</button>
-              <button class="btn btn--primary btn--sm" on:click={() => dispatch('save')} disabled={saving}>
+              <Button variant="ghost" size="sm" on:click={() => dispatch('cancel')} disabled={saving}>Cancelar</Button>
+              <Button variant="primary" size="sm" on:click={() => dispatch('save')} disabled={saving}>
                 <Check size={14} /> {saving ? 'Guardando…' : 'Guardar'}
-              </button>
+              </Button>
             {:else if profile.badges.length > 0}
-              <button class="btn btn--ghost btn--sm" on:click={() => dispatch('edit')}><Pencil size={13} /> Editar</button>
+              <Button variant="ghost" size="sm" on:click={() => dispatch('edit')}><Pencil size={13} /> Editar</Button>
             {/if}
           </div>
         {/if}
@@ -141,15 +145,25 @@
               class="pf-badge"
               class:selectable={editing}
               class:featured={editing && isFeatured}
-              title={`${b.name} · ${TIER_LABELS[b.tier] ?? b.tier}\n${b.description}\nConseguida el ${formatDate(b.unlockedAt)}`}
+              title={editing ? (isFeatured ? 'Quitar de la vitrina' : 'Poner en la vitrina') : 'Ver detalle'}
               aria-pressed={editing ? isFeatured : undefined}
-              on:click={() => editing && dispatch('toggle', b.id)}
+              aria-expanded={editing ? undefined : detailId === b.id}
+              on:click={() => (editing ? dispatch('toggle', b.id) : (detailId = detailId === b.id ? '' : b.id))}
             >
               <Badge icon={b.badgeIcon} tier={b.tier} size={44} />
               <span class="pf-badge__name">{b.name}</span>
             </button>
           {/each}
         </div>
+        {#if detail && !editing}
+          <div class="ui-notice ui-notice--info pf-detail" role="status">
+            <div class="ui-notice__body">
+              <strong>{detail.name}</strong> · {TIER_LABELS[detail.tier] ?? detail.tier}
+              <br />{detail.description}
+              <br /><small>Conseguida el {formatDate(detail.unlockedAt)}</small>
+            </div>
+          </div>
+        {/if}
       {:else}
         <div class="ui-empty">
           <span class="ui-empty__icon"><Award size={22} /></span>

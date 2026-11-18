@@ -57,7 +57,7 @@
           <span>Descargando actualización…</span>
           <span class="progress-val">{progress !== null ? `${progress}%` : 'Preparando…'}</span>
         </div>
-        <div class="progress-track">
+        <div class="progress-track" role="progressbar" aria-label="Descarga de la actualización" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress ?? undefined}>
           <div
             class="progress-fill"
             class:indeterminate={progress === null}
@@ -71,10 +71,11 @@
     {:else if isChecking}
       <p class="muted-note">Comprobando actualización…</p>
     {:else if isError}
-      <Notice tone="error">{state.message}</Notice>
+      <Notice tone="error">No se pudo descargar o instalar la actualización. Revisa tu conexión e inténtalo de nuevo.</Notice>
       <button class="btn btn--primary block" on:click={() => retryUpdate()}>
         <RefreshCw size={16} /> Reintentar
       </button>
+      <p class="muted-note">Si sigue fallando, descarga el instalador desde pockai.world o escríbenos a contact@pockai.world.</p>
     {:else}
       <button class="btn btn--primary block" on:click={() => installUpdate()}>
         <Download size={18} /> Actualizar ahora y reiniciar

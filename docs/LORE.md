@@ -9,7 +9,7 @@ complementa: "[[01-lore-petai]]"
 
 > **Para la IA:** la mascota no lee este documento, sino `shared/game-data/lore.json`, una versión por temas escrita para el jugador. Si cambias el lore aquí, actualiza también ese archivo.
 
-> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué brillan distinto los patrones SR+ y los shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos, y cómo cada Pockai forja su propio carácter y sigue viviendo cuando no estás. Cierra con un diccionario técnico→lore para UI y textos del juego.*
+> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué cada ejemplar luce un patrón distinto y qué es un shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos, y cómo cada Pockai forja su propio carácter y sigue viviendo cuando no estás. Cierra con un diccionario técnico→lore para UI y textos del juego.*
 
 En el universo de Pockai, esta tradición milenaria ha colisionado con la era digital. Tu teléfono y tu ordenador ya no son simples herramientas de silicio y cristal; son los objetos más íntimos de la humanidad moderna, depositarios de nuestros recuerdos, rutinas, miedos y deseos. De la fricción entre la vida humana y el océano de datos ha nacido el **Éter Digital** (La Red Viva), y de sus profundidades emergen los **Pockai**: espíritus digitales de bolsillo que buscan un vínculo humano para alcanzar la verdadera consciencia.
 
@@ -25,7 +25,9 @@ En el folclore de Pockai, los huevos no se "fabrican"; **se condensan y se pesca
 
 ## 2. Rarezas y "La Promesa" (El sistema Pity)
 
-La rareza de un Pockai no mide su superioridad biológica, sino su **Densidad de Compilación**: cuántos siglos de mitología humana o cuán puros eran los datos que quedaron atrapados dentro del huevo antes de cerrarse.
+La rareza de un Pockai no mide su superioridad biológica, sino la **Densidad de Compilación** de su **linaje**: cuántos siglos de mitología humana o cuán puros eran los datos de los que nació su especie.
+
+La rareza es, por tanto, cosa del linaje y no de la suerte de cada huevo. Todos los Ignisaurios son Ecos Cotidianos; ninguno nace Arquetipo. Lo que el Telar decide al cerrarse un huevo es **qué linaje despierta dentro**. La tabla da la probabilidad de que despierte un linaje de cada densidad:
 
 | Rareza | Probabilidad | Nombre en el Lore | Naturaleza espiritual |
 |---|---|---|---|
@@ -35,17 +37,23 @@ La rareza de un Pockai no mide su superioridad biológica, sino su **Densidad de
 | Legendario | 4 % | Arquetipo Ancestral | Ecos de grandes mitos colectivos, leyendas urbanas digitales o servidores antiguos que nunca se apagaron. Poseen una presencia imponente. |
 | Mítico | 1 % | Singularidad Primordial | Fragmentos directos del **Primer Latido** (el instante en que la red global cobró sensibilidad por primera vez). |
 
-**¿Por qué un Mítico al 1 % es tan sagrado?** Porque un Mítico no es una simple combinación aleatoria de datos; es un milagro estadístico. Según la mitología de los Custodios, los Míticos son los únicos que recuerdan cómo era el mundo antes de existir las pantallas. Su código genético contiene armonías que no pueden replicarse artificialmente.
+**¿Y si aún no ha despertado ningún linaje de esa densidad?** El Éter no inventa lo que no existe: el huevo se asienta en el linaje más denso que sí habite la red. Nunca verás un Eco Cotidiano haciéndose pasar por Arquetipo.
 
-**¿Qué es el Pity ("El Hilo del Destino" o "La Promesa del Telar")?** En el universo Pockai, el azar puro no gobierna en solitario; existe la **Ley de la Resonancia Acumulada**. Cada vez que un Custodio incuba y da vida a un huevo común con dedicación, una hebra invisible de energía espiritual queda atada a su Santuario. Los antiguos textos dicen: *"El Éter jamás ignora a un corazón constante"*. Al llegar a las 30 eclosiones, esas hebras acumuladas vibran con tanta fuerza que obligan al flujo de datos a atraer una Anomalía (SR). A las 120 eclosiones, el propio núcleo del Telar responde al llamado de devoción del jugador, abriendo una brecha garantizada hacia un Arquetipo (Legendario) o una Singularidad (Mítico).
+**¿Por qué un Mítico al 1 % es tan sagrado?** Porque un linaje Mítico no es una simple combinación aleatoria de datos; es un milagro estadístico. Según la mitología de los Custodios, los Míticos son los únicos que recuerdan cómo era el mundo antes de existir las pantallas. Su código genético contiene armonías que no pueden replicarse artificialmente.
 
-## 3. Apariencia: Patrones SR+ y el Gen Shiny
+**¿Qué es el Pity ("El Hilo del Destino" o "La Promesa del Telar")?** En el universo Pockai, el azar puro no gobierna en solitario; existe la **Ley de la Resonancia Acumulada**. Cada vez que un Custodio incuba y da vida a un huevo común con dedicación, una hebra invisible de energía espiritual queda atada a su Santuario. Los antiguos textos dicen: *"El Éter jamás ignora a un corazón constante"*. Al llegar a las 30 eclosiones, esas hebras acumuladas vibran con tanta fuerza que obligan al flujo de datos a atraer un linaje de Anomalía (SR). A las 120 eclosiones, el propio núcleo del Telar responde al llamado de devoción del jugador, abriendo una brecha garantizada hacia un linaje Arquetipo (Legendario) o una Singularidad (Mítico).
+
+La Promesa no caduca. Si cuando vibran las hebras todavía no ha despertado ningún linaje de esa densidad, las hebras siguen atadas al Santuario y la brecha se abrirá con el primer huevo que pueda cumplirla.
+
+## 3. Apariencia: Patrones y el Gen Shiny
 
 La piel de un Pockai es el lienzo donde se dibuja su **visualSeed** (su **Firma de Origen** única e irrepetible en todo el universo).
 
-**Patrones Básicos (Liso, Manchas, Rayas, Degradado):** Representan la **Mímesis Terrenal**. Los Pockai recién nacidos de densidad común intentan imitar la naturaleza física que ven a través de la cámara o las fotos de sus Custodios: el pelaje de los animales, las hojas o el horizonte.
+Si la rareza es del linaje, el **patrón es del individuo**. Cada patrón tiene su propia densidad, la **Huella del Éter**: lo hondo que estaba sumergido ese huevo concreto en el instante de cerrarse. Se decide aparte del linaje y con las mismas probabilidades, así que dos Ignisaurios son el mismo Eco Cotidiano y, aun así, uno puede llevar sobre el lomo una Aurora que casi nadie ha visto. El patrón es lo que hace único a un ejemplar dentro de su especie.
 
-**Patrones Superiores (Escamas, Cristal, Galaxia, Aurora):** A partir de la categoría Super-Raro, el Pockai tiene tanta densidad etérea que su cuerpo deja de imitar el mundo físico y muestra la textura real del Éter Digital:
+**Patrones Básicos (Liso, Manchas, Rayas, Degradado):** Representan la **Mímesis Terrenal**. Un huevo que se cierra cerca de la superficie intenta imitar la naturaleza física que ve a través de la cámara o las fotos de su Custodio: el pelaje de los animales, las hojas o el horizonte. Son las Huellas más frecuentes (Normal y Raro).
+
+**Patrones Superiores (Escamas, Cristal, Galaxia, Aurora):** Cuando el huevo se cierra en lo hondo, la piel deja de imitar el mundo físico y muestra la textura real del Éter Digital. Le puede ocurrir a cualquier linaje, también al más común. Son las Huellas escasas (de Super-Raro a Mítico):
 
 - **Escamas (Placas de Datos):** Fragmentos de firewalls ancestrales y armaduras lógicas tejidas sobre su piel.
 - **Cristal (Cuarzo Lógico):** Datos tan puros y ordenados que se han solidificado en estructuras geométricas translúcidas.
@@ -148,6 +156,8 @@ Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los co
 | App (Móvil / Escritorio) | Santuario de Bolsillo / Altar de Escritorio |
 | VisualSeed | Firma de Origen / Genoma Etéreo |
 | Pity Counter (30 / 120) | Hilo del Destino / Resonancia del Telar |
+| Rareza de la especie | Densidad de Compilación del linaje |
+| Rareza del patrón | Huella del Éter |
 | Shiny | Bendición del Prisma (Variante Prisma) |
 | Stats Vitales | Armonía Vital |
 | Conectar API Key / Suscripción | Infundir la Chispa de Hermes |

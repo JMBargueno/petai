@@ -4,7 +4,8 @@
   import { api, type BattleResponse, type BattleSummary, type CombatProfile, type LeaderboardEntry } from '../lib/api';
   import ReplayViewer from './ReplayViewer.svelte';
   import { elementMeta } from '../lib/ui/maps';
-  import { Badge, Button, Card, EmptyState, ListRow, Notice, SectionHeader, Segmented, Skeleton } from './ui';
+  import { Badge, Button, Card, ConfirmDialog, EmptyState, ListRow, Notice, SectionHeader, Segmented, Skeleton } from './ui';
+  import { friendlyError } from '../lib/ui/errors';
 
   export let pet: any = null;
 
@@ -69,15 +70,24 @@
     }
   });
 
+  // Errores de carga de cada vista: sin ellos el esqueleto se quedaba para siempre.
+  let profileError = '';
+  let historyError = '';
+  let boardError = '';
+  let savingStrategy = false;
+  let confirmPoints = false;
+
   async function loadProfile() {
     if (!pet) return;
+    profileError = '';
     try {
       profile = await api.getCombatProfile(pet.id);
       draft = {};
       equipDraft = [...profile.equippedSkills];
       error = '';
     } catch (e: any) {
-      error = e.message;
+      if (profile) error = friendlyError(e, 'No se pudo actualizar el perfil de combate.');
+      else profileError = friendlyError(e, 'No se pudo cargar el perfil de combate.');
     }
   }
 
@@ -97,10 +107,11 @@
       error = '';
       dispatch('refreshPet');
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudieron repartir los puntos.');
       await loadProfile();
     } finally {
       busy = false;
+      confirmPoints = false;
     }
   }
 
@@ -117,7 +128,7 @@
       equipDraft = [...profile.equippedSkills];
       error = '';
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudieron guardar las habilidades.');
     } finally {
       busy = false;
     }
@@ -125,13 +136,19 @@
 
   async function changeStrategy(e: Event) {
     if (!pet) return;
-    const value = (e.currentTarget as HTMLSelectElement).value;
+    const select = e.currentTarget as HTMLSelectElement;
+    const value = select.value;
+    savingStrategy = true;
     try {
       await api.setStrategy(pet.id, value);
       if (profile) profile = { ...profile, strategy: value };
       error = '';
     } catch (err: any) {
-      error = err.message;
+      // No se guardó: el desplegable vuelve a la estrategia que sigue activa.
+      select.value = profile?.strategy ?? value;
+      error = friendlyError(err, 'No se pudo cambiar la estrategia.');
+    } finally {
+      savingStrategy = false;
     }
   }
 
@@ -159,12 +176,13 @@
   }
 
   async function loadHistory() {
+    historyError = '';
     try {
       history = await api.getBattles(20);
       historyLoaded = true;
       error = '';
     } catch (e: any) {
-      error = e.message;
+      historyError = friendlyError(e, 'No se pudo cargar el historial.');
     }
   }
 
@@ -176,16 +194,17 @@
       last = null;
       view = 'fight';
     } catch (e: any) {
-      error = e.message;
+      historyError = friendlyError(e, 'No se pudo cargar la repetición.');
     }
   }
 
   async function loadBoard() {
+    boardError = '';
     try {
       board = await api.getLeaderboard(scope, pet?.id);
       error = '';
     } catch (e: any) {
-      error = e.message;
+      boardError = friendlyError(e, 'No se pudo cargar la clasificación.');
     }
   }
 
@@ -282,13 +301,13 @@
                 {#if draft[s.key]}<em>+{draft[s.key]}</em>{/if}
               </span>
               {#if profile.statPoints > 0}
-                <Button size="sm" iconOnly label="Quitar punto" disabled={!(draft[s.key] > 0)} on:click={() => bump(s.key, -1)}>−</Button>
-                <Button size="sm" iconOnly label="Añadir punto" disabled={pointsLeft <= 0} on:click={() => bump(s.key, 1)}>+</Button>
+                <Button size="sm" iconOnly label="Quitar un punto de {s.label}" disabled={!(draft[s.key] > 0)} on:click={() => bump(s.key, -1)}>−</Button>
+                <Button size="sm" iconOnly label="Añadir un punto a {s.label}" disabled={pointsLeft <= 0} on:click={() => bump(s.key, 1)}>+</Button>
               {/if}
             </div>
           {/each}
           {#if draftTotal > 0}
-            <Button variant="primary" block loading={busy} on:click={applyPoints}>Aplicar {draftTotal} puntos</Button>
+            <Button block loading={busy} on:click={() => (confirmPoints = true)}>Aplicar {draftTotal} {draftTotal === 1 ? 'punto' : 'puntos'}</Button>
           {:else if profile.statPoints === 0}
             <p class="ui-card__hint">Ganas 3 puntos por nivel para repartir.</p>
           {/if}
@@ -296,7 +315,7 @@
 
         <!-- Estrategia y habilidades -->
         <Card title="Estrategia" icon="brain">
-          <select class="select" value={profile.strategy} on:change={changeStrategy}>
+          <select class="select" aria-label="Estrategia de combate" aria-busy={savingStrategy || undefined} disabled={savingStrategy} value={profile.strategy} on:change={changeStrategy}>
             {#each STRATEGIES as st}<option value={st.id}>{st.label}</option>{/each}
           </select>
 
@@ -316,7 +335,7 @@
           </div>
           {#if !equipHasAttack}<Notice tone="warning">Equipa al menos un ataque.</Notice>{/if}
           {#if equipDirty}
-            <Button variant="primary" block loading={busy} disabled={!equipHasAttack || equipDraft.length === 0} on:click={saveSkills}>Guardar habilidades</Button>
+            <Button block loading={busy} disabled={!equipHasAttack || equipDraft.length === 0} on:click={saveSkills}>Guardar habilidades</Button>
           {/if}
           {#if skills.length > 0}
             {@const locked = skills.filter((s) => (s.element === 'neutral' || s.element === profile.element) && s.unlockLevel > profile.level)}
@@ -336,25 +355,34 @@
             {/if}
           {/if}
         </Card>
+      {:else if profileError}
+        <Notice tone="error">{profileError}
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadProfile}>Reintentar</Button></svelte:fragment>
+        </Notice>
       {:else}
         <Skeleton rows={3} height={80} />
       {/if}
 
     <!-- ======================= HISTORIAL ======================= -->
     {:else if view === 'history'}
+      {#if historyError}
+        <Notice tone="error">{historyError}
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadHistory}>Reintentar</Button></svelte:fragment>
+        </Notice>
+      {/if}
       {#if !historyLoaded}
-        <Skeleton rows={4} />
+        {#if !historyError}<Skeleton rows={4} />{/if}
       {:else if history.length === 0}
         <EmptyState icon="swords" text="Aún no hay peleas. ¡Busca tu primer rival!" />
       {:else}
         <SectionHeader title="Últimas peleas" icon="log" count={history.length} />
-        <div class="ui-list">
+        <div class="ui-list ui-list--scroll history-list">
           {#each history as b (b.id)}
             <button class="ui-row fight-row {b.outcome}" on:click={() => openReplay(b)}>
-              <span class="ui-row__lead outcome">{b.outcome === 'win' ? 'V' : b.outcome === 'loss' ? 'D' : 'E'}</span>
+              <span class="ui-row__lead outcome" role="img" aria-label={OUTCOME[b.outcome] ?? b.outcome} title={OUTCOME[b.outcome] ?? b.outcome}>{b.outcome === 'win' ? 'V' : b.outcome === 'loss' ? 'D' : 'E'}</span>
               <span class="ui-row__body">
                 <span class="ui-row__title">{b.role === 'defender' ? 'Te retó ' : 'vs '}{b.opponent.name}</span>
-                <span class="ui-row__sub">Nv. {b.opponent.level}{b.opponent.isBot ? ' · bot' : ''} · {fmtDate(b.createdAt)}</span>
+                <span class="ui-row__sub">Nv. {b.opponent.level}{b.opponent.isBot ? ' · rival fantasma' : ''} · {fmtDate(b.createdAt)}</span>
               </span>
               <span class="ui-row__value delta" class:pos={b.eloDelta > 0} class:neg={b.eloDelta < 0}>{b.eloDelta ? sign(b.eloDelta) : '–'}</span>
             </button>
@@ -388,14 +416,27 @@
             <EmptyState compact icon="medal" text="Todavía no hay peleas en esta clasificación." />
           {/each}
         </div>
+      {:else if boardError}
+        <Notice tone="error">{boardError}
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadBoard}>Reintentar</Button></svelte:fragment>
+        </Notice>
       {:else}
         <Skeleton rows={5} />
       {/if}
     {/if}
   {/if}
+
+  {#if confirmPoints}
+    <ConfirmDialog title="Repartir puntos" icon="chart" confirmLabel="Aplicar" loading={busy} on:confirm={applyPoints} on:cancel={() => (confirmPoints = false)}>
+      <p>Vas a repartir <strong>{draftTotal} {draftTotal === 1 ? 'punto' : 'puntos'}</strong>. Una vez aplicados no se pueden mover a otra estadística.</p>
+    </ConfirmDialog>
+  {/if}
 </div>
 
 <style>
+  .history-list {
+    max-height: 360px;
+  }
   .center {
     text-align: center;
   }

@@ -26,6 +26,17 @@
     hideTimer = setTimeout(dismiss, HIDE_MS);
   }
 
+  /** Con el ratón encima o el foco dentro no se cierra solo: da tiempo a leerlo. */
+  function hold() {
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = null;
+  }
+  function release() {
+    if (!visible) return;
+    hold();
+    hideTimer = setTimeout(dismiss, HIDE_MS);
+  }
+
   function dismiss() {
     if (hideTimer) clearTimeout(hideTimer);
     hideTimer = null;
@@ -40,15 +51,15 @@
 
 <div role="status" aria-live="polite">
 {#if visible && shown}
-  <button type="button" class="toast" on:click={dismiss}>
+  <button type="button" class="toast" title="Cerrar" on:click={dismiss} on:mouseenter={hold} on:mouseleave={release} on:focus={hold} on:blur={release}>
     <Badge icon={shown.badgeIcon ?? 'trophy'} tier={shown.tier} size={48} />
     <span class="toast__body">
       <span class="toast__title">¡Insignia desbloqueada!</span>
       <span class="toast__name">{shown.name}</span>
       <span class="toast__reward">
-        {#if shown.reward.coins > 0}<span>+{shown.reward.coins} <Ico n="coin" /></span>{/if}
-        {#if shown.reward.gems > 0}<span>+{shown.reward.gems} <Ico n="gem" /></span>{/if}
-        {#if shown.reward.xp > 0}<span>+{shown.reward.xp} <Ico n="xp" /></span>{/if}
+        {#if shown.reward.coins > 0}<span>+{shown.reward.coins} <Ico n="coin" /><span class="sr-only"> monedas</span></span>{/if}
+        {#if shown.reward.gems > 0}<span>+{shown.reward.gems} <Ico n="gem" /><span class="sr-only"> gemas</span></span>{/if}
+        {#if shown.reward.xp > 0}<span>+{shown.reward.xp} <Ico n="xp" /><span class="sr-only"> de experiencia</span></span>{/if}
         {#if shown.reward.itemId}<span class="toast__item">+ Objeto exclusivo</span>{/if}
       </span>
     </span>

@@ -52,13 +52,13 @@ async function main() {
       update: {
         name: pat.name,
         description: pat.description,
-        minRarity: pat.minRarity,
+        rarity: pat.rarity,
       },
       create: {
         id: pat.id,
         name: pat.name,
         description: pat.description,
-        minRarity: pat.minRarity,
+        rarity: pat.rarity,
       },
     });
   }
@@ -137,12 +137,15 @@ async function main() {
       gems: 25,
       // Nickname fijo: si ya lo tiene, reescribir el mismo valor no choca con el trigger de inmutabilidad.
       handle: 'entrenador_demo',
+      // Verificado: sin esto el escritorio se queda en «Verifica tu correo».
+      emailVerifiedAt: new Date(),
     },
     create: {
       email: demoEmail,
       passwordHash,
       displayName: 'Entrenador Demo',
       handle: 'entrenador_demo',
+      emailVerifiedAt: new Date(),
       coins: 500,
       gems: 25,
       pityCounter: {

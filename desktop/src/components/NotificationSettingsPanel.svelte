@@ -33,6 +33,10 @@
   let prefs: Prefs = { ...DEFAULTS };
   let loading = true;
   let saving = false;
+  let loadFailed = false;
+  /** Valor del deslizador mientras se arrastra (se guarda al soltar). */
+  let draftMax: number | null = null;
+  let confirmClear = false;
   let notice = '';
   let noticeOk = true;
 
@@ -44,12 +48,14 @@
 
   async function refresh() {
     loading = true;
+    loadFailed = false;
     try {
       const me = await api.getMe();
       // `null` ⇒ defaults; si existe, el servidor ya devuelve el objeto resuelto.
       prefs = me.notificationPrefs ? { ...DEFAULTS, ...me.notificationPrefs } : { ...DEFAULTS };
     } catch {
-      /* sin sesión o error: se conservan los defaults */
+      // No se enseñan los valores por defecto como si fueran los guardados.
+      loadFailed = true;
     } finally {
       loading = false;
     }
@@ -60,7 +66,7 @@
     try {
       await api.updateMe({ notificationPrefs: { [key]: value } });
       prefs = { ...prefs, [key]: value };
-      flash('Preferencia guardada');
+      flash('Guardado');
     } catch {
       prefs = { ...prefs };
       flash('No se pudo guardar', false);
@@ -75,30 +81,32 @@
     try {
       await api.updateMe({ notificationPrefs: { maxPerDay: value } });
       prefs = { ...prefs, maxPerDay: value };
-      flash(`Máximo ${value}/día`);
+      flash(`Como mucho ${value} ${value === 1 ? 'aviso' : 'avisos'} al día`);
     } catch {
       flash('No se pudo guardar', false);
     } finally {
       saving = false;
+      draftMax = null;
     }
   }
 
   onMount(refresh);
 </script>
 
-<div class="ui-stack" aria-label="Ajustes de notificaciones">
+<div class="ui-stack" role="group" aria-label="Ajustes de notificaciones">
   <SectionHeader title="Notificaciones" icon="bell">
     <svelte:fragment slot="end">
-      {#if $unreadCount > 0}
-        <Button variant="ghost" size="sm" title="Marcar todo como leído" on:click={() => markAllRead()}>
-          <Badge tone="danger" size="sm">{$unreadCount} sin leer</Badge>
-        </Button>
-      {/if}
+      {#if $unreadCount > 0}<Badge tone="danger" size="sm">{$unreadCount} sin leer</Badge>{/if}
     </svelte:fragment>
   </SectionHeader>
 
   {#if loading}
     <Skeleton rows={5} height={46} />
+  {:else if loadFailed}
+    <Notice tone="error">
+      No se pudieron cargar tus preferencias de avisos.
+      <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={refresh}>Reintentar</Button></svelte:fragment>
+    </Notice>
   {:else}
     <div class="ui-list">
       {#each CATEGORIES as c (c.key)}
@@ -108,7 +116,7 @@
 
     <Card size="sm" variant="flat">
       <label class="slider" for="maxday">
-        <span class="ui-progress-label"><span>Máximo por día</span><span>{prefs.maxPerDay}</span></span>
+        <span class="ui-progress-label"><span>Avisos al día, como mucho</span><span>{draftMax ?? prefs.maxPerDay}</span></span>
         <input
           id="maxday"
           type="range"
@@ -116,6 +124,7 @@
           max="10"
           step="1"
           value={prefs.maxPerDay}
+          on:input={(e) => (draftMax = Number((e.target as HTMLInputElement).value))}
           on:change={(e) => setMaxPerDay(Number((e.target as HTMLInputElement).value))}
           disabled={saving}
         />
@@ -128,8 +137,13 @@
   <SectionHeader title="Bandeja" icon="note" count={$inbox.length}>
     <svelte:fragment slot="end">
       {#if $inbox.length > 0}
-        <Button variant="ghost" size="sm" icon="check" on:click={() => markAllRead()}>Leídas</Button>
-        <Button variant="ghost" size="sm" icon="trash" on:click={() => clearInbox()}>Limpiar</Button>
+        {#if confirmClear}
+          <Button variant="danger" size="sm" on:click={() => { clearInbox(); confirmClear = false; }}>Borrar todos</Button>
+          <Button variant="ghost" size="sm" on:click={() => (confirmClear = false)}>No</Button>
+        {:else}
+          {#if $unreadCount > 0}<Button variant="ghost" size="sm" icon="check" on:click={() => markAllRead()}>Marcar leídos</Button>{/if}
+          <Button variant="ghost" size="sm" icon="trash" on:click={() => (confirmClear = true)}>Vaciar</Button>
+        {/if}
       {/if}
     </svelte:fragment>
   </SectionHeader>

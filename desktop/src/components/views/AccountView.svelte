@@ -2,7 +2,7 @@
   /** Ajustes › Cuenta: datos del jugador y cerrar sesión. */
   import { createEventDispatcher } from 'svelte';
   import SocialAvatar from '../SocialAvatar.svelte';
-  import { Badge, Button, Card, CurrencyPill, ListRow } from '../ui';
+  import { Badge, Button, Card, ListRow } from '../ui';
 
   export let user: any;
 
@@ -27,15 +27,14 @@
         <svelte:fragment slot="end"><Badge>@{user.handle}</Badge></svelte:fragment>
       </ListRow>
     {/if}
-    <ListRow icon="coin" iconTint="var(--color-sunburst)" title="Monedas">
-      <svelte:fragment slot="end"><CurrencyPill kind="coins" amount={user.coins} /></svelte:fragment>
-    </ListRow>
-    <ListRow icon="gem" iconTint="var(--color-electric-blue)" title="Gemas">
-      <svelte:fragment slot="end"><CurrencyPill kind="gems" amount={user.gems} /></svelte:fragment>
-    </ListRow>
+    {#if user.email}
+      <ListRow icon="note" title="Correo" sub={user.email} />
+    {/if}
   </div>
 
-  <Button variant="danger" block icon="logout" on:click={() => dispatch('logout')}>Cerrar sesión</Button>
+  <!-- Cerrar sesión no borra nada: es una acción normal, no de peligro -->
+  <Button block icon="logout" on:click={() => dispatch('logout')}>Cerrar sesión</Button>
+  <p class="form-hint">Tu Pockai y tu progreso se quedan guardados en tu cuenta.</p>
 </div>
 
 <style>

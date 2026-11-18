@@ -14,7 +14,7 @@
   <div class="auth-hero">
     <div class="auth-halo"><PockaiMark size={72} /></div>
     <span class="eyebrow">{eyebrow}</span>
-    <h3 class="display auth-title">{title}</h3>
+    <h2 class="display auth-title">{title}</h2>
     {#if $$slots.subtitle}<p class="auth-subtitle"><slot name="subtitle" /></p>{/if}
   </div>
   <slot />

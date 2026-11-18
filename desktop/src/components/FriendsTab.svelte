@@ -5,8 +5,10 @@
   import { pendingFriends, acceptedFriends, presenceState, friendPetLabel, type PresenceState } from '../lib/visitors';
   import { handleFormatError, normalizeHandle } from '../lib/handle';
   import SocialAvatar from './SocialAvatar.svelte';
+  import { friendlyError } from '../lib/ui/errors';
+  import { Button, Notice } from './ui';
   import UserProfileModal from '../features/profile/UserProfileModal.svelte';
-  import { UserPlus, Check, X, Home, RefreshCw, Users, AlertCircle, CircleCheck, Send, IdCard } from 'lucide-svelte';
+  import { UserPlus, Check, X, Home, RefreshCw, Users, Send } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher<{ visit: string }>();
 
@@ -39,7 +41,7 @@
       friends = await api.getCoopFriends();
       await loadPresence();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       loading = false;
     }
@@ -69,7 +71,7 @@
       ok = `Ahora sois amigos con ${f.otherDisplayName}.`;
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -84,7 +86,7 @@
       ok = `Petición de ${f.otherDisplayName} rechazada.`;
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -109,7 +111,7 @@
       requestHandle = '';
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -133,14 +135,14 @@
         bind:value={requestHandle}
         disabled={busy === 'request'}
       />
-      <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'request' || !requestHandle.trim()}>
+      <Button variant="primary" size="sm" type="submit" disabled={busy === 'request' || !requestHandle.trim()}>
         <Send size={14} /> {busy === 'request' ? 'Enviando…' : 'Pedir'}
-      </button>
+      </Button>
     </div>
   </form>
 
-  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+  {#if error}<Notice tone="error" dismissible on:dismiss={() => (error = '')}>{error}</Notice>{/if}
+  {#if ok}<Notice tone="ok">{ok}</Notice>{/if}
 
   {#if loading && !friends.length}
     <div class="ui-loading" aria-label="Cargando amigos">
@@ -164,12 +166,12 @@
               <span class="ui-row__sub">Quiere ser tu amigo · {friendPetLabel(f)}</span>
             </button>
             <div class="ui-row__actions">
-              <button class="btn btn--icon ui-ibtn ui-ibtn--ok" title="Aceptar" aria-label="Aceptar a {f.otherDisplayName}" disabled={!!busy} on:click={() => accept(f)}>
+              <Button class="ui-ibtn ui-ibtn--ok" iconOnly label="Aceptar a {f.otherDisplayName}" title="Aceptar" disabled={!!busy} on:click={() => accept(f)}>
                 <Check size={16} />
-              </button>
-              <button class="btn btn--ghost btn--icon ui-ibtn ui-ibtn--no" title="Rechazar" aria-label="Rechazar a {f.otherDisplayName}" disabled={!!busy} on:click={() => decline(f)}>
+              </Button>
+              <Button variant="ghost" class="ui-ibtn ui-ibtn--no" iconOnly label="Rechazar a {f.otherDisplayName}" title="Rechazar" disabled={!!busy} on:click={() => decline(f)}>
                 <X size={16} />
-              </button>
+              </Button>
             </div>
           </div>
         {/each}
@@ -208,22 +210,12 @@
             <span class="ui-row__sub">{friendPetLabel(f)}</span>
           </button>
           {#if st === 'online'}<span class="chip ui-chip ui-chip--online">En línea</span>{/if}
-          <button
-            class="btn btn--ghost btn--icon ui-ibtn"
-            title="Perfil de {f.otherDisplayName}"
-            aria-label="Ver perfil de {f.otherDisplayName}"
-            on:click={() => (profileOf = f.otherUserId)}
-          >
-            <IdCard size={16} />
-          </button>
-          <button
-            class="btn btn--ghost btn--icon ui-ibtn"
-            title="Visitar a {f.otherDisplayName}"
-            aria-label="Visitar a {f.otherDisplayName}"
+          <Button variant="ghost" class="ui-ibtn" iconOnly label="Visitar a {f.otherDisplayName}" title="Visitar a {f.otherDisplayName}"
+           
             on:click={() => dispatch('visit', f.otherUserId)}
           >
             <Home size={16} />
-          </button>
+          </Button>
         </div>
       {:else}
         <div class="ui-empty">

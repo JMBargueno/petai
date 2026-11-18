@@ -3,6 +3,7 @@
   import {
     skillAuthorizations,
     toggleSkillAuthorization,
+    skillSyncFailed,
     syncSkillsFromBackend,
     isSkillUnlocked,
     getPetBonding,
@@ -104,6 +105,9 @@
     title="Habilidades"
     sub="Tu mascota aprende nuevas capacidades según su vínculo e inteligencia. Autoriza cuáles permites que use en tu pantalla."
   />
+  {#if $skillSyncFailed}
+    <Notice tone="warning">El cambio se ha guardado en este equipo, pero no se pudo enviar al servidor. Se reintentará la próxima vez que cambies una habilidad.</Notice>
+  {/if}
 
   <Segmented
     bind:value={activeCategory}
@@ -277,6 +281,10 @@
     flex-shrink: 0;
   }
   .toggle {
+    min-width: var(--hit-min);
+    min-height: var(--control-h-icon);
+    display: grid;
+    place-items: center;
     padding: var(--space-1);
     border: none;
     background: none;

@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { PockaiSprite, PockaiState } from '../../shared/ui/pockai-sprite';
 import { Sticker } from '../../shared/ui/sticker';
-import { RARITY_ODDS, SHINY_PROBABILITY, SPECIES } from '../content';
+import { ofRolledRarity, PATTERNS, RARITY_ODDS, SHINY_PROBABILITY, SPECIES } from '../content';
 
 /** Fuente de azar de la demo (0 ≤ n < 1). Los tests la sustituyen por una secuencia fija. */
 export const DEMO_RANDOM = new InjectionToken<() => number>('DEMO_RANDOM', {
@@ -24,8 +24,9 @@ const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
 /**
  * Demo jugable: tocar un huevo hasta que eclosiona y cuidar al pockai que sale.
- * Todo ocurre en el navegador. La rareza se sortea con las probabilidades reales del juego,
- * pero en el juego de verdad esa tirada la hace el servidor.
+ * Todo ocurre en el navegador, con las probabilidades y las reglas reales del juego: una tirada
+ * decide la especie (la rareza es de la especie) y otra, aparte, el patrón del ejemplar. En el juego
+ * de verdad esas tiradas las hace el servidor.
  */
 @Component({
   selector: 'app-pet-demo',
@@ -40,7 +41,7 @@ export class PetDemo {
 
   protected readonly tapsToHatch = TAPS_TO_HATCH;
   readonly taps = signal(0);
-  readonly pet = signal<{ name: string; spriteKey: string; rarity: string; shiny: boolean } | null>(null);
+  readonly pet = signal<{ name: string; spriteKey: string; rarity: string; pattern: string; patternRarity: string; shiny: boolean } | null>(null);
   readonly state = signal<PockaiState>('idle');
   readonly hunger = signal(60);
   readonly happiness = signal(60);
@@ -73,21 +74,39 @@ export class PetDemo {
     if (this.taps() >= TAPS_TO_HATCH) this.hatch();
   }
 
-  private hatch() {
+  /** Tirada de rareza con las probabilidades del juego. */
+  private rollRarity() {
     const roll = this.random();
     let limit = 0;
-    const rarity = RARITY_ODDS.find((r) => roll < (limit += r.probability)) ?? RARITY_ODDS[0];
-    const species = SPECIES[Math.floor(this.random() * SPECIES.length)];
+    return RARITY_ODDS.find((r) => roll < (limit += r.probability)) ?? RARITY_ODDS[0];
+  }
+
+  private pick<T>(items: T[]): T {
+    return items[Math.min(items.length - 1, Math.floor(this.random() * items.length))];
+  }
+
+  private hatch() {
+    // La rareza es de la especie: la tirada decide qué especie sale, no etiqueta al ejemplar.
+    const species = this.pick(ofRolledRarity(SPECIES, this.rollRarity().id));
+    // El patrón tiene su propia rareza y su propia tirada.
+    const pattern = this.pick(ofRolledRarity(PATTERNS, this.rollRarity().id));
     const shiny = this.random() < SHINY_PROBABILITY;
 
-    this.pet.set({ name: species.name, spriteKey: species.spriteKey, rarity: rarity.name, shiny });
+    this.pet.set({
+      name: species.name,
+      spriteKey: species.spriteKey,
+      rarity: species.rarity,
+      pattern: pattern.name,
+      patternRarity: pattern.rarity,
+      shiny,
+    });
     this.hunger.set(60);
     this.happiness.set(60);
     this.react('happy');
     this.message.set(
       shiny
-        ? $localize`:@@demo.hatched.shiny:¡Ha salido ${species.name}:NAME:, ${rarity.name}:RARITY: y shiny!`
-        : $localize`:@@demo.hatched:¡Ha salido ${species.name}:NAME:, ${rarity.name}:RARITY:!`,
+        ? $localize`:@@demo.hatched.shiny:¡Ha salido ${species.name}:NAME:, ${species.rarity}:RARITY:, con patrón ${pattern.name}:PATTERN: (${pattern.rarity}:PRARITY:) y además shiny!`
+        : $localize`:@@demo.hatched:¡Ha salido ${species.name}:NAME:, ${species.rarity}:RARITY:, con patrón ${pattern.name}:PATTERN: (${pattern.rarity}:PRARITY:)!`,
     );
   }
 

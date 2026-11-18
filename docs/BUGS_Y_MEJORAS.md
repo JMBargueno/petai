@@ -38,6 +38,12 @@
 | G3 | Tarjetas compartibles (usuario / Pockai) | Diseño | P3 | ❓ | |
 | G4 | Intercambio de Pockais (nombre de lore) | Diseño | P3 | ❓ | |
 | M1 | Tareas Android | Mobile | — | ❓ | |
+| D6 | Eliminar a un amigo y cancelar una petición enviada (falta endpoint) | Desktop / Backend | P2 | [ ] | |
+| D7 | Borrar la cuenta desde Ajustes › Cuenta (falta endpoint) | Desktop / Backend | P2 | [ ] | |
+| D8 | Torneo: mostrar quién ganó cada enfrentamiento (el cuadro no identifica a los participantes) | Desktop / Backend | P2 | [ ] | |
+| D9 | Entrenamiento: recuperar corazones y piso al retomar una sesión (falta endpoint de estado) | Desktop / Backend | P2 | [ ] | |
+| D10 | Minijuegos: el listado no informa del coste de energía | Desktop / Backend | P3 | [ ] | |
+| D11 | Convertir a `<Button>` los botones que aún llevan estilos locales (21) | Desktop | P3 | [ ] | |
 
 ## Orden de ataque sugerido
 

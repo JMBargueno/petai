@@ -6,11 +6,18 @@
   import { checkMaintenance, maintenanceLock } from '../lib/maintenance';
 
   let checking = false;
+  /** Resultado de la última comprobación manual, para que el botón no parezca no hacer nada. */
+  let status = '';
 
   async function retry() {
     checking = true;
+    status = '';
+    const at = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     try {
       await checkMaintenance();
+      status = `Seguimos en mantenimiento · comprobado a las ${at}`;
+    } catch {
+      status = `No se pudo comprobar (sin conexión) · ${at}`;
     } finally {
       checking = false;
     }
@@ -29,13 +36,14 @@
 
   <h2 id="maintenance-title" class="display">Estamos haciendo unos ajustes</h2>
 
-  <p id="maintenance-desc" class="desc-text">{$maintenanceLock ?? ''}</p>
+  <p id="maintenance-desc" class="desc-text">{$maintenanceLock || 'Volvemos en un rato. No tienes que hacer nada.'}</p>
   <p class="muted-note">Tu mascota descansa mientras tanto. Pockai volverá solo en cuanto terminemos.</p>
 
-  <button class="btn btn--primary block" on:click={retry} disabled={checking} aria-live="polite">
+  <button class="btn btn--primary block" on:click={retry} disabled={checking} aria-busy={checking || undefined}>
     <RefreshCw size={16} class={checking ? 'spin' : ''} />
     {checking ? 'Comprobando…' : 'Comprobar de nuevo'}
   </button>
+  <p class="muted-note" role="status" aria-live="polite">{status}</p>
 </section>
 
 <style>

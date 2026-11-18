@@ -41,9 +41,12 @@
   import { Button, CurrencyPill, Notice, Segmented } from './ui';
   import Onboarding from './Onboarding.svelte';
   import { completeOnboarding, onboardingDone } from '../lib/onboarding';
+  import { friendlyError } from '../lib/ui/errors';
 
   export let user: any = null;
   export let pet: any = null;
+  /** Todas las mascotas del jugador (para el selector de mascota activa). */
+  export let pets: any[] = [];
   export let eggs: any[] = [];
   export let inventory: any[] = [];
   export let shopItems: any[] = [];
@@ -88,30 +91,46 @@
   const dispatch = createEventDispatcher();
 
   // Errores de las acciones: nunca con alert()/confirm() nativos (en Tauri abren un diálogo modal
-  // "tauri.localhost dice" que congela la ventana). Los de negocio los dice la mascota en su
-  // bocadillo; los terminales (sin conexión, servidor caído, sesión) van a un aviso en el panel.
+  // "tauri.localhost dice" que congela la ventana). Siempre salen como aviso en el panel, que es
+  // donde está mirando el jugador; los de negocio además los dice la mascota en su bocadillo
+  // cuando está en el escritorio (en casa no hay bocadillo).
   let panelError = '';
-  let panelErrorTimer: ReturnType<typeof setTimeout> | null = null;
+  let panelOk = '';
+  let panelNoticeTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function showPanelError(message: string) {
-    panelError = message;
-    if (panelErrorTimer) clearTimeout(panelErrorTimer);
-    panelErrorTimer = setTimeout(() => (panelError = ''), 6000);
+  function showPanelNotice(kind: 'error' | 'ok', message: string) {
+    panelError = kind === 'error' ? message : '';
+    panelOk = kind === 'ok' ? message : '';
+    if (panelNoticeTimer) clearTimeout(panelNoticeTimer);
+    panelNoticeTimer = setTimeout(() => ((panelError = ''), (panelOk = '')), kind === 'error' ? 6000 : 3000);
   }
 
   function reportError(err: unknown) {
-    const message = err instanceof Error && err.message ? err.message : 'Algo ha fallado';
-    if (pet && !isTerminalError(err)) {
-      dispatch('bubble', petVoice(message));
-    } else {
-      // fetch lanza TypeError cuando no hay red o el servidor no responde
-      showPanelError(err instanceof TypeError ? 'Sin conexión con el servidor. Inténtalo de nuevo en un momento.' : message);
+    const message = friendlyError(err);
+    showPanelNotice('error', message);
+    if (pet && !pet.inHabitat && !isTerminalError(err)) dispatch('bubble', petVoice(message));
+  }
+
+  /** Acción en curso (`feed:apple`, `clean`, `buy:apple`…): bloquea su botón y evita dobles envíos. */
+  let busyAction: string | null = null;
+  /** La guía se cerró sin terminarla: no molesta más en esta sesión, pero volverá a salir. */
+  let onboardingLater = false;
+  async function runAction(key: string, fn: () => Promise<void>) {
+    if (busyAction) return;
+    busyAction = key;
+    try {
+      await fn();
+    } catch (err) {
+      reportError(err);
+    } finally {
+      busyAction = null;
     }
   }
 
   onDestroy(() => {
     endPanelDrag();
-    if (panelErrorTimer) clearTimeout(panelErrorTimer);
+    if (panelNoticeTimer) clearTimeout(panelNoticeTimer);
+    hatchTimers.forEach(clearTimeout);
     if (hatchClock) clearInterval(hatchClock);
     if (resendTimer) clearInterval(resendTimer);
   });
@@ -141,10 +160,51 @@
     lastRequest = request.n;
     go(request.dest, request.sub);
   }
+  /** Última sub-sección visitada de cada destino: al volver se retoma donde estabas. */
+  const lastSub: Record<string, string> = {};
+  /** Dónde estabas antes de abrir Ajustes, para volver ahí al cerrarlos. */
+  let beforeSettings = { dest: 'pet', sub: 'home' };
+  let contentEl: HTMLElement | null = null;
+
   function go(d: string, s?: string) {
-    dest = d;
-    const entry = NAV.find((n) => n.id === d)!;
-    sub = s ?? (entry.subs[0]?.[0] ?? '');
+    const entry = NAV.find((n) => n.id === d) ?? NAV[0];
+    if (entry.id === 'settings' && dest !== 'settings') beforeSettings = { dest, sub };
+    const wanted = s ?? lastSub[entry.id];
+    leaveSub();
+    dest = entry.id;
+    sub = entry.subs.some(([v]) => v === wanted) ? (wanted as string) : (entry.subs[0]?.[0] ?? '');
+    lastSub[dest] = sub;
+    contentEl?.scrollTo({ top: 0 });
+  }
+  function setSub(s: string) {
+    leaveSub();
+    sub = s;
+    lastSub[dest] = s;
+    contentEl?.scrollTo({ top: 0 });
+  }
+  /** Limpia lo que solo tiene sentido mientras se mira una sub-sección. */
+  function leaveSub() {
+    if (dest === 'pet' && sub === 'hatch' && hatchingEggId === null) hatchedResult = null;
+  }
+  const toggleSettings = () => (dest === 'settings' ? go(beforeSettings.dest, beforeSettings.sub) : go('settings'));
+
+  /** Huevos que ya se pueden eclosionar (los que siguen incubando no avisan). */
+  $: readyEggs = eggs.filter((e) => !(new Date(e?.hatchesAt).getTime() > now)).length;
+
+  /** Atajos: Esc cierra el panel (si no hay un diálogo abierto) y Ctrl+1…6 cambia de destino. */
+  function onShortcut(e: KeyboardEvent) {
+    if (!isOpen || e.defaultPrevented) return;
+    if (e.key === 'Escape') {
+      if (document.querySelector('[role="dialog"]')) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('input, textarea, select, [contenteditable]')) return (el as HTMLElement).blur();
+      dispatch('close');
+      return;
+    }
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || !/^[1-6]$/.test(e.key)) return;
+    if (!user || user.emailVerified === false || user.handle === null || $updateLock !== null || $maintenanceLock !== null) return;
+    e.preventDefault();
+    go(NAV.filter((n) => n.id !== 'settings')[Number(e.key) - 1].id);
   }
   $: current = NAV.find((n) => n.id === dest)!;
   /** Color de cada destino (--view-tint): tiñe contadores, vacíos, cabeceras y héroes de la sección. */
@@ -199,6 +259,8 @@
   // Si cambia el texto tras pedir confirmación, se vuelve a pedir.
   $: chooseHandle, (chooseHandleConfirm = false);
   let authError = '';
+  /** Aviso de éxito en la pantalla de acceso (p. ej. tras cambiar la contraseña). */
+  let authNotice = '';
   let isLoading = false;
 
   // ---- Recuperar contraseña (sin sesión) ----
@@ -247,15 +309,20 @@
     }
   }
 
+  let resending = false;
   async function handleResetResend() {
+    if (resending) return;
     resetError = '';
     resetNotice = '';
+    resending = true;
     try {
       await api.requestPasswordReset(resetEmail);
       resetNotice = 'Te hemos enviado un código nuevo. El anterior ya no sirve.';
       startResendCooldown();
     } catch (err: any) {
-      resetError = err?.message || 'No se pudo reenviar el código';
+      resetError = friendlyError(err, 'No se pudo reenviar el código');
+    } finally {
+      resending = false;
     }
   }
 
@@ -283,7 +350,7 @@
       resetPassword2 = '';
       authView = 'login';
       dispatch('authSuccess');
-      dispatch('bubble', 'Contraseña cambiada. Se ha cerrado la sesión en tus otros dispositivos.');
+      authNotice = 'Contraseña cambiada. Se ha cerrado la sesión en tus otros dispositivos.';
     } catch (err: any) {
       resetError = err?.message || 'No se pudo cambiar la contraseña';
     } finally {
@@ -346,14 +413,18 @@
   }
 
   async function handleResendVerification() {
+    if (resending) return;
     verifyError = '';
     verifyNotice = '';
+    resending = true;
     try {
       await api.resendVerification();
       verifyNotice = 'Te hemos enviado un correo nuevo. El código anterior ya no sirve.';
       startResendCooldown();
     } catch (err: any) {
-      verifyError = err?.message || 'No se pudo reenviar el correo';
+      verifyError = friendlyError(err, 'No se pudo reenviar el correo');
+    } finally {
+      resending = false;
     }
   }
 
@@ -400,60 +471,63 @@
   async function toggleAuthMode() {
     isLoginMode = !isLoginMode;
     authError = '';
-    if (!isLoginMode) inviteRequired = (await api.getRegistrationConfig()).inviteRequired;
+    if (isLoginMode) return;
+    try {
+      inviteRequired = (await api.getRegistrationConfig()).inviteRequired;
+    } catch (err) {
+      authError = friendlyError(err, 'No se pudo comprobar si el registro está abierto.');
+    }
   }
 
-  async function handleFeed(itemId: string) {
+  const petName = () => pet?.nickname || pet?.species?.name || 'Tu Pockai';
+
+  function handleFeed(itemId: string) {
     if (!pet) return;
-    try {
+    const food = inventory.find((i) => i.itemId === itemId)?.item?.name;
+    return runAction(`feed:${itemId}`, async () => {
       const updated = await api.feedPet(pet.id, itemId);
       dispatch('petUpdated', updated);
       dispatch('actionTriggered', 'eat');
-      refreshInventory();
-    } catch (err: any) {
-      reportError(err);
-    }
+      await refreshInventory();
+      showPanelNotice('ok', food ? `${petName()} se ha comido: ${food}.` : `${petName()} ha comido.`);
+    });
   }
 
-  async function handleClean() {
+  function handleClean() {
     if (!pet) return;
-    try {
+    return runAction('clean', async () => {
       const updated = await api.cleanPet(pet.id);
       dispatch('petUpdated', updated);
       dispatch('actionTriggered', 'clean');
-    } catch (err: any) {
-      reportError(err);
-    }
+      showPanelNotice('ok', `${petName()} está reluciente.`);
+    });
   }
 
-  async function handleToggleSleep() {
+  function handleToggleSleep() {
     if (!pet) return;
-    try {
+    return runAction('sleep', async () => {
       const waking = pet.sleeping;
       const updated = waking ? await api.wakePet(pet.id) : await api.sleepPet(pet.id);
       dispatch('petUpdated', updated);
       if (waking) dispatch('actionTriggered', 'wake');
-    } catch (err: any) {
-      reportError(err);
-    }
+    });
   }
 
-  async function handleToggleHabitat(inHabitat: boolean) {
+  function handleToggleHabitat(inHabitat: boolean) {
     if (!pet) return;
-    try {
+    return runAction('habitat', async () => {
       const updated = await api.setPetInHabitat(pet.id, inHabitat);
       dispatch('petUpdated', updated);
-      dispatch(
-        'bubble',
-        inHabitat ? '¡Me quedo a descansar en mi casita!' : '¡De vuelta a explorar el escritorio!'
-      );
-    } catch (err: any) {
-      reportError(err);
-    }
+      dispatch('bubble', inHabitat ? '¡Me quedo a descansar en mi casita!' : '¡De vuelta a explorar el escritorio!');
+      if (inHabitat) showPanelNotice('ok', `${petName()} está en casa.`);
+    });
   }
 
+  /** Soltar a la mascota sobre el panel la manda a casa. Un archivo o un texto arrastrado no. */
   async function handlePanelDrop(e: DragEvent) {
     e.preventDefault();
+    const types = Array.from(e.dataTransfer?.types ?? []);
+    if (types.some((t) => t === 'Files' || t.startsWith('text/'))) return;
     if (!pet || pet.inHabitat) return;
     await handleToggleHabitat(true);
   }
@@ -461,55 +535,63 @@
   async function handleHatch(eggId: string, nickname?: string) {
     // Vacío/espacios → undefined: el backend asigna un nombre aleatorio.
     const name = (nickname ?? '').trim();
+    if (hatchingEggId !== null) return;
     hatchingEggId = eggId;
+    hatchedResult = null;
     isShaking = true;
-
-    setTimeout(() => {
+    try {
+      // La petición va en paralelo al temblor: si falla, el huevo no llega a «romperse».
+      const [newPet] = await Promise.all([api.hatchEgg(eggId, name || undefined), wait(1500)]);
       isCracking = true;
-    }, 1500);
-
-    setTimeout(async () => {
-      try {
-        const newPet = await api.hatchEgg(eggId, name || undefined);
-        // Animación de eclosión antes de quitar el huevo de la lista
-        isShaking = false;
-        isCracking = false;
-        isHatchingOut = true;
-        await new Promise((r) => setTimeout(r, 900));
-        hatchedResult = newPet;
-        dispatch('petUpdated', newPet);
-        dispatch('actionTriggered', 'hatched');
-        dispatch('refreshEggs');
-        delete eggNames[eggId]; // al terminar, limpia el input de ese huevo
-      } catch (err: any) {
-        reportError(err);
-      } finally {
-        isShaking = false;
-        isCracking = false;
-        isHatchingOut = false;
-        hatchingEggId = null;
-      }
-    }, 2800);
+      await wait(1300);
+      isShaking = false;
+      isCracking = false;
+      isHatchingOut = true;
+      await wait(900);
+      hatchedResult = newPet;
+      dispatch('petHatched', newPet);
+      dispatch('actionTriggered', 'hatched');
+      dispatch('refreshEggs');
+      delete eggNames[eggId]; // al terminar, limpia el input de ese huevo
+    } catch (err: any) {
+      reportError(err);
+    } finally {
+      isShaking = false;
+      isCracking = false;
+      isHatchingOut = false;
+      hatchingEggId = null;
+    }
   }
 
-  async function handleBuyEgg() {
-    try {
+  /** Esperas de la animación de eclosión, canceladas si el panel se desmonta. */
+  const hatchTimers = new Set<ReturnType<typeof setTimeout>>();
+  function wait(ms: number) {
+    return new Promise<void>((resolve) => {
+      const t = setTimeout(() => {
+        hatchTimers.delete(t);
+        resolve();
+      }, ms);
+      hatchTimers.add(t);
+    });
+  }
+
+  function handleBuyEgg() {
+    return runAction('buy:egg', async () => {
       await api.buyEgg();
       dispatch('refreshEggs');
       dispatch('refreshUser');
-    } catch (err: any) {
-      reportError(err);
-    }
+      showPanelNotice('ok', 'Huevo comprado. Ya está incubando.');
+    });
   }
 
-  async function handleBuyItem(itemId: string) {
-    try {
+  function handleBuyItem(itemId: string) {
+    const name = shopItems.find((i) => i.id === itemId)?.name;
+    return runAction(`buy:${itemId}`, async () => {
       await api.buyShopItem(itemId, 1);
       dispatch('refreshUser');
-      refreshInventory();
-    } catch (err: any) {
-      reportError(err);
-    }
+      await refreshInventory();
+      showPanelNotice('ok', name ? `Comprado: ${name}.` : 'Compra hecha.');
+    });
   }
 
   async function refreshInventory() {
@@ -518,6 +600,8 @@
   }
 </script>
 
+
+<svelte:window on:keydown={onShortcut} />
 
 {#if isOpen}
   <div
@@ -545,16 +629,16 @@
             <button
               class="btn btn--ghost btn--icon settings-btn"
               class:active={dest === 'settings'}
-              aria-label="Ajustes"
-              aria-pressed={dest === 'settings'}
-              title="Ajustes"
-              on:click={() => (dest === 'settings' ? go('pet') : go('settings'))}
+              aria-label={hasUpdate($updateState) ? 'Ajustes: hay una versión nueva' : dest === 'settings' ? 'Cerrar ajustes' : 'Ajustes'}
+              aria-current={dest === 'settings' ? 'page' : undefined}
+              title={dest === 'settings' ? 'Cerrar ajustes' : 'Ajustes'}
+              on:click={toggleSettings}
             >
               <Settings size={18} />
-              {#if hasUpdate($updateState)}<span class="dot-badge" title="Hay una versión nueva"></span>{/if}
+              {#if hasUpdate($updateState)}<span class="dot-badge" aria-hidden="true"></span>{/if}
             </button>
           {/if}
-          <button class="btn btn--ghost btn--icon close-btn" aria-label="Cerrar panel" on:click={() => dispatch('close')}><X size={18} /></button>
+          <button class="btn btn--ghost btn--icon close-btn" aria-label="Cerrar panel" title="Cerrar panel (Esc)" on:click={() => dispatch('close')}><X size={18} /></button>
         </div>
       {/if}
     </div>
@@ -610,7 +694,7 @@
             <Button type="submit" variant="primary" size="lg" block loading={isLoading}>Cambiar contraseña</Button>
           </form>
 
-          <button type="button" class="auth-link" on:click={handleResetResend} disabled={resendIn > 0}>
+          <button type="button" class="auth-link" on:click={handleResetResend} disabled={resendIn > 0 || resending}>
             {#if resendIn > 0}Puedes pedir otro código en {resendIn} s{:else}¿No te ha llegado? <strong>Reenviar código</strong>{/if}
           </button>
         {/if}
@@ -622,6 +706,7 @@
         <svelte:fragment slot="subtitle">Conecta con tu mascota virtual</svelte:fragment>
 
         <form class="card auth-form" on:submit|preventDefault={handleAuth}>
+          {#if authNotice}<Notice tone="ok">{authNotice}</Notice>{/if}
           {#if authError}<Notice tone="error">{authError}</Notice>{/if}
 
           <div class="form-group">
@@ -696,7 +781,7 @@
           <Button block disabled={isLoading} on:click={handleVerifyRecheck}>Ya lo he verificado con el enlace</Button>
         </form>
 
-        <button type="button" class="auth-link" on:click={handleResendVerification} disabled={resendIn > 0}>
+        <button type="button" class="auth-link" on:click={handleResendVerification} disabled={resendIn > 0 || resending}>
           {#if resendIn > 0}Puedes reenviarlo en {resendIn} s{:else}¿No te ha llegado? <strong>Reenviar correo</strong>{/if}
         </button>
         <button type="button" class="auth-link" on:click={() => { api.logout(); dispatch('logout'); }}>Usar otra cuenta</button>
@@ -724,23 +809,26 @@
       </AuthLayout>
     {:else}
       <!-- Guía de primer uso: una vez, cuando ya hay mascota y no se está en plena eclosión -->
-      {#if pet && !$onboardingDone && !(dest === 'pet' && sub === 'hatch')}
-        <Onboarding on:done={() => completeOnboarding()} on:go={(e) => go(e.detail.dest, e.detail.sub)} />
+      {#if pet && !$onboardingDone && !onboardingLater && !(dest === 'pet' && sub === 'hatch')}
+        <Onboarding on:done={() => completeOnboarding()} on:later={() => (onboardingLater = true)} on:go={(e) => go(e.detail.dest, e.detail.sub)} />
       {/if}
 
       <!-- Destinos principales -->
       <nav class="nav-tabs" aria-label="Secciones">
         <!-- Ajustes no va en la barra: es el engranaje de la cabecera, junto a la X -->
-        {#each NAV.filter((n) => n.id !== 'settings') as n (n.id)}
+        {#each NAV.filter((n) => n.id !== 'settings') as n, i (n.id)}
           <button
             class:active={dest === n.id}
             style="--tab-tint: {TINT[n.id]}"
             aria-current={dest === n.id ? 'page' : undefined}
+            title="{n.label} (Ctrl+{i + 1})"
             on:click={() => go(n.id)}
           >
             <svelte:component this={n.icon} size={18} />
             <span>{n.label}</span>
-            {#if n.id === 'pet' && eggs.length > 0}<span class="tab-badge">{eggs.length}</span>{/if}
+            {#if n.id === 'pet' && readyEggs > 0}
+              <span class="tab-badge" aria-label="{readyEggs} {readyEggs === 1 ? 'huevo listo' : 'huevos listos'}">{readyEggs}</span>
+            {/if}
           </button>
         {/each}
       </nav>
@@ -752,8 +840,8 @@
           class="sub-tabs"
           label={current.label}
           value={sub}
-          options={current.subs.map(([value, label]) => ({ value, label }))}
-          on:change={(e) => (sub = e.detail)}
+          options={current.subs.map(([value, label]) => ({ value, label, badge: value === 'hatch' && readyEggs > 0 ? readyEggs : undefined }))}
+          on:change={(e) => setSub(e.detail)}
         />
       {/if}
 
@@ -761,13 +849,20 @@
         <div class="panel-error">
           <Notice tone="error" dismissible on:dismiss={() => (panelError = '')}>{panelError}</Notice>
         </div>
+      {:else if panelOk}
+        <div class="panel-error">
+          <Notice tone="ok">{panelOk}</Notice>
+        </div>
       {/if}
 
-      <div class="tab-content">
+      <div class="tab-content" role="tabpanel" aria-label={current.subs.find(([v]) => v === sub)?.[1] ?? current.label} bind:this={contentEl}>
         {#if dest === 'pet' && sub === 'home'}
           <HomeView
             {pet}
+            {pets}
             {inventory}
+            busy={busyAction}
+            on:selectPet
             on:clean={handleClean}
             on:toggleSleep={handleToggleSleep}
             on:toggleHabitat={(e) => handleToggleHabitat(e.detail)}
@@ -785,8 +880,13 @@
             {isCracking}
             {isHatchingOut}
             {hatchedResult}
+            activePetId={pet?.id ?? null}
+            coins={user.coins}
+            buying={busyAction === 'buy:egg'}
             on:hatch={(e) => handleHatch(e.detail.id, e.detail.name)}
             on:buyEgg={handleBuyEgg}
+            on:selectPet
+            on:dismissResult={() => (hatchedResult = null)}
           />
 
         {:else if dest === 'pet' && sub === 'bonding'}
@@ -863,10 +963,10 @@
           <MissionsTab on:refreshUser />
 
         {:else if dest === 'progress' && sub === 'seasons'}
-          <SeasonsTab on:refreshUser />
+          <SeasonsTab coins={user.coins} gems={user.gems} on:refreshUser />
 
         {:else if dest === 'shop' && sub === 'store'}
-          <ShopView {shopItems} on:buy={(e) => handleBuyItem(e.detail)} />
+          <ShopView {shopItems} {inventory} coins={user.coins} busyItem={busyAction?.startsWith('buy:') ? busyAction.slice(4) : null} on:buy={(e) => handleBuyItem(e.detail)} />
 
         {:else if dest === 'shop' && sub === 'chests'}
           <ChestsTab on:refreshUser />
@@ -1057,10 +1157,9 @@
   .panel-card :global(.sub-tabs) {
     flex-shrink: 0; /* con contenido largo el flex la recortaba */
     padding: var(--space-2) var(--space-3) 2px;
-    /* Las pastillas desplazables ocultaban la última (p. ej. "Habilidades") sin barra ni pista de
-       scroll: en el panel se reparten en varias filas para que todas se vean siempre. */
-    flex-wrap: wrap;
-    overflow-x: visible;
+    /* Una sola fila desplazable: Segmented difumina el borde cuando hay más pastillas a ese
+       lado y mantiene la activa a la vista, así la altura no cambia entre destinos. */
+    padding-bottom: var(--space-1);
   }
 
   .panel-error {

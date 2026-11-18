@@ -5,6 +5,9 @@
    *  gestión solo se muestran a quien puede hacerlas (el backend las valida igualmente). */
   import SocialAvatar from './SocialAvatar.svelte';
   import { onMount } from 'svelte';
+  import { friendlyError } from '../lib/ui/errors';
+  import { isNearBottom } from '../lib/ui/chatScroll';
+  import { Button, ConfirmDialog, Notice } from './ui';
   import { handleFormatError, normalizeHandle } from '../lib/handle';
   import {
     Shield, Crown, Eye, Users, Target, MessageCircle, Pencil, Plus, Trash2, Send, RefreshCw, UserPlus,
@@ -98,11 +101,32 @@
   $: sortedGoals = [...$clanGoalsStore].sort(
     (a, b) => (a.status === 'completed' ? 1 : 0) - (b.status === 'completed' ? 1 : 0),
   );
-  /** El chat siempre queda pegado al final al llegar mensajes. */
-  $: if (chatEl && $clanMessagesStore) {
+  /** El chat sigue al último mensaje solo si ya estabas abajo: si has subido a leer, no te mueve. */
+  let chatPinned = true;
+  $: if (chatEl && $clanMessagesStore && chatPinned) {
     const el = chatEl;
     queueMicrotask(() => (el.scrollTop = el.scrollHeight));
   }
+
+  /** Acción destructiva pendiente de confirmar en un diálogo. */
+  let pending: { title: string; text: string; label: string; run: () => Promise<void> | void } | null = null;
+  let confirming = false;
+  async function runPending() {
+    if (!pending) return;
+    confirming = true;
+    try {
+      await pending.run();
+    } finally {
+      confirming = false;
+      pending = null;
+    }
+  }
+  const askLeave = () =>
+    (pending = { title: 'Salir del clan', label: 'Salir', text: `Dejarás ${clan?.name ?? 'el clan'} y perderás el acceso a su chat y a sus objetivos. Para volver necesitarás su tag o una invitación.`, run: leave });
+  const askDeleteGoal = (g: ClanGoal) =>
+    (pending = { title: 'Borrar objetivo', label: 'Borrar', text: `Se borrará «${g.title}» con su progreso (${g.progress}/${g.target}) para todo el clan.`, run: () => deleteGoal(g) });
+  const askDeleteMsg = (m: ClanMessage) =>
+    (pending = { title: 'Borrar mensaje', label: 'Borrar', text: `«${m.body.length > 120 ? m.body.slice(0, 120) + '…' : m.body}»`, run: () => deleteMsg(m) });
 
   async function load() {
     loading = true;
@@ -122,7 +146,7 @@
         clearClan();
       }
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       loading = false;
     }
@@ -161,7 +185,7 @@
       description = '';
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -178,7 +202,7 @@
       joinTag = '';
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -203,7 +227,7 @@
       inviteTarget = '';
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -220,7 +244,7 @@
       clearClan();
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -250,7 +274,7 @@
       ok = success;
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -313,7 +337,7 @@
       await api.deleteClanMessage(clan.id, m.id);
       dropClanMessage(m.id);
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -335,7 +359,7 @@
       ok = 'Objetivo creado.';
       showGoalForm = false;
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -349,7 +373,7 @@
       const updated = await api.addClanGoalProgress(clan.id, goal.id, 1);
       upsertClanGoal(updated);
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -364,7 +388,7 @@
       dropClanGoal(goal.id);
       ok = 'Objetivo eliminado.';
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -382,7 +406,7 @@
       // Lo guardamos ya por si el socket tarda (deduplicado por id en el store)
       if (sent?.id) pushClanMessage(sent);
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
       chatInput = body; // permite reintentar
     } finally {
       busy = '';
@@ -393,8 +417,13 @@
 </script>
 
 <div class="ui-stack">
-  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+  <!-- Pegados arriba: se ven aunque la acción esté al final de la lista (invitar, chat, zona de peligro) -->
+  {#if error || ok}
+    <div class="clan-notice">
+      {#if error}<Notice tone="error" dismissible on:dismiss={() => (error = '')}>{error}</Notice>{/if}
+      {#if ok}<Notice tone="ok" dismissible on:dismiss={() => (ok = '')}>{ok}</Notice>{/if}
+    </div>
+  {/if}
 
   {#if loading && !clan}
     <div class="ui-loading" aria-label="Cargando clan">
@@ -412,7 +441,7 @@
           <span class="chip clan-tag">[{clan.tag}]</span>
         </div>
         <p class="clan-desc">{clan.description || 'Sin descripción'}</p>
-        <span class="clan-leader">Forjador: {clan.leader?.displayName ?? clan.leaderId}{clan.leader?.handle ? ` · @${clan.leader.handle}` : ''}</span>
+        <span class="clan-leader">Forjador: {clan.leader?.displayName ?? 'Desconocido'}{clan.leader?.handle ? ` · @${clan.leader.handle}` : ''}</span>
         <div class="clan-stats">
           <span class="chip clan-stat"><Sparkles size={12} /> {(clan.xp ?? 0).toLocaleString()} XP</span>
           <span class="chip clan-stat" title="Hebras"><Users size={12} /> {clan.memberCount}</span>
@@ -424,7 +453,7 @@
       </div>
       <div class="clan-hero__tools">
         {#if canEdit && !editing}
-          <button class="btn btn--ghost btn--icon ui-ibtn" title="Editar Nexo" aria-label="Editar Nexo" on:click={startEdit}><Pencil size={15} /></button>
+          <Button variant="ghost" class="ui-ibtn" iconOnly label="Editar Nexo" title="Editar Nexo" on:click={startEdit}><Pencil size={15} /></Button>
         {/if}
         <button class="btn btn--ghost btn--icon ui-ibtn ui-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar clan" on:click={load}>
           <RefreshCw size={15} />
@@ -438,10 +467,10 @@
         <input class="input" placeholder="Nombre del clan" aria-label="Nombre del clan" maxlength="40" bind:value={editName} disabled={busy === 'edit'} />
         <textarea class="input desc" rows="2" maxlength="300" placeholder="Descripción" aria-label="Descripción" bind:value={editDescription} disabled={busy === 'edit'}></textarea>
         <div class="ui-inline end">
-          <button type="button" class="btn btn--sm btn--ghost" disabled={busy === 'edit'} on:click={() => (editing = false)}>Cancelar</button>
-          <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'edit' || !editName.trim()}>
+          <Button variant="ghost" size="sm" disabled={busy === 'edit'} on:click={() => (editing = false)}>Cancelar</Button>
+          <Button variant="primary" size="sm" type="submit" disabled={busy === 'edit' || !editName.trim()}>
             {busy === 'edit' ? 'Guardando…' : 'Guardar'}
-          </button>
+          </Button>
         </div>
       </form>
     {/if}
@@ -478,14 +507,14 @@
             {#if acts && (acts.kick || acts.promote || acts.demote || acts.transfer)}
               <div class="member-actions">
                 {#if acts.promote}
-                  <button class="btn btn--sm btn--ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.promote && changeRole(m, acts.promote)}>
+                  <Button variant="ghost" size="sm" disabled={busy === `member-${m.userId}`} on:click={() => acts.promote && changeRole(m, acts.promote)}>
                     <ChevronUp size={14} /> {CLAN_ROLE_LABEL[acts.promote]}
-                  </button>
+                  </Button>
                 {/if}
                 {#if acts.demote}
-                  <button class="btn btn--sm btn--ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.demote && changeRole(m, acts.demote)}>
+                  <Button variant="ghost" size="sm" disabled={busy === `member-${m.userId}`} on:click={() => acts.demote && changeRole(m, acts.demote)}>
                     <ChevronDown size={14} /> {CLAN_ROLE_LABEL[acts.demote]}
-                  </button>
+                  </Button>
                 {/if}
                 {#if acts.transfer}
                   <button class="btn btn--sm btn--ghost" class:armed={armed === `transfer-${m.userId}`} disabled={busy === `member-${m.userId}`} on:click={() => transfer(m)}>
@@ -508,9 +537,9 @@
           <span class="ui-card__title"><UserPlus size={15} /> Invitar al Nexo</span>
           <div class="ui-inline">
             <input class="input" placeholder="@nickname del jugador" aria-label="Nickname del jugador" autocapitalize="none" spellcheck="false" bind:value={inviteTarget} disabled={busy === 'invite'} />
-            <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'invite' || !inviteTarget.trim()}>
+            <Button variant="primary" size="sm" type="submit" disabled={busy === 'invite' || !inviteTarget.trim()}>
               {busy === 'invite' ? 'Enviando…' : 'Invitar'}
-            </button>
+            </Button>
           </div>
         </form>
       {/if}
@@ -520,7 +549,7 @@
         {#if isCreator && clan.memberCount > 1}
           <p class="ui-card__hint">Como Forjador, cede la Forja a otra hebra antes de salir del Nexo.</p>
         {:else}
-          <button class="btn btn--sm btn--ghost danger-ghost" disabled={!!busy} on:click={leave}>
+          <button class="btn btn--sm btn--ghost danger-ghost" disabled={!!busy} on:click={askLeave}>
             <LogOut size={14} /> {busy === 'leave' ? 'Saliendo…' : 'Salir del clan'}
           </button>
         {/if}
@@ -552,9 +581,9 @@
                 <option value="generic">Progreso</option>
               </select>
               <input class="input goal-target" type="number" min="1" placeholder="Meta" aria-label="Meta" bind:value={goalTarget} disabled={busy === 'goal-create'} />
-              <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'goal-create' || !goalTitle.trim() || !(parseInt(goalTarget, 10) > 0)}>
+              <Button variant="primary" size="sm" type="submit" disabled={busy === 'goal-create' || !goalTitle.trim() || !(parseInt(goalTarget, 10)> 0)}>
                 {busy === 'goal-create' ? 'Creando…' : 'Crear'}
-              </button>
+              </Button>
             </div>
           </form>
         {/if}
@@ -573,12 +602,12 @@
               </div>
               <span class="goal-num">{Math.min(g.progress, g.target)}/{g.target}</span>
               {#if !done}
-                <button class="btn btn--sm ui-ibtn" title="Sumar 1" aria-label="Sumar 1 a {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => addProgress(g)}>+1</button>
+                <Button size="sm" class="ui-ibtn" label="Sumar 1 a {g.title}" title="Sumar 1" disabled={busy === `goal-${g.id}`} on:click={() => addProgress(g)}>+1</Button>
               {/if}
               {#if canModerate}
-                <button class="btn btn--ghost btn--icon ui-ibtn ui-ibtn--no" title="Borrar objetivo" aria-label="Borrar {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => deleteGoal(g)}>
+                <Button variant="ghost" class="ui-ibtn ui-ibtn--no" iconOnly label="Borrar {g.title}" title="Borrar objetivo" disabled={busy === `goal-${g.id}`} on:click={() => askDeleteGoal(g)}>
                   <Trash2 size={14} />
-                </button>
+                </Button>
               {/if}
             </div>
           </div>
@@ -595,7 +624,7 @@
 
     {:else}
       <section class="chat-box">
-        <div class="chat" bind:this={chatEl}>
+        <div class="chat" role="log" aria-label="Chat del clan" bind:this={chatEl} on:scroll={() => chatEl && (chatPinned = isNearBottom(chatEl))}>
           {#each $clanMessagesStore as m (m.id)}
             {@const mine = m.userId === meId}
             <div class="msg" class:mine>
@@ -605,10 +634,10 @@
                   {#if !mine}<span class="sender">{m.senderName}</span>{/if}
                   <span class="time">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   {#if canModerate || mine}
-                    <button class="msg-del" title="Borrar mensaje" aria-label="Borrar mensaje" disabled={busy === `msg-${m.id}`} on:click={() => deleteMsg(m)}><X size={11} /></button>
+                    <button class="msg-del" title="Borrar mensaje" aria-label="Borrar mensaje" disabled={busy === `msg-${m.id}`} on:click={() => askDeleteMsg(m)}><X size={12} /></button>
                   {/if}
                 </div>
-                <div class="bubble-body">{m.body}</div>
+                <div class="bubble-body ui-usertext">{m.body}</div>
               </div>
             </div>
           {:else}
@@ -620,9 +649,9 @@
         </div>
         <form class="chat-input" on:submit|preventDefault={sendMsg}>
           <input class="input" placeholder="Escribe un mensaje…" aria-label="Mensaje" bind:value={chatInput} disabled={busy === 'chat'} />
-          <button type="submit" class="btn btn--primary btn--icon ui-ibtn" title="Enviar" aria-label="Enviar" disabled={busy === 'chat' || !chatInput.trim()}>
+          <Button variant="primary" class="ui-ibtn" iconOnly label="Enviar" type="submit" title="Enviar" disabled={busy === 'chat' || !chatInput.trim()}>
             <Send size={15} />
-          </button>
+          </Button>
         </form>
       </section>
     {/if}
@@ -638,28 +667,44 @@
     <form class="ui-card" on:submit|preventDefault={join}>
       <span class="ui-card__title"><Users size={15} /> Unirse por tag</span>
       <div class="ui-inline">
-        <input class="input tag-input" placeholder="TAG" aria-label="Tag del clan" bind:value={joinTag} disabled={busy === 'join'} />
-        <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'join' || !joinTag.trim()}>
+        <input class="input tag-input" placeholder="TAG" aria-label="Tag del clan" maxlength="6" bind:value={joinTag} disabled={busy === 'join'} />
+        <Button size="sm" type="submit" disabled={busy === 'join' || !joinTag.trim()}>
           {busy === 'join' ? 'Uniéndote…' : 'Unirse'}
-        </button>
+        </Button>
       </div>
     </form>
 
     <form class="ui-card" on:submit|preventDefault={create}>
       <span class="ui-card__title"><Plus size={15} /> Fundar un Nexo</span>
       <div class="ui-inline">
-        <input class="input" placeholder="Nombre del clan" aria-label="Nombre del clan" bind:value={name} disabled={busy === 'create'} />
-        <input class="input tag-input short" placeholder="TAG" aria-label="Tag (p. ej. PCK)" bind:value={tag} disabled={busy === 'create'} />
+        <input class="input" placeholder="Nombre del clan" aria-label="Nombre del clan" maxlength="40" bind:value={name} disabled={busy === 'create'} />
+        <input class="input tag-input short" placeholder="TAG" aria-label="Tag (p. ej. PCK)" maxlength="6" bind:value={tag} disabled={busy === 'create'} />
       </div>
-      <textarea class="input desc" rows="2" placeholder="Descripción (opcional)" aria-label="Descripción" bind:value={description} disabled={busy === 'create'}></textarea>
-      <button type="submit" class="btn btn--primary" disabled={busy === 'create' || !name.trim() || !tag.trim()}>
+      <textarea class="input desc" rows="2" maxlength="300" placeholder="Descripción (opcional)" aria-label="Descripción" bind:value={description} disabled={busy === 'create'}></textarea>
+      <p class="form-hint">El tag es un código corto en mayúsculas (por ejemplo, PCK): con él os encontrarán.</p>
+      <Button variant="primary" type="submit" disabled={busy === 'create' || !name.trim() || !tag.trim()}>
         {busy === 'create' ? 'Creando…' : 'Crear clan'}
-      </button>
+      </Button>
     </form>
+  {/if}
+
+  {#if pending}
+    <ConfirmDialog title={pending.title} icon="trash" danger confirmLabel={pending.label} loading={confirming} on:confirm={runPending} on:cancel={() => (pending = null)}>
+      <p class="ui-usertext">{pending.text}</p>
+      <p>No se puede deshacer.</p>
+    </ConfirmDialog>
   {/if}
 </div>
 
 <style>
+  .clan-notice {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
   .ui-skel.tall {
     height: 110px;
   }
@@ -943,13 +988,16 @@
     display: inline-grid;
     place-items: center;
     margin-left: auto;
-    padding: 1px;
+    /* Zona de clic de 24 px aunque el icono sea pequeño; siempre visible (atenuado), no solo al pasar el ratón */
+    width: 24px;
+    height: 24px;
+    padding: 0;
     border: none;
     border-radius: 50%;
     background: none;
     color: var(--ink-muted);
     cursor: pointer;
-    opacity: 0;
+    opacity: 0.45;
     transition: opacity var(--dur-1);
   }
   .msg:hover .msg-del,

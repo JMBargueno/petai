@@ -7,7 +7,7 @@ Este documento contiene las reglas, fórmulas matemáticas y parámetros de dise
 ## 1. Eclosión y Probabilidades
 
 ### 1.1 Distribución de Rareza
-Las tiradas de eclosión se resuelven en el servidor de forma autoritativa utilizando `crypto.randomInt`:
+La rareza es de la **especie**: todos los ejemplares de una especie tienen la misma. La tirada de eclosión decide de qué rareza sale la especie y se resuelve en el servidor de forma autoritativa con `crypto.randomInt`:
 
 | Rareza | Probabilidad | Multiplicador de Stats Base | Especies Iniciales |
 |---|---|---|---|
@@ -17,14 +17,16 @@ Las tiradas de eclosión se resuelven en el servidor de forma autoritativa utili
 | **Legendario** | 4.0 % | $\times 1.50$ | Criaturas raras |
 | **Mítico** | 1.0 % | $\times 1.75$ | Criatura mítica especial |
 
+Si todavía no hay especies de la rareza tirada, se entrega una especie de la rareza más cercana por debajo (`rarity.engine.ts`). Nunca se etiqueta un ejemplar con una rareza que no sea la de su especie. El multiplicador de estadísticas es el de la rareza de la especie, así que todos sus ejemplares nacen con la misma base.
+
 ### 1.2 Sistema de Pity (Protección contra mala suerte)
 - **Super-raro garantizado**: Si tras 29 huevos no ha salido ningún huevo Super-raro o superior, el huevo 30 tiene una probabilidad del 100% de ser al menos Super-raro.
 - **Legendario garantizado**: Si tras 119 huevos no ha salido ningún Legendario o Mítico, el huevo 120 garantiza al menos un Legendario.
-- Ambos contadores (`sinceSuperRare`, `sinceLegendary`) se reinician al obtener una rareza igual o superior a la requerida.
+- Ambos contadores (`sinceSuperRare`, `sinceLegendary`) se reinician al **conseguir** una especie de rareza igual o superior a la requerida. Si la garantía no puede cumplirse porque aún no hay especies de esa rareza, sigue pendiente.
 
 ### 1.3 Patrones y Rasgos Visuales (Pipeline de Composición Determinista)
 - Patrones: `liso` (predeterminado), `manchas`, `rayas`, `degradado`, `escamas`, `cristal`, `galaxia`, `aurora`.
-- Los patrones avanzados (`escamas`, `cristal`, `galaxia`, `aurora`) solo son accesibles en rarezas Super-raro, Legendario y Mítico.
+- Cada patrón tiene su **propia rareza** (`shared/game-data/patterns.json`) y su propia tirada por ejemplar, con las mismas probabilidades de §1.1 e independiente de la especie: un Ignisaurio (normal) puede llevar un patrón `galaxia` (mítico). El patrón es lo que hace raro a un ejemplar dentro de su especie.
 - Cada criatura recibe una `visualSeed` (entero de 32 bits autoritativo) y una tupla de paleta (`primaryColor`, `secondaryColor`, `accentColor`) proveniente de `palettes.json`.
 - Existe un 2% de probabilidad independiente de variante **Shiny** (paleta alternativa y efecto de brillo especular diagonal animado cada 4 s + destellos).
 - **Algoritmo Mulberry32**: Todos los clientes (Tauri, Android, iOS) ejecutan el mismo PRNG con `visualSeed` para derivar:
@@ -147,7 +149,7 @@ $$\text{Stat} = \text{round}\left((\text{BaseSpecies} \cdot \text{RarityMultipli
 
 - **Requisitos**: dos pets del mismo elemento, nivel 20+, ticket de cría (10 gemas).
 - **Incubación**: 2 horas (acelerable con gemas).
-- **Genética**: descendencia hereda elemento (70/30), patrón (tirada del pool unido), rareza (media de padres ±1 tier), genes (50% de cada padre).
+- **Genética**: descendencia hereda elemento (70/30), patrón (tirada del pool unido), rareza (la de la especie de la cría; no se hereda ni muta), genes (50% de cada padre).
 - **Mutación**: 5% de probabilidad de un gen mutante nuevo.
 - **Límite**: 1 cría por pet cada 24h.
 
