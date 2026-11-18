@@ -1,0 +1,81 @@
+# Motor de efectos del escritorio
+
+Código: `desktop/src/lib/effects/` y `desktop/src/components/EffectLayer.svelte`. No depende del navegador salvo `CanvasSink` y el componente: se prueba en Node (vitest, entorno `node`) y la hoja de frames se pinta con `sharp`.
+
+## Piezas
+
+| Archivo | Qué hace |
+|---|---|
+| `types.ts` | `EffectDef`, `FxPhase`, `FxFrame`, `FxPalette`, `PixelSink`. |
+| `timeline.ts` | `EffectPlayer` (fases y `hold`), `fixedDuration`, `quantize`. Lógica pura. |
+| `palettes.ts` | `FLOW_PALETTES` y `flowPalette(element)`: la rampa de cada Flujo del Éter. |
+| `render.ts` | `GridSink` (memoria, tests y hoja), `CanvasSink` (pantalla) y `renderFrame`. |
+| `index.ts` | Registro `EFFECTS`: todo efecto nuevo se añade aquí. |
+| `portalNexo.ts` | Efecto de referencia. |
+| `EffectLayer.svelte` | Canvas absoluto, `pointer-events: none`, anima con rAF a la cadencia del efecto. |
+
+## EffectDef
+
+```ts
+{
+  id: 'portal-nexo',
+  lore: 'Una frase con la referencia a LORE.md',
+  width: 44, height: 66, scale: 2,      // rejilla nativa y escala entera
+  anchor: { x: 22, y: 63 },              // píxel que cae sobre el punto (x, y) que da quien lo lanza
+  points: { mouth: { x: 22, y: 42 } },   // puntos con nombre para colocar a la mascota
+  phases: [{ name: 'appear', ms: 560 }, …, { name: 'hold', ms: 'hold' }, …],
+  reducedPhases: [...],                  // mismos nombres, cortas
+  fps: 12,
+  draw(sink, frame) { … },               // frame = { phase, t 0..1, time ms cuantizado, palette, seed, reduced }
+  opacity?(frame) { … },                 // fundido (sobre todo con movimiento reducido)
+}
+```
+
+- `draw` pinta con `sink.set(x, y, color)` en coordenadas nativas. Lo que cae fuera se ignora, así que una partícula puede salirse sin romper nada.
+- `t` es el progreso de la fase; `time` sirve para lo que fluye siempre (remolinos, parpadeos). Con `reduced` ninguno de los dos debe cambiar el dibujo.
+- Una fase con `ms: 0` se salta.
+
+## EffectPlayer y la fase `hold`
+
+```ts
+const player = new EffectPlayer(phases, (phase) => {
+  if (phase === 'hold') /* mueve a la mascota y, al acabar: */ player.release(performance.now());
+  if (phase === 'done') /* quita el efecto y avisa al estado */;
+});
+player.start(performance.now());
+```
+
+- `onPhase` llega una vez por fase y en orden, aunque un frame se salte varias. Al final llega `'done'`.
+- `release()` antes de llegar al `hold` hace que se pase de largo.
+- Quien llama a `tick()` es `EffectLayer`, en cada frame. Si el componente no está montado, el efecto no avanza: móntalo siempre que exista el reproductor.
+
+## Montarlo junto a la mascota (PetView)
+
+```svelte
+{#if portal}
+  {#key portal.id}
+    <EffectLayer def={portalNexo} player={portal.player} x={portal.x} y={portal.y}
+                 palette={portalPalette} seed={portalSeed} reduced={reducedMotion} />
+  {/key}
+{/if}
+```
+
+- `x, y` son los píxeles de pantalla del anclaje. Para los pies de la mascota: `posX + PET_SIZE / 2`, `posY + PET_SIZE - FEET_INSET`.
+- `layer="behind"` (por defecto) queda bajo la mascota (`--z-pet - 1`); `front` queda encima.
+- La paleta sale de `flowPalette(pet.species.element)`, y la semilla, de un hash del id del Pockai.
+
+## Sincronía con la mascota (patrón del portal)
+
+PetView tiene, para el viaje:
+- `travelBusy` (clase `traveling`): no pasea, no habla sola, no se arrastra, no se invoca, y el paso hasta el portal usa `transition: left 0.76s linear`.
+- `petAway` (clase `away`): `visibility: hidden`. El click-through (`lib/clickthrough.ts`) ignora lo oculto. Además, `setPetOnScreen(false)` hace que los avisos salgan como notificación nativa.
+- `portalAnim` (`entering`/`exiting`): keyframe `enterPortal` sobre `.pet-body`, que encoge hacia la boca, se ilumina y se funde. La salida es el mismo keyframe al revés.
+
+Antes de mover a la mascota, déjala quieta y horizontal (`settleForTravel`): sin trepar, sin física en el aire, sin choca-esos-cinco. Para andar, pon `walkUntil = now + ms` (el controlador pinta `walk`) y cambia `posX`.
+
+## Estado de juego (visitTravel)
+
+Si el efecto acompaña a un cambio de estado, ese estado vive en `lib/` y no en el componente:
+- Es un store con estados de transición (`departing`, `returning`) que solo existen si hay un **presentador** (`registerTravelPresenter()` en `onMount`). Sin presentador se salta al estado final, por ejemplo cuando la mascota está en su hábitat.
+- El presentador avisa con `travelArrived()` al acabar. Si se desmonta a mitad, la baja lo resuelve sola.
+- Las salidas del estado (temporizador, restaurar al arrancar) se prueban con `vi.useFakeTimers()` en su spec.

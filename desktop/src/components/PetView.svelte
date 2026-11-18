@@ -32,6 +32,9 @@
   import { currentSpeech, parseBold, speak, speechBusy } from '../lib/speech-queue';
   import { setPetOnScreen } from '../lib/window-visibility';
   import Ico from './Ico.svelte';
+  import EffectLayer from './EffectLayer.svelte';
+  import { EffectPlayer, flowPalette, portalNexo } from '../lib/effects';
+  import { registerTravelPresenter, travel, travelArrived, type TravelState } from '../lib/visitTravel';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
@@ -270,7 +273,7 @@
   }
 
   function handleMouseDown(e: MouseEvent) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || petAway || travelBusy) return;
     isDragging = true;
     dragMoved = false;
     dragStartX = e.clientX - posX;
@@ -307,6 +310,136 @@
 
     // ¿Está encima del panel (la casa)? Resalta el panel y la mascota como destino
     setOverHome(isOverPanel(e.clientX, e.clientY));
+  }
+
+  // ---------- Viaje de visita por las hebras del Nexo (lib/visitTravel, skill pockai-effect-architect) ----------
+  /** Píxeles desde el borde inferior del frame hasta los pies del sprite. */
+  const FEET_INSET = 4;
+  /** Distancia entre el centro de la mascota y el del portal al abrirse. */
+  const PORTAL_GAP = 104;
+  const WALK_TO_PORTAL_MS = reducedMotion ? 0 : 760;
+  const THROUGH_PORTAL_MS = reducedMotion ? 220 : 440;
+  /** Fuera de casa: invisible y sin zona de clic (el click-through ignora lo oculto). */
+  let petAway = false;
+  /** Entrando o saliendo por el portal: no pasea, no habla sola y no se puede arrastrar. */
+  let travelBusy = false;
+  let portalAnim: '' | 'entering' | 'exiting' = '';
+  let portal: { x: number; y: number; player: EffectPlayer; id: number } | null = null;
+  let portalSeq = 0;
+  let travelHandled: TravelState = 'home';
+  let unregisterTravel: () => void = () => {};
+  $: portalPalette = flowPalette(pet?.species?.element);
+  $: portalSeed = [...String(pet?.id ?? 'pockai')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
+  $: onTravel($travel.state);
+  $: setPetOnScreen(!petAway);
+
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const friendLabel = () => $travel.friendName || 'tu amigo';
+
+  function onTravel(state: TravelState) {
+    if (state === travelHandled) return;
+    travelHandled = state;
+    if (state === 'departing') void departThroughPortal();
+    else if (state === 'returning') void returnThroughPortal();
+    else if (!portal) {
+      // Sin animación (visita restaurada, o vuelta mientras estaba en su hábitat)
+      petAway = state === 'away';
+      travelBusy = false;
+    }
+  }
+
+  /** Deja a la mascota quieta y en horizontal antes de viajar. */
+  function settleForTravel() {
+    isClimbing = false;
+    climbWall = null;
+    climbRotation = 0;
+    physicsState.isAirborne = false;
+    isHighFiveWaiting = false;
+    walkUntil = 0;
+  }
+
+  /** Pies del portal: a un lado de la mascota (hacia donde mira, si cabe) y a la altura de sus pies. */
+  function portalSpot(): { x: number; y: number } {
+    const w = window.innerWidth || 800;
+    const half = (portalNexo.width * portalNexo.scale) / 2 + 8;
+    const center = posX + PET_SIZE / 2;
+    // Ni fuera de la pantalla ni tapado por el panel de control abierto
+    const panel = document.querySelector('.panel-card')?.getBoundingClientRect();
+    const feetY = posY + PET_SIZE - FEET_INSET;
+    const blocked = (cx: number) =>
+      cx < half || cx > w - half || (!!panel && cx + half > panel.left && cx - half < panel.right && feetY > panel.top);
+    let x = center + direction * PORTAL_GAP;
+    if (blocked(x)) x = center - direction * PORTAL_GAP;
+    x = Math.min(Math.max(half, x), w - half);
+    return { x, y: feetY };
+  }
+
+  function launchPortal(spot: { x: number; y: number }, onHold: (p: EffectPlayer) => Promise<void>): void {
+    const player = new EffectPlayer(reducedMotion ? portalNexo.reducedPhases : portalNexo.phases, (phase) => {
+      if (phase === 'hold') void onHold(player);
+      if (phase === 'done') {
+        portal = null;
+        travelBusy = false;
+        travelArrived();
+      }
+    });
+    player.start(performance.now());
+    portal = { ...spot, player, id: ++portalSeq };
+  }
+
+  async function departThroughPortal() {
+    travelBusy = true;
+    settleForTravel();
+    const spot = portalSpot();
+    direction = spot.x > posX + PET_SIZE / 2 ? 1 : -1;
+    // Dormida, al menos se despereza antes de cruzar (el resto de clips esperan a que despierte)
+    play(isSleeping ? 'wake' : 'surprised');
+    speak(`¡Me voy al Santuario de ${friendLabel()}! 🧵`, { key: 'travel', durationMs: 2400, maxWaitMs: 400 });
+    launchPortal(spot, async (player) => {
+      // Camina hasta la boca del portal…
+      if (WALK_TO_PORTAL_MS > 0) {
+        walkUntil = performance.now() + WALK_TO_PORTAL_MS;
+        posX = spot.x - PET_SIZE / 2;
+        await wait(WALK_TO_PORTAL_MS);
+      } else {
+        posX = spot.x - PET_SIZE / 2;
+      }
+      // …y se lo traga el Éter.
+      portalAnim = 'entering';
+      await wait(THROUGH_PORTAL_MS);
+      petAway = true;
+      portalAnim = '';
+      player.release(performance.now());
+    });
+  }
+
+  async function returnThroughPortal() {
+    travelBusy = true;
+    settleForTravel();
+    const w = window.innerWidth || 800;
+    posX = Math.min(Math.max(0, posX), w - PET_SIZE);
+    // Vuelve al suelo aunque se fuera desde el techo, una pared o una ventana: mientras estaba
+    // fuera no se veía, así que elegir dónde reaparece no es un teletransporte.
+    posY = (window.innerHeight || 600) - PET_SIZE;
+    isPerched = false;
+    const spot = { x: posX + PET_SIZE / 2, y: posY + PET_SIZE - FEET_INSET };
+    launchPortal(spot, async (player) => {
+      // Sale del Éter…
+      petAway = false;
+      portalAnim = 'exiting';
+      await wait(THROUGH_PORTAL_MS);
+      portalAnim = '';
+      // …da unos pasos hacia el centro de la pantalla y cuenta de dónde viene.
+      direction = posX + PET_SIZE / 2 < w / 2 ? 1 : -1;
+      if (WALK_TO_PORTAL_MS > 0) {
+        walkUntil = performance.now() + WALK_TO_PORTAL_MS;
+        posX = Math.min(Math.max(0, posX + direction * PORTAL_GAP * 0.8), w - PET_SIZE);
+        await wait(WALK_TO_PORTAL_MS);
+      }
+      play('happy');
+      speak(`¡Ya volví del Santuario de ${friendLabel()}! ✨`, { key: 'travel', durationMs: 3200, maxWaitMs: 1500 });
+      player.release(performance.now());
+    });
   }
 
   // Arrastre hacia casa: la mascota va por encima del panel mientras se arrastra, así que
@@ -559,7 +692,7 @@
       petBonding,
       petIntelligence
     );
-    if (!skillActive) return;
+    if (!skillActive || petAway || travelBusy) return;
 
     physicsState.isAirborne = false;
     isClimbing = false;
@@ -596,7 +729,8 @@
   }
 
   onMount(() => {
-    setPetOnScreen(true);
+    setPetOnScreen(!petAway);
+    unregisterTravel = registerTravelPresenter();
     // Inicializar loop de animación
     animRafId = requestAnimationFrame(renderLoop);
 
@@ -605,6 +739,7 @@
 
     // Ciclo de comportamiento de la mascota en pantalla
     moveInterval = setInterval(async () => {
+      if (petAway || travelBusy) return;
       if (isSleeping || isDragging || physicsState.isAirborne || controller.actionPriority >= BUSY_PRIORITY) return;
 
       const windowWidth = window.innerWidth || 800;
@@ -810,7 +945,7 @@
 
     // Motor de pensamientos frecuentes (Barks contextuales) cada ~65s
     barkInterval = setInterval(() => {
-      if (isSleeping || isDragging || isHighFiveWaiting || speechBusy()) return;
+      if (petAway || travelBusy || isSleeping || isDragging || isHighFiveWaiting || speechBusy()) return;
       const now = performance.now();
       const ctx = {
         appCategory: currentAppCategory,
@@ -836,6 +971,7 @@
     if (animRafId !== null) cancelAnimationFrame(animRafId);
     clearInterval(moveInterval);
     clearInterval(barkInterval);
+    unregisterTravel();
     clearTimeout(cursorStopTimer);
     if (particleTimer) clearTimeout(particleTimer);
     window.removeEventListener('mousemove', handleMouseMove);
@@ -850,10 +986,30 @@
   únicamente a `.pet-body`; el nombre, el bocadillo, las partículas y el texto ambiental quedan
   fuera de esa transformación para que siempre se lean en horizontal.
 -->
+<!-- Portal de hebras del Nexo: por él se va de visita y vuelve (detrás de la mascota) -->
+{#if portal}
+  {#key portal.id}
+    <EffectLayer
+      def={portalNexo}
+      player={portal.player}
+      x={portal.x}
+      y={portal.y}
+      palette={portalPalette}
+      seed={portalSeed}
+      reduced={reducedMotion}
+    />
+  {/key}
+{/if}
+
 <div
   class="pet-container"
   role="button"
-  tabindex="0"
+  tabindex={petAway ? -1 : 0}
+  aria-hidden={petAway}
+  class:away={petAway}
+  class:traveling={travelBusy}
+  class:entering-portal={portalAnim === 'entering'}
+  class:exiting-portal={portalAnim === 'exiting'}
   aria-label="{pet.nickname || pet.species?.name || 'Tu Pockai'}, nivel {pet.level}. {isHighFiveWaiting ? 'Pulsa Enter para chocar los cinco' : 'Pulsa Enter para abrir su panel'}"
   data-anim={currentAnim}
   class:dragging={isDragging}
@@ -895,7 +1051,7 @@
 >
   <div
     class="pet-body"
-    style="transform: scaleX({direction}) rotate({climbRotation}deg) scale({squashScaleX}, {squashScaleY});"
+    style="--dir: {direction}; transform: scaleX({direction}) rotate({climbRotation}deg) scale({squashScaleX}, {squashScaleY});"
   >
     <!-- Tinte ambiental (feature 005): tramo del día + clima -->
     {#if envVariant}
@@ -991,6 +1147,61 @@
     to {
       transform: scale(0.25) translateY(30px);
       opacity: 0;
+    }
+  }
+
+  /* De visita por las hebras del Nexo: fuera de pantalla, sin zona de clic. */
+  .pet-container.away {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .pet-container.traveling {
+    pointer-events: none;
+    /* El paseo hasta el portal: paso constante, no el deslizamiento corto de siempre */
+    transition: left 0.76s linear, top 0.76s linear;
+  }
+  /* Encoge hacia la boca del portal (unos 40 px por encima de los pies) y se funde con el Éter */
+  .pet-container.entering-portal .pet-body {
+    transform-origin: 50% 70%;
+    animation: enterPortal 0.44s ease-in forwards;
+  }
+  .pet-container.exiting-portal .pet-body {
+    transform-origin: 50% 70%;
+    animation: enterPortal 0.44s ease-out reverse both;
+  }
+  .pet-container.entering-portal .pet-badge,
+  .pet-container.exiting-portal .pet-badge {
+    opacity: 0;
+  }
+  /* La animación pisa el transform en línea: se repite el giro (--dir) para que no mire al revés */
+  @keyframes enterPortal {
+    from {
+      transform: scaleX(var(--dir, 1)) translateY(0) scale(1);
+      filter: brightness(1);
+      opacity: 1;
+    }
+    60% {
+      filter: brightness(1.6);
+      opacity: 1;
+    }
+    to {
+      transform: scaleX(var(--dir, 1)) translateY(-30px) scale(0.12);
+      filter: brightness(2.4);
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pet-container.entering-portal .pet-body,
+    .pet-container.exiting-portal .pet-body {
+      animation: fadePortal 0.22s linear forwards;
+    }
+    .pet-container.exiting-portal .pet-body {
+      animation-direction: reverse;
+    }
+    @keyframes fadePortal {
+      to {
+        opacity: 0;
+      }
     }
   }
 
