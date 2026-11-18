@@ -369,6 +369,8 @@ La anatomía tiene que tener sentido para el animal que es: una ballena no tiene
 | Legendario | Proporciones de criatura que impone (cabeza pequeña, cuello o patas largas, piezas mayores que el cuerpo) y piezas compuestas: plumas sueltas, varias cabezas, crines |
 | Mítico | Cuerpo en curva lisa con su luz y su sombra, una segunda lectura de color (vientre de placas, mandíbula, copa por capas), una fila de piezas a lo largo del cuerpo, anatomía con articulaciones y al menos un brillo en color literal (perla, farol, núcleo). La etapa final llena el frame |
 
+**La forma dice la edad.** La cría es redonda y de ojo grande. Cada etapa cambia curvas por puntas y estrena dos o tres piezas con nombre. En la etapa final las terminaciones son afiladas (aletas, cuernos, garras), el ojo es más pequeño y duro, la cabeza tiene hocico, mandíbula o cresta, y aparece un material o un oscuro que no había. Lo que queda detrás (el ala, la pata o la aleta lejanas) va más oscuro, y cada material lleva su trama: placas, veta, racimos de hojas.
+
 Los brillos en color literal son la única excepción a «la hoja no guarda colores»: se ven igual en cualquier ejemplar, sea cual sea su paleta.
 
 Con un plan que no es bípedo, la tabla de etapas siguiente se lee por su intención: «un volumen» es la forma más simple de ese plan y «dos volúmenes», su forma completa. Las alturas son máximos.
@@ -394,7 +396,7 @@ Cada etapa es un **dibujo distinto, con su propio plan corporal**, no la anterio
 Lo que no cambia nunca, para que siga siendo la misma especie:
 
 - La rampa del elemento y los colores secundario y acento.
-- La forma del ojo de la especie (la suya, que puede no ser la de otras especies), con el brillo arriba a la izquierda.
+- El sitio de los ojos y su familia, con el brillo arriba a la izquierda. El tamaño y la dureza sí cambian: la cara madura con la edad.
 - El sitio del rasgo icónico: crece, se duplica o se adorna, pero sale del mismo punto.
 - La vista en tres cuartos y la luz.
 

@@ -45,6 +45,7 @@ La hoja de contactos imprime la altura real de cada etapa: si se pasa, baja o ac
 - **Plan corporal:** cuál de `pixel-style.md` (o uno nuevo) y en qué se diferencia de las especies más parecidas.
 - **Silueta (1 frase):** forma base y proporción cabeza/cuerpo en adulto.
 - **Rasgos icónicos:** los 2 de la ficha, con qué papel de color van y cómo se leen a 64 px.
+- **Estrenos por etapa:** una frase por etapa con la forma del cuerpo y de dos a cuatro piezas nuevas; en la final, un material nuevo (formato y ejemplos en `design-lessons.md` §3).
 - **Evolución visual:** para cada etapa, su plan corporal y qué cambia en los cinco ejes (plan corporal, rasgo icónico, piezas, color y marcas, cara). Indica también qué no cambia, para que la especie siga reconociéndose de baby a final.
 - **Anclas de accesorios:** por etapa, dónde van `neck` y `back`, y cualquier salvedad (por ejemplo, «el gorro se ladea porque la cresta es central»).
 - **Movimiento:** qué pieza «vende» cada pose clave: qué gira con la cola y qué late con los apéndices.
@@ -64,6 +65,9 @@ La hoja de contactos imprime la altura real de cada etapa: si se pasa, baja o ac
    - [ ] **Cambio entre etapas:** cada una se distingue de la anterior por su plan corporal o silueta y por al menos tres ejes más. En negro, las cuatro siluetas se distinguen. Si dos solo difieren en tamaño, falta cambio.
    - [ ] **Distinta de las demás:** su plan corporal no repite el de otra especie del mismo elemento o rareza, y se diferencia de cualquier otra en al menos cuatro de: apoyo, proporción, cabeza, extremidades, rasgo icónico, contorno y cara. Compara su fila de siluetas con las de las demás (`sprite-previews/*-pixel-contact.png`).
    - [ ] **La rareza se ve:** el nivel de detalle corresponde a su rareza (tabla «Cuanto más rara, más trabajada» de `pixel-style.md`). Un legendario impone por proporción; un mítico usa la técnica de míticos y llena el frame en su etapa final.
+   - [ ] **La forma dice la edad:** la cría es redonda; las terminaciones de adult y final acaban en punta; cada etapa estrena dos o tres piezas; la final estrena un material o un oscuro que no había.
+   - [ ] **La cara madura:** el ojo de la etapa final es más pequeño y duro que el de la cría, y su cabeza tiene hocico, mandíbula o cresta. Ninguna etapa final sonríe como una cría.
+   - [ ] **Profundidad y trama** (legendarios y míticos): lo de detrás va más oscuro, cada extremidad tiene tramos y remate, y cada material lleva su trama.
    - [ ] **Anatomía con sentido:** ninguna pieza que el animal no tendría (pies en una ballena, brazos en un pulpo) y nada colgando bajo el cuerpo que se lea como pies.
    - [ ] **Misma especie:** misma paleta, misma forma de ojo y rasgo icónico en el mismo sitio en las cuatro.
    - [ ] **Poses:** la cola y el rasgo icónico se mueven (walk, happy, attack), nada se despega del cuerpo y nada desaparece al dormir.

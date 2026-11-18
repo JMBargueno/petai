@@ -66,6 +66,8 @@ Técnica de míticos, en `scripts/sprites/pixel/species.ts`:
 - `hidden(x, y)`: `torso` mínimo, para esconderlo bajo otra pieza cuando el cuerpo es una curva.
 - Capas de tono sobre una pieza: `{ clip: pieza, keep: true, tone: 'light' | 'shade' | 'hi' }` pinta luces y sombras a mano donde el sombreado automático no llega.
 
+El nivel al que hay que llegar está en `examples/`: compara `<id>-generador.png` con `<id>-objetivo.*` y lee `design-lessons.md`.
+
 Hazlo siempre en este orden: dibuja primero la etapa final, que es la que tiene que impresionar, y saca las demás quitándole piezas. Amplía el frame y míralo de cerca antes de darlo por bueno: si en la etapa final se sigue viendo «una bola con cosas», no está.
 
 ## Etapas
@@ -78,7 +80,8 @@ Las alturas van en px nativos; en la hoja de 128 son el doble.
 | Rasgo icónico | Un solo brote de 4–5 px | Doble y pequeño | Completo | Alargado, más un accesorio que lea el elemento (cresta, aura, corona) |
 | Piezas nuevas | Ninguna | Brazos, cola con punta | Cuello, cola grande | Segunda cola, púas en el lomo (o alas, o melena) |
 | Color y marcas | Sin barriga; mofletes de 2 px | Barriga | Manchas en cabeza y lomo | Franjas, emblema en el pecho, pies y manos en el acento |
-| Cara | Ojos enormes, brillo de 2×2 | Ojos grandes | Ojos normales | Ceja de 1 px: mirada decidida |
+| Cara | Ojos enormes y redondos, brillo de 2×2 | Ojos grandes | Ojos normales; en especies raras, ya con su estilo | Ojo más pequeño y duro, con ceja; cabeza con hocico, mandíbula o cresta |
+| Terminaciones | Todo redondo | La primera punta | Aletas, orejas y cola en punta | Además, cuernos y garras; un material o un oscuro nuevo |
 | Color que no es el base | ~5 % | ~15 % | ~25 % | ~35 % |
 
 **Regla de los cuatro ejes:** en cada salto de etapa cambian al menos cuatro de estos cinco ejes: plan corporal, rasgo icónico, piezas, color y marcas, cara. Además, a lo largo de la línea el plan corporal cambia como mínimo dos veces (bola, cuerpo con extremidades, cabeza y torso).
@@ -88,7 +91,7 @@ Las alturas van en px nativos; en la hoja de 128 son el doble.
 Lo que no cambia nunca, para que siga siendo la misma especie:
 
 - La rampa del elemento y los colores secundario y acento.
-- La forma del ojo (rectángulo oscuro de esquinas recortadas con brillo arriba a la izquierda).
+- El sitio de los ojos y su familia. El tamaño y la dureza sí cambian: la cara madura con la edad (`design-lessons.md` §2).
 - El sitio del rasgo icónico: crece, se duplica o se adorna, pero sale del mismo punto.
 - La vista en tres cuartos y la luz.
 
@@ -111,6 +114,9 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta.
 - Piezas heredadas de la geometría común que el animal no tendría: pies en una ballena, brazos en un pulpo. También apoyos o aletas colocados bajo el cuerpo, que se leen como pies.
 - La misma cara en todas las especies: mismos ojos, mismo tamaño, misma altura.
 - Un mítico o un legendario con el mismo nivel de detalle que una especie normal: la rareza no se ve.
+- Una etapa final con terminaciones redondas y cara de cría: sigue pareciendo un peluche.
+- Una etapa final que es la adulta con las piezas más largas, sin estrenar ningún material.
+- Las dos alas, patas o aletas del mismo tono: no se lee cuál está delante.
 - Una criatura que debería imponer (un fénix, un guardián) dibujada con proporciones de cría: cabeza grande y redonda sobre un cuerpo de bola. Lo épico sale de la proporción: cabeza pequeña, cuello o patas largas y piezas (alas, colas) más grandes que el cuerpo.
 - Un carácter que la cara no cuenta: una especie fiera necesita cejas, colmillos u orejas tiesas, no los ojos redondos de todas.
 - Etapas que solo cambian de tamaño o de proporción de cabeza.

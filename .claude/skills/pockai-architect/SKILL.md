@@ -15,6 +15,8 @@ Lee las referencias cuando las necesites:
 - `references/art-brief.md`: cómo se dibuja una especie en pixel art (`PixelSpecies`), brief de arte, proceso y checklist visual.
 - `references/iso-style.md`: reglas 3/4 isométricas (cámara, luz, cara, etapas y errores típicos).
 - `references/pixel-style.md`: estilo pixel art, evolución por etapas (plan corporal propio y regla de los cuatro ejes) y anclas de accesorios.
+- `references/design-lessons.md`: diez lecciones sacadas de comparar el generador con las hojas objetivo de `references/examples/`, y lo que el generador aún no hace. **Léela antes de dibujar un legendario o un mítico.**
+- `references/concept-prompt.md`: cómo preparar un pase de concepto con una IA de imagen y qué hacer con el resultado.
 - `references/integration-checklist.md`: todos los archivos que hay que tocar, en orden.
 
 ## Modos
@@ -50,7 +52,7 @@ Si no da nada, propón 2-3 conceptos que cubran huecos del catálogo (elementos 
 3. **Coherencia elemento → paleta → comida.** La paleta es `palettes.json[element].default` o una variación cercana (mismo tono, ±luminosidad). La comida favorita tiene sentido con el elemento y la descripción.
 4. **Stats según `balance.md`**: total exacto por rareza, perfil de arquetipo y distinto de las especies del mismo elemento.
 5. **Personalidad de partida (`personalityBias`).** Las 5 dimensiones con las reglas de `references/personality.md`: enteros en [15, 85], al menos un rasgo marcado, coherente con la descripción y el concepto, y distinta de las demás especies. Es solo el punto de partida: piensa también cómo puede evolucionar con distintas crianzas y qué hará en su vida autónoma (va en la ficha).
-6. **Evolución visual: evolucionar es cambiar.** Cada etapa tiene su propio plan corporal (`pixel-style.md`): baby es una bola sin brazos ni cola con el rasgo en brote; juvenile, un cuerpo con brazos, cola y barriga; adult separa cabeza y torso, completa el rasgo y gana manchas; final suma piezas que rompen el contorno (segunda cola, púas, alas), su accesorio de elemento, franjas y una mirada más decidida. En cada salto cambian al menos cuatro de cinco ejes: plan corporal, rasgo icónico, piezas, color y marcas, cara. Se mantienen la paleta, la forma del ojo y el sitio del rasgo icónico, para que las 4 etapas sigan siendo la misma especie. Cada etapa es una geometría propia en el `PixelSpecies` (`art-brief.md`).
+6. **Evolución visual: evolucionar es cambiar.** Cada etapa tiene su propio plan corporal (`pixel-style.md`): baby es una bola sin brazos ni cola con el rasgo en brote; juvenile, un cuerpo con brazos, cola y barriga; adult separa cabeza y torso, completa el rasgo y gana manchas; final suma piezas que rompen el contorno (segunda cola, púas, alas), su accesorio de elemento, franjas y una mirada más decidida. En cada salto cambian al menos cuatro de cinco ejes: plan corporal, rasgo icónico, piezas, color y marcas, cara. Se mantienen la paleta, el sitio de los ojos y el sitio del rasgo icónico, para que las 4 etapas sigan siendo la misma especie. **La forma dice la edad:** la cría es redonda y de ojo grande; cada etapa cambia curvas por puntas y estrena dos o tres piezas con nombre; en la final el ojo es más pequeño y duro, y aparece un material o un color oscuro que no había (`design-lessons.md`). Escribe la evolución como una lista de estrenos, una frase por etapa. Cada etapa es una geometría propia en el `PixelSpecies` (`art-brief.md`).
 7. **Sitio para accesorios.** La especie debe poder llevar gorro, gafas, bufanda y capa en las 4 etapas sin tapar ojos, boca ni rasgo icónico. Define sus anclas `head`, `face`, `neck` y `back` por etapa en la ficha (`pixel-style.md`).
 8. **`description` = semilla del chat.** Se inyecta en el prompt de personalidad (`backend/src/modules/ai/personality.ts`). Son 1–2 frases en español, en tono cálido, con un rasgo físico y uno de carácter, sin stats ni jerga de juego.
 9. **Nombres:** `name` en español, evocador, con juego de palabras animal + elemento (Ignisaurio, Axolunar, Florabrote). `id` en minúsculas y sin espacios (`^[a-z][a-z0-9_]*$`), único; `spriteKey` = `id`.
@@ -73,9 +75,11 @@ Sigue `references/integration-checklist.md` paso a paso. Puntos críticos:
 
 ### 5b. Dibujar el arte (salvo que el usuario pida placeholders)
 Sigue la sección "Dibujar" de `references/art-brief.md`:
-1. Escribe el `PixelSpecies` con sus cuatro geometrías, con las diferencias por etapa de `pixel-style.md`.
+0. Si la especie es legendaria o mítica, abre un par de `references/examples/` (`<id>-generador.png` y `<id>-objetivo.*`) y repasa `design-lessons.md`: el objetivo es el nivel que se espera.
+1. Escribe el `PixelSpecies` con sus cuatro geometrías, con las diferencias por etapa de `pixel-style.md`. Empieza por la etapa final.
 2. Genera la hoja de contactos con `contact_sheet.ts <id>` y **mírala** leyendo el PNG.
 3. Pasa la checklist y corrige hasta que todo pase. Normalmente hacen falta 2-3 iteraciones; no te quedes en la primera.
+3b. Si es legendaria o mítica y la hoja pasa pero se queda corta, ofrece al usuario un pase de concepto (`concept-prompt.md`): le das el prompt, lo ejecuta con la hoja adjunta y tú incorporas lo que estrena cada etapa.
 4. Ejecuta `pnpm generate:sprites` (hojas, anclas de accesorio y vistas previas).
 
 Enseña al usuario la hoja de contactos final o descríbela. Si se piden placeholders, usa los dos scripts de la sección "Placeholders" (siempre **con id**).
