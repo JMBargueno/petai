@@ -218,7 +218,8 @@ export const patternsSchema = z.array(
       id: z.string(),
       name: z.string(),
       description: z.string(),
-      minRarity: z.string(),
+      /** Rareza propia del patrón (se tira por ejemplar). */
+      rarity: z.string(),
     })
     .passthrough(),
 );
@@ -559,9 +560,9 @@ export function validateGameData(b: GameDataBundle): string[] {
     if (!rarities[sp.rarity]) errors.push(`Rareza '${sp.rarity}' en especie ${sp.id} no está en balance.json`);
   }
 
-  // 7. Patrones (minRarity)
+  // 7. Patrones (rareza propia)
   for (const pat of patterns ?? []) {
-    if (!rarities[pat.minRarity]) errors.push(`minRarity '${pat.minRarity}' en patrón ${pat.id} no está en balance.json`);
+    if (!rarities[pat.rarity]) errors.push(`Rareza '${pat.rarity}' en patrón ${pat.id} no está en balance.json`);
   }
 
   // 8. Logros y constelaciones (feature 008): integridad cruzada

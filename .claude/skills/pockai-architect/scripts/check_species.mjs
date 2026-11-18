@@ -117,7 +117,7 @@ for (const s of species) {
 // Avisos de catálogo (fallback de eclosión)
 const byRarity = Object.fromEntries(Object.keys(balance.rarity ?? {}).map((r) => [r, species.filter((s) => s.rarity === r).length]));
 const empty = Object.entries(byRarity).filter(([, n]) => n === 0).map(([r]) => r);
-if (empty.length) warnings.push(`Rarezas sin especies: ${empty.join(', ')} → la eclosión usa TODO el pool en esas tiradas`);
+if (empty.length) warnings.push(`Rarezas sin especies: ${empty.join(', ')} → en esas tiradas la eclosión entrega una especie de la rareza más cercana por debajo`);
 for (const [r, n] of Object.entries(byRarity)) {
   if (n === 1 && r !== 'normal') warnings.push(`Solo 1 especie ${r}: saldrá en todas las eclosiones ${r} (${(balance.rarity[r].probability * 100).toFixed(0)} %)`);
 }

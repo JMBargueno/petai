@@ -45,7 +45,8 @@ Estado sugerido (solo los existentes):
 Puedes proponer otro de los cuatro si el concepto lo justifica; `guard` solo en skills `kind: "guard"`. Nombres en español, `id` en inglés snake_case (como `flame_burst`).
 
 ## Avisos de eclosión (avisar siempre que aplique)
-`hatching.service.ts` elige una especie con `rarity === rareza tirada`; **si no hay ninguna, usa todo el pool**.
-- **Primera especie de una rareza X:** saldrá en *todas* las tiradas de X (p. ej. la primera `rare` = 25 % de eclosiones).
-- **Mientras haya rarezas vacías**, cualquier especie (incluida una legendaria de 300 de base) puede salir en ellas por el fallback.
-- Hoy todas las especies son `normal`. Indícalo en el resumen; cambiar el fallback es una tarea aparte, no de esta skill.
+La rareza es de la especie: todos sus ejemplares la llevan. `hatching.service.ts` tira una rareza y entrega una especie de esa rareza; **si no hay ninguna, baja a la rareza más cercana que tenga especies** (`rarity.engine.ts`).
+- **Primera especie de una rareza X:** saldrá en *todas* las tiradas de X (p. ej. la primera `rare` = 25 % de eclosiones), y también en las de rarezas superiores que sigan vacías.
+- **Mientras haya rarezas vacías**, sus tiradas caen en la rareza de debajo: hoy todas las especies son `normal`, así que todas las eclosiones dan una especie normal.
+- El patrón tiene rareza propia y se tira aparte: no depende de la especie.
+- Indica en el resumen qué rarezas siguen sin especies.

@@ -52,13 +52,13 @@ async function main() {
       update: {
         name: pat.name,
         description: pat.description,
-        minRarity: pat.minRarity,
+        rarity: pat.rarity,
       },
       create: {
         id: pat.id,
         name: pat.name,
         description: pat.description,
-        minRarity: pat.minRarity,
+        rarity: pat.rarity,
       },
     });
   }
