@@ -133,7 +133,7 @@ describe('Agente: herramientas y confirmación (e2e, LLM mock)', () => {
     const req = mock.seen[mock.seen.length - 1];
     expect(req.tools.map((t: any) => t.function.name).sort()).toEqual([
       // express_behavior (spec 36): reacción estructurada que propone el LLM, validada por reglas de juego
-      'create_reminder', 'express_behavior', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'set_in_habitat', 'suggest_minigame',
+      'create_reminder', 'express_behavior', 'get_lore', 'get_my_status', 'list_reminders', 'request_food', 'search_memory', 'set_in_habitat', 'suggest_minigame',
     ]);
     expect(req.messages[0].content).toContain('La hora actual es');
     expect(req.messages[0].content).toContain('NO se ejecutan hasta que el entrenador las confirma');
