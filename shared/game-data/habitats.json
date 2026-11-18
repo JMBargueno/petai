@@ -25,13 +25,13 @@
       "unlockStage": "juvenile",
       "description": "Un espacio exterior con césped y flores.",
       "theme": {
-        "wall": "#bfe8ff",
-        "wallShade": "#e2f6ff",
-        "floor": "#6cc56a",
-        "floorAlt": "#3f9a45",
-        "trim": "#2f7a35",
+        "wall": "#4f9e4a",
+        "wallShade": "#fff6e6",
+        "floor": "#7ccf6a",
+        "floorAlt": "#5fb456",
+        "trim": "#8a5a35",
         "sky": "#8fd0ff",
-        "light": "#ffffdc"
+        "light": "#fff6c8"
       }
     },
     {
@@ -42,12 +42,12 @@
       "unlockStage": "adult",
       "description": "Un lugar místico para la meditación y el descanso.",
       "theme": {
-        "wall": "#f4e7d1",
-        "wallShade": "#e2cfae",
-        "floor": "#b8834a",
-        "floorAlt": "#7e5426",
+        "wall": "#fbf3e2",
+        "wallShade": "#ecdfc2",
+        "floor": "#cdc27e",
+        "floorAlt": "#b0a560",
         "trim": "#c0392b",
-        "sky": "#8fd0ff",
+        "sky": "#ffb27a",
         "light": "#ffd296"
       }
     },
@@ -59,12 +59,12 @@
       "unlockStage": "final",
       "description": "El espacio definitivo de tu pet, un legendario.",
       "theme": {
-        "wall": "#e9ccff",
-        "wallShade": "#cdb4ff",
-        "floor": "#6d5bff",
-        "floorAlt": "#3d2fa8",
-        "trim": "#5c4ade",
-        "sky": "#3a2f7a",
+        "wall": "#3a2f7a",
+        "wallShade": "#2c2361",
+        "floor": "#8d7fe8",
+        "floorAlt": "#7466d6",
+        "trim": "#e8b94a",
+        "sky": "#1b1450",
         "light": "#c8f0ff"
       }
     }
