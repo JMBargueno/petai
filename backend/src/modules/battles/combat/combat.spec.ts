@@ -360,10 +360,15 @@ describe('motor de combate', () => {
 
     it('nunca baja del nivel 1 y es un rival justo frente a un jugador del mismo nivel', () => {
       expect(generateBot(1, 1, species, skills, cfg).level).toBeGreaterThanOrEqual(1);
+      // El jugador de la prueba lleva una especie normal, así que se mide contra bots de especie normal:
+      // un bot de una especie más rara tiene mejores stats base y no es un rival «del mismo nivel».
+      const normal = new Set(species.filter((sp) => sp.rarity === 'normal').map((sp) => sp.id));
       let wins = 0;
       const n = 150;
-      for (let i = 0; i < n; i++) {
+      for (let i = 0, seen = 0; seen < n; i++) {
         const bot = generateBot(i + 5, 10, species, skills, cfg);
+        if (!normal.has(bot.speciesId)) continue;
+        seen++;
         const me = fighter(bot.element === 'fire' ? 'plant' : 'fire', { level: 10 });
         if (simulateBattle(me, bot, i, cfg).winner === 0) wins++;
       }

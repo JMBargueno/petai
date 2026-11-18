@@ -15,6 +15,9 @@ const PALETTES: Record<string, { primary: string; secondary: string }> = {
   livolt: { primary: '#FFD166', secondary: '#FFEBB3' },
   inktopus: { primary: '#4A4E69', secondary: '#9A8C98' },
   solarejo: { primary: '#F4F1DE', secondary: '#E07A5F' },
+  magmadillo: { primary: '#C2452D', secondary: '#FFB627' },
+  nubeballena: { primary: '#4F86C6', secondary: '#E8F1FA' },
+  cactuerno: { primary: '#4FAF7A', secondary: '#F7B2C4' },
 };
 /** Prendas de ejemplo por ranura (ids de shared/game-data/accessories.json). */
 const DEMO_ACCESSORIES: Record<string, string[]> = {

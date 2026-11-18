@@ -13,6 +13,7 @@ Escribe en español. Sustituye lo que va entre `<>`.
 
 ## Clasificación y hábitat
 - **Tipo:** <bestia / ave / anfibio / constructo de datos…>
+- **Plan corporal:** <bípedo / alado / tentacular / cuadrúpedo / flotante / columna / otro> y en qué se diferencia de las especies más parecidas (`pixel-style.md`).
 - **Tamaño aparente:** <diminuto / pequeño / mediano>
 - **Hábitat en el Éter:** <dónde "vive" en la red y en el mundo del Custodio>
 - **Comportamiento social:** <solitario / pareja / grupo>

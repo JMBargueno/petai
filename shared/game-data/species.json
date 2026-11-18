@@ -166,5 +166,89 @@
       "secondary": "#E07A5F",
       "accent": "#F2CC8F"
     }
+  },
+  {
+    "id": "magmadillo",
+    "name": "Magmadillo",
+    "description": "Un armadillo de coraza volcánica cuyas grietas brillan cuando se emociona. Es tranquilo y protector, y se hace una bola cuando algo le asusta.",
+    "element": "fire",
+    "rarity": "super_rare",
+    "baseStats": {
+      "hp": 62,
+      "atk": 52,
+      "def": 70,
+      "vel": 44,
+      "esp": 52
+    },
+    "favoriteFood": "spicy_berry",
+    "spriteKey": "magmadillo",
+    "personalityBias": {
+      "curiosity": 40,
+      "sociability": 45,
+      "bravery": 70,
+      "affection": 65,
+      "temper": 30
+    },
+    "defaultPalette": {
+      "primary": "#C2452D",
+      "secondary": "#FFB627",
+      "accent": "#5A1807"
+    }
+  },
+  {
+    "id": "nubeballena",
+    "name": "Nubeballena",
+    "description": "Un ballenato que flota por el aire y guarda recuerdos en los puntos de luz de su lomo. Es sereno y soñador, y nunca tiene prisa.",
+    "element": "water",
+    "rarity": "super_rare",
+    "baseStats": {
+      "hp": 66,
+      "atk": 44,
+      "def": 54,
+      "vel": 46,
+      "esp": 70
+    },
+    "favoriteFood": "sweet_coral",
+    "spriteKey": "nubeballena",
+    "personalityBias": {
+      "curiosity": 60,
+      "sociability": 55,
+      "bravery": 45,
+      "affection": 70,
+      "temper": 20
+    },
+    "defaultPalette": {
+      "primary": "#4F86C6",
+      "secondary": "#E8F1FA",
+      "accent": "#1F3F6E"
+    }
+  },
+  {
+    "id": "cactuerno",
+    "name": "Cactuerno",
+    "description": "Un erizo-cactus de púas tiesas y flor en lo alto. Parece arisco, pero florece cada vez que le dedicas un rato.",
+    "element": "plant",
+    "rarity": "super_rare",
+    "baseStats": {
+      "hp": 56,
+      "atk": 62,
+      "def": 68,
+      "vel": 44,
+      "esp": 50
+    },
+    "favoriteFood": "sun_seed",
+    "spriteKey": "cactuerno",
+    "personalityBias": {
+      "curiosity": 45,
+      "sociability": 30,
+      "bravery": 65,
+      "affection": 55,
+      "temper": 65
+    },
+    "defaultPalette": {
+      "primary": "#4FAF7A",
+      "secondary": "#F7B2C4",
+      "accent": "#1F5A44"
+    }
   }
 ]

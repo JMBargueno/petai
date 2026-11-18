@@ -28,7 +28,7 @@ Lee estos archivos y las secciones 2 y 4 de `docs/LORE.md`:
 - `shared/game-data/species.json`, `skills.json`, `foods.json` y `genes.json`.
 - `shared/assets/palettes.json`.
 
-Haz un mini-inventario: especies por elemento y por rareza, el `personalityBias` de cada una y cuáles tienen `PixelSpecies` en `scripts/sprites/pixel/species.ts`. Sirve para detectar huecos (de catálogo y de carácter) y no duplicar conceptos.
+Haz un mini-inventario: especies por elemento y por rareza, el plan corporal de cada una (tabla de `pixel-style.md`), el `personalityBias` de cada una y cuáles tienen `PixelSpecies` en `scripts/sprites/pixel/species.ts`. Sirve para detectar huecos (de catálogo y de carácter) y no duplicar conceptos.
 
 Si necesitas entender cómo se usa la personalidad, lee también `balance.json → personality` (bandas y keywords) y `docs/specs/spec-36-cerebro-pockai.md`. `node .claude/skills/pockai-architect/scripts/check_species.mjs` da el inventario y los avisos actuales.
 
@@ -45,6 +45,7 @@ Si no da nada, propón 2-3 conceptos que cubran huecos del catálogo (elementos 
 ### 3. Diseñar (reglas)
 1. **La forma sigue a la función, en clave mascota.** Cada rasgo (cola, cresta, branquias, antenas) responde a su elemento o Flujo del Éter y a su forma de vivir. Tierno, legible y nada gore.
 2. **Silueta reconocible a 64 px** (tamaño en sala) en 3/4, con al menos 2 rasgos icónicos que anticipen su estilo de combate y que se lean también con espejo.
+   **Cada especie, un cuerpo distinto.** Elige primero su plan corporal (`pixel-style.md`: bípedo, alado, tentacular, cuadrúpedo, flotante, columna u otro nuevo) y no repitas el de otra especie del mismo elemento ni de la misma rareza. Frente a cualquier otra especie debe cambiar en al menos cuatro de: apoyo, proporción, cabeza, extremidades, rasgo icónico, contorno y cara (forma, tamaño y sitio de los ojos). Un bípedo redondo con otro adorno no es una especie nueva. **La anatomía tiene que tener sentido** para el animal que es: una ballena no tiene pies, un pulpo no tiene brazos.
 3. **Coherencia elemento → paleta → comida.** La paleta es `palettes.json[element].default` o una variación cercana (mismo tono, ±luminosidad). La comida favorita tiene sentido con el elemento y la descripción.
 4. **Stats según `balance.md`**: total exacto por rareza, perfil de arquetipo y distinto de las especies del mismo elemento.
 5. **Personalidad de partida (`personalityBias`).** Las 5 dimensiones con las reglas de `references/personality.md`: enteros en [15, 85], al menos un rasgo marcado, coherente con la descripción y el concepto, y distinta de las demás especies. Es solo el punto de partida: piensa también cómo puede evolucionar con distintas crianzas y qué hará en su vida autónoma (va en la ficha).

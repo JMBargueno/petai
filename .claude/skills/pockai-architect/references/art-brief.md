@@ -11,6 +11,15 @@ Toma como referencia de código `IGNISAUR`, `AXOLUNAR` y `FLORABUD` en ese archi
 - **Ganchos de la especie:**
   - `behind(g, s, p)`: lo que va detrás del cuerpo (cola, aletas, púas, branquias).
   - `onHead(g, s, p)`: lo que va sobre la cabeza, pintado después (cuernos, hojas, cresta, collar).
+  - `front(g, s, p)`: lo que va por delante de todo el cuerpo (patas cercanas de un cuadrúpedo, la nube de un flotante).
+- **Planes corporales que no son bípedos** (`pixel-style.md`): la geometría común es un bípedo, pero todo se puede quitar o mover.
+  - Quita piezas con `undefined`: `head` (un solo volumen en adult y final), `arm`, `farArm`, `feet` (flota o repta), `belly`, `marks`, `emblem`. Ojo: `stage('adult')` y `stage('final')` traen `head`; si tu plan es de un volumen, quítala o saldrá una bola encima.
+  - Mueve `torso`, `head` y `eye` adonde toque. Conserva el ancho y la separación de los ojos de la etapa (`{ ...BASE.adult.eye, y, x1, x2 }`) para que las gafas sigan encajando.
+  - Apoyos propios: `step(p, [cx, cy, rx, ry], fase)` devuelve la elipse desplazada con el paso. `hindFar`/`hindNear` son las patas traseras de un cuadrúpedo. Usa `p.leg` y `-p.leg` para alternar. Un flotante no lleva apoyos: nada bajo el cuerpo.
+  - Cara propia: `eye.style` (`bead`, `lid`, `grumpy` o sin estilo) cambia la forma del ojo abierto; el resto de expresiones son comunes. Mueve también la altura y la separación de los ojos según el animal.
+  - `hat: [x, y]` fija el ancla `head` cuando lo alto del cuerpo no es el sitio del gorro.
+  - Para fundir una pieza con el tronco sin línea de separación, píntala con la pieza 4 en `behind` (los brazos del Cactuerno).
+  - Referencias: `MAGMADILLO` (cuadrúpedo), `NUBEBALLENA` (flotante), `CACTUERNO` (columna).
 - **Papeles de color (`Role`):** `body` (primario, admite patrón), `skin` (primario sin patrón: extremidades y cara), `belly` (secundario plano), `trait` (secundario con sombra: el rasgo icónico) y `mark` (primario oscurecido: manchas, franjas, púas). No hay más colores: la paleta de la mascota solo tiene primario y secundario.
 - **Piezas (`part`):** dos formas con el mismo número de pieza se funden; con números distintos, el rasterizador pone una línea de separación entre ellas. Con `{ clip: n, keep: true }` pintas una mancha dentro de la pieza `n` sin crear línea.
 - **Movimiento:** las 31 animaciones salen de las poses de `scripts/sprites/poses.ts`, que no se tocan. Para que tus piezas se muevan con ellas, envuélvelas en los ayudantes:
@@ -31,6 +40,7 @@ Toma como referencia de código `IGNISAUR`, `AXOLUNAR` y `FLORABUD` en ese archi
 La hoja de contactos imprime la altura real de cada etapa: si se pasa, baja o acorta lo que sobresale. Si una pose saca la criatura del frame, el rasterizador la recoloca sola.
 
 ## Plantilla del brief (va en la ficha)
+- **Plan corporal:** cuál de `pixel-style.md` (o uno nuevo) y en qué se diferencia de las especies más parecidas.
 - **Silueta (1 frase):** forma base y proporción cabeza/cuerpo en adulto.
 - **Rasgos icónicos:** los 2 de la ficha, con qué papel de color van y cómo se leen a 64 px.
 - **Evolución visual:** para cada etapa, su plan corporal y qué cambia en los cinco ejes (plan corporal, rasgo icónico, piezas, color y marcas, cara). Indica también qué no cambia, para que la especie siga reconociéndose de baby a final.
@@ -50,6 +60,8 @@ La hoja de contactos imprime la altura real de cada etapa: si se pasa, baja o ac
    - [ ] Es 3/4 de verdad: se ven la cara y el costado derecho, y lo lejano asoma detrás.
    - [ ] **Alturas:** ninguna etapa pasa de su máximo.
    - [ ] **Cambio entre etapas:** cada una se distingue de la anterior por su plan corporal o silueta y por al menos tres ejes más. En negro, las cuatro siluetas se distinguen. Si dos solo difieren en tamaño, falta cambio.
+   - [ ] **Distinta de las demás:** su plan corporal no repite el de otra especie del mismo elemento o rareza, y se diferencia de cualquier otra en al menos cuatro de: apoyo, proporción, cabeza, extremidades, rasgo icónico, contorno y cara. Compara su fila de siluetas con las de las demás (`sprite-previews/*-pixel-contact.png`).
+   - [ ] **Anatomía con sentido:** ninguna pieza que el animal no tendría (pies en una ballena, brazos en un pulpo) y nada colgando bajo el cuerpo que se lea como pies.
    - [ ] **Misma especie:** misma paleta, misma forma de ojo y rasgo icónico en el mismo sitio en las cuatro.
    - [ ] **Poses:** la cola y el rasgo icónico se mueven (walk, happy, attack), nada se despega del cuerpo y nada desaparece al dormir.
    - [ ] **Accesorios:** hay sitio para gorro, gafas, bufanda y capa en las 4 etapas sin tapar ojos, boca ni rasgo icónico.
