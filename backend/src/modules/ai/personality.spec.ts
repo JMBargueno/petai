@@ -94,3 +94,30 @@ describe('personality', () => {
     });
   });
 });
+
+describe('spec 37 §1.4: hora local para el agente', () => {
+  const { buildSystemPrompt, localTimeLabel } = require('./personality');
+  const NOON_UTC = new Date('2026-11-18T12:00:45Z');
+
+  it('da la hora local con desfase y día de la semana, sin segundos', () => {
+    expect(localTimeLabel(NOON_UTC, 'Europe/Madrid')).toBe('2026-11-18T13:00+01:00, miércoles');
+    expect(localTimeLabel(NOON_UTC, 'America/New_York')).toBe('2026-11-18T07:00-05:00, miércoles');
+    expect(localTimeLabel(NOON_UTC, 'UTC')).toBe('2026-11-18T12:00+00:00, miércoles');
+  });
+
+  it('cambia de día cuando en la zona del entrenador ya es otro', () => {
+    expect(localTimeLabel(new Date('2026-11-18T23:30:00Z'), 'Asia/Tokyo')).toBe('2026-11-19T08:30+09:00, jueves');
+  });
+
+  it('una zona desconocida o ausente cae a UTC', () => {
+    expect(localTimeLabel(NOON_UTC, 'Marte/Olimpo')).toBe('2026-11-18T12:00+00:00, miércoles');
+    expect(localTimeLabel(NOON_UTC, undefined)).toBe('2026-11-18T12:00+00:00, miércoles');
+  });
+
+  it('el prompt del agente lleva la hora local, no la UTC', () => {
+    const pet = { nickname: 'Brasa', species: { name: 'Ignisaur', element: 'fire' }, intelligence: 600, hunger: 80, energy: 80, hygiene: 80, happiness: 80, health: 100, level: 3, stage: 'baby', rarity: 'common', visualSeed: 1 };
+    const prompt = buildSystemPrompt(pet, {}, { tier: 'agent', now: NOON_UTC, timeZone: 'Europe/Madrid' });
+    expect(prompt).toContain('2026-11-18T13:00+01:00, miércoles');
+    expect(prompt).not.toContain('2026-11-18T12:00:45.000Z');
+  });
+});

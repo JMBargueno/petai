@@ -502,7 +502,10 @@
       "promptBudgetChars": { "free": 700, "pro": 1400, "byok": 1400 },
       "recall": { "episodic": 4, "semantic": 6, "emotional": 3 },
       "recencyHalfLifeDays": { "episodic": 7, "semantic": 60, "emotional": 30 },
-      "minImportanceToStore": 0.3
+      "minImportanceToStore": 0.3,
+      "minRecallScore": 0.15,
+      "recentRecallMinutes": 60,
+      "recentRecallPenalty": 0.5
     },
     "autonomy": {
       "intervalMinutes": 60,

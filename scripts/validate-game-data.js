@@ -96,6 +96,11 @@ if (pers) {
       if (!PERSONALITY_DIMS.includes(k)) throw new Error(`balance.personality.evolution.events.${ev}: dimensión desconocida ${k}`);
     }
   }
+  const mem = pers.memory;
+  if (mem) {
+    if (!(mem.minRecallScore >= 0 && mem.minRecallScore < 1)) throw new Error('balance.personality.memory.minRecallScore debe estar en [0, 1)');
+    if (!(mem.recentRecallMinutes > 0) || !(mem.recentRecallPenalty >= 0)) throw new Error('balance.personality.memory: recentRecallMinutes/recentRecallPenalty inválidos');
+  }
   for (const id of pers.autonomy?.itemFind?.items ?? []) {
     if (!foods.some((f) => f.id === id)) throw new Error(`balance.personality.autonomy.itemFind: ${id} no existe en foods.json`);
   }

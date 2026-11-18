@@ -13,6 +13,7 @@ import {
   selectRelevantFacts,
 } from './memory';
 import { MEMORY_UNLOCK } from './personality';
+import { EMPTY_SUMMARY } from '../mind/memory.engine';
 import { UsageService } from './usage.service';
 import { getDesktopSkill, skillStateOf } from './desktop-skills';
 import {
@@ -177,7 +178,7 @@ export class MemoryService {
         // Spec 36: los resúmenes de conversación son memoria episódica
         layer: 'episodic',
         importance: summary ? 0.45 : 0.1,
-        content: summary || 'Conversación sin datos relevantes.',
+        content: summary || EMPTY_SUMMARY,
         // Marca del último mensaje procesado: los llegados durante la extracción no se pierden
         createdAt: processedUpTo,
       },

@@ -68,7 +68,9 @@ export class EvolutionListener {
   }
 
   @OnEvent('chat:message_sent', { async: true })
-  onChat(p: { petId: string }) {
+  onChat(p: { petId: string; mindHandled?: boolean }) {
+    // El orquestador del chat ya aplica esta deriva junto con la del turno, en una sola escritura
+    if (p.mindHandled) return Promise.resolve();
     return this.safe(() => this.mind.applyExperience(p.petId, ['chat']));
   }
 
@@ -80,17 +82,12 @@ export class EvolutionListener {
 
   /** Visita en vivo a un hábitat: las mascotas de ambos entrenadores la recuerdan. */
   @OnEvent('habitat:visited', { async: true })
-  onHabitatVisit(p: { userId: string; ownerId: string }) {
+  onHabitatVisit(p: { userId: string; ownerId: string; visitorPetId?: string; hostPetId?: string }) {
     return this.safe(async () => {
-      const [visitorPet, hostPet] = await Promise.all(
-        [p.userId, p.ownerId].map((userId) =>
-          this.prisma.pet.findFirst({
-            where: { userId },
-            orderBy: { createdAt: 'asc' },
-            select: { id: true, nickname: true, user: { select: { displayName: true } } },
-          }),
-        ),
-      );
+      const [visitorPet, hostPet] = await Promise.all([
+        this.petInVisit(p.userId, p.visitorPetId),
+        this.petInVisit(p.ownerId, p.hostPetId),
+      ]);
       if (!visitorPet || !hostPet) return;
       const visitorName = visitorPet.user?.displayName || 'un entrenador';
       const hostName = hostPet.user?.displayName || 'un entrenador';
@@ -106,6 +103,24 @@ export class EvolutionListener {
       await this.memory.feel(hostPet.id, `pet:${visitorPet.id}`, `${visitorPet.nickname} (Pockai de ${visitorName})`, 0.1);
       await this.memory.feel(visitorPet.id, `pet:${hostPet.id}`, `${hostPet.nickname} (Pockai de ${hostName})`, 0.1);
     });
+  }
+
+  /**
+   * Mascota de un entrenador que participa en una visita: la que indica el evento y, si no viene
+   * o no es suya, la que tiene elegida como activa (la más antigua si no ha elegido).
+   */
+  private async petInVisit(userId: string, petId?: string) {
+    const select = { id: true, nickname: true, user: { select: { displayName: true } } };
+    if (petId) {
+      const named = await this.prisma.pet.findFirst({ where: { id: petId, userId }, select });
+      if (named) return named;
+    }
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { activePetId: true } });
+    if (user?.activePetId) {
+      const active = await this.prisma.pet.findFirst({ where: { id: user.activePetId, userId }, select });
+      if (active) return active;
+    }
+    return this.prisma.pet.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' }, select });
   }
 
   @OnEvent('coop:friendship_accepted', { async: true })

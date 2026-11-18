@@ -15,6 +15,11 @@ import { cleanText, isSensitive, normalizeForMatch } from '../ai/memory';
 import { IntelligenceTier, MEMORY_LAYERS, MemoryLayer, PersonalityConfig } from './mind.types';
 
 export const MAX_MEMORY_CHARS = 220;
+/**
+ * Texto del resumen cuando una conversación no dejó nada que recordar. La fila existe solo como
+ * marca de «procesado hasta» (la lee `maybeSummarize`): nunca debe llegar al prompt.
+ */
+export const EMPTY_SUMMARY = 'Conversación sin datos relevantes.';
 const DAY_MS = 86_400_000;
 
 export interface MemoryRow {
@@ -59,14 +64,16 @@ export function capacityFor(tier: IntelligenceTier, plan: string, cfg: Personali
   };
 }
 
-/** Retención 0..~1.2: importancia que decae con la edad (vida media por capa); recordar refresca. */
+/**
+ * Retención 0..~1.2: importancia que decae con la edad (vida media por capa).
+ *
+ * La edad se cuenta desde la última vez que el recuerdo se reforzó (`updatedAt`): cuando se
+ * reescribe o cuando sale porque el mensaje hablaba de él. `lastRecalledAt` no cuenta: solo dice
+ * cuándo se inyectó por última vez, y si refrescara el olvido saldrían siempre los mismos.
+ */
 export function retention(m: MemoryRow, now: Date, cfg: PersonalityConfig): number {
   const layer = layerOf(m);
-  const touched = Math.max(
-    m.createdAt.getTime(),
-    m.updatedAt?.getTime() ?? 0,
-    m.lastRecalledAt?.getTime() ?? 0,
-  );
+  const touched = Math.max(m.createdAt.getTime(), m.updatedAt?.getTime() ?? 0);
   const ageDays = Math.max(0, (now.getTime() - touched) / DAY_MS);
   const halfLife = cfg.memory.recencyHalfLifeDays[layer] ?? 30;
   const decay = Math.pow(0.5, ageDays / halfLife);
@@ -111,12 +118,18 @@ export interface RecallSelection {
   episodic: MemoryRow[];
   semantic: MemoryRow[];
   emotional: MemoryRow[];
+  /** Ids de los recuerdos elegidos que comparten palabras con el mensaje (son los que se refuerzan). */
+  matched: string[];
 }
 
 /**
  * Elige qué recuerdos ver en esta interacción: relevancia léxica con el mensaje (peso 1 por
- * palabra compartida), más retención, más un extra a las relaciones con sujetos mencionados.
+ * palabra compartida), más retención, más un extra a la relación con el entrenador.
  * Respeta el máximo por capa y el presupuesto de caracteres del plan.
+ *
+ * Para que no salgan siempre los mismos: lo inyectado hace poco y sin relación con el mensaje
+ * pierde puntuación, y lo que no llega a un mínimo se queda fuera. El marcador de conversación
+ * vacía no entra nunca.
  */
 export function selectForPrompt(
   rows: MemoryRow[],
@@ -126,15 +139,23 @@ export function selectForPrompt(
   budgetChars: number,
 ): RecallSelection {
   const q = tokens(message);
-  const scored = rows.map((m) => {
-    let overlap = 0;
-    for (const t of tokens(m.content)) if (q.has(t)) overlap++;
-    const ownerBonus = m.key === 'emo:owner' ? 1 : 0;
-    return { m, layer: layerOf(m), score: overlap + retention(m, now, cfg) + ownerBonus };
-  });
+  const recentMs = cfg.memory.recentRecallMinutes * 60_000;
+  const scored = rows
+    .filter((m) => !(m.kind === 'summary' && m.content === EMPTY_SUMMARY))
+    .map((m) => {
+      let overlap = 0;
+      for (const t of tokens(m.content)) if (q.has(t)) overlap++;
+      const owner = m.key === 'emo:owner';
+      const justSeen =
+        !owner && overlap === 0 && !!m.lastRecalledAt && now.getTime() - m.lastRecalledAt.getTime() < recentMs;
+      const score = overlap + retention(m, now, cfg) + (owner ? 1 : 0) - (justSeen ? cfg.memory.recentRecallPenalty : 0);
+      return { m, layer: layerOf(m), score, overlap, owner };
+    })
+    // Lo recién visto pierde puesto pero no desaparece por ello: el mínimo mira la puntuación sin esa rebaja
+    .filter((s) => s.owner || s.overlap > 0 || retention(s.m, now, cfg) >= cfg.memory.minRecallScore);
   scored.sort((a, b) => b.score - a.score || b.m.createdAt.getTime() - a.m.createdAt.getTime());
 
-  const sel: RecallSelection = { episodic: [], semantic: [], emotional: [] };
+  const sel: RecallSelection = { episodic: [], semantic: [], emotional: [], matched: [] };
   let budget = budgetChars;
   for (const s of scored) {
     if (sel[s.layer].length >= (cfg.memory.recall[s.layer] ?? 0)) continue;
@@ -142,6 +163,7 @@ export function selectForPrompt(
     if (cost > budget) continue;
     budget -= cost;
     sel[s.layer].push(s.m);
+    if (s.overlap > 0) sel.matched.push(s.m.id);
   }
   // Los episodios se cuentan en orden cronológico
   sel.episodic.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());

@@ -19,7 +19,10 @@ function makeService() {
         return { id: `msg-${created.length}`, ...data };
       }),
     },
-    pet: { update: jest.fn(async () => ({ id: 'pet-1', intelligence: 1 })) },
+    pet: {
+      update: jest.fn(async () => ({ id: 'pet-1', intelligence: 1 })),
+      updateMany: jest.fn(async () => ({ count: 1 })),
+    },
   };
   const svc = new ChatService(
     prisma as any,
@@ -276,7 +279,40 @@ describe('ChatService: orquestador del cerebro (spec 36)', () => {
     expect(done.behavior).toEqual(viewOf('comfort'));
     expect(s.mindMemory.remember).toHaveBeenCalledWith('pet-1', [expect.objectContaining({ layer: 'episodic', subject: 'owner' })]);
     expect(s.mindMemory.feel).toHaveBeenCalledWith('pet-1', 'owner', 'Mi entrenador', expect.any(Number));
-    expect(s.mind.applyExperience).toHaveBeenCalledWith('pet-1', ['talk_comfort']);
+    // La deriva del chat y la del turno van juntas, en una sola escritura (spec 37 §1.1)
+    expect(s.mind.applyExperience).toHaveBeenCalledWith('pet-1', ['chat', 'talk_comfort']);
+    expect(s.mind.applyExperience).toHaveBeenCalledTimes(1);
+  });
+
+  it('la felicidad del turno se suma de forma atómica y sin pasar de 100 (spec 37 §1.5)', async () => {
+    const s = setup([[{ type: 'delta', text: 'Ánimo.' }, { type: 'done' }]]);
+    s.pet.energy = 80;
+    const prisma = (s.svc as any).prisma;
+    await drive(s);
+    // Incremento en la base de datos, condicionado a que quepa: no usa la felicidad leída antes de responder
+    expect(prisma.pet.updateMany).toHaveBeenCalledWith({
+      where: { id: 'pet-1', happiness: { lte: 99 } },
+      data: { happiness: { increment: 1 } },
+    });
+    expect(prisma.pet.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('si la felicidad ya no cabe, se deja en 100', async () => {
+    const s = setup([[{ type: 'delta', text: 'Ánimo.' }, { type: 'done' }]]);
+    s.pet.energy = 80;
+    const prisma = (s.svc as any).prisma;
+    prisma.pet.updateMany.mockResolvedValueOnce({ count: 0 });
+    await drive(s);
+    expect(prisma.pet.updateMany).toHaveBeenLastCalledWith({ where: { id: 'pet-1' }, data: { happiness: 100 } });
+  });
+
+  it('avisa al listener de la mente de que la deriva del chat ya está aplicada (spec 37 §1.1)', async () => {
+    const s = setup([[{ type: 'delta', text: 'Ánimo.' }, { type: 'done' }]]);
+    s.pet.energy = 80;
+    const emit = jest.fn();
+    (s.svc as any).events = { emit };
+    await drive(s);
+    expect(emit).toHaveBeenCalledWith('chat:message_sent', expect.objectContaining({ petId: 'pet-1', mindHandled: true }));
   });
 
   it('un mensaje trivial no crea recuerdos ni mueve la relación con el entrenador', async () => {

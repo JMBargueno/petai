@@ -179,6 +179,19 @@ export function validateBehavior(proposed: unknown, dims: Dims, state: BehaviorS
   return { ok: true, view: viewOf(proposed) };
 }
 
+/** Intenciones de un mensaje corriente: la reacción se anima, pero no se le dicta al modelo. */
+const NEUTRAL_INTENTS = new Set(['chat', 'question']);
+
+/**
+ * Pista de reacción para el prompt, solo cuando el mensaje la merece. En un mensaje corriente la
+ * reacción elegida es siempre la misma para una personalidad dada, y repetir la instrucción turno
+ * tras turno («devuelve una pregunta curiosa») hace que todas las respuestas suenen igual.
+ * Provisional (spec 37 §1.6): cuando haya anti-repetición (§4.4) la pista puede volver siempre.
+ */
+export function hintForTurn(intent: string, view: BehaviorView): string | undefined {
+  return NEUTRAL_INTENTS.has(intent) ? undefined : promptHint(view);
+}
+
 export function promptHint(view: BehaviorView): string {
   return `Reacción decidida para este mensaje: ${PROMPT_HINT[view.action]}`;
 }

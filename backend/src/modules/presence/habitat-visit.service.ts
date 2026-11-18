@@ -158,7 +158,9 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
     const visit: ActiveVisitor = { visitorId: actorId, visitorName, visitorHandle, pet, message, startedAt };
     if (this.realtime) this.realtime.emitToUser(ownerId, 'habitat:visitor_joined', visit);
     // Estadística de visitas (logros "Visitante"/"Trotamundos").
-    this.events?.emit('habitat:visited', { userId: actorId, ownerId });
+    // La mente necesita saber qué mascotas se han visto: sin los ids, cada lado lo adivinaría por su cuenta
+    const hostPetId = (await this.resolveActivePet(ownerId).catch(() => null))?.pet.petId;
+    this.events?.emit('habitat:visited', { userId: actorId, ownerId, visitorPetId: pet.petId, hostPetId });
 
     this.logger.debug(`Visita en vivo: ${actorId} → habitat de ${ownerId}`);
     return { success: true, visit, energy };

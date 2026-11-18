@@ -39,6 +39,11 @@ export interface PersonalityConfig {
     recall: Record<MemoryLayer, number>;
     recencyHalfLifeDays: Record<MemoryLayer, number>;
     minImportanceToStore: number;
+    /** Puntuación mínima para que un recuerdo entre en el prompt (lo casi olvidado y sin relación se queda fuera). */
+    minRecallScore: number;
+    /** Un recuerdo inyectado hace menos de estos minutos y sin relación con el mensaje pierde puntuación. */
+    recentRecallMinutes: number;
+    recentRecallPenalty: number;
   };
   autonomy: AutonomyConfig;
   combat: { maxThresholdShift: number };

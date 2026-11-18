@@ -1,4 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EntitlementService } from '../billing/entitlement.service';
 import { intelligenceTier } from '../ai/personality';
@@ -6,6 +7,7 @@ import { MemoryLayer } from './mind.types';
 import { MindService } from './mind.service';
 import {
   MemoryRow,
+  RecallSelection,
   buildLayeredMemoryBlock,
   capacityFor,
   nextValence,
@@ -136,12 +138,34 @@ export class MindMemoryService {
     })) as unknown as MemoryRow[];
     const budget = cfg.memory.promptBudgetChars[budgetKey] ?? cfg.memory.promptBudgetChars.free ?? 700;
     const sel = selectForPrompt(rows, message, now, cfg, budget);
-    const used = [...sel.episodic, ...sel.semantic, ...sel.emotional].map((m) => m.id);
-    if (used.length) {
-      // Recordar refuerza: lo que se usa tarda más en olvidarse
-      await this.prisma.petMemory.updateMany({ where: { id: { in: used } }, data: { lastRecalledAt: now } }).catch(() => undefined);
-    }
+    await this.markRecalled(sel, now);
     return buildLayeredMemoryBlock(sel, now);
+  }
+
+  /**
+   * Anota qué se inyectó. Solo lo que coincidió con el mensaje se refuerza (tarda más en
+   * olvidarse); el resto únicamente apunta cuándo salió, para no repetirlo en el turno siguiente.
+   * Nunca rompe el chat: si falla, el turno sigue sin la anotación.
+   */
+  private async markRecalled(sel: RecallSelection, now: Date) {
+    const all = [...sel.episodic, ...sel.semantic, ...sel.emotional].map((m) => m.id);
+    const matched = new Set(sel.matched);
+    const reinforced = all.filter((id) => matched.has(id));
+    const seen = all.filter((id) => !matched.has(id));
+    try {
+      if (reinforced.length) {
+        // updateMany refresca `updatedAt` (@updatedAt), que es de donde la retención cuenta la edad
+        await this.prisma.petMemory.updateMany({ where: { id: { in: reinforced } }, data: { lastRecalledAt: now } });
+      }
+      if (seen.length) {
+        // SQL directo para no tocar `updatedAt`: haber salido en un prompt no es reforzarse
+        await this.prisma.$executeRaw(
+          Prisma.sql`UPDATE "PetMemory" SET "lastRecalledAt" = ${now} WHERE "id" IN (${Prisma.join(seen)})`,
+        );
+      }
+    } catch (e: any) {
+      this.logger.debug(`No se pudo anotar el recuerdo usado: ${e?.message}`);
+    }
   }
 
   async counts(petId: string) {
