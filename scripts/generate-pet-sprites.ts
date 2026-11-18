@@ -21,6 +21,7 @@ import { Ctx, fx, Mode, Palette } from './sprites/draw';
 import { EGG_POSES, drawEgg } from './sprites/egg';
 import { POSES } from './sprites/poses';
 import { SPECIES, SpeciesArt, Stage, STAGES } from './sprites/species';
+import { writeTextKeepEol } from './sprites/io';
 
 /** La etapa adult vive en la raíz de la especie (alias histórico que leen todos los clientes). */
 const stageDir = (id: string, stage: Stage) => (stage === 'adult' ? id : `${id}/${stage}`);
@@ -137,7 +138,7 @@ function writeSheet(id: string, anims: AnimDef[], drawerFor: (a: AnimDef) => Fra
   const mask = sheetSvg(frames, 'mask', palette);
   writeFileSync(join(dir, 'base.png'), renderPng(base.svg));
   writeFileSync(join(dir, 'mask.png'), renderPng(mask.svg));
-  writeFileSync(join(dir, 'anim.json'), JSON.stringify(animJson(id.replace('/', '_'), frames, anims, base.w, base.h), null, 2) + '\n');
+  writeTextKeepEol(join(dir, 'anim.json'), JSON.stringify(animJson(id.replace('/', '_'), frames, anims, base.w, base.h), null, 2) + '\n');
   return frames.length;
 }
 
@@ -158,7 +159,7 @@ function writePreviewSvg(sp: SpeciesArt, palette: Palette) {
     const i = which === 'first' ? 0 : Math.floor(anim.frames / 2);
     const ctx = ctxFor('color', palette, 0);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">${characterFrame(sp, anim)(ctx, i, anim.frames)}</svg>\n`;
-    writeFileSync(join(ASSETS, 'sprites', `${sp.id}_${state}.svg`), svg);
+    writeTextKeepEol(join(ASSETS, 'sprites', `${sp.id}_${state}.svg`), svg);
   }
 }
 
@@ -207,7 +208,7 @@ function writeAnimationSpecs(species: { id: string; element: string }[]) {
     validEasings: ['linear', 'easeInQuad', 'easeOutCubic', 'easeInOutSine', 'elastic'],
     specs,
   };
-  writeFileSync(join(ASSETS, 'animation-specs.json'), JSON.stringify(file, null, 2) + '\n');
+  writeTextKeepEol(join(ASSETS, 'animation-specs.json'), JSON.stringify(file, null, 2) + '\n');
 }
 
 /** `--preview <dir>`: escribe hojas a color con la paleta por defecto (solo para revisarlas). */

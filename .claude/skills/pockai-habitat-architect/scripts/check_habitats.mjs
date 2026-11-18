@@ -68,6 +68,11 @@ for (const r of data.rooms) {
   console.log(`Sala ${r.id} (${r.unlockStage}, ${r.gridWidth}×${r.gridHeight}): ${n} muebles${r.theme ? '' : ' · sin theme'}`);
 }
 console.log('Buffs del catálogo: ' + BUFFS.map((k) => `${k}=${totals[k].toFixed(2)}/${capOf(k) ?? '∞'}`).join(' '));
+// Reparto por buff: es la fuente de verdad del reparto (no hay tabla fija que se desfase).
+for (const k of BUFFS) {
+  const parts = data.furniture.filter((f) => f.buffs?.[k]).map((f) => `${f.id} ${f.buffs[k]}`);
+  if (parts.length) console.log(`  ${k}: ${parts.join(' · ')}`);
+}
 for (const w of warnings) console.log(`⚠ ${w}`);
 for (const e of errors) console.error(`✗ ${e}`);
 if (errors.length) process.exit(1);

@@ -12,6 +12,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Resvg } from '@resvg/resvg-js';
 import { FURNITURE_ART, renderFurniture, TILE_H, TILE_W, type Orientation } from './sprites/furniture';
+import { writeTextKeepEol } from './sprites/io';
 
 const ROOT = resolve(__dirname, '..');
 const OUT = join(ROOT, 'shared', 'assets', 'furniture');
@@ -62,11 +63,11 @@ if (process.argv.includes('--preview')) {
     const entry: Record<string, unknown> = { footprint: art.footprint, wall: !!art.wall };
     for (const o of ORIENTATIONS) {
       const r = renderFurniture(art, o);
-      writeFileSync(join(OUT, `${art.id}_${o}.svg`), r.svg);
+      writeTextKeepEol(join(OUT, `${art.id}_${o}.svg`), r.svg);
       entry[o] = { width: r.width, height: r.height, anchorX: r.anchorX, anchorY: r.anchorY };
     }
     manifest[art.id] = entry;
   }
-  writeFileSync(join(OUT, 'furniture.json'), JSON.stringify(manifest, null, 2) + '\n');
+  writeTextKeepEol(join(OUT, 'furniture.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log(`✓ ${FURNITURE_ART.length} muebles × ${ORIENTATIONS.length} orientaciones en shared/assets/furniture/`);
 }

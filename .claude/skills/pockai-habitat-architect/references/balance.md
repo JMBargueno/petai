@@ -29,11 +29,4 @@ Reglas:
 - Los duplicados (dos fuentes) suman, pero el tope los recorta: no se cuentan en la regla del catálogo.
 - `check_habitats.mjs` falla si una suma supera el tope y avisa si no llega.
 
-Reparto actual (HAB-BUFFS, noviembre de 2026):
-
-| Buff | Tope | Muebles |
-|---|---|---|
-| higiene | 0,40 | fuente 0,10 · estanque 0,15 · jardín legendario 0,15 |
-| felicidad | 0,30 | pelota 0,05 · banco 0,08 · lámpara de cristal 0,07 · jardín legendario 0,10 |
-| energía | 0,40 | cama 0,20 · lámpara de cristal 0,20 |
-| ánimo de combate | 0,10 | altar 0,04 · trono 0,06 |
+El reparto actual lo imprime `check_habitats.mjs` (una línea por buff con cada mueble y su valor). No se copia aquí para que no se desfase: si repartes un buff, basta con que la salida del script vuelva a cuadrar.
