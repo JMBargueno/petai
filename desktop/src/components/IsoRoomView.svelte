@@ -76,6 +76,7 @@
         pattern: pet.pattern?.id && pet.pattern.id !== 'plain' ? pet.pattern.id : null,
         visualSeed: pet.visualSeed ?? 1337,
         shiny: !!pet.shiny,
+        accessories: pet.accessories ?? {},
       },
     });
 

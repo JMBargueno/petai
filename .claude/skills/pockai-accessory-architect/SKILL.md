@@ -1,6 +1,6 @@
 ---
 name: pockai-accessory-architect
-description: Diseña e integra accesorios (prendas) para los Pockais de PetAI, como gorros, coronas, gafas, bufandas, collares, capas, alas o mochilas. Cubre la entrada en shared/game-data/accessories.json (ranura, rareza, color, desbloqueo por monedas, gemas o logro), el brief de arte en pixel art por tallas en docs/accesorios/<id>.md, el enlace con achievements.json cuando la prenda es premio de logro y la validación. Úsala cuando el usuario pida "un accesorio nuevo", "una prenda", "un gorro/unas gafas/una capa para los pockais", "ropa o cosméticos para la mascota", "convertir el premio de un logro en prenda" o "más cosas para la tienda de accesorios". Para criaturas usa pockai-architect; para muebles y salas, pockai-habitat-architect.
+description: Diseña, dibuja e integra accesorios (prendas) para los Pockais de PetAI, como gorros, coronas, gafas, bufandas, collares, capas, alas o mochilas. Cubre la entrada en shared/game-data/accessories.json (ranura, rareza, color, desbloqueo por monedas, gemas o logro), el arte en pixel art procedural en tres tallas revisado con una hoja de contactos sobre cada especie y etapa, el brief en docs/accesorios/<id>.md, el enlace con achievements.json cuando la prenda es premio de logro y la validación. Úsala cuando el usuario pida "un accesorio nuevo", "una prenda", "un gorro/unas gafas/una capa para los pockais", "ropa o cosméticos para la mascota", "convertir el premio de un logro en prenda" o "más cosas para la tienda de accesorios". Para criaturas usa pockai-architect; para muebles y salas, pockai-habitat-architect.
 ---
 
 # Pockai Accessory Architect
@@ -19,7 +19,7 @@ Lee las referencias cuando las necesites:
 
 La norma es `docs/GUIA_ARTISTICA.md` §7.6 (visual) y `docs/specs/spec-38-accesorios-pockai.md` (datos). Si hay conflicto con esta skill, mandan ellas.
 
-**Estado del sistema:** el catálogo, la compra y el equipado funcionan (lotes 1 y 2 de la spec 38). El **render no existe todavía** (lote 3: faltan los sprites en pixel art, las anclas por especie y la carpeta de arte). Hasta entonces esta skill llega hasta los datos y el brief de arte; no dibuja ni exporta PNG. Dilo al cerrar.
+**Estado del sistema:** el catálogo, la compra, el equipado, el arte y el render funcionan (spec 38). La escena compartida y la mascota de escritorio pintan la prenda en cuanto existe su arte; el armario solo está en el escritorio.
 
 ## Flujo
 
@@ -61,11 +61,15 @@ Sigue `references/integration-checklist.md`:
 1. Añade la entrada **al final** de `accessories` en `shared/game-data/accessories.json`.
 2. Si es premio de logro, comprueba que el logro existe y que su `reward.itemId` es el `id` de la prenda. No toques `achievements.json` salvo que el usuario pida un logro nuevo.
 3. Escribe el brief en `docs/accesorios/<id>.md` con la plantilla de `pixel-accessory-brief.md`.
+4. Dibuja la prenda: añade su entrada en `ACCESSORY_ART` (`scripts/sprites/pixel/accessories.ts`), reutilizando una forma existente (`beanie`, `partyHat`, `crown`, `glasses`, `scarf`, `cape`, `wings`) o escribiendo una nueva.
+5. Genera la hoja de contactos con `pnpm generate:accessories --preview` y **mírala** (Read de `sprite-previews/accessories-contact.png`): cada prenda sobre las tres especies en sus cuatro etapas. Corrige hasta que pase la checklist visual.
+6. `pnpm generate:accessories` escribe `shared/assets/accessories/<id>/{s,m,l}.png` y `meta.json`.
 
 ### 6. Validar
 ```bash
 node .claude/skills/pockai-accessory-architect/scripts/check_accessories.mjs <id>
 node scripts/validate-game-data.js
+node scripts/validate-assets.js
 ```
 Desde `backend/`, ejecuta también `npx jest src/modules/accessories src/modules/inventory`. Si algo falla, corrige y repite.
 
@@ -73,5 +77,6 @@ Desde `backend/`, ejecuta también `npx jest src/modules/accessories src/modules
 Resume al usuario:
 - Archivos tocados y resultado de las validaciones.
 - Avisos del script que hayas dejado sin resolver, y por qué.
-- Que la prenda **aún no se ve en el juego**: falta su arte y el render (lote 3 de la spec 38).
+- Hoja de contactos revisada.
+- Dónde se ve: en la sala y en la mascota de escritorio, tras equiparla en Mascota › Armario.
 - El paso que queda fuera del repo: ejecutar el seed (`backend/prisma/seed.ts`) en cada entorno para que la prenda exista como `Item`. El precio solo se fija al crearla; después se cambia desde el panel de admin.

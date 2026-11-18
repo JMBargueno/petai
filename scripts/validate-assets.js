@@ -164,7 +164,49 @@ function validateSheet(label, dir) {
     }
   }
 
-  console.log(`✓ species/${label}/: base.png, mask.png y anim.json validados`);
+  validateAnchors(label, dir, animData);
+  console.log(`✓ species/${label}/: base.png, mask.png, anim.json y anchors.json validados`);
+}
+
+// Anclas de accesorio (spec 38 §5): cuatro ranuras dentro del frame nativo de 64×64 y, por
+// animación, tantos desplazamientos como frames tiene en anim.json.
+const ANCHOR_SLOTS = ['head', 'face', 'neck', 'back'];
+const ANCHOR_SIZES = ['S', 'M', 'L'];
+
+function validateAnchors(label, dir, animData) {
+  const anchorsPath = path.join(dir, 'anchors.json');
+  if (!fs.existsSync(anchorsPath)) {
+    console.error(`❌ CRÍTICO: Falta anchors.json en species/${label}/`);
+    criticalErrors++;
+    return;
+  }
+  const anchors = readJson(anchorsPath);
+  const fail = (msg) => {
+    console.error(`❌ CRÍTICO [${label}]: anchors.json: ${msg}`);
+    criticalErrors++;
+  };
+  const isPoint = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isInteger);
+  if (!ANCHOR_SIZES.includes(anchors.size)) fail(`size debe ser ${ANCHOR_SIZES.join(', ')}`);
+  if (!Number.isInteger(anchors.eyeGap) || anchors.eyeGap < 1) fail('eyeGap debe ser un entero mayor que 0');
+  for (const slot of ANCHOR_SLOTS) {
+    const p = anchors.base?.[slot];
+    if (!isPoint(p)) fail(`falta el ancla base '${slot}'`);
+    else if (p.some((v) => v < 2 || v > 61)) fail(`el ancla '${slot}' (${p}) se sale del frame (2–61)`);
+  }
+  const frameCount = new Map((animData?.meta?.frameTags || []).map((t) => [t.name, t.to - t.from + 1]));
+  for (const [anim, value] of Object.entries(anchors.frames || {})) {
+    const expected = frameCount.get(anim);
+    if (expected === undefined) {
+      fail(`la animación '${anim}' no existe en anim.json`);
+      continue;
+    }
+    const lists = Array.isArray(value) ? [['*', value]] : ANCHOR_SLOTS.map((slot) => [slot, value[slot]]);
+    for (const [slot, list] of lists) {
+      if (!Array.isArray(list) || list.length !== expected || !list.every(isPoint)) {
+        fail(`'${anim}' (${slot}) debe tener ${expected} desplazamientos [dx, dy]`);
+      }
+    }
+  }
 }
 
 for (const sp of speciesData) {
@@ -185,6 +227,50 @@ for (const sp of speciesData) {
     }
   }
 }
+
+// Accesorios (spec 38 §6): cada prenda del catálogo tiene su arte en tres tallas y un meta.json
+// coherente con los PNG (que van a ×2 y con los frames en horizontal).
+const accessoriesData = readJson(path.join(sharedGameDataDir, 'accessories.json'));
+const accessoriesDir = path.join(sharedAssetsDir, 'accessories');
+// Lienzo máximo por talla, en px nativos: [ancho, alto] (scripts/sprites/pixel/accessories.ts).
+const ACC_CANVAS = { s: [40, 24], m: [48, 32], l: [56, 40] };
+for (const acc of accessoriesData?.accessories || []) {
+  const dir = path.join(accessoriesDir, acc.id);
+  const fail = (msg) => {
+    console.error(`❌ CRÍTICO [accessories/${acc.id}]: ${msg}`);
+    criticalErrors++;
+  };
+  const metaPath = path.join(dir, 'meta.json');
+  if (!fs.existsSync(metaPath)) {
+    fail('falta meta.json (ejecuta pnpm generate:accessories)');
+    continue;
+  }
+  const meta = readJson(metaPath);
+  if (meta.slot !== acc.slot) fail(`meta.slot es '${meta.slot}' y el catálogo dice '${acc.slot}'`);
+  if (!Number.isInteger(meta.frames) || meta.frames < 1) fail('frames debe ser un entero mayor que 0');
+  if (!!acc.animated !== meta.frames > 1) fail('"animated" del catálogo no coincide con los frames del arte');
+  for (const size of Object.keys(ACC_CANVAS)) {
+    const s = meta.sizes?.[size];
+    const pngPath = path.join(dir, `${size}.png`);
+    if (!s || !fs.existsSync(pngPath)) {
+      fail(`falta la talla ${size.toUpperCase()}`);
+      continue;
+    }
+    const [maxW, maxH] = ACC_CANVAS[size];
+    if (s.w > maxW || s.h > maxH) fail(`talla ${size.toUpperCase()}: ${s.w}×${s.h} no cabe en el lienzo (${maxW}×${maxH})`);
+    const a = s.anchor;
+    if (!Array.isArray(a) || a.length !== 2 || !a.every(Number.isInteger)) fail(`talla ${size.toUpperCase()}: anchor debe ser [x, y]`);
+    try {
+      const dim = readPngDimensions(pngPath);
+      if (dim.width !== s.w * meta.scale * meta.frames || dim.height !== s.h * meta.scale) {
+        fail(`talla ${size.toUpperCase()}: el PNG mide ${dim.width}×${dim.height} y meta.json dice ${s.w * meta.scale * meta.frames}×${s.h * meta.scale}`);
+      }
+    } catch (err) {
+      fail(`error leyendo ${size}.png: ${err.message}`);
+    }
+  }
+}
+console.log(`✓ accessories/: ${(accessoriesData?.accessories || []).length} prendas con arte en tres tallas`);
 
 console.log('\n=== Resumen de Validación ===');
 console.log(`Errores críticos: ${criticalErrors}`);

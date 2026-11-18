@@ -12,13 +12,18 @@ Las rutas son relativas a la raíz del repo.
 ## Brief
 4. Escribe `docs/accesorios/<id>.md` con la plantilla de `pixel-accessory-brief.md`.
 
+## Arte
+5. Añade la prenda a `ACCESSORY_ART` en `scripts/sprites/pixel/accessories.ts` (`pixel-accessory-brief.md`). Si el catálogo dice `animated: true`, el arte tiene 2 frames.
+6. `pnpm generate:accessories --preview`, lee `sprite-previews/accessories-contact.png` e itera.
+7. `pnpm generate:accessories` → `shared/assets/accessories/<id>/{s,m,l}.png` y `meta.json`. El script falla si el catálogo y el arte no coinciden en ranura o en animación.
+
 ## Validación
-5. `node .claude/skills/pockai-accessory-architect/scripts/check_accessories.mjs <id>`: errores a 0; revisa los avisos.
-6. `node scripts/validate-game-data.js`
-7. Desde `backend/`: `npx jest src/modules/accessories src/modules/inventory`.
-8. `git diff --stat`: solo cambian `accessories.json` y el brief de la prenda.
+8. `node .claude/skills/pockai-accessory-architect/scripts/check_accessories.mjs <id>`: errores a 0; revisa los avisos.
+9. `node scripts/validate-game-data.js` y `node scripts/validate-assets.js`
+10. Desde `backend/`: `npx jest src/modules/accessories src/modules/inventory`.
+11. `git diff --stat`: solo cambian `accessories.json`, el brief, `accessories.ts` y la carpeta de arte de la prenda.
 
 ## Después
-9. El seed (`backend/prisma/seed.ts`) crea el `Item` de la prenda; hay que ejecutarlo en cada entorno. Sin seed la prenda aparece en `GET /accessories`, pero no se puede comprar.
-10. El precio del JSON solo se usa al crear el `Item`. Para cambiarlo después, panel de admin.
-11. Arte y render: pendientes del lote 3 de `docs/specs/spec-38-accesorios-pockai.md`. Cuando exista, la prenda necesitará `shared/assets/accessories/<id>/{s,m,l}.png` y `meta.json`.
+12. El seed (`backend/prisma/seed.ts`) crea el `Item` de la prenda; hay que ejecutarlo en cada entorno. Sin seed la prenda aparece en `GET /accessories`, pero no se puede comprar.
+13. El precio del JSON solo se usa al crear el `Item`. Para cambiarlo después, panel de admin.
+14. No hay que registrar la prenda en ningún cliente: la escena y el escritorio descubren su arte solos. Para verla, `pnpm --filter @pockai/scene dev`, abre `/?demo` y elígela en el selector de su ranura (añádela a `DEMO_ACCESSORIES` en `shared/scene/src/embed/demo.ts`).

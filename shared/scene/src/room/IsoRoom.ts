@@ -18,7 +18,8 @@ import { furnitureMeta, loadFurnitureTexture, type Orientation } from './furnitu
 import { SLAB, sparkle, styleFor, WALL_H, type Twinkle } from './roomStyles';
 
 export { WALL_H } from './roomStyles';
-const PET_SCALE = 72 / 128; // ~72 px de alto a escala de sala
+// Pixel art (GUIA_ARTISTICA §7.5): la hoja va a ×2, así que 0,5 deja 1 px nativo = 1 px de sala.
+const PET_SCALE = 64 / 128;
 const WALK_SPEED = 1.7; // celdas por segundo
 
 const DEFAULT_THEME: RoomTheme = {

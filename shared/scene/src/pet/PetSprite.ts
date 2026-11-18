@@ -1,9 +1,18 @@
 /**
  * Pockai en la escena: una hoja horneada troceada en texturas por frame y un reproductor de clips
  * que respeta la duración de cada frame de `anim.json`, bucles, repeticiones y vuelta al clip base.
+ * Encima y debajo del cuerpo pinta las prendas equipadas, cada una en el ancla de su ranura.
  */
 import { Container, Graphics, Rectangle, Sprite, Texture, type Ticker } from 'pixi.js';
 import { resolveClip, type AnimMetadata, type ResolvedClip } from '../bake/anim';
+import {
+  BEHIND_SLOTS,
+  FRONT_SLOTS,
+  placeAccessory,
+  type AccessoryMeta,
+  type AccessorySlot,
+  type AnchorsFile,
+} from '../bake/accessories';
 
 export const FRAME = 128;
 /** Pies del Pockai dentro del frame (GUIA_ARTISTICA §7.1/§7.4). */
@@ -14,12 +23,33 @@ export interface PetSpriteOptions {
   onClipEnded?: (clip: string) => void;
 }
 
+/** Prenda lista para pintar: su hoja y sus medidas. */
+export interface AccessoryLayer {
+  slot: AccessorySlot;
+  canvas: HTMLCanvasElement | HTMLImageElement;
+  meta: AccessoryMeta;
+}
+
+interface Worn {
+  layer: AccessoryLayer;
+  sprite: Sprite;
+  source: Texture;
+  frames: Texture[];
+}
+
 export class PetSprite extends Container {
   private readonly body = new Sprite();
   private readonly shadow = new Graphics();
+  /** Cuerpo y prendas: se voltean juntos al cambiar de orientación. */
+  private readonly rig = new Container();
+  private readonly behind = new Container();
+  private readonly front = new Container();
   private frames = new Map<string, Texture[]>();
   private anim: AnimMetadata | null = null;
   private source: Texture | null = null;
+  private anchors: AnchorsFile | null = null;
+  private worn: Worn[] = [];
+  private accessoryTime = 0;
 
   private baseClip = 'idle';
   private clip: ResolvedClip | null = null;
@@ -33,7 +63,8 @@ export class PetSprite extends Container {
     // Sombra de suelo isométrica (elipse 2:1) bajo los pies; el origen del contenedor son los pies.
     this.shadow.ellipse(0, -6, 24, 12).fill({ color: 0x000000, alpha: 0.2 });
     this.body.anchor.set(0.5, FOOT_Y / FRAME);
-    this.addChild(this.shadow, this.body);
+    this.rig.addChild(this.behind, this.body, this.front);
+    this.addChild(this.shadow, this.rig);
   }
 
   /** Sustituye la hoja (al cambiar de especie, etapa o paleta). Conserva el clip base. */
@@ -42,12 +73,53 @@ export class PetSprite extends Container {
     this.frames.clear();
     this.anim = anim;
     this.source = Texture.from(canvas);
+    // Pixel art (GUIA_ARTISTICA §7.5): vecino más próximo, sin suavizado al escalar.
+    this.source.source.scaleMode = 'nearest';
     this.play(this.baseClip);
   }
 
-  /** Orientación: 1 = abajo-derecha (como se dibuja), -1 = espejo. Solo afecta al cuerpo. */
+  /**
+   * Prendas equipadas y anclas de la hoja actual. Sin anclas (huevo, especie con placeholder) no se
+   * pinta ninguna prenda.
+   */
+  setAccessories(layers: AccessoryLayer[], anchors: AnchorsFile | null): void {
+    for (const w of this.worn) {
+      w.sprite.destroy();
+      w.frames.forEach((t) => t.destroy(false));
+      w.source.destroy(true);
+    }
+    this.worn = [];
+    this.anchors = anchors;
+    if (!anchors) return;
+    const size = anchors.size.toLowerCase() as 's' | 'm' | 'l';
+    for (const layer of layers) {
+      const dims = layer.meta.sizes[size];
+      if (!dims) continue;
+      const source = Texture.from(layer.canvas);
+      source.source.scaleMode = 'nearest';
+      const k = layer.meta.scale;
+      const frames = Array.from(
+        { length: layer.meta.frames },
+        (_, f) => new Texture({ source: source.source, frame: new Rectangle(f * dims.w * k, 0, dims.w * k, dims.h * k) }),
+      );
+      const sprite = new Sprite(frames[0]);
+      (BEHIND_SLOTS.includes(layer.slot) ? this.behind : this.front).addChild(sprite);
+      this.worn.push({ layer, sprite, source, frames });
+    }
+    // Delante, de dentro afuera: cuello, cara y cabeza.
+    this.front.children.sort(
+      (a, b) => FRONT_SLOTS.indexOf(this.slotOf(a as Sprite)) - FRONT_SLOTS.indexOf(this.slotOf(b as Sprite)),
+    );
+    this.placeAccessories();
+  }
+
+  private slotOf(sprite: Sprite): AccessorySlot {
+    return this.worn.find((w) => w.sprite === sprite)!.layer.slot;
+  }
+
+  /** Orientación: 1 = abajo-derecha (como se dibuja), -1 = espejo. Voltea cuerpo y prendas. */
   setFacing(facing: 1 | -1): void {
-    this.body.scale.x = Math.abs(this.body.scale.x) * facing;
+    this.rig.scale.x = facing;
   }
 
   setBaseClip(name: string): void {
@@ -82,6 +154,7 @@ export class PetSprite extends Container {
     if (!clip || clip.frames.length === 0) return;
     // Movimiento reducido: los bucles de fondo se quedan quietos; las acciones pedidas sí avanzan.
     if (this.opts.reducedMotion && !this.oneShot) return;
+    if (!this.opts.reducedMotion) this.accessoryTime += ticker.deltaMS;
     this.elapsed += ticker.deltaMS;
     let dur = clip.frames[this.frameIdx].duration || 150;
     while (this.elapsed >= dur) {
@@ -114,10 +187,28 @@ export class PetSprite extends Container {
       this.frames.set(this.clip.name, list);
     }
     this.body.texture = list[this.frameIdx] ?? list[0];
+    this.placeAccessories();
+  }
+
+  /** Coloca cada prenda en el ancla de su ranura para el frame actual, a píxel entero. */
+  private placeAccessories(): void {
+    if (!this.anchors || this.worn.length === 0) return;
+    const clip = this.clip?.name ?? 'idle';
+    for (const w of this.worn) {
+      const p = placeAccessory(this.anchors, w.layer.meta, clip, this.frameIdx, this.accessoryTime);
+      const k = w.layer.meta.scale;
+      // El origen del rig son los pies: el frame empieza en (-FRAME/2, -FOOT_Y).
+      w.sprite.position.set(p.x * k - FRAME / 2, p.y * k - FOOT_Y);
+      w.sprite.texture = w.frames[p.frame] ?? w.frames[0];
+    }
   }
 
   override destroy(options?: Parameters<Container['destroy']>[0]): void {
     for (const list of this.frames.values()) list.forEach((t) => t.destroy(false));
+    for (const w of this.worn) {
+      w.frames.forEach((t) => t.destroy(false));
+      w.source.destroy(true);
+    }
     this.source?.destroy(true);
     super.destroy(options);
   }

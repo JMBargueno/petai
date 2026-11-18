@@ -1,95 +1,75 @@
 #!/usr/bin/env tsx
 /**
- * Genera las hojas de sprites de cada especie y del huevo a partir del catálogo de animaciones.
+ * Genera las hojas de sprites en pixel art de cada especie y del huevo (GUIA_ARTISTICA §7.5) a
+ * partir del catálogo de animaciones.
  *
  *   pnpm generate:sprites
+ *   pnpm generate:sprites --preview [dir]   hojas a color para revisarlas (no toca los assets)
  *
  * Salida (determinista, se commitea):
- *  - shared/assets/species/<especie>/{base.png, mask.png, anim.json}            (etapa adult)
- *  - shared/assets/species/<especie>/<baby|juvenile|final>/{base.png, mask.png, anim.json}
+ *  - shared/assets/species/<especie>/{base.png, mask.png, anim.json, anchors.json}       (etapa adult)
+ *  - shared/assets/species/<especie>/<baby|juvenile|final>/{base.png, mask.png, anim.json, anchors.json}
  *  - shared/assets/species/egg/{base.png, mask.png, anim.json}
- *  - shared/assets/sprites/<especie>_idle.svg (vista previa a color para el fallback)
+ *  - shared/assets/sprites/<especie>_{idle,happy,eat,sleep}.svg (vista previa a color para el fallback)
  *  - shared/assets/animation-specs.json (estados, frames, fps y transiciones)
  *
- * Cada frame mide 128×128 y la hoja se organiza en una cuadrícula de COLS columnas.
+ * Cada frame se dibuja en una rejilla nativa de 64×64 y se guarda a ×2: mide 128×128 en la hoja,
+ * que se organiza en una cuadrícula de COLS columnas. El formato de `base.png` y `mask.png` es el
+ * que hornean los clientes (`shared/scene/src/bake/bakePixels.ts`).
  */
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { Resvg } from '@resvg/resvg-js';
 import { AnimDef, ANIMATION_ALIASES, EGG_ANIMATIONS, PET_ANIMATIONS } from './sprites/catalog';
-import { Ctx, fx, Mode, Palette } from './sprites/draw';
-import { EGG_POSES, drawEgg } from './sprites/egg';
+import type { Palette } from './sprites/draw';
+import { EGG_POSES } from './sprites/egg';
 import { POSES } from './sprites/poses';
-import { SPECIES, SpeciesArt, Stage, STAGES } from './sprites/species';
+import { Stage, STAGES } from './sprites/species';
 import { writeTextKeepEol } from './sprites/io';
+import { drawEggFrame } from './sprites/pixel/egg';
+import { Grid, N, SCALE } from './sprites/pixel/raster';
+import { bakeSheet, composeSheet, FRAME, frameSvg, pngOf, Sheet, upscale } from './sprites/pixel/sheet';
+import { Anchors, drawPockai, PIXEL_SPECIES, PixelSpecies, poseArt, Slot } from './sprites/pixel/species';
 
 /** La etapa adult vive en la raíz de la especie (alias histórico que leen todos los clientes). */
 const stageDir = (id: string, stage: Stage) => (stage === 'adult' ? id : `${id}/${stage}`);
 
 const ROOT = resolve(__dirname, '..');
 const ASSETS = join(ROOT, 'shared', 'assets');
-const FRAME = 128;
 const COLS = 16;
+const SLOTS: Slot[] = ['head', 'face', 'neck', 'back'];
 
-type FrameDrawer = (ctx: Ctx, i: number, n: number) => string;
-
-function ctxFor(mode: Mode, palette: Palette, frame: number): Ctx {
-  let n = 0;
-  return { mode, palette, uid: () => `f${frame}c${n++}` };
-}
-
-function characterFrame(sp: SpeciesArt, anim: AnimDef, stage: Stage = 'adult'): FrameDrawer {
-  const poseFn = POSES[anim.name];
-  if (!poseFn) throw new Error(`Falta la pose de "${anim.name}"`);
-  return (ctx, i, n) => {
-    const p = poseFn(i, n, sp);
-    const t = `translate(${64 + p.dx} ${120 + p.dy}) rotate(${p.rot}) scale(${p.sx} ${p.sy}) translate(-64 -120)`;
-    const behind = p.fx.filter((f) => f.b).map((f) => fx(ctx, f)).join('');
-    const front = p.fx.filter((f) => !f.b).map((f) => fx(ctx, f)).join('');
-    return behind + `<g transform="${t}">${sp.draw(ctx, p, stage)}</g>` + front;
-  };
-}
-
-function eggFrame(anim: AnimDef): FrameDrawer {
-  const poseFn = EGG_POSES[anim.name];
-  if (!poseFn) throw new Error(`Falta la pose del huevo "${anim.name}"`);
-  return (ctx, i, n) => drawEgg(ctx, poseFn(i, n));
-}
-
-interface SheetFrame {
+interface Frame {
   anim: AnimDef;
   index: number;
-  draw: FrameDrawer;
+  grid: Grid;
+  anchors?: Anchors;
 }
 
-function layout(anims: AnimDef[], drawerFor: (a: AnimDef) => FrameDrawer): SheetFrame[] {
-  const frames: SheetFrame[] = [];
-  for (const anim of anims) {
-    const draw = drawerFor(anim);
-    for (let i = 0; i < anim.frames; i++) frames.push({ anim, index: i, draw });
+function petFrames(sp: PixelSpecies, stage: Stage): Frame[] {
+  const art = poseArt(sp, stage);
+  const frames: Frame[] = [];
+  for (const anim of PET_ANIMATIONS) {
+    const poseFn = POSES[anim.name];
+    if (!poseFn) throw new Error(`Falta la pose de "${anim.name}"`);
+    for (let i = 0; i < anim.frames; i++) {
+      const d = drawPockai(sp, stage, poseFn(i, anim.frames, art as never));
+      frames.push({ anim, index: i, grid: d.grid, anchors: d.anchors });
+    }
   }
   return frames;
 }
 
-function sheetSvg(frames: SheetFrame[], mode: Mode, palette: Palette): { svg: string; w: number; h: number } {
-  const rows = Math.ceil(frames.length / COLS);
-  const w = Math.min(COLS, frames.length) * FRAME;
-  const h = rows * FRAME;
-  let body = '';
-  frames.forEach((f, k) => {
-    const x = (k % COLS) * FRAME;
-    const y = Math.floor(k / COLS) * FRAME;
-    const ctx = ctxFor(mode, palette, k);
-    body += `<svg x="${x}" y="${y}" width="${FRAME}" height="${FRAME}" viewBox="0 0 ${FRAME} ${FRAME}" overflow="hidden">${f.draw(ctx, f.index, f.anim.frames)}</svg>`;
-  });
-  return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${body}</svg>`, w, h };
+function eggFrames(): Frame[] {
+  const frames: Frame[] = [];
+  for (const anim of EGG_ANIMATIONS) {
+    const poseFn = EGG_POSES[anim.name];
+    if (!poseFn) throw new Error(`Falta la pose del huevo "${anim.name}"`);
+    for (let i = 0; i < anim.frames; i++) frames.push({ anim, index: i, grid: drawEggFrame(poseFn(i, anim.frames)) });
+  }
+  return frames;
 }
 
-function renderPng(svg: string): Buffer {
-  return new Resvg(svg, { fitTo: { mode: 'original' }, shapeRendering: 2 }).render().asPng();
-}
-
-function animJson(id: string, frames: SheetFrame[], anims: AnimDef[], w: number, h: number) {
+function animJson(id: string, frames: Frame[], anims: AnimDef[], w: number, h: number) {
   let cursor = 0;
   const frameTags = anims.map((a) => {
     const tag = {
@@ -117,29 +97,53 @@ function animJson(id: string, frames: SheetFrame[], anims: AnimDef[], w: number,
     })),
     meta: {
       app: 'PetAI Sprite Generator',
-      version: '2.0',
+      version: '3.0',
       image: 'base.png',
       mask: 'mask.png',
       format: 'RGBA8888',
       size: { w, h },
       frameSize: { w: FRAME, h: FRAME },
       scale: '1',
+      // Pixel art: la hoja guarda cada píxel nativo como un bloque de `scale`×`scale`. Los clientes
+      // deben escalar por enteros y sin suavizado (GUIA_ARTISTICA §7.5).
+      pixelArt: { native: N, scale: SCALE },
       aliases: ANIMATION_ALIASES,
       frameTags,
     },
   };
 }
 
-function writeSheet(id: string, anims: AnimDef[], drawerFor: (a: AnimDef) => FrameDrawer, palette: Palette) {
+/**
+ * Anclas de accesorio (spec 38 §5): posición base de cada ranura (frame 0 de idle) y, por
+ * animación, el desplazamiento de cada frame respecto a esa base, en px nativos.
+ */
+function anchorsJson(sp: PixelSpecies, stage: Stage, frames: Frame[]) {
+  const s = sp.stages[stage];
+  const base = frames.find((f) => f.anim.name === 'idle' && f.index === 0)!.anchors!;
+  const out: Record<string, unknown> = {};
+  for (const anim of PET_ANIMATIONS) {
+    const fs = frames.filter((f) => f.anim.name === anim.name);
+    const per = Object.fromEntries(SLOTS.map((slot) => [slot, fs.map((f) => [f.anchors![slot][0] - base[slot][0], f.anchors![slot][1] - base[slot][1]])])) as Record<Slot, number[][]>;
+    const same = SLOTS.every((slot) => JSON.stringify(per[slot]) === JSON.stringify(per.head));
+    const zero = SLOTS.every((slot) => per[slot].every(([x, y]) => x === 0 && y === 0));
+    if (zero) continue; // sin entrada = [0, 0] en todos los frames
+    out[anim.name] = same ? per.head : per;
+  }
+  return { size: s.size, base, eyeGap: s.eye.x2 - (s.eye.x1 + s.eye.w1), frames: out };
+}
+
+/** JSON con las listas de números en una línea (las anclas serían ilegibles con una por línea). */
+const compactJson = (v: unknown) =>
+  JSON.stringify(v, null, 2).replace(/\[\s*(-?\d+),\s*(-?\d+)\s*\]/g, '[$1, $2]').replace(/\[\s*((?:\[-?\d+, -?\d+\],?\s*)+)\]/g, (_m, inner: string) => `[${inner.trim().replace(/\s+/g, ' ')}]`);
+
+function writeSheet(id: string, frames: Frame[], anims: AnimDef[]): Sheet {
   const dir = join(ASSETS, 'species', id);
   mkdirSync(dir, { recursive: true });
-  const frames = layout(anims, drawerFor);
-  const base = sheetSvg(frames, 'base', palette);
-  const mask = sheetSvg(frames, 'mask', palette);
-  writeFileSync(join(dir, 'base.png'), renderPng(base.svg));
-  writeFileSync(join(dir, 'mask.png'), renderPng(mask.svg));
-  writeTextKeepEol(join(dir, 'anim.json'), JSON.stringify(animJson(id.replace('/', '_'), frames, anims, base.w, base.h), null, 2) + '\n');
-  return frames.length;
+  const sheet = composeSheet(frames.map((f) => f.grid), COLS);
+  writeFileSync(join(dir, 'base.png'), pngOf(sheet.w, sheet.h, sheet.base));
+  writeFileSync(join(dir, 'mask.png'), pngOf(sheet.w, sheet.h, sheet.mask));
+  writeTextKeepEol(join(dir, 'anim.json'), JSON.stringify(animJson(id.replace('/', '_'), frames, anims, sheet.w, sheet.h), null, 2) + '\n');
+  return sheet;
 }
 
 /**
@@ -153,13 +157,13 @@ const PREVIEW_STATES: [state: string, frame: 'first' | 'mid'][] = [
   ['sleep', 'mid'],
 ];
 
-function writePreviewSvg(sp: SpeciesArt, palette: Palette) {
+function writePreviewSvg(id: string, frames: Frame[], sheet: Sheet, palette: Palette) {
+  const color = bakeSheet(sheet, palette);
   for (const [state, which] of PREVIEW_STATES) {
     const anim = PET_ANIMATIONS.find((a) => a.name === state)!;
     const i = which === 'first' ? 0 : Math.floor(anim.frames / 2);
-    const ctx = ctxFor('color', palette, 0);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">${characterFrame(sp, anim)(ctx, i, anim.frames)}</svg>\n`;
-    writeTextKeepEol(join(ASSETS, 'sprites', `${sp.id}_${state}.svg`), svg);
+    const k = frames.findIndex((f) => f.anim.name === state && f.index === i);
+    writeTextKeepEol(join(ASSETS, 'sprites', `${id}_${state}.svg`), frameSvg(color, sheet.w, (k % COLS) * FRAME, Math.floor(k / COLS) * FRAME));
   }
 }
 
@@ -214,15 +218,16 @@ function writeAnimationSpecs(species: { id: string; element: string }[]) {
 /** `--preview <dir>`: escribe hojas a color con la paleta por defecto (solo para revisarlas). */
 function writePreviews(dir: string, speciesData: { id: string; defaultPalette: Palette }[]) {
   mkdirSync(dir, { recursive: true });
-  for (const sp of SPECIES) {
+  const write = (name: string, frames: Frame[], palette: Palette) => {
+    const sheet = composeSheet(frames.map((f) => f.grid), COLS);
+    const big = upscale(sheet.w, sheet.h, bakeSheet(sheet, palette), 1);
+    writeFileSync(join(dir, name), pngOf(big.w, big.h, big.data));
+  };
+  for (const sp of PIXEL_SPECIES) {
     const palette = speciesData.find((s) => s.id === sp.id)!.defaultPalette;
-    for (const stage of STAGES) {
-      const frames = layout(PET_ANIMATIONS, (a) => characterFrame(sp, a, stage));
-      writeFileSync(join(dir, `${sp.id}-${stage}-preview.png`), renderPng(sheetSvg(frames, 'color', palette).svg));
-    }
+    for (const stage of STAGES) write(`${sp.id}-${stage}-preview.png`, petFrames(sp, stage), palette);
   }
-  const eggFrames = layout(EGG_ANIMATIONS, eggFrame);
-  writeFileSync(join(dir, 'egg-preview.png'), renderPng(sheetSvg(eggFrames, 'color', { primary: '#fff', secondary: '#fff' }).svg));
+  write('egg-preview.png', eggFrames(), { primary: '#fff', secondary: '#fff' });
   console.log(`✓ vistas previas en ${dir}`);
 }
 
@@ -239,21 +244,25 @@ function main() {
     return;
   }
 
-  for (const sp of SPECIES) {
+  for (const sp of PIXEL_SPECIES) {
     const data = speciesData.find((s) => s.id === sp.id);
     if (!data) throw new Error(`Especie ${sp.id} no está en species.json`);
     let count = 0;
     for (const stage of STAGES) {
-      count = writeSheet(stageDir(sp.id, stage), PET_ANIMATIONS, (a) => characterFrame(sp, a, stage), data.defaultPalette);
+      const frames = petFrames(sp, stage);
+      const sheet = writeSheet(stageDir(sp.id, stage), frames, PET_ANIMATIONS);
+      writeTextKeepEol(join(ASSETS, 'species', stageDir(sp.id, stage), 'anchors.json'), compactJson(anchorsJson(sp, stage, frames)) + '\n');
+      if (stage === 'adult') writePreviewSvg(sp.id, frames, sheet, data.defaultPalette);
+      count = frames.length;
     }
-    writePreviewSvg(sp, data.defaultPalette);
     console.log(`✓ ${sp.id}: ${count} frames × ${STAGES.length} etapas (${STAGES.join(', ')})`);
   }
 
-  const eggCount = writeSheet('egg', EGG_ANIMATIONS, eggFrame, { primary: '#fff4d6', secondary: '#ffc94d' });
-  console.log(`✓ egg: ${eggCount} frames en ${EGG_ANIMATIONS.length} animaciones`);
+  const egg = eggFrames();
+  writeSheet('egg', egg, EGG_ANIMATIONS);
+  console.log(`✓ egg: ${egg.length} frames en ${EGG_ANIMATIONS.length} animaciones`);
 
-  writeAnimationSpecs(speciesData.filter((s) => SPECIES.some((sp) => sp.id === s.id)));
+  writeAnimationSpecs(speciesData.filter((s) => PIXEL_SPECIES.some((sp) => sp.id === s.id)));
   console.log('✓ animation-specs.json regenerado');
 }
 

@@ -54,4 +54,4 @@ Una prenda por ranura. Una mascota puede llevar las cuatro a la vez.
 - **Logro**: al desbloquearlo, `grantExclusiveItem` entrega la prenda.
 - Las prendas no se regalan ni se consumen.
 
-No existen todavía: carpeta de arte (`shared/assets/accessories/`), anclas por especie y render. No añadas campos para ellos en `accessories.json`.
+El arte vive en `shared/assets/accessories/<id>/` y las anclas, en el `anchors.json` de cada especie y etapa; los escriben los generadores. No añadas campos para ellos en `accessories.json`.

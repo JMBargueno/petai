@@ -230,7 +230,7 @@ Pesos: 500 (medio), 700 (negrita) y 800 (extra).
 
 Sprites en `shared/assets/sprites/*.svg`.
 
-> **Objetivo: pixel art.** Los Pockais pasan a dibujarse en píxeles según [§7.5](#75-pixel-art-objetivo-sustituye-al-vector-de-71-y-73). Los apartados 7.1 y 7.3 describen el arte vectorial que existe hoy y siguen valiendo hasta que se migre. §7.2 y §7.4 se mantienen, salvo la tabla de etapas y la escala en sala de §7.4.
+> **Los Pockais son pixel art** ([§7.5](#75-pixel-art-sustituye-al-vector-de-71-y-73)). Los apartados 7.1 y 7.3 describen el arte vectorial anterior y se conservan como referencia histórica. §7.2 y §7.4 se mantienen, salvo la tabla de etapas y la escala en sala de §7.4.
 
 ### 7.1 Plantilla
 
@@ -305,14 +305,14 @@ Tabla orientativa: los valores exactos (escala total, cabeza, apéndices y ojos)
 - **Muebles:** SVG isométrico con huella `W×D` en celdas, de suelo o de pared, con 2 orientaciones dibujadas (las otras 2 salen por espejo). El punto de anclaje es el vértice superior de la celda (x, y) de la huella.
 - **Ni emoji ni iconos** como muebles.
 
-### 7.5 Pixel art (objetivo; sustituye al vector de §7.1 y §7.3)
+### 7.5 Pixel art (sustituye al vector de §7.1 y §7.3)
 
-Los Pockais pasan de SVG procedural a **pixel art**. La interfaz no cambia: sigue siendo vectorial y de pegatina. Solo son pixel art las criaturas, los huevos, sus partículas y, más adelante, las salas. Mientras se migra, el arte vectorial sigue siendo válido; todo arte **nuevo** se diseña con estas reglas. La cámara, la luz y la vista en 3/4 son las de §7.4.
+Los Pockais son **pixel art procedural**: `scripts/sprites/pixel/` los rasteriza a partir de formas, sin editor ni IA. La interfaz no cambia: sigue siendo vectorial y de pegatina. Solo son pixel art las criaturas, los huevos, sus partículas y, más adelante, las salas. La cámara, la luz y la vista en 3/4 son las de §7.4.
 
 **Frame**
 - Se dibuja en un frame nativo de **64×64 px** y se exporta a ×2 (128×128), que es el tamaño que ya esperan `anim.json`, el generador y las apps.
 - Suelo en la fila 60 (y = 120 exportado). Los pies apoyan en la fila 59. La criatura va centrada en x = 32.
-- La sombra de suelo la sigue poniendo el generador: elipse 2:1 centrada en (32, 58), radios 12×6, negra al 20 %, con borde duro.
+- La sombra de suelo no va en la hoja: la ponen los clientes, como elipse 2:1.
 
 **Contorno y sombreado**
 - Contorno exterior de **1 px nativo** en el tono `900` de la rampa del elemento: un oscuro teñido, no `#1e1e1e`. Donde una pieza tapa a otra, 1 px en `900`.
@@ -324,7 +324,7 @@ Los Pockais pasan de SVG procedural a **pixel art**. La interfaz no cambia: sigu
 
 **Rampas por elemento**
 
-El tono `500` es el primario de `shared/assets/palettes.json`, sin cambios; el secundario y el acento también se mantienen. Las sombras giran hacia el violeta y las luces hacia el amarillo, para compartir temperatura con las sombras de la interfaz.
+Esta tabla es la referencia de diseño. En el juego la hoja no guarda colores, sino tonos que el cliente multiplica por la paleta de cada mascota: el contorno sale del color de la pieza muy oscurecido y la luz suma una parte del secundario, que la gira hacia el color cálido de la paleta. El resultado se acerca a la tabla sin fijar cada hex.
 
 | Elemento | 900 contorno | 700 sombra | 500 base | 300 luz | 100 brillo |
 |---|---|---|---|---|---|
@@ -370,7 +370,7 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta. La etapa fin
 - Al sprite no se le aplica `border-radius`, `filter`, `drop-shadow`, opacidad intermedia ni giros o escalados fraccionarios. El espejo horizontal sí vale.
 
 **Huevo y partículas**
-- Huevo de juego en el mismo frame: base `#fde047`, luz `#fff08a`, sombra `#e8b520`, brillo `#fffbe0`, manchas planas `#f59e0b` y contorno y grieta de 1 px en `#3a2a12`. El favicon y el icono de app siguen siendo el huevo vectorial de §2.
+- Huevo de juego en el mismo frame, con los colores que ya tenía: cáscara `#fff4d6`, sombra `#f1ddb0`, manchas `#ffc94d` y `#7fd0ff`, y contorno y grietas de 1 px en `#3b2a12`. El favicon y el icono de app siguen siendo el huevo vectorial de §2.
 - Corazón, Zzz, chispa y gota son mapas de bits en la rejilla nativa del sprite, con contorno de 1 px en carbón. Se mueven por pasos de 1 px y desaparecen sin fundido.
 - Los patrones de piel pasan a mosaicos de 16×16 px nativos.
 
@@ -378,15 +378,15 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta. La etapa fin
 - El sprite vive en un escenario (`--surface-2` o sky-wash) dentro de una tarjeta normal: `--surface`, contorno de 1 px, radio de 20 px y `--shadow-pop`.
 - Tarjetas, chips, burbujas, iconos y texto no se pixelan. No hay tipografía de píxeles.
 
-### 7.6 Accesorios (objetivo)
+### 7.6 Accesorios
 
-Prendas en pixel art que el Pockai lleva puestas (gorros, gafas, bufandas, capas, alas) y que se desbloquean por **logros**, **monedas** o **gemas**. Sustituyen a los emoji de accesorio.
+Prendas en pixel art que el Pockai lleva puestas (gorros, gafas, bufandas, capas, alas) y que se desbloquean por **logros**, **monedas** o **gemas**. El catálogo, la compra, el equipado y el arte ya existen (`pnpm generate:accessories`), y la escena compartida y el escritorio las pintan sobre la mascota.
 
 **Ranuras y anclas**
 - Cuatro ranuras, una prenda por ranura: **cabeza** (gorros, coronas, lazos), **cara** (gafas, antifaces), **cuello** (bufandas, collares) y **espalda** (capas, alas, mochilas).
 - Cada especie define cuatro anclas por etapa (`head`, `face`, `neck`, `back`), en píxeles nativos del frame de 64×64. La prenda se coloca en el ancla y la sigue en cada frame, a píxel entero.
 - Orden de pintado: cola, espalda, cuerpo, cabeza, rasgo icónico cercano, cuello, brazo cercano, ojos, cara.
-- Tres tallas dibujadas, no escaladas: S para baby (16×16), M para juvenile (24×24), L para adult y final (32×32).
+- Tres tallas dibujadas, no escaladas: S para baby, M para juvenile y L para adult y final. Cada prenda se recorta a su caja mínima; el lienzo máximo es de 40×24 (S), 48×32 (M) y 56×40 px (L), porque una bufanda rodea el cuerpo y unas alas asoman por los dos lados.
 
 **Estilo**
 - Mismas reglas que el sprite: contorno de 1 px, luz arriba a la izquierda, sin transparencias. El contorno usa el tono oscuro **de la prenda**, no el del Pockai.
@@ -419,7 +419,7 @@ Prendas en pixel art que el Pockai lleva puestas (gorros, gafas, bufandas, capas
 
 El esquema de datos, las anclas y el orden de implementación están en [`specs/spec-38-accesorios-pockai.md`](specs/spec-38-accesorios-pockai.md).
 
-**Datos (propuesta, sin implementar):** una prenda es un `Item` con `kind: "accessory"`, que ya tiene `priceCoins` y `priceGems`; las de logro llegan por `reward.itemId` de `achievements.json`. Faltan los campos `slot` y `rarity`, las hojas por talla y las anclas por especie y etapa. Los accesorios de festival (`festivals.json`) pasarían a este sistema.
+**Datos:** una prenda es un `Item` con `kind: "accessory"`; las de logro llegan por `reward.itemId` de `achievements.json`. Su arte se dibuja en `scripts/sprites/pixel/accessories.ts`.
 
 ## 8 · Movimiento
 
@@ -527,10 +527,8 @@ Esta sección lista lo que existe hoy y no sigue esta guía. Corregirlo es traba
 | Huevo | Icono Android `#FDE68A` con manchas azules; sprite `#FDE047` con manchas `#F59E0B` | Un solo huevo de marca (§2) |
 | Emoji de contenido | En el escritorio quedan emoji como contenido de juego (frutas de minijuegos, accesorios y muebles, iconos de elemento) | Pegatinas/Lucide cuando haya arte propio; los muebles, en SVG isométrico (§7.4) |
 | Vista | Pockais de perfil y hábitat en diorama lateral (CSS) | Pockais en 3/4 por etapa y salas isométricas (§7.4) |
-| Técnica | Sprites en SVG procedural (`scripts/sprites/species.ts`), contorno de 3 px | Pixel art a 64×64 con contorno de 1 px y rampa de 5 tonos (§7.5) |
-| Etapas | Un dibujo parametrizado y escalado por etapa (`STAGE_PARAMS`) | Cuatro dibujos con plan corporal propio; en cada salto cambian cuatro de cinco ejes (§7.5) |
-| Escala y render | Pockai a ~72 px en sala, con suavizado | Escalas enteras (64 px en sala) y vecino más próximo (§7.5) |
-| Accesorios | Emoji de festival sobre la mascota | Prendas en pixel art por ranura y ancla, desbloqueables por logro, monedas o gemas (§7.6) |
+| Escala y render | Escritorio y escena de PixiJS ya escalan por enteros y sin suavizado; falta revisar Android, iOS y la web | Escalas enteras y vecino más próximo en todas las plataformas (§7.5) |
+| Accesorios | Armario y tienda solo en el escritorio; los festivales siguen usando emoji | Armario en todos los clientes y accesorios de festival como prendas (§7.6) |
 | Movimiento de la mascota | *Bob*, toque y daño por transformaciones continuas | Frames dibujados y pasos de 1 px (§8) |
 | Elementos | Eléctrico, Sombra y Luz sin color de UI | Completar §3.6 |
 | Docs vs arte | Los docs hablan de 14 estados y 21 especies | Hay 4 estados en SVG y 3 especies con arte |

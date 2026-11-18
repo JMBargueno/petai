@@ -27,7 +27,8 @@
     "web:dev": "pnpm --filter pockai-web run start",
     "web:build": "pnpm --filter pockai-web run build",
     "web:test": "pnpm --filter pockai-web run test",
-    "generate:furniture": "tsx scripts/generate-furniture.ts"
+    "generate:furniture": "tsx scripts/generate-furniture.ts",
+    "generate:accessories": "tsx scripts/generate-accessories.ts"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.750.0",

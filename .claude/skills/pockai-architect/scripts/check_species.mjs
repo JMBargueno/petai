@@ -99,8 +99,8 @@ for (const s of species) {
 // Arte: hojas por etapa (GUIA_ARTISTICA §7.4, ART_PIPELINE §8). Mientras dure la migración
 // solo avisa; el alias species/<id>/{base,mask,anim} sí es obligatorio (lo exige validate-assets).
 const STAGES = ['baby', 'juvenile', 'adult', 'final'];
-const SHEET = ['base.png', 'mask.png', 'anim.json'];
-const speciesTs = fs.readFileSync(path.join(root, 'scripts/sprites/species.ts'), 'utf8');
+const SHEET = ['base.png', 'mask.png', 'anim.json', 'anchors.json'];
+const speciesTs = fs.readFileSync(path.join(root, 'scripts/sprites/pixel/species.ts'), 'utf8');
 for (const s of species) {
   if (only && s.id !== only) continue;
   const tag = `[${s.id}]`;
@@ -111,7 +111,7 @@ for (const s of species) {
   const missingStages = STAGES.filter((st) => st !== 'adult' && SHEET.some((f) => !fs.existsSync(path.join(dir, st, f))));
   if (missingStages.length) warnings.push(`${tag} sin hojas por etapa (${missingStages.join(', ')}): los clientes usarán la hoja adult/alias`);
   const hasArt = new RegExp(`id:\\s*['"]${s.id}['"]`).test(speciesTs);
-  if (!hasArt) warnings.push(`${tag} sin SpeciesArt en scripts/sprites/species.ts: sigue con placeholder`);
+  if (!hasArt) warnings.push(`${tag} sin PixelSpecies en scripts/sprites/pixel/species.ts: sigue con placeholder`);
 }
 
 // Avisos de catálogo (fallback de eclosión)

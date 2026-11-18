@@ -13,6 +13,13 @@ const PALETTES: Record<string, { primary: string; secondary: string }> = {
   axolunar: { primary: '#38A3A5', secondary: '#80ED99' },
   florabud: { primary: '#57CC99', secondary: '#C7F9CC' },
 };
+/** Prendas de ejemplo por ranura (ids de shared/game-data/accessories.json). */
+const DEMO_ACCESSORIES: Record<string, string[]> = {
+  head: ['acc_gorro_lana_azul', 'acc_gorro_fiesta', 'ach_item_care_crown'],
+  face: ['acc_gafas_estudio'],
+  neck: ['acc_bufanda_menta', 'ach_item_care_blanket'],
+  back: ['acc_capa_gala', 'acc_alas_nube', 'ach_item_battle_legend'],
+};
 const CLIPS = ['idle', 'walk', 'happy', 'eat', 'sleep', 'attack', 'sad', 'dance', 'level_up'];
 
 export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void {
@@ -23,6 +30,7 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
     <label>Etapa <select name="stage"><option>baby</option><option>juvenile</option><option selected>adult</option><option>final</option><option>egg</option></select></label>
     <label>Patrón <select name="pattern"><option value="">—</option>${Object.keys(PATTERNS).map((p) => `<option>${p}</option>`).join('')}</select></label>
     <label>Semilla <input name="seed" type="number" value="1337"></label>
+    ${Object.entries(DEMO_ACCESSORIES).map(([slot, ids]) => `<label>${slot} <select name="acc_${slot}"><option value="">—</option>${ids.map((i) => `<option>${i}</option>`).join('')}</select></label>`).join('')}
     ${
       withRoom
         ? `<label>Sala <select name="room">${DEMO_ROOMS.map((r) => `<option>${r}</option>`).join('')}</select></label>
@@ -56,6 +64,7 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
         palette: PALETTES[species] ?? PALETTES.ignisaur,
         pattern: field('pattern') || null,
         visualSeed: Number(field('seed')) || 1,
+        accessories: Object.fromEntries(Object.keys(DEMO_ACCESSORIES).map((slot) => [slot, field(`acc_${slot}`)]).filter(([, id]) => id)),
       },
     });
   };
