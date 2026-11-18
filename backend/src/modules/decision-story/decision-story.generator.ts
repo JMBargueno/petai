@@ -97,7 +97,7 @@ export class DecisionStoryGenerator implements OnApplicationBootstrap {
     const have = await this.prisma.decisionStory.count({ where: { day } });
     if (have >= bucket.storiesPerDay) return null;
     // Pasada la hora límite, o si la IA no puede llamar, los huecos se rellenan con el respaldo
-    const aiReady = this.systemAi.isAvailable();
+    const aiReady = await this.systemAi.isAvailable();
     return this.generateForDay(day, { allowFallback: hour >= bucket.aiDeadlineHour || !aiReady, skipAi: !aiReady });
   }
 

@@ -264,4 +264,35 @@ describe('Aventura diaria: DecisionStoryGenerator (e2e)', () => {
     const list = await api().get(`/v1/admin/stories?day=${DAY1}`).set(u.auth).expect(200);
     expect(list.body.stories[0].scenes[0].choices[0]).toHaveProperty('votes');
   });
+
+  it('h. IA interna: solo el equipo la configura, la clave no se devuelve y el generador la usa antes que OpenRouter', async () => {
+    const u = await signup();
+    await api().get('/v1/admin/ai/internal').set(u.auth).expect(403);
+    await api().put('/v1/admin/ai/internal').set(u.auth).send({ baseUrl: mock.url, model: 'interno-1' }).expect(403);
+    await prisma.user.update({ where: { id: u.userId }, data: { role: 'superadmin' } });
+
+    expect((await api().get('/v1/admin/ai/internal').set(u.auth).expect(200)).body).toMatchObject({ configured: false });
+    // Sin permiso de red privada, un servidor local por http se rechaza
+    await api().put('/v1/admin/ai/internal').set(u.auth).send({ baseUrl: mock.url, model: 'interno-1', apiKey: 'sk-interna-e2e-123456' }).expect(400);
+
+    const saved = await api()
+      .put('/v1/admin/ai/internal')
+      .set(u.auth)
+      .send({ baseUrl: mock.url, model: 'interno-1', apiKey: 'sk-interna-e2e-123456', allowPrivateNetwork: true })
+      .expect(200);
+    expect(saved.body).toMatchObject({ configured: true, enabled: true, model: 'interno-1', hasKey: true });
+    expect(JSON.stringify(saved.body)).not.toContain('sk-interna-e2e-123456');
+
+    // El generador llama con el modelo de la IA interna, sin los parámetros propios de OpenRouter
+    mock.seen.length = 0;
+    const day = '2999-02-01';
+    const report = await generator.generateForDay(day, { allowFallback: false });
+    expect(report.created.every((c) => c.source === 'ai')).toBe(true);
+    expect(mock.seen[0].model).toBe('interno-1');
+    expect(mock.seen[0].models).toBeUndefined();
+    expect((await prisma.decisionStory.findFirst({ where: { day } })).model).toBe('interno-1');
+
+    await api().delete('/v1/admin/ai/internal').set(u.auth).expect(200);
+    expect((await api().get('/v1/admin/ai/internal').set(u.auth).expect(200)).body).toMatchObject({ configured: false });
+  });
 });

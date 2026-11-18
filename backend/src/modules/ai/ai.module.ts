@@ -7,6 +7,8 @@ import { MemoryService } from './memory.service';
 import { AgentService } from './agent.service';
 import { UsageService } from './usage.service';
 import { SystemAiService } from './system-ai.service';
+import { InternalAiService } from './internal-ai.service';
+import { AdminInternalAiController } from './admin-internal-ai.controller';
 import { GameDataModule } from '../game-data/game-data.module';
 import { PetsModule } from '../pets/pets.module';
 import { EnvironmentalModule } from '../environmental/environmental.module';
@@ -16,11 +18,11 @@ import { MindModule } from '../mind/mind.module';
 
 @Module({
   imports: [PetsModule, GameDataModule, EnvironmentalModule, BondingModule, BillingModule, MindModule],
-  controllers: [AiController],
-  providers: [AiConfigService, ChatService, KeyCryptoService, MemoryService, AgentService, UsageService, SystemAiService],
+  controllers: [AiController, AdminInternalAiController],
+  providers: [AiConfigService, ChatService, KeyCryptoService, MemoryService, AgentService, UsageService, SystemAiService, InternalAiService],
   // `AiConfigService` se exporta para el módulo de notificaciones (feature 007), que reutiliza el
   // mecanismo de LLM call (resolveProvider) sin registrar consumo en `AiUsage`.
   // `SystemAiService`: IA del sistema para tareas internas sin usuario (aventura diaria).
-  exports: [AiConfigService, SystemAiService],
+  exports: [AiConfigService, SystemAiService, InternalAiService],
 })
 export class AiModule {}

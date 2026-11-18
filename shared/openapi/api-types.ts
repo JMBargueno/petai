@@ -1713,6 +1713,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/ai/internal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Conexión de IA interna guardada (la clave nunca se devuelve, solo una máscara) */
+        get: operations["AdminInternalAiController_get"];
+        /** Guardar la conexión de IA interna. Sin `apiKey` se conserva la clave guardada; vacía la borra. */
+        put: operations["AdminInternalAiController_save"];
+        post?: never;
+        /** Quitar la conexión de IA interna (la IA del sistema vuelve a su respaldo) */
+        delete: operations["AdminInternalAiController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/ai/internal/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Probar la conexión guardada con una llamada mínima */
+        post: operations["AdminInternalAiController_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pets/{id}/combat": {
         parameters: {
             query?: never;
@@ -8205,6 +8241,88 @@ export interface operations {
                 };
             };
         };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminInternalAiController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminInternalAiController_save: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description URL base compatible con OpenAI, p. ej. https://ia.ejemplo.com/v1 */
+                    baseUrl: string;
+                    model: string;
+                    apiKey?: string;
+                    /** @description Pedir la salida con response_format json_object */
+                    jsonMode?: boolean;
+                    /** @description Permitir http y direcciones de red privada */
+                    allowPrivateNetwork?: boolean;
+                    enabled?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminInternalAiController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminInternalAiController_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             201: {
                 headers: {

@@ -969,6 +969,30 @@ model AdventureScene {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// IA interna: conexión propia del equipo a un endpoint compatible con la API de OpenAI
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Fila única (id "default"). La usa la IA del sistema (tareas sin usuario, como las historias de la
+// aventura diaria). El chat de los usuarios NO pasa por aquí: sigue con la IA gestionada o su clave.
+model InternalAiConnection {
+  id                  String   @id @default("default")
+  baseUrl             String
+  model               String
+  // Clave cifrada con AES-GCM (KeyCryptoService). Opcional: un servidor local puede no pedirla.
+  encryptedKey        String?
+  keyIv               String?
+  keyTag              String?
+  // Pedir la salida con response_format json_object (hay servidores que no lo admiten)
+  jsonMode            Boolean  @default(true)
+  // Permite http y direcciones de red privada (servidor propio en la red interna)
+  allowPrivateNetwork Boolean  @default(false)
+  enabled             Boolean  @default(true)
+  updatedById         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Aventura diaria: DecisionStoryGenerator
 // ─────────────────────────────────────────────────────────────────────────────
 

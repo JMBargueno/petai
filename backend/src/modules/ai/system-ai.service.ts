@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
 import { BillingConfigService } from '../billing/billing-config.service';
 import { ManagedBudgetService } from '../billing/managed-budget.service';
+import { InternalAiService } from './internal-ai.service';
 import { extractJsonObject } from './json-output';
 import { LlmProvider } from './llm-provider';
 import { moderateOutput } from './moderation';
@@ -56,9 +57,13 @@ export interface SystemAiJsonRequest<T> {
 
 /**
  * IA del sistema: llamadas a un LLM para tareas internas del backend, sin usuario detrás (hoy, las
- * historias de la aventura diaria). Es independiente de la IA del chat de cada Pockai: clave, modelo
- * y presupuesto diario propios (`BillingConfig.systemAi`), y no toca ni el presupuesto ni el
- * circuit breaker de la IA gestionada.
+ * historias de la aventura diaria). Es independiente de la IA del chat de cada Pockai, que sigue con
+ * la IA gestionada o la clave del usuario: aquí no se toca ni su presupuesto ni su circuit breaker.
+ *
+ * Conexión, por orden: la IA interna configurada en el panel de administración
+ * (`InternalAiService`, cualquier endpoint compatible con OpenAI) y, si no hay ninguna activa, el
+ * respaldo por entorno (`AI_SYSTEM_API_KEY` u `OPENROUTER_API_KEY` con el modelo de
+ * `BillingConfig.systemAi`). El presupuesto diario y los límites son siempre los de `systemAi`.
  */
 @Injectable()
 export class SystemAiService {
@@ -68,29 +73,42 @@ export class SystemAiService {
     private readonly config: ConfigService,
     private readonly billingConfig: BillingConfigService,
     private readonly budget: ManagedBudgetService,
+    private readonly internalAi: InternalAiService,
   ) {}
 
   private apiKey(): string | undefined {
     return this.config.get<string>('AI_SYSTEM_API_KEY') || this.config.get<string>('OPENROUTER_API_KEY') || undefined;
   }
 
-  /** `true` si está encendida y hay clave. No comprueba el presupuesto. */
-  isAvailable(): boolean {
-    return this.billingConfig.systemAiSettings().enabled && !!this.apiKey();
+  /** `true` si está encendida y tiene con qué llamar. No comprueba el presupuesto. */
+  async isAvailable(): Promise<boolean> {
+    return this.billingConfig.systemAiSettings().enabled && !!(await this.resolveConnection());
   }
 
-  /** Punto de extensión (y de sustitución en tests). */
-  protected createProvider(apiKey: string, fallbackModels: string[]): LlmProvider {
+  /**
+   * Con qué proveedor y modelo llamar, o `null` si no hay ninguno. Punto de extensión (y de
+   * sustitución en tests).
+   */
+  protected async resolveConnection(): Promise<{ provider: LlmProvider; model: string; source: 'internal' | 'env' } | null> {
+    const internal = await this.internalAi.resolve();
+    if (internal) return { provider: internal.provider, model: internal.model, source: 'internal' };
+
+    const apiKey = this.apiKey();
+    if (!apiKey) return null;
+    const settings = this.billingConfig.systemAiSettings();
+    const fallbackModels = settings.fallbackModels ?? [];
     const baseUrl =
       this.config.get<string>('AI_SYSTEM_BASE_URL') || this.config.get<string>('OPENROUTER_BASE_URL') || OPENROUTER_DEFAULT_BASE_URL;
-    return new OpenAiCompatibleProvider(baseUrl, apiKey, fetch, {
+    const provider = new OpenAiCompatibleProvider(baseUrl, apiKey, fetch, {
       extraHeaders: { 'HTTP-Referer': 'https://pockai.app', 'X-Title': 'Pockai' },
+      // `models` y `usage.include` son de OpenRouter: reserva de modelos y coste real de la llamada
       extraBody: {
         ...(fallbackModels.length > 0 ? { models: fallbackModels } : {}),
         usage: { include: true },
         response_format: { type: 'json_object' },
       },
     });
+    return { provider, model: settings.model, source: 'env' };
   }
 
   private estimateUsd(promptTokens: number, completionTokens: number): number {
@@ -105,10 +123,9 @@ export class SystemAiService {
   async completeJson<T>(req: SystemAiJsonRequest<T>): Promise<SystemAiResult<T>> {
     const usage: SystemAiUsage = { promptTokens: 0, completionTokens: 0, costUsd: 0 };
     const settings = this.billingConfig.systemAiSettings();
-    const apiKey = this.apiKey();
-    if (!settings.enabled || !apiKey) return { ok: false, reason: 'unavailable', usage };
-
-    const provider = this.createProvider(apiKey, settings.fallbackModels ?? []);
+    const connection = settings.enabled ? await this.resolveConnection() : null;
+    if (!connection) return { ok: false, reason: 'unavailable', usage };
+    const { provider, model } = connection;
     const maxTokens = Math.min(req.maxTokens ?? settings.maxOutputTokens, settings.maxOutputTokens);
     const attempts = Math.max(1, req.attempts ?? 2);
     let feedback = '';
@@ -133,7 +150,7 @@ export class SystemAiService {
             { role: 'system', content: req.system },
             { role: 'user', content: user },
           ],
-          { model: settings.model, temperature: req.temperature ?? settings.temperature, maxTokens },
+          { model, temperature: req.temperature ?? settings.temperature, maxTokens },
         );
         for await (const ev of stream) {
           if (ev.type === 'delta') output += ev.text;
@@ -182,8 +199,8 @@ export class SystemAiService {
         this.logger.warn(`IA del sistema (${req.purpose}), intento ${attempt}/${attempts}: salida moderada`);
         continue;
       }
-      return { ok: true, data: parsed.data, model: settings.model, usage };
+      return { ok: true, data: parsed.data, model, usage };
     }
-    return { ok: false, ...failure, model: settings.model, usage };
+    return { ok: false, ...failure, model, usage };
   }
 }

@@ -75,7 +75,7 @@ function build(aiImpl?: (req: any) => any) {
   const { rows, prisma } = fakePrisma();
   const requests: any[] = [];
   const systemAi = {
-    isAvailable: jest.fn(() => !!aiImpl),
+    isAvailable: jest.fn(async () => !!aiImpl),
     completeJson: jest.fn(async (req: any) => {
       requests.push(req);
       return aiImpl(req);

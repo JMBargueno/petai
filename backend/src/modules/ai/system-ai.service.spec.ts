@@ -22,7 +22,7 @@ function scripted(responses: Array<string | Error>, usage?: { promptTokens?: num
   return { provider, calls };
 }
 
-function build(opts: { key?: string; enabled?: boolean; provider?: LlmProvider; reserve?: jest.Mock } = {}) {
+function build(opts: { key?: string; enabled?: boolean; provider?: LlmProvider; reserve?: jest.Mock; internal?: { provider: LlmProvider; model: string } | null } = {}) {
   const config = { get: jest.fn((k: string) => (k === 'OPENROUTER_API_KEY' ? ('key' in opts ? opts.key : 'sk-test') : undefined)) };
   const billingConfig = {
     systemAiSettings: jest.fn(() => ({
@@ -40,12 +40,17 @@ function build(opts: { key?: string; enabled?: boolean; provider?: LlmProvider; 
     reserveScoped: opts.reserve ?? jest.fn(async () => 500),
     settleScoped: jest.fn(async () => undefined),
   };
+  const internalAi = { resolve: jest.fn(async () => opts.internal ?? null) };
+  // Respaldo por entorno: mismo criterio que el servicio real (hay clave), con el proveedor falso
   class TestService extends SystemAiService {
-    protected createProvider(): LlmProvider {
-      return opts.provider;
+    protected async resolveConnection() {
+      const internal = await internalAi.resolve();
+      if (internal) return { ...internal, source: 'internal' as const };
+      const hasKey = 'key' in opts ? !!opts.key : true;
+      return hasKey ? { provider: opts.provider, model: 'test/model', source: 'env' as const } : null;
     }
   }
-  return { svc: new TestService(config as any, billingConfig as any, budget as any), budget };
+  return { svc: new TestService(config as any, billingConfig as any, budget as any, internalAi as any), budget, internalAi };
 }
 
 const request = { purpose: 'test', system: 'Eres un narrador.', user: 'Escribe.', schema };
@@ -91,8 +96,8 @@ describe('SystemAiService', () => {
     expect(await build({ provider, key: undefined }).svc.completeJson(request)).toMatchObject({ ok: false, reason: 'unavailable' });
     expect(await build({ provider, enabled: false }).svc.completeJson(request)).toMatchObject({ ok: false, reason: 'unavailable' });
     expect(calls).toHaveLength(0);
-    expect(build({ provider, key: undefined }).svc.isAvailable()).toBe(false);
-    expect(build({ provider }).svc.isAvailable()).toBe(true);
+    expect(await build({ provider, key: undefined }).svc.isAvailable()).toBe(false);
+    expect(await build({ provider }).svc.isAvailable()).toBe(true);
   });
 
   it('no llama si el presupuesto diario está agotado', async () => {
@@ -110,6 +115,22 @@ describe('SystemAiService', () => {
     expect(calls).toHaveLength(2);
     // Sin respuesta se conserva la reserva: no se liquida a la baja
     expect(budget.settleScoped).not.toHaveBeenCalled();
+  });
+
+  it('usa la IA interna del panel antes que el respaldo por entorno, con su modelo', async () => {
+    const internal = scripted(['{"title":"Interna","n":7}']);
+    const env = scripted(['{"title":"Entorno","n":1}']);
+    const res = await build({ provider: env.provider, internal: { provider: internal.provider, model: 'mi-modelo-interno' } }).svc.completeJson(request);
+    expect(res).toMatchObject({ ok: true, data: { title: 'Interna', n: 7 }, model: 'mi-modelo-interno' });
+    expect(internal.calls).toEqual([expect.objectContaining({ model: 'mi-modelo-interno' })]);
+    expect(env.calls).toHaveLength(0);
+  });
+
+  it('con IA interna configurada está disponible aunque no haya clave en el entorno', async () => {
+    const internal = scripted(['{"title":"a","n":1}']);
+    const built = build({ key: undefined, internal: { provider: internal.provider, model: 'm' } });
+    expect(await built.svc.isAvailable()).toBe(true);
+    expect((await built.svc.completeJson(request)).ok).toBe(true);
   });
 
   it('rechaza salidas con datos sensibles', async () => {

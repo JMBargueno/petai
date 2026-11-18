@@ -3365,6 +3365,119 @@
         ]
       }
     },
+    "/v1/admin/ai/internal": {
+      "get": {
+        "operationId": "AdminInternalAiController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Conexión de IA interna guardada (la clave nunca se devuelve, solo una máscara)",
+        "tags": [
+          "Admin AI"
+        ]
+      },
+      "put": {
+        "operationId": "AdminInternalAiController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "baseUrl",
+                  "model"
+                ],
+                "properties": {
+                  "baseUrl": {
+                    "type": "string",
+                    "description": "URL base compatible con OpenAI, p. ej. https://ia.ejemplo.com/v1"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "apiKey": {
+                    "type": "string"
+                  },
+                  "jsonMode": {
+                    "type": "boolean",
+                    "description": "Pedir la salida con response_format json_object"
+                  },
+                  "allowPrivateNetwork": {
+                    "type": "boolean",
+                    "description": "Permitir http y direcciones de red privada"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar la conexión de IA interna. Sin `apiKey` se conserva la clave guardada; vacía la borra.",
+        "tags": [
+          "Admin AI"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminInternalAiController_remove",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quitar la conexión de IA interna (la IA del sistema vuelve a su respaldo)",
+        "tags": [
+          "Admin AI"
+        ]
+      }
+    },
+    "/v1/admin/ai/internal/test": {
+      "post": {
+        "operationId": "AdminInternalAiController_test",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Probar la conexión guardada con una llamada mínima",
+        "tags": [
+          "Admin AI"
+        ]
+      }
+    },
     "/v1/pets/{id}/combat": {
       "get": {
         "operationId": "BattlesController_profile",
