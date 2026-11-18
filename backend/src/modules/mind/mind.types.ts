@@ -44,6 +44,9 @@ export interface PersonalityConfig {
     /** Un recuerdo inyectado hace menos de estos minutos y sin relación con el mensaje pierde puntuación. */
     recentRecallMinutes: number;
     recentRecallPenalty: number;
+    /** Un episodio que se repite (misma clave) gana esta importancia cada vez, hasta `repeatCap`. */
+    repeatBoost: number;
+    repeatCap: number;
   };
   autonomy: AutonomyConfig;
   combat: { maxThresholdShift: number };

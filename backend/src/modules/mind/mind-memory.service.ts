@@ -25,6 +25,11 @@ export interface RememberInput {
   subject?: string | null;
   key?: string | null;
   createdAt?: Date;
+  /**
+   * Con `key`: el recuerdo es algo que se repite (p. ej. «me dijo que me quiere»). En vez de
+   * acumular uno por vez, se actualiza el mismo: pasa a ser de ahora y gana algo de importancia.
+   */
+  bump?: boolean;
 }
 
 const LOAD_LIMIT = 400;
@@ -85,10 +90,26 @@ export class MindMemoryService {
           if (dup) continue;
         }
         if (input.key) {
+          let importance = data.importance;
+          let refreshed: { createdAt?: Date } = {};
+          if (input.bump) {
+            const prev = await this.prisma.petMemory.findUnique({
+              where: { petId_key: { petId, key: input.key } },
+              select: { importance: true },
+            });
+            if (prev) {
+              importance = Math.max(
+                data.importance,
+                Math.min(cfg.memory.repeatCap, Math.max(prev.importance, data.importance) + cfg.memory.repeatBoost),
+              );
+            }
+            // Vuelve a ser reciente: «hoy me dijo…», no «hace tres semanas»
+            refreshed = { createdAt: input.createdAt ?? new Date() };
+          }
           await this.prisma.petMemory.upsert({
             where: { petId_key: { petId, key: input.key } },
-            create: { ...data, key: input.key },
-            update: { content, importance: data.importance, valence: data.valence },
+            create: { ...data, importance, key: input.key },
+            update: { content, importance, valence: data.valence, ...refreshed },
           });
         } else {
           await this.prisma.petMemory.create({ data });

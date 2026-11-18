@@ -101,6 +101,9 @@ if (pers) {
     if (!(mem.minRecallScore >= 0 && mem.minRecallScore < 1)) throw new Error('balance.personality.memory.minRecallScore debe estar en [0, 1)');
     if (!(mem.recentRecallMinutes > 0) || !(mem.recentRecallPenalty >= 0)) throw new Error('balance.personality.memory: recentRecallMinutes/recentRecallPenalty inválidos');
   }
+  if (mem && (!(mem.repeatBoost >= 0) || !(mem.repeatCap > 0 && mem.repeatCap <= 1))) {
+    throw new Error('balance.personality.memory: repeatBoost/repeatCap inválidos');
+  }
   for (const id of pers.autonomy?.itemFind?.items ?? []) {
     if (!foods.some((f) => f.id === id)) throw new Error(`balance.personality.autonomy.itemFind: ${id} no existe en foods.json`);
   }

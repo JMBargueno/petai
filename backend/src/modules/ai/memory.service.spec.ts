@@ -34,6 +34,7 @@ describe('MemoryService', () => {
         create: jest.fn(({ data }) => { created.push(data); return Promise.resolve(data); }),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         upsert: jest.fn().mockResolvedValue({}),
+        update: jest.fn().mockResolvedValue({}),
       },
       chatMessage: { findMany: jest.fn().mockResolvedValue(userMsgs(6)) },
       pet: { findFirst: jest.fn() },
@@ -208,5 +209,121 @@ describe('MemoryService', () => {
     await expect(svc.remove('u', 'p', 'zzz')).rejects.toThrow('Recuerdo no encontrado');
     const l = await svc.list('u', 'p');
     expect(l).toMatchObject({ unlocked: false, unlockAt: 200, memories: [] });
+  });
+});
+
+describe('MemoryService — spec 37 lote 2 (memoria v2)', () => {
+  const when = (n: number) => new Date(1_700_000_000_000 + n * 1000);
+  const provider = (output: string) =>
+    ({
+      chat: jest.fn(async function* () {
+        yield { type: 'delta', text: output };
+        yield { type: 'done' };
+      }),
+      test: jest.fn(),
+    }) as any;
+
+  function setup(facts: { id: string; content: string }[] = []) {
+    const created: any[] = [];
+    const prisma: any = {
+      petMemory: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn(({ where }: any) => Promise.resolve(where.kind === 'fact' ? facts.map((f, i) => ({ ...f, kind: 'fact', createdAt: when(i) })) : [])),
+        create: jest.fn(({ data }: any) => {
+          created.push(data);
+          return Promise.resolve(data);
+        }),
+        update: jest.fn().mockResolvedValue({}),
+        upsert: jest.fn().mockResolvedValue({}),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      chatMessage: {
+        findMany: jest.fn().mockResolvedValue(
+          Array.from({ length: 12 }, (_, i) => ({ role: i % 2 === 0 ? 'user' : 'assistant', content: `m${i}`, createdAt: when(i) })),
+        ),
+      },
+      pet: { findFirst: jest.fn() },
+      petContextProfile: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue({}) },
+    };
+    const usage: any = { hasQuota: jest.fn().mockResolvedValue(true), record: jest.fn().mockResolvedValue(undefined) };
+    const mindMemory: any = { remember: jest.fn(async () => 1), enforceCapacity: jest.fn(async () => undefined) };
+    const svc = new MemoryService(prisma, usage, undefined, mindMemory);
+    return { svc, prisma, created, mindMemory };
+  }
+
+  const KNOWN = [
+    { id: 'f-madrid', content: 'Vive en Madrid' },
+    { id: 'f-gato', content: 'Tiene un gato' },
+  ];
+
+  it('enseña al extractor los hechos conocidos, numerados', async () => {
+    const s = setup(KNOWN);
+    const p = provider('{"summary":"x resumen","facts":[]}');
+    await s.svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
+    const user = p.chat.mock.calls[0][0][1].content;
+    expect(user).toContain('1. Vive en Madrid');
+    expect(user).toContain('2. Tiene un gato');
+  });
+
+  it('una corrección sustituye el hecho antiguo en vez de añadir otro', async () => {
+    const s = setup(KNOWN);
+    const p = provider(JSON.stringify({ summary: 'Se mudó', facts: [{ op: 'update', index: 1, text: 'Vive en Barcelona', importance: 0.9 }] }));
+    await s.svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
+    expect(s.prisma.petMemory.update).toHaveBeenCalledWith({ where: { id: 'f-madrid' }, data: { content: 'Vive en Barcelona', importance: 0.9 } });
+    expect(s.created.filter((c) => c.kind === 'fact')).toEqual([]);
+  });
+
+  it('una baja borra solo ese hecho de esa mascota', async () => {
+    const s = setup(KNOWN);
+    const p = provider(JSON.stringify({ summary: 'Ya no tiene gato', facts: [{ op: 'delete', index: 2 }] }));
+    await s.svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
+    expect(s.prisma.petMemory.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['f-gato'] }, petId: 'p1' } });
+  });
+
+  it('un índice fuera de rango no toca nada', async () => {
+    const s = setup(KNOWN);
+    const p = provider(JSON.stringify({ summary: 'x resumen', facts: [{ op: 'delete', index: 7 }, { op: 'update', index: 9, text: 'Otra cosa' }] }));
+    await s.svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
+    expect(s.prisma.petMemory.update).not.toHaveBeenCalled();
+    expect(s.prisma.petMemory.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('no da de alta un hecho que ya dice lo mismo que una corrección', async () => {
+    const s = setup(KNOWN);
+    const p = provider(
+      JSON.stringify({
+        summary: 'Se mudó',
+        facts: [{ op: 'update', index: 1, text: 'Vive en Barcelona' }, { op: 'add', text: 'Tiene un GATO' }, { op: 'add', text: 'Toca el piano', importance: 0.4 }],
+      }),
+    );
+    await s.svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
+    expect(s.created.filter((c) => c.kind === 'fact').map((c) => [c.content, c.importance])).toEqual([['Toca el piano', 0.4]]);
+  });
+
+  it('los episodios extraídos van a la memoria episódica a través de la mente', async () => {
+    const s = setup();
+    const p = provider(JSON.stringify({ summary: 'Aprobó', facts: [], episodes: [{ text: 'Mi entrenador me contó que aprobó el examen', importance: 0.7, valence: 0.8 }] }));
+    await s.svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
+    expect(s.mindMemory.remember).toHaveBeenCalledWith('p1', [
+      expect.objectContaining({ layer: 'episodic', kind: 'event', subject: 'owner', content: 'Mi entrenador me contó que aprobó el examen', importance: 0.7, valence: 0.8 }),
+    ]);
+  });
+
+  it('tras guardar aplica la capacidad por retención y no los topes fijos', async () => {
+    const many = Array.from({ length: 60 }, (_, i) => ({ id: `f${i}`, content: `Hecho ${i}` }));
+    const s = setup(many);
+    const p = provider(JSON.stringify({ summary: 'x resumen', facts: [{ op: 'add', text: 'Tiene un loro' }] }));
+    await s.svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
+    expect(s.mindMemory.enforceCapacity).toHaveBeenCalledWith('p1');
+    // Ni se borran los hechos más antiguos por orden de llegada ni se podan resúmenes por número
+    expect(s.prisma.petMemory.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('el marcador de «procesado hasta» se sigue escribiendo aunque no haya resumen', async () => {
+    const s = setup();
+    const p = provider(JSON.stringify({ summary: '', facts: [{ op: 'add', text: 'Tiene un loro' }] }));
+    await s.svc.maybeSummarize('p1', 250, p, 'm', 'u1', 'byok');
+    const marker = s.created.find((c) => c.kind === 'summary');
+    expect(marker).toMatchObject({ importance: 0.1, createdAt: when(11) });
   });
 });
