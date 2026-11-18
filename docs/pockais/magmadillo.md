@@ -55,7 +55,7 @@ Valiente y calmado: no busca pelea, pero no se aparta.
 ## Brief de arte
 Pixel art en 3/4. Coraza en primario (lleva el patrón), franjas de placa y chimeneas en primario oscurecido, grietas, panza y llamas en secundario. La cola gira con la pose y las llamas laten con los apéndices; las cuatro patas dan el paso en diagonal.
 
-**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Coraza con escamas y, en la etapa final, chimeneas y cuerno en el acento.
+**Estado del arte:** arte final por hoja objetivo (`target-sheet-pipeline.md`): cada etapa generada con Nano Banana a partir del boceto y de su hoja de diseño aprobada (`examples/magmadillo-diseno.jpg`), e importada a 64 px (`scripts/sprites/pixel/imported/magmadillo.json`). La paleta por defecto es la de la hoja. Boceto anterior: redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Coraza con escamas y, en la etapa final, chimeneas y cuerno en el acento.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -69,6 +69,6 @@ Pixel art en 3/4. Coraza en primario (lleva el patrón), franjas de placa y chim
   "favoriteFood": "spicy_berry",
   "spriteKey": "magmadillo",
   "personalityBias": { "curiosity": 40, "sociability": 45, "bravery": 70, "affection": 65, "temper": 30 },
-  "defaultPalette": { "primary": "#C2452D", "secondary": "#FFB627", "accent": "#5A1807" }
+  "defaultPalette": { "primary": "#C63D27", "secondary": "#70162C", "accent": "#FFD33F" }
 }
 ```

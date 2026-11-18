@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bakePixels, resolveBakeColors, shadeShift, type RgbaImage } from './bakePixels';
+import { bakePixels, patternTone, resolveBakeColors, shadeShift, type RgbaImage } from './bakePixels';
 import { resolveClip, type AnimMetadata } from './anim';
 import { createMulberry32, deriveVisualTraits, rgbToHsl } from '../prng';
 
@@ -53,6 +53,53 @@ describe('bakePixels', () => {
     expect(px(out, 0)).toEqual([...accent.map((c) => Math.round((c * 239) / 255)), 255]);
   });
 
+  describe('patrón', () => {
+    const lum = (o: ArrayLike<number>, i = 0) => 0.299 * o[i] + 0.587 * o[i + 1] + 0.114 * o[i + 2];
+    const tone: RgbaImage = { width: 1, height: 1, data: new Uint8ClampedArray([255, 255, 255, 255]) };
+    const body = (n: number) => img(Array.from({ length: n }, () => [255, 0, 255, 255]));
+    const flat = (n: number) => img(Array.from({ length: n }, () => [239, 239, 239, 255]));
+
+    it('aclara en una especie oscura y oscurece en una clara, sin irse a blanco', () => {
+      for (const [primary, sign] of [['#223366', 1], ['#F4E8C0', -1]] as const) {
+        const p = { primary, secondary: '#888888' };
+        const plain = bakePixels(flat(1), body(1), { palette: p, visualSeed: 7 });
+        const marked = bakePixels(flat(1), body(1), { palette: p, visualSeed: 7, pattern: tone });
+        expect(Math.sign(lum(marked) - lum(plain))).toBe(sign);
+        expect(lum(marked)).toBeLessThan(250);
+      }
+    });
+
+    it('un píxel de patrón no blanco es un destello: aclara siempre y más que el tono', () => {
+      const glint: RgbaImage = { width: 1, height: 1, data: new Uint8ClampedArray([80, 220, 255, 255]) };
+      const p = { primary: '#F4E8C0', secondary: '#888888' };
+      const plain = bakePixels(flat(1), body(1), { palette: p, visualSeed: 7 });
+      const out = bakePixels(flat(1), body(1), { palette: p, visualSeed: 7, pattern: glint });
+      expect(lum(out)).toBeGreaterThan(lum(plain));
+    });
+
+    it('un alfa por debajo de la mitad no pinta: no hay mezclas parciales', () => {
+      const faint: RgbaImage = { width: 1, height: 1, data: new Uint8ClampedArray([255, 255, 255, 100]) };
+      const plain = bakePixels(flat(1), body(1), { palette, visualSeed: 7 });
+      expect(Array.from(bakePixels(flat(1), body(1), { palette, visualSeed: 7, pattern: faint }))).toEqual(Array.from(plain));
+    });
+
+    it('cada píxel del patrón cubre un píxel nativo entero (pixelSize píxeles de hoja)', () => {
+      // Damero de 2×2 píxeles de patrón sobre una fila de 4 píxeles de hoja a escala 2.
+      const checker: RgbaImage = { width: 2, height: 1, data: new Uint8ClampedArray([255, 255, 255, 255, 0, 0, 0, 0]) };
+      const out = bakePixels(flat(4), body(4), { palette, visualSeed: 7, pattern: checker, pixelSize: 2 });
+      const px = (i: number) => Array.from(out.slice(i * 4, i * 4 + 3));
+      expect(px(0)).toEqual(px(1));
+      expect(px(2)).toEqual(px(3));
+      expect(px(0)).not.toEqual(px(2));
+    });
+
+    it('patternTone conserva el tono del color', () => {
+      const [r, g, b] = patternTone(40, 60, 160, true, false);
+      expect(b).toBeGreaterThan(r);
+      expect(b).toBeGreaterThan(g);
+    });
+  });
+
   it('sin acento en la paleta usa el primario oscurecido', () => {
     const { accent } = resolveBakeColors({ palette, visualSeed: 7 });
     const dark = resolveBakeColors({ palette: { ...palette, accent: '#6b0000' }, visualSeed: 7 }).accent;
@@ -79,7 +126,8 @@ describe('bakePixels', () => {
     const base = img([[255 - 1, 200, 200, 0], [255 - 1, 200, 200, 0]]);
     const mask = img([[255, 0, 255, 255], [255, 0, 0, 255]]);
     const out = bakePixels(base, mask, { palette, visualSeed: 7, pattern });
-    expect(px(out, 0)).toEqual([255, 255, 255, 255]); // patrón opaco con B = 1 → blanco
+    expect(px(out, 0)).not.toEqual([...primary, 255]); // con B = 1 → marca de tono
+    expect(px(out, 0)).not.toEqual([255, 255, 255, 255]); // …que ya no es blanco
     expect(px(out, 1)).toEqual([...primary, 255]); // sin B → color del rol
   });
 

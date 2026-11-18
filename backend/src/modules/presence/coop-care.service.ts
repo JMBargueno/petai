@@ -209,11 +209,13 @@ export class CoopCareService {
     const handles = new Map<string, string | null>();
     const us = await this.prisma.user.findMany({
       where: { id: { in: others } },
-      select: { id: true, displayName: true, handle: true },
+      select: { id: true, displayName: true, handle: true, activePetId: true },
     });
+    const chosenPet = new Map<string, string | null>();
     for (const u of us) {
       names.set(u.id, u.displayName);
       handles.set(u.id, u.handle ?? null);
+      chosenPet.set(u.id, (u as { activePetId?: string | null }).activePetId ?? null);
     }
 
     const pets = new Map<string, { petId: string; nickname: string; speciesName: string }>();
@@ -222,8 +224,10 @@ export class CoopCareService {
       select: { id: true, userId: true, nickname: true, species: { select: { name: true } } },
       orderBy: { createdAt: 'asc' },
     });
+    // Pockai activo: el elegido por el jugador si sigue siendo suyo; si no, el más antiguo.
     for (const p of ps) {
-      if (!pets.has(p.userId)) pets.set(p.userId, { petId: p.id, nickname: p.nickname, speciesName: p.species.name });
+      const entry = { petId: p.id, nickname: p.nickname, speciesName: p.species.name };
+      if (!pets.has(p.userId) || chosenPet.get(p.userId) === p.id) pets.set(p.userId, entry);
     }
 
     return rows.map((row) => {

@@ -43,6 +43,15 @@ describe('parseHostMessage (sala)', () => {
     expect(parseHostMessage({ type: 'setRoom', room: null })).toEqual({ type: 'setRoom', room: null });
   });
 
+  it('conserva la forma de la sala (celdas sin suelo) y rechaza huecos mal formados', () => {
+    expect(parseHostMessage({ type: 'setRoom', room: { ...room, blocked: [[10, 7, 4, 3]] } })).toMatchObject({
+      room: { blocked: [[10, 7, 4, 3]] },
+    });
+    expect(parseHostMessage({ type: 'setRoom', room })).not.toHaveProperty('room.blocked');
+    expect(parseHostMessage({ type: 'setRoom', room: { ...room, blocked: [[1, 1, 0, 2]] } })).toBeNull();
+    expect(parseHostMessage({ type: 'setRoom', room: { ...room, blocked: 'x' } })).toBeNull();
+  });
+
   it('rechaza salas mal formadas', () => {
     expect(parseHostMessage({ type: 'setRoom', room: { ...room, gridWidth: 0 } })).toBeNull();
     expect(

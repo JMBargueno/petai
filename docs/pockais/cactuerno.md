@@ -55,7 +55,7 @@ Reservado y con genio, pero con cariño de fondo: el clásico gruñón de buen c
 ## Brief de arte
 Pixel art en 3/4. Tronco y brazos en primario (llevan el patrón); barriga y flores en secundario; púas y costillas en primario oscurecido. La flor late con los apéndices. No tiene cola ni brazos móviles: los brazos de cactus son parte del tronco.
 
-**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Costillas por todo el tronco y púas finales en el acento.
+**Estado del arte:** arte final por hoja objetivo (`target-sheet-pipeline.md`): cada etapa generada con Nano Banana a partir del boceto y de su hoja de diseño aprobada (`examples/cactuerno-diseno.jpg`), e importada a 64 px (`scripts/sprites/pixel/imported/cactuerno.json`). La paleta por defecto es la de la hoja. Boceto anterior: redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Costillas por todo el tronco y púas finales en el acento.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -69,6 +69,6 @@ Pixel art en 3/4. Tronco y brazos en primario (llevan el patrón); barriga y flo
   "favoriteFood": "sun_seed",
   "spriteKey": "cactuerno",
   "personalityBias": { "curiosity": 45, "sociability": 30, "bravery": 65, "affection": 55, "temper": 65 },
-  "defaultPalette": { "primary": "#4FAF7A", "secondary": "#F7B2C4", "accent": "#1F5A44" }
+  "defaultPalette": { "primary": "#85D3A0", "secondary": "#376F6D", "accent": "#FAA8C0" }
 }
 ```

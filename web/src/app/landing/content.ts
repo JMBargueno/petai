@@ -104,6 +104,7 @@ export const SPECIES = speciesData.map((s, i) => ({
   element: ELEMENTS[s.element] ?? s.element,
   /** Rareza de la especie: todos sus ejemplares la comparten. */
   rarity: RARITIES[s.rarity] ?? s.rarity,
+  description: s.description,
   rarityId: s.rarity,
   color: CARD_COLORS[i % CARD_COLORS.length],
 }));
@@ -261,20 +262,28 @@ const PATTERN_NAMES: Record<string, string> = {
   spots: $localize`:@@pat.spots:Manchas`,
   stripes: $localize`:@@pat.stripes:Rayas`,
   gradient: $localize`:@@pat.gradient:Degradado`,
+  rosettes: $localize`:@@pat.rosettes:Rosetas`,
+  honeycomb: $localize`:@@pat.honeycomb:Panal`,
   scales: $localize`:@@pat.scales:Escamas`,
   crystal: $localize`:@@pat.crystal:Cristal`,
+  circuit: $localize`:@@pat.circuit:Circuito`,
   galaxy: $localize`:@@pat.galaxy:Galaxia`,
+  storm: $localize`:@@pat.storm:Tormenta`,
   aurora: $localize`:@@pat.aurora:Aurora`,
 };
-const PATTERN_SPRITES = new Set(['spots', 'stripes', 'gradient', 'scales']);
 
+/**
+ * Preview de cada patrón: composición PNG de la textura tileable real
+ * (shared/assets/patterns) generada por scripts/generate-pattern-previews.mjs.
+ * `plain` (Liso) no tiene textura en el juego, así que se muestra con su color sólido.
+ */
 export const PATTERNS = patternData.map((p) => ({
   id: p.id,
   name: PATTERN_NAMES[p.id] ?? p.name,
   /** Rareza propia del patrón: se tira por ejemplar, aparte de la de su especie. */
   rarity: RARITIES[p.rarity] ?? p.rarity,
   rarityId: p.rarity,
-  sprite: PATTERN_SPRITES.has(p.id) ? `sprites/pattern_${p.id}.svg` : null,
+  sprite: p.id === 'plain' ? null : `sprites/pattern_${p.id}_preview.png`,
   color: RARITY_COLORS[p.rarity] ?? 'sunburst',
 }));
 

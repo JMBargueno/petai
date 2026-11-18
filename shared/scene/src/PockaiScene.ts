@@ -7,7 +7,9 @@
  */
 import { Application, Rectangle } from 'pixi.js';
 import { resolveAccessory, resolveSheet, PATTERNS } from './assets';
-import { bakeToCanvas, loadImage } from './bake/bakeTexture';
+import { bakeSheet, loadImage } from './bake/bakeTexture';
+import { PATTERN_FX } from './bake/patternFx';
+import { isLightPrimary } from './bake/bakePixels';
 import { ACCESSORY_SLOTS } from './bake/accessories';
 import type { AccessoryLayer } from './pet/PetSprite';
 import { PetSprite, FRAME } from './pet/PetSprite';
@@ -227,7 +229,7 @@ export class PockaiScene {
     this.petState = state;
     try {
       const { key, sheet } = resolveSheet(state.species, state.stage);
-      const canvas = await bakeToCanvas({
+      const { canvas, fxMap, width } = await bakeSheet({
         key,
         base: sheet.base,
         mask: sheet.mask,
@@ -248,6 +250,9 @@ export class PockaiScene {
       }
       if (seq !== this.loadSeq) return; // llegó otro setPet mientras horneábamos
       this.pet.setSheet(canvas, sheet.anim);
+      // El huevo no lleva efectos: ni patrón ni brillo de shiny.
+      const egg = state.stage === 'egg';
+      this.pet.setFx(egg ? null : fxMap, width, (state.pattern && PATTERN_FX[state.pattern]) || null, !egg && state.shiny === true, isLightPrimary(state.palette.primary));
       this.pet.setAccessories(layers, sheet.anchors);
       this.layout();
       this.emit({ type: 'petLoaded', species: key.split('/')[0], stage: state.stage });

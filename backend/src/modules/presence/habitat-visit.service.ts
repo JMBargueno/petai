@@ -34,6 +34,8 @@ export interface PetIdentity {
   speciesName: string;
   speciesId: string;
   spriteRef: string;
+  /** Etapa evolutiva (baby, juvenile, adult, final): el anfitrión dibuja la forma correcta. */
+  stage: string;
 }
 
 export interface ActiveVisitor {
@@ -226,8 +228,9 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
             speciesName: petRow.species.name,
             speciesId: petRow.species.id,
             spriteRef: petRow.species.id || 'default',
+            stage: petRow.stage ?? 'baby',
           }
-        : { petId: v.petId, nickname: '—', speciesName: '—', speciesId: 'default', spriteRef: 'default' };
+        : { petId: v.petId, nickname: '—', speciesName: '—', speciesId: 'default', spriteRef: 'default', stage: 'baby' };
       return {
         visitorId: v.visitorId,
         visitorName: nameById.get(v.visitorId) ?? '—',
@@ -301,17 +304,25 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Pet activo del usuario: el más antiguo (primero por createdAt), como `summarizeMany`. La energía
+   * Pet activo del usuario: el elegido (`User.activePetId`) o, si no hay, el más antiguo. La energía
    * y el sueño se leen tras el tick perezoso de PetsService cuando está disponible.
    */
   private async resolveActivePet(
     userId: string,
   ): Promise<{ pet: PetIdentity; energy: number; sleeping: boolean } | null> {
-    const row = await this.prisma.pet.findFirst({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-      include: { species: { select: { id: true, name: true } } },
-    });
+    // El que eligió el jugador (`User.activePetId`) si sigue siendo suyo; si no, el más antiguo.
+    const include = { species: { select: { id: true, name: true } } };
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { activePetId: true } });
+    const chosen = user?.activePetId
+      ? await this.prisma.pet.findFirst({ where: { id: user.activePetId, userId }, include })
+      : null;
+    const row =
+      chosen ??
+      (await this.prisma.pet.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        include,
+      }));
     if (!row) return null;
     let energy = row.energy ?? 0;
     let sleeping = !!row.sleeping;
@@ -332,6 +343,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
         speciesName: row.species.name,
         speciesId: row.species.id,
         spriteRef: row.species.id || 'default',
+        stage: row.stage ?? 'baby',
       },
       energy,
       sleeping,

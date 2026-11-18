@@ -34,7 +34,7 @@
   import { setPetOnScreen } from '../lib/window-visibility';
   import Ico from './Ico.svelte';
   import EffectLayer from './EffectLayer.svelte';
-  import { EFFECTS, EffectPlayer, flowPalette, phasesOf, portalNexo, prismColors, type EffectDef, type FxPalette } from '../lib/effects';
+  import { EFFECTS, EffectPlayer, flowPalette, phasesOf, portalNexo, type EffectDef, type FxPalette } from '../lib/effects';
   import { admitMoment } from '../lib/effects/momentQueue';
   import { registerTravelPresenter, travel, travelArrived, type TravelState } from '../lib/visitTravel';
 
@@ -853,7 +853,6 @@
   }
 
   const SHINY_PERIOD_MS = 6000;
-  const SHINY_SWEEP_MS = 700;
   let lastShinyCycle = -1;
 
   // Loop de renderizado del Canvas a 60 FPS
@@ -882,6 +881,9 @@
           frame.sx, frame.sy, frame.sw, frame.sh,
           0, 0, PET_SIZE, PET_SIZE
         );
+        // Efectos del patrón (Textura del Éter) y de la variante shiny, sobre el cuerpo y bajo las prendas.
+        const fxLayer = reducedMotion ? null : bakedSheet.fxFrame(frame, time);
+        if (fxLayer) ctx.drawImage(fxLayer, 0, 0, PET_SIZE, PET_SIZE);
         drawWorn(ctx, wornSet, 'front', frameState.name, frameState.frame, wornTime);
 
         // Efecto Flash blanco en daño
@@ -893,29 +895,13 @@
           ctx.restore();
         }
 
-        // Shiny (LORE §3, Bendición del Prisma): cada 6 s un destello en diagonal, en pixel art y con
-        // la paleta invertida, cruza el sprite; a la vez chispean estrellitas alrededor (destello-prisma).
+        // Shiny (LORE §3, Bendición del Prisma): el brillo sobre el cuerpo ya lo pinta la hoja horneada
+        // (fxFrame, arriba); cada 6 s, además, chispean estrellitas de paleta invertida alrededor.
         if (isShiny && !reducedMotion) {
-          const period = (time % SHINY_PERIOD_MS) / SHINY_PERIOD_MS;
           const cycle = Math.floor(time / SHINY_PERIOD_MS);
           if (cycle !== lastShinyCycle) {
             lastShinyCycle = cycle;
             playMinor('destello-prisma');
-          }
-          const sweep = period / (SHINY_SWEEP_MS / SHINY_PERIOD_MS);
-          if (sweep < 1) {
-            // A saltos de 12 fps y en bloques de 2 px, como el resto del pixel art
-            const step = Math.floor(sweep * 8) / 8;
-            const bandX = Math.round((step * 200 - 40) / 2) * 2;
-            const prism = prismColors(portalPalette);
-            ctx.save();
-            ctx.globalCompositeOperation = 'source-atop';
-            for (const [offset, width, color] of [[0, 4, prism.a], [4, 2, prism.core], [6, 4, prism.b]] as const) {
-              ctx.fillStyle = color;
-              ctx.globalAlpha = 0.55;
-              for (let y = 0; y < PET_SIZE; y += 2) ctx.fillRect(bandX + offset - y / 2, y, width, 2);
-            }
-            ctx.restore();
           }
         }
       }

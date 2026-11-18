@@ -52,7 +52,7 @@ Un mismo efecto sirve para todos los Flujos cambiando la rampa. Si un Flujo pide
 | `polvo-estatico` (menor) | `cleaned` | §6: chispas grises de estática en zigzag. |
 | `desfragmentacion` (menor) | `slept` | §6: bloques que se ordenan en columnas y se apagan. |
 | `polvo-impacto` / `estela-flujo` (menores) | Posarse tras un lanzamiento / zoomies | Polvo del escritorio y estela del Flujo, pequeños y de ≤400 ms. |
-| `destello-prisma` (menor) | Shiny, cada 6 s (renderLoop) | §3: estrellitas en paleta invertida a la vez que un destello en pixel art cruza el sprite (sustituye la franja degradada). |
+| `destello-prisma` (menor) | Shiny, cada 6 s (renderLoop) | §3: estrellitas en paleta invertida alrededor de la cabeza; complementan el brillo de la variante que la hoja horneada pinta sobre el cuerpo (`fxFrame`). |
 | `clima` (ambiente) | `environmental.weather.condition` = `rain` / `snow` | Lluvia o nieve en pixel art (rampa fija) en vez del emoji; se queda mientras dure. |
 
 ## Ideas pendientes (propón desde aquí)

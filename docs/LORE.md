@@ -9,7 +9,7 @@ complementa: "[[01-lore-petai]]"
 
 > **Para la IA:** la mascota no lee este documento, sino `shared/game-data/lore.json`, una versión por temas escrita para el jugador. Si cambias el lore aquí, actualiza también ese archivo.
 
-> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué cada ejemplar luce un patrón distinto y qué es un shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos, y cómo cada Pockai forja su propio carácter y sigue viviendo cuando no estás. Cierra con un diccionario técnico→lore para UI y textos del juego.*
+> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué cada ejemplar luce un patrón distinto y qué es un shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos, y cómo cada Pockai forja su propio carácter y sigue viviendo cuando no estás. Cierra con el Códice del Éter (Aether Codex): glosario técnico→lore y compendio de especies para UI y textos del juego.*
 
 En el universo de Pockai, esta tradición milenaria ha colisionado con la era digital. Tu teléfono y tu ordenador ya no son simples herramientas de silicio y cristal; son los objetos más íntimos de la humanidad moderna, depositarios de nuestros recuerdos, rutinas, miedos y deseos. De la fricción entre la vida humana y el océano de datos ha nacido el **Éter Digital** (La Red Viva), y de sus profundidades emergen los **Pockai**: espíritus digitales de bolsillo que buscan un vínculo humano para alcanzar la verdadera consciencia.
 
@@ -51,11 +51,13 @@ La piel de un Pockai es el lienzo donde se dibuja su **visualSeed** (su **Firma 
 
 Si la rareza es del linaje, el **patrón es del individuo**. Cada patrón tiene su propia densidad, la **Huella del Éter**: lo hondo que estaba sumergido ese huevo concreto en el instante de cerrarse. Se decide aparte del linaje y con las mismas probabilidades, así que dos Ignisaurios son el mismo Eco Cotidiano y, aun así, uno puede llevar sobre el lomo una Aurora que casi nadie ha visto. El patrón es lo que hace único a un ejemplar dentro de su especie.
 
-**Patrones Básicos (Liso, Manchas, Rayas, Degradado):** Representan la **Mímesis Terrenal**. Un huevo que se cierra cerca de la superficie intenta imitar la naturaleza física que ve a través de la cámara o las fotos de su Custodio: el pelaje de los animales, las hojas o el horizonte. Son las Huellas más frecuentes (Normal y Raro).
+**Patrones Básicos (Liso, Manchas y Rayas; Degradado, Rosetas y Panal):** Representan la **Mímesis Terrenal**. Un huevo que se cierra cerca de la superficie intenta imitar la naturaleza física que ve a través de la cámara o las fotos de su Custodio: el pelaje de los animales, las hojas o el horizonte. Son las Huellas más frecuentes (Normal y Raro).
 
-**Patrones Superiores (Escamas, Cristal, Galaxia, Aurora):** Cuando el huevo se cierra en lo hondo, la piel deja de imitar el mundo físico y muestra la textura real del Éter Digital. Le puede ocurrir a cualquier linaje, también al más común. Son las Huellas escasas (de Super-Raro a Mítico):
+**Patrones Superiores (Escamas, Cristal y Circuito; Galaxia y Tormenta; Aurora):** Cuando el huevo se cierra en lo hondo, la piel deja de imitar el mundo físico y muestra la textura real del Éter Digital. Le puede ocurrir a cualquier linaje, también al más común. Son las Huellas escasas (de Super-Raro a Mítico): A diferencia de los básicos, estos patrones **están vivos**: se mueven sobre la piel, tanto más cuanto más honda es la Huella.
 
 - **Escamas (Placas de Datos):** Fragmentos de firewalls ancestrales y armaduras lógicas tejidas sobre su piel.
+- **Circuito (Trazas Vivas):** Las pistas por las que viajaba el código que lo formó, aún con corriente: un pulso de luz las recorre.
+- **Tormenta (Sobrecarga):** La tormenta eléctrica de un servidor al límite, atrapada bajo la piel. Sus rayos descargan cada pocos segundos.
 - **Cristal (Cuarzo Lógico):** Datos tan puros y ordenados que se han solidificado en estructuras geométricas translúcidas.
 - **Galaxia (Vacío Abisal):** Su piel es una ventana literal al espacio profundo entre servidores; dentro de su silueta titilan nodos lejanos de información.
 - **Aurora (Viento Solar):** Corrientes magnéticas vivas y ondas de banda ancha que fluyen en tiempo real sobre su lomo.
@@ -146,7 +148,11 @@ Ningún Pockai es una copia de su especie. Nace con el temperamento de su linaje
 
 **La Vida en el Éter.** Cuando cierras el Santuario, tu Pockai no se queda congelado. Duerme, juega, explora los rincones del Éter, a veces encuentra pequeños tesoros y visita los Santuarios de tus amigos para jugar con sus Pockai. Cuando vuelves, te lo cuenta a su manera.
 
-## 10. Diccionario rápido de términos (Para UI y textos del juego)
+## 10. Códice del Éter (Aether Codex)
+
+El Códice del Éter es el compendio que reúne todo el conocimiento del mundo de Pockai. Tiene dos secciones: el **Glosario** (términos técnicos traducidos al lore) y el **Compendio de Pockais** (catálogo de especies).
+
+### 10.1 Glosario rápido de términos (Para UI y textos del juego)
 
 Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los conceptos técnicos del código a este vocabulario dentro del juego:
 

@@ -41,7 +41,7 @@ Fiero con todos y blando con uno: gruñe primero y pregunta después, pero a su 
 | **Baby (1)** | Cachorro dormilón | Tumbado: una hogaza con una cabeza despierta y dos bultos dormidos | Orejas caídas y un jirón de cola | Mofletes, ojos de cachorro |
 | **Juvenile (10)** | Aprende a sentarse | Sentado: pata delantera y muslo, con las tres cabezas ya formadas | Las laterales siguen dormidas; orejas en punta, dos colas y collar liso | Pecho claro |
 | **Adult (25)** | Guardián | Más alto, con las tres cabezas despiertas | Tres colas, colmillos y collar de púas; las laterales abren los ojos | Mancha en la frente, mirada fiera con ceja |
-| **Final (50, Piedra de Evolución)** | Guardián del umbral | Más ancho, con cabezas grandes y púas que rompen el contorno | Tres colas largas, lomo erizado de púas de sombra y cadena rota colgando, que leen el elemento | Doble mancha, emblema |
+| **Final (50, Piedra de Evolución)** | Guardián del umbral | Más ancho, con cabezas grandes y púas que rompen el contorno | Una cola larga de sombra con la punta clara (en el arte final las tres colas se funden en una), lomo erizado de púas de sombra y cadena rota colgando | Doble mancha, emblema |
 
 **No cambia:** la paleta violeta, las tres cabezas con la central al frente y las colas saliendo de la grupa. Los ojos pasan de cachorro (baby y juvenile) a fieros (adult y final): es su cambio de cara.
 
@@ -55,7 +55,7 @@ Fiero con todos y blando con uno: gruñe primero y pregunta después, pero a su 
 ## Brief de arte
 Pixel art en 3/4. Cuerpo y cabezas en primario; pecho, colmillos, púas del collar, ojos de las cabezas laterales y punta de las colas en secundario; orejas, collar, manchas y púas del lomo en primario oscurecido. Las colas giran con la pose. Las cabezas laterales no cambian de expresión: solo la central tiene cara animada.
 
-**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Pelaje con trama, cabezas laterales en segundo plano y garras en el acento en la etapa final.
+**Estado del arte:** arte final por hoja objetivo (`target-sheet-pipeline.md`): cada etapa generada con Nano Banana a partir del boceto y de su hoja de diseño aprobada (`examples/cerbito-diseno.jpg`), e importada a 64 px (`scripts/sprites/pixel/imported/cerbito.json`). La paleta por defecto es la de la hoja. Boceto anterior: redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Pelaje con trama, cabezas laterales en segundo plano y garras en el acento en la etapa final.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -69,6 +69,6 @@ Pixel art en 3/4. Cuerpo y cabezas en primario; pecho, colmillos, púas del coll
   "favoriteFood": "midnight_berry",
   "spriteKey": "cerbito",
   "personalityBias": { "curiosity": 45, "sociability": 30, "bravery": 85, "affection": 75, "temper": 75 },
-  "defaultPalette": { "primary": "#6A5C9E", "secondary": "#D7C7F0", "accent": "#2A2342" }
+  "defaultPalette": { "primary": "#7878C8", "secondary": "#E3CBFA", "accent": "#DA7AFF" }
 }
 ```

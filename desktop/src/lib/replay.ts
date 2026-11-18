@@ -28,6 +28,9 @@ export interface ReplayLog {
 export interface ReplayParticipant {
   name: string;
   speciesId: string;
+  /** Etapa evolutiva al combatir; las repeticiones antiguas no la traen (se dibuja bebé). */
+  stage?: string;
+  petId?: string;
   element: string;
   level: number;
   maxHp: number;

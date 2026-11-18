@@ -390,9 +390,12 @@
      las variantes "grandes" llevan degradado y las de respiro, fondo liso. */
   .band {
     position: relative;
-    overflow: clip;
     padding: clamp(72px, 10vw, 136px) var(--gutter);
     background: var(--bg);
+  }
+  .band:has(> app-sticker),
+  .band:has(> app-ribbon) {
+    overflow: clip;
   }
   .band--compact {
     padding-block: clamp(56px, 7vw, 96px);

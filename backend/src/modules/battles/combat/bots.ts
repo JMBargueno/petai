@@ -1,4 +1,5 @@
 import { createRng } from './rng';
+import { stageForLevel } from '../../pets/stages';
 import { effectiveStats, equippedSkills, moodMultiplier } from './stats';
 import { CombatConfig, Element, Fighter, SkillDef, STAT_KEYS, Strategy } from './types';
 
@@ -55,6 +56,8 @@ export function generateBot(
   return {
     name: `Fantasma de ${sp.name}`,
     speciesId: sp.id,
+    // La etapa sale del nivel (sin tirar del rng: la misma semilla sigue dando el mismo bot)
+    stage: stageForLevel(level),
     element: sp.element,
     level,
     stats: effectiveStats(pet),

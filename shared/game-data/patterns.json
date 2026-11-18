@@ -3,48 +3,90 @@
     "id": "plain",
     "name": "Liso",
     "description": "Textura suave y uniforme con el color natural de la especie.",
-    "rarity": "normal"
+    "rarity": "normal",
+    "group": "terrestrial"
   },
   {
     "id": "spots",
     "name": "Manchas",
     "description": "Motas decorativas dispersas por el torso y extremidades.",
-    "rarity": "normal"
+    "rarity": "normal",
+    "group": "terrestrial"
   },
   {
     "id": "stripes",
     "name": "Rayas",
     "description": "Franjas dinámicas en el lomo y la cola.",
-    "rarity": "normal"
+    "rarity": "normal",
+    "group": "terrestrial"
   },
   {
     "id": "gradient",
     "name": "Degradado",
     "description": "Transición tonal fluida desde la cabeza hacia la base.",
-    "rarity": "rare"
+    "rarity": "rare",
+    "group": "terrestrial"
+  },
+  {
+    "id": "rosettes",
+    "name": "Rosetas",
+    "description": "Anillos rotos como los de un leopardo, cada uno un poco distinto.",
+    "rarity": "rare",
+    "group": "terrestrial"
+  },
+  {
+    "id": "honeycomb",
+    "name": "Panal",
+    "description": "Celdas hexagonales encajadas, como un panal o el caparazón de una tortuga.",
+    "rarity": "rare",
+    "group": "terrestrial"
   },
   {
     "id": "scales",
     "name": "Escamas",
-    "description": "Reflejos de escamas nacaradas con bordes luminosos.",
-    "rarity": "super_rare"
+    "description": "Reflejos de escamas nacaradas con bordes luminosos. De vez en cuando las recorre un brillo.",
+    "rarity": "super_rare",
+    "group": "aether",
+    "fx": "sheen"
   },
   {
     "id": "crystal",
     "name": "Cristal",
-    "description": "Estructuras prismáticas translúcidas que refractan la luz.",
-    "rarity": "super_rare"
+    "description": "Estructuras prismáticas translúcidas que refractan la luz. Sus vértices centellean.",
+    "rarity": "super_rare",
+    "group": "aether",
+    "fx": "twinkle"
+  },
+  {
+    "id": "circuit",
+    "name": "Circuito",
+    "description": "Pistas de datos grabadas en la piel, por las que corre un pulso de luz.",
+    "rarity": "super_rare",
+    "group": "aether",
+    "fx": "flow"
   },
   {
     "id": "galaxy",
     "name": "Galaxia",
-    "description": "Cúmulo cósmico estelar brillante integrado en el pelaje/piel.",
-    "rarity": "legendary"
+    "description": "Cúmulo cósmico estelar brillante integrado en el pelaje/piel. Las estrellas titilan y la nebulosa cambia de color.",
+    "rarity": "legendary",
+    "group": "aether",
+    "fx": "starfield"
+  },
+  {
+    "id": "storm",
+    "name": "Tormenta",
+    "description": "Nubarrones de sobrecarga cruzados por rayos que descargan cada pocos segundos.",
+    "rarity": "legendary",
+    "group": "aether",
+    "fx": "flash"
   },
   {
     "id": "aurora",
     "name": "Aurora",
-    "description": "Ondulaciones de luz polar que cambian según el estado de ánimo.",
-    "rarity": "mythic"
+    "description": "Cintas de luz polar que ondulan y cambian de color sin parar sobre su lomo.",
+    "rarity": "mythic",
+    "group": "aether",
+    "fx": "aurora"
   }
 ]

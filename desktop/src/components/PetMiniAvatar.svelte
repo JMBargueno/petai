@@ -14,6 +14,9 @@
   export let anim: string = 'idle';
   export let interactive: boolean = true;
   export let draggable: boolean = false;
+  /** Acción puntual (celebrate, level_up…): se reproduce una vez cada vez que cambia `actionKey`. */
+  export let action: string | null = null;
+  export let actionKey: number = 0;
 
   let canvasEl: HTMLCanvasElement | null = null;
   let bakedSheet: BakedPetSheet | null = null;
@@ -41,6 +44,12 @@
   $: stage = pet?.stage ?? null;
 
   $: activeAnim = isSleeping ? 'sleep' : anim;
+
+  let playedActionKey = 0;
+  $: if (action && actionKey && actionKey !== playedActionKey && !isSleeping) {
+    playedActionKey = actionKey;
+    controller.play(action);
+  }
 
   $: if (pet && (speciesKey || patternKey || palette || visualSeed || stage)) {
     triggerBake();

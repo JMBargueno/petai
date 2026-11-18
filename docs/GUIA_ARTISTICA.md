@@ -262,7 +262,11 @@ Especies con arte: **Axolunar** (agua, `#38A3A5`), **Florabud** (planta, `#57CC9
 ### 7.3 Huevos y patrones
 
 - **Huevo:** relleno `#FDE047`, contorno `#1A1A1A` de 3 px, manchas `#F59E0B` al 60 %. El huevo agrietado añade una grieta en zigzag de 3 px.
-- **Patrones:** puntos, rayas, escamas y degradado en SVG con `currentColor`. Aurora, cristal y galaxia existen como PNG mosaico en `shared/assets/patterns/`.
+- **Patrones de piel:** doce, en dos familias (`shared/game-data/patterns.json`). Son mosaicos de pixel art en `shared/assets/patterns/`, dibujados en píxeles nativos por `scripts/sprites/pixel/patterns.mjs`, y se hornean como un tono del color de la mascota, no en blanco, y solo sobre el primario.
+  - **Mímesis Terrestre** (imitan la naturaleza; sin efecto): Liso, Manchas y Rayas (normales); Degradado, Rosetas y Panal (raros).
+  - **Textura del Éter** (llevan destellos y un efecto animado, más visible cuanto más raro): Escamas, Cristal y Circuito (superraros, muy sutil); Galaxia y Tormenta (legendarios, visible); Aurora (mítico, constante).
+- **Efectos animados:** `shared/scene/src/bake/patternFx.ts`, compartido por la escena y el escritorio. Van a unos 11 fotogramas por segundo y en píxeles nativos, para que se muevan como pixel art. Sobre un primario claro los brillos sutiles van en azul, porque el blanco no se vería. Con movimiento reducido no se pintan.
+- **Variante shiny (2 %):** además de su paleta, un barrido irisado cruza la silueta cada cuatro segundos y tres destellos en estrella se relevan sobre el cuerpo.
 - Cada patrón tiene su propia rareza (`shared/game-data/patterns.json`), que se tira por ejemplar y no depende de la rareza de la especie.
 - **Variación por mascota:** la semilla `visualSeed` decide el desplazamiento, la escala (0,85–1,15), el giro (±0,15 rad) y el tono (±8°). Nunca se colorea sobre la cara ni los ojos (canal B de la máscara).
 
@@ -346,10 +350,11 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Cada una parte de u
 
 | Plan | Cómo es | Especies |
 |---|---|---|
-| Bípedo redondo | De pie, cabeza grande sobre torso, brazos cortos | Ignisaurio, Axolunar, Florabrote, Solarejo |
+| Bípedo redondo | De pie, cabeza grande sobre torso, brazos cortos | Axolunar, Florabrote, Solarejo |
 | Bípedo alado | Bípedo con alas que doblan su anchura | Livolt |
 | Tentacular | Manto y apoyos múltiples, sin brazos | Inktopus |
 | Cuadrúpedo bajo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas cortas | Magmadillo |
+| Cuadrúpedo de gorguera | Robusto y cabezón, a cuatro patas, con gorguera detrás de la cabeza, cuernos y cola de maza | Ignisaurio |
 | Cuadrúpedo sentado de tres cabezas | Grupa en el suelo, patas delanteras rectas y tres cabezas en abanico; solo la central lleva cara y accesorios | Cerbito |
 | Cuadrúpedo esbelto | Patas largas y finas, cuello alto y hocico; el cuerpo queda lejos del suelo | Kirisol |
 | Ave de cuello largo | Sin brazos: alas. Cabeza pequeña, cuello largo, pico y patas finas con garras | Fénixel |

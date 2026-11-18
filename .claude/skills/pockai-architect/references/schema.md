@@ -7,7 +7,7 @@ Validada por `speciesSchema` en `backend/src/modules/game-data/game-data.schemas
 {
   "id": "ignisaur",
   "name": "Ignisaurio",
-  "description": "Una pequeña criatura reptiliana de escamas cálidas y temperamento vivaz. Cuando se alegra, desprende chispas brillantes.",
+  "description": "Un pequeño dinosaurio de fuego, robusto y cabezón, con una gorguera coronada de llamas y una maza de brasas en la cola. Cuando se alegra, desprende chispas brillantes.",
   "element": "fire",
   "rarity": "normal",
   "baseStats": { "hp": 50, "atk": 55, "def": 45, "vel": 48, "esp": 52 },

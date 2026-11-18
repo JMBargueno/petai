@@ -8,6 +8,7 @@
  * `bakePixels` como referencia de test.
  */
 import { bakePixels, type RgbaImage } from './bakePixels';
+import { bakeFxMap } from './patternFx';
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
@@ -47,9 +48,20 @@ export interface BakeRequest {
   visualSeed: number;
 }
 
-const bakedCache = new Map<string, Promise<HTMLCanvasElement>>();
+/** Hoja horneada y su mapa de efectos (`patternFx.ts`). */
+export interface BakedSheet {
+  canvas: HTMLCanvasElement;
+  fxMap: Uint8ClampedArray;
+  width: number;
+}
+
+const bakedCache = new Map<string, Promise<BakedSheet>>();
 
 export function bakeToCanvas(req: BakeRequest): Promise<HTMLCanvasElement> {
+  return bakeSheet(req).then((b) => b.canvas);
+}
+
+export function bakeSheet(req: BakeRequest): Promise<BakedSheet> {
   const cacheKey = `${req.key}:${req.pattern ?? '-'}:${req.palette.primary}:${req.palette.secondary}:${req.palette.accent ?? '-'}:${req.visualSeed}`;
   let p = bakedCache.get(cacheKey);
   if (!p) {
@@ -67,7 +79,7 @@ export function bakeToCanvas(req: BakeRequest): Promise<HTMLCanvasElement> {
       canvas.width = base.width;
       canvas.height = base.height;
       canvas.getContext('2d')!.putImageData(new ImageData(out as Uint8ClampedArray<ArrayBuffer>, base.width, base.height), 0, 0);
-      return canvas;
+      return { canvas, fxMap: bakeFxMap(mask, { pattern, visualSeed: req.visualSeed }), width: base.width };
     })();
     bakedCache.set(cacheKey, p);
     p.catch(() => bakedCache.delete(cacheKey));

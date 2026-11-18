@@ -69,7 +69,7 @@
       type: 'setPet',
       pet: {
         species: speciesKey,
-        stage: pet.stage ?? 'adult',
+        stage: pet.stage ?? 'baby',
         palette: {
           primary: pet.palette?.primary ?? '#E25822',
           secondary: pet.palette?.secondary ?? '#F3C544',
@@ -87,6 +87,7 @@
         id: room.id,
         gridWidth: room.gridWidth,
         gridHeight: room.gridHeight,
+        ...(room.blocked ? { blocked: room.blocked } : {}),
         theme: room.theme ?? null,
         items: room.items.map((i) => ({ id: i.id, furnitureId: i.furnitureId, x: i.x, y: i.y, rotation: i.rotation ?? 0 })),
         furniture: furniture.map((f) => ({

@@ -284,6 +284,8 @@ data class HabitatRoom(
     val description: String = "",
     val gridWidth: Int = 0,
     val gridHeight: Int = 0,
+    /** Celdas sin suelo `[x, y, ancho, fondo]` (forma de la sala). Vacío en backends antiguos. */
+    val blocked: List<List<Int>> = emptyList(),
     val unlocked: Boolean = false,
     val active: Boolean = false,
     val theme: HabitatTheme? = null,

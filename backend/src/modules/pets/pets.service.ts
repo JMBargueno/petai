@@ -10,8 +10,7 @@ import { BondingService } from '../bonding/bonding.service';
 import { nightHoursBetween, safeTimeZone } from './sleep-cycle';
 import { HabitatService } from '../habitat/habitat.service';
 import { boostedRecovery, reducedDecay, type ActiveBuffs } from '../habitat/habitat-buffs';
-
-const STAGE_ORDER = ['baby', 'juvenile', 'adult', 'final'];
+import { STAGE_ORDER, stageForLevel, type Stage } from './stages';
 /** Higiene a partir de la cual el baño se rechaza (balance.vitals.cleanMaxHygiene lo sustituye). */
 const DEFAULT_CLEAN_MAX_HYGIENE = 80;
 /** Por debajo de este intervalo (~36 s) el lazy tick no cambia nada. */
@@ -450,6 +449,17 @@ export class PetsService {
     return updated;
   }
 
+  /**
+   * Da XP por la vía de nivel (sube nivel, puntos y etapa, y avisa con `level_up`/`evolved`).
+   * Para recompensas que no pasan por `applyActivityReward` (aventuras, entrenamiento…).
+   */
+  async grantXp(userId: string, petId: string, xp: number) {
+    const pet = await this.prisma.pet.findFirst({ where: { id: petId, userId } });
+    if (!pet) throw new NotFoundException('Mascota no encontrada');
+    if (xp <= 0) return pet;
+    return this.addXpInternal(pet, xp);
+  }
+
   private async addXpInternal(pet: any, xpGained: number) {
     let currentXp = pet.xp + xpGained;
     let currentLevel = pet.level;
@@ -467,10 +477,8 @@ export class PetsService {
       levelChanged = true;
 
       // Hitos de evolución automáticos (la forma final requiere un objeto: ver evolve())
-      let reached = 'baby';
-      if (currentLevel >= 25) reached = 'adult';
-      else if (currentLevel >= 10) reached = 'juvenile';
-      if (STAGE_ORDER.indexOf(reached) > STAGE_ORDER.indexOf(stage)) stage = reached;
+      const reached = stageForLevel(currentLevel);
+      if (STAGE_ORDER.indexOf(reached) > STAGE_ORDER.indexOf(stage as Stage)) stage = reached;
 
       neededXp = Math.round(100 * Math.pow(currentLevel, 1.5));
     }
@@ -560,5 +568,16 @@ export class PetsService {
     const result = { ...updated, ...this.bonding.bondingFields(updated) };
     this.realtimeGateway.emitPetUpdate(userId, result);
     return result;
+  }
+
+  /**
+   * Marca `petId` como el pockai activo del jugador (el de su escritorio). Lo usan el hábitat del
+   * clan y las visitas para mostrar la mascota que el jugador tiene elegida. 404 si no es suya.
+   */
+  async setActivePet(userId: string, petId: string): Promise<{ activePetId: string }> {
+    const pet = await this.prisma.pet.findFirst({ where: { id: petId, userId }, select: { id: true } });
+    if (!pet) throw new NotFoundException('Mascota no encontrada');
+    await this.prisma.user.update({ where: { id: userId }, data: { activePetId: pet.id } });
+    return { activePetId: pet.id };
   }
 }

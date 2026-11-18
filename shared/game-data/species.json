@@ -2,7 +2,7 @@
   {
     "id": "ignisaur",
     "name": "Ignisaurio",
-    "description": "Una pequeña criatura reptiliana de escamas cálidas y temperamento vivaz. Cuando se alegra, desprende chispas brillantes.",
+    "description": "Un pequeño dinosaurio de fuego, robusto y cabezón, con una gorguera coronada de llamas y una maza de brasas en la cola. Cuando se alegra, desprende chispas brillantes.",
     "element": "fire",
     "rarity": "normal",
     "baseStats": {
@@ -22,9 +22,9 @@
       "temper": 65
     },
     "defaultPalette": {
-      "primary": "#E25822",
-      "secondary": "#F3C544",
-      "accent": "#6D1600"
+      "primary": "#FB2910",
+      "secondary": "#42202B",
+      "accent": "#FFDB85"
     }
   },
   {
@@ -50,9 +50,9 @@
       "temper": 20
     },
     "defaultPalette": {
-      "primary": "#38A3A5",
-      "secondary": "#80ED99",
-      "accent": "#22577A"
+      "primary": "#3FA5A5",
+      "secondary": "#306373",
+      "accent": "#81EB9B"
     }
   },
   {
@@ -78,9 +78,9 @@
       "temper": 35
     },
     "defaultPalette": {
-      "primary": "#57CC99",
-      "secondary": "#C7F9CC",
-      "accent": "#22577A"
+      "primary": "#73E1A5",
+      "secondary": "#FFBBC6",
+      "accent": "#458D80"
     }
   },
   {
@@ -106,9 +106,9 @@
       "temper": 80
     },
     "defaultPalette": {
-      "primary": "#FFD166",
-      "secondary": "#FFEBB3",
-      "accent": "#FF9F1C"
+      "primary": "#FFFACF",
+      "secondary": "#FFE502",
+      "accent": "#CA8940"
     }
   },
   {
@@ -134,9 +134,9 @@
       "temper": 25
     },
     "defaultPalette": {
-      "primary": "#4A4E69",
-      "secondary": "#9A8C98",
-      "accent": "#22223B"
+      "primary": "#4B4C61",
+      "secondary": "#ADA0AA",
+      "accent": "#5E1725"
     }
   },
   {
@@ -162,9 +162,9 @@
       "temper": 55
     },
     "defaultPalette": {
-      "primary": "#F4F1DE",
-      "secondary": "#E07A5F",
-      "accent": "#7A7689"
+      "primary": "#FFF8CA",
+      "secondary": "#D87359",
+      "accent": "#A8A39D"
     }
   },
   {
@@ -190,9 +190,9 @@
       "temper": 30
     },
     "defaultPalette": {
-      "primary": "#C2452D",
-      "secondary": "#FFB627",
-      "accent": "#5A1807"
+      "primary": "#C63D27",
+      "secondary": "#70162C",
+      "accent": "#FFD33F"
     }
   },
   {
@@ -218,9 +218,9 @@
       "temper": 20
     },
     "defaultPalette": {
-      "primary": "#4F86C6",
-      "secondary": "#E8F1FA",
-      "accent": "#1F3F6E"
+      "primary": "#5485C1",
+      "secondary": "#F6F9FF",
+      "accent": "#FC7771"
     }
   },
   {
@@ -246,9 +246,9 @@
       "temper": 65
     },
     "defaultPalette": {
-      "primary": "#4FAF7A",
-      "secondary": "#F7B2C4",
-      "accent": "#1F5A44"
+      "primary": "#85D3A0",
+      "secondary": "#376F6D",
+      "accent": "#FAA8C0"
     }
   },
   {
@@ -274,9 +274,9 @@
       "temper": 60
     },
     "defaultPalette": {
-      "primary": "#E8483A",
-      "secondary": "#FFD166",
-      "accent": "#6D1600"
+      "primary": "#FFD62D",
+      "secondary": "#FF642D",
+      "accent": "#692125"
     }
   },
   {
@@ -302,9 +302,9 @@
       "temper": 75
     },
     "defaultPalette": {
-      "primary": "#6A5C9E",
-      "secondary": "#D7C7F0",
-      "accent": "#2A2342"
+      "primary": "#7878C8",
+      "secondary": "#E3CBFA",
+      "accent": "#DA7AFF"
     }
   },
   {
@@ -330,9 +330,9 @@
       "temper": 75
     },
     "defaultPalette": {
-      "primary": "#FFF4D6",
-      "secondary": "#F4A259",
-      "accent": "#B5651D"
+      "primary": "#FFF9D9",
+      "secondary": "#FFB047",
+      "accent": "#BF5439"
     }
   },
   {
@@ -386,9 +386,9 @@
       "temper": 15
     },
     "defaultPalette": {
-      "primary": "#6FAE3A",
-      "secondary": "#C9A06B",
-      "accent": "#3B5B1E"
+      "primary": "#C59865",
+      "secondary": "#A0D349",
+      "accent": "#45802B"
     }
   },
   {
@@ -414,9 +414,9 @@
       "temper": 85
     },
     "defaultPalette": {
-      "primary": "#F2C230",
-      "secondary": "#7DF9FF",
-      "accent": "#8A5A00"
+      "primary": "#FFE12D",
+      "secondary": "#D6A024",
+      "accent": "#1DE2F2"
     }
   }
 ]

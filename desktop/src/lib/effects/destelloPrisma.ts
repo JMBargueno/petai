@@ -5,9 +5,9 @@ import { Canvas2, easeOut, hash, invert } from './fxMath';
  * Destello del Prisma: el brillo periódico de un Pockai shiny (LORE §3: la Bendición del Prisma,
  * un Rayo Cósmico que «invierte y electrifica su paleta»).
  *
- * Cada pocos segundos, cuatro estrellitas en la paleta invertida chispean alrededor de la cabeza a
- * la vez que PetView cruza el sprite con un destello en diagonal de esos mismos colores (en vez de la
- * franja degradada de antes). Efecto menor, muy corto.
+ * Cada 6 s, cuatro estrellitas en la paleta invertida chispean alrededor de la cabeza. Complementa
+ * el brillo de la variante shiny que la hoja horneada pinta sobre el cuerpo (`fxFrame`): este va
+ * fuera de la silueta. Efecto menor, muy corto.
  *
  * Rejilla 64×80 ×2; pies en la fila 76. Va DELANTE.
  */
@@ -17,7 +17,7 @@ const H = 80;
 const CX = 32;
 const FEET = 76;
 
-/** Colores del destello del sprite: los mismos que las estrellas (para que PetView los use). */
+/** Colores del Prisma (paleta invertida) a partir de la rampa del Flujo. */
 export function prismColors(palette: { light: string; glow: string; mid: string }) {
   return { a: invert(palette.mid), b: invert(palette.light), core: palette.glow };
 }

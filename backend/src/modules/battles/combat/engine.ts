@@ -146,6 +146,8 @@ function participantLog(s: Side): ParticipantLog {
   return {
     name: s.f.name,
     speciesId: s.f.speciesId,
+    // Solo si existe (como la personalidad): los logs sin etapa quedan igual que antes
+    ...(s.f.stage ? { stage: s.f.stage } : {}),
     element: s.f.element,
     level: s.f.level,
     stats: { ...s.f.stats },

@@ -12,6 +12,7 @@
  */
 import { z } from 'zod';
 import { isKnownStatKey } from '../../stats/stat-keys';
+import { roomShapeErrors } from '../habitat/habitat-layout';
 
 export const ELEMENTS = ['fire', 'water', 'plant', 'electric', 'shadow', 'light'] as const;
 export type ElementValue = (typeof ELEMENTS)[number];
@@ -220,6 +221,10 @@ export const patternsSchema = z.array(
       description: z.string(),
       /** Rareza propia del patrón (se tira por ejemplar). */
       rarity: z.string(),
+      /** Familia: Mímesis Terrestre (normal y raro) o Textura del Éter (superraro en adelante). */
+      group: z.enum(['terrestrial', 'aether']).optional(),
+      /** Efecto animado de los patrones del Éter (`shared/scene/src/bake/patternFx.ts`). */
+      fx: z.enum(['sheen', 'twinkle', 'flow', 'starfield', 'flash', 'aurora']).optional(),
     })
     .passthrough(),
 );
@@ -349,6 +354,8 @@ export const habitatsSchema = z.object({
         name: z.string().min(1),
         gridWidth: z.number().int().positive(),
         gridHeight: z.number().int().positive(),
+        /** Celdas sin suelo `[x, y, ancho, fondo]`: dan a cada sala su forma (estanque, escalón…). */
+        blocked: z.array(z.tuple([z.number().int(), z.number().int(), z.number().int(), z.number().int()])).optional(),
         unlockStage: z.enum(['baby', 'juvenile', 'adult', 'final']),
         description: z.string(),
         /** Colores de la sala isométrica (GUIA_ARTISTICA §7.4). Opcional: los clientes tienen uno por defecto. */
@@ -563,6 +570,11 @@ export function validateGameData(b: GameDataBundle): string[] {
   // 7. Patrones (rareza propia)
   for (const pat of patterns ?? []) {
     if (!rarities[pat.rarity]) errors.push(`Rareza '${pat.rarity}' en patrón ${pat.id} no está en balance.json`);
+    // La familia sigue a la rareza, y solo la Textura del Éter lleva efecto.
+    const aether = ['super_rare', 'legendary', 'mythic'].includes(pat.rarity);
+    if (pat.group && pat.group !== (aether ? 'aether' : 'terrestrial')) errors.push(`El patrón ${pat.id} (${pat.rarity}) no puede ser de la familia '${pat.group}'`);
+    if (pat.fx && !aether) errors.push(`El patrón ${pat.id} (${pat.rarity}) no puede llevar efecto: solo los de la Textura del Éter`);
+    if (aether && pat.group && !pat.fx) errors.push(`El patrón ${pat.id} es de la Textura del Éter y no tiene efecto`);
   }
 
   // 8. Logros y constelaciones (feature 008): integridad cruzada
@@ -638,6 +650,18 @@ export function validateGameData(b: GameDataBundle): string[] {
       if (room && (Math.max(fw, fd) > Math.min(room.gridWidth, room.gridHeight))) {
         errors.push(`Mueble ${f.id}: la huella ${fw}×${fd} no cabe girada en la sala '${f.room}'`);
       }
+    }
+    // Forma de cada sala: huecos lejos de las paredes del fondo, suelo conexo y sitio para su
+    // mueble más grande.
+    for (const r of (habitats as any).rooms ?? []) {
+      const sizes = ((habitats as any).furniture ?? [])
+        .filter((f: any) => f.room === r.id && f.mount !== 'wall')
+        .map((f: any) => (Array.isArray(f.footprint) ? f.footprint : [1, 1]) as [number, number]);
+      const biggest = sizes.reduce(
+        (a: [number, number], f: [number, number]) => (f[0] * f[1] > a[0] * a[1] ? f : a),
+        [1, 1] as [number, number],
+      );
+      for (const e of roomShapeErrors(r, biggest)) errors.push(`Sala ${r.id}: ${e}`);
     }
   }
 

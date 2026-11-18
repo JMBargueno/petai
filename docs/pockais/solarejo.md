@@ -54,7 +54,7 @@ Es sociable y cariñoso por encima de todo: el contrapunto luminoso del Inktopus
 ## Brief de arte
 Pixel art en 3/4. Cuerpo en primario; interior y punta de las orejas, barriga, pompón y rayos en secundario; manchas y franjas en primario oscurecido. Las orejas laten con los apéndices y el pompón gira con la cola.
 
-**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Tiene proporción de conejo (ancas, pecho estrecho). Las rayas atigradas van en el acento, que pasa a pizarra; la etapa final suma pechera de pelusa, anillo en el vientre y esquirlas de luz alrededor de la cabeza.
+**Estado del arte:** arte final por hoja objetivo (`target-sheet-pipeline.md`): cada etapa generada con Nano Banana a partir del boceto y de `examples/solarejo-objetivo.webp`, e importada a 64 px (`scripts/sprites/pixel/imported/solarejo.json`). La paleta por defecto es la de la hoja. Boceto anterior: redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Tiene proporción de conejo (ancas, pecho estrecho). Las rayas atigradas van en el acento, que pasa a pizarra; la etapa final suma pechera de pelusa, anillo en el vientre y esquirlas de luz alrededor de la cabeza.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -68,6 +68,6 @@ Pixel art en 3/4. Cuerpo en primario; interior y punta de las orejas, barriga, p
   "favoriteFood": "dawn_honey",
   "spriteKey": "solarejo",
   "personalityBias": { "curiosity": 55, "sociability": 80, "bravery": 50, "affection": 75, "temper": 55 },
-  "defaultPalette": { "primary": "#F4F1DE", "secondary": "#E07A5F", "accent": "#7A7689" }
+  "defaultPalette": { "primary": "#FFF8CA", "secondary": "#D87359", "accent": "#A8A39D" }
 }
 ```

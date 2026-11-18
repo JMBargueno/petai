@@ -126,4 +126,12 @@ export class PetsController {
   ) {
     return this.petsService.setInHabitat(user.id, petId, body.inHabitat);
   }
+
+  @Post(':id/activate')
+  @ApiOperation({
+    summary: 'Elegir esta mascota como pockai activo (la que representa al jugador en su clan y visitas)',
+  })
+  activate(@CurrentUser() user: any, @Param('id') petId: string) {
+    return this.petsService.setActivePet(user.id, petId);
+  }
 }
