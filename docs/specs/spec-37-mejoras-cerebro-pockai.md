@@ -727,6 +727,34 @@ tres capas, las mismas de la sección 7:
   la cría no hereda personalidad (`breeding.service.ts` crea la mascota sin ella) y la vida
   autónoma aplica el estado del momento de la lectura (`sleeping`, `energy`, `sick`) a todos los
   intervalos pasados. Y que el backend importe `@pockai/mind` en lugar de su copia.
-- **Fase 4 — visitas con escena compartida.** Depende de las fases 2 y 3 (1.7). El visitante entra en
-  la sala del anfitrión y ambos se resuelven con `resolveScene` (6.3) y la relación por etapas (6.1).
+- **Fase 4 — visitas con escena compartida (hecha para el anfitrión).**
+  - **Relación por etapas (6.1).** `mind/social.engine.ts` (puro): `nextStage` deriva
+    desconocido → conocido → amigo → mejor amigo de la valencia y la familiaridad, con umbrales
+    distintos para subir y bajar (`balance.json → personality.social.stages`). La etapa se guarda
+    en la columna nueva `PetMemory.stage` (migración `20261125100000_relation_stage`), porque la
+    histéresis necesita saber de dónde se viene. **Decidido:** no hay etapa `rival`; entre dos
+    Pockai la valencia tiene suelo (`valenceFloor`).
+  - **Escenas (6.3).** `resolveScene` elige entre presentarse, explorar, pilla-pilla, compartir
+    comida, siesta, un pique y hacer las paces con las dos personalidades, la energía de ambos y
+    su etapa, con un generador sembrado por la pareja ordenada y la ranura. Cada mascota recibe
+    su propio episodio; entre amigos el texto es otro. Solo las primeras escenas de una visita
+    (`maxEffectScenesPerVisit`) dejan recuerdo y mueven la relación.
+  - **Reparto.** `HabitatVisitService` avisa a la mente al empezar la visita y en cada ranura
+    (`habitat:visit_tick`), la mente responde con `habitat:scene_resolved` y el servicio lo
+    reenvía al anfitrión por socket como `habitat:scene`. Al terminar emite `habitat:visit_ended`.
+  - **Qué viaja.** Del visitante, su aspecto (`PetIdentity.look`: paleta, patrón, semilla, shiny,
+    prendas) y, en cada escena, su carácter en palabras (las bandas). Nunca números, estado ni
+    recuerdos.
+  - **Escena.** Mensajes nuevos y opcionales `setGuest` y `playScene` (sin subir
+    `PROTOCOL_VERSION`). `room/visitScene.ts` (puro) es el guion; `IsoRoom` mueve al visitante y
+    dirige los tiempos. Al encontrarse se colocan lado a lado en pantalla para no taparse.
+  - **Escritorio.** `IsoRoomView` dibuja al visitante con `showVisitors` (pestaña Hábitat y
+    casita) y lanza cada escena; un pie dice quién es y qué hacen. Con esto deja de ser
+    invisible la visita cuando el anfitrión tiene a su Pockai en casa.
+  - **Pendiente:** que quien visita vea la sala del amigo (decidido dejarlo para después); que
+    Android envíe `setGuest` y `playScene`; que `GET /pets/:id/mind` devuelva la etapa de cada
+    relación; que el visitante junto a la mascota flotante (`VisitorPet`) use también su aspecto;
+    y que los encuentros autónomos (`socialSweep`, `simulate`) y los buddies pasen por
+    `resolveScene` en vez de sus frases fijas, que es la otra mitad de 6.3. Los textos de las
+    escenas están en `social.engine.ts` hasta que el lote 5 los pase a identificadores de línea.
 - **Fase 5 — lotes 3 a 6 restantes**, incluido el menú del dueño visitante (6.2).

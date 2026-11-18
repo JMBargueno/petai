@@ -54,6 +54,7 @@ export interface PersonalityConfig {
     earlyExtractEvery: number;
   };
   autonomy: AutonomyConfig;
+  social: import('./social.engine').SocialConfig;
   combat: { maxThresholdShift: number };
   behavior: { minEnergyToPlay: number };
 }

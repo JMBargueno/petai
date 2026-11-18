@@ -112,6 +112,49 @@ if (pers) {
   }
   console.log('✓ balance.json: personalidad (5 dimensiones, evolución y autonomía) validada');
 
+  // 1c-quater. Vida social: etapas de relación y escenas entre dos Pockai
+  const social = pers.social;
+  if (social) {
+    const where = 'balance.personality.social';
+    const STAGE_IDS = ['stranger', 'acquaintance', 'friend', 'best_friend'];
+    const SCENE_IDS = ['greet', 'explore_together', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up'];
+    const unit = (v) => typeof v === 'number' && v >= 0 && v <= 1;
+    const st = social.stages ?? {};
+    if (!unit(st.acquaintance?.familiarity)) throw new Error(`${where}.stages.acquaintance inválido`);
+    for (const id of ['friend', 'best_friend']) {
+      const s = st[id];
+      if (!s || !unit(s.familiarity) || typeof s.enterValence !== 'number' || typeof s.exitValence !== 'number') throw new Error(`${where}.stages.${id} inválido`);
+      // Sin margen entre entrar y salir, una relación en el borde cambiaría de etapa en cada encuentro
+      if (!(s.exitValence < s.enterValence)) throw new Error(`${where}.stages.${id}: exitValence debe ser menor que enterValence`);
+    }
+    if (!(st.acquaintance.familiarity < st.friend.familiarity && st.friend.familiarity < st.best_friend.familiarity)) {
+      throw new Error(`${where}.stages: la familiaridad debe crecer de una etapa a la siguiente`);
+    }
+    if (!(social.valenceFloor < 0 && social.valenceFloor >= -1)) throw new Error(`${where}.valenceFloor debe estar en [-1, 0)`);
+    const sc = social.scene ?? {};
+    if (!(sc.slotMs >= 30000) || !Number.isInteger(sc.maxEffectScenesPerVisit) || sc.maxEffectScenesPerVisit < 1 || !(sc.repeatFactor >= 0 && sc.repeatFactor <= 1)) {
+      throw new Error(`${where}.scene inválido`);
+    }
+    for (const id of SCENE_IDS) {
+      const s = social.scenes?.[id];
+      const at = `${where}.scenes.${id}`;
+      if (!s) throw new Error(`${at} falta`);
+      if (!(typeof s.base === 'number' && s.base > 0)) throw new Error(`${at}.base debe ser > 0`);
+      if (!(typeof s.delta === 'number' && Math.abs(s.delta) <= 0.3)) throw new Error(`${at}.delta debe estar en [-0.3, 0.3]`);
+      for (const [k, v] of Object.entries(s.weights ?? {})) {
+        if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${at}.weights.${k} inválido`);
+      }
+      for (const k of ['minStage', 'maxStage']) if (s[k] !== undefined && !STAGE_IDS.includes(s[k])) throw new Error(`${at}.${k} desconocida`);
+      if (s.after !== undefined && !SCENE_IDS.includes(s.after)) throw new Error(`${at}.after desconocida`);
+    }
+    for (const id of Object.keys(social.scenes ?? {})) if (!SCENE_IDS.includes(id)) throw new Error(`${where}.scenes: escena desconocida ${id}`);
+    // Siempre debe quedar una escena sin condiciones, para cualquier pareja y cualquier ranura
+    if (!SCENE_IDS.some((id) => { const s = social.scenes[id]; return !s.minStage && !s.maxStage && !s.after && !s.firstSlotOnly && s.minEnergy === undefined && s.maxEnergy === undefined && s.minTemper === undefined; })) {
+      throw new Error(`${where}.scenes: hace falta una escena sin condiciones`);
+    }
+    console.log(`✓ balance.json: vida social (${SCENE_IDS.length} escenas, 4 etapas) validada`);
+  }
+
   // 1c-ter. Sala del hábitat: acciones con pesos por dimensión y empuje por necesidades
   const roomCfg = pers.room;
   if (roomCfg) {

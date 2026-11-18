@@ -1575,6 +1575,31 @@ export interface PetIdentity {
   spriteRef: string;
   /** Etapa evolutiva; si falta (backend antiguo) se dibuja la de bebé. */
   stage?: string;
+  /** Aspecto con el que se dibuja en la sala del anfitrión (backend antiguo: no viene). */
+  look?: PetLook;
+}
+
+/** Aspecto de la mascota de un visitante. Solo apariencia: nada de su estado ni de su memoria. */
+export interface PetLook {
+  palette: { primary: string; secondary: string; accent?: string };
+  pattern: string | null;
+  visualSeed: number;
+  shiny: boolean;
+  accessories: Record<string, string>;
+}
+
+/** Escena entre tu Pockai y el de un visitante, tal como la resuelve el servidor. */
+export interface HabitatSceneEvent {
+  visitorId: string;
+  slot: number;
+  /** greet | explore_together | play_tag | share_food | nap_together | squabble | make_up */
+  type: string;
+  /** Relación de tu Pockai con el visitante: stranger | acquaintance | friend | best_friend */
+  stage: string;
+  hostPetId: string;
+  guestPetId: string;
+  /** Carácter del visitante en palabras, por dimensión (p. ej. `{ temper: 'calm' }`). */
+  guestTraits?: Record<string, string>;
 }
 
 export interface HabitatVisitor {

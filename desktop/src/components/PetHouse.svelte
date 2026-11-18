@@ -52,6 +52,7 @@
     {height}
     activity={pet?.sleeping ? 'sleep' : 'idle'}
     night={!!pet?.sleeping}
+    showVisitors
     on:petPress={(e) => dispatch('petPress', e.detail)}
   />
   <slot name="overlay" />

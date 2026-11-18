@@ -45,9 +45,9 @@
   import { PawPrint, Bell, X, Volleyball } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
-  import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
+  import { clearVisitors, sceneReceived, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
   import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster, emitClanHabitatEvent } from './lib/clan-store';
-  import type { HabitatVisitor, ClanMessage, ClanGoal, ClanXpEvent } from './lib/api';
+  import type { HabitatVisitor, HabitatSceneEvent, ClanMessage, ClanGoal, ClanXpEvent } from './lib/api';
   import { loadActivePetId, pickActivePet, saveActivePetId } from './lib/activePet';
   import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
   import { maintenanceLock } from './lib/maintenance';
@@ -357,6 +357,8 @@
         socket.on('habitat:visitor_left', (ev: { visitorId?: string } | null) => {
           if (ev?.visitorId) visitorLeft(ev.visitorId);
         });
+        // Qué hacen tu Pockai y el visitante: lo decide el servidor y se representa en la sala
+        socket.on('habitat:scene', (ev: HabitatSceneEvent | null) => sceneReceived(ev));
         // Estado inicial: quién visita ahora mismo (por si la app arrancó con visitas en curso)
         api.getHabitatVisitors()
           .then((r) => setVisitors(r?.visitors ?? []))
