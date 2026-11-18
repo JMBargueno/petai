@@ -57,7 +57,11 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
       effect: { id: 'capullo-telar', params: stage ? { stage } : {} },
     };
   },
-  hatched: () => ({ anims: ['summon', 'happy'], bubble: '¡Hola! Encantado de conocerte 🐣' }),
+  hatched: (c) => ({
+    anims: ['summon', 'happy'],
+    bubble: c?.shiny === true ? '¡Hola! Nací con la Bendición del Prisma ✨' : '¡Hola! Encantado de conocerte 🐣',
+    effect: { id: 'revelacion-densidad', params: birthParams(c) },
+  }),
   battle_won: () => ({ anims: ['attack', 'victory'], bubble: '¡Victoria! 🏆' }),
   battle_lost: () => ({ anims: ['hit', 'defeat'], bubble: 'Uf… la próxima ganaré.' }),
   battle_defended: (c) => {
@@ -112,20 +116,51 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     };
   },
   welcome_back: (c) => {
-    switch (str(c, 'tier')) {
-      case 'offended':
-        return { anims: ['sad'], bubble: 'Hmpf… me has dejado mucho tiempo solo.' };
-      case 'sad':
-        return { anims: ['cry'], bubble: 'Te he echado de menos…' };
-      case 'emotional':
-        return { anims: ['cry', 'love'], bubble: '¡Has vuelto! 🥹' };
-      default:
-        return { anims: ['happy'], bubble: '¡Bienvenido de nuevo! 😊' };
-    }
+    const r = welcomeReaction(str(c, 'tier'));
+    return { ...r, effect: { id: 'descarga-calida', params: { tier: str(c, 'tier') ?? 'happy' } } };
   },
   sick: () => ({ anims: ['sad'], bubble: 'No me encuentro muy bien… 🤒' }),
   vitals_critical: () => null, // el estado base (hungry/tired/sad) ya lo refleja
 };
+
+/** Datos del nacimiento para la revelación: densidad, Bendición del Prisma y Promesa del Telar. */
+function birthParams(c: Ctx): Record<string, string | number> {
+  const pity = str(c, 'pity');
+  return { rarity: str(c, 'rarity') ?? 'normal', shiny: c?.shiny === true ? 1 : 0, ...(pity ? { pity } : {}) };
+}
+
+function welcomeReaction(tier: string | undefined): Reaction {
+  switch (tier) {
+    case 'offended':
+      return { anims: ['sad'], bubble: 'Hmpf… me has dejado mucho tiempo solo.' };
+    case 'sad':
+      return { anims: ['cry'], bubble: 'Te he echado de menos…' };
+    case 'emotional':
+      return { anims: ['cry', 'love'], bubble: '¡Has vuelto! 🥹' };
+    default:
+      return { anims: ['happy'], bubble: '¡Bienvenido de nuevo! 😊' };
+  }
+}
+
+/**
+ * Nace otro Pockai de tu colección y no es el que está en el escritorio: el activo lo presencia
+ * (sorpresa y alegría) y la revelación se alza A SU LADO, en el Flujo de la recién nacida.
+ */
+export function reactionForSiblingHatch(newborn: {
+  nickname?: string;
+  rarity?: string;
+  shiny?: boolean;
+  pityGuarantee?: string | null;
+  species?: { element?: string; name?: string };
+}): Reaction {
+  const name = newborn.nickname || newborn.species?.name || 'un Pockai';
+  const params = birthParams({ rarity: newborn.rarity, shiny: newborn.shiny, pity: newborn.pityGuarantee ?? undefined });
+  return {
+    anims: ['surprised', 'happy'],
+    bubble: newborn.shiny ? `¡Ha nacido ${name}… y brilla! ✨` : `¡Ha nacido ${name}! 🐣`,
+    effect: { id: 'revelacion-densidad', params: { ...params, element: newborn.species?.element ?? 'neutral', beside: 1 } },
+  };
+}
 
 export function reactionForAction(event: Pick<PetActionEvent, 'action' | 'context'>): Reaction | null {
   const fn = REACTIONS[event.action];

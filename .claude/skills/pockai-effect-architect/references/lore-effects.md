@@ -38,17 +38,15 @@ Un mismo efecto sirve para todos los Flujos cambiando la rampa. Si un Flujo pide
 | `capullo-telar` | Evolución (`evolved` → `eventMap` `effect`) | §1, §6: seis hebras en espiral tejen un capullo que tapa a la mascota **mientras se re-hornea su nueva etapa**, se agrieta de luz y estalla en jirones. La forma final lleva corona. |
 | `resonancia` | Subida de nivel (`level_up` → `eventMap` `effect`) | §1: ondas a ras de suelo, pulsos a los lados y un Códice que sube por detrás y se parte en destellos. Cede ante la evolución si llegan juntas. |
 | `hebra-invocacion` | Invocación rápida (`petai:summon`) | §8: tu hebra baja hasta el cursor, se enrosca en un ovillo y de él brota la mascota (keyframe `sprout`); ya no se teletransporta. |
+| `revelacion-densidad` | Nacimiento (`hatched {rarity, shiny, pity}`; desde el panel, `celebrateHatch` en App) | §2, §3: columna de luz con un anillo por densidad (la mítica late: «Primer Latido»). Si se cumplió la garantía, antes vibran las hebras de la **Promesa del Telar**; si es shiny, cae el **Rayo Cósmico** con la paleta invertida. Si la que nace no es la activa, la columna se alza **a su lado** en el Flujo de la recién nacida (`reactionForSiblingHatch`). Fases según `params` (`phasesFor`). |
+| `altar-santuario` | Entrar en casa con el botón del panel (App `watchHabitat` + `PetView.enterAltar`) y salir por cualquier vía (`entrance = 'altar'`) | §10: pórtico de piedra con arco de dovelas, sello y runas que emerge, abre sus hojas a la luz del hogar y se hunde. El arrastre al panel conserva su animación propia (`skipAltarOnce`). |
+| `descarga-calida` | Bienvenida (`welcome_back {tier}`) | §6: escarcha de hielo (rampa fija: el frío no es del Pockai) que una onda de luz del Flujo derrite en gotas; más escarcha cuanto más dura fue la ausencia. |
 
 ## Ideas pendientes (propón desde aquí)
 
 | Evento (código) | Idea |
 |---|---|
-| Entrar en el hábitat: arrastre (`PetView` `isEnteringHome`) **y** el botón del panel (`ControlPanel.svelte` «A casa», que desmonta sin animar) | Altar del Santuario (§10): un altar o una puerta de piedra y madera con runas del Flujo que se abre en el borde del panel. Debe unificar los dos caminos. |
-| Salir del hábitat (`habitatExitDrag.ts` → `spawnAt`) | El mismo altar, al revés. |
-| Shiny al nacer (`hatched {shiny}`, ignorado por `eventMap`) | Rayo Cósmico (§3): rayo diagonal y bit-flip de paleta; variante periódica para sustituir la franja shiny. **Antes:** `hatched` se reproduce en la mascota activa anterior (`App.svelte` filtra por `petId`). |
-| Rareza al nacer (`hatched {rarity}`) | Revelación de densidad (§2): columna de luz con un anillo por densidad; la Singularidad mítica, con el «Primer Latido». |
-| Garantía de la Promesa del Telar | Hebras que vibran antes de la revelación (§2). Necesita que el backend exponga `pityTriggered` (`hatching.service.ts`). |
-| Bienvenida (`welcome_back {tier}`) | Escarcha que se derrite con una «descarga de luz cálida» (§6), más intensa cuanto más larga fue la ausencia. La spec 28 lo pide. |
+| Franja shiny periódica (`PetView` renderLoop) | Sustituirla por un destello corto del Rayo Cósmico (§3) cada cierto tiempo. |
 | Logro (`achievement {tier}`, rango ignorado) | Pergamino o sello (§7) que crece por rango. |
 | Arena (`battle_won/lost/defended`) | Proyección astral (§7): la Sombra Guardiana vuelve y se funde, con glitch si pierde. |
 | Juramento de clan cumplido (`clan:goal_completed`) | Trenza de hebras de colores que se tensa (§8). |

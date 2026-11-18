@@ -63,6 +63,11 @@ export interface EffectDef {
   phases: FxPhase[];
   /** Fases cortas para `prefers-reduced-motion` (mismos nombres). */
   reducedPhases: FxPhase[];
+  /**
+   * Fases según los datos del momento (p. ej. saltar la Promesa si no hubo garantía). Mismos nombres
+   * que `phases`; las que no tocan, con `ms: 0`. Si no está, se usan `phases` / `reducedPhases`.
+   */
+  phasesFor?(params: Record<string, string | number>, reduced: boolean): FxPhase[];
   /** Cadencia del dibujo (fps). 12 da el tacto de los sprites. */
   fps: number;
   draw(sink: PixelSink, frame: FxFrame): void;

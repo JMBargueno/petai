@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HatchingService } from './hatching.service';
+import { HatchingService, pityGuaranteeMet } from './hatching.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PET_NAMES } from './pet-names';
@@ -141,6 +141,30 @@ describe('HatchingService', () => {
       expect(pet.rarity).toBe('normal');
       // Sin multiplicador de rareza: las estadísticas son las de la especie.
       expect(pet.combatStats).toEqual({ hp: 50, atk: 55, def: 45, vel: 48, esp: 52 });
+    });
+
+    it('no anuncia la Promesa del Telar si la garantía no se ha podido cumplir', async () => {
+      setupSuccessfulHatch();
+      mockPrismaService.pityCounter.findUnique.mockResolvedValue({ userId: 'user-1', sinceSuperRare: 29, sinceLegendary: 119 });
+      const pet: any = await service.hatchEgg('user-1', 'egg-1', 'Chispa');
+      expect(pet.pityGuarantee).toBeNull();
+    });
+
+    it('anuncia la Promesa del Telar cuando la tirada forzada se cumple', async () => {
+      setupSuccessfulHatch();
+      mockGameDataService.getSpecies.mockReturnValueOnce([
+        { id: 'legendario', name: 'Leg', rarity: 'legendary', baseStats: { hp: 50, atk: 50, def: 50, vel: 50, esp: 50 }, defaultPalette: {} },
+      ]);
+      mockPrismaService.pityCounter.findUnique.mockResolvedValue({ userId: 'user-1', sinceSuperRare: 5, sinceLegendary: 119 });
+      const pet: any = await service.hatchEgg('user-1', 'egg-1', 'Chispa');
+      expect(pet.pityGuarantee).toBe('legendary');
+    });
+
+    it('pityGuaranteeMet solo cuenta tiradas forzadas cumplidas', () => {
+      expect(pityGuaranteeMet(29, 10, 'super_rare')).toBe('super_rare');
+      expect(pityGuaranteeMet(29, 10, 'normal')).toBeNull();
+      expect(pityGuaranteeMet(28, 10, 'legendary')).toBeNull();
+      expect(pityGuaranteeMet(40, 119, 'mythic')).toBe('legendary');
     });
 
     it('la garantía de pity sigue pendiente si no se ha conseguido la rareza', async () => {

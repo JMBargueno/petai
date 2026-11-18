@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  altarSantuario,
   capulloTelar,
+  descargaCalida,
+  phasesOf,
+  revelacionDensidad,
   FLOW_PALETTES,
   fixedDuration,
   GridSink,
@@ -13,7 +17,7 @@ import {
 } from './index';
 import { admitMoment } from './momentQueue';
 
-const MOMENTS: EffectDef[] = [capulloTelar, resonancia, hebraInvocacion];
+const MOMENTS: EffectDef[] = [capulloTelar, resonancia, hebraInvocacion, revelacionDensidad, altarSantuario, descargaCalida];
 
 function render(def: EffectDef, phase: string, t: number, opts: { el?: string; reduced?: boolean; ms?: number; params?: Record<string, string | number> } = {}) {
   const sink = new GridSink(def.width, def.height);
@@ -60,6 +64,49 @@ describe('capullo del Telar', () => {
   it('la forma final lleva corona', () => {
     const plain = render(capulloTelar, 'hold', 0).count();
     expect(render(capulloTelar, 'hold', 0, { params: { stage: 'final' } }).count()).toBeGreaterThan(plain);
+  });
+});
+
+describe('revelación de densidad', () => {
+  it('sin garantía no hay Promesa y sin shiny no cae el Rayo', () => {
+    const plain = phasesOf(revelacionDensidad, { rarity: 'rare', shiny: 0 }, false);
+    expect(plain.find((p) => p.name === 'promise')?.ms).toBe(0);
+    const full = phasesOf(revelacionDensidad, { rarity: 'mythic', shiny: 1, pity: 'legendary' }, false);
+    expect(full.find((p) => p.name === 'promise')?.ms).toBeGreaterThan(0);
+    expect(fixedDuration(full)).toBeLessThanOrEqual(2500);
+    expect(fixedDuration(plain)).toBeLessThan(fixedDuration(full));
+  });
+  it('a más densidad, más anillos', () => {
+    const normal = render(revelacionDensidad, 'density', 1, { params: { rarity: 'normal' } }).count();
+    const mythic = render(revelacionDensidad, 'density', 1, { params: { rarity: 'mythic' } }).count();
+    expect(mythic).toBeGreaterThan(normal);
+  });
+  it('el Rayo Cósmico usa la paleta invertida (Bendición del Prisma)', () => {
+    const shiny = render(revelacionDensidad, 'prism', 0.7, { el: 'fire', params: { rarity: 'rare', shiny: 1 } });
+    expect(shiny.colors()).toContain('#04b6fc'); // complementario del tono medio de fuego (#fb4903)
+  });
+});
+
+describe('altar del Santuario', () => {
+  it('cerrado tapa la puerta con sus hojas y abierto deja ver la luz de casa', () => {
+    const { x, y } = altarSantuario.points.door;
+    const p = FLOW_PALETTES.water;
+    // Cerrado: madera (oscuros); abierto: la luz de casa
+    for (const dx of [-4, 0, 3]) {
+      expect([p.deep, p.mid, p.outline]).toContain(render(altarSantuario, 'runes', 1).get(x + dx, y));
+      expect([p.glow, p.light, p.mid]).toContain(render(altarSantuario, 'hold', 0).get(x + dx, y));
+    }
+  });
+  it('al hundirse no deja nada por encima del suelo', () => {
+    expect(render(altarSantuario, 'sink', 1).count()).toBeLessThan(40);
+  });
+});
+
+describe('descarga cálida', () => {
+  it('a más dura la ausencia, más escarcha', () => {
+    const happy = render(descargaCalida, 'frost', 1, { params: { tier: 'happy' } }).count();
+    const offended = render(descargaCalida, 'frost', 1, { params: { tier: 'offended' } }).count();
+    expect(offended).toBeGreaterThan(happy);
   });
 });
 

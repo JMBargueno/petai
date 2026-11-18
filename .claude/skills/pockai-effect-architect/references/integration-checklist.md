@@ -27,6 +27,9 @@ cd desktop && npx svelte-check --threshold error   # filtra por tus archivos: el
    __pockaiFx.react('level_up', { level: 12 })          // cualquier pet:action de eventMap
    __pockaiFx.react('evolved', { stage: 'adult' })
    __pockaiFx.summon(600, 600)                          // invocación rápida en ese punto
+   __pockaiFx.hatch('mythic', true, 'legendary')        // nace otra: rareza, shiny, garantía
+   __pockaiFx.react('welcome_back', { tier: 'offended' })
+   __pockaiFx.home(true) / __pockaiFx.home(false)       // entrar y salir de casa por el altar
    __pockaiFx.visitorJoin({ visitorId: 'u-9', visitorName: 'Marta', pet: { petId: 'p-9', nickname: 'Luna', speciesName: 'Axolunar', speciesId: 'axolunar', spriteRef: '' }, startedAt: new Date().toISOString() })
    __pockaiFx.visitorLeave('u-9')
    ```

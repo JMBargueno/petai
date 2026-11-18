@@ -550,7 +550,6 @@
       await wait(900);
       hatchedResult = newPet;
       dispatch('petHatched', newPet);
-      dispatch('actionTriggered', 'hatched');
       dispatch('refreshEggs');
       delete eggNames[eggId]; // al terminar, limpia el input de ese huevo
     } catch (err: any) {

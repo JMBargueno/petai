@@ -86,7 +86,12 @@ export class HatchingService {
       try {
         const pet = await this.tryHatch(userId, eggId, finalNickname);
         this.realtime?.emitPetUpdate(userId, pet);
-        this.realtime?.emitPetAction(userId, pet.id, 'hatched', { rarity: pet.rarity, shiny: pet.shiny });
+        // `pity`: si esta eclosión cumplió la garantía de la Promesa del Telar (el escritorio la anima)
+        this.realtime?.emitPetAction(userId, pet.id, 'hatched', {
+          rarity: pet.rarity,
+          shiny: pet.shiny,
+          ...(pet.pityGuarantee ? { pity: pet.pityGuarantee } : {}),
+        });
         // Estadísticas de colección, misiones y logros (huevos abiertos, rareza, elemento, shiny).
         this.events?.emit('egg:hatched', {
           userId,
@@ -139,6 +144,7 @@ export class HatchingService {
     let newSinceLeg = pity.sinceLegendary + 1;
     if (['super_rare', 'legendary', 'mythic'].includes(petRarity)) newSinceSuper = 0;
     if (['legendary', 'mythic'].includes(petRarity)) newSinceLeg = 0;
+    const pityGuarantee = pityGuaranteeMet(pity.sinceSuperRare, pity.sinceLegendary, petRarity);
 
     // El patrón tiene su propia rareza y su propia tirada, independiente de la especie.
     const balance = this.gameData.getBalance();
@@ -224,7 +230,8 @@ export class HatchingService {
         },
       });
 
-      return pet;
+      // No se guarda: solo viaja en la respuesta y en el aviso `hatched` de esta eclosión.
+      return Object.assign(pet, { pityGuarantee });
     });
   }
 
@@ -248,4 +255,19 @@ export class HatchingService {
     if (roll < 9900) return 'legendary';    // 4%
     return 'mythic';                        // 1%
   }
+}
+
+/**
+ * ¿Ha cumplido esta eclosión la garantía de la Promesa del Telar (LORE §2)? Solo cuenta si la tirada
+ * estaba forzada (119+ sin legendario, 29+ sin super-raro) **y** el ejemplar tiene esa rareza o más:
+ * si no había especies de esa densidad, la garantía sigue pendiente y no se anuncia.
+ */
+export function pityGuaranteeMet(
+  sinceSuperRare: number,
+  sinceLegendary: number,
+  petRarity: string,
+): 'legendary' | 'super_rare' | null {
+  if (sinceLegendary >= 119 && ['legendary', 'mythic'].includes(petRarity)) return 'legendary';
+  if (sinceSuperRare >= 29 && ['super_rare', 'legendary', 'mythic'].includes(petRarity)) return 'super_rare';
+  return null;
 }
