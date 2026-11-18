@@ -2,9 +2,49 @@
   "size": 32,
   "scale": 2,
   "items": {
+    "apple": {
+      "colors": 9,
+      "box": [2, 2, 27, 28]
+    },
     "spicy_berry": {
       "colors": 9,
       "box": [4, 2, 24, 28]
+    },
+    "sweet_coral": {
+      "colors": 8,
+      "box": [2, 2, 27, 28]
+    },
+    "sun_seed": {
+      "colors": 8,
+      "box": [4, 2, 24, 28]
+    },
+    "spark_candy": {
+      "colors": 9,
+      "box": [2, 2, 28, 27]
+    },
+    "midnight_berry": {
+      "colors": 8,
+      "box": [3, 2, 26, 28]
+    },
+    "dawn_honey": {
+      "colors": 7,
+      "box": [2, 2, 28, 28]
+    },
+    "cake": {
+      "colors": 10,
+      "box": [2, 2, 27, 28]
+    },
+    "healthy_salad": {
+      "colors": 10,
+      "box": [2, 3, 28, 26]
+    },
+    "medicine": {
+      "colors": 10,
+      "box": [5, 2, 21, 28]
+    },
+    "evolution_stone": {
+      "colors": 9,
+      "box": [6, 2, 19, 28]
     }
   }
 }

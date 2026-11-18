@@ -1,5 +1,7 @@
 <script lang="ts">
   import Ico from './Ico.svelte';
+  import ItemIcon from './ItemIcon.svelte';
+  import { itemIcon } from '../lib/items';
   import { onMount, createEventDispatcher } from 'svelte';
   import {
     api,
@@ -130,9 +132,12 @@
         <Card variant="pop" title="¡Cofre {label(lastOpen.chest.type)} abierto!" icon="party">
           <div class="drops">
             {#each lastOpen.drops as d (d.itemId + d.tier)}
-              <Badge color={TIER_COLOR[d.tier]} title={tierLabel(d.tier)}>
-                {d.name} ×{d.qty} · {tierLabel(d.tier)}{#if d.isNew}&nbsp;· Nuevo{/if}
-              </Badge>
+              <span class="drop">
+                {#if itemIcon(d.itemId)}<ItemIcon id={d.itemId} scale={2} />{/if}
+                <Badge color={TIER_COLOR[d.tier]} title={tierLabel(d.tier)}>
+                  {d.name} ×{d.qty} · {tierLabel(d.tier)}{#if d.isNew}&nbsp;· Nuevo{/if}
+                </Badge>
+              </span>
             {:else}
               <span class="muted">Este cofre venía vacío.</span>
             {/each}
@@ -241,6 +246,14 @@
     flex-wrap: wrap;
     gap: var(--space-1);
     margin-top: 2px;
+  }
+  /* Un premio recién salido del cofre: su icono (si lo tiene) sobre su etiqueta. */
+  .drop {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-1);
   }
   .buy-grid {
     display: grid;

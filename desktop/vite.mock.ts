@@ -82,15 +82,16 @@ let eggs = [
 ];
 
 const foods = [
-  { id: 'apple', name: 'Manzana', description: 'Sacia un poco y sube el ánimo.', priceCoins: 20 },
-  { id: 'berry_bowl', name: 'Cuenco de bayas', description: 'Un tentempié dulce. +15 de saciedad.', priceCoins: 45 },
-  { id: 'grilled_fish', name: 'Pescado a la brasa', description: 'Comida completa. +40 de saciedad y +5 de felicidad.', priceCoins: 120 },
+  { id: 'apple', name: 'Manzana Crujiente', description: 'Una fruta fresca y dulce que sacia el hambre rápidamente.', priceCoins: 10 },
+  { id: 'spicy_berry', name: 'Baya Ígnea', description: 'Una baya ardiente que calienta el espíritu. Favorita de las criaturas de fuego.', priceCoins: 25 },
+  { id: 'sweet_coral', name: 'Coral Glaseado', description: 'Delicadeza marina dulce y refrescante. Favorita de las criaturas acuáticas.', priceCoins: 25 },
+  { id: 'cake', name: 'Pastel de Fresas', description: 'Un dulce delicioso que aumenta mucho la felicidad, aunque no es lo más saludable.', priceCoins: 40 },
   { id: 'royal_feast', name: 'Banquete real', description: 'Llena del todo y da energía para una tarde entera de juegos.', priceCoins: 1500 },
 ];
 
 let inventory = [
   { itemId: 'apple', qty: 5, item: foods[0] },
-  { itemId: 'berry_bowl', qty: 2, item: foods[1] },
+  { itemId: 'spicy_berry', qty: 2, item: foods[1] },
 ];
 
 const friends = [
@@ -193,7 +194,7 @@ let chests = [
   { id: 'ch-2', type: 'gold', source: 'season_pass', createdAt: iso(-2 * DAY) },
 ];
 const drops = [
-  { itemId: 'apple', name: 'Manzana', qty: 3, tier: 'common', isNew: false },
+  { itemId: 'apple', name: 'Manzana Crujiente', qty: 3, tier: 'common', isNew: false },
   { itemId: 'soft_bed', name: 'Cama Suave', qty: 1, tier: 'uncommon', isNew: true },
   { itemId: 'gems', name: 'Gemas', qty: 5, tier: 'rare', isNew: false },
 ];

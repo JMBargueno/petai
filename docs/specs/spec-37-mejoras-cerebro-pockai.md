@@ -676,9 +676,14 @@ tres capas, las mismas de la sección 7:
 
 ### A.2 Fases siguientes
 
-- **Fase 2 — sala del hábitat.** `IsoRoom.wander()` pasa a un `petWander.ts` puro que usa
-  `selectByUtility` con `personality.room`: come con hambre, se baña sucio, duerme cansado. El mensaje
-  `setActivity` gana un campo opcional `mind { dims, needs, seed }` y la sala admite varios actores.
+- **Fase 2 — sala del hábitat (hecha).** `shared/scene/src/room/petWander.ts` (puro) decide el paseo con
+  `selectByUtility` y `balance.json → personality.room`: come con hambre, se baña sucio, se sienta
+  cansado, juega contento, y la personalidad inclina la balanza. Va al mueble más cercano y a la celda
+  de su huella a la que llegue. El mensaje `setActivity` admite un campo opcional
+  `mind { dims, needs, seed }`; sin él la sala se porta de forma neutra, así que no sube
+  `PROTOCOL_VERSION`. El escritorio ya lo envía (`IsoRoomView.svelte`). **Pendiente:** que Android lo
+  envíe (`SceneMessages.setActivity`), que usar un mueble tenga efecto de juego en el servidor y que
+  la sala admita varios actores; esto último pasa a la fase 4, que es quien lo necesita.
 - **Fase 3 — lote 1 (hecho).** Los siete puntos de la sección 4, cada uno con un test que fallaba
   antes del arreglo:
   - 1.1: `MindService` bloquea la fila (`SELECT … FOR UPDATE`) en `applyExperience` y
