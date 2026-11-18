@@ -173,12 +173,14 @@ export class TrainingService {
     });
 
     if (newStatus === 'completed') {
-      await this.prisma.pet.update({ where: { id: petId }, data: { xp: { increment: xp }, happiness: { increment: 12 } } });
+      await this.prisma.pet.update({ where: { id: petId }, data: { happiness: { increment: 12 } } });
       // La felicidad tiene tope 100: el incremento atómico puede pasarse, se recorta aquí
       await this.prisma.pet.updateMany({ where: { id: petId, happiness: { gt: 100 } }, data: { happiness: 100 } });
       await this.prisma.user.update({ where: { id: userId }, data: { coins: { increment: coins } } });
-    } else if (newStatus === 'failed') {
-      await this.prisma.pet.update({ where: { id: petId }, data: { xp: { increment: xp } } });
+    }
+    // La XP sube nivel y etapa (y avisa de `level_up`/`evolved`), no solo se acumula
+    if (newStatus === 'completed' || newStatus === 'failed') {
+      await this.petsService.grantXp(userId, petId, xp);
     }
     if (this.realtime && newStatus !== 'active') {
       const trainedPet = await this.prisma.pet.findUnique({ where: { id: petId }, include: { species: true, pattern: true } });

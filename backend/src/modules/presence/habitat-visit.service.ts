@@ -34,6 +34,8 @@ export interface PetIdentity {
   speciesName: string;
   speciesId: string;
   spriteRef: string;
+  /** Etapa evolutiva (baby, juvenile, adult, final): el anfitrión dibuja la forma correcta. */
+  stage: string;
 }
 
 export interface ActiveVisitor {
@@ -226,8 +228,9 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
             speciesName: petRow.species.name,
             speciesId: petRow.species.id,
             spriteRef: petRow.species.id || 'default',
+            stage: petRow.stage ?? 'baby',
           }
-        : { petId: v.petId, nickname: '—', speciesName: '—', speciesId: 'default', spriteRef: 'default' };
+        : { petId: v.petId, nickname: '—', speciesName: '—', speciesId: 'default', spriteRef: 'default', stage: 'baby' };
       return {
         visitorId: v.visitorId,
         visitorName: nameById.get(v.visitorId) ?? '—',
@@ -340,6 +343,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
         speciesName: row.species.name,
         speciesId: row.species.id,
         spriteRef: row.species.id || 'default',
+        stage: row.stage ?? 'baby',
       },
       energy,
       sleeping,

@@ -358,6 +358,15 @@ describe('motor de combate', () => {
       expect(species2.size).toBe(species.length);
     });
 
+    it('llevan la etapa evolutiva de su nivel (nunca la final) y la repetición la recoge', () => {
+      expect(generateBot(7, 5, species, skills, cfg).stage).toBe('baby');
+      expect(generateBot(7, 15, species, skills, cfg).stage).toBe('juvenile');
+      expect(generateBot(7, 60, species, skills, cfg).stage).toBe('adult');
+      const bot = generateBot(7, 5, species, skills, cfg);
+      const res = simulateBattle(bot, generateBot(8, 30, species, skills, cfg), 3, cfg);
+      expect(res.log.participants.map((p) => p.stage)).toEqual(['baby', 'adult']);
+    });
+
     it('nunca baja del nivel 1 y es un rival justo frente a un jugador del mismo nivel', () => {
       expect(generateBot(1, 1, species, skills, cfg).level).toBeGreaterThanOrEqual(1);
       // El jugador de la prueba lleva una especie normal, así que se mide contra bots de especie normal:

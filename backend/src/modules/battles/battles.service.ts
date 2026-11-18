@@ -88,6 +88,7 @@ export class BattlesService {
     return {
       name: pet.nickname || pet.species.name,
       speciesId: pet.species.id,
+      stage: pet.stage ?? 'baby',
       element,
       level: pet.level,
       stats: effectiveStats(pet),
@@ -348,6 +349,7 @@ export class BattlesService {
       opponent: {
         name: defender.name,
         speciesId: defender.speciesId,
+        stage: defender.stage ?? 'baby',
         element: defender.element,
         level: defender.level,
         isBot: defender.isBot,

@@ -69,7 +69,7 @@
       type: 'setPet',
       pet: {
         species: speciesKey,
-        stage: pet.stage ?? 'adult',
+        stage: pet.stage ?? 'baby',
         palette: {
           primary: pet.palette?.primary ?? '#E25822',
           secondary: pet.palette?.secondary ?? '#F3C544',

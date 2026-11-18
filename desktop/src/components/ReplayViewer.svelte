@@ -1,7 +1,11 @@
 <script lang="ts">
   import Ico from './Ico.svelte';
   import { onDestroy } from 'svelte';
-  import { getPetSvg } from '../lib/sprites';
+  import PetMiniAvatar from './PetMiniAvatar.svelte';
+  import { DEFAULT_STAGE } from '../lib/sprites';
+  import { speciesPalette } from '../lib/speciesPalette';
+  import { visitorSeed } from '../lib/visitors';
+  import type { ReplayParticipant } from '../lib/replay';
   import { buildFrames, type Frame, type ReplayLog } from '../lib/replay';
 
   export let log: ReplayLog;
@@ -30,6 +34,25 @@
 
   $: frame = frames[index];
   $: [p0, p1] = log.participants;
+
+  /** Pixel art a escala entera (×2 de la hoja de 64 px). */
+  const SPRITE_SIZE = 128;
+  /**
+   * Cada luchador se dibuja con su especie y su etapa evolutiva del momento del combate (sin
+   * etapa, la de bebé). Los objetos se crean una vez por repetición —despierto y K.O.— para no
+   * re-hornear el sprite en cada jugada.
+   */
+  function avatarFor(p: ReplayParticipant) {
+    const base = {
+      nickname: p.name,
+      species: { id: p.speciesId },
+      stage: p.stage || DEFAULT_STAGE,
+      palette: speciesPalette(p.speciesId),
+      visualSeed: visitorSeed(p.petId ?? p.name),
+    };
+    return { awake: base, asleep: { ...base, sleeping: true } };
+  }
+  $: avatars = [avatarFor(p0), avatarFor(p1)];
   $: hp = frame?.hp ?? [p0.maxHp, p1.maxHp];
   $: atFlash = frame?.kind === 'hit' ? frame.target : frame?.kind === 'dot' ? frame.target : null;
   $: lunge = frame && (frame.kind === 'hit' || frame.kind === 'miss') ? frame.actor : null;
@@ -101,7 +124,7 @@
             class:lunge={lunge === i}
             style="--dir: {i === 0 ? 1 : -1}; transform: scaleX({i === 0 ? 1 : -1});"
           >
-            {@html getPetSvg(p.speciesId, fainted[i] ? 'sleep' : 'idle')}
+            <PetMiniAvatar pet={avatars[i][fainted[i] ? 'asleep' : 'awake']} size={SPRITE_SIZE} interactive={false} />
             {#if atFlash === i && frame.damage}
               {#key index}<span class="float" class:crit={frame.crit}>−{frame.damage}</span>{/key}
             {/if}
@@ -144,10 +167,10 @@
   .fill { height: 100%; transition: width var(--dur-3) ease, background var(--dur-2); }
   .hptext { font-size: var(--text-caption); opacity: 0.7; }
   .sprite {
-    position: relative; width: 96px; height: 96px; margin-top: 2px;
+    position: relative; width: 128px; height: 128px; margin-top: 2px;
     transition: transform var(--dur-2) ease, filter var(--dur-1);
   }
-  .sprite :global(svg) { width: 100%; height: 100%; }
+  .sprite :global(.pet-mini-avatar) { display: block; }
   .sprite.lunge { animation: lunge 0.5s ease; }
   .sprite.flash { animation: shake 0.4s ease; filter: brightness(1.8) saturate(1.4); }
   .fainted .sprite { opacity: 0.45; filter: grayscale(1); }

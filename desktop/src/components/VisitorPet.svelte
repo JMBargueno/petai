@@ -99,7 +99,8 @@
 
   async function bake() {
     try {
-      sheet = await bakePetSpriteSheet(speciesKey, 'plain', palette, seed);
+      // Con su etapa evolutiva: un bebé de visita se ve bebé (sin etapa, también bebé)
+      sheet = await bakePetSpriteSheet(speciesKey, 'plain', palette, seed, false, visitor.pet?.stage);
     } catch (err) {
       console.warn('Visita: sin sprite, se queda el SVG base:', err);
       sheet = null;
