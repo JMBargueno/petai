@@ -55,7 +55,7 @@ La especie más serena del catálogo: cariñosa y sin prisa.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo y cola en primario; panza, crin de nubes, chorro y puntos de luz en secundario; franjas en primario oscurecido. La cola gira con la pose, el chorro late con los apéndices y la aleta del costado saluda. Bajo el cuerpo no hay nada.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). En la etapa final, los puntos de luz del lomo brillan en color fijo.
 
 ## Datos (`shared/game-data/species.json`)
 ```json

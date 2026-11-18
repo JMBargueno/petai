@@ -129,10 +129,10 @@ Features sin UI (solo backend + API):
 | Muebles y salas | Siguen en SVG isométrico; conviven con Pockais en píxeles. |
 | Variante shiny | Sin rampa propia: usa una paleta fija en la eclosión. |
 | **Ocho especies por debajo del objetivo** | El usuario rehízo con una IA de imagen las hojas de Livolt, Inktopus, Solarejo, Fénixel, Kirisol, Leviatín, Yggdrito y Primpulso, y ese es el nivel que quiere (`.claude/skills/pockai-architect/references/examples/`). Falta redibujarlas con el generador aplicando `design-lessons.md`. Lo más urgente: los tentáculos rectos del Inktopus (parece una araña), la proporción de muñeco de Solarejo y Kirisol, y la cara de cría en las etapas finales. Dos hojas objetivo cambian el concepto y hay que decidirlo antes: el Livolt sale como abeja (es una polilla) y el Kirisol final gana alas. |
+| Redibujo con el generador v2 | Las 15 especies usan ya el tercer color, las tramas, el plano lejano o el trazo interior. A fondo solo se han rehecho Livolt, Inktopus y Solarejo; el resto recibe mejoras sobre el dibujo que tenía. Las crías y casi todas las segundas etapas no cambian. |
+| Acento en iOS y web | El escritorio y Android pasan el `accent` de la paleta al horneado; iOS y la web no se han revisado. Sin él, el acento sale como el primario oscurecido. |
+| Límites del generador v2 | Las tramas van en rejilla recta (las escamas no giran con un cuello curvo), todas las sombras tiran al mismo violeta y el trazo interior hay que darlo a mano. |
 | Hojas objetivo sin par | Faltan hojas objetivo de Ignisaurio, Axolunar, Florabrote, Magmadillo, Nubeballena, Cactuerno y Cerbito. |
-| Tercer color en los sprites | La hoja solo distingue primario y secundario; el `accent` de la paleta no llega al sprite. Hace falta un papel de color nuevo en `raster.ts`, en la máscara y en `bakePixels.ts`, y por tanto en los tres clientes. |
-| Rampas con giro de tono | El color sale de multiplicar un gris por la paleta: la sombra es el mismo color más oscuro. El objetivo usa cuatro o cinco tonos con la sombra hacia el frío y la luz hacia el claro. |
-| Tramas de relleno, plano lejano y contorno interior | No hay rellenos de escamas, corteza u hojas, ni una forma de mandar una pieza «al fondo» oscureciéndola, ni líneas oscuras dentro de una pieza para separar mechones o plumas: se pinta pieza a pieza. |
 | Sistema de diseño publicado | No refleja los últimos cambios (tamaños de prenda, colores del huevo, rareza por especie). |
 
 ### 8d. Rareza por especie (GAME_DESIGN §1)

@@ -12,7 +12,7 @@
  */
 import type { Pose, Stage } from '../species';
 import { drawFace, drawFx, EyeSpec } from './face';
-import { FLOOR, Grid, hex, mul, N, rotateAt, scaleAt, translate } from './raster';
+import { FLOOR, Grid, hex, mul, N, rotateAt, scaleAt, TEX, translate } from './raster';
 
 /** Elipse: [cx, cy, rx, ry]. */
 type E = [number, number, number, number];
@@ -121,7 +121,8 @@ const BASE: Record<Stage, StageSpec> = {
       torso: [[18.5, 43, 3.4, 1.2], [17.5, 47.5, 3.4, 1.2], [19, 52, 3, 1.2]],
     },
     brow: true,
-    eye: { y: 22, h: 6, x1: 31, w1: 4, x2: 42, w2: 3, glint: 1, gap: 2 },
+    // La cara madura: el ojo de la etapa final es 1 px más bajo que el de la adulta.
+    eye: { y: 23, h: 5, x1: 31, w1: 4, x2: 42, w2: 3, glint: 1, gap: 2 },
     size: 'L',
     neck: [32.5, 35.5],
     back: [18, 33],
@@ -152,6 +153,154 @@ function lowered(st: Stage, dy: number, patch: Partial<StageSpec> & Hooks = {}):
   return { ...b, torso: [b.torso[0], b.torso[1] + half, b.torso[2], b.torso[3] - half], eye: { ...b.eye, y: b.eye.y + Math.round(half) }, ...patch };
 }
 
+// ───────────────────────── Técnica común ─────────────────────────
+// Piezas que usan todas las especies: cuerpos en curva lisa (`tube`) con su luz y su sombra, filas de
+// aletas o púas (`ridge`), púas y cuernos, brillos en color literal (`glow`), pelusa, bandas, anillos,
+// garras y esquirlas. Los míticos construyen el cuerpo entero con `tube`.
+
+type P3 = [number, number, number];
+
+/** Puntos de una curva suave (Catmull-Rom) por los puntos de control [x, y, radio]. */
+function samples(pts: P3[], stepPx = 1.1): P3[] {
+  const out: P3[] = [];
+  const at = (i: number) => pts[Math.max(0, Math.min(pts.length - 1, i))];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [p0, p1, p2, p3] = [at(i - 1), at(i), at(i + 1), at(i + 2)];
+    const n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / stepPx));
+    for (let k = 0; k < n; k++) {
+      const t = k / n;
+      const c = (a: number, b: number, cc: number, d: number) =>
+        0.5 * (2 * b + (-a + cc) * t + (2 * a - 5 * b + 4 * cc - d) * t * t + (-a + 3 * b - 3 * cc + d) * t * t * t);
+      out.push([c(p0[0], p1[0], p2[0], p3[0]), c(p0[1], p1[1], p2[1], p3[1]), p1[2] + (p2[2] - p1[2]) * t]);
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
+interface TubeOpts {
+  /** Todo el tubo en sombra: tramos que pasan por detrás. */
+  far?: boolean;
+  /** Franja de vientre, desplazada [dx, dy] radios desde el eje. */
+  belly?: [number, number];
+  /** Papel y tono de la franja de vientre (por defecto, secundario plano). */
+  bellyRole?: 'belly' | 'skin' | 'trait';
+  bellyTone?: 'light' | 'hi' | 'base';
+  /** Una placa cada `scutes` muestras. */
+  scutes?: number;
+}
+
+/** Cuerpo curvo liso: base, sombra abajo a la derecha, luz arriba a la izquierda y vientre de placas. */
+function tube(g: Grid, part: number, role: 'body' | 'skin' | 'trait' | 'accent' | 'mark', pts: P3[], o: TubeOpts = {}): void {
+  const S = samples(pts);
+  S.forEach(([x, y, r]) => g.ellipse(part, role, x, y, r, r, o.far ? { tone: 'shade' } : { flat: true }));
+  if (o.far) return;
+  S.forEach(([x, y, r]) => g.ellipse(part, role, x + r * 0.5, y + r * 0.62, r * 0.8, r * 0.8, { clip: part, keep: true, tone: 'shade' }));
+  S.forEach(([x, y, r]) => { if (r >= 2.4) g.ellipse(part, role, x - r * 0.42, y - r * 0.52, r * 0.4, r * 0.4, { clip: part, keep: true, tone: 'light' }); });
+  if (!o.belly) return;
+  const [bx, by] = o.belly;
+  const role2 = o.bellyRole ?? 'belly';
+  const tone2 = o.bellyTone ?? 'base';
+  S.forEach(([x, y, r]) => g.ellipse(part, role2, x + bx * r, y + by * r, r * 0.52, r * 0.52, { clip: part, keep: true, tone: tone2 }));
+  if (!o.scutes) return;
+  S.forEach(([x, y, r], i) => {
+    if (i % o.scutes! !== 0 || i === 0 || i >= S.length - 1) return;
+    const tx = S[i + 1][0] - S[i - 1][0];
+    const ty = S[i + 1][1] - S[i - 1][1];
+    const l = Math.hypot(tx, ty) || 1;
+    const nx = -ty / l;
+    const ny = tx / l;
+    const cx = x + bx * r;
+    const cy = y + by * r;
+    const h = r * 0.62;
+    g.poly(part, role2, [[cx - nx * h, cy - ny * h], [cx + nx * h, cy + ny * h], [cx + nx * h + tx / l * 0.9, cy + ny * h + ty / l * 0.9], [cx - nx * h + tx / l * 0.9, cy - ny * h + ty / l * 0.9]], { clip: part, keep: true, tone: 'shade' });
+  });
+}
+
+/** Aletas o púas a lo largo de una curva, por el lado `side` (1 o -1), echadas hacia atrás. */
+function ridge(g: Grid, part: number, pts: P3[], every: number, h: number, side: 1 | -1, from = 2): void {
+  const S = samples(pts);
+  S.forEach(([x, y, r], i) => {
+    if (i < from || i >= S.length - 2 || (i - from) % every !== 0) return;
+    const tx = S[i + 1][0] - S[i - 1][0];
+    const ty = S[i + 1][1] - S[i - 1][1];
+    const l = Math.hypot(tx, ty) || 1;
+    const ux = tx / l;
+    const uy = ty / l;
+    const nx = -uy * side;
+    const ny = ux * side;
+    const b = r - 0.8;
+    g.poly(part + (i % 7), 'trait', [[x - ux * 1.7 + nx * b, y - uy * 1.7 + ny * b], [x + ux * 1.7 + nx * b, y + uy * 1.7 + ny * b], [x - ux * 2.2 + nx * (r + h), y - uy * 2.2 + ny * (r + h)]]);
+  });
+}
+
+/** Púa o cuerno recto y afilado (grados como `gill`: 0 = izquierda, 90 = arriba). */
+function spike(g: Grid, part: number, role: 'trait' | 'mark' | 'skin' | 'accent', x: number, y: number, len: number, deg: number, w: number): void {
+  const r = (deg * Math.PI) / 180;
+  const dx = -Math.cos(r);
+  const dy = -Math.sin(r);
+  g.poly(part, role, [[x - dy * w, y + dx * w], [x + dy * w, y - dx * w], [x + dx * len, y + dy * len]]);
+}
+
+/** Cuerno curvo: dos tramos que se doblan hacia atrás. */
+function curvedHorn(g: Grid, part: number, x: number, y: number, len: number, deg: number, bend: number, w: number, role: 'trait' | 'accent' = 'trait'): void {
+  const r = (deg * Math.PI) / 180;
+  const mx = x - Math.cos(r) * len * 0.55;
+  const my = y - Math.sin(r) * len * 0.55;
+  spike(g, part, role, mx, my, len * 0.6, deg + bend, w * 0.75);
+  g.poly(part, role, [[x + Math.sin(r) * w, y - Math.cos(r) * w], [x - Math.sin(r) * w, y + Math.cos(r) * w], [mx - Math.sin(r) * w * 0.75, my + Math.cos(r) * w * 0.75], [mx + Math.sin(r) * w * 0.75, my - Math.cos(r) * w * 0.75]]);
+}
+
+/** Hocico: alarga la cabeza hacia delante y abajo, sin línea de separación. */
+const snout = (g: Grid, h: E, k = 1) => g.ellipse(10, 'body', h[0] + h[2] * 0.62, h[1] + h[3] * 0.42, h[2] * 0.62 * k, h[3] * 0.56 * k, { keep: true });
+
+/** Rampas literales: brillos que no pasan por la paleta de la mascota. */
+const glowRamp = (line: string, shade: string, base: string, light: string) => ({ line: hex(line), shade: hex(shade), base: hex(base), light: hex(light), hi: hex('#ffffff') });
+const PEARL = glowRamp('#3b4a7a', '#bcd3ee', '#eef6ff', '#ffffff');
+const EMBER_GLOW = glowRamp('#7a4a12', '#f4b942', '#ffe08a', '#fff6cf');
+const PULSE = glowRamp('#1c6f86', '#7de8f7', '#d6fbff', '#ffffff');
+
+/** Punto de luz con su halo: núcleo literal sobre un cerco del secundario. */
+function glow(g: Grid, part: number, x: number, y: number, r: number, ramp: ReturnType<typeof glowRamp>, clip?: number): void {
+  const o = clip === undefined ? {} : { clip, keep: true };
+  g.ellipse(part, 'belly', x, y, r, r, { flat: true, ...o });
+  g.ellipse(part, 'belly', x - r * 0.1, y - r * 0.1, r * 0.62, r * 0.62, { ramp, tone: 'base', clip: clip ?? part, keep: true });
+  g.ellipse(part, 'belly', x - r * 0.3, y - r * 0.3, Math.max(0.6, r * 0.28), Math.max(0.6, r * 0.28), { ramp, tone: 'hi', clip: clip ?? part, keep: true });
+}
+
+/** Los míticos esconden el `torso` de la geometría común bajo otra pieza: su cuerpo es la curva. */
+const hidden = (x: number, y: number): E => [x, y, 2.5, 2.5];
+
+/** Pelusa: banda con el borde de abajo dentado (collar, pechera, melena corta). */
+function fluff(g: Grid, part: number, role: 'belly' | 'trait' | 'skin' | 'mark' | 'accent' | 'body', x0: number, x1: number, y: number, h: number, teeth: number): void {
+  const pts: [number, number][] = [[x0, y - h * 0.5], [x1, y - h * 0.5]];
+  for (let i = teeth; i >= 0; i--) pts.push([x0 + ((x1 - x0) * i) / teeth, y + (i % 2 ? h : h * 0.3)]);
+  g.poly(part, role, pts);
+}
+
+/** Bandas: rayas de otro papel de color dentro de una pieza (rayas atigradas). [x, y, largo, grados]. */
+const bands = (g: Grid, clip: number, role: 'mark' | 'accent' | 'belly' | 'trait', pts: [number, number, number, number][], w = 0.9) =>
+  pts.forEach(([x, y, len, deg]) => g.ellipse(clip, role, x, y, len, w, { flat: true, clip, keep: true, rot: deg }));
+
+/** Anillo con punto central: el emblema de las etapas finales. */
+function ring(g: Grid, clip: number, role: 'mark' | 'accent' | 'trait', x: number, y: number, r: number, inner: 'belly' | 'skin' | 'body' = 'belly'): void {
+  g.ellipse(clip, role, x, y, r, r, { flat: true, clip, keep: true });
+  g.ellipse(clip, inner, x, y, r - 1.1, r - 1.1, { flat: true, clip, keep: true });
+  g.ellipse(clip, role, x, y, 0.9, 0.9, { flat: true, clip, keep: true });
+}
+
+/** Garras: `n` púas cortas hacia abajo y adelante desde (x, y). */
+const claws = (g: Grid, part: number, x: number, y: number, n: number, role: 'accent' | 'mark' = 'accent', len = 2.4) => {
+  for (let i = 0; i < n; i++) spike(g, part + i, role, x + i * 1.9, y, len, 262 - i * 14, 0.9);
+};
+
+/** Esquirlas sueltas alrededor del cuerpo: el aura de una etapa final. [x, y, tamaño, grados]. */
+const shards = (g: Grid, part: number, role: 'trait' | 'accent' | 'belly', pts: [number, number, number, number][]) =>
+  pts.forEach(([x, y, sz, deg], i) => g.with(rotateAt(deg, x, y), () => g.poly(part + i, role, [[x, y - sz], [x + sz * 0.6, y], [x, y + sz], [x - sz * 0.6, y]])));
+
+/** Mechón o tentáculo blando: tubo que siempre dibuja una curva, con la punta más fina. */
+const strand = (g: Grid, part: number, role: 'body' | 'skin' | 'trait' | 'accent' | 'mark', pts: P3[], o: TubeOpts = {}) => tube(g, part, role, pts, o);
+
 // ───────────────────────── Ignisaurio (fuego) ─────────────────────────
 // Rasgo icónico: la llama de la cola. Segundo rasgo: las púas del lomo.
 
@@ -162,8 +311,8 @@ function flame(g: Grid, part: number, x: number, y: number, w: number, h: number
   if (w >= 5) g.ellipse(part, 'belly', x + 0.3, y - h * 0.22, w * 0.22, h * 0.2, { flat: true, clip: part, keep: true, tone: 'shade' });
 }
 
-const spikes = (g: Grid, pts: [number, number, number][]) =>
-  pts.forEach(([x, y, r]) => g.poly(11, 'mark', [[x + r, y - r * 0.6], [x - r * 1.3, y - r * 0.3], [x + r * 0.8, y + r]], { flat: true }));
+const spikes = (g: Grid, pts: [number, number, number][], role: 'mark' | 'accent' = 'mark') =>
+  pts.forEach(([x, y, r]) => g.poly(11, role, [[x + r, y - r * 0.6], [x - r * 1.3, y - r * 0.3], [x + r * 0.8, y + r]], { flat: true }));
 
 const IGNISAUR: PixelSpecies = {
   id: 'ignisaur',
@@ -191,8 +340,11 @@ const IGNISAUR: PixelSpecies = {
       },
       marks: { torso: BASE.adult.marks!.torso },
       onHead: (g) => {
-        g.ellipse(5, 'mark', 23, 18.5, 2.6, 3, { flat: true });
-        g.ellipse(3, 'mark', 41, 19, 2.3, 2.6, { flat: true });
+        g.texture(4, TEX.scales(4), 'body');
+        g.texture(10, TEX.scales(4), 'body');
+        [42, 45.5, 49, 52].forEach((y) => g.ellipse(4, 'belly', 34, y, 7, 0.6, { clip: 4, keep: true, tone: 'shade' }));
+        spike(g, 5, 'mark', 23, 20, 4.5, 112, 1.9);
+        spike(g, 3, 'mark', 41, 20.5, 4, 66, 1.7);
       },
     }),
     final: stage('final', {
@@ -201,12 +353,16 @@ const IGNISAUR: PixelSpecies = {
           g.ellipse(1, 'body', 11.5, 49.5, 7.5, 5);
           appendage(g, p, 7, 46, () => flame(g, 12, 6.5, 46.5, 10, 15));
         });
-        spikes(g, [[18, 17, 3], [16, 23.5, 3.2], [16, 30.5, 3], [14.5, 39.5, 3]]);
+        spikes(g, [[18, 17, 3.4], [16, 23.5, 3.6], [16, 30.5, 3.4], [14.5, 39.5, 3.4], [15, 45, 3]], 'accent');
       },
       marks: { torso: BASE.final.marks!.torso },
       onHead: (g, _s, p) => {
-        g.ellipse(5, 'mark', 22.5, 14.5, 3, 3.6, { flat: true });
-        g.ellipse(3, 'mark', 42.5, 15, 2.6, 3.2, { flat: true });
+        g.texture(4, TEX.scales(4), 'body');
+        g.texture(10, TEX.scales(4), 'body');
+        [41, 44.5, 48, 51.5].forEach((y) => g.ellipse(4, 'belly', 34.5, y, 8.5, 0.6, { clip: 4, keep: true, tone: 'shade' }));
+        // Material nuevo de la etapa final: cuernos en el acento.
+        spike(g, 5, 'accent', 22.5, 17, 6.5, 114, 2.3);
+        spike(g, 3, 'accent', 42.5, 17.5, 5.8, 64, 2.1);
         // Accesorio de etapa final: cresta de fuego.
         appendage(g, p, 32, 13, () => flame(g, 6, 32, 13.5, 6, 5.5));
       },
@@ -258,6 +414,7 @@ const AXOLUNAR: PixelSpecies = {
         });
         appendage(g, p, 17, 28, () => { gill(g, 5, 18, 23.5, 7.5, 45); gill(g, 5, 16.5, 28.5, 8, 10); gill(g, 5, 18, 33.5, 7, -25); });
         appendage(g, p, 47.5, 28, () => { gill(g, 3, 46.5, 24, 5.5, 135); gill(g, 3, 47.5, 28.5, 6, 172); gill(g, 3, 46.5, 33, 5, 205); });
+        g.dim(3);
       },
     }),
     final: stage('final', {
@@ -272,8 +429,9 @@ const AXOLUNAR: PixelSpecies = {
           g.ellipse(1, 'trait', 5.5, 48, 4, 7, { flat: true, rot: 20 });
           g.ellipse(9, 'trait', 12, 45.5, 5, 2.2, { flat: true, rot: -12 });
         });
-        appendage(g, p, 17, 24, () => { gill(g, 5, 18.5, 19, 9.5, 48, true); gill(g, 5, 16.5, 24.5, 10.5, 12, true); gill(g, 5, 18, 30, 9, -22, true); });
-        appendage(g, p, 48.5, 24, () => { gill(g, 3, 47.5, 19.5, 7, 132, true); gill(g, 3, 48.5, 24.5, 7.5, 170, true); gill(g, 3, 47.5, 29.5, 6.5, 205, true); });
+        appendage(g, p, 17, 24, () => { fan(g, 5, 18.5, 19, [[11.5, 48]], 2.3); fan(g, 6, 16.5, 24.5, [[12.5, 12]], 2.4); fan(g, 7, 18, 30, [[11, -22]], 2.3); });
+        appendage(g, p, 48.5, 24, () => { fan(g, 30, 47.5, 19.5, [[8.5, 132]], 2); fan(g, 31, 48.5, 24.5, [[9, 170]], 2.1); fan(g, 32, 47.5, 29.5, [[8, 205]], 2); });
+        g.dim(500, 510, 520);
       },
       onHead: (g, _s, p) =>
         // Accesorio de etapa final: media luna sobre la cabeza.
@@ -291,6 +449,8 @@ const AXOLUNAR: PixelSpecies = {
 const leaf = (g: Grid, part: number, x: number, y: number, len: number, deg: number) => {
   const r = (deg * Math.PI) / 180;
   g.ellipse(part, 'trait', x - (Math.cos(r) * len) / 2, y - (Math.sin(r) * len) / 2, len / 2 + 0.5, Math.max(1.5, len * 0.3), { rot: deg });
+  // Nervio central: trazo interior de la base a la punta.
+  if (len >= 6) g.ink(part, [[x - Math.cos(r) * 1, y - Math.sin(r) * 1], [x - Math.cos(r) * (len - 1.5), y - Math.sin(r) * (len - 1.5)]]);
 };
 
 const collar = (g: Grid, pts: [number, number, number][]) => pts.forEach(([x, y, r]) => g.ellipse(13, 'trait', x, y, r, r * 0.8, { flat: true }));
@@ -326,7 +486,7 @@ const FLORABUD: PixelSpecies = {
         tail(g, p, 17, 50, () => { leaf(g, 1, 17, 51, 12, 18); leaf(g, 9, 16, 46, 10, 48); leaf(g, 9, 17.5, 41.5, 7, 80); });
         // Accesorio de etapa final: corona de pétalos alrededor de la cabeza.
         appendage(g, p, 32.5, 14, () =>
-          [[18.5, 18, 4], [23.5, 13.5, 4], [31, 11.5, 4.2], [39, 12.5, 4], [45, 16.5, 3.8]].forEach(([x, y, r]) => g.ellipse(6, 'trait', x, y, r, r, { flat: true })),
+          fan(g, 6, 32.5, 24, [[19, 150], [18, 120], [17.5, 90], [18, 60], [19, 30]], 3.4),
         );
       },
       onHead: (g, _s, p) => {
@@ -338,7 +498,9 @@ const FLORABUD: PixelSpecies = {
 };
 
 // ───────────────────────── Livolt (eléctrico, raro) ─────────────────────────
-// Rasgo icónico: las alas con la marca de corazón. Segundo rasgo: las antenas en zigzag.
+// Polilla. Rasgo icónico: las alas con la marca de corazón. Segundo rasgo: las antenas en zigzag.
+// Las marcas son su reloj: lisa de cría, vientre claro, rayas en el abdomen y, al final, rayas por
+// todo el cuerpo, collar de pelusa oscuro y alas con ocelos.
 
 /** Ala: lóbulo girado que sale de la espalda. `heart` le pinta la marca de corazón. */
 function wing(g: Grid, part: number, x: number, y: number, rx: number, ry: number, deg: number, heart = false): void {
@@ -354,12 +516,15 @@ function wing(g: Grid, part: number, x: number, y: number, rx: number, ry: numbe
 /** Antena recta con bolita, o en forma de rayo en la etapa final. */
 function antenna(g: Grid, part: number, x: number, y: number, len: number, lean: number, bolt = false): void {
   if (bolt) {
-    g.poly(part, 'mark', [[x - 1, y], [x + lean * 0.5 - 1.5, y - len * 0.5], [x + lean * 0.5 + 0.5, y - len * 0.5], [x + lean - 1, y - len], [x + lean + 2, y - len * 0.4], [x + lean * 0.5 + 1, y - len * 0.4], [x + 1.5, y]], { flat: true });
+    g.poly(part, 'accent', [[x - 1, y], [x + lean * 0.5 - 1.5, y - len * 0.5], [x + lean * 0.5 + 0.5, y - len * 0.5], [x + lean - 1, y - len], [x + lean + 2, y - len * 0.4], [x + lean * 0.5 + 1, y - len * 0.4], [x + 1.5, y]], { flat: true });
     return;
   }
   g.poly(part, 'mark', [[x - 0.9, y], [x + 0.9, y], [x + lean + 0.9, y - len], [x + lean - 0.9, y - len]], { flat: true });
   g.ellipse(part, 'trait', x + lean, y - len, 1.7, 1.7, { flat: true });
 }
+
+/** Rayas del abdomen: bandas horizontales oscuras sobre el torso. */
+const mothStripes = (g: Grid, ys: number[], cx: number, half: number) => bands(g, 4, 'mark', ys.map((y) => [cx, y, half, 0] as [number, number, number, number]), 1);
 
 const LIVOLT: PixelSpecies = {
   id: 'livolt',
@@ -368,6 +533,7 @@ const LIVOLT: PixelSpecies = {
       behind: (g, _s, p) => {
         appendage(g, p, 20, 46, () => wing(g, 20, 17.5, 45, 4.5, 3.6, -20));
         appendage(g, p, 44, 46, () => wing(g, 21, 45.5, 45.5, 3.5, 3, 20));
+        g.dim(21);
       },
       onHead: (g, _s, p) => appendage(g, p, 31, 40, () => { antenna(g, 22, 28.5, 40, 3, -1); antenna(g, 23, 34.5, 40, 3, 1); }),
     }),
@@ -375,35 +541,54 @@ const LIVOLT: PixelSpecies = {
       behind: (g, _s, p) => {
         appendage(g, p, 18, 42, () => wing(g, 20, 12.5, 39, 8, 6, -25));
         appendage(g, p, 45, 42, () => wing(g, 21, 48.5, 40, 5, 5.5, 25));
+        g.dim(21);
       },
-      onHead: (g, _s, p) => appendage(g, p, 31, 32, () => { antenna(g, 22, 27.5, 32.5, 5, -2); antenna(g, 23, 35, 32.5, 5, 2); }),
+      onHead: (g, _s, p) => {
+        mothStripes(g, [52.5], 31, 9);
+        appendage(g, p, 31, 32, () => { antenna(g, 22, 27.5, 32.5, 5, -2); antenna(g, 23, 35, 32.5, 5, 2); });
+      },
     }),
     adult: lowered('adult', 5, {
       belly: [34, 50, 7.5, 5],
       behind: (g, _s, p) => {
         appendage(g, p, 18, 40, () => { wing(g, 20, 11.5, 33.5, 9.5, 7.5, -28, true); wing(g, 24, 12.5, 45, 7, 5.5, 20); });
         appendage(g, p, 46, 40, () => { wing(g, 21, 50.5, 34.5, 6, 7, 28); wing(g, 25, 50, 45, 4.5, 4.5, -20); });
+        g.dim(21, 25);
+        g.ink(20, [[18, 38], [6, 30]]);
+        g.ink(24, [[18, 43], [8, 47]]);
       },
       onHead: (g, _s, p) => {
-        // Collar de pelusa en el cuello.
-        g.ellipse(13, 'belly', 32, 44.5, 9.5, 3, { flat: true });
+        mothStripes(g, [47, 51.5, 55.5], 29, 11);
+        // Collar de pelusa: separa la cabeza del cuerpo con un borde dentado.
+        fluff(g, 13, 'belly', 22.5, 42, 43.5, 2.8, 6);
         appendage(g, p, 32, 22, () => { antenna(g, 22, 27, 22.5, 6, -3); antenna(g, 23, 37, 22.5, 6, 3); });
       },
     }),
+    // Cambia de registro: rayas por todo el cuerpo, collar y antenas en el acento, alas con ocelos.
     final: lowered('final', 5, {
       belly: [34.5, 50, 8.5, 5.5],
-      emblem: [34.5, 50, 2, 2],
+      emblem: undefined,
       behind: (g, _s, p) => {
         appendage(g, p, 18, 37, () => {
           wing(g, 20, 10.5, 27.5, 9.5, 8.5, -30, true);
           wing(g, 24, 10.5, 42.5, 8, 6, 22);
-          // Colas de ala: la pieza nueva de la etapa final.
+          ring(g, 24, 'mark', 10, 42.5, 2.6, 'trait');
           g.poly(26, 'trait', [[6, 46], [11, 46.5], [5.5, 55]], { flat: true });
         });
-        appendage(g, p, 47, 37, () => { wing(g, 21, 52.5, 29, 6.5, 8, 30); wing(g, 25, 53, 42, 5, 5, -22); g.poly(27, 'trait', [[52, 45.5], [56.5, 45], [57, 53]], { flat: true }); });
+        appendage(g, p, 47, 37, () => {
+          wing(g, 21, 52.5, 29, 6.5, 8, 30);
+          wing(g, 25, 53, 42, 5, 5, -22);
+          g.poly(27, 'trait', [[52, 45.5], [56.5, 45], [57, 53]], { flat: true });
+        });
+        g.dim(21, 25, 27);
+        g.ink(20, [[18, 34], [4, 24]]);
+        g.ink(20, [[18, 32], [9, 20]]);
+        g.ink(24, [[18, 41], [4, 46]]);
       },
       onHead: (g, _s, p) => {
-        g.ellipse(13, 'belly', 32.5, 40.5, 10.5, 3.2, { flat: true });
+        mothStripes(g, [43.5, 47, 50.5, 54, 57], 28, 13);
+        bands(g, 10, 'mark', [[24.5, 20, 4.5, 20], [22.5, 24.5, 4, 8], [22.5, 29, 3.6, -6]], 1);
+        fluff(g, 13, 'accent', 20.5, 44.5, 39.5, 3.8, 8);
         appendage(g, p, 32.5, 18, () => { antenna(g, 22, 27, 18.5, 9.5, -4, true); antenna(g, 23, 38, 18.5, 9.5, 2, true); });
       },
     }),
@@ -411,87 +596,118 @@ const LIVOLT: PixelSpecies = {
 };
 
 // ───────────────────────── Inktopus (sombra, raro) ─────────────────────────
-// Rasgo icónico: los tentáculos que gotean tinta. Segundo rasgo: el manto en punta, como una capucha.
+// Pulpo: cuerpo blando. Rasgo icónico: los tentáculos, gruesos, curvos y con la punta enroscada
+// (nunca rectos: rectos parecía una araña). Segundo rasgo: el manto en cúpula, con sus marcas.
 
-/** Tentáculo: lóbulo que sale de la base del cuerpo, con la punta enroscada. */
-function tentacle(g: Grid, part: number, x: number, y: number, len: number, deg: number, drip = false): void {
-  const r = (deg * Math.PI) / 180;
-  const ex = x + Math.cos(r) * len;
-  const ey = y + Math.sin(r) * len;
-  g.ellipse(part, 'body', (x + ex) / 2, (y + ey) / 2, len / 2 + 1, 2.3, { rot: deg });
-  g.ellipse(part, 'body', ex, ey - 1.2, 2.2, 2.2);
-  if (drip) g.ellipse(part + 40, 'mark', ex, ey + 3.2, 1.3, 1.9, { flat: true });
+type Arm = P3[];
+const mirrored = (a: Arm): Arm => a.map(([x, y, r]) => [65 - x, y, r]);
+
+/** Tentáculos de un lado y su espejo. `from` es el primer número de pieza; `lit` les pone ventosas. */
+function tentacles(g: Grid, from: number, arms: Arm[], suckers = false): void {
+  arms.forEach((a, i) => {
+    [a, mirrored(a)].forEach((pts, k) => {
+      const part = from + i * 2 + k;
+      strand(g, part, 'body', pts, suckers ? { belly: [k ? -0.1 : 0.1, 0.55], bellyRole: 'belly' } : {});
+    });
+  });
 }
 
-/** Punta del manto: convierte la cabeza redonda en capucha. */
+/** Punta del manto: convierte la cabeza redonda en gota. */
 const hood = (g: Grid, part: number, x: number, base: number, w: number, h: number) =>
   g.poly(part, 'body', [[x - w, base], [x - w * 0.35, base - h * 0.75], [x + 0.5, base - h], [x + w * 0.5, base - h * 0.7], [x + w, base]], { keep: true });
+
+const SOFT = { feet: undefined, arm: undefined, farArm: undefined, marks: undefined, emblem: undefined };
 
 const INKTOPUS: PixelSpecies = {
   id: 'inktopus',
   stages: {
+    // Gota recién caída: cúpula blanda con cuatro muñones ondulados.
     baby: stage('baby', {
-      feet: { near: [37, 58, 4, 1.9], far: [26.5, 57.8, 3.6, 1.8] },
-      behind: (g) => { tentacle(g, 25, 21, 55, 4, 165); tentacle(g, 26, 43, 55.5, 3.5, 15); },
-      onHead: (g) => hood(g, 4, 31, 41.5, 6, 6.5),
+      ...SOFT,
+      torso: [32.5, 48.5, 11, 9.5],
+      eye: { ...BASE.baby.eye, y: 44, x1: 30, x2: 38 },
+      cheek: [26, 51],
+      behind: (g) => tentacles(g, 25, [[[25, 55, 2.3], [20.5, 57.6, 1.9], [17.5, 56.4, 1.3]], [[29, 56.6, 2.2], [27, 58.2, 1.6], [24.5, 58, 1.1]]]),
+      onHead: (g) => hood(g, 4, 32.5, 41.5, 5.5, 4.5),
     }),
+    // Manto alargado, vientre claro y seis tentáculos que se abren a los lados.
     juvenile: stage('juvenile', {
-      arm: undefined,
-      farArm: undefined,
-      feet: { near: [37.5, 57.8, 5.5, 2.3], far: [25, 57.5, 4.8, 2.2] },
-      behind: (g, _s, p) => {
-        tail(g, p, 19, 53, () => tentacle(g, 25, 19.5, 53, 7.5, 170, true));
-        tentacle(g, 26, 44, 53.5, 6, 12);
-        tentacle(g, 27, 19, 48, 5.5, 200);
+      ...SOFT,
+      torso: [32.5, 40.5, 11, 12],
+      belly: [33, 47.5, 5.2, 4.2],
+      eye: { ...BASE.juvenile.eye, y: 37, x1: 28, x2: 37 },
+      neck: [32.5, 46.5],
+      back: [22, 41],
+      behind: (g) => {
+        tentacles(g, 25, [
+          [[25, 49, 2.6], [18, 53, 2.4], [12.5, 52, 1.9], [11, 48.5, 1.4]],
+          [[27, 52, 2.6], [21, 57, 2.3], [15.5, 57.8, 1.7]],
+        ]);
+        g.dim(25, 26);
       },
-      onHead: (g) => hood(g, 4, 31, 31.5, 7.5, 6.5),
+      front: (g) => tentacles(g, 40, [[[30, 54, 2.5], [28, 57.6, 2.1], [24.5, 58.2, 1.5]]]),
     }),
+    // Cabeza en cúpula con marcas en la frente, abdomen con círculo claro y ocho tentáculos largos.
     adult: stage('adult', {
-      head: [32, 29, 14, 12.5],
-      torso: [30.5, 48, 12, 8.5],
-      arm: undefined,
-      farArm: undefined,
-      belly: [34, 50, 6.5, 4.5],
-      feet: { near: [37.5, 57.8, 6, 2.4], far: [25, 57.5, 5.2, 2.3] },
-      behind: (g, _s, p) => {
-        tail(g, p, 19, 53, () => { tentacle(g, 25, 19, 53.5, 9.5, 172, true); tentacle(g, 27, 18.5, 48.5, 8, 205); });
-        tentacle(g, 26, 43.5, 54, 8, 10, true);
-        tentacle(g, 28, 44, 49, 6.5, -25);
+      ...SOFT,
+      head: [32.5, 28, 12.5, 11.5],
+      torso: [32.5, 46, 10, 8.5],
+      belly: [33, 47, 5, 4.5],
+      eye: { ...BASE.adult.eye, y: 26, x1: 27, x2: 38, style: 'lid' },
+      neck: [32.5, 39],
+      back: [21, 44],
+      behind: (g) => {
+        tentacles(g, 25, [
+          [[24, 45, 3], [16, 48, 2.8], [9.5, 46, 2.2], [7.5, 41.5, 1.6]],
+          [[25, 50, 3], [17, 55, 2.7], [10, 56.5, 2.1], [6, 54, 1.5]],
+        ]);
+        g.dim(25, 26);
       },
-      onHead: (g) => hood(g, 10, 32, 20, 8.5, 5),
+      onHead: (g) => bands(g, 10, 'mark', [[32.5, 19.5, 3.2, 0], [28, 22, 2.2, 28], [37, 22, 2.2, -28]], 1),
+      front: (g) => tentacles(g, 40, [
+        [[28, 53, 2.9], [23, 57.4, 2.5], [17, 58, 1.8]],
+        [[31, 54, 2.6], [29.5, 57.8, 2.2], [26, 58.3, 1.5]],
+      ]),
     }),
+    // Pulpo abisal: tres crestas en el acento, marcas tribales, anillo en el abdomen y ventosas.
     final: stage('final', {
-      head: [32.5, 26.5, 15, 13],
-      torso: [30.5, 47.5, 13, 9],
-      arm: undefined,
-      farArm: undefined,
-      belly: [34.5, 49.5, 7.5, 5],
-      emblem: [34.5, 49.5, 1.8, 1.8],
-      feet: { near: [38, 57.8, 6.5, 2.5], far: [24.5, 57.5, 5.6, 2.4] },
+      ...SOFT,
+      head: [32.5, 24.5, 14, 12.5],
+      torso: [32.5, 45, 11.5, 9.5],
+      belly: [33, 46, 5.6, 5],
+      eye: { ...BASE.final.eye, y: 23, x1: 27, x2: 38, style: 'lid' },
+      brow: true,
+      neck: [32.5, 37],
+      back: [20, 42],
       behind: (g, _s, p) => {
-        tail(g, p, 19, 53, () => {
-          tentacle(g, 25, 18.5, 54, 11.5, 174, true);
-          tentacle(g, 27, 18, 49, 10.5, 200, true);
-          tentacle(g, 29, 19.5, 44, 8, 225);
+        tentacles(g, 25, [
+          [[23, 43, 3.3], [14, 45, 3], [7, 42, 2.4], [5.5, 36.5, 1.7]],
+          [[24, 49, 3.3], [15, 54, 3], [7.5, 55.5, 2.3], [3.5, 52, 1.6]],
+        ], true);
+        g.dim(25, 26);
+        // Material nuevo de la etapa final: tres crestas cartilaginosas en el acento.
+        appendage(g, p, 32.5, 14, () => {
+          spike(g, 50, 'accent', 25.5, 15, 5, 112, 2);
+          spike(g, 51, 'accent', 32.5, 12.5, 6, 90, 2.2);
+          spike(g, 52, 'accent', 39.5, 15, 5, 68, 2);
         });
-        tentacle(g, 26, 43.5, 54.5, 10, 8, true);
-        tentacle(g, 28, 44.5, 49.5, 9, -20, true);
-        tentacle(g, 30, 44, 44.5, 6.5, -45);
       },
-      onHead: (g, _s, p) => {
-        hood(g, 10, 32.5, 17, 9, 3.2);
-        // Accesorio de etapa final: corona de gotas de tinta suspendidas.
-        appendage(g, p, 32.5, 9, () => [[23.5, 14.5, 1.4], [32.5, 11.4, 1.7], [41.5, 14.5, 1.4]].forEach(([x, y, r]) => {
-          g.ellipse(6, 'mark', x, y, r, r * 1.25, { flat: true });
-          g.poly(6, 'mark', [[x - r * 0.8, y - r * 0.6], [x + r * 0.8, y - r * 0.6], [x, y - r * 2.3]], { flat: true });
-        }));
+      onHead: (g) => {
+        bands(g, 10, 'mark', [[32.5, 16, 4, 0], [27, 18.5, 2.8, 30], [38, 18.5, 2.8, -30], [24, 22.5, 2, 55], [41, 22.5, 2, -55]], 1);
+        ring(g, 4, 'mark', 33, 46, 4.4);
       },
+      front: (g) => tentacles(g, 40, [
+        [[27, 53, 3.2], [21, 57.2, 2.7], [13.5, 57.8, 2]],
+        [[30.5, 54.5, 2.8], [29, 57.6, 2.3], [25, 58.2, 1.6]],
+      ], true),
     }),
   },
 };
 
 // ───────────────────────── Solarejo (luz, raro) ─────────────────────────
-// Rasgo icónico: las orejas largas con la punta encendida. Segundo rasgo: la cola de pompón luminoso.
+// Conejo con proporción de conejo: grupa pesada, pecho estrecho y orejas largas. Rasgo icónico: las
+// orejas de punta encendida. Segundo rasgo: la cola de pompón. Las marcas son su reloj: liso de
+// cría, vientre de color, rayas atigradas en el acento y, al final, rayas por todo el cuerpo.
 
 /** Oreja: lóbulo del color del cuerpo con el interior claro y la punta encendida. */
 function ear(g: Grid, part: number, x: number, y: number, len: number, deg: number, w = 2.6): void {
@@ -505,36 +721,97 @@ function ear(g: Grid, part: number, x: number, y: number, len: number, deg: numb
 
 const pompom = (g: Grid, x: number, y: number, r: number) => g.ellipse(1, 'trait', x, y, r, r);
 
+/** Anca: el muslo grande del conejo, por delante del cuerpo. */
+const haunch = (g: Grid, x: number, y: number, rx: number, ry: number) => g.ellipse(17, 'skin', x, y, rx, ry);
+
 const SOLAREJO: PixelSpecies = {
   id: 'solarejo',
   stages: {
+    // Bolita que aún no salta: orejas cortas y pompón.
     baby: lowered('baby', 4, {
+      behind: (g, _s, p) => tail(g, p, 20, 52, () => pompom(g, 18.5, 52, 2.6)),
       onHead: (g, _s, p) => appendage(g, p, 31, 42, () => { ear(g, 23, 27.5, 43, 5.5, 80, 2); ear(g, 24, 35, 43, 5, 100, 1.8); }),
     }),
-    juvenile: lowered('juvenile', 6, {
-      belly: [35, 50, 7, 5],
-      behind: (g, _s, p) => tail(g, p, 19, 52, () => pompom(g, 16.5, 52, 3.4)),
-      onHead: (g, _s, p) => appendage(g, p, 31, 35, () => { ear(g, 23, 26.5, 35.5, 10, 82, 2.4); ear(g, 24, 35.5, 35.5, 9, 98, 2.1); }),
-    }),
-    adult: lowered('adult', 7, {
-      belly: [34, 51.5, 7, 4],
-      behind: (g, _s, p) => tail(g, p, 18, 52, () => pompom(g, 14.5, 52, 4.3)),
-      onHead: (g, _s, p) => appendage(g, p, 32, 25, () => { ear(g, 23, 26, 25.5, 10, 78, 2.8); ear(g, 24, 38, 25.5, 9, 104, 2.5); }),
-    }),
-    final: lowered('final', 7, {
-      belly: [34.5, 51, 8, 4.5],
-      emblem: [34.5, 51, 1.8, 1.8],
+    // Se pone de pie: cabeza aparte, vientre de color, ancas y orejas ya largas.
+    juvenile: stage('juvenile', {
+      torso: [30.5, 49, 9.5, 9],
+      head: [33, 38.5, 8.5, 7.5],
+      belly: [32.5, 50.5, 5.6, 6],
+      arm: [41, 47.5, 2.2, 3],
+      farArm: undefined,
+      feet: { near: [35.5, 57.8, 4, 2.2], far: [26.5, 57.4, 3.4, 2] },
+      eye: { ...BASE.juvenile.eye, y: 36, x1: 29, x2: 38 },
+      neck: [32.5, 45],
+      back: [21, 47],
       behind: (g, _s, p) => {
-        tail(g, p, 17, 51, () => { pompom(g, 13, 51.5, 5); pompom(g, 10, 46.5, 2.6); });
-        // Accesorio de etapa final: rayos de sol detrás de la cabeza.
-        appendage(g, p, 32.5, 30, () =>
-          [[15.5, 31, 198], [16.5, 23.5, 215], [49.5, 23.5, 325], [50.5, 31, 342]].forEach(([x, y, deg]) => {
-            const a = (deg * Math.PI) / 180;
-            g.poly(6, 'trait', [[x - Math.sin(a) * 1.8, y + Math.cos(a) * 1.8], [x + Math.sin(a) * 1.8, y - Math.cos(a) * 1.8], [x + Math.cos(a) * 5, y + Math.sin(a) * 5]], { flat: true });
-          }),
+        tail(g, p, 20, 53, () => pompom(g, 17.5, 53, 3.4));
+        appendage(g, p, 32, 32, () => { ear(g, 23, 28.5, 32.5, 6.6, 84, 2.2); ear(g, 24, 37, 32.5, 6.2, 98, 2); });
+        g.dim(24);
+      },
+      front: (g) => haunch(g, 24.5, 53.5, 4.8, 4.2),
+    }),
+    // Conejo robusto con rayas atigradas en el lomo y la cabeza.
+    adult: stage('adult', {
+      torso: [30.5, 48, 11, 10],
+      head: [33, 33, 10, 9],
+      belly: [32.5, 50, 6.6, 7],
+      arm: [42.5, 46, 2.5, 3.6],
+      farArm: undefined,
+      marks: undefined,
+      boots: true,
+      feet: { near: [36, 57.8, 4.6, 2.3], far: [26, 57.4, 3.8, 2.1] },
+      eye: { ...BASE.adult.eye, y: 30, x1: 28, x2: 39 },
+      neck: [32.5, 41],
+      back: [19.5, 45],
+      behind: (g, _s, p) => {
+        tail(g, p, 19, 53, () => pompom(g, 15.5, 53, 4.2));
+        appendage(g, p, 32.5, 25, () => { ear(g, 23, 28, 25.5, 10.5, 82, 2.7); ear(g, 24, 38, 25.5, 9.5, 100, 2.4); });
+        g.dim(24);
+      },
+      onHead: (g) => {
+        bands(g, 4, 'accent', [[22, 42.5, 3, 30], [20.5, 46.5, 3.2, 12], [20.5, 51, 3, -5]], 1);
+        bands(g, 10, 'accent', [[25.5, 27.5, 2.6, 40], [24, 31.5, 2.4, 15]], 1);
+      },
+      front: (g) => {
+        haunch(g, 23.5, 53, 6, 5);
+        bands(g, 17, 'accent', [[21.5, 51, 2.6, 25], [22.5, 54.5, 2.4, 5]], 1);
+      },
+    }),
+    // Liebre mística: rayas por todo el cuerpo, pechera de pelusa, anillo en el vientre y esquirlas.
+    final: stage('final', {
+      torso: [30.5, 46.5, 12.5, 11],
+      head: [33, 28, 11, 9.5],
+      belly: [32.5, 50, 7.6, 7.2],
+      emblem: undefined,
+      marks: undefined,
+      arm: [44, 45, 2.8, 4],
+      farArm: undefined,
+      boots: true,
+      brow: true,
+      feet: { near: [36.5, 57.8, 5, 2.4], far: [25.5, 57.4, 4.2, 2.2] },
+      eye: { ...BASE.final.eye, y: 25.5, x1: 28, x2: 39 },
+      neck: [32.5, 37],
+      back: [18.5, 43],
+      behind: (g, _s, p) => {
+        tail(g, p, 18, 52, () => { pompom(g, 14, 52.5, 4.8); pompom(g, 11, 47.5, 2.6); });
+        appendage(g, p, 32.5, 20, () => { ear(g, 23, 27.5, 20.5, 13, 80, 3); ear(g, 24, 38.5, 20.5, 12, 102, 2.7); });
+        g.dim(24);
+        // Aura de la etapa final: esquirlas de luz alrededor de la cabeza y los hombros.
+        appendage(g, p, 32.5, 26, () =>
+          shards(g, 60, 'trait', [[15.5, 24, 2.2, -20], [12, 33, 1.8, 15], [51, 23, 2.2, 20], [54.5, 32, 1.8, -15], [20, 15, 1.7, -30], [46.5, 14.5, 1.7, 30]]),
         );
       },
-      onHead: (g, _s, p) => appendage(g, p, 32.5, 21, () => { ear(g, 23, 26, 21.5, 14.5, 76, 3); ear(g, 24, 39, 21.5, 13.5, 106, 2.7); }),
+      onHead: (g) => {
+        bands(g, 4, 'accent', [[21.5, 40, 3.2, 35], [19.5, 44, 3.6, 18], [19, 48.5, 3.6, 4], [20.5, 53, 3, -10]], 1);
+        bands(g, 10, 'accent', [[25, 22, 3, 42], [23, 26, 2.8, 20], [23, 30.5, 2.4, 0]], 1);
+        ring(g, 4, 'accent', 32.5, 50.5, 3.2);
+        // Pechera de pelusa entre la cabeza y el cuerpo.
+        fluff(g, 13, 'skin', 24.5, 42.5, 37.2, 3.2, 6);
+      },
+      front: (g) => {
+        haunch(g, 22.5, 52.5, 7, 5.8);
+        bands(g, 17, 'accent', [[20, 50, 3, 28], [21, 53.5, 3, 8], [23.5, 56.5, 2.4, -8]], 1);
+      },
     }),
   },
 };
@@ -628,6 +905,7 @@ const MAGMADILLO: PixelSpecies = {
       },
       onHead: (g, s) => {
         plates(g, s.torso, [15, 22, 29], [17.5, 24.5, 32]);
+        g.texture(4, TEX.scales(4), 'body');
         g.ellipse(10, 'mark', 46, 32.5, 6, 2.6, { flat: true, clip: 10, keep: true });
       },
       front: (g, _s, p) => hindNear(g, p, [20, 57.5, 4.2, 2.8]),
@@ -647,9 +925,9 @@ const MAGMADILLO: PixelSpecies = {
           appendage(g, p, 3, 48, () => flame(g, 12, 3.5, 48.5, 6, 8));
         });
         // Accesorio de etapa final: tres chimeneas encendidas, la central más alta.
-        g.poly(15, 'mark', [[11, 34], [14.5, 25], [18, 25], [20, 32]]);
-        g.poly(17, 'mark', [[20.5, 30], [24, 18.5], [29, 18.5], [32, 29]]);
-        g.poly(18, 'mark', [[32, 31], [34.5, 23.5], [38, 23.5], [40, 33]]);
+        g.poly(15, 'accent', [[11, 34], [14.5, 25], [18, 25], [20, 32]]);
+        g.poly(17, 'accent', [[20.5, 30], [24, 18.5], [29, 18.5], [32, 29]]);
+        g.poly(18, 'accent', [[32, 31], [34.5, 23.5], [38, 23.5], [40, 33]]);
         appendage(g, p, 26.5, 19, () => flame(g, 6, 26.5, 19.5, 6, 8));
         appendage(g, p, 16, 25, () => flame(g, 19, 16.2, 25.5, 4, 4.5));
         appendage(g, p, 36, 24, () => flame(g, 20, 36.2, 24, 4, 4.5));
@@ -659,8 +937,9 @@ const MAGMADILLO: PixelSpecies = {
       },
       onHead: (g, s) => {
         plates(g, s.torso, [13, 20, 27, 34], [15.5, 22.5, 29.5, 36]);
+        g.texture(4, TEX.scales(4), 'body');
         g.ellipse(10, 'mark', 46.5, 30, 7, 2.8, { flat: true, clip: 10, keep: true });
-        g.poly(21, 'mark', [[45, 30], [48, 22.5], [50.5, 30]], { flat: true });
+        g.poly(21, 'accent', [[45, 30], [48, 22.5], [50.5, 30]], { flat: true });
       },
       front: (g, _s, p) => hindNear(g, p, [19, 57.5, 4.8, 2.9], true),
     }),
@@ -769,7 +1048,8 @@ const NUBEBALLENA: PixelSpecies = {
         [[13.5, 31.5, 3.2], [18, 27, 3.6], [24, 24.5, 3.2], [45.5, 28.5, 2.6]].forEach(([x, y, r]) => g.ellipse(6, 'trait', x, y, r, r));
       },
       onHead: (g, _s, p) => {
-        dots(g, [[19, 33.5, 1.4], [25, 29.5, 1.2], [16.5, 39.5, 1.2], [30, 28, 1], [22, 38.5, 0.9]]);
+        dots(g, [[30, 28, 1], [22, 38.5, 0.9]]);
+        [[19, 33.5, 1.7], [25, 29.5, 1.5], [16.5, 39.5, 1.5]].forEach(([x, y, r]) => glow(g, 4, x, y, r, PEARL, 4));
         g.ellipse(4, 'mark', 15.5, 44.5, 3.2, 1.1, { flat: true, clip: 4, keep: true });
         g.ellipse(4, 'mark', 17.5, 48.5, 3, 1.1, { flat: true, clip: 4, keep: true });
         grooves(g, [[40, 46.5, 9], [41, 49, 8], [42, 51, 6]]);
@@ -790,12 +1070,12 @@ const NUBEBALLENA: PixelSpecies = {
 // icónico: las púas, que dentan la silueta. Segundo rasgo: la flor, ladeada en lo alto.
 
 /** Púas: triángulos que salen del cuerpo en un ángulo (grados, 0 = derecha, 90 = abajo). */
-const thorns = (g: Grid, pts: [number, number, number][], len = 3) =>
+const thorns = (g: Grid, pts: [number, number, number][], len = 3, role: 'mark' | 'accent' = 'mark') =>
   pts.forEach(([x, y, deg]) => {
     const a = (deg * Math.PI) / 180;
     const c = Math.cos(a);
     const s = Math.sin(a);
-    g.poly(11, 'mark', [[x - s * 1.3, y + c * 1.3], [x + s * 1.3, y - c * 1.3], [x + c * len, y + s * len]], { flat: true });
+    g.poly(11, role, [[x - s * 1.3, y + c * 1.3], [x + s * 1.3, y - c * 1.3], [x + c * len, y + s * len]], { flat: true });
   });
 
 /** Brazo de cactus: sale hacia un lado y dobla hacia arriba. Con la pieza del tronco, se funde con él. */
@@ -873,6 +1153,7 @@ const CACTUERNO: PixelSpecies = {
         appendage(g, p, 27, 22, () => flower(g, 27, 19.5, 3.4, true));
       },
       onHead: (g) => {
+        g.texture(4, TEX.stripes(5, 1, 0), 'body');
         snoutNose(g, 44.5, 38);
         g.ellipse(4, 'mark', 23.5, 42, 0.8, 12, { flat: true, clip: 4, keep: true });
         g.ellipse(4, 'mark', 27, 47, 0.7, 8, { flat: true, clip: 4, keep: true });
@@ -892,12 +1173,13 @@ const CACTUERNO: PixelSpecies = {
         cactusArm(g, 18.5, 34, -1, 6, 10, 3, 2.2);
         cactusArm(g, 45.5, 41, 1, 5.5, 8, 2.8, 2);
         cactusArm(g, 19, 48, -1, 4, 3.5, 2.2);
-        thorns(g, [[19, 24, 205], [22, 18.5, 235], [26.5, 15.5, 255], [42.5, 19, 310], [45.5, 25, 335], [18, 42, 185], [19.5, 54, 165], [17.5, 30, 195]], 5);
+        thorns(g, [[19, 24, 205], [22, 18.5, 235], [26.5, 15.5, 255], [42.5, 19, 310], [45.5, 25, 335], [18, 42, 185], [19.5, 54, 165], [17.5, 30, 195]], 5.5, 'accent');
         snoutBack(g, 46, 33);
         // Accesorio de etapa final: flor grande en corona, ladeada para dejar sitio al gorro.
         appendage(g, p, 37, 16, () => flower(g, 37.5, 12.5, 4.2, true));
       },
       onHead: (g) => {
+        g.texture(4, TEX.stripes(5, 1, 0), 'body');
         snoutNose(g, 46, 33);
         g.ellipse(4, 'mark', 22.5, 38, 0.9, 15, { flat: true, clip: 4, keep: true });
         g.ellipse(4, 'mark', 26, 45, 0.8, 11, { flat: true, clip: 4, keep: true });
@@ -931,6 +1213,9 @@ function feather(g: Grid, part: number, x: number, y: number, len: number, deg: 
   const ny = dx;
   const at = (t: number, k: number): [number, number] => [x + dx * len * t + nx * w * k, y + dy * len * t + ny * w * k];
   g.poly(part, 'trait', [at(0, 0.45), at(0.4, 1), at(0.75, 0.7), at(1, 0), at(0.75, -0.7), at(0.4, -1), at(0, -0.45)]);
+  // Degradado: la base de la pluma arde más oscura y la punta queda clara.
+  g.poly(part, 'trait', [at(0, 0.45), at(0.46, 1), at(0.46, -1), at(0, -0.45)], { clip: part, keep: true, tone: 'shade' });
+  g.poly(part, 'trait', [at(0, 0.45), at(0.2, 0.8), at(0.2, -0.8), at(0, -0.45)], { clip: part, keep: true, tone: 'deep' });
 }
 
 /**
@@ -949,8 +1234,8 @@ function fan(g: Grid, part: number, x: number, y: number, feathers: [number, num
 /** Pata de ave: caña fina y garra oscura; da el paso con la pose. */
 function talon(g: Grid, part: number, p: Pose, x: number, top: number, phase: number, far: boolean): void {
   const t = step(p, [x + 0.8, 58, 2.6, 1.5], phase);
-  g.poly(part, 'belly', [[x - 0.9, top], [x + 0.9, top], [t[0] + 0.1, t[1]], [t[0] - 1.7, t[1]]], far ? { flat: true, tone: 'shade' } : { flat: true });
-  g.ellipse(part, 'mark', t[0], t[1], t[2], t[3], { flat: true });
+  g.poly(part, 'accent', [[x - 0.9, top], [x + 0.9, top], [t[0] + 0.1, t[1]], [t[0] - 1.7, t[1]]], far ? { flat: true, tone: 'shade' } : { flat: true });
+  g.ellipse(part, 'accent', t[0], t[1], t[2], t[3], far ? { flat: true, tone: 'shade' } : { flat: true });
 }
 
 /** Cuello largo de fénix: se funde con el cuerpo (pieza 4) y sube hasta la cabeza. */
@@ -1013,6 +1298,7 @@ const FENIXEL: PixelSpecies = {
         talon(g, 2, p, 26, 50, -p.leg, true);
       },
       onHead: (g, s, p) => {
+        g.texture(4, TEX.scales(3), 'body');
         beak(g, s.eye, 1.1);
         appendage(g, p, 35.5, 21, () => fan(g, 5, 35.5, 21.5, [[9, 42], [8, 20], [7, 66]], 1.7));
       },
@@ -1024,7 +1310,8 @@ const FENIXEL: PixelSpecies = {
       torso: [28.5, 43.5, 10, 8],
       head: [39, 22.5, 8.5, 8],
       belly: [30.5, 46, 6.5, 5],
-      emblem: [30.5, 46, 1.8, 1.8],
+      emblem: undefined,
+      brow: true,
       eye: { ...BASE.final.eye, y: 19, x1: 35, x2: 43, w1: 4, w2: 3, h: 5, style: 'almond' },
       neck: [36, 34],
       back: [19, 41],
@@ -1037,6 +1324,10 @@ const FENIXEL: PixelSpecies = {
         talon(g, 2, p, 26, 50, -p.leg, true);
       },
       onHead: (g, s, p) => {
+        g.texture(4, TEX.scales(3), 'body');
+        // Lomo oscuro y emblema en anillo: la etapa final cambia de registro.
+        g.ellipse(4, 'mark', 23, 40, 6.5, 3.2, { flat: true, clip: 4, keep: true });
+        ring(g, 4, 'mark', 30.5, 46.2, 2.7);
         beak(g, s.eye, 1.2);
         appendage(g, p, 36, 16, () => fan(g, 5, 36, 16.5, [[12, 38], [11, 18], [9, 60], [7, 82]], 1.9));
       },
@@ -1168,11 +1459,14 @@ const CERBITO: PixelSpecies = {
         tail(g, p, 17, 51, () => { shadowTail(g, 25, 17, 50, 12, 50, 2.3); shadowTail(g, 26, 17, 52, 11, 20, 2.2); shadowTail(g, 27, 17, 54, 9, -8, 2); });
         sideHead(g, 36, -1, 21, 30.5, 8, 7.5, true, 4.5);
         sideHead(g, 39, 1, 48, 31, 7.5, 7, true, 4.2);
+        g.dim(36, 37, 38, 39, 40, 41);
         sharpEar(g, 22, 27.5, 22.5, 5, 6, -1);
         sharpEar(g, 23, 41.5, 22.5, 4.6, 5.5, 1);
       },
       onHead: (g, s) => {
         g.ellipse(10, 'mark', 34.5, 21.5, 3.2, 1.6, { flat: true, clip: 10, keep: true });
+        g.texture(4, TEX.fur(4), 'body');
+        g.texture(10, TEX.fur(4), 'body');
         fangs(g, s.eye);
         spikedCollar(g, 26.5, 42.5, 40, 4);
       },
@@ -1197,17 +1491,23 @@ const CERBITO: PixelSpecies = {
         });
         sideHead(g, 36, -1, 20, 28.5, 9.5, 8.5, true, 6);
         sideHead(g, 39, 1, 50, 29.5, 9, 8, true, 5.5);
+        g.dim(36, 37, 38, 39, 40, 41);
         sharpEar(g, 22, 28, 20, 5.5, 8, -1.5);
         sharpEar(g, 23, 42.5, 20, 5, 7.5, 1.5);
       },
       onHead: (g, s) => {
         g.ellipse(10, 'mark', 35, 19, 3.6, 1.7, { flat: true, clip: 10, keep: true });
         g.ellipse(10, 'mark', 35, 22, 2, 1.2, { flat: true, clip: 10, keep: true });
+        g.texture(4, TEX.fur(4), 'body');
+        g.texture(10, TEX.fur(4), 'body');
         fangs(g, s.eye);
         spikedCollar(g, 26, 44, 38.5, 5);
         [[35, 43], [35, 46.2]].forEach(([x, y]) => g.ellipse(13, 'belly', x, y, 1.6, 1.6, { flat: true }));
       },
-      front: (g) => sitting(g, 37, 51.5, 6.5, 22, 52.5, 7.2),
+      front: (g) => {
+        sitting(g, 37, 51.5, 6.5, 22, 52.5, 7.2);
+        claws(g, 60, 35.2, 58.2, 3, 'accent', 1.8);
+      },
     }),
   },
 };
@@ -1220,7 +1520,10 @@ const CERBITO: PixelSpecies = {
 function longLeg(g: Grid, part: number, p: Pose, x: number, top: number, phase: number, far: boolean, dark = false): void {
   const f = step(p, [x, 57.7, 2, 1.5], phase);
   g.poly(part, 'skin', [[x - 1.3, top], [x + 1.3, top], [f[0] + 1.2, f[1]], [f[0] - 1.2, f[1]]], far ? { tone: 'shade' } : {});
-  g.ellipse(part, dark ? 'mark' : 'trait', f[0], f[1], f[2], f[3], { flat: true });
+  // Rodilla: un abultamiento a media pata, para que no sea un palo.
+  g.ellipse(part, 'skin', (x + f[0]) / 2 + 0.4, (top + f[1]) / 2 + 0.4, 1.8, 1.5, far ? { tone: 'shade' } : { flat: true });
+  g.ellipse(part, dark ? 'accent' : 'trait', f[0], f[1], f[2] + (dark ? 0.4 : 0), f[3], far ? { flat: true, tone: 'shade' } : { flat: true });
+  if (dark && !far) g.poly(part, 'trait', [[f[0] - 2, f[1] - 3.2], [f[0] + 1.6, f[1] - 3.2], [f[0] - 0.6, f[1] - 0.8]], { flat: true });
 }
 
 const horn = (g: Grid, x: number, y: number, len: number, lean = 0.5) =>
@@ -1229,7 +1532,8 @@ const horn = (g: Grid, x: number, y: number, len: number, lean = 0.5) =>
 /** Hocico de potro: alarga la cabeza hacia abajo a la derecha, sin línea de separación. */
 const muzzle = (g: Grid, h: E, k = 1) => g.ellipse(10, 'body', h[0] + h[2] * 0.42, h[1] + h[3] * 0.62, h[2] * 0.62 * k, h[3] * 0.6 * k, { keep: true });
 
-const mane = (g: Grid, part: number, pts: [number, number, number, number][]) => pts.forEach(([x, y, rx, ry]) => g.ellipse(part, 'trait', x, y, rx, ry));
+/** Crin: cada mechón es una pieza, así que el contorno los separa. */
+const mane = (g: Grid, part: number, pts: [number, number, number, number][]) => pts.forEach(([x, y, rx, ry], i) => g.ellipse(part * 10 + 300 + i, 'trait', x, y, rx, ry, { rot: -20 }));
 
 const FOAL = { feet: undefined, arm: undefined, farArm: undefined, belly: undefined, marks: undefined };
 
@@ -1310,26 +1614,28 @@ const KIRISOL: PixelSpecies = {
       ...FOAL,
       torso: [26, 41.5, 13.5, 8],
       head: [42.5, 22.5, 9.5, 8.5],
-      emblem: [24, 41.5, 2.2, 2.2],
+      emblem: undefined,
+      brow: true,
       eye: { ...BASE.final.eye, y: 20, x1: 36, x2: 47, style: 'lash' },
       neck: [37, 36.5],
       back: [17, 34.5],
       behind: (g, _s, p) => {
         tail(g, p, 14, 40, () => plumes(g, 12, 14, 40, [[13, -20], [12, -45], [10, -68]], true));
+        // Extremidad nueva de la etapa final: alas. El potro pasa a alicornio.
+        appendage(g, p, 24, 38, () => fan(g, 58, 23.5, 38, [[14, 62], [13.5, 44], [11.5, 26]], 2.4, 3));
         longLeg(g, 2, p, 18.5, 47, p.leg, true, true);
         longLeg(g, 3, p, 33, 47, -p.leg, true, true);
         g.poly(4, 'body', [[28, 38], [38.5, 45], [45, 30], [35.5, 24]]);
         // Accesorio de etapa final: la crin se alarga en una estela de luz.
         appendage(g, p, 31, 26, () => {
-          mane(g, 6, [[33, 19, 3, 4.5], [30.5, 25.5, 3, 5], [28.5, 32.5, 2.8, 4.5]]);
-          plumes(g, 6, 29.5, 24, [[12, -8], [10, -28]], true);
+          mane(g, 6, [[33.5, 18.5, 2.6, 4.2], [31.5, 24.5, 2.6, 4.6], [30, 31, 2.4, 4.2]]);
         });
         pointEar(g, 22, 38, 16, 3.4, 5.5, -0.8);
         pointEar(g, 23, 48.5, 16, 3, 5, 0.8);
       },
       onHead: (g, s, p) => {
         muzzle(g, s.head!);
-        dots(g, [[19, 39, 1.1], [29.5, 44.5, 1], [17, 43.5, 0.9]]);
+        dots(g, [[19, 39, 1.5], [29.5, 44.5, 1.3], [17, 43.5, 1.2], [23, 45.5, 1.1], [31, 39.5, 1]]);
         appendage(g, p, 43.5, 15, () => horn(g, 43.5, 15, 8.5, 1.5));
       },
       front: (g, _s, p) => {
@@ -1339,124 +1645,6 @@ const KIRISOL: PixelSpecies = {
     }),
   },
 };
-
-// ───────────────────────── Míticos: técnica común ─────────────────────────
-// Los míticos no se construyen con dos elipses: su cuerpo es una curva lisa (`tube`) con sombreado
-// propio, vientre de placas y aletas a lo largo del lomo, y llevan brillos en color literal (perla,
-// faroles, núcleo) que no dependen de la paleta.
-
-type P3 = [number, number, number];
-
-/** Puntos de una curva suave (Catmull-Rom) por los puntos de control [x, y, radio]. */
-function samples(pts: P3[], stepPx = 1.1): P3[] {
-  const out: P3[] = [];
-  const at = (i: number) => pts[Math.max(0, Math.min(pts.length - 1, i))];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [p0, p1, p2, p3] = [at(i - 1), at(i), at(i + 1), at(i + 2)];
-    const n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / stepPx));
-    for (let k = 0; k < n; k++) {
-      const t = k / n;
-      const c = (a: number, b: number, cc: number, d: number) =>
-        0.5 * (2 * b + (-a + cc) * t + (2 * a - 5 * b + 4 * cc - d) * t * t + (-a + 3 * b - 3 * cc + d) * t * t * t);
-      out.push([c(p0[0], p1[0], p2[0], p3[0]), c(p0[1], p1[1], p2[1], p3[1]), p1[2] + (p2[2] - p1[2]) * t]);
-    }
-  }
-  out.push(pts[pts.length - 1]);
-  return out;
-}
-
-interface TubeOpts {
-  /** Todo el tubo en sombra: tramos que pasan por detrás. */
-  far?: boolean;
-  /** Franja de vientre, desplazada [dx, dy] radios desde el eje. */
-  belly?: [number, number];
-  /** Papel y tono de la franja de vientre (por defecto, secundario plano). */
-  bellyRole?: 'belly' | 'skin' | 'trait';
-  bellyTone?: 'light' | 'hi' | 'base';
-  /** Una placa cada `scutes` muestras. */
-  scutes?: number;
-}
-
-/** Cuerpo curvo liso: base, sombra abajo a la derecha, luz arriba a la izquierda y vientre de placas. */
-function tube(g: Grid, part: number, role: 'body' | 'skin' | 'trait', pts: P3[], o: TubeOpts = {}): void {
-  const S = samples(pts);
-  S.forEach(([x, y, r]) => g.ellipse(part, role, x, y, r, r, o.far ? { tone: 'shade' } : { flat: true }));
-  if (o.far) return;
-  S.forEach(([x, y, r]) => g.ellipse(part, role, x + r * 0.5, y + r * 0.62, r * 0.8, r * 0.8, { clip: part, keep: true, tone: 'shade' }));
-  S.forEach(([x, y, r]) => { if (r >= 2.4) g.ellipse(part, role, x - r * 0.42, y - r * 0.52, r * 0.4, r * 0.4, { clip: part, keep: true, tone: 'light' }); });
-  if (!o.belly) return;
-  const [bx, by] = o.belly;
-  const role2 = o.bellyRole ?? 'belly';
-  const tone2 = o.bellyTone ?? 'base';
-  S.forEach(([x, y, r]) => g.ellipse(part, role2, x + bx * r, y + by * r, r * 0.52, r * 0.52, { clip: part, keep: true, tone: tone2 }));
-  if (!o.scutes) return;
-  S.forEach(([x, y, r], i) => {
-    if (i % o.scutes! !== 0 || i === 0 || i >= S.length - 1) return;
-    const tx = S[i + 1][0] - S[i - 1][0];
-    const ty = S[i + 1][1] - S[i - 1][1];
-    const l = Math.hypot(tx, ty) || 1;
-    const nx = -ty / l;
-    const ny = tx / l;
-    const cx = x + bx * r;
-    const cy = y + by * r;
-    const h = r * 0.62;
-    g.poly(part, role2, [[cx - nx * h, cy - ny * h], [cx + nx * h, cy + ny * h], [cx + nx * h + tx / l * 0.9, cy + ny * h + ty / l * 0.9], [cx - nx * h + tx / l * 0.9, cy - ny * h + ty / l * 0.9]], { clip: part, keep: true, tone: 'shade' });
-  });
-}
-
-/** Aletas o púas a lo largo de una curva, por el lado `side` (1 o -1), echadas hacia atrás. */
-function ridge(g: Grid, part: number, pts: P3[], every: number, h: number, side: 1 | -1, from = 2): void {
-  const S = samples(pts);
-  S.forEach(([x, y, r], i) => {
-    if (i < from || i >= S.length - 2 || (i - from) % every !== 0) return;
-    const tx = S[i + 1][0] - S[i - 1][0];
-    const ty = S[i + 1][1] - S[i - 1][1];
-    const l = Math.hypot(tx, ty) || 1;
-    const ux = tx / l;
-    const uy = ty / l;
-    const nx = -uy * side;
-    const ny = ux * side;
-    const b = r - 0.8;
-    g.poly(part + (i % 7), 'trait', [[x - ux * 1.7 + nx * b, y - uy * 1.7 + ny * b], [x + ux * 1.7 + nx * b, y + uy * 1.7 + ny * b], [x - ux * 2.2 + nx * (r + h), y - uy * 2.2 + ny * (r + h)]]);
-  });
-}
-
-/** Púa o cuerno recto y afilado (grados como `gill`: 0 = izquierda, 90 = arriba). */
-function spike(g: Grid, part: number, role: 'trait' | 'mark' | 'skin', x: number, y: number, len: number, deg: number, w: number): void {
-  const r = (deg * Math.PI) / 180;
-  const dx = -Math.cos(r);
-  const dy = -Math.sin(r);
-  g.poly(part, role, [[x - dy * w, y + dx * w], [x + dy * w, y - dx * w], [x + dx * len, y + dy * len]]);
-}
-
-/** Cuerno curvo: dos tramos que se doblan hacia atrás. */
-function curvedHorn(g: Grid, part: number, x: number, y: number, len: number, deg: number, bend: number, w: number): void {
-  const r = (deg * Math.PI) / 180;
-  const mx = x - Math.cos(r) * len * 0.55;
-  const my = y - Math.sin(r) * len * 0.55;
-  spike(g, part, 'trait', mx, my, len * 0.6, deg + bend, w * 0.75);
-  g.poly(part, 'trait', [[x + Math.sin(r) * w, y - Math.cos(r) * w], [x - Math.sin(r) * w, y + Math.cos(r) * w], [mx - Math.sin(r) * w * 0.75, my + Math.cos(r) * w * 0.75], [mx + Math.sin(r) * w * 0.75, my - Math.cos(r) * w * 0.75]]);
-}
-
-/** Hocico: alarga la cabeza hacia delante y abajo, sin línea de separación. */
-const snout = (g: Grid, h: E, k = 1) => g.ellipse(10, 'body', h[0] + h[2] * 0.62, h[1] + h[3] * 0.42, h[2] * 0.62 * k, h[3] * 0.56 * k, { keep: true });
-
-/** Rampas literales: brillos que no pasan por la paleta de la mascota. */
-const glowRamp = (line: string, shade: string, base: string, light: string) => ({ line: hex(line), shade: hex(shade), base: hex(base), light: hex(light), hi: hex('#ffffff') });
-const PEARL = glowRamp('#3b4a7a', '#bcd3ee', '#eef6ff', '#ffffff');
-const EMBER_GLOW = glowRamp('#7a4a12', '#f4b942', '#ffe08a', '#fff6cf');
-const PULSE = glowRamp('#1c6f86', '#7de8f7', '#d6fbff', '#ffffff');
-
-/** Punto de luz con su halo: núcleo literal sobre un cerco del secundario. */
-function glow(g: Grid, part: number, x: number, y: number, r: number, ramp: ReturnType<typeof glowRamp>, clip?: number): void {
-  const o = clip === undefined ? {} : { clip, keep: true };
-  g.ellipse(part, 'belly', x, y, r, r, { flat: true, ...o });
-  g.ellipse(part, 'belly', x - r * 0.1, y - r * 0.1, r * 0.62, r * 0.62, { ramp, tone: 'base', clip: clip ?? part, keep: true });
-  g.ellipse(part, 'belly', x - r * 0.3, y - r * 0.3, Math.max(0.6, r * 0.28), Math.max(0.6, r * 0.28), { ramp, tone: 'hi', clip: clip ?? part, keep: true });
-}
-
-/** Los míticos esconden el `torso` de la geometría común bajo otra pieza: su cuerpo es la curva. */
-const hidden = (x: number, y: number): E => [x, y, 2.5, 2.5];
 
 // ───────────────────────── Leviatín (agua, mítico) ─────────────────────────
 // Plan corporal: SERPENTINO. Sin patas ni brazos: un cuerpo de anillos con vientre de placas que se
@@ -1534,13 +1722,13 @@ const LEVIATIN: PixelSpecies = {
         const tailc: P3[] = [[5, 32, 1.3], [9.5, 37, 2.2], [14, 44, 3.1], [12, 51.5, 3.9], [17, 54.8, 4.3]];
         const ground: P3[] = [[15, 54.6, 4.3], [23, 55, 4.6], [33, 54.6, 4.8], [40.5, 52, 4.8]];
         const neck: P3[] = [[39.5, 52.5, 4.8], [43.5, 47, 4.7], [42.5, 41.5, 4.5], [38.5, 37, 4.3], [38, 31.5, 4.1], [42, 27, 3.9]];
-        appendage(g, p, 5, 32, () => plumes(g, 12, 5.5, 32, [[7.5, 62], [7.5, 92], [6, 122]], true));
+        appendage(g, p, 5, 32, () => fan(g, 12, 5.5, 33, [[9, 62], [9.5, 92], [8, 122]], 2.2));
         ridge(g, 60, tailc, 5, 2.2, -1, 4);
         tube(g, 42, 'body', tailc);
         tube(g, 4, 'body', ground, { belly: [0.05, 0.55], scutes: 3 });
         ridge(g, 70, neck, 5, 2.6, -1, 4);
         tube(g, 41, 'body', neck, { belly: [0.5, 0.2], scutes: 3 });
-        appendage(g, p, 40.5, 26, () => plumes(g, 5, 40.5, 26, [[8.5, 12], [7.5, -16], [5.5, -42]], true));
+        appendage(g, p, 40.5, 26, () => fan(g, 5, 40.5, 26, [[10, 14], [9, -14], [7, -40]], 2.1));
         curvedHorn(g, 22, 43, 20.5, 6.5, 48, -22, 1.3);
         curvedHorn(g, 24, 46.6, 19.8, 5.8, 68, -22, 1.2);
       },
@@ -1557,7 +1745,7 @@ const LEVIATIN: PixelSpecies = {
       ...SERPENT,
       torso: hidden(45.5, 18),
       head: [45.5, 17.6, 8.4, 6.4],
-      eye: { y: 14.5, h: 5, x1: 43.5, w1: 3, x2: 49.5, w2: 2, glint: 1, gap: 1, style: 'slit' },
+      eye: { y: 14.5, h: 5, x1: 43.5, w1: 3, x2: 49.5, w2: 2, glint: 1, gap: 1, style: 'fierce' },
       brow: true,
       neck: [40.5, 24.5],
       back: [21, 47],
@@ -1566,18 +1754,22 @@ const LEVIATIN: PixelSpecies = {
         const tailc: P3[] = [[4.5, 25, 1.4], [9.5, 31, 2.4], [14.5, 40, 3.4], [11.5, 49, 4.4], [16.5, 53.6, 4.8]];
         const ground: P3[] = [[14, 53.8, 4.8], [22, 54.2, 5.2], [33, 54, 5.4], [41, 51.4, 5.4]];
         const neck: P3[] = [[40, 51.6, 5.4], [44.5, 46.5, 5.3], [43.5, 40, 5.1], [37.5, 35, 4.9], [35.5, 28.5, 4.7], [39.5, 22.5, 4.5], [44, 19.5, 4.2]];
-        appendage(g, p, 4.5, 25, () => plumes(g, 12, 5.5, 25, [[9.5, 60], [9.5, 86], [8.5, 112], [7, 138]], true));
+        appendage(g, p, 4.5, 25, () => fan(g, 12, 5.5, 26, [[11, 58], [11.5, 84], [10, 110], [8, 136]], 2.5));
+        // Material nuevo de la etapa final: caparazón en el acento, con trama de escamas.
         ridge(g, 80, hump, 4, 2.8, -1, 2);
-        tube(g, 40, 'body', hump);
+        tube(g, 40, 'accent', hump);
+        g.texture(40, TEX.scales(4));
         ridge(g, 60, tailc, 5, 2.6, -1, 4);
         tube(g, 42, 'body', tailc, { belly: [0.5, 0.1] });
         tube(g, 4, 'body', ground, { belly: [0.05, 0.55], scutes: 3 });
         ridge(g, 70, neck, 5, 3, -1, 4);
         tube(g, 41, 'body', neck, { belly: [0.5, 0.2], scutes: 3 });
+        g.texture(41, TEX.scales(3), 'body');
+        g.texture(4, TEX.scales(3), 'body');
         // Accesorio de etapa final: melena de velos tras la cabeza y cuernos curvos sobre la perla.
-        appendage(g, p, 39.5, 19.5, () => plumes(g, 5, 39.5, 19.5, [[11, 14], [10, -12], [8, -38], [6, -62]], true));
-        curvedHorn(g, 22, 42.5, 13.8, 7.8, 40, -22, 1.5);
-        curvedHorn(g, 24, 46.5, 13, 6.6, 62, -22, 1.4);
+        appendage(g, p, 39.5, 19.5, () => fan(g, 5, 39.5, 19.5, [[13, 16], [12, -10], [10, -36], [8, -60]], 2.4));
+        curvedHorn(g, 22, 42.5, 13.8, 7.8, 40, -22, 1.6, 'accent');
+        curvedHorn(g, 24, 46.5, 13, 6.6, 62, -22, 1.5, 'accent');
       },
       onHead: (g, s) => {
         snout(g, s.head!, 1.15);
@@ -1688,6 +1880,7 @@ const YGGDRITO: PixelSpecies = {
       onHead: (g, s) => {
         bark(g, s.torso, [[25.5, 50, 4]]);
         canopy(g, [[29.5, 29.4, 5.5, 3.4], [38, 30.6, 4.5, 3]], [[28, 29, 4, 2], [37, 31, 3, 1.6]], [[27, 37, 5, 1.8], [38, 37, 4, 1.6]], [[26.5, 28.2]]);
+        g.texture(10, TEX.leaves(5));
       },
     }),
     // Árbol joven: copa ancha por capas, ramas que la sostienen, barba corta y raíces abiertas.
@@ -1716,6 +1909,8 @@ const YGGDRITO: PixelSpecies = {
           [[25, 32, 6, 2.2], [39, 32, 6, 2.2], [47.5, 31.5, 3, 1.8], [16.5, 31, 2.8, 1.6]],
           [[22.5, 18.6], [37, 18.2], [29.5, 23.4]],
         );
+        g.texture(10, TEX.leaves(6));
+        g.texture(4, TEX.bark(4), 'trait');
         beard(g, 31.5, 51, 3.6, 5);
       },
     }),
@@ -1754,6 +1949,8 @@ const YGGDRITO: PixelSpecies = {
           [[22, 28.5, 7, 2.6], [41.5, 28.5, 7, 2.6], [51.5, 28, 3.6, 2.2], [12.5, 28, 3.2, 2], [31, 26, 5, 1.8]],
           [[19, 10.4], [38, 9.8], [28.5, 15], [12, 20.6]],
         );
+        g.texture(10, TEX.leaves(7));
+        g.texture(4, TEX.bark(4), 'trait');
         brows(g, s.eye);
         beard(g, 31.5, 49.5, 4.6, 8.6);
         // Runa encendida en el tronco.
@@ -1901,7 +2098,10 @@ const PRIMPULSO: PixelSpecies = {
         snout(g, s.head!);
         pulseCore(g, 4, 33.5, 43.5, 1.6);
       },
-      front: (g) => hindLeg(g, 27, 50.5, 4.6, 5.8),
+      front: (g) => {
+        hindLeg(g, 27, 50.5, 4.6, 5.8);
+        claws(g, 61, 31.5, 58.4, 3, 'accent', 2);
+      },
     }),
     // Dragón de pulso: dos alas de rayo desplegadas, cuernos altos, núcleo encendido y cola de hoja.
     final: stage('final', {
@@ -1917,7 +2117,9 @@ const PRIMPULSO: PixelSpecies = {
       behind: (g, _s, p) => {
         const body: P3[] = [[23, 50.5, 5.4], [27, 46.5, 6.2], [31.5, 41.5, 6], [35.5, 35, 4.4], [38.5, 28.5, 3.7], [42, 23.5, 3.5]];
         // Accesorio de etapa final: las dos alas de rayo, más altas que la cabeza.
-        appendage(g, p, 34, 37, () => dragonWing(g, 54, [35, 39], [46.5, 35], [[59.5, 27], [61, 36], [56.5, 44]], [47, 43.5], true));
+        appendage(g, p, 34, 37, () => dragonWing(g, 54, [35, 39], [46.5, 35], [[59.5, 27], [61, 36], [56.5, 44]], [47, 43.5]));
+        g.dim(54, 55);
+        g.dim(54, 55);
         tail(g, p, 23.5, 50.5, () => {
           bolt(g, 12, 8.5, 48, 6.5, 35, 2.5);
           bolt(g, 13, 8.5, 48, 5, -5, 2);
@@ -1929,7 +2131,11 @@ const PRIMPULSO: PixelSpecies = {
         });
         ridge(g, 70, body, 5, 3, -1, 3);
         tube(g, 4, 'body', body, { belly: [0.5, 0.3], bellyRole: 'skin', bellyTone: 'light', scutes: 3 });
+        g.texture(4, TEX.scales(3), 'body');
         tube(g, 8, 'skin', [[34, 42.5, 1.9], [38.5, 45, 1.6], [41, 43.5, 1.2]]);
+        // Material nuevo de la etapa final: segundo par de cuernos, en el acento.
+        spike(g, 56, 'accent', 40, 19.5, 7.5, 22, 1.5);
+        spike(g, 57, 'accent', 47.5, 18, 6, 96, 1.4);
         appendage(g, p, 43, 15.5, () => { bolt(g, 22, 41, 17, 11, 48, 2.5); bolt(g, 23, 45, 16, 10, 68, 2.3); });
       },
       onHead: (g, s) => {
@@ -1937,7 +2143,11 @@ const PRIMPULSO: PixelSpecies = {
         g.ellipse(10, 'mark', 43.5, 16, 4.6, 1.2, { flat: true, clip: 10, keep: true });
         pulseCore(g, 4, 34, 41.5, 2.1);
       },
-      front: (g) => hindLeg(g, 27, 50, 5, 6.2),
+      front: (g) => {
+        hindLeg(g, 27, 50, 5, 6.2);
+        claws(g, 61, 32, 58.4, 3, 'accent', 2.2);
+        claws(g, 64, 40.5, 44.5, 2, 'accent', 1.6);
+      },
     }),
   },
 };

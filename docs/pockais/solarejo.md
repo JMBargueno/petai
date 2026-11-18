@@ -40,7 +40,7 @@ Es sociable y cariñoso por encima de todo: el contrapunto luminoso del Inktopus
 | **Baby (1)** | Una bolita que aún no salta | Una bola aplastada, sin brazos ni cola | Dos orejas cortas | Sin barriga, mofletes, ojos enormes |
 | **Juvenile (10)** | Primeros saltos | Cuerpo alargado con brazos | Orejas largas y cola de pompón | Barriga |
 | **Adult (25)** | Salta de sol a sol | Cabeza y torso separados | Orejas completas y pompón grande | Manchas en el lomo |
-| **Final (50, Piedra de Evolución)** | Lleva el amanecer consigo | Más ancho, con rayos de sol que rompen el contorno | Orejas muy largas, doble pompón y rayos de sol tras la cabeza, que leen el elemento | Franjas, emblema, mirada decidida |
+| **Final (50, Piedra de Evolución)** | Lleva el amanecer consigo | Liebre robusta de ancas grandes | Orejas muy largas, doble pompón, pechera de pelusa y esquirlas de luz flotando, que leen el elemento | Rayas atigradas por todo el cuerpo, anillo en el vientre, ceja |
 
 **No cambia:** el pelaje crema, la forma del ojo, las orejas saliendo de lo alto de la cabeza y el pompón.
 
@@ -54,7 +54,7 @@ Es sociable y cariñoso por encima de todo: el contrapunto luminoso del Inktopus
 ## Brief de arte
 Pixel art en 3/4. Cuerpo en primario; interior y punta de las orejas, barriga, pompón y rayos en secundario; manchas y franjas en primario oscurecido. Las orejas laten con los apéndices y el pompón gira con la cola.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Tiene proporción de conejo (ancas, pecho estrecho). Las rayas atigradas van en el acento, que pasa a pizarra; la etapa final suma pechera de pelusa, anillo en el vientre y esquirlas de luz alrededor de la cabeza.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -68,6 +68,6 @@ Pixel art en 3/4. Cuerpo en primario; interior y punta de las orejas, barriga, p
   "favoriteFood": "dawn_honey",
   "spriteKey": "solarejo",
   "personalityBias": { "curiosity": 55, "sociability": 80, "bravery": 50, "affection": 75, "temper": 55 },
-  "defaultPalette": { "primary": "#F4F1DE", "secondary": "#E07A5F", "accent": "#F2CC8F" }
+  "defaultPalette": { "primary": "#F4F1DE", "secondary": "#E07A5F", "accent": "#7A7689" }
 }
 ```

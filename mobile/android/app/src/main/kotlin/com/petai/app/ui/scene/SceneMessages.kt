@@ -27,6 +27,11 @@ object SceneMessages {
             putJsonObject("palette") {
                 put("primary", pet.palette.primary)
                 put("secondary", pet.palette.secondary)
+                // Tercer color (cuernos, garras…). El blanco es el valor por defecto del modelo cuando
+                // la API no lo manda: en ese caso la escena deriva el acento del primario.
+                if (pet.palette.accent.isNotBlank() && !pet.palette.accent.equals("#FFFFFF", ignoreCase = true)) {
+                    put("accent", pet.palette.accent)
+                }
             }
             if (pet.pattern.id.isNotBlank() && pet.pattern.id != "plain") put("pattern", pet.pattern.id) else put("pattern", JsonNull)
             put("visualSeed", pet.visualSeed)

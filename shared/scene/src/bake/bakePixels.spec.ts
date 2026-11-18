@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { bakePixels, resolveBakeColors, type RgbaImage } from './bakePixels';
+import { bakePixels, resolveBakeColors, shadeShift, type RgbaImage } from './bakePixels';
 import { resolveClip, type AnimMetadata } from './anim';
-import { createMulberry32, deriveVisualTraits } from '../prng';
+import { createMulberry32, deriveVisualTraits, rgbToHsl } from '../prng';
 
 const img = (pixels: number[][]): RgbaImage => ({ width: pixels.length, height: 1, data: new Uint8ClampedArray(pixels.flat()) });
 const palette = { primary: '#ff0000', secondary: '#0000ff' };
@@ -20,9 +20,43 @@ describe('bakePixels', () => {
     expect(px(out, 0)).toEqual([10, 120, 230, 200]);
   });
 
-  it('multiplica el color del rol por el sombreado de base', () => {
+  it('multiplica el color del rol por el sombreado de base, con la sombra girada de tono', () => {
     const out = bakePixels(img([[128, 128, 128, 255]]), img([[255, 0, 0, 255]]), { palette, visualSeed: 7 });
-    expect(px(out, 0)).toEqual([...primary.map((c) => Math.round((c * 128) / 255)), 255]);
+    const shaded = shadeShift(primary[0], primary[1], primary[2], (239 - 128) / 239);
+    expect(px(out, 0)).toEqual([...shaded.map((c) => Math.round((c * 128) / 255)), 255]);
+  });
+
+  it('el tono base no gira: un gris claro solo multiplica', () => {
+    const out = bakePixels(img([[239, 239, 239, 255]]), img([[255, 0, 0, 255]]), { palette, visualSeed: 7 });
+    expect(px(out, 0)).toEqual([...primary.map((c) => Math.round((c * 239) / 255)), 255]);
+  });
+
+  it('un base.png con color propio multiplica sin girar', () => {
+    const out = bakePixels(img([[128, 100, 60, 255]]), img([[255, 0, 0, 255]]), { palette, visualSeed: 7 });
+    expect(px(out, 0)).toEqual([Math.round((primary[0] * 128) / 255), Math.round((primary[1] * 100) / 255), Math.round((primary[2] * 60) / 255), 255]);
+  });
+
+  it('la sombra gira hacia el violeta por el camino corto y gana saturación', () => {
+    const hue = (c: number[]) => rgbToHsl(c[0], c[1], c[2])[0];
+    // Amarillo (60°) → hacia el rojo; verde (120°) → hacia el azul; los grises no giran.
+    expect(hue(shadeShift(230, 200, 40, 0.6))).toBeLessThan(hue([230, 200, 40]));
+    expect(hue(shadeShift(60, 180, 90, 0.6))).toBeGreaterThan(hue([60, 180, 90]));
+    expect(shadeShift(120, 120, 120, 0.8)).toEqual([120, 120, 120]);
+    expect(rgbToHsl(...shadeShift(60, 180, 90, 0.6))[1]).toBeGreaterThan(rgbToHsl(60, 180, 90)[1]);
+  });
+
+  it('pinta el acento donde la máscara es azul puro, sin patrón', () => {
+    const pattern: RgbaImage = { width: 1, height: 1, data: new Uint8ClampedArray([255, 255, 255, 255]) };
+    const withAccent = { primary: '#ff0000', secondary: '#0000ff', accent: '#00ff00' };
+    const { accent } = resolveBakeColors({ palette: withAccent, visualSeed: 7 });
+    const out = bakePixels(img([[239, 239, 239, 255]]), img([[0, 0, 255, 255]]), { palette: withAccent, visualSeed: 7, pattern });
+    expect(px(out, 0)).toEqual([...accent.map((c) => Math.round((c * 239) / 255)), 255]);
+  });
+
+  it('sin acento en la paleta usa el primario oscurecido', () => {
+    const { accent } = resolveBakeColors({ palette, visualSeed: 7 });
+    const dark = resolveBakeColors({ palette: { ...palette, accent: '#6b0000' }, visualSeed: 7 }).accent;
+    expect(accent).toEqual(dark); // 255 × 0,42 = 107 = 0x6b
   });
 
   it('mezcla primario y secundario según R/G', () => {

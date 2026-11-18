@@ -55,7 +55,7 @@ Solemne y sereno: no se altera y no retrocede.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo en primario (lleva el patrón), dibujado como una curva lisa con su propia luz y sombra; vientre de placas, mandíbula, cresta, cuernos, velos, bigotes y cola en secundario; franja de la frente en primario oscurecido. La perla es un brillo en color literal: no cambia con la paleta. Los velos y la cola laten con los apéndices. No da pasos: se desliza.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Velos y cola acaban en punta, y la etapa final tiene mirada fiera, cuernos en el acento y un caparazón de escamas.
 
 ## Datos (`shared/game-data/species.json`)
 ```json

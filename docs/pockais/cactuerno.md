@@ -55,7 +55,7 @@ Reservado y con genio, pero con cariño de fondo: el clásico gruñón de buen c
 ## Brief de arte
 Pixel art en 3/4. Tronco y brazos en primario (llevan el patrón); barriga y flores en secundario; púas y costillas en primario oscurecido. La flor late con los apéndices. No tiene cola ni brazos móviles: los brazos de cactus son parte del tronco.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Costillas por todo el tronco y púas finales en el acento.
 
 ## Datos (`shared/game-data/species.json`)
 ```json

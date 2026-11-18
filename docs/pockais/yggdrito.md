@@ -55,7 +55,7 @@ El más sereno del catálogo: curioso por todo y sin ninguna prisa.
 ## Brief de arte
 Pixel art en 3/4. Copa, hojas y barba en primario (la copa lleva el patrón y va por capas: matas en luz arriba y en sombra abajo); tronco, ramas y raíces en secundario, con las raíces dibujadas como curvas lisas; capuchón de la bellota en primario oscurecido. Faroles y runa son brillos en color literal: no cambian con la paleta. Los faroles laten con los apéndices. No da pasos: las raíces se quedan en el suelo.
 
-**Estado del arte:** dibujado y revisado con la hoja de contactos.
+**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Copa con racimos de hojas y tronco con veta desde el plantón.
 
 ## Datos (`shared/game-data/species.json`)
 ```json

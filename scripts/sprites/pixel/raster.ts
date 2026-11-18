@@ -7,7 +7,7 @@
  *
  * La rejilla produce las dos hojas que hornean los clientes (`shared/scene/src/bake/bakePixels.ts`):
  *  - base: gris que multiplica al color (tono) o color literal;
- *  - mask: R = primario, G = secundario, B = zona de patrón; negro = "color literal".
+ *  - mask: R = primario, G = secundario, B = zona de patrón; azul puro = acento; negro = "color literal".
  * El tono de luz no puede salir de multiplicar (eso solo oscurece): se consigue sumando una parte
  * del secundario en la máscara, que además gira la luz hacia el color cálido de la paleta.
  */
@@ -23,9 +23,11 @@ export type Role =
   | 'skin' // primario, sin patrón (cara y extremidades)
   | 'belly' // secundario
   | 'trait' // secundario con sombra propia (rasgo icónico)
-  | 'mark'; // primario oscurecido (manchas y franjas)
+  | 'mark' // primario oscurecido (manchas y franjas)
+  | 'accent'; // tercer color de la paleta (cuernos, garras, caparazones: lo que estrena la etapa final)
 
-export type Tone = 'line' | 'shade' | 'base' | 'light' | 'hi';
+/** Cinco tonos por material, más la línea. `deep` es la sombra profunda. */
+export type Tone = 'line' | 'deep' | 'shade' | 'base' | 'light' | 'hi';
 
 export type Rgb = [number, number, number];
 export const hex = (h: string): Rgb => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as Rgb;
@@ -79,8 +81,65 @@ interface Cell {
   ramp?: Ramp;
 }
 
-/** Colores literales por tono para piezas que no usan la paleta de la mascota. */
-export type Ramp = Record<Tone, Rgb>;
+/** Colores literales por tono para piezas que no usan la paleta de la mascota. Sin `deep`, usa `shade`. */
+export type Ramp = Record<Exclude<Tone, 'deep'>, Rgb> & { deep?: Rgb };
+
+/** Trama: dado un punto local de la pieza, oscurece (-1), aclara (1) o deja el píxel (0). */
+export type Texture = (u: number, v: number) => -1 | 0 | 1;
+
+const DARKER: Record<Tone, Tone> = { hi: 'light', light: 'base', base: 'shade', shade: 'deep', deep: 'deep', line: 'line' };
+const LIGHTER: Record<Tone, Tone> = { deep: 'shade', shade: 'base', base: 'light', light: 'hi', hi: 'hi', line: 'line' };
+
+const frac = (x: number, p: number) => ((x % p) + p) % p;
+const hash = (a: number, b: number) => {
+  const h = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return h - Math.floor(h);
+};
+
+/** Tramas de material listas para `Grid.texture`. Los tamaños van en px nativos. */
+export const TEX = {
+  /** Escamas: filas de arcos alternadas. */
+  scales: (size = 4): Texture => (u, v) => {
+    const row = Math.floor(v / size);
+    const du = frac(u + (row % 2 ? size / 2 : 0), size) - size / 2;
+    const dv = frac(v, size);
+    const d = Math.hypot(du, dv);
+    return d > size * 0.5 && d <= size * 0.5 + 0.9 && dv > size * 0.2 ? -1 : 0;
+  },
+  /** Corteza: vetas verticales onduladas, a tramos. */
+  bark: (period = 4): Texture => (u, v) => {
+    const w = u + Math.sin(v * 0.45) * 1.1;
+    const col = Math.floor(w / period);
+    if (frac(w, period) >= 1) return 0;
+    return hash(col, Math.floor(v / 5)) > 0.28 ? -1 : 0;
+  },
+  /** Hojas: racimos redondos con el borde de abajo en sombra y un punto de luz arriba. */
+  leaves: (size = 6): Texture => (u, v) => {
+    const gx = Math.floor(u / size);
+    const gy = Math.floor(v / size);
+    let best = 9;
+    let bx = 0;
+    let by = 0;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const cx = (gx + i + 0.2 + hash(gx + i, gy + j) * 0.6) * size;
+      const cy = (gy + j + 0.2 + hash(gy + j, gx + i) * 0.6) * size;
+      const d = Math.hypot(u - cx, v - cy) / size;
+      if (d < best) { best = d; bx = u - cx; by = v - cy; }
+    }
+    if (best > 0.4 && best < 0.58 && bx + by > 0) return -1;
+    if (best < 0.2 && bx + by < 0) return 1;
+    return 0;
+  },
+  /** Pelo: mechones cortos en diagonal. */
+  fur: (period = 4): Texture => (u, v) => (frac(u + v * 2, period) < 1 && hash(Math.floor(u / 3), Math.floor(v / 2)) > 0.45 ? -1 : 0),
+  /** Rayas: bandas de ancho `width` cada `period`, giradas `deg` grados (0 = verticales). */
+  stripes: (period = 6, width = 2, deg = 0): Texture => {
+    const r = (deg * Math.PI) / 180;
+    const c = Math.cos(r);
+    const s = Math.sin(r);
+    return (u, v) => (frac(u * c + v * s, period) < width ? -1 : 0);
+  },
+};
 
 export interface ShapeOpts {
   /** Sin sombreado: toda la pieza en el tono base. */
@@ -164,6 +223,7 @@ export class Grid {
           const t = ((px - cx) / hw) * LX + ((py - cy) / hh) * LY;
           if (o.hi && t > 0.86) tone = 'hi';
           else if (t > 0.42) tone = 'light';
+          else if (t < -0.82) tone = 'deep';
           else if (t < -0.4) tone = 'shade';
         }
         this.cells[i] = { part: o.keep && prev ? prev.part : part, role, tone, lit: null, ramp: o.ramp };
@@ -205,6 +265,49 @@ export class Grid {
       [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
       o,
     );
+  }
+
+  /**
+   * Trama de material sobre una pieza ya pintada: cambia el tono de sus píxeles según un patrón
+   * definido en coordenadas locales, así que la trama se mueve con la pieza y no «nada» al animar.
+   * `role` limita la trama a un papel de color (p. ej. solo el cuerpo, no el vientre).
+   */
+  texture(part: number, tex: Texture, role?: Role): void {
+    const inv = invert(this.m);
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        const c = this.cells[y * N + x];
+        if (!c || c.lit || c.ramp || c.part !== part || c.tone === 'line' || (role && c.role !== role)) continue;
+        const [u, v] = apply(inv, x + 0.5, y + 0.5);
+        const k = tex(u, v);
+        if (k < 0) c.tone = DARKER[c.tone];
+        else if (k > 0) c.tone = LIGHTER[c.tone];
+      }
+    }
+  }
+
+  /** Plano lejano: oscurece un paso las piezas que quedan detrás (ala, pata o aleta lejanas). */
+  dim(...parts: number[]): void {
+    for (const c of this.cells) if (c && !c.lit && !c.ramp && parts.includes(c.part)) c.tone = DARKER[c.tone];
+  }
+
+  /**
+   * Trazo interior: línea de 1 px por los puntos dados (coordenadas locales), solo sobre la pieza.
+   * Separa mechones, plumas o pliegues dentro de una misma pieza, en su oscuro teñido.
+   */
+  ink(part: number, pts: [number, number][]): void {
+    for (let k = 0; k < pts.length - 1; k++) {
+      const [ax, ay] = this.point(pts[k][0], pts[k][1]);
+      const [bx, by] = this.point(pts[k + 1][0], pts[k + 1][1]);
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(bx - ax), Math.abs(by - ay)) * 2));
+      for (let i = 0; i <= n; i++) {
+        const x = Math.floor(ax + ((bx - ax) * i) / n);
+        const y = Math.floor(ay + ((by - ay) * i) / n);
+        if (x < 0 || y < 0 || x >= N || y >= N) continue;
+        const c = this.cells[y * N + x];
+        if (c && !c.lit && c.part === part) c.tone = 'line';
+      }
+    }
   }
 
   /** Píxel de color literal en coordenadas de rejilla (ya transformadas). */
@@ -326,24 +429,29 @@ export class Grid {
 
 // Gris de base por tono. La línea queda por encima de 40 para que el horneado la multiplique por el
 // color (oscuro teñido) en lugar de copiarla como negro; la base, en 239 (≤ 240) por la misma regla.
-const GRAY: Record<Tone, number> = { line: 62, shade: 172, base: 239, light: 239, hi: 239 };
+const GRAY: Record<Tone, number> = { line: 62, deep: 124, shade: 172, base: 239, light: 239, hi: 239 };
 
 function cellColors(c: Cell): [Rgb, Rgb] {
   if (c.lit) return [c.lit, [0, 0, 0]];
-  if (c.ramp) return [c.ramp[c.tone], [0, 0, 0]];
+  if (c.ramp) return [c.ramp[c.tone] ?? c.ramp.shade, [0, 0, 0]];
   let g = GRAY[c.tone];
   let mask: Rgb;
   switch (c.role) {
     case 'belly':
       mask = [0, 255, 0];
       if (c.tone === 'shade') g = 200;
+      if (c.tone === 'deep') g = 160;
+      break;
+    case 'accent':
+      // Azul puro: ni primario ni secundario. El horneado lo pinta con el acento de la paleta.
+      mask = [0, 0, 255];
       break;
     case 'trait':
       mask = [0, 255, 0];
       break;
     case 'mark':
       mask = [255, 0, 0];
-      if (c.tone !== 'line') g = 128;
+      if (c.tone !== 'line') g = c.tone === 'deep' ? 96 : c.tone === 'light' || c.tone === 'hi' ? 150 : 128;
       break;
     case 'skin':
       mask = [255, c.tone === 'light' ? 64 : c.tone === 'hi' ? 128 : 0, 0];
