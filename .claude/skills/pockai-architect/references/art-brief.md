@@ -67,6 +67,10 @@ La hoja de contactos imprime la altura real de cada etapa: si se pasa, baja o ac
    - [ ] **La rareza se ve:** el nivel de detalle corresponde a su rareza (tabla «Cuanto más rara, más trabajada» de `pixel-style.md`). Un legendario impone por proporción; un mítico usa la técnica de míticos y llena el frame en su etapa final.
    - [ ] **La forma dice la edad:** la cría es redonda; las terminaciones de adult y final acaban en punta; cada etapa estrena dos o tres piezas; la final estrena un material o un oscuro que no había.
    - [ ] **La cara madura:** el ojo de la etapa final es más pequeño y duro que el de la cría, y su cabeza tiene hocico, mandíbula o cresta. Ninguna etapa final sonríe como una cría.
+   - [ ] **Proporción de animal:** se reconoce por la proporción del animal real (peso, cuello, patas), no solo por las orejas o las alas.
+   - [ ] **Blando y duro:** lo blando (tentáculos, colas, crines) dibuja una curva; lo duro (cuernos, garras) es recto. Ningún tentáculo ni mechón es una elipse recta.
+   - [ ] **Marcas que crecen:** liso, zona de color, patrón visible, patrón por todo el cuerpo con emblema. La etapa final se ve más oscura que la adulta.
+   - [ ] **¿Con qué se confunde?** Mira la hoja y di con qué otro animal se podría confundir cada etapa. Si hay respuesta, corrige (los tentáculos rectos del Inktopus lo hacían parecer una araña).
    - [ ] **Profundidad y trama** (legendarios y míticos): lo de detrás va más oscuro, cada extremidad tiene tramos y remate, y cada material lleva su trama.
    - [ ] **Anatomía con sentido:** ninguna pieza que el animal no tendría (pies en una ballena, brazos en un pulpo) y nada colgando bajo el cuerpo que se lea como pies.
    - [ ] **Misma especie:** misma paleta, misma forma de ojo y rasgo icónico en el mismo sitio en las cuatro.

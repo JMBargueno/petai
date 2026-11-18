@@ -1,8 +1,26 @@
 # Lecciones de diseño: del generador al objetivo
 
-En `examples/` hay tres pares de hojas. `<id>-generador.png` es lo que dibujó el generador procedural para los míticos; `<id>-objetivo.*` es el mismo sprite sheet rehecho por una IA de imagen a partir de él, y es **el nivel que el usuario quiere**. Antes de diseñar una especie legendaria o mítica, abre un par con Read y compáralo: lo que sigue es lo que cambia de una hoja a la otra.
+En `examples/` hay ocho pares de hojas. `<id>-generador.png` es lo que dibujó el generador procedural; `<id>-objetivo.*` es el mismo sprite sheet rehecho por una IA de imagen a partir de él, y es **el nivel que el usuario quiere**. `examples/prompts.md` guarda el prompt que dio cada hoja objetivo.
+
+| Par | Rareza | Qué enseña sobre todo |
+|---|---|---|
+| `livolt` | rara | Rayas que crecen por etapa, collar de pelusa, alas con dibujo y una etapa final más oscura y rica |
+| `inktopus` | rara | Cuerpo blando: tentáculos gruesos, curvos y ondulados, nunca rectos |
+| `solarejo` | rara | Proporción de conejo de verdad, rayas en un tercer color y cristales flotando en la etapa final |
+| `fenixel` | legendaria | Plumas con degradado de la base a la punta y abanico de cola más grande que el cuerpo |
+| `kirisol` | legendaria | Anatomía de caballo (patas con articulación, hocico, crin en mechones) y una extremidad nueva en la etapa final: las alas |
+| `leviatin` | mítica | Cara que madura, terminaciones afiladas y un material nuevo: el caparazón |
+| `yggdrito` | mítica | Trama por material: racimos de hojas, veta, raíces entrelazadas |
+| `primpulso` | mítica | Articulaciones, planos de profundidad y un tercer color en la etapa final |
+
+Antes de diseñar una especie, abre con Read el par de su rareza que más se le parezca y compáralo: lo que sigue es lo que cambia de una hoja a la otra. **Vale para todas las rarezas**: las tres raras mejoran tanto como los míticos. La rareza decide cuántas piezas y materiales lleva la especie, no cuánto cuidado se pone en dibujarla.
 
 Las hojas objetivo son una referencia de diseño, no assets: tienen frames borrosos, el diseño baila de una celda a otra, no llevan máscara y no admiten paleta ni patrón. Lo que se aprende de ellas se dibuja con el generador.
+
+## 0. Proporción de animal, no de muñeco
+- **Objetivo:** el conejo tiene ancas y pecho; el potro, patas con articulación y hocico; la abeja, abdomen. Cada especie se reconoce por la proporción del animal de verdad, simplificada.
+- **Generador:** casi todo era la misma cabeza redonda sobre el mismo torso, con las orejas o las alas cambiadas.
+- **Regla:** antes de dibujar, apunta tres rasgos de proporción del animal real (dónde tiene el peso, qué largo tiene el cuello, cómo son las patas) y cúmplelos de juvenile en adelante. La cría puede ser una bola.
 
 ## 1. La forma dice la edad: redondo de cría, afilado de adulto
 - **Objetivo:** la cría es una bola con ojos grandes. Cada etapa cambia curvas por puntas: aletas en rombo, cuernos, garras, púas. La etapa final casi no tiene una terminación redonda.
@@ -56,6 +74,39 @@ Las hojas objetivo son una referencia de diseño, no assets: tienen frames borro
 - **Objetivo:** la cría es tan simple que cuesta creer en qué acaba. Ese salto es lo que hace que la etapa final impresione.
 - **Regla:** no «mejores» la cría para que se parezca a la final. Cuanto más rara la especie, mayor la distancia entre las dos.
 
+## 11. Lo blando se curva, lo duro se quiebra
+- **Objetivo:** los tentáculos del Inktopus son gruesos, se ondulan y acaban enroscados. El prompt lo pide en negativo: «sin patas articuladas ni aspecto de insecto o araña».
+- **Generador:** tentáculos en elipses rectas que salían en abanico, y por eso parecía una araña.
+- **Regla:** decide de qué está hecha cada pieza. Lo blando (tentáculos, colas, crines, velos, raíces) va con `tube` y al menos tres puntos de control que dibujen una S. Lo duro (cuernos, garras, púas, patas de insecto) va con rectas y ángulos. Nunca una elipse recta para algo blando.
+
+## 12. Las marcas crecen con la edad
+- **Objetivo:** el Livolt pasa de liso a rayas en el lomo y a rayas de tigre por todo el cuerpo; el Solarejo, de liso a vientre de color, rayas y emblema en el vientre; el Kirisol gana motas. Las marcas son el reloj de la especie.
+- **Generador:** dos o tres manchas pequeñas en adult y unas franjas en final, casi invisibles.
+- **Regla:** baby liso; juvenile con una zona de color (vientre, pecho); adult con un patrón que se vea de lejos (rayas, motas, anillos); final con ese patrón por todo el cuerpo y un emblema. Las rayas ocupan al menos una cuarta parte de la superficie donde van.
+
+## 13. Degradado dentro de la pieza
+- **Objetivo:** las plumas del Fénixel van de naranja en la base a amarillo en la punta; las alas del Primpulso, de azul a cian.
+- **Generador:** cada pluma de un solo color.
+- **Regla:** en las piezas largas del rasgo icónico (plumas, aletas, mechones), pinta la punta o la base en otro tono con una capa (`{ clip, keep, tone: 'light' }` hacia la punta, `'shade'` hacia la base).
+
+## 14. La etapa final cambia de registro
+- **Objetivo:** la etapa final del Livolt y del Leviatín es más oscura y saturada que las anteriores, además de más grande. Se nota que es otra cosa antes de mirar los detalles.
+- **Generador:** las cuatro etapas con el mismo valor.
+- **Regla:** en la etapa final, sube la proporción de `mark` y de sombra: franjas anchas, lomo oscuro, extremidades en oscuro (`boots`). Que al entornar los ojos se vea más oscura que la adulta.
+
+## 15. Aura: piezas sueltas en la etapa final
+- **Objetivo:** el Solarejo final tiene cristales flotando alrededor de la cabeza y los hombros; el Yggdrito adulto, hojas cayendo.
+- **Generador:** todo pegado al cuerpo.
+- **Regla:** la etapa final de una especie rara o superior puede llevar de cuatro a seis piezas sueltas (cristales, chispas, hojas, gotas) alrededor de la cabeza. Van en `behind`, dentro de `appendage` para que laten, y a no más de 6 px del cuerpo.
+
+## 16. Un material entre la cabeza y el cuerpo
+- **Objetivo:** el Livolt y el Solarejo llevan un collar de pelusa que separa la cabeza del cuerpo y rompe la silueta con un borde en zigzag.
+- **Regla:** donde se juntan dos volúmenes, pon un material de transición (pelusa, plumón, melena, collar) con borde dentado, no una línea limpia.
+
+## 17. Una extremidad nueva en la etapa final
+- **Objetivo:** el Kirisol final tiene alas; el Primpulso, un segundo par de cuernos; el Inktopus, tres crestas.
+- **Regla:** además del material nuevo, la etapa final de un legendario o un mítico puede estrenar una extremidad que cambie qué animal parece (un potro pasa a alicornio). Decídelo con el usuario al diseñar: cambia el concepto.
+
 ## Lo que el generador aún no hace
 Estas cuatro cosas separan hoy al generador del objetivo y no se arreglan con reglas de diseño. Están apuntadas en `docs/PENDIENTES.md` §8c:
 
@@ -63,5 +114,7 @@ Estas cuatro cosas separan hoy al generador del objetivo y no se arreglan con re
 2. **Rampas con giro de tono y cinco tonos.** El color sale de multiplicar un gris por la paleta, así que la sombra es el mismo color más oscuro.
 3. **Tramas de relleno.** No hay un relleno de «escamas», «corteza» u «hojas»: cada trama se pinta pieza a pieza.
 4. **Plano lejano.** No hay una forma de mandar una pieza «al fondo» que la oscurezca y la apague de una vez.
+
+5. **Contorno interior.** Las hojas objetivo separan mechones, plumas y racimos con líneas oscuras dentro de la pieza; aquí solo hay contorno entre piezas distintas.
 
 Mientras no existan, acércate con `mark`, capas de tono y colores literales, y dile al usuario qué parte del objetivo no se puede alcanzar todavía.

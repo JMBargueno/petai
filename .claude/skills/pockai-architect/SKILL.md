@@ -15,8 +15,8 @@ Lee las referencias cuando las necesites:
 - `references/art-brief.md`: cómo se dibuja una especie en pixel art (`PixelSpecies`), brief de arte, proceso y checklist visual.
 - `references/iso-style.md`: reglas 3/4 isométricas (cámara, luz, cara, etapas y errores típicos).
 - `references/pixel-style.md`: estilo pixel art, evolución por etapas (plan corporal propio y regla de los cuatro ejes) y anclas de accesorios.
-- `references/design-lessons.md`: diez lecciones sacadas de comparar el generador con las hojas objetivo de `references/examples/`, y lo que el generador aún no hace. **Léela antes de dibujar un legendario o un mítico.**
-- `references/concept-prompt.md`: cómo preparar un pase de concepto con una IA de imagen y qué hacer con el resultado.
+- `references/design-lessons.md`: lecciones sacadas de comparar el generador con las ocho hojas objetivo de `references/examples/` (raras, legendarias y míticas), y lo que el generador aún no hace. **Léela antes de dibujar cualquier especie.**
+- `references/concept-prompt.md`: cómo preparar un pase de concepto con una IA de imagen y qué hacer con el resultado. Los prompts reales del usuario están en `references/examples/prompts.md`.
 - `references/integration-checklist.md`: todos los archivos que hay que tocar, en orden.
 
 ## Modos
@@ -75,11 +75,11 @@ Sigue `references/integration-checklist.md` paso a paso. Puntos críticos:
 
 ### 5b. Dibujar el arte (salvo que el usuario pida placeholders)
 Sigue la sección "Dibujar" de `references/art-brief.md`:
-0. Si la especie es legendaria o mítica, abre un par de `references/examples/` (`<id>-generador.png` y `<id>-objetivo.*`) y repasa `design-lessons.md`: el objetivo es el nivel que se espera.
+0. Abre el par de `references/examples/` de su rareza que más se le parezca (`<id>-generador.png` y `<id>-objetivo.*`) y repasa `design-lessons.md`: el objetivo es el nivel que se espera, en todas las rarezas.
 1. Escribe el `PixelSpecies` con sus cuatro geometrías, con las diferencias por etapa de `pixel-style.md`. Empieza por la etapa final.
 2. Genera la hoja de contactos con `contact_sheet.ts <id>` y **mírala** leyendo el PNG.
 3. Pasa la checklist y corrige hasta que todo pase. Normalmente hacen falta 2-3 iteraciones; no te quedes en la primera.
-3b. Si es legendaria o mítica y la hoja pasa pero se queda corta, ofrece al usuario un pase de concepto (`concept-prompt.md`): le das el prompt, lo ejecuta con la hoja adjunta y tú incorporas lo que estrena cada etapa.
+3b. Si es rara o superior y la hoja pasa pero se queda corta, ofrece al usuario un pase de concepto (`concept-prompt.md`): le das el prompt, lo ejecuta con la hoja adjunta y tú incorporas lo que estrena cada etapa.
 4. Ejecuta `pnpm generate:sprites` (hojas, anclas de accesorio y vistas previas).
 
 Enseña al usuario la hoja de contactos final o descríbela. Si se piden placeholders, usa los dos scripts de la sección "Placeholders" (siempre **con id**).

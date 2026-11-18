@@ -51,7 +51,7 @@ La rareza se tiene que ver en el dibujo, no solo en los stats. Un mítico resuel
 
 | Rareza | Qué se espera del diseño |
 |---|---|
-| normal y raro | Geometría común bien resuelta: dos volúmenes, un rasgo icónico claro y un segundo rasgo. |
+| normal y raro | Proporción del animal real, un rasgo icónico claro y un segundo rasgo, marcas que crecen por etapa y un material de transición entre cabeza y cuerpo. En raras, la etapa final puede llevar un aura de piezas sueltas. |
 | super-raro | Plan corporal propio, que no sea el bípedo redondo, y una forma de ojo propia. |
 | legendario | Lo anterior, con proporciones de criatura que impone (cabeza pequeña, cuello o patas largas, piezas mayores que el cuerpo) y piezas compuestas: plumas sueltas, varias cabezas, crines. |
 | mítico | Lo anterior, y además la **técnica de míticos**: cuerpo en curva lisa con su luz y su sombra (`tube`), una segunda lectura de color en el cuerpo (vientre de placas, mandíbula, capas en la copa), una fila de piezas a lo largo del cuerpo (`ridge`), anatomía con articulaciones (alas con huesos y membrana, raíces, garras) y al menos un brillo en color literal (`glow`: perla, farol, núcleo). La etapa final llena el frame: roza los 54 px de alto y abre más de 50 de ancho. |
@@ -66,7 +66,7 @@ Técnica de míticos, en `scripts/sprites/pixel/species.ts`:
 - `hidden(x, y)`: `torso` mínimo, para esconderlo bajo otra pieza cuando el cuerpo es una curva.
 - Capas de tono sobre una pieza: `{ clip: pieza, keep: true, tone: 'light' | 'shade' | 'hi' }` pinta luces y sombras a mano donde el sombreado automático no llega.
 
-El nivel al que hay que llegar está en `examples/`: compara `<id>-generador.png` con `<id>-objetivo.*` y lee `design-lessons.md`.
+El nivel al que hay que llegar está en `examples/`, para todas las rarezas: compara `<id>-generador.png` con `<id>-objetivo.*` y lee `design-lessons.md`.
 
 Hazlo siempre en este orden: dibuja primero la etapa final, que es la que tiene que impresionar, y saca las demás quitándole piezas. Amplía el frame y míralo de cerca antes de darlo por bueno: si en la etapa final se sigue viendo «una bola con cosas», no está.
 
