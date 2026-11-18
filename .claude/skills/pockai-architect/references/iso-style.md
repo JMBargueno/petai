@@ -33,6 +33,8 @@ Valores reales en `STAGE_PARAMS` (`scripts/sprites/species.ts`):
 
 El rasgo icónico **crece** con la etapa, pero no cambia de forma. Si un baby y un final no parecen de la misma especie, está mal.
 
+Estos parámetros son solo la base. Cada etapa tiene además su propio plan corporal, y en cada salto cambian cuatro de cinco ejes: ver `pixel-style.md`.
+
 ## Escala en sala
 - En el hábitat, el Pockai se ve a ~72 px (escala ≈ 0,56), junto a muebles de 16–64 px de alto.
 - Cualquier detalle de menos de 3 px en el frame de 128 desaparece: mejor formas grandes y contornos limpios.
@@ -42,5 +44,5 @@ El rasgo icónico **crece** con la etapa, pero no cambia de forma. Si un baby y 
 - **Sombra circular** o dibujada dentro del `SpeciesArt` (la pone el generador).
 - **Patrón (canal B) sobre la cara**, o la cara pintada con un rol que lleva B.
 - **Rasgos que dependen del lado:** al hacer espejo, una marca "del lado del corazón" acaba en el otro lado.
-- **Etapas como dibujos distintos** en lugar de parámetros.
+- **Etapas que solo cambian de tamaño:** cada etapa necesita su propio plan corporal, piezas y marcas (`pixel-style.md`), siempre sobre la misma especie.
 - Detalles finos que se pierden a 72 px.
