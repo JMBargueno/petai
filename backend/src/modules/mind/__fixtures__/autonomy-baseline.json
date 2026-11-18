@@ -1,0 +1,890 @@
+{
+ "neutral": {
+  "episodes": [
+   {
+    "index": 480001,
+    "activity": "rest",
+    "content": "Pasé un rato tumbado mirando las luces del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480003,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Eva y jugué con Zarpa. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f3",
+     "name": "Zarpa",
+     "ownerId": "u3",
+     "ownerName": "Eva"
+    }
+   },
+   {
+    "index": 480006,
+    "activity": "explore",
+    "content": "Exploré los alrededores y descubrí un rincón nuevo.",
+    "importance": 0.45,
+    "valence": 0.3
+   },
+   {
+    "index": 480007,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Eva y jugué con Zarpa. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f3",
+     "name": "Zarpa",
+     "ownerId": "u3",
+     "ownerName": "Eva"
+    }
+   },
+   {
+    "index": 480009,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Luis y jugué con Lumo. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480028,
+    "activity": "explore",
+    "content": "Explorando encontré algo: spicy_berry. ¡Lo guardé para mi entrenador!",
+    "importance": 0.6,
+    "valence": 0.6,
+    "itemId": "spicy_berry"
+   }
+  ],
+  "evolutionEvents": [
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_find_item",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_socialize",
+   "auto_socialize"
+  ],
+  "energyDelta": -18,
+  "happinessDelta": 12,
+  "itemsFound": [
+   "spicy_berry"
+  ],
+  "encounters": [
+   {
+    "index": 480003,
+    "friend": {
+     "petId": "f3",
+     "name": "Zarpa",
+     "ownerId": "u3",
+     "ownerName": "Eva"
+    }
+   },
+   {
+    "index": 480007,
+    "friend": {
+     "petId": "f3",
+     "name": "Zarpa",
+     "ownerId": "u3",
+     "ownerName": "Eva"
+    }
+   },
+   {
+    "index": 480009,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   }
+  ],
+  "daily": {
+   "day": "2026-11-18",
+   "items": 1,
+   "happiness": 12,
+   "energy": 30,
+   "encounters": 3
+  }
+ },
+ "curiosa": {
+  "episodes": [
+   {
+    "index": 480002,
+    "activity": "explore",
+    "content": "Explorando encontré algo: Manzana. ¡Lo guardé para mi entrenador!",
+    "importance": 0.6,
+    "valence": 0.6,
+    "itemId": "apple"
+   },
+   {
+    "index": 480007,
+    "activity": "explore",
+    "content": "Explorando encontré algo: sweet_coral. ¡Lo guardé para mi entrenador!",
+    "importance": 0.6,
+    "valence": 0.6,
+    "itemId": "sweet_coral"
+   },
+   {
+    "index": 480016,
+    "activity": "explore",
+    "content": "Exploré los alrededores y descubrí un rincón nuevo.",
+    "importance": 0.45,
+    "valence": 0.3
+   },
+   {
+    "index": 480020,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Luis y jugué con Lumo. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480021,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Luis y jugué con Lumo. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480028,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Luis y jugué con Lumo. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   }
+  ],
+  "evolutionEvents": [
+   "auto_explore",
+   "auto_explore",
+   "auto_find_item",
+   "auto_explore",
+   "auto_find_item",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_explore",
+   "auto_explore",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_explore",
+   "auto_explore",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_explore",
+   "auto_explore",
+   "auto_explore",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_explore"
+  ],
+  "energyDelta": -42,
+  "happinessDelta": 12,
+  "itemsFound": [
+   "apple",
+   "sweet_coral"
+  ],
+  "encounters": [
+   {
+    "index": 480020,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480021,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480028,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   }
+  ],
+  "daily": {
+   "day": "2026-11-18",
+   "items": 2,
+   "happiness": 12,
+   "energy": 30,
+   "encounters": 3
+  }
+ },
+ "sociable": {
+  "episodes": [
+   {
+    "index": 480001,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Luis y jugué con Lumo. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480004,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Luis y jugué con Lumo. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480005,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Luis y jugué con Lumo. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480011,
+    "activity": "socialize",
+    "content": "Jugué un rato con otros ecos del vecindario.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480031,
+    "activity": "explore",
+    "content": "Seguí un rastro de chispas del Éter hasta un sitio desconocido.",
+    "importance": 0.45,
+    "valence": 0.3
+   },
+   {
+    "index": 480034,
+    "activity": "explore",
+    "content": "Exploré los alrededores y descubrí un rincón nuevo.",
+    "importance": 0.45,
+    "valence": 0.3
+   }
+  ],
+  "evolutionEvents": [
+   "auto_socialize",
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_explore",
+   "auto_explore",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_socialize"
+  ],
+  "energyDelta": -37,
+  "happinessDelta": 12,
+  "itemsFound": [],
+  "encounters": [
+   {
+    "index": 480001,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480004,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   },
+   {
+    "index": 480005,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   }
+  ],
+  "daily": {
+   "day": "2026-11-18",
+   "items": 0,
+   "happiness": 12,
+   "energy": 30,
+   "encounters": 3
+  }
+ },
+ "tranquila_en_casa": {
+  "episodes": [
+   {
+    "index": 480005,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Eva y jugué con Zarpa. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f3",
+     "name": "Zarpa",
+     "ownerId": "u3",
+     "ownerName": "Eva"
+    }
+   },
+   {
+    "index": 480010,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Ana y jugué con Brasa. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f1",
+     "name": "Brasa",
+     "ownerId": "u1",
+     "ownerName": "Ana"
+    }
+   },
+   {
+    "index": 480013,
+    "activity": "explore",
+    "content": "Explorando encontré algo: sweet_coral. ¡Lo guardé para mi entrenador!",
+    "importance": 0.6,
+    "valence": 0.6,
+    "itemId": "sweet_coral"
+   },
+   {
+    "index": 480017,
+    "activity": "explore",
+    "content": "Exploré los alrededores y descubrí un rincón nuevo.",
+    "importance": 0.45,
+    "valence": 0.3
+   },
+   {
+    "index": 480026,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Ana y jugué con Brasa. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f1",
+     "name": "Brasa",
+     "ownerId": "u1",
+     "ownerName": "Ana"
+    }
+   },
+   {
+    "index": 480039,
+    "activity": "explore",
+    "content": "Explorando encontré algo: sweet_coral. ¡Lo guardé para mi entrenador!",
+    "importance": 0.6,
+    "valence": 0.6,
+    "itemId": "sweet_coral"
+   }
+  ],
+  "evolutionEvents": [
+   "auto_wait_owner",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_socialize",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_wait_owner",
+   "auto_rest_home",
+   "auto_explore",
+   "auto_find_item",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_explore",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_socialize",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_explore",
+   "auto_socialize",
+   "auto_explore",
+   "auto_rest_home",
+   "auto_rest_home",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_rest_home",
+   "auto_explore",
+   "auto_find_item",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_rest_home"
+  ],
+  "energyDelta": -11,
+  "happinessDelta": 12,
+  "itemsFound": [
+   "sweet_coral",
+   "sweet_coral"
+  ],
+  "encounters": [
+   {
+    "index": 480005,
+    "friend": {
+     "petId": "f3",
+     "name": "Zarpa",
+     "ownerId": "u3",
+     "ownerName": "Eva"
+    }
+   },
+   {
+    "index": 480010,
+    "friend": {
+     "petId": "f1",
+     "name": "Brasa",
+     "ownerId": "u1",
+     "ownerName": "Ana"
+    }
+   },
+   {
+    "index": 480026,
+    "friend": {
+     "petId": "f1",
+     "name": "Brasa",
+     "ownerId": "u1",
+     "ownerName": "Ana"
+    }
+   }
+  ],
+  "daily": {
+   "day": "2026-11-18",
+   "items": 2,
+   "happiness": 12,
+   "energy": 30,
+   "encounters": 3
+  }
+ },
+ "sin_amigos": {
+  "episodes": [
+   {
+    "index": 480002,
+    "activity": "play_alone",
+    "content": "Inventé un juego nuevo con una hoja que encontré.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480003,
+    "activity": "rest",
+    "content": "Pasé un rato tumbado mirando las luces del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480004,
+    "activity": "play_alone",
+    "content": "Estuve jugando yo solo a perseguir mi sombra.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480008,
+    "activity": "play_alone",
+    "content": "Estuve jugando yo solo a perseguir mi sombra.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480012,
+    "activity": "rest",
+    "content": "Pasé un rato tumbado mirando las luces del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480015,
+    "activity": "explore",
+    "content": "Exploré los alrededores y descubrí un rincón nuevo.",
+    "importance": 0.45,
+    "valence": 0.3
+   }
+  ],
+  "evolutionEvents": [
+   "auto_explore",
+   "auto_explore",
+   "auto_explore",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_explore",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_socialize"
+  ],
+  "energyDelta": -27,
+  "happinessDelta": 12,
+  "itemsFound": [],
+  "encounters": [],
+  "daily": {
+   "day": "2026-11-18",
+   "items": 0,
+   "happiness": 12,
+   "energy": 30,
+   "encounters": 0
+  }
+ },
+ "cansada": {
+  "episodes": [
+   {
+    "index": 480001,
+    "activity": "rest",
+    "content": "Descansé tranquilamente en mi rincón favorito del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480007,
+    "activity": "rest",
+    "content": "Pasé un rato tumbado mirando las luces del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480013,
+    "activity": "explore",
+    "content": "Seguí un rastro de chispas del Éter hasta un sitio desconocido.",
+    "importance": 0.45,
+    "valence": 0.3
+   },
+   {
+    "index": 480014,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Eva y jugué con Zarpa. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f3",
+     "name": "Zarpa",
+     "ownerId": "u3",
+     "ownerName": "Eva"
+    }
+   },
+   {
+    "index": 480015,
+    "activity": "explore",
+    "content": "Explorando encontré algo: Manzana. ¡Lo guardé para mi entrenador!",
+    "importance": 0.6,
+    "valence": 0.6,
+    "itemId": "apple"
+   },
+   {
+    "index": 480016,
+    "activity": "socialize",
+    "content": "Visité el hábitat de Luis y jugué con Lumo. Me lo pasé bien.",
+    "importance": 0.65,
+    "valence": 0.6,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   }
+  ],
+  "evolutionEvents": [
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_socialize",
+   "auto_explore",
+   "auto_find_item",
+   "auto_socialize",
+   "auto_explore"
+  ],
+  "energyDelta": 9,
+  "happinessDelta": 12,
+  "itemsFound": [
+   "apple"
+  ],
+  "encounters": [
+   {
+    "index": 480014,
+    "friend": {
+     "petId": "f3",
+     "name": "Zarpa",
+     "ownerId": "u3",
+     "ownerName": "Eva"
+    }
+   },
+   {
+    "index": 480016,
+    "friend": {
+     "petId": "f2",
+     "name": "Lumo",
+     "ownerId": "u2",
+     "ownerName": "Luis"
+    }
+   }
+  ],
+  "daily": {
+   "day": "2026-11-18",
+   "items": 1,
+   "happiness": 12,
+   "energy": 30,
+   "encounters": 2
+  }
+ },
+ "enferma": {
+  "episodes": [
+   {
+    "index": 480003,
+    "activity": "rest",
+    "content": "Pasé un rato tumbado mirando las luces del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480004,
+    "activity": "rest",
+    "content": "Pasé un rato tumbado mirando las luces del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480006,
+    "activity": "rest",
+    "content": "Descansé tranquilamente en mi rincón favorito del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480009,
+    "activity": "rest",
+    "content": "Pasé un rato tumbado mirando las luces del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480011,
+    "activity": "rest",
+    "content": "Pasé un rato tumbado mirando las luces del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480016,
+    "activity": "rest",
+    "content": "Descansé tranquilamente en mi rincón favorito del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   }
+  ],
+  "evolutionEvents": [],
+  "energyDelta": 30,
+  "happinessDelta": 0,
+  "itemsFound": [],
+  "encounters": [],
+  "daily": {
+   "day": "2026-11-18",
+   "items": 0,
+   "happiness": 0,
+   "energy": 30,
+   "encounters": 0
+  }
+ },
+ "dormida": {
+  "episodes": [
+   {
+    "index": 480000,
+    "activity": "sleep",
+    "content": "Dormí profundamente y soñé con el Éter.",
+    "importance": 0.3,
+    "valence": 0.2
+   }
+  ],
+  "evolutionEvents": [],
+  "energyDelta": 0,
+  "happinessDelta": 0,
+  "itemsFound": [],
+  "encounters": [],
+  "daily": {
+   "day": "2026-11-18",
+   "items": 0,
+   "happiness": 0,
+   "energy": 0,
+   "encounters": 0
+  }
+ },
+ "con_topes_gastados": {
+  "episodes": [
+   {
+    "index": 480002,
+    "activity": "play_alone",
+    "content": "Inventé un juego nuevo con una hoja que encontré.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480004,
+    "activity": "rest",
+    "content": "Pasé un rato tumbado mirando las luces del hábitat.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480009,
+    "activity": "play_alone",
+    "content": "Inventé un juego nuevo con una hoja que encontré.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480011,
+    "activity": "socialize",
+    "content": "Charlé con un Pockai que pasaba por allí.",
+    "importance": 0.35,
+    "valence": 0.3
+   },
+   {
+    "index": 480012,
+    "activity": "wait_owner",
+    "content": "Esperé junto a la puerta por si volvía mi entrenador.",
+    "importance": 0.35,
+    "valence": -0.1
+   },
+   {
+    "index": 480046,
+    "activity": "explore",
+    "content": "Seguí un rastro de chispas del Éter hasta un sitio desconocido.",
+    "importance": 0.45,
+    "valence": 0.3
+   }
+  ],
+  "evolutionEvents": [
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_wait_owner",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_explore",
+   "auto_wait_owner",
+   "auto_explore",
+   "auto_explore",
+   "auto_explore",
+   "auto_socialize",
+   "auto_socialize",
+   "auto_explore"
+  ],
+  "energyDelta": -61,
+  "happinessDelta": 0,
+  "itemsFound": [],
+  "encounters": [],
+  "daily": {
+   "day": "2026-11-18",
+   "items": 2,
+   "happiness": 12,
+   "energy": 30,
+   "encounters": 3
+  }
+ }
+}

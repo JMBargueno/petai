@@ -14,6 +14,7 @@ import {
   withDims,
 } from './personality.engine';
 import { applyEvents } from './evolution.engine';
+import { fulfilWish, normalizeWishes, type WishId } from './wishes.engine';
 
 /**
  * Personality Engine + Evolution Engine con estado (spec 36).
@@ -135,6 +136,38 @@ export class MindService {
     } catch (e: any) {
       this.logger.warn(`No se pudo aplicar la experiencia ${events.join(',')} a ${petId}: ${e?.message}`);
       return null;
+    }
+  }
+
+  /**
+   * Un deseo se ha cumplido fuera del chat (fue de aventura, vio a un amigo). Solo cuenta si la
+   * mascota lo había expresado: entonces entra en enfriamiento, gana algo de felicidad (acotada)
+   * y devuelve `true` para que quien llama deje el recuerdo.
+   */
+  async fulfilWish(petId: string, id: WishId, now = new Date()): Promise<boolean> {
+    const cfg = this.config();
+    try {
+      const done = await this.prisma.$transaction(async (tx) => {
+        await this.lockPet(tx, petId);
+        const pet = await tx.pet.findUnique({ where: { id: petId }, select: { personality: true } });
+        if (!pet) return false;
+        const stored = (pet.personality ?? {}) as StoredPersonality;
+        const state = normalizeWishes(stored.wishes);
+        if (state.shownId !== id) return false;
+        const next = fulfilWish(state, id, now, cfg.wishes);
+        if (!next) return false;
+        await tx.pet.update({ where: { id: petId }, data: { personality: { ...stored, wishes: next } as any } });
+        return true;
+      });
+      if (done && cfg.wishes.happinessOnFulfil > 0) {
+        const n = cfg.wishes.happinessOnFulfil;
+        const bumped = await this.prisma.pet.updateMany({ where: { id: petId, happiness: { lte: 100 - n } }, data: { happiness: { increment: n } } });
+        if (bumped.count === 0) await this.prisma.pet.updateMany({ where: { id: petId }, data: { happiness: 100 } });
+      }
+      return done;
+    } catch (e: any) {
+      this.logger.warn(`No se pudo marcar el deseo ${id} de ${petId}: ${e?.message}`);
+      return false;
     }
   }
 

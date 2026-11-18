@@ -8,6 +8,33 @@ import { MindMemoryService } from './mind-memory.service';
 import { Friend, encounterRoll, intervalIndex, intervalStart, simulate } from './autonomy.engine';
 import { dayKey } from './evolution.engine';
 import { AutonomyConfig, AutonomyDaily, StoredPersonality } from './mind.types';
+import { nextTrick, normalizeTricks, practiceTrick } from './tricks.engine';
+import { activeWishes, activityBoosts, normalizeWishes } from './wishes.engine';
+import { layerOf, type MemoryRow } from './memory.engine';
+
+const STAGE_PULL: Record<string, number> = { stranger: 1, acquaintance: 1.3, friend: 2, best_friend: 3 };
+
+/** Días desde el último recuerdo de un tipo; `null` si no hay ninguno. */
+function daysSinceKind(rows: readonly MemoryRow[], kind: string, now: Date): number | null {
+  let latest = -Infinity;
+  for (const r of rows) if (r.kind === kind) latest = Math.max(latest, r.createdAt.getTime());
+  return latest === -Infinity ? null : Math.max(0, (now.getTime() - latest) / 86_400_000);
+}
+
+/**
+ * Añade a cada amigo cuánto tira ir a verle, según lo que la mascota siente por su Pockai. Si no
+ * hay ninguna relación guardada, devuelve la lista tal cual (y se elige como siempre).
+ */
+export function withAffinity(friends: Friend[], rows: readonly MemoryRow[]): Friend[] {
+  const bySubject = new Map<string, MemoryRow>();
+  for (const r of rows) if (layerOf(r) === 'emotional' && r.subject) bySubject.set(r.subject, r);
+  if (!friends.some((f) => bySubject.has(`pet:${f.petId}`))) return friends;
+  return friends.map((f) => {
+    const rel = bySubject.get(`pet:${f.petId}`);
+    const stage = (rel as { stage?: string } | undefined)?.stage ?? 'stranger';
+    return { ...f, affinity: (1 + Math.max(0, rel?.valence ?? 0)) * (STAGE_PULL[stage] ?? 1) };
+  });
+}
 
 const DAY_MS = 86_400_000;
 const MAX_FRIENDS = 10;
@@ -63,7 +90,27 @@ export class AutonomyService {
       if (from > current) return { ...pet, autonomyCursor: current };
 
       const { dims, stored } = await this.mind.ensureDims(pet);
-      const friends = await this.friendsOf(pet.userId);
+      const mindCfg = this.mind.config();
+      // Lo que recuerda (episodios y relaciones) decide qué le apetece y a qué amigo va a ver
+      const rows = await this.memory.situationRows(pet.id).catch(() => []);
+      const tricks = normalizeTricks(stored.tricks, mindCfg.tricks);
+      const canPractice = !!tricks.learning || nextTrick(tricks, dims, mindCfg.tricks) !== null;
+      const friends = withAffinity(await this.friendsOf(pet.userId), rows);
+      const wishes = activeWishes(
+        {
+          dims,
+          now,
+          awayMinutes: Math.max(0, Math.floor((now.getTime() - new Date(pet.lastInteractionAt ?? pet.lastLoginAt ?? pet.createdAt ?? now).getTime()) / 60_000)),
+          daysSinceAdventure: daysSinceKind(rows, 'adventure', now),
+          daysSinceFriend: friends.length ? (daysSinceKind(rows, 'encounter', now) ?? 999) : null,
+          hasUntoldFind: false,
+          canLearnTrick: canPractice,
+          energy: pet.energy ?? 100,
+          sick: !!pet.sick,
+        },
+        normalizeWishes(stored.wishes),
+        mindCfg.wishes,
+      );
       const itemNames = Object.fromEntries(this.gameData.getFoods().map((f: any) => [f.id, f.name]));
       const today = dayKey(now);
       const sim = simulate(
@@ -79,6 +126,8 @@ export class AutonomyService {
           friends,
           daily: stored.autonomy,
           itemNames,
+          canPractice,
+          boosts: activityBoosts(wishes, mindCfg.wishes),
         },
         cfg,
         today,
@@ -123,8 +172,33 @@ export class AutonomyService {
         await this.recordEncounterForFriend(pet, enc.friend, intervalStart(enc.index, cfg));
       }
 
+      // Lo que practicó por su cuenta avanza su truco; si lo aprende, lo recuerda
+      const patch: Partial<StoredPersonality> = { autonomy: sim.daily, lastNeglectDay };
+      if (sim.practices > 0) {
+        let state = tricks;
+        const learned: string[] = [];
+        for (let i = 0; i < sim.practices; i++) {
+          const res = practiceTrick(state, dims, mindCfg.tricks, today, 'self');
+          state = res.state;
+          if (res.learned) learned.push(res.learned);
+        }
+        patch.tricks = state;
+        if (learned.length) {
+          await this.memory.remember(
+            pet.id,
+            learned.map((id) => ({
+              layer: 'episodic' as const,
+              kind: 'event',
+              key: `trick:${id}`,
+              content: `Aprendí un truco yo solo: ${mindCfg.tricks.catalog[id].name}. ¡Quiero enseñárselo a mi entrenador!`,
+              importance: 0.6,
+              valence: 0.7,
+            })),
+          );
+        }
+      }
       // Deriva y contadores del día en una sola escritura del JSON de personalidad
-      await this.mind.applyExperience(pet.id, events, now, { autonomy: sim.daily, lastNeglectDay } as Partial<StoredPersonality>);
+      await this.mind.applyExperience(pet.id, events, now, patch);
       return { ...updated, autonomyCursor: current };
     } catch (e: any) {
       this.logger.warn(`Vida autónoma de ${pet?.id} no simulada: ${e?.message}`);

@@ -155,6 +155,18 @@ if (pers) {
     console.log(`✓ balance.json: reacciones del chat (${ids.length} en catálogo, ${Object.keys(beh.reactions).length} intenciones) validadas`);
   }
 
+  // Actividades autónomas: las cinco de siempre son obligatorias; las nuevas, opcionales
+  const acts = pers.autonomy?.activities ?? {};
+  for (const id of ['rest', 'play_alone', 'explore', 'socialize', 'wait_owner']) {
+    if (!acts[id]) throw new Error(`balance.personality.autonomy.activities.${id} falta`);
+  }
+  for (const [id, a] of Object.entries(acts)) {
+    if (!['rest', 'play_alone', 'explore', 'socialize', 'wait_owner', 'practice_trick', 'tidy_habitat'].includes(id)) {
+      throw new Error(`balance.personality.autonomy.activities: actividad desconocida ${id}`);
+    }
+    if (!(a.base > 0) || typeof a.energy !== 'number' || typeof a.happiness !== 'number') throw new Error(`balance.personality.autonomy.activities.${id} inválida`);
+  }
+
   // 1c-sexies. Trucos y deseos (spec 37 §4.5 y §4.6)
   const tricks = pers.tricks;
   if (tricks) {

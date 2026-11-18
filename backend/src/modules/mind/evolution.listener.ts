@@ -5,6 +5,7 @@ import { MindService } from './mind.service';
 import { MindMemoryService } from './mind-memory.service';
 import { adventureEpisode } from './memory.engine';
 import { describeDims } from './personality.engine';
+import { fulfilEpisode, type WishId } from './wishes.engine';
 import { resolveScene, type SceneType } from './social.engine';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
@@ -95,6 +96,7 @@ export class EvolutionListener {
   onAdventure(p: { petId: string; theme?: string; outcome?: string }) {
     return this.safe(async () => {
       await this.mind.applyExperience(p.petId, ['adventure']);
+      await this.wishFulfilled(p.petId, 'go_explore');
       // El tema lo escribe un modelo: pasa por el filtro de textos de `remember` como cualquier recuerdo
       await this.memory.remember(p.petId, [
         {
@@ -162,6 +164,9 @@ export class EvolutionListener {
       if (slot === 0) {
         await this.mind.applyExperience(visitorPet.id, ['habitat_visit']);
         await this.mind.applyExperience(hostPet.id, ['habitat_visit']);
+        // Si alguno llevaba tiempo queriendo ver a sus amigos, ya los ha visto
+        await this.wishFulfilled(visitorPet.id, 'see_friend');
+        await this.wishFulfilled(hostPet.id, 'see_friend');
         await this.memory.feel(hostPet.id, `user:${p.userId}`, `${visitorName} (otro entrenador)`, 0.15);
       }
       await this.memory.remember(visitorPet.id, [
@@ -191,6 +196,14 @@ export class EvolutionListener {
         guestTraits: Object.fromEntries(Object.entries(traits).map(([d, t]) => [d, t.keyword])),
       },
     });
+  }
+
+  /** Si la mascota había dicho que le apetecía esto, lo recuerda como un deseo cumplido. */
+  private async wishFulfilled(petId: string, id: WishId) {
+    if (!(await this.mind.fulfilWish?.(petId, id))) return;
+    await this.memory.remember(petId, [
+      { layer: 'episodic', kind: 'event', key: `wish:${id}`, bump: true, content: fulfilEpisode(id), importance: 0.45, valence: 0.6 },
+    ]);
   }
 
   /**

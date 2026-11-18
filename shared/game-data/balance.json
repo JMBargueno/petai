@@ -523,6 +523,8 @@
         "play_alone": { "base": 2, "weights": { "temper": 0.03, "curiosity": 0.01 }, "energy": -2, "happiness": 2 },
         "explore": { "base": 1.5, "weights": { "curiosity": 0.04, "bravery": 0.02 }, "energy": -3, "happiness": 2 },
         "socialize": { "base": 1, "weights": { "sociability": 0.04 }, "energy": -2, "happiness": 3 },
+        "practice_trick": { "base": 0.8, "weights": { "curiosity": 0.02, "temper": 0.01 }, "energy": -1, "happiness": 1 },
+        "tidy_habitat": { "base": 0.5, "weights": { "temper": -0.02, "affection": 0.01 }, "energy": -1, "happiness": 0 },
         "wait_owner": { "base": 1, "weights": { "affection": 0.03 }, "energy": 0, "happiness": 0 }
       },
       "itemFind": {

@@ -106,7 +106,10 @@ export interface AutonomyActivityConfig {
   happiness: number;
 }
 
-export type AutonomyActivity = 'rest' | 'play_alone' | 'explore' | 'socialize' | 'wait_owner';
+export type AutonomyActivity = 'rest' | 'play_alone' | 'explore' | 'socialize' | 'wait_owner' | ExtraActivity;
+
+/** Actividades añadidas por la spec 37 §4.6. Solo entran si están en la configuración y vienen a cuento. */
+export type ExtraActivity = 'practice_trick' | 'tidy_habitat';
 
 export interface AutonomyConfig {
   intervalMinutes: number;
@@ -117,7 +120,7 @@ export interface AutonomyConfig {
   minEnergyForActivity: number;
   dailyHappinessCap: number;
   dailyEnergyCap: number;
-  activities: Record<AutonomyActivity, AutonomyActivityConfig>;
+  activities: Record<Exclude<AutonomyActivity, ExtraActivity>, AutonomyActivityConfig> & Partial<Record<ExtraActivity, AutonomyActivityConfig>>;
   itemFind: { chancePerExplore: number; curiosityBonusPerPoint: number; dailyCap: number; items: string[] };
   social: { batchSize: number; maxPairsPerSweep: number; encounterChance: number; dailyCapPerPet: number };
 }
