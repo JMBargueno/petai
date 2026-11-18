@@ -14,8 +14,8 @@
 - **Comportamiento social:** solitario; tolera compañía, no la busca.
 
 ## Anatomía y rasgos distintivos
-Un cuerpo largo de anillos, con el vientre claro y aletas dorsales en punta a lo largo del cuello. A los lados de la cabeza se abren dos aletas de velo, y en la frente lleva una perla que se enciende cuando recuerda. Tiene ojos de rendija, de reptil.
-- **Rasgos icónicos (silueta):** 1) las aletas de velo a los lados de la cabeza; 2) el cuerpo enroscado con la cola de abanico en alto.
+Un cuerpo largo de anillos que se alza en un cuello en S, con el vientre de placas claras y una cresta de aletas en punta por todo el lomo. La cabeza es de dragón marino: hocico, mandíbula clara, dos cuernos curvados hacia atrás y bigotes que le cuelgan. Tras la cabeza se abre una melena de velos, y en la frente lleva una perla que se enciende cuando recuerda. Tiene ojos de rendija, de reptil.
+- **Rasgos icónicos (silueta):** 1) el cuerpo en S con su cresta de aletas y la cola de abanico en alto; 2) la melena de velos, los cuernos y la perla.
 
 ## Ecología y lore
 Antes de que hubiera Custodios hubo un primer océano de datos, y algo dormía en el fondo. Leviatín es una cría de aquello: no nació de un recuerdo ni de un mito, sino del propio Éter cuando aún no tenía forma. Por eso es una Singularidad Primordial. Los Custodios dicen que la perla guarda lo primero que el Éter supo, y que nadie ha conseguido que lo cuente.
@@ -38,14 +38,14 @@ Solemne y sereno: no se altera y no retrocede.
 ## Evolución *(cada etapa con su plan corporal; en cada salto cambian 4 de 5 ejes: `references/pixel-style.md`)*
 | Etapa | Narrativa | Plan corporal y silueta | Rasgo icónico y piezas | Color, marcas y cara |
 |---|---|---|---|---|
-| **Baby (1)** | Renacuajo | Una judía tumbada con la punta de la cola en alto | Aletita de cola y perla diminuta | Mofletes, ojos de rendija |
-| **Juvenile (10)** | Se alza | Un anillo en el suelo, cuello corto y cabeza aparte | Dos aletas de velo pequeñas y cola con abanico | Vientre claro en el cuello |
-| **Adult (25)** | Serpiente marina | Dos anillos y cuello alto | Velos anchos, aletas dorsales y cola de tres mechones | Bandas en el lomo, vientre claro |
-| **Final (50, Piedra de Evolución)** | Leviatán | Tres anillos y cuello muy alto, con velos que rompen el contorno | Velos enormes, corona de aletas sobre la perla y cola de cuatro mechones, que leen el elemento | Perla grande, mirada decidida |
+| **Baby (1)** | Alevín | Cabeza grande sobre un cuerpecito enroscado | Aletitas, perla diminuta y cola con dos mechones | Vientre de placas, mofletes, ojos de rendija |
+| **Juvenile (10)** | Se alza | Un anillo en el suelo y un cuello corto; cabeza con hocico | Dos cuernecillos, cresta corta y un velo pequeño | Mandíbula clara |
+| **Adult (25)** | Serpiente marina | Dos tramos: cola alzada y cuello en S | Cuernos curvos, melena de tres velos, cresta completa y un bigote | Franja oscura en la frente |
+| **Final (50, Piedra de Evolución)** | Leviatán | Tres anillos, cuello alto en S y cola en alto, que rompen el contorno | Cuernos largos, melena de cuatro velos, dos bigotes y cola de cuatro mechones, que leen el elemento | Perla grande encendida, ceja |
 
-**No cambia:** la paleta añil con aletas aguamarina, los ojos de rendija, la perla en la frente y la cola a la izquierda.
+**No cambia:** la paleta añil con aletas aguamarina, los ojos de rendija, el vientre de placas, la perla en la frente y la cola a la izquierda.
 
-**Anclas de accesorios:** `head` en lo alto de la cabeza (el gorro tapa la corona); `neck` bajo la cabeza, en el cuello; `back` en el lomo del anillo trasero. No tiene pies ni brazos.
+**Anclas de accesorios:** `head` en lo alto de la cabeza, entre los cuernos; `neck` bajo la cabeza, en el cuello; `back` en el lomo del anillo del suelo. No tiene pies ni brazos. De la segunda etapa en adelante tiene los ojos más pequeños que el resto, así que las gafas le quedan grandes.
 
 ## Frases de chat de ejemplo
 1. «…Sí. Te he oído.»
@@ -53,7 +53,7 @@ Solemne y sereno: no se altera y no retrocede.
 3. «¿Un día malo? Los he visto peores. Quédate aquí, que se pasa.»
 
 ## Brief de arte
-Pixel art en 3/4. Cuerpo en primario (lleva el patrón); vientre, perla, aletas de velo, aletas dorsales y cola en secundario; bandas en primario oscurecido. La cola gira con la pose y los velos y la corona laten con los apéndices. No da pasos: se desliza.
+Pixel art en 3/4. Cuerpo en primario (lleva el patrón), dibujado como una curva lisa con su propia luz y sombra; vientre de placas, mandíbula, cresta, cuernos, velos, bigotes y cola en secundario; franja de la frente en primario oscurecido. La perla es un brillo en color literal: no cambia con la paleta. Los velos y la cola laten con los apéndices. No da pasos: se desliza.
 
 **Estado del arte:** dibujado y revisado con la hoja de contactos.
 

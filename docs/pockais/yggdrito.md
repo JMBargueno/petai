@@ -14,8 +14,8 @@
 - **Comportamiento social:** en grupo; otros Pockai se sientan a su sombra.
 
 ## Anatomía y rasgos distintivos
-Un tronco rechoncho de corteza con dos ojos que parecen nudos de la madera, huecos y con una luz dentro. Encima lleva una copa de hojas que crece con los años, y camina despacio sobre sus raíces. De la copa de los más viejos cuelgan faroles de luz.
-- **Rasgos icónicos (silueta):** 1) la copa, más ancha que el cuerpo; 2) las raíces abiertas sobre el suelo.
+Un tronco rechoncho de corteza con vetas, cejas de madera y dos ojos que parecen nudos huecos con una luz dentro. Bajo la boca le cuelga una barba de musgo con su bigote. Encima lleva una copa de hojas por capas, sostenida por dos ramas, y camina despacio sobre raíces retorcidas que se abren por el suelo. De la copa de los más viejos cuelgan faroles de luz.
+- **Rasgos icónicos (silueta):** 1) la copa, más ancha que el cuerpo, con sus faroles; 2) las raíces abiertas sobre el suelo.
 
 ## Ecología y lore
 Todo lo que existe en el Éter cuelga de algo, y ese algo es un árbol que nadie ha visto entero. Yggdrito es uno de sus brotes: se desprendió, echó a andar y todavía recuerda de dónde viene. Es una Singularidad Primordial porque no nació de nada humano, sino de la estructura misma que lo sostiene todo. Los Custodios dicen que, donde un Yggdrito echa raíces una noche, la conexión no se cae.
@@ -39,11 +39,11 @@ El más sereno del catálogo: curioso por todo y sin ninguna prisa.
 | Etapa | Narrativa | Plan corporal y silueta | Rasgo icónico y piezas | Color, marcas y cara |
 |---|---|---|---|---|
 | **Baby (1)** | Semilla | Una bellota con capuchón, sin copa | Dos hojitas recién brotadas y dos raicillas | Mofletes, ojos huecos enormes |
-| **Juvenile (10)** | Plantón | Tronquito con una copa pequeña encima | Dos ramitas de una hoja y dos raíces | Copa lisa |
-| **Adult (25)** | Árbol joven | Copa ancha de tres lóbulos | Dos ramas con su mata de hojas y tres raíces | Sombras de hoja en la copa |
-| **Final (50, Piedra de Evolución)** | Árbol del mundo | Copa enorme de cinco lóbulos que rompe el contorno | Faroles de luz colgando, ramas altas y cuatro raíces, que leen el elemento | Runa y vetas en el tronco, mirada decidida |
+| **Juvenile (10)** | Plantón | Tronquito con una copa pequeña encima | Dos ramitas de una hoja y dos raíces cortas | Copa de dos capas, una veta |
+| **Adult (25)** | Árbol joven | Copa ancha de seis lóbulos sobre dos ramas | Ramas que sostienen la copa, raíces largas y barba corta | Copa por capas de luz y sombra |
+| **Final (50, Piedra de Evolución)** | Árbol del mundo | Copa enorme de siete lóbulos y raíces que rompen el contorno | Cuatro faroles de luz, barba larga con bigote, cejas de corteza y raíces retorcidas, que leen el elemento | Runa encendida y vetas en el tronco |
 
-**No cambia:** la corteza y el verde de la hoja, los ojos huecos, la cara en el tronco y las raíces en el suelo.
+**No cambia:** la corteza y el verde de la hoja, los ojos huecos, la cara en el tronco y las raíces abiertas en el suelo.
 
 **Anclas de accesorios:** `head` en lo alto de la copa; `face` en el tronco, donde están los ojos; `neck` donde el tronco se junta con la copa; `back` en el costado del tronco.
 
@@ -53,7 +53,7 @@ El más sereno del catálogo: curioso por todo y sin ninguna prisa.
 3. «¿Un día malo? Siéntate a mi sombra. Los días también se caen, como las hojas.»
 
 ## Brief de arte
-Pixel art en 3/4. Copa y hojas en primario (llevan el patrón); tronco, ramas, raíces y faroles en secundario; capuchón, sombras de hoja, vetas y runa en primario oscurecido. La copa late con los apéndices y las raíces dan el paso.
+Pixel art en 3/4. Copa, hojas y barba en primario (la copa lleva el patrón y va por capas: matas en luz arriba y en sombra abajo); tronco, ramas y raíces en secundario, con las raíces dibujadas como curvas lisas; capuchón de la bellota en primario oscurecido. Faroles y runa son brillos en color literal: no cambian con la paleta. Los faroles laten con los apéndices. No da pasos: las raíces se quedan en el suelo.
 
 **Estado del arte:** dibujado y revisado con la hoja de contactos.
 

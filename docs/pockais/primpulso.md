@@ -8,14 +8,14 @@
 
 ## Clasificación y hábitat
 - **Tipo:** dragón de pulso.
-- **Plan corporal:** dragón bípedo inclinado, de terópodo: cuerpo tumbado hacia delante sobre dos patas fuertes, cuello que avanza, hocico, bracitos y una cola larga de contrapeso. Es la única especie que camina inclinada (`references/pixel-style.md`).
+- **Plan corporal:** dragón erguido, de terópodo: un cuerpo en S de la cola al cuello, sobre dos patas con garras, con bracitos, hocico y alas de membrana. Es la única especie con alas de membrana (`references/pixel-style.md`).
 - **Tamaño aparente:** grande.
 - **Hábitat en el Éter:** allí donde algo se enciende por primera vez.
 - **Comportamiento social:** en pareja; respeta a quien le aguanta el ritmo.
 
 ## Anatomía y rasgos distintivos
-Camina sobre dos patas fuertes, con el cuerpo echado hacia delante y la cola como contrapeso. Tiene la cabeza pequeña y con hocico, y dos cuernos que son rayos quietos. Una línea de latido le cruza el costado y parpadea al ritmo de su pulso; de adulto le salen alas hechas de rayo.
-- **Rasgos icónicos (silueta):** 1) los cuernos y las alas de rayo; 2) la cola larga acabada en rayo y la línea de latido.
+Un dragón erguido sobre dos patas con garras: el cuerpo dibuja una S de la cola al cuello, con placas claras en el vientre y una cresta de púas en el lomo. Tiene la cabeza pequeña y con hocico, dos cuernos que son rayos echados hacia atrás y alas de membrana que parecen hechas de relámpago. En el pecho le late un núcleo de luz, y en el muslo lleva dibujada una línea de latido.
+- **Rasgos icónicos (silueta):** 1) las alas de rayo; 2) los cuernos, la cola acabada en hoja de rayo y el núcleo del pecho.
 
 ## Ecología y lore
 El Éter empezó con un pulso: el Primer Latido. Primpulso es su eco, lo que queda vibrando de aquel instante, y por eso lleva el latido dibujado en el cuerpo. Es una Singularidad Primordial porque no nació de nadie: nació de que hubiera algo. Los Custodios dicen que, si acercas el oído a un Primpulso dormido, se oye a qué velocidad late todo lo demás.
@@ -38,14 +38,14 @@ Puro impulso: va el primero, pregunta después y no soporta aburrirse.
 ## Evolución *(cada etapa con su plan corporal; en cada salto cambian 4 de 5 ejes: `references/pixel-style.md`)*
 | Etapa | Narrativa | Plan corporal y silueta | Rasgo icónico y piezas | Color, marcas y cara |
 |---|---|---|---|---|
-| **Baby (1)** | Chispa | Una bola con una cola corta | Dos cuernecillos de rayo y la punta de la cola | Primer latido, mofletes |
-| **Juvenile (10)** | Cría | Inclinado: cabeza aparte con hocico, muslo y cola de contrapeso | Cuernos mayores, una púa de chispa y bracitos | Latido más largo |
-| **Adult (25)** | Dragón joven | Cabeza pequeña sobre un cuello largo; cuerpo esbelto | Cuernos altos, alas cortas de rayo y cola larga | Ceja, ojos más pequeños |
-| **Final (50, Piedra de Evolución)** | Dragón de pulso | Alas enormes que le sobrepasan la cabeza y rompen el contorno | Alas de cinco rayos, cuernos largos y cola de tridente, que leen el elemento | Núcleo en el pecho, garras oscuras |
+| **Baby (1)** | Chispa | Una bola con una cola corta | Dos cuernecillos, un muñón de ala y la punta de la cola | Primer latido, mofletes |
+| **Juvenile (10)** | Cría | Cuerpo en S sobre dos patas; cabeza aparte con hocico | Ala corta de dos dedos, cresta de púas y cola de contrapeso | Placas en el vientre, latido en el muslo |
+| **Adult (25)** | Dragón joven | Cuello largo y cabeza pequeña | Ala de tres dedos, cuernos largos, bracito y cola con hoja de rayo | Núcleo en el pecho, garras oscuras, ceja |
+| **Final (50, Piedra de Evolución)** | Dragón de pulso | Dos alas desplegadas que le sobrepasan la cabeza y rompen el contorno | Segunda ala, cuernos altos y cola de doble hoja, que leen el elemento | Núcleo grande, franja oscura en la frente |
 
-**No cambia:** la paleta dorada con rayos cian, los ojos inclinados con chispa, los cuernos en lo alto de la cabeza y la línea de latido.
+**No cambia:** la paleta dorada con rayos cian, los ojos inclinados con chispa, los cuernos en lo alto de la cabeza, el ala a la espalda y la línea de latido.
 
-**Anclas de accesorios:** `head` entre los dos cuernos; `neck` en la base del cuello; `back` en el lomo, delante de las alas. De adulto tiene los ojos más pequeños que el resto, así que las gafas le quedan grandes.
+**Anclas de accesorios:** `head` entre los dos cuernos; `neck` en la base del cuello; `back` en el lomo, donde nace el ala (una capa la tapa). De la segunda etapa en adelante tiene los ojos más pequeños que el resto, así que las gafas le quedan grandes.
 
 ## Frases de chat de ejemplo
 1. «¡Venga, venga, venga! ¿A qué esperamos?»
@@ -53,7 +53,7 @@ Puro impulso: va el primero, pregunta después y no soporta aburrirse.
 3. «¿Un día malo? Pues se le gana. Dime por dónde empezamos.»
 
 ## Brief de arte
-Pixel art en 3/4. Cuerpo, cuello, cola y patas en primario; cuernos, alas, púas, punta de la cola y línea de latido en secundario; núcleo y garras de la etapa final en primario oscurecido. La cola gira con la pose y cuernos y alas laten con los apéndices.
+Pixel art en 3/4. Cuerpo, cuello y cola en primario, dibujados como una curva lisa con su propia luz y sombra y placas más claras en el vientre; membrana de las alas, cuernos, cresta y hoja de la cola en secundario, con los huesos del ala en primario; garras en primario oscurecido. El núcleo del pecho y la línea de latido son brillos en color literal: no cambian con la paleta. La cola gira con la pose y cuernos y alas laten con los apéndices.
 
 **Estado del arte:** dibujado y revisado con la hoja de contactos.
 

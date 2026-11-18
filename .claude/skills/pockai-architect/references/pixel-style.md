@@ -25,9 +25,9 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Antes de pensar en 
 | Ave de cuello largo | Sin brazos: alas. Cabeza pequeña, cuello largo, pico y patas finas con garras | `arm` y `feet` en `undefined`, `beak()`, `longNeck()`, `talon()` y `fan()` de plumas en punta | Fénixel |
 | Flotante | Sin patas ni apoyos: el cuerpo queda en el aire, a unos 6 px del suelo | `feet: undefined`, `head: undefined`, `arm: undefined`, aleta al costado en `front`, ancla `hat` | Nubeballena |
 | Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | `head: undefined` en las 4 etapas, ramas con la pieza del tronco | Cactuerno |
-| Serpentino | Sin patas ni brazos: anillos enroscados en el suelo, cuello alzado y cola en alto | `feet` y `arm` en `undefined`, `coil()` con la pieza del tronco para cuello, anillos y cola | Leviatín |
-| Árbol | Tronco con la cara, copa por cabeza, ramas y raíces. El cuerpo va en el secundario | `bark()` cubre el tronco, `head` es la copa, `eye` cae en el `torso`, `root()` y `branch()` | Yggdrito |
-| Dragón bípedo inclinado | De terópodo: cuerpo tumbado hacia delante sobre dos patas, cuello que avanza, hocico y cola de contrapeso | `torso` horizontal, `head` arriba a la derecha, `longNeck()`, `snout()`, `thigh()` en `front` y `boltTail()` | Primpulso |
+| Serpentino | Sin patas ni brazos: anillos enroscados en el suelo, cuello en S y cola en alto | `feet` y `arm` en `undefined`, `torso` oculto, el cuerpo es un `tube()` por tramos con `ridge()` | Leviatín |
+| Árbol | Tronco con la cara, copa por cabeza, ramas y raíces. El cuerpo va en el secundario | `bark()` cubre el tronco, `head` es la copa (`canopy()` por capas), `eye` cae en el `torso`, ramas y raíces con `tube()` | Yggdrito |
+| Dragón erguido | De terópodo: cuerpo en S de la cola al cuello sobre dos patas con garras, bracitos, hocico y alas de membrana | `torso` oculto, el cuerpo es un `tube()`, `dragonWing()`, `snout()` y `hindLeg()` en `front` | Primpulso |
 | Insecto, medusa, etc. | Libres | Combina lo anterior | — |
 
 Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo cuatro de siete**):
@@ -45,6 +45,28 @@ Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo cuatro de s
 Con un plan que no es bípedo, la tabla de etapas se lee por su intención y no al pie de la letra: «un volumen» en baby significa la forma más simple de ese plan (el Magmadillo enroscado, la Nubeballena posada), y «dos volúmenes» en adult significa su forma completa. Las alturas son máximos: un cuadrúpedo puede quedarse muy por debajo y crecer a lo ancho.
 
 **Prueba entre especies:** pon en negro el adulto de la especie nueva junto a los adultos de las demás. Si alguien puede confundirlo con otro, falta diferencia.
+
+## Cuanto más rara, más trabajada
+La rareza se tiene que ver en el dibujo, no solo en los stats. Un mítico resuelto con dos elipses y un adorno es un fallo de diseño, aunque cumpla todo lo demás.
+
+| Rareza | Qué se espera del diseño |
+|---|---|
+| normal y raro | Geometría común bien resuelta: dos volúmenes, un rasgo icónico claro y un segundo rasgo. |
+| super-raro | Plan corporal propio, que no sea el bípedo redondo, y una forma de ojo propia. |
+| legendario | Lo anterior, con proporciones de criatura que impone (cabeza pequeña, cuello o patas largas, piezas mayores que el cuerpo) y piezas compuestas: plumas sueltas, varias cabezas, crines. |
+| mítico | Lo anterior, y además la **técnica de míticos**: cuerpo en curva lisa con su luz y su sombra (`tube`), una segunda lectura de color en el cuerpo (vientre de placas, mandíbula, capas en la copa), una fila de piezas a lo largo del cuerpo (`ridge`), anatomía con articulaciones (alas con huesos y membrana, raíces, garras) y al menos un brillo en color literal (`glow`: perla, farol, núcleo). La etapa final llena el frame: roza los 54 px de alto y abre más de 50 de ancho. |
+
+Técnica de míticos, en `scripts/sprites/pixel/species.ts`:
+
+- `tube(g, pieza, papel, puntos, opciones)`: cuerpo curvo liso por puntos de control `[x, y, radio]`. Pone la base, la sombra abajo a la derecha y la luz arriba a la izquierda. Con `belly` añade una franja de vientre y con `scutes`, sus placas. Parte el cuerpo en tramos de piezas distintas donde un tramo cruza por delante de otro: el contorno marca el cruce.
+- `ridge(g, pieza, puntos, cada, alto, lado)`: aletas o púas a lo largo de la misma curva. Se pinta antes que el `tube`.
+- `glow(g, pieza, x, y, r, rampa)`: punto de luz en color literal con su halo. Las rampas (`PEARL`, `EMBER_GLOW`, `PULSE`) no pasan por la paleta, así que el brillo se ve igual en cualquier ejemplar.
+- `canopy(g, lóbulos, luz, sombra, chispas)`: masa de hojas por capas.
+- `dragonWing(g, pieza, hombro, codo, puntas, interior)`: ala con membrana festoneada y huesos.
+- `hidden(x, y)`: `torso` mínimo, para esconderlo bajo otra pieza cuando el cuerpo es una curva.
+- Capas de tono sobre una pieza: `{ clip: pieza, keep: true, tone: 'light' | 'shade' | 'hi' }` pinta luces y sombras a mano donde el sombreado automático no llega.
+
+Hazlo siempre en este orden: dibuja primero la etapa final, que es la que tiene que impresionar, y saca las demás quitándole piezas. Amplía el frame y míralo de cerca antes de darlo por bueno: si en la etapa final se sigue viendo «una bola con cosas», no está.
 
 ## Etapas
 Las alturas van en px nativos; en la hoja de 128 son el doble.
@@ -88,6 +110,7 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta.
 - Una especie que es el bípedo redondo de siempre con otro adorno en la cabeza.
 - Piezas heredadas de la geometría común que el animal no tendría: pies en una ballena, brazos en un pulpo. También apoyos o aletas colocados bajo el cuerpo, que se leen como pies.
 - La misma cara en todas las especies: mismos ojos, mismo tamaño, misma altura.
+- Un mítico o un legendario con el mismo nivel de detalle que una especie normal: la rareza no se ve.
 - Una criatura que debería imponer (un fénix, un guardián) dibujada con proporciones de cría: cabeza grande y redonda sobre un cuerpo de bola. Lo épico sale de la proporción: cabeza pequeña, cuello o patas largas y piezas (alas, colas) más grandes que el cuerpo.
 - Un carácter que la cara no cuenta: una especie fiera necesita cejas, colmillos u orejas tiesas, no los ojos redondos de todas.
 - Etapas que solo cambian de tamaño o de proporción de cabeza.
