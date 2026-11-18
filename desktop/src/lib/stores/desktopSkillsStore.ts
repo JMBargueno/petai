@@ -2,40 +2,65 @@ import { writable } from 'svelte/store';
 import { DESKTOP_SKILLS, type DesktopSkillDefinition } from '../types/desktopSkills';
 import { api } from '../api';
 
-const STORAGE_KEY = 'petai:desktop_skills_authorization';
+/** Clave antigua, común a todas las mascotas. Solo se lee para migrar. */
+const LEGACY_KEY = 'petai:desktop_skills_authorization';
 
-function loadAuthorizations(): Record<string, boolean> {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    const defaults: Record<string, boolean> = {};
-    for (const s of DESKTOP_SKILLS) defaults[s.id] = s.defaultEnabled;
-    return defaults;
-  }
+type Authorizations = Record<string, boolean>;
+type KeyValueStore = Pick<Storage, 'getItem' | 'setItem'>;
 
+function browserStorage(): KeyValueStore | null {
+  return typeof window !== 'undefined' && window.localStorage ? window.localStorage : null;
+}
+
+export function skillsStorageKey(petId: string | null | undefined): string {
+  return petId ? `${LEGACY_KEY}:${petId}` : LEGACY_KEY;
+}
+
+export function defaultAuthorizations(): Authorizations {
+  const defaults: Authorizations = {};
+  for (const s of DESKTOP_SKILLS) defaults[s.id] = s.defaultEnabled;
+  return defaults;
+}
+
+function readKey(storage: KeyValueStore | null, key: string): Authorizations | null {
+  if (!storage) return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      const defaults: Record<string, boolean> = {};
-      for (const s of DESKTOP_SKILLS) defaults[s.id] = s.defaultEnabled;
-      return defaults;
-    }
-    return JSON.parse(raw);
+    const raw = storage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
   } catch {
-    const defaults: Record<string, boolean> = {};
-    for (const s of DESKTOP_SKILLS) defaults[s.id] = s.defaultEnabled;
-    return defaults;
+    return null;
   }
 }
 
-function saveAuthorizations(auth: Record<string, boolean>) {
-  if (typeof window === 'undefined' || !window.localStorage) return;
+/**
+ * Autorizaciones guardadas de una mascota. Si aún no tiene las suyas hereda las de la clave
+ * antigua (migración: antes eran comunes a todas) y, si tampoco hay, los valores por defecto.
+ * Las habilidades nuevas que no estén guardadas toman su valor por defecto.
+ */
+export function loadAuthorizationsFor(
+  storage: KeyValueStore | null,
+  petId: string | null | undefined,
+): Authorizations {
+  const saved = (petId ? readKey(storage, skillsStorageKey(petId)) : null) ?? readKey(storage, LEGACY_KEY);
+  return { ...defaultAuthorizations(), ...(saved ?? {}) };
+}
+
+function saveAuthorizations(auth: Authorizations) {
+  const storage = browserStorage();
+  if (!storage) return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
+    storage.setItem(skillsStorageKey(activePetId), JSON.stringify(auth));
   } catch (err) {
     console.warn('[desktopSkillsStore] Error guardando autorizaciones:', err);
   }
 }
 
-export const skillAuthorizations = writable<Record<string, boolean>>(loadAuthorizations());
+/** Mascota a la que pertenecen las autorizaciones cargadas en el store. */
+let activePetId: string | null = null;
+
+export const skillAuthorizations = writable<Authorizations>(loadAuthorizationsFor(browserStorage(), null));
 
 skillAuthorizations.subscribe((val) => {
   saveAuthorizations(val);
@@ -44,47 +69,59 @@ skillAuthorizations.subscribe((val) => {
 /** true si el último cambio no se pudo guardar en el servidor (en este equipo sí queda guardado). */
 export const skillSyncFailed = writable(false);
 
+function onlyBooleans(raw: unknown): Authorizations {
+  const out: Authorizations = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === 'boolean') out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * Carga en el store las autorizaciones de la mascota activa: lo guardado en este equipo para
+ * ella y, encima, lo que diga el servidor. Se llama al cambiar de mascota, no solo al abrir el
+ * panel de Habilidades, para que cada Pockai use las suyas desde el primer momento.
+ */
+export function setActiveSkillsPet(petId: string | null | undefined, backendSkills?: unknown) {
+  activePetId = petId ?? null;
+  skillAuthorizations.set({
+    ...loadAuthorizationsFor(browserStorage(), activePetId),
+    ...onlyBooleans(backendSkills),
+  });
+}
+
 export function syncSkillsFromBackend(backendSkills?: Record<string, boolean> | null) {
   if (!backendSkills || typeof backendSkills !== 'object') return;
   skillAuthorizations.update((current) => ({
     ...current,
-    ...backendSkills,
+    ...onlyBooleans(backendSkills),
   }));
+}
+
+function pushToBackend(petId: string | undefined, updated: Authorizations) {
+  if (!petId) return;
+  api
+    .updateDesktopSkills(petId, updated)
+    .then(() => skillSyncFailed.set(false))
+    .catch((err) => {
+      console.warn('[desktopSkillsStore] Error sincronizando habilidades con backend:', err);
+      skillSyncFailed.set(true);
+    });
 }
 
 export function toggleSkillAuthorization(skillId: string, petId?: string) {
   skillAuthorizations.update((current) => {
-    const nextVal = !current[skillId];
-    const updated = { ...current, [skillId]: nextVal };
-
-    // Sincronizar de forma asíncrona con el backend si hay una mascota activa
-    if (petId) {
-      api
-        .updateDesktopSkills(petId, updated)
-        .then(() => skillSyncFailed.set(false))
-        .catch((err) => {
-          console.warn('[desktopSkillsStore] Error sincronizando habilidades con backend:', err);
-          skillSyncFailed.set(true);
-        });
-    }
-
+    const updated = { ...current, [skillId]: !current[skillId] };
+    pushToBackend(petId, updated);
     return updated;
   });
 }
 
 export function setSkillAuthorization(skillId: string, enabled: boolean, petId?: string) {
   skillAuthorizations.update((current) => {
-    const updated = {
-      ...current,
-      [skillId]: enabled,
-    };
-
-    if (petId) {
-      api.updateDesktopSkills(petId, updated).catch((err) => {
-        console.warn('[desktopSkillsStore] Error sincronizando habilidades con backend:', err);
-      });
-    }
-
+    const updated = { ...current, [skillId]: enabled };
+    pushToBackend(petId, updated);
     return updated;
   });
 }

@@ -24,7 +24,7 @@
     type PointerSample,
   } from '../lib/physics/petPhysics';
   import { fetchActiveWindow, calculatePerchTarget } from '../lib/windowPerching';
-  import { categorizeWindowTitle, type AppCategory } from '../lib/contextAwareness';
+  import { categorizeWindowTitle, localTopicOf, type AppCategory } from '../lib/contextAwareness';
   import { deskState } from '../lib/deskContext';
   import { analyzeDroppedFile } from '../lib/fileAnalyzer';
   import { BarksEngine } from '../lib/barks';
@@ -36,6 +36,17 @@
   import EffectLayer from './EffectLayer.svelte';
   import { EFFECTS, EffectPlayer, admitMoment, flowPalette, phasesOf, portalNexo, type EffectDef, type FxPalette } from '@pockai/scene/effects';
   import { registerTravelPresenter, travel, travelArrived, type TravelState } from '../lib/visitTravel';
+  import { createRng, hashSeed, type Rng } from '@pockai/mind';
+  import { DESK_CONFIG } from '../lib/brain/deskConfig';
+  import { buildSituation, type DeskSituation, type Surface } from '../lib/brain/deskSituation';
+  import { initialBrain, mayBark, stepBrain, type BrainState } from '../lib/brain/deskBrain';
+  import type { DeskCommand } from '../lib/brain/deskBehaviors';
+  import { stepLocomotion, type Locomotion } from '../lib/brain/locomotion';
+  import { DeskSense } from '../lib/brain/deskSense';
+  import { petDims, usePersonalityOf } from '../lib/brain/personalityStore';
+  import { DESKTOP_SKILLS } from '../lib/types/desktopSkills';
+  import { pomodoroStore } from '../lib/pomodoro';
+  import { api } from '../lib/api';
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
@@ -128,12 +139,53 @@
   // Fase 3: Drag & Drop de archivos y Conciencia de contexto
   let isDragOverPet = false;
   let currentAppCategory: AppCategory = 'generic';
+  // Tema de la ventana solo para elegir frases; se queda en el equipo (no va en deskState)
+  let currentLocalTopic: 'browser' | 'chat' | null = null;
   let lastContextCheckTime = 0;
 
   // Motores de interactividad avanzada (Barks & Comportamientos dinámicos)
   const barksEngine = new BarksEngine();
   const behaviorEngine = new BehaviorEngine();
   let barkInterval: any = null;
+
+  // ---------- Cerebro del escritorio (lib/brain) ----------
+  // Percibir (deskSense + pizarra) → decidir (deskBrain) → actuar (runCommands, aquí).
+  // `localStorage['petai:desk_brain'] = '0'` vuelve al bucle anterior (legacyTick) sin recompilar.
+  const USE_BRAIN = (() => {
+    try {
+      return typeof localStorage === 'undefined' || localStorage.getItem('petai:desk_brain') !== '0';
+    } catch {
+      return true;
+    }
+  })();
+  const sense = new DeskSense();
+  let brain: BrainState = initialBrain(performance.now());
+  let brainRng: Rng = createRng(hashSeed(`desk:${pet?.id ?? 'pockai'}:${Date.now()}`));
+  /** Última pizarra montada (la leen las frases espontáneas). */
+  let lastSituation: DeskSituation | null = null;
+  /** Desplazamiento en curso, frame a frame; `null` = quieta. */
+  let loco: (Locomotion & { trail: boolean }) | null = null;
+  let lastTrailAt = 0;
+  /** Sentada por decisión propia (descansando, en foco…). */
+  let brainPose: 'sit' | null = null;
+  /** Siesta local porque el usuario se fue: solo visual, no cambia `pet.sleeping` ni se envía. */
+  let brainNap = false;
+  /** Oculta mientras hay una ventana a pantalla completa. */
+  let brainHidden = false;
+  /** Salto corto a una ventana: reactiva un instante la transición de posición. */
+  let hopping = false;
+  let hopTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Personalidad: la del servidor, guardada por mascota; mientras llega, la estimada por especie
+  let personalityPetId: string | null | undefined = undefined;
+  $: watchPersonality(pet?.id ?? null);
+  function watchPersonality(id: string | null) {
+    if (id === personalityPetId) return;
+    personalityPetId = id;
+    brain = initialBrain(performance.now());
+    brainRng = createRng(hashSeed(`desk:${id ?? 'pockai'}:${Date.now()}`));
+    void usePersonalityOf(pet, (petId) => api.getMind(petId));
+  }
 
   // Detección del cursor del ratón
   let cursorX = 0;
@@ -166,7 +218,7 @@
     const lib = getAnimLibrary(speciesKey);
     controller.setLibrary(lib.library, lib.aliases);
   }
-  $: controller.setBase(resolveBaseState(pet));
+  $: controller.setBase(brainNap ? 'sleep' : resolveBaseState(pet));
   $: if (isSleeping) controller.stop();
 
   // Hornear sprite sheet en memoria al cambiar de mascota, paleta o patrón
@@ -333,6 +385,8 @@
     if (e.button !== 0 || petAway || travelBusy || fxLock) return;
     isDragging = true;
     dragMoved = false;
+    loco = null;
+    brainPose = null;
     dragStartX = e.clientX - posX;
     dragStartY = e.clientY - posY;
     physicsState.isAirborne = false;
@@ -889,6 +943,8 @@
     if (physicsState.isAirborne) return 'fall';
     if (isClimbing) return 'climb';
     if (isPerched) return 'perch';
+    if (loco) return 'walk';
+    if (brainPose === 'sit') return 'perch';
     if (now < walkUntil) return 'walk';
     return null;
   }
@@ -898,7 +954,9 @@
 
   // Loop de renderizado del Canvas a 60 FPS
   function renderLoop(time: number) {
-    const dt = lastRenderTime ? Math.min(time - lastRenderTime, 250) : 16;
+    // Tiempo real entre frames: el desplazamiento no debe frenarse si el navegador espacia los frames
+    const elapsed = lastRenderTime ? Math.min(time - lastRenderTime, 1000) : 16;
+    const dt = Math.min(elapsed, 250);
     lastRenderTime = time;
 
     controller.setMotion(resolveMotion(time));
@@ -962,6 +1020,20 @@
       }
     }
 
+    // Desplazamiento decidido por el cerebro: avanza hacia su destino a velocidad constante
+    if (loco && !isDragging && !physicsState.isAirborne && !petAway && !travelBusy && !fxLock && !isSleeping) {
+      const step = stepLocomotion(posX, posY, loco, elapsed);
+      posX = step.x;
+      posY = step.y;
+      if (step.dir !== 0) direction = step.dir;
+      if (loco.trail && !reducedMotion && time - lastTrailAt > 170) {
+        // Estela del Flujo donde estaba (se queda atrás mientras corre)
+        lastTrailAt = time;
+        playMinor('estela-flujo', { dir: direction }, { x: posX + PET_SIZE / 2, y: posY + PET_SIZE - FEET_INSET });
+      }
+      if (step.arrived) loco = null;
+    }
+
     // Paso de simulación física si la mascota está en el aire o lanzada
     if (physicsState.isAirborne) {
       const pdt = lastPhysicsTime ? (time - lastPhysicsTime) / 1000 : 1 / 60;
@@ -1012,6 +1084,8 @@
     climbWall = null;
     climbRotation = 0;
     isPerched = false;
+    loco = null;
+    brainPose = null;
     const clientX = customEvent.detail?.x ?? (window.innerWidth || 800) / 2;
     const clientY = customEvent.detail?.y ?? (window.innerHeight || 600) - PET_SIZE;
 
@@ -1064,6 +1138,202 @@
     }
   }
 
+  /** Ofrece la patita para chocar los cinco durante unos segundos. */
+  function offerHighFive() {
+    if (isHighFiveWaiting) return;
+    isHighFiveWaiting = true;
+    behaviorEngine.startHighFive();
+    play('happy');
+    squash(1.15, 0.85, 180);
+    const name = pet?.nickname || pet?.species?.name;
+    speak(barksEngine.barkFrom('high_five', name, brainRng), { priority: 'low', durationMs: 6000, key: 'high-five-offer' });
+    setTimeout(() => {
+      if (isHighFiveWaiting) isHighFiveWaiting = false;
+    }, 6000);
+  }
+
+  /**
+   * Conciencia de la app en foco (context_awareness): cada pocos segundos mira el título de la
+   * ventana activa y lo clasifica. Sin la habilidad no se consulta ni se conserva nada.
+   */
+  async function checkAppContext() {
+    const canContext = isSkillActive('context_awareness', $skillAuthorizations, petBonding, petIntelligence);
+    if (!canContext) {
+      // Sin la habilidad no se conserva la última categoría (no debe llegar al chat ni a los hábitos)
+      if (currentAppCategory !== 'generic') currentAppCategory = 'generic';
+      currentLocalTopic = null;
+      return;
+    }
+    const now = Date.now();
+    if (now - lastContextCheckTime <= 6000) return;
+    lastContextCheckTime = now;
+    const win = await fetchActiveWindow();
+    if (!win || !win.title) return;
+    const ctx = categorizeWindowTitle(win.title);
+    currentLocalTopic = localTopicOf(win.title);
+    if (ctx.category === currentAppCategory) return;
+    currentAppCategory = ctx.category;
+    // En juegos y vídeo se aparta sin decir nada: lo promete su perfil de app
+    const quiet = (DESK_CONFIG.appProfiles[ctx.category]?.barkFactor ?? 1) === 0;
+    if (ctx.category !== 'generic' && !quiet) {
+      speak(`${ctx.accessoryIcon} ${ctx.reactionComment}`, {
+        priority: 'low',
+        durationMs: 4500,
+        key: 'app-context',
+        onShow: () => play('talk'),
+      });
+    }
+  }
+
+  function currentSurface(): Surface {
+    if (physicsState.isAirborne) return 'air';
+    if (isClimbing) return climbWall === 'ceiling' ? 'ceiling' : 'wall';
+    if (isPerched) return 'perched';
+    return 'ground';
+  }
+
+  /** Suelta paredes, techo o ventana y cae con gravedad. */
+  function dropToGround() {
+    const wasOff = isClimbing || isPerched;
+    isClimbing = false;
+    climbWall = null;
+    climbRotation = 0;
+    isPerched = false;
+    loco = null;
+    if (!wasOff) return;
+    physicsState = { x: posX, y: posY, vx: 30 * direction, vy: 50, isAirborne: true, bounceCount: 0 };
+    lastPhysicsTime = performance.now();
+    physicsAccumulator = 0;
+  }
+
+  /** Ejecuta las órdenes del cerebro: es lo único que el cerebro puede hacerle a la vista. */
+  function runCommands(commands: DeskCommand[]) {
+    for (const c of commands) {
+      switch (c.type) {
+        case 'move':
+          loco = { targetX: c.x, targetY: c.y ?? null, speed: DESK_CONFIG.speeds[c.speed], trail: !!c.trail };
+          if (c.x !== null && Math.abs(c.x - posX) > 1 && !isClimbing) direction = c.x > posX ? 1 : -1;
+          break;
+        case 'stop':
+          loco = null;
+          break;
+        case 'face':
+          direction = c.dir;
+          break;
+        case 'clip':
+          play(c.name);
+          break;
+        case 'pose':
+          brainPose = c.pose;
+          break;
+        case 'fx':
+          playMinor(c.id, c.params ?? {});
+          break;
+        case 'bark': {
+          const name = pet?.nickname || pet?.species?.name;
+          const text = barksEngine.barkFrom(c.category as any, name, brainRng);
+          speak(text, { priority: 'low', durationMs: 6000, key: `brain-${c.category}` });
+          break;
+        }
+        case 'particle':
+          showParticle(c.emoji);
+          break;
+        case 'squash':
+          squash(1.15, 0.85, 160);
+          break;
+        case 'highFive':
+          offerHighFive();
+          break;
+        case 'surface':
+          isClimbing = true;
+          isPerched = false;
+          if (c.surface === 'ceiling') {
+            climbWall = 'ceiling';
+            climbRotation = 180;
+          } else {
+            climbWall = c.side ?? 'left';
+            climbRotation = climbWall === 'right' ? -90 : 90;
+            posX = climbWall === 'right' ? (window.innerWidth || 800) - PET_SIZE - 5 : 5;
+          }
+          break;
+        case 'drop':
+          dropToGround();
+          break;
+        case 'perch':
+          isClimbing = false;
+          climbWall = null;
+          climbRotation = 0;
+          loco = null;
+          brainPose = null;
+          if (c.hop) {
+            // El salto usa un instante la transición de posición; al llegar, aterriza
+            hopping = true;
+            clearTimeout(hopTimer);
+            hopTimer = setTimeout(() => {
+              hopping = false;
+              play('land');
+              playMinor('polvo-impacto', {}, { x: posX + PET_SIZE / 2, y: posY + PET_SIZE - FEET_INSET });
+            }, 420);
+          }
+          posX = c.x;
+          posY = c.y;
+          isPerched = true;
+          break;
+        case 'hide':
+          brainHidden = c.on;
+          if (c.on) loco = null;
+          break;
+        case 'nap':
+          brainNap = c.on;
+          break;
+      }
+    }
+  }
+
+  /** Un tic del cerebro: monta la pizarra, decide y ejecuta. */
+  function brainTick() {
+    void checkAppContext();
+
+    const now = performance.now();
+    const screen = { w: window.innerWidth || 800, h: window.innerHeight || 600 };
+    const skills: Record<string, boolean> = {};
+    for (const s of DESKTOP_SKILLS) skills[s.id] = isSkillActive(s.id, $skillAuthorizations, petBonding, petIntelligence);
+
+    // Solo se enciende lo que alguna habilidad activa necesita. La ventana en primer plano
+    // (posición y pantalla completa, sin título) hace falta siempre para saber cuándo apartarse.
+    sense.want({ cursor: skills.cursor_play, idle: skills.presence_sense, foreground: !petAway, fast: isPerched });
+
+    const o = sense.overrides;
+    const rolling = !!ball && ball.isRolling && Math.abs(ball.vx) > 10;
+    const situation = buildSituation(
+      {
+        now,
+        dims: $petDims,
+        pet,
+        away: petAway || travelBusy,
+        held: isDragging || physicsState.isAirborne || isEnteringHome,
+        busy: controller.actionPriority >= BUSY_PRIORITY || fxLock || isPetting,
+        body: { x: posX, y: posY, size: PET_SIZE, dir: direction === -1 ? -1 : 1, surface: currentSurface(), moving: loco !== null },
+        screen,
+        cursor: sense.cursor(now, screen),
+        idleMs: sense.idleMs(now),
+        foreground: sense.foregroundWindow(),
+        appCategory: o.appCategory !== undefined ? o.appCategory : currentAppCategory,
+        timeOfDay: o.timeOfDay !== undefined ? o.timeOfDay : (environmental?.timeOfDay ?? null),
+        pomodoro: $pomodoroStore.isRunning ? $pomodoroStore.phase : 'idle',
+        skills,
+        reducedMotion,
+        ball: rolling && ball ? { x: ball.x, rolling: true } : null,
+      },
+      DESK_CONFIG,
+    );
+    lastSituation = situation;
+
+    const out = stepBrain(brain, situation, brainRng, DESK_CONFIG);
+    brain = out.state;
+    if (out.commands.length) runCommands(out.commands);
+  }
+
   onMount(() => {
     setPetOnScreen(!petAway);
     unregisterTravel = registerTravelPresenter();
@@ -1074,8 +1344,9 @@
     window.addEventListener('petai:summon', handleQuickSummon);
     window.addEventListener('petai:pomodoro_event', handlePomodoroEvent);
 
-    // Ciclo de comportamiento de la mascota en pantalla
-    moveInterval = setInterval(async () => {
+    // Ciclo de comportamiento anterior al cerebro (tiradas al azar cada 3 s). Se conserva tal cual
+    // tras el interruptor `petai:desk_brain` hasta dar por bueno el cerebro; después se retira.
+    const legacyTick = async () => {
       if (petAway || travelBusy || fxLock) return;
       if (isSleeping || isDragging || physicsState.isAirborne || controller.actionPriority >= BUSY_PRIORITY) return;
 
@@ -1147,11 +1418,13 @@
       const now = Date.now();
       // Sin la habilidad no se conserva la última categoría (no debe llegar al chat ni a los hábitos)
       if (!canContext && currentAppCategory !== 'generic') currentAppCategory = 'generic';
+      if (!canContext) currentLocalTopic = null;
       if (canContext && now - lastContextCheckTime > 6000) {
         lastContextCheckTime = now;
         const win = await fetchActiveWindow();
         if (win && win.title) {
           const ctx = categorizeWindowTitle(win.title);
+          currentLocalTopic = localTopicOf(win.title);
           if (ctx.category !== currentAppCategory) {
             currentAppCategory = ctx.category;
             if (ctx.category !== 'generic') {
@@ -1276,7 +1549,22 @@
         // De vez en cuando mira alrededor
         play('idle_alt');
       }
-    }, 3000);
+    };
+
+    sense.start();
+    // En desarrollo: `__pockaiBrain()` enseña qué está pensando (modo, conducta y últimas elegidas)
+    if (import.meta.env.DEV) {
+      (window as any).__pockaiBrain = () => ({
+        mode: brain.mode,
+        active: brain.active?.id ?? null,
+        recent: brain.recent,
+        dims: $petDims,
+        mood: lastSituation?.mood,
+        cursor: lastSituation?.cursor.kind,
+        idleMs: lastSituation?.idleMs,
+      });
+    }
+    moveInterval =USE_BRAIN ? setInterval(brainTick, DESK_CONFIG.thinkMs) : setInterval(legacyTick, 3000);
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -1285,18 +1573,23 @@
     barkInterval = setInterval(() => {
       if (petAway || travelBusy || isSleeping || isDragging || isHighFiveWaiting || speechBusy()) return;
       const now = performance.now();
+      // Con el cerebro, el silencio lo decide él: en foco, oculta, de siesta o según la app en foco
+      if (USE_BRAIN && (!lastSituation || !mayBark(brain, lastSituation, DESK_CONFIG, brainRng))) return;
       const ctx = {
         appCategory: currentAppCategory,
+        localTopic: currentLocalTopic,
         hunger: pet?.hunger,
         energy: pet?.energy,
         hygiene: pet?.hygiene,
         happiness: pet?.happiness,
         timeOfDay: environmental?.timeOfDay,
         weatherCondition: environmental?.weather?.condition,
-        isUserIdle: now - cursorLastMove > 35000,
+        // El cursor del webview solo se ve sobre la mascota: con el cerebro se usa la inactividad real
+        isUserIdle: USE_BRAIN && lastSituation ? lastSituation.idleMs > 35000 : now - cursorLastMove > 35000,
+        isTyping: USE_BRAIN && !!lastSituation?.typing,
         petName: pet?.nickname || pet?.species?.name,
       };
-      const text = barksEngine.generateBark(ctx);
+      const text = USE_BRAIN ? barksEngine.generateBark(ctx, brainRng) : barksEngine.generateBark(ctx);
       if (text) speak(text, { priority: 'low', durationMs: 6500, onShow: () => play('talk') });
     }, 65000);
   });
@@ -1311,6 +1604,8 @@
     clearInterval(barkInterval);
     unregisterTravel();
     clearTimeout(cursorStopTimer);
+    clearTimeout(hopTimer);
+    sense.stop();
     if (particleTimer) clearTimeout(particleTimer);
     window.removeEventListener('mousemove', handleMouseMove);
     window.removeEventListener('mouseup', handleMouseUp);
@@ -1368,6 +1663,9 @@
   aria-label="{pet.nickname || pet.species?.name || 'Tu Pockai'}, nivel {pet.level}. {isHighFiveWaiting ? 'Pulsa Enter para chocar los cinco' : 'Pulsa Enter para abrir su panel'}"
   data-anim={currentAnim}
   class:dragging={isDragging}
+  class:brain-moving={!!loco && !hopping}
+  class:hopping
+  class:brain-hidden={brainHidden}
   class:over-home={isOverHome}
   class:entering-home={isEnteringHome}
   class:drag-over={isDragOverPet}
@@ -1485,6 +1783,21 @@
     transition: none;
     /* Por encima del panel de control (z-index 100) para "meterla" en casa arrastrando */
     z-index: var(--z-popover);
+  }
+
+  /* El cerebro mueve a la mascota frame a frame: la transición la haría ir a trompicones */
+  .pet-container.brain-moving {
+    transition: none;
+  }
+  /* Salto a una ventana: un arco corto en vez del deslizamiento habitual */
+  .pet-container.hopping {
+    transition: left 0.4s cubic-bezier(0.3, 0, 0.4, 1), top 0.4s cubic-bezier(0.2, -0.4, 0.5, 1);
+  }
+  /* Apartada mientras hay algo a pantalla completa: ni se ve ni recibe clics */
+  .pet-container.brain-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
   }
 
   .pet-container.over-home .pet-body {

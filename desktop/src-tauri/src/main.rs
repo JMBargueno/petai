@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ai_cli;
+mod desk_sense;
 
 use serde::Deserialize;
 use std::sync::Mutex;
@@ -215,6 +216,7 @@ fn get_active_window_info(app: tauri::AppHandle) -> ActiveWindowInfo {
 fn spawn_click_through_loop(app: tauri::AppHandle) {
     std::thread::spawn(move || {
         let mut ignoring: Option<bool> = None;
+        let mut cursor_throttle = desk_sense::CursorThrottle::new();
         loop {
             std::thread::sleep(Duration::from_millis(30));
             let Some(window) = app.get_webview_window("main") else { continue };
@@ -230,6 +232,7 @@ fn spawn_click_through_loop(app: tauri::AppHandle) {
             };
             let cx = (cursor.x - origin.x as f64) / scale;
             let cy = (cursor.y - origin.y as f64) / scale;
+            desk_sense::on_cursor(&app, &mut cursor_throttle, cx, cy);
 
             let over_interactive = app
                 .state::<HitRegions>()
@@ -277,11 +280,13 @@ fn main() {
         )
         .manage(HitRegions::default())
         .manage(SummonShortcut::default())
+        .manage(desk_sense::DeskSenseFlags::default())
         .manage(ai_cli::CliProcs::default())
         .invoke_handler(tauri::generate_handler![
             set_hit_regions,
             get_active_window_info,
             set_summon_shortcut,
+            desk_sense::set_desk_sense,
             ai_cli::run_ai_cli,
             ai_cli::cancel_ai_cli,
             ai_cli::detect_ai_cli
@@ -309,6 +314,7 @@ fn main() {
                 }
             }
             spawn_click_through_loop(app.handle().clone());
+            desk_sense::spawn_sense_loop(app.handle().clone());
 
             // Configurar Menú de la Bandeja del Sistema (System Tray)
             let toggle = MenuItem::with_id(app, "toggle", "Mostrar/Ocultar Mascota", true, None::<&str>)?;

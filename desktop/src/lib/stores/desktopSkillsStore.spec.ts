@@ -6,6 +6,9 @@ import {
   getPetIntelligenceRequiredPoints,
   isSkillUnlocked,
   isSkillActive,
+  skillsStorageKey,
+  loadAuthorizationsFor,
+  defaultAuthorizations,
 } from './desktopSkillsStore';
 import { DESKTOP_SKILLS } from '../types/desktopSkills';
 
@@ -73,5 +76,46 @@ describe('desktopSkillsStore helpers', () => {
       expect(isSkillUnlocked(fileAnalyzer, 30, 500)).toBe(true); // ambos cumplidos
       expect(isSkillUnlocked(fileAnalyzer, 30, 3)).toBe(true); // nivel directo 3
     });
+  });
+});
+
+describe('autorizaciones por mascota', () => {
+  /** Almacén en memoria con la misma forma que localStorage. */
+  function memoryStorage(initial: Record<string, string> = {}) {
+    const data = new Map(Object.entries(initial));
+    return {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+    };
+  }
+
+  it('cada mascota tiene su propia clave', () => {
+    expect(skillsStorageKey('a')).not.toBe(skillsStorageKey('b'));
+    expect(skillsStorageKey(null)).toBe('petai:desktop_skills_authorization');
+  });
+
+  it('sin nada guardado devuelve los valores por defecto', () => {
+    expect(loadAuthorizationsFor(memoryStorage(), 'a')).toEqual(defaultAuthorizations());
+    expect(loadAuthorizationsFor(null, 'a')).toEqual(defaultAuthorizations());
+  });
+
+  it('lo guardado para una mascota no afecta a otra', () => {
+    const storage = memoryStorage({
+      [skillsStorageKey('a')]: JSON.stringify({ climb_walls: false }),
+    });
+    expect(loadAuthorizationsFor(storage, 'a').climb_walls).toBe(false);
+    expect(loadAuthorizationsFor(storage, 'b').climb_walls).toBe(true);
+  });
+
+  it('una mascota sin clave propia hereda la antigua, común a todas', () => {
+    const storage = memoryStorage({
+      [skillsStorageKey(null)]: JSON.stringify({ window_perching: true }),
+    });
+    expect(loadAuthorizationsFor(storage, 'a').window_perching).toBe(true);
+  });
+
+  it('un valor corrupto no rompe la carga', () => {
+    const storage = memoryStorage({ [skillsStorageKey('a')]: '{no es json' });
+    expect(loadAuthorizationsFor(storage, 'a')).toEqual(defaultAuthorizations());
   });
 });

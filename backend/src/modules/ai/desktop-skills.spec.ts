@@ -25,7 +25,7 @@ describe('desktop-skills', () => {
   it('el bloque del prompt separa activas, apagadas y bloqueadas', () => {
     const block = buildDesktopSkillsBlock({ bonding: 22, intelligence: 250, desktopSkills: { climb_walls: false } });
     expect(block).toContain('Activas:');
-    expect(block).toContain('rebotes'); // drag_throw, activa por defecto
+    expect(block).toContain('rebotas'); // drag_throw, activa por defecto
     expect(block).toContain('Trepar bordes [climb_walls]');
     expect(block).toContain('Mascota → Habilidades');
     expect(block).toMatch(/Conciencia de la app en foco: te falta 3 puntos más de vínculo/);

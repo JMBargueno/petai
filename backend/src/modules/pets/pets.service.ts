@@ -11,6 +11,7 @@ import { nightHoursBetween, safeTimeZone } from './sleep-cycle';
 import { HabitatService } from '../habitat/habitat.service';
 import { boostedRecovery, reducedDecay, type ActiveBuffs } from '../habitat/habitat-buffs';
 import { STAGE_ORDER, stageForLevel, type Stage } from './stages';
+import { DESKTOP_SKILL_REGISTRY } from '../ai/desktop-skills';
 /** Higiene a partir de la cual el baño se rechaza (balance.vitals.cleanMaxHygiene lo sustituye). */
 const DEFAULT_CLEAN_MAX_HYGIENE = 80;
 /** Por debajo de este intervalo (~36 s) el lazy tick no cambia nada. */
@@ -510,15 +511,10 @@ export class PetsService {
   async updateDesktopSkills(userId: string, petId: string, skills: Record<string, boolean>) {
     const pet = await this.getPetById(userId, petId);
 
-    const SKILL_REQUIREMENTS: Record<string, { bonding: number; intelligence: number }> = {
-      drag_throw: { bonding: 0, intelligence: 1 },
-      quick_summon: { bonding: 0, intelligence: 1 },
-      climb_walls: { bonding: 10, intelligence: 1 },
-      window_perching: { bonding: 15, intelligence: 2 },
-      pomodoro_companion: { bonding: 20, intelligence: 1 },
-      context_awareness: { bonding: 25, intelligence: 2 },
-      file_analyzer: { bonding: 30, intelligence: 3 },
-    };
+    // Umbrales del registro único de habilidades: sin copia aparte que se quede atrás
+    const SKILL_REQUIREMENTS: Record<string, { bonding: number; intelligence: number }> = Object.fromEntries(
+      DESKTOP_SKILL_REGISTRY.map((sk) => [sk.id, { bonding: sk.requiredBonding, intelligence: sk.requiredIntelligence }]),
+    );
 
     const petBonding = typeof pet.bonding === 'number' ? pet.bonding : 0;
     const petIntelligence = typeof pet.intelligence === 'number' ? pet.intelligence : 0;

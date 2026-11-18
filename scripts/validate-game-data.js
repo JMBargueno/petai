@@ -100,6 +100,86 @@ if (pers) {
     if (!foods.some((f) => f.id === id)) throw new Error(`balance.personality.autonomy.itemFind: ${id} no existe en foods.json`);
   }
   console.log('✓ balance.json: personalidad (5 dimensiones, evolución y autonomía) validada');
+
+  // 1c-bis. Cerebro del escritorio: conductas con pesos por dimensión y requisitos declarativos
+  const desk = pers.desktop;
+  if (desk) {
+    const where = 'balance.personality.desktop';
+    const REQUIRES = {
+      minEnergy: 'number', maxEnergy: 'number', minHappiness: 'number', skill: 'string', cursor: 'string',
+      userActive: 'boolean', typing: 'boolean', motion: 'boolean', newTimeSlot: 'boolean', window: 'boolean',
+      apps: 'array', moods: 'array', minDims: 'dims', maxDims: 'dims',
+    };
+    const CURSOR_KINDS = ['near', 'still', 'fast', 'slow', 'approaching'];
+    const APPS = ['coding', 'music', 'video', 'gaming', 'reading'];
+    const MOODS = ['sick', 'hungry', 'exhausted', 'dirty', 'sad', 'happy', 'calm'];
+    const BOOSTS = ['lowEnergy', 'highEnergy', 'lowHappiness', 'highHappiness'];
+    const posNum = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
+    const range = (v) => Array.isArray(v) && v.length === 2 && posNum(v[0]) && v[1] >= v[0];
+    const checkDims = (obj, at) => {
+      for (const [k, v] of Object.entries(obj ?? {})) {
+        if (!PERSONALITY_DIMS.includes(k)) throw new Error(`${at}: dimensión desconocida ${k}`);
+        if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`${at}.${k} debe ser un número`);
+      }
+    };
+
+    if (!posNum(desk.thinkMs)) throw new Error(`${where}.thinkMs inválido`);
+    if (!range(desk.pauseMs)) throw new Error(`${where}.pauseMs debe ser [min, max]`);
+    if (!range(desk.perch?.stayMs) || !posNum(desk.perch?.hopCooldownMs)) throw new Error(`${where}.perch inválido`);
+    const ar = desk.antiRepeat;
+    if (!ar || !Number.isInteger(ar.window) || ar.window < 1 || !(ar.penalty > 0 && ar.penalty <= 1) || !Number.isInteger(ar.top) || ar.top < 1 || !(ar.margin >= 0)) {
+      throw new Error(`${where}.antiRepeat inválido`);
+    }
+    if (!(desk.needs?.low >= 0 && desk.needs.high > desk.needs.low && desk.needs.high <= 100)) throw new Error(`${where}.needs inválido`);
+    for (const k of ['slow', 'walk', 'run', 'climb']) if (!posNum(desk.speeds?.[k])) throw new Error(`${where}.speeds.${k} inválido`);
+    for (const k of ['napAfterMs', 'welcomeMinAwayMs', 'longAwayMs', 'typingStillMs', 'typingRecentMs', 'cursorOnlyFactor']) {
+      if (!posNum(desk.idle?.[k])) throw new Error(`${where}.idle.${k} inválido`);
+    }
+    for (const k of ['nearPx', 'stalkMinPx', 'stalkMaxPx', 'stillMs', 'fastPxPerS', 'slowPxPerS', 'shyPx', 'followGapPx', 'catchPx']) {
+      if (!posNum(desk.cursor?.[k])) throw new Error(`${where}.cursor.${k} inválido`);
+    }
+    if (!posNum(desk.barks?.everyMs)) throw new Error(`${where}.barks.everyMs inválido`);
+
+    const ids = Object.keys(desk.behaviors ?? {});
+    if (ids.length === 0) throw new Error(`${where}.behaviors vacío`);
+    for (const id of ids) {
+      const b = desk.behaviors[id];
+      const at = `${where}.behaviors.${id}`;
+      if (!posNum(b.base)) throw new Error(`${at}.base debe ser > 0`);
+      checkDims(b.weights, `${at}.weights`);
+      if (b.cooldownMs !== undefined && !posNum(b.cooldownMs)) throw new Error(`${at}.cooldownMs inválido`);
+      for (const [k, v] of Object.entries(b.boost ?? {})) {
+        if (!BOOSTS.includes(k) || !posNum(v)) throw new Error(`${at}.boost.${k} inválido`);
+      }
+      for (const [k, v] of Object.entries(b.requires ?? {})) {
+        const kind = REQUIRES[k];
+        // Lista blanca: un requisito desconocido se ignoraría en silencio y la conducta saldría siempre
+        if (!kind) throw new Error(`${at}.requires.${k}: requisito desconocido`);
+        if (kind === 'array') {
+          const allowed = k === 'apps' ? APPS : MOODS;
+          if (!Array.isArray(v) || v.length === 0 || v.some((x) => !allowed.includes(x))) throw new Error(`${at}.requires.${k} inválido`);
+        } else if (kind === 'dims') {
+          checkDims(v, `${at}.requires.${k}`);
+        } else if (typeof v !== kind) {
+          throw new Error(`${at}.requires.${k} debe ser ${kind}`);
+        }
+      }
+      if (b.requires?.cursor && !CURSOR_KINDS.includes(b.requires.cursor)) throw new Error(`${at}.requires.cursor inválido`);
+    }
+    for (const id of desk.focus ?? []) if (!ids.includes(id)) throw new Error(`${where}.focus: conducta desconocida ${id}`);
+    if (!Array.isArray(desk.focus) || desk.focus.length === 0) throw new Error(`${where}.focus vacío: en un Pomodoro no tendría nada que hacer`);
+    // Con una personalidad cualquiera y sin habilidades debe quedar algo que hacer
+    if (!ids.some((id) => !desk.behaviors[id].requires)) throw new Error(`${where}.behaviors: hace falta al menos una conducta sin requisitos`);
+    for (const [app, profile] of Object.entries(desk.appProfiles ?? {})) {
+      if (!APPS.includes(app)) throw new Error(`${where}.appProfiles: app desconocida ${app}`);
+      if (!(profile.barkFactor >= 0 && profile.barkFactor <= 1)) throw new Error(`${where}.appProfiles.${app}.barkFactor debe estar en 0-1`);
+      for (const [id, f] of Object.entries(profile.factors ?? {})) {
+        if (!ids.includes(id)) throw new Error(`${where}.appProfiles.${app}: conducta desconocida ${id}`);
+        if (!(typeof f === 'number' && f >= 0)) throw new Error(`${where}.appProfiles.${app}.${id} debe ser ≥ 0`);
+      }
+    }
+    console.log(`✓ balance.json: cerebro del escritorio (${ids.length} conductas) validado`);
+  }
 }
 
 // 1c. Combate (Fase 4): balance, ligas y habilidades
