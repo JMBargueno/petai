@@ -26,7 +26,7 @@ La norma es `docs/GUIA_ARTISTICA.md` §7.7 (visual, con las rampas de §7.5 y §
 **Estado del sistema:**
 - Los datos funcionan de punta a punta: `foods.json` → seed → `Item` → tienda, inventario, cofres, minijuegos, hallazgos y regalos.
 - Tipos con mecánica: `food` (alimentar), `medicine` (curar) y `evolution` (la Forma Final, un único objeto). **Nada más.** Un juguete (`toy`) o un ingrediente de `recipes.json` no hacen nada hoy: si te piden uno, dilo y propón construir antes la mecánica.
-- El arte de objetos tiene pipeline (`scripts/sprites/items/import.mjs`, `pnpm generate:items`) y los 11 objetos de partida tienen icono. **El escritorio los pinta solo** en la tienda, en los chips de «Alimentar» y al abrir un cofre (`desktop/src/components/ItemIcon.svelte`); un objeto sin PNG cae al icono genérico. Web y Android aún no los pintan.
+- El arte de objetos tiene pipeline (`scripts/sprites/items/import.mjs`, `pnpm generate:items`) y los 11 objetos de partida tienen icono. **El escritorio los pinta solo** en la tienda, en los chips de «Alimentar» y al abrir un cofre (`desktop/src/components/ItemIcon.svelte`); un objeto sin PNG cae al icono genérico. Android también (`ui/theme/ItemIcon.kt`: tienda, selector de comida, cofres y premio de minijuego), con el arte dentro del APK. El contrato para cualquier cliente está en `docs/ART_PIPELINE.md` §10; iOS y la web aún no los pintan.
 
 ## Flujo
 

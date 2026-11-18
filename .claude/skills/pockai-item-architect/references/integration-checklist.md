@@ -28,5 +28,5 @@ Las rutas son relativas a la raíz del repo.
 ## Después
 13. El seed (`backend/prisma/seed.ts`) crea el `Item`; hay que ejecutarlo en cada entorno. Sin seed el objeto no existe en la tienda y un cofre que lo suelte fallaría al entregarlo: **datos y seed se despliegan juntos**.
 14. El precio del JSON solo se usa al crear el `Item`. Para cambiarlo después, panel de admin.
-15. El escritorio pinta el icono solo, en cuanto existe el PNG: tienda, chips de «Alimentar» y premios de un cofre (`desktop/src/lib/items.ts`, `ItemIcon.svelte`). Sin PNG cae al icono genérico. Web y Android aún no los pintan.
+15. El escritorio y Android pintan el icono solos en cuanto existe el PNG (`ItemIcon.svelte`, `ui/theme/ItemIcon.kt`); sin PNG caen al icono genérico. El contrato para cualquier cliente, iOS incluido, está en `docs/ART_PIPELINE.md` §10. En Android el icono viaja dentro del APK: llega con la siguiente versión de la app.
 16. `desktop/vite.mock.ts` y `PlayScreen.kt` (Android) llevan nombres de objetos a mano para la demo y el premio de minijuego. Si el objeto nuevo es premio de un minijuego, añádelo ahí o dilo al cerrar.

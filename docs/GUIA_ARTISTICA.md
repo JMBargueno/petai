@@ -475,7 +475,7 @@ El esquema de datos, las anclas y el orden de implementación están en [`specs/
 
 ### 7.7 Objetos
 
-Los consumibles (comida, medicina y la Piedra de Evolución, en `shared/game-data/foods.json`) son **pixel art**, como las criaturas: son trozos del mundo, no iconos de interfaz. Los iconos de moneda, gema y botones siguen siendo vectoriales. El pipeline existe (`pnpm items:import`, `pnpm generate:items`). El escritorio los pinta en la tienda, en los chips de «Alimentar» y al abrir un cofre; un objeto sin arte cae al icono genérico de interfaz. Web y Android aún no los pintan.
+Los consumibles (comida, medicina y la Piedra de Evolución, en `shared/game-data/foods.json`) son **pixel art**, como las criaturas: son trozos del mundo, no iconos de interfaz. Los iconos de moneda, gema y botones siguen siendo vectoriales. El pipeline existe (`pnpm items:import`, `pnpm generate:items`). El escritorio los pinta en la tienda, en los chips de «Alimentar» y al abrir un cofre; un objeto sin arte cae al icono genérico de interfaz. Android los pinta en la tienda, el selector de comida, los cofres y el premio de minijuego. El contrato para todos los clientes está en `ART_PIPELINE.md` §10; iOS y la web aún no los pintan.
 
 **Lienzo**
 - **32×32 px nativos**, exportado a ×2 (64×64) en `shared/assets/items/<id>.png`. `manifest.json` lista los que tienen arte.

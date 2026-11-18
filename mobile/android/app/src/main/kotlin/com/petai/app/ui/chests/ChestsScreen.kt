@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import com.petai.app.ui.theme.CardNoPadding
 import com.petai.app.ui.theme.CoinAmount
 import com.petai.app.ui.theme.GemAmount
+import com.petai.app.ui.theme.ItemIcon
 import com.petai.app.ui.theme.PockaiCard
 import com.petai.app.ui.theme.SecondaryButton
 import com.petai.app.ui.theme.PrimaryButton
@@ -111,7 +112,8 @@ fun ChestsScreen(service: ApiService, onChanged: () -> Unit) {
                         Column {
                             Text("¡Cofre ${r.chest.type} abierto!", style = MaterialTheme.typography.titleMedium)
                             r.drops.forEach { d ->
-                                Row(Modifier.padding(top = 4.dp)) {
+                                Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    ItemIcon(d.itemId, Modifier.padding(end = 8.dp))
                                     Text(d.name, style = MaterialTheme.typography.bodyMedium)
                                     Text(" ×${d.qty}", style = MaterialTheme.typography.labelLarge)
                                     if (d.isNew) Tag("Nuevo", Modifier.padding(start = 8.dp), Brand.MintPop)
