@@ -138,7 +138,7 @@ Features sin UI (solo backend + API):
 | Arte importado: animación | Cada animación mueve una de 10 poses en píxeles enteros, sin frames intermedios. No se han revisado en movimiento. |
 | Arte importado: accesorios | Las anclas se estiman desde la silueta; no se ha comprobado cómo caen las prendas sobre el Leviatín. |
 | Leviatín: salto de estilo | La etapa final se generó en una ronda anterior y tiene más detalle que las otras tres. |
-| Boceto y ficha del Ignisaurio | El arte final es un dinosaurio cuadrúpedo de gorguera; su `PixelSpecies` de formas sigue siendo el bípedo anterior (solo sirve de boceto y para colocar efectos). Faltan también las fichas de Ignisaurio, Axolunar y Florabrote en `docs/pockais/`. |
+| Boceto del Ignisaurio | El arte final es un dinosaurio cuadrúpedo de gorguera; su `PixelSpecies` de formas sigue siendo el bípedo anterior (solo sirve de boceto y para colocar efectos). Las 15 especies tienen ya su ficha en `docs/pockais/`. |
 | Sistema de diseño publicado | No refleja los últimos cambios (tamaños de prenda, colores del huevo, rareza por especie). |
 
 ### 8d. Rareza por especie (GAME_DESIGN §1)
