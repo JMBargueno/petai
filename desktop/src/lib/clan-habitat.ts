@@ -13,6 +13,16 @@ export interface HabitatTierDef {
   name: string;
   minXp: number;
   tagline: string;
+  /** Franja [arriba, abajo] (fracción de la altura) por la que pasean los pockais en ese fondo. */
+  ground?: [number, number];
+}
+
+const DEFAULT_GROUND: [number, number] = [0.64, 0.93];
+
+/** Franja de paseo del nivel `level` en el escenario (por defecto, el tercio inferior). */
+export function groundBand(level: number): [number, number] {
+  const g = HABITAT_TIERS.find((t) => t.level === level)?.ground;
+  return g && g.length === 2 && g[0] < g[1] ? g : DEFAULT_GROUND;
 }
 
 export const HABITAT_TIERS: HabitatTierDef[] = [...(data.tiers as HabitatTierDef[])].sort((a, b) => a.minXp - b.minXp);

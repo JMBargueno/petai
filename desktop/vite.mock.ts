@@ -148,7 +148,7 @@ const clan = {
   tag: 'NEXO',
   description: 'Clan tranquilo para cuidar pockais y hacer raids los fines de semana.',
   leaderId: 'u-2',
-  xp: 4820,
+  xp: 320, // nivel 1 del hábitat: el único con fondo pintado por ahora
   memberCount: clanMembers.length,
   leader: { userId: 'u-2', displayName: 'Marta', handle: 'marta' },
   members: clanMembers,

@@ -1,5 +1,5 @@
 {
-  "_comment": "Hábitat del Nexo (clan): niveles visuales según la Resonancia del Nexo (XP del clan). El escenario sube de nivel solo al cruzar minXp. maxResidents: tope de pockais (uno por Custodio) que pasean a la vez.",
+  "_comment": "Hábitat del Nexo (clan): niveles visuales según la Resonancia del Nexo (XP del clan). El escenario sube de nivel solo al cruzar minXp. maxResidents: tope de pockais (uno por Custodio) que pasean a la vez. ground: franja [arriba, abajo] (fracción de la altura) por la que pasean los pockais sobre el fondo pintado de ese nivel.",
   "maxResidents": 5,
   "tiers": [
     {
@@ -7,35 +7,55 @@
       "id": "claro",
       "name": "Claro de las Hebras",
       "minXp": 0,
-      "tagline": "Unas pocas hebras brillan en la hierba: el Nexo acaba de trenzarse."
+      "tagline": "Unas pocas hebras brillan en la hierba: el Nexo acaba de trenzarse.",
+      "ground": [
+        0.64,
+        0.93
+      ]
     },
     {
       "level": 2,
       "id": "campamento",
       "name": "Campamento del Eco",
       "minXp": 500,
-      "tagline": "Hogueras, estandartes y el rumor del Eco entre las tiendas."
+      "tagline": "Hogueras, estandartes y el rumor del Eco entre las tiendas.",
+      "ground": [
+        0.64,
+        0.93
+      ]
     },
     {
       "level": 3,
       "id": "santuario",
       "name": "Santuario de los Juramentos",
       "minXp": 2000,
-      "tagline": "Piedras rúnicas que laten cada vez que el Nexo cumple su palabra."
+      "tagline": "Piedras rúnicas que laten cada vez que el Nexo cumple su palabra.",
+      "ground": [
+        0.66,
+        0.93
+      ]
     },
     {
       "level": 4,
       "id": "ciudadela",
       "name": "Ciudadela del Nexo",
       "minXp": 6000,
-      "tagline": "Torres de cristal de Éter sostienen el trenzado sobre el valle."
+      "tagline": "Torres de cristal de Éter sostienen el trenzado sobre el valle.",
+      "ground": [
+        0.7,
+        0.93
+      ]
     },
     {
       "level": 5,
       "id": "celestial",
       "name": "Nexo Celestial",
       "minXp": 15000,
-      "tagline": "El Nexo flota entre auroras: su Resonancia se ve desde todo el Éter."
+      "tagline": "El Nexo flota entre auroras: su Resonancia se ve desde todo el Éter.",
+      "ground": [
+        0.66,
+        0.8
+      ]
     }
   ]
 }

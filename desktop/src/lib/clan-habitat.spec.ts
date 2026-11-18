@@ -9,6 +9,7 @@ import {
   stepWalkers,
   celebrateAll,
   depthScale,
+  groundBand,
   type Walker,
 } from './clan-habitat';
 
@@ -32,6 +33,16 @@ describe('clan-habitat: niveles', () => {
     expect(habitatTier(500).level).toBe(2);
     expect(habitatTier(14999).level).toBe(4);
     expect(habitatTier(15000).level).toBe(5);
+  });
+
+  it('cada nivel tiene una franja de paseo válida (y uno desconocido usa la de por defecto)', () => {
+    for (const t of HABITAT_TIERS) {
+      const [top, bottom] = groundBand(t.level);
+      expect(top).toBeGreaterThan(0.5);
+      expect(bottom).toBeLessThanOrEqual(0.95);
+      expect(top).toBeLessThan(bottom);
+    }
+    expect(groundBand(99)).toEqual([0.64, 0.93]);
   });
 
   it('tierProgress: porcentaje dentro del tramo y XP restante', () => {

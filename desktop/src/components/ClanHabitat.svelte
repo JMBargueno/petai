@@ -22,6 +22,7 @@
     stepWalkers,
     celebrateAll,
     depthScale,
+    groundBand,
     type Walker,
   } from '../lib/clan-habitat';
 
@@ -275,10 +276,9 @@
   }
 
   /** Posición en píxeles de un residente (los pies tocan la franja de suelo). */
-  const GROUND_TOP = 0.6;
-  const GROUND_BOTTOM = 0.94;
+  $: [groundTop, groundBottom] = groundBand(shownLevel);
   function residentPos(w: Walker) {
-    return { left: w.x * width, top: height * (GROUND_TOP + w.y * (GROUND_BOTTOM - GROUND_TOP)) };
+    return { left: w.x * width, top: height * (groundTop + w.y * (groundBottom - groundTop)) };
   }
   const BASE_SIZE = 84;
 
@@ -498,7 +498,7 @@
     height: 100%;
     object-fit: cover;
     object-position: center bottom;
-    image-rendering: pixelated;
+    /* Se pinta más pequeño que su tamaño real: reducir con suavizado evita los dientes de sierra. */
     animation: fade-in 0.9s ease;
   }
   @keyframes fade-in { from { opacity: 0; } }
