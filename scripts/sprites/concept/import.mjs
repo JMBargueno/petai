@@ -73,14 +73,16 @@ if (String(cellArg).startsWith('h=')) {
 /** Reduce una criatura a 64×64: centrada en x y apoyada en la fila 59; color más repetido de cada bloque. */
 function downscale(s) {
   const out = new Array(N * N).fill(null);
+  // Si la pose no cabe (62 px de alto o de ancho), se reduce solo esa pose.
+  const step = Math.max(STEP, (s.y1 - s.y0 + 1) / 60, (s.x1 - s.x0 + 1) / 62);
   const cx = (s.x0 + s.x1) / 2;
-  const left = cx - 32 * STEP;
-  const top = s.y1 + 1 - 60 * STEP;
+  const left = cx - 32 * step;
+  const top = s.y1 + 1 - 60 * step;
   for (let ny = 0; ny < N; ny++) for (let nx = 0; nx < N; nx++) {
-    const xa = Math.floor(left + nx * STEP);
-    const xb = Math.floor(left + (nx + 1) * STEP);
-    const ya = Math.floor(top + ny * STEP);
-    const yb = Math.floor(top + (ny + 1) * STEP);
+    const xa = Math.floor(left + nx * step);
+    const xb = Math.floor(left + (nx + 1) * step);
+    const ya = Math.floor(top + ny * step);
+    const yb = Math.floor(top + (ny + 1) * step);
     let total = 0;
     let inside = 0;
     const bins = new Map();
@@ -105,7 +107,8 @@ const frames = sprites.map(downscale);
 
 // Partículas pegadas: una mancha grande amarilla o naranja tocando a la criatura es una estrella de
 // impacto o un destello que dibujó la IA. El juego pone las suyas, así que se quitan. Las pequeñas
-// (ojos de estrella) se quedan.
+// (ojos de estrella) se quedan. Solo se hace si ese color es raro en la especie: en una criatura
+// dorada, crema o de fuego, el amarillo es su cuerpo, no una partícula.
 const isFx = (c) => {
   const mx = Math.max(...c);
   const mn = Math.min(...c);
@@ -114,7 +117,9 @@ const isFx = (c) => {
   return h >= 12 && h <= 68;
 };
 let removed = 0;
-for (const f of frames) {
+const opaque = frames.flat().filter(Boolean);
+const fxShare = opaque.filter(isFx).length / Math.max(1, opaque.length);
+for (const f of fxShare > 0.04 ? [] : frames) {
   const seen = new Uint8Array(N * N);
   for (let i = 0; i < N * N; i++) {
     if (seen[i] || !f[i] || !isFx(f[i])) continue;

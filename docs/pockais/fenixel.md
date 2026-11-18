@@ -55,7 +55,7 @@ Valiente y curiosa: prueba, falla y vuelve a probar.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo, cuello y plumón del arranque de las alas en primario; pecho, pico, patas, cascarón y todas las plumas en secundario; garras en primario oscurecido. Cada pluma es una pieza con su contorno. La cola gira con la pose, cresta y alas laten con los apéndices y las patas dan el paso.
 
-**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Las plumas van en degradado de la base a la punta, las patas y garras en el acento, y la etapa final tiene el lomo oscuro y un anillo en el pecho.
+**Estado del arte:** arte final por hoja objetivo (`target-sheet-pipeline.md`): cada etapa generada con Nano Banana a partir del boceto y de `examples/fenixel-objetivo.png`, e importada a 64 px (`scripts/sprites/pixel/imported/fenixel.json`). La paleta por defecto es la de la hoja. Boceto anterior: redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Las plumas van en degradado de la base a la punta, las patas y garras en el acento, y la etapa final tiene el lomo oscuro y un anillo en el pecho.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -69,6 +69,6 @@ Pixel art en 3/4. Cuerpo, cuello y plumón del arranque de las alas en primario;
   "favoriteFood": "spicy_berry",
   "spriteKey": "fenixel",
   "personalityBias": { "curiosity": 70, "sociability": 50, "bravery": 75, "affection": 55, "temper": 60 },
-  "defaultPalette": { "primary": "#E8483A", "secondary": "#FFD166", "accent": "#6D1600" }
+  "defaultPalette": { "primary": "#FFD62D", "secondary": "#FF642D", "accent": "#692125" }
 }
 ```

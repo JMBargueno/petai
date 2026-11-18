@@ -2,7 +2,7 @@
 
 Es el flujo para el arte final de una especie. El generador procedural (`scripts/sprites/pixel/species.ts`) no alcanza la calidad que pide el usuario dibujando con formas, así que su dibujo pasa a ser un **boceto de disposición**: fija cuántas poses hay, dónde van y hacia dónde miran. El arte lo dibuja una IA de imagen (Nano Banana, por la API de Gemini) y el repo lo **importa** píxel a píxel al formato del juego.
 
-Referencia hecha con este flujo: el Leviatín (`scripts/sprites/pixel/imported/leviatin.json`).
+Hechas con este flujo: Leviatín, Livolt, Inktopus, Solarejo, Fénixel, Kirisol, Yggdrito y Primpulso (`scripts/sprites/pixel/imported/`).
 
 ```
 boceto (generador) ─┐
@@ -89,18 +89,20 @@ Si falla, **regenera solo esa etapa**: dos llamadas iguales dan resultados disti
 ## Qué hace el importador
 `import.mjs` localiza las 10 criaturas por su mancha conexa (no por una rejilla fija, así que da igual que el modelo las desplace), las reduce todas con la misma escala apoyándolas en el suelo, las pasa a una paleta corta común y las limpia:
 
-- quita las partículas sueltas y las manchas amarillas o naranjas grandes pegadas (estrellas de impacto);
+- quita las partículas sueltas y, solo si el amarillo y el naranja son raros en la especie, las manchas grandes de ese color pegadas a la criatura (estrellas de impacto). En una especie dorada, crema o de fuego no se quitan, porque ese color es su cuerpo: si ves **zonas blancas o huecas** dentro de una criatura, es este filtro comiéndosela;
 - quita píxeles sueltos de la silueta y rellena agujeros de 1 px;
 - funde con su entorno los píxeles aislados que se parecen al color de al lado. Los que contrastan (brillos, ojos) se respetan.
 
 Si una etapa sale **con ruido**, casi siempre es que la criatura era pequeña en la imagen: regenera pidiéndola más grande, o baja los colores.
 
 ## Qué hace `roles.mjs`
-Clasifica cada color en primario, secundario, acento, línea o color literal, y le da el tono del generador que deja su luminancia más cerca. Así la especie sigue admitiendo **paleta y patrón por mascota**. Imprime el reparto: desconfía si la línea pasa del 15 % o el acento se queda en 0.
+Clasifica cada color en primario, secundario, acento, línea o color literal, y le da el tono del generador que deja su luminancia más cerca. Así la especie sigue admitiendo **paleta y patrón por mascota**.
 
+- Agrupa los colores en tres familias por parecido real (k-medias en Lab), no por tono dominante: vale igual para una especie azul, una crema con crin naranja o una dorada con alas cian. La familia con más píxeles es el primario; la segunda, el secundario; la tercera, el acento.
 - El color más oscuro de cada etapa es siempre el contorno.
-- Los oscuros restantes van al acento (caparazones, cuernos, sombras profundas).
-- Lo que se sale de los tonos de la paleta (boca, comida, chispas) y los blancos son literales.
+- Los colores escasos que no se parecen a ninguna familia (boca, comida, chispas) y los brillos blancos pequeños son literales.
+
+Imprime el reparto. Es normal que la línea ronde el 25–35 % (el contorno pesa mucho en un sprite pequeño). Desconfía si una familia se queda en 0 o si la paleta propuesta no se parece a la hoja: **mira siempre la hoja de contactos real**, porque un reparto mal hecho cambia los colores de toda la especie.
 
 Propone la paleta por defecto de la especie para que el horneado reproduzca la hoja; `set-palette.mjs` la pone en `species.json`. Actualiza también el bloque JSON de la ficha.
 
@@ -109,7 +111,15 @@ Una especie con `imported/<id>.json` se dibuja con sus píxeles (`drawImported` 
 
 El `PixelSpecies` de formas sigue haciendo falta: da el boceto de disposición y la posición de los efectos.
 
+## Tandas
+Para varias especies seguidas, un script que recorra especies y etapas llamando a `stage.mjs`, `import.mjs` y, al acabar cada especie, a `roles.mjs` y `set-palette.mjs`, y que escriba un registro. Son unos 35 segundos por imagen: lánzalo en segundo plano. Reimportar y reclasificar no gasta imágenes: si falla el importador o el reparto de color, corrige el script y repite solo esos pasos sobre los `.jpg` que ya tienes.
+
+## Tandas
+Para varias especies seguidas, un script que recorra especies y etapas llamando a `stage.mjs`, `import.mjs` y, al acabar cada especie, a `roles.mjs` y `set-palette.mjs`, y que escriba un registro. Son unos 35 segundos por imagen: lánzalo en segundo plano. Reimportar y reclasificar no gasta imágenes: si falla el importador o el reparto de color, corrige el script y repite solo esos pasos sobre los `.jpg` que ya tienes.
+
 ## Límites conocidos
+- **Piezas sueltas:** lo que no toca a la criatura se descarta como partícula. Un aura de esquirlas o de hojas flotantes no se puede importar; no la pidas en el prompt.
+- **Piezas sueltas:** lo que no toca a la criatura se descarta como partícula. Un aura de esquirlas o de hojas flotantes no se puede importar; no la pidas en el prompt.
 - **Animación pobre:** 10 poses por etapa. Si una animación necesita una pose que no está, hay que pedir una hoja más.
 - **Accesorios:** las anclas de gorro, gafas, bufanda y capa se estiman desde la silueta. Revisa `pnpm generate:accessories --preview`.
 - **Color:** al pasar por la paleta, los tonos salen algo más saturados que en la hoja.

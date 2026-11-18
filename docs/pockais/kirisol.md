@@ -55,7 +55,7 @@ Impulsivo y valiente: primero corre y luego pregunta adónde.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo, cuello y patas en primario; cuerno, crin, cola, cascos y motas en secundario; cascos de la etapa final en primario oscurecido. La cola gira con la pose, cuerno y crin laten con los apéndices y las cuatro patas dan el paso en diagonal.
 
-**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Patas con rodilla y casco, crin en mechones separados y, en la etapa final, un ala sobre la grupa: el potro pasa a alicornio.
+**Estado del arte:** arte final por hoja objetivo (`target-sheet-pipeline.md`): cada etapa generada con Nano Banana a partir del boceto y de `examples/kirisol-objetivo.png`, e importada a 64 px (`scripts/sprites/pixel/imported/kirisol.json`). La paleta por defecto es la de la hoja. Boceto anterior: redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Patas con rodilla y casco, crin en mechones separados y, en la etapa final, un ala sobre la grupa: el potro pasa a alicornio.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -69,6 +69,6 @@ Pixel art en 3/4. Cuerpo, cuello y patas en primario; cuerno, crin, cola, cascos
   "favoriteFood": "dawn_honey",
   "spriteKey": "kirisol",
   "personalityBias": { "curiosity": 65, "sociability": 60, "bravery": 70, "affection": 50, "temper": 75 },
-  "defaultPalette": { "primary": "#FFF4D6", "secondary": "#F4A259", "accent": "#B5651D" }
+  "defaultPalette": { "primary": "#FFF9D9", "secondary": "#FFB047", "accent": "#BF5439" }
 }
 ```
