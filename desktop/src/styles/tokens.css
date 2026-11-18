@@ -22,10 +22,17 @@
   --font-display: 'Lateral', 'Bowlby One', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-ui: 'Aeonik Pro', 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --text-caption: 12px;
+  --text-label: 13px;
   --text-body: 14px;
   --text-body-lg: 16px;
   --text-subheading: 22px;
   --text-heading-sm: 30px;
+  --leading-tight: 1.1;
+  --leading-snug: 1.35;
+  --leading-body: 1.5;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
 
   /* Espaciado (guía §5): escala de 4 px */
   --space-1: 4px;
@@ -41,6 +48,8 @@
   --view-tint: var(--theme-social);
 
   /* Radios */
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --radius-2xl: 16px;
   --radius-cards: 20px;
   --radius-3xl: 28px;
@@ -120,6 +129,32 @@
   --dur-1: 0.15s;
   --dur-2: 0.3s;
   --dur-3: 0.6s;
+
+  /* Escala de capas (z-index). Las capas locales de un componente usan --z-raised y calc(). */
+  --z-below: -1;
+  --z-base: 0;
+  --z-raised: 1;
+  --z-sticky: 10;
+  --z-overlay: 30;
+  --z-pet: 50;
+  --z-dock: 90;
+  --z-panel: 100;
+  --z-popover: 200;
+  --z-modal: 900;
+  --z-toast: 1000;
+
+  /* Controles: alto visual y zona de clic mínima (guía §9) */
+  --control-h: 36px;
+  --control-h-icon: 32px;
+  --hit-min: 44px;
+}
+
+/* Tema manual (Ajustes): fuerza el esquema; sin atributo se sigue al sistema. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 /* Isla de tono: fondo pastel con texto oscuro aunque el sistema esté en oscuro (§3.9). */

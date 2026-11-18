@@ -38,6 +38,7 @@
   /* Escala tipográfica (fluida donde importa) */
   --text-caption: 12px;
   --leading-caption: 1.56;
+  --text-label: 13px;
   --text-body-lg: 16px;
   --leading-body-lg: 1.5;
   --text-subheading: 22px;
@@ -86,6 +87,28 @@
   --line-soft: light-dark(rgb(11 10 20 / 0.12), rgb(255 255 255 / 0.1));
   --on-color: #0b0a14; /* texto sobre la paleta de marca */
   --on-dark: #ffffff; /* texto sobre carbón / violeta */
+
+  /* ── Escala de capas (z-index). Las capas locales de un componente usan --z-raised y calc(). ── */
+  --z-below: -1;
+  --z-base: 0;
+  --z-raised: 1;
+  --z-sticky: 10;
+  --z-overlay: 30;
+  --z-pet: 50;
+  --z-dock: 90;
+  --z-panel: 100;
+  --z-popover: 200;
+  --z-modal: 900;
+  --z-toast: 1000;
+
+  /* ── Controles: alto visual y zona de clic mínima (guía §9) ── */
+  --control-h: 36px;
+  --control-h-icon: 32px;
+  --hit-min: 44px;
+
+  /* ── Radios pequeños (controles y miniaturas dentro de tarjetas) ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
 
   /* ── Bandas ── */
   --band-sky: light-dark(#dceeff, #0f1d33);
@@ -143,4 +166,12 @@
   /* ── Contornos y foco ── */
   --outline: 1px solid var(--line);
   --focus-ring: 3px solid light-dark(#5c4ade, #b3a8ff);
+}
+
+/* Tema manual (Ajustes): fuerza el esquema; sin atributo se sigue al sistema. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
