@@ -77,6 +77,12 @@ export function resolveBakeColors(params: BakeParams): ResolvedColors {
 /** Por debajo de esta luminancia del primario, el patrón aclara; por encima, oscurece. */
 const PATTERN_LIGHT_BELOW = 150;
 
+/** ¿Es claro el primario? En ese caso el patrón oscurece y los efectos brillan en azul, no en blanco. */
+export function isLightPrimary(hex: string): boolean {
+  const [r, g, b] = hexToRgb(hex || '#E25822');
+  return 0.299 * r + 0.587 * g + 0.114 * b >= PATTERN_LIGHT_BELOW;
+}
+
 /** Color de una marca de patrón sobre `(r, g, b)`: un tono del mismo color, o un destello. */
 export function patternTone(r: number, g: number, b: number, lighten: boolean, glint: boolean, amount = 1): Rgb {
   let t: Rgb;

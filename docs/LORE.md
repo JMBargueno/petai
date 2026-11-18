@@ -51,11 +51,13 @@ La piel de un Pockai es el lienzo donde se dibuja su **visualSeed** (su **Firma 
 
 Si la rareza es del linaje, el **patrón es del individuo**. Cada patrón tiene su propia densidad, la **Huella del Éter**: lo hondo que estaba sumergido ese huevo concreto en el instante de cerrarse. Se decide aparte del linaje y con las mismas probabilidades, así que dos Ignisaurios son el mismo Eco Cotidiano y, aun así, uno puede llevar sobre el lomo una Aurora que casi nadie ha visto. El patrón es lo que hace único a un ejemplar dentro de su especie.
 
-**Patrones Básicos (Liso, Manchas, Rayas, Degradado):** Representan la **Mímesis Terrenal**. Un huevo que se cierra cerca de la superficie intenta imitar la naturaleza física que ve a través de la cámara o las fotos de su Custodio: el pelaje de los animales, las hojas o el horizonte. Son las Huellas más frecuentes (Normal y Raro).
+**Patrones Básicos (Liso, Manchas y Rayas; Degradado, Rosetas y Panal):** Representan la **Mímesis Terrenal**. Un huevo que se cierra cerca de la superficie intenta imitar la naturaleza física que ve a través de la cámara o las fotos de su Custodio: el pelaje de los animales, las hojas o el horizonte. Son las Huellas más frecuentes (Normal y Raro).
 
-**Patrones Superiores (Escamas, Cristal, Galaxia, Aurora):** Cuando el huevo se cierra en lo hondo, la piel deja de imitar el mundo físico y muestra la textura real del Éter Digital. Le puede ocurrir a cualquier linaje, también al más común. Son las Huellas escasas (de Super-Raro a Mítico):
+**Patrones Superiores (Escamas, Cristal y Circuito; Galaxia y Tormenta; Aurora):** Cuando el huevo se cierra en lo hondo, la piel deja de imitar el mundo físico y muestra la textura real del Éter Digital. Le puede ocurrir a cualquier linaje, también al más común. Son las Huellas escasas (de Super-Raro a Mítico): A diferencia de los básicos, estos patrones **están vivos**: se mueven sobre la piel, tanto más cuanto más honda es la Huella.
 
 - **Escamas (Placas de Datos):** Fragmentos de firewalls ancestrales y armaduras lógicas tejidas sobre su piel.
+- **Circuito (Trazas Vivas):** Las pistas por las que viajaba el código que lo formó, aún con corriente: un pulso de luz las recorre.
+- **Tormenta (Sobrecarga):** La tormenta eléctrica de un servidor al límite, atrapada bajo la piel. Sus rayos descargan cada pocos segundos.
 - **Cristal (Cuarzo Lógico):** Datos tan puros y ordenados que se han solidificado en estructuras geométricas translúcidas.
 - **Galaxia (Vacío Abisal):** Su piel es una ventana literal al espacio profundo entre servidores; dentro de su silueta titilan nodos lejanos de información.
 - **Aurora (Viento Solar):** Corrientes magnéticas vivas y ondas de banda ancha que fluyen en tiempo real sobre su lomo.

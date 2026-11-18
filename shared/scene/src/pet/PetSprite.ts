@@ -56,7 +56,7 @@ export class PetSprite extends Container {
   private readonly fxSprite = new Sprite();
   private readonly fxCanvas = document.createElement('canvas');
   private fxTexture: Texture | null = null;
-  private fx: { map: Uint8ClampedArray; width: number; fx: PatternFx | null; shiny: boolean } | null = null;
+  private fx: { map: Uint8ClampedArray; width: number; fx: PatternFx | null; shiny: boolean; light: boolean } | null = null;
   private fxTime = 0;
   private fxDrawn = '';
   private fxBuf: Uint8ClampedArray | undefined;
@@ -94,8 +94,8 @@ export class PetSprite extends Container {
    * Efectos animados de la hoja actual: `map` es su mapa de efectos (`bakeFxMap`). Sin efecto de
    * patrón ni shiny, o con movimiento reducido, la capa no se pinta.
    */
-  setFx(map: Uint8ClampedArray | null, width: number, fx: PatternFx | null, shiny: boolean): void {
-    this.fx = map && (fx || shiny) && !this.opts.reducedMotion ? { map, width, fx, shiny } : null;
+  setFx(map: Uint8ClampedArray | null, width: number, fx: PatternFx | null, shiny: boolean, light = false): void {
+    this.fx = map && (fx || shiny) && !this.opts.reducedMotion ? { map, width, fx, shiny, light } : null;
     this.fxSprite.visible = false;
     this.fxDrawn = '';
     this.drawFx();
@@ -111,7 +111,7 @@ export class PetSprite extends Container {
       this.fxCanvas.width = rect.w;
       this.fxCanvas.height = rect.h;
     }
-    this.fxBuf = renderFx(this.fx.map, this.fx.width, rect, { fx: this.fx.fx, shiny: this.fx.shiny, time: this.fxTime }, this.fxBuf);
+    this.fxBuf = renderFx(this.fx.map, this.fx.width, rect, { fx: this.fx.fx, shiny: this.fx.shiny, light: this.fx.light, time: this.fxTime }, this.fxBuf);
     this.fxCanvas.getContext('2d')!.putImageData(new ImageData(this.fxBuf as Uint8ClampedArray<ArrayBuffer>, rect.w, rect.h), 0, 0);
     if (!this.fxTexture) {
       this.fxTexture = Texture.from(this.fxCanvas);
