@@ -16,10 +16,11 @@ Toma como referencia de código `IGNISAUR`, `AXOLUNAR` y `FLORABUD` en ese archi
   - Quita piezas con `undefined`: `head` (un solo volumen en adult y final), `arm`, `farArm`, `feet` (flota o repta), `belly`, `marks`, `emblem`. Ojo: `stage('adult')` y `stage('final')` traen `head`; si tu plan es de un volumen, quítala o saldrá una bola encima.
   - Mueve `torso`, `head` y `eye` adonde toque. Conserva el ancho y la separación de los ojos de la etapa (`{ ...BASE.adult.eye, y, x1, x2 }`) para que las gafas sigan encajando.
   - Apoyos propios: `step(p, [cx, cy, rx, ry], fase)` devuelve la elipse desplazada con el paso. `hindFar`/`hindNear` son las patas traseras de un cuadrúpedo. Usa `p.leg` y `-p.leg` para alternar. Un flotante no lleva apoyos: nada bajo el cuerpo.
-  - Cara propia: `eye.style` (`bead`, `lid`, `grumpy`, `almond`, `shine`, `fierce`, `lash` o sin estilo) cambia la forma del ojo abierto; el resto de expresiones son comunes. Mueve también la altura y la separación de los ojos según el animal.
+  - Cara propia: `eye.style` (`bead`, `lid`, `grumpy`, `almond`, `shine`, `fierce`, `lash`, `slit`, `ring`, `spark` o sin estilo) cambia la forma del ojo abierto; el resto de expresiones son comunes. Mueve también la altura y la separación de los ojos según el animal.
   - `hat: [x, y]` fija el ancla `head` cuando lo alto del cuerpo no es el sitio del gorro.
   - Para fundir una pieza con el tronco sin línea de separación, píntala con la pieza 4 en `behind` (los brazos del Cactuerno).
-  - Referencias: `MAGMADILLO` (cuadrúpedo bajo), `CERBITO` (cuadrúpedo sentado de tres cabezas), `KIRISOL` (cuadrúpedo esbelto), `NUBEBALLENA` (flotante), `CACTUERNO` (columna) y `FENIXEL` (ave de cuello largo).
+  - Referencias: `MAGMADILLO` (cuadrúpedo bajo), `CERBITO` (cuadrúpedo sentado de tres cabezas), `KIRISOL` (cuadrúpedo esbelto), `NUBEBALLENA` (flotante), `CACTUERNO` (columna) `FENIXEL` (ave de cuello largo), `LEVIATIN` (serpentino), `YGGDRITO` (árbol) y `PRIMPULSO` (dragón erguido). Los tres míticos usan la técnica de míticos de `pixel-style.md` (`tube`, `ridge`, `glow`, `canopy`, `dragonWing`).
+  - La cara no tiene por qué ir en la cabeza: en un árbol va en el tronco (`eye` sobre el `torso`) y la `head` es la copa.
   - Más de una cabeza: solo la principal es `head` y lleva la cara animada y las anclas de accesorio. Las demás se pintan en `behind` con `sideHead()`, con ojos fijos.
 - **Papeles de color (`Role`):** `body` (primario, admite patrón), `skin` (primario sin patrón: extremidades y cara), `belly` (secundario plano), `trait` (secundario con sombra: el rasgo icónico) y `mark` (primario oscurecido: manchas, franjas, púas). No hay más colores: la paleta de la mascota solo tiene primario y secundario.
 - **Piezas (`part`):** dos formas con el mismo número de pieza se funden; con números distintos, el rasterizador pone una línea de separación entre ellas. Con `{ clip: n, keep: true }` pintas una mancha dentro de la pieza `n` sin crear línea.
@@ -44,6 +45,7 @@ La hoja de contactos imprime la altura real de cada etapa: si se pasa, baja o ac
 - **Plan corporal:** cuál de `pixel-style.md` (o uno nuevo) y en qué se diferencia de las especies más parecidas.
 - **Silueta (1 frase):** forma base y proporción cabeza/cuerpo en adulto.
 - **Rasgos icónicos:** los 2 de la ficha, con qué papel de color van y cómo se leen a 64 px.
+- **Estrenos por etapa:** una frase por etapa con la forma del cuerpo y de dos a cuatro piezas nuevas; en la final, un material nuevo (formato y ejemplos en `design-lessons.md` §3).
 - **Evolución visual:** para cada etapa, su plan corporal y qué cambia en los cinco ejes (plan corporal, rasgo icónico, piezas, color y marcas, cara). Indica también qué no cambia, para que la especie siga reconociéndose de baby a final.
 - **Anclas de accesorios:** por etapa, dónde van `neck` y `back`, y cualquier salvedad (por ejemplo, «el gorro se ladea porque la cresta es central»).
 - **Movimiento:** qué pieza «vende» cada pose clave: qué gira con la cola y qué late con los apéndices.
@@ -62,6 +64,14 @@ La hoja de contactos imprime la altura real de cada etapa: si se pasa, baja o ac
    - [ ] **Alturas:** ninguna etapa pasa de su máximo.
    - [ ] **Cambio entre etapas:** cada una se distingue de la anterior por su plan corporal o silueta y por al menos tres ejes más. En negro, las cuatro siluetas se distinguen. Si dos solo difieren en tamaño, falta cambio.
    - [ ] **Distinta de las demás:** su plan corporal no repite el de otra especie del mismo elemento o rareza, y se diferencia de cualquier otra en al menos cuatro de: apoyo, proporción, cabeza, extremidades, rasgo icónico, contorno y cara. Compara su fila de siluetas con las de las demás (`sprite-previews/*-pixel-contact.png`).
+   - [ ] **La rareza se ve:** el nivel de detalle corresponde a su rareza (tabla «Cuanto más rara, más trabajada» de `pixel-style.md`). Un legendario impone por proporción; un mítico usa la técnica de míticos y llena el frame en su etapa final.
+   - [ ] **La forma dice la edad:** la cría es redonda; las terminaciones de adult y final acaban en punta; cada etapa estrena dos o tres piezas; la final estrena un material o un oscuro que no había.
+   - [ ] **La cara madura:** el ojo de la etapa final es más pequeño y duro que el de la cría, y su cabeza tiene hocico, mandíbula o cresta. Ninguna etapa final sonríe como una cría.
+   - [ ] **Proporción de animal:** se reconoce por la proporción del animal real (peso, cuello, patas), no solo por las orejas o las alas.
+   - [ ] **Blando y duro:** lo blando (tentáculos, colas, crines) dibuja una curva; lo duro (cuernos, garras) es recto. Ningún tentáculo ni mechón es una elipse recta.
+   - [ ] **Marcas que crecen:** liso, zona de color, patrón visible, patrón por todo el cuerpo con emblema. La etapa final se ve más oscura que la adulta.
+   - [ ] **¿Con qué se confunde?** Mira la hoja y di con qué otro animal se podría confundir cada etapa. Si hay respuesta, corrige (los tentáculos rectos del Inktopus lo hacían parecer una araña).
+   - [ ] **Profundidad y trama** (legendarios y míticos): lo de detrás va más oscuro, cada extremidad tiene tramos y remate, y cada material lleva su trama.
    - [ ] **Anatomía con sentido:** ninguna pieza que el animal no tendría (pies en una ballena, brazos en un pulpo) y nada colgando bajo el cuerpo que se lea como pies.
    - [ ] **Misma especie:** misma paleta, misma forma de ojo y rasgo icónico en el mismo sitio en las cuatro.
    - [ ] **Poses:** la cola y el rasgo icónico se mueven (walk, happy, attack), nada se despega del cuerpo y nada desaparece al dormir.

@@ -35,8 +35,11 @@ export interface EyeSpec {
    *   lash    el ojo por defecto con una pestaña hacia fuera: mirada dulce
    *   shine   el ojo por defecto con un segundo brillo abajo: ojos de cachorro
    *   fierce  el borde de arriba cae hacia el centro de la cara: mirada fiera
+   *   slit    rendija vertical de 2 px: ojo de reptil
+   *   ring    ojo hueco con el centro encendido: un nudo de madera que mira
+   *   spark   borde inclinado sin ceja y brillo amarillo: mirada eléctrica
    */
-  style?: 'bead' | 'lid' | 'grumpy' | 'almond' | 'lash' | 'shine' | 'fierce';
+  style?: 'bead' | 'lid' | 'grumpy' | 'almond' | 'lash' | 'shine' | 'fierce' | 'slit' | 'ring' | 'spark';
 }
 
 function eye(g: Grid, x: number, y: number, w: number, h: number, kind: Eyes, glint: number, near: boolean, look: number, style?: EyeSpec['style']): void {
@@ -67,6 +70,31 @@ function eye(g: Grid, x: number, y: number, w: number, h: number, kind: Eyes, gl
     g.rect(x, yy + 1, w, hh - 2, EYE);
     g.rect(x + (w > 2 ? 1 : 0), yy, Math.max(1, w - 2), hh, EYE);
   };
+  if (style === 'slit' && opened) {
+    const sx = x + Math.floor((w - 2) / 2);
+    const top = kind === 'wide' ? y - 1 : y;
+    g.rect(sx, top, 2, y + h - top, EYE);
+    g.put(sx, top + 1, WHITE);
+    return;
+  }
+  if (style === 'ring' && opened) {
+    const yy = kind === 'wide' ? y - 1 : y;
+    const hh = kind === 'wide' ? h + 1 : h;
+    round(yy, hh);
+    g.rect(x + 1, yy + 2, Math.max(1, w - 2), Math.max(1, hh - 4), WHITE);
+    return;
+  }
+  if (style === 'spark' && opened) {
+    for (let k = 0; k < w; k++) {
+      const t01 = w > 1 ? k / (w - 1) : 0;
+      const drop = Math.round((near ? t01 : 1 - t01) * 2);
+      const edge = w > 2 && (k === 0 || k === w - 1) ? 1 : 0;
+      g.rect(x + k, y + drop, 1, Math.max(1, h - drop - edge), EYE);
+    }
+    g.put(x + (near ? 0 : w - 1), y + 1, WHITE);
+    g.put(x + (near ? 1 : w - 2), y + h - 2, SUN);
+    return;
+  }
   if (style === 'fierce' && opened) {
     for (let k = 0; k < w; k++) {
       const t01 = w > 1 ? k / (w - 1) : 0;

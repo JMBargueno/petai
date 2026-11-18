@@ -352,10 +352,26 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Cada una parte de u
 | Ave de cuello largo | Sin brazos: alas. Cabeza pequeña, cuello largo, pico y patas finas con garras | Fénixel |
 | Flotante | Sin patas ni apoyos: el cuerpo queda en el aire | Nubeballena |
 | Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | Cactuerno |
+| Serpentino | Sin patas ni brazos: anillos enroscados en el suelo, cuello en S y cola en alto | Leviatín |
+| Árbol | Tronco con la cara, copa por cabeza, ramas y raíces; el cuerpo va en el secundario | Yggdrito |
+| Dragón erguido | De terópodo: cuerpo en S de la cola al cuello sobre dos patas con garras, bracitos, hocico y alas de membrana | Primpulso |
 
-Frente a cualquier otra especie, una nueva cambia en al menos cuatro de estos siete rasgos: apoyo (dos pies, cuatro patas, flota, repta), proporción (alto, ancho o cuadrado), cabeza (fundida, encima o delante), extremidades (brazos, aletas, alas, ramas o ninguna), rasgo icónico (dónde sale y qué forma tiene), contorno (liso, dentado, lobulado o con placas) y cara (forma, tamaño y sitio de los ojos: altos y redondeados, de cuenta, de párpado caído, de gruñón, rasgados, de cachorro, fieros o con pestaña).
+Frente a cualquier otra especie, una nueva cambia en al menos cuatro de estos siete rasgos: apoyo (dos pies, cuatro patas, flota, repta), proporción (alto, ancho o cuadrado), cabeza (fundida, encima o delante), extremidades (brazos, aletas, alas, ramas o ninguna), rasgo icónico (dónde sale y qué forma tiene), contorno (liso, dentado, lobulado o con placas) y cara (forma, tamaño y sitio de los ojos: altos y redondeados, de cuenta, de párpado caído, de gruñón, rasgados, de cachorro, fieros, con pestaña, de rendija, huecos o con chispa).
 
 La anatomía tiene que tener sentido para el animal que es: una ballena no tiene pies ni nada bajo el cuerpo que se lea como tal, un pulpo no tiene brazos y un cactus no tiene cola. La prueba es poner en negro los adultos de todas las especies: ninguno se confunde con otro.
+
+**Cuanto más rara, más trabajada.** La rareza se tiene que ver en el dibujo, no solo en los stats:
+
+| Rareza | Qué se espera del diseño |
+|---|---|
+| Normal y raro | Geometría común bien resuelta: dos volúmenes, un rasgo icónico claro y un segundo rasgo |
+| Super-raro | Plan corporal propio y una forma de ojo propia |
+| Legendario | Proporciones de criatura que impone (cabeza pequeña, cuello o patas largas, piezas mayores que el cuerpo) y piezas compuestas: plumas sueltas, varias cabezas, crines |
+| Mítico | Cuerpo en curva lisa con su luz y su sombra, una segunda lectura de color (vientre de placas, mandíbula, copa por capas), una fila de piezas a lo largo del cuerpo, anatomía con articulaciones y al menos un brillo en color literal (perla, farol, núcleo). La etapa final llena el frame |
+
+**La forma dice la edad.** La cría es redonda y de ojo grande. Cada etapa cambia curvas por puntas y estrena dos o tres piezas con nombre. En la etapa final las terminaciones son afiladas (aletas, cuernos, garras), el ojo es más pequeño y duro, la cabeza tiene hocico, mandíbula o cresta, y aparece un material o un oscuro que no había. Lo que queda detrás (el ala, la pata o la aleta lejanas) va más oscuro, y cada material lleva su trama: placas, veta, racimos de hojas.
+
+Los brillos en color literal son la única excepción a «la hoja no guarda colores»: se ven igual en cualquier ejemplar, sea cual sea su paleta.
 
 Con un plan que no es bípedo, la tabla de etapas siguiente se lee por su intención: «un volumen» es la forma más simple de ese plan y «dos volúmenes», su forma completa. Las alturas son máximos.
 
@@ -380,7 +396,7 @@ Cada etapa es un **dibujo distinto, con su propio plan corporal**, no la anterio
 Lo que no cambia nunca, para que siga siendo la misma especie:
 
 - La rampa del elemento y los colores secundario y acento.
-- La forma del ojo de la especie (la suya, que puede no ser la de otras especies), con el brillo arriba a la izquierda.
+- El sitio de los ojos y su familia, con el brillo arriba a la izquierda. El tamaño y la dureza sí cambian: la cara madura con la edad.
 - El sitio del rasgo icónico: crece, se duplica o se adorna, pero sale del mismo punto.
 - La vista en tres cuartos y la luz.
 

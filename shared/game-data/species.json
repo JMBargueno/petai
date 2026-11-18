@@ -334,5 +334,89 @@
       "secondary": "#F4A259",
       "accent": "#B5651D"
     }
+  },
+  {
+    "id": "leviatin",
+    "name": "Leviatín",
+    "description": "Una cría de leviatán de cuerpo de serpiente, con aletas de velo y una perla en la frente. Es solemne y callada, y lo mira todo como si ya lo hubiera visto antes.",
+    "element": "water",
+    "rarity": "mythic",
+    "baseStats": {
+      "hp": 74,
+      "atk": 58,
+      "def": 80,
+      "vel": 50,
+      "esp": 58
+    },
+    "favoriteFood": "sweet_coral",
+    "spriteKey": "leviatin",
+    "personalityBias": {
+      "curiosity": 50,
+      "sociability": 35,
+      "bravery": 80,
+      "affection": 55,
+      "temper": 25
+    },
+    "defaultPalette": {
+      "primary": "#3D4FA8",
+      "secondary": "#9FE8E0",
+      "accent": "#1B2260"
+    }
+  },
+  {
+    "id": "yggdrito",
+    "name": "Yggdrito",
+    "description": "Un brote del árbol que sostiene la red, con la copa por cabeza y las raíces por pies. Es paciente y sabio, y habla despacio porque piensa en estaciones.",
+    "element": "plant",
+    "rarity": "mythic",
+    "baseStats": {
+      "hp": 80,
+      "atk": 50,
+      "def": 66,
+      "vel": 48,
+      "esp": 76
+    },
+    "favoriteFood": "sun_seed",
+    "spriteKey": "yggdrito",
+    "personalityBias": {
+      "curiosity": 80,
+      "sociability": 65,
+      "bravery": 45,
+      "affection": 70,
+      "temper": 15
+    },
+    "defaultPalette": {
+      "primary": "#6FAE3A",
+      "secondary": "#C9A06B",
+      "accent": "#3B5B1E"
+    }
+  },
+  {
+    "id": "primpulso",
+    "name": "Primpulso",
+    "description": "Un dragoncito con cuernos de rayo y una línea de latido que le cruza el cuerpo: el eco del primer pulso del Éter. Es impetuoso y orgulloso, y no sabe quedarse quieto.",
+    "element": "electric",
+    "rarity": "mythic",
+    "baseStats": {
+      "hp": 60,
+      "atk": 80,
+      "def": 54,
+      "vel": 70,
+      "esp": 56
+    },
+    "favoriteFood": "spark_candy",
+    "spriteKey": "primpulso",
+    "personalityBias": {
+      "curiosity": 75,
+      "sociability": 55,
+      "bravery": 85,
+      "affection": 45,
+      "temper": 85
+    },
+    "defaultPalette": {
+      "primary": "#F2C230",
+      "secondary": "#7DF9FF",
+      "accent": "#8A5A00"
+    }
   }
 ]
