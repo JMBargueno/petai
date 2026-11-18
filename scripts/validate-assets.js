@@ -272,6 +272,46 @@ for (const acc of accessoriesData?.accessories || []) {
 }
 console.log(`✓ accessories/: ${(accessoriesData?.accessories || []).length} prendas con arte en tres tallas`);
 
+// Objetos consumibles (GUIA_ARTISTICA §7.7): un icono de 32×32 nativos a ×2 por objeto de foods.json.
+// El arte es opcional mientras los clientes usen el icono genérico: que falte es un aviso.
+const foodsData = readJson(path.join(sharedGameDataDir, 'foods.json')) || [];
+const itemsDir = path.join(sharedAssetsDir, 'items');
+const ITEM_SIDE = 64;
+let itemsWithArt = 0;
+if (fs.existsSync(itemsDir)) {
+  const manifest = fs.existsSync(path.join(itemsDir, 'manifest.json')) ? readJson(path.join(itemsDir, 'manifest.json')) : null;
+  for (const file of fs.readdirSync(itemsDir).filter((f) => f.endsWith('.png'))) {
+    const id = file.slice(0, -4);
+    const fail = (msg) => {
+      console.error(`❌ CRÍTICO [items/${id}]: ${msg}`);
+      criticalErrors++;
+    };
+    if (!foodsData.some((f) => f.id === id)) {
+      fail('hay arte para un objeto que no está en foods.json');
+      continue;
+    }
+    try {
+      const dim = readPngDimensions(path.join(itemsDir, file));
+      if (dim.width !== ITEM_SIDE || dim.height !== ITEM_SIDE) fail(`el PNG mide ${dim.width}×${dim.height} y debe medir ${ITEM_SIDE}×${ITEM_SIDE}`);
+    } catch (err) {
+      fail(`error leyendo ${file}: ${err.message}`);
+    }
+    if (!manifest?.items?.[id]) fail('no está en manifest.json (ejecuta pnpm generate:items)');
+    itemsWithArt++;
+  }
+  for (const id of Object.keys(manifest?.items || {})) {
+    if (!fs.existsSync(path.join(itemsDir, `${id}.png`))) {
+      console.error(`❌ CRÍTICO [items/${id}]: manifest.json lo lista y falta su PNG`);
+      criticalErrors++;
+    }
+  }
+}
+if (itemsWithArt < foodsData.length) {
+  console.warn(`⚠️ ADVERTENCIA [items]: ${foodsData.length - itemsWithArt} de ${foodsData.length} objetos sin icono. Los clientes usarán el icono genérico.`);
+  warnings++;
+}
+console.log(`✓ items/: ${itemsWithArt} de ${foodsData.length} objetos con icono`);
+
 console.log('\n=== Resumen de Validación ===');
 console.log(`Errores críticos: ${criticalErrors}`);
 console.log(`Advertencias (con fallback activo): ${warnings}`);

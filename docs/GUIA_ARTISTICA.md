@@ -473,6 +473,29 @@ El esquema de datos, las anclas y el orden de implementación están en [`specs/
 
 **Datos:** una prenda es un `Item` con `kind: "accessory"`; las de logro llegan por `reward.itemId` de `achievements.json`. Su arte se dibuja en `scripts/sprites/pixel/accessories.ts`.
 
+### 7.7 Objetos
+
+Los consumibles (comida, medicina y la Piedra de Evolución, en `shared/game-data/foods.json`) son **pixel art**, como las criaturas: son trozos del mundo, no iconos de interfaz. Los iconos de moneda, gema y botones siguen siendo vectoriales. El pipeline existe (`pnpm items:import`, `pnpm generate:items`); los clientes aún enseñan un icono genérico en la tienda y el inventario.
+
+**Lienzo**
+- **32×32 px nativos**, exportado a ×2 (64×64) en `shared/assets/items/<id>.png`. `manifest.json` lista los que tienen arte.
+- El objeto mide de 24 a 28 px en su lado mayor, va centrado y deja al menos 1 px libre en cada borde. Fondo transparente y sin sombra de suelo.
+- Vista en 3/4 desde arriba, la misma cámara que las criaturas.
+- Solo escalas enteras y sin suavizado, como en §7.5: 32 px en listas, 64 px en tarjetas, 128 px en detalle y en la revelación de un cofre.
+
+**Estilo**
+- Mismas reglas que el sprite: contorno de 1 px en el `900` de su rampa (un oscuro teñido), luz arriba a la izquierda, brillo de 1 a 3 px, sombra que gira de tono. Sin degradados, transparencias parciales ni tramado.
+- **Como mucho 12 colores** y dos o tres piezas: cuerpo, remate y, si la rareza lo pide, un detalle.
+- **Sin cara** y sin texto: un objeto con ojos se confunde con una criatura.
+- Un objeto de un Flujo lleva la rampa de ese Flujo (§7.5) en el cuerpo. Uno neutro lleva el color real de lo que imita, tomado de las rampas de marca (§7.6). El remate nunca va en la rampa del cuerpo.
+- Sin magenta ni rosa chillón: es el color de fondo que el importador hace transparente.
+
+**Familias de silueta.** En negro, dos objetos no se confunden: fruta (redonda, con rabito u hoja), dulce (envoltorio o piezas apiladas), plato (más ancho que alto), frasco (cuerpo, cuello y tapón) y cristal (facetas y puntas; solo la evolución).
+
+**La rareza se ve en la forma.** Sigue el tier de cofre del objeto: una pieza y un remate (`common`), dos materiales (`uncommon`), una pieza que rompe la silueta (`rare`), un brillo en color literal y facetas con su luz y su sombra (`epic`), una segunda lectura de color y destellos de 1 px (`legendary`).
+
+**Origen del arte.** Como el arte final de las criaturas, lo dibuja una IA de imagen (Nano Banana) a partir de un brief (`docs/objetos/<id>.md`) y `scripts/sprites/items/import.mjs` lo lleva a la rejilla nativa con su paleta reducida y el contorno limpio. No se dibuja con formas por código ni se retoca a mano.
+
 ## 8 · Movimiento
 
 Tokens en [`web/src/styles/motion.css`](../web/src/styles/motion.css):
