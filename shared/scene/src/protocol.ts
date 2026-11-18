@@ -9,6 +9,7 @@
 export const PROTOCOL_VERSION = 2;
 
 import { parseEquipped, type EquippedAccessories } from './bake/accessories';
+import { parseClock } from './ambience/sunClock';
 
 export type Stage = 'egg' | 'baby' | 'juvenile' | 'adult' | 'final';
 export type ThemeMode = 'light' | 'dark';
@@ -68,6 +69,20 @@ export interface RoomState {
 /** Qué hace el Pockai en la sala: pasear, dormir (va a la cama si hay) o no estar. */
 export type Activity = 'idle' | 'sleep' | 'away';
 
+/**
+ * Lo que la sala necesita saber del exterior. Cada campo es opcional: el que no viene se queda
+ * como estaba; `null` lo borra.
+ */
+export interface AmbienceMessage {
+  type: 'setAmbience';
+  /** Clima real: código WMO de Open-Meteo y temperatura en °C. Sin él, cielo despejado. */
+  weather?: { code: number | null; temperature: number | null } | null;
+  /** Salida y puesta de sol en minutos del día (por el puente admite también "HH:MM"). */
+  sun?: { sunrise: number; sunset: number } | null;
+  /** Minuto del día forzado (demo y pruebas). `null` = reloj del dispositivo. */
+  clock?: number | null;
+}
+
 /** Anfitrión → escena. */
 export type HostMessage =
   | { type: 'setPet'; pet: PetState }
@@ -78,7 +93,9 @@ export type HostMessage =
   | { type: 'setRoom'; room: RoomState | null }
   /** `rest`: clip de reposo según el estado del Pockai (idle, sick, hungry, tired, sad…). */
   | { type: 'setActivity'; activity: Activity; rest?: string }
+  /** Luces apagadas porque el Pockai duerme (la hora del día va por `setAmbience`). */
   | { type: 'setNight'; night: boolean }
+  | AmbienceMessage
   | { type: 'setEditMode'; edit: boolean }
   | { type: 'selectItem'; itemId: string | null }
   | { type: 'rotateSelected' };
@@ -103,6 +120,7 @@ const HOST_TYPES = new Set<HostMessage['type']>([
   'setRoom',
   'setActivity',
   'setNight',
+  'setAmbience',
   'setEditMode',
   'selectItem',
   'rotateSelected',
@@ -198,6 +216,25 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
         : { type: 'setActivity', activity: m.activity };
     case 'setNight':
       return typeof m.night === 'boolean' ? { type: 'setNight', night: m.night } : null;
+    case 'setAmbience': {
+      const out: AmbienceMessage = { type: 'setAmbience' };
+      const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+      if (m.weather === null) out.weather = null;
+      else if (m.weather && typeof m.weather === 'object') {
+        const w = m.weather as Record<string, unknown>;
+        out.weather = { code: num(w.code), temperature: num(w.temperature) };
+      }
+      if (m.sun === null) out.sun = null;
+      else if (m.sun && typeof m.sun === 'object') {
+        const s = m.sun as Record<string, unknown>;
+        const sunrise = parseClock(s.sunrise);
+        const sunset = parseClock(s.sunset);
+        // Un sol mal formado se trata como "sin dato": la escena usa sus horas de defecto.
+        out.sun = sunrise !== null && sunset !== null ? { sunrise, sunset } : null;
+      }
+      if ('clock' in m) out.clock = parseClock(m.clock);
+      return out;
+    }
     case 'setEditMode':
       return typeof m.edit === 'boolean' ? { type: 'setEditMode', edit: m.edit } : null;
     case 'selectItem':

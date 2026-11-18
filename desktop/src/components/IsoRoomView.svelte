@@ -8,8 +8,9 @@
    * seleccionado), `petTap` y `petPress` (mousedown sobre el Pockai, para sacarlo de la sala).
    */
   import { onDestroy, onMount, createEventDispatcher } from 'svelte';
-  import { PockaiScene, type Activity, type HostMessage, type RoomState, type SceneEvent } from '@pockai/scene';
+  import { PockaiScene, parseClock, type Activity, type HostMessage, type RoomState, type SceneEvent } from '@pockai/scene';
   import type { HabitatFurniture, HabitatRoom } from '../lib/api';
+  import { environmentalStatus } from '../lib/environmental';
   import { resolveBaseState } from '../lib/animation/AnimationController';
 
   export let pet: any = null;
@@ -105,6 +106,17 @@
   })();
   $: if (scene) send({ type: 'setActivity', activity, rest });
   $: if (scene) send({ type: 'setNight', night });
+  // Clima y sol reales (la hora la pone el reloj del equipo dentro de la escena). Sin ubicación
+  // no hay dato: cielo despejado y horas de sol por defecto.
+  $: weather = $environmentalStatus?.weather ?? null;
+  $: sunrise = parseClock(weather?.sunrise);
+  $: sunset = parseClock(weather?.sunset);
+  $: if (scene)
+    send({
+      type: 'setAmbience',
+      weather: weather ? { code: weather.weatherCode ?? null, temperature: weather.temperature ?? null } : null,
+      sun: sunrise !== null && sunset !== null ? { sunrise, sunset } : null,
+    });
   $: if (scene) send({ type: 'setEditMode', edit });
   $: if (scene) send({ type: 'selectItem', itemId: selectedId });
 

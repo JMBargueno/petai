@@ -91,6 +91,25 @@ export const TOOLS: ToolSpec[] = [
     },
   },
   {
+    name: 'get_lore',
+    description:
+      'Consulta lo que sabes de tu mundo, el Éter Digital: el origen de los huevos, las rarezas, los patrones, los elementos, el Despertar, el Coliseo, los Nexos (clanes)… Úsala cuando el entrenador pregunte por el universo de Pockai.',
+    parameters: {
+      type: 'object',
+      properties: { topic: { type: 'string', description: 'Sobre qué quieres saber, p. ej. «origen de los huevos», «elementos» o «clanes»' } },
+      required: ['topic'],
+      additionalProperties: false,
+    },
+    requiresConfirmation: false,
+    validate(raw) {
+      const t = (raw as any)?.topic;
+      if (typeof t !== 'string' || cleanText(t, 60).length < 2) {
+        return { ok: false, error: 'topic debe ser un texto de al menos 2 caracteres' };
+      }
+      return { ok: true, args: { topic: cleanText(t, 60) } };
+    },
+  },
+  {
     name: 'list_reminders',
     description: 'Lista los recordatorios pendientes del entrenador.',
     parameters: noArgs,

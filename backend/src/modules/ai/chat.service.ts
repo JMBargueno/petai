@@ -36,6 +36,8 @@ import {
   validateBehavior,
 } from '../mind/behavior.engine';
 import { Dims } from '../mind/mind.types';
+import { GameDataService } from '../game-data/game-data.service';
+import { buildLoreBlock } from './lore';
 
 /**
  * Plan del turno (spec 36), calculado por el orquestador ANTES del LLM: interpretación del
@@ -102,6 +104,7 @@ export class ChatService {
     // Spec 36: cerebro del Pockai (personalidad, memoria en capas, comportamiento)
     @Optional() private readonly mind?: MindService,
     @Optional() private readonly mindMemory?: MindMemoryService,
+    @Optional() private readonly gameData?: GameDataService,
   ) {}
 
   private async checkRateLimit(userId: string) {
@@ -354,6 +357,13 @@ export class ChatService {
     }
     if (memoryBlock) systemPrompt += `\n\n${memoryBlock}`;
 
+    // Lore: con herramientas el Pockai lo consulta con get_lore; sin ellas (inteligencia baja, Hermes
+    // local, CLI) se le da el tema del que habla el mensaje, si habla de alguno.
+    if (tier !== 'agent') {
+      const loreBlock = buildLoreBlock(this.gameData?.getLore?.() ?? null, message);
+      if (loreBlock) systemPrompt += `\n\n${loreBlock}`;
+    }
+
     const messages: ChatMessageInput[] = [
       { role: 'system', content: systemPrompt },
       ...history,
@@ -434,7 +444,8 @@ export class ChatService {
   // La inferencia la hace la app de escritorio contra un Hermes en el propio equipo
   // (el backend no puede alcanzar un loopback). El servidor sigue siendo quien construye
   // el prompt, modera la entrada y la salida y guarda el historial.
-  // Límites: sin herramientas ni extracción de memoria, y la respuesta la afirma el cliente.
+  // Límites: sin herramientas (los recuerdos y el lore van en el prompt), y la respuesta la afirma
+  // el cliente. Los recuerdos resumidos sí se generan, con el proveedor del usuario (summarizeLocal).
 
   /** Paso 1: valida y devuelve los mensajes a enviar al Hermes local, con un turno de un solo uso. */
   async prepareLocal(userId: string, petId: string, rawMessage: unknown, rawClientContext?: unknown) {
@@ -484,7 +495,27 @@ export class ChatService {
     const saved = await this.persistExchange(userId, pet, ticket.message, reply, 0);
     // Modo local: sin herramientas, la reacción la decide el Behavior Engine por reglas
     const behavior = await this.afterTurn(userId, pet, await this.planTurn(pet, ticket.message));
+    // En segundo plano, como en un turno nativo: no retrasa la respuesta ni puede romper el chat
+    void this.summarizeLocal(userId, pet.id, saved.intelligence);
     return { message: { id: saved.id, content: reply }, intelligence: saved.intelligence, tier: intelligenceTier(saved.intelligence), behavior };
+  }
+
+  /**
+   * Recuerdos resumidos de los turnos locales (Hermes local y CLI). El modelo local no pasa por el
+   * servidor, así que la extracción usa el proveedor configurado del usuario: su key (BYOK) o la IA
+   * de Pockai, con los mismos límites que un turno nativo (cuota, presupuesto y cadencia del plan).
+   */
+  private async summarizeLocal(userId: string, petId: string, intelligence: number) {
+    try {
+      const { provider, model, mode } = await this.aiConfig.resolveProvider(userId);
+      const every =
+        mode === 'managed'
+          ? (await this.billingConfig.limits(await this.entitlements.planFor(userId))).memoryExtractEvery
+          : undefined;
+      await this.memory.maybeSummarize(petId, intelligence, provider, model, userId, mode, every);
+    } catch (e: any) {
+      this.logger.debug(`Sin resumen de recuerdos para el turno local: ${e?.message}`);
+    }
   }
 
   /** Guarda el intercambio, sube la inteligencia y avisa por WebSocket. */

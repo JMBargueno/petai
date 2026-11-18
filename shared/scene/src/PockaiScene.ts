@@ -12,6 +12,8 @@ import { ACCESSORY_SLOTS } from './bake/accessories';
 import type { AccessoryLayer } from './pet/PetSprite';
 import { PetSprite, FRAME } from './pet/PetSprite';
 import { IsoRoom } from './room/IsoRoom';
+import { styleFor } from './room/roomStyles';
+import { Ambience, NO_AMBIENCE, type AmbienceState } from './ambience/Ambience';
 import {
   PROTOCOL_VERSION,
   type Activity,
@@ -51,6 +53,9 @@ export class PockaiScene {
   private rest = 'idle';
   private night = false;
   private edit = false;
+  /** Cielo y clima de la sala; solo existe mientras hay sala (el Pockai suelto va sin fondo). */
+  private ambience: Ambience | null = null;
+  private ambienceState: AmbienceState = NO_AMBIENCE;
   private disposers: (() => void)[] = [];
 
   private constructor(private readonly opts: SceneOptions) {}
@@ -99,6 +104,7 @@ export class PockaiScene {
     });
     this.app.ticker.add((t) => {
       this.pet.update(t);
+      this.ambience?.update(t.deltaMS);
       this.room?.update(t);
     });
     this.app.renderer.on('resize', () => this.layout());
@@ -148,9 +154,18 @@ export class PockaiScene {
         this.night = msg.night;
         this.room?.setNight(msg.night);
         break;
+      case 'setAmbience':
+        this.ambienceState = {
+          weather: msg.weather === undefined ? this.ambienceState.weather : msg.weather,
+          sun: msg.sun === undefined ? this.ambienceState.sun : msg.sun,
+          clock: msg.clock === undefined ? this.ambienceState.clock : msg.clock,
+        };
+        this.ambience?.set(this.ambienceState);
+        break;
       case 'setEditMode':
         this.edit = msg.edit;
         this.room?.setEditMode(msg.edit);
+        this.ambience?.setEdit(msg.edit);
         break;
       case 'selectItem':
         this.room?.select(msg.itemId);
@@ -172,6 +187,8 @@ export class PockaiScene {
         this.app.stage.removeChild(this.room);
         this.room.destroy({ children: true });
         this.room = null;
+        this.ambience?.destroy();
+        this.ambience = null;
         this.app.stage.addChild(this.pet);
         this.pet.zIndex = 0;
         this.pet.visible = this.activity !== 'away';
@@ -187,9 +204,21 @@ export class PockaiScene {
       this.room.setActivity(this.activity, this.rest);
       this.room.setNight(this.night);
       this.room.setEditMode(this.edit);
+      // Cielo detrás de la sala y clima por delante.
+      const room = this.room;
+      this.ambience = new Ambience({
+        reducedMotion: this.reducedMotion,
+        onSky: (sky, look) => room.setSky(sky, look),
+        onLightning: () => room.startle(),
+      });
+      this.app.stage.addChildAt(this.ambience.back, 0);
+      this.app.stage.addChild(this.ambience.front);
+      this.ambience.setEdit(this.edit);
+      this.ambience.set(this.ambienceState);
     } else {
       this.room.setRoom(state);
     }
+    this.ambience?.setExterior(!!styleFor(state.id).exterior);
     this.layout();
   }
 
@@ -229,6 +258,7 @@ export class PockaiScene {
 
   private layout(): void {
     const { width, height } = this.app.screen;
+    this.ambience?.resize(width, height);
     if (this.room) {
       const b = this.room.bounds();
       const bw = b.maxX - b.minX;

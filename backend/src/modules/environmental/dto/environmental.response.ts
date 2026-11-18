@@ -20,6 +20,12 @@ export class WeatherInfoModel {
 
   @ApiProperty({ nullable: true, description: 'ISO 8601 del último (re)obtenimiento' })
   fetchedAt!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, example: '07:58', description: 'Salida del sol de hoy, hora local ("HH:MM")' })
+  sunrise!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, example: '17:54', description: 'Puesta de sol de hoy, hora local ("HH:MM")' })
+  sunset!: string | null;
 }
 
 /** Modelo de actividad para el contrato OpenAPI (espejo de `ActivityInfo`). */

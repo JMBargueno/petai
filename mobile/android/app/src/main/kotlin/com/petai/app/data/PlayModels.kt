@@ -510,3 +510,20 @@ data class CoopVisitLog(
 @Serializable
 data class CoopHistory(val userId: String = "", val visits: List<CoopVisitLog> = emptyList())
 
+
+// ---------- Ambiente (clima y sol reales para la sala del hábitat) ----------
+
+/** Clima de `GET /environmental/status`; sin ubicación guardada llega todo a null. */
+@Serializable
+data class WeatherInfo(
+    val condition: String = "unknown",
+    val temperature: Double? = null,
+    /** Código WMO de Open-Meteo. */
+    val weatherCode: Int? = null,
+    /** Salida y puesta de sol de hoy, hora local ("HH:MM"). */
+    val sunrise: String? = null,
+    val sunset: String? = null,
+)
+
+@Serializable
+data class EnvironmentalStatus(val timeOfDay: String = "", val weather: WeatherInfo = WeatherInfo())

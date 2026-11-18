@@ -29,7 +29,7 @@
   import { BarksEngine } from '../lib/barks';
   import { BehaviorEngine, type BehaviorState } from '../lib/behaviorEngine';
   import { checkPetBallCollision, type BallState } from '../lib/toys/toyPhysics';
-  import { currentSpeech, speak, speechBusy } from '../lib/speech-queue';
+  import { currentSpeech, parseBold, speak, speechBusy } from '../lib/speech-queue';
   import { setPetOnScreen } from '../lib/window-visibility';
   import Ico from './Ico.svelte';
 
@@ -931,11 +931,11 @@
 
   {#if $currentSpeech}
     {#key $currentSpeech.id}
-      <div class="speech" class:below={posY < 110} style="--speech-shift: {speechShift}px" aria-hidden="true">{$currentSpeech.text}</div>
+      <div class="speech" class:below={posY < 110} style="--speech-shift: {speechShift}px" aria-hidden="true">{#each parseBold($currentSpeech.text) as part}{#if part.bold}<strong>{part.text}</strong>{:else}{part.text}{/if}{/each}</div>
     {/key}
   {/if}
   <!-- Región viva estable: si se recreara con cada mensaje, los lectores de pantalla no lo anunciarían -->
-  <div class="sr-only" role="status" aria-live="polite">{$currentSpeech?.text ?? ''}</div>
+  <div class="sr-only" role="status" aria-live="polite">{($currentSpeech?.text ?? '').split('**').join('')}</div>
 
   {#if isHighFiveWaiting}
     <div class="high-five-badge" title="¡Haz clic para chocar los cinco!">

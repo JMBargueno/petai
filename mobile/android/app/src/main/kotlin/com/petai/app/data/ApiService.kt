@@ -352,6 +352,9 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     suspend fun endHabitatVisit(): Int = api.request<VisitEndResponse>("POST", "/habitat/visit/end").ended
 
     suspend fun getHabitatVisitors(): List<HabitatVisitor> = api.request<VisitorsResponse>("GET", "/habitat/visitors").visitors
+
+    /** Clima y sol reales del usuario (según las coordenadas guardadas en su perfil). */
+    suspend fun environmentalStatus(): EnvironmentalStatus = api.request("GET", "/environmental/status")
 }
 
 /** Respuesta de POST /habitat/visit: `{ success, visit }`. */

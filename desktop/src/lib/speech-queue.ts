@@ -44,11 +44,14 @@ export interface Speech {
   expiresAt?: number;
 }
 
-export const MAX_CHUNK = 160;
+/** Letras visibles por bocadillo (las marcas `**` de negrita no cuentan). */
+export const MAX_CHUNK = 140;
 /** Máximo de mensajes pendientes (no de trozos): un mensaje troceado nunca se recorta a medias. */
 export const MAX_QUEUE = 8;
 /** Máximo de bocadillos por mensaje por defecto. */
 export const MAX_CHUNKS = 8;
+/** Máximo de bocadillos para una respuesta de la IA; el resto se lee en el chat. */
+export const MAX_AI_CHUNKS = 3;
 /** Pausa entre mensajes para que se note el cambio de bocadillo. */
 export const GAP_MS = 400;
 
@@ -59,19 +62,67 @@ export function durationFor(text: string): number {
   return Math.min(12_000, Math.max(3_000, 2_500 + 55 * text.length));
 }
 
+const BOLD = '**';
+
+/** Longitud visible: las marcas de negrita no ocupan sitio en el bocadillo. */
+function vis(text: string): number {
+  return text.split(BOLD).join('').length;
+}
+
+function countBold(text: string): number {
+  return text.split(BOLD).length - 1;
+}
+
+/** Cierra una negrita que haya quedado abierta (p. ej. al recortar el texto). */
+function closeBold(text: string): string {
+  const t = text.replace(/\*+$/, (m) => (m.length % 2 ? m.slice(1) : m));
+  return countBold(t) % 2 ? `${t}${BOLD}` : t;
+}
+
+/** Una negrita partida entre dos trozos se cierra en el primero y se reabre en el siguiente. */
+function balanceBold(chunks: string[]): string[] {
+  let open = false;
+  return chunks.map((c) => {
+    let t = open ? BOLD + c : c;
+    open = countBold(t) % 2 === 1;
+    if (open) t += BOLD;
+    return t;
+  });
+}
+
+/**
+ * Parte un texto en tramos normales y en negrita (`**así**`) para pintarlos sin HTML: quien lo
+ * muestra decide la etiqueta. Las marcas sueltas se descartan.
+ */
+export function parseBold(text: string): { text: string; bold: boolean }[] {
+  const out: { text: string; bold: boolean }[] = [];
+  const plain = (t: string) => {
+    const clean = t.split(BOLD).join('');
+    if (clean) out.push({ text: clean, bold: false });
+  };
+  let last = 0;
+  for (const m of text.matchAll(/\*\*(.+?)\*\*/g)) {
+    plain(text.slice(last, m.index));
+    out.push({ text: m[1], bold: true });
+    last = m.index! + m[0].length;
+  }
+  plain(text.slice(last));
+  return out;
+}
+
 function splitWords(text: string, max: number): string[] {
   const out: string[] = [];
   let cur = '';
   for (const word of text.split(/\s+/)) {
     if (!word) continue;
-    if (word.length > max) {
+    if (vis(word) > max) {
       if (cur) out.push(cur);
       cur = '';
       for (let i = 0; i < word.length; i += max) out.push(word.slice(i, i + max));
       continue;
     }
     const next = cur ? `${cur} ${word}` : word;
-    if (next.length > max) {
+    if (vis(next) > max) {
       out.push(cur);
       cur = word;
     } else cur = next;
@@ -82,9 +133,14 @@ function splitWords(text: string, max: number): string[] {
 
 /** Trocea un texto en fragmentos de como mucho `max` caracteres, respetando frases cuando se puede. */
 export function splitForSpeech(text: string, max = MAX_CHUNK): string[] {
-  const clean = text.replace(/[ \t]+/g, ' ').trim();
+  let clean = text.replace(/[ \t]+/g, ' ').trim();
+  // Una marca de negrita sin pareja se descarta (la última)
+  if (countBold(clean) % 2) {
+    const i = clean.lastIndexOf(BOLD);
+    clean = (clean.slice(0, i) + clean.slice(i + BOLD.length)).trim();
+  }
   if (!clean) return [];
-  if (clean.length <= max && !clean.includes('\n')) return [clean];
+  if (vis(clean) <= max && !clean.includes('\n')) return [clean];
 
   // Frases: terminadas en . ! ? … (con comillas/paréntesis de cierre opcionales) o por salto de línea
   const sentences = clean
@@ -96,30 +152,34 @@ export function splitForSpeech(text: string, max = MAX_CHUNK): string[] {
   const out: string[] = [];
   let cur = '';
   for (const s of sentences) {
-    if (s.length > max) {
+    if (vis(s) > max) {
       if (cur) out.push(cur);
       cur = '';
       out.push(...splitWords(s, max));
       continue;
     }
     const next = cur ? `${cur} ${s}` : s;
-    if (next.length > max) {
+    if (vis(next) > max) {
       out.push(cur);
       cur = s;
     } else cur = next;
   }
   if (cur) out.push(cur);
-  return out;
+  return balanceBold(out);
 }
 
-/** Quita bloques de razonamiento y el markdown más común para que se lea bien en el bocadillo. */
+/**
+ * Quita bloques de razonamiento y el markdown más común para que se lea bien en el bocadillo.
+ * La negrita `**así**` se conserva: el bocadillo la pinta (ver `parseBold`).
+ */
 export function toSpeakable(text: string): string {
   return text
     .replace(/<think>[\s\S]*?(<\/think>|$)/gi, '')
     .replace(/```[\s\S]*?```/g, '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/(\*\*|__|\*|`|~~)(.+?)\1/g, '$2')
+    .replace(/(__|`|~~)(.+?)\1/g, '$2')
+    .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1')
     .replace(/^\s*#{1,6}\s+/gm, '')
     .replace(/^\s*(?:[-*+]|\d+[.)])\s+/gm, '')
     .replace(/^\s*>\s?/gm, '')
@@ -210,7 +270,7 @@ export function createSpeechQueue() {
       chunks = chunks.slice(0, maxChunks);
       const last = chunks[maxChunks - 1];
       const room = MAX_CHUNK - note.length - 1;
-      chunks[maxChunks - 1] = `${last.length > room ? last.slice(0, room).trimEnd() : last} ${note}`;
+      chunks[maxChunks - 1] = `${vis(last) > room ? closeBold(last.slice(0, room).trimEnd()) : last} ${note}`;
     }
     if (opts.key && (shown?.key === opts.key || queue.some((q) => q.key === opts.key))) return false;
     if (priority === 'low' && busy()) return false;
