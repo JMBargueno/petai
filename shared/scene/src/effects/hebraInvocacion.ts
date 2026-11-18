@@ -1,5 +1,7 @@
 import type { EffectDef, FxFrame, PixelSink } from './types';
 import { Canvas2, easeIn, easeOut, hash, span } from './fxMath';
+import { paintSheetFrame, type FrameSheet } from './sheet';
+import COIL_FRAMES from './frames/hebra-invocacion.json';
 
 /**
  * Hebra de invocación: la invocación rápida (LORE §8, la hebra que cada Custodio pone en el Nexo).
@@ -15,6 +17,7 @@ const W = 40;
 const H = 80;
 const CX = 20;
 const FEET = 76;
+const SHEET = COIL_FRAMES as FrameSheet;
 
 /** La hebra: una línea vertical que ondula un poco, con trenzado de dos tonos. */
 function paintThread(c: Canvas2, f: FxFrame, fromY: number, toY: number) {
@@ -26,26 +29,32 @@ function paintThread(c: Canvas2, f: FxFrame, fromY: number, toY: number) {
   }
 }
 
-/** Ovillo a los pies: anillo achatado que gira. */
+/**
+ * Ovillo a los pies, dibujado con Nano Banana (`frames/hebra-invocacion.json`, por roles): la hebra
+ * enroscada en espiral con su cabo subiendo del centro. `amount` 0..1 lo abre desde el centro.
+ */
 function paintCoil(c: Canvas2, f: FxFrame, amount: number) {
   const { palette } = f;
-  const rx = 4 + amount * 9;
-  const turns = f.reduced ? 0 : f.time / 200;
-  for (let a = 0; a < Math.PI * 2 * amount; a += 0.07) {
-    const x = CX - 0.5 + Math.cos(a + turns) * rx;
-    const y = FEET - 1 + Math.sin(a + turns) * rx * 0.25;
-    c.set(x, y, Math.sin(a + turns) > 0 ? palette.light : palette.deep);
-  }
+  paintSheetFrame(
+    c,
+    SHEET,
+    0,
+    { outline: palette.outline, deep: palette.deep, mid: palette.mid, light: palette.light, glow: palette.glow, core: palette.light },
+    { x: CX, bottom: FEET, scaleX: Math.max(0.15, amount) },
+  );
 }
 
 function draw(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(W, H);
+  // El ovillo trae su contorno de la lámina: va en su propia capa, encima de la hebra
+  const coil = new Canvas2(W, H);
   const { palette } = f;
 
   if (f.reduced) {
     paintThread(c, f, 0, FEET - 2);
-    paintCoil(c, f, 1);
+    paintCoil(coil, f, 1);
     c.flush(sink, palette.outline);
+    coil.flush(sink, null);
     return;
   }
 
@@ -59,21 +68,21 @@ function draw(sink: PixelSink, f: FxFrame): void {
     }
     case 'coil': {
       paintThread(c, f, 0, FEET - 2);
-      paintCoil(c, f, easeOut(f.t));
+      paintCoil(coil, f, easeOut(f.t));
       // Chispazo al tocar el suelo
       if (f.t < 0.4) for (const dx of [-4, -2, 2, 4]) c.set(CX - 0.5 + dx, FEET - 2 - Math.abs(dx) / 2, palette.glow);
       break;
     }
     case 'hold': {
       paintThread(c, f, 0, FEET - 2);
-      paintCoil(c, f, 1);
+      paintCoil(coil, f, 1);
       break;
     }
     case 'retract': {
       // La hebra se recoge hacia arriba; el ovillo se deshace en chispas
       const bottom = (FEET - 2) * (1 - easeIn(f.t));
       paintThread(c, f, 0, bottom);
-      if (f.t < 0.5) paintCoil(c, f, 1 - f.t * 2);
+      if (f.t < 0.5) paintCoil(coil, f, 1 - f.t * 2);
       for (let k = 0; k < 8; k++) {
         if (hash(k, 4, f.seed) < span(f.t, 0.3, 1)) continue;
         const x = CX - 12 + hash(k, 1, f.seed) * 24;
@@ -84,6 +93,7 @@ function draw(sink: PixelSink, f: FxFrame): void {
     }
   }
   c.flush(sink, palette.outline);
+  coil.flush(sink, null);
 }
 
 export const hebraInvocacion: EffectDef = {

@@ -25,7 +25,7 @@ El generador es `scripts/sprites/concept/generate.mjs`. Llama a la API de Gemini
 
 `sprite-previews/` está ignorado por git: los conceptos no se suben. Si uno define el diseño, descríbelo con palabras en el comentario de cabecera del efecto.
 
-## Arte final por roles (cofre, huevo, paquete, sello, altar, jefe de raid, manitas, capullo, portal)
+## Arte final por roles (cofre, huevo, paquete, sello, altar, jefe de raid, manitas, capullo, portal, resonancia, hebra, trenza, descarga)
 Para los efectos figurativos, la lámina de Nano Banana ES el arte, importado **por roles de color** para que el motor lo siga tiñendo (Flujo, metal, tier):
 1. **Prompt:**
    - Pide una tira de frames sobre fondo magenta `#ff00ff`, todos al mismo tamaño y sobre la misma línea de suelo.
@@ -43,7 +43,7 @@ Para los efectos figurativos, la lámina de Nano Banana ES el arte, importado **
 4. **Pinta** con `paintSheetFrame(c, sheet, frame, { rol: color }, { x, bottom })` (`effects/sheet.ts`), en un `Canvas2` propio que se vuelca con `flush(sink, null)`: la lámina ya trae su contorno. Las partículas, haces y anillos siguen siendo procedurales, en otra capa con contorno.
 5. **Tamaño:** NB dibuja a ~70 px nativos aunque pidas 24. Por debajo de ~22 px de ancho se emborrona. La rejilla máxima es 64×80, así que lo que vaya junto a la mascota cabe hasta ~26 px.
 
-Coste real: 10 imágenes para 9 efectos (~0,63 $). Por debajo de ~12 px (una mano) el arte de NB se vuelve una mancha: dale a esas piezas su propia anchura con `--widths`.
+Coste real: 13 imágenes para 13 efectos (~0,82 $). Una lámina puede servir a dos efectos: impórtala dos veces con `--order` (el Códice de la resonancia y el ovillo de la hebra comparten imagen). Por debajo de ~12 px (una mano) el arte de NB se vuelve una mancha: dale a esas piezas su propia anchura con `--widths`.
 
 `paintSheetFrame` también refleja (`flipX`), estrecha desde el centro (`scaleX`, un portal que se abre), recorta bajo el suelo (`clipBottom`) y acepta un color por rol y fila (runas que se encienden de abajo arriba).
 
