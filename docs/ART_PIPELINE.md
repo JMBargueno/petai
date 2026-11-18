@@ -268,6 +268,7 @@ Un único renderizador para escritorio, Android e iOS, que sustituye a la spec `
 - El reproductor de clips (`anim.json`).
 - La sala isométrica: proyección, orden de profundidad, A*, paseo y modo edición.
 - Las partículas.
+- Los **efectos** (`src/effects/`, export `@pockai/scene/effects`): portales, capullo de evolución, revelación al nacer, sello de logro, clima… en pixel art procedural, sin assets. El motor y los efectos son TypeScript puro (sin DOM ni Pixi), así que también los importan el escritorio y la web. En la escena los pinta `effects/pixiLayer.ts` colgados del Pockai. La tabla `effectForPetAction` (`effects/reactions.ts`) decide qué efecto acompaña a cada aviso `pet:action`, igual en todas las plataformas. Se diseñan con la skill `pockai-effect-architect`.
 - El ambiente de la sala (`src/ambience/`): ciclo amanecer → día → tarde → atardecer → anochecer → noche y clima real, dibujados por código.
   - `sunClock.ts`: de la hora local y la salida/puesta de sol sale un `SkyState` continuo (colores interpolados entre fotogramas clave). La hora la da el reloj del dispositivo; sin sol real usa 07:30 / 20:00.
   - `weather.ts`: del código WMO de Open-Meteo sale el aspecto (nubes, lluvia, nieve, niebla, tormenta).
@@ -277,9 +278,11 @@ Un único renderizador para escritorio, Android e iOS, que sustituye a la spec `
 **Qué queda nativo:** menús, pantallas, compras y llamadas a la API. La app nativa traduce los eventos de la escena a la API.
 
 **Protocolo** (`shared/scene/src/protocol.ts`): mensajes JSON tipados.
-- Entrada: `setPet`, `setHabitat`, `setTheme`, `setMode`, `playClip`.
+Versión actual: **3** (`PROTOCOL_VERSION`, anunciada en `ready`).
+- Entrada: `setPet`, `playClip`, `setTheme`, `setPaused`, `setFacing`, `setRoom`, `setActivity`, `setNight`, `setEditMode`, `selectItem`, `rotateSelected`.
+- Efectos (v3): `playEffect { id, params? }` pinta un efecto concreto; `petAction { action, context? }` reenvía un aviso del backend tal cual y la escena elige el efecto con `effectForPetAction`.
 - `setAmbience { weather: { code, temperature }, sun: { sunrise, sunset }, clock }`: clima y sol reales (de `GET /environmental/status`). Todos los campos son opcionales; `clock` fuerza la hora (demo y pruebas). `setNight` queda para "luces apagadas porque duerme".
-- Salida: `ready`, `petTapped`, `furnitureMoved`, `petDraggedOut`.
+- Salida: `ready`, `petLoaded`, `petTapped`, `clipEnded`, `itemSelected`, `furnitureMoved`, `effectEnded` (v3), `error`.
 
 **Android** (`mobile/android`):
 - `pnpm --filter @pockai/scene build:embed` genera `shared/scene/dist/embed/`. La tarea Gradle `syncPockaiScene` (en `preBuild`) lo copia a `assets/scene/` y falla con un mensaje claro si falta.
@@ -287,7 +290,8 @@ Un único renderizador para escritorio, Android e iOS, que sustituye a la spec `
   - Los eventos llegan por `AndroidBridge.postMessage`.
   - `SceneController` encola los mensajes hasta `ready` y, si la página se recarga, repite el último estado.
   - Se pausa en `ON_PAUSE`.
-- `ui/scene/SceneMessages.kt` construye los mensajes del protocolo (v2); `restClip` es el equivalente de `resolveBaseState`.
+- `ui/scene/SceneMessages.kt` construye los mensajes del protocolo (v3); `restClip` es el equivalente de `resolveBaseState`.
+- `HabitatScreen` reenvía a la escena los `pet:action` del Pockai del hábitat (`SceneMessages.petAction`): los efectos salen igual que en el escritorio.
 - En builds debug, `adb shell am start -n com.petai.app/.debug.SceneDebugActivity` abre la sala con datos de ejemplo, sin backend (eventos en logcat con la etiqueta `PockaiScene`).
 
 **Reglas:**

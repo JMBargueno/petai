@@ -17,7 +17,7 @@ import kotlinx.serialization.json.putJsonObject
  * Mensajes anfitrión → escena del protocolo de `@pockai/scene` (shared/scene/src/protocol.ts,
  * versión [SCENE_PROTOCOL_VERSION]). La escena valida cada mensaje y descarta los mal formados.
  */
-const val SCENE_PROTOCOL_VERSION = 2
+const val SCENE_PROTOCOL_VERSION = 3
 
 object SceneMessages {
     fun setPet(pet: Pet): JsonObject = buildJsonObject {
@@ -152,6 +152,31 @@ object SceneMessages {
     fun setPaused(paused: Boolean): JsonObject = buildJsonObject {
         put("type", "setPaused")
         put("paused", paused)
+    }
+
+    /**
+     * Reenvía un aviso `pet:action` del backend tal cual (protocolo v3). La escena decide el efecto
+     * con la misma tabla que el escritorio (`effectForPetAction` en shared/scene/src/effects), así
+     * que Android no repite esa lógica.
+     */
+    fun petAction(action: String, context: JsonObject?): JsonObject = buildJsonObject {
+        put("type", "petAction")
+        put("action", action)
+        if (context != null) put("context", context)
+    }
+
+    /** Pide un efecto concreto de @pockai/scene/effects (protocolo v3), con sus datos. */
+    fun playEffect(id: String, params: Map<String, Any> = emptyMap()): JsonObject = buildJsonObject {
+        put("type", "playEffect")
+        put("id", id)
+        putJsonObject("params") {
+            params.forEach { (k, v) ->
+                when (v) {
+                    is Number -> put(k, v)
+                    else -> put(k, v.toString())
+                }
+            }
+        }
     }
 }
 

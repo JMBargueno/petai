@@ -35,6 +35,8 @@ sealed interface SceneEvent {
     data class ItemSelected(val itemId: String?) : SceneEvent
     data class FurnitureMoved(val itemId: String, val x: Int, val y: Int, val rotation: Int) : SceneEvent
     data object PetTapped : SceneEvent
+    /** Un efecto de `playEffect`/`petAction` terminó (protocolo v3). */
+    data class EffectEnded(val id: String) : SceneEvent
     data class Error(val message: String) : SceneEvent
 }
 
@@ -53,6 +55,7 @@ private fun parseEvent(raw: String): SceneEvent? = runCatching {
             o["rotation"]!!.jsonPrimitive.int,
         )
         "petTapped" -> SceneEvent.PetTapped
+        "effectEnded" -> SceneEvent.EffectEnded(str("id") ?: return null)
         "error" -> SceneEvent.Error(str("message") ?: "")
         else -> null
     }

@@ -52,6 +52,12 @@
       "port": 5180
     },
     {
+      "name": "pockai-scene-dev-alt",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@pockai/scene", "exec", "vite", "--port", "5182", "--strictPort"],
+      "port": 5182
+    },
+    {
       "name": "pockai-web-dev",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "pockai-web", "exec", "ng", "serve", "--port", "4200"],

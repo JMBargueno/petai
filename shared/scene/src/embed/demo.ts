@@ -7,6 +7,7 @@
 import { PATTERNS } from '../assets';
 import type { RoomState } from '../protocol';
 import { DEMO_ROOMS, demoRoom } from './demoRoom';
+import { EFFECTS } from '../effects';
 
 const PALETTES: Record<string, { primary: string; secondary: string }> = {
   ignisaur: { primary: '#E25822', secondary: '#F3C544' },
@@ -46,6 +47,18 @@ const WEATHERS: [string, number][] = [
 ];
 const CLIPS = ['idle', 'walk', 'happy', 'eat', 'sleep', 'attack', 'sad', 'dance', 'level_up'];
 
+/** Avisos `pet:action` de ejemplo (como llegan del backend) para probar la tabla compartida. */
+const DEMO_ACTIONS: [string, Record<string, unknown>][] = [
+  ['level_up', { level: 12 }],
+  ['evolved', { stage: 'final' }],
+  ['hatched', { rarity: 'mythic', shiny: true, pity: 'legendary' }],
+  ['achievement', { name: 'Demostración', tier: 'legendary' }],
+  ['battle_lost', {}],
+  ['welcome_back', { tier: 'offended' }],
+  ['gift_received', {}],
+  ['sick', {}],
+];
+
 export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void {
   const panel = document.createElement('form');
   panel.className = 'demo';
@@ -71,6 +84,9 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
     <div class="row"><button type="button" data-facing="1">→</button><button type="button" data-facing="-1">←</button></div>`
     }
     <div class="row"><button type="button" data-pause>pausa</button></div>
+    <label>Efecto <select name="effect">${Object.keys(EFFECTS).map((id) => `<option>${id}</option>`).join('')}</select></label>
+    <div class="row"><button type="button" data-effect>lanzar efecto</button></div>
+    <div class="row">${DEMO_ACTIONS.map(([a]) => `<button type="button" data-action="${a}">${a}</button>`).join('')}</div>
     <ol class="log" aria-live="polite"></ol>`;
   document.body.appendChild(panel);
   const log = panel.querySelector('.log')!;
@@ -138,6 +154,15 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
       b.textContent = edit ? 'terminar' : 'editar';
     }
     if (b.hasAttribute('data-rotate')) send({ type: 'rotateSelected' });
+    if (b.hasAttribute('data-effect')) {
+      const id = (panel.querySelector('[name=effect]') as HTMLSelectElement).value;
+      send({ type: 'playEffect', id });
+    }
+    if (b.dataset.action) {
+      // Como lo reenviaría la app nativa: el aviso del backend tal cual
+      const ctx = DEMO_ACTIONS.find(([a]) => a === b.dataset.action)?.[1];
+      send({ type: 'petAction', action: b.dataset.action, context: ctx });
+    }
     if (b.hasAttribute('data-pause')) send({ type: 'setPaused', paused: (paused = !paused) });
   });
 

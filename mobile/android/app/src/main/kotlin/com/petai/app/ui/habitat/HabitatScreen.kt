@@ -154,6 +154,15 @@ fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onCha
                 visitors = visitors.filter { it.visitorId != id }
             }
         }
+        // Lo que le pasa a tu Pockai (sube de nivel, evoluciona, gana un logro…): la escena pinta
+        // el mismo efecto que el escritorio (@pockai/scene/effects). Solo los de este Pockai.
+        launch {
+            realtime.petAction().collect { ev ->
+                if (ev.action.isNotBlank() && (ev.petId == null || ev.petId == pet.id)) {
+                    scene.send(SceneMessages.petAction(ev.action, ev.context))
+                }
+            }
+        }
     }
 
     fun place(f: HabitatFurniture) {
