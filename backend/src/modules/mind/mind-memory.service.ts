@@ -5,7 +5,7 @@ import { EntitlementService } from '../billing/entitlement.service';
 import { intelligenceTier } from '../ai/personality';
 import { MemoryLayer } from './mind.types';
 import { MindService } from './mind.service';
-import { floorValence, isStage, nextStage, type Stage } from './social.engine';
+import { floorValence, isStage, nextStage, type Shareable, type Stage } from './social.engine';
 import {
   MemoryRow,
   RecallOptions,
@@ -168,6 +168,30 @@ export class MindMemoryService {
   async stageWith(petId: string, subject: string): Promise<Stage> {
     const row = await this.prisma.petMemory.findUnique({ where: { petId_key: { petId, key: `emo:${subject}` } } });
     return isStage((row as any)?.stage) ? (row as any).stage : 'stranger';
+  }
+
+  /**
+   * Episodios propios que una mascota podría contar o regalar a otro Pockai: recientes, sin
+   * sujeto y sin clave (lo nacido del chat, los deseos y los trucos la llevan). El filtro fino
+   * (lista blanca de orígenes) es de `social.engine.isShareable`.
+   */
+  async shareableEpisodes(petId: string, kinds: string[], since: Date): Promise<Shareable[]> {
+    return this.prisma.petMemory.findMany({
+      where: { petId, layer: 'episodic', key: null, subject: null, kind: { in: kinds }, createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, kind: true, content: true, key: true, subject: true, createdAt: true },
+    });
+  }
+
+  /** Cómo acabó el último encuentro con alguien (valencia del recuerdo); `null` si no hay ninguno. */
+  async lastEncounterMood(petId: string, subject: string): Promise<number | null> {
+    const row = await this.prisma.petMemory.findFirst({
+      where: { petId, layer: 'episodic', subject, kind: { in: ['encounter', 'visit'] } },
+      orderBy: { createdAt: 'desc' },
+      select: { valence: true },
+    });
+    return row ? row.valence : null;
   }
 
   async enforceCapacity(petId: string) {

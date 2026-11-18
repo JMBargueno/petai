@@ -23,7 +23,7 @@ import { weighted } from './personality.engine';
 export const STAGES = ['stranger', 'acquaintance', 'friend', 'best_friend'] as const;
 export type Stage = (typeof STAGES)[number];
 
-export const SCENE_TYPES = ['greet', 'explore_together', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up'] as const;
+export const SCENE_TYPES = ['greet', 'explore_together', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up', 'give_gift'] as const;
 export type SceneType = (typeof SCENE_TYPES)[number];
 
 export interface SocialConfig {
@@ -43,6 +43,19 @@ export interface SocialConfig {
     repeatFactor: number;
   };
   scenes: Record<SceneType, SceneConfig>;
+  /** Rumores (spec 37 §6.4): qué puede contar un Pockai a otro de lo que ha vivido. */
+  rumors?: RumorConfig;
+}
+
+export interface RumorConfig {
+  /** Lista blanca de orígenes (`kind`) que se pueden contar. Lo que no esté aquí es privado. */
+  kinds: string[];
+  /** Probabilidad de que en una escena entre amigos uno le cuente algo al otro. */
+  chance: number;
+  /** Solo se cuenta lo reciente. */
+  maxAgeDays: number;
+  /** Importancia del recuerdo de segunda mano (baja: se olvida antes que lo vivido). */
+  importance: number;
 }
 
 export interface SceneConfig {
@@ -65,6 +78,8 @@ export interface SceneConfig {
   after?: SceneType;
   /** Solo en la primera ranura de la visita. */
   firstSlotOnly?: boolean;
+  /** Solo si alguno de los dos tiene algo que encontró por su cuenta (un regalo, §6.5). */
+  requiresFind?: boolean;
 }
 
 const rank = (s: Stage) => STAGES.indexOf(s);
@@ -112,6 +127,8 @@ export interface SceneActor {
   ownerName: string;
   dims: Dims;
   energy: number;
+  /** Tiene algo que encontró hace poco y que podría regalar. */
+  hasFind?: boolean;
 }
 
 export interface SceneInput {
@@ -123,6 +140,13 @@ export interface SceneInput {
   slot: number;
   /** Escena de la ranura anterior, si la hubo. */
   previous?: SceneType | null;
+  /**
+   * Es el momento de llegar. Por defecto, la ranura 0; un encuentro autónomo es una visita de una
+   * sola escena y siempre lo es, aunque su ranura (que solo siembra el azar) sea otra.
+   */
+  first?: boolean;
+  /** Viven en la misma casa (buddies del mismo entrenador): nadie va de visita ni se presenta. */
+  sameHome?: boolean;
 }
 
 export interface SceneSide {
@@ -139,6 +163,8 @@ export interface SceneResult {
   slot: number;
   host: SceneSide;
   guest: SceneSide;
+  /** En un regalo, quién lo da. */
+  giver?: 'host' | 'guest';
 }
 
 /** Semilla de la pareja en una ranura: no depende de quién sea anfitrión. */
@@ -156,6 +182,7 @@ function meanDims(a: Dims, b: Dims): Dims {
 /** Escenas posibles ahora, con su peso. */
 export function sceneCandidates(input: SceneInput, cfg: SocialConfig): { type: SceneType; weight: number }[] {
   const { host, guest, stage, slot, previous } = input;
+  const first = input.first ?? slot === 0;
   const dims = meanDims(host.dims, guest.dims);
   const minEnergy = Math.min(host.energy, guest.energy);
   const maxEnergy = Math.max(host.energy, guest.energy);
@@ -166,7 +193,8 @@ export function sceneCandidates(input: SceneInput, cfg: SocialConfig): { type: S
     if (!c) continue;
     if (c.minStage && rank(stage) < rank(c.minStage)) continue;
     if (c.maxStage && rank(stage) > rank(c.maxStage)) continue;
-    if (c.firstSlotOnly && slot !== 0) continue;
+    if (c.firstSlotOnly && (!first || input.sameHome)) continue;
+    if (c.requiresFind && !host.hasFind && !guest.hasFind) continue;
     if (c.after && previous !== c.after) continue;
     if (c.minEnergy !== undefined && minEnergy < c.minEnergy) continue;
     if (c.maxEnergy !== undefined && maxEnergy > c.maxEnergy) continue;
@@ -184,7 +212,7 @@ type Lines = { first: string[]; again: string[] };
  * Episodios por escena y papel. `{other}` es el otro Pockai y `{owner}` su entrenador. `first` es
  * para quienes apenas se conocen; `again`, para amigos (el quinto encuentro no se cuenta como el primero).
  */
-const EPISODES: Record<SceneType, { host: Lines; guest: Lines }> = {
+const EPISODES: Record<Exclude<SceneType, 'give_gift'>, { host: Lines; guest: Lines }> = {
   greet: {
     host: {
       first: ['{owner} vino a visitarme con {other}. Nos olisqueamos con curiosidad.', 'Hoy conocí a {other}, que vino de visita con {owner}.'],
@@ -257,6 +285,30 @@ const EPISODES: Record<SceneType, { host: Lines; guest: Lines }> = {
   },
 };
 
+/** Un regalo: `host` son las líneas de quien da y `guest` las de quien recibe, sea quien sea el anfitrión. */
+const GIFT: { giver: Lines; receiver: Lines } = {
+  giver: {
+    first: ['Le regalé a {other} una cosa que encontré en mis paseos.'],
+    again: ['Le regalé a {other} una cosa que encontré en mis paseos. Le hizo mucha ilusión.', 'Guardaba algo que encontré para {other} y hoy se lo di.'],
+  },
+  receiver: {
+    first: ['{other} me regaló una cosa que encontró en sus paseos.'],
+    again: ['{other} me regaló una cosa que encontró en sus paseos. ¡Qué detalle!', '{other} me había guardado un regalo de sus paseos.'],
+  },
+};
+
+/** Episodios entre compañeros de casa (mismo entrenador): sin visitas ni presentaciones. */
+const HOME_EPISODES: Record<SceneType, string[]> = {
+  greet: ['Saludé a {other}, mi compañero de casa.', '{other} y yo nos dimos los buenos días.'],
+  explore_together: ['{other} y yo curioseamos juntos por casa.', 'Husmeé por los rincones con {other}.'],
+  play_tag: ['Jugué al pilla-pilla con {other} por casa.', '{other} y yo nos perseguimos hasta quedarnos sin aliento.'],
+  share_food: ['Comí al lado de {other}; compartimos lo que había.', '{other} y yo comimos juntos.'],
+  nap_together: ['Siesta con {other}, acurrucados.', 'Me dormí al lado de {other}.'],
+  squabble: ['{other} y yo nos picamos por una tontería. Ya se nos pasará.', 'Discutí con {other}; los dos queríamos el mismo sitio.'],
+  make_up: ['{other} y yo hicimos las paces enseguida.', 'Me reconcilié con {other}; vivimos juntos, no podemos estar enfadados.'],
+  give_gift: ['Le di a {other} una cosa que encontré.', '{other} y yo nos enseñamos nuestros tesoros.'],
+};
+
 const fill = (text: string, other: SceneActor) => text.replace(/\{other\}/g, other.name).replace(/\{owner\}/g, other.ownerName);
 
 /**
@@ -268,6 +320,8 @@ export function resolveScene(input: SceneInput, cfg: SocialConfig): SceneResult 
   const rPick = rng();
   const rHost = rng();
   const rGuest = rng();
+  // Tirada nueva al final: no cambia las escenas que ya salían con las tres primeras
+  const rGiver = rng();
 
   const candidates = sceneCandidates(input, cfg);
   let type: SceneType = 'explore_together';
@@ -288,10 +342,98 @@ export function resolveScene(input: SceneInput, cfg: SocialConfig): SceneResult 
   const set: keyof Lines = rank(input.stage) >= rank('friend') ? 'again' : 'first';
   const pick = (lines: string[], r: number) => lines[Math.min(lines.length - 1, Math.floor(r * lines.length))];
   const mood = delta < 0 ? -0.3 : Math.min(0.8, 0.3 + delta * 3);
+  if (input.sameHome) {
+    const lines = HOME_EPISODES[type];
+    return {
+      type,
+      slot: input.slot,
+      host: { episode: fill(pick(lines, rHost), input.guest), delta, mood },
+      guest: { episode: fill(pick(lines, rGuest), input.host), delta, mood },
+    };
+  }
+  if (type === 'give_gift') {
+    const both = !!input.host.hasFind && !!input.guest.hasFind;
+    const giver: 'host' | 'guest' = both ? (rGiver < 0.5 ? 'host' : 'guest') : input.guest.hasFind ? 'guest' : 'host';
+    const hostLines = giver === 'host' ? GIFT.giver : GIFT.receiver;
+    const guestLines = giver === 'guest' ? GIFT.giver : GIFT.receiver;
+    return {
+      type,
+      slot: input.slot,
+      giver,
+      host: { episode: fill(pick(hostLines[set], rHost), input.guest), delta, mood },
+      guest: { episode: fill(pick(guestLines[set], rGuest), input.host), delta, mood },
+    };
+  }
   return {
     type,
     slot: input.slot,
     host: { episode: fill(pick(EPISODES[type].host[set], rHost), input.guest), delta, mood },
     guest: { episode: fill(pick(EPISODES[type].guest[set], rGuest), input.host), delta, mood },
   };
+}
+
+/** Lo mínimo de un recuerdo para decidir si se puede contar a otro Pockai. */
+export interface Shareable {
+  id: string;
+  kind: string;
+  content: string;
+  key?: string | null;
+  subject?: string | null;
+  createdAt: Date;
+}
+
+/**
+ * ¿Puede un Pockai contarle este episodio a otro? (spec 37 §6.4). Lista blanca: solo los orígenes
+ * de `cfg.kinds`. Además, nunca nada con sujeto (nombraría a un tercero, o a su entrenador), ni
+ * con clave (los episodios del chat, los deseos y los trucos la llevan), ni un rumor recibido: un
+ * rumor da un solo salto.
+ */
+export function isShareable(m: Shareable, cfg: RumorConfig | undefined, now: Date): boolean {
+  if (!cfg || !cfg.kinds.includes(m.kind)) return false;
+  if (m.kind === 'rumor' || m.kind === 'summary') return false;
+  if (m.subject || m.key) return false;
+  return now.getTime() - m.createdAt.getTime() <= cfg.maxAgeDays * 86_400_000;
+}
+
+/** Semilla de lo que se cuentan dos Pockai en una ranura. */
+export function rumorSeed(petA: string, petB: string, slot: number): number {
+  const [a, b] = [petA, petB].sort();
+  return hashSeed(`rumor:${a}:${b}:${slot}`);
+}
+
+export interface RumorPick {
+  teller: 'host' | 'guest';
+  source: Shareable;
+  /** Lo que recuerda quien lo escucha. */
+  content: string;
+}
+
+/**
+ * Qué se cuentan en una escena, si se cuentan algo. Solo entre amigos, nunca en plena discusión.
+ * Función pura: misma pareja y misma ranura, mismo rumor.
+ */
+export function pickRumor(
+  input: { hostId: string; guestId: string; hostName: string; guestName: string; stage: Stage; slot: number; type: SceneType },
+  shareable: { host: readonly Shareable[]; guest: readonly Shareable[] },
+  cfg: SocialConfig,
+  now: Date,
+): RumorPick | null {
+  const r = cfg.rumors;
+  if (!r || rank(input.stage) < rank('friend') || input.type === 'squabble') return null;
+  const rng = createRng(rumorSeed(input.hostId, input.guestId, input.slot));
+  const rChance = rng();
+  const rTeller = rng();
+  const rPick = rng();
+  if (rChance >= r.chance) return null;
+  const options = {
+    host: shareable.host.filter((m) => isShareable(m, r, now)),
+    guest: shareable.guest.filter((m) => isShareable(m, r, now)),
+  };
+  let teller: 'host' | 'guest' = rTeller < 0.5 ? 'host' : 'guest';
+  if (!options[teller].length) teller = teller === 'host' ? 'guest' : 'host';
+  const list = options[teller];
+  if (!list.length) return null;
+  const source = list[Math.min(list.length - 1, Math.floor(rPick * list.length))];
+  const name = teller === 'host' ? input.hostName : input.guestName;
+  return { teller, source, content: `${name} me contó algo suyo: «${source.content}»` };
 }

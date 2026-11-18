@@ -309,6 +309,8 @@ export class CoopCareService {
     //    las metas del clan) la procesa `ClansService.onClanActivity`. Así la XP no se contabiliza
     //    en dos sitios y la visita nunca depende de un fallo de clan.
     this.events.emit('clan:activity', { userId: ownerId, xp: xpGained, visits: 1 });
+    // La mascota cuidada lo recuerda (spec 37 §6.7); lo atiende la mente, sin bloquear la visita
+    this.events.emit('coop:care_received', { ownerId, visitorId, petId: pet.id, action: action.action });
 
     return { success: true, message: `Successfully ${action.action} the pet`, xpGained, petState };
   }

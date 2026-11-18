@@ -6,13 +6,14 @@ import { PrismaModule } from '../../prisma/prisma.module';
 import { PetsModule } from '../pets/pets.module';
 import { BondingModule } from '../bonding/bonding.module';
 import { RealtimeModule } from '../realtime/realtime.module';
+import { MindModule } from '../mind/mind.module';
 
 /**
  * Módulo de dominio de Pet Buddies (feature 029). `PrismaModule` y `RealtimeModule`
  * son globales; se importan para explicitar las dependencias del dominio.
  */
 @Module({
-  imports: [PrismaModule, PetsModule, BondingModule, RealtimeModule],
+  imports: [PrismaModule, PetsModule, BondingModule, RealtimeModule, MindModule],
   controllers: [BuddiesController],
   providers: [BuddiesService, InteractionEngineService],
   exports: [BuddiesService, InteractionEngineService],

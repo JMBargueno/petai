@@ -125,6 +125,7 @@ const SCENE_LABEL: Record<string, string> = {
   nap_together: 'se echan una siesta juntos',
   squabble: 'se han picado',
   make_up: 'hacen las paces',
+  give_gift: 'se hacen un regalo',
 };
 
 const STAGE_LABEL: Record<string, string> = {

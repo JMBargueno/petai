@@ -27,7 +27,7 @@ export class MindController {
       this.memory.counts(pet.id),
       this.memory.capacity(pet.id),
       this.prisma.petMemory.findMany({
-        where: { petId: pet.id, layer: 'episodic', kind: { in: ['event', 'encounter', 'find'] } },
+        where: { petId: pet.id, layer: 'episodic', kind: { in: ['event', 'encounter', 'find', 'visit', 'rumor'] } },
         orderBy: { createdAt: 'desc' },
         take: 10,
         select: { id: true, kind: true, content: true, createdAt: true },
