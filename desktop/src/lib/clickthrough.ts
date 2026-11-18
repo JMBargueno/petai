@@ -3,7 +3,7 @@
 // En el navegador (sin Tauri) no hace nada.
 
 // .ui-modal-backdrop: los diálogos (components/ui/Modal.svelte) bloquean el escritorio mientras están abiertos.
-const INTERACTIVE_SELECTOR = '.pet-container, .dock, .panel-card, .ui-modal-backdrop';
+const INTERACTIVE_SELECTOR = '.pet-container, .dock, .desktop-ball, .panel-card, .ui-modal-backdrop';
 const REFRESH_MS = 50;
 
 type Rect = { x: number; y: number; w: number; h: number };

@@ -783,6 +783,9 @@
     position: fixed;
     bottom: 16px;
     z-index: var(--z-dock);
+    /* .app-viewport es pointer-events:none (se hereda); el dock debe ser interactivo y
+       así el click-through lo cuenta como zona clicable. */
+    pointer-events: auto;
   }
   .dock :global(.btn) {
     box-shadow: var(--shadow-2);
