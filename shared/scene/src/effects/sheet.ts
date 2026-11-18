@@ -17,7 +17,16 @@ export interface SheetPos {
   /** Fila de la base: la última fila del frame cae aquí. */
   bottom: number;
   align?: 'center' | 'left';
+  /** Espejo horizontal (la mano derecha es la izquierda reflejada). */
+  flipX?: boolean;
+  /** Estrecha el frame en horizontal (0..1, desde su centro): un portal que se abre. */
+  scaleX?: number;
+  /** No pinta por debajo de esta fila (lo que se hunde en el suelo no se ve). */
+  clipBottom?: number;
 }
+
+/** Un color por rol, o una función rol × fila (en coordenadas del frame) para colorear por altura. */
+export type SheetColors = Record<string, string | undefined> | ((role: string, y: number, h: number) => string | undefined);
 
 export function frameSize(sheet: FrameSheet, index: number): { w: number; h: number } {
   const rows = sheet.frames[index] ?? [];
@@ -26,21 +35,28 @@ export function frameSize(sheet: FrameSheet, index: number): { w: number; h: num
 
 /** Esquina superior izquierda del frame en la rejilla del efecto. */
 export function frameOrigin(sheet: FrameSheet, index: number, pos: SheetPos): { x: number; y: number } {
-  const { w, h } = frameSize(sheet, index);
+  const { h } = frameSize(sheet, index);
+  const w = Math.max(1, Math.round(frameSize(sheet, index).w * (pos.scaleX ?? 1)));
   return { x: pos.align === 'left' ? pos.x : Math.round(pos.x - w / 2), y: pos.bottom - h + 1 };
 }
 
 /** Pinta el frame `index` con un color por rol (un rol sin color no se pinta). */
-export function paintSheetFrame(c: Canvas2, sheet: FrameSheet, index: number, colors: Record<string, string | undefined>, pos: SheetPos): void {
+export function paintSheetFrame(c: Canvas2, sheet: FrameSheet, index: number, colors: SheetColors, pos: SheetPos): void {
   const rows = sheet.frames[index];
   if (!rows) return;
   const o = frameOrigin(sheet, index, pos);
-  const byCode = sheet.roles.map((r) => colors[r]);
+  const srcW = rows[0]?.length ?? 0;
+  const w = Math.max(1, Math.round(srcW * (pos.scaleX ?? 1)));
+  const color = typeof colors === 'function' ? colors : (role: string) => colors[role];
   rows.forEach((row, y) => {
-    for (let x = 0; x < row.length; x++) {
-      const k = row.charCodeAt(x) - 97;
+    if (pos.clipBottom !== undefined && o.y + y > pos.clipBottom) return;
+    for (let x = 0; x < w; x++) {
+      // Columna de origen: estrechada desde el centro y, si toca, reflejada
+      let sx = w === srcW ? x : Math.min(srcW - 1, Math.floor(((x + 0.5) * srcW) / w));
+      if (pos.flipX) sx = srcW - 1 - sx;
+      const k = row.charCodeAt(sx) - 97;
       if (k < 0) continue; // '.'
-      const col = byCode[k];
+      const col = color(sheet.roles[k]!, y, rows.length);
       if (col) c.set(o.x + x, o.y + y, col);
     }
   });

@@ -1,0 +1,66 @@
+{
+ "source": "manitas-espirituales-a.png",
+ "roles": [
+  "outline",
+  "deep",
+  "mid",
+  "light",
+  "glow",
+  "void",
+  "paperLight",
+  "paperMid",
+  "ink"
+ ],
+ "frames": [
+  [
+   "............",
+   ".....aaaa...",
+   "....addaaa..",
+   "aaaaddddddaa",
+   "adddddddddda",
+   "adddddddddda",
+   "aaaddddbaada",
+   "...abdda..aa",
+   "....aadda...",
+   "......aaa..."
+  ],
+  [
+   ".....aaaaaa.....",
+   "....aceeeecaa...",
+   "...aeddeeddea...",
+   "..aeddffffcdea..",
+   "..adcffffffcda..",
+   ".aedffffffffdea.",
+   ".aecffffffffcea.",
+   "acdcffffffffcdca",
+   "aedffeeeeeeffdea",
+   "aeeffffffffffeea",
+   "aeeffeeeebbffeea",
+   "aeeffffffffffeea",
+   "aeeffeeeeffffeea",
+   "aeeffffffffffeea",
+   "aedcffffffffcdea",
+   ".adcffffffffcda.",
+   ".aedffffffffdea.",
+   ".aedcffffffcdea.",
+   "..aedcffffcdea..",
+   "...aedccccdeaa..",
+   "...aaeddddeaa...",
+   ".....aaaaaa....."
+  ],
+  [
+   ".aa..........aa.",
+   "ahhaaaaaaaaaahha",
+   "ahghgggggggghhha",
+   "ahghgggggggghhha",
+   "ahghiiigigighhha",
+   "ahghgggggggghhha",
+   "ahghgggggggghgha",
+   "ahghgiggggighhha",
+   "ahghgggggggghgha",
+   "ahhhgggggggghhha",
+   "aiiaaaaaaaaaaiia",
+   "aaa..........aaa"
+  ]
+ ]
+}

@@ -136,7 +136,8 @@ describe('altar del Santuario', () => {
     const p = FLOW_PALETTES['water'];
     // Cerrado: madera (oscuros); abierto: la luz de casa
     for (const dx of [-4, 0, 3]) {
-      expect([p.deep, p.mid, p.outline]).toContain(render(altarSantuario, 'runes', 1).get(x + dx, y));
+      // Hojas de madera (rampa fija de la lámina) o sus juntas
+      expect(['#5a3a22', '#8a5a32', p.outline]).toContain(render(altarSantuario, 'runes', 1).get(x + dx, y));
       expect([p.glow, p.light, p.mid]).toContain(render(altarSantuario, 'hold', 0).get(x + dx, y));
     }
   });

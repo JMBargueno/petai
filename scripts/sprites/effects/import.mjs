@@ -2,7 +2,7 @@
 // el motor los tiña en tiempo real (Flujo, metal del cofre…).
 //
 //   node scripts/sprites/effects/import.mjs <lámina> <salida.json> --palette <roles.json>
-//        --width <px nativos> [--order 0,1,2,4,5] [--crop x,y,w,h] [--same-scale <i>] [--preview <png>]
+//        --width <px nativos> [--order 0,1,2,4,5] [--crop x,y,w,h] [--same-scale <i>] [--widths 8,13,13] [--preview <png>]
 //
 // <roles.json>: { "outline": "#101010", "woodDeep": "#5a3a22", … } — los colores EXACTOS que pidió el
 // prompt. Cada píxel nativo toma el rol del color mayoritario de su celda (el fondo, inundado desde
@@ -101,7 +101,9 @@ function baseWidth(p) {
 const sameIdx = opt('same-scale');
 const SAME = sameIdx !== undefined ? baseWidth(pieces[Number(sameIdx)]) / TARGET_W : null;
 const frames = pieces.map((p) => {
-  const STEP = SAME ?? baseWidth(p) / TARGET_W;
+  // --widths: anchura de base propia por pieza (una mano pequeña junto a un portal mayor)
+  const own = opt('widths')?.split(',').map(Number)[pieces.indexOf(p)];
+  const STEP = own ? baseWidth(p) / own : (SAME ?? baseWidth(p) / TARGET_W);
   const fw = Math.ceil((p.x1 - p.x0 + 1) / STEP);
   const fh = Math.ceil((p.y1 - p.y0 + 1) / STEP);
   const rows = [];
