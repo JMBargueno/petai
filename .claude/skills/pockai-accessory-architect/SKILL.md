@@ -19,7 +19,7 @@ Lee las referencias cuando las necesites:
 
 La norma es `docs/GUIA_ARTISTICA.md` §7.6 (visual) y `docs/specs/spec-38-accesorios-pockai.md` (datos). Si hay conflicto con esta skill, mandan ellas.
 
-**Estado del sistema:** el catálogo, la compra, el equipado y el arte funcionan (spec 38). Lo que **no existe todavía** es el render: los clientes aún no pintan la prenda sobre la mascota. Dilo al cerrar.
+**Estado del sistema:** el catálogo, la compra, el equipado, el arte y el render funcionan (spec 38). La escena compartida y la mascota de escritorio pintan la prenda en cuanto existe su arte; el armario solo está en el escritorio.
 
 ## Flujo
 
@@ -78,5 +78,5 @@ Resume al usuario:
 - Archivos tocados y resultado de las validaciones.
 - Avisos del script que hayas dejado sin resolver, y por qué.
 - Hoja de contactos revisada.
-- Que la prenda **aún no se ve en el juego**: falta el render en los clientes (lote 3 de la spec 38).
+- Dónde se ve: en la sala y en la mascota de escritorio, tras equiparla en Mascota › Armario.
 - El paso que queda fuera del repo: ejecutar el seed (`backend/prisma/seed.ts`) en cada entorno para que la prenda exista como `Item`. El precio solo se fija al crearla; después se cambia desde el panel de admin.

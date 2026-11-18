@@ -373,7 +373,7 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta. La etapa fin
 
 ### 7.6 Accesorios
 
-Prendas en pixel art que el Pockai lleva puestas (gorros, gafas, bufandas, capas, alas) y que se desbloquean por **logros**, **monedas** o **gemas**. El catálogo, la compra, el equipado y el arte ya existen (`pnpm generate:accessories`); falta pintarlas sobre la mascota en los clientes.
+Prendas en pixel art que el Pockai lleva puestas (gorros, gafas, bufandas, capas, alas) y que se desbloquean por **logros**, **monedas** o **gemas**. El catálogo, la compra, el equipado y el arte ya existen (`pnpm generate:accessories`), y la escena compartida y el escritorio las pintan sobre la mascota.
 
 **Ranuras y anclas**
 - Cuatro ranuras, una prenda por ranura: **cabeza** (gorros, coronas, lazos), **cara** (gafas, antifaces), **cuello** (bufandas, collares) y **espalda** (capas, alas, mochilas).
@@ -519,7 +519,7 @@ Esta sección lista lo que existe hoy y no sigue esta guía. Corregirlo es traba
 | Emoji de contenido | En el escritorio quedan emoji como contenido de juego (frutas de minijuegos, accesorios y muebles, iconos de elemento) | Pegatinas/Lucide cuando haya arte propio; los muebles, en SVG isométrico (§7.4) |
 | Vista | Pockais de perfil y hábitat en diorama lateral (CSS) | Pockais en 3/4 por etapa y salas isométricas (§7.4) |
 | Escala y render | Escritorio y escena de PixiJS ya escalan por enteros y sin suavizado; falta revisar Android, iOS y la web | Escalas enteras y vecino más próximo en todas las plataformas (§7.5) |
-| Accesorios | Las prendas existen en datos y tienen arte, pero los clientes aún no las pintan; los festivales siguen usando emoji | Prendas pintadas sobre la mascota por ranura y ancla (§7.6) |
+| Accesorios | Armario y tienda solo en el escritorio; los festivales siguen usando emoji | Armario en todos los clientes y accesorios de festival como prendas (§7.6) |
 | Movimiento de la mascota | *Bob*, toque y daño por transformaciones continuas | Frames dibujados y pasos de 1 px (§8) |
 | Elementos | Eléctrico, Sombra y Luz sin color de UI | Completar §3.6 |
 | Docs vs arte | Los docs hablan de 14 estados y 21 especies | Hay 4 estados en SVG y 3 especies con arte |

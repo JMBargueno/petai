@@ -32,6 +32,17 @@ for (const [file, meta] of Object.entries(METAS)) {
   ART[m[1]] = { meta, urls: { S: PNGS[`${dir}s.png`], M: PNGS[`${dir}m.png`], L: PNGS[`${dir}l.png`] } };
 }
 
+/**
+ * Miniatura de una prenda para listas: su hoja de talla L y el tamaño de un frame en px nativos
+ * (una prenda animada trae varios frames en horizontal y solo se enseña el primero).
+ * `null` si este cliente no tiene su arte.
+ */
+export function accessoryPreview(id: string): { url: string; w: number; h: number; frames: number } | null {
+  const art = ART[id];
+  const url = art?.urls.L;
+  return art && url ? { url, w: art.meta.sizes.l.w, h: art.meta.sizes.l.h, frames: art.meta.frames } : null;
+}
+
 export interface WornAccessory {
   slot: AccessorySlot;
   image: HTMLImageElement;

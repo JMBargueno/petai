@@ -703,6 +703,23 @@ export const api = {
     return minigameRequest<any>('PATCH', `/v1/pets/${petId}/desktop-skills`, { skills });
   },
 
+  // Prendas (spec 38): catálogo con estado, compra y equipado por ranura.
+  async getAccessories() {
+    return minigameRequest<AccessoryCatalog>('GET', '/v1/accessories');
+  },
+
+  async buyAccessory(id: string) {
+    return minigameRequest<{ id: string; slot: AccessorySlotId; state: 'owned' }>('POST', `/v1/accessories/${encodeURIComponent(id)}/buy`);
+  },
+
+  async getPetAccessories(petId: string) {
+    return minigameRequest<PetAccessories>('GET', `/v1/pets/${petId}/accessories`);
+  },
+
+  async equipAccessories(petId: string, change: Partial<Record<AccessorySlotId, string | null>>) {
+    return minigameRequest<PetAccessories>('PUT', `/v1/pets/${petId}/accessories`, change);
+  },
+
   async setPetInHabitat(petId: string, inHabitat: boolean) {
     return minigameRequest<any>('PATCH', `/v1/pets/${petId}/in-habitat`, { inHabitat });
   },
@@ -1776,6 +1793,29 @@ export interface HabitatState {
   petId: string;
   habitatSeed: number;
   rooms: HabitatRoom[];
+}
+
+/** Prendas (spec 38). */
+export type AccessorySlotId = 'head' | 'face' | 'neck' | 'back';
+export interface AccessoryEntry {
+  id: string;
+  name: string;
+  description: string;
+  slot: AccessorySlotId;
+  rarity: string;
+  color: string;
+  animated: boolean;
+  fx: string | null;
+  unlock: { type: 'coins' | 'gems' | 'achievement'; price?: number; achievementId?: string; achievementName?: string | null };
+  state: 'locked' | 'available' | 'owned';
+}
+export interface AccessoryCatalog {
+  slots: AccessorySlotId[];
+  accessories: AccessoryEntry[];
+}
+export interface PetAccessories {
+  petId: string;
+  accessories: Partial<Record<AccessorySlotId, string>>;
 }
 
 export interface HabitatBuffs {

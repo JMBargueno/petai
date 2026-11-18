@@ -26,4 +26,4 @@ Las rutas son relativas a la raíz del repo.
 ## Después
 12. El seed (`backend/prisma/seed.ts`) crea el `Item` de la prenda; hay que ejecutarlo en cada entorno. Sin seed la prenda aparece en `GET /accessories`, pero no se puede comprar.
 13. El precio del JSON solo se usa al crear el `Item`. Para cambiarlo después, panel de admin.
-14. Render: pendiente del lote 3 de `docs/specs/spec-38-accesorios-pockai.md`. Hasta entonces la prenda se compra y se equipa, pero no se ve sobre la mascota.
+14. No hay que registrar la prenda en ningún cliente: la escena y el escritorio descubren su arte solos. Para verla, `pnpm --filter @pockai/scene dev`, abre `/?demo` y elígela en el selector de su ranura (añádela a `DEMO_ACCESSORIES` en `shared/scene/src/embed/demo.ts`).

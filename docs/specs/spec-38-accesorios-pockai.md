@@ -4,7 +4,7 @@ Documento autocontenido. Define **qué es un accesorio en los datos**, **dónde 
 especie** y **en qué orden se implementa**. Las reglas visuales están en
 `docs/GUIA_ARTISTICA.md` §7.6 y no se repiten aquí.
 
-Estado: **propuesta, sin implementar**. Las decisiones abiertas están en la sección 8.
+Estado: **implementada en backend, arte, escena y escritorio** (ver la sección 10 para lo que queda). Las decisiones de la sección 8 se aplicaron tal como se proponían.
 
 ## 1. Qué se pide
 
@@ -247,9 +247,13 @@ porque tampoco expone el aspecto de la mascota. Queda pendiente: los tests e2e c
 - Hecho: el arte de las 9 prendas en tres tallas (`pnpm generate:accessories`) y sus reglas en
   `validate-assets.js`. `pnpm generate:accessories --preview` pone cada prenda sobre cada especie y
   etapa para revisarla.
-- Render por capas en `shared/scene` (PixiJS), en la mascota flotante de escritorio y en Android,
-  con vecino más próximo y posiciones a píxel entero.
-- Tienda y armario, con los estados y chips de la guía §7.6.
+- Hecho: render por capas. La colocación es una función pura (`shared/scene/src/bake/accessories.ts`)
+  que comparten la escena de PixiJS (`PetSprite`) y la mascota flotante de escritorio
+  (`desktop/src/lib/accessories.ts`). El mensaje `setPet` del protocolo acepta `accessories`; lo
+  envían el hábitat de escritorio y Android.
+- Hecho: armario y tienda en el escritorio (Mascota › Armario).
+- Pendiente: armario y tienda en Android, iOS y la web; comprobar Android en un dispositivo (el
+  cambio de Kotlin no se ha compilado); el hábitat de iOS no envía `accessories`.
 
 **Lote 4: skill `pockai-accessory-architect`**
 - Diseña la prenda (ranura, rareza, color, vía de desbloqueo), la dibuja en tres tallas, la revisa
