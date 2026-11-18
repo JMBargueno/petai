@@ -20,7 +20,7 @@
 | `name` | Nombre visible | Español, de 1 a 3 palabras |
 | `kind` | Qué mecánica lo usa | `food`, `medicine` o `evolution` |
 | `description` | Texto de tienda | Una frase; una segunda si dice de qué Flujo es favorita |
-| `priceCoins`, `priceGems` | Precio de salida en la tienda | Enteros ≥ 0, **al menos uno mayor que 0**: la tienda lista todos los objetos y `buyItem` no filtra por precio, así que uno a 0 se regalaría. Con los dos mayores que 0 se cobran ambos |
+| `priceCoins`, `priceGems` | Precio de salida en la tienda | Enteros ≥ 0. Con los dos a 0 el objeto **no está a la venta**: `buyItem` rechaza la compra, pero la tienda lo sigue listando, así que resérvalo para objetos que solo salen de cofres o regalos. Con los dos mayores que 0 se cobran ambos |
 | `effects` | Lo que cambia al usarlo | Ver abajo. En `evolution`, `{}` |
 
 El esquema es `passthrough`: un campo de más no rompe nada, pero tampoco hace nada. No añadas `element`, `rarity` ni `tier`: el Flujo de un objeto sale de quién lo tiene como favorita y su rareza, de las tablas de cofre.
@@ -30,12 +30,12 @@ El esquema es `passthrough`: un campo de más no rompe nada, pero tampoco hace n
 | `kind` | Dónde | Qué pasa |
 |---|---|---|
 | `food` | `PetsService.feed` (`backend/src/modules/pets/pets.service.ts`) | Suma `hunger`, `happiness`, `energy` y `health` a la mascota. Si el objeto es la `favoriteFood` de su especie, **`hunger` y `happiness` se multiplican por 1,5** (`health` y `energy` no). No se puede dar mientras duerme. Cuenta como interacción de vínculo y emite `pet:fed` |
-| `medicine` | `PetsService.heal` (mismo archivo) | Suma **solo `health`** (40 si falta o vale 0) y **siempre** quita la enfermedad. `curesSick` solo sirve para que el servidor acepte una medicina sin `health`. `hunger`, `happiness` y `energy` se ignoran |
+| `medicine` | `PetsService.heal` (mismo archivo) | Suma `health` (40 si falta o vale 0), `hunger`, `happiness` y `energy`, y **siempre** quita la enfermedad. `curesSick` solo sirve para que el servidor acepte una medicina sin `health` |
 | `evolution` | `balance.evolution.finalStageItemId` | Es el objeto que se consume para pasar a la Forma Final a partir de `finalStageMinLevel` (50). El backend solo conoce **un** id: un segundo objeto `evolution` no se usaría nunca |
 
-Los efectos se suman tal cual y la estadística se recorta entre 0 y 100. En una comida, un valor negativo es una contrapartida real.
+Los efectos se suman tal cual y la estadística se recorta entre 0 y 100. Un valor negativo es una contrapartida real, tanto en una comida como en una medicina: el Elixir Reparador cura y baja 10 de felicidad.
 
-> **Ojo con el Elixir Reparador:** sus datos dicen `happiness: -10`, pero `heal` no lo aplica. Hoy una medicina no puede tener contrapartida. Si el diseño la necesita, hay que tocar `PetsService.heal`: díselo al usuario en vez de escribir un efecto que no pasa.
+> **Toda medicina cura.** `heal` pone `sick: false` con cualquier objeto `medicine`, lleve o no `curesSick`. Un remedio que alivie sin curar necesita tocar `PetsService.heal`: díselo al usuario en vez de diseñarlo como si existiera.
 
 ### Claves de `effects`
 `hunger`, `happiness`, `energy`, `health` (enteros, pueden ser negativos) y `curesSick` (booleano). Cualquier otra se ignora. No existe efecto sobre higiene, experiencia, stats de combate ni duración: si el objeto las necesita, falta mecánica.

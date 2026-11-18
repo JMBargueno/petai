@@ -98,6 +98,14 @@ describe('InventoryService.buyItem', () => {
     expect(inv.size).toBe(0);
   });
 
+  it('un objeto sin precio no está a la venta: no se regala', async () => {
+    const gratis = { id: 'free_snack', kind: 'food', effects: { hunger: 10 }, priceCoins: 0, priceGems: 0 };
+    const { service, inv, user } = build([gratis]);
+    await expect(service.buyItem('u1', 'free_snack', 99)).rejects.toBeInstanceOf(BadRequestException);
+    expect(inv.size).toBe(0);
+    expect(user).toEqual({ coins: 1000, gems: 50 });
+  });
+
   it('sin saldo no hay prenda', async () => {
     const { service, inv } = build([capa], { coins: 0, gems: 5 });
     await expect(service.buyItem('u1', 'acc_capa_gala')).rejects.toBeInstanceOf(BadRequestException);

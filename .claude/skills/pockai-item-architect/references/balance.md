@@ -12,7 +12,7 @@ Para comparar, **beneficio** es la suma de los efectos positivos (`hunger + happ
 | De Flujo | Baya Ígnea y las otras cinco | 25 mon. | 20 / 15 / 5 / 5 | 45 | Las seis iguales: ningún Flujo come mejor que otro. Su gracia es el 50 % extra para los suyos |
 | Saludable | Ensalada Silvestre | 30 mon. | hambre 18, felicidad 5, energía 5, salud 15 | ~45 | Cambia hambre y alegría por salud |
 | Capricho | Pastel de Fresas | 40 mon. | hambre 30, felicidad 35, energía 10, salud −5 | 75 | Mucho de una cosa, con contrapartida |
-| Remedio | Elixir Reparador | 80 mon. + 1 gema | salud 40, cura | — | Solo cuenta `health` (ver `item-schema.md`) |
+| Remedio | Elixir Reparador | 80 mon. + 1 gema | salud 40, felicidad −10, cura | — | Cura siempre; los demás efectos se aplican como en la comida |
 | Evolución | Piedra de Evolución | 20 gemas | — | — | Única |
 
 ## Reglas
@@ -23,7 +23,7 @@ Para comparar, **beneficio** es la suma de los efectos positivos (`hunger + happ
 - **Una segunda favorita de un Flujo** no puede ser estrictamente mejor que la primera: mismo beneficio (45) repartido de otra forma, o más cara. Si no, la primera deja de comprarse.
 - **Con la favorita, cuenta el ×1,5:** una comida de Flujo con hambre 30 da 45 a los suyos. Calcula el caso bueno antes de fijar el número.
 - **Medicina:** entre 60 y 150 monedas. Un remedio menor (salud 15–25) cabe por debajo del Elixir, pero recuerda que cualquier medicina quita la enfermedad: si es barata, abarata curar. Dilo en la propuesta.
-- **Todo objeto lleva precio**, aunque también salga de cofres: a 0, la tienda lo regalaría.
+- **Todo objeto de tienda lleva precio.** Uno con los dos precios a 0 no se puede comprar (el servidor lo rechaza), pero la tienda lo lista igual: déjalo a 0 solo si de verdad sale únicamente de cofres o regalos.
 
 ## Tiers de cofre
 
@@ -51,4 +51,4 @@ Los cofres (`balance.json` → `chests`) reparten por tier: `common`, `uncommon`
 `check_items.mjs` los lista al día. Los de partida:
 - Caramelo de Chispa, Mora de Medianoche y Miel de Alba no salen en ningún cofre ni se encuentran explorando; Baya, Coral y Semilla sí.
 - Cada Flujo tiene una sola favorita, compartida por todas sus especies, también las legendarias y míticas.
-- Hay una sola medicina.
+- Hay una sola medicina, y toda medicina quita la enfermedad.

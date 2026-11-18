@@ -90,8 +90,8 @@ for (const f of foods) {
 
   if (!Number.isInteger(f.priceCoins) || f.priceCoins < 0) err('priceCoins debe ser un entero mayor o igual que 0');
   if (!Number.isInteger(f.priceGems) || f.priceGems < 0) err('priceGems debe ser un entero mayor o igual que 0');
-  // buyItem no filtra por precio: un objeto a 0 se podría «comprar» gratis sin límite.
-  if (f.priceCoins === 0 && f.priceGems === 0) err('sin precio: la tienda lo daría gratis. Todo consumible lleva precio aunque también salga de cofres');
+  // buyItem rechaza lo que no tiene precio, pero la tienda lo sigue listando con un botón que falla.
+  if (f.priceCoins === 0 && f.priceGems === 0) warn('sin precio: no está a la venta, pero la tienda lo lista igualmente. Ponle precio salvo que solo deba salir de cofres o regalos');
 
   const e = f.effects ?? {};
   for (const k of Object.keys(e)) if (!EFFECT_KEYS.includes(k)) err(`effects.${k}: clave que el backend no lee (válidas: ${EFFECT_KEYS.join(', ')})`);
@@ -120,9 +120,8 @@ for (const f of foods) {
     if (f.priceCoins > 0 && (f.priceCoins < MEDICINE_PRICE[0] || f.priceCoins > MEDICINE_PRICE[1])) {
       warn(`precio ${f.priceCoins} fuera de la banda de medicina (${MEDICINE_PRICE[0]}–${MEDICINE_PRICE[1]} monedas)`);
     }
-    // PetsService.heal solo suma health (40 si falta o es 0) y siempre quita la enfermedad.
-    const ignored = ['hunger', 'happiness', 'energy'].filter((k) => e[k]);
-    if (ignored.length) warn(`effects.${ignored.join(', ')}: al curar, el backend solo aplica health; estos valores no hacen nada`);
+    // PetsService.heal suma los cuatro efectos (health vale 40 si falta o es 0) y siempre quita la enfermedad.
+    if ((e.hunger ?? 0) > 0) warn('una medicina no debería saciar: para eso está la comida');
     if (!(e.health > 0)) warn('sin effects.health el backend da 40 de salud por defecto: escríbelo');
   } else if (f.kind === 'evolution') {
     if (f.id !== evoId) err(`no es balance.evolution.finalStageItemId ('${evoId}'): el backend nunca lo usará`);
@@ -168,7 +167,7 @@ if (!only) {
     const n = new Set(chestTables.flatMap(([, c]) => c.dropTable.filter((d) => d.tier === t).map((d) => d.itemId))).size;
     if (n <= 1) gaps.push(`Tier de cofre ${t}: ${n === 0 ? 'ningún objeto' : 'un solo objeto'}`);
   }
-  if (foods.filter((f) => f.kind === 'medicine').length === 1) gaps.push('Una sola medicina: cabe un remedio barato que no cure la enfermedad');
+  if (foods.filter((f) => f.kind === 'medicine').length === 1) gaps.push('Una sola medicina: cabe un remedio menor (ojo: hoy toda medicina quita la enfermedad)');
   const noArt = foods.filter((f) => !fs.existsSync(path.join(root, 'shared/assets/items', `${f.id}.png`))).length;
   if (noArt) gaps.push(`${noArt} de ${foods.length} objetos sin arte`);
   const noBrief = foods.filter((f) => !fs.existsSync(path.join(root, 'docs/objetos', `${f.id}.md`))).length;

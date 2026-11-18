@@ -214,10 +214,17 @@ export class PetsService {
     const item = await this.inventoryService.consumeItem(userId, targetItemId, 'medicine');
     const effects = item.effects as any;
 
+    // Una medicina puede traer más efectos que la salud (el Elixir Reparador baja la felicidad):
+    // se aplican todos, como al alimentar, y cada vital se queda entre 0 y 100.
+    const clamp = (v: number) => Math.min(100, Math.max(0, v));
+
     const updated = await this.prisma.pet.update({
       where: { id: petId },
       data: {
-        health: Math.min(100, pet.health + (effects.health || 40)),
+        health: clamp(pet.health + (effects.health || 40)),
+        hunger: clamp(pet.hunger + (effects.hunger || 0)),
+        happiness: clamp(pet.happiness + (effects.happiness || 0)),
+        energy: clamp(pet.energy + (effects.energy || 0)),
         sick: false,
         lastTickAt: new Date(),
       },
