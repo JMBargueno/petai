@@ -38,6 +38,8 @@ cd desktop && npx svelte-check --threshold error   # filtra por tus archivos: el
    __pockaiFx.weather('rain')                           // rain | snow | clear
    __pockaiFx.gift('care')                              // gift | care
    __pockaiFx.react('sick' | 'cleaned' | 'slept')
+   __pockaiFx.eggHatch('water')                         // huevo: tiembla, se agrieta con ese Flujo y estalla
+   __pockaiFx.dailyMissions() / chest('mythic', 'legendary') / ritual() / raidVictory('fire')
    __pockaiFx.visitorJoin({ visitorId: 'u-9', visitorName: 'Marta', pet: { petId: 'p-9', nickname: 'Luna', speciesName: 'Axolunar', speciesId: 'axolunar', spriteRef: '' }, startedAt: new Date().toISOString() })
    __pockaiFx.visitorLeave('u-9')
    ```

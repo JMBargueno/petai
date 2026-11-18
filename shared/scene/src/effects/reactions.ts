@@ -51,6 +51,11 @@ const TABLE: Record<string, (c: Ctx) => EffectRequest | null> = {
   cleaned: () => ({ id: 'polvo-estatico', params: {} }),
   slept: () => ({ id: 'desfragmentacion', params: {} }),
   sick: () => ({ id: 'glitch-animo', params: {} }),
+  // Cuarta tanda
+  mission_completed: (c) => (c?.['dailyCompleted'] === true ? { id: 'confeti-codices', params: {} } : null),
+  chest_opened: (c) => ({ id: 'cofre-tier', params: { type: str(c, 'type') ?? 'bronze', bestTier: str(c, 'bestTier') ?? 'common' } }),
+  ritual_completed: () => ({ id: 'destello-ritual', params: {} }),
+  raid_victory: (c) => ({ id: 'triunfo-raid', params: { element: str(c, 'element') ?? 'neutral', gems: num(c, 'gems') ?? 0 } }),
 };
 
 /** Efecto para un aviso `pet:action` (o `null` si ese momento no tiene efecto propio). */

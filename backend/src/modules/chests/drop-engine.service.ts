@@ -21,6 +21,16 @@ export function tierRank(tier: DropTier): number {
   return TIER_RANK[tier] ?? 0;
 }
 
+/** El tier más alto de una tirada (`null` si no hay drops). Decide el brillo de la revelación. */
+export function bestDropTier(drops: ReadonlyArray<{ tier: string }>): DropTier | null {
+  let best: DropTier | null = null;
+  for (const d of drops) {
+    const t = d.tier as DropTier;
+    if (best === null || tierRank(t) > tierRank(best)) best = t;
+  }
+  return best;
+}
+
 /**
  * Generador de un entero aleatorio en `[0, maxExclusive)` (exclusivo), idéntico al contrato de
  * `crypto.randomInt(0, max)`. Por defecto el motor usa `cryptoRng` (criptográficamente seguro).

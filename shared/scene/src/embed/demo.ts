@@ -57,6 +57,10 @@ const DEMO_ACTIONS: [string, Record<string, unknown>][] = [
   ['welcome_back', { tier: 'offended' }],
   ['gift_received', {}],
   ['sick', {}],
+  ['mission_completed', { dailyCompleted: true }],
+  ['chest_opened', { type: 'mythic', bestTier: 'legendary' }],
+  ['ritual_completed', { type: 'feed' }],
+  ['raid_victory', { theme: 'Inferno Dragon', element: 'fire', gems: 120 }],
 ];
 
 export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void {

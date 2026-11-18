@@ -260,6 +260,8 @@ export class RaidService {
     const payouts = participants.map((p) => ({ userId: p.userId, gems: Math.max(Math.floor(totalGems * (p.damageDealt / totalDamage)), 1) }));
     const cap = Math.floor(totalGems * 0.5);
     const final = payouts.map((p) => ({ ...p, gems: Math.min(p.gems, cap) }));
+    const petOf = new Map(participants.map((p) => [p.userId, p.petId]));
+    let claimedHere = false;
     // S-14 (SDD §3.3): liquidación atómica — el reclamo por estado y el reparto viven en UNA tx.
     // El guard `status: { not: 'settled' }` deja un único `count === 1`: dos réplicas no reparten 2x.
     await this.prisma.$transaction(async (tx) => {
@@ -268,10 +270,21 @@ export class RaidService {
         data: { status: 'settled', settledAt: new Date(), endedAt: new Date(), hpRemaining: 0 },
       });
       if (claimed.count === 0) return;
+      claimedHere = true;
       for (const p of final) {
         await tx.user.update({ where: { id: p.userId }, data: { gems: { increment: p.gems } } });
       }
     });
+    if (!claimedHere) return; // otra réplica lo liquidó (y avisa ella)
+    // Celebración en el escritorio y en el hábitat de Android (efecto triunfo-raid): a cada
+    // participante, con su Pockai y sus gemas. Solo quien reclamó el raid lo anuncia.
+    for (const p of final) {
+      this.realtime?.emitPetAction(p.userId, petOf.get(p.userId) ?? null, 'raid_victory', {
+        theme: raid.theme,
+        element: raid.element,
+        gems: p.gems,
+      });
+    }
     this.logger.log(`Raid ${raidId} settled: ${final.length} participants`);
   }
 

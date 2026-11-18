@@ -540,9 +540,13 @@
     hatchedResult = null;
     isShaking = true;
     try {
+      // El huevo también tiembla en el escritorio, junto a la mascota (efecto huevo-grietas)
+      dispatch('hatchProgress', { stage: 'shake' });
       // La petición va en paralelo al temblor: si falla, el huevo no llega a «romperse».
       const [newPet] = await Promise.all([api.hatchEgg(eggId, name || undefined), wait(1500)]);
       isCracking = true;
+      // Ya se sabe quién nace: sus grietas brillan con el Flujo de la recién nacida
+      dispatch('hatchProgress', { stage: 'crack', newborn: newPet });
       await wait(1300);
       isShaking = false;
       isCracking = false;
@@ -553,6 +557,7 @@
       dispatch('refreshEggs');
       delete eggNames[eggId]; // al terminar, limpia el input de ese huevo
     } catch (err: any) {
+      dispatch('hatchProgress', { stage: 'abort' });
       reportError(err);
     } finally {
       isShaking = false;

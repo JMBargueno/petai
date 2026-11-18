@@ -106,6 +106,8 @@ for (const f of files) {
   if (!reduced?.length) err('falta reducedPhases (prefers-reduced-motion)');
   else if (reduced.map((p) => p.name).join() !== phases.map((p) => p.name).join()) warn('reducedPhases no tiene las mismas fases que phases');
   if (!/reduced/.test(src.split('export const')[0])) warn('el dibujo no mira frame.reduced: con movimiento reducido debe quedarse quieto');
+  // El motor (PetView y la escena) suelta la espera por su NOMBRE: debe llamarse 'hold'
+  if (phases.some((p) => p.ms === 'hold' && p.name !== 'hold')) err("la fase de espera (ms: 'hold') debe llamarse 'hold'");
   if (total > 2500) err(`dura ${total} ms sin contar el hold (máx. 2500)`);
   if (!(w <= 64 && h <= 80)) err(`rejilla ${w}×${h} (máx. 64×80)`);
   if (!Number.isInteger(scale) || scale < 1) err(`escala ${scale}: debe ser entera`);

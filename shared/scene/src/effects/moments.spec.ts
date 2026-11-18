@@ -4,7 +4,12 @@ import {
   capulloTelar,
   chispaDespertar,
   clima,
+  cofreTier,
+  confetiCodices,
   desfragmentacion,
+  destelloRitual,
+  huevoGrietas,
+  triunfoRaid,
   destelloPrisma,
   estelaFlujo,
   glitchAnimo,
@@ -50,6 +55,11 @@ const MOMENTS: EffectDef[] = [
   estelaFlujo,
   destelloPrisma,
   clima,
+  huevoGrietas,
+  confetiCodices,
+  cofreTier,
+  destelloRitual,
+  triunfoRaid,
 ];
 
 function render(def: EffectDef, phase: string, t: number, opts: { el?: string; reduced?: boolean; ms?: number; params?: Record<string, string | number> } = {}) {
@@ -181,6 +191,28 @@ describe('tercera tanda', () => {
     }
     expect(fixedDuration(polvoImpacto.phases)).toBeLessThanOrEqual(400);
     expect(fixedDuration(estelaFlujo.phases)).toBeLessThanOrEqual(400);
+  });
+});
+
+describe('cuarta tanda', () => {
+  it('el cofre brilla con su metal y la columna lleva un destello por rango del mejor drop', () => {
+    const at = (type: string, bestTier: string) => render(cofreTier, 'open', 1, { params: { type, bestTier } });
+    expect(at('bronze', 'common').colors()).not.toEqual(at('mythic', 'common').colors());
+    expect(at('gold', 'legendary').count()).toBeGreaterThan(at('gold', 'common').count());
+  });
+  it('el huevo espera (hold) a que el panel tenga a la recién nacida, y sus grietas son del Flujo', () => {
+    expect(huevoGrietas.phases[0]).toEqual({ name: 'hold', ms: 'hold' });
+    const cracked = render(huevoGrietas, 'crack', 0.8, { el: 'water' });
+    expect(cracked.colors()).toContain(FLOW_PALETTES['water']!.glow);
+  });
+  it('la silueta del jefe usa el Flujo de su elemento, no el del Pockai', () => {
+    const boss = render(triunfoRaid, 'crack', 0.2, { el: 'water', params: { element: 'fire' } });
+    expect(boss.colors()).toContain(FLOW_PALETTES['fire']!.deep);
+    expect(boss.colors()).not.toContain(FLOW_PALETTES['water']!.deep);
+  });
+  it('el confeti y el ritual llegan por la tabla compartida', () => {
+    expect(confetiCodices.channel ?? 'moment').toBe('moment');
+    expect(destelloRitual.channel).toBe('minor');
   });
 });
 

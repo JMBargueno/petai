@@ -83,6 +83,14 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     return { anims: ['hit', 'defeat'], bubble: attacker ? `${attacker} me ha ganado…` : 'Me han ganado en la arena…' };
   },
   raid_attack: () => ({ anims: ['attack'] }),
+  raid_victory: (c) => {
+    const theme = str(c, 'theme');
+    const gems = num(c, 'gems');
+    return {
+      anims: ['victory', 'celebrate'],
+      bubble: `¡Hemos derrotado a ${theme ?? 'el jefe'}!${gems ? ` +${gems} 💎` : ''}`,
+    };
+  },
   tournament_win: () => ({ anims: ['victory', 'celebrate'], bubble: '¡Ronda de torneo ganada! 🏅' }),
   tournament_loss: () => ({ anims: ['defeat'], bubble: 'Me han eliminado del torneo…' }),
   trained: (c) =>
@@ -103,7 +111,7 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
   minigame_finished: () => ({ anims: ['happy'] }),
   gift_received: () => ({ anims: ['surprised', 'love'], bubble: '¡Me han hecho un regalo! 🎁' }),
   care_received: () => ({ anims: ['love'], bubble: '¡Alguien me ha mandado cariño! 💌' }),
-  chest_opened: () => ({ anims: ['surprised', 'celebrate'], particle: '🎁' }),
+  chest_opened: () => ({ anims: ['surprised', 'celebrate'] }),
   mission_completed: (c) =>
     c?.dailyCompleted ? { anims: ['celebrate'], bubble: '¡Misiones del día completadas! 🎉' } : { anims: ['happy'], particle: '✅' },
   achievement: (c) => {
@@ -112,7 +120,7 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
   },
   bonding_up: () => ({ anims: ['love'], bubble: 'Siento que estamos más unidos 💞' }),
   bonding_down: () => ({ anims: ['sad'] }),
-  ritual_completed: () => ({ anims: ['celebrate'], particle: '🌟' }),
+  ritual_completed: () => ({ anims: ['celebrate'] }),
   ritual_missed: () => ({ anims: ['sad'] }),
   mood_moment: (c) => {
     const act = str(c, 'act');

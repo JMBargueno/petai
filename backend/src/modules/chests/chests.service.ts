@@ -14,6 +14,7 @@ import {
   PityState,
   DropTier,
   QtyRangeResolver,
+  bestDropTier,
   tierRank,
 } from './drop-engine.service';
 import { ChestPityService } from './chest-pity.service';
@@ -234,7 +235,9 @@ export class ChestsService {
       type: existing.type,
       drops: drops.map((d) => ({ itemId: d.itemId, name: d.name, qty: d.qty, tier: d.tier })),
     });
-    this.realtime.emitPetAction(userId, null, 'chest_opened', { type: existing.type });
+    // El mejor drop decide el brillo de la revelación (efecto cofre-tier).
+    const bestTier = bestDropTier(drops);
+    this.realtime.emitPetAction(userId, null, 'chest_opened', { type: existing.type, ...(bestTier ? { bestTier } : {}) });
 
     return {
       chest: {

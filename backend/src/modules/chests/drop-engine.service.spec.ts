@@ -3,8 +3,17 @@ import {
   DropEntry,
   ChestTierWeights,
   ChestDropTable,
+  bestDropTier,
   tierRank,
 } from './drop-engine.service';
+
+describe('bestDropTier (brillo de la revelación del cofre)', () => {
+  it('devuelve el tier más alto de la tirada', () => {
+    expect(bestDropTier([{ tier: 'common' }, { tier: 'epic' }, { tier: 'rare' }])).toBe('epic');
+    expect(bestDropTier([{ tier: 'legendary' }])).toBe('legendary');
+    expect(bestDropTier([])).toBeNull();
+  });
+});
 
 /**
  * Tests unitarios del motor de drops (T023 / SC-001 / SC-002). El motor es puro: se instancia

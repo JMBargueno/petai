@@ -650,6 +650,48 @@
     startMoment(effectId, params);
   }
 
+  // ---------- Huevo con grietas de luz: la eclosión vista en el escritorio ----------
+  let eggMoment: { id: number; player: EffectPlayer | null } | null = null;
+  /**
+   * La eclosión del panel también se ve junto a la mascota. `shake`: aparece el huevo y tiembla
+   * (espera); `crack`: ya se sabe quién nace, sus grietas toman el Flujo de la recién nacida y el
+   * huevo estalla (antes de que llegue la revelación); `abort`: la eclosión falló, el huevo se va.
+   */
+  export function hatchEgg(stage: 'shake' | 'crack' | 'abort', newborn?: { species?: { element?: string } }) {
+    if (stage === 'shake') {
+      const started = startMoment('huevo-grietas', {}, {
+        at: portalSpot(),
+        onHold: (player) => {
+          if (eggMoment) eggMoment.player = player;
+        },
+        onDone: () => (eggMoment = null),
+      });
+      eggMoment = started ? { id: momentSeq, player: null } : null;
+      return;
+    }
+    if (!eggMoment) return;
+    const egg = eggMoment;
+    if (stage === 'abort') {
+      moments = moments.filter((m) => m.id !== egg.id);
+      eggMoment = null;
+      return;
+    }
+    // Las grietas brillan con el Flujo de quien nace
+    const element = newborn?.species?.element;
+    if (element) moments = moments.map((m) => (m.id === egg.id ? { ...m, palette: flowPalette(element) } : m));
+    const release = () => egg.player?.release(performance.now());
+    if (egg.player) release();
+    else {
+      // Aún no había llegado a la espera (respuesta muy rápida): suéltala en cuanto llegue
+      const tick = setInterval(() => {
+        if (egg.player || !eggMoment) {
+          clearInterval(tick);
+          release();
+        }
+      }, 50);
+    }
+  }
+
   // ---------- Altar del Santuario: entrar en casa y salir de ella ----------
   /**
    * Va a casa por el altar: se alza a su lado, anda hasta él, entra y el altar se hunde. Lo llama App

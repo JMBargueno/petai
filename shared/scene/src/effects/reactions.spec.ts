@@ -4,7 +4,8 @@ import { ACTIONS_WITH_EFFECT, EFFECTS, effectForPetAction } from './index';
 describe('effectForPetAction (tabla compartida escritorio / escena)', () => {
   it('cada acción con efecto apunta a un efecto registrado', () => {
     for (const action of ACTIONS_WITH_EFFECT) {
-      const req = effectForPetAction(action, {});
+      // Contexto que activa el efecto en las acciones que lo piden (misiones: el día completo)
+      const req = effectForPetAction(action, { dailyCompleted: true });
       expect(req, action).not.toBeNull();
       expect(EFFECTS[req!.id], action + ' → ' + req!.id).toBeDefined();
     }
