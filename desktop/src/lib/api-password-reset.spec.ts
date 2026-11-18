@@ -11,25 +11,26 @@ describe('api: recuperar contraseña', () => {
   });
 
   it('requestPasswordReset envía el correo (recortado) al endpoint público', async () => {
-    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => json(200, { ok: true }));
+    const fetchMock = vi.fn(async (_req: Request) => json(200, { ok: true }));
     vi.stubGlobal('fetch', fetchMock);
     await api.requestPasswordReset('  ana@example.com ');
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/v1\/auth\/reset\/request$/);
-    expect(JSON.parse(String(init?.body))).toEqual({ email: 'ana@example.com' });
+    // apiFetch manda un único Request, con las cabeceras del cliente ya puestas
+    const req = fetchMock.mock.calls[0][0];
+    expect(req.url).toMatch(/\/v1\/auth\/reset\/request$/);
+    expect(await req.json()).toEqual({ email: 'ana@example.com' });
   });
 
   it('confirmPasswordReset guarda la sesión que devuelve el servidor', async () => {
-    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
+    const fetchMock = vi.fn(async (_req: Request) =>
       json(200, { ok: true, accessToken: 'acceso-nuevo', refreshToken: 'refresh-nuevo', user: { id: 'u1', emailVerified: true } }),
     );
     vi.stubGlobal('fetch', fetchMock);
     const res = await api.confirmPasswordReset('ana@example.com', ' 123456 ', 'NuevaContrasena-1');
     expect(res.user.emailVerified).toBe(true);
     expect(getAccessToken()).toBe('acceso-nuevo');
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/v1\/auth\/reset\/confirm$/);
-    expect(JSON.parse(String(init?.body))).toEqual({ email: 'ana@example.com', code: '123456', newPassword: 'NuevaContrasena-1' });
+    const req = fetchMock.mock.calls[0][0];
+    expect(req.url).toMatch(/\/v1\/auth\/reset\/confirm$/);
+    expect(await req.json()).toEqual({ email: 'ana@example.com', code: '123456', newPassword: 'NuevaContrasena-1' });
   });
 
   it('un código inválido lanza el mensaje del servidor y no inicia sesión', async () => {
