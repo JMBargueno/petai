@@ -168,6 +168,15 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
       // Como lo reenviaría la app nativa: el aviso del backend tal cual
       const ctx = DEMO_ACTIONS.find(([a]) => a === b.dataset.action)?.[1];
       send({ type: 'petAction', action: b.dataset.action, context: ctx });
+      if (b.dataset.action === 'evolved') {
+        // Como la app: al rato llega la mascota con su nueva etapa y el capullo se abre
+        const stage = panel.querySelector('[name=stage]') as HTMLSelectElement;
+        const order = ['egg', 'baby', 'juvenile', 'adult', 'final'];
+        setTimeout(() => {
+          stage.value = order[Math.min(order.indexOf(stage.value) + 1, order.length - 1)];
+          setPet();
+        }, 1500);
+      }
     }
     if (b.hasAttribute('data-pause')) send({ type: 'setPaused', paused: (paused = !paused) });
   });

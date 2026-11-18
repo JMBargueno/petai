@@ -286,7 +286,7 @@ Un único renderizador para escritorio, Android e iOS, que sustituye a la spec `
 **Protocolo** (`shared/scene/src/protocol.ts`): mensajes JSON tipados.
 Versión actual: **3** (`PROTOCOL_VERSION`, anunciada en `ready`).
 - Entrada: `setPet`, `playClip`, `setTheme`, `setPaused`, `setFacing`, `setRoom`, `setActivity`, `setNight`, `setEditMode`, `selectItem`, `rotateSelected`.
-- Efectos (v3): `playEffect { id, params? }` pinta un efecto concreto; `petAction { action, context? }` reenvía un aviso del backend tal cual y la escena elige el efecto con `effectForPetAction`.
+- Efectos (v3): `playEffect { id, params? }` pinta un efecto concreto; `petAction { action, context? }` reenvía un aviso del backend tal cual y la escena elige el efecto con `effectForPetAction` y encadena los clips de `clipsForPetAction` (las mismas tablas que el escritorio). En `evolved`, el capullo espera al siguiente `setPet` (la nueva etapa ya horneada) para abrirse, 5 s como mucho.
 - `setAmbience { weather: { code, temperature }, sun: { sunrise, sunset }, clock, backdrop }`: clima y sol reales (de `GET /environmental/status`). Todos los campos son opcionales; `clock` fuerza la hora (demo y pruebas) y `backdrop` (`painted` por defecto o `plain`) enciende o apaga el paisaje pintado del modo híbrido. `setNight` queda para "luces apagadas porque duerme".
 - Salida: `ready`, `petLoaded`, `petTapped`, `clipEnded`, `itemSelected`, `furnitureMoved`, `effectEnded` (v3), `error`.
 

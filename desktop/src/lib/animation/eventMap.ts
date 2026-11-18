@@ -2,7 +2,7 @@
  * Traduce lo que le pasa a la mascota (acciones del backend o de la propia UI) a una reacción:
  * una secuencia de animaciones, un bocadillo opcional y una partícula opcional.
  */
-import { birthParams, effectForPetAction } from '@pockai/scene/effects';
+import { birthParams, clipsForPetAction, effectForPetAction } from '@pockai/scene/effects';
 import type { PetAction, PetActionEvent } from './petActions';
 
 export interface Reaction {
@@ -38,115 +38,77 @@ const MOOD_PARTICLES: Record<string, string> = {
   stretch: '✨',
 };
 
-/** Actos del Mood Theater del backend → animación. */
-const MOOD_ACTS: Record<string, string> = {
-  dance: 'dance',
-  sing: 'talk',
-  cry: 'cry',
-  smoke: 'defeat',
-  glow: 'level_up',
-  yawn: 'tired',
-  stretch: 'wake',
-};
+/** Lo que solo pinta el escritorio: bocadillo, partícula y énfasis. Los clips vienen de la tabla compartida. */
+type Extras = Omit<Reaction, 'anims'>;
 
-const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
-  fed: (c) => (c?.favorite ? { anims: ['eat', 'love'], bubble: '¡Mi comida favorita! 😋' } : { anims: ['eat'] }),
-  cleaned: () => ({ anims: ['clean', 'happy'] }),
-  // El estado base `sleep` ya pone el clip; la reacción solo existe para llevar su efecto
-  slept: () => ({ anims: [] }),
-  woke: () => ({ anims: ['wake'] }),
-  healed: () => ({ anims: ['heal', 'happy'], bubble: '¡Ya me encuentro mejor! 💚' }),
+const EXTRAS: Partial<Record<PetAction, (ctx: Ctx) => Extras>> = {
+  fed: (c) => (c?.favorite ? { bubble: '¡Mi comida favorita! 😋' } : {}),
+  healed: () => ({ bubble: '¡Ya me encuentro mejor! 💚' }),
   level_up: (c) => {
     const level = num(c, 'level');
-    return {
-      anims: ['level_up'],
-      bubble: level ? `¡Nivel ${level}! ⬆️` : '¡He subido de nivel! ⬆️',
-    };
+    return { bubble: level ? `¡Nivel ${level}! ⬆️` : '¡He subido de nivel! ⬆️' };
   },
   evolved: (c) => {
     const stage = str(c, 'stage');
-    return {
-      anims: ['evolution', 'celebrate'],
-      bubble: stage ? `¡He evolucionado (${stage})! ✨` : '¡He evolucionado! ✨',
-    };
+    return { bubble: stage ? `¡He evolucionado (${stage})! ✨` : '¡He evolucionado! ✨' };
   },
   hatched: (c) => ({
-    anims: ['summon', 'happy'],
     bubble: c?.shiny === true ? '¡Hola! Nací con la Bendición del Prisma ✨' : '¡Hola! Encantado de conocerte 🐣',
   }),
-  battle_won: () => ({ anims: ['attack', 'victory'], bubble: '¡Victoria! 🏆' }),
-  battle_lost: () => ({ anims: ['hit', 'defeat'], bubble: 'Uf… la próxima ganaré.' }),
+  battle_won: () => ({ bubble: '¡Victoria! 🏆' }),
+  battle_lost: () => ({ bubble: 'Uf… la próxima ganaré.' }),
   battle_defended: (c) => {
     const attacker = str(c, 'attackerName');
-    if (c?.draw) return { anims: ['surprised'], bubble: attacker ? `Empate contra ${attacker} 🤝` : 'Empate 🤝' };
-    if (c?.won) return { anims: ['hit', 'victory'], bubble: attacker ? `¡He defendido contra ${attacker}! 🛡️` : '¡He defendido mi puesto! 🛡️' };
-    return { anims: ['hit', 'defeat'], bubble: attacker ? `${attacker} me ha ganado…` : 'Me han ganado en la arena…' };
+    if (c?.draw) return { bubble: attacker ? `Empate contra ${attacker} 🤝` : 'Empate 🤝' };
+    if (c?.won) return { bubble: attacker ? `¡He defendido contra ${attacker}! 🛡️` : '¡He defendido mi puesto! 🛡️' };
+    return { bubble: attacker ? `${attacker} me ha ganado…` : 'Me han ganado en la arena…' };
   },
-  raid_attack: () => ({ anims: ['attack'] }),
   raid_victory: (c) => {
     const theme = str(c, 'theme');
     const gems = num(c, 'gems');
-    return {
-      anims: ['victory', 'celebrate'],
-      bubble: `¡Hemos derrotado a ${theme ?? 'el jefe'}!${gems ? ` +${gems} 💎` : ''}`,
-    };
+    return { bubble: `¡Hemos derrotado a ${theme ?? 'el jefe'}!${gems ? ` +${gems} 💎` : ''}` };
   },
-  tournament_win: () => ({ anims: ['victory', 'celebrate'], bubble: '¡Ronda de torneo ganada! 🏅' }),
-  tournament_loss: () => ({ anims: ['defeat'], bubble: 'Me han eliminado del torneo…' }),
+  tournament_win: () => ({ bubble: '¡Ronda de torneo ganada! 🏅' }),
+  tournament_loss: () => ({ bubble: 'Me han eliminado del torneo…' }),
   trained: (c) =>
-    str(c, 'status') === 'failed'
-      ? { anims: ['hit', 'sad'], bubble: 'Ese entrenamiento ha sido duro…' }
-      : { anims: ['attack', 'victory'], bubble: '¡Entrenamiento completado! 💪' },
-  cooked: () => ({ anims: ['eat', 'happy'], particle: '🍳' }),
+    str(c, 'status') === 'failed' ? { bubble: 'Ese entrenamiento ha sido duro…' } : { bubble: '¡Entrenamiento completado! 💪' },
+  cooked: () => ({ particle: '🍳' }),
   adventure: (c) => {
     switch (str(c, 'result')) {
       case 'win':
-        return { anims: ['celebrate'], bubble: '¡Qué aventura! Hemos ganado 🗺️', particle: '🗺️' };
+        return { bubble: '¡Qué aventura! Hemos ganado 🗺️', particle: '🗺️' };
       case 'partial':
-        return { anims: ['happy'], particle: '🗺️' };
+        return { particle: '🗺️' };
       default:
-        return { anims: ['sad'], bubble: 'La aventura no salió bien, pero aprendí mucho.' };
+        return { bubble: 'La aventura no salió bien, pero aprendí mucho.' };
     }
   },
-  minigame_finished: () => ({ anims: ['happy'] }),
-  gift_received: () => ({ anims: ['surprised', 'love'], bubble: '¡Me han hecho un regalo! 🎁' }),
-  care_received: () => ({ anims: ['love'], bubble: '¡Alguien me ha mandado cariño! 💌' }),
-  chest_opened: () => ({ anims: ['surprised', 'celebrate'] }),
-  mission_completed: (c) =>
-    c?.dailyCompleted ? { anims: ['celebrate'], bubble: '¡Misiones del día completadas! 🎉' } : { anims: ['happy'], particle: '✅' },
+  gift_received: () => ({ bubble: '¡Me han hecho un regalo! 🎁' }),
+  care_received: () => ({ bubble: '¡Alguien me ha mandado cariño! 💌' }),
+  mission_completed: (c) => (c?.dailyCompleted ? { bubble: '¡Misiones del día completadas! 🎉' } : { particle: '✅' }),
   achievement: (c) => {
     const name = str(c, 'name');
-    return { anims: ['victory'], bubble: name ? `¡Logro: ${name}! 🏆` : '¡Nuevo logro! 🏆' };
+    return { bubble: name ? `¡Logro: ${name}! 🏆` : '¡Nuevo logro! 🏆' };
   },
-  bonding_up: () => ({ anims: ['love'], bubble: 'Siento que estamos más unidos 💞' }),
-  bonding_down: () => ({ anims: ['sad'] }),
-  ritual_completed: () => ({ anims: ['celebrate'] }),
-  ritual_missed: () => ({ anims: ['sad'] }),
+  bonding_up: () => ({ bubble: 'Siento que estamos más unidos 💞' }),
   mood_moment: (c) => {
     const act = str(c, 'act');
-    const anim = act ? MOOD_ACTS[act] : undefined;
-    if (!anim || !act) return null;
-    // Intensidad del momento: suave = solo el clip; normal = con su partícula; exagerado = doble y marcado
+    // Intensidad: suave = solo el clip; normal = con su partícula; exagerado = doble (en la tabla) y marcado
     switch (str(c, 'intensity')) {
       case 'soft':
-        return { anims: [anim] };
+        return {};
       case 'exaggerated':
-        return { anims: [anim, anim], particle: MOOD_PARTICLES[act], emphasis: true };
+        return { particle: act ? MOOD_PARTICLES[act] : undefined, emphasis: true };
       default:
-        return { anims: [anim], particle: MOOD_PARTICLES[act] };
+        return { particle: act ? MOOD_PARTICLES[act] : undefined };
     }
   },
-  buddy_play: () => ({ anims: ['dance', 'happy'] }),
   friend_visit: (c) => {
     const name = str(c, 'visitorName');
-    return {
-      anims: ['surprised', 'happy'],
-      bubble: name ? `¡${name} está de visita en mi hábitat! 👋` : '¡Ha venido un amigo de visita! 👋',
-    };
+    return { bubble: name ? `¡${name} está de visita en mi hábitat! 👋` : '¡Ha venido un amigo de visita! 👋' };
   },
-  welcome_back: (c) => welcomeReaction(str(c, 'tier')),
-  sick: () => ({ anims: ['sad'], bubble: 'No me encuentro muy bien… 🤒' }),
-  vitals_critical: () => null, // el estado base (hungry/tired/sad) ya lo refleja
+  welcome_back: (c) => welcomeExtras(str(c, 'tier')),
+  sick: () => ({ bubble: 'No me encuentro muy bien… 🤒' }),
 };
 
 /** Juramento de clan cumplido (LORE §8): la trenza del Nexo se tensa sobre la mascota. */
@@ -158,16 +120,16 @@ export function reactionForClanGoal(title?: string | null): Reaction {
   };
 }
 
-function welcomeReaction(tier: string | undefined): Reaction {
+function welcomeExtras(tier: string | undefined): Extras {
   switch (tier) {
     case 'offended':
-      return { anims: ['sad'], bubble: 'Hmpf… me has dejado mucho tiempo solo.' };
+      return { bubble: 'Hmpf… me has dejado mucho tiempo solo.' };
     case 'sad':
-      return { anims: ['cry'], bubble: 'Te he echado de menos…' };
+      return { bubble: 'Te he echado de menos…' };
     case 'emotional':
-      return { anims: ['cry', 'love'], bubble: '¡Has vuelto! 🥹' };
+      return { bubble: '¡Has vuelto! 🥹' };
     default:
-      return { anims: ['happy'], bubble: '¡Bienvenido de nuevo! 😊' };
+      return { bubble: '¡Bienvenido de nuevo! 😊' };
   }
 }
 
@@ -192,13 +154,15 @@ export function reactionForSiblingHatch(newborn: {
 }
 
 /**
- * Reacción a un aviso `pet:action`: animaciones y bocadillo del escritorio, más el efecto que decide
- * la tabla compartida (`effectForPetAction`, la misma que usa la escena en Android e iOS).
+ * Reacción a un aviso `pet:action`: clips y efecto de las tablas compartidas (`clipsForPetAction`,
+ * `effectForPetAction`, las mismas que usa la escena en Android e iOS) más el bocadillo del escritorio.
  */
 export function reactionForAction(event: Pick<PetActionEvent, 'action' | 'context'>): Reaction | null {
-  const fn = REACTIONS[event.action];
-  const reaction = fn ? fn(event.context) : null;
-  if (!reaction) return null;
+  const anims = clipsForPetAction(event.action, event.context);
+  if (anims === null) return null;
+  const extras = EXTRAS[event.action]?.(event.context) ?? {};
+  const reaction: Reaction = { anims, ...extras };
+  if (reaction.particle === undefined) delete reaction.particle;
   const effect = effectForPetAction(event.action, event.context);
   return effect ? { ...reaction, effect } : reaction;
 }

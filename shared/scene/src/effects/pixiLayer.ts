@@ -5,8 +5,9 @@
  * `PetSprite` son sus pies, que es justo el anclaje de los efectos, así que el efecto sigue a la
  * mascota, a su escala y a su posición en la sala sin cuentas extra.
  *
- * Diferencias con el escritorio: aquí no hay flujos de mascota (viaje, altar, capullo que espera
- * el re-horneado), así que las fases `hold` se sueltan solas a los `HOLD_MS`.
+ * Diferencias con el escritorio: aquí no hay flujos de mascota (viaje, altar), así que las fases
+ * `hold` se sueltan solas a los `HOLD_MS`. Quien espera algo (el capullo, el re-horneado de la
+ * nueva etapa) pasa un `holdMs` mayor y la suelta antes con `release(id)`.
  */
 import { Container, Sprite, Texture } from 'pixi.js';
 import { EFFECTS, phasesOf } from './index';
@@ -29,6 +30,9 @@ interface Active {
   sprite: Sprite;
   lastKey: string;
   releaseAt: number | null;
+  holdMs: number;
+  /** La fase `hold` ya terminó (o el efecto no la tiene todavía y ya se pidió soltarla). */
+  released: boolean;
   minor: boolean;
 }
 
@@ -51,8 +55,11 @@ export class PixiEffects {
     private readonly opts: PixiEffectsOptions,
   ) {}
 
-  /** Lanza un efecto. Devuelve `false` si no existe o si la cola de momentos lo descarta. */
-  play(id: string, params: Record<string, string | number> = {}): boolean {
+  /**
+   * Lanza un efecto. Devuelve `false` si no existe o si la cola de momentos lo descarta.
+   * `holdMs`: cuánto puede durar como mucho su fase `hold` (por defecto `HOLD_MS`).
+   */
+  play(id: string, params: Record<string, string | number> = {}, opts: { holdMs?: number } = {}): boolean {
     const def = EFFECTS[id];
     if (!def) return false;
     const minor = def.channel === 'minor';
@@ -86,11 +93,13 @@ export class PixiEffects {
       sprite,
       lastKey: '',
       releaseAt: null,
+      holdMs: opts.holdMs ?? HOLD_MS,
+      released: false,
       minor,
       player: null as unknown as EffectPlayer,
     };
     entry.player = new EffectPlayer(phasesOf(def, params, reduced), (phase) => {
-      if (phase === 'hold') entry.releaseAt = this.now + HOLD_MS;
+      if (phase === 'hold') entry.releaseAt = entry.released ? this.now : this.now + entry.holdMs;
       if (phase === 'done') this.finish(entry);
     });
     entry.player.start(this.now);
@@ -106,10 +115,23 @@ export class PixiEffects {
     for (const a of [...this.active]) {
       if (a.releaseAt !== null && this.now >= a.releaseAt) {
         a.releaseAt = null;
+        a.released = true;
         a.player.release(this.now);
       }
       this.draw(a);
     }
+  }
+
+  /**
+   * Suelta ya la fase `hold` del efecto `id` en curso (si aún no ha llegado a ella, la soltará
+   * en cuanto llegue). Devuelve `false` si ese efecto no está en curso.
+   */
+  release(id: string): boolean {
+    const a = this.active.find((e) => e.id === id && !e.released);
+    if (!a) return false;
+    a.released = true;
+    if (a.releaseAt !== null) a.releaseAt = this.now;
+    return true;
   }
 
   /** Efectos en curso (para tests y depuración). */

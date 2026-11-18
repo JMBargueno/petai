@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { EMOTE_EMOJI, LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior, reactionForClanGoal, reactionForSiblingHatch } from './eventMap';
 import { PET_ACTIONS, isPetActionEvent } from './petActions';
 import { getAnimLibrary } from '../sprites';
+import { ACTIONS_WITH_CLIPS } from '@pockai/scene/effects';
 
 describe('reactionForAction', () => {
+  it('la tabla compartida de clips cubre todas las acciones del backend', () => {
+    expect([...ACTIONS_WITH_CLIPS].sort()).toEqual([...PET_ACTIONS].sort());
+  });
+
   it('cada animación de cada reacción existe en las hojas de sprites', () => {
     const { library, aliases } = getAnimLibrary('axolunar');
     const contexts = [undefined, { won: true }, { draw: true }, { favorite: true }, { dailyCompleted: true }, { tier: 'emotional' }, { act: 'dance' }];

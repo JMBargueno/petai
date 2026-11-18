@@ -19,6 +19,7 @@ import { Ambience, NO_AMBIENCE, type AmbienceState } from './ambience/Ambience';
 import { loadBackdrop } from './ambience/backdrops';
 import { PixiEffects } from './effects/pixiLayer';
 import { effectForPetAction } from './effects/reactions';
+import { clipsForPetAction } from './effects/clips';
 import { flowPalette } from './effects/palettes';
 import { speciesElement } from './effects/speciesElement';
 import {
@@ -46,6 +47,10 @@ export interface SceneOptions {
 }
 
 const ROOM_PADDING = 8;
+/** Lo más que el capullo espera a la nueva etapa antes de abrirse igualmente. */
+const EVOLVE_WAIT_MS = 5000;
+/** Si la etapa cambió hace menos de esto, `evolved` llega tarde: el capullo no espera. */
+const STAGE_RECENT_MS = 3000;
 
 export class PockaiScene {
   readonly app = new Application();
@@ -71,6 +76,12 @@ export class PockaiScene {
   private disposers: (() => void)[] = [];
   /** Efectos compartidos (@pockai/scene/effects) colgados del Pockai. */
   private effects!: PixiEffects;
+  /** Clips que faltan de la reacción en curso a un `petAction` (se encadenan al acabar cada uno). */
+  private clipQueue: string[] = [];
+  /** Hay un capullo de evolución esperando a que llegue y se hornee la nueva etapa. */
+  private awaitingRebake = false;
+  /** Cuándo cambió por última vez la etapa del Pockai (por si `setPet` llega antes que `evolved`). */
+  private stageChangedAt = -Infinity;
 
   private constructor(private readonly opts: SceneOptions) {}
 
@@ -104,7 +115,10 @@ export class PockaiScene {
       this.opts.reducedMotion ?? window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     this.pet = new PetSprite({
       reducedMotion: this.reducedMotion,
-      onClipEnded: (clip) => this.emit({ type: 'clipEnded', clip }),
+      onClipEnded: (clip) => {
+        this.emit({ type: 'clipEnded', clip });
+        this.playNextClip();
+      },
     });
     this.pet.eventMode = 'static';
     this.pet.cursor = 'pointer';
@@ -149,6 +163,7 @@ export class PockaiScene {
         void this.setPet(msg.pet);
         break;
       case 'playClip':
+        this.clipQueue = []; // una orden explícita del anfitrión manda sobre la reacción en curso
         if (msg.once) this.pet.play(msg.clip, true);
         else this.pet.setBaseClip(msg.clip);
         break;
@@ -204,9 +219,28 @@ export class PockaiScene {
       case 'petAction': {
         // La misma tabla que el escritorio decide el efecto de cada aviso del backend
         const req = effectForPetAction(msg.action, msg.context);
-        if (req) this.effects.play(req.id, req.params);
+        if (req) {
+          // El capullo tapa a la mascota mientras se hornea su nueva etapa: espera a `setPet`
+          // (como mucho EVOLVE_WAIT_MS), salvo que la etapa ya haya cambiado justo antes.
+          const evolving = req.id === 'capullo-telar' && performance.now() - this.stageChangedAt > STAGE_RECENT_MS;
+          const played = this.effects.play(req.id, req.params, evolving ? { holdMs: EVOLVE_WAIT_MS } : {});
+          this.awaitingRebake = evolving && played;
+        }
+        // Y las mismas animaciones que el escritorio, en cola
+        const clips = clipsForPetAction(msg.action, msg.context);
+        if (clips?.length) {
+          this.clipQueue = [...clips];
+          this.playNextClip();
+        }
         break;
       }
+    }
+  }
+
+  /** Pone el siguiente clip de la cola (saltando los que esta hoja no tenga). */
+  private playNextClip(): void {
+    while (this.clipQueue.length) {
+      if (this.pet.play(this.clipQueue.shift()!, true)) return;
     }
   }
 
@@ -273,6 +307,7 @@ export class PockaiScene {
 
   private async setPet(state: PetState): Promise<void> {
     const seq = ++this.loadSeq;
+    if (this.petState && this.petState.stage !== state.stage) this.stageChangedAt = performance.now();
     this.petState = state;
     try {
       const { key, sheet } = resolveSheet(state.species, state.stage);
@@ -302,6 +337,11 @@ export class PockaiScene {
       this.pet.setFx(egg ? null : fxMap, width, (state.pattern && PATTERN_FX[state.pattern]) || null, !egg && state.shiny === true, isLightPrimary(state.palette.primary));
       this.pet.setAccessories(layers, sheet.anchors);
       this.layout();
+      // La nueva etapa ya está horneada: el capullo puede abrirse
+      if (this.awaitingRebake) {
+        this.awaitingRebake = false;
+        this.effects.release('capullo-telar');
+      }
       this.emit({ type: 'petLoaded', species: key.split('/')[0], stage: state.stage });
     } catch (e) {
       this.emit({ type: 'error', message: e instanceof Error ? e.message : String(e) });

@@ -80,7 +80,7 @@ Los efectos viven en `shared/scene/src/effects` (export `@pockai/scene/effects`)
 | Plataforma | Cómo los pinta |
 |---|---|
 | Escritorio | `desktop/src/components/EffectLayer.svelte` (canvas DOM) desde `PetView`. |
-| Escena incrustada (Android hoy, iOS cuando exista) | `effects/pixiLayer.ts`, colgados del Pockai. Llegan por el protocolo v3: `playEffect` o `petAction` (la escena aplica `effectForPetAction`). |
+| Escena incrustada (Android hoy, iOS cuando exista) | `effects/pixiLayer.ts`, colgados del Pockai. Llegan por el protocolo v3: `playEffect` o `petAction` (la escena aplica `effectForPetAction` y pone en cola los clips de `clipsForPetAction`; el capullo espera al `setPet` de la nueva etapa). |
 | Web | Solo importable por ahora (`web/src/app/shared/effects/effects.spec.ts`). |
 
 Reglas para que un efecto funcione en todas:
