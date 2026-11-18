@@ -7340,6 +7340,1839 @@
           ]
         }
       }
+    },
+    {
+      "species": "leviatin",
+      "element": "water",
+      "sheet": {
+        "frames": 175,
+        "columns": 16,
+        "frameSize": 128,
+        "source": "shared/assets/species/leviatin/anim.json"
+      },
+      "defaultFps": 8,
+      "states": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "fps": 6,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=move",
+              "to": "walk"
+            },
+            {
+              "on": "vitals=sleep",
+              "to": "sleep"
+            },
+            {
+              "on": "vitals=sick",
+              "to": "sick"
+            },
+            {
+              "on": "vitals=hunger",
+              "to": "hungry"
+            },
+            {
+              "on": "vitals=energy",
+              "to": "tired"
+            },
+            {
+              "on": "mood=sad",
+              "to": "sad"
+            }
+          ]
+        },
+        "idle_alt": {
+          "frames": [
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "fps": 6,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "sleep": {
+          "frames": [
+            12,
+            13,
+            14,
+            15
+          ],
+          "fps": 2,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "sick": {
+          "frames": [
+            16,
+            17,
+            18,
+            19
+          ],
+          "fps": 4,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "sad": {
+          "frames": [
+            20,
+            21,
+            22,
+            23
+          ],
+          "fps": 3,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "hungry": {
+          "frames": [
+            24,
+            25,
+            26,
+            27
+          ],
+          "fps": 4,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "tired": {
+          "frames": [
+            28,
+            29,
+            30,
+            31
+          ],
+          "fps": 3,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "walk": {
+          "frames": [
+            32,
+            33,
+            34,
+            35,
+            36,
+            37
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "perch": {
+          "frames": [
+            38,
+            39,
+            40,
+            41
+          ],
+          "fps": 4,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "climb": {
+          "frames": [
+            42,
+            43,
+            44,
+            45
+          ],
+          "fps": 7,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "fall": {
+          "frames": [
+            46,
+            47,
+            48
+          ],
+          "fps": 10,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "drag": {
+          "frames": [
+            49,
+            50,
+            51,
+            52
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "land": {
+          "frames": [
+            53,
+            54,
+            55,
+            56
+          ],
+          "fps": 14,
+          "easing": "easeOutCubic",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "summon": {
+          "frames": [
+            57,
+            58,
+            59,
+            60,
+            61,
+            62
+          ],
+          "fps": 11,
+          "easing": "elastic",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "talk": {
+          "frames": [
+            63,
+            64,
+            65,
+            66
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "happy": {
+          "frames": [
+            67,
+            68,
+            69,
+            70,
+            71,
+            72
+          ],
+          "fps": 10,
+          "easing": "elastic",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "love": {
+          "frames": [
+            73,
+            74,
+            75,
+            76,
+            77,
+            78
+          ],
+          "fps": 7,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "dance": {
+          "frames": [
+            79,
+            80,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "cry": {
+          "frames": [
+            87,
+            88,
+            89,
+            90,
+            91,
+            92
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "eat": {
+          "frames": [
+            93,
+            94,
+            95,
+            96,
+            97,
+            98,
+            99,
+            100
+          ],
+          "fps": 8,
+          "easing": "easeInOutSine",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "clean": {
+          "frames": [
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "heal": {
+          "frames": [
+            109,
+            110,
+            111,
+            112,
+            113,
+            114
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "wake": {
+          "frames": [
+            115,
+            116,
+            117,
+            118,
+            119,
+            120
+          ],
+          "fps": 7,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "surprised": {
+          "frames": [
+            121,
+            122,
+            123,
+            124
+          ],
+          "fps": 11,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "celebrate": {
+          "frames": [
+            125,
+            126,
+            127,
+            128,
+            129,
+            130,
+            131,
+            132
+          ],
+          "fps": 10,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "attack": {
+          "frames": [
+            133,
+            134,
+            135,
+            136,
+            137,
+            138
+          ],
+          "fps": 13,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "victory": {
+          "frames": [
+            139,
+            140,
+            141,
+            142,
+            143,
+            144,
+            145,
+            146
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "defeat": {
+          "frames": [
+            147,
+            148,
+            149,
+            150,
+            151,
+            152
+          ],
+          "fps": 6,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "hit": {
+          "frames": [
+            153,
+            154,
+            155,
+            156
+          ],
+          "fps": 13,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "level_up": {
+          "frames": [
+            157,
+            158,
+            159,
+            160,
+            161,
+            162,
+            163,
+            164
+          ],
+          "fps": 10,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "evolution": {
+          "frames": [
+            165,
+            166,
+            167,
+            168,
+            169,
+            170,
+            171,
+            172,
+            173,
+            174
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "species": "yggdrito",
+      "element": "plant",
+      "sheet": {
+        "frames": 175,
+        "columns": 16,
+        "frameSize": 128,
+        "source": "shared/assets/species/yggdrito/anim.json"
+      },
+      "defaultFps": 8,
+      "states": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "fps": 6,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=move",
+              "to": "walk"
+            },
+            {
+              "on": "vitals=sleep",
+              "to": "sleep"
+            },
+            {
+              "on": "vitals=sick",
+              "to": "sick"
+            },
+            {
+              "on": "vitals=hunger",
+              "to": "hungry"
+            },
+            {
+              "on": "vitals=energy",
+              "to": "tired"
+            },
+            {
+              "on": "mood=sad",
+              "to": "sad"
+            }
+          ]
+        },
+        "idle_alt": {
+          "frames": [
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "fps": 6,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "sleep": {
+          "frames": [
+            12,
+            13,
+            14,
+            15
+          ],
+          "fps": 2,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "sick": {
+          "frames": [
+            16,
+            17,
+            18,
+            19
+          ],
+          "fps": 4,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "sad": {
+          "frames": [
+            20,
+            21,
+            22,
+            23
+          ],
+          "fps": 3,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "hungry": {
+          "frames": [
+            24,
+            25,
+            26,
+            27
+          ],
+          "fps": 4,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "tired": {
+          "frames": [
+            28,
+            29,
+            30,
+            31
+          ],
+          "fps": 3,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "walk": {
+          "frames": [
+            32,
+            33,
+            34,
+            35,
+            36,
+            37
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "perch": {
+          "frames": [
+            38,
+            39,
+            40,
+            41
+          ],
+          "fps": 4,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "climb": {
+          "frames": [
+            42,
+            43,
+            44,
+            45
+          ],
+          "fps": 7,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "fall": {
+          "frames": [
+            46,
+            47,
+            48
+          ],
+          "fps": 10,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "drag": {
+          "frames": [
+            49,
+            50,
+            51,
+            52
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "land": {
+          "frames": [
+            53,
+            54,
+            55,
+            56
+          ],
+          "fps": 14,
+          "easing": "easeOutCubic",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "summon": {
+          "frames": [
+            57,
+            58,
+            59,
+            60,
+            61,
+            62
+          ],
+          "fps": 11,
+          "easing": "elastic",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "talk": {
+          "frames": [
+            63,
+            64,
+            65,
+            66
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "happy": {
+          "frames": [
+            67,
+            68,
+            69,
+            70,
+            71,
+            72
+          ],
+          "fps": 10,
+          "easing": "elastic",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "love": {
+          "frames": [
+            73,
+            74,
+            75,
+            76,
+            77,
+            78
+          ],
+          "fps": 7,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "dance": {
+          "frames": [
+            79,
+            80,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "cry": {
+          "frames": [
+            87,
+            88,
+            89,
+            90,
+            91,
+            92
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "eat": {
+          "frames": [
+            93,
+            94,
+            95,
+            96,
+            97,
+            98,
+            99,
+            100
+          ],
+          "fps": 8,
+          "easing": "easeInOutSine",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "clean": {
+          "frames": [
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "heal": {
+          "frames": [
+            109,
+            110,
+            111,
+            112,
+            113,
+            114
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "wake": {
+          "frames": [
+            115,
+            116,
+            117,
+            118,
+            119,
+            120
+          ],
+          "fps": 7,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "surprised": {
+          "frames": [
+            121,
+            122,
+            123,
+            124
+          ],
+          "fps": 11,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "celebrate": {
+          "frames": [
+            125,
+            126,
+            127,
+            128,
+            129,
+            130,
+            131,
+            132
+          ],
+          "fps": 10,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "attack": {
+          "frames": [
+            133,
+            134,
+            135,
+            136,
+            137,
+            138
+          ],
+          "fps": 13,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "victory": {
+          "frames": [
+            139,
+            140,
+            141,
+            142,
+            143,
+            144,
+            145,
+            146
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "defeat": {
+          "frames": [
+            147,
+            148,
+            149,
+            150,
+            151,
+            152
+          ],
+          "fps": 6,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "hit": {
+          "frames": [
+            153,
+            154,
+            155,
+            156
+          ],
+          "fps": 13,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "level_up": {
+          "frames": [
+            157,
+            158,
+            159,
+            160,
+            161,
+            162,
+            163,
+            164
+          ],
+          "fps": 10,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "evolution": {
+          "frames": [
+            165,
+            166,
+            167,
+            168,
+            169,
+            170,
+            171,
+            172,
+            173,
+            174
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "species": "primpulso",
+      "element": "electric",
+      "sheet": {
+        "frames": 175,
+        "columns": 16,
+        "frameSize": 128,
+        "source": "shared/assets/species/primpulso/anim.json"
+      },
+      "defaultFps": 8,
+      "states": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "fps": 6,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=move",
+              "to": "walk"
+            },
+            {
+              "on": "vitals=sleep",
+              "to": "sleep"
+            },
+            {
+              "on": "vitals=sick",
+              "to": "sick"
+            },
+            {
+              "on": "vitals=hunger",
+              "to": "hungry"
+            },
+            {
+              "on": "vitals=energy",
+              "to": "tired"
+            },
+            {
+              "on": "mood=sad",
+              "to": "sad"
+            }
+          ]
+        },
+        "idle_alt": {
+          "frames": [
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "fps": 6,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "sleep": {
+          "frames": [
+            12,
+            13,
+            14,
+            15
+          ],
+          "fps": 2,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "sick": {
+          "frames": [
+            16,
+            17,
+            18,
+            19
+          ],
+          "fps": 4,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "sad": {
+          "frames": [
+            20,
+            21,
+            22,
+            23
+          ],
+          "fps": 3,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "hungry": {
+          "frames": [
+            24,
+            25,
+            26,
+            27
+          ],
+          "fps": 4,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "tired": {
+          "frames": [
+            28,
+            29,
+            30,
+            31
+          ],
+          "fps": 3,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "vitals=ok",
+              "to": "idle"
+            }
+          ]
+        },
+        "walk": {
+          "frames": [
+            32,
+            33,
+            34,
+            35,
+            36,
+            37
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "perch": {
+          "frames": [
+            38,
+            39,
+            40,
+            41
+          ],
+          "fps": 4,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "climb": {
+          "frames": [
+            42,
+            43,
+            44,
+            45
+          ],
+          "fps": 7,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "fall": {
+          "frames": [
+            46,
+            47,
+            48
+          ],
+          "fps": 10,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "drag": {
+          "frames": [
+            49,
+            50,
+            51,
+            52
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": true,
+          "triggers": [
+            {
+              "on": "input=stop",
+              "to": "idle"
+            }
+          ]
+        },
+        "land": {
+          "frames": [
+            53,
+            54,
+            55,
+            56
+          ],
+          "fps": 14,
+          "easing": "easeOutCubic",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "summon": {
+          "frames": [
+            57,
+            58,
+            59,
+            60,
+            61,
+            62
+          ],
+          "fps": 11,
+          "easing": "elastic",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "talk": {
+          "frames": [
+            63,
+            64,
+            65,
+            66
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "happy": {
+          "frames": [
+            67,
+            68,
+            69,
+            70,
+            71,
+            72
+          ],
+          "fps": 10,
+          "easing": "elastic",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "love": {
+          "frames": [
+            73,
+            74,
+            75,
+            76,
+            77,
+            78
+          ],
+          "fps": 7,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "dance": {
+          "frames": [
+            79,
+            80,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "cry": {
+          "frames": [
+            87,
+            88,
+            89,
+            90,
+            91,
+            92
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "eat": {
+          "frames": [
+            93,
+            94,
+            95,
+            96,
+            97,
+            98,
+            99,
+            100
+          ],
+          "fps": 8,
+          "easing": "easeInOutSine",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "clean": {
+          "frames": [
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108
+          ],
+          "fps": 9,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "heal": {
+          "frames": [
+            109,
+            110,
+            111,
+            112,
+            113,
+            114
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "wake": {
+          "frames": [
+            115,
+            116,
+            117,
+            118,
+            119,
+            120
+          ],
+          "fps": 7,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "surprised": {
+          "frames": [
+            121,
+            122,
+            123,
+            124
+          ],
+          "fps": 11,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "celebrate": {
+          "frames": [
+            125,
+            126,
+            127,
+            128,
+            129,
+            130,
+            131,
+            132
+          ],
+          "fps": 10,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "attack": {
+          "frames": [
+            133,
+            134,
+            135,
+            136,
+            137,
+            138
+          ],
+          "fps": 13,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "victory": {
+          "frames": [
+            139,
+            140,
+            141,
+            142,
+            143,
+            144,
+            145,
+            146
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "defeat": {
+          "frames": [
+            147,
+            148,
+            149,
+            150,
+            151,
+            152
+          ],
+          "fps": 6,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "hit": {
+          "frames": [
+            153,
+            154,
+            155,
+            156
+          ],
+          "fps": 13,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "level_up": {
+          "frames": [
+            157,
+            158,
+            159,
+            160,
+            161,
+            162,
+            163,
+            164
+          ],
+          "fps": 10,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        },
+        "evolution": {
+          "frames": [
+            165,
+            166,
+            167,
+            168,
+            169,
+            170,
+            171,
+            172,
+            173,
+            174
+          ],
+          "fps": 8,
+          "easing": "linear",
+          "loop": false,
+          "triggers": [
+            {
+              "on": "finish",
+              "to": "idle"
+            }
+          ]
+        }
+      }
     }
   ]
 }
