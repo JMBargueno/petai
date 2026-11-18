@@ -50,7 +50,7 @@ describe('portal de hebras del Nexo', () => {
     const a = render('hold', 0, { reduced: true, elapsedMs: 0 });
     const b = render('hold', 0, { reduced: true, elapsedMs: 900 });
     expect(a.cells).toEqual(b.cells);
-    expect(portalNexo.opacity?.({ phase: 'appear', t: 0.5, time: 0, palette: FLOW_PALETTES.fire, seed: 1, reduced: true })).toBe(0.5);
+    expect(portalNexo.opacity?.({ phase: 'appear', t: 0.5, time: 0, palette: FLOW_PALETTES.fire, seed: 1, params: {}, reduced: true })).toBe(0.5);
   });
 
   it('un elemento desconocido usa las hebras neutras del Nexo', () => {

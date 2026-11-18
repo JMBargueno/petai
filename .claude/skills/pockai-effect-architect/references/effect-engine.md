@@ -73,6 +73,20 @@ PetView tiene, para el viaje:
 
 Antes de mover a la mascota, déjala quieta y horizontal (`settleForTravel`): sin trepar, sin física en el aire, sin choca-esos-cinco. Para andar, pon `walkUntil = now + ms` (el controlador pinta `walk`) y cambia `posX`.
 
+## Efectos de momento (lo que llega con una reacción)
+
+Para un evento que ya pasa por `eventMap` (`pet:action` del backend o acción local), no hace falta tocar App:
+1. Añade `effect: { id, params }` a su reacción en `desktop/src/lib/animation/eventMap.ts`, con test en `eventMap.spec.ts`.
+2. `PetView.react` llama a `playMoment`, que usa `startMoment(id, params, { at?, onHold?, onDone? })`:
+   - Sin `at`, el efecto sigue los pies de la mascota (`posX/posY`); con `at`, se queda en ese punto de pantalla.
+   - Sin `onHold`, la espera se suelta sola.
+   - **Solo un efecto grande a la vez** (`effects/momentQueue.ts`): gana el de más `priority`. El capullo (3) corta a la resonancia (2), que llega en el mismo tick.
+3. Si el efecto tapa a la mascota, usa `fxHidden` (oculta y sin clics). Si la tiene que dejar quieta, usa `fxLock`, que impide que pasee, se arrastre o se invoque. Suelta los dos en `onDone`.
+4. Datos para el dibujo: `frame.params`, con lo que llegue en `params`, como `stage` o `level`.
+5. `layer` y `priority` van en el propio `EffectDef`. `EffectLayer` acepta `scale` para pintarlo a ×1 junto a mascotas pequeñas (`VisitorPet`).
+
+Para efectos de **otra** mascota, como los visitantes, el elemento sale de `speciesElement(speciesId)`. Lo que sale de pantalla con efecto debe seguir pintado hasta que acabe: mira `visitorsShown.ts`, que mantiene a los que se van con `leaving` hasta su `gone`.
+
 ## Estado de juego (visitTravel)
 
 Si el efecto acompaña a un cambio de estado, ese estado vive en `lib/` y no en el componente:

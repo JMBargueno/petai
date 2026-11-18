@@ -41,6 +41,8 @@ export interface FxFrame {
   time: number;
   palette: FxPalette;
   seed: number;
+  /** Datos del momento (nivel alcanzado, etapa…); cada efecto documenta los suyos. */
+  params: Record<string, string | number>;
   /** Movimiento reducido: el dibujo debe quedarse quieto (solo cambia la opacidad). */
   reduced: boolean;
 }
@@ -64,6 +66,13 @@ export interface EffectDef {
   /** Cadencia del dibujo (fps). 12 da el tacto de los sprites. */
   fps: number;
   draw(sink: PixelSink, frame: FxFrame): void;
+  /** Delante o detrás de la mascota (por defecto, detrás). */
+  layer?: 'behind' | 'front';
+  /**
+   * Peso del momento: si hay otro efecto de la mascota en curso, el de más peso se queda y el de
+   * menos se descarta (evolución > subida de nivel). Por defecto 1.
+   */
+  priority?: number;
   /** Opacidad global por fase (para el fundido con movimiento reducido). Por defecto 1. */
   opacity?(frame: FxFrame): number;
 }
