@@ -1,0 +1,11 @@
+Concept sheet for a pixel-art visual effect in a desktop pet game. Show {{FRAMES}} frames in a single row, left to right, that tell one short animation: {{STORY}}.
+
+World: the creatures ("Pockais") live in the "Éter Digital", a living network. {{LORE}}
+
+Style rules (strict):
+- Low-resolution pixel art: each frame drawn on a {{WIDTH}}x{{HEIGHT}} pixel grid, then shown enlarged with hard square pixels. No anti-aliasing, no gradients, no blur, no glow halos made of soft alpha.
+- One limited color ramp of 5 tones around {{MAIN_COLOR}} (very dark outline, deep, main, light, near-white highlight) plus two near-black violet tones for the void. Maximum 12 colors.
+- 1-pixel dark outline around every shape so it reads over any wallpaper, light or dark.
+- The effect sits on the ground line at the bottom of each frame. A small 64x64 pixel creature should fit through or next to it.
+- Readable silhouette first; detail only where it tells the story: {{SIGNATURE_DETAIL}}.
+- Plain flat mid-gray background behind every frame, frames separated by clear gaps. No text, no labels, no UI.

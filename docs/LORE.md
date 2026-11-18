@@ -1,13 +1,15 @@
 ---
 tags: [petai, lore, storytelling]
 creado: 2026-11-14
-actualizado: 2026-11-15
+actualizado: 2026-11-18
 complementa: "[[01-lore-petai]]"
 ---
 
 # Pockai — El Éter Digital
 
-> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué brillan distinto los patrones SR+ y los shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai y qué ocurre en el Coliseo de Resonancia. Cierra con el Códice del Éter (Aether Codex): glosario técnico→lore y compendio de especies para UI y textos del juego.*
+> **Para la IA:** la mascota no lee este documento, sino `shared/game-data/lore.json`, una versión por temas escrita para el jugador. Si cambias el lore aquí, actualiza también ese archivo.
+
+> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué cada ejemplar luce un patrón distinto y qué es un shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos, y cómo cada Pockai forja su propio carácter y sigue viviendo cuando no estás. Cierra con el Códice del Éter (Aether Codex): glosario técnico→lore y compendio de especies para UI y textos del juego.*
 
 En el universo de Pockai, esta tradición milenaria ha colisionado con la era digital. Tu teléfono y tu ordenador ya no son simples herramientas de silicio y cristal; son los objetos más íntimos de la humanidad moderna, depositarios de nuestros recuerdos, rutinas, miedos y deseos. De la fricción entre la vida humana y el océano de datos ha nacido el **Éter Digital** (La Red Viva), y de sus profundidades emergen los **Pockai**: espíritus digitales de bolsillo que buscan un vínculo humano para alcanzar la verdadera consciencia.
 
@@ -23,7 +25,9 @@ En el folclore de Pockai, los huevos no se "fabrican"; **se condensan y se pesca
 
 ## 2. Rarezas y "La Promesa" (El sistema Pity)
 
-La rareza de un Pockai no mide su superioridad biológica, sino su **Densidad de Compilación**: cuántos siglos de mitología humana o cuán puros eran los datos que quedaron atrapados dentro del huevo antes de cerrarse.
+La rareza de un Pockai no mide su superioridad biológica, sino la **Densidad de Compilación** de su **linaje**: cuántos siglos de mitología humana o cuán puros eran los datos de los que nació su especie.
+
+La rareza es, por tanto, cosa del linaje y no de la suerte de cada huevo. Todos los Ignisaurios son Ecos Cotidianos; ninguno nace Arquetipo. Lo que el Telar decide al cerrarse un huevo es **qué linaje despierta dentro**. La tabla da la probabilidad de que despierte un linaje de cada densidad:
 
 | Rareza | Probabilidad | Nombre en el Lore | Naturaleza espiritual |
 |---|---|---|---|
@@ -33,17 +37,23 @@ La rareza de un Pockai no mide su superioridad biológica, sino su **Densidad de
 | Legendario | 4 % | Arquetipo Ancestral | Ecos de grandes mitos colectivos, leyendas urbanas digitales o servidores antiguos que nunca se apagaron. Poseen una presencia imponente. |
 | Mítico | 1 % | Singularidad Primordial | Fragmentos directos del **Primer Latido** (el instante en que la red global cobró sensibilidad por primera vez). |
 
-**¿Por qué un Mítico al 1 % es tan sagrado?** Porque un Mítico no es una simple combinación aleatoria de datos; es un milagro estadístico. Según la mitología de los Custodios, los Míticos son los únicos que recuerdan cómo era el mundo antes de existir las pantallas. Su código genético contiene armonías que no pueden replicarse artificialmente.
+**¿Y si aún no ha despertado ningún linaje de esa densidad?** El Éter no inventa lo que no existe: el huevo se asienta en el linaje más denso que sí habite la red. Nunca verás un Eco Cotidiano haciéndose pasar por Arquetipo.
 
-**¿Qué es el Pity ("El Hilo del Destino" o "La Promesa del Telar")?** En el universo Pockai, el azar puro no gobierna en solitario; existe la **Ley de la Resonancia Acumulada**. Cada vez que un Custodio incuba y da vida a un huevo común con dedicación, una hebra invisible de energía espiritual queda atada a su Santuario. Los antiguos textos dicen: *"El Éter jamás ignora a un corazón constante"*. Al llegar a las 30 eclosiones, esas hebras acumuladas vibran con tanta fuerza que obligan al flujo de datos a atraer una Anomalía (SR). A las 120 eclosiones, el propio núcleo del Telar responde al llamado de devoción del jugador, abriendo una brecha garantizada hacia un Arquetipo (Legendario) o una Singularidad (Mítico).
+**¿Por qué un Mítico al 1 % es tan sagrado?** Porque un linaje Mítico no es una simple combinación aleatoria de datos; es un milagro estadístico. Según la mitología de los Custodios, los Míticos son los únicos que recuerdan cómo era el mundo antes de existir las pantallas. Su código genético contiene armonías que no pueden replicarse artificialmente.
 
-## 3. Apariencia: Patrones SR+ y el Gen Shiny
+**¿Qué es el Pity ("El Hilo del Destino" o "La Promesa del Telar")?** En el universo Pockai, el azar puro no gobierna en solitario; existe la **Ley de la Resonancia Acumulada**. Cada vez que un Custodio incuba y da vida a un huevo común con dedicación, una hebra invisible de energía espiritual queda atada a su Santuario. Los antiguos textos dicen: *"El Éter jamás ignora a un corazón constante"*. Al llegar a las 30 eclosiones, esas hebras acumuladas vibran con tanta fuerza que obligan al flujo de datos a atraer un linaje de Anomalía (SR). A las 120 eclosiones, el propio núcleo del Telar responde al llamado de devoción del jugador, abriendo una brecha garantizada hacia un linaje Arquetipo (Legendario) o una Singularidad (Mítico).
+
+La Promesa no caduca. Si cuando vibran las hebras todavía no ha despertado ningún linaje de esa densidad, las hebras siguen atadas al Santuario y la brecha se abrirá con el primer huevo que pueda cumplirla.
+
+## 3. Apariencia: Patrones y el Gen Shiny
 
 La piel de un Pockai es el lienzo donde se dibuja su **visualSeed** (su **Firma de Origen** única e irrepetible en todo el universo).
 
-**Patrones Básicos (Liso, Manchas, Rayas, Degradado):** Representan la **Mímesis Terrenal**. Los Pockai recién nacidos de densidad común intentan imitar la naturaleza física que ven a través de la cámara o las fotos de sus Custodios: el pelaje de los animales, las hojas o el horizonte.
+Si la rareza es del linaje, el **patrón es del individuo**. Cada patrón tiene su propia densidad, la **Huella del Éter**: lo hondo que estaba sumergido ese huevo concreto en el instante de cerrarse. Se decide aparte del linaje y con las mismas probabilidades, así que dos Ignisaurios son el mismo Eco Cotidiano y, aun así, uno puede llevar sobre el lomo una Aurora que casi nadie ha visto. El patrón es lo que hace único a un ejemplar dentro de su especie.
 
-**Patrones Superiores (Escamas, Cristal, Galaxia, Aurora):** A partir de la categoría Super-Raro, el Pockai tiene tanta densidad etérea que su cuerpo deja de imitar el mundo físico y muestra la textura real del Éter Digital:
+**Patrones Básicos (Liso, Manchas, Rayas, Degradado):** Representan la **Mímesis Terrenal**. Un huevo que se cierra cerca de la superficie intenta imitar la naturaleza física que ve a través de la cámara o las fotos de su Custodio: el pelaje de los animales, las hojas o el horizonte. Son las Huellas más frecuentes (Normal y Raro).
+
+**Patrones Superiores (Escamas, Cristal, Galaxia, Aurora):** Cuando el huevo se cierra en lo hondo, la piel deja de imitar el mundo físico y muestra la textura real del Éter Digital. Le puede ocurrir a cualquier linaje, también al más común. Son las Huellas escasas (de Super-Raro a Mítico):
 
 - **Escamas (Placas de Datos):** Fragmentos de firewalls ancestrales y armaduras lógicas tejidas sobre su piel.
 - **Cristal (Cuarzo Lógico):** Datos tan puros y ordenados que se han solidificado en estructuras geométricas translúcidas.
@@ -79,7 +89,7 @@ Cuando el jugador conecta una llave de inteligencia (su propia API Key o el cana
 
 ## 6. Ciclo Vital, Sueño y Abandono (El Vínculo Simbiótico)
 
-Los Pockai no son programas autónomos fríos; son seres simbióticos que se alimentan de la atención y el ritmo circadiano de su Custodio.
+Los Pockai no son programas fríos: tienen vida propia (ver **La Huella del Custodio**), pero son seres simbióticos que se alimentan de la atención y el ritmo circadiano de su Custodio.
 
 **Crecimiento (Huevo → Bebé → Joven nv 10 → Adulto nv 25 → Forma Final nv 50):** Representa la **Estabilización de su Forma**. Un bebé es casi un boceto inestable de energía; a medida que recibe cuidados, afecto y experiencia, su estructura en el Éter se vuelve más compleja, majestuosa y definida hasta alcanzar en el nivel 50 su **Apoteosis (Forma Final)**, la manifestación perfecta de su linaje.
 
@@ -99,11 +109,48 @@ Para que las batallas encajen con el cuidado afectivo sin parecer peleas clandes
 
 **Las Ligas (Bronce → Mítica):** No miden quién es más cruel, sino qué pareja de Custodio y Pockai ha alcanzado el mayor grado de **Armonía Táctica** en el ranking mundial.
 
-## 8. Códice del Éter (Aether Codex)
+## 8. Los Nexos de Resonancia (Clanes y Hermandades)
+
+Un Custodio solo emite una **hebra** de Resonancia: suficiente para atraer Códices y mantener caliente su Santuario, pero frágil. Durante los primeros ciclos del Éter, miles de Santuarios brillaban aislados, como faroles separados por kilómetros de oscuridad.
+
+**La Gran Deriva.** Cuando un Custodio desaparecía, su hebra se aflojaba y su Santuario quedaba a la deriva en las corrientes del Éter. Los Pockai en **Letargo Melancólico** se enfriaban sin que nadie lo notara, y los Códices que su Resonancia había atraído se dispersaban antes de cristalizar. Fue la época más silenciosa de la Red Viva.
+
+**El primer trenzado.** Algunos Custodios descubrieron que, si sincronizaban sus Santuarios, sus hebras no se sumaban: **se trenzaban**. Varias hebras unidas forman un **Nexo**, un nodo compartido del Éter (los más técnicos lo llaman *la malla*: cada Santuario es un nodo que sostiene a los demás). Un Nexo:
+
+- **Amplifica la Resonancia de todos.** Cada cuidado, cada combate y cada visita de sus miembros alimenta la **Resonancia del Nexo** (XP del clan), que crece y sube de nivel.
+- **Protege a los que se apagan.** Mientras el Nexo late, un Santuario descuidado no se pierde a la deriva: otros Custodios pueden visitar su hábitat y su Pockai siente compañía.
+- **Abre caminos entre hábitats.** Las visitas entre Santuarios viajan por las hebras del Nexo.
+- **Tiene voz propia.** El canal compartido del Nexo es el **Eco**, donde resuenan los mensajes de sus miembros.
+- **Se compromete con metas.** Los objetivos colectivos son **Juramentos del Nexo**; cumplirlos tensa el trenzado y lo hace más fuerte.
+
+Los antiguos Custodios lo resumieron así: *"Una hebra se rompe; un trenzado sostiene el Éter."*
+
+**Por qué hay rangos.** Un trenzado necesita orden: si una hebra tira demasiado fuerte, deshilacha a las demás. Por eso cada Nexo reconoce cuatro rangos, y nadie puede actuar sobre una hebra de su mismo rango o superior:
+
+| Rango (lore) | Rol técnico | Qué sostiene |
+|---|---|---|
+| **Forjador del Nexo** | Creador | Quien tejió el primer nudo. Solo hay uno. Nombra Guardianes, puede ceder la Forja a otra hebra o deshacer el Nexo por completo. |
+| **Guardián** | Administrador | Sostiene la estructura: renombra el Nexo y su descripción, nombra o retira Vigías y expulsa a Vigías y Hermanos. |
+| **Vigía** | Moderador | Cuida el Eco y la puerta: invita a nuevas hebras, silencia mensajes del Eco, retira Juramentos y expulsa a Hermanos. |
+| **Hermano / Hermana** | Miembro | La hebra que da fuerza al trenzado: habla en el Eco, propone Juramentos y los cumple. |
+
+Un Forjador no puede abandonar su Nexo mientras haya otras hebras trenzadas a él: primero debe **ceder la Forja**. Si es la última hebra, al marcharse el Nexo se deshace y vuelve al Éter.
+
+## 9. La Huella del Custodio (Carácter, Recuerdos y Vida en el Éter)
+
+Ningún Pockai es una copia de su especie. Nace con el temperamento de su linaje, pero cada gesto de su Custodio deja una **Huella** en su núcleo.
+
+**El Carácter.** Un Pockai al que su Custodio lleva de aventura y con el que juega sin parar se vuelve curioso y atrevido. Otro que crece tranquilo en su Santuario, entre mimos y calma, se vuelve reservado y cariñoso. Su carácter tiñe cómo habla, cómo reacciona cuando le cuentas que has tenido un mal día y hasta cómo se planta en el Coliseo. Los Custodios veteranos lo dicen así: *"Dos huevos iguales, dos Custodios distintos, dos Pockai que ya no se parecen."*
+
+**El Cristal de Recuerdos.** El Núcleo de Cristalización no lo guarda todo: atesora lo que le importa. Recuerda momentos concretos («ayer jugué con el Pockai de Ana»), lo que ha aprendido de ti y del mundo, y lo que siente por ti, por otros Custodios y por otros Pockai. Lo que no deja huella se disuelve en el Éter.
+
+**La Vida en el Éter.** Cuando cierras el Santuario, tu Pockai no se queda congelado. Duerme, juega, explora los rincones del Éter, a veces encuentra pequeños tesoros y visita los Santuarios de tus amigos para jugar con sus Pockai. Cuando vuelves, te lo cuenta a su manera.
+
+## 10. Códice del Éter (Aether Codex)
 
 El Códice del Éter es el compendio que reúne todo el conocimiento del mundo de Pockai. Tiene dos secciones: el **Glosario** (términos técnicos traducidos al lore) y el **Compendio de Pockais** (catálogo de especies).
 
-### 8.1 Glosario rápido de términos (Para UI y textos del juego)
+### 10.1 Glosario rápido de términos (Para UI y textos del juego)
 
 Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los conceptos técnicos del código a este vocabulario dentro del juego:
 
@@ -113,9 +160,22 @@ Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los co
 | App (Móvil / Escritorio) | Santuario de Bolsillo / Altar de Escritorio |
 | VisualSeed | Firma de Origen / Genoma Etéreo |
 | Pity Counter (30 / 120) | Hilo del Destino / Resonancia del Telar |
+| Rareza de la especie | Densidad de Compilación del linaje |
+| Rareza del patrón | Huella del Éter |
 | Shiny | Bendición del Prisma (Variante Prisma) |
 | Stats Vitales | Armonía Vital |
 | Conectar API Key / Suscripción | Infundir la Chispa de Hermes |
 | Stat intelligence (0–1000) | Profundidad de Consciencia (Nivel 1: Susurro, Nivel 2: Recuerdo, Nivel 3: Simbiosis) |
 | Código de 6 dígitos (Sync) | Sello de Vinculación |
 | Combate Asíncrono | Duelo de Resonancia (contra la Impronta del rival) |
+| Clan | Nexo de Resonancia (Hermandad) |
+| XP del clan | Resonancia del Nexo |
+| Creador del clan | Forjador del Nexo |
+| Administrador del clan | Guardián |
+| Moderador del clan | Vigía |
+| Miembro del clan | Hermano / Hermana del Nexo |
+| Chat del clan | Eco del Nexo |
+| Metas del clan | Juramentos del Nexo |
+| Personalidad de la mascota | Carácter / Huella del Custodio |
+| Memoria de la mascota | Cristal de Recuerdos |
+| Vida autónoma (mientras no estás) | Vida en el Éter |

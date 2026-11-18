@@ -33,14 +33,21 @@ export function allocatedPoints(pet: { combatStats: any }): Stats {
 /**
  * Multiplicador de rendimiento por cuidado: felicidad y salud altas rinden al 100 %;
  * con ambas a 0 se rinde al `minMultiplier`. Estar enfermo penaliza un poco más.
+ *
+ * `habitatBonus` es el buff `combat_mood_bonus` de los muebles (spec 10), ya recortado a su
+ * tope: multiplica el resultado por `1 + bonus`, así que con cuidado máximo el ánimo puede
+ * superar 1.0 (hasta 1.1 con el tope actual). Es intencionado: el hábitat premia el cuidado.
  */
 export function moodMultiplier(
   pet: { happiness: number; health: number; sick?: boolean },
   cfg: Pick<CombatConfig, 'mood'>,
+  habitatBonus = 0,
 ): number {
   const care = (Math.min(100, Math.max(0, pet.happiness)) + Math.min(100, Math.max(0, pet.health))) / 200;
   let m = cfg.mood.minMultiplier + (1 - cfg.mood.minMultiplier) * care;
   if (pet.sick) m *= cfg.mood.sickMultiplier;
+  const bonus = Number.isFinite(habitatBonus) ? Math.min(1, Math.max(0, habitatBonus)) : 0;
+  m *= 1 + bonus;
   return Math.round(m * 1000) / 1000;
 }
 

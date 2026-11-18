@@ -66,4 +66,22 @@ describe('UsageService', () => {
     const unlimited = await new UsageService(prismaWith(300), cfg()).summary('u', 'byok');
     expect(unlimited).toMatchObject({ quota: null, remaining: null });
   });
+
+  describe('tope mensual por plan (panel de facturación)', () => {
+    const billing = { limits: jest.fn(async (plan: string) => ({ monthlyTokenQuota: plan === 'pro' ? 3_000_000 : 300_000 })) } as any;
+
+    it('en modo gestionado usa el tope del plan del usuario, no la variable de entorno', async () => {
+      const pro = new UsageService(prismaWith(600_000), cfg(), billing, { planFor: jest.fn(async () => 'pro') } as any);
+      expect(await pro.quotaForUser('u1', 'managed')).toBe(3_000_000);
+      expect(await pro.hasQuota('u1', 'managed')).toBe(true);
+
+      const free = new UsageService(prismaWith(600_000), cfg(), billing, { planFor: jest.fn(async () => 'free') } as any);
+      expect(await free.hasQuota('u1', 'managed')).toBe(false);
+    });
+
+    it('en BYOK sigue usando la variable de entorno', async () => {
+      const s = new UsageService(prismaWith(), cfg({ AI_MONTHLY_TOKEN_QUOTA_BYOK: '1000' }), billing, { planFor: jest.fn() } as any);
+      expect(await s.quotaForUser('u1', 'byok')).toBe(1000);
+    });
+  });
 });

@@ -1,17 +1,29 @@
-import { Controller, Get, Post, Body, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpCode, HttpStatus, Query, Req, UseGuards } from '@nestjs/common';
 import { InvitesService } from '../invites/invites.service';
 import { RegistrationConfigDto } from '../invites/dto/invites.dto';
 import type { Request } from 'express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { DeviceLinkService } from './device-link.service';
 import { PasswordResetService } from './password-reset.service';
+import { EmailVerificationService } from './email-verification.service';
+import { AllowUnverified } from './allow-unverified.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
-import { RegisterDto, LoginDto, RefreshTokenDto, AuthResponseDto, ChangePasswordDto, ResetRequestDto, ResetConfirmDto } from './dto/auth.dto';
-
-/** IP del cliente (con TRUST_PROXY configurado respeta X-Forwarded-For del proxy de confianza). */
-const clientIp = (req: Request) => req.ip || req.socket?.remoteAddress || 'unknown';
+import {
+  RegisterDto,
+  LoginDto,
+  RefreshTokenDto,
+  AuthResponseDto,
+  ChangePasswordDto,
+  ResetRequestDto,
+  ResetConfirmDto,
+  VerifyEmailCodeDto,
+  VerifyEmailLinkDto,
+  VerifyEmailResultDto,
+  HandleAvailabilityDto,
+} from './dto/auth.dto';
+import { clientIp } from '../../common/client-ip';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -20,6 +32,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly deviceLink: DeviceLinkService,
     private readonly passwordReset: PasswordResetService,
+    private readonly emailVerification: EmailVerificationService,
     private readonly invites: InvitesService,
   ) {}
 
@@ -28,6 +41,14 @@ export class AuthController {
   @ApiResponse({ status: HttpStatus.OK, type: RegistrationConfigDto })
   async registrationConfig(): Promise<RegistrationConfigDto> {
     return { inviteRequired: await this.invites.isInviteOnly() };
+  }
+
+  @Get('handle-available')
+  @ApiOperation({ summary: 'Comprueba si un nickname es válido y está libre (público, con límite por IP)' })
+  @ApiQuery({ name: 'handle', required: true, example: 'jmbargueno' })
+  @ApiResponse({ status: HttpStatus.OK, type: HandleAvailabilityDto })
+  handleAvailable(@Query('handle') handle: string, @Req() req: Request): Promise<HandleAvailabilityDto> {
+    return this.authService.handleAvailability(handle, clientIp(req));
   }
 
   @Post('register')
@@ -62,6 +83,7 @@ export class AuthController {
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
+  @AllowUnverified()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cerrar todas las sesiones del usuario en todos sus dispositivos' })
   logoutAll(@CurrentUser() user: any) {
@@ -71,10 +93,40 @@ export class AuthController {
   @Post('password')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
+  @AllowUnverified()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar la contraseña: exige la actual, cierra las demás sesiones y devuelve tokens nuevos' })
   changePassword(@CurrentUser() user: any, @Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(user.id, dto);
+  }
+
+  @Post('verify-email/resend')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @AllowUnverified()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reenviar el correo de verificación (código + enlace). Invalida los anteriores' })
+  verifyEmailResend(@CurrentUser() user: any, @Req() req: Request) {
+    return this.emailVerification.send(user.id, { ip: clientIp(req) });
+  }
+
+  @Post('verify-email/confirm')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @AllowUnverified()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verificar el correo con el código de 6 dígitos (desde la app)' })
+  @ApiResponse({ status: HttpStatus.OK, type: VerifyEmailResultDto })
+  verifyEmailConfirm(@CurrentUser() user: any, @Body() dto: VerifyEmailCodeDto, @Req() req: Request) {
+    return this.emailVerification.confirmCode(user.id, dto, clientIp(req));
+  }
+
+  @Post('verify-email/link')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verificar el correo con el token del enlace (página web /verify-email, sin sesión)' })
+  @ApiResponse({ status: HttpStatus.OK, type: VerifyEmailResultDto })
+  verifyEmailLink(@Body() dto: VerifyEmailLinkDto, @Req() req: Request) {
+    return this.emailVerification.confirmLink(dto, clientIp(req));
   }
 
   @Post('reset/request')

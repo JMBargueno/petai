@@ -41,7 +41,9 @@ La app es multiplataforma: un backend autoritativo y varios clientes que muestra
 
 ### Inteligencia (IA)
 - Conecta tu propia API key (BYOK) o un Hermes Agent. Las keys se cifran en el servidor y nunca vuelven a la app; solo se muestra una máscara.
-- La mascota tiene personalidad que depende de su especie, carácter, ánimo y estadísticas. Su estadística `intelligence` sube al conversar y desbloquea tres niveles:
+- En el escritorio también puedes usar un CLI de IA que ya tengas instalado y con sesión iniciada: **Claude CLI** (`claude`) o **Antigravity CLI** (`agy`). La app lo lanza en local en una carpeta temporal vacía (Claude sin herramientas ni MCP; Antigravity en modo headless con `--sandbox`); el servidor sigue poniendo la personalidad, moderando y guardando el historial.
+- **Carácter propio**: cada Pockai nace con el temperamento de su especie, pero cambia según cómo lo cuides. Recuerda lo que vivís juntos y lo que siente por ti y por otros Pockai, y cuando no estás sigue a lo suyo: descansa, juega, explora y visita a las mascotas de tus amigos. Al volver, te lo cuenta. Detalle técnico (equipo) en [`docs/specs/spec-36-cerebro-pockai.md`](docs/specs/spec-36-cerebro-pockai.md).
+- Su estadística `intelligence` sube al conversar y desbloquea tres niveles:
   1. **Charla**: conversación en streaming.
   2. **Memoria**: resume conversaciones y recuerda hechos. Puedes ver y borrar cada recuerdo.
   3. **Agente**: usa herramientas, como consultar su estado, pedir comida, sugerir un minijuego, crear y listar recordatorios, o buscar en su memoria.

@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { onMount, tick, createEventDispatcher } from 'svelte';
+  import { AsyncState, Badge, Button, Card, ConfirmDialog, EmptyState, FeatureHeader, ListRow, Notice, SectionHeader } from './ui';
+  import { friendlyError } from '../lib/ui/errors';
   import { api, type AdventureScene, type AdventureHistoryEntry } from '../lib/api';
 
   const dispatch = createEventDispatcher();
@@ -7,7 +9,12 @@
   export let pet: any = null;
 
   const PREMIUM_COST_GEMS = 10;
-  const OUTCOME: Record<string, string> = { win: '🏆 Victoria', partial: '⭐ Logro parcial', lose: '💫 Derrota valiente' };
+  const OUTCOME: Record<string, { label: string; icon: string; tone: 'success' | 'warning' | 'neutral' }> = {
+    win: { label: 'Victoria', icon: 'trophy', tone: 'success' },
+    partial: { label: 'Logro parcial', icon: 'star', tone: 'warning' },
+    lose: { label: 'Derrota valiente', icon: 'shield', tone: 'neutral' },
+  };
+  const outcome = (o: string | null | undefined) => (o ? OUTCOME[o] ?? { label: o, icon: 'star', tone: 'neutral' as const } : null);
 
   let adventureId: string | null = null;
   let theme = '';
@@ -18,10 +25,15 @@
   let error = '';
   let loading = true;
   let busy = false;
+  let loadError = '';
+  /** Confirmación de la aventura premium (gasta gemas). */
+  let confirmPremium = false;
+  let sceneEl: HTMLElement | null = null;
 
   async function load() {
-    loading = true;
-    error = '';
+    // Con una escena en curso solo se refresca el historial: no se cambia por el esqueleto.
+    loading = !adventureId;
+    loadError = '';
     try {
       const [cur, hist] = await Promise.all([api.adventureCurrent(), api.adventureHistory(5)]);
       history = hist;
@@ -32,7 +44,7 @@
         scene = cur.scene;
       }
     } catch (e: any) {
-      error = e.message;
+      loadError = friendlyError(e, 'No se pudo cargar la aventura.');
     } finally {
       loading = false;
     }
@@ -50,10 +62,12 @@
       sceneCount = res.sceneCount;
       scene = res.scene;
       if (premium) dispatch('refreshUser');
+      focusScene();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo empezar la aventura.');
     } finally {
       busy = false;
+      confirmPremium = false;
     }
   }
 
@@ -72,102 +86,135 @@
         dispatch('refreshUser');
       } else {
         scene = res.scene;
+        focusScene();
       }
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo enviar tu elección.');
     } finally {
       busy = false;
     }
   }
 
+  /** Al cambiar de escena el foco va al texto nuevo (los botones anteriores ya no existen). */
+  async function focusScene() {
+    await tick();
+    sceneEl?.focus();
+  }
+
   onMount(load);
 </script>
 
-{#if loading}
-  <div class="empty-msg">Cargando aventura…</div>
-{:else}
-  <div class="card">
-    <div class="head">
-      <span class="big">🗺️</span>
-      <div class="title">
-        <div class="name">{adventureId ? theme : 'Aventura diaria'}</div>
-        <small>
-          {#if adventureId && scene}Escena {scene.order + 1} de {sceneCount}{:else}1 gratis al día · premium: 5 escenas por {PREMIUM_COST_GEMS} gemas{/if}
-        </small>
-      </div>
-    </div>
+<div class="ui-stack">
+  <AsyncState {loading} error={loadError} onRetry={load} rows={3} height={64}>
+    <Card variant="hero">
+      <FeatureHeader
+        icon="map"
+        title={adventureId ? theme : 'Aventura diaria'}
+        sub={adventureId && scene ? `Escena ${scene.order + 1} de ${sceneCount}` : `1 gratis al día · premium: 5 escenas por ${PREMIUM_COST_GEMS} gemas`}
+      />
 
-    {#if adventureId && scene}
-      <p class="scene-text">{scene.text}</p>
-      <div class="choices">
-        {#each scene.choices as c, i}
-          <button class="choice" disabled={busy} on:click={() => choose(i)}>
-            <span>{c.label}</span>
-            {#if c.hint}<small>{c.hint}</small>{/if}
-          </button>
-        {/each}
-      </div>
-      {#if busy}<div class="empty-msg">La historia continúa…</div>{/if}
-    {:else}
-      {#if ending}
-        <div class="ok-msg">
-          <b>{OUTCOME[ending.outcome] ?? ending.outcome}</b> · +{ending.rewards.xp} XP, +{ending.rewards.coins} monedas
-          <p class="memory">{ending.memory}</p>
+      {#if adventureId && scene}
+        <p class="scene-text ui-usertext" tabindex="-1" aria-live="polite" bind:this={sceneEl}>{scene.text}</p>
+        <div class="ui-list">
+          {#each scene.choices as c, i}
+            <button class="ui-row choice" disabled={busy} on:click={() => choose(i)}>
+              <span class="ui-row__rank">{i + 1}</span>
+              <span class="ui-row__body">
+                <span class="ui-row__title">{c.label}</span>
+                {#if c.hint}<span class="ui-row__sub ui-row__sub--wrap">{c.hint}</span>{/if}
+              </span>
+            </button>
+          {/each}
+        </div>
+        {#if busy}<p class="ui-card__hint center">La historia continúa…</p>{/if}
+      {:else}
+        {#if ending}
+          {@const o = outcome(ending.outcome)}
+          <Notice tone={ending.outcome === 'lose' ? 'warning' : ending.outcome === 'partial' ? 'info' : 'ok'} icon={o?.icon}>
+            <b>{o?.label}</b> · +{ending.rewards.xp} XP, +{ending.rewards.coins} monedas
+            <p class="memory">{ending.memory}</p>
+          </Notice>
+        {/if}
+        <div class="row">
+          <Button variant="primary" size="lg" icon="map" class="grow" loading={busy} disabled={!pet} on:click={() => start(false)}>
+            {pet ? 'Empezar aventura' : 'Sin mascota activa'}
+          </Button>
+          <Button size="lg" icon="gem" disabled={!pet || busy} title="Aventura de 5 escenas por {PREMIUM_COST_GEMS} gemas" on:click={() => (confirmPremium = true)}>Premium · {PREMIUM_COST_GEMS}</Button>
         </div>
       {/if}
-      <div class="row">
-        <button class="primary" disabled={!pet || busy} on:click={() => start(false)}>
-          {#if busy}Preparando…{:else if pet}Empezar aventura{:else}Sin mascota activa{/if}
-        </button>
-        <button class="ghost" disabled={!pet || busy} on:click={() => start(true)}>💎 Premium</button>
-      </div>
-    {/if}
+    </Card>
 
-    {#if error}<div class="error-msg">{error}</div>{/if}
-  </div>
+    {#if error}<Notice tone="error">{error}</Notice>{/if}
 
-  <div class="sec-title">Aventuras anteriores</div>
-  <div class="hist-list">
-    {#each history as h (h.adventureId)}
-      <div class="hist-row">
-        <div class="hist-body">
-          <span class="hist-name">{h.theme}{h.isPremium ? ' 💎' : ''}</span>
-          <small>{new Date(h.startedAt).toLocaleDateString('es-ES')} · +{h.xpAwarded} XP · +{h.coinsAwarded} monedas</small>
-        </div>
-        <span class="hist-status">{h.outcome ? OUTCOME[h.outcome] ?? h.outcome : '—'}</span>
-      </div>
-    {:else}
-      <div class="empty-msg">Aún no has vivido ninguna aventura.</div>
-    {/each}
-  </div>
-{/if}
+    <SectionHeader title="Aventuras anteriores" icon="book" count={history.length} onRefresh={load} {loading} />
+    <div class="ui-list">
+      {#each history as h (h.adventureId)}
+        {@const o = outcome(h.outcome)}
+        <ListRow
+          icon={h.isPremium ? 'gem' : 'map'}
+          title={h.theme}
+          sub="{new Date(h.startedAt).toLocaleDateString('es-ES')} · +{h.xpAwarded} XP · +{h.coinsAwarded} monedas"
+        >
+          <svelte:fragment slot="end">
+            {#if o}<Badge size="sm" tone={o.tone} icon={o.icon}>{o.label}</Badge>{:else}<Badge size="sm">—</Badge>{/if}
+          </svelte:fragment>
+        </ListRow>
+      {:else}
+        <EmptyState compact icon="map" text="Aún no has vivido ninguna aventura." />
+      {/each}
+    </div>
+  </AsyncState>
+
+  {#if confirmPremium}
+    <ConfirmDialog
+      title="Aventura premium"
+      icon="gem"
+      confirmLabel="Empezar"
+      cost={PREMIUM_COST_GEMS}
+      currency="gems"
+      loading={busy}
+      on:confirm={() => start(true)}
+      on:cancel={() => (confirmPremium = false)}
+    >
+      <p>Una aventura más larga, de 5 escenas, con mejores recompensas. No cuenta para la aventura gratis del día.</p>
+    </ConfirmDialog>
+  {/if}
+</div>
 
 <style>
-  .card { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .head { display: flex; gap: 12px; align-items: center; }
-  .big { font-size: 34px; }
-  .title { display: flex; flex-direction: column; gap: 2px; }
-  .name { font-size: 16px; font-weight: 700; }
-  .title small { color: var(--ink-muted); font-size: 11px; }
-  .scene-text { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-line; }
-  .choices { display: flex; flex-direction: column; gap: 6px; }
-  .choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 13px; font-weight: 600; }
-  .choice small { font-size: 11px; font-weight: 400; color: var(--ink-muted); }
-  .choice:hover:not(:disabled) { border-color: var(--accent); }
-  .choice:disabled { opacity: 0.5; cursor: not-allowed; }
-  .row { display: flex; gap: 6px; }
-  .primary { flex: 2; padding: 10px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); }
-  .ghost { flex: 1; padding: 10px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface); color: var(--ink); cursor: pointer; font-size: 12px; font-weight: 600; }
-  .primary:disabled, .ghost:disabled { opacity: 0.5; cursor: not-allowed; }
-  .memory { margin: 6px 0 0; font-size: 11px; color: var(--ink-muted); font-style: italic; }
-  .ok-msg { font-size: 12px; color: var(--success-ink); text-align: center; background: color-mix(in srgb, var(--success) 12%, var(--surface)); border: 1px solid var(--success); border-radius: var(--radius-2xl); padding: 8px; margin: 0; }
-  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
-  .empty-msg { font-size: 12px; color: var(--ink-muted); text-align: center; padding: 10px 0; }
-  .sec-title { font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
-  .hist-list { display: flex; flex-direction: column; gap: 6px; }
-  .hist-row { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: var(--radius-2xl); background: var(--surface-2); }
-  .hist-body { flex: 1; display: flex; flex-direction: column; gap: 1px; }
-  .hist-name { font-size: 12px; font-weight: 600; }
-  .hist-body small { font-size: 10px; color: var(--ink-muted); }
-  .hist-status { font-size: 11px; color: var(--success-ink); white-space: nowrap; }
+  .scene-text {
+    margin: 0;
+    font-size: var(--text-label);
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+  .choice {
+    width: 100%;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .choice:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .choice .ui-row__title {
+    white-space: normal;
+  }
+  .row {
+    display: flex;
+    gap: var(--space-2);
+  }
+  .row :global(.grow) {
+    flex: 1;
+  }
+  .memory {
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-caption);
+    font-style: italic;
+  }
+  .center {
+    text-align: center;
+  }
 </style>

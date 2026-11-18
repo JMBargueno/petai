@@ -20,5 +20,10 @@
     "paths": {
       "@/*": ["src/*"]
     }
-  }
+  },
+  // En Docker, `backend/shared` es un enlace a `/app/shared` (ver Dockerfile). El backend solo lee
+  // de ahí JSON y assets en tiempo de ejecución, no compila nada: sin excluirlo, tsc arrastraría el
+  // núcleo de escena del cliente (PixiJS) y podría cambiar la estructura de dist/ al seguir el
+  // enlace. Al declarar `exclude` se pierden los valores por defecto: se repiten aquí.
+  "exclude": ["node_modules", "dist", "shared"]
 }

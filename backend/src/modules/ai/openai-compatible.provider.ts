@@ -1,4 +1,5 @@
 import { ChatMessageInput, ChatOptions, LlmEvent, LlmProvider, ToolCall } from './llm-provider';
+import { SplitChunk, ThinkTagSplitter } from './think-tags';
 
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_TOOL_ARGS_CHARS = 10_000;
@@ -21,6 +22,13 @@ function toWire(m: ChatMessageInput) {
   return { role: m.role, content: m.content };
 }
 
+export interface OpenAiCompatibleOptions {
+  extraHeaders?: Record<string, string>;
+  extraBody?: Record<string, any>;
+  /** Corta la llamada si no llega ningún evento en este tiempo (IA gestionada: `firstTokenTimeoutSeconds`). */
+  firstTokenTimeoutMs?: number;
+}
+
 /**
  * Proveedor para cualquier API compatible con OpenAI Chat Completions:
  * OpenAI, Hermes Agent (API server), OpenRouter, Ollama…
@@ -32,6 +40,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     private readonly baseUrl: string,
     private readonly apiKey: string | null,
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly options?: OpenAiCompatibleOptions,
   ) {
     this.normalizedBaseUrl = baseUrl.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
   }
@@ -40,12 +49,35 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     return {
       'Content-Type': 'application/json',
       ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+      ...(this.options?.extraHeaders ?? {}),
     };
   }
 
   async *chat(messages: ChatMessageInput[], opts: ChatOptions): AsyncIterable<LlmEvent> {
-    const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    // Plazo total de la petición y, si se configura, plazo hasta el primer evento del stream
+    const firstToken = new AbortController();
+    const firstTokenMs = this.options?.firstTokenTimeoutMs;
+    const firstTokenTimer = firstTokenMs && firstTokenMs > 0 ? setTimeout(() => firstToken.abort(), firstTokenMs) : undefined;
+    const timeout = AbortSignal.any([AbortSignal.timeout(REQUEST_TIMEOUT_MS), firstToken.signal]);
     const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
+    try {
+      let first = true;
+      for await (const ev of this.chatStream(messages, opts, signal, timeout)) {
+        if (first && firstTokenTimer) clearTimeout(firstTokenTimer);
+        first = false;
+        yield ev;
+      }
+    } finally {
+      if (firstTokenTimer) clearTimeout(firstTokenTimer);
+    }
+  }
+
+  private async *chatStream(
+    messages: ChatMessageInput[],
+    opts: ChatOptions,
+    signal: AbortSignal,
+    timeout: AbortSignal,
+  ): AsyncIterable<LlmEvent> {
 
     const res = await this.fetchImpl(`${this.normalizedBaseUrl}/chat/completions`, {
       method: 'POST',
@@ -85,6 +117,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     return JSON.stringify({
         model: opts.model,
         messages: messages.map(toWire),
+        ...(this.options?.extraBody ?? {}),
         ...(opts.tools?.length
           ? {
               tools: opts.tools.map((t) => ({
@@ -117,7 +150,13 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   private async *parseStream(body: AsyncIterable<Uint8Array>): AsyncIterable<LlmEvent> {
     const decoder = new TextDecoder();
     let buffer = '';
-    let usage: { promptTokens?: number; completionTokens?: number } | undefined;
+    let usage: { promptTokens?: number; completionTokens?: number; costUsd?: number } | undefined;
+    // Algunos modelos mezclan el razonamiento en el contenido con etiquetas <think>
+    const splitter = new ThinkTagSplitter();
+    const fromSplit = function* (part: SplitChunk): Generator<LlmEvent> {
+      if (part.thinking) yield { type: 'thinking', text: part.thinking };
+      if (part.text) yield { type: 'delta', text: part.text };
+    };
     // Las llamadas a herramientas llegan fragmentadas por índice: se acumulan
     const calls = new Map<number, { id: string; name: string; args: string }>();
     const flushCalls = function* (): Generator<LlmEvent> {
@@ -137,6 +176,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         if (!line.startsWith('data:')) continue;
         const data = line.slice(5).trim();
         if (data === '[DONE]') {
+          yield* fromSplit(splitter.flush());
           yield* flushCalls();
           yield { type: 'done', usage };
           return;
@@ -147,11 +187,12 @@ export class OpenAiCompatibleProvider implements LlmProvider {
           const text = delta?.content;
           const reasoning = delta?.reasoning_content ?? delta?.reasoning;
 
+          // Modelos de razonamiento (Qwen/DeepSeek/o1…): el pensamiento va aparte, nunca en la respuesta
+          if (typeof reasoning === 'string' && reasoning.length > 0) {
+            yield { type: 'thinking', text: reasoning };
+          }
           if (typeof text === 'string' && text.length > 0) {
-            yield { type: 'delta', text };
-          } else if (typeof reasoning === 'string' && reasoning.length > 0) {
-            // Soporte para modelos de razonamiento (Qwen/DeepSeek): el texto de pensamiento se emite
-            yield { type: 'delta', text: reasoning };
+            yield* fromSplit(splitter.push(text));
           }
 
           for (const tc of json.choices?.[0]?.delta?.tool_calls ?? []) {
@@ -168,6 +209,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
             usage = {
               promptTokens: json.usage.prompt_tokens,
               completionTokens: json.usage.completion_tokens,
+              ...(typeof json.usage.cost === 'number' && json.usage.cost >= 0 ? { costUsd: json.usage.cost } : {}),
             };
           }
         } catch {
@@ -175,6 +217,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         }
       }
     }
+    yield* fromSplit(splitter.flush());
     yield* flushCalls();
     yield { type: 'done', usage };
   }
@@ -182,7 +225,8 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   async test(model: string): Promise<void> {
     let got = false;
     for await (const ev of this.chat([{ role: 'user', content: 'ping' }], { model, maxTokens: 40 })) {
-      if (ev.type === 'delta') got = true;
+      // Un modelo de razonamiento puede gastar los pocos tokens de la prueba solo en pensar
+      if (ev.type === 'delta' || ev.type === 'thinking') got = true;
       if (ev.type === 'done' && (ev.usage?.completionTokens ?? 0) > 0) got = true;
     }
     if (!got) throw new Error('El proveedor respondió sin contenido');

@@ -10,9 +10,11 @@ import { GameDataModule } from '../game-data/game-data.module';
 import { PetsModule } from '../pets/pets.module';
 import { EnvironmentalModule } from '../environmental/environmental.module';
 import { BondingModule } from '../bonding/bonding.module';
+import { BillingModule } from '../billing/billing.module';
+import { MindModule } from '../mind/mind.module';
 
 @Module({
-  imports: [PetsModule, GameDataModule, EnvironmentalModule, BondingModule],
+  imports: [PetsModule, GameDataModule, EnvironmentalModule, BondingModule, BillingModule, MindModule],
   controllers: [AiController],
   providers: [AiConfigService, ChatService, KeyCryptoService, MemoryService, AgentService, UsageService],
   // `AiConfigService` se exporta para el módulo de notificaciones (feature 007), que reutiliza el

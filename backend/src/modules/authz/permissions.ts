@@ -16,6 +16,10 @@ export const PERMISSIONS = [
   'invites:manage', // invitaciones de registro y ajuste "solo con invitación"
   'pets:read', // listar mascotas en el panel de administración
   'pets:rename', // renombrar mascotas desde el panel de administración
+  'billing:manage', // precios, planes y límites de IA gestionada. SOLO superadmin.
+  'users:verify', // marcar el correo como verificado / reenviar la verificación (soporte)
+  'email:send', // enviar correos a usuarios desde el panel
+  'site:manage', // ajustes de la web pública (landing «Coming soon», cuenta atrás)
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -41,6 +45,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Grant[]> = {
     'pets:read',
     'pets:rename',
     'invites:manage',
+    'users:verify',
+    'email:send',
+    'site:manage',
   ],
   moderator: ['admin:access', 'users:read', 'mods:moderate', 'audit:read', 'pets:read'],
   user: [],

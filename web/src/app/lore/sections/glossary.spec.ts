@@ -4,7 +4,7 @@ import { GLOSSARY, SPECIES } from '../content';
 
 describe('Aether Codex — Glosario', () => {
   it('pinta los catorce términos técnicos con su nombre de lore', async () => {
-    const fixture = TestBed.configureTestingModule({ imports: [Glossary] }).createComponent(Glossary);
+    const fixture = TestBed.createComponent(Glossary);
     await fixture.whenStable();
     const el: HTMLElement = fixture.nativeElement;
 

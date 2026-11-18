@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch';
 import type { paths } from '@shared/openapi/api-types';
+import { CLIENT_HEADERS, inspectMaintenance, setMaintenanceBaseUrl } from './maintenance';
 
 /**
  * URL del backend. En el servidor de desarrollo de Vite se usa el proxy (misma origin); en una
@@ -10,6 +11,23 @@ const configuredUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim
 export const API_BASE_URL = typeof window !== 'undefined' && window.location.origin.includes('localhost:')
   ? ''
   : configuredUrl || 'http://127.0.0.1:3000';
+
+setMaintenanceBaseUrl(API_BASE_URL);
+
+/**
+ * fetch de la app contra el backend: se identifica como escritorio (`X-Client`, el mantenimiento
+ * puede afectar solo a la web o solo a las apps) y, si la API responde 503 `MAINTENANCE`, bloquea la
+ * app con el aviso hasta que termine.
+ */
+export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const req = new Request(input, init);
+  for (const [name, value] of Object.entries(CLIENT_HEADERS)) {
+    if (!req.headers.has(name)) req.headers.set(name, value);
+  }
+  const res = await fetch(req);
+  await inspectMaintenance(res);
+  return res;
+}
 
 const ACCESS_KEY = 'petai_access_token';
 const REFRESH_KEY = 'petai_refresh_token';
@@ -54,6 +72,34 @@ export function onTokenRenewed(cb: (token: string) => void): () => void {
   return () => tokenRenewedListeners.delete(cb);
 }
 
+/** Código del 403 que devuelve la API a las cuentas con el correo sin verificar. */
+export const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
+const emailUnverifiedListeners = new Set<() => void>();
+
+/** Avisa cuando la API rechaza una petición porque el correo de la cuenta no está verificado. */
+export function onEmailUnverified(cb: () => void): () => void {
+  emailUnverifiedListeners.add(cb);
+  return () => emailUnverifiedListeners.delete(cb);
+}
+
+/** Código del 403 que devuelve la API (con HANDLE_REQUIRED=true) a las cuentas sin nickname. */
+export const HANDLE_REQUIRED = 'HANDLE_REQUIRED';
+const handleRequiredListeners = new Set<() => void>();
+
+/** Avisa cuando la API rechaza una petición porque la cuenta aún no ha elegido su nickname. */
+export function onHandleRequired(cb: () => void): () => void {
+  handleRequiredListeners.add(cb);
+  return () => handleRequiredListeners.delete(cb);
+}
+
+/** Código del 403 de "falta un paso de alta" (lee una copia: el cuerpo original queda intacto). */
+async function blockedCode(res: Response): Promise<string | null> {
+  if (res.status !== 403) return null;
+  const body = await res.clone().json().catch(() => null);
+  const code = body?.code;
+  return code === EMAIL_NOT_VERIFIED || code === HANDLE_REQUIRED ? code : null;
+}
+
 function expireSession() {
   const hadSession = currentToken !== null || currentRefreshToken !== null;
   setSession(null);
@@ -90,7 +136,7 @@ async function doRefresh(): Promise<string | null> {
   // S-01: el fast-path del edge se eliminó; el refresh siempre va al origin autoritativo.
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+    res = await apiFetch(`${API_BASE_URL}/v1/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
@@ -114,19 +160,33 @@ async function doRefresh(): Promise<string | null> {
 
 /**
  * fetch con renovación de sesión: ante un 401 en una petición autenticada renueva el token y la
- * repite una vez. Las rutas /auth/* (login incorrecto, refresh caducado) no se reintentan.
+ * repite una vez. Las rutas /auth/* (login incorrecto, refresh caducado) no se reintentan, salvo
+ * /auth/verify-email/* (con sesión; el usuario puede volver a la pantalla de verificación horas después).
  */
 async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const req = new Request(input, init);
   const sent = req.headers.get('Authorization')?.replace(/^Bearer /, '') ?? null;
-  if (!sent || new URL(req.url).pathname.includes('/auth/')) return fetch(req);
+  const path = new URL(req.url).pathname;
+  // La verificación del correo va con sesión y se puede completar pasado un rato: sí se renueva.
+  if (!sent || (path.includes('/auth/') && !path.includes('/auth/verify-email/'))) return apiFetch(req);
   const retry = req.clone();
-  const res = await fetch(req);
+  const res = await apiFetch(req);
+  // Cuenta sin verificar o sin nickname: no es un problema de token (no se renueva); la app
+  // muestra la pantalla que falta (verificación o "elige tu nickname").
+  const blocked = await blockedCode(res);
+  if (blocked === EMAIL_NOT_VERIFIED) {
+    emailUnverifiedListeners.forEach((cb) => cb());
+    return res;
+  }
+  if (blocked === HANDLE_REQUIRED) {
+    handleRequiredListeners.forEach((cb) => cb());
+    return res;
+  }
   if (res.status !== 401) return res;
   const token = await renewAccessToken(sent);
   if (!token) return res;
   retry.headers.set('Authorization', `Bearer ${token}`);
-  return fetch(retry);
+  return apiFetch(retry);
 }
 
 const client = createClient<paths>({ baseUrl: API_BASE_URL, fetch: authFetch });
@@ -160,13 +220,33 @@ export function isTerminalError(err: unknown): boolean {
   return err.status >= 500 || err.status === 401;
 }
 
+/** POST a una ruta pública de /auth/ (sin sesión). Lanza ApiError con el mensaje del servidor. */
+async function authPost(path: string, body: unknown, fallback: string): Promise<any> {
+  let res: Response;
+  try {
+    res = await apiFetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError('Sin conexión con el servidor. Inténtalo de nuevo en un momento.');
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const message = Array.isArray(data?.message) ? data.message.join('. ') : data?.message;
+    throw new ApiError(typeof message === 'string' && message ? message : fallback, res.status);
+  }
+  return data;
+}
+
 export const api = {
   client,
 
-  async register(email: string, password: string, displayName?: string, inviteCode?: string) {
+  async register(email: string, password: string, displayName?: string, inviteCode?: string, handle?: string) {
     const code = inviteCode?.trim();
     const res = await client.POST('/v1/auth/register', {
-      body: { email, password, displayName, ...(code ? { inviteCode: code } : {}) },
+      body: { email, password, displayName, ...(code ? { inviteCode: code } : {}), ...(handle ? { handle } : {}) },
     });
     if (res.error) throw new Error((res.error as any)?.message || 'Error en registro');
     if (res.data?.accessToken) {
@@ -196,12 +276,35 @@ export const api = {
     return res.data;
   },
 
+  /**
+   * Recuperar contraseña, paso 1: pide un código por correo. El servidor responde igual exista o no
+   * la cuenta (no revela qué correos están registrados).
+   */
+  async requestPasswordReset(email: string) {
+    await authPost('/v1/auth/reset/request', { email: email.trim() }, 'No se pudo enviar el código');
+  },
+
+  /**
+   * Recuperar contraseña, paso 2: con el código cambia la contraseña. El servidor cierra las demás
+   * sesiones y devuelve una nueva, que se guarda: el usuario entra directamente.
+   */
+  async confirmPasswordReset(email: string, code: string, newPassword: string) {
+    const data = await authPost(
+      '/v1/auth/reset/confirm',
+      { email: email.trim(), code: code.trim(), newPassword },
+      'No se pudo cambiar la contraseña',
+    );
+    if (!data?.accessToken || !data?.refreshToken) throw new ApiError('Respuesta inesperada del servidor');
+    setSession(data);
+    return data;
+  },
+
   /** Cierra la sesión en este equipo y revoca su refresh token en el servidor (sin esperar la respuesta). */
   logout() {
     const refreshToken = currentRefreshToken;
     setSession(null);
     if (refreshToken) {
-      void fetch(`${API_BASE_URL}/v1/auth/logout`, {
+      void apiFetch(`${API_BASE_URL}/v1/auth/logout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
@@ -220,6 +323,55 @@ export const api = {
     return res.data;
   },
 
+  /** Verifica el correo con el código de 6 dígitos del email. */
+  async verifyEmail(code: string) {
+    const res = await client.POST('/v1/auth/verify-email/confirm', {
+      body: { code: code.trim() },
+      ...authHeaders(),
+    });
+    if (res.error) throw apiError(res, 'No se pudo verificar el código');
+    return res.data;
+  },
+
+  /**
+   * ¿Está libre este nickname? Público (sirve en el registro). Ante un fallo de red se responde
+   * "no disponible" con el motivo, para no dejar seguir con un nickname sin comprobar.
+   */
+  async checkHandleAvailable(handle: string): Promise<{ handle: string; available: boolean; reason?: string }> {
+    try {
+      const res = await client.GET('/v1/auth/handle-available', { params: { query: { handle } } });
+      if (res.error || !res.data) return { handle, available: false, reason: (res.error as any)?.message || 'No se pudo comprobar' };
+      return res.data;
+    } catch {
+      return { handle, available: false, reason: 'Sin conexión con el servidor' };
+    }
+  },
+
+  /** Fija el nickname de la cuenta (una sola vez: es inmutable). Devuelve el perfil actualizado. */
+  async setMyHandle(handle: string) {
+    const res = await client.POST('/v1/me/handle', { body: { handle }, ...authHeaders() });
+    if (res.error) throw apiError(res, 'No se pudo guardar el nickname');
+    return res.data as any;
+  },
+
+  /** Perfil público mínimo de un jugador por su nickname (con o sin "@"). */
+  async getUserByHandle(handle: string) {
+    const res = await client.GET('/v1/users/by-handle/{handle}', {
+      params: { path: { handle: handle.trim().replace(/^@/, '') } },
+      ...authHeaders(),
+    });
+    if (res.error) throw apiError(res, 'No hay ningún jugador con ese nickname');
+    return res.data as { id: string; handle: string; displayName: string | null; title: string | null; accountXp: number };
+  },
+
+  /** Reenvía el correo de verificación (invalida el código anterior). */
+  async resendVerification() {
+    const res = await client.POST('/v1/auth/verify-email/resend', {
+      ...authHeaders(),
+    });
+    if (res.error) throw apiError(res, 'No se pudo reenviar el correo');
+  },
+
   async getCatalog() {
     const res = await client.GET('/v1/catalog');
     if (res.error) throw new Error('Error al obtener catálogo');
@@ -231,7 +383,14 @@ export const api = {
       ...authHeaders(),
     });
     if (res.error) throw new Error('Error al listar huevos');
-    return res.data;
+    // El servidor manda `remainingMs` (su reloj). Se traduce a un `hatchesAt` en el reloj local para
+    // que la cuenta atrás sea correcta aunque el reloj del PC esté desfasado.
+    const receivedAt = Date.now();
+    return ((res.data ?? []) as any[]).map((egg) =>
+      typeof egg?.remainingMs === 'number'
+        ? { ...egg, hatchesAt: new Date(receivedAt + egg.remainingMs).toISOString() }
+        : egg,
+    ) as typeof res.data;
   },
 
   async buyEgg() {
@@ -361,7 +520,7 @@ export const api = {
     return minigameRequest<any>('GET', '/v1/ai/config');
   },
 
-  async saveAiConfig(cfg: { provider: string; baseUrl?: string; model?: string; apiKey?: string }) {
+  async saveAiConfig(cfg: { mode?: 'byok' | 'managed'; provider?: string; baseUrl?: string; model?: string; apiKey?: string }) {
     return minigameRequest<any>('PUT', '/v1/ai/config', cfg);
   },
 
@@ -380,19 +539,25 @@ export const api = {
     );
   },
 
-  /** Chat en streaming (SSE). Llama a onDelta con cada fragmento y devuelve el evento final. */
+  /**
+   * Chat en streaming (SSE). Llama a onDelta con cada fragmento de la respuesta y devuelve el evento
+   * final. El razonamiento del modelo nunca llega en los delta: viene aparte en message.thinking.
+   */
   async chatStream(
     petId: string,
     message: string,
     clientTools: readonly string[],
     handlers: {
       onDelta: (text: string) => void;
+      /** Pensamiento del modelo de razonamiento: se muestra plegado, nunca como respuesta. */
+      onReasoning?: (text: string) => void;
       onTool?: (name: string) => void;
       onAction?: (action: { id: string; tool: string; summary: string; expiresAt: string; clientSide?: boolean }) => void;
       onModerated?: (info: { reason: string; message: string; hideUserMessage: boolean }) => void;
     },
     signal?: AbortSignal,
-  ): Promise<{ message: { id: string; content: string }; intelligence: number; tier: string } | { moderated: true }> {
+    clientContext?: unknown,
+  ): Promise<{ message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string; behavior?: PetBehavior } | { moderated: true }> {
     const res = await authFetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
       method: 'POST',
       signal,
@@ -400,7 +565,7 @@ export const api = {
         'Content-Type': 'application/json',
         ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
       },
-      body: JSON.stringify({ message, clientTools }),
+      body: JSON.stringify({ message, clientTools, clientContext }),
     });
     if (!res.ok || !res.body) {
       const data = await res.json().catch(() => ({}));
@@ -423,6 +588,7 @@ export const api = {
         if (!event || !raw) continue;
         const data = JSON.parse(raw);
         if (event === 'delta') handlers.onDelta(data.text);
+        else if (event === 'reasoning') handlers.onReasoning?.(data.text);
         else if (event === 'tool') handlers.onTool?.(data.name);
         else if (event === 'action') handlers.onAction?.(data.action);
         else if (event === 'moderated') {
@@ -439,6 +605,7 @@ export const api = {
   async updateMe(data: {
     displayName?: string;
     timezone?: string;
+    achievementsPublic?: boolean;
     notificationPrefs?: {
       vitals_critical?: boolean;
       interaction?: boolean;
@@ -458,21 +625,59 @@ export const api = {
       requests: number;
       quota: number | null;
       remaining: number | null;
+      mode?: string;
+      plan?: 'free' | 'pro';
+      daily?: {
+        used: number;
+        limit: number;
+        resetsAt: string;
+      };
     }>('GET', '/v1/ai/usage');
   },
 
+  // ---- Facturación y Suscripción Pro (Spec-34) ----
+  async getBillingPlans() {
+    return minigameRequest<{
+      pricing: { monthlyPriceUsd: number; monthlyPriceEur: number; trialDays: number };
+      plans: {
+        free: { name: string; priceUsd: number; priceEur: number; dailyMessages: number; maxInputChars: number; maxOutputTokens: number; agentTools: boolean };
+        pro: { name: string; priceUsd: number; priceEur: number; dailyMessages: number; maxInputChars: number; maxOutputTokens: number; agentTools: boolean };
+        byok: { name: string; priceUsd: number; priceEur: number; dailyMessages: null; maxInputChars: number; rateLimitPerMinute: number };
+      };
+    }>('GET', '/v1/billing/plans');
+  },
+
+  async getBillingEntitlement() {
+    return minigameRequest<{
+      plan: 'free' | 'pro';
+      source?: 'stripe' | 'google_play' | null;
+      currentPeriodEnd?: string | null;
+      cancelAtPeriodEnd?: boolean;
+      status?: string | null;
+      duplicateSubscriptions?: boolean;
+    }>('GET', '/v1/billing/entitlement');
+  },
+
+  async createStripeCheckout() {
+    return minigameRequest<{ url: string }>('POST', '/v1/billing/stripe/checkout');
+  },
+
+  async createStripePortal() {
+    return minigameRequest<{ url: string }>('POST', '/v1/billing/stripe/portal');
+  },
+
   /** Modo Hermes local, paso 1: el servidor valida, modera y devuelve los mensajes a enviar al modelo local. */
-  async localChatContext(petId: string, message: string) {
+  async localChatContext(petId: string, message: string, clientContext?: unknown) {
     return minigameRequest<
       | { turnId: string; messages: { role: 'system' | 'user' | 'assistant'; content: string }[]; maxTokens: number }
       | { moderated: { reason: string; message: string; hideUserMessage: boolean } }
-    >('POST', `/v1/pets/${petId}/chat/local/context`, { message });
+    >('POST', `/v1/pets/${petId}/chat/local/context`, { message, clientContext });
   },
 
   /** Modo Hermes local, paso 2: entrega la respuesta generada para moderarla y guardarla. */
   async localChatSync(petId: string, turnId: string, reply: string) {
     return minigameRequest<
-      | { message: { id: string; content: string }; intelligence: number; tier: string }
+      | { message: { id: string; content: string }; intelligence: number; tier: string; behavior?: PetBehavior }
       | { moderated: { reason: string; message: string; hideUserMessage: boolean } }
     >('POST', `/v1/pets/${petId}/chat/local/sync`, { turnId, reply });
   },
@@ -496,6 +701,23 @@ export const api = {
 
   async updateDesktopSkills(petId: string, skills: Record<string, boolean>) {
     return minigameRequest<any>('PATCH', `/v1/pets/${petId}/desktop-skills`, { skills });
+  },
+
+  // Prendas (spec 38): catálogo con estado, compra y equipado por ranura.
+  async getAccessories() {
+    return minigameRequest<AccessoryCatalog>('GET', '/v1/accessories');
+  },
+
+  async buyAccessory(id: string) {
+    return minigameRequest<{ id: string; slot: AccessorySlotId; state: 'owned' }>('POST', `/v1/accessories/${encodeURIComponent(id)}/buy`);
+  },
+
+  async getPetAccessories(petId: string) {
+    return minigameRequest<PetAccessories>('GET', `/v1/pets/${petId}/accessories`);
+  },
+
+  async equipAccessories(petId: string, change: Partial<Record<AccessorySlotId, string | null>>) {
+    return minigameRequest<PetAccessories>('PUT', `/v1/pets/${petId}/accessories`, change);
   },
 
   async setPetInHabitat(petId: string, inHabitat: boolean) {
@@ -578,8 +800,13 @@ export const api = {
       unlocked: boolean;
       unlockAt: number;
       intelligence: number;
-      memories: { id: string; kind: 'fact' | 'summary'; content: string; createdAt: string }[];
+      memories: PetMemoryItem[];
     }>('GET', `/v1/pets/${petId}/memories`);
+  },
+
+  /** Cerebro del Pockai (spec 36): 5 dimensiones, memoria por capas y vida autónoma reciente. */
+  async getMind(petId: string) {
+    return minigameRequest<PetMind>('GET', `/v1/pets/${petId}/mind`);
   },
 
   async forgetMemory(petId: string, memoryId: string) {
@@ -588,6 +815,11 @@ export const api = {
 
   async forgetAllMemories(petId: string) {
     return minigameRequest<{ deleted: number }>('DELETE', `/v1/pets/${petId}/memories`);
+  },
+
+  /** Resumen diario de hábitos de escritorio (solo categorías y minutos; ver lib/contextDigest.ts). */
+  async sendContextDigest(petId: string, body: unknown) {
+    return minigameRequest<{ habits: number; stored: boolean }>('POST', `/v1/pets/${petId}/context-digest`, body);
   },
 
   async evolvePet(petId: string) {
@@ -675,13 +907,22 @@ export const api = {
     return minigameRequest<HabitatCatalog>('GET', '/v1/habitat/catalog');
   },
 
-  async placeHabitatFurniture(furnitureId: string) {
-    return minigameRequest<{ message: string; furnitureId: string; room: string }>(
-      'POST',
-      `/v1/habitat/furniture/${furnitureId}/place`,
-    );
+  /** Compra y coloca un mueble. Sin `at`, el servidor lo pone en el primer hueco donde quepa. */
+  async placeHabitatFurniture(furnitureId: string, at?: HabitatPlacement) {
+    return minigameRequest<HabitatPlaceResult>('POST', `/v1/habitat/furniture/${furnitureId}/place`, at);
   },
 
+  /** Mueve y/o gira un mueble ya colocado (sin coste). */
+  async moveHabitatItem(itemId: string, to: Partial<HabitatPlacement>) {
+    return minigameRequest<HabitatPlaceResult>('PATCH', `/v1/habitat/items/${itemId}`, to);
+  },
+
+  /** Quita un mueble concreto (por id de item). */
+  async removeHabitatItem(itemId: string) {
+    return minigameRequest<{ message: string; itemId: string; furnitureId: string }>('DELETE', `/v1/habitat/items/${itemId}`);
+  },
+
+  /** Quita el mueble más reciente de ese tipo. Preferible `removeHabitatItem`. */
   async removeHabitatFurniture(furnitureId: string) {
     return minigameRequest<{ message: string; furnitureId: string }>('DELETE', `/v1/habitat/furniture/${furnitureId}`);
   },
@@ -690,11 +931,34 @@ export const api = {
     return minigameRequest<HabitatBuffs>('GET', '/v1/habitat/buffs');
   },
 
+  // ── Perfil social e insignias ─────────────────────────────────────────────
+  async getMyProfile() {
+    return minigameRequest<MyProfile>('GET', '/v1/me/profile');
+  },
+  async getUserProfile(userId: string) {
+    return minigameRequest<PublicProfile>('GET', `/v1/users/${encodeURIComponent(userId)}/profile`);
+  },
+  async setFeaturedBadges(achIds: string[]) {
+    return minigameRequest<{ featuredBadges: string[] }>('PUT', '/v1/me/featured-badges', { achIds });
+  },
+  async getAchievements() {
+    return minigameRequest<AchievementListResponse>('GET', '/v1/achievements');
+  },
+  async getConstellation(category: string) {
+    return minigameRequest<ConstellationResponse>('GET', `/v1/achievements/constellation/${encodeURIComponent(category)}`);
+  },
+  async claimAchievement(id: string) {
+    return minigameRequest<{ achievement: { claimed: boolean }; reward: AchievementReward }>(
+      'POST',
+      `/v1/achievements/${encodeURIComponent(id)}/claim`,
+    );
+  },
+
   // ── Amistad + Co-op (feature 021) ─────────────────────────────────────────
   async getCoopFriends() {
     return minigameRequest<CoopFriend[]>('GET', '/v1/coop/friends');
   },
-  async requestCoopFriend(target: { targetUserId?: string; email?: string }) {
+  async requestCoopFriend(target: { targetUserId?: string; handle?: string }) {
     return minigameRequest<CoopFriend>('POST', '/v1/coop/friends', target);
   },
   async acceptCoopFriend(friendshipId: string) {
@@ -712,7 +976,127 @@ export const api = {
     return minigameRequest<CoopVisitResult>('POST', '/v1/coop/visit', body);
   },
   async getCoopHistory() {
-    return minigameRequest<{ userId: string; visits: CoopVisitLog[] }>('GET', '/v1/coop/history');
+    // scope=all: visitas en ambos sentidos y de hábitat (sin él, el formato antiguo).
+    return minigameRequest<{ userId: string; visits: CoopVisitLog[] }>('GET', '/v1/coop/history?scope=all');
+  },
+
+  // ── Presencia (feature 021) ────────────────────────────────────────────────
+  /** Dispositivos de un jugador y si tiene alguno activo (punto de presencia). */
+  async getPresence(userId: string) {
+    return minigameRequest<PresenceInfo>('GET', `/v1/presence/${encodeURIComponent(userId)}`);
+  },
+
+  // ── Clanes (feature 021) ──────────────────────────────────────────────────
+  async createClan({ name, tag, description }: { name: string; tag: string; description?: string }) {
+    return minigameRequest<ClanSummary>('POST', '/v1/clans', { name, tag, description });
+  },
+  /** El clan del usuario; `null` si aún no está en ningún clan (404 del contrato). */
+  async getMyClan(): Promise<ClanSummary | null> {
+    try {
+      return await minigameRequest<ClanSummary>('GET', '/v1/clans');
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
+  async joinClan(tag: string) {
+    return minigameRequest<ClanSummary>('POST', '/v1/clans/join', { tag });
+  },
+  async leaveClan() {
+    return minigameRequest<{ ok: boolean }>('POST', '/v1/clans/leave');
+  },
+  /** Invita a un jugador (Vigía o superior). Devuelve el resumen actualizado. */
+  async inviteToClan(clanId: string, target: { userId?: string; handle?: string }) {
+    return minigameRequest<ClanSummary>('POST', `/v1/clans/${encodeURIComponent(clanId)}/invite`, target);
+  },
+  /** Roster vivo del clan (el backend devuelve el resumen completo). */
+  async getClanMembers(clanId: string) {
+    return minigameRequest<ClanSummary>('GET', `/v1/clans/${encodeURIComponent(clanId)}/members`);
+  },
+
+  // ── Gestión del Nexo (rangos de clan) ──────────────────────────────────────
+  /** Edita nombre y/o descripción (Guardián o superior). */
+  async updateClan(clanId: string, patch: { name?: string; description?: string | null }) {
+    return minigameRequest<ClanSummary>('PATCH', `/v1/clans/${encodeURIComponent(clanId)}`, patch);
+  },
+  /** Disuelve el clan (solo el Forjador). */
+  async disbandClan(clanId: string) {
+    return minigameRequest<{ success: boolean; message: string }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}`);
+  },
+  /** Expulsa a un miembro de rango inferior (Vigía o superior). */
+  async kickClanMember(clanId: string, userId: string) {
+    return minigameRequest<ClanSummary>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/members/${encodeURIComponent(userId)}`);
+  },
+  /** Cambia el rango de un miembro (Guardián o superior; Guardianes solo el Forjador). */
+  async setClanMemberRole(clanId: string, userId: string, role: Exclude<ClanRole, 'creator'>) {
+    return minigameRequest<ClanSummary>('PATCH', `/v1/clans/${encodeURIComponent(clanId)}/members/${encodeURIComponent(userId)}/role`, { role });
+  },
+  /** Cede la Forja a otro miembro (solo el Forjador; pasa a Guardián). */
+  async transferClanCreator(clanId: string, userId: string) {
+    return minigameRequest<ClanSummary>('POST', `/v1/clans/${encodeURIComponent(clanId)}/transfer`, { userId });
+  },
+  /** Borra un mensaje del chat (el autor o un Vigía o superior). */
+  async deleteClanMessage(clanId: string, messageId: string) {
+    return minigameRequest<{ success: boolean }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/messages/${encodeURIComponent(messageId)}`);
+  },
+
+  // ── Chat de clan (feature 021) ─────────────────────────────────────────────
+  /** Envía un mensaje al chat del clan. Devuelve el mensaje persistido. */
+  async sendClanMessage(clanId: string, body: string) {
+    return minigameRequest<ClanMessage>('POST', `/v1/clans/${encodeURIComponent(clanId)}/messages`, { body });
+  },
+  /** Historial reciente del chat del clan (más nuevos al final). */
+  async getClanMessages(clanId: string, { limit, before }: { limit?: number; before?: string } = {}) {
+    const params = new URLSearchParams();
+    if (limit != null) params.set('limit', String(limit));
+    if (before) params.set('before', before);
+    const q = params.toString();
+    return minigameRequest<ClanMessage[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/messages${q ? `?${q}` : ''}`);
+  },
+
+  // ── Objetivos de clan (feature 021) ────────────────────────────────────────
+  /** Crea un objetivo de clan. Devuelve el objetivo persistido. */
+  async createClanGoal(clanId: string, goal: { title: string; description?: string; metric: ClanGoalMetric; target: number }) {
+    return minigameRequest<ClanGoal>('POST', `/v1/clans/${encodeURIComponent(clanId)}/goals`, goal);
+  },
+  /** Hábitat del Nexo: nivel por XP y hasta 5 pockais activos (uno por miembro, el tuyo siempre). */
+  async getClanHabitat(clanId: string) {
+    return minigameRequest<ClanHabitat>('GET', `/v1/clans/${encodeURIComponent(clanId)}/habitat`);
+  },
+  /** Guarda en el servidor cuál es la mascota activa (la que te representa en clan y visitas). */
+  async activatePet(petId: string) {
+    return minigameRequest<{ activePetId: string }>('POST', `/v1/pets/${encodeURIComponent(petId)}/activate`);
+  },
+  /** Objetivos del clan (activos y completados). */
+  async getClanGoals(clanId: string) {
+    return minigameRequest<ClanGoal[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/goals`);
+  },
+  /** Añade progreso a un objetivo. Devuelve el objetivo actualizado. */
+  async addClanGoalProgress(clanId: string, goalId: string, amount: number) {
+    return minigameRequest<ClanGoal>('POST', `/v1/clans/${encodeURIComponent(clanId)}/goals/${encodeURIComponent(goalId)}/progress`, { amount });
+  },
+  /** Borra un objetivo del clan (solo el líder, según el contrato). */
+  async deleteClanGoal(clanId: string, goalId: string) {
+    return minigameRequest<{ ok: boolean }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/goals/${encodeURIComponent(goalId)}`);
+  },
+
+  // ── Visitas en vivo al hábitat (feature 021) ───────────────────────────────
+  /** Inicia una visita del jugador a tu hábitat (el backend emite `habitat:visitor_joined`). */
+  async startHabitatVisit(ownerId: string, message?: string) {
+    const text = message?.trim();
+    return minigameRequest<{ success: boolean; visit: HabitatVisitor; energy: number }>(
+      'POST',
+      '/v1/habitat/visit',
+      text ? { ownerId, message: text } : { ownerId },
+    );
+  },
+  /** Cierra tu visita en curso (el backend emite `habitat:visitor_left`). */
+  async endHabitatVisit() {
+    return minigameRequest<{ ok: boolean }>('POST', '/v1/habitat/visit/end');
+  },
+  /** Amigos que ahora mismo están de visita en tu hábitat. */
+  async getHabitatVisitors() {
+    return minigameRequest<{ visitors: HabitatVisitor[] }>('GET', '/v1/habitat/visitors');
   },
 
   // ── Bienvenida (feature 028) ────────────────────────────────────────────────
@@ -1023,12 +1407,25 @@ export interface CoopFriend {
   direction: 'incoming' | 'outgoing';
   otherUserId: string;
   otherDisplayName: string;
+  /** Nickname público del otro jugador (null si aún no lo ha elegido). */
+  otherHandle?: string | null;
   otherPet: { petId: string; nickname: string; speciesName: string } | null;
   updatedAt: string;
 }
 
 export interface CoopVisitLog {
+  /** Campos nuevos (backend ≥ 0.24): opcionales para tolerar un backend antiguo. */
+  id?: string;
+  kind?: 'care' | 'habitat';
+  /** `in` = visitaron a mis pets; `out` = visité yo. */
+  direction?: 'in' | 'out';
+  otherUserId?: string;
+  otherName?: string;
+  otherHandle?: string | null;
+  ownerId?: string;
+  endedAt?: string | null;
   visitorId: string;
+  /** feed | play | clean, o `habitat` para visitas en vivo. */
   action: string;
   petId: string;
   xpGained: number;
@@ -1041,6 +1438,151 @@ export interface CoopVisitResult {
   xpGained: number;
   petState: { hunger: number; happiness: number; hygiene: number };
 }
+
+// ── Presencia + Clanes ──────────────────────────────────────────────────────
+/** Dispositivos de un jugador; la forma concreta la decide el backend (lo que importa es `active`). */
+export interface PresenceDevice {
+  deviceId: string;
+  platform?: string;
+  lastSeenAt?: string;
+  active?: boolean;
+}
+
+export interface PresenceInfo {
+  userId: string;
+  devices: PresenceDevice[];
+  hasActiveDevices: boolean;
+}
+
+/**
+ * Rango dentro del clan (lore: Nexo de Resonancia): creator = Forjador, admin = Guardián,
+ * moderator = Vigía, member = Hermano.
+ */
+export type ClanRole = 'creator' | 'admin' | 'moderator' | 'member';
+
+export interface ClanMember {
+  userId: string;
+  displayName: string;
+  handle?: string | null;
+  role: ClanRole;
+  isOnline: boolean;
+  joinedAt: string;
+}
+
+export interface ClanSummary {
+  id: string;
+  name: string;
+  tag: string;
+  description: string;
+  leaderId: string;
+  xp: number;
+  memberCount: number;
+  leader: { userId: string; displayName: string; handle?: string | null };
+  members: ClanMember[];
+}
+
+/** Pockai de un residente del hábitat del clan (misma forma que espera `PetMiniAvatar`). */
+export interface ClanHabitatPet {
+  id: string;
+  nickname: string;
+  species: { id: string; name: string };
+  pattern: { id: string };
+  rarity: string;
+  stage: string;
+  palette: Record<string, string>;
+  visualSeed: number;
+  shiny: boolean;
+  accessories: Record<string, string>;
+  level: number;
+  sleeping: boolean;
+  sick: boolean;
+  hunger: number;
+  happiness: number;
+  energy: number;
+  hygiene: number;
+  health: number;
+}
+
+export interface ClanHabitatResident {
+  userId: string;
+  displayName: string;
+  handle: string | null;
+  role: ClanRole;
+  isMe: boolean;
+  pet: ClanHabitatPet;
+}
+
+/** `GET /v1/clans/:id/habitat`: nivel visual 1–5 y residentes sorteados. */
+export interface ClanHabitat {
+  clanId: string;
+  xp: number;
+  tier: number;
+  tierId: string;
+  nextTierXp: number | null;
+  residents: ClanHabitatResident[];
+}
+
+/** Evento de socket `clan:xp`: el Nexo ganó Resonancia. */
+export interface ClanXpEvent {
+  clanId: string;
+  xp: number;
+  delta: number;
+  tier: number;
+  leveledUp: boolean;
+  byUserId: string;
+}
+
+/** Mensaje del chat de clan (feature 021). */
+export interface ClanMessage {
+  id: string;
+  clanId: string;
+  userId: string;
+  senderName: string;
+  body: string;
+  createdAt: string;
+}
+
+/** Métrica que alimenta el progreso de un objetivo de clan. */
+export type ClanGoalMetric = 'xp' | 'visits' | 'generic' | string;
+
+/** Estado de un objetivo de clan (feature 021). */
+export interface ClanGoal {
+  id: string;
+  clanId: string;
+  title: string;
+  description: string;
+  metric: ClanGoalMetric;
+  target: number;
+  progress: number;
+  status: 'active' | 'completed' | string;
+  createdAt: string;
+  completedAt?: string | null;
+}
+
+// ── Visitas en vivo al hábitat ─────────────────────────────────────────────
+/** Identidad de la mascota de un amigo (suficiente para dibujar su sprite). */
+export interface PetIdentity {
+  petId: string;
+  nickname: string;
+  speciesName: string;
+  speciesId: string;
+  /** Referencia del sprite del backend (p. ej. `sprites/ignisaur_idle`); puede no resolver. */
+  spriteRef: string;
+}
+
+export interface HabitatVisitor {
+  visitorId: string;
+  visitorName: string;
+  visitorHandle?: string | null;
+  pet: PetIdentity;
+  /** Mensaje corto que trae el visitante (≤140), si dejó alguno. */
+  message?: string | null;
+  startedAt: string;
+}
+
+/** Límites de la visita en vivo (deben coincidir con el backend: habitat-visit.service.ts). */
+export const VISIT_MESSAGE_MAX = 140;
+export const VISIT_ENERGY_COST = 10;
 
 // ── Misiones (Paso 3) ─────────────────────────────────────────────────────
 export interface MissionReward {
@@ -1161,6 +1703,60 @@ export interface BondingUnlocks {
   sleepNearCursor: boolean;
 }
 
+// ── Cerebro del Pockai (spec 36) ────────────────────────────────────────────
+// `GET /v1/pets/{id}/mind` no declara esquema de respuesta en OpenAPI: se refleja aquí a mano
+// desde `backend/src/modules/mind/mind.controller.ts`.
+export type MindDimension = 'curiosity' | 'sociability' | 'bravery' | 'affection' | 'temper';
+export type MemoryLayer = 'episodic' | 'semantic' | 'emotional';
+
+export interface MindDimensionView {
+  /** 0-100. */
+  value: number;
+  /** Tramo de 20 puntos (p. ej. `curious`). */
+  keyword: string;
+  /** Nombre del tramo en castellano (p. ej. `Curioso`). */
+  label: string;
+}
+
+export interface MindLifeEntry {
+  id: string;
+  kind: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface PetMind {
+  petId: string;
+  dimensions: Record<MindDimension, MindDimensionView>;
+  legacy: { trait: string; temperament: string };
+  mood: string;
+  bondingTier: string;
+  intelligenceTier: 'chat' | 'memory' | 'agent';
+  memory: { counts: Record<MemoryLayer, number>; capacity: Record<MemoryLayer, number> | null };
+  recentLife: MindLifeEntry[];
+}
+
+export interface PetMemoryItem {
+  id: string;
+  /** fact, summary, habit, event, encounter, relation… */
+  kind: string;
+  /** Recuerdos anteriores a la spec 36 pueden no traerla: se deduce de `kind`. */
+  layer?: string | null;
+  importance?: number;
+  /** -1 (negativo) … 1 (positivo); solo tiene sentido en la capa emocional. */
+  valence?: number | null;
+  subject?: string | null;
+  content: string;
+  createdAt: string;
+}
+
+/** Reacción del Pockai al final de un turno de chat (evento SSE `done`). */
+export interface PetBehavior {
+  action: string;
+  animation: 'idle' | 'happy' | 'sleep';
+  emote: 'heart' | 'sparkle' | 'note' | 'question' | 'tear' | 'zzz' | 'wave' | 'star' | null;
+}
+
 export interface BondingDetail {
   value: number;
   tier: string;
@@ -1177,9 +1773,25 @@ export interface HabitatCatalogRoom {
   name: string;
   gridWidth: number;
   gridHeight: number;
+  /** Celdas sin suelo `[x, y, ancho, fondo]` (forma de la sala). */
+  blocked?: [number, number, number, number][];
   unlockStage: string;
   description: string;
+  theme?: HabitatTheme;
 }
+
+/** Colores de la sala isométrica (habitats.json → theme). */
+export interface HabitatTheme {
+  wall: string;
+  wallShade: string;
+  floor: string;
+  floorAlt: string;
+  trim: string;
+  sky: string;
+  light: string;
+}
+
+export type HabitatInteraction = 'sleep' | 'eat' | 'play' | 'bathe' | 'sit';
 
 export interface HabitatFurniture {
   id: string;
@@ -1189,6 +1801,27 @@ export interface HabitatFurniture {
   currency: 'coins' | 'gems';
   buffs: Record<string, number>;
   description: string;
+  /** Huella [ancho (x), fondo (y)] con rotación 0. */
+  footprint?: [number, number];
+  mount?: 'floor' | 'wall';
+  interaction?: HabitatInteraction;
+}
+
+/** Celda ancla y giro (0–3, pasos de 90°) de un mueble. */
+export interface HabitatPlacement {
+  x: number;
+  y: number;
+  rotation?: number;
+}
+
+export interface HabitatPlaceResult {
+  message: string;
+  furnitureId: string;
+  room: string;
+  itemId: string;
+  x: number;
+  y: number;
+  rotation: number;
 }
 
 export interface HabitatCatalog {
@@ -1202,6 +1835,7 @@ export interface HabitatRoomItem {
   furnitureId: string;
   x: number;
   y: number;
+  rotation: number;
 }
 
 export interface HabitatRoom {
@@ -1210,8 +1844,11 @@ export interface HabitatRoom {
   description: string;
   gridWidth: number;
   gridHeight: number;
+  /** Celdas sin suelo `[x, y, ancho, fondo]` (forma de la sala). Ausente en backends antiguos. */
+  blocked?: [number, number, number, number][];
   unlocked: boolean;
   active: boolean;
+  theme: HabitatTheme | null;
   items: HabitatRoomItem[];
 }
 
@@ -1219,6 +1856,29 @@ export interface HabitatState {
   petId: string;
   habitatSeed: number;
   rooms: HabitatRoom[];
+}
+
+/** Prendas (spec 38). */
+export type AccessorySlotId = 'head' | 'face' | 'neck' | 'back';
+export interface AccessoryEntry {
+  id: string;
+  name: string;
+  description: string;
+  slot: AccessorySlotId;
+  rarity: string;
+  color: string;
+  animated: boolean;
+  fx: string | null;
+  unlock: { type: 'coins' | 'gems' | 'achievement'; price?: number; achievementId?: string; achievementName?: string | null };
+  state: 'locked' | 'available' | 'owned';
+}
+export interface AccessoryCatalog {
+  slots: AccessorySlotId[];
+  accessories: AccessoryEntry[];
+}
+export interface PetAccessories {
+  petId: string;
+  accessories: Partial<Record<AccessorySlotId, string>>;
 }
 
 export interface HabitatBuffs {
@@ -1351,4 +2011,119 @@ export interface TournamentStandings {
   offset: number;
   entries: TournamentStandingsEntry[];
   me: { rank: number; placement: number | null } | null;
+}
+
+// ── Perfil social, logros e insignias ─────────────────────────────────────────
+export type AchievementStatus = 'locked' | 'in_progress' | 'unlocked';
+export type AchievementTier = 'common' | 'rare' | 'epic' | 'legendary';
+
+export interface AchievementReward {
+  coins: number;
+  gems: number;
+  xp: number;
+  itemId: string | null;
+}
+
+export interface Achievement {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  /** Icono lucide (kebab-case) de la insignia. */
+  badgeIcon: string;
+  hidden: boolean;
+  tier: AchievementTier | string;
+  target: number;
+  current: number;
+  status: AchievementStatus;
+  unlockedAt: string | null;
+  claimed: boolean;
+  reward: AchievementReward;
+}
+
+export interface AchievementListResponse {
+  timestamp: string;
+  achievementsPublic: boolean;
+  categories: Record<string, Achievement[]>;
+}
+
+export interface ConstellationStar {
+  id: string;
+  x: number;
+  y: number;
+  status: AchievementStatus;
+  name: string;
+  tier: string;
+}
+
+export interface ConstellationResponse {
+  category: string;
+  name: string;
+  stars: ConstellationStar[];
+  connections: [string, string][];
+}
+
+/** Insignia (logro desbloqueado) en un perfil. */
+export interface ProfileBadge {
+  id: string;
+  name: string;
+  description: string;
+  badgeIcon: string;
+  category: string;
+  tier: AchievementTier | string;
+  unlockedAt: string;
+}
+
+export interface ProfileStats {
+  playMinutes: number;
+  feeds: number;
+  cleans: number;
+  sleeps: number;
+  eggsHatched: number;
+  byRarity: Record<string, number>;
+  shinies: number;
+  habitatVisits: number;
+  friends: number;
+  streakCurrent: number;
+  streakBest: number;
+  proDays: number;
+  coinsSpent?: number;
+  gemsSpent?: number;
+}
+
+export interface ProfilePet {
+  id: string;
+  nickname: string;
+  speciesName: string;
+  element: string;
+  rarity: string;
+  level: number;
+  stage: string;
+  shiny: boolean;
+}
+
+export interface ProfileBase {
+  id: string;
+  displayName: string;
+  handle: string | null;
+  title: string | null;
+  accountXp: number;
+  createdAt: string;
+  isPro: boolean;
+  achievementsPublic: boolean;
+  pet: ProfilePet | null;
+  /** null si el dueño oculta sus insignias y estadísticas. */
+  stats: ProfileStats | null;
+  badges: ProfileBadge[];
+  featuredBadges: string[];
+  achievementCount: { unlocked: number; total: number };
+}
+
+export interface MyProfile extends ProfileBase {
+  proSince: string | null;
+}
+
+export interface PublicProfile extends ProfileBase {
+  isFriend: boolean;
+  isSelf: boolean;
 }

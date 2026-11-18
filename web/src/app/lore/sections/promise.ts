@@ -20,7 +20,8 @@ import { LORE_RARITIES } from '../content';
               Densidad de <span class="hl hl--ember">Compilación</span>
             </h2>
             <p class="lead reveal" i18n="@@lore.rare.lead">
-              La rareza no mide superioridad biológica: mide cuántos siglos de mito quedaron atrapados en el huevo.
+              La rareza no mide superioridad biológica: mide cuántos siglos de mito carga un linaje. Todos los ejemplares de
+              una especie la comparten.
             </p>
 
             <!-- Espectro: cada franja ocupa su probabilidad real. -->
@@ -94,7 +95,8 @@ import { LORE_RARITIES } from '../content';
                 <span class="label-caps promise__kicker" i18n="@@lore.promise.30.t">30 eclosiones</span>
                 <p i18n="@@lore.promise.30.b">
                   Cada huevo común eclosionado con dedicación deja un hilo invisible ligado a tu Santuario. A los 30, los
-                  hilos vibran y el flujo garantiza una Anomalía Resonante (SR).
+                  hilos vibran y el flujo garantiza un linaje de Anomalía Resonante (SR). Si ninguno ha despertado todavía, la
+                  promesa sigue en pie.
                 </p>
               </article>
             </li>
@@ -103,8 +105,8 @@ import { LORE_RARITIES } from '../content';
               <article class="card promise__card">
                 <span class="label-caps promise__kicker" i18n="@@lore.promise.120.t">120 eclosiones</span>
                 <p i18n="@@lore.promise.120.b">
-                  El núcleo del Telar responde a tu devoción y abre una brecha garantizada hacia un Arquetipo Ancestral o
-                  una Singularidad Primordial.
+                  El núcleo del Telar responde a tu devoción y abre una brecha garantizada hacia un linaje de Arquetipo
+                  Ancestral o de Singularidad Primordial. Tu hilo no se pierde: espera a que ese linaje despierte.
                 </p>
               </article>
             </li>

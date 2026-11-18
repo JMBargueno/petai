@@ -229,6 +229,29 @@ export async function validateR2Env(env: Record<string, string | undefined>): Pr
     CLOUDFLARE_R2_REGION: z.string().optional(),
     CDN_BASE_URL: z.string().url('CDN_BASE_URL debe ser una URL válida'),
   });
+  return schema.parse({
+    CLOUDFLARE_R2_ACCESS_KEY_ID: env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+    CLOUDFLARE_R2_SECRET_ACCESS_KEY: env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    CLOUDFLARE_R2_BUCKET: env.CLOUDFLARE_R2_BUCKET,
+    CLOUDFLARE_R2_ENDPOINT: env.CLOUDFLARE_R2_ENDPOINT,
+    CLOUDFLARE_R2_REGION: env.CLOUDFLARE_R2_REGION,
+    CDN_BASE_URL: env.CDN_BASE_URL,
+  }) as R2Env;
+}
+
+/**
+ * URL versionada relativa al `baseUrl` del CDN para una ruta relativa a `shared/`.
+ */
+export function toVersionedUrl(relFromShared: string, hash: string): string {
+  const posix = relFromShared.split(path.sep).join('/');
+  const ext = path.extname(posix);
+  const dir = path.posix.dirname(posix);
+  const base = path.posix.basename(posix, ext);
+  const versioned = versionedName(base, ext, hash);
+  const dirPart = dir === '.' ? '' : dir.replace(/^assets\//, '');
+  return dirPart ? `${dirPart}/${versioned}` : versioned;
+}
+
 // ---------------------------------------------------------------------------
 // Upload a Cloudflare R2 (S3-compatible) y salida local
 // ---------------------------------------------------------------------------
@@ -358,26 +381,4 @@ if (isMainModule) {
     console.error('[build-assets] Error:', (err as Error).message);
     process.exit(1);
   });
-}
-  return schema.parse({
-    CLOUDFLARE_R2_ACCESS_KEY_ID: env.CLOUDFLARE_R2_ACCESS_KEY_ID,
-    CLOUDFLARE_R2_SECRET_ACCESS_KEY: env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
-    CLOUDFLARE_R2_BUCKET: env.CLOUDFLARE_R2_BUCKET,
-    CLOUDFLARE_R2_ENDPOINT: env.CLOUDFLARE_R2_ENDPOINT,
-    CLOUDFLARE_R2_REGION: env.CLOUDFLARE_R2_REGION,
-    CDN_BASE_URL: env.CDN_BASE_URL,
-  }) as R2Env;
-}
-
-/**
- * URL versionada relativa al `baseUrl` del CDN para una ruta relativa a `shared/`.
- */
-export function toVersionedUrl(relFromShared: string, hash: string): string {
-  const posix = relFromShared.split(path.sep).join('/');
-  const ext = path.extname(posix);
-  const dir = path.posix.dirname(posix);
-  const base = path.posix.basename(posix, ext);
-  const versioned = versionedName(base, ext, hash);
-  const dirPart = dir === '.' ? '' : dir.replace(/^assets\//, '');
-  return dirPart ? `${dirPart}/${versioned}` : versioned;
 }

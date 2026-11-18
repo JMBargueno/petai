@@ -3,6 +3,9 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type BattleResponse, type BattleSummary, type CombatProfile, type LeaderboardEntry } from '../lib/api';
   import ReplayViewer from './ReplayViewer.svelte';
+  import { elementMeta } from '../lib/ui/maps';
+  import { Badge, Button, Card, ConfirmDialog, EmptyState, ListRow, Notice, SectionHeader, Segmented, Skeleton } from './ui';
+  import { friendlyError } from '../lib/ui/errors';
 
   export let pet: any = null;
 
@@ -20,7 +23,6 @@
     { id: 'balanced', label: 'Equilibrada' },
     { id: 'defensive', label: 'Defensiva' },
   ];
-  const ELEMENT_ICON: Record<string, string> = { fire: '🔥', water: '💧', plant: '🌿', electric: '⚡', shadow: '🌑', light: '✨' };
   const OUTCOME = { win: 'Victoria', loss: 'Derrota', draw: 'Empate' } as const;
 
   type Skill = { id: string; name: string; element: string; kind: string; power: number; cooldown: number; unlockLevel: number; description?: string };
@@ -68,15 +70,24 @@
     }
   });
 
+  // Errores de carga de cada vista: sin ellos el esqueleto se quedaba para siempre.
+  let profileError = '';
+  let historyError = '';
+  let boardError = '';
+  let savingStrategy = false;
+  let confirmPoints = false;
+
   async function loadProfile() {
     if (!pet) return;
+    profileError = '';
     try {
       profile = await api.getCombatProfile(pet.id);
       draft = {};
       equipDraft = [...profile.equippedSkills];
       error = '';
     } catch (e: any) {
-      error = e.message;
+      if (profile) error = friendlyError(e, 'No se pudo actualizar el perfil de combate.');
+      else profileError = friendlyError(e, 'No se pudo cargar el perfil de combate.');
     }
   }
 
@@ -96,10 +107,11 @@
       error = '';
       dispatch('refreshPet');
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudieron repartir los puntos.');
       await loadProfile();
     } finally {
       busy = false;
+      confirmPoints = false;
     }
   }
 
@@ -116,7 +128,7 @@
       equipDraft = [...profile.equippedSkills];
       error = '';
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudieron guardar las habilidades.');
     } finally {
       busy = false;
     }
@@ -124,13 +136,19 @@
 
   async function changeStrategy(e: Event) {
     if (!pet) return;
-    const value = (e.currentTarget as HTMLSelectElement).value;
+    const select = e.currentTarget as HTMLSelectElement;
+    const value = select.value;
+    savingStrategy = true;
     try {
       await api.setStrategy(pet.id, value);
       if (profile) profile = { ...profile, strategy: value };
       error = '';
     } catch (err: any) {
-      error = err.message;
+      // No se guardó: el desplegable vuelve a la estrategia que sigue activa.
+      select.value = profile?.strategy ?? value;
+      error = friendlyError(err, 'No se pudo cambiar la estrategia.');
+    } finally {
+      savingStrategy = false;
     }
   }
 
@@ -158,12 +176,13 @@
   }
 
   async function loadHistory() {
+    historyError = '';
     try {
       history = await api.getBattles(20);
       historyLoaded = true;
       error = '';
     } catch (e: any) {
-      error = e.message;
+      historyError = friendlyError(e, 'No se pudo cargar el historial.');
     }
   }
 
@@ -175,16 +194,17 @@
       last = null;
       view = 'fight';
     } catch (e: any) {
-      error = e.message;
+      historyError = friendlyError(e, 'No se pudo cargar la repetición.');
     }
   }
 
   async function loadBoard() {
+    boardError = '';
     try {
       board = await api.getLeaderboard(scope, pet?.id);
       error = '';
     } catch (e: any) {
-      error = e.message;
+      boardError = friendlyError(e, 'No se pudo cargar la clasificación.');
     }
   }
 
@@ -203,264 +223,332 @@
   const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 </script>
 
-{#if !pet}
-  <p class="muted">Necesitas una mascota para entrar en la arena. Eclosiona un huevo primero.</p>
-{:else}
-  <div class="seg">
-    <button class:active={view === 'fight'} on:click={() => show('fight')}><Ico n="swords" /> Pelea</button>
-    <button class:active={view === 'history'} on:click={() => show('history')}><Ico n="log" /> Historial</button>
-    <button class:active={view === 'ranking'} on:click={() => show('ranking')}><Ico n="medal" /> Ranking</button>
-  </div>
+<div class="ui-stack">
+  {#if !pet}
+    <EmptyState icon="swords" title="Sin mascota" text="Necesitas una mascota para entrar en la arena. Eclosiona un huevo primero." />
+  {:else}
+    <Segmented
+      value={view}
+      label="Arena"
+      options={[
+        { value: 'fight', label: 'Pelea', icon: 'swords' },
+        { value: 'history', label: 'Historial', icon: 'log' },
+        { value: 'ranking', label: 'Ranking', icon: 'medal' },
+      ]}
+      on:change={(e) => show(e.detail === 'history' ? 'history' : e.detail === 'ranking' ? 'ranking' : 'fight')}
+    />
 
-  {#if error}<p class="error">{error}</p>{/if}
+    {#if error}<Notice tone="error">{error}</Notice>{/if}
 
-  <!-- ======================= PELEA ======================= -->
-  {#if view === 'fight'}
-    {#if profile}
-      <div class="card head">
-        <div>
-          <strong>{ELEMENT_ICON[profile.element] ?? ''} {profile.name}</strong>
-          <small>Nv. {profile.level}</small>
-        </div>
-        <div class="league">
-          <span class="badge">{profile.league.name}</span>
-          <span class="elo">ELO {profile.elo}</span>
-        </div>
-        {#if profile.league.next}
-          <small class="muted-line">{profile.league.toNext} para {profile.league.next.name}</small>
-        {/if}
-        <small class="muted-line">Peleas 24 h: {profile.battlesToday}/{profile.dailyLimit} · Coste: {profile.energyCost} <Ico n="energy" /> · Ánimo ×{profile.mood.toFixed(2)}</small>
-      </div>
-
-      <button class="primary big" disabled={fighting || !profile.canFight} on:click={fight} title={profile.reason ?? ''}>
-        {#if fighting}Buscando rival…{:else}<Ico n="swords" /> Buscar rival{/if}
-      </button>
-      {#if profile.reason}<p class="muted">{profile.reason}</p>{/if}
-
-      {#if last}
-        <div class="card result {last.result.outcome}">
-          <strong>{OUTCOME[last.result.outcome]}</strong>
-          <span>
-            contra {last.opponent.name}{last.opponent.ownerName ? ` (${last.opponent.ownerName})` : ''}
-            {#if last.opponent.isBot}· rival fantasma, no puntúa{/if}
-          </span>
-          <span>
-            ELO {last.elo.before} → {last.elo.after} ({sign(last.elo.delta)}) · {last.elo.league.name}
-          </span>
-          <span>+{last.rewards.xp} XP · +{last.rewards.coins} <Ico n="coin" /> · {sign(last.rewards.happiness)} <Ico n="smile" /> · −{last.rewards.energyCost} <Ico n="energy" /></span>
-        </div>
-      {/if}
-
-      {#if replayLog}
-        <div class="card">
-          <div class="sec-title"><Ico n="replay" /> {replayTitle}</div>
-          <ReplayViewer log={replayLog} {skillNames} />
-        </div>
-      {/if}
-
-      <!-- Estadísticas y puntos -->
-      <div class="card">
-        <div class="sec-title">
-          Estadísticas
-          {#if profile.statPoints > 0}<span class="points">{pointsLeft} puntos por repartir</span>{/if}
-        </div>
-        {#each STATS as s}
-          <div class="stat-row">
-            <span class="lbl"><Ico n={s.icon} /> {s.label}</span>
-            <span class="val">
-              {profile.stats[s.key]}
-              {#if draft[s.key]}<em>+{draft[s.key]}</em>{/if}
-            </span>
-            {#if profile.statPoints > 0}
-              <button class="mini" disabled={!(draft[s.key] > 0)} on:click={() => bump(s.key, -1)}>−</button>
-              <button class="mini" disabled={pointsLeft <= 0} on:click={() => bump(s.key, 1)}>+</button>
-            {/if}
+    <!-- ======================= PELEA ======================= -->
+    {#if view === 'fight'}
+      {#if profile}
+        {@const el = elementMeta(profile.element)}
+        <Card variant="hero">
+          <div class="ui-feature">
+            <span class="ui-feature__icon" style="--feature-tint: {el.color}" aria-hidden="true"><Ico n={el.icon} size={22} /></span>
+            <div class="ui-feature__body">
+              <h3 class="ui-feature__title">{profile.name}</h3>
+              <p class="ui-feature__sub">Nv. {profile.level} · {el.label}</p>
+            </div>
+            <div class="ui-feature__end league">
+              <Badge color="var(--color-sunburst)" icon="trophy">{profile.league.name}</Badge>
+              <strong class="elo">{profile.elo} <small>ELO</small></strong>
+            </div>
           </div>
-        {/each}
-        {#if draftTotal > 0}
-          <button class="primary" disabled={busy} on:click={applyPoints}>Aplicar {draftTotal} puntos</button>
-        {:else if profile.statPoints === 0}
-          <p class="muted">Ganas 3 puntos por nivel para repartir.</p>
+          {#if profile.league.next}
+            <p class="ui-card__hint">{profile.league.toNext} para {profile.league.next.name}</p>
+          {/if}
+          <div class="facts">
+            <Badge size="sm" icon="swords">{profile.battlesToday}/{profile.dailyLimit} hoy</Badge>
+            <Badge size="sm" icon="energy">{profile.energyCost} energía</Badge>
+            <Badge size="sm" icon="smile">ánimo ×{profile.mood.toFixed(2)}</Badge>
+          </div>
+          <Button variant="primary" size="lg" block icon="swords" loading={fighting} disabled={!profile.canFight} title={profile.reason ?? ''} on:click={fight}>
+            {fighting ? 'Buscando rival…' : 'Buscar rival'}
+          </Button>
+          {#if profile.reason}<p class="ui-card__hint center">{profile.reason}</p>{/if}
+        </Card>
+
+        {#if last}
+          <Notice
+            tone={last.result.outcome === 'win' ? 'ok' : last.result.outcome === 'loss' ? 'error' : 'warning'}
+            icon={last.result.outcome === 'win' ? 'trophy' : last.result.outcome === 'loss' ? 'shield' : 'swords'}
+          >
+            <b>{OUTCOME[last.result.outcome]}</b> contra {last.opponent.name}{last.opponent.ownerName ? ' (' + last.opponent.ownerName + ')' : ''}
+            {#if last.opponent.isBot}· rival fantasma, no puntúa{/if}
+            <br />ELO {last.elo.before} → {last.elo.after} ({sign(last.elo.delta)}) · {last.elo.league.name}
+            <br />+{last.rewards.xp} XP · +{last.rewards.coins} <Ico n="coin" /> · {sign(last.rewards.happiness)} <Ico n="smile" /> · −{last.rewards.energyCost} <Ico n="energy" />
+          </Notice>
         {/if}
-      </div>
 
-      <!-- Estrategia y habilidades -->
-      <div class="card">
-        <div class="sec-title">Estrategia</div>
-        <select value={profile.strategy} on:change={changeStrategy}>
-          {#each STRATEGIES as st}<option value={st.id}>{st.label}</option>{/each}
-        </select>
+        {#if replayLog}
+          <Card title={replayTitle} icon="replay">
+            <ReplayViewer log={replayLog} {skillNames} />
+          </Card>
+        {/if}
 
-        <div class="sec-title" style="margin-top:10px">Habilidades ({equipDraft.length}/4)</div>
-        <div class="chips">
-          {#each profile.unlockedSkills as id}
-            {@const sk = skills.find((x) => x.id === id)}
-            {#if sk}
-              <button
-                class="chip"
-                class:on={equipDraft.includes(id)}
-                title={sk.description ?? ''}
-                on:click={() => toggleSkill(id)}
-              >
-                {ELEMENT_ICON[sk.element] ?? '⚪'} {sk.name}
-                <small>{#if sk.kind === 'attack'}{sk.power}{:else if sk.kind === 'heal'}<Ico n="heart" />{:else}<Ico n="shield" />{/if}{#if sk.cooldown} · <Ico n="wait" />{sk.cooldown}{/if}</small>
-              </button>
+        <!-- Estadísticas y puntos -->
+        <Card title="Estadísticas" icon="chart">
+          <svelte:fragment slot="title-end">
+            {#if profile.statPoints > 0}<span class="title-end"><Badge size="sm" tone="warning">{pointsLeft} por repartir</Badge></span>{/if}
+          </svelte:fragment>
+          {#each STATS as s}
+            <div class="stat-row">
+              <span class="lbl"><Ico n={s.icon} /> {s.label}</span>
+              <span class="val">
+                {profile.stats[s.key]}
+                {#if draft[s.key]}<em>+{draft[s.key]}</em>{/if}
+              </span>
+              {#if profile.statPoints > 0}
+                <Button size="sm" iconOnly label="Quitar un punto de {s.label}" disabled={!(draft[s.key] > 0)} on:click={() => bump(s.key, -1)}>−</Button>
+                <Button size="sm" iconOnly label="Añadir un punto a {s.label}" disabled={pointsLeft <= 0} on:click={() => bump(s.key, 1)}>+</Button>
+              {/if}
+            </div>
+          {/each}
+          {#if draftTotal > 0}
+            <Button block loading={busy} on:click={() => (confirmPoints = true)}>Aplicar {draftTotal} {draftTotal === 1 ? 'punto' : 'puntos'}</Button>
+          {:else if profile.statPoints === 0}
+            <p class="ui-card__hint">Ganas 3 puntos por nivel para repartir.</p>
+          {/if}
+        </Card>
+
+        <!-- Estrategia y habilidades -->
+        <Card title="Estrategia" icon="brain">
+          <select class="select" aria-label="Estrategia de combate" aria-busy={savingStrategy || undefined} disabled={savingStrategy} value={profile.strategy} on:change={changeStrategy}>
+            {#each STRATEGIES as st}<option value={st.id}>{st.label}</option>{/each}
+          </select>
+
+          <SectionHeader title="Habilidades" icon="xp" count="{equipDraft.length}/4" />
+          <div class="chips">
+            {#each profile.unlockedSkills as id}
+              {@const sk = skills.find((x) => x.id === id)}
+              {#if sk}
+                {@const se = elementMeta(sk.element)}
+                <button class="skill" class:on={equipDraft.includes(id)} title={sk.description ?? ''} aria-pressed={equipDraft.includes(id)} on:click={() => toggleSkill(id)}>
+                  <span style="color: {se.color}"><Ico n={se.icon} /></span>
+                  {sk.name}
+                  <small>{#if sk.kind === 'attack'}{sk.power}{:else if sk.kind === 'heal'}<Ico n="heart" />{:else}<Ico n="shield" />{/if}{#if sk.cooldown} · <Ico n="wait" />{sk.cooldown}{/if}</small>
+                </button>
+              {/if}
+            {/each}
+          </div>
+          {#if !equipHasAttack}<Notice tone="warning">Equipa al menos un ataque.</Notice>{/if}
+          {#if equipDirty}
+            <Button block loading={busy} disabled={!equipHasAttack || equipDraft.length === 0} on:click={saveSkills}>Guardar habilidades</Button>
+          {/if}
+          {#if skills.length > 0}
+            {@const locked = skills.filter((s) => (s.element === 'neutral' || s.element === profile.element) && s.unlockLevel > profile.level)}
+            {#if locked.length}
+              <p class="ui-card__hint">Próximas habilidades por desbloquear:</p>
+              <div class="chips">
+                {#each locked as sk}
+                  <span
+                    class="skill skill--locked"
+                    title="{sk.description ? sk.description + ' — ' : ''}Requiere Nivel {sk.unlockLevel} (tienes Nivel {profile.level})"
+                  >
+                    <Ico n="lock" /> {sk.name}
+                    <small class="req-lvl">Nv. {sk.unlockLevel}</small>
+                  </span>
+                {/each}
+              </div>
             {/if}
+          {/if}
+        </Card>
+      {:else if profileError}
+        <Notice tone="error">{profileError}
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadProfile}>Reintentar</Button></svelte:fragment>
+        </Notice>
+      {:else}
+        <Skeleton rows={3} height={80} />
+      {/if}
+
+    <!-- ======================= HISTORIAL ======================= -->
+    {:else if view === 'history'}
+      {#if historyError}
+        <Notice tone="error">{historyError}
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadHistory}>Reintentar</Button></svelte:fragment>
+        </Notice>
+      {/if}
+      {#if !historyLoaded}
+        {#if !historyError}<Skeleton rows={4} />{/if}
+      {:else if history.length === 0}
+        <EmptyState icon="swords" text="Aún no hay peleas. ¡Busca tu primer rival!" />
+      {:else}
+        <SectionHeader title="Últimas peleas" icon="log" count={history.length} />
+        <div class="ui-list ui-list--scroll history-list">
+          {#each history as b (b.id)}
+            <button class="ui-row fight-row {b.outcome}" on:click={() => openReplay(b)}>
+              <span class="ui-row__lead outcome" role="img" aria-label={OUTCOME[b.outcome] ?? b.outcome} title={OUTCOME[b.outcome] ?? b.outcome}>{b.outcome === 'win' ? 'V' : b.outcome === 'loss' ? 'D' : 'E'}</span>
+              <span class="ui-row__body">
+                <span class="ui-row__title">{b.role === 'defender' ? 'Te retó ' : 'vs '}{b.opponent.name}</span>
+                <span class="ui-row__sub">Nv. {b.opponent.level}{b.opponent.isBot ? ' · rival fantasma' : ''} · {fmtDate(b.createdAt)}</span>
+              </span>
+              <span class="ui-row__value delta" class:pos={b.eloDelta > 0} class:neg={b.eloDelta < 0}>{b.eloDelta ? sign(b.eloDelta) : '–'}</span>
+            </button>
           {/each}
         </div>
-        {#if !equipHasAttack}<p class="error">Equipa al menos un ataque.</p>{/if}
-        {#if equipDirty}
-          <button class="primary" disabled={busy || !equipHasAttack || equipDraft.length === 0} on:click={saveSkills}>Guardar habilidades</button>
-        {/if}
-        {#if skills.length > 0}
-          {@const locked = skills.filter((s) => (s.element === 'neutral' || s.element === profile.element) && s.unlockLevel > profile.level)}
-          {#if locked.length}
-            <div class="sec-subtitle">Próximas habilidades por desbloquear:</div>
-            <div class="chips locked-chips">
-              {#each locked as sk}
-                <div
-                  class="chip locked-chip"
-                  title="{sk.description ? `${sk.description} — ` : ''}Requiere Nivel {sk.unlockLevel} (tienes Nivel {profile.level})"
-                >
-                  <Ico n="lock" /> {ELEMENT_ICON[sk.element] ?? '⚪'} {sk.name}
-                  <small class="req-lvl">Requiere Nv. {sk.unlockLevel}</small>
-                </div>
-              {/each}
-            </div>
-          {/if}
-        {/if}
-      </div>
-    {:else}
-      <p class="muted">Cargando…</p>
-    {/if}
-
-  <!-- ======================= HISTORIAL ======================= -->
-  {:else if view === 'history'}
-    {#if history.length === 0 && historyLoaded}
-      <p class="muted">Aún no hay peleas. ¡Busca tu primer rival!</p>
-    {/if}
-    {#each history as b (b.id)}
-      <button class="row-btn {b.outcome}" on:click={() => openReplay(b)}>
-        <span class="o">{b.outcome === 'win' ? 'V' : b.outcome === 'loss' ? 'D' : 'E'}</span>
-        <span class="who">
-          <strong>{b.role === 'defender' ? 'Te retó ' : 'vs '}{b.opponent.name}</strong>
-          <small>Nv. {b.opponent.level}{b.opponent.isBot ? ' · bot' : ''} · {fmtDate(b.createdAt)}</small>
-        </span>
-        <span class="delta" class:pos={b.eloDelta > 0} class:neg={b.eloDelta < 0}>{b.eloDelta ? sign(b.eloDelta) : '–'}</span>
-      </button>
-    {/each}
-    {#if history.length > 0}<p class="muted">Pulsa una pelea para ver su repetición.</p>{/if}
-
-  <!-- ======================= RANKING ======================= -->
-  {:else}
-    <div class="seg small">
-      <button class:active={scope === 'global'} on:click={() => setScope('global')}>Global (ELO)</button>
-      <button class:active={scope === 'weekly'} on:click={() => setScope('weekly')}>Semanal</button>
-    </div>
-    {#if board}
-      {#if board.me}
-        <p class="mine-line">Tu mascota: puesto <strong>#{board.me.rank}</strong> · {board.me.score} {scope === 'global' ? 'ELO' : 'pts'}</p>
-      {:else}
-        <p class="muted">Tu mascota aún no figura: ¡pelea para entrar!</p>
+        <p class="ui-card__hint center">Pulsa una pelea para ver su repetición.</p>
       {/if}
-      {#each board.entries as e (e.petId)}
-        <div class="lb-row" class:me={e.mine}>
-          <span class="rk">{e.rank}</span>
-          <span class="who">
-            <strong>{e.name}</strong>
-            <small>{e.owner ?? 'Anónimo'} · Nv. {e.level} · {e.league}</small>
-          </span>
-          <span class="score">{e.score}{scope === 'global' ? '' : ' pts'}</span>
-        </div>
-      {/each}
-      {#if board.entries.length === 0}<p class="muted">Todavía no hay peleas en esta clasificación.</p>{/if}
+
+    <!-- ======================= RANKING ======================= -->
     {:else}
-      <p class="muted">Cargando…</p>
+      <Segmented
+        variant="pills"
+        value={scope}
+        label="Clasificación"
+        options={[
+          { value: 'global', label: 'Global (ELO)' },
+          { value: 'weekly', label: 'Semanal' },
+        ]}
+        on:change={(e) => setScope(e.detail === 'weekly' ? 'weekly' : 'global')}
+      />
+      {#if board}
+        {#if board.me}
+          <Notice tone="info" icon="medal">Tu mascota: puesto <strong>#{board.me.rank}</strong> · {board.me.score} {scope === 'global' ? 'ELO' : 'pts'}</Notice>
+        {:else}
+          <Notice tone="info">Tu mascota aún no figura: ¡pelea para entrar!</Notice>
+        {/if}
+        <div class="ui-list">
+          {#each board.entries as e (e.petId)}
+            <ListRow rank={e.rank} highlight={e.mine} title={e.name} sub="{e.owner ?? 'Anónimo'} · Nv. {e.level} · {e.league}" value="{e.score}{scope === 'global' ? '' : ' pts'}" />
+          {:else}
+            <EmptyState compact icon="medal" text="Todavía no hay peleas en esta clasificación." />
+          {/each}
+        </div>
+      {:else if boardError}
+        <Notice tone="error">{boardError}
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadBoard}>Reintentar</Button></svelte:fragment>
+        </Notice>
+      {:else}
+        <Skeleton rows={5} />
+      {/if}
     {/if}
   {/if}
-{/if}
+
+  {#if confirmPoints}
+    <ConfirmDialog title="Repartir puntos" icon="chart" confirmLabel="Aplicar" loading={busy} on:confirm={applyPoints} on:cancel={() => (confirmPoints = false)}>
+      <p>Vas a repartir <strong>{draftTotal} {draftTotal === 1 ? 'punto' : 'puntos'}</strong>. Una vez aplicados no se pueden mover a otra estadística.</p>
+    </ConfirmDialog>
+  {/if}
+</div>
 
 <style>
-  .muted { font-size: 12px; opacity: 0.7; margin: 6px 0; }
-  .error { color: var(--danger-ink); font-size: 12px; margin: 6px 0; }
-  .seg { display: flex; gap: 4px; margin-bottom: 8px; }
-  .seg button {
-    flex: 1; padding: 6px 4px; font-size: 12px; border-radius: var(--radius-2xl); cursor: pointer; color: inherit;
-    background: var(--surface-2); border: 1px solid var(--line-soft);
+  .history-list {
+    max-height: 360px;
   }
-  .seg button.active { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); border-color: var(--accent); }
-  .seg.small button { font-size: 11px; padding: 4px; }
-  .card {
-    padding: 10px; margin-bottom: 8px; border-radius: var(--radius-2xl); font-size: 13px;
-    background: var(--surface-2); border: 1px solid var(--line-soft);
-    display: flex; flex-direction: column; gap: 6px;
+  .center {
+    text-align: center;
   }
-  .head { gap: 3px; }
-  .head > div:first-child { display: flex; justify-content: space-between; align-items: baseline; }
-  .league { display: flex; gap: 8px; align-items: center; }
-  .badge { background: color-mix(in srgb, var(--color-sunburst) 20%, var(--surface)); border: 1px solid var(--color-sunburst); border-radius: var(--radius-2xl); padding: 1px 8px; font-size: 12px; font-weight: 700; }
-  .elo { font-weight: 700; }
-  .muted-line { opacity: 0.65; font-size: 11px; }
-  .primary {
-    padding: 8px 12px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700;
-    background: var(--accent); color: var(--on-color);
+  .title-end {
+    margin-left: auto;
   }
-  .primary.big { width: 100%; padding: 11px; font-size: 14px; margin-bottom: 8px; }
-  .primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .result { gap: 3px; }
-  .result.win { border-color: var(--success); background: color-mix(in srgb, var(--success) 10%, var(--surface)); }
-  .result.loss { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--surface)); }
-  .result.draw { border-color: var(--color-sunburst); background: color-mix(in srgb, var(--color-sunburst) 10%, var(--surface)); }
-  .sec-title { font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-  .points { font-size: 11px; color: var(--warning-ink); font-weight: 600; }
-  .stat-row { display: flex; align-items: center; gap: 6px; }
-  .stat-row .lbl { flex: 1; }
-  .stat-row .val { min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
-  .stat-row em { color: var(--success-ink); font-style: normal; margin-left: 3px; }
-  .mini {
-    width: 24px; height: 24px; border-radius: var(--radius-2xl); cursor: pointer; color: inherit; line-height: 1;
-    background: var(--surface-2); border: 1px solid var(--line-soft);
+  .league {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
   }
-  .mini:disabled { opacity: 0.35; cursor: not-allowed; }
-  select {
-    background: var(--surface-2); color: inherit; border: 1px solid var(--line-soft);
-    border-radius: var(--radius-2xl); padding: 6px 8px; font: inherit;
+  .elo {
+    font-size: var(--text-body);
+    font-variant-numeric: tabular-nums;
   }
-  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
-  .chip {
-    padding: 4px 8px; border-radius: var(--radius-2xl); font-size: 12px; cursor: pointer; color: inherit;
-    background: var(--surface-2); border: 1px solid var(--line-soft);
+  .elo small {
+    font-size: var(--text-caption);
+    color: var(--ink-muted);
   }
-  .chip small { opacity: 0.6; margin-left: 3px; }
-  .chip.on { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); border-color: var(--accent); }
-  .sec-subtitle { font-size: 11.5px; color: var(--muted-ink); margin-top: 10px; margin-bottom: 2px; }
-  .locked-chip {
-    opacity: 0.6;
-    background: var(--surface-1);
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  .stat-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-label);
+  }
+  .stat-row .lbl {
+    flex: 1;
+  }
+  .stat-row .val {
+    min-width: 54px;
+    text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-row em {
+    margin-left: 3px;
+    color: var(--success-ink);
+    font-style: normal;
+  }
+  .stat-row :global(.btn--icon) {
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  .skill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-pills);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .skill small {
+    color: var(--ink-muted);
+  }
+  .skill.on {
+    border-color: var(--line);
+    background: color-mix(in srgb, var(--view-tint) 35%, var(--surface));
+    box-shadow: 1px 2px 0 var(--line);
+  }
+  .skill--locked {
     border-style: dashed;
+    color: var(--ink-muted);
     cursor: help;
   }
-  .locked-chip .req-lvl {
+  .skill--locked .req-lvl {
     color: var(--warning-ink);
-    font-weight: 600;
+    font-weight: 700;
   }
-  .row-btn, .lb-row {
-    display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 9px; margin-bottom: 5px; border-radius: var(--radius-2xl);
-    background: var(--surface-2); border: 1px solid var(--line-soft); color: inherit; text-align: left; font-size: 13px;
+  .fight-row {
+    width: 100%;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
-  .row-btn { cursor: pointer; }
-  .row-btn:hover { background: var(--surface-2); }
-  .row-btn.win { border-left: 3px solid var(--success); }
-  .row-btn.loss { border-left: 3px solid var(--danger); }
-  .row-btn.draw { border-left: 3px solid #facc15; }
-  .who { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  .who strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .who small { opacity: 0.6; font-size: 11px; }
-  .delta { font-weight: 700; min-width: 34px; text-align: right; }
-  .delta.pos { color: var(--success-ink); }
-  .delta.neg { color: var(--danger-ink); }
-  .lb-row.me { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
-  .rk { width: 26px; text-align: center; font-weight: 700; }
-  .score { font-weight: 700; font-variant-numeric: tabular-nums; }
-  .mine-line { font-size: 12px; margin: 4px 0 8px; }
+  .outcome {
+    font-weight: 800;
+    font-size: var(--text-label);
+    border: 1px solid var(--line);
+  }
+  .fight-row.win .outcome {
+    background: var(--success);
+    color: var(--on-color);
+  }
+  .fight-row.loss .outcome {
+    background: var(--danger);
+    color: var(--on-color);
+  }
+  .fight-row.draw .outcome {
+    background: var(--warning);
+    color: var(--on-color);
+  }
+  .delta.pos {
+    color: var(--success-ink);
+  }
+  .delta.neg {
+    color: var(--danger-ink);
+  }
 </style>

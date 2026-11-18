@@ -1,6 +1,7 @@
 import { cleanText } from './memory';
 import { isPrivateAddress } from './ssrf';
 import { isIP } from 'net';
+import { DESKTOP_SKILL_IDS, getDesktopSkill } from './desktop-skills';
 
 /**
  * Definiciones y validación de las herramientas del agente (intelligence >= 500).
@@ -87,6 +88,25 @@ export const TOOLS: ToolSpec[] = [
         return { ok: false, error: 'query debe ser un texto de al menos 2 caracteres' };
       }
       return { ok: true, args: { query: cleanText(q, 100) } };
+    },
+  },
+  {
+    name: 'get_lore',
+    description:
+      'Consulta lo que sabes de tu mundo, el Éter Digital: el origen de los huevos, las rarezas, los patrones, los elementos, el Despertar, el Coliseo, los Nexos (clanes)… Úsala cuando el entrenador pregunte por el universo de Pockai.',
+    parameters: {
+      type: 'object',
+      properties: { topic: { type: 'string', description: 'Sobre qué quieres saber, p. ej. «origen de los huevos», «elementos» o «clanes»' } },
+      required: ['topic'],
+      additionalProperties: false,
+    },
+    requiresConfirmation: false,
+    validate(raw) {
+      const t = (raw as any)?.topic;
+      if (typeof t !== 'string' || cleanText(t, 60).length < 2) {
+        return { ok: false, error: 'topic debe ser un texto de al menos 2 caracteres' };
+      }
+      return { ok: true, args: { topic: cleanText(t, 60) } };
     },
   },
   {
@@ -201,7 +221,107 @@ TOOLS.push(
   },
 );
 
-export const CLIENT_TOOL_NAMES = TOOLS.filter((t) => t.clientSide).map((t) => t.name);
+// ---------- Herramientas sobre la propia mascota (siempre con confirmación) ----------
+// set_in_habitat la ejecuta el servidor; el resto, la app de escritorio.
+// El servidor valida los argumentos; AgentService comprueba además el estado de la mascota
+// (habilidad desbloqueada, Pomodoro activo…) antes de proponer la tarjeta.
+
+export const MIN_POMODORO_MINUTES = 5;
+export const MAX_POMODORO_MINUTES = 120;
+export const MAX_BREAK_MINUTES = 30;
+
+const intArg = (v: unknown, min: number, max: number): number | undefined =>
+  typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : undefined;
+
+TOOLS.push(
+  {
+    name: 'toggle_desktop_skill',
+    description:
+      'Activa o desactiva una de tus habilidades de escritorio. REQUIERE la confirmación del entrenador. Solo puedes activar habilidades ya desbloqueadas.',
+    parameters: {
+      type: 'object',
+      properties: {
+        skill_id: { type: 'string', enum: DESKTOP_SKILL_IDS, description: 'Id de la habilidad' },
+        enabled: { type: 'boolean', description: 'true para activarla, false para desactivarla' },
+      },
+      required: ['skill_id', 'enabled'],
+      additionalProperties: false,
+    },
+    requiresConfirmation: true,
+    clientSide: true,
+    validate(raw) {
+      const a = raw as any;
+      if (!a || typeof a.skill_id !== 'string' || !getDesktopSkill(a.skill_id)) {
+        return { ok: false, error: `skill_id debe ser uno de: ${DESKTOP_SKILL_IDS.join(', ')}` };
+      }
+      if (typeof a.enabled !== 'boolean') return { ok: false, error: 'enabled debe ser true o false' };
+      return { ok: true, args: { skill_id: a.skill_id, enabled: a.enabled } };
+    },
+    describe(args: { skill_id: string; enabled: boolean }) {
+      const skill = getDesktopSkill(args.skill_id)!;
+      const base = `${args.enabled ? 'Activar' : 'Desactivar'} la habilidad «${skill.name}»`;
+      return args.enabled && skill.sensitive ? `${base} (usa un permiso del sistema: revisa Mascota → Habilidades)` : base;
+    },
+  },
+  {
+    name: 'start_pomodoro',
+    description: `Inicia un temporizador Pomodoro de foco en el escritorio. REQUIERE confirmación. Minutos de foco entre ${MIN_POMODORO_MINUTES} y ${MAX_POMODORO_MINUTES} (por defecto 25) y de descanso entre 1 y ${MAX_BREAK_MINUTES} (por defecto 5).`,
+    parameters: {
+      type: 'object',
+      properties: {
+        work_minutes: { type: 'integer', minimum: MIN_POMODORO_MINUTES, maximum: MAX_POMODORO_MINUTES },
+        break_minutes: { type: 'integer', minimum: 1, maximum: MAX_BREAK_MINUTES },
+      },
+      additionalProperties: false,
+    },
+    requiresConfirmation: true,
+    clientSide: true,
+    validate(raw) {
+      const a = (raw ?? {}) as any;
+      if (typeof a !== 'object' || Array.isArray(a)) return { ok: false, error: 'Argumentos no válidos' };
+      const work = a.work_minutes === undefined ? 25 : intArg(a.work_minutes, MIN_POMODORO_MINUTES, MAX_POMODORO_MINUTES);
+      const rest = a.break_minutes === undefined ? 5 : intArg(a.break_minutes, 1, MAX_BREAK_MINUTES);
+      if (work === undefined) return { ok: false, error: `work_minutes debe ser un entero entre ${MIN_POMODORO_MINUTES} y ${MAX_POMODORO_MINUTES}` };
+      if (rest === undefined) return { ok: false, error: `break_minutes debe ser un entero entre 1 y ${MAX_BREAK_MINUTES}` };
+      return { ok: true, args: { work_minutes: work, break_minutes: rest } };
+    },
+    describe(args: { work_minutes: number; break_minutes: number }) {
+      return `Empezar un Pomodoro de ${args.work_minutes} min de foco y ${args.break_minutes} min de descanso`;
+    },
+  },
+  {
+    name: 'stop_pomodoro',
+    description: 'Detiene el Pomodoro en curso en el escritorio. REQUIERE confirmación.',
+    parameters: noArgs,
+    requiresConfirmation: true,
+    clientSide: true,
+    validate: acceptNoArgs,
+    describe() {
+      return 'Detener el Pomodoro en curso';
+    },
+  },
+  {
+    name: 'set_in_habitat',
+    description:
+      'Vete a tu casita (hábitat) a descansar o sal de ella al escritorio. REQUIERE confirmación. in_habitat=true para entrar, false para salir.',
+    parameters: {
+      type: 'object',
+      properties: { in_habitat: { type: 'boolean' } },
+      required: ['in_habitat'],
+      additionalProperties: false,
+    },
+    requiresConfirmation: true,
+    validate(raw) {
+      const v = (raw as any)?.in_habitat;
+      return typeof v === 'boolean' ? { ok: true, args: { in_habitat: v } } : { ok: false, error: 'in_habitat debe ser true o false' };
+    },
+    describe(args: { in_habitat: boolean }) {
+      return args.in_habitat ? 'Mandar a tu mascota a su casita a descansar' : 'Sacar a tu mascota de su casita al escritorio';
+    },
+  },
+);
+
+export const CLIENT_TOOL_NAMES =TOOLS.filter((t) => t.clientSide).map((t) => t.name);
 
 /** Interpreta la lista de herramientas de cliente que declara la app: solo nombres conocidos. */
 export function sanitizeClientTools(raw: unknown): string[] {

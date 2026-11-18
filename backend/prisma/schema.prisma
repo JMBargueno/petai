@@ -14,7 +14,10 @@ model User {
   // Rol de autorización (RBAC). Los permisos de cada rol viven en código: src/modules/authz/permissions.ts
   role         String         @default("user") // superadmin | admin | moderator | user
   displayName  String?
-  title       String?        // Título competitivo de la arena (premio de fin de temporada por liga)
+  // Nickname público (@handle): único, en minúsculas, sin '@' e INMUTABLE una vez fijado (lo garantiza
+  // un trigger de la migración 20261117000000_user_handle). null = la cuenta aún debe elegirlo.
+  handle       String?        @unique
+  title      String?        // Título competitivo de la arena (premio de fin de temporada por liga)
   timezone     String         @default("UTC")
   // Coordenadas opt-in para el clima (privacidad): se guardan redondeadas y solo las usa el servidor.
   latitude     Float?
@@ -28,16 +31,26 @@ model User {
   coins        Int            @default(100)
   gems         Int            @default(5)
   accountXp    Int            @default(0)
+  stripeCustomerId String?    @unique
+  emailVerifiedAt  DateTime?
+  // Baja de los correos informativos del panel (segmentos). Los transaccionales se envían siempre.
+  emailOptOutAt    DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
   refreshTokens  RefreshToken[]
+  subscriptions  Subscription[]
   deviceLinks    DeviceLink[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  emailCampaigns   EmailCampaign[]
   // Invitaciones de registro: códigos creados por este admin y el canje con el que se registró.
   invitesCreated   InviteCode[]       @relation("InviteCreatedBy")
   inviteRedemption InviteRedemption?
   pets           Pet[]
+  // Pockai activo que el jugador ha elegido (el de su escritorio). Sin FK a propósito: si la
+  // mascota ya no existe o no es suya, se usa la más antigua (pets/active-pet.ts).
+  activePetId    String?
   eggs           Egg[]
   inventory      InventoryItem[]
   pityCounter    PityCounter?
@@ -50,8 +63,13 @@ model User {
   chests         Chest[]
   chestPity      ChestPity[]
    achievements   Achievement[]
-   // Opt-in de visibilidad pública de logros (feature 008): por defecto false (privacidad por defecto).
-   achievementsPublic Boolean @default(false)
+   // Visibilidad pública de logros/insignias en el perfil. Por defecto true: las insignias se ven en
+   // el perfil público y el usuario puede ocultarlas (en feature 008 era opt-in).
+   achievementsPublic Boolean @default(true)
+   // Insignias destacadas en la vitrina del perfil (máx. 3 ids de logros desbloqueados).
+   featuredBadges String[] @default([])
+   // Estadísticas acumuladas (comidas, tiempo de juego, rachas, gasto...) del perfil y los logros.
+   stats          UserStat[]
   // Feature 011: Temporadas
   seasonPasses     SeasonPass[]
   seasonProgress   SeasonProgress[]
@@ -108,11 +126,66 @@ model PasswordResetToken {
   @@index([email])
 }
 
+// Verificación de correo: un código de 6 dígitos (para la app) y un token largo (enlace a la web),
+// ambos guardados como sha256. Un único token vivo por usuario; `attempts` limita los intentos con
+// código y `consumedAt` marca el uso. Al canjearlo se rellena User.emailVerifiedAt.
+model EmailVerificationToken {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email         String
+  codeHash      String
+  linkTokenHash String    @unique
+  attempts      Int       @default(0)
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Envíos de correo desde el panel de administración. `html` es el cuerpo libre que escribe el staff
+// (se envuelve en la plantilla de marca al enviar) y `audience` el destinatario: usuarios concretos,
+// lista de correos o segmento. Lo procesa la cola email-campaigns por lotes (`cursor` = último
+// destinatario procesado, para reanudar tras un reinicio).
+model EmailCampaign {
+  id          String    @id @default(uuid())
+  subject     String
+  preheader   String?
+  html        String
+  audience    Json
+  status      String    @default("queued") // queued | sending | sent | failed
+  total       Int       @default(0)
+  sent        Int       @default(0)
+  failed      Int       @default(0)
+  cursor      String?
+  lastError   String?
+  createdById String?
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+
+  @@index([createdAt])
+}
+
 // Ajustes globales de la app (una sola fila, id = 1). Editables desde el panel admin.
 model AppSettings {
   id                     Int      @id @default(1)
   // Si está activo, el registro exige un código de invitación válido.
   registrationInviteOnly Boolean  @default(false)
+  // Landing "Coming soon": tapa toda la web a quien no tenga sesión con el correo verificado.
+  comingSoonEnabled          Boolean   @default(false)
+  // Cuenta atrás de la landing (solo se muestra si está activa y hay fecha futura).
+  comingSoonCountdownEnabled Boolean   @default(false)
+  comingSoonLaunchAt         DateTime?
+  // Modo mantenimiento manual: bloquea la web y/o las apps salvo admins, login y contacto.
+  maintenanceEnabled         Boolean   @default(false)
+  // Alcance: 'web' | 'apps' | 'all' (validado en site.schemas.ts).
+  maintenanceScope           String    @default("all")
+  // Mensaje opcional para los usuarios (vacío = texto por defecto de cada cliente).
+  maintenanceMessageEs       String?
+  maintenanceMessageEn       String?
   updatedAt              DateTime @updatedAt
 }
 
@@ -163,7 +236,8 @@ model Pattern {
   id          String   @id
   name        String
   description String
-  minRarity   String
+  /// Rareza del patrón: se tira por ejemplar, aparte de la rareza de su especie.
+  rarity      String
 
   pets        Pet[]
 }
@@ -219,7 +293,12 @@ model Pet {
   awakened      Boolean   @default(false)
   personality   Json?
   desktopSkills Json?     @default("{}")
+  /// Prendas equipadas por ranura (spec 38): { head, face, neck, back }, cada una un itemId o ausente.
+  accessories   Json      @default("{}")
   inHabitat     Boolean   @default(false)
+  /// Vida autónoma (spec 36): último intervalo simulado (índice absoluto = epoch / intervalo).
+  /// Cursor propio, independiente de lastTickAt: la simulación es determinista por (pet, índice).
+  autonomyCursor Int?
 
   lastTickAt    DateTime  @default(now())
   createdAt     DateTime  @default(now())
@@ -240,6 +319,7 @@ model Pet {
 
   chatMessages  ChatMessage[]
   memories      PetMemory[]
+  contextProfile PetContextProfile?
   reminders     Reminder[]
   pendingActions PendingAction[]
   minigames     MinigameSession[]
@@ -382,11 +462,36 @@ model PetMemory {
   id        String   @id @default(uuid())
   petId     String
   pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
-  kind      String   // fact | summary
+  kind      String   // fact | summary | habit | event | encounter | relation | ...
+  /// Capa de memoria (spec 36): episodic (acontecimientos) | semantic (conocimiento) | emotional (relaciones)
+  layer     String   @default("semantic")
   content   String
+  /// Clave estable de hábitos (habit:coding_time…) y relaciones (emo:owner, emo:pet:<id>…): upsert, no se acumulan
+  key       String?
+  /// 0-1: cuánto importa el recuerdo (decide qué se olvida al llenarse la capacidad)
+  importance Float   @default(0.5)
+  /// -1..1: valoración emocional simulada (sobre todo en la capa emotional)
+  valence   Float    @default(0)
+  /// Sujeto del recuerdo: owner | user:<id> | pet:<id> (null = general)
+  subject   String?
+  /// Última vez que se usó en un prompt (refuerza la retención)
+  lastRecalledAt DateTime?
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
+  @@unique([petId, key])
   @@index([petId, createdAt])
+  @@index([petId, layer])
+}
+
+/// Perfil de hábitos de escritorio (una fila por mascota, tamaño fijo). Se alimenta con un
+/// resumen diario del escritorio (solo categorías y minutos) y decae con el tiempo.
+model PetContextProfile {
+  petId        String   @id
+  pet          Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  data         Json
+  lastDigestAt DateTime
+  updatedAt    DateTime @updatedAt
 }
 
 model Reminder {
@@ -510,6 +615,18 @@ model Achievement {
   @@index([userId])
 }
 
+/// Estadística acumulada por usuario (clave/valor). Fuente única del progreso de los logros de tipo
+/// `stat` y de los datos del perfil. Claves: ver `backend/src/stats/stat-keys.ts`.
+model UserStat {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, key])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 010: Hábitat / Base Personalizable
 // ─────────────────────────────────────────────────────────────────────────────
@@ -532,12 +649,16 @@ model HabitatItem {
   habitatId   String
   furnitureId String
   roomId      String
+  /// Celda ancla (vértice superior de la huella en la vista isométrica).
   x           Int
   y           Int
+  /// Giro en pasos de 90° (0–3). Con 1 y 3 la huella [ancho, fondo] se intercambia.
+  rotation    Int      @default(0)
   purchasedAt DateTime @default(now())
   habitat     Habitat  @relation(fields: [habitatId], references: [id], onDelete: Cascade)
 
-  @@unique([petId, x, y, roomId])
+  // Sin @@unique por celda: un mueble ocupa varias celdas y los de pared no ocupan suelo. Las
+  // colisiones las valida HabitatService (con bloqueo de fila del hábitat).
   @@index([petId, roomId])
 }
 
@@ -924,6 +1045,87 @@ model CoopVisit {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Clanes + Visita en vivo del habitat
+// (patrón CoopFriendship: ids String planos, SIN relación a `User`)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Clan {
+  id          String            @id @default(uuid())
+  name        String
+  tag         String
+  description String?
+  leaderId    String
+  xp          Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  members     ClanMembership[]
+  messages    ClanMessage[]
+  goals       ClanGoal[]
+
+  @@unique([tag])
+  @@index([leaderId])
+}
+
+model ClanMembership {
+  id       String   @id @default(uuid())
+  clanId   String
+  userId   String
+  role     String   @default("member") // creator (Forjador) | admin (Guardián) | moderator (Vigía) | member (Hermano)
+  joinedAt DateTime @default(now())
+  clan     Clan     @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  @@unique([userId]) // un clan activo por usuario
+  @@index([clanId])
+}
+
+// Chat del clan: mensajes internos (userId String plano, sin relación a `User`).
+model ClanMessage {
+  id        String   @id @default(uuid())
+  clanId    String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+  clan      Clan     @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  @@index([clanId, createdAt])
+}
+
+// Metas / objetivos compartidos del clan con progreso y métrica (xp | visits | generic).
+model ClanGoal {
+  id          String    @id @default(uuid())
+  clanId      String
+  title       String
+  description String?
+  metric      String    @default("generic")
+  target      Int
+  progress    Int       @default(0)
+  status      String    @default("active") // active | completed
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  clan        Clan      @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  @@index([clanId, status])
+}
+
+// Visita "en vivo": el pet del visitante aparece en el habitat del dueño en tiempo real.
+model HabitatVisit {
+  id        String    @id @default(uuid())
+  visitorId String
+  ownerId   String
+  petId     String
+  status    String    @default("active") // active | ended
+  message   String?   // mensaje corto opcional del visitante (≤140)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([ownerId, status])
+  @@index([visitorId, status])
+  @@index([visitorId, startedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Feature 022: Offline-First CRDT Sync
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1302,3 +1504,51 @@ model GroupSession {
   @@index([hostId])
   @@index([status, expiresAt])
 }
+
+// Spec-34: IA Gestionada (Pockai AI) + Suscripción Pro
+model Subscription {
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source            String    // stripe | google_play
+  externalId        String    // sub_xxx (Stripe) | purchaseToken (Play)
+  productId         String    // price_xxx | pockai_pro_monthly
+  plan              String    @default("pro")
+  status            String    // active | trialing | past_due | canceled | expired | revoked
+  currentPeriodEnd  DateTime
+  cancelAtPeriodEnd Boolean   @default(false)
+  graceUntil        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([source, externalId])
+  @@index([userId, status])
+}
+
+/// Idempotencia y auditoría de eventos de pago (webhooks Stripe, RTDN Play).
+model BillingEvent {
+  id          String   @id @default(uuid())
+  source      String   // stripe | google_play
+  eventId     String   // evt_xxx | messageId de Pub/Sub
+  type        String
+  userId      String?
+  payloadHash String   // SHA-256; nunca se guarda el payload con datos de tarjeta
+  processedAt DateTime @default(now())
+
+  @@unique([source, eventId])
+}
+
+/// Configuración versionada de precios y límites de IA/facturación (solo superadmin).
+model BillingConfig {
+  id             String   @id @default(uuid())
+  version        Int      @unique
+  active         Boolean  @default(false)
+  data           Json     // validado con billing-config.schema.ts
+  stripePriceIds Json?    // { "usd": "price_…", "eur": "price_…" }
+  createdById    String
+  note           String?  // motivo del cambio
+  createdAt      DateTime @default(now())
+
+  @@index([active])
+}
+

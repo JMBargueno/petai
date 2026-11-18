@@ -41,6 +41,9 @@ skillAuthorizations.subscribe((val) => {
   saveAuthorizations(val);
 });
 
+/** true si el último cambio no se pudo guardar en el servidor (en este equipo sí queda guardado). */
+export const skillSyncFailed = writable(false);
+
 export function syncSkillsFromBackend(backendSkills?: Record<string, boolean> | null) {
   if (!backendSkills || typeof backendSkills !== 'object') return;
   skillAuthorizations.update((current) => ({
@@ -56,9 +59,13 @@ export function toggleSkillAuthorization(skillId: string, petId?: string) {
 
     // Sincronizar de forma asíncrona con el backend si hay una mascota activa
     if (petId) {
-      api.updateDesktopSkills(petId, updated).catch((err) => {
-        console.warn('[desktopSkillsStore] Error sincronizando habilidades con backend:', err);
-      });
+      api
+        .updateDesktopSkills(petId, updated)
+        .then(() => skillSyncFailed.set(false))
+        .catch((err) => {
+          console.warn('[desktopSkillsStore] Error sincronizando habilidades con backend:', err);
+          skillSyncFailed.set(true);
+        });
     }
 
     return updated;

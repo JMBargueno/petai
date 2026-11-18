@@ -31,8 +31,8 @@ const defParts = (body: string) => {
               <div>
                 <h3 i18n="@@lore.appear.basic.t">Mimesis Terrestre</h3>
                 <p i18n="@@lore.appear.basic">
-                  Los recién nacidos de densidad común imitan la naturaleza que ven a través de la cámara de su Custodio:
-                  pelaje, hojas, horizontes.
+                  Un huevo que se cierra cerca de la superficie imita la naturaleza que ve a través de la cámara de su
+                  Custodio: pelaje, hojas, horizontes.
                 </p>
               </div>
             </header>
@@ -46,7 +46,7 @@ const defParts = (body: string) => {
                   </span>
                   <span>
                     <strong>{{ p.name }}</strong>
-                    <small>{{ p.minRarity }}+</small>
+                    <small>{{ p.rarity }}</small>
                   </span>
                 </li>
               }
@@ -59,8 +59,8 @@ const defParts = (body: string) => {
               <div>
                 <h3 i18n="@@lore.appear.sup.t">Textura del Éter</h3>
                 <p i18n="@@lore.appear.sup">
-                  Desde Super-raro en adelante, el cuerpo deja de imitar el mundo físico y muestra la textura real del Éter
-                  Digital.
+                  Cuando el huevo se cierra en lo hondo, el cuerpo deja de imitar el mundo físico y muestra la textura real
+                  del Éter Digital. Le puede pasar a cualquier linaje, también al más común.
                 </p>
               </div>
             </header>
@@ -74,7 +74,7 @@ const defParts = (body: string) => {
                   </span>
                   <span>
                     <strong>{{ p.name }}</strong>
-                    <small>{{ p.minRarity }}+</small>
+                    <small>{{ p.rarity }}</small>
                   </span>
                 </li>
               }

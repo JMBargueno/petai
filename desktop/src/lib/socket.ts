@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { API_BASE_URL, getAccessToken, onTokenRenewed, renewAccessToken } from './api';
+import { enterMaintenance } from './maintenance';
 
 let socket: Socket | null = null;
 /** Token enviado en el último handshake. */
@@ -36,6 +37,41 @@ async function recover(s: Socket) {
   if (token && s === socket && !s.active) s.connect();
 }
 
+/** Clave de localStorage donde persistimos el id estable del dispositivo. */
+const DEVICE_ID_KEY = 'petai.deviceId';
+
+/** Genera un id único: usa `crypto.randomUUID()` si está disponible, con fallback simple. */
+function randomDeviceId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback sin crypto.randomUUID: marca de tiempo + aleatorio base36.
+  return `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Devuelve el id estable del dispositivo. Lee el valor persistido en
+ * `localStorage` bajo `petai.deviceId`; si no existe, genera uno y lo guarda.
+ * Se protege contra entornos sin `window` (SSR/pruebas): en ese caso solo
+ * devuelve un id generado, sin persistir.
+ */
+export function getDeviceId(): string {
+  const storage = typeof window !== 'undefined' ? window.localStorage : null;
+  if (storage) {
+    try {
+      const existing = storage.getItem(DEVICE_ID_KEY);
+      if (existing) return existing;
+      const id = randomDeviceId();
+      storage.setItem(DEVICE_ID_KEY, id);
+      return id;
+    } catch {
+      // localStorage no disponible (modo privado, quota, etc.): devolvemos uno volátil.
+      return randomDeviceId();
+    }
+  }
+  return randomDeviceId();
+}
+
 export function initSocket() {
   closeSocket();
 
@@ -45,7 +81,9 @@ export function initSocket() {
     // Función: se reevalúa en cada (re)conexión para usar el token vigente
     auth: (cb) => {
       handshakeToken = getAccessToken();
-      cb({ token: handshakeToken });
+      // El backend usa `deviceId` + `platform` como señal de presencia del dispositivo.
+      // `client`: el backend distingue web y apps para el modo mantenimiento.
+      cb({ token: handshakeToken, deviceId: getDeviceId(), platform: 'desktop', client: 'desktop' });
     },
     transports: ['websocket', 'polling'],
   });
@@ -61,6 +99,9 @@ export function initSocket() {
   s.on('auth:expired', () => {
     expiredNotice = true;
   });
+
+  // Mantenimiento manual: el servidor cierra el canal; la app se bloquea con el aviso.
+  s.on('maintenance', (body: unknown) => enterMaintenance(body));
 
   s.on('disconnect', (reason) => {
     console.log('[WebSocket] Desconectado:', reason);

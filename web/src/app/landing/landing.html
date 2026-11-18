@@ -62,6 +62,8 @@
     </div>
   </section>
 
+  <app-section-toc [sections]="sections" />
+
   <app-marquee [text]="marquee" />
 
   <app-how-it-works />
@@ -123,6 +125,7 @@
       <div class="section-head">
         <h2 class="display section-title reveal" i18n="@@download.title">Llévatelo</h2>
         <p class="lead reveal" i18n="@@download.lead">La misma mascota en todos tus dispositivos.</p>
+        <p class="download__note reveal" i18n="@@download.note">Para descargar la app de escritorio necesitas una cuenta con el correo verificado.</p>
       </div>
 
       <div class="download">
@@ -141,10 +144,12 @@
             <li class="card platform reveal">
               <div class="platform__head">
                 <h3>{{ p.name }}</h3>
-                <span class="tag" [class.tag--ready]="p.url">{{ p.status }}</span>
+                <span class="tag" [class.tag--ready]="p.desktop || p.url">{{ p.status }}</span>
               </div>
               <p>{{ p.body }}</p>
-              @if (p.url) {
+              @if (p.desktop) {
+                <app-download-action [platform]="p.desktop" [label]="p.name" />
+              } @else if (p.url) {
                 <a class="btn btn--filled" [href]="p.url" rel="noopener" i18n="@@download.cta">Descargar</a>
               } @else {
                 <button class="btn" type="button" disabled i18n="@@download.soon">Descarga próximamente</button>
@@ -164,6 +169,10 @@
       <div class="section-head faq__head">
         <h2 class="display section-title section-title--sm reveal" i18n="@@faq.title">Preguntas</h2>
         <p class="lead" i18n="@@faq.lead">Lo que más nos preguntan antes de eclosionar el primer huevo.</p>
+        <div class="faq__contact">
+          <p i18n="@@faq.contact.prompt">¿No encuentras tu respuesta?</p>
+          <a class="btn btn--filled" [href]="contactHref" i18n="@@faq.contact.cta">Escríbenos</a>
+        </div>
       </div>
       <div class="faq__list">
         @for (item of faq; track item.q) {

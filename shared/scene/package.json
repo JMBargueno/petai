@@ -1,0 +1,28 @@
+{
+  "name": "@pockai/scene",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Núcleo de escena compartido de Pockai (PixiJS): bake de sprites, reproductor de clips y protocolo para incrustarlo en escritorio, Android e iOS.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./bake": "./src/bake/index.ts",
+    "./protocol": "./src/protocol.ts"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build:embed": "vite build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pixi.js": "8.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  }
+}

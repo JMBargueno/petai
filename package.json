@@ -11,6 +11,7 @@
     "validate:animations": "tsx scripts/validate-animations.ts",
     "validate:all": "node scripts/validate-game-data.js && node scripts/validate-assets.js && tsx scripts/validate-animations.ts",
     "generate:sprites": "tsx scripts/generate-pet-sprites.ts",
+    "generate:patterns": "node scripts/sprites/pixel/patterns.mjs",
     "build:assets": "tsx scripts/build-assets.ts",
     "build:assets:dry": "tsx scripts/build-assets.ts --dry-run",
     "test:assets": "vitest run scripts/build-assets.spec.ts",
@@ -22,17 +23,24 @@
     "backend:test": "pnpm --filter petai-backend run test",
     "backend:build": "pnpm --filter petai-backend run build",
     "desktop:dev": "pnpm --filter petai-desktop run dev",
+    "desktop:demo": "pnpm --filter petai-desktop run demo",
     "desktop:build": "pnpm --filter petai-desktop run build",
     "test:all": "pnpm --filter petai-backend run test && pnpm --filter petai-backend run test:e2e && pnpm test:assets",
     "web:dev": "pnpm --filter pockai-web run start",
     "web:build": "pnpm --filter pockai-web run build",
-    "web:test": "pnpm --filter pockai-web run test"
+    "web:test": "pnpm --filter pockai-web run test",
+    "generate:furniture": "tsx scripts/generate-furniture.ts",
+    "generate:accessories": "tsx scripts/generate-accessories.ts",
+    "sprites:concept": "node scripts/sprites/concept/stage.mjs",
+    "sprites:import": "node scripts/sprites/concept/import.mjs",
+    "sprites:roles": "node scripts/sprites/concept/roles.mjs"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.750.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^22.13.0",
     "openapi-typescript": "^7.13.0",
+    "sharp": "0.35.5",
     "tsx": "^4.19.0",
     "vitest": "^3.0.0",
     "zod": "^4.6.7"

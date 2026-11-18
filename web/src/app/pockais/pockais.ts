@@ -4,15 +4,17 @@ import { Species } from '../landing/sections/species';
 import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
+import { SectionToc, TocSection } from '../shared/layout/section-toc';
 import { SeoService } from '../shared/seo/seo.service';
 import { SITE_NAME, pageUrl } from '../site.config';
 
 /** Especies, rarezas y patrones: todo lo que puede salir de un huevo, en una página. */
 @Component({
   selector: 'app-pockais',
-  imports: [SiteHeader, SiteFooter, Species, Rarities],
+  imports: [SiteHeader, SiteFooter, SectionToc, Species, Rarities],
   template: `
     <app-site-header
+      [links]="links"
       [pages]="pages"
       [cta]="cta"
       [home]="home"
@@ -36,6 +38,7 @@ import { SITE_NAME, pageUrl } from '../site.config';
         </div>
       </section>
 
+      <app-section-toc [sections]="sections" />
       <app-species />
       <app-rarities />
 
@@ -62,6 +65,13 @@ import { SITE_NAME, pageUrl } from '../site.config';
 export class Pockais {
   protected readonly locale = inject(LOCALE_ID).slice(0, 2);
   protected readonly home = `/${this.locale}/`;
+  /** Secciones de esta página: índice flotante y anclas de la cabecera. */
+  protected readonly sections: TocSection[] = [
+    { id: 'especies', label: $localize`:@@pockais.nav.species:Especies` },
+    { id: 'rarezas', label: $localize`:@@lore.nav.rare:Rarezas` },
+    { id: 'patrones', label: $localize`:@@rar.patterns:Patrones` },
+  ];
+  protected readonly links: NavLink[] = this.sections.map((s) => ({ href: `#${s.id}`, label: s.label }));
   protected readonly pages = navPages(this.locale, 'pockais');
   protected readonly cta: NavLink = { href: `${this.home}#descargar`, label: $localize`:@@nav.cta:Descargar` };
   protected readonly homeLabel = $localize`:@@nav.home:Pockai, inicio`;

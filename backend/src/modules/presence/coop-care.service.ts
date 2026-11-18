@@ -8,7 +8,9 @@ import {
   HttpStatus,
   Optional,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EMAIL_LOOKUP_REMOVED_MESSAGE, findUserIdByHandle } from '../../common/user-handle';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 /**
@@ -40,8 +42,29 @@ export interface FriendshipSummary {
   direction: 'incoming' | 'outgoing';
   otherUserId: string;
   otherDisplayName: string;
+  /** Nickname público del otro jugador (null si su cuenta aún no lo ha elegido). */
+  otherHandle: string | null;
   otherPet: { petId: string; nickname: string; speciesName: string } | null;
   updatedAt: Date;
+}
+
+/** Entrada del historial de visitas (cuidado o hábitat), vista desde el usuario que lo pide. */
+export interface VisitHistoryEntry {
+  id: string;
+  kind: 'care' | 'habitat';
+  /** `in` = visitaron a mis pets; `out` = visité yo a otro. */
+  direction: 'in' | 'out';
+  otherUserId: string;
+  otherName: string;
+  otherHandle: string | null;
+  visitorId: string;
+  ownerId: string;
+  petId: string;
+  /** feed | play | clean para cuidado; `habitat` para visitas en vivo. */
+  action: string;
+  xpGained: number;
+  createdAt: Date;
+  endedAt: Date | null;
 }
 
 const MAX_VISITS_PER_DAY = 5;
@@ -55,6 +78,7 @@ export class CoopCareService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
     @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
 
@@ -76,18 +100,19 @@ export class CoopCareService {
 
   // ── Amistad ──────────────────────────────────────────────────────────────────
 
-  async requestFriendship(target: { targetUserId?: string; email?: string }, requesterId: string): Promise<FriendshipSummary> {
+  async requestFriendship(
+    target: { targetUserId?: string; handle?: string; email?: string },
+    requesterId: string,
+  ): Promise<FriendshipSummary> {
     let targetUserId = target?.targetUserId;
-    if (!targetUserId && target?.email) {
-      // Identificación por email (no hay un buscador de usuarios; el email es el identificador natural).
-      const byEmail = await this.prisma.user.findUnique({
-        where: { email: target.email.trim().toLowerCase() },
-        select: { id: true },
-      });
-      if (!byEmail) throw new NotFoundException('Usuario no encontrado');
-      targetUserId = byEmail.id;
+    if (!targetUserId && target?.handle) {
+      // Los jugadores se identifican por su @nickname público (nunca por email: no se filtran correos).
+      const byHandle = await findUserIdByHandle(this.prisma, target.handle);
+      if (!byHandle) throw new NotFoundException('No hay ningún jugador con ese nickname');
+      targetUserId = byHandle;
     }
-    if (!targetUserId) throw new BadRequestException('Indica targetUserId o email');
+    if (!targetUserId && target?.email) throw new BadRequestException(EMAIL_LOOKUP_REMOVED_MESSAGE);
+    if (!targetUserId) throw new BadRequestException('Indica el @nickname del jugador');
     if (targetUserId === requesterId) {
       throw new BadRequestException('No puedes enviarte una petición a ti mismo');
     }
@@ -128,6 +153,8 @@ export class CoopCareService {
     if (claimed.count === 0) throw new BadRequestException('Esta petición ya fue resuelta');
 
     const updated = await this.prisma.coopFriendship.findUniqueOrThrow({ where: { id: friendshipId } });
+    // Logros de amistad (`friends` es una estadística derivada: se re-evalúa a ambos).
+    this.events.emit('coop:friendship_accepted', { userIds: [updated.ownerId, updated.visitorId] });
     return (await this.summarizeMany([updated], actorId))[0];
   }
 
@@ -179,11 +206,17 @@ export class CoopCareService {
     const others = [...new Set(rows.map((r) => (r.ownerId === me ? r.visitorId : r.ownerId)))];
 
     const names = new Map<string, string>();
+    const handles = new Map<string, string | null>();
     const us = await this.prisma.user.findMany({
       where: { id: { in: others } },
-      select: { id: true, displayName: true },
+      select: { id: true, displayName: true, handle: true, activePetId: true },
     });
-    for (const u of us) names.set(u.id, u.displayName);
+    const chosenPet = new Map<string, string | null>();
+    for (const u of us) {
+      names.set(u.id, u.displayName);
+      handles.set(u.id, u.handle ?? null);
+      chosenPet.set(u.id, (u as { activePetId?: string | null }).activePetId ?? null);
+    }
 
     const pets = new Map<string, { petId: string; nickname: string; speciesName: string }>();
     const ps = await this.prisma.pet.findMany({
@@ -191,8 +224,10 @@ export class CoopCareService {
       select: { id: true, userId: true, nickname: true, species: { select: { name: true } } },
       orderBy: { createdAt: 'asc' },
     });
+    // Pockai activo: el elegido por el jugador si sigue siendo suyo; si no, el más antiguo.
     for (const p of ps) {
-      if (!pets.has(p.userId)) pets.set(p.userId, { petId: p.id, nickname: p.nickname, speciesName: p.species.name });
+      const entry = { petId: p.id, nickname: p.nickname, speciesName: p.species.name };
+      if (!pets.has(p.userId) || chosenPet.get(p.userId) === p.id) pets.set(p.userId, entry);
     }
 
     return rows.map((row) => {
@@ -203,6 +238,7 @@ export class CoopCareService {
         direction: row.ownerId === me ? 'incoming' : 'outgoing',
         otherUserId: other,
         otherDisplayName: names.get(other) ?? '—',
+        otherHandle: handles.get(other) ?? null,
         otherPet: pets.get(other) ?? null,
         updatedAt: row.updatedAt,
       };
@@ -269,13 +305,20 @@ export class CoopCareService {
       `Visit: ${visitorId} → pet ${action.petId} de ${ownerId}, action=${action.action}, xp=${xpGained}`,
     );
 
+    // 5. XP compartida al clan del dueño: se emite `clan:activity` y la suma de XP (y el avance de
+    //    las metas del clan) la procesa `ClansService.onClanActivity`. Así la XP no se contabiliza
+    //    en dos sitios y la visita nunca depende de un fallo de clan.
+    this.events.emit('clan:activity', { userId: ownerId, xp: xpGained, visits: 1 });
+
     return { success: true, message: `Successfully ${action.action} the pet`, xpGained, petState };
   }
 
   /**
-   * Historial de visitas sobre los pets de `ownerId` (opcionalmente filtrado por `petId`).
+   * Formato antiguo del historial (apps sin `scope=all`): solo visitas de cuidado recibidas por los
+   * pets de `ownerId`. Se mantiene para que Android y escritorios ya publicados no muestren como
+   * recibidas las visitas que hizo el propio usuario.
    */
-  async getVisitHistory(
+  async getReceivedCareVisits(
     ownerId: string,
     petId?: string,
   ): Promise<Array<{ visitorId: string; action: string; petId: string; xpGained: number; createdAt: Date }>> {
@@ -284,6 +327,71 @@ export class CoopCareService {
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+  }
+
+  /**
+   * Historial de visitas de `userId` en ambos sentidos (`scope=all`): las que recibieron sus pets y las que hizo él,
+   * tanto de cuidado (`CoopVisit`) como en vivo al hábitat (`HabitatVisit`). Antes solo devolvía las
+   * de cuidado recibidas, así que quien visitaba (o usaba el hábitat) veía el historial vacío.
+   * Incluye el nombre del otro jugador para no depender de que siga siendo amigo.
+   */
+  async getVisitHistory(userId: string, petId?: string): Promise<VisitHistoryEntry[]> {
+    const LIMIT = 100;
+    const petFilter = petId ? { petId } : {};
+    const [care, habitat] = await Promise.all([
+      this.prisma.coopVisit.findMany({
+        where: { OR: [{ ownerId: userId }, { visitorId: userId }], ...petFilter },
+        orderBy: { createdAt: 'desc' },
+        take: LIMIT,
+      }),
+      this.prisma.habitatVisit.findMany({
+        where: { OR: [{ ownerId: userId }, { visitorId: userId }], ...petFilter },
+        orderBy: { startedAt: 'desc' },
+        take: LIMIT,
+      }),
+    ]);
+
+    const entries: Array<Omit<VisitHistoryEntry, 'otherName' | 'otherHandle'>> = [
+      ...care.map((v) => ({
+        id: v.id,
+        kind: 'care' as const,
+        direction: v.ownerId === userId ? ('in' as const) : ('out' as const),
+        otherUserId: v.ownerId === userId ? v.visitorId : v.ownerId,
+        visitorId: v.visitorId,
+        ownerId: v.ownerId,
+        petId: v.petId,
+        action: v.action,
+        xpGained: v.xpGained,
+        createdAt: v.createdAt,
+        endedAt: null,
+      })),
+      ...habitat.map((v) => ({
+        id: v.id,
+        kind: 'habitat' as const,
+        direction: v.ownerId === userId ? ('in' as const) : ('out' as const),
+        otherUserId: v.ownerId === userId ? v.visitorId : v.ownerId,
+        visitorId: v.visitorId,
+        ownerId: v.ownerId,
+        petId: v.petId,
+        action: 'habitat',
+        xpGained: 0,
+        createdAt: v.startedAt,
+        endedAt: v.endedAt,
+      })),
+    ]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, LIMIT);
+
+    const otherIds = [...new Set(entries.map((e) => e.otherUserId))];
+    const users = otherIds.length
+      ? await this.prisma.user.findMany({ where: { id: { in: otherIds } }, select: { id: true, displayName: true, handle: true } })
+      : [];
+    const byId = new Map(users.map((u) => [u.id, u]));
+    return entries.map((e) => ({
+      ...e,
+      otherName: byId.get(e.otherUserId)?.displayName ?? '—',
+      otherHandle: byId.get(e.otherUserId)?.handle ?? null,
+    }));
   }
 
   /**

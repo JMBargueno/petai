@@ -25,7 +25,7 @@ type SkillFilter = 'all' | 'attack' | 'guard' | 'heal';
         </p>
 
         <!-- 1. Rueda Elemental interactiva -->
-        <div class="card element-wheel reveal">
+        <div id="elementos" class="card element-wheel reveal">
           <div class="element-wheel__header">
             <app-sticker icon="shield" color="electric-blue" [size]="64" />
             <div>
@@ -82,7 +82,7 @@ type SkillFilter = 'all' | 'attack' | 'guard' | 'heal';
         </div>
 
         <!-- 2. Estrategias -->
-        <h3 class="label-caps block-title reveal" i18n="@@arena.strategies.title">Elige tu estrategia</h3>
+        <h3 id="estrategias" class="label-caps block-title reveal" i18n="@@arena.strategies.title">Elige tu estrategia</h3>
         <div class="strategies-grid">
           @for (s of strategies; track s.id; let i = $index) {
             <div class="card strategy-card reveal" [style.--i]="i">
@@ -94,7 +94,7 @@ type SkillFilter = 'all' | 'attack' | 'guard' | 'heal';
         </div>
 
         <!-- 3. Catálogo de Habilidades -->
-        <div class="skills-section reveal">
+        <div id="habilidades" class="skills-section reveal">
           <div class="skills-section__top">
             <div>
               <h3 class="label-caps block-title" i18n="@@arena.skills.title">Catálogo de Habilidades</h3>
@@ -163,7 +163,7 @@ type SkillFilter = 'all' | 'attack' | 'guard' | 'heal';
         </div>
 
         <!-- 4. Escalera de Ligas y Juego Limpio -->
-        <div class="leagues-card card reveal">
+        <div id="ligas" class="leagues-card card reveal">
           <div class="leagues-card__header">
             <div>
               <h3 i18n="@@arena.leagues.title">Escalera de Ligas</h3>

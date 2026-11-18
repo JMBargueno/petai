@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Landing } from './landing';
 import { FAQ, FEATURES } from './content';
+import { SITE_URL } from '../site.config';
 
 describe('Landing', () => {
   it('pinta el titular, las funciones y las especies del catálogo compartido', async () => {
@@ -34,9 +35,16 @@ describe('Landing', () => {
     expect(el.querySelectorAll('main .band').length).toBe(7);
     expect(el.querySelector('.species__card, #rarezas, #arena-a-fondo')).toBeNull();
     const links = [...el.querySelectorAll('.feature__link')].map((a) => a.getAttribute('href'));
-    expect(links).toEqual(['/es/pockais', '/es/arena', '/es/lore#despertar']);
+    expect(links).toEqual(['/es/pockais', '/es/arena', '/es/lore#despertar', '/es/lore#huella']);
     const pages = [...el.querySelectorAll('.site-menu__page')].map((a) => a.getAttribute('href'));
     expect(pages).toEqual(['/es/', '/es/pockais', '/es/arena', '/es/lore']);
+  });
+
+  it('el FAQ remite al formulario de contacto', async () => {
+    const fixture = TestBed.createComponent(Landing);
+    await fixture.whenStable();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('#faq .faq__contact a')?.getAttribute('href')).toBe('/es/contact');
   });
 
   it('no enlaza el panel de administración', async () => {
@@ -62,7 +70,7 @@ describe('Landing', () => {
     await fixture.whenStable();
     const head = document.head;
 
-    expect(head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://pockai.example/es/');
+    expect(head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${SITE_URL}/es/`);
     const langs = [...head.querySelectorAll('link[rel="alternate"][hreflang]')].map((l) => l.getAttribute('hreflang'));
     expect(langs).toEqual(['es', 'en', 'x-default']);
     expect(head.querySelector('meta[name="twitter:card"]')?.getAttribute('content')).toBe('summary_large_image');
@@ -70,5 +78,7 @@ describe('Landing', () => {
     const blocks = [...head.querySelectorAll('script[type="application/ld+json"]')].map((s) => JSON.parse(s.textContent!));
     const types = blocks.flatMap((b) => (b['@graph'] ?? [b]).map((n: { '@type': string }) => n['@type']));
     expect(types).toEqual(expect.arrayContaining(['Organization', 'WebSite', 'SoftwareApplication', 'FAQPage']));
+    const org = blocks.flatMap((b) => b['@graph'] ?? [b]).find((n: { '@type': string }) => n['@type'] === 'Organization');
+    expect(org.sameAs).toEqual(['https://www.instagram.com/pockais/', 'https://www.tiktok.com/@pockais', 'https://x.com/pockais']);
   });
 });

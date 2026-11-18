@@ -21,10 +21,29 @@
       "port": 5173
     },
     {
+      "name": "pockai-desktop-demo",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "petai-desktop", "run", "demo"],
+      "port": 5175
+    },
+    {
+      "name": "pockai-desktop-demo-alt",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "petai-desktop", "run", "demo"],
+      "env": { "DEMO_PORT": "5176" },
+      "port": 5176
+    },
+    {
       "name": "pockai-desktop-dev-alt",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "petai-desktop", "exec", "vite", "--port", "5174"],
       "port": 5174
+    },
+    {
+      "name": "pockai-scene-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@pockai/scene", "run", "dev"],
+      "port": 5180
     },
     {
       "name": "pockai-web-dev",

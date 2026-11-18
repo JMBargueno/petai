@@ -1,9 +1,10 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, CanMatchFn, Router } from '@angular/router';
 import { AdminApi, ApiError, SessionUser } from './api';
+import { PANEL_PERMISSION, UserAuth } from '../shared/auth/user-auth';
 
 /** Permiso que da acceso al panel (lo concede el backend según el rol: superadmin, admin y moderator). */
-export const PANEL_PERMISSION = 'admin:access';
+export { PANEL_PERMISSION };
 
 /**
  * Sesión del panel contra el backend: login con correo y contraseña y comprobación del rol
@@ -13,6 +14,7 @@ export const PANEL_PERMISSION = 'admin:access';
 @Injectable({ providedIn: 'root' })
 export class AdminAuth {
   private readonly api = inject(AdminApi);
+  private readonly account = inject(UserAuth);
   private revalidation: Promise<boolean> | null = null;
 
   readonly user = computed(() => this.api.session()?.user ?? null);
@@ -73,18 +75,9 @@ export class AdminAuth {
     return this.revalidation;
   }
 
-  private async fetchMe(): Promise<SessionUser> {
-    const me = await this.api.request<SessionUser>('/v1/me');
-    const user: SessionUser = {
-      id: me.id,
-      email: me.email,
-      displayName: me.displayName,
-      role: me.role,
-      permissions: me.permissions ?? [],
-    };
-    const session = this.api.session();
-    if (session) this.api.setSession({ ...session, user });
-    return user;
+  /** Misma lectura de `/v1/me` que la web: guarda rol, permisos y verificación en la sesión compartida. */
+  private fetchMe(): Promise<SessionUser> {
+    return this.account.fetchMe();
   }
 }
 

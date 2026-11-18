@@ -102,7 +102,12 @@ function attackScore(me: Side, foe: Side, skill: SkillDef, cfg: CombatConfig): n
 }
 
 export function chooseSkill(me: Side, foe: Side, cfg: CombatConfig): SkillDef {
-  const t = STRATEGY[me.f.strategy as Strategy] ?? STRATEGY.balanced;
+  const base = STRATEGY[me.f.strategy as Strategy] ?? STRATEGY.balanced;
+  // Personalidad (spec 36): desplaza umbrales; la estrategia agresiva sigue sin protegerse nunca
+  const bias = me.f.personality;
+  const t = bias
+    ? { heal: base.heal + bias.heal, guard: base.guard > 0 ? base.guard + bias.guard : base.guard }
+    : base;
   const hpPct = me.hp / me.maxHp;
   let pool = me.f.skills.filter((s) => isAvailable(me, s));
 
@@ -150,6 +155,8 @@ function participantLog(s: Side): ParticipantLog {
     strategy: s.f.strategy,
     isBot: s.f.isBot,
     petId: s.f.petId,
+    // Solo si existe: los luchadores sin personalidad (bots) dejan el log exactamente igual que antes
+    ...(s.f.personality ? { personality: { ...s.f.personality } } : {}),
   };
 }
 

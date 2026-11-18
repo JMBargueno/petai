@@ -1,30 +1,61 @@
 <script lang="ts">
+  import { Button } from './components/ui';
   import { onMount, onDestroy } from 'svelte';
-  import { api, getAccessToken, onSessionExpired } from './lib/api';
+  import { api, getAccessToken, onEmailUnverified, onHandleRequired, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
+  import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
+  import { initSummonShortcut } from './lib/summonShortcut';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
+  import { speak, clearSpeech, MAX_AI_CHUNKS, type SpeakOptions } from './lib/speech-queue';
   import {
     fetchStatus,
     startHeartbeat,
     requestOptInCoordinates,
     saveCoordinates,
+    environmentalStatus,
+    STATUS_REFRESH_MS,
     type EnvironmentalStatus,
     type EnvironmentalChangedEvent,
   } from './lib/environmental';
   import PetView from './components/PetView.svelte';
   import DesktopBall from './components/DesktopBall.svelte';
-  import { stepBallPhysics, kickBall, type BallState } from './lib/toys/toyPhysics';
-  import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction } from './lib/animation/eventMap';
+  import {
+    advanceBallPhysics,
+    kickBall,
+    throwBall,
+    BALL_MAX_THROW_SPEED,
+    type BallState,
+  } from './lib/toys/toyPhysics';
+  import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior } from './lib/animation/eventMap';
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
-  import UpdateLockModal from './components/UpdateLockModal.svelte';
+  import AchievementToast from './features/achievements/AchievementToast.svelte';
+  import type { AchievementUnlockedPayload } from './features/achievements/achievements.api';
   import type { AnalyzedFile } from './lib/fileAnalyzer';
-  import { PawPrint, Bell, X } from 'lucide-svelte';
+  import { PawPrint, Bell, X, Volleyball } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
-  import { updateState, startAutoCheck, checkForUpdates } from './lib/updater';
+  import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
+  import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster, emitClanHabitatEvent } from './lib/clan-store';
+  import type { HabitatVisitor, ClanMessage, ClanGoal, ClanXpEvent } from './lib/api';
+  import { loadActivePetId, pickActivePet, saveActivePetId } from './lib/activePet';
+  import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
+  import { maintenanceLock } from './lib/maintenance';
+  import { startContextDigest } from './lib/contextDigest';
+  import { activeVisit } from './lib/activeVisit';
+  import { configureTravel, endTravel, resetTravel, restoreFromHistory } from './lib/visitTravel';
+
+  // Visita en vivo: el servidor la cierra a los 15 min sin avisar al visitante. A esa hora el
+  // Pockai vuelve por su portal y se cierra también aquí (si ya estaba cerrada, el error no importa).
+  configureTravel({
+    onExpire: () => {
+      api.endHabitatVisit().catch(() => {});
+      activeVisit.set('');
+      endTravel();
+    },
+  });
 
   let user: any = null;
   let pets: any[] = [];
@@ -34,9 +65,35 @@
   let shopItems: any[] = [];
   let isPanelOpen = true;
   let droppedFile: AnalyzedFile | null = null;
+  /** Último logro desbloqueado (aviso con la insignia). */
+  let unlockedAchievement: AchievementUnlockedPayload | null = null;
   // Petición de navegación al panel (la campana abre Ajustes › Avisos)
-  let panelRequest: { dest: string; sub: string; n: number } | null = null;
+  let panelRequest: { dest: string; sub: string; n: number; prompt?: string } | null = null;
   let requestN = 0;
+  /** Cambia la mascota activa (la que pasea por el escritorio) y lo recuerda en este equipo. */
+  function selectPet(id: string) {
+    const next = pets.find((p) => p.id === id);
+    if (!next || next.id === currentPet?.id) return;
+    currentPet = next;
+    saveActivePetId(next.id);
+  }
+
+  /**
+   * El servidor también guarda cuál es la mascota activa (la que te representa en el hábitat del
+   * clan y en las visitas). Se sincroniza cada vez que cambia, sin bloquear ni avisar si falla.
+   * Solo si es una elección guardada en este equipo: uno recién instalado (sin elección) mostraría
+   * la primera mascota y pisaría la que el jugador eligió en otro.
+   */
+  let syncedActivePetId: string | null = null;
+  $: if (user && currentPet?.id && currentPet.id !== syncedActivePetId && currentPet.id === loadActivePetId()) {
+    const id = currentPet.id;
+    syncedActivePetId = id;
+    api.activatePet(id).catch(() => {
+      if (syncedActivePetId === id) syncedActivePetId = null; // se reintenta en el próximo cambio
+    });
+  }
+  $: if (!user) syncedActivePetId = null;
+
   function openNotifications() {
     panelRequest = { dest: 'settings', sub: 'notifications', n: ++requestN };
     isPanelOpen = true;
@@ -46,13 +103,27 @@
     isPanelOpen = true;
   }
 
-  // Actualizaciones: la mascota avisa una sola vez por versión nueva.
+  // Actualización obligatoria: se bloquea el panel (muestra solo el aviso) y se oculta la mascota
+  // y los controles flotantes hasta que se instale. Aviso nativo una sola vez por versión.
+  $: updateLocked = $updateLock !== null;
+  // Mantenimiento del servidor: mismo bloqueo (panel con el aviso, sin mascota).
+  $: maintenanceLocked = $maintenanceLock !== null;
+  $: locked = updateLocked || maintenanceLocked;
+  $: if (locked) isPanelOpen = true;
+  // Al terminar el mantenimiento se recarga: sesión, socket y datos vuelven a empezar limpios.
+  let wasInMaintenance = false;
+  $: {
+    if (wasInMaintenance && !maintenanceLocked) window.location.reload();
+    wasInMaintenance = maintenanceLocked;
+  }
   let announcedVersion = '';
-  $: if ($updateState.status === 'available' && $updateState.version !== announcedVersion) {
-    announcedVersion = $updateState.version;
-    const text = `¡Ha salido mi versión ${announcedVersion}! Actualízame en Ajustes › Acerca de.`;
-    showBubble(text);
-    notifyNow('Nueva versión de Pockai', text);
+  $: if ($updateLock !== null && $updateLock !== announcedVersion) {
+    announcedVersion = $updateLock;
+    notifyNow(
+      'Nueva versión de Pockai',
+      `Actualiza Pockai a la versión ${announcedVersion} desde el panel para seguir jugando.`,
+      { key: 'update-available' },
+    );
   }
 
   /** Comprobación pedida desde la bandeja: la mascota cuenta el resultado. */
@@ -63,9 +134,6 @@
     if (s.status === 'upToDate') showBubble('¡Ya estoy en la última versión!');
     else if (s.status === 'error') showBubble(s.message);
   }
-
-  let bubbleText = '';
-  let bubbleTimer: any = null;
 
   // Pelotita de juego interactiva en pantalla
   let showBall = false;
@@ -80,20 +148,65 @@
   };
   let ballRaf: number | null = null;
   let lastBallTime = performance.now();
+  let ballAccumulator = 0;
+  // Mientras se sujeta con el ratón la pelota no simula (ni cae ni acumula velocidad)
+  let ballGrabbed = false;
 
   function runBallLoop(now: number) {
     if (!showBall) {
       ballRaf = null;
       return;
     }
-    const dt = Math.min(0.04, (now - lastBallTime) / 1000);
+    const frameDt = (now - lastBallTime) / 1000;
     lastBallTime = now;
-    const bounds = {
-      width: window.innerWidth || 800,
-      height: window.innerHeight || 600,
-    };
-    ballState = stepBallPhysics(ballState, bounds, dt);
+    if (!ballGrabbed) {
+      const bounds = {
+        width: window.innerWidth || 800,
+        height: window.innerHeight || 600,
+      };
+      const r = advanceBallPhysics(ballState, bounds, frameDt, {}, ballAccumulator);
+      ballAccumulator = r.accumulator;
+      if (r.ball !== ballState) ballState = r.ball;
+    }
     ballRaf = requestAnimationFrame(runBallLoop);
+  }
+
+  function ensureBallLoop() {
+    if (!ballRaf && showBall) {
+      lastBallTime = performance.now();
+      ballAccumulator = 0;
+      ballRaf = requestAnimationFrame(runBallLoop);
+    }
+  }
+
+  function handleBallGrab() {
+    ballGrabbed = true;
+    ballState = { ...ballState, vx: 0, vy: 0, isRolling: false };
+  }
+
+  function handleBallDrag(x: number, y: number) {
+    const size = ballState.radius * 2;
+    ballState = {
+      ...ballState,
+      x: Math.min(Math.max(0, x), (window.innerWidth || 800) - size),
+      y: Math.min(Math.max(0, y), (window.innerHeight || 600) - size),
+    };
+  }
+
+  /** Soltar tras arrastrar: la velocidad del gesto sustituye a la que tuviera. */
+  function handleBallThrow(vx: number, vy: number) {
+    ballGrabbed = false;
+    ballState = throwBall(ballState, vx, vy, BALL_MAX_THROW_SPEED);
+    ballAccumulator = 0;
+    lastBallTime = performance.now();
+    ensureBallLoop();
+  }
+
+  /** Golpe de la mascota: la colisión ya calcula la velocidad resultante. */
+  function handleBallHit(vx: number, vy: number) {
+    if (ballGrabbed) return;
+    ballState = throwBall(ballState, vx, vy);
+    ensureBallLoop();
   }
 
   function toggleBall() {
@@ -108,8 +221,8 @@
         isRolling: true,
         bounces: 0,
       };
-      lastBallTime = performance.now();
-      if (!ballRaf) ballRaf = requestAnimationFrame(runBallLoop);
+      ballGrabbed = false;
+      ensureBallLoop();
       showBubble('¡Una pelotita! ⚽ ¡Lánzamela con el ratón!');
     } else {
       if (ballRaf) cancelAnimationFrame(ballRaf);
@@ -117,21 +230,22 @@
     }
   }
 
+  /** Clic simple sobre la pelota: impulso que se suma a su velocidad. */
   function handleBallKick(vx: number, vy: number) {
     ballState = kickBall(ballState, vx, vy);
-    if (!ballRaf && showBall) {
-      lastBallTime = performance.now();
-      ballRaf = requestAnimationFrame(runBallLoop);
-    }
+    ensureBallLoop();
   }
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
   let environmental: EnvironmentalStatus | null = null;
   let stopHeartbeat: () => void = () => {};
+  let stopEnvRefresh: () => void = () => {};
+  // Las salas del hábitat leen el clima y el sol de este store.
+  $: environmentalStatus.set(environmental);
+  let stopContextDigest: () => void = () => {};
 
-  function showBubble(text: string) {
-    bubbleText = text.length > 160 ? text.slice(0, 157) + '…' : text;
-    clearTimeout(bubbleTimer);
-    bubbleTimer = setTimeout(() => (bubbleText = ''), 10_000);
+  /** Única vía de habla: todo lo que dice la mascota pasa por la cola de `speech-queue`. */
+  function showBubble(text: string, opts?: SpeakOptions) {
+    speak(text, opts);
   }
 
   // Badge de la bandeja/tray (feature 007 / US3): refleja los avisos no leídos en el título de la app.
@@ -158,6 +272,17 @@
 
       if (getAccessToken()) {
         user = await api.getMe();
+        // Cuenta sin verificar: solo se muestra la pantalla de verificación del panel (sin mascota,
+        // socket ni datos de juego: la API los rechaza con 403 hasta verificar el correo).
+        if (user?.emailVerified === false) {
+          isPanelOpen = true;
+          return;
+        }
+        // Cuenta sin nickname (anterior a él o creada desde una app antigua): primero se elige.
+        if (user && user.handle === null) {
+          isPanelOpen = true;
+          return;
+        }
         // El servidor usa la zona horaria del usuario (ciclo de sueño, recordatorios):
         // si sigue en el valor por defecto (UTC), se ajusta a la del equipo.
         const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -169,7 +294,7 @@
           }
         }
         pets = await api.getPets();
-        currentPet = pets.length > 0 ? pets[0] : null;
+        currentPet = pickActivePet(pets, loadActivePetId());
         eggs = await api.getEggs();
         inventory = await api.getInventory();
 
@@ -202,9 +327,55 @@
           const outcome = b.draw ? 'empató' : b.won ? 'ganó' : 'perdió';
           const delta = b.eloDelta ? ` (${b.eloDelta > 0 ? '+' : ''}${b.eloDelta} ELO)` : '';
           const text = `${b.attackerName} retó a ${b.defenderPetName}: tu mascota ${outcome}${delta}`;
-          // La animación y el bocadillo llegan con `pet:action` (battle_defended)
-          notifyNow('Te han retado en la arena', text);
+          // La animación y el bocadillo llegan con `pet:action` (battle_defended): solo nativa si está oculta
+          notifyNow('Te han retado en la arena', text, { speech: false });
         });
+
+        // Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía.
+        socket.on('habitat:visitor_joined', (v: HabitatVisitor | null) => {
+          if (!v?.visitorId) return;
+          visitorJoined(v);
+          // Reacción reutilizando la acción del backend `friend_visit` (ya existe en eventMap)
+          if (currentPet) reactToAction(currentPet.id, 'friend_visit', { visitorName: v.visitorName });
+        });
+        socket.on('habitat:visitor_left', (ev: { visitorId?: string } | null) => {
+          if (ev?.visitorId) visitorLeft(ev.visitorId);
+        });
+        // Estado inicial: quién visita ahora mismo (por si la app arrancó con visitas en curso)
+        api.getHabitatVisitors()
+          .then((r) => setVisitors(r?.visitors ?? []))
+          .catch(() => {/* sin conexión o endpoint aún no disponible: se reintenta con los eventos */});
+        // ¿Arrancó con mi Pockai de visita? Sigue fuera (sin portal) hasta que vuelva.
+        api.getCoopHistory()
+          .then((h) => restoreFromHistory(h?.visits ?? []))
+          .catch(() => {/* sin historial: la pestaña de Visitas lo recupera al abrirla */});
+
+        // Chat y objetivos de clan (feature 021): se reflejan en vivo en la pestaña de clanes.
+        socket.on('clan:message', (m: ClanMessage | null) => {
+          if (m?.id && m?.clanId) pushClanMessage(m);
+        });
+        socket.on('clan:goal_progress', (g: ClanGoal | null) => {
+          if (g?.id && g?.clanId) upsertClanGoal(g);
+        });
+        socket.on('clan:goal_completed', (g: ClanGoal | null) => {
+          if (!g?.id || !g?.clanId) return;
+          upsertClanGoal(g);
+          emitClanHabitatEvent({ kind: 'goal', clanId: g.clanId, title: g.title });
+          notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`, {
+            speech: `¡Objetivo de clan cumplido! «${g.title}» llegó a ${g.progress}/${g.target}. 🎉`,
+          });
+        });
+        // Rangos del Nexo: borrados en el chat y cambios de roster (la pestaña recarga el clan).
+        socket.on('clan:message_deleted', (ev: { id?: string } | null) => {
+          if (ev?.id) dropClanMessage(ev.id);
+        });
+        // Hábitat del Nexo: la XP del clan sube (y a veces el escenario cambia de nivel).
+        socket.on('clan:xp', (ev: ClanXpEvent | null) => {
+          if (ev?.clanId && typeof ev.xp === 'number') emitClanHabitatEvent({ kind: 'xp', ...ev });
+        });
+        socket.on('clan:role_changed', () => bumpClanRoster());
+        socket.on('clan:member_kicked', () => bumpClanRoster());
+        socket.on('clan:disbanded', () => bumpClanRoster());
 
         // Bienvenida: si el jugador vuelve tras una ausencia, el backend emite `pet:action
         // welcome_back`. Se pide una vez por sesión, con el socket ya conectado para recibirlo.
@@ -214,6 +385,13 @@
         // Feature ambiental: hora del día, clima, inactividad y festividades
         socket.on('environmental:changed', (ev: EnvironmentalChangedEvent) => handleEnvironmentalChanged(ev));
 
+        // Logro desbloqueado → aviso con la insignia (la recompensa ya está acreditada: refresca saldo).
+        socket.on('achievement:unlocked', (p: AchievementUnlockedPayload | null) => {
+          if (!p) return;
+          unlockedAchievement = p;
+          api.getMe().then((u) => (user = u)).catch(() => {});
+        });
+
         // Aviso en tiempo real de nueva versión disponible
         socket.on('desktop:update_available', () => {
           checkForUpdates();
@@ -222,6 +400,13 @@
         setupCoordinates(); // geolocalización opt-in → clima real
         loadEnvironmental(); // estado inicial
         stopHeartbeat = startHeartbeat(); // heartbeat cada 60 s
+        // El clima cambia a lo largo del día: sin este refresco solo se leía al arrancar.
+        stopEnvRefresh();
+        const envTimer = setInterval(loadEnvironmental, STATUS_REFRESH_MS);
+        stopEnvRefresh = () => clearInterval(envTimer);
+        stopContextDigest();
+        // Hábitos de escritorio: contador local y resumen diario al servidor (lib/contextDigest.ts)
+        stopContextDigest = startContextDigest(() => currentPet?.id ?? null, api.sendContextDigest);
       }
     } catch (err) {
       // Si la sesión ya no es válida, la capa de API la cierra (onSessionExpired). Un fallo de
@@ -267,6 +452,12 @@
     if (reaction.bubble) showBubble(reaction.bubble);
   }
 
+  /** Reacción del Pockai al terminar un turno de chat (`behavior` del evento `done`, spec 36). */
+  function reactToBehavior(behavior: unknown) {
+    const reaction = reactionForBehavior(behavior);
+    if (reaction) petViewRef?.react?.(reaction);
+  }
+
   /** Acción disparada desde el panel (comer, bañar, despertar, minijuego, eclosión). */
   function handlePetAction(local: string) {
     const action = LOCAL_ACTIONS[local];
@@ -281,12 +472,18 @@
     closeSocket();
     welcomeChecked = false;
     stopHeartbeat();
+    stopEnvRefresh();
+    stopContextDigest();
     user = null;
     currentPet = null;
     pets = [];
     eggs = [];
     inventory = [];
     environmental = null;
+    clearVisitors();
+    clearSpeech();
+    activeVisit.set('');
+    resetTravel();
   }
 
   // ---------- Ambiental (feature 005) ----------
@@ -344,8 +541,30 @@
 
   let stopClickThrough: () => void = () => {};
   let stopSessionExpired: () => void = () => {};
+  let stopEmailUnverified: () => void = () => {};
+
+  /** La API dice que el correo no está verificado: se para el juego y se pide la verificación. */
+  function lockUnverified() {
+    const current = user;
+    if (current?.emailVerified === false) return;
+    clearSessionState();
+    user = current ? { ...current, emailVerified: false } : null;
+    isPanelOpen = true;
+  }
+
+  let stopHandleRequired: () => void = () => {};
+
+  /** La API exige nickname (403 HANDLE_REQUIRED): se para el juego y se muestra "Elige tu nickname". */
+  function lockNoHandle() {
+    const current = user;
+    if (current && current.handle === null) return;
+    clearSessionState();
+    user = current ? { ...current, handle: null } : null;
+    isPanelOpen = true;
+  }
   let stopAutoUpdate: () => void = () => {};
   let stopTrayUpdates: () => void = () => {};
+  let stopSummonShortcut: () => void = () => {};
   let needsPoll: any = null;
 
   // Las constantes vitales solo se recalculan al consultar al servidor (tick perezoso):
@@ -356,8 +575,7 @@
     try {
       const due = await api.getDueReminders();
       for (const r of due) {
-        showBubble(r.text);
-        await notifyNow('Recordatorio', r.text);
+        await notifyNow('Recordatorio', r.text, { speech: `⏰ ${r.text}`, priority: 'high' });
         await api.markReminderDelivered(r.id);
       }
     } catch {
@@ -401,33 +619,61 @@
     }
   }
 
-  async function handleViewportDrop(e: DragEvent) {
-    const data = e.dataTransfer?.getData('application/petai-pet');
-    if (data === 'exit-habitat' && currentPet && currentPet.inHabitat) {
+  // Punto donde se soltó al sacarlo del Hábitat: PetView aparece ahí al montarse
+  let petSpawnAt: { x: number; y: number } | null = null;
+  // Al volver a casa (por cualquier vía) se olvida: la próxima salida con «Sacar» usa la posición por defecto
+  $: if (currentPet?.inHabitat === true) petSpawnAt = null;
+
+  async function handleExitHabitat(e: Event) {
+    const ce = e as CustomEvent<ExitHabitatDetail>;
+    if (currentPet && currentPet.inHabitat) {
       try {
+        petSpawnAt = ce.detail ?? null;
         const updated = await api.setPetInHabitat(currentPet.id, false);
         currentPet = updated;
         const idx = pets.findIndex((p) => p.id === currentPet.id);
         if (idx !== -1) pets[idx] = updated;
         showBubble('¡De vuelta a explorar el escritorio!');
       } catch (err: any) {
+        petSpawnAt = null;
         console.error('Error sacando del hábitat:', err);
       }
     }
   }
 
   onMount(() => {
+    // Solo en desarrollo (y en la demo): lanzar momentos a mano para probar los efectos del
+    // escritorio sin backend (skill pockai-effect-architect, integration-checklist.md).
+    if (import.meta.env.DEV) {
+      (window as any).__pockaiFx = {
+        react: (action: PetAction, context?: Record<string, unknown>) => currentPet && reactToAction(currentPet.id, action, context),
+        // Como el backend: primero el aviso `evolved` y, un instante después, la etapa nueva
+        evolve: (stage: string) => {
+          if (!currentPet) return;
+          reactToAction(currentPet.id, 'evolved', { stage });
+          setTimeout(() => currentPet && (currentPet = { ...currentPet, stage }), 50);
+        },
+        visitorJoin: (v: HabitatVisitor) => visitorJoined(v),
+        visitorLeave: (visitorId: string) => visitorLeft(visitorId),
+        summon: (x?: number, y?: number) => window.dispatchEvent(new CustomEvent('petai:summon', { detail: { x, y } })),
+      };
+    }
     window.addEventListener('petai:file_dropped', handleFileDropped);
     window.addEventListener('petai:move_to_habitat', handleMoveToHabitat);
+    window.addEventListener(EXIT_HABITAT_EVENT, handleExitHabitat);
     stopClickThrough = startClickThrough();
     // Refresh token rechazado (caducado o revocado): vuelta a la pantalla de acceso
     stopSessionExpired = onSessionExpired(() => {
       clearSessionState();
       isPanelOpen = true;
     });
+    stopEmailUnverified = onEmailUnverified(lockUnverified);
+    stopHandleRequired = onHandleRequired(lockNoHandle);
     needsPoll = setInterval(pollPet, 60_000);
     loadInitialData();
     stopAutoUpdate = startAutoCheck();
+    // Atajo global de «Invocación rápida» (configurable desde Habilidades)
+    stopSummonShortcut = initSummonShortcut();
     if ('__TAURI_INTERNALS__' in window) {
       import('@tauri-apps/api/event')
         .then(({ listen }) => listen('check-updates', () => void checkUpdatesFromTray()))
@@ -440,13 +686,18 @@
     if (ballRaf) cancelAnimationFrame(ballRaf);
     window.removeEventListener('petai:file_dropped', handleFileDropped);
     window.removeEventListener('petai:move_to_habitat', handleMoveToHabitat);
+    window.removeEventListener(EXIT_HABITAT_EVENT, handleExitHabitat);
     clearInterval(needsPoll);
-    clearTimeout(bubbleTimer);
+    clearSpeech();
     stopHeartbeat();
+    stopEnvRefresh();
     stopClickThrough();
     stopSessionExpired();
+    stopEmailUnverified();
+    stopHandleRequired();
     stopAutoUpdate();
     stopTrayUpdates();
+    stopSummonShortcut();
     stopNotificationHandler();
     closeSocket();
   });
@@ -455,41 +706,47 @@
 <main
   class="app-viewport"
   on:dragover|preventDefault
-  on:drop={handleViewportDrop}
 >
-  <!-- Botón flotante para alternar panel de control -->
+  {#if !locked}
+  <div class="dock">
+  <!-- Pelotita interactiva de escritorio -->
   <button
-    class="btn glass toggle-panel-pill"
-    on:click={() => (isPanelOpen = !isPanelOpen)}
-    title="Abrir/Cerrar Panel de Control"
+    class="btn glass btn--icon"
+    on:click={toggleBall}
+    title={showBall ? 'Guardar la pelota' : 'Sacar la pelota'}
+    aria-label={showBall ? 'Guardar la pelota' : 'Sacar la pelota'}
+    aria-pressed={showBall}
   >
-    {#if isPanelOpen}<X size={16} /> Ocultar panel{:else}<PawPrint size={16} /> Abrir panel{/if}
+    <Volleyball size={16} />
   </button>
 
   <!-- Avisos de la mascota (feature 007 / US3) con badge de no leídas -->
   <button
-    class="btn glass notif-toggle-pill"
+    class="btn glass"
+    class:btn--icon={$unreadCount === 0}
     on:click={openNotifications}
-    title="Ajustes de notificaciones"
-    aria-label="Avisos"
+    title="Avisos"
+    aria-label={$unreadCount > 0 ? `Avisos: ${$unreadCount} sin leer` : 'Avisos'}
   >
     <Bell size={16} />
     {#if $unreadCount > 0}<span class="notif-badge">{$unreadCount}</span>{/if}
   </button>
 
-  <!-- Pelotita interactiva de escritorio -->
-  <button
-    class="btn glass ball-toggle-pill"
-    on:click={toggleBall}
-    title={showBall ? 'Guardar pelota de juego' : 'Sacar pelota de juego'}
+  <!-- Botón flotante para alternar panel de control -->
+  <Button class="glass" on:click={() => (isPanelOpen = !isPanelOpen)}
+    title="Abrir/Cerrar Panel de Control"
+    aria-expanded={isPanelOpen}
   >
-    <span>⚽</span>
-  </button>
+    {#if isPanelOpen}<X size={16} /> Ocultar panel{:else}<PawPrint size={16} /> Abrir panel{/if}
+  </Button>
+  </div>
 
   {#if showBall}
     <DesktopBall
       ball={ballState}
-      on:throw={(e) => handleBallKick(e.detail.vx, e.detail.vy)}
+      on:grab={handleBallGrab}
+      on:drag={(e) => handleBallDrag(e.detail.x, e.detail.y)}
+      on:throw={(e) => handleBallThrow(e.detail.vx, e.detail.vy)}
       on:kick={(e) => handleBallKick(e.detail.vx, e.detail.vy)}
     />
   {/if}
@@ -499,12 +756,17 @@
     <PetView
       bind:this={petViewRef}
       pet={currentPet}
-      bubble={bubbleText}
+      spawnAt={petSpawnAt}
       environmental={environmental}
-      ball={showBall ? ballState : null}
-      onBallKick={handleBallKick}
-      onPetClick={() => (isPanelOpen = true)}
+      visitors={$visitorsStore}
+      ball={showBall && !ballGrabbed ? ballState : null}
+      onBallKick={handleBallHit}
+      onPetClick={() => {
+        isPanelOpen = true;
+        panelRequest = { dest: 'pet', sub: 'home', n: ++requestN };
+      }}
     />
+  {/if}
   {/if}
 
   <!-- Panel de Control y Cuidados -->
@@ -513,6 +775,7 @@
     request={panelRequest}
     user={user}
     pet={currentPet}
+    {pets}
     eggs={eggs}
     inventory={inventory}
     shopItems={shopItems}
@@ -526,29 +789,34 @@
       if (idx !== -1) pets[idx] = currentPet;
       else pets = [currentPet, ...pets];
     }}
+    on:petHatched={(e) => {
+      // La recién nacida se añade a la colección; solo pasa a ser la activa si no había ninguna.
+      pets = [...pets.filter((p) => p.id !== e.detail.id), e.detail];
+      if (!currentPet) selectPet(e.detail.id);
+    }}
+    on:selectPet={(e) => selectPet(e.detail)}
     on:actionTriggered={(e) => handlePetAction(e.detail)}
-    on:bubble={(e) => showBubble(e.detail)}
+    on:bubble={(e) =>
+      showBubble(e.detail, { maxChunks: MAX_AI_CHUNKS, overflowNote: '… (sigue en el chat)', onShow: () => petViewRef?.play?.('talk') })}
+    on:behavior={(e) => reactToBehavior(e.detail)}
     on:refreshPet={refreshPet}
     on:logout={clearSessionState}
   />
 
-  {#if droppedFile}
+  <AchievementToast payload={unlockedAchievement} onDismiss={() => (unlockedAchievement = null)} />
+
+  {#if droppedFile && !locked}
     <FileDropModal
       file={droppedFile}
       on:close={() => (droppedFile = null)}
       on:sendPrompt={(e) => {
         const { prompt, file } = e.detail;
         droppedFile = null;
-        panelRequest = { dest: 'chat', sub: '', n: ++requestN };
+        panelRequest = { dest: 'chat', sub: '', n: ++requestN, prompt };
         isPanelOpen = true;
         showBubble(`Examinando ${file.name} con la IA...`);
       }}
     />
-  {/if}
-
-  <!-- Modal infranqueable de actualización obligatoria -->
-  {#if $updateState.status === 'available' || $updateState.status === 'downloading' || $updateState.status === 'ready'}
-    <UpdateLockModal />
   {/if}
 </main>
 
@@ -562,34 +830,29 @@
     pointer-events: none;
   }
 
-  .toggle-panel-pill,
-  .notif-toggle-pill,
-  .ball-toggle-pill {
+  .dock {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    right: 16px;
     position: fixed;
     bottom: 16px;
-    z-index: 90;
+    z-index: var(--z-dock);
+    /* .app-viewport es pointer-events:none (se hereda); el dock debe ser interactivo y
+       así el click-through lo cuenta como zona clicable. */
+    pointer-events: auto;
+  }
+  .dock :global(.btn) {
     box-shadow: var(--shadow-2);
-  }
-  .toggle-panel-pill {
-    right: 16px;
-  }
-  .notif-toggle-pill {
-    right: 170px;
-  }
-  .ball-toggle-pill {
-    right: 228px;
-    font-size: 14px;
-    padding: 0 10px;
-    min-width: 40px;
   }
 
   .notif-badge {
     min-width: 18px;
-    padding: 0 5px;
+    padding: 0 var(--space-1);
     background: var(--danger);
     color: var(--on-color);
     border-radius: var(--radius-pills);
-    font-size: 11px;
+    font-size: var(--text-caption);
     line-height: 18px;
     text-align: center;
   }

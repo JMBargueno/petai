@@ -1,6 +1,231 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/v1/me/profile": {
+      "get": {
+        "operationId": "MyProfileController_getMyProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyProfileDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mi perfil: datos de la cuenta, mascota principal, estadísticas e insignias",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/v1/me/featured-badges": {
+      "put": {
+        "operationId": "MyProfileController_setFeaturedBadges",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetFeaturedBadgesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ featuredBadges: string[] }"
+          },
+          "400": {
+            "description": "Más de 3, o alguna no está desbloqueada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fijar las insignias destacadas del perfil (máx. 3, solo desbloqueadas)",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/v1/users/{id}/profile": {
+      "get": {
+        "operationId": "PublicProfileController_getPublicProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicProfileDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perfil público de un jugador (insignias y estadísticas si las muestra)",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/v1/achievements": {
+      "get": {
+        "operationId": "AchievementsController_getAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Logros del usuario por categoría",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AchievementListResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "500": {
+            "description": "Game-data de logros no cargado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener todos los logros del usuario con su estado",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/v1/achievements/constellation/{cat}": {
+      "get": {
+        "operationId": "AchievementsController_getConstellation",
+        "parameters": [
+          {
+            "name": "cat",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Constelación de la categoría",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConstellationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Categoría inválida"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "500": {
+            "description": "Game-data de constelaciones no cargado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Constelación (layout SVG + estado) de una categoría",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/v1/achievements/{id}/claim": {
+      "post": {
+        "operationId": "AchievementsController_claim",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logro reclamado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimRewardResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Logro no desbloqueado"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "404": {
+            "description": "Logro no encontrado o no pertenece al usuario"
+          },
+          "409": {
+            "description": "Logro ya reclamado (race condition)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reclamar el estado de recompensa de un logro desbloqueado",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
     "/v1/catalog": {
       "get": {
         "operationId": "GameDataController_getCatalog",
@@ -13,6 +238,427 @@
         "summary": "Obtener catálogo general de juego (especies, balance, patrones y alimentos)",
         "tags": [
           "Catalog"
+        ]
+      }
+    },
+    "/v1/presence/{userId}": {
+      "get": {
+        "operationId": "PresenceController_getPresence",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get device presence for a user (own or accepted friend)",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/visit": {
+      "post": {
+        "operationId": "PresenceController_visit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ownerId",
+                  "petId",
+                  "action"
+                ],
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "Dueño del pet visitado"
+                  },
+                  "petId": {
+                    "type": "string",
+                    "description": "Pet visitado"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "feed",
+                      "play",
+                      "clean"
+                    ],
+                    "description": "Acción de la visita"
+                  },
+                  "itemId": {
+                    "type": "string",
+                    "description": "Item usado (para feed, opcional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perform a co-op visit action on a friend's pet",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/history": {
+      "get": {
+        "description": "Por defecto, solo las visitas de cuidado que recibieron mis pets (formato de las apps antiguas). Con `scope=all`, también las que hice yo y las visitas en vivo al hábitat, con `direction`, `kind` y el nombre del otro jugador.",
+        "operationId": "PresenceController_getVisitHistory",
+        "parameters": [
+          {
+            "name": "scope",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get visit history for my pets",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/friends": {
+      "get": {
+        "operationId": "CoopFriendsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mis relaciones de amistad (amigos aceptados + peticiones)",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      },
+      "post": {
+        "operationId": "CoopFriendsController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "handle": {
+                    "type": "string",
+                    "example": "jmbargueno",
+                    "description": "Nickname del destinatario (con o sin \"@\")"
+                  },
+                  "targetUserId": {
+                    "type": "string",
+                    "description": "Alternativa a handle: id del destinatario"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar una petición de amistad (por @nickname o id del destinatario)",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/friends/{id}/accept": {
+      "post": {
+        "operationId": "CoopFriendsController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aceptar una petición de amistad recibida",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/coop/friends/{id}/decline": {
+      "post": {
+        "operationId": "CoopFriendsController_decline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rechazar una petición de amistad recibida",
+        "tags": [
+          "Presence & Co-op"
+        ]
+      }
+    },
+    "/v1/habitat/visit": {
+      "post": {
+        "description": "Gasta 10 de energía del pet visitante. Cooldown de 10 min por amigo y máx. 10 visitas en 24 h. Si ya hay una visita activa con ese amigo, la devuelve sin cobrar ni volver a notificar.",
+        "operationId": "HabitatVisitController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ownerId"
+                ],
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "Dueño del habitat visitado"
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 140,
+                    "description": "Mensaje corto opcional para el amigo"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Iniciar una visita en vivo al habitat de un amigo",
+        "tags": [
+          "Habitat · Visita en vivo"
+        ]
+      }
+    },
+    "/v1/habitat/visit/end": {
+      "post": {
+        "operationId": "HabitatVisitController_end",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "Opcional: limitar a un dueño"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Terminar mi visita en vivo activa",
+        "tags": [
+          "Habitat · Visita en vivo"
+        ]
+      }
+    },
+    "/v1/habitat/visitors": {
+      "get": {
+        "operationId": "HabitatVisitController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Visitas activas donde el actor es el dueño del habitat",
+        "tags": [
+          "Habitat · Visita en vivo"
+        ]
+      }
+    },
+    "/v1/site/config": {
+      "get": {
+        "operationId": "SiteController_config",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteConfigDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Configuración pública de la web (registro y landing «Coming soon»)",
+        "tags": [
+          "Site"
+        ]
+      }
+    },
+    "/v1/shop": {
+      "get": {
+        "operationId": "InventoryController_getShop",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar artículos de la tienda",
+        "tags": [
+          "Inventory & Shop"
+        ]
+      }
+    },
+    "/v1/inventory": {
+      "get": {
+        "operationId": "InventoryController_getInventory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener inventario del usuario",
+        "tags": [
+          "Inventory & Shop"
+        ]
+      }
+    },
+    "/v1/shop/buy": {
+      "post": {
+        "operationId": "InventoryController_buyItem",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprar artículo de la tienda",
+        "tags": [
+          "Inventory & Shop"
         ]
       }
     },
@@ -125,6 +771,38 @@
           }
         },
         "summary": "Configuración pública del registro (¿hace falta invitación?)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/handle-available": {
+      "get": {
+        "operationId": "AuthController_handleAvailable",
+        "parameters": [
+          {
+            "name": "handle",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "jmbargueno",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandleAvailabilityDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Comprueba si un nickname es válido y está libre (público, con límite por IP)",
         "tags": [
           "Auth"
         ]
@@ -289,6 +967,95 @@
           }
         ],
         "summary": "Cambiar la contraseña: exige la actual, cierra las demás sesiones y devuelve tokens nuevos",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/verify-email/resend": {
+      "post": {
+        "operationId": "AuthController_verifyEmailResend",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reenviar el correo de verificación (código + enlace). Invalida los anteriores",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/verify-email/confirm": {
+      "post": {
+        "operationId": "AuthController_verifyEmailConfirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyEmailResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verificar el correo con el código de 6 dígitos (desde la app)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/verify-email/link": {
+      "post": {
+        "operationId": "AuthController_verifyEmailLink",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyEmailResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verificar el correo con el token del enlace (página web /verify-email, sin sesión)",
         "tags": [
           "Auth"
         ]
@@ -490,7 +1257,85 @@
             "bearer": []
           }
         ],
-        "summary": "Actualizar preferencias del usuario",
+        "summary": "Actualizar preferencias del usuario (el nickname no se puede cambiar)",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/me/handle": {
+      "post": {
+        "description": "Solo se puede hacer una vez: el nickname es inmutable. 409 si ya está en uso o si la cuenta ya tenía uno.",
+        "operationId": "UsersController_setHandle",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "handle"
+                ],
+                "properties": {
+                  "handle": {
+                    "type": "string",
+                    "example": "jmbargueno"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil actualizado (igual que GET /me)"
+          },
+          "400": {
+            "description": "Formato no válido o nickname reservado"
+          },
+          "409": {
+            "description": "Nickname en uso o ya fijado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir el nickname (@handle) de una cuenta que aún no lo tiene",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/v1/users/by-handle/{handle}": {
+      "get": {
+        "operationId": "UsersAchievementsController_getByHandle",
+        "parameters": [
+          {
+            "name": "handle",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ id, handle, displayName, title, accountXp }"
+          },
+          "404": {
+            "description": "No hay ningún jugador con ese nickname"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perfil público mínimo de un jugador por su nickname (con o sin \"@\")",
         "tags": [
           "Users"
         ]
@@ -543,196 +1388,6 @@
         "summary": "Logros públicos de un usuario (solo si ha activado la visibilidad)",
         "tags": [
           "Users"
-        ]
-      }
-    },
-    "/v1/achievements": {
-      "get": {
-        "operationId": "AchievementsController_getAll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Logros del usuario por categoría",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AchievementListResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          },
-          "500": {
-            "description": "Game-data de logros no cargado"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener todos los logros del usuario con su estado",
-        "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/v1/achievements/constellation/{cat}": {
-      "get": {
-        "operationId": "AchievementsController_getConstellation",
-        "parameters": [
-          {
-            "name": "cat",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Constelación de la categoría",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConstellationResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Categoría inválida"
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          },
-          "500": {
-            "description": "Game-data de constelaciones no cargado"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Constelación (layout SVG + estado) de una categoría",
-        "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/v1/achievements/{id}/claim": {
-      "post": {
-        "operationId": "AchievementsController_claim",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Logro reclamado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClaimRewardResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Logro no desbloqueado"
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          },
-          "404": {
-            "description": "Logro no encontrado o no pertenece al usuario"
-          },
-          "409": {
-            "description": "Logro ya reclamado (race condition)"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Reclamar el estado de recompensa de un logro desbloqueado",
-        "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/v1/shop": {
-      "get": {
-        "operationId": "InventoryController_getShop",
-        "parameters": [
-          {
-            "name": "kind",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Listar artículos de la tienda",
-        "tags": [
-          "Inventory & Shop"
-        ]
-      }
-    },
-    "/v1/inventory": {
-      "get": {
-        "operationId": "InventoryController_getInventory",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener inventario del usuario",
-        "tags": [
-          "Inventory & Shop"
-        ]
-      }
-    },
-    "/v1/shop/buy": {
-      "post": {
-        "operationId": "InventoryController_buyItem",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Comprar artículo de la tienda",
-        "tags": [
-          "Inventory & Shop"
         ]
       }
     },
@@ -819,6 +1474,317 @@
         "summary": "Eclosionar huevo completado (nombre opcional de la mascota)",
         "tags": [
           "Eggs"
+        ]
+      }
+    },
+    "/v1/pets/{id}/mind": {
+      "get": {
+        "operationId": "MindController_profile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perfil de criatura: 5 dimensiones de personalidad, keywords, memoria por capas y vida autónoma reciente",
+        "tags": [
+          "Mind"
+        ]
+      }
+    },
+    "/v1/billing/plans": {
+      "get": {
+        "operationId": "BillingController_getPlans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener los planes, precios y límites vigentes",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/billing/entitlement": {
+      "get": {
+        "operationId": "BillingController_getEntitlement",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar el estado de suscripción y entitlement del usuario autenticado",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/billing/google/verify": {
+      "post": {
+        "operationId": "BillingController_verifyGooglePurchase",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "purchaseToken",
+                  "productId"
+                ],
+                "properties": {
+                  "purchaseToken": {
+                    "type": "string"
+                  },
+                  "productId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verificar y reconocer una compra de Google Play Billing",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/billing/google/rtdn": {
+      "post": {
+        "operationId": "BillingController_googleRtdn",
+        "parameters": [
+          {
+            "name": "authorization",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Recepción de notificaciones en tiempo real (RTDN) de Google Play Pub/Sub",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/billing/stripe/checkout": {
+      "post": {
+        "operationId": "StripeController_checkout",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar URL de Stripe Checkout para suscripción Pro",
+        "tags": [
+          "Billing Stripe"
+        ]
+      }
+    },
+    "/v1/billing/stripe/portal": {
+      "post": {
+        "operationId": "StripeController_portal",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar URL del Stripe Customer Portal para gestionar la suscripción",
+        "tags": [
+          "Billing Stripe"
+        ]
+      }
+    },
+    "/v1/billing/stripe/webhook": {
+      "post": {
+        "operationId": "StripeController_webhook",
+        "parameters": [
+          {
+            "name": "stripe-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Recepción de webhooks de eventos de suscripción y pago de Stripe",
+        "tags": [
+          "Billing Stripe"
+        ]
+      }
+    },
+    "/v1/admin/billing/config": {
+      "get": {
+        "operationId": "AdminBillingController_getConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Configuración activa y número de versión"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener configuración activa de facturación e IA",
+        "tags": [
+          "Admin Billing"
+        ]
+      },
+      "put": {
+        "operationId": "AdminBillingController_updateConfig",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBillingConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nueva versión creada y activada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar y activar una nueva versión de configuración de facturación",
+        "tags": [
+          "Admin Billing"
+        ]
+      }
+    },
+    "/v1/admin/billing/config/versions": {
+      "get": {
+        "operationId": "AdminBillingController_listVersions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Historial de versiones"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar historial de versiones de configuración",
+        "tags": [
+          "Admin Billing"
+        ]
+      }
+    },
+    "/v1/admin/billing/config/versions/{version}/activate": {
+      "post": {
+        "operationId": "AdminBillingController_activateVersion",
+        "parameters": [
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versión reactivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revertir / activar una versión histórica de configuración",
+        "tags": [
+          "Admin Billing"
+        ]
+      }
+    },
+    "/v1/admin/billing/stats": {
+      "get": {
+        "operationId": "AdminBillingController_stats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Resumen de métricas de facturación"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Métricas de negocio de suscripciones y gasto de IA",
+        "tags": [
+          "Admin Billing"
         ]
       }
     },
@@ -1204,6 +2170,35 @@
         ]
       }
     },
+    "/v1/pets/{id}/activate": {
+      "post": {
+        "operationId": "PetsController_activate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir esta mascota como pockai activo (la que representa al jugador en su clan y visitas)",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
     "/v1/environmental/status": {
       "get": {
         "operationId": "EnvironmentalController_getStatus",
@@ -1301,6 +2296,243 @@
         "summary": "Festividades próximas (incluida la de hoy), con días restantes",
         "tags": [
           "Environmental"
+        ]
+      }
+    },
+    "/v1/habitat": {
+      "get": {
+        "operationId": "HabitatController_getHabitat",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Hábitat completo"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "404": {
+            "description": "Pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener el hábitat del usuario (salas, layout, buffs)",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/furniture/{id}/place": {
+      "post": {
+        "description": "Con x/y (y rotation opcional) lo coloca en esa celda si cabe su huella; sin cuerpo, en el primer hueco libre.",
+        "operationId": "HabitatController_placeFurniture",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceFurnitureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mueble colocado (incluye itemId, x, y y rotation)"
+          },
+          "400": {
+            "description": "Posición no válida, sin hueco, sin saldo o sala bloqueada"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble o pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprar y colocar un mueble",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/items/{itemId}": {
+      "patch": {
+        "operationId": "HabitatController_moveFurniture",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveFurnitureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mueble movido"
+          },
+          "400": {
+            "description": "Posición no válida (fuera de la sala, ocupada o lejos de la pared)"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble no encontrado en el hábitat"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mover y/o girar un mueble ya colocado (sin coste)",
+        "tags": [
+          "Habitat"
+        ]
+      },
+      "delete": {
+        "operationId": "HabitatController_removeItem",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mueble removido"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble no encontrado en el hábitat"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quitar un mueble concreto del hábitat (por id de item)",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/furniture/{id}": {
+      "delete": {
+        "operationId": "HabitatController_removeFurniture",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mueble removido"
+          },
+          "401": {
+            "description": "Token inválido"
+          },
+          "404": {
+            "description": "Mueble no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/catalog": {
+      "get": {
+        "operationId": "HabitatController_getCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Catálogo completo"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/buffs": {
+      "get": {
+        "operationId": "HabitatController_getActiveBuffs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Buffs agregados de muebles colocados"
+          },
+          "401": {
+            "description": "Token inválido"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener los buffs activos del hábitat",
+        "tags": [
+          "Habitat"
         ]
       }
     },
@@ -1593,7 +2825,7 @@
             "bearer": []
           }
         ],
-        "summary": "Borrar toda la memoria de la mascota",
+        "summary": "Borrar toda la memoria de la mascota (también el perfil de hábitos)",
         "tags": [
           "AI"
         ]
@@ -1631,6 +2863,65 @@
           }
         ],
         "summary": "Olvidar un recuerdo concreto",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/v1/pets/{id}/context-digest": {
+      "post": {
+        "description": "Solo categorías de app y minutos por franja de 4 h, y duraciones de Pomodoro. Nunca títulos de ventana. El servidor descarta las partes cuya habilidad (context_awareness, pomodoro_companion) no está activa.",
+        "operationId": "AiController_contextDigest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "appMinutes": {
+                    "type": "object",
+                    "description": "Por categoría (coding, music, video, gaming, reading): 6 números (minutos por franja de 4 h)",
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "pomodoros": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Minutos de foco de cada Pomodoro completado"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resumen diario del escritorio para los hábitos de la mascota (máx. 2 KB, uno cada 12 h)",
         "tags": [
           "AI"
         ]
@@ -1860,6 +3151,51 @@
                   "message": {
                     "type": "string",
                     "description": "Mensaje del usuario"
+                  },
+                  "clientContext": {
+                    "type": "object",
+                    "description": "Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente",
+                    "properties": {
+                      "appCategory": {
+                        "type": "string",
+                        "enum": [
+                          "coding",
+                          "music",
+                          "video",
+                          "gaming",
+                          "reading",
+                          "generic"
+                        ]
+                      },
+                      "pose": {
+                        "type": "string",
+                        "enum": [
+                          "walking",
+                          "climbing",
+                          "perched",
+                          "sleeping"
+                        ]
+                      },
+                      "pomodoro": {
+                        "type": "object",
+                        "properties": {
+                          "phase": {
+                            "type": "string",
+                            "enum": [
+                              "idle",
+                              "work",
+                              "break"
+                            ]
+                          },
+                          "minutesLeft": {
+                            "type": "number"
+                          },
+                          "sessionsToday": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -1933,6 +3269,7 @@
     },
     "/v1/pets/{id}/chat": {
       "post": {
+        "description": "El razonamiento del modelo (reasoning_content o bloques <think>) nunca llega en los eventos delta: si existe y supera la moderación, el evento done lo incluye aparte en message.thinking (no se guarda en el historial).",
         "operationId": "AiController_chatStream",
         "parameters": [
           {
@@ -1961,6 +3298,51 @@
                       "type": "string"
                     },
                     "description": "Herramientas del cliente (opcional)"
+                  },
+                  "clientContext": {
+                    "type": "object",
+                    "description": "Contexto del escritorio (opcional); el servidor descarta lo que no permita la habilidad correspondiente",
+                    "properties": {
+                      "appCategory": {
+                        "type": "string",
+                        "enum": [
+                          "coding",
+                          "music",
+                          "video",
+                          "gaming",
+                          "reading",
+                          "generic"
+                        ]
+                      },
+                      "pose": {
+                        "type": "string",
+                        "enum": [
+                          "walking",
+                          "climbing",
+                          "perched",
+                          "sleeping"
+                        ]
+                      },
+                      "pomodoro": {
+                        "type": "object",
+                        "properties": {
+                          "phase": {
+                            "type": "string",
+                            "enum": [
+                              "idle",
+                              "work",
+                              "break"
+                            ]
+                          },
+                          "minutesLeft": {
+                            "type": "number"
+                          },
+                          "sessionsToday": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -1977,7 +3359,7 @@
             "bearer": []
           }
         ],
-        "summary": "Conversar con la mascota (streaming SSE: eventos delta, done, error)",
+        "summary": "Conversar con la mascota (streaming SSE: eventos delta, tool, action, moderated, done, error)",
         "tags": [
           "AI"
         ]
@@ -2258,6 +3640,40 @@
         ]
       }
     },
+    "/v1/contact": {
+      "post": {
+        "operationId": "ContactController_submit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Mensaje aceptado"
+          },
+          "400": {
+            "description": "Datos no válidos"
+          },
+          "429": {
+            "description": "Demasiados mensajes; espera un rato"
+          },
+          "503": {
+            "description": "No se pudo enviar el correo"
+          }
+        },
+        "summary": "Enviar un mensaje desde el formulario de contacto público",
+        "tags": [
+          "Contact"
+        ]
+      }
+    },
     "/v1/desktop/updates/download/{assetId}": {
       "get": {
         "operationId": "DesktopUpdatesController_download",
@@ -2350,16 +3766,767 @@
           }
         ],
         "responses": {
-          "302": {
-            "description": "Redirección a la descarga del instalador"
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesktopDownloadDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión"
+          },
+          "403": {
+            "description": "Correo sin verificar (code: EMAIL_NOT_VERIFIED)"
           },
           "404": {
             "description": "Plataforma desconocida o sin instalador publicado"
           }
         },
-        "summary": "Descarga el instalador más reciente de la app de escritorio. Público.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "URL de descarga del instalador más reciente. Requiere sesión con el correo verificado.",
         "tags": [
           "Desktop updates"
+        ]
+      }
+    },
+    "/v1/admin/emails/preview": {
+      "post": {
+        "operationId": "AdminEmailController_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "subject",
+                  "html"
+                ],
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "preheader": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "Cuerpo en HTML libre: se envuelve en la plantilla de marca"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Vista previa: devuelve el HTML final con la plantilla de marca",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/emails/audience/count": {
+      "post": {
+        "operationId": "AdminEmailController_count",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "audience": {
+                    "type": "object",
+                    "description": "{type:'users',userIds[]} | {type:'emails',emails[]} | {type:'segment',role?,verified?:'any'|'verified'|'unverified'}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Número de destinatarios de un público (los segmentos excluyen las bajas)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/emails/test": {
+      "post": {
+        "operationId": "AdminEmailController_test",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "subject",
+                  "html"
+                ],
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "preheader": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "Cuerpo en HTML libre: se envuelve en la plantilla de marca"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar una prueba al correo del propio administrador",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/emails": {
+      "post": {
+        "operationId": "AdminEmailController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "subject",
+                  "html",
+                  "audience"
+                ],
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "preheader": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "Cuerpo en HTML libre: se envuelve en la plantilla de marca"
+                  },
+                  "audience": {
+                    "type": "object",
+                    "description": "{type:'users',userIds[]} | {type:'emails',emails[]} | {type:'segment',role?,verified?:'any'|'verified'|'unverified'}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un envío (se encola y se manda por lotes; queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "get": {
+        "operationId": "AdminEmailController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de envíos (paginado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/emails/{id}": {
+      "get": {
+        "operationId": "AdminEmailController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle y progreso de un envío",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users": {
+      "get": {
+        "operationId": "AdminUsersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar usuarios (paginado; filtros: role, q)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/role": {
+      "patch": {
+        "operationId": "AdminUsersController_assignRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "superadmin",
+                      "admin",
+                      "moderator",
+                      "user"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el rol de un usuario (cierra sus sesiones y queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/balance": {
+      "patch": {
+        "operationId": "AdminUsersController_adjustBalance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "coins": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "gems": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/verify-email": {
+      "post": {
+        "operationId": "AdminUsersController_markVerified",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Marcar el correo de un usuario como verificado (soporte; queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/resend-verification": {
+      "post": {
+        "operationId": "AdminUsersController_resendVerification",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reenviar el correo de verificación a un usuario sin verificar",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/registration-settings": {
+      "get": {
+        "operationId": "AdminInvitesController_getSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajustes del registro (¿solo con invitación?)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminInvitesController_setSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar el registro solo con invitación (queda auditado)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/invites": {
+      "get": {
+        "operationId": "AdminInvitesController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "active",
+                "used",
+                "revoked",
+                "expired"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar códigos de invitación (paginado; filtro: status)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "operationId": "AdminInvitesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvitesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedInvitesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar códigos de invitación",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/invites/{id}/revoke": {
+      "post": {
+        "operationId": "AdminInvitesController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteCodeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revocar un código de invitación (idempotente)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/pets": {
+      "get": {
+        "operationId": "AdminPetsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mascotas (paginado; filtros: rarity, q por nickname o dueño)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/pets/{id}": {
+      "patch": {
+        "operationId": "AdminPetsController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nickname"
+                ],
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "maxLength": 16
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Renombrar una mascota (auditoría: pet_rename)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/site-settings": {
+      "get": {
+        "operationId": "AdminSiteController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajustes de la web pública (landing «Coming soon»)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminSiteController_set",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSiteSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar los ajustes de la web pública (queda auditado)",
+        "tags": [
+          "Admin"
         ]
       }
     },
@@ -2682,19 +4849,13 @@
         ]
       }
     },
-    "/v1/habitat": {
+    "/v1/accessories": {
       "get": {
-        "operationId": "HabitatController_getHabitat",
+        "operationId": "AccessoriesController_list",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Hábitat completo"
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          },
-          "404": {
-            "description": "Pet no encontrado"
+            "description": "Ranuras y prendas, cada una locked, available u owned"
           }
         },
         "security": [
@@ -2702,15 +4863,15 @@
             "bearer": []
           }
         ],
-        "summary": "Obtener el hábitat del usuario (salas, layout, buffs)",
+        "summary": "Catálogo de accesorios con el estado de cada prenda para el usuario",
         "tags": [
-          "Habitat"
+          "Accessories"
         ]
       }
     },
-    "/v1/habitat/furniture/{id}/place": {
+    "/v1/accessories/{id}/buy": {
       "post": {
-        "operationId": "HabitatController_placeFurniture",
+        "operationId": "AccessoriesController_buy",
         "parameters": [
           {
             "name": "id",
@@ -2723,16 +4884,13 @@
         ],
         "responses": {
           "201": {
-            "description": "Mueble colocado"
+            "description": "Prenda comprada"
           },
           "400": {
-            "description": "Celda ocupada o sala bloqueada"
-          },
-          "401": {
-            "description": "Token inválido"
+            "description": "Sin saldo, ya en propiedad o prenda de logro"
           },
           "404": {
-            "description": "Mueble o pet no encontrado"
+            "description": "Prenda no encontrada"
           }
         },
         "security": [
@@ -2740,18 +4898,18 @@
             "bearer": []
           }
         ],
-        "summary": "Colocar un mueble en una celda del hábitat",
+        "summary": "Comprar una prenda con monedas o gemas",
         "tags": [
-          "Habitat"
+          "Accessories"
         ]
       }
     },
-    "/v1/habitat/furniture/{id}": {
-      "delete": {
-        "operationId": "HabitatController_removeFurniture",
+    "/v1/pets/{petId}/accessories": {
+      "get": {
+        "operationId": "AccessoriesController_getEquipped",
         "parameters": [
           {
-            "name": "id",
+            "name": "petId",
             "required": true,
             "in": "path",
             "schema": {
@@ -2760,14 +4918,52 @@
           }
         ],
         "responses": {
+          "404": {
+            "description": "Pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Prendas equipadas de una mascota",
+        "tags": [
+          "Accessories"
+        ]
+      },
+      "put": {
+        "description": "Cada ranura admite un itemId (equipar) o null (quitar). Lo que no se envía se conserva.",
+        "operationId": "AccessoriesController_equip",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipAccessoriesDto"
+              }
+            }
+          }
+        },
+        "responses": {
           "200": {
-            "description": "Mueble removido"
+            "description": "Prendas equipadas tras el cambio"
           },
-          "401": {
-            "description": "Token inválido"
+          "400": {
+            "description": "Prenda inexistente, de otra ranura o que no es del usuario"
           },
           "404": {
-            "description": "Mueble no encontrado"
+            "description": "Pet no encontrado"
           }
         },
         "security": [
@@ -2775,55 +4971,9 @@
             "bearer": []
           }
         ],
-        "summary": "Quitar un mueble del hábitat",
+        "summary": "Equipar o quitar prendas por ranura",
         "tags": [
-          "Habitat"
-        ]
-      }
-    },
-    "/v1/habitat/catalog": {
-      "get": {
-        "operationId": "HabitatController_getCatalog",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Catálogo completo"
-          },
-          "401": {
-            "description": "Token inválido o ausente"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Catálogo del hábitat: salas, muebles (precio/moneda/buffs) y topes de buffs",
-        "tags": [
-          "Habitat"
-        ]
-      }
-    },
-    "/v1/habitat/buffs": {
-      "get": {
-        "operationId": "HabitatController_getActiveBuffs",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Buffs agregados de muebles colocados"
-          },
-          "401": {
-            "description": "Token inválido"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener los buffs activos del hábitat",
-        "tags": [
-          "Habitat"
+          "Accessories"
         ]
       }
     },
@@ -4974,10 +7124,325 @@
         ]
       }
     },
-    "/v1/presence/{userId}": {
+    "/v1/clans": {
+      "post": {
+        "operationId": "ClansController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "tag"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "tag": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Opcional"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un clan (el actor se convierte en Forjador)",
+        "tags": [
+          "Clans"
+        ]
+      },
       "get": {
-        "operationId": "PresenceController_getPresence",
+        "operationId": "ClansController_getMine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mi clan (o 404 si no perteneces a ninguno)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/join": {
+      "post": {
+        "operationId": "ClansController_join",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "tag"
+                ],
+                "properties": {
+                  "tag": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Unirse a un clan existente por su etiqueta (tag)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/leave": {
+      "post": {
+        "operationId": "ClansController_leave",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Abandonar mi clan",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/invite": {
+      "post": {
+        "operationId": "ClansController_invite",
         "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "handle": {
+                    "type": "string",
+                    "example": "jmbargueno",
+                    "description": "Nickname del invitado (con o sin \"@\")"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "description": "Alternativa a handle: ID del usuario invitado"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Invitar a un usuario a unirse directamente (Vigía o superior)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/members": {
+      "get": {
+        "operationId": "ClansController_getMembers",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Roster del clan con presencia en línea por miembro",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/habitat": {
+      "get": {
+        "operationId": "ClansController_getHabitat",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Hábitat del Nexo: nivel visual por XP y hasta 5 pockais activos (uno por miembro, el tuyo siempre), sorteados en cada llamada",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}": {
+      "patch": {
+        "operationId": "ClansController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Máx. 40 caracteres"
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Máx. 300 caracteres; vacío o null la borra"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar nombre y/o descripción del clan (Guardián o superior)",
+        "tags": [
+          "Clans"
+        ]
+      },
+      "delete": {
+        "operationId": "ClansController_disband",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Disolver el clan (solo el Forjador)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/members/{userId}": {
+      "delete": {
+        "operationId": "ClansController_kick",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "userId",
             "required": true,
@@ -4997,16 +7462,33 @@
             "bearer": []
           }
         ],
-        "summary": "Get device presence for a user (own or accepted friend)",
+        "summary": "Expulsar a un miembro de rango inferior (Vigía o superior)",
         "tags": [
-          "Presence & Co-op"
+          "Clans"
         ]
       }
     },
-    "/v1/coop/visit": {
-      "post": {
-        "operationId": "PresenceController_visit",
-        "parameters": [],
+    "/v1/clans/{id}/members/{userId}/role": {
+      "patch": {
+        "operationId": "ClansController_setRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -5014,31 +7496,16 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "ownerId",
-                  "petId",
-                  "action"
+                  "role"
                 ],
                 "properties": {
-                  "ownerId": {
-                    "type": "string",
-                    "description": "Dueño del pet visitado"
-                  },
-                  "petId": {
-                    "type": "string",
-                    "description": "Pet visitado"
-                  },
-                  "action": {
+                  "role": {
                     "type": "string",
                     "enum": [
-                      "feed",
-                      "play",
-                      "clean"
-                    ],
-                    "description": "Acción de la visita"
-                  },
-                  "itemId": {
-                    "type": "string",
-                    "description": "Item usado (para feed, opcional)"
+                      "admin",
+                      "moderator",
+                      "member"
+                    ]
                   }
                 }
               }
@@ -5055,67 +7522,38 @@
             "bearer": []
           }
         ],
-        "summary": "Perform a co-op visit action on a friend's pet",
+        "summary": "Cambiar el rango de un miembro (Guardián o superior; Guardianes solo el Forjador)",
         "tags": [
-          "Presence & Co-op"
+          "Clans"
         ]
       }
     },
-    "/v1/coop/history": {
-      "get": {
-        "operationId": "PresenceController_getVisitHistory",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get visit history for my pets",
-        "tags": [
-          "Presence & Co-op"
-        ]
-      }
-    },
-    "/v1/coop/friends": {
-      "get": {
-        "operationId": "CoopFriendsController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Mis relaciones de amistad (amigos aceptados + peticiones)",
-        "tags": [
-          "Presence & Co-op"
-        ]
-      },
+    "/v1/clans/{id}/transfer": {
       "post": {
-        "operationId": "CoopFriendsController_request",
-        "parameters": [],
+        "operationId": "ClansController_transfer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "userId"
+                ],
                 "properties": {
-                  "targetUserId": {
-                    "type": "string"
-                  },
-                  "email": {
+                  "userId": {
                     "type": "string",
-                    "description": "Alternativa a targetUserId: email del destinatario"
+                    "description": "ID del nuevo Forjador"
                   }
                 }
               }
@@ -5132,15 +7570,203 @@
             "bearer": []
           }
         ],
-        "summary": "Enviar una petición de amistad (por id o email del destinatario)",
+        "summary": "Ceder la Forja (rango de creador) a otro miembro (solo el Forjador)",
         "tags": [
-          "Presence & Co-op"
+          "Clans"
         ]
       }
     },
-    "/v1/coop/friends/{id}/accept": {
+    "/v1/clans/{id}/messages": {
       "post": {
-        "operationId": "CoopFriendsController_accept",
+        "operationId": "ClansController_sendMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "body"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "description": "Texto (máx. 500 caracteres)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar un mensaje al chat del clan",
+        "tags": [
+          "Clans"
+        ]
+      },
+      "get": {
+        "operationId": "ClansController_getMessages",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Máx. 50 (por defecto 20)",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "before",
+            "required": false,
+            "in": "query",
+            "description": "Cursor ISO datetime: anteriores a esta fecha",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial reciente del chat del clan (más reciente primero)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/messages/{messageId}": {
+      "delete": {
+        "operationId": "ClansController_deleteMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Borrar un mensaje del chat (su autor o un Vigía o superior)",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/goals": {
+      "post": {
+        "operationId": "ClansController_createGoal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "target"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Opcional"
+                  },
+                  "metric": {
+                    "type": "string",
+                    "description": "xp | visits | generic (por defecto generic)"
+                  },
+                  "target": {
+                    "type": "number",
+                    "description": "Objetivo (> 0)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una meta compartida del clan",
+        "tags": [
+          "Clans"
+        ]
+      },
+      "get": {
+        "operationId": "ClansController_getGoals",
         "parameters": [
           {
             "name": "id",
@@ -5161,18 +7787,82 @@
             "bearer": []
           }
         ],
-        "summary": "Aceptar una petición de amistad recibida",
+        "summary": "Lista de metas del clan (activas primero, progreso desc)",
         "tags": [
-          "Presence & Co-op"
+          "Clans"
         ]
       }
     },
-    "/v1/coop/friends/{id}/decline": {
+    "/v1/clans/{id}/goals/{goalId}/progress": {
       "post": {
-        "operationId": "CoopFriendsController_decline",
+        "operationId": "ClansController_addGoalProgress",
         "parameters": [
           {
             "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "goalId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "description": "Cantidad a sumar al progreso"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aumentar el progreso de una meta del clan",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/goals/{goalId}": {
+      "delete": {
+        "operationId": "ClansController_deleteGoal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "goalId",
             "required": true,
             "in": "path",
             "schema": {
@@ -5190,9 +7880,9 @@
             "bearer": []
           }
         ],
-        "summary": "Rechazar una petición de amistad recibida",
+        "summary": "Eliminar una meta del clan (Vigía o superior)",
         "tags": [
-          "Presence & Co-op"
+          "Clans"
         ]
       }
     },
@@ -6345,387 +9035,6 @@
         ]
       }
     },
-    "/v1/admin/users": {
-      "get": {
-        "operationId": "AdminUsersController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar usuarios (paginado; filtros: role, q)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/users/{id}/role": {
-      "patch": {
-        "operationId": "AdminUsersController_assignRole",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "role"
-                ],
-                "properties": {
-                  "role": {
-                    "type": "string",
-                    "enum": [
-                      "superadmin",
-                      "admin",
-                      "moderator",
-                      "user"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Cambiar el rol de un usuario (cierra sus sesiones y queda auditado)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/users/{id}/balance": {
-      "patch": {
-        "operationId": "AdminUsersController_adjustBalance",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "coins": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "gems": {
-                    "type": "integer",
-                    "minimum": 0
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Fijar monedas y/o gemas de un usuario (valor absoluto; queda auditado)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/registration-settings": {
-      "get": {
-        "operationId": "AdminInvitesController_getSettings",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegistrationSettingsDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Ajustes del registro (¿solo con invitación?)",
-        "tags": [
-          "Admin"
-        ]
-      },
-      "patch": {
-        "operationId": "AdminInvitesController_setSettings",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegistrationSettingsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegistrationSettingsDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Activar o desactivar el registro solo con invitación (queda auditado)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/invites": {
-      "get": {
-        "operationId": "AdminInvitesController_list",
-        "parameters": [
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "active",
-                "used",
-                "revoked",
-                "expired"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "pageSize",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InviteListDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar códigos de invitación (paginado; filtro: status)",
-        "tags": [
-          "Admin"
-        ]
-      },
-      "post": {
-        "operationId": "AdminInvitesController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateInvitesDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatedInvitesDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Generar códigos de invitación",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/invites/{id}/revoke": {
-      "post": {
-        "operationId": "AdminInvitesController_revoke",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InviteCodeDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Revocar un código de invitación (idempotente)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/pets": {
-      "get": {
-        "operationId": "AdminPetsController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar mascotas (paginado; filtros: rarity, q por nickname o dueño)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
-    "/v1/admin/pets/{id}": {
-      "patch": {
-        "operationId": "AdminPetsController_rename",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "nickname"
-                ],
-                "properties": {
-                  "nickname": {
-                    "type": "string",
-                    "maxLength": 16
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Renombrar una mascota (auditoría: pet_rename)",
-        "tags": [
-          "Admin"
-        ]
-      }
-    },
     "/v1/admin/stats": {
       "get": {
         "operationId": "AdminController_stats",
@@ -7000,6 +9309,739 @@
       }
     },
     "schemas": {
+      "ProfilePetDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string",
+            "example": "Chispa"
+          },
+          "speciesName": {
+            "type": "string",
+            "example": "Flamín"
+          },
+          "element": {
+            "type": "string",
+            "example": "fire"
+          },
+          "rarity": {
+            "type": "string",
+            "example": "rare"
+          },
+          "level": {
+            "type": "number",
+            "example": 12
+          },
+          "stage": {
+            "type": "string",
+            "example": "juvenile"
+          },
+          "shiny": {
+            "type": "boolean",
+            "example": false
+          },
+          "accessories": {
+            "type": "object",
+            "description": "Prendas equipadas por ranura (head, face, neck, back): itemId de accessories.json",
+            "example": {
+              "head": "acc_gorro_lana_azul"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nickname",
+          "speciesName",
+          "element",
+          "rarity",
+          "level",
+          "stage",
+          "shiny",
+          "accessories"
+        ]
+      },
+      "ProfileStatsDto": {
+        "type": "object",
+        "properties": {
+          "playMinutes": {
+            "type": "number",
+            "description": "Minutos de juego",
+            "example": 754
+          },
+          "feeds": {
+            "type": "number",
+            "description": "Veces que ha alimentado a sus mascotas",
+            "example": 132
+          },
+          "cleans": {
+            "type": "number",
+            "example": 40
+          },
+          "sleeps": {
+            "type": "number",
+            "example": 25
+          },
+          "eggsHatched": {
+            "type": "number",
+            "description": "Huevos abiertos",
+            "example": 6
+          },
+          "byRarity": {
+            "type": "object",
+            "description": "Pockais por rareza",
+            "example": {
+              "normal": 4,
+              "rare": 2
+            }
+          },
+          "shinies": {
+            "type": "number",
+            "description": "Pockais shiny conseguidos",
+            "example": 0
+          },
+          "habitatVisits": {
+            "type": "number",
+            "description": "Visitas a hábitats de amigos",
+            "example": 9
+          },
+          "friends": {
+            "type": "number",
+            "description": "Amigos aceptados",
+            "example": 3
+          },
+          "streakCurrent": {
+            "type": "number",
+            "description": "Racha actual de días seguidos",
+            "example": 4
+          },
+          "streakBest": {
+            "type": "number",
+            "description": "Mejor racha de días seguidos",
+            "example": 12
+          },
+          "proDays": {
+            "type": "number",
+            "description": "Días siendo PRO",
+            "example": 45
+          },
+          "coinsSpent": {
+            "type": "number",
+            "description": "Monedas gastadas (solo en el perfil propio)",
+            "example": 3400
+          },
+          "gemsSpent": {
+            "type": "number",
+            "description": "Gemas gastadas (solo en el perfil propio)",
+            "example": 20
+          }
+        },
+        "required": [
+          "playMinutes",
+          "feeds",
+          "cleans",
+          "sleeps",
+          "eggsHatched",
+          "byRarity",
+          "shinies",
+          "habitatVisits",
+          "friends",
+          "streakCurrent",
+          "streakBest",
+          "proDays"
+        ]
+      },
+      "ProfileBadgeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID lógico del logro",
+            "example": "special_beta_tester"
+          },
+          "name": {
+            "type": "string",
+            "example": "Beta Tester"
+          },
+          "description": {
+            "type": "string",
+            "example": "Te uniste a PockAI antes de 2027"
+          },
+          "badgeIcon": {
+            "type": "string",
+            "description": "Icono lucide (kebab-case) de la insignia",
+            "example": "flask-conical"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "care",
+              "battle",
+              "ai",
+              "collection",
+              "social",
+              "activity",
+              "special"
+            ],
+            "example": "special"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "common",
+              "rare",
+              "epic",
+              "legendary"
+            ],
+            "example": "legendary"
+          },
+          "unlockedAt": {
+            "type": "string",
+            "description": "Fecha de desbloqueo (ISO 8601)",
+            "example": "2026-11-17T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "badgeIcon",
+          "category",
+          "tier",
+          "unlockedAt"
+        ]
+      },
+      "ProfileAchievementCountDto": {
+        "type": "object",
+        "properties": {
+          "unlocked": {
+            "type": "number",
+            "example": 14
+          },
+          "total": {
+            "type": "number",
+            "example": 78
+          }
+        },
+        "required": [
+          "unlocked",
+          "total"
+        ]
+      },
+      "MyProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Jose"
+          },
+          "handle": {
+            "type": "string",
+            "nullable": true,
+            "example": "jose"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "example": "Cuidador novato"
+          },
+          "accountXp": {
+            "type": "number",
+            "example": 1200
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Fecha de alta (ISO 8601)"
+          },
+          "isPro": {
+            "type": "boolean",
+            "description": "Si ahora mismo es PRO"
+          },
+          "achievementsPublic": {
+            "type": "boolean",
+            "description": "Si el dueño muestra sus insignias y estadísticas"
+          },
+          "pet": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProfilePetDto"
+              }
+            ]
+          },
+          "stats": {
+            "nullable": true,
+            "description": "null si el dueño las oculta",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProfileStatsDto"
+              }
+            ]
+          },
+          "badges": {
+            "description": "Insignias desbloqueadas (vacío si las oculta)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileBadgeDto"
+            }
+          },
+          "featuredBadges": {
+            "description": "Ids de las insignias destacadas (máx. 3)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "achievementCount": {
+            "$ref": "#/components/schemas/ProfileAchievementCountDto"
+          },
+          "proSince": {
+            "type": "string",
+            "nullable": true,
+            "description": "Inicio del tramo PRO actual (ISO 8601)"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "accountXp",
+          "createdAt",
+          "isPro",
+          "achievementsPublic",
+          "badges",
+          "featuredBadges",
+          "achievementCount"
+        ]
+      },
+      "SetFeaturedBadgesDto": {
+        "type": "object",
+        "properties": {
+          "achIds": {
+            "maxItems": 3,
+            "example": [
+              "special_beta_tester",
+              "care_feed_50"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "achIds"
+        ]
+      },
+      "PublicProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Jose"
+          },
+          "handle": {
+            "type": "string",
+            "nullable": true,
+            "example": "jose"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "example": "Cuidador novato"
+          },
+          "accountXp": {
+            "type": "number",
+            "example": 1200
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Fecha de alta (ISO 8601)"
+          },
+          "isPro": {
+            "type": "boolean",
+            "description": "Si ahora mismo es PRO"
+          },
+          "achievementsPublic": {
+            "type": "boolean",
+            "description": "Si el dueño muestra sus insignias y estadísticas"
+          },
+          "pet": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProfilePetDto"
+              }
+            ]
+          },
+          "stats": {
+            "nullable": true,
+            "description": "null si el dueño las oculta",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProfileStatsDto"
+              }
+            ]
+          },
+          "badges": {
+            "description": "Insignias desbloqueadas (vacío si las oculta)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileBadgeDto"
+            }
+          },
+          "featuredBadges": {
+            "description": "Ids de las insignias destacadas (máx. 3)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "achievementCount": {
+            "$ref": "#/components/schemas/ProfileAchievementCountDto"
+          },
+          "isFriend": {
+            "type": "boolean",
+            "description": "Si el visitante y el dueño son amigos"
+          },
+          "isSelf": {
+            "type": "boolean",
+            "description": "Si es el perfil del propio visitante"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "accountXp",
+          "createdAt",
+          "isPro",
+          "achievementsPublic",
+          "badges",
+          "featuredBadges",
+          "achievementCount",
+          "isFriend",
+          "isSelf"
+        ]
+      },
+      "AchievementListResponseDto": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp de la respuesta (ISO 8601)",
+            "example": "2026-11-13T14:30:00.000Z"
+          },
+          "achievementsPublic": {
+            "type": "boolean",
+            "description": "Estado del opt-in de visibilidad pública",
+            "example": false
+          },
+          "categories": {
+            "type": "object",
+            "description": "Logros por categoría (care, battle, ai, collection, social, activity, special)"
+          }
+        },
+        "required": [
+          "timestamp",
+          "achievementsPublic",
+          "categories"
+        ]
+      },
+      "StarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID lógico del logro",
+            "example": "battle_10_wins"
+          },
+          "x": {
+            "type": "number",
+            "description": "Coordenada X normalizada [0,1]",
+            "example": 0.45
+          },
+          "y": {
+            "type": "number",
+            "description": "Coordenada Y normalizada [0,1]",
+            "example": 0.45
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado del logro",
+            "enum": [
+              "locked",
+              "in_progress",
+              "unlocked"
+            ],
+            "example": "unlocked"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del logro",
+            "example": "Guerrero"
+          },
+          "tier": {
+            "type": "string",
+            "description": "Tier del logro",
+            "enum": [
+              "common",
+              "rare",
+              "epic",
+              "legendary"
+            ],
+            "example": "rare"
+          }
+        },
+        "required": [
+          "id",
+          "x",
+          "y",
+          "status",
+          "name",
+          "tier"
+        ]
+      },
+      "ConstellationResponseDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Categoría/constelación",
+            "enum": [
+              "care",
+              "battle",
+              "ai",
+              "collection",
+              "social",
+              "activity",
+              "special"
+            ],
+            "example": "battle"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la constelación",
+            "example": "Batalla"
+          },
+          "stars": {
+            "description": "Estrellas de la constelación",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StarDto"
+            }
+          },
+          "connections": {
+            "description": "Conexiones entre estrellas (pares de ids)",
+            "example": [
+              [
+                "battle_5_fights",
+                "battle_1_wins"
+              ]
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "category",
+          "name",
+          "stars",
+          "connections"
+        ]
+      },
+      "ClaimedAchievementDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID lógico del logro",
+            "example": "battle_10_wins"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría",
+            "example": "battle"
+          },
+          "claimed": {
+            "type": "boolean",
+            "description": "Si fue reclamado",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "claimed"
+        ]
+      },
+      "AchievementRewardDto": {
+        "type": "object",
+        "properties": {
+          "coins": {
+            "type": "number",
+            "description": "Monedas de recompensa",
+            "example": 100
+          },
+          "gems": {
+            "type": "number",
+            "description": "Gemas de recompensa",
+            "example": 0
+          },
+          "xp": {
+            "type": "number",
+            "description": "XP de recompensa",
+            "example": 40
+          },
+          "itemId": {
+            "type": "string",
+            "description": "Item exclusivo (solo epic/legendary)",
+            "nullable": true,
+            "example": null
+          }
+        },
+        "required": [
+          "coins",
+          "gems",
+          "xp"
+        ]
+      },
+      "ClaimRewardResponseDto": {
+        "type": "object",
+        "properties": {
+          "mission": {
+            "description": "Misión reclamada",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClaimedMissionDto"
+              }
+            ]
+          },
+          "reward": {
+            "description": "Recompensa acreditada",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MissionRewardDto"
+              }
+            ]
+          },
+          "dailyChestUnlocked": {
+            "type": "boolean",
+            "description": "Si todas las diarias están completadas (desbloquea cofre)",
+            "example": true
+          }
+        },
+        "required": [
+          "mission",
+          "reward",
+          "dailyChestUnlocked"
+        ]
+      },
+      "SiteCountdownDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "launchAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "enabled",
+          "launchAt"
+        ]
+      },
+      "SiteComingSoonDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "countdown": {
+            "$ref": "#/components/schemas/SiteCountdownDto"
+          }
+        },
+        "required": [
+          "enabled",
+          "countdown"
+        ]
+      },
+      "SiteMaintenanceMessageDto": {
+        "type": "object",
+        "properties": {
+          "es": {
+            "type": "string",
+            "nullable": true
+          },
+          "en": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "es",
+          "en"
+        ]
+      },
+      "SiteMaintenanceDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "web",
+              "apps",
+              "all"
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/SiteMaintenanceMessageDto"
+          }
+        },
+        "required": [
+          "enabled",
+          "scope",
+          "message"
+        ]
+      },
+      "SiteConfigDto": {
+        "type": "object",
+        "properties": {
+          "inviteRequired": {
+            "type": "boolean",
+            "description": "Si es true, el registro exige un código de invitación"
+          },
+          "comingSoon": {
+            "$ref": "#/components/schemas/SiteComingSoonDto"
+          },
+          "maintenance": {
+            "$ref": "#/components/schemas/SiteMaintenanceDto"
+          }
+        },
+        "required": [
+          "inviteRequired",
+          "comingSoon",
+          "maintenance"
+        ]
+      },
       "ManifestDto": {
         "type": "object",
         "properties": {
@@ -7108,6 +10150,29 @@
           "inviteRequired"
         ]
       },
+      "HandleAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": "string",
+            "example": "jmbargueno",
+            "description": "Nickname normalizado (minúsculas, sin \"@\")"
+          },
+          "available": {
+            "type": "boolean",
+            "example": true
+          },
+          "reason": {
+            "type": "string",
+            "example": "Ese nickname ya está en uso",
+            "description": "Motivo cuando no está disponible"
+          }
+        },
+        "required": [
+          "handle",
+          "available"
+        ]
+      },
       "RegisterDto": {
         "type": "object",
         "properties": {
@@ -7130,6 +10195,11 @@
             "type": "string",
             "example": "ABCD-EF23",
             "description": "Código de invitación (obligatorio si el registro es solo con invitación)"
+          },
+          "handle": {
+            "type": "string",
+            "example": "jmbargueno",
+            "description": "Nickname público, único e inmutable (3-20: a-z, 0-9, \"_\" y \".\"; empieza por letra; sin distinguir mayúsculas; se acepta con o sin \"@\"). Si falta, la cuenta tendrá que elegirlo con POST /me/handle."
           }
         },
         "required": [
@@ -7169,11 +10239,20 @@
               "displayName": {
                 "type": "string"
               },
+              "handle": {
+                "type": "string",
+                "nullable": true,
+                "description": "Nickname público e inmutable; null = debe elegirlo (POST /me/handle)"
+              },
               "coins": {
                 "type": "number"
               },
               "gems": {
                 "type": "number"
+              },
+              "emailVerified": {
+                "type": "boolean",
+                "description": "false: la cuenta debe verificar el correo antes de usar las apps"
               }
             }
           }
@@ -7232,6 +10311,48 @@
           "newPassword"
         ]
       },
+      "VerifyEmailCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "482913",
+            "description": "Código de 6 dígitos recibido por email"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "VerifyEmailResultDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "ok",
+          "emailVerified"
+        ]
+      },
+      "VerifyEmailLinkDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token del enlace de verificación (parámetro ?token= de la página /verify-email)"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
       "ResetRequestDto": {
         "type": "object",
         "properties": {
@@ -7270,37 +10391,6 @@
           "newPassword"
         ]
       },
-      "AchievementRewardDto": {
-        "type": "object",
-        "properties": {
-          "coins": {
-            "type": "number",
-            "description": "Monedas de recompensa",
-            "example": 100
-          },
-          "gems": {
-            "type": "number",
-            "description": "Gemas de recompensa",
-            "example": 0
-          },
-          "xp": {
-            "type": "number",
-            "description": "XP de recompensa",
-            "example": 40
-          },
-          "itemId": {
-            "type": "string",
-            "description": "Item exclusivo (solo epic/legendary)",
-            "nullable": true,
-            "example": null
-          }
-        },
-        "required": [
-          "coins",
-          "gems",
-          "xp"
-        ]
-      },
       "PublicAchievementDto": {
         "type": "object",
         "properties": {
@@ -7314,6 +10404,16 @@
             "description": "Nombre",
             "example": "Guerrero"
           },
+          "description": {
+            "type": "string",
+            "description": "Descripción del logro",
+            "example": "Gana 10 combates"
+          },
+          "badgeIcon": {
+            "type": "string",
+            "description": "Icono de la insignia (nombre lucide, kebab-case)",
+            "example": "sword"
+          },
           "category": {
             "type": "string",
             "description": "Categoría",
@@ -7322,7 +10422,9 @@
               "battle",
               "ai",
               "collection",
-              "social"
+              "social",
+              "activity",
+              "special"
             ],
             "example": "battle"
           },
@@ -7354,6 +10456,8 @@
         "required": [
           "id",
           "name",
+          "description",
+          "badgeIcon",
           "category",
           "tier",
           "unlockedAt",
@@ -7394,187 +10498,9 @@
           "achievements"
         ]
       },
-      "AchievementListResponseDto": {
+      "UpdateBillingConfigDto": {
         "type": "object",
-        "properties": {
-          "timestamp": {
-            "type": "string",
-            "description": "Timestamp de la respuesta (ISO 8601)",
-            "example": "2026-11-13T14:30:00.000Z"
-          },
-          "achievementsPublic": {
-            "type": "boolean",
-            "description": "Estado del opt-in de visibilidad pública",
-            "example": false
-          },
-          "categories": {
-            "type": "object",
-            "description": "Logros por categoría (5: care, battle, ai, collection, social)"
-          }
-        },
-        "required": [
-          "timestamp",
-          "achievementsPublic",
-          "categories"
-        ]
-      },
-      "StarDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "ID lógico del logro",
-            "example": "battle_10_wins"
-          },
-          "x": {
-            "type": "number",
-            "description": "Coordenada X normalizada [0,1]",
-            "example": 0.45
-          },
-          "y": {
-            "type": "number",
-            "description": "Coordenada Y normalizada [0,1]",
-            "example": 0.45
-          },
-          "status": {
-            "type": "string",
-            "description": "Estado del logro",
-            "enum": [
-              "locked",
-              "in_progress",
-              "unlocked"
-            ],
-            "example": "unlocked"
-          },
-          "name": {
-            "type": "string",
-            "description": "Nombre del logro",
-            "example": "Guerrero"
-          },
-          "tier": {
-            "type": "string",
-            "description": "Tier del logro",
-            "enum": [
-              "common",
-              "rare",
-              "epic",
-              "legendary"
-            ],
-            "example": "rare"
-          }
-        },
-        "required": [
-          "id",
-          "x",
-          "y",
-          "status",
-          "name",
-          "tier"
-        ]
-      },
-      "ConstellationResponseDto": {
-        "type": "object",
-        "properties": {
-          "category": {
-            "type": "string",
-            "description": "Categoría/constelación",
-            "enum": [
-              "care",
-              "battle",
-              "ai",
-              "collection",
-              "social"
-            ],
-            "example": "battle"
-          },
-          "name": {
-            "type": "string",
-            "description": "Nombre de la constelación",
-            "example": "Batalla"
-          },
-          "stars": {
-            "description": "Estrellas de la constelación",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/StarDto"
-            }
-          },
-          "connections": {
-            "description": "Conexiones entre estrellas (pares de ids)",
-            "example": [
-              [
-                "battle_5_fights",
-                "battle_1_wins"
-              ]
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "category",
-          "name",
-          "stars",
-          "connections"
-        ]
-      },
-      "ClaimedAchievementDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "ID lógico del logro",
-            "example": "battle_10_wins"
-          },
-          "category": {
-            "type": "string",
-            "description": "Categoría",
-            "example": "battle"
-          },
-          "claimed": {
-            "type": "boolean",
-            "description": "Si fue reclamado",
-            "example": true
-          }
-        },
-        "required": [
-          "id",
-          "category",
-          "claimed"
-        ]
-      },
-      "ClaimRewardResponseDto": {
-        "type": "object",
-        "properties": {
-          "mission": {
-            "description": "Misión reclamada",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ClaimedMissionDto"
-              }
-            ]
-          },
-          "reward": {
-            "description": "Recompensa acreditada",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MissionRewardDto"
-              }
-            ]
-          },
-          "dailyChestUnlocked": {
-            "type": "boolean",
-            "description": "Si todas las diarias están completadas (desbloquea cofre)",
-            "example": true
-          }
-        },
-        "required": [
-          "mission",
-          "reward",
-          "dailyChestUnlocked"
-        ]
+        "properties": {}
       },
       "BondingFieldsDto": {
         "type": "object",
@@ -7862,6 +10788,18 @@
             "type": "string",
             "nullable": true,
             "description": "ISO 8601 del último (re)obtenimiento"
+          },
+          "sunrise": {
+            "type": "string",
+            "nullable": true,
+            "example": "07:58",
+            "description": "Salida del sol de hoy, hora local (\"HH:MM\")"
+          },
+          "sunset": {
+            "type": "string",
+            "nullable": true,
+            "example": "17:54",
+            "description": "Puesta de sol de hoy, hora local (\"HH:MM\")"
           }
         },
         "required": [
@@ -7869,7 +10807,9 @@
           "temperature",
           "weatherCode",
           "cached",
-          "fetchedAt"
+          "fetchedAt",
+          "sunrise",
+          "sunset"
         ]
       },
       "ActivityInfoModel": {
@@ -8009,6 +10949,373 @@
           "date",
           "daysRemaining"
         ]
+      },
+      "PlaceFurnitureDto": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla x (con y)"
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla y (con x)"
+          },
+          "rotation": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "Giro en pasos de 90°"
+          }
+        }
+      },
+      "MoveFurnitureDto": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla x (con y)"
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Celda ancla y (con x)"
+          },
+          "rotation": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "Giro en pasos de 90°"
+          }
+        }
+      },
+      "ContactDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Ana",
+            "description": "Nombre (1–100)"
+          },
+          "email": {
+            "type": "string",
+            "example": "ana@example.com",
+            "description": "Correo al que responder"
+          },
+          "subject": {
+            "type": "string",
+            "example": "Duda sobre mi Pockai",
+            "description": "Asunto (1–150)"
+          },
+          "message": {
+            "type": "string",
+            "example": "Hola, quería preguntar…",
+            "description": "Mensaje (10–5000)"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "bug",
+              "improvement",
+              "question",
+              "legal",
+              "account",
+              "other"
+            ],
+            "default": "other",
+            "description": "Tipo de mensaje; va en el asunto del correo"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "web",
+              "android",
+              "desktop"
+            ],
+            "default": "web",
+            "description": "Desde dónde se llegó al formulario"
+          },
+          "website": {
+            "type": "string",
+            "description": "Honeypot anti-spam: debe ir vacío"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "subject",
+          "message"
+        ]
+      },
+      "DesktopDownloadDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL firmada y temporal (unos minutos) del instalador en GitHub"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "RegistrationSettingsDto": {
+        "type": "object",
+        "properties": {
+          "inviteOnly": {
+            "type": "boolean",
+            "description": "Si es true, el registro exige un código de invitación válido"
+          }
+        },
+        "required": [
+          "inviteOnly"
+        ]
+      },
+      "InviteCreatorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName"
+        ]
+      },
+      "InviteCodeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "example": "ABCD-EF23"
+          },
+          "maxUses": {
+            "type": "number"
+          },
+          "usedCount": {
+            "type": "number"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InviteCreatorDto"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "used",
+              "revoked",
+              "expired"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "maxUses",
+          "usedCount",
+          "expiresAt",
+          "revokedAt",
+          "note",
+          "createdAt",
+          "createdBy",
+          "status"
+        ]
+      },
+      "InviteListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InviteCodeDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "CreateInvitesDto": {
+        "type": "object",
+        "properties": {
+          "maxUses": {
+            "type": "number",
+            "default": 1,
+            "minimum": 1,
+            "description": "Número de registros que permite cada código"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Caducidad (opcional, futura)"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Nota interna (para quién es la invitación)"
+          },
+          "count": {
+            "type": "number",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Cuántos códigos generar"
+          }
+        }
+      },
+      "CreatedInvitesDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InviteCodeDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "SiteSettingsDto": {
+        "type": "object",
+        "properties": {
+          "comingSoonEnabled": {
+            "type": "boolean",
+            "description": "Landing «Coming soon» activa: tapa la web a quien no tenga sesión verificada"
+          },
+          "comingSoonCountdownEnabled": {
+            "type": "boolean",
+            "description": "Mostrar la cuenta atrás en la landing"
+          },
+          "comingSoonLaunchAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Fecha de lanzamiento de la cuenta atrás"
+          },
+          "maintenanceEnabled": {
+            "type": "boolean",
+            "description": "Modo mantenimiento manual: solo pasan admins, login y contacto"
+          },
+          "maintenanceScope": {
+            "type": "string",
+            "enum": [
+              "web",
+              "apps",
+              "all"
+            ],
+            "description": "A quién afecta: solo la web, solo las apps o todo"
+          },
+          "maintenanceMessageEs": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mensaje en castellano (vacío = texto por defecto)"
+          },
+          "maintenanceMessageEn": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mensaje en inglés (vacío = texto por defecto)"
+          }
+        },
+        "required": [
+          "comingSoonEnabled",
+          "comingSoonCountdownEnabled",
+          "comingSoonLaunchAt",
+          "maintenanceEnabled",
+          "maintenanceScope",
+          "maintenanceMessageEs",
+          "maintenanceMessageEn"
+        ]
+      },
+      "UpdateSiteSettingsDto": {
+        "type": "object",
+        "properties": {
+          "comingSoonEnabled": {
+            "type": "boolean"
+          },
+          "comingSoonCountdownEnabled": {
+            "type": "boolean"
+          },
+          "comingSoonLaunchAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "maintenanceEnabled": {
+            "type": "boolean"
+          },
+          "maintenanceScope": {
+            "type": "string",
+            "enum": [
+              "web",
+              "apps",
+              "all"
+            ]
+          },
+          "maintenanceMessageEs": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "maintenanceMessageEn": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          }
+        }
       },
       "MissionRewardDto": {
         "type": "object",
@@ -8566,172 +11873,30 @@
           "total"
         ]
       },
-      "RegistrationSettingsDto": {
+      "EquipAccessoriesDto": {
         "type": "object",
         "properties": {
-          "inviteOnly": {
-            "type": "boolean",
-            "description": "Si es true, el registro exige un código de invitación válido"
-          }
-        },
-        "required": [
-          "inviteOnly"
-        ]
-      },
-      "InviteCreatorDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "email",
-          "displayName"
-        ]
-      },
-      "InviteCodeDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string",
-            "example": "ABCD-EF23"
-          },
-          "maxUses": {
-            "type": "number"
-          },
-          "usedCount": {
-            "type": "number"
-          },
-          "expiresAt": {
+          "head": {
             "type": "string",
             "nullable": true,
-            "format": "date-time"
+            "description": "Prenda de cabeza; null la quita"
           },
-          "revokedAt": {
+          "face": {
             "type": "string",
             "nullable": true,
-            "format": "date-time"
+            "description": "Prenda de cara; null la quita"
           },
-          "note": {
-            "type": "string",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "createdBy": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/InviteCreatorDto"
-              }
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "active",
-              "used",
-              "revoked",
-              "expired"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "maxUses",
-          "usedCount",
-          "expiresAt",
-          "revokedAt",
-          "note",
-          "createdAt",
-          "createdBy",
-          "status"
-        ]
-      },
-      "InviteListDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InviteCodeDto"
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "page": {
-            "type": "number"
-          },
-          "pageSize": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "page",
-          "pageSize"
-        ]
-      },
-      "CreateInvitesDto": {
-        "type": "object",
-        "properties": {
-          "maxUses": {
-            "type": "number",
-            "default": 1,
-            "minimum": 1,
-            "description": "Número de registros que permite cada código"
-          },
-          "expiresAt": {
+          "neck": {
             "type": "string",
             "nullable": true,
-            "format": "date-time",
-            "description": "Caducidad (opcional, futura)"
+            "description": "Prenda de cuello; null la quita"
           },
-          "note": {
+          "back": {
             "type": "string",
-            "maxLength": 200,
-            "description": "Nota interna (para quién es la invitación)"
-          },
-          "count": {
-            "type": "number",
-            "default": 1,
-            "minimum": 1,
-            "maximum": 50,
-            "description": "Cuántos códigos generar"
+            "nullable": true,
+            "description": "Prenda de espalda; null la quita"
           }
         }
-      },
-      "CreatedInvitesDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InviteCodeDto"
-            }
-          }
-        },
-        "required": [
-          "items"
-        ]
       },
       "AdminStatsUsersDto": {
         "type": "object",

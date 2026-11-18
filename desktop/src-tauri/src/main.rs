@@ -1,14 +1,41 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ai_cli;
+
 use serde::Deserialize;
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager, State,
+    Emitter, Manager, State, WindowEvent,
 };
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt as AutostartExt};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+
+/// Muestra y enfoca la ventana principal (bandeja, segunda instancia…).
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+/// La primera vez que se ejecuta la app se activa «Iniciar con Windows». Un marcador en la carpeta
+/// de configuración evita reactivarlo si el usuario lo desactiva después en Ajustes › Aplicación.
+fn enable_autostart_on_first_run(app: &tauri::AppHandle) {
+    let Ok(dir) = app.path().app_config_dir() else { return };
+    let marker = dir.join("autostart-initialized");
+    if marker.exists() {
+        return;
+    }
+    if app.autolaunch().enable().is_ok() {
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::write(&marker, b"1");
+    }
+}
 
 /// Rectángulo interactivo en píxeles CSS (coordenadas del viewport del webview).
 #[derive(Clone, Copy, Deserialize)]
@@ -36,6 +63,62 @@ struct HitRegions(Mutex<Vec<HitRect>>);
 #[tauri::command]
 fn set_hit_regions(state: State<HitRegions>, rects: Vec<HitRect>) {
     *state.0.lock().unwrap() = rects;
+}
+
+/// Atajo global registrado para la habilidad «Invocación rápida» (si hay uno).
+#[derive(Default)]
+struct SummonShortcut(Mutex<Option<Shortcut>>);
+
+/// Posición del cursor en píxeles CSS del webview, para llevar a la mascota hasta él.
+#[derive(serde::Serialize, Clone)]
+struct SummonPosition {
+    x: f64,
+    y: f64,
+}
+
+/// Cambia el atajo global de «Invocación rápida». `None` o vacío lo desactiva.
+/// Si el nuevo atajo no es válido o está ocupado se devuelve un error y se mantiene el anterior.
+#[tauri::command]
+fn set_summon_shortcut(
+    app: tauri::AppHandle,
+    state: State<SummonShortcut>,
+    accelerator: Option<String>,
+) -> Result<(), String> {
+    let wanted = match accelerator.as_deref().map(str::trim) {
+        Some(a) if !a.is_empty() => Some(
+            a.parse::<Shortcut>()
+                .map_err(|e| format!("Atajo no válido ({a}): {e}"))?,
+        ),
+        _ => None,
+    };
+    let gs = app.global_shortcut();
+    let mut current = state.0.lock().unwrap();
+    if *current == wanted {
+        return Ok(());
+    }
+    if let Some(next) = wanted {
+        gs.register(next)
+            .map_err(|e| format!("No se pudo registrar el atajo (¿lo usa otra aplicación?): {e}"))?;
+    }
+    if let Some(prev) = current.take() {
+        let _ = gs.unregister(prev);
+    }
+    *current = wanted;
+    Ok(())
+}
+
+/// Al pulsar el atajo: muestra la ventana y avisa al frontend con la posición del cursor.
+fn on_summon_shortcut(app: &tauri::AppHandle) {
+    let Some(window) = app.get_webview_window("main") else { return };
+    let _ = window.show();
+    let pos = match (window.cursor_position(), window.inner_position(), window.scale_factor()) {
+        (Ok(cursor), Ok(origin), Ok(scale)) => Some(SummonPosition {
+            x: (cursor.x - origin.x as f64) / scale,
+            y: (cursor.y - origin.y as f64) / scale,
+        }),
+        _ => None,
+    };
+    let _ = window.emit("quick-summon", pos);
 }
 
 /// Detección nativa Win32 de la ventana activa en primer plano.
@@ -168,14 +251,54 @@ fn spawn_click_through_loop(app: tauri::AppHandle) {
 
 fn main() {
     tauri::Builder::default()
+        // Debe ir primero: si ya hay una instancia (p. ej. oculta en la bandeja), se muestra esa
+        // en vez de abrir otra.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            show_main_window(app);
+        }))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec!["--autostart"]),
+        ))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    // Solo se registra el atajo de «Invocación rápida»; se ignora el soltar la tecla
+                    if event.state() == ShortcutState::Pressed {
+                        on_summon_shortcut(app);
+                    }
+                })
+                .build(),
+        )
         .manage(HitRegions::default())
-        .invoke_handler(tauri::generate_handler![set_hit_regions, get_active_window_info])
+        .manage(SummonShortcut::default())
+        .manage(ai_cli::CliProcs::default())
+        .invoke_handler(tauri::generate_handler![
+            set_hit_regions,
+            get_active_window_info,
+            set_summon_shortcut,
+            ai_cli::run_ai_cli,
+            ai_cli::cancel_ai_cli,
+            ai_cli::detect_ai_cli
+        ])
+        // Cerrar la ventana (Alt+F4, «Cerrar ventana» en la barra de tareas) solo la oculta: Pockai
+        // sigue en la bandeja. Para salir del todo, menú de la bandeja › «Salir de Pockai».
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .setup(|app| {
+            enable_autostart_on_first_run(app.handle());
+
             // La ventana transparente cubre el área útil del monitor (sin tapar la
             // barra de tareas) para que la mascota pueda moverse por toda la pantalla.
             if let Some(window) = app.get_webview_window("main") {
@@ -231,11 +354,7 @@ fn main() {
                         ..
                     } = event
                     {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
+                        show_main_window(tray.app_handle());
                     }
                 })
                 .build(app)?;
@@ -244,4 +363,27 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error running PetAI desktop application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Shortcut;
+
+    /// Los aceleradores que genera `captureShortcut` (desktop/src/lib/summonShortcut.ts) deben
+    /// ser válidos para el plugin global-shortcut.
+    #[test]
+    fn acepta_los_atajos_del_frontend() {
+        for a in [
+            "Ctrl+Alt+P",
+            "Shift+Super+1",
+            "Alt+Up",
+            "Ctrl+Alt+Num1",
+            "Ctrl+Alt+-",
+            "Ctrl+Alt+F5",
+            "Ctrl+Shift+Space",
+            "Alt+Shift+K",
+        ] {
+            assert!(a.parse::<Shortcut>().is_ok(), "atajo rechazado: {a}");
+        }
+    }
 }

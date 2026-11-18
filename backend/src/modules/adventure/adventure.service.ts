@@ -1,3 +1,4 @@
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Injectable, BadRequestException, NotFoundException, Logger, Optional } from '@nestjs/common';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { randomInt } from 'crypto';
@@ -24,6 +25,7 @@ export class AdventureService {
     private readonly orchestrator: AdventureOrchestratorService,
     private readonly wallet: WalletService,
     @Optional() private readonly realtime?: RealtimeGateway,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   async startDaily(userId: string, petId: string, premium: boolean) {
@@ -208,8 +210,11 @@ export class AdventureService {
       `Fue una experiencia ${result === 'win' ? 'incrediblemente emocionante' : result === 'partial' ? 'interesante con obstáculos' : 'difícil pero aprendí mucho'}.`;
 
     await this.prisma.petMemory.create({
-      data: { petId: pet.id, kind: 'adventure', content: memoryContent },
+      data: { petId: pet.id, kind: 'adventure', layer: 'episodic', importance: 0.6, valence: result === 'lose' ? 0 : 0.6, content: memoryContent },
     });
+
+    // Spec 36: la aventura es una experiencia que mueve la personalidad (curiosidad, valentía)
+    this.events?.emit('adventure:finished', { userId, petId: pet.id, theme: adventure.theme, outcome: result });
 
     this.logger.log(`Adventure ${adventure.id} finished: outcome=${result} score=${score.toFixed(3)}`);
     if (this.realtime) {

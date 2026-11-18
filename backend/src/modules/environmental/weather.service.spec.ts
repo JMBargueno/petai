@@ -28,7 +28,15 @@ describe('WeatherService', () => {
   it('sin coordenadas → unknown (opt-in desactivado)', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
     const w = await service.getWeather(null, null);
-    expect(w).toEqual({ condition: 'unknown', temperature: null, weatherCode: null, cached: false, fetchedAt: null });
+    expect(w).toEqual({
+      condition: 'unknown',
+      temperature: null,
+      weatherCode: null,
+      cached: false,
+      fetchedAt: null,
+      sunrise: null,
+      sunset: null,
+    });
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
@@ -42,6 +50,9 @@ describe('WeatherService', () => {
     const w = await service.getWeather(10, 20);
     expect(w.cached).toBe(true);
     expect(w.condition).toBe('rain');
+    // Entrada cacheada antes de añadir el sol: se sirve sin él.
+    expect(w.sunrise).toBeNull();
+    expect(w.sunset).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
@@ -56,6 +67,29 @@ describe('WeatherService', () => {
     expect(w.temperature).toBe(35);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(memory.get('weather:10:20')).toBeDefined();
+    fetchSpy.mockRestore();
+  });
+
+  it('pide la salida y la puesta de sol y las devuelve como hora local "HH:MM"', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          current: { temperature_2m: 14, weather_code: 2 },
+          daily: { sunrise: ['2026-11-18T07:58'], sunset: ['2026-11-18T17:54'] },
+        }),
+        { status: 200 },
+      ),
+    );
+    const w = await service.getWeather(10, 20);
+    expect(w.sunrise).toBe('07:58');
+    expect(w.sunset).toBe('17:54');
+    const url = new URL(String(fetchSpy.mock.calls[0][0]));
+    expect(url.searchParams.get('daily')).toBe('sunrise,sunset');
+    expect(url.searchParams.get('timezone')).toBe('auto');
+    // Y se cachean con el clima: la siguiente lectura los conserva.
+    const again = await service.getWeather(10, 20);
+    expect(again.cached).toBe(true);
+    expect(again.sunset).toBe('17:54');
     fetchSpy.mockRestore();
   });
 

@@ -14,7 +14,8 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 ## 2. Endpoints REST
 
 ### 2.1 Autenticación (`/auth`)
-- `POST /auth/register` `{ email, password, displayName? }`: Registro (Argon2id). El correo se normaliza a minúsculas (máx. 254) y debe ser válido; la contraseña tiene de 8 a 128 caracteres; `displayName` de 1 a 50 sin caracteres de control. Devuelve `accessToken`, `refreshToken` y el usuario. Entradas inválidas → 400; correo repetido → 409.
+- `POST /auth/register` `{ email, password, displayName?, handle? }`: Registro (Argon2id). El correo se normaliza a minúsculas (máx. 254) y debe ser válido; la contraseña tiene de 8 a 128 caracteres; `displayName` de 1 a 50 sin caracteres de control. `handle` es el nickname público, único e **inmutable** (3-20: `a-z`, `0-9`, `_`, `.`; empieza por letra; sin distinguir mayúsculas; con o sin `@`; ver spec-35). Es opcional en la API por compatibilidad: sin él la cuenta lo elige después con `POST /me/handle`. Devuelve `accessToken`, `refreshToken` y el usuario (con `handle`). Entradas inválidas o nickname reservado → 400; correo repetido → 409; nickname en uso → 409 «Ese nickname ya está en uso».
+- `GET /auth/handle-available?handle=x` (sin sesión): `{ handle, available, reason? }`. 60 por IP y minuto (`AUTH_HANDLE_CHECK_MAX_PER_MINUTE`).
 - `POST /auth/login` `{ email, password }`: Autenticación. Cuenta inexistente y contraseña errónea dan la misma respuesta (401) y el mismo coste de cálculo (sin pistas por tiempos).
 - `POST /auth/refresh` `{ refreshToken }`: Rotación del token de refresco, atómica (un token solo se canjea una vez). Reutilizar un token ya revocado hace más de 10 s se trata como robo y **revoca todas las sesiones** de la cuenta.
 - `POST /auth/logout` `{ refreshToken }`: Revoca ese token (idempotente). 30 por IP y minuto.
@@ -28,9 +29,16 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `POST /auth/device/confirm` `{ code }` (con sesión): vincula el código mostrado en otro dispositivo. 10 intentos por IP y por usuario cada 15 min; código inexistente o caducado → 404; código ya confirmado (por cualquier cuenta) → 409: la primera confirmación es la que vale.
 - `POST /auth/device/poll` `{ pollToken }` (sin sesión): `{ status: "pending" }` o, una sola vez, `{ status: "confirmed", accessToken, refreshToken, user }`. 120 por IP y minuto. Estado en Redis con caducidad de 5 min (respaldo en memoria si Redis no responde).
 
+### 2.1b Contacto (`/contact`)
+- `POST /contact` `{ name, email, subject, message, type?, source?, website? }` (sin sesión): envía el mensaje al buzón de contacto (`CONTACT_TO`, por defecto `contact@pockai.world`) con `Reply-To` del remitente. `type` es el tipo de mensaje (`bug`, `improvement`, `question`, `account`, `legal`, `other`; por defecto `other`) y va en el asunto para ordenar el buzón: `[Contacto][Fallo] <asunto>` (Fallo, Mejora, Pregunta, Cuenta, Legal, Otro). `source` (`web`, `android`, `desktop`; por defecto `web`) indica desde dónde se llegó y va en el cuerpo junto al tipo. La web preselecciona ambos con `/contact?type=bug&from=android` (las apps enlazan así); en mantenimiento esa URL abre el formulario en el modal. `name` 1–100, `subject` 1–150, `message` 10–5000 caracteres; `email` válido. `website` es un honeypot: si llega relleno se responde 204 sin enviar nada. Respuestas: 204 aceptado, 400 datos no válidos, 429 (5 mensajes por IP y 5 por email cada hora), 503 si el SMTP falla.
+
 ### 2.2 Usuario y Perfil (`/users` y `/me`)
 - `GET /me`: Obtener perfil del usuario actual (monedas, gemas, nivel de cuenta, zona horaria).
-- `PATCH /me`: Actualizar preferencias (zona horaria, ajustes de notificación).
+- `PATCH /me`: Actualizar preferencias (zona horaria, ajustes de notificación). El nickname no se puede cambiar: enviar `handle` → 400.
+- `POST /me/handle` `{ handle }`: fija el nickname de una cuenta que aún no lo tiene (una sola vez). 409 si ya tenía uno o si está en uso. Accesible sin verificar el correo.
+- `GET /users/by-handle/:handle`: perfil público mínimo `{ id, handle, displayName, title, accountXp }`; 404 si nadie lo usa.
+- Con `HANDLE_REQUIRED=true`, las cuentas sin nickname reciben 403 `{ code: "HANDLE_REQUIRED" }` en las rutas que no son de alta (las apps muestran «Elige tu nickname»).
+- Amigos (`POST /coop/friends`) e invitaciones a clan (`POST /clans/:id/invite`) identifican al jugador por `handle` (o por id). El email ya no se acepta (400).
 
 ### 2.3 Catálogo de Juego (`/catalog`)
 - `GET /catalog`: Devuelve especies, patrones, comidas y tablas de balance (cacheadas).
@@ -102,6 +110,8 @@ Para un Hermes Agent en el propio equipo (el backend no puede alcanzar un loopba
 - `POST /pets/:id/chat/local/context` `{ message }`: valida, aplica el límite de mensajes y la moderación de entrada, y devuelve `{ turnId, messages, maxTokens }` (o `{ moderated }`). No necesita proveedor configurado y no consume cuota. Con memoria (≥ 200) incluye los recuerdos; el prompt no promete herramientas.
 - `POST /pets/:id/chat/local/sync` `{ turnId, reply }`: el turno es de un solo uso, caduca a los 5 min y es del usuario y mascota que lo pidieron. La respuesta (máx. 4000 caracteres) se modera; si pasa se guarda y sube la inteligencia, si no devuelve `{ moderated }` y no se guarda.
 Límites: la respuesta la afirma el cliente (no debe usarse para nada competitivo), no hay herramientas de agente ni extracción de memoria, y la moderación de salida ocurre al sincronizar (el texto ya se mostró en local). La URL, el modelo y la key de Hermes se guardan solo en el equipo.
+
+Los modos **Claude CLI** y **Antigravity CLI** del escritorio usan estos mismos dos endpoints: entre `context` y `sync`, la app lanza `claude -p` o `agy -p` (comando nativo `run_ai_cli`, `desktop/src-tauri/src/ai_cli.rs`) con la sesión que el usuario ya tiene iniciada en ese CLI. El proceso corre en un directorio temporal vacío y sin shell. Claude se lanza con `--tools "" --strict-mcp-config --no-session-persistence`. Antigravity se lanza con `--sandbox`; en headless deniega las herramientas que el usuario no haya permitido en su `settings.json`. Al cancelar o agotar el tiempo se mata el proceso lanzado; si es un `.cmd` de npm, su proceso hijo de Node puede terminar por su cuenta. El backend no distingue estos modos de Hermes local.
 
 #### Moderación
 Evento SSE `moderated` `{reason, message, hideUserMessage}` (el mensaje no se guarda y no gasta tokens salvo `output_leak`):

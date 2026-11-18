@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /** Categorías/constelaciones de logros. */
-export const ACHIEVEMENT_CATEGORY_VALUES = ['care', 'battle', 'ai', 'collection', 'social'] as const;
+export const ACHIEVEMENT_CATEGORY_VALUES = ['care', 'battle', 'ai', 'collection', 'social', 'activity', 'special'] as const;
 /** Tiers de logro. */
 export const ACHIEVEMENT_TIER_VALUES = ['common', 'rare', 'epic', 'legendary'] as const;
 /** Estado derivado de un logro. */
@@ -36,6 +36,12 @@ export class AchievementDto {
   @ApiProperty({ description: 'Texto descriptivo', example: 'Alimenta a tu pet 50 veces' })
   description: string;
 
+  @ApiProperty({ description: 'Icono de la insignia (nombre lucide, kebab-case)', example: 'apple' })
+  badgeIcon: string;
+
+  @ApiProperty({ description: 'Logro secreto (nombre oculto hasta desbloquearlo)', example: false })
+  hidden: boolean;
+
   @ApiProperty({ description: 'Tier', enum: ACHIEVEMENT_TIER_VALUES, example: 'common' })
   tier: string;
 
@@ -66,7 +72,7 @@ export class AchievementListResponseDto {
   @ApiProperty({ description: 'Estado del opt-in de visibilidad pública', example: false })
   achievementsPublic: boolean;
 
-  @ApiProperty({ description: 'Logros por categoría (5: care, battle, ai, collection, social)' } as any)
+  @ApiProperty({ description: 'Logros por categoría (care, battle, ai, collection, social, activity, special)' } as any)
   categories: Record<string, AchievementDto[]>;
 }
 
@@ -134,6 +140,12 @@ export class PublicAchievementDto {
 
   @ApiProperty({ description: 'Nombre', example: 'Guerrero' })
   name: string;
+
+  @ApiProperty({ description: 'Descripción del logro', example: 'Gana 10 combates' })
+  description: string;
+
+  @ApiProperty({ description: 'Icono de la insignia (nombre lucide, kebab-case)', example: 'sword' })
+  badgeIcon: string;
 
   @ApiProperty({ description: 'Categoría', enum: ACHIEVEMENT_CATEGORY_VALUES, example: 'battle' })
   category: string;

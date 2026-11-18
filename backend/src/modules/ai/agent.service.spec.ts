@@ -10,6 +10,11 @@ describe('AgentService', () => {
   let svc: AgentService;
   const memory: any = { search: jest.fn().mockResolvedValue(['A Ana le gusta pescar']) };
   const gameData: any = {
+    getLore: () => ({
+      topics: [
+        { id: 'elementos', title: 'Los Seis Flujos del Éter', keywords: ['elementos', 'fuego'], text: 'Seis formas de la energía.' },
+      ],
+    }),
     getBalance: () => ({
       minigames: { minEnergy: 10, energyCost: 10, games: { catch_food: { name: 'A' }, reflex: { name: 'R' }, memory_match: { name: 'M' } } },
     }),
@@ -63,6 +68,16 @@ describe('AgentService', () => {
     expect(parse(await svc.handle(ctx, call('suggest_minigame'))).recomendado).toBe('catch_food'); // triste
     pets.getPetById.mockResolvedValue({ happiness: 90, energy: 5, sleeping: false });
     expect(parse(await svc.handle(ctx, call('suggest_minigame'))).recomendado).toBeNull(); // cansado
+  });
+
+  it('get_lore devuelve el tema pedido o la lista de temas si no lo conoce', async () => {
+    expect(parse(await svc.handle(ctx, call('get_lore', { topic: 'los elementos' })))).toEqual({
+      tema: 'Los Seis Flujos del Éter',
+      lore: 'Seis formas de la energía.',
+    });
+    const miss = parse(await svc.handle(ctx, call('get_lore', { topic: 'recetas de cocina' })));
+    expect(miss.error).toBeDefined();
+    expect(miss.temas_disponibles).toEqual(['Los Seis Flujos del Éter']);
   });
 
   it('search_memory y list_reminders delegan en sus fuentes', async () => {
@@ -147,6 +162,57 @@ describe('AgentService', () => {
       ]);
       const l = await svc.listPending('u1', 'p1');
       expect(l.map((a) => a.clientSide)).toEqual([true, false]);
+    });
+  });
+
+  describe('acciones sobre la propia mascota', () => {
+    const deskCtx = { ...ctx, clientTools: ['toggle_desktop_skill', 'start_pomodoro', 'stop_pomodoro'] };
+    const petWith = (extra: any) =>
+      pets.getPetById.mockResolvedValue({ bonding: 50, intelligence: 600, desktopSkills: {}, inHabitat: false, ...extra });
+
+    it('no propone activar una habilidad bloqueada (el servidor decide con sus datos)', async () => {
+      petWith({ bonding: 5 });
+      const o: any = await svc.handle(deskCtx, call('toggle_desktop_skill', { skill_id: 'climb_walls', enabled: true }));
+      expect(o.kind).toBe('result');
+      expect(parse(o).error).toContain('bloqueada');
+      expect(prisma.pendingAction.create).not.toHaveBeenCalled();
+    });
+
+    it('no propone lo que ya está hecho y sí lo que cambia algo', async () => {
+      petWith({ desktopSkills: { climb_walls: true } });
+      const same = await svc.handle(deskCtx, call('toggle_desktop_skill', { skill_id: 'climb_walls', enabled: true }));
+      expect(parse(same).error).toContain('ya está activada');
+      const o: any = await svc.handle(deskCtx, call('toggle_desktop_skill', { skill_id: 'climb_walls', enabled: false }));
+      expect(o.kind).toBe('confirm');
+      expect(o.action.clientSide).toBe(true);
+    });
+
+    it('el Pomodoro exige la habilidad activa', async () => {
+      petWith({ desktopSkills: { pomodoro_companion: false } });
+      expect(parse(await svc.handle(deskCtx, call('start_pomodoro', { work_minutes: 50 }))).error).toContain('no está activa');
+      petWith({});
+      expect((await svc.handle(deskCtx, call('start_pomodoro', { work_minutes: 50 }))).kind).toBe('confirm');
+    });
+
+    it('al confirmar se revalida el estado: si ya cambió, se rechaza', async () => {
+      prisma.pendingAction.findUniqueOrThrow.mockResolvedValue({
+        id: 'a1',
+        tool: 'toggle_desktop_skill',
+        args: { skill_id: 'climb_walls', enabled: true },
+        summary: 's',
+      });
+      petWith({ desktopSkills: { climb_walls: true } });
+      await expect(svc.confirm('u1', 'p1', 'a1')).rejects.toThrow('ya está activada');
+      expect(prisma.pendingAction.update).toHaveBeenCalledWith({ where: { id: 'a1' }, data: { status: 'rejected' } });
+    });
+
+    it('set_in_habitat lo ejecuta el servidor tras confirmar', async () => {
+      pets.setInHabitat = jest.fn().mockResolvedValue({ inHabitat: true });
+      prisma.pendingAction.findUniqueOrThrow.mockResolvedValue({ id: 'a1', tool: 'set_in_habitat', args: { in_habitat: true }, summary: 's' });
+      petWith({ inHabitat: false });
+      const r: any = await svc.confirm('u1', 'p1', 'a1');
+      expect(pets.setInHabitat).toHaveBeenCalledWith('u1', 'p1', true);
+      expect(r.result).toEqual({ en_casita: true });
     });
   });
 

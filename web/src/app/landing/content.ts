@@ -3,6 +3,7 @@ import patternData from '../../../../shared/game-data/patterns.json';
 import skillsData from '../../../../shared/game-data/skills.json';
 import speciesData from '../../../../shared/game-data/species.json';
 import { DOWNLOADS } from '../site.config';
+import type { DesktopPlatform } from '../shared/device/device';
 import type { StickerColor, StickerIcon } from '../shared/ui/sticker';
 
 /**
@@ -32,7 +33,7 @@ export const FEATURES: Feature[] = [
     icon: 'egg',
     color: 'sunburst',
     title: $localize`:@@feat.hatch.title:Eclosión`,
-    body: $localize`:@@feat.hatch.body:Cada huevo esconde una criatura con rareza, patrón y paleta propios, de normal a mítica. Con suerte, incluso una variante shiny.`,
+    body: $localize`:@@feat.hatch.body:Cada huevo esconde una especie, de normal a mítica, y cada ejemplar nace con patrón y paleta propios. Con suerte, incluso una variante shiny.`,
     link: { path: 'pockais', label: $localize`:@@feat.link.pockais:Conoce a los pockais →` },
   },
   {
@@ -58,7 +59,7 @@ export const FEATURES: Feature[] = [
     icon: 'chat',
     color: 'lavender',
     title: $localize`:@@feat.ai.title:Inteligencia`,
-    body: $localize`:@@feat.ai.body:Conecta tu propio modelo de lenguaje y tu pockai conversa, recuerda lo que le cuentas y actúa como un pequeño agente personal.`,
+    body: $localize`:@@feat.ai.body:Conecta tu propio modelo de lenguaje y tu pockai conversa contigo con su propia voz y actúa como un pequeño agente personal.`,
     link: { path: 'lore#despertar', label: $localize`:@@feat.link.ai:El despertar de la IA →` },
   },
   {
@@ -66,6 +67,13 @@ export const FEATURES: Feature[] = [
     color: 'voltage-violet',
     title: $localize`:@@feat.sync.title:Sincronización`,
     body: $localize`:@@feat.sync.body:La misma mascota en el escritorio y en el móvil. Vinculas los dispositivos con un código y los cambios llegan al momento.`,
+  },
+  {
+    icon: 'leaf',
+    color: 'mint-pop',
+    title: $localize`:@@feat.mind.title:Carácter propio`,
+    body: $localize`:@@feat.mind.body:Tu pockai cambia según cómo lo cuidas, recuerda lo que vivís juntos y, cuando no estás, sigue a lo suyo: explora, juega y visita a sus amigos.`,
+    link: { path: 'lore#huella', label: $localize`:@@feat.link.mind:La huella del Custodio →` },
   },
 ];
 
@@ -94,20 +102,38 @@ export const SPECIES = speciesData.map((s, i) => ({
   name: s.name,
   spriteKey: s.spriteKey,
   element: ELEMENTS[s.element] ?? s.element,
+  /** Rareza de la especie: todos sus ejemplares la comparten. */
   rarity: RARITIES[s.rarity] ?? s.rarity,
   description: s.description,
+  rarityId: s.rarity,
   color: CARD_COLORS[i % CARD_COLORS.length],
 }));
 
 const READY = $localize`:@@plat.status.ready:Disponible`;
 const IN_PROGRESS = $localize`:@@plat.status.wip:En desarrollo`;
 
-export const PLATFORMS = [
+export interface Platform {
+  name: string;
+  status: string;
+  /** Instalador de escritorio: se descarga con sesión (DownloadAction). */
+  desktop?: DesktopPlatform;
+  /** Enlace de tienda de las apps móviles (null mientras no exista). */
+  url?: string | null;
+  body: string;
+}
+
+export const PLATFORMS: Platform[] = [
   {
     name: 'Windows',
     status: READY,
-    url: DOWNLOADS.windows,
+    desktop: 'windows',
     body: $localize`:@@plat.windows.body:Tu pockai vive sobre el escritorio: camina, duerme y come en una ventana transparente, con chat flotante y avisos nativos.`,
+  },
+  {
+    name: 'macOS',
+    status: READY,
+    desktop: 'macos',
+    body: $localize`:@@plat.macos.body:La misma mascota de escritorio, ahora también en tu Mac.`,
   },
   {
     name: 'Android',
@@ -126,7 +152,7 @@ export const PLATFORMS = [
 export const FAQ = [
   {
     q: $localize`:@@faq.1.q:¿En qué plataformas está Pockai?`,
-    a: $localize`:@@faq.1.a:En Windows y Android. La versión para iOS está en desarrollo.`,
+    a: $localize`:@@faq.1.a:En Windows, macOS y Android. La versión para iOS está en desarrollo.`,
   },
   {
     q: $localize`:@@faq.2.q:¿Necesito una API key para jugar?`,
@@ -143,6 +169,10 @@ export const FAQ = [
   {
     q: $localize`:@@faq.5.q:¿Qué pasa si no cuido a mi pockai?`,
     a: $localize`:@@faq.5.a:Si una estadística se queda baja mucho tiempo puede enfermar y habrá que curarla, o ponerse triste y rendir menos en combate.`,
+  },
+  {
+    q: $localize`:@@faq.mind.q:¿Qué hace mi pockai cuando no estoy?`,
+    a: $localize`:@@faq.mind.a:Sigue con su vida: descansa, juega, explora, a veces encuentra algún tesoro y visita a los pockais de tus amigos. Cuando vuelves, te cuenta lo que ha vivido a su manera.`,
   },
   {
     q: $localize`:@@faq.6.q:¿Tiene algún coste o suscripción mensual?`,
@@ -209,6 +239,21 @@ export const RARITY_ODDS = Object.entries(balance.rarity).map(([id, r]) => ({
   color: RARITY_COLORS[id] ?? 'sunburst',
 }));
 
+/**
+ * De entre `items`, los de la rareza tirada; si no hay ninguno, los de la rareza más cercana por
+ * debajo (y, si tampoco, por encima). Es la misma regla que usa el servidor al eclosionar.
+ */
+export function ofRolledRarity<T extends { rarityId: string }>(items: T[], rolledId: string): T[] {
+  const order = RARITY_ODDS.map((r) => r.id);
+  const at = order.indexOf(rolledId);
+  const tryIds = [rolledId, ...order.slice(0, Math.max(at, 0)).reverse(), ...order.slice(at + 1)];
+  for (const id of tryIds) {
+    const found = items.filter((i) => i.rarityId === id);
+    if (found.length) return found;
+  }
+  return items;
+}
+
 export const SHINY_PROBABILITY = balance.shinyProbability;
 export const SHINY_NOTE = $localize`:@@rar.shiny:Y además, un ${percent(balance.shinyProbability)}:PERCENT: % de las eclosiones sale en variante shiny.`;
 
@@ -217,9 +262,13 @@ const PATTERN_NAMES: Record<string, string> = {
   spots: $localize`:@@pat.spots:Manchas`,
   stripes: $localize`:@@pat.stripes:Rayas`,
   gradient: $localize`:@@pat.gradient:Degradado`,
+  rosettes: $localize`:@@pat.rosettes:Rosetas`,
+  honeycomb: $localize`:@@pat.honeycomb:Panal`,
   scales: $localize`:@@pat.scales:Escamas`,
   crystal: $localize`:@@pat.crystal:Cristal`,
+  circuit: $localize`:@@pat.circuit:Circuito`,
   galaxy: $localize`:@@pat.galaxy:Galaxia`,
+  storm: $localize`:@@pat.storm:Tormenta`,
   aurora: $localize`:@@pat.aurora:Aurora`,
 };
 const PATTERN_SPRITES = new Set(['spots', 'stripes', 'gradient', 'scales']);
@@ -227,9 +276,11 @@ const PATTERN_SPRITES = new Set(['spots', 'stripes', 'gradient', 'scales']);
 export const PATTERNS = patternData.map((p) => ({
   id: p.id,
   name: PATTERN_NAMES[p.id] ?? p.name,
-  minRarity: RARITIES[p.minRarity] ?? p.minRarity,
+  /** Rareza propia del patrón: se tira por ejemplar, aparte de la de su especie. */
+  rarity: RARITIES[p.rarity] ?? p.rarity,
+  rarityId: p.rarity,
   sprite: PATTERN_SPRITES.has(p.id) ? `sprites/pattern_${p.id}.svg` : null,
-  color: RARITY_COLORS[p.minRarity] ?? 'sunburst',
+  color: RARITY_COLORS[p.rarity] ?? 'sunburst',
 }));
 
 export const DESKTOP_POINTS = [
@@ -386,22 +437,40 @@ export interface PricingCard {
 
 export const PRICING_CARDS: PricingCard[] = [
   {
-    title: $localize`:@@price.free.title:Juego Completo`,
+    title: $localize`:@@price.free.title:Gratuito (Free)`,
     badge: $localize`:@@price.free.badge:Sin costes`,
     price: '0 €',
     period: $localize`:@@price.free.period:Gratis para siempre`,
-    description: $localize`:@@price.free.desc:Todo el núcleo del juego sin muros de pago ni compras obligatorias.`,
+    description: $localize`:@@price.free.desc:Juego completo y 15 mensajes de IA al día incluidos sin configurar nada.`,
     features: [
-      $localize`:@@price.free.f1:Eclosión y cuidados diarios sin límites de tiempo`,
-      $localize`:@@price.free.f2:Los 3 minijuegos para ganar experiencia y monedas`,
+      $localize`:@@price.free.f1:15 mensajes diarios con IA de Pockai incluidos`,
+      $localize`:@@price.free.f2:Eclosión, cuidados y los 3 minijuegos`,
       $localize`:@@price.free.f3:10 combates diarios en la Arena con repetición animada`,
-      $localize`:@@price.free.f4:Sincronización instantánea entre PC y móvil`,
+      $localize`:@@price.free.f4:Opción de usar tu propia API key (BYOK) o Hermes local gratis`,
     ],
     color: 'mint-pop',
     icon: 'heart',
     ctaText: $localize`:@@price.free.cta:Empezar a jugar`,
     ctaLink: '#descargar',
     filled: false,
+  },
+  {
+    title: $localize`:@@price.pro.title:Pockai Pro`,
+    badge: $localize`:@@price.pro.badge:Recomendado`,
+    price: '9,99 €',
+    period: $localize`:@@price.pro.period:al mes`,
+    description: $localize`:@@price.pro.desc:La experiencia de IA conversacional y agente sin preocupaciones.`,
+    features: [
+      $localize`:@@price.pro.f1:200 mensajes diarios con IA gestionada de alta calidad`,
+      $localize`:@@price.pro.f2:Herramientas de agente desbloqueadas (recordatorios, enlaces)`,
+      $localize`:@@price.pro.f3:Mayor memoria conversacional y respuestas detalladas`,
+      $localize`:@@price.pro.f4:Modelos con redundancia y fallback automático sin configurar keys`,
+    ],
+    color: 'sunburst',
+    icon: 'star',
+    ctaText: $localize`:@@price.pro.cta:Hazte Pro`,
+    ctaLink: '#descargar',
+    filled: true,
   },
   {
     title: $localize`:@@price.pass.title:Pase de Temporada`,
@@ -415,28 +484,10 @@ export const PRICING_CARDS: PricingCard[] = [
       $localize`:@@price.pass.f3:Cero ventajas competitivas en combate`,
       $localize`:@@price.pass.f4:Conserva todas tus recompensas de por vida`,
     ],
-    color: 'sunburst',
-    icon: 'star',
-    ctaText: $localize`:@@price.pass.cta:Ver recompensas`,
-    ctaLink: '#funciones',
-    filled: true,
-  },
-  {
-    title: $localize`:@@price.ai.title:IA Abierta (BYOK)`,
-    badge: $localize`:@@price.ai.badge:Tú eliges`,
-    price: '0 €',
-    period: $localize`:@@price.ai.period:Sin suscripción fija`,
-    description: $localize`:@@price.ai.desc:Conecta tu propia API key de Google Gemini u OpenAI sin intermediarios.`,
-    features: [
-      $localize`:@@price.ai.f1:Usa los niveles gratuitos oficiales de los proveedores`,
-      $localize`:@@price.ai.f2:Cero comisión o recargo sobre el coste del token`,
-      $localize`:@@price.ai.f3:Cifrado seguro AES-GCM de tus claves en el servidor`,
-      $localize`:@@price.ai.f4:Memoria privada: borra recuerdos cuando quieras`,
-    ],
     color: 'lavender',
     icon: 'chat',
-    ctaText: $localize`:@@price.ai.cta:Saber más`,
-    ctaLink: '#faq',
+    ctaText: $localize`:@@price.pass.cta:Ver recompensas`,
+    ctaLink: '#funciones',
     filled: false,
   },
 ];

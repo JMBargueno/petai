@@ -18,6 +18,10 @@
     accent-color: var(--accent);
     scrollbar-color: color-mix(in srgb, var(--ink) 35%, transparent) transparent;
   }
+  /* Con índice flotante de secciones bajo la cabecera, las anclas no quedan tapadas por él. */
+  html:has(.toc) {
+    scroll-padding-top: calc(var(--header-h) + 72px);
+  }
 
   body {
     margin: 0;
@@ -386,9 +390,12 @@
      las variantes "grandes" llevan degradado y las de respiro, fondo liso. */
   .band {
     position: relative;
-    overflow: clip;
     padding: clamp(72px, 10vw, 136px) var(--gutter);
     background: var(--bg);
+  }
+  .band:has(> app-sticker),
+  .band:has(> app-ribbon) {
+    overflow: clip;
   }
   .band--compact {
     padding-block: clamp(56px, 7vw, 96px);

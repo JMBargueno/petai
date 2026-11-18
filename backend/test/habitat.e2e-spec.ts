@@ -137,7 +137,7 @@ describe('Hábitat (e2e) — camino feliz', () => {
       userId = u.userId;
       petId = u.petId;
       // Saldo suficiente para todos los muebles del flujo (incl. el test del cap de buffs):
-      // fountain(400)+soft_bed(600)+toy_ball(400)+3×fountain(1200) = 2600.
+      // fountain(400)+soft_bed(600)+toy_ball(400)+6×fountain(2400) = 3800.
       await prisma.user.update({ where: { id: userId }, data: { coins: 5000, gems: 10 } });
       // Precondición real de `place`: el hábitat debe existir. La raíz lo inicializa.
       await api().get('/v1/habitat').set(authH).expect(200);
@@ -186,11 +186,11 @@ describe('Hábitat (e2e) — camino feliz', () => {
 
       expect(body.petId).toBe(petId);
       expect(body.itemCount).toBe(3);
-      // fountain_water (hygiene 0.15) + soft_bed (energy 0.20) + toy_ball (happiness 0.10).
+      // fountain_water (hygiene 0.08) + soft_bed (energy 0.15) + toy_ball (happiness 0.05).
       expect(body.activeBuffs).toMatchObject({
-        hygiene_decay_reduction: 0.15,
-        energy_recovery_boost: 0.2,
-        happiness_decay_reduction: 0.1,
+        hygiene_decay_reduction: 0.08,
+        energy_recovery_boost: 0.15,
+        happiness_decay_reduction: 0.05,
       });
       // Los valores están por debajo de sus topes (0.40/0.40/0.30), así que se devuelven sin topar.
       // (El cap sí se aplica cuando se supera: ver el test e).)
@@ -223,15 +223,82 @@ describe('Hábitat (e2e) — camino feliz', () => {
     });
 
     it('e) buffs: al superar el tope (cap) el valor se limita al máximo del catálogo', async () => {
-      // fountain_water da hygiene_decay_reduction 0.15 por unidad. Colocando 3 (0.45 > cap 0.40),
+      // fountain_water da hygiene_decay_reduction 0.08 por unidad. Colocando 6 (0.48 > cap 0.40),
       // el buff debe toparse en 0.40 (buffCaps.hygiene_decay_reduction_max) y no en la suma cruda.
-      await api().post('/v1/habitat/furniture/fountain_water/place').set(authH).expect(201);
-      await api().post('/v1/habitat/furniture/fountain_water/place').set(authH).expect(201);
-      await api().post('/v1/habitat/furniture/fountain_water/place').set(authH).expect(201);
+      for (let k = 0; k < 6; k++) {
+        await api().post('/v1/habitat/furniture/fountain_water/place').set(authH).expect(201);
+      }
 
       const buffs = (await api().get('/v1/habitat/buffs').set(authH).expect(200)).body;
-      expect(buffs.itemCount).toBe(5); // soft_bed + toy_ball + 3× fountain_water
-      expect(buffs.activeBuffs.hygiene_decay_reduction).toBe(0.4); // topado (sin fix: 0.45)
+      expect(buffs.itemCount).toBe(8); // soft_bed + toy_ball + 6× fountain_water
+      expect(buffs.activeBuffs.hygiene_decay_reduction).toBe(0.4); // topado (sin tope: 0.48)
+    });
+  });
+
+  describe('colocación isométrica: posición, giro, movimiento y borrado por item', () => {
+    let authH: Record<string, string>;
+    let userId: string;
+    let petId: string;
+
+    beforeAll(async () => {
+      const u = await createPetUser();
+      authH = u.authH;
+      userId = u.userId;
+      petId = u.petId;
+      await prisma.user.update({ where: { id: userId }, data: { coins: 5000, gems: 10 } });
+      await api().get('/v1/habitat').set(authH).expect(200);
+    });
+
+    it('coloca en una celda concreta con giro y devuelve itemId, x, y y rotation', async () => {
+      // soft_bed tiene huella 2×1; girada (rotation 1) ocupa 1×2.
+      const res = await api()
+        .post('/v1/habitat/furniture/soft_bed/place')
+        .set(authH)
+        .send({ x: 13, y: 0, rotation: 1 })
+        .expect(201);
+      expect(res.body).toMatchObject({ furnitureId: 'soft_bed', room: 'sala', x: 13, y: 0, rotation: 1 });
+      expect(typeof res.body.itemId).toBe('string');
+
+      const root = await api().get('/v1/habitat').set(authH).expect(200);
+      const sala = root.body.rooms.find((r: any) => r.id === 'sala');
+      expect(sala.theme).toMatchObject({ floor: expect.stringMatching(/^#/) });
+      expect(sala.items[0]).toMatchObject({ id: res.body.itemId, x: 13, y: 0, rotation: 1 });
+    });
+
+    it('rechaza posiciones fuera de la sala, solapadas o de pared lejos de la pared, sin cobrar', async () => {
+      const before = (await prisma.user.findUniqueOrThrow({ where: { id: userId } })).coins;
+      await api().post('/v1/habitat/furniture/soft_bed/place').set(authH).send({ x: 13, y: 0, rotation: 0 }).expect(400);
+      await api().post('/v1/habitat/furniture/toy_ball/place').set(authH).send({ x: 13, y: 1 }).expect(400);
+      await api().post('/v1/habitat/furniture/wall_shelf/place').set(authH).send({ x: 4, y: 3 }).expect(400);
+      await api().post('/v1/habitat/furniture/toy_ball/place').set(authH).send({ x: 2 }).expect(400); // x sin y
+      const after = (await prisma.user.findUniqueOrThrow({ where: { id: userId } })).coins;
+      expect(after).toBe(before);
+    });
+
+    it('PATCH mueve y gira sin coste; DELETE por item quita ese mueble', async () => {
+      const placed = await api()
+        .post('/v1/habitat/furniture/toy_ball/place')
+        .set(authH)
+        .send({ x: 2, y: 2 })
+        .expect(201);
+      const coins = (await prisma.user.findUniqueOrThrow({ where: { id: userId } })).coins;
+
+      const moved = await api()
+        .patch(`/v1/habitat/items/${placed.body.itemId}`)
+        .set(authH)
+        .send({ x: 5, y: 6 })
+        .expect(200);
+      expect(moved.body).toMatchObject({ itemId: placed.body.itemId, x: 5, y: 6 });
+      expect((await prisma.user.findUniqueOrThrow({ where: { id: userId } })).coins).toBe(coins);
+
+      // Encima de la cama (13,0–13,1) no se puede.
+      await api().patch(`/v1/habitat/items/${placed.body.itemId}`).set(authH).send({ x: 13, y: 1 }).expect(400);
+      await api().patch('/v1/habitat/items/no-existe').set(authH).send({ x: 1, y: 1 }).expect(404);
+
+      await api().delete(`/v1/habitat/items/${placed.body.itemId}`).set(authH).expect(200);
+      const gone = await prisma.habitatItem.findUnique({ where: { id: placed.body.itemId } });
+      expect(gone).toBeNull();
+      expect(await prisma.habitatItem.count({ where: { petId } })).toBe(1); // queda la cama
     });
   });
 });

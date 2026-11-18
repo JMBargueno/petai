@@ -31,11 +31,11 @@ describe('Achievements E2E', () => {
 
   afterEach(async () => {
     if (!userId) return;
-    await prisma.achievement.deleteMany({ where: { userId } });
-    await prisma.inventoryItem.deleteMany({ where: { userId } });
-    await prisma.pet.deleteMany({ where: { userId } });
-    await prisma.egg.deleteMany({ where: { userId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.achievement.deleteMany({ where: { userId } }).catch(() => {});
+    await prisma.inventoryItem.deleteMany({ where: { userId } }).catch(() => {});
+    await prisma.pet.deleteMany({ where: { userId } }).catch(() => {});
+    await prisma.egg.deleteMany({ where: { userId } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { id: userId } }).catch(() => {});
     userId = '';
     petId = '';
   });
@@ -99,15 +99,15 @@ describe('Achievements E2E', () => {
     await request(app.getHttpServer()).get('/v1/achievements').expect(401);
   });
 
-  it('GET /achievements with token returns 200 with the 5 categories', async () => {
+  it('GET /achievements with token returns 200 with all categories (badges public by default)', async () => {
     await auth();
     const res = await request(app.getHttpServer())
       .get('/v1/achievements')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(res.body.timestamp).toEqual(expect.any(String));
-    expect(res.body.achievementsPublic).toBe(false);
-    for (const cat of ['care', 'battle', 'ai', 'collection', 'social']) {
+    expect(res.body.achievementsPublic).toBe(true);
+    for (const cat of ['care', 'battle', 'ai', 'collection', 'social', 'activity', 'special']) {
       expect(Array.isArray(res.body.categories[cat])).toBe(true);
     }
     const all = Object.values(res.body.categories as Record<string, any[]>).flatMap((c) => c);
@@ -116,6 +116,7 @@ describe('Achievements E2E', () => {
       expect(['locked', 'in_progress', 'unlocked']).toContain(a.status);
       expect(a.id).toBeDefined();
       expect(a.target).toBeDefined();
+      expect(a.badgeIcon).toEqual(expect.any(String));
     }
   });
 
@@ -136,7 +137,8 @@ describe('Achievements E2E', () => {
         .expect(201);
     }
 
-    const unlocked = await waitForAchievement('care_feed_10', (a) => a.status === 'unlocked');
+    // `status` ya es «unlocked» al llegar al objetivo, pero el reclamo exige `unlockedAt` persistido
+    const unlocked = await waitForAchievement('care_feed_10', (a) => a.status === 'unlocked' && !!a.unlockedAt);
     expect(unlocked.status).toBe('unlocked');
 
     await request(app.getHttpServer())
@@ -169,7 +171,7 @@ describe('Achievements E2E', () => {
       .expect(400);
   });
 
-  it('PATCH /me achievementsPublic=true exposes only unlocked logros via the public endpoint', async () => {
+  it('PATCH /me achievementsPublic toggles what the public endpoint exposes', async () => {
     await auth();
     await ensurePet();
 
@@ -186,6 +188,12 @@ describe('Achievements E2E', () => {
         .expect(201);
     }
     await waitForAchievement('care_feed_10', (a) => a.status === 'unlocked');
+
+    await request(app.getHttpServer())
+      .patch('/v1/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ achievementsPublic: false })
+      .expect(200);
 
     const privateRes = await request(app.getHttpServer())
       .get(`/v1/users/${userId}/achievements`)
@@ -210,5 +218,50 @@ describe('Achievements E2E', () => {
     for (const a of publicRes.body.achievements) {
       expect(a).not.toHaveProperty('current');
     }
+  });
+
+  it('GET /me/profile returns stats and badges; featured badges must be unlocked', async () => {
+    await auth();
+    await ensurePet();
+    await prisma.inventoryItem.create({ data: { userId, itemId: 'apple', qty: 10 } });
+    for (let i = 0; i < 10; i++) {
+      await request(app.getHttpServer())
+        .post(`/v1/pets/${petId}/feed`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ itemId: 'apple' })
+        .expect(201);
+    }
+    await waitForAchievement('care_feed_10', (a) => a.status === 'unlocked');
+
+    const me = await request(app.getHttpServer())
+      .get('/v1/me/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(me.body.stats.feeds).toBeGreaterThanOrEqual(10);
+    const ids = me.body.badges.map((b: any) => b.id);
+    expect(ids).toContain('care_feed_10');
+    // Cuenta creada antes de 2027 → insignia Beta Tester al abrir el perfil.
+    if (Date.now() < Date.parse('2027-01-01T00:00:00Z')) expect(ids).toContain('special_beta_tester');
+
+    await request(app.getHttpServer())
+      .put('/v1/me/featured-badges')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ achIds: ['battle_legend'] })
+      .expect(400);
+    const featured = await request(app.getHttpServer())
+      .put('/v1/me/featured-badges')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ achIds: ['care_feed_10'] })
+      .expect(200);
+    expect(featured.body.featuredBadges).toEqual(['care_feed_10']);
+
+    const pub = await request(app.getHttpServer())
+      .get(`/v1/users/${userId}/profile`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(pub.body.isSelf).toBe(true);
+    expect(pub.body.featuredBadges).toEqual(['care_feed_10']);
+    expect(pub.body).not.toHaveProperty('email');
+    expect(pub.body.stats).not.toHaveProperty('coinsSpent');
   });
 });

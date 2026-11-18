@@ -1,7 +1,7 @@
 // Sistema de Composición y Baking en Memoria para Sprites de PetAI
 // Conforme a la especificación técnica en docs/ART_PIPELINE.md
 
-import { deriveVisualTraits, hexToRgb, applyHueShiftRgb } from './prng';
+import { bakePixels, bakeFxMap, renderFx, PATTERN_FX, type RgbaImage } from '@pockai/scene/bake';
 import { AssetLoader } from './asset-loader';
 import { createMemoryAssetCache } from './asset-cache';
 import type { AnimLibrary } from './animation/AnimationController';
@@ -24,13 +24,7 @@ import eggMask from '@shared/assets/species/egg/mask.png';
 import eggAnim from '@shared/assets/species/egg/anim.json';
 
 // Importación de patrones tileables
-import stripesPng from '@shared/assets/patterns/stripes.png';
-import spotsPng from '@shared/assets/patterns/spots.png';
-import scalesPng from '@shared/assets/patterns/scales.png';
-import crystalPng from '@shared/assets/patterns/crystal.png';
-import galaxyPng from '@shared/assets/patterns/galaxy.png';
-import gradientPng from '@shared/assets/patterns/gradient.png';
-import auroraPng from '@shared/assets/patterns/aurora.png';
+const PATTERN_PNGS = import.meta.glob('@shared/assets/patterns/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 // Vista previa SVG por especie (generada) mientras se hornea la hoja
 import ignisaurIdleSvg from '@shared/assets/sprites/ignisaur_idle.svg?raw';
@@ -66,12 +60,14 @@ export interface AnimMetadata {
 
 export interface BakedPetSheet {
   canvas: HTMLCanvasElement;
+  /** Capa de efectos del frame (patrón del Éter y shiny) en el instante `time`; `null` si no lleva. */
+  fxFrame: (frame: { sx: number; sy: number; sw: number; sh: number }, time: number) => HTMLCanvasElement | null;
   anim: AnimMetadata;
   tags: Map<string, FrameTag>;
   getFrame: (tag: string, relativeIndex: number) => { sx: number; sy: number; sw: number; sh: number; totalFrames: number };
 }
 
-// Registro de especies raster
+// Registro de especies raster (etapa adult = raíz de la especie)
 const SPECIES_REGISTRY: Record<string, { base: string; mask: string; anim: AnimMetadata }> = {
   ignisaur: { base: ignisaurBase, mask: ignisaurMask, anim: ignisaurAnim as AnimMetadata },
   axolunar: { base: axolunarBase, mask: axolunarMask, anim: axolunarAnim as AnimMetadata },
@@ -79,14 +75,62 @@ const SPECIES_REGISTRY: Record<string, { base: string; mask: string; anim: AnimM
   egg: { base: eggBase, mask: eggMask, anim: eggAnim as AnimMetadata },
 };
 
+// Hojas adult del resto de especies: se descubren solas, así que una especie nueva no requiere
+// tocar este archivo (las cuatro de arriba se importan a mano por compatibilidad).
+const ADULT_PNGS = import.meta.glob('@shared/assets/species/*/{base,mask}.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const ADULT_ANIMS = import.meta.glob('@shared/assets/species/*/anim.json', { eager: true, import: 'default' }) as Record<string, AnimMetadata>;
+for (const [file, anim] of Object.entries(ADULT_ANIMS)) {
+  const m = file.match(/species\/([^/]+)\/anim\.json$/);
+  const dir = file.slice(0, -'anim.json'.length);
+  const base = ADULT_PNGS[`${dir}base.png`];
+  const mask = ADULT_PNGS[`${dir}mask.png`];
+  if (m && base && mask && !SPECIES_REGISTRY[m[1]]) SPECIES_REGISTRY[m[1]] = { base, mask, anim };
+}
+
+// Hojas por etapa (GUIA_ARTISTICA §7.4): species/<id>/<baby|juvenile|final>/. Se descubren solas.
+const STAGE_PNGS = import.meta.glob('@shared/assets/species/*/{baby,juvenile,final}/{base,mask}.png', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>;
+const STAGE_ANIMS = import.meta.glob('@shared/assets/species/*/{baby,juvenile,final}/anim.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, AnimMetadata>;
+for (const [file, anim] of Object.entries(STAGE_ANIMS)) {
+  const m = file.match(/species\/([^/]+)\/([^/]+)\/anim\.json$/);
+  const dir = file.slice(0, -'anim.json'.length);
+  const base = STAGE_PNGS[`${dir}base.png`];
+  const mask = STAGE_PNGS[`${dir}mask.png`];
+  if (m && base && mask) SPECIES_REGISTRY[`${m[1]}/${m[2]}`] = { base, mask, anim };
+}
+
+/** Clave de hoja para `(especie, etapa)`: la etapa si existe; si no, la hoja adult de la especie. */
+export function sheetKey(speciesId: string, stage?: string | null): string {
+  const id = normalizeSpecies(speciesId);
+  return stage && SPECIES_REGISTRY[`${id}/${stage}`] ? `${id}/${stage}` : id;
+}
+
 const PREVIEW_SVG: Record<string, string> = {
   ignisaur: ignisaurIdleSvg,
   axolunar: axolunarIdleSvg,
   florabud: florabudIdleSvg,
 };
 
+// Vistas previas del resto de especies (sprites/<id>_idle.svg): también se descubren solas.
+const IDLE_SVGS = import.meta.glob('@shared/assets/sprites/*_idle.svg', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+for (const [file, svg] of Object.entries(IDLE_SVGS)) {
+  const m = file.match(/sprites\/([^/]+)_idle\.svg$/);
+  if (m && !PREVIEW_SVG[m[1]]) PREVIEW_SVG[m[1]] = svg;
+}
+
 export function normalizeSpecies(speciesId: string): string {
-  return SPECIES_REGISTRY[speciesId] ? speciesId : 'ignisaur';
+  return SPECIES_REGISTRY[speciesId] && !speciesId.includes('/') ? speciesId : 'ignisaur';
+}
+
+/** ¿La clave es una especie raster conocida en este cliente? (para resolver sprites de terceros). */
+export function isKnownSpecies(speciesId: string): boolean {
+  return !!SPECIES_REGISTRY[speciesId];
 }
 
 /**
@@ -112,15 +156,9 @@ export function getAnimLibrary(speciesId: string): { library: AnimLibrary; alias
 }
 
 // Registro de patrones
-const PATTERN_REGISTRY: Record<string, string> = {
-  stripes: stripesPng,
-  spots: spotsPng,
-  scales: scalesPng,
-  crystal: crystalPng,
-  galaxy: galaxyPng,
-  gradient: gradientPng,
-  aurora: auroraPng,
-};
+const PATTERN_REGISTRY: Record<string, string> = Object.fromEntries(
+  Object.entries(PATTERN_PNGS).map(([path, url]) => [path.split('/').pop()!.replace('.png', ''), url]),
+);
 
 // Fallbacks: nombres antiguos o que no existan en una hoja → animación existente
 export const ANIM_FALLBACKS: Record<string, string> = {
@@ -148,6 +186,17 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+function readPixels(img: HTMLImageElement): RgbaImage {
+  const width = img.naturalWidth || img.width;
+  const height = img.naturalHeight || img.height;
+  const c = document.createElement('canvas');
+  c.width = width;
+  c.height = height;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0);
+  return { width, height, data: ctx.getImageData(0, 0, width, height).data };
+}
+
 // Caché de hojas de sprites horneadas en memoria (In-Memory Baking)
 const bakedSheetCache = new Map<string, BakedPetSheet>();
 
@@ -160,10 +209,11 @@ export async function bakePetSpriteSheet(
   patternId: string,
   palette: { primary: string; secondary: string; accent?: string },
   visualSeed: number = 1337,
-  shiny: boolean = false
+  shiny: boolean = false,
+  stage?: string | null
 ): Promise<BakedPetSheet> {
-  const normalizedSpecies = normalizeSpecies(speciesId);
-  const cacheKey = `${normalizedSpecies}:${patternId}:${palette.primary}:${palette.secondary}:${visualSeed}:${shiny}`;
+  const normalizedSpecies = sheetKey(speciesId, stage);
+  const cacheKey = `${normalizedSpecies}:${patternId}:${palette.primary}:${palette.secondary}:${palette.accent ?? '-'}:${visualSeed}:${shiny}`;
 
   if (bakedSheetCache.has(cacheKey)) {
     return bakedSheetCache.get(cacheKey)!;
@@ -181,138 +231,27 @@ export async function bakePetSpriteSheet(
   const width = baseImg.naturalWidth || baseImg.width;
   const height = baseImg.naturalHeight || baseImg.height;
 
-  // Derivación determinista mediante Mulberry32
-  const traits = deriveVisualTraits(visualSeed);
+  // Algoritmo único compartido con la escena de PixiJS (Android/iOS): @pockai/scene/bake.
+  const maskPixels = readPixels(maskImg);
+  const patternPixels = patternImg ? readPixels(patternImg) : null;
+  const out = bakePixels(readPixels(baseImg), maskPixels, {
+    palette: { primary: palette.primary, secondary: palette.secondary, accent: palette.accent },
+    visualSeed,
+    pattern: patternPixels,
+  });
 
-  // Colores primario y secundario con hueShift sutil (±8 grados)
-  const basePrimaryRgb = hexToRgb(palette.primary || '#E25822');
-  const baseSecondaryRgb = hexToRgb(palette.secondary || '#F3C544');
-  const primaryRgb = applyHueShiftRgb(basePrimaryRgb, traits.hueShiftDeg);
-  const secondaryRgb = applyHueShiftRgb(baseSecondaryRgb, traits.hueShiftDeg);
+  // Efectos animados (patrones de la Textura del Éter y shiny): la misma función que la escena.
+  const fxKind = PATTERN_FX[patternId] ?? null;
+  const isEgg = normalizedSpecies === 'egg';
+  const fxMap = !isEgg && (fxKind || shiny) ? bakeFxMap(maskPixels, { pattern: patternPixels, visualSeed }) : null;
+  let fxCanvas: HTMLCanvasElement | null = null;
+  let fxBuf: Uint8ClampedArray | undefined;
 
-  // Canvas auxiliar para leer píxeles de mask.png
-  const offCanvas = document.createElement('canvas');
-  offCanvas.width = width;
-  offCanvas.height = height;
-  const offCtx = offCanvas.getContext('2d', { willReadFrequently: true })!;
-
-  offCtx.drawImage(maskImg, 0, 0);
-  const maskData = offCtx.getImageData(0, 0, width, height);
-  const maskPixels = maskData.data;
-
-  // Canvas auxiliar para leer píxeles de base.png
-  offCtx.clearRect(0, 0, width, height);
-  offCtx.drawImage(baseImg, 0, 0);
-  const baseData = offCtx.getImageData(0, 0, width, height);
-  const basePixels = baseData.data;
-
-  // Preparar píxeles del patrón tileable si existe
-  let patternPixels: Uint8ClampedArray | null = null;
-  let patW = 256;
-  let patH = 256;
-  if (patternImg) {
-    const patCanvas = document.createElement('canvas');
-    patW = patternImg.naturalWidth || 256;
-    patH = patternImg.naturalHeight || 256;
-    patCanvas.width = patW;
-    patCanvas.height = patH;
-    const patCtx = patCanvas.getContext('2d', { willReadFrequently: true })!;
-    patCtx.drawImage(patternImg, 0, 0);
-    patternPixels = patCtx.getImageData(0, 0, patW, patH).data;
-  }
-
-  // Canvas final horneado
   const bakedCanvas = document.createElement('canvas');
   bakedCanvas.width = width;
   bakedCanvas.height = height;
   const bakedCtx = bakedCanvas.getContext('2d')!;
-  const outImgData = bakedCtx.createImageData(width, height);
-  const out = outImgData.data;
-
-  const totalPixels = width * height;
-  const offX = traits.patternOffsetX;
-  const offY = traits.patternOffsetY;
-
-  for (let i = 0; i < totalPixels; i++) {
-    const px = i * 4;
-    const maskA = maskPixels[px + 3];
-
-    // Si está fuera de la silueta total
-    if (maskA === 0) {
-      out[px] = 0;
-      out[px + 1] = 0;
-      out[px + 2] = 0;
-      out[px + 3] = 0;
-      continue;
-    }
-
-    const maskR = maskPixels[px] / 255; // Primario
-    const maskG = maskPixels[px + 1] / 255; // Secundario
-    const maskB = maskPixels[px + 2] / 255; // Zona patrón
-
-    // Máscara negra = color literal (efectos: lágrimas, corazones, comida…): se copia base.png tal cual
-    if (maskR < 0.04 && maskG < 0.04 && maskB < 0.04) {
-      out[px] = basePixels[px];
-      out[px + 1] = basePixels[px + 1];
-      out[px + 2] = basePixels[px + 2];
-      out[px + 3] = Math.min(maskA, basePixels[px + 3]);
-      continue;
-    }
-
-    // 1. Capa Base de Color (Interpolación R / G)
-    let colorR = primaryRgb[0] * maskR + secondaryRgb[0] * maskG;
-    let colorG = primaryRgb[1] * maskR + secondaryRgb[1] * maskG;
-    let colorB = primaryRgb[2] * maskR + secondaryRgb[2] * maskG;
-
-    // 2. Proyección de Patrón (multiplicado por Canal B)
-    if (patternPixels && maskB > 0.05) {
-      const x = i % width;
-      const y = Math.floor(i / width);
-      // Muestreo tileable con offset derivado de visualSeed
-      const u = (x + offX) % patW;
-      const v = (y + offY) % patH;
-      const patIdx = (v * patW + u) * 4;
-      const patAlpha = (patternPixels[patIdx + 3] / 255) * maskB;
-
-      if (patAlpha > 0) {
-        // El patrón es blanco/luz sobre la base
-        colorR = colorR * (1 - patAlpha) + 255 * patAlpha;
-        colorG = colorG * (1 - patAlpha) + 255 * patAlpha;
-        colorB = colorB * (1 - patAlpha) + 255 * patAlpha;
-      }
-    }
-
-    // 3. Sombreado y Lineart (base.png)
-    const baseR = basePixels[px];
-    const baseG = basePixels[px + 1];
-    const baseB = basePixels[px + 2];
-    const baseA = basePixels[px + 3] / 255;
-
-    if (baseA > 0) {
-      // Si es un contorno negro u ojo puro (< 40), dibujar directamente
-      if (baseR < 40 && baseG < 40 && baseB < 40) {
-        colorR = baseR;
-        colorG = baseG;
-        colorB = baseB;
-      } else if (baseR > 240 && baseG > 240 && baseB > 240) {
-        // Reflejo blanco puro de ojos
-        colorR = baseR;
-        colorG = baseG;
-        colorB = baseB;
-      } else {
-        // Sombra neutra en escala de grises: modo de fusión Multiply
-        colorR = (colorR * baseR) / 255;
-        colorG = (colorG * baseG) / 255;
-        colorB = (colorB * baseB) / 255;
-      }
-    }
-
-    out[px] = Math.min(255, Math.max(0, Math.round(colorR)));
-    out[px + 1] = Math.min(255, Math.max(0, Math.round(colorG)));
-    out[px + 2] = Math.min(255, Math.max(0, Math.round(colorB)));
-    out[px + 3] = maskA;
-  }
-
+  const outImgData = new ImageData(out as Uint8ClampedArray<ArrayBuffer>, width, height);
   bakedCtx.putImageData(outImgData, 0, 0);
 
   // Mapa de tags de animación
@@ -326,6 +265,17 @@ export async function bakePetSpriteSheet(
 
   const bakedSheet: BakedPetSheet = {
     canvas: bakedCanvas,
+    fxFrame: (frame, time) => {
+      if (!fxMap) return null;
+      if (!fxCanvas) fxCanvas = document.createElement('canvas');
+      if (fxCanvas.width !== frame.sw || fxCanvas.height !== frame.sh) {
+        fxCanvas.width = frame.sw;
+        fxCanvas.height = frame.sh;
+      }
+      fxBuf = renderFx(fxMap, width, { x: frame.sx, y: frame.sy, w: frame.sw, h: frame.sh }, { fx: fxKind, shiny, time }, fxBuf);
+      fxCanvas.getContext('2d')!.putImageData(new ImageData(fxBuf as Uint8ClampedArray<ArrayBuffer>, frame.sw, frame.sh), 0, 0);
+      return fxCanvas;
+    },
     anim: animJson,
     tags: tagsMap,
     getFrame: (requestedTag: string, relativeIndex: number) => {

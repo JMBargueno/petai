@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AdminUsersService } from './admin-users.service';
+import { EmailVerificationService } from '../auth/email-verification.service';
 import { PermissionsGuard } from './permissions.guard';
 import { RequirePermissions } from './require-permissions.decorator';
 import { ROLES } from './roles';
@@ -12,7 +13,10 @@ import { ROLES } from './roles';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('admin/users')
 export class AdminUsersController {
-  constructor(private readonly adminUsers: AdminUsersService) {}
+  constructor(
+    private readonly adminUsers: AdminUsersService,
+    private readonly verification: EmailVerificationService,
+  ) {}
 
   @Get()
   @RequirePermissions('users:read')
@@ -40,5 +44,21 @@ export class AdminUsersController {
   })
   adjustBalance(@CurrentUser() actor: any, @Param('id', ParseUUIDPipe) id: string, @Body() body: unknown) {
     return this.adminUsers.adjustBalance(actor, id, body);
+  }
+
+  @Post(':id/verify-email')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('users:verify')
+  @ApiOperation({ summary: 'Marcar el correo de un usuario como verificado (soporte; queda auditado)' })
+  markVerified(@CurrentUser() actor: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.verification.markVerified(id, actor.id);
+  }
+
+  @Post(':id/resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('users:verify')
+  @ApiOperation({ summary: 'Reenviar el correo de verificación a un usuario sin verificar' })
+  resendVerification(@Param('id', ParseUUIDPipe) id: string) {
+    return this.verification.send(id, { throttled: false });
   }
 }

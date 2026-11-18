@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, LOCALE_ID, inject } from '@angular/core';
+import { SOCIAL_LINKS } from '../social';
 
 /** Pie común de la web pública: mapa del sitio, idioma y marca. */
 @Component({
@@ -15,6 +16,23 @@ import { ChangeDetectionStrategy, Component, LOCALE_ID, inject } from '@angular/
             Tu yokai de bolsillo con IA. Eclosiona, cuida, combate y conversa, en el escritorio y en el móvil.
           </p>
           <a class="btn btn--filled" [href]="home + '#descargar'" i18n="@@hero.cta.primary">Descargar Pockai</a>
+          <ul class="footer__social" aria-label="Redes sociales" i18n-aria-label="@@footer.social">
+            @for (s of social; track s.id) {
+              <li>
+                <a
+                  class="footer__social-link"
+                  [href]="s.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.aria-label]="s.label"
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                    <path [attr.d]="s.path" fill="currentColor" />
+                  </svg>
+                </a>
+              </li>
+            }
+          </ul>
         </div>
 
         <nav class="footer__cols" aria-label="Mapa del sitio" i18n-aria-label="@@footer.nav">
@@ -27,6 +45,7 @@ import { ChangeDetectionStrategy, Component, LOCALE_ID, inject } from '@angular/
               <li><a [href]="home + '#demo'" i18n="@@nav.demo">Pruébalo</a></li>
               <li><a [href]="home + '#precios'" i18n="@@nav.pricing">Precios</a></li>
               <li><a [href]="home + '#faq'">FAQ</a></li>
+              <li><a [href]="home + 'contact'" i18n="@@footer.contact">Contacto</a></li>
             </ul>
           </div>
           <div>
@@ -87,6 +106,30 @@ import { ChangeDetectionStrategy, Component, LOCALE_ID, inject } from '@angular/
       max-inline-size: 36ch;
       color: var(--ink-muted);
       font-size: 17px;
+    }
+    .footer__social {
+      display: flex;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .footer__social-link {
+      display: inline-grid;
+      place-items: center;
+      inline-size: 44px;
+      block-size: 44px;
+      border: 1px solid var(--line-soft);
+      border-radius: 9999px;
+      color: var(--ink);
+      transition:
+        background-color 0.15s,
+        border-color 0.15s;
+    }
+    .footer__social-link:hover,
+    .footer__social-link:focus-visible {
+      border-color: var(--ink);
+      background: rgb(255 255 255 / 0.08);
     }
     .footer__cols {
       display: grid;
@@ -150,4 +193,8 @@ export class SiteFooter {
   protected readonly home = `/${this.locale}/`;
   protected readonly lore = `/${this.locale}/lore`;
   protected readonly year = new Date().getFullYear();
+  protected readonly social = SOCIAL_LINKS.map((s) => ({
+    ...s,
+    label: $localize`:@@footer.social.link:Pockai en ${s.name}:INTERPOLATION:`,
+  }));
 }

@@ -1,10 +1,34 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
-import { updateState, hasUpdate, mockTriggerUpdate, type UpdateState } from './updater';
+import { updateState, updateLock, hasUpdate, mockTriggerUpdate, retryUpdate, type UpdateState } from './updater';
 
 describe('updater', () => {
   beforeEach(() => {
     updateState.set({ status: 'idle' });
+    updateLock.set(null);
+  });
+
+  describe('updateLock', () => {
+    it('se bloquea al detectar una versión nueva', () => {
+      expect(get(updateLock)).toBeNull();
+      mockTriggerUpdate('3.0.0');
+      expect(get(updateLock)).toBe('3.0.0');
+    });
+
+    it('sigue bloqueado si la instalación falla', () => {
+      mockTriggerUpdate('3.0.0');
+      updateState.set({ status: 'error', message: 'No se pudo instalar la actualización.' });
+      expect(get(updateLock)).toBe('3.0.0');
+    });
+
+    it('retryUpdate vuelve a ofrecer la versión bloqueada tras un error (modo navegador)', async () => {
+      mockTriggerUpdate('3.0.0');
+      updateState.set({ status: 'error', message: 'Fallo' });
+      await retryUpdate();
+      const s = get(updateState);
+      expect(s.status).toBe('available');
+      if (s.status === 'available') expect(s.version).toBe('3.0.0');
+    });
   });
 
   describe('hasUpdate', () => {

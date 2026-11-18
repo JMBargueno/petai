@@ -1,0 +1,401 @@
+{
+  "fountain_water": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 60
+    },
+    "b": {
+      "width": 40,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 60
+    }
+  },
+  "soft_bed": {
+    "footprint": [
+      2,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 56,
+      "height": 78,
+      "anchorX": 20,
+      "anchorY": 50
+    },
+    "b": {
+      "width": 56,
+      "height": 78,
+      "anchorX": 36,
+      "anchorY": 50
+    }
+  },
+  "toy_ball": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 62,
+      "anchorX": 20,
+      "anchorY": 42
+    },
+    "b": {
+      "width": 40,
+      "height": 62,
+      "anchorX": 20,
+      "anchorY": 42
+    }
+  },
+  "wall_shelf": {
+    "footprint": [
+      2,
+      1
+    ],
+    "wall": true,
+    "a": {
+      "width": 56,
+      "height": 114,
+      "anchorX": 20,
+      "anchorY": 86
+    },
+    "b": {
+      "width": 56,
+      "height": 114,
+      "anchorX": 36,
+      "anchorY": 86
+    }
+  },
+  "flower_pot": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 60
+    },
+    "b": {
+      "width": 40,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 60
+    }
+  },
+  "garden_bench": {
+    "footprint": [
+      2,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 56,
+      "height": 80,
+      "anchorX": 20,
+      "anchorY": 52
+    },
+    "b": {
+      "width": 56,
+      "height": 80,
+      "anchorX": 36,
+      "anchorY": 52
+    }
+  },
+  "garden_pond": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 74,
+      "anchorX": 36,
+      "anchorY": 38
+    },
+    "b": {
+      "width": 72,
+      "height": 74,
+      "anchorX": 36,
+      "anchorY": 38
+    }
+  },
+  "shrine_altar": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 112,
+      "anchorX": 36,
+      "anchorY": 76
+    },
+    "b": {
+      "width": 72,
+      "height": 112,
+      "anchorX": 36,
+      "anchorY": 76
+    }
+  },
+  "crystal_lamp": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 90,
+      "anchorX": 20,
+      "anchorY": 70
+    },
+    "b": {
+      "width": 40,
+      "height": 90,
+      "anchorX": 20,
+      "anchorY": 70
+    }
+  },
+  "final_throne": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 116,
+      "anchorX": 36,
+      "anchorY": 80
+    },
+    "b": {
+      "width": 72,
+      "height": 116,
+      "anchorX": 36,
+      "anchorY": 80
+    }
+  },
+  "final_garden": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 116,
+      "anchorX": 36,
+      "anchorY": 80
+    },
+    "b": {
+      "width": 72,
+      "height": 116,
+      "anchorX": 36,
+      "anchorY": 80
+    }
+  },
+  "food_bowl": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 58,
+      "anchorX": 20,
+      "anchorY": 38
+    },
+    "b": {
+      "width": 40,
+      "height": 58,
+      "anchorX": 20,
+      "anchorY": 38
+    }
+  },
+  "round_rug": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 58,
+      "anchorX": 36,
+      "anchorY": 22
+    },
+    "b": {
+      "width": 72,
+      "height": 58,
+      "anchorX": 36,
+      "anchorY": 22
+    }
+  },
+  "wall_clock": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": true,
+    "a": {
+      "width": 40,
+      "height": 106,
+      "anchorX": 20,
+      "anchorY": 86
+    },
+    "b": {
+      "width": 40,
+      "height": 106,
+      "anchorX": 20,
+      "anchorY": 86
+    }
+  },
+  "garden_swing": {
+    "footprint": [
+      2,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 56,
+      "height": 102,
+      "anchorX": 20,
+      "anchorY": 74
+    },
+    "b": {
+      "width": 56,
+      "height": 102,
+      "anchorX": 36,
+      "anchorY": 74
+    }
+  },
+  "stone_lantern": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 88,
+      "anchorX": 20,
+      "anchorY": 68
+    },
+    "b": {
+      "width": 40,
+      "height": 88,
+      "anchorX": 20,
+      "anchorY": 68
+    }
+  },
+  "zen_cushion": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 56,
+      "anchorX": 20,
+      "anchorY": 36
+    },
+    "b": {
+      "width": 40,
+      "height": 56,
+      "anchorX": 20,
+      "anchorY": 36
+    }
+  },
+  "bonsai_tree": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": false,
+    "a": {
+      "width": 40,
+      "height": 84,
+      "anchorX": 20,
+      "anchorY": 64
+    },
+    "b": {
+      "width": 40,
+      "height": 84,
+      "anchorX": 20,
+      "anchorY": 64
+    }
+  },
+  "hanging_scroll": {
+    "footprint": [
+      1,
+      1
+    ],
+    "wall": true,
+    "a": {
+      "width": 40,
+      "height": 114,
+      "anchorX": 20,
+      "anchorY": 94
+    },
+    "b": {
+      "width": 40,
+      "height": 114,
+      "anchorX": 20,
+      "anchorY": 94
+    }
+  },
+  "star_fountain": {
+    "footprint": [
+      2,
+      2
+    ],
+    "wall": false,
+    "a": {
+      "width": 72,
+      "height": 118,
+      "anchorX": 36,
+      "anchorY": 82
+    },
+    "b": {
+      "width": 72,
+      "height": 118,
+      "anchorX": 36,
+      "anchorY": 82
+    }
+  },
+  "constellation_frame": {
+    "footprint": [
+      2,
+      1
+    ],
+    "wall": true,
+    "a": {
+      "width": 56,
+      "height": 124,
+      "anchorX": 20,
+      "anchorY": 96
+    },
+    "b": {
+      "width": 56,
+      "height": 124,
+      "anchorX": 36,
+      "anchorY": 96
+    }
+  }
+}

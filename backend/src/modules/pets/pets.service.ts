@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { AutonomyService } from '../mind/autonomy.service';
+import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -7,10 +8,18 @@ import { GameDataService } from '../game-data/game-data.service';
 import { WeatherService } from '../environmental/weather.service';
 import { BondingService } from '../bonding/bonding.service';
 import { nightHoursBetween, safeTimeZone } from './sleep-cycle';
+import { HabitatService } from '../habitat/habitat.service';
+import { boostedRecovery, reducedDecay, type ActiveBuffs } from '../habitat/habitat-buffs';
 
 const STAGE_ORDER = ['baby', 'juvenile', 'adult', 'final'];
 /** Higiene a partir de la cual el baño se rechaza (balance.vitals.cleanMaxHygiene lo sustituye). */
 const DEFAULT_CLEAN_MAX_HYGIENE = 80;
+/** Por debajo de este intervalo (~36 s) el lazy tick no cambia nada. */
+const MIN_TICK_HOURS = 0.01;
+
+function hoursSinceTick(pet: { lastTickAt: Date | string }, now: Date): number {
+  return (now.getTime() - new Date(pet.lastTickAt).getTime()) / (1000 * 60 * 60);
+}
 
 @Injectable()
 export class PetsService {
@@ -22,6 +31,10 @@ export class PetsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly weatherService: WeatherService,
     private readonly bonding: BondingService,
+    // Vida autónoma (spec 36): opcional para no romper tests que construyen el servicio a mano
+    @Optional() private readonly autonomy?: AutonomyService,
+    // Buffs de muebles (spec 10): opcional por la misma razón; sin él no hay buffs
+    @Optional() private readonly habitat?: HabitatService,
   ) {}
 
   async getPets(userId: string) {
@@ -31,9 +44,16 @@ export class PetsService {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Buffs del hábitat con UNA consulta para todas las mascotas que van a hacer tick
+    const now = new Date();
+    const toTick = pets.filter((p) => hoursSinceTick(p, now) >= MIN_TICK_HOURS).map((p) => p.id);
+    const buffsByPet = this.habitat && toTick.length ? await this.habitat.getActiveBuffsForPets(toTick) : undefined;
+
     const updatedPets = [];
     for (const pet of pets) {
-      const updated = await this.applyLazyTick(pet);
+      const ticked = await this.applyLazyTick(pet, buffsByPet?.get(pet.id) ?? (buffsByPet ? {} : undefined));
+      // Vida autónoma (spec 36): los clientes cargan la lista al abrir; como mucho una simulación por hora y mascota
+      const updated = this.autonomy ? await this.autonomy.catchUp(ticked) : ticked;
       // Campos de vínculo (feature 006): el cliente recibe el rango sin calcular nada
       updatedPets.push({ ...updated, ...this.bonding.bondingFields(updated) });
     }
@@ -48,7 +68,9 @@ export class PetsService {
     if (!pet) {
       throw new NotFoundException('Mascota no encontrada');
     }
-    const updated = await this.applyLazyTick(pet);
+    const ticked = await this.applyLazyTick(pet);
+    // Vida autónoma (spec 36): simula lo que hizo mientras no estabas (perezoso, sin LLM)
+    const updated = this.autonomy ? await this.autonomy.catchUp(ticked) : ticked;
     return { ...updated, ...this.bonding.bondingFields(updated) };
   }
 
@@ -286,14 +308,19 @@ export class PetsService {
     return updated;
   }
 
-  private async applyLazyTick(pet: any) {
+  /**
+   * @param buffs buffs del hábitat ya recortados (spec 10). Si no se pasan, se consultan aquí,
+   *   tras la salida temprana, para que un tick sin cambios no cueste ninguna consulta.
+   */
+  private async applyLazyTick(pet: any, buffs?: ActiveBuffs) {
     const now = new Date();
-    const elapsedMs = now.getTime() - new Date(pet.lastTickAt).getTime();
-    const elapsedHours = elapsedMs / (1000 * 60 * 60);
+    const elapsedHours = hoursSinceTick(pet, now);
 
-    if (elapsedHours < 0.01) {
+    if (elapsedHours < MIN_TICK_HOURS) {
       return pet; // Menos de ~36 segundos, sin cambio significativo
     }
+
+    const habitatBuffs: ActiveBuffs = buffs ?? (this.habitat ? await this.habitat.getActiveBuffsForPet(pet.id) : {});
 
     const balance = this.gameData.getBalance();
     const decay = pet.sleeping
@@ -328,13 +355,19 @@ export class PetsService {
     }
 
     let newHunger = Math.max(0, pet.hunger - decay.hunger * elapsedHours);
-    let newHappiness = Math.max(0, pet.happiness - decay.happiness * elapsedHours);
+    // Buffs del hábitat (spec 10): reducen el decaimiento base de felicidad e higiene en su porcentaje
+    let newHappiness = Math.max(
+      0,
+      pet.happiness - reducedDecay(decay.happiness, habitatBuffs, 'happiness_decay_reduction') * elapsedHours,
+    );
     let newEnergy: number;
     let newHealth = pet.health;
     if (pet.sleeping) {
       // Dormir de noche recupera más energía y regenera algo de salud
       const effectiveHours = elapsedHours + (sleepCfg ? (sleepCfg.sleepingNightEnergyBonus - 1) * nightHours : 0);
-      newEnergy = Math.min(100, pet.energy + Math.abs(decay.energy) * effectiveHours);
+      // Buff `energy_recovery_boost` (spec 10): la cama y la lámpara aumentan la recuperación al dormir
+      const recoveryPerHour = boostedRecovery(Math.abs(decay.energy), habitatBuffs, 'energy_recovery_boost');
+      newEnergy = Math.min(100, pet.energy + recoveryPerHour * effectiveHours);
       if (sleepCfg) {
         newHealth = Math.min(100, newHealth + sleepCfg.sleepingNightHealthRegenPerHour * nightHours);
       }
@@ -343,7 +376,10 @@ export class PetsService {
       const effectiveHours = elapsedHours + (sleepCfg ? (sleepCfg.awakeNightEnergyMultiplier - 1) * nightHours : 0);
       newEnergy = Math.max(0, pet.energy - decay.energy * effectiveHours);
     }
-    let newHygiene = Math.max(0, pet.hygiene - decay.hygiene * elapsedHours);
+    let newHygiene = Math.max(
+      0,
+      pet.hygiene - reducedDecay(decay.hygiene, habitatBuffs, 'hygiene_decay_reduction') * elapsedHours,
+    );
 
     // Modificadores ambientales (feature 005), acotados a [0, max]:
     // - hot:  con calor le da más hambre (decaimiento extra de `hunger`).
@@ -524,5 +560,16 @@ export class PetsService {
     const result = { ...updated, ...this.bonding.bondingFields(updated) };
     this.realtimeGateway.emitPetUpdate(userId, result);
     return result;
+  }
+
+  /**
+   * Marca `petId` como el pockai activo del jugador (el de su escritorio). Lo usan el hábitat del
+   * clan y las visitas para mostrar la mascota que el jugador tiene elegida. 404 si no es suya.
+   */
+  async setActivePet(userId: string, petId: string): Promise<{ activePetId: string }> {
+    const pet = await this.prisma.pet.findFirst({ where: { id: petId, userId }, select: { id: true } });
+    if (!pet) throw new NotFoundException('Mascota no encontrada');
+    await this.prisma.user.update({ where: { id: userId }, data: { activePetId: pet.id } });
+    return { activePetId: pet.id };
   }
 }

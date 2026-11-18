@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { z } from 'zod';
+import { handleSchema } from '../../../common/user-handle';
 
 /**
  * Validación estricta de las entradas de autenticación. Los DTO de dto/auth.dto.ts solo documentan
@@ -37,7 +38,14 @@ const inviteCode = z
   .optional()
   .transform((v) => v || undefined);
 
-export const registerSchema = z.object({ email, password, displayName, inviteCode });
+// Nickname: opcional en la API para no romper apps antiguas (esas cuentas lo eligen al entrar);
+// las apps actuales lo exigen en el formulario. Vacío se trata como ausente.
+const handle = z.preprocess((v) => (v === '' || v === null ? undefined : v), handleSchema.optional());
+
+export const registerSchema = z.object({ email, password, displayName, inviteCode, handle });
+
+/** Fijar el nickname de una cuenta que aún no lo tiene (una sola vez). */
+export const setHandleSchema = z.object({ handle: handleSchema });
 
 // En el login no se exige la política de contraseña (las cuentas antiguas podrían incumplirla),
 // solo un tope de longitud para no hashear cuerpos enormes.
@@ -72,6 +80,18 @@ export const resetConfirmSchema = z.object({
     .trim()
     .regex(/^\d{6}$/, 'El código debe tener 6 dígitos'),
   newPassword: password,
+});
+
+// Verificación de correo: código de 6 dígitos (app) o token del enlace (web).
+export const verifyEmailCodeSchema = z.object({
+  code: z
+    .string({ error: (issue) => (issue.input === undefined ? 'code es obligatorio' : 'code debe ser un texto') })
+    .trim()
+    .regex(/^\d{6}$/, 'El código debe tener 6 dígitos'),
+});
+
+export const verifyEmailLinkSchema = z.object({
+  token: text('token').trim().min(20, 'token no es válido').max(200, 'token no es válido'),
 });
 
 /** Valida y devuelve los datos tipados; ante un error responde 400 con el primer motivo. */

@@ -70,56 +70,6 @@ main:focus {
   color: var(--ink);
 }
 
-/* ───── Índice fijo con scrollspy ───── */
-.toc {
-  position: sticky;
-  inset-block-start: calc(var(--header-h) - 2px);
-  z-index: 15;
-  padding: 8px var(--gutter);
-  pointer-events: none;
-}
-.toc__list {
-  position: relative; /* referencia de offsetLeft para centrar el chip activo */
-  display: flex;
-  gap: 4px;
-  inline-size: fit-content;
-  max-inline-size: min(100%, var(--page-max-width));
-  margin: 0 auto;
-  padding: 5px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  list-style: none;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-pills);
-  background: var(--surface-glass);
-  box-shadow: var(--shadow-2);
-  backdrop-filter: saturate(1.6) blur(14px);
-  pointer-events: auto;
-}
-.toc__link {
-  display: grid;
-  place-items: center;
-  min-block-size: 36px;
-  padding: 0 14px;
-  border-radius: var(--radius-pills);
-  color: var(--ink-muted);
-  font-weight: var(--font-weight-bold);
-  font-size: 13px;
-  text-decoration: none;
-  white-space: nowrap;
-  transition:
-    background-color var(--dur-1),
-    color var(--dur-1);
-}
-.toc__link:hover {
-  color: var(--ink);
-}
-/* Estado activo: no solo color (fondo + peso) */
-.toc__link:is(.target-current) {
-  background: var(--ink);
-  color: var(--bg);
-}
-
 /* ───── CTA final ───── */
 .lore-cta__inner {
   display: grid;

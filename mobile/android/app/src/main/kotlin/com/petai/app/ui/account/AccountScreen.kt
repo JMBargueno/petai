@@ -30,7 +30,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.petai.app.AppUiState
+import androidx.compose.ui.platform.LocalUriHandler
 import com.petai.app.BuildConfig
+import com.petai.app.ui.theme.BrandIcons
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.vector.ImageVector
+
+/** Buzón de contacto público (el mismo que recibe el formulario de la web). */
+const val CONTACT_EMAIL = "contact@pockai.world"
+
+/** Formulario de contacto de la web (vía preferente). Si la web está en mantenimiento, se abre en un modal. */
+const val CONTACT_FORM_URL = "https://pockai.world/es/contact"
+
+/** Enlace al formulario con el tipo de mensaje ya elegido (`bug`, `improvement`…) y el origen. */
+fun contactFormUrl(type: String) = "$CONTACT_FORM_URL?type=$type&from=android"
+
+/** Perfiles oficiales de Pockai (mismo usuario en todas las redes). */
+const val SOCIAL_HANDLE = "pockais"
+
+private data class SocialLink(val name: String, val url: String, val icon: ImageVector)
+
+private val SOCIAL_LINKS by lazy {
+    listOf(
+        SocialLink("Instagram", "https://www.instagram.com/pockais/", BrandIcons.Instagram),
+        SocialLink("TikTok", "https://www.tiktok.com/@pockais", BrandIcons.TikTok),
+        SocialLink("X", "https://x.com/pockais", BrandIcons.X),
+    )
+}
 
 @Composable
 fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: String, onResult: (String?) -> Unit) -> Unit) {
@@ -39,6 +66,7 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
     var linkMsg by remember { mutableStateOf<String?>(null) }
     var linkOk by remember { mutableStateOf(false) }
     val user = state.user
+    val uriHandler = LocalUriHandler.current
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         ScreenTitle("Tu cuenta", eyebrow = "Perfil")
@@ -46,6 +74,9 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
         PockaiCard(Modifier.fillMaxWidth()) {
             Column {
                 Text(user?.displayName ?: "Entrenador", style = MaterialTheme.typography.titleLarge)
+                user?.handle?.takeIf { it.isNotEmpty() }?.let {
+                    Text("@$it · no se puede cambiar", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Text(user?.email.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
                 Row { CoinAmount(user?.coins ?: 0); Spacer(Modifier.padding(horizontal = 8.dp)); GemAmount(user?.gems ?: 0) }
@@ -75,6 +106,45 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
                     onClick = { onLinkDevice(code) { err -> linkOk = err == null; linkMsg = err ?: "Escritorio vinculado"; if (err == null) code = "" } },
                     enabled = code.length == 6,
                 )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        PockaiCard(Modifier.fillMaxWidth()) {
+            Column {
+                Text("Contacto", style = MaterialTheme.typography.titleMedium)
+                Text("¿Has visto un fallo o tienes una idea? La vía preferente es el formulario de contacto: nos llega ordenado y te respondemos por correo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(12.dp))
+                SecondaryButton(
+                    "Informar de un fallo",
+                    onClick = { runCatching { uriHandler.openUri(contactFormUrl("bug")) } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                SecondaryButton(
+                    "Sugerir una mejora",
+                    onClick = { runCatching { uriHandler.openUri(contactFormUrl("improvement")) } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("Si lo prefieres, también puedes escribirnos a:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { runCatching { uriHandler.openUri("mailto:$CONTACT_EMAIL") } }) {
+                    Text(CONTACT_EMAIL)
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        PockaiCard(Modifier.fillMaxWidth()) {
+            Column {
+                Text("Síguenos", style = MaterialTheme.typography.titleMedium)
+                Text("Novedades, pockais nuevos y avances: @$SOCIAL_HANDLE en todas las redes.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
+                Row {
+                    SOCIAL_LINKS.forEach { link ->
+                        IconButton(onClick = { runCatching { uriHandler.openUri(link.url) } }) {
+                            Icon(link.icon, contentDescription = "Pockai en ${link.name}", tint = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
             }
         }
         Spacer(Modifier.height(16.dp))

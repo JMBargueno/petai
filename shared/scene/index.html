@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Pockai Scene</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: transparent;
+        --ink: #0b0a14;
+        --surface: #ffffff;
+        --line: #0b0a14;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --ink: #f4f2ff; --surface: #17162a; --line: #3d3a63; }
+      }
+      html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+      #scene { position: fixed; inset: 0; touch-action: none; }
+      /* Panel de depuración (?demo) */
+      .demo {
+        position: fixed; top: 8px; left: 8px; max-width: min(340px, calc(100vw - 16px));
+        display: grid; gap: 6px; padding: 10px; font: 13px/1.3 system-ui, sans-serif;
+        color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+      }
+      .demo .row { display: flex; flex-wrap: wrap; gap: 4px; }
+      .demo button { font: inherit; padding: 4px 8px; border-radius: 9999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+      .demo .log { margin: 0; padding-left: 18px; font: 11px/1.3 ui-monospace, monospace; max-height: 140px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <div id="scene"></div>
+    <script type="module" src="/src/embed/main.ts"></script>
+  </body>
+</html>

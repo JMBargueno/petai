@@ -20,7 +20,8 @@ const STAGE_ICONS: StickerIcon[] = ['egg', 'heart', 'leaf', 'shield', 'star'];
             Vínculo <span class="hl hl--mint">Simbiótico</span>
           </h2>
           <p class="lead reveal" i18n="@@lore.life.lead">
-            Los pockai no son programas autónomos fríos: se alimentan de tu atención y de tu ritmo circadiano.
+            Los pockai no son programas fríos: tienen vida propia, pero se alimentan de tu atención y de tu ritmo
+            circadiano.
           </p>
         </div>
 

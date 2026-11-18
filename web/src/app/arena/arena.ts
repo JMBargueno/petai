@@ -3,15 +3,17 @@ import { ArenaShowcase } from '../landing/sections/arena-showcase';
 import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
+import { SectionToc, TocSection } from '../shared/layout/section-toc';
 import { SeoService } from '../shared/seo/seo.service';
 import { SITE_NAME, pageUrl } from '../site.config';
 
 /** La Arena a fondo, en su propia página (antes era una banda más de la home). */
 @Component({
   selector: 'app-arena',
-  imports: [SiteHeader, SiteFooter, ArenaShowcase],
+  imports: [SiteHeader, SiteFooter, SectionToc, ArenaShowcase],
   template: `
     <app-site-header
+      [links]="links"
       [pages]="pages"
       [cta]="cta"
       [home]="home"
@@ -37,6 +39,7 @@ import { SITE_NAME, pageUrl } from '../site.config';
         </div>
       </section>
 
+      <app-section-toc [sections]="sections" />
       <app-arena-showcase />
     </main>
 
@@ -53,6 +56,14 @@ export class Arena {
   protected readonly locale = inject(LOCALE_ID).slice(0, 2);
   protected readonly home = `/${this.locale}/`;
   protected readonly download = `${this.home}#descargar`;
+  /** Secciones de esta página: índice flotante y anclas de la cabecera. */
+  protected readonly sections: TocSection[] = [
+    { id: 'elementos', label: $localize`:@@lore.nav.elem:Elementos` },
+    { id: 'estrategias', label: $localize`:@@arena.nav.strategies:Estrategias` },
+    { id: 'habilidades', label: $localize`:@@arena.nav.skills:Habilidades` },
+    { id: 'ligas', label: $localize`:@@arena.nav.leagues:Ligas` },
+  ];
+  protected readonly links: NavLink[] = this.sections.map((s) => ({ href: `#${s.id}`, label: s.label }));
   protected readonly pages = navPages(this.locale, 'arena');
   protected readonly cta: NavLink = { href: this.download, label: $localize`:@@nav.cta:Descargar` };
   protected readonly homeLabel = $localize`:@@nav.home:Pockai, inicio`;

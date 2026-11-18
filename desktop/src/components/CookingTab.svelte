@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { Badge, Button, Card, FeatureHeader, Notice, SectionHeader } from './ui';
   import { api, type CookingDailyMenu, type CookingStart, type CookingSubmit } from '../lib/api';
 
   const dispatch = createEventDispatcher();
@@ -34,19 +35,29 @@
   let error = '';
   let busy = false;
   let timer: ReturnType<typeof setInterval> | null = null;
+  /** Segundos que quedan para memorizar la receta antes de que se oculte. */
+  let memorizeLeft = 0;
+  let menuError = false;
+
+  // El servidor manda las estadísticas en inglés.
+  const STAT_LABEL: Record<string, string> = { energy: 'energía', happiness: 'felicidad', hunger: 'saciedad', hygiene: 'higiene', atk: 'ataque', def: 'defensa', vel: 'velocidad', hp: 'vida', esp: 'especial' };
+  const stat = (s: string) => STAT_LABEL[s] ?? s;
 
   function stopTimer() {
     if (timer) clearInterval(timer);
     timer = null;
   }
 
-  onMount(async () => {
+  async function loadMenu() {
+    menuError = false;
     try {
       menu = await api.cookingDailyMenu();
     } catch {
       menu = null;
+      menuError = true;
     }
-  });
+  }
+  onMount(loadMenu);
   onDestroy(stopTimer);
 
   async function start() {
@@ -63,13 +74,15 @@
       const memorizeUntil = Date.now() + MEMORIZE_SECONDS * 1000;
       // Reloj local (no `expiresAt`) para no depender del desfase con el servidor
       const deadline = Date.now() + session.durationSeconds * 1000;
+      memorizeLeft = MEMORIZE_SECONDS;
       timer = setInterval(() => {
         secondsLeft = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+        memorizeLeft = Math.max(0, Math.ceil((memorizeUntil - Date.now()) / 1000));
         if (phase === 'memorize' && Date.now() >= memorizeUntil) phase = 'cook';
         if (secondsLeft === 0 && phase !== 'done') void submit();
       }, 250);
     } catch (e: any) {
-      error = e.message;
+      error = e instanceof TypeError ? 'Sin conexión con el servidor. Inténtalo de nuevo en un momento.' : e?.message || 'No se pudo empezar a cocinar.';
     } finally {
       busy = false;
     }
@@ -109,98 +122,133 @@
   }
 </script>
 
-<div class="card">
-  <div class="head">
-    <span class="big">🍳</span>
-    <div class="title">
-      <div class="name">Cocina</div>
-      <small>Memoriza la receta y añade los ingredientes en orden · cuesta 10 de energía</small>
-    </div>
-  </div>
+<div class="ui-stack">
+  <Card variant="hero">
+    <FeatureHeader icon="chef" title="Cocina" sub="Memoriza la receta y añade los ingredientes en orden · cuesta 10 de energía">
+      <svelte:fragment slot="end">
+        {#if session && (phase === 'memorize' || phase === 'cook')}
+          <Badge tone={secondsLeft <= 10 ? 'danger' : 'tint'} icon="timer" title="Tiempo total">{secondsLeft} s</Badge>
+        {/if}
+      </svelte:fragment>
+    </FeatureHeader>
 
-  {#if menu && phase === 'idle'}
-    <div class="menu">
-      <b>Menú del día:</b> {menu.recipeName} (dificultad {menu.difficulty})
-      <div class="chips">{#each menu.ingredients as ing}<span class="chip">{icon(ing)} {label(ing)}</span>{/each}</div>
-      <small>+{menu.buff.value} {menu.buff.stat} · {menu.bonus}</small>
-    </div>
-  {/if}
+    {#if menu && phase === 'idle'}
+      <div class="menu">
+        <span class="label-caps muted">Menú del día</span>
+        <strong>{menu.recipeName} <small class="muted">· dificultad {menu.difficulty} de 5</small></strong>
+        <div class="chips">{#each menu.ingredients as ing}<span class="ing">{icon(ing)} {label(ing)}</span>{/each}</div>
+        <p class="ui-card__hint">Si sale bien: +{menu.buff.value} de {stat(menu.buff.stat)} · {menu.bonus}</p>
+      </div>
+    {/if}
+
+    {#if menuError && phase === 'idle'}
+      <Notice tone="warning">No se pudo cargar el menú del día.
+        <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadMenu}>Reintentar</Button></svelte:fragment>
+      </Notice>
+    {/if}
+
+    {#if !(session && (phase === 'memorize' || phase === 'cook'))}
+      <Button variant="primary" size="lg" block icon="chef" loading={busy} disabled={!pet} on:click={start}>
+        {#if pet}{phase === 'done' ? 'Cocinar otra vez' : 'Empezar a cocinar'}{:else}Sin mascota activa{/if}
+      </Button>
+    {/if}
+  </Card>
 
   {#if session && (phase === 'memorize' || phase === 'cook')}
-    <div class="recipe-head">
-      <b>{session.recipeName}</b>
-      <span class="timer" class:low={secondsLeft <= 10}>⏱ {secondsLeft}s</span>
-    </div>
-
+    <strong class="recipe">{session.recipeName}</strong>
     {#if phase === 'memorize'}
-      <div class="sec-title">Memoriza el orden…</div>
-      <div class="chips big-chips">
-        {#each session.ingredients as ing, i}<span class="chip"><b>{i + 1}.</b> {icon(ing)} {label(ing)}</span>{/each}
+      <SectionHeader title="Memoriza el orden" icon="brain" count="{memorizeLeft} s" />
+      <p class="sr-only" role="status">Tienes {MEMORIZE_SECONDS} segundos para memorizar la receta.</p>
+      <div class="chips">
+        {#each session.ingredients as ing, i}<span class="ing ing--big"><b>{i + 1}.</b> {icon(ing)} {label(ing)}</span>{/each}
       </div>
     {:else}
-      <div class="sec-title">Tu olla ({picked.length}/{session.ingredients.length})</div>
+      <SectionHeader title="Tu olla" icon="chef" count="{picked.length}/{session.ingredients.length}" />
       <div class="chips pot">
-        {#each picked as ing, i}<span class="chip"><b>{i + 1}.</b> {icon(ing)}</span>{:else}<small>Vacía</small>{/each}
+        {#each picked as ing, i}<span class="ing"><b>{i + 1}.</b> {icon(ing)}</span>{:else}<small class="muted">Vacía</small>{/each}
       </div>
-      <div class="sec-title">Ingredientes</div>
+      <SectionHeader title="Ingredientes" icon="food" />
       <div class="chips">
         {#each session.order as ing, i}
-          <button class="chip btn-chip" disabled={usedIdx.includes(i)} on:click={() => pick(i)}>
-            {icon(ing)} {label(ing)}
-          </button>
+          <button class="ing ing--btn" disabled={usedIdx.includes(i)} on:click={() => pick(i)}>{icon(ing)} {label(ing)}</button>
         {/each}
       </div>
       <div class="row">
-        <button class="ghost" disabled={picked.length === 0} on:click={undo}>↶ Deshacer</button>
-        <button class="ghost" on:click={submit}>Servir ya</button>
+        <Button block icon="refresh" disabled={picked.length === 0} on:click={undo}>Deshacer</Button>
+        <Button block variant="ink" icon="check" on:click={submit}>Servir ya</Button>
       </div>
     {/if}
-  {:else}
-    <button class="primary" disabled={!pet || busy} on:click={start}>
-      {#if busy}…{:else if pet}{phase === 'done' ? 'Cocinar otra vez' : 'Empezar a cocinar'}{:else}Sin mascota activa{/if}
-    </button>
   {/if}
 
   {#if result}
     {#if result.message}
-      <p class="info-msg">{result.message}</p>
+      <Notice tone="info">{result.message}</Notice>
     {:else}
-      <p class="ok-msg">
-        {result.correctPct}% correcto · +{result.coins ?? 0} monedas
-        {#if result.buff} · buff +{result.buff.value} {result.buff.stat} (24 h){/if}
-      </p>
+      {@const pct = result.correctPct ?? 0}
+      <Notice tone={pct >= 75 ? 'ok' : pct >= 25 ? 'info' : 'warning'} icon={pct >= 75 ? 'party' : 'chef'}>
+        {pct >= 75 ? '¡Te ha salido muy bien!' : pct >= 25 ? 'No está mal.' : 'Se te ha quemado un poco.'}
+        {pct}% en su sitio · +{result.coins ?? 0} monedas
+        {#if result.buff} · +{result.buff.value} de {stat(result.buff.stat)} durante 24 h{/if}
+      </Notice>
     {/if}
   {/if}
-  {#if error}<div class="error-msg">{error}</div>{/if}
+  {#if error}<Notice tone="error">{error}</Notice>{/if}
 </div>
 
 <style>
-  .card { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: var(--radius-2xl); background: var(--surface-2); border: 1px solid var(--line-soft); }
-  .head { display: flex; gap: 12px; align-items: center; }
-  .big { font-size: 34px; }
-  .title { display: flex; flex-direction: column; gap: 2px; }
-  .name { font-size: 16px; font-weight: 700; }
-  .title small { color: var(--ink-muted); font-size: 11px; }
-  .menu { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
-  .menu small { color: var(--ink-muted); font-size: 11px; }
-  .recipe-head { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-  .timer { font-variant-numeric: tabular-nums; font-weight: 700; }
-  .timer.low { color: var(--danger-ink); }
-  .sec-title { font-weight: 700; font-size: 13px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chips small { color: var(--ink-muted); font-size: 11px; }
-  .chip { padding: 4px 8px; border-radius: var(--radius-2xl); background: var(--surface); border: 1px solid var(--line-soft); font-size: 12px; color: var(--ink); }
-  .big-chips .chip { font-size: 14px; padding: 6px 10px; }
-  .pot { min-height: 30px; padding: 6px; border-radius: var(--radius-2xl); border: 1px dashed var(--line-soft); }
-  .btn-chip { cursor: pointer; }
-  .btn-chip:hover:not(:disabled) { border-color: var(--accent); }
-  .btn-chip:disabled { opacity: 0.35; cursor: not-allowed; }
-  .row { display: flex; gap: 6px; }
-  .ghost { flex: 1; padding: 6px; border-radius: var(--radius-2xl); border: 1px solid var(--line-soft); background: var(--surface); color: var(--ink); cursor: pointer; font-size: 12px; }
-  .ghost:disabled { opacity: 0.5; cursor: not-allowed; }
-  .primary { padding: 10px; border: none; border-radius: var(--radius-2xl); cursor: pointer; font-weight: 700; background: var(--accent); color: var(--on-color); width: 100%; }
-  .primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .info-msg { font-size: 12px; text-align: center; margin: 0; color: var(--ink); }
-  .ok-msg { font-size: 12px; color: var(--success-ink); text-align: center; background: color-mix(in srgb, var(--success) 12%, var(--surface)); border: 1px solid var(--success); border-radius: var(--radius-2xl); padding: 8px; margin: 0; }
-  .error-msg { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); border: 1px solid var(--danger); color: var(--danger-ink); padding: 8px; border-radius: var(--radius-2xl); font-size: 12px; }
+  .menu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    font-size: var(--text-label);
+  }
+  .recipe {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: var(--text-body-lg);
+    text-transform: uppercase;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .ing {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-pills);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-caption);
+  }
+  .ing--big {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-body);
+  }
+  .ing--btn {
+    cursor: pointer;
+    font-weight: 600;
+    transition: border-color var(--dur-1), transform var(--dur-1) var(--ease-out);
+  }
+  .ing--btn:hover:not(:disabled) {
+    border-color: var(--line);
+    transform: translateY(-1px);
+  }
+  .ing--btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .pot {
+    min-height: 34px;
+    padding: var(--space-2);
+    border: 1.5px dashed var(--line-soft);
+    border-radius: var(--radius-2xl);
+  }
+  .row {
+    display: flex;
+    gap: var(--space-2);
+  }
 </style>

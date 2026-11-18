@@ -10,6 +10,8 @@ import {
   parseToolArguments,
 } from './agent-tools';
 import { moodOf } from './personality';
+import { MAX_LORE_CHARS, findLore, loreTopics } from './lore';
+import { getDesktopSkill, skillStateOf } from './desktop-skills';
 import { safeTimeZone } from '../pets/sleep-cycle';
 
 const ACTION_TTL_MS = 10 * 60 * 1000;
@@ -63,6 +65,8 @@ export class AgentService {
 
     try {
       if (spec.requiresConfirmation) {
+        const blocked = await this.checkPetState(ctx.userId, ctx.petId, spec.name, valid.args);
+        if (blocked) return { kind: 'result', content: this.json({ error: blocked }) };
         return await this.propose(ctx, spec.name, valid.args, spec.describe!(valid.args, ctx.timeZone));
       }
       return { kind: 'result', content: this.json(await this.execute(ctx, spec.name, valid.args)) };
@@ -70,6 +74,43 @@ export class AgentService {
       this.logger.warn(`Fallo en la herramienta ${spec.name}: ${err?.message}`);
       return { kind: 'result', content: this.json({ error: err?.message || 'Error al ejecutar la herramienta' }) };
     }
+  }
+
+  /**
+   * Comprueba el estado de la mascota antes de proponer (y otra vez al confirmar) las
+   * acciones sobre ella misma. Devuelve el motivo del bloqueo o null si se puede hacer.
+   * El cliente no decide: aquí se aplica la regla de desbloqueo con los datos del servidor.
+   */
+  private async checkPetState(userId: string, petId: string, tool: string, args: any): Promise<string | null> {
+    if (!['toggle_desktop_skill', 'start_pomodoro', 'stop_pomodoro', 'set_in_habitat'].includes(tool)) return null;
+    const pet: any = await this.petsService.getPetById(userId, petId);
+    switch (tool) {
+      case 'toggle_desktop_skill': {
+        const skill = getDesktopSkill(args.skill_id)!;
+        const st = skillStateOf(skill, pet.desktopSkills, pet);
+        if (st.state === 'locked') {
+          return args.enabled
+            ? `La habilidad ${skill.name} aún está bloqueada: no se puede activar`
+            : `La habilidad ${skill.name} está bloqueada, así que ya está inactiva`;
+        }
+        if ((st.state === 'active') === args.enabled) {
+          return `La habilidad ${skill.name} ya está ${args.enabled ? 'activada' : 'desactivada'}`;
+        }
+        return null;
+      }
+      case 'start_pomodoro':
+      case 'stop_pomodoro': {
+        const st = skillStateOf(getDesktopSkill('pomodoro_companion')!, pet.desktopSkills, pet);
+        return st.state === 'active' ? null : 'La habilidad Compañero Pomodoro no está activa';
+      }
+      case 'set_in_habitat':
+        return !!pet.inHabitat === args.in_habitat
+          ? args.in_habitat
+            ? 'Ya estás en tu casita'
+            : 'Ya estás fuera de tu casita'
+          : null;
+    }
+    return null;
   }
 
   private json(value: unknown): string {
@@ -154,6 +195,13 @@ export class AgentService {
       }
       case 'search_memory':
         return { recuerdos: await this.memory.search(ctx.petId, args.query, 5) };
+      case 'get_lore': {
+        const lore = this.gameData.getLore?.() ?? null;
+        const topic = findLore(lore, args.topic);
+        return topic
+          ? { tema: topic.title, lore: topic.text.slice(0, MAX_LORE_CHARS) }
+          : { error: 'No sé nada de ese tema', temas_disponibles: loreTopics(lore).map((t) => t.title) };
+      }
       case 'list_reminders': {
         const rows = await this.prisma.reminder.findMany({
           where: { userId: ctx.userId, delivered: false },
@@ -171,6 +219,10 @@ export class AgentService {
           data: { userId: ctx.userId, petId: ctx.petId, text: args.text, dueAt: new Date(args.due_at) },
         });
         return { id: r.id, texto: r.text, para: r.dueAt.toISOString() };
+      }
+      case 'set_in_habitat': {
+        const pet = await this.petsService.setInHabitat(ctx.userId, ctx.petId, args.in_habitat);
+        return { en_casita: !!(pet as any)?.inHabitat };
       }
       default:
         throw new BadRequestException('Herramienta no soportada');
@@ -211,6 +263,12 @@ export class AgentService {
     if (!spec || !valid || !valid.ok) {
       await this.prisma.pendingAction.update({ where: { id: actionId }, data: { status: 'rejected' } });
       throw new BadRequestException('La acción ya no es válida');
+    }
+    // El estado de la mascota pudo cambiar desde la propuesta (p. ej. ya se activó desde el panel)
+    const blocked = await this.checkPetState(userId, petId, action.tool, valid.args);
+    if (blocked) {
+      await this.prisma.pendingAction.update({ where: { id: actionId }, data: { status: 'rejected' } });
+      throw new BadRequestException(blocked);
     }
     // Herramientas de escritorio: el servidor NO las ejecuta; solo registra la confirmación (una vez)
     // y devuelve los argumentos ya validados para que la app los ejecute en el equipo del usuario.

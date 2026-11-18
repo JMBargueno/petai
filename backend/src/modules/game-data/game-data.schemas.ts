@@ -11,6 +11,8 @@
  * que el hot-reload y el CLI `validate` comparten la misma fuente de verdad de integridad.
  */
 import { z } from 'zod';
+import { isKnownStatKey } from '../../stats/stat-keys';
+import { roomShapeErrors } from '../habitat/habitat-layout';
 
 export const ELEMENTS = ['fire', 'water', 'plant', 'electric', 'shadow', 'light'] as const;
 export type ElementValue = (typeof ELEMENTS)[number];
@@ -19,7 +21,7 @@ export const GAME_DATA_FILES = ['balance', 'species', 'patterns', 'foods', 'skil
 export type GameDataFileKey = (typeof GAME_DATA_FILES)[number];
 
 // Categorías y tiers de logros (feature 008). `event` referencia un evento de dominio conocido.
-export const ACHIEVEMENT_CATEGORIES = ['care', 'battle', 'ai', 'collection', 'social'] as const;
+export const ACHIEVEMENT_CATEGORIES = ['care', 'battle', 'ai', 'collection', 'social', 'activity', 'special'] as const;
 export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
 export const ACHIEVEMENT_TIERS = ['common', 'rare', 'epic', 'legendary'] as const;
 export type AchievementTier = (typeof ACHIEVEMENT_TIERS)[number];
@@ -29,7 +31,25 @@ export const ACHIEVEMENT_EVENTS = [
   'chat:message_sent', 'social:constellation_shared', 'social:public_profile',
 ] as const;
 
-const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color hex #RRGGBB');
+/**
+ * Disparador de un logro (motor centralizado, `AchievementEngineService`). Sin `trigger` se usa el
+ * formato original `event` (contador de eventos de dominio).
+ * - `stat`: progreso = valor de una estadística de `UserStat` (o derivada).
+ * - `all_stats`: progreso = cuántas de esas estadísticas valen al menos `min` (1 por defecto).
+ * - `account_before`: se cumple si la cuenta se creó antes de `date` (p. ej. beta tester).
+ */
+const achievementTriggerSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('event'), event: z.string().min(1) }),
+  z.object({ type: z.literal('stat'), stat: z.string().min(1) }),
+  z.object({
+    type: z.literal('all_stats'),
+    stats: z.array(z.string().min(1)).min(1),
+    min: z.number().int().positive().optional(),
+  }),
+  z.object({ type: z.literal('account_before'), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'fecha YYYY-MM-DD') }),
+]);
+
+const hexColor =z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color hex #RRGGBB');
 
 const baseStatsSchema = z.object({
   hp: z.number().nonnegative(),
@@ -178,6 +198,16 @@ export const speciesSchema = z.array(
       favoriteFood: z.string(),
       spriteKey: z.string(),
       defaultPalette: z.object({ primary: hexColor, secondary: hexColor, accent: hexColor }),
+      /** Sesgo de personalidad al nacer (spec 36). Opcional: sin él, todas las dimensiones parten de 50. */
+      personalityBias: z
+        .object({
+          curiosity: z.number().int().min(0).max(100),
+          sociability: z.number().int().min(0).max(100),
+          bravery: z.number().int().min(0).max(100),
+          affection: z.number().int().min(0).max(100),
+          temper: z.number().int().min(0).max(100),
+        })
+        .optional(),
     })
     .passthrough(),
 );
@@ -189,7 +219,12 @@ export const patternsSchema = z.array(
       id: z.string(),
       name: z.string(),
       description: z.string(),
-      minRarity: z.string(),
+      /** Rareza propia del patrón (se tira por ejemplar). */
+      rarity: z.string(),
+      /** Familia: Mímesis Terrestre (normal y raro) o Textura del Éter (superraro en adelante). */
+      group: z.enum(['terrestrial', 'aether']).optional(),
+      /** Efecto animado de los patrones del Éter (`shared/scene/src/bake/patternFx.ts`). */
+      fx: z.enum(['sheen', 'twinkle', 'flow', 'starfield', 'flash', 'aurora']).optional(),
     })
     .passthrough(),
 );
@@ -276,8 +311,14 @@ export const achievementsSchema = z.object({
           desc: z.string().min(1),
           category: z.enum(ACHIEVEMENT_CATEGORIES),
           target: z.number().int().positive(),
-          event: z.string().min(1),
+          // Contador por evento de dominio (formato original). Opcional si hay `trigger`.
+          event: z.string().min(1).optional(),
+          trigger: achievementTriggerSchema.optional(),
           tier: z.enum(ACHIEVEMENT_TIERS),
+          // Insignia del logro: icono (nombre lucide) que se dibuja dentro del marco de su tier.
+          badge: z.object({ icon: z.string().regex(/^[a-z0-9-]+$/, 'icono lucide en kebab-case') }),
+          // Logro secreto: no se muestra (ni su nombre) hasta desbloquearlo.
+          hidden: z.boolean().optional(),
           reward: z.object({
             coins: z.number().int().nonnegative(),
             gems: z.number().int().nonnegative(),
@@ -285,7 +326,8 @@ export const achievementsSchema = z.object({
             itemId: z.string().nullable(),
           }),
         })
-        .passthrough(),
+        .passthrough()
+        .refine((a) => !!a.event || !!a.trigger, { message: 'cada logro necesita `event` o `trigger`' }),
     )
     .min(1),
 });
@@ -293,7 +335,7 @@ export const achievementsSchema = z.object({
 /** constellations.json (feature 008): layout SVG de estrellas por categoría. */
 export const constellationsSchema = z.object({
   version: z.string(),
-  categories: z.record(
+  categories: z.partialRecord(
     z.enum(ACHIEVEMENT_CATEGORIES),
     z.object({
       name: z.string().min(1),
@@ -312,8 +354,22 @@ export const habitatsSchema = z.object({
         name: z.string().min(1),
         gridWidth: z.number().int().positive(),
         gridHeight: z.number().int().positive(),
+        /** Celdas sin suelo `[x, y, ancho, fondo]`: dan a cada sala su forma (estanque, escalón…). */
+        blocked: z.array(z.tuple([z.number().int(), z.number().int(), z.number().int(), z.number().int()])).optional(),
         unlockStage: z.enum(['baby', 'juvenile', 'adult', 'final']),
         description: z.string(),
+        /** Colores de la sala isométrica (GUIA_ARTISTICA §7.4). Opcional: los clientes tienen uno por defecto. */
+        theme: z
+          .object({
+            wall: hexColor,
+            wallShade: hexColor,
+            floor: hexColor,
+            floorAlt: hexColor,
+            trim: hexColor,
+            sky: hexColor,
+            light: hexColor,
+          })
+          .optional(),
       }),
     )
     .min(1),
@@ -326,6 +382,12 @@ export const habitatsSchema = z.object({
       currency: z.enum(['coins', 'gems']),
       buffs: z.record(z.string(), z.number()),
       description: z.string(),
+      /** Huella en celdas `[ancho (x), fondo (y)]` con rotación 0. Por defecto 1×1. */
+      footprint: z.tuple([z.number().int().min(1).max(4), z.number().int().min(1).max(4)]).default([1, 1]),
+      /** `floor`: ocupa celdas del suelo. `wall`: va pegado a una pared y no bloquea el suelo. */
+      mount: z.enum(['floor', 'wall']).default('floor'),
+      /** Uso que le da el Pockai (cama → dormir…). */
+      interaction: z.enum(['sleep', 'eat', 'play', 'bathe', 'sit']).optional(),
     }),
   ),
   buffCaps: z.record(z.string(), z.number().min(0)),
@@ -505,9 +567,14 @@ export function validateGameData(b: GameDataBundle): string[] {
     if (!rarities[sp.rarity]) errors.push(`Rareza '${sp.rarity}' en especie ${sp.id} no está en balance.json`);
   }
 
-  // 7. Patrones (minRarity)
+  // 7. Patrones (rareza propia)
   for (const pat of patterns ?? []) {
-    if (!rarities[pat.minRarity]) errors.push(`minRarity '${pat.minRarity}' en patrón ${pat.id} no está en balance.json`);
+    if (!rarities[pat.rarity]) errors.push(`Rareza '${pat.rarity}' en patrón ${pat.id} no está en balance.json`);
+    // La familia sigue a la rareza, y solo la Textura del Éter lleva efecto.
+    const aether = ['super_rare', 'legendary', 'mythic'].includes(pat.rarity);
+    if (pat.group && pat.group !== (aether ? 'aether' : 'terrestrial')) errors.push(`El patrón ${pat.id} (${pat.rarity}) no puede ser de la familia '${pat.group}'`);
+    if (pat.fx && !aether) errors.push(`El patrón ${pat.id} (${pat.rarity}) no puede llevar efecto: solo los de la Textura del Éter`);
+    if (aether && pat.group && !pat.fx) errors.push(`El patrón ${pat.id} es de la Textura del Éter y no tiene efecto`);
   }
 
   // 8. Logros y constelaciones (feature 008): integridad cruzada
@@ -523,8 +590,21 @@ export function validateGameData(b: GameDataBundle): string[] {
       }
       achIds.add(a.id);
       knownAchIds.add(a.id);
-      if (!ACHIEVEMENT_EVENTS.includes(a.event as (typeof ACHIEVEMENT_EVENTS)[number])) {
-        errors.push(`Logro ${a.id}: evento de dominio desconocido '${a.event}'`);
+      const trig = a.trigger ?? { type: 'event', event: a.event };
+      if (trig.type === 'event' && !ACHIEVEMENT_EVENTS.includes(trig.event as (typeof ACHIEVEMENT_EVENTS)[number])) {
+        errors.push(`Logro ${a.id}: evento de dominio desconocido '${trig.event}'`);
+      }
+      if (trig.type === 'stat' && !isKnownStatKey(trig.stat)) {
+        errors.push(`Logro ${a.id}: estadística desconocida '${trig.stat}'`);
+      }
+      if (trig.type === 'all_stats') {
+        const stats: string[] = trig.stats ?? [];
+        for (const st of stats) {
+          if (!isKnownStatKey(st)) errors.push(`Logro ${a.id}: estadística desconocida '${st}'`);
+        }
+        if (a.target !== stats.length) {
+          errors.push(`Logro ${a.id}: con 'all_stats' el target debe ser el número de estadísticas (${stats.length})`);
+        }
       }
       // Los logros epic/legendary pueden llevar item; los otros deben dejarlo nulo.
       if (a.reward?.itemId && !['epic', 'legendary'].includes(a.tier)) {
@@ -565,6 +645,23 @@ export function validateGameData(b: GameDataBundle): string[] {
       }
       furnIds.add(f.id);
       if (!roomIds.has(f.room)) errors.push(`Mueble ${f.id}: la sala '${f.room}' no existe en habitats.json`);
+      const room = ((habitats as any).rooms ?? []).find((r: any) => r.id === f.room);
+      const [fw, fd] = Array.isArray(f.footprint) ? f.footprint : [1, 1];
+      if (room && (Math.max(fw, fd) > Math.min(room.gridWidth, room.gridHeight))) {
+        errors.push(`Mueble ${f.id}: la huella ${fw}×${fd} no cabe girada en la sala '${f.room}'`);
+      }
+    }
+    // Forma de cada sala: huecos lejos de las paredes del fondo, suelo conexo y sitio para su
+    // mueble más grande.
+    for (const r of (habitats as any).rooms ?? []) {
+      const sizes = ((habitats as any).furniture ?? [])
+        .filter((f: any) => f.room === r.id && f.mount !== 'wall')
+        .map((f: any) => (Array.isArray(f.footprint) ? f.footprint : [1, 1]) as [number, number]);
+      const biggest = sizes.reduce(
+        (a: [number, number], f: [number, number]) => (f[0] * f[1] > a[0] * a[1] ? f : a),
+        [1, 1] as [number, number],
+      );
+      for (const e of roomShapeErrors(r, biggest)) errors.push(`Sala ${r.id}: ${e}`);
     }
   }
 

@@ -43,6 +43,8 @@ android {
     sourceSets {
         // Los sprites SVG son la fuente única compartida con escritorio (shared/assets/sprites)
         getByName("main").assets.directories.add("../../../shared/assets")
+        // Núcleo de escena compartido (@pockai/scene) en assets/scene/ (ver tarea syncPockaiScene)
+        getByName("main").assets.directories.add("build/generated/pockaiScene")
     }
 }
 
@@ -76,6 +78,29 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
+    implementation(libs.socket.io.client)
     implementation(libs.coil.compose)
     implementation(libs.coil.svg)
+    implementation(libs.androidx.webkit)
 }
+
+/**
+ * Copia el bundle web de la escena (sala isométrica + Pockai, PixiJS) a los assets de la app. Se
+ * genera desde la raíz del monorepo con `pnpm --filter @pockai/scene build:embed`
+ * (docs/ART_PIPELINE.md §9); la app lo carga sin red con WebViewAssetLoader.
+ */
+val syncPockaiScene by tasks.registering(Sync::class) {
+    // Solo valores simples dentro de doFirst: el configuration cache no admite referencias al script.
+    val distPath = rootProject.file("../../shared/scene/dist/embed").absolutePath
+    from(distPath)
+    into(layout.buildDirectory.dir("generated/pockaiScene/scene"))
+    doFirst {
+        if (!File(distPath, "index.html").exists()) {
+            throw GradleException(
+                "Falta el bundle de la escena en $distPath. Ejecuta desde la raíz del repo: " +
+                    "pnpm --filter @pockai/scene build:embed",
+            )
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn(syncPockaiScene) }
