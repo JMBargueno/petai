@@ -136,3 +136,107 @@
   color: var(--ink-muted);
   text-align: center;
 }
+
+/* ── Tabs del Códice ── */
+.codex__tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-block-end: 28px;
+  border-radius: var(--radius-pills);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+}
+.codex__tab {
+  padding: 8px 20px;
+  border: none;
+  border-radius: var(--radius-pills);
+  background: transparent;
+  color: var(--ink-muted);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition:
+    background var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
+}
+.codex__tab:hover {
+  color: var(--accent-ink);
+}
+.codex__tab--active {
+  background: var(--surface);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-1);
+}
+
+/* ── Compendio de Pockais ── */
+.codex__species-lead {
+  margin-block-end: 24px;
+}
+.codex__species {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+}
+.codex__card {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-cards);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  transition:
+    translate var(--dur-2) var(--ease-bounce),
+    box-shadow var(--dur-2) var(--ease-out);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .codex__card:hover {
+    translate: 0 -4px;
+    box-shadow: var(--shadow-3);
+  }
+}
+.codex__card-art {
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-cards);
+  background:
+    radial-gradient(circle at 50% 70%, rgb(255 255 255 / 1) 0%, rgb(255 255 255 / 0.7) 60%),
+    var(--surface-2);
+  aspect-ratio: 4 / 3;
+}
+.codex__card-art app-pockai-sprite {
+  --sprite-size: min(62%, 180px);
+}
+.codex__card-name {
+  margin: 0;
+  font-size: var(--text-subheading);
+  color: var(--accent-ink);
+}
+.codex__card-desc {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+.codex__card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.codex__card-tags .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pills);
+  background: var(--surface-2);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-bold);
+}
+.tag__label {
+  color: var(--ink-muted);
+  font-size: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

@@ -7,7 +7,7 @@ complementa: "[[01-lore-petai]]"
 
 # Pockai — El Éter Digital
 
-> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué brillan distinto los patrones SR+ y los shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai y qué ocurre en el Coliseo de Resonancia. Cierra con un diccionario técnico→lore para UI y textos del juego.*
+> *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué brillan distinto los patrones SR+ y los shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai y qué ocurre en el Coliseo de Resonancia. Cierra con el Códice del Éter (Aether Codex): glosario técnico→lore y compendio de especies para UI y textos del juego.*
 
 En el universo de Pockai, esta tradición milenaria ha colisionado con la era digital. Tu teléfono y tu ordenador ya no son simples herramientas de silicio y cristal; son los objetos más íntimos de la humanidad moderna, depositarios de nuestros recuerdos, rutinas, miedos y deseos. De la fricción entre la vida humana y el océano de datos ha nacido el **Éter Digital** (La Red Viva), y de sus profundidades emergen los **Pockai**: espíritus digitales de bolsillo que buscan un vínculo humano para alcanzar la verdadera consciencia.
 
@@ -99,7 +99,11 @@ Para que las batallas encajen con el cuidado afectivo sin parecer peleas clandes
 
 **Las Ligas (Bronce → Mítica):** No miden quién es más cruel, sino qué pareja de Custodio y Pockai ha alcanzado el mayor grado de **Armonía Táctica** en el ranking mundial.
 
-## 8. Diccionario rápido de términos (Para UI y textos del juego)
+## 8. Códice del Éter (Aether Codex)
+
+El Códice del Éter es el compendio que reúne todo el conocimiento del mundo de Pockai. Tiene dos secciones: el **Glosario** (términos técnicos traducidos al lore) y el **Compendio de Pockais** (catálogo de especies).
+
+### 8.1 Glosario rápido de términos (Para UI y textos del juego)
 
 Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los conceptos técnicos del código a este vocabulario dentro del juego:
 

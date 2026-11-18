@@ -112,7 +112,7 @@ export class Lore {
     { id: 'despertar', label: $localize`:@@lore.nav.awake:Despertar` },
     { id: 'ciclo', label: $localize`:@@lore.nav.life:Ciclo` },
     { id: 'coliseo', label: $localize`:@@lore.nav.colo:Coliseo` },
-    { id: 'diccionario', label: $localize`:@@lore.nav.gloss:Diccionario` },
+    { id: 'codice', label: $localize`:@@lore.nav.gloss:Códice` },
   ];
 
   private readonly toc = viewChild.required<ElementRef<HTMLElement>>('toc');

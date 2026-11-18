@@ -1,6 +1,6 @@
 import balance from '../../../../shared/game-data/balance.json';
 import patternData from '../../../../shared/game-data/patterns.json';
-import { PATTERNS, RARITIES, RARITY_COLORS } from '../landing/content';
+import { PATTERNS, RARITIES, RARITY_COLORS, SPECIES } from '../landing/content';
 import type { StickerColor } from '../shared/ui/sticker';
 
 /**
@@ -243,4 +243,4 @@ export const TEASER = {
 };
 
 /** `PATTERNS` y `RARITIES` se reutilizan directamente de ../landing/content (datos, no copy). */
-export { PATTERNS, RARITIES };
+export { PATTERNS, RARITIES, SPECIES };

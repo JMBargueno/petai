@@ -95,6 +95,7 @@ export const SPECIES = speciesData.map((s, i) => ({
   spriteKey: s.spriteKey,
   element: ELEMENTS[s.element] ?? s.element,
   rarity: RARITIES[s.rarity] ?? s.rarity,
+  description: s.description,
   color: CARD_COLORS[i % CARD_COLORS.length],
 }));
 
