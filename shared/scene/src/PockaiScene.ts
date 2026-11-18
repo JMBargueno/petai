@@ -5,7 +5,7 @@
  *  - Solo Pockai (sin sala): el Pockai sobre fondo transparente, del tamaño que quepa.
  *  - Sala (`setRoom`): la sala isométrica (`IsoRoom`) encajada en el lienzo, con el Pockai dentro.
  */
-import { Application, Rectangle } from 'pixi.js';
+import { Application, Container, Rectangle } from 'pixi.js';
 import { resolveAccessory, resolveSheet, PATTERNS } from './assets';
 import { bakeSheet, loadImage } from './bake/bakeTexture';
 import { PATTERN_FX } from './bake/patternFx';
@@ -19,6 +19,7 @@ import { styleFor } from './room/roomStyles';
 import { Ambience, NO_AMBIENCE, type AmbienceState } from './ambience/Ambience';
 import { loadBackdrop } from './ambience/backdrops';
 import { PixiEffects } from './effects/pixiLayer';
+import { PixiScreenFx } from './effects/screenLayer';
 import { effectForPetAction } from './effects/reactions';
 import { clipsForPetAction } from './effects/clips';
 import { flowPalette } from './effects/palettes';
@@ -78,6 +79,9 @@ export class PockaiScene {
   private disposers: (() => void)[] = [];
   /** Efectos compartidos (@pockai/scene/effects) colgados del Pockai. */
   private effects!: PixiEffects;
+  /** Transiciones que tapan todo el lienzo (velo de Éter), siempre por encima de lo demás. */
+  private screenFx!: PixiScreenFx;
+  private readonly screenLayer = new Container();
   /** Clips que faltan de la reacción en curso a un `petAction` (se encadenan al acabar cada uno). */
   private clipQueue: string[] = [];
   /** Hay un capullo de evolución esperando a que llegue y se hornee la nueva etapa. */
@@ -132,6 +136,15 @@ export class PockaiScene {
       seed: () => this.petState?.visualSeed ?? 1,
       onEnded: (id) => this.emit({ type: 'effectEnded', id }),
     });
+    this.app.stage.addChild(this.screenLayer);
+    this.screenFx = new PixiScreenFx(this.screenLayer, {
+      reducedMotion: this.reducedMotion,
+      palette: () => flowPalette(speciesElement(this.petState?.species)),
+      seed: () => this.petState?.visualSeed ?? 1,
+      viewport: () => this.app.screen,
+      onCovered: () => this.emit({ type: 'screenCovered' }),
+      onUncovered: () => this.emit({ type: 'screenUncovered' }),
+    });
     // Escenario interactivo en toda su área: arrastres de muebles y clics en vacío.
     this.app.stage.eventMode = 'static';
     this.app.stage.hitArea = new Rectangle(0, 0, 1e6, 1e6);
@@ -141,6 +154,7 @@ export class PockaiScene {
     this.app.ticker.add((t) => {
       this.pet.update(t);
       this.effects.update(t.deltaMS);
+      this.screenFx.update(t.deltaMS);
       this.ambience?.update(t.deltaMS);
       this.room?.update(t);
     });
@@ -218,6 +232,12 @@ export class PockaiScene {
       case 'rotateSelected':
         this.room?.rotateSelected();
         break;
+      case 'coverScreen':
+        this.cover(msg.effect);
+        break;
+      case 'uncoverScreen':
+        this.uncover();
+        break;
       case 'playEffect':
         this.effects.play(msg.id, msg.params ?? {});
         break;
@@ -264,6 +284,7 @@ export class PockaiScene {
         this.ambience = null;
         this.backdropRoom = null;
         this.app.stage.addChild(this.pet);
+        this.raiseScreen();
         this.pet.zIndex = 0;
         this.pet.visible = this.activity !== 'away';
       }
@@ -288,6 +309,7 @@ export class PockaiScene {
       });
       this.app.stage.addChildAt(this.ambience.back, 0);
       this.app.stage.addChild(this.ambience.front);
+      this.raiseScreen();
       this.ambience.setEdit(this.edit);
       this.ambience.set(this.ambienceState);
     } else {
@@ -391,6 +413,25 @@ export class PockaiScene {
     }
   }
 
+  /** La capa de pantalla siempre encima (la sala y el clima se añaden después). */
+  private raiseScreen(): void {
+    this.app.stage.addChild(this.screenLayer);
+  }
+
+  /**
+   * Tapa el lienzo con un efecto de pantalla (por defecto el velo de Éter) y avisa con
+   * `screenCovered` cuando ya no se ve lo de detrás. Si el efecto no existe, avisa igualmente
+   * para que el anfitrión no se quede esperando.
+   */
+  cover(effect = 'velo-eter'): void {
+    if (!this.screenFx.cover(effect)) this.emit({ type: 'screenCovered' });
+  }
+
+  /** Abre el velo; avisa con `screenUncovered` al terminar. */
+  uncover(): void {
+    this.screenFx.uncover();
+  }
+
   private applyPaused(): void {
     const stop = this.paused || document.visibilityState === 'hidden';
     if (stop) this.app.ticker.stop();
@@ -427,6 +468,7 @@ export class PockaiScene {
 
   destroy(): void {
     this.effects?.destroy();
+    this.screenFx?.destroy();
     this.disposers.forEach((d) => d());
     this.app.destroy(true, { children: true });
   }

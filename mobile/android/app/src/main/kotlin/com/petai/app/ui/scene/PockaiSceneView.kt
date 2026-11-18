@@ -37,6 +37,10 @@ sealed interface SceneEvent {
     data object PetTapped : SceneEvent
     /** Un efecto de `playEffect`/`petAction` terminó (protocolo v3). */
     data class EffectEnded(val id: String) : SceneEvent
+    /** El velo de `coverScreen` ya tapa todo el lienzo. */
+    data object ScreenCovered : SceneEvent
+    /** El velo terminó de abrirse. */
+    data object ScreenUncovered : SceneEvent
     data class Error(val message: String) : SceneEvent
 }
 
@@ -56,6 +60,8 @@ private fun parseEvent(raw: String): SceneEvent? = runCatching {
         )
         "petTapped" -> SceneEvent.PetTapped
         "effectEnded" -> SceneEvent.EffectEnded(str("id") ?: return null)
+        "screenCovered" -> SceneEvent.ScreenCovered
+        "screenUncovered" -> SceneEvent.ScreenUncovered
         "error" -> SceneEvent.Error(str("message") ?: "")
         else -> null
     }

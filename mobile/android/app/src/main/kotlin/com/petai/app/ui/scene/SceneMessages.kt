@@ -165,6 +165,18 @@ object SceneMessages {
         if (context != null) put("context", context)
     }
 
+    /**
+     * Tapa todo el lienzo con un efecto de pantalla (por defecto el velo de Éter) para cambiar el
+     * tamaño de la vista sin que se vea el salto. La escena responde con `screenCovered`.
+     */
+    fun coverScreen(effect: String? = null): JsonObject = buildJsonObject {
+        put("type", "coverScreen")
+        if (effect != null) put("effect", effect)
+    }
+
+    /** Abre el velo de [coverScreen]; la escena responde con `screenUncovered` al terminar. */
+    fun uncoverScreen(): JsonObject = buildJsonObject { put("type", "uncoverScreen") }
+
     /** Pide un efecto concreto de @pockai/scene/effects (protocolo v3), con sus datos. */
     fun playEffect(id: String, params: Map<String, Any> = emptyMap()): JsonObject = buildJsonObject {
         put("type", "playEffect")
