@@ -68,7 +68,7 @@ describe('RaidService.settle (F-06: liquidación idempotente y proporcional)', (
     expect(tx.user.update).not.toHaveBeenCalled();
   });
 
-  it('avisa de la victoria (raid_victory) a cada participante con su Pockai y sus gemas', async () => {
+  it('avisa de la victoria (raid_victory) a cada participante con sus gemas (a su mascota activa)', async () => {
     const { svc, prisma, realtime } = build();
     prisma.raid.findUnique.mockResolvedValue({ id: 'r', status: 'active', theme: 'Inferno Dragon', element: 'fire' });
     prisma.raidParticipant.findMany.mockResolvedValue([
@@ -78,8 +78,8 @@ describe('RaidService.settle (F-06: liquidación idempotente y proporcional)', (
     prisma.$transaction.mockImplementation(async (fn: any) => fn(txMock(1)));
     await (svc as any).settle('r');
     expect(realtime.emitPetAction.mock.calls).toEqual([
-      ['u1', 'p1', 'raid_victory', { theme: 'Inferno Dragon', element: 'fire', gems: 500 }],
-      ['u2', 'p2', 'raid_victory', { theme: 'Inferno Dragon', element: 'fire', gems: 100 }],
+      ['u1', null, 'raid_victory', { theme: 'Inferno Dragon', element: 'fire', gems: 500 }],
+      ['u2', null, 'raid_victory', { theme: 'Inferno Dragon', element: 'fire', gems: 100 }],
     ]);
   });
 
