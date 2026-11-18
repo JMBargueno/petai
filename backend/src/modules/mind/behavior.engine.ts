@@ -29,6 +29,23 @@ export const BEHAVIORS = [
   'sulk',
   'show_off',
   'yawn',
+  // Spec 37 §4.6 — con su entrenador
+  'bring_gift',
+  'tell_story',
+  'ask_about_day',
+  'apologize',
+  'perform_trick',
+  // Ante un entrenador que visita (las usa el menú de visita, lote 6)
+  'greet_visitor',
+  'hide',
+  'show_habitat',
+  'accept_treat',
+  // Con otro Pockai (las usa la escena entre dos, lote 6)
+  'play_tag',
+  'share_food',
+  'nap_together',
+  'squabble',
+  'make_up',
 ] as const;
 export type Behavior = (typeof BEHAVIORS)[number];
 
@@ -52,6 +69,20 @@ const VIEW: Record<Behavior, Omit<BehaviorView, 'action'>> = {
   sulk: { animation: 'idle', emote: 'tear' },
   show_off: { animation: 'happy', emote: 'star' },
   yawn: { animation: 'sleep', emote: 'zzz' },
+  bring_gift: { animation: 'happy', emote: 'sparkle' },
+  tell_story: { animation: 'happy', emote: 'note' },
+  ask_about_day: { animation: 'idle', emote: 'question' },
+  apologize: { animation: 'idle', emote: 'tear' },
+  perform_trick: { animation: 'happy', emote: 'star' },
+  greet_visitor: { animation: 'happy', emote: 'wave' },
+  hide: { animation: 'idle', emote: null },
+  show_habitat: { animation: 'happy', emote: 'star' },
+  accept_treat: { animation: 'happy', emote: 'heart' },
+  play_tag: { animation: 'happy', emote: 'note' },
+  share_food: { animation: 'happy', emote: 'heart' },
+  nap_together: { animation: 'sleep', emote: 'zzz' },
+  squabble: { animation: 'idle', emote: 'tear' },
+  make_up: { animation: 'happy', emote: 'heart' },
 };
 
 /** Guía para el LLM: cómo debe sonar la respuesta para encajar con la acción. */
@@ -68,6 +99,20 @@ const PROMPT_HINT: Record<Behavior, string> = {
   sulk: 'Muéstrate algo dolido, sin ser cruel, y deja la puerta abierta a hacer las paces.',
   show_off: 'Presume un poco de lo que sabes hacer, con gracia.',
   yawn: 'Estás muy cansado: responde bostezando y con pocas palabras.',
+  bring_gift: 'Enséñale con ilusión lo que encontraste para él mientras no estaba (está entre tus recuerdos).',
+  tell_story: 'Cuéntale algo que te ha pasado mientras no estaba (está entre tus recuerdos), con tus palabras.',
+  ask_about_day: 'Salúdale y pregúntale con interés qué tal le ha ido el día.',
+  apologize: 'Pídele perdón por lo de antes, con sinceridad y pocas palabras.',
+  perform_trick: 'Haz uno de tus trucos y cuéntalo con gracia.',
+  greet_visitor: 'Saluda al visitante con alegría.',
+  hide: 'Te da vergüenza: escóndete un poco y responde con timidez.',
+  show_habitat: 'Enséñale tu hábitat con orgullo.',
+  accept_treat: 'Acepta el premio y da las gracias.',
+  play_tag: 'Proponle jugar al pilla-pilla.',
+  share_food: 'Comparte tu comida con él.',
+  nap_together: 'Estáis cansados: echad una siesta juntos.',
+  squabble: 'Os habéis picado: muéstrate molesto, sin crueldad.',
+  make_up: 'Haz las paces con él.',
 };
 
 export interface BehaviorState {
@@ -93,7 +138,13 @@ export function scoreReaction(entry: ReactionEntry, dims: Dims): number {
  * Candidatas de una intención para una audiencia, con su puntuación, en el orden de los datos
  * (`balance.json → personality.behavior.reactions`). Una intención sin tabla usa la de `chat`.
  */
-export function reactionScores(intent: string, dims: Dims, cfg: PersonalityConfig, audience: ReactionAudience = 'owner'): { behavior: Behavior; score: number }[] {
+export function reactionScores(
+  intent: string,
+  dims: Dims,
+  cfg: PersonalityConfig,
+  audience: ReactionAudience = 'owner',
+  flags: ReactionFlags = NO_FLAGS,
+): { behavior: Behavior; score: number }[] {
   const table = cfg.behavior.reactions ?? {};
   const catalog = cfg.behavior.catalog ?? {};
   const out: { behavior: Behavior; score: number }[] = [];
@@ -102,12 +153,22 @@ export function reactionScores(intent: string, dims: Dims, cfg: PersonalityConfi
     // Una reacción pensada para el entrenador no se le ofrece a un visitante ni a otro Pockai
     const audiences = catalog[entry.behavior]?.audiences ?? ['owner'];
     if (!audiences.includes(audience)) continue;
+    // Contar una historia exige tener una; hacer un truco, saber alguno
+    const when = catalog[entry.behavior]?.when;
+    if (when && !flags.has(when)) continue;
     out.push({ behavior: entry.behavior, score: scoreReaction(entry, dims) });
   }
   return out;
 }
 
+/** Condiciones de la situación que se cumplen ahora (tiene algo que contar, sabe un truco…). */
+export type ReactionFlags = ReadonlySet<string>;
+
+const NO_FLAGS: ReactionFlags = new Set();
+
 export interface DecisionContext {
+  /** Condiciones que se cumplen. Una reacción con `when` solo es candidata si la suya está aquí. */
+  flags?: ReactionFlags;
   /** Últimas reacciones elegidas, la más reciente al final. Sin ellas no hay anti-repetición. */
   recent?: readonly string[];
   /** Semilla para desempatar (id de la mascota): mismo estado, misma reacción. */
@@ -128,8 +189,9 @@ export interface DecisionContext {
  */
 export function decideBehavior(intent: Intent, dims: Dims, state: BehaviorState, cfg: PersonalityConfig, ctx: DecisionContext = {}): BehaviorView {
   const audience = ctx.audience ?? 'owner';
-  let list = reactionScores(intent, dims, cfg, audience);
-  if (!list.length) return validateBehavior('listen', dims, state, cfg, audience).view;
+  const flags = ctx.flags ?? NO_FLAGS;
+  let list = reactionScores(intent, dims, cfg, audience, flags);
+  if (!list.length) return validateBehavior('listen', dims, state, cfg, audience, flags).view;
 
   const anti = cfg.behavior.antiRepeat;
   const recent = anti && ctx.recent ? ctx.recent.slice(-anti.window) : [];
@@ -157,7 +219,7 @@ export function decideBehavior(intent: Intent, dims: Dims, state: BehaviorState,
     const prev = list.find((c) => c.behavior === recent[recent.length - 1]);
     if (prev && prev.behavior !== best.behavior && best.score < prev.score * (1 + anti.margin)) best = prev;
   }
-  return validateBehavior(best.behavior, dims, state, cfg, audience).view;
+  return validateBehavior(best.behavior, dims, state, cfg, audience, flags).view;
 }
 
 export interface Validation {
@@ -188,6 +250,7 @@ export function validateBehavior(
   state: BehaviorState,
   cfg: PersonalityConfig,
   audience: ReactionAudience = 'owner',
+  flags: ReactionFlags = NO_FLAGS,
 ): Validation {
   if (!isBehavior(proposed)) return { ok: false, view: viewOf('listen'), reason: 'acción fuera de catálogo' };
   if (state.sleeping) {
@@ -197,6 +260,8 @@ export function validateBehavior(
   const entry = catalog[proposed];
   const allowed = (b: Behavior) => (catalog[b]?.audiences ?? ['owner']).includes(audience);
   if (!allowed(proposed)) return { ok: false, view: viewOf('listen'), reason: 'no es una reacción para quien tiene delante' };
+  // No puede contar lo que no ha vivido ni hacer un truco que no sabe, lo proponga quien lo proponga
+  if (entry?.when && !flags.has(entry.when)) return { ok: false, view: viewOf('listen'), reason: 'ahora no tiene sentido' };
 
   if (entry?.active && (state.sick || state.energy < cfg.behavior.minEnergyToPlay)) {
     const tired = state.energy < cfg.behavior.minEnergyToPlay;
@@ -234,10 +299,17 @@ export function effectsOf(action: Behavior): { happiness: number; evolutionEvent
       return { happiness: 2, evolutionEvent: 'talk_play' };
     case 'propose_explore':
       return { happiness: 1, evolutionEvent: 'talk_play' };
+    case 'perform_trick':
+      return { happiness: 1, evolutionEvent: 'talk_play' };
+    case 'bring_gift':
+    case 'apologize':
+      return { happiness: 1, evolutionEvent: 'talk_comfort' };
     default:
       return { happiness: 0 };
   }
 }
+
+const NOT_FOR_CHAT = new Set<string>(['greet_visitor', 'hide', 'show_habitat', 'accept_treat', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up']);
 
 /** Definición OpenAI-compatible de la herramienta con la que el LLM propone la acción estructurada. */
 export const EXPRESS_BEHAVIOR_TOOL = {
@@ -246,7 +318,8 @@ export const EXPRESS_BEHAVIOR_TOOL = {
     'Elige UNA reacción física para acompañar tu respuesta (animación en pantalla). Úsala como mucho una vez por mensaje. El juego puede sustituirla si no es posible (p. ej. sin energía).',
   parameters: {
     type: 'object',
-    properties: { action: { type: 'string', enum: [...BEHAVIORS] } },
+    // Solo las reacciones pensadas para el entrenador: las de visitantes y otros Pockai no son para el chat
+    properties: { action: { type: 'string', enum: BEHAVIORS.filter((b) => !NOT_FOR_CHAT.has(b)) } },
     required: ['action'],
     additionalProperties: false,
   },

@@ -11,6 +11,7 @@ const cfg = balance.personality as PersonalityConfig;
 
 const INTENTS: Intent[] = ['sad_day', 'good_news', 'affection', 'scold', 'play_request', 'explore_request', 'greeting', 'farewell', 'question', 'chat'];
 const AWAKE = { sleeping: false, sick: false, energy: 80 };
+const LEGACY_BEHAVIORS = ['comfort', 'celebrate', 'cuddle', 'invite_play', 'propose_explore', 'greet', 'wave_goodbye', 'listen', 'ask_back', 'sulk', 'show_off', 'yawn'];
 
 /** Rejilla de personalidades: cinco dimensiones con valores repartidos, incluidos los extremos. */
 function grid(): Dims[] {
@@ -49,7 +50,8 @@ describe('Spec 37 §4.3 — la tabla de reacciones vive en datos', () => {
   it('las reglas de validación trasladadas coinciden con las de antes', () => {
     const states = [AWAKE, { sleeping: true, sick: false, energy: 80 }, { sleeping: false, sick: true, energy: 80 }, { sleeping: false, sick: false, energy: 5 }];
     const dimsList: Dims[] = [neutralDims(), { ...neutralDims(), affection: 10 }, { ...neutralDims(), bravery: 5 }, { ...neutralDims(), affection: 19, bravery: 14 }];
-    for (const b of BEHAVIORS) {
+    // Solo las doce reacciones que existían entonces: las nuevas no tienen reglas antiguas con las que comparar
+    for (const b of LEGACY_BEHAVIORS) {
       for (const state of states) {
         for (const dims of dimsList) {
           const expected = legacyValidate(b, dims, state, cfg.behavior.minEnergyToPlay);

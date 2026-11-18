@@ -14,7 +14,7 @@ const { cases } = JSON.parse(fs.readFileSync(path.resolve(__dirname, '__fixtures
 describe('Conversation Engine — tabla de casos (spec 37 §3.2)', () => {
   it('la tabla cubre todas las intenciones', () => {
     const covered = new Set(cases.map(([, intent]) => intent));
-    for (const intent of ['sad_day', 'good_news', 'affection', 'scold', 'play_request', 'explore_request', 'greeting', 'farewell', 'question', 'chat']) {
+    for (const intent of ['sad_day', 'good_news', 'affection', 'scold', 'play_request', 'explore_request', 'greeting', 'farewell', 'question', 'chat', 'ask_life', 'ask_friend', 'praise', 'apology', 'gift', 'teach']) {
       expect(covered.has(intent)).toBe(true);
     }
   });

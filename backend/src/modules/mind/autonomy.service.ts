@@ -111,7 +111,7 @@ export class AutonomyService {
         pet.id,
         sim.episodes.map((e) => ({
           layer: 'episodic' as const,
-          kind: e.friend ? 'encounter' : 'event',
+          kind: e.friend ? 'encounter' : e.itemId ? 'find' : 'event',
           content: e.content,
           importance: e.importance,
           valence: e.valence,

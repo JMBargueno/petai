@@ -554,7 +554,21 @@
         "ask_back": { "audiences": ["owner"] },
         "sulk": { "audiences": ["owner"] },
         "show_off": { "audiences": ["owner"] },
-        "yawn": { "audiences": ["owner", "visitor", "pockai"] }
+        "yawn": { "audiences": ["owner", "visitor", "pockai"] },
+        "bring_gift": { "audiences": ["owner"], "when": "has_find" },
+        "tell_story": { "audiences": ["owner"], "when": "untold" },
+        "ask_about_day": { "audiences": ["owner"], "when": "first_turn_today" },
+        "apologize": { "audiences": ["owner"], "when": "after_scold" },
+        "perform_trick": { "audiences": ["owner"], "when": "knows_trick", "active": true },
+        "greet_visitor": { "audiences": ["visitor"] },
+        "hide": { "audiences": ["visitor"] },
+        "show_habitat": { "audiences": ["visitor"] },
+        "accept_treat": { "audiences": ["visitor"] },
+        "play_tag": { "audiences": ["pockai"], "active": true },
+        "share_food": { "audiences": ["pockai"] },
+        "nap_together": { "audiences": ["pockai"] },
+        "squabble": { "audiences": ["pockai"] },
+        "make_up": { "audiences": ["pockai"] }
       },
       "reactions": {
         "sad_day": [
@@ -588,7 +602,10 @@
         ],
         "greeting": [
           { "behavior": "greet", "base": 1, "weights": { "sociability": 0.004 } },
-          { "behavior": "cuddle", "base": 0.45, "weights": { "affection": 0.009 } }
+          { "behavior": "cuddle", "base": 0.45, "weights": { "affection": 0.009 } },
+          { "behavior": "bring_gift", "base": 1.6 },
+          { "behavior": "ask_about_day", "base": 1.05, "weights": { "curiosity": 0.008, "affection": 0.006 } },
+          { "behavior": "apologize", "base": 1.3, "weights": { "affection": 0.006 } }
         ],
         "farewell": [
           { "behavior": "wave_goodbye", "base": 1 },
@@ -602,8 +619,67 @@
         "chat": [
           { "behavior": "listen", "base": 0.6 },
           { "behavior": "ask_back", "base": 0.45, "weights": { "curiosity": 0.009 } },
-          { "behavior": "invite_play", "base": 0.25, "weights": { "temper": 0.005 } }
+          { "behavior": "invite_play", "base": 0.25, "weights": { "temper": 0.005 } },
+          { "behavior": "tell_story", "base": 0.55, "weights": { "sociability": 0.006 } },
+          { "behavior": "bring_gift", "base": 0.9 },
+          { "behavior": "apologize", "base": 1.3, "weights": { "affection": 0.006 } }
+        ],
+        "ask_life": [
+          { "behavior": "tell_story", "base": 2 },
+          { "behavior": "bring_gift", "base": 1.6 },
+          { "behavior": "ask_back", "base": 0.6, "weights": { "curiosity": 0.008 } },
+          { "behavior": "listen", "base": 0.5 }
+        ],
+        "ask_friend": [
+          { "behavior": "tell_story", "base": 0.9, "weights": { "sociability": 0.006 } },
+          { "behavior": "ask_back", "base": 0.6, "weights": { "curiosity": 0.006 } },
+          { "behavior": "listen", "base": 0.7 }
+        ],
+        "praise": [
+          { "behavior": "perform_trick", "base": 1.2, "weights": { "bravery": 0.004 } },
+          { "behavior": "show_off", "base": 0.8, "weights": { "bravery": 0.008, "affection": -0.004 } },
+          { "behavior": "cuddle", "base": 0.8, "weights": { "affection": 0.01 } },
+          { "behavior": "listen", "base": 0.3 }
+        ],
+        "apology": [
+          { "behavior": "cuddle", "base": 0.9, "weights": { "affection": 0.01 } },
+          { "behavior": "listen", "base": 0.6 },
+          { "behavior": "sulk", "base": 0.2, "weights": { "affection": -0.006, "temper": 0.004 } }
+        ],
+        "gift": [
+          { "behavior": "celebrate", "base": 1.1, "weights": { "temper": 0.01 } },
+          { "behavior": "cuddle", "base": 0.6, "weights": { "affection": 0.01 } },
+          { "behavior": "ask_back", "base": 0.5, "weights": { "curiosity": 0.01 } }
+        ],
+        "teach": [
+          { "behavior": "perform_trick", "base": 0.9 },
+          { "behavior": "invite_play", "base": 0.8, "weights": { "temper": 0.008 } },
+          { "behavior": "ask_back", "base": 0.5, "weights": { "curiosity": 0.008 } },
+          { "behavior": "listen", "base": 0.55 }
         ]
+      }
+    },
+    "tricks": {
+      "teachDailyCap": 3,
+      "catalog": {
+        "spin": { "name": "girar sobre sí mismo", "practices": 3 },
+        "wave": { "name": "saludar con la pata", "practices": 4, "minDims": { "sociability": 35 } },
+        "play_dead": { "name": "hacerse el dormido", "practices": 5, "minDims": { "curiosity": 40 } },
+        "fetch": { "name": "traer cosas", "practices": 6, "minDims": { "affection": 40, "bravery": 30 } }
+      }
+    },
+    "wishes": {
+      "maxActive": 2,
+      "minScore": 0.5,
+      "showEveryTurns": 8,
+      "cooldownHours": 24,
+      "happinessOnFulfil": 2,
+      "catalog": {
+        "go_explore": { "base": 0.8, "weights": { "curiosity": 0.03, "bravery": 0.01 }, "minDays": 2, "activity": "explore", "activityBoost": 1.8 },
+        "see_friend": { "base": 0.7, "weights": { "sociability": 0.03 }, "minDays": 2, "activity": "socialize", "activityBoost": 1.8 },
+        "show_find": { "base": 1.6, "weights": { "affection": 0.01 } },
+        "be_cuddled": { "base": 0.7, "weights": { "affection": 0.03 }, "minAwayMinutes": 480 },
+        "learn_trick": { "base": 0.6, "weights": { "curiosity": 0.02, "temper": 0.01 }, "activity": "practice_trick", "activityBoost": 1.6 }
       }
     },
     "social": {

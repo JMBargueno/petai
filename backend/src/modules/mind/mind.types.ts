@@ -50,6 +50,8 @@ export interface PersonalityConfig {
   };
   autonomy: AutonomyConfig;
   social: import('./social.engine').SocialConfig;
+  tricks: import('./tricks.engine').TricksConfig;
+  wishes: import('./wishes.engine').WishesConfig;
   combat: { maxThresholdShift: number };
   behavior: BehaviorConfig;
 }
@@ -76,7 +78,12 @@ export interface BehaviorCatalogEntry {
   minDims?: Partial<Dims>;
   fallback?: string;
   reason?: string;
+  /** Condición de la situación para que tenga sentido (tiene algo que contar, sabe un truco…). */
+  when?: ReactionCondition;
 }
+
+/** Condiciones que una reacción puede exigir. Lista cerrada: se calculan en la pizarra de situación. */
+export type ReactionCondition = 'has_find' | 'untold' | 'first_turn_today' | 'after_scold' | 'knows_trick';
 
 export interface BehaviorConfig {
   minEnergyToPlay: number;
@@ -141,6 +148,12 @@ export interface StoredPersonality {
   lastNeglectDay?: string;
   /** Últimas reacciones del chat (spec 37 §4.4), la más reciente al final. */
   recent?: string[];
+  /** Trucos aprendidos y en curso (spec 37 §4.6); ver tricks.engine. */
+  tricks?: unknown;
+  /** Reloj de turnos y enfriamiento de los deseos (spec 37 §4.5); ver wishes.engine. */
+  wishes?: unknown;
+  /** Último día en que una disculpa del entrenador reparó la relación (una vez al día). */
+  apologyDay?: string;
   trait?: string;
   temperament?: string;
   genes?: unknown[];
@@ -163,6 +176,8 @@ export interface CreatureProfile {
   dims: Dims;
   /** Últimas reacciones del chat guardadas (sin validar: puede traer ids de otra versión). */
   recent: string[];
+  /** JSON de personalidad tal como está guardado (trucos, deseos…). Nunca se devuelve por la API. */
+  stored: StoredPersonality;
   traits: Record<Dimension, DimView>;
   legacy: { trait: string; temperament: string };
   mood: string;

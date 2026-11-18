@@ -8,6 +8,7 @@ import { MindService } from './mind.service';
 import { floorValence, isStage, nextStage, type Stage } from './social.engine';
 import {
   MemoryRow,
+  RecallOptions,
   RecallSelection,
   buildLayeredMemoryBlock,
   capacityFor,
@@ -150,6 +151,19 @@ export class MindMemoryService {
     return { valence, stage };
   }
 
+  /**
+   * Lo que la pizarra de situación necesita de la memoria, en una sola consulta: los episodios
+   * recientes y las relaciones. Nunca la capa semántica (lo aprendido del entrenador no hace falta
+   * para decidir y así no puede colarse donde no debe).
+   */
+  async situationRows(petId: string): Promise<MemoryRow[]> {
+    return (await this.prisma.petMemory.findMany({
+      where: { petId, layer: { in: ['episodic', 'emotional'] } },
+      orderBy: { createdAt: 'desc' },
+      take: 80,
+    })) as unknown as MemoryRow[];
+  }
+
   /** Etapa de la relación de una mascota con un sujeto (`pet:<id>`, `user:<id>`); desconocido si no hay fila. */
   async stageWith(petId: string, subject: string): Promise<Stage> {
     const row = await this.prisma.petMemory.findUnique({ where: { petId_key: { petId, key: `emo:${subject}` } } });
@@ -169,7 +183,7 @@ export class MindMemoryService {
   }
 
   /** Bloque de recuerdos relevantes para este mensaje, dentro del presupuesto del plan. */
-  async recallBlock(petId: string, message: string, budgetKey: string, now = new Date()): Promise<string> {
+  async recallBlock(petId: string, message: string, budgetKey: string, now = new Date(), opts: RecallOptions = {}): Promise<string> {
     const cfg = this.mind.config();
     const rows = (await this.prisma.petMemory.findMany({
       where: { petId },
@@ -177,7 +191,7 @@ export class MindMemoryService {
       take: LOAD_LIMIT,
     })) as unknown as MemoryRow[];
     const budget = cfg.memory.promptBudgetChars[budgetKey] ?? cfg.memory.promptBudgetChars.free ?? 700;
-    const sel = selectForPrompt(rows, message, now, cfg, budget);
+    const sel = selectForPrompt(rows, message, now, cfg, budget, opts);
     await this.markRecalled(sel, now);
     return buildLayeredMemoryBlock(sel, now);
   }

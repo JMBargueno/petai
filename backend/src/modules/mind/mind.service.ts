@@ -70,6 +70,7 @@ export class MindService {
       element: pet.species?.element ?? 'unknown',
       dims,
       recent,
+      stored,
       traits: describeDims(dims, cfg),
       legacy: deriveLegacy(dims),
       mood: moodOf(pet),

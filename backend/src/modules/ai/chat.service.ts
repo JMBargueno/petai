@@ -26,19 +26,19 @@ import { PlanLimits } from '../billing/plans';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MindService } from '../mind/mind.service';
 import { MindMemoryService } from '../mind/mind-memory.service';
-import { Interpretation, interpretMessage } from '../mind/conversation.engine';
+import { Interpretation } from '../mind/conversation.engine';
 import {
   BehaviorView,
   EXPRESS_BEHAVIOR_TOOL,
-  decideBehavior,
   effectsOf,
   promptHint,
   pushRecentBehavior,
-  isBehavior,
   validateBehavior,
 } from '../mind/behavior.engine';
 import { Dims } from '../mind/mind.types';
-import { buildSituation, type Situation } from '../mind/situation.engine';
+import { type Situation } from '../mind/situation.engine';
+import { planOwnerTurn, settleOwnerTurn, type TurnPlanData } from '../mind/turn.engine';
+import type { StoredPersonality } from '../mind/mind.types';
 import { GameDataService } from '../game-data/game-data.service';
 import { buildLoreBlock } from './lore';
 
@@ -52,6 +52,10 @@ interface TurnPlan {
   behavior: BehaviorView;
   /** Pizarra del turno (falta en los tests que montan el plan a mano). */
   situation?: Situation;
+  /** Plan completo del turno: deseos, trucos, recuerdos a garantizar y guía para el prompt. */
+  plan?: TurnPlanData;
+  /** JSON de personalidad leído al planificar (para liquidar el turno sin volver a leer). */
+  stored?: StoredPersonality;
   dims: Dims;
 }
 
@@ -338,7 +342,8 @@ export class ChatService {
 
     let systemPrompt = buildSystemPrompt(pet, owner ?? {}, {
       personalityBlock: turn ? this.mind!.personalityBlock(turn.dims) : undefined,
-      behaviorHint: turn ? promptHint(turn.behavior) : undefined,
+      // Reacción decidida y, si los hay, el truco que hace, por quién le preguntan y qué le apetece
+      behaviorHint: turn ? (turn.plan?.hints.join('\n') ?? promptHint(turn.behavior)) : undefined,
       tier,
       now,
       timeZone,
@@ -352,7 +357,11 @@ export class ChatService {
     let memoryBlock = '';
     if (this.mindMemory) {
       memoryBlock = await this.mindMemory
-        .recallBlock(pet.id, message, extra.limits ? (extra.plan ?? 'free') : 'byok', now)
+        .recallBlock(pet.id, message, extra.limits ? (extra.plan ?? 'free') : 'byok', now, {
+          // Lo que va a contar o enseñar, y los recuerdos de quien le preguntan
+          ensureIds: turn?.plan?.ensureIds,
+          subject: turn?.plan?.subject,
+        })
         .catch((e) => {
           this.logger.debug(`Memoria por capas no disponible: ${(e as Error).message}`);
           return '';
@@ -382,25 +391,24 @@ export class ChatService {
     if (!this.mind) return undefined;
     try {
       const profile = await this.mind.profile(pet);
-      const cfg = this.mind.config();
-      const interpretation = interpretMessage(message);
-      // Pizarra de situación: se monta una vez por turno y de ella leen la decisión y sus efectos
-      const situation = buildSituation(
-        {
-          audience: 'owner',
-          pet,
-          now: new Date(),
-          lastOwnerInteractionAt: pet.lastInteractionAt ?? null,
-          recent: profile.recent,
-        },
-        cfg,
-        isBehavior,
-      );
-      const behavior = decideBehavior(interpretation.intent, profile.dims, this.behaviorState(pet), cfg, {
-        recent: situation.recent,
-        seed: pet.id,
-      });
-      return { interpretation, behavior, dims: profile.dims, situation };
+      // Episodios recientes y relaciones, en una consulta. Sin ellos el turno sale igual, solo
+      // que sin nada que contar ni deseos que dependan de lo vivido.
+      const rows = this.mindMemory
+        ? await this.mindMemory.situationRows(pet.id).catch((e) => {
+            this.logger.debug(`Recuerdos de situación no disponibles: ${(e as Error).message}`);
+            return [];
+          })
+        : [];
+      // Percibir y decidir, sin efectos: la pizarra se monta una vez y de ella lee todo lo demás
+      const plan = planOwnerTurn({ message, pet, dims: profile.dims, stored: profile.stored ?? {}, rows, now: new Date() }, this.mind.config());
+      return {
+        interpretation: plan.interpretation,
+        behavior: plan.behavior,
+        dims: profile.dims,
+        situation: plan.situation,
+        plan,
+        stored: profile.stored ?? {},
+      };
     } catch (e) {
       this.logger.debug(`Plan de turno no disponible: ${(e as Error).message}`);
       return undefined;
@@ -422,7 +430,8 @@ export class ChatService {
     } catch {
       action = undefined;
     }
-    const v = validateBehavior(action, turn.dims, this.behaviorState(pet), this.mind!.config());
+    // Mismas condiciones que usó el motor: el modelo tampoco puede contar lo que no ha vivido
+    const v = validateBehavior(action, turn.dims, this.behaviorState(pet), this.mind!.config(), 'owner', turn.plan?.flags);
     turn.behavior = v.view;
     return v.ok ? `ok: ${v.view.action}` : `no permitido (${v.reason}); se usará ${v.view.action}`;
   }
@@ -435,6 +444,10 @@ export class ChatService {
     if (!turn || !this.mind) return undefined;
     try {
       const effects = effectsOf(turn.behavior.action);
+      const now = new Date();
+      // Qué cambia por lo que ha pasado en el turno: historial, deseos, trucos, relación
+      const outcome = turn.plan ? settleOwnerTurn(turn.plan, turn.behavior.action, turn.dims, turn.stored ?? {}, now, this.mind.config()) : null;
+      effects.happiness += outcome?.happiness ?? 0;
       if (effects.happiness > 0 && !pet.sleeping) {
         // Incremento atómico: `pet` se leyó antes de la respuesta y su felicidad puede haber cambiado
         const bumped = await this.prisma.pet.updateMany({
@@ -449,7 +462,7 @@ export class ChatService {
       // La reacción que al final se vio (la del motor o la que propuso el modelo, ya validada)
       // entra en el historial, en la misma escritura que la deriva
       const recent = turn.situation ? pushRecentBehavior(turn.situation.recent, turn.behavior.action, this.mind.config()) : undefined;
-      await this.mind.applyExperience(pet.id, events, new Date(), recent ? { recent } : undefined);
+      await this.mind.applyExperience(pet.id, events, now, outcome?.patch ?? (recent ? { recent } : undefined));
       if (this.mindMemory) {
         const ep = turn.interpretation.episode;
         if (ep) {
@@ -467,6 +480,14 @@ export class ChatService {
             },
           ]);
         }
+        // Deseos cumplidos y trucos aprendidos: un recuerdo por cada uno, que se refresca si se repite
+        if (outcome?.episodes.length) {
+          await this.mindMemory.remember(
+            pet.id,
+            outcome.episodes.map((e) => ({ layer: 'episodic' as const, kind: 'event', key: e.key, bump: true, content: e.content, importance: e.importance, valence: e.valence, subject: 'owner' })),
+          );
+        }
+        if (outcome?.ownerDelta) await this.mindMemory.feel(pet.id, 'owner', 'Mi entrenador', outcome.ownerDelta);
         // La relación con el entrenador solo se mueve con mensajes significativos (no con cada «hola»)
         if (ep || Math.abs(turn.interpretation.sentiment) >= 0.5) {
           await this.mindMemory.feel(pet.id, 'owner', 'Mi entrenador', 0.02 + turn.interpretation.sentiment * 0.08);

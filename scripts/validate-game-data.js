@@ -128,6 +128,9 @@ if (pers) {
         if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${at}.minDims.${k} inválido`);
       }
       if (c.minDims && !ids.includes(c.fallback)) throw new Error(`${at}: con minDims hace falta un fallback del catálogo`);
+      if (c.when !== undefined && !['has_find', 'untold', 'first_turn_today', 'after_scold', 'knows_trick'].includes(c.when)) {
+        throw new Error(`${at}.when: condición desconocida ${c.when}`);
+      }
     }
     for (const [intent, list] of Object.entries(beh.reactions)) {
       const at = `${where}.reactions.${intent}`;
@@ -145,9 +148,47 @@ if (pers) {
         if (!(r.base > 0) && !r.product) throw new Error(`${at}.${r.behavior}: sin base ni producto nunca puntuaría`);
       }
       // Toda intención necesita al menos una candidata para el entrenador
-      if (!list.some((r) => catalog[r.behavior].audiences.includes('owner'))) throw new Error(`${at}: ninguna candidata para el entrenador`);
+      if (!list.some((r) => catalog[r.behavior].audiences.includes('owner') && !catalog[r.behavior].when)) {
+        throw new Error(`${at}: ninguna candidata sin condiciones para el entrenador`);
+      }
     }
     console.log(`✓ balance.json: reacciones del chat (${ids.length} en catálogo, ${Object.keys(beh.reactions).length} intenciones) validadas`);
+  }
+
+  // 1c-sexies. Trucos y deseos (spec 37 §4.5 y §4.6)
+  const tricks = pers.tricks;
+  if (tricks) {
+    const where = 'balance.personality.tricks';
+    if (!Number.isInteger(tricks.teachDailyCap) || tricks.teachDailyCap < 1) throw new Error(`${where}.teachDailyCap inválido`);
+    const entries = Object.entries(tricks.catalog ?? {});
+    if (entries.length === 0) throw new Error(`${where}.catalog vacío`);
+    for (const [id, t] of entries) {
+      if (!t.name || !Number.isInteger(t.practices) || t.practices < 1) throw new Error(`${where}.catalog.${id} inválido`);
+      for (const [k, v] of Object.entries(t.minDims ?? {})) {
+        if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${where}.catalog.${id}.minDims.${k} inválido`);
+      }
+    }
+    // Cualquier Pockai debe poder aprender al menos uno
+    if (!entries.some(([, t]) => !t.minDims)) throw new Error(`${where}.catalog: hace falta un truco sin requisitos`);
+    console.log(`✓ balance.json: ${entries.length} trucos validados`);
+  }
+  const wishes = pers.wishes;
+  if (wishes) {
+    const where = 'balance.personality.wishes';
+    const WISH_IDS = ['go_explore', 'see_friend', 'show_find', 'be_cuddled', 'learn_trick'];
+    if (!Number.isInteger(wishes.maxActive) || wishes.maxActive < 1 || wishes.maxActive > 2) throw new Error(`${where}.maxActive debe ser 1 o 2`);
+    if (!Number.isInteger(wishes.showEveryTurns) || wishes.showEveryTurns < 1) throw new Error(`${where}.showEveryTurns inválido`);
+    if (!(wishes.cooldownHours > 0) || !(wishes.happinessOnFulfil >= 0 && wishes.happinessOnFulfil <= 5) || !(wishes.minScore >= 0)) throw new Error(`${where}: cooldownHours, happinessOnFulfil o minScore inválidos`);
+    for (const id of WISH_IDS) {
+      const w = wishes.catalog?.[id];
+      if (!w || !(w.base > 0)) throw new Error(`${where}.catalog.${id} falta o no tiene base`);
+      for (const [k, v] of Object.entries(w.weights ?? {})) {
+        if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${where}.catalog.${id}.weights.${k} inválido`);
+      }
+      if (w.activityBoost !== undefined && !(w.activityBoost >= 1 && w.activityBoost <= 3)) throw new Error(`${where}.catalog.${id}.activityBoost debe estar en 1-3`);
+    }
+    for (const id of Object.keys(wishes.catalog ?? {})) if (!WISH_IDS.includes(id)) throw new Error(`${where}.catalog: deseo desconocido ${id}`);
+    console.log(`✓ balance.json: ${WISH_IDS.length} deseos validados`);
   }
 
   // 1c-quater. Vida social: etapas de relación y escenas entre dos Pockai
