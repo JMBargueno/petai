@@ -71,6 +71,7 @@
       "slot": "head",
       "rarity": "legendary",
       "color": "sunburst",
+      "animated": true,
       "unlock": { "type": "achievement", "achievementId": "care_level_50" }
     },
     {
@@ -80,6 +81,7 @@
       "slot": "back",
       "rarity": "legendary",
       "color": "ember",
+      "animated": true,
       "unlock": { "type": "achievement", "achievementId": "battle_legend" }
     }
   ]

@@ -253,6 +253,10 @@ eligen campos a mano expongan `accessories`; se revisa al hacer el render (lote 
 - Va la última porque necesita el catálogo del lote 1 y, para la hoja de contactos, las anclas del
   lote 3. Puede adelantarse tras el lote 1 si se limita a ficha, datos y validación.
 
+Hecho en su versión adelantada: `.claude/skills/pockai-accessory-architect/` llega hasta los datos y el
+brief de arte (`docs/accesorios/<id>.md`). Le falta dibujar y la hoja de contactos, que dependen
+del lote 3.
+
 ## 11. Fuera de alcance
 
 - *Skins* que cambian la paleta o el patrón del sprite.
