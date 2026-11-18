@@ -83,6 +83,8 @@ export interface DeskSituation {
     stillMs: number;
     /** Distancia horizontal del cursor al centro de la mascota. */
     dist: number;
+    /** Distancia vertical del cursor al centro de la mascota. */
+    dy: number;
     /** Se acerca deprisa a la mascota. */
     approaching: boolean;
   };
@@ -165,6 +167,7 @@ export function buildSituation(raw: RawSituation, cfg: DeskConfig): DeskSituatio
       speed: raw.cursor.speed,
       stillMs: raw.cursor.stillMs,
       dist: Math.abs(dx),
+      dy: Math.abs(raw.cursor.y - (raw.body.y + raw.body.size / 2)),
       approaching,
     },
     idleMs,

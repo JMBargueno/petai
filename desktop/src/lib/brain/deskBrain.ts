@@ -71,6 +71,8 @@ export function meets(req: BehaviorRequires | undefined, sit: DeskSituation, sta
   if (req.cursor) {
     if (!cursor.onScreen) return false;
     const c = cfg.cursor;
+    // La mascota anda por su franja: un cursor muy por encima o por debajo le queda fuera de alcance
+    if (cursor.dy > c.nearPx) return false;
     switch (req.cursor) {
       case 'near':
         if (cursor.dist > c.nearPx) return false;
@@ -79,8 +81,7 @@ export function meets(req: BehaviorRequires | undefined, sit: DeskSituation, sta
         if (cursor.kind !== 'still' || cursor.dist < c.stalkMinPx || cursor.dist > c.stalkMaxPx) return false;
         break;
       case 'fast':
-        // Solo si pasa por la mitad baja de la pantalla: por arriba no llegaría
-        if (cursor.kind !== 'fast' || cursor.y < sit.screen.h * 0.45) return false;
+        if (cursor.kind !== 'fast') return false;
         break;
       case 'slow':
         if (cursor.kind !== 'slow' || cursor.dist > c.nearPx * 1.5) return false;
