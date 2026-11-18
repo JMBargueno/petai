@@ -43,14 +43,14 @@ export interface BakeRequest {
   base: string;
   mask: string;
   pattern?: string | null;
-  palette: { primary: string; secondary: string };
+  palette: { primary: string; secondary: string; accent?: string };
   visualSeed: number;
 }
 
 const bakedCache = new Map<string, Promise<HTMLCanvasElement>>();
 
 export function bakeToCanvas(req: BakeRequest): Promise<HTMLCanvasElement> {
-  const cacheKey = `${req.key}:${req.pattern ?? '-'}:${req.palette.primary}:${req.palette.secondary}:${req.visualSeed}`;
+  const cacheKey = `${req.key}:${req.pattern ?? '-'}:${req.palette.primary}:${req.palette.secondary}:${req.palette.accent ?? '-'}:${req.visualSeed}`;
   let p = bakedCache.get(cacheKey);
   if (!p) {
     p = (async () => {

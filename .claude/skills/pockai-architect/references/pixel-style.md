@@ -7,8 +7,8 @@ Es un resumen práctico de `docs/GUIA_ARTISTICA.md` §7.5 y §7.6. Si hay confli
 ## Reglas de diseño
 - **Evolucionar es cambiar.** Cada etapa tiene su propio plan corporal y su propia geometría.
 - **Formas grandes.** Se dibuja en 64×64: un rasgo de menos de 2 px no existe.
-- **Tres tonos por volumen**, sin degradados: luz arriba a la izquierda, base, sombra abajo a la derecha. Los pone el rasterizador.
-- **Dos colores de paleta:** primario (cuerpo, y oscurecido para las marcas) y secundario (barriga y rasgo icónico).
+- **Cinco tonos por volumen**, sin degradados: brillo, luz arriba a la izquierda, base, sombra y sombra profunda abajo a la derecha. Los pone el rasterizador, y el horneado gira las sombras hacia el violeta.
+- **Tres colores de paleta:** primario (cuerpo, y oscurecido para las marcas), secundario (barriga y rasgo icónico) y acento (lo que estrenan las etapas adulta y final: cuernos, garras, caparazones).
 - **Sitio para accesorios.** La especie debe poder llevar gorro, gafas, bufanda y capa en todas las etapas.
 
 ## Planes corporales: cada especie, un cuerpo distinto
@@ -54,6 +54,7 @@ La rareza se tiene que ver en el dibujo, no solo en los stats. Un mítico resuel
 | normal y raro | Proporción del animal real, un rasgo icónico claro y un segundo rasgo, marcas que crecen por etapa y un material de transición entre cabeza y cuerpo. En raras, la etapa final puede llevar un aura de piezas sueltas. |
 | super-raro | Plan corporal propio, que no sea el bípedo redondo, y una forma de ojo propia. |
 | legendario | Lo anterior, con proporciones de criatura que impone (cabeza pequeña, cuello o patas largas, piezas mayores que el cuerpo) y piezas compuestas: plumas sueltas, varias cabezas, crines. |
+| todas | Desde el generador v2: tramas de material (`g.texture`), plano lejano (`g.dim`) y, en adult y final, el tercer color (`accent`). Ver la tabla de piezas de `design-lessons.md`. |
 | mítico | Lo anterior, y además la **técnica de míticos**: cuerpo en curva lisa con su luz y su sombra (`tube`), una segunda lectura de color en el cuerpo (vientre de placas, mandíbula, capas en la copa), una fila de piezas a lo largo del cuerpo (`ridge`), anatomía con articulaciones (alas con huesos y membrana, raíces, garras) y al menos un brillo en color literal (`glow`: perla, farol, núcleo). La etapa final llena el frame: roza los 54 px de alto y abre más de 50 de ancho. |
 
 Técnica de míticos, en `scripts/sprites/pixel/species.ts`:
@@ -64,7 +65,11 @@ Técnica de míticos, en `scripts/sprites/pixel/species.ts`:
 - `canopy(g, lóbulos, luz, sombra, chispas)`: masa de hojas por capas.
 - `dragonWing(g, pieza, hombro, codo, puntas, interior)`: ala con membrana festoneada y huesos.
 - `hidden(x, y)`: `torso` mínimo, para esconderlo bajo otra pieza cuando el cuerpo es una curva.
-- Capas de tono sobre una pieza: `{ clip: pieza, keep: true, tone: 'light' | 'shade' | 'hi' }` pinta luces y sombras a mano donde el sombreado automático no llega.
+- Capas de tono sobre una pieza: `{ clip: pieza, keep: true, tone: 'light' | 'shade' | 'deep' | 'hi' }` pinta luces y sombras a mano donde el sombreado automático no llega.
+- `g.texture(pieza, TEX.scales(4))`: trama de material (escamas, corteza, hojas, pelo, rayas) sobre una pieza ya pintada.
+- `g.dim(pieza, …)`: manda al fondo las piezas de detrás, oscureciéndolas un paso.
+- `g.ink(pieza, puntos)`: trazo interior de 1 px para separar mechones, plumas o pliegues.
+- Papel `accent`: el tercer color, para el material que estrena la etapa final.
 
 El nivel al que hay que llegar está en `examples/`, para todas las rarezas: compara `<id>-generador.png` con `<id>-objetivo.*` y lee `design-lessons.md`.
 
@@ -104,8 +109,10 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta.
 
 ## Cómo sale el color
 - La hoja no guarda colores: guarda tonos de gris (`base.png`) y papeles (`mask.png`), y el cliente los multiplica por la paleta de la mascota.
-- El contorno es el color de la pieza muy oscurecido: un oscuro teñido, no negro.
+- El contorno es el color de la pieza muy oscurecido y girado hacia el violeta: un oscuro teñido, no negro.
 - La luz suma una parte del secundario: por eso gira hacia el color cálido de la paleta.
+- La sombra no es el mismo color más oscuro: el horneado la gira hacia el violeta por el camino más corto (el amarillo se va al naranja, el verde al azulado) y la satura.
+- El papel `accent` se pinta con el tercer color de la paleta. Si una mascota no lo tiene, se usa el primario oscurecido.
 - Ojos, boca y efectos son colores literales.
 - En sala se muestra a 64 px (×1); en la mascota flotante, a 128 px (×2). Siempre sin suavizado.
 
