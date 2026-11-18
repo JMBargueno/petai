@@ -147,6 +147,13 @@ export type HostMessage =
   | { type: 'setActivity'; activity: Activity; rest?: string; mind?: RoomMind }
   /** Luces apagadas porque el Pockai duerme (la hora del día va por `setAmbience`). */
   | { type: 'setNight'; night: boolean }
+  /**
+   * Pockai de un amigo que está de visita en la sala (`null` = se ha ido). Solo su aspecto. Sin
+   * sala no se dibuja. Mensajes opcionales: una app que no los manda sigue funcionando igual.
+   */
+  | { type: 'setGuest'; pet: PetState | null }
+  /** Escena entre el Pockai de la sala y el visitante (la decide el servidor; ver room/visitScene.ts). */
+  | { type: 'playScene'; scene: string }
   | AmbienceMessage
   | { type: 'setEditMode'; edit: boolean }
   | { type: 'selectItem'; itemId: string | null }
@@ -159,7 +166,15 @@ export type HostMessage =
    */
   | { type: 'petAction'; action: string; context?: Record<string, unknown> }
   /** Modo historia: escenario por capas con el Pockai andando de izquierda a derecha. */
-  | { type: 'setStory'; story: StoryState | null };
+  | { type: 'setStory'; story: StoryState | null }
+  /**
+   * Tapa todo el lienzo con un efecto de pantalla (por defecto `velo-eter`) para cambiar algo por
+   * detrás sin que se vea el salto (p. ej. el tamaño de la vista). Responde con `screenCovered`.
+   * Mensaje nuevo y opcional: no sube PROTOCOL_VERSION.
+   */
+  | { type: 'coverScreen'; effect?: string }
+  /** Abre el velo de `coverScreen`. Responde con `screenUncovered` al terminar. */
+  | { type: 'uncoverScreen' };
 
 /** Datos de un efecto: solo textos y números (viajan por el puente como JSON). */
 export type EffectParams = Record<string, string | number>;
@@ -177,6 +192,10 @@ export type SceneEvent =
   | { type: 'effectEnded'; id: string }
   /** Hito de la escena de historia en curso (ver `StoryState.phase`). Cada uno llega una vez por escena. */
   | { type: 'storyBeat'; key: string; beat: StoryBeat }
+  /** El velo de `coverScreen` ya tapa todo: el anfitrión puede hacer su cambio. */
+  | { type: 'screenCovered' }
+  /** El velo terminó de abrirse. */
+  | { type: 'screenUncovered' }
   | { type: 'error'; message: string };
 
 const HOST_TYPES = new Set<HostMessage['type']>([
@@ -188,6 +207,8 @@ const HOST_TYPES = new Set<HostMessage['type']>([
   'setRoom',
   'setActivity',
   'setNight',
+  'setGuest',
+  'playScene',
   'setAmbience',
   'setEditMode',
   'selectItem',
@@ -195,6 +216,8 @@ const HOST_TYPES = new Set<HostMessage['type']>([
   'playEffect',
   'petAction',
   'setStory',
+  'coverScreen',
+  'uncoverScreen',
 ]);
 
 /** Escena de historia validada; undefined si está mal formada. */
@@ -216,6 +239,22 @@ function parseStory(raw: unknown): StoryState | null | undefined {
   if (typeof r.fx === 'string' && /^[a-z-]{1,40}$/.test(r.fx)) story.fx = r.fx;
   if (typeof r.clip === 'string' && /^[a-z_]{1,24}$/.test(r.clip)) story.clip = r.clip;
   return story;
+}
+
+/** Aspecto de un Pockai validado (el propio o el de un visitante); `null` si le falta lo imprescindible. */
+function parsePet(raw: unknown): PetState | null {
+  const p = raw as Record<string, unknown> | undefined;
+  const pal = p?.palette as Record<string, unknown> | undefined;
+  if (!p || typeof p !== 'object' || typeof p.species !== 'string' || typeof pal?.primary !== 'string' || typeof pal?.secondary !== 'string') return null;
+  return {
+    species: p.species,
+    stage: (['egg', 'baby', 'juvenile', 'adult', 'final'] as const).includes(p.stage as Stage) ? (p.stage as Stage) : 'adult',
+    palette: { primary: pal.primary, secondary: pal.secondary, ...(typeof pal.accent === 'string' ? { accent: pal.accent } : {}) },
+    pattern: typeof p.pattern === 'string' ? p.pattern : null,
+    visualSeed: Number.isFinite(p.visualSeed) ? (p.visualSeed as number) : 1337,
+    shiny: p.shiny === true,
+    accessories: parseEquipped(p.accessories),
+  };
 }
 
 /** Datos de efecto validados: claves cortas y valores texto/número finitos; el resto se descarta. */
@@ -295,22 +334,16 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
   if (typeof m.type !== 'string' || !HOST_TYPES.has(m.type as HostMessage['type'])) return null;
   switch (m.type) {
     case 'setPet': {
-      const p = m.pet as Record<string, unknown> | undefined;
-      const pal = p?.palette as Record<string, unknown> | undefined;
-      if (!p || typeof p.species !== 'string' || typeof pal?.primary !== 'string' || typeof pal?.secondary !== 'string') return null;
-      return {
-        type: 'setPet',
-        pet: {
-          species: p.species,
-          stage: (['egg', 'baby', 'juvenile', 'adult', 'final'] as const).includes(p.stage as Stage) ? (p.stage as Stage) : 'adult',
-          palette: { primary: pal.primary, secondary: pal.secondary, ...(typeof pal.accent === 'string' ? { accent: pal.accent } : {}) },
-          pattern: typeof p.pattern === 'string' ? p.pattern : null,
-          visualSeed: Number.isFinite(p.visualSeed) ? (p.visualSeed as number) : 1337,
-          shiny: p.shiny === true,
-          accessories: parseEquipped(p.accessories),
-        },
-      };
+      const pet = parsePet(m.pet);
+      return pet ? { type: 'setPet', pet } : null;
     }
+    case 'setGuest': {
+      if (m.pet === null) return { type: 'setGuest', pet: null };
+      const pet = parsePet(m.pet);
+      return pet ? { type: 'setGuest', pet } : null;
+    }
+    case 'playScene':
+      return typeof m.scene === 'string' && /^[a-z_]{1,32}$/.test(m.scene) ? { type: 'playScene', scene: m.scene } : null;
     case 'playClip':
       return typeof m.clip === 'string' ? { type: 'playClip', clip: m.clip, once: m.once === true } : null;
     case 'setTheme':
@@ -370,6 +403,13 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
       const story = parseStory(m.story);
       return story === undefined ? null : { type: 'setStory', story };
     }
+    case 'coverScreen':
+      if (m.effect === undefined) return { type: 'coverScreen' };
+      return typeof m.effect === 'string' && /^[a-z-]{1,40}$/.test(m.effect)
+        ? { type: 'coverScreen', effect: m.effect }
+        : null;
+    case 'uncoverScreen':
+      return { type: 'uncoverScreen' };
     case 'petAction': {
       if (typeof m.action !== 'string' || !/^[a-z_]{1,40}$/.test(m.action)) return null;
       const ctx = m.context && typeof m.context === 'object' && !Array.isArray(m.context) ? (m.context as Record<string, unknown>) : undefined;

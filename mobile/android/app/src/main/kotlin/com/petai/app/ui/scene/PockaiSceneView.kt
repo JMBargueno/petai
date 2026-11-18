@@ -39,6 +39,10 @@ sealed interface SceneEvent {
     data class EffectEnded(val id: String) : SceneEvent
     /** Hito de la escena de historia (protocolo v4): `arrived`, `reacted` o `exited`. */
     data class StoryBeat(val key: String, val beat: String) : SceneEvent
+    /** El velo de `coverScreen` ya tapa todo el lienzo. */
+    data object ScreenCovered : SceneEvent
+    /** El velo terminó de abrirse. */
+    data object ScreenUncovered : SceneEvent
     data class Error(val message: String) : SceneEvent
 }
 
@@ -59,6 +63,8 @@ private fun parseEvent(raw: String): SceneEvent? = runCatching {
         "petTapped" -> SceneEvent.PetTapped
         "effectEnded" -> SceneEvent.EffectEnded(str("id") ?: return null)
         "storyBeat" -> SceneEvent.StoryBeat(str("key") ?: return null, str("beat") ?: return null)
+        "screenCovered" -> SceneEvent.ScreenCovered
+        "screenUncovered" -> SceneEvent.ScreenUncovered
         "error" -> SceneEvent.Error(str("message") ?: "")
         else -> null
     }

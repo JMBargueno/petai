@@ -505,7 +505,7 @@
     direction = spot.x > posX + PET_SIZE / 2 ? 1 : -1;
     // Dormida, al menos se despereza antes de cruzar (el resto de clips esperan a que despierte)
     play(isSleeping ? 'wake' : 'surprised');
-    speak(`¡Me voy al Santuario de ${friendLabel()}! 🧵`, { key: 'travel', durationMs: 2400, maxWaitMs: 400 });
+    speak(`¡Me voy de visita a casa de ${friendLabel()}! 🧵`, { key: 'travel', durationMs: 2400, maxWaitMs: 400 });
     launchPortal(spot, async (player) => {
       // Camina hasta la boca del portal…
       if (WALK_TO_PORTAL_MS > 0) {
@@ -548,7 +548,7 @@
         await wait(WALK_TO_PORTAL_MS);
       }
       play('happy');
-      speak(`¡Ya volví del Santuario de ${friendLabel()}! ✨`, { key: 'travel', durationMs: 3200, maxWaitMs: 1500 });
+      speak(`¡Ya he vuelto de casa de ${friendLabel()}! ✨`, { key: 'travel', durationMs: 3200, maxWaitMs: 1500 });
       player.release(performance.now());
     });
   }

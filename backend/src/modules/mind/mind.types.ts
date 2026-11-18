@@ -44,8 +44,17 @@ export interface PersonalityConfig {
     /** Un recuerdo inyectado hace menos de estos minutos y sin relación con el mensaje pierde puntuación. */
     recentRecallMinutes: number;
     recentRecallPenalty: number;
+    /** Un episodio que se repite (misma clave) gana esta importancia cada vez, hasta `repeatCap`. */
+    repeatBoost: number;
+    repeatCap: number;
+    /**
+     * Por debajo del nivel de memoria, cada cuántos mensajes del entrenador se extraen recuerdos
+     * (más espaciado que la cadencia del plan). 0 = no se extrae hasta alcanzar ese nivel.
+     */
+    earlyExtractEvery: number;
   };
   autonomy: AutonomyConfig;
+  social: import('./social.engine').SocialConfig;
   combat: { maxThresholdShift: number };
   behavior: { minEnergyToPlay: number };
 }

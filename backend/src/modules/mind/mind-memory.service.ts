@@ -5,6 +5,7 @@ import { EntitlementService } from '../billing/entitlement.service';
 import { intelligenceTier } from '../ai/personality';
 import { MemoryLayer } from './mind.types';
 import { MindService } from './mind.service';
+import { floorValence, isStage, nextStage, type Stage } from './social.engine';
 import {
   MemoryRow,
   RecallSelection,
@@ -25,6 +26,13 @@ export interface RememberInput {
   subject?: string | null;
   key?: string | null;
   createdAt?: Date;
+  /**
+   * Con `key`: el recuerdo es algo que se repite (p. ej. «me dijo que me quiere»). En vez de
+   * acumular uno por vez, se actualiza el mismo: pasa a ser de ahora y gana algo de importancia.
+   */
+  bump?: boolean;
+  /** Etapa de la relación (solo en la capa emocional). */
+  stage?: string;
 }
 
 const LOAD_LIMIT = 400;
@@ -46,6 +54,11 @@ export class MindMemoryService {
   private async planOf(userId: string): Promise<string> {
     if (!this.entitlements) return 'free';
     return this.entitlements.planFor(userId).catch(() => 'free');
+  }
+
+  /** Cadencia de extracción antes del nivel de memoria (mensajes del entrenador); 0 = desactivada. */
+  earlyExtractEvery(): number {
+    return this.mind.config().memory.earlyExtractEvery ?? 0;
   }
 
   async capacity(petId: string) {
@@ -71,6 +84,7 @@ export class MindMemoryService {
         importance: Math.max(0, Math.min(1, input.importance)),
         valence: Math.max(-1, Math.min(1, input.valence ?? 0)),
         subject: input.subject ?? null,
+        ...(input.stage ? { stage: input.stage } : {}),
         ...(input.createdAt ? { createdAt: input.createdAt } : {}),
       };
       try {
@@ -85,10 +99,26 @@ export class MindMemoryService {
           if (dup) continue;
         }
         if (input.key) {
+          let importance = data.importance;
+          let refreshed: { createdAt?: Date } = {};
+          if (input.bump) {
+            const prev = await this.prisma.petMemory.findUnique({
+              where: { petId_key: { petId, key: input.key } },
+              select: { importance: true },
+            });
+            if (prev) {
+              importance = Math.max(
+                data.importance,
+                Math.min(cfg.memory.repeatCap, Math.max(prev.importance, data.importance) + cfg.memory.repeatBoost),
+              );
+            }
+            // Vuelve a ser reciente: «hoy me dijo…», no «hace tres semanas»
+            refreshed = { createdAt: input.createdAt ?? new Date() };
+          }
           await this.prisma.petMemory.upsert({
             where: { petId_key: { petId, key: input.key } },
-            create: { ...data, key: input.key },
-            update: { content, importance: data.importance, valence: data.valence },
+            create: { ...data, importance, key: input.key },
+            update: { content, importance, valence: data.valence, ...(input.stage ? { stage: input.stage } : {}), ...refreshed },
           });
         } else {
           await this.prisma.petMemory.create({ data });
@@ -106,14 +136,29 @@ export class MindMemoryService {
    * Memoria emocional: una fila por sujeto. La valencia se mueve despacio (media móvil) y la
    * importancia crece con la familiaridad.
    */
-  async feel(petId: string, subject: string, label: string, delta: number) {
+  async feel(petId: string, subject: string, label: string, delta: number): Promise<{ valence: number; stage: Stage | null }> {
     const key = `emo:${subject}`;
+    const social = this.mind.config().social;
     const prev = await this.prisma.petMemory.findUnique({ where: { petId_key: { petId, key } } });
-    const valence = nextValence(prev?.valence ?? 0, delta);
+    let valence = nextValence(prev?.valence ?? 0, delta);
+    // Entre dos Pockai la relación tiene suelo: se pican, pero no se odian
+    if (social && subject.startsWith('pet:')) valence = floorValence(valence, social);
     const importance = Math.min(1, (prev?.importance ?? 0.35) + 0.05);
+    // La relación con el entrenador no va por etapas; con otros Pockai y otros entrenadores, sí
+    const stage =
+      social && subject !== 'owner'
+        ? nextStage(isStage((prev as any)?.stage) ? (prev as any).stage : null, valence, importance, social)
+        : null;
     await this.remember(petId, [
-      { layer: 'emotional', kind: 'relation', key, subject, content: label, importance, valence },
+      { layer: 'emotional', kind: 'relation', key, subject, content: label, importance, valence, ...(stage ? { stage } : {}) },
     ]);
+    return { valence, stage };
+  }
+
+  /** Etapa de la relación de una mascota con un sujeto (`pet:<id>`, `user:<id>`); desconocido si no hay fila. */
+  async stageWith(petId: string, subject: string): Promise<Stage> {
+    const row = await this.prisma.petMemory.findUnique({ where: { petId_key: { petId, key: `emo:${subject}` } } });
+    return isStage((row as any)?.stage) ? (row as any).stage : 'stranger';
   }
 
   async enforceCapacity(petId: string) {

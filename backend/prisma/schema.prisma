@@ -479,6 +479,9 @@ model PetMemory {
   valence   Float    @default(0)
   /// Sujeto del recuerdo: owner | user:<id> | pet:<id> (null = general)
   subject   String?
+  /// Etapa de la relación (solo en la capa emotional): stranger | acquaintance | friend | best_friend.
+  /// Se guarda porque subir y bajar de etapa tienen umbrales distintos (spec 37 §6.1).
+  stage     String?
   /// Última vez que se usó en un prompt (refuerza la retención)
   lastRecalledAt DateTime?
   createdAt DateTime @default(now())

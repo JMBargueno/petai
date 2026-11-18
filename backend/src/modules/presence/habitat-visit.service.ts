@@ -9,7 +9,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { CoopCareService } from './coop-care.service';
@@ -36,6 +36,39 @@ export interface PetIdentity {
   spriteRef: string;
   /** Etapa evolutiva (baby, juvenile, adult, final): el anfitrión dibuja la forma correcta. */
   stage: string;
+  /** Aspecto con el que el anfitrión lo dibuja en su sala. Solo apariencia: nada de su estado ni su memoria. */
+  look?: PetLook;
+}
+
+export interface PetLook {
+  palette: { primary: string; secondary: string; accent?: string };
+  pattern: string | null;
+  visualSeed: number;
+  shiny: boolean;
+  accessories: Record<string, string>;
+}
+
+/** Aspecto de una fila `Pet` (tolerante: una paleta o unas prendas mal guardadas no rompen la visita). */
+export function lookOf(row: { palette?: unknown; patternId?: string | null; visualSeed?: number | null; shiny?: boolean | null; accessories?: unknown }): PetLook {
+  const pal = (row.palette && typeof row.palette === 'object' ? row.palette : {}) as Record<string, unknown>;
+  const color = (v: unknown, fallback: string) => (typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : fallback);
+  const accessories: Record<string, string> = {};
+  if (row.accessories && typeof row.accessories === 'object') {
+    for (const [slot, id] of Object.entries(row.accessories as Record<string, unknown>)) {
+      if (typeof id === 'string' && /^[a-z0-9_-]{1,40}$/.test(id) && /^[a-z]{1,12}$/.test(slot)) accessories[slot] = id;
+    }
+  }
+  return {
+    palette: {
+      primary: color(pal.primary, '#E25822'),
+      secondary: color(pal.secondary, '#F3C544'),
+      ...(typeof pal.accent === 'string' ? { accent: color(pal.accent, '#6D1600') } : {}),
+    },
+    pattern: row.patternId && row.patternId !== 'plain' ? row.patternId : null,
+    visualSeed: typeof row.visualSeed === 'number' ? row.visualSeed : 1337,
+    shiny: !!row.shiny,
+    accessories,
+  };
 }
 
 export interface ActiveVisitor {
@@ -62,6 +95,8 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(HabitatVisitService.name);
   private cleanupTimer: NodeJS.Timeout | null = null;
   private cleaning = false;
+  /** Última ranura de escena avisada de cada visita activa (id de visita → ranura). */
+  private readonly sceneSlot = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -74,7 +109,9 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     this.logger.log('HabitatVisitService iniciado (cleanup de visitas en vivo activo)');
-    this.cleanupTimer = setInterval(() => void this.cleanupStaleVisits(), CLEANUP_INTERVAL_MS);
+    this.cleanupTimer = setInterval(() => {
+      void this.cleanupStaleVisits().then(() => this.tickScenes());
+    }, CLEANUP_INTERVAL_MS);
     this.cleanupTimer.unref?.();
   }
 
@@ -151,9 +188,10 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.pet.update({ where: { id: pet.petId }, data: { energy } });
 
     const startedAt = new Date(now);
-    await this.prisma.habitatVisit.create({
+    const created = await this.prisma.habitatVisit.create({
       data: { visitorId: actorId, ownerId, petId: pet.petId, status: 'active', startedAt, message },
     });
+    if (created?.id) this.sceneSlot.set(created.id, 0);
 
     const visit: ActiveVisitor = { visitorId: actorId, visitorName, visitorHandle, pet, message, startedAt };
     if (this.realtime) this.realtime.emitToUser(ownerId, 'habitat:visitor_joined', visit);
@@ -192,6 +230,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
         });
       }
     }
+    for (const v of visits) this.visitEnded(v);
 
     this.logger.debug(`Visita finalizada: ${actorId} → ${visits.map((v) => v.ownerId).join(', ')}`);
     return { success: true, ended: visits.length };
@@ -231,6 +270,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
             speciesId: petRow.species.id,
             spriteRef: petRow.species.id || 'default',
             stage: petRow.stage ?? 'baby',
+            look: lookOf(petRow),
           }
         : { petId: v.petId, nickname: '—', speciesName: '—', speciesId: 'default', spriteRef: 'default', stage: 'baby' };
       return {
@@ -282,6 +322,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
           });
         }
       }
+      for (const v of stale) this.visitEnded(v);
 
       this.logger.debug(`Cleanup: ${stale.length} visitas en vivo marcadas como finalizadas`);
     } catch (err) {
@@ -289,6 +330,53 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
     } finally {
       this.cleaning = false;
     }
+  }
+
+  /**
+   * Escenas de las visitas en curso. Cada `sceneSlotMs` de visita, avisa a la mente
+   * (`habitat:visit_tick`) para que resuelva la siguiente escena de la pareja. La mente contesta
+   * con `habitat:scene_resolved` y aquí se reenvía al anfitrión.
+   */
+  async tickScenes(now = Date.now()): Promise<void> {
+    try {
+      const active = await this.prisma.habitatVisit.findMany({ where: { status: 'active' } });
+      const alive = new Set(active.map((v) => v.id));
+      for (const id of [...this.sceneSlot.keys()]) if (!alive.has(id)) this.sceneSlot.delete(id);
+      for (const v of active) {
+        const slot = Math.floor((now - v.startedAt.getTime()) / this.sceneSlotMs);
+        // Tras un reinicio no se sabe qué se avisó: se parte de la ranura actual, sin repetir escenas
+        const last = this.sceneSlot.get(v.id);
+        if (last === undefined) {
+          this.sceneSlot.set(v.id, slot);
+          continue;
+        }
+        if (slot <= last) continue;
+        this.sceneSlot.set(v.id, slot);
+        this.events?.emit('habitat:visit_tick', { userId: v.visitorId, ownerId: v.ownerId, visitorPetId: v.petId, slot });
+      }
+    } catch (err) {
+      this.logger.warn(`Error avisando de las escenas de visita: ${(err as Error)?.message}`);
+    }
+  }
+
+  /** Duración de una ranura de escena (la fija la mente con su configuración; por defecto, 4 min). */
+  sceneSlotMs = 4 * 60 * 1000;
+
+  /** La mente ha resuelto la escena de una pareja: el anfitrión la ve en su sala. */
+  @OnEvent('habitat:scene_resolved')
+  onSceneResolved(p: { ownerId: string; visitorId: string; scene: Record<string, unknown>; slotMs?: number }) {
+    if (typeof p.slotMs === 'number' && p.slotMs >= 30_000) this.sceneSlotMs = p.slotMs;
+    this.realtime?.emitToUser(p.ownerId, 'habitat:scene', { visitorId: p.visitorId, ...p.scene });
+  }
+
+  private visitEnded(v: { id: string; visitorId: string; ownerId: string; petId: string; startedAt: Date }) {
+    this.sceneSlot.delete(v.id);
+    this.events?.emit('habitat:visit_ended', {
+      userId: v.visitorId,
+      ownerId: v.ownerId,
+      visitorPetId: v.petId,
+      durationMs: Date.now() - v.startedAt.getTime(),
+    });
   }
 
   // ── Internos ──────────────────────────────────────────────────────────────
@@ -346,6 +434,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
         speciesId: row.species.id,
         spriteRef: row.species.id || 'default',
         stage: row.stage ?? 'baby',
+        look: lookOf(row),
       },
       energy,
       sleeping,

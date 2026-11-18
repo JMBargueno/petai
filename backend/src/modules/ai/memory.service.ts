@@ -5,6 +5,9 @@ import { LlmProvider } from './llm-provider';
 import {
   EXTRACTION_SYSTEM_PROMPT,
   MAX_FACTS,
+  MAX_KNOWN_FACTS_IN_PROMPT,
+  buildExtractionInput,
+  type Extraction,
   buildMemoryBlock,
   searchByKeywords,
   formatTranscript,
@@ -14,6 +17,7 @@ import {
 } from './memory';
 import { MEMORY_UNLOCK } from './personality';
 import { EMPTY_SUMMARY } from '../mind/memory.engine';
+import { MindMemoryService } from '../mind/mind-memory.service';
 import { UsageService } from './usage.service';
 import { getDesktopSkill, skillStateOf } from './desktop-skills';
 import {
@@ -30,6 +34,8 @@ import {
 const SUMMARIZE_EVERY_USER_MESSAGES = 6;
 /** Pausa mínima entre intentos por mascota (protege el gasto de la key del usuario). */
 const RETRY_COOLDOWN_MS = 2 * 60 * 1000;
+/** Importancia de un hábito de escritorio: un dato útil, por debajo de lo que el entrenador cuenta de sí mismo. */
+const HABIT_IMPORTANCE = 0.5;
 /** Resúmenes que se conservan por mascota (antes crecían sin límite). */
 export const MAX_SUMMARIES = 20;
 
@@ -44,6 +50,8 @@ export class MemoryService {
     private readonly usage: UsageService,
     // IA gestionada: la extracción también gasta el presupuesto global del servidor
     @Optional() private readonly managedBudget?: ManagedBudgetService,
+    // Memoria por capas (spec 36): con ella, el olvido lo decide una sola política (por retención)
+    @Optional() private readonly mindMemory?: MindMemoryService,
   ) {}
 
   /** Bloque de recuerdos para el prompt (vacío si la mascota aún no tiene memoria). */
@@ -93,7 +101,15 @@ export class MemoryService {
     everyUserMessages = SUMMARIZE_EVERY_USER_MESSAGES,
   ) {
     if (everyUserMessages <= 0) return;
-    if (intelligence < MEMORY_UNLOCK || this.inflight.has(petId)) return;
+    if (intelligence < MEMORY_UNLOCK) {
+      // Antes del nivel de memoria también aprende, pero más despacio: sin esto, los primeros 200
+      // mensajes no dejaban ningún dato concreto del entrenador. La capacidad del nivel charla
+      // acota lo que se guarda, y nunca va más deprisa que la cadencia del plan.
+      const early = this.mindMemory?.earlyExtractEvery() ?? 0;
+      if (early <= 0) return;
+      everyUserMessages = Math.max(everyUserMessages, early);
+    }
+    if (this.inflight.has(petId)) return;
     const last = this.lastAttempt.get(petId) ?? 0;
     if (Date.now() - last < RETRY_COOLDOWN_MS) return;
 
@@ -111,7 +127,8 @@ export class MemoryService {
       const recent = await this.prisma.chatMessage.findMany({
         where: { petId, role: { in: ['user', 'assistant'] }, createdAt: { gt: since } },
         orderBy: { createdAt: 'asc' },
-        take: 40,
+        // Cabe la tanda entera aunque la cadencia sea la espaciada (cada mensaje del entrenador trae su respuesta)
+        take: Math.max(40, everyUserMessages * 2),
       });
       if (recent.filter((m) => m.role === 'user').length < everyUserMessages) return;
 
@@ -125,13 +142,22 @@ export class MemoryService {
       let reportedCost: number | undefined;
       let promptTokens = 0;
       let completionTokens = 0;
-      const transcript = formatTranscript(recent);
+      // Los hechos que ya recuerda van numerados en el prompt, para que el extractor pueda
+      // corregirlos o retirarlos en vez de acumular versiones contradictorias.
+      const known = (
+        await this.prisma.petMemory.findMany({ where: { petId, kind: 'fact' }, orderBy: { createdAt: 'asc' } })
+      ).slice(-MAX_KNOWN_FACTS_IN_PROMPT);
+      const transcript = buildExtractionInput(
+        formatTranscript(recent),
+        known.map((f) => f.content),
+      );
       for await (const ev of provider.chat(
         [
           { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
           { role: 'user', content: transcript },
         ],
-        { model, temperature: 0, maxTokens: 400 },
+        // 600: la salida lleva ahora operaciones sobre hechos y hasta dos episodios
+        { model, temperature: 0, maxTokens: 600 },
       )) {
         if (ev.type === 'delta') output += ev.text;
         else if (ev.type === 'done') {
@@ -149,12 +175,12 @@ export class MemoryService {
       }
       await this.usage.record(userId, used, costUsd, managed ? 'openrouter' : undefined);
 
-      const extraction = parseExtraction(output);
+      const extraction = parseExtraction(output, known.length);
       if (!extraction) {
         this.logger.warn(`Extracción de memoria sin formato válido (mascota ${petId})`);
         return;
       }
-      await this.store(petId, extraction.summary, extraction.facts, recent[recent.length - 1].createdAt);
+      await this.store(petId, extraction, known, recent[recent.length - 1].createdAt);
     } catch (err: any) {
       this.logger.warn(`No se pudo actualizar la memoria (mascota ${petId}): ${err?.message}`);
     } finally {
@@ -162,13 +188,42 @@ export class MemoryService {
     }
   }
 
-  private async store(petId: string, summary: string, facts: string[], processedUpTo: Date) {
+  /**
+   * Guarda el resultado de una extracción. `known` son los hechos que se le enseñaron numerados:
+   * los índices de `update` y `delete` se refieren a esa lista.
+   */
+  private async store(petId: string, extraction: Extraction, known: { id: string; content: string }[], processedUpTo: Date) {
+    const { summary } = extraction;
     const existing = await this.prisma.petMemory.findMany({
       where: { petId, kind: 'fact' },
       orderBy: { createdAt: 'asc' },
     });
-    const known = new Set(existing.map((f) => normalizeForMatch(f.content)));
-    const fresh = facts.filter((f) => !known.has(normalizeForMatch(f)));
+
+    // Correcciones y bajas sobre lo ya conocido
+    const removed = new Set<string>();
+    const rewritten = new Map<string, string>();
+    for (const op of extraction.ops) {
+      if (op.op === 'add') continue;
+      const target = known[op.index - 1];
+      if (!target) continue;
+      if (op.op === 'delete') {
+        removed.add(target.id);
+      } else {
+        rewritten.set(target.id, op.text);
+        await this.prisma.petMemory.update({
+          where: { id: target.id },
+          data: { content: op.text, importance: op.importance },
+        });
+      }
+    }
+    if (removed.size) await this.prisma.petMemory.deleteMany({ where: { id: { in: [...removed] }, petId } });
+
+    const current = new Set(
+      existing.filter((f) => !removed.has(f.id)).map((f) => normalizeForMatch(rewritten.get(f.id) ?? f.content)),
+    );
+    const fresh = extraction.ops.filter(
+      (op): op is Extract<Extraction['ops'][number], { op: 'add' }> => op.op === 'add' && !current.has(normalizeForMatch(op.text)),
+    );
 
     // El resumen marca hasta dónde se ha procesado la conversación, aunque no haya hechos nuevos
     await this.prisma.petMemory.create({
@@ -183,16 +238,40 @@ export class MemoryService {
         createdAt: processedUpTo,
       },
     });
-    for (const content of fresh) {
+    for (const op of fresh) {
       // Spec 36: lo aprendido del entrenador es memoria semántica
-      await this.prisma.petMemory.create({ data: { petId, kind: 'fact', layer: 'semantic', importance: 0.6, content } });
+      await this.prisma.petMemory.create({
+        data: { petId, kind: 'fact', layer: 'semantic', importance: op.importance, content: op.text },
+      });
     }
 
-    // Tope de hechos: se descartan los más antiguos
-    const overflow = existing.length + fresh.length - MAX_FACTS;
+    if (this.mindMemory) {
+      // Episodios de la conversación, contados por la mascota (pasan el filtro de textos de `remember`)
+      if (extraction.episodes.length) {
+        await this.mindMemory.remember(
+          petId,
+          extraction.episodes.map((e) => ({
+            layer: 'episodic' as const,
+            kind: 'event',
+            content: e.text,
+            importance: e.importance,
+            valence: e.valence,
+            subject: 'owner',
+            createdAt: processedUpTo,
+          })),
+        );
+      }
+      // Una sola política de olvido: por retención y con la capacidad del nivel y del plan. El
+      // resumen más reciente (la marca de «procesado hasta») nunca se olvida.
+      await this.mindMemory.enforceCapacity(petId);
+      return;
+    }
+
+    // Sin memoria por capas (no debería pasar en producción): topes fijos de antes
+    const overflow = existing.length - removed.size + fresh.length - MAX_FACTS;
     if (overflow > 0) {
       await this.prisma.petMemory.deleteMany({
-        where: { id: { in: existing.slice(0, overflow).map((f) => f.id) } },
+        where: { id: { in: existing.filter((f) => !removed.has(f.id)).slice(0, overflow).map((f) => f.id) } },
       });
     }
 
@@ -246,14 +325,16 @@ export class MemoryService {
     for (const h of habits) {
       await this.prisma.petMemory.upsert({
         where: { petId_key: { petId, key: h.key } },
-        create: { petId, kind: 'habit', key: h.key, content: h.content },
-        update: { content: h.content },
+        // Importancia explícita: el olvido por retención la necesita para comparar con el resto
+        create: { petId, kind: 'habit', layer: 'semantic', key: h.key, content: h.content, importance: HABIT_IMPORTANCE },
+        update: { content: h.content, importance: HABIT_IMPORTANCE },
       });
     }
     // Los hábitos que ya no se cumplen desaparecen
     await this.prisma.petMemory.deleteMany({
       where: { petId, kind: 'habit', key: { notIn: habits.map((h) => h.key) } },
     });
+    await this.mindMemory?.enforceCapacity(petId);
     return { habits: habits.length, stored: true };
   }
 

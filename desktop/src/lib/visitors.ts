@@ -4,7 +4,8 @@
  */
 import { writable } from 'svelte/store';
 import { isKnownSpecies } from './sprites';
-import type { CoopFriend, HabitatVisitor, PetIdentity, PresenceInfo } from './api';
+import type { CoopFriend, HabitatSceneEvent, HabitatVisitor, PetIdentity, PresenceInfo } from './api';
+import type { PetState } from '@pockai/scene/protocol';
 
 // ── Presencia (punto verde/gris en las listas de amigos y clanes) ───────────
 export type PresenceState = 'online' | 'offline' | 'unknown';
@@ -81,8 +82,73 @@ export function visitorJoined(visitor: HabitatVisitor) {
   visitorsStore.update((list) => upsertVisitor(list, visitor));
 }
 export function visitorLeft(visitorId: string) {
+  visitScene.update((s) => (s?.visitorId === visitorId ? null : s));
   visitorsStore.update((list) => removeVisitor(list, visitorId));
 }
 export function clearVisitors() {
   visitorsStore.set([]);
+}
+
+// ── Visitante dentro de la sala (spec 37, anexo A, fase 4) ─────────────────
+const STAGES = ['egg', 'baby', 'juvenile', 'adult', 'final'] as const;
+
+/**
+ * Aspecto del visitante para dibujarlo en la sala (`setGuest` de la escena). `null` si el
+ * servidor no manda su aspecto (versión antigua): entonces no se dibuja dentro de la sala.
+ */
+export function guestPetState(visitor: HabitatVisitor | null | undefined): PetState | null {
+  const pet = visitor?.pet;
+  const look = pet?.look;
+  if (!pet || !look) return null;
+  const stage = STAGES.find((s) => s === pet.stage) ?? 'baby';
+  return {
+    species: resolveVisitorSpriteKey(pet),
+    stage,
+    palette: { primary: look.palette.primary, secondary: look.palette.secondary, ...(look.palette.accent ? { accent: look.palette.accent } : {}) },
+    pattern: look.pattern,
+    visualSeed: look.visualSeed,
+    shiny: look.shiny,
+    accessories: look.accessories,
+  };
+}
+
+/** Cabe un visitante en la sala: el que llegó primero. Los demás siguen en la lista de visitas. */
+export function roomGuestOf(visitors: HabitatVisitor[]): HabitatVisitor | null {
+  return visitors.find((v) => !!v.pet?.look) ?? null;
+}
+
+const SCENE_LABEL: Record<string, string> = {
+  greet: 'se están saludando',
+  explore_together: 'curiosean juntos por la sala',
+  play_tag: 'juegan al pilla-pilla',
+  share_food: 'comparten la comida',
+  nap_together: 'se echan una siesta juntos',
+  squabble: 'se han picado',
+  make_up: 'hacen las paces',
+};
+
+const STAGE_LABEL: Record<string, string> = {
+  stranger: 'Acaban de conocerse',
+  acquaintance: 'Ya se conocen',
+  friend: 'Son amigos',
+  best_friend: 'Son mejores amigos',
+};
+
+/** Qué están haciendo, en una frase («juegan al pilla-pilla»); vacío si la escena no se conoce. */
+export function sceneLabel(type: string | null | undefined): string {
+  return (type && SCENE_LABEL[type]) || '';
+}
+
+/** Cómo se llevan, en una frase («Son amigos»); vacío si la etapa no se conoce. */
+export function stageLabel(stage: string | null | undefined): string {
+  return (stage && STAGE_LABEL[stage]) || '';
+}
+
+/** Última escena recibida. `n` crece con cada una, para relanzarla aunque se repita el tipo. */
+export const visitScene = writable<(HabitatSceneEvent & { n: number }) | null>(null);
+
+let sceneCount = 0;
+export function sceneReceived(ev: HabitatSceneEvent | null | undefined) {
+  if (!ev?.visitorId || typeof ev.type !== 'string') return;
+  visitScene.set({ ...ev, n: ++sceneCount });
 }

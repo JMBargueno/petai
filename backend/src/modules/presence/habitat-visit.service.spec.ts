@@ -226,7 +226,16 @@ describe('HabitatVisitService', () => {
       visitorId: actor,
       visitorName: 'n-visitor',
       visitorHandle: null,
-      pet: { petId: 'pet-1', nickname: 'Rex', speciesName: 'Lobo', speciesId: 'sp-1', spriteRef: 'sp-1', stage: 'juvenile' },
+      pet: {
+        petId: 'pet-1',
+        nickname: 'Rex',
+        speciesName: 'Lobo',
+        speciesId: 'sp-1',
+        spriteRef: 'sp-1',
+        stage: 'juvenile',
+        // Aspecto para dibujarlo en la sala del anfitrión (con valores por defecto si la fila no los trae)
+        look: expect.objectContaining({ palette: expect.any(Object), shiny: false, accessories: {} }),
+      },
       message: '¡Hola!',
       startedAt: started,
     });
@@ -262,3 +271,91 @@ describe('HabitatVisitService', () => {
   });
 });
 
+describe('HabitatVisitService — aspecto del visitante y escenas (fase 4)', () => {
+  const { HabitatVisitService: Service, lookOf } = require('./habitat-visit.service');
+
+  describe('lookOf', () => {
+    it('lleva paleta, patrón, semilla, shiny y prendas', () => {
+      expect(
+        lookOf({ palette: { primary: '#112233', secondary: '#445566', accent: '#778899' }, patternId: 'stripes', visualSeed: 42, shiny: true, accessories: { head: 'crown_gold' } }),
+      ).toEqual({
+        palette: { primary: '#112233', secondary: '#445566', accent: '#778899' },
+        pattern: 'stripes',
+        visualSeed: 42,
+        shiny: true,
+        accessories: { head: 'crown_gold' },
+      });
+    });
+
+    it('el patrón liso viaja como nulo', () => {
+      expect(lookOf({ patternId: 'plain' }).pattern).toBeNull();
+    });
+
+    it('descarta colores y prendas que no tienen forma válida', () => {
+      const look = lookOf({
+        palette: { primary: 'javascript:alert(1)', secondary: 7 },
+        accessories: { head: '<script>', 'slot raro': 'x', neck: 'scarf_red', back: 12 },
+      });
+      expect(look.palette).toEqual({ primary: '#E25822', secondary: '#F3C544' });
+      expect(look.accessories).toEqual({ neck: 'scarf_red' });
+    });
+
+    it('una fila sin datos de aspecto no rompe', () => {
+      expect(lookOf({})).toEqual({ palette: { primary: '#E25822', secondary: '#F3C544' }, pattern: null, visualSeed: 1337, shiny: false, accessories: {} });
+    });
+
+    it('no lleva nada del estado ni de la memoria de la mascota', () => {
+      const look = lookOf({ palette: {}, hunger: 3, personality: { dims: {} }, intelligence: 900 } as any);
+      expect(Object.keys(look).sort()).toEqual(['accessories', 'palette', 'pattern', 'shiny', 'visualSeed']);
+    });
+  });
+
+  describe('escenas durante la visita', () => {
+    const T0 = 1_700_000_000_000;
+    function setup(visits: any[]) {
+      const prisma: any = { habitatVisit: { findMany: jest.fn(async () => visits) } };
+      const realtime = { emitToUser: jest.fn() };
+      const events = { emit: jest.fn() };
+      const svc = new Service(prisma, {} as any, realtime as any, undefined, events as any);
+      return { svc, realtime, events };
+    }
+    const visit = { id: 'visit-1', visitorId: 'visitor', ownerId: 'host', petId: 'pet-v', startedAt: new Date(T0) };
+    const ticks = (events: any) => events.emit.mock.calls.filter((c: any[]) => c[0] === 'habitat:visit_tick').map((c: any[]) => c[1]);
+
+    it('avisa a la mente una vez por ranura de tiempo', async () => {
+      const s = setup([visit]);
+      const slot = s.svc.sceneSlotMs;
+      // Primera pasada: toma nota de la ranura en curso, sin repetir la escena de llegada
+      await s.svc.tickScenes(T0 + 1000);
+      expect(ticks(s.events)).toEqual([]);
+      await s.svc.tickScenes(T0 + slot - 1000);
+      expect(ticks(s.events)).toEqual([]);
+      await s.svc.tickScenes(T0 + slot + 1000);
+      await s.svc.tickScenes(T0 + slot + 30_000);
+      expect(ticks(s.events)).toEqual([{ userId: 'visitor', ownerId: 'host', visitorPetId: 'pet-v', slot: 1 }]);
+      await s.svc.tickScenes(T0 + slot * 2 + 1000);
+      expect(ticks(s.events).map((t: any) => t.slot)).toEqual([1, 2]);
+    });
+
+    it('sin visitas activas no avisa de nada', async () => {
+      const s = setup([]);
+      await s.svc.tickScenes(T0);
+      expect(s.events.emit).not.toHaveBeenCalled();
+    });
+
+    it('reenvía al anfitrión la escena que resuelve la mente y adopta su duración de ranura', () => {
+      const s = setup([]);
+      s.svc.onSceneResolved({ ownerId: 'host', visitorId: 'visitor', slotMs: 120_000, scene: { slot: 1, type: 'play_tag', stage: 'friend' } });
+      expect(s.realtime.emitToUser).toHaveBeenCalledWith('host', 'habitat:scene', { visitorId: 'visitor', slot: 1, type: 'play_tag', stage: 'friend' });
+      expect(s.svc.sceneSlotMs).toBe(120_000);
+    });
+
+    it('un fallo de la base de datos no tumba el temporizador', async () => {
+      const s = setup([]);
+      (s.svc as any).prisma.habitatVisit.findMany = jest.fn(async () => {
+        throw new Error('sin conexión');
+      });
+      await expect(s.svc.tickScenes(T0)).resolves.toBeUndefined();
+    });
+  });
+});

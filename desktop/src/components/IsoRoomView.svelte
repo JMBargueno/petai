@@ -15,6 +15,7 @@
   import { resolveBaseState } from '../lib/animation/AnimationController';
   import { hashSeed } from '@pockai/mind';
   import { fallbackDims, loadDims, petDims } from '../lib/brain/personalityStore';
+  import { guestPetState, roomGuestOf, visitScene, visitorsStore } from '../lib/visitors';
 
   export let pet: any = null;
   export let room: HabitatRoom | null = null;
@@ -25,6 +26,8 @@
   export let selectedId: string | null = null;
   export let label = 'Sala del Pockai';
   export let height = 360;
+  /** Dibuja en la sala al Pockai del amigo que esté de visita (solo si el tuyo está en ella). */
+  export let showVisitors = false;
 
   const dispatch = createEventDispatcher<{
     move: { itemId: string; x: number; y: number; rotation: number };
@@ -126,6 +129,21 @@
     : undefined;
   $: if (scene) send({ type: 'setActivity', activity, rest, mind: roomMind });
   $: if (scene) send({ type: 'setNight', night });
+
+  // Visita: el Pockai del amigo entra en la sala y los dos representan lo que decide el servidor.
+  // La clave evita volver a hornearlo cada vez que cambia otra cosa de la lista de visitantes.
+  $: guest = showVisitors && activity !== 'away' ? roomGuestOf($visitorsStore) : null;
+  $: guestKey = guest ? `${guest.visitorId}:${guest.pet.petId}:${guest.pet.stage ?? ''}` : '';
+  let sentGuestKey = '';
+  $: if (scene && guestKey !== sentGuestKey) {
+    sentGuestKey = guestKey;
+    send({ type: 'setGuest', pet: guest ? guestPetState(guest) : null });
+  }
+  let playedScene = 0;
+  $: if (scene && guest && $visitScene && $visitScene.n !== playedScene && $visitScene.visitorId === guest.visitorId) {
+    playedScene = $visitScene.n;
+    send({ type: 'playScene', scene: $visitScene.type });
+  }
   // Clima y sol reales (la hora la pone el reloj del equipo dentro de la escena). Sin ubicación
   // no hay dato: cielo despejado y horas de sol por defecto.
   $: weather = $environmentalStatus?.weather ?? null;
