@@ -107,14 +107,24 @@ Las hojas objetivo son una referencia de diseño, no assets: tienen frames borro
 - **Objetivo:** el Kirisol final tiene alas; el Primpulso, un segundo par de cuernos; el Inktopus, tres crestas.
 - **Regla:** además del material nuevo, la etapa final de un legendario o un mítico puede estrenar una extremidad que cambie qué animal parece (un potro pasa a alicornio). Decídelo con el usuario al diseñar: cambia el concepto.
 
+## Con qué pieza del generador se hace cada lección
+El generador (v2) tiene una pieza para cada cosa que antes solo se podía imitar:
+
+| Lección | Pieza | Cómo se usa |
+|---|---|---|
+| 4. Tercer color | Papel `accent` | `g.ellipse(pieza, 'accent', …)`, `spike(g, pieza, 'accent', …)`, `tube(g, pieza, 'accent', …)`. Se pinta con el `accent` de la paleta de la mascota. Resérvalo para adult y final |
+| 5. Planos de profundidad | `g.dim(pieza, …)` | Tras dibujar el ala, la pata o la aleta de detrás, oscurece sus piezas un paso. Llámalo dos veces para alejarla más |
+| 7. Trama por material | `g.texture(pieza, TEX.…, papel?)` | `TEX.scales(tamaño)`, `TEX.bark(periodo)`, `TEX.leaves(tamaño)`, `TEX.fur(periodo)` y `TEX.stripes(periodo, ancho, grados)`. Va después de pintar la pieza y dentro de su mismo bloque, para que la trama se mueva con ella. El tercer argumento la limita a un papel (solo el cuerpo, no el vientre) |
+| 8. Luz con color | Automático | El horneado gira las sombras hacia el violeta y las satura, y el sombreado tiene un quinto tono (`deep`). No hay que hacer nada; `tone: 'deep'` existe para forzarlo |
+| 12. Marcas que crecen | `TEX.stripes` | Rayas atigradas sobre una pieza entera, sin dibujar franja a franja |
+| 13. Degradado en la pieza | Capas de tono | `{ clip, keep, tone: 'light' }` hacia la punta y `'shade'` o `'deep'` hacia la base |
+| 7 y 16. Mechones, plumas, pliegues | `g.ink(pieza, puntos)` | Trazo interior de 1 px en el oscuro de la pieza: separa mechones o plumas sin partirla en piezas |
+
+Una trama es un patrón de 1 px sobre el tono que ya tiene la pieza: no se ve sobre piezas en `flat` muy pequeñas ni por debajo de 3 px de tamaño. Mira siempre el resultado ampliado.
+
 ## Lo que el generador aún no hace
-Estas cuatro cosas separan hoy al generador del objetivo y no se arreglan con reglas de diseño. Están apuntadas en `docs/PENDIENTES.md` §8c:
+- **Contorno interior automático.** `g.ink` traza las líneas que tú le des; no separa racimos o plumas por su cuenta.
+- **Tramas que siguen una curva.** Las tramas van en una rejilla recta: las escamas no giran con el cuello de una serpiente.
+- **Giro de tono distinto por material.** Todas las sombras tiran al mismo violeta; las hojas objetivo llevan las de la madera al rojizo y las de la hoja al azulado.
 
-1. **Tercer color de paleta.** La hoja solo distingue primario y secundario; el `accent` de la mascota no llega a los sprites. Hace falta un papel de color nuevo.
-2. **Rampas con giro de tono y cinco tonos.** El color sale de multiplicar un gris por la paleta, así que la sombra es el mismo color más oscuro.
-3. **Tramas de relleno.** No hay un relleno de «escamas», «corteza» u «hojas»: cada trama se pinta pieza a pieza.
-4. **Plano lejano.** No hay una forma de mandar una pieza «al fondo» que la oscurezca y la apague de una vez.
-
-5. **Contorno interior.** Las hojas objetivo separan mechones, plumas y racimos con líneas oscuras dentro de la pieza; aquí solo hay contorno entre piezas distintas.
-
-Mientras no existan, acércate con `mark`, capas de tono y colores literales, y dile al usuario qué parte del objetivo no se puede alcanzar todavía.
+Dile al usuario qué parte del objetivo no se puede alcanzar todavía.

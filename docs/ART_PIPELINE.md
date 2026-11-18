@@ -46,6 +46,8 @@ Para condensar todas las capas en un único archivo de máscara y ahorrar memori
 - **Canal Rojo (R)**: Máscara para la zona del **color primario** (ej. pelaje/cuerpo principal).
 - **Canal Verde (G)**: Máscara para la zona del **color secundario** (ej. vientre, puntas de orejas, cola).
 - **Canal Azul (B)**: Máscara para la zona de **proyección del patrón** (lomo, alas, hombros, respetando cara y ojos).
+- **Azul puro (R = 0, G = 0, B = 255)**: zona del **color de acento** (`palette.accent`): cuernos, garras, caparazones. No recibe patrón. Si la paleta no trae acento, se usa el primario oscurecido.
+- **Negro puro**: color literal; se copia `base.png` tal cual (ojos, boca, efectos, brillos).
 - **Canal Alfa (A)**: **Silueta total** de la criatura para recorte duro y recorte del patrón.
 
 ---
@@ -133,7 +135,8 @@ Para componer un cuadro o la hoja de sprites completa:
 [ Pase Shiny (Banda especular 4s + Destellos) ] ───> [ Sprite Final Compuesto ]
 ```
 
-1. **Capa Base de Color**: Se evalúa `mask.png`. Cada píxel se colorea interpolando `palette.primary` (ponderado por el canal R) y `palette.secondary` (ponderado por el canal G).
+1. **Capa Base de Color**: Se evalúa `mask.png`. Cada píxel se colorea interpolando `palette.primary` (ponderado por el canal R) y `palette.secondary` (ponderado por el canal G); el azul puro se pinta con `palette.accent`.
+   - **Giro de tono en la sombra**: al multiplicar por el gris de `base.png`, el color gira hacia el violeta y se satura en proporción a lo oscuro que sea ese gris (`shadeShift` en `shared/scene/src/bake/bakePixels.ts`). Solo se aplica cuando `base.png` es un gris; un `base.png` con color propio multiplica tal cual.
 2. **Proyección del Patrón**: Se muestrea `patterns/{patternId}.png` aplicando el transform `(offsetX, offsetY, scale, rotation)`. El valor se multiplica por el canal `B` de `mask.png` y se combina con la capa base. De esta forma, el patrón solo cubre las zonas permitidas y nunca mancha los ojos, boca o vientre.
 3. **Sombreado y Lineart**: Se superpone `base.png`. Las sombras en escala de grises actúan en modo de fusión `Multiply`, oscureciendo el color y el patrón subyacente. Los contornos negros y los reflejos blancos de los ojos se dibujan en modo `Normal`.
 4. **Efecto Shiny (si `shiny == true`)**: Se aplica un shader con una banda diagonal blanca semitransparente que recorre la silueta (máscara canal A) cada 4 segundos, acompañado de un emisor de partículas de estrellas o chispas.

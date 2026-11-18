@@ -316,7 +316,10 @@ Los Pockais son **pixel art procedural**: `scripts/sprites/pixel/` los rasteriza
 
 **Contorno y sombreado**
 - Contorno exterior de **1 px nativo** en el tono `900` de la rampa del elemento: un oscuro teñido, no `#1e1e1e`. Donde una pieza tapa a otra, 1 px en `900`.
-- Tres tonos por volumen (`300` arriba a la izquierda, `500` en el centro, `700` abajo a la derecha) y un brillo `100` de 2 a 6 px en el volumen principal.
+- Cinco tonos por volumen: brillo `100` de 2 a 6 px en el volumen principal, luz `300` arriba a la izquierda, base `500`, sombra `700` y sombra profunda abajo a la derecha.
+- La sombra gira de tono: no es el mismo color más oscuro, sino que tira al violeta por el camino más corto (el amarillo al naranja, el verde al azulado) y gana saturación.
+- Tres colores por mascota: primario, secundario y acento. El acento se reserva para lo que estrenan las etapas adulta y final (cuernos, garras, caparazones).
+- Cada material puede llevar su trama de 1 px: escamas, corteza, hojas, pelo o rayas. Lo que queda detrás (el ala o la pata lejanas) va un paso más oscuro.
 - Barriga (secundario) y accesorios (acento) van planos.
 - Sin degradados, sin transparencias parciales y sin antialiasing contra el fondo. El tramado solo se admite en patrones de piel.
 - Como mucho 16 colores opacos por sprite. Un rasgo de menos de 2 px nativos no existe.

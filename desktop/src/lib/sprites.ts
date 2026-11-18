@@ -223,7 +223,7 @@ export async function bakePetSpriteSheet(
   stage?: string | null
 ): Promise<BakedPetSheet> {
   const normalizedSpecies = sheetKey(speciesId, stage);
-  const cacheKey = `${normalizedSpecies}:${patternId}:${palette.primary}:${palette.secondary}:${visualSeed}:${shiny}`;
+  const cacheKey = `${normalizedSpecies}:${patternId}:${palette.primary}:${palette.secondary}:${palette.accent ?? '-'}:${visualSeed}:${shiny}`;
 
   if (bakedSheetCache.has(cacheKey)) {
     return bakedSheetCache.get(cacheKey)!;
@@ -243,7 +243,7 @@ export async function bakePetSpriteSheet(
 
   // Algoritmo único compartido con la escena de PixiJS (Android/iOS): @pockai/scene/bake.
   const out = bakePixels(readPixels(baseImg), readPixels(maskImg), {
-    palette: { primary: palette.primary, secondary: palette.secondary },
+    palette: { primary: palette.primary, secondary: palette.secondary, accent: palette.accent },
     visualSeed,
     pattern: patternImg ? readPixels(patternImg) : null,
   });

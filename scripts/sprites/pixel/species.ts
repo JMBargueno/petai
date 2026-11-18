@@ -12,7 +12,7 @@
  */
 import type { Pose, Stage } from '../species';
 import { drawFace, drawFx, EyeSpec } from './face';
-import { FLOOR, Grid, hex, mul, N, rotateAt, scaleAt, translate } from './raster';
+import { FLOOR, Grid, hex, mul, N, rotateAt, scaleAt, TEX, translate } from './raster';
 
 /** Elipse: [cx, cy, rx, ry]. */
 type E = [number, number, number, number];
@@ -1378,7 +1378,7 @@ interface TubeOpts {
 }
 
 /** Cuerpo curvo liso: base, sombra abajo a la derecha, luz arriba a la izquierda y vientre de placas. */
-function tube(g: Grid, part: number, role: 'body' | 'skin' | 'trait', pts: P3[], o: TubeOpts = {}): void {
+function tube(g: Grid, part: number, role: 'body' | 'skin' | 'trait' | 'accent' | 'mark', pts: P3[], o: TubeOpts = {}): void {
   const S = samples(pts);
   S.forEach(([x, y, r]) => g.ellipse(part, role, x, y, r, r, o.far ? { tone: 'shade' } : { flat: true }));
   if (o.far) return;
@@ -1422,7 +1422,7 @@ function ridge(g: Grid, part: number, pts: P3[], every: number, h: number, side:
 }
 
 /** Púa o cuerno recto y afilado (grados como `gill`: 0 = izquierda, 90 = arriba). */
-function spike(g: Grid, part: number, role: 'trait' | 'mark' | 'skin', x: number, y: number, len: number, deg: number, w: number): void {
+function spike(g: Grid, part: number, role: 'trait' | 'mark' | 'skin' | 'accent', x: number, y: number, len: number, deg: number, w: number): void {
   const r = (deg * Math.PI) / 180;
   const dx = -Math.cos(r);
   const dy = -Math.sin(r);
@@ -1567,13 +1567,17 @@ const LEVIATIN: PixelSpecies = {
         const ground: P3[] = [[14, 53.8, 4.8], [22, 54.2, 5.2], [33, 54, 5.4], [41, 51.4, 5.4]];
         const neck: P3[] = [[40, 51.6, 5.4], [44.5, 46.5, 5.3], [43.5, 40, 5.1], [37.5, 35, 4.9], [35.5, 28.5, 4.7], [39.5, 22.5, 4.5], [44, 19.5, 4.2]];
         appendage(g, p, 4.5, 25, () => plumes(g, 12, 5.5, 25, [[9.5, 60], [9.5, 86], [8.5, 112], [7, 138]], true));
+        // Material nuevo de la etapa final: caparazón en el acento, con trama de escamas.
         ridge(g, 80, hump, 4, 2.8, -1, 2);
-        tube(g, 40, 'body', hump);
+        tube(g, 40, 'accent', hump);
+        g.texture(40, TEX.scales(4));
         ridge(g, 60, tailc, 5, 2.6, -1, 4);
         tube(g, 42, 'body', tailc, { belly: [0.5, 0.1] });
         tube(g, 4, 'body', ground, { belly: [0.05, 0.55], scutes: 3 });
         ridge(g, 70, neck, 5, 3, -1, 4);
         tube(g, 41, 'body', neck, { belly: [0.5, 0.2], scutes: 3 });
+        g.texture(41, TEX.scales(3), 'body');
+        g.texture(4, TEX.scales(3), 'body');
         // Accesorio de etapa final: melena de velos tras la cabeza y cuernos curvos sobre la perla.
         appendage(g, p, 39.5, 19.5, () => plumes(g, 5, 39.5, 19.5, [[11, 14], [10, -12], [8, -38], [6, -62]], true));
         curvedHorn(g, 22, 42.5, 13.8, 7.8, 40, -22, 1.5);
@@ -1716,6 +1720,8 @@ const YGGDRITO: PixelSpecies = {
           [[25, 32, 6, 2.2], [39, 32, 6, 2.2], [47.5, 31.5, 3, 1.8], [16.5, 31, 2.8, 1.6]],
           [[22.5, 18.6], [37, 18.2], [29.5, 23.4]],
         );
+        g.texture(10, TEX.leaves(6));
+        g.texture(4, TEX.bark(4), 'trait');
         beard(g, 31.5, 51, 3.6, 5);
       },
     }),
@@ -1754,6 +1760,8 @@ const YGGDRITO: PixelSpecies = {
           [[22, 28.5, 7, 2.6], [41.5, 28.5, 7, 2.6], [51.5, 28, 3.6, 2.2], [12.5, 28, 3.2, 2], [31, 26, 5, 1.8]],
           [[19, 10.4], [38, 9.8], [28.5, 15], [12, 20.6]],
         );
+        g.texture(10, TEX.leaves(7));
+        g.texture(4, TEX.bark(4), 'trait');
         brows(g, s.eye);
         beard(g, 31.5, 49.5, 4.6, 8.6);
         // Runa encendida en el tronco.
@@ -1917,7 +1925,9 @@ const PRIMPULSO: PixelSpecies = {
       behind: (g, _s, p) => {
         const body: P3[] = [[23, 50.5, 5.4], [27, 46.5, 6.2], [31.5, 41.5, 6], [35.5, 35, 4.4], [38.5, 28.5, 3.7], [42, 23.5, 3.5]];
         // Accesorio de etapa final: las dos alas de rayo, más altas que la cabeza.
-        appendage(g, p, 34, 37, () => dragonWing(g, 54, [35, 39], [46.5, 35], [[59.5, 27], [61, 36], [56.5, 44]], [47, 43.5], true));
+        appendage(g, p, 34, 37, () => dragonWing(g, 54, [35, 39], [46.5, 35], [[59.5, 27], [61, 36], [56.5, 44]], [47, 43.5]));
+        g.dim(54, 55);
+        g.dim(54, 55);
         tail(g, p, 23.5, 50.5, () => {
           bolt(g, 12, 8.5, 48, 6.5, 35, 2.5);
           bolt(g, 13, 8.5, 48, 5, -5, 2);
@@ -1929,7 +1939,11 @@ const PRIMPULSO: PixelSpecies = {
         });
         ridge(g, 70, body, 5, 3, -1, 3);
         tube(g, 4, 'body', body, { belly: [0.5, 0.3], bellyRole: 'skin', bellyTone: 'light', scutes: 3 });
+        g.texture(4, TEX.scales(3), 'body');
         tube(g, 8, 'skin', [[34, 42.5, 1.9], [38.5, 45, 1.6], [41, 43.5, 1.2]]);
+        // Material nuevo de la etapa final: segundo par de cuernos, en el acento.
+        spike(g, 56, 'accent', 40, 19.5, 7.5, 22, 1.5);
+        spike(g, 57, 'accent', 47.5, 18, 6, 96, 1.4);
         appendage(g, p, 43, 15.5, () => { bolt(g, 22, 41, 17, 11, 48, 2.5); bolt(g, 23, 45, 16, 10, 68, 2.3); });
       },
       onHead: (g, s) => {

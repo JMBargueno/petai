@@ -17,7 +17,7 @@ export interface PetState {
   /** Id de especie (species.json); desconocida → `ignisaur`. `egg` para el huevo. */
   species: string;
   stage: Stage;
-  palette: { primary: string; secondary: string };
+  palette: { primary: string; secondary: string; accent?: string };
   pattern?: string | null;
   visualSeed: number;
   shiny?: boolean;
@@ -171,7 +171,7 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
         pet: {
           species: p.species,
           stage: (['egg', 'baby', 'juvenile', 'adult', 'final'] as const).includes(p.stage as Stage) ? (p.stage as Stage) : 'adult',
-          palette: { primary: pal.primary, secondary: pal.secondary },
+          palette: { primary: pal.primary, secondary: pal.secondary, ...(typeof pal.accent === 'string' ? { accent: pal.accent } : {}) },
           pattern: typeof p.pattern === 'string' ? p.pattern : null,
           visualSeed: Number.isFinite(p.visualSeed) ? (p.visualSeed as number) : 1337,
           shiny: p.shiny === true,
