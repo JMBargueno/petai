@@ -107,10 +107,10 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
-    margin-top: 4px;
+    margin-top: var(--space-1);
   }
   .m-meta small {
-    font-size: 10px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .ui-list :global(.ui-row__title) {

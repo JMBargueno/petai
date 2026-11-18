@@ -189,7 +189,7 @@
 
 <style>
   .pr-privacy {
-    gap: 6px;
+    gap: var(--space-2);
   }
   .pr-privacy .btn {
     align-self: flex-start;
@@ -197,8 +197,8 @@
   .pr-check {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 11px;
+    gap: var(--space-1);
+    font-size: var(--text-caption);
     font-weight: 600;
     color: var(--ink-muted);
     cursor: pointer;
@@ -206,17 +206,17 @@
   .pr-filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .pr-filters .chip {
     cursor: pointer;
-    font-size: 11px;
-    padding: 2px 10px;
+    font-size: var(--text-caption);
+    padding: 2px var(--space-2);
   }
   .pr-filters .chip.active {
     background: var(--theme-social);
-    border-color: var(--color-carbon);
-    color: var(--color-carbon);
+    border-color: var(--on-color);
+    color: var(--on-color);
     font-weight: 700;
   }
   .pr-ach.done {
@@ -230,8 +230,8 @@
   }
   .pr-bar {
     height: 5px;
-    margin-top: 4px;
-    border-radius: 99px;
+    margin-top: var(--space-1);
+    border-radius: var(--radius-pills);
     background: var(--surface-2);
     overflow: hidden;
   }
@@ -249,21 +249,21 @@
     flex-shrink: 0;
   }
   .pr-tier {
-    padding: 0 6px;
-    border: 1px solid var(--color-carbon);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--on-color);
     border-radius: var(--radius-pills);
-    font-size: 9px;
+    font-size: var(--text-caption);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--color-carbon);
+    color: var(--on-color);
     background: var(--rarity-common);
   }
   .pr-tier.tier-rare { background: var(--rarity-rare); }
   .pr-tier.tier-epic { background: var(--rarity-super-rare); }
   .pr-tier.tier-legendary { background: var(--rarity-legendary); }
   .pr-count {
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }

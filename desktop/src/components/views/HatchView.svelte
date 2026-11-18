@@ -116,7 +116,7 @@
     width: 100%;
   }
   .egg-type {
-    font-size: 14px;
+    font-size: var(--text-body);
   }
   .count {
     text-align: right;

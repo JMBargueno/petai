@@ -20,11 +20,27 @@
     value = v;
     dispatch('change', v);
   }
+
+  /** Patrón de pestañas: flechas, Inicio y Fin mueven la selección y el foco. */
+  function onKeydown(e: KeyboardEvent) {
+    const i = options.findIndex((o) => o.value === value);
+    let next = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % options.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + options.length) % options.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = options.length - 1;
+    if (next < 0 || !options[next]) return;
+    e.preventDefault();
+    pick(options[next].value);
+    const tabs = (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('[role="tab"]');
+    tabs[next]?.focus();
+    tabs[next]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 </script>
 
-<div class="{variant === 'seg' ? 'ui-seg' : 'ui-pills'} {klass}" role="tablist" aria-label={label}>
+<div class="{variant === 'seg' ? 'ui-seg' : 'ui-pills'} {klass}" role="tablist" tabindex="-1" aria-label={label} on:keydown={onKeydown}>
   {#each options as o (o.value)}
-    <button type="button" role="tab" aria-selected={value === o.value} class:active={value === o.value} on:click={() => pick(o.value)}>
+    <button type="button" role="tab" aria-selected={value === o.value} tabindex={value === o.value ? 0 : -1} class:active={value === o.value} on:click={() => pick(o.value)}>
       {#if o.icon}<Ico n={o.icon} size={13} />{/if}{o.label}
       {#if o.badge}<span class="chip ui-chip ui-count">{o.badge}</span>{/if}
     </button>

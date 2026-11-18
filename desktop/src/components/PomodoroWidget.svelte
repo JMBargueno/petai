@@ -65,7 +65,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .digits {
     font-family: var(--font-display);
@@ -80,7 +80,7 @@
   }
   .controls {
     display: flex;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .controls :global(.grow) {
     flex: 1;

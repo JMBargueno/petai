@@ -254,7 +254,7 @@
     background: color-mix(in srgb, var(--surface-2) 60%, var(--surface));
   }
   .skill.enabled {
-    border-color: var(--color-carbon);
+    border-color: var(--line);
     box-shadow: var(--shadow-pop);
   }
   .skill-top {
@@ -266,18 +266,18 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     flex: 1;
     min-width: 0;
   }
   .skill-action {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-1);
     flex-shrink: 0;
   }
   .toggle {
-    padding: 4px;
+    padding: var(--space-1);
     border: none;
     background: none;
     cursor: pointer;
@@ -296,34 +296,34 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-1);
   }
   .reqs .label-caps {
-    font-size: 10px;
+    font-size: var(--text-caption);
     margin-right: 2px;
   }
   .met {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: var(--space-1);
     margin: 0;
-    font-size: 11px;
+    font-size: var(--text-caption);
     color: var(--success-ink);
   }
   kbd {
-    padding: 1px 6px;
+    padding: 1px var(--space-2);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
     color: var(--ink);
     font-family: inherit;
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
   }
   .shortcut {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
     padding: var(--space-3);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
@@ -340,6 +340,6 @@
   }
   .row {
     display: flex;
-    gap: 6px;
+    gap: var(--space-2);
   }
 </style>

@@ -143,7 +143,7 @@
   .hero-info {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
     min-width: 0;
   }
   .hero-title {
@@ -155,11 +155,11 @@
   .hero-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .pet-title {
     font-family: var(--font-display);
-    font-size: 22px;
+    font-size: var(--text-subheading);
     line-height: 1.05;
     text-transform: uppercase;
     white-space: nowrap;
@@ -168,13 +168,13 @@
   }
   .level-tag {
     flex-shrink: 0;
-    padding: 6px 12px;
-    border: 1px solid var(--color-carbon);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--on-color);
     border-radius: var(--radius-pills);
     background: var(--color-sunburst);
-    box-shadow: 2px 2px 0 var(--color-carbon);
+    box-shadow: 2px 2px 0 var(--on-color);
     color: var(--on-color);
-    font-size: 13px;
+    font-size: var(--text-label);
     font-weight: 800;
   }
   .home-house {
@@ -184,16 +184,16 @@
     position: absolute;
     top: 8px;
     left: 8px;
-    z-index: 2;
+    z-index: calc(var(--z-raised) + 1);
     max-width: 62%;
-    padding: 3px 10px;
-    border: 1.5px solid var(--color-carbon);
+    padding: 3px var(--space-2);
+    border: 1.5px solid var(--on-color);
     border-radius: var(--radius-pills);
     background: var(--color-sunburst);
-    box-shadow: 2px 2px 0 var(--color-carbon);
-    color: var(--color-carbon);
+    box-shadow: 2px 2px 0 var(--on-color);
+    color: var(--on-color);
     font-family: var(--font-display);
-    font-size: 11px;
+    font-size: var(--text-caption);
     letter-spacing: 0.02em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -205,12 +205,12 @@
     position: absolute;
     right: 8px;
     bottom: 8px;
-    z-index: 2;
-    padding: 2px 8px;
+    z-index: calc(var(--z-raised) + 1);
+    padding: 2px var(--space-2);
     border-radius: var(--radius-pills);
     background: rgb(255 255 255 / 0.8);
-    color: var(--color-carbon);
-    font-size: 10px;
+    color: var(--on-color);
+    font-size: var(--text-caption);
     font-weight: 700;
     pointer-events: none;
     opacity: 0;
@@ -224,7 +224,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .row {
     display: flex;
@@ -241,8 +241,8 @@
   .vital {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
     background: var(--surface);
@@ -256,21 +256,21 @@
     align-items: center;
     justify-content: space-between;
     color: var(--ink-muted);
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 700;
   }
   .vital-label > span:first-child {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .vital-icon {
     display: grid;
     place-items: center;
     width: 22px;
     height: 22px;
-    border: 1px solid var(--color-carbon);
-    border-radius: 8px;
+    border: 1px solid var(--on-color);
+    border-radius: var(--radius-sm);
     color: var(--on-color);
   }
   .vital-value {
@@ -284,33 +284,33 @@
   .food {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .food-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 4px 4px 10px;
-    border: 1px solid var(--color-carbon);
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
+    border: 1px solid var(--on-color);
     border-radius: var(--radius-pills);
     background: var(--color-mint-pop);
     color: var(--on-color);
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 700;
     cursor: pointer;
     transition: translate var(--dur-1), box-shadow var(--dur-1);
   }
   .food-chip:hover {
     translate: -1px -1px;
-    box-shadow: 2px 2px 0 var(--color-carbon);
+    box-shadow: 2px 2px 0 var(--line);
   }
   .qty {
     min-width: 20px;
-    padding: 0 6px;
+    padding: 0 var(--space-2);
     border-radius: var(--radius-pills);
-    background: var(--color-carbon);
-    color: var(--color-paper-white);
-    font-size: 11px;
+    background: var(--ink);
+    color: var(--bg);
+    font-size: var(--text-caption);
     font-weight: 800;
     text-align: center;
   }

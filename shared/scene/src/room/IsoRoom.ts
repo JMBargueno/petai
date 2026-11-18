@@ -15,9 +15,9 @@ import { footprintCells, normalizeRotation, rotatedFootprint, snapToWall, valida
 import { findPath, type Cell } from '../iso/pathfind';
 import { PetSprite } from '../pet/PetSprite';
 import { furnitureMeta, loadFurnitureTexture, type Orientation } from './furnitureAssets';
+import { SLAB, sparkle, styleFor, WALL_H, type Twinkle } from './roomStyles';
 
-export const WALL_H = 92;
-const SLAB = 10;
+export { WALL_H } from './roomStyles';
 // Pixel art (GUIA_ARTISTICA §7.5): la hoja va a ×2, así que 0,5 deja 1 px nativo = 1 px de sala.
 const PET_SCALE = 64 / 128;
 const WALK_SPEED = 1.7; // celdas por segundo
@@ -33,7 +33,7 @@ const DEFAULT_THEME: RoomTheme = {
 };
 
 const NIGHT_TINT = 0x1b1846;
-const LINE = 0x1a1a1a;
+const TWINKLE = 0xfff8e6;
 const OK = 0x55db9c;
 const BAD = 0xfb4903;
 const ACCENT = 0x5c4ade;
@@ -46,8 +46,6 @@ const USE_CLIP: Record<Interaction, string> = {
   bathe: 'clean',
   sit: 'perch',
 };
-
-const hex = (c: string) => parseInt(c.replace('#', ''), 16);
 
 interface PlacedFurniture {
   item: RoomItem;
@@ -63,6 +61,10 @@ interface IsoRoomOptions {
 
 export class IsoRoom extends Container {
   private readonly shell = new Graphics();
+  /** Misma geometría que la carcasa: recorta el tinte de noche a la silueta de cada sala. */
+  private readonly shellMask = new Graphics(this.shell.context);
+  /** Capa ambiental animada (estrellas que titilan), encima de la carcasa. */
+  private readonly ambient = new Graphics();
   private readonly objects = new Container();
   private readonly overlay = new Graphics();
   private readonly night = new Graphics();
@@ -71,6 +73,8 @@ export class IsoRoom extends Container {
   private room: RoomState | null = null;
   private placed = new Map<string, PlacedFurniture>();
   private restClip = 'idle';
+  private twinkles: Twinkle[] = [];
+  private clock = 0;
 
   private activity: Activity = 'idle';
   private isNight = false;
@@ -91,7 +95,9 @@ export class IsoRoom extends Container {
     super();
     this.pet = opts.pet;
     this.objects.sortableChildren = true;
-    this.addChild(this.shell, this.objects, this.overlay, this.night);
+    this.addChild(this.shell, this.shellMask, this.ambient, this.objects, this.overlay, this.night);
+    this.night.mask = this.shellMask;
+    this.ambient.eventMode = 'none';
     this.night.eventMode = 'none';
     this.overlay.eventMode = 'none';
     this.eventMode = 'static';
@@ -200,66 +206,28 @@ export class IsoRoom extends Container {
   bounds(): { minX: number; maxX: number; minY: number; maxY: number } {
     const W = this.room?.gridWidth ?? 14;
     const H = this.room?.gridHeight ?? 10;
+    const style = styleFor(this.room?.id);
     return {
       minX: -H * (TILE_W / 2) - 4,
       maxX: W * (TILE_W / 2) + 4,
-      minY: -WALL_H - 4,
-      maxY: (W + H) * (TILE_H / 2) + SLAB + 4,
+      minY: -WALL_H - style.topExtra - 4,
+      maxY: (W + H) * (TILE_H / 2) + SLAB + style.bottomExtra + 4,
     };
   }
 
+  /** Carcasa de la sala (paredes, suelo, losa) según su estilo (`roomStyles.ts`). */
   private drawShell(): void {
     const g = this.shell;
     g.clear();
-    if (!this.room) return;
-    const t = this.theme();
-    const W = this.room.gridWidth;
-    const H = this.room.gridHeight;
-    const P = (x: number, y: number, z = 0) => {
-      const s = toScreen(x, y, z);
-      return [s.x, s.y];
-    };
-
-    // Losa del suelo (grosor visible en los dos bordes delanteros)
-    g.poly([...P(W, 0), ...P(W, H), ...P(W, H, -SLAB), ...P(W, 0, -SLAB)]).fill(hex(t.trim)).stroke({ width: 2, color: LINE });
-    g.poly([...P(0, H), ...P(W, H), ...P(W, H, -SLAB), ...P(0, H, -SLAB)])
-      .fill(shadeHex(t.trim, 0.12))
-      .stroke({ width: 2, color: LINE });
-
-    // Paredes: izquierda (a lo largo de x = 0) y derecha (a lo largo de y = 0)
-    g.poly([...P(0, 0, WALL_H), ...P(0, H, WALL_H), ...P(0, H), ...P(0, 0)]).fill(hex(t.wall));
-    g.poly([...P(0, 0, WALL_H), ...P(W, 0, WALL_H), ...P(W, 0), ...P(0, 0)]).fill(hex(t.wallShade));
-    // Zócalo
-    g.poly([...P(0, 0, 8), ...P(0, H, 8), ...P(0, H), ...P(0, 0)]).fill(hex(t.trim));
-    g.poly([...P(0, 0, 8), ...P(W, 0, 8), ...P(W, 0), ...P(0, 0)]).fill(shadeHex(t.trim, -0.12));
-    // Ventana en la pared derecha
-    const wx0 = W * 0.55;
-    const wx1 = Math.min(W - 1, wx0 + 3);
-    g.poly([...P(wx0, 0, 70), ...P(wx1, 0, 70), ...P(wx1, 0, 36), ...P(wx0, 0, 36)])
-      .fill(hex(t.sky))
-      .stroke({ width: 3, color: hex(t.trim) });
-    g.poly([...P((wx0 + wx1) / 2, 0, 70), ...P((wx0 + wx1) / 2, 0, 36)], false).stroke({ width: 2, color: hex(t.trim) });
-    // Luz que entra por la ventana
-    const glow = toScreen((wx0 + wx1) / 2 + 1, 2.5);
-    g.ellipse(glow.x, glow.y, 70, 35).fill({ color: hex(t.light), alpha: 0.35 });
-
-    // Suelo: rombos alternos
-    for (let x = 0; x < W; x++) {
-      for (let y = 0; y < H; y++) {
-        const alt = (x + y) % 2 === 1;
-        g.poly([...P(x, y), ...P(x + 1, y), ...P(x + 1, y + 1), ...P(x, y + 1)]).fill(
-          alt ? shadeHex(t.floor, -0.06) : hex(t.floor),
-        );
-      }
+    this.twinkles = [];
+    if (this.room) {
+      const style = styleFor(this.room.id);
+      const W = this.room.gridWidth;
+      const H = this.room.gridHeight;
+      style.draw({ g, t: this.theme(), W, H });
+      this.twinkles = style.twinkles?.(W, H) ?? [];
     }
-    // Contornos: borde del suelo y de las paredes
-    g.poly([...P(0, 0), ...P(W, 0), ...P(W, H), ...P(0, H)]).stroke({ width: 2, color: LINE });
-    // Contorno abierto de las paredes (sin cerrar: si no, cruzaría el suelo en diagonal)
-    g.poly([...P(0, H), ...P(0, H, WALL_H), ...P(0, 0, WALL_H), ...P(W, 0, WALL_H), ...P(W, 0)], false).stroke({
-      width: 2,
-      color: LINE,
-    });
-    g.poly([...P(0, 0), ...P(0, 0, WALL_H)], false).stroke({ width: 1.5, color: LINE, alpha: 0.6 });
+    this.ambient.clear();
     this.drawNight();
   }
 
@@ -267,18 +235,23 @@ export class IsoRoom extends Container {
     const g = this.night;
     g.clear();
     if (!this.isNight || !this.room) return;
-    // Silueta de la sala (paredes + suelo + losa): el tinte no oscurece el fondo de alrededor.
-    const W = this.room.gridWidth;
-    const H = this.room.gridHeight;
-    const pts = [
-      toScreen(0, H, WALL_H),
-      toScreen(0, 0, WALL_H),
-      toScreen(W, 0, WALL_H),
-      toScreen(W, 0, -SLAB),
-      toScreen(W, H, -SLAB),
-      toScreen(0, H, -SLAB),
-    ];
-    g.poly(pts.flatMap((p) => [p.x, p.y])).fill({ color: NIGHT_TINT, alpha: 0.42 });
+    // Rectángulo que cubre la sala, recortado por la máscara a la silueta de la carcasa: el tinte
+    // no oscurece el fondo de alrededor, tenga la sala la forma que tenga (setos, árbol, cristales).
+    const b = this.bounds();
+    g.rect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY).fill({ color: NIGHT_TINT, alpha: 0.42 });
+  }
+
+  /** Estrellas que titilan (solo en las salas que las tienen y sin movimiento reducido). */
+  private drawAmbient(dt: number): void {
+    if (!this.twinkles.length || this.opts.reducedMotion) return;
+    this.clock += dt;
+    const g = this.ambient;
+    g.clear();
+    for (const tw of this.twinkles) {
+      const a = Math.sin(this.clock / 700 + tw.phase);
+      if (a <= 0.2) continue;
+      sparkle(g, tw.x, tw.y, tw.size * (0.6 + 0.4 * a), TWINKLE, a);
+    }
   }
 
   private drawOverlay(): void {
@@ -557,8 +530,9 @@ export class IsoRoom extends Container {
   }
 
   update(ticker: Ticker): void {
-    if (!this.room || this.activity === 'away') return;
     const dt = ticker.deltaMS;
+    if (this.room) this.drawAmbient(dt);
+    if (!this.room || this.activity === 'away') return;
 
     if (this.path.length) {
       const next = this.path[0];
@@ -603,13 +577,4 @@ export class IsoRoom extends Container {
     this.waitMs -= dt;
     if (this.waitMs <= 0) this.wander();
   }
-}
-
-/** Aclara (k > 0) u oscurece (k < 0) un color hex y lo devuelve como número. */
-function shadeHex(color: string, k: number): number {
-  const n = hex(color);
-  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) =>
-    Math.round(k >= 0 ? c + (255 - c) * k : c * (1 + k)),
-  );
-  return (ch[0] << 16) | (ch[1] << 8) | ch[2];
 }

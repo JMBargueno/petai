@@ -3,6 +3,7 @@
   import { RefreshCw, Download } from 'lucide-svelte';
   import { updateState, checkForUpdates, installUpdate } from '../lib/updater';
   import { SOCIAL_HANDLE, SOCIAL_LINKS } from '../lib/social';
+  import { restartOnboarding } from '../lib/onboarding';
 
   let version = '';
 
@@ -67,6 +68,8 @@
     {/if}
   {/if}
 
+  <button class="btn btn--ghost" on:click={() => restartOnboarding()}>Ver la guía de inicio otra vez</button>
+
   <div class="contact">
     <p class="muted">¿Has visto un fallo o tienes una idea? La vía preferente es el formulario de contacto.</p>
     <div class="contact__links">
@@ -107,36 +110,36 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
-    padding: 14px;
+    gap: var(--space-2);
+    padding: var(--space-4);
     background: var(--surface-2);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
     color: var(--ink);
   }
-  h2 { margin: 0; font-size: 15px; }
-  p { margin: 0; font-size: 13px; }
+  h2 { margin: 0; font-size: var(--text-body); }
+  p { margin: 0; font-size: var(--text-label); }
   .muted { color: var(--ink-muted); }
   .notice { color: var(--success-ink); }
   .error { color: var(--danger-ink); }
-  .update-box { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .update-box { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
   .notes { white-space: pre-line; max-height: 120px; overflow-y: auto; color: var(--ink-muted); }
   progress { width: 100%; accent-color: var(--accent); }
-  .contact { display: grid; gap: 8px; justify-items: start; padding-top: 6px; border-top: 1px solid var(--line-soft); width: 100%; }
+  .contact { display: grid; gap: var(--space-2); justify-items: start; padding-top: var(--space-2); border-top: 1px solid var(--line-soft); width: 100%; }
   .contact p { margin: 0; }
-  .contact p a { color: var(--accent); }
-  .contact__links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .contact p a { color: var(--accent-ink); }
+  .contact__links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
   .contact__links .btn { text-decoration: none; }
-  .social { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
-  .social ul { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .social { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; }
+  .social ul { display: flex; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
   .social a {
     display: grid;
     place-items: center;
     width: 32px;
     height: 32px;
     border: 1px solid var(--line-soft);
-    border-radius: 9999px;
+    border-radius: var(--radius-pills);
     color: var(--ink);
   }
-  .social a:hover, .social a:focus-visible { border-color: var(--accent); color: var(--accent); }
+  .social a:hover, .social a:focus-visible { border-color: var(--accent); color: var(--accent-ink); }
 </style>

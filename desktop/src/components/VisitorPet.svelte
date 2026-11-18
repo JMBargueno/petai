@@ -91,7 +91,7 @@
     position: absolute;
     left: -86px;
     bottom: 0;
-    z-index: 49;
+    z-index: calc(var(--z-pet) - 1);
     width: 64px;
     display: flex;
     flex-direction: column;
@@ -100,14 +100,14 @@
   }
   .v-bubble {
     position: relative;
-    margin-bottom: 6px;
+    margin-bottom: var(--space-2);
     width: max-content;
     max-width: 160px;
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-2xl);
     background: var(--surface);
     border: 1px solid var(--line-soft);
-    font-size: 11px;
+    font-size: var(--text-caption);
     line-height: 1.3;
     color: var(--ink);
     text-align: center;
@@ -134,11 +134,11 @@
   .v-label {
     margin-top: 2px;
     max-width: 130px;
-    padding: 2px 8px;
+    padding: 2px var(--space-2);
     border-radius: var(--radius-pills);
     background: color-mix(in srgb, var(--surface) 88%, transparent);
     border: 1px solid var(--line-soft);
-    font-size: 10px;
+    font-size: var(--text-caption);
     font-weight: 600;
     color: var(--ink-muted);
     text-align: center;

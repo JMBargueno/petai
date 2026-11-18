@@ -24,7 +24,7 @@
 <style>
   .code {
     font-family: ui-monospace, 'Cascadia Code', monospace;
-    font-size: 22px;
+    font-size: var(--text-subheading);
     letter-spacing: 0.3em;
     text-align: center;
   }

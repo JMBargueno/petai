@@ -269,8 +269,8 @@
   .online-sum {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 11px;
+    gap: var(--space-1);
+    font-size: var(--text-caption);
     font-weight: 600;
     color: var(--ink-muted);
   }

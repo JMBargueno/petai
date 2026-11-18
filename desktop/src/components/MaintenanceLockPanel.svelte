@@ -46,8 +46,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
-    padding: 24px 24px 28px;
+    gap: var(--space-4);
+    padding: var(--space-6) var(--space-6) var(--space-6);
     text-align: center;
     color: var(--ink);
     overflow-x: hidden;
@@ -55,13 +55,13 @@
   .header-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     background: color-mix(in srgb, var(--warning) 18%, transparent);
     color: var(--warning-ink);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     letter-spacing: 0.08em;
-    padding: 4px 12px;
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pills);
     text-transform: uppercase;
   }
@@ -73,21 +73,21 @@
     align-items: center;
     justify-content: center;
     background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--accent);
+    color: var(--accent-ink);
   }
   h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: var(--text-title);
   }
   .desc-text {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--text-body);
     line-height: 1.5;
     white-space: pre-line;
   }
   .muted-note {
     margin: 0;
-    font-size: 12.5px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .block {

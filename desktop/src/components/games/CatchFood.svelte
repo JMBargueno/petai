@@ -124,7 +124,7 @@
 <p class="hint">Mueve el ratón (o ← →) para atrapar la comida. ¡Esquiva las piedras!</p>
 
 <style>
-  .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
+  .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: var(--space-2); }
   .score em { color: var(--accent-ink); font-style: normal; display: inline-block; min-width: 24px; }
   .arena {
     position: relative; overflow: hidden; border-radius: var(--radius-2xl); cursor: none;
@@ -133,5 +133,5 @@
   }
   .item, .basket { position: absolute; transform: translate(-50%, -50%); font-size: 26px; pointer-events: none; }
   .basket { font-size: 38px; }
-  .hint { font-size: 11px; opacity: 0.65; margin: 6px 0 0; text-align: center; }
+  .hint { font-size: var(--text-caption); opacity: 0.65; margin: var(--space-2) 0 0; text-align: center; }
 </style>
