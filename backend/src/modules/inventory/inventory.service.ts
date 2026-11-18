@@ -1,13 +1,17 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { recordSpend } from '../../stats/spend';
+import { GameDataService } from '../game-data/game-data.service';
 
 const MAX_PURCHASE_QTY = 99;
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly gameData?: GameDataService,
+  ) {}
 
   async getInventory(userId: string) {
     return this.prisma.inventoryItem.findMany({
@@ -156,19 +160,32 @@ export class InventoryService {
     }
     const client = tx ?? this.prisma;
 
-    // Asegura que el item exista en el catálogo (cosmético, sin coste).
+    // Asegura que el item exista en el catálogo, sin coste. Si el premio es una prenda de
+    // accessories.json (spec 38) se crea como tal, con su nombre y su ranura; si no, como cosmético
+    // genérico. Así el premio es correcto aunque el seed aún no haya sembrado la prenda.
+    const accessory = this.gameData?.getAccessories().find((a) => a.id === itemId);
     await client.item.upsert({
       where: { id: itemId },
       update: {},
-      create: {
-        id: itemId,
-        kind: 'cosmetic',
-        name: `Item exclusivo: ${itemId}`,
-        description: 'Item cosmético otorgado por un logro',
-        effects: {},
-        priceCoins: 0,
-        priceGems: 0,
-      },
+      create: accessory
+        ? {
+            id: itemId,
+            kind: 'accessory',
+            name: accessory.name,
+            description: accessory.description,
+            effects: { slot: accessory.slot, rarity: accessory.rarity, color: accessory.color, unlock: accessory.unlock.type },
+            priceCoins: 0,
+            priceGems: 0,
+          }
+        : {
+            id: itemId,
+            kind: 'cosmetic',
+            name: `Item exclusivo: ${itemId}`,
+            description: 'Item cosmético otorgado por un logro',
+            effects: {},
+            priceCoins: 0,
+            priceGems: 0,
+          },
     });
 
     return client.inventoryItem.upsert({

@@ -32,6 +32,7 @@ import { ChestsModule } from './modules/chests/chests.module';
 import { EnvironmentalModule } from './modules/environmental/environmental.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HabitatModule } from './modules/habitat/habitat.module';
+import { AccessoriesModule } from './modules/accessories/accessories.module';
 import { SeasonsModule } from './modules/seasons/seasons.module';
 import { BreedingModule } from './modules/breeding/breeding.module';
 import { TrainingModule } from './modules/training/training.module';
@@ -106,6 +107,7 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     EnvironmentalModule,
     NotificationsModule,
     HabitatModule,
+    AccessoriesModule,
     SeasonsModule,
     BreedingModule,
     RaidModule,

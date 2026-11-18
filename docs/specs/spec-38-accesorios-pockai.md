@@ -101,13 +101,14 @@ accessories Json @default("{}")
 
 - Una misma prenda puede estar equipada en varias mascotas del usuario a la vez (decisión 8.2).
 - Equipar valida: la prenda es del usuario, su `slot` coincide con la ranura y la mascota es suya.
-- Regalar o perder una prenda la desequipa de todas las mascotas del usuario.
+- Las prendas no se regalan (sección 11), así que una prenda en propiedad no se pierde.
 
 **Contrato HTTP** (regenerar OpenAPI al añadirlo):
 
 | Método y ruta | Qué hace |
 |---|---|
 | `GET /accessories` | Catálogo con el estado del usuario por prenda: `locked`, `available`, `owned` |
+| `GET /pets/:petId/accessories` | Prendas equipadas de una mascota del usuario |
 | `POST /accessories/:id/buy` | Compra con monedas o gemas; descuenta del monedero en la misma transacción |
 | `PUT /pets/:petId/accessories` | Cuerpo `{ head?, face?, neck?, back? }` con `itemId` o `null`; devuelve las prendas equipadas |
 
@@ -233,6 +234,11 @@ propio del lote 2.
 - `grantExclusiveItem` usa el `Item` del catálogo cuando el id es una prenda, en lugar de crear un
   `cosmetic` genérico.
 - OpenAPI regenerado.
+- Regalos: `GiftingService` rechaza prendas y premios de logro.
+
+Hecho, en `backend/src/modules/accessories/`. Las reglas puras están en `accessories.engine.ts`.
+Queda pendiente: los tests e2e contra base de datos y que las vistas públicas de mascota que
+eligen campos a mano expongan `accessories`; se revisa al hacer el render (lote 3).
 
 **Lote 3: anclas y render** (tras la migración a pixel art)
 - `anchors.json` para las especies existentes, en las cuatro etapas.

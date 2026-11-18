@@ -8,7 +8,13 @@ function build(items: any[], wallet = { coins: 1000, gems: 50 }, inventory: Reco
   const user = { ...wallet };
   const row = (itemId: string) => (inv.has(itemId) ? { userId: 'u1', itemId, qty: inv.get(itemId), item: catalog.get(itemId) } : null);
   const prismaMock: any = {
-    item: { findUnique: jest.fn(async ({ where }: any) => catalog.get(where.id) ?? null) },
+    item: {
+      findUnique: jest.fn(async ({ where }: any) => catalog.get(where.id) ?? null),
+      upsert: jest.fn(async ({ where, create }: any) => {
+        if (!catalog.has(where.id)) catalog.set(where.id, create);
+        return catalog.get(where.id);
+      }),
+    },
     user: {
       updateMany: jest.fn(async ({ where, data }: any) => {
         if (user.coins < where.coins.gte || user.gems < where.gems.gte) return { count: 0 };
@@ -39,7 +45,8 @@ function build(items: any[], wallet = { coins: 1000, gems: 50 }, inventory: Reco
     },
     $transaction: jest.fn(async (fn: any) => fn(prismaMock)),
   };
-  return { service: new InventoryService(prismaMock), prismaMock, user, inv };
+  const gameData: any = { getAccessories: () => [{ id: 'ach_item_care_crown', name: 'Corona del guardián', description: 'd', slot: 'head', rarity: 'legendary', color: 'sunburst', unlock: { type: 'achievement' } }] };
+  return { service: new InventoryService(prismaMock, gameData), prismaMock, user, inv, catalog };
 }
 
 const apple = { id: 'apple', kind: 'food', effects: {}, priceCoins: 10, priceGems: 0 };
@@ -95,5 +102,16 @@ describe('InventoryService.buyItem', () => {
     const { service, inv } = build([capa], { coins: 0, gems: 5 });
     await expect(service.buyItem('u1', 'acc_capa_gala')).rejects.toBeInstanceOf(BadRequestException);
     expect(inv.size).toBe(0);
+  });
+});
+
+describe('InventoryService.grantExclusiveItem', () => {
+  it('crea el premio como prenda si está en el catálogo de accesorios, y como cosmético si no', async () => {
+    const { service, catalog, inv } = build([]);
+    await service.grantExclusiveItem('u1', 'ach_item_care_crown');
+    await service.grantExclusiveItem('u1', 'ach_item_care_medal');
+    expect(catalog.get('ach_item_care_crown')).toMatchObject({ kind: 'accessory', name: 'Corona del guardián', effects: { slot: 'head', unlock: 'achievement' } });
+    expect(catalog.get('ach_item_care_medal')).toMatchObject({ kind: 'cosmetic' });
+    expect(inv.get('ach_item_care_crown')).toBe(1);
   });
 });

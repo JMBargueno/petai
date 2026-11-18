@@ -46,6 +46,10 @@ export class GiftingService {
 
     const item = await this.prisma.item.findUnique({ where: { id: input.itemId } });
     if (!item) throw new NotFoundException('Item no encontrado');
+    // Las prendas y los premios de logro no se regalan (spec 38 §11): son de la cuenta que los ganó.
+    if (item.kind === 'accessory' || item.kind === 'cosmetic') {
+      throw new BadRequestException('Este objeto no se puede regalar');
+    }
 
     const gift = await this.prisma.$transaction(async (tx) => {
       // S-03: límites diarios contados dentro de la tx (reduce la ventana de un doble envío).

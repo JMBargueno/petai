@@ -2363,6 +2363,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accessories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catálogo de accesorios con el estado de cada prenda para el usuario */
+        get: operations["AccessoriesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accessories/{id}/buy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Comprar una prenda con monedas o gemas */
+        post: operations["AccessoriesController_buy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pets/{petId}/accessories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prendas equipadas de una mascota */
+        get: operations["AccessoriesController_getEquipped"];
+        /**
+         * Equipar o quitar prendas por ranura
+         * @description Cada ranura admite un itemId (equipar) o null (quitar). Lo que no se envía se conserva.
+         */
+        put: operations["AccessoriesController_equip"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/seasons/current": {
         parameters: {
             query?: never;
@@ -5406,6 +5461,16 @@ export interface components {
              * @example 120
              */
             total: number;
+        };
+        EquipAccessoriesDto: {
+            /** @description Prenda de cabeza; null la quita */
+            head?: string | null;
+            /** @description Prenda de cara; null la quita */
+            face?: string | null;
+            /** @description Prenda de cuello; null la quita */
+            neck?: string | null;
+            /** @description Prenda de espalda; null la quita */
+            back?: string | null;
         };
         AdminStatsUsersDto: {
             total: number;
@@ -9027,6 +9092,116 @@ export interface operations {
             };
             /** @description Token ausente o inválido */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AccessoriesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ranuras y prendas, cada una locked, available u owned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AccessoriesController_buy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Prenda comprada */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin saldo, ya en propiedad o prenda de logro */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Prenda no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AccessoriesController_getEquipped: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                petId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pet no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AccessoriesController_equip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                petId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipAccessoriesDto"];
+            };
+        };
+        responses: {
+            /** @description Prendas equipadas tras el cambio */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Prenda inexistente, de otra ranura o que no es del usuario */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pet no encontrado */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
