@@ -534,6 +534,129 @@
       }
     },
     "combat": { "maxThresholdShift": 0.05 },
-    "behavior": { "minEnergyToPlay": 15 }
+    "behavior": { "minEnergyToPlay": 15 },
+    "desktop": {
+      "thinkMs": 500,
+      "pauseMs": [1500, 4200],
+      "antiRepeat": { "window": 6, "penalty": 0.45, "top": 3, "margin": 0.15 },
+      "needs": { "low": 35, "high": 65 },
+      "speeds": { "slow": 26, "walk": 44, "run": 250, "climb": 72 },
+      "idle": {
+        "napAfterMs": 180000,
+        "welcomeMinAwayMs": 300000,
+        "longAwayMs": 1800000,
+        "typingStillMs": 10000,
+        "typingRecentMs": 4000,
+        "cursorOnlyFactor": 3
+      },
+      "cursor": {
+        "nearPx": 450,
+        "stalkMinPx": 90,
+        "stalkMaxPx": 700,
+        "stillMs": 3500,
+        "fastPxPerS": 900,
+        "slowPxPerS": 260,
+        "shyPx": 240,
+        "followGapPx": 130,
+        "catchPx": 80
+      },
+      "barks": { "everyMs": 65000 },
+      "perch": { "stayMs": [20000, 60000], "hopCooldownMs": 30000 },
+      "focus": ["rest_sit", "look_around"],
+      "appProfiles": {
+        "coding": { "barkFactor": 0.3, "factors": { "rest_sit": 3, "zoomies": 0.2, "high_five_offer": 0.3, "cursor_chase": 0.3 } },
+        "reading": { "barkFactor": 0.3, "factors": { "rest_sit": 3, "zoomies": 0.2, "high_five_offer": 0.3, "cursor_chase": 0.3 } },
+        "music": { "barkFactor": 1, "factors": {} },
+        "gaming": {
+          "barkFactor": 0,
+          "factors": { "rest_sit": 3, "zoomies": 0, "peek_edge": 0, "high_five_offer": 0, "mood_express": 0, "cursor_stalk": 0, "cursor_chase": 0, "cursor_follow": 0, "climb": 0, "perch_window": 0, "flow_talent": 0 }
+        },
+        "video": {
+          "barkFactor": 0,
+          "factors": { "rest_sit": 3, "zoomies": 0, "peek_edge": 0, "high_five_offer": 0, "mood_express": 0, "cursor_stalk": 0, "cursor_chase": 0, "cursor_follow": 0, "climb": 0, "perch_window": 0, "flow_talent": 0 }
+        }
+      },
+      "behaviors": {
+        "stroll": { "base": 3, "weights": { "temper": 0.01, "curiosity": 0.01 } },
+        "look_around": { "base": 1.5, "weights": { "curiosity": 0.02 } },
+        "rest_sit": { "base": 1.2, "weights": { "temper": -0.02 }, "boost": { "lowEnergy": 3 } },
+        "zoomies": {
+          "base": 0.5,
+          "weights": { "temper": 0.03, "bravery": 0.01 },
+          "cooldownMs": 240000,
+          "requires": { "minEnergy": 40, "minHappiness": 40, "motion": true },
+          "boost": { "highEnergy": 1.5 }
+        },
+        "peek_edge": { "base": 0.5, "weights": { "curiosity": 0.02, "bravery": -0.01 }, "cooldownMs": 360000 },
+        "high_five_offer": {
+          "base": 0.4,
+          "weights": { "sociability": 0.015, "affection": 0.015 },
+          "cooldownMs": 1200000,
+          "requires": { "userActive": true, "cursor": "near" }
+        },
+        "mood_express": {
+          "base": 0.8,
+          "weights": { "affection": 0.01, "temper": 0.01 },
+          "cooldownMs": 900000,
+          "requires": { "moods": ["happy", "sad", "exhausted", "hungry"] }
+        },
+        "time_routine": { "base": 6, "weights": { "sociability": 0.02 }, "requires": { "newTimeSlot": true } },
+        "dance": {
+          "base": 1.5,
+          "weights": { "sociability": 0.02, "temper": 0.01 },
+          "cooldownMs": 150000,
+          "requires": { "apps": ["music"], "minEnergy": 25 }
+        },
+        "retreat_corner": { "base": 4, "cooldownMs": 120000, "requires": { "apps": ["gaming", "video"] } },
+        "cursor_stalk": {
+          "base": 1.2,
+          "weights": { "curiosity": 0.04, "bravery": 0.01 },
+          "cooldownMs": 45000,
+          "requires": { "skill": "cursor_play", "cursor": "still" }
+        },
+        "cursor_chase": {
+          "base": 1.5,
+          "weights": { "temper": 0.04, "curiosity": 0.015 },
+          "cooldownMs": 90000,
+          "requires": { "skill": "cursor_play", "cursor": "fast", "minEnergy": 35, "motion": true }
+        },
+        "cursor_follow": {
+          "base": 1,
+          "weights": { "affection": 0.04, "sociability": 0.015 },
+          "cooldownMs": 120000,
+          "requires": { "skill": "cursor_play", "cursor": "slow", "minDims": { "affection": 60 } }
+        },
+        "cursor_shy": {
+          "base": 2,
+          "weights": { "bravery": -0.05 },
+          "cooldownMs": 60000,
+          "requires": { "skill": "cursor_play", "cursor": "approaching", "maxDims": { "bravery": 30 } }
+        },
+        "typing_cheer": {
+          "base": 1,
+          "weights": { "sociability": 0.02 },
+          "cooldownMs": 600000,
+          "requires": { "skill": "presence_sense", "typing": true }
+        },
+        "climb": {
+          "base": 0.6,
+          "weights": { "bravery": 0.02, "curiosity": 0.01 },
+          "cooldownMs": 180000,
+          "requires": { "skill": "climb_walls", "minEnergy": 30 }
+        },
+        "perch_window": {
+          "base": 0.7,
+          "weights": { "curiosity": 0.02, "bravery": 0.01 },
+          "cooldownMs": 150000,
+          "requires": { "skill": "window_perching", "window": true }
+        },
+        "flow_talent": {
+          "base": 0.5,
+          "weights": { "bravery": 0.01, "temper": 0.01, "sociability": 0.01 },
+          "cooldownMs": 720000,
+          "requires": { "skill": "flow_talent", "minEnergy": 50, "minHappiness": 50, "userActive": true }
+        }
+      }
+    }
   }
 }
