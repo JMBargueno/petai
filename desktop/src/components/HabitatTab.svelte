@@ -9,12 +9,13 @@
     type HabitatFurniture,
     type HabitatRoom,
   } from '../lib/api';
-  import { furnitureUrl } from '@pockai/scene';
+  import { backdropUrl, furnitureUrl } from '@pockai/scene';
   import IsoRoomView from './IsoRoomView.svelte';
   import { AsyncState, Badge, Button, ConfirmDialog, EmptyState, Notice, SectionHeader, Segmented } from './ui';
   import { friendlyError } from '../lib/ui/errors';
   import { startHabitatExitDrag } from '../lib/habitatExitDrag';
-  import { Home, Pencil, Check, RotateCw, Trash2 } from 'lucide-svelte';
+  import { Home, Pencil, Check, RotateCw, Trash2, Mountain } from 'lucide-svelte';
+  import { habitatBackdrop } from '../lib/habitatBackdrop';
 
   const dispatch = createEventDispatcher();
 
@@ -274,6 +275,17 @@
         on:petPress={onPetPress}
       />
 
+      {#if !editing && backdropUrl(activeRoom.id)}
+        <button
+          class="btn btn--sm backdrop-toggle"
+          aria-pressed={$habitatBackdrop === 'painted'}
+          title={$habitatBackdrop === 'painted' ? 'Ver solo el cielo' : 'Ver el paisaje pintado alrededor de la sala'}
+          on:click={() => habitatBackdrop.update((m) => (m === 'painted' ? 'plain' : 'painted'))}
+        >
+          <Mountain size={14} /> {$habitatBackdrop === 'painted' ? 'Paisaje' : 'Solo cielo'}
+        </button>
+      {/if}
+
       {#if canEdit}
         <div class="room-tools">
           {#if editing && selectedItem}
@@ -480,6 +492,17 @@
     outline-color: var(--accent);
   }
 
+  .backdrop-toggle {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    z-index: calc(var(--z-sticky) + 2);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgb(255 255 255 / 0.9);
+    color: var(--on-color);
+  }
   .room-tools {
     position: absolute;
     right: 8px;

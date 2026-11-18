@@ -273,12 +273,18 @@ Un único renderizador para escritorio, Android e iOS, que sustituye a la spec `
   - `weather.ts`: del código WMO de Open-Meteo sale el aspecto (nubes, lluvia, nieve, niebla, tormenta).
   - `Ambience.ts`: cielo, sol, luna, estrellas y nubes detrás de la sala; en las salas exteriores (`exterior` en `roomStyles.ts`) la lluvia y la nieve caen también por delante. La sala recibe un velo de luz y sus ventanas toman el color del cielo. Con movimiento reducido todo queda estático.
   - Solo se dibuja cuando hay sala: el Pockai suelto sigue con fondo transparente.
+  - **Modo híbrido** (`backdrops.ts`): cada sala puede tener un paisaje pintado (`shared/assets/habitat-backdrops/<sala>.webp`) que va entre las nubes y la precipitación, con el cielo transparente para que se vea el vivo. Recibe el mismo velo de la hora que la sala (color `tint` con `tintAlpha`, nunca un tinte multiplicativo), bruma de lejanía y blanco con nieve. Sin archivo, la sala se ve solo con cielo.
+- La vida de la sala (`room/roomLife.ts`), con la misma hora y clima:
+  - Luces (`glows` de cada estilo en `roomStyles.ts` y `FURNITURE_LIGHTS` para muebles como la lámpara de cristal o el farol de piedra): se encienden al anochecer o en días muy cubiertos, en modo aditivo por encima del velo; bajan al 30 % si el Pockai duerme. Reflejo de luna en el estanque.
+  - Clima dentro: gotas que resbalan por los cristales (`panes`), escarcha con frío, charcos y ondas en las salas exteriores, niebla baja, nieve sobre lo que está a la intemperie (`snow`) y destello del rayo en las ventanas.
+  - Partículas (`life`): polvo (Sala), mariposas, luciérnagas y hojas (Jardín), pétalos (Santuario) y polvo de estrellas (Cita Final). No salen en modo edición ni con movimiento reducido.
+- Fuera de la escena (Hábitat del Nexo y salita de Visitas, en Svelte) se usa `desktop/src/lib/ambience-2d.ts`: las mismas funciones puras (`skyAt`, `applyWeather`, `lookFromWmo`, `mix`) dibujadas en Canvas 2D, para que todas las vistas de hábitat coincidan en hora, luz y clima.
 
 **Qué queda nativo:** menús, pantallas, compras y llamadas a la API. La app nativa traduce los eventos de la escena a la API.
 
 **Protocolo** (`shared/scene/src/protocol.ts`): mensajes JSON tipados.
 - Entrada: `setPet`, `setHabitat`, `setTheme`, `setMode`, `playClip`.
-- `setAmbience { weather: { code, temperature }, sun: { sunrise, sunset }, clock }`: clima y sol reales (de `GET /environmental/status`). Todos los campos son opcionales; `clock` fuerza la hora (demo y pruebas). `setNight` queda para "luces apagadas porque duerme".
+- `setAmbience { weather: { code, temperature }, sun: { sunrise, sunset }, clock, backdrop }`: clima y sol reales (de `GET /environmental/status`). Todos los campos son opcionales; `clock` fuerza la hora (demo y pruebas) y `backdrop` (`painted` por defecto o `plain`) enciende o apaga el paisaje pintado del modo híbrido. `setNight` queda para "luces apagadas porque duerme".
 - Salida: `ready`, `petTapped`, `furnitureMoved`, `petDraggedOut`.
 
 **Android** (`mobile/android`):

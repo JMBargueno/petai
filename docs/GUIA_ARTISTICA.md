@@ -308,6 +308,12 @@ Tabla orientativa: los valores exactos (escala total, cabeza, apéndices y ojos)
 - Cada sala tiene su tema (pared, suelo, zócalo, ventana y luz) y su variante de noche.
 - **Muebles:** SVG isométrico con huella `W×D` en celdas, de suelo o de pared, con 2 orientaciones dibujadas (las otras 2 salen por espejo). El punto de anclaje es el vértice superior de la celda (x, y) de la huella.
 - **Ni emoji ni iconos** como muebles.
+- **Modo híbrido (fondo pintado):** detrás de la sala va un panorama pintado con Nano Banana (`scripts/art/habitat-backdrops/generate.mjs`) en el mismo pixel art que el Hábitat del Nexo.
+  - El cielo se pinta de **magenta plano #FF00FF** y `import.mjs` lo vuelve transparente (relleno desde los bordes, desfringe de 2 px y magenta suelto pasado a rosa): así el cielo es siempre el vivo y el paisaje nunca lleva una hora horneada. Nada magenta ni violeta en el paisaje.
+  - Luz neutra de día: la hora la pone el juego con el mismo velo que la sala.
+  - La sala tapa el centro: lo interesante va en los tercios izquierdo y derecho y en el horizonte (a media altura). Formato 16:9, unos 70 KB en `.webp`.
+  - Los fondos del Nexo siguen la misma regla (`scripts/art/clan-habitat/generate.mjs --keyed`); lo que vive en el cielo (aurora, haces de luz) se dibuja por código.
+- **Luz y clima dentro de la sala:** las fuentes de luz (apliques, farolillos, lámparas) se declaran como `glows` del estilo o en `FURNITURE_LIGHTS` (muebles), y se encienden solas al anochecer. Una sala nueva debería declarar también sus cristales (`panes`), su nieve si tiene parte a la intemperie (`snow`) y su vida (`life`). Ver `shared/scene/src/room/roomLife.ts`.
 
 ### 7.5 Pixel art (sustituye al vector de §7.1 y §7.3)
 

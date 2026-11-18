@@ -50,8 +50,36 @@ export interface Twinkle {
   phase: number;
 }
 
+/**
+ * Fuente de luz de la sala (en píxeles de la sala). `lamp` se enciende al caer la noche (y baja
+ * cuando el Pockai duerme); `moon` es un reflejo de luna que solo se ve de noche y despejado.
+ * `pool`: charco de luz en el suelo, centrado en ese punto.
+ */
+export interface Glow {
+  x: number;
+  y: number;
+  r: number;
+  color: number;
+  kind: 'lamp' | 'moon';
+  pool?: { x: number; y: number; rx: number };
+}
+
+/** Cristal de una ventana (polígono en píxeles de la sala): ahí resbala la lluvia y se escarcha. */
+export type Pane = number[];
+
+/** Vida ambiental de cada sala (`roomLife.ts` decide cuándo sale cada una según hora y clima). */
+export type ParticleKind = 'dust' | 'firefly' | 'butterfly' | 'leaf' | 'petal' | 'stardust';
+
 export interface RoomStyle {
   id: StyleId;
+  /** Luces propias de la carcasa (apliques, farolillos, portal…). */
+  glows?(W: number, H: number, holes: Set<string>): Glow[];
+  /** Cristales de las ventanas. */
+  panes?(W: number, H: number): Pane[];
+  /** Manto de nieve sobre lo que queda a la intemperie (`amount` de 0 a 1). */
+  snow?(g: Graphics, W: number, H: number, holes: Set<string>, amount: number): void;
+  /** Partículas que viven en la sala. */
+  life?: ParticleKind[];
   /** Píxeles que sobresalen por encima de las paredes (copa del árbol…). */
   topExtra: number;
   /** Píxeles que cuelgan por debajo de la losa (cristales…). */
@@ -451,6 +479,41 @@ function lightPatch(c: ShellCtx, side: 0 | 1, p0: number, p1: number): void {
   g.poly(pts).fill({ color: hex(t.light), alpha: 0.22 });
 }
 
+const BRASS = 0xc9a14a;
+const SHADE = 0xfff1cf;
+const SCONCE_Z = 60;
+
+/** Ventanas de la Sala: [lado, desde, hasta] (las mismas que dibuja `drawInterior`). */
+function interiorWindows(W: number, H: number): [0 | 1, number, number][] {
+  const wx0 = W * 0.55;
+  const ly0 = H * 0.3;
+  return [
+    [1, wx0, Math.min(W - 1, wx0 + 3)],
+    [0, ly0, ly0 + 2],
+  ];
+}
+
+/** Apliques de pared de la Sala: uno entre la ventana y el cuadro, otro junto a la otra ventana. */
+function interiorSconces(W: number, H: number): [0 | 1, number][] {
+  return [
+    [0, H * 0.3 + 2.9],
+    [1, W * 0.55 - 1.3],
+  ];
+}
+
+/** Aplique: placa de latón, brazo y pantalla de tela con la bombilla asomando. */
+function drawSconce(c: ShellCtx, side: 0 | 1, pos: number): void {
+  const { g } = c;
+  const [px, py] = onWall(side, pos, SCONCE_Z - 8);
+  g.rect(px - 2.5, py - 4, 5, 9).fill(shade(BRASS, side === 0 ? 0 : -0.18)).stroke({ width: 1.2, color: LINE });
+  const [sx, sy] = onWall(side, pos, SCONCE_Z, 0.35);
+  line(g, [px, py, sx, sy + 5], 2, shade(BRASS, -0.25));
+  g.poly([sx - 4, sy - 5, sx + 4, sy - 5, sx + 6.5, sy + 4, sx - 6.5, sy + 4])
+    .fill(side === 0 ? SHADE : shade(SHADE, -0.08))
+    .stroke({ width: 1.5, color: LINE });
+  g.ellipse(sx, sy + 4.5, 3, 1.4).fill(0xffd27a);
+}
+
 function drawInterior(c: ShellCtx): void {
   const { g, t, W, H, holes } = c;
   const trim = hex(t.trim);
@@ -496,13 +559,11 @@ function drawInterior(c: ShellCtx): void {
   band(c, WALL_H - 6, WALL_H, shade(trim, 0.55), shade(trim, 0.4));
   wallLine(c, WALL_H - 6, 1, LINE, 0.4);
 
-  // Ventanas (una en cada pared) y un cuadro
-  const wx0 = W * 0.55;
-  const wx1 = Math.min(W - 1, wx0 + 3);
+  // Ventanas (una en cada pared), apliques y un cuadro
+  const [[, wx0, wx1], [, ly0, ly1]] = interiorWindows(W, H);
   windowOn(c, 1, wx0, wx1, 44, 74);
-  const ly0 = H * 0.3;
-  const ly1 = ly0 + 2;
   windowOn(c, 0, ly0, ly1, 44, 74);
+  for (const [side, pos] of interiorSconces(W, H)) drawSconce(c, side, pos);
   const fy = H * 0.72;
   g.poly([...onWall(0, fy, 76), ...onWall(0, fy + 1.3, 76), ...onWall(0, fy + 1.3, 52), ...onWall(0, fy, 52)])
     .fill(shade(trim, -0.15))
@@ -1258,18 +1319,160 @@ function drawCelestial(c: ShellCtx): void {
   wallThickness(c, shade(gold, 0.15), shadeHex(t.wall, -0.1));
 }
 
+// ───────────────────────── Luces, ventanas y nieve de cada sala ─────────────────────────
+// Lo que `roomLife.ts` anima por encima de la carcasa. Las posiciones salen de las mismas
+// funciones que dibujan la carcasa, así la luz cae justo en el aplique o el farolillo.
+
+const WARM = 0xffc46b;
+const SNOW = 0xf4f8ff;
+
+const paneOf = (side: 0 | 1, p0: number, p1: number, z0: number, z1: number): Pane => [
+  ...onWall(side, p0, z1),
+  ...onWall(side, p1, z1),
+  ...onWall(side, p1, z0),
+  ...onWall(side, p0, z0),
+];
+
+function interiorGlows(W: number, H: number): Glow[] {
+  return interiorSconces(W, H).map(([side, pos]) => {
+    const [x, y] = onWall(side, pos, SCONCE_Z, 0.35);
+    // El charco de luz cae en la pared y el suelo de debajo, un poco hacia dentro.
+    const [fx, fy] = side === 0 ? P(1.2, pos) : P(pos, 1.2);
+    return { x, y: y + 2, r: 46, color: WARM, kind: 'lamp', pool: { x: fx, y: fy, rx: 34 } } satisfies Glow;
+  });
+}
+
+function interiorPanes(W: number, H: number): Pane[] {
+  return interiorWindows(W, H).map(([side, p0, p1]) => paneOf(side, p0, p1, 44, 74));
+}
+
+/** Celdas de un estanque (huecos rodeados de suelo). */
+function pondCells(W: number, H: number, holes: Set<string>): [number, number][] {
+  const open = openHoles(W, H, holes);
+  return [...holes].filter((k) => !open.has(k)).map((k) => k.split(',').map(Number) as [number, number]);
+}
+
+function gardenGlows(W: number, H: number, holes: Set<string>): Glow[] {
+  // Reflejo de la luna en el estanque: una sola mancha alargada en su centro.
+  const cells = pondCells(W, H, holes);
+  if (!cells.length) return [];
+  const cx = cells.reduce((s, [x]) => s + x + 0.5, 0) / cells.length;
+  const cy = cells.reduce((s, [, y]) => s + y + 0.5, 0) / cells.length;
+  const p = toScreen(cx, cy, -POND);
+  return [{ x: p.x, y: p.y, r: 16, color: 0xdfe8ff, kind: 'moon' }];
+}
+
+function gardenSnow(g: Graphics, W: number, H: number, holes: Set<string>, amount: number): void {
+  const a = Math.min(1, amount * 1.2);
+  // Césped: manto a parches que se cierra con la intensidad
+  for (let x = 0; x < W; x++) {
+    for (let y = 0; y < H; y++) {
+      if (holes.has(`${x},${y}`)) continue;
+      // Capa base uniforme (sin damero) y montoncitos sueltos que la hacen irregular
+      g.poly(quad(x, y, x + 1, y + 1)).fill({ color: SNOW, alpha: 0.35 + 0.5 * a });
+      const h = cellHash(x, y, 141);
+      if (h < 0.45) {
+        const s = toScreen(x + 0.25 + 0.5 * cellHash(x, y, 142), y + 0.25 + 0.5 * h);
+        g.ellipse(s.x, s.y, 6 + 4 * a, 2.5 + 2 * a).fill({ color: 0xffffff, alpha: 0.6 + 0.3 * a });
+      }
+    }
+  }
+  // Seto: copete blanco siguiendo los bultos
+  for (const side of [0, 1] as const) {
+    const len = side === 0 ? H : W;
+    const top: number[] = [];
+    for (let i = 0; i <= len * 6; i++) {
+      const pos = (i / (len * 6)) * len;
+      top.push(...onWall(side, pos, hedgeZ(Math.min(pos, len - 1e-6), side) - 1));
+    }
+    line(g, top, 2 + 4 * a, SNOW, 0.95);
+  }
+  // Copa del árbol
+  for (const [x, y, r] of [
+    [8, -98, 26],
+    [-9, -102, 24],
+    [2, -112, 22],
+  ]) {
+    g.ellipse(x, y - r * 0.62, r * 0.72, r * 0.3 * (0.6 + 0.4 * a)).fill(SNOW);
+  }
+}
+
+/** Farolillos del Santuario (los mismos de `drawShrine`). */
+function shrineLanterns(W: number): number[] {
+  return [2.2, W / 2 - 1.6];
+}
+
+function shrineGlows(W: number): Glow[] {
+  return shrineLanterns(W).map((pos) => {
+    const [tx, ty] = onWall(1, pos, BEAM0, 0.15);
+    const [fx, fy] = P(pos + 0.2, 1.4);
+    return { x: tx, y: ty + 16, r: 40, color: 0xff8a4a, kind: 'lamp', pool: { x: fx, y: fy, rx: 26 } } satisfies Glow;
+  });
+}
+
+function shrinePanes(W: number): Pane[] {
+  return [rightWallArc(W * 0.75, 47, 1.25, 0, Math.PI * 2, 24)];
+}
+
+function shrineSnow(g: Graphics, W: number, H: number, holes: Set<string>, amount: number): void {
+  // Solo el jardín seco está a la intemperie
+  for (const k of openHoles(W, H, holes)) {
+    const [x, y] = k.split(',').map(Number);
+    if (cellHash(x, y, 151) < amount * 1.3) g.poly(quad(x, y, x + 1, y + 1, -ZEN)).fill({ color: SNOW, alpha: 0.85 });
+  }
+}
+
+function celestialGlows(W: number, H: number): Glow[] {
+  const { cx } = portalOf(W);
+  const portal = toScreen(cx, 0, 38);
+  const rune = toScreen(W / 2, H / 2);
+  return [
+    { x: portal.x, y: portal.y, r: 44, color: 0xa35ad0, kind: 'lamp' },
+    { x: rune.x, y: rune.y, r: 30, color: 0xffd86b, kind: 'lamp', pool: { x: rune.x, y: rune.y, rx: 52 } },
+  ];
+}
+
 // ───────────────────────── Registro ─────────────────────────
 
 const STYLES: Record<StyleId, RoomStyle> = {
-  interior: { id: 'interior', topExtra: 0, bottomExtra: 0, draw: drawInterior },
-  garden: { id: 'garden', topExtra: 42, bottomExtra: 0, exterior: true, draw: drawGarden, twinkles: pondGlints },
-  shrine: { id: 'shrine', topExtra: 0, bottomExtra: 0, draw: drawShrine },
+  interior: {
+    id: 'interior',
+    topExtra: 0,
+    bottomExtra: 0,
+    draw: drawInterior,
+    glows: interiorGlows,
+    panes: interiorPanes,
+    life: ['dust'],
+  },
+  garden: {
+    id: 'garden',
+    topExtra: 42,
+    bottomExtra: 0,
+    exterior: true,
+    draw: drawGarden,
+    twinkles: pondGlints,
+    glows: gardenGlows,
+    snow: gardenSnow,
+    life: ['firefly', 'butterfly', 'leaf'],
+  },
+  shrine: {
+    id: 'shrine',
+    topExtra: 0,
+    bottomExtra: 0,
+    draw: drawShrine,
+    glows: (W) => shrineGlows(W),
+    panes: (W) => shrinePanes(W),
+    snow: shrineSnow,
+    life: ['petal'],
+  },
   celestial: {
     id: 'celestial',
     topExtra: 0,
     bottomExtra: 18,
     ownSky: true,
     draw: drawCelestial,
+    glows: celestialGlows,
+    life: ['stardust'],
     twinkles: (W, H) =>
       celestialStars(W, H)
         .filter((s) => s.big || s.r > 1.3)
