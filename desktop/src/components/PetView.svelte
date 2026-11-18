@@ -604,6 +604,9 @@
           frame.sx, frame.sy, frame.sw, frame.sh,
           0, 0, PET_SIZE, PET_SIZE
         );
+        // Efectos del patrón (Textura del Éter) y de la variante shiny, sobre el cuerpo y bajo las prendas.
+        const fxLayer = reducedMotion ? null : bakedSheet.fxFrame(frame, time);
+        if (fxLayer) ctx.drawImage(fxLayer, 0, 0, PET_SIZE, PET_SIZE);
         drawWorn(ctx, wornSet, 'front', frameState.name, frameState.frame, wornTime);
 
         // Efecto Flash blanco en daño
@@ -613,25 +616,6 @@
           ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
           ctx.fillRect(0, 0, PET_SIZE, PET_SIZE);
           ctx.restore();
-        }
-
-        // Efecto Shiny: Franja especular animada cada 4s
-        if (isShiny) {
-          const shinyPeriod = (time % 4000) / 4000; // 0.0 a 1.0 cada 4s
-          if (shinyPeriod < 0.35) { // La franja cruza en 1.4s
-            const progress = shinyPeriod / 0.35;
-            const bandX = progress * 240 - 60;
-
-            ctx.save();
-            ctx.globalCompositeOperation = 'source-atop';
-            const grad = ctx.createLinearGradient(bandX, 0, bandX + 40, PET_SIZE);
-            grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-            grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.45)');
-            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, PET_SIZE, PET_SIZE);
-            ctx.restore();
-          }
         }
       }
     }

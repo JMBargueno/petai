@@ -19,13 +19,8 @@ const ANCHORS = import.meta.glob('../../assets/species/**/anchors.json', { eager
 const ACC_PNGS = import.meta.glob('../../assets/accessories/*/{s,m,l}.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const ACC_METAS = import.meta.glob('../../assets/accessories/*/meta.json', { eager: true, import: 'default' }) as Record<string, AccessoryMeta>;
 
-import stripesPng from '../../assets/patterns/stripes.png';
-import spotsPng from '../../assets/patterns/spots.png';
-import scalesPng from '../../assets/patterns/scales.png';
-import crystalPng from '../../assets/patterns/crystal.png';
-import galaxyPng from '../../assets/patterns/galaxy.png';
-import gradientPng from '../../assets/patterns/gradient.png';
-import auroraPng from '../../assets/patterns/aurora.png';
+// Patrones de piel: todos los PNG de la carpeta, por id.
+const PATTERN_PNGS = import.meta.glob('../../assets/patterns/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 export interface SheetAssets {
   base: string;
@@ -56,15 +51,9 @@ function buildSheets(): Record<string, Partial<Record<Stage | 'default', SheetAs
 
 const SHEETS = buildSheets();
 
-export const PATTERNS: Record<string, string> = {
-  stripes: stripesPng,
-  spots: spotsPng,
-  scales: scalesPng,
-  crystal: crystalPng,
-  galaxy: galaxyPng,
-  gradient: gradientPng,
-  aurora: auroraPng,
-};
+export const PATTERNS: Record<string, string> = Object.fromEntries(
+  Object.entries(PATTERN_PNGS).map(([path, url]) => [path.split('/').pop()!.replace('.png', ''), url]),
+);
 
 export const FALLBACK_SPECIES = 'ignisaur';
 

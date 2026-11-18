@@ -88,6 +88,8 @@ export const ORIGIN_CARDS = [
 export const PATTERN_DEFS: Record<string, string> = {
   scales: $localize`:@@lore.appear.def.scales:Placas de Datos: firewalls ancestrales y armaduras lógicas tejidas en la piel.`,
   crystal: $localize`:@@lore.appear.def.crystal:Cuarzo Lógico: datos tan puros que se solidifican en estructuras geométricas translúcidas.`,
+  circuit: $localize`:@@lore.appear.def.circuit:Trazas Vivas: las pistas por las que viajaba el código que lo formó, aún con corriente.`,
+  storm: $localize`:@@lore.appear.def.storm:Sobrecarga: la tormenta eléctrica de un servidor al límite, atrapada bajo la piel.`,
   galaxy: $localize`:@@lore.appear.def.galaxy:Vacío Abisal: una ventana literal al espacio profundo entre servidores.`,
   aurora: $localize`:@@lore.appear.def.aurora:Viento Solar: corrientes magnéticas vivas que fluyen en tiempo real sobre su lomo.`,
 };
