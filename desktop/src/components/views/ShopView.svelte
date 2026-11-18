@@ -1,6 +1,7 @@
 <script lang="ts">
   /** Tienda › Tienda: catálogo de objetos que se compran con monedas. */
   import { createEventDispatcher } from 'svelte';
+  import ItemIcon from '../ItemIcon.svelte';
   import { Button, CurrencyPill, EmptyState, ListRow, SectionHeader } from '../ui';
 
   export let shopItems: any[] = [];
@@ -21,7 +22,8 @@
     {#each shopItems as item (item.id)}
       {@const have = owned(item.id, inventory)}
       {@const short = coins < item.priceCoins}
-      <ListRow icon="food" title={item.name} sub="{item.description}{have ? ` · Tienes ${have}` : ''}" wrap>
+      <ListRow title={item.name} sub="{item.description}{have ? ` · Tienes ${have}` : ''}" wrap>
+        <ItemIcon slot="lead" id={item.id} />
         <svelte:fragment slot="end">
           <CurrencyPill kind="coins" amount={item.priceCoins} plain />
           <Button

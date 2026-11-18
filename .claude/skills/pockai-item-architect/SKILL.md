@@ -26,7 +26,7 @@ La norma es `docs/GUIA_ARTISTICA.md` §7.7 (visual, con las rampas de §7.5 y §
 **Estado del sistema:**
 - Los datos funcionan de punta a punta: `foods.json` → seed → `Item` → tienda, inventario, cofres, minijuegos, hallazgos y regalos.
 - Tipos con mecánica: `food` (alimentar), `medicine` (curar) y `evolution` (la Forma Final, un único objeto). **Nada más.** Un juguete (`toy`) o un ingrediente de `recipes.json` no hacen nada hoy: si te piden uno, dilo y propón construir antes la mecánica.
-- El arte de objetos tiene pipeline (`scripts/sprites/items/import.mjs`, `pnpm generate:items`), pero **los clientes aún no pintan los iconos**: la tienda y el inventario enseñan un icono genérico. Cablearlos es otra tarea; dilo al cerrar.
+- El arte de objetos tiene pipeline (`scripts/sprites/items/import.mjs`, `pnpm generate:items`) y los 11 objetos de partida tienen icono. **El escritorio los pinta solo** en la tienda, en los chips de «Alimentar» y al abrir un cofre (`desktop/src/components/ItemIcon.svelte`); un objeto sin PNG cae al icono genérico. Web y Android aún no los pintan.
 
 ## Flujo
 
@@ -95,4 +95,4 @@ Resume al usuario:
 - Archivos tocados y resultado de las validaciones; avisos de `check_items.mjs` que dejes sin resolver, y por qué.
 - La hoja de contactos revisada, y cuántas imágenes de Nano Banana ha costado.
 - El paso que queda fuera del repo: ejecutar el seed (`backend/prisma/seed.ts`) en cada entorno para que el objeto exista como `Item`. El precio solo se fija al crearlo; después se cambia desde el panel de admin.
-- Lo que no se ve todavía: los clientes no pintan el icono hasta que se cablee.
+- Dónde se ve: en el escritorio, en Tienda, en «Alimentar» y al abrir un cofre. Para comprobarlo, `preview_start` con `pockai-desktop-demo`; la demo solo lista los objetos de `desktop/vite.mock.ts`, así que añade ahí el nuevo si quieres verlo.
