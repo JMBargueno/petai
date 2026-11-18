@@ -307,7 +307,7 @@ Tabla orientativa: los valores exactos (escala total, cabeza, apéndices y ojos)
 
 ### 7.5 Pixel art (sustituye al vector de §7.1 y §7.3)
 
-Los Pockais son **pixel art procedural**: `scripts/sprites/pixel/` los rasteriza a partir de formas, sin editor ni IA. La interfaz no cambia: sigue siendo vectorial y de pegatina. Solo son pixel art las criaturas, los huevos, sus partículas y, más adelante, las salas. La cámara, la luz y la vista en 3/4 son las de §7.4.
+Los Pockais son **pixel art** en dos tiempos. `scripts/sprites/pixel/` rasteriza un **boceto procedural** a partir de formas, que fija las poses. El **arte final** lo dibuja una IA de imagen (Nano Banana) a partir de ese boceto y de la hoja objetivo de la especie, y `scripts/sprites/concept/` lo importa a 64 px, con su color clasificado en primario, secundario y acento para que cada mascota conserve su paleta. Hoy solo el Leviatín tiene arte final; el resto usa el boceto. La interfaz no cambia: sigue siendo vectorial y de pegatina. Solo son pixel art las criaturas, los huevos, sus partículas y, más adelante, las salas. La cámara, la luz y la vista en 3/4 son las de §7.4.
 
 **Frame**
 - Se dibuja en un frame nativo de **64×64 px** y se exporta a ×2 (128×128), que es el tamaño que ya esperan `anim.json`, el generador y las apps.

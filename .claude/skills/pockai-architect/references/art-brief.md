@@ -1,6 +1,6 @@
 # Brief y dibujo del arte (pixel art, 3/4, una geometría por etapa)
 
-Los sprites **no se generan con IA** ni se dibujan en un editor: son pixel art procedural. Cada especie es un `PixelSpecies` en `scripts/sprites/pixel/species.ts`, con una geometría por etapa, y un rasterizador la convierte en píxeles. `pnpm generate:sprites` produce las hojas `shared/assets/species/<id>/…`, las anclas de accesorio y las vistas previas `sprites/<id>_*.svg`.
+Este documento cubre el **boceto procedural**: cada especie es un `PixelSpecies` en `scripts/sprites/pixel/species.ts`, con una geometría por etapa, y un rasterizador la convierte en píxeles. El boceto fija las poses y la disposición; el **arte final** lo dibuja una IA de imagen a partir de él y se importa (`target-sheet-pipeline.md`). `pnpm generate:sprites` produce las hojas `shared/assets/species/<id>/…`, las anclas de accesorio y las vistas previas `sprites/<id>_*.svg`.
 
 Toma como referencia de código `IGNISAUR`, `AXOLUNAR` y `FLORABUD` en ese archivo. Las reglas visuales están en `pixel-style.md` (estilo y etapas) y en `iso-style.md` (cámara, luz y cara en 3/4).
 

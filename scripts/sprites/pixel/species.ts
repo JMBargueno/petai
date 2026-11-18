@@ -10,9 +10,12 @@
  *
  * La pose (`Pose`, la misma de `poses.ts`) se aplica a la geometría antes de rasterizar.
  */
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Pose, Stage } from '../species';
 import { drawFace, drawFx, EyeSpec } from './face';
 import { FLOOR, Grid, hex, mul, N, rotateAt, scaleAt, TEX, translate } from './raster';
+import type { Rgb, Role, Tone } from './raster';
 
 /** Elipse: [cx, cy, rx, ry]. */
 type E = [number, number, number, number];
@@ -53,9 +56,20 @@ interface Hooks {
   front?: (g: Grid, s: StageSpec, p: Pose) => void;
 }
 
+/** Una etapa de arte importado: 10 poses clave de 64×64, un carácter por píxel, y su leyenda. */
+export interface ImportedStage {
+  legend: ({ role: Role; tone: Tone } | { lit: Rgb })[];
+  frames: string[];
+}
+
 export interface PixelSpecies {
   id: string;
   stages: Record<Stage, StageSpec & Hooks>;
+  /**
+   * Arte importado de una hoja objetivo (`scripts/sprites/pixel/imported/<id>.json`). Si existe, el
+   * dibujo sale de sus píxeles y `stages` solo se usa para colocar efectos.
+   */
+  imported?: Record<Stage, ImportedStage>;
 }
 
 const q = (v: number, step: number) => Math.round(v / step) * step;
@@ -2166,8 +2180,79 @@ export interface Drawn {
   height: number;
 }
 
+// Arte importado: una especie con `imported/<id>.json` se dibuja con sus píxeles.
+for (const sp of PIXEL_SPECIES) {
+  const file = join(__dirname, 'imported', `${sp.id}.json`);
+  if (existsSync(file)) sp.imported = JSON.parse(readFileSync(file, 'utf8')).stages;
+}
+
 /** Dibuja un frame: geometría de la etapa + pose + cara + efectos. */
+/**
+ * Pose clave de una hoja importada, en el orden de la hoja de contactos:
+ * 0 reposo, 1 reposo (2), 2 andar, 3 comer, 4 alegre, 5 dormir, 6 atacar, 7 triste, 8 celebrar, 9 golpe.
+ */
+function keyPose(p: Pose): number {
+  if (p.food >= 0) return 3;
+  if (p.fx.some((f) => f.k === 'zzz')) return 5;
+  if (p.eyes === 'x') return 9;
+  if (p.eyes === 'star' || p.eyes === 'heart') return 8;
+  if (p.eyes === 'sad' || p.eyes === 'cry' || p.tears > 0) return 7;
+  if (p.eyes === 'angry') return 6;
+  if (p.eyes === 'happy') return 4;
+  if (p.eyes === 'closed' || p.eyes === 'half') return 5;
+  if (Math.abs(p.leg) > 0.05) return 2;
+  return p.appRot > 0 ? 1 : 0;
+}
+
+/** Dibuja un frame de arte importado: la pose clave que toca, movida en píxeles enteros. */
+function drawImported(art: ImportedStage, p: Pose): Drawn {
+  const g = new Grid();
+  p.fx.filter((f) => f.b).forEach((f) => drawFx(g, f));
+  const frame = art.frames[keyPose(p)] ?? art.frames[0];
+  let x0 = N;
+  let x1 = -1;
+  let y0 = N;
+  let y1 = -1;
+  for (let i = 0; i < N * N; i++) {
+    if (frame[i] === '.') continue;
+    const x = i % N;
+    const y = Math.floor(i / N);
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+  }
+  // El desplazamiento de la pose, en píxeles enteros y sin sacar la criatura del frame.
+  const dx = Math.max(-x0, Math.min(N - 1 - x1, Math.round(p.dx / 2)));
+  const dy = Math.max(-y0, Math.min(N - 1 - y1, Math.round(p.dy / 2)));
+  for (let i = 0; i < N * N; i++) {
+    const ch = frame[i];
+    if (ch === '.') continue;
+    const e = art.legend[ch.charCodeAt(0) - 48];
+    const x = (i % N) + dx;
+    const y = Math.floor(i / N) + dy;
+    if ('lit' in e) g.put(x, y, e.lit, 4);
+    else g.paint(x, y, 4, e.role, e.tone);
+  }
+  p.fx.filter((f) => !f.b).forEach((f) => drawFx(g, f));
+  // Anclas de accesorio aproximadas, a partir de la silueta: la cabeza es lo más alto.
+  let hx = 0;
+  let hn = 0;
+  for (let x = 0; x < N; x++) for (let y = y0; y <= y0 + 2; y++) if (frame[y * N + x] !== '.') { hx += x; hn++; }
+  const headX = Math.round(hx / Math.max(1, hn)) + dx;
+  const top = y0 + dy;
+  const h = y1 - y0 + 1;
+  const anchors: Anchors = {
+    head: [headX, top],
+    face: [headX + 2, top + Math.round(h * 0.16)],
+    neck: [headX - 1, top + Math.round(h * 0.32)],
+    back: [x0 + dx + Math.round((x1 - x0) * 0.3), top + Math.round(h * 0.5)],
+  };
+  return { grid: g, anchors, height: FLOOR - y0 };
+}
+
 export function drawPockai(sp: PixelSpecies, st: Stage, p: Pose): Drawn {
+  if (sp.imported) return drawImported(sp.imported[st], p);
   // Una pose con salto, golpe o embestida puede sacar la criatura del frame. En ese caso se vuelve a
   // dibujar desplazada lo justo para que quepa entera, con 1 px de margen para el contorno.
   const first = drawOnce(sp, st, p, 0, 0);

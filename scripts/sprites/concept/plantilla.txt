@@ -1,0 +1,29 @@
+Tienes dos imágenes.
+
+Imagen 1 (disposición): una sprite sheet de 10 celdas en 2 filas por 5 columnas. De ella toma SOLO la disposición: cuántos sprites hay, dónde va cada uno, su tamaño aproximado y hacia dónde mira. NO copies su dibujo: sus formas son un boceto tosco.
+
+Imagen 2 (diseño): la misma criatura con su diseño definitivo. De ella toma las piezas de la criatura, sus proporciones y sus colores, pero SIMPLIFICADOS como se explica abajo.
+
+Tarea: dibuja una sprite sheet nueva de 10 sprites en 2 filas por 5 columnas sobre un fondo gris muy claro y sólido, con la disposición de la imagen 1 y la criatura de la imagen 2.
+
+Tamaño, importante: dibuja cada criatura GRANDE, ocupando casi toda su celda (unas tres cuartas partes del alto), sin importar que en la imagen 1 sea pequeña. Todas las criaturas de la hoja al mismo tamaño.
+
+Estilo, importante: pixel art de MUY baja resolución, como un sprite de 64×64 píxeles ampliado. Píxeles grandes, cuadrados y nítidos, sin suavizado ni anti-aliasing. Aspecto «low-poly»: formas simples, grandes y angulosas, hechas de pocos planos de color. Cada material usa solo 3 tonos planos (luz, base y sombra), con cambio de tono (hue-shifting) hacia el frío en la sombra. Paleta total de unos 12 colores. Contorno oscuro limpio de 1 píxel. NADA de texturas, tramado, degradados, ruido ni detalles pequeños: cada pieza tiene que leerse como una forma plana y clara.
+
+La criatura: {{CRIATURA}}
+
+Expresiones, importante: tienen que notarse muchísimo, incluso en pequeño. Ojos grandes y muy legibles, y bocas grandes. El cuerpo acompaña a la emoción con una pose claramente distinta en cada celda. De izquierda a derecha y de arriba abajo:
+1. Reposo: tranquila, ojos abiertos, sonrisa pequeña.
+2. Reposo: igual, pero mirando hacia un lado y con el cuerpo un poco más bajo.
+3. Andando: cuerpo inclinado hacia delante, avanzando.
+4. Comiendo: boca muy abierta mordiendo una manzana roja; la manzana queda separada del cuerpo, justo delante de la boca.
+5. Alegría: salta, cuerpo estirado hacia arriba, ojos cerrados en forma de arco y boca abierta riendo.
+6. Dormida: cuerpo aplastado contra el suelo, ojos cerrados en una línea, y letras Z flotando encima.
+7. Ataque: cuerpo lanzado hacia delante, ceño muy fruncido, boca abierta enseñando los dientes.
+8. Tristeza: cabeza baja, ojos caídos y llorosos, boca curvada hacia abajo.
+9. Celebración: cuerpo alzado, ojos convertidos en estrellas amarillas, boca abierta, confeti de colores alrededor.
+10. Golpe: cuerpo echado hacia atrás, ojos en forma de X, boca torcida, una estrella de impacto al lado.
+
+Las partículas (manzana, Z, confeti, estrella de impacto) NO deben tocar a la criatura: deja un hueco de fondo entre ellas y el cuerpo.
+
+El diseño de la criatura es idéntico en las 10 celdas: mismas piezas, mismos colores y mismas proporciones; solo cambian la pose y la cara. No añadas texto, marcos, sombras de suelo ni celdas nuevas.
