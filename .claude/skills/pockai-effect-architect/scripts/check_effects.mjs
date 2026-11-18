@@ -78,7 +78,12 @@ for (const f of files) {
   const warn = (m) => (issues.push(`aviso  ${m}`), warnings++);
 
   if (!new RegExp(`\\b${exportName}\\b`).test(index)) err(`no está registrado en effects/index.ts (EFFECTS)`);
-  if (!existsSync(join(dir, f.replace(/\.ts$/, '.spec.ts')))) err(`falta el test ${f.replace(/\.ts$/, '.spec.ts')}`);
+  // Vale su propio spec o cualquier spec de effects/ que lo use por su nombre exportado
+  const mentions = new RegExp(`\\b${exportName}\\b`);
+  const tested = readdirSync(dir)
+    .filter((s) => s.endsWith('.spec.ts'))
+    .some((s) => mentions.test(readFileSync(join(dir, s), 'utf8')));
+  if (!tested) err(`ningún test de effects/ lo cubre (crea ${f.replace(/\.ts$/, '.spec.ts')})`);
   if (!lore || !/§\s*\d+/.test(lore)) warn('el lore no cita una sección de docs/LORE.md (§N)');
   if (!reduced?.length) err('falta reducedPhases (prefers-reduced-motion)');
   else if (reduced.map((p) => p.name).join() !== phases.map((p) => p.name).join()) warn('reducedPhases no tiene las mismas fases que phases');
@@ -89,7 +94,8 @@ for (const f of files) {
   if (fps !== 12) warn(`cadencia ${fps} fps (lo normal son 12)`);
   const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   if (/Math\.random/.test(code)) err('usa Math.random: el dibujo debe ser determinista (hash con la semilla)');
-  const used = appFiles.filter(([p, s]) => !p.startsWith(dir) && new RegExp(`\\b${exportName}\\b`).test(s));
+  // Se usa si la app lo importa o lo pide por su id (eventMap, startMoment…)
+  const used = appFiles.filter(([p, s]) => !p.startsWith(dir) && (mentions.test(s) || s.includes(`'${id}'`)));
   if (!used.length) warn('ningún componente de la app lo usa todavía');
 
   rows.push({ id, f, lore, phases, total, w, h, scale, fps, used: used.map(([p]) => relative(root, p)), issues });

@@ -24,6 +24,10 @@ describe('reactionForAction', () => {
     });
     expect(reactionForAction({ action: 'battle_defended', context: { won: false } })?.anims).toEqual(['hit', 'defeat']);
     expect(reactionForAction({ action: 'level_up', context: { level: 7 } })?.bubble).toContain('7');
+    // Momentos grandes: llevan su efecto del escritorio con los datos del contexto
+    expect(reactionForAction({ action: 'level_up', context: { level: 7 } })?.effect).toEqual({ id: 'resonancia', params: { level: 7 } });
+    expect(reactionForAction({ action: 'evolved', context: { stage: 'adult' } })?.effect).toEqual({ id: 'capullo-telar', params: { stage: 'adult' } });
+    expect(reactionForAction({ action: 'fed' })?.effect).toBeUndefined();
     expect(reactionForAction({ action: 'mood_moment', context: { act: 'cry' } })?.anims).toEqual(['cry']);
     expect(reactionForAction({ action: 'mood_moment', context: { act: 'desconocido' } })).toBeNull();
     expect(reactionForAction({ action: 'slept' })).toBeNull();

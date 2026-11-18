@@ -49,6 +49,7 @@ export function renderFrame(
   palette: FxPalette,
   seed: number,
   reduced = false,
+  params: Record<string, string | number> = {},
 ): FxFrame {
   const frame: FxFrame = {
     phase: state.phase,
@@ -56,6 +57,7 @@ export function renderFrame(
     time: quantize(state.elapsedMs, def.fps),
     palette,
     seed,
+    params,
     reduced,
   };
   def.draw(sink, frame);

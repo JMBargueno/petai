@@ -642,6 +642,22 @@
   }
 
   onMount(() => {
+    // Solo en desarrollo (y en la demo): lanzar momentos a mano para probar los efectos del
+    // escritorio sin backend (skill pockai-effect-architect, integration-checklist.md).
+    if (import.meta.env.DEV) {
+      (window as any).__pockaiFx = {
+        react: (action: PetAction, context?: Record<string, unknown>) => currentPet && reactToAction(currentPet.id, action, context),
+        // Como el backend: primero el aviso `evolved` y, un instante después, la etapa nueva
+        evolve: (stage: string) => {
+          if (!currentPet) return;
+          reactToAction(currentPet.id, 'evolved', { stage });
+          setTimeout(() => currentPet && (currentPet = { ...currentPet, stage }), 50);
+        },
+        visitorJoin: (v: HabitatVisitor) => visitorJoined(v),
+        visitorLeave: (visitorId: string) => visitorLeft(visitorId),
+        summon: (x?: number, y?: number) => window.dispatchEvent(new CustomEvent('petai:summon', { detail: { x, y } })),
+      };
+    }
     window.addEventListener('petai:file_dropped', handleFileDropped);
     window.addEventListener('petai:move_to_habitat', handleMoveToHabitat);
     window.addEventListener(EXIT_HABITAT_EVENT, handleExitHabitat);

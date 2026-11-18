@@ -23,7 +23,17 @@ Lee las referencias cuando las necesites:
 
 Manda la norma de `docs/GUIA_ARTISTICA.md` (§3.6 color por elemento, §7 pixel art) y el lore de `docs/LORE.md`. Si chocan con esta skill, mandan ellos.
 
-**Estado del sistema:** el motor y el primer efecto existen. `portal-nexo` es la puerta de hebras por la que el Pockai se va de visita y vuelve. La máquina de estados del viaje vive en `desktop/src/lib/visitTravel.ts` y PetView la pinta. Es la referencia para cualquier efecto nuevo.
+**Estado del sistema:** el motor y cuatro efectos existen:
+- `portal-nexo`: el Pockai se va de visita y vuelve, y los amigos llegan a tu hábitat y se van, en su propio Flujo.
+- `capullo-telar`: evolución.
+- `resonancia`: subida de nivel.
+- `hebra-invocacion`: invocación rápida.
+
+Hay dos patrones de referencia:
+- **Viaje con estado de juego:** `visitTravel.ts` + `departThroughPortal` en PetView.
+- **Efecto de momento:** `effect` en `eventMap.ts` + `startMoment` en PetView.
+
+En `lore-effects.md` está la lista priorizada de lo pendiente.
 
 ## Flujo
 

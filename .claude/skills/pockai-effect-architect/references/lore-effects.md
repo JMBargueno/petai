@@ -34,15 +34,24 @@ Un mismo efecto sirve para todos los Flujos cambiando la rampa. Si un Flujo pide
 | id | Evento | Lore |
 |---|---|---|
 | `portal-nexo` | Ir de visita y volver (`visitTravel`) | §8: la clave del Nexo baja tres hebras, se trenzan en un arco, la trama se teje y se abre al Éter, y al terminar se deshilacha. |
+| `portal-nexo` a ×1 | Un amigo llega a tu hábitat o se va (`habitat:visitor_joined/left` → `VisitorPet`, `visitorsShown.ts`) | §8: el mismo portal en el Flujo **del amigo** (`speciesElement`), a la medida de su mascota de 64 px. |
+| `capullo-telar` | Evolución (`evolved` → `eventMap` `effect`) | §1, §6: seis hebras en espiral tejen un capullo que tapa a la mascota **mientras se re-hornea su nueva etapa**, se agrieta de luz y estalla en jirones. La forma final lleva corona. |
+| `resonancia` | Subida de nivel (`level_up` → `eventMap` `effect`) | §1: ondas a ras de suelo, pulsos a los lados y un Códice que sube por detrás y se parte en destellos. Cede ante la evolución si llegan juntas. |
+| `hebra-invocacion` | Invocación rápida (`petai:summon`) | §8: tu hebra baja hasta el cursor, se enrosca en un ovillo y de él brota la mascota (keyframe `sprout`); ya no se teletransporta. |
 
 ## Ideas pendientes (propón desde aquí)
 
 | Evento (código) | Idea |
 |---|---|
-| Entrar en el hábitat (`PetView` `isEnteringHome`, hoy un `enterHome` CSS) | Puerta del Santuario: el panel se abre como un altar y la mascota cruza. |
-| Salir del hábitat (`habitatExitDrag.ts`) | El mismo altar, al revés. |
-| Invocación rápida (`petai:summon`) | Hebra que cae del Nexo y deja a la mascota en el cursor. |
-| Evolución (`eventMap` `evolved`) | Capullo de trama del Telar que se teje alrededor y se rompe en hebras. |
-| Amigo de visita llega (`habitat:visitor_joined`) | El portal del amigo con **su** Flujo junto a tu mascota, y sale su Pockai (`VisitorPet`). |
-| Shiny (al nacer) | Rayo Cósmico en diagonal. |
-| Eclosión (`HatchView`) | Grietas del huevo con luz del Flujo. |
+| Entrar en el hábitat: arrastre (`PetView` `isEnteringHome`) **y** el botón del panel (`ControlPanel.svelte` «A casa», que desmonta sin animar) | Altar del Santuario (§10): un altar o una puerta de piedra y madera con runas del Flujo que se abre en el borde del panel. Debe unificar los dos caminos. |
+| Salir del hábitat (`habitatExitDrag.ts` → `spawnAt`) | El mismo altar, al revés. |
+| Shiny al nacer (`hatched {shiny}`, ignorado por `eventMap`) | Rayo Cósmico (§3): rayo diagonal y bit-flip de paleta; variante periódica para sustituir la franja shiny. **Antes:** `hatched` se reproduce en la mascota activa anterior (`App.svelte` filtra por `petId`). |
+| Rareza al nacer (`hatched {rarity}`) | Revelación de densidad (§2): columna de luz con un anillo por densidad; la Singularidad mítica, con el «Primer Latido». |
+| Garantía de la Promesa del Telar | Hebras que vibran antes de la revelación (§2). Necesita que el backend exponga `pityTriggered` (`hatching.service.ts`). |
+| Bienvenida (`welcome_back {tier}`) | Escarcha que se derrite con una «descarga de luz cálida» (§6), más intensa cuanto más larga fue la ausencia. La spec 28 lo pide. |
+| Logro (`achievement {tier}`, rango ignorado) | Pergamino o sello (§7) que crece por rango. |
+| Arena (`battle_won/lost/defended`) | Proyección astral (§7): la Sombra Guardiana vuelve y se funde, con glitch si pierde. |
+| Juramento de clan cumplido (`clan:goal_completed`) | Trenza de hebras de colores que se tensa (§8). |
+| Acción del agente (`AiTab` `open_url`, portapapeles) | Manitas espirituales (§5): mini portal web o pergamino. |
+| Enfermo, crítico (`sick`) | Glitch de ánimo (§7): scanlines y desplazamiento de 1 px, sin parpadeos. |
+| Baño, dormir | Polvo estático y desfragmentación (§6). |

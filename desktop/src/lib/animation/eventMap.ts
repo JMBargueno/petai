@@ -9,6 +9,8 @@ export interface Reaction {
   anims: string[];
   bubble?: string;
   particle?: string;
+  /** Efecto del escritorio (lib/effects) que acompaña al momento, con sus datos. */
+  effect?: { id: string; params?: Record<string, string | number> };
 }
 
 type Ctx = Record<string, unknown> | undefined;
@@ -41,11 +43,19 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
   healed: () => ({ anims: ['heal', 'happy'], bubble: '¡Ya me encuentro mejor! 💚' }),
   level_up: (c) => {
     const level = num(c, 'level');
-    return { anims: ['level_up'], bubble: level ? `¡Nivel ${level}! ⬆️` : '¡He subido de nivel! ⬆️' };
+    return {
+      anims: ['level_up'],
+      bubble: level ? `¡Nivel ${level}! ⬆️` : '¡He subido de nivel! ⬆️',
+      effect: { id: 'resonancia', params: level ? { level } : {} },
+    };
   },
   evolved: (c) => {
     const stage = str(c, 'stage');
-    return { anims: ['evolution', 'celebrate'], bubble: stage ? `¡He evolucionado (${stage})! ✨` : '¡He evolucionado! ✨' };
+    return {
+      anims: ['evolution', 'celebrate'],
+      bubble: stage ? `¡He evolucionado (${stage})! ✨` : '¡He evolucionado! ✨',
+      effect: { id: 'capullo-telar', params: stage ? { stage } : {} },
+    };
   },
   hatched: () => ({ anims: ['summon', 'happy'], bubble: '¡Hola! Encantado de conocerte 🐣' }),
   battle_won: () => ({ anims: ['attack', 'victory'], bubble: '¡Victoria! 🏆' }),

@@ -12,6 +12,7 @@
   import type { Reaction } from '../lib/animation/eventMap';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
   import VisitorPet from './VisitorPet.svelte';
+  import { dropGoneVisitor, syncShownVisitors, type ShownVisitor } from '../lib/effects/visitorsShown';
   import type { EnvironmentalStatus } from '../lib/environmental';
   import type { HabitatVisitor } from '../lib/api';
   import { skillAuthorizations, isSkillActive, getPetBonding } from '../lib/stores/desktopSkillsStore';
@@ -33,7 +34,8 @@
   import { setPetOnScreen } from '../lib/window-visibility';
   import Ico from './Ico.svelte';
   import EffectLayer from './EffectLayer.svelte';
-  import { EffectPlayer, flowPalette, portalNexo } from '../lib/effects';
+  import { EFFECTS, EffectPlayer, flowPalette, portalNexo, type EffectDef } from '../lib/effects';
+  import { admitMoment } from '../lib/effects/momentQueue';
   import { registerTravelPresenter, travel, travelArrived, type TravelState } from '../lib/visitTravel';
 
   export let pet: any;
@@ -42,6 +44,18 @@
   export let environmental: EnvironmentalStatus | null = null;
   /** Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía. */
   export let visitors: HabitatVisitor[] = [];
+  /**
+   * Visitantes pintados: los que se van siguen aquí (con `leaving`) hasta cruzar su portal; el
+   * store ya los ha quitado. Lógica pura en lib/effects/visitorsShown.
+   */
+  let shownVisitors: ShownVisitor[] = [];
+  $: syncVisitors(visitors);
+  function syncVisitors(list: HabitatVisitor[]) {
+    shownVisitors = syncShownVisitors(shownVisitors, list);
+  }
+  function visitorGone(id: string) {
+    shownVisitors = dropGoneVisitor(shownVisitors, id);
+  }
   /** Pelota de juguete opcional en el escritorio */
   export let ball: BallState | null = null;
   /** Callback cuando la mascota patea o cabecea la pelota */
@@ -155,7 +169,26 @@
   $: if (isSleeping) controller.stop();
 
   // Hornear sprite sheet en memoria al cambiar de mascota, paleta o patrón
-  $: stage = pet?.stage ?? null;
+  /**
+   * Etapa congelada mientras el capullo del Telar aún no tapa a la mascota: el backend avisa de
+   * `evolved` antes de mandar el `pet:update` con la etapa nueva, y el re-horneado (sprite y
+   * prendas) debe ocurrir dentro del capullo, no a la vista. Flag aparte porque `null` es etapa válida.
+   */
+  let stageFrozen = false;
+  let frozenStage: string | null = null;
+  $: stage = stageFrozen ? frozenStage : (pet?.stage ?? null);
+  // Si la etapa nueva llega antes que el aviso `evolved` (o sin él), el capullo sale igual;
+  // el `evolved` que llegue después se descarta (mismo peso en admitMoment).
+  let lastSeenStage: string | null | undefined = undefined;
+  $: watchStage(pet?.stage ?? null);
+  function watchStage(next: string | null) {
+    const prev = lastSeenStage;
+    lastSeenStage = next;
+    if (prev === undefined || prev === next || stageFrozen) return;
+    if (STAGE_RANK.indexOf(next ?? '') > STAGE_RANK.indexOf(prev ?? '')) {
+      playMoment('capullo-telar', next ? { stage: next } : {}, prev);
+    }
+  }
   $: if (pet && (speciesKey || patternKey || palette || visualSeed || stage)) {
     triggerBake();
   }
@@ -212,6 +245,7 @@
 
   /** Reacción completa: animaciones en orden y partícula opcional (el bocadillo lo gestiona App). */
   export function react(reaction: Reaction) {
+    if (reaction.effect) playMoment(reaction.effect.id, reaction.effect.params ?? {});
     for (const anim of reaction.anims) play(anim);
     if (reaction.particle) showParticle(reaction.particle);
   }
@@ -273,7 +307,7 @@
   }
 
   function handleMouseDown(e: MouseEvent) {
-    if (e.button !== 0 || petAway || travelBusy) return;
+    if (e.button !== 0 || petAway || travelBusy || fxLock) return;
     isDragging = true;
     dragMoved = false;
     dragStartX = e.clientX - posX;
@@ -323,7 +357,7 @@
   let petAway = false;
   /** Entrando o saliendo por el portal: no pasea, no habla sola y no se puede arrastrar. */
   let travelBusy = false;
-  let portalAnim: '' | 'entering' | 'exiting' = '';
+  let portalAnim: '' | 'entering' | 'exiting' | 'sprouting' = '';
   let portal: { x: number; y: number; player: EffectPlayer; id: number } | null = null;
   let portalSeq = 0;
   let travelHandled: TravelState = 'home';
@@ -440,6 +474,92 @@
       speak(`¡Ya volví del Santuario de ${friendLabel()}! ✨`, { key: 'travel', durationMs: 3200, maxWaitMs: 1500 });
       player.release(performance.now());
     });
+  }
+
+  // ---------- Efectos de momento (evolución, nivel, invocación…; skill pockai-effect-architect) ----------
+  type MomentFx = {
+    id: number;
+    def: EffectDef;
+    player: EffectPlayer;
+    params: Record<string, string | number>;
+    /** Sigue a la mascota (pies) o se queda en un punto fijo de la pantalla. */
+    at: { x: number; y: number } | null;
+  };
+  let moments: MomentFx[] = [];
+  let momentSeq = 0;
+  /** La mascota está tapada por un efecto (dentro del capullo, aún sin brotar de la hebra…). */
+  let fxHidden = false;
+  /** Un efecto la tiene quieta: no pasea ni se puede arrastrar. */
+  let fxLock = false;
+  /** Tope de la espera del capullo si el re-horneado no llega (p. ej. sin cambio de etapa). */
+  const COCOON_MAX_HOLD_MS = 2600;
+  const COCOON_MIN_HOLD_MS = 700;
+  const STAGE_RANK = ['baby', 'juvenile', 'adult', 'final'];
+
+  /**
+   * Lanza un efecto de momento junto a la mascota. Solo cabe uno grande a la vez (`admitMoment`).
+   * `onHold` se llama al llegar a la fase de espera y debe soltarla (`player.release`).
+   */
+  function startMoment(
+    effectId: string,
+    params: Record<string, string | number>,
+    opts: { at?: { x: number; y: number }; onHold?: (p: EffectPlayer) => void; onDone?: () => void } = {},
+  ): boolean {
+    const def = EFFECTS[effectId];
+    if (!def || petAway || travelBusy) return false;
+    const verdict = admitMoment(moments, def);
+    if (!verdict.play) return false;
+    if (verdict.replace.length) moments = moments.filter((_, i) => !verdict.replace.includes(i));
+    const id = ++momentSeq;
+    const player = new EffectPlayer(reducedMotion ? def.reducedPhases : def.phases, (phase) => {
+      if (phase === 'hold') opts.onHold ? opts.onHold(player) : player.release(performance.now());
+      if (phase === 'done') {
+        moments = moments.filter((m) => m.id !== id);
+        opts.onDone?.();
+      }
+    });
+    player.start(performance.now());
+    moments = [...moments, { id, def, player, params, at: opts.at ?? null }];
+    return true;
+  }
+
+  /** Efecto que llega con una reacción (`eventMap`): capullo o resonancia. */
+  function playMoment(effectId: string, params: Record<string, string | number>, fromStage?: string | null) {
+    if (effectId === 'capullo-telar') {
+      // Se sigue dibujando la etapa de antes hasta que el capullo la tape
+      const stageAtStart = fromStage !== undefined ? fromStage : stage;
+      const started = startMoment(effectId, params, {
+        onHold: (player) => {
+          // Dentro del capullo se re-hornea la nueva etapa: el cambio ya no es un corte en seco.
+          fxHidden = true;
+          stageFrozen = false;
+          const holdAt = performance.now();
+          const tick = setInterval(() => {
+            const held = performance.now() - holdAt;
+            const rebaked = stage !== stageAtStart && !isBaking && !!bakedSheet;
+            if ((held >= COCOON_MIN_HOLD_MS && rebaked) || held >= COCOON_MAX_HOLD_MS) {
+              clearInterval(tick);
+              fxHidden = false;
+              play('celebrate');
+              player.release(performance.now());
+            }
+          }, 100);
+        },
+        onDone: () => {
+          fxLock = false;
+          fxHidden = false;
+          stageFrozen = false;
+        },
+      });
+      if (started) {
+        frozenStage = stageAtStart;
+        stageFrozen = true;
+        fxLock = true;
+        settleForTravel();
+      }
+      return;
+    }
+    startMoment(effectId, params);
   }
 
   // Arrastre hacia casa: la mascota va por encima del panel mientras se arrastra, así que
@@ -692,7 +812,7 @@
       petBonding,
       petIntelligence
     );
-    if (!skillActive || petAway || travelBusy) return;
+    if (!skillActive || petAway || travelBusy || fxLock) return;
 
     physicsState.isAirborne = false;
     isClimbing = false;
@@ -702,10 +822,33 @@
     const clientX = customEvent.detail?.x ?? (window.innerWidth || 800) / 2;
     const clientY = customEvent.detail?.y ?? (window.innerHeight || 600) - PET_SIZE;
 
-    posX = Math.min(Math.max(20, clientX - PET_SIZE / 2), (window.innerWidth || 800) - PET_SIZE - 20);
-    posY = Math.min(Math.max(20, clientY - PET_SIZE / 2), (window.innerHeight || 600) - PET_SIZE);
+    const nextX = Math.min(Math.max(20, clientX - PET_SIZE / 2), (window.innerWidth || 800) - PET_SIZE - 20);
+    const nextY = Math.min(Math.max(20, clientY - PET_SIZE / 2), (window.innerHeight || 600) - PET_SIZE);
+    const feet = { x: nextX + PET_SIZE / 2, y: nextY + PET_SIZE - FEET_INSET };
 
-    play('summon');
+    // Su hebra baja del Nexo hasta el cursor y de su ovillo brota: nunca aparece de golpe.
+    // Mientras la hebra cae, la mascota ya está oculta en su sitio nuevo.
+    const started = startMoment('hebra-invocacion', {}, {
+      at: feet,
+      onHold: async (player) => {
+        fxHidden = false;
+        portalAnim = 'sprouting';
+        play('summon');
+        await wait(THROUGH_PORTAL_MS);
+        portalAnim = '';
+        player.release(performance.now());
+      },
+      onDone: () => {
+        fxLock = false;
+      },
+    });
+    if (started) {
+      fxLock = true;
+      fxHidden = true;
+    }
+    posX = nextX;
+    posY = nextY;
+    if (!started) play('summon');
   }
 
   // Declarado a nivel de componente para poder quitar el listener en onDestroy
@@ -739,7 +882,7 @@
 
     // Ciclo de comportamiento de la mascota en pantalla
     moveInterval = setInterval(async () => {
-      if (petAway || travelBusy) return;
+      if (petAway || travelBusy || fxLock) return;
       if (isSleeping || isDragging || physicsState.isAirborne || controller.actionPriority >= BUSY_PRIORITY) return;
 
       const windowWidth = window.innerWidth || 800;
@@ -1001,15 +1144,32 @@
   {/key}
 {/if}
 
+<!-- Efectos de momento: siguen los pies de la mascota salvo que tengan un punto fijo -->
+{#each moments as m (m.id)}
+  <EffectLayer
+    def={m.def}
+    player={m.player}
+    x={m.at ? m.at.x : posX + recoilOffsetX + PET_SIZE / 2}
+    y={m.at ? m.at.y : posY + PET_SIZE - FEET_INSET}
+    palette={portalPalette}
+    seed={portalSeed}
+    params={m.params}
+    reduced={reducedMotion}
+  />
+{/each}
+
 <div
   class="pet-container"
   role="button"
   tabindex={petAway ? -1 : 0}
+  class:fx-hidden={fxHidden}
+  class:fx-lock={fxLock}
   aria-hidden={petAway}
   class:away={petAway}
   class:traveling={travelBusy}
   class:entering-portal={portalAnim === 'entering'}
   class:exiting-portal={portalAnim === 'exiting'}
+  class:sprouting={portalAnim === 'sprouting'}
   aria-label="{pet.nickname || pet.species?.name || 'Tu Pockai'}, nivel {pet.level}. {isHighFiveWaiting ? 'Pulsa Enter para chocar los cinco' : 'Pulsa Enter para abrir su panel'}"
   data-anim={currentAnim}
   class:dragging={isDragging}
@@ -1078,8 +1238,8 @@
   </div>
 
   <!-- Mascotas de los amigos de visita (feature 021): junto a la mía, sin su transformación -->
-  {#each visitors as v (v.visitorId)}
-    <VisitorPet visitor={v} />
+  {#each shownVisitors as s (s.v.visitorId)}
+    <VisitorPet visitor={s.v} leaving={s.leaving} on:gone={(e) => visitorGone(e.detail)} />
   {/each}
 
   <!-- Texto ambiental, bocadillo, nombre y partículas: sin girar ni rotar -->
@@ -1150,9 +1310,48 @@
     }
   }
 
+  /* Brota del ovillo de la hebra de invocación: crece desde los pies */
+  .pet-container.sprouting .pet-body {
+    transform-origin: 50% 96%;
+    animation: sprout 0.44s ease-out both;
+  }
+  .pet-container.sprouting .pet-badge {
+    opacity: 0;
+  }
+  @keyframes sprout {
+    from {
+      transform: scaleX(calc(var(--dir, 1) * 0.3)) scaleY(0.05);
+      filter: brightness(2.4);
+      opacity: 0;
+    }
+    55% {
+      transform: scaleX(calc(var(--dir, 1) * 0.9)) scaleY(1.15);
+      filter: brightness(1.5);
+      opacity: 1;
+    }
+    to {
+      transform: scaleX(var(--dir, 1)) scaleY(1);
+      filter: brightness(1);
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pet-container.sprouting .pet-body {
+      animation: none;
+    }
+  }
+
   /* De visita por las hebras del Nexo: fuera de pantalla, sin zona de clic. */
   .pet-container.away {
     visibility: hidden;
+    pointer-events: none;
+  }
+  /* Tapada por un efecto (capullo, hebra que aún cae): ni se ve ni recibe clics */
+  .pet-container.fx-hidden {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .pet-container.fx-lock {
     pointer-events: none;
   }
   .pet-container.traveling {

@@ -22,7 +22,15 @@ cd desktop && npx svelte-check --threshold error   # filtra por tus archivos: el
 
 ## En la demo (`pockai-desktop-demo`, puerto 5175)
 1. Entra con las credenciales de demo que ya trae el formulario.
-2. Lanza el disparador. Para el portal: Social › Visitas › Iniciar visita, y después Terminar visita.
+2. Lanza el disparador. Para el portal: Social › Visitas › Iniciar visita, y después Terminar visita. Para lo que llega por socket, usa el gancho de desarrollo de `App.svelte` (solo existe con `import.meta.env.DEV`):
+   ```js
+   __pockaiFx.react('level_up', { level: 12 })          // cualquier pet:action de eventMap
+   __pockaiFx.react('evolved', { stage: 'adult' })
+   __pockaiFx.summon(600, 600)                          // invocación rápida en ese punto
+   __pockaiFx.visitorJoin({ visitorId: 'u-9', visitorName: 'Marta', pet: { petId: 'p-9', nickname: 'Luna', speciesName: 'Axolunar', speciesId: 'axolunar', spriteRef: '' }, startedAt: new Date().toISOString() })
+   __pockaiFx.visitorLeave('u-9')
+   ```
+   Si el panel del navegador está oculto, `requestAnimationFrame` se para y el efecto no avanza: enséñalo (`show_pane` preview) antes de capturar.
 3. Captura las fases con `zoom` sobre la mascota, separadas de 0,4 a 0,6 s.
 4. Comprueba con JS: el canvas `[data-effect]` desaparece al terminar y la mascota no tiene `.away` ni `.traveling`.
 5. Mira que la consola esté sin errores.

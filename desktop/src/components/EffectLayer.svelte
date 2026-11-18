@@ -19,16 +19,20 @@
   export let palette: FxPalette;
   export let seed = 1;
   export let reduced = false;
+  /** Datos del momento para el dibujo (ver cada efecto). */
+  export let params: Record<string, string | number> = {};
   /** Por encima o por debajo de la mascota. */
-  export let layer: 'behind' | 'front' = 'behind';
+  export let layer: 'behind' | 'front' = def.layer ?? 'behind';
+  /** Escala entera en pantalla (por defecto la del efecto; 1 para mascotas pintadas a ×1). */
+  export let scale: number = def.scale;
 
   let canvas: HTMLCanvasElement;
   let raf: number | null = null;
   let lastKey = '';
   let opacity = 1;
 
-  $: left = Math.round(x - (def.anchor.x + 0.5) * def.scale);
-  $: top = Math.round(y - (def.anchor.y + 1) * def.scale);
+  $: left = Math.round(x - (def.anchor.x + 0.5) * scale);
+  $: top = Math.round(y - (def.anchor.y + 1) * scale);
 
   function loop(now: number) {
     // El reproductor se consulta con el tiempo cuantizado: el progreso va a saltos, como un sprite.
@@ -41,8 +45,8 @@
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const sink = new CanvasSink(ctx, def.width, def.height, def.scale);
-        const frame = renderFrame(def, sink, { phase: state.phase, t: state.t, elapsedMs: elapsed }, palette, seed, reduced);
+        const sink = new CanvasSink(ctx, def.width, def.height, scale);
+        const frame = renderFrame(def, sink, { phase: state.phase, t: state.t, elapsedMs: elapsed }, palette, seed, reduced, params);
         opacity = def.opacity ? def.opacity(frame) : 1;
         if (state.done) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -64,8 +68,8 @@
   bind:this={canvas}
   class="fx-layer"
   class:front={layer === 'front'}
-  width={def.width * def.scale}
-  height={def.height * def.scale}
+  width={def.width * scale}
+  height={def.height * scale}
   style="left: {left}px; top: {top}px; opacity: {opacity};"
   aria-hidden="true"
   data-effect={def.id}
