@@ -55,7 +55,7 @@ Puro impulso: va el primero, pregunta después y no soporta aburrirse.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo, cuello y cola en primario, dibujados como una curva lisa con su propia luz y sombra y placas más claras en el vientre; membrana de las alas, cuernos, cresta y hoja de la cola en secundario, con los huesos del ala en primario; garras en primario oscurecido. El núcleo del pecho y la línea de latido son brillos en color literal: no cambian con la paleta. La cola gira con la pose y cuernos y alas laten con los apéndices.
 
-**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Garras en el acento, ala lejana en segundo plano y segundo par de cuernos oscuros en la etapa final.
+**Estado del arte:** arte final por hoja objetivo (`target-sheet-pipeline.md`): cada etapa generada con Nano Banana a partir del boceto y de `examples/primpulso-objetivo.webp`, e importada a 64 px (`scripts/sprites/pixel/imported/primpulso.json`). La paleta por defecto es la de la hoja. Boceto anterior: redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Garras en el acento, ala lejana en segundo plano y segundo par de cuernos oscuros en la etapa final.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -69,6 +69,6 @@ Pixel art en 3/4. Cuerpo, cuello y cola en primario, dibujados como una curva li
   "favoriteFood": "spark_candy",
   "spriteKey": "primpulso",
   "personalityBias": { "curiosity": 75, "sociability": 55, "bravery": 85, "affection": 45, "temper": 85 },
-  "defaultPalette": { "primary": "#F2C230", "secondary": "#7DF9FF", "accent": "#8A5A00" }
+  "defaultPalette": { "primary": "#FFE12D", "secondary": "#BB8B2E", "accent": "#1DE2F2" }
 }
 ```

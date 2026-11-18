@@ -105,7 +105,8 @@ const frames = sprites.map(downscale);
 
 // Partículas pegadas: una mancha grande amarilla o naranja tocando a la criatura es una estrella de
 // impacto o un destello que dibujó la IA. El juego pone las suyas, así que se quitan. Las pequeñas
-// (ojos de estrella) se quedan.
+// (ojos de estrella) se quedan. Solo se hace si ese color es raro en la especie: en una criatura
+// dorada, crema o de fuego, el amarillo es su cuerpo, no una partícula.
 const isFx = (c) => {
   const mx = Math.max(...c);
   const mn = Math.min(...c);
@@ -114,7 +115,9 @@ const isFx = (c) => {
   return h >= 12 && h <= 68;
 };
 let removed = 0;
-for (const f of frames) {
+const opaque = frames.flat().filter(Boolean);
+const fxShare = opaque.filter(isFx).length / Math.max(1, opaque.length);
+for (const f of fxShare > 0.04 ? [] : frames) {
   const seen = new Uint8Array(N * N);
   for (let i = 0; i < N * N; i++) {
     if (seen[i] || !f[i] || !isFx(f[i])) continue;
