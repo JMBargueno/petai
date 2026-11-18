@@ -120,7 +120,7 @@ export function rollBatch(random: () => number, size = BATCH): Egg[] {
                 }
               </span>
               <strong>{{ p.name }}</strong>
-              <span class="pattern__min" [style.--tone]="'var(--color-' + p.color + ')'">{{ p.minRarity }}+</span>
+              <span class="pattern__min" [style.--tone]="'var(--color-' + p.color + ')'">{{ p.rarity }}</span>
             </li>
           }
         </ul>

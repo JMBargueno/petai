@@ -186,7 +186,7 @@ User(id, email, appleSub, googleSub, displayName, timezone, coins, gems, account
 RefreshToken(id, userId, hash, expiresAt, revokedAt)
 DeviceLink(code, userId, expiresAt, confirmedAt)
 Species(id, name, element, rarity, baseStats json, favoriteFood, spriteKey)
-Pattern(id, name, minRarity)
+Pattern(id, name, rarity)
 Egg(id, userId, eggType, startedAt, hatchesAt, hatchedPetId?)
 Pet(id, userId, speciesId, rarity, patternId, palette json, shiny, visualSeed, nickname,
     level, xp, stage, hunger, happiness, energy, hygiene, health, sick, sleeping,

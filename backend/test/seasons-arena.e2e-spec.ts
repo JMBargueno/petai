@@ -46,7 +46,7 @@ describe('Arena: premios de fin de temporada por liga/ELO (e2e)', () => {
     let pattern = await prisma.pattern.findFirst();
     if (!pattern) {
       pattern = await prisma.pattern.create({
-        data: { id: 'pat_arena_test', name: 'TestPattern', description: 't', minRarity: 'common' },
+        data: { id: 'pat_arena_test', name: 'TestPattern', description: 't', rarity: 'common' },
       });
     }
     return { speciesId: species.id, patternId: pattern.id };

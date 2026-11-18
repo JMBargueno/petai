@@ -233,7 +233,8 @@ model Pattern {
   id          String   @id
   name        String
   description String
-  minRarity   String
+  /// Rareza del patrón: se tira por ejemplar, aparte de la rareza de su especie.
+  rarity      String
 
   pets        Pet[]
 }

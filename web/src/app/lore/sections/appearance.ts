@@ -46,7 +46,7 @@ const defParts = (body: string) => {
                   </span>
                   <span>
                     <strong>{{ p.name }}</strong>
-                    <small>{{ p.minRarity }}+</small>
+                    <small>{{ p.rarity }}</small>
                   </span>
                 </li>
               }
@@ -74,7 +74,7 @@ const defParts = (body: string) => {
                   </span>
                   <span>
                     <strong>{{ p.name }}</strong>
-                    <small>{{ p.minRarity }}+</small>
+                    <small>{{ p.rarity }}</small>
                   </span>
                 </li>
               }

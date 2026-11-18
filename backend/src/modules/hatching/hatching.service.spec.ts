@@ -68,7 +68,7 @@ describe('HatchingService', () => {
       },
     ]),
     getPatterns: jest.fn().mockReturnValue([
-      { id: 'plain', name: 'Liso', minRarity: 'normal' },
+      { id: 'plain', name: 'Liso', rarity: 'normal' },
     ]),
   };
 
@@ -129,6 +129,28 @@ describe('HatchingService', () => {
     // Rare en torno al 25% ± 3%
     expect(counts.rare / TOTAL).toBeGreaterThan(0.22);
     expect(counts.rare / TOTAL).toBeLessThan(0.28);
+  });
+
+  describe('hatchEgg — rareza', () => {
+    it('el ejemplar lleva la rareza de su especie aunque la tirada sea legendaria', async () => {
+      setupSuccessfulHatch();
+      // Pity al límite: la tirada sale legendaria o mítica, pero solo hay especies normales.
+      mockPrismaService.pityCounter.findUnique.mockResolvedValue({ userId: 'user-1', sinceSuperRare: 10, sinceLegendary: 119 });
+      const pet: any = await service.hatchEgg('user-1', 'egg-1', 'Chispa');
+      expect(pet.speciesId).toBe('ignisaur');
+      expect(pet.rarity).toBe('normal');
+      // Sin multiplicador de rareza: las estadísticas son las de la especie.
+      expect(pet.combatStats).toEqual({ hp: 50, atk: 55, def: 45, vel: 48, esp: 52 });
+    });
+
+    it('la garantía de pity sigue pendiente si no se ha conseguido la rareza', async () => {
+      setupSuccessfulHatch();
+      mockPrismaService.pityCounter.findUnique.mockResolvedValue({ userId: 'user-1', sinceSuperRare: 10, sinceLegendary: 119 });
+      await service.hatchEgg('user-1', 'egg-1', 'Chispa');
+      expect(mockPrismaService.pityCounter.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { sinceSuperRare: 11, sinceLegendary: 120 } }),
+      );
+    });
   });
 
   describe('hatchEgg — nickname', () => {

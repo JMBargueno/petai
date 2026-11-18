@@ -144,7 +144,6 @@ export class BreedingService {
 
     const g1: PetGenes = {
       element: parent1.species?.element || 'fire',
-      rarity: parent1.rarity,
       patternId: parent1.patternId,
       palette: parent1.palette as Record<string, string>,
       baseStats: (parent1.species?.baseStats as Record<string, number>) || {},
@@ -152,7 +151,6 @@ export class BreedingService {
     };
     const g2: PetGenes = {
       element: parent2.species?.element || 'fire',
-      rarity: parent2.rarity,
       patternId: parent2.patternId,
       palette: parent2.palette as Record<string, string>,
       baseStats: (parent2.species?.baseStats as Record<string, number>) || {},
@@ -165,7 +163,8 @@ export class BreedingService {
       data: {
         userId: breeding.userId,
         speciesId: parent1.speciesId,
-        rarity: result.offspringGenes.rarity,
+        // La cría es de la especie del primer progenitor y lleva la rareza de esa especie.
+        rarity: parent1.species?.rarity ?? parent1.rarity,
         patternId: result.offspringGenes.patternId,
         palette: result.offspringGenes.palette,
         shiny: result.offspringGenes.shiny,

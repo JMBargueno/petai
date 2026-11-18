@@ -254,9 +254,9 @@ const PATTERN_SPRITES = new Set(['spots', 'stripes', 'gradient', 'scales']);
 export const PATTERNS = patternData.map((p) => ({
   id: p.id,
   name: PATTERN_NAMES[p.id] ?? p.name,
-  minRarity: RARITIES[p.minRarity] ?? p.minRarity,
+  rarity: RARITIES[p.rarity] ?? p.rarity,
   sprite: PATTERN_SPRITES.has(p.id) ? `sprites/pattern_${p.id}.svg` : null,
-  color: RARITY_COLORS[p.minRarity] ?? 'sunburst',
+  color: RARITY_COLORS[p.rarity] ?? 'sunburst',
 }));
 
 export const DESKTOP_POINTS = [

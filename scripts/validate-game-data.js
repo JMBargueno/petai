@@ -148,8 +148,8 @@ console.log(`✓ species.json: ${species.length} especies validadas con relacion
 
 // 4. Validar patrones
 for (const pat of patterns) {
-  if (!rarities[pat.minRarity]) {
-    throw new Error(`minRarity '${pat.minRarity}' en patrón ${pat.id} no está en balance.json`);
+  if (!rarities[pat.rarity]) {
+    throw new Error(`Rareza '${pat.rarity}' en patrón ${pat.id} no está en balance.json`);
   }
 }
 console.log(`✓ patterns.json: ${patterns.length} patrones validados`);

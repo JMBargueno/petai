@@ -8,6 +8,7 @@ import { normalizePetName, PET_NAME_INVALID_MESSAGE } from '../../common/pet-nam
 import { randomPetName } from './pet-names';
 import { recordSpend } from '../../stats/spend';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { pickPattern, resolveRarity } from './rarity.engine';
 
 @Injectable()
 export class HatchingService {
@@ -123,40 +124,30 @@ export class HatchingService {
       });
     }
 
-    // Determinación autoritativa de rareza
+    // La rareza es de la especie. La tirada decide qué especie sale: si no hay especies de la rareza
+    // tirada se baja a la más cercana que tenga alguna, y el ejemplar lleva siempre la de su especie.
     const rolledRarity = this.rollRarity(pity.sinceSuperRare, pity.sinceLegendary);
+    const allSpecies = this.gameData.getSpecies();
+    const speciesRarity = resolveRarity(rolledRarity, allSpecies.map((s: any) => s.rarity));
+    const eligibleSpecies = allSpecies.filter((s: any) => s.rarity === speciesRarity);
+    const chosenSpecies = eligibleSpecies[crypto.randomInt(0, eligibleSpecies.length)];
+    const petRarity: string = chosenSpecies.rarity;
 
-    // Actualización de Pity
+    // Pity: cuenta lo que se ha conseguido de verdad, no lo que se tiró. Si la garantía no puede
+    // cumplirse porque aún no hay especies de esa rareza, sigue pendiente.
     let newSinceSuper = pity.sinceSuperRare + 1;
     let newSinceLeg = pity.sinceLegendary + 1;
+    if (['super_rare', 'legendary', 'mythic'].includes(petRarity)) newSinceSuper = 0;
+    if (['legendary', 'mythic'].includes(petRarity)) newSinceLeg = 0;
 
-    if (['super_rare', 'legendary', 'mythic'].includes(rolledRarity)) {
-      newSinceSuper = 0;
-    }
-    if (['legendary', 'mythic'].includes(rolledRarity)) {
-      newSinceLeg = 0;
-    }
-
-    // Selección de especie
-    const allSpecies = this.gameData.getSpecies();
-    let eligibleSpecies = allSpecies.filter((s: any) => s.rarity === rolledRarity);
-    if (eligibleSpecies.length === 0) {
-      eligibleSpecies = allSpecies; // Fallback
-    }
-    const chosenSpecies = eligibleSpecies[crypto.randomInt(0, eligibleSpecies.length)];
-
-    // Selección de patrón cosmético
-    const allPatterns = this.gameData.getPatterns();
-    const rarityRanks: Record<string, number> = {
-      normal: 1,
-      rare: 2,
-      super_rare: 3,
-      legendary: 4,
-      mythic: 5,
-    };
-    const rolledRank = rarityRanks[rolledRarity] || 1;
-    const eligiblePatterns = allPatterns.filter((p: any) => (rarityRanks[p.minRarity] || 1) <= rolledRank);
-    const chosenPattern = eligiblePatterns[crypto.randomInt(0, eligiblePatterns.length)];
+    // El patrón tiene su propia rareza y su propia tirada, independiente de la especie.
+    const balance = this.gameData.getBalance();
+    const chosenPattern = pickPattern<any>(
+      this.gameData.getPatterns(),
+      balance.rarity,
+      crypto.randomInt(0, 1_000_000) / 1_000_000,
+      (n) => crypto.randomInt(0, n),
+    );
 
     // Tirada de Shiny (2%)
     const isShiny = crypto.randomInt(0, 100) < 2;
@@ -164,9 +155,8 @@ export class HatchingService {
     // Semilla visual determinista
     const visualSeed = crypto.randomInt(1, 2147483647);
 
-    // Multiplicador de combate según rareza
-    const balance = this.gameData.getBalance();
-    const rarityMultiplier = balance.rarity[rolledRarity]?.multiplier || 1.0;
+    // Multiplicador de combate según la rareza de la especie: todos sus ejemplares nacen iguales
+    const rarityMultiplier = balance.rarity[petRarity]?.multiplier || 1.0;
 
     const baseCombat = chosenSpecies.baseStats;
     const initialCombatStats = {
@@ -206,7 +196,7 @@ export class HatchingService {
           id: petId,
           userId,
           speciesId: chosenSpecies.id,
-          rarity: rolledRarity,
+          rarity: petRarity,
           patternId: chosenPattern.id,
           palette,
           shiny: isShiny,

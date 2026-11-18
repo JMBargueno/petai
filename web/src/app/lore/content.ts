@@ -93,11 +93,11 @@ export const PATTERN_DEFS: Record<string, string> = {
 };
 
 /**
- * PATTERNS ya traduce minRarity a nombre de rareza; para filtrar por densidad usamos
+ * PATTERNS ya traduce rarity a nombre de rareza; para filtrar por densidad usamos
  * el id crudo de patterns.json (mismo orden y longitud, filtrado por índice).
  */
-export const EARTH_PATTERNS = PATTERNS.filter((_, i) => patternData[i].minRarity !== 'super_rare' && patternData[i].minRarity !== 'legendary' && patternData[i].minRarity !== 'mythic');
-export const AETHER_PATTERNS = PATTERNS.filter((_, i) => ['super_rare', 'legendary', 'mythic'].includes(patternData[i].minRarity));
+export const EARTH_PATTERNS = PATTERNS.filter((_, i) => patternData[i].rarity !== 'super_rare' && patternData[i].rarity !== 'legendary' && patternData[i].rarity !== 'mythic');
+export const AETHER_PATTERNS = PATTERNS.filter((_, i) => ['super_rare', 'legendary', 'mythic'].includes(patternData[i].rarity));
 
 export const ELEMENTS = [
   {
