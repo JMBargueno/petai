@@ -87,37 +87,37 @@
 
 <style>
   .list { font-family: inherit; color: var(--ink); }
-  .list__filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .list__filters { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
   .chip {
     background: #141824; color: var(--ink-muted); border: 1px solid #232a3a;
-    padding: 4px 12px; border-radius: 999px; cursor: pointer; font-size: 0.8rem;
+    padding: var(--space-1) var(--space-3); border-radius: var(--radius-pills); cursor: pointer; font-size: var(--text-label);
   }
   .chip--active { background: #1f2a44; color: var(--ink); border-color: var(--line); }
-  .list__empty { color: var(--ink-muted); font-size: 0.9rem; }
-  .list__items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .list__empty { color: var(--ink-muted); font-size: var(--text-body); }
+  .list__items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
   .item {
-    display: flex; justify-content: space-between; gap: 12px;
-    background: var(--surface-2); border: 1px solid #1e2431; border-radius: var(--radius-2xl); padding: 10px 12px;
+    display: flex; justify-content: space-between; gap: var(--space-3);
+    background: var(--surface-2); border: 1px solid #1e2431; border-radius: var(--radius-2xl); padding: var(--space-2) var(--space-3);
   }
   .item--unlocked { border-color: #3a3320; background: #17140d; }
-  .item__title { display: flex; align-items: center; gap: 8px; }
+  .item__title { display: flex; align-items: center; gap: var(--space-2); }
   .item__name { font-weight: 600; color: var(--ink); }
-  .badge { font-size: 0.65rem; text-transform: uppercase; padding: 1px 6px; border-radius: var(--radius-2xl); }
+  .badge { font-size: var(--text-caption); text-transform: uppercase; padding: 1px var(--space-2); border-radius: var(--radius-2xl); }
   .badge--common { background: #2a2f3a; color: var(--ink-muted); }
   .badge--rare { background: #1c2a44; color: #7ea0ff; }
   .badge--epic { background: #2a1c44; color: var(--color-lavender); }
   .badge--legendary { background: #3a2a10; color: var(--warning-ink); }
-  .item__desc { margin: 4px 0 0; font-size: 0.82rem; color: var(--ink-muted); }
-  .item__progress { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .item__desc { margin: var(--space-1) 0 0; font-size: var(--text-label); color: var(--ink-muted); }
+  .item__progress { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
   .item__bar { flex: 1; height: 6px; background: #1c212e; border-radius: var(--radius-2xl); overflow: hidden; }
   .item__fill { height: 100%; background: #5b8cff; }
-  .item__count { font-size: 0.72rem; color: var(--ink-muted); }
-  .item__side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-  .item__status { font-size: 0.72rem; color: var(--ink-muted); }
+  .item__count { font-size: var(--text-caption); color: var(--ink-muted); }
+  .item__side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
+  .item__status { font-size: var(--text-caption); color: var(--ink-muted); }
   .item--unlocked .item__status { color: var(--warning-ink); }
-  .item__reward { font-size: 0.78rem; color: var(--ink); }
+  .item__reward { font-size: var(--text-caption); color: var(--ink); }
   .item__claim {
-    background: #2f6df0; color: var(--ink); border: none; padding: 4px 12px; border-radius: var(--radius-2xl); cursor: pointer;
+    background: #2f6df0; color: var(--ink); border: none; padding: var(--space-1) var(--space-3); border-radius: var(--radius-2xl); cursor: pointer;
   }
-  .item__claimed { font-size: 0.72rem; color: var(--ink-muted); }
+  .item__claimed { font-size: var(--text-caption); color: var(--ink-muted); }
 </style>

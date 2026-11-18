@@ -52,7 +52,7 @@
     border-radius: 50%;
     background: var(--bg);
     color: var(--on-color);
-    border: 1.5px solid var(--color-carbon);
+    border: 1.5px solid var(--on-color);
     font-family: var(--font-display);
     line-height: 1;
     letter-spacing: 0.02em;

@@ -129,7 +129,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
-    font-size: 12px;
+    gap: var(--space-1);
+    font-size: var(--text-caption);
   }
 </style>

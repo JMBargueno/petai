@@ -745,7 +745,7 @@
   .ball-toggle-pill {
     position: fixed;
     bottom: 16px;
-    z-index: 90;
+    z-index: var(--z-dock);
     box-shadow: var(--shadow-2);
   }
   .toggle-panel-pill {
@@ -756,18 +756,18 @@
   }
   .ball-toggle-pill {
     right: 228px;
-    font-size: 14px;
-    padding: 0 10px;
+    font-size: var(--text-body);
+    padding: 0 var(--space-2);
     min-width: 40px;
   }
 
   .notif-badge {
     min-width: 18px;
-    padding: 0 5px;
+    padding: 0 var(--space-1);
     background: var(--danger);
     color: var(--on-color);
     border-radius: var(--radius-pills);
-    font-size: 11px;
+    font-size: var(--text-caption);
     line-height: 18px;
     text-align: center;
   }

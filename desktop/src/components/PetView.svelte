@@ -928,8 +928,8 @@
     width: 128px;
     height: 128px;
     cursor: grab;
-    transition: left 0.4s ease-out, top 0.4s ease-out;
-    z-index: 50;
+    transition: left var(--dur-2) ease-out, top var(--dur-2) ease-out;
+    z-index: var(--z-pet);
     pointer-events: auto;
   }
 
@@ -940,7 +940,7 @@
   .pet-container.dragging {
     transition: none;
     /* Por encima del panel de control (z-index 100) para "meterla" en casa arrastrando */
-    z-index: 200;
+    z-index: var(--z-popover);
   }
 
   .pet-container.over-home .pet-body {
@@ -948,7 +948,7 @@
   }
 
   .pet-container.entering-home {
-    z-index: 200;
+    z-index: var(--z-popover);
     pointer-events: none;
     transition: none;
     animation: enterHome 0.26s ease-in forwards;
@@ -972,16 +972,16 @@
     transform: translateX(-50%);
     background: var(--color-sunburst);
     color: var(--on-color);
-    padding: 3px 10px;
+    padding: 3px var(--space-2);
     border-radius: var(--radius-pills);
-    border: 1.5px solid var(--color-carbon);
-    font-size: 11px;
+    border: 1.5px solid var(--on-color);
+    font-size: var(--text-caption);
     font-weight: 800;
-    box-shadow: 2px 2px 0 var(--color-carbon);
+    box-shadow: 2px 2px 0 var(--on-color);
     animation: highFiveBounce 0.5s infinite alternate ease-in-out;
     cursor: pointer;
     white-space: nowrap;
-    z-index: 60;
+    z-index: calc(var(--z-pet) + 10);
   }
 
   @keyframes highFiveBounce {
@@ -1011,7 +1011,7 @@
     width: 100%;
     height: 100%;
     transform-origin: bottom center;
-    transition: transform 0.14s ease-out;
+    transition: transform var(--dur-1) ease-out;
   }
 
   .pet-container.dragging .pet-body {
@@ -1020,7 +1020,7 @@
 
   .pet-canvas {
     position: relative;
-    z-index: 1;
+    z-index: var(--z-raised);
     width: 128px;
     height: 128px;
     image-rendering: auto;
@@ -1041,17 +1041,17 @@
     left: 50%;
     margin-left: -110px;
     width: 220px;
-    padding: 8px 12px;
+    padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-2xl);
     background: var(--surface);
     color: var(--ink);
     border: var(--outline);
-    font-size: 13px;
+    font-size: var(--text-label);
     line-height: 1.35;
     text-align: center;
     box-shadow: var(--shadow-3);
     pointer-events: none;
-    z-index: 60;
+    z-index: calc(var(--z-pet) + 10);
     animation: speechIn 180ms ease-out;
   }
 
@@ -1102,17 +1102,17 @@
     background: var(--surface-2);
     backdrop-filter: blur(8px);
     color: var(--ink);
-    padding: 2px 8px;
+    padding: 2px var(--space-2);
     border-radius: var(--radius-2xl);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 600;
     white-space: nowrap;
     display: flex;
-    gap: 4px;
+    gap: var(--space-1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border: 1px solid var(--line-soft);
     pointer-events: none;
-    z-index: 55;
+    z-index: calc(var(--z-pet) + 5);
   }
 
   .pet-lvl {
@@ -1123,10 +1123,10 @@
     position: absolute;
     top: -15px;
     right: 6px;
-    font-size: 22px;
+    font-size: var(--text-subheading);
     animation: floatUp 1.8s ease-out forwards;
     pointer-events: none;
-    z-index: 58;
+    z-index: calc(var(--z-pet) + 8);
   }
 
   @keyframes floatUp {
@@ -1159,7 +1159,7 @@
     inset: -20px;
     border-radius: 50%;
     pointer-events: none;
-    z-index: 0;
+    z-index: var(--z-base);
     opacity: 0.35;
     transition: background 1.2s ease;
   }

@@ -51,6 +51,6 @@
     min-width: 0;
   }
   .who-text .muted {
-    font-size: 12px;
+    font-size: var(--text-caption);
   }
 </style>

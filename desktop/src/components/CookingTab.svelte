@@ -178,34 +178,34 @@
   .menu {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    font-size: 13px;
+    gap: var(--space-2);
+    font-size: var(--text-label);
   }
   .recipe {
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: 16px;
+    font-size: var(--text-body-lg);
     text-transform: uppercase;
   }
   .chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .ing {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-pills);
     background: var(--surface);
     color: var(--ink);
-    font-size: 12px;
+    font-size: var(--text-caption);
   }
   .ing--big {
-    padding: 6px 12px;
-    font-size: 14px;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-body);
   }
   .ing--btn {
     cursor: pointer;
@@ -222,7 +222,7 @@
   }
   .pot {
     min-height: 34px;
-    padding: 8px;
+    padding: var(--space-2);
     border: 1.5px dashed var(--line-soft);
     border-radius: var(--radius-2xl);
   }

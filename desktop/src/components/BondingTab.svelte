@@ -102,20 +102,20 @@
   }
   .bond-value small {
     font-family: var(--font-ui);
-    font-size: 11px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .unlocks {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
+    gap: var(--space-2);
   }
   .unlock {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 8px 4px;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-1);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
     background: var(--surface);
@@ -127,14 +127,14 @@
     color: var(--ink-muted);
   }
   .unlock.on {
-    border-color: var(--color-carbon);
+    border-color: var(--line);
     --tile-c: var(--color-lavender);
   }
   .unlock.on .ui-tile__icon {
     color: var(--on-color);
   }
   .unlock small {
-    font-size: 10px;
+    font-size: var(--text-caption);
     font-weight: 700;
     color: var(--ink-muted);
     text-align: center;
@@ -145,7 +145,7 @@
   }
   .delta {
     font-weight: 800;
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-variant-numeric: tabular-nums;
   }
   .delta.pos {
@@ -155,6 +155,6 @@
     color: var(--danger-ink);
   }
   .muted {
-    font-size: 11px;
+    font-size: var(--text-caption);
   }
 </style>

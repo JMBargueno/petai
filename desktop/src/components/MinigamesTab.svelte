@@ -154,14 +154,14 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: var(--space-2);
     margin: 0;
     font-family: var(--font-display);
-    font-size: 30px;
+    font-size: var(--text-heading-sm);
   }
   .score small {
     font-family: var(--font-ui);
-    font-size: 12px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
 </style>

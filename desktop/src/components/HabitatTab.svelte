@@ -362,12 +362,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
     background: var(--surface);
     color: var(--ink);
     border: var(--outline);
     border-radius: var(--radius-cards);
-    padding: 10px 12px;
+    padding: var(--space-2) var(--space-3);
     box-shadow: var(--shadow-1);
     transition: background var(--dur-2) var(--ease-out);
   }
@@ -375,14 +375,14 @@
     background: color-mix(in srgb, var(--success) 14%, var(--surface));
     box-shadow: var(--shadow-pop);
   }
-  .status-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .status-left { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
   .status-icon-circle {
     flex: none;
     display: grid;
     place-items: center;
     width: 36px;
     height: 36px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     border: var(--outline);
     background: var(--surface-2);
     color: var(--ink-muted);
@@ -394,16 +394,16 @@
   .status-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .status-badge {
     align-self: flex-start;
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 800;
-    padding: 1px 8px;
+    padding: 1px var(--space-2);
     border-radius: var(--radius-pills);
-    border: 1px solid var(--color-carbon);
+    border: 1px solid var(--on-color);
     background: var(--color-sunburst);
     color: var(--on-color);
   }
   .in-house .status-badge { background: var(--color-mint-pop); }
-  .status-subtitle { font-size: 11.5px; color: var(--ink-muted); margin: 0; line-height: 1.3; }
+  .status-subtitle { font-size: var(--text-caption); color: var(--ink-muted); margin: 0; line-height: 1.3; }
 
   /* --- SALA ISOMÉTRICA ---
      Isla de tono: los colores de la sala vienen de habitats.json (theme), iguales en claro y oscuro. */
@@ -413,7 +413,7 @@
     width: 100%;
     border-radius: var(--radius-cards);
     overflow: hidden;
-    border: 1.5px solid var(--color-carbon);
+    border: 1.5px solid var(--line);
     box-shadow: var(--shadow-pop);
     background:
       radial-gradient(80% 70% at 50% 35%, rgb(255 255 255 / 0.65), transparent 75%),
@@ -434,20 +434,20 @@
     position: absolute;
     right: 8px;
     bottom: 8px;
-    z-index: 12;
+    z-index: calc(var(--z-sticky) + 2);
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px;
+    gap: var(--space-2);
+    padding: var(--space-1);
     border-radius: var(--radius-pills);
     background: rgb(255 255 255 / 0.9);
-    border: 1px solid var(--color-carbon);
-    color: var(--color-carbon);
+    border: 1px solid var(--on-color);
+    color: var(--on-color);
   }
   .sel-name,
   .sel-hint {
-    padding: 0 6px;
-    font-size: 11.5px;
+    padding: 0 var(--space-2);
+    font-size: var(--text-caption);
     font-weight: 700;
     white-space: nowrap;
   }
@@ -459,67 +459,67 @@
   .pet-absent-overlay {
     position: absolute;
     inset: 0;
-    z-index: 10;
+    z-index: var(--z-sticky);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 12px;
+    gap: var(--space-2);
+    padding: var(--space-3);
     text-align: center;
     background: rgb(11 10 20 / 0.38);
     backdrop-filter: blur(2px);
   }
   .absent-text {
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 700;
-    color: var(--color-carbon);
+    color: var(--on-color);
     background: rgb(255 255 255 / 0.9);
-    border: 1px solid var(--color-carbon);
-    padding: 4px 12px;
+    border: 1px solid var(--on-color);
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pills);
   }
-  .absent-hint { font-size: 10.5px; color: rgb(255 255 255 / 0.85); font-weight: 600; }
+  .absent-hint { font-size: var(--text-caption); color: rgb(255 255 255 / 0.85); font-weight: 600; }
   .drop-target .pet-absent-overlay { background: rgb(85 219 156 / 0.35); }
 
   .room-locked-badge {
     position: absolute;
     top: 10px;
     left: 10px;
-    z-index: 11;
+    z-index: calc(var(--z-sticky) + 1);
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 11px;
+    gap: var(--space-1);
+    font-size: var(--text-caption);
     font-weight: 700;
-    color: var(--color-carbon);
+    color: var(--on-color);
     background: var(--color-soft-mist);
-    border: 1px solid var(--color-carbon);
+    border: 1px solid var(--on-color);
     border-radius: var(--radius-pills);
-    padding: 2px 9px;
+    padding: 2px var(--space-2);
   }
 
   /* Buffs y compras */
-  .buffs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .buffs { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
   .buffs :global(.ui-empty) { grid-column: 1 / -1; }
   .buff {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 10px;
+    padding: var(--space-2) var(--space-2);
     border-radius: var(--radius-2xl);
     background: var(--surface-2);
     border: 1px solid var(--line-soft);
   }
-  .buff small { font-size: 11px; color: var(--ink-muted); }
-  .buff span { font-size: 13px; font-weight: 800; color: var(--success-ink); }
+  .buff small { font-size: var(--text-caption); color: var(--ink-muted); }
+  .buff span { font-size: var(--text-label); font-weight: 800; color: var(--success-ink); }
 
-  .shop, .placed { display: flex; flex-direction: column; gap: 6px; }
+  .shop, .placed { display: flex; flex-direction: column; gap: var(--space-2); }
   .shop-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-2);
     border-radius: var(--radius-2xl);
     background: var(--surface);
     border: 1px solid var(--line-soft);
@@ -530,7 +530,7 @@
     place-items: center;
     width: 40px;
     height: 40px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     overflow: hidden;
   }
@@ -539,18 +539,18 @@
     max-height: 36px;
   }
   .f-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-  .f-name { font-size: 13px; font-weight: 700; color: var(--ink); }
-  .f-info small { font-size: 10.5px; color: var(--ink-muted); }
-  .f-price { font-size: 12px; font-weight: 800; white-space: nowrap; color: var(--ink); }
+  .f-name { font-size: var(--text-label); font-weight: 700; color: var(--ink); }
+  .f-info small { font-size: var(--text-caption); color: var(--ink-muted); }
+  .f-price { font-size: var(--text-caption); font-weight: 800; white-space: nowrap; color: var(--ink); }
   .f-price.short { color: var(--danger-ink); }
   .placed-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 4px 6px 4px 10px;
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-2);
     border-radius: var(--radius-2xl);
     background: var(--surface-2);
-    font-size: 12px;
+    font-size: var(--text-caption);
     color: var(--ink);
     border: 1px solid transparent;
   }
@@ -561,7 +561,7 @@
   .placed-name {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     padding: 0;
     border: 0;
     background: none;

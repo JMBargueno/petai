@@ -165,17 +165,17 @@
   .pf {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-4);
   }
   .pf-head {
     display: flex;
-    gap: 12px;
+    gap: var(--space-3);
     align-items: center;
-    padding: 12px;
-    border: 1px solid var(--color-carbon);
+    padding: var(--space-3);
+    border: 1px solid var(--line);
     border-radius: var(--radius-2xl);
     background: color-mix(in srgb, var(--theme-social) 14%, var(--surface));
-    box-shadow: 2px 3px 0 var(--color-carbon);
+    box-shadow: 2px 3px 0 var(--line);
   }
   .pf-head__body {
     display: flex;
@@ -186,8 +186,8 @@
   .pf-name {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 16px;
+    gap: var(--space-2);
+    font-size: var(--text-body-lg);
   }
   .pf-name strong {
     white-space: nowrap;
@@ -196,20 +196,20 @@
   }
   .pf-pro {
     gap: 3px;
-    padding: 1px 7px;
-    font-size: 10px;
+    padding: 1px var(--space-2);
+    font-size: var(--text-caption);
     font-weight: 800;
     background: var(--rarity-legendary);
-    border-color: var(--color-carbon);
-    color: var(--color-carbon);
+    border-color: var(--on-color);
+    color: var(--on-color);
   }
   .pf-handle {
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 600;
     color: var(--ink-muted);
   }
   .pf-meta {
-    font-size: 11px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .pf-title {
@@ -220,14 +220,14 @@
   .pf-featured {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    gap: var(--space-2);
   }
   .pf-slot {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 8px 4px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-1);
     min-width: 0;
   }
   .pf-slot__ghost {
@@ -240,7 +240,7 @@
     color: var(--ink-muted);
   }
   .pf-slot__name {
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     text-align: center;
     line-height: 1.2;
@@ -253,15 +253,15 @@
   .pf-stats {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 6px;
+    gap: var(--space-2);
   }
   .pf-stat {
     display: grid;
     grid-template-columns: auto 1fr;
     grid-template-rows: auto auto;
-    column-gap: 8px;
+    column-gap: var(--space-2);
     align-items: center;
-    padding: 8px 10px;
+    padding: var(--space-2) var(--space-2);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
     background: var(--surface);
@@ -271,22 +271,22 @@
     color: var(--theme-social);
   }
   .pf-stat strong {
-    font-size: 14px;
+    font-size: var(--text-body);
   }
   .pf-stat span {
-    font-size: 10px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .pf-rarities {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .pf-rarity {
-    font-size: 11px;
-    padding: 1px 8px;
-    border-color: var(--color-carbon);
-    color: var(--color-carbon);
+    font-size: var(--text-caption);
+    padding: 1px var(--space-2);
+    border-color: var(--on-color);
+    color: var(--on-color);
     background: var(--rarity-common);
   }
   .rarity-rare { background: var(--rarity-rare); }
@@ -297,14 +297,14 @@
   .pf-badges {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-    gap: 6px;
+    gap: var(--space-2);
   }
   .pf-badge {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 8px 4px;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-1);
     border: 1px solid transparent;
     border-radius: var(--radius-2xl);
     background: transparent;
@@ -321,12 +321,12 @@
     translate: 0 -1px;
   }
   .pf-badge.featured {
-    border-color: var(--color-carbon);
+    border-color: var(--line);
     background: color-mix(in srgb, var(--theme-social) 22%, var(--surface));
-    box-shadow: 1px 2px 0 var(--color-carbon);
+    box-shadow: 1px 2px 0 var(--line);
   }
   .pf-badge__name {
-    font-size: 10px;
+    font-size: var(--text-caption);
     font-weight: 700;
     text-align: center;
     line-height: 1.15;

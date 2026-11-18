@@ -894,9 +894,9 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    z-index: 100;
+    z-index: var(--z-panel);
     pointer-events: auto;
-    transition: box-shadow 0.15s ease, outline-color 0.15s ease;
+    transition: box-shadow var(--dur-1) ease, outline-color var(--dur-1) ease;
     outline: 3px solid transparent;
     outline-offset: -3px;
   }
@@ -912,8 +912,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
-    padding: 10px 12px 10px 16px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
     background: color-mix(in srgb, var(--surface) 45%, transparent);
     border-bottom: 1px solid var(--line-soft);
   }
@@ -923,24 +923,24 @@
   .header-title {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
     min-width: 0;
   }
   .logo {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
+    gap: var(--space-2);
   }
   .logo .display {
     font-family: var(--font-display);
-    font-size: 18px;
+    font-size: var(--text-title);
     letter-spacing: 0.02em;
     text-transform: uppercase;
     line-height: 1;
   }
   .user-pill {
     display: flex;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .header-actions {
     display: flex;
@@ -962,8 +962,8 @@
   .settings-btn.active:hover {
     background: var(--view-tint);
     color: var(--on-color);
-    border-color: var(--color-carbon);
-    box-shadow: 2px 2px 0 var(--color-carbon);
+    border-color: var(--on-color);
+    box-shadow: 2px 2px 0 var(--on-color);
   }
   .dot-badge {
     position: absolute;
@@ -973,7 +973,7 @@
     height: 8px;
     border-radius: 50%;
     background: var(--danger);
-    border: 1px solid var(--color-carbon);
+    border: 1px solid var(--on-color);
   }
   .close-btn {
     transition: background var(--dur-1), rotate var(--dur-1);
@@ -987,8 +987,8 @@
     flex-shrink: 0;
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
-    padding: 8px;
+    gap: var(--space-1);
+    padding: var(--space-2);
     border-bottom: 1px solid var(--line-soft);
   }
   .nav-tabs button {
@@ -997,12 +997,12 @@
     flex-direction: column;
     align-items: center;
     gap: 3px;
-    padding: 7px 0 6px;
+    padding: var(--space-2) 0 var(--space-2);
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--radius-2xl);
     color: var(--ink-muted);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     cursor: pointer;
     transition: background var(--dur-1), color var(--dur-1), box-shadow var(--dur-1), translate var(--dur-1);
@@ -1020,8 +1020,8 @@
   .nav-tabs button.active {
     color: var(--on-color);
     background: var(--tab-tint);
-    border-color: var(--color-carbon);
-    box-shadow: 2px 3px 0 var(--color-carbon);
+    border-color: var(--on-color);
+    box-shadow: 2px 3px 0 var(--on-color);
     translate: -1px -1px;
   }
   .nav-tabs button:focus-visible {
@@ -1033,19 +1033,19 @@
     top: -4px;
     right: 4px;
     min-width: 16px;
-    padding: 0 4px;
-    border: 1px solid var(--color-carbon);
+    padding: 0 var(--space-1);
+    border: 1px solid var(--on-color);
     border-radius: var(--radius-pills);
     background: var(--danger);
     color: var(--on-dark);
-    font-size: 10px;
+    font-size: var(--text-caption);
     line-height: 14px;
     text-align: center;
   }
 
   .panel-card :global(.sub-tabs) {
     flex-shrink: 0; /* con contenido largo el flex la recortaba */
-    padding: 10px 12px 2px;
+    padding: var(--space-2) var(--space-3) 2px;
     /* Las pastillas desplazables ocultaban la última (p. ej. "Habilidades") sin barra ni pista de
        scroll: en el panel se reparten en varias filas para que todas se vean siempre. */
     flex-wrap: wrap;
@@ -1053,11 +1053,11 @@
   }
 
   .panel-error {
-    margin: 10px 12px 0;
+    margin: var(--space-2) var(--space-3) 0;
   }
 
   .tab-content {
-    padding: 14px 16px 16px;
+    padding: var(--space-4) var(--space-4) var(--space-4);
     overflow-y: auto;
     user-select: text;
   }

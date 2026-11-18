@@ -82,15 +82,15 @@
 <p class="hint">Encuentra las 8 parejas. Cuanto más rápido y con menos fallos, más puntos.</p>
 
 <style>
-  .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
-  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 340px; }
+  .hud { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: var(--space-2); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); width: 340px; }
   .card {
     aspect-ratio: 1; font-size: 28px; border-radius: var(--radius-2xl); cursor: pointer;
     background: var(--surface-2); border: 1px solid var(--line-soft); color: inherit;
-    transition: transform 0.15s, background 0.15s;
+    transition: transform var(--dur-1), background var(--dur-1);
   }
   .card:hover { transform: translateY(-2px); }
   .card.up { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
   .card.ok { background: color-mix(in srgb, var(--success) 22%, var(--surface)); border-color: var(--success); }
-  .hint { font-size: 11px; opacity: 0.65; margin: 8px 0 0; text-align: center; }
+  .hint { font-size: var(--text-caption); opacity: 0.65; margin: var(--space-2) 0 0; text-align: center; }
 </style>

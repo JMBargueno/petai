@@ -291,8 +291,8 @@
   /* Selector de amigos */
   .picker {
     display: flex;
-    gap: 6px;
-    padding: 8px 4px 4px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-1) var(--space-1);
     overflow-x: auto;
     scrollbar-width: thin;
   }
@@ -302,8 +302,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 6px 4px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-1);
     border: 1px solid transparent;
     border-radius: var(--radius-2xl);
     background: transparent;
@@ -320,7 +320,7 @@
   }
   .pick-name {
     max-width: 100%;
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
@@ -329,7 +329,7 @@
   .pick-handle {
     max-width: 100%;
     margin-top: -5px;
-    font-size: 10px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
     white-space: nowrap;
     overflow: hidden;
@@ -339,13 +339,13 @@
     position: absolute;
     top: 2px;
     right: 2px;
-    padding: 0 5px;
-    font-size: 9px;
+    padding: 0 var(--space-1);
+    font-size: var(--text-caption);
     font-weight: 800;
     border-radius: var(--radius-pills);
     background: var(--theme-social);
     color: var(--on-color);
-    border: 1px solid var(--color-carbon);
+    border: 1px solid var(--on-color);
   }
 
   /* Tarjeta del amigo */
@@ -367,9 +367,9 @@
     width: 54px;
     height: 54px;
     border-radius: 50%;
-    border: 1.5px solid var(--color-carbon);
+    border: 1.5px solid var(--on-color);
     background: #fffaf0;
-    color: var(--color-carbon);
+    color: var(--on-color);
     animation: bob 3s ease-in-out infinite;
   }
   @keyframes bob {
@@ -380,45 +380,45 @@
   .visit-body {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
+    gap: var(--space-2);
+    padding: var(--space-3);
   }
   .visit-title {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     flex-wrap: wrap;
   }
   .pet-name {
     font-family: var(--font-display);
     text-transform: uppercase;
-    font-size: 18px;
+    font-size: var(--text-title);
     line-height: 1.05;
   }
   .care-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    gap: var(--space-2);
   }
   .care {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    padding: 9px 4px 8px;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-1) var(--space-2);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
     background: var(--surface-2);
     color: var(--ink);
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 700;
     cursor: pointer;
     transition: transform var(--dur-1) var(--ease-out), border-color var(--dur-1), box-shadow var(--dur-1);
   }
   .care:hover:not(:disabled) {
     transform: translateY(-2px);
-    border-color: var(--color-carbon);
-    box-shadow: 2px 3px 0 var(--color-carbon);
+    border-color: var(--line);
+    box-shadow: 2px 3px 0 var(--line);
   }
   .care:disabled {
     opacity: 0.5;
@@ -429,8 +429,8 @@
     place-items: center;
     width: 30px;
     height: 30px;
-    border-radius: 10px;
-    border: 1px solid var(--color-carbon);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--on-color);
     background: var(--c);
     color: var(--on-color);
   }
@@ -441,7 +441,7 @@
   }
   .msg-count {
     align-self: flex-end;
-    font-size: 10px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .block {
@@ -452,8 +452,8 @@
   .hist-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 10px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-2);
     border-radius: var(--radius-2xl);
     background: var(--surface);
     border: 1px solid var(--line-soft);
@@ -465,12 +465,12 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 1px solid var(--color-carbon);
+    border: 1px solid var(--on-color);
     background: var(--c);
     color: var(--on-color);
   }
   .hist-title {
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
@@ -485,9 +485,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 12px;
-    font-size: 12px;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
 

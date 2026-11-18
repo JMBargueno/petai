@@ -92,8 +92,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
-    padding: 24px 24px 28px;
+    gap: var(--space-4);
+    padding: var(--space-6) var(--space-6) var(--space-6);
     text-align: center;
     color: var(--ink);
     overflow-x: hidden;
@@ -105,13 +105,13 @@
   .header-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     background: color-mix(in srgb, var(--warning) 18%, transparent);
     color: var(--warning-ink);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     letter-spacing: 0.08em;
-    padding: 4px 12px;
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pills);
     text-transform: uppercase;
   }
@@ -124,7 +124,7 @@
     align-items: center;
     justify-content: center;
     background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--accent);
+    color: var(--accent-ink);
   }
   .icon-circle.loading {
     background: color-mix(in srgb, var(--color-electric-blue) 16%, transparent);
@@ -150,27 +150,27 @@
 
   h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: var(--text-title);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     flex-wrap: wrap;
     justify-content: center;
   }
 
   .version-tag {
     font-family: var(--font-ui);
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 600;
     background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--accent);
-    padding: 2px 8px;
+    color: var(--accent-ink);
+    padding: 2px var(--space-2);
     border-radius: var(--radius-pills);
   }
 
   .desc-text {
     margin: 0;
-    font-size: 13.5px;
+    font-size: var(--text-label);
     line-height: 1.5;
     color: var(--ink-muted);
   }
@@ -180,21 +180,21 @@
     background: var(--surface-2);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-cards);
-    padding: 12px 14px;
+    padding: var(--space-3) var(--space-4);
     text-align: left;
     max-height: 160px;
     overflow-y: auto;
   }
   .notes-header {
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--accent);
-    margin-bottom: 6px;
+    color: var(--accent-ink);
+    margin-bottom: var(--space-2);
   }
   .notes-body {
-    font-size: 12.5px;
+    font-size: var(--text-caption);
     line-height: 1.45;
     white-space: pre-wrap;
     word-break: break-word;
@@ -202,27 +202,27 @@
 
   .action-section {
     width: 100%;
-    margin-top: 4px;
+    margin-top: var(--space-1);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-2);
   }
 
   .progress-wrap {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .progress-info {
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
+    font-size: var(--text-label);
     font-weight: 500;
   }
   .progress-val {
-    color: var(--accent);
+    color: var(--accent-ink);
     font-weight: 700;
   }
   .progress-track {
@@ -236,7 +236,7 @@
     height: 100%;
     background: var(--grad-accent, var(--accent));
     border-radius: var(--radius-pills);
-    transition: width 0.3s ease;
+    transition: width var(--dur-2) ease;
   }
   .progress-fill.indeterminate {
     width: 40%;
@@ -253,17 +253,17 @@
 
   .muted-note {
     margin: 0;
-    font-size: 12px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
 
   .ready-banner {
     width: 100%;
-    padding: 12px;
+    padding: var(--space-3);
     background: color-mix(in srgb, var(--success) 16%, transparent);
     border-radius: var(--radius-cards);
     color: var(--success-ink);
-    font-size: 13.5px;
+    font-size: var(--text-label);
     font-weight: 500;
   }
 

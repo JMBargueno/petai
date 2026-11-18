@@ -88,15 +88,15 @@
     margin: 0;
     background: radial-gradient(ellipse at center, #10141f 0%, #0a0d15 100%);
     border-radius: var(--radius-2xl);
-    padding: 12px;
+    padding: var(--space-3);
     color: var(--ink);
     font-family: inherit;
   }
   .constellation__title {
-    font-size: 0.9rem;
+    font-size: var(--text-body);
     font-weight: 600;
     letter-spacing: 0.04em;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
     color: var(--ink);
   }
   .constellation__player {

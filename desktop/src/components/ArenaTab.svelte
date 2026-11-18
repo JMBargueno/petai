@@ -408,23 +408,23 @@
     gap: 2px;
   }
   .elo {
-    font-size: 15px;
+    font-size: var(--text-body);
     font-variant-numeric: tabular-nums;
   }
   .elo small {
-    font-size: 10px;
+    font-size: var(--text-caption);
     color: var(--ink-muted);
   }
   .facts {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--space-1);
   }
   .stat-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
+    gap: var(--space-2);
+    font-size: var(--text-label);
   }
   .stat-row .lbl {
     flex: 1;
@@ -448,18 +448,18 @@
   .chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: var(--space-1);
   }
   .skill {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-pills);
     background: var(--surface);
     color: var(--ink);
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 600;
     cursor: pointer;
   }
@@ -467,9 +467,9 @@
     color: var(--ink-muted);
   }
   .skill.on {
-    border-color: var(--color-carbon);
+    border-color: var(--line);
     background: color-mix(in srgb, var(--view-tint) 35%, var(--surface));
-    box-shadow: 1px 2px 0 var(--color-carbon);
+    box-shadow: 1px 2px 0 var(--line);
   }
   .skill--locked {
     border-style: dashed;
@@ -489,8 +489,8 @@
   }
   .outcome {
     font-weight: 800;
-    font-size: 13px;
-    border: 1px solid var(--color-carbon);
+    font-size: var(--text-label);
+    border: 1px solid var(--line);
   }
   .fight-row.win .outcome {
     background: var(--success);

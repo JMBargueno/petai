@@ -31,7 +31,7 @@
   }
 </script>
 
-<Modal title="" on:close={() => dispatch('close')}>
+<Modal label="Archivo: {file.name}" on:close={() => dispatch('close')}>
   <div class="ui-feature file-head" style="--feature-tint: {cat.color}">
     <span class="ui-feature__icon" aria-hidden="true"><Ico n={cat.icon} size={22} /></span>
     <div class="ui-feature__body">
@@ -73,7 +73,7 @@
   }
   .file-name {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--text-body);
     font-weight: 800;
     white-space: nowrap;
     overflow: hidden;
@@ -81,25 +81,25 @@
   }
   .badges {
     display: flex;
-    gap: 4px;
+    gap: var(--space-1);
     margin-top: 3px;
   }
   .snippet {
     max-height: 140px;
     margin: 0;
-    padding: 10px 12px;
+    padding: var(--space-2) var(--space-3);
     overflow: auto;
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
     background: var(--surface-2);
     color: var(--ink);
-    font-size: 11px;
+    font-size: var(--text-caption);
     line-height: 1.45;
     user-select: text;
   }
   .actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
   }
 </style>

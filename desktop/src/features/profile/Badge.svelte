@@ -70,10 +70,10 @@
     inset: 0;
     overflow: visible;
   }
-  .shadow { fill: var(--color-carbon); }
+  .shadow { fill: var(--on-color); }
   .frame {
     fill: var(--tier);
-    stroke: var(--color-carbon);
+    stroke: var(--on-color);
     stroke-width: 4;
     stroke-linejoin: round;
   }
@@ -86,7 +86,7 @@
   .glyph {
     position: relative;
     display: inline-flex;
-    color: var(--color-carbon);
+    color: var(--on-color);
   }
   .tier-legendary .glyph { margin-top: 1px; }
 

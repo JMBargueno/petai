@@ -118,14 +118,14 @@
   .desktop-ball {
     position: fixed;
     pointer-events: auto;
-    z-index: 92;
+    z-index: calc(var(--z-dock) + 2);
     cursor: grab;
     user-select: none;
     touch-action: none;
   }
   .desktop-ball.grabbed {
     cursor: grabbing;
-    z-index: 95;
+    z-index: calc(var(--z-dock) + 5);
   }
 
   .ball-sphere {
@@ -175,6 +175,6 @@
     border-radius: 50%;
     filter: blur(2px);
     pointer-events: none;
-    z-index: -1;
+    z-index: var(--z-below);
   }
 </style>

@@ -96,7 +96,7 @@
     font-weight: 600;
   }
   .handle-input .input {
-    padding-left: 28px;
+    padding-left: var(--space-6);
     width: 100%;
   }
   .handle-input.ok .input {
@@ -107,7 +107,7 @@
   }
   .handle-hint {
     display: flex;
-    gap: 4px;
+    gap: var(--space-1);
     align-items: center;
     flex-wrap: wrap;
   }
