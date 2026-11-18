@@ -4,6 +4,12 @@ import {
   acceptedFriends,
   clearVisitors,
   friendPetLabel,
+  guestPetState,
+  roomGuestOf,
+  sceneLabel,
+  sceneReceived,
+  stageLabel,
+  visitScene,
   pendingFriends,
   presenceState,
   removeVisitor,
@@ -131,5 +137,73 @@ describe('visitorSeed', () => {
     expect(visitorSeed('usuario-1')).toBe(visitorSeed('usuario-1'));
     expect(visitorSeed('usuario-1')).not.toBe(visitorSeed('usuario-2'));
     expect(Number.isFinite(visitorSeed('x'))).toBe(true);
+  });
+});
+
+describe('visitante dentro de la sala', () => {
+  const look = { palette: { primary: '#112233', secondary: '#445566' }, pattern: 'stripes', visualSeed: 42, shiny: true, accessories: { head: 'crown' } };
+  const visitor = (over: Record<string, unknown> = {}, pet: Record<string, unknown> = {}): any => ({
+    visitorId: 'u1',
+    visitorName: 'Ana',
+    startedAt: '2026-11-18T12:00:00Z',
+    pet: { petId: 'p1', nickname: 'Brasa', speciesName: 'Ignisaur', speciesId: 'ignisaur', spriteRef: 'ignisaur', stage: 'adult', look, ...pet },
+    ...over,
+  });
+
+  it('traduce el aspecto del visitante al de la escena', () => {
+    expect(guestPetState(visitor())).toEqual({
+      species: 'ignisaur',
+      stage: 'adult',
+      palette: { primary: '#112233', secondary: '#445566' },
+      pattern: 'stripes',
+      visualSeed: 42,
+      shiny: true,
+      accessories: { head: 'crown' },
+    });
+  });
+
+  it('una especie o etapa desconocida cae a un valor que se puede dibujar', () => {
+    const state = guestPetState(visitor({}, { speciesId: 'criatura_nueva', spriteRef: 'nada', stage: 'ancestral' }));
+    expect(state?.species).toBe('ignisaur');
+    expect(state?.stage).toBe('baby');
+  });
+
+  it('sin aspecto (servidor antiguo) no se dibuja dentro de la sala', () => {
+    expect(guestPetState(visitor({}, { look: undefined }))).toBeNull();
+    expect(guestPetState(null)).toBeNull();
+  });
+
+  it('en la sala cabe uno: el primero que trae aspecto', () => {
+    const old = visitor({ visitorId: 'u0' }, { look: undefined });
+    const a = visitor({ visitorId: 'u1' });
+    const b = visitor({ visitorId: 'u2' });
+    expect(roomGuestOf([old, a, b])?.visitorId).toBe('u1');
+    expect(roomGuestOf([old])).toBeNull();
+    expect(roomGuestOf([])).toBeNull();
+  });
+
+  it('describe la escena y la relación con palabras, y calla ante lo que no conoce', () => {
+    expect(sceneLabel('play_tag')).toContain('pilla-pilla');
+    expect(stageLabel('friend')).toBe('Son amigos');
+    expect(sceneLabel('baile_raro')).toBe('');
+    expect(stageLabel(undefined)).toBe('');
+  });
+
+  it('cada escena recibida se numera para poder repetirla; al irse el visitante se olvida', () => {
+    const seen: any[] = [];
+    const stop = visitScene.subscribe((s) => seen.push(s));
+    const ev = { visitorId: 'u1', slot: 0, type: 'greet', stage: 'stranger', hostPetId: 'h', guestPetId: 'p1' };
+    sceneReceived(ev);
+    sceneReceived({ ...ev, slot: 1 });
+    sceneReceived(null);
+    sceneReceived({ ...ev, type: 7 } as any);
+    const numbered = seen.filter(Boolean);
+    expect(numbered).toHaveLength(2);
+    expect(numbered[1].n).toBeGreaterThan(numbered[0].n);
+    visitorLeft('otro');
+    expect(seen[seen.length - 1]).not.toBeNull();
+    visitorLeft('u1');
+    expect(seen[seen.length - 1]).toBeNull();
+    stop();
   });
 });

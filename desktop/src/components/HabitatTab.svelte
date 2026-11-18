@@ -16,6 +16,7 @@
   import { startHabitatExitDrag } from '../lib/habitatExitDrag';
   import { Home, Pencil, Check, RotateCw, Trash2, Mountain } from 'lucide-svelte';
   import { habitatBackdrop } from '../lib/habitatBackdrop';
+  import { roomGuestOf, sceneLabel, stageLabel, visitScene, visitorsStore } from '../lib/visitors';
 
   const dispatch = createEventDispatcher();
 
@@ -85,6 +86,10 @@
     loadedFor = petId;
     load();
   }
+
+  // Visita en curso: el Pockai del amigo que cabe en la sala y lo último que han hecho juntos
+  $: roomGuest = roomGuestOf($visitorsStore);
+  $: guestScene = roomGuest && $visitScene?.visitorId === roomGuest.visitorId ? $visitScene : null;
 
   let activeRoom: HabitatRoom | null = null;
   let furnitureByRoom: HabitatFurniture[] = [];
@@ -269,11 +274,20 @@
         {activity}
         night={isInHabitat && isSleeping}
         edit={editing}
+        showVisitors={isInHabitat && !editing}
         label="Sala {activeRoom.name}{editing ? ': modo edición. Flechas para mover, R para girar, Escape para soltar' : ''}"
         height={340}
         on:move={onMove}
         on:petPress={onPetPress}
       />
+
+      {#if roomGuest && isInHabitat && !editing}
+        <!-- Quién está de visita y qué hacen: el dibujo solo no dice de quién es el otro Pockai -->
+        <p class="visit-caption" aria-live="polite">
+          <strong>{roomGuest.pet.nickname}</strong>, de {roomGuest.visitorName}, está de visita{#if guestScene}: {sceneLabel(guestScene.type)}{/if}.
+          {#if guestScene && stageLabel(guestScene.stage)}<span class="visit-caption__stage">{stageLabel(guestScene.stage)}.</span>{/if}
+        </p>
+      {/if}
 
       {#if !editing && backdropUrl(activeRoom.id)}
         <button
@@ -648,4 +662,13 @@
     object-fit: contain;
   }
   .remove-btn { color: var(--danger-ink); }
+  .visit-caption {
+    margin: var(--space-2, 8px) 0 0;
+    font-size: var(--text-sm, 13px);
+    color: var(--text-secondary, inherit);
+    text-align: center;
+  }
+  .visit-caption__stage {
+    opacity: 0.75;
+  }
 </style>
