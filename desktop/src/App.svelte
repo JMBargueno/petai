@@ -739,6 +739,8 @@
         clanGoal: () => celebrateClanGoal('Visitas de la semana'),
         agent: (tool = 'open_url') => petViewRef?.playMinor?.('manitas-espirituales', { tool }),
         intelligence: (n: number) => currentPet && (currentPet = { ...currentPet, intelligence: n }),
+        // Cualquier campo de la mascota activa (p. ej. { shiny: true } para ver el destello del Prisma)
+        patchPet: (p: Record<string, unknown>) => currentPet && (currentPet = { ...currentPet, ...p }),
         weather: (condition: string) =>
           (environmental = { ...(environmental ?? {}), weather: { condition, temperature: 12, weatherCode: 0 } } as any),
         gift: (kind: 'gift' | 'care' = 'gift') => currentPet && reactToAction(currentPet.id, kind === 'gift' ? 'gift_received' : 'care_received'),

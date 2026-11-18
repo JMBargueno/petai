@@ -15,7 +15,7 @@
   import { dropGoneVisitor, syncShownVisitors, type ShownVisitor } from '../lib/effects/visitorsShown';
   import type { EnvironmentalStatus } from '../lib/environmental';
   import type { HabitatVisitor } from '../lib/api';
-  import { skillAuthorizations, isSkillActive, getPetBonding } from '../lib/stores/desktopSkillsStore';
+  import { skillAuthorizations, isSkillActive, getPetBonding, getPetIntelligenceLevel } from '../lib/stores/desktopSkillsStore';
   import {
     calculateThrowVelocity,
     advancePhysics,
@@ -181,8 +181,11 @@
   $: stage = stageFrozen ? frozenStage : (pet?.stage ?? null);
   // Si la etapa nueva llega antes que el aviso `evolved` (o sin él), el capullo sale igual;
   // el `evolved` que llegue después se descarta (mismo peso en admitMoment).
-  /** Niveles del Despertar (LORE §5): Susurro < 200 ≤ Hilo de Ariadna < 500 ≤ Simbiosis. */
-  const awakeningLevel = (n: number) => (n >= 500 ? 3 : n >= 200 ? 2 : 1);
+  /**
+   * Niveles del Despertar (LORE §5): Susurro < 200 ≤ Hilo de Ariadna < 500 ≤ Simbiosis. Mismo mapeo
+   * que las habilidades (acepta también el nivel directo 2/3 de datos antiguos).
+   */
+  const awakeningLevel = (n: number) => getPetIntelligenceLevel(n);
   let lastAwakening: { id: string; level: number } | undefined = undefined;
   $: watchAwakening(pet?.id ?? '', awakeningLevel(petIntelligence));
   function watchAwakening(id: string, level: number) {
