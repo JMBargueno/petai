@@ -4,7 +4,9 @@ import {
   GAP_MS,
   MAX_QUEUE,
   createSpeechQueue,
+  MAX_CHUNK,
   durationFor,
+  parseBold,
   splitForSpeech,
   toSpeakable,
 } from './speech-queue';
@@ -35,12 +37,41 @@ describe('splitForSpeech', () => {
   });
 });
 
+describe('negritas', () => {
+  it('parseBold separa los tramos en negrita y descarta marcas sueltas', () => {
+    expect(parseBold('Hola **mundo** cruel')).toEqual([
+      { text: 'Hola ', bold: false },
+      { text: 'mundo', bold: true },
+      { text: ' cruel', bold: false },
+    ]);
+    expect(parseBold('sin ** pareja')).toEqual([{ text: 'sin  pareja', bold: false }]);
+    expect(parseBold('<b>no es html</b>')).toEqual([{ text: '<b>no es html</b>', bold: false }]);
+  });
+
+  it('las marcas no cuentan para el máximo por bocadillo', () => {
+    const text = `**${'a'.repeat(MAX_CHUNK)}**`;
+    expect(splitForSpeech(text)).toEqual([text]);
+  });
+
+  it('una negrita partida entre dos bocadillos se cierra y se reabre', () => {
+    const chunks = splitForSpeech('uno dos **tres cuatro cinco seis** siete', 14);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const c of chunks) expect((c.split('**').length - 1) % 2).toBe(0);
+    expect(chunks.flatMap(parseBold).filter((p) => p.bold).map((p) => p.text).join(' ')).toBe('tres cuatro cinco seis');
+  });
+
+  it('una marca sin pareja se elimina', () => {
+    expect(splitForSpeech('hola **mundo')).toEqual(['hola mundo']);
+  });
+});
+
 describe('toSpeakable', () => {
   it('quita el razonamiento <think> y el markdown', () => {
-    expect(toSpeakable('<think>pienso cosas</think>**Hola** `mundo`')).toBe('Hola mundo');
+    expect(toSpeakable('<think>pienso cosas</think>**Hola** `mundo`')).toBe('**Hola** mundo');
     expect(toSpeakable('- uno\n- dos\n# Título')).toBe('uno\ndos\nTítulo');
     expect(toSpeakable('mira [esto](http://x.y)')).toBe('mira esto');
     expect(toSpeakable('nombre_de_archivo')).toBe('nombre_de_archivo');
+    expect(toSpeakable('*cursiva* y ~~tachado~~')).toBe('cursiva y tachado');
   });
 });
 
@@ -67,7 +98,7 @@ describe('createSpeechQueue', () => {
     const long = 'Frase número uno con algo de texto. '.repeat(10);
     q.speak(long);
     expect(q.pending()).toBeGreaterThan(0);
-    expect(get(q.current)!.text.length).toBeLessThanOrEqual(160);
+    expect(get(q.current)!.text.length).toBeLessThanOrEqual(MAX_CHUNK);
   });
 
   it('el relleno (low) no entra si hay algo en curso', () => {
@@ -126,7 +157,7 @@ describe('createSpeechQueue', () => {
     let last = '';
     for (let i = 0; i < 3; i++) {
       last = get(q.current)!.text;
-      expect(last.length).toBeLessThanOrEqual(160);
+      expect(last.length).toBeLessThanOrEqual(MAX_CHUNK);
       vi.advanceTimersByTime(get(q.current)!.durationMs + GAP_MS);
     }
     expect(last.endsWith('(sigue en el chat)')).toBe(true);

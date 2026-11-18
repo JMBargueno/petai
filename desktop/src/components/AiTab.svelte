@@ -25,7 +25,7 @@
   import { buildClientContext } from '../lib/deskContext';
   import { setSkillAuthorization } from '../lib/stores/desktopSkillsStore';
   import { startPomodoro, stopPomodoro } from '../lib/pomodoro';
-  import { toSpeakable } from '../lib/speech-queue';
+  import { parseBold, toSpeakable } from '../lib/speech-queue';
   import { getSocket } from '../lib/socket';
   import { MEMORY_LAYERS, groupMemoriesByLayer, memoryIcon, valenceView } from '../lib/mind';
   import { stickToBottom } from '../lib/ui/chatScroll';
@@ -819,7 +819,8 @@
               no hayas permitido en tu configuración de Antigravity quedan denegadas.
             {/if}
             El servidor sigue creando la personalidad, moderando y guardando el historial.
-            Limitaciones: sin herramientas de agente y sin nuevos recuerdos automáticos.
+            Limitaciones: sin herramientas de agente (recordatorios y acciones solo con la IA de Pockai o con tu
+            propia key). Los recuerdos se siguen resumiendo en el servidor.
           </p>
           <div class="form-group">
             <label for="ai-cli-model">Modelo <small class="form-hint">(vacío = el predeterminado del CLI)</small></label>
@@ -855,7 +856,8 @@
           <p class="ui-card__hint">
             Conversa con un Hermes Agent que corre en tu ordenador, sin gastar tu key ni salir a internet. Los ajustes
             se guardan solo aquí. El servidor sigue creando la personalidad, moderando y guardando el historial.
-            Limitaciones: sin herramientas de agente y sin nuevos recuerdos automáticos.
+            Limitaciones: sin herramientas de agente (recordatorios y acciones solo con la IA de Pockai o con tu
+            propia key). Los recuerdos se siguen resumiendo en el servidor.
           </p>
           <Switch label="Usar mi Hermes local para conversar" bind:checked={local.enabled} />
           <div class="form-group">
@@ -902,7 +904,7 @@
               {/if}
             </div>
           {/if}
-          <div class="msg {m.role}" class:notice={m.notice}><span class="sr-only">{m.role === 'user' ? 'Tú: ' : `${pet.nickname || pet.species?.name}: `}</span>{m.content}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}<span class="typing" role="status" aria-label="Está escribiendo"><i></i><i></i><i></i></span>{/if}</div>
+          <div class="msg {m.role}" class:notice={m.notice}><span class="sr-only">{m.role === 'user' ? 'Tú: ' : `${pet.nickname || pet.species?.name}: `}</span>{#if m.role === 'assistant'}{#each parseBold(m.content) as part}{#if part.bold}<strong>{part.text}</strong>{:else}{part.text}{/if}{/each}{:else}{m.content}{/if}{#if streaming && m.id.startsWith('tmp-reply') && !m.content}<span class="typing" role="status" aria-label="Está escribiendo"><i></i><i></i><i></i></span>{/if}</div>
         {/each}
         {#if toolHint}<div class="hint">{toolHint}</div>{/if}
         {#each actions as a (a.id)}

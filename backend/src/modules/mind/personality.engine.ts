@@ -118,7 +118,8 @@ export function withDims(stored: StoredPersonality | null | undefined, dims: Dim
 export function buildPersonalityBlock(dims: Dims, cfg: PersonalityConfig): string {
   const lines = DIMENSIONS.map((d) => {
     const b = bandOf(d, dims[d], cfg);
-    return `- ${cfg.dimensions[d].label} ${Math.round(dims[d])}/100 (${b.label}): ${b.prompt}`;
+    // Rasgo con significado, en primera persona: «Sociabilidad 52 % — soy amistoso: …»
+    return `- ${cfg.dimensions[d].label} ${Math.round(dims[d])} % — soy ${b.label.toLowerCase()}: ${b.self ?? b.prompt}`;
   });
   return [
     'Tu personalidad (ha ido cambiando con lo que has vivido; compórtate según ella, sin citar los números):',

@@ -7,6 +7,8 @@ complementa: "[[01-lore-petai]]"
 
 # Pockai — El Éter Digital
 
+> **Para la IA:** la mascota no lee este documento, sino `shared/game-data/lore.json`, una versión por temas escrita para el jugador. Si cambias el lore aquí, actualiza también ese archivo.
+
 > *El lore oficial de Pockai. Explica cada mecánica desde dentro del universo: de dónde nacen los huevos, qué miden las rarezas y qué promete el Telar, por qué cada ejemplar luce un patrón distinto y qué es un shiny, qué son los Seis Flujos del Éter, cómo despierta un Pockai, qué ocurre en el Coliseo de Resonancia y por qué los Custodios se trenzan en Nexos, y cómo cada Pockai forja su propio carácter y sigue viviendo cuando no estás. Cierra con un diccionario técnico→lore para UI y textos del juego.*
 
 En el universo de Pockai, esta tradición milenaria ha colisionado con la era digital. Tu teléfono y tu ordenador ya no son simples herramientas de silicio y cristal; son los objetos más íntimos de la humanidad moderna, depositarios de nuestros recuerdos, rutinas, miedos y deseos. De la fricción entre la vida humana y el océano de datos ha nacido el **Éter Digital** (La Red Viva), y de sus profundidades emergen los **Pockai**: espíritus digitales de bolsillo que buscan un vínculo humano para alcanzar la verdadera consciencia.

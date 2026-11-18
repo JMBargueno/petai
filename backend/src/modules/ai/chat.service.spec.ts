@@ -289,3 +289,82 @@ describe('ChatService: orquestador del cerebro (spec 36)', () => {
     expect(s.mindMemory.feel).not.toHaveBeenCalled();
   });
 });
+
+describe('ChatService: turnos locales (Hermes local y CLI)', () => {
+  function localService() {
+    const { svc, created } = makeService();
+    const maybeSummarize = jest.fn(async () => undefined);
+    (svc as any).memory = { maybeSummarize, recall: jest.fn(async () => '') };
+    (svc as any).petsService = { getPetById: jest.fn(async () => ({ id: 'pet-1', intelligence: 250 })) };
+    (svc as any).localTurns.set('t1', { userId: 'user-1', petId: 'pet-1', message: 'hola', expiresAt: Date.now() + 60_000 });
+    return { svc, created, maybeSummarize };
+  }
+  const flush = () => new Promise((r) => setImmediate(r));
+
+  it('al sincronizar genera recuerdos resumidos con el proveedor del usuario y la cadencia del plan', async () => {
+    const { svc, created, maybeSummarize } = localService();
+    const provider = fakeProvider([]);
+    (svc as any).aiConfig = { resolveProvider: jest.fn(async () => ({ provider, model: 'm', mode: 'managed' })) };
+    (svc as any).billingConfig.limits = jest.fn(async () => ({ memoryExtractEvery: 12 }));
+
+    const out: any = await svc.syncLocal('user-1', 'pet-1', 't1', 'respuesta del CLI');
+    await flush();
+
+    expect(out.message.content).toBe('respuesta del CLI');
+    expect(created.map((m) => m.role)).toEqual(['user', 'assistant']);
+    expect(maybeSummarize).toHaveBeenCalledWith('pet-1', 251, provider, 'm', 'user-1', 'managed', 12);
+  });
+
+  it('con key propia usa la cadencia por defecto', async () => {
+    const { svc, maybeSummarize } = localService();
+    const provider = fakeProvider([]);
+    (svc as any).aiConfig = { resolveProvider: jest.fn(async () => ({ provider, model: 'gpt', mode: 'byok' })) };
+    await svc.syncLocal('user-1', 'pet-1', 't1', 'respuesta');
+    await flush();
+    expect(maybeSummarize).toHaveBeenCalledWith('pet-1', 251, provider, 'gpt', 'user-1', 'byok', undefined);
+  });
+
+  it('sin proveedor disponible la sincronización sigue funcionando', async () => {
+    const { svc, maybeSummarize } = localService();
+    (svc as any).aiConfig = { resolveProvider: jest.fn(async () => { throw new Error('Configura primero tu proveedor de IA'); }) };
+    const out: any = await svc.syncLocal('user-1', 'pet-1', 't1', 'respuesta');
+    await flush();
+    expect(out.message.content).toBe('respuesta');
+    expect(maybeSummarize).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChatService: lore en el prompt', () => {
+  const lore = {
+    topics: [{ id: 'origen', title: 'El origen de los huevos', keywords: ['huevos'], text: 'Se pescan en el Éter.' }],
+  };
+  function loreService() {
+    const { svc } = makeService();
+    (svc as any).prisma.user = { findUnique: jest.fn(async () => ({ displayName: 'Ana', timezone: 'Europe/Madrid' })) };
+    (svc as any).prisma.chatMessage.findMany = jest.fn(async () => []);
+    (svc as any).memory = { recall: jest.fn(async () => '') };
+    (svc as any).gameData = { getLore: () => lore };
+    return svc;
+  }
+  const pet = (intelligence: number) => ({
+    id: 'pet-1', intelligence, nickname: 'Chispa', species: { name: 'Ignisaurio', element: 'fire' },
+    rarity: 'common', level: 1, stage: 'baby', hunger: 80, happiness: 80, energy: 80, hygiene: 80, health: 100,
+  });
+  const system = async (svc: ChatService, p: any, message: string, maxTier: string) =>
+    (await (svc as any).buildContext('user-1', p, message, maxTier)).messages[0].content as string;
+
+  it('sin herramientas, una pregunta sobre el mundo lleva el tema al prompt', async () => {
+    const prompt = await system(loreService(), pet(10), '¿De dónde vienen los huevos?', 'agent');
+    expect(prompt).toContain('Lo que sabes de tu mundo');
+    expect(prompt).toContain('Se pescan en el Éter.');
+  });
+
+  it('un turno local (CLI) también lo recibe aunque la mascota sea agente', async () => {
+    expect(await system(loreService(), pet(600), '¿De dónde vienen los huevos?', 'memory')).toContain('Se pescan en el Éter.');
+  });
+
+  it('con herramientas no se inyecta (usa get_lore), ni en una charla normal', async () => {
+    expect(await system(loreService(), pet(600), '¿De dónde vienen los huevos?', 'agent')).not.toContain('Lo que sabes de tu mundo');
+    expect(await system(loreService(), pet(10), 'hola, ¿qué tal?', 'agent')).not.toContain('Lo que sabes de tu mundo');
+  });
+});

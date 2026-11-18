@@ -10,6 +10,7 @@ import {
   parseToolArguments,
 } from './agent-tools';
 import { moodOf } from './personality';
+import { MAX_LORE_CHARS, findLore, loreTopics } from './lore';
 import { getDesktopSkill, skillStateOf } from './desktop-skills';
 import { safeTimeZone } from '../pets/sleep-cycle';
 
@@ -194,6 +195,13 @@ export class AgentService {
       }
       case 'search_memory':
         return { recuerdos: await this.memory.search(ctx.petId, args.query, 5) };
+      case 'get_lore': {
+        const lore = this.gameData.getLore?.() ?? null;
+        const topic = findLore(lore, args.topic);
+        return topic
+          ? { tema: topic.title, lore: topic.text.slice(0, MAX_LORE_CHARS) }
+          : { error: 'No sé nada de ese tema', temas_disponibles: loreTopics(lore).map((t) => t.title) };
+      }
       case 'list_reminders': {
         const rows = await this.prisma.reminder.findMany({
           where: { userId: ctx.userId, delivered: false },

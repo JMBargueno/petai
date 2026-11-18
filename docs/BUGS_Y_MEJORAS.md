@@ -21,10 +21,10 @@
 | W3 | Recuadro negro en preview de correo (admin) | Web | P1 | [x] | lote 1 (sin PR) |
 | W4 | Campos en rojo al enviar correo + modal resultado | Web | P1 | [x] | lote 1 (sin PR) |
 | A1 | "PetAI" → "Pockai" en prompts | IA | P1 | [x] | lote 1 (sin PR) |
-| A2 | Rasgos de personalidad semánticos en prompt | IA | P2 | [ ] | |
-| A3 | Bocadillos: máx. 3 × 140 chars + negritas | IA / Desktop | P2 | [ ] | |
-| A4 | Skill/tool de lore de Pockai | IA | P2 | [ ] | |
-| A6 | Igualar turnos por CLI con los nativos | IA / Desktop | P2 | [ ] | |
+| A2 | Rasgos de personalidad semánticos en prompt | IA | P2 | [x] | [#121](https://github.com/JMBargueno/petai/pull/121) |
+| A3 | Bocadillos: máx. 3 × 140 chars + negritas | IA / Desktop | P2 | [x] | [#121](https://github.com/JMBargueno/petai/pull/121) |
+| A4 | Skill/tool de lore de Pockai | IA | P2 | [x] | [#121](https://github.com/JMBargueno/petai/pull/121) |
+| A6 | Igualar turnos por CLI con los nativos | IA / Desktop | P2 | [x] | [#121](https://github.com/JMBargueno/petai/pull/121) |
 | B4 | Clanes: 1 clan, invitaciones y solicitudes | Backend | P2 | [ ] | |
 | B5 | Visitas: ajustes, aforo, expulsar, offline, render | Backend / Desktop | P2 | [ ] | |
 | B6 | Presencia online en lista de amigos | Backend / Desktop | P2 | [ ] | |
@@ -146,28 +146,32 @@
   - **Fuera de alcance:** claves internas (`petai_ai_cli`, `petai:…:presence`, etc.), que requieren migración aparte.
   - **Hecho cuando:** `grep -ri petai` sobre textos de prompt devuelve 0.
 
-- [ ] **A2 — Rasgos de personalidad semánticos** · P2
+- [x] **A2 — Rasgos de personalidad semánticos** · P2
+  - ✅ **Resuelto (lote 2):** el bloque de personalidad del prompt pasa de «Curiosidad 73/100 (Curioso): Eres curioso…» a «Curiosidad 73 % — soy curioso: Hago preguntas y quiero saber el porqué de las cosas.». Cada una de las 25 bandas de `balance.json` tiene su frase en primera persona (campo `self`; se usan las 5 bandas que ya existían, no solo bajo/medio/alto). El rasgo de respaldo de las mascotas sin perfil de mente también va en primera persona.
   - Pasar contexto tipo *"Sociabilidad 52 % — soy amistoso"* en vez de datos crudos.
   - **Dónde:** `backend/src/modules/mind/personality.engine.ts:118` (`buildPersonalityBlock`, hoy "Curiosidad 73/100 (banda): …"); fallback `backend/src/modules/ai/personality.ts` (`TRAITS`).
   - **Hecho cuando:** cada rasgo se traduce a una frase en primera persona por banda (bajo / medio / alto); tests unit del bloque generado.
 
-- [ ] **A3 — Formato de respuesta en bocadillos** · P2
-  - [ ] Máximo **3 bocadillos** por interacción.
-  - [ ] Máximo **140 caracteres** por bocadillo (ajustar al tamaño real del bocadillo).
-  - [ ] **Markdown básico** (negritas) renderizado en el bocadillo.
+- [x] **A3 — Formato de respuesta en bocadillos** · P2
+  - ✅ **Resuelto (lote 2):** el prompt pide como mucho 3 frases cortas y permite `**negrita**` (ningún otro formato). El escritorio lo garantiza en `speech-queue.ts` para cualquier origen (IA de Pockai, key propia, Hermes local y CLI): 140 letras visibles por bocadillo, 3 bocadillos por respuesta de IA y el resto «… (sigue en el chat)». La negrita se pinta en el bocadillo y en el chat con `<strong>`, sin `{@html}`; si un corte cae en medio, se cierra y se reabre en el siguiente bocadillo. Los avisos que no son de IA siguen con su máximo de 8 bocadillos. Comprobado en el modo demo (bocadillo con negrita); el chat con negrita, solo con tests.
+  - [x] Máximo **3 bocadillos** por interacción.
+  - [x] Máximo **140 caracteres** por bocadillo (ajustar al tamaño real del bocadillo).
+  - [x] **Markdown básico** (negritas) renderizado en el bocadillo.
   - **Dónde:** prompt `backend/src/modules/ai/personality.ts:193` ("Sé breve: 1 a 3 frases"); límites `backend/src/modules/ai/chat.service.ts` (`MAX_MESSAGE_CHARS`, `LOCAL_MAX_REPLY_CHARS`); render `desktop/src/lib/speech-queue.ts`, `desktop/src/components/PetView.svelte`, `desktop/src/lib/thinkTags.ts`.
   - **Hecho cuando:** el prompt pide el formato y el cliente lo **garantiza** (troceo + recorte en `speech-queue.ts`, también para respuestas de CLI); `**negrita**` se renderiza de forma segura (sin HTML arbitrario).
 
-- [ ] **A4 — Skill de lore** · P2
+- [x] **A4 — Skill de lore** · P2
+  - ✅ **Resuelto (lote 2):** `shared/game-data/lore.json` recoge `docs/LORE.md` en 10 temas escritos para el jugador (origen, rarezas, apariencia, elementos, despertar, ciclo vital, coliseo, nexos, huella y glosario). Las mascotas con herramientas lo consultan con la tool `get_lore(topic)`; las que no las tienen (inteligencia < 500, Hermes local, CLI) reciben en el prompt el tema del que habla el mensaje, si habla de alguno. Si se cambia `LORE.md` hay que actualizar `lore.json` a mano. **Pendiente:** probarlo con preguntas reales contra un modelo.
   - Documento estructurado con el lore de Pockai que la IA consulte dinámicamente.
   - **Dónde:** `docs/LORE.md` (existe, sin uso por la IA); tools en `backend/src/modules/ai/agent-tools.ts` (`get_my_status`, `search_memory`, …).
   - **Hecho cuando:** lore troceado por secciones (servido desde backend) + tool `get_lore(topic)` que la IA invoca cuando se pregunta por el universo; probado con 3-4 preguntas de lore.
 
-- [ ] **A6 — Igualar los turnos por CLI con los nativos** · P2 *(nace de la duda A5)*
+- [x] **A6 — Igualar los turnos por CLI con los nativos** · P2 *(nace de la duda A5)*
+  - ✅ **Resuelto (lote 2):** al sincronizar un turno local, el servidor lanza el mismo resumen de recuerdos que en un turno nativo, con el proveedor configurado del usuario (su key, o la IA de Pockai si no tiene) y los mismos límites de cuota, presupuesto y cadencia del plan. **Decisión:** el CLI sigue sin tools; dárselas exigiría un servidor MCP local con credenciales del backend y las tarjetas de confirmación. A cambio recibe en el prompt los recuerdos y el lore (A4). La ayuda del modo CLI y de Hermes local en el escritorio lo explica.
   - **Dónde:** `backend/src/modules/ai/chat.service.ts` (`syncLocal` frente a `run`), `desktop/src/lib/aiCli.ts`, `desktop/src-tauri/src/ai_cli.rs`, `backend/src/modules/ai/agent-tools.ts`.
   - **Estado actual:** la memoria es común (ver A5), con dos diferencias:
-    - [ ] `syncLocal` no llama a `memory.maybeSummarize`, así que las conversaciones por CLI (y Hermes local) no generan recuerdos resumidos en `PetMemory`.
-    - [ ] El CLI se lanza con `--strict-mcp-config` y sin tools: no puede usar `search_memory`, recordatorios, etc.
+    - [x] `syncLocal` no llama a `memory.maybeSummarize`, así que las conversaciones por CLI (y Hermes local) no generan recuerdos resumidos en `PetMemory`.
+    - [x] El CLI se lanza con `--strict-mcp-config` y sin tools: no puede usar `search_memory`, recordatorios, etc. → **se documenta que no las tendrá.**
   - **Hecho cuando:** los turnos por CLI también alimentan los recuerdos resumidos (p. ej. resumen con el modelo gestionado o en el siguiente turno nativo), y el CLI dispone de las tools o se documenta que no las tendrá.
 
 ---
@@ -226,6 +230,7 @@
 ## 📱 Android
 
 - ❓ **M1 —** pendiente de añadir tareas específicas.
+  - [ ] Pintar `**negrita**` en el chat de la mascota: desde A3 las respuestas de la IA pueden traerla y, sin tratar, se verían los asteriscos.
 
 ---
 
