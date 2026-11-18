@@ -323,7 +323,7 @@ const profile = (over: object = {}) => ({
   isPro: false,
   achievementsPublic: true,
   pet: { id: 'p-1', nickname: 'Fuego', speciesName: 'Ignisaur', element: 'fire', rarity: 'rare', level: 7, stage: 'baby', shiny: false },
-  stats: { playMinutes: 1840, feeds: 212, cleans: 96, sleeps: 61, eggsHatched: 2, byRarity: { common: 1, rare: 1 }, shinies: 0, habitatVisits: 17, friends: 2, streakCurrent: 6, streakBest: 14, proDays: 0, coinsSpent: 5400, gemsSpent: 20 },
+  stats: { playMinutes: 1840, feeds: 212, cleans: 96, sleeps: 61, eggsHatched: 2, byRarity: { normal: 1, rare: 1 }, shinies: 0, habitatVisits: 17, friends: 2, streakCurrent: 6, streakBest: 14, proDays: 0, coinsSpent: 5400, gemsSpent: 20 },
   badges,
   featuredBadges,
   achievementCount: { unlocked: badges.length, total: 6 },

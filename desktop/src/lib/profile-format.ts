@@ -20,6 +20,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
 
 export const RARITY_LABELS: Record<string, string> = {
   normal: 'Normal',
+  common: 'Común',
   rare: 'Raro',
   super_rare: 'Superraro',
   legendary: 'Legendario',
