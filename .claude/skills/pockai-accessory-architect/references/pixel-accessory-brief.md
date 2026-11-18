@@ -2,12 +2,12 @@
 
 Resumen práctico de `docs/GUIA_ARTISTICA.md` §7.6. Si hay conflicto, manda la guía.
 
-El arte todavía no se dibuja ni se integra (lote 3 de la spec 38). El brief deja la prenda lista para dibujar: quien la dibuje no debería tener que decidir nada.
+El arte es procedural, como el de los Pockais: cada prenda es una función de dibujo en `scripts/sprites/pixel/accessories.ts` que recibe la talla y pinta alrededor del ancla, en el origen (0, 0). El brief deja decidido qué se dibuja antes de escribirla.
 
 ## Reglas comunes
 - Pixel art en la rejilla nativa del sprite (frame de 64×64). Sin antialiasing, sin transparencias parciales, sin degradados.
-- **Tres tallas dibujadas, no escaladas:** S para baby (lienzo de 16×16), M para juvenile (24×24) y L para adult y final (32×32). Las prendas de espalda admiten hasta 32×40 en L.
-- Cada lienzo marca su **punto de anclaje**: el píxel que se coloca sobre el ancla de la especie.
+- **Tres tallas dibujadas, no escaladas:** S para baby, M para juvenile y L para adult y final. La función de dibujo recibe la talla y su factor `k` (0,6, 0,8 y 1). Lienzo máximo: 40×24 (S), 48×32 (M) y 56×40 px (L); el generador recorta cada prenda a su caja mínima.
+- El **punto de anclaje** es el origen del dibujo: lo que pintes en (0, 0) cae sobre el ancla de la especie.
 - Contorno exterior de 1 px en el tono `900` **de la prenda**. Sombra `700` abajo a la derecha, base `500`, luz `300` arriba a la izquierda. Sin brillo.
 - Como mucho 6 colores, contorno incluido. Lo normal son 4: una rampa.
 - Nada de menos de 2 px. Sin textos ni logotipos.
@@ -69,9 +69,9 @@ Una prenda rara puede sumar una segunda rampa para el ribete, el pompón o el fo
 ## Por talla
 | Talla | Lienzo | Qué se conserva y qué se simplifica |
 |---|---|---|
-| S (baby) | 16×16 | <…> |
-| M (juvenile) | 24×24 | <…> |
-| L (adult, final) | 32×32 | <…> |
+| S (baby) | <ancho×alto> | <…> |
+| M (juvenile) | <ancho×alto> | <…> |
+| L (adult, final) | <ancho×alto> | <…> |
 
 ## Convivencia
 - **No tapa:** <ojos, boca, rasgo icónico: cómo lo evita>.
@@ -81,10 +81,10 @@ Una prenda rara puede sumar una segunda rampa para el ribete, el pompón o el fo
 ## Animación *(solo legendary y mythic)*
 <Los 2 frames y cuándo se reproducen; la partícula, si la hay.>
 
-**Estado del arte:** pendiente (lote 3 de la spec 38)
+**Estado del arte:** <dibujado y revisado con la hoja de contactos | pendiente (motivo)>
 ````
 
-## Checklist visual (para cuando haya arte)
+## Checklist visual
 - [ ] Se reconoce a ×1 sobre una baby y sobre una final.
 - [ ] Contorno de 1 px en el tono de la prenda, sin huecos.
 - [ ] Luz arriba a la izquierda.

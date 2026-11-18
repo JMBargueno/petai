@@ -228,6 +228,50 @@ for (const sp of speciesData) {
   }
 }
 
+// Accesorios (spec 38 §6): cada prenda del catálogo tiene su arte en tres tallas y un meta.json
+// coherente con los PNG (que van a ×2 y con los frames en horizontal).
+const accessoriesData = readJson(path.join(sharedGameDataDir, 'accessories.json'));
+const accessoriesDir = path.join(sharedAssetsDir, 'accessories');
+// Lienzo máximo por talla, en px nativos: [ancho, alto] (scripts/sprites/pixel/accessories.ts).
+const ACC_CANVAS = { s: [40, 24], m: [48, 32], l: [56, 40] };
+for (const acc of accessoriesData?.accessories || []) {
+  const dir = path.join(accessoriesDir, acc.id);
+  const fail = (msg) => {
+    console.error(`❌ CRÍTICO [accessories/${acc.id}]: ${msg}`);
+    criticalErrors++;
+  };
+  const metaPath = path.join(dir, 'meta.json');
+  if (!fs.existsSync(metaPath)) {
+    fail('falta meta.json (ejecuta pnpm generate:accessories)');
+    continue;
+  }
+  const meta = readJson(metaPath);
+  if (meta.slot !== acc.slot) fail(`meta.slot es '${meta.slot}' y el catálogo dice '${acc.slot}'`);
+  if (!Number.isInteger(meta.frames) || meta.frames < 1) fail('frames debe ser un entero mayor que 0');
+  if (!!acc.animated !== meta.frames > 1) fail('"animated" del catálogo no coincide con los frames del arte');
+  for (const size of Object.keys(ACC_CANVAS)) {
+    const s = meta.sizes?.[size];
+    const pngPath = path.join(dir, `${size}.png`);
+    if (!s || !fs.existsSync(pngPath)) {
+      fail(`falta la talla ${size.toUpperCase()}`);
+      continue;
+    }
+    const [maxW, maxH] = ACC_CANVAS[size];
+    if (s.w > maxW || s.h > maxH) fail(`talla ${size.toUpperCase()}: ${s.w}×${s.h} no cabe en el lienzo (${maxW}×${maxH})`);
+    const a = s.anchor;
+    if (!Array.isArray(a) || a.length !== 2 || !a.every(Number.isInteger)) fail(`talla ${size.toUpperCase()}: anchor debe ser [x, y]`);
+    try {
+      const dim = readPngDimensions(pngPath);
+      if (dim.width !== s.w * meta.scale * meta.frames || dim.height !== s.h * meta.scale) {
+        fail(`talla ${size.toUpperCase()}: el PNG mide ${dim.width}×${dim.height} y meta.json dice ${s.w * meta.scale * meta.frames}×${s.h * meta.scale}`);
+      }
+    } catch (err) {
+      fail(`error leyendo ${size}.png: ${err.message}`);
+    }
+  }
+}
+console.log(`✓ accessories/: ${(accessoriesData?.accessories || []).length} prendas con arte en tres tallas`);
+
 console.log('\n=== Resumen de Validación ===');
 console.log(`Errores críticos: ${criticalErrors}`);
 console.log(`Advertencias (con fallback activo): ${warnings}`);

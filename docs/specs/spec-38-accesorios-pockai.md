@@ -151,17 +151,18 @@ Archivo nuevo junto a cada `anim.json`:
 
 ```
 shared/assets/accessories/<id>/
-  s.png  m.png  l.png     hojas a ×2; si la prenda es animada, 2 frames en horizontal
+  s.png  m.png  l.png     hojas a ×2; si la prenda es animada, sus frames van en horizontal
   meta.json
 ```
 
 ```json
 {
   "slot": "head",
+  "scale": 2,
   "sizes": {
-    "s": { "w": 16, "h": 16, "anchor": [8, 13] },
-    "m": { "w": 24, "h": 24, "anchor": [12, 20] },
-    "l": { "w": 32, "h": 32, "anchor": [16, 27] }
+    "s": { "w": 14, "h": 11, "anchor": [7, 8] },
+    "m": { "w": 16, "h": 13, "anchor": [8, 10] },
+    "l": { "w": 20, "h": 15, "anchor": [10, 12] }
   },
   "frames": 1,
   "frameMs": 220
@@ -169,7 +170,8 @@ shared/assets/accessories/<id>/
 ```
 
 - `anchor` es el píxel nativo del lienzo que se coloca sobre el ancla de la especie.
-- Lienzos: 16×16 (S), 24×24 (M), 32×32 (L). Las prendas de espalda admiten hasta 32×40 en L.
+- `w` y `h` son el tamaño de un frame en px nativos: cada prenda se recorta a su caja mínima. El lienzo máximo es 40×24 (S), 48×32 (M) y 56×40 (L).
+- El arte es procedural, como el de los Pockais: una entrada por prenda en `ACCESSORY_ART` (`scripts/sprites/pixel/accessories.ts`) y `pnpm generate:accessories`.
 - PNG de 8 bits con transparencia binaria, como los sprites.
 
 **Orden de pintado** (lo hace el cliente con tres capas): prenda `back` → sprite del Pockai →
@@ -187,7 +189,7 @@ generador exporte una capa `front.png` con las piezas que deben tapar a la prend
 - Todo `reward.itemId` de `achievements.json` que sea una prenda tiene `unlock.type: "achievement"`.
 
 `scripts/validate-assets.js`:
-- Cada prenda tiene `s.png`, `m.png`, `l.png` y `meta.json`, con las medidas de `meta.json`.
+- Cada prenda tiene `s.png`, `m.png`, `l.png` y `meta.json`, con las medidas de `meta.json`, dentro del lienzo máximo de su talla.
 - Cada carpeta de especie y etapa tiene `anchors.json`, con las cuatro anclas dentro del frame
   (2–61 en ambos ejes) y tantos desplazamientos por animación como frames tiene en `anim.json`.
 
@@ -242,7 +244,9 @@ porque tampoco expone el aspecto de la mascota. Queda pendiente: los tests e2e c
 **Lote 3: anclas y render**
 - Hecho: `anchors.json` para las tres especies en las cuatro etapas (lo escribe
   `pnpm generate:sprites`) y sus reglas en `validate-assets.js`.
-- Pendiente: el arte de las prendas (`shared/assets/accessories/`) y sus reglas de validación.
+- Hecho: el arte de las 9 prendas en tres tallas (`pnpm generate:accessories`) y sus reglas en
+  `validate-assets.js`. `pnpm generate:accessories --preview` pone cada prenda sobre cada especie y
+  etapa para revisarla.
 - Render por capas en `shared/scene` (PixiJS), en la mascota flotante de escritorio y en Android,
   con vecino más próximo y posiciones a píxel entero.
 - Tienda y armario, con los estados y chips de la guía §7.6.

@@ -423,3 +423,6 @@ export function poseArt(sp: PixelSpecies, st: Stage): { id: string; top: [number
     face: { l: [(e.x1 + e.w1 / 2) * 2, cy], r: [(e.x2 + e.w2 / 2) * 2, cy], er: e.h, mouth: [(e.x1 + e.w1 + e.x2) * 1, (e.y + e.h + e.gap) * 2] },
   };
 }
+
+/** Ojos por talla de accesorio (S = baby, M = juvenile, L = adult y final): los usan las gafas. */
+export const EYES_BY_SIZE: Record<'S' | 'M' | 'L', EyeSpec> = { S: BASE.baby.eye, M: BASE.juvenile.eye, L: BASE.adult.eye };
