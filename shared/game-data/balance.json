@@ -489,7 +489,10 @@
         "auto_rest_home": { "sociability": -0.1, "affection": 0.1, "temper": -0.1 },
         "auto_wait_owner": { "affection": 0.1 },
         "auto_find_item": { "curiosity": 0.15 },
-        "neglect_day": { "affection": -0.3, "sociability": -0.15 }
+        "neglect_day": { "affection": -0.3, "sociability": -0.15 },
+        "buddy_play": { "sociability": 0.15, "temper": 0.05 },
+        "care_received": { "sociability": 0.2, "affection": 0.05 },
+        "gift_received": { "sociability": 0.15, "affection": 0.05 }
       }
     },
     "memory": {
@@ -507,7 +510,8 @@
       "recentRecallMinutes": 60,
       "recentRecallPenalty": 0.5,
       "repeatBoost": 0.05,
-      "repeatCap": 0.8
+      "repeatCap": 0.8,
+      "sinceLastMax": 2
     },
     "autonomy": {
       "intervalMinutes": 60,
@@ -699,8 +703,10 @@
         "share_food": { "base": 1.5, "weights": { "affection": 0.04 }, "delta": 0.12, "minStage": "friend" },
         "nap_together": { "base": 3, "weights": { "temper": -0.02 }, "delta": 0.06, "maxEnergy": 45 },
         "squabble": { "base": 1.2, "weights": { "temper": 0.03 }, "delta": -0.08, "minTemper": 65 },
-        "make_up": { "base": 24, "weights": { "affection": 0.05 }, "delta": 0.12, "after": "squabble" }
-      }
+        "make_up": { "base": 24, "weights": { "affection": 0.05 }, "delta": 0.12, "after": "squabble" },
+        "give_gift": { "base": 2, "weights": { "affection": 0.04 }, "delta": 0.12, "minStage": "friend", "requiresFind": true }
+      },
+      "rumors": { "kinds": ["find", "adventure", "event"], "chance": 0.5, "maxAgeDays": 7, "importance": 0.35 }
     },
     "room": {
       "antiRepeat": { "window": 5, "penalty": 0.5, "top": 3, "margin": 0.15 },

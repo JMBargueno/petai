@@ -208,7 +208,7 @@ if (pers) {
   if (social) {
     const where = 'balance.personality.social';
     const STAGE_IDS = ['stranger', 'acquaintance', 'friend', 'best_friend'];
-    const SCENE_IDS = ['greet', 'explore_together', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up'];
+    const SCENE_IDS = ['greet', 'explore_together', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up', 'give_gift'];
     const unit = (v) => typeof v === 'number' && v >= 0 && v <= 1;
     const st = social.stages ?? {};
     if (!unit(st.acquaintance?.familiarity)) throw new Error(`${where}.stages.acquaintance inválido`);
@@ -240,9 +240,26 @@ if (pers) {
     }
     for (const id of Object.keys(social.scenes ?? {})) if (!SCENE_IDS.includes(id)) throw new Error(`${where}.scenes: escena desconocida ${id}`);
     // Siempre debe quedar una escena sin condiciones, para cualquier pareja y cualquier ranura
-    if (!SCENE_IDS.some((id) => { const s = social.scenes[id]; return !s.minStage && !s.maxStage && !s.after && !s.firstSlotOnly && s.minEnergy === undefined && s.maxEnergy === undefined && s.minTemper === undefined; })) {
+    if (!SCENE_IDS.some((id) => { const s = social.scenes[id]; return !s.minStage && !s.maxStage && !s.after && !s.firstSlotOnly && s.minEnergy === undefined && s.maxEnergy === undefined && s.minTemper === undefined && !s.requiresFind; })) {
       throw new Error(`${where}.scenes: hace falta una escena sin condiciones`);
     }
+    // Rumores: lista blanca de orígenes. Lo privado no puede colarse por configuración.
+    const ru = social.rumors;
+    if (ru) {
+      const SHAREABLE = ['find', 'adventure', 'event'];
+      if (!Array.isArray(ru.kinds)) throw new Error(`${where}.rumors.kinds debe ser una lista`);
+      for (const k of ru.kinds) {
+        if (!SHAREABLE.includes(k)) throw new Error(`${where}.rumors.kinds: «${k}» no se puede compartir entre Pockai (permitidos: ${SHAREABLE.join(', ')})`);
+      }
+      if (!unit(ru.chance)) throw new Error(`${where}.rumors.chance debe estar en [0, 1]`);
+      if (!(ru.maxAgeDays >= 1 && ru.maxAgeDays <= 30)) throw new Error(`${where}.rumors.maxAgeDays debe estar en [1, 30]`);
+      // Un rumor pesa menos que lo vivido, pero tiene que llegar a guardarse
+      if (!(ru.importance >= (pers.memory?.minImportanceToStore ?? 0) && ru.importance <= 0.5)) {
+        throw new Error(`${where}.rumors.importance debe estar entre memory.minImportanceToStore y 0.5`);
+      }
+    }
+    const slm = pers.memory?.sinceLastMax;
+    if (slm !== undefined && !(Number.isInteger(slm) && slm >= 0 && slm <= 4)) throw new Error('balance.personality.memory.sinceLastMax debe ser un entero en [0, 4]');
     console.log(`✓ balance.json: vida social (${SCENE_IDS.length} escenas, 4 etapas) validada`);
   }
 

@@ -15,7 +15,7 @@ import { Interpretation, interpretMessage } from './conversation.engine';
 import { dayKey } from './evolution.engine';
 import { MemoryRow, layerOf } from './memory.engine';
 import { Dims, PersonalityConfig, StoredPersonality } from './mind.types';
-import { Situation, buildSituation } from './situation.engine';
+import { Situation, buildSituation, sinceLastOrder } from './situation.engine';
 import { TricksState, nextTrick, normalizeTricks, practiceTrick, trickToPerform } from './tricks.engine';
 import { WishId, WishesState, activeWishes, afterChatTurn, fulfilEpisode, fulfilWish, mayShowWish, normalizeWishes, wishHint } from './wishes.engine';
 import { createRng, hashSeed } from '../battles/combat/rng';
@@ -65,9 +65,9 @@ export interface TurnPlanData {
 
 const state = (pet: TurnPet): BehaviorState => ({ sleeping: !!pet.sleeping, sick: !!pet.sick, energy: pet.energy ?? 100 });
 
-const daysSince = (rows: readonly MemoryRow[], kind: string, now: Date): number | null => {
+const daysSince = (rows: readonly MemoryRow[], kinds: string | string[], now: Date): number | null => {
   let latest = -Infinity;
-  for (const r of rows) if (r.kind === kind) latest = Math.max(latest, r.createdAt.getTime());
+  for (const r of rows) if (Array.isArray(kinds) ? kinds.includes(r.kind) : kinds === r.kind) latest = Math.max(latest, r.createdAt.getTime());
   return latest === -Infinity ? null : Math.max(0, (now.getTime() - latest) / DAY_MS);
 };
 
@@ -123,7 +123,7 @@ export function planOwnerTurn(input: TurnInput, cfg: PersonalityConfig): TurnPla
       awayMinutes: situation.awayMinutes,
       daysSinceAdventure: daysSince(rows, 'adventure', now),
       // Con amigos y sin ningún encuentro recordado, es como llevar mucho sin verlos
-      daysSinceFriend: hasFriends ? (daysSince(rows, 'encounter', now) ?? 999) : null,
+      daysSinceFriend: hasFriends ? (daysSince(rows, ['encounter', 'visit'], now) ?? 999) : null,
       hasUntoldFind: finds.length > 0,
       canLearnTrick: !!tricks.learning || nextTrick(tricks, dims, cfg.tricks) !== null,
       energy: situation.needs.energy,
@@ -171,8 +171,28 @@ export function planOwnerTurn(input: TurnInput, cfg: PersonalityConfig): TurnPla
     );
   }
 
-  // Un deseo, como mucho cada tantos turnos, y nunca cuando el mensaje pide otra cosa
   const heavy = interpretation.intent === 'sad_day' || interpretation.intent === 'scold' || interpretation.intent === 'farewell';
+
+  // «Desde la última vez» (§6.6): en el primer turno tras una ausencia tiene delante lo que vivió
+  // mientras tanto, diga lo que diga el mensaje. Lo inyectado queda como contado, así que el
+  // turno siguiente no lo repite; y `lastChatAt` impide forzarlo otra vez en la misma charla.
+  const awayLimit = cfg.autonomy?.ownerAwayMinutes ?? 30;
+  const lastChat = typeof stored.lastChatAt === 'string' ? Date.parse(stored.lastChatAt) : NaN;
+  const sinceChat = Number.isFinite(lastChat) ? Math.max(0, (now.getTime() - lastChat) / 60_000) : Infinity;
+  const back = !!last && Math.min(situation.awayMinutes, sinceChat) >= awayLimit;
+  if (back && !heavy && !pet.sleeping && situation.untold.length) {
+    const max = cfg.memory.sinceLastMax ?? 2;
+    const before = ensureIds.length;
+    for (const u of sinceLastOrder(situation.untold)) {
+      if (ensureIds.length >= Math.max(max, before)) break;
+      if (!ensureIds.includes(u.id)) ensureIds.push(u.id);
+    }
+    hints.push(
+      'Tu entrenador vuelve después de un rato sin veros. Entre tus recuerdos tienes lo que viviste mientras no estaba: si viene a cuento, cuéntale algo de eso con tus palabras, en una frase y sin inventar nada.',
+    );
+  }
+
+  // Un deseo, como mucho cada tantos turnos, y nunca cuando el mensaje pide otra cosa
   const wish = !pet.sleeping && !heavy && wishes[0] && mayShowWish(wishesState, cfg.wishes) ? wishes[0] : null;
   if (wish) hints.push(wishHint(wish));
 
@@ -232,6 +252,7 @@ export function settleOwnerTurn(plan: TurnPlanData, action: Behavior, dims: Dims
   // Una disculpa repara parte de lo que dolió un regaño, una vez al día
   let ownerDelta = 0;
   const patch: Partial<StoredPersonality> = {
+    lastChatAt: now.toISOString(),
     recent: pushRecentBehavior(plan.situation.recent, action, cfg),
     wishes,
     tricks,

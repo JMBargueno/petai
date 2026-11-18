@@ -7,10 +7,11 @@ import { MindService } from './mind.service';
 import { MindMemoryService } from './mind-memory.service';
 import { Friend, encounterRoll, intervalIndex, intervalStart, simulate } from './autonomy.engine';
 import { dayKey } from './evolution.engine';
-import { AutonomyConfig, AutonomyDaily, StoredPersonality } from './mind.types';
+import { AutonomyConfig, AutonomyDaily, Dims, StoredPersonality } from './mind.types';
 import { nextTrick, normalizeTricks, practiceTrick } from './tricks.engine';
 import { activeWishes, activityBoosts, normalizeWishes } from './wishes.engine';
 import { layerOf, type MemoryRow } from './memory.engine';
+import { EncounterService } from './encounter.service';
 
 const STAGE_PULL: Record<string, number> = { stranger: 1, acquaintance: 1.3, friend: 2, best_friend: 3 };
 
@@ -61,7 +62,12 @@ export class AutonomyService {
     private readonly mind: MindService,
     private readonly memory: MindMemoryService,
     @Optional() private readonly cronLock?: CronLockService,
-  ) {}
+    @Optional() encounters?: EncounterService,
+  ) {
+    this.encounters = encounters ?? new EncounterService(mind, memory);
+  }
+
+  private readonly encounters: EncounterService;
 
   private cfg(): AutonomyConfig | undefined {
     return this.mind.config()?.autonomy;
@@ -102,7 +108,7 @@ export class AutonomyService {
           now,
           awayMinutes: Math.max(0, Math.floor((now.getTime() - new Date(pet.lastInteractionAt ?? pet.lastLoginAt ?? pet.createdAt ?? now).getTime()) / 60_000)),
           daysSinceAdventure: daysSinceKind(rows, 'adventure', now),
-          daysSinceFriend: friends.length ? (daysSinceKind(rows, 'encounter', now) ?? 999) : null,
+          daysSinceFriend: friends.length ? (Math.min(daysSinceKind(rows, 'encounter', now) ?? 999, daysSinceKind(rows, 'visit', now) ?? 999)) : null,
           hasUntoldFind: false,
           canLearnTrick: canPractice,
           energy: pet.energy ?? 100,
@@ -156,9 +162,10 @@ export class AutonomyService {
       for (const itemId of sim.itemsFound) await this.grantItem(pet.userId, itemId);
 
       // Memoria episódica (fechada en el intervalo en que ocurrió: "ayer visité…")
+      // Los encuentros con amigos los escribe la escena (más abajo), cada uno desde su lado
       await this.memory.remember(
         pet.id,
-        sim.episodes.map((e) => ({
+        sim.episodes.filter((e) => !e.friend).map((e) => ({
           layer: 'episodic' as const,
           kind: e.friend ? 'encounter' : e.itemId ? 'find' : 'event',
           content: e.content,
@@ -169,7 +176,7 @@ export class AutonomyService {
         })),
       );
       for (const enc of sim.encounters) {
-        await this.recordEncounterForFriend(pet, enc.friend, intervalStart(enc.index, cfg));
+        await this.recordEncounterForFriend(pet, dims, enc.friend, enc.index, intervalStart(enc.index, cfg));
       }
 
       // Lo que practicó por su cuenta avanza su truco; si lo aprende, lo recuerda
@@ -227,22 +234,21 @@ export class AutonomyService {
   }
 
   /** El amigo también recuerda el encuentro (episodio + relación emocional + evolución). */
-  private async recordEncounterForFriend(pet: any, friend: Friend, at: Date) {
-    const owner = await this.prisma.user.findUnique({ where: { id: pet.userId }, select: { displayName: true } });
-    const name = pet.nickname || 'un Pockai';
-    await this.memory.remember(friend.petId, [
-      {
-        layer: 'episodic',
-        kind: 'encounter',
-        content: `${name}, el Pockai de ${owner?.displayName || 'un amigo'}, vino a jugar conmigo.`,
-        importance: 0.6,
-        valence: 0.5,
-        subject: `pet:${pet.id}`,
-        createdAt: at,
-      },
+  private async recordEncounterForFriend(pet: any, dims: Dims, friend: Friend, slot: number, at: Date) {
+    const [owner, friendPet] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: pet.userId }, select: { displayName: true } }),
+      this.prisma.pet.findUnique({ where: { id: friend.petId } }),
     ]);
-    await this.memory.feel(friend.petId, `pet:${pet.id}`, `${name} (Pockai de ${owner?.displayName || 'un amigo'})`, 0.15);
-    await this.memory.feel(pet.id, `pet:${friend.petId}`, `${friend.name} (Pockai de ${friend.ownerName})`, 0.15);
+    if (!friendPet) return;
+    const friendMind = await this.mind.ensureDims(friendPet);
+    // La misma escena que en una visita en vivo: la mascota va a casa de su amigo
+    await this.encounters.play({
+      host: { id: friend.petId, name: friend.name, ownerName: friend.ownerName, dims: friendMind.dims, energy: friendPet.energy ?? 60 },
+      guest: { id: pet.id, name: pet.nickname || 'un Pockai', ownerName: owner?.displayName || 'un amigo', dims, energy: pet.energy ?? 60 },
+      slot,
+      first: true,
+      at,
+    });
     await this.mind.applyExperience(friend.petId, ['auto_socialize']);
   }
 
@@ -321,22 +327,18 @@ export class AutonomyService {
     if (counters.some((c) => c.encounters >= cfg.social.dailyCapPerPet)) return false;
 
     const ownerName = (p: any) => p.user?.displayName || 'un amigo';
-    for (const [me, other, counter] of [
-      [a, b, counters[0]],
-      [b, a, counters[1]],
+    // Una escena para los dos: `b` va a casa de `a`, y cada uno la recuerda desde su lado
+    await this.encounters.play({
+      host: { id: a.id, name: a.nickname, ownerName: ownerName(a), dims: da.dims, energy: a.energy ?? 60 },
+      guest: { id: b.id, name: b.nickname, ownerName: ownerName(b), dims: db.dims, energy: b.energy ?? 60 },
+      slot,
+      first: true,
+      at: now,
+    });
+    for (const [me, counter] of [
+      [a, counters[0]],
+      [b, counters[1]],
     ] as const) {
-      await this.memory.remember(me.id, [
-        {
-          layer: 'episodic',
-          kind: 'encounter',
-          content: `Visité el hábitat de ${ownerName(other)} y jugué con ${other.nickname}. Me lo pasé bien.`,
-          importance: 0.65,
-          valence: 0.6,
-          subject: `pet:${other.id}`,
-          createdAt: now,
-        },
-      ]);
-      await this.memory.feel(me.id, `pet:${other.id}`, `${other.nickname} (Pockai de ${ownerName(other)})`, 0.15);
       await this.mind.applyExperience(me.id, ['auto_socialize'], now);
       counter.encounters++;
       await this.mind.patchStored(me.id, { autonomy: counter } as Partial<StoredPersonality>);

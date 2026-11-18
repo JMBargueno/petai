@@ -8,6 +8,30 @@ export type BuddyInteractionType =
   | 'idle_chat'
   | 'watch_together';
 
+/** Qué interacción de buddies representa cada escena del cerebro (spec 37 §6.3). */
+export const SCENE_TO_BUDDY: Record<string, BuddyInteractionType> = {
+  greet: 'idle_chat',
+  explore_together: 'watch_together',
+  play_tag: 'chase',
+  share_food: 'eat_together',
+  nap_together: 'sleep_together',
+  squabble: 'play_fight',
+  make_up: 'idle_chat',
+  give_gift: 'idle_chat',
+};
+
+/** Lo que se dicen, por escena: sustituye a las notas fijas cuando decide el cerebro. */
+export const SCENE_NOTE: Record<string, string> = {
+  greet: '¡Hola!',
+  explore_together: '¡Mira esto!',
+  play_tag: '¡A que no me pillas!',
+  share_food: '¿Quieres un poco?',
+  nap_together: 'Zzz... juntos...',
+  squabble: '¡Eso es mío!',
+  make_up: '¿Amigos otra vez?',
+  give_gift: 'Toma, para ti.',
+};
+
 export interface BuddyEffect {
   happiness?: number;
   bonding?: number;
@@ -38,6 +62,11 @@ export class InteractionEngineService {
     { type: 'idle_chat', prob: 0.15 },
     { type: 'watch_together', prob: 0.10 },
   ];
+
+  /** Probabilidad de que en un tic haya interacción (la suma de la distribución de abajo). */
+  readonly INTERACTION_CHANCE = 0.65;
+  /** Ranura de tiempo que, con el número de intento, siembra el azar de una pareja. */
+  readonly SLOT_MS = 60 * 1000;
 
   /**
    * Rola una interacción. `rand` (0..1) inyectable para tests. `state` permite filtrar

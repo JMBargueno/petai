@@ -158,7 +158,7 @@ describe('EvolutionListener: escenas de visita (spec 37 §6.3)', () => {
     const host = episodeOf(s.memory, 'h');
     const guest = episodeOf(s.memory, 'v');
     expect(host.content).not.toBe(guest.content);
-    expect(host).toMatchObject({ layer: 'episodic', kind: 'encounter', subject: 'pet:v' });
+    expect(host).toMatchObject({ layer: 'episodic', kind: 'visit', subject: 'pet:v' });
     expect(guest).toMatchObject({ layer: 'episodic', kind: 'encounter', subject: 'pet:h' });
     expect(s.mind.applyExperience).toHaveBeenCalledWith('v', ['habitat_visit']);
     expect(s.events.emit).toHaveBeenCalledWith(

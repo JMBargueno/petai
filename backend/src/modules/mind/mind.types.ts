@@ -47,6 +47,8 @@ export interface PersonalityConfig {
     /** Un episodio que se repite (misma clave) gana esta importancia cada vez, hasta `repeatCap`. */
     repeatBoost: number;
     repeatCap: number;
+    /** Episodios sin contar que se garantizan en el primer turno tras una ausencia (spec 37 §6.6). */
+    sinceLastMax?: number;
   };
   autonomy: AutonomyConfig;
   social: import('./social.engine').SocialConfig;
@@ -157,6 +159,8 @@ export interface StoredPersonality {
   wishes?: unknown;
   /** Último día en que una disculpa del entrenador reparó la relación (una vez al día). */
   apologyDay?: string;
+  /** Último turno de chat con su entrenador (ISO). Con él se sabe cuál es el primero tras una ausencia. */
+  lastChatAt?: string;
   trait?: string;
   temperament?: string;
   genes?: unknown[];

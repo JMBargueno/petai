@@ -111,10 +111,26 @@ export function resolveMode(needs: Pick<Needs, 'sleeping' | 'sick'>, audience: A
 /**
  * ¿Es un episodio que se puede contar fuera de casa? Lo nacido del chat con el entrenador es
  * privado: las plantillas (`ep:<intención>`), lo que extrae el LLM (sujeto `owner`) y los
- * resúmenes. Lo vivido por su cuenta (encuentros, aventuras, vida autónoma), no.
+ * resúmenes. Lo vivido por su cuenta (encuentros, aventuras, vida autónoma), no. Lo que le contó
+ * otro Pockai (`rumor`) tampoco se reenvía: un rumor da un solo salto.
  */
 export function isPrivateEpisode(m: Pick<MemoryRow, 'kind' | 'key' | 'subject'>): boolean {
-  return m.kind === 'summary' || m.subject === 'owner' || !!m.key?.startsWith('ep:');
+  return m.kind === 'summary' || m.kind === 'rumor' || m.subject === 'owner' || !!m.key?.startsWith('ep:');
+}
+
+/**
+ * Orden en que cuenta a su entrenador lo vivido mientras no estaba (spec 37 §6.6): quién vino a
+ * verla, a quién fue a ver, qué encontró y qué le contaron. Lo demás, al final.
+ */
+const SINCE_LAST_ORDER = ['visit', 'encounter', 'find', 'rumor'];
+
+export function sinceLastOrder(untold: readonly UntoldEpisode[]): UntoldEpisode[] {
+  const rank = (u: UntoldEpisode) => {
+    const i = SINCE_LAST_ORDER.indexOf(u.kind);
+    return i < 0 ? SINCE_LAST_ORDER.length : i;
+  };
+  // Orden estable: dentro de cada tipo se conserva el de llegada (lo más reciente primero)
+  return untold.map((u, i) => ({ u, i })).sort((a, b) => rank(a.u) - rank(b.u) || a.i - b.i).map((x) => x.u);
 }
 
 /** Episodios aún no contados que la criatura puede usar ante esta audiencia. */

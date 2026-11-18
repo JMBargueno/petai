@@ -38,7 +38,7 @@ export interface MemoryRow {
 
 /** Capa de un recuerdo anterior a la spec 36 (por su `kind`). */
 export function layerOfKind(kind: string): MemoryLayer {
-  if (kind === 'summary' || kind === 'event' || kind === 'encounter' || kind === 'adventure' || kind === 'find') return 'episodic';
+  if (kind === 'summary' || kind === 'event' || kind === 'encounter' || kind === 'adventure' || kind === 'find' || kind === 'visit' || kind === 'rumor') return 'episodic';
   if (kind === 'relation') return 'emotional';
   return 'semantic';
 }

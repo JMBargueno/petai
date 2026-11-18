@@ -1,9 +1,13 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Optional } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { createRng, hashSeed } from '../battles/combat/rng';
+import { MindService } from '../mind/mind.service';
+import { EncounterService } from '../mind/encounter.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PetsService } from '../pets/pets.service';
 import { BondingService } from '../bonding/bonding.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
-import { InteractionEngineService } from './interaction-engine.service';
+import { InteractionEngineService, SCENE_NOTE, SCENE_TO_BUDDY } from './interaction-engine.service';
 
 /**
  * Servicio de Pet Buddies (feature 029). Coordina pares de 2 pets del mismo usuario,
@@ -18,7 +22,13 @@ export class BuddiesService {
     private readonly bonding: BondingService,
     private readonly realtime: RealtimeGateway,
     private readonly engine: InteractionEngineService,
+    @Optional() private readonly mind?: MindService,
+    @Optional() private readonly encounters?: EncounterService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
+
+  /** Intentos de interacción de cada pareja desde que arrancó el proceso (parte de la semilla). */
+  private readonly attempts = new Map<string, number>();
 
   /** Crea (o recupera) el par buddy entre dos pets del mismo usuario. */
   async pair(userId: string, petAId: string, petBId: string) {
@@ -102,10 +112,37 @@ export class BuddiesService {
       bothTired: petA.energy < 40 && petB.energy < 40,
       environmentalActive: true,
     };
-    const type = this.engine.rollInteraction(Math.random, state);
+    // Azar sembrado por la pareja y la ranura: nada de Math.random (spec 37 §6.3). La ranura es el
+    // minuto más el número de intento de la pareja, para que un tic sin suerte no condene a
+    // todos los del mismo minuto.
+    const attempt = this.attempts.get(pair.id) ?? 0;
+    this.attempts.set(pair.id, attempt + 1);
+    const slot = Math.floor(Date.now() / this.engine.SLOT_MS) * 1000 + (attempt % 1000);
+    const rng = createRng(hashSeed(`buddy:${pair.id}:${slot}`));
+    const rHappens = rng();
+    let type = null as ReturnType<InteractionEngineService['rollInteraction']>;
+    let note: string | undefined;
+    let scene: { previous: string | null } | null = null;
+    if (this.mind && this.encounters) {
+      // Qué hacen lo decide el cerebro, con las dos personalidades y cómo se llevan
+      if (rHappens >= this.engine.INTERACTION_CHANCE) return null;
+      const [da, db] = [await this.mind.ensureDims(petA), await this.mind.ensureDims(petB)];
+      const res = await this.encounters.resolve({
+        host: { id: petA.id, name: petA.nickname, ownerName: '', dims: da.dims, energy: petA.energy ?? 60 },
+        guest: { id: petB.id, name: petB.nickname, ownerName: '', dims: db.dims, energy: petB.energy ?? 60 },
+        slot,
+        first: false,
+        sameHome: true,
+      });
+      type = SCENE_TO_BUDDY[res.scene.type] ?? 'idle_chat';
+      note = SCENE_NOTE[res.scene.type];
+      scene = { previous: res.previous };
+    } else {
+      type = this.engine.rollInteraction(() => rHappens, state);
+    }
     if (!type) return null;
 
-    const effect = this.engine.effectsFor(type);
+    const effect = { ...this.engine.effectsFor(type), ...(note ? { note } : {}) };
     const bondingToday = await this.prisma.buddyInteraction.count({
       where: { userId, type, createdAt: { gte: new Date(Date.now() - this.engine.DAILY_WINDOW_MS) } },
     });
@@ -124,6 +161,16 @@ export class BuddiesService {
         effects: { ...effect, bondingAllowed },
       },
     });
+
+    // La mente guarda el recuerdo de cada uno y mueve su relación, con el mismo tope diario que
+    // el vínculo. Nunca rompe la interacción.
+    if (scene && bondingAllowed) {
+      try {
+        this.events?.emit('buddy:interacted', { userId, petAId, petBId, slot, previous: scene.previous });
+      } catch {
+        /* la mente es opcional */
+      }
+    }
 
     const payload = { type, petAId, petBId, duration: record.duration, effects: effect };
     this.realtime.emitToUser(userId, 'buddy:interaction', payload);

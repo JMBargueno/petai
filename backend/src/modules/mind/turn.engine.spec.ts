@@ -215,14 +215,15 @@ describe('Turn Engine — un turno con su entrenador (spec 37 §4.5–4.7)', () 
   it('enseña lo que encontró y deja de ser un deseo pendiente', () => {
     const plan = planOwnerTurn(input({ message: 'hola', rows: lived, pet: { ...input().pet, lastInteractionAt: ago(1) } }), cfg);
     expect(plan.behavior.action).toBe('bring_gift');
-    expect(plan.ensureIds).toEqual(['find']);
+    // Vuelve tras un día fuera: además del hallazgo que enseña, tiene delante la visita que recibió (§6.6)
+    expect(plan.ensureIds).toEqual(['find', 'visit']);
     expect(plan.situation.wishes).toContain('show_find');
     const out = settleOwnerTurn(plan, plan.behavior.action, neutralDims(), {}, NOW, cfg);
     expect(out.fulfilled).toEqual(['show_find']);
     expect(out.happiness).toBe(cfg.wishes.happinessOnFulfil);
     expect(out.episodes[0].key).toBe('wish:show_find');
     // No crea objetos: el resultado no toca el inventario, solo memoria y personalidad
-    expect(Object.keys(out.patch).sort()).toEqual(['recent', 'tricks', 'wishes']);
+    expect(Object.keys(out.patch).sort()).toEqual(['lastChatAt', 'recent', 'tricks', 'wishes']);
   });
 
   it('el tema de deseo no sale en turnos consecutivos', () => {

@@ -3,7 +3,9 @@ import {
   Logger,
   BadRequestException,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -22,6 +24,7 @@ export class GiftingService {
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimeGateway,
     private readonly cronLock: CronLockService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   async send(
@@ -86,6 +89,12 @@ export class GiftingService {
     this.realtime.emitToUser(userId, 'gift:sent', payload);
     this.realtime.emitToUser(recipient.id, 'gift:received', payload);
     this.realtime.emitPetAction(recipient.id, null, 'gift_received', { item: item.name });
+    // La mascota a la que va el regalo lo recuerda (spec 37 §6.7). Nunca rompe el envío.
+    try {
+      this.events?.emit('gift:received', { senderId: userId, recipientId: recipient.id, petId: pet.id, itemName: item.name });
+    } catch {
+      /* la mente es opcional */
+    }
     return payload;
   }
 

@@ -9,7 +9,7 @@
  */
 import type { Cell } from '../iso/pathfind';
 
-export const VISIT_SCENES = ['greet', 'explore_together', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up'] as const;
+export const VISIT_SCENES = ['greet', 'explore_together', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up', 'give_gift'] as const;
 export type VisitSceneType = (typeof VISIT_SCENES)[number];
 
 export function isVisitScene(v: unknown): v is VisitSceneType {
@@ -75,6 +75,11 @@ const SCRIPTS: Record<VisitSceneType, Beat[]> = {
   make_up: [
     { host: { move: 'stay', face: 'other', clip: 'love' }, guest: { move: 'meet', face: 'other', clip: 'love' }, holdMs: 2200 },
     { host: { move: 'stay', face: 'other', clip: 'happy' }, guest: { move: 'stay', face: 'other', clip: 'happy' }, holdMs: 1200 },
+  ],
+  // Un regalo: se acercan, uno se sorprende y los dos lo celebran
+  give_gift: [
+    { host: { move: 'stay', face: 'other', clip: 'surprised' }, guest: { move: 'meet', face: 'other', clip: 'happy' }, holdMs: 1600 },
+    { host: { move: 'stay', face: 'other', clip: 'love' }, guest: { move: 'stay', face: 'other', clip: 'love' }, holdMs: 1800 },
   ],
 };
 
