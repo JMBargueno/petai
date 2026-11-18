@@ -959,7 +959,7 @@
           <MissionsTab on:refreshUser />
 
         {:else if dest === 'progress' && sub === 'seasons'}
-          <SeasonsTab on:refreshUser />
+          <SeasonsTab coins={user.coins} gems={user.gems} on:refreshUser />
 
         {:else if dest === 'shop' && sub === 'store'}
           <ShopView {shopItems} {inventory} coins={user.coins} busyItem={busyAction?.startsWith('buy:') ? busyAction.slice(4) : null} on:buy={(e) => handleBuyItem(e.detail)} />

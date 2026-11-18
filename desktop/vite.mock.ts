@@ -20,6 +20,7 @@ const MIN = 60_000;
 const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 
+const balance = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/balance.json'), 'utf8'));
 const habitats = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/habitats.json'), 'utf8'));
 
 // ── Estado mutable de la sesión demo ─────────────────────────────────────────
@@ -577,7 +578,8 @@ const routes: [string, RegExp, Handler][] = [
     return { chest: { ...chest, openedAt: iso() }, drops, pityProgress: { count: 4, threshold: 10, minTier: 'rare' } };
   }],
   ['POST', /^\/chests\/purchase$/, ({ body }) => {
-    spend(body.paymentMethod === 'gems' ? 'gems' : 'coins', body.paymentMethod === 'gems' ? 10 : 500);
+    const method = body.paymentMethod === 'gems' ? 'gems' : 'coins';
+    spend(method, balance.chests?.[body.type ?? 'bronze']?.prices?.[method] ?? 0);
     const chest = { id: uid('ch'), type: body.type ?? 'bronze', source: 'purchase', createdAt: iso() };
     chests.push(chest);
     return { chest, coinsRemaining: user.coins, gemsRemaining: user.gems };

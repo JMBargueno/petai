@@ -5,8 +5,10 @@
   import { pendingFriends, acceptedFriends, presenceState, friendPetLabel, type PresenceState } from '../lib/visitors';
   import { handleFormatError, normalizeHandle } from '../lib/handle';
   import SocialAvatar from './SocialAvatar.svelte';
+  import { friendlyError } from '../lib/ui/errors';
+  import { Notice } from './ui';
   import UserProfileModal from '../features/profile/UserProfileModal.svelte';
-  import { UserPlus, Check, X, Home, RefreshCw, Users, AlertCircle, CircleCheck, Send, IdCard } from 'lucide-svelte';
+  import { UserPlus, Check, X, Home, RefreshCw, Users, Send } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher<{ visit: string }>();
 
@@ -39,7 +41,7 @@
       friends = await api.getCoopFriends();
       await loadPresence();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       loading = false;
     }
@@ -69,7 +71,7 @@
       ok = `Ahora sois amigos con ${f.otherDisplayName}.`;
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -84,7 +86,7 @@
       ok = `Petición de ${f.otherDisplayName} rechazada.`;
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -109,7 +111,7 @@
       requestHandle = '';
       await load();
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e);
     } finally {
       busy = '';
     }
@@ -139,8 +141,8 @@
     </div>
   </form>
 
-  {#if error}<div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>{/if}
-  {#if ok}<div class="ui-notice ui-notice--ok" role="status"><CircleCheck size={15} /><span>{ok}</span></div>{/if}
+  {#if error}<Notice tone="error" dismissible on:dismiss={() => (error = '')}>{error}</Notice>{/if}
+  {#if ok}<Notice tone="ok">{ok}</Notice>{/if}
 
   {#if loading && !friends.length}
     <div class="ui-loading" aria-label="Cargando amigos">
@@ -208,14 +210,6 @@
             <span class="ui-row__sub">{friendPetLabel(f)}</span>
           </button>
           {#if st === 'online'}<span class="chip ui-chip ui-chip--online">En línea</span>{/if}
-          <button
-            class="btn btn--ghost btn--icon ui-ibtn"
-            title="Perfil de {f.otherDisplayName}"
-            aria-label="Ver perfil de {f.otherDisplayName}"
-            on:click={() => (profileOf = f.otherUserId)}
-          >
-            <IdCard size={16} />
-          </button>
           <button
             class="btn btn--ghost btn--icon ui-ibtn"
             title="Visitar a {f.otherDisplayName}"

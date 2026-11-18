@@ -5,6 +5,7 @@
    */
   import { createEventDispatcher } from 'svelte';
   import { focusTrap } from '../../lib/ui/focusTrap';
+  import { friendlyError } from '../../lib/ui/errors';
   import { api, type PublicProfile } from '../../lib/api';
   import ProfileView from './ProfileView.svelte';
   import { X, AlertCircle, Home } from 'lucide-svelte';
@@ -26,7 +27,7 @@
     try {
       profile = await api.getUserProfile(id);
     } catch (e: any) {
-      error = e.message;
+      error = friendlyError(e, 'No se pudo cargar el perfil.');
     } finally {
       loading = false;
     }
@@ -61,7 +62,7 @@
     </div>
     <div class="upm-body ui">
       {#if error}
-        <div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span>{error}</span></div>
+        <div class="ui-notice ui-notice--error" role="alert"><AlertCircle size={15} /><span class="ui-notice__body">{error}</span><button class="btn btn--ghost btn--sm" on:click={() => load(userId)}>Reintentar</button></div>
       {:else if loading || !profile}
         <div class="ui-loading" aria-label="Cargando perfil">
           <div class="ui-skel"></div>
