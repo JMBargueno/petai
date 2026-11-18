@@ -19,6 +19,61 @@ import {
   normalizeClanRole,
   outranks,
 } from './clan-roles';
+import { habitatTier, nextTierXp, pickResidents } from './clan-habitat';
+import { resolveActivePetIds } from '../pets/active-pet';
+
+/** Pockai de un residente del hábitat: lo justo para pintarlo (misma forma que usa el cliente). */
+export interface ClanHabitatPet {
+  id: string;
+  nickname: string;
+  species: { id: string; name: string };
+  pattern: { id: string };
+  rarity: string;
+  stage: string;
+  palette: unknown;
+  visualSeed: number;
+  shiny: boolean;
+  accessories: unknown;
+  level: number;
+  sleeping: boolean;
+  sick: boolean;
+  hunger: number;
+  happiness: number;
+  energy: number;
+  hygiene: number;
+  health: number;
+}
+
+export interface ClanHabitatResident {
+  userId: string;
+  displayName: string;
+  handle: string | null;
+  role: ClanRole;
+  isMe: boolean;
+  pet: ClanHabitatPet;
+}
+
+export interface ClanHabitat {
+  clanId: string;
+  xp: number;
+  /** Nivel visual 1–5 (ver `shared/game-data/clan-habitat.json`). */
+  tier: number;
+  tierId: string;
+  /** XP del siguiente nivel, o null en el máximo. */
+  nextTierXp: number | null;
+  /** Como mucho 5, uno por Custodio; el del espectador primero si tiene pockai. */
+  residents: ClanHabitatResident[];
+}
+
+/** Evento de socket `clan:xp` tras sumar Resonancia al Nexo. */
+export interface ClanXpEvent {
+  clanId: string;
+  xp: number;
+  delta: number;
+  tier: number;
+  leveledUp: boolean;
+  byUserId: string;
+}
 
 /**
  * ClansService — gestión de clanes con XP compartida y presencia en línea.
@@ -158,6 +213,80 @@ export class ClansService {
   async getMembers(actorId: string, clanId: string): Promise<ClanSummary> {
     await this.requireMembership(actorId, clanId);
     return this.summaryForClan(clanId);
+  }
+
+  /**
+   * Hábitat del Nexo: nivel visual según la XP y hasta `MAX_RESIDENTS` pockais activos, uno por
+   * Custodio. El del espectador entra siempre (si tiene); el resto se sortea en cada llamada. Los
+   * miembros sin mascota no ocupan hueco.
+   */
+  async getHabitat(actorId: string, clanId: string): Promise<ClanHabitat> {
+    await this.requireMembership(actorId, clanId);
+    const clan = await this.prisma.clan.findUnique({ where: { id: clanId }, select: { id: true, xp: true } });
+    if (!clan) throw new NotFoundException('Clan no encontrado');
+
+    const memberships = await this.prisma.clanMembership.findMany({
+      where: { clanId },
+      select: { userId: true, role: true },
+    });
+    const activeByUser = await resolveActivePetIds(this.prisma as any, memberships.map((m) => m.userId));
+    const chosenUsers = pickResidents([...activeByUser.keys()], actorId);
+
+    const petIds = chosenUsers.map((u) => activeByUser.get(u)!);
+    const [pets, users] = await Promise.all([
+      petIds.length
+        ? this.prisma.pet.findMany({
+            where: { id: { in: petIds } },
+            include: { species: { select: { id: true, name: true } } },
+          })
+        : Promise.resolve([] as any[]),
+      chosenUsers.length
+        ? this.prisma.user.findMany({
+            where: { id: { in: chosenUsers } },
+            select: { id: true, displayName: true, handle: true },
+          })
+        : Promise.resolve([] as any[]),
+    ]);
+    const petById = new Map(pets.map((p: any) => [p.id, p] as const));
+    const userById = new Map(users.map((u: any) => [u.id, u] as const));
+    const roleByUser = new Map(memberships.map((m) => [m.userId, normalizeClanRole(m.role)] as const));
+
+    const residents: ClanHabitatResident[] = [];
+    for (const userId of chosenUsers) {
+      const pet: any = petById.get(activeByUser.get(userId)!);
+      if (!pet) continue;
+      const user: any = userById.get(userId);
+      residents.push({
+        userId,
+        displayName: user?.displayName ?? '—',
+        handle: user?.handle ?? null,
+        role: roleByUser.get(userId) ?? 'member',
+        isMe: userId === actorId,
+        pet: {
+          id: pet.id,
+          nickname: pet.nickname,
+          species: { id: pet.species?.id ?? pet.speciesId, name: pet.species?.name ?? pet.speciesId },
+          pattern: { id: pet.patternId },
+          rarity: pet.rarity,
+          stage: pet.stage,
+          palette: pet.palette,
+          visualSeed: pet.visualSeed,
+          shiny: !!pet.shiny,
+          accessories: pet.accessories ?? {},
+          level: pet.level,
+          sleeping: !!pet.sleeping,
+          sick: !!pet.sick,
+          hunger: pet.hunger,
+          happiness: pet.happiness,
+          energy: pet.energy,
+          hygiene: pet.hygiene,
+          health: pet.health,
+        },
+      });
+    }
+
+    const tier = habitatTier(clan.xp);
+    return { clanId: clan.id, xp: clan.xp, tier: tier.level, tierId: tier.id, nextTierXp: nextTierXp(clan.xp), residents };
   }
 
   /**
@@ -579,10 +708,24 @@ export class ClansService {
       const visits = Math.max(0, evt.visits ?? 0);
 
       if (xp > 0) {
-        await this.prisma.clan.update({
+        const updated = await this.prisma.clan.update({
           where: { id: membership.clanId },
           data: { xp: { increment: xp } },
         });
+        // Hábitat del Nexo: los clientes celebran la XP y, si cruza un umbral, transforman el escenario.
+        const total = typeof updated?.xp === 'number' ? updated.xp : null;
+        if (total !== null) {
+          const tier = habitatTier(total).level;
+          const payload: ClanXpEvent = {
+            clanId: membership.clanId,
+            xp: total,
+            delta: xp,
+            tier,
+            leveledUp: tier > habitatTier(total - xp).level,
+            byUserId: evt.userId,
+          };
+          this.emitToMembers(await this.memberIds(membership.clanId), 'clan:xp', payload);
+        }
       }
 
       const goals = await this.prisma.clanGoal.findMany({

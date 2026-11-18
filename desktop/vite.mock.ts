@@ -105,14 +105,50 @@ const clanMembers = [
   { userId: 'u-demo', displayName: 'Entrenadora Demo', handle: 'demo', role: 'admin', isOnline: true, joinedAt: iso(-30 * DAY) },
   { userId: 'u-3', displayName: 'Un nombre de jugador bastante largo', handle: 'nombre_largo_de_verdad', role: 'moderator', isOnline: false, joinedAt: iso(-20 * DAY) },
   { userId: 'u-4', displayName: 'Dani', handle: 'dani', role: 'member', isOnline: false, joinedAt: iso(-3 * DAY) },
+  { userId: 'u-6', displayName: 'Iker', handle: 'iker', role: 'member', isOnline: true, joinedAt: iso(-2 * DAY) },
+  { userId: 'u-7', displayName: 'Noa', handle: 'noa', role: 'member', isOnline: false, joinedAt: iso(-DAY) },
+  { userId: 'u-8', displayName: 'Leo', handle: 'leo', role: 'member', isOnline: false, joinedAt: iso(-HOUR) },
 ];
+
+/** Pockai activo de cada miembro para el hábitat del Nexo (Dani no tiene ninguno). */
+const habitatPets: Record<string, object> = {
+  'u-2': { id: 'p-20', nickname: 'Luna', species: { id: 'axolunar', name: 'Axolunar' }, pattern: { id: 'spots' }, rarity: 'normal', stage: 'juvenile', palette: { primary: '#8fd3ff', secondary: '#ffd1f0' }, visualSeed: 77, level: 14 },
+  'u-demo': { id: 'p-1', nickname: 'Fuego', species: { id: 'ignisaur', name: 'Ignisaur' }, pattern: { id: 'none' }, rarity: 'normal', stage: 'baby', palette: { primary: '#fb4903', secondary: '#ffd731' }, visualSeed: 12345, level: 7 },
+  'u-3': { id: 'p-30', nickname: 'Chispa', species: { id: 'livolt', name: 'Livolt' }, pattern: { id: 'stripes' }, rarity: 'rare', stage: 'adult', palette: { primary: '#ffe14d', secondary: '#4d6bff' }, visualSeed: 31, level: 28 },
+  'u-6': { id: 'p-60', nickname: 'Brasa', species: { id: 'magmadillo', name: 'Magmadillo' }, pattern: { id: 'scales' }, rarity: 'super_rare', stage: 'juvenile', palette: { primary: '#7a2b1a', secondary: '#ff8a3d' }, visualSeed: 9, level: 19 },
+  'u-7': { id: 'p-70', nickname: 'Bruma', species: { id: 'nubeballena', name: 'Nubeballena' }, pattern: { id: 'none' }, rarity: 'super_rare', stage: 'baby', palette: { primary: '#cfe8ff', secondary: '#8aa6ff' }, visualSeed: 5, level: 4, sleeping: true },
+  'u-8': { id: 'p-80', nickname: 'Ascua', species: { id: 'fenixel', name: 'Fenixel' }, pattern: { id: 'galaxy' }, rarity: 'legendary', stage: 'adult', palette: { primary: '#ff5a2d', secondary: '#ffd447' }, visualSeed: 101, level: 33, shiny: true },
+};
+
+/** Hábitat del Nexo: hasta 5 residentes, el tuyo siempre, el resto sorteado en cada llamada. */
+function clanHabitat(xp: number) {
+  const tiers = [0, 500, 2000, 6000, 15000];
+  const tier = tiers.filter((t) => xp >= t).length;
+  const others = clanMembers.filter((m) => m.userId !== 'u-demo' && habitatPets[m.userId]).sort(() => Math.random() - 0.5);
+  const chosen = [clanMembers.find((m) => m.userId === 'u-demo')!, ...others].slice(0, 5);
+  return {
+    clanId: 'c-1',
+    xp,
+    tier,
+    tierId: ['claro', 'campamento', 'santuario', 'ciudadela', 'celestial'][tier - 1],
+    nextTierXp: tiers[tier] ?? null,
+    residents: chosen.map((m) => ({
+      userId: m.userId,
+      displayName: m.displayName,
+      handle: m.handle,
+      role: m.role,
+      isMe: m.userId === 'u-demo',
+      pet: { shiny: false, sleeping: false, sick: false, accessories: {}, hunger: 80, happiness: 85, energy: 70, hygiene: 75, health: 100, ...habitatPets[m.userId] },
+    })),
+  };
+}
 const clan = {
   id: 'c-1',
   name: 'Nexo de Resonancia',
   tag: 'NEXO',
   description: 'Clan tranquilo para cuidar pockais y hacer raids los fines de semana.',
   leaderId: 'u-2',
-  xp: 4820,
+  xp: 320, // nivel 1 del hábitat: el único con fondo pintado por ahora
   memberCount: clanMembers.length,
   leader: { userId: 'u-2', displayName: 'Marta', handle: 'marta' },
   members: clanMembers,
@@ -542,6 +578,9 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/presence\/([^/]+)$/, ({ m }) => ({ userId: m[1], devices: [], hasActiveDevices: m[1] === 'u-2' })],
   ['GET', /^\/clans$/, () => clan],
   ['GET', /^\/clans\/[^/]+\/members$/, () => clan],
+  // `?xp=` fuerza la XP para revisar cada nivel del hábitat (p. ej. /v1/clans/c-1/habitat?xp=15000)
+  ['GET', /^\/clans\/[^/]+\/habitat$/, ({ query }) => clanHabitat(Number(query.get('xp') ?? clan.xp))],
+  ['POST', /^\/pets\/([^/]+)\/activate$/, ({ m }) => ({ activePetId: m[1] })],
   ['GET', /^\/clans\/[^/]+\/goals$/, () => clanGoals],
   ['POST', /^\/clans\/[^/]+\/goals$/, ({ body }) => {
     const g = { id: uid('g'), clanId: 'c-1', description: '', metric: 'generic', progress: 0, status: 'active', createdAt: iso(), ...body };

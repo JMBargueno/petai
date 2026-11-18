@@ -1190,6 +1190,23 @@ export interface paths {
         patch: operations["PetsController_updateInHabitat"];
         trace?: never;
     };
+    "/v1/pets/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Elegir esta mascota como pockai activo (la que representa al jugador en su clan y visitas) */
+        post: operations["PetsController_activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/environmental/status": {
         parameters: {
             query?: never;
@@ -3455,6 +3472,23 @@ export interface paths {
         };
         /** Roster del clan con presencia en línea por miembro */
         get: operations["ClansController_getMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clans/{id}/habitat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hábitat del Nexo: nivel visual por XP y hasta 5 pockais activos (uno por miembro, el tuyo siempre), sorteados en cada llamada */
+        get: operations["ClansController_getHabitat"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7242,6 +7276,25 @@ export interface operations {
             };
         };
     };
+    PetsController_activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     EnvironmentalController_getStatus: {
         parameters: {
             query?: never;
@@ -10902,6 +10955,25 @@ export interface operations {
         };
     };
     ClansController_getMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClansController_getHabitat: {
         parameters: {
             query?: never;
             header?: never;

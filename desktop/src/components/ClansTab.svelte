@@ -4,6 +4,7 @@
    *  Rangos del Nexo (docs/LORE.md §8): Forjador > Guardián > Vigía > Hermano; las acciones de
    *  gestión solo se muestran a quien puede hacerlas (el backend las valida igualmente). */
   import SocialAvatar from './SocialAvatar.svelte';
+  import ClanHabitat from './ClanHabitat.svelte';
   import { onMount } from 'svelte';
   import { friendlyError } from '../lib/ui/errors';
   import { isNearBottom } from '../lib/ui/chatScroll';
@@ -128,9 +129,13 @@
   const askDeleteMsg = (m: ClanMessage) =>
     (pending = { title: 'Borrar mensaje', label: 'Borrar', text: `«${m.body.length > 120 ? m.body.slice(0, 120) + '…' : m.body}»`, run: () => deleteMsg(m) });
 
+  /** Cada recarga del clan vuelve a sortear los pockais del hábitat. */
+  let habitatKey = 0;
+
   async function load() {
     loading = true;
     error = '';
+    habitatKey += 1;
     try {
       clan = await api.getMyClan(); // null si aún no hay clan (404 del contrato)
       if (clan) {
@@ -432,7 +437,13 @@
       <div class="ui-skel"></div>
     </div>
   {:else if clan}
-    <!-- Cabecera del Nexo -->
+    <!-- Cabecera del Nexo: el hábitat vivo, con la información del clan encima -->
+    <ClanHabitat
+      clanId={clan.id}
+      xp={clan.xp ?? 0}
+      refreshKey={habitatKey}
+      on:xp={(e) => clan && (clan = { ...clan, xp: e.detail })}
+    >
     <div class="clan-hero">
       <div class="clan-hero__crest" aria-hidden="true"><Shield size={26} /></div>
       <div class="clan-hero__info">
@@ -460,6 +471,7 @@
         </button>
       </div>
     </div>
+    </ClanHabitat>
 
     {#if editing}
       <form class="ui-card" on:submit|preventDefault={saveEdit}>
@@ -710,16 +722,37 @@
   }
 
   /* Cabecera del Nexo */
+  /* Placa de cristal sobre el hábitat (ClanHabitat la coloca arriba) */
   .clan-hero {
     display: flex;
-    gap: var(--space-3);
-    padding: var(--space-4);
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border: var(--outline);
     border-radius: var(--radius-cards);
-    background:
-      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--theme-social) 34%, transparent), transparent 62%),
-      var(--surface);
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    backdrop-filter: blur(6px);
     box-shadow: var(--shadow-pop);
+  }
+  .clan-hero .clan-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .clan-hero .clan-hero__info {
+    gap: 3px;
+  }
+  .clan-hero .clan-hero__crest {
+    width: 38px;
+    height: 38px;
+  }
+  .clan-hero .clan-name {
+    font-size: calc(var(--text-title) * 0.85);
+  }
+  /* El Forjador ya sale en el roster: en el hábitat se deja ver más escenario */
+  .clan-hero .clan-leader {
+    display: none;
   }
   .clan-hero__crest {
     flex-shrink: 0;

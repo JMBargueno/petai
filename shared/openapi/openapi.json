@@ -2170,6 +2170,35 @@
         ]
       }
     },
+    "/v1/pets/{id}/activate": {
+      "post": {
+        "operationId": "PetsController_activate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir esta mascota como pockai activo (la que representa al jugador en su clan y visitas)",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
     "/v1/environmental/status": {
       "get": {
         "operationId": "EnvironmentalController_getStatus",
@@ -7291,6 +7320,35 @@
           }
         ],
         "summary": "Roster del clan con presencia en línea por miembro",
+        "tags": [
+          "Clans"
+        ]
+      }
+    },
+    "/v1/clans/{id}/habitat": {
+      "get": {
+        "operationId": "ClansController_getHabitat",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Hábitat del Nexo: nivel visual por XP y hasta 5 pockais activos (uno por miembro, el tuyo siempre), sorteados en cada llamada",
         "tags": [
           "Clans"
         ]
