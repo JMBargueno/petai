@@ -468,6 +468,8 @@ Estado actual de lo ya construido en el panel:
 | IA: ajustes BYOK, chat, recuerdos, tarjetas de confirmación, recordatorios | ✅ |
 | Logros y constelación (con exportación a imagen) | ✅ |
 | Ajustes de notificaciones | ✅ |
+| Guía de primer uso (4 pasos, una vez, cuando ya hay mascota; se repite desde Acerca de) | ✅ |
+| Tema Sistema / Claro / Oscuro en Ajustes › Escritorio | ✅ |
 | Cuenta con código de vinculación | ✅ |
 | Acerca de: «Informar de un fallo» y «Sugerir una mejora» (formulario de la web con `from=desktop`) y el correo como alternativa | ✅ |
 | Misiones, cofres, vínculo, temporada, rituales, hábitat y el resto de la Fase 7 | ⬜ |
@@ -496,7 +498,7 @@ Estado actual de lo ya construido en el panel:
 - Permitir a la mascota proponer **abrir un enlace** y **leer el portapapeles**. Cada uso muestra una tarjeta de confirmación con el destino exacto.
 - En Ajustes: interruptor independiente para cada herramienta, desactivadas por defecto.
 
-**Ajustes › Escritorio** · 🟡 · P1 (hecho: iniciar con el sistema; al cerrar la ventana la app sigue en la bandeja)
+**Ajustes › Escritorio** · 🟡 · P1 (hecho: iniciar con el sistema; al cerrar la ventana la app sigue en la bandeja; tema Sistema / Claro / Oscuro)
 
 | Opción | Descripción |
 |---|---|

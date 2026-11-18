@@ -768,6 +768,7 @@
   color: var(--ink-muted);
 }
 .form-hint {
+  margin: 0;
   font-size: var(--text-caption);
   color: var(--ink-muted);
 }

@@ -637,6 +637,7 @@
     class="btn glass toggle-panel-pill"
     on:click={() => (isPanelOpen = !isPanelOpen)}
     title="Abrir/Cerrar Panel de Control"
+    aria-expanded={isPanelOpen}
   >
     {#if isPanelOpen}<X size={16} /> Ocultar panel{:else}<PawPrint size={16} /> Abrir panel{/if}
   </button>
@@ -646,7 +647,7 @@
     class="btn glass notif-toggle-pill"
     on:click={openNotifications}
     title="Ajustes de notificaciones"
-    aria-label="Avisos"
+    aria-label={$unreadCount > 0 ? `Avisos: ${$unreadCount} sin leer` : 'Avisos'}
   >
     <Bell size={16} />
     {#if $unreadCount > 0}<span class="notif-badge">{$unreadCount}</span>{/if}
@@ -657,8 +658,10 @@
     class="btn glass ball-toggle-pill"
     on:click={toggleBall}
     title={showBall ? 'Guardar pelota de juego' : 'Sacar pelota de juego'}
+    aria-label={showBall ? 'Guardar pelota de juego' : 'Sacar pelota de juego'}
+    aria-pressed={showBall}
   >
-    <span>⚽</span>
+    <span aria-hidden="true">⚽</span>
   </button>
 
   {#if showBall}

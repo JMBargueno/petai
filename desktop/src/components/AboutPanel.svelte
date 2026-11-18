@@ -3,6 +3,7 @@
   import { RefreshCw, Download } from 'lucide-svelte';
   import { updateState, checkForUpdates, installUpdate } from '../lib/updater';
   import { SOCIAL_HANDLE, SOCIAL_LINKS } from '../lib/social';
+  import { restartOnboarding } from '../lib/onboarding';
 
   let version = '';
 
@@ -66,6 +67,8 @@
       <p class="error" role="alert">{s.message}</p>
     {/if}
   {/if}
+
+  <button class="btn btn--ghost" on:click={() => restartOnboarding()}>Ver la guía de inicio otra vez</button>
 
   <div class="contact">
     <p class="muted">¿Has visto un fallo o tienes una idea? La vía preferente es el formulario de contacto.</p>

@@ -38,6 +38,8 @@
   import AuthLayout from './auth/AuthLayout.svelte';
   import CodeInput from './auth/CodeInput.svelte';
   import { Button, CurrencyPill, Notice, Segmented } from './ui';
+  import Onboarding from './Onboarding.svelte';
+  import { completeOnboarding, onboardingDone } from '../lib/onboarding';
 
   export let user: any = null;
   export let pet: any = null;
@@ -623,21 +625,21 @@
 
           <div class="form-group">
             <label for="auth-email">Correo electrónico</label>
-            <input class="input" id="auth-email" type="email" bind:value={authEmail} placeholder="entrenador@pockai.app" />
+            <input class="input" id="auth-email" type="email" autocomplete="email" required bind:value={authEmail} placeholder="entrenador@pockai.app" />
           </div>
 
           {#if !isLoginMode}
             <HandleField id="auth-handle" bind:value={authHandle} bind:valid={authHandleValid} />
             <div class="form-group">
               <label for="auth-name">Nombre de jugador</label>
-              <input class="input" id="auth-name" type="text" bind:value={authDisplayName} placeholder="Red" />
+              <input class="input" id="auth-name" type="text" autocomplete="nickname" bind:value={authDisplayName} placeholder="Red" />
               <small class="form-hint">El nombre sí podrás cambiarlo cuando quieras.</small>
             </div>
           {/if}
 
           <div class="form-group">
             <label for="auth-pass">Contraseña</label>
-            <input class="input" id="auth-pass" type="password" bind:value={authPassword} placeholder="••••••••" />
+            <input class="input" id="auth-pass" type="password" autocomplete={isLoginMode ? 'current-password' : 'new-password'} required bind:value={authPassword} placeholder="••••••••" />
             {#if isLoginMode}
               <button type="button" class="forgot-link" on:click={openForgot}>¿Has olvidado tu contraseña?</button>
             {/if}
@@ -720,6 +722,11 @@
         <button type="button" class="auth-link" on:click={() => { api.logout(); dispatch('logout'); }}>Usar otra cuenta</button>
       </AuthLayout>
     {:else}
+      <!-- Guía de primer uso: una vez, cuando ya hay mascota y no se está en plena eclosión -->
+      {#if pet && !$onboardingDone && !(dest === 'pet' && sub === 'hatch')}
+        <Onboarding on:done={() => completeOnboarding()} on:go={(e) => go(e.detail.dest, e.detail.sub)} />
+      {/if}
+
       <!-- Destinos principales -->
       <nav class="nav-tabs" aria-label="Secciones">
         <!-- Ajustes no va en la barra: es el engranaje de la cabecera, junto a la X -->
