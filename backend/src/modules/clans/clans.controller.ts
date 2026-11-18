@@ -12,7 +12,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
-import { ClansService, ClanSummary } from './clans.service';
+import { ClansService, ClanSummary, ClanHabitat } from './clans.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 
@@ -25,6 +25,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
  *   - POST  /v1/clans/leave      → abandonar el propio clan
  *   - POST  /v1/clans/:id/invite → invitar a un usuario (Vigía+) { handle | userId }
  *   - GET   /v1/clans/:id/members → roster con presencia en línea
+ *   - GET   /v1/clans/:id/habitat → hábitat del Nexo: nivel por XP + hasta 5 pockais activos
  *   - POST  /v1/clans/:id/messages → enviar mensaje al chat { body }
  *   - GET   /v1/clans/:id/messages?limit=&before= → historial reciente del chat
  *   - POST  /v1/clans/:id/goals → crear una meta { title, description?, metric, target }
@@ -119,6 +120,15 @@ export class ClansController {
   @ApiOperation({ summary: 'Roster del clan con presencia en línea por miembro' })
   getMembers(@CurrentUser() user: any, @Param('id') clanId: string): Promise<ClanSummary> {
     return this.clansService.getMembers(user.id, clanId);
+  }
+
+  @Get(':id/habitat')
+  @ApiOperation({
+    summary:
+      'Hábitat del Nexo: nivel visual por XP y hasta 5 pockais activos (uno por miembro, el tuyo siempre), sorteados en cada llamada',
+  })
+  getHabitat(@CurrentUser() user: any, @Param('id') clanId: string): Promise<ClanHabitat> {
+    return this.clansService.getHabitat(user.id, clanId);
   }
 
   // ── Gestión del Nexo (rangos) ───────────────────────────────────────────────

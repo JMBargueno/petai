@@ -561,4 +561,15 @@ export class PetsService {
     this.realtimeGateway.emitPetUpdate(userId, result);
     return result;
   }
+
+  /**
+   * Marca `petId` como el pockai activo del jugador (el de su escritorio). Lo usan el hábitat del
+   * clan y las visitas para mostrar la mascota que el jugador tiene elegida. 404 si no es suya.
+   */
+  async setActivePet(userId: string, petId: string): Promise<{ activePetId: string }> {
+    const pet = await this.prisma.pet.findFirst({ where: { id: petId, userId }, select: { id: true } });
+    if (!pet) throw new NotFoundException('Mascota no encontrada');
+    await this.prisma.user.update({ where: { id: userId }, data: { activePetId: pet.id } });
+    return { activePetId: pet.id };
+  }
 }

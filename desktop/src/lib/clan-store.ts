@@ -4,7 +4,7 @@
  * `ClansTab.svelte` suscribe para mostrarlo en vivo. Sigue el patrón de `lib/visitors.ts`.
  */
 import { writable } from 'svelte/store';
-import type { ClanGoal, ClanMessage, ClanRole } from './api';
+import type { ClanGoal, ClanMessage, ClanRole, ClanXpEvent } from './api';
 
 // ── Rangos del Nexo (espejo de backend/src/modules/clans/clan-roles.ts) ─────
 export const CLAN_ROLE_RANK: Record<ClanRole, number> = { creator: 4, admin: 3, moderator: 2, member: 1 };
@@ -120,6 +120,21 @@ export const clanRosterTick = writable(0);
 export function bumpClanRoster() {
   clanRosterTick.update((n) => n + 1);
 }
+
+/**
+ * Eventos en vivo para el hábitat del Nexo: XP ganada (`clan:xp`) y juramentos cumplidos
+ * (`clan:goal_completed`). `n` crece en cada evento para que dos iguales seguidos también reaccionen.
+ */
+export type ClanHabitatEvent =
+  | ({ kind: 'xp' } & ClanXpEvent & { n: number })
+  | { kind: 'goal'; clanId: string; title: string; n: number };
+
+export const clanHabitatEvents = writable<ClanHabitatEvent | null>(null);
+let habitatEventN = 0;
+export function emitClanHabitatEvent(ev: DistributiveOmit<ClanHabitatEvent, 'n'>) {
+  clanHabitatEvents.set({ ...ev, n: ++habitatEventN } as ClanHabitatEvent);
+}
+type DistributiveOmit<T, K extends keyof any> = T extends unknown ? Omit<T, K> : never;
 
 /** Borra chat y objetivos (al salir del clan o cambiar de clan). */
 export function clearClan() {

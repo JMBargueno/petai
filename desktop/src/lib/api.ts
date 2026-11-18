@@ -1059,6 +1059,14 @@ export const api = {
   async createClanGoal(clanId: string, goal: { title: string; description?: string; metric: ClanGoalMetric; target: number }) {
     return minigameRequest<ClanGoal>('POST', `/v1/clans/${encodeURIComponent(clanId)}/goals`, goal);
   },
+  /** Hábitat del Nexo: nivel por XP y hasta 5 pockais activos (uno por miembro, el tuyo siempre). */
+  async getClanHabitat(clanId: string) {
+    return minigameRequest<ClanHabitat>('GET', `/v1/clans/${encodeURIComponent(clanId)}/habitat`);
+  },
+  /** Guarda en el servidor cuál es la mascota activa (la que te representa en clan y visitas). */
+  async activatePet(petId: string) {
+    return minigameRequest<{ activePetId: string }>('POST', `/v1/pets/${encodeURIComponent(petId)}/activate`);
+  },
   /** Objetivos del clan (activos y completados). */
   async getClanGoals(clanId: string) {
     return minigameRequest<ClanGoal[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/goals`);
@@ -1471,6 +1479,57 @@ export interface ClanSummary {
   memberCount: number;
   leader: { userId: string; displayName: string; handle?: string | null };
   members: ClanMember[];
+}
+
+/** Pockai de un residente del hábitat del clan (misma forma que espera `PetMiniAvatar`). */
+export interface ClanHabitatPet {
+  id: string;
+  nickname: string;
+  species: { id: string; name: string };
+  pattern: { id: string };
+  rarity: string;
+  stage: string;
+  palette: Record<string, string>;
+  visualSeed: number;
+  shiny: boolean;
+  accessories: Record<string, string>;
+  level: number;
+  sleeping: boolean;
+  sick: boolean;
+  hunger: number;
+  happiness: number;
+  energy: number;
+  hygiene: number;
+  health: number;
+}
+
+export interface ClanHabitatResident {
+  userId: string;
+  displayName: string;
+  handle: string | null;
+  role: ClanRole;
+  isMe: boolean;
+  pet: ClanHabitatPet;
+}
+
+/** `GET /v1/clans/:id/habitat`: nivel visual 1–5 y residentes sorteados. */
+export interface ClanHabitat {
+  clanId: string;
+  xp: number;
+  tier: number;
+  tierId: string;
+  nextTierXp: number | null;
+  residents: ClanHabitatResident[];
+}
+
+/** Evento de socket `clan:xp`: el Nexo ganó Resonancia. */
+export interface ClanXpEvent {
+  clanId: string;
+  xp: number;
+  delta: number;
+  tier: number;
+  leveledUp: boolean;
+  byUserId: string;
 }
 
 /** Mensaje del chat de clan (feature 021). */

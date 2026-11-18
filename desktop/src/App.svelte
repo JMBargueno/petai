@@ -38,8 +38,8 @@
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
   import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
-  import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster } from './lib/clan-store';
-  import type { HabitatVisitor, ClanMessage, ClanGoal } from './lib/api';
+  import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster, emitClanHabitatEvent } from './lib/clan-store';
+  import type { HabitatVisitor, ClanMessage, ClanGoal, ClanXpEvent } from './lib/api';
   import { loadActivePetId, pickActivePet, saveActivePetId } from './lib/activePet';
   import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
   import { maintenanceLock } from './lib/maintenance';
@@ -65,6 +65,22 @@
     currentPet = next;
     saveActivePetId(next.id);
   }
+
+  /**
+   * El servidor también guarda cuál es la mascota activa (la que te representa en el hábitat del
+   * clan y en las visitas). Se sincroniza cada vez que cambia, sin bloquear ni avisar si falla.
+   * Solo si es una elección guardada en este equipo: uno recién instalado (sin elección) mostraría
+   * la primera mascota y pisaría la que el jugador eligió en otro.
+   */
+  let syncedActivePetId: string | null = null;
+  $: if (user && currentPet?.id && currentPet.id !== syncedActivePetId && currentPet.id === loadActivePetId()) {
+    const id = currentPet.id;
+    syncedActivePetId = id;
+    api.activatePet(id).catch(() => {
+      if (syncedActivePetId === id) syncedActivePetId = null; // se reintenta en el próximo cambio
+    });
+  }
+  $: if (!user) syncedActivePetId = null;
 
   function openNotifications() {
     panelRequest = { dest: 'settings', sub: 'notifications', n: ++requestN };
@@ -328,6 +344,7 @@
         socket.on('clan:goal_completed', (g: ClanGoal | null) => {
           if (!g?.id || !g?.clanId) return;
           upsertClanGoal(g);
+          emitClanHabitatEvent({ kind: 'goal', clanId: g.clanId, title: g.title });
           notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`, {
             speech: `¡Objetivo de clan cumplido! «${g.title}» llegó a ${g.progress}/${g.target}. 🎉`,
           });
@@ -335,6 +352,10 @@
         // Rangos del Nexo: borrados en el chat y cambios de roster (la pestaña recarga el clan).
         socket.on('clan:message_deleted', (ev: { id?: string } | null) => {
           if (ev?.id) dropClanMessage(ev.id);
+        });
+        // Hábitat del Nexo: la XP del clan sube (y a veces el escenario cambia de nivel).
+        socket.on('clan:xp', (ev: ClanXpEvent | null) => {
+          if (ev?.clanId && typeof ev.xp === 'number') emitClanHabitatEvent({ kind: 'xp', ...ev });
         });
         socket.on('clan:role_changed', () => bumpClanRoster());
         socket.on('clan:member_kicked', () => bumpClanRoster());

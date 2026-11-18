@@ -48,6 +48,9 @@ model User {
   invitesCreated   InviteCode[]       @relation("InviteCreatedBy")
   inviteRedemption InviteRedemption?
   pets           Pet[]
+  // Pockai activo que el jugador ha elegido (el de su escritorio). Sin FK a propósito: si la
+  // mascota ya no existe o no es suya, se usa la más antigua (pets/active-pet.ts).
+  activePetId    String?
   eggs           Egg[]
   inventory      InventoryItem[]
   pityCounter    PityCounter?
