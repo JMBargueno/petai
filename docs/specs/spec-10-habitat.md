@@ -36,7 +36,7 @@ cuidar, decorar" que refuerza la retención y crea un *sunk-cost* emocional. Con
 ## Criterios de aceptación
 - [ ] AC1: El usuario puede ver el estado de su hábitat (salas desbloqueadas, muebles colocados, buffs activos).
 - [ ] AC2: Puede comprar un mueble (monedas o gemas) y colocarlo en una celda libre de una sala desbloqueada.
-- [ ] AC3: Muebles con buff alteran correctamente el cálculo del lazy tick y/o el `Fighter` de combate.
+- [x] AC3: Muebles con buff alteran correctamente el cálculo del lazy tick y/o el `Fighter` de combate.
 - [ ] AC4: Solo se colocan muebles en salas cuya etapa evolutiva sea ≤ `Pet.stage` del pet propietario.
 - [ ] AC5: Mover/quitar un mueble actualiza los buffs al instante y persiste el layout.
 - [ ] AC6: El render de la escena es determinista dado `habitatSeed` + layout.
@@ -149,22 +149,42 @@ model HabitatRoom {
 ```
 Relación agregada en `Pet`: `furniture Furniture[]`, `habitatCells HabitatCell[]`, `habitatRooms HabitatRoom[]`.
 ## Lógica de juego
-### Buffs pasivos (aplicados al lazy tick)
-El lazy tick actual (`GAME_DESIGN §2.2`) calcula el decaimiento con `vitals.decayPerHour`. El hábitat
-aplica un multiplicador por celda ocupada (agregado, no reemplaza):
-- `hygieneDecay` (Fuente): `hygieneDecay_eff = 2.5 × value` → 2.5 × 0.80 = **2.0/h**.
-- `happinessDecayAwake` (Comedor): `happinessDecay_eff = 4 × value` → 4 × 0.90 = **3.6/h** (solo vigilia).
-- `energySleepRegen` (Camita): `energyRegen_eff = 20 × (1 + value)` → 20 × 1.10 = **22/h** en sueño.
+### Buffs de los muebles (implementado)
+> El diseño inicial (multiplicadores compuestos por tipo, solo la sala activa, suelos en /h) se
+> sustituyó por el modelo aditivo con topes de `shared/game-data/habitats.json`. Esto es lo que hace
+> el backend hoy.
 
-Reglas de agregación: los buffs del mismo tipo **se multiplican de forma compuesta con un techo**,
-p. ej. higiene = `2.5 × Π(value_i)` con piso `≥ 1.0/h` (no puede dejar de decaer). Se aplica solo a la
-sala "activa" del pet (la escena actual), no a todas.
+**Cálculo (único, compartido).** `computeActiveBuffs` (`backend/src/modules/habitat/habitat-buffs.ts`)
+suma los `buffs` de **todos** los muebles colocados de la mascota (en cualquier sala) y recorta cada
+clave a su tope `buffCaps.<clave>_max`. Lo usan tanto la API (`GET /v1/habitat/buffs` →
+`HabitatService.getActiveBuffs`) como la lógica de juego (`getActiveBuffsForPet` /
+`getActiveBuffsForPets`), así que el juego aplica exactamente el valor que ve el cliente. Con un mueble
+de cada tipo el catálogo suma justo cada tope (HAB-BUFFS); repetir muebles no pasa del tope. Cada
+valor se acota además a [0, 1] al aplicarlo, para que un dato corrupto nunca invierta el efecto.
 
-### Buffs de combate (opcionales, por muebles temáticos)
-Algunos muebles de sala de combate otorgan un modificador al `Fighter` (multiplicador sobre `mood`,
-coherente con `engine.ts → effStat`): p. ej. `Estatua del Guerrero` → `mood ×1.03` (+3% ATK/DEF/ESP/VEL).
-Límite: máx. 2 muebles de combate por pet, techo combinado `mood ≤ 1.10`. Se refleja en
-`/pets/:id/combat` y se pasa al `runCombat` vía el campo `Fighter.mood`.
+| Buff | Tope | Dónde se aplica | Fórmula |
+|------|------|-----------------|---------|
+| `hygiene_decay_reduction` | 0.4 | Lazy tick (`PetsService.applyLazyTick`) | `decayPerHour.hygiene × (1 − r)` |
+| `happiness_decay_reduction` | 0.3 | Lazy tick | `decayPerHour.happiness × (1 − r)` |
+| `energy_recovery_boost` | 0.4 | Lazy tick, **solo durmiendo** | `abs(decayPerHour.sleeping.energy) × (1 + b)` × horas efectivas (incluye el bonus nocturno) |
+| `combat_mood_bonus` | 0.1 | `moodMultiplier(pet, cfg, bonus)` en `BattlesService.fighterFromPet` | `mood × (1 + bonus)` |
+
+- Las reducciones afectan solo al decaimiento **base** de `balance.vitals.decayPerHour` (despierto o
+  dormido). No tocan los modificadores de clima (`happiness_rain`, `energy_snow`, `hunger_hot`) ni el
+  gasto de energía despierto.
+- Ejemplo (2 h despierto, catálogo completo): higiene 2.5 × 2 × 0.6 = −3; felicidad 4 × 2 × 0.7 = −5.6.
+  Dormido 1 h con la cama (0.2): +20 × 1.2 = +24 de energía.
+- **Combate.** El bonus multiplica el ánimo por cuidado; con cuidado máximo el `mood` puede superar 1.0
+  (hasta 1.10 con el tope actual). Es intencionado: el hábitat premia el cuidado. Se aplica al atacante
+  **y** al rival real en la arena, en raids y en torneos, y `combatProfile` devuelve el `mood` con el bonus
+  para que el cliente muestre el mismo número que usa el combate. No afecta a bots (`bots.ts`), a la
+  simulación de balance (`battle-sim.ts`) ni a la herramienta de desarrollo (`dev-action.service.ts`).
+
+**Consultas.** No hay bucle por ticks: el lazy tick es cerrado (una pasada por petición). Los buffs se
+consultan tras la salida temprana del tick (un tick de < 36 s no consulta nada), `getPets` los pide
+para todas las mascotas en **una** consulta, y el combate/torneo los pide en lote
+(`BattlesService.combatMoodBonuses(petIds)`) para todos los luchadores. `HabitatService` se inyecta como
+`@Optional()` en `PetsService` y `BattlesService`: sin él, no hay buffs.
 
 ### Desbloqueo de salas
 Mapa etapa→sala: `baby→sala`, `juvenile→jardin`, `adult→santuario`, `final→citafinal`. Al cambiar

@@ -169,14 +169,16 @@ export class TournamentService {
       ? await this.prisma.pet.findMany({ where: { id: { in: petIds } }, include: { species: true } })
       : [];
     const petById = new Map(pets.map((p) => [p.id, p]));
+    // Bonus de ánimo del hábitat (spec 10) de todo el frente con una sola consulta
+    const moodBonuses = await this.battlesService.combatMoodBonuses(pets.map((p) => p.id));
 
     for (const match of frontier) {
       const a = match.petAId, b = match.petBId;
       if (a && b) {
         const petA = petById.get(a), petB = petById.get(b);
         if (!petA || !petB) continue;
-        const fighterA = this.battlesService.fighterFromPet(petA);
-        const fighterB = this.battlesService.fighterFromPet(petB);
+        const fighterA = this.battlesService.fighterFromPet(petA, moodBonuses.get(petA.id) ?? 0);
+        const fighterB = this.battlesService.fighterFromPet(petB, moodBonuses.get(petB.id) ?? 0);
         const { winnerPetId } = await this.bracketService.resolveMatch(tournament.id, match.id, fighterA, fighterB);
         for (const p of [petA, petB]) {
           this.realtime?.emitPetAction(p.userId, p.id, p.id === winnerPetId ? 'tournament_win' : 'tournament_loss', { round: match.round });
