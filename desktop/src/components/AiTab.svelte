@@ -210,6 +210,8 @@
           if (res.tool === 'open_url') {
             await openUrl(res.args.url);
             card.note = 'Abierto en tu navegador';
+            // Las manitas espirituales del Pockai abren el portal web (efecto en el escritorio)
+            dispatch('agentAction', 'open_url');
           } else if (res.tool === 'toggle_desktop_skill') {
             setSkillAuthorization(res.args.skill_id, !!res.args.enabled, pet.id);
             card.note = res.args.enabled ? 'Habilidad activada' : 'Habilidad desactivada';
@@ -225,6 +227,7 @@
               card.note = 'El portapapeles está vacío';
             } else {
               card.note = 'Compartido con tu mascota';
+              dispatch('agentAction', 'read_clipboard');
               followUp = `Esto es lo que tengo en el portapapeles:\n"""\n${text.slice(0, 800)}\n"""`;
             }
           }

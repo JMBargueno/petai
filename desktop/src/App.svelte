@@ -27,7 +27,14 @@
     BALL_MAX_THROW_SPEED,
     type BallState,
   } from './lib/toys/toyPhysics';
-  import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior, reactionForSiblingHatch } from './lib/animation/eventMap';
+  import {
+    LOCAL_ACTIONS,
+    ReactionDeduper,
+    reactionForAction,
+    reactionForBehavior,
+    reactionForClanGoal,
+    reactionForSiblingHatch,
+  } from './lib/animation/eventMap';
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
@@ -361,6 +368,8 @@
           if (!g?.id || !g?.clanId) return;
           upsertClanGoal(g);
           emitClanHabitatEvent({ kind: 'goal', clanId: g.clanId, title: g.title });
+          // La trenza del Juramento se tensa sobre la mascota (si está en el escritorio)
+          celebrateClanGoal(g.title);
           notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`, {
             speech: `¡Objetivo de clan cumplido! «${g.title}» llegó a ${g.progress}/${g.target}. 🎉`,
           });
@@ -481,6 +490,11 @@
     const reaction = reactionForSiblingHatch(newborn);
     petViewRef?.react?.(reaction);
     if (reaction.bubble) showBubble(reaction.bubble);
+  }
+
+  function celebrateClanGoal(title?: string | null) {
+    const reaction = reactionForClanGoal(title);
+    petViewRef?.react?.(reaction);
   }
 
   /** Acción disparada desde el panel (comer, bañar, despertar, minijuego, eclosión). */
@@ -740,6 +754,17 @@
         },
         // Entrar en casa y salir como con el botón del panel (con el altar)
         home: (inHabitat: boolean) => currentPet && (currentPet = { ...currentPet, inHabitat }),
+        achievement: (tier = 'legendary') => currentPet && reactToAction(currentPet.id, 'achievement', { name: 'Demostración', tier }),
+        battle: (outcome: 'won' | 'lost' | 'draw' = 'won') =>
+          currentPet && reactToAction(currentPet.id, 'battle_defended', { won: outcome === 'won', draw: outcome === 'draw', attackerName: 'Rival' }),
+        clanGoal: () => celebrateClanGoal('Visitas de la semana'),
+        agent: (tool = 'open_url') => petViewRef?.playMinor?.('manitas-espirituales', { tool }),
+        intelligence: (n: number) => currentPet && (currentPet = { ...currentPet, intelligence: n }),
+        // Cualquier campo de la mascota activa (p. ej. { shiny: true } para ver el destello del Prisma)
+        patchPet: (p: Record<string, unknown>) => currentPet && (currentPet = { ...currentPet, ...p }),
+        weather: (condition: string) =>
+          (environmental = { ...(environmental ?? {}), weather: { condition, temperature: 12, weatherCode: 0 } } as any),
+        gift: (kind: 'gift' | 'care' = 'gift') => currentPet && reactToAction(currentPet.id, kind === 'gift' ? 'gift_received' : 'care_received'),
         visitorJoin: (v: HabitatVisitor) => visitorJoined(v),
         visitorLeave: (visitorId: string) => visitorLeft(visitorId),
         summon: (x?: number, y?: number) => window.dispatchEvent(new CustomEvent('petai:summon', { detail: { x, y } })),
@@ -883,6 +908,7 @@
     on:bubble={(e) =>
       showBubble(e.detail, { maxChunks: MAX_AI_CHUNKS, overflowNote: '… (sigue en el chat)', onShow: () => petViewRef?.play?.('talk') })}
     on:behavior={(e) => reactToBehavior(e.detail)}
+    on:agentAction={(e) => petViewRef?.playMinor?.('manitas-espirituales', { tool: e.detail })}
     on:refreshPet={refreshPet}
     on:logout={clearSessionState}
   />

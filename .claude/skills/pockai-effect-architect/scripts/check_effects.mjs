@@ -68,10 +68,14 @@ for (const f of files) {
   const lore = src.match(/\blore:\s*'([^']*)'/)?.[1] ?? '';
   const phases = phasesOf(src, 'phases') ?? [];
   const reduced = phasesOf(src, 'reducedPhases');
-  const w = num(src, 'width');
-  const h = num(src, 'height');
-  const scale = num(src, 'scale');
-  const fps = num(src, 'fps');
+  // Las propiedades se leen del bloque del EffectDef exportado (no de parámetros de funciones)
+  // (las constantes de la rejilla se resuelven en todo el archivo: `num` busca `const W = …`)
+  const defStart = src.search(/export const \w+\s*:\s*EffectDef/);
+  const defBlock = (defStart >= 0 ? src.slice(defStart) : src) + '\n' + src.replace(/^(?!const ).*$/gm, '');
+  const w = num(defBlock, 'width');
+  const h = num(defBlock, 'height');
+  const scale = num(defBlock, 'scale');
+  const fps = num(defBlock, 'fps');
   const total = phases.reduce((a, p) => a + (p.ms === 'hold' ? 0 : p.ms), 0);
   const issues = [];
   const err = (m) => (issues.push(`ERROR  ${m}`), errors++);
@@ -98,7 +102,8 @@ for (const f of files) {
   const used = appFiles.filter(([p, s]) => !p.startsWith(dir) && (mentions.test(s) || s.includes(`'${id}'`)));
   if (!used.length) warn('ningún componente de la app lo usa todavía');
 
-  rows.push({ id, f, lore, phases, total, w, h, scale, fps, used: used.map(([p]) => relative(root, p)), issues });
+  const channel = defBlock.match(/\bchannel:\s*'(\w+)'/)?.[1] ?? 'moment';
+  rows.push({ id, f, lore, phases, total, w, h, scale, fps, channel, used: used.map(([p]) => relative(root, p)), issues });
 }
 
 if (!rows.length) {
@@ -110,7 +115,7 @@ console.log(`Efectos del escritorio (${rows.length})\n`);
 for (const r of rows) {
   console.log(`■ ${r.id}  (${r.f})`);
   console.log(`  lore: ${r.lore || '—'}`);
-  console.log(`  rejilla ${r.w}×${r.h} ×${r.scale} · ${r.fps} fps · ${r.total} ms + hold`);
+  console.log(`  rejilla ${r.w}×${r.h} ×${r.scale} · ${r.fps} fps · ${r.total} ms + hold · canal ${r.channel}`);
   console.log(`  fases: ${r.phases.map((p) => `${p.name} ${p.ms === 'hold' ? '(hold)' : p.ms + 'ms'}`).join(' → ')}`);
   console.log(`  usado en: ${r.used.join(', ') || '—'}`);
   for (const i of r.issues) console.log(`  ${i}`);

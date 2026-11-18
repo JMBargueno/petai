@@ -943,6 +943,7 @@
             on:promptConsumed={(e) => (consumedPromptN = Math.max(consumedPromptN, e.detail))}
             on:bubble
             on:behavior
+            on:agentAction
             on:refreshPet
           />
 

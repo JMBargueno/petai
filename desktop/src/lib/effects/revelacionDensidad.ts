@@ -1,5 +1,5 @@
 import type { EffectDef, FxFrame, FxPhase, PixelSink } from './types';
-import { Canvas2, easeIn, easeOut, hash, span } from './fxMath';
+import { Canvas2, easeIn, easeOut, hash, invert, span } from './fxMath';
 
 /**
  * Revelación de densidad: el nacimiento de un Pockai (LORE §2 y §3).
@@ -24,12 +24,6 @@ const TIERS: Record<string, number> = { normal: 1, common: 1, rare: 2, super_rar
 
 export function densityTier(rarity: unknown): number {
   return TIERS[String(rarity ?? '')] ?? 1;
-}
-
-/** Complementario de un color #rrggbb: la paleta «invertida» del Prisma. */
-function invert(hex: string): string {
-  const n = parseInt(hex.slice(1), 16);
-  return '#' + (0xffffff - n).toString(16).padStart(6, '0');
 }
 
 function paintColumn(c: Canvas2, f: FxFrame, top: number, half: number, flash: boolean) {

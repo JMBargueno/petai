@@ -60,3 +60,15 @@ export class Canvas2 {
     }
   }
 }
+
+/** Complementario de un color #rrggbb: la paleta «invertida» del Prisma (LORE §3). */
+export function invert(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  return '#' + (0xffffff - n).toString(16).padStart(6, '0');
+}
+
+/** Corazón de 5×4 píxeles con la esquina superior izquierda en (x, y). */
+export function heart(c: Canvas2, x: number, y: number, fill: string, shine: string) {
+  const rows = ['.X.X.', 'XXXXX', '.XXX.', '..X..'];
+  rows.forEach((r, j) => [...r].forEach((ch, i) => ch === 'X' && c.set(x + i, y + j, i === 1 && j === 1 ? shine : fill)));
+}

@@ -73,6 +73,16 @@ PetView tiene, para el viaje:
 
 Antes de mover a la mascota, déjala quieta y horizontal (`settleForTravel`): sin trepar, sin física en el aire, sin choca-esos-cinco. Para andar, pon `walkUntil = now + ms` (el controlador pinta `walk`) y cambia `posX`.
 
+## Canales (PetView)
+
+| Canal | Para qué | Cómo |
+|---|---|---|
+| `moment` (por defecto) | Momentos grandes: uno a la vez, el de más `priority` gana (`momentQueue.ts`). | `startMoment` / `playMoment` |
+| `minor` | Pequeños y frecuentes: conviven (máx. 3), no bloquean ni tapan a la mascota. | `playMinor(id, params, at?)` (exportada: App la usa para el agente) |
+| `ambient` | Bucles con `hold` que duran mientras su condición (clima). Uno por clave. | `setAmbient(key, id | null, params)`; al cambiar, el anterior cierra sus fases |
+
+Pon `channel` en el `EffectDef`. `playMoment` desvía solo a `minor` si el efecto lo es, así que `eventMap` no necesita saber el canal.
+
 ## Efectos de momento (lo que llega con una reacción)
 
 Para un evento que ya pasa por `eventMap` (`pet:action` del backend o acción local), no hace falta tocar App:

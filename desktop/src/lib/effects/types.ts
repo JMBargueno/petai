@@ -71,6 +71,11 @@ export interface EffectDef {
   /** Cadencia del dibujo (fps). 12 da el tacto de los sprites. */
   fps: number;
   draw(sink: PixelSink, frame: FxFrame): void;
+  /**
+   * Canal en PetView: `moment` (por defecto) = uno grande a la vez; `minor` = pequeño y frecuente,
+   * convive con otros y no bloquea a la mascota; `ambient` = bucle que dura mientras su condición.
+   */
+  channel?: 'moment' | 'minor' | 'ambient';
   /** Delante o detrás de la mascota (por defecto, detrás). */
   layer?: 'behind' | 'front';
   /**

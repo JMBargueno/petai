@@ -31,6 +31,8 @@ Manda la norma de `docs/GUIA_ARTISTICA.md` (§3.6 color por elemento, §7 pixel 
 - `revelacion-densidad`: nacimiento, con la Promesa del Telar y el Rayo Cósmico según los datos.
 - `altar-santuario`: entrar en casa y salir de ella.
 - `descarga-calida`: bienvenida tras una ausencia.
+- `sello-logro`, `proyeccion-astral`, `trenza-juramento`, `chispa-despertar`, `paquete-hebra`: logro, arena, clan, despertar y regalos.
+- Menores y de ambiente: `manitas-espirituales`, `glitch-animo`, `polvo-estatico`, `desfragmentacion`, `polvo-impacto`, `estela-flujo`, `destello-prisma` y `clima` (ver «Canales» en `effect-engine.md`).
 
 Hay dos patrones de referencia:
 - **Viaje con estado de juego:** `visitTravel.ts` + `departThroughPortal` en PetView.

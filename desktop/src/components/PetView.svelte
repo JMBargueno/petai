@@ -15,7 +15,7 @@
   import { dropGoneVisitor, syncShownVisitors, type ShownVisitor } from '../lib/effects/visitorsShown';
   import type { EnvironmentalStatus } from '../lib/environmental';
   import type { HabitatVisitor } from '../lib/api';
-  import { skillAuthorizations, isSkillActive, getPetBonding } from '../lib/stores/desktopSkillsStore';
+  import { skillAuthorizations, isSkillActive, getPetBonding, getPetIntelligenceLevel } from '../lib/stores/desktopSkillsStore';
   import {
     calculateThrowVelocity,
     advancePhysics,
@@ -181,12 +181,29 @@
   $: stage = stageFrozen ? frozenStage : (pet?.stage ?? null);
   // Si la etapa nueva llega antes que el aviso `evolved` (o sin él), el capullo sale igual;
   // el `evolved` que llegue después se descarta (mismo peso en admitMoment).
-  let lastSeenStage: string | null | undefined = undefined;
-  $: watchStage(pet?.stage ?? null);
-  function watchStage(next: string | null) {
-    const prev = lastSeenStage;
-    lastSeenStage = next;
-    if (prev === undefined || prev === next || stageFrozen) return;
+  /**
+   * Niveles del Despertar (LORE §5): Susurro < 200 ≤ Hilo de Ariadna < 500 ≤ Simbiosis. Mismo mapeo
+   * que las habilidades (acepta también el nivel directo 2/3 de datos antiguos).
+   */
+  const awakeningLevel = (n: number) => getPetIntelligenceLevel(n);
+  let lastAwakening: { id: string; level: number } | undefined = undefined;
+  $: watchAwakening(pet?.id ?? '', awakeningLevel(petIntelligence));
+  function watchAwakening(id: string, level: number) {
+    const prev = lastAwakening;
+    lastAwakening = { id, level };
+    // Cambiar de mascota activa no es despertar
+    if (prev && prev.id === id && level > prev.level) playMoment('chispa-despertar', { level });
+  }
+
+  let lastSeenStage: { id: string; stage: string | null } | undefined = undefined;
+  $: watchStage(pet?.id ?? '', pet?.stage ?? null);
+  function watchStage(id: string, next: string | null) {
+    const prevSeen = lastSeenStage;
+    lastSeenStage = { id, stage: next };
+    // Primera vez o cambio de mascota activa: no es una evolución
+    if (!prevSeen || prevSeen.id !== id) return;
+    const prev = prevSeen.stage;
+    if (prev === next || stageFrozen) return;
     if (STAGE_RANK.indexOf(next ?? '') > STAGE_RANK.indexOf(prev ?? '')) {
       playMoment('capullo-telar', next ? { stage: next } : {}, prev);
     }
@@ -248,8 +265,13 @@
   /** Reacción completa: animaciones en orden y partícula opcional (el bocadillo lo gestiona App). */
   export function react(reaction: Reaction) {
     if (reaction.effect) playMoment(reaction.effect.id, reaction.effect.params ?? {});
-    for (const anim of reaction.anims) play(anim);
+    reaction.anims.forEach((anim, i) => {
+      // Un golpe (arena) se nota: destello blanco y retroceso, no solo el clip
+      if (i === 0 && anim === 'hit') triggerHurt();
+      else play(anim);
+    });
     if (reaction.particle) showParticle(reaction.particle);
+    if (reaction.emphasis) squash(1.28, 0.74, 220);
   }
 
   export function showParticle(emoji: string, ms = 1800) {
@@ -532,8 +554,61 @@
     return true;
   }
 
+  // ---------- Canal menor: efectos pequeños y frecuentes, concurrentes, sin bloquear a la mascota ----------
+  let minors: MomentFx[] = [];
+  const MAX_MINORS = 3;
+  /** Lanza un efecto menor junto a la mascota (sigue sus pies si no lleva `at`). Si hay muchos, se omite. */
+  export function playMinor(effectId: string, params: Record<string, string | number> = {}, at: { x: number; y: number } | null = null) {
+    const def = EFFECTS[effectId];
+    if (!def || petAway || fxHidden || minors.length >= MAX_MINORS) return;
+    const id = ++momentSeq;
+    const player = new EffectPlayer(phasesOf(def, params, reducedMotion), (phase) => {
+      if (phase === 'hold') player.release(performance.now());
+      if (phase === 'done') minors = minors.filter((m) => m.id !== id);
+    });
+    player.start(performance.now());
+    minors = [...minors, { id, def, player, params, at, palette: portalPalette }];
+  }
+
+  /** Lluvia o nieve en pixel art (sustituye al emoji del paraguas o el copo). */
+  $: climaKind = (() => {
+    const cond = (environmental?.weather as { condition?: string } | undefined)?.condition;
+    return cond === 'rain' || cond === 'snow' ? cond : null;
+  })();
+  $: setAmbient('clima', climaKind && !petAway ? 'clima' : null, climaKind ? { kind: climaKind } : {});
+
+  // ---------- Canal ambiente: bucles que duran mientras su condición (clima, destello shiny) ----------
+  let ambients: Array<MomentFx & { key: string; sig: string }> = [];
+  /**
+   * Pone (o quita, con `effectId = null`) el efecto de ambiente de una clave. Si ya está el mismo con
+   * los mismos datos, no hace nada; si cambia, el anterior cierra sus fases y entra el nuevo.
+   */
+  function setAmbient(key: string, effectId: string | null, params: Record<string, string | number> = {}) {
+    const sig = effectId ? effectId + JSON.stringify(params) : '';
+    const current = ambients.find((a) => a.key === key && !a.player.done);
+    if (current?.sig === sig) return;
+    // El anterior se suelta y termina su salida; deja de contar para esta clave
+    if (current) {
+      current.player.release(performance.now());
+      current.key = key + ':saliendo';
+    }
+    if (!effectId) return;
+    const def = EFFECTS[effectId];
+    if (!def) return;
+    const id = ++momentSeq;
+    const player = new EffectPlayer(phasesOf(def, params, reducedMotion), (phase) => {
+      if (phase === 'done') ambients = ambients.filter((m) => m.id !== id);
+    });
+    player.start(performance.now());
+    ambients = [...ambients, { id, def, player, params, at: null, palette: portalPalette, key, sig }];
+  }
+
   /** Efecto que llega con una reacción (`eventMap`): capullo o resonancia. */
   function playMoment(effectId: string, params: Record<string, string | number>, fromStage?: string | null) {
+    if (EFFECTS[effectId]?.channel === 'minor') {
+      playMinor(effectId, params);
+      return;
+    }
     if (effectId === 'capullo-telar') {
       // Se sigue dibujando la etapa de antes hasta que el capullo la tape
       const stageAtStart = fromStage !== undefined ? fromStage : stage;
@@ -777,6 +852,9 @@
     return null;
   }
 
+  const SHINY_PERIOD_MS = 6000;
+  let lastShinyCycle = -1;
+
   // Loop de renderizado del Canvas a 60 FPS
   function renderLoop(time: number) {
     const dt = lastRenderTime ? Math.min(time - lastRenderTime, 250) : 16;
@@ -815,6 +893,16 @@
           ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
           ctx.fillRect(0, 0, PET_SIZE, PET_SIZE);
           ctx.restore();
+        }
+
+        // Shiny (LORE §3, Bendición del Prisma): el brillo sobre el cuerpo ya lo pinta la hoja horneada
+        // (fxFrame, arriba); cada 6 s, además, chispean estrellitas de paleta invertida alrededor.
+        if (isShiny && !reducedMotion) {
+          const cycle = Math.floor(time / SHINY_PERIOD_MS);
+          if (cycle !== lastShinyCycle) {
+            lastShinyCycle = cycle;
+            playMinor('destello-prisma');
+          }
         }
       }
     }
@@ -857,6 +945,7 @@
       // Al posarse definitivamente en el suelo
       if (!physicsState.isAirborne) {
         play('land');
+        playMinor('polvo-impacto', {}, { x: posX + PET_SIZE / 2, y: posY + PET_SIZE - FEET_INSET });
         squash(1.12, 0.88, 90);
       }
     } else {
@@ -1098,10 +1187,11 @@
       if (beh.state === 'zoomies' && beh.targetX !== undefined) {
         const diff = beh.targetX - posX;
         direction = diff > 0 ? 1 : -1;
+        // Estela del Flujo donde estaba (se queda atrás mientras corre)
+        playMinor('estela-flujo', { dir: direction }, { x: posX + PET_SIZE / 2, y: posY + PET_SIZE - FEET_INSET });
         posX += Math.min(Math.abs(diff), 60) * direction;
         walkUntil = performance.now() + 900;
         play('run');
-        showParticle('💨✨', 1200);
         return;
       }
 
@@ -1208,8 +1298,8 @@
   {/key}
 {/if}
 
-<!-- Efectos de momento: siguen los pies de la mascota salvo que tengan un punto fijo -->
-{#each moments as m (m.id)}
+<!-- Efectos de momento, menores y de ambiente: siguen los pies de la mascota salvo que tengan un punto fijo -->
+{#each [...ambients, ...moments, ...minors] as m (m.id)}
   <EffectLayer
     def={m.def}
     player={m.player}
@@ -1298,7 +1388,7 @@
     {/if}
 
     <!-- Accesorio ambiental (paraguas, gorro, sombrerito…): se mueve con el cuerpo -->
-    <EnvironmentalOverlay environmental={environmental} part="accessory" />
+    <EnvironmentalOverlay environmental={environmental} part="accessory" weatherFx={!!climaKind} />
   </div>
 
   <!-- Mascotas de los amigos de visita (feature 021): junto a la mía, sin su transformación -->
@@ -1409,6 +1499,12 @@
   .pet-container.away {
     visibility: hidden;
     pointer-events: none;
+  }
+  /* Los amigos de visita siguen viéndose aunque tu Pockai esté fuera o tapado: un hijo puede volver a
+     ser visible con el padre oculto (sus reglas propias lo ocultan mientras cruza su portal) */
+  .pet-container.away :global(.visitor),
+  .pet-container.fx-hidden :global(.visitor) {
+    visibility: visible;
   }
   /* Tapada por un efecto (capullo, hebra que aún cae): ni se ve ni recibe clics */
   .pet-container.fx-hidden {
