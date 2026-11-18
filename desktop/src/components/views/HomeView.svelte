@@ -5,6 +5,7 @@
    */
   import { createEventDispatcher } from 'svelte';
   import Ico from '../Ico.svelte';
+  import ItemIcon from '../ItemIcon.svelte';
   import PetHouse from '../PetHouse.svelte';
   import { startHabitatExitDrag } from '../../lib/habitatExitDrag';
   import { elementMeta, rarityMeta } from '../../lib/ui/maps';
@@ -138,7 +139,7 @@
             title="Dar {item.item.name}"
             on:click={() => dispatch('feed', item.itemId)}
           >
-            <Ico n="drumstick" size={13} /> {item.item.name} <span class="qty" aria-hidden="true">{item.qty}</span>
+            <ItemIcon id={item.itemId} fallback="drumstick" /> {item.item.name} <span class="qty" aria-hidden="true">{item.qty}</span>
           </button>
         {/each}
       </div>
