@@ -65,16 +65,16 @@ const circuit = canvas((put) => {
   }
 });
 
-// Tormenta: nubarrones tramados y un rayo en zigzag por cada celda de 32×32. El efecto enciende
+// Tormenta: nubarrones tramados y un rayo en zigzag por cada celda de 16×32. El efecto enciende
 // cada rayo por separado (la celda es su grupo).
 const storm = canvas((put) => {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const cloud = 0.5 + 0.3 * Math.sin((2 * Math.PI * x) / 64 + 2 * Math.sin((2 * Math.PI * y) / 32)) + 0.2 * Math.sin((2 * Math.PI * (x + y)) / 32);
     if (dither(x, y, Math.max(0, cloud - 0.45) * 0.8)) put(x, y, 1);
   }
-  for (let cy = 0; cy < N / 32; cy++) for (let cx = 0; cx < N / 32; cx++) {
-    let x = cx * 32 + 10 + Math.floor(hash(cx, cy, 21) * 12);
-    const top = cy * 32 + 3 + Math.floor(hash(cx, cy, 22) * 6);
+  for (let cy = 0; cy < N / 32; cy++) for (let cx = 0; cx < N / 16; cx++) {
+    let x = cx * 16 + 5 + Math.floor(hash(cx, cy, 21) * 6);
+    const top = cy * 32 + 2 + Math.floor(hash(cx, cy, 22) * 10);
     let dir = hash(cx, cy, 23) < 0.5 ? -1 : 1;
     for (let i = 0; i < 20; i++) {
       put(x, top + i, 2);

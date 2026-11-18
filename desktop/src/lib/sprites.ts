@@ -1,7 +1,7 @@
 // Sistema de Composición y Baking en Memoria para Sprites de PetAI
 // Conforme a la especificación técnica en docs/ART_PIPELINE.md
 
-import { bakePixels, bakeFxMap, renderFx, PATTERN_FX, type RgbaImage } from '@pockai/scene/bake';
+import { bakePixels, bakeFxMap, isLightPrimary, renderFx, PATTERN_FX, type RgbaImage } from '@pockai/scene/bake';
 import { AssetLoader } from './asset-loader';
 import { createMemoryAssetCache } from './asset-cache';
 import type { AnimLibrary } from './animation/AnimationController';
@@ -272,7 +272,7 @@ export async function bakePetSpriteSheet(
         fxCanvas.width = frame.sw;
         fxCanvas.height = frame.sh;
       }
-      fxBuf = renderFx(fxMap, width, { x: frame.sx, y: frame.sy, w: frame.sw, h: frame.sh }, { fx: fxKind, shiny, time }, fxBuf);
+      fxBuf = renderFx(fxMap, width, { x: frame.sx, y: frame.sy, w: frame.sw, h: frame.sh }, { fx: fxKind, shiny, time, light: isLightPrimary(palette.primary) }, fxBuf);
       fxCanvas.getContext('2d')!.putImageData(new ImageData(fxBuf as Uint8ClampedArray<ArrayBuffer>, frame.sw, frame.sh), 0, 0);
       return fxCanvas;
     },

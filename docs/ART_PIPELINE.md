@@ -37,7 +37,7 @@ shared/assets/
 │   ├── spots.png
 │   ├── scales.png
 │   ├── crystal.png
-│   └── galaxy.png
+│   └── galaxy.png   (uno por patrón de patterns.json, salvo el liso)
 └── palettes.json                   # Paletas curadas por elemento/rareza + variantes Shiny
 ```
 
@@ -139,7 +139,7 @@ Para componer un cuadro o la hoja de sprites completa:
    - **Giro de tono en la sombra**: al multiplicar por el gris de `base.png`, el color gira hacia el violeta y se satura en proporción a lo oscuro que sea ese gris (`shadeShift` en `shared/scene/src/bake/bakePixels.ts`). Solo se aplica cuando `base.png` es un gris; un `base.png` con color propio multiplica tal cual.
 2. **Proyección del Patrón**: `patterns/{patternId}.png` es pixel art en **píxeles nativos**: cada píxel del patrón cubre un píxel nativo del sprite (2×2 píxeles de hoja), desplazado por `(offsetX, offsetY)`. Solo actúa donde el canal `B` de `mask.png` lo permite (el primario; nunca el vientre, el acento ni los colores literales). No pinta blanco: un píxel blanco del patrón es una **marca de tono** del propio color (más clara si el primario es oscuro, más oscura si es claro) y un píxel de otro color es un **destello** casi blanco. No hay alfas intermedios; los degradados van con tramado. Los patrones se generan con `pnpm generate:patterns` (`scripts/sprites/pixel/patterns.mjs`). La escala y la rotación por semilla no se aplican: romperían la rejilla.
 3. **Sombreado y Lineart**: Se superpone `base.png`. Las sombras en escala de grises actúan en modo de fusión `Multiply`, oscureciendo el color y el patrón subyacente. Los contornos negros y los reflejos blancos de los ojos se dibujan en modo `Normal`.
-4. **Efecto Shiny (si `shiny == true`)**: Se aplica un shader con una banda diagonal blanca semitransparente que recorre la silueta (máscara canal A) cada 4 segundos, acompañado de un emisor de partículas de estrellas o chispas.
+4. **Efectos animados**: no se hornean. `bakeFxMap` guarda, para cada píxel de la silueta, en qué punto del patrón cae y si es marca de tono, destello o cuerpo liso; `renderFx` devuelve en cada paso (90 ms) una capa RGBA del frame visible que el cliente pinta encima. Cubre los seis efectos de los patrones de la Textura del Éter (`sheen`, `twinkle`, `flow`, `starfield`, `flash`, `aurora`) y el de la **variante shiny**: un barrido irisado cada 4 segundos y destellos en estrella sobre el cuerpo. Todo está en `shared/scene/src/bake/patternFx.ts`.
 
 ---
 

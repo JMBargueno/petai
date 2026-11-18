@@ -90,6 +90,8 @@ export interface FxOptions {
   shiny?: boolean;
   /** Milisegundos desde que se muestra la mascota. */
   time: number;
+  /** Primario claro (`isLightPrimary`): los brillos sutiles van en azul, porque el blanco no se vería. */
+  light?: boolean;
   pixelSize?: number;
 }
 
@@ -105,28 +107,31 @@ type Px = [number, number, number, number];
 const NONE: Px = [0, 0, 0, 0];
 
 /** Color (0–255) y alfa (0–1) que el efecto del patrón pone sobre un píxel. */
-function patternPixel(fx: PatternFx, kind: number, u: number, v: number, lx: number, ly: number, t: number): Px {
+function patternPixel(fx: PatternFx, kind: number, u: number, v: number, lx: number, ly: number, t: number, light: boolean): Px {
   if (kind === FX_BODY) return NONE;
   const glint = kind === FX_GLINT;
+  // Color de los brillos: blanco sobre cuerpos oscuros, azul eléctrico sobre los claros.
+  const [sr, sg, sb] = light ? [70, 170, 255] : [255, 255, 255];
+  const boost = light ? 1.5 : 1;
   switch (fx) {
     // Superraro. Un brillo cruza las escamas en diagonal cada cinco segundos.
     case 'sheen': {
       const p = mod(t, 5200) / 1100;
       if (p > 1) return NONE;
       const d = Math.abs(lx + ly - (p * 150 - 12));
-      return d < 4 ? [255, 255, 255, glint ? 0.7 : 0.35] : NONE;
+      return d < 4 ? [sr, sg, sb, Math.min(1, (glint ? 0.7 : 0.35) * boost)] : NONE;
     }
     // Superraro. Cada vértice del cristal centellea por su cuenta, de uno en uno.
     case 'twinkle': {
       if (!glint) return NONE;
       const q = mod(t + hash(u, v, 1) * 3600, 3600);
       if (q > 360) return NONE;
-      return [255, 255, 255, 0.9 * (1 - Math.abs(q - 180) / 180)];
+      return [sr, sg, sb, 0.9 * (1 - Math.abs(q - 180) / 180)];
     }
     // Superraro. Un pulso de luz recorre las pistas del circuito.
     case 'flow': {
       const m = mod(u + v * 3 - t / 45, 48);
-      if (m < 5) return [190, 255, 255, (1 - m / 5) * (glint ? 0.9 : 0.6)];
+      if (m < 5) return light ? [40, 150, 255, Math.min(1, (1 - m / 5) * (glint ? 1 : 0.85))] : [190, 255, 255, (1 - m / 5) * (glint ? 0.9 : 0.6)];
       return NONE;
     }
     // Legendario. Las estrellas titilan con fuerza y la nebulosa va del azul al magenta.
@@ -134,25 +139,25 @@ function patternPixel(fx: PatternFx, kind: number, u: number, v: number, lx: num
       if (glint) {
         const period = 1400 + hash(u, v, 2) * 1200;
         const a = 0.5 + 0.5 * Math.sin((t / period) * Math.PI * 2 + hash(u, v, 3) * 6.28);
-        return [255, 255, 255, a];
+        return [sr, sg, sb, a];
       }
       const hue = 250 + 60 * Math.sin(t / 2600 + (u + v) / 20);
-      const [r, g, b] = hslToRgb(hue, 0.85, 0.66);
-      return [r, g, b, 0.5];
+      const [r, g, b] = hslToRgb(hue, 0.85, light ? 0.5 : 0.66);
+      return [r, g, b, light ? 0.7 : 0.5];
     }
     // Legendario. Cada rayo descarga por separado; su nube se enciende con él.
     case 'flash': {
-      const q = mod(t + hash(u >> 5, v >> 5, 4) * 2600, 2600);
+      const q = mod(t + hash(u >> 4, v >> 5, 4) * 2600, 2600);
       const power = q < 120 ? 1 : q < 240 ? 0 : q < 330 ? 0.8 : q < 800 ? 0.5 * (1 - (q - 330) / 470) : 0;
-      if (glint) return [255, 250, 190, Math.max(power, 0.3 + 0.1 * Math.sin(t / 300 + u))];
-      return power === 0 ? NONE : [235, 235, 255, power * 0.45];
+      if (glint) return light ? [255, 170, 0, Math.max(power, 0.5)] : [255, 250, 190, Math.max(power, 0.3 + 0.1 * Math.sin(t / 300 + u))];
+      return power === 0 ? NONE : light ? [90, 100, 170, power * 0.6] : [235, 235, 255, power * 0.45];
     }
     // Mítico. Las cintas cambian de color sin parar y una ola de luz sube por ellas.
     case 'aurora': {
       const hue = 150 + 70 * Math.sin(v * 0.12 + t / 700) + u * 2 + t / 30;
       const wave = 0.5 + 0.5 * Math.sin(v * 0.3 - t / 240);
       if (glint) return [255, 255, 255, 0.35 + 0.65 * wave];
-      const [r, g, b] = hslToRgb(mod(hue, 360), 0.9, 0.62 + 0.12 * wave);
+      const [r, g, b] = hslToRgb(mod(hue, 360), 0.9, (light ? 0.5 : 0.62) + 0.12 * wave);
       return [r, g, b, 0.6 + 0.3 * wave];
     }
   }
@@ -191,7 +196,7 @@ export function renderFx(map: ArrayLike<number>, sheetWidth: number, frame: FxFr
         if (map[m + 3] === 0) continue;
         const lx = (x / cell) | 0;
         const ly = (y / cell) | 0;
-        let [r, g, b, a] = fx ? patternPixel(fx, map[m + 2], map[m], map[m + 1], lx, ly, t) : NONE;
+        let [r, g, b, a] = fx ? patternPixel(fx, map[m + 2], map[m], map[m + 1], lx, ly, t, opts.light === true) : NONE;
         if (sweep <= 1) {
           // Barrido del shiny: una banda ancha irisada y otra fina detrás, sobre toda la silueta.
           const d = lx + ly - (sweep * 150 - 12);
