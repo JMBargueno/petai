@@ -21,10 +21,10 @@
 | W3 | Recuadro negro en preview de correo (admin) | Web | P1 | [x] | lote 1 (sin PR) |
 | W4 | Campos en rojo al enviar correo + modal resultado | Web | P1 | [x] | lote 1 (sin PR) |
 | A1 | "PetAI" → "Pockai" en prompts | IA | P1 | [x] | lote 1 (sin PR) |
-| A2 | Rasgos de personalidad semánticos en prompt | IA | P2 | [x] | lote 2 |
-| A3 | Bocadillos: máx. 3 × 140 chars + negritas | IA / Desktop | P2 | [x] | lote 2 |
-| A4 | Skill/tool de lore de Pockai | IA | P2 | [x] | lote 2 |
-| A6 | Igualar turnos por CLI con los nativos | IA / Desktop | P2 | [x] | lote 2 |
+| A2 | Rasgos de personalidad semánticos en prompt | IA | P2 | [x] | [#121](https://github.com/JMBargueno/petai/pull/121) |
+| A3 | Bocadillos: máx. 3 × 140 chars + negritas | IA / Desktop | P2 | [x] | [#121](https://github.com/JMBargueno/petai/pull/121) |
+| A4 | Skill/tool de lore de Pockai | IA | P2 | [x] | [#121](https://github.com/JMBargueno/petai/pull/121) |
+| A6 | Igualar turnos por CLI con los nativos | IA / Desktop | P2 | [x] | [#121](https://github.com/JMBargueno/petai/pull/121) |
 | B4 | Clanes: 1 clan, invitaciones y solicitudes | Backend | P2 | [ ] | |
 | B5 | Visitas: ajustes, aforo, expulsar, offline, render | Backend / Desktop | P2 | [ ] | |
 | B6 | Presencia online en lista de amigos | Backend / Desktop | P2 | [ ] | |
