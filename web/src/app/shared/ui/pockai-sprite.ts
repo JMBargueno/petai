@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 export type PockaiState = 'idle' | 'happy' | 'eat' | 'sleep';
 
 /** Etapa evolutiva con sprites propios para la web (scripts/generate-web-stage-sprites.ts). */
-export type PockaiStage = 'baby';
+export type PockaiStage = 'baby' | 'juvenile';
 
 /**
  * Un pockai con vida, a partir de los sprites reales del juego (uno por estado).

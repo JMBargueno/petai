@@ -4,13 +4,14 @@ import {
   DestroyRef,
   InjectionToken,
   afterNextRender,
-  computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
+import { speciesElement } from '@pockai/scene/effects';
+import { FxCanvas } from '../../shared/effects/fx-canvas';
 import { PockaiSprite, PockaiState } from '../../shared/ui/pockai-sprite';
-import { Sticker } from '../../shared/ui/sticker';
-import { ofRolledRarity, PATTERNS, RARITY_ODDS, SHINY_PROBABILITY, SPECIES } from '../content';
+import { ofRolledRarity, PATTERNS, RARITY_ODDS, SHINY_PROBABILITY, STARTER_SPECIES } from '../content';
 
 /** Fuente de azar de la demo (0 ≤ n < 1). Los tests la sustituyen por una secuencia fija. */
 export const DEMO_RANDOM = new InjectionToken<() => number>('DEMO_RANDOM', {
@@ -24,13 +25,15 @@ const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
 /**
  * Demo jugable: tocar un huevo hasta que eclosiona y cuidar al pockai que sale.
- * Todo ocurre en el navegador, con las probabilidades y las reglas reales del juego: una tirada
- * decide la especie (la rareza es de la especie) y otra, aparte, el patrón del ejemplar. En el juego
- * de verdad esas tiradas las hace el servidor.
+ * Todo ocurre en el navegador. Como el primer huevo de una partida, sale una de las especies
+ * iniciales (rareza normal) y en etapa bebé; el patrón y el shiny sí se sortean con las
+ * probabilidades reales del juego (en el juego de verdad esas tiradas las hace el servidor).
+ * La eclosión usa los efectos del paquete común, como el escritorio: el huevo con grietas de luz
+ * (`huevo-grietas`) y, al nacer, la Revelación de densidad detrás de la recién nacida.
  */
 @Component({
   selector: 'app-pet-demo',
-  imports: [PockaiSprite, Sticker],
+  imports: [FxCanvas, PockaiSprite],
   templateUrl: './pet-demo.html',
   styleUrl: './pet-demo.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,23 +44,25 @@ export class PetDemo {
 
   protected readonly tapsToHatch = TAPS_TO_HATCH;
   readonly taps = signal(0);
-  readonly pet = signal<{ name: string; spriteKey: string; rarity: string; pattern: string; patternRarity: string; shiny: boolean } | null>(null);
+  readonly pet = signal<{
+    name: string;
+    spriteKey: string;
+    element: string;
+    rarity: string;
+    pattern: string;
+    patternRarity: string;
+    shiny: boolean;
+  } | null>(null);
+  /** El huevo aún se está rompiendo: el pockai ya está decidido pero no se ve. */
+  readonly hatching = signal(false);
+  /** La Revelación de densidad sube detrás de la recién nacida. */
+  readonly revealing = signal(false);
   readonly state = signal<PockaiState>('idle');
   readonly hunger = signal(60);
   readonly happiness = signal(60);
   readonly message = signal('');
 
-  protected readonly eggSprite = computed(() =>
-    this.taps() >= TAPS_TO_HATCH - 1 ? 'sprites/egg_cracked.svg' : 'sprites/egg_closed.svg',
-  );
-  protected readonly burst = [
-    { icon: 'star', color: 'sunburst' },
-    { icon: 'heart', color: 'ember' },
-    { icon: 'bolt', color: 'mint-pop' },
-    { icon: 'star', color: 'lavender' },
-    { icon: 'coin', color: 'electric-blue' },
-    { icon: 'heart', color: 'sunburst' },
-  ] as const;
+  private readonly egg = viewChild<FxCanvas>('egg');
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -70,8 +75,16 @@ export class PetDemo {
   }
 
   tapEgg() {
+    if (this.pet()) return;
     this.taps.update((n) => n + 1);
     if (this.taps() >= TAPS_TO_HATCH) this.hatch();
+  }
+
+  /** El huevo ha estallado: aparece la recién nacida con su revelación detrás. */
+  eggDone() {
+    if (!this.hatching()) return;
+    this.hatching.set(false);
+    this.revealing.set(true);
   }
 
   /** Tirada de rareza con las probabilidades del juego. */
@@ -86,20 +99,24 @@ export class PetDemo {
   }
 
   private hatch() {
-    // La rareza es de la especie: la tirada decide qué especie sale, no etiqueta al ejemplar.
-    const species = this.pick(ofRolledRarity(SPECIES, this.rollRarity().id));
+    // Del huevo de la demo solo salen las especies iniciales (rareza normal), como en el primer huevo.
+    const species = this.pick(STARTER_SPECIES);
     // El patrón tiene su propia rareza y su propia tirada.
     const pattern = this.pick(ofRolledRarity(PATTERNS, this.rollRarity().id));
     const shiny = this.random() < SHINY_PROBABILITY;
 
+    // Las grietas brillan con el Flujo de quien nace y el huevo estalla; al acabar, `eggDone`.
+    this.hatching.set(true);
     this.pet.set({
       name: species.name,
       spriteKey: species.spriteKey,
+      element: speciesElement(species.id),
       rarity: species.rarity,
       pattern: pattern.name,
       patternRarity: pattern.rarity,
       shiny,
     });
+    this.egg()?.release();
     this.hunger.set(60);
     this.happiness.set(60);
     this.react('happy');
@@ -135,6 +152,8 @@ export class PetDemo {
   reset() {
     clearTimeout(this.reaction);
     this.pet.set(null);
+    this.hatching.set(false);
+    this.revealing.set(false);
     this.taps.set(0);
     this.state.set('idle');
     this.message.set('');

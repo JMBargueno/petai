@@ -76,11 +76,11 @@ export type AuthMode = 'login' | 'register' | 'forgot' | 'verify';
       <div class="hatch" aria-hidden="true">
         <span class="ring"></span>
         <span class="ring ring--2"></span>
-        <img class="egg" src="sprites/egg_closed.svg" alt="" width="200" height="200" fetchpriority="high" />
+        <img class="app-icon" src="favicon.svg" alt="" width="200" height="200" fetchpriority="high" />
         @for (key of orbit; track key; let i = $index) {
           <span class="orbit" [style.--i]="i">
             <span class="orbit__pet">
-              <app-pockai-sprite [species]="key" state="happy" [size]="76" />
+              <app-pockai-sprite [species]="key" stage="baby" state="happy" [size]="76" />
             </span>
           </span>
         }
@@ -533,11 +533,12 @@ export type AuthMode = 'login' | 'register' | 'forgot' | 'verify';
       aspect-ratio: 1;
       margin-block-end: 4px;
     }
-    .egg {
+    /* El icono de la app (el mismo del escritorio), en el centro del anillo. */
+    .app-icon {
       inline-size: 58%;
       block-size: auto;
       filter: drop-shadow(0 14px 28px rgb(255 215 49 / 0.35));
-      transform-origin: 50% 85%;
+      transform-origin: 50% 50%;
     }
     .ring {
       position: absolute;
@@ -919,7 +920,7 @@ export type AuthMode = 'login' | 'register' | 'forgot' | 'verify';
           twinkle 6s ease-in-out infinite 1s,
           rise 140s linear infinite;
       }
-      .egg {
+      .app-icon {
         animation: wobble 3.2s ease-in-out infinite;
       }
       .ring {

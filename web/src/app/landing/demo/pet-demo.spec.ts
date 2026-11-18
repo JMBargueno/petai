@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { PATTERNS, RARITY_ODDS, SPECIES } from '../content';
+import { PATTERNS, RARITY_ODDS, STARTER_SPECIES } from '../content';
 import { DEMO_RANDOM, PetDemo } from './pet-demo';
 
 /**
- * Crea la demo con una secuencia fija de "azar": rareza de especie, especie, rareza de patrón,
+ * Crea la demo con una secuencia fija de "azar": especie (de las iniciales), rareza de patrón,
  * patrón y shiny, en ese orden.
  */
 function setup(...rolls: number[]) {
@@ -16,10 +16,12 @@ function setup(...rolls: number[]) {
   return { fixture, demo: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
 }
 
+/** Tres toques y el huevo estalla (en el navegador lo avisa el efecto `huevo-grietas`). */
 const hatch = (demo: PetDemo) => {
   demo.tapEgg();
   demo.tapEgg();
   demo.tapEgg();
+  demo.eggDone();
 };
 
 describe('PetDemo', () => {
@@ -27,34 +29,37 @@ describe('PetDemo', () => {
   afterEach(() => vi.useRealTimers());
 
   it('el huevo eclosiona al tercer toque, no antes', () => {
-    const { demo } = setup(0, 0, 0, 0, 0.9);
+    const { demo } = setup(0, 0, 0, 0.9);
     demo.tapEgg();
     demo.tapEgg();
     expect(demo.pet()).toBeNull();
     demo.tapEgg();
     expect(demo.pet()).not.toBeNull();
+    // El pockai no se ve hasta que el huevo termina de estallar.
+    expect(demo.hatching()).toBe(true);
+    demo.eggDone();
+    expect(demo.hatching()).toBe(false);
   });
 
-  it('la rareza es la de la especie y el patrón se sortea aparte', () => {
-    const common = setup(0, 0, 0, 0, 0.9).demo;
+  it('solo salen especies iniciales (normales); el patrón y el shiny se sortean aparte', () => {
+    const common = setup(0, 0, 0, 0.9).demo;
     hatch(common);
     const plain = PATTERNS.filter((p) => p.rarityId === RARITY_ODDS[0].id)[0];
     expect(common.pet()).toEqual({
-      name: SPECIES[0].name,
-      spriteKey: SPECIES[0].spriteKey,
-      rarity: SPECIES[0].rarity,
+      name: STARTER_SPECIES[0].name,
+      spriteKey: STARTER_SPECIES[0].spriteKey,
+      element: expect.any(String),
+      rarity: STARTER_SPECIES[0].rarity,
       pattern: plain.name,
       patternRarity: plain.rarity,
       shiny: false,
     });
 
-    // Tirada de especie mítica y de patrón mítico: sale una especie de las que existen, con SU
-    // rareza, y un patrón mítico de verdad.
+    // Con la mejor suerte sigue saliendo una especie normal, pero el patrón sí puede ser mítico.
     TestBed.resetTestingModule();
-    const lucky = setup(0.999, 0.99, 0.999, 0, 0).demo;
+    const lucky = setup(0.999, 0.999, 0, 0).demo;
     hatch(lucky);
-    const got = SPECIES.find((s) => s.spriteKey === lucky.pet()?.spriteKey)!;
-    expect(lucky.pet()?.rarity).toBe(got.rarity);
+    expect(STARTER_SPECIES.map((s) => s.spriteKey)).toContain(lucky.pet()?.spriteKey);
     expect(lucky.pet()?.patternRarity).toBe(RARITY_ODDS.at(-1)!.name);
     expect(lucky.pet()?.shiny).toBe(true);
   });
@@ -64,7 +69,7 @@ describe('PetDemo', () => {
   });
 
   it('cuidar cambia las barras y el estado, y la reacción termina sola', () => {
-    const { demo } = setup(0, 0, 0, 0, 0.9);
+    const { demo } = setup(0, 0, 0, 0.9);
     hatch(demo);
 
     demo.feed();
@@ -109,8 +114,8 @@ describe('PetDemo', () => {
     expect(el.querySelector('button.egg')).not.toBeNull();
     hatch(demo);
     fixture.detectChanges();
-    expect(el.querySelector('app-pockai-sprite img')?.getAttribute('src')).toContain(SPECIES[0].spriteKey);
+    expect(el.querySelector('app-pockai-sprite img')?.getAttribute('src')).toContain(`${STARTER_SPECIES[0].spriteKey}_baby_`);
     expect(el.querySelectorAll('.actions button').length).toBe(4);
-    expect(el.querySelector('[role=status]')?.textContent).toContain(SPECIES[0].name);
+    expect(el.querySelector('[role=status]')?.textContent).toContain(STARTER_SPECIES[0].name);
   });
 });

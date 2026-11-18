@@ -78,7 +78,8 @@ main:focus {
   text-align: center;
 }
 .lore-cta__egg {
-  inline-size: 120px;
+  /* El huevo nuevo (efecto huevo-grietas, rejilla 40×56) se zarandea esperando a eclosionar. */
+  inline-size: 150px;
   block-size: auto;
   filter: drop-shadow(0 18px 30px rgb(38 30 110 / 0.3));
 }

@@ -135,11 +135,11 @@ function ogCard({ eyebrow, title, tagline, pet, dark }) {
 </svg>`;
 }
 
+/** Icono de la app (favicon.svg: el mismo del escritorio) a toda la caja. */
 function icon(size) {
+  const appIcon = `data:image/svg+xml;base64,${readFileSync(join(pub, 'favicon.svg')).toString('base64')}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 512 512">
-  <defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d5bff"/><stop offset=".45" stop-color="#5c4ade"/><stop offset="1" stop-color="#3f8cff"/></linearGradient></defs>
-  <rect width="512" height="512" rx="112" fill="url(#a)"/>
-  <image href="${sprite('egg_closed')}" x="56" y="56" width="400" height="400"/>
+  <image href="${appIcon}" x="0" y="0" width="512" height="512"/>
 </svg>`;
 }
 

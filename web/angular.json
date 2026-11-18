@@ -87,6 +87,11 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "prebundle": {
+              "exclude": ["@pockai/scene"]
+            }
+          },
           "configurations": {
             "production": {
               "buildTarget": "pockai-web:build:production"

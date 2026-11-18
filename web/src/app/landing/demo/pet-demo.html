@@ -1,11 +1,17 @@
 <div class="stage" [class.stage--shiny]="pet()?.shiny">
-  @if (pet(); as p) {
-    <div class="burst" aria-hidden="true">
-      @for (b of burst; track $index) {
-        <app-sticker [icon]="b.icon" [color]="b.color" [size]="44" [style.--n]="$index" />
+  @if (!hatching() && pet(); as p) {
+    <div class="born">
+      @if (revealing()) {
+        <app-fx-canvas
+          class="reveal"
+          effect="revelacion-densidad"
+          [element]="p.element"
+          [params]="{ rarity: 'normal', shiny: p.shiny ? 1 : 0 }"
+          (done)="revealing.set(false)"
+        />
       }
+      <app-pockai-sprite class="pet pop-in" [species]="p.spriteKey" stage="baby" [state]="state()" [alt]="p.name" />
     </div>
-    <app-pockai-sprite class="pet pop-in" [species]="p.spriteKey" [state]="state()" [alt]="p.name" />
     <p class="name">
       <strong>{{ p.name }}</strong>
       <span class="tag">{{ p.rarity }}</span>
@@ -20,9 +26,10 @@
       type="button"
       [class.egg--a]="taps() % 2 === 1"
       [class.egg--b]="taps() > 0 && taps() % 2 === 0"
+      [disabled]="hatching()"
       (click)="tapEgg()"
     >
-      <img [src]="eggSprite()" alt="" width="128" height="128" />
+      <app-fx-canvas #egg effect="huevo-grietas" [element]="pet()?.element ?? ''" (done)="eggDone()" />
       <span class="visually-hidden" i18n="@@demo.egg.label">Tocar el huevo</span>
     </button>
     <p class="hint">
@@ -37,7 +44,7 @@
 </div>
 
 <div class="panel">
-  @if (pet()) {
+  @if (pet() && !hatching()) {
     <div class="meters">
       <div class="meter">
         <span class="label-caps" id="demo-hunger" i18n="@@demo.hunger">Saciedad</span>
@@ -81,7 +88,7 @@
     </p>
   }
 
-  <p class="status" role="status">{{ message() }}</p>
+  <p class="status" role="status">{{ hatching() ? '' : message() }}</p>
   <p class="disclaimer" i18n="@@demo.disclaimer">
     Es una demostración: usa las probabilidades reales, pero en el juego la tirada la hace el servidor.
   </p>
