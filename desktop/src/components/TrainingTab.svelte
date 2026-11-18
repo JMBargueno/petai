@@ -121,7 +121,7 @@
 </script>
 
 <div class="ui-stack">
-  <Card variant="hero">
+  <Card variant="hero" backdrop="training">
     <FeatureHeader
       icon="castle"
       title="Mazmorra elemental"

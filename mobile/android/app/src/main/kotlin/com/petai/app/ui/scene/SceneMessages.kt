@@ -3,6 +3,7 @@ package com.petai.app.ui.scene
 import com.petai.app.data.HabitatFurniture
 import com.petai.app.data.HabitatRoom
 import com.petai.app.data.Pet
+import com.petai.app.data.StoryScene
 import com.petai.app.data.WeatherInfo
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -17,7 +18,7 @@ import kotlinx.serialization.json.putJsonObject
  * Mensajes anfitrión → escena del protocolo de `@pockai/scene` (shared/scene/src/protocol.ts,
  * versión [SCENE_PROTOCOL_VERSION]). La escena valida cada mensaje y descarta los mal formados.
  */
-const val SCENE_PROTOCOL_VERSION = 3
+const val SCENE_PROTOCOL_VERSION = 4
 
 object SceneMessages {
     fun setPet(pet: Pet): JsonObject = buildJsonObject {
@@ -40,6 +41,33 @@ object SceneMessages {
             // Prendas equipadas por ranura (spec 38): la escena las pinta en su ancla.
             putJsonObject("accessories") { pet.accessories.forEach { (slot, id) -> put(slot, id) } }
         }
+    }
+
+    /**
+     * Escena de la aventura diaria (protocolo v4). El mensaje lleva el estado entero: repetirlo no
+     * cambia nada. [phase]: `enter` | `await` | `react` | `exit`; [clip]: reacción del Pockai.
+     */
+    fun setStory(key: String, scene: StoryScene, phase: String, clip: String? = null): JsonObject = buildJsonObject {
+        put("type", "setStory")
+        putJsonObject("story") {
+            put("key", key)
+            put("locationId", scene.locationId)
+            put("phase", phase)
+            scene.mood?.let { m ->
+                putJsonObject("mood") {
+                    m.timeOfDay?.let { put("timeOfDay", it) }
+                    m.weather?.let { put("weather", it) }
+                }
+            }
+            scene.event.fx?.let { put("fx", it) }
+            clip?.let { put("clip", it) }
+        }
+    }
+
+    /** Sale del modo historia. */
+    fun clearStory(): JsonObject = buildJsonObject {
+        put("type", "setStory")
+        put("story", JsonNull)
     }
 
     fun setRoom(room: HabitatRoom?, furniture: List<HabitatFurniture>): JsonObject = buildJsonObject {
@@ -164,6 +192,18 @@ object SceneMessages {
         put("action", action)
         if (context != null) put("context", context)
     }
+
+    /**
+     * Tapa todo el lienzo con un efecto de pantalla (por defecto el velo de Éter) para cambiar el
+     * tamaño de la vista sin que se vea el salto. La escena responde con `screenCovered`.
+     */
+    fun coverScreen(effect: String? = null): JsonObject = buildJsonObject {
+        put("type", "coverScreen")
+        if (effect != null) put("effect", effect)
+    }
+
+    /** Abre el velo de [coverScreen]; la escena responde con `screenUncovered` al terminar. */
+    fun uncoverScreen(): JsonObject = buildJsonObject { put("type", "uncoverScreen") }
 
     /** Pide un efecto concreto de @pockai/scene/effects (protocolo v3), con sus datos. */
     fun playEffect(id: String, params: Map<String, Any> = emptyMap()): JsonObject = buildJsonObject {

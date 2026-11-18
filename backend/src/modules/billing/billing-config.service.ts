@@ -94,6 +94,10 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
     if (concurrency !== undefined) seed.managedAi.maxConcurrency = Number(concurrency);
     const freeDaily = this.config.get<number>('AI_PLAN_FREE_DAILY');
     if (freeDaily !== undefined) seed.free.dailyMessages = Number(freeDaily);
+    const systemModel = this.config.get<string>('AI_SYSTEM_MODEL');
+    if (systemModel) seed.systemAi.model = systemModel;
+    const systemBudget = this.config.get<number>('AI_SYSTEM_DAILY_BUDGET_USD');
+    if (systemBudget !== undefined) seed.systemAi.dailyBudgetUsd = Number(systemBudget);
     const proDaily = this.config.get<number>('AI_PLAN_PRO_DAILY');
     if (proDaily !== undefined) seed.pro.dailyMessages = Number(proDaily);
     return billingConfigSchema.parse(seed);
@@ -120,6 +124,7 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
       agentTools: p.agentTools,
       memoryExtractEvery: p.memoryExtractEvery,
       monthlyTokenQuota: p.monthlyTokenQuota,
+      dailyStories: p.dailyStories,
     };
   }
 
@@ -132,6 +137,11 @@ export class BillingConfigService implements OnModuleInit, OnModuleDestroy {
 
   managedAiSettings() {
     return this.activeConfig.managedAi;
+  }
+
+  /** IA del sistema (tareas internas sin usuario): modelo, presupuesto y límites propios. */
+  systemAiSettings() {
+    return this.activeConfig.systemAi;
   }
 
   pricingSettings() {

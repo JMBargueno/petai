@@ -1,48 +1,68 @@
 <script lang="ts">
+  /**
+   * Aventura diaria: el bucket de historias de hoy (las mismas para todos los Custodios) y la
+   * partida en curso como narrativa gráfica. En cada escena el Pockai entra andando, al llegar al
+   * centro ocurre el evento y se elige una respuesta; después se ve la consecuencia y qué eligió
+   * la comunidad, y el Pockai sigue hacia la localización siguiente.
+   */
   import { onMount, tick, createEventDispatcher } from 'svelte';
-  import { AsyncState, Badge, Button, Card, ConfirmDialog, EmptyState, FeatureHeader, ListRow, Notice, SectionHeader } from './ui';
+  import type { StoryBeat, StoryState } from '@pockai/scene';
+  import { AsyncState, Badge, Button, Card, EmptyState, FeatureHeader, ListRow, Notice, SectionHeader } from './ui';
+  import StorySceneView from './StorySceneView.svelte';
   import { friendlyError } from '../lib/ui/errors';
-  import { api, type AdventureScene, type AdventureHistoryEntry } from '../lib/api';
+  import { api, type StoryAnswer, type StoryHistoryEntry, type StoryPlayState, type StoryResult, type StoryScene, type StorySummary, type StoryToday } from '../lib/api';
 
   const dispatch = createEventDispatcher();
 
   export let pet: any = null;
 
-  const PREMIUM_COST_GEMS = 10;
   const OUTCOME: Record<string, { label: string; icon: string; tone: 'success' | 'warning' | 'neutral' }> = {
     win: { label: 'Victoria', icon: 'trophy', tone: 'success' },
     partial: { label: 'Logro parcial', icon: 'star', tone: 'warning' },
     lose: { label: 'Derrota valiente', icon: 'shield', tone: 'neutral' },
   };
   const outcome = (o: string | null | undefined) => (o ? OUTCOME[o] ?? { label: o, icon: 'star', tone: 'neutral' as const } : null);
+  const APPROACH: Record<string, string> = { brave: 'Con valentía', careful: 'Con prudencia', kind: 'Con cariño', curious: 'Con curiosidad', cunning: 'Con astucia' };
 
-  let adventureId: string | null = null;
-  let theme = '';
-  let sceneCount = 0;
-  let scene: AdventureScene | null = null;
-  let ending: { outcome: string; rewards: { xp: number; coins: number }; memory: string } | null = null;
-  let history: AdventureHistoryEntry[] = [];
-  let error = '';
+  let today: StoryToday | null = null;
+  let history: StoryHistoryEntry[] = [];
   let loading = true;
-  let busy = false;
   let loadError = '';
-  /** Confirmación de la aventura premium (gasta gemas). */
-  let confirmPremium = false;
-  let sceneEl: HTMLElement | null = null;
+  let error = '';
+  let busy = false;
+
+  /** Partida en curso. */
+  let play: StoryPlayState | null = null;
+  let scene: StoryScene | null = null;
+  /** Fase de la escena en pantalla (la misma que se le manda a la escena compartida). */
+  let phase: StoryState['phase'] = 'enter';
+  let clip: string | undefined;
+  /** Respuesta a la escena actual, mientras se ve su consecuencia. */
+  let answer: StoryAnswer | null = null;
+  let ending: StoryResult | null = null;
+  let textEl: HTMLElement | null = null;
+
+  $: petName = pet?.nickname || pet?.species?.name || 'Tu Pockai';
+  const named = (text: string, name: string) => text.replaceAll('{pet}', name);
+
+  $: remaining = today ? Math.max(0, today.limit - today.used) : 0;
+  $: story =
+    play && scene
+      ? ({
+          key: `${play.storyId}:${scene.index}`,
+          locationId: scene.locationId,
+          phase,
+          ...(scene.mood ? { mood: scene.mood } : {}),
+          ...(scene.event.fx ? { fx: scene.event.fx } : {}),
+          ...(clip ? { clip } : {}),
+        } satisfies StoryState)
+      : null;
 
   async function load() {
-    // Con una escena en curso solo se refresca el historial: no se cambia por el esqueleto.
-    loading = !adventureId;
+    loading = !today;
     loadError = '';
     try {
-      const [cur, hist] = await Promise.all([api.adventureCurrent(), api.adventureHistory(5)]);
-      history = hist;
-      if (cur.active) {
-        adventureId = cur.adventureId;
-        theme = cur.theme;
-        sceneCount = cur.sceneCount;
-        scene = cur.scene;
-      }
+      [today, history] = await Promise.all([api.storiesToday(), api.storiesHistory(5)]);
     } catch (e: any) {
       loadError = friendlyError(e, 'No se pudo cargar la aventura.');
     } finally {
@@ -50,44 +70,59 @@
     }
   }
 
-  async function start(premium: boolean) {
-    if (!pet) return;
+  async function open(s: StorySummary) {
+    if (!pet || busy) return;
     busy = true;
     error = '';
     ending = null;
     try {
-      const res = await api.adventureStart(pet.id, premium);
-      adventureId = res.adventureId;
-      theme = res.theme;
-      sceneCount = res.sceneCount;
-      scene = res.scene;
-      if (premium) dispatch('refreshUser');
-      focusScene();
+      const state = await api.storyStart(s.id, pet.id);
+      if (state.status === 'completed' || !state.scene) {
+        // Ya vivida: no se vuelve a jugar, solo se refresca la lista
+        await load();
+        return;
+      }
+      play = state;
+      enter(state.scene);
+      if (!s.play) today = today ? { ...today, used: today.used + 1 } : today;
     } catch (e: any) {
-      error = friendlyError(e, 'No se pudo empezar la aventura.');
+      error = friendlyError(e, 'No se pudo empezar la historia.');
     } finally {
       busy = false;
-      confirmPremium = false;
+    }
+  }
+
+  function enter(next: StoryScene) {
+    scene = next;
+    answer = null;
+    clip = undefined;
+    phase = 'enter';
+  }
+
+  /** Hitos de la escena compartida: marcan el ritmo de la narración. */
+  function onBeat(e: CustomEvent<{ key: string; beat: StoryBeat }>) {
+    if (!story || e.detail.key !== story.key) return;
+    if (e.detail.beat === 'arrived' && phase === 'enter') {
+      // Ha llegado al centro: ocurre el evento y aparecen las respuestas
+      phase = 'await';
+      void focusText();
+    } else if (e.detail.beat === 'exited' && phase === 'exit') {
+      if (answer?.next) enter(answer.next);
+      else finish();
     }
   }
 
   async function choose(i: number) {
-    if (!adventureId || busy) return;
+    if (!play || !scene || busy || phase !== 'await') return;
     busy = true;
     error = '';
     try {
-      const res = await api.adventureChoose(adventureId, i);
-      if ('completed' in res) {
-        ending = { outcome: res.outcome, rewards: res.rewards, memory: res.memory };
-        adventureId = null;
-        scene = null;
-        history = await api.adventureHistory(5).catch(() => history);
-        dispatch('refreshPet');
-        dispatch('refreshUser');
-      } else {
-        scene = res.scene;
-        focusScene();
-      }
+      const res = await api.storyAnswer(play.storyId, scene.index, i);
+      answer = res;
+      // Reacción: en la última escena depende del resultado; antes, celebra haber decidido
+      clip = res.completed ? (res.completed.outcome === 'lose' ? 'sad' : 'happy') : 'happy';
+      phase = 'react';
+      void focusText();
     } catch (e: any) {
       error = friendlyError(e, 'No se pudo enviar tu elección.');
     } finally {
@@ -95,98 +130,170 @@
     }
   }
 
-  /** Al cambiar de escena el foco va al texto nuevo (los botones anteriores ya no existen). */
-  async function focusScene() {
-    await tick();
-    sceneEl?.focus();
+  /** Tras leer la consecuencia: el Pockai sale por la derecha hacia la escena siguiente. */
+  function proceed() {
+    if (phase === 'react') phase = 'exit';
   }
+
+  function finish() {
+    ending = answer?.completed ?? null;
+    play = null;
+    scene = null;
+    answer = null;
+    void load();
+    dispatch('refreshPet');
+    dispatch('refreshUser');
+  }
+
+  /** Al cambiar el texto, el foco va a él (los botones anteriores ya no existen). */
+  async function focusText() {
+    await tick();
+    textEl?.focus();
+  }
+
+  const pct = (count: number, total: number) => (total > 0 ? Math.round((count / total) * 100) : 0);
 
   onMount(load);
 </script>
 
 <div class="ui-stack">
   <AsyncState {loading} error={loadError} onRetry={load} rows={3} height={64}>
-    <Card variant="hero">
-      <FeatureHeader
-        icon="map"
-        title={adventureId ? theme : 'Aventura diaria'}
-        sub={adventureId && scene ? `Escena ${scene.order + 1} de ${sceneCount}` : `1 gratis al día · premium: 5 escenas por ${PREMIUM_COST_GEMS} gemas`}
-      />
+    {#if play && scene && story}
+      <Card variant="hero">
+        <FeatureHeader icon="map" title={play.title} sub="Escena {scene.index + 1} de {play.sceneCount}" />
+        <StorySceneView {pet} {story} on:beat={onBeat} />
 
-      {#if adventureId && scene}
-        <p class="scene-text ui-usertext" tabindex="-1" aria-live="polite" bind:this={sceneEl}>{scene.text}</p>
-        <div class="ui-list">
-          {#each scene.choices as c, i}
-            <button class="ui-row choice" disabled={busy} on:click={() => choose(i)}>
-              <span class="ui-row__rank">{i + 1}</span>
-              <span class="ui-row__body">
-                <span class="ui-row__title">{c.label}</span>
-                {#if c.hint}<span class="ui-row__sub ui-row__sub--wrap">{c.hint}</span>{/if}
-              </span>
-            </button>
-          {/each}
+        <div class="narration" tabindex="-1" aria-live="polite" bind:this={textEl}>
+          {#if phase === 'enter'}
+            <p class="scene-text ui-usertext">{named(scene.narration, petName)}</p>
+          {:else if phase === 'await'}
+            <p class="scene-text ui-usertext"><b>{named(scene.event.text, petName)}</b></p>
+          {:else if answer}
+            <p class="scene-text ui-usertext">{named(answer.consequence, petName)}</p>
+          {/if}
         </div>
-        {#if busy}<p class="ui-card__hint center">La historia continúa…</p>{/if}
-      {:else}
+
+        {#if phase === 'await'}
+          <div class="ui-list">
+            {#each scene.choices as c, i}
+              <button class="ui-row choice" disabled={busy} on:click={() => choose(i)}>
+                <span class="ui-row__rank">{i + 1}</span>
+                <span class="ui-row__body">
+                  <span class="ui-row__title">{c.label}</span>
+                  <span class="ui-row__sub ui-row__sub--wrap">{APPROACH[c.approach] ?? ''}</span>
+                </span>
+              </button>
+            {/each}
+          </div>
+        {:else if answer && (phase === 'react' || phase === 'exit')}
+          <div class="community" aria-label="Lo que ha elegido la comunidad">
+            <p class="ui-card__hint">Lo que han elegido los Custodios ({answer.community.total})</p>
+            {#each scene.choices as c, i}
+              {@const p = pct(answer.community.counts[i] ?? 0, answer.community.total)}
+              <div class="vote" class:mine={i === answer.optionIndex}>
+                <span class="vote__label">{c.label}{#if i === answer.optionIndex}{' · tú'}{/if}</span>
+                <span class="vote__bar" aria-hidden="true"><span style="width: {p}%"></span></span>
+                <span class="vote__pct">{p} %</span>
+              </div>
+            {/each}
+          </div>
+          <Button variant="primary" block icon="map" disabled={phase === 'exit'} on:click={proceed}>
+            {answer.next ? 'Seguir el camino' : 'Terminar la historia'}
+          </Button>
+        {:else}
+          <p class="ui-card__hint center">{petName} sigue su camino…</p>
+        {/if}
+      </Card>
+    {:else}
+      <Card variant="hero">
+        <FeatureHeader
+          icon="map"
+          title="Crónica del Éter"
+          sub={today ? `${remaining} de ${today.limit} ${today.limit === 1 ? 'historia' : 'historias'} por vivir hoy` : 'Las historias de hoy'}
+        />
         {#if ending}
           {@const o = outcome(ending.outcome)}
           <Notice tone={ending.outcome === 'lose' ? 'warning' : ending.outcome === 'partial' ? 'info' : 'ok'} icon={o?.icon}>
             <b>{o?.label}</b> · +{ending.rewards.xp} XP, +{ending.rewards.coins} monedas
-            <p class="memory">{ending.memory}</p>
+            {#if ending.memory}<p class="memory">{ending.memory}</p>{/if}
           </Notice>
         {/if}
-        <div class="row">
-          <Button variant="primary" size="lg" icon="map" class="grow" loading={busy} disabled={!pet} on:click={() => start(false)}>
-            {pet ? 'Empezar aventura' : 'Sin mascota activa'}
-          </Button>
-          <Button size="lg" icon="gem" disabled={!pet || busy} title="Aventura de 5 escenas por {PREMIUM_COST_GEMS} gemas" on:click={() => (confirmPremium = true)}>Premium · {PREMIUM_COST_GEMS}</Button>
+        {#if !pet}
+          <Notice tone="info">Necesitas una mascota activa para vivir una historia.</Notice>
+        {/if}
+        <div class="ui-list">
+          {#each today?.stories ?? [] as s (s.id)}
+            {@const o = outcome(s.play?.outcome)}
+            {@const done = s.play?.status === 'completed'}
+            {@const locked = !s.play && remaining === 0}
+            <div class="story" class:done>
+              <div class="story__head">
+                <span class="story__title">{s.title}</span>
+                {#if s.chronicle}<Badge size="sm" tone="accent" icon="book">Crónica · cap. {s.chronicle.chapter}</Badge>{/if}
+                {#if s.rerun}<Badge size="sm" title="El Telar ha vuelto sobre una historia antigua">Eco</Badge>{/if}
+                {#if done && o}<Badge size="sm" tone={o.tone} icon={o.icon}>{o.label}</Badge>{/if}
+              </div>
+              <p class="story__synopsis">{s.synopsis}</p>
+              {#if s.previously}
+                <p class="story__previously"><b>Ayer la mayoría decidió:</b> {s.previously.decided}</p>
+              {/if}
+              {#if !done}
+                <Button
+                  variant={s.play ? 'primary' : 'default'}
+                  size="sm"
+                  icon="map"
+                  loading={busy}
+                  disabled={!pet || locked}
+                  title={locked ? 'Ya has vivido tus historias de hoy' : undefined}
+                  on:click={() => open(s)}
+                >
+                  {s.play ? `Continuar · escena ${s.play.sceneIndex + 1}` : 'Vivir esta historia'}
+                </Button>
+              {/if}
+            </div>
+          {:else}
+            <EmptyState compact icon="map" text="El Telar aún está tejiendo las historias de hoy. Vuelve en un rato." />
+          {/each}
         </div>
-      {/if}
-    </Card>
+        {#if today && remaining === 0 && today.plan === 'free' && today.stories.length > 1}
+          <p class="ui-card__hint">Has vivido tu historia de hoy. Con Pro puedes vivir {today.stories.length > 3 ? 3 : today.stories.length} cada día.</p>
+        {/if}
+      </Card>
+    {/if}
 
     {#if error}<Notice tone="error">{error}</Notice>{/if}
 
-    <SectionHeader title="Aventuras anteriores" icon="book" count={history.length} onRefresh={load} {loading} />
-    <div class="ui-list">
-      {#each history as h (h.adventureId)}
-        {@const o = outcome(h.outcome)}
-        <ListRow
-          icon={h.isPremium ? 'gem' : 'map'}
-          title={h.theme}
-          sub="{new Date(h.startedAt).toLocaleDateString('es-ES')} · +{h.xpAwarded} XP · +{h.coinsAwarded} monedas"
-        >
-          <svelte:fragment slot="end">
-            {#if o}<Badge size="sm" tone={o.tone} icon={o.icon}>{o.label}</Badge>{:else}<Badge size="sm">—</Badge>{/if}
-          </svelte:fragment>
-        </ListRow>
-      {:else}
-        <EmptyState compact icon="map" text="Aún no has vivido ninguna aventura." />
-      {/each}
-    </div>
+    {#if !play}
+      <SectionHeader title="Historias vividas" icon="book" count={history.length} onRefresh={load} {loading} />
+      <div class="ui-list">
+        {#each history as h (h.storyId)}
+          {@const o = outcome(h.outcome)}
+          <ListRow
+            icon="map"
+            title={h.title}
+            sub="{new Date(h.startedAt).toLocaleDateString('es-ES')} · {h.answers.map((a) => a.label).join(' → ') || 'Sin terminar'}"
+          >
+            <svelte:fragment slot="end">
+              {#if o}<Badge size="sm" tone={o.tone} icon={o.icon}>{o.label}</Badge>{:else}<Badge size="sm">En curso</Badge>{/if}
+            </svelte:fragment>
+          </ListRow>
+        {:else}
+          <EmptyState compact icon="map" text="Aún no has vivido ninguna historia." />
+        {/each}
+      </div>
+    {/if}
   </AsyncState>
-
-  {#if confirmPremium}
-    <ConfirmDialog
-      title="Aventura premium"
-      icon="gem"
-      confirmLabel="Empezar"
-      cost={PREMIUM_COST_GEMS}
-      currency="gems"
-      loading={busy}
-      on:confirm={() => start(true)}
-      on:cancel={() => (confirmPremium = false)}
-    >
-      <p>Una aventura más larga, de 5 escenas, con mejores recompensas. No cuenta para la aventura gratis del día.</p>
-    </ConfirmDialog>
-  {/if}
 </div>
 
 <style>
+  .narration {
+    min-height: 3.2em;
+    outline: none;
+  }
   .scene-text {
     margin: 0;
     font-size: var(--text-label);
     line-height: 1.55;
-    white-space: pre-line;
   }
   .choice {
     width: 100%;
@@ -202,12 +309,64 @@
   .choice .ui-row__title {
     white-space: normal;
   }
-  .row {
+  .story {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    border: var(--border-ui, 1px solid var(--line));
+    border-radius: var(--radius-cards);
+    background: var(--surface);
+  }
+  .story.done {
+    opacity: 0.75;
+  }
+  .story__head {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-2);
   }
-  .row :global(.grow) {
-    flex: 1;
+  .story__title {
+    font-weight: 700;
+  }
+  .story__synopsis,
+  .story__previously {
+    margin: 0;
+    font-size: var(--text-caption);
+    line-height: 1.45;
+  }
+  .story__previously {
+    font-style: italic;
+  }
+  .community {
+    display: grid;
+    gap: var(--space-1);
+  }
+  .vote {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30% 3.5em;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-caption);
+  }
+  .vote.mine .vote__label {
+    font-weight: 700;
+  }
+  .vote__bar {
+    height: 8px;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--ink) 12%, transparent);
+    overflow: hidden;
+  }
+  .vote__bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--view-tint, var(--ink));
+  }
+  .vote__pct {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
   .memory {
     margin: var(--space-2) 0 0;

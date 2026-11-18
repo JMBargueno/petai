@@ -49,6 +49,11 @@ export interface PersonalityConfig {
     repeatCap: number;
     /** Episodios sin contar que se garantizan en el primer turno tras una ausencia (spec 37 §6.6). */
     sinceLastMax?: number;
+    /**
+     * Por debajo del nivel de memoria, cada cuántos mensajes del entrenador se extraen recuerdos
+     * (más espaciado que la cadencia del plan). 0 = no se extrae hasta alcanzar ese nivel.
+     */
+    earlyExtractEvery: number;
   };
   autonomy: AutonomyConfig;
   social: import('./social.engine').SocialConfig;

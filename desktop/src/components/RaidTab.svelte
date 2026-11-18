@@ -67,7 +67,7 @@
 <div class="ui-stack">
   <AsyncState loading={loading && !current} error={current ? '' : error} onRetry={load} rows={3} height={64}>
     {#if current}
-      <Card variant="hero">
+      <Card variant="hero" backdrop="raid">
         <FeatureHeader
           icon={el.icon}
           tint={el.color}

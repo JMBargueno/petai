@@ -40,7 +40,7 @@ Features sin UI (solo backend + API):
 | Genes (Herencia) | ✅ | ❌ | ❌ |
 | Training (Ejercicio) | ✅ | ❌ | ❌ |
 | Hábitat (Salas) | ✅ | ❌ | ❌ |
-| Aventura (Expediciones) | ✅ | ❌ | ❌ |
+| Aventura diaria (Crónica del Éter) | ✅ | ✅ | ✅ |
 | Reengagement (Regreso) | ✅ | ❌ | ❌ |
 | Rituals (Ceremonias) | ✅ | ❌ | ❌ |
 | Mood Theater | ✅ | ❌ | ❌ |

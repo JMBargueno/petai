@@ -80,6 +80,8 @@ model User {
   trainingSessions TrainingSession[]
   // Feature 018: Aventura Narrativa IA
   adventures       Adventure[]
+  // Aventura diaria (DecisionStoryGenerator): lo que respondió en cada historia
+  storyPlays       DecisionStoryPlay[]
   // Feature 013: Raid
   raidParticipants RaidParticipant[]
   // Feature 014: Tournament
@@ -335,6 +337,7 @@ model Pet {
   trainingSessions TrainingSession[]
   // Feature 018: Aventura Narrativa IA
   adventures Adventure[]
+  storyPlays DecisionStoryPlay[]
   // Feature 013: Raid
   raidParticipants RaidParticipant[]
   // Feature 014: Tournament
@@ -966,6 +969,111 @@ model AdventureScene {
   createdAt     DateTime @default(now())
 
   @@unique([adventureId, order])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IA interna: conexión propia del equipo a un endpoint compatible con la API de OpenAI
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Fila única (id "default"). La usa la IA del sistema (tareas sin usuario, como las historias de la
+// aventura diaria). El chat de los usuarios NO pasa por aquí: sigue con la IA gestionada o su clave.
+model InternalAiConnection {
+  id                  String   @id @default("default")
+  baseUrl             String
+  model               String
+  // Clave cifrada con AES-GCM (KeyCryptoService). Opcional: un servidor local puede no pedirla.
+  encryptedKey        String?
+  keyIv               String?
+  keyTag              String?
+  // Pedir la salida con response_format json_object (hay servidores que no lo admiten)
+  jsonMode            Boolean  @default(true)
+  // Permite http y direcciones de red privada (servidor propio en la red interna)
+  allowPrivateNetwork Boolean  @default(false)
+  enabled             Boolean  @default(true)
+  updatedById         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Aventura diaria: DecisionStoryGenerator
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Historia global del bucket de un día: la juegan todos los usuarios. La genera de noche la IA del
+// sistema; si no llega, se repone una antigua (rerun) o se usa una semilla de game-data (seed).
+model DecisionStory {
+  id               String    @id @default(uuid())
+  // Día del bucket (YYYY-MM-DD en la zona horaria de las historias) y posición dentro de él
+  day              String
+  slot             Int
+  title            String
+  synopsis         String
+  // { v: 1, scenes: [...] } validado con buildStoryContentSchema (game-data/story-data.schemas.ts)
+  scenes           Json
+  // 'ai' | 'seed' | 'rerun'
+  source           String
+  seedId           String?
+  rerunOfId        String?
+  // Crónica: historias encadenadas día a día (slot 0). El resto son autoconclusivas (arcKey null).
+  arcKey           String?
+  arcChapter       Int       @default(0)
+  parentStoryId    String?
+  closesArc        Boolean   @default(false)
+  // Al cerrar el día: opción más votada de cada escena y el resumen que alimenta la continuación
+  canon            Json?
+  canonSummary     String?
+  closedAt         DateTime?
+  // Coste de la generación (solo source 'ai')
+  model            String?
+  promptTokens     Int?
+  completionTokens Int?
+  costUsd          Float?
+  createdAt        DateTime  @default(now())
+
+  tallies DecisionStoryTally[]
+  plays   DecisionStoryPlay[]
+
+  @@unique([day, slot])
+  @@index([arcKey, arcChapter])
+  @@index([source, day])
+}
+
+// Votos de la comunidad: cuántos usuarios eligieron cada opción de cada escena.
+model DecisionStoryTally {
+  storyId     String
+  story       DecisionStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  sceneIndex  Int
+  optionIndex Int
+  count       Int           @default(0)
+
+  @@id([storyId, sceneIndex, optionIndex])
+}
+
+// Partida de un usuario en una historia: sus respuestas (una por escena) y el resultado.
+model DecisionStoryPlay {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId        String
+  pet          Pet           @relation(fields: [petId], references: [id], onDelete: Cascade)
+  storyId      String
+  story        DecisionStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  // Día local del usuario en que la empezó y su número de orden ese día (0, 1, 2…): el índice único
+  // [userId, localDay, ordinal] impide superar el cupo del plan con dos peticiones simultáneas.
+  localDay     String
+  ordinal      Int
+  answers      Int[]
+  status       String        @default("active")
+  outcome      String?
+  score        Float?
+  xpAwarded    Int           @default(0)
+  coinsAwarded Int           @default(0)
+  startedAt    DateTime      @default(now())
+  finishedAt   DateTime?
+
+  @@unique([userId, storyId])
+  @@unique([userId, localDay, ordinal])
+  @@index([userId, startedAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

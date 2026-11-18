@@ -1,11 +1,13 @@
 /**
  * Escena de Pockai: envuelve la `Application` de PixiJS y aplica los mensajes del anfitrión.
  *
- * Dos modos:
+ * Tres modos (excluyentes):
  *  - Solo Pockai (sin sala): el Pockai sobre fondo transparente, del tamaño que quepa.
  *  - Sala (`setRoom`): la sala isométrica (`IsoRoom`) encajada en el lienzo, con el Pockai dentro.
+ *  - Historia (`setStory`): escenario por capas de la aventura diaria (`StoryStage`), con el Pockai
+ *    entrando por la izquierda y saliendo por la derecha.
  */
-import { Application, Rectangle } from 'pixi.js';
+import { Application, Container, Rectangle } from 'pixi.js';
 import { resolveAccessory, resolveSheet, PATTERNS } from './assets';
 import { bakeSheet, loadImage } from './bake/bakeTexture';
 import { PATTERN_FX } from './bake/patternFx';
@@ -19,10 +21,12 @@ import { styleFor } from './room/roomStyles';
 import { Ambience, NO_AMBIENCE, type AmbienceState } from './ambience/Ambience';
 import { loadBackdrop } from './ambience/backdrops';
 import { PixiEffects } from './effects/pixiLayer';
+import { PixiScreenFx } from './effects/screenLayer';
 import { effectForPetAction } from './effects/reactions';
 import { clipsForPetAction } from './effects/clips';
 import { flowPalette } from './effects/palettes';
 import { speciesElement } from './effects/speciesElement';
+import { StoryStage } from './story/StoryStage';
 import {
   PROTOCOL_VERSION,
   type Activity,
@@ -31,8 +35,13 @@ import {
   type PetState,
   type RoomState,
   type SceneEvent,
+  type StoryState,
   type ThemeMode,
 } from './protocol';
+
+/** Hora (minuto del día) y clima (código WMO) de una escena de historia con ambiente propio. */
+const STORY_CLOCK = { dawn: 7 * 60 + 40, day: 13 * 60, dusk: 20 * 60 + 10, night: 23 * 60 } as const;
+const STORY_WMO = { clear: 0, rain: 63, snow: 73, fog: 45, storm: 95 } as const;
 
 export interface SceneOptions {
   /** Elemento donde se inserta el canvas (o canvas existente). */
@@ -57,6 +66,7 @@ export class PockaiScene {
   readonly app = new Application();
   private pet!: PetSprite;
   private room: IsoRoom | null = null;
+  private story: StoryStage | null = null;
   private petState: PetState | null = null;
   private loadSeq = 0;
   private paused = false;
@@ -81,9 +91,14 @@ export class PockaiScene {
   private backdropMode: BackdropMode = 'painted';
   private backdropRoom: string | null = null;
   private backdropSeq = 0;
+  /** Ambiente propio de la escena de historia en curso (si lo trae). */
+  private storyMood: StoryState['mood'] | null = null;
   private disposers: (() => void)[] = [];
   /** Efectos compartidos (@pockai/scene/effects) colgados del Pockai. */
   private effects!: PixiEffects;
+  /** Transiciones que tapan todo el lienzo (velo de Éter), siempre por encima de lo demás. */
+  private screenFx!: PixiScreenFx;
+  private readonly screenLayer = new Container();
   /** Clips que faltan de la reacción en curso a un `petAction` (se encadenan al acabar cada uno). */
   private clipQueue: string[] = [];
   /** Hay un capullo de evolución esperando a que llegue y se hornee la nueva etapa. */
@@ -138,6 +153,15 @@ export class PockaiScene {
       seed: () => this.petState?.visualSeed ?? 1,
       onEnded: (id) => this.emit({ type: 'effectEnded', id }),
     });
+    this.app.stage.addChild(this.screenLayer);
+    this.screenFx = new PixiScreenFx(this.screenLayer, {
+      reducedMotion: this.reducedMotion,
+      palette: () => flowPalette(speciesElement(this.petState?.species)),
+      seed: () => this.petState?.visualSeed ?? 1,
+      viewport: () => this.app.screen,
+      onCovered: () => this.emit({ type: 'screenCovered' }),
+      onUncovered: () => this.emit({ type: 'screenUncovered' }),
+    });
     // Escenario interactivo en toda su área: arrastres de muebles y clics en vacío.
     this.app.stage.eventMode = 'static';
     this.app.stage.hitArea = new Rectangle(0, 0, 1e6, 1e6);
@@ -148,8 +172,10 @@ export class PockaiScene {
       this.pet.update(t);
       this.guest?.update(t);
       this.effects.update(t.deltaMS);
+      this.screenFx.update(t.deltaMS);
       this.ambience?.update(t.deltaMS);
       this.room?.update(t);
+      this.story?.update(t.deltaMS);
     });
     this.app.renderer.on('resize', () => this.layout());
     this.layout();
@@ -187,7 +213,12 @@ export class PockaiScene {
         this.pet.setFacing(msg.facing);
         break;
       case 'setRoom':
+        // Sala e historia son excluyentes: pedir una sala sale del modo historia
+        if (msg.room && this.story) this.setStory(null);
         this.setRoom(msg.room);
+        break;
+      case 'setStory':
+        this.setStory(msg.story);
         break;
       case 'setActivity':
         this.activity = msg.activity;
@@ -196,7 +227,7 @@ export class PockaiScene {
         if (msg.mind) this.mind = msg.mind;
         this.room?.setMind(this.mind);
         this.room?.setActivity(msg.activity, this.rest);
-        if (!this.room) this.pet.visible = msg.activity !== 'away';
+        if (!this.room && !this.story) this.pet.visible = msg.activity !== 'away';
         break;
       case 'setGuest':
         void this.setGuest(msg.pet);
@@ -215,7 +246,8 @@ export class PockaiScene {
           sun: msg.sun === undefined ? this.ambienceState.sun : msg.sun,
           clock: msg.clock === undefined ? this.ambienceState.clock : msg.clock,
         };
-        this.ambience?.set(this.ambienceState);
+        if (this.story) this.syncStoryAmbience();
+        else this.ambience?.set(this.ambienceState);
         if (msg.backdrop && msg.backdrop !== this.backdropMode) {
           this.backdropMode = msg.backdrop;
           void this.syncBackdrop();
@@ -231,6 +263,12 @@ export class PockaiScene {
         break;
       case 'rotateSelected':
         this.room?.rotateSelected();
+        break;
+      case 'coverScreen':
+        this.cover(msg.effect);
+        break;
+      case 'uncoverScreen':
+        this.uncover();
         break;
       case 'playEffect':
         this.effects.play(msg.id, msg.params ?? {});
@@ -280,6 +318,7 @@ export class PockaiScene {
         this.ambience = null;
         this.backdropRoom = null;
         this.app.stage.addChild(this.pet);
+        this.raiseScreen();
         this.pet.zIndex = 0;
         this.pet.visible = this.activity !== 'away';
       }
@@ -305,6 +344,7 @@ export class PockaiScene {
       });
       this.app.stage.addChildAt(this.ambience.back, 0);
       this.app.stage.addChild(this.ambience.front);
+      this.raiseScreen();
       this.ambience.setEdit(this.edit);
       this.ambience.set(this.ambienceState);
     } else {
@@ -316,6 +356,59 @@ export class PockaiScene {
       void this.syncBackdrop();
     }
     this.layout();
+  }
+
+  /** Entra en el modo historia, actualiza la escena en curso o sale de él (`null`). */
+  private setStory(state: StoryState | null): void {
+    if (!state) {
+      if (this.story) {
+        this.story.release();
+        this.app.stage.removeChild(this.story);
+        this.story = null;
+        this.ambience?.destroy();
+        this.ambience = null;
+        this.app.stage.addChild(this.pet);
+        this.pet.setBaseClip(this.rest || 'idle');
+        this.pet.visible = this.activity !== 'away';
+      }
+      this.layout();
+      return;
+    }
+    if (this.room) this.setRoom(null);
+    if (!this.story) {
+      this.app.stage.removeChild(this.pet);
+      const story = new StoryStage({
+        pet: this.pet,
+        emit: (e) => this.emit(e),
+        reducedMotion: this.reducedMotion,
+        playFx: (id) => this.effects.play(id, {}),
+      });
+      this.story = story;
+      this.app.stage.addChildAt(story, 0);
+      // Cielo vivo detrás del escenario y lluvia o nieve por delante, como en las salas exteriores
+      this.ambience = new Ambience({
+        reducedMotion: this.reducedMotion,
+        onSky: (sky) => story.setSky(sky),
+        onLightning: () => story.flash(),
+      });
+      this.ambience.setExterior(true);
+      this.app.stage.addChildAt(this.ambience.back, 0);
+      this.app.stage.addChild(this.ambience.front);
+    }
+    this.layout();
+    this.story.set(state);
+    this.storyMood = state.mood ?? null;
+    this.syncStoryAmbience();
+  }
+
+  /** Hora y clima del modo historia: los de la escena si los trae; si no, los reales del anfitrión. */
+  private syncStoryAmbience(): void {
+    const mood = this.storyMood;
+    this.ambience?.set({
+      sun: this.ambienceState.sun,
+      clock: mood?.timeOfDay ? STORY_CLOCK[mood.timeOfDay] : this.ambienceState.clock,
+      weather: mood?.weather ? { code: STORY_WMO[mood.weather], temperature: mood.weather === 'snow' ? -2 : 16 } : this.ambienceState.weather,
+    });
   }
 
   /** Pone (o quita) el fondo pintado de la sala actual según el modo elegido por el anfitrión. */
@@ -413,6 +506,10 @@ export class PockaiScene {
   private layout(): void {
     const { width, height } = this.app.screen;
     this.ambience?.resize(width, height);
+    if (this.story) {
+      this.story.resize(width, height);
+      return;
+    }
     if (this.room) {
       const b = this.room.bounds();
       const bw = b.maxX - b.minX;
@@ -445,6 +542,25 @@ export class PockaiScene {
     } else if (e.key === 'Escape') {
       this.room.select(null);
     }
+  }
+
+  /** La capa de pantalla siempre encima (la sala y el clima se añaden después). */
+  private raiseScreen(): void {
+    this.app.stage.addChild(this.screenLayer);
+  }
+
+  /**
+   * Tapa el lienzo con un efecto de pantalla (por defecto el velo de Éter) y avisa con
+   * `screenCovered` cuando ya no se ve lo de detrás. Si el efecto no existe, avisa igualmente
+   * para que el anfitrión no se quede esperando.
+   */
+  cover(effect = 'velo-eter'): void {
+    if (!this.screenFx.cover(effect)) this.emit({ type: 'screenCovered' });
+  }
+
+  /** Abre el velo; avisa con `screenUncovered` al terminar. */
+  uncover(): void {
+    this.screenFx.uncover();
   }
 
   private applyPaused(): void {
@@ -483,6 +599,7 @@ export class PockaiScene {
 
   destroy(): void {
     this.effects?.destroy();
+    this.screenFx?.destroy();
     this.disposers.forEach((d) => d());
     this.app.destroy(true, { children: true });
   }

@@ -57,6 +57,11 @@ export class MindMemoryService {
     return this.entitlements.planFor(userId).catch(() => 'free');
   }
 
+  /** Cadencia de extracción antes del nivel de memoria (mensajes del entrenador); 0 = desactivada. */
+  earlyExtractEvery(): number {
+    return this.mind.config().memory.earlyExtractEvery ?? 0;
+  }
+
   async capacity(petId: string) {
     const pet = await this.prisma.pet.findUnique({ where: { id: petId }, select: { userId: true, intelligence: true } });
     if (!pet) return null;

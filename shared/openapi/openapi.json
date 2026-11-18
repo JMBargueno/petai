@@ -3365,6 +3365,119 @@
         ]
       }
     },
+    "/v1/admin/ai/internal": {
+      "get": {
+        "operationId": "AdminInternalAiController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Conexión de IA interna guardada (la clave nunca se devuelve, solo una máscara)",
+        "tags": [
+          "Admin AI"
+        ]
+      },
+      "put": {
+        "operationId": "AdminInternalAiController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "baseUrl",
+                  "model"
+                ],
+                "properties": {
+                  "baseUrl": {
+                    "type": "string",
+                    "description": "URL base compatible con OpenAI, p. ej. https://ia.ejemplo.com/v1"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "apiKey": {
+                    "type": "string"
+                  },
+                  "jsonMode": {
+                    "type": "boolean",
+                    "description": "Pedir la salida con response_format json_object"
+                  },
+                  "allowPrivateNetwork": {
+                    "type": "boolean",
+                    "description": "Permitir http y direcciones de red privada"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar la conexión de IA interna. Sin `apiKey` se conserva la clave guardada; vacía la borra.",
+        "tags": [
+          "Admin AI"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminInternalAiController_remove",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quitar la conexión de IA interna (la IA del sistema vuelve a su respaldo)",
+        "tags": [
+          "Admin AI"
+        ]
+      }
+    },
+    "/v1/admin/ai/internal/test": {
+      "post": {
+        "operationId": "AdminInternalAiController_test",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Probar la conexión guardada con una llamada mínima",
+        "tags": [
+          "Admin AI"
+        ]
+      }
+    },
     "/v1/pets/{id}/combat": {
       "get": {
         "operationId": "BattlesController_profile",
@@ -5749,96 +5862,9 @@
         ]
       }
     },
-    "/v1/adventure/start": {
-      "post": {
-        "operationId": "AdventureController_start",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "petId"
-                ],
-                "properties": {
-                  "petId": {
-                    "type": "string",
-                    "description": "Pet que emprende la aventura"
-                  },
-                  "premium": {
-                    "type": "boolean",
-                    "description": "Usar una aventura premium (gasta gemas)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Iniciar aventura diaria (1 gratis/día, premium con gemas)",
-        "tags": [
-          "Adventure"
-        ]
-      }
-    },
-    "/v1/adventure/choose": {
-      "post": {
-        "operationId": "AdventureController_choose",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "adventureId",
-                  "optionIndex"
-                ],
-                "properties": {
-                  "adventureId": {
-                    "type": "string",
-                    "description": "Aventura en curso"
-                  },
-                  "optionIndex": {
-                    "type": "integer",
-                    "description": "Índice de la opción elegida"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Elegir opción y avanzar a la siguiente escena",
-        "tags": [
-          "Adventure"
-        ]
-      }
-    },
-    "/v1/adventure/current": {
+    "/v1/stories/today": {
       "get": {
-        "operationId": "AdventureController_current",
+        "operationId": "DecisionStoryController_today",
         "parameters": [],
         "responses": {
           "200": {
@@ -5850,15 +5876,15 @@
             "bearer": []
           }
         ],
-        "summary": "Ver aventura en curso",
+        "summary": "Historias del día (bucket global), cupo del plan y progreso del usuario",
         "tags": [
-          "Adventure"
+          "Stories"
         ]
       }
     },
-    "/v1/adventure/history": {
+    "/v1/stories/history": {
       "get": {
-        "operationId": "AdventureController_history",
+        "operationId": "DecisionStoryController_history",
         "parameters": [
           {
             "name": "limit",
@@ -5879,9 +5905,241 @@
             "bearer": []
           }
         ],
-        "summary": "Historial de aventuras completadas",
+        "summary": "Historial del usuario: qué contestó en cada historia",
         "tags": [
-          "Adventure"
+          "Stories"
+        ]
+      }
+    },
+    "/v1/stories/{id}/start": {
+      "post": {
+        "operationId": "DecisionStoryController_start",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Empezar una historia de hoy (o retomarla). Free 1 al día, Pro 3.",
+        "tags": [
+          "Stories"
+        ]
+      }
+    },
+    "/v1/stories/{id}/answer": {
+      "post": {
+        "operationId": "DecisionStoryController_answer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sceneIndex",
+                  "optionIndex"
+                ],
+                "properties": {
+                  "sceneIndex": {
+                    "type": "integer"
+                  },
+                  "optionIndex": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Responder la escena pendiente; devuelve la consecuencia y la escena siguiente o el resultado",
+        "tags": [
+          "Stories"
+        ]
+      }
+    },
+    "/v1/admin/stories": {
+      "get": {
+        "operationId": "AdminDecisionStoryController_list",
+        "parameters": [
+          {
+            "name": "day",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historias de un día con su origen, coste y votos por opción",
+        "tags": [
+          "Admin Stories"
+        ]
+      }
+    },
+    "/v1/admin/stories/regenerate": {
+      "post": {
+        "operationId": "AdminDecisionStoryController_regenerate",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Teje ahora las historias que falten de un día (opcionalmente, reemplaza las que nadie ha empezado)",
+        "tags": [
+          "Admin Stories"
+        ]
+      }
+    },
+    "/v1/adventure/current": {
+      "get": {
+        "deprecated": true,
+        "operationId": "LegacyAdventureController_current",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retirado: siempre sin aventura en curso. Usa GET /stories/today",
+        "tags": [
+          "Adventure (retirado)"
+        ]
+      }
+    },
+    "/v1/adventure/history": {
+      "get": {
+        "deprecated": true,
+        "operationId": "LegacyAdventureController_history",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retirado: siempre vacío. Usa GET /stories/history",
+        "tags": [
+          "Adventure (retirado)"
+        ]
+      }
+    },
+    "/v1/adventure/start": {
+      "post": {
+        "deprecated": true,
+        "operationId": "LegacyAdventureController_start",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retirado (410). Usa POST /stories/:id/start",
+        "tags": [
+          "Adventure (retirado)"
+        ]
+      }
+    },
+    "/v1/adventure/choose": {
+      "post": {
+        "deprecated": true,
+        "operationId": "LegacyAdventureController_choose",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retirado (410). Usa POST /stories/:id/answer",
+        "tags": [
+          "Adventure (retirado)"
         ]
       }
     },

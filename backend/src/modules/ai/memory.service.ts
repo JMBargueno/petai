@@ -101,7 +101,15 @@ export class MemoryService {
     everyUserMessages = SUMMARIZE_EVERY_USER_MESSAGES,
   ) {
     if (everyUserMessages <= 0) return;
-    if (intelligence < MEMORY_UNLOCK || this.inflight.has(petId)) return;
+    if (intelligence < MEMORY_UNLOCK) {
+      // Antes del nivel de memoria también aprende, pero más despacio: sin esto, los primeros 200
+      // mensajes no dejaban ningún dato concreto del entrenador. La capacidad del nivel charla
+      // acota lo que se guarda, y nunca va más deprisa que la cadencia del plan.
+      const early = this.mindMemory?.earlyExtractEvery() ?? 0;
+      if (early <= 0) return;
+      everyUserMessages = Math.max(everyUserMessages, early);
+    }
+    if (this.inflight.has(petId)) return;
     const last = this.lastAttempt.get(petId) ?? 0;
     if (Date.now() - last < RETRY_COOLDOWN_MS) return;
 
@@ -119,7 +127,8 @@ export class MemoryService {
       const recent = await this.prisma.chatMessage.findMany({
         where: { petId, role: { in: ['user', 'assistant'] }, createdAt: { gt: since } },
         orderBy: { createdAt: 'asc' },
-        take: 40,
+        // Cabe la tanda entera aunque la cadencia sea la espaciada (cada mensaje del entrenador trae su respuesta)
+        take: Math.max(40, everyUserMessages * 2),
       });
       if (recent.filter((m) => m.role === 'user').length < everyUserMessages) return;
 

@@ -229,6 +229,16 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
         api.send("DELETE", "/habitat/furniture/$furnitureId")
     }
 
+    // ── Aventura diaria (historias de decisión) ─────────────────────────────────
+    suspend fun storiesToday(): StoryToday = api.request("GET", "/stories/today")
+    /** Empieza una historia de hoy o devuelve la partida si ya estaba empezada. */
+    suspend fun storyStart(storyId: String, petId: String): StoryPlayState =
+        api.request("POST", "/stories/$storyId/start", obj("petId" to petId))
+    suspend fun storyAnswer(storyId: String, sceneIndex: Int, optionIndex: Int): StoryAnswer =
+        api.request("POST", "/stories/$storyId/answer", obj("sceneIndex" to sceneIndex, "optionIndex" to optionIndex))
+    suspend fun storiesHistory(limit: Int = 10): List<StoryHistoryEntry> =
+        api.json.decodeFromString(ListSerializer(StoryHistoryEntry.serializer()), api.send("GET", "/stories/history?limit=$limit"))
+
     // ── Raid Boss (Paso 5, feature 013) ─────────────────────────────────────────
     suspend fun raidCurrent(): RaidCurrent = api.request("GET", "/raid/current")
     suspend fun raidAttack(petId: String): RaidAttackResponse =

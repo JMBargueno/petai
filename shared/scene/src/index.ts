@@ -1,6 +1,8 @@
 export { PockaiScene, type SceneOptions } from './PockaiScene';
 export { PetSprite } from './pet/PetSprite';
 export { IsoRoom } from './room/IsoRoom';
+export { StoryStage } from './story/StoryStage';
+export { LOCATION_IDS, SCREEN_IDS, locationComposition, screenComposition, type Composition } from './backdrop/model';
 export { furnitureUrl } from './room/furnitureAssets';
 export { backdropUrl } from './ambience/backdrops';
 export * from './protocol';
