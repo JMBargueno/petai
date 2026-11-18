@@ -10,7 +10,8 @@
     type CoopVisitResult,
   } from '../lib/api';
   import { acceptedFriends } from '../lib/visitors';
-  import { activeVisit, ongoingVisitFrom } from '../lib/activeVisit';
+  import { activeVisit } from '../lib/activeVisit';
+  import { endTravel, restoreFromHistory, startTravel } from '../lib/visitTravel';
   import { friendlyError } from '../lib/ui/errors';
   import Ico from './Ico.svelte';
   import { Button, Notice } from './ui';
@@ -73,7 +74,7 @@
       friends = fr;
       history = hist?.visits ?? [];
       // Si la app se reinició con una visita abierta, se recupera del historial.
-      if (!$activeVisit) activeVisit.set(ongoingVisitFrom(history));
+      restoreFromHistory(history);
       const acc = acceptedFriends(friends);
       if ($activeVisit && acc.some((f) => f.otherUserId === $activeVisit) && !initialFriend) selected = $activeVisit;
       if (acc.length && !acc.some((f) => f.otherUserId === selected)) {
@@ -117,6 +118,8 @@
     try {
       await api.startHabitatVisit(f.otherUserId, visitMessage);
       activeVisit.set(f.otherUserId);
+      // Se va por un portal de hebras del Nexo (lib/visitTravel + PetView)
+      startTravel(f.otherDisplayName);
       visitMessage = '';
       ok = `¡Tu Pockai está de visita en el hábitat de ${f.otherDisplayName}!`;
       await load();
@@ -135,6 +138,7 @@
     try {
       await api.endHabitatVisit();
       activeVisit.set('');
+      endTravel();
       ok = 'Visita terminada. ¡Hasta la próxima!';
     } catch (e: any) {
       error = friendlyError(e, 'No se pudo terminar la visita.');

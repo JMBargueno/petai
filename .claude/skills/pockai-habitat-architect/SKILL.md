@@ -1,6 +1,6 @@
 ---
 name: pockai-habitat-architect
-description: Diseña, dibuja e integra muebles y salas del hábitat isométrico de Pockai (PetAI). Cubre la entrada en shared/game-data/habitats.json (sala, precio, moneda, buffs dentro de buffCaps, huella W×D, montaje suelo/pared, interacción con el Pockai), el arte SVG isométrico con sus 2 orientaciones revisado con una hoja de contactos, los temas de sala y la validación. Úsala cuando el usuario pida "un mueble nuevo", "decoración para el hábitat/jardín/santuario", "una sala nueva", "rediseñar el arte de un mueble", "cambiar el tema de una sala" o "pasar los muebles a isométrico". Para criaturas usa pockai-architect.
+description: Diseña, dibuja e integra muebles y salas del hábitat isométrico de Pockai (PetAI). Cubre la entrada en shared/game-data/habitats.json (sala, precio, moneda, buffs dentro de buffCaps, huella W×D, montaje suelo/pared, interacción con el Pockai), el arte SVG isométrico con sus 2 orientaciones revisado con una hoja de contactos, los temas de sala y la validación. Úsala cuando el usuario pida "un mueble nuevo", "decoración para el hábitat/jardín/santuario", "una sala nueva", "rediseñar el arte de un mueble", "cambiar el tema de una sala" o "pasar los muebles a isométrico". Para criaturas usa pockai-architect; para efectos del escritorio (portales, apariciones, transiciones), pockai-effect-architect.
 ---
 
 # Pockai Habitat Architect

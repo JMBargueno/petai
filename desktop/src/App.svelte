@@ -44,6 +44,18 @@
   import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
   import { maintenanceLock } from './lib/maintenance';
   import { startContextDigest } from './lib/contextDigest';
+  import { activeVisit } from './lib/activeVisit';
+  import { configureTravel, endTravel, resetTravel, restoreFromHistory } from './lib/visitTravel';
+
+  // Visita en vivo: el servidor la cierra a los 15 min sin avisar al visitante. A esa hora el
+  // Pockai vuelve por su portal y se cierra también aquí (si ya estaba cerrada, el error no importa).
+  configureTravel({
+    onExpire: () => {
+      api.endHabitatVisit().catch(() => {});
+      activeVisit.set('');
+      endTravel();
+    },
+  });
 
   let user: any = null;
   let pets: any[] = [];
@@ -317,6 +329,10 @@
         api.getHabitatVisitors()
           .then((r) => setVisitors(r?.visitors ?? []))
           .catch(() => {/* sin conexión o endpoint aún no disponible: se reintenta con los eventos */});
+        // ¿Arrancó con mi Pockai de visita? Sigue fuera (sin portal) hasta que vuelva.
+        api.getCoopHistory()
+          .then((h) => restoreFromHistory(h?.visits ?? []))
+          .catch(() => {/* sin historial: la pestaña de Visitas lo recupera al abrirla */});
 
         // Chat y objetivos de clan (feature 021): se reflejan en vivo en la pestaña de clanes.
         socket.on('clan:message', (m: ClanMessage | null) => {
@@ -445,6 +461,8 @@
     environmental = null;
     clearVisitors();
     clearSpeech();
+    activeVisit.set('');
+    resetTravel();
   }
 
   // ---------- Ambiental (feature 005) ----------
