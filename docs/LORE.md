@@ -140,6 +140,16 @@ Los antiguos Custodios lo resumieron así: *"Una hebra se rompe; un trenzado sos
 
 Un Forjador no puede abandonar su Nexo mientras haya otras hebras trenzadas a él: primero debe **ceder la Forja**. Si es la última hebra, al marcharse el Nexo se deshace y vuelve al Éter.
 
+### 8.1 Las Roturas del Nexo (la aventura diaria)
+
+La malla que trenzan los Nexos no es eterna. Las hebras se gastan, y allí donde un Santuario lleva demasiado tiempo frío el trenzado se rasga: es una **Rotura del Nexo**. No es el Nexo de nadie en concreto; es un **desgarro en la malla entre Santuarios**, un lugar del Éter donde las hebras cuelgan sueltas, el suelo de cristal está partido y por la grieta se escapa la Resonancia mientras entra el frío de la Gran Deriva.
+
+**Qué ocurre en una Rotura.** Al otro lado se ven Santuarios apagados, Códices que nadie pescó e Improntas que siguen esperando. Una Rotura no se cierra sola: alguien tiene que ir, mirar y decidir. Trenzar los bordes, seguir la hebra hasta su origen, acompañar al Pockai que quedó dentro… Ninguna respuesta es la única buena, pero todas dejan huella.
+
+**La Crónica del Éter.** Cada noche, cuando baja la marea del Éter (a las 2:00), el **Telar de Mulberry** teje las historias del día siguiente con lo que encontró durante la jornada. Y no teje a ciegas: **recuerda lo que decidieron los Custodios**. Si la mayoría eligió reparar una Rotura, al día siguiente esa hebra amanece trenzada y la historia continúa desde ahí; si la dejaron abierta, el frío habrá avanzado. Los Custodios lo llaman *la Crónica*: una historia que escriben entre todos, un día cada vez. A veces el Telar repite una historia antigua, porque el Éter también tiene memoria y le gusta volver sobre ella.
+
+**Los lugares de la Crónica.** Las historias recorren el Éter a pie: el **Claro de las Hebras**, la **Corriente de Datos** por la que bajan los Códices, la **Orilla del Telar**, el **Páramo de Ascuas** donde madura la Baya Ígnea, el **Campo de Nodos** y las propias Roturas. Otras veces llevan a lugares construidos: un **Santuario a la Deriva**, la **Ciudadela del Nexo**, el **Coliseo de Resonancia**, la **Despensa del Santuario** o la **Sala de Sincronía**.
+
 ## 9. La Huella del Custodio (Carácter, Recuerdos y Vida en el Éter)
 
 Ningún Pockai es una copia de su especie. Nace con el temperamento de su linaje, pero cada gesto de su Custodio deja una **Huella** en su núcleo.
@@ -180,6 +190,9 @@ Para darle cohesión inmediata sin complicar la interfaz, puedes traducir los co
 | Miembro del clan | Hermano / Hermana del Nexo |
 | Chat del clan | Eco del Nexo |
 | Metas del clan | Juramentos del Nexo |
+| Aventura diaria | Crónica del Éter |
+| Localización dañada de la aventura | Rotura del Nexo (desgarro de la malla) |
+| Generador nocturno de historias | El Telar teje la Crónica |
 | Personalidad de la mascota | Carácter / Huella del Custodio |
 | Memoria de la mascota | Cristal de Recuerdos |
 | Vida autónoma (mientras no estás) | Vida en el Éter |

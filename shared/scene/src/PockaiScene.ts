@@ -1,9 +1,11 @@
 /**
  * Escena de Pockai: envuelve la `Application` de PixiJS y aplica los mensajes del anfitrión.
  *
- * Dos modos:
+ * Tres modos (excluyentes):
  *  - Solo Pockai (sin sala): el Pockai sobre fondo transparente, del tamaño que quepa.
  *  - Sala (`setRoom`): la sala isométrica (`IsoRoom`) encajada en el lienzo, con el Pockai dentro.
+ *  - Historia (`setStory`): escenario por capas de la aventura diaria (`StoryStage`), con el Pockai
+ *    entrando por la izquierda y saliendo por la derecha.
  */
 import { Application, Container, Rectangle } from 'pixi.js';
 import { resolveAccessory, resolveSheet, PATTERNS } from './assets';
@@ -24,6 +26,7 @@ import { effectForPetAction } from './effects/reactions';
 import { clipsForPetAction } from './effects/clips';
 import { flowPalette } from './effects/palettes';
 import { speciesElement } from './effects/speciesElement';
+import { StoryStage } from './story/StoryStage';
 import {
   PROTOCOL_VERSION,
   type Activity,
@@ -32,8 +35,13 @@ import {
   type PetState,
   type RoomState,
   type SceneEvent,
+  type StoryState,
   type ThemeMode,
 } from './protocol';
+
+/** Hora (minuto del día) y clima (código WMO) de una escena de historia con ambiente propio. */
+const STORY_CLOCK = { dawn: 7 * 60 + 40, day: 13 * 60, dusk: 20 * 60 + 10, night: 23 * 60 } as const;
+const STORY_WMO = { clear: 0, rain: 63, snow: 73, fog: 45, storm: 95 } as const;
 
 export interface SceneOptions {
   /** Elemento donde se inserta el canvas (o canvas existente). */
@@ -58,6 +66,7 @@ export class PockaiScene {
   readonly app = new Application();
   private pet!: PetSprite;
   private room: IsoRoom | null = null;
+  private story: StoryStage | null = null;
   private petState: PetState | null = null;
   private loadSeq = 0;
   private paused = false;
@@ -82,6 +91,8 @@ export class PockaiScene {
   private backdropMode: BackdropMode = 'painted';
   private backdropRoom: string | null = null;
   private backdropSeq = 0;
+  /** Ambiente propio de la escena de historia en curso (si lo trae). */
+  private storyMood: StoryState['mood'] | null = null;
   private disposers: (() => void)[] = [];
   /** Efectos compartidos (@pockai/scene/effects) colgados del Pockai. */
   private effects!: PixiEffects;
@@ -164,6 +175,7 @@ export class PockaiScene {
       this.screenFx.update(t.deltaMS);
       this.ambience?.update(t.deltaMS);
       this.room?.update(t);
+      this.story?.update(t.deltaMS);
     });
     this.app.renderer.on('resize', () => this.layout());
     this.layout();
@@ -201,7 +213,12 @@ export class PockaiScene {
         this.pet.setFacing(msg.facing);
         break;
       case 'setRoom':
+        // Sala e historia son excluyentes: pedir una sala sale del modo historia
+        if (msg.room && this.story) this.setStory(null);
         this.setRoom(msg.room);
+        break;
+      case 'setStory':
+        this.setStory(msg.story);
         break;
       case 'setActivity':
         this.activity = msg.activity;
@@ -210,7 +227,7 @@ export class PockaiScene {
         if (msg.mind) this.mind = msg.mind;
         this.room?.setMind(this.mind);
         this.room?.setActivity(msg.activity, this.rest);
-        if (!this.room) this.pet.visible = msg.activity !== 'away';
+        if (!this.room && !this.story) this.pet.visible = msg.activity !== 'away';
         break;
       case 'setGuest':
         void this.setGuest(msg.pet);
@@ -229,7 +246,8 @@ export class PockaiScene {
           sun: msg.sun === undefined ? this.ambienceState.sun : msg.sun,
           clock: msg.clock === undefined ? this.ambienceState.clock : msg.clock,
         };
-        this.ambience?.set(this.ambienceState);
+        if (this.story) this.syncStoryAmbience();
+        else this.ambience?.set(this.ambienceState);
         if (msg.backdrop && msg.backdrop !== this.backdropMode) {
           this.backdropMode = msg.backdrop;
           void this.syncBackdrop();
@@ -340,6 +358,59 @@ export class PockaiScene {
     this.layout();
   }
 
+  /** Entra en el modo historia, actualiza la escena en curso o sale de él (`null`). */
+  private setStory(state: StoryState | null): void {
+    if (!state) {
+      if (this.story) {
+        this.story.release();
+        this.app.stage.removeChild(this.story);
+        this.story = null;
+        this.ambience?.destroy();
+        this.ambience = null;
+        this.app.stage.addChild(this.pet);
+        this.pet.setBaseClip(this.rest || 'idle');
+        this.pet.visible = this.activity !== 'away';
+      }
+      this.layout();
+      return;
+    }
+    if (this.room) this.setRoom(null);
+    if (!this.story) {
+      this.app.stage.removeChild(this.pet);
+      const story = new StoryStage({
+        pet: this.pet,
+        emit: (e) => this.emit(e),
+        reducedMotion: this.reducedMotion,
+        playFx: (id) => this.effects.play(id, {}),
+      });
+      this.story = story;
+      this.app.stage.addChildAt(story, 0);
+      // Cielo vivo detrás del escenario y lluvia o nieve por delante, como en las salas exteriores
+      this.ambience = new Ambience({
+        reducedMotion: this.reducedMotion,
+        onSky: (sky) => story.setSky(sky),
+        onLightning: () => story.flash(),
+      });
+      this.ambience.setExterior(true);
+      this.app.stage.addChildAt(this.ambience.back, 0);
+      this.app.stage.addChild(this.ambience.front);
+    }
+    this.layout();
+    this.story.set(state);
+    this.storyMood = state.mood ?? null;
+    this.syncStoryAmbience();
+  }
+
+  /** Hora y clima del modo historia: los de la escena si los trae; si no, los reales del anfitrión. */
+  private syncStoryAmbience(): void {
+    const mood = this.storyMood;
+    this.ambience?.set({
+      sun: this.ambienceState.sun,
+      clock: mood?.timeOfDay ? STORY_CLOCK[mood.timeOfDay] : this.ambienceState.clock,
+      weather: mood?.weather ? { code: STORY_WMO[mood.weather], temperature: mood.weather === 'snow' ? -2 : 16 } : this.ambienceState.weather,
+    });
+  }
+
   /** Pone (o quita) el fondo pintado de la sala actual según el modo elegido por el anfitrión. */
   private async syncBackdrop(): Promise<void> {
     const seq = ++this.backdropSeq;
@@ -435,6 +506,10 @@ export class PockaiScene {
   private layout(): void {
     const { width, height } = this.app.screen;
     this.ambience?.resize(width, height);
+    if (this.story) {
+      this.story.resize(width, height);
+      return;
+    }
     if (this.room) {
       const b = this.room.bounds();
       const bw = b.maxX - b.minX;

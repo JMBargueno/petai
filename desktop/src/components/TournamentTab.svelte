@@ -72,7 +72,7 @@
 <div class="ui-stack">
   <AsyncState loading={loading && !current} error={current ? '' : error} onRetry={load} rows={3} height={64}>
     {#if current}
-      <Card variant="hero">
+      <Card variant="hero" backdrop="tournament">
         <FeatureHeader icon="trophy" title="Torneo" sub="{current.entryCount}/{current.bracketSize} inscritos">
           <svelte:fragment slot="end">
             <Badge tone={current.status === 'finished' ? 'neutral' : 'tint'}>{statusLabel(current.status)}</Badge>

@@ -109,6 +109,17 @@ export const envSchema = z.object({
   PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
   // URL pública de esta API (enlaces de baja de los correos y cabecera List-Unsubscribe). Ej.: https://game-api.pockai.world
   PUBLIC_API_URL: z.string().default('http://localhost:3000'),
+  // ---- IA del sistema (tareas internas sin usuario: historias de la aventura diaria) ----
+  // Sin AI_SYSTEM_API_KEY se usa OPENROUTER_API_KEY; sin ninguna de las dos, la IA del sistema no llama.
+  AI_SYSTEM_API_KEY: z.string().optional(),
+  AI_SYSTEM_BASE_URL: z.string().url().optional(),
+  // Semilla de BillingConfig.systemAi (después manda el panel de administración)
+  AI_SYSTEM_MODEL: z.string().optional(),
+  AI_SYSTEM_DAILY_BUDGET_USD: z.coerce.number().min(0).optional(),
+  // Zona horaria del bucket diario de historias (por defecto, la de shared/game-data/stories.json)
+  STORY_TZ: z.string().optional(),
+  // 'false' apaga el generador nocturno de historias (los e2e lo llaman a mano)
+  STORY_GENERATOR_ENABLED: z.enum(['true', 'false']).default('true'),
   AI_MANAGED_ENABLED: z.enum(['true', 'false']).default('true'),
   AI_MANAGED_MODEL: z.string().default('google/gemini-2.5-flash-lite'),
   AI_MANAGED_FALLBACK_MODELS: z.string().default('meta-llama/llama-3.3-70b-instruct,deepseek/deepseek-chat'),

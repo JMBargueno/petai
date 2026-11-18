@@ -9,6 +9,8 @@ export interface PlanLimits {
   agentTools: boolean;
   memoryExtractEvery: number;
   monthlyTokenQuota: number;
+  /** Aventura diaria: historias del bucket que puede jugar al día. */
+  dailyStories: number;
 }
 
 /**
@@ -25,6 +27,7 @@ export const DEFAULT_PLAN_LIMITS: Record<Plan, PlanLimits> = {
     agentTools: false,
     memoryExtractEvery: 12,
     monthlyTokenQuota: 300000,
+    dailyStories: 1,
   },
   pro: {
     dailyMessages: 200,
@@ -35,5 +38,6 @@ export const DEFAULT_PLAN_LIMITS: Record<Plan, PlanLimits> = {
     agentTools: true,
     memoryExtractEvery: 6,
     monthlyTokenQuota: 3000000,
+    dailyStories: 3,
   },
 };

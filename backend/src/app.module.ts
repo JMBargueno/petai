@@ -37,7 +37,7 @@ import { SeasonsModule } from './modules/seasons/seasons.module';
 import { BreedingModule } from './modules/breeding/breeding.module';
 import { TrainingModule } from './modules/training/training.module';
 import { GenesModule } from './modules/genes/genes.module';
-import { AdventureModule } from './modules/adventure/adventure.module';
+import { DecisionStoryModule } from './modules/decision-story/decision-story.module';
 import { DevModule } from './modules/dev/dev.module';
 import { RaidModule } from './modules/raid/raid.module';
 import { TournamentModule } from './modules/tournament/tournament.module';
@@ -115,7 +115,7 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     CookingModule,
     TrainingModule,
     GenesModule,
-    AdventureModule,
+    DecisionStoryModule,
     ModdingModule,
     WebhooksModule,
     SecurityModule,

@@ -1136,18 +1136,19 @@ export const api = {
     return minigameRequest<CookingSubmit>('POST', '/v1/cooking/submit', { sessionId, score, correctOrder });
   },
 
-  // ── Aventura ────────────────────────────────────────────────────────────────
-  async adventureStart(petId: string, premium = false) {
-    return minigameRequest<AdventureStart>('POST', '/v1/adventure/start', { petId, premium });
+  // ── Aventura diaria (historias de decisión) ──────────────────────────────────
+  async storiesToday() {
+    return minigameRequest<StoryToday>('GET', '/v1/stories/today');
   },
-  async adventureChoose(adventureId: string, optionIndex: number) {
-    return minigameRequest<AdventureChoose>('POST', '/v1/adventure/choose', { adventureId, optionIndex });
+  /** Empieza una historia de hoy o devuelve la partida si ya estaba empezada. */
+  async storyStart(storyId: string, petId: string) {
+    return minigameRequest<StoryPlayState>('POST', `/v1/stories/${storyId}/start`, { petId });
   },
-  async adventureCurrent() {
-    return minigameRequest<AdventureCurrent>('GET', '/v1/adventure/current');
+  async storyAnswer(storyId: string, sceneIndex: number, optionIndex: number) {
+    return minigameRequest<StoryAnswer>('POST', `/v1/stories/${storyId}/answer`, { sceneIndex, optionIndex });
   },
-  async adventureHistory(limit = 10) {
-    return minigameRequest<AdventureHistoryEntry[]>('GET', `/v1/adventure/history?limit=${limit}`);
+  async storiesHistory(limit = 10) {
+    return minigameRequest<StoryHistoryEntry[]>('GET', `/v1/stories/history?limit=${limit}`);
   },
 };
 
@@ -1244,59 +1245,87 @@ export interface CookingSubmit {
   message?: string;
 }
 
-// ── Aventura ──────────────────────────────────────────────────────────────────
-export interface AdventureScene {
-  order: number;
-  text: string;
-  choices: { label: string; hint: string }[];
-  isFinal?: boolean;
-  chosenOption?: number | null;
+// ── Aventura diaria (historias de decisión) ───────────────────────────────────
+export type StoryOutcome = 'win' | 'partial' | 'lose';
+
+/** Escena tal como llega antes de responder: sin la consecuencia ni la calidad de cada opción. */
+export interface StoryScene {
+  index: number;
+  locationId: string;
+  mood?: { timeOfDay?: 'dawn' | 'day' | 'dusk' | 'night'; weather?: 'clear' | 'rain' | 'snow' | 'fog' | 'storm' };
+  /** Lleva el marcador `{pet}`, que el cliente sustituye por el nombre del Pockai. */
+  narration: string;
+  event: { kind: string; text: string; fx?: string };
+  choices: { label: string; approach: string }[];
 }
 
-export interface AdventureStart {
-  adventureId: string;
-  theme: string;
+export interface StorySummary {
+  id: string;
+  slot: number;
+  title: string;
+  synopsis: string;
   sceneCount: number;
-  currentScene: number;
-  scene: AdventureScene;
-  isPremium: boolean;
-  retriesLeft: number;
+  locationIds: string[];
+  /** Crónica: capítulo de una historia que continúa día a día. */
+  chronicle: { chapter: number; closes: boolean } | null;
+  /** Lo que decidió ayer la mayoría (Crónica, a partir del capítulo 2). */
+  previously: { title: string; decided: string } | null;
+  rerun: boolean;
+  play: { status: 'active' | 'completed'; sceneIndex: number; outcome: StoryOutcome | null } | null;
 }
 
-export type AdventureChoose =
-  | { advanced: true; scene: AdventureScene }
-  | {
-      completed: true;
-      outcome: 'win' | 'partial' | 'lose';
-      score: number;
-      rewards: { xp: number; coins: number };
-      memory: string;
-    };
+export interface StoryToday {
+  day: string | null;
+  plan: 'free' | 'pro';
+  /** Historias que el plan deja vivir al día y cuántas se han empezado hoy. */
+  limit: number;
+  used: number;
+  resetsAt: string;
+  stories: StorySummary[];
+}
 
-export type AdventureCurrent =
-  | { active: false }
-  | {
-      active: true;
-      adventureId: string;
-      theme: string;
-      sceneCount: number;
-      currentScene: number;
-      scene: AdventureScene | null;
-      isPremium: boolean;
-      retriesLeft: number;
-    };
+export interface StoryResult {
+  outcome: StoryOutcome;
+  score: number;
+  rewards: { xp: number; coins: number; happiness?: number };
+  memory?: string;
+}
 
-export interface AdventureHistoryEntry {
-  adventureId: string;
-  theme: string;
+export interface StoryPlayState {
+  storyId: string;
+  title: string;
+  synopsis: string;
   sceneCount: number;
-  outcome: 'win' | 'partial' | 'lose' | null;
+  status: 'active' | 'completed';
+  sceneIndex: number;
+  /** Escena pendiente de respuesta (`null` si la historia ya terminó). */
+  scene: StoryScene | null;
+  answered: { sceneIndex: number; optionIndex: number; label: string; consequence: string }[];
+  result: StoryResult | null;
+}
+
+export interface StoryAnswer {
+  sceneIndex: number;
+  optionIndex: number;
+  consequence: string;
+  /** Votos de la comunidad por opción en esa escena (incluido el propio). */
+  community: { counts: number[]; total: number };
+  next: StoryScene | null;
+  completed: StoryResult | null;
+}
+
+export interface StoryHistoryEntry {
+  storyId: string;
+  day: string;
+  title: string;
+  status: 'active' | 'completed';
+  outcome: StoryOutcome | null;
   score: number | null;
   xpAwarded: number;
   coinsAwarded: number;
-  isPremium: boolean;
   startedAt: string;
   finishedAt: string | null;
+  answers: { sceneIndex: number; optionIndex: number; label: string; withMajority: boolean | null }[];
 }
 
 async function minigameRequest<T>(method: string, path: string, body?: unknown): Promise<T> {

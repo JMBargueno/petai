@@ -388,6 +388,110 @@ for (const slot of ACCESSORY_SLOTS) {
 }
 console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesorios validados con sus logros`);
 
+// 4c. Aventura diaria: configuración, escenarios por capas y semillas (mismas reglas que
+// backend/src/modules/game-data/story-data.schemas.ts)
+{
+  const cfg = readJson('shared/game-data/stories.json');
+  const loc = readJson('shared/game-data/story-locations.json');
+  const seeds = readJson('shared/game-data/story-seeds.json');
+  const SLOTS = ['bg', 'l1', 'l2', 'l3'];
+  const LIFE = ['none', 'dust', 'firefly', 'stardust', 'ember'];
+  const where = 'stories.json';
+  if (!Number.isInteger(cfg.scenesPerStory) || cfg.scenesPerStory < 1) throw new Error(`${where}: scenesPerStory inválido`);
+  if (!(cfg.choicesPerScene?.min >= 2 && cfg.choicesPerScene.max >= cfg.choicesPerScene.min)) throw new Error(`${where}: choicesPerScene inválido`);
+  const bucket = cfg.bucket || {};
+  if (!Number.isInteger(bucket.storiesPerDay) || bucket.storiesPerDay < 1) throw new Error(`${where}: bucket.storiesPerDay inválido`);
+  if (!(bucket.generateAtHour >= 0 && bucket.aiDeadlineHour <= 23 && bucket.aiDeadlineHour > bucket.generateAtHour)) {
+    throw new Error(`${where}: bucket.aiDeadlineHour debe ser posterior a generateAtHour (0-23)`);
+  }
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone: bucket.timezone });
+  } catch {
+    throw new Error(`${where}: bucket.timezone '${bucket.timezone}' no es una zona horaria IANA`);
+  }
+  if (!(cfg.outcome?.winAt > cfg.outcome?.partialAt)) throw new Error(`${where}: outcome.winAt debe ser mayor que partialAt`);
+  for (const r of ['win', 'partial', 'lose']) {
+    for (const k of ['xp', 'coins', 'happiness']) {
+      if (!Number.isInteger(cfg.rewards?.[r]?.[k]) || cfg.rewards[r][k] < 0) throw new Error(`${where}: rewards.${r}.${k} inválido`);
+    }
+  }
+  // Los efectos de evento deben existir en el registro de @pockai/scene
+  const effectsDir = path.resolve(__dirname, '..', 'shared/scene/src/effects');
+  const effectIds = new Set();
+  for (const f of fs.readdirSync(effectsDir).filter((n) => n.endsWith('.ts') && !n.endsWith('.spec.ts'))) {
+    for (const m of fs.readFileSync(path.join(effectsDir, f), 'utf8').matchAll(/^\s+id: '([a-z-]+)'/gm)) effectIds.add(m[1]);
+  }
+  for (const fx of cfg.eventFx ?? []) if (!effectIds.has(fx)) throw new Error(`${where}: eventFx '${fx}' no es un efecto de shared/scene`);
+
+  const layerSlot = new Map();
+  for (const l of loc.layers ?? []) {
+    if (layerSlot.has(l.id)) throw new Error(`story-locations.json: capa duplicada '${l.id}'`);
+    if (!SLOTS.includes(l.slot)) throw new Error(`story-locations.json: la capa '${l.id}' tiene una ranura desconocida '${l.slot}'`);
+    if (!/^#[0-9a-fA-F]{6}$/.test(l.color)) throw new Error(`story-locations.json: color inválido en la capa '${l.id}'`);
+    if (l.building && l.slot !== 'l1') throw new Error(`story-locations.json: la capa '${l.id}' es edificio y debe ir en l1`);
+    layerSlot.set(l.id, l.slot);
+  }
+  for (const slot of SLOTS) {
+    if (![...layerSlot.values()].includes(slot)) throw new Error(`story-locations.json: ninguna capa en la ranura '${slot}'`);
+  }
+  const buildings = new Set((loc.layers ?? []).filter((l) => l.building).map((l) => l.id));
+  const checkSet = (at, set) => {
+    for (const slot of SLOTS) {
+      if (layerSlot.get(set?.[slot]) !== slot) throw new Error(`${at}: '${set?.[slot]}' no es una capa de la ranura ${slot}`);
+    }
+  };
+  const locationIds = new Set();
+  for (const l of loc.locations ?? []) {
+    if (locationIds.has(l.id)) throw new Error(`story-locations.json: localización duplicada '${l.id}'`);
+    locationIds.add(l.id);
+    checkSet(`localización ${l.id}`, l.layers);
+    if (!['open', 'building'].includes(l.kind)) throw new Error(`localización ${l.id}: kind inválido`);
+    if ((l.kind === 'building') !== buildings.has(l.layers.l1)) throw new Error(`localización ${l.id}: kind '${l.kind}' no cuadra con su capa l1`);
+    if (!ELEMENTS.has(l.flow)) throw new Error(`localización ${l.id}: flow desconocido '${l.flow}'`);
+    if (!LIFE.includes(l.life)) throw new Error(`localización ${l.id}: life desconocido '${l.life}'`);
+    if (!(Array.isArray(l.ground) && l.ground[0] >= 0 && l.ground[1] <= 1 && l.ground[1] > l.ground[0])) throw new Error(`localización ${l.id}: ground inválido`);
+  }
+  for (const kind of ['open', 'building']) {
+    if (!(loc.locations ?? []).some((l) => l.kind === kind)) throw new Error(`story-locations.json: falta alguna localización '${kind}'`);
+  }
+  for (const [id, s] of Object.entries(loc.screens ?? {})) {
+    checkSet(`pantalla ${id}`, s.layers);
+    if (!ELEMENTS.has(s.flow) || !LIFE.includes(s.life)) throw new Error(`pantalla ${id}: flow/life inválido`);
+  }
+  for (const id of ['arena', 'raid', 'tournament', 'training', 'kitchen']) {
+    if (!loc.screens?.[id]) throw new Error(`story-locations.json: falta la pantalla '${id}'`);
+  }
+
+  const seedIds = new Set();
+  const txt = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
+  for (const s of seeds.stories ?? []) {
+    const at = `semilla ${s.id}`;
+    if (seedIds.has(s.id)) throw new Error(`story-seeds.json: semilla duplicada '${s.id}'`);
+    seedIds.add(s.id);
+    if (!txt(s.title, cfg.text.titleMax) || !txt(s.synopsis, cfg.text.synopsisMax)) throw new Error(`${at}: título o sinopsis inválidos`);
+    if (!Array.isArray(s.scenes) || s.scenes.length !== cfg.scenesPerStory) throw new Error(`${at}: debe tener ${cfg.scenesPerStory} escenas`);
+    s.scenes.forEach((sc, i) => {
+      const sat = `${at}, escena ${i + 1}`;
+      if (!locationIds.has(sc.locationId)) throw new Error(`${sat}: localización desconocida '${sc.locationId}'`);
+      if (!txt(sc.narration, cfg.text.narrationMax)) throw new Error(`${sat}: narración inválida`);
+      if (!cfg.eventKinds.includes(sc.event?.kind) || !txt(sc.event?.text, cfg.text.eventMax)) throw new Error(`${sat}: evento inválido`);
+      if (sc.event.fx !== undefined && !cfg.eventFx.includes(sc.event.fx)) throw new Error(`${sat}: fx '${sc.event.fx}' no está en eventFx`);
+      const cs = sc.choices;
+      if (!Array.isArray(cs) || cs.length < cfg.choicesPerScene.min || cs.length > cfg.choicesPerScene.max) throw new Error(`${sat}: número de opciones inválido`);
+      for (const c of cs) {
+        if (!txt(c.label, cfg.text.labelMax) || !txt(c.consequence, cfg.text.consequenceMax) || !txt(c.canonLine, cfg.text.canonLineMax)) {
+          throw new Error(`${sat}: opción '${c.label}' con textos inválidos o demasiado largos`);
+        }
+        if (!cfg.approaches.includes(c.approach)) throw new Error(`${sat}: approach desconocido '${c.approach}'`);
+        if (![0, 1, 2].includes(c.score)) throw new Error(`${sat}: score debe ser 0, 1 o 2`);
+      }
+      if (!cs.some((c) => c.score === 2)) throw new Error(`${sat}: hace falta una opción con score 2`);
+    });
+  }
+  if (seedIds.size < bucket.storiesPerDay) throw new Error(`story-seeds.json: hacen falta al menos ${bucket.storiesPerDay} semillas`);
+  console.log(`✓ aventura diaria: ${layerSlot.size} capas, ${locationIds.size} localizaciones y ${seedIds.size} semillas validadas`);
+}
+
 // 5. Validar existencia de sprites base
 const spritesDir = path.resolve(__dirname, '..', 'shared/assets/sprites');
 for (const sp of species) {

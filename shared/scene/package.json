@@ -10,7 +10,8 @@
     ".": "./src/index.ts",
     "./bake": "./src/bake/index.ts",
     "./protocol": "./src/protocol.ts",
-    "./effects": "./src/effects/index.ts"
+    "./effects": "./src/effects/index.ts",
+    "./backdrop": "./src/backdrop/index.ts"
   },
   "scripts": {
     "dev": "vite",
