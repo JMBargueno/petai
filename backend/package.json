@@ -4,11 +4,11 @@
   "private": true,
   "description": "PetAI — Backend autoritativo NestJS",
   "scripts": {
-    "build": "nest build",
+    "build": "pnpm --filter @pockai/minigames run build:node && nest build",
     "export:openapi": "ts-node src/export-openapi.ts",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
+    "start": "pnpm --filter @pockai/minigames run build:node && nest start",
+    "start:dev": "pnpm --filter @pockai/minigames run build:node && nest start --watch",
+    "start:debug": "pnpm --filter @pockai/minigames run build:node && nest start --debug --watch",
     "start:prod": "node --expose-gc dist/src/main",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.0",
+    "@pockai/minigames": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
@@ -90,6 +91,9 @@
       "ts"
     ],
     "rootDir": "src",
+    "moduleNameMapper": {
+      "^@pockai/minigames/logic$": "<rootDir>/../../shared/minigames/src/logic.ts"
+    },
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"

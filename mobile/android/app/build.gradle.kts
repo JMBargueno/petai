@@ -45,6 +45,8 @@ android {
         getByName("main").assets.directories.add("../../../shared/assets")
         // Núcleo de escena compartido (@pockai/scene) en assets/scene/ (ver tarea syncPockaiScene)
         getByName("main").assets.directories.add("build/generated/pockaiScene")
+        // Minijuegos compartidos (@pockai/minigames) en assets/minigames/ (ver tarea syncPockaiMinigames)
+        getByName("main").assets.directories.add("build/generated/pockaiMinigames")
     }
 }
 
@@ -104,3 +106,23 @@ val syncPockaiScene by tasks.registering(Sync::class) {
     }
 }
 tasks.named("preBuild") { dependsOn(syncPockaiScene) }
+
+/**
+ * Copia el bundle de los minijuegos compartidos (mismas reglas que escritorio; el servidor repite
+ * las partidas con la misma lógica) a los assets de la app. Se genera desde la raíz del monorepo con
+ * `pnpm --filter @pockai/minigames build:embed` (docs/specs/spec-39-minijuegos-compartidos.md).
+ */
+val syncPockaiMinigames by tasks.registering(Sync::class) {
+    val distPath = rootProject.file("../../shared/minigames/dist/embed").absolutePath
+    from(distPath)
+    into(layout.buildDirectory.dir("generated/pockaiMinigames/minigames"))
+    doFirst {
+        if (!File(distPath, "index.html").exists()) {
+            throw GradleException(
+                "Falta el bundle de los minijuegos en $distPath. Ejecuta desde la raíz del repo: " +
+                    "pnpm --filter @pockai/minigames build:embed",
+            )
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn(syncPockaiMinigames) }

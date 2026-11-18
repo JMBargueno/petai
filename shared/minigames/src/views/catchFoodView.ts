@@ -1,6 +1,6 @@
 import { TICKS_PER_SECOND } from '../core/types';
 import { CATCH_FOOD as C, type CatchFoodState } from '../games/catchFood';
-import { el, pct, toLogical, type GameView, type ViewContext } from './types';
+import { el, pct, toLogical, typing, type GameView, type ViewContext } from './types';
 
 const GOOD = ['🍎', '🍓', '🍇', '🍪'];
 const BAD = '🪨';
@@ -40,14 +40,15 @@ export function createCatchFoodView(): GameView<CatchFoodState> {
       arena.append(basket);
       root.append(arena, el('p', 'pmg-hint', 'Mueve el ratón, arrastra el dedo o usa ← → para atrapar la comida. ¡Esquiva las piedras!'));
 
-      const onPointer = (e: PointerEvent) => ctx.push({ kind: 'move', x: toLogical(e, arena, C.W, C.H).x });
+      // Posición entera: el registro que viaja al servidor queda más corto y es igual de jugable.
+      const onPointer = (e: PointerEvent) => ctx.push({ kind: 'move', x: Math.round(toLogical(e, arena, C.W, C.H).x) });
       listen(arena, 'pointermove', onPointer);
       listen(arena, 'pointerdown', (e) => {
         arena.setPointerCapture?.(e.pointerId);
         onPointer(e);
       });
       listen(window, 'keydown', (e) => {
-        if (!(e.key in MOVE_KEYS)) return;
+        if (!(e.key in MOVE_KEYS) || typing(e)) return;
         // Las flechas mueven la cesta, no el scroll del panel.
         e.preventDefault();
         held.add(e.key);

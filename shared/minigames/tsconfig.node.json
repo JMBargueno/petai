@@ -1,0 +1,17 @@
+{
+  // Solo la lógica (sin DOM) compilada a CommonJS para el backend, que repite las partidas para
+  // validarlas (spec 39, fase 3). Sin "DOM" en lib: si la lógica tocara el navegador, no compilaría.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "types": [],
+    "strict": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "dist/node"
+  },
+  "files": ["src/logic.ts"]
+}

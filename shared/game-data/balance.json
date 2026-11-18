@@ -209,6 +209,8 @@
     "dailyRewardedSessions": 20,
     "energyCost": 10,
     "minEnergy": 10,
+    "requireReplay": false,
+    "elementAffinityBonus": 0.25,
     "games": {
       "catch_food": {
         "name": "Atrapa la comida",
@@ -224,8 +226,8 @@
       "memory_match": {
         "name": "Parejas de memoria",
         "durationSeconds": 90,
-        "minDurationSeconds": 15,
-        "maxScorePerSecond": 2,
+        "minDurationSeconds": 8,
+        "maxScorePerSecond": 3,
         "coinsPerPoint": 0.8,
         "maxCoins": 40,
         "xpPerPoint": 1.5,
@@ -242,6 +244,79 @@
         "xpPerPoint": 1.5,
         "maxXp": 50,
         "happiness": 12
+      },
+      "pulso_voltaico": {
+        "name": "Pulso Voltaico",
+        "element": "electric",
+        "durationSeconds": 40,
+        "minDurationSeconds": 15,
+        "maxScorePerSecond": 3,
+        "coinsPerPoint": 0.6,
+        "maxCoins": 40,
+        "xpPerPoint": 1,
+        "maxXp": 60,
+        "happiness": 14
+      },
+      "corriente_datos": {
+        "name": "Corriente de Datos",
+        "element": "water",
+        "durationSeconds": 45,
+        "minDurationSeconds": 20,
+        "maxScorePerSecond": 2,
+        "coinsPerPoint": 0.6,
+        "maxCoins": 40,
+        "xpPerPoint": 1,
+        "maxXp": 60,
+        "happiness": 14
+      },
+      "raiz_fractal": {
+        "name": "Raíz Fractal",
+        "element": "plant",
+        "durationSeconds": 90,
+        "minDurationSeconds": 20,
+        "maxScorePerSecond": 4,
+        "coinsPerPoint": 0.8,
+        "maxCoins": 40,
+        "xpPerPoint": 1.2,
+        "maxXp": 60,
+        "happiness": 14
+      },
+      "cifrado": {
+        "name": "Cifrado",
+        "element": "shadow",
+        "durationSeconds": 60,
+        "minDurationSeconds": 15,
+        "maxScorePerSecond": 2,
+        "coinsPerPoint": 1.5,
+        "maxCoins": 40,
+        "xpPerPoint": 2.5,
+        "maxXp": 60,
+        "happiness": 14
+      },
+      "faro_claridad": {
+        "name": "Faro de Claridad",
+        "element": "light",
+        "durationSeconds": 45,
+        "minDurationSeconds": 20,
+        "maxScorePerSecond": 2,
+        "coinsPerPoint": 1,
+        "maxCoins": 40,
+        "xpPerPoint": 1.5,
+        "maxXp": 60,
+        "happiness": 14
+      },
+      "forja_termica": {
+        "name": "Forja Térmica",
+        "element": "fire",
+        "durationSeconds": 45,
+        "minDurationSeconds": 15,
+        "maxScorePerSecond": 1.5,
+        "coinsPerPoint": 1,
+        "maxCoins": 40,
+        "xpPerPoint": 1.5,
+        "maxXp": 60,
+        "happiness": 14,
+        "itemDrop": { "itemId": "spicy_berry", "minScore": 40, "chance": 0.5 }
       }
     }
   },

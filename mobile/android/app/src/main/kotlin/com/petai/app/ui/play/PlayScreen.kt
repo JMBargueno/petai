@@ -18,6 +18,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,12 +37,31 @@ fun PlayScreen(vm: PlayViewModel, section: Int) {
     val state by vm.state.collectAsState()
     val tab = section
 
-    // Una partida en curso ocupa toda la pestaña
+    // Una partida en curso ocupa toda la pestaña. El juego es el del paquete compartido
+    // (@pockai/minigames): mismas reglas y misma semilla que en escritorio, y el servidor lo repite.
     state.session?.let { s ->
-        when (s.gameId) {
-            "catch_food" -> CatchFoodGame(s.seed, s.durationSeconds, vm::finishGame)
-            "memory_match" -> MemoryGame(s.seed, s.durationSeconds, vm::finishGame)
-            else -> ReflexGame(s.seed, s.durationSeconds, vm::finishGame)
+        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(top = 8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    state.games.firstOrNull { it.id == s.gameId }?.name ?: "Minijuego",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = vm::abandonGame) { Text("Salir") }
+            }
+            MinigameView(
+                gameId = s.gameId,
+                seed = s.seed,
+                durationSeconds = s.durationSeconds,
+                variant = s.variant,
+                modifier = Modifier.fillMaxSize(),
+            ) { ev ->
+                when (ev) {
+                    is MinigameEvent.Finished -> vm.finishGame(ev)
+                    is MinigameEvent.Error -> vm.gameError(ev.message)
+                    is MinigameEvent.Ready -> Unit
+                }
+            }
         }
         return
     }
@@ -64,7 +85,13 @@ fun PlayScreen(vm: PlayViewModel, section: Int) {
         AlertDialog(
             onDismissRequest = vm::dismissGameResult,
             title = { Text("¡Partida terminada!") },
-            text = { Text("Puntuación: ${r.score}\n+${r.rewards.coins} monedas · +${r.rewards.xp} XP · +${r.rewards.happiness} felicidad\nEnergía: −${r.rewards.energyCost}") },
+            text = {
+                val extra = buildString {
+                    if (r.affinity) append("\nPrueba de su elemento: lo ha disfrutado más.")
+                    r.item?.let { append("\nHa dejado ${it.qty} × ${ITEM_NAMES[it.itemId] ?: it.itemId} en tu inventario.") }
+                }
+                Text("Puntuación: ${r.score}\n+${r.rewards.coins} monedas · +${r.rewards.xp} XP · +${r.rewards.happiness} felicidad\nEnergía: −${r.rewards.energyCost}$extra")
+            },
             confirmButton = { TextButton(onClick = vm::dismissGameResult) { Text("Genial") } },
         )
     }
@@ -128,18 +155,25 @@ private fun GamesTab(state: PlayUiState, vm: PlayViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        items(state.games, key = { it.id }) { g ->
-            val icon = when (g.id) { "catch_food" -> Lucide.Apple; "memory_match" -> Lucide.Brain; else -> Lucide.Zap }
-            val hint = when (g.id) {
-                "catch_food" -> "Toca la comida que cae; evita las bombas."
-                "memory_match" -> "Encuentra todas las parejas antes de que acabe el tiempo."
-                else -> "Toca los círculos en cuanto aparezcan."
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Modo accesible", style = MaterialTheme.typography.titleSmall)
+                    Text("Más tiempo para reaccionar, zonas más grandes y pistas.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = state.accessible, onCheckedChange = vm::setAccessible)
             }
+        }
+        items(state.games, key = { it.id }) { g ->
+            val (icon, hint) = GAME_INFO[g.id] ?: (Lucide.Gamepad2 to "Minijuego del Éter.")
             PockaiCard(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Sticker(icon, color = PockaiTheme.colors.themeArena, size = 48.dp)
                     Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                         Text(g.name, style = MaterialTheme.typography.titleMedium)
+                        g.element?.let { el ->
+                            Text("Prueba de ${ELEMENT_NAMES[el] ?: el}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        }
                         Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("${g.durationSeconds} s · hasta ${g.maxCoins} monedas y ${g.maxXp} XP", style = MaterialTheme.typography.labelMedium)
                     }
@@ -150,6 +184,27 @@ private fun GamesTab(state: PlayUiState, vm: PlayViewModel) {
         if (energy != null) item { Text("Energía por partida: la mascota debe estar despierta y con energía suficiente.", style = MaterialTheme.typography.labelSmall) }
     }
 }
+
+/** Icono y pista de cada minijuego (las reglas viven en el paquete compartido). */
+private val GAME_INFO: Map<String, Pair<ImageVector, String>> = mapOf(
+    "catch_food" to (Lucide.Apple to "Arrastra la cesta para atrapar la comida; esquiva las piedras."),
+    "memory_match" to (Lucide.Brain to "Encuentra todas las parejas antes de que acabe el tiempo."),
+    "reflex" to (Lucide.Zap to "Toca el objetivo en cuanto aparezca."),
+    "pulso_voltaico" to (Lucide.Zap to "Toca el carril cuando el pulso cruce la línea."),
+    "corriente_datos" to (Lucide.Droplet to "Cambia de carril para recoger paquetes y esquivar bloques."),
+    "raiz_fractal" to (Lucide.Leaf to "Gira las raíces hasta que la savia llegue al borde."),
+    "cifrado" to (Lucide.Moon to "Memoriza el orden de los glifos y repítelo."),
+    "faro_claridad" to (Lucide.Sun to "Deja el haz sobre los bits corruptos para purificarlos."),
+    "forja_termica" to (Lucide.Flame to "Mantén pulsado el fuelle para templar piezas sin quemarlas."),
+)
+
+private val ELEMENT_NAMES = mapOf(
+    "fire" to "Fuego", "water" to "Agua", "plant" to "Planta",
+    "electric" to "Eléctrico", "shadow" to "Sombra", "light" to "Luz",
+)
+
+/** Objetos que pueden soltar los minijuegos (foods.json). */
+private val ITEM_NAMES = mapOf("spicy_berry" to "Baya Ígnea")
 
 private fun describe(e: ReplayEvent, names: List<String>): String? = when (e.t) {
     "round" -> "— Asalto ${e.n} —"

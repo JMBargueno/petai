@@ -151,7 +151,8 @@ describe('Accesibilidad (e2e) — camino feliz', () => {
       const body = res.body;
 
       expect(Array.isArray(body)).toBe(true);
-      expect(body).toHaveLength(3); // catch_food, memory_match, reflex
+      // Uno por minijuego de balance.json (los 3 clásicos y las 6 Pruebas de los Seis Flujos).
+      expect(body).toHaveLength(9);
       for (const item of body) {
         expect(item.accessible).toBe(true);
         expect(item.rewards).toBe('equal');

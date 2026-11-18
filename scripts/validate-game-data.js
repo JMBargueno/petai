@@ -56,11 +56,20 @@ for (const [id, g] of Object.entries(mg.games)) {
     throw new Error(`minijuego ${id}: minDurationSeconds no puede superar durationSeconds`);
   }
 }
-// Spec 39: todo minijuego tiene variante accesible.
+// Spec 39: todo minijuego tiene variante accesible; las Pruebas, un elemento real; los premios, un objeto que existe.
 const a11y = readJson('shared/game-data/accessibility.json');
-for (const id of Object.keys(mg.games)) {
+const ELEMENTS = new Set(['fire', 'water', 'plant', 'electric', 'shadow', 'light']);
+for (const [id, g] of Object.entries(mg.games)) {
   if (!a11y.minigames || !a11y.minigames[id]) {
     throw new Error(`minijuego ${id}: falta su variante accesible en accessibility.json (minigames.${id})`);
+  }
+  if (g.element !== undefined && !ELEMENTS.has(g.element)) {
+    throw new Error(`minijuego ${id}: elemento desconocido "${g.element}"`);
+  }
+  if (g.itemDrop) {
+    const d = g.itemDrop;
+    if (!foods.some((f) => f.id === d.itemId)) throw new Error(`minijuego ${id}: itemDrop.itemId "${d.itemId}" no existe en foods.json`);
+    if (!(d.chance > 0 && d.chance <= 1) || !(d.minScore >= 0)) throw new Error(`minijuego ${id}: itemDrop inválido`);
   }
 }
 console.log(`✓ balance.json: sueño, evolución y ${Object.keys(mg.games).length} minijuegos validados`);

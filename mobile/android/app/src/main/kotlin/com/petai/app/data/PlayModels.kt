@@ -97,15 +97,20 @@ data class Leaderboard(val scope: String = "", val entries: List<LeaderboardEntr
 data class MinigameInfo(
     val id: String,
     val name: String = "",
+    /** Elemento de las Pruebas de los Seis Flujos (spec 39); `null` en los juegos clásicos. */
+    val element: String? = null,
     val durationSeconds: Int = 30,
     val maxCoins: Int = 0,
     val maxXp: Int = 0,
+    val energyCost: Int? = null,
 )
 
 @Serializable
 data class MinigameSession(
     val sessionId: String,
     val gameId: String = "",
+    /** `standard` o `easy` (variante accesible). */
+    val variant: String = "standard",
     val seed: Long = 0,
     val durationSeconds: Int = 30,
     val maxScorePerSecond: Double = 1.0,
@@ -115,7 +120,19 @@ data class MinigameSession(
 data class MinigameRewards(val coins: Int = 0, val xp: Int = 0, val happiness: Int = 0, val energyCost: Int = 0)
 
 @Serializable
-data class MinigameResult(val score: Int = 0, val rewards: MinigameRewards = MinigameRewards(), val pet: Pet? = null)
+data class MinigameItemDrop(val itemId: String, val qty: Int = 1)
+
+@Serializable
+data class MinigameResult(
+    val score: Int = 0,
+    val rewards: MinigameRewards = MinigameRewards(),
+    val pet: Pet? = null,
+    /** El servidor repitió la partida y cuadra (spec 39, fase 3). */
+    val verified: Boolean = false,
+    /** La especie es del elemento de la Prueba: más felicidad. */
+    val affinity: Boolean = false,
+    val item: MinigameItemDrop? = null,
+)
 
 // ---------- Vinculación de dispositivos ----------
 

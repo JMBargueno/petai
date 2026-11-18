@@ -1,20 +1,24 @@
-import type { GameDefinition, GameInput } from './core/types';
-import { catchFood } from './games/catchFood';
-import { memoryMatch } from './games/memoryMatch';
-import { reflex } from './games/reflex';
+import type { AnyGameDefinition } from './core/runner';
+import { GAME_DEFINITIONS } from './logic';
 import type { GameView } from './views/types';
 import { createCatchFoodView } from './views/catchFoodView';
 import { createMemoryMatchView } from './views/memoryMatchView';
 import { createReflexView } from './views/reflexView';
+import { createPulsoVoltaicoView } from './views/pulsoVoltaicoView';
+import { createCorrienteDatosView } from './views/corrienteDatosView';
+import { createRaizFractalView } from './views/raizFractalView';
+import { createCifradoView } from './views/cifradoView';
+import { createFaroClaridadView } from './views/faroClaridadView';
+import { createForjaTermicaView } from './views/forjaTermicaView';
 
 /**
- * Catálogo de minijuegos que saben jugar los clientes. Las reglas de recompensa y el techo están en
- * `shared/game-data/balance.json` (`minigames.games`); un test exige que ambos tengan los mismos ids.
+ * Catálogo de minijuegos que saben jugar los clientes. Las reglas de recompensa, el techo y el
+ * elemento están en `shared/game-data/balance.json` (`minigames.games`); un test exige que ambos
+ * tengan los mismos ids.
  */
 export interface MinigameEntry {
   id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  definition: GameDefinition<any, GameInput>;
+  definition: AnyGameDefinition;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   createView: () => GameView<any>;
   /** Nombre de icono de la app (Lucide en escritorio). */
@@ -23,32 +27,24 @@ export interface MinigameEntry {
   howTo: string;
 }
 
-const entries: MinigameEntry[] = [
-  {
-    id: 'catch_food',
-    definition: catchFood as MinigameEntry['definition'],
-    createView: createCatchFoodView,
-    icon: 'apple',
-    howTo: 'Mueve la cesta con el ratón, el dedo o las flechas ← → y atrapa la comida.',
-  },
-  {
-    id: 'memory_match',
-    definition: memoryMatch as MinigameEntry['definition'],
-    createView: createMemoryMatchView,
-    icon: 'cards',
-    howTo: 'Destapa dos cartas iguales. Puedes usar Tab y Enter.',
-  },
-  {
-    id: 'reflex',
-    definition: reflex as MinigameEntry['definition'],
-    createView: createReflexView,
-    icon: 'target',
-    howTo: 'Pulsa el objetivo en cuanto aparezca, con el ratón, tocándolo o con Espacio.',
-  },
-];
+const UI: Record<string, Omit<MinigameEntry, 'id' | 'definition'>> = {
+  catch_food: { createView: createCatchFoodView, icon: 'apple', howTo: 'Mueve la cesta con el ratón, el dedo o las flechas ← → y atrapa la comida.' },
+  memory_match: { createView: createMemoryMatchView, icon: 'cards', howTo: 'Destapa dos cartas iguales. Puedes usar Tab y Enter.' },
+  reflex: { createView: createReflexView, icon: 'target', howTo: 'Pulsa el objetivo en cuanto aparezca, con el ratón, tocándolo o con Espacio.' },
+  pulso_voltaico: { createView: createPulsoVoltaicoView, icon: 'energy', howTo: 'Pulsa el carril (J K L) cuando el pulso cruce la línea de sinapsis.' },
+  corriente_datos: { createView: createCorrienteDatosView, icon: 'water', howTo: 'Cambia de carril (← →) para recoger paquetes y esquivar bloques corruptos.' },
+  raiz_fractal: { createView: createRaizFractalView, icon: 'leaf', howTo: 'Gira las raíces para llevar la savia de la semilla al borde derecho.' },
+  cifrado: { createView: createCifradoView, icon: 'moon', howTo: 'Memoriza el orden de los glifos y repítelo.' },
+  faro_claridad: { createView: createFaroClaridadView, icon: 'sun', howTo: 'Deja el haz de luz sobre los bits corruptos para purificarlos.' },
+  forja_termica: { createView: createForjaTermicaView, icon: 'flame', howTo: 'Aviva el fuelle para mantener la forja en la franja dorada.' },
+};
 
 export const MINIGAMES: Readonly<Record<string, MinigameEntry>> = Object.freeze(
-  Object.fromEntries(entries.map((e) => [e.id, e])),
+  Object.fromEntries(
+    Object.entries(UI)
+      .filter(([id]) => GAME_DEFINITIONS[id])
+      .map(([id, ui]) => [id, { id, definition: GAME_DEFINITIONS[id], ...ui }]),
+  ),
 );
 
 export const getMinigame = (id: string): MinigameEntry | undefined => MINIGAMES[id];

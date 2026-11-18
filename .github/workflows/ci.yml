@@ -243,7 +243,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # La app incrusta la escena compartida (@pockai/scene): hay que generar su bundle antes del
+      # La app incrusta la escena (@pockai/scene) y los minijuegos (@pockai/minigames) compartidos: hay que generar sus bundles antes del
       # build (la tarea Gradle syncPockaiScene lo copia a assets/scene y falla si falta).
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -254,10 +254,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Build scene bundle
+      - name: Build scene and minigames bundles
         run: |
-          pnpm install --frozen-lockfile --filter @pockai/scene...
+          pnpm install --frozen-lockfile --filter @pockai/scene... --filter @pockai/minigames...
           pnpm --filter @pockai/scene build:embed
+          pnpm --filter @pockai/minigames build:embed
 
       - name: Setup JDK
         uses: actions/setup-java@v4

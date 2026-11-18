@@ -496,23 +496,28 @@ export const api = {
     return minigameRequest<any[]>('GET', '/v1/minigames');
   },
 
-  async startMinigame(gameId: string, petId: string) {
+  async startMinigame(gameId: string, petId: string, variant: 'standard' | 'easy' = 'standard') {
     return minigameRequest<{
       sessionId: string;
       gameId: string;
+      variant?: 'standard' | 'easy';
       seed: number;
       durationSeconds: number;
       maxScorePerSecond: number;
       expiresAt: string;
-    }>('POST', `/v1/minigames/${gameId}/start`, { petId });
+    }>('POST', `/v1/minigames/${gameId}/start`, { petId, variant });
   },
 
-  async finishMinigame(sessionId: string, score: number) {
-    return minigameRequest<{ score: number; rewards: any; pet: any }>(
-      'POST',
-      `/v1/minigames/sessions/${sessionId}/finish`,
-      { score },
-    );
+  /** `ticks` y `log` (spec 39): el servidor repite la partida para validar la puntuación. */
+  async finishMinigame(sessionId: string, score: number, proof: { ticks?: number; log?: unknown[] } = {}) {
+    return minigameRequest<{
+      score: number;
+      rewards: any;
+      pet: any;
+      verified?: boolean;
+      affinity?: boolean;
+      item?: { itemId: string; qty: number } | null;
+    }>('POST', `/v1/minigames/sessions/${sessionId}/finish`, { score, ...proof });
   },
 
   // ---- IA (Fase 3) ----
