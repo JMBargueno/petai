@@ -21,7 +21,7 @@ import { pose, Stage, STAGES } from './sprites/species';
 import { ACCESSORY_ART, AccessorySprite, CANVAS, renderAccessory, Size, SIZES } from './sprites/pixel/accessories';
 import { encodePng, SCALE } from './sprites/pixel/raster';
 import { bakeSheet, composeSheet, FRAME, upscale } from './sprites/pixel/sheet';
-import { Anchors, drawPockai, PIXEL_SPECIES, Slot } from './sprites/pixel/species';
+import { accessorySize, Anchors, drawPockai, PIXEL_SPECIES, Slot } from './sprites/pixel/species';
 
 const ROOT = resolve(__dirname, '..');
 const OUT = join(ROOT, 'shared', 'assets', 'accessories');
@@ -95,7 +95,6 @@ function writeContact(dir: string, entries: CatalogEntry[]): void {
   // Columnas: cada prenda por separado y, al final, un conjunto con las cuatro ranuras.
   const outfit = ['acc_capa_gala', 'acc_bufanda_menta', 'acc_gafas_estudio', 'acc_gorro_lana_azul'];
   const cols: string[][] = [...entries.map((e) => [e.id]), outfit];
-  const sizeOf: Record<Stage, Size> = { baby: 'S', juvenile: 'M', adult: 'L', final: 'L' };
   const rowsN = PIXEL_SPECIES.length * STAGES.length;
   const w = cols.length * FRAME;
   const h = rowsN * FRAME;
@@ -117,7 +116,7 @@ function writeContact(dir: string, entries: CatalogEntry[]): void {
         for (const slot of order) {
           for (const id of ids) {
             const a = ACCESSORY_ART[id];
-            if (a.slot === slot) overlay(out, w, ox, oy, renderAccessory(a, sizeOf[st]), anchors[slot], slot === 'back');
+            if (a.slot === slot) overlay(out, w, ox, oy, renderAccessory(a, accessorySize(sp, st) as Size), anchors[slot], slot === 'back');
           }
         }
       });

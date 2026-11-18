@@ -60,6 +60,12 @@ interface Hooks {
 export interface ImportedStage {
   legend: ({ role: Role; tone: Tone } | { lit: Rgb })[];
   frames: string[];
+  /** Anclas de accesorio de la pose de reposo, puestas a mano (`imported/anchors.json`). */
+  anchors?: Anchors;
+  /** Talla de accesorio de la etapa, si la cabeza no es la de un bípedo redondo. */
+  size?: 'S' | 'M' | 'L';
+  /** Anclas de cada pose clave, calculadas una vez siguiendo la cabeza y el lomo desde el reposo. */
+  poseAnchors?: Anchors[];
 }
 
 export interface PixelSpecies {
@@ -2185,6 +2191,112 @@ for (const sp of PIXEL_SPECIES) {
   const file = join(__dirname, 'imported', `${sp.id}.json`);
   if (existsSync(file)) sp.imported = JSON.parse(readFileSync(file, 'utf8')).stages;
 }
+// Anclas de accesorio del arte importado. La silueta no dice dónde está la cabeza (lo más alto puede
+// ser una llama, una flor o el chorro de una ballena), así que el reposo se anota a mano.
+{
+  const file = join(__dirname, 'imported', 'anchors.json');
+  const all = existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as Record<string, Record<Stage, Anchors & { size?: 'S' | 'M' | 'L' }>>) : {};
+  for (const sp of PIXEL_SPECIES) {
+    if (!sp.imported || !all[sp.id]) continue;
+    for (const st of Object.keys(sp.imported) as Stage[]) {
+      const { size, ...anchors } = all[sp.id][st];
+      sp.imported[st].anchors = anchors;
+      sp.imported[st].size = size;
+    }
+  }
+}
+
+/** Talla de accesorio de una etapa: la del arte importado si la fija, o la del boceto de formas. */
+export function accessorySize(sp: PixelSpecies, stage: Stage): 'S' | 'M' | 'L' {
+  return sp.imported?.[stage].size ?? sp.stages[stage].size;
+}
+
+/**
+ * Desplazamiento de un trozo del reposo dentro de otra pose: busca dónde encaja mejor el recorte de
+ * `2r+1` píxeles de lado centrado en `(cx, cy)`. Devuelve `null` si no encaja en ningún sitio
+ * (la pose ha cambiado demasiado, como al tumbarse).
+ */
+function trackPatch(from: string, to: string, cx: number, cy: number, r: number, guess: [number, number]): [number, number] | null {
+  const cells: [number, number, string][] = [];
+  let solid = 0;
+  for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) {
+    if (x < 0 || y < 0 || x >= N || y >= N) continue;
+    const ch = from[y * N + x];
+    if (ch === '.') continue;
+    cells.push([x, y, ch]);
+    solid++;
+  }
+  if (solid < 12) return null;
+  let best = { score: -Infinity, hits: 0, dx: 0, dy: 0 };
+  // Solo se busca cerca de `guess`: donde caería el punto si la silueta entera se hubiera movido o
+  // encogido a la vez. Buscar por todo el frame encuentra parecidos falsos (una hoja, la gorguera).
+  const gx = guess[0] - cx;
+  const gy = guess[1] - cy;
+  for (let dy = gy - 9; dy <= gy + 9; dy++) for (let dx = gx - 9; dx <= gx + 9; dx++) {
+    let hits = 0;
+    for (const [x, y, ch] of cells) {
+      const xx = x + dx;
+      const yy = y + dy;
+      const other = xx >= 0 && yy >= 0 && xx < N && yy < N ? to[yy * N + xx] : '.';
+      if (other === ch) hits++;
+    }
+    // A encaje parecido gana el desplazamiento más corto: las poses mueven la cabeza unos píxeles.
+    const score = hits - 0.4 * Math.hypot(dx - gx, dy - gy);
+    if (score > best.score) best = { score, hits, dx, dy };
+  }
+  return best.hits >= cells.length * 0.45 ? [best.dx, best.dy] : null;
+}
+
+/** Caja de la silueta de un frame importado. */
+function frameBox(frame: string): [number, number, number, number] {
+  let x0 = N;
+  let x1 = -1;
+  let y0 = N;
+  let y1 = -1;
+  for (let i = 0; i < N * N; i++) {
+    if (frame[i] === '.') continue;
+    const x = i % N;
+    const y = Math.floor(i / N);
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+  }
+  return [x0, y0, x1, y1];
+}
+
+/** Anclas de las diez poses clave: la cabeza (gorro, gafas y bufanda) y el lomo se siguen por separado. */
+function poseAnchorsOf(art: ImportedStage): Anchors[] {
+  if (art.poseAnchors) return art.poseAnchors;
+  const rest = art.anchors!;
+  const base = art.frames[0];
+  const [bx0, by0, bx1, by1] = frameBox(base);
+  art.poseAnchors = art.frames.map((frame, k) => {
+    if (k === 0) return rest;
+    const [x0, y0, x1, y1] = frameBox(frame);
+    // Sin encaje: la posición relativa dentro de la caja de la silueta.
+    const rel = (p: [number, number]): [number, number] => [
+      Math.round(x0 + ((p[0] - bx0) / Math.max(1, bx1 - bx0)) * (x1 - x0)),
+      Math.round(y0 + ((p[1] - by0) / Math.max(1, by1 - by0)) * (y1 - y0)),
+    ];
+    const head = trackPatch(base, frame, rest.face[0], rest.face[1], 8, rel(rest.face));
+    const back = trackPatch(base, frame, rest.back[0], rest.back[1], 7, rel(rest.back));
+    const move = (p: [number, number], d: [number, number] | null): [number, number] => (d ? [p[0] + d[0], p[1] + d[1]] : rel(p));
+    // Tumbada: la silueta ha perdido al menos un tercio de su altura.
+    const lying = y1 - y0 < (by1 - by0) * 0.68;
+    if (!head && lying) {
+      // La cabeza no se ha encontrado y la criatura se ha tumbado: el gorro se posa en lo más alto
+      // de la silueta en su columna, y gafas y bufanda conservan su distancia a él.
+      const hx = Math.max(x0, Math.min(x1, rel(rest.head)[0]));
+      let hy = y0;
+      for (let y = y0; y <= y1; y++) if (frame[y * N + hx] !== '.') { hy = y; break; }
+      const under = (p: [number, number]): [number, number] => [hx + (p[0] - rest.head[0]), Math.min(y1, hy + Math.round((p[1] - rest.head[1]) * ((y1 - y0) / Math.max(1, by1 - by0))))];
+      return { head: [hx, hy], face: under(rest.face), neck: under(rest.neck), back: move(rest.back, back) };
+    }
+    return { head: move(rest.head, head), face: move(rest.face, head), neck: move(rest.neck, head), back: move(rest.back, back ?? head) };
+  });
+  return art.poseAnchors;
+}
 
 /** Dibuja un frame: geometría de la etapa + pose + cara + efectos. */
 /**
@@ -2199,7 +2311,10 @@ function keyPose(p: Pose): number {
   if (p.eyes === 'sad' || p.eyes === 'cry' || p.tears > 0) return 7;
   if (p.eyes === 'angry') return 6;
   if (p.eyes === 'happy') return 4;
-  if (p.eyes === 'closed' || p.eyes === 'half') return 5;
+  // Ojos entornados sin estar dormida: cansancio, que se parece más a la pose triste que a tumbarse.
+  // Los ojos cerrados sueltos son un parpadeo o un apretón de ojos: se queda en la pose que tocaría,
+  // porque usar la de dormir tumbaba a la criatura un frame en mitad del reposo.
+  if (p.eyes === 'half') return 7;
   if (Math.abs(p.leg) > 0.05) return 2;
   return 0;
 }
@@ -2208,7 +2323,8 @@ function keyPose(p: Pose): number {
 function drawImported(art: ImportedStage, p: Pose): Drawn {
   const g = new Grid();
   p.fx.filter((f) => f.b).forEach((f) => drawFx(g, f));
-  const frame = art.frames[keyPose(p)] ?? art.frames[0];
+  const key = art.frames[keyPose(p)] ? keyPose(p) : 0;
+  const frame = art.frames[key];
   let x0 = N;
   let x1 = -1;
   let y0 = N;
@@ -2242,6 +2358,12 @@ function drawImported(art: ImportedStage, p: Pose): Drawn {
   const headX = Math.round(hx / Math.max(1, hn)) + dx;
   const top = y0 + dy;
   const h = y1 - y0 + 1;
+  if (art.anchors) {
+    const a = poseAnchorsOf(art)[key];
+    // Siempre dentro del frame: un ancla fuera dejaría la prenda cortada o sin pintar.
+    const at = (q: [number, number]): [number, number] => [Math.max(0, Math.min(N - 1, q[0] + dx)), Math.max(0, Math.min(N - 1, q[1] + dy))];
+    return { grid: g, anchors: { head: at(a.head), face: at(a.face), neck: at(a.neck), back: at(a.back) }, height: FLOOR - y0 };
+  }
   const anchors: Anchors = {
     head: [headX, top],
     face: [headX + 2, top + Math.round(h * 0.16)],
