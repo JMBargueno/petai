@@ -29,7 +29,7 @@ export const DESKTOP_SKILL_REGISTRY: DesktopSkillInfo[] = [
     requiredIntelligence: 1,
     defaultEnabled: true,
     sensitive: false,
-    active: 'Tu entrenador puede agarrarte con el ratón y lanzarte para que rebotes con físicas por la pantalla.',
+    active: 'Cuando tu entrenador te suelta con impulso sales lanzado y rebotas con físicas por la pantalla.',
     howTo: 'arrastrarme con el ratón y soltarme con impulso',
   },
   {

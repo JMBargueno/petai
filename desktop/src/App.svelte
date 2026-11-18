@@ -6,6 +6,7 @@
   import { startClickThrough } from './lib/clickthrough';
   import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
   import { initSummonShortcut } from './lib/summonShortcut';
+  import { setActiveSkillsPet } from './lib/stores/desktopSkillsStore';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
   import { speak, clearSpeech, MAX_AI_CHUNKS, type SpeakOptions } from './lib/speech-queue';
   import {
@@ -91,6 +92,14 @@
    * Solo si es una elección guardada en este equipo: uno recién instalado (sin elección) mostraría
    * la primera mascota y pisaría la que el jugador eligió en otro.
    */
+  // Las habilidades de escritorio son de cada mascota: se cargan al cambiar la activa (no al
+  // refrescarse sus datos, que pisaría un cambio hecho aquí que el servidor aún no ha guardado).
+  let skillsPetId: string | null = null;
+  $: if ((currentPet?.id ?? null) !== skillsPetId) {
+    skillsPetId = currentPet?.id ?? null;
+    setActiveSkillsPet(skillsPetId, currentPet?.desktopSkills);
+  }
+
   let syncedActivePetId: string | null = null;
   $: if (user && currentPet?.id && currentPet.id !== syncedActivePetId && currentPet.id === loadActivePetId()) {
     const id = currentPet.id;
