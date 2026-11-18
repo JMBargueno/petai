@@ -4974,6 +4974,16 @@ export interface components {
             cached: boolean;
             /** @description ISO 8601 del último (re)obtenimiento */
             fetchedAt: string | null;
+            /**
+             * @description Salida del sol de hoy, hora local ("HH:MM")
+             * @example 07:58
+             */
+            sunrise: string | null;
+            /**
+             * @description Puesta de sol de hoy, hora local ("HH:MM")
+             * @example 17:54
+             */
+            sunset: string | null;
         };
         ActivityInfoModel: {
             /** @description ¿Hay un heartbeat reciente? */

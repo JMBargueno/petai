@@ -77,6 +77,9 @@ private fun FurnitureIcon(id: String, size: androidx.compose.ui.unit.Dp) {
     )
 }
 
+/** Cada cuánto se vuelve a pedir el clima (el servidor lo cachea 30 min). */
+private const val AMBIENCE_REFRESH_MS = 15 * 60_000L
+
 private val BUFF_LABELS = mapOf(
     "hygiene_decay_reduction" to "Higiene decae menos",
     "happiness_decay_reduction" to "Felicidad decae menos",
@@ -128,6 +131,16 @@ fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onCha
     }
 
     LaunchedEffect(Unit) { loadAll() }
+
+    // Clima y sol reales para el cielo de la sala; se refresca mientras la pantalla está abierta.
+    // Si falla (sin red), la sala sigue con el ciclo de hora del dispositivo y cielo despejado.
+    LaunchedEffect(Unit) {
+        while (true) {
+            runCatching { service.environmentalStatus() }
+                .onSuccess { scene.send(SceneMessages.setAmbience(it.weather)) }
+            delay(AMBIENCE_REFRESH_MS)
+        }
+    }
 
     // Visitas en vivo: un pet de un amigo entra/sale de tu hábitat.
     LaunchedEffect(Unit) {

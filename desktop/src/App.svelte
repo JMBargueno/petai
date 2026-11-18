@@ -13,6 +13,8 @@
     startHeartbeat,
     requestOptInCoordinates,
     saveCoordinates,
+    environmentalStatus,
+    STATUS_REFRESH_MS,
     type EnvironmentalStatus,
     type EnvironmentalChangedEvent,
   } from './lib/environmental';
@@ -208,6 +210,9 @@
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
   let environmental: EnvironmentalStatus | null = null;
   let stopHeartbeat: () => void = () => {};
+  let stopEnvRefresh: () => void = () => {};
+  // Las salas del hábitat leen el clima y el sol de este store.
+  $: environmentalStatus.set(environmental);
   let stopContextDigest: () => void = () => {};
 
   /** Única vía de habla: todo lo que dice la mascota pasa por la cola de `speech-queue`. */
@@ -358,6 +363,10 @@
         setupCoordinates(); // geolocalización opt-in → clima real
         loadEnvironmental(); // estado inicial
         stopHeartbeat = startHeartbeat(); // heartbeat cada 60 s
+        // El clima cambia a lo largo del día: sin este refresco solo se leía al arrancar.
+        stopEnvRefresh();
+        const envTimer = setInterval(loadEnvironmental, STATUS_REFRESH_MS);
+        stopEnvRefresh = () => clearInterval(envTimer);
         stopContextDigest();
         // Hábitos de escritorio: contador local y resumen diario al servidor (lib/contextDigest.ts)
         stopContextDigest = startContextDigest(() => currentPet?.id ?? null, api.sendContextDigest);
@@ -426,6 +435,7 @@
     closeSocket();
     welcomeChecked = false;
     stopHeartbeat();
+    stopEnvRefresh();
     stopContextDigest();
     user = null;
     currentPet = null;
@@ -625,6 +635,7 @@
     clearInterval(needsPoll);
     clearSpeech();
     stopHeartbeat();
+    stopEnvRefresh();
     stopClickThrough();
     stopSessionExpired();
     stopEmailUnverified();

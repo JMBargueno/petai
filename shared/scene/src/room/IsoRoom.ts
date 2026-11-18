@@ -16,6 +16,8 @@ import { findPath, type Cell } from '../iso/pathfind';
 import { PetSprite } from '../pet/PetSprite';
 import { furnitureMeta, loadFurnitureTexture, type Orientation } from './furnitureAssets';
 import { SLAB, sparkle, styleFor, WALL_H, type Twinkle } from './roomStyles';
+import { toHexString, type SkyState } from '../ambience/sunClock';
+import { isWet, type WeatherLook } from '../ambience/weather';
 
 export { WALL_H } from './roomStyles';
 // Pixel art (GUIA_ARTISTICA §7.5): la hoja va a ×2, así que 0,5 deja 1 px nativo = 1 px de sala.
@@ -33,6 +35,13 @@ const DEFAULT_THEME: RoomTheme = {
 };
 
 const NIGHT_TINT = 0x1b1846;
+/** Con las luces apagadas (el Pockai duerme) la sala queda al menos así de oscura. */
+const SLEEP_ALPHA = 0.42;
+/** En modo edición la luz del día no debe estorbar al colocar muebles. */
+const EDIT_TINT_MAX = 0.15;
+/** Celdas del fondo donde el Pockai se resguarda de la lluvia (bajo el árbol del jardín). */
+const SHELTER = 4;
+const STARTLE_EVERY_MS = 20_000;
 const TWINKLE = 0xfff8e6;
 const OK = 0x55db9c;
 const BAD = 0xfb4903;
@@ -78,6 +87,11 @@ export class IsoRoom extends Container {
 
   private activity: Activity = 'idle';
   private isNight = false;
+  /** Cielo y clima actuales (los pone `Ambience`); sin ellos la sala se ve como de día. */
+  private sky: SkyState | null = null;
+  private look: WeatherLook | null = null;
+  private skyKey = '';
+  private startleMs = 0;
   private edit = false;
   private selected: string | null = null;
 
@@ -153,6 +167,29 @@ export class IsoRoom extends Container {
     this.drawNight();
   }
 
+  /**
+   * Hora y clima: ajusta la luz de la sala y el color de sus ventanas. La carcasa solo se redibuja
+   * cuando el color cambia de forma apreciable (se cuantiza), no en cada aviso.
+   */
+  setSky(sky: SkyState, look: WeatherLook): void {
+    this.sky = sky;
+    this.look = look;
+    const q = (c: number) => c & 0xf8f8f8;
+    const key = `${q(sky.glass)}:${q(sky.light)}`;
+    if (key !== this.skyKey) {
+      this.skyKey = key;
+      this.drawShell();
+    } else this.drawNight();
+  }
+
+  /** Un rayo: si el Pockai está quieto y despierto, se asusta (como mucho cada 20 s). */
+  startle(): void {
+    if (this.activity !== 'idle' || this.path.length || this.using || this.staysPut || this.startleMs > 0) return;
+    this.startleMs = STARTLE_EVERY_MS;
+    this.pet.play('sad', true);
+    this.waitMs = Math.max(this.waitMs, 2200);
+  }
+
   setEditMode(edit: boolean): void {
     this.edit = edit;
     for (const pf of this.placed.values()) {
@@ -161,6 +198,7 @@ export class IsoRoom extends Container {
     }
     if (!edit) this.select(null);
     this.drawOverlay();
+    this.drawNight();
   }
 
   select(itemId: string | null): void {
@@ -199,7 +237,13 @@ export class IsoRoom extends Container {
   // ───────────────────────── Dibujo ─────────────────────────
 
   private theme(): RoomTheme {
-    return { ...DEFAULT_THEME, ...(this.room?.theme ?? {}) };
+    const t = { ...DEFAULT_THEME, ...(this.room?.theme ?? {}) };
+    // Las ventanas enseñan el cielo de ahora y la luz que entra es la del sol o la luna.
+    if (this.sky && !styleFor(this.room?.id).ownSky) {
+      t.sky = toHexString(this.sky.glass);
+      t.light = toHexString(this.sky.light);
+    }
+    return t;
   }
 
   /** Límites en píxeles de la sala (para encajarla en el lienzo). */
@@ -234,11 +278,35 @@ export class IsoRoom extends Container {
   private drawNight(): void {
     const g = this.night;
     g.clear();
-    if (!this.isNight || !this.room) return;
+    if (!this.room) return;
     // Rectángulo que cubre la sala, recortado por la máscara a la silueta de la carcasa: el tinte
     // no oscurece el fondo de alrededor, tenga la sala la forma que tenga (setos, árbol, cristales).
     const b = this.bounds();
-    g.rect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY).fill({ color: NIGHT_TINT, alpha: 0.42 });
+    const cover = (color: number, alpha: number) =>
+      g.rect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY).fill({ color, alpha });
+    // Luz de la hora y del clima (la Cita Final, con cielo propio, recibe la mitad).
+    let lit = 0;
+    if (this.sky) {
+      lit = this.sky.tintAlpha * (styleFor(this.room.id).ownSky ? 0.5 : 1);
+      if (this.edit) lit = Math.min(lit, EDIT_TINT_MAX);
+      if (lit > 0.005) cover(this.sky.tint, lit);
+    }
+    // Luces apagadas porque duerme: se oscurece lo que falte hasta la penumbra de siempre.
+    if (this.isNight && lit < SLEEP_ALPHA) cover(NIGHT_TINT, SLEEP_ALPHA - lit * 0.6);
+  }
+
+  /** ¿Está el Pockai a la intemperie con lluvia o nieve? */
+  private get sheltering(): boolean {
+    return !!this.look && isWet(this.look) && !!styleFor(this.room?.id).exterior;
+  }
+
+  /** Cuánto se alargan las pausas entre paseos: de noche, con calor o resguardado, va con calma. */
+  private get calm(): number {
+    let k = 1;
+    if (this.sky && this.sky.daylight < 0.25) k *= 1.8;
+    if (this.look?.feel === 'hot') k *= 1.5;
+    if (this.sheltering) k *= 2;
+    return k;
   }
 
   /** Estrellas que titilan (solo en las salas que las tienen y sin movimiento reducido). */
@@ -513,14 +581,31 @@ export class IsoRoom extends Container {
   private wander(): void {
     if (!this.room) return;
     this.using = false;
+    const blocked = this.blockedCells();
+    const here = this.petCell();
+    if (this.sheltering) {
+      // Llueve o nieva en el jardín: se queda al fondo, bajo el árbol.
+      for (let tries = 0; tries < 12; tries++) {
+        const x = Math.min(this.room.gridWidth - 1, Math.floor(Math.random() * SHELTER));
+        const y = Math.min(this.room.gridHeight - 1, Math.floor(Math.random() * SHELTER));
+        if ((x !== here.x || y !== here.y) && !blocked.has(`${x},${y}`) && this.goTo({ x, y })) return;
+      }
+      this.waitMs = 3000;
+      return;
+    }
+    // Con buen tiempo y de día, de vez en cuando se alegra.
+    const sunny = !!this.sky && !!this.look && this.sky.daylight > 0.8 && this.look.cover < 0.5 && this.look.feel !== 'hot';
+    if (sunny && Math.random() < 0.15) {
+      this.pet.play('happy', true);
+      this.waitMs = 2400;
+      return;
+    }
     // A veces usa un mueble (jugar, sentarse, bañarse); si no, pasea a una celda libre cercana.
     if (Math.random() < 0.3) {
       const kinds: Interaction[] = ['play', 'sit', 'bathe', 'eat'];
       const kind = kinds[Math.floor(Math.random() * kinds.length)];
       if (this.useFurniture(kind, false)) return;
     }
-    const blocked = this.blockedCells();
-    const here = this.petCell();
     for (let tries = 0; tries < 12; tries++) {
       const x = Math.max(0, Math.min(this.room.gridWidth - 1, here.x + Math.round((Math.random() - 0.5) * 8)));
       const y = Math.max(0, Math.min(this.room.gridHeight - 1, here.y + Math.round((Math.random() - 0.5) * 8)));
@@ -531,6 +616,7 @@ export class IsoRoom extends Container {
 
   update(ticker: Ticker): void {
     const dt = ticker.deltaMS;
+    if (this.startleMs > 0) this.startleMs -= dt;
     if (this.room) this.drawAmbient(dt);
     if (!this.room || this.activity === 'away') return;
 
@@ -556,7 +642,7 @@ export class IsoRoom extends Container {
         const cb = this.onArrive;
         this.onArrive = null;
         this.pet.setBaseClip(this.activity === 'sleep' && !cb ? 'sleep' : this.restClip);
-        this.waitMs = 1500 + Math.random() * 3000;
+        this.waitMs = (1500 + Math.random() * 3000) * this.calm;
         cb?.();
       }
       return;

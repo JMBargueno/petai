@@ -3,6 +3,7 @@ package com.petai.app.ui.scene
 import com.petai.app.data.HabitatFurniture
 import com.petai.app.data.HabitatRoom
 import com.petai.app.data.Pet
+import com.petai.app.data.WeatherInfo
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -95,6 +96,33 @@ object SceneMessages {
     fun setNight(night: Boolean): JsonObject = buildJsonObject {
         put("type", "setNight")
         put("night", night)
+    }
+
+    /**
+     * Clima y sol reales para el cielo de la sala. La hora la pone el reloj del dispositivo dentro
+     * de la escena; sin dato de clima o de sol se dibuja despejado con horas de sol por defecto.
+     */
+    fun setAmbience(weather: WeatherInfo?): JsonObject = buildJsonObject {
+        put("type", "setAmbience")
+        if (weather == null) {
+            put("weather", JsonNull)
+            put("sun", JsonNull)
+            return@buildJsonObject
+        }
+        putJsonObject("weather") {
+            put("code", weather.weatherCode)
+            put("temperature", weather.temperature)
+        }
+        val sunrise = weather.sunrise
+        val sunset = weather.sunset
+        if (sunrise != null && sunset != null) {
+            putJsonObject("sun") {
+                put("sunrise", sunrise)
+                put("sunset", sunset)
+            }
+        } else {
+            put("sun", JsonNull)
+        }
     }
 
     fun setEditMode(edit: Boolean): JsonObject = buildJsonObject {

@@ -458,7 +458,12 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/reminders\/due$/, () => []],
   ['GET', /^\/reminders$/, () => [{ id: 'rem-1', text: 'Beber agua', dueAt: iso(2 * HOUR) }]],
   ['DELETE', /^\/reminders\/[^/]+$/, () => ({ ok: true })],
-  ['GET', /^\/environmental\/status$/, () => ({})],
+  ['GET', /^\/environmental\/status$/, () => ({
+    timeOfDay: 'afternoon',
+    weather: { condition: 'clear', temperature: 18, weatherCode: 2, cached: false, fetchedAt: iso(0), sunrise: '07:45', sunset: '18:05' },
+    activity: { active: true, mode: 'active', lastActiveAt: iso(0) },
+    festival: null,
+  })],
   ['GET', /^\/minigames$/, () => [
     { id: 'catch_food', name: 'Atrapa la comida', durationSeconds: 30, maxCoins: 60, maxXp: 40, energyCost: 5 },
     { id: 'memory_match', name: 'Parejas', durationSeconds: 45, maxCoins: 80, maxXp: 50, energyCost: 5 },
