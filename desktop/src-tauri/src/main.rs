@@ -9,9 +9,33 @@ use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager, State,
+    Emitter, Manager, State, WindowEvent,
 };
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt as AutostartExt};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+
+/// Muestra y enfoca la ventana principal (bandeja, segunda instancia…).
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+/// La primera vez que se ejecuta la app se activa «Iniciar con Windows». Un marcador en la carpeta
+/// de configuración evita reactivarlo si el usuario lo desactiva después en Ajustes › Aplicación.
+fn enable_autostart_on_first_run(app: &tauri::AppHandle) {
+    let Ok(dir) = app.path().app_config_dir() else { return };
+    let marker = dir.join("autostart-initialized");
+    if marker.exists() {
+        return;
+    }
+    if app.autolaunch().enable().is_ok() {
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::write(&marker, b"1");
+    }
+}
 
 /// Rectángulo interactivo en píxeles CSS (coordenadas del viewport del webview).
 #[derive(Clone, Copy, Deserialize)]
@@ -227,6 +251,15 @@ fn spawn_click_through_loop(app: tauri::AppHandle) {
 
 fn main() {
     tauri::Builder::default()
+        // Debe ir primero: si ya hay una instancia (p. ej. oculta en la bandeja), se muestra esa
+        // en vez de abrir otra.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            show_main_window(app);
+        }))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec!["--autostart"]),
+        ))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_http::init())
@@ -253,7 +286,19 @@ fn main() {
             ai_cli::cancel_ai_cli,
             ai_cli::detect_ai_cli
         ])
+        // Cerrar la ventana (Alt+F4, «Cerrar ventana» en la barra de tareas) solo la oculta: Pockai
+        // sigue en la bandeja. Para salir del todo, menú de la bandeja › «Salir de Pockai».
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .setup(|app| {
+            enable_autostart_on_first_run(app.handle());
+
             // La ventana transparente cubre el área útil del monitor (sin tapar la
             // barra de tareas) para que la mascota pueda moverse por toda la pantalla.
             if let Some(window) = app.get_webview_window("main") {
@@ -309,11 +354,7 @@ fn main() {
                         ..
                     } = event
                     {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
+                        show_main_window(tray.app_handle());
                     }
                 })
                 .build(app)?;

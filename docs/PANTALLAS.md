@@ -496,11 +496,11 @@ Estado actual de lo ya construido en el panel:
 - Permitir a la mascota proponer **abrir un enlace** y **leer el portapapeles**. Cada uso muestra una tarjeta de confirmación con el destino exacto.
 - En Ajustes: interruptor independiente para cada herramienta, desactivadas por defecto.
 
-**Ajustes › Escritorio** · ⬜ · P1
+**Ajustes › Escritorio** · 🟡 · P1 (hecho: iniciar con el sistema; al cerrar la ventana la app sigue en la bandeja)
 
 | Opción | Descripción |
 |---|---|
-| Iniciar con el sistema | Arranque automático |
+| Iniciar con el sistema | Arranque automático (✅ activado por defecto la primera vez) |
 | Monitor | En cuál vive la mascota cuando hay varios |
 | Tamaño de la mascota | Pequeño, mediano, grande |
 | Siempre visible | Mantener por encima de las demás ventanas |

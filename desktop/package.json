@@ -17,6 +17,7 @@
     "@fontsource/bowlby-one": "^5.3.0",
     "@pockai/scene": "workspace:*",
     "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-autostart": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
     "@tauri-apps/plugin-http": "^2.9.0",
     "@tauri-apps/plugin-notification": "^2.8.1",
