@@ -31,8 +31,12 @@ export interface EyeSpec {
    *   bead    cuenta pequeña de 3 px: criaturas grandes de ojo diminuto
    *   lid     párpado caído: la mitad superior queda tapada, mirada tranquila
    *   grumpy  párpado caído con ceja inclinada hacia el centro: mirada de gruñón
+   *   almond  rasgado: más bajo y con las esquinas opuestas recortadas, mirada de ave
+   *   lash    el ojo por defecto con una pestaña hacia fuera: mirada dulce
+   *   shine   el ojo por defecto con un segundo brillo abajo: ojos de cachorro
+   *   fierce  el borde de arriba cae hacia el centro de la cara: mirada fiera
    */
-  style?: 'bead' | 'lid' | 'grumpy';
+  style?: 'bead' | 'lid' | 'grumpy' | 'almond' | 'lash' | 'shine' | 'fierce';
 }
 
 function eye(g: Grid, x: number, y: number, w: number, h: number, kind: Eyes, glint: number, near: boolean, look: number, style?: EyeSpec['style']): void {
@@ -63,6 +67,44 @@ function eye(g: Grid, x: number, y: number, w: number, h: number, kind: Eyes, gl
     g.rect(x, yy + 1, w, hh - 2, EYE);
     g.rect(x + (w > 2 ? 1 : 0), yy, Math.max(1, w - 2), hh, EYE);
   };
+  if (style === 'fierce' && opened) {
+    for (let k = 0; k < w; k++) {
+      const t01 = w > 1 ? k / (w - 1) : 0;
+      const drop = Math.round((near ? t01 : 1 - t01) * 2);
+      const edge = w > 2 && (k === 0 || k === w - 1) ? 1 : 0;
+      g.rect(x + k, y + drop, 1, Math.max(1, h - drop - edge), EYE);
+    }
+    g.put(x + (near ? 0 : w - 1), y + 1, WHITE);
+    // Ceja gruesa que cae hacia el centro, separada del ojo por 1 px.
+    for (let k = -1; k <= w; k++) {
+      const t01 = (k + 1) / (w + 1);
+      g.put(x + k, y - 2 + Math.round((near ? t01 : 1 - t01) * 3), EYE);
+    }
+    return;
+  }
+  if (style === 'almond' && opened) {
+    // Rasgado: sube por el lado de fuera y baja por el de dentro.
+    const top = y + 1;
+    const hh = h - 2 + (kind === 'wide' ? 1 : 0);
+    g.rect(x, top + 1, w, hh - 2, EYE);
+    g.rect(near ? x : x + 1, top, w - 1, 1, EYE);
+    g.rect(near ? x + 1 : x, top + hh - 1, w - 1, 1, EYE);
+    g.put(x + 1, top + 1, WHITE);
+    return;
+  }
+  if ((style === 'lash' || style === 'shine') && opened) {
+    const yy = kind === 'wide' ? y - 1 : y;
+    const hh = kind === 'wide' ? h + 1 : h;
+    round(yy, hh);
+    g.rect(x + 1, yy + 1, glint, glint, WHITE);
+    if (style === 'shine' && w > 2) g.put(x + w - 2, yy + hh - 2, WHITE);
+    if (style === 'lash') {
+      const ox = near ? x - 1 : x + w;
+      g.put(ox, yy, EYE);
+      g.put(ox + (near ? -1 : 1), yy - 1, EYE);
+    }
+    return;
+  }
   switch (kind) {
     case 'closed':
       g.rect(x, mid, w, 1, EYE);
@@ -164,7 +206,7 @@ export function drawFace(g: Grid, e: EyeSpec, o: FaceOpts): { face: [number, num
   const look = Math.max(-1, Math.min(1, Math.round(o.look / 2)));
   eye(g, x1, y1, e.w1, e.h, o.eyes, e.glint, true, look, e.style);
   eye(g, x2, y2, e.w2, e.h, o.eyes, 1, false, look, e.style);
-  if (o.brow && e.style !== 'grumpy' && (o.eyes === 'open' || o.eyes === 'wide')) {
+  if (o.brow && e.style !== 'grumpy' && e.style !== 'fierce' && (o.eyes === 'open' || o.eyes === 'wide')) {
     g.rect(x1 - 1, y1 - 2, e.w1 + 1, 1, o.browColor);
     g.put(x1 + e.w1, y1 - 1, o.browColor);
     g.rect(x2, y2 - 2, e.w2 + 1, 1, o.browColor);

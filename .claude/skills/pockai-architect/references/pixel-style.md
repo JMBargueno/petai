@@ -19,10 +19,13 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Antes de pensar en 
 | Bípedo redondo | De pie, cabeza grande sobre torso, brazos cortos | La geometría común de `stage()` tal cual | Ignisaurio, Axolunar, Florabrote, Solarejo |
 | Bípedo alado | Bípedo con alas que doblan su anchura | `lowered()` y alas en `behind` | Livolt |
 | Tentacular | Cuerpo con manto y apoyos múltiples, sin brazos | `arm: undefined` y tentáculos en `behind` | Inktopus |
-| Cuadrúpedo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas | `torso` horizontal, `head` a la derecha, patas traseras con `hindFar` (en `behind`) y `hindNear` (en `front`) | Magmadillo |
+| Cuadrúpedo bajo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas cortas | `torso` horizontal, `head` a la derecha, patas traseras con `hindFar` (en `behind`) y `hindNear` (en `front`) | Magmadillo |
+| Cuadrúpedo sentado de tres cabezas | Grupa en el suelo, patas delanteras rectas y tres cabezas en abanico; solo la central lleva cara y accesorios | `torso` vertical, `sitting()` en `front`, cabezas laterales con `sideHead()` en `behind` | Cerbito |
+| Cuadrúpedo esbelto | Patas largas y finas, cuello alto, hocico; el cuerpo queda lejos del suelo | `feet: undefined`, cuatro `longLeg` (dos en `behind`, dos en `front`), cuello como polígono de la pieza 4, `muzzle()` | Kirisol |
+| Ave de cuello largo | Sin brazos: alas. Cabeza pequeña, cuello largo, pico y patas finas con garras | `arm` y `feet` en `undefined`, `beak()`, `longNeck()`, `talon()` y `fan()` de plumas en punta | Fénixel |
 | Flotante | Sin patas ni apoyos: el cuerpo queda en el aire, a unos 6 px del suelo | `feet: undefined`, `head: undefined`, `arm: undefined`, aleta al costado en `front`, ancla `hat` | Nubeballena |
 | Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | `head: undefined` en las 4 etapas, ramas con la pieza del tronco | Cactuerno |
-| Serpentino, ave, insecto, etc. | Libres | Combina lo anterior | — |
+| Serpentino, árbol, insecto, etc. | Libres | Combina lo anterior | — |
 
 Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo cuatro de siete**):
 
@@ -32,7 +35,7 @@ Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo cuatro de s
 - **Extremidades:** brazos, aletas, alas, ramas o ninguna.
 - **Rasgo icónico:** dónde sale (cabeza, lomo, cola, costados) y qué forma tiene.
 - **Contorno:** liso, dentado, lobulado o con placas.
-- **Cara:** la forma del ojo (`eye.style`), su tamaño y dónde cae en el cuerpo. Estilos: por defecto (alto y redondeado), `bead` (cuenta de 3 px: criaturas grandes de ojo diminuto, como la Nubeballena), `lid` (párpado caído y tranquilo, como el Magmadillo) y `grumpy` (párpado caído con ceja inclinada, como el Cactuerno). Elige el que cuente su carácter y no repitas el de las especies de su misma rareza. Si ninguno encaja, añade un estilo en `scripts/sprites/pixel/face.ts`.
+- **Cara:** la forma del ojo (`eye.style`), su tamaño y dónde cae en el cuerpo. Estilos: por defecto (alto y redondeado), `bead` (cuenta de 3 px: criaturas grandes de ojo diminuto, como la Nubeballena), `lid` (párpado caído y tranquilo, como el Magmadillo) `grumpy` (párpado caído con ceja inclinada, como el Cactuerno), `almond` (rasgado, de ave, como Fénixel), `shine` (doble brillo de cachorro, como el Cerbito de cría), `fierce` (borde caído hacia el centro y ceja gruesa, como el Cerbito adulto) y `lash` (con pestaña, como Kirisol). Elige el que cuente su carácter y no repitas el de las especies de su misma rareza. Si ninguno encaja, añade un estilo en `scripts/sprites/pixel/face.ts`.
 
 **La anatomía tiene que tener sentido.** Cada pieza responde a qué animal es: una ballena no tiene pies ni nada que cuelgue bajo el cuerpo y se lea como tal; un pulpo no tiene brazos; un cactus no tiene cola. Antes de dar por buena una hoja, pregúntate por cada pieza: «¿esto lo tendría el animal de verdad?». Lo que la geometría común trae y la criatura no tendría, se quita con `undefined`.
 
@@ -82,6 +85,8 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta.
 - Una especie que es el bípedo redondo de siempre con otro adorno en la cabeza.
 - Piezas heredadas de la geometría común que el animal no tendría: pies en una ballena, brazos en un pulpo. También apoyos o aletas colocados bajo el cuerpo, que se leen como pies.
 - La misma cara en todas las especies: mismos ojos, mismo tamaño, misma altura.
+- Una criatura que debería imponer (un fénix, un guardián) dibujada con proporciones de cría: cabeza grande y redonda sobre un cuerpo de bola. Lo épico sale de la proporción: cabeza pequeña, cuello o patas largas y piezas (alas, colas) más grandes que el cuerpo.
+- Un carácter que la cara no cuenta: una especie fiera necesita cejas, colmillos u orejas tiesas, no los ojos redondos de todas.
 - Etapas que solo cambian de tamaño o de proporción de cabeza.
 - Un baby que ya tiene todas las piezas del adulto en pequeño.
 - Una etapa final cuyo extra queda dentro del cuerpo y no altera la silueta.

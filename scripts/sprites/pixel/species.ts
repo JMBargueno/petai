@@ -907,7 +907,440 @@ const CACTUERNO: PixelSpecies = {
   },
 };
 
-export const PIXEL_SPECIES: PixelSpecies[] = [IGNISAUR, AXOLUNAR, FLORABUD, LIVOLT, INKTOPUS, SOLAREJO, MAGMADILLO, NUBEBALLENA, CACTUERNO];
+// ───────────────────────── Fénixel (fuego, legendario) ─────────────────────────
+// Plan corporal: AVE de cuello largo. Sin brazos: alas de llama que se abren. Pico, patas finas y
+// plumas en punta. Rasgo icónico: las alas y la cola de plumas de fuego. Segundo rasgo: la cresta.
+
+/** Pico: triángulo bajo los ojos, donde cae la boca. */
+function beak(g: Grid, e: EyeSpec, size = 1): void {
+  const mx = (e.x1 + e.w1 + e.x2) / 2 + 1;
+  const my = e.y + e.h + e.gap;
+  g.poly(30, 'belly', [[mx - 3 * size, my - 1.5], [mx + 3 * size, my - 1.5], [mx + 0.5, my + 3.5 * size]], { flat: true });
+}
+
+/** Abanico de mechones redondeados que sale de un punto (crines y colas). */
+const plumes = (g: Grid, part: number, x: number, y: number, fan: [number, number][], tip = false) =>
+  fan.forEach(([len, deg]) => gill(g, part, x, y, len, deg, tip));
+
+/** Pluma de fuego: rombo alargado que acaba en punta (grados como `gill`: 0 = izquierda, 90 = arriba). */
+function feather(g: Grid, part: number, x: number, y: number, len: number, deg: number, w = 2.2): void {
+  const r = (deg * Math.PI) / 180;
+  const dx = -Math.cos(r);
+  const dy = -Math.sin(r);
+  const nx = -dy;
+  const ny = dx;
+  const at = (t: number, k: number): [number, number] => [x + dx * len * t + nx * w * k, y + dy * len * t + ny * w * k];
+  g.poly(part, 'trait', [at(0, 0.45), at(0.4, 1), at(0.75, 0.7), at(1, 0), at(0.75, -0.7), at(0.4, -1), at(0, -0.45)]);
+}
+
+/**
+ * Ala, cola o cresta: abanico de plumas en punta. Cada pluma es una pieza, así que el contorno las
+ * separa. `cover` tapa el arranque con plumón del color del cuerpo.
+ */
+function fan(g: Grid, part: number, x: number, y: number, feathers: [number, number][], w = 2.2, cover = 0): void {
+  feathers.forEach(([len, deg], i) => feather(g, part * 10 + 200 + i, x, y, len, deg, w));
+  if (cover) {
+    const mid = feathers.reduce((acc, [, d]) => acc + d, 0) / feathers.length;
+    const r = (mid * Math.PI) / 180;
+    g.ellipse(part * 10 + 209, 'skin', x - Math.cos(r) * cover * 0.7, y - Math.sin(r) * cover * 0.7, cover, cover * 0.62, { rot: mid });
+  }
+}
+
+/** Pata de ave: caña fina y garra oscura; da el paso con la pose. */
+function talon(g: Grid, part: number, p: Pose, x: number, top: number, phase: number, far: boolean): void {
+  const t = step(p, [x + 0.8, 58, 2.6, 1.5], phase);
+  g.poly(part, 'belly', [[x - 0.9, top], [x + 0.9, top], [t[0] + 0.1, t[1]], [t[0] - 1.7, t[1]]], far ? { flat: true, tone: 'shade' } : { flat: true });
+  g.ellipse(part, 'mark', t[0], t[1], t[2], t[3], { flat: true });
+}
+
+/** Cuello largo de fénix: se funde con el cuerpo (pieza 4) y sube hasta la cabeza. */
+const longNeck = (g: Grid, x0: number, y0: number, x1: number, y1: number, w: number) =>
+  g.poly(4, 'body', [[x0 - w, y0 - w * 0.4], [x0 + w * 0.9, y0 + w * 0.8], [x1 + w, y1 + w * 0.3], [x1 - w, y1 - w * 0.5]]);
+
+const BIRD = { arm: undefined, farArm: undefined, marks: undefined, feet: undefined };
+
+const FENIXEL: PixelSpecies = {
+  id: 'fenixel',
+  stages: {
+    // Un ascua dentro del cascarón: solo asoman la cabeza, el pico y la primera llama.
+    baby: stage('baby', {
+      feet: undefined,
+      torso: [31.5, 47.5, 11.5, 10.5],
+      eye: { ...BASE.baby.eye, y: 41, style: 'almond' },
+      cheek: [27, 47],
+      onHead: (g, s, p) => {
+        beak(g, s.eye, 0.8);
+        appendage(g, p, 31.5, 38, () => fan(g, 5, 31.5, 38.5, [[5.5, 90], [4, 58], [4, 122]], 1.6));
+      },
+      front: (g) =>
+        g.poly(31, 'belly', [[19.5, 51.5], [22.5, 48.5], [25.5, 51.5], [28.5, 48.5], [31.5, 51.5], [34.5, 48.5], [37.5, 51.5], [40.5, 48.5], [43.5, 51.5], [42.5, 56], [38, 59.5], [25, 59.5], [20.5, 56]]),
+    }),
+    // Volantón: cuerpo de gota sobre patas finas, alas ya alzadas y tres plumas de cola.
+    juvenile: stage('juvenile', {
+      ...BIRD,
+      torso: [32, 42.5, 9, 10],
+      belly: [34, 46, 5.5, 5.5],
+      eye: { ...BASE.juvenile.eye, y: 37, x1: 30, x2: 38, w1: 3, h: 4, style: 'almond' },
+      neck: [32.5, 47.5],
+      back: [22, 42],
+      behind: (g, _s, p) => {
+        tail(g, p, 24, 48, () => fan(g, 12, 24, 48, [[13, 8], [12, -16], [10, 30]], 1.9));
+        appendage(g, p, 24, 40, () => fan(g, 20, 24, 40, [[15, 66], [14, 44], [11, 22]], 2, 3));
+        appendage(g, p, 40, 41, () => fan(g, 21, 40, 41, [[12, 118], [11, 142]], 1.9, 2.6));
+        talon(g, 2, p, 29.5, 50.5, -p.leg, true);
+      },
+      onHead: (g, s, p) => {
+        beak(g, s.eye, 0.9);
+        appendage(g, p, 31, 33, () => fan(g, 5, 31, 33.5, [[8, 62], [6.5, 38], [6, 88]], 1.6));
+      },
+      front: (g, _s, p) => talon(g, 7, p, 34.5, 51, p.leg, false),
+    }),
+    // Fénix joven: cabeza pequeña sobre un cuello largo, alas a medio abrir y cola larga.
+    adult: stage('adult', {
+      ...BIRD,
+      torso: [28, 44, 9.5, 7.5],
+      head: [38, 27, 8, 7.5],
+      belly: [30, 46.5, 6, 4.5],
+      brow: true,
+      eye: { ...BASE.adult.eye, y: 24, x1: 34, x2: 42, w1: 4, w2: 3, h: 5, style: 'almond' },
+      neck: [35.5, 37],
+      back: [19, 41],
+      behind: (g, _s, p) => {
+        tail(g, p, 20, 46, () => fan(g, 12, 20, 46, [[17, 10], [16, -12], [14, 30], [12, -32]], 2.1));
+        appendage(g, p, 24, 41, () => fan(g, 20, 24, 41, [[21, 66], [20, 48], [17, 30], [13, 12]], 2.4, 4));
+        appendage(g, p, 35, 42, () => fan(g, 21, 35, 42, [[17, 116], [16, 134], [13, 152]], 2.2, 3.2));
+        longNeck(g, 31, 41, 37.5, 31, 3.4);
+        talon(g, 2, p, 26, 50, -p.leg, true);
+      },
+      onHead: (g, s, p) => {
+        beak(g, s.eye, 1.1);
+        appendage(g, p, 35.5, 21, () => fan(g, 5, 35.5, 21.5, [[9, 42], [8, 20], [7, 66]], 1.7));
+      },
+      front: (g, _s, p) => talon(g, 7, p, 31, 50.5, p.leg, false),
+    }),
+    // Fénix: alas enormes de fuego sobre la cabeza, cola de cinco plumas y cresta en estela.
+    final: stage('final', {
+      ...BIRD,
+      torso: [28.5, 43.5, 10, 8],
+      head: [39, 22.5, 8.5, 8],
+      belly: [30.5, 46, 6.5, 5],
+      emblem: [30.5, 46, 1.8, 1.8],
+      eye: { ...BASE.final.eye, y: 19, x1: 35, x2: 43, w1: 4, w2: 3, h: 5, style: 'almond' },
+      neck: [36, 34],
+      back: [19, 41],
+      behind: (g, _s, p) => {
+        tail(g, p, 20, 46, () => fan(g, 12, 20, 46, [[18, 12], [17, -8], [15, -26], [15, 32], [12, -42]], 2.3));
+        // Accesorio de etapa final: las alas se abren del todo y arden.
+        appendage(g, p, 24, 40, () => fan(g, 20, 24, 40, [[30, 80], [29, 65], [26, 50], [22, 35], [18, 20], [13, 5]], 2.7, 5));
+        appendage(g, p, 36, 41, () => fan(g, 21, 36, 41, [[27, 100], [27, 115], [24, 130], [20, 145], [16, 160], [12, 175]], 2.5, 4.2));
+        longNeck(g, 31.5, 40, 38.5, 27.5, 3.8);
+        talon(g, 2, p, 26, 50, -p.leg, true);
+      },
+      onHead: (g, s, p) => {
+        beak(g, s.eye, 1.2);
+        appendage(g, p, 36, 16, () => fan(g, 5, 36, 16.5, [[12, 38], [11, 18], [9, 60], [7, 82]], 1.9));
+      },
+      front: (g, _s, p) => talon(g, 7, p, 31.5, 50.5, p.leg, false),
+    }),
+  },
+};
+
+// ───────────────────────── Cerbito (sombra, legendario) ─────────────────────────
+// Plan corporal: CUADRÚPEDO SENTADO DE TRES CABEZAS: grupa en el suelo, patas delanteras rectas y
+// tres cabezas en abanico. Solo la central lleva cara completa y accesorios; las laterales asoman
+// detrás, con ojos que brillan. Rasgo icónico: las tres cabezas. Segundo rasgo: las tres colas de
+// sombra y el collar de púas.
+
+/** Oreja caída de cachorro: lóbulo oscuro que cuelga desde lo alto de la cabeza. */
+const floppyEar = (g: Grid, part: number, x: number, y: number, len: number, w: number, deg: number) =>
+  g.ellipse(part, 'mark', x, y + len / 2, w, len / 2, { rot: deg });
+
+/** Oreja tiesa y en punta. */
+const sharpEar = (g: Grid, part: number, x: number, y: number, w: number, h: number, lean = 0) =>
+  g.poly(part, 'mark', [[x - w / 2, y], [x + lean, y - h], [x + w / 2, y]]);
+
+/** Cola de sombra: jirón del color del cuerpo con la punta encendida (grados como `gill`). */
+function shadowTail(g: Grid, part: number, x: number, y: number, len: number, deg: number, w: number): void {
+  const r = (deg * Math.PI) / 180;
+  const dx = -Math.cos(r);
+  const dy = -Math.sin(r);
+  g.ellipse(part, 'body', x + (dx * len) / 2, y + (dy * len) / 2, len / 2 + 1, w, { rot: deg });
+  g.ellipse(part, 'trait', x + dx * len, y + dy * len, w * 1.15, w * 1.15);
+}
+
+/** Sentado: la pata delantera cercana y el muslo, por delante del cuerpo. */
+function sitting(g: Grid, legX: number, legY: number, legH: number, hx: number, hy: number, hr: number): void {
+  g.ellipse(17, 'skin', hx, hy, hr, hr * 0.8);
+  g.ellipse(16, 'skin', legX, legY, 2.4, legH);
+}
+
+/**
+ * Cabeza lateral: va detrás de la central, así que solo asoma su mitad de fuera. `awake` le abre
+ * los ojos (dos rendijas que brillan); dormida lleva una raya. `side` es -1 a la izquierda y 1 a
+ * la derecha.
+ */
+function sideHead(g: Grid, part: number, side: 1 | -1, x: number, y: number, rx: number, ry: number, awake: boolean, ears: number): void {
+  if (ears) {
+    sharpEar(g, part + 1, x - side * rx * 0.1, y - ry * 0.75, rx * 0.55, ears, -side * 0.5);
+    sharpEar(g, part + 2, x + side * rx * 0.6, y - ry * 0.55, rx * 0.5, ears * 0.85, side * 1);
+  }
+  g.ellipse(part, 'body', x, y, rx, ry);
+  const ex = x + side * rx * 0.42;
+  const ey = y - ry * 0.05;
+  const eye = (cx: number) =>
+    awake
+      ? g.poly(part, 'belly', [[cx - 1.3, ey - 1.1 + side * 0.5], [cx + 1.3, ey - 1.1 - side * 0.5], [cx + 1.3, ey + 1], [cx - 1.3, ey + 1]], { flat: true, clip: part, keep: true })
+      : g.poly(part, 'mark', [[cx - 1.3, ey], [cx + 1.3, ey], [cx + 1.3, ey + 1], [cx - 1.3, ey + 1]], { flat: true, clip: part, keep: true });
+  eye(ex - 1.9);
+  eye(ex + 1.9);
+  g.poly(part, 'mark', [[ex - 1.5, ey + ry * 0.45], [ex + 1.5, ey + ry * 0.45], [ex + 1.5, ey + ry * 0.45 + 1], [ex - 1.5, ey + ry * 0.45 + 1]], { flat: true, clip: part, keep: true });
+}
+
+/** Collar de púas sobre el cuello de la cabeza central. */
+function spikedCollar(g: Grid, x0: number, x1: number, y: number, spikes: number): void {
+  g.ellipse(13, 'mark', (x0 + x1) / 2, y, (x1 - x0) / 2, 1.6, { flat: true });
+  for (let i = 0; i < spikes; i++) {
+    const x = x0 + 2 + (i * (x1 - x0 - 4)) / Math.max(1, spikes - 1);
+    g.poly(35, 'belly', [[x - 1.3, y + 0.6], [x + 1.3, y + 0.6], [x, y + 3.6]], { flat: true });
+  }
+}
+
+/** Colmillos: dos puntas claras bajo la boca de la cabeza central. */
+function fangs(g: Grid, e: EyeSpec): void {
+  const mx = (e.x1 + e.w1 + e.x2) / 2 - 1;
+  const my = e.y + e.h + e.gap + 1;
+  [mx - 0.5, mx + 4.5].forEach((x) => g.poly(10, 'belly', [[x - 1, my], [x + 1, my], [x, my + 2.6]], { flat: true, clip: 10, keep: true }));
+}
+
+const DOG = { arm: undefined, farArm: undefined, marks: undefined };
+
+const CERBITO: PixelSpecies = {
+  id: 'cerbito',
+  stages: {
+    // Cachorro tumbado: la cabeza central despierta y dos bultos dormidos a los lados.
+    baby: stage('baby', {
+      torso: [31.5, 49.5, 12, 9],
+      feet: { near: [38, 58.2, 3.2, 1.8], far: [30, 58, 2.8, 1.6] },
+      eye: { ...BASE.baby.eye, y: 44, style: 'shine' },
+      cheek: [27, 52],
+      neck: [32, 55],
+      behind: (g, _s, p) => {
+        tail(g, p, 19, 53, () => g.ellipse(1, 'trait', 17, 52, 3, 2.4));
+        sideHead(g, 36, -1, 21.5, 47, 5, 4.6, false, 0);
+        sideHead(g, 39, 1, 42.5, 47.5, 4.6, 4.2, false, 0);
+      },
+      onHead: (g) => {
+        floppyEar(g, 22, 24.5, 41.5, 6.5, 2.4, 15);
+        floppyEar(g, 23, 39.5, 42, 6, 2.2, -15);
+      },
+    }),
+    // Se sienta: las cabezas laterales ya han brotado, pero siguen dormidas. Dos colas.
+    juvenile: stage('juvenile', {
+      ...DOG,
+      torso: [29.5, 48.5, 10.5, 9],
+      head: [34, 36, 9.5, 8.5],
+      feet: { near: [36, 57.8, 3.4, 2.2], far: [30, 57.5, 3, 2] },
+      belly: [32, 50, 5.5, 5.5],
+      eye: { ...BASE.juvenile.eye, y: 33, x1: 29, x2: 38, style: 'shine' },
+      neck: [33, 44.5],
+      back: [19, 45],
+      behind: (g, _s, p) => {
+        tail(g, p, 19, 52, () => { shadowTail(g, 25, 19, 52, 8, 28, 2); shadowTail(g, 26, 19, 53.5, 7, -2, 1.8); });
+        sideHead(g, 36, -1, 23, 37.5, 6.5, 6, false, 2.5);
+        sideHead(g, 39, 1, 44.5, 38, 6, 5.5, false, 2.5);
+        sharpEar(g, 22, 28, 30, 4, 3.5, -0.5);
+        sharpEar(g, 23, 40, 30, 3.6, 3.2, 0.5);
+      },
+      onHead: (g) => g.ellipse(13, 'mark', 33, 44.2, 6.5, 1.5, { flat: true }),
+      front: (g) => sitting(g, 36, 52.5, 5, 24, 53.5, 5.5),
+    }),
+    // Guardián: las tres cabezas despiertas, tres colas, colmillos y collar de púas.
+    adult: stage('adult', {
+      ...DOG,
+      torso: [28.5, 47.5, 12, 10],
+      head: [34.5, 29.5, 11, 10],
+      feet: { near: [36.5, 57.8, 3.8, 2.3], far: [30, 57.5, 3.4, 2.1] },
+      belly: [31.5, 49.5, 6.5, 6.5],
+      eye: { ...BASE.adult.eye, y: 26, x1: 30, x2: 41, style: 'fierce' },
+      neck: [34, 40.5],
+      back: [17, 43],
+      behind: (g, _s, p) => {
+        tail(g, p, 17, 51, () => { shadowTail(g, 25, 17, 50, 12, 50, 2.3); shadowTail(g, 26, 17, 52, 11, 20, 2.2); shadowTail(g, 27, 17, 54, 9, -8, 2); });
+        sideHead(g, 36, -1, 21, 30.5, 8, 7.5, true, 4.5);
+        sideHead(g, 39, 1, 48, 31, 7.5, 7, true, 4.2);
+        sharpEar(g, 22, 27.5, 22.5, 5, 6, -1);
+        sharpEar(g, 23, 41.5, 22.5, 4.6, 5.5, 1);
+      },
+      onHead: (g, s) => {
+        g.ellipse(10, 'mark', 34.5, 21.5, 3.2, 1.6, { flat: true, clip: 10, keep: true });
+        fangs(g, s.eye);
+        spikedCollar(g, 26.5, 42.5, 40, 4);
+      },
+      front: (g) => sitting(g, 36.5, 52, 6, 22.5, 53, 6.5),
+    }),
+    // Guardián del umbral: tres cabezas grandes, lomo erizado, colas largas y la cadena rota.
+    final: stage('final', {
+      ...DOG,
+      torso: [28.5, 46.5, 13.5, 11],
+      head: [35, 27.5, 12, 10.5],
+      feet: { near: [37, 57.8, 4.2, 2.4], far: [30, 57.5, 3.6, 2.2] },
+      belly: [31.5, 49, 7.5, 7],
+      emblem: [31.5, 50, 2, 2],
+      eye: { ...BASE.final.eye, y: 24, x1: 30, x2: 41, style: 'fierce' },
+      neck: [34.5, 39],
+      back: [16, 42],
+      behind: (g, _s, p) => {
+        tail(g, p, 16, 50, () => { shadowTail(g, 25, 16, 48, 19, 62, 2.8); shadowTail(g, 26, 16, 51, 16, 30, 2.7); shadowTail(g, 27, 16, 54, 12, 4, 2.5); });
+        // Accesorio de etapa final: lomo erizado, con púas de sombra entre las cabezas.
+        appendage(g, p, 35, 22, () => {
+          [[25, 21.5, -1.5], [22, 22.5, -2], [45, 21.5, 1.5], [48, 23, 2]].forEach(([x, y, lean], i) => sharpEar(g, 44 + i, x, y, 3, 5.5, lean));
+        });
+        sideHead(g, 36, -1, 20, 28.5, 9.5, 8.5, true, 6);
+        sideHead(g, 39, 1, 50, 29.5, 9, 8, true, 5.5);
+        sharpEar(g, 22, 28, 20, 5.5, 8, -1.5);
+        sharpEar(g, 23, 42.5, 20, 5, 7.5, 1.5);
+      },
+      onHead: (g, s) => {
+        g.ellipse(10, 'mark', 35, 19, 3.6, 1.7, { flat: true, clip: 10, keep: true });
+        g.ellipse(10, 'mark', 35, 22, 2, 1.2, { flat: true, clip: 10, keep: true });
+        fangs(g, s.eye);
+        spikedCollar(g, 26, 44, 38.5, 5);
+        [[35, 43], [35, 46.2]].forEach(([x, y]) => g.ellipse(13, 'belly', x, y, 1.6, 1.6, { flat: true }));
+      },
+      front: (g) => sitting(g, 37, 51.5, 6.5, 22, 52.5, 7.2),
+    }),
+  },
+};
+
+// ───────────────────────── Kirisol (luz, legendario) ─────────────────────────
+// Plan corporal: CUADRÚPEDO ESBELTO de patas largas y cuello alto: el cuerpo queda lejos del
+// suelo. Rasgo icónico: el cuerno de luz. Segundo rasgo: la crin y la cola, que dejan estela.
+
+/** Pata larga y fina con casco; da el paso con la pose. */
+function longLeg(g: Grid, part: number, p: Pose, x: number, top: number, phase: number, far: boolean, dark = false): void {
+  const f = step(p, [x, 57.7, 2, 1.5], phase);
+  g.poly(part, 'skin', [[x - 1.3, top], [x + 1.3, top], [f[0] + 1.2, f[1]], [f[0] - 1.2, f[1]]], far ? { tone: 'shade' } : {});
+  g.ellipse(part, dark ? 'mark' : 'trait', f[0], f[1], f[2], f[3], { flat: true });
+}
+
+const horn = (g: Grid, x: number, y: number, len: number, lean = 0.5) =>
+  g.poly(32, 'trait', [[x - 1.4, y], [x + 1.4, y], [x + lean, y - len]], { flat: true });
+
+/** Hocico de potro: alarga la cabeza hacia abajo a la derecha, sin línea de separación. */
+const muzzle = (g: Grid, h: E, k = 1) => g.ellipse(10, 'body', h[0] + h[2] * 0.42, h[1] + h[3] * 0.62, h[2] * 0.62 * k, h[3] * 0.6 * k, { keep: true });
+
+const mane = (g: Grid, part: number, pts: [number, number, number, number][]) => pts.forEach(([x, y, rx, ry]) => g.ellipse(part, 'trait', x, y, rx, ry));
+
+const FOAL = { feet: undefined, arm: undefined, farArm: undefined, belly: undefined, marks: undefined };
+
+const KIRISOL: PixelSpecies = {
+  id: 'kirisol',
+  stages: {
+    // Potrillo recién nacido: tumbado, con las patas recogidas y un botón de cuerno.
+    baby: stage('baby', {
+      torso: [29.5, 51, 12.5, 8],
+      head: [36, 43.5, 8.5, 7.5],
+      feet: { near: [38, 58.3, 3, 1.5], far: [31.5, 58.2, 2.6, 1.4] },
+      eye: { ...BASE.baby.eye, y: 40, x1: 30, x2: 38, style: 'lash' },
+      cheek: [28, 47],
+      neck: [34, 51],
+      back: [20, 48],
+      behind: (g, _s, p) => {
+        tail(g, p, 18, 51, () => g.ellipse(1, 'trait', 16.5, 50, 3, 2.2));
+        pointEar(g, 22, 31, 38, 3, 3.5, -0.5);
+        pointEar(g, 23, 40.5, 38, 2.6, 3, 0.5);
+      },
+      onHead: (g, _s, p) => appendage(g, p, 35.5, 37, () => horn(g, 35.5, 37, 3.5)),
+    }),
+    // Se pone en pie: patas largas que aún tiemblan, cuerpo pequeño y cuerno corto.
+    juvenile: stage('juvenile', {
+      ...FOAL,
+      torso: [28, 44.5, 10.5, 6.5],
+      head: [40.5, 35, 8.5, 7.5],
+      eye: { ...BASE.juvenile.eye, y: 33, x1: 36, x2: 45, style: 'lash' },
+      neck: [37, 44],
+      back: [21, 39],
+      behind: (g, _s, p) => {
+        tail(g, p, 18, 43, () => gill(g, 12, 18, 43.5, 7, -40));
+        longLeg(g, 2, p, 22, 48, p.leg, true);
+        longLeg(g, 3, p, 33.5, 48, -p.leg, true);
+        mane(g, 6, [[31.5, 32, 2.4, 3.6], [30.5, 37.5, 2.4, 3.2]]);
+        pointEar(g, 22, 36.5, 29.5, 3, 4, -0.5);
+        pointEar(g, 23, 45.5, 29.5, 2.6, 3.6, 0.5);
+      },
+      onHead: (g, s, p) => {
+        muzzle(g, s.head!);
+        appendage(g, p, 41, 28.5, () => horn(g, 41, 28.5, 3.5));
+      },
+      front: (g, _s, p) => {
+        longLeg(g, 16, p, 24.5, 48.5, -p.leg, false);
+        longLeg(g, 7, p, 36, 48.5, p.leg, false);
+      },
+    }),
+    // Potro: cuello alto, crin que cae por él, cola larga y motas de luz en el flanco.
+    adult: stage('adult', {
+      ...FOAL,
+      torso: [26.5, 42, 12.5, 7.5],
+      head: [42, 26.5, 9, 8],
+      eye: { ...BASE.adult.eye, y: 24, x1: 36, x2: 47, style: 'lash' },
+      neck: [37, 39],
+      back: [18, 35.5],
+      behind: (g, _s, p) => {
+        tail(g, p, 15, 41, () => plumes(g, 12, 15, 41, [[10, -32], [9, -58]]));
+        longLeg(g, 2, p, 19.5, 47, p.leg, true);
+        longLeg(g, 3, p, 33, 47, -p.leg, true);
+        // Cuello: se funde con el cuerpo (misma pieza).
+        g.poly(4, 'body', [[29, 39], [38, 45], [44, 33], [35.5, 28]]);
+        mane(g, 6, [[32.5, 23.5, 2.8, 4.2], [30, 29.5, 2.8, 4.6], [28.5, 35.5, 2.6, 4]]);
+        pointEar(g, 22, 37.5, 20.5, 3.2, 5, -0.8);
+        pointEar(g, 23, 47.5, 20.5, 2.8, 4.5, 0.8);
+      },
+      onHead: (g, s, p) => {
+        muzzle(g, s.head!);
+        dots(g, [[21, 40, 1.2], [25, 43.5, 1], [18.5, 43.5, 0.9]]);
+        appendage(g, p, 43, 19.5, () => horn(g, 43, 19.5, 5, 1));
+      },
+      front: (g, _s, p) => {
+        longLeg(g, 16, p, 22, 47.5, -p.leg, false);
+        longLeg(g, 7, p, 36, 47.5, p.leg, false);
+      },
+    }),
+    // Unicornio del alba: cuerno largo, crin y cola en estela, cascos oscuros y estrella en el flanco.
+    final: stage('final', {
+      ...FOAL,
+      torso: [26, 41.5, 13.5, 8],
+      head: [42.5, 22.5, 9.5, 8.5],
+      emblem: [24, 41.5, 2.2, 2.2],
+      eye: { ...BASE.final.eye, y: 20, x1: 36, x2: 47, style: 'lash' },
+      neck: [37, 36.5],
+      back: [17, 34.5],
+      behind: (g, _s, p) => {
+        tail(g, p, 14, 40, () => plumes(g, 12, 14, 40, [[13, -20], [12, -45], [10, -68]], true));
+        longLeg(g, 2, p, 18.5, 47, p.leg, true, true);
+        longLeg(g, 3, p, 33, 47, -p.leg, true, true);
+        g.poly(4, 'body', [[28, 38], [38.5, 45], [45, 30], [35.5, 24]]);
+        // Accesorio de etapa final: la crin se alarga en una estela de luz.
+        appendage(g, p, 31, 26, () => {
+          mane(g, 6, [[33, 19, 3, 4.5], [30.5, 25.5, 3, 5], [28.5, 32.5, 2.8, 4.5]]);
+          plumes(g, 6, 29.5, 24, [[12, -8], [10, -28]], true);
+        });
+        pointEar(g, 22, 38, 16, 3.4, 5.5, -0.8);
+        pointEar(g, 23, 48.5, 16, 3, 5, 0.8);
+      },
+      onHead: (g, s, p) => {
+        muzzle(g, s.head!);
+        dots(g, [[19, 39, 1.1], [29.5, 44.5, 1], [17, 43.5, 0.9]]);
+        appendage(g, p, 43.5, 15, () => horn(g, 43.5, 15, 8.5, 1.5));
+      },
+      front: (g, _s, p) => {
+        longLeg(g, 16, p, 21.5, 47.5, -p.leg, false, true);
+        longLeg(g, 7, p, 36.5, 47.5, p.leg, false, true);
+      },
+    }),
+  },
+};
+
+export const PIXEL_SPECIES: PixelSpecies[] = [IGNISAUR, AXOLUNAR, FLORABUD, LIVOLT, INKTOPUS, SOLAREJO, MAGMADILLO, NUBEBALLENA, CACTUERNO, FENIXEL, CERBITO, KIRISOL];
 
 // ───────────────────────── Dibujo ─────────────────────────
 
