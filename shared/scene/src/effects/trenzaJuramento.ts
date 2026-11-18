@@ -1,13 +1,15 @@
 import type { EffectDef, FxFrame, PixelSink } from './types';
 import { Canvas2, easeOut, hash, invert, span } from './fxMath';
+import { paintSheetFrame, type FrameSheet } from './sheet';
+import BRAID_FRAMES from './frames/trenza-juramento.json';
 
 /**
  * Trenza del Juramento: el clan cumple su juramento (LORE §8: cumplir un Juramento del Nexo «tensa
  * el trenzado»).
  *
  * Cinco hebras de colores distintos —una por Custodio: la del Pockai y las de sus compañeros— bajan
- * y se trenzan en un arco sobre la mascota; al cumplirse, la trenza se tensa recta y brilla de punta
- * a punta, y se suelta en motas.
+ * y se trenzan en un arco sobre la mascota; al cumplirse, la trenza se tensa (dibujada con Nano Banana) y brilla de
+ * punta a punta, y se suelta en motas.
  *
  * Colores: los tres tonos del Flujo propio, su complementario y dos fijos de clan (sol y menta).
  * Rejilla 64×80 ×2; pies en la fila 76. Va DETRÁS de la mascota.
@@ -19,6 +21,7 @@ const CX = 32;
 const FEET = 76;
 const ARC = { x: CX, y: 64, r: 27 };
 const STRANDS = 5;
+const SHEET = BRAID_FRAMES as FrameSheet;
 
 function strandColors(f: FxFrame): string[] {
   return [f.palette.mid, '#ffd731', invert(f.palette.mid), '#55db9c', f.palette.light];
@@ -50,12 +53,36 @@ function paintBraid(c: Canvas2, f: FxFrame, reach: number, slack: number, glow: 
   }
 }
 
+/**
+ * La trenza tensa, dibujada con Nano Banana (`frames/trenza-juramento.json`): cinco hebras
+ * trenzadas en arco, una por rol de color (las mismas de `strandColors`). `glow` 0..1: la luz que
+ * la recorre de punta a punta.
+ */
+function paintTaut(c: Canvas2, f: FxFrame, glow: number) {
+  const [own, sun, other, mint, light] = strandColors(f);
+  const colors: Record<string, string> = { outline: f.palette.outline, own: own!, sun: sun!, other: other!, mint: mint!, light: light! };
+  const tmp = new Canvas2(W, H);
+  paintSheetFrame(tmp, SHEET, 0, colors, { x: ARC.x, bottom: ARC.y });
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const col = tmp.get(x, y);
+      if (!col) continue;
+      // Posición a lo largo del arco (0 = pie izquierdo, 1 = pie derecho)
+      const s = 1 - Math.atan2(Math.max(0, ARC.y - y), x + 0.5 - ARC.x) / Math.PI;
+      const lit = glow > 0 && col !== f.palette.outline && Math.abs(s - glow) < 0.06;
+      c.set(x, y, lit ? f.palette.glow : col);
+    }
+  }
+}
+
 function draw(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(W, H);
+  // La trenza tensa trae su contorno de la lámina: capa propia
+  const taut = new Canvas2(W, H);
 
   if (f.reduced) {
-    paintBraid(c, { ...f, time: 0 }, 1, 0, 0);
-    c.flush(sink, f.palette.outline);
+    paintTaut(taut, f, 0);
+    taut.flush(sink, null);
     return;
   }
 
@@ -67,8 +94,8 @@ function draw(sink: PixelSink, f: FxFrame): void {
       paintBraid(c, f, 1, 1 - f.t * 0.3, 0);
       break;
     case 'tense':
-      // Se tensa: el vaivén desaparece y una luz recorre la trenza de punta a punta
-      paintBraid(c, f, 1, 0.7 * (1 - easeOut(f.t)), f.t);
+      // Se tensa: las hebras sueltas quedan recogidas en la trenza (lámina) y una luz la recorre
+      paintTaut(taut, f, f.t);
       break;
     case 'release':
       for (let k = 0; k < 18; k++) {
@@ -79,6 +106,7 @@ function draw(sink: PixelSink, f: FxFrame): void {
       break;
   }
   c.flush(sink, f.palette.outline);
+  taut.flush(sink, null);
 }
 
 export const trenzaJuramento: EffectDef = {

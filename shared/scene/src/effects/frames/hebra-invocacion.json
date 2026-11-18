@@ -1,0 +1,37 @@
+{
+ "source": "resonancia-hebra-a.png",
+ "roles": [
+  "outline",
+  "deep",
+  "mid",
+  "light",
+  "glow",
+  "core"
+ ],
+ "frames": [
+  [
+   "................................",
+   "...............aa...............",
+   "...............aa...............",
+   "................aa..............",
+   "................afa.............",
+   ".................aa.............",
+   ".................aea............",
+   ".................aea............",
+   "........aaaaaaaaafaea...........",
+   "....aaaaeaeeaaaaebaaaaaaaaa.....",
+   "...aaeebaeffbbbefabbbbbfffeaa...",
+   "..aeeaafeabaaeaeadddddaaabbefa..",
+   ".aebaaeba.addbaeaaaaaabbdaaabea.",
+   "afbaafea.aeeaaaeadddaaaaeea.aefa",
+   "afa.afa..aedaa.aeeada...aea..afa",
+   "aea.abeaa.aeedaddddea..afea..aea",
+   "aeeaaabfeaaabeeeeeaaaaafeba.aeea",
+   ".aeefaabbeeeffffffffeeebbaaaeea.",
+   "..abbeffaaaaebbbbbbeaabffeebba..",
+   "...aabbeeffffaaaaaaffffeebaaa...",
+   ".....aaaaaaabeeeeeebbaaaaa......",
+   "............aaaaaaaaa..........."
+  ]
+ ]
+}

@@ -1,6 +1,6 @@
 /**
  * Qué efecto acompaña a cada aviso `pet:action` del backend. Es la ÚNICA tabla: la usan el
- * escritorio (eventMap añade sus animaciones y bocadillos) y la escena incrustada (Android hoy, iOS
+ * escritorio (eventMap añade sus bocadillos; los clips salen de `clips.ts`) y la escena incrustada (Android hoy, iOS
  * cuando exista) a través del mensaje `petAction` del protocolo. Así todas las plataformas
  * deciden igual qué se ve.
  */

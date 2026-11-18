@@ -1,11 +1,17 @@
 import type { EffectDef, FxFrame, PixelSink } from './types';
+import { frameOrigin, frameSize, type FrameSheet } from './sheet';
+import ARCH_FRAMES from './frames/portal-nexo.json';
 
 /**
  * Portal de hebras del Nexo (LORE §8: «las visitas entre Santuarios viajan por las hebras del
- * Nexo»; §2: el Telar). Una clave en rombo —el nudo del Nexo, atado a la red por una hebra que
- * sube— se enciende, y de ella bajan tres hebras del Flujo del Pockai que se trenzan en un arco.
- * Dentro, una trama se teje y se abre como una cortina y deja ver el Éter; el Flujo se derrama en
- * un charco de luz a los pies. Al terminar, la trama se cierra y las hebras se deshilachan y caen.
+ * Nexo»; §2: el Telar). Un arco de tres hebras trenzadas del Flujo del Pockai, con una clave en
+ * rombo —el nudo del Nexo, atado a la red por una hebra que sube—. El arco y la clave están
+ * dibujados con Nano Banana (`frames/portal-nexo.json`, por roles); lo demás es procedural.
+ *
+ * Las hebras bajan desde la clave hasta los pies; dentro, una trama se teje y se abre como una
+ * cortina y deja ver el Éter; el Flujo se derrama en un charco de luz a los pies. Al terminar, la
+ * trama se cierra y las hebras se deshilachan y caen. Un destello recorre la trenza mientras está
+ * abierto.
  *
  * Rejilla nativa 44×66, ×2 en pantalla: los pies del arco (fila 63) quedan a la altura de los de
  * la mascota y las dos filas de debajo son el charco de luz.
@@ -14,26 +20,51 @@ import type { EffectDef, FxFrame, PixelSink } from './types';
 const W = 44;
 const H = 66;
 const CX = 22;
-/** Línea de arranque del arco: por debajo, postes rectos; por encima, medio círculo. */
-const SPRING_Y = 26;
 const BOTTOM = 63;
-/** Radios del marco: banda de hebras [R_IN, R_OUT), contorno a 1 px por cada lado. */
-const R_IN = 14;
-const R_OUT = 18;
-const R_MID = 16;
+
+const SHEET = ARCH_FRAMES as FrameSheet;
+const POS = { x: CX, bottom: BOTTOM };
+const ORIGIN = frameOrigin(SHEET, 0, POS);
+const SIZE = frameSize(SHEET, 0);
+const ROWS = SHEET.frames[0]!;
+
+/** Hasta aquí llegan los hombros del arco; por debajo, los postes son rectos. */
+const SPRING_Y = ORIGIN.y + Math.round(SIZE.h * 0.44);
+/** Radio medio de la trenza (para recorrer el arco de pie a pie). */
+const R_MID = SIZE.w / 2 - 3;
 const POST_LEN = BOTTOM - SPRING_Y;
 const ARC_LEN = Math.PI * R_MID;
 const TOTAL_LEN = POST_LEN * 2 + ARC_LEN;
-/** Centro del vacío (boca del portal), donde entra la mascota. */
-const MOUTH = { x: CX, y: 42 };
-const STRANDS = 3;
-const BRAID_PERIOD = 9;
 
-/** Distancia «de arco»: a qué radio del marco cae el píxel (postes = distancia horizontal). */
-function archDist(x: number, y: number): number {
-  const dx = x + 0.5 - CX;
-  const dy = y + 0.5 - SPRING_Y;
-  return dy >= 0 ? Math.abs(dx) : Math.hypot(dx, dy);
+const cell = (x: number, y: number): string | undefined => ROWS[y - ORIGIN.y]?.[x - ORIGIN.x];
+const filled = (x: number, y: number) => {
+  const ch = cell(x, y);
+  return ch !== undefined && ch !== '.';
+};
+
+/**
+ * La boca del portal, sacada de la propia lámina: en cada fila, el hueco entre la cara interior
+ * de los dos lados del arco (desde el centro hacia fuera). Filas sin hueco (la clave) no cuentan.
+ */
+const MOUTH_ROWS = new Map<number, [number, number]>();
+for (let y = ORIGIN.y; y <= BOTTOM; y++) {
+  if (filled(CX, y) || filled(CX - 1, y)) continue;
+  let l = CX - 1;
+  while (l >= ORIGIN.x && !filled(l, y)) l--;
+  let r = CX;
+  while (r < ORIGIN.x + SIZE.w && !filled(r, y)) r++;
+  // Solo si está cerrada por los dos lados (por encima de la clave no hay boca)
+  if (l >= ORIGIN.x && r < ORIGIN.x + SIZE.w && y > ORIGIN.y + 6) MOUTH_ROWS.set(y, [l + 1, r - 1]);
+}
+const MOUTH_TOP = Math.min(...MOUTH_ROWS.keys());
+/** Media anchura máxima de la boca (la cortina se abre hasta aquí). */
+const MOUTH_HALF = Math.max(...[...MOUTH_ROWS.values()].map(([a, b]) => (b - a + 1) / 2));
+/** Centro del vacío (boca del portal), donde entra la mascota. */
+const MOUTH = { x: CX, y: Math.round((MOUTH_TOP + BOTTOM) / 2) + 2 };
+
+function insideMouth(x: number, y: number): boolean {
+  const span = MOUTH_ROWS.get(y);
+  return !!span && x >= span[0] && x <= span[1];
 }
 
 /** Posición 0..1 a lo largo del marco: 0 = pie izquierdo, 0,5 = clave del arco, 1 = pie derecho. */
@@ -45,11 +76,7 @@ function archS(x: number, y: number): number {
     return dx < 0 ? up / TOTAL_LEN : 1 - up / TOTAL_LEN;
   }
   const theta = Math.atan2(-dy, dx); // π a la izquierda, 0 a la derecha
-  return (POST_LEN + (Math.PI - theta) * R_MID) / TOTAL_LEN;
-}
-
-function insideMouth(x: number, y: number): boolean {
-  return archDist(x, y) < R_IN && y <= BOTTOM;
+  return Math.min(1, Math.max(0, (POST_LEN + (Math.PI - theta) * R_MID) / TOTAL_LEN));
 }
 
 /** Hash entero estable → 0..1 (sin Math.random: el dibujo es determinista con la semilla). */
@@ -62,75 +89,37 @@ function hash(x: number, y: number, seed: number): number {
 
 type Px = { x: number; y: number; color: string; s: number };
 
-/** Píxeles del marco (hebras trenzadas + contorno), con su posición `s` a lo largo del arco. */
-function framePixels(f: FxFrame, flow: number): Px[] {
+/**
+ * Píxeles del arco (trenza, clave y hebra), con su posición `s` a lo largo del marco. `flow`
+ * mueve un destello por la trenza; `lit` enciende el corazón de la clave.
+ */
+function framePixels(f: FxFrame, flow: number, lit: boolean): Px[] {
   const { palette } = f;
+  const colors: Record<string, string> = {
+    outline: palette.outline,
+    braidDeep: palette.deep,
+    braidMid: palette.mid,
+    braidLight: palette.light,
+    glow: lit ? palette.glow : palette.light,
+  };
   const out: Px[] = [];
-  for (let y = 0; y <= BOTTOM; y++) {
-    for (let x = 0; x < W; x++) {
-      const d = archDist(x, y);
-      if (d < R_IN - 1 || d >= R_OUT + 1) continue;
+  ROWS.forEach((row, ry) => {
+    for (let rx = 0; rx < row.length; rx++) {
+      const k = row.charCodeAt(rx) - 97;
+      if (k < 0) continue;
+      const role = SHEET.roles[k]!;
+      const x = ORIGIN.x + rx;
+      const y = ORIGIN.y + ry;
       const s = archS(x, y);
-      if (d < R_IN || d >= R_OUT) {
-        out.push({ x, y, color: palette.outline, s });
-        continue;
+      let color = colors[role]!;
+      // Destello que corre por la trenza (dos, uno por cada lado)
+      if (flow >= 0 && role === 'braidLight') {
+        const pos = (s * TOTAL_LEN - flow * 10) % 24;
+        if (pos > -2 && pos < 1.5) color = palette.glow;
       }
-      // Trenza de tres hebras: cada una ondula a un lado y otro del centro de la banda.
-      const r = d - R_MID; // -2..2
-      const along = s * TOTAL_LEN;
-      let best = Infinity;
-      let depth = 0;
-      for (let k = 0; k < STRANDS; k++) {
-        const a = ((along + flow) / BRAID_PERIOD) * Math.PI * 2 + (k * Math.PI * 2) / STRANDS;
-        const off = Math.sin(a) * 1.7;
-        const dist = Math.abs(r - off);
-        if (dist < best) {
-          best = dist;
-          depth = Math.cos(a);
-        }
-      }
-      let color = palette.deep;
-      if (best < 0.75) color = depth > 0.55 ? palette.light : depth > -0.3 ? palette.mid : palette.deep;
-      if (best < 0.75 && depth > 0.93 && hash(x, y, f.seed) < 0.35) color = palette.glow;
       out.push({ x, y, color, s });
     }
-  }
-  return out;
-}
-
-/** Clave en rombo (nudo del Nexo): [fila, x inicial, x final]. */
-const KEYSTONE: Array<[number, number, number]> = [
-  [5, 21, 22],
-  [6, 20, 23],
-  [7, 19, 24],
-  [8, 19, 24],
-  [9, 20, 23],
-  [10, 21, 22],
-];
-const inKey = (x: number, y: number) => KEYSTONE.some(([ky, a, b]) => ky === y && x >= a && x <= b);
-
-/** La clave y la hebra que sube de ella hacia la red (filas 0..3). */
-function ornamentPixels(f: FxFrame, lit: boolean): Px[] {
-  const { palette } = f;
-  const out: Px[] = [];
-  for (let y = 4; y <= 11; y++) {
-    for (let x = 18; x <= 25; x++) {
-      if (inKey(x, y)) {
-        const core = (y === 7 || y === 8) && (x === 21 || x === 22);
-        const rim = !inKey(x - 1, y) || !inKey(x, y - 1);
-        const color = core ? (lit ? palette.glow : palette.light) : rim ? palette.light : palette.mid;
-        out.push({ x, y, color, s: 0.5 });
-      } else if (inKey(x - 1, y) || inKey(x + 1, y) || inKey(x, y - 1) || inKey(x, y + 1)) {
-        out.push({ x, y, color: palette.outline, s: 0.5 });
-      }
-    }
-  }
-  const wave = f.reduced ? 0 : Math.floor(f.time / 166) % 2;
-  for (let y = 0; y <= 3; y++) {
-    const x = 21 + ((y + wave) % 2);
-    const color = y === 0 ? palette.mid : y === 3 ? palette.glow : palette.light;
-    out.push({ x, y, color, s: 0.5 });
-  }
+  });
   return out;
 }
 
@@ -158,7 +147,7 @@ function paintPool(sink: PixelSink, f: FxFrame, amount: number) {
 function paintVoid(sink: PixelSink, f: FxFrame, openHalf: number) {
   const { palette } = f;
   const spin = f.reduced ? 0 : f.time / 260;
-  for (let y = 0; y <= BOTTOM; y++) {
+  for (let y = MOUTH_TOP; y <= BOTTOM; y++) {
     for (let x = 0; x < W; x++) {
       if (!insideMouth(x, y)) continue;
       if (Math.abs(x + 0.5 - CX) > openHalf) continue;
@@ -180,23 +169,22 @@ function paintVoid(sink: PixelSink, f: FxFrame, openHalf: number) {
   }
 }
 
-/** La trama del telar: hilos horizontales que llenan la boca hasta la fracción `filled`. */
-function paintWeft(sink: PixelSink, f: FxFrame, filled: number, openHalf: number) {
+/** La trama del telar: hilos horizontales que llenan la boca hasta la fracción `amount`. */
+function paintWeft(sink: PixelSink, f: FxFrame, amount: number, openHalf: number) {
   const { palette } = f;
-  const top = SPRING_Y - R_IN;
-  for (let y = top; y <= BOTTOM; y++) {
-    const fy = (y - top) / (BOTTOM - top);
-    if (fy > filled) continue;
+  for (let y = MOUTH_TOP; y <= BOTTOM; y++) {
+    const fy = (y - MOUTH_TOP) / (BOTTOM - MOUTH_TOP);
+    if (fy > amount) continue;
     for (let x = 0; x < W; x++) {
       if (!insideMouth(x, y)) continue;
       if (Math.abs(x + 0.5 - CX) <= openHalf) continue;
-      const even = (y - top) % 2 === 0;
+      const even = (y - MOUTH_TOP) % 2 === 0;
       // Cada hilo pasa por encima y por debajo de la urdimbre: se alterna cada 3 px
       const over = Math.floor((x + (even ? 0 : 1)) / 3) % 2 === 0;
       sink.set(x, y, even ? (over ? palette.light : palette.mid) : over ? palette.deep : palette.void1);
     }
     // El borde de la cortina brilla mientras se abre
-    if (openHalf > 0 && openHalf < R_IN) {
+    if (openHalf > 0 && openHalf < MOUTH_HALF) {
       for (const sx of [Math.floor(CX - openHalf - 0.5), Math.floor(CX + openHalf - 0.5)]) {
         if (insideMouth(sx, y)) sink.set(sx, y, palette.glow);
       }
@@ -211,26 +199,24 @@ function easeOut(t: number): number {
 function draw(sink: PixelSink, f: FxFrame): void {
   if (f.reduced) {
     // Quieto: portal abierto; la opacidad hace el fundido (ver `opacity`).
-    paintVoid(sink, f, R_IN);
+    paintVoid(sink, f, MOUTH_HALF);
     paintPool(sink, f, 1);
-    for (const p of framePixels(f, 0)) sink.set(p.x, p.y, p.color);
-    for (const p of ornamentPixels(f, true)) sink.set(p.x, p.y, p.color);
+    for (const p of framePixels(f, -1, true)) sink.set(p.x, p.y, p.color);
     return;
   }
 
   const flow = (f.time / 1000) * 6;
   const lit = Math.floor(f.time / 250) % 2 === 0;
-  const frameAndKey = () => {
-    for (const p of framePixels(f, flow)) sink.set(p.x, p.y, p.color);
-    for (const p of ornamentPixels(f, lit)) sink.set(p.x, p.y, p.color);
+  const arch = () => {
+    for (const p of framePixels(f, flow, lit)) sink.set(p.x, p.y, p.color);
   };
 
   switch (f.phase) {
     case 'appear': {
       // Primero se enciende la clave; después las hebras bajan de ella hacia los dos pies.
-      if (f.t > 0.05) for (const p of ornamentPixels(f, f.t > 0.6)) sink.set(p.x, p.y, p.color);
-      const reach = easeOut(Math.max(0, (f.t - 0.15) / 0.85)) * 0.5;
-      for (const p of framePixels(f, flow)) {
+      const reach = 0.04 + easeOut(Math.max(0, (f.t - 0.15) / 0.85)) * 0.46;
+      if (f.t <= 0.05) return;
+      for (const p of framePixels(f, -1, f.t > 0.6)) {
         const fromTop = Math.abs(p.s - 0.5);
         if (fromTop > reach) continue;
         // La punta de cada hebra va encendida
@@ -243,33 +229,33 @@ function draw(sink: PixelSink, f: FxFrame): void {
       // Primero se teje la trama de arriba abajo; luego se abre por el centro como una cortina.
       const weave = Math.min(1, f.t / 0.45);
       const part = f.t <= 0.45 ? 0 : easeOut((f.t - 0.45) / 0.55);
-      const openHalf = part * R_IN;
+      const openHalf = part * MOUTH_HALF;
       if (openHalf > 0) paintVoid(sink, f, openHalf);
       paintWeft(sink, f, weave, openHalf);
       paintPool(sink, f, part);
-      frameAndKey();
+      arch();
       return;
     }
     case 'hold': {
-      paintVoid(sink, f, R_IN);
+      paintVoid(sink, f, MOUTH_HALF);
       paintPool(sink, f, 1);
-      frameAndKey();
+      arch();
       return;
     }
     case 'close': {
       // La cortina se cierra y la trama se deshace de abajo arriba.
       const shut = Math.min(1, f.t / 0.55);
-      const openHalf = (1 - easeOut(shut)) * R_IN;
+      const openHalf = (1 - easeOut(shut)) * MOUTH_HALF;
       const unweave = f.t <= 0.55 ? 1 : 1 - (f.t - 0.55) / 0.45;
       if (openHalf > 0) paintVoid(sink, f, openHalf);
       paintWeft(sink, f, unweave, openHalf);
-      paintPool(sink, f, openHalf / R_IN);
-      frameAndKey();
+      paintPool(sink, f, openHalf / MOUTH_HALF);
+      arch();
       return;
     }
     case 'vanish': {
       // Las hebras se sueltan del Nexo: cada píxel cae a su tiempo, chispea y se apaga.
-      for (const p of [...framePixels(f, flow), ...ornamentPixels(f, false)]) {
+      for (const p of framePixels(f, -1, false)) {
         const delay = hash(p.x, p.y, f.seed) * 0.45 + (1 - Math.abs(p.s - 0.5) * 2) * 0.1;
         const local = Math.max(0, Math.min(1, (f.t - delay) / 0.5));
         if (local <= 0) {

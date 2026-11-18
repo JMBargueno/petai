@@ -172,17 +172,21 @@ export class PetSprite extends Container {
     if (!this.oneShot) this.play(name);
   }
 
-  /** Reproduce un clip. `once`: al terminar sus repeticiones vuelve al clip base. */
-  play(name: string, once = false): void {
-    if (!this.anim) return;
+  /**
+   * Reproduce un clip. `once`: al terminar sus repeticiones vuelve al clip base.
+   * Devuelve `false` si la hoja aún no está o no tiene ese clip.
+   */
+  play(name: string, once = false): boolean {
+    if (!this.anim) return false;
     const clip = resolveClip(this.anim, name);
-    if (!clip) return;
+    if (!clip) return false;
     this.clip = clip;
     this.oneShot = once;
     this.frameIdx = 0;
     this.elapsed = 0;
     this.plays = 0;
     this.showFrame();
+    return true;
   }
 
   /** Textura del frame actual (`null` hasta que se carga la hoja). */
