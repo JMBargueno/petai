@@ -1,6 +1,6 @@
 # Nubeballena — «La que guarda las copias»
 
-> Un ballenato que flota sobre su propia nube y guarda recuerdos en los puntos de luz de su lomo. Es sereno y soñador, y nunca tiene prisa.
+> Un ballenato que flota por el aire y guarda recuerdos en los puntos de luz de su lomo. Es sereno y soñador, y nunca tiene prisa.
 
 | Elemento | Rareza | Arquetipo | Comida favorita |
 |---|---|---|---|
@@ -8,13 +8,13 @@
 
 ## Clasificación y hábitat
 - **Tipo:** cetáceo del aire.
-- **Plan corporal:** flotante sin patas, cuerpo de gota tumbada (ver `references/pixel-style.md`).
+- **Plan corporal:** flotante sin patas ni apoyos, cuerpo de gota tumbada (ver `references/pixel-style.md`).
 - **Tamaño aparente:** grande.
 - **Hábitat en el Éter:** las capas altas, donde descansan las copias de seguridad.
 - **Comportamiento social:** en grupo, pero a su ritmo; acompaña sin hacer ruido.
 
 ## Anatomía y rasgos distintivos
-No toca el suelo: flota sobre una nube que va con ella. Respira por un chorro que, en vez de agua, suelta una nube. Cada punto de luz del lomo es algo que alguien no quiso perder.
+No toca el suelo ni tiene patas: nada por el aire, con las aletas tendidas a los costados. Tiene los ojos pequeños, como cuentas, y respira por un chorro que, en vez de agua, suelta una nube. Cada punto de luz del lomo es algo que alguien no quiso perder.
 - **Rasgos icónicos (silueta):** 1) el chorro en forma de nube; 2) la cola de aleta alzada y los puntos de luz del lomo.
 
 ## Ecología y lore
@@ -39,13 +39,13 @@ La especie más serena del catálogo: cariñosa y sin prisa.
 | Etapa | Narrativa | Plan corporal y silueta | Rasgo icónico y piezas | Color, marcas y cara |
 |---|---|---|---|---|
 | **Baby (1)** | Una gota que aún no flota | Una gota posada en el suelo | Una nubecita y un brote de cola | Mofletes, ojos enormes |
-| **Juvenile (10)** | Despega | Flota sobre su nube; cuerpo alargado | Cola de dos lóbulos, aleta y nube mayor | Panza clara |
-| **Adult (25)** | Ya guarda recuerdos | Cuerpo grande y alto | Chorro de nube sobre un tallo, cola alzada, dos aletas | Puntos de luz en el lomo |
+| **Juvenile (10)** | Despega | Queda en el aire; cuerpo alargado | Cola de dos lóbulos, aleta al costado y nube mayor | Panza clara con surcos |
+| **Adult (25)** | Ya guarda recuerdos | Cuerpo grande y alto | Chorro de nube sobre un tallo, cola alzada, aleta larga | Puntos de luz en el lomo |
 | **Final (50, Piedra de Evolución)** | Lleva el cielo encima | Más ancha, con crin de nubes que rompe el contorno | Chorro alto con gotas, cola doble y crin de nubes, que leen el elemento | Franjas, emblema, mirada decidida |
 
-**No cambia:** la paleta, la forma del ojo, el chorro saliendo de lo alto del lomo y la cola a la izquierda.
+**No cambia:** la paleta, los ojos de cuenta, el chorro saliendo de lo alto del lomo y la cola a la izquierda.
 
-**Anclas de accesorios:** `head` por delante del chorro, sobre los ojos; `neck` bajo la boca; `back` en el arranque de la cola. No tiene pies: flota.
+**Anclas de accesorios:** `head` por delante del chorro, sobre los ojos; `neck` bajo la boca; `back` en el arranque de la cola. No tiene pies ni apoyos: flota.
 
 ## Frases de chat de ejemplo
 1. «Hoy el aire está blandito. Quédate un rato.»
@@ -53,7 +53,7 @@ La especie más serena del catálogo: cariñosa y sin prisa.
 3. «¿Un día malo? Súbete. Desde arriba todo pesa menos.»
 
 ## Brief de arte
-Pixel art en 3/4. Cuerpo y cola en primario; panza, nubes, chorro y puntos de luz en secundario; franjas en primario oscurecido. La cola gira con la pose, el chorro late con los apéndices y las nubes de abajo dan el paso al andar.
+Pixel art en 3/4. Cuerpo y cola en primario; panza, crin de nubes, chorro y puntos de luz en secundario; franjas en primario oscurecido. La cola gira con la pose, el chorro late con los apéndices y la aleta del costado saluda. Bajo el cuerpo no hay nada.
 
 **Estado del arte:** dibujado y revisado con la hoja de contactos.
 
@@ -62,7 +62,7 @@ Pixel art en 3/4. Cuerpo y cola en primario; panza, nubes, chorro y puntos de lu
 {
   "id": "nubeballena",
   "name": "Nubeballena",
-  "description": "Un ballenato que flota sobre su propia nube y guarda recuerdos en los puntos de luz de su lomo. Es sereno y soñador, y nunca tiene prisa.",
+  "description": "Un ballenato que flota por el aire y guarda recuerdos en los puntos de luz de su lomo. Es sereno y soñador, y nunca tiene prisa.",
   "element": "water",
   "rarity": "super_rare",
   "baseStats": { "hp": 66, "atk": 44, "def": 54, "vel": 46, "esp": 70 },

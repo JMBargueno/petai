@@ -579,7 +579,7 @@ const MAGMADILLO: PixelSpecies = {
     // Enroscado: una bola acorazada de la que solo asoman la cara y las orejas.
     baby: stage('baby', {
       torso: [31.5, 49, 12.5, 10],
-      eye: { ...BASE.baby.eye, y: 45, x1: 32, x2: 40 },
+      eye: { ...BASE.baby.eye, y: 45, x1: 32, x2: 40, style: 'lid' },
       cheek: [29, 52],
       behind: (g) => {
         pointEar(g, 22, 30, 41.5, 4, 4.5, -0.5);
@@ -596,7 +596,7 @@ const MAGMADILLO: PixelSpecies = {
       torso: [27, 46.5, 14, 10],
       head: [45, 45, 9.5, 8.5],
       feet: { near: [38.5, 57.6, 3.4, 2.5], far: [33, 57.2, 3, 2.3] },
-      eye: { ...BASE.juvenile.eye, y: 41, x1: 41, x2: 50 },
+      eye: { ...BASE.juvenile.eye, y: 41, x1: 41, x2: 50, style: 'lid' },
       neck: [39, 51],
       back: [22, 38],
       behind: (g, _s, p) => {
@@ -614,7 +614,7 @@ const MAGMADILLO: PixelSpecies = {
       torso: [26, 43.5, 17, 13],
       head: [46.5, 41.5, 10.5, 10],
       feet: { near: [40, 57.5, 4, 2.8], far: [34, 57, 3.6, 2.6] },
-      eye: { ...BASE.adult.eye, y: 37, x1: 41, x2: 52 },
+      eye: { ...BASE.adult.eye, y: 37, x1: 41, x2: 52, style: 'lid' },
       neck: [39, 49],
       back: [20, 32],
       behind: (g, _s, p) => {
@@ -638,7 +638,7 @@ const MAGMADILLO: PixelSpecies = {
       torso: [25.5, 42, 18.5, 14.5],
       head: [47, 39.5, 11, 10.5],
       feet: { near: [41, 57.5, 4.6, 2.9], far: [34.5, 57, 4, 2.6] },
-      eye: { ...BASE.final.eye, y: 35, x1: 42, x2: 53 },
+      eye: { ...BASE.final.eye, y: 35, x1: 42, x2: 53, style: 'lid' },
       neck: [40, 48],
       back: [18, 30],
       behind: (g, _s, p) => {
@@ -668,7 +668,7 @@ const MAGMADILLO: PixelSpecies = {
 };
 
 // ───────────────────────── Nubeballena (agua, super-raro) ─────────────────────────
-// Plan corporal: FLOTANTE sin patas, cuerpo de gota tumbada. Rasgo icónico: el chorro en forma de
+// Plan corporal: FLOTANTE sin patas ni apoyos: el cuerpo queda en el aire. Cuerpo de gota tumbada. Rasgo icónico: el chorro en forma de
 // nube. Segundo rasgo: la cola de aleta doble y los puntos de luz del lomo.
 
 /** Nube: tres lóbulos fundidos. */
@@ -687,18 +687,15 @@ function fluke(g: Grid, part: number, x0: number, y0: number, x: number, y: numb
 
 const dots = (g: Grid, pts: [number, number, number][]) => pts.forEach(([x, y, r]) => g.ellipse(4, 'belly', x, y, r, r, { flat: true, clip: 4, keep: true }));
 
-/** Nubes sobre las que flota: hacen de pies y dan el paso al andar. */
-function cloudFar(g: Grid, p: Pose, e: E): void {
-  const f = step(p, e, -p.leg);
-  g.ellipse(2, 'trait', f[0], f[1], f[2], f[3], { flat: true });
-}
-function cloudNear(g: Grid, p: Pose, e: E): void {
-  const f = step(p, e, p.leg);
-  g.ellipse(7, 'trait', f[0], f[1], f[2], f[3], { flat: true });
-  g.ellipse(7, 'trait', f[0] - f[2] * 0.7, f[1] - 0.8, f[2] * 0.55, f[3] * 0.9, { flat: true });
-}
+/** Surcos de la garganta: rayas cortas sobre la panza. */
+const grooves = (g: Grid, pts: [number, number, number][]) =>
+  pts.forEach(([x, y, len]) => g.poly(4, 'belly', [[x, y], [x + len, y - 0.6], [x + len, y + 0.4], [x, y + 1]], { flat: true, clip: 4, keep: true, tone: 'shade' }));
 
-const FLOAT = { head: undefined, feet: undefined, farArm: undefined, marks: undefined };
+/** Aleta pectoral: sale del costado y queda tendida hacia atrás, nunca bajo el cuerpo. Saluda con la pose. */
+const flipper = (g: Grid, p: Pose, x: number, y: number, len: number, w: number) =>
+  g.with(rotateAt(q(-p.armR * 0.6, 10), x, y), () => g.ellipse(8, 'skin', x - len * 0.42, y + len * 0.2, len / 2, w, { rot: -25 }));
+
+const FLOAT = { head: undefined, feet: undefined, arm: undefined, farArm: undefined, marks: undefined };
 
 const NUBEBALLENA: PixelSpecies = {
   id: 'nubeballena',
@@ -707,61 +704,59 @@ const NUBEBALLENA: PixelSpecies = {
     baby: stage('baby', {
       ...FLOAT,
       torso: [32, 50, 14, 9.5],
-      eye: { ...BASE.baby.eye, y: 45, x1: 32, x2: 40 },
-      cheek: [28, 53],
+      eye: { ...BASE.baby.eye, y: 46, x1: 32, x2: 41, style: 'bead' },
+      cheek: [29, 54],
       hat: [34, 41],
       behind: (g, _s, p) => tail(g, p, 19, 52, () => g.ellipse(1, 'body', 17, 50, 3.6, 2.2, { rot: 30 })),
       onHead: (g, _s, p) => appendage(g, p, 26, 41, () => puff(g, 5, 26, 39, 2.2)),
     }),
-    // Despega: flota sobre una nube, con aletas y cola de dos lóbulos.
+    // Despega: queda en el aire, con aletas y cola de dos lóbulos.
     juvenile: stage('juvenile', {
       ...FLOAT,
-      torso: [31, 43.5, 16, 10.5],
-      belly: [35, 49, 11, 5.5],
-      arm: [27, 52, 2.4, 3.8],
-      eye: { ...BASE.juvenile.eye, y: 38, x1: 32, x2: 41 },
-      hat: [34, 33.5],
-      neck: [36, 51],
-      back: [19, 38],
+      torso: [31, 44.5, 16, 10.5],
+      belly: [35, 50, 11, 5.5],
+      eye: { ...BASE.juvenile.eye, y: 41, x1: 32, x2: 42, style: 'bead' },
+      hat: [34, 34.5],
+      neck: [36, 52],
+      back: [19, 39],
       behind: (g, _s, p) => {
-        tail(g, p, 17, 44, () => fluke(g, 1, 17, 44, 11, 38, 5));
-        cloudFar(g, p, [24.5, 57.3, 4.5, 2.3]);
+        tail(g, p, 17, 45, () => fluke(g, 1, 17, 45, 11, 39, 5));
       },
-      onHead: (g, _s, p) => appendage(g, p, 25, 33, () => puff(g, 5, 25, 30.5, 3)),
-      front: (g, _s, p) => cloudNear(g, p, [37.5, 57.6, 5.5, 2.4]),
+      onHead: (g, _s, p) => {
+        grooves(g, [[36, 51, 6], [37, 53, 5]]);
+        appendage(g, p, 25, 34, () => puff(g, 5, 25, 31.5, 3));
+      },
+      front: (g, _s, p) => flipper(g, p, 30, 46, 7, 2),
     }),
     // Cuerpo grande con puntos de luz, chorro de nube sobre un tallo y cola alzada.
     adult: stage('adult', {
       ...FLOAT,
       torso: [31, 40.5, 19, 13],
       belly: [36, 47.5, 13.5, 6.5],
-      arm: [27, 51, 2.8, 5.5],
-      eye: { ...BASE.adult.eye, y: 35, x1: 34, x2: 45 },
+      eye: { ...BASE.adult.eye, y: 38, x1: 34, x2: 46, style: 'bead' },
       hat: [36, 28],
       neck: [38, 51],
       back: [16, 33],
       behind: (g, _s, p) => {
         tail(g, p, 14, 40, () => fluke(g, 1, 14, 40, 7, 30, 7));
-        g.ellipse(14, 'skin', 21, 51.5, 2.6, 5, { rot: 30, tone: 'shade' });
-        cloudFar(g, p, [22, 57.2, 6, 2.5]);
       },
       onHead: (g, _s, p) => {
         dots(g, [[19, 34, 1.3], [24, 30.5, 1.1], [17, 40, 1.1], [28.5, 29, 0.9]]);
+        grooves(g, [[37, 48, 8], [38, 50.5, 7], [39, 52.5, 5]]);
         appendage(g, p, 25, 28, () => {
           g.poly(5, 'trait', [[23.8, 28.5], [26.2, 28.5], [25.8, 24], [24.2, 24]], { flat: true });
           puff(g, 5, 25, 21, 4);
         });
       },
-      front: (g, _s, p) => cloudNear(g, p, [38, 57.6, 7, 2.5]),
+      front: (g, _s, p) => flipper(g, p, 30, 43, 10, 2.6),
     }),
     // Lleva el cielo encima: crin de nubes en el lomo, cola doble y un chorro alto con gotas.
     final: stage('final', {
       ...FLOAT,
       torso: [31, 39, 20.5, 13.5],
       belly: [36.5, 46.5, 15, 6.5],
-      emblem: [38, 46.5, 2, 2],
-      arm: [27, 50, 3.2, 7],
-      eye: { ...BASE.final.eye, y: 33, x1: 35, x2: 46 },
+      emblem: [33, 47, 2, 2],
+      eye: { ...BASE.final.eye, y: 36, x1: 35, x2: 47, style: 'bead' },
       hat: [37, 26],
       neck: [39, 50.5],
       back: [15, 31],
@@ -772,13 +767,12 @@ const NUBEBALLENA: PixelSpecies = {
         });
         // Accesorio de etapa final: crin de nubes que asoma sobre el lomo.
         [[13.5, 31.5, 3.2], [18, 27, 3.6], [24, 24.5, 3.2], [45.5, 28.5, 2.6]].forEach(([x, y, r]) => g.ellipse(6, 'trait', x, y, r, r));
-        g.ellipse(14, 'skin', 20, 51, 3, 6.5, { rot: 35, tone: 'shade' });
-        cloudFar(g, p, [21, 57.2, 7, 2.5]);
       },
       onHead: (g, _s, p) => {
         dots(g, [[19, 33.5, 1.4], [25, 29.5, 1.2], [16.5, 39.5, 1.2], [30, 28, 1], [22, 38.5, 0.9]]);
         g.ellipse(4, 'mark', 15.5, 44.5, 3.2, 1.1, { flat: true, clip: 4, keep: true });
         g.ellipse(4, 'mark', 17.5, 48.5, 3, 1.1, { flat: true, clip: 4, keep: true });
+        grooves(g, [[40, 46.5, 9], [41, 49, 8], [42, 51, 6]]);
         appendage(g, p, 27, 25, () => {
           g.poly(5, 'trait', [[25.6, 26], [28.4, 26], [27.8, 17], [26.2, 17]], { flat: true });
           puff(g, 5, 27, 13, 5);
@@ -786,7 +780,7 @@ const NUBEBALLENA: PixelSpecies = {
           g.ellipse(23, 'trait', 35.5, 16.5, 1.3, 1.8, { flat: true });
         });
       },
-      front: (g, _s, p) => cloudNear(g, p, [38.5, 57.6, 8, 2.5]),
+      front: (g, _s, p) => flipper(g, p, 30, 41.5, 13, 3),
     }),
   },
 };
@@ -834,7 +828,7 @@ const CACTUERNO: PixelSpecies = {
     baby: stage('baby', {
       torso: [32, 50.5, 12, 8.5],
       feet: { near: [36, 58.2, 3, 1.8], far: [28, 57.8, 2.6, 1.6] },
-      eye: { ...BASE.baby.eye, y: 46, x1: 30, x2: 38 },
+      eye: { ...BASE.baby.eye, y: 46, x1: 30, x2: 38, style: 'grumpy' },
       cheek: [26, 53],
       neck: [32, 55],
       behind: (g, _s, p) => {
@@ -848,7 +842,7 @@ const CACTUERNO: PixelSpecies = {
       torso: [32, 44.5, 11.5, 14],
       feet: { near: [36.5, 58, 3.8, 2.2], far: [27.5, 57.6, 3.2, 2] },
       belly: [35, 51, 6, 5.5],
-      eye: { ...BASE.juvenile.eye, y: 37, x1: 29, x2: 38 },
+      eye: { ...BASE.juvenile.eye, y: 37, x1: 29, x2: 38, style: 'grumpy' },
       neck: [32, 47],
       back: [21, 44],
       behind: (g, _s, p) => {
@@ -868,7 +862,7 @@ const CACTUERNO: PixelSpecies = {
       torso: [32, 40, 13, 19],
       feet: { near: [37, 58, 4.4, 2.3], far: [27, 57.6, 3.8, 2.1] },
       belly: [35, 49.5, 7, 7.5],
-      eye: { ...BASE.adult.eye, y: 29, x1: 28, x2: 39 },
+      eye: { ...BASE.adult.eye, y: 29, x1: 28, x2: 39, style: 'grumpy' },
       neck: [32, 40.5],
       back: [19, 38],
       behind: (g, _s, p) => {
@@ -891,7 +885,7 @@ const CACTUERNO: PixelSpecies = {
       feet: { near: [37.5, 58, 5, 2.4], far: [26.5, 57.6, 4.2, 2.2] },
       belly: [35.5, 47.5, 8.5, 9],
       emblem: [35.5, 47, 2, 2],
-      eye: { ...BASE.final.eye, y: 23, x1: 28, x2: 39 },
+      eye: { ...BASE.final.eye, y: 23, x1: 28, x2: 39, style: 'grumpy' },
       neck: [32, 34.5],
       back: [18, 34],
       behind: (g, _s, p) => {

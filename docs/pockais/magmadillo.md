@@ -43,7 +43,7 @@ Valiente y calmado: no busca pelea, pero no se aparta.
 | **Adult (25)** | Aguanta lo que le echen | Coraza alta, cabeza grande | Tres franjas con grietas encendidas, placa en la frente, cola anillada, orejas largas | Grietas en el secundario |
 | **Final (50, Piedra de Evolución)** | Un volcán pequeño y paciente | Más ancho, con chimeneas que rompen el contorno | Tres chimeneas con llama, cuerno en la frente y ascua en la cola, que leen el elemento | Patas oscuras, mirada decidida |
 
-**No cambia:** la paleta, la forma del ojo, la coraza sobre el lomo y las orejas en punta.
+**No cambia:** la paleta, los ojos de párpado caído, la coraza sobre el lomo y las orejas en punta.
 
 **Anclas de accesorios:** `head` sobre la cabeza, entre las orejas; `neck` bajo la cabeza, donde se junta con el cuerpo; `back` en lo alto de la coraza.
 

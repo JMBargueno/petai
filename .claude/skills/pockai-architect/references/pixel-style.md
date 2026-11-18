@@ -20,11 +20,11 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Antes de pensar en 
 | Bípedo alado | Bípedo con alas que doblan su anchura | `lowered()` y alas en `behind` | Livolt |
 | Tentacular | Cuerpo con manto y apoyos múltiples, sin brazos | `arm: undefined` y tentáculos en `behind` | Inktopus |
 | Cuadrúpedo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas | `torso` horizontal, `head` a la derecha, patas traseras con `hindFar` (en `behind`) y `hindNear` (en `front`) | Magmadillo |
-| Flotante | Sin patas: cuerpo de gota tumbada sobre un apoyo que no es suyo | `feet: undefined`, `head: undefined`, apoyos en `behind` y `front`, ancla `hat` | Nubeballena |
+| Flotante | Sin patas ni apoyos: el cuerpo queda en el aire, a unos 6 px del suelo | `feet: undefined`, `head: undefined`, `arm: undefined`, aleta al costado en `front`, ancla `hat` | Nubeballena |
 | Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | `head: undefined` en las 4 etapas, ramas con la pieza del tronco | Cactuerno |
 | Serpentino, ave, insecto, etc. | Libres | Combina lo anterior | — |
 
-Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo tres**):
+Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo cuatro de siete**):
 
 - **Apoyo:** dos pies, cuatro patas, flota, repta, raíces.
 - **Proporción:** más alto que ancho, más ancho que alto, o cuadrado. Mira la fila de siluetas de las dos especies una junto a otra.
@@ -32,6 +32,9 @@ Qué debe diferenciar a dos especies (cuantas más, mejor; **mínimo tres**):
 - **Extremidades:** brazos, aletas, alas, ramas o ninguna.
 - **Rasgo icónico:** dónde sale (cabeza, lomo, cola, costados) y qué forma tiene.
 - **Contorno:** liso, dentado, lobulado o con placas.
+- **Cara:** la forma del ojo (`eye.style`), su tamaño y dónde cae en el cuerpo. Estilos: por defecto (alto y redondeado), `bead` (cuenta de 3 px: criaturas grandes de ojo diminuto, como la Nubeballena), `lid` (párpado caído y tranquilo, como el Magmadillo) y `grumpy` (párpado caído con ceja inclinada, como el Cactuerno). Elige el que cuente su carácter y no repitas el de las especies de su misma rareza. Si ninguno encaja, añade un estilo en `scripts/sprites/pixel/face.ts`.
+
+**La anatomía tiene que tener sentido.** Cada pieza responde a qué animal es: una ballena no tiene pies ni nada que cuelgue bajo el cuerpo y se lea como tal; un pulpo no tiene brazos; un cactus no tiene cola. Antes de dar por buena una hoja, pregúntate por cada pieza: «¿esto lo tendría el animal de verdad?». Lo que la geometría común trae y la criatura no tendría, se quita con `undefined`.
 
 Con un plan que no es bípedo, la tabla de etapas se lee por su intención y no al pie de la letra: «un volumen» en baby significa la forma más simple de ese plan (el Magmadillo enroscado, la Nubeballena posada), y «dos volúmenes» en adult significa su forma completa. Las alturas son máximos: un cuadrúpedo puede quedarse muy por debajo y crecer a lo ancho.
 
@@ -77,6 +80,8 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta.
 
 ## Errores típicos
 - Una especie que es el bípedo redondo de siempre con otro adorno en la cabeza.
+- Piezas heredadas de la geometría común que el animal no tendría: pies en una ballena, brazos en un pulpo. También apoyos o aletas colocados bajo el cuerpo, que se leen como pies.
+- La misma cara en todas las especies: mismos ojos, mismo tamaño, misma altura.
 - Etapas que solo cambian de tamaño o de proporción de cabeza.
 - Un baby que ya tiene todas las piezas del adulto en pequeño.
 - Una etapa final cuyo extra queda dentro del cuerpo y no altera la silueta.

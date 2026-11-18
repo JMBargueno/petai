@@ -43,7 +43,7 @@ Reservado y con genio, pero con cariño de fondo: el clásico gruñón de buen c
 | **Adult (25)** | Un saguaro con carácter | Columna alta y estrecha | Dos brazos a distinta altura y la flor abierta | Dos costillas |
 | **Final (50, Piedra de Evolución)** | Cactus centenario | Columna ancha con tres brazos que rompen el contorno | Brazos en flor, flor grande en corona y crin de púas, que leen el elemento | Tres costillas, emblema, mirada decidida |
 
-**No cambia:** la paleta verde con flor rosa, la forma del ojo, el hocico a la derecha y la flor en lo alto.
+**No cambia:** la paleta verde con flor rosa, los ojos de gruñón, el hocico a la derecha y la flor en lo alto.
 
 **Anclas de accesorios:** `head` en lo alto del tronco (la flor queda a un lado); `neck` bajo la boca; `back` en el costado izquierdo, junto al brazo.
 

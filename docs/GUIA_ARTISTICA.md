@@ -347,10 +347,12 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Cada una parte de u
 | Bípedo alado | Bípedo con alas que doblan su anchura | Livolt |
 | Tentacular | Manto y apoyos múltiples, sin brazos | Inktopus |
 | Cuadrúpedo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas | Magmadillo |
-| Flotante | Sin patas: cuerpo de gota tumbada sobre una nube | Nubeballena |
+| Flotante | Sin patas ni apoyos: el cuerpo queda en el aire | Nubeballena |
 | Columna | Un solo volumen que crece en vertical, con ramas fundidas al tronco | Cactuerno |
 
-Frente a cualquier otra especie, una nueva cambia en al menos tres de estos seis rasgos: apoyo (dos pies, cuatro patas, flota, repta), proporción (alto, ancho o cuadrado), cabeza (fundida, encima o delante), extremidades (brazos, aletas, alas, ramas o ninguna), rasgo icónico (dónde sale y qué forma tiene) y contorno (liso, dentado, lobulado o con placas). La prueba es poner en negro los adultos de todas las especies: ninguno se confunde con otro.
+Frente a cualquier otra especie, una nueva cambia en al menos cuatro de estos siete rasgos: apoyo (dos pies, cuatro patas, flota, repta), proporción (alto, ancho o cuadrado), cabeza (fundida, encima o delante), extremidades (brazos, aletas, alas, ramas o ninguna), rasgo icónico (dónde sale y qué forma tiene), contorno (liso, dentado, lobulado o con placas) y cara (forma, tamaño y sitio de los ojos: altos y redondeados, de cuenta, de párpado caído o de gruñón).
+
+La anatomía tiene que tener sentido para el animal que es: una ballena no tiene pies ni nada bajo el cuerpo que se lea como tal, un pulpo no tiene brazos y un cactus no tiene cola. La prueba es poner en negro los adultos de todas las especies: ninguno se confunde con otro.
 
 Con un plan que no es bípedo, la tabla de etapas siguiente se lee por su intención: «un volumen» es la forma más simple de ese plan y «dos volúmenes», su forma completa. Las alturas son máximos.
 
@@ -375,7 +377,7 @@ Cada etapa es un **dibujo distinto, con su propio plan corporal**, no la anterio
 Lo que no cambia nunca, para que siga siendo la misma especie:
 
 - La rampa del elemento y los colores secundario y acento.
-- La forma del ojo (rectángulo oscuro de esquinas recortadas con brillo arriba a la izquierda).
+- La forma del ojo de la especie (la suya, que puede no ser la de otras especies), con el brillo arriba a la izquierda.
 - El sitio del rasgo icónico: crece, se duplica o se adorna, pero sale del mismo punto.
 - La vista en tres cuartos y la luz.
 
