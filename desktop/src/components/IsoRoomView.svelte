@@ -13,6 +13,8 @@
   import { environmentalStatus } from '../lib/environmental';
   import { habitatBackdrop } from '../lib/habitatBackdrop';
   import { resolveBaseState } from '../lib/animation/AnimationController';
+  import { hashSeed } from '@pockai/mind';
+  import { fallbackDims, loadDims, petDims } from '../lib/brain/personalityStore';
 
   export let pet: any = null;
   export let room: HabitatRoom | null = null;
@@ -106,7 +108,23 @@
     const s = resolveBaseState(pet);
     return s === 'sleep' ? 'idle' : s;
   })();
-  $: if (scene) send({ type: 'setActivity', activity, rest });
+  // Personalidad y necesidades, para que en la sala elija qué hacer según cómo es y cómo está
+  // (con hambre va al comedero, sucio a la fuente…). La personalidad es la última que dio el
+  // servidor para esta mascota; `$petDims` solo se lee para refrescar cuando llega una nueva.
+  const roomSeedSalt = Date.now();
+  $: roomMind = pet
+    ? {
+        dims: ($petDims, loadDims(typeof localStorage === 'undefined' ? null : localStorage, pet.id)) ?? fallbackDims(pet),
+        needs: {
+          hunger: pet.hunger ?? 60,
+          energy: pet.energy ?? 60,
+          hygiene: pet.hygiene ?? 60,
+          happiness: pet.happiness ?? 60,
+        },
+        seed: hashSeed(`room:${pet.id}:${roomSeedSalt}`),
+      }
+    : undefined;
+  $: if (scene) send({ type: 'setActivity', activity, rest, mind: roomMind });
   $: if (scene) send({ type: 'setNight', night });
   // Clima y sol reales (la hora la pone el reloj del equipo dentro de la escena). Sin ubicación
   // no hay dato: cielo despejado y horas de sol por defecto.

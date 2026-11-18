@@ -11,6 +11,9 @@ export const PROTOCOL_VERSION = 3;
 
 import { parseEquipped, type EquippedAccessories } from './bake/accessories';
 import { parseClock } from './ambience/sunClock';
+import { parseRoomMind, type RoomMind } from './room/petWander';
+
+export type { RoomMind };
 
 export type Stage = 'egg' | 'baby' | 'juvenile' | 'adult' | 'final';
 export type ThemeMode = 'light' | 'dark';
@@ -105,7 +108,12 @@ export type HostMessage =
   | { type: 'setFacing'; facing: 1 | -1 }
   | { type: 'setRoom'; room: RoomState | null }
   /** `rest`: clip de reposo según el estado del Pockai (idle, sick, hungry, tired, sad…). */
-  | { type: 'setActivity'; activity: Activity; rest?: string }
+  /**
+   * `mind` (opcional): personalidad y necesidades del Pockai para que en la sala elija qué hacer
+   * según cómo es y cómo está. Sin él se porta de forma neutra, así que las apps que aún no lo
+   * mandan siguen funcionando igual (por eso no sube PROTOCOL_VERSION).
+   */
+  | { type: 'setActivity'; activity: Activity; rest?: string; mind?: RoomMind }
   /** Luces apagadas porque el Pockai duerme (la hora del día va por `setAmbience`). */
   | { type: 'setNight'; night: boolean }
   | AmbienceMessage
@@ -260,9 +268,13 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
     }
     case 'setActivity':
       if (m.activity !== 'idle' && m.activity !== 'sleep' && m.activity !== 'away') return null;
-      return typeof m.rest === 'string' && /^[a-z_]{1,24}$/.test(m.rest)
-        ? { type: 'setActivity', activity: m.activity, rest: m.rest }
-        : { type: 'setActivity', activity: m.activity };
+    {
+      const out: Extract<HostMessage, { type: 'setActivity' }> = { type: 'setActivity', activity: m.activity };
+      if (typeof m.rest === 'string' && /^[a-z_]{1,24}$/.test(m.rest)) out.rest = m.rest;
+      const mind = parseRoomMind(m.mind);
+      if (mind) out.mind = mind;
+      return out;
+    }
     case 'setNight':
       return typeof m.night === 'boolean' ? { type: 'setNight', night: m.night } : null;
     case 'setAmbience': {

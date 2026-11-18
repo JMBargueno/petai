@@ -14,6 +14,7 @@ import { ACCESSORY_SLOTS } from './bake/accessories';
 import type { AccessoryLayer } from './pet/PetSprite';
 import { PetSprite, FRAME } from './pet/PetSprite';
 import { IsoRoom } from './room/IsoRoom';
+import type { RoomMind } from './room/petWander';
 import { styleFor } from './room/roomStyles';
 import { Ambience, NO_AMBIENCE, type AmbienceState } from './ambience/Ambience';
 import { loadBackdrop } from './ambience/backdrops';
@@ -59,6 +60,7 @@ export class PockaiScene {
   // Estado de sala que puede llegar antes que la propia sala
   private activity: Activity = 'idle';
   private rest = 'idle';
+  private mind: RoomMind | null = null;
   private night = false;
   private edit = false;
   /** Cielo y clima de la sala; solo existe mientras hay sala (el Pockai suelto va sin fondo). */
@@ -168,6 +170,9 @@ export class PockaiScene {
       case 'setActivity':
         this.activity = msg.activity;
         this.rest = msg.rest ?? 'idle';
+        // Un mensaje sin `mind` no borra el anterior: el anfitrión puede mandarlo solo cuando cambia
+        if (msg.mind) this.mind = msg.mind;
+        this.room?.setMind(this.mind);
         this.room?.setActivity(msg.activity, this.rest);
         if (!this.room) this.pet.visible = msg.activity !== 'away';
         break;
@@ -236,6 +241,7 @@ export class PockaiScene {
       this.room = new IsoRoom({ pet: this.pet, emit: (e) => this.emit(e), reducedMotion: this.reducedMotion });
       this.app.stage.addChildAt(this.room, 0);
       this.room.setRoom(state);
+      this.room.setMind(this.mind);
       this.room.setActivity(this.activity, this.rest);
       this.room.setNight(this.night);
       this.room.setEditMode(this.edit);

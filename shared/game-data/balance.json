@@ -535,6 +535,24 @@
     },
     "combat": { "maxThresholdShift": 0.05 },
     "behavior": { "minEnergyToPlay": 15 },
+    "room": {
+      "antiRepeat": { "window": 5, "penalty": 0.5, "top": 3, "margin": 0.15 },
+      "needs": { "low": 35, "high": 65 },
+      "actions": {
+        "stroll": { "base": 3, "weights": { "curiosity": 0.02, "temper": 0.01 } },
+        "cheer": { "base": 0.4, "weights": { "affection": 0.01, "sociability": 0.01 }, "cooldownMs": 20000, "requires": { "sunny": true } },
+        "eat": { "base": 0.4, "interaction": "eat", "cooldownMs": 30000, "boost": { "lowHunger": 8, "highHunger": 0.2 } },
+        "bathe": { "base": 0.4, "interaction": "bathe", "weights": { "curiosity": 0.005 }, "cooldownMs": 30000, "boost": { "lowHygiene": 8, "highHygiene": 0.2 } },
+        "play": {
+          "base": 0.8,
+          "interaction": "play",
+          "weights": { "temper": 0.03, "curiosity": 0.01 },
+          "cooldownMs": 15000,
+          "boost": { "highEnergy": 1.5, "lowEnergy": 0.3, "lowHappiness": 2 }
+        },
+        "sit": { "base": 0.8, "interaction": "sit", "weights": { "temper": -0.03 }, "cooldownMs": 15000, "boost": { "lowEnergy": 3 } }
+      }
+    },
     "desktop": {
       "thinkMs": 500,
       "pauseMs": [1500, 4200],
