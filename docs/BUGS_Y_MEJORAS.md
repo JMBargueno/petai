@@ -153,7 +153,7 @@
   - **Hecho cuando:** cada rasgo se traduce a una frase en primera persona por banda (bajo / medio / alto); tests unit del bloque generado.
 
 - [x] **A3 — Formato de respuesta en bocadillos** · P2
-  - ✅ **Resuelto (lote 2):** el prompt pide como mucho 3 frases cortas y permite `**negrita**` (ningún otro formato). El escritorio lo garantiza en `speech-queue.ts` para cualquier origen (IA de Pockai, key propia, Hermes local y CLI): 140 letras visibles por bocadillo, 3 bocadillos por respuesta de IA y el resto «… (sigue en el chat)». La negrita se pinta en el bocadillo y en el chat con `<strong>`, sin `{@html}`; si un corte cae en medio, se cierra y se reabre en el siguiente bocadillo. Los avisos que no son de IA siguen con su máximo de 8 bocadillos. **Sin comprobar a ojo en la app** (hace falta sesión y backend); cubierto con tests.
+  - ✅ **Resuelto (lote 2):** el prompt pide como mucho 3 frases cortas y permite `**negrita**` (ningún otro formato). El escritorio lo garantiza en `speech-queue.ts` para cualquier origen (IA de Pockai, key propia, Hermes local y CLI): 140 letras visibles por bocadillo, 3 bocadillos por respuesta de IA y el resto «… (sigue en el chat)». La negrita se pinta en el bocadillo y en el chat con `<strong>`, sin `{@html}`; si un corte cae en medio, se cierra y se reabre en el siguiente bocadillo. Los avisos que no son de IA siguen con su máximo de 8 bocadillos. Comprobado en el modo demo (bocadillo con negrita); el chat con negrita, solo con tests.
   - [x] Máximo **3 bocadillos** por interacción.
   - [x] Máximo **140 caracteres** por bocadillo (ajustar al tamaño real del bocadillo).
   - [x] **Markdown básico** (negritas) renderizado en el bocadillo.
