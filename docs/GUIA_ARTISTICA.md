@@ -346,10 +346,11 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Cada una parte de u
 
 | Plan | Cómo es | Especies |
 |---|---|---|
-| Bípedo redondo | De pie, cabeza grande sobre torso, brazos cortos | Ignisaurio, Axolunar, Florabrote, Solarejo |
+| Bípedo redondo | De pie, cabeza grande sobre torso, brazos cortos | Axolunar, Florabrote, Solarejo |
 | Bípedo alado | Bípedo con alas que doblan su anchura | Livolt |
 | Tentacular | Manto y apoyos múltiples, sin brazos | Inktopus |
 | Cuadrúpedo bajo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas cortas | Magmadillo |
+| Cuadrúpedo de gorguera | Robusto y cabezón, a cuatro patas, con gorguera detrás de la cabeza, cuernos y cola de maza | Ignisaurio |
 | Cuadrúpedo sentado de tres cabezas | Grupa en el suelo, patas delanteras rectas y tres cabezas en abanico; solo la central lleva cara y accesorios | Cerbito |
 | Cuadrúpedo esbelto | Patas largas y finas, cuello alto y hocico; el cuerpo queda lejos del suelo | Kirisol |
 | Ave de cuello largo | Sin brazos: alas. Cabeza pequeña, cuello largo, pico y patas finas con garras | Fénixel |

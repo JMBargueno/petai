@@ -2,7 +2,7 @@
   {
     "id": "ignisaur",
     "name": "Ignisaurio",
-    "description": "Una pequeña criatura reptiliana de escamas cálidas y temperamento vivaz. Cuando se alegra, desprende chispas brillantes.",
+    "description": "Un pequeño dinosaurio de fuego, robusto y cabezón, con una gorguera coronada de llamas y una maza de brasas en la cola. Cuando se alegra, desprende chispas brillantes.",
     "element": "fire",
     "rarity": "normal",
     "baseStats": {
@@ -22,9 +22,9 @@
       "temper": 65
     },
     "defaultPalette": {
-      "primary": "#E25822",
-      "secondary": "#F3C544",
-      "accent": "#6D1600"
+      "primary": "#FB2910",
+      "secondary": "#42202B",
+      "accent": "#FFDB85"
     }
   },
   {
@@ -50,9 +50,9 @@
       "temper": 20
     },
     "defaultPalette": {
-      "primary": "#38A3A5",
-      "secondary": "#80ED99",
-      "accent": "#22577A"
+      "primary": "#3FA5A5",
+      "secondary": "#306373",
+      "accent": "#81EB9B"
     }
   },
   {
@@ -78,9 +78,9 @@
       "temper": 35
     },
     "defaultPalette": {
-      "primary": "#57CC99",
-      "secondary": "#C7F9CC",
-      "accent": "#22577A"
+      "primary": "#73E1A5",
+      "secondary": "#FFBBC6",
+      "accent": "#458D80"
     }
   },
   {
@@ -190,9 +190,9 @@
       "temper": 30
     },
     "defaultPalette": {
-      "primary": "#C2452D",
-      "secondary": "#FFB627",
-      "accent": "#5A1807"
+      "primary": "#C63D27",
+      "secondary": "#70162C",
+      "accent": "#FFD33F"
     }
   },
   {
@@ -218,9 +218,9 @@
       "temper": 20
     },
     "defaultPalette": {
-      "primary": "#4F86C6",
-      "secondary": "#E8F1FA",
-      "accent": "#1F3F6E"
+      "primary": "#5485C1",
+      "secondary": "#F6F9FF",
+      "accent": "#FC7771"
     }
   },
   {
@@ -246,9 +246,9 @@
       "temper": 65
     },
     "defaultPalette": {
-      "primary": "#4FAF7A",
-      "secondary": "#F7B2C4",
-      "accent": "#1F5A44"
+      "primary": "#85D3A0",
+      "secondary": "#376F6D",
+      "accent": "#FAA8C0"
     }
   },
   {
@@ -302,9 +302,9 @@
       "temper": 75
     },
     "defaultPalette": {
-      "primary": "#6A5C9E",
-      "secondary": "#D7C7F0",
-      "accent": "#2A2342"
+      "primary": "#7878C8",
+      "secondary": "#E3CBFA",
+      "accent": "#DA7AFF"
     }
   },
   {

@@ -98,6 +98,7 @@ const accent = anchor('accent', primary.map((v) => v * 0.42));
 const BASE = { primary, secondary, accent };
 
 // Tono: el gris del generador que deja la luminancia más cerca de la del color original.
+const MAX_DRIFT = 30;
 const TONES = {
   primary: [['body', 'base', 239], ['body', 'shade', 172], ['body', 'deep', 124], ['mark', 'deep', 96]],
   secondary: [['belly', 'base', 239], ['belly', 'shade', 200], ['trait', 'shade', 172], ['belly', 'deep', 160], ['trait', 'deep', 124]],
@@ -111,8 +112,12 @@ function entry(c) {
   let best = null;
   for (const [role, tone, g] of TONES[c.family]) {
     const d = Math.abs((ref * g) / 255 - target);
-    if (!best || d < best.d) best = { role, tone, d };
+    if (!best || d < best.d) best = { role, tone, d, g };
   }
+  // Si el papel elegido dejaría el color irreconocible (una llama naranja en una familia crema
+  // saldría parda), se guarda literal: pierde la paleta por mascota, pero conserva el dibujo.
+  const shown = lab(BASE[c.family].map((v) => (v * best.g) / 255));
+  if (d3(shown, c.lab) > MAX_DRIFT) { c.family = 'lit'; return { lit: c.c.map(Math.round) }; }
   return { role: best.role, tone: best.tone };
 }
 
