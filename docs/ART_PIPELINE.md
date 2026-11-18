@@ -228,17 +228,24 @@ El script de validación se ejecuta en GitHub Actions (`npm run validate:assets`
 Reglas visuales en [`GUIA_ARTISTICA.md` §7.4](GUIA_ARTISTICA.md#74-isométrico-objetivo-sustituye-a-la-vista-de-perfil).
 
 ### Hojas por etapa
-- `SpeciesArt.draw(ctx, pose, stage)` recibe la etapa (`baby | juvenile | adult | final`), y `stageParams(stage)` (en `scripts/sprites/species.ts`) da `{ size, head, app, eye, accessory }`: escala total, escala extra de la cabeza, apéndices, ojos y accesorio final.
-- `pnpm generate:sprites` escribe la etapa **adult en la raíz** `shared/assets/species/<id>/{base.png, mask.png, anim.json}` (así los clientes antiguos y el manifiesto del CDN siguen funcionando sin duplicar bytes) y `baby`, `juvenile` y `final` en `species/<id>/<etapa>/`.
-- La cara se pinta en la máscara con primario **sin canal B** (`MASK_FACE` en `draw.ts`), así que el patrón nunca la pisa.
+- Cada especie es un `PixelSpecies` en `scripts/sprites/pixel/species.ts`, con una geometría por etapa (`baby | juvenile | adult | final`). No hay un dibujo escalado: cada etapa tiene su propio plan corporal ([`GUIA_ARTISTICA.md` §7.5](GUIA_ARTISTICA.md)).
+- `pnpm generate:sprites` escribe la etapa **adult en la raíz** `shared/assets/species/<id>/{base.png, mask.png, anim.json, anchors.json}` (así los clientes antiguos y el manifiesto del CDN siguen funcionando sin duplicar bytes) y `baby`, `juvenile` y `final` en `species/<id>/<etapa>/`.
+- La cara se pinta en la máscara con primario **sin canal B** (papel `skin`), así que el patrón nunca la pisa.
 - Los clientes piden `(especie, etapa)`. Si no existe, usan `adult` y, si tampoco existe, `ignisaur`.
 
 ### Muebles
 - `scripts/sprites/furniture.ts` dibuja cada mueble en SVG isométrico con 2 orientaciones (`a` = rotación 0 y `b` = rotación 1). Las rotaciones 2 y 3 son el espejo de `b` y `a`.
 - Salida: `shared/assets/furniture/<id>_{a,b}.svg`. Los datos (huella, montaje, interacción) están en `shared/game-data/habitats.json`.
 
+### Pixel art
+- El generador no rasteriza SVG: `scripts/sprites/pixel/raster.ts` dibuja cada frame desde cero en una rejilla de **64×64** a partir de elipses y polígonos ya transformados por la pose, y guarda la hoja a ×2 (frames de 128×128). Nunca se escala ni se gira un mapa de bits.
+- El formato de `base.png` y `mask.png` no cambia, así que el horneado de los clientes (§4) es el mismo. Tonos en `base.png`: contorno 62, sombra 172, base y luz 239. El tono de luz se consigue sumando en la máscara una parte del secundario (G = 64; brillo, G = 128).
+- `anim.json` lleva `meta.pixelArt = { native: 64, scale: 2 }`. Los clientes escalan por enteros y con vecino más próximo.
+- `anchors.json` (junto a cada `anim.json`): anclas de accesorio por ranura y su desplazamiento por frame ([spec 38 §5](specs/spec-38-accesorios-pockai.md)).
+- Los `sprites/<id>_*.svg` de vista previa son el mismo pixel art, hecho de rectángulos.
+
 ### Revisión visual
-- `npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>` compone una hoja de contactos PNG (clips clave × etapas) a color con la paleta por defecto, para revisarla antes de commitear.
+- `npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>` compone una hoja de contactos PNG (poses clave × etapas, más las cuatro siluetas) a color con la paleta por defecto, para revisarla antes de commitear.
 
 ---
 

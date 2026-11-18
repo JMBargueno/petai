@@ -13,7 +13,8 @@
 
   export let visitor: HabitatVisitor;
 
-  const SIZE = 72;
+  // Pixel art (GUIA_ARTISTICA §7.5): 64 px = ×1, escala entera.
+  const SIZE = 64;
   const speciesKey = resolveVisitorSpriteKey(visitor.pet);
   /** El visitante no trae paleta ni patrón: seed determinista por jugador y paleta por defecto. */
   const palette = { primary: '#8F7BD8', secondary: '#F3C544', accent: '#2D2A4A' };
@@ -91,7 +92,7 @@
     left: -86px;
     bottom: 0;
     z-index: 49;
-    width: 72px;
+    width: 64px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -118,13 +119,13 @@
     overflow: hidden;
   }
   .v-canvas {
-    width: 72px;
-    height: 72px;
-    image-rendering: auto;
+    width: 64px;
+    height: 64px;
+    image-rendering: pixelated;
   }
   .v-svg {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
   }
   .v-svg :global(svg) {
     width: 100%;

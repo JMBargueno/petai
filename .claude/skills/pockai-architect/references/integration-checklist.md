@@ -31,10 +31,9 @@ Rutas relativas a la raíz del repo. Marca cada paso en el resumen final.
    Indica en el resumen qué clasificaste como cada cosa.
 
 ## Arte real (paso 5b de SKILL.md)
-9. `scripts/sprites/species.ts`: añade el `SpeciesArt` en 3/4 con `stage` y regístralo en `SPECIES` (ver `art-brief.md` e `iso-style.md`).
+9. `scripts/sprites/pixel/species.ts`: añade el `PixelSpecies` con sus cuatro etapas y regístralo en `PIXEL_SPECIES` (ver `art-brief.md` y `pixel-style.md`).
 9a. `npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>`: **lee el PNG** y pasa la checklist de `art-brief.md`. Itera hasta que pase.
-9b. `pnpm generate:sprites` → `shared/assets/species/<id>/` (adult), `species/<id>/{baby,juvenile,final}/` y `sprites/<id>_idle.svg`.
-    Luego borra los placeholders `sprites/<id>_{eat,happy,sleep}.svg` solo si el generador ya los produce; si no, regénéralos con `placeholder_svgs.mjs <id> --force` (plantilla 3/4).
+9b. `pnpm generate:sprites` → `shared/assets/species/<id>/` (adult), `species/<id>/{baby,juvenile,final}/`, con `base.png`, `mask.png`, `anim.json` y `anchors.json` en cada una, y `sprites/<id>_{idle,happy,eat,sleep}.svg`.
 
 ## Personalidad
 9c. `personalityBias` presente con las 5 dimensiones (reglas en `personality.md`). No toques `balance.json → personality` por una especie: es global.

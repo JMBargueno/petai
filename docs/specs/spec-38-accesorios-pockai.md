@@ -205,9 +205,8 @@ generador exporte una capa `front.png` con las piezas que deben tapar a la prend
 
 ## 9. Dependencia: el arte en pixel art
 
-Las prendas son pixel art y los Pockais se siguen generando en SVG. Una prenda en píxeles sobre
-un sprite vectorial no casa. Por eso el render (lote 3) va **después** de migrar los sprites a
-pixel art (`GUIA_ARTISTICA.md` §7.5). Los lotes 1 y 2 no dependen de esa migración.
+Resuelta: los Pockais ya se generan en pixel art (`scripts/sprites/pixel/`, `GUIA_ARTISTICA.md`
+§7.5), así que una prenda en píxeles casa con el sprite.
 
 ## 10. Lotes
 
@@ -240,9 +239,10 @@ Hecho, en `backend/src/modules/accessories/`. Las reglas puras están en `access
 El perfil público (`ProfileService`) expone ya `pet.accessories`. La API pública de webhooks no,
 porque tampoco expone el aspecto de la mascota. Queda pendiente: los tests e2e contra base de datos.
 
-**Lote 3: anclas y render** (tras la migración a pixel art)
-- `anchors.json` para las especies existentes, en las cuatro etapas.
-- Reglas de arte de la sección 7 en `validate-assets.js`.
+**Lote 3: anclas y render**
+- Hecho: `anchors.json` para las tres especies en las cuatro etapas (lo escribe
+  `pnpm generate:sprites`) y sus reglas en `validate-assets.js`.
+- Pendiente: el arte de las prendas (`shared/assets/accessories/`) y sus reglas de validación.
 - Render por capas en `shared/scene` (PixiJS), en la mascota flotante de escritorio y en Android,
   con vecino más próximo y posiciones a píxel entero.
 - Tienda y armario, con los estados y chips de la guía §7.6.

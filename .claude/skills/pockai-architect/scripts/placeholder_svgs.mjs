@@ -48,7 +48,7 @@ const POSES = {
 };
 
 const svg = (p) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Placeholder 3/4 de ${sp.name} (${key}). Sustituir por el SpeciesArt real: scripts/sprites/species.ts -->
+  <!-- Placeholder 3/4 de ${sp.name} (${key}). Sustituir por el PixelSpecies real: scripts/sprites/pixel/species.ts -->
   <ellipse cx="64" cy="114" rx="24" ry="12" fill="#000000" opacity="0.2"/>
   <g transform="translate(0, ${p.dy})">
     <ellipse cx="44" cy="106" rx="9" ry="6" fill="${primary}" stroke="#1A1A1A" stroke-width="2.6"/>

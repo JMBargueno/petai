@@ -2,17 +2,17 @@
 
 Es un resumen práctico de `docs/GUIA_ARTISTICA.md` §7.5 y §7.6. Si hay conflicto, manda la guía. La cámara, la luz y la cara en 3/4 siguen en `iso-style.md`.
 
-**Estado:** el pixel art es el estilo **objetivo**. El generador (`scripts/sprites/species.ts`) todavía produce SVG procedural, así que hoy el arte se sigue escribiendo como `SpeciesArt`. Lo que ya se aplica siempre es el **diseño**: la evolución por etapas, la economía de formas y el hueco para accesorios van en la ficha y en el dibujo, para que la especie esté lista cuando se migre.
+**Estado:** los Pockais ya se generan en pixel art (`scripts/sprites/pixel/`). El render de accesorios sobre la mascota sigue pendiente (spec 38, lote 3).
 
-## Lo que ya se aplica hoy (con el generador vectorial)
-- **Evolucionar es cambiar.** Cada etapa tiene su propio plan corporal. No basta con `stageParams`: usa ramas y helpers propios de etapa (`if (stage === 'baby')`), como permite `art-brief.md`.
-- **Formas grandes.** Diseña pensando en 64×64: un rasgo que mida menos de 4 px en el frame de 128 (2 px nativos) no existirá en pixel art.
-- **Tres tonos planos por volumen**, sin degradados: luz arriba a la izquierda, base, sombra abajo a la derecha.
-- **Marcas en el acento**, barriga en el secundario, ambas planas.
+## Reglas de diseño
+- **Evolucionar es cambiar.** Cada etapa tiene su propio plan corporal y su propia geometría.
+- **Formas grandes.** Se dibuja en 64×64: un rasgo de menos de 2 px no existe.
+- **Tres tonos por volumen**, sin degradados: luz arriba a la izquierda, base, sombra abajo a la derecha. Los pone el rasterizador.
+- **Dos colores de paleta:** primario (cuerpo, y oscurecido para las marcas) y secundario (barriga y rasgo icónico).
 - **Sitio para accesorios.** La especie debe poder llevar gorro, gafas, bufanda y capa en todas las etapas.
 
 ## Etapas
-Las alturas van en px nativos; en el frame de 128 son el doble.
+Las alturas van en px nativos; en la hoja de 128 son el doble.
 
 | Eje | baby | juvenile | adult | final |
 |---|---|---|---|---|
@@ -42,13 +42,12 @@ Las piezas nuevas de la etapa final tienen que verse en la silueta.
 - Al diseñar, comprueba que nada lo impide: el rasgo icónico no ocupa el centro de la cabeza (o el ancla `head` se ladea), hay sitio bajo la boca para una bufanda y la espalda queda libre por el lado izquierdo.
 - Las piezas propias de la especie (cresta, segunda cola) no son accesorios: no se quitan ni se venden.
 
-## Cuando el arte sea pixel art
-- Frame nativo de 64×64, suelo en la fila 60, exportado a ×2 (128×128).
-- Contorno exterior de 1 px en el tono `900` de la rampa del elemento; no `LINE`.
-- Rampa de 5 tonos por elemento (tabla en la guía §7.5); el tono `500` es el primario de `palettes.json`.
-- Como mucho 16 colores, sin antialiasing ni transparencias parciales.
-- Cada etapa se dibuja en su propia rejilla; no se escala una para obtener otra.
-- En sala se muestra a 64 px (×1), no a 72.
+## Cómo sale el color
+- La hoja no guarda colores: guarda tonos de gris (`base.png`) y papeles (`mask.png`), y el cliente los multiplica por la paleta de la mascota.
+- El contorno es el color de la pieza muy oscurecido: un oscuro teñido, no negro.
+- La luz suma una parte del secundario: por eso gira hacia el color cálido de la paleta.
+- Ojos, boca y efectos son colores literales.
+- En sala se muestra a 64 px (×1); en la mascota flotante, a 128 px (×2). Siempre sin suavizado.
 
 ## Errores típicos
 - Etapas que solo cambian de tamaño o de proporción de cabeza.

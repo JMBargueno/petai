@@ -164,7 +164,49 @@ function validateSheet(label, dir) {
     }
   }
 
-  console.log(`✓ species/${label}/: base.png, mask.png y anim.json validados`);
+  validateAnchors(label, dir, animData);
+  console.log(`✓ species/${label}/: base.png, mask.png, anim.json y anchors.json validados`);
+}
+
+// Anclas de accesorio (spec 38 §5): cuatro ranuras dentro del frame nativo de 64×64 y, por
+// animación, tantos desplazamientos como frames tiene en anim.json.
+const ANCHOR_SLOTS = ['head', 'face', 'neck', 'back'];
+const ANCHOR_SIZES = ['S', 'M', 'L'];
+
+function validateAnchors(label, dir, animData) {
+  const anchorsPath = path.join(dir, 'anchors.json');
+  if (!fs.existsSync(anchorsPath)) {
+    console.error(`❌ CRÍTICO: Falta anchors.json en species/${label}/`);
+    criticalErrors++;
+    return;
+  }
+  const anchors = readJson(anchorsPath);
+  const fail = (msg) => {
+    console.error(`❌ CRÍTICO [${label}]: anchors.json: ${msg}`);
+    criticalErrors++;
+  };
+  const isPoint = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isInteger);
+  if (!ANCHOR_SIZES.includes(anchors.size)) fail(`size debe ser ${ANCHOR_SIZES.join(', ')}`);
+  if (!Number.isInteger(anchors.eyeGap) || anchors.eyeGap < 1) fail('eyeGap debe ser un entero mayor que 0');
+  for (const slot of ANCHOR_SLOTS) {
+    const p = anchors.base?.[slot];
+    if (!isPoint(p)) fail(`falta el ancla base '${slot}'`);
+    else if (p.some((v) => v < 2 || v > 61)) fail(`el ancla '${slot}' (${p}) se sale del frame (2–61)`);
+  }
+  const frameCount = new Map((animData?.meta?.frameTags || []).map((t) => [t.name, t.to - t.from + 1]));
+  for (const [anim, value] of Object.entries(anchors.frames || {})) {
+    const expected = frameCount.get(anim);
+    if (expected === undefined) {
+      fail(`la animación '${anim}' no existe en anim.json`);
+      continue;
+    }
+    const lists = Array.isArray(value) ? [['*', value]] : ANCHOR_SLOTS.map((slot) => [slot, value[slot]]);
+    for (const [slot, list] of lists) {
+      if (!Array.isArray(list) || list.length !== expected || !list.every(isPoint)) {
+        fail(`'${anim}' (${slot}) debe tener ${expected} desplazamientos [dx, dy]`);
+      }
+    }
+  }
 }
 
 for (const sp of speciesData) {

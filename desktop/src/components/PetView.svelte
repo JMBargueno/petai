@@ -1023,7 +1023,8 @@
     z-index: 1;
     width: 128px;
     height: 128px;
-    image-rendering: auto;
+    /* Pixel art (GUIA_ARTISTICA §7.5): escala entera y sin suavizado. */
+    image-rendering: pixelated;
     pointer-events: none;
   }
 

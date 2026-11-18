@@ -42,6 +42,8 @@ export class PetSprite extends Container {
     this.frames.clear();
     this.anim = anim;
     this.source = Texture.from(canvas);
+    // Pixel art (GUIA_ARTISTICA §7.5): vecino más próximo, sin suavizado al escalar.
+    this.source.source.scaleMode = 'nearest';
     this.play(this.baseClip);
   }
 
