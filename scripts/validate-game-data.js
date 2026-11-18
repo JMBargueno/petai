@@ -104,6 +104,9 @@ if (pers) {
   if (mem && (!(mem.repeatBoost >= 0) || !(mem.repeatCap > 0 && mem.repeatCap <= 1))) {
     throw new Error('balance.personality.memory: repeatBoost/repeatCap inválidos');
   }
+  if (mem && !(Number.isInteger(mem.earlyExtractEvery) && mem.earlyExtractEvery >= 0)) {
+    throw new Error('balance.personality.memory.earlyExtractEvery debe ser un entero ≥ 0 (0 = desactivado)');
+  }
   for (const id of pers.autonomy?.itemFind?.items ?? []) {
     if (!foods.some((f) => f.id === id)) throw new Error(`balance.personality.autonomy.itemFind: ${id} no existe en foods.json`);
   }
