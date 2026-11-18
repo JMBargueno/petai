@@ -137,7 +137,7 @@ describe('Hábitat (e2e) — camino feliz', () => {
       userId = u.userId;
       petId = u.petId;
       // Saldo suficiente para todos los muebles del flujo (incl. el test del cap de buffs):
-      // fountain(400)+soft_bed(600)+toy_ball(400)+5×fountain(2000) = 3400.
+      // fountain(400)+soft_bed(600)+toy_ball(400)+6×fountain(2400) = 3800.
       await prisma.user.update({ where: { id: userId }, data: { coins: 5000, gems: 10 } });
       // Precondición real de `place`: el hábitat debe existir. La raíz lo inicializa.
       await api().get('/v1/habitat').set(authH).expect(200);
@@ -186,10 +186,10 @@ describe('Hábitat (e2e) — camino feliz', () => {
 
       expect(body.petId).toBe(petId);
       expect(body.itemCount).toBe(3);
-      // fountain_water (hygiene 0.10) + soft_bed (energy 0.20) + toy_ball (happiness 0.05).
+      // fountain_water (hygiene 0.08) + soft_bed (energy 0.15) + toy_ball (happiness 0.05).
       expect(body.activeBuffs).toMatchObject({
-        hygiene_decay_reduction: 0.1,
-        energy_recovery_boost: 0.2,
+        hygiene_decay_reduction: 0.08,
+        energy_recovery_boost: 0.15,
         happiness_decay_reduction: 0.05,
       });
       // Los valores están por debajo de sus topes (0.40/0.40/0.30), así que se devuelven sin topar.
@@ -223,15 +223,15 @@ describe('Hábitat (e2e) — camino feliz', () => {
     });
 
     it('e) buffs: al superar el tope (cap) el valor se limita al máximo del catálogo', async () => {
-      // fountain_water da hygiene_decay_reduction 0.10 por unidad. Colocando 5 (0.50 > cap 0.40),
+      // fountain_water da hygiene_decay_reduction 0.08 por unidad. Colocando 6 (0.48 > cap 0.40),
       // el buff debe toparse en 0.40 (buffCaps.hygiene_decay_reduction_max) y no en la suma cruda.
-      for (let k = 0; k < 5; k++) {
+      for (let k = 0; k < 6; k++) {
         await api().post('/v1/habitat/furniture/fountain_water/place').set(authH).expect(201);
       }
 
       const buffs = (await api().get('/v1/habitat/buffs').set(authH).expect(200)).body;
-      expect(buffs.itemCount).toBe(7); // soft_bed + toy_ball + 5× fountain_water
-      expect(buffs.activeBuffs.hygiene_decay_reduction).toBe(0.4); // topado (sin tope: 0.50)
+      expect(buffs.itemCount).toBe(8); // soft_bed + toy_ball + 6× fountain_water
+      expect(buffs.activeBuffs.hygiene_decay_reduction).toBe(0.4); // topado (sin tope: 0.48)
     });
   });
 

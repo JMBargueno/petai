@@ -150,6 +150,42 @@ const WATER = '#4da2ff';
 const LEAF = '#55db9c';
 const LEAF_DARK = '#2f9a5e';
 const GOLD = '#ffd731';
+const NIGHT = '#3a2f7a';
+const VIOLET = '#5c4ade';
+
+type P3 = [number, number, number];
+
+/** Polígono libre con puntos (u, v, z) del mueble: útil para caras planas sobre la pared. */
+function shape(p: Pen, pts: P3[], fill: string, sw = 2): void {
+  p.out += `<path d="M${pts.map(([u, v, z]) => p.p(u, v, z).map((n) => n.toFixed(2)).join(' ')).join('L')}Z" fill="${fill}" stroke="${LINE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+}
+
+/** Disco sobre el plano de la pared (v fijo): radio ru en celdas a lo largo y rz en px de alto. */
+function wallDisc(p: Pen, u: number, v: number, z: number, ru: number, rz: number, fill: string, sw = 2): void {
+  const pts: P3[] = [];
+  for (let k = 0; k < 24; k++) {
+    const t = (k / 24) * Math.PI * 2;
+    pts.push([u + ru * Math.cos(t), v, z + rz * Math.sin(t)]);
+  }
+  shape(p, pts, fill, sw);
+}
+
+/** Línea entre dos puntos del mueble. */
+function line(p: Pen, a: P3, b: P3, color = LINE, w = 2): void {
+  const [x0, y0] = p.p(...a);
+  const [x1, y1] = p.p(...b);
+  p.out += `<path d="M${x0.toFixed(2)} ${y0.toFixed(2)}L${x1.toFixed(2)} ${y1.toFixed(2)}" stroke="${color}" stroke-width="${w}" stroke-linecap="round"/>`;
+}
+
+/** Estrella de 5 puntas en píxeles centrada en (x, y). */
+function star(x: number, y: number, r: number, fill = GOLD): string {
+  const pts = Array.from({ length: 10 }, (_, k) => {
+    const a = -Math.PI / 2 + (k * Math.PI) / 5;
+    const rr = k % 2 ? r * 0.45 : r;
+    return `${(x + rr * Math.cos(a)).toFixed(2)} ${(y + rr * Math.sin(a)).toFixed(2)}`;
+  });
+  return `<path d="M${pts.join('L')}Z" fill="${fill}" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>`;
+}
 
 const FURNITURE: FurnitureArt[] = [
   {
@@ -301,6 +337,163 @@ const FURNITURE: FurnitureArt[] = [
       );
       [[1.4, 1.3], [1.6, 0.6], [0.6, 1.6]].forEach(([u, v]) =>
         p.raw(u, v, 4, (x, y) => `<circle cx="${x}" cy="${y - 3}" r="4" fill="${GOLD}" stroke="${LINE}" stroke-width="1.4"/><path d="M${x} ${y}L${x} ${y + 3}" stroke="${LEAF_DARK}" stroke-width="2"/>`),
+      );
+    },
+  },
+  {
+    id: 'food_bowl',
+    footprint: [1, 1],
+    height: 22,
+    draw(p) {
+      p.flat(0.5, 0.5, 0, 0.36, '#000000', false, 0.15);
+      p.cyl(0.5, 0.5, 0.36, 0, 9, '#4da2ff', '#2f6fb8');
+      p.flat(0.5, 0.5, 9, 0.28, '#c98a4b', false); // pienso
+      p.raw(0.5, 0.5, 9, (x, y) =>
+        [[-7, 0], [-2, -3], [4, -2], [-3, 2], [3, 2], [8, 0], [0, 0]]
+          .map(([dx, dy], k) => `<circle cx="${x + dx}" cy="${y + dy - 1}" r="2.2" fill="${k % 2 ? '#fb8b3c' : '#8a5a2b'}" stroke="${LINE}" stroke-width="0.8"/>`)
+          .join(''),
+      );
+      // Pez de adorno pintado en el frente del cuenco.
+      p.raw(0.5, 0.5, 4, (x, y) => `<path d="M${x - 5} ${y + 6}Q${x} ${y + 3} ${x + 4} ${y + 6}Q${x} ${y + 9} ${x - 5} ${y + 6}ZM${x + 4} ${y + 6}L${x + 7} ${y + 4}L${x + 7} ${y + 8}Z" fill="#ffffff"/>`);
+    },
+  },
+  {
+    id: 'round_rug',
+    footprint: [2, 2],
+    height: 6,
+    draw(p) {
+      p.flat(1, 1, 0, 0.92, shade('#e8604c', -0.25));
+      p.flat(1, 1, 2, 0.92, '#e8604c');
+      p.flat(1, 1, 2, 0.68, '#ffd8a8', false);
+      p.flat(1, 1, 2, 0.46, '#e8604c', false);
+      p.flat(1, 1, 2, 0.22, GOLD, false);
+    },
+  },
+  {
+    id: 'wall_clock',
+    footprint: [1, 1],
+    height: 70,
+    wall: true,
+    draw(p) {
+      wallDisc(p, 0.5, 0, 46, 0.46, 13, WOOD_DARK);
+      wallDisc(p, 0.5, 0.06, 46, 0.36, 10, '#fff8e8', 1.4);
+      for (let k = 0; k < 4; k++) {
+        const t = (k * Math.PI) / 2;
+        p.raw(0.5 + 0.24 * Math.cos(t), 0.06, 46 + 7 * Math.sin(t), (x, y) => `<circle cx="${x}" cy="${y}" r="1.2" fill="${LINE}"/>`);
+      }
+      line(p, [0.5, 0.06, 46], [0.5, 0.06, 53], LINE, 1.8); // minutero
+      line(p, [0.5, 0.06, 46], [0.66, 0.06, 46], '#fb4903', 1.8); // horario
+      // Péndulo bajo la esfera.
+      line(p, [0.5, 0.04, 34], [0.5, 0.04, 26], WOOD_DARK, 1.6);
+      p.raw(0.5, 0.04, 25, (x, y) => `<circle cx="${x}" cy="${y}" r="3" fill="${GOLD}" stroke="${LINE}" stroke-width="1.6"/>`);
+    },
+  },
+  {
+    id: 'garden_swing',
+    footprint: [2, 1],
+    height: 58,
+    draw(p) {
+      p.footprintShadow(2, 1);
+      p.box(0.12, 0.4, 0.26, 0.6, 0, 52, WOOD_DARK); // poste del fondo
+      p.box(0.12, 0.42, 1.88, 0.58, 48, 54, WOOD); // travesaño
+      for (const u of [0.72, 1.28]) line(p, [u, 0.5, 48], [u, 0.5, 16], '#6b4429', 1.8);
+      p.box(0.62, 0.28, 1.38, 0.72, 13, 17, '#fb4903'); // asiento
+      p.box(1.74, 0.4, 1.88, 0.6, 0, 52, WOOD_DARK); // poste del frente
+    },
+  },
+  {
+    id: 'stone_lantern',
+    footprint: [1, 1],
+    height: 52,
+    draw(p) {
+      p.flat(0.5, 0.5, 0, 0.34, '#000000', false, 0.15);
+      p.box(0.28, 0.28, 0.72, 0.72, 0, 6, STONE);
+      p.box(0.42, 0.42, 0.58, 0.58, 6, 18, STONE);
+      p.box(0.26, 0.26, 0.74, 0.74, 18, 22, shade(STONE, -0.08));
+      p.raw(0.5, 0.5, 30, (x, y) => `<circle cx="${x}" cy="${y}" r="15" fill="#ffd296" fill-opacity="0.35"/>`);
+      p.box(0.34, 0.34, 0.66, 0.66, 22, 34, '#ffd296'); // luz
+      p.box(0.18, 0.18, 0.82, 0.82, 34, 38, shade(STONE, -0.12)); // tejadillo
+      p.box(0.4, 0.4, 0.6, 0.6, 38, 44, shade(STONE, -0.12));
+      p.ball(0.5, 0.5, 44, 3, STONE);
+    },
+  },
+  {
+    id: 'zen_cushion',
+    footprint: [1, 1],
+    height: 20,
+    draw(p) {
+      p.footprintShadow(1, 1);
+      p.box(0.06, 0.06, 0.94, 0.94, 0, 3, '#e2cfae'); // tatami
+      p.cyl(0.5, 0.5, 0.38, 3, 9, '#c0392b', '#e0584a');
+      p.flat(0.5, 0.5, 9, 0.24, '#c0392b', false);
+      p.flat(0.5, 0.5, 9, 0.07, GOLD);
+    },
+  },
+  {
+    id: 'bonsai_tree',
+    footprint: [1, 1],
+    height: 48,
+    draw(p) {
+      p.flat(0.5, 0.5, 0, 0.34, '#000000', false, 0.15);
+      p.box(0.24, 0.3, 0.76, 0.7, 0, 8, '#3d5a80'); // maceta
+      p.box(0.28, 0.34, 0.72, 0.66, 8, 9, '#6b4429', false);
+      p.raw(0.5, 0.5, 9, (x, y) =>
+        `<path d="M${x} ${y}C${x - 6} ${y - 8} ${x + 8} ${y - 12} ${x + 2} ${y - 22}" fill="none" stroke="${LINE}" stroke-width="6" stroke-linecap="round"/>` +
+        `<path d="M${x} ${y}C${x - 6} ${y - 8} ${x + 8} ${y - 12} ${x + 2} ${y - 22}" fill="none" stroke="#8a5a2b" stroke-width="3.6" stroke-linecap="round"/>` +
+        [[-9, -22, 7], [10, -26, 6], [1, -32, 8]]
+          .map(([dx, dy, r]) => `<ellipse cx="${x + dx}" cy="${y + dy}" rx="${r + 3}" ry="${r}" fill="${LEAF_DARK}" stroke="${LINE}" stroke-width="2"/><ellipse cx="${x + dx - 2}" cy="${y + dy - 2}" rx="${r - 1}" ry="${r - 3}" fill="${LEAF}"/>`)
+          .join(''),
+      );
+    },
+  },
+  {
+    id: 'hanging_scroll',
+    footprint: [1, 1],
+    height: 78,
+    wall: true,
+    draw(p) {
+      line(p, [0.25, 0.04, 62], [0.5, 0.04, 68], LINE, 1.4);
+      line(p, [0.75, 0.04, 62], [0.5, 0.04, 68], LINE, 1.4);
+      shape(p, [[0.14, 0.05, 60], [0.86, 0.05, 60], [0.86, 0.05, 28], [0.14, 0.05, 28]], '#f4e7d1');
+      shape(p, [[0.22, 0.06, 33], [0.44, 0.06, 49], [0.56, 0.06, 41], [0.66, 0.06, 45], [0.8, 0.06, 33]], '#7e8aa0', 1.2); // montaña
+      shape(p, [[0.36, 0.06, 43], [0.44, 0.06, 49], [0.5, 0.06, 45]], '#ffffff', 0.8); // nieve
+      wallDisc(p, 0.66, 0.06, 53, 0.08, 3.5, '#c0392b', 1); // sol
+      p.box(0.06, 0, 0.94, 0.1, 59, 62, WOOD_DARK);
+      p.box(0.08, 0, 0.92, 0.1, 25, 28, WOOD_DARK);
+    },
+  },
+  {
+    id: 'star_fountain',
+    footprint: [2, 2],
+    height: 66,
+    draw(p) {
+      p.footprintShadow(2, 2);
+      p.box(0.1, 0.1, 1.9, 1.9, 0, 8, VIOLET);
+      p.box(0.3, 0.3, 1.7, 1.7, 7, 8.5, '#7fc8ff', false);
+      [[0.6, 1.3], [1.4, 0.55], [1.45, 1.4]].forEach(([u, v]) =>
+        p.raw(u, v, 9, (x, y) => `<circle cx="${x}" cy="${y}" r="1.6" fill="#ffffff"/>`),
+      );
+      p.cyl(1, 1, 0.12, 8, 30, '#cdb4ff');
+      p.cyl(1, 1, 0.38, 30, 36, VIOLET, '#7fc8ff');
+      p.raw(1, 1, 36, (x, y) =>
+        `<circle cx="${x}" cy="${y - 14}" r="15" fill="#c8f0ff" fill-opacity="0.35"/>` +
+        `<path d="M${x - 4} ${y - 2}Q${x - 14} ${y - 6} ${x - 18} ${y + 14}M${x + 4} ${y - 2}Q${x + 14} ${y - 6} ${x + 18} ${y + 14}" fill="none" stroke="#c8f0ff" stroke-width="2.2" stroke-linecap="round"/>` +
+        star(x, y - 16, 9),
+      );
+    },
+  },
+  {
+    id: 'constellation_frame',
+    footprint: [2, 1],
+    height: 80,
+    wall: true,
+    draw(p) {
+      p.box(0.14, 0, 1.86, 0.08, 28, 64, GOLD);
+      shape(p, [[0.24, 0.09, 32], [1.76, 0.09, 32], [1.76, 0.09, 60], [0.24, 0.09, 60]], NIGHT, 1.4);
+      const stars: [number, number][] = [[0.42, 38], [0.7, 50], [1.0, 44], [1.25, 54], [1.55, 40]];
+      stars.slice(1).forEach(([u, z], k) => line(p, [stars[k][0], 0.1, stars[k][1]], [u, 0.1, z], '#c8f0ff', 1.2));
+      stars.forEach(([u, z], k) =>
+        p.raw(u, 0.1, z, (x, y) => `<circle cx="${x}" cy="${y}" r="${k === 3 ? 2.6 : 1.8}" fill="${k === 3 ? GOLD : '#ffffff'}"/>`),
       );
     },
   },
