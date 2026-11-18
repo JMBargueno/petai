@@ -65,6 +65,8 @@ data class Pet(
     val stage: String = "baby",
     val rarity: String = "normal",
     val shiny: Boolean = false,
+    /** Prendas equipadas: ranura (head, face, neck, back) → id de accessories.json. */
+    val accessories: Map<String, String> = emptyMap(),
     val hunger: Double = 100.0,
     val happiness: Double = 100.0,
     val energy: Double = 100.0,

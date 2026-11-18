@@ -531,7 +531,7 @@
   ],
   "meta": {
     "app": "PetAI Sprite Generator",
-    "version": "2.0",
+    "version": "3.0",
     "image": "base.png",
     "mask": "mask.png",
     "format": "RGBA8888",
@@ -544,6 +544,10 @@
       "h": 128
     },
     "scale": "1",
+    "pixelArt": {
+      "native": 64,
+      "scale": 2
+    },
     "aliases": {
       "sit": "perch",
       "hurt": "hit",

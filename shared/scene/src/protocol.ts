@@ -8,6 +8,8 @@
  */
 export const PROTOCOL_VERSION = 2;
 
+import { parseEquipped, type EquippedAccessories } from './bake/accessories';
+
 export type Stage = 'egg' | 'baby' | 'juvenile' | 'adult' | 'final';
 export type ThemeMode = 'light' | 'dark';
 
@@ -19,6 +21,8 @@ export interface PetState {
   pattern?: string | null;
   visualSeed: number;
   shiny?: boolean;
+  /** Prendas equipadas por ranura (ids de accessories.json). Opcional: sin ellas no se pinta ninguna. */
+  accessories?: EquippedAccessories;
 }
 
 export type Interaction = 'sleep' | 'eat' | 'play' | 'bathe' | 'sit';
@@ -171,6 +175,7 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
           pattern: typeof p.pattern === 'string' ? p.pattern : null,
           visualSeed: Number.isFinite(p.visualSeed) ? (p.visualSeed as number) : 1337,
           shiny: p.shiny === true,
+          accessories: parseEquipped(p.accessories),
         },
       };
     }

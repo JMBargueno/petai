@@ -1,13 +1,17 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { recordSpend } from '../../stats/spend';
+import { GameDataService } from '../game-data/game-data.service';
 
 const MAX_PURCHASE_QTY = 99;
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly gameData?: GameDataService,
+  ) {}
 
   async getInventory(userId: string) {
     return this.prisma.inventoryItem.findMany({
@@ -36,10 +40,28 @@ export class InventoryService {
       throw new NotFoundException('Objeto de tienda no encontrado');
     }
 
+    // Los objetos de logro no se venden: se entregan con `grantExclusiveItem`. Sin este filtro se
+    // podrían comprar a precio 0 (cosméticos genéricos y prendas de logro de accessories.json).
+    const isAccessory = item.kind === 'accessory';
+    const unlock = (item.effects as { unlock?: string } | null)?.unlock;
+    if (item.kind === 'cosmetic' || (isAccessory && unlock === 'achievement')) {
+      throw new BadRequestException('Este objeto no se puede comprar: se consigue con un logro');
+    }
+    // Una prenda se tiene o no se tiene: no hay segundas unidades (spec 38 §4).
+    if (isAccessory && quantity !== 1) {
+      throw new BadRequestException('Las prendas se compran de una en una');
+    }
+
     const totalCoins = item.priceCoins * quantity;
     const totalGems = item.priceGems * quantity;
 
     return this.prisma.$transaction(async (tx) => {
+      if (isAccessory) {
+        const owned = await tx.inventoryItem.findUnique({ where: { userId_itemId: { userId, itemId } } });
+        if (owned && owned.qty > 0) {
+          throw new BadRequestException('Ya tienes esta prenda');
+        }
+      }
       // Cobro atómico: la condición de fondos y el descuento van en una sola
       // sentencia, así dos compras simultáneas no pueden dejar el saldo negativo.
       const charged = await tx.user.updateMany({
@@ -55,6 +77,23 @@ export class InventoryService {
       // Estadísticas de gasto (logros de gasto) en la misma transacción del cobro.
       await recordSpend(tx, userId, 'coins', totalCoins);
       await recordSpend(tx, userId, 'gems', totalGems);
+
+      if (isAccessory) {
+        // Reactiva una fila a 0 (prenda regalada) o crea la fila. Si dos compras simultáneas pasan
+        // la comprobación de arriba, la segunda no encuentra fila a 0 y choca con la clave única
+        // (userId, itemId): la transacción se deshace y no se cobra dos veces.
+        const reactivated = await tx.inventoryItem.updateMany({
+          where: { userId, itemId, qty: 0 },
+          data: { qty: 1 },
+        });
+        if (reactivated.count === 0) {
+          await tx.inventoryItem.create({ data: { userId, itemId, qty: 1 } });
+        }
+        return tx.inventoryItem.findUniqueOrThrow({
+          where: { userId_itemId: { userId, itemId } },
+          include: { item: true },
+        });
+      }
 
       return tx.inventoryItem.upsert({
         where: {
@@ -121,19 +160,32 @@ export class InventoryService {
     }
     const client = tx ?? this.prisma;
 
-    // Asegura que el item exista en el catálogo (cosmético, sin coste).
+    // Asegura que el item exista en el catálogo, sin coste. Si el premio es una prenda de
+    // accessories.json (spec 38) se crea como tal, con su nombre y su ranura; si no, como cosmético
+    // genérico. Así el premio es correcto aunque el seed aún no haya sembrado la prenda.
+    const accessory = this.gameData?.getAccessories().find((a) => a.id === itemId);
     await client.item.upsert({
       where: { id: itemId },
       update: {},
-      create: {
-        id: itemId,
-        kind: 'cosmetic',
-        name: `Item exclusivo: ${itemId}`,
-        description: 'Item cosmético otorgado por un logro',
-        effects: {},
-        priceCoins: 0,
-        priceGems: 0,
-      },
+      create: accessory
+        ? {
+            id: itemId,
+            kind: 'accessory',
+            name: accessory.name,
+            description: accessory.description,
+            effects: { slot: accessory.slot, rarity: accessory.rarity, color: accessory.color, unlock: accessory.unlock.type },
+            priceCoins: 0,
+            priceGems: 0,
+          }
+        : {
+            id: itemId,
+            kind: 'cosmetic',
+            name: `Item exclusivo: ${itemId}`,
+            description: 'Item cosmético otorgado por un logro',
+            effects: {},
+            priceCoins: 0,
+            priceGems: 0,
+          },
     });
 
     return client.inventoryItem.upsert({

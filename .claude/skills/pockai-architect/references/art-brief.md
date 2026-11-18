@@ -1,55 +1,63 @@
-# Brief y dibujo del arte (3/4 isométrico, por etapa)
+# Brief y dibujo del arte (pixel art, 3/4, una geometría por etapa)
 
-Los sprites **no se generan con IA**. Son SVG procedurales escritos a mano en `scripts/sprites/species.ts`: un `SpeciesArt` por especie, registrado en la lista `SPECIES`. Después, `pnpm generate:sprites` produce las hojas `shared/assets/species/<id>/…` y la vista previa `sprites/<id>_idle.svg`.
+Los sprites **no se generan con IA** ni se dibujan en un editor: son pixel art procedural. Cada especie es un `PixelSpecies` en `scripts/sprites/pixel/species.ts`, con una geometría por etapa, y un rasterizador la convierte en píxeles. `pnpm generate:sprites` produce las hojas `shared/assets/species/<id>/…`, las anclas de accesorio y las vistas previas `sprites/<id>_*.svg`.
 
-Toma como referencia de código `ignisaur`, `axolunar` y `florabud` en ese archivo, y lee `iso-style.md` para las reglas visuales.
+Toma como referencia de código `IGNISAUR`, `AXOLUNAR` y `FLORABUD` en ese archivo. Las reglas visuales están en `pixel-style.md` (estilo y etapas) y en `iso-style.md` (cámara, luz y cara en 3/4).
 
-## Restricciones técnicas
-- **Frame:** 128×128, con el suelo en **y = 120**, mirando **abajo-derecha** en 3/4. La otra diagonal sale por espejo, así que **no dibujes asimetrías que delaten el espejo** (textos, cicatrices en un solo lado con significado).
-- **Firma:** `SpeciesArt { id, face: FaceAnchors | (stage) => FaceAnchors, top, draw(ctx, pose, stage) }`.
-  - `FaceAnchors { l: [x,y], r: [x,y], er, mouth: [x,y] }`.
-  - En 3/4, `l` es el **ojo cercano** (izquierda de la pantalla, tamaño completo) y `r` el **ojo lejano** (derecha, junto al contorno de la cara). Pon `far: 0.74` en las anclas: `face()` estrecha el ojo `r` y, en la máscara, pinta la zona de cara sin patrón.
-  - La boca va bajo el punto medio de los ojos.
-- **Etapas:** `stage ∈ baby | juvenile | adult | final`. Usa `stageParams(stage)` → `{ size, head, app, eye, accessory }` (valores en `iso-style.md`). **Un único `draw` parametrizado**, no cuatro dibujos.
-- **Formas propias de una etapa:** el punto de partida es un único `draw` con `stageParams`. Si una etapa necesita una forma distinta, por ejemplo un capullo cerrado en el bebé de una planta, dibújala con un helper propio que solo se use en esa etapa (`if (stage === 'baby')`) y anclas de cara propias si hace falta. Úsalo solo si la silueta sigue reconociéndose como la misma especie, y no toques `STAGE_PARAMS`, que comparten todas las especies.
-- **Patrón a seguir:** envuelve la cabeza en `scaleAt(st.head, cuelloX, cuelloY, …)` y todo el dibujo en `scaleAt(st.size, 64, 120, …)`; multiplica `p.app` por `st.app` y usa `stageFace()` para el ojo. Mira `ignisaur` como referencia.
-- **Roles de color (máscara):** `body` (primario, canal R), `limb` (extremidades), `accent` (accesorios) y `mix`. El patrón va en el canal B, **nunca sobre la cara ni los ojos**.
-- **Contorno:** el principal es `#1A1A1A` (`LINE`). Los accesorios llevan 2 px en el accent (GUIA_ARTISTICA §7.1).
-- **Partes móviles:** las 31 animaciones (idle, walk, eat, happy, sleep, attack, evolution…) salen de las poses de `scripts/sprites/poses.ts`, así que las partes deben poder moverse con los campos de `Pose`:
-  - `armL/armR`, `leg`, `tail`.
-  - `app/appRot` (apéndices: branquias, pétalos, llama).
-  - `sit`, `eyes`, `mouth`, `look`.
-- **Sombra:** no la dibujes en el `SpeciesArt`; la pone el generador como elipse isométrica.
+## Cómo funciona
+- **Rejilla:** 64×64 px nativos, suelo en la fila 60, mirando **abajo a la derecha** en 3/4. La hoja se guarda a ×2 (frames de 128×128). La otra diagonal sale por espejo: **no dibujes asimetrías que delaten el espejo**.
+- **Formas, no píxeles sueltos:** dibujas con elipses (`g.ellipse`, admite giro) y polígonos (`g.poly`) en coordenadas nativas. El rasterizador pone el sombreado en tres tonos (luz arriba a la izquierda), el brillo y el contorno de 1 px.
+- **Una geometría por etapa:** `stages: { baby, juvenile, adult, final }`. Cada una parte de `stage('<etapa>', { … })`, que da el cuerpo común de esa etapa (torso, cabeza si la hay, pies, brazos, barriga, ojos), y tú cambias lo que haga falta y añades los ganchos de la especie.
+- **Ganchos de la especie:**
+  - `behind(g, s, p)`: lo que va detrás del cuerpo (cola, aletas, púas, branquias).
+  - `onHead(g, s, p)`: lo que va sobre la cabeza, pintado después (cuernos, hojas, cresta, collar).
+- **Papeles de color (`Role`):** `body` (primario, admite patrón), `skin` (primario sin patrón: extremidades y cara), `belly` (secundario plano), `trait` (secundario con sombra: el rasgo icónico) y `mark` (primario oscurecido: manchas, franjas, púas). No hay más colores: la paleta de la mascota solo tiene primario y secundario.
+- **Piezas (`part`):** dos formas con el mismo número de pieza se funden; con números distintos, el rasterizador pone una línea de separación entre ellas. Con `{ clip: n, keep: true }` pintas una mancha dentro de la pieza `n` sin crear línea.
+- **Movimiento:** las 31 animaciones salen de las poses de `scripts/sprites/poses.ts`, que no se tocan. Para que tus piezas se muevan con ellas, envuélvelas en los ayudantes:
+  - `tail(g, p, x, y, () => …)`: gira desde la base de la cola con la pose.
+  - `appendage(g, p, x, y, () => …)`: escala y gira el rasgo icónico (llama, branquias, hojas) desde su base.
+  - Brazos, pies, cuerpo y cara ya los mueve el dibujo común.
+- **Lo que no dibujas:** la sombra de suelo (la ponen los clientes), los ojos y la boca (salen de `eye` en la geometría), y los efectos.
+- **Anclas de accesorio:** `neck` y `back` van en la geometría de cada etapa; `head` y `face` se calculan solos. El generador escribe `anchors.json`.
+
+## Límites por etapa
+| Etapa | Altura máxima | Plan corporal |
+|---|---|---|
+| baby | 28 px | Un volumen (solo `torso`), sin brazos ni cola |
+| juvenile | 36 px | Un volumen, con `arm` y cola |
+| adult | 46 px | Dos volúmenes (`torso` y `head`) |
+| final | 54 px | Dos volúmenes y piezas que rompen el contorno |
+
+La hoja de contactos imprime la altura real de cada etapa: si se pasa, baja o acorta lo que sobresale. Si una pose saca la criatura del frame, el rasterizador la recoloca sola.
 
 ## Plantilla del brief (va en la ficha)
 - **Silueta (1 frase):** forma base y proporción cabeza/cuerpo en adulto.
-- **Partes:** cada pieza (cuerpo, cabeza, extremidades cercanas/lejanas, cola, accesorios) con su rol de color.
-- **Rasgos icónicos:** los 2 de la ficha y cómo se leen a **72 px** (tamaño en sala) y a 128 px.
-- **Cara en 3/4:** anclas aproximadas (ojo lejano, ojo cercano y boca) y expresión base.
-- **Evolución visual:** qué cambia en cada etapa (proporción, apéndices, accesorio final). La **silueta debe seguir reconociéndose** de baby a final.
-- **Movimiento:** qué parte "vende" cada pose clave. Por ejemplo: en idle respira con…, en attack lanza…, en sleep se enrosca…
-- **Zona de patrón:** dónde se ve el patrón (lomo, alas…) y dónde no.
+- **Rasgos icónicos:** los 2 de la ficha, con qué papel de color van y cómo se leen a 64 px.
+- **Evolución visual:** para cada etapa, su plan corporal y qué cambia en los cinco ejes (plan corporal, rasgo icónico, piezas, color y marcas, cara). Indica también qué no cambia, para que la especie siga reconociéndose de baby a final.
+- **Anclas de accesorios:** por etapa, dónde van `neck` y `back`, y cualquier salvedad (por ejemplo, «el gorro se ladea porque la cresta es central»).
+- **Movimiento:** qué pieza «vende» cada pose clave: qué gira con la cola y qué late con los apéndices.
+- **Zona de patrón:** dónde se ve el patrón (piezas en `body`) y dónde no.
 
 ## Dibujar (paso 5b de SKILL.md)
-1. Añade el `SpeciesArt` en `scripts/sprites/species.ts`, siguiendo el patrón de las especies existentes: helpers `part(ctx, role, …)`, `leg`, `arm` y `foodAndFace`, y regístralo en `SPECIES`.
+1. Añade el `PixelSpecies` en `scripts/sprites/pixel/species.ts`, siguiendo el patrón de las especies existentes, y regístralo en `PIXEL_SPECIES`.
 2. Genera la hoja de contactos y **mírala** (Read del PNG):
    ```bash
    npx tsx .claude/skills/pockai-architect/scripts/contact_sheet.ts <id>
    ```
-   Escribe `sprite-previews/<id>-contact.png`, que está ignorado por git. Tiene 4 filas de etapa y otras tres (a escala de sala, a ~72 px; en espejo; y la máscara) de la etapa adult. Si estás retocando otra etapa, añade `--stage baby` (o la que sea) para que esas tres filas sean de esa etapa: la máscara y la lectura a 72 px son donde se ven los fallos.
-3. Revísala con esta checklist y corrige hasta que todo pase:
-   - [ ] La silueta y los 2 rasgos icónicos se reconocen en la fila de ~72 px.
-   - [ ] Es 3/4 de verdad: se ven la cara y el costado derecho, el ojo lejano es más estrecho y las patas lejanas asoman detrás.
-   - [ ] Todo es coherente con la luz desde arriba a la izquierda (brillos `lit` a la izquierda).
-   - [ ] **Máscara:** la zona de patrón es todo píxel con canal B. En la fila de máscara, el rol `body` sale **magenta** (R+B); `limb` (rojo), `accent` (verde) y `mix` (oliva) no llevan B. Revisa dos cosas:
-     - La cara (zona entre los ojos y la boca) no debe salir magenta: necesita un parche sin B.
-     - Los efectos deben ser negro puro.
-     Ojo: hoy las 3 especies de perfil **no cumplen** esto (cabeza entera en `body`), y se corrige al pasar a 3/4.
-   - [ ] **Etapas:** baby es cabezón y tierno, final lleva su accesorio, y las 4 son la misma especie.
-   - [ ] **Espejo:** sigue leyéndose bien y nada queda "al revés".
-   - [ ] **Poses:** las partes se mueven (la cola en walk, los brazos en happy, se enrosca en sleep), nada se sale del frame y nada se despega del cuerpo.
-4. `pnpm generate:sprites` regenera **todas** las especies. Antes de commitear, comprueba con `git diff --stat` que el resto de especies no cambió, salvo que hayas tocado código común.
+   Escribe `sprite-previews/<id>-pixel-contact.png`, que está ignorado por git: una fila por etapa con diez poses clave a ×2, y debajo las cuatro siluetas en negro a ×1. Por consola da la altura de cada etapa.
+3. Revísala con esta checklist y corrige hasta que todo pase. Normalmente hacen falta 2 o 3 vueltas:
+   - [ ] La silueta y los 2 rasgos icónicos se reconocen en la fila de siluetas (64 px).
+   - [ ] Es 3/4 de verdad: se ven la cara y el costado derecho, y lo lejano asoma detrás.
+   - [ ] **Alturas:** ninguna etapa pasa de su máximo.
+   - [ ] **Cambio entre etapas:** cada una se distingue de la anterior por su plan corporal o silueta y por al menos tres ejes más. En negro, las cuatro siluetas se distinguen. Si dos solo difieren en tamaño, falta cambio.
+   - [ ] **Misma especie:** misma paleta, misma forma de ojo y rasgo icónico en el mismo sitio en las cuatro.
+   - [ ] **Poses:** la cola y el rasgo icónico se mueven (walk, happy, attack), nada se despega del cuerpo y nada desaparece al dormir.
+   - [ ] **Accesorios:** hay sitio para gorro, gafas, bufanda y capa en las 4 etapas sin tapar ojos, boca ni rasgo icónico.
+   - [ ] **Espejo:** sigue leyéndose bien y nada queda «al revés».
+4. `pnpm generate:sprites` regenera **todas** las especies (es determinista). Antes de commitear, comprueba con `git diff --stat` que el resto de especies no cambió, salvo que hayas tocado código común de `scripts/sprites/pixel/`.
 
 ## Placeholders (solo si el usuario no quiere arte todavía)
 1. `node scripts/generate-placeholder-assets.js <id>` → `species/<id>/` (una elipse genérica). **Siempre con id**: sin argumentos regenera las especies base y machaca su arte.
-2. `node .claude/skills/pockai-architect/scripts/placeholder_svgs.mjs <id>` → `sprites/<id>_{idle,eat,happy,sleep}.svg`, con la plantilla 3/4 y la paleta de la especie.
+2. `node .claude/skills/pockai-architect/scripts/placeholder_svgs.mjs <id>` → `sprites/<id>_{idle,eat,happy,sleep}.svg`.
+
+Una especie con placeholder no tiene `anchors.json`: `validate-assets.js` lo marca como error crítico hasta que tenga arte real.

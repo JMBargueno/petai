@@ -30,6 +30,8 @@ object SceneMessages {
             if (pet.pattern.id.isNotBlank() && pet.pattern.id != "plain") put("pattern", pet.pattern.id) else put("pattern", JsonNull)
             put("visualSeed", pet.visualSeed)
             put("shiny", pet.shiny)
+            // Prendas equipadas por ranura (spec 38): la escena las pinta en su ancla.
+            putJsonObject("accessories") { pet.accessories.forEach { (slot, id) -> put(slot, id) } }
         }
     }
 

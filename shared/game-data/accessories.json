@@ -1,0 +1,88 @@
+{
+  "slots": ["head", "face", "neck", "back"],
+  "accessories": [
+    {
+      "id": "acc_gorro_lana_azul",
+      "name": "Gorro de lana",
+      "description": "Un gorro con pompón que abriga las ideas.",
+      "slot": "head",
+      "rarity": "normal",
+      "color": "blue",
+      "unlock": { "type": "coins", "price": 250 }
+    },
+    {
+      "id": "acc_gafas_estudio",
+      "name": "Gafas de estudio",
+      "description": "Montura roja para mirar el mundo con atención.",
+      "slot": "face",
+      "rarity": "normal",
+      "color": "ember",
+      "unlock": { "type": "coins", "price": 300 }
+    },
+    {
+      "id": "acc_bufanda_menta",
+      "name": "Bufanda menta",
+      "description": "Suave y fresca, con un cabo que ondea al andar.",
+      "slot": "neck",
+      "rarity": "normal",
+      "color": "mint",
+      "unlock": { "type": "coins", "price": 200 }
+    },
+    {
+      "id": "acc_gorro_fiesta",
+      "name": "Gorro de fiesta",
+      "description": "Para celebrar cualquier cosa, incluso un martes.",
+      "slot": "head",
+      "rarity": "rare",
+      "color": "sunburst",
+      "unlock": { "type": "gems", "price": 8 }
+    },
+    {
+      "id": "acc_capa_gala",
+      "name": "Capa de gala",
+      "description": "Una capa violeta para entrar en la arena con estilo.",
+      "slot": "back",
+      "rarity": "rare",
+      "color": "violet",
+      "unlock": { "type": "gems", "price": 12 }
+    },
+    {
+      "id": "acc_alas_nube",
+      "name": "Alas de nube",
+      "description": "No vuelan, pero lo parece.",
+      "slot": "back",
+      "rarity": "super_rare",
+      "color": "white",
+      "unlock": { "type": "gems", "price": 30 }
+    },
+    {
+      "id": "ach_item_care_blanket",
+      "name": "Bufanda de siesta",
+      "description": "Premio por una buena rutina de descanso.",
+      "slot": "neck",
+      "rarity": "super_rare",
+      "color": "lavender",
+      "unlock": { "type": "achievement", "achievementId": "care_sleep_75" }
+    },
+    {
+      "id": "ach_item_care_crown",
+      "name": "Corona del guardián",
+      "description": "Solo la llevan quienes han cuidado de verdad.",
+      "slot": "head",
+      "rarity": "legendary",
+      "color": "sunburst",
+      "animated": true,
+      "unlock": { "type": "achievement", "achievementId": "care_level_50" }
+    },
+    {
+      "id": "ach_item_battle_legend",
+      "name": "Capa de leyenda",
+      "description": "La capa de quien ya es historia del ring.",
+      "slot": "back",
+      "rarity": "legendary",
+      "color": "ember",
+      "animated": true,
+      "unlock": { "type": "achievement", "achievementId": "battle_legend" }
+    }
+  ]
+}

@@ -4820,6 +4820,134 @@
         ]
       }
     },
+    "/v1/accessories": {
+      "get": {
+        "operationId": "AccessoriesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Ranuras y prendas, cada una locked, available u owned"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Catálogo de accesorios con el estado de cada prenda para el usuario",
+        "tags": [
+          "Accessories"
+        ]
+      }
+    },
+    "/v1/accessories/{id}/buy": {
+      "post": {
+        "operationId": "AccessoriesController_buy",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Prenda comprada"
+          },
+          "400": {
+            "description": "Sin saldo, ya en propiedad o prenda de logro"
+          },
+          "404": {
+            "description": "Prenda no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comprar una prenda con monedas o gemas",
+        "tags": [
+          "Accessories"
+        ]
+      }
+    },
+    "/v1/pets/{petId}/accessories": {
+      "get": {
+        "operationId": "AccessoriesController_getEquipped",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Prendas equipadas de una mascota",
+        "tags": [
+          "Accessories"
+        ]
+      },
+      "put": {
+        "description": "Cada ranura admite un itemId (equipar) o null (quitar). Lo que no se envía se conserva.",
+        "operationId": "AccessoriesController_equip",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipAccessoriesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prendas equipadas tras el cambio"
+          },
+          "400": {
+            "description": "Prenda inexistente, de otra ranura o que no es del usuario"
+          },
+          "404": {
+            "description": "Pet no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Equipar o quitar prendas por ranura",
+        "tags": [
+          "Accessories"
+        ]
+      }
+    },
     "/v1/seasons/current": {
       "get": {
         "operationId": "SeasonsController_getCurrentSeason",
@@ -9156,6 +9284,13 @@
           "shiny": {
             "type": "boolean",
             "example": false
+          },
+          "accessories": {
+            "type": "object",
+            "description": "Prendas equipadas por ranura (head, face, neck, back): itemId de accessories.json",
+            "example": {
+              "head": "acc_gorro_lana_azul"
+            }
           }
         },
         "required": [
@@ -9166,7 +9301,8 @@
           "rarity",
           "level",
           "stage",
-          "shiny"
+          "shiny",
+          "accessories"
         ]
       },
       "ProfileStatsDto": {
@@ -11664,6 +11800,31 @@
           "openings",
           "total"
         ]
+      },
+      "EquipAccessoriesDto": {
+        "type": "object",
+        "properties": {
+          "head": {
+            "type": "string",
+            "nullable": true,
+            "description": "Prenda de cabeza; null la quita"
+          },
+          "face": {
+            "type": "string",
+            "nullable": true,
+            "description": "Prenda de cara; null la quita"
+          },
+          "neck": {
+            "type": "string",
+            "nullable": true,
+            "description": "Prenda de cuello; null la quita"
+          },
+          "back": {
+            "type": "string",
+            "nullable": true,
+            "description": "Prenda de espalda; null la quita"
+          }
+        }
       },
       "AdminStatsUsersDto": {
         "type": "object",

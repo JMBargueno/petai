@@ -289,6 +289,8 @@ model Pet {
   awakened      Boolean   @default(false)
   personality   Json?
   desktopSkills Json?     @default("{}")
+  /// Prendas equipadas por ranura (spec 38): { head, face, neck, back }, cada una un itemId o ausente.
+  accessories   Json      @default("{}")
   inHabitat     Boolean   @default(false)
   /// Vida autónoma (spec 36): último intervalo simulado (índice absoluto = epoch / intervalo).
   /// Cursor propio, independiente de lastTickAt: la simulación es determinista por (pet, índice).

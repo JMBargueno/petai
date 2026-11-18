@@ -6,8 +6,10 @@
  *  - Sala (`setRoom`): la sala isométrica (`IsoRoom`) encajada en el lienzo, con el Pockai dentro.
  */
 import { Application, Rectangle } from 'pixi.js';
-import { resolveSheet, PATTERNS } from './assets';
-import { bakeToCanvas } from './bake/bakeTexture';
+import { resolveAccessory, resolveSheet, PATTERNS } from './assets';
+import { bakeToCanvas, loadImage } from './bake/bakeTexture';
+import { ACCESSORY_SLOTS } from './bake/accessories';
+import type { AccessoryLayer } from './pet/PetSprite';
 import { PetSprite, FRAME } from './pet/PetSprite';
 import { IsoRoom } from './room/IsoRoom';
 import {
@@ -204,8 +206,20 @@ export class PockaiScene {
         palette: state.palette,
         visualSeed: state.visualSeed,
       });
+      // Prendas equipadas, en la talla de la etapa. Una prenda sin arte en este cliente se omite.
+      const layers: AccessoryLayer[] = [];
+      if (sheet.anchors) {
+        for (const slot of ACCESSORY_SLOTS) {
+          const id = state.accessories?.[slot];
+          const acc = id ? resolveAccessory(id, sheet.anchors.size) : null;
+          if (!acc || acc.meta.slot !== slot) continue;
+          const img = await loadImage(acc.url).catch(() => null);
+          if (img) layers.push({ slot, canvas: img, meta: acc.meta });
+        }
+      }
       if (seq !== this.loadSeq) return; // llegó otro setPet mientras horneábamos
       this.pet.setSheet(canvas, sheet.anim);
+      this.pet.setAccessories(layers, sheet.anchors);
       this.layout();
       this.emit({ type: 'petLoaded', species: key.split('/')[0], stage: state.stage });
     } catch (e) {

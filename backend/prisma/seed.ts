@@ -87,6 +87,33 @@ async function main() {
     });
   }
 
+  // Accesorios (spec 38): un Item de kind "accessory" por prenda. Las de logro van sin precio.
+  const accessories = readJson('accessories.json').accessories;
+  console.log(`Cargando ${accessories.length} accesorios...`);
+  for (const acc of accessories) {
+    const effects = { slot: acc.slot, rarity: acc.rarity, color: acc.color, unlock: acc.unlock.type };
+    await prisma.item.upsert({
+      where: { id: acc.id },
+      // Igual que la comida: los precios solo se fijan al crear, para no pisar el panel de admin.
+      // `kind` sí se actualiza: una prenda de logro pudo crearse antes como "cosmetic" genérico.
+      update: {
+        kind: 'accessory',
+        name: acc.name,
+        description: acc.description,
+        effects,
+      },
+      create: {
+        id: acc.id,
+        kind: 'accessory',
+        name: acc.name,
+        description: acc.description,
+        effects,
+        priceCoins: acc.unlock.type === 'coins' ? acc.unlock.price : 0,
+        priceGems: acc.unlock.type === 'gems' ? acc.unlock.price : 0,
+      },
+    });
+  }
+
   // El usuario demo tiene una contraseña pública: jamás se crea en producción
   if (process.env.NODE_ENV === 'production') {
     console.log('✓ Catálogo cargado. Producción: no se crea el usuario demo.');

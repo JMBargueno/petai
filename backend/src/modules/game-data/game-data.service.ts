@@ -37,6 +37,11 @@ export interface GameDataSnapshot {
   constellations: any | null;
   /** Hábitat (feature 019): salas, muebles y topes de buffs. `null` si `habitats.json` no existe. */
   habitats: any | null;
+  /**
+   * Catálogo de accesorios (spec 38): `accessories.json` (opcional). Se lee del disco como `festivals`
+   * (no entra en el hot-reload). `{ slots, accessories }` o `null`.
+   */
+  accessories: any | null;
   /** ISO de cuando el snapshot se construyó/actualizó. */
   loadedAt: string;
   /** Origen del último cambio aplicado: `disk` (watcher/arranque) o `inline` (hot-reload inline). */
@@ -148,6 +153,11 @@ export class GameDataService implements OnModuleInit {
         const parsed = JSON.parse(fs.readFileSync(p, 'utf8')) as { templates?: any };
         return parsed?.templates ?? null;
       })(),
+      // Accesorios (spec 38): opcional y fuera del hot-reload, como `festivals`.
+      accessories: (() => {
+        const p = path.join(this.dataDir, 'accessories.json');
+        return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
+      })(),
       loadedAt: new Date().toISOString(),
       source,
     };
@@ -214,6 +224,11 @@ export class GameDataService implements OnModuleInit {
   /** Hábitat (feature 019): `habitats.json` (salas, muebles y topes de buffs). O `null`. */
   getHabitats() {
     return this.snapshot.habitats ?? null;
+  }
+
+  /** Accesorios (spec 38): lista de prendas de `accessories.json`, o [] si el archivo no existe. */
+  getAccessories(): any[] {
+    return this.snapshot.accessories?.accessories ?? [];
   }
 
   /** Catálogo de juego (los 6 game-data gestionados). Lo sirve el endpoint público `/catalog`. */

@@ -11,7 +11,7 @@ Referencia visual común para la **web**, la **app de escritorio** (Tauri + Svel
 ## 1 · Principios
 
 1. **Pegatina y juguete.** Formas redondas y rellenos planos de colores vivos, con un contorno fino que los recorta. Nada de realismo ni de texturas recargadas.
-2. **El contorno es la firma.** Las tarjetas, chips y pegatinas llevan 1 px de `--line`, y los sprites 3 px de `#1A1A1A`.
+2. **El contorno es la firma.** Las tarjetas, chips y pegatinas llevan 1 px de `--line`, y los sprites 3 px de `#1A1A1A` (en pixel art, 1 px nativo en el tono más oscuro de su rampa: §7.5).
 3. **Profundidad moderada.** Las sombras van tintadas de violeta y nunca son negro puro. Hay una sombra dura "de pegatina" para los momentos destacados.
 4. **Un color, un significado.** Cada tema, elemento y rareza tiene un color fijo y lo mantiene en todas las plataformas (§3.5–3.7).
 5. **Calma.** Como mucho un elemento en bucle por pantalla. Las entradas son fundidos cortos y siempre se respeta `prefers-reduced-motion`.
@@ -230,6 +230,8 @@ Pesos: 500 (medio), 700 (negrita) y 800 (extra).
 
 Sprites en `shared/assets/sprites/*.svg`.
 
+> **Los Pockais son pixel art** ([§7.5](#75-pixel-art-sustituye-al-vector-de-71-y-73)). Los apartados 7.1 y 7.3 describen el arte vectorial anterior y se conservan como referencia histórica. §7.2 y §7.4 se mantienen, salvo la tabla de etapas y la escala en sala de §7.4.
+
 ### 7.1 Plantilla
 
 - Lienzo `viewBox 0 0 128 128`.
@@ -303,6 +305,122 @@ Tabla orientativa: los valores exactos (escala total, cabeza, apéndices y ojos)
 - **Muebles:** SVG isométrico con huella `W×D` en celdas, de suelo o de pared, con 2 orientaciones dibujadas (las otras 2 salen por espejo). El punto de anclaje es el vértice superior de la celda (x, y) de la huella.
 - **Ni emoji ni iconos** como muebles.
 
+### 7.5 Pixel art (sustituye al vector de §7.1 y §7.3)
+
+Los Pockais son **pixel art procedural**: `scripts/sprites/pixel/` los rasteriza a partir de formas, sin editor ni IA. La interfaz no cambia: sigue siendo vectorial y de pegatina. Solo son pixel art las criaturas, los huevos, sus partículas y, más adelante, las salas. La cámara, la luz y la vista en 3/4 son las de §7.4.
+
+**Frame**
+- Se dibuja en un frame nativo de **64×64 px** y se exporta a ×2 (128×128), que es el tamaño que ya esperan `anim.json`, el generador y las apps.
+- Suelo en la fila 60 (y = 120 exportado). Los pies apoyan en la fila 59. La criatura va centrada en x = 32.
+- La sombra de suelo no va en la hoja: la ponen los clientes, como elipse 2:1.
+
+**Contorno y sombreado**
+- Contorno exterior de **1 px nativo** en el tono `900` de la rampa del elemento: un oscuro teñido, no `#1e1e1e`. Donde una pieza tapa a otra, 1 px en `900`.
+- Tres tonos por volumen (`300` arriba a la izquierda, `500` en el centro, `700` abajo a la derecha) y un brillo `100` de 2 a 6 px en el volumen principal.
+- Barriga (secundario) y accesorios (acento) van planos.
+- Sin degradados, sin transparencias parciales y sin antialiasing contra el fondo. El tramado solo se admite en patrones de piel.
+- Como mucho 16 colores opacos por sprite. Un rasgo de menos de 2 px nativos no existe.
+- Ojos `#1e1e1e` con brillo blanco de 1 px (2×2 en baby); el ojo lejano, 1 px más estrecho. Boca `#8B0000`.
+
+**Rampas por elemento**
+
+Esta tabla es la referencia de diseño. En el juego la hoja no guarda colores, sino tonos que el cliente multiplica por la paleta de cada mascota: el contorno sale del color de la pieza muy oscurecido y la luz suma una parte del secundario, que la gira hacia el color cálido de la paleta. El resultado se acerca a la tabla sin fijar cada hex.
+
+| Elemento | 900 contorno | 700 sombra | 500 base | 300 luz | 100 brillo |
+|---|---|---|---|---|---|
+| Fuego | `#3e0e18` | `#b41922` | `#e25822` | `#f9853c` | `#f4b68c` |
+| Agua | `#002633` | `#117584` | `#38a3a5` | `#6bc2b9` | `#acd7ce` |
+| Planta | `#002826` | `#1e9d85` | `#57cc99` | `#96e9ac` | `#d5fcd6` |
+| Eléctrico | `#371800` | `#e09b38` | `#ffd166` | `#feeb9c` | `#fffbe3` |
+| Sombra | `#161421` | `#2b2841` | `#4a4e69` | `#626c84` | `#7f8795` |
+| Luz | `#26211a` | `#ccc2ad` | `#f4f1de` | `#fbf9ee` | `#ffffff` |
+
+La variante shiny se construye con el mismo método a partir del trío shiny; aún no tiene valores fijados. Un sprite nunca se coloca sobre el color de interfaz de su propio elemento (§3.6): el fondo de escena es `--surface-2` o sky-wash.
+
+**Etapas: evolucionar es cambiar**
+
+Cada etapa es un **dibujo distinto, con su propio plan corporal**, no la anterior ampliada. Esta tabla sustituye a la de §7.4.
+
+| Eje | baby | juvenile | adult | final |
+|---|---|---|---|---|
+| Altura máxima | 28 px | 36 px | 46 px | 54 px |
+| Plan corporal | Un volumen: una bola. Sin brazos ni cola, solo pies | Un volumen alargado, con brazos y cola | Dos volúmenes: cabeza y torso, con el cuello marcado | Dos volúmenes más anchos y piezas que rompen el contorno |
+| Rasgo icónico | Un solo brote de 4–5 px | Doble y pequeño | Completo | Alargado, más un accesorio que lea el elemento (cresta, aura, corona) |
+| Piezas nuevas | Ninguna | Brazos, cola con punta | Cuello, cola grande | Segunda cola, púas en el lomo (o alas, o melena) |
+| Color y marcas | Sin barriga; mofletes de 2 px | Barriga | Manchas en cabeza y lomo | Franjas, emblema en el pecho, pies y manos en el acento |
+| Cara | Ojos enormes, brillo de 2×2 | Ojos grandes | Ojos normales | Ceja de 1 px: mirada decidida |
+| Color que no es el base | ~5 % | ~15 % | ~25 % | ~35 % |
+
+**Regla de los cuatro ejes:** en cada salto de etapa cambian al menos cuatro de estos cinco ejes: plan corporal, rasgo icónico, piezas, color y marcas, cara. Además, a lo largo de la línea el plan corporal cambia como mínimo dos veces (bola, cuerpo con extremidades, cabeza y torso).
+
+**Prueba de siluetas:** pon las cuatro etapas en negro a 64 px. Tienen que distinguirse sin color y sin mirar el tamaño.
+
+Lo que no cambia nunca, para que siga siendo la misma especie:
+
+- La rampa del elemento y los colores secundario y acento.
+- La forma del ojo (rectángulo oscuro de esquinas recortadas con brillo arriba a la izquierda).
+- El sitio del rasgo icónico: crece, se duplica o se adorna, pero sale del mismo punto.
+- La vista en tres cuartos y la luz.
+
+Las piezas nuevas de la etapa final tienen que verse en la silueta. La etapa final no pasa de 54 px, para dejar 6 px a los saltos.
+
+**Escala y render**
+- Solo escalas enteras: ×1 (64 px) en sala, ×2 (128 px) en la mascota flotante, ×3 (192 px) en la ficha, ×4 (256 px) en hero y evolución. En sala se pasa de unos 72 px a **64 px (escala 0,5)**.
+- Sin suavizado en ninguna plataforma: `image-rendering: pixelated` en CSS, `imageSmoothingEnabled = false` en canvas, `scaleMode = 'nearest'` en PixiJS, `FilterQuality.None` en Compose e `.interpolation(.none)` en SwiftUI.
+- Al sprite no se le aplica `border-radius`, `filter`, `drop-shadow`, opacidad intermedia ni giros o escalados fraccionarios. El espejo horizontal sí vale.
+
+**Huevo y partículas**
+- Huevo de juego en el mismo frame, con los colores que ya tenía: cáscara `#fff4d6`, sombra `#f1ddb0`, manchas `#ffc94d` y `#7fd0ff`, y contorno y grietas de 1 px en `#3b2a12`. El favicon y el icono de app siguen siendo el huevo vectorial de §2.
+- Corazón, Zzz, chispa y gota son mapas de bits en la rejilla nativa del sprite, con contorno de 1 px en carbón. Se mueven por pasos de 1 px y desaparecen sin fundido.
+- Los patrones de piel pasan a mosaicos de 16×16 px nativos.
+
+**Convivencia con la interfaz**
+- El sprite vive en un escenario (`--surface-2` o sky-wash) dentro de una tarjeta normal: `--surface`, contorno de 1 px, radio de 20 px y `--shadow-pop`.
+- Tarjetas, chips, burbujas, iconos y texto no se pixelan. No hay tipografía de píxeles.
+
+### 7.6 Accesorios
+
+Prendas en pixel art que el Pockai lleva puestas (gorros, gafas, bufandas, capas, alas) y que se desbloquean por **logros**, **monedas** o **gemas**. El catálogo, la compra, el equipado y el arte ya existen (`pnpm generate:accessories`), y la escena compartida y el escritorio las pintan sobre la mascota.
+
+**Ranuras y anclas**
+- Cuatro ranuras, una prenda por ranura: **cabeza** (gorros, coronas, lazos), **cara** (gafas, antifaces), **cuello** (bufandas, collares) y **espalda** (capas, alas, mochilas).
+- Cada especie define cuatro anclas por etapa (`head`, `face`, `neck`, `back`), en píxeles nativos del frame de 64×64. La prenda se coloca en el ancla y la sigue en cada frame, a píxel entero.
+- Orden de pintado: cola, espalda, cuerpo, cabeza, rasgo icónico cercano, cuello, brazo cercano, ojos, cara.
+- Tres tallas dibujadas, no escaladas: S para baby, M para juvenile y L para adult y final. Cada prenda se recorta a su caja mínima; el lienzo máximo es de 40×24 (S), 48×32 (M) y 56×40 px (L), porque una bufanda rodea el cuerpo y unas alas asoman por los dos lados.
+
+**Estilo**
+- Mismas reglas que el sprite: contorno de 1 px, luz arriba a la izquierda, sin transparencias. El contorno usa el tono oscuro **de la prenda**, no el del Pockai.
+- Tres tonos más contorno. El tono base es un color de la paleta de marca (§3.1): la prenda trae a la criatura el color de la interfaz.
+
+| Color | 900 contorno | 700 sombra | 500 base | 300 luz |
+|---|---|---|---|---|
+| Ember | `#3d0e1a` | `#c1122d` | `#fb4903` | `#fb9059` |
+| Sunburst | `#331b00` | `#dfa004` | `#ffd731` | `#feee8c` |
+| Mint | `#012825` | `#02ab8c` | `#55db9c` | `#a0f6b1` |
+| Electric blue | `#1c1b44` | `#4a6dd4` | `#4da2ff` | `#7fc7fe` |
+| Violet | `#170c35` | `#490ca4` | `#5c4ade` | `#8a6be9` |
+| Lavender | `#211e36` | `#b1a3d8` | `#e9ccff` | `#f9e2fe` |
+| Blanco | `#4b4862` | `#d6d4e0` | `#ffffff` | `#ffffff` |
+| Carbón | `#0b0a14` | `#17162a` | `#3d3a63` | `#4b4862` |
+
+**Convivencia con la criatura**
+- Ninguna prenda tapa los ojos ni la boca. Las gafas son solo montura de 1 px; no hay cristales tintados.
+- El gorro se pinta detrás del rasgo icónico cercano, que asoma por delante.
+- Capas y alas van detrás del cuerpo y sobresalen al menos 4 px de la silueta.
+- Las piezas propias de la etapa final no se quitan al equipar.
+- Una prenda puede superar la altura de la etapa en 6 px como mucho y no sale del frame.
+
+**Rareza y desbloqueo**
+- La rareza usa los colores de §3.7 y se nota en la forma: una rampa (normal), dos rampas (raro), un detalle que rompe la silueta (super-raro), animación de 2 frames (legendario), animación y partícula (mítico).
+- Chip de desbloqueo, siempre con icono y palabra: **monedas** sobre sunburst, **gemas** sobre lavender, **logro** sobre mint-pop, con el nombre del logro.
+- Estados: bloqueado (prenda en gris y requisito escrito), disponible (precio), en propiedad (botón «Equipar»), equipado (chip en `--accent`).
+- En la tienda la prenda se enseña sobre un maniquí en grises; en el armario, sobre la propia mascota.
+- Los iconos de moneda, gema y logro son de interfaz: vectoriales, no se pixelan.
+
+El esquema de datos, las anclas y el orden de implementación están en [`specs/spec-38-accesorios-pockai.md`](specs/spec-38-accesorios-pockai.md).
+
+**Datos:** una prenda es un `Item` con `kind: "accessory"`; las de logro llegan por `reward.itemId` de `achievements.json`. Su arte se dibuja en `scripts/sprites/pixel/accessories.ts`.
+
 ## 8 · Movimiento
 
 Tokens en [`web/src/styles/motion.css`](../web/src/styles/motion.css):
@@ -329,6 +447,7 @@ Reglas:
 - **Al recibir daño:** retrocede 12 px con un destello blanco de 80 ms.
 - **En reposo:** flota suavemente (*bob*), con un ciclo de 3,2 s.
 - Partículas compartidas: corazones, burbujas, Zzz, gotas y chispas.
+- **Con pixel art (§7.5)** el catálogo de animaciones no cambia, pero el movimiento va a píxel entero y cada frame se redibuja: no se escala ni se gira el mapa de bits. El *bob* sube y baja 1 px nativo por pasos, el toque reproduce `land` en lugar de aplastar por escala, y el daño reproduce `hit` (retroceso de 3 px nativos y un frame en blanco).
 
 ## 9 · Componentes base
 
@@ -408,5 +527,8 @@ Esta sección lista lo que existe hoy y no sigue esta guía. Corregirlo es traba
 | Huevo | Icono Android `#FDE68A` con manchas azules; sprite `#FDE047` con manchas `#F59E0B` | Un solo huevo de marca (§2) |
 | Emoji de contenido | En el escritorio quedan emoji como contenido de juego (frutas de minijuegos, accesorios y muebles, iconos de elemento) | Pegatinas/Lucide cuando haya arte propio; los muebles, en SVG isométrico (§7.4) |
 | Vista | Pockais de perfil y hábitat en diorama lateral (CSS) | Pockais en 3/4 por etapa y salas isométricas (§7.4) |
+| Escala y render | Escritorio y escena de PixiJS ya escalan por enteros y sin suavizado; falta revisar Android, iOS y la web | Escalas enteras y vecino más próximo en todas las plataformas (§7.5) |
+| Accesorios | Armario y tienda solo en el escritorio; los festivales siguen usando emoji | Armario en todos los clientes y accesorios de festival como prendas (§7.6) |
+| Movimiento de la mascota | *Bob*, toque y daño por transformaciones continuas | Frames dibujados y pasos de 1 px (§8) |
 | Elementos | Eléctrico, Sombra y Luz sin color de UI | Completar §3.6 |
 | Docs vs arte | Los docs hablan de 14 estados y 21 especies | Hay 4 estados en SVG y 3 especies con arte |

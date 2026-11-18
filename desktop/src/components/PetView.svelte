@@ -7,6 +7,8 @@
     type BakedPetSheet
   } from '../lib/sprites';
   import { AnimationController, resolveBaseState } from '../lib/animation/AnimationController';
+  import { parseEquipped } from '@pockai/scene/bake';
+  import { drawWorn, loadWornSet, type WornSet } from '../lib/accessories';
   import type { Reaction } from '../lib/animation/eventMap';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
   import VisitorPet from './VisitorPet.svelte';
@@ -48,6 +50,8 @@
   const BUSY_PRIORITY = 40;
   const PET_SIZE = 128;
   const SPEECH_HALF = 110 + 8; // media burbuja + margen con el borde
+  /** Con movimiento reducido las prendas animadas se quedan en su primer frame. */
+  const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   /** Punto (cursor) donde aparece al montarse, p. ej. al soltarlo fuera del Hábitat. */
   export let spawnAt: { x: number; y: number } | null = null;
@@ -151,6 +155,17 @@
   $: stage = pet?.stage ?? null;
   $: if (pet && (speciesKey || patternKey || palette || visualSeed || stage)) {
     triggerBake();
+  }
+
+  // Prendas equipadas (spec 38): se recargan al cambiar de especie, de etapa o de prendas.
+  let wornSet: WornSet | null = null;
+  let wornSeq = 0;
+  $: equippedKey = JSON.stringify(parseEquipped(pet?.accessories));
+  $: void refreshWorn(speciesKey, stage, equippedKey);
+  async function refreshWorn(species: string, petStage: string | null, key: string) {
+    const seq = ++wornSeq;
+    const next = await loadWornSet(species, petStage, JSON.parse(key));
+    if (seq === wornSeq) wornSet = next;
   }
 
   async function triggerBake() {
@@ -444,6 +459,11 @@
       if (ctx) {
         ctx.clearRect(0, 0, PET_SIZE, PET_SIZE);
 
+        // Pixel art: sin suavizado. Las prendas de espalda van antes que el cuerpo; el resto, después.
+        ctx.imageSmoothingEnabled = false;
+        const wornTime = reducedMotion ? 0 : time;
+        drawWorn(ctx, wornSet, 'behind', frameState.name, frameState.frame, wornTime);
+
         // Recortar frame del sprite sheet horneado
         const frame = bakedSheet.getFrame(frameState.name, frameState.frame);
         ctx.drawImage(
@@ -451,6 +471,7 @@
           frame.sx, frame.sy, frame.sw, frame.sh,
           0, 0, PET_SIZE, PET_SIZE
         );
+        drawWorn(ctx, wornSet, 'front', frameState.name, frameState.frame, wornTime);
 
         // Efecto Flash blanco en daño
         if (isWhiteFlash) {
@@ -1035,7 +1056,8 @@
     z-index: var(--z-raised);
     width: 128px;
     height: 128px;
-    image-rendering: auto;
+    /* Pixel art (GUIA_ARTISTICA §7.5): escala entera y sin suavizado. */
+    image-rendering: pixelated;
     pointer-events: none;
   }
 
