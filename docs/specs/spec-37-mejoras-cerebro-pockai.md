@@ -639,3 +639,51 @@ bloquea.
 
 Ya decidido: un dueño que visita habla con el Pockai anfitrión **por menú de opciones, sin LLM y
 sin texto libre**.
+
+## Anexo A. Cerebro del escritorio y de la sala (fuera de los seis lotes)
+
+Los lotes 1–6 son de backend. Este anexo cubre lo que no tocaban: cómo decide el Pockai en el
+escritorio y en la sala isométrica, y cómo encaja con las visitas. Se hace por fases, un PR por fase.
+
+### A.1 Fase 1 — escritorio (hecha)
+
+El bucle de `PetView.svelte` (tiradas de `Math.random` cada 3 s, sin personalidad) se sustituye por
+tres capas, las mismas de la sección 7:
+
+| Capa | Dónde | Qué hace |
+|---|---|---|
+| Percibir | `desktop/src/lib/brain/deskSense.ts`, `deskSituation.ts`, `desktop/src-tauri/src/desk_sense.rs` | Pizarra con vitales, ánimo, personalidad, cursor, inactividad, ventana en primer plano, app en foco, hora y fase de Pomodoro |
+| Decidir | `desktop/src/lib/brain/deskBrain.ts`, `deskBehaviors.ts`, `shared/mind` (`@pockai/mind`) | Modo superior y selector por utilidad con enfriamientos y anti-repetición |
+| Actuar | `PetView.svelte` (`runCommands`), `desktop/src/lib/brain/locomotion.ts` | Ejecuta órdenes: moverse frame a frame, clips, efectos, frases, trepar, posarse, ocultarse |
+
+- **`@pockai/mind`** (TypeScript puro): generador sembrado, dimensiones (`weighted`, `bandOf`,
+  `rollBirthDims`) y `selectByUtility`. Es copia del motor del servidor; `mindParity.spec.ts` impide
+  que se separen hasta que el backend importe el paquete (fase 3).
+- **Pesos en datos**: `balance.json → personality.desktop`, con la forma `{ base, weights, requires }`
+  de 4.3. `requires` es una lista blanca validada en `scripts/validate-game-data.js`.
+- **Modos**: `away`, `asleep`, `held`, `hidden` (ventana a pantalla completa), `napping` (el usuario
+  se fue), `busy` (pausa mientras suena un clip), `focus` (trabajo de un Pomodoro) y `free`.
+- **Habilidades nuevas**: `cursor_play`, `presence_sense` y `flow_talent`, registradas en
+  `desktop/src/lib/types/desktopSkills.ts` y en `backend/src/modules/ai/desktop-skills.ts`.
+- **Privacidad**: los sentidos nuevos son eventos locales de Tauri. No entran en `deskContext`
+  (`buildClientContext`) ni en `contextDigest`; el título de la ventana solo se lee con
+  `context_awareness` activa. La siesta por ausencia es visual: no cambia `pet.sleeping`.
+- **Interruptor**: `localStorage['petai:desk_brain'] = '0'` vuelve al bucle anterior (`legacyTick`).
+  Se retira cuando la parte nativa (cursor global, inactividad, pantalla completa, seguir la ventana)
+  esté comprobada en el overlay real de Windows; en macOS y Linux esos sentidos llegan vacíos.
+- **En desarrollo**: `__pockaiBrain()` enseña modo y conducta; `__pockaiSense.set({ idleMs,
+  foreground, appCategory, timeOfDay, cursor })` simula percepciones en el navegador.
+
+### A.2 Fases siguientes
+
+- **Fase 2 — sala del hábitat.** `IsoRoom.wander()` pasa a un `petWander.ts` puro que usa
+  `selectByUtility` con `personality.room`: come con hambre, se baña sucio, duerme cansado. El mensaje
+  `setActivity` gana un campo opcional `mind { dims, needs, seed }` y la sala admite varios actores.
+- **Fase 3 — lotes 1 y 2**, más lo que la revisión encontró fuera de ellos: `gene-reveal.service.ts`
+  reescribe `personality` sin fusionar; la cría no hereda personalidad; mood-theater lee
+  `personality.type`, que nadie escribe; la aventura guarda recuerdos sin pasar por el motor de
+  memoria; `ELEMENTS` no traduce `electric`, `light` ni `shadow`; la vida autónoma aplica el estado
+  actual (`sleeping`, `energy`) a todos los intervalos pasados.
+- **Fase 4 — visitas con escena compartida.** Depende de las fases 2 y 3 (1.7). El visitante entra en
+  la sala del anfitrión y ambos se resuelven con `resolveScene` (6.3) y la relación por etapas (6.1).
+- **Fase 5 — lotes 3 a 6 restantes**, incluido el menú del dueño visitante (6.2).
