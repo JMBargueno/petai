@@ -87,6 +87,7 @@
         id: room.id,
         gridWidth: room.gridWidth,
         gridHeight: room.gridHeight,
+        ...(room.blocked ? { blocked: room.blocked } : {}),
         theme: room.theme ?? null,
         items: room.items.map((i) => ({ id: i.id, furnitureId: i.furnitureId, x: i.x, y: i.y, rotation: i.rotation ?? 0 })),
         furniture: furniture.map((f) => ({

@@ -11,11 +11,20 @@
 import { Container, Graphics, Sprite, type FederatedPointerEvent, type Ticker } from 'pixi.js';
 import type { Activity, Interaction, RoomFurniture, RoomItem, RoomState, RoomTheme, SceneEvent } from '../protocol';
 import { depthOf, TILE_H, TILE_W, toGrid, toScreen } from '../iso/projection';
-import { footprintCells, normalizeRotation, rotatedFootprint, snapToWall, validatePlacement, type PlacedShape } from '../iso/layout';
+import {
+  footprintCells,
+  normalizeRotation,
+  roomBlockedCells,
+  rotatedFootprint,
+  snapToWall,
+  validatePlacement,
+  type PlacedShape,
+} from '../iso/layout';
 import { findPath, type Cell } from '../iso/pathfind';
 import { PetSprite } from '../pet/PetSprite';
 import { furnitureMeta, loadFurnitureTexture, type Orientation } from './furnitureAssets';
 import { SLAB, sparkle, styleFor, WALL_H, type Twinkle } from './roomStyles';
+import { blockedOf } from './roomShape';
 import { toHexString, type SkyState } from '../ambience/sunClock';
 import { isWet, type WeatherLook } from '../ambience/weather';
 
@@ -39,6 +48,8 @@ const NIGHT_TINT = 0x1b1846;
 const SLEEP_ALPHA = 0.42;
 /** En modo edición la luz del día no debe estorbar al colocar muebles. */
 const EDIT_TINT_MAX = 0.15;
+/** Margen alrededor de la sala al encajarla (cubre el grosor de las paredes). */
+const MARGIN = 10;
 /** Celdas del fondo donde el Pockai se resguarda de la lluvia (bajo el árbol del jardín). */
 const SHELTER = 4;
 const STARTLE_EVERY_MS = 20_000;
@@ -80,6 +91,8 @@ export class IsoRoom extends Container {
   private readonly pet: PetSprite;
 
   private room: RoomState | null = null;
+  /** Celdas sin suelo de la sala actual (su forma): ni muebles de suelo ni paseos. */
+  private holes = new Set<string>();
   private placed = new Map<string, PlacedFurniture>();
   private restClip = 'idle';
   private twinkles: Twinkle[] = [];
@@ -126,7 +139,8 @@ export class IsoRoom extends Container {
 
   setRoom(room: RoomState): void {
     const prevId = this.room?.id;
-    this.room = room;
+    this.room = { ...room, blocked: blockedOf(room) };
+    this.holes = roomBlockedCells(this.room);
     this.drawShell();
     this.syncFurniture();
     if (prevId !== room.id) this.placePetAtStart();
@@ -252,10 +266,10 @@ export class IsoRoom extends Container {
     const H = this.room?.gridHeight ?? 10;
     const style = styleFor(this.room?.id);
     return {
-      minX: -H * (TILE_W / 2) - 4,
-      maxX: W * (TILE_W / 2) + 4,
-      minY: -WALL_H - style.topExtra - 4,
-      maxY: (W + H) * (TILE_H / 2) + SLAB + style.bottomExtra + 4,
+      minX: -H * (TILE_W / 2) - MARGIN,
+      maxX: W * (TILE_W / 2) + MARGIN,
+      minY: -WALL_H - style.topExtra - MARGIN,
+      maxY: (W + H) * (TILE_H / 2) + SLAB + style.bottomExtra + MARGIN,
     };
   }
 
@@ -268,8 +282,8 @@ export class IsoRoom extends Container {
       const style = styleFor(this.room.id);
       const W = this.room.gridWidth;
       const H = this.room.gridHeight;
-      style.draw({ g, t: this.theme(), W, H });
-      this.twinkles = style.twinkles?.(W, H) ?? [];
+      style.draw({ g, t: this.theme(), W, H, holes: this.holes });
+      this.twinkles = style.twinkles?.(W, H, this.holes) ?? [];
     }
     this.ambient.clear();
     this.drawNight();
@@ -333,6 +347,16 @@ export class IsoRoom extends Container {
         g.poly(pts.flatMap((p) => [p.x, p.y])).fill({ color, alpha: fillAlpha }).stroke({ width: 1.5, color, alpha: 0.9 });
       }
     };
+    // Celdas sin suelo: rayadas, para que se vea dónde no cabe nada
+    for (const k of this.holes) {
+      const [x, y] = k.split(',').map(Number);
+      const a = toScreen(x, y);
+      const b = toScreen(x + 1, y);
+      const c = toScreen(x + 1, y + 1);
+      const d = toScreen(x, y + 1);
+      g.poly([a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y]).fill({ color: BAD, alpha: 0.08 });
+      g.moveTo(d.x, d.y).lineTo(b.x, b.y).stroke({ width: 1, color: BAD, alpha: 0.35 });
+    }
     if (this.drag) {
       const pf = this.placed.get(this.drag.id);
       if (pf) outline(footprintCells(pf.def, { ...this.drag.cand, rotation: pf.item.rotation }), this.drag.valid ? OK : BAD, 0.35);
@@ -495,7 +519,7 @@ export class IsoRoom extends Container {
   // ───────────────────────── Pockai ─────────────────────────
 
   private blockedCells(): Set<string> {
-    const out = new Set<string>();
+    const out = new Set<string>(this.holes);
     for (const pf of this.placed.values()) {
       if (pf.def.mount === 'wall') continue;
       for (const c of footprintCells(pf.def, pf.item)) out.add(c);

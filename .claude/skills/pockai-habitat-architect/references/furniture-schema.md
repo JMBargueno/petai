@@ -8,6 +8,7 @@ El validador es `habitatsSchema` en `backend/src/modules/game-data/game-data.sch
 | `id` | string | único |
 | `name` | string | en español |
 | `gridWidth`, `gridHeight` | int | hoy 14×10 en todas |
+| `blocked` | `[[x, y, ancho, fondo], …]` | celdas sin suelo que dan forma a la sala (estanque, escalón, abismo). No pueden tocar `x = 0` ni `y = 0` (paredes), el suelo debe quedar conexo y caber el mueble de suelo más grande. Un mueble de suelo encima → `out_of_bounds`. El jardín deja libre 0–3 × 0–3 (refugio bajo el árbol) |
 | `unlockStage` | `baby \| juvenile \| adult \| final` | la sala se desbloquea con la etapa del Pockai |
 | `description` | string | |
 | `theme` | objeto | `{ wall, wallShade, floor, floorAlt, trim, sky, light }` en hex (opcional; los clientes tienen uno por defecto) |

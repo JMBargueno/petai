@@ -7,6 +7,7 @@ import com.petai.app.data.WeatherInfo
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
@@ -46,6 +47,12 @@ object SceneMessages {
             put("id", room.id)
             put("gridWidth", room.gridWidth)
             put("gridHeight", room.gridHeight)
+            // Sin datos (backend antiguo) no se manda: la escena usa la forma de habitats.json.
+            if (room.blocked.isNotEmpty()) {
+                putJsonArray("blocked") {
+                    room.blocked.filter { it.size == 4 }.forEach { r -> add(buildJsonArray { r.forEach { add(it) } }) }
+                }
+            }
             room.theme?.let { t ->
                 putJsonObject("theme") {
                     put("wall", t.wall)
