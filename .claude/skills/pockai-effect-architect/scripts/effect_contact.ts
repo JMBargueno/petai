@@ -2,7 +2,10 @@
 /**
  * Hoja de frames de un efecto del escritorio, para revisarlo a simple vista antes de cablearlo.
  *
- *   npx tsx .claude/skills/pockai-effect-architect/scripts/effect_contact.ts <id> [--scale 3] [--reduced]
+ *   npx tsx .claude/skills/pockai-effect-architect/scripts/effect_contact.ts <id> [--scale 3] [--reduced] [--param clave=valor …]
+ *
+ * `--param` da los datos del momento (`frame.params`), p. ej. `--param rarity=mythic --param shiny=1`.
+ * Con ellos se eligen también las fases (`phasesFor`). La hoja se llama `<id>[-reduced][-k-v…]-contact.png`.
  *
  * Escribe `sprite-previews/effects/<id>-contact.png`: una fila por Flujo del Éter (fuego, agua,
  * planta, eléctrico, sombra, luz, neutral) y una columna por instante muestreado de cada fase. Los
@@ -12,7 +15,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import sharp from 'sharp';
-import { EFFECTS, FLOW_PALETTES, GridSink, renderFrame } from '../../../../desktop/src/lib/effects/index';
+import { EFFECTS, FLOW_PALETTES, GridSink, phasesOf, renderFrame } from '../../../../desktop/src/lib/effects/index';
 
 const root = resolve(__dirname, '../../../..');
 const args = process.argv.slice(2);
@@ -20,6 +23,13 @@ const id = args.find((a) => !a.startsWith('--')) ?? 'portal-nexo';
 const scaleArg = args.indexOf('--scale');
 const SCALE = scaleArg >= 0 ? Number(args[scaleArg + 1]) : 3;
 const reduced = args.includes('--reduced');
+const params: Record<string, string | number> = {};
+args.forEach((a, i) => {
+  if (a !== '--param') return;
+  const [k, v] = String(args[i + 1] ?? '').split('=');
+  if (k) params[k] = v !== undefined && v !== '' && !Number.isNaN(Number(v)) ? Number(v) : (v ?? '');
+});
+const suffix = Object.entries(params).map(([k, v]) => `-${k}-${v}`).join('');
 
 const def = EFFECTS[id];
 if (!def) {
@@ -31,7 +41,7 @@ if (!def) {
 const SAMPLES: Record<string, number[]> = { default: [0.2, 0.45, 0.7, 1] };
 type Col = { phase: string; t: number; elapsedMs: number };
 const cols: Col[] = [];
-const phases = reduced ? def.reducedPhases : def.phases;
+const phases = phasesOf(def, params, reduced);
 let cursor = 0;
 for (const p of phases) {
   if (p.ms === 'hold') {
@@ -71,7 +81,7 @@ elements.forEach((el, row) => {
     const y0 = PAD + row * (cellH + PAD);
     fill(x0, y0, cellW, cellH, ci % 2 === 0 ? [30, 30, 46] : [232, 232, 238]);
     const sink = new GridSink(def.width, def.height);
-    renderFrame(def, sink, col, FLOW_PALETTES[el], 7, reduced);
+    renderFrame(def, sink, col, FLOW_PALETTES[el], 7, reduced, params);
     const n = sink.colors().size;
     if (n > 12) warnings.push(`${el} ${col.phase}@${col.t}: ${n} colores (máx. 12)`);
     for (let y = 0; y < def.height; y++)
@@ -82,7 +92,7 @@ elements.forEach((el, row) => {
   });
 });
 
-const out = resolve(root, `sprite-previews/effects/${id}${reduced ? '-reduced' : ''}-contact.png`);
+const out = resolve(root, `sprite-previews/effects/${id}${reduced ? '-reduced' : ''}${suffix}-contact.png`);
 mkdirSync(dirname(out), { recursive: true });
 sharp(img, { raw: { width: W, height: H, channels: 4 } })
   .png()

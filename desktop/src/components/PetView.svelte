@@ -34,7 +34,7 @@
   import { setPetOnScreen } from '../lib/window-visibility';
   import Ico from './Ico.svelte';
   import EffectLayer from './EffectLayer.svelte';
-  import { EFFECTS, EffectPlayer, flowPalette, portalNexo, type EffectDef } from '../lib/effects';
+  import { EFFECTS, EffectPlayer, flowPalette, phasesOf, portalNexo, type EffectDef, type FxPalette } from '../lib/effects';
   import { admitMoment } from '../lib/effects/momentQueue';
   import { registerTravelPresenter, travel, travelArrived, type TravelState } from '../lib/visitTravel';
 
@@ -72,6 +72,8 @@
 
   /** Punto (cursor) donde aparece al montarse, p. ej. al soltarlo fuera del Hábitat. */
   export let spawnAt: { x: number; y: number } | null = null;
+  /** Cómo entra en escena al montarse: 'altar' = sale de su casa por el Altar del Santuario. */
+  export let entrance: 'altar' | null = null;
 
   /** Desplazamiento horizontal de la burbuja para que no se salga por un borde de la pantalla. */
   $: speechShift = (() => {
@@ -484,6 +486,8 @@
     params: Record<string, string | number>;
     /** Sigue a la mascota (pies) o se queda en un punto fijo de la pantalla. */
     at: { x: number; y: number } | null;
+    /** Rampa del efecto: la del Pockai, o la de otro (la recién nacida, en la revelación). */
+    palette: FxPalette;
   };
   let moments: MomentFx[] = [];
   let momentSeq = 0;
@@ -503,7 +507,12 @@
   function startMoment(
     effectId: string,
     params: Record<string, string | number>,
-    opts: { at?: { x: number; y: number }; onHold?: (p: EffectPlayer) => void; onDone?: () => void } = {},
+    opts: {
+      at?: { x: number; y: number };
+      palette?: FxPalette;
+      onHold?: (p: EffectPlayer) => void;
+      onDone?: () => void;
+    } = {},
   ): boolean {
     const def = EFFECTS[effectId];
     if (!def || petAway || travelBusy) return false;
@@ -511,7 +520,7 @@
     if (!verdict.play) return false;
     if (verdict.replace.length) moments = moments.filter((_, i) => !verdict.replace.includes(i));
     const id = ++momentSeq;
-    const player = new EffectPlayer(reducedMotion ? def.reducedPhases : def.phases, (phase) => {
+    const player = new EffectPlayer(phasesOf(def, params, reducedMotion), (phase) => {
       if (phase === 'hold') opts.onHold ? opts.onHold(player) : player.release(performance.now());
       if (phase === 'done') {
         moments = moments.filter((m) => m.id !== id);
@@ -519,7 +528,7 @@
       }
     });
     player.start(performance.now());
-    moments = [...moments, { id, def, player, params, at: opts.at ?? null }];
+    moments = [...moments, { id, def, player, params, at: opts.at ?? null, palette: opts.palette ?? portalPalette }];
     return true;
   }
 
@@ -559,7 +568,77 @@
       }
       return;
     }
+    if (effectId === 'revelacion-densidad' && params.beside) {
+      // Nace otra de la colección: la columna se alza junto a la mascota, en el Flujo de la recién nacida
+      startMoment(effectId, params, { at: portalSpot(), palette: flowPalette(String(params.element ?? '')) });
+      return;
+    }
     startMoment(effectId, params);
+  }
+
+  // ---------- Altar del Santuario: entrar en casa y salir de ella ----------
+  /**
+   * Va a casa por el altar: se alza a su lado, anda hasta él, entra y el altar se hunde. Lo llama App
+   * cuando el Pockai pasa a su hábitat desde el panel (botón «A casa»); al resolverse, App la desmonta.
+   */
+  export function enterAltar(): Promise<void> {
+    return new Promise((resolve) => {
+      if (petAway || travelBusy) return resolve();
+      const spot = portalSpot();
+      settleForTravel();
+      fxLock = true;
+      direction = spot.x > posX + PET_SIZE / 2 ? 1 : -1;
+      const started = startMoment('altar-santuario', {}, {
+        at: spot,
+        onHold: async (player) => {
+          if (WALK_TO_PORTAL_MS > 0) {
+            walkUntil = performance.now() + WALK_TO_PORTAL_MS;
+            travelBusy = true; // paso constante hasta la puerta
+            posX = spot.x - PET_SIZE / 2;
+            await wait(WALK_TO_PORTAL_MS);
+            travelBusy = false;
+          } else {
+            posX = spot.x - PET_SIZE / 2;
+          }
+          portalAnim = 'entering';
+          await wait(THROUGH_PORTAL_MS);
+          fxHidden = true;
+          portalAnim = '';
+          player.release(performance.now());
+        },
+        onDone: () => {
+          fxLock = false;
+          resolve();
+        },
+      });
+      if (!started) {
+        fxLock = false;
+        resolve();
+      }
+    });
+  }
+
+  /** Sale de casa por el altar, donde aparece (al montarse con entrance = 'altar'). */
+  export function emergeFromAltar() {
+    const spot = { x: posX + PET_SIZE / 2, y: posY + PET_SIZE - FEET_INSET };
+    const started = startMoment('altar-santuario', {}, {
+      at: spot,
+      onHold: async (player) => {
+        fxHidden = false;
+        portalAnim = 'exiting';
+        await wait(THROUGH_PORTAL_MS);
+        portalAnim = '';
+        play('happy');
+        player.release(performance.now());
+      },
+      onDone: () => {
+        fxLock = false;
+      },
+    });
+    if (started) {
+      fxLock = true;
+      fxHidden = true;
+    }
   }
 
   // Arrastre hacia casa: la mascota va por encima del panel mientras se arrastra, así que
@@ -858,6 +937,7 @@
   onMount(() => {
     setPetOnScreen(!petAway);
     unregisterTravel = registerTravelPresenter();
+    if (entrance === 'altar' && !petAway) emergeFromAltar();
     // Inicializar loop de animación
     animRafId = requestAnimationFrame(renderLoop);
 
@@ -1135,7 +1215,7 @@
     player={m.player}
     x={m.at ? m.at.x : posX + recoilOffsetX + PET_SIZE / 2}
     y={m.at ? m.at.y : posY + PET_SIZE - FEET_INSET}
-    palette={portalPalette}
+    palette={m.palette}
     seed={portalSeed}
     params={m.params}
     reduced={reducedMotion}

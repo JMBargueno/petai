@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMOTE_EMOJI, LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior } from './eventMap';
+import { EMOTE_EMOJI, LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior, reactionForSiblingHatch } from './eventMap';
 import { PET_ACTIONS, isPetActionEvent } from './petActions';
 import { getAnimLibrary } from '../sprites';
 
@@ -28,6 +28,20 @@ describe('reactionForAction', () => {
     expect(reactionForAction({ action: 'level_up', context: { level: 7 } })?.effect).toEqual({ id: 'resonancia', params: { level: 7 } });
     expect(reactionForAction({ action: 'evolved', context: { stage: 'adult' } })?.effect).toEqual({ id: 'capullo-telar', params: { stage: 'adult' } });
     expect(reactionForAction({ action: 'fed' })?.effect).toBeUndefined();
+    expect(reactionForAction({ action: 'hatched', context: { rarity: 'mythic', shiny: true, pity: 'legendary' } })?.effect).toEqual({
+      id: 'revelacion-densidad',
+      params: { rarity: 'mythic', shiny: 1, pity: 'legendary' },
+    });
+    expect(reactionForAction({ action: 'welcome_back', context: { tier: 'sad' } })).toMatchObject({
+      anims: ['cry'],
+      effect: { id: 'descarga-calida', params: { tier: 'sad' } },
+    });
+    // Nace otra de la colección: la activa lo presencia y la columna va a su lado, en el Flujo de la nueva
+    expect(reactionForSiblingHatch({ nickname: 'Brote', rarity: 'rare', shiny: false, species: { element: 'water' } })).toMatchObject({
+      anims: ['surprised', 'happy'],
+      bubble: expect.stringContaining('Brote'),
+      effect: { id: 'revelacion-densidad', params: { rarity: 'rare', shiny: 0, element: 'water', beside: 1 } },
+    });
     expect(reactionForAction({ action: 'mood_moment', context: { act: 'cry' } })?.anims).toEqual(['cry']);
     expect(reactionForAction({ action: 'mood_moment', context: { act: 'desconocido' } })).toBeNull();
     expect(reactionForAction({ action: 'slept' })).toBeNull();

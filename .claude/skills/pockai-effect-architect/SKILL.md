@@ -23,11 +23,14 @@ Lee las referencias cuando las necesites:
 
 Manda la norma de `docs/GUIA_ARTISTICA.md` (§3.6 color por elemento, §7 pixel art) y el lore de `docs/LORE.md`. Si chocan con esta skill, mandan ellos.
 
-**Estado del sistema:** el motor y cuatro efectos existen:
+**Estado del sistema:** el motor y siete efectos existen:
 - `portal-nexo`: el Pockai se va de visita y vuelve, y los amigos llegan a tu hábitat y se van, en su propio Flujo.
 - `capullo-telar`: evolución.
 - `resonancia`: subida de nivel.
 - `hebra-invocacion`: invocación rápida.
+- `revelacion-densidad`: nacimiento, con la Promesa del Telar y el Rayo Cósmico según los datos.
+- `altar-santuario`: entrar en casa y salir de ella.
+- `descarga-calida`: bienvenida tras una ausencia.
 
 Hay dos patrones de referencia:
 - **Viaje con estado de juego:** `visitTravel.ts` + `departThroughPortal` en PetView.

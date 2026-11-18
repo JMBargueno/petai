@@ -83,7 +83,7 @@ Para un evento que ya pasa por `eventMap` (`pet:action` del backend o acción lo
    - **Solo un efecto grande a la vez** (`effects/momentQueue.ts`): gana el de más `priority`. El capullo (3) corta a la resonancia (2), que llega en el mismo tick.
 3. Si el efecto tapa a la mascota, usa `fxHidden` (oculta y sin clics). Si la tiene que dejar quieta, usa `fxLock`, que impide que pasee, se arrastre o se invoque. Suelta los dos en `onDone`.
 4. Datos para el dibujo: `frame.params`, con lo que llegue en `params`, como `stage` o `level`.
-5. `layer` y `priority` van en el propio `EffectDef`. `EffectLayer` acepta `scale` para pintarlo a ×1 junto a mascotas pequeñas (`VisitorPet`).
+5. `layer` y `priority` van en el propio `EffectDef`. Si las fases dependen de los datos (saltar la Promesa sin garantía), define `phasesFor(params, reduced)` y usa `phasesOf(def, params, reduced)` al crear el `EffectPlayer`. Para teñir con otro Flujo (la recién nacida), pasa `palette` a `startMoment`. `EffectLayer` acepta `scale` para pintarlo a ×1 junto a mascotas pequeñas (`VisitorPet`).
 
 Para efectos de **otra** mascota, como los visitantes, el elemento sale de `speciesElement(speciesId)`. Lo que sale de pantalla con efecto debe seguir pintado hasta que acabe: mira `visitorsShown.ts`, que mantiene a los que se van con `leaving` hasta su `gone`.
 

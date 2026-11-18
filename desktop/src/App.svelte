@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button } from './components/ui';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { api, getAccessToken, onEmailUnverified, onHandleRequired, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
@@ -27,7 +27,7 @@
     BALL_MAX_THROW_SPEED,
     type BallState,
   } from './lib/toys/toyPhysics';
-  import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior } from './lib/animation/eventMap';
+  import { LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior, reactionForSiblingHatch } from './lib/animation/eventMap';
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
@@ -458,6 +458,31 @@
     if (reaction) petViewRef?.react?.(reaction);
   }
 
+  /**
+   * Eclosión desde el panel. La recién nacida se añade a la colección y solo pasa a ser la activa si
+   * no había ninguna: entonces es ella la que nace en el escritorio (revelación a sus pies). Si no,
+   * la mascota activa lo presencia y la revelación se alza a su lado, en el Flujo de la recién nacida.
+   * (Antes la animación de nacer la hacía la activa, como si fuera ella la nueva.)
+   */
+  async function celebrateHatch(newborn: any) {
+    if (!newborn?.id) return;
+    pets = [...pets.filter((p) => p.id !== newborn.id), newborn];
+    if (!currentPet) {
+      selectPet(newborn.id);
+      await tick();
+      reactToAction(newborn.id, 'hatched', {
+        rarity: newborn.rarity,
+        shiny: newborn.shiny,
+        ...(newborn.pityGuarantee ? { pity: newborn.pityGuarantee } : {}),
+      });
+      return;
+    }
+    if (!reactionDeduper.shouldPlay(newborn.id, 'hatched')) return;
+    const reaction = reactionForSiblingHatch(newborn);
+    petViewRef?.react?.(reaction);
+    if (reaction.bubble) showBubble(reaction.bubble);
+  }
+
   /** Acción disparada desde el panel (comer, bañar, despertar, minijuego, eclosión). */
   function handlePetAction(local: string) {
     const action = LOCAL_ACTIONS[local];
@@ -484,6 +509,9 @@
     clearSpeech();
     activeVisit.set('');
     resetTravel();
+    petEntrance = null;
+    homeAnim = false;
+    lastHabitat = null;
   }
 
   // ---------- Ambiental (feature 005) ----------
@@ -609,13 +637,58 @@
     const petId = ce.detail?.petId;
     if (!currentPet || currentPet.id !== petId) return;
     try {
+      // Ya se ha metido en el panel arrastrándola: no hace falta además el altar
+      skipAltarOnce = true;
       const updated = await api.setPetInHabitat(petId, true);
       currentPet = updated;
       const idx = pets.findIndex((p) => p.id === petId);
       if (idx !== -1) pets[idx] = updated;
       showBubble('¡A descansar a mi casita!');
     } catch (err: any) {
+      skipAltarOnce = false;
       console.error('Error enviando al hábitat:', err);
+    }
+  }
+
+  // ---------- Altar del Santuario (skill pockai-effect-architect) ----------
+  /** PetView sigue montada mientras entra en casa por el altar (botón «A casa» del panel). */
+  let homeAnim = false;
+  /** Al salir de casa, PetView aparece por el altar. */
+  let petEntrance: 'altar' | null = null;
+  /** El arrastre al panel ya tiene su animación: esa entrada no usa el altar. */
+  let skipAltarOnce = false;
+  let lastHabitat: { id: string; inHabitat: boolean } | null = null;
+  $: watchHabitat(currentPet?.id ?? null, !!currentPet?.inHabitat);
+  function watchHabitat(id: string | null, inHabitat: boolean) {
+    const prev = lastHabitat;
+    lastHabitat = id ? { id, inHabitat } : null;
+    // Primera carga o cambio de mascota: sin altar
+    if (!prev || !id || prev.id !== id) {
+      petEntrance = null;
+      return;
+    }
+    if (prev.inHabitat === inHabitat) return;
+    if (inHabitat) {
+      petEntrance = null;
+      if (skipAltarOnce) {
+        skipAltarOnce = false;
+        return;
+      }
+      homeAnim = true;
+      void tick().then(async () => {
+        try {
+          await petViewRef?.enterAltar?.();
+          // La sacaron otra vez mientras entraba: sigue montada, así que sale por el altar ahora
+          if (currentPet && !currentPet.inHabitat) petViewRef?.emergeFromAltar?.();
+        } finally {
+          homeAnim = false;
+        }
+      });
+    } else {
+      // PetView solo la lee al montarse: después se olvida (si no, cualquier montaje posterior,
+      // como volver a entrar en sesión, saldría también del altar)
+      petEntrance = 'altar';
+      void tick().then(() => (petEntrance = null));
     }
   }
 
@@ -653,6 +726,20 @@
           reactToAction(currentPet.id, 'evolved', { stage });
           setTimeout(() => currentPet && (currentPet = { ...currentPet, stage }), 50);
         },
+        // Eclosión de otra de la colección: rareza, shiny y garantía de la Promesa del Telar
+        hatch: (rarity = 'legendary', shiny = false, pity: string | null = null) => {
+          const newborn = {
+            id: 'demo-' + Date.now(),
+            nickname: 'Brote',
+            rarity,
+            shiny,
+            pityGuarantee: pity,
+            species: { id: 'axolunar', name: 'Axolunar', element: 'water' },
+          };
+          void celebrateHatch(newborn);
+        },
+        // Entrar en casa y salir como con el botón del panel (con el altar)
+        home: (inHabitat: boolean) => currentPet && (currentPet = { ...currentPet, inHabitat }),
         visitorJoin: (v: HabitatVisitor) => visitorJoined(v),
         visitorLeave: (visitorId: string) => visitorLeft(visitorId),
         summon: (x?: number, y?: number) => window.dispatchEvent(new CustomEvent('petai:summon', { detail: { x, y } })),
@@ -752,11 +839,12 @@
   {/if}
 
   <!-- Mascota Interactiva Flotante (oculta si está en su Hábitat/casa) -->
-  {#if currentPet && !currentPet.inHabitat}
+  {#if currentPet && (!currentPet.inHabitat || homeAnim)}
     <PetView
       bind:this={petViewRef}
       pet={currentPet}
       spawnAt={petSpawnAt}
+      entrance={petEntrance}
       environmental={environmental}
       visitors={$visitorsStore}
       ball={showBall && !ballGrabbed ? ballState : null}
@@ -789,11 +877,7 @@
       if (idx !== -1) pets[idx] = currentPet;
       else pets = [currentPet, ...pets];
     }}
-    on:petHatched={(e) => {
-      // La recién nacida se añade a la colección; solo pasa a ser la activa si no había ninguna.
-      pets = [...pets.filter((p) => p.id !== e.detail.id), e.detail];
-      if (!currentPet) selectPet(e.detail.id);
-    }}
+    on:petHatched={(e) => celebrateHatch(e.detail)}
     on:selectPet={(e) => selectPet(e.detail)}
     on:actionTriggered={(e) => handlePetAction(e.detail)}
     on:bubble={(e) =>
