@@ -18,6 +18,9 @@ const PALETTES: Record<string, { primary: string; secondary: string }> = {
   magmadillo: { primary: '#C2452D', secondary: '#FFB627' },
   nubeballena: { primary: '#4F86C6', secondary: '#E8F1FA' },
   cactuerno: { primary: '#4FAF7A', secondary: '#F7B2C4' },
+  fenixel: { primary: '#E8483A', secondary: '#FFD166' },
+  cerbito: { primary: '#6A5C9E', secondary: '#D7C7F0' },
+  kirisol: { primary: '#FFF4D6', secondary: '#F4A259' },
 };
 /** Prendas de ejemplo por ranura (ids de shared/game-data/accessories.json). */
 const DEMO_ACCESSORIES: Record<string, string[]> = {

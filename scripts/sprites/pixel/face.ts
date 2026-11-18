@@ -31,8 +31,11 @@ export interface EyeSpec {
    *   bead    cuenta pequeña de 3 px: criaturas grandes de ojo diminuto
    *   lid     párpado caído: la mitad superior queda tapada, mirada tranquila
    *   grumpy  párpado caído con ceja inclinada hacia el centro: mirada de gruñón
+   *   almond  rasgado: más bajo y con las esquinas opuestas recortadas, mirada de ave
+   *   lash    el ojo por defecto con una pestaña hacia fuera: mirada dulce
+   *   shine   el ojo por defecto con un segundo brillo abajo: ojos de cachorro
    */
-  style?: 'bead' | 'lid' | 'grumpy';
+  style?: 'bead' | 'lid' | 'grumpy' | 'almond' | 'lash' | 'shine';
 }
 
 function eye(g: Grid, x: number, y: number, w: number, h: number, kind: Eyes, glint: number, near: boolean, look: number, style?: EyeSpec['style']): void {
@@ -63,6 +66,29 @@ function eye(g: Grid, x: number, y: number, w: number, h: number, kind: Eyes, gl
     g.rect(x, yy + 1, w, hh - 2, EYE);
     g.rect(x + (w > 2 ? 1 : 0), yy, Math.max(1, w - 2), hh, EYE);
   };
+  if (style === 'almond' && opened) {
+    // Rasgado: sube por el lado de fuera y baja por el de dentro.
+    const top = y + 1;
+    const hh = h - 2 + (kind === 'wide' ? 1 : 0);
+    g.rect(x, top + 1, w, hh - 2, EYE);
+    g.rect(near ? x : x + 1, top, w - 1, 1, EYE);
+    g.rect(near ? x + 1 : x, top + hh - 1, w - 1, 1, EYE);
+    g.put(x + 1, top + 1, WHITE);
+    return;
+  }
+  if ((style === 'lash' || style === 'shine') && opened) {
+    const yy = kind === 'wide' ? y - 1 : y;
+    const hh = kind === 'wide' ? h + 1 : h;
+    round(yy, hh);
+    g.rect(x + 1, yy + 1, glint, glint, WHITE);
+    if (style === 'shine' && w > 2) g.put(x + w - 2, yy + hh - 2, WHITE);
+    if (style === 'lash') {
+      const ox = near ? x - 1 : x + w;
+      g.put(ox, yy, EYE);
+      g.put(ox + (near ? -1 : 1), yy - 1, EYE);
+    }
+    return;
+  }
   switch (kind) {
     case 'closed':
       g.rect(x, mid, w, 1, EYE);
