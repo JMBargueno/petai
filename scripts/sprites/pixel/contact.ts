@@ -25,7 +25,7 @@ function main() {
   const args = process.argv.slice(2);
   const outIdx = args.indexOf('--out');
   const out = resolve(outIdx > -1 ? args[outIdx + 1] : join(ROOT, 'sprite-previews'));
-  const only = args.find((a, i) => !a.startsWith('--') && i !== outIdx + 1);
+  const only = args.find((a, i) => !a.startsWith('--') && (outIdx < 0 || i !== outIdx + 1));
   const speciesData = JSON.parse(readFileSync(join(ROOT, 'shared/game-data/species.json'), 'utf8')) as { id: string; defaultPalette: Palette }[];
   mkdirSync(out, { recursive: true });
 
