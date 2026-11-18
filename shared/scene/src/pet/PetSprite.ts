@@ -13,6 +13,7 @@ import {
   type AccessorySlot,
   type AnchorsFile,
 } from '../bake/accessories';
+import { FX_STEP_MS, renderFx, type PatternFx } from '../bake/patternFx';
 
 export const FRAME = 128;
 /** Pies del Pockai dentro del frame (GUIA_ARTISTICA §7.1/§7.4). */
@@ -51,6 +52,15 @@ export class PetSprite extends Container {
   private worn: Worn[] = [];
   private accessoryTime = 0;
 
+  /** Capa de efectos (patrón del Éter y shiny), encima del cuerpo y debajo de las prendas de delante. */
+  private readonly fxSprite = new Sprite();
+  private readonly fxCanvas = document.createElement('canvas');
+  private fxTexture: Texture | null = null;
+  private fx: { map: Uint8ClampedArray; width: number; fx: PatternFx | null; shiny: boolean } | null = null;
+  private fxTime = 0;
+  private fxDrawn = '';
+  private fxBuf: Uint8ClampedArray | undefined;
+
   private baseClip = 'idle';
   private clip: ResolvedClip | null = null;
   private oneShot = false;
@@ -63,7 +73,9 @@ export class PetSprite extends Container {
     // Sombra de suelo isométrica (elipse 2:1) bajo los pies; el origen del contenedor son los pies.
     this.shadow.ellipse(0, -6, 24, 12).fill({ color: 0x000000, alpha: 0.2 });
     this.body.anchor.set(0.5, FOOT_Y / FRAME);
-    this.rig.addChild(this.behind, this.body, this.front);
+    this.fxSprite.anchor.set(0.5, FOOT_Y / FRAME);
+    this.fxSprite.visible = false;
+    this.rig.addChild(this.behind, this.body, this.fxSprite, this.front);
     this.addChild(this.shadow, this.rig);
   }
 
@@ -76,6 +88,39 @@ export class PetSprite extends Container {
     // Pixel art (GUIA_ARTISTICA §7.5): vecino más próximo, sin suavizado al escalar.
     this.source.source.scaleMode = 'nearest';
     this.play(this.baseClip);
+  }
+
+  /**
+   * Efectos animados de la hoja actual: `map` es su mapa de efectos (`bakeFxMap`). Sin efecto de
+   * patrón ni shiny, o con movimiento reducido, la capa no se pinta.
+   */
+  setFx(map: Uint8ClampedArray | null, width: number, fx: PatternFx | null, shiny: boolean): void {
+    this.fx = map && (fx || shiny) && !this.opts.reducedMotion ? { map, width, fx, shiny } : null;
+    this.fxSprite.visible = false;
+    this.fxDrawn = '';
+    this.drawFx();
+  }
+
+  private drawFx(): void {
+    const rect = this.clip?.frames[this.frameIdx]?.frame;
+    if (!this.fx || !rect) return;
+    const key = `${rect.x}:${rect.y}:${Math.floor(this.fxTime / FX_STEP_MS)}`;
+    if (key === this.fxDrawn) return;
+    this.fxDrawn = key;
+    if (this.fxCanvas.width !== rect.w || this.fxCanvas.height !== rect.h) {
+      this.fxCanvas.width = rect.w;
+      this.fxCanvas.height = rect.h;
+    }
+    this.fxBuf = renderFx(this.fx.map, this.fx.width, rect, { fx: this.fx.fx, shiny: this.fx.shiny, time: this.fxTime }, this.fxBuf);
+    this.fxCanvas.getContext('2d')!.putImageData(new ImageData(this.fxBuf as Uint8ClampedArray<ArrayBuffer>, rect.w, rect.h), 0, 0);
+    if (!this.fxTexture) {
+      this.fxTexture = Texture.from(this.fxCanvas);
+      this.fxTexture.source.scaleMode = 'nearest';
+      this.fxSprite.texture = this.fxTexture;
+    } else {
+      this.fxTexture.source.update();
+    }
+    this.fxSprite.visible = true;
   }
 
   /**
@@ -152,6 +197,10 @@ export class PetSprite extends Container {
   update(ticker: Ticker): void {
     const clip = this.clip;
     if (!clip || clip.frames.length === 0) return;
+    if (this.fx) {
+      this.fxTime += ticker.deltaMS;
+      this.drawFx();
+    }
     // Movimiento reducido: los bucles de fondo se quedan quietos; las acciones pedidas sí avanzan.
     if (this.opts.reducedMotion && !this.oneShot) return;
     if (!this.opts.reducedMotion) this.accessoryTime += ticker.deltaMS;
@@ -187,6 +236,7 @@ export class PetSprite extends Container {
       this.frames.set(this.clip.name, list);
     }
     this.body.texture = list[this.frameIdx] ?? list[0];
+    this.drawFx();
     this.placeAccessories();
   }
 
@@ -210,6 +260,7 @@ export class PetSprite extends Container {
       w.source.destroy(true);
     }
     this.source?.destroy(true);
+    this.fxTexture?.destroy(true);
     super.destroy(options);
   }
 }

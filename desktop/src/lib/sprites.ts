@@ -1,7 +1,7 @@
 // Sistema de Composición y Baking en Memoria para Sprites de PetAI
 // Conforme a la especificación técnica en docs/ART_PIPELINE.md
 
-import { bakePixels, type RgbaImage } from '@pockai/scene/bake';
+import { bakePixels, bakeFxMap, renderFx, PATTERN_FX, type RgbaImage } from '@pockai/scene/bake';
 import { AssetLoader } from './asset-loader';
 import { createMemoryAssetCache } from './asset-cache';
 import type { AnimLibrary } from './animation/AnimationController';
@@ -24,13 +24,7 @@ import eggMask from '@shared/assets/species/egg/mask.png';
 import eggAnim from '@shared/assets/species/egg/anim.json';
 
 // Importación de patrones tileables
-import stripesPng from '@shared/assets/patterns/stripes.png';
-import spotsPng from '@shared/assets/patterns/spots.png';
-import scalesPng from '@shared/assets/patterns/scales.png';
-import crystalPng from '@shared/assets/patterns/crystal.png';
-import galaxyPng from '@shared/assets/patterns/galaxy.png';
-import gradientPng from '@shared/assets/patterns/gradient.png';
-import auroraPng from '@shared/assets/patterns/aurora.png';
+const PATTERN_PNGS = import.meta.glob('@shared/assets/patterns/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 // Vista previa SVG por especie (generada) mientras se hornea la hoja
 import ignisaurIdleSvg from '@shared/assets/sprites/ignisaur_idle.svg?raw';
@@ -66,6 +60,8 @@ export interface AnimMetadata {
 
 export interface BakedPetSheet {
   canvas: HTMLCanvasElement;
+  /** Capa de efectos del frame (patrón del Éter y shiny) en el instante `time`; `null` si no lleva. */
+  fxFrame: (frame: { sx: number; sy: number; sw: number; sh: number }, time: number) => HTMLCanvasElement | null;
   anim: AnimMetadata;
   tags: Map<string, FrameTag>;
   getFrame: (tag: string, relativeIndex: number) => { sx: number; sy: number; sw: number; sh: number; totalFrames: number };
@@ -160,15 +156,9 @@ export function getAnimLibrary(speciesId: string): { library: AnimLibrary; alias
 }
 
 // Registro de patrones
-const PATTERN_REGISTRY: Record<string, string> = {
-  stripes: stripesPng,
-  spots: spotsPng,
-  scales: scalesPng,
-  crystal: crystalPng,
-  galaxy: galaxyPng,
-  gradient: gradientPng,
-  aurora: auroraPng,
-};
+const PATTERN_REGISTRY: Record<string, string> = Object.fromEntries(
+  Object.entries(PATTERN_PNGS).map(([path, url]) => [path.split('/').pop()!.replace('.png', ''), url]),
+);
 
 // Fallbacks: nombres antiguos o que no existan en una hoja → animación existente
 export const ANIM_FALLBACKS: Record<string, string> = {
@@ -242,11 +232,20 @@ export async function bakePetSpriteSheet(
   const height = baseImg.naturalHeight || baseImg.height;
 
   // Algoritmo único compartido con la escena de PixiJS (Android/iOS): @pockai/scene/bake.
-  const out = bakePixels(readPixels(baseImg), readPixels(maskImg), {
+  const maskPixels = readPixels(maskImg);
+  const patternPixels = patternImg ? readPixels(patternImg) : null;
+  const out = bakePixels(readPixels(baseImg), maskPixels, {
     palette: { primary: palette.primary, secondary: palette.secondary, accent: palette.accent },
     visualSeed,
-    pattern: patternImg ? readPixels(patternImg) : null,
+    pattern: patternPixels,
   });
+
+  // Efectos animados (patrones de la Textura del Éter y shiny): la misma función que la escena.
+  const fxKind = PATTERN_FX[patternId] ?? null;
+  const isEgg = normalizedSpecies === 'egg';
+  const fxMap = !isEgg && (fxKind || shiny) ? bakeFxMap(maskPixels, { pattern: patternPixels, visualSeed }) : null;
+  let fxCanvas: HTMLCanvasElement | null = null;
+  let fxBuf: Uint8ClampedArray | undefined;
 
   const bakedCanvas = document.createElement('canvas');
   bakedCanvas.width = width;
@@ -266,6 +265,17 @@ export async function bakePetSpriteSheet(
 
   const bakedSheet: BakedPetSheet = {
     canvas: bakedCanvas,
+    fxFrame: (frame, time) => {
+      if (!fxMap) return null;
+      if (!fxCanvas) fxCanvas = document.createElement('canvas');
+      if (fxCanvas.width !== frame.sw || fxCanvas.height !== frame.sh) {
+        fxCanvas.width = frame.sw;
+        fxCanvas.height = frame.sh;
+      }
+      fxBuf = renderFx(fxMap, width, { x: frame.sx, y: frame.sy, w: frame.sw, h: frame.sh }, { fx: fxKind, shiny, time }, fxBuf);
+      fxCanvas.getContext('2d')!.putImageData(new ImageData(fxBuf as Uint8ClampedArray<ArrayBuffer>, frame.sw, frame.sh), 0, 0);
+      return fxCanvas;
+    },
     anim: animJson,
     tags: tagsMap,
     getFrame: (requestedTag: string, relativeIndex: number) => {

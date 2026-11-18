@@ -261,9 +261,13 @@ const PATTERN_NAMES: Record<string, string> = {
   spots: $localize`:@@pat.spots:Manchas`,
   stripes: $localize`:@@pat.stripes:Rayas`,
   gradient: $localize`:@@pat.gradient:Degradado`,
+  rosettes: $localize`:@@pat.rosettes:Rosetas`,
+  honeycomb: $localize`:@@pat.honeycomb:Panal`,
   scales: $localize`:@@pat.scales:Escamas`,
   crystal: $localize`:@@pat.crystal:Cristal`,
+  circuit: $localize`:@@pat.circuit:Circuito`,
   galaxy: $localize`:@@pat.galaxy:Galaxia`,
+  storm: $localize`:@@pat.storm:Tormenta`,
   aurora: $localize`:@@pat.aurora:Aurora`,
 };
 const PATTERN_SPRITES = new Set(['spots', 'stripes', 'gradient', 'scales']);

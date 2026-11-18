@@ -5,9 +5,13 @@
 // (shared/scene/src/bake/bakePixels.ts) lo amplía con la hoja, así que el dibujo cae siempre en la
 // rejilla. El PNG mide 256×256 y es tileable; todos los periodos dividen a 256.
 //   - blanco opaco  → marca de tono: más clara en especies oscuras, más oscura en las claras
-//   - cian opaco    → destello: casi blanco
+//   - cian opaco    → destello: casi blanco. Es también lo que animan los efectos (patternFx.ts)
 //   - transparente  → nada
 // No hay alfas intermedios: los degradados van con tramado ordenado (Bayer 4×4).
+//
+// Dos familias (shared/game-data/patterns.json):
+//   - Mímesis Terrestre (normal y raro): imitan la naturaleza; solo marcas de tono, sin efecto.
+//   - Textura del Éter (superraro, legendario y mítico): llevan destellos y un efecto animado.
 import sharp from 'sharp';
 
 const N = 256;
@@ -24,8 +28,80 @@ const hash = (x, y, s = 0) => {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 };
 
+/** Rejilla dibujada de antemano, para los patrones que no salen de una fórmula por píxel. */
+function canvas(draw) {
+  const g = new Uint8Array(N * N);
+  draw((x, y, v) => { g[mod(y, N) * N + mod(x, N)] = v; });
+  return (x, y) => g[y * N + x];
+}
+
+// Circuito: pistas horizontales cada 8 filas que suben o bajan un par de píxeles en diagonal, con
+// pastillas de soldadura (destello) y algún ramal corto.
+const circuit = canvas((put) => {
+  for (let row = 0; row < N / 8; row++) {
+    const y0 = row * 8 + 4;
+    for (let cell = 0; cell < N / 16; cell++) {
+      const x0 = cell * 16;
+      const jog = [0, -2, 2, 0][Math.floor(hash(cell, row, 11) * 4)];
+      const k = Math.abs(jog);
+      for (let i = 0; i < 16; i++) {
+        // Sube (o baja) en diagonal entre i = 3 y 3 + |jog|, y vuelve entre 11 y 11 + |jog|.
+        let dy = 0;
+        if (i >= 3 && i < 3 + k) dy = Math.sign(jog) * (i - 2);
+        else if (i >= 3 + k && i < 11) dy = jog;
+        else if (i >= 11 && i < 11 + k) dy = jog - Math.sign(jog) * (i - 10);
+        put(x0 + i, y0 + dy, 1);
+      }
+      if (hash(cell, row, 12) < 0.45) {
+        // Pastilla en el tramo llano y ramal hacia arriba o abajo, acabado en otra pastilla.
+        const px = x0 + 7;
+        const py = y0 + jog;
+        const dir = hash(cell, row, 13) < 0.5 ? -1 : 1;
+        put(px, py, 2);
+        put(px, py + dir, 1);
+        put(px, py + dir * 2, 2);
+      }
+    }
+  }
+});
+
+// Tormenta: nubarrones tramados y un rayo en zigzag por cada celda de 32×32. El efecto enciende
+// cada rayo por separado (la celda es su grupo).
+const storm = canvas((put) => {
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const cloud = 0.5 + 0.3 * Math.sin((2 * Math.PI * x) / 64 + 2 * Math.sin((2 * Math.PI * y) / 32)) + 0.2 * Math.sin((2 * Math.PI * (x + y)) / 32);
+    if (dither(x, y, Math.max(0, cloud - 0.45) * 0.8)) put(x, y, 1);
+  }
+  for (let cy = 0; cy < N / 32; cy++) for (let cx = 0; cx < N / 32; cx++) {
+    let x = cx * 32 + 10 + Math.floor(hash(cx, cy, 21) * 12);
+    const top = cy * 32 + 3 + Math.floor(hash(cx, cy, 22) * 6);
+    let dir = hash(cx, cy, 23) < 0.5 ? -1 : 1;
+    for (let i = 0; i < 20; i++) {
+      put(x, top + i, 2);
+      // Zigzag: baja en diagonal y, cada cuatro filas, cambia de lado con un tramo horizontal.
+      if (i % 4 === 3) { put(x + dir, top + i, 2); put(x + dir * 2, top + i, 2); x += dir * 2; dir = -dir; }
+      else if (i % 2 === 0) x += dir;
+    }
+  }
+});
+
+/** Celda hexagonal más cercana (centros en tresbolillo, 8×16). */
+function hexCell(x, y) {
+  let best = null;
+  for (let j = Math.floor(y / 8) - 1; j <= Math.floor(y / 8) + 1; j++) {
+    for (let i = Math.floor(x / 8) - 1; i <= Math.floor(x / 8) + 1; i++) {
+      const cx = i * 8 + (j & 1 ? 4 : 0);
+      const cy = j * 8;
+      const d = (x - cx) ** 2 + ((y - cy) * 0.62) ** 2;
+      if (!best || d < best.d) best = { d, id: i * 1000 + j };
+    }
+  }
+  return best.id;
+}
+
 // Cada patrón: (x, y) → 0 nada, 1 tono, 2 destello.
 const PATTERNS = {
+  // ── Mímesis Terrestre ──
   // Motas en tresbolillo, de dos tamaños.
   spots(x, y) {
     const cx = mod(x, 8);
@@ -34,7 +110,7 @@ const PATTERNS = {
     const small = cx >= 6 && cx <= 7 && cy >= 5 && cy <= 6; // 2×2
     return big || small ? 1 : 0;
   },
-  // Franjas diagonales de 2 píxeles con una fina al lado, como las de un tigre.
+  // Franjas diagonales de 3 píxeles con una fina al lado, como las de un tigre.
   stripes(x, y) {
     const d = mod(x + y, 16);
     return d < 3 || d === 8 ? 1 : 0;
@@ -44,7 +120,28 @@ const PATTERNS = {
     const t = Math.abs(mod(y, 64) - 32) / 32;
     return dither(x, y, t * 0.9) ? 1 : 0;
   },
-  // Escamas: arcos de 1 píxel en filas alternas, con un brillo en lo alto de cada una.
+  // Rosetas de leopardo: anillos rotos en tresbolillo, cada uno algo descentrado.
+  rosettes(x, y) {
+    const row = Math.floor(y / 8);
+    const sx = x + (row & 1 ? 8 : 0);
+    const col = Math.floor(sx / 16);
+    const jx = Math.floor(hash(mod(col, 16), mod(row, 32), 31) * 3) - 1;
+    const dx = mod(sx, 16) - 7.5 - jx;
+    const dy = mod(y, 8) - 3.5;
+    const d = Math.hypot(dx, dy * 1.15);
+    if (d < 2.2 || d >= 3.6) return 0;
+    // El anillo se rompe en uno o dos sitios.
+    const sector = Math.floor(((Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI)) * 6) % 6;
+    return hash(mod(col, 16) * 7 + sector, mod(row, 32), 33) < 0.3 ? 0 : 1;
+  },
+  // Panal: celdas hexagonales de 1 píxel de borde.
+  honeycomb(x, y) {
+    const id = hexCell(x, y);
+    return id !== hexCell(x + 1, y) || id !== hexCell(x, y + 1) ? 1 : 0;
+  },
+
+  // ── Textura del Éter ──
+  // Placas de Datos: escamas en filas alternas, con un brillo en lo alto de algunas.
   scales(x, y) {
     const row = Math.floor(y / 4);
     const cx = mod(x + (row & 1 ? 4 : 0), 8) - 3.5;
@@ -53,7 +150,7 @@ const PATTERNS = {
     if (d >= 3.6 && d < 4.7) return 1;
     return cy === 1 && Math.abs(cx) < 1 && hash(Math.floor((x + (row & 1 ? 4 : 0)) / 8), row, 3) < 0.35 ? 2 : 0;
   },
-  // Cristal: rombos facetados, con media cara tramada y destellos en algunos vértices.
+  // Cuarzo Lógico: rombos facetados, con media cara tramada y destellos en algunos vértices.
   crystal(x, y) {
     const a = mod(x + y, 16);
     const b = mod(x - y, 16);
@@ -61,16 +158,8 @@ const PATTERNS = {
     if (a === 0 || b === 0) return 1;
     return a < 8 && b < 8 && dither(x, y, 0.3) ? 1 : 0;
   },
-  // Aurora: cintas verticales que ondulan, con el borde tramado y un hilo de luz dentro.
-  aurora(x, y) {
-    const wave = Math.round(4 * Math.sin((2 * Math.PI * y) / 64) + 2 * Math.sin((2 * Math.PI * y) / 32));
-    const d = mod(x + wave, 32);
-    if (d === 4 && mod(y, 8) < 5) return 2;
-    if (d >= 2 && d < 8) return 1;
-    if (d >= 8 && d < 13) return dither(x, y, (13 - d) / 6) ? 1 : 0;
-    return 0;
-  },
-  // Galaxia: nebulosa tramada con estrellas de un píxel y alguna en cruz.
+  circuit,
+  // Vacío Abisal: nebulosa tramada con estrellas de un píxel y alguna en cruz.
   galaxy(x, y) {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       const sx = mod(x + dx, N);
@@ -81,6 +170,16 @@ const PATTERNS = {
     }
     const neb = 0.5 + 0.28 * Math.sin((2 * Math.PI * (x + y)) / 32) + 0.22 * Math.sin((2 * Math.PI * (x - 2 * y)) / 64);
     return dither(x, y, Math.max(0, neb - 0.35) * 0.9) ? 1 : 0;
+  },
+  storm,
+  // Viento Solar: cintas verticales que ondulan, con el borde tramado y un hilo de luz dentro.
+  aurora(x, y) {
+    const wave = Math.round(4 * Math.sin((2 * Math.PI * y) / 64) + 2 * Math.sin((2 * Math.PI * y) / 32));
+    const d = mod(x + wave, 16);
+    if (d === 3 && mod(y, 8) < 5) return 2;
+    if (d >= 1 && d < 6) return 1;
+    if (d >= 6 && d < 9) return dither(x, y, (9 - d) / 4) ? 1 : 0;
+    return 0;
   },
 };
 

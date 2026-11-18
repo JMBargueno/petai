@@ -221,6 +221,10 @@ export const patternsSchema = z.array(
       description: z.string(),
       /** Rareza propia del patrón (se tira por ejemplar). */
       rarity: z.string(),
+      /** Familia: Mímesis Terrestre (normal y raro) o Textura del Éter (superraro en adelante). */
+      group: z.enum(['terrestrial', 'aether']).optional(),
+      /** Efecto animado de los patrones del Éter (`shared/scene/src/bake/patternFx.ts`). */
+      fx: z.enum(['sheen', 'twinkle', 'flow', 'starfield', 'flash', 'aurora']).optional(),
     })
     .passthrough(),
 );
@@ -566,6 +570,11 @@ export function validateGameData(b: GameDataBundle): string[] {
   // 7. Patrones (rareza propia)
   for (const pat of patterns ?? []) {
     if (!rarities[pat.rarity]) errors.push(`Rareza '${pat.rarity}' en patrón ${pat.id} no está en balance.json`);
+    // La familia sigue a la rareza, y solo la Textura del Éter lleva efecto.
+    const aether = ['super_rare', 'legendary', 'mythic'].includes(pat.rarity);
+    if (pat.group && pat.group !== (aether ? 'aether' : 'terrestrial')) errors.push(`El patrón ${pat.id} (${pat.rarity}) no puede ser de la familia '${pat.group}'`);
+    if (pat.fx && !aether) errors.push(`El patrón ${pat.id} (${pat.rarity}) no puede llevar efecto: solo los de la Textura del Éter`);
+    if (aether && pat.group && !pat.fx) errors.push(`El patrón ${pat.id} es de la Textura del Éter y no tiene efecto`);
   }
 
   // 8. Logros y constelaciones (feature 008): integridad cruzada
