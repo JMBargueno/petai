@@ -327,3 +327,89 @@ describe('MemoryService — spec 37 lote 2 (memoria v2)', () => {
     expect(marker).toMatchObject({ importance: 0.1, createdAt: when(11) });
   });
 });
+
+describe('MemoryService — spec 37 §2.4: aprender antes del nivel de memoria', () => {
+  const when = (n: number) => new Date(1_700_000_000_000 + n * 1000);
+  const JSON_FACT = '{"summary":"Hablaron de pesca","facts":["Le gusta pescar"]}';
+  const provider = () =>
+    ({
+      chat: jest.fn(async function* () {
+        yield { type: 'delta', text: JSON_FACT };
+        yield { type: 'done' };
+      }),
+      test: jest.fn(),
+    }) as any;
+
+  function setup(userMessages: number, early: number | null) {
+    const created: any[] = [];
+    const prisma: any = {
+      petMemory: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn(({ data }: any) => {
+          created.push(data);
+          return Promise.resolve(data);
+        }),
+        update: jest.fn().mockResolvedValue({}),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      chatMessage: {
+        findMany: jest.fn().mockResolvedValue(
+          Array.from({ length: userMessages * 2 }, (_, i) => ({ role: i % 2 === 0 ? 'user' : 'assistant', content: `m${i}`, createdAt: when(i) })),
+        ),
+      },
+    };
+    const usage: any = { hasQuota: jest.fn().mockResolvedValue(true), record: jest.fn().mockResolvedValue(undefined) };
+    const mindMemory: any =
+      early === null ? undefined : { earlyExtractEvery: () => early, remember: jest.fn(async () => 1), enforceCapacity: jest.fn(async () => undefined) };
+    return { svc: new MemoryService(prisma, usage, undefined, mindMemory), prisma, created };
+  }
+
+  it('con inteligencia 50 aprende hechos cuando se cumple la cadencia espaciada', async () => {
+    const s = setup(20, 20);
+    const p = provider();
+    await s.svc.maybeSummarize('p1', 50, p, 'm', 'u1', 'managed', 12);
+    expect(p.chat).toHaveBeenCalledTimes(1);
+    expect(s.created.filter((c) => c.kind === 'fact').map((c) => c.content)).toEqual(['Le gusta pescar']);
+    // Pide la tanda entera, no solo los últimos 40 mensajes
+    expect(s.prisma.chatMessage.findMany.mock.calls[0][0].take).toBe(40);
+  });
+
+  it('por debajo del nivel de memoria no extrae con la cadencia normal del plan', async () => {
+    const s = setup(12, 20);
+    const p = provider();
+    await s.svc.maybeSummarize('p1', 50, p, 'm', 'u1', 'managed', 12);
+    expect(p.chat).not.toHaveBeenCalled();
+  });
+
+  it('nunca va más deprisa que la cadencia del plan', async () => {
+    const s = setup(20, 20);
+    const p = provider();
+    await s.svc.maybeSummarize('p1', 50, p, 'm', 'u1', 'managed', 30);
+    expect(p.chat).not.toHaveBeenCalled();
+    expect(s.prisma.chatMessage.findMany.mock.calls[0][0].take).toBe(60);
+  });
+
+  it('con la extracción del plan a 0 sigue desactivada, también antes del nivel de memoria', async () => {
+    const s = setup(40, 20);
+    const p = provider();
+    await s.svc.maybeSummarize('p1', 50, p, 'm', 'u1', 'managed', 0);
+    expect(p.chat).not.toHaveBeenCalled();
+  });
+
+  it('con la cadencia temprana a 0, o sin memoria por capas, sigue bloqueada hasta el nivel de memoria', async () => {
+    for (const early of [0, null]) {
+      const s = setup(40, early);
+      const p = provider();
+      await s.svc.maybeSummarize('p1', 199, p, 'm', 'u1', 'managed', 12);
+      expect(p.chat).not.toHaveBeenCalled();
+    }
+  });
+
+  it('a partir del nivel de memoria la cadencia es la del plan, como antes', async () => {
+    const s = setup(12, 20);
+    const p = provider();
+    await s.svc.maybeSummarize('p1', 200, p, 'm', 'u1', 'managed', 12);
+    expect(p.chat).toHaveBeenCalledTimes(1);
+  });
+});

@@ -507,7 +507,8 @@
       "recentRecallMinutes": 60,
       "recentRecallPenalty": 0.5,
       "repeatBoost": 0.05,
-      "repeatCap": 0.8
+      "repeatCap": 0.8,
+      "earlyExtractEvery": 20
     },
     "autonomy": {
       "intervalMinutes": 60,

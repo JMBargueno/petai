@@ -630,10 +630,10 @@ bloquea.
 
 | Punto | Decisión |
 |---|---|
-| 2.4 | Cadencia de extracción de memoria en el plan gratuito (gasta presupuesto de IA gestionada). |
+| 2.4 | ~~Cadencia de extracción de memoria en el plan gratuito.~~ **Decidido:** cada 20 mensajes por debajo de inteligencia 200. |
 | 3.4 | Tope diario de progresión de inteligencia. |
 | 4.5 | Cada cuántos turnos puede el Pockai sacar un deseo por su cuenta. |
-| 6.1 | Si existe la etapa `rival` o las relaciones entre Pockai solo pueden ser neutras o buenas. |
+| 6.1 | ~~Si existe la etapa `rival`.~~ **Decidido:** no. Dos Pockai pueden discutir y reconciliarse, pero la relación tiene suelo y no hay etapa `rival`. |
 | 6.2 | Topes por visitante y día; si ofrecer un premio consume un alimento real del visitante. |
 | 6.5 | Si los regalos entre Pockai mueven objetos reales entre inventarios o son solo narrativos. |
 
@@ -704,7 +704,7 @@ tres capas, las mismas de la sección 7:
   reescribir `personality`; mood-theater lee el rasgo derivado (`trait`) en vez de `type`, que
   nadie escribe; el recuerdo de aventura lo escribe la mente (`EvolutionListener.onAdventure`) con
   sus filtros y su capacidad; y `ELEMENTS` traduce todos los elementos de `species.json`.
-- **Fase 3 — lote 2 (hecho, salvo 2.4).**
+- **Fase 3 — lote 2 (hecho).**
   - 2.1: `MemoryService.store` e `ingestDigest` terminan en `MindMemoryService.enforceCapacity`: el
     olvido es por retención, con la capacidad del nivel y del plan. Los topes fijos (`MAX_FACTS`,
     `MAX_SUMMARIES`) solo quedan como respaldo si la memoria por capas no está inyectada. Los
@@ -718,9 +718,12 @@ tres capas, las mismas de la sección 7:
   - 2.3: los episodios de plantilla se guardan con clave `ep:<intención>` y `bump`: se actualiza
     el mismo recuerdo, vuelve a ser de hoy y gana importancia hasta un tope
     (`personality.memory.repeatBoost` y `repeatCap`).
-  - 2.4 **no está hecho**: necesita la decisión de producto de la sección 12 (cadencia de extracción
-    en el plan gratuito). La extracción sigue bloqueada por debajo de inteligencia 200.
-- **Fase 3 — pendiente.** El punto 2.4 y dos hallazgos que piden decisión de diseño, no un arreglo:
+  - 2.4: por debajo de inteligencia 200 se extrae cada `personality.memory.earlyExtractEvery`
+    mensajes del entrenador (**decidido: 20**; 0 lo desactiva), nunca más deprisa que la cadencia
+    del plan, y con `memoryExtractEvery` a 0 sigue desactivado. `MemoryService.list` conserva
+    `unlocked: intelligence >= 200`; el escritorio enseña ya los recuerdos que haya aunque la
+    memoria completa siga bloqueada, para que se puedan ver y borrar.
+- **Fase 3 — pendiente.** Dos hallazgos que piden decisión de diseño, no un arreglo:
   la cría no hereda personalidad (`breeding.service.ts` crea la mascota sin ella) y la vida
   autónoma aplica el estado del momento de la lectura (`sleeping`, `energy`, `sick`) a todos los
   intervalos pasados. Y que el backend importe `@pockai/mind` en lugar de su copia.

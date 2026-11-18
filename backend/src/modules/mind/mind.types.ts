@@ -47,6 +47,11 @@ export interface PersonalityConfig {
     /** Un episodio que se repite (misma clave) gana esta importancia cada vez, hasta `repeatCap`. */
     repeatBoost: number;
     repeatCap: number;
+    /**
+     * Por debajo del nivel de memoria, cada cuántos mensajes del entrenador se extraen recuerdos
+     * (más espaciado que la cadencia del plan). 0 = no se extrae hasta alcanzar ese nivel.
+     */
+    earlyExtractEvery: number;
   };
   autonomy: AutonomyConfig;
   combat: { maxThresholdShift: number };
