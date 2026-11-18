@@ -47,6 +47,11 @@ export class InventoryService {
     if (item.kind === 'cosmetic' || (isAccessory && unlock === 'achievement')) {
       throw new BadRequestException('Este objeto no se puede comprar: se consigue con un logro');
     }
+    // Lo que no tiene precio no está a la venta: sin este filtro, cualquier objeto a 0 (un consumible
+    // mal configurado, un objeto creado solo para cofres o regalos) se podría «comprar» gratis sin límite.
+    if (item.priceCoins <= 0 && item.priceGems <= 0) {
+      throw new BadRequestException('Este objeto no está a la venta');
+    }
     // Una prenda se tiene o no se tiene: no hay segundas unidades (spec 38 §4).
     if (isAccessory && quantity !== 1) {
       throw new BadRequestException('Las prendas se compran de una en una');

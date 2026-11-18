@@ -151,6 +151,39 @@ describe('PetsService', () => {
     );
   });
 
+  it('al curar aplica todos los efectos de la medicina, no solo la salud', async () => {
+    const pet = { id: 'pet-1', userId: 'user-1', hunger: 50, happiness: 50, health: 30, energy: 50, sick: true, sleeping: false };
+    const elixir = { id: 'medicine', kind: 'medicine', effects: { hunger: 0, happiness: -10, energy: 0, health: 40, curesSick: true } };
+
+    jest.spyOn(service, 'getPetById').mockResolvedValue(pet as any);
+    (mockPrismaService as any).item = { findUnique: jest.fn().mockResolvedValue(elixir) };
+    mockInventoryService.consumeItem.mockResolvedValue(elixir);
+
+    await service.heal('user-1', 'pet-1', 'medicine');
+
+    // El Elixir Reparador cura y sube la salud, pero baja la felicidad: 50 - 10 = 40
+    expect(mockPrismaService.pet.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ health: 70, happiness: 40, hunger: 50, energy: 50, sick: false }),
+      }),
+    );
+  });
+
+  it('al curar ninguna vital sale de 0–100', async () => {
+    const pet = { id: 'pet-1', userId: 'user-1', hunger: 95, happiness: 4, health: 90, energy: 50, sick: true, sleeping: false };
+    const tonic = { id: 'tonic', kind: 'medicine', effects: { hunger: 20, happiness: -10, health: 40 } };
+
+    jest.spyOn(service, 'getPetById').mockResolvedValue(pet as any);
+    (mockPrismaService as any).item = { findUnique: jest.fn().mockResolvedValue(tonic) };
+    mockInventoryService.consumeItem.mockResolvedValue(tonic);
+
+    await service.heal('user-1', 'pet-1', 'tonic');
+
+    expect(mockPrismaService.pet.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ health: 100, happiness: 0, hunger: 100, energy: 50 }) }),
+    );
+  });
+
   it('debe calcular la progresión de niveles y evolución', async () => {
     const pet = {
       id: 'pet-1',

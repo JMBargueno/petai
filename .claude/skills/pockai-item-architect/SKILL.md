@@ -52,7 +52,7 @@ Si lo que piden es solo **el arte de un objeto que ya existe**, salta al paso 6.
 1. **Lore primero.** Una frase: «X sale de Y, por eso hace Z» (`lore-items.md`). El efecto se deduce del lore, no al revés: una baya del Termo-Impulso calienta (energía), no calma.
 2. **Una idea por objeto.** Una baya con una llama por hoja. Si necesitas tres adjetivos para describirlo, sobra algo.
 3. **Solo lo que el backend lee.** `effects` admite `hunger`, `happiness`, `energy`, `health` y `curesSick`. No inventes claves: el servidor las ignora y el objeto miente.
-4. **Dentro de su banda** (`balance.md`). Una comida potente lleva contrapartida: el Pastel sube 35 de felicidad y baja 5 de salud. Una medicina no puede llevarla hoy (`item-schema.md`).
+4. **Dentro de su banda** (`balance.md`). Una comida potente lleva contrapartida: el Pastel sube 35 de felicidad y baja 5 de salud. Una medicina también puede: el Elixir cura y baja 10 de felicidad.
 5. **No toques lo que ya está en manos de los jugadores.** Nunca renombres un `id` ni cambies el `kind` de un objeto existente: está en inventarios, cofres y regalos.
 6. **Comida favorita con cuidado.** Cambiar `favoriteFood` de una especie cambia qué comida le sacia y le alegra un 50 % más. Solo si el usuario lo pide, y nunca a todas las especies de un Flujo a la vez sin decirlo.
 7. **`id`** en snake_case, en inglés, sin prefijo (`acc_` y `ach_item_` son de las prendas). **`name`** en español, de 1 a 3 palabras: un sustantivo y un apellido del Éter («Baya Ígnea», «Miel de Alba»). **`description`** de una frase que diga qué es y qué hace sin números; si es favorita de un Flujo, una segunda frase corta: «Favorita de las criaturas de fuego».
