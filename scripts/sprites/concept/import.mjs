@@ -73,14 +73,16 @@ if (String(cellArg).startsWith('h=')) {
 /** Reduce una criatura a 64×64: centrada en x y apoyada en la fila 59; color más repetido de cada bloque. */
 function downscale(s) {
   const out = new Array(N * N).fill(null);
+  // Si la pose no cabe (62 px de alto o de ancho), se reduce solo esa pose.
+  const step = Math.max(STEP, (s.y1 - s.y0 + 1) / 60, (s.x1 - s.x0 + 1) / 62);
   const cx = (s.x0 + s.x1) / 2;
-  const left = cx - 32 * STEP;
-  const top = s.y1 + 1 - 60 * STEP;
+  const left = cx - 32 * step;
+  const top = s.y1 + 1 - 60 * step;
   for (let ny = 0; ny < N; ny++) for (let nx = 0; nx < N; nx++) {
-    const xa = Math.floor(left + nx * STEP);
-    const xb = Math.floor(left + (nx + 1) * STEP);
-    const ya = Math.floor(top + ny * STEP);
-    const yb = Math.floor(top + (ny + 1) * STEP);
+    const xa = Math.floor(left + nx * step);
+    const xb = Math.floor(left + (nx + 1) * step);
+    const ya = Math.floor(top + ny * step);
+    const yb = Math.floor(top + (ny + 1) * step);
     let total = 0;
     let inside = 0;
     const bins = new Map();

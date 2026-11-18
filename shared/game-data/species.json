@@ -136,7 +136,7 @@
     "defaultPalette": {
       "primary": "#4B4C61",
       "secondary": "#ADA0AA",
-      "accent": "#5D1926"
+      "accent": "#5E1725"
     }
   },
   {
@@ -386,9 +386,9 @@
       "temper": 15
     },
     "defaultPalette": {
-      "primary": "#95D43C",
-      "secondary": "#C59865",
-      "accent": "#34601F"
+      "primary": "#C59865",
+      "secondary": "#A0D349",
+      "accent": "#45802B"
     }
   },
   {
@@ -415,7 +415,7 @@
     },
     "defaultPalette": {
       "primary": "#FFE12D",
-      "secondary": "#BB8B2E",
+      "secondary": "#D6A024",
       "accent": "#1DE2F2"
     }
   }

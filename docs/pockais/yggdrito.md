@@ -69,6 +69,6 @@ Pixel art en 3/4. Copa, hojas y barba en primario (la copa lleva el patrón y va
   "favoriteFood": "sun_seed",
   "spriteKey": "yggdrito",
   "personalityBias": { "curiosity": 80, "sociability": 65, "bravery": 45, "affection": 70, "temper": 15 },
-  "defaultPalette": { "primary": "#95D43C", "secondary": "#C59865", "accent": "#34601F" }
+  "defaultPalette": { "primary": "#C59865", "secondary": "#A0D349", "accent": "#45802B" }
 }
 ```

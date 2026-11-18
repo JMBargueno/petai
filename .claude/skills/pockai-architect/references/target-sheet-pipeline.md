@@ -114,7 +114,11 @@ El `PixelSpecies` de formas sigue haciendo falta: da el boceto de disposición y
 ## Tandas
 Para varias especies seguidas, un script que recorra especies y etapas llamando a `stage.mjs`, `import.mjs` y, al acabar cada especie, a `roles.mjs` y `set-palette.mjs`, y que escriba un registro. Son unos 35 segundos por imagen: lánzalo en segundo plano. Reimportar y reclasificar no gasta imágenes: si falla el importador o el reparto de color, corrige el script y repite solo esos pasos sobre los `.jpg` que ya tienes.
 
+## Tandas
+Para varias especies seguidas, un script que recorra especies y etapas llamando a `stage.mjs`, `import.mjs` y, al acabar cada especie, a `roles.mjs` y `set-palette.mjs`, y que escriba un registro. Son unos 35 segundos por imagen: lánzalo en segundo plano. Reimportar y reclasificar no gasta imágenes: si falla el importador o el reparto de color, corrige el script y repite solo esos pasos sobre los `.jpg` que ya tienes.
+
 ## Límites conocidos
+- **Piezas sueltas:** lo que no toca a la criatura se descarta como partícula. Un aura de esquirlas o de hojas flotantes no se puede importar; no la pidas en el prompt.
 - **Piezas sueltas:** lo que no toca a la criatura se descarta como partícula. Un aura de esquirlas o de hojas flotantes no se puede importar; no la pidas en el prompt.
 - **Animación pobre:** 10 poses por etapa. Si una animación necesita una pose que no está, hay que pedir una hoja más.
 - **Accesorios:** las anclas de gorro, gafas, bufanda y capa se estiman desde la silueta. Revisa `pnpm generate:accessories --preview`.

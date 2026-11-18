@@ -69,6 +69,6 @@ Pixel art en 3/4. Cuerpo, cuello y cola en primario, dibujados como una curva li
   "favoriteFood": "spark_candy",
   "spriteKey": "primpulso",
   "personalityBias": { "curiosity": 75, "sociability": 55, "bravery": 85, "affection": 45, "temper": 85 },
-  "defaultPalette": { "primary": "#FFE12D", "secondary": "#BB8B2E", "accent": "#1DE2F2" }
+  "defaultPalette": { "primary": "#FFE12D", "secondary": "#D6A024", "accent": "#1DE2F2" }
 }
 ```

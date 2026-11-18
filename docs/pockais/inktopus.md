@@ -68,6 +68,6 @@ Pixel art en 3/4. Cuerpo y tentáculos en primario; barriga en secundario; gotas
   "favoriteFood": "midnight_berry",
   "spriteKey": "inktopus",
   "personalityBias": { "curiosity": 75, "sociability": 30, "bravery": 40, "affection": 60, "temper": 25 },
-  "defaultPalette": { "primary": "#4B4C61", "secondary": "#ADA0AA", "accent": "#5D1926" }
+  "defaultPalette": { "primary": "#4B4C61", "secondary": "#ADA0AA", "accent": "#5E1725" }
 }
 ```

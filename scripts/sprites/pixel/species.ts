@@ -2189,7 +2189,7 @@ for (const sp of PIXEL_SPECIES) {
 /** Dibuja un frame: geometría de la etapa + pose + cara + efectos. */
 /**
  * Pose clave de una hoja importada, en el orden de la hoja de contactos:
- * 0 reposo, 1 reposo (2), 2 andar, 3 comer, 4 alegre, 5 dormir, 6 atacar, 7 triste, 8 celebrar, 9 golpe.
+ * 0 reposo, 1 reposo (2, sin usar: puede cambiar de postura y haría parpadear el reposo), 2 andar, 3 comer, 4 alegre, 5 dormir, 6 atacar, 7 triste, 8 celebrar, 9 golpe.
  */
 function keyPose(p: Pose): number {
   if (p.food >= 0) return 3;
@@ -2201,7 +2201,7 @@ function keyPose(p: Pose): number {
   if (p.eyes === 'happy') return 4;
   if (p.eyes === 'closed' || p.eyes === 'half') return 5;
   if (Math.abs(p.leg) > 0.05) return 2;
-  return p.appRot > 0 ? 1 : 0;
+  return 0;
 }
 
 /** Dibuja un frame de arte importado: la pose clave que toca, movida en píxeles enteros. */
