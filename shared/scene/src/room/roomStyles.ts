@@ -46,6 +46,10 @@ export interface RoomStyle {
   topExtra: number;
   /** Píxeles que cuelgan por debajo de la losa (cristales…). */
   bottomExtra: number;
+  /** Sala al aire libre: la lluvia y la nieve caen dentro y el Pockai busca resguardo. */
+  exterior?: boolean;
+  /** La sala trae su propio cielo (Cita Final): no se le cambian los colores con la hora. */
+  ownSky?: boolean;
   draw(c: ShellCtx): void;
   twinkles?(W: number, H: number): Twinkle[];
 }
@@ -648,12 +652,13 @@ function drawCelestial(c: ShellCtx): void {
 
 const STYLES: Record<StyleId, RoomStyle> = {
   interior: { id: 'interior', topExtra: 0, bottomExtra: 0, draw: drawInterior },
-  garden: { id: 'garden', topExtra: 42, bottomExtra: 0, draw: drawGarden },
+  garden: { id: 'garden', topExtra: 42, bottomExtra: 0, exterior: true, draw: drawGarden },
   shrine: { id: 'shrine', topExtra: 0, bottomExtra: 0, draw: drawShrine },
   celestial: {
     id: 'celestial',
     topExtra: 0,
     bottomExtra: 18,
+    ownSky: true,
     draw: drawCelestial,
     twinkles: (W, H) =>
       celestialStars(W, H)

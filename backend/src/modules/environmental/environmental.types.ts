@@ -21,6 +21,10 @@ export interface WeatherInfo {
   cached: boolean;
   /** ISO 8601 del momento en que se (re)obtuvo el dato, o null. */
   fetchedAt: string | null;
+  /** Salida del sol de hoy, hora local de las coordenadas ("HH:MM"), o null si no se conoce. */
+  sunrise: string | null;
+  /** Puesta de sol de hoy, hora local de las coordenadas ("HH:MM"), o null si no se conoce. */
+  sunset: string | null;
 }
 
 export interface ActivityInfo {

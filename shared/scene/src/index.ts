@@ -3,6 +3,8 @@ export { PetSprite } from './pet/PetSprite';
 export { IsoRoom } from './room/IsoRoom';
 export { furnitureUrl } from './room/furnitureAssets';
 export * from './protocol';
+export { parseClock, skyAt, type DayPhase, type SkyState } from './ambience/sunClock';
+export { lookFromWmo, type WeatherLook } from './ambience/weather';
 export { createBridge, detectTransport, type Transport } from './bridge';
 export { resolveSheet, isKnownSpecies, PATTERNS } from './assets';
 export * from './bake';

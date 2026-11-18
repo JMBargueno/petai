@@ -68,4 +68,33 @@ describe('parseHostMessage (sala)', () => {
     expect(parseHostMessage({ type: 'selectItem', itemId: null })).toEqual({ type: 'selectItem', itemId: null });
     expect(parseHostMessage({ type: 'rotateSelected' })).toEqual({ type: 'rotateSelected' });
   });
+
+  it('valida setAmbience: clima, sol en "HH:MM" o minutos y reloj forzado', () => {
+    expect(
+      parseHostMessage({
+        type: 'setAmbience',
+        weather: { code: 63, temperature: 11.5 },
+        sun: { sunrise: '07:58', sunset: 1074 },
+        clock: 600,
+      }),
+    ).toEqual({
+      type: 'setAmbience',
+      weather: { code: 63, temperature: 11.5 },
+      sun: { sunrise: 478, sunset: 1074 },
+      clock: 600,
+    });
+    // Solo viaja lo que se manda; un campo ausente no pisa el estado de la escena.
+    expect(parseHostMessage({ type: 'setAmbience' })).toEqual({ type: 'setAmbience' });
+    expect(parseHostMessage({ type: 'setAmbience', weather: null, clock: null })).toEqual({
+      type: 'setAmbience',
+      weather: null,
+      clock: null,
+    });
+    // Datos raros se degradan a "sin dato" en vez de romper el mensaje.
+    expect(parseHostMessage({ type: 'setAmbience', weather: { code: 'x' }, sun: { sunrise: '25:00', sunset: '20:00' } })).toEqual({
+      type: 'setAmbience',
+      weather: { code: null, temperature: null },
+      sun: null,
+    });
+  });
 });

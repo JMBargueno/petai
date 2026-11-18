@@ -265,11 +265,17 @@ Un único renderizador para escritorio, Android e iOS, que sustituye a la spec `
 - El reproductor de clips (`anim.json`).
 - La sala isométrica: proyección, orden de profundidad, A*, paseo y modo edición.
 - Las partículas.
+- El ambiente de la sala (`src/ambience/`): ciclo amanecer → día → tarde → atardecer → anochecer → noche y clima real, dibujados por código.
+  - `sunClock.ts`: de la hora local y la salida/puesta de sol sale un `SkyState` continuo (colores interpolados entre fotogramas clave). La hora la da el reloj del dispositivo; sin sol real usa 07:30 / 20:00.
+  - `weather.ts`: del código WMO de Open-Meteo sale el aspecto (nubes, lluvia, nieve, niebla, tormenta).
+  - `Ambience.ts`: cielo, sol, luna, estrellas y nubes detrás de la sala; en las salas exteriores (`exterior` en `roomStyles.ts`) la lluvia y la nieve caen también por delante. La sala recibe un velo de luz y sus ventanas toman el color del cielo. Con movimiento reducido todo queda estático.
+  - Solo se dibuja cuando hay sala: el Pockai suelto sigue con fondo transparente.
 
 **Qué queda nativo:** menús, pantallas, compras y llamadas a la API. La app nativa traduce los eventos de la escena a la API.
 
 **Protocolo** (`shared/scene/src/protocol.ts`): mensajes JSON tipados.
 - Entrada: `setPet`, `setHabitat`, `setTheme`, `setMode`, `playClip`.
+- `setAmbience { weather: { code, temperature }, sun: { sunrise, sunset }, clock }`: clima y sol reales (de `GET /environmental/status`). Todos los campos son opcionales; `clock` fuerza la hora (demo y pruebas). `setNight` queda para "luces apagadas porque duerme".
 - Salida: `ready`, `petTapped`, `furnitureMoved`, `petDraggedOut`.
 
 **Android** (`mobile/android`):

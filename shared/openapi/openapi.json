@@ -10730,6 +10730,18 @@
             "type": "string",
             "nullable": true,
             "description": "ISO 8601 del último (re)obtenimiento"
+          },
+          "sunrise": {
+            "type": "string",
+            "nullable": true,
+            "example": "07:58",
+            "description": "Salida del sol de hoy, hora local (\"HH:MM\")"
+          },
+          "sunset": {
+            "type": "string",
+            "nullable": true,
+            "example": "17:54",
+            "description": "Puesta de sol de hoy, hora local (\"HH:MM\")"
           }
         },
         "required": [
@@ -10737,7 +10749,9 @@
           "temperature",
           "weatherCode",
           "cached",
-          "fetchedAt"
+          "fetchedAt",
+          "sunrise",
+          "sunset"
         ]
       },
       "ActivityInfoModel": {

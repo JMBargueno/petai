@@ -11,9 +11,31 @@ interface CachedWeather {
   weatherCode: number | null;
   condition: WeatherCondition;
   fetchedAt: string;
+  /** Ausentes en entradas cacheadas antes de añadir el sol: se leen como null. */
+  sunrise?: string | null;
+  sunset?: string | null;
 }
 
-const UNKNOWN: WeatherInfo = { condition: 'unknown', temperature: null, weatherCode: null, cached: false, fetchedAt: null };
+const UNKNOWN: WeatherInfo = {
+  condition: 'unknown',
+  temperature: null,
+  weatherCode: null,
+  cached: false,
+  fetchedAt: null,
+  sunrise: null,
+  sunset: null,
+};
+
+/** Hora local "HH:MM" de un instante de Open-Meteo ("2026-11-18T07:58"); null si no tiene esa forma. */
+function clockOf(iso: unknown): string | null {
+  const m = typeof iso === 'string' ? /T(\d{2}:\d{2})/.exec(iso) : null;
+  return m ? m[1] : null;
+}
+
+/** Completa una entrada de cache como `WeatherInfo`. */
+function toInfo(w: CachedWeather, cached: boolean): WeatherInfo {
+  return { ...w, sunrise: w.sunrise ?? null, sunset: w.sunset ?? null, cached };
+}
 
 /**
  * Servicio de clima: consulta Open-Meteo (gratuito, sin API key) con allowlist SSRF y timeout de
@@ -44,17 +66,17 @@ export class WeatherService {
 
     // 1) Cache caliente: si está en Redis (< 30 min), se sirve sin consultar el upstream.
     const cached = await this.readCache(key);
-    if (cached) return { ...cached, cached: true };
+    if (cached) return toInfo(cached, true);
 
     // 2) Upstream. Ante cualquier fallo se degrada (último cacheado o `unknown`).
     try {
       const fresh = await this.fetchUpstream(lat, lon);
       await this.redis.run((r) => r.set(key, JSON.stringify(fresh), 'EX', WEATHER_CACHE_TTL_SECONDS), 'weather.set');
-      return { ...fresh, cached: false };
+      return toInfo(fresh, false);
     } catch (err: any) {
       this.logger.warn(`Fallo de Open-Meteo (${err?.message}); se degrada a cache o 'unknown'`);
       const retry = await this.readCache(key);
-      if (retry) return { ...retry, cached: true };
+      if (retry) return toInfo(retry, true);
       return { ...UNKNOWN };
     }
   }
@@ -93,7 +115,14 @@ export class WeatherService {
         hotTemp: env.hot_temp ?? 30,
         coldTemp: env.cold_temp ?? 5,
       });
-      return { temperature, weatherCode, condition, fetchedAt: new Date().toISOString() };
+      return {
+        temperature,
+        weatherCode,
+        condition,
+        fetchedAt: new Date().toISOString(),
+        sunrise: clockOf(data?.daily?.sunrise?.[0]),
+        sunset: clockOf(data?.daily?.sunset?.[0]),
+      };
     } finally {
       clearTimeout(timer);
     }
@@ -109,6 +138,10 @@ export class WeatherService {
     url.searchParams.set('latitude', String(lat));
     url.searchParams.set('longitude', String(lon));
     url.searchParams.set('current', 'temperature_2m,weather_code,is_day');
+    // Salida y puesta de sol de hoy, en la hora local de las coordenadas (ciclo día/noche de la sala).
+    url.searchParams.set('daily', 'sunrise,sunset');
+    url.searchParams.set('timezone', 'auto');
+    url.searchParams.set('forecast_days', '1');
     if (url.hostname !== WEATHER_API_HOST) {
       throw new Error('Host de meteo no permitido (allowlist SSRF)');
     }

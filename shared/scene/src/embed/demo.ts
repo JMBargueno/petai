@@ -29,6 +29,18 @@ const DEMO_ACCESSORIES: Record<string, string[]> = {
   neck: ['acc_bufanda_menta', 'ach_item_care_blanket'],
   back: ['acc_capa_gala', 'acc_alas_nube', 'ach_item_battle_legend'],
 };
+/** Climas de ejemplo (código WMO de Open-Meteo). */
+const WEATHERS: [string, number][] = [
+  ['despejado', 0],
+  ['poco nuboso', 2],
+  ['cubierto', 3],
+  ['niebla', 45],
+  ['llovizna', 51],
+  ['lluvia', 63],
+  ['lluvia fuerte', 65],
+  ['nieve', 73],
+  ['tormenta', 95],
+];
 const CLIPS = ['idle', 'walk', 'happy', 'eat', 'sleep', 'attack', 'sad', 'dance', 'level_up'];
 
 export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void {
@@ -45,8 +57,12 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
         ? `<label>Sala <select name="room">${DEMO_ROOMS.map((r) => `<option>${r}</option>`).join('')}</select></label>
     <div class="row">
       <button type="button" data-act="idle">pasear</button><button type="button" data-act="sleep">dormir</button><button type="button" data-act="away">fuera</button>
-      <button type="button" data-night>noche</button>
+      <button type="button" data-night>luces</button>
     </div>
+    <label>Hora <input name="clock" type="range" min="0" max="1439" step="5" value="720"> <output name="clockOut">reloj</output></label>
+    <label>Clima <select name="weather">${WEATHERS.map(([label, code]) => `<option value="${code}">${label}</option>`).join('')}</select></label>
+    <label>Temp °C <input name="temp" type="number" value="18"></label>
+    <div class="row"><button type="button" data-realclock>hora real</button></div>
     <div class="row"><button type="button" data-edit>editar</button><button type="button" data-rotate>girar (R)</button></div>`
         : `<div class="row">${CLIPS.map((c) => `<button type="button" data-clip="${c}">${c}</button>`).join('')}</div>
     <div class="row"><button type="button" data-facing="1">→</button><button type="button" data-facing="-1">←</button></div>`
@@ -77,9 +93,27 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
       },
     });
   };
+  /** Hora forzada (`null` = reloj del dispositivo) y clima elegidos en el panel. */
+  let clock: number | null = null;
+  const sendAmbience = () => {
+    const out = panel.elements.namedItem('clockOut') as HTMLOutputElement | null;
+    if (out) out.value = clock === null ? 'reloj' : `${String(Math.floor(clock / 60)).padStart(2, '0')}:${String(clock % 60).padStart(2, '0')}`;
+    send({
+      type: 'setAmbience',
+      clock,
+      weather: { code: Number(field('weather')), temperature: Number(field('temp')) },
+    });
+  };
+  panel.addEventListener('input', (e) => {
+    if ((e.target as HTMLElement).getAttribute('name') !== 'clock') return;
+    clock = Number(field('clock'));
+    sendAmbience();
+  });
   panel.addEventListener('change', (e) => {
-    if ((e.target as HTMLElement).getAttribute('name') === 'room') sendRoom();
-    else setPet();
+    const name = (e.target as HTMLElement).getAttribute('name');
+    if (name === 'room') sendRoom();
+    else if (name === 'weather' || name === 'temp') sendAmbience();
+    else if (name !== 'clock') setPet();
   });
 
   let paused = false;
@@ -92,6 +126,10 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
     if (b.dataset.facing) send({ type: 'setFacing', facing: Number(b.dataset.facing) });
     if (b.dataset.act) send({ type: 'setActivity', activity: b.dataset.act });
     if (b.hasAttribute('data-night')) send({ type: 'setNight', night: (night = !night) });
+    if (b.hasAttribute('data-realclock')) {
+      clock = null;
+      sendAmbience();
+    }
     if (b.hasAttribute('data-edit')) {
       send({ type: 'setEditMode', edit: (edit = !edit) });
       b.textContent = edit ? 'terminar' : 'editar';
