@@ -126,7 +126,15 @@ export type HostMessage =
    * Reenvía un aviso `pet:action` del backend tal cual: la escena decide el efecto con la misma
    * tabla que el escritorio (`effectForPetAction`). Así la app nativa no repite la lógica.
    */
-  | { type: 'petAction'; action: string; context?: Record<string, unknown> };
+  | { type: 'petAction'; action: string; context?: Record<string, unknown> }
+  /**
+   * Tapa todo el lienzo con un efecto de pantalla (por defecto `velo-eter`) para cambiar algo por
+   * detrás sin que se vea el salto (p. ej. el tamaño de la vista). Responde con `screenCovered`.
+   * Mensaje nuevo y opcional: no sube PROTOCOL_VERSION.
+   */
+  | { type: 'coverScreen'; effect?: string }
+  /** Abre el velo de `coverScreen`. Responde con `screenUncovered` al terminar. */
+  | { type: 'uncoverScreen' };
 
 /** Datos de un efecto: solo textos y números (viajan por el puente como JSON). */
 export type EffectParams = Record<string, string | number>;
@@ -142,6 +150,10 @@ export type SceneEvent =
   | { type: 'furnitureMoved'; itemId: string; x: number; y: number; rotation: number }
   /** Un efecto pedido con `playEffect` o `petAction` terminó (o se descartó por otro más importante). */
   | { type: 'effectEnded'; id: string }
+  /** El velo de `coverScreen` ya tapa todo: el anfitrión puede hacer su cambio. */
+  | { type: 'screenCovered' }
+  /** El velo terminó de abrirse. */
+  | { type: 'screenUncovered' }
   | { type: 'error'; message: string };
 
 const HOST_TYPES = new Set<HostMessage['type']>([
@@ -159,6 +171,8 @@ const HOST_TYPES = new Set<HostMessage['type']>([
   'rotateSelected',
   'playEffect',
   'petAction',
+  'coverScreen',
+  'uncoverScreen',
 ]);
 
 /** Datos de efecto validados: claves cortas y valores texto/número finitos; el resto se descarta. */
@@ -309,6 +323,13 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
       return typeof m.id === 'string' && /^[a-z-]{1,40}$/.test(m.id)
         ? { type: 'playEffect', id: m.id, params: parseEffectParams(m.params) }
         : null;
+    case 'coverScreen':
+      if (m.effect === undefined) return { type: 'coverScreen' };
+      return typeof m.effect === 'string' && /^[a-z-]{1,40}$/.test(m.effect)
+        ? { type: 'coverScreen', effect: m.effect }
+        : null;
+    case 'uncoverScreen':
+      return { type: 'uncoverScreen' };
     case 'petAction': {
       if (typeof m.action !== 'string' || !/^[a-z_]{1,40}$/.test(m.action)) return null;
       const ctx = m.context && typeof m.context === 'object' && !Array.isArray(m.context) ? (m.context as Record<string, unknown>) : undefined;

@@ -126,4 +126,12 @@ describe('parseHostMessage (sala)', () => {
     expect(parseHostMessage({ type: 'petAction', action: 'level_up', context: [1] })).toEqual({ type: 'petAction', action: 'level_up' });
     expect(parseHostMessage({ type: 'petAction', action: 'DROP TABLE' })).toBeNull();
   });
+
+  it('valida coverScreen y uncoverScreen (velo de pantalla)', () => {
+    expect(parseHostMessage({ type: 'coverScreen' })).toEqual({ type: 'coverScreen' });
+    expect(parseHostMessage('{"type":"coverScreen","effect":"velo-eter"}')).toEqual({ type: 'coverScreen', effect: 'velo-eter' });
+    expect(parseHostMessage({ type: 'coverScreen', effect: 'Velo Malo' })).toBeNull();
+    expect(parseHostMessage({ type: 'coverScreen', effect: 3 })).toBeNull();
+    expect(parseHostMessage({ type: 'uncoverScreen', extra: true })).toEqual({ type: 'uncoverScreen' });
+  });
 });

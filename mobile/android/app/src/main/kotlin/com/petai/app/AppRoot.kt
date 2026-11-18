@@ -5,6 +5,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -139,6 +140,12 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
     val subStates = Dest.entries.map { d -> rememberSaveable(d.name) { mutableIntStateOf(0) } }
     val sub = subStates[dest.ordinal].intValue
     val app = LocalContext.current.applicationContext as PetAiApp
+    // Modo «solo hábitat»: la sala a pantalla completa, sin cabecera, navegación ni sub-pestañas.
+    // Solo vale en Mascota › Hábitat con mascota; cualquier otro sitio lo apaga.
+    var habitatSolo by rememberSaveable { mutableStateOf(false) }
+    val onHabitat = dest == Dest.Pet && sub == 1 && state.pet != null
+    LaunchedEffect(onHabitat) { if (!onHabitat) habitatSolo = false }
+    val solo = habitatSolo && onHabitat
 
     fun go(d: Dest, s: Int = 0) {
         dest = d
@@ -149,7 +156,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            BalanceHeader(
+            if (!solo) BalanceHeader(
                 coins = state.user?.coins ?: 0,
                 gems = state.user?.gems ?: 0,
                 onShop = { go(Dest.More, 0) },
@@ -157,7 +164,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
             )
         },
         bottomBar = {
-            NavigationBar(
+            if (!solo) NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
                 modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
@@ -177,8 +184,8 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
             }
         },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
-            if (dest.subs.isNotEmpty()) {
+        Column(Modifier.padding(if (solo) PaddingValues(0.dp) else padding).fillMaxSize()) {
+            if (dest.subs.isNotEmpty() && !solo) {
                 SubTabs(dest.subs, sub, { subStates[dest.ordinal].intValue = it })
             }
             Box(Modifier.weight(1f).fillMaxSize()) {
@@ -204,7 +211,14 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                             onBuyEgg = vm::buyEgg,
                             onGoToShop = { go(Dest.More, 0) },
                         )
-                        else -> if (pet == null) noPet() else HabitatScreen(app.service, app.realtime, pet = pet, onChanged = { vm.refreshAll() })
+                        else -> if (pet == null) noPet() else HabitatScreen(
+                            app.service,
+                            app.realtime,
+                            pet = pet,
+                            onChanged = { vm.refreshAll() },
+                            solo = solo,
+                            onSoloChange = { habitatSolo = it },
+                        )
                     }
                     Dest.Play ->
                         if (pet == null) noPet() else when (sub) {
