@@ -12,7 +12,7 @@
   import type { Reaction } from '../lib/animation/eventMap';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
   import VisitorPet from './VisitorPet.svelte';
-  import { dropGoneVisitor, syncShownVisitors, type ShownVisitor } from '../lib/effects/visitorsShown';
+  import { dropGoneVisitor, syncShownVisitors, type ShownVisitor } from '../lib/visitorsShown';
   import type { EnvironmentalStatus } from '../lib/environmental';
   import type { HabitatVisitor } from '../lib/api';
   import { skillAuthorizations, isSkillActive, getPetBonding, getPetIntelligenceLevel } from '../lib/stores/desktopSkillsStore';
@@ -34,8 +34,7 @@
   import { setPetOnScreen } from '../lib/window-visibility';
   import Ico from './Ico.svelte';
   import EffectLayer from './EffectLayer.svelte';
-  import { EFFECTS, EffectPlayer, flowPalette, phasesOf, portalNexo, type EffectDef, type FxPalette } from '../lib/effects';
-  import { admitMoment } from '../lib/effects/momentQueue';
+  import { EFFECTS, EffectPlayer, admitMoment, flowPalette, phasesOf, portalNexo, type EffectDef, type FxPalette } from '@pockai/scene/effects';
   import { registerTravelPresenter, travel, travelArrived, type TravelState } from '../lib/visitTravel';
 
   export let pet: any;
@@ -46,7 +45,7 @@
   export let visitors: HabitatVisitor[] = [];
   /**
    * Visitantes pintados: los que se van siguen aquí (con `leaving`) hasta cruzar su portal; el
-   * store ya los ha quitado. Lógica pura en lib/effects/visitorsShown.
+   * store ya los ha quitado. Lógica pura en lib/visitorsShown.
    */
   let shownVisitors: ShownVisitor[] = [];
   $: syncVisitors(visitors);

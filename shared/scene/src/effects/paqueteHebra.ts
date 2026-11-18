@@ -59,7 +59,7 @@ function paintThread(c: Canvas2, f: FxFrame, toY: number) {
 
 function draw(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(W, H);
-  const care = f.params.kind === 'care';
+  const care = f.params['kind'] === 'care';
   const item = (bottom: number, squash: number, open: number) =>
     care ? paintEnvelope(c, f, bottom, squash, open) : paintGift(c, f, bottom, squash, open);
 

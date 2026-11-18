@@ -77,6 +77,9 @@ export {
 export { prismColors } from './destelloPrisma';
 export { EffectPlayer, fixedDuration, quantize } from './timeline';
 export { flowPalette, FLOW_PALETTES, FLOW_NAMES } from './palettes';
-export { renderFrame, GridSink } from './render';
+export { renderFrame, GridSink, CanvasSink } from './render';
+export { admitMoment } from './momentQueue';
+export { hash, invert } from './fxMath';
 export { speciesElement } from './speciesElement';
+export { effectForPetAction, birthParams, ACTIONS_WITH_EFFECT, type EffectRequest } from './reactions';
 export type { EffectDef, FxFrame, FxPalette, FxPhase, PixelSink } from './types';

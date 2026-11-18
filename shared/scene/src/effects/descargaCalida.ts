@@ -26,7 +26,7 @@ const FROST_BY_TIER: Record<string, number> = { happy: 0.35, emotional: 0.55, sa
 type Needle = { x: number; y: number; dx: number; dy: number; len: number };
 
 function needles(f: FxFrame): Needle[] {
-  const amount = FROST_BY_TIER[String(f.params.tier ?? '')] ?? 0.5;
+  const amount = FROST_BY_TIER[String(f.params['tier'] ?? '')] ?? 0.5;
   const n = Math.round(10 + amount * 18);
   const out: Needle[] = [];
   for (let k = 0; k < n; k++) {

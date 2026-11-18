@@ -36,7 +36,7 @@ function paintHalo(c: Canvas2, f: FxFrame, y: number, rx: number, turn: number, 
 
 function draw(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(W, H);
-  const level = Number(f.params.level ?? 2);
+  const level = Number(f.params['level'] ?? 2);
   const haloY = BROW.y - 10;
 
   if (f.reduced) {

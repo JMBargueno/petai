@@ -123,7 +123,7 @@ describe('revelación de densidad', () => {
 describe('altar del Santuario', () => {
   it('cerrado tapa la puerta con sus hojas y abierto deja ver la luz de casa', () => {
     const { x, y } = altarSantuario.points.door;
-    const p = FLOW_PALETTES.water;
+    const p = FLOW_PALETTES['water'];
     // Cerrado: madera (oscuros); abierto: la luz de casa
     for (const dx of [-4, 0, 3]) {
       expect([p.deep, p.mid, p.outline]).toContain(render(altarSantuario, 'runes', 1).get(x + dx, y));

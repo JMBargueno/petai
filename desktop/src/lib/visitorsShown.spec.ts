@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { HabitatVisitor } from '../api';
+import type { HabitatVisitor } from './api';
 import { dropGoneVisitor, syncShownVisitors } from './visitorsShown';
 
 const visitor = (id: string): HabitatVisitor => ({

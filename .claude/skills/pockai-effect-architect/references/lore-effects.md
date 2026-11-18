@@ -15,7 +15,7 @@ Fuente: `docs/LORE.md` (espejo en `web/src/app/lore/content.ts`). Cita la secci�
 
 ## Los Seis Flujos del Éter (§4) → rampa del efecto
 
-La rampa sale de `desktop/src/lib/effects/palettes.ts`, con 5 tonos (`outline`, `deep`, `mid`, `light`, `glow`) más el vacío (`void0`, `void1`). El tono medio es el color de UI del elemento (GUIA §3.6).
+La rampa sale de `shared/scene/src/effects/palettes.ts`, con 5 tonos (`outline`, `deep`, `mid`, `light`, `glow`) más el vacío (`void0`, `void1`). El tono medio es el color de UI del elemento (GUIA §3.6).
 
 | Elemento | Flujo | Tono medio | Carácter para animar |
 |---|---|---|---|

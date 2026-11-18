@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Inventario y comprobaciones de los efectos del escritorio (desktop/src/lib/effects).
+ * Inventario y comprobaciones de los efectos del escritorio (shared/scene/src/effects).
  *
  *   node .claude/skills/pockai-effect-architect/scripts/check_effects.mjs [id]
  *
@@ -14,9 +14,21 @@ import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../../..');
-const dir = join(root, 'desktop/src/lib/effects');
-const srcDir = join(root, 'desktop/src');
-const ENGINE = new Set(['index.ts', 'types.ts', 'timeline.ts', 'palettes.ts', 'render.ts']);
+const dir = join(root, 'shared/scene/src/effects');
+// Dónde se usan los efectos: el escritorio y la escena compartida (Android, iOS)
+const srcDirs = [join(root, 'desktop/src'), join(root, 'shared/scene/src')];
+const ENGINE = new Set([
+  'index.ts',
+  'types.ts',
+  'timeline.ts',
+  'palettes.ts',
+  'render.ts',
+  'fxMath.ts',
+  'momentQueue.ts',
+  'speciesElement.ts',
+  'reactions.ts',
+  'pixiLayer.ts',
+]);
 const only = process.argv[2];
 
 if (!existsSync(dir)) {
@@ -35,7 +47,9 @@ function walk(d, out = []) {
   }
   return out;
 }
-const appFiles = walk(srcDir).map((p) => [p, readFileSync(p, 'utf8')]);
+const appFiles = srcDirs.flatMap((d) => walk(d)).map((p) => [p, readFileSync(p, 'utf8')]);
+// La tabla compartida de reacciones (pet:action → efecto) también cuenta como uso: la leen todas las plataformas
+appFiles.push([join(dir, '..', 'reactions (pet:action)'), readFileSync(join(dir, 'reactions.ts'), 'utf8')]);
 
 function phasesOf(src, key) {
   const m = src.match(new RegExp(`${key}:\\s*\\[([\\s\\S]*?)\\]`));

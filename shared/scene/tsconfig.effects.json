@@ -1,0 +1,13 @@
+{
+  // Los efectos los compila también la web (Angular), que es más estricta: se comprueban aquí
+  // con sus mismas opciones para que ningún efecto nuevo rompa su build.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/effects"],
+  "exclude": ["src/effects/**/*.spec.ts"]
+}

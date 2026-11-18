@@ -15,7 +15,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import sharp from 'sharp';
-import { EFFECTS, FLOW_PALETTES, GridSink, phasesOf, renderFrame } from '../../../../desktop/src/lib/effects/index';
+import { EFFECTS, FLOW_PALETTES, GridSink, phasesOf, renderFrame } from '../../../../shared/scene/src/effects/index';
 
 const root = resolve(__dirname, '../../../..');
 const args = process.argv.slice(2);

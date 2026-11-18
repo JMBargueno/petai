@@ -14,7 +14,7 @@ const EFEET = 22;
 
 function drawTrail(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(EW, EH);
-  const dir = Number(f.params.dir ?? 1) >= 0 ? 1 : -1;
+  const dir = Number(f.params['dir'] ?? 1) >= 0 ? 1 : -1;
   const t = f.reduced ? 0.3 : f.t;
   const rows = [EFEET - 14, EFEET - 9, EFEET - 4];
   rows.forEach((y, i) => {

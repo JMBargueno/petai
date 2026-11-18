@@ -1,6 +1,6 @@
 # Motor de efectos del escritorio
 
-Código: `desktop/src/lib/effects/` y `desktop/src/components/EffectLayer.svelte`. No depende del navegador salvo `CanvasSink` y el componente: se prueba en Node (vitest, entorno `node`) y la hoja de frames se pinta con `sharp`.
+Código: `shared/scene/src/effects/` y `desktop/src/components/EffectLayer.svelte`. No depende del navegador salvo `CanvasSink` y el componente: se prueba en Node (vitest, entorno `node`) y la hoja de frames se pinta con `sharp`.
 
 ## Piezas
 

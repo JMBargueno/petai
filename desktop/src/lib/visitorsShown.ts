@@ -1,4 +1,4 @@
-import type { HabitatVisitor } from '../api';
+import type { HabitatVisitor } from './api';
 
 /** Un visitante pintado junto a la mascota; `leaving` mientras cruza su portal de salida. */
 export interface ShownVisitor {

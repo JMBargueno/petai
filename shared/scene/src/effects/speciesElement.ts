@@ -1,5 +1,5 @@
-// Ruta relativa (no el alias @shared) para que también cargue en Node: hoja de frames y tests.
-import speciesData from '../../../../shared/game-data/species.json';
+// Ruta relativa: el paquete importa su código fuente y debe cargar igual en Node, escritorio, web y escena.
+import speciesData from '../../../game-data/species.json';
 
 /**
  * Elemento de una especie según el catálogo compartido. Sirve para teñir efectos de mascotas que

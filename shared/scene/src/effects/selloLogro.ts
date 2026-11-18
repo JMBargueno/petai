@@ -95,7 +95,7 @@ function paintSparkles(c: Canvas2, f: FxFrame) {
 
 function draw(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(W, H);
-  const rank = tierRank(f.params.tier);
+  const rank = tierRank(f.params['tier']);
   const sealY = TOP + Math.floor(ROWS / 2);
 
   if (f.reduced) {

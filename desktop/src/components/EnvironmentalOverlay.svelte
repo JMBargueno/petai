@@ -15,7 +15,7 @@
    * ambiental no se pinta aquí, se dice por la cola de habla (ver `caption` abajo).
    */
   export let part: 'all' | 'accessory' | 'caption' = 'all';
-  /** La lluvia o la nieve ya se pintan como efecto (lib/effects/clima): sin emoji para ellas. */
+  /** La lluvia o la nieve ya se pintan como efecto (@pockai/scene/effects, clima): sin emoji para ellas. */
   export let weatherFx = false;
 
   const ACCESSORY_EMOJI: Record<string, string> = {

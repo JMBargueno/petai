@@ -106,8 +106,8 @@ function paintRay(c: Canvas2, f: FxFrame, t: number) {
 
 function draw(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(W, H);
-  const tier = densityTier(f.params.rarity);
-  const shiny = Number(f.params.shiny) === 1;
+  const tier = densityTier(f.params['rarity']);
+  const shiny = Number(f.params['shiny']) === 1;
 
   if (f.reduced) {
     paintColumn(c, f, TOP, 4, false);
@@ -176,8 +176,8 @@ const REDUCED: FxPhase[] = [
 function phasesFor(params: Record<string, string | number>, reduced: boolean): FxPhase[] {
   const base = reduced ? REDUCED : PHASES;
   return base.map((p) => {
-    if (p.name === 'promise' && !params.pity) return { ...p, ms: 0 };
-    if (p.name === 'prism' && Number(params.shiny) !== 1) return { ...p, ms: reduced ? 0 : 150 };
+    if (p.name === 'promise' && !params['pity']) return { ...p, ms: 0 };
+    if (p.name === 'prism' && Number(params['shiny']) !== 1) return { ...p, ms: reduced ? 0 : 150 };
     return p;
   });
 }

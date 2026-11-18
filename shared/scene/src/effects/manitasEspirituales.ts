@@ -52,7 +52,7 @@ function paintScroll(c: Canvas2, f: FxFrame, cx: number, cy: number, open: numbe
 
 function draw(sink: PixelSink, f: FxFrame): void {
   const c = new Canvas2(W, H);
-  const url = f.params.tool !== 'read_clipboard';
+  const url = f.params['tool'] !== 'read_clipboard';
   const item = (open: number) => (url ? paintPortal(c, f, CHEST.x, CHEST.y - 4, open) : paintScroll(c, f, CHEST.x, CHEST.y - 4, open));
 
   if (f.reduced) {
