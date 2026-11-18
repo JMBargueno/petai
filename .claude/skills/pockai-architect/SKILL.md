@@ -1,6 +1,6 @@
 ---
 name: pockai-architect
-description: Diseña, dibuja e integra especies de Pockai (criaturas/mascotas de PetAI). Cubre la ficha narrativa en docs/pockais/<id>.md, la entrada válida en shared/game-data/species.json (stats, personalityBias de 5 dimensiones, paleta, comida), las skills del elemento si es nuevo, el arte real en pixel art procedural 3/4 con una geometría distinta por etapa (baby→final) revisado con una hoja de contactos, las anclas de accesorios, los registros de clientes y la validación final. Úsala cuando el usuario pida "un nuevo pockai", "crear/diseñar una especie", "añadir una criatura", "inventar un pockai de tipo X", y también para "redibujar/rediseñar el arte o el sprite de <especie>", "cómo se ve <especie> de baby/adulto" o "evoluciones visuales". Para muebles o salas del hábitat usa pockai-habitat-architect; para prendas y accesorios, pockai-accessory-architect.
+description: Diseña, dibuja e integra especies de Pockai (criaturas/mascotas de PetAI). Cubre la ficha narrativa en docs/pockais/<id>.md, la entrada válida en shared/game-data/species.json (stats, personalityBias de 5 dimensiones, paleta, comida), las skills del elemento si es nuevo, el arte real en pixel art 3/4 (un boceto procedural por etapa que una IA de imagen, Nano Banana, redibuja a partir de una hoja objetivo y el repo importa a 64 px) revisado con una hoja de contactos, las anclas de accesorios, los registros de clientes y la validación final. Úsala cuando el usuario pida "un nuevo pockai", "crear/diseñar una especie", "añadir una criatura", "inventar un pockai de tipo X", y también para "redibujar/rediseñar el arte o el sprite de <especie>", "cómo se ve <especie> de baby/adulto" o "evoluciones visuales". Para muebles o salas del hábitat usa pockai-habitat-architect; para prendas y accesorios, pockai-accessory-architect.
 ---
 
 # Pockai Architect
@@ -15,6 +15,7 @@ Lee las referencias cuando las necesites:
 - `references/art-brief.md`: cómo se dibuja una especie en pixel art (`PixelSpecies`), brief de arte, proceso y checklist visual.
 - `references/iso-style.md`: reglas 3/4 isométricas (cámara, luz, cara, etapas y errores típicos).
 - `references/pixel-style.md`: estilo pixel art, evolución por etapas (plan corporal propio y regla de los cuatro ejes) y anclas de accesorios.
+- `references/target-sheet-pipeline.md`: **el flujo del arte final**: generar cada etapa con Nano Banana a partir del boceto y de la hoja objetivo, importarla a 64 px, clasificar el color y validar. Léela antes de dibujar.
 - `references/design-lessons.md`: lecciones sacadas de comparar el generador con las ocho hojas objetivo de `references/examples/` (raras, legendarias y míticas), y lo que el generador aún no hace. **Léela antes de dibujar cualquier especie.**
 - `references/concept-prompt.md`: cómo preparar un pase de concepto con una IA de imagen y qué hacer con el resultado. Los prompts reales del usuario están en `references/examples/prompts.md`.
 - `references/integration-checklist.md`: todos los archivos que hay que tocar, en orden.
@@ -74,13 +75,24 @@ Sigue `references/integration-checklist.md` paso a paso. Puntos críticos:
 - Registros de clientes: localízalos con grep, no con una lista fija.
 
 ### 5b. Dibujar el arte (salvo que el usuario pida placeholders)
-Sigue la sección "Dibujar" de `references/art-brief.md`:
+El arte se hace en dos tiempos. Primero el **boceto** procedural, que fija las poses y sirve de disposición; después el **arte final**, que dibuja Nano Banana y el repo importa.
+
+**Boceto.** Sigue la sección "Dibujar" de `references/art-brief.md`:
 0. Abre el par de `references/examples/` de su rareza que más se le parezca (`<id>-generador.png` y `<id>-objetivo.*`) y repasa `design-lessons.md`: el objetivo es el nivel que se espera, en todas las rarezas.
 1. Escribe el `PixelSpecies` con sus cuatro geometrías, con las diferencias por etapa de `pixel-style.md`. Empieza por la etapa final.
 2. Genera la hoja de contactos con `contact_sheet.ts <id>` y **mírala** leyendo el PNG.
 3. Pasa la checklist y corrige hasta que todo pase. Normalmente hacen falta 2-3 iteraciones; no te quedes en la primera.
 3b. Si es rara o superior y la hoja pasa pero se queda corta, ofrece al usuario un pase de concepto (`concept-prompt.md`): le das el prompt, lo ejecuta con la hoja adjunta y tú incorporas lo que estrena cada etapa.
 4. Ejecuta `pnpm generate:sprites` (hojas, anclas de accesorio y vistas previas).
+
+**Arte final.** Sigue `references/target-sheet-pipeline.md`:
+1. Comprueba que hay clave de la API (`node scripts/sprites/concept/generate.mjs --list`). Si no, pide al usuario que cree `.env.local`; nunca la escribas tú. Confirma con él antes de la primera llamada: cada imagen se cobra.
+2. La especie necesita una **hoja objetivo** con su diseño (`references/examples/<id>-objetivo.*`). Si no la tiene, genera una con `concept-prompt.md` y espera a que el usuario la apruebe.
+3. Empieza por la **etapa final**: genérala con `stage.mjs`, mírala, impórtala y enséñasela al usuario. Con su visto bueno, haz las otras tres.
+4. `roles.mjs` y `set-palette.mjs`, hoja de contactos real, `pnpm generate:sprites` y `pnpm validate:all`.
+5. Si una etapa sale con ruido, con caras que no se leen o con otro diseño, regenera solo esa etapa.
+
+No des por terminada una especie con el boceto: el boceto no tiene la calidad que pide el usuario.
 
 Enseña al usuario la hoja de contactos final o descríbela. Si se piden placeholders, usa los dos scripts de la sección "Placeholders" (siempre **con id**).
 

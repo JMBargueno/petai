@@ -29,13 +29,17 @@
     "web:build": "pnpm --filter pockai-web run build",
     "web:test": "pnpm --filter pockai-web run test",
     "generate:furniture": "tsx scripts/generate-furniture.ts",
-    "generate:accessories": "tsx scripts/generate-accessories.ts"
+    "generate:accessories": "tsx scripts/generate-accessories.ts",
+    "sprites:concept": "node scripts/sprites/concept/stage.mjs",
+    "sprites:import": "node scripts/sprites/concept/import.mjs",
+    "sprites:roles": "node scripts/sprites/concept/roles.mjs"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.750.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^22.13.0",
     "openapi-typescript": "^7.13.0",
+    "sharp": "0.35.5",
     "tsx": "^4.19.0",
     "vitest": "^3.0.0",
     "zod": "^4.6.7"

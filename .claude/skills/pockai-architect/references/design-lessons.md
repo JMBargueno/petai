@@ -15,6 +15,8 @@ En `examples/` hay ocho pares de hojas. `<id>-generador.png` es lo que dibujó e
 
 Antes de diseñar una especie, abre con Read el par de su rareza que más se le parezca y compáralo: lo que sigue es lo que cambia de una hoja a la otra. **Vale para todas las rarezas**: las tres raras mejoran tanto como los míticos. La rareza decide cuántas piezas y materiales lleva la especie, no cuánto cuidado se pone en dibujarla.
 
+Estas lecciones valen para escribir la descripción de cada etapa en el prompt (`target-sheet-pipeline.md`) y para el boceto procedural.
+
 Las hojas objetivo son una referencia de diseño, no assets: tienen frames borrosos, el diseño baila de una celda a otra, no llevan máscara y no admiten paleta ni patrón. Lo que se aprende de ellas se dibuja con el generador.
 
 ## 0. Proporción de animal, no de muñeco
