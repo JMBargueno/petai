@@ -5,8 +5,18 @@ import { MindService } from './mind.service';
 import { MindMemoryService } from './mind-memory.service';
 import { adventureEpisode } from './memory.engine';
 import { describeDims } from './personality.engine';
-import { resolveScene, type SceneType } from './social.engine';
+import { fulfilEpisode, type WishId } from './wishes.engine';
+import { type SceneType } from './social.engine';
+import { EncounterService } from './encounter.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+
+/** Lo que hizo un amigo al venir a cuidarla, en palabras de la mascota. */
+const CARE_TEXT: Record<string, string> = {
+  feed: 'me dio de comer',
+  clean: 'me dejó bien limpio',
+  play: 'jugó conmigo',
+  pet: 'me hizo mimos',
+};
 
 /** Encuentro de dos mascotas en una visita. `slot` es la ranura de tiempo (0 = llegada). */
 interface VisitEvent {
@@ -32,7 +42,12 @@ export class EvolutionListener {
     private readonly mind: MindService,
     private readonly memory: MindMemoryService,
     @Optional() private readonly events?: EventEmitter2,
-  ) {}
+    @Optional() encounters?: EncounterService,
+  ) {
+    this.encounters = encounters ?? new EncounterService(mind, memory);
+  }
+
+  private readonly encounters: EncounterService;
 
   /** Última escena de cada pareja mientras dura su visita (para no repetirla y para reconciliarse). */
   private readonly lastScene = new Map<string, SceneType>();
@@ -95,6 +110,7 @@ export class EvolutionListener {
   onAdventure(p: { petId: string; theme?: string; outcome?: string }) {
     return this.safe(async () => {
       await this.mind.applyExperience(p.petId, ['adventure']);
+      await this.wishFulfilled(p.petId, 'go_explore');
       // El tema lo escribe un modelo: pasa por el filtro de textos de `remember` como cualquier recuerdo
       await this.memory.remember(p.petId, [
         {
@@ -142,19 +158,16 @@ export class EvolutionListener {
     const visitorName = visitorPet.user?.displayName || 'un entrenador';
     const hostName = hostPet.user?.displayName || 'un entrenador';
     const [guestMind, hostMind] = await Promise.all([this.mind.ensureDims(visitorPet), this.mind.ensureDims(hostPet)]);
-    const stage = await this.memory.stageWith(hostPet.id, `pet:${visitorPet.id}`);
-
     const key = `${p.userId}>${p.ownerId}:${visitorPet.id}:${hostPet.id}`;
-    const scene = resolveScene(
-      {
-        host: { petId: hostPet.id, name: hostPet.nickname, ownerName: hostName, dims: hostMind.dims, energy: hostPet.energy ?? 60 },
-        guest: { petId: visitorPet.id, name: visitorPet.nickname, ownerName: visitorName, dims: guestMind.dims, energy: visitorPet.energy ?? 60 },
-        stage,
-        slot,
-        previous: this.lastScene.get(key) ?? null,
-      },
-      social,
-    );
+    // En la llegada no hay escena anterior en esta visita: se mira cómo acabó la última vez
+    const previous = slot === 0 ? undefined : (this.lastScene.get(key) ?? null);
+    const resolved = await this.encounters.resolve({
+      host: { id: hostPet.id, name: hostPet.nickname, ownerName: hostName, dims: hostMind.dims, energy: hostPet.energy ?? 60 },
+      guest: { id: visitorPet.id, name: visitorPet.nickname, ownerName: visitorName, dims: guestMind.dims, energy: visitorPet.energy ?? 60 },
+      slot,
+      previous,
+    });
+    const { scene, stage } = resolved;
     this.lastScene.set(key, scene.type);
 
     // Solo las primeras escenas de una visita dejan huella: quedarse más rato no infla la relación
@@ -162,16 +175,12 @@ export class EvolutionListener {
       if (slot === 0) {
         await this.mind.applyExperience(visitorPet.id, ['habitat_visit']);
         await this.mind.applyExperience(hostPet.id, ['habitat_visit']);
+        // Si alguno llevaba tiempo queriendo ver a sus amigos, ya los ha visto
+        await this.wishFulfilled(visitorPet.id, 'see_friend');
+        await this.wishFulfilled(hostPet.id, 'see_friend');
         await this.memory.feel(hostPet.id, `user:${p.userId}`, `${visitorName} (otro entrenador)`, 0.15);
       }
-      await this.memory.remember(visitorPet.id, [
-        { layer: 'episodic', kind: 'encounter', content: scene.guest.episode, importance: 0.6, valence: scene.guest.mood, subject: `pet:${hostPet.id}` },
-      ]);
-      await this.memory.remember(hostPet.id, [
-        { layer: 'episodic', kind: 'encounter', content: scene.host.episode, importance: 0.6, valence: scene.host.mood, subject: `pet:${visitorPet.id}` },
-      ]);
-      await this.memory.feel(hostPet.id, `pet:${visitorPet.id}`, `${visitorPet.nickname} (Pockai de ${visitorName})`, scene.host.delta);
-      await this.memory.feel(visitorPet.id, `pet:${hostPet.id}`, `${hostPet.nickname} (Pockai de ${hostName})`, scene.guest.delta);
+      await this.encounters.record(resolved);
     }
 
     // El anfitrión la ve en su sala. Del visitante solo viaja el carácter en palabras (las bandas),
@@ -193,6 +202,14 @@ export class EvolutionListener {
     });
   }
 
+  /** Si la mascota había dicho que le apetecía esto, lo recuerda como un deseo cumplido. */
+  private async wishFulfilled(petId: string, id: WishId) {
+    if (!(await this.mind.fulfilWish?.(petId, id))) return;
+    await this.memory.remember(petId, [
+      { layer: 'episodic', kind: 'event', key: `wish:${id}`, bump: true, content: fulfilEpisode(id), importance: 0.45, valence: 0.6 },
+    ]);
+  }
+
   /**
    * Mascota de un entrenador que participa en una visita: la que indica el evento y, si no viene
    * o no es suya, la que tiene elegida como activa (la más antigua si no ha elegido).
@@ -209,6 +226,76 @@ export class EvolutionListener {
       if (active) return active;
     }
     return this.prisma.pet.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' }, include });
+  }
+
+  /**
+   * Dos Pockai del mismo entrenador juegan juntos (buddies). El servicio de buddies ya eligió la
+   * escena con `EncounterService.resolve`; aquí se resuelve igual (misma pareja, misma ranura,
+   * misma escena anterior) y se guarda lo que recuerda cada uno.
+   */
+  @OnEvent('buddy:interacted', { async: true })
+  onBuddy(p: { userId: string; petAId: string; petBId: string; slot: number; previous?: SceneType | null }) {
+    return this.safe(async () => {
+      const pets = await this.prisma.pet.findMany({ where: { id: { in: [p.petAId, p.petBId] }, userId: p.userId } });
+      const a = pets.find((x: any) => x.id === p.petAId);
+      const b = pets.find((x: any) => x.id === p.petBId);
+      if (!a || !b) return;
+      const [da, db] = [await this.mind.ensureDims(a), await this.mind.ensureDims(b)];
+      await this.encounters.play({
+        host: { id: a.id, name: a.nickname, ownerName: '', dims: da.dims, energy: a.energy ?? 60 },
+        guest: { id: b.id, name: b.nickname, ownerName: '', dims: db.dims, energy: b.energy ?? 60 },
+        slot: p.slot,
+        first: false,
+        sameHome: true,
+        previous: p.previous ?? null,
+      });
+      await this.mind.applyExperience(a.id, ['buddy_play']);
+      await this.mind.applyExperience(b.id, ['buddy_play']);
+    });
+  }
+
+  /** Un amigo vino a cuidarla mientras su entrenador no estaba (visita de cuidado co-op). */
+  @OnEvent('coop:care_received', { async: true })
+  onCare(p: { ownerId: string; visitorId: string; petId: string; action: string }) {
+    return this.safe(async () => {
+      const [pet, visitor] = await Promise.all([
+        this.prisma.pet.findFirst({ where: { id: p.petId, userId: p.ownerId }, select: { id: true } }),
+        this.prisma.user.findUnique({ where: { id: p.visitorId }, select: { displayName: true } }),
+      ]);
+      if (!pet) return;
+      const name = visitor?.displayName || 'Un amigo de mi entrenador';
+      const what = CARE_TEXT[p.action] ?? 'me cuidó un rato';
+      await this.mind.applyExperience(pet.id, ['care_received']);
+      await this.memory.remember(pet.id, [
+        { layer: 'episodic', kind: 'visit', content: `${name} vino a verme y ${what}.`, importance: 0.55, valence: 0.5, subject: `user:${p.visitorId}` },
+      ]);
+      await this.memory.feel(pet.id, `user:${p.visitorId}`, `${name} (otro entrenador)`, 0.1);
+    });
+  }
+
+  /** Otro entrenador le envía un regalo. Lo recuerda la mascota a la que iba dirigido. */
+  @OnEvent('gift:received', { async: true })
+  onGift(p: { senderId: string; recipientId: string; petId?: string; itemName?: string }) {
+    return this.safe(async () => {
+      const [pet, sender] = await Promise.all([
+        this.petInVisit(p.recipientId, p.petId),
+        this.prisma.user.findUnique({ where: { id: p.senderId }, select: { displayName: true } }),
+      ]);
+      if (!pet) return;
+      const name = sender?.displayName || 'Un amigo de mi entrenador';
+      await this.mind.applyExperience(pet.id, ['gift_received']);
+      await this.memory.remember(pet.id, [
+        {
+          layer: 'episodic',
+          kind: 'event',
+          content: p.itemName ? `${name} me mandó un regalo: ${p.itemName}. ¡Qué ilusión!` : `${name} me mandó un regalo. ¡Qué ilusión!`,
+          importance: 0.55,
+          valence: 0.6,
+          subject: `user:${p.senderId}`,
+        },
+      ]);
+      await this.memory.feel(pet.id, `user:${p.senderId}`, `${name} (otro entrenador)`, 0.1);
+    });
   }
 
   @OnEvent('coop:friendship_accepted', { async: true })

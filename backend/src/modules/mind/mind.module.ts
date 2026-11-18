@@ -5,6 +5,7 @@ import { MindService } from './mind.service';
 import { MindMemoryService } from './mind-memory.service';
 import { AutonomyService } from './autonomy.service';
 import { EvolutionListener } from './evolution.listener';
+import { EncounterService } from './encounter.service';
 import { MindController } from './mind.controller';
 
 /**
@@ -14,7 +15,7 @@ import { MindController } from './mind.controller';
 @Module({
   imports: [GameDataModule, BillingModule],
   controllers: [MindController],
-  providers: [MindService, MindMemoryService, AutonomyService, EvolutionListener],
-  exports: [MindService, MindMemoryService, AutonomyService],
+  providers: [MindService, MindMemoryService, EncounterService, AutonomyService, EvolutionListener],
+  exports: [MindService, MindMemoryService, EncounterService, AutonomyService],
 })
 export class MindModule {}

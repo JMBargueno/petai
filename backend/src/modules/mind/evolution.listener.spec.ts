@@ -158,7 +158,7 @@ describe('EvolutionListener: escenas de visita (spec 37 §6.3)', () => {
     const host = episodeOf(s.memory, 'h');
     const guest = episodeOf(s.memory, 'v');
     expect(host.content).not.toBe(guest.content);
-    expect(host).toMatchObject({ layer: 'episodic', kind: 'encounter', subject: 'pet:v' });
+    expect(host).toMatchObject({ layer: 'episodic', kind: 'visit', subject: 'pet:v' });
     expect(guest).toMatchObject({ layer: 'episodic', kind: 'encounter', subject: 'pet:h' });
     expect(s.mind.applyExperience).toHaveBeenCalledWith('v', ['habitat_visit']);
     expect(s.events.emit).toHaveBeenCalledWith(
@@ -211,5 +211,27 @@ describe('EvolutionListener: escenas de visita (spec 37 §6.3)', () => {
     await s.listener.onHabitatVisit({ userId: 'nadie', ownerId: 'host' });
     expect(s.memory.remember).not.toHaveBeenCalled();
     expect(s.events.emit).not.toHaveBeenCalled();
+  });
+});
+
+describe('EvolutionListener: deseos que se cumplen fuera del chat (spec 37 §4.5)', () => {
+  const build = (fulfilled: boolean) => {
+    const mind: any = { applyExperience: jest.fn(async () => null), fulfilWish: jest.fn(async () => fulfilled) };
+    const memory: any = { remember: jest.fn(async () => 1), feel: jest.fn() };
+    return { listener: new EvolutionListener({} as any, mind, memory), mind, memory };
+  };
+
+  it('si le apetecía ir de aventura, además del recuerdo de la aventura queda el del deseo cumplido', async () => {
+    const s = build(true);
+    await s.listener.onAdventure({ petId: 'p', theme: 'La cueva', outcome: 'win' });
+    expect(s.mind.fulfilWish).toHaveBeenCalledWith('p', 'go_explore');
+    const keys = s.memory.remember.mock.calls.map((c: any[]) => c[1][0].key ?? c[1][0].kind);
+    expect(keys).toEqual(expect.arrayContaining(['adventure', 'wish:go_explore']));
+  });
+
+  it('si no lo había pedido, solo queda el recuerdo de la aventura', async () => {
+    const s = build(false);
+    await s.listener.onAdventure({ petId: 'p', theme: 'La cueva', outcome: 'win' });
+    expect(s.memory.remember).toHaveBeenCalledTimes(1);
   });
 });

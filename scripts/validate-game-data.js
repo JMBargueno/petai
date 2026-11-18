@@ -112,12 +112,106 @@ if (pers) {
   }
   console.log('✓ balance.json: personalidad (5 dimensiones, evolución y autonomía) validada');
 
+  // 1c-quinquies. Reacciones del chat: catálogo y tabla por intención (spec 37 §4.3)
+  const beh = pers.behavior;
+  if (beh?.reactions) {
+    const where = 'balance.personality.behavior';
+    const AUDIENCES = ['owner', 'visitor', 'pockai'];
+    const catalog = beh.catalog ?? {};
+    const ids = Object.keys(catalog);
+    if (!ids.includes('listen') || !ids.includes('yawn')) throw new Error(`${where}.catalog: faltan listen o yawn (son las reacciones de respaldo)`);
+    const ar = beh.antiRepeat;
+    if (!ar || !Number.isInteger(ar.window) || ar.window < 1 || !(ar.penalty > 0 && ar.penalty <= 1) || !(ar.margin >= 0)) throw new Error(`${where}.antiRepeat inválido`);
+    for (const [id, c] of Object.entries(catalog)) {
+      const at = `${where}.catalog.${id}`;
+      // Una reacción sin audiencia no se podría elegir nunca
+      if (!Array.isArray(c.audiences) || c.audiences.length === 0) throw new Error(`${at}: sin audiencia`);
+      for (const a of c.audiences) if (!AUDIENCES.includes(a)) throw new Error(`${at}: audiencia desconocida ${a}`);
+      for (const [k, v] of Object.entries(c.minDims ?? {})) {
+        if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${at}.minDims.${k} inválido`);
+      }
+      if (c.minDims && !ids.includes(c.fallback)) throw new Error(`${at}: con minDims hace falta un fallback del catálogo`);
+      if (c.when !== undefined && !['has_find', 'untold', 'first_turn_today', 'after_scold', 'knows_trick'].includes(c.when)) {
+        throw new Error(`${at}.when: condición desconocida ${c.when}`);
+      }
+    }
+    for (const [intent, list] of Object.entries(beh.reactions)) {
+      const at = `${where}.reactions.${intent}`;
+      if (!Array.isArray(list) || list.length === 0) throw new Error(`${at} vacío`);
+      for (const r of list) {
+        if (!ids.includes(r.behavior)) throw new Error(`${at}: reacción fuera de catálogo ${r.behavior}`);
+        if (!(typeof r.base === 'number' && r.base >= 0)) throw new Error(`${at}.${r.behavior}.base debe ser ≥ 0`);
+        for (const [k, v] of Object.entries(r.weights ?? {})) {
+          if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${at}.${r.behavior}.weights.${k} inválido`);
+        }
+        if (r.product) {
+          const dimsOk = (xs) => Array.isArray(xs) && xs.every((d) => PERSONALITY_DIMS.includes(d));
+          if (typeof r.product.scale !== 'number' || !dimsOk(r.product.dims ?? []) || !dimsOk(r.product.inverse ?? [])) throw new Error(`${at}.${r.behavior}.product inválido`);
+        }
+        if (!(r.base > 0) && !r.product) throw new Error(`${at}.${r.behavior}: sin base ni producto nunca puntuaría`);
+      }
+      // Toda intención necesita al menos una candidata para el entrenador
+      if (!list.some((r) => catalog[r.behavior].audiences.includes('owner') && !catalog[r.behavior].when)) {
+        throw new Error(`${at}: ninguna candidata sin condiciones para el entrenador`);
+      }
+    }
+    console.log(`✓ balance.json: reacciones del chat (${ids.length} en catálogo, ${Object.keys(beh.reactions).length} intenciones) validadas`);
+  }
+
+  // Actividades autónomas: las cinco de siempre son obligatorias; las nuevas, opcionales
+  const acts = pers.autonomy?.activities ?? {};
+  for (const id of ['rest', 'play_alone', 'explore', 'socialize', 'wait_owner']) {
+    if (!acts[id]) throw new Error(`balance.personality.autonomy.activities.${id} falta`);
+  }
+  for (const [id, a] of Object.entries(acts)) {
+    if (!['rest', 'play_alone', 'explore', 'socialize', 'wait_owner', 'practice_trick', 'tidy_habitat'].includes(id)) {
+      throw new Error(`balance.personality.autonomy.activities: actividad desconocida ${id}`);
+    }
+    if (!(a.base > 0) || typeof a.energy !== 'number' || typeof a.happiness !== 'number') throw new Error(`balance.personality.autonomy.activities.${id} inválida`);
+  }
+
+  // 1c-sexies. Trucos y deseos (spec 37 §4.5 y §4.6)
+  const tricks = pers.tricks;
+  if (tricks) {
+    const where = 'balance.personality.tricks';
+    if (!Number.isInteger(tricks.teachDailyCap) || tricks.teachDailyCap < 1) throw new Error(`${where}.teachDailyCap inválido`);
+    const entries = Object.entries(tricks.catalog ?? {});
+    if (entries.length === 0) throw new Error(`${where}.catalog vacío`);
+    for (const [id, t] of entries) {
+      if (!t.name || !Number.isInteger(t.practices) || t.practices < 1) throw new Error(`${where}.catalog.${id} inválido`);
+      for (const [k, v] of Object.entries(t.minDims ?? {})) {
+        if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${where}.catalog.${id}.minDims.${k} inválido`);
+      }
+    }
+    // Cualquier Pockai debe poder aprender al menos uno
+    if (!entries.some(([, t]) => !t.minDims)) throw new Error(`${where}.catalog: hace falta un truco sin requisitos`);
+    console.log(`✓ balance.json: ${entries.length} trucos validados`);
+  }
+  const wishes = pers.wishes;
+  if (wishes) {
+    const where = 'balance.personality.wishes';
+    const WISH_IDS = ['go_explore', 'see_friend', 'show_find', 'be_cuddled', 'learn_trick'];
+    if (!Number.isInteger(wishes.maxActive) || wishes.maxActive < 1 || wishes.maxActive > 2) throw new Error(`${where}.maxActive debe ser 1 o 2`);
+    if (!Number.isInteger(wishes.showEveryTurns) || wishes.showEveryTurns < 1) throw new Error(`${where}.showEveryTurns inválido`);
+    if (!(wishes.cooldownHours > 0) || !(wishes.happinessOnFulfil >= 0 && wishes.happinessOnFulfil <= 5) || !(wishes.minScore >= 0)) throw new Error(`${where}: cooldownHours, happinessOnFulfil o minScore inválidos`);
+    for (const id of WISH_IDS) {
+      const w = wishes.catalog?.[id];
+      if (!w || !(w.base > 0)) throw new Error(`${where}.catalog.${id} falta o no tiene base`);
+      for (const [k, v] of Object.entries(w.weights ?? {})) {
+        if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${where}.catalog.${id}.weights.${k} inválido`);
+      }
+      if (w.activityBoost !== undefined && !(w.activityBoost >= 1 && w.activityBoost <= 3)) throw new Error(`${where}.catalog.${id}.activityBoost debe estar en 1-3`);
+    }
+    for (const id of Object.keys(wishes.catalog ?? {})) if (!WISH_IDS.includes(id)) throw new Error(`${where}.catalog: deseo desconocido ${id}`);
+    console.log(`✓ balance.json: ${WISH_IDS.length} deseos validados`);
+  }
+
   // 1c-quater. Vida social: etapas de relación y escenas entre dos Pockai
   const social = pers.social;
   if (social) {
     const where = 'balance.personality.social';
     const STAGE_IDS = ['stranger', 'acquaintance', 'friend', 'best_friend'];
-    const SCENE_IDS = ['greet', 'explore_together', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up'];
+    const SCENE_IDS = ['greet', 'explore_together', 'play_tag', 'share_food', 'nap_together', 'squabble', 'make_up', 'give_gift'];
     const unit = (v) => typeof v === 'number' && v >= 0 && v <= 1;
     const st = social.stages ?? {};
     if (!unit(st.acquaintance?.familiarity)) throw new Error(`${where}.stages.acquaintance inválido`);
@@ -149,9 +243,26 @@ if (pers) {
     }
     for (const id of Object.keys(social.scenes ?? {})) if (!SCENE_IDS.includes(id)) throw new Error(`${where}.scenes: escena desconocida ${id}`);
     // Siempre debe quedar una escena sin condiciones, para cualquier pareja y cualquier ranura
-    if (!SCENE_IDS.some((id) => { const s = social.scenes[id]; return !s.minStage && !s.maxStage && !s.after && !s.firstSlotOnly && s.minEnergy === undefined && s.maxEnergy === undefined && s.minTemper === undefined; })) {
+    if (!SCENE_IDS.some((id) => { const s = social.scenes[id]; return !s.minStage && !s.maxStage && !s.after && !s.firstSlotOnly && s.minEnergy === undefined && s.maxEnergy === undefined && s.minTemper === undefined && !s.requiresFind; })) {
       throw new Error(`${where}.scenes: hace falta una escena sin condiciones`);
     }
+    // Rumores: lista blanca de orígenes. Lo privado no puede colarse por configuración.
+    const ru = social.rumors;
+    if (ru) {
+      const SHAREABLE = ['find', 'adventure', 'event'];
+      if (!Array.isArray(ru.kinds)) throw new Error(`${where}.rumors.kinds debe ser una lista`);
+      for (const k of ru.kinds) {
+        if (!SHAREABLE.includes(k)) throw new Error(`${where}.rumors.kinds: «${k}» no se puede compartir entre Pockai (permitidos: ${SHAREABLE.join(', ')})`);
+      }
+      if (!unit(ru.chance)) throw new Error(`${where}.rumors.chance debe estar en [0, 1]`);
+      if (!(ru.maxAgeDays >= 1 && ru.maxAgeDays <= 30)) throw new Error(`${where}.rumors.maxAgeDays debe estar en [1, 30]`);
+      // Un rumor pesa menos que lo vivido, pero tiene que llegar a guardarse
+      if (!(ru.importance >= (pers.memory?.minImportanceToStore ?? 0) && ru.importance <= 0.5)) {
+        throw new Error(`${where}.rumors.importance debe estar entre memory.minImportanceToStore y 0.5`);
+      }
+    }
+    const slm = pers.memory?.sinceLastMax;
+    if (slm !== undefined && !(Number.isInteger(slm) && slm >= 0 && slm <= 4)) throw new Error('balance.personality.memory.sinceLastMax debe ser un entero en [0, 4]');
     console.log(`✓ balance.json: vida social (${SCENE_IDS.length} escenas, 4 etapas) validada`);
   }
 

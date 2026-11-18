@@ -20,7 +20,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
  *   · `pair` exige dos pets DISTINTOS y PROPIOS del usuario (`getPetById` los valida).
  *   · `trigger` exige al menos un `buddyPair` con `separated=false`, ambos pets
  *     despiertos y sanos, y sin exceder el cooldown (máx 3 en 5 min). El tipo se rola
- *     con `Math.random`; si el roll cae fuera del 65% de probabilidad acumulada, la
+ *     con un azar sembrado por pareja e intento; si el roll cae fuera del 65% de probabilidad acumulada, la
  *     interacción no ocurre y se devuelve `null`. Por eso el happy path de `trigger`
  *     se obtiene repitiendo la llamada (cada `null` no crea registro ni gasta cooldown)
  *     hasta conseguir un resultado no nulo, y se corta en cuanto ocurre uno.
@@ -175,7 +175,7 @@ describe('Pet Buddies: par, interacción y estado (e2e) — happy path', () => {
       const happinessBefore: Record<string, number> = { [petAId]: petBefore[0]!.happiness, [petBId]: petBefore[1]!.happiness };
       const energyBefore: Record<string, number> = { [petAId]: petBefore[0]!.energy, [petBId]: petBefore[1]!.energy };
 
-      // El roll usa Math.random: cada `null` no crea registro ni gasta cooldown, así que
+      // El roll cambia en cada intento: cada `null` no crea registro ni gasta cooldown, así que
       // se repite hasta obtener una interacción real (o agotar intentos de seguridad).
       let record: any = null;
       for (let i = 0; i < 15 && !record; i++) {

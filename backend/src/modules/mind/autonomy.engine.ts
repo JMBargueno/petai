@@ -12,10 +12,22 @@
  * entrenador. Lo memorable se convierte en recuerdos episódicos y en eventos de evolución.
  */
 import { createRng, hashSeed } from '../battles/combat/rng';
-import { AutonomyActivity, AutonomyConfig, AutonomyDaily, Dims } from './mind.types';
+import { AutonomyActivity, AutonomyConfig, AutonomyDaily, Dims, ExtraActivity } from './mind.types';
 import { weighted } from './personality.engine';
 
 export const ACTIVITIES: AutonomyActivity[] = ['rest', 'play_alone', 'explore', 'socialize', 'wait_owner'];
+
+/**
+ * Actividades de este intervalo: las cinco de siempre y, **al final**, las nuevas que estén en la
+ * configuración y vengan a cuento (practicar exige tener un truco por aprender; ordenar, estar en
+ * su hábitat). Sin ellas, la elección es idéntica a la de antes: mismo orden, mismas cuentas.
+ */
+export function activitiesFor(input: SimInput, cfg: AutonomyConfig): AutonomyActivity[] {
+  const extras: ExtraActivity[] = [];
+  if (cfg.activities.practice_trick && input.canPractice) extras.push('practice_trick');
+  if (cfg.activities.tidy_habitat && input.inHabitat) extras.push('tidy_habitat');
+  return extras.length ? [...ACTIVITIES, ...extras] : ACTIVITIES;
+}
 
 export function intervalIndex(t: Date | number, cfg: AutonomyConfig): number {
   const ms = typeof t === 'number' ? t : t.getTime();
@@ -31,6 +43,11 @@ export interface Friend {
   name: string;
   ownerId: string;
   ownerName: string;
+  /**
+   * Cuánto tira ir a verle (por lo bien que le cae y la etapa de la relación). Sin este dato en
+   * ningún amigo, se elige como siempre.
+   */
+  affinity?: number;
 }
 
 export interface SimInput {
@@ -47,6 +64,10 @@ export interface SimInput {
   daily: AutonomyDaily | undefined;
   /** Nombre visible de los objetos encontrables (id → nombre). */
   itemNames?: Record<string, string>;
+  /** Le queda algún truco por aprender (habilita practicar). */
+  canPractice?: boolean;
+  /** Multiplicador de peso por actividad: lo que le apetece (deseos activos) pesa más. */
+  boosts?: Readonly<Record<string, number>>;
 }
 
 export interface Episode {
@@ -67,6 +88,8 @@ export interface SimResult {
   itemsFound: string[];
   /** Encuentros con mascotas de amigos (para escribir también en la memoria del otro). */
   encounters: { index: number; friend: Friend }[];
+  /** Veces que practicó un truco por su cuenta. */
+  practices: number;
   daily: AutonomyDaily;
 }
 
@@ -79,23 +102,45 @@ const TEXTS: Record<AutonomyActivity | 'sleep', string[]> = {
   explore: ['Exploré los alrededores y descubrí un rincón nuevo.', 'Seguí un rastro de chispas del Éter hasta un sitio desconocido.'],
   socialize: ['Jugué un rato con otros ecos del vecindario.', 'Charlé con un Pockai que pasaba por allí.'],
   wait_owner: ['Esperé junto a la puerta por si volvía mi entrenador.', 'Estuve pensando en mi entrenador y en cuándo volvería.'],
+  practice_trick: ['Estuve practicando un truco yo solo, una y otra vez.', 'Ensayé mi truco a escondidas para sorprender a mi entrenador.'],
+  tidy_habitat: ['Ordené mi hábitat: cada cosa en su sitio.', 'Di una vuelta por mi hábitat recolocando mis cosas.'],
 };
+
+/**
+ * A qué amigo va a ver. Si se sabe cuánto tira cada uno, es más probable el que mejor le cae; si
+ * no, se elige como siempre. Usa la misma tirada en los dos casos: no consume azar nuevo.
+ */
+export function pickFriend(friends: Friend[], r: number): Friend {
+  if (!friends.some((f) => typeof f.affinity === 'number')) return pick(friends, r);
+  const weights = friends.map((f) => Math.max(0.05, f.affinity ?? 1));
+  const total = weights.reduce((s, w) => s + w, 0);
+  let acc = 0;
+  for (let i = 0; i < friends.length; i++) {
+    acc += weights[i] / total;
+    if (r < acc) return friends[i];
+  }
+  return friends[friends.length - 1];
+}
 
 function chooseActivity(input: SimInput, energy: number, r: number, cfg: AutonomyConfig): AutonomyActivity {
   if (input.sick || energy < cfg.minEnergyForActivity) return 'rest';
-  const weights = ACTIVITIES.map((a) => {
-    const conf = cfg.activities[a];
+  const list = activitiesFor(input, cfg);
+  const weights = list.map((a) => {
+    const conf = cfg.activities[a]!;
     let w = weighted(conf.base, conf.weights, input.dims);
     if (a === 'rest' && input.inHabitat) w *= 1.5;
+    // Lo que le apetece pesa más (solo si hay deseo: sin él no se toca la cuenta)
+    const boost = input.boosts?.[a];
+    if (boost !== undefined) w *= boost;
     return w;
   });
   const total = weights.reduce((s, w) => s + w, 0);
   let acc = 0;
-  for (let i = 0; i < ACTIVITIES.length; i++) {
+  for (let i = 0; i < list.length; i++) {
     acc += weights[i] / total;
-    if (r < acc) return ACTIVITIES[i];
+    if (r < acc) return list[i];
   }
-  return ACTIVITIES[ACTIVITIES.length - 1];
+  return list[list.length - 1];
 }
 
 const EVOLUTION: Partial<Record<AutonomyActivity, string>> = {
@@ -108,7 +153,7 @@ const EVOLUTION: Partial<Record<AutonomyActivity, string>> = {
 export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): SimResult {
   const daily: AutonomyDaily =
     input.daily?.day === today ? { ...input.daily } : { day: today, items: 0, happiness: 0, energy: 0, encounters: 0 };
-  const res: SimResult = { episodes: [], evolutionEvents: [], energyDelta: 0, happinessDelta: 0, itemsFound: [], encounters: [], daily };
+  const res: SimResult = { episodes: [], evolutionEvents: [], energyDelta: 0, happinessDelta: 0, itemsFound: [], encounters: [], practices: 0, daily };
   let energy = input.energy;
   let sleptLogged = false;
 
@@ -130,7 +175,8 @@ export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): S
     }
 
     const activity = chooseActivity(input, energy, rActivity, cfg);
-    const conf = cfg.activities[activity];
+    const conf = cfg.activities[activity]!;
+    if (activity === 'practice_trick') res.practices++;
 
     // Energía y felicidad con topes diarios (el lazy tick sigue gestionando el decaimiento)
     if (conf.energy > 0) {
@@ -163,7 +209,7 @@ export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): S
       }
     }
     if (activity === 'socialize' && input.friends.length && daily.encounters < cfg.social.dailyCapPerPet) {
-      const friend = pick(input.friends, rFriend);
+      const friend = pickFriend(input.friends, rFriend);
       daily.encounters++;
       res.encounters.push({ index: idx, friend });
       episode = {

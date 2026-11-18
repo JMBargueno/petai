@@ -632,10 +632,10 @@ bloquea.
 |---|---|
 | 2.4 | ~~Cadencia de extracción de memoria en el plan gratuito.~~ **Decidido:** cada 20 mensajes por debajo de inteligencia 200. |
 | 3.4 | Tope diario de progresión de inteligencia. |
-| 4.5 | Cada cuántos turnos puede el Pockai sacar un deseo por su cuenta. |
+| 4.5 | ~~Cada cuántos turnos puede el Pockai sacar un deseo por su cuenta.~~ **Decidido:** como mucho uno cada 8 turnos. |
 | 6.1 | ~~Si existe la etapa `rival`.~~ **Decidido:** no. Dos Pockai pueden discutir y reconciliarse, pero la relación tiene suelo y no hay etapa `rival`. |
-| 6.2 | Topes por visitante y día; si ofrecer un premio consume un alimento real del visitante. |
-| 6.5 | Si los regalos entre Pockai mueven objetos reales entre inventarios o son solo narrativos. |
+| 6.2 | ~~Topes por visitante y día; si ofrecer un premio consume un alimento real del visitante.~~ **Decidido:** hasta 5 interacciones por visita, 3 al día por visitante con efecto, deriva del anfitrión a la mitad que la del dueño; el premio consume un alimento real del visitante. |
+| 6.5 | ~~Si los regalos entre Pockai mueven objetos reales entre inventarios o son solo narrativos.~~ **Decidido:** solo narrativos. |
 
 Ya decidido: un dueño que visita habla con el Pockai anfitrión **por menú de opciones, sin LLM y
 sin texto libre**.
@@ -757,4 +757,93 @@ tres capas, las mismas de la sección 7:
     y que los encuentros autónomos (`socialSweep`, `simulate`) y los buddies pasen por
     `resolveScene` en vez de sus frases fijas, que es la otra mitad de 6.3. Los textos de las
     escenas están en `social.engine.ts` hasta que el lote 5 los pase a identificadores de línea.
-- **Fase 5 — lotes 3 a 6 restantes**, incluido el menú del dueño visitante (6.2).
+- **Fase 5 — lote 4, primera mitad (hecha): 4.1 a 4.4, más 3.2.**
+  - 3.2: tabla de casos de `interpretMessage` en `mind/__fixtures__/intent-cases.json` (frase →
+    intención, con negaciones, falsos positivos e inglés). Destapó 18 fallos, ya corregidos: las
+    frases negadas («no estoy triste») dejan de contar y explorar exige el verbo conjugado.
+  - 4.1: `mind/situation.engine.ts` (puro) con `Situation` y `buildSituation`. El chat la monta
+    una vez por turno. Ante un visitante u otro Pockai filtra lo privado: nada de la capa
+    semántica, ni `emo:owner`, ni episodios nacidos del chat (`isPrivateEpisode`).
+  - 4.2: `resolveMode` (dormida, enferma, sola, con su entrenador, recibiendo o de visita);
+    `validateBehavior` aplica modo, audiencia y coherencia leyendo del catálogo.
+  - 4.3: la tabla de reacciones y sus umbrales viven en `balance.json → personality.behavior`
+    (`catalog` y `reactions`). Un test de regresión compara 72.030 combinaciones con el cálculo
+    anterior (`mind/__fixtures__/legacy-reactions.ts`): coinciden todas salvo 98 empates exactos
+    que antes decidía el redondeo.
+  - 4.4: historial en `Pet.personality.recent`, guardado en la misma escritura que la deriva.
+    Penalización por repetición, nunca tres seguidas, margen para cambiar y desempate sembrado.
+    Se retira el parche de 1.6: la pista de reacción vuelve a enviarse en todos los turnos.
+- **Fase 5 — lote 4, segunda mitad (hecha): 4.5 a 4.7.**
+  - **Motor del turno.** `mind/turn.engine.ts` (puro): `planOwnerTurn` monta la pizarra, decide y
+    prepara el prompt; `settleOwnerTurn` calcula qué cambia. `ChatService` solo trae los datos
+    (`MindMemoryService.situationRows`: episodios y relaciones, nunca la capa semántica) y guarda
+    el resultado en la misma escritura que la deriva.
+  - **4.5 Deseos.** `mind/wishes.engine.ts` y `balance.json → personality.wishes`: explorar, ver a
+    un amigo, enseñar lo que encontró, mimos tras una ausencia, aprender un truco. Como mucho dos
+    activos; el principal entra en el prompt como tema opcional **cada 8 turnos como mucho**
+    (decidido), nunca si el mensaje es triste, un regaño o una despedida. En la vida autónoma
+    multiplica el peso de la actividad que lo satisface. Cumplido: felicidad acotada, un recuerdo
+    y enfriamiento; fuera del chat lo marca `MindService.fulfilWish`, solo si lo había expresado.
+  - **4.6 Trucos.** `mind/tricks.engine.ts` y `personality.tricks`: cuatro trucos con requisito de
+    carácter y número de prácticas, guardados en `Pet.personality.tricks`. Enseñar en el chat
+    cuenta con tope diario; practicar solo, no.
+  - **4.6 Reacciones.** Catorce nuevas en el catálogo. Las del entrenador llevan una condición
+    (`when`): `bring_gift` exige un hallazgo sin contar, `tell_story` algo vivido,
+    `ask_about_day` el primer turno del día, `apologize` haberse enfurruñado llevándose bien y
+    `perform_trick` saber un truco. La validación las aplica también a lo que propone el modelo.
+    Las de visitante y de otro Pockai están en el catálogo con su audiencia, a la espera del lote 6.
+  - **4.6 Actividades autónomas.** `practice_trick` y `tidy_habitat`, opcionales y al final de la
+    lista; `visit_friend` es la elección de amigo por afinidad (`pickFriend`) con la misma tirada
+    de siempre. Los hallazgos se guardan con `kind: 'find'`. El test de determinismo compara con
+    `mind/__fixtures__/autonomy-baseline.json`, congelado antes del cambio.
+  - **4.7 Intenciones.** `ask_life`, `ask_friend`, `praise`, `apology`, `gift` y `teach`, con sus
+    filas en la tabla de casos. `ask_life` y las reacciones de contar garantizan sus recuerdos en
+    el prompt (`RecallOptions.ensureIds`) y quedan como contados; `ask_friend` busca al sujeto por
+    nombre entre las relaciones y, si no lo conoce, se le dice al modelo que no invente.
+  - **Pendiente:** `hosting` y `visiting` de la pizarra siguen sin calcularse en el chat; las
+    reacciones de visitante y de Pockai no tienen aún quien las elija (lote 6); los clientes no
+    pintan todavía los emotes de las reacciones nuevas más allá de la animación base.
+- **Fase 6 — lote 6, primera parte (hecha): 6.3 a 6.7, sin interfaz nueva.**
+  - **Un solo encuentro (6.3).** `mind/encounter.service.ts`: `resolve` decide la escena (no
+    escribe) y `record` guarda el recuerdo de cada uno y mueve la relación. Lo usan la visita en
+    vivo (`EvolutionListener.visitScene`), la vida autónoma (`AutonomyService`: encuentros de
+    `simulate` y `socialSweep`) y los buddies. `simulate` no cambia (el test de determinismo
+    sigue comparando con su base congelada): el servicio descarta su frase fija y escribe la
+    escena. Un encuentro autónomo es una visita de una sola escena (`first`). Si lo último entre
+    dos Pockai fue un pique (`MindMemoryService.lastEncounterMood`), en el siguiente encuentro
+    pueden hacer las paces.
+  - **Buddies.** `BuddiesService.trigger` deja `Math.random`: la tirada va sembrada por pareja,
+    minuto e intento, y qué hacen lo decide la escena (`SCENE_TO_BUDDY` la traduce a los tipos
+    de siempre; `SCENE_NOTE` sustituye a las notas fijas). Emite `buddy:interacted` solo
+    mientras queda tope diario de vínculo. Entre compañeros de casa (`sameHome`) los textos son
+    otros, nadie se presenta y no hay rumores ni regalos.
+  - **Recuerdos nuevos.** El anfitrión guarda la visita con `kind: 'visit'` (el que va, con
+    `encounter`) y lo que le cuentan, con `kind: 'rumor'`.
+  - **Rumores (6.4).** `social.engine.pickRumor` e `isShareable`. Lista blanca en
+    `balance.json → personality.social.rumors.kinds` (hallazgos, aventuras y sucesos), y además
+    nunca nada con sujeto ni con clave: así quedan fuera la capa semántica, los episodios del chat
+    (`ep:*`), deseos, trucos, lo extraído por el modelo (sujeto `owner`) y lo que nombre a un
+    tercero. Solo entre amigos, nunca en una discusión, y solo lo reciente. Un rumor no se
+    reenvía (`isPrivateEpisode`); a su entrenador sí puede contárselo. El validador impide añadir
+    a la lista un origen que no sea de esos tres.
+  - **Regalos (6.5). Decidido: solo narrativos.** Escena `give_gift`: entre amigos y solo si
+    alguno tiene un hallazgo reciente. Da el regalo quien lo encontró; no se mueve ningún objeto
+    entre inventarios. La sala la representa con el guion `give_gift` de `room/visitScene.ts`.
+  - **«Desde la última vez» (6.6).** En `planOwnerTurn`: en el primer turno tras una ausencia se
+    garantizan hasta `memory.sinceLastMax` episodios sin contar, por este orden: visita
+    recibida, encuentro, hallazgo, rumor (`sinceLastOrder`). Quedan como contados al inyectarse
+    y `Pet.personality.lastChatAt` impide forzarlo otra vez en la misma charla. No se fuerza
+    con un mal día, un regaño o una despedida. El diario de reenganche
+    (`reengagement/diary.service.ts`) no lee `PetMemory` (cuenta sueño, combates y mensajes),
+    así que no cuenta lo mismo por dos canales.
+  - **Eventos (6.7).** `coop:care_received` (`CoopCareService.processVisit`), `gift:received`
+    (`GiftingService.send`) y `buddy:interacted`, atendidos en `EvolutionListener` con
+    episodio, relación con ese sujeto y deriva (`buddy_play`, `care_received`, `gift_received`).
+  - **Para los clientes.** `habitat:scene` puede traer el tipo `give_gift` (una app antigua lo
+    ignora: `scriptFor` devuelve vacío). `effects.note` de buddies trae frases nuevas.
+    `GET /pets/:id/mind` incluye en lo reciente los recuerdos `visit` y `rumor`.
+  - **Sin hacer aquí:** los paquetes de cuidados (`care-package.service.ts`) no avisan a la
+    mente; el contador de intentos de buddies vive en memoria del proceso.
+- **Pendiente.** Lote 6, segunda parte: el menú del dueño que visita (6.2). Lote 3 salvo 3.2
+  (métricas, lematización, tope de inteligencia, orden del prompt) y lote 5 (diálogo por datos).
+

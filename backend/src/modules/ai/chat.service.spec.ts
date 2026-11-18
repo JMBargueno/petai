@@ -280,7 +280,7 @@ describe('ChatService: orquestador del cerebro (spec 36)', () => {
     expect(s.mindMemory.remember).toHaveBeenCalledWith('pet-1', [expect.objectContaining({ layer: 'episodic', subject: 'owner' })]);
     expect(s.mindMemory.feel).toHaveBeenCalledWith('pet-1', 'owner', 'Mi entrenador', expect.any(Number));
     // La deriva del chat y la del turno van juntas, en una sola escritura (spec 37 §1.1)
-    expect(s.mind.applyExperience).toHaveBeenCalledWith('pet-1', ['chat', 'talk_comfort']);
+    expect(s.mind.applyExperience).toHaveBeenCalledWith('pet-1', ['chat', 'talk_comfort'], expect.any(Date), undefined);
     expect(s.mind.applyExperience).toHaveBeenCalledTimes(1);
   });
 
@@ -313,6 +313,29 @@ describe('ChatService: orquestador del cerebro (spec 36)', () => {
     (s.svc as any).events = { emit };
     await drive(s);
     expect(emit).toHaveBeenCalledWith('chat:message_sent', expect.objectContaining({ petId: 'pet-1', mindHandled: true }));
+  });
+
+  it('la reacción del turno entra en el historial, en la misma escritura que la deriva (spec 37 §4.4)', async () => {
+    const s = setup([[{ type: 'delta', text: 'Ánimo.' }, { type: 'done' }]]);
+    s.pet.energy = 80;
+    (s.turn as any).situation = { recent: ['listen', 'ask_back'] };
+    await drive(s);
+    expect(s.mind.applyExperience).toHaveBeenCalledTimes(1);
+    expect(s.mind.applyExperience).toHaveBeenCalledWith('pet-1', expect.any(Array), expect.any(Date), { recent: ['listen', 'ask_back', 'comfort'] });
+  });
+
+  it('si el modelo propone otra reacción, la que se guarda es la que se vio', async () => {
+    const s = setup([
+      [
+        { type: 'delta', text: 'Ven aquí.' },
+        { type: 'tool_call', id: 't1', name: 'express_behavior', arguments: '{"action":"cuddle"}' } as any,
+        { type: 'done' },
+      ],
+    ]);
+    s.pet.energy = 80;
+    (s.turn as any).situation = { recent: [] };
+    await drive(s);
+    expect(s.mind.applyExperience).toHaveBeenCalledWith('pet-1', expect.any(Array), expect.any(Date), { recent: ['cuddle'] });
   });
 
   it('un mensaje trivial no crea recuerdos ni mueve la relación con el entrenador', async () => {

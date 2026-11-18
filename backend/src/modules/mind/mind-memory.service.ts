@@ -5,9 +5,10 @@ import { EntitlementService } from '../billing/entitlement.service';
 import { intelligenceTier } from '../ai/personality';
 import { MemoryLayer } from './mind.types';
 import { MindService } from './mind.service';
-import { floorValence, isStage, nextStage, type Stage } from './social.engine';
+import { floorValence, isStage, nextStage, type Shareable, type Stage } from './social.engine';
 import {
   MemoryRow,
+  RecallOptions,
   RecallSelection,
   buildLayeredMemoryBlock,
   capacityFor,
@@ -155,10 +156,47 @@ export class MindMemoryService {
     return { valence, stage };
   }
 
+  /**
+   * Lo que la pizarra de situación necesita de la memoria, en una sola consulta: los episodios
+   * recientes y las relaciones. Nunca la capa semántica (lo aprendido del entrenador no hace falta
+   * para decidir y así no puede colarse donde no debe).
+   */
+  async situationRows(petId: string): Promise<MemoryRow[]> {
+    return (await this.prisma.petMemory.findMany({
+      where: { petId, layer: { in: ['episodic', 'emotional'] } },
+      orderBy: { createdAt: 'desc' },
+      take: 80,
+    })) as unknown as MemoryRow[];
+  }
+
   /** Etapa de la relación de una mascota con un sujeto (`pet:<id>`, `user:<id>`); desconocido si no hay fila. */
   async stageWith(petId: string, subject: string): Promise<Stage> {
     const row = await this.prisma.petMemory.findUnique({ where: { petId_key: { petId, key: `emo:${subject}` } } });
     return isStage((row as any)?.stage) ? (row as any).stage : 'stranger';
+  }
+
+  /**
+   * Episodios propios que una mascota podría contar o regalar a otro Pockai: recientes, sin
+   * sujeto y sin clave (lo nacido del chat, los deseos y los trucos la llevan). El filtro fino
+   * (lista blanca de orígenes) es de `social.engine.isShareable`.
+   */
+  async shareableEpisodes(petId: string, kinds: string[], since: Date): Promise<Shareable[]> {
+    return this.prisma.petMemory.findMany({
+      where: { petId, layer: 'episodic', key: null, subject: null, kind: { in: kinds }, createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, kind: true, content: true, key: true, subject: true, createdAt: true },
+    });
+  }
+
+  /** Cómo acabó el último encuentro con alguien (valencia del recuerdo); `null` si no hay ninguno. */
+  async lastEncounterMood(petId: string, subject: string): Promise<number | null> {
+    const row = await this.prisma.petMemory.findFirst({
+      where: { petId, layer: 'episodic', subject, kind: { in: ['encounter', 'visit'] } },
+      orderBy: { createdAt: 'desc' },
+      select: { valence: true },
+    });
+    return row ? row.valence : null;
   }
 
   async enforceCapacity(petId: string) {
@@ -174,7 +212,7 @@ export class MindMemoryService {
   }
 
   /** Bloque de recuerdos relevantes para este mensaje, dentro del presupuesto del plan. */
-  async recallBlock(petId: string, message: string, budgetKey: string, now = new Date()): Promise<string> {
+  async recallBlock(petId: string, message: string, budgetKey: string, now = new Date(), opts: RecallOptions = {}): Promise<string> {
     const cfg = this.mind.config();
     const rows = (await this.prisma.petMemory.findMany({
       where: { petId },
@@ -182,7 +220,7 @@ export class MindMemoryService {
       take: LOAD_LIMIT,
     })) as unknown as MemoryRow[];
     const budget = cfg.memory.promptBudgetChars[budgetKey] ?? cfg.memory.promptBudgetChars.free ?? 700;
-    const sel = selectForPrompt(rows, message, now, cfg, budget);
+    const sel = selectForPrompt(rows, message, now, cfg, budget, opts);
     await this.markRecalled(sel, now);
     return buildLayeredMemoryBlock(sel, now);
   }

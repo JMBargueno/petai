@@ -21,7 +21,7 @@ export const MEMORY_LAYERS: { id: MemoryLayer; label: string; icon: string; hint
 /** Capa de un recuerdo; los anteriores a la spec 36 se clasifican por `kind` (igual que el backend). */
 export function layerOfMemory(m: Pick<PetMemoryItem, 'layer' | 'kind'>): MemoryLayer {
   if (m.layer === 'episodic' || m.layer === 'semantic' || m.layer === 'emotional') return m.layer;
-  if (m.kind === 'summary' || m.kind === 'event' || m.kind === 'encounter' || m.kind === 'adventure') return 'episodic';
+  if (m.kind === 'summary' || m.kind === 'event' || m.kind === 'encounter' || m.kind === 'adventure' || m.kind === 'find' || m.kind === 'visit' || m.kind === 'rumor') return 'episodic';
   if (m.kind === 'relation') return 'emotional';
   return 'semantic';
 }
@@ -43,7 +43,10 @@ export function memoryIcon(kind: string): string {
     case 'event':
       return 'map';
     case 'encounter':
+    case 'visit':
       return 'users';
+    case 'rumor':
+      return 'chat';
     case 'adventure':
       return 'mountain';
     case 'relation':

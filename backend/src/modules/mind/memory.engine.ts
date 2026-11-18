@@ -38,7 +38,7 @@ export interface MemoryRow {
 
 /** Capa de un recuerdo anterior a la spec 36 (por su `kind`). */
 export function layerOfKind(kind: string): MemoryLayer {
-  if (kind === 'summary' || kind === 'event' || kind === 'encounter' || kind === 'adventure') return 'episodic';
+  if (kind === 'summary' || kind === 'event' || kind === 'encounter' || kind === 'adventure' || kind === 'find' || kind === 'visit' || kind === 'rumor') return 'episodic';
   if (kind === 'relation') return 'emotional';
   return 'semantic';
 }
@@ -131,20 +131,33 @@ export interface RecallSelection {
  * pierde puntuación, y lo que no llega a un mínimo se queda fuera. El marcador de conversación
  * vacía no entra nunca.
  */
+export interface RecallOptions {
+  /** Recuerdos que deben entrar si caben (lo que va a contar, lo que encontró). */
+  ensureIds?: readonly string[];
+  /** Sujeto por el que se pregunta (`pet:<id>`, `user:<id>`): sus recuerdos ganan puesto. */
+  subject?: string | null;
+}
+
 export function selectForPrompt(
   rows: MemoryRow[],
   message: string,
   now: Date,
   cfg: PersonalityConfig,
   budgetChars: number,
+  opts: RecallOptions = {},
 ): RecallSelection {
   const q = tokens(message);
+  const ensure = new Set(opts.ensureIds ?? []);
   const recentMs = cfg.memory.recentRecallMinutes * 60_000;
   const scored = rows
     .filter((m) => !(m.kind === 'summary' && m.content === EMPTY_SUMMARY))
     .map((m) => {
       let overlap = 0;
       for (const t of tokens(m.content)) if (q.has(t)) overlap++;
+      // Preguntar por alguien es hablar de sus recuerdos, aunque el texto no comparta palabras;
+      // y lo que la criatura va a contar tiene que estar delante del modelo
+      if (opts.subject && m.subject === opts.subject) overlap += 3;
+      if (ensure.has(m.id)) overlap += 10;
       const owner = m.key === 'emo:owner';
       const justSeen =
         !owner && overlap === 0 && !!m.lastRecalledAt && now.getTime() - m.lastRecalledAt.getTime() < recentMs;
