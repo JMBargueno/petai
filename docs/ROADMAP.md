@@ -149,7 +149,7 @@ Implementación de 33 nuevas funcionalidades organizadas en tres oleadas. Cada f
 | 015 — Cocina / Menú | `backend/src/modules/cooking/` | ⚠️ |
 | 016 — Entrenamiento Elemental | `backend/src/modules/training/` | ⚠️ |
 | 017 — Genes y Temperamento | `backend/src/modules/genes/` | ⚠️ |
-| 018 — Aventura Narrativa IA | `backend/src/modules/adventure/` | ⚠️ |
+| 018 — Aventura diaria (DecisionStoryGenerator: historias de decisión tejidas de noche por la IA del sistema) | `backend/src/modules/decision-story/` | ✅ |
 
 ### Oleada 3 — Comunidad y Ecosistema
 

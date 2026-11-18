@@ -52,6 +52,7 @@ import com.petai.app.ui.pet.PetScreen
 import com.petai.app.ui.play.PlayScreen
 import com.petai.app.ui.play.PlayViewModel
 import com.petai.app.ui.play.PlayViewModelFactory
+import com.petai.app.ui.adventure.AdventureScreen
 import com.petai.app.ui.raid.RaidScreen
 import com.petai.app.ui.shop.ShopScreen
 import com.petai.app.ui.theme.BalanceHeader
@@ -63,12 +64,12 @@ import com.petai.app.ui.tournament.TournamentScreen
 
 /**
  * Cinco destinos de primer nivel (docs/PANTALLAS.md §3.1) con sub-pestañas:
- * Mascota (Inicio, Hábitat) · Jugar (Arena, Minijuegos, Raid, Torneo) · Chat · Progreso (Misiones) ·
+ * Mascota (Inicio, Hábitat) · Jugar (Arena, Minijuegos, Raid, Torneo, Aventura) · Chat · Progreso (Misiones) ·
  * Más (Tienda, Cofres, Amigos, Cuenta).
  */
 private enum class Dest(val label: String, val icon: ImageVector, val subs: List<String>) {
     Pet("Mascota", Lucide.PawPrint, listOf("Inicio", "Hábitat")),
-    Play("Jugar", Lucide.Gamepad2, listOf("Arena", "Minijuegos", "Raid", "Torneo")),
+    Play("Jugar", Lucide.Gamepad2, listOf("Arena", "Minijuegos", "Raid", "Torneo", "Aventura")),
     Chat("Chat", Lucide.MessageCircle, emptyList()),
     Progress("Progreso", Lucide.Trophy, emptyList()),
     More("Más", Lucide.Ellipsis, listOf("Tienda", "Cofres", "Amigos", "Clan", "Cuenta")),
@@ -217,7 +218,8 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                                 PlayScreen(play, section = sub)
                             }
                             2 -> RaidScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
-                            else -> TournamentScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
+                            3 -> TournamentScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
+                            else -> AdventureScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
                         }
                     Dest.Chat ->
                         if (pet == null) noPet() else {

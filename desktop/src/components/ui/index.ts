@@ -10,6 +10,7 @@ export { default as FeatureHeader } from './FeatureHeader.svelte';
 export { default as ListRow } from './ListRow.svelte';
 export { default as Modal } from './Modal.svelte';
 export { default as Notice } from './Notice.svelte';
+export { default as SceneBackdrop } from './SceneBackdrop.svelte';
 export { default as ProgressBar } from './ProgressBar.svelte';
 export { default as SectionHeader } from './SectionHeader.svelte';
 export { default as Segmented } from './Segmented.svelte';

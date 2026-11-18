@@ -143,4 +143,34 @@ describe('ManagedBudgetService', () => {
       await expect(svc.acquireSlot()).resolves.toEqual(expect.any(String));
     });
   });
+
+  describe('presupuesto con ámbito propio', () => {
+    it('reserva en su propia clave, sin tocar la de la IA gestionada', async () => {
+      const evalMock = jest.fn(async () => 300);
+      redis.run.mockImplementation(async (fn: any) => fn({ eval: evalMock }));
+      await expect(svc.reserveScoped('system-ai', 1, 0.0003)).resolves.toBe(300);
+      const [, , key, micro, max] = evalMock.mock.calls[0] as unknown as string[];
+      expect(key).toMatch(/^test:system-ai:spend:\d{4}-\d{2}-\d{2}$/);
+      expect(micro).toBe('300');
+      expect(max).toBe('1000000');
+    });
+
+    it('devuelve null (sin lanzar) cuando el ámbito está agotado o su tope es 0', async () => {
+      redis.run.mockImplementation(async (fn: any) => fn({ eval: jest.fn(async () => -1) }));
+      await expect(svc.reserveScoped('system-ai', 1, 0.01)).resolves.toBeNull();
+      await expect(svc.reserveScoped('system-ai', 0, 0.01)).resolves.toBeNull();
+    });
+
+    it('sin Redis lleva la cuenta en memoria y liquida al coste real', async () => {
+      redis.run.mockRejectedValue(new Error('redis caído'));
+      await expect(svc.reserveScoped('system-ai', 0.001, 0.0008)).resolves.toBe(800);
+      // Se gastó menos de lo reservado: queda sitio para otra llamada
+      await svc.settleScoped('system-ai', 800, 0.0002);
+      await expect(svc.getScopedSpendUsd('system-ai')).resolves.toBeCloseTo(0.0002);
+      await expect(svc.reserveScoped('system-ai', 0.001, 0.0008)).resolves.toBe(800);
+      await expect(svc.reserveScoped('system-ai', 0.001, 0.0008)).resolves.toBeNull();
+      // El gasto de la IA gestionada no se ha movido
+      await expect(svc.getDailySpendUsd()).resolves.toBe(0);
+    });
+  });
 });

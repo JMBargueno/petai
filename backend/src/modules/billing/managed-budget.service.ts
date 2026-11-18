@@ -160,6 +160,63 @@ export class ManagedBudgetService {
   }
 
   /**
+   * Presupuesto diario con ámbito propio (p. ej. `system-ai`), separado del de la IA gestionada del
+   * chat: ni comparte gasto ni circuit breaker. Reserva de forma atómica el coste estimado y devuelve
+   * los micro-USD reservados, o `null` si el presupuesto del ámbito está agotado (no lanza).
+   */
+  async reserveScoped(scope: string, maxUsd: number, estimateUsd: number): Promise<number | null> {
+    const microUsd = Math.max(0, Math.round(estimateUsd * 1_000_000));
+    const max = Math.round(Math.max(0, maxUsd) * 1_000_000);
+    if (max <= 0) return null;
+    const day = this.getUtcDateKey();
+    const spendKey = this.redis.key(`${scope}:spend:${day}`);
+    const memoryKey = `${scope}:${day}`;
+
+    const result = await this.redis
+      .run(async (r) => r.eval(RESERVE_LUA, 1, spendKey, String(microUsd), String(max)), 'spend_reserve_scoped')
+      .catch(() => null);
+    if (result === null || result === undefined) {
+      const cur = this.memorySpend.get(memoryKey) ?? 0;
+      if (cur >= max) return null;
+      this.memorySpend.set(memoryKey, cur + microUsd);
+      return microUsd;
+    }
+    return Number(result) < 0 ? null : microUsd;
+  }
+
+  /** Ajusta una reserva de `reserveScoped` al coste real. */
+  async settleScoped(scope: string, reservedMicro: number, actualUsd: number): Promise<void> {
+    const delta = Math.round(Math.max(0, actualUsd) * 1_000_000) - reservedMicro;
+    if (delta === 0) return;
+    const day = this.getUtcDateKey();
+    const spendKey = this.redis.key(`${scope}:spend:${day}`);
+    const ok = await this.redis
+      .run(async (r) => {
+        const total = await r.incrby(spendKey, delta);
+        if (total === delta) await r.expire(spendKey, 172800);
+        return true;
+      }, 'spend_settle_scoped')
+      .catch(() => null);
+    if (ok === null) {
+      const memoryKey = `${scope}:${day}`;
+      this.memorySpend.set(memoryKey, Math.max(0, (this.memorySpend.get(memoryKey) ?? 0) + delta));
+    }
+  }
+
+  /** Gasto acumulado hoy (UTC) en un ámbito de `reserveScoped`, en USD. */
+  async getScopedSpendUsd(scope: string): Promise<number> {
+    const day = this.getUtcDateKey();
+    const spendKey = this.redis.key(`${scope}:spend:${day}`);
+    const micro = await this.redis
+      .run(async (r) => {
+        const val = await r.get(spendKey);
+        return val ? parseInt(val, 10) : 0;
+      }, 'spend_get_scoped')
+      .catch(() => null);
+    return (micro ?? this.memorySpend.get(`${scope}:${day}`) ?? 0) / 1_000_000;
+  }
+
+  /**
    * Semáforo global de streams simultáneos de IA gestionada (`managedAi.maxConcurrency`).
    * Cada plaza caduca a los 5 min por si un stream se abandona o una réplica muere sin liberar.
    * Devuelve el identificador de la plaza para `releaseSlot`.

@@ -385,15 +385,28 @@ const season = {
 const tier = (n: number) => ({ tier: n, freeRewards: [{ type: 'coins', value: 100 * n }], premiumRewards: [{ type: 'gems', value: 2 * n }] });
 const seasonProgress = { seasonId: 's-1', seasonName: season.name, currentTier: 4, totalXp: 2180, xpPerTier: 500, maxTier: 30, xpToNextTier: 320, hasPass: false, unlockedTiers: [1, 2, 3, 4].map(tier), nextReward: tier(5), seasonExpired: false };
 
-const adventureScene = {
-  order: 1,
-  text: 'Fuego encuentra una cueva que respira vapor caliente. Dentro se oye un goteo y, más al fondo, algo que parece un ronquido.',
-  choices: [
-    { label: 'Entrar despacio', hint: 'Valentía' },
-    { label: 'Llamar desde fuera', hint: 'Sociabilidad' },
-    { label: 'Rodear la colina', hint: 'Curiosidad' },
-  ],
-};
+// Aventura diaria: las historias semilla de game-data, jugables de verdad en la demo
+const storySeeds = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/story-seeds.json'), 'utf8')).stories as any[];
+const storyRewards = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/stories.json'), 'utf8')).rewards;
+const storyPlays: Record<string, { answers: number[]; status: string; outcome: string | null }> = {};
+const storyLimit = 3;
+const storyPublic = (scene: any, index: number) => ({ index, locationId: scene.locationId, narration: scene.narration, event: scene.event, choices: scene.choices.map((c: any) => ({ label: c.label, approach: c.approach })) });
+function storyOf(id: string) {
+  const s = storySeeds.find((x) => x.id === id);
+  if (!s) throw fail(404, 'Historia no encontrada');
+  return s;
+}
+function storyState(id: string) {
+  const s = storyOf(id);
+  const p = storyPlays[id];
+  const i = p.answers.length;
+  return {
+    storyId: id, title: s.title, synopsis: s.synopsis, sceneCount: s.scenes.length, status: p.status, sceneIndex: i,
+    scene: i < s.scenes.length ? storyPublic(s.scenes[i], i) : null,
+    answered: p.answers.map((o, k) => ({ sceneIndex: k, optionIndex: o, label: s.scenes[k].choices[o].label, consequence: s.scenes[k].choices[o].consequence })),
+    result: p.status === 'completed' ? { outcome: p.outcome, score: 1, rewards: storyRewards[p.outcome ?? 'partial'] } : null,
+  };
+}
 
 let visiting: null | { friendId: string } = null;
 let tick = 0;
@@ -538,13 +551,45 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/cooking\/daily-menu$/, () => ({ date: iso().slice(0, 10), recipeId: 'stew', recipeName: 'Guiso de brasas', difficulty: 2, ingredients: ['Seta', 'Baya', 'Raíz', 'Miel'], buff: { stat: 'energy', value: 10 }, bonus: 'Doble de monedas hoy' })],
   ['POST', /^\/cooking\/start$/, () => ({ sessionId: uid('ck'), recipeId: 'stew', recipeName: 'Guiso de brasas', difficulty: 2, ingredients: ['Seta', 'Baya', 'Raíz', 'Miel'], order: ['Baya', 'Miel', 'Seta', 'Raíz'], hotPotPositions: [1], durationSeconds: 30, seed: 3, expiresAt: iso(2 * MIN) })],
   ['POST', /^\/cooking\/submit$/, () => ({ score: 75, buff: { stat: 'energy', value: 10, durationMs: HOUR }, coins: 40, correctPct: 75, message: '¡Casi perfecto!' })],
-  ['GET', /^\/adventure\/current$/, () => ({ active: false })],
-  ['GET', /^\/adventure\/history$/, () => [
-    { adventureId: 'ad-1', theme: 'El faro apagado', sceneCount: 4, outcome: 'win', score: 82, xpAwarded: 60, coinsAwarded: 90, isPremium: false, startedAt: iso(-DAY), finishedAt: iso(-DAY + 10 * MIN) },
-    { adventureId: 'ad-2', theme: 'La cueva que respira', sceneCount: 4, outcome: 'lose', score: 20, xpAwarded: 10, coinsAwarded: 0, isPremium: true, startedAt: iso(-3 * DAY), finishedAt: iso(-3 * DAY + 8 * MIN) },
+  ['GET', /^\/stories\/today$/, () => ({
+    day: iso().slice(0, 10), plan: 'pro', limit: storyLimit, used: Object.keys(storyPlays).length, resetsAt: iso(8 * HOUR),
+    stories: storySeeds.slice(0, 4).map((s, slot) => ({
+      id: s.id, slot, title: s.title, synopsis: s.synopsis, sceneCount: s.scenes.length, locationIds: s.scenes.map((sc: any) => sc.locationId),
+      chronicle: slot === 0 ? { chapter: 2, closes: false } : null,
+      previously: slot === 0 ? { title: 'El frío de la Deriva', decided: 'Avisaron por el Eco de que las hebras se estaban aflojando.' } : null,
+      rerun: slot === 3,
+      play: storyPlays[s.id] ? { status: storyPlays[s.id].status, sceneIndex: storyPlays[s.id].answers.length, outcome: storyPlays[s.id].outcome } : null,
+    })),
+  })],
+  ['GET', /^\/stories\/history$/, () => [
+    { storyId: 'old-1', day: iso(-DAY).slice(0, 10), title: 'El frío de la Deriva', status: 'completed', outcome: 'win', score: 0.83, xpAwarded: 30, coinsAwarded: 20, startedAt: iso(-DAY), finishedAt: iso(-DAY + 6 * MIN), answers: [{ sceneIndex: 0, optionIndex: 1, label: 'Avisar al Nexo por el Eco', withMajority: true }, { sceneIndex: 1, optionIndex: 0, label: 'Trenzar los bordes', withMajority: false }, { sceneIndex: 2, optionIndex: 0, label: 'Quedarse a hacerle compañía', withMajority: true }] },
   ]],
-  ['POST', /^\/adventure\/start$/, ({ body }) => (body.premium && spend('gems', 10), { adventureId: uid('ad'), theme: 'La cueva que respira', sceneCount: 3, currentScene: 1, scene: adventureScene, isPremium: !!body.premium, retriesLeft: 1 })],
-  ['POST', /^\/adventure\/choose$/, () => ({ completed: true, outcome: 'partial', score: 55, rewards: { xp: 35, coins: 40 }, memory: 'Fuego salió de la cueva con un mechón chamuscado y una historia que contar.' })],
+  ['POST', /^\/stories\/([^/]+)\/start$/, ({ m }) => {
+    storyOf(m[1]);
+    if (!storyPlays[m[1]]) {
+      if (Object.keys(storyPlays).length >= storyLimit) throw fail(403, 'Ya has vivido todas tus historias de hoy.');
+      storyPlays[m[1]] = { answers: [], status: 'active', outcome: null };
+    }
+    return storyState(m[1]);
+  }],
+  ['POST', /^\/stories\/([^/]+)\/answer$/, ({ m, body }) => {
+    const s = storyOf(m[1]);
+    const p = storyPlays[m[1]];
+    if (!p) throw fail(404, 'No has empezado esa historia');
+    const scene = s.scenes[body.sceneIndex];
+    if (body.sceneIndex !== p.answers.length || !scene?.choices[body.optionIndex]) throw fail(409, 'Esa escena ya está respondida');
+    p.answers.push(body.optionIndex);
+    const last = p.answers.length >= s.scenes.length;
+    const counts = scene.choices.map((_: unknown, k: number) => 12 + ((k * 17 + body.sceneIndex * 5) % 23) + (k === body.optionIndex ? 1 : 0));
+    let completed = null;
+    if (last) {
+      const total = p.answers.reduce((sum, o, k) => sum + s.scenes[k].choices[o].score, 0) / (s.scenes.length * 2);
+      p.outcome = total >= 0.7 ? 'win' : total >= 0.4 ? 'partial' : 'lose';
+      p.status = 'completed';
+      completed = { outcome: p.outcome, score: total, rewards: storyRewards[p.outcome], memory: `Viví una aventura: ${s.title}.` };
+    }
+    return { sceneIndex: body.sceneIndex, optionIndex: body.optionIndex, consequence: scene.choices[body.optionIndex].consequence, community: { counts, total: counts.reduce((a: number, b: number) => a + b, 0) }, next: last ? null : storyPublic(s.scenes[body.sceneIndex + 1], body.sceneIndex + 1), completed };
+  }],
   ['GET', /^\/habitat$/, () => ({
     petId: 'p-1',
     habitatSeed: 7,

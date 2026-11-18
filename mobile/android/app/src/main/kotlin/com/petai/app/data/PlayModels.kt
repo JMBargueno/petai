@@ -349,6 +349,110 @@ data class HabitatCatalog(
 @Serializable
 data class HabitatBuffs(val petId: String = "", val activeBuffs: Map<String, Double> = emptyMap(), val itemCount: Int = 0)
 
+// ── Aventura diaria (historias de decisión) ───────────────────────────────────
+@Serializable
+data class StoryMood(val timeOfDay: String? = null, val weather: String? = null)
+
+@Serializable
+data class StoryEvent(val kind: String = "", val text: String = "", val fx: String? = null)
+
+@Serializable
+data class StoryChoice(val label: String = "", val approach: String = "")
+
+/** Escena antes de responder: sin la consecuencia ni la calidad de cada opción. */
+@Serializable
+data class StoryScene(
+    val index: Int = 0,
+    val locationId: String = "",
+    val mood: StoryMood? = null,
+    /** Lleva el marcador `{pet}`, que la app sustituye por el nombre del Pockai. */
+    val narration: String = "",
+    val event: StoryEvent = StoryEvent(),
+    val choices: List<StoryChoice> = emptyList(),
+)
+
+@Serializable
+data class StoryChronicle(val chapter: Int = 0, val closes: Boolean = false)
+
+@Serializable
+data class StoryPreviously(val title: String = "", val decided: String = "")
+
+@Serializable
+data class StoryPlayRef(val status: String = "", val sceneIndex: Int = 0, val outcome: String? = null)
+
+@Serializable
+data class StorySummary(
+    val id: String = "",
+    val slot: Int = 0,
+    val title: String = "",
+    val synopsis: String = "",
+    val sceneCount: Int = 0,
+    val locationIds: List<String> = emptyList(),
+    val chronicle: StoryChronicle? = null,
+    val previously: StoryPreviously? = null,
+    val rerun: Boolean = false,
+    val play: StoryPlayRef? = null,
+)
+
+@Serializable
+data class StoryToday(
+    val day: String? = null,
+    val plan: String = "free",
+    val limit: Int = 1,
+    val used: Int = 0,
+    val resetsAt: String = "",
+    val stories: List<StorySummary> = emptyList(),
+)
+
+@Serializable
+data class StoryRewards(val xp: Int = 0, val coins: Int = 0, val happiness: Int = 0)
+
+@Serializable
+data class StoryResult(val outcome: String = "", val score: Double = 0.0, val rewards: StoryRewards = StoryRewards(), val memory: String = "")
+
+@Serializable
+data class StoryAnswered(val sceneIndex: Int = 0, val optionIndex: Int = 0, val label: String = "", val consequence: String = "")
+
+@Serializable
+data class StoryPlayState(
+    val storyId: String = "",
+    val title: String = "",
+    val synopsis: String = "",
+    val sceneCount: Int = 0,
+    val status: String = "",
+    val sceneIndex: Int = 0,
+    val scene: StoryScene? = null,
+    val answered: List<StoryAnswered> = emptyList(),
+    val result: StoryResult? = null,
+)
+
+@Serializable
+data class StoryCommunity(val counts: List<Int> = emptyList(), val total: Int = 0)
+
+@Serializable
+data class StoryAnswer(
+    val sceneIndex: Int = 0,
+    val optionIndex: Int = 0,
+    val consequence: String = "",
+    val community: StoryCommunity = StoryCommunity(),
+    val next: StoryScene? = null,
+    val completed: StoryResult? = null,
+)
+
+@Serializable
+data class StoryHistoryAnswer(val sceneIndex: Int = 0, val optionIndex: Int = 0, val label: String = "", val withMajority: Boolean? = null)
+
+@Serializable
+data class StoryHistoryEntry(
+    val storyId: String = "",
+    val day: String = "",
+    val title: String = "",
+    val status: String = "",
+    val outcome: String? = null,
+    val startedAt: String = "",
+    val answers: List<StoryHistoryAnswer> = emptyList(),
+)
+
 // ── Raid Boss (Paso 5, feature 013) ───────────────────────────────────────────
 @Serializable
 data class RaidContribution(val damageDealt: Long = 0, val attacks: Int = 0, val percentage: Double = 0.0)

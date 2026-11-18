@@ -123,7 +123,7 @@
 </script>
 
 <div class="ui-stack">
-  <Card variant="hero">
+  <Card variant="hero" backdrop="kitchen">
     <FeatureHeader icon="chef" title="Cocina" sub="Memoriza la receta y añade los ingredientes en orden · cuesta 10 de energía">
       <svelte:fragment slot="end">
         {#if session && (phase === 'memorize' || phase === 'cook')}

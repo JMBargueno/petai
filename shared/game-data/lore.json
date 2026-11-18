@@ -51,6 +51,12 @@
       "text": "Un Custodio solo emite una hebra de Resonancia, frágil. En los primeros ciclos, miles de Santuarios brillaban aislados; cuando un Custodio desaparecía, el suyo quedaba a la deriva. Fue la Gran Deriva. Luego algunos descubrieron que, al sincronizar sus Santuarios, las hebras no se suman: se trenzan. Varias hebras forman un Nexo, que amplifica la Resonancia de todos, protege a los Santuarios que se apagan, abre caminos para las visitas entre hábitats, tiene voz propia (el Eco) y se compromete con metas comunes (los Juramentos). «Una hebra se rompe; un trenzado sostiene el Éter». Hay cuatro rangos: el Forjador del Nexo, que tejió el primer nudo; los Guardianes, que sostienen la estructura; los Vigías, que cuidan el Eco y la puerta e invitan a nuevas hebras; y los Hermanos, la fuerza del trenzado."
     },
     {
+      "id": "roturas",
+      "title": "Las Roturas del Nexo y la Crónica",
+      "keywords": ["rotura", "roturas", "desgarro", "grieta", "malla", "cronica", "aventura", "aventuras", "historia de hoy", "que decidimos", "claro de las hebras", "corriente de datos", "paramo de ascuas", "campo de nodos", "santuario a la deriva", "ciudadela"],
+      "text": "La malla que trenzan los Nexos no es eterna: las hebras se gastan y, donde un Santuario lleva demasiado tiempo frío, el trenzado se rasga. Eso es una Rotura del Nexo. No es el Nexo de nadie, sino un desgarro en la malla entre Santuarios: hebras sueltas, suelo de cristal partido y una grieta por la que se escapa la Resonancia y entra el frío de la Gran Deriva. Una Rotura no se cierra sola; alguien tiene que ir y decidir qué hacer. Cada noche, cuando baja la marea del Éter, el Telar de Mulberry teje las historias del día siguiente, y no lo hace a ciegas: recuerda lo que decidieron los Custodios. Si la mayoría eligió reparar una Rotura, al día siguiente amanece trenzada; si la dejaron abierta, el frío habrá avanzado. Los Custodios lo llaman la Crónica: una historia escrita entre todos, un día cada vez. Recorre lugares como el Claro de las Hebras, la Corriente de Datos, la Orilla del Telar, el Páramo de Ascuas, el Campo de Nodos, un Santuario a la Deriva o la Ciudadela del Nexo."
+    },
+    {
       "id": "huella",
       "title": "La Huella del Custodio",
       "keywords": ["huella", "cristal de recuerdos", "vida en el eter", "que haces cuando", "cuando no estoy"],

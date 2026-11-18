@@ -1,3 +1,4 @@
+import { extractJsonObject } from './json-output';
 /**
  * Utilidades puras de la memoria de la mascota (sin acceso a BD ni al LLM).
  */
@@ -52,16 +53,8 @@ export interface Extraction {
 
 /** Interpreta la salida del LLM de forma tolerante (puede traer ```json o texto alrededor). */
 export function parseExtraction(output: string): Extraction | null {
-  const start = output.indexOf('{');
-  const end = output.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
-  let json: any;
-  try {
-    json = JSON.parse(output.slice(start, end + 1));
-  } catch {
-    return null;
-  }
-  if (!json || typeof json !== 'object') return null;
+  const json: any = extractJsonObject(output);
+  if (!json) return null;
 
   const summary = typeof json.summary === 'string' ? cleanText(json.summary, MAX_SUMMARY_CHARS) : '';
   const rawFacts: unknown[] = Array.isArray(json.facts) ? json.facts : [];

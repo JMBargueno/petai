@@ -6,8 +6,9 @@
  * Versionado: si cambias un mensaje de forma incompatible, sube `PROTOCOL_VERSION`. La escena lo
  * anuncia en `ready` para que la app nativa compruebe que habla el mismo idioma.
  */
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 // v3: efectos compartidos (`playEffect`, `petAction` → `effectEnded`), ver src/effects.
+// v4: escena de la aventura diaria (`setStory` → `storyBeat`), ver src/story.
 
 import { parseEquipped, type EquippedAccessories } from './bake/accessories';
 import { parseClock } from './ambience/sunClock';
@@ -99,6 +100,36 @@ export interface AmbienceMessage {
 
 export type BackdropMode = 'painted' | 'plain';
 
+export type StoryPhase = 'enter' | 'await' | 'react' | 'exit';
+export type StoryBeat = 'arrived' | 'reacted' | 'exited';
+export const STORY_TIMES = ['dawn', 'day', 'dusk', 'night'] as const;
+export const STORY_WEATHER = ['clear', 'rain', 'snow', 'fog', 'storm'] as const;
+
+/**
+ * Escena de la aventura diaria (null = salir del modo historia). El mensaje lleva el estado ENTERO
+ * y es idempotente: repetirlo no cambia nada, y si llega por primera vez en una fase posterior a
+ * `enter` (recarga del WebView), el Pockai aparece ya en su sitio.
+ */
+export interface StoryState {
+  /** Identifica la escena (p. ej. `<storyId>:<índice>`). Una clave nueva empieza una escena nueva. */
+  key: string;
+  /** Localización de shared/game-data/story-locations.json. */
+  locationId: string;
+  /**
+   * `enter`: entra andando por la izquierda hasta el centro (→ `storyBeat: arrived`).
+   * `await`: quieto en el centro mientras el jugador elige.
+   * `react`: reacciona a la respuesta (→ `storyBeat: reacted`).
+   * `exit`: sale andando por la derecha (→ `storyBeat: exited`).
+   */
+  phase: StoryPhase;
+  /** Hora y clima de la escena. Sin ellos, los reales del dispositivo. */
+  mood?: { timeOfDay?: (typeof STORY_TIMES)[number]; weather?: (typeof STORY_WEATHER)[number] };
+  /** Efecto de @pockai/scene/effects que acompaña al evento, al llegar al centro. */
+  fx?: string;
+  /** Clip del Pockai al reaccionar (`happy`, `sad`…). */
+  clip?: string;
+}
+
 /** Anfitrión → escena. */
 export type HostMessage =
   | { type: 'setPet'; pet: PetState }
@@ -126,7 +157,9 @@ export type HostMessage =
    * Reenvía un aviso `pet:action` del backend tal cual: la escena decide el efecto con la misma
    * tabla que el escritorio (`effectForPetAction`). Así la app nativa no repite la lógica.
    */
-  | { type: 'petAction'; action: string; context?: Record<string, unknown> };
+  | { type: 'petAction'; action: string; context?: Record<string, unknown> }
+  /** Modo historia: escenario por capas con el Pockai andando de izquierda a derecha. */
+  | { type: 'setStory'; story: StoryState | null };
 
 /** Datos de un efecto: solo textos y números (viajan por el puente como JSON). */
 export type EffectParams = Record<string, string | number>;
@@ -142,6 +175,8 @@ export type SceneEvent =
   | { type: 'furnitureMoved'; itemId: string; x: number; y: number; rotation: number }
   /** Un efecto pedido con `playEffect` o `petAction` terminó (o se descartó por otro más importante). */
   | { type: 'effectEnded'; id: string }
+  /** Hito de la escena de historia en curso (ver `StoryState.phase`). Cada uno llega una vez por escena. */
+  | { type: 'storyBeat'; key: string; beat: StoryBeat }
   | { type: 'error'; message: string };
 
 const HOST_TYPES = new Set<HostMessage['type']>([
@@ -159,7 +194,29 @@ const HOST_TYPES = new Set<HostMessage['type']>([
   'rotateSelected',
   'playEffect',
   'petAction',
+  'setStory',
 ]);
+
+/** Escena de historia validada; undefined si está mal formada. */
+function parseStory(raw: unknown): StoryState | null | undefined {
+  if (raw === null) return null;
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.key !== 'string' || !/^[A-Za-z0-9:_-]{1,80}$/.test(r.key)) return undefined;
+  if (typeof r.locationId !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(r.locationId)) return undefined;
+  if (r.phase !== 'enter' && r.phase !== 'await' && r.phase !== 'react' && r.phase !== 'exit') return undefined;
+  const story: StoryState = { key: r.key, locationId: r.locationId, phase: r.phase };
+  if (r.mood && typeof r.mood === 'object') {
+    const m = r.mood as Record<string, unknown>;
+    const mood: NonNullable<StoryState['mood']> = {};
+    if ((STORY_TIMES as readonly unknown[]).includes(m.timeOfDay)) mood.timeOfDay = m.timeOfDay as (typeof STORY_TIMES)[number];
+    if ((STORY_WEATHER as readonly unknown[]).includes(m.weather)) mood.weather = m.weather as (typeof STORY_WEATHER)[number];
+    if (mood.timeOfDay || mood.weather) story.mood = mood;
+  }
+  if (typeof r.fx === 'string' && /^[a-z-]{1,40}$/.test(r.fx)) story.fx = r.fx;
+  if (typeof r.clip === 'string' && /^[a-z_]{1,24}$/.test(r.clip)) story.clip = r.clip;
+  return story;
+}
 
 /** Datos de efecto validados: claves cortas y valores texto/número finitos; el resto se descarta. */
 function parseEffectParams(raw: unknown): EffectParams {
@@ -309,6 +366,10 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
       return typeof m.id === 'string' && /^[a-z-]{1,40}$/.test(m.id)
         ? { type: 'playEffect', id: m.id, params: parseEffectParams(m.params) }
         : null;
+    case 'setStory': {
+      const story = parseStory(m.story);
+      return story === undefined ? null : { type: 'setStory', story };
+    }
     case 'petAction': {
       if (typeof m.action !== 'string' || !/^[a-z_]{1,40}$/.test(m.action)) return null;
       const ctx = m.context && typeof m.context === 'object' && !Array.isArray(m.context) ? (m.context as Record<string, unknown>) : undefined;

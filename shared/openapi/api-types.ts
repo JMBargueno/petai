@@ -2843,24 +2843,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/adventure/start": {
+    "/v1/stories/today": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Historias del día (bucket global), cupo del plan y progreso del usuario */
+        get: operations["DecisionStoryController_today"];
         put?: never;
-        /** Iniciar aventura diaria (1 gratis/día, premium con gemas) */
-        post: operations["AdventureController_start"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/adventure/choose": {
+    "/v1/stories/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historial del usuario: qué contestó en cada historia */
+        get: operations["DecisionStoryController_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stories/{id}/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -2869,8 +2886,59 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Elegir opción y avanzar a la siguiente escena */
-        post: operations["AdventureController_choose"];
+        /** Empezar una historia de hoy (o retomarla). Free 1 al día, Pro 3. */
+        post: operations["DecisionStoryController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stories/{id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Responder la escena pendiente; devuelve la consecuencia y la escena siguiente o el resultado */
+        post: operations["DecisionStoryController_answer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/stories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historias de un día con su origen, coste y votos por opción */
+        get: operations["AdminDecisionStoryController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/stories/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Teje ahora las historias que falten de un día (opcionalmente, reemplaza las que nadie ha empezado) */
+        post: operations["AdminDecisionStoryController_regenerate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2884,8 +2952,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ver aventura en curso */
-        get: operations["AdventureController_current"];
+        /**
+         * Retirado: siempre sin aventura en curso. Usa GET /stories/today
+         * @deprecated
+         */
+        get: operations["LegacyAdventureController_current"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2901,10 +2972,53 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Historial de aventuras completadas */
-        get: operations["AdventureController_history"];
+        /**
+         * Retirado: siempre vacío. Usa GET /stories/history
+         * @deprecated
+         */
+        get: operations["LegacyAdventureController_history"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/adventure/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retirado (410). Usa POST /stories/:id/start
+         * @deprecated
+         */
+        post: operations["LegacyAdventureController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/adventure/choose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retirado (410). Usa POST /stories/:id/answer
+         * @deprecated
+         */
+        post: operations["LegacyAdventureController_choose"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9879,20 +9993,56 @@ export interface operations {
             };
         };
     };
-    AdventureController_start: {
+    DecisionStoryController_today: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DecisionStoryController_history: {
+        parameters: {
+            query: {
+                limit: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DecisionStoryController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Pet que emprende la aventura */
+                    /** Format: uuid */
                     petId: string;
-                    /** @description Usar una aventura premium (gasta gemas) */
-                    premium?: boolean;
                 };
             };
         };
@@ -9905,19 +10055,19 @@ export interface operations {
             };
         };
     };
-    AdventureController_choose: {
+    DecisionStoryController_answer: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Aventura en curso */
-                    adventureId: string;
-                    /** @description Índice de la opción elegida */
+                    sceneIndex: number;
                     optionIndex: number;
                 };
             };
@@ -9931,7 +10081,43 @@ export interface operations {
             };
         };
     };
-    AdventureController_current: {
+    AdminDecisionStoryController_list: {
+        parameters: {
+            query: {
+                day: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDecisionStoryController_regenerate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LegacyAdventureController_current: {
         parameters: {
             query?: never;
             header?: never;
@@ -9948,11 +10134,9 @@ export interface operations {
             };
         };
     };
-    AdventureController_history: {
+    LegacyAdventureController_history: {
         parameters: {
-            query: {
-                limit: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -9960,6 +10144,40 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LegacyAdventureController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LegacyAdventureController_choose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
