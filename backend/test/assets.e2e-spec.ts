@@ -40,14 +40,24 @@ describe('Assets origin (e2e)', () => {
 
   it('sirve un asset sprite (svg) y un asset game-data (json) con 200', async () => {
     const manifest = (await api().get('/v1/assets/manifest').expect(200)).body;
-    const spriteKey = Object.keys(manifest.assets).find((k) => k.startsWith('sprites/'));
-    const gameDataKey = Object.keys(manifest.assets).find((k) => k.startsWith('game-data/'));
-    expect(spriteKey).toBeTruthy();
+    // En sprites/ conviven SVG y PNG (los bebés en pixel art): se elige cada uno por su tipo, no por
+    // el orden del manifest.
+    const keys = Object.keys(manifest.assets);
+    const spriteOfType = (type: string) => keys.find((k) => k.startsWith('sprites/') && manifest.assets[k].type === type);
+    const svgKey = spriteOfType('image/svg+xml');
+    const pngKey = spriteOfType('image/png');
+    const gameDataKey = keys.find((k) => k.startsWith('game-data/'));
+    expect(svgKey).toBeTruthy();
     expect(gameDataKey).toBeTruthy();
 
-    const svg = await api().get(`/v1/assets/${spriteKey}`).expect(200);
+    const svg = await api().get(`/v1/assets/${svgKey}`).expect(200);
     expect(svg.headers['content-type']).toBe('image/svg+xml');
     expect(svg.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+
+    if (pngKey) {
+      const png = await api().get(`/v1/assets/${pngKey}`).expect(200);
+      expect(png.headers['content-type']).toBe('image/png');
+    }
 
     const json = await api().get(`/v1/assets/${gameDataKey}`).expect(200);
     expect(json.headers['content-type']).toContain('application/json');
