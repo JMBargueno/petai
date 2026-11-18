@@ -310,6 +310,12 @@ export class Grid {
     }
   }
 
+  /** Píxel con papel de color y tono, en coordenadas de rejilla: lo usa el arte importado. */
+  paint(x: number, y: number, part: number, role: Role, tone: Tone): void {
+    if (x < 0 || y < 0 || x >= N || y >= N) return;
+    this.cells[y * N + x] = { part, role, tone, lit: null };
+  }
+
   /** Píxel de color literal en coordenadas de rejilla (ya transformadas). */
   put(x: number, y: number, rgb: Rgb, part = 0): void {
     x = Math.round(x);

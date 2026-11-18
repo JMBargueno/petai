@@ -1,13 +1,15 @@
 # Pase de concepto con una IA de imagen
 
-Para legendarios y míticos, el usuario sube el nivel de un diseño pasando la hoja de contactos del generador por una IA de imagen. El resultado es una **referencia de diseño**: enseña qué piezas, materiales y proporciones le faltan a la especie. No es un asset, porque el juego necesita `base.png` y `mask.png` exactos, 31 animaciones por etapa y arte que admita paleta y patrón.
+> **Para qué sirve este documento:** conseguir la **hoja objetivo** de una especie, es decir, decidir su diseño. El arte final de cada etapa se genera e importa con `target-sheet-pipeline.md`, que usa esa hoja como referencia.
+
+El usuario decide el diseño de una especie pasando la hoja de contactos del generador por una IA de imagen. El resultado es una **referencia de diseño**: enseña qué piezas, materiales y proporciones le faltan a la especie. No es un asset, porque el juego necesita `base.png` y `mask.png` exactos, 31 animaciones por etapa y arte que admita paleta y patrón.
 
 ## Cuándo proponerlo
 - La especie es rara o superior. En legendarias y míticas, proponlo siempre.
 - La hoja de contactos pasa la checklist pero «se queda corta», o el usuario lo dice.
 - El usuario pide ideas para una etapa final.
 
-Tú no generas la imagen: preparas el prompt, el usuario lo ejecuta en su herramienta con la hoja de contactos adjunta y te devuelve el resultado.
+Puedes generarla tú con `node scripts/sprites/concept/generate.mjs <salida> --ref <hoja de contactos> --prompt <archivo>` si hay clave de la API (`target-sheet-pipeline.md`, «Requisitos»), o preparar el prompt para que el usuario lo ejecute en su herramienta con la hoja de contactos adjunta.
 
 ## Prompt
 Hay dos formatos, y los dos están con sus ejemplos reales en `examples/prompts.md`. Usa el **largo** por defecto: es el que mejor ha funcionado.

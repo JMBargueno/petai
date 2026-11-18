@@ -54,7 +54,7 @@ Lo mira todo y no se acerca a casi nadie: curiosidad alta con sociabilidad baja.
 ## Brief de arte
 Pixel art en 3/4. Cuerpo y tentáculos en primario; barriga en secundario; gotas, manchas y corona en primario oscurecido. Los tentáculos traseros giran con la cola; los delanteros hacen de pies.
 
-**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Los tentáculos son ahora curvas gruesas con la punta enroscada (rectos parecía una araña). La adulta tiene marcas en la frente y la final, tres crestas en el acento, un anillo en el abdomen y ventosas.
+**Estado del arte:** arte final por hoja objetivo (`target-sheet-pipeline.md`): cada etapa generada con Nano Banana a partir del boceto y de `examples/inktopus-objetivo.png`, e importada a 64 px (`scripts/sprites/pixel/imported/inktopus.json`). La paleta por defecto es la de la hoja. Boceto anterior: redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Los tentáculos son ahora curvas gruesas con la punta enroscada (rectos parecía una araña). La adulta tiene marcas en la frente y la final, tres crestas en el acento, un anillo en el abdomen y ventosas.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -68,6 +68,6 @@ Pixel art en 3/4. Cuerpo y tentáculos en primario; barriga en secundario; gotas
   "favoriteFood": "midnight_berry",
   "spriteKey": "inktopus",
   "personalityBias": { "curiosity": 75, "sociability": 30, "bravery": 40, "affection": 60, "temper": 25 },
-  "defaultPalette": { "primary": "#4A4E69", "secondary": "#9A8C98", "accent": "#22223B" }
+  "defaultPalette": { "primary": "#4B4C61", "secondary": "#ADA0AA", "accent": "#5E1725" }
 }
 ```

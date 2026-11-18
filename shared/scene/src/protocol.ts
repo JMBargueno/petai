@@ -61,6 +61,11 @@ export interface RoomState {
   id: string;
   gridWidth: number;
   gridHeight: number;
+  /**
+   * Celdas sin suelo `[x, y, ancho, fondo]` que dan a la sala su forma. Si el anfitrión no lo
+   * manda (versiones antiguas), la escena usa el de habitats.json para ese id de sala.
+   */
+  blocked?: [number, number, number, number][];
   theme?: RoomTheme | null;
   items: RoomItem[];
   furniture: RoomFurniture[];
@@ -163,7 +168,17 @@ function parseRoom(raw: unknown): RoomState | null | undefined {
     });
   }
   const theme = r.theme && typeof r.theme === 'object' ? (r.theme as RoomTheme) : null;
-  return { id: r.id, gridWidth: r.gridWidth as number, gridHeight: r.gridHeight as number, theme, items, furniture };
+  const room: RoomState = { id: r.id, gridWidth: r.gridWidth as number, gridHeight: r.gridHeight as number, theme, items, furniture };
+  if (r.blocked !== undefined && r.blocked !== null) {
+    if (!Array.isArray(r.blocked)) return undefined;
+    const blocked: [number, number, number, number][] = [];
+    for (const b of r.blocked as unknown[]) {
+      if (!Array.isArray(b) || b.length !== 4 || !int(b[0]) || !int(b[1]) || !int(b[2], 1) || !int(b[3], 1)) return undefined;
+      blocked.push(b as [number, number, number, number]);
+    }
+    room.blocked = blocked;
+  }
+  return room;
 }
 
 /** Valida y normaliza un mensaje del anfitrión (llega como JSON sin tipar desde el WebView). */

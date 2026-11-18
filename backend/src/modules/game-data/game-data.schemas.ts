@@ -12,6 +12,7 @@
  */
 import { z } from 'zod';
 import { isKnownStatKey } from '../../stats/stat-keys';
+import { roomShapeErrors } from '../habitat/habitat-layout';
 
 export const ELEMENTS = ['fire', 'water', 'plant', 'electric', 'shadow', 'light'] as const;
 export type ElementValue = (typeof ELEMENTS)[number];
@@ -349,6 +350,8 @@ export const habitatsSchema = z.object({
         name: z.string().min(1),
         gridWidth: z.number().int().positive(),
         gridHeight: z.number().int().positive(),
+        /** Celdas sin suelo `[x, y, ancho, fondo]`: dan a cada sala su forma (estanque, escalón…). */
+        blocked: z.array(z.tuple([z.number().int(), z.number().int(), z.number().int(), z.number().int()])).optional(),
         unlockStage: z.enum(['baby', 'juvenile', 'adult', 'final']),
         description: z.string(),
         /** Colores de la sala isométrica (GUIA_ARTISTICA §7.4). Opcional: los clientes tienen uno por defecto. */
@@ -638,6 +641,18 @@ export function validateGameData(b: GameDataBundle): string[] {
       if (room && (Math.max(fw, fd) > Math.min(room.gridWidth, room.gridHeight))) {
         errors.push(`Mueble ${f.id}: la huella ${fw}×${fd} no cabe girada en la sala '${f.room}'`);
       }
+    }
+    // Forma de cada sala: huecos lejos de las paredes del fondo, suelo conexo y sitio para su
+    // mueble más grande.
+    for (const r of (habitats as any).rooms ?? []) {
+      const sizes = ((habitats as any).furniture ?? [])
+        .filter((f: any) => f.room === r.id && f.mount !== 'wall')
+        .map((f: any) => (Array.isArray(f.footprint) ? f.footprint : [1, 1]) as [number, number]);
+      const biggest = sizes.reduce(
+        (a: [number, number], f: [number, number]) => (f[0] * f[1] > a[0] * a[1] ? f : a),
+        [1, 1] as [number, number],
+      );
+      for (const e of roomShapeErrors(r, biggest)) errors.push(`Sala ${r.id}: ${e}`);
     }
   }
 

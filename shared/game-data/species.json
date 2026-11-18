@@ -106,9 +106,9 @@
       "temper": 80
     },
     "defaultPalette": {
-      "primary": "#FFD166",
-      "secondary": "#FFEBB3",
-      "accent": "#FF9F1C"
+      "primary": "#FFFACF",
+      "secondary": "#FFE502",
+      "accent": "#CA8940"
     }
   },
   {
@@ -134,9 +134,9 @@
       "temper": 25
     },
     "defaultPalette": {
-      "primary": "#4A4E69",
-      "secondary": "#9A8C98",
-      "accent": "#22223B"
+      "primary": "#4B4C61",
+      "secondary": "#ADA0AA",
+      "accent": "#5E1725"
     }
   },
   {
@@ -162,9 +162,9 @@
       "temper": 55
     },
     "defaultPalette": {
-      "primary": "#F4F1DE",
-      "secondary": "#E07A5F",
-      "accent": "#7A7689"
+      "primary": "#FFF8CA",
+      "secondary": "#D87359",
+      "accent": "#A8A39D"
     }
   },
   {
@@ -274,9 +274,9 @@
       "temper": 60
     },
     "defaultPalette": {
-      "primary": "#E8483A",
-      "secondary": "#FFD166",
-      "accent": "#6D1600"
+      "primary": "#FFD62D",
+      "secondary": "#FF642D",
+      "accent": "#692125"
     }
   },
   {
@@ -330,9 +330,9 @@
       "temper": 75
     },
     "defaultPalette": {
-      "primary": "#FFF4D6",
-      "secondary": "#F4A259",
-      "accent": "#B5651D"
+      "primary": "#FFF9D9",
+      "secondary": "#FFB047",
+      "accent": "#BF5439"
     }
   },
   {
@@ -358,9 +358,9 @@
       "temper": 25
     },
     "defaultPalette": {
-      "primary": "#3D4FA8",
-      "secondary": "#9FE8E0",
-      "accent": "#1B2260"
+      "primary": "#0292FA",
+      "secondary": "#6AF6F5",
+      "accent": "#0C325F"
     }
   },
   {
@@ -386,9 +386,9 @@
       "temper": 15
     },
     "defaultPalette": {
-      "primary": "#6FAE3A",
-      "secondary": "#C9A06B",
-      "accent": "#3B5B1E"
+      "primary": "#C59865",
+      "secondary": "#A0D349",
+      "accent": "#45802B"
     }
   },
   {
@@ -414,9 +414,9 @@
       "temper": 85
     },
     "defaultPalette": {
-      "primary": "#F2C230",
-      "secondary": "#7DF9FF",
-      "accent": "#8A5A00"
+      "primary": "#FFE12D",
+      "secondary": "#D6A024",
+      "accent": "#1DE2F2"
     }
   }
 ]

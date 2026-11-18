@@ -539,6 +539,7 @@ const routes: [string, RegExp, Handler][] = [
       description: r.description,
       gridWidth: r.gridWidth,
       gridHeight: r.gridHeight,
+      blocked: r.blocked ?? [],
       unlocked: i === 0,
       active: i === 0,
       theme: r.theme ?? null,

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { depthOf, toGrid, toScreen } from './projection';
-import { footprintCells, rotatedFootprint, snapToWall, validatePlacement } from './layout';
+import {
+  findFreePlacement,
+  footprintCells,
+  roomBlockedCells,
+  roomShapeErrors,
+  rotatedFootprint,
+  snapToWall,
+  validatePlacement,
+} from './layout';
 import { findPath } from './pathfind';
 
 const room = { gridWidth: 14, gridHeight: 10 };
@@ -39,6 +47,20 @@ describe('layout (mismo contrato que el backend)', () => {
     expect(validatePlacement(room, shelf, { x: 2, y: 3, rotation: 0 }, [])).toBe('not_on_wall');
     expect(validatePlacement(room, shelf, snapToWall({ x: 2, y: 3, rotation: 0 }), [])).toBeNull();
     expect(validatePlacement(room, bed, { x: 0, y: 0, rotation: 0 }, [{ ...bed, x: 1, y: 0, rotation: 1 }])).toBe('collision');
+  });
+  it('celdas sin suelo: mismos casos que el backend', () => {
+    const shaped = { ...room, blocked: [[10, 7, 4, 3]] as [number, number, number, number][] };
+    expect(roomBlockedCells(shaped).size).toBe(12);
+    expect(validatePlacement(shaped, bed, { x: 9, y: 7, rotation: 0 }, [])).toBe('out_of_bounds');
+    expect(validatePlacement(shaped, bed, { x: 8, y: 7, rotation: 0 }, [])).toBeNull();
+    expect(validatePlacement(shaped, shelf, { x: 12, y: 0, rotation: 0 }, [])).toBeNull();
+    const corner = { gridWidth: 3, gridHeight: 3, blocked: [[1, 1, 2, 2]] as [number, number, number, number][] };
+    expect(findFreePlacement(corner, { footprint: [2, 2] }, [])).toBeNull();
+    expect(roomShapeErrors(shaped, [2, 2])).toEqual([]);
+    expect(roomShapeErrors({ ...shaped, blocked: [[0, 3, 2, 2]] })[0]).toMatch(/pared del fondo/);
+    expect(roomShapeErrors({ gridWidth: 4, gridHeight: 4, blocked: [[2, 1, 1, 3], [3, 1, 1, 1]] })).toContain(
+      'el suelo queda partido en zonas sin conexión',
+    );
   });
 });
 

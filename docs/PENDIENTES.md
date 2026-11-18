@@ -132,6 +132,11 @@ Features sin UI (solo backend + API):
 | Redibujo con el generador v2 | Las 15 especies usan ya el tercer color, las tramas, el plano lejano o el trazo interior. A fondo solo se han rehecho Livolt, Inktopus y Solarejo; el resto recibe mejoras sobre el dibujo que tenía. Las crías y casi todas las segundas etapas no cambian. |
 | Acento en iOS y web | El escritorio y Android pasan el `accent` de la paleta al horneado; iOS y la web no se han revisado. Sin él, el acento sale como el primario oscurecido. |
 | Límites del generador v2 | Las tramas van en rejilla recta (las escamas no giran con un cuello curvo), todas las sombras tiran al mismo violeta y el trazo interior hay que darlo a mano. |
+| **Arte final por hoja objetivo** | El flujo (generar con Nano Banana, importar, clasificar el color) está en `scripts/sprites/concept/` y en la skill (`target-sheet-pipeline.md`). Lo usan ocho especies: Leviatín, Livolt, Inktopus, Solarejo, Fénixel, Kirisol, Yggdrito y Primpulso. Faltan Ignisaurio, Axolunar, Florabrote, Magmadillo, Nubeballena, Cactuerno y Cerbito, que antes necesitan una hoja objetivo aprobada. De las siete nuevas solo se ha revisado la pose de reposo de cada etapa. |
+| Paletas por defecto cambiadas | Las ocho especies con arte importado tienen ahora la paleta de su hoja objetivo. Las mascotas ya eclosionadas conservan la suya; hay que ejecutar el seed. El Livolt y el Solarejo comparten casi el mismo primario crema. |
+| Arte importado: animación | Cada animación mueve una de 10 poses en píxeles enteros, sin frames intermedios. No se han revisado en movimiento. |
+| Arte importado: accesorios | Las anclas se estiman desde la silueta; no se ha comprobado cómo caen las prendas sobre el Leviatín. |
+| Leviatín: salto de estilo | La etapa final se generó en una ronda anterior y tiene más detalle que las otras tres. |
 | Hojas objetivo sin par | Faltan hojas objetivo de Ignisaurio, Axolunar, Florabrote, Magmadillo, Nubeballena, Cactuerno y Cerbito. |
 | Sistema de diseño publicado | No refleja los últimos cambios (tamaños de prenda, colores del huevo, rareza por especie). |
 

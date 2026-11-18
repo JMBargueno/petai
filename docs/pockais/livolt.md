@@ -54,7 +54,7 @@ Nació de un gesto social repetido: va hacia lo que brilla, quiere público y no
 ## Brief de arte
 Pixel art en 3/4, mirando abajo a la derecha. Cuerpo en primario; alas, antenas con bolita y collar en secundario; marca de corazón, tallos de antena y franjas en primario oscurecido. Las alas van detrás del cuerpo y laten con los apéndices.
 
-**Estado del arte:** redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Las marcas crecen con la edad: una raya de cría, tres en el abdomen de adulta y rayas por todo el cuerpo en la final, que además lleva collar de pelusa y antenas en el acento y un ocelo en el ala. Sigue siendo una polilla.
+**Estado del arte:** arte final por hoja objetivo (`target-sheet-pipeline.md`): cada etapa generada con Nano Banana a partir del boceto y de `examples/livolt-objetivo.png`, e importada a 64 px (`scripts/sprites/pixel/imported/livolt.json`). La paleta por defecto es la de la hoja. Boceto anterior: redibujado con el generador v2 y las lecciones de diseño (`design-lessons.md`). Las marcas crecen con la edad: una raya de cría, tres en el abdomen de adulta y rayas por todo el cuerpo en la final, que además lleva collar de pelusa y antenas en el acento y un ocelo en el ala. Sigue siendo una polilla.
 
 ## Datos (`shared/game-data/species.json`)
 ```json
@@ -68,6 +68,6 @@ Pixel art en 3/4, mirando abajo a la derecha. Cuerpo en primario; alas, antenas 
   "favoriteFood": "spark_candy",
   "spriteKey": "livolt",
   "personalityBias": { "curiosity": 70, "sociability": 75, "bravery": 45, "affection": 55, "temper": 80 },
-  "defaultPalette": { "primary": "#FFD166", "secondary": "#FFEBB3", "accent": "#FF9F1C" }
+  "defaultPalette": { "primary": "#FFFACF", "secondary": "#FFE502", "accent": "#CA8940" }
 }
 ```

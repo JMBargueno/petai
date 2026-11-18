@@ -1,14 +1,19 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
   findFreePlacement,
   footprintCells,
   normalizeRotation,
   repairRoom,
+  roomBlockedCells,
+  roomShapeErrors,
   rotatedFootprint,
   validatePlacement,
   type PlacedShape,
 } from './habitat-layout';
 
 const room = { gridWidth: 14, gridHeight: 10 };
+const habitats = JSON.parse(readFileSync(join(__dirname, '../../../../shared/game-data/habitats.json'), 'utf8'));
 const bed = { footprint: [2, 1] as [number, number], mount: 'floor' as const };
 const pond = { footprint: [2, 2] as [number, number], mount: 'floor' as const };
 const shelf = { footprint: [2, 1] as [number, number], mount: 'wall' as const };
@@ -82,5 +87,53 @@ describe('habitat-layout', () => {
     const shelfTo = moved.find((m) => m.id === 'd')!.to;
     expect(validatePlacement(room, shelf, shelfTo, [])).toBeNull();
     expect(repairRoom(room, [{ id: 'a', ...ball, x: 0, y: 0, rotation: 0 }]).moved).toEqual([]);
+  });
+
+  describe('forma de la sala (celdas sin suelo)', () => {
+    const shaped = { gridWidth: 14, gridHeight: 10, blocked: [[10, 7, 4, 3]] as [number, number, number, number][] };
+
+    it('lista las celdas del hueco', () => {
+      const cells = roomBlockedCells(shaped);
+      expect(cells.size).toBe(12);
+      expect(cells.has('10,7')).toBe(true);
+      expect(cells.has('9,7')).toBe(false);
+      expect(roomBlockedCells({}).size).toBe(0);
+    });
+
+    it('no deja un mueble de suelo sobre el hueco, pero sí junto a él', () => {
+      expect(validatePlacement(shaped, bed, { x: 9, y: 7, rotation: 0 }, [])).toBe('out_of_bounds');
+      expect(validatePlacement(shaped, bed, { x: 8, y: 7, rotation: 0 }, [])).toBeNull();
+      expect(validatePlacement(shaped, shelf, { x: 12, y: 0, rotation: 0 }, [])).toBeNull();
+    });
+
+    it('findFreePlacement y repairRoom saltan los huecos', () => {
+      const corner = { gridWidth: 3, gridHeight: 3, blocked: [[1, 1, 2, 2]] as [number, number, number, number][] };
+      expect(findFreePlacement(corner, pond, [])).toBeNull();
+      expect(findFreePlacement(corner, bed, [{ ...ball, x: 0, y: 0, rotation: 0 }])).toEqual({ x: 1, y: 0, rotation: 0 });
+      const { moved } = repairRoom(shaped, [{ id: 'z', ...ball, x: 12, y: 8, rotation: 0 }]);
+      expect(moved).toHaveLength(1);
+      expect(validatePlacement(shaped, ball, moved[0].to, [])).toBeNull();
+    });
+
+    it('valida las reglas de forma', () => {
+      expect(roomShapeErrors(shaped, [2, 2])).toEqual([]);
+      expect(roomShapeErrors({ ...shaped, blocked: [[0, 3, 2, 2]] })[0]).toMatch(/pared del fondo/);
+      expect(roomShapeErrors({ ...shaped, blocked: [[12, 9, 3, 1]] })[0]).toMatch(/se sale/);
+      // Una columna que no llega a la pared del fondo deja paso por y = 0.
+      expect(roomShapeErrors({ ...shaped, blocked: [[5, 1, 1, 9]] })).toEqual([]);
+      expect(roomShapeErrors({ gridWidth: 4, gridHeight: 4, blocked: [[1, 2, 3, 1], [2, 1, 1, 1]] })).toEqual([]);
+      expect(roomShapeErrors({ gridWidth: 4, gridHeight: 4, blocked: [[2, 1, 1, 3], [3, 1, 1, 1]] })).toContain(
+        'el suelo queda partido en zonas sin conexión',
+      );
+      expect(roomShapeErrors({ gridWidth: 3, gridHeight: 3, blocked: [[1, 1, 2, 2]] }, [2, 2])[0]).toMatch(/no cabe/);
+    });
+
+    it('cada sala del catálogo tiene una forma válida y distinta', () => {
+      const rooms = habitats.rooms as { id: string; gridWidth: number; gridHeight: number; blocked?: [number, number, number, number][] }[];
+      for (const r of rooms) expect([r.id, roomShapeErrors(r, [2, 2])]).toEqual([r.id, []]);
+      const shapes = rooms.map((r) => [...roomBlockedCells(r)].sort().join(' '));
+      expect(new Set(shapes).size).toBe(rooms.length);
+      expect(shapes.every((s) => s.length > 0)).toBe(true);
+    });
   });
 });
