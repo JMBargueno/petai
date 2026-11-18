@@ -6,7 +6,7 @@ import habitats from '../../../game-data/habitats.json';
 import type { RoomItem, RoomState } from '../protocol';
 
 type Catalog = {
-  rooms: { id: string; gridWidth: number; gridHeight: number; theme?: RoomState['theme'] }[];
+  rooms: { id: string; gridWidth: number; gridHeight: number; blocked?: number[][]; theme?: RoomState['theme'] }[];
   furniture: { id: string; name: string; room: string; footprint?: [number, number]; mount?: 'floor' | 'wall'; interaction?: string }[];
 };
 const data = habitats as unknown as Catalog;
@@ -26,9 +26,9 @@ const SAMPLE: Record<string, Omit<RoomItem, 'id'>[]> = {
     { furnitureId: 'garden_pond', x: 8, y: 2, rotation: 0 },
     { furnitureId: 'garden_bench', x: 2, y: 6, rotation: 1 },
     { furnitureId: 'flower_pot', x: 1, y: 1, rotation: 0 },
-    { furnitureId: 'flower_pot', x: 12, y: 8, rotation: 0 },
+    { furnitureId: 'flower_pot', x: 11, y: 8, rotation: 0 },
     { furnitureId: 'garden_swing', x: 4, y: 1, rotation: 0 },
-    { furnitureId: 'stone_lantern', x: 11, y: 5, rotation: 0 },
+    { furnitureId: 'stone_lantern', x: 12, y: 2, rotation: 0 },
   ],
   santuario: [
     { furnitureId: 'shrine_altar', x: 6, y: 2, rotation: 0 },
@@ -54,6 +54,7 @@ export function demoRoom(roomId: string): RoomState {
     id: room.id,
     gridWidth: room.gridWidth,
     gridHeight: room.gridHeight,
+    blocked: (room.blocked ?? []) as RoomState['blocked'],
     theme: room.theme ?? null,
     furniture: data.furniture.map((f) => ({
       id: f.id,

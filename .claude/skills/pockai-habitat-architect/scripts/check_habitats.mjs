@@ -63,9 +63,36 @@ for (const [k, v] of Object.entries(totals)) {
   else if (typeof cap === 'number' && v > 0 && v < cap - 1e-9) warnings.push(`Catálogo: ${k} suma ${v.toFixed(2)} < tope ${cap}: el tope no se alcanza ni con el catálogo completo`);
 }
 
+// Forma de las salas (`blocked`): mismas reglas que roomShapeErrors en habitat-layout.ts
+for (const r of data.rooms) {
+  const holes = new Set();
+  for (const b of r.blocked ?? []) {
+    const [bx, by, bw, bh] = b;
+    if (!Array.isArray(b) || b.length !== 4 || !b.every(Number.isInteger) || bw < 1 || bh < 1) errors.push(`[${r.id}] hueco mal formado: ${JSON.stringify(b)}`);
+    else if (bx < 1 || by < 1) errors.push(`[${r.id}] el hueco ${b} toca una pared del fondo (x = 0 o y = 0)`);
+    else if (bx + bw > r.gridWidth || by + bh > r.gridHeight) errors.push(`[${r.id}] el hueco ${b} se sale de la sala`);
+    else for (let x = bx; x < bx + bw; x++) for (let y = by; y < by + bh; y++) holes.add(`${x},${y}`);
+  }
+  if (r.id === 'jardin') for (let x = 0; x < 4; x++) for (let y = 0; y < 4; y++) if (holes.has(`${x},${y}`)) errors.push(`[jardin] la celda ${x},${y} es el refugio bajo el árbol: no puede ser un hueco`);
+  const free = [];
+  for (let x = 0; x < r.gridWidth; x++) for (let y = 0; y < r.gridHeight; y++) if (!holes.has(`${x},${y}`)) free.push(`${x},${y}`);
+  const seen = new Set(free.slice(0, 1));
+  const queue = free.slice(0, 1);
+  while (queue.length) {
+    const [x, y] = queue.pop().split(',').map(Number);
+    for (const k of [`${x + 1},${y}`, `${x - 1},${y}`, `${x},${y + 1}`, `${x},${y - 1}`]) {
+      if (free.includes(k) && !seen.has(k)) {
+        seen.add(k);
+        queue.push(k);
+      }
+    }
+  }
+  if (seen.size !== free.length) errors.push(`[${r.id}] el suelo queda partido en zonas sin conexión`);
+}
+
 for (const r of data.rooms) {
   const n = data.furniture.filter((f) => f.room === r.id).length;
-  console.log(`Sala ${r.id} (${r.unlockStage}, ${r.gridWidth}×${r.gridHeight}): ${n} muebles${r.theme ? '' : ' · sin theme'}`);
+  console.log(`Sala ${r.id} (${r.unlockStage}, ${r.gridWidth}×${r.gridHeight}, ${(r.blocked ?? []).length} huecos): ${n} muebles${r.theme ? '' : ' · sin theme'}`);
 }
 console.log('Buffs del catálogo: ' + BUFFS.map((k) => `${k}=${totals[k].toFixed(2)}/${capOf(k) ?? '∞'}`).join(' '));
 // Reparto por buff: es la fuente de verdad del reparto (no hay tabla fija que se desfase).

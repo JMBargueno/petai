@@ -13,6 +13,7 @@ import {
   normalizeRotation,
   repairRoom,
   validatePlacement,
+  type BlockedRect,
   type FurnitureShape,
   type Mount,
   type PlacedShape,
@@ -27,6 +28,8 @@ export interface RoomConfig {
   name: string;
   gridWidth: number;
   gridHeight: number;
+  /** Celdas sin suelo `[x, y, ancho, fondo]` (forma de la sala). */
+  blocked?: BlockedRect[];
   unlockStage: string;
   description: string;
   theme?: Record<string, string>;
@@ -347,6 +350,7 @@ export class HabitatService {
       theme: room.theme ?? null,
       gridWidth: room.gridWidth,
       gridHeight: room.gridHeight,
+      blocked: room.blocked ?? [],
       unlocked: STAGE_ORDER.indexOf(room.unlockStage) <= petStageIdx,
       active: habitat.rooms.includes(room.id),
       items: habitat.items

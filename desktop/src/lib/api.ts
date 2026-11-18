@@ -1714,6 +1714,8 @@ export interface HabitatCatalogRoom {
   name: string;
   gridWidth: number;
   gridHeight: number;
+  /** Celdas sin suelo `[x, y, ancho, fondo]` (forma de la sala). */
+  blocked?: [number, number, number, number][];
   unlockStage: string;
   description: string;
   theme?: HabitatTheme;
@@ -1783,6 +1785,8 @@ export interface HabitatRoom {
   description: string;
   gridWidth: number;
   gridHeight: number;
+  /** Celdas sin suelo `[x, y, ancho, fondo]` (forma de la sala). Ausente en backends antiguos. */
+  blocked?: [number, number, number, number][];
   unlocked: boolean;
   active: boolean;
   theme: HabitatTheme | null;
