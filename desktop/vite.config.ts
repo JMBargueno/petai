@@ -1,10 +1,14 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import path from 'path';
+import { demoApi } from './vite.mock';
+
+// Modo demo (`pnpm desktop:demo`): la API se sirve con datos de ejemplo y no hace falta backend.
+const demo = process.env.VITE_MOCK === '1';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [svelte(), demoApi(demo)],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -16,7 +20,7 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    proxy: {
+    proxy: demo ? undefined : {
       '/v1': {
         target: 'http://127.0.0.1:3000',
         changeOrigin: true,

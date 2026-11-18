@@ -22,6 +22,7 @@
     "backend:test": "pnpm --filter petai-backend run test",
     "backend:build": "pnpm --filter petai-backend run build",
     "desktop:dev": "pnpm --filter petai-desktop run dev",
+    "desktop:demo": "pnpm --filter petai-desktop run demo",
     "desktop:build": "pnpm --filter petai-desktop run build",
     "test:all": "pnpm --filter petai-backend run test && pnpm --filter petai-backend run test:e2e && pnpm test:assets",
     "web:dev": "pnpm --filter pockai-web run start",
