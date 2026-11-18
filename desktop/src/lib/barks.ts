@@ -27,6 +27,7 @@ export type BarkCategory =
   | 'idle_user'
   | 'typing'
   | 'high_five'
+  | 'welcome_back'
   | 'generic';
 
 /** Tema local de la ventana (navegador, mensajería). Nunca sale del equipo. */
@@ -156,6 +157,12 @@ export const BARKS_CATALOG: Record<BarkCategory, string[]> = {
   high_five: [
     '¡Choca esos cinco! Haz clic en mi patita rápida. 🐾✋',
     '¡Dame esos cinco! ¡Arriba ese ánimo! 🐾💥',
+  ],
+  welcome_back: [
+    '¡Has vuelto! Te he guardado el sitio. 🐾',
+    '¡Por fin! {name} ya te echaba de menos. ❤️',
+    '¡Hola otra vez! Me he echado una siestecita mientras no estabas. 😴✨',
+    '¡Aquí estás! ¿Seguimos donde lo dejamos? 🌟',
   ],
   generic: [
     '¡Qué bien se está aquí en tu pantalla! 🌸',

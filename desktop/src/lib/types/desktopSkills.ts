@@ -41,6 +41,35 @@ export const DESKTOP_SKILLS: DesktopSkillDefinition[] = [
     requiredIntelligence: 2,
     defaultEnabled: false,
   },
+  {
+    id: 'cursor_play',
+    name: 'Jugar con el Cursor',
+    category: 'playful',
+    description: 'Acecha el cursor cuando se queda quieto, lo persigue cuando pasa deprisa y, según su carácter, lo acompaña de cerca o se aparta de él.',
+    permissionNotice: 'Usa la posición del cursor en la pantalla. No sale de este equipo.',
+    requiredBonding: 5,
+    requiredIntelligence: 1,
+    defaultEnabled: true,
+  },
+  {
+    id: 'presence_sense',
+    name: 'Notar tu Presencia',
+    category: 'playful',
+    description: 'Se echa una siesta cuando te alejas del equipo, te recibe al volver y te anima cuando llevas un rato tecleando.',
+    permissionNotice: 'Consulta cuánto tiempo llevas sin usar el teclado o el ratón. No lee qué tecleas y no sale de este equipo.',
+    requiredBonding: 10,
+    requiredIntelligence: 1,
+    defaultEnabled: true,
+  },
+  {
+    id: 'flow_talent',
+    name: 'Talento del Flujo',
+    category: 'playful',
+    description: 'De vez en cuando luce un gesto propio de su elemento: una llamarada a la carrera, un destello de agua, un chispazo en zigzag...',
+    requiredBonding: 40,
+    requiredIntelligence: 1,
+    defaultEnabled: true,
+  },
 
   // --- PRODUCTIVIDAD Y ASISTENTE ---
   {
