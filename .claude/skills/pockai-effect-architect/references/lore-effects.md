@@ -42,14 +42,27 @@ Un mismo efecto sirve para todos los Flujos cambiando la rampa. Si un Flujo pide
 | `altar-santuario` | Entrar en casa con el botón del panel (App `watchHabitat` + `PetView.enterAltar`) y salir por cualquier vía (`entrance = 'altar'`) | §10: pórtico de piedra con arco de dovelas, sello y runas que emerge, abre sus hojas a la luz del hogar y se hunde. El arrastre al panel conserva su animación propia (`skipAltarOnce`). |
 | `descarga-calida` | Bienvenida (`welcome_back {tier}`) | §6: escarcha de hielo (rampa fija: el frío no es del Pockai) que una onda de luz del Flujo derrite en gotas; más escarcha cuanto más dura fue la ausencia. |
 
+| `sello-logro` | Logro (`achievement {tier}`) | §7: pergamino sobre la cabeza con sello del Flujo; el marco crece por rango (común → legendario con corona). |
+| `proyeccion-astral` | Arena (`battle_won/lost/defended` → `outcome`) | §7: la proyección vuelve del Coliseo y se funde; estrella si gana, franjas rotas si pierde (más el golpe `triggerHurt`), medias lunas si empata. |
+| `trenza-juramento` | Juramento de clan cumplido (`clan:goal_completed` → `reactionForClanGoal`) | §8: cinco hebras de colores se trenzan en arco y se tensan. |
+| `chispa-despertar` | La inteligencia cruza 200 o 500 (`watchAwakening` en PetView) | §5: la Chispa entra en la frente y uno o dos halos de runas giran. |
+| `paquete-hebra` | `gift_received` / `care_received` | §8: paquete (o sobre con corazón) que baja colgado de una hebra y se abre. |
+| `manitas-espirituales` (menor) | El agente abre una web o lee el portapapeles (`AiTab` → `agentAction`) | §5: manitas de luz sostienen un portal web o un pergamino. |
+| `glitch-animo` (menor) | `sick` | §7: franjas de interferencia a ~6 fps, sin estroboscopio. |
+| `polvo-estatico` (menor) | `cleaned` | §6: chispas grises de estática en zigzag. |
+| `desfragmentacion` (menor) | `slept` | §6: bloques que se ordenan en columnas y se apagan. |
+| `polvo-impacto` / `estela-flujo` (menores) | Posarse tras un lanzamiento / zoomies | Polvo del escritorio y estela del Flujo, pequeños y de ≤400 ms. |
+| `destello-prisma` (menor) | Shiny, cada 6 s (renderLoop) | §3: estrellitas en paleta invertida a la vez que un destello en pixel art cruza el sprite (sustituye la franja degradada). |
+| `clima` (ambiente) | `environmental.weather.condition` = `rain` / `snow` | Lluvia o nieve en pixel art (rampa fija) en vez del emoji; se queda mientras dure. |
+
 ## Ideas pendientes (propón desde aquí)
+
+Del catálogo inicial no queda nada. Ideas para seguir:
 
 | Evento (código) | Idea |
 |---|---|
-| Franja shiny periódica (`PetView` renderLoop) | Sustituirla por un destello corto del Rayo Cósmico (§3) cada cierto tiempo. |
-| Logro (`achievement {tier}`, rango ignorado) | Pergamino o sello (§7) que crece por rango. |
-| Arena (`battle_won/lost/defended`) | Proyección astral (§7): la Sombra Guardiana vuelve y se funde, con glitch si pierde. |
-| Juramento de clan cumplido (`clan:goal_completed`) | Trenza de hebras de colores que se tensa (§8). |
-| Acción del agente (`AiTab` `open_url`, portapapeles) | Manitas espirituales (§5): mini portal web o pergamino. |
-| Enfermo, crítico (`sick`) | Glitch de ánimo (§7): scanlines y desplazamiento de 1 px, sin parpadeos. |
-| Baño, dormir | Polvo estático y desfragmentación (§6). |
+| Eclosión en el panel (`HatchView`, `EggSprite`) | Grietas del huevo con luz del Flujo, en el escritorio y no solo en el panel. |
+| Misiones del día completas (`mission_completed {dailyCompleted}`) | Confeti de Códices (spec 01). |
+| Cofre abierto (`chest_opened {type}`) | Brillo por tier y revelación (spec 02). |
+| Ritual cumplido (`ritual_completed`) | Destello de 1 s y mini confeti (spec 30). |
+| Jefe de raid derrotado (no llega al cliente) | Celebración (spec 13); requiere evento del backend. |

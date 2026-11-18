@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMOTE_EMOJI, LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior, reactionForSiblingHatch } from './eventMap';
+import { EMOTE_EMOJI, LOCAL_ACTIONS, ReactionDeduper, reactionForAction, reactionForBehavior, reactionForClanGoal, reactionForSiblingHatch } from './eventMap';
 import { PET_ACTIONS, isPetActionEvent } from './petActions';
 import { getAnimLibrary } from '../sprites';
 
@@ -36,6 +36,22 @@ describe('reactionForAction', () => {
       anims: ['cry'],
       effect: { id: 'descarga-calida', params: { tier: 'sad' } },
     });
+    // Tercera tanda: rango del logro, arena, intensidad del Mood Theater y estados con efecto
+    expect(reactionForAction({ action: 'achievement', context: { name: 'X', tier: 'epic' } })?.effect).toEqual({ id: 'sello-logro', params: { tier: 'epic' } });
+    expect(reactionForAction({ action: 'battle_lost' })?.effect).toEqual({ id: 'proyeccion-astral', params: { outcome: 'lost' } });
+    expect(reactionForAction({ action: 'battle_defended', context: { draw: true } })?.effect?.params).toEqual({ outcome: 'draw' });
+    expect(reactionForAction({ action: 'mood_moment', context: { act: 'cry', intensity: 'soft' } })).toEqual({ anims: ['cry'] });
+    expect(reactionForAction({ action: 'mood_moment', context: { act: 'cry', intensity: 'normal' } })).toEqual({ anims: ['cry'], particle: '💧' });
+    expect(reactionForAction({ action: 'mood_moment', context: { act: 'dance', intensity: 'exaggerated' } })).toEqual({
+      anims: ['dance', 'dance'],
+      particle: '🎵',
+      emphasis: true,
+    });
+    expect(reactionForAction({ action: 'slept' })).toEqual({ anims: [], effect: { id: 'desfragmentacion' } });
+    expect(reactionForAction({ action: 'sick' })?.effect?.id).toBe('glitch-animo');
+    expect(reactionForAction({ action: 'cleaned' })?.effect?.id).toBe('polvo-estatico');
+    expect(reactionForAction({ action: 'care_received' })?.effect).toEqual({ id: 'paquete-hebra', params: { kind: 'care' } });
+    expect(reactionForClanGoal('Visitas')).toMatchObject({ bubble: expect.stringContaining('Visitas'), effect: { id: 'trenza-juramento' } });
     // Nace otra de la colección: la activa lo presencia y la columna va a su lado, en el Flujo de la nueva
     expect(reactionForSiblingHatch({ nickname: 'Brote', rarity: 'rare', shiny: false, species: { element: 'water' } })).toMatchObject({
       anims: ['surprised', 'happy'],
@@ -44,7 +60,6 @@ describe('reactionForAction', () => {
     });
     expect(reactionForAction({ action: 'mood_moment', context: { act: 'cry' } })?.anims).toEqual(['cry']);
     expect(reactionForAction({ action: 'mood_moment', context: { act: 'desconocido' } })).toBeNull();
-    expect(reactionForAction({ action: 'slept' })).toBeNull();
     // friend_visit: el bocadillo usa el nombre del visitante cuando el contexto lo trae
     expect(reactionForAction({ action: 'friend_visit', context: { visitorName: 'Luis' } })?.bubble).toContain('Luis');
     expect(reactionForAction({ action: 'friend_visit' })?.bubble).toContain('amigo');

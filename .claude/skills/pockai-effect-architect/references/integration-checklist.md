@@ -30,6 +30,14 @@ cd desktop && npx svelte-check --threshold error   # filtra por tus archivos: el
    __pockaiFx.hatch('mythic', true, 'legendary')        // nace otra: rareza, shiny, garantía
    __pockaiFx.react('welcome_back', { tier: 'offended' })
    __pockaiFx.home(true) / __pockaiFx.home(false)       // entrar y salir de casa por el altar
+   __pockaiFx.achievement('legendary')                  // logro por rango
+   __pockaiFx.battle('lost')                            // arena: won | lost | draw
+   __pockaiFx.clanGoal()                                // juramento de clan cumplido
+   __pockaiFx.agent('open_url')                         // manitas: open_url | read_clipboard
+   __pockaiFx.intelligence(600)                         // cruce de umbral del Despertar
+   __pockaiFx.weather('rain')                           // rain | snow | clear
+   __pockaiFx.gift('care')                              // gift | care
+   __pockaiFx.react('sick' | 'cleaned' | 'slept')
    __pockaiFx.visitorJoin({ visitorId: 'u-9', visitorName: 'Marta', pet: { petId: 'p-9', nickname: 'Luna', speciesName: 'Axolunar', speciesId: 'axolunar', spriteRef: '' }, startedAt: new Date().toISOString() })
    __pockaiFx.visitorLeave('u-9')
    ```

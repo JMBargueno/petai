@@ -11,6 +11,8 @@ export interface Reaction {
   particle?: string;
   /** Efecto del escritorio (lib/effects) que acompaña al momento, con sus datos. */
   effect?: { id: string; params?: Record<string, string | number> };
+  /** Momento exagerado (Mood Theater): PetView añade un squash marcado. */
+  emphasis?: boolean;
 }
 
 type Ctx = Record<string, unknown> | undefined;
@@ -22,6 +24,17 @@ const str = (ctx: Ctx, key: string): string | undefined => {
 const num = (ctx: Ctx, key: string): number | undefined => {
   const v = ctx?.[key];
   return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+};
+
+/** Partícula de cada acto del Mood Theater (intensidad normal o exagerada). */
+const MOOD_PARTICLES: Record<string, string> = {
+  dance: '🎵',
+  sing: '🎶',
+  cry: '💧',
+  smoke: '💨',
+  glow: '✨',
+  yawn: '💤',
+  stretch: '✨',
 };
 
 /** Actos del Mood Theater del backend → animación. */
@@ -37,8 +50,9 @@ const MOOD_ACTS: Record<string, string> = {
 
 const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
   fed: (c) => (c?.favorite ? { anims: ['eat', 'love'], bubble: '¡Mi comida favorita! 😋' } : { anims: ['eat'] }),
-  cleaned: () => ({ anims: ['clean', 'happy'] }),
-  slept: () => null, // lo cubre el estado base `sleep`
+  cleaned: () => ({ anims: ['clean', 'happy'], effect: { id: 'polvo-estatico' } }),
+  // El estado base `sleep` ya pone el clip; aquí solo la desfragmentación al dormirse
+  slept: () => ({ anims: [], effect: { id: 'desfragmentacion' } }),
   woke: () => ({ anims: ['wake'] }),
   healed: () => ({ anims: ['heal', 'happy'], bubble: '¡Ya me encuentro mejor! 💚' }),
   level_up: (c) => {
@@ -62,13 +76,13 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     bubble: c?.shiny === true ? '¡Hola! Nací con la Bendición del Prisma ✨' : '¡Hola! Encantado de conocerte 🐣',
     effect: { id: 'revelacion-densidad', params: birthParams(c) },
   }),
-  battle_won: () => ({ anims: ['attack', 'victory'], bubble: '¡Victoria! 🏆' }),
-  battle_lost: () => ({ anims: ['hit', 'defeat'], bubble: 'Uf… la próxima ganaré.' }),
+  battle_won: () => ({ anims: ['attack', 'victory'], bubble: '¡Victoria! 🏆', effect: astral('won') }),
+  battle_lost: () => ({ anims: ['hit', 'defeat'], bubble: 'Uf… la próxima ganaré.', effect: astral('lost') }),
   battle_defended: (c) => {
     const attacker = str(c, 'attackerName');
-    if (c?.draw) return { anims: ['surprised'], bubble: attacker ? `Empate contra ${attacker} 🤝` : 'Empate 🤝' };
-    if (c?.won) return { anims: ['hit', 'victory'], bubble: attacker ? `¡He defendido contra ${attacker}! 🛡️` : '¡He defendido mi puesto! 🛡️' };
-    return { anims: ['hit', 'defeat'], bubble: attacker ? `${attacker} me ha ganado…` : 'Me han ganado en la arena…' };
+    if (c?.draw) return { anims: ['surprised'], bubble: attacker ? `Empate contra ${attacker} 🤝` : 'Empate 🤝', effect: astral('draw') };
+    if (c?.won) return { anims: ['hit', 'victory'], bubble: attacker ? `¡He defendido contra ${attacker}! 🛡️` : '¡He defendido mi puesto! 🛡️', effect: astral('won') };
+    return { anims: ['hit', 'defeat'], bubble: attacker ? `${attacker} me ha ganado…` : 'Me han ganado en la arena…', effect: astral('lost') };
   },
   raid_attack: () => ({ anims: ['attack'] }),
   tournament_win: () => ({ anims: ['victory', 'celebrate'], bubble: '¡Ronda de torneo ganada! 🏅' }),
@@ -89,14 +103,19 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     }
   },
   minigame_finished: () => ({ anims: ['happy'] }),
-  gift_received: () => ({ anims: ['surprised', 'love'], bubble: '¡Me han hecho un regalo! 🎁', particle: '🎁' }),
-  care_received: () => ({ anims: ['love'], bubble: '¡Alguien me ha mandado cariño! 💌', particle: '💌' }),
+  gift_received: () => ({ anims: ['surprised', 'love'], bubble: '¡Me han hecho un regalo! 🎁', effect: { id: 'paquete-hebra', params: { kind: 'gift' } } }),
+  care_received: () => ({ anims: ['love'], bubble: '¡Alguien me ha mandado cariño! 💌', effect: { id: 'paquete-hebra', params: { kind: 'care' } } }),
   chest_opened: () => ({ anims: ['surprised', 'celebrate'], particle: '🎁' }),
   mission_completed: (c) =>
     c?.dailyCompleted ? { anims: ['celebrate'], bubble: '¡Misiones del día completadas! 🎉' } : { anims: ['happy'], particle: '✅' },
   achievement: (c) => {
     const name = str(c, 'name');
-    return { anims: ['victory'], bubble: name ? `¡Logro: ${name}! 🏆` : '¡Nuevo logro! 🏆', particle: '🏆' };
+    // El sello crece con el rango del logro (común … legendario)
+    return {
+      anims: ['victory'],
+      bubble: name ? `¡Logro: ${name}! 🏆` : '¡Nuevo logro! 🏆',
+      effect: { id: 'sello-logro', params: { tier: str(c, 'tier') ?? 'common' } },
+    };
   },
   bonding_up: () => ({ anims: ['love'], bubble: 'Siento que estamos más unidos 💞' }),
   bonding_down: () => ({ anims: ['sad'] }),
@@ -105,7 +124,16 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
   mood_moment: (c) => {
     const act = str(c, 'act');
     const anim = act ? MOOD_ACTS[act] : undefined;
-    return anim ? { anims: [anim] } : null;
+    if (!anim || !act) return null;
+    // Intensidad del momento: suave = solo el clip; normal = con su partícula; exagerado = doble y marcado
+    switch (str(c, 'intensity')) {
+      case 'soft':
+        return { anims: [anim] };
+      case 'exaggerated':
+        return { anims: [anim, anim], particle: MOOD_PARTICLES[act], emphasis: true };
+      default:
+        return { anims: [anim], particle: MOOD_PARTICLES[act] };
+    }
   },
   buddy_play: () => ({ anims: ['dance', 'happy'] }),
   friend_visit: (c) => {
@@ -119,9 +147,23 @@ const REACTIONS: Record<PetAction, (ctx: Ctx) => Reaction | null> = {
     const r = welcomeReaction(str(c, 'tier'));
     return { ...r, effect: { id: 'descarga-calida', params: { tier: str(c, 'tier') ?? 'happy' } } };
   },
-  sick: () => ({ anims: ['sad'], bubble: 'No me encuentro muy bien… 🤒' }),
+  sick: () => ({ anims: ['sad'], bubble: 'No me encuentro muy bien… 🤒', effect: { id: 'glitch-animo' } }),
   vitals_critical: () => null, // el estado base (hungry/tired/sad) ya lo refleja
 };
+
+/** Proyección astral del Coliseo (LORE §7): la Sombra Guardiana vuelve con el resultado. */
+function astral(outcome: 'won' | 'lost' | 'draw') {
+  return { id: 'proyeccion-astral', params: { outcome } };
+}
+
+/** Juramento de clan cumplido (LORE §8): la trenza del Nexo se tensa sobre la mascota. */
+export function reactionForClanGoal(title?: string | null): Reaction {
+  return {
+    anims: ['celebrate'],
+    bubble: title ? `¡Juramento cumplido: ${title}! 🤝` : '¡Hemos cumplido el juramento del clan! 🤝',
+    effect: { id: 'trenza-juramento' },
+  };
+}
 
 /** Datos del nacimiento para la revelación: densidad, Bendición del Prisma y Promesa del Telar. */
 function birthParams(c: Ctx): Record<string, string | number> {

@@ -9,6 +9,19 @@ import { hebraInvocacion } from './hebraInvocacion';
 import { revelacionDensidad } from './revelacionDensidad';
 import { altarSantuario } from './altarSantuario';
 import { descargaCalida } from './descargaCalida';
+import { selloLogro } from './selloLogro';
+import { proyeccionAstral } from './proyeccionAstral';
+import { trenzaJuramento } from './trenzaJuramento';
+import { chispaDespertar } from './chispaDespertar';
+import { paqueteHebra } from './paqueteHebra';
+import { manitasEspirituales } from './manitasEspirituales';
+import { glitchAnimo } from './glitchAnimo';
+import { polvoEstatico } from './polvoEstatico';
+import { desfragmentacion } from './desfragmentacion';
+import { polvoImpacto } from './polvoImpacto';
+import { estelaFlujo } from './estelaFlujo';
+import { destelloPrisma } from './destelloPrisma';
+import { clima } from './clima';
 import type { EffectDef, FxPhase } from './types';
 
 export const EFFECTS: Record<string, EffectDef> = {
@@ -19,6 +32,19 @@ export const EFFECTS: Record<string, EffectDef> = {
   [revelacionDensidad.id]: revelacionDensidad,
   [altarSantuario.id]: altarSantuario,
   [descargaCalida.id]: descargaCalida,
+  [selloLogro.id]: selloLogro,
+  [proyeccionAstral.id]: proyeccionAstral,
+  [trenzaJuramento.id]: trenzaJuramento,
+  [chispaDespertar.id]: chispaDespertar,
+  [paqueteHebra.id]: paqueteHebra,
+  [manitasEspirituales.id]: manitasEspirituales,
+  [glitchAnimo.id]: glitchAnimo,
+  [polvoEstatico.id]: polvoEstatico,
+  [desfragmentacion.id]: desfragmentacion,
+  [polvoImpacto.id]: polvoImpacto,
+  [estelaFlujo.id]: estelaFlujo,
+  [destelloPrisma.id]: destelloPrisma,
+  [clima.id]: clima,
 };
 
 /** Fases que tocan para estos datos (algunos efectos se saltan fases según el momento). */
@@ -26,7 +52,29 @@ export function phasesOf(def: EffectDef, params: Record<string, string | number>
   return def.phasesFor?.(params, reduced) ?? (reduced ? def.reducedPhases : def.phases);
 }
 
-export { portalNexo, capulloTelar, resonancia, hebraInvocacion, revelacionDensidad, altarSantuario, descargaCalida };
+export {
+  portalNexo,
+  capulloTelar,
+  resonancia,
+  hebraInvocacion,
+  revelacionDensidad,
+  altarSantuario,
+  descargaCalida,
+  selloLogro,
+  proyeccionAstral,
+  trenzaJuramento,
+  chispaDespertar,
+  paqueteHebra,
+  manitasEspirituales,
+  glitchAnimo,
+  polvoEstatico,
+  desfragmentacion,
+  polvoImpacto,
+  estelaFlujo,
+  destelloPrisma,
+  clima,
+};
+export { prismColors } from './destelloPrisma';
 export { EffectPlayer, fixedDuration, quantize } from './timeline';
 export { flowPalette, FLOW_PALETTES, FLOW_NAMES } from './palettes';
 export { renderFrame, GridSink } from './render';

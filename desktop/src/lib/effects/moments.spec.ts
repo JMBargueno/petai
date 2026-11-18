@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   altarSantuario,
   capulloTelar,
+  chispaDespertar,
+  clima,
+  desfragmentacion,
+  destelloPrisma,
+  estelaFlujo,
+  glitchAnimo,
+  manitasEspirituales,
+  paqueteHebra,
+  polvoEstatico,
+  polvoImpacto,
+  proyeccionAstral,
+  selloLogro,
+  trenzaJuramento,
   descargaCalida,
   phasesOf,
   revelacionDensidad,
@@ -17,7 +30,27 @@ import {
 } from './index';
 import { admitMoment } from './momentQueue';
 
-const MOMENTS: EffectDef[] = [capulloTelar, resonancia, hebraInvocacion, revelacionDensidad, altarSantuario, descargaCalida];
+const MOMENTS: EffectDef[] = [
+  capulloTelar,
+  resonancia,
+  hebraInvocacion,
+  revelacionDensidad,
+  altarSantuario,
+  descargaCalida,
+  selloLogro,
+  proyeccionAstral,
+  trenzaJuramento,
+  chispaDespertar,
+  paqueteHebra,
+  manitasEspirituales,
+  glitchAnimo,
+  polvoEstatico,
+  desfragmentacion,
+  polvoImpacto,
+  estelaFlujo,
+  destelloPrisma,
+  clima,
+];
 
 function render(def: EffectDef, phase: string, t: number, opts: { el?: string; reduced?: boolean; ms?: number; params?: Record<string, string | number> } = {}) {
   const sink = new GridSink(def.width, def.height);
@@ -44,7 +77,7 @@ describe.each(MOMENTS.map((d) => [d.id, d] as const))('efecto %s', (_id, def) =>
   });
 
   it('se queda quieto con movimiento reducido', () => {
-    const hold = def.phases.find((p) => p.ms === 'hold')?.name ?? def.phases[1].name;
+    const hold = def.phases.find((p) => p.ms === 'hold')?.name ?? def.phases[Math.min(1, def.phases.length - 1)].name;
     expect(render(def, hold, 0, { reduced: true, ms: 0 }).cells).toEqual(render(def, hold, 0, { reduced: true, ms: 900 }).cells);
   });
 
@@ -107,6 +140,47 @@ describe('descarga cálida', () => {
     const happy = render(descargaCalida, 'frost', 1, { params: { tier: 'happy' } }).count();
     const offended = render(descargaCalida, 'frost', 1, { params: { tier: 'offended' } }).count();
     expect(offended).toBeGreaterThan(happy);
+  });
+});
+
+describe('tercera tanda', () => {
+  it('el sello crece con el rango del logro', () => {
+    const count = (tier: string) => render(selloLogro, 'show', 0, { params: { tier } }).count();
+    expect(count('rare')).toBeGreaterThanOrEqual(count('common'));
+    expect(count('legendary')).toBeGreaterThan(count('epic'));
+  });
+  it('la proyección astral distingue victoria, derrota y empate', () => {
+    const at = (outcome: string) => render(proyeccionAstral, 'result', 0.5, { params: { outcome } }).cells.join();
+    expect(at('won')).not.toBe(at('lost'));
+    expect(at('lost')).not.toBe(at('draw'));
+  });
+  it('Simbiosis lleva dos halos de runas', () => {
+    expect(render(chispaDespertar, 'halo', 0.5, { params: { level: 3 } }).count()).toBeGreaterThan(
+      render(chispaDespertar, 'halo', 0.5, { params: { level: 2 } }).count(),
+    );
+  });
+  it('las manitas sostienen un portal web o un pergamino según la herramienta', () => {
+    const web = render(manitasEspirituales, 'hold', 1, { params: { tool: 'open_url' } }).cells.join();
+    const clip = render(manitasEspirituales, 'hold', 1, { params: { tool: 'read_clipboard' } }).cells.join();
+    expect(web).not.toBe(clip);
+  });
+  it('el regalo y el paquete de cariño se dibujan distinto', () => {
+    expect(render(paqueteHebra, 'open', 0.6, { params: { kind: 'gift' } }).cells.join()).not.toBe(
+      render(paqueteHebra, 'open', 0.6, { params: { kind: 'care' } }).cells.join(),
+    );
+  });
+  it('el clima es de ambiente y se queda mientras dure el tiempo', () => {
+    expect(clima.channel).toBe('ambient');
+    expect(clima.phases.some((p) => p.ms === 'hold')).toBe(true);
+    expect(render(clima, 'hold', 0, { params: { kind: 'rain' }, ms: 1000 }).count()).toBeGreaterThan(20);
+    expect(render(clima, 'hold', 0, { params: { kind: 'snow' }, ms: 1000 }).count()).toBeGreaterThan(10);
+  });
+  it('los efectos frecuentes son menores y cortos', () => {
+    for (const def of [polvoImpacto, estelaFlujo, destelloPrisma, glitchAnimo, polvoEstatico, desfragmentacion, manitasEspirituales]) {
+      expect(def.channel).toBe('minor');
+    }
+    expect(fixedDuration(polvoImpacto.phases)).toBeLessThanOrEqual(400);
+    expect(fixedDuration(estelaFlujo.phases)).toBeLessThanOrEqual(400);
   });
 });
 

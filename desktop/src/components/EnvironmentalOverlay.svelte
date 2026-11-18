@@ -15,6 +15,8 @@
    * ambiental no se pinta aquí, se dice por la cola de habla (ver `caption` abajo).
    */
   export let part: 'all' | 'accessory' | 'caption' = 'all';
+  /** La lluvia o la nieve ya se pintan como efecto (lib/effects/clima): sin emoji para ellas. */
+  export let weatherFx = false;
 
   const ACCESSORY_EMOJI: Record<string, string> = {
     paraguas: '☔',
@@ -51,6 +53,7 @@
     const fest = environmental?.festival as FestivalInfo | undefined;
     if (fest?.accessory) return fest.accessory;
     const cond = (environmental?.weather as WeatherInfo | undefined)?.condition;
+    if (weatherFx && (cond === 'rain' || cond === 'snow')) return null;
     if (cond) return WEATHER_ACCESSORY[cond] ?? null;
     return null;
   }
