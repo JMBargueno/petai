@@ -357,7 +357,7 @@
         </Card>
       {:else if profileError}
         <Notice tone="error">{profileError}
-          <svelte:fragment slot="end"><button class="btn btn--ghost btn--sm" on:click={loadProfile}>Reintentar</button></svelte:fragment>
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadProfile}>Reintentar</Button></svelte:fragment>
         </Notice>
       {:else}
         <Skeleton rows={3} height={80} />
@@ -367,7 +367,7 @@
     {:else if view === 'history'}
       {#if historyError}
         <Notice tone="error">{historyError}
-          <svelte:fragment slot="end"><button class="btn btn--ghost btn--sm" on:click={loadHistory}>Reintentar</button></svelte:fragment>
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadHistory}>Reintentar</Button></svelte:fragment>
         </Notice>
       {/if}
       {#if !historyLoaded}
@@ -418,7 +418,7 @@
         </div>
       {:else if boardError}
         <Notice tone="error">{boardError}
-          <svelte:fragment slot="end"><button class="btn btn--ghost btn--sm" on:click={loadBoard}>Reintentar</button></svelte:fragment>
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadBoard}>Reintentar</Button></svelte:fragment>
         </Notice>
       {:else}
         <Skeleton rows={5} />

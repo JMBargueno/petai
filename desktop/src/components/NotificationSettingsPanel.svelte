@@ -105,7 +105,7 @@
   {:else if loadFailed}
     <Notice tone="error">
       No se pudieron cargar tus preferencias de avisos.
-      <svelte:fragment slot="end"><button class="btn btn--ghost btn--sm" on:click={refresh}>Reintentar</button></svelte:fragment>
+      <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={refresh}>Reintentar</Button></svelte:fragment>
     </Notice>
   {:else}
     <div class="ui-list">

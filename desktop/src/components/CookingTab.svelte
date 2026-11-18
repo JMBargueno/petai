@@ -143,7 +143,7 @@
 
     {#if menuError && phase === 'idle'}
       <Notice tone="warning">No se pudo cargar el menú del día.
-        <svelte:fragment slot="end"><button class="btn btn--ghost btn--sm" on:click={loadMenu}>Reintentar</button></svelte:fragment>
+        <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={loadMenu}>Reintentar</Button></svelte:fragment>
       </Notice>
     {/if}
 

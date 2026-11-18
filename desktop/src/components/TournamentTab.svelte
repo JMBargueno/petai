@@ -130,7 +130,7 @@
       {/each}
       {#if bracketError}
         <Notice tone="warning">No se pudo cargar el cuadro de enfrentamientos.
-          <svelte:fragment slot="end"><button class="btn btn--ghost btn--sm" on:click={load}>Reintentar</button></svelte:fragment>
+          <svelte:fragment slot="end"><Button variant="ghost" size="sm" on:click={load}>Reintentar</Button></svelte:fragment>
         </Notice>
       {/if}
     {/if}

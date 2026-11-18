@@ -278,9 +278,9 @@
         <div class="room-tools">
           {#if editing && selectedItem}
             <span class="sel-name">{furnName(selectedItem.furnitureId)}</span>
-            <button class="btn btn--sm" title="Girar (R)" on:click={() => roomView?.rotate()}>
+            <Button size="sm" title="Girar (R)" on:click={() => roomView?.rotate()}>
               <RotateCw size={14} /> Girar
-            </button>
+            </Button>
             <button class="btn btn--sm btn--ghost remove-btn" disabled={!!busy} on:click={() => askRemove(selectedItem.id, selectedItem.furnitureId)}>
               <Trash2 size={14} /> Quitar
             </button>

@@ -9,7 +9,7 @@
   import { CATEGORY_LABELS, TIER_LABELS, formatProgress, progressRatio, toggleFeatured } from '../../lib/profile-format';
   import ProfileView from './ProfileView.svelte';
   import { friendlyError } from '../../lib/ui/errors';
-  import { Notice } from '../../components/ui';
+  import { Button, Notice } from '../../components/ui';
   import Badge from './Badge.svelte';
   import { RefreshCw, Eye, EyeOff } from 'lucide-svelte';
 
@@ -113,7 +113,7 @@
   {#if error}
     <Notice tone="error" dismissible={!!profile} on:dismiss={() => (error = '')}>
       {error}
-      <svelte:fragment slot="end">{#if !profile}<button class="btn btn--ghost btn--sm" on:click={load}>Reintentar</button>{/if}</svelte:fragment>
+      <svelte:fragment slot="end">{#if !profile}<Button variant="ghost" size="sm" on:click={load}>Reintentar</Button>{/if}</svelte:fragment>
     </Notice>
   {/if}
   {#if ok}<Notice tone="ok">{ok}</Notice>{/if}

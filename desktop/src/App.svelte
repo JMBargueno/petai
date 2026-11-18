@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from './components/ui';
   import { onMount, onDestroy } from 'svelte';
   import { api, getAccessToken, onEmailUnverified, onHandleRequired, onSessionExpired } from './lib/api';
   import { initSocket, closeSocket } from './lib/socket';
@@ -666,14 +667,12 @@
   </button>
 
   <!-- Botón flotante para alternar panel de control -->
-  <button
-    class="btn glass"
-    on:click={() => (isPanelOpen = !isPanelOpen)}
+  <Button class="glass" on:click={() => (isPanelOpen = !isPanelOpen)}
     title="Abrir/Cerrar Panel de Control"
     aria-expanded={isPanelOpen}
   >
     {#if isPanelOpen}<X size={16} /> Ocultar panel{:else}<PawPrint size={16} /> Abrir panel{/if}
-  </button>
+  </Button>
   </div>
 
   {#if showBall}

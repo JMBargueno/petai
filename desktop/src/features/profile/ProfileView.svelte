@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from '../../components/ui';
   /**
    * Vista de un perfil (propio o de otro jugador): cabecera, vitrina de insignias destacadas,
    * estadísticas e insignias desbloqueadas. En el perfil propio (`own`) la vitrina se puede editar:
@@ -79,12 +80,12 @@
         {#if own}
           <div class="ui-head__end">
             {#if editing}
-              <button class="btn btn--ghost btn--sm" on:click={() => dispatch('cancel')} disabled={saving}>Cancelar</button>
-              <button class="btn btn--primary btn--sm" on:click={() => dispatch('save')} disabled={saving}>
+              <Button variant="ghost" size="sm" on:click={() => dispatch('cancel')} disabled={saving}>Cancelar</Button>
+              <Button variant="primary" size="sm" on:click={() => dispatch('save')} disabled={saving}>
                 <Check size={14} /> {saving ? 'Guardando…' : 'Guardar'}
-              </button>
+              </Button>
             {:else if profile.badges.length > 0}
-              <button class="btn btn--ghost btn--sm" on:click={() => dispatch('edit')}><Pencil size={13} /> Editar</button>
+              <Button variant="ghost" size="sm" on:click={() => dispatch('edit')}><Pencil size={13} /> Editar</Button>
             {/if}
           </div>
         {/if}

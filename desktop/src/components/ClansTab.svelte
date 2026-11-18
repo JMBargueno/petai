@@ -7,7 +7,7 @@
   import { onMount } from 'svelte';
   import { friendlyError } from '../lib/ui/errors';
   import { isNearBottom } from '../lib/ui/chatScroll';
-  import { ConfirmDialog, Notice } from './ui';
+  import { Button, ConfirmDialog, Notice } from './ui';
   import { handleFormatError, normalizeHandle } from '../lib/handle';
   import {
     Shield, Crown, Eye, Users, Target, MessageCircle, Pencil, Plus, Trash2, Send, RefreshCw, UserPlus,
@@ -453,7 +453,7 @@
       </div>
       <div class="clan-hero__tools">
         {#if canEdit && !editing}
-          <button class="btn btn--ghost btn--icon ui-ibtn" title="Editar Nexo" aria-label="Editar Nexo" on:click={startEdit}><Pencil size={15} /></button>
+          <Button variant="ghost" class="ui-ibtn" iconOnly label="Editar Nexo" title="Editar Nexo" on:click={startEdit}><Pencil size={15} /></Button>
         {/if}
         <button class="btn btn--ghost btn--icon ui-ibtn ui-refresh" class:spinning={loading} title="Actualizar" aria-label="Actualizar clan" on:click={load}>
           <RefreshCw size={15} />
@@ -467,10 +467,10 @@
         <input class="input" placeholder="Nombre del clan" aria-label="Nombre del clan" maxlength="40" bind:value={editName} disabled={busy === 'edit'} />
         <textarea class="input desc" rows="2" maxlength="300" placeholder="Descripción" aria-label="Descripción" bind:value={editDescription} disabled={busy === 'edit'}></textarea>
         <div class="ui-inline end">
-          <button type="button" class="btn btn--sm btn--ghost" disabled={busy === 'edit'} on:click={() => (editing = false)}>Cancelar</button>
-          <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'edit' || !editName.trim()}>
+          <Button variant="ghost" size="sm" disabled={busy === 'edit'} on:click={() => (editing = false)}>Cancelar</Button>
+          <Button variant="primary" size="sm" type="submit" disabled={busy === 'edit' || !editName.trim()}>
             {busy === 'edit' ? 'Guardando…' : 'Guardar'}
-          </button>
+          </Button>
         </div>
       </form>
     {/if}
@@ -507,14 +507,14 @@
             {#if acts && (acts.kick || acts.promote || acts.demote || acts.transfer)}
               <div class="member-actions">
                 {#if acts.promote}
-                  <button class="btn btn--sm btn--ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.promote && changeRole(m, acts.promote)}>
+                  <Button variant="ghost" size="sm" disabled={busy === `member-${m.userId}`} on:click={() => acts.promote && changeRole(m, acts.promote)}>
                     <ChevronUp size={14} /> {CLAN_ROLE_LABEL[acts.promote]}
-                  </button>
+                  </Button>
                 {/if}
                 {#if acts.demote}
-                  <button class="btn btn--sm btn--ghost" disabled={busy === `member-${m.userId}`} on:click={() => acts.demote && changeRole(m, acts.demote)}>
+                  <Button variant="ghost" size="sm" disabled={busy === `member-${m.userId}`} on:click={() => acts.demote && changeRole(m, acts.demote)}>
                     <ChevronDown size={14} /> {CLAN_ROLE_LABEL[acts.demote]}
-                  </button>
+                  </Button>
                 {/if}
                 {#if acts.transfer}
                   <button class="btn btn--sm btn--ghost" class:armed={armed === `transfer-${m.userId}`} disabled={busy === `member-${m.userId}`} on:click={() => transfer(m)}>
@@ -537,9 +537,9 @@
           <span class="ui-card__title"><UserPlus size={15} /> Invitar al Nexo</span>
           <div class="ui-inline">
             <input class="input" placeholder="@nickname del jugador" aria-label="Nickname del jugador" autocapitalize="none" spellcheck="false" bind:value={inviteTarget} disabled={busy === 'invite'} />
-            <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'invite' || !inviteTarget.trim()}>
+            <Button variant="primary" size="sm" type="submit" disabled={busy === 'invite' || !inviteTarget.trim()}>
               {busy === 'invite' ? 'Enviando…' : 'Invitar'}
-            </button>
+            </Button>
           </div>
         </form>
       {/if}
@@ -581,9 +581,9 @@
                 <option value="generic">Progreso</option>
               </select>
               <input class="input goal-target" type="number" min="1" placeholder="Meta" aria-label="Meta" bind:value={goalTarget} disabled={busy === 'goal-create'} />
-              <button type="submit" class="btn btn--sm btn--primary" disabled={busy === 'goal-create' || !goalTitle.trim() || !(parseInt(goalTarget, 10) > 0)}>
+              <Button variant="primary" size="sm" type="submit" disabled={busy === 'goal-create' || !goalTitle.trim() || !(parseInt(goalTarget, 10)> 0)}>
                 {busy === 'goal-create' ? 'Creando…' : 'Crear'}
-              </button>
+              </Button>
             </div>
           </form>
         {/if}
@@ -602,12 +602,12 @@
               </div>
               <span class="goal-num">{Math.min(g.progress, g.target)}/{g.target}</span>
               {#if !done}
-                <button class="btn btn--sm ui-ibtn" title="Sumar 1" aria-label="Sumar 1 a {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => addProgress(g)}>+1</button>
+                <Button size="sm" class="ui-ibtn" label="Sumar 1 a {g.title}" title="Sumar 1" disabled={busy === `goal-${g.id}`} on:click={() => addProgress(g)}>+1</Button>
               {/if}
               {#if canModerate}
-                <button class="btn btn--ghost btn--icon ui-ibtn ui-ibtn--no" title="Borrar objetivo" aria-label="Borrar {g.title}" disabled={busy === `goal-${g.id}`} on:click={() => askDeleteGoal(g)}>
+                <Button variant="ghost" class="ui-ibtn ui-ibtn--no" iconOnly label="Borrar {g.title}" title="Borrar objetivo" disabled={busy === `goal-${g.id}`} on:click={() => askDeleteGoal(g)}>
                   <Trash2 size={14} />
-                </button>
+                </Button>
               {/if}
             </div>
           </div>
@@ -649,9 +649,9 @@
         </div>
         <form class="chat-input" on:submit|preventDefault={sendMsg}>
           <input class="input" placeholder="Escribe un mensaje…" aria-label="Mensaje" bind:value={chatInput} disabled={busy === 'chat'} />
-          <button type="submit" class="btn btn--primary btn--icon ui-ibtn" title="Enviar" aria-label="Enviar" disabled={busy === 'chat' || !chatInput.trim()}>
+          <Button variant="primary" class="ui-ibtn" iconOnly label="Enviar" type="submit" title="Enviar" disabled={busy === 'chat' || !chatInput.trim()}>
             <Send size={15} />
-          </button>
+          </Button>
         </form>
       </section>
     {/if}
@@ -668,9 +668,9 @@
       <span class="ui-card__title"><Users size={15} /> Unirse por tag</span>
       <div class="ui-inline">
         <input class="input tag-input" placeholder="TAG" aria-label="Tag del clan" maxlength="6" bind:value={joinTag} disabled={busy === 'join'} />
-        <button type="submit" class="btn btn--sm" disabled={busy === 'join' || !joinTag.trim()}>
+        <Button size="sm" type="submit" disabled={busy === 'join' || !joinTag.trim()}>
           {busy === 'join' ? 'Uniéndote…' : 'Unirse'}
-        </button>
+        </Button>
       </div>
     </form>
 
@@ -682,9 +682,9 @@
       </div>
       <textarea class="input desc" rows="2" maxlength="300" placeholder="Descripción (opcional)" aria-label="Descripción" bind:value={description} disabled={busy === 'create'}></textarea>
       <p class="form-hint">El tag es un código corto en mayúsculas (por ejemplo, PCK): con él os encontrarán.</p>
-      <button type="submit" class="btn btn--primary" disabled={busy === 'create' || !name.trim() || !tag.trim()}>
+      <Button variant="primary" type="submit" disabled={busy === 'create' || !name.trim() || !tag.trim()}>
         {busy === 'create' ? 'Creando…' : 'Crear clan'}
-      </button>
+      </Button>
     </form>
   {/if}
 

@@ -66,7 +66,7 @@
       <Switch
         icon="settings"
         label="Iniciar Pockai al iniciar Windows"
-        sub="Tu pockai aparece solo al encender el ordenador"
+        sub="Tu Pockai aparece solo al encender el ordenador"
         checked={autostart}
         disabled={saving || !supported}
         on:change={(e) => toggle(e.detail)}

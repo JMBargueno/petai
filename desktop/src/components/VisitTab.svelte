@@ -152,7 +152,7 @@
   {#if visiting && selectedFriend && visiting !== selectedFriend.otherUserId}
     <Notice tone="info" icon="home">
       Tu Pockai sigue de visita en casa de {friendName(visiting)}.
-      <svelte:fragment slot="end"><button class="btn btn--ghost btn--sm" disabled={!!busy} on:click={endVisit}>Terminar</button></svelte:fragment>
+      <svelte:fragment slot="end"><Button variant="ghost" size="sm" disabled={!!busy} on:click={endVisit}>Terminar</Button></svelte:fragment>
     </Notice>
   {/if}
 
@@ -166,7 +166,7 @@
       <span class="ui-empty__icon"><Users size={22} /></span>
       <strong>Nadie a quien visitar todavía</strong>
       <p>Cuando aceptéis una amistad podrás cuidar de su mascota y visitar su hábitat.</p>
-      <button class="btn btn--sm btn--primary" on:click={() => dispatch('goFriends')}>Ir a Amigos</button>
+      <Button variant="primary" size="sm" on:click={() => dispatch('goFriends')}>Ir a Amigos</Button>
     </div>
   {:else}
     <!-- Selector de amigo -->
@@ -454,9 +454,6 @@
     align-self: flex-end;
     font-size: var(--text-caption);
     color: var(--ink-muted);
-  }
-  .block {
-    width: 100%;
   }
 
   /* Historial */
