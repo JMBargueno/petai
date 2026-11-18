@@ -77,9 +77,9 @@
       "price": 400,
       "currency": "coins",
       "buffs": {
-        "hygiene_decay_reduction": 0.1
+        "hygiene_decay_reduction": 0.08
       },
-      "description": "Reduce el decaimiento de higiene un 10%.",
+      "description": "Reduce el decaimiento de higiene un 8%.",
       "footprint": [1, 1],
       "mount": "floor",
       "interaction": "bathe"
@@ -91,9 +91,9 @@
       "price": 600,
       "currency": "coins",
       "buffs": {
-        "energy_recovery_boost": 0.2
+        "energy_recovery_boost": 0.15
       },
-      "description": "Aumenta la recuperación de energía un 20% durante el sueño.",
+      "description": "Aumenta la recuperación de energía un 15% durante el sueño.",
       "footprint": [2, 1],
       "mount": "floor",
       "interaction": "sleep"
@@ -141,9 +141,9 @@
       "price": 500,
       "currency": "coins",
       "buffs": {
-        "happiness_decay_reduction": 0.08
+        "happiness_decay_reduction": 0.06
       },
-      "description": "Un lugar tranquilo para descansar. Reduce el decaimiento de felicidad un 8%.",
+      "description": "Un lugar tranquilo para descansar. Reduce el decaimiento de felicidad un 6%.",
       "footprint": [2, 1],
       "mount": "floor",
       "interaction": "sit"
@@ -155,9 +155,9 @@
       "price": 800,
       "currency": "coins",
       "buffs": {
-        "hygiene_decay_reduction": 0.15
+        "hygiene_decay_reduction": 0.12
       },
-      "description": "Un estanque sereno. Reduce el decaimiento de higiene un 15%.",
+      "description": "Un estanque sereno. Reduce el decaimiento de higiene un 12%.",
       "footprint": [2, 2],
       "mount": "floor",
       "interaction": "bathe"
@@ -182,10 +182,10 @@
       "price": 900,
       "currency": "coins",
       "buffs": {
-        "energy_recovery_boost": 0.2,
-        "happiness_decay_reduction": 0.07
+        "energy_recovery_boost": 0.15,
+        "happiness_decay_reduction": 0.05
       },
-      "description": "Ilumina el santuario. +20% recuperación de energía, -7% decaimiento de felicidad.",
+      "description": "Ilumina el santuario. +15% recuperación de energía, -5% decaimiento de felicidad.",
       "footprint": [1, 1],
       "mount": "floor"
     },
@@ -210,12 +210,134 @@
       "price": 700,
       "currency": "coins",
       "buffs": {
-        "happiness_decay_reduction": 0.1,
-        "hygiene_decay_reduction": 0.15
+        "happiness_decay_reduction": 0.08,
+        "hygiene_decay_reduction": 0.1
       },
-      "description": "Un jardín extraordinario. Reduce decaimiento de felicidad 10% e higiene 15%.",
+      "description": "Un jardín extraordinario. Reduce decaimiento de felicidad 8% e higiene 10%.",
       "footprint": [2, 2],
       "mount": "floor"
+    },
+    {
+      "id": "food_bowl",
+      "name": "Comedero",
+      "room": "sala",
+      "price": 350,
+      "currency": "coins",
+      "buffs": {
+        "happiness_decay_reduction": 0.03
+      },
+      "description": "Un cuenco siempre lleno. Reduce el decaimiento de felicidad un 3%.",
+      "footprint": [1, 1],
+      "mount": "floor",
+      "interaction": "eat"
+    },
+    {
+      "id": "round_rug",
+      "name": "Alfombra Redonda",
+      "room": "sala",
+      "price": 150,
+      "currency": "coins",
+      "buffs": {},
+      "description": "Decoración pura. Una alfombra mullida para el centro de la sala.",
+      "footprint": [2, 2],
+      "mount": "floor"
+    },
+    {
+      "id": "wall_clock",
+      "name": "Reloj de Pared",
+      "room": "sala",
+      "price": 120,
+      "currency": "coins",
+      "buffs": {},
+      "description": "Decoración pura. Marca las horas de siesta.",
+      "footprint": [1, 1],
+      "mount": "wall"
+    },
+    {
+      "id": "garden_swing",
+      "name": "Columpio",
+      "room": "jardin",
+      "price": 380,
+      "currency": "coins",
+      "buffs": {
+        "happiness_decay_reduction": 0.03
+      },
+      "description": "Un columpio de madera. Reduce el decaimiento de felicidad un 3%.",
+      "footprint": [2, 1],
+      "mount": "floor",
+      "interaction": "play"
+    },
+    {
+      "id": "stone_lantern",
+      "name": "Farolillo de Piedra",
+      "room": "jardin",
+      "price": 150,
+      "currency": "coins",
+      "buffs": {},
+      "description": "Decoración pura. Una luz cálida entre las flores.",
+      "footprint": [1, 1],
+      "mount": "floor"
+    },
+    {
+      "id": "zen_cushion",
+      "name": "Cojín de Meditación",
+      "room": "santuario",
+      "price": 550,
+      "currency": "coins",
+      "buffs": {
+        "energy_recovery_boost": 0.1
+      },
+      "description": "Un cojín para meditar. Aumenta la recuperación de energía un 10%.",
+      "footprint": [1, 1],
+      "mount": "floor",
+      "interaction": "sit"
+    },
+    {
+      "id": "bonsai_tree",
+      "name": "Bonsái",
+      "room": "santuario",
+      "price": 200,
+      "currency": "coins",
+      "buffs": {},
+      "description": "Decoración pura. Un árbol diminuto y paciente.",
+      "footprint": [1, 1],
+      "mount": "floor"
+    },
+    {
+      "id": "hanging_scroll",
+      "name": "Pergamino Colgante",
+      "room": "santuario",
+      "price": 180,
+      "currency": "coins",
+      "buffs": {},
+      "description": "Decoración pura. Un pergamino con una montaña pintada.",
+      "footprint": [1, 1],
+      "mount": "wall"
+    },
+    {
+      "id": "star_fountain",
+      "name": "Fuente Estelar",
+      "room": "citafinal",
+      "price": 550,
+      "currency": "coins",
+      "buffs": {
+        "hygiene_decay_reduction": 0.1
+      },
+      "description": "Agua con polvo de estrellas. Reduce el decaimiento de higiene un 10%.",
+      "footprint": [2, 2],
+      "mount": "floor",
+      "interaction": "bathe"
+    },
+    {
+      "id": "constellation_frame",
+      "name": "Cuadro de Constelaciones",
+      "room": "citafinal",
+      "price": 230,
+      "currency": "coins",
+      "buffs": {},
+      "description": "Decoración pura. El mapa del cielo de un legendario.",
+      "footprint": [2, 1],
+      "mount": "wall"
     }
   ],
   "buffCaps": {

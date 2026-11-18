@@ -18,21 +18,31 @@ const SAMPLE: Record<string, Omit<RoomItem, 'id'>[]> = {
     { furnitureId: 'wall_shelf', x: 6, y: 0, rotation: 0 },
     { furnitureId: 'fountain_water', x: 10, y: 6, rotation: 0 },
     { furnitureId: 'toy_ball', x: 5, y: 6, rotation: 0 },
+    { furnitureId: 'food_bowl', x: 3, y: 4, rotation: 0 },
+    { furnitureId: 'round_rug', x: 7, y: 4, rotation: 0 },
+    { furnitureId: 'wall_clock', x: 10, y: 0, rotation: 0 },
   ],
   jardin: [
     { furnitureId: 'garden_pond', x: 8, y: 2, rotation: 0 },
     { furnitureId: 'garden_bench', x: 2, y: 6, rotation: 1 },
     { furnitureId: 'flower_pot', x: 1, y: 1, rotation: 0 },
     { furnitureId: 'flower_pot', x: 12, y: 8, rotation: 0 },
+    { furnitureId: 'garden_swing', x: 4, y: 1, rotation: 0 },
+    { furnitureId: 'stone_lantern', x: 11, y: 5, rotation: 0 },
   ],
   santuario: [
     { furnitureId: 'shrine_altar', x: 6, y: 2, rotation: 0 },
     { furnitureId: 'crystal_lamp', x: 3, y: 3, rotation: 0 },
     { furnitureId: 'crystal_lamp', x: 10, y: 3, rotation: 0 },
+    { furnitureId: 'zen_cushion', x: 6, y: 6, rotation: 0 },
+    { furnitureId: 'bonsai_tree', x: 2, y: 7, rotation: 0 },
+    { furnitureId: 'hanging_scroll', x: 9, y: 0, rotation: 0 },
   ],
   citafinal: [
     { furnitureId: 'final_throne', x: 6, y: 1, rotation: 0 },
     { furnitureId: 'final_garden', x: 1, y: 6, rotation: 0 },
+    { furnitureId: 'star_fountain', x: 9, y: 5, rotation: 0 },
+    { furnitureId: 'constellation_frame', x: 2, y: 0, rotation: 0 },
   ],
 };
 
