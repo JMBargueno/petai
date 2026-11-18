@@ -4,29 +4,15 @@
   import { friendlyError } from '../lib/ui/errors';
   import { api } from '../lib/api';
   import { AsyncState, Button, Card, EmptyState, Notice, SectionHeader, StatTile } from './ui';
-  import CatchFood from './games/CatchFood.svelte';
-  import MemoryMatch from './games/MemoryMatch.svelte';
-  import Reflex from './games/Reflex.svelte';
+  import { MINIGAMES } from '@pockai/minigames';
+  import MinigameHost from './MinigameHost.svelte';
 
   export let pet: any = null;
 
   const dispatch = createEventDispatcher();
 
-  const ICONS: Record<string, string> = { catch_food: 'apple', memory_match: 'cards', reflex: 'target' };
   let loadingGames = true;
-  const COMPONENTS: Record<string, any> = {
-    catch_food: CatchFood,
-    memory_match: MemoryMatch,
-    reflex: Reflex,
-  };
-
   let games: any[] = [];
-  /** Instrucciones de una línea que se ven durante la cuenta atrás. */
-  const HOW: Record<string, string> = {
-    catch_food: 'Mueve la cesta con el ratón o con las flechas ← → y atrapa la comida.',
-    memory_match: 'Destapa dos cartas iguales. Puedes usar Tab y Enter.',
-    reflex: 'Pulsa el objetivo en cuanto aparezca, con el ratón o con Espacio.',
-  };
   let phase: 'list' | 'countdown' | 'playing' | 'saving' | 'result' = 'list';
   /** Cuenta atrás antes de empezar (3, 2, 1) y aviso si el servidor recortó la puntuación. */
   let countdown = 3;
@@ -44,7 +30,8 @@
     loadingGames = true;
     listError = '';
     try {
-      games = await api.listMinigames();
+      // Solo los juegos que este cliente sabe jugar (el servidor puede ir por delante).
+      games = (await api.listMinigames()).filter((g: any) => g.id in MINIGAMES);
     } catch (e: any) {
       listError = friendlyError(e, 'No se pudieron cargar los minijuegos.');
     } finally {
@@ -124,7 +111,7 @@
         {#each games as g (g.id)}
           {@const noEnergy = g.energyCost != null && (pet.energy ?? 0) < g.energyCost}
           <button class="ui-row game" disabled={busy || pet.sleeping || noEnergy} on:click={() => play(g.id)}>
-            <span class="ui-feature__icon game-icon" aria-hidden="true"><Ico n={ICONS[g.id] || 'gamepad'} size={20} /></span>
+            <span class="ui-feature__icon game-icon" aria-hidden="true"><Ico n={MINIGAMES[g.id]?.icon || 'gamepad'} size={20} /></span>
             <span class="ui-row__body">
               <span class="ui-row__title">{g.name}</span>
               <span class="ui-row__sub ui-row__sub--wrap">
@@ -144,7 +131,7 @@
     <Card variant="hero" class="result">
       <h3 class="ui-feature__title">{games.find((g) => g.id === lastGameId)?.name ?? 'Minijuego'}</h3>
       <p class="score countdown" role="status" aria-live="assertive">{countdown}</p>
-      <p class="ui-card__hint">{HOW[lastGameId] ?? '¡Prepárate!'}</p>
+      <p class="ui-card__hint">{MINIGAMES[lastGameId]?.howTo ?? '¡Prepárate!'}</p>
       <Button variant="ghost" size="sm" on:click={back}>Cancelar</Button>
     </Card>
   {:else if phase === 'playing' && session}
@@ -152,11 +139,15 @@
       <span class="label-caps">{games.find((g) => g.id === lastGameId)?.name ?? 'Minijuego'}</span>
       <Button variant="ghost" size="sm" icon="x" title="Abandonar la partida (no da recompensa)" on:click={back}>Salir</Button>
     </div>
-    <svelte:component
-      this={COMPONENTS[session.gameId]}
+    <MinigameHost
+      gameId={session.gameId}
       seed={session.seed}
       durationSeconds={session.durationSeconds}
       on:finish={onFinish}
+      on:error={(e) => {
+        back();
+        error = e.detail.message;
+      }}
     />
   {:else if phase === 'saving'}
     <Card variant="hero" class="result">

@@ -34,6 +34,12 @@
       "port": 5176
     },
     {
+      "name": "pockai-minigames-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@pockai/minigames", "run", "dev"],
+      "port": 5181
+    },
+    {
       "name": "pockai-desktop-dev-alt",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "petai-desktop", "exec", "vite", "--port", "5174"],

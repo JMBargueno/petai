@@ -68,7 +68,7 @@ export class MissionTrackingService implements OnModuleDestroy {
   }
 
   @OnEvent('minigame:finished')
-  async onMinigameFinished(payload: { userId: string; petId?: string; score?: number }) {
+  async onMinigameFinished(payload: { userId: string; petId?: string; gameId?: string; score?: number }) {
     await this.incrementProgress(payload.userId, 'minigame', 1);
   }
 

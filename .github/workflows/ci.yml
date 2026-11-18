@@ -206,6 +206,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Minijuegos compartidos (spec 39): determinismo y techo de puntos frente a balance.json.
+      - name: Test shared minigames
+        run: |
+          pnpm --filter @pockai/minigames run typecheck
+          pnpm --filter @pockai/minigames run test
+
       - name: Build frontend (Svelte + Vite)
         run: pnpm --filter petai-desktop run build
 

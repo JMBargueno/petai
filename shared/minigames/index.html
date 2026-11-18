@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Pockai Minijuegos</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ink: #0b0a14;
+        --surface: #ffffff;
+        --surface-2: #f3f1fb;
+        --line-soft: rgba(11, 10, 20, 0.12);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --ink: #f4f2ff; --surface: #17162a; --surface-2: #211f3a; --line-soft: rgba(244, 242, 255, 0.14); }
+      }
+      html, body { margin: 0; min-height: 100%; background: var(--surface); color: var(--ink); font: 15px/1.4 system-ui, sans-serif; }
+      #minigame { padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <div id="minigame"></div>
+    <script type="module" src="/src/embed/main.ts"></script>
+  </body>
+</html>
