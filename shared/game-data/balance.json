@@ -540,6 +540,24 @@
     },
     "combat": { "maxThresholdShift": 0.05 },
     "behavior": { "minEnergyToPlay": 15 },
+    "social": {
+      "stages": {
+        "acquaintance": { "familiarity": 0.45 },
+        "friend": { "familiarity": 0.6, "enterValence": 0.25, "exitValence": 0.1 },
+        "best_friend": { "familiarity": 0.85, "enterValence": 0.55, "exitValence": 0.4 }
+      },
+      "valenceFloor": -0.4,
+      "scene": { "slotMs": 240000, "maxEffectScenesPerVisit": 3, "repeatFactor": 0.25 },
+      "scenes": {
+        "greet": { "base": 12, "delta": 0.1, "firstSlotOnly": true },
+        "explore_together": { "base": 2, "weights": { "curiosity": 0.04 }, "delta": 0.07 },
+        "play_tag": { "base": 2, "weights": { "temper": 0.03, "sociability": 0.02 }, "delta": 0.1, "minEnergy": 30 },
+        "share_food": { "base": 1.5, "weights": { "affection": 0.04 }, "delta": 0.12, "minStage": "friend" },
+        "nap_together": { "base": 3, "weights": { "temper": -0.02 }, "delta": 0.06, "maxEnergy": 45 },
+        "squabble": { "base": 1.2, "weights": { "temper": 0.03 }, "delta": -0.08, "minTemper": 65 },
+        "make_up": { "base": 24, "weights": { "affection": 0.05 }, "delta": 0.12, "after": "squabble" }
+      }
+    },
     "room": {
       "antiRepeat": { "window": 5, "penalty": 0.5, "top": 3, "margin": 0.15 },
       "needs": { "low": 35, "high": 65 },
