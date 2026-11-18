@@ -7,6 +7,7 @@
 import { PATTERNS } from '../assets';
 import type { RoomState } from '../protocol';
 import { DEMO_ROOMS, demoRoom } from './demoRoom';
+import { VISIT_SCENES } from '../room/visitScene';
 import { EFFECTS } from '../effects';
 
 const PALETTES: Record<string, { primary: string; secondary: string }> = {
@@ -84,7 +85,8 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
     <label>Temp °C <input name="temp" type="number" value="18"></label>
     <label>Fondo <select name="backdrop"><option value="painted">pintado (híbrido)</option><option value="plain">clásico</option></select></label>
     <div class="row"><button type="button" data-realclock>hora real</button></div>
-    <div class="row"><button type="button" data-edit>editar</button><button type="button" data-rotate>girar (R)</button></div>`
+    <div class="row"><button type="button" data-edit>editar</button><button type="button" data-rotate>girar (R)</button></div>
+    <div class="row"><button type="button" data-guest>visita</button><select name="scene">${VISIT_SCENES.map((s) => `<option>${s}</option>`).join('')}</select><button type="button" data-scene>escena</button></div>`
         : `<div class="row">${CLIPS.map((c) => `<button type="button" data-clip="${c}">${c}</button>`).join('')}</div>
     <div class="row"><button type="button" data-facing="1">→</button><button type="button" data-facing="-1">←</button></div>`
     }
@@ -143,6 +145,7 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
 
   let paused = false;
   let night = false;
+  let guest = false;
   let edit = false;
   panel.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('button');
@@ -151,6 +154,15 @@ export function mountDemo(send: (raw: unknown) => void, withRoom: boolean): void
     if (b.dataset.facing) send({ type: 'setFacing', facing: Number(b.dataset.facing) });
     if (b.dataset.act) send({ type: 'setActivity', activity: b.dataset.act });
     if (b.hasAttribute('data-night')) send({ type: 'setNight', night: (night = !night) });
+    if (b.hasAttribute('data-guest')) {
+      guest = !guest;
+      b.textContent = guest ? 'despedir' : 'visita';
+      send({
+        type: 'setGuest',
+        pet: guest ? { species: 'axolunar', stage: 'adult', palette: { primary: '#7fb0e0', secondary: '#f6c8ff' }, visualSeed: 77, shiny: false } : null,
+      });
+    }
+    if (b.hasAttribute('data-scene')) send({ type: 'playScene', scene: field('scene') });
     if (b.hasAttribute('data-realclock')) {
       clock = null;
       sendAmbience();

@@ -116,6 +116,13 @@ export type HostMessage =
   | { type: 'setActivity'; activity: Activity; rest?: string; mind?: RoomMind }
   /** Luces apagadas porque el Pockai duerme (la hora del día va por `setAmbience`). */
   | { type: 'setNight'; night: boolean }
+  /**
+   * Pockai de un amigo que está de visita en la sala (`null` = se ha ido). Solo su aspecto. Sin
+   * sala no se dibuja. Mensajes opcionales: una app que no los manda sigue funcionando igual.
+   */
+  | { type: 'setGuest'; pet: PetState | null }
+  /** Escena entre el Pockai de la sala y el visitante (la decide el servidor; ver room/visitScene.ts). */
+  | { type: 'playScene'; scene: string }
   | AmbienceMessage
   | { type: 'setEditMode'; edit: boolean }
   | { type: 'selectItem'; itemId: string | null }
@@ -153,6 +160,8 @@ const HOST_TYPES = new Set<HostMessage['type']>([
   'setRoom',
   'setActivity',
   'setNight',
+  'setGuest',
+  'playScene',
   'setAmbience',
   'setEditMode',
   'selectItem',
@@ -160,6 +169,22 @@ const HOST_TYPES = new Set<HostMessage['type']>([
   'playEffect',
   'petAction',
 ]);
+
+/** Aspecto de un Pockai validado (el propio o el de un visitante); `null` si le falta lo imprescindible. */
+function parsePet(raw: unknown): PetState | null {
+  const p = raw as Record<string, unknown> | undefined;
+  const pal = p?.palette as Record<string, unknown> | undefined;
+  if (!p || typeof p !== 'object' || typeof p.species !== 'string' || typeof pal?.primary !== 'string' || typeof pal?.secondary !== 'string') return null;
+  return {
+    species: p.species,
+    stage: (['egg', 'baby', 'juvenile', 'adult', 'final'] as const).includes(p.stage as Stage) ? (p.stage as Stage) : 'adult',
+    palette: { primary: pal.primary, secondary: pal.secondary, ...(typeof pal.accent === 'string' ? { accent: pal.accent } : {}) },
+    pattern: typeof p.pattern === 'string' ? p.pattern : null,
+    visualSeed: Number.isFinite(p.visualSeed) ? (p.visualSeed as number) : 1337,
+    shiny: p.shiny === true,
+    accessories: parseEquipped(p.accessories),
+  };
+}
 
 /** Datos de efecto validados: claves cortas y valores texto/número finitos; el resto se descarta. */
 function parseEffectParams(raw: unknown): EffectParams {
@@ -238,22 +263,16 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
   if (typeof m.type !== 'string' || !HOST_TYPES.has(m.type as HostMessage['type'])) return null;
   switch (m.type) {
     case 'setPet': {
-      const p = m.pet as Record<string, unknown> | undefined;
-      const pal = p?.palette as Record<string, unknown> | undefined;
-      if (!p || typeof p.species !== 'string' || typeof pal?.primary !== 'string' || typeof pal?.secondary !== 'string') return null;
-      return {
-        type: 'setPet',
-        pet: {
-          species: p.species,
-          stage: (['egg', 'baby', 'juvenile', 'adult', 'final'] as const).includes(p.stage as Stage) ? (p.stage as Stage) : 'adult',
-          palette: { primary: pal.primary, secondary: pal.secondary, ...(typeof pal.accent === 'string' ? { accent: pal.accent } : {}) },
-          pattern: typeof p.pattern === 'string' ? p.pattern : null,
-          visualSeed: Number.isFinite(p.visualSeed) ? (p.visualSeed as number) : 1337,
-          shiny: p.shiny === true,
-          accessories: parseEquipped(p.accessories),
-        },
-      };
+      const pet = parsePet(m.pet);
+      return pet ? { type: 'setPet', pet } : null;
     }
+    case 'setGuest': {
+      if (m.pet === null) return { type: 'setGuest', pet: null };
+      const pet = parsePet(m.pet);
+      return pet ? { type: 'setGuest', pet } : null;
+    }
+    case 'playScene':
+      return typeof m.scene === 'string' && /^[a-z_]{1,32}$/.test(m.scene) ? { type: 'playScene', scene: m.scene } : null;
     case 'playClip':
       return typeof m.clip === 'string' ? { type: 'playClip', clip: m.clip, once: m.once === true } : null;
     case 'setTheme':

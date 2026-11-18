@@ -30,6 +30,7 @@ import { toHexString, type SkyState } from '../ambience/sunClock';
 import { isWet, type WeatherLook } from '../ambience/weather';
 import { createRng, pushRecent, type Rng } from '@pockai/mind';
 import { ROOM_CONFIG, byNearest, cellsByDistance, chooseRoomAction, type RoomMind } from './petWander';
+import { entranceCell, freeNeighbor, roamCell, scriptFor, type ActorStep, type Beat } from './visitScene';
 
 export { WALL_H } from './roomStyles';
 // Pixel art (GUIA_ARTISTICA §7.5): la hoja va a ×2, así que 0,5 deja 1 px nativo = 1 px de sala.
@@ -131,6 +132,14 @@ export class IsoRoom extends Container {
   /** Reloj propio de las decisiones (ms que la sala lleva viva). */
   private lifeMs = 0;
 
+  // Visita: el Pockai de un amigo comparte la sala y los dos representan escenas (visitScene.ts)
+  private guest: PetSprite | null = null;
+  private guestPos = { x: 1.5, y: 1.5 };
+  private guestPath: Cell[] = [];
+  private guestWaitMs = 2500;
+  /** Escena en curso: tiempos del guion, cuál toca y si aún están llegando a su sitio. */
+  private scene: { beats: Beat[]; index: number; phase: 'moving' | 'holding'; timer: number } | null = null;
+
   // Arrastre en modo edición
   private drag: { id: string; grabDx: number; grabDy: number; cand: { x: number; y: number }; valid: boolean } | null = null;
 
@@ -174,7 +183,11 @@ export class IsoRoom extends Container {
     this.drawShell();
     this.drawGroundShadow();
     this.syncFurniture();
-    if (prevId !== room.id) this.placePetAtStart();
+    if (prevId !== room.id) {
+      this.placePetAtStart();
+      this.endScene();
+      this.placeGuestAtEntrance();
+    }
     this.replanIfBlocked();
     this.drawOverlay();
   }
@@ -193,6 +206,9 @@ export class IsoRoom extends Container {
     }
     this.activity = activity;
     this.pet.visible = activity !== 'away';
+    // Sin anfitrión en la sala no hay visita que ver aquí (se muestra junto a la mascota del escritorio)
+    if (this.guest) this.guest.visible = activity !== 'away';
+    this.endScene();
     this.path = [];
     this.onArrive = null;
     this.using = false;
@@ -210,6 +226,192 @@ export class IsoRoom extends Container {
   setMind(mind: RoomMind | null): void {
     if (mind && mind.seed !== this.mind?.seed) this.rng = createRng(mind.seed);
     this.mind = mind;
+  }
+
+  // ───────────────────────── Visita ─────────────────────────
+
+  get hasGuest(): boolean {
+    return !!this.guest;
+  }
+
+  /** Entra (o se va) el Pockai de un amigo. Aparece por la parte delantera de la sala. */
+  setGuest(sprite: PetSprite | null): void {
+    if (sprite === this.guest) return;
+    this.endScene();
+    if (this.guest) this.objects.removeChild(this.guest);
+    this.guest = sprite;
+    this.guestPath = [];
+    if (!sprite) return;
+    sprite.scale.set(PET_SCALE);
+    sprite.visible = this.activity !== 'away';
+    sprite.setBaseClip('idle');
+    this.objects.addChild(sprite);
+    this.placeGuestAtEntrance();
+  }
+
+  private placeGuestAtEntrance(): void {
+    if (!this.room || !this.guest) return;
+    const cell = entranceCell(this.blockedCells(), this.room);
+    this.guestPos = { x: cell.x + 0.5, y: cell.y + 0.5 };
+    this.guestWaitMs = 1500;
+    this.placeGuestSprite();
+  }
+
+  private placeGuestSprite(): void {
+    if (!this.guest) return;
+    const s = toScreen(this.guestPos.x, this.guestPos.y);
+    this.guest.position.set(s.x, s.y);
+    // Un pelín por detrás del Pockai de la casa cuando comparten celda
+    this.guest.zIndex = depthOf(this.guestPos.x, this.guestPos.y, 0.04);
+  }
+
+  private guestCell(): Cell {
+    return { x: Math.floor(this.guestPos.x), y: Math.floor(this.guestPos.y) };
+  }
+
+  /**
+   * Representa una escena entre el Pockai de la sala y el visitante. Se ignora si no hay
+   * visitante, si el de la casa no está paseando (duerme, está fuera, enfermo) o si se está
+   * decorando: una escena es un extra, nunca interrumpe otra cosa.
+   */
+  playScene(type: string): void {
+    if (!this.room || !this.guest || this.activity !== 'idle' || this.edit || this.staysPut) return;
+    const beats = scriptFor(type);
+    if (!beats.length) return;
+    this.endScene();
+    this.path = [];
+    this.onArrive = null;
+    this.using = false;
+    this.scene = { beats, index: 0, phase: 'moving', timer: 0 };
+    this.startBeat();
+  }
+
+  private endScene(): void {
+    if (!this.scene) return;
+    this.scene = null;
+    this.guestPath = [];
+    if (this.activity === 'idle' && !this.path.length) this.pet.setBaseClip(this.restClip);
+    this.guest?.setBaseClip('idle');
+    this.waitMs = 1500;
+    this.guestWaitMs = 2500;
+  }
+
+  /** Pone a cada uno camino de su sitio para el tiempo actual del guion. */
+  private startBeat(): void {
+    const scene = this.scene;
+    if (!scene || !this.room || !this.guest) return;
+    const beat = scene.beats[scene.index];
+    scene.phase = 'moving';
+    scene.timer = 0;
+    const blocked = this.blockedCells();
+    const hostCell = this.petCell();
+    const guestCell = this.guestCell();
+    // Con movimiento reducido nadie camina: la escena son solo los gestos, cada uno en su sitio
+    const still = this.opts.reducedMotion;
+
+    // Primero el que marca el destino (quien pasea o se queda); después, quien va a su lado
+    const destination = (step: ActorStep, from: Cell): Cell => {
+      if (still || step.move !== 'roam') return from;
+      return roamCell(from, blocked, this.room!, this.rng) ?? from;
+    };
+    const hostDest = destination(beat.host, hostCell);
+    const guestDest = destination(beat.guest, guestCell);
+    const beside = (step: ActorStep, from: Cell, other: Cell, otherDest: Cell): Cell => {
+      if (still) return from;
+      if (step.move === 'meet') return freeNeighbor(other, blocked, this.room!, from) ?? from;
+      if (step.move === 'follow') return freeNeighbor(otherDest, blocked, this.room!, from) ?? from;
+      return from;
+    };
+    const hostTarget = beat.host.move === 'roam' ? hostDest : beside(beat.host, hostCell, guestCell, guestDest);
+    const guestTarget = beat.guest.move === 'roam' ? guestDest : beside(beat.guest, guestCell, hostCell, hostDest);
+
+    this.path = findPath(this.room, blocked, hostCell, hostTarget) ?? [];
+    this.onArrive = null;
+    if (this.path.length) this.pet.setBaseClip('walk');
+    this.guestPath = findPath(this.room, blocked, guestCell, guestTarget) ?? [];
+    if (this.guestPath.length) this.guest.setBaseClip('walk');
+  }
+
+  /** Los dos han llegado: se miran (o se dan la espalda) y hacen su gesto. */
+  private performBeat(beat: Beat): void {
+    if (!this.guest) return;
+    // x de pantalla = x − y de la rejilla: de ahí sale quién queda a la derecha de quién
+    const sdx = this.guestPos.x - this.guestPos.y - (this.petPos.x - this.petPos.y);
+    const toGuest: 1 | -1 = sdx >= 0 ? 1 : -1;
+    const act = (sprite: PetSprite, step: ActorStep, towardsOther: 1 | -1, rest: string) => {
+      if (step.face === 'other') sprite.setFacing(towardsOther);
+      else if (step.face === 'away') sprite.setFacing(towardsOther === 1 ? -1 : 1);
+      sprite.setBaseClip(step.hold ?? rest);
+      if (step.clip) sprite.play(step.clip, true);
+    };
+    act(this.pet, beat.host, toGuest, this.restClip);
+    act(this.guest, beat.guest, toGuest === 1 ? -1 : 1, 'idle');
+  }
+
+  private updateScene(dt: number): void {
+    const scene = this.scene;
+    if (!scene) return;
+    if (!this.guest) {
+      this.endScene();
+      return;
+    }
+    scene.timer += dt;
+    const beat = scene.beats[scene.index];
+    if (scene.phase === 'moving') {
+      // Si alguno no consigue llegar (camino tapado), a los 9 s se sigue igualmente
+      const arrived = !this.path.length && !this.guestPath.length;
+      if (!arrived && scene.timer < 9000) return;
+      this.path = [];
+      this.guestPath = [];
+      this.performBeat(beat);
+      scene.phase = 'holding';
+      scene.timer = 0;
+      return;
+    }
+    if (scene.timer < beat.holdMs) return;
+    scene.index++;
+    if (scene.index >= scene.beats.length) this.endScene();
+    else this.startBeat();
+  }
+
+  /** Avanza al visitante por su camino y, fuera de las escenas, le hace pasear por la sala. */
+  private updateGuest(dt: number): void {
+    const guest = this.guest;
+    if (!guest || !this.room) return;
+    if (this.guestPath.length) {
+      const next = this.guestPath[0];
+      const tx = next.x + 0.5;
+      const ty = next.y + 0.5;
+      const dx = tx - this.guestPos.x;
+      const dy = ty - this.guestPos.y;
+      const dist = Math.hypot(dx, dy);
+      const step = (WALK_SPEED * dt) / 1000;
+      if (dist <= step) {
+        this.guestPos = { x: tx, y: ty };
+        this.guestPath.shift();
+      } else {
+        this.guestPos = { x: this.guestPos.x + (dx / dist) * step, y: this.guestPos.y + (dy / dist) * step };
+      }
+      const sdx = dx - dy;
+      if (Math.abs(sdx) > 0.01) guest.setFacing(sdx > 0 ? 1 : -1);
+      this.placeGuestSprite();
+      if (!this.guestPath.length && !this.scene) {
+        guest.setBaseClip('idle');
+        this.guestWaitMs = 2500 + this.rng() * 4000;
+      }
+      return;
+    }
+    if (this.scene || this.opts.reducedMotion || this.edit) return;
+    this.guestWaitMs -= dt;
+    if (this.guestWaitMs > 0) return;
+    const target = roamCell(this.guestCell(), this.blockedCells(), this.room, this.rng, 2, 4);
+    const path = target ? findPath(this.room, this.blockedCells(), this.guestCell(), target) : null;
+    if (path?.length) {
+      this.guestPath = path;
+      guest.setBaseClip('walk');
+    } else {
+      this.guestWaitMs = 2000;
+    }
   }
 
   private get staysPut(): boolean {
@@ -657,6 +859,16 @@ export class IsoRoom extends Container {
       this.path = [];
       this.onArrive = null;
     }
+    // Lo mismo para el visitante: si le ponen un mueble encima o en el camino, se recoloca
+    if (this.guest) {
+      const at = this.guestCell();
+      if (blocked.has(`${at.x},${at.y}`)) {
+        this.endScene();
+        this.placeGuestAtEntrance();
+      } else if (this.guestPath.some((c) => blocked.has(`${c.x},${c.y}`))) {
+        this.guestPath = [];
+      }
+    }
   }
 
   private goTo(target: Cell, allowed: Set<string> = new Set(), onArrive: (() => void) | null = null): boolean {
@@ -754,6 +966,9 @@ export class IsoRoom extends Container {
     }
     if (!this.room || this.activity === 'away') return;
 
+    this.updateGuest(dt);
+    this.updateScene(dt);
+
     if (this.path.length) {
       const next = this.path[0];
       const tx = next.x + 0.5;
@@ -775,7 +990,8 @@ export class IsoRoom extends Container {
       if (!this.path.length) {
         const cb = this.onArrive;
         this.onArrive = null;
-        this.pet.setBaseClip(this.activity === 'sleep' && !cb ? 'sleep' : this.restClip);
+        // En plena escena el gesto al llegar lo pone el guion, no el reposo de siempre
+        if (!this.scene) this.pet.setBaseClip(this.activity === 'sleep' && !cb ? 'sleep' : this.restClip);
         this.waitMs = (1500 + this.rng() * 3000) * this.calm;
         cb?.();
       }
@@ -794,6 +1010,7 @@ export class IsoRoom extends Container {
     }
 
     if (this.staysPut) return; // enfermo o cansado: se queda quieto con su clip de reposo
+    if (this.scene) return; // en plena escena con el visitante no se va a pasear por su cuenta
     this.waitMs -= dt;
     if (this.waitMs <= 0) this.wander();
   }

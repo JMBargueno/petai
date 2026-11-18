@@ -66,6 +66,12 @@ export class PockaiScene {
   private activity: Activity = 'idle';
   private rest = 'idle';
   private mind: RoomMind | null = null;
+  /** Pockai de visita: solo se dibuja dentro de una sala. */
+  private guest: PetSprite | null = null;
+  private guestState: PetState | null = null;
+  private guestSeq = 0;
+  /** Escena pedida antes de que el visitante estuviera horneado: se lanza en cuanto esté. */
+  private pendingScene: string | null = null;
   private night = false;
   private edit = false;
   /** Cielo y clima de la sala; solo existe mientras hay sala (el Pockai suelto va sin fondo). */
@@ -140,6 +146,7 @@ export class PockaiScene {
     });
     this.app.ticker.add((t) => {
       this.pet.update(t);
+      this.guest?.update(t);
       this.effects.update(t.deltaMS);
       this.ambience?.update(t.deltaMS);
       this.room?.update(t);
@@ -190,6 +197,13 @@ export class PockaiScene {
         this.room?.setMind(this.mind);
         this.room?.setActivity(msg.activity, this.rest);
         if (!this.room) this.pet.visible = msg.activity !== 'away';
+        break;
+      case 'setGuest':
+        void this.setGuest(msg.pet);
+        break;
+      case 'playScene':
+        if (this.room?.hasGuest) this.room.playScene(msg.scene);
+        else if (this.guestState) this.pendingScene = msg.scene;
         break;
       case 'setNight':
         this.night = msg.night;
@@ -256,6 +270,8 @@ export class PockaiScene {
   private setRoom(state: RoomState | null): void {
     if (!state) {
       if (this.room) {
+        // El visitante es de la sala: sin sala no se dibuja (su aspecto se conserva por si vuelve)
+        this.room.setGuest(null);
         this.room.removeChild(this.pet);
         this.app.stage.removeChild(this.room);
         this.room.destroy({ children: true });
@@ -275,6 +291,7 @@ export class PockaiScene {
       this.room = new IsoRoom({ pet: this.pet, emit: (e) => this.emit(e), reducedMotion: this.reducedMotion });
       this.app.stage.addChildAt(this.room, 0);
       this.room.setRoom(state);
+      if (this.guest) this.room.setGuest(this.guest);
       this.room.setMind(this.mind);
       this.room.setActivity(this.activity, this.rest);
       this.room.setNight(this.night);
@@ -311,37 +328,76 @@ export class PockaiScene {
     this.room.setGrounded(!!texture);
   }
 
+  /** Llega (o se va) el Pockai de un amigo que está de visita. */
+  private async setGuest(state: PetState | null): Promise<void> {
+    const seq = ++this.guestSeq;
+    this.guestState = state;
+    if (!state) {
+      this.pendingScene = null;
+      this.room?.setGuest(null);
+      this.guest?.destroy({ children: true });
+      this.guest = null;
+      return;
+    }
+    try {
+      const sprite = this.guest ?? new PetSprite({ reducedMotion: this.reducedMotion });
+      const key = await this.bakeInto(sprite, state, () => seq === this.guestSeq);
+      if (key === null) {
+        // Llegó otro visitante (o se fue) mientras se horneaba
+        if (!this.guest) sprite.destroy({ children: true });
+        return;
+      }
+      sprite.eventMode = 'none';
+      this.guest = sprite;
+      this.room?.setGuest(sprite);
+      if (this.pendingScene && this.room?.hasGuest) this.room.playScene(this.pendingScene);
+      this.pendingScene = null;
+    } catch (e) {
+      this.emit({ type: 'error', message: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  /**
+   * Hornea la hoja de un Pockai (paleta, patrón, prendas) y la pone en `sprite`. Devuelve la
+   * clave de la hoja, o `null` si mientras tanto llegó otra petición (`isCurrent`).
+   */
+  private async bakeInto(sprite: PetSprite, state: PetState, isCurrent: () => boolean): Promise<string | null> {
+    const { key, sheet } = resolveSheet(state.species, state.stage);
+    const { canvas, fxMap, width } = await bakeSheet({
+      key,
+      base: sheet.base,
+      mask: sheet.mask,
+      pattern: state.pattern ? (PATTERNS[state.pattern] ?? null) : null,
+      palette: state.palette,
+      visualSeed: state.visualSeed,
+    });
+    // Prendas equipadas, en la talla de la etapa. Una prenda sin arte en este cliente se omite.
+    const layers: AccessoryLayer[] = [];
+    if (sheet.anchors) {
+      for (const slot of ACCESSORY_SLOTS) {
+        const id = state.accessories?.[slot];
+        const acc = id ? resolveAccessory(id, sheet.anchors.size) : null;
+        if (!acc || acc.meta.slot !== slot) continue;
+        const img = await loadImage(acc.url).catch(() => null);
+        if (img) layers.push({ slot, canvas: img, meta: acc.meta });
+      }
+    }
+    if (!isCurrent()) return null;
+    sprite.setSheet(canvas, sheet.anim);
+    // El huevo no lleva efectos: ni patrón ni brillo de shiny.
+    const egg = state.stage === 'egg';
+    sprite.setFx(egg ? null : fxMap, width, (state.pattern && PATTERN_FX[state.pattern]) || null, !egg && state.shiny === true, isLightPrimary(state.palette.primary));
+    sprite.setAccessories(layers, sheet.anchors);
+    return key;
+  }
+
   private async setPet(state: PetState): Promise<void> {
     const seq = ++this.loadSeq;
     if (this.petState && this.petState.stage !== state.stage) this.stageChangedAt = performance.now();
     this.petState = state;
     try {
-      const { key, sheet } = resolveSheet(state.species, state.stage);
-      const { canvas, fxMap, width } = await bakeSheet({
-        key,
-        base: sheet.base,
-        mask: sheet.mask,
-        pattern: state.pattern ? (PATTERNS[state.pattern] ?? null) : null,
-        palette: state.palette,
-        visualSeed: state.visualSeed,
-      });
-      // Prendas equipadas, en la talla de la etapa. Una prenda sin arte en este cliente se omite.
-      const layers: AccessoryLayer[] = [];
-      if (sheet.anchors) {
-        for (const slot of ACCESSORY_SLOTS) {
-          const id = state.accessories?.[slot];
-          const acc = id ? resolveAccessory(id, sheet.anchors.size) : null;
-          if (!acc || acc.meta.slot !== slot) continue;
-          const img = await loadImage(acc.url).catch(() => null);
-          if (img) layers.push({ slot, canvas: img, meta: acc.meta });
-        }
-      }
-      if (seq !== this.loadSeq) return; // llegó otro setPet mientras horneábamos
-      this.pet.setSheet(canvas, sheet.anim);
-      // El huevo no lleva efectos: ni patrón ni brillo de shiny.
-      const egg = state.stage === 'egg';
-      this.pet.setFx(egg ? null : fxMap, width, (state.pattern && PATTERN_FX[state.pattern]) || null, !egg && state.shiny === true, isLightPrimary(state.palette.primary));
-      this.pet.setAccessories(layers, sheet.anchors);
+      const key = await this.bakeInto(this.pet, state, () => seq === this.loadSeq);
+      if (key === null) return; // llegó otro setPet mientras horneábamos
       this.layout();
       // La nueva etapa ya está horneada: el capullo puede abrirse
       if (this.awaitingRebake) {
