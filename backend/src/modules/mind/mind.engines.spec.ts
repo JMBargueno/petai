@@ -359,20 +359,3 @@ describe('Spec 37 §1.3 — refuerzo y ruido en el recuerdo', () => {
     expect(selectForPrompt([owner], 'hola', NOW, cfg, 1000).emotional).toHaveLength(1);
   });
 });
-
-describe('Spec 37 §1.6 — la pista de reacción solo va cuando el mensaje la merece', () => {
-  const { hintForTurn, viewOf } = require('./behavior.engine');
-
-  it('un mensaje corriente o una pregunta no dictan la reacción al modelo', () => {
-    for (const text of ['pues hoy ha hecho sol', '¿cuánto es dos más dos?']) {
-      const intent = interpretMessage(text).intent;
-      expect(['chat', 'question']).toContain(intent);
-      expect(hintForTurn(intent, viewOf('ask_back'))).toBeUndefined();
-    }
-  });
-
-  it('un mensaje con carga emocional sí lleva la pista', () => {
-    const intent = interpretMessage('He tenido un día bastante malo').intent;
-    expect(hintForTurn(intent, viewOf('comfort'))).toContain('Reacción decidida');
-  });
-});

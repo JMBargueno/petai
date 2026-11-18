@@ -40,7 +40,11 @@ const RULES: { intent: Intent; re: RegExp }[] = [
   },
   { intent: 'affection', re: /(te\s+quiero|te\s+adoro|eres\s+(el|la|lo)\s+mejor|te\s+he\s+echado\s+de\s+menos|un\s+abrazo|love\s+you|missed\s+you|you'?re\s+the\s+best)/i },
   { intent: 'scold', re: /(te\s+(has\s+)?portad[oa]\s+mal|eres\s+(mal[oa]|tont[oa]|in[uú]til)|c[aá]llate|no\s+me\s+molestes|bad\s+(pet|boy|girl)|shut\s+up)/i },
-  { intent: 'explore_request', re: /(explor|aventura|vamos\s+de\s+paseo|salir\s+a\s+dar|adventure|explore|go\s+for\s+a\s+walk)/i },
+  // Verbo explorar conjugado o «de aventura»: «explorador de archivos» y «película de aventuras» no cuentan
+  {
+    intent: 'explore_request',
+    re: /(\bexplor(ar|emos|amos|aci[oó]n|a|o|as|e)\b|\b(de|una|otra)\s+aventura\b|vamos\s+de\s+paseo|salir\s+a\s+dar|\badventure\b|\bexplore\b|go\s+for\s+a\s+walk)/i,
+  },
   { intent: 'play_request', re: /(jug(ar|amos|uemos)|una\s+partida|minijuego|let'?s\s+play|wanna\s+play|play\s+a\s+game)/i },
   { intent: 'farewell', re: /(^|\s)(adi[oó]s|hasta\s+(luego|mañana|pronto)|me\s+voy|buenas\s+noches|bye|good\s*night|see\s+you)/i },
   { intent: 'greeting', re: /^\s*(hola|holi|buenas|hey|hi|hello|buenos\s+d[ií]as|buenas\s+tardes)\b/i },
@@ -74,11 +78,27 @@ const EVOLUTION: Partial<Record<Intent, string>> = {
   explore_request: 'talk_play',
 };
 
+/**
+ * Negación justo antes de lo que casa con una regla, con hasta tres palabras por medio:
+ * «no estoy triste», «no ha sido un día malo», «I don't feel bad».
+ */
+const NEGATION = /(^|[\s,;.¡¿(])(no|nunca|jam[aá]s|tampoco|not|never|don'?t|doesn'?t|didn'?t|isn'?t|wasn'?t|can'?t)\s+(\S+\s+){0,3}$/i;
+
+/** ¿Casa la regla sin estar negada? Un saludo no se niega: «no, hola» sigue siendo un saludo. */
+function matches(rule: { intent: Intent; re: RegExp }, text: string): boolean {
+  const m = rule.re.exec(text);
+  if (!m) return false;
+  if (rule.intent === 'greeting') return true;
+  // Algunas reglas casan con el espacio que precede a la palabra: se cuenta como parte de lo anterior
+  const start = m.index + (m[0].length - m[0].trimStart().length);
+  return !NEGATION.test(text.slice(0, start));
+}
+
 export function interpretMessage(text: string): Interpretation {
   const t = (text ?? '').trim();
   let intent: Intent = 'chat';
   for (const r of RULES) {
-    if (r.re.test(t)) {
+    if (matches(r, t)) {
       intent = r.intent;
       break;
     }

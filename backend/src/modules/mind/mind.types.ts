@@ -51,7 +51,45 @@ export interface PersonalityConfig {
   autonomy: AutonomyConfig;
   social: import('./social.engine').SocialConfig;
   combat: { maxThresholdShift: number };
-  behavior: { minEnergyToPlay: number };
+  behavior: BehaviorConfig;
+}
+
+/** Quién puede recibir una reacción. */
+export type ReactionAudience = 'owner' | 'visitor' | 'pockai';
+
+export interface ReactionEntry {
+  /** Id de la reacción (del catálogo). */
+  behavior: string;
+  /** Peso con una personalidad neutra. */
+  base: number;
+  /** Cuánto mueve el peso cada punto de dimensión por encima o por debajo de 50. */
+  weights?: Partial<Dims>;
+  /** Término no lineal: `scale × Π(dim/100) × Π(1 − inverse/100)`. */
+  product?: { scale: number; dims?: Dimension[]; inverse?: Dimension[] };
+}
+
+export interface BehaviorCatalogEntry {
+  audiences: ReactionAudience[];
+  /** Reacción activa: no sale enferma ni sin energía. */
+  active?: boolean;
+  /** Mínimos de personalidad para que sea coherente; si no se cumplen se usa `fallback`. */
+  minDims?: Partial<Dims>;
+  fallback?: string;
+  reason?: string;
+}
+
+export interface BehaviorConfig {
+  minEnergyToPlay: number;
+  antiRepeat?: {
+    /** Cuántas reacciones recientes se recuerdan. */
+    window: number;
+    /** Factor (0-1) por cada aparición de la reacción en la ventana. */
+    penalty: number;
+    /** Margen relativo que otra reacción debe superar para sustituir a la última. */
+    margin: number;
+  };
+  catalog?: Record<string, BehaviorCatalogEntry>;
+  reactions?: Record<string, ReactionEntry[]>;
 }
 
 export interface AutonomyActivityConfig {
@@ -101,6 +139,8 @@ export interface StoredPersonality {
   drift?: DriftState;
   autonomy?: AutonomyDaily;
   lastNeglectDay?: string;
+  /** Últimas reacciones del chat (spec 37 §4.4), la más reciente al final. */
+  recent?: string[];
   trait?: string;
   temperament?: string;
   genes?: unknown[];
@@ -121,6 +161,8 @@ export interface CreatureProfile {
   speciesId: string;
   element: string;
   dims: Dims;
+  /** Últimas reacciones del chat guardadas (sin validar: puede traer ids de otra versión). */
+  recent: string[];
   traits: Record<Dimension, DimView>;
   legacy: { trait: string; temperament: string };
   mood: string;

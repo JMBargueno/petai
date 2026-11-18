@@ -32,10 +32,13 @@ import {
   EXPRESS_BEHAVIOR_TOOL,
   decideBehavior,
   effectsOf,
-  hintForTurn,
+  promptHint,
+  pushRecentBehavior,
+  isBehavior,
   validateBehavior,
 } from '../mind/behavior.engine';
 import { Dims } from '../mind/mind.types';
+import { buildSituation, type Situation } from '../mind/situation.engine';
 import { GameDataService } from '../game-data/game-data.service';
 import { buildLoreBlock } from './lore';
 
@@ -47,6 +50,8 @@ import { buildLoreBlock } from './lore';
 interface TurnPlan {
   interpretation: Interpretation;
   behavior: BehaviorView;
+  /** Pizarra del turno (falta en los tests que montan el plan a mano). */
+  situation?: Situation;
   dims: Dims;
 }
 
@@ -333,7 +338,7 @@ export class ChatService {
 
     let systemPrompt = buildSystemPrompt(pet, owner ?? {}, {
       personalityBlock: turn ? this.mind!.personalityBlock(turn.dims) : undefined,
-      behaviorHint: turn ? hintForTurn(turn.interpretation.intent, turn.behavior) : undefined,
+      behaviorHint: turn ? promptHint(turn.behavior) : undefined,
       tier,
       now,
       timeZone,
@@ -377,9 +382,25 @@ export class ChatService {
     if (!this.mind) return undefined;
     try {
       const profile = await this.mind.profile(pet);
+      const cfg = this.mind.config();
       const interpretation = interpretMessage(message);
-      const behavior = decideBehavior(interpretation.intent, profile.dims, this.behaviorState(pet), this.mind.config());
-      return { interpretation, behavior, dims: profile.dims };
+      // Pizarra de situación: se monta una vez por turno y de ella leen la decisión y sus efectos
+      const situation = buildSituation(
+        {
+          audience: 'owner',
+          pet,
+          now: new Date(),
+          lastOwnerInteractionAt: pet.lastInteractionAt ?? null,
+          recent: profile.recent,
+        },
+        cfg,
+        isBehavior,
+      );
+      const behavior = decideBehavior(interpretation.intent, profile.dims, this.behaviorState(pet), cfg, {
+        recent: situation.recent,
+        seed: pet.id,
+      });
+      return { interpretation, behavior, dims: profile.dims, situation };
     } catch (e) {
       this.logger.debug(`Plan de turno no disponible: ${(e as Error).message}`);
       return undefined;
@@ -425,7 +446,10 @@ export class ChatService {
       }
       // «chat» va aquí, junto a la deriva del turno, y no en el listener: una sola escritura
       const events = [...new Set(['chat', turn.interpretation.evolutionEvent, effects.evolutionEvent].filter(Boolean) as string[])];
-      await this.mind.applyExperience(pet.id, events);
+      // La reacción que al final se vio (la del motor o la que propuso el modelo, ya validada)
+      // entra en el historial, en la misma escritura que la deriva
+      const recent = turn.situation ? pushRecentBehavior(turn.situation.recent, turn.behavior.action, this.mind.config()) : undefined;
+      await this.mind.applyExperience(pet.id, events, new Date(), recent ? { recent } : undefined);
       if (this.mindMemory) {
         const ep = turn.interpretation.episode;
         if (ep) {

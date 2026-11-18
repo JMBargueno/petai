@@ -109,6 +109,47 @@ if (pers) {
   }
   console.log('✓ balance.json: personalidad (5 dimensiones, evolución y autonomía) validada');
 
+  // 1c-quinquies. Reacciones del chat: catálogo y tabla por intención (spec 37 §4.3)
+  const beh = pers.behavior;
+  if (beh?.reactions) {
+    const where = 'balance.personality.behavior';
+    const AUDIENCES = ['owner', 'visitor', 'pockai'];
+    const catalog = beh.catalog ?? {};
+    const ids = Object.keys(catalog);
+    if (!ids.includes('listen') || !ids.includes('yawn')) throw new Error(`${where}.catalog: faltan listen o yawn (son las reacciones de respaldo)`);
+    const ar = beh.antiRepeat;
+    if (!ar || !Number.isInteger(ar.window) || ar.window < 1 || !(ar.penalty > 0 && ar.penalty <= 1) || !(ar.margin >= 0)) throw new Error(`${where}.antiRepeat inválido`);
+    for (const [id, c] of Object.entries(catalog)) {
+      const at = `${where}.catalog.${id}`;
+      // Una reacción sin audiencia no se podría elegir nunca
+      if (!Array.isArray(c.audiences) || c.audiences.length === 0) throw new Error(`${at}: sin audiencia`);
+      for (const a of c.audiences) if (!AUDIENCES.includes(a)) throw new Error(`${at}: audiencia desconocida ${a}`);
+      for (const [k, v] of Object.entries(c.minDims ?? {})) {
+        if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${at}.minDims.${k} inválido`);
+      }
+      if (c.minDims && !ids.includes(c.fallback)) throw new Error(`${at}: con minDims hace falta un fallback del catálogo`);
+    }
+    for (const [intent, list] of Object.entries(beh.reactions)) {
+      const at = `${where}.reactions.${intent}`;
+      if (!Array.isArray(list) || list.length === 0) throw new Error(`${at} vacío`);
+      for (const r of list) {
+        if (!ids.includes(r.behavior)) throw new Error(`${at}: reacción fuera de catálogo ${r.behavior}`);
+        if (!(typeof r.base === 'number' && r.base >= 0)) throw new Error(`${at}.${r.behavior}.base debe ser ≥ 0`);
+        for (const [k, v] of Object.entries(r.weights ?? {})) {
+          if (!PERSONALITY_DIMS.includes(k) || typeof v !== 'number') throw new Error(`${at}.${r.behavior}.weights.${k} inválido`);
+        }
+        if (r.product) {
+          const dimsOk = (xs) => Array.isArray(xs) && xs.every((d) => PERSONALITY_DIMS.includes(d));
+          if (typeof r.product.scale !== 'number' || !dimsOk(r.product.dims ?? []) || !dimsOk(r.product.inverse ?? [])) throw new Error(`${at}.${r.behavior}.product inválido`);
+        }
+        if (!(r.base > 0) && !r.product) throw new Error(`${at}.${r.behavior}: sin base ni producto nunca puntuaría`);
+      }
+      // Toda intención necesita al menos una candidata para el entrenador
+      if (!list.some((r) => catalog[r.behavior].audiences.includes('owner'))) throw new Error(`${at}: ninguna candidata para el entrenador`);
+    }
+    console.log(`✓ balance.json: reacciones del chat (${ids.length} en catálogo, ${Object.keys(beh.reactions).length} intenciones) validadas`);
+  }
+
   // 1c-quater. Vida social: etapas de relación y escenas entre dos Pockai
   const social = pers.social;
   if (social) {

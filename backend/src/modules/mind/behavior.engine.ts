@@ -11,8 +11,10 @@
  * 3. `effectsOf`: qué aplica el game engine (efectos pequeños y acotados) y qué evento de evolución
  *    registra.
  */
+import { createRng, hashSeed } from '../battles/combat/rng';
 import { Intent } from './conversation.engine';
-import { Dims, PersonalityConfig } from './mind.types';
+import { Dims, PersonalityConfig, ReactionAudience, ReactionEntry } from './mind.types';
+import { weighted } from './personality.engine';
 
 export const BEHAVIORS = [
   'comfort',
@@ -74,75 +76,88 @@ export interface BehaviorState {
   energy: number;
 }
 
-/** Candidatas por intención con su peso según la personalidad (sin azar: mismo estado → misma reacción). */
-function candidates(intent: Intent, d: Dims): [Behavior, number][] {
-  const n = (v: number) => v / 100;
-  switch (intent) {
-    case 'sad_day':
-      return [
-        ['comfort', 0.5 + n(d.affection)],
-        ['cuddle', n(d.affection) + (1 - n(d.temper)) * 0.5],
-        ['invite_play', n(d.temper) * 0.6 + n(d.sociability) * 0.6],
-        ['listen', (1 - n(d.affection)) * 0.9],
-      ];
-    case 'good_news':
-      return [
-        ['celebrate', 0.6 + n(d.temper)],
-        ['cuddle', n(d.affection)],
-        ['ask_back', n(d.curiosity) * 0.9],
-      ];
-    case 'affection':
-      return [
-        ['cuddle', 0.4 + n(d.affection)],
-        ['show_off', (1 - n(d.affection)) * 0.6 + n(d.bravery) * 0.3],
-        ['listen', (1 - n(d.affection)) * 0.7],
-      ];
-    case 'scold':
-      return [
-        ['sulk', 0.5 + (1 - n(d.bravery)) * 0.5],
-        ['listen', n(d.affection) * 0.8],
-        ['show_off', n(d.bravery) * n(d.temper)],
-      ];
-    case 'play_request':
-      return [
-        ['invite_play', 0.6 + n(d.temper)],
-        ['listen', (1 - n(d.temper)) * 0.6],
-      ];
-    case 'explore_request':
-      return [
-        ['propose_explore', 0.4 + n(d.curiosity) + n(d.bravery) * 0.4],
-        ['listen', (1 - n(d.bravery)) * 0.8],
-      ];
-    case 'greeting':
-      return [
-        ['greet', 0.8 + n(d.sociability) * 0.4],
-        ['cuddle', n(d.affection) * 0.9],
-      ];
-    case 'farewell':
-      return [
-        ['wave_goodbye', 1],
-        ['sulk', n(d.affection) * 0.5 * (1 - n(d.bravery))],
-      ];
-    case 'question':
-      return [
-        ['ask_back', 0.4 + n(d.curiosity)],
-        ['show_off', n(d.bravery) * 0.6],
-        ['listen', 0.6],
-      ];
-    default:
-      return [
-        ['listen', 0.6],
-        ['ask_back', n(d.curiosity) * 0.9],
-        ['invite_play', n(d.temper) * 0.5],
-      ];
+/** Puntuación de una candidata: lineal en las dimensiones más, si lo declara, un término de producto. */
+export function scoreReaction(entry: ReactionEntry, dims: Dims): number {
+  // Sin suelo: aquí una puntuación baja debe poder perder (a diferencia de la vida autónoma)
+  let score = weighted(entry.base, entry.weights ?? {}, dims, -Infinity);
+  if (entry.product) {
+    let term = entry.product.scale;
+    for (const d of entry.product.dims ?? []) term *= dims[d] / 100;
+    for (const d of entry.product.inverse ?? []) term *= 1 - dims[d] / 100;
+    score += term;
   }
+  return score;
 }
 
-export function decideBehavior(intent: Intent, dims: Dims, state: BehaviorState, cfg: PersonalityConfig): BehaviorView {
-  const list = candidates(intent, dims);
+/**
+ * Candidatas de una intención para una audiencia, con su puntuación, en el orden de los datos
+ * (`balance.json → personality.behavior.reactions`). Una intención sin tabla usa la de `chat`.
+ */
+export function reactionScores(intent: string, dims: Dims, cfg: PersonalityConfig, audience: ReactionAudience = 'owner'): { behavior: Behavior; score: number }[] {
+  const table = cfg.behavior.reactions ?? {};
+  const catalog = cfg.behavior.catalog ?? {};
+  const out: { behavior: Behavior; score: number }[] = [];
+  for (const entry of table[intent] ?? table.chat ?? []) {
+    if (!isBehavior(entry.behavior)) continue;
+    // Una reacción pensada para el entrenador no se le ofrece a un visitante ni a otro Pockai
+    const audiences = catalog[entry.behavior]?.audiences ?? ['owner'];
+    if (!audiences.includes(audience)) continue;
+    out.push({ behavior: entry.behavior, score: scoreReaction(entry, dims) });
+  }
+  return out;
+}
+
+export interface DecisionContext {
+  /** Últimas reacciones elegidas, la más reciente al final. Sin ellas no hay anti-repetición. */
+  recent?: readonly string[];
+  /** Semilla para desempatar (id de la mascota): mismo estado, misma reacción. */
+  seed?: string;
+  audience?: ReactionAudience;
+}
+
+/**
+ * Elige la reacción de la criatura a un mensaje.
+ *
+ * Sin `ctx.recent` gana la candidata de mayor puntuación (la primera si empatan), como siempre.
+ * Con historial (spec 37 §4.4):
+ * - cada aparición reciente de una candidata multiplica su puntuación por `penalty`;
+ * - nunca la misma tres veces seguidas si hay alternativa;
+ * - se cambia de reacción solo si la nueva supera a la última por un margen, para que una
+ *   diferencia mínima no haga saltar de una a otra;
+ * - los empates se deshacen con un generador sembrado con la mascota y su historial, nunca al azar.
+ */
+export function decideBehavior(intent: Intent, dims: Dims, state: BehaviorState, cfg: PersonalityConfig, ctx: DecisionContext = {}): BehaviorView {
+  const audience = ctx.audience ?? 'owner';
+  let list = reactionScores(intent, dims, cfg, audience);
+  if (!list.length) return validateBehavior('listen', dims, state, cfg, audience).view;
+
+  const anti = cfg.behavior.antiRepeat;
+  const recent = anti && ctx.recent ? ctx.recent.slice(-anti.window) : [];
+  if (anti && recent.length) {
+    list = list.map((c) => {
+      const repeats = recent.reduce((n, r) => (r === c.behavior ? n + 1 : n), 0);
+      return { behavior: c.behavior, score: Math.max(0, c.score) * Math.pow(anti.penalty, repeats) };
+    });
+    const last = recent[recent.length - 1];
+    const twice = recent.length > 1 && recent[recent.length - 2] === last;
+    if (twice && list.some((c) => c.behavior !== last)) list = list.filter((c) => c.behavior !== last);
+  }
+
   let best = list[0];
-  for (const c of list) if (c[1] > best[1]) best = c;
-  return validateBehavior(best[0], dims, state, cfg).view;
+  for (const c of list) if (c.score > best.score) best = c;
+
+  if (anti && recent.length) {
+    // Empate: lo decide la semilla, no el orden de la tabla
+    const tied = list.filter((c) => Math.abs(c.score - best.score) < 1e-9);
+    if (tied.length > 1 && ctx.seed) {
+      const rng = createRng(hashSeed(`reaction:${ctx.seed}:${recent.join(',')}`));
+      best = tied[Math.min(tied.length - 1, Math.floor(rng() * tied.length))];
+    }
+    // Histéresis: la última reacción se mantiene si la nueva no la supera con claridad
+    const prev = list.find((c) => c.behavior === recent[recent.length - 1]);
+    if (prev && prev.behavior !== best.behavior && best.score < prev.score * (1 + anti.margin)) best = prev;
+  }
+  return validateBehavior(best.behavior, dims, state, cfg, audience).view;
 }
 
 export interface Validation {
@@ -160,36 +175,48 @@ export function isBehavior(v: unknown): v is Behavior {
 }
 
 /**
- * Validación de reglas de juego: permisos (catálogo cerrado), límites y estado (dormido, enfermo,
- * sin energía) y coherencia (una criatura muy distante no se acurruca). Devuelve la acción
- * aceptada o la alternativa segura.
+ * Validación de reglas de juego. Toda acción, la proponga quien la proponga, pasa por aquí:
+ * 1. catálogo cerrado;
+ * 2. modo superior (dormida solo bosteza; enferma o sin energía no hace nada activo);
+ * 3. audiencia (una reacción para el entrenador no vale ante un visitante);
+ * 4. coherencia con la personalidad (mínimos de `balance.json → personality.behavior.catalog`).
+ * Devuelve la acción aceptada o la alternativa segura; nunca algo fuera de catálogo.
  */
-export function validateBehavior(proposed: unknown, dims: Dims, state: BehaviorState, cfg: PersonalityConfig): Validation {
+export function validateBehavior(
+  proposed: unknown,
+  dims: Dims,
+  state: BehaviorState,
+  cfg: PersonalityConfig,
+  audience: ReactionAudience = 'owner',
+): Validation {
   if (!isBehavior(proposed)) return { ok: false, view: viewOf('listen'), reason: 'acción fuera de catálogo' };
   if (state.sleeping) {
     return proposed === 'yawn' ? { ok: true, view: viewOf('yawn') } : { ok: false, view: viewOf('yawn'), reason: 'está dormido' };
   }
-  const active = proposed === 'invite_play' || proposed === 'propose_explore' || proposed === 'celebrate';
-  if (active && (state.sick || state.energy < cfg.behavior.minEnergyToPlay)) {
-    const alt: Behavior = state.energy < cfg.behavior.minEnergyToPlay ? 'yawn' : 'cuddle';
+  const catalog = cfg.behavior.catalog ?? {};
+  const entry = catalog[proposed];
+  const allowed = (b: Behavior) => (catalog[b]?.audiences ?? ['owner']).includes(audience);
+  if (!allowed(proposed)) return { ok: false, view: viewOf('listen'), reason: 'no es una reacción para quien tiene delante' };
+
+  if (entry?.active && (state.sick || state.energy < cfg.behavior.minEnergyToPlay)) {
+    const tired = state.energy < cfg.behavior.minEnergyToPlay;
+    // Enferma pero con energía busca mimos; si eso no cabe ante esta audiencia, escucha
+    const alt: Behavior = tired ? 'yawn' : allowed('cuddle') ? 'cuddle' : 'listen';
     return { ok: false, view: viewOf(alt), reason: state.sick ? 'está enfermo' : 'no tiene energía' };
   }
-  if (proposed === 'cuddle' && dims.affection < 20) return { ok: false, view: viewOf('listen'), reason: 'incoherente con su personalidad distante' };
-  if (proposed === 'propose_explore' && dims.bravery < 15) return { ok: false, view: viewOf('listen'), reason: 'incoherente con su personalidad miedosa' };
+  for (const [d, min] of Object.entries(entry?.minDims ?? {})) {
+    if (dims[d as keyof Dims] < (min as number)) {
+      const fallback = isBehavior(entry?.fallback) && allowed(entry.fallback) ? entry.fallback : 'listen';
+      return { ok: false, view: viewOf(fallback), reason: entry?.reason ?? 'incoherente con su personalidad' };
+    }
+  }
   return { ok: true, view: viewOf(proposed) };
 }
 
-/** Intenciones de un mensaje corriente: la reacción se anima, pero no se le dicta al modelo. */
-const NEUTRAL_INTENTS = new Set(['chat', 'question']);
-
-/**
- * Pista de reacción para el prompt, solo cuando el mensaje la merece. En un mensaje corriente la
- * reacción elegida es siempre la misma para una personalidad dada, y repetir la instrucción turno
- * tras turno («devuelve una pregunta curiosa») hace que todas las respuestas suenen igual.
- * Provisional (spec 37 §1.6): cuando haya anti-repetición (§4.4) la pista puede volver siempre.
- */
-export function hintForTurn(intent: string, view: BehaviorView): string | undefined {
-  return NEUTRAL_INTENTS.has(intent) ? undefined : promptHint(view);
+/** Añade una reacción al historial reciente, sin dejarlo crecer más que la ventana. */
+export function pushRecentBehavior(recent: readonly string[], action: Behavior, cfg: PersonalityConfig): string[] {
+  const window = cfg.behavior.antiRepeat?.window ?? 4;
+  return [...recent, action].slice(-window);
 }
 
 export function promptHint(view: BehaviorView): string {

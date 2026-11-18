@@ -632,7 +632,7 @@ bloquea.
 |---|---|
 | 2.4 | Cadencia de extracción de memoria en el plan gratuito (gasta presupuesto de IA gestionada). |
 | 3.4 | Tope diario de progresión de inteligencia. |
-| 4.5 | Cada cuántos turnos puede el Pockai sacar un deseo por su cuenta. |
+| 4.5 | ~~Cada cuántos turnos puede el Pockai sacar un deseo por su cuenta.~~ **Decidido:** como mucho uno cada 8 turnos. |
 | 6.1 | ~~Si existe la etapa `rival`.~~ **Decidido:** no. Dos Pockai pueden discutir y reconciliarse, pero la relación tiene suelo y no hay etapa `rival`. |
 | 6.2 | Topes por visitante y día; si ofrecer un premio consume un alimento real del visitante. |
 | 6.5 | Si los regalos entre Pockai mueven objetos reales entre inventarios o son solo narrativos. |
@@ -754,4 +754,24 @@ tres capas, las mismas de la sección 7:
     y que los encuentros autónomos (`socialSweep`, `simulate`) y los buddies pasen por
     `resolveScene` en vez de sus frases fijas, que es la otra mitad de 6.3. Los textos de las
     escenas están en `social.engine.ts` hasta que el lote 5 los pase a identificadores de línea.
-- **Fase 5 — lotes 3 a 6 restantes**, incluido el menú del dueño visitante (6.2).
+- **Fase 5 — lote 4, primera mitad (hecha): 4.1 a 4.4, más 3.2.**
+  - 3.2: tabla de casos de `interpretMessage` en `mind/__fixtures__/intent-cases.json` (frase →
+    intención, con negaciones, falsos positivos e inglés). Destapó 18 fallos, ya corregidos: las
+    frases negadas («no estoy triste») dejan de contar y explorar exige el verbo conjugado.
+  - 4.1: `mind/situation.engine.ts` (puro) con `Situation` y `buildSituation`. El chat la monta
+    una vez por turno. Ante un visitante u otro Pockai filtra lo privado: nada de la capa
+    semántica, ni `emo:owner`, ni episodios nacidos del chat (`isPrivateEpisode`).
+  - 4.2: `resolveMode` (dormida, enferma, sola, con su entrenador, recibiendo o de visita);
+    `validateBehavior` aplica modo, audiencia y coherencia leyendo del catálogo.
+  - 4.3: la tabla de reacciones y sus umbrales viven en `balance.json → personality.behavior`
+    (`catalog` y `reactions`). Un test de regresión compara 72.030 combinaciones con el cálculo
+    anterior (`mind/__fixtures__/legacy-reactions.ts`): coinciden todas salvo 98 empates exactos
+    que antes decidía el redondeo.
+  - 4.4: historial en `Pet.personality.recent`, guardado en la misma escritura que la deriva.
+    Penalización por repetición, nunca tres seguidas, margen para cambiar y desempate sembrado.
+    Se retira el parche de 1.6: la pista de reacción vuelve a enviarse en todos los turnos.
+  - **Pendiente de la pizarra:** en el chat va con `untold`, `wishes` y `tricks` vacíos (los
+    rellenan 4.5–4.7 y 6.6), y `hosting`/`visiting` solo se calculan si quien la monta se lo dice.
+- **Fase 5 — pendiente.** Segunda mitad del lote 4 (4.5 deseos, **decidido: como mucho uno cada 8
+  turnos**; 4.6 reacciones, actividades y trucos nuevos; 4.7 intenciones nuevas), lote 3 salvo
+  3.2, lote 5 y lo que queda del 6, incluido el menú del dueño visitante (6.2).

@@ -539,7 +539,73 @@
       }
     },
     "combat": { "maxThresholdShift": 0.05 },
-    "behavior": { "minEnergyToPlay": 15 },
+    "behavior": {
+      "minEnergyToPlay": 15,
+      "antiRepeat": { "window": 4, "penalty": 0.5, "margin": 0.15 },
+      "catalog": {
+        "comfort": { "audiences": ["owner"] },
+        "celebrate": { "audiences": ["owner"], "active": true },
+        "cuddle": { "audiences": ["owner"], "minDims": { "affection": 20 }, "fallback": "listen", "reason": "incoherente con su personalidad distante" },
+        "invite_play": { "audiences": ["owner"], "active": true },
+        "propose_explore": { "audiences": ["owner"], "active": true, "minDims": { "bravery": 15 }, "fallback": "listen", "reason": "incoherente con su personalidad miedosa" },
+        "greet": { "audiences": ["owner"] },
+        "wave_goodbye": { "audiences": ["owner"] },
+        "listen": { "audiences": ["owner", "visitor", "pockai"] },
+        "ask_back": { "audiences": ["owner"] },
+        "sulk": { "audiences": ["owner"] },
+        "show_off": { "audiences": ["owner"] },
+        "yawn": { "audiences": ["owner", "visitor", "pockai"] }
+      },
+      "reactions": {
+        "sad_day": [
+          { "behavior": "comfort", "base": 1, "weights": { "affection": 0.01 } },
+          { "behavior": "cuddle", "base": 0.75, "weights": { "affection": 0.01, "temper": -0.005 } },
+          { "behavior": "invite_play", "base": 0.6, "weights": { "temper": 0.006, "sociability": 0.006 } },
+          { "behavior": "listen", "base": 0.45, "weights": { "affection": -0.009 } }
+        ],
+        "good_news": [
+          { "behavior": "celebrate", "base": 1.1, "weights": { "temper": 0.01 } },
+          { "behavior": "cuddle", "base": 0.5, "weights": { "affection": 0.01 } },
+          { "behavior": "ask_back", "base": 0.45, "weights": { "curiosity": 0.009 } }
+        ],
+        "affection": [
+          { "behavior": "cuddle", "base": 0.9, "weights": { "affection": 0.01 } },
+          { "behavior": "show_off", "base": 0.45, "weights": { "affection": -0.006, "bravery": 0.003 } },
+          { "behavior": "listen", "base": 0.35, "weights": { "affection": -0.007 } }
+        ],
+        "scold": [
+          { "behavior": "sulk", "base": 0.75, "weights": { "bravery": -0.005 } },
+          { "behavior": "listen", "base": 0.4, "weights": { "affection": 0.008 } },
+          { "behavior": "show_off", "base": 0, "product": { "scale": 1, "dims": ["bravery", "temper"] } }
+        ],
+        "play_request": [
+          { "behavior": "invite_play", "base": 1.1, "weights": { "temper": 0.01 } },
+          { "behavior": "listen", "base": 0.3, "weights": { "temper": -0.006 } }
+        ],
+        "explore_request": [
+          { "behavior": "propose_explore", "base": 1.1, "weights": { "curiosity": 0.01, "bravery": 0.004 } },
+          { "behavior": "listen", "base": 0.4, "weights": { "bravery": -0.008 } }
+        ],
+        "greeting": [
+          { "behavior": "greet", "base": 1, "weights": { "sociability": 0.004 } },
+          { "behavior": "cuddle", "base": 0.45, "weights": { "affection": 0.009 } }
+        ],
+        "farewell": [
+          { "behavior": "wave_goodbye", "base": 1 },
+          { "behavior": "sulk", "base": 0, "product": { "scale": 0.5, "dims": ["affection"], "inverse": ["bravery"] } }
+        ],
+        "question": [
+          { "behavior": "ask_back", "base": 0.9, "weights": { "curiosity": 0.01 } },
+          { "behavior": "show_off", "base": 0.3, "weights": { "bravery": 0.006 } },
+          { "behavior": "listen", "base": 0.6 }
+        ],
+        "chat": [
+          { "behavior": "listen", "base": 0.6 },
+          { "behavior": "ask_back", "base": 0.45, "weights": { "curiosity": 0.009 } },
+          { "behavior": "invite_play", "base": 0.25, "weights": { "temper": 0.005 } }
+        ]
+      }
+    },
     "social": {
       "stages": {
         "acquaintance": { "familiarity": 0.45 },

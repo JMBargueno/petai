@@ -59,8 +59,9 @@ export class MindService {
   }
 
   async profile(pet: any): Promise<CreatureProfile> {
-    const { dims } = await this.ensureDims(pet);
+    const { dims, stored } = await this.ensureDims(pet);
     const cfg = this.config();
+    const recent = Array.isArray(stored.recent) ? stored.recent.filter((r): r is string => typeof r === 'string') : [];
     return {
       petId: pet.id,
       userId: pet.userId,
@@ -68,6 +69,7 @@ export class MindService {
       speciesId: pet.speciesId,
       element: pet.species?.element ?? 'unknown',
       dims,
+      recent,
       traits: describeDims(dims, cfg),
       legacy: deriveLegacy(dims),
       mood: moodOf(pet),
