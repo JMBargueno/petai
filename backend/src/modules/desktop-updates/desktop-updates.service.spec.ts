@@ -32,10 +32,15 @@ function makeService(token: string | undefined = 'tok', realtime?: any) {
 function mockFetch() {
   const fn = jest.fn(async (url: string) => {
     if (url.endsWith('/releases/latest')) return new Response(JSON.stringify(RELEASE), { status: 200 });
+    if (url.endsWith('/releases?per_page=15')) return new Response(JSON.stringify([RELEASE]), { status: 200 });
     if (url.endsWith('/assets/1')) return new Response(JSON.stringify(LATEST), { status: 200 });
-    if (url.endsWith('/assets/2')) {
+    // Los binarios instaladores (2, 3 y 4) redirigen a su URL firmada; el resto, 404.
+    if (url.endsWith('/assets/2'))
       return new Response(null, { status: 302, headers: { location: 'https://objects.github/signed' } });
-    }
+    if (url.endsWith('/assets/3'))
+      return new Response(null, { status: 302, headers: { location: 'https://objects.github/signed-3' } });
+    if (url.endsWith('/assets/4'))
+      return new Response(null, { status: 302, headers: { location: 'https://objects.github/signed-4' } });
     return new Response('nope', { status: 404 });
   });
   global.fetch = fn as unknown as typeof fetch;
@@ -122,6 +127,91 @@ describe('DesktopUpdatesService', () => {
       throw new Error('ECONNRESET');
     }) as unknown as typeof fetch;
     await expect(makeService().findUpdate('windows', 'x86_64', '0.1.0')).resolves.toBeNull();
+  });
+
+  it('auto-recupera el instalador si el de la cache ya no existe (release re-escrito)', async () => {
+    let latestCalls = 0;
+    // Primer release resuelto: su instalador (id 10) ya fue borrado junto a su release.
+    const RELEASE_DEAD = {
+      assets: [{ id: 10, name: 'Pockai_0.34.0_x64-setup.exe', url: 'https://api.github.com/repos/o/r/releases/assets/10' }],
+    };
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/releases/latest')) {
+        latestCalls += 1;
+        // La 1ª re-resolución devuelve el release muerto; la 2ª (tras purgar la cache) el re-creado.
+        return new Response(JSON.stringify(latestCalls <= 1 ? RELEASE_DEAD : RELEASE), { status: 200 });
+      }
+      if (url.endsWith('/assets/1')) return new Response(JSON.stringify(LATEST), { status: 200 });
+      if (url.endsWith('/assets/2'))
+        return new Response(null, { status: 302, headers: { location: 'https://objects.github/signed' } });
+      return new Response('nope', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const svc = makeService();
+    // No devuelve el id muerto: purga la cache, re-resuelve y devuelve el instalador vigente.
+    await expect(svc.findInstallerAssetId('windows')).resolves.toBe(2);
+    expect(latestCalls).toBe(2);
+  });
+
+  it('purga la cache ante un 404 de getDownloadUrl para que se re-resuelva el release', async () => {
+    let latestCalls = 0;
+    const RELEASE_DEAD = {
+      assets: [{ id: 10, name: 'Pockai_0.34.0_x64-setup.exe', url: 'https://api.github.com/repos/o/r/releases/assets/10' }],
+    };
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/releases/latest')) {
+        latestCalls += 1;
+        return new Response(JSON.stringify(latestCalls <= 1 ? RELEASE_DEAD : RELEASE), { status: 200 });
+      }
+      if (url.endsWith('/assets/1')) return new Response(JSON.stringify(LATEST), { status: 200 });
+      if (url.endsWith('/assets/2'))
+        return new Response(null, { status: 302, headers: { location: 'https://objects.github/signed' } });
+      return new Response('nope', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const svc = makeService();
+    // El asset que traía la cache (10) ya no existe → 404.
+    await expect(svc.getDownloadUrl(10)).rejects.toBeInstanceOf(NotFoundException);
+    // Tras el fallo la cache está purgada: la siguiente consulta re-resuelve el release vigente
+    // (vuelve a llamar a releases/latest) y sirve el instalador sano.
+    await expect(svc.getDownloadUrl(2)).resolves.toBe('https://objects.github/signed');
+    expect(latestCalls).toBeGreaterThanOrEqual(2);
+  });
+
+  it('404 «Instalador no disponible» si no hay ningún instalador que redirija tras reintentar', async () => {
+    // releases/latest siempre sirve el mismo release cuyo único instalador está muerto.
+    const RELEASE_ONLY_DEAD = {
+      assets: [{ id: 10, name: 'Pockai_0.34.0_x64-setup.exe', url: 'https://api.github.com/repos/o/r/releases/assets/10' }],
+    };
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/releases/latest')) return new Response(JSON.stringify(RELEASE_ONLY_DEAD), { status: 200 });
+      if (url.endsWith('/releases?per_page=15'))
+        return new Response(JSON.stringify([RELEASE_ONLY_DEAD]), { status: 200 });
+      return new Response('nope', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    await expect(makeService().findInstallerAssetId('windows')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('usa la lista de releases si releases/latest no devuelve un release usable', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/releases/latest')) return new Response(JSON.stringify({ assets: [] }), { status: 200 });
+      if (url.endsWith('/releases?per_page=15')) return new Response(JSON.stringify([RELEASE]), { status: 200 });
+      if (url.endsWith('/assets/1')) return new Response(JSON.stringify(LATEST), { status: 200 });
+      if (url.endsWith('/assets/2'))
+        return new Response(null, { status: 302, headers: { location: 'https://objects.github/signed' } });
+      return new Response('nope', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    await expect(makeService().findInstallerAssetId('windows')).resolves.toBe(2);
+  });
+
+  it('comparte un solo fetch de releases/latest entre consultas concurrentes (dedup en vuelo)', async () => {
+    const fn = mockFetch();
+    const svc = makeService();
+    await Promise.all([svc.getDownloadUrl(2), svc.getDownloadUrl(2), svc.getDownloadUrl(2)]);
+    const latestFetches = fn.mock.calls.filter((c) => String(c[0]).endsWith('/releases/latest')).length;
+    expect(latestFetches).toBe(1);
   });
 
   it('notifica por websocket al detectar una versión nueva', async () => {
