@@ -19,6 +19,7 @@ import {
   type Placement,
   type PlacementError,
 } from './habitat-layout';
+import { computeActiveBuffs, type ActiveBuffs } from './habitat-buffs';
 import type { MoveFurnitureInput, PlaceFurnitureInput } from './habitat.schemas';
 
 export interface RoomConfig {
@@ -259,27 +260,41 @@ export class HabitatService {
     if (!pet) throw new NotFoundException('No pet found for this user');
 
     const items = await this.prisma.habitatItem.findMany({ where: { petId: pet.id } });
-    const aggregated: Record<string, number> = {};
-    const buffCaps = this.data().buffCaps ?? {};
+    // Mismo cálculo (suma + recorte a `buffCaps`) que usa la lógica de juego: ver habitat-buffs.ts
+    const activeBuffs = computeActiveBuffs(items.map((i) => i.furnitureId), this.data());
+    return { petId: pet.id, activeBuffs, itemCount: items.length };
+  }
 
-    for (const item of items) {
-      const furn = this.data().furniture.find((f) => f.id === item.furnitureId);
-      if (furn?.buffs) {
-        for (const [k, v] of Object.entries(furn.buffs)) {
-          aggregated[k] = (aggregated[k] || 0) + v;
-        }
-      }
+  /**
+   * Buffs activos (ya recortados a `buffCaps`) de una mascota concreta, para la lógica de juego
+   * (lazy tick de vitales y combate). Mismo cálculo que `getActiveBuffs`.
+   */
+  async getActiveBuffsForPet(petId: string): Promise<ActiveBuffs> {
+    const items = await this.prisma.habitatItem.findMany({ where: { petId }, select: { furnitureId: true } });
+    return computeActiveBuffs(items.map((i) => i.furnitureId), this.data());
+  }
+
+  /**
+   * Buffs activos de varias mascotas con UNA sola consulta (lista de mascotas, combate, torneos).
+   * Cada id pedido aparece en el mapa; sin muebles, con `{}`.
+   */
+  async getActiveBuffsForPets(petIds: string[]): Promise<Map<string, ActiveBuffs>> {
+    const ids = Array.from(new Set(petIds));
+    const out = new Map<string, ActiveBuffs>();
+    if (ids.length === 0) return out;
+    if (ids.length === 1) {
+      out.set(ids[0], await this.getActiveBuffsForPet(ids[0]));
+      return out;
     }
-
-    // Fix: las claves de `buffCaps` llevan el sufijo `_max` (p. ej. `hygiene_decay_reduction_max`);
-    // antes la lookup usaba la clave cruda y el tope NUNCA se aplicaba.
-    const capped: Record<string, number> = {};
-    for (const [k, v] of Object.entries(aggregated)) {
-      const cap = buffCaps[k] ?? buffCaps[`${k}_max`];
-      capped[k] = typeof cap === 'number' ? Math.min(v, cap) : v;
-    }
-
-    return { petId: pet.id, activeBuffs: capped, itemCount: items.length };
+    const items = await this.prisma.habitatItem.findMany({
+      where: { petId: { in: ids } },
+      select: { petId: true, furnitureId: true },
+    });
+    const byPet = new Map<string, string[]>(ids.map((id) => [id, []]));
+    for (const it of items) byPet.get(it.petId)?.push(it.furnitureId);
+    const data = this.data();
+    for (const [id, furnitureIds] of byPet) out.set(id, computeActiveBuffs(furnitureIds, data));
+    return out;
   }
 
   async unlockRoom(petId: string, newStage: string) {

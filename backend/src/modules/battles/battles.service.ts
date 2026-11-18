@@ -7,12 +7,15 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { randomInt } from 'crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
+import { HabitatService } from '../habitat/habitat.service';
+import { buffValue } from '../habitat/habitat-buffs';
 import { BondingService } from '../bonding/bonding.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { LeaderboardService, BoardScope } from './leaderboard.service';
@@ -54,6 +57,8 @@ export class BattlesService {
     private readonly eventEmitter: EventEmitter2,
     private readonly exclusiveLock: ExclusiveLockService,
     private readonly cache: RedisCacheService,
+    // Buffs de muebles (spec 10): opcional para no romper tests que construyen el servicio a mano
+    @Optional() private readonly habitat?: HabitatService,
   ) {}
 
   private get cfg(): CombatConfig & Record<string, any> {
@@ -65,7 +70,20 @@ export class BattlesService {
 
   // ---------- Luchadores ----------
 
-  fighterFromPet(pet: any): Fighter {
+  /**
+   * Bonus de ánimo en combate (`combat_mood_bonus`, spec 10) de cada mascota, ya recortado al
+   * tope, con UNA consulta para todas. Las que no tienen muebles (o sin HabitatService) dan 0.
+   */
+  async combatMoodBonuses(petIds: string[]): Promise<Map<string, number>> {
+    const out = new Map<string, number>();
+    if (!this.habitat || petIds.length === 0) return out;
+    const buffs = await this.habitat.getActiveBuffsForPets(petIds);
+    for (const [id, b] of buffs) out.set(id, buffValue(b, 'combat_mood_bonus'));
+    return out;
+  }
+
+  /** @param moodBonus `combat_mood_bonus` del hábitat de la mascota (ver `combatMoodBonuses`). */
+  fighterFromPet(pet: any, moodBonus = 0): Fighter {
     const element = pet.species.element as Element;
     return {
       name: pet.nickname || pet.species.name,
@@ -73,7 +91,7 @@ export class BattlesService {
       element,
       level: pet.level,
       stats: effectiveStats(pet),
-      mood: moodMultiplier(pet, this.cfg),
+      mood: moodMultiplier(pet, this.cfg, moodBonus),
       skills: equippedSkills(pet, element, this.catalog),
       strategy: STRATEGIES.includes(pet.strategy) ? pet.strategy : 'balanced',
       isBot: false,
@@ -118,6 +136,7 @@ export class BattlesService {
     const used = await this.battlesInLastDay(userId);
     const equipped = equippedSkills(pet, element, this.catalog);
     const blocker = this.fightBlocker(pet, used);
+    const moodBonus = (await this.combatMoodBonuses([pet.id])).get(pet.id) ?? 0;
     return {
       petId: pet.id,
       name: pet.nickname,
@@ -126,7 +145,8 @@ export class BattlesService {
       stats: effectiveStats(pet),
       allocated: allocatedPoints(pet),
       statPoints: pet.statPoints,
-      mood: moodMultiplier(pet, this.cfg),
+      // El mismo ánimo que usará el combate, con el bonus de los muebles incluido
+      mood: moodMultiplier(pet, this.cfg, moodBonus),
       strategy: pet.strategy,
       elo: pet.elo,
       league: leagueFor(pet.elo, this.cfg.leagues),
@@ -210,12 +230,14 @@ export class BattlesService {
     const candidates = (fresh.length > 0 ? fresh : rows).map((r) => ({ petId: r.id, elo: r.elo, row: r }));
     const chosen = pickOpponent(candidates, pet.elo, cfg.elo, rng);
 
-    const attacker = this.fighterFromPet(pet);
+    // El hábitat del rival también cuenta: una sola consulta para los dos
+    const moodBonuses = await this.combatMoodBonuses(chosen ? [pet.id, chosen.row.id] : [pet.id]);
+    const attacker = this.fighterFromPet(pet, moodBonuses.get(pet.id) ?? 0);
     let defender: Fighter;
     let defenderRow: (typeof rows)[number] | null = null;
     if (chosen) {
       defenderRow = chosen.row;
-      defender = this.fighterFromPet(chosen.row);
+      defender = this.fighterFromPet(chosen.row, moodBonuses.get(chosen.row.id) ?? 0);
     } else {
       // Sin rival cercano: bot determinista derivado de la semilla del combate
       defender = generateBot((seed ^ 0x9e3779b9) >>> 0, pet.level, this.gameData.getSpecies(), this.catalog, cfg);
