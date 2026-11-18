@@ -16,10 +16,11 @@ Dos especies no pueden ser el mismo muñeco con otro adorno. Antes de pensar en 
 
 | Plan | Cómo es | Qué cambia en la geometría | Especies |
 |---|---|---|---|
-| Bípedo redondo | De pie, cabeza grande sobre torso, brazos cortos | La geometría común de `stage()` tal cual | Ignisaurio, Axolunar, Florabrote, Solarejo |
+| Bípedo redondo | De pie, cabeza grande sobre torso, brazos cortos | La geometría común de `stage()` tal cual | Axolunar, Florabrote, Solarejo |
 | Bípedo alado | Bípedo con alas que doblan su anchura | `lowered()` y alas en `behind` | Livolt |
 | Tentacular | Cuerpo con manto y apoyos múltiples, sin brazos | `arm: undefined` y tentáculos en `behind` | Inktopus |
 | Cuadrúpedo bajo | Bajo y largo: cuerpo tumbado, cabeza delante, cuatro patas cortas | `torso` horizontal, `head` a la derecha, patas traseras con `hindFar` (en `behind`) y `hindNear` (en `front`) | Magmadillo |
+| Cuadrúpedo de gorguera | Robusto y cabezón, a cuatro patas, con gorguera detrás de la cabeza, cuernos y cola de maza | Solo en el arte final importado: el boceto de formas sigue siendo el bípedo anterior y está por rehacer | Ignisaurio |
 | Cuadrúpedo sentado de tres cabezas | Grupa en el suelo, patas delanteras rectas y tres cabezas en abanico; solo la central lleva cara y accesorios | `torso` vertical, `sitting()` en `front`, cabezas laterales con `sideHead()` en `behind` | Cerbito |
 | Cuadrúpedo esbelto | Patas largas y finas, cuello alto, hocico; el cuerpo queda lejos del suelo | `feet: undefined`, cuatro `longLeg` (dos en `behind`, dos en `front`), cuello como polígono de la pieza 4, `muzzle()` | Kirisol |
 | Ave de cuello largo | Sin brazos: alas. Cabeza pequeña, cuello largo, pico y patas finas con garras | `arm` y `feet` en `undefined`, `beak()`, `longNeck()`, `talon()` y `fan()` de plumas en punta | Fénixel |

@@ -101,6 +101,7 @@ Clasifica cada color en primario, secundario, acento, línea o color literal, y 
 - Agrupa los colores en tres familias por parecido real (k-medias en Lab), no por tono dominante: vale igual para una especie azul, una crema con crin naranja o una dorada con alas cian. La familia con más píxeles es el primario; la segunda, el secundario; la tercera, el acento.
 - El color más oscuro de cada etapa es siempre el contorno.
 - Los colores escasos que no se parecen a ninguna familia (boca, comida, chispas) y los brillos blancos pequeños son literales.
+- Si el papel elegido dejaría un color irreconocible (más de 30 de distancia en Lab), ese color se guarda literal. Pasa con las llamas: en una especie roja de vientre crema caían en la familia crema y salían pardas. Un literal no cambia con la paleta de la mascota, así que el reparto imprime su porcentaje: por encima del 15–20 % conviene revisar la hoja.
 
 Imprime el reparto. Es normal que la línea ronde el 25–35 % (el contorno pesa mucho en un sprite pequeño). Desconfía si una familia se queda en 0 o si la paleta propuesta no se parece a la hoja: **mira siempre la hoja de contactos real**, porque un reparto mal hecho cambia los colores de toda la especie.
 
@@ -111,14 +112,22 @@ Una especie con `imported/<id>.json` se dibuja con sus píxeles (`drawImported` 
 
 El `PixelSpecies` de formas sigue haciendo falta: da el boceto de disposición y la posición de los efectos.
 
-## Tandas
-Para varias especies seguidas, un script que recorra especies y etapas llamando a `stage.mjs`, `import.mjs` y, al acabar cada especie, a `roles.mjs` y `set-palette.mjs`, y que escriba un registro. Son unos 35 segundos por imagen: lánzalo en segundo plano. Reimportar y reclasificar no gasta imágenes: si falla el importador o el reparto de color, corrige el script y repite solo esos pasos sobre los `.jpg` que ya tienes.
+## Especies sin hoja objetivo: la hoja de diseño
+Si la especie no tiene una hoja objetivo hecha a mano, el diseño se aprueba antes de gastar las cuatro imágenes de arte final:
+
+1. **Hoja de diseño** (1 imagen): las cuatro etapas en reposo, en fila, sobre fondo claro. Referencias: el boceto con las cuatro etapas y una imagen con Pockais ya aprobados, que fija el **estilo** (contorno, tamaño de píxel, sombreado plano, caras). El prompt pide copiar el estilo y no las criaturas, describe cada etapa y prohíbe parecerse a personajes existentes.
+2. **Aprobación del usuario.** Es el momento de cambiar la forma: en esta tanda el Ignisaurio pasó de lagarto bípedo con llama en la cola (demasiado parecido a un personaje conocido) a dinosaurio cuadrúpedo de gorguera.
+3. `node scripts/sprites/concept/split-design.mjs <id> <hoja>` la parte en una referencia por etapa (`sprite-previews/nano/<id>-<etapa>-diseno.png`).
+4. `stage.mjs <id> <etapa> - "<descripción>"`: con `-` en lugar de la hoja objetivo usa esas referencias.
+
+Las hojas aprobadas quedan en `examples/<id>-diseno.jpg`. Si el arte final cambia el plan corporal, el boceto de formas deja de coincidir: pasa a `import.mjs` la altura de reposo que quieres para cada etapa y apunta que el boceto está por rehacer.
+
+Una imagen puede salir mal compuesta (tres filas, criaturas cortadas): se ve en la hoja de contactos como una pose recortada. Se repite solo esa etapa.
 
 ## Tandas
-Para varias especies seguidas, un script que recorra especies y etapas llamando a `stage.mjs`, `import.mjs` y, al acabar cada especie, a `roles.mjs` y `set-palette.mjs`, y que escriba un registro. Son unos 35 segundos por imagen: lánzalo en segundo plano. Reimportar y reclasificar no gasta imágenes: si falla el importador o el reparto de color, corrige el script y repite solo esos pasos sobre los `.jpg` que ya tienes.
+Para varias especies seguidas, un script que recorra especies y etapas llamando a `stage.mjs`, `import.mjs` y, al acabar cada especie, a `roles.mjs` y `set-palette.mjs`, y que escriba un registro. Son unos 35 segundos por imagen: lánzalo en segundo plano. Si la API responde 429 por el tope de gasto mensual, para: no lo rodees; lo sube el usuario y la tanda se relanza reutilizando los `.jpg` que ya existen. Reimportar y reclasificar no gasta imágenes: si falla el importador o el reparto de color, corrige el script y repite solo esos pasos sobre los `.jpg` que ya tienes.
 
 ## Límites conocidos
-- **Piezas sueltas:** lo que no toca a la criatura se descarta como partícula. Un aura de esquirlas o de hojas flotantes no se puede importar; no la pidas en el prompt.
 - **Piezas sueltas:** lo que no toca a la criatura se descarta como partícula. Un aura de esquirlas o de hojas flotantes no se puede importar; no la pidas en el prompt.
 - **Animación pobre:** 10 poses por etapa. Si una animación necesita una pose que no está, hay que pedir una hoja más.
 - **Accesorios:** las anclas de gorro, gafas, bufanda y capa se estiman desde la silueta. Revisa `pnpm generate:accessories --preview`.
