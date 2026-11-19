@@ -3,7 +3,7 @@
 Seguimiento paso a paso. La arquitectura y el porqué están en
 [`specs/spec-42-nucleo-rust-tauri.md`](specs/spec-42-nucleo-rust-tauri.md).
 
-**Estados:** ⬜ no empezado · 🟡 en progreso · ✅ terminado y verificado
+**Estados:** ⬜ no empezado · 🟡 en progreso · ✅ terminado y verificado · ➖ descartado (con su motivo)
 
 Cada paso se marca 🟡 al empezarlo y ✅ al terminarlo, en el mismo commit que el trabajo. Si algo
 se desvía del plan, se anota en «Desviaciones» al final.
@@ -14,7 +14,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 |---|---|---|---|
 | 1 | Toda la red del escritorio pasa por Rust; ningún token en el webview | 24 / 24 | ✅ |
 | 2 | El estado global vive en Rust; `App.svelte` solo se suscribe | 5 / 6 | 🟡 |
-| 3 | Dominios restantes y fin de la pasarela `api_request` | 0 / 6 | ⬜ |
+| 3 | Dominios restantes y fin de la pasarela `api_request` | 2 / 4 (2 descartados) | 🟡 |
 | 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 0 / 10 | ⬜ |
 | 5 | Live Activity / Dynamic Island y widgets | 0 / 7 | ⬜ |
 
@@ -65,11 +65,11 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 2.6 `App.svelte` refleja `appState`; `ControlPanel`, `PetView` y `HabitatWidget` siguen recibiendo props
 
 ## Fase 3 — Dominios restantes
-- ⬜ 3.1 Avisos, bandeja y recordatorios (`notifications`, `notification-inbox`, `initiative`)
-- ⬜ 3.2 Entorno: latido, caché de clima, geolocalización
-- ⬜ 3.3 Social: visitas, viaje de visita, clanes
-- ⬜ 3.4 Skills de escritorio, digest de contexto y ajustes persistidos
-- ⬜ 3.5 Cola larga: commands tipados pestaña a pestaña (arena, cocina, misiones, …)
+- ✅ 3.1 Avisos de necesidades, recordatorios y bandeja en el núcleo (`notices.rs`, evento `core://notice`). La iniciativa (`initiative.ts`) se queda en la UI: ver decisiones
+- ✅ 3.2 Entorno: estado ambiental del servidor, latido y cambios por tiempo real en el núcleo. El clima se queda en la UI: ver decisiones
+- ➖ 3.3 Social: la visita en curso pasa a la fase 5; visitantes y clanes se quedan en la UI: ver decisiones
+- ➖ 3.4 Skills de escritorio, digest de contexto y ajustes: se quedan en la UI: ver decisiones
+- 🟡 3.5 El núcleo actualiza el estado con las respuestas de cuidado, huevos y tienda. Quedan los commands tipados, pestaña a pestaña (arena, cocina, misiones, …)
 - ⬜ 3.6 Borrar `api_request`, `api.ts` y el transporte web salvo el modo demo
 
 ## Fase 4 — Móvil
@@ -85,7 +85,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ⬜ 4.10 Borrar `mobile/android`, su job de CI y las referencias en docs, specs y skills
 
 ## Fase 5 — Superficies nativas
-- ⬜ 5.1 `surfaces.rs`: política pura `AppState → descriptor`
+- ⬜ 5.1 `surfaces.rs`: política pura `AppState → descriptor`, y la visita en curso como parte del estado del núcleo
 - ⬜ 5.2 `tauri-plugin-pockai-surfaces` (Rust) y paquete Swift `PockaiActivityKit`
 - ⬜ 5.3 Plugin Swift: iniciar, actualizar y terminar la Live Activity
 - ⬜ 5.4 Widget Extension: Dynamic Island y pantalla de bloqueo
@@ -121,6 +121,36 @@ se desvía del plan, se anota en «Desviaciones» al final.
   de comer, bañar…) aún pasan por la pasarela `api_request`, así que el núcleo no ve su respuesta; con
   los commands tipados de la fase 3 actualizará el estado él solo.
 
+
+## Decisiones de la fase 3: qué no se mueve al núcleo
+
+Al entrar en cada módulo se ha aplicado la frontera de la spec 42 (reglas sin UI al núcleo;
+presentación en la UI). Estos se quedan donde están, y por qué:
+
+- **Iniciativa (`initiative.ts`)**. Es un temporizador alrededor de una llamada cuyo resultado es
+  una frase que dice la mascota, y lo dispara la presencia del dueño que detecta el cerebro de
+  escritorio. El móvil usará su propio canal de iniciativa del backend. Se revisará en la fase 4.
+- **Clima local** (`refreshLocalWeather`). No habla con el backend: va del equipo a Open-Meteo, y el
+  parseo vive en `@pockai/scene/weather`, que se queda en TypeScript.
+- **Visitantes y clanes** (`visitors.ts`, `clan-store.ts`). Son estado de pantalla alimentado por el
+  tiempo real, sin persistencia ni reglas de negocio propias.
+- **Viaje de visita** (`visitTravel.ts`). Mezcla un hecho (mi mascota está de visita hasta tal hora)
+  con fases de animación que dependen de qué componentes están en pantalla. El hecho pasará al núcleo
+  en la fase 5, que es donde tiene consumidor (la Live Activity de «visita en curso»).
+- **Skills de escritorio y digest de contexto**. Son funciones exclusivas del escritorio (cursor,
+  ventanas, hábitos de uso): no hay nada que compartir con el móvil.
+- **Ajustes** (tema, audio, atajo, onboarding). Preferencias visuales de cada UI; el `localStorage`
+  de cada plataforma basta.
+
+## Verificado en la app: fase 3 (2026-11-20)
+
+Compilación de desarrollo contra un backend local: el núcleo carga el estado ambiental (hora del día,
+actividad) y manda el latido; al eclosionar desde la UI añade la mascota y refresca huevos y saldo;
+al dar de comer desde la UI baja el inventario él solo (5 → 4) y la UI lo refleja; un aviso metido en
+la bandeja del núcleo aparece en el contador de la app.
+
+No se ha visto en la app: el aviso de necesidades (la mascota de prueba no bajó de los umbrales) ni
+un recordatorio vencido. Ambos están cubiertos por los tests del núcleo.
 
 ## Pendiente de verificar en la fase 1
 

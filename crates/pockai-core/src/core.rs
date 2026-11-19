@@ -313,6 +313,9 @@ impl Core {
         if path.contains("/auth/") {
             self.adopt_session(&mut out);
         }
+        if sent.is_some() && (200..300).contains(&out.status) {
+            self.state_on_response(&req.method, path, &out.body);
+        }
         Ok(Outcome::Buffered(out))
     }
 

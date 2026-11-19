@@ -440,6 +440,59 @@ impl Core {
         }
     }
 
+    /// Respuestas correctas de la API que cambian el estado. Mientras las acciones pasen por la
+    /// pasarela (`api_request`), así es como el núcleo se entera de lo que la UI acaba de hacer: dar
+    /// de comer devuelve la mascota y gasta inventario, comprar cambia el saldo, eclosionar trae una
+    /// mascota nueva.
+    pub(crate) fn state_on_response(&self, method: &str, path: &str, body: &str) {
+        if method.eq_ignore_ascii_case("GET") {
+            return;
+        }
+        let path = path.split('?').next().unwrap_or("");
+        let Some(route) = path.strip_prefix("/v1/") else { return };
+        let segments: Vec<&str> = route.split('/').collect();
+        let value = serde_json::from_str::<Value>(body).unwrap_or(Value::Null);
+
+        match segments.as_slice() {
+            // Cambios en la cuenta (zona horaria, nickname…): la respuesta es el usuario.
+            ["me"] | ["me", "handle"] => {
+                if value.get("id").is_some() {
+                    self.change(Slice::User, ChangeSource::Server, |s| s.user = value);
+                }
+            }
+            // Cuidar a una mascota: la respuesta es esa mascota, ya actualizada.
+            ["pets", id] | ["pets", id, _] => {
+                if pet_id(&value) == Some(*id) {
+                    self.apply_pet(value, false, ChangeSource::Server);
+                }
+                if matches!(segments.get(2), Some(&"feed") | Some(&"heal") | Some(&"use-item")) {
+                    self.refresh_later(&[Slice::Inventory]);
+                }
+            }
+            ["eggs", _, "hatch"] => {
+                if pet_id(&value).is_some() {
+                    self.apply_pet(value, true, ChangeSource::Server);
+                }
+                self.refresh_later(&[Slice::Eggs, Slice::User]);
+            }
+            ["eggs", "buy"] => self.refresh_later(&[Slice::Eggs, Slice::User]),
+            ["shop", "buy"] => self.refresh_later(&[Slice::Inventory, Slice::User]),
+            _ => {}
+        }
+    }
+
+    /// Vuelve a pedir partes del estado en segundo plano, sin hacer esperar a quien llamó.
+    fn refresh_later(&self, slices: &[Slice]) {
+        let Ok(runtime) = tokio::runtime::Handle::try_current() else { return };
+        let core = self.clone();
+        let slices = slices.to_vec();
+        runtime.spawn(async move {
+            for slice in slices {
+                let _ = core.state_refresh(slice).await;
+            }
+        });
+    }
+
     /// Eventos del servidor que cambian el estado.
     pub(crate) fn state_on_realtime(&self, name: &str, payload: &Value) {
         match name {

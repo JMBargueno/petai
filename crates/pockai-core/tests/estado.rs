@@ -358,3 +358,89 @@ async fn la_bandeja_guarda_los_avisos_que_no_se_pudieron_mostrar() {
     assert!(restored.state_snapshot().inbox.is_empty());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+fn post(route: &str, body: Value) -> ApiRequest {
+    ApiRequest { method: "POST".into(), path: route.into(), body: Some(body.to_string()), auth: true, content_type: None }
+}
+
+async fn settle() {
+    tokio::time::sleep(Duration::from_millis(250)).await;
+}
+
+#[tokio::test]
+async fn dar_de_comer_actualiza_la_mascota_y_el_inventario_sin_que_la_ui_lo_pida() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/pets/p1/feed"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "id": "p1", "hunger": 100 })))
+        .mount(&server)
+        .await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    // Tras comer, el servidor ya da el inventario con una manzana menos.
+    server.reset().await;
+    get(&server, "/v1/inventory", json!([{ "itemId": "manzana", "quantity": 1 }])).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/pets/p1/feed"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "id": "p1", "hunger": 100 })))
+        .mount(&server)
+        .await;
+
+    let res = core.request(post("/v1/pets/p1/feed", json!({ "itemId": "manzana" }))).await.unwrap();
+    settle().await;
+
+    assert_eq!(res.status, 201);
+    let state = core.state_snapshot();
+    assert_eq!(state.pets[0]["hunger"], 100);
+    assert_eq!(state.inventory[0]["quantity"], 1);
+}
+
+#[tokio::test]
+async fn eclosionar_anade_la_mascota_y_refresca_huevos_y_saldo() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/eggs", json!([])).await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 300 })).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/eggs/e1/hatch"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "id": "p3", "nickname": "Brote" })))
+        .mount(&server)
+        .await;
+
+    core.request(post("/v1/eggs/e1/hatch", json!({}))).await.unwrap();
+    settle().await;
+
+    let state = core.state_snapshot();
+    assert_eq!(state.pets.len(), 3);
+    assert_eq!(state.pets[2]["nickname"], "Brote");
+    assert!(state.eggs.is_empty());
+    assert_eq!(state.user["coins"], 300);
+}
+
+#[tokio::test]
+async fn una_respuesta_que_no_es_la_mascota_no_toca_el_estado() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/pets/p1/activate"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "activePetId": "p1" })))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v1/pets/p1/feed"))
+        .respond_with(ResponseTemplate::new(400).set_body_json(json!({ "id": "p1", "message": "No tienes ese objeto" })))
+        .mount(&server)
+        .await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+
+    core.request(post("/v1/pets/p1/activate", json!({}))).await.unwrap();
+    core.request(post("/v1/pets/p1/feed", json!({ "itemId": "nada" }))).await.unwrap();
+    settle().await;
+
+    assert_eq!(core.state_snapshot().pets[0], json!({ "id": "p1", "hunger": 80 }));
+}
