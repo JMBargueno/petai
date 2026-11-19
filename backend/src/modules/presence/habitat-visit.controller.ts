@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { HabitatVisitService, ActiveVisitor } from './habitat-visit.service';
+import { VisitDialogService, VisitInteraction } from './visit-dialog.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 
@@ -9,6 +10,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
  *
  *   - POST /v1/habitat/visit       → iniciar visita { ownerId } (exige amistad aceptada)
  *   - POST /v1/habitat/visit/end   → terminar mi visita activa
+ *   - POST /v1/habitat/visit/interact → hablar por menú con el Pockai anfitrión
  *   - GET  /v1/habitat/visitors    → visitas activas donde el actor es el dueño
  */
 @ApiTags('Habitat · Visita en vivo')
@@ -16,7 +18,38 @@ import { CurrentUser } from '../auth/current-user.decorator';
 @UseGuards(JwtAuthGuard)
 @Controller('habitat')
 export class HabitatVisitController {
-  constructor(private readonly habitatVisitService: HabitatVisitService) {}
+  constructor(
+    private readonly habitatVisitService: HabitatVisitService,
+    private readonly dialog: VisitDialogService,
+  ) {}
+
+  @Post('visit/interact')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Hablar por menú con el Pockai del amigo al que estás visitando',
+    description:
+      'Solo con una visita en vivo activa (403 si no). Sin texto libre: sin `choice` empieza la conversación (o la retoma); ' +
+      'con `choice` (índice de una de las opciones recibidas) avanza. Devuelve la línea del Pockai, su reacción y las opciones. ' +
+      'Enviar también `turn` (el de la última respuesta) hace que repetir la petición no repita el efecto. ' +
+      'Ofrecer un premio consume un alimento del inventario del visitante.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        ownerId: { type: 'string', description: 'Opcional: el amigo visitado, si hay más de una visita activa' },
+        choice: { type: 'integer', minimum: 0, description: 'Índice de la opción elegida' },
+        turn: { type: 'integer', description: 'Turno de la respuesta a la que se contesta' },
+      },
+    },
+  })
+  interact(@CurrentUser() user: any, @Body() body: { ownerId?: string; choice?: number; turn?: number }): Promise<VisitInteraction> {
+    return this.dialog.interact(user.id, {
+      ownerId: typeof body?.ownerId === 'string' ? body.ownerId : undefined,
+      choice: body?.choice,
+      turn: typeof body?.turn === 'number' ? body.turn : undefined,
+    });
+  }
 
   @Post('visit')
   @HttpCode(HttpStatus.OK)

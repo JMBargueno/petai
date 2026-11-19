@@ -46,6 +46,7 @@
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
   import { clearVisitors, sceneReceived, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
+  import { clearVisitorTalk, visitorInteracted, type VisitorInteractionEvent } from './lib/visitDialog';
   import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster, emitClanHabitatEvent } from './lib/clan-store';
   import type { HabitatVisitor, HabitatSceneEvent, ClanMessage, ClanGoal, ClanXpEvent } from './lib/api';
   import { loadActivePetId, pickActivePet, saveActivePetId } from './lib/activePet';
@@ -355,8 +356,13 @@
           if (currentPet) reactToAction(currentPet.id, 'friend_visit', { visitorName: v.visitorName });
         });
         socket.on('habitat:visitor_left', (ev: { visitorId?: string } | null) => {
-          if (ev?.visitorId) visitorLeft(ev.visitorId);
+          if (ev?.visitorId) {
+            visitorLeft(ev.visitorId);
+            clearVisitorTalk(ev.visitorId);
+          }
         });
+        // Lo que el visitante hace con tu Pockai (saludarle, traerle un premio…) y cómo responde
+        socket.on('habitat:visitor_interaction', (ev: VisitorInteractionEvent | null) => visitorInteracted(ev));
         // Qué hacen tu Pockai y el visitante: lo decide el servidor y se representa en la sala
         socket.on('habitat:scene', (ev: HabitatSceneEvent | null) => sceneReceived(ev));
         // Estado inicial: quién visita ahora mismo (por si la app arrancó con visitas en curso)

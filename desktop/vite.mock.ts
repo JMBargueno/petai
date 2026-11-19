@@ -396,6 +396,24 @@ const adventureScene = {
 };
 
 let visiting: null | { friendId: string } = null;
+
+/** Conversación de ejemplo del menú de visita (el real lo decide el backend). */
+const TALK_LINES: Record<string, string> = {
+  greet: 'Luna te saluda contenta.',
+  pet: 'Luna ronronea con tus caricias.',
+  treat: 'Luna acepta Manzana encantada.',
+  play: 'Luna juega contigo un buen rato.',
+  ask: 'Luna está tranquila y a gusto. Parece que quiere contarte algo: «Explorando encontré algo: Semilla solar.»',
+  bye: 'Luna te acompaña hasta la puerta.',
+};
+const TALK_LABELS: Record<string, string> = { greet: 'Saludar', pet: 'Acariciar', treat: 'Ofrecer Manzana', play: 'Jugar un momento', ask: '¿Qué tal estás?', bye: 'Despedirse' };
+let talk = { turn: 0, done: [] as string[], ended: false, last: null as any };
+function talkReply(line: string) {
+  const left = ['greet', 'pet', 'treat', 'play', 'ask'].filter((id) => !talk.done.includes(id));
+  const options = talk.ended ? [] : [...(talk.done.length >= 5 ? [] : left), 'bye'].map((id) => ({ id, label: TALK_LABELS[id], ...(id === 'treat' ? { item: { id: 'apple', name: 'Manzana' } } : {}) }));
+  talk.last = { turn: talk.turn, line, behavior: { action: 'greet_visitor', animation: 'happy', emote: 'wave' }, options, remaining: Math.max(0, 5 - talk.done.length), ended: talk.ended, stage: 'friend', petName: 'Luna' };
+  return talk.last;
+}
 let tick = 0;
 const uid = (p: string) => `${p}-${++tick}`;
 
@@ -570,7 +588,20 @@ const routes: [string, RegExp, Handler][] = [
     return { message: 'Colocado', furnitureId: m[1], room: f?.room ?? 'sala', itemId: uid('it'), x: body?.x ?? 0, y: body?.y ?? 0, rotation: body?.rotation ?? 0 };
   }],
   ['POST', /^\/habitat\/visit$/, ({ body }) => ((visiting = { friendId: body?.friendId ?? 'u-2' }), { success: true, visit: { visitorId: 'u-demo', visitorName: user.displayName, pet: { petId: 'p-1', nickname: 'Fuego', speciesName: 'Ignisaur', speciesId: 'ignisaur', spriteRef: 'sprites/ignisaur_idle' }, startedAt: iso() }, energy: 54 })],
-  ['POST', /^\/habitat\/visit\/end$/, () => ((visiting = null), { ok: true })],
+  ['POST', /^\/habitat\/visit\/end$/, () => ((visiting = null), (talk = { turn: 0, done: [], ended: false, last: null }), { ok: true })],
+  ['POST', /^\/habitat\/visit\/interact$/, ({ body }) => {
+    if (body?.choice === undefined) {
+      if (talk.last && !talk.ended) return talk.last;
+      talk = { turn: 1, done: [], ended: false, last: null };
+      return talkReply('Luna te reconoce y viene derecha hacia ti.');
+    }
+    if (body.turn !== undefined && body.turn !== talk.turn) return talk.last;
+    const id = talk.last?.options?.[body.choice]?.id ?? 'bye';
+    talk.turn++;
+    if (id === 'bye') talk.ended = true;
+    else talk.done.push(id);
+    return talkReply(TALK_LINES[id]);
+  }],
   ['GET', /^\/coop\/friends$/, () => friends],
   ['POST', /^\/coop\/friends$/, ({ body }) => {
     const f = { id: uid('f'), status: 'pending', direction: 'outgoing', otherUserId: uid('u'), otherDisplayName: body?.handle ?? 'Nuevo', otherHandle: body?.handle ?? null, otherPet: null, updatedAt: iso() };

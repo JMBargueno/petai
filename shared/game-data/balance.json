@@ -492,7 +492,12 @@
         "neglect_day": { "affection": -0.3, "sociability": -0.15 },
         "buddy_play": { "sociability": 0.15, "temper": 0.05 },
         "care_received": { "sociability": 0.2, "affection": 0.05 },
-        "gift_received": { "sociability": 0.15, "affection": 0.05 }
+        "gift_received": { "sociability": 0.15, "affection": 0.05 },
+        "visitor_greet": { "sociability": 0.03 },
+        "visitor_pet": { "affection": 0.075 },
+        "visitor_treat": { "affection": 0.05 },
+        "visitor_play": { "temper": 0.1, "sociability": 0.05 },
+        "visitor_ask": { "sociability": 0.03 }
       }
     },
     "memory": {
@@ -706,7 +711,16 @@
         "make_up": { "base": 24, "weights": { "affection": 0.05 }, "delta": 0.12, "after": "squabble" },
         "give_gift": { "base": 2, "weights": { "affection": 0.04 }, "delta": 0.12, "minStage": "friend", "requiresFind": true }
       },
-      "rumors": { "kinds": ["find", "adventure", "event"], "chance": 0.5, "maxAgeDays": 7, "importance": 0.35 }
+      "rumors": { "kinds": ["find", "adventure", "event"], "chance": 0.5, "maxAgeDays": 7, "importance": 0.35 },
+      "visitor": {
+        "maxPerVisit": 5,
+        "dailyEffects": 3,
+        "shyBelow": 35,
+        "aloofBelow": 35,
+        "minEnergyToPlay": 25,
+        "treat": { "happiness": 3, "hunger": 5 },
+        "deltas": { "greet": 0.04, "pet": 0.06, "treat": 0.1, "play": 0.08, "ask": 0.03 }
+      }
     },
     "room": {
       "antiRepeat": { "window": 5, "penalty": 0.5, "top": 3, "margin": 0.15 },

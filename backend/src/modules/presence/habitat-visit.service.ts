@@ -372,6 +372,7 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
   private visitEnded(v: { id: string; visitorId: string; ownerId: string; petId: string; startedAt: Date }) {
     this.sceneSlot.delete(v.id);
     this.events?.emit('habitat:visit_ended', {
+      visitId: v.id,
       userId: v.visitorId,
       ownerId: v.ownerId,
       visitorPetId: v.petId,

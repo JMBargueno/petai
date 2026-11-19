@@ -841,6 +841,38 @@ tres capas, las mismas de la sección 7:
     `GET /pets/:id/mind` incluye en lo reciente los recuerdos `visit` y `rumor`.
   - **Sin hacer aquí:** los paquetes de cuidados (`care-package.service.ts`) no avisan a la
     mente; el contador de intentos de buddies vive en memoria del proceso.
-- **Pendiente.** Lote 6, segunda parte: el menú del dueño que visita (6.2). Lote 3 salvo 3.2
-  (métricas, lematización, tope de inteligencia, orden del prompt) y lote 5 (diálogo por datos).
+- **Fase 6 — lote 6, segunda parte (hecha): 6.2, el menú del entrenador que visita.**
+  - **Motor.** `mind/visitor.engine.ts` (puro): `openVisit` y `stepVisit`. Opciones: saludar,
+    acariciar, ofrecer un premio, jugar, «¿qué tal estás?», esperar y despedirse; ninguna
+    negativa. Cada una, una vez por visita. La respuesta sale de la personalidad y de la etapa
+    con ese visitante (`emo:user:<id>`): un tímido se esconde de un desconocido y solo deja
+    esperar; un distante no se deja acariciar por quien no conoce. Toda reacción pasa por
+    `validateBehavior` con audiencia `visitor`.
+  - **Servicio.** `presence/visit-dialog.service.ts` y `POST /habitat/visit/interact`
+    (`{ ownerId?, choice?, turn? }`): 403 sin visita activa. Sin `choice` empieza o retoma;
+    con él, avanza. `turn` es el de la respuesta a la que se contesta: una petición repetida
+    devuelve lo ya contestado, sin efecto. Una interacción a la vez por visita
+    (`ExclusiveLockService`). El estado vive en Redis (`visit-dialog:<visita>`) con respaldo
+    en memoria, y se borra con `habitat:visit_ended` (que ahora lleva `visitId`).
+  - **Topes (decididos).** `balance.json → personality.social.visitor`: 5 interacciones por
+    visita y 3 al día por visitante con efecto (contador por mascota, visitante y día). La
+    deriva usa los eventos `visitor_*`; el validador exige que ninguno mueva más de la mitad
+    que el equivalente del propio entrenador.
+  - **Premio (decidido): consume un alimento real** del visitante, del que más tiene. Se
+    descuenta con una escritura condicional y una sola vez; sin efectos por hoy no se ofrece.
+    Al anfitrión le sube un poco la felicidad y el hambre saciada, acotado.
+  - **Privacidad.** Del anfitrión solo se lee su relación con el visitante y, para «¿qué tal
+    estás?», una vivencia propia de la lista blanca de los rumores, y solo a quien ya conoce.
+  - **El dueño.** Recibe `habitat:visitor_interaction` (`{ visitorId, petId, option, line,
+    behavior }`); si no está, queda un recuerdo `visit` por visita (clave `visitor:<visita>`)
+    que su Pockai le contará («desde la última vez»).
+  - **Escritorio.** `VisitDialog.svelte` en la pestaña de visitas mientras dura la visita, y la
+    última interacción en el pie de la sala del anfitrión (`lib/visitDialog.ts`).
+  - **Sin ciclo de módulos.** `VisitDialogService` resuelve la mente con `ModuleRef`: importar
+    `MindModule` en presencia cerraría Mind → Billing → Realtime → Presence → Mind.
+  - **Sin hacer aquí:** Android y web no pintan el menú; el Pockai anfitrión no anima la
+    reacción en la sala (solo se muestra la línea); el visitante elige el menú desde la pestaña,
+    sin ver la sala del amigo.
+- **Pendiente.** Lote 3 salvo 3.2 (métricas, lematización, tope de inteligencia, orden del
+  prompt) y lote 5 (diálogo por datos).
 

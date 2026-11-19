@@ -258,6 +258,30 @@ if (pers) {
         throw new Error(`${where}.rumors.importance debe estar entre memory.minImportanceToStore y 0.5`);
       }
     }
+    // Menú del entrenador que visita: topes y efectos acotados para un tercero
+    const vi = social.visitor;
+    if (vi) {
+      const at = `${where}.visitor`;
+      const OPTS = ['greet', 'pet', 'treat', 'play', 'ask'];
+      if (!(Number.isInteger(vi.maxPerVisit) && vi.maxPerVisit >= 1 && vi.maxPerVisit <= 10)) throw new Error(`${at}.maxPerVisit debe ser un entero en [1, 10]`);
+      if (!(Number.isInteger(vi.dailyEffects) && vi.dailyEffects >= 0 && vi.dailyEffects <= vi.maxPerVisit)) throw new Error(`${at}.dailyEffects debe ser un entero en [0, maxPerVisit]`);
+      for (const k of ['shyBelow', 'aloofBelow', 'minEnergyToPlay']) if (!(vi[k] >= 0 && vi[k] <= 100)) throw new Error(`${at}.${k} debe estar en [0, 100]`);
+      if (!(vi.treat?.happiness >= 0 && vi.treat.happiness <= 10 && vi.treat?.hunger >= 0 && vi.treat.hunger <= 15)) throw new Error(`${at}.treat fuera de rango`);
+      for (const [k, v] of Object.entries(vi.deltas ?? {})) {
+        // Sin opciones negativas: un visitante no puede empeorar la relación
+        if (!OPTS.includes(k) || !(typeof v === 'number' && v >= 0 && v <= 0.15)) throw new Error(`${at}.deltas.${k} inválido (0 a 0,15)`);
+      }
+      // La deriva que provoca un tercero es, como mucho, la mitad de la del propio entrenador
+      const owner = { greet: 'chat', pet: 'chat', ask: 'chat', treat: 'fed', play: 'minigame' };
+      for (const o of OPTS) {
+        const ev = pers.evolution?.events?.[`visitor_${o}`];
+        if (!ev) throw new Error(`balance.personality.evolution.events.visitor_${o} falta`);
+        const cap = Math.max(...Object.values(pers.evolution.events[owner[o]] ?? {}).map((x) => Math.abs(x)), 0) / 2;
+        for (const [d, x] of Object.entries(ev)) {
+          if (Math.abs(x) > cap + 1e-9) throw new Error(`balance.personality.evolution.events.visitor_${o}.${d}: supera la mitad de lo que mueve el entrenador (${cap})`);
+        }
+      }
+    }
     const slm = pers.memory?.sinceLastMax;
     if (slm !== undefined && !(Number.isInteger(slm) && slm >= 0 && slm <= 4)) throw new Error('balance.personality.memory.sinceLastMax debe ser un entero en [0, 4]');
     console.log(`✓ balance.json: vida social (${SCENE_IDS.length} escenas, 4 etapas) validada`);
