@@ -45,6 +45,8 @@ export interface SocialConfig {
   scenes: Record<SceneType, SceneConfig>;
   /** Rumores (spec 37 §6.4): qué puede contar un Pockai a otro de lo que ha vivido. */
   rumors?: RumorConfig;
+  /** Menú del entrenador que visita (spec 37 §6.2). */
+  visitor?: import('./visitor.engine').VisitorConfig;
 }
 
 export interface RumorConfig {

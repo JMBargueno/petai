@@ -229,6 +229,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/habitat/visit/interact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hablar por menú con el Pockai del amigo al que estás visitando
+         * @description Solo con una visita en vivo activa (403 si no). Sin texto libre: sin `choice` empieza la conversación (o la retoma); con `choice` (índice de una de las opciones recibidas) avanza. Devuelve la línea del Pockai, su reacción y las opciones. Enviar también `turn` (el de la última respuesta) hace que repetir la petición no repita el efecto. Ofrecer un premio consume un alimento del inventario del visitante.
+         */
+        post: operations["HabitatVisitController_interact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/habitat/visit": {
         parameters: {
             query?: never;
@@ -6145,6 +6165,34 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatVisitController_interact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Opcional: el amigo visitado, si hay más de una visita activa */
+                    ownerId?: string;
+                    /** @description Índice de la opción elegida */
+                    choice?: number;
+                    /** @description Turno de la respuesta a la que se contesta */
+                    turn?: number;
+                };
+            };
+        };
         responses: {
             200: {
                 headers: {

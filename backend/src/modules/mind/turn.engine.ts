@@ -15,7 +15,7 @@ import { Interpretation, interpretMessage } from './conversation.engine';
 import { dayKey } from './evolution.engine';
 import { MemoryRow, layerOf } from './memory.engine';
 import { Dims, PersonalityConfig, StoredPersonality } from './mind.types';
-import { Situation, buildSituation, sinceLastOrder } from './situation.engine';
+import { Situation, asDate, buildSituation, sinceLastOrder } from './situation.engine';
 import { TricksState, nextTrick, normalizeTricks, practiceTrick, trickToPerform } from './tricks.engine';
 import { WishId, WishesState, activeWishes, afterChatTurn, fulfilEpisode, fulfilWish, mayShowWish, normalizeWishes, wishHint } from './wishes.engine';
 import { createRng, hashSeed } from '../battles/combat/rng';
@@ -31,7 +31,8 @@ export interface TurnPet {
   health?: number | null;
   sleeping?: boolean | null;
   sick?: boolean | null;
-  lastInteractionAt?: Date | null;
+  /** Puede llegar como texto: la mascota del chat viene serializada. */
+  lastInteractionAt?: Date | string | null;
 }
 
 export interface TurnInput {
@@ -96,7 +97,7 @@ export function planOwnerTurn(input: TurnInput, cfg: PersonalityConfig): TurnPla
       subject: ownerRow ? { key: 'owner', valence: ownerRow.valence, stage: null } : null,
       pet,
       now,
-      lastOwnerInteractionAt: pet.lastInteractionAt ?? null,
+      lastOwnerInteractionAt: asDate(pet.lastInteractionAt),
       recent: stored.recent,
       memories: rows,
       tricks: tricks.known,
@@ -106,7 +107,7 @@ export function planOwnerTurn(input: TurnInput, cfg: PersonalityConfig): TurnPla
   );
 
   const finds = situation.untold.filter((u) => u.kind === 'find');
-  const last = pet.lastInteractionAt ?? null;
+  const last = asDate(pet.lastInteractionAt);
   const flags = new Set<string>();
   if (situation.untold.length) flags.add('untold');
   if (finds.length) flags.add('has_find');

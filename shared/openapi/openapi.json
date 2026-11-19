@@ -475,6 +475,52 @@
         ]
       }
     },
+    "/v1/habitat/visit/interact": {
+      "post": {
+        "description": "Solo con una visita en vivo activa (403 si no). Sin texto libre: sin `choice` empieza la conversación (o la retoma); con `choice` (índice de una de las opciones recibidas) avanza. Devuelve la línea del Pockai, su reacción y las opciones. Enviar también `turn` (el de la última respuesta) hace que repetir la petición no repita el efecto. Ofrecer un premio consume un alimento del inventario del visitante.",
+        "operationId": "HabitatVisitController_interact",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "Opcional: el amigo visitado, si hay más de una visita activa"
+                  },
+                  "choice": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Índice de la opción elegida"
+                  },
+                  "turn": {
+                    "type": "integer",
+                    "description": "Turno de la respuesta a la que se contesta"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Hablar por menú con el Pockai del amigo al que estás visitando",
+        "tags": [
+          "Habitat · Visita en vivo"
+        ]
+      }
+    },
     "/v1/habitat/visit": {
       "post": {
         "description": "Gasta 10 de energía del pet visitante. Cooldown de 10 min por amigo y máx. 10 visitas en 24 h. Si ya hay una visita activa con ese amigo, la devuelve sin cobrar ni volver a notificar.",

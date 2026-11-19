@@ -1095,6 +1095,18 @@ export const api = {
       text ? { ownerId, message: text } : { ownerId },
     );
   },
+  /**
+   * Habla por menú con el Pockai del amigo al que visitas. Sin `choice` empieza (o retoma) la
+   * conversación; con él, elige una de las opciones recibidas. `turn` es el de la respuesta a la
+   * que se contesta: así un reintento no repite el efecto.
+   */
+  async visitInteract(ownerId: string, choice?: number, turn?: number) {
+    return minigameRequest<VisitInteraction>(
+      'POST',
+      '/v1/habitat/visit/interact',
+      choice === undefined ? { ownerId } : { ownerId, choice, turn },
+    );
+  },
   /** Cierra tu visita en curso (el backend emite `habitat:visitor_left`). */
   async endHabitatVisit() {
     return minigameRequest<{ ok: boolean }>('POST', '/v1/habitat/visit/end');
@@ -1618,6 +1630,29 @@ export interface PetLook {
 }
 
 /** Escena entre tu Pockai y el de un visitante, tal como la resuelve el servidor. */
+/** Una opción del menú de visita. El texto lo pone el servidor. */
+export interface VisitMenuOption {
+  /** greet | pet | treat | play | ask | wait | bye */
+  id: string;
+  label: string;
+  /** En «ofrecer un premio», el alimento de tu inventario que se gastaría. */
+  item?: { id: string; name: string };
+}
+
+/** Respuesta del Pockai anfitrión a quien le visita (spec 37 §6.2). */
+export interface VisitInteraction {
+  turn: number;
+  line: string;
+  behavior: { action: string; animation: string; emote: string | null };
+  options: VisitMenuOption[];
+  /** Interacciones que quedan en esta visita. */
+  remaining: number;
+  ended: boolean;
+  /** Lo que ese Pockai siente por ti: stranger | acquaintance | friend | best_friend */
+  stage: string;
+  petName: string;
+}
+
 export interface HabitatSceneEvent {
   visitorId: string;
   slot: number;

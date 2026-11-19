@@ -17,6 +17,7 @@
   import { Home, Pencil, Check, RotateCw, Trash2, Mountain } from 'lucide-svelte';
   import { habitatBackdrop } from '../lib/habitatBackdrop';
   import { roomGuestOf, sceneLabel, stageLabel, visitScene, visitorsStore } from '../lib/visitors';
+  import { visitorTalk } from '../lib/visitDialog';
 
   const dispatch = createEventDispatcher();
 
@@ -90,6 +91,8 @@
   // Visita en curso: el Pockai del amigo que cabe en la sala y lo último que han hecho juntos
   $: roomGuest = roomGuestOf($visitorsStore);
   $: guestScene = roomGuest && $visitScene?.visitorId === roomGuest.visitorId ? $visitScene : null;
+  /** Lo último que el entrenador visitante ha hecho con tu Pockai. */
+  $: guestTalk = roomGuest && $visitorTalk?.visitorId === roomGuest.visitorId ? $visitorTalk : null;
 
   let activeRoom: HabitatRoom | null = null;
   let furnitureByRoom: HabitatFurniture[] = [];
@@ -286,6 +289,7 @@
         <p class="visit-caption" aria-live="polite">
           <strong>{roomGuest.pet.nickname}</strong>, de {roomGuest.visitorName}, está de visita{#if guestScene}: {sceneLabel(guestScene.type)}{/if}.
           {#if guestScene && stageLabel(guestScene.stage)}<span class="visit-caption__stage">{stageLabel(guestScene.stage)}.</span>{/if}
+          {#if guestTalk}<span class="visit-caption__talk">{roomGuest.visitorName}: {guestTalk.line}</span>{/if}
         </p>
       {/if}
 
@@ -670,5 +674,11 @@
   }
   .visit-caption__stage {
     opacity: 0.75;
+  }
+  .visit-caption__talk {
+    display: block;
+    margin-top: var(--space-1, 4px);
+    color: var(--ink, inherit);
+    text-wrap: pretty;
   }
 </style>

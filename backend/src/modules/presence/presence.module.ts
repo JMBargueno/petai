@@ -5,6 +5,7 @@ import { PresenceService } from './presence.service';
 import { CoopCareService } from './coop-care.service';
 import { HabitatVisitController } from './habitat-visit.controller';
 import { HabitatVisitService } from './habitat-visit.service';
+import { VisitDialogService } from './visit-dialog.service';
 
 /**
  * Multi-Device Presence + Co-op Module.
@@ -15,7 +16,7 @@ import { HabitatVisitService } from './habitat-visit.service';
  */
 @Module({
   controllers: [PresenceController, CoopFriendsController, HabitatVisitController],
-  providers: [PresenceService, CoopCareService, HabitatVisitService],
+  providers: [PresenceService, CoopCareService, HabitatVisitService, VisitDialogService],
   exports: [PresenceService, CoopCareService, HabitatVisitService],
 })
 export class PresenceModule {}
