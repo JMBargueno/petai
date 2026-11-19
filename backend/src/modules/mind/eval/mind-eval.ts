@@ -126,7 +126,7 @@ const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,
 /** Frases de una respuesta (los puntos suspensivos y las abreviaturas no la parten de más). */
 export function countSentences(reply: string): number {
   return reply
-    .replace(/\.{2,}|…/g, '.')
+    .replace(/\.{2,}|…/g, ',')
     .split(/[.!?¡¿]+(?:\s|$)/)
     .map((s) => s.trim())
     .filter((s) => /[a-záéíóúñ0-9]/i.test(s)).length;
