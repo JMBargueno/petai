@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: prueba-nueva-de-flujo
+expected_outcome: |
+  Ante la petición de un minijuego nuevo sin más detalle, lee el estado con check_minigames.mjs, pregunta en una
+  sola tanda lo que falta y presenta una propuesta con frase de lore, un único verbo, lo que hace el Pockai, la
+  cuenta del techo de puntos, la variante accesible y las recompensas dentro de banda; no repite la mecánica de un
+  juego existente y se detiene a pedir confirmación antes de programar o tocar datos.

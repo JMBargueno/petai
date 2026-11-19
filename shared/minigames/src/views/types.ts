@@ -1,9 +1,12 @@
 import type { GameInput } from '../core/types';
+import type { PetActor } from '../pet';
 
 /** Lo que la vista puede hacer: encolar entradas para el siguiente tick. */
 export interface ViewContext {
   push(input: GameInput): void;
   reducedMotion: boolean;
+  /** La mascota del jugador, lista para colocar en la arena (ver pet.ts). */
+  pet: PetActor;
 }
 
 /**

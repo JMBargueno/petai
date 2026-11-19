@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: arte-sin-gastar
+expected_outcome: |
+  Prepara el arte de un minijuego que ya existe sin tocar sus reglas: escribe el brief docs/minijuegos/forja_termica.md
+  con la plantilla (lugar, lore, el Pockai, fondo y tabla de piezas con rampa de fuego) y los prompts rellenos de
+  piezas y de fondo en sprite-previews/minigames/, con colores por hex y fondo magenta en las piezas; no dibuja nada
+  con código ni deja emoji, y se detiene a pedir confirmación del coste antes de llamar a Nano Banana.

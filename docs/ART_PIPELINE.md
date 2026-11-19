@@ -350,3 +350,20 @@ struct ItemIcon: View {
 ```
 
 **Pendiente:** el CDN (`scripts/build-assets.ts`) no publica todavía `items/`. Mientras no lo haga, un icono nuevo llega a los móviles con la siguiente versión de la app, y hasta entonces se ve el icono de interfaz.
+
+## 11. Arte de los minijuegos
+
+Se diseña con la skill `pockai-minigame-architect`. Cada minijuego lleva un **fondo de arena** y sus **piezas** propias en `shared/assets/minigames/<id>/`; la comida se reutiliza de `items/` y la mascota es la del jugador.
+
+| Qué | Formato | Cómo llega |
+|---|---|---|
+| Piezas | PNG de 32×32 o 48×48 px nativos, guardado a ×2, 12 colores como mucho, sin transparencias parciales | Lámina de Nano Banana → `scripts/sprites/items/import.mjs --free-ids --out shared/assets/minigames/<id>` |
+| Fondo | `backdrop.webp` de 680×520 (el doble de la arena de 340×260), sin transparencia | Nano Banana → `scripts/sprites/minigames/backdrop.mjs <png> <id>` |
+| Manifiesto | `shared/assets/minigames/manifest.json` | `pnpm generate:minigames` (comprueba la norma) |
+| Hoja de contactos | `sprite-previews/minigames-contact.png` | `pnpm generate:minigames --preview` |
+
+**Clientes.** Las vistas piden el arte por nombre (`shared/minigames/src/assets.ts`: `pieceUrl`, `backdropUrl`, `itemUrl`). El escritorio lo sirve desde su bundle; el embed lo empaqueta en `dist/embed`, así que Android lo recibe con `syncPockaiMinigames`. Una pieza sin archivo se pinta como un recuadro de color: el juego funciona y se nota que falta.
+
+**La mascota dentro del juego.** El anfitrión manda la mascota en `start` (protocolo v3, campo `pet`: especie, etapa, paleta, patrón y semilla visual) y `shared/minigames/src/pet.ts` la hornea con `@pockai/scene/bake` en un canvas. Las hojas no van en el bundle de minijuegos: el escritorio las resuelve con su registro y el embed las pide a `../species/…`, que en Android son los assets compartidos de la app. Todo va a la misma densidad: un píxel nativo mide lo mismo en la mascota (64 px) que en una pieza.
+
+`validate-assets.js` comprueba tamaños y que el manifiesto esté al día; que un juego no tenga arte es un aviso, no un error.

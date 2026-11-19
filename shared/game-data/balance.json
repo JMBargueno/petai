@@ -213,18 +213,19 @@
     "elementAffinityBonus": 0.25,
     "games": {
       "catch_food": {
-        "name": "Atrapa la comida",
+        "name": "Cosecha del Éter",
         "durationSeconds": 45,
         "minDurationSeconds": 20,
         "maxScorePerSecond": 3,
         "coinsPerPoint": 0.4,
         "maxCoins": 40,
-        "xpPerPoint": 1,
+        "xpPerPoint": 0.7,
         "maxXp": 60,
-        "happiness": 15
+        "happiness": 15,
+        "itemDrop": { "itemId": "apple", "minScore": 75, "chance": 0.4 }
       },
       "memory_match": {
-        "name": "Parejas de memoria",
+        "name": "Cristal de Recuerdos",
         "durationSeconds": 90,
         "minDurationSeconds": 8,
         "maxScorePerSecond": 3,
@@ -235,7 +236,7 @@
         "happiness": 12
       },
       "reflex": {
-        "name": "Reflejos",
+        "name": "Pesca de Códices",
         "durationSeconds": 30,
         "minDurationSeconds": 10,
         "maxScorePerSecond": 2,
