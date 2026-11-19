@@ -204,6 +204,21 @@
     "candidates": 1,
     "generatedAt": "2026-11-19T08:35:33.094Z"
   },
+  "cook.hotpot.burn": {
+    "hash": "9eff101ac73b9afc",
+    "candidates": 4,
+    "generatedAt": "2026-11-19T12:44:53.885Z"
+  },
+  "cook.hotpot.saved": {
+    "hash": "745e2583474c5e56",
+    "candidates": 4,
+    "generatedAt": "2026-11-19T12:44:54.998Z"
+  },
+  "cook.hotpot.warn": {
+    "hash": "c471eee2cd08d8ca",
+    "candidates": 4,
+    "generatedAt": "2026-11-19T12:44:53.530Z"
+  },
   "cook.ingredient.place": {
     "hash": "541f7009050e4b41",
     "candidates": 2,
