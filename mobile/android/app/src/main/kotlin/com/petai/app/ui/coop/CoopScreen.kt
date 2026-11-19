@@ -46,6 +46,7 @@ import com.petai.app.data.ApiService
 import com.petai.app.data.CoopFriend
 import com.petai.app.data.CoopVisitLog
 import com.petai.app.data.Handle
+import com.petai.app.data.RealtimeClient
 import com.petai.app.data.VISIT_ENERGY_COST
 import com.petai.app.data.VISIT_MESSAGE_MAX
 import kotlinx.coroutines.launch
@@ -58,7 +59,7 @@ import kotlinx.coroutines.launch
  *  - Historial de visitas
  */
 @Composable
-fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
+fun CoopScreen(service: ApiService, onChanged: () -> Unit, realtime: RealtimeClient? = null) {
     val scope = rememberCoroutineScope()
     var friends by remember { mutableStateOf<List<CoopFriend>>(emptyList()) }
     var visits by remember { mutableStateOf<List<CoopVisitLog>>(emptyList()) }
@@ -122,7 +123,7 @@ fun CoopScreen(service: ApiService, onChanged: () -> Unit) {
             msg?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = PockaiTheme.colors.accentInk) }
             Spacer(Modifier.height(8.dp))
             when (sel) {
-                0 -> FriendsSection(friends.filter { it.status == "accepted" }, presence, visitingOwner, busy,
+                0 -> FriendsSection(friends.filter { it.status == "accepted" }, presence, visitingOwner, busy, service, realtime,
                     onVisit = { f, a -> act("Visita hecha.") { service.coopVisit(f.otherUserId, f.otherPet!!.petId, a) } },
                     onStartVisit = { f, message ->
                         act("¡Tu pockai está de visita en el hábitat de ${f.otherDisplayName}!") {
@@ -147,6 +148,8 @@ private fun FriendsSection(
     presence: Map<String, Boolean>,
     visitingOwner: String?,
     busy: Boolean,
+    service: ApiService,
+    realtime: RealtimeClient?,
     onVisit: (CoopFriend, String) -> Unit,
     onStartVisit: (CoopFriend, String) -> Unit,
     onEndVisit: (CoopFriend) -> Unit,
@@ -173,6 +176,9 @@ private fun FriendsSection(
                     }
                     Spacer(Modifier.height(8.dp))
                     if (visitingOwner == f.otherUserId) {
+                        // Mientras dura la visita: la sala del amigo con los dos Pockai y el menú
+                        VisitRoomCard(service, realtime, f.otherUserId, f.otherDisplayName)
+                        Spacer(Modifier.height(8.dp))
                         PrimaryButton("Terminar visita", { onEndVisit(f) }, enabled = !busy, icon = Lucide.LogOut)
                     } else {
                         var visitMessage by remember(f.otherUserId) { mutableStateOf("") }
