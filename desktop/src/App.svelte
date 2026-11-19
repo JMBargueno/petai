@@ -9,6 +9,9 @@
   import { setActiveSkillsPet } from './lib/stores/desktopSkillsStore';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
   import { speak, clearSpeech, MAX_AI_CHUNKS, type SpeakOptions } from './lib/speech-queue';
+  import { createInitiativeLoop } from './lib/initiative';
+  import { get } from 'svelte/store';
+  import { pomodoroStore } from './lib/pomodoro';
   import {
     fetchStatus,
     startHeartbeat,
@@ -309,6 +312,21 @@
   function showBubble(text: string, opts?: SpeakOptions) {
     speak(text, opts);
   }
+
+  // Iniciativa (spec 41): el Pockai habla por su cuenta. Qué dice y cuándo lo decide el servidor;
+  // aquí solo se le pregunta y se muestra. Con el Pomodoro en marcha no se le interrumpe.
+  const initiative = createInitiativeLoop({
+    ask: async (back) => {
+      if (!currentPet?.id) return null;
+      const p = get(pomodoroStore);
+      return api.petInitiative(currentPet.id, { back, focus: p.isRunning && p.phase === 'work' });
+    },
+    say: (text) => showBubble(text, { priority: 'low', durationMs: 7000, key: 'initiative' }),
+    setTimer: (fn, ms) => setTimeout(fn, ms),
+    clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+  });
+  $: if (currentPet?.id) initiative.start();
+  else initiative.stop();
 
   // Badge de la bandeja/tray (feature 007 / US3): refleja los avisos no leídos en el título de la app.
   $: if (typeof document !== 'undefined') {
@@ -882,6 +900,7 @@
   });
 
   onDestroy(() => {
+    initiative.stop();
     if (ballRaf) cancelAnimationFrame(ballRaf);
     window.removeEventListener('petai:file_dropped', handleFileDropped);
     window.removeEventListener('petai:move_to_habitat', handleMoveToHabitat);
@@ -978,6 +997,7 @@
       visitors={$visitorsStore}
       ball={showBall && !ballGrabbed ? ballState : null}
       onBallKick={handleBallHit}
+      onOwnerBack={(fallback) => void initiative.ownerBack(fallback)}
       onPetClick={() => {
         isPanelOpen = true;
         panelRequest = { dest: 'pet', sub: 'home', n: ++requestN };

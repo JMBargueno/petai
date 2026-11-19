@@ -1,4 +1,5 @@
 import createClient from 'openapi-fetch';
+import type { InitiativeReply, InitiativeSettings, TalkLevel } from './initiative';
 import type { paths } from '@shared/openapi/api-types';
 import { CLIENT_HEADERS, inspectMaintenance, setMaintenanceBaseUrl } from './maintenance';
 
@@ -840,6 +841,21 @@ export const api = {
   /** Cerebro del Pockai (spec 36): 5 dimensiones, memoria por capas y vida autónoma reciente. */
   async getMind(petId: string) {
     return minigameRequest<PetMind>('GET', `/v1/pets/${petId}/mind`);
+  },
+
+  /**
+   * ¿Tiene el Pockai algo que decir por su cuenta? Lo decide el servidor (nivel elegido, carácter,
+   * ánimo, lo que necesita y lo que sabe de ti) y devuelve la frase ya escrita, o ninguna, y
+   * cuándo volver a preguntar.
+   */
+  async petInitiative(petId: string, opts: { back?: boolean; focus?: boolean } = {}) {
+    return minigameRequest<InitiativeReply>('POST', `/v1/pets/${petId}/initiative`, { channel: 'desktop', back: !!opts.back, focus: !!opts.focus });
+  },
+  async getInitiativeSettings(petId: string) {
+    return minigameRequest<InitiativeSettings>('GET', `/v1/pets/${petId}/initiative/settings`);
+  },
+  async setInitiativeLevel(petId: string, level: TalkLevel) {
+    return minigameRequest<InitiativeSettings>('PUT', `/v1/pets/${petId}/initiative/settings`, { level });
   },
 
   async forgetMemory(petId: string, memoryId: string) {
@@ -1964,6 +1980,8 @@ export interface PetMind {
   dimensions: Record<MindDimension, MindDimensionView>;
   legacy: { trait: string; temperament: string };
   mood: string;
+  /** Ánimo de corto plazo: lo que le acaba de pasar. Ausente con un servidor anterior. */
+  feeling?: { label: string; valence: number; arousal: number } | null;
   bondingTier: string;
   intelligenceTier: 'chat' | 'memory' | 'agent';
   memory: { counts: Record<MemoryLayer, number>; capacity: Record<MemoryLayer, number> | null };

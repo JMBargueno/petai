@@ -388,6 +388,18 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
 
     suspend fun getHabitatVisitors(): List<HabitatVisitor> = api.request<VisitorsResponse>("GET", "/habitat/visitors").visitors
 
+    /**
+     * ¿Tiene el Pockai algo que decir por su cuenta? Lo decide el servidor (nivel elegido, carácter,
+     * ánimo, lo que necesita y lo que sabe de su entrenador). [back]: el entrenador acaba de volver.
+     */
+    suspend fun petInitiative(petId: String, back: Boolean = false): InitiativeReply =
+        api.request("POST", "/pets/$petId/initiative", obj("channel" to "mobile", "back" to back))
+
+    suspend fun initiativeSettings(petId: String): InitiativeSettings = api.request("GET", "/pets/$petId/initiative/settings")
+
+    suspend fun setInitiativeLevel(petId: String, level: String): InitiativeSettings =
+        api.request("PUT", "/pets/$petId/initiative/settings", obj("level" to level))
+
     /** Clima y sol reales del usuario (según las coordenadas guardadas en su perfil). */
     suspend fun environmentalStatus(): EnvironmentalStatus = api.request("GET", "/environmental/status")
 }

@@ -357,6 +357,39 @@ data class HabitatVisitor(
 const val VISIT_MESSAGE_MAX = 140
 const val VISIT_ENERGY_COST = 10
 
+/** Lo que el Pockai dice por su cuenta (POST /pets/:id/initiative). El texto ya viene escrito. */
+@Serializable
+data class InitiativePhrase(val id: String = "", val kind: String = "", val text: String = "")
+
+@Serializable
+data class InitiativeReply(
+    val phrase: InitiativePhrase? = null,
+    /** Por qué calla, si calla (too_soon, quiet_hours, daily_cap…). */
+    val reason: String? = null,
+    /** Cuándo tiene sentido volver a preguntar. */
+    val retryInMs: Long = 300_000,
+    val level: String = "normal",
+    val feeling: String? = null,
+)
+
+/** Un nivel de insistencia, con los números ya ajustados al carácter de ese Pockai. */
+@Serializable
+data class InitiativeLevel(
+    val id: String = "",
+    val desktopMinutes: Int = 0,
+    val mobilePerDay: Int = 0,
+    val onlyOnReturn: Boolean = false,
+)
+
+/** Cuánto puede interrumpir el Pockai (GET/PUT /pets/:id/initiative/settings). */
+@Serializable
+data class InitiativeSettings(
+    val level: String = "normal",
+    val levels: List<InitiativeLevel> = emptyList(),
+    /** Cuánto de hablador es por carácter (1 = lo normal). */
+    val talkFactor: Double = 1.0,
+)
+
 /** Evento `pet:action`: qué le acaba de pasar a la mascota para animarla. */
 @Serializable
 data class PetActionEvent(val petId: String? = null, val action: String = "", val context: JsonObject? = null)

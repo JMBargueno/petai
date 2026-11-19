@@ -719,6 +719,35 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
   if (errors.length) throw new Error(`Frases inválidas:\n  - ${errors.join('\n  - ')}`);
   console.log(`✓ phrases.json: ${phrases.phrases.length} frases, ${Object.keys(phrases.variables).length} variables y ${Object.keys(phrases.facts).length} datos del entrenador validados`);
 
+  // Iniciativa: tres niveles de insistencia y prioridad de tipos de frase
+  const ini = pers.initiative;
+  if (ini) {
+    const at = 'balance.personality.initiative';
+    const LEVELS = ['quiet', 'normal', 'chatty'];
+    if (!LEVELS.includes(ini.defaultLevel)) throw new Error(`${at}.defaultLevel desconocido`);
+    for (const id of LEVELS) {
+      const l = ini.levels?.[id];
+      if (!l || !(l.desktopMinutes >= 2) || !(Number.isInteger(l.mobilePerDay) && l.mobilePerDay >= 0 && l.mobilePerDay <= 12)) throw new Error(`${at}.levels.${id} inválido (desktopMinutes ≥ 2, mobilePerDay entero de 0 a 12)`);
+    }
+    for (const id of Object.keys(ini.levels ?? {})) if (!LEVELS.includes(id)) throw new Error(`${at}.levels: nivel desconocido ${id}`);
+    // De más callado a más hablador: nunca al revés
+    if (!(ini.levels.chatty.desktopMinutes <= ini.levels.normal.desktopMinutes && ini.levels.chatty.mobilePerDay >= ini.levels.normal.mobilePerDay && ini.levels.normal.mobilePerDay >= ini.levels.quiet.mobilePerDay)) {
+      throw new Error(`${at}.levels: «chatty» debe hablar al menos tanto como «normal», y «normal» como «quiet»`);
+    }
+    const pw = ini.personality ?? {};
+    if (!(pw.min > 0 && pw.min <= 1 && pw.max >= 1 && pw.max <= 3)) throw new Error(`${at}.personality: min en (0, 1] y max en [1, 3]`);
+    for (const d of Object.keys(pw.weights ?? {})) if (!Object.keys(pers.dimensions ?? {}).includes(d)) throw new Error(`${at}.personality.weights: dimensión desconocida ${d}`);
+    const q = ini.quietHours ?? {};
+    for (const k of ['from', 'to']) if (!(Number.isInteger(q[k]) && q[k] >= 0 && q[k] <= 23)) throw new Error(`${at}.quietHours.${k} debe ser una hora de 0 a 23`);
+    if (!(ini.backAfterMinutes >= 5)) throw new Error(`${at}.backAfterMinutes debe ser al menos 5`);
+    const kinds = new Set(phrases.kinds);
+    const listed = (ini.priority ?? []).flat();
+    for (const k of listed) if (!kinds.has(k)) throw new Error(`${at}.priority: tipo de frase desconocido ${k}`);
+    for (const k of kinds) if (!listed.includes(k)) throw new Error(`${at}.priority: falta el tipo de frase ${k} (nunca se diría)`);
+    if (new Set(listed).size !== listed.length) throw new Error(`${at}.priority: tipo repetido`);
+    console.log(`✓ balance.json: iniciativa (${LEVELS.length} niveles, ${ini.priority.length} prioridades) validada`);
+  }
+
   const feeling = pers.feeling;
   if (feeling) {
     if (!(feeling.halfLifeMinutes >= 5 && feeling.halfLifeMinutes <= 1440)) throw new Error('balance.personality.feeling.halfLifeMinutes debe estar entre 5 y 1440');

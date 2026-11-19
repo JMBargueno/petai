@@ -65,6 +65,11 @@
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
+  /**
+   * Su entrenador ha vuelto tras un rato fuera. Si se da, la bienvenida la decide el servidor
+   * (iniciativa) y `fallback` es la frase local de siempre, por si no contesta.
+   */
+  export let onOwnerBack: ((fallback: () => void) => void) | null = null;
   /** Estado ambiental (feature 005): hora del día, clima, actividad y festividad. */
   export let environmental: EnvironmentalStatus | null = null;
   /** Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía. */
@@ -1413,8 +1418,12 @@
           break;
         case 'bark': {
           const name = pet?.nickname || pet?.species?.name;
-          const text = barksEngine.barkFrom(c.category as any, name, brainRng);
-          speak(text, { priority: 'low', durationMs: 6000, key: `brain-${c.category}` });
+          const local = () => {
+            const text = barksEngine.barkFrom(c.category as any, name, brainRng);
+            speak(text, { priority: 'low', durationMs: 6000, key: `brain-${c.category}` });
+          };
+          if (c.category === 'welcome_back' && onOwnerBack) onOwnerBack(local);
+          else local();
           break;
         }
         case 'particle':

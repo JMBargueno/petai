@@ -145,6 +145,10 @@ private fun PetContent(
 
         Spacer(Modifier.height(16.dp))
 
+        // Lo que dice por su cuenta y cuánto puede interrumpir (lo decide el servidor)
+        InitiativeCard(service, pet.nickname.ifBlank { pet.species.name }, pet.id)
+        Spacer(Modifier.height(16.dp))
+
         val vitals = listOf(
             Vital("Hambre", Lucide.Utensils, pet.hunger, Brand.Sunburst),
             Vital("Felicidad", Lucide.Smile, pet.happiness, Brand.MintPop),

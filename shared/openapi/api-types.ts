@@ -837,6 +837,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/pets/{id}/initiative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * ¿Tiene el Pockai algo que decir por su cuenta?
+         * @description Lo decide el servidor: según el nivel de insistencia elegido, el carácter de la mascota, su ánimo, lo que necesita o le apetece y lo que sabe de su entrenador. Devuelve una frase ya escrita (o ninguna) y cuándo volver a preguntar. El cliente solo la muestra. `back: true` avisa de que el entrenador acaba de volver tras un rato fuera; `focus: true`, de que está concentrado y no hay que interrumpir.
+         */
+        post: operations["MindController_speak"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pets/{id}/initiative/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cuánto puede interrumpir el Pockai: nivel elegido y niveles disponibles */
+        get: operations["MindController_initiativeSettings"];
+        /** Elegir cuánto puede interrumpir el Pockai (quiet | normal | chatty) */
+        put: operations["MindController_setInitiativeLevel"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pets/{id}/mind": {
         parameters: {
             query?: never;
@@ -7319,6 +7357,81 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MindController_speak: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    channel: "desktop" | "mobile";
+                    /** @description El entrenador acaba de volver */
+                    back?: boolean;
+                    /** @description El entrenador está concentrado (Pomodoro, pantalla completa) */
+                    focus?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MindController_initiativeSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MindController_setInitiativeLevel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    level: "quiet" | "normal" | "chatty";
+                };
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
