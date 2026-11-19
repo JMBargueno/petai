@@ -314,3 +314,26 @@ describe('Turn Engine — un turno con su entrenador (spec 37 §4.5–4.7)', () 
     expect({ ...a, flags: [...a.flags] }).toEqual({ ...b, flags: [...b.flags] });
   });
 });
+
+describe('Turn Engine — la mascota llega serializada', () => {
+  // `PetsService.getPetById` devuelve las fechas como texto. Con eso el plan del turno lanzaba
+  // un error que el chat se tragaba: sin plan no hay reacción, ni deseos, ni `express_behavior`.
+  const iso = new Date(NOW.getTime() - 26 * 3_600_000).toISOString();
+
+  it('con la fecha como texto planifica igual que con un Date', () => {
+    const asText = planOwnerTurn(input({ pet: { ...input().pet, lastInteractionAt: iso } }), cfg);
+    const asObject = planOwnerTurn(input({ pet: { ...input().pet, lastInteractionAt: new Date(iso) } }), cfg);
+    expect(asText.behavior).toEqual(asObject.behavior);
+    expect(asText.situation.awayMinutes).toBe(26 * 60);
+    expect([...asText.flags].sort()).toEqual([...asObject.flags].sort());
+    expect(asText.flags.has('first_turn_today')).toBe(true);
+  });
+
+  it('una fecha ausente o inválida no rompe el turno', () => {
+    for (const bad of [null, undefined, '', 'no es una fecha']) {
+      const plan = planOwnerTurn(input({ pet: { ...input().pet, lastInteractionAt: bad as any } }), cfg);
+      expect(plan.situation.awayMinutes).toBe(0);
+      expect(plan.behavior.action).toBeTruthy();
+    }
+  });
+});
