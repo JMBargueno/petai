@@ -34,7 +34,9 @@
   import { setPetOnScreen } from '../lib/window-visibility';
   import Ico from './Ico.svelte';
   import EffectLayer from './EffectLayer.svelte';
-  import { EFFECTS, EffectPlayer, admitMoment, flowPalette, phasesOf, portalNexo, type EffectDef, type FxPalette } from '@pockai/scene/effects';
+  import { EFFECTS, EffectPlayer, admitMoment, flowPalette, moodForBase, phasesOf, portalNexo, soundForClip, voiceForPet, type EffectDef, type FxPalette } from '@pockai/scene/effects';
+  import { sfx, sfxLoop, sfxStopLoop } from '../lib/audio';
+  import type { PlayOptions } from '@pockai/audio';
   import { registerTravelPresenter, travel, travelArrived, type TravelState } from '../lib/visitTravel';
   import { createRng, hashSeed, type Rng } from '@pockai/mind';
   import { DESK_CONFIG } from '../lib/brain/deskConfig';
@@ -218,7 +220,23 @@
     const lib = getAnimLibrary(speciesKey);
     controller.setLibrary(lib.library, lib.aliases);
   }
-  $: controller.setBase(brainNap ? 'sleep' : resolveBaseState(pet));
+  $: baseState = brainNap ? 'sleep' : resolveBaseState(pet);
+  $: controller.setBase(baseState);
+
+  // Sonido del Pockai (spec 40): su voz cambia con la especie, la etapa, el elemento y el humor.
+  $: voice = voiceForPet({ speciesId: speciesKey, stage, shiny: isShiny, mood: moodForBase(baseState) });
+  function petSound(id: string, extra: PlayOptions = {}) {
+    if (petAway) return;
+    const w = typeof window !== 'undefined' ? window.innerWidth || 800 : 800;
+    const pan = ((posX + PET_SIZE / 2) / w) * 2 - 1;
+    sfx(id, { ...voice, pan: pan * 0.6, ...extra });
+  }
+  // Ronquido en bucle mientras duerme (y está a la vista).
+  $: snoring = (isSleeping || baseState === 'sleep') && !petAway;
+  $: if (snoring) sfxLoop('pet.sleep.snore', { key: 'pet-snore', ...voice });
+  else sfxStopLoop('pet-snore');
+  /** Último fotograma de paseo que sonó (pasos alternos). */
+  let lastStepFrame = -1;
   $: if (isSleeping) controller.stop();
 
   // Hornear sprite sheet en memoria al cambiar de mascota, paleta o patrón
@@ -305,7 +323,12 @@
   /** Reproduce una animación de acción. Devuelve `false` si no se pudo (no existe o duerme). */
   export function play(anim: string): boolean {
     if (isSleeping && !ALLOWED_WHILE_SLEEPING.has(anim)) return false;
-    return controller.play(anim);
+    const ok = controller.play(anim);
+    if (ok) {
+      const id = soundForClip(anim);
+      if (id) petSound(id);
+    }
+    return ok;
   }
 
   /** Compatibilidad: API anterior de PetView. */
@@ -322,6 +345,7 @@
       else play(anim);
     });
     if (reaction.particle) showParticle(reaction.particle);
+    reaction.sounds?.forEach((id, i) => petSound(id, { delayMs: 250 + i * 300 }));
     if (reaction.emphasis) squash(1.28, 0.74, 220);
   }
 
@@ -411,7 +435,10 @@
     if (!isDragging) return;
     const nx = e.clientX - dragStartX;
     const ny = e.clientY - dragStartY;
-    if (Math.abs(nx - posX) + Math.abs(ny - posY) > 0) dragMoved = true;
+    if (!dragMoved && Math.abs(nx - posX) + Math.abs(ny - posY) > 0) {
+      dragMoved = true;
+      petSound('pet.drag.lift');
+    }
     posX = Math.min(Math.max(0, nx), window.innerWidth - PET_SIZE);
     posY = Math.min(Math.max(0, ny), window.innerHeight - PET_SIZE);
 
@@ -915,6 +942,7 @@
     if (isHighFiveWaiting) {
       isHighFiveWaiting = false;
       behaviorEngine.completeHighFive();
+      petSound('pet.highfive.slap');
       play('celebrate');
       showParticle('🎉✨', 2500);
       squash(1.2, 0.8, 150);
@@ -923,6 +951,7 @@
     }
 
     // Procedural Squash & Stretch al interactuar
+    petSound('pet.squash.boing');
     squashScaleX = 1.15;
     squashScaleY = 0.85;
     setTimeout(() => {
@@ -962,6 +991,13 @@
     controller.setMotion(resolveMotion(time));
     const frameState = controller.update(dt);
     if (frameState.name !== currentAnim) currentAnim = frameState.name;
+    // Pasos: uno en cada fotograma par del paseo (el cooldown de pet.step evita ráfagas)
+    if (frameState.name === 'walk') {
+      if (frameState.frame !== lastStepFrame && frameState.frame % 2 === 0) petSound('pet.step');
+      lastStepFrame = frameState.frame;
+    } else {
+      lastStepFrame = -1;
+    }
 
     if (petCanvas && bakedSheet) {
       const ctx = petCanvas.getContext('2d');
@@ -1053,7 +1089,11 @@
       posY = physicsState.y;
 
       // Rebote procedural con squash & stretch según la fuerza del golpe
-      if (step.impactSpeed > 0) impactSquash(step.impactSpeed);
+      if (step.impactSpeed > 0) {
+        impactSquash(step.impactSpeed);
+        // Rebote audible solo si el golpe tiene fuerza; más flojo cuanto más suave
+        if (step.impactSpeed > 220) petSound('pet.bounce', { gainDb: -12 * (1 - Math.min(1, step.impactSpeed / 1600)) });
+      }
 
       // Al posarse definitivamente en el suelo
       if (!physicsState.isAirborne) {
@@ -1595,6 +1635,7 @@
   });
 
   onDestroy(() => {
+    sfxStopLoop('pet-snore');
     // Fuera del escritorio (p. ej. en su casita) no hay app en foco ni postura que contar
     deskState.set({ appCategory: null, pose: 'walking' });
     setPetOnScreen(false);
@@ -1650,6 +1691,7 @@
 
 <div
   class="pet-container"
+  data-sound="none"
   role="button"
   tabindex={petAway ? -1 : 0}
   class:fx-hidden={fxHidden}

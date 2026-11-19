@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.petai.app.audio.UiSounds
 
 // Componentes base de la guía §9. Sustituyen a los RoundedCornerShape/Color inline de las pantallas.
 
@@ -84,7 +85,7 @@ fun PockaiCard(
         m.shadow(2.dp, CardShape, ambientColor = tint, spotColor = tint)
     }
     m = m.clip(CardShape).background(containerColor).border(BorderStroke(1.dp, outline), CardShape)
-    if (onClick != null) m = m.clickable(role = Role.Button, onClick = onClick)
+    if (onClick != null) m = m.clickable(role = Role.Button, onClick = { UiSounds.play("ui.tap_soft"); onClick() })
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides contentColor) {
         Column(m.padding(contentPadding), content = content)
     }
@@ -128,7 +129,7 @@ fun PrimaryButton(
             .shadow(2.dp, CircleShape, ambientColor = ShadowTint, spotColor = ShadowTint)
             .clip(CircleShape)
             .background(Brush.linearGradient(Brand.GradAccent))
-            .clickable(interactionSource = source, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .clickable(interactionSource = source, indication = null, enabled = enabled, role = Role.Button, onClick = { UiSounds.play("ui.tap"); onClick() })
             .padding(horizontal = 24.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
@@ -153,7 +154,7 @@ fun SecondaryButton(
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-            .clickable(interactionSource = source, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .clickable(interactionSource = source, indication = null, enabled = enabled, role = Role.Button, onClick = { UiSounds.play("ui.tap_soft"); onClick() })
             .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
@@ -268,7 +269,7 @@ fun SubTabs(
         modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        labels.forEachIndexed { i, l -> PockaiChip(l, selected == i, { onSelect(i) }, icon = icons.getOrNull(i)) }
+        labels.forEachIndexed { i, l -> PockaiChip(l, selected == i, { if (selected != i) UiSounds.play("ui.tab"); onSelect(i) }, icon = icons.getOrNull(i)) }
     }
 }
 
