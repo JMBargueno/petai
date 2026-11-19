@@ -6,7 +6,7 @@ describe('hasPermission', () => {
   });
 
   it('admin gestiona el juego pero no edita usuarios a mano', () => {
-    for (const p of ['admin:access', 'users:read', 'users:role:assign', 'economy:manage', 'events:manage', 'audit:read', 'pets:read', 'pets:rename', 'invites:manage', 'users:verify', 'email:send', 'site:manage'] as const) {
+    for (const p of ['admin:access', 'users:read', 'users:role:assign', 'economy:manage', 'events:manage', 'audit:read', 'pets:read', 'pets:rename', 'invites:manage', 'users:verify', 'email:send', 'site:manage', 'vouchers:manage'] as const) {
       expect(hasPermission('admin', p)).toBe(true);
     }
     expect(hasPermission('admin', 'users:update')).toBe(false);

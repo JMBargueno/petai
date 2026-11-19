@@ -40,6 +40,9 @@
   import ControlPanel from './components/ControlPanel.svelte';
   import FileDropModal from './components/FileDropModal.svelte';
   import AchievementToast from './features/achievements/AchievementToast.svelte';
+  import RewardToast from './features/rewards/RewardToast.svelte';
+  import { celebrateReward, rewardToCelebrate } from './lib/rewards';
+  import type { RewardReceived } from './lib/api';
   import type { AchievementUnlockedPayload } from './features/achievements/achievements.api';
   import type { AnalyzedFile } from './lib/fileAnalyzer';
   import { PawPrint, Bell, X, Volleyball } from 'lucide-svelte';
@@ -419,6 +422,14 @@
         socket.on('achievement:unlocked', (p: AchievementUnlockedPayload | null) => {
           if (!p) return;
           unlockedAchievement = p;
+          api.getMe().then((u) => (user = u)).catch(() => {});
+        });
+
+        // Recompensa recibida (voucher canjeado o regalo del equipo): la mascota ya lo celebra con
+        // `pet:action gift_received`; aquí el desglose y el saldo al día. Se deduplica por redemptionId.
+        socket.on('reward:received', (p: RewardReceived | null) => {
+          if (!p) return;
+          celebrateReward(p);
           api.getMe().then((u) => (user = u)).catch(() => {});
         });
 
@@ -948,6 +959,7 @@
   />
 
   <AchievementToast payload={unlockedAchievement} onDismiss={() => (unlockedAchievement = null)} />
+  <RewardToast payload={$rewardToCelebrate} onDismiss={() => rewardToCelebrate.set(null)} />
 
   {#if droppedFile && !locked}
     <FileDropModal

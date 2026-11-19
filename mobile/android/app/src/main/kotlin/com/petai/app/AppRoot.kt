@@ -56,6 +56,7 @@ import com.petai.app.ui.play.PlayViewModel
 import com.petai.app.ui.play.PlayViewModelFactory
 import com.petai.app.ui.adventure.AdventureScreen
 import com.petai.app.ui.raid.RaidScreen
+import com.petai.app.ui.rewards.RewardCelebration
 import com.petai.app.ui.shop.ShopScreen
 import com.petai.app.ui.theme.BalanceHeader
 import com.petai.app.ui.theme.EmptyState
@@ -130,7 +131,12 @@ fun AppRoot(vm: AppViewModel) {
                 onLogout = vm::logout,
             )
         } else {
-            MainScaffold(vm, state, snackbar)
+            val reward by vm.reward.collectAsState()
+            Box(Modifier.fillMaxSize()) {
+                MainScaffold(vm, state, snackbar)
+                // Voucher canjeado o regalo del equipo: celebración por encima de todo.
+                RewardCelebration(reward, onDismiss = vm::dismissReward)
+            }
         }
     }
 }
@@ -250,7 +256,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                         1 -> ChestsScreen(app.service, onChanged = { vm.refreshAll() })
                         2 -> CoopScreen(app.service, onChanged = { vm.refreshAll() })
                         3 -> ClanScreen(app.service, app.realtime, onChanged = { vm.refreshAll() })
-                        else -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice)
+                        else -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice, onRedeemVoucher = vm::redeemVoucher)
                     }
                 }
             }

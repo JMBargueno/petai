@@ -4,11 +4,12 @@ import { Router } from '@angular/router';
 import { UserAuth } from '../shared/auth/user-auth';
 import { DownloadAction } from '../shared/download/download-action';
 import { AUTH_FORM_STYLES, AuthShell, setAuthTitle } from './auth-shell';
+import { RedeemVoucher } from './redeem-voucher';
 
 /** `/account`: datos básicos de la cuenta, descargas y cierre de sesión. Sin sesión, a /login. */
 @Component({
   selector: 'app-account',
-  imports: [AuthShell, DownloadAction],
+  imports: [AuthShell, DownloadAction, RedeemVoucher],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-auth-shell path="account">
@@ -46,6 +47,8 @@ import { AUTH_FORM_STYLES, AuthShell, setAuthTitle } from './auth-shell';
             </div>
           </div>
         </section>
+
+        <app-redeem-voucher />
 
         <div class="actions">
           @if (auth.isAdmin()) {

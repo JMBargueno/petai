@@ -60,6 +60,7 @@ import { GiftingModule } from './modules/gifting/gifting.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { AuthzModule } from './modules/authz/authz.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { VouchersModule } from './modules/vouchers/vouchers.module';
 import { DesktopUpdatesModule } from './modules/desktop-updates/desktop-updates.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { AdminEmailModule } from './modules/admin-email/admin-email.module';
@@ -138,6 +139,8 @@ const DEV_TOOLS_ENABLED = process.env.NODE_ENV !== 'production' && process.env.D
     // Autorización por roles (superadmin | admin | moderator | user) y gestión de usuarios.
     AuthzModule,
     AdminModule,
+    // Vouchers de recompensas y regalos directos desde el panel.
+    VouchersModule,
     ...(DEV_TOOLS_ENABLED ? [DevModule] : []),
   ],
   providers: [{ provide: APP_FILTER, useClass: AppExceptionFilter }],
