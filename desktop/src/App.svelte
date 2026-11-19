@@ -54,6 +54,7 @@
   import { startContextDigest } from './lib/contextDigest';
   import { activeVisit } from './lib/activeVisit';
   import { configureTravel, endTravel, resetTravel, restoreFromHistory } from './lib/visitTravel';
+  import { getSoundEngine, setPanelOpen } from './lib/audio';
 
   // Visita en vivo: el servidor la cierra a los 15 min sin avisar al visitante. A esa hora el
   // Pockai vuelve por su portal y se cierra también aquí (si ya estaba cerrada, el error no importa).
@@ -126,6 +127,8 @@
   $: maintenanceLocked = $maintenanceLock !== null;
   $: locked = updateLocked || maintenanceLocked;
   $: if (locked) isPanelOpen = true;
+  // Sonido: con el panel cerrado la mascota «vive en el escritorio» (lib/audio.ts).
+  $: setPanelOpen(isPanelOpen);
   // Al terminar el mantenimiento se recarga: sesión, socket y datos vuelven a empezar limpios.
   let wasInMaintenance = false;
   $: {
@@ -740,6 +743,7 @@
   }
 
   onMount(() => {
+    getSoundEngine();
     // Solo en desarrollo (y en la demo): lanzar momentos a mano para probar los efectos del
     // escritorio sin backend (skill pockai-effect-architect, integration-checklist.md).
     if (import.meta.env.DEV) {

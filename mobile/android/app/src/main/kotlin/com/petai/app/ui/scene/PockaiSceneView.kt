@@ -17,7 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.petai.app.PetAiApp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -153,6 +155,7 @@ fun PockaiSceneView(
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
+                // El sonido (WebAudio) se desbloquea igualmente con el primer toque en la escena.
                 settings.mediaPlaybackRequiresUserGesture = true
                 isVerticalScrollBarEnabled = false
                 isHorizontalScrollBarEnabled = false
@@ -208,4 +211,11 @@ fun PockaiSceneView(
     }
 
     LaunchedEffect(Unit) { controller.send(SceneMessages.setPaused(false)) }
+
+    // Ajustes de sonido (spec 40): se reenvían cada vez que cambian; el controlador guarda el último
+    // y lo repite si la página se recarga.
+    val app = LocalContext.current.applicationContext as? PetAiApp
+    LaunchedEffect(controller, app) {
+        app?.audio?.prefs?.collect { controller.send(SceneMessages.setAudio(it)) }
+    }
 }

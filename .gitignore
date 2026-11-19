@@ -85,3 +85,6 @@ sprite-previews/
 
 # Resultados de las evals de skills (skill-creator)
 .claude/skills/*-workspace/
+
+# Tomas candidatas de ElevenLabs (pnpm sfx:generate); las elegidas van a shared/assets/audio
+scripts/sfx/.candidates/

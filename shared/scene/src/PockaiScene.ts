@@ -270,6 +270,9 @@ export class PockaiScene {
       case 'uncoverScreen':
         this.uncover();
         break;
+      case 'setAudio':
+        // Lo atiende el motor de sonido del anfitrión (embed/audio.ts), no la escena.
+        break;
       case 'playEffect':
         this.effects.play(msg.id, msg.params ?? {});
         break;
