@@ -47,7 +47,7 @@ data class SpeciesDto(
 )
 
 @Serializable
-data class PatternDto(val id: String = "plain")
+data class PatternDto(val id: String = "plain", val name: String? = null)
 
 @Serializable
 data class PaletteDto(
