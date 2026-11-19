@@ -1,5 +1,6 @@
 package com.petai.app.ui.rewards
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -120,6 +121,8 @@ fun RewardCelebration(reward: RewardReceived?, onDismiss: () -> Unit) {
     val giftTilt = remember(reward.redemptionId) { Animatable(0f) }
     val burst = remember(reward.redemptionId) { Animatable(0f) }
     var shownLines by remember(reward.redemptionId) { mutableStateOf(0) }
+    // Atrás cierra la celebración (no la pantalla de debajo).
+    BackHandler(onBack = onDismiss)
 
     LaunchedEffect(reward.redemptionId) {
         giftScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))

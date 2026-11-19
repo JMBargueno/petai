@@ -41,6 +41,7 @@
   const SOURCE_LABEL: Record<string, string> = {
     daily_missions: 'Misiones diarias', mission: 'Misión', season_pass: 'Pase de temporada', season: 'Temporada',
     purchase: 'Comprado', raid: 'Raid', tournament: 'Torneo', achievement: 'Logro', gift: 'Regalo', login: 'Regalo diario',
+    voucher: 'Código canjeado', admin_grant: 'Regalo del equipo',
   };
   const sourceLabel = (s: string) => SOURCE_LABEL[s] ?? 'Recompensa';
 

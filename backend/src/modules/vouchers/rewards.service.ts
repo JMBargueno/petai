@@ -126,14 +126,17 @@ export class RewardsService {
    * pierden días.
    */
   private async extendPro(tx: Tx, userId: string, days: number): Promise<Date> {
+    // `now` va como parámetro (no NOW()): las columnas son timestamp sin zona y Prisma las escribe en
+    // UTC; así no depende de la zona horaria de la sesión de Postgres.
+    const now = new Date().toISOString().replace("Z", ""); // UTC, sin zona
     const rows = await tx.$queryRaw<{ currentPeriodEnd: Date }[]>`
       INSERT INTO "Subscription" ("id", "userId", "source", "externalId", "productId", "plan", "status", "currentPeriodEnd", "cancelAtPeriodEnd", "createdAt", "updatedAt")
-      VALUES (${crypto.randomUUID()}, ${userId}, ${VOUCHER_SUBSCRIPTION_SOURCE}, ${userId}, 'voucher', 'pro', 'active', NOW() + make_interval(days => ${days}::int), false, NOW(), NOW())
+      VALUES (${crypto.randomUUID()}, ${userId}, ${VOUCHER_SUBSCRIPTION_SOURCE}, ${userId}, 'voucher', 'pro', 'active', ${now}::timestamp + make_interval(days => ${days}::int), false, ${now}::timestamp, ${now}::timestamp)
       ON CONFLICT ("source", "externalId") DO UPDATE SET
-        "currentPeriodEnd" = GREATEST("Subscription"."currentPeriodEnd", NOW()) + make_interval(days => ${days}::int),
+        "currentPeriodEnd" = GREATEST("Subscription"."currentPeriodEnd", ${now}::timestamp) + make_interval(days => ${days}::int),
         "status" = 'active',
         "cancelAtPeriodEnd" = false,
-        "updatedAt" = NOW()
+        "updatedAt" = ${now}::timestamp
       RETURNING "currentPeriodEnd"`;
     return new Date(rows[0].currentPeriodEnd);
   }
