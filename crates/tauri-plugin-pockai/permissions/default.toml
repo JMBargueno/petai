@@ -1,0 +1,19 @@
+[default]
+description = "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real y estado global."
+permissions = [
+  "allow-api-request",
+  "allow-chat-stream",
+  "allow-chat-cancel",
+  "allow-session-state",
+  "allow-session-logout",
+  "allow-session-import-legacy",
+  "allow-realtime-start",
+  "allow-realtime-stop",
+  "allow-state-snapshot",
+  "allow-state-load",
+  "allow-state-refresh",
+  "allow-state-apply-pet",
+  "allow-state-patch-pet",
+  "allow-state-select-pet",
+  "allow-state-clear",
+]

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-state-patch-pet"
+description = "Enables the state_patch_pet command without any pre-configured scope."
+commands.allow = ["state_patch_pet"]
+
+[[permission]]
+identifier = "deny-state-patch-pet"
+description = "Denies the state_patch_pet command without any pre-configured scope."
+commands.deny = ["state_patch_pet"]

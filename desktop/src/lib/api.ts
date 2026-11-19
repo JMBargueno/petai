@@ -1,7 +1,26 @@
 import createClient from 'openapi-fetch';
 import type { InitiativeReply, InitiativeSettings, TalkLevel } from './initiative';
 import type { paths } from '@shared/openapi/api-types';
-import { CLIENT_HEADERS, inspectMaintenance, setMaintenanceBaseUrl } from './maintenance';
+import {
+  coreFetch,
+  coreStream,
+  hasCore,
+  importLegacySession,
+  logout as coreLogout,
+  onMaintenance,
+  onSession,
+  sessionState,
+} from '@pockai/client';
+import { CLIENT_HEADERS, enterMaintenance, inspectMaintenance, setMaintenanceBaseUrl } from './maintenance';
+
+/**
+ * Dentro de la app, la red y la sesión las lleva el núcleo en Rust (`crates/pockai-core`): este
+ * módulo solo describe las llamadas y el webview no ve ningún token. En el navegador (modo demo) y
+ * en los tests no hay núcleo y se usa el transporte web de siempre.
+ */
+const CORE = hasCore();
+/** Con núcleo, lo que la UI tiene en lugar del token: solo indica que hay sesión. */
+const CORE_SESSION = 'core';
 
 /**
  * URL del backend. En el servidor de desarrollo de Vite se usa el proxy (misma origin); en una
@@ -25,7 +44,7 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   for (const [name, value] of Object.entries(CLIENT_HEADERS)) {
     if (!req.headers.has(name)) req.headers.set(name, value);
   }
-  const res = await fetch(req);
+  const res = CORE ? await coreFetch(req) : await fetch(req);
   await inspectMaintenance(res);
   return res;
 }
@@ -33,17 +52,18 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
 const ACCESS_KEY = 'petai_access_token';
 const REFRESH_KEY = 'petai_refresh_token';
 
-let currentToken: string | null = typeof localStorage !== 'undefined' ? localStorage.getItem(ACCESS_KEY) : null;
-let currentRefreshToken: string | null = typeof localStorage !== 'undefined' ? localStorage.getItem(REFRESH_KEY) : null;
+const webStorage = !CORE && typeof localStorage !== 'undefined';
+let currentToken: string | null = webStorage ? localStorage.getItem(ACCESS_KEY) : null;
+let currentRefreshToken: string | null = webStorage ? localStorage.getItem(REFRESH_KEY) : null;
 
 function store(key: string, value: string | null) {
-  if (typeof localStorage === 'undefined') return;
+  if (!webStorage) return;
   if (value) localStorage.setItem(key, value);
   else localStorage.removeItem(key);
 }
 
 export function setAccessToken(token: string | null) {
-  currentToken = token;
+  currentToken = token && CORE ? CORE_SESSION : token;
   store(ACCESS_KEY, token);
 }
 
@@ -107,6 +127,46 @@ function expireSession() {
   if (hadSession) sessionExpiredListeners.forEach((cb) => cb());
 }
 
+let coreSession: Promise<void> | null = null;
+
+/**
+ * Se resuelve cuando ya se sabe si hay sesión. Con núcleo hay que preguntárselo (y, la primera vez
+ * tras actualizar, entregarle la sesión que guardaba el webview); sin él se sabe desde el arranque.
+ */
+export function sessionReady(): Promise<void> {
+  if (!CORE) return Promise.resolve();
+  return (coreSession ??= initCoreSession());
+}
+
+async function initCoreSession() {
+  await onSession((kind) => {
+    if (kind === 'active') currentToken = CORE_SESSION;
+    else if (kind === 'loggedOut') currentToken = null;
+    else if (kind === 'expired') expireSession();
+    else if (kind === 'unverified') emailUnverifiedListeners.forEach((cb) => cb());
+    else if (kind === 'handleRequired') handleRequiredListeners.forEach((cb) => cb());
+  });
+  // Mantenimiento detectado por el núcleo fuera de una llamada de la UI (tiempo real, renovación).
+  await onMaintenance(enterMaintenance);
+  await importLegacySessionOnce();
+  currentToken = (await sessionState()).active ? CORE_SESSION : null;
+}
+
+/** Versiones anteriores guardaban los tokens en el webview: pasan al núcleo y se borran de aquí. */
+async function importLegacySessionOnce() {
+  if (typeof localStorage === 'undefined') return;
+  const access = localStorage.getItem(ACCESS_KEY);
+  const refresh = localStorage.getItem(REFRESH_KEY);
+  if (!access && !refresh) return;
+  try {
+    if (access && refresh) await importLegacySession(access, refresh, localStorage.getItem('petai.deviceId'));
+    localStorage.removeItem(ACCESS_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+  } catch {
+    // El núcleo no respondió: se conservan para intentarlo en el próximo arranque.
+  }
+}
+
 let refreshing: Promise<string | null> | null = null;
 
 /**
@@ -120,6 +180,8 @@ let refreshing: Promise<string | null> | null = null;
  * refresh token; un fallo de red o un 429/5xx la conserva para reintentar más tarde.
  */
 export function renewAccessToken(stale?: string | null): Promise<string | null> {
+  // Con núcleo la renovación es suya: aquí no hay nada que renovar.
+  if (CORE) return Promise.resolve(currentToken);
   if (stale !== undefined && currentToken && currentToken !== stale) return Promise.resolve(currentToken);
   refreshing ??= doRefresh().finally(() => {
     refreshing = null;
@@ -164,7 +226,9 @@ async function doRefresh(): Promise<string | null> {
  * repite una vez. Las rutas /auth/* (login incorrecto, refresh caducado) no se reintentan, salvo
  * /auth/verify-email/* (con sesión; el usuario puede volver a la pantalla de verificación horas después).
  */
-async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  // Con núcleo, todo esto (renovar, repetir, avisar del paso de alta que falta) lo hace él.
+  if (CORE) return apiFetch(input, init);
   const req = new Request(input, init);
   const sent = req.headers.get('Authorization')?.replace(/^Bearer /, '') ?? null;
   const path = new URL(req.url).pathname;
@@ -236,6 +300,41 @@ function apiError(res: { error?: unknown; response?: Response }, fallback: strin
 export function isTerminalError(err: unknown): boolean {
   if (!(err instanceof ApiError) || err.status === undefined) return true;
   return err.status >= 500 || err.status === 401;
+}
+
+/**
+ * Chat en streaming a través del núcleo: los eventos llegan por un canal y `apply` devuelve el
+ * resultado cuando procesa el último (`done` o `moderated`).
+ */
+function coreChat<T>(url: string, init: RequestInit, apply: (event: string, data: any) => T | undefined): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+    coreStream(url, init, (ev) => {
+      if (settled) return;
+      try {
+        const result = apply(ev.event, JSON.parse(ev.data));
+        if (result !== undefined) settle(() => resolve(result));
+      } catch (e) {
+        settle(() => reject(e));
+      }
+    }).then(
+      async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          settle(() => reject(new Error(data?.message || 'Error al enviar el mensaje')));
+          return;
+        }
+        // Los últimos eventos del canal pueden llegar justo después de la respuesta del comando.
+        setTimeout(() => settle(() => reject(new Error('La respuesta terminó sin completarse'))), 500);
+      },
+      (e) => settle(() => reject(e)),
+    );
+  });
 }
 
 /** POST a una ruta pública de /auth/ (sin sesión). Lanza ApiError con el mensaje del servidor. */
@@ -321,6 +420,10 @@ export const api = {
   logout() {
     const refreshToken = currentRefreshToken;
     setSession(null);
+    if (CORE) {
+      void coreLogout().catch(() => {});
+      return;
+    }
     if (refreshToken) {
       void apiFetch(`${API_BASE_URL}/v1/auth/logout`, {
         method: 'POST',
@@ -581,7 +684,8 @@ export const api = {
     signal?: AbortSignal,
     clientContext?: unknown,
   ): Promise<{ message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string; behavior?: PetBehavior } | { moderated: true }> {
-    const res = await authFetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
+    const url = `${API_BASE_URL}/v1/pets/${petId}/chat`;
+    const init: RequestInit = {
       method: 'POST',
       signal,
       headers: {
@@ -589,7 +693,22 @@ export const api = {
         ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
       },
       body: JSON.stringify({ message, clientTools, clientContext }),
-    });
+    };
+    if (CORE) {
+      return coreChat(url, init, (event, data) => {
+        if (event === 'delta') handlers.onDelta(data.text);
+        else if (event === 'reasoning') handlers.onReasoning?.(data.text);
+        else if (event === 'tool') handlers.onTool?.(data.name);
+        else if (event === 'action') handlers.onAction?.(data.action);
+        else if (event === 'moderated') {
+          handlers.onModerated?.(data);
+          return { moderated: true as const };
+        } else if (event === 'error') throw new Error(data.message);
+        else if (event === 'done') return data;
+        return undefined;
+      });
+    }
+    const res = await authFetch(url, init);
     if (!res.ok || !res.body) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data?.message || 'Error al enviar el mensaje');

@@ -395,6 +395,9 @@ importers:
       '@pockai/audio':
         specifier: workspace:*
         version: link:../shared/audio
+      '@pockai/client':
+        specifier: workspace:*
+        version: link:../shared/client
       '@pockai/mind':
         specifier: workspace:*
         version: link:../shared/mind
@@ -486,6 +489,19 @@ importers:
         version: 4.161.0(@cloudflare/workers-types@4.20260702.1)(@types/node@22.20.5)
 
   shared/audio:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(sass-embedded@1.104.1)(sass@1.104.1)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
+  shared/client:
+    dependencies:
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.12.4
     devDependencies:
       typescript:
         specifier: ^5.7.3

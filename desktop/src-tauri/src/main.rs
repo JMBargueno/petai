@@ -253,6 +253,18 @@ fn spawn_click_through_loop(app: tauri::AppHandle) {
     });
 }
 
+/// URL del backend. En desarrollo es el backend local (o `POCKAI_API_URL` si se define al arrancar);
+/// en una compilación de producción es el `VITE_API_URL` con el que se compiló (ver `build.rs`),
+/// el mismo que usaba el frontend.
+fn api_base_url() -> String {
+    const LOCAL: &str = "http://127.0.0.1:3000";
+    if cfg!(debug_assertions) {
+        std::env::var("POCKAI_API_URL").unwrap_or_else(|_| LOCAL.to_string())
+    } else {
+        option_env!("POCKAI_API_URL").unwrap_or(LOCAL).to_string()
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         // Debe ir primero: si ya hay una instancia (p. ej. oculta en la bandeja), se muestra esa
@@ -269,6 +281,8 @@ fn main() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // Núcleo cliente: toda la comunicación con el backend pasa por aquí, no por el webview.
+        .plugin(tauri_plugin_pockai::init(tauri_plugin_pockai::PockaiConfig { base_url: api_base_url() }))
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _shortcut, event| {

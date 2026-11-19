@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-session-import-legacy"
+description = "Enables the session_import_legacy command without any pre-configured scope."
+commands.allow = ["session_import_legacy"]
+
+[[permission]]
+identifier = "deny-session-import-legacy"
+description = "Denies the session_import_legacy command without any pre-configured scope."
+commands.deny = ["session_import_legacy"]

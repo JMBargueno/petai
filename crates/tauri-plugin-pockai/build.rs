@@ -1,0 +1,21 @@
+const COMMANDS: &[&str] = &[
+    "api_request",
+    "chat_stream",
+    "chat_cancel",
+    "session_state",
+    "session_logout",
+    "session_import_legacy",
+    "realtime_start",
+    "realtime_stop",
+    "state_snapshot",
+    "state_load",
+    "state_refresh",
+    "state_apply_pet",
+    "state_patch_pet",
+    "state_select_pet",
+    "state_clear",
+];
+
+fn main() {
+    tauri_plugin::Builder::new(COMMANDS).build();
+}

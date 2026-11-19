@@ -18,7 +18,7 @@ import {
   type WeatherThresholds,
 } from '@pockai/scene/weather';
 import balance from '@shared/game-data/balance.json';
-import { API_BASE_URL, apiFetch, getAccessToken, renewAccessToken } from './api';
+import { API_BASE_URL, authFetch, getAccessToken } from './api';
 
 export type TimeOfDay = 'late_night' | 'morning' | 'afternoon' | 'evening' | 'night';
 export type WeatherCondition = 'clear' | 'cloud' | 'rain' | 'snow' | 'hot' | 'cold' | 'unknown';
@@ -86,22 +86,15 @@ export const environmentalStatus = writable<EnvironmentalStatus | null>(null);
 export const STATUS_REFRESH_MS = 15 * 60_000;
 
 async function authedFetch(path: string, init?: RequestInit): Promise<Response> {
-  const base = `${API_BASE_URL}${path}`;
-  const doFetch = (token: string | null) =>
-    apiFetch(base, {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-
-  let res = await doFetch(getAccessToken());
-  if (res.status === 401) {
-    const token = await renewAccessToken(getAccessToken());
-    if (token) res = await doFetch(token);
-  }
-  return res;
+  // La renovación de sesión es la de `authFetch` (una sola en toda la app), no una propia.
+  const token = getAccessToken();
+  return authFetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
 }
 
 async function json<T>(res: Response): Promise<T> {

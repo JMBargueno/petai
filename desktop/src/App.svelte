@@ -2,6 +2,7 @@
   import { Button } from './components/ui';
   import { onMount, onDestroy, tick } from 'svelte';
   import { api, getAccessToken, onEmailUnverified, onHandleRequired, onSessionExpired } from './lib/api';
+  import * as appState from './lib/appState';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
   import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
@@ -59,7 +60,6 @@
   import { clearVisitorTalk, visitorInteracted, type VisitorInteractionEvent } from './lib/visitDialog';
   import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster, emitClanHabitatEvent } from './lib/clan-store';
   import type { HabitatVisitor, HabitatSceneEvent, ClanMessage, ClanGoal, ClanXpEvent } from './lib/api';
-  import { loadActivePetId, pickActivePet, saveActivePetId } from './lib/activePet';
   import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
   import { maintenanceLock } from './lib/maintenance';
   import { startContextDigest } from './lib/contextDigest';
@@ -78,12 +78,24 @@
     },
   });
 
+  // Estado global: lo guarda `lib/appState` (dentro de la app, el núcleo en Rust). Aquí solo se
+  // refleja; para cambiarlo se llama a `appState`, nunca se asignan estas variables.
   let user: any = null;
   let pets: any[] = [];
   let currentPet: any = null;
   let eggs: any[] = [];
   let inventory: any[] = [];
   let shopItems: any[] = [];
+  const stopAppState = [
+    appState.user.subscribe((v) => (user = v)),
+    appState.pets.subscribe((v) => (pets = v)),
+    appState.currentPet.subscribe((v) => (currentPet = v)),
+    appState.eggs.subscribe((v) => (eggs = v)),
+    appState.inventory.subscribe((v) => (inventory = v)),
+    appState.shopItems.subscribe((v) => (shopItems = v)),
+    // Lectura fresca del servidor (sondeo o tiempo real): ¿necesita atención la mascota activa?
+    appState.onServerPets(() => currentPet && notifyPetNeeds(currentPet)),
+  ];
   let isPanelOpen = true;
   let droppedFile: AnalyzedFile | null = null;
   /** Último logro desbloqueado (aviso con la insignia). */
@@ -93,18 +105,9 @@
   let requestN = 0;
   /** Cambia la mascota activa (la que pasea por el escritorio) y lo recuerda en este equipo. */
   function selectPet(id: string) {
-    const next = pets.find((p) => p.id === id);
-    if (!next || next.id === currentPet?.id) return;
-    currentPet = next;
-    saveActivePetId(next.id);
+    appState.selectPet(id);
   }
 
-  /**
-   * El servidor también guarda cuál es la mascota activa (la que te representa en el hábitat del
-   * clan y en las visitas). Se sincroniza cada vez que cambia, sin bloquear ni avisar si falla.
-   * Solo si es una elección guardada en este equipo: uno recién instalado (sin elección) mostraría
-   * la primera mascota y pisaría la que el jugador eligió en otro.
-   */
   // Las habilidades de escritorio son de cada mascota: se cargan al cambiar la activa (no al
   // refrescarse sus datos, que pisaría un cambio hecho aquí que el servidor aún no ha guardado).
   let skillsPetId: string | null = null;
@@ -112,16 +115,6 @@
     skillsPetId = currentPet?.id ?? null;
     setActiveSkillsPet(skillsPetId, currentPet?.desktopSkills);
   }
-
-  let syncedActivePetId: string | null = null;
-  $: if (user && currentPet?.id && currentPet.id !== syncedActivePetId && currentPet.id === loadActivePetId()) {
-    const id = currentPet.id;
-    syncedActivePetId = id;
-    api.activatePet(id).catch(() => {
-      if (syncedActivePetId === id) syncedActivePetId = null; // se reintenta en el próximo cambio
-    });
-  }
-  $: if (!user) syncedActivePetId = null;
 
   function openNotifications() {
     panelRequest = { dest: 'settings', sub: 'notifications', n: ++requestN };
@@ -156,9 +149,7 @@
     try {
       const updated = await api.setPetInHabitat(petId, true);
       if (currentPet?.id !== petId) return;
-      currentPet = updated;
-      const idx = pets.findIndex((p) => p.id === petId);
-      if (idx !== -1) pets[idx] = updated;
+      appState.applyPet(updated, false);
     } catch (err: any) {
       console.error('Error llevando a casa al entrar en el modo hábitat:', err);
     }
@@ -337,52 +328,26 @@
     document.title = $unreadCount > 0 ? `(${$unreadCount}) Pockai` : 'Pockai';
   }
 
-  async function refreshPet() {
-    try {
-      const fresh = await api.getPets();
-      pets = fresh;
-      currentPet = fresh.find((p: any) => p.id === currentPet?.id) ?? currentPet;
-    } catch {
-      /* se actualizará con el siguiente ciclo */
-    }
+  function refreshPet() {
+    return appState.refreshPets();
   }
 
   let petViewRef: any = null;
 
   async function loadInitialData() {
     try {
-      const catalog = await api.getCatalog();
-      // Spec 41: lo que es solo drop (cofres y actividades) u oculto (solo admin) no se vende
-      shopItems = (catalog.foods || []).filter((f: any) => (f.availability ?? 'shop') === 'shop');
-
-      if (getAccessToken()) {
-        user = await api.getMe();
-        // Cuenta sin verificar: solo se muestra la pantalla de verificación del panel (sin mascota,
-        // socket ni datos de juego: la API los rechaza con 403 hasta verificar el correo).
-        if (user?.emailVerified === false) {
-          isPanelOpen = true;
-          return;
-        }
-        // Cuenta sin nickname (anterior a él o creada desde una app antigua): primero se elige.
-        if (user && user.handle === null) {
-          isPanelOpen = true;
-          return;
-        }
-        // El servidor usa la zona horaria del usuario (ciclo de sueño, recordatorios):
-        // si sigue en el valor por defecto (UTC), se ajusta a la del equipo.
-        const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        if (user.timezone === 'UTC' && localTz && localTz !== 'UTC') {
-          try {
-            user = await api.updateMe({ timezone: localTz });
-          } catch {
-            /* no crítico: se reintenta en el próximo inicio */
-          }
-        }
-        pets = await api.getPets();
-        currentPet = pickActivePet(pets, loadActivePetId());
-        eggs = await api.getEggs();
-        inventory = await api.getInventory();
-
+      lockShown = null;
+      // Tienda y, con sesión, usuario, mascotas, huevos e inventario (dentro de la app los carga
+      // el núcleo, que además guarda la sesión).
+      const loaded = await appState.load();
+      // Cuenta sin verificar o sin nickname: solo se muestra esa pantalla del panel (sin mascota,
+      // socket ni datos de juego: la API los rechaza con 403 hasta completar el paso).
+      if (loaded.lock) {
+        isPanelOpen = true;
+        return;
+      }
+      // Sin sesión, o sin conexión y sin estado guardado: se queda en la pantalla de entrada.
+      if (loaded.session && user) {
         checkReminders();
 
         // Conectar WebSocket en tiempo real
@@ -390,16 +355,7 @@
         // Notificaciones con personalidad (feature 007): suscribe al evento `pet:notification`
         // y lo entrega como nativa de Tauri (o al inbox offline si no es posible).
         initNotificationHandler(socket);
-        socket.on('pet:update', (updatedPet: any) => {
-          if (currentPet && currentPet.id === updatedPet.id) {
-            currentPet = updatedPet;
-            notifyPetNeeds(updatedPet);
-          }
-          const index = pets.findIndex((p) => p.id === updatedPet.id);
-          if (index !== -1) {
-            pets[index] = updatedPet;
-          }
-        });
+        socket.on('pet:update', (updatedPet: any) => appState.applyRealtimePet(updatedPet));
         // Qué le acaba de pasar a la mascota (comer, subir de nivel, ganar…) → animación
         socket.on('pet:action', (ev: unknown) => {
           if (!isPetActionEvent(ev) || !currentPet) return;
@@ -487,7 +443,7 @@
         socket.on('achievement:unlocked', (p: AchievementUnlockedPayload | null) => {
           if (!p) return;
           unlockedAchievement = p;
-          api.getMe().then((u) => (user = u)).catch(() => {});
+          appState.userChangedOnServer();
         });
 
         // Recompensa recibida (voucher canjeado o regalo del equipo): la mascota ya lo celebra con
@@ -495,7 +451,7 @@
         socket.on('reward:received', (p: RewardReceived | null) => {
           if (!p) return;
           celebrateReward(p);
-          api.getMe().then((u) => (user = u)).catch(() => {});
+          appState.userChangedOnServer();
         });
 
         // Aviso en tiempo real de nueva versión disponible
@@ -516,8 +472,7 @@
     } catch (err) {
       // Si la sesión ya no es válida, la capa de API la cierra (onSessionExpired). Un fallo de
       // red no borra los tokens: se podrá entrar sin credenciales en el próximo arranque.
-      console.warn('Sesión no iniciada o servidor no disponible:', err);
-      user = null;
+      console.warn('No se pudo terminar de arrancar la sesión:', err);
     }
   }
 
@@ -571,8 +526,9 @@
    */
   async function celebrateHatch(newborn: any) {
     if (!newborn?.id) return;
-    pets = [...pets.filter((p) => p.id !== newborn.id), newborn];
-    if (!currentPet) {
+    const hadPet = !!currentPet;
+    appState.applyPet(newborn);
+    if (!hadPet) {
       selectPet(newborn.id);
       await tick();
       reactToAction(newborn.id, 'hatched', {
@@ -609,11 +565,7 @@
     stopHeartbeat();
     stopEnvRefresh();
     stopContextDigest();
-    user = null;
-    currentPet = null;
-    pets = [];
-    eggs = [];
-    inventory = [];
+    appState.clear();
     serverEnvironmental = null;
     clearVisitors();
     clearSpeech();
@@ -666,10 +618,18 @@
 
   /** La API dice que el correo no está verificado: se para el juego y se pide la verificación. */
   function lockUnverified() {
+    showLock('unverified');
+  }
+
+  /** Paso de alta que ya se está mostrando (para no parar el juego dos veces). */
+  let lockShown: appState.AccountLock | null = null;
+
+  function showLock(kind: appState.AccountLock) {
+    if (lockShown === kind) return;
+    lockShown = kind;
     const current = user;
-    if (current?.emailVerified === false) return;
     clearSessionState();
-    user = current ? { ...current, emailVerified: false } : null;
+    appState.lock(kind, current);
     isPanelOpen = true;
   }
 
@@ -677,11 +637,7 @@
 
   /** La API exige nickname (403 HANDLE_REQUIRED): se para el juego y se muestra "Elige tu nickname". */
   function lockNoHandle() {
-    const current = user;
-    if (current && current.handle === null) return;
-    clearSessionState();
-    user = current ? { ...current, handle: null } : null;
-    isPanelOpen = true;
+    showLock('noHandle');
   }
   let stopAutoUpdate: () => void = () => {};
   let stopTrayUpdates: () => void = () => {};
@@ -706,18 +662,9 @@
 
   async function pollPet() {
     checkReminders();
-    if (!getAccessToken() || !currentPet) return;
-    try {
-      const fresh = await api.getPets();
-      const pet = fresh.find((p: any) => p.id === currentPet.id);
-      if (pet) {
-        currentPet = pet;
-        pets = fresh;
-        notifyPetNeeds(pet);
-      }
-    } catch {
-      /* sin conexión o sesión caducada: se reintenta en el siguiente ciclo */
-    }
+    // Dentro de la app las mascotas las sondea el núcleo; el aviso de necesidades llega por
+    // `appState.onServerPets`.
+    await appState.poll();
   }
 
   function handleFileDropped(e: Event) {
@@ -733,9 +680,7 @@
       // Ya se ha metido en el panel arrastrándola: no hace falta además el altar
       skipAltarOnce = true;
       const updated = await api.setPetInHabitat(petId, true);
-      currentPet = updated;
-      const idx = pets.findIndex((p) => p.id === petId);
-      if (idx !== -1) pets[idx] = updated;
+      appState.applyPet(updated, false);
       showBubble('¡A descansar a mi casita!');
     } catch (err: any) {
       skipAltarOnce = false;
@@ -796,9 +741,7 @@
       try {
         petSpawnAt = ce.detail ?? null;
         const updated = await api.setPetInHabitat(currentPet.id, false);
-        currentPet = updated;
-        const idx = pets.findIndex((p) => p.id === currentPet.id);
-        if (idx !== -1) pets[idx] = updated;
+        appState.applyPet(updated, false);
         showBubble('¡De vuelta a explorar el escritorio!');
       } catch (err: any) {
         petSpawnAt = null;
@@ -819,7 +762,7 @@
         evolve: (stage: string) => {
           if (!currentPet) return;
           reactToAction(currentPet.id, 'evolved', { stage });
-          setTimeout(() => currentPet && (currentPet = { ...currentPet, stage }), 50);
+          setTimeout(() => appState.patchActivePet({ stage }), 50);
         },
         // Eclosión de otra de la colección: rareza, shiny y garantía de la Promesa del Telar
         hatch: (rarity = 'legendary', shiny = false, pity: string | null = null) => {
@@ -834,15 +777,15 @@
           void celebrateHatch(newborn);
         },
         // Entrar en casa y salir como con el botón del panel (con el altar)
-        home: (inHabitat: boolean) => currentPet && (currentPet = { ...currentPet, inHabitat }),
+        home: (inHabitat: boolean) => appState.patchActivePet({ inHabitat }),
         achievement: (tier = 'legendary') => currentPet && reactToAction(currentPet.id, 'achievement', { name: 'Demostración', tier }),
         battle: (outcome: 'won' | 'lost' | 'draw' = 'won') =>
           currentPet && reactToAction(currentPet.id, 'battle_defended', { won: outcome === 'won', draw: outcome === 'draw', attackerName: 'Rival' }),
         clanGoal: () => celebrateClanGoal('Visitas de la semana'),
         agent: (tool = 'open_url') => petViewRef?.playMinor?.('manitas-espirituales', { tool }),
-        intelligence: (n: number) => currentPet && (currentPet = { ...currentPet, intelligence: n }),
+        intelligence: (n: number) => appState.patchActivePet({ intelligence: n }),
         // Cualquier campo de la mascota activa (p. ej. { shiny: true } para ver el destello del Prisma)
-        patchPet: (p: Record<string, unknown>) => currentPet && (currentPet = { ...currentPet, ...p }),
+        patchPet: (p: Record<string, unknown>) => appState.patchActivePet(p),
         weather: (condition: string) => {
           serverEnvironmental = serverEnvironmental ?? ({} as any);
           localWeather.set({ ...($localWeather ?? {}), condition, temperature: 12, weatherCode: 0 } as any);
@@ -888,6 +831,7 @@
   });
 
   onDestroy(() => {
+    stopAppState.forEach((stop) => stop());
     initiative.stop();
     if (ballRaf) cancelAnimationFrame(ballRaf);
     window.removeEventListener('petai:file_dropped', handleFileDropped);
@@ -953,11 +897,7 @@
     <HabitatWidget
       pet={currentPet}
       on:exit={exitHabitatMode}
-      on:petUpdated={(e) => {
-        currentPet = e.detail;
-        const idx = pets.findIndex((p) => p.id === currentPet.id);
-        if (idx !== -1) pets[idx] = currentPet;
-      }}
+      on:petUpdated={(e) => appState.applyPet(e.detail, false)}
     />
   {/if}
 
@@ -1006,14 +946,9 @@
     shopItems={shopItems}
     on:close={() => (isPanelOpen = false)}
     on:authSuccess={loadInitialData}
-    on:refreshUser={async () => (user = await api.getMe())}
-    on:refreshEggs={async () => (eggs = await api.getEggs())}
-    on:petUpdated={(e) => {
-      currentPet = e.detail;
-      const idx = pets.findIndex((p) => p.id === currentPet.id);
-      if (idx !== -1) pets[idx] = currentPet;
-      else pets = [currentPet, ...pets];
-    }}
+    on:refreshUser={() => appState.refreshUser()}
+    on:refreshEggs={() => appState.refreshEggs()}
+    on:petUpdated={(e) => appState.applyPet(e.detail)}
     on:petHatched={(e) => celebrateHatch(e.detail)}
     on:hatchProgress={(e) => petViewRef?.hatchEgg?.(e.detail.stage, e.detail.newborn)}
     on:selectPet={(e) => selectPet(e.detail)}

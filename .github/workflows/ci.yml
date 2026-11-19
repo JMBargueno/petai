@@ -219,6 +219,12 @@ jobs:
           pnpm --filter @pockai/scene run typecheck
           pnpm --filter @pockai/scene run test
 
+      # Lado de la UI del núcleo cliente (spec 42): la pasarela `coreFetch` y el canal del chat.
+      - name: Test core client
+        run: |
+          pnpm --filter @pockai/client run typecheck
+          pnpm --filter @pockai/client run test
+
       - name: Build frontend (Svelte + Vite)
         run: pnpm --filter petai-desktop run build
 
@@ -237,10 +243,27 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
-          workspaces: desktop/src-tauri
+          workspaces: .
 
-      - name: Check Tauri (Rust)
-        run: cargo check --manifest-path desktop/src-tauri/Cargo.toml --locked
+      # Workspace de Rust: el shell de Tauri y los crates del núcleo cliente (spec 42).
+      - name: Check Rust workspace
+        run: cargo check --workspace --locked
+
+      # Núcleo cliente contra un backend simulado: sesión, renovación única, mantenimiento y chat.
+      # De paso regenera los tipos del contrato para la UI (ts-rs).
+      - name: Test core (Rust)
+        run: cargo test -p pockai-core --locked
+
+      # Canal en tiempo real contra un servidor Socket.IO de verdad (el paquete del backend).
+      - name: Test core realtime
+        run: cargo test -p pockai-core --locked --test tiempo_real -- --ignored
+
+      - name: Core contract types are up to date
+        run: |
+          git diff --exit-code -- shared/client/src/bindings || {
+            echo "::error::Los tipos del contrato están desactualizados. Ejecuta: cargo test -p pockai-core export_bindings"
+            exit 1
+          }
 
   android:
     name: Android build (Compose)

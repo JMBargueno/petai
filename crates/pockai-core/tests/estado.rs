@@ -1,0 +1,285 @@
+//! Estado global del núcleo contra un backend simulado: carga, bloqueos de cuenta, cambios locales,
+//! mascota activa y lo que se guarda en disco.
+
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::Duration;
+
+use pockai_core::{
+    AccountLock, ApiRequest, ChangeSource, Core, CoreConfig, CoreEvent, LoadOptions, MemoryStore, Slice, StateChange,
+    Tokens,
+};
+use serde_json::{json, Map, Value};
+use wiremock::matchers::{body_json, method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
+
+fn session() -> Box<MemoryStore> {
+    Box::new(MemoryStore::with(Tokens { access: "a".into(), refresh: "r".into() }))
+}
+
+fn core(server: &MockServer) -> Core {
+    Core::new(CoreConfig::desktop(server.uri(), None), session())
+}
+
+/// Carpeta de datos nueva para cada test.
+fn data_dir() -> PathBuf {
+    static NEXT: AtomicU32 = AtomicU32::new(0);
+    let dir = std::env::temp_dir().join(format!("pockai-core-{}-{}", std::process::id(), NEXT.fetch_add(1, Ordering::SeqCst)));
+    let _ = std::fs::remove_dir_all(&dir);
+    dir
+}
+
+async fn get(server: &MockServer, route: &str, body: Value) {
+    Mock::given(method("GET")).and(path(route)).respond_with(ResponseTemplate::new(200).set_body_json(body)).mount(server).await;
+}
+
+/// Un backend con una cuenta normal: dos mascotas, un huevo y algo de inventario.
+async fn mount_account(server: &MockServer) {
+    get(
+        server,
+        "/v1/catalog",
+        json!({ "foods": [
+            { "id": "manzana" },
+            { "id": "baya", "availability": "shop" },
+            { "id": "reliquia", "availability": "drop" },
+            { "id": "secreto", "availability": "hidden" },
+        ]}),
+    )
+    .await;
+    get(server, "/v1/me", json!({ "id": "u1", "emailVerified": true, "handle": "filo", "timezone": "Europe/Madrid", "coins": 10 })).await;
+    get(server, "/v1/pets", json!([{ "id": "p1", "hunger": 80 }, { "id": "p2", "hunger": 50 }])).await;
+    get(server, "/v1/eggs", json!([{ "id": "e1", "remainingMs": 60000 }])).await;
+    get(server, "/v1/inventory", json!([{ "itemId": "manzana", "quantity": 2 }])).await;
+}
+
+fn changes(events: &mut tokio::sync::broadcast::Receiver<CoreEvent>) -> Vec<StateChange> {
+    let mut out = Vec::new();
+    while let Ok(event) = events.try_recv() {
+        if let CoreEvent::State(change) = event {
+            out.push(change);
+        }
+    }
+    out
+}
+
+#[tokio::test]
+async fn carga_el_estado_de_una_cuenta_normal() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    let mut events = core.subscribe();
+
+    let outcome = core.state_load(LoadOptions::default()).await;
+
+    assert!(outcome.session && outcome.lock.is_none() && !outcome.offline);
+    let state = core.state_snapshot();
+    assert_eq!(state.user["handle"], "filo");
+    assert_eq!(state.pets.len(), 2);
+    assert_eq!(state.inventory[0]["quantity"], 2);
+    // Solo lo que se vende: ni lo que sale de cofres ni lo oculto.
+    let shop: Vec<&str> = state.shop.iter().map(|f| f["id"].as_str().unwrap()).collect();
+    assert_eq!(shop, ["manzana", "baya"]);
+    // El huevo lleva su hora de eclosión ya calculada.
+    assert!(state.eggs[0]["hatchesAt"].as_str().unwrap().ends_with('Z'));
+    // Sin elección guardada, la activa es la primera.
+    assert_eq!(state.active_pet().unwrap()["id"], "p1");
+
+    let announced: Vec<Slice> = changes(&mut events).iter().map(|c| c.slice).collect();
+    assert_eq!(announced, [Slice::Shop, Slice::User, Slice::Pets, Slice::Eggs, Slice::Inventory]);
+}
+
+#[tokio::test]
+async fn sin_sesion_solo_carga_la_tienda() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = Core::new(CoreConfig::desktop(server.uri(), None), Box::new(MemoryStore::default()));
+
+    let outcome = core.state_load(LoadOptions::default()).await;
+
+    assert!(!outcome.session);
+    let state = core.state_snapshot();
+    assert_eq!(state.shop.len(), 2);
+    assert!(state.user.is_null() && state.pets.is_empty());
+}
+
+#[tokio::test]
+async fn una_cuenta_sin_verificar_solo_carga_el_usuario() {
+    let server = MockServer::start().await;
+    get(&server, "/v1/catalog", json!({ "foods": [] })).await;
+    get(&server, "/v1/me", json!({ "id": "u1", "emailVerified": false })).await;
+    Mock::given(method("GET")).and(path("/v1/pets")).respond_with(ResponseTemplate::new(403)).expect(0).mount(&server).await;
+    let core = core(&server);
+
+    let outcome = core.state_load(LoadOptions::default()).await;
+
+    assert_eq!(outcome.lock, Some(AccountLock::Unverified));
+    assert_eq!(core.state_snapshot().user["id"], "u1");
+}
+
+#[tokio::test]
+async fn una_cuenta_sin_nickname_queda_bloqueada() {
+    let server = MockServer::start().await;
+    get(&server, "/v1/catalog", json!({ "foods": [] })).await;
+    get(&server, "/v1/me", json!({ "id": "u1", "emailVerified": true, "handle": null })).await;
+    let core = core(&server);
+
+    assert_eq!(core.state_load(LoadOptions::default()).await.lock, Some(AccountLock::NoHandle));
+}
+
+#[tokio::test]
+async fn ajusta_la_zona_horaria_si_sigue_en_utc() {
+    let server = MockServer::start().await;
+    get(&server, "/v1/catalog", json!({ "foods": [] })).await;
+    get(&server, "/v1/me", json!({ "id": "u1", "timezone": "UTC" })).await;
+    get(&server, "/v1/pets", json!([])).await;
+    get(&server, "/v1/eggs", json!([])).await;
+    get(&server, "/v1/inventory", json!([])).await;
+    Mock::given(method("PATCH"))
+        .and(path("/v1/me"))
+        .and(body_json(json!({ "timezone": "Europe/Madrid" })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "id": "u1", "timezone": "Europe/Madrid" })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let core = core(&server);
+
+    core.state_load(LoadOptions { timezone: Some("Europe/Madrid".into()), ..Default::default() }).await;
+
+    assert_eq!(core.state_snapshot().user["timezone"], "Europe/Madrid");
+}
+
+#[tokio::test]
+async fn los_cambios_de_la_ui_actualizan_las_mascotas() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    let mut events = core.subscribe();
+
+    // Respuesta de «dar de comer»: sustituye a la mascota.
+    core.state_apply_pet(json!({ "id": "p2", "hunger": 100 }), false);
+    // Una que no se tiene solo entra si se pide añadirla (una recién nacida).
+    core.state_apply_pet(json!({ "id": "p9" }), false);
+    core.state_apply_pet(json!({ "id": "p3", "stage": "baby" }), true);
+    // Cambio suelto sin esperar al servidor.
+    let mut patch = Map::new();
+    patch.insert("stage".into(), json!("teen"));
+    core.state_patch_pet("p3", patch);
+
+    let pets = core.state_snapshot().pets;
+    assert_eq!(pets.len(), 3);
+    assert_eq!(pets[1]["hunger"], 100);
+    assert_eq!(pets[2], json!({ "id": "p3", "stage": "teen" }));
+
+    let announced = changes(&mut events);
+    // La que no se tenía no cambió nada: no se anuncia.
+    assert_eq!(announced.len(), 3);
+    assert!(announced.iter().all(|c| c.slice == Slice::Pets && c.source == ChangeSource::Local));
+    assert!(announced.windows(2).all(|pair| pair[0].rev < pair[1].rev));
+}
+
+#[tokio::test]
+async fn elegir_mascota_se_recuerda_y_se_le_dice_al_servidor() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/pets/p2/activate"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "activePetId": "p2" })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+
+    core.state_select_pet("p2");
+    core.state_select_pet("p2");
+    core.state_select_pet("no-existe");
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let state = core.state_snapshot();
+    assert_eq!(state.active_pet_id.as_deref(), Some("p2"));
+    assert_eq!(state.active_pet().unwrap()["id"], "p2");
+}
+
+#[tokio::test]
+async fn la_eleccion_que_guardaba_el_webview_se_adopta_una_vez() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    Mock::given(method("POST")).and(path("/v1/pets/p2/activate")).respond_with(ResponseTemplate::new(201)).expect(1).mount(&server).await;
+    let core = core(&server);
+
+    core.state_load(LoadOptions { legacy_active_pet_id: Some("p2".into()), ..Default::default() }).await;
+    // En el siguiente arranque ya hay elección propia: la heredada no la pisa.
+    core.state_load(LoadOptions { legacy_active_pet_id: Some("p1".into()), ..Default::default() }).await;
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    assert_eq!(core.state_snapshot().active_pet_id.as_deref(), Some("p2"));
+}
+
+#[tokio::test]
+async fn cerrar_sesion_vacia_el_estado_y_conserva_la_tienda() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+
+    core.logout();
+
+    let state = core.state_snapshot();
+    assert!(state.user.is_null() && state.pets.is_empty() && state.eggs.is_empty() && state.inventory.is_empty());
+    assert_eq!(state.shop.len(), 2);
+}
+
+#[tokio::test]
+async fn un_403_de_correo_sin_verificar_para_el_juego() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    Mock::given(method("GET"))
+        .and(path("/v1/missions"))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({ "code": "EMAIL_NOT_VERIFIED" })))
+        .mount(&server)
+        .await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+
+    let request = ApiRequest { method: "GET".into(), path: "/v1/missions".into(), body: None, auth: true, content_type: None };
+    core.request(request).await.unwrap();
+
+    let state = core.state_snapshot();
+    assert_eq!(state.user["emailVerified"], false);
+    assert_eq!(state.user["id"], "u1");
+    assert!(state.pets.is_empty());
+}
+
+#[tokio::test]
+async fn el_estado_guardado_se_recupera_al_arrancar_con_sesion() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let dir = data_dir();
+    {
+        let core = Core::new(CoreConfig::desktop(server.uri(), Some(dir.clone())), session());
+        core.state_load(LoadOptions::default()).await;
+        core.state_select_pet("p2");
+    }
+
+    // Arranque siguiente, sin red todavía: el estado ya está.
+    let restored = Core::new(CoreConfig::desktop("http://127.0.0.1:9", Some(dir.clone())), session());
+    let state = restored.state_snapshot();
+    assert_eq!(state.pets.len(), 2);
+    assert_eq!(state.active_pet().unwrap()["id"], "p2");
+    assert_eq!(state.user["handle"], "filo");
+
+    // Y si el servidor no responde, se conserva y se avisa de que es lo guardado.
+    let outcome = restored.state_load(LoadOptions::default()).await;
+    assert!(outcome.session && outcome.offline);
+    assert_eq!(restored.state_snapshot().pets.len(), 2);
+
+    // Sin sesión no se enseña el estado de nadie.
+    let anonymous = Core::new(CoreConfig::desktop(server.uri(), Some(dir.clone())), Box::new(MemoryStore::default()));
+    assert!(anonymous.state_snapshot().pets.is_empty());
+
+    // Cerrar sesión borra lo guardado.
+    restored.logout();
+    assert!(!dir.join("state.json").exists());
+    let _ = std::fs::remove_dir_all(&dir);
+}
