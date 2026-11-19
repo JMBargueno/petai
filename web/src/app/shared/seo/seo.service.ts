@@ -10,7 +10,7 @@ export interface SeoConfig {
   description: string;
   /** Ruta sin idioma: '' para la home, 'lore'… */
   path: string;
-  /** Ruta pública de la imagen social (1200×630). Por defecto la OG general del idioma. */
+  /** Ruta pública de la imagen social (1200×630). Por defecto la OG de la home. */
   image?: string;
   imageAlt?: string;
   type?: 'website' | 'article';
@@ -36,7 +36,7 @@ export class SeoService {
 
   set(config: SeoConfig) {
     const url = pageUrl(this.locale, config.path);
-    const image = `${SITE_URL}/${config.image ?? OG_IMAGE(this.locale)}`;
+    const image = `${SITE_URL}/${config.image ?? OG_IMAGE()}`;
     const imageAlt = config.imageAlt ?? config.title;
 
     this.title.setTitle(config.title);

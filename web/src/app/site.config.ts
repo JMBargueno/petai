@@ -17,8 +17,11 @@ export const LOCALES = site.locales as readonly string[];
 /** URL canónica de una ruta pública: '' → /es/, 'lore' → /es/lore. */
 export const pageUrl = (locale: string, path: string) => `${SITE_URL}/${locale}/${path}`;
 
-/** Imagen social por defecto de cada idioma (ruta pública, sin barra inicial). */
-export const OG_IMAGE = (locale: string, page = 'home') => `og/${page}-${locale}.png`;
+/**
+ * Imagen social de una página (ruta pública, sin barra inicial), en inglés para todos los
+ * idiomas. La genera scripts/generate-og.mjs; `ogVersion` va en el nombre para que las redes no sirvan la caché vieja.
+ */
+export const OG_IMAGE = (page = 'home') => `og/${page}-v${site.ogVersion}.png`;
 
 export const DOWNLOADS: Record<'android' | 'ios', string | null> = {
   android: null,

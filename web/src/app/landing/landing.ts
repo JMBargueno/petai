@@ -115,7 +115,7 @@ export class Landing {
               name: SITE_NAME,
               description: META.description,
               url,
-              image: `${SITE_URL}/${OG_IMAGE(this.locale)}`,
+              image: `${SITE_URL}/${OG_IMAGE()}`,
               applicationCategory: 'GameApplication',
               operatingSystem: 'Windows 10, Windows 11, Android 8.0+',
               inLanguage: this.locale,

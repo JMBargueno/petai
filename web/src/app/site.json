@@ -2,5 +2,6 @@
   "url": "https://pockai.world",
   "name": "Pockai",
   "locales": ["es", "en"],
-  "apiUrl": "https://game-api.pockai.world"
+  "apiUrl": "https://game-api.pockai.world",
+  "ogVersion": 2
 }
