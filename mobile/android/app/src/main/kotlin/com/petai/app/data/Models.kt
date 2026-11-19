@@ -266,3 +266,36 @@ const val VISIT_ENERGY_COST = 10
 /** Evento `pet:action`: qué le acaba de pasar a la mascota para animarla. */
 @Serializable
 data class PetActionEvent(val petId: String? = null, val action: String = "", val context: JsonObject? = null)
+
+// ---------- Vouchers y regalos del equipo ----------
+
+/** Cofre recibido en un paquete de recompensas (`bronze | silver | gold | diamond | mythic`). */
+@Serializable
+data class RewardChest(val type: String = "", val qty: Int = 0)
+
+/** Prenda recibida; `alreadyOwned`: ya la tenía y no se ha dado otra. */
+@Serializable
+data class RewardAccessory(val id: String = "", val name: String = "", val alreadyOwned: Boolean = false)
+
+@Serializable
+data class GrantedRewards(
+    val coins: Int = 0,
+    val gems: Int = 0,
+    val proDays: Int = 0,
+    /** Fin del Pro regalado (ISO 8601) si había días. */
+    val proUntil: String? = null,
+    val chests: List<RewardChest> = emptyList(),
+    val accessories: List<RewardAccessory> = emptyList(),
+)
+
+/** Respuesta de POST /vouchers/redeem y payload del evento `reward:received`. */
+@Serializable
+data class RewardReceived(
+    /** `voucher` (código canjeado) o `admin_grant` (regalo del equipo). */
+    val source: String = "voucher",
+    /** Id único de la entrega: evita celebrarla dos veces (respuesta + evento). */
+    val redemptionId: String = "",
+    val code: String? = null,
+    val note: String? = null,
+    val granted: GrantedRewards = GrantedRewards(),
+)

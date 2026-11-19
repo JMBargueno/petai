@@ -18,6 +18,7 @@ import com.petai.app.ui.theme.PrimaryButton
 import com.petai.app.ui.theme.ScreenTitle
 import com.petai.app.ui.theme.SecondaryButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,7 +61,12 @@ private val SOCIAL_LINKS by lazy {
 }
 
 @Composable
-fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: String, onResult: (String?) -> Unit) -> Unit) {
+fun AccountScreen(
+    state: AppUiState,
+    onLogout: () -> Unit,
+    onLinkDevice: (code: String, onResult: (String?) -> Unit) -> Unit,
+    onRedeemVoucher: (code: String, onResult: (String?) -> Unit) -> Unit = { _, _ -> },
+) {
     var confirm by remember { mutableStateOf(false) }
     var code by remember { mutableStateOf("") }
     var linkMsg by remember { mutableStateOf<String?>(null) }
@@ -85,6 +91,8 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
                 }
             }
         }
+        Spacer(Modifier.height(16.dp))
+        RedeemVoucherCard(onRedeemVoucher)
         Spacer(Modifier.height(16.dp))
         PockaiCard(Modifier.fillMaxWidth()) {
             Column {
@@ -168,5 +176,40 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
             confirmButton = { TextButton(onClick = { confirm = false; onLogout() }) { Text("Cerrar sesión") } },
             dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancelar") } },
         )
+    }
+}
+
+/** «Canjear código»: canjea un voucher; la celebración la pinta la app por encima de todo. */
+@Composable
+private fun RedeemVoucherCard(onRedeem: (code: String, onResult: (String?) -> Unit) -> Unit) {
+    var voucher by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    PockaiCard(Modifier.fillMaxWidth()) {
+        Column {
+            Text("Canjear código", style = MaterialTheme.typography.titleMedium)
+            Text("¿Tienes un código de regalo? Canjéalo para recibir monedas, gemas, Pro y más.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = voucher,
+                onValueChange = { voucher = it.uppercase().filter { c -> c.isLetterOrDigit() || c == '-' }.take(40); error = null },
+                label = { Text("Código") },
+                placeholder = { Text("ABCD-EF23") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, autoCorrectEnabled = false),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            Spacer(Modifier.height(8.dp))
+            PrimaryButton(
+                if (busy) "Canjeando…" else "Canjear",
+                onClick = {
+                    busy = true
+                    onRedeem(voucher) { err -> busy = false; error = err; if (err == null) voucher = "" }
+                },
+                enabled = voucher.isNotBlank() && !busy,
+                icon = com.petai.app.ui.theme.Lucide.Gift,
+            )
+        }
     }
 }
