@@ -5,7 +5,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { GameDataService } from '../game-data/game-data.service';
-import { WeatherService } from '../environmental/weather.service';
 import { BondingService } from '../bonding/bonding.service';
 import { nightHoursBetween, safeTimeZone } from './sleep-cycle';
 import { HabitatService } from '../habitat/habitat.service';
@@ -36,7 +35,6 @@ export class PetsService {
     private readonly realtimeGateway: RealtimeGateway,
     private readonly gameData: GameDataService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly weatherService: WeatherService,
     private readonly bonding: BondingService,
     // Vida autónoma (spec 36): opcional para no romper tests que construyen el servicio a mano
     @Optional() private readonly autonomy?: AutonomyService,
@@ -391,20 +389,13 @@ export class PetsService {
     const decay = pet.sleeping
       ? balance.vitals.decayPerHour.sleeping
       : balance.vitals.decayPerHour.awake;
-    const maxVital = balance.vitals?.max ?? 100;
 
-    // Datos del propietario: zona horaria (ciclo de sueño) y coordenadas (clima ambiental).
+    // Zona horaria del propietario (ciclo de sueño). El clima ya no incide en los vitales: la
+    // ubicación se queda en el dispositivo y el servidor no la conoce.
     const owner = await this.prisma.user.findUnique({
       where: { id: pet.userId },
-      select: { timezone: true, latitude: true, longitude: true },
+      select: { timezone: true },
     });
-
-    // Modificadores ambientales (feature 005): el clima actual incide en los vitales dentro del
-    // lazy tick (Constitución IV, sin cron por pet). El clima se cachea en Redis, así que el coste
-    // adicional es mínimo y tolera fallos (degradación a 'unknown' → sin modificador).
-    const env = balance.environmental;
-    const weather = await this.weatherService.getWeather(owner?.latitude ?? null, owner?.longitude ?? null);
-    const condition = weather.condition;
 
     // Ciclo de sueño: horas del intervalo que caen en la noche local del usuario
     const sleepCfg = balance.sleep;
@@ -419,9 +410,9 @@ export class PetsService {
       );
     }
 
-    let newHunger = Math.max(0, pet.hunger - decay.hunger * elapsedHours);
+    const newHunger = Math.max(0, pet.hunger - decay.hunger * elapsedHours);
     // Buffs del hábitat (spec 10): reducen el decaimiento base de felicidad e higiene en su porcentaje
-    let newHappiness = Math.max(
+    const newHappiness = Math.max(
       0,
       pet.happiness - reducedDecay(decay.happiness, habitatBuffs, 'happiness_decay_reduction') * elapsedHours,
     );
@@ -445,22 +436,6 @@ export class PetsService {
       0,
       pet.hygiene - reducedDecay(decay.hygiene, habitatBuffs, 'hygiene_decay_reduction') * elapsedHours,
     );
-
-    // Modificadores ambientales (feature 005), acotados a [0, max]:
-    // - hot:  con calor le da más hambre (decaimiento extra de `hunger`).
-    // - rain: con lluvia sube su ánimo (recuperación de `happiness`).
-    // - snow: con nieve gasta energía (decaimiento extra de `energy`).
-    if (env) {
-      if (condition === 'hot' && env.hunger_hot) {
-        newHunger = Math.max(0, newHunger - env.hunger_hot * elapsedHours);
-      }
-      if (condition === 'rain' && env.happiness_rain) {
-        newHappiness = Math.min(maxVital, newHappiness + env.happiness_rain * elapsedHours);
-      }
-      if (condition === 'snow' && env.energy_snow) {
-        newEnergy = Math.max(0, newEnergy - env.energy_snow * elapsedHours);
-      }
-    }
 
     // Si hambre o higiene están críticamente bajas (< 15), la salud decae
     if (newHunger < 15.0 || newHygiene < 15.0) {

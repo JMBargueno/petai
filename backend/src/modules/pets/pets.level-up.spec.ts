@@ -11,7 +11,7 @@ function build(pet: any, effects: any = { levels: 1 }) {
   const realtime: any = { emitPetUpdate: jest.fn(), emitPetAction: jest.fn() };
   const events: any = { emit: jest.fn() };
   const gameData: any = { getBalance: () => ({ evolution: { finalStageItemId: 'evolution_stone' } }) };
-  const service = new PetsService(prisma, inventory, realtime, gameData, events, {} as any, {} as any);
+  const service = new PetsService(prisma, inventory, realtime, gameData, events, {} as any);
   jest.spyOn(service, 'getPetById').mockResolvedValue(pet);
   return { service, prisma, inventory, events };
 }

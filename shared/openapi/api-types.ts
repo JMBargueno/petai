@@ -7191,10 +7191,6 @@ export interface operations {
                 "application/json": {
                     displayName?: string;
                     timezone?: string;
-                    /** @description Coordenada opt-in para el clima (se borra con null) */
-                    latitude?: number | null;
-                    /** @description Coordenada opt-in para el clima (se borra con null) */
-                    longitude?: number | null;
                     /** @description Cumpleaños (YYYY-MM-DD) */
                     birthday?: string | null;
                     /** @description Opt-in de visibilidad pública de logros */

@@ -19,9 +19,6 @@ model User {
   handle       String?        @unique
   title      String?        // Título competitivo de la arena (premio de fin de temporada por liga)
   timezone     String         @default("UTC")
-  // Coordenadas opt-in para el clima (privacidad): se guardan redondeadas y solo las usa el servidor.
-  latitude     Float?
-  longitude    Float?
   // Cumpleaños como "YYYY-MM-DD" (para micro-momentos de festividad).
   birthday     String?
   // Preferencias de notificaciones con personalidad (feature 007). `null` = defaults

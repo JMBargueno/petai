@@ -108,35 +108,20 @@ describe('Usuarios / Perfil (e2e) — camino feliz', () => {
 
       expect(after.body.displayName).toBe('Solo el nombre');
       expect(after.body.timezone).toBe(before.body.timezone);
-      expect(after.body.latitude).toBe(before.body.latitude);
       expect(after.body.birthday).toBe(before.body.birthday);
     });
 
-    it('redondea las coordenadas a 2 decimales (opt-in de privacidad)', async () => {
+    it('ignora las coordenadas: la ubicación no se guarda en el servidor', async () => {
       const { token } = await signup();
       const res = await api()
         .patch('/v1/me')
         .set(auth(token))
         .send({ latitude: 40.123456, longitude: -3.456 })
         .expect(200);
-      expect(res.body.latitude).toBe(40.12);
-      expect(res.body.longitude).toBe(-3.46);
-    });
-
-    it('acepta null para borrar las coordenadas (opt-out)', async () => {
-      const { token } = await signup();
-      await api()
-        .patch('/v1/me')
-        .set(auth(token))
-        .send({ latitude: 40.12, longitude: -3.46 })
-        .expect(200);
-      const res = await api()
-        .patch('/v1/me')
-        .set(auth(token))
-        .send({ latitude: null, longitude: null })
-        .expect(200);
-      expect(res.body.latitude).toBeNull();
-      expect(res.body.longitude).toBeNull();
+      expect(res.body).not.toHaveProperty('latitude');
+      expect(res.body).not.toHaveProperty('longitude');
+      // Valores fuera de rango o null tampoco fallan: el campo ya no existe.
+      await api().patch('/v1/me').set(auth(token)).send({ latitude: 91, longitude: null }).expect(200);
     });
 
     it('ignora campos ajenos al perfil (mass-assignment): coins/gems no se tocan', async () => {
@@ -161,12 +146,6 @@ describe('Usuarios / Perfil (e2e) — camino feliz', () => {
     it('rechaza un timezone IANA inválido (400)', async () => {
       const { token } = await signup();
       await api().patch('/v1/me').set(auth(token)).send({ timezone: 'Not/AZone' }).expect(400);
-    });
-
-    it('rechaza coordenadas fuera de rango (400)', async () => {
-      const { token } = await signup();
-      await api().patch('/v1/me').set(auth(token)).send({ latitude: 91 }).expect(400);
-      await api().patch('/v1/me').set(auth(token)).send({ longitude: 200 }).expect(400);
     });
 
     it('rechaza un birthday no válido (400)', async () => {

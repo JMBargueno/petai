@@ -15,8 +15,9 @@
   import {
     fetchStatus,
     startHeartbeat,
-    requestOptInCoordinates,
-    saveCoordinates,
+    refreshLocalWeather,
+    mergeLocalWeather,
+    localWeather,
     environmentalStatus,
     STATUS_REFRESH_MS,
     type EnvironmentalStatus,
@@ -301,7 +302,10 @@
     ensureBallLoop();
   }
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
-  let environmental: EnvironmentalStatus | null = null;
+  // El servidor da hora del día, actividad y festividad; el clima sale del propio equipo
+  // (ubicación nativa → Open-Meteo, sin pasar por el servidor) y se funde aquí.
+  let serverEnvironmental: EnvironmentalStatus | null = null;
+  $: environmental = mergeLocalWeather(serverEnvironmental, $localWeather);
   let stopHeartbeat: () => void = () => {};
   let stopEnvRefresh: () => void = () => {};
   // Las salas del hábitat leen el clima y el sol de este store.
@@ -499,8 +503,7 @@
           checkForUpdates();
         });
 
-        setupCoordinates(); // geolocalización opt-in → clima real
-        loadEnvironmental(); // estado inicial
+        loadEnvironmental(); // estado inicial (y clima del lugar, desde el propio equipo)
         stopHeartbeat = startHeartbeat(); // heartbeat cada 60 s
         // El clima cambia a lo largo del día: sin este refresco solo se leía al arrancar.
         stopEnvRefresh();
@@ -611,7 +614,7 @@
     pets = [];
     eggs = [];
     inventory = [];
-    environmental = null;
+    serverEnvironmental = null;
     clearVisitors();
     clearSpeech();
     activeVisit.set('');
@@ -624,53 +627,36 @@
   // ---------- Ambiental (feature 005) ----------
   /** Recarga el estado ambiental completo. */
   async function loadEnvironmental() {
+    // Clima del lugar: ubicación nativa del equipo → Open-Meteo (caché de 30 min, nunca lanza).
+    void refreshLocalWeather();
     if (!getAccessToken()) return;
     try {
-      environmental = await fetchStatus();
+      serverEnvironmental = await fetchStatus();
     } catch {
       /* sin conexión o sesión: se reintenta con el heartbeat */
     }
   }
 
-  /** Geolocalización opt-in (privacidad): si el usuario acepta, se guardan las coordenadas. */
-  async function setupCoordinates() {
-    if (!getAccessToken()) return;
-    const coords = await requestOptInCoordinates();
-    if (!coords) return; // denegado o no disponible → se sigue sin clima (degradación elegante)
-    try {
-      await saveCoordinates(coords);
-    } catch {
-      /* no crítico: se reintenta en el próximo arranque */
-    }
-  }
-
-  /** Aplica un evento `environmental:changed` del WebSocket al estado local. */
+  /**
+   * Aplica un evento `environmental:changed` del WebSocket al estado local. Los de clima se
+   * ignoran: el servidor ya no conoce la ubicación y el clima sale del propio equipo.
+   */
   function handleEnvironmentalChanged(ev: EnvironmentalChangedEvent) {
-    if (!environmental) {
+    if (!serverEnvironmental) {
       loadEnvironmental();
       return;
     }
-    if (ev.type === 'weather') {
-      const d = ev.data as { condition: any; temperature: number | null; weatherCode: number | null };
-      environmental = {
-        ...environmental,
-        weather: {
-          ...environmental.weather,
-          condition: d.condition,
-          temperature: d.temperature,
-          weatherCode: d.weatherCode,
-        },
-      };
-    } else if (ev.type === 'timeOfDay') {
-      environmental = { ...environmental, timeOfDay: (ev.data as { timeOfDay: any }).timeOfDay };
+    const env = serverEnvironmental;
+    if (ev.type === 'timeOfDay') {
+      serverEnvironmental = { ...env, timeOfDay: (ev.data as { timeOfDay: any }).timeOfDay };
     } else if (ev.type === 'activity') {
       const mode = (ev.data as { mode: any }).mode;
-      environmental = {
-        ...environmental,
-        activity: { ...environmental.activity, mode, active: mode === 'active' },
+      serverEnvironmental = {
+        ...env,
+        activity: { ...env.activity, mode, active: mode === 'active' },
       };
     } else if (ev.type === 'festival') {
-      environmental = { ...environmental, festival: ev.data };
+      serverEnvironmental = { ...env, festival: ev.data as any };
     }
   }
 
@@ -857,8 +843,10 @@
         intelligence: (n: number) => currentPet && (currentPet = { ...currentPet, intelligence: n }),
         // Cualquier campo de la mascota activa (p. ej. { shiny: true } para ver el destello del Prisma)
         patchPet: (p: Record<string, unknown>) => currentPet && (currentPet = { ...currentPet, ...p }),
-        weather: (condition: string) =>
-          (environmental = { ...(environmental ?? {}), weather: { condition, temperature: 12, weatherCode: 0 } } as any),
+        weather: (condition: string) => {
+          serverEnvironmental = serverEnvironmental ?? ({} as any);
+          localWeather.set({ ...($localWeather ?? {}), condition, temperature: 12, weatherCode: 0 } as any);
+        },
         gift: (kind: 'gift' | 'care' = 'gift') => currentPet && reactToAction(currentPet.id, kind === 'gift' ? 'gift_received' : 'care_received'),
         // Eclosión vista en el escritorio: el huevo tiembla, se agrieta con el Flujo de quien nace y estalla
         eggHatch: (element = 'water') => {

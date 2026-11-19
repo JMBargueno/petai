@@ -50,7 +50,6 @@ function makeServices(furnitureByPet: Record<string, string[]>) {
     { emitPetUpdate: jest.fn(), emitPetAction: jest.fn() } as any,
     gameData,
     { emit: jest.fn() } as any,
-    { getWeather: jest.fn().mockResolvedValue({ condition: 'unknown' }) } as any,
     {
       applyDecay: jest.fn().mockResolvedValue({ decayed: false }),
       bondingFields: jest.fn().mockReturnValue({}),
