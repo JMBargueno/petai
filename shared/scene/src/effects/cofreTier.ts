@@ -25,7 +25,7 @@ const BX = 49;
 const MOUTH_Y = FEET - 14;
 
 type Ramp = { outline: string; deep: string; mid: string; light: string };
-const METAL: Record<string, Ramp> = {
+export const METAL: Record<string, Ramp> = {
   bronze: { outline: '#3a200c', deep: '#a0632b', mid: '#d9924a', light: '#ffd08a' },
   silver: { outline: '#2a3040', deep: '#8a95a8', mid: '#c9d2e0', light: '#ffffff' },
   gold: { outline: '#4a3700', deep: '#c99a1a', mid: '#ffd731', light: '#fff4b0' },

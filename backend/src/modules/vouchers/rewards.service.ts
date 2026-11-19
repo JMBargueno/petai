@@ -9,7 +9,7 @@ import { GameDataService } from '../game-data/game-data.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { WalletService } from '../wallet/wallet.service';
-import { grantSchema, Rewards, RewardChestType } from './rewards.schemas';
+import { grantSchema, REWARD_CHEST_TYPES, Rewards, RewardChestType } from './rewards.schemas';
 
 type Tx = Prisma.TransactionClient;
 export type RewardSource = 'voucher' | 'admin_grant';
@@ -40,6 +40,25 @@ export interface RewardReceivedEvent {
 export interface AppliedRewards {
   granted: GrantedRewards;
   chests: { id: string; type: RewardChestType }[];
+}
+
+/** Tipo de recompensa que da color al sello del Éter sobre la mascota (`sello-eter` en @pockai/scene). */
+export type DominantReward = { reward: 'coins' | 'gems' | 'pro' | 'chest' | 'accessory'; tier?: RewardChestType };
+
+/**
+ * Lo más vistoso de una entrega: Pro, luego el cofre de mejor tipo, una prenda nueva, gemas y
+ * monedas. Las prendas que el usuario ya tenía solo cuentan si no llega nada más.
+ */
+export function dominantReward(g: GrantedRewards): DominantReward {
+  if (g.proDays > 0) return { reward: 'pro' };
+  if (g.chests.length) {
+    const tier = g.chests.reduce((best, c) => (REWARD_CHEST_TYPES.indexOf(c.type) > REWARD_CHEST_TYPES.indexOf(best) ? c.type : best), g.chests[0].type);
+    return { reward: 'chest', tier };
+  }
+  if (g.accessories.some((a) => !a.alreadyOwned)) return { reward: 'accessory' };
+  if (g.gems > 0) return { reward: 'gems' };
+  if (g.coins > 0) return { reward: 'coins' };
+  return { reward: g.accessories.length ? 'accessory' : 'coins' };
 }
 
 /** `Subscription.source` de los días Pro concedidos por vouchers y regalos (una fila por usuario). */
@@ -151,7 +170,7 @@ export class RewardsService {
       this.realtime.emitToUser(userId, 'entitlement:updated', { plan: 'pro' });
     }
     this.realtime.emitToUser(userId, 'reward:received', event);
-    this.realtime.emitPetAction(userId, null, 'gift_received', { source: event.source });
+    this.realtime.emitPetAction(userId, null, 'gift_received', { source: event.source, ...dominantReward(event.granted) });
   }
 
   /** Regalo directo desde el panel (Usuarios › Dar recompensa). Queda auditado. */
