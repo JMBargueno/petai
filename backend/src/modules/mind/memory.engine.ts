@@ -233,7 +233,7 @@ export function buildLayeredMemoryBlock(sel: RecallSelection, now: Date): string
   }
   if (sel.semantic.length) {
     lines.push('Cosas que sabes:');
-    for (const m of sel.semantic) lines.push(`- ${m.kind === 'habit' ? '(hábito en el ordenador) ' : ''}${m.content}`);
+    for (const m of sel.semantic) lines.push(`- ${m.kind === 'habit' ? '(hábito en el ordenador) ' : m.kind === 'digest' ? '(de hace tiempo) ' : ''}${m.content}`);
   }
   if (sel.emotional.length) {
     lines.push('Lo que sientes:');

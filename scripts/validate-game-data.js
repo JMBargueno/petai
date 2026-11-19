@@ -676,6 +676,30 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
     placeholders: ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story', 'trick'],
   });
   if (errors.length) throw new Error(`Diálogos o textos inválidos:\n  - ${errors.join('\n  - ')}`);
+
+  // Consolidación de la memoria: cada grupo que se pliega necesita su frase de resumen
+  const cons = pers.memory?.consolidation;
+  if (cons) {
+    const at = 'balance.personality.memory.consolidation';
+    const groups = new Set();
+    for (const [kind, by] of Object.entries(cons.kinds ?? {})) {
+      if (!['subject', 'kind'].includes(by)) throw new Error(`${at}.kinds.${kind} debe ser subject o kind`);
+      // Lo nacido del chat no se pliega sin leerlo: resumirlo bien es cosa de un modelo
+      if (['summary', 'event', 'fact', 'habit', 'relation', 'rumor'].includes(kind)) throw new Error(`${at}.kinds: «${kind}» no se puede plegar`);
+      for (const g of by === 'subject' ? ['PET', 'USER'] : [kind.toUpperCase()]) groups.add(g);
+    }
+    if (!groups.size) throw new Error(`${at}.kinds no puede estar vacío`);
+    if (!(Number.isInteger(cons.minCount) && cons.minCount >= 2)) throw new Error(`${at}.minCount debe ser un entero ≥ 2`);
+    if (!(Number.isInteger(cons.manyFrom) && cons.manyFrom > cons.minCount)) throw new Error(`${at}.manyFrom debe ser mayor que minCount`);
+    if (!(Number.isInteger(cons.maxDigests) && cons.maxDigests >= 4 && cons.maxDigests <= 100)) throw new Error(`${at}.maxDigests debe ser un entero de 4 a 100`);
+    if (!(cons.tone?.good > 0 && cons.tone.bad < 0)) throw new Error(`${at}.tone: good > 0 y bad < 0`);
+    const imp = cons.importance ?? {};
+    if (!(imp.base >= (pers.memory.minImportanceToStore ?? 0) && imp.max <= 1 && imp.base <= imp.max && imp.perEpisode >= 0)) throw new Error(`${at}.importance inválida`);
+    for (const lang of Object.keys(strings)) {
+      for (const g of groups) for (const amount of ['SOME', 'MANY']) if (typeof strings[lang][`DIGEST_${g}_${amount}`] !== 'string') throw new Error(`strings/${lang}.json: falta DIGEST_${g}_${amount} (resumen de memoria)`);
+    }
+    console.log(`✓ balance.json: consolidación de memoria (${Object.keys(cons.kinds).length} tipos, ${groups.size} grupos con frase) validada`);
+  }
   console.log(`✓ diálogos: ${Object.keys(readJson('shared/game-data/dialogues.json').conversations).length} conversación(es) y ${Object.keys(strings.es ?? {}).length} textos en ${Object.keys(strings).join(', ')} validados`);
 }
 

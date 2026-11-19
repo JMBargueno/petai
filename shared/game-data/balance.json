@@ -536,7 +536,16 @@
       "repeatBoost": 0.05,
       "repeatCap": 0.8,
       "sinceLastMax": 2,
-      "earlyExtractEvery": 20
+      "earlyExtractEvery": 20,
+      "consolidation": {
+        "kinds": { "encounter": "subject", "visit": "subject", "find": "kind", "adventure": "kind" },
+        "keyPrefixes": ["visitor:"],
+        "minCount": 2,
+        "manyFrom": 6,
+        "maxDigests": 24,
+        "tone": { "good": 0.25, "bad": -0.25 },
+        "importance": { "base": 0.5, "perEpisode": 0.02, "max": 0.8 }
+      }
     },
     "intelligence": { "dailyChatCap": 50 },
     "feeling": {

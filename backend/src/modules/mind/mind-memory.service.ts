@@ -5,7 +5,9 @@ import { EntitlementService } from '../billing/entitlement.service';
 import { MetricsService } from '../../observability/metrics.service';
 import { intelligenceTier } from '../ai/personality';
 import { MemoryLayer } from './mind.types';
+import { DIGEST_PREFIX, digestView, foldEpisodes, groupOf, normalizeDigests, type Digests } from '@pockai/mind/node';
 import { MindService } from './mind.service';
+import { hasText, text } from './strings';
 import { floorValence, isStage, nextStage, type Shareable, type Stage } from './social.engine';
 import {
   MemoryRow,
@@ -13,6 +15,7 @@ import {
   RecallSelection,
   buildLayeredMemoryBlock,
   capacityFor,
+  layerOf,
   nextValence,
   pickEvictions,
   safeMemoryText,
@@ -210,7 +213,71 @@ export class MindMemoryService {
       take: LOAD_LIMIT,
     })) as unknown as MemoryRow[];
     const evict = pickEvictions(rows, cap, new Date(), this.mind.config());
-    if (evict.length) await this.prisma.petMemory.deleteMany({ where: { id: { in: evict }, petId } });
+    if (!evict.length) return;
+    const gone = new Set(evict);
+    // Antes de olvidar, lo vivido se pliega en un resumen: se pierde el detalle, no el hecho
+    await this.consolidate(petId, rows.filter((r) => gone.has(r.id)), rows);
+    await this.prisma.petMemory.deleteMany({ where: { id: { in: evict }, petId } });
+  }
+
+  /** Texto del resumen de un grupo; `null` si no se sabe cómo llamar a quien toca. */
+  private digestText(view: NonNullable<ReturnType<typeof digestView>>, rows: readonly MemoryRow[]): string | null {
+    const group = view.group.toUpperCase();
+    const id = `DIGEST_${group}_${view.amount.toUpperCase()}`;
+    if (!hasText(id)) return null;
+    let who: string | undefined;
+    if (view.subject) {
+      // Su nombre está en la relación; sin ella no hay con quién
+      who = rows.find((r) => r.key === `emo:${view.subject}`)?.content;
+      if (!who) return null;
+    }
+    const tone = `DIGEST_${group}_TONE_${view.tone.toUpperCase()}`;
+    return [text(id, { friend: who, visitor: who }), hasText(tone) ? text(tone) : ''].filter(Boolean).join(' ');
+  }
+
+  /**
+   * Pliega los episodios que se van a olvidar en los resúmenes de su grupo (spec 41, fase E).
+   * Los contadores viven en `Pet.personality.digests` y el resumen es un recuerdo más de la capa
+   * semántica (clave `sum:…`). Nunca rompe el guardado: si falla, se olvida como antes.
+   */
+  private async consolidate(petId: string, evicted: readonly MemoryRow[], rows: readonly MemoryRow[]) {
+    const cfg = this.mind.config().memory.consolidation;
+    if (!cfg) return;
+    const episodes = evicted
+      .filter((r) => layerOf(r) === 'episodic')
+      .map((r) => ({ kind: r.kind, subject: r.subject, key: r.key, valence: r.valence, at: r.createdAt.getTime() }));
+    if (!episodes.some((e) => groupOf(e, cfg))) return;
+    try {
+      const pet = await this.prisma.pet.findUnique({ where: { id: petId }, select: { personality: true } });
+      const result = foldEpisodes(normalizeDigests((pet as any)?.personality?.digests), episodes, cfg);
+      await this.mind.patchStored(petId, { digests: result.digests });
+      for (const key of result.touched) {
+        const view = digestView(key, result.digests[key], cfg);
+        const content = view && this.digestText(view, rows);
+        if (!view || !content) continue;
+        const data = { layer: 'semantic', kind: 'digest', content, importance: view.importance, valence: result.digests[key].valence, subject: view.subject };
+        await this.prisma.petMemory.upsert({ where: { petId_key: { petId, key } }, create: { petId, key, ...data }, update: data });
+      }
+      if (result.dropped.length) await this.prisma.petMemory.deleteMany({ where: { petId, key: { in: result.dropped } } });
+    } catch (e: any) {
+      this.logger.warn(`No se pudo consolidar la memoria de ${petId}: ${e?.message}`);
+    }
+  }
+
+  /**
+   * El entrenador ha pedido olvidar un resumen (o todo): se borran también sus contadores, para
+   * que no reaparezca la próxima vez que se pliegue algo de ese grupo.
+   */
+  async forgetDigests(petId: string, key?: string | null) {
+    if (key && !key.startsWith(DIGEST_PREFIX)) return;
+    try {
+      const pet = await this.prisma.pet.findUnique({ where: { id: petId }, select: { personality: true } });
+      const digests: Digests = key ? normalizeDigests((pet as any)?.personality?.digests) : {};
+      if (key) delete digests[key];
+      await this.mind.patchStored(petId, { digests });
+    } catch (e: any) {
+      this.logger.warn(`No se pudieron olvidar los resúmenes de ${petId}: ${e?.message}`);
+    }
   }
 
   /** Bloque de recuerdos relevantes para este mensaje, dentro del presupuesto del plan. */
