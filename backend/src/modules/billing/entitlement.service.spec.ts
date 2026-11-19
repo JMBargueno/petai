@@ -84,5 +84,26 @@ describe('EntitlementService', () => {
       expect(details.plan).toBe('pro');
       expect(details.duplicateSubscriptions).toBe(true);
     });
+
+    it('con Pro regalado y Stripe, la principal es Stripe y no cuenta como duplicada', async () => {
+      prisma.subscription.findMany.mockResolvedValue([
+        { id: 'sub-v', source: 'voucher', currentPeriodEnd: new Date(Date.now() + 9e8), cancelAtPeriodEnd: false, status: 'active', createdAt: new Date() },
+        { id: 'sub-s', source: 'stripe', currentPeriodEnd: new Date(Date.now() + 86400000), cancelAtPeriodEnd: true, status: 'active', createdAt: new Date(Date.now() - 1000) },
+      ]);
+
+      const details = await svc.getDetails('user-mixed');
+      expect(details.source).toBe('stripe');
+      expect(details.cancelAtPeriodEnd).toBe(true);
+      expect(details.duplicateSubscriptions).toBe(false);
+    });
+
+    it('solo con Pro regalado devuelve source voucher', async () => {
+      prisma.subscription.findMany.mockResolvedValue([
+        { id: 'sub-v', source: 'voucher', currentPeriodEnd: new Date(Date.now() + 9e8), cancelAtPeriodEnd: false, status: 'active', createdAt: new Date() },
+      ]);
+
+      const details = await svc.getDetails('user-gift');
+      expect(details).toMatchObject({ plan: 'pro', source: 'voucher', duplicateSubscriptions: false });
+    });
   });
 });

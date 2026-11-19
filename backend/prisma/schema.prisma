@@ -47,6 +47,9 @@ model User {
   // Invitaciones de registro: códigos creados por este admin y el canje con el que se registró.
   invitesCreated   InviteCode[]       @relation("InviteCreatedBy")
   inviteRedemption InviteRedemption?
+  // Vouchers de recompensas: los que creó este admin y los que ha canjeado.
+  vouchersCreated    Voucher[]           @relation("VoucherCreatedBy")
+  voucherRedemptions VoucherRedemption[]
   pets           Pet[]
   // Pockai activo que el jugador ha elegido (el de su escritorio). Sin FK a propósito: si la
   // mascota ya no existe o no es suya, se usa la más antigua (pets/active-pet.ts).
@@ -218,6 +221,38 @@ model InviteRedemption {
   createdAt    DateTime   @default(now())
 
   @@index([inviteCodeId])
+}
+
+// Voucher de recompensas: código canjeable (aleatorio XXXX-XXXX o personalizado) que da un paquete
+// de recompensas (monedas, gemas, días Pro, cofres, prendas). Canje atómico (usedCount < maxUses) y
+// como mucho una vez por cuenta (VoucherRedemption). `rewards` se valida con rewards.schemas.ts.
+model Voucher {
+  id          String              @id @default(uuid())
+  code        String              @unique // en mayúsculas
+  rewards     Json
+  maxUses     Int                 @default(1)
+  usedCount   Int                 @default(0)
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  note        String?
+  createdById String?
+  createdBy   User?               @relation("VoucherCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime            @default(now())
+  redemptions VoucherRedemption[]
+
+  @@index([createdAt])
+}
+
+model VoucherRedemption {
+  id        String   @id @default(uuid())
+  voucherId String
+  voucher   Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([voucherId, userId])
+  @@index([userId])
 }
 
 model Species {
@@ -582,7 +617,7 @@ model Chest {
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      String // bronze | silver | gold | diamond | mythic
-  source    String // daily_mission | battle | evolution | purchase | event
+  source    String // daily_mission | battle | evolution | purchase | event | voucher | admin_grant
   openedAt  DateTime?
   drops     Json?
   createdAt DateTime  @default(now())
@@ -1623,7 +1658,7 @@ model Subscription {
   id                String    @id @default(uuid())
   userId            String
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  source            String    // stripe | google_play
+  source            String    // stripe | google_play | voucher (días Pro de vouchers y regalos del admin)
   externalId        String    // sub_xxx (Stripe) | purchaseToken (Play)
   productId         String    // price_xxx | pockai_pro_monthly
   plan              String    @default("pro")

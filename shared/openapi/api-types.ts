@@ -4382,6 +4382,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/vouchers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar vouchers de recompensas (paginado; filtro: status) */
+        get: operations["AdminVouchersController_list"];
+        put?: never;
+        /** Crear vouchers (lote aleatorio o código personalizado). Días Pro: exige billing:manage */
+        post: operations["AdminVouchersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/vouchers/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revocar un voucher (idempotente) */
+        post: operations["AdminVouchersController_revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{id}/grant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dar un paquete de recompensas a un usuario (queda auditado). Días Pro: exige billing:manage */
+        post: operations["AdminVouchersController_grant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/vouchers/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Canjear un voucher de recompensas (una vez por cuenta) */
+        post: operations["VouchersController_redeem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5769,6 +5838,103 @@ export interface components {
             total: number;
             page: number;
             pageSize: number;
+        };
+        RewardChestDto: {
+            /** @enum {string} */
+            type: "bronze" | "silver" | "gold" | "diamond" | "mythic";
+            qty: number;
+        };
+        RewardsDto: {
+            coins?: number;
+            gems?: number;
+            /** @description Días de Pro (exige billing:manage) */
+            proDays?: number;
+            chests?: components["schemas"]["RewardChestDto"][];
+            /** @description Ids de prendas de accessories.json */
+            accessories?: string[];
+        };
+        VoucherCreatorDto: {
+            id: string;
+            email: string;
+            displayName: string | null;
+        };
+        VoucherDto: {
+            id: string;
+            /** @example ABCD-EF23 */
+            code: string;
+            rewards: components["schemas"]["RewardsDto"];
+            maxUses: number;
+            usedCount: number;
+            /** Format: date-time */
+            expiresAt: string | null;
+            /** Format: date-time */
+            revokedAt: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            createdBy: components["schemas"]["VoucherCreatorDto"] | null;
+            /** @enum {string} */
+            status: "active" | "used" | "revoked" | "expired";
+        };
+        VoucherListDto: {
+            items: components["schemas"]["VoucherDto"][];
+            total: number;
+            page: number;
+            pageSize: number;
+        };
+        CreateVouchersDto: {
+            /**
+             * @description Código personalizado (si falta, se generan `count` aleatorios)
+             * @example NAVIDAD2026
+             */
+            code?: string;
+            /** @default 1 */
+            count: number;
+            /**
+             * @description Canjes totales permitidos (cada cuenta, una vez)
+             * @default 1
+             */
+            maxUses: number;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            note?: string;
+            rewards: components["schemas"]["RewardsDto"];
+        };
+        CreatedVouchersDto: {
+            items: components["schemas"]["VoucherDto"][];
+        };
+        GrantRewardsDto: {
+            rewards: components["schemas"]["RewardsDto"];
+            /** @description Mensaje que verá el jugador en el aviso */
+            note?: string;
+        };
+        GrantedAccessoryDto: {
+            id: string;
+            name: string;
+            /** @description Ya la tenía: no se ha dado otra */
+            alreadyOwned: boolean;
+        };
+        GrantedRewardsDto: {
+            coins: number;
+            gems: number;
+            proDays: number;
+            /** Format: date-time */
+            proUntil: string | null;
+            chests: components["schemas"]["RewardChestDto"][];
+            accessories: components["schemas"]["GrantedAccessoryDto"][];
+        };
+        RewardReceivedDto: {
+            /** @enum {string} */
+            source: "voucher" | "admin_grant";
+            /** @description Id único de la entrega (para no celebrarla dos veces) */
+            redemptionId: string;
+            code?: string;
+            note?: string;
+            granted: components["schemas"]["GrantedRewardsDto"];
+        };
+        RedeemVoucherDto: {
+            /** @example ABCD-EF23 */
+            code: string;
         };
     };
     responses: never;
@@ -12687,6 +12853,142 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AdminAuditListDto"];
                 };
+            };
+        };
+    };
+    AdminVouchersController_list: {
+        parameters: {
+            query?: {
+                status?: "active" | "used" | "revoked" | "expired";
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoucherListDto"];
+                };
+            };
+        };
+    };
+    AdminVouchersController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVouchersDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedVouchersDto"];
+                };
+            };
+        };
+    };
+    AdminVouchersController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoucherDto"];
+                };
+            };
+        };
+    };
+    AdminVouchersController_grant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantRewardsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardReceivedDto"];
+                };
+            };
+        };
+    };
+    VouchersController_redeem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RedeemVoucherDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardReceivedDto"];
+                };
+            };
+            /** @description Código no válido o caducado */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya canjeado por esta cuenta */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiados intentos */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
