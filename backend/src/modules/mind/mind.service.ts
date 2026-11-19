@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { feelingLabel, isFeeling, pushFeeling, restingFeeling, settleFeeling, type FeelingBody } from '@pockai/mind/node';
 import { GameDataService } from '../game-data/game-data.service';
 import { intelligenceTier, moodOf, traitOf } from '../ai/personality';
 import { Dims, PersonalityConfig, StoredPersonality, CreatureProfile } from './mind.types';
@@ -21,7 +22,10 @@ import { fulfilWish, normalizeWishes, type WishId } from './wishes.engine';
  *
  * Construye el perfil único de criatura que comparten todos los motores y persiste los cambios de
  * personalidad en `Pet.personality` (JSON), fusionando siempre con lo que ya hubiera (genes…).
- */
+ */
+/** Lo que el ánimo necesita saber del cuerpo de la mascota (tolerante con filas incompletas). */
+const bodyOf = (pet: any): FeelingBody => ({ happiness: pet?.happiness ?? 60, energy: pet?.energy ?? 60, hunger: pet?.hunger ?? 60, sick: !!pet?.sick });
+
 @Injectable()
 export class MindService {
   private readonly logger = new Logger(MindService.name);
@@ -75,6 +79,7 @@ export class MindService {
       traits: describeDims(dims, cfg),
       legacy: deriveLegacy(dims),
       mood: moodOf(pet),
+      feeling: this.feelingOf(stored, dims, pet),
       bondingTier: pet.bondingTier ?? 'acquainted',
       intelligenceTier: intelligenceTier(pet.intelligence ?? 0),
       vitals: {
@@ -87,6 +92,19 @@ export class MindService {
         sleeping: !!pet.sleeping,
       },
     };
+  }
+
+  /**
+   * Ánimo de corto plazo tal como está ahora: lo guardado, asentado hacia su punto de reposo según
+   * el tiempo que ha pasado. No escribe nada.
+   */
+  feelingOf(stored: StoredPersonality, dims: Dims, pet: any, now = new Date()): CreatureProfile['feeling'] {
+    const cfg = this.config().feeling;
+    if (!cfg) return null;
+    const body = bodyOf(pet);
+    const rest = restingFeeling(dims, body);
+    const f = isFeeling(stored.feeling) ? settleFeeling(stored.feeling, now.getTime(), rest, cfg) : { ...rest, at: now.getTime() };
+    return { label: feelingLabel(f, cfg), valence: f.valence, arousal: f.arousal };
   }
 
   personalityBlock(dims: Dims): string {
@@ -120,7 +138,7 @@ export class MindService {
         await this.lockPet(tx, petId);
         const pet = await tx.pet.findUnique({
           where: { id: petId },
-          select: { id: true, personality: true, speciesId: true, visualSeed: true },
+          select: { id: true, personality: true, speciesId: true, visualSeed: true, happiness: true, energy: true, hunger: true, sick: true },
         });
         if (!pet) return null;
         const stored = (pet.personality ?? {}) as StoredPersonality;
@@ -128,8 +146,11 @@ export class MindService {
           ? stored.dims
           : legacyDims(rollBirthDims(this.speciesBias(pet.speciesId), pet.visualSeed ?? 0, cfg), traitOf(pet.visualSeed ?? 0).id, stored.temperament);
         const res = applyEvents(base, events, stored.drift, now, cfg);
-        if (!res.changed && isValidDims(stored.dims) && !patch) return base;
-        const next = { ...withDims(stored, res.dims), drift: res.drift, ...(patch ?? {}) };
+        // Lo que acaba de pasar también mueve su ánimo de corto plazo, en la misma escritura
+        const felt = cfg.feeling && events.some((e) => cfg.feeling!.events[e]);
+        const feeling = felt ? pushFeeling(stored.feeling, events, now.getTime(), res.dims, bodyOf(pet), cfg.feeling!) : undefined;
+        if (!res.changed && isValidDims(stored.dims) && !patch && !feeling) return base;
+        const next = { ...withDims(stored, res.dims), drift: res.drift, ...(feeling ? { feeling } : {}), ...(patch ?? {}) };
         await tx.pet.update({ where: { id: petId }, data: { personality: next as any } });
         return res.dims;
       });

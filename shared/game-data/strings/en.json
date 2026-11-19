@@ -243,5 +243,11 @@
   "FURNITURE_BATHE": "I had a good bath in my habitat.",
   "FURNITURE_SIT": "I sat for a while in my favourite spot.",
   "FURNITURE_SLEEP": "I slept in my bed, nice and warm.",
-  "FURNITURE_PLAY": "I played with my things in my habitat."
+  "FURNITURE_PLAY": "I played with my things in my habitat.",
+  "FEELING_EXCITED": "Right now you are overjoyed about something good that just happened: it shows in every sentence.",
+  "FEELING_CONTENT": "Right now you are content and in a good mood because of what happened recently.",
+  "FEELING_UPSET": "Right now you are hurt and agitated by something that just happened: you find it hard to hide.",
+  "FEELING_DOWN": "Right now you are feeling low about something recent: you speak more quietly and with less energy.",
+  "FEELING_RESTLESS": "Right now you are restless and eager to move.",
+  "FEELING_SLEEPY": "Right now you are drowsy and calm."
 }

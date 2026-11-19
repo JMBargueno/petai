@@ -38,6 +38,8 @@ export class MindController {
       dimensions: profile.traits,
       legacy: profile.legacy,
       mood: profile.mood,
+      // Ánimo de corto plazo: lo que le acaba de pasar (los clientes lo usan para el tono y las conductas)
+      feeling: profile.feeling,
       bondingTier: profile.bondingTier,
       intelligenceTier: profile.intelligenceTier,
       memory: { counts, capacity },

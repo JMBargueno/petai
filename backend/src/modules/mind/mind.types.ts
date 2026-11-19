@@ -56,6 +56,8 @@ export interface PersonalityConfig {
     earlyExtractEvery: number;
   };
   autonomy: AutonomyConfig;
+  /** Estado de ánimo de corto plazo (`@pockai/mind` → feeling). */
+  feeling?: import('@pockai/mind/node').FeelingConfig;
   /** Progresión de inteligencia (spec 37 §3.4). */
   intelligence?: { /** Puntos de inteligencia que el chat puede dar en un día. */ dailyChatCap: number };
   social: import('./social.engine').SocialConfig;
@@ -166,6 +168,8 @@ export interface StoredPersonality {
   wishes?: unknown;
   /** Último día en que una disculpa del entrenador reparó la relación (una vez al día). */
   apologyDay?: string;
+  /** Ánimo de corto plazo: lo que le acaba de pasar (`@pockai/mind` → feeling). */
+  feeling?: { valence: number; arousal: number; at: number };
   /** Último turno de chat con su entrenador (ISO). Con él se sabe cuál es el primero tras una ausencia. */
   lastChatAt?: string;
   trait?: string;
@@ -195,6 +199,8 @@ export interface CreatureProfile {
   traits: Record<Dimension, DimView>;
   legacy: { trait: string; temperament: string };
   mood: string;
+  /** Ánimo de corto plazo, ya asentado a este momento. `null` si no está configurado. */
+  feeling: { label: string; valence: number; arousal: number } | null;
   bondingTier: string;
   intelligenceTier: IntelligenceTier;
   vitals: { hunger: number; happiness: number; energy: number; hygiene: number; health: number; sick: boolean; sleeping: boolean };

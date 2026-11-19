@@ -553,6 +553,37 @@
       "earlyExtractEvery": 20
     },
     "intelligence": { "dailyChatCap": 50 },
+    "feeling": {
+      "halfLifeMinutes": 90,
+      "labels": { "high": 0.3, "low": -0.3, "excited": 0.6, "sleepy": 0.15 },
+      "events": {
+        "chat": { "valence": 0.03 },
+        "fed": { "valence": 0.08 },
+        "cleaned": { "valence": 0.05 },
+        "slept": { "valence": 0.05, "arousal": -0.3 },
+        "minigame": { "valence": 0.15, "arousal": 0.25 },
+        "battle_won": { "valence": 0.3, "arousal": 0.3 },
+        "battle_lost": { "valence": -0.25, "arousal": 0.2 },
+        "habitat_visit": { "valence": 0.2, "arousal": 0.2 },
+        "friend_made": { "valence": 0.25, "arousal": 0.15 },
+        "adventure": { "valence": 0.2, "arousal": 0.3 },
+        "talk_comfort": { "valence": 0.15, "arousal": -0.05 },
+        "talk_play": { "valence": 0.1, "arousal": 0.15 },
+        "talk_scold": { "valence": -0.35, "arousal": 0.15 },
+        "auto_socialize": { "valence": 0.1, "arousal": 0.1 },
+        "auto_find_item": { "valence": 0.12, "arousal": 0.1 },
+        "neglect_day": { "valence": -0.3, "arousal": -0.1 },
+        "buddy_play": { "valence": 0.1, "arousal": 0.15 },
+        "care_received": { "valence": 0.15 },
+        "gift_received": { "valence": 0.2, "arousal": 0.1 },
+        "visitor_pet": { "valence": 0.08 },
+        "visitor_treat": { "valence": 0.12, "arousal": 0.05 },
+        "visitor_play": { "valence": 0.1, "arousal": 0.15 },
+        "furniture_sleep": { "arousal": -0.2 },
+        "furniture_play": { "valence": 0.05, "arousal": 0.1 },
+        "furniture_bathe": { "valence": 0.04, "arousal": -0.05 }
+      }
+    },
     "autonomy": {
       "intervalMinutes": 60,
       "maxIntervalsPerCatchUp": 24,
