@@ -13,6 +13,7 @@ import { activeWishes, activityBoosts, normalizeWishes } from './wishes.engine';
 import { layerOf, type MemoryRow } from './memory.engine';
 import { EncounterService } from './encounter.service';
 import { text } from './strings';
+import { localClock } from './initiative.service';
 
 const STAGE_PULL: Record<string, number> = { stranger: 1, acquaintance: 1.3, friend: 2, best_friend: 3 };
 
@@ -120,6 +121,14 @@ export class AutonomyService {
       );
       const itemNames = Object.fromEntries(this.gameData.getFoods().map((f: any) => [f.id, f.name]));
       const today = dayKey(now);
+      // La rutina va con la hora local de su entrenador: de noche descansa aunque en UTC sea mediodía
+      const owner = cfg.routine ? await this.prisma.user.findUnique({ where: { id: pet.userId }, select: { timezone: true } }).catch(() => null) : null;
+      const clock = cfg.routine
+        ? (index: number) => {
+            const at = intervalStart(index, cfg);
+            return { hour: localClock(at, owner?.timezone).hour, day: dayKey(at) };
+          }
+        : undefined;
       const sim = simulate(
         {
           petId: pet.id,
@@ -135,6 +144,8 @@ export class AutonomyService {
           itemNames,
           canPractice,
           boosts: activityBoosts(wishes, mindCfg.wishes),
+          clock,
+          routine: stored.routine,
         },
         cfg,
         today,
@@ -181,7 +192,7 @@ export class AutonomyService {
       }
 
       // Lo que practicó por su cuenta avanza su truco; si lo aprende, lo recuerda
-      const patch: Partial<StoredPersonality> = { autonomy: sim.daily, lastNeglectDay };
+      const patch: Partial<StoredPersonality> = { autonomy: sim.daily, lastNeglectDay, ...(sim.routine ? { routine: sim.routine } : {}) };
       if (sim.practices > 0) {
         let state = tricks;
         const learned: string[] = [];

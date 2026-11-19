@@ -140,6 +140,8 @@ export interface AutonomyConfig {
   activities: Record<Exclude<AutonomyActivity, ExtraActivity>, AutonomyActivityConfig> & Partial<Record<ExtraActivity, AutonomyActivityConfig>>;
   itemFind: { chancePerExplore: number; curiosityBonusPerPoint: number; dailyCap: number; items: string[] };
   social: { batchSize: number; maxPairsPerSweep: number; encounterChance: number; dailyCapPerPet: number };
+  /** Momentos del día e hilo entre horas (spec 41, fase F). Sin ella, cada hora es una tirada suelta. */
+  routine?: import('@pockai/mind/node').RoutineConfig;
 }
 
 /** Estado de deriva diaria (topes de cambio por dimensión y día). */
@@ -176,6 +178,8 @@ export interface StoredPersonality {
   apologyDay?: string;
   /** Iniciativa: nivel elegido, enfriamientos y lo último que dijo (ver `@pockai/mind` → initiative). */
   initiative?: unknown;
+  /** Qué estaba haciendo por su cuenta y cuánto llevaba; ver `@pockai/mind` routine. */
+  routine?: unknown;
   /** Contadores de los resúmenes de memoria por grupo; ver `@pockai/mind` consolidate. */
   digests?: unknown;
   /** Preferencias aprendidas entre conductas del escritorio; ver `@pockai/mind` learning. */
