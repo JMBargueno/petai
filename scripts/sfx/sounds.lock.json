@@ -1,0 +1,1157 @@
+{
+  "achievement.common": {
+    "hash": "df62eaefc0f79cbe",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:29.314Z"
+  },
+  "achievement.epic": {
+    "hash": "45080a09f8ac84d8",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:30.320Z"
+  },
+  "achievement.legendary": {
+    "hash": "8782af8ab4eac11c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:31.811Z"
+  },
+  "achievement.rare": {
+    "hash": "7aa567e2fdc9dbcf",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:31.651Z"
+  },
+  "adv.approach.brave": {
+    "hash": "d6e1ba8d8246d436",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:42.032Z"
+  },
+  "adv.approach.careful": {
+    "hash": "bb0872af98c4630c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:42.924Z"
+  },
+  "adv.approach.cunning": {
+    "hash": "ed1074f53728308c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:44.657Z"
+  },
+  "adv.approach.curious": {
+    "hash": "bdbc67e777df0750",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:44.507Z"
+  },
+  "adv.approach.kind": {
+    "hash": "0c5362aa6ed08784",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:43.127Z"
+  },
+  "adv.choice.hover": {
+    "hash": "3a763ae8d0373893",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:36.161Z"
+  },
+  "adv.choice.select": {
+    "hash": "5d14be6c566fdb1e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:37.632Z"
+  },
+  "adv.end.lose": {
+    "hash": "41cb69aea0ae097d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:48.336Z"
+  },
+  "adv.end.partial": {
+    "hash": "57164582fddcc1d3",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:47.036Z"
+  },
+  "adv.end.win": {
+    "hash": "204a4f47aff2ead7",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:46.908Z"
+  },
+  "adv.event.discovery": {
+    "hash": "469bcecfb019432b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:40.772Z"
+  },
+  "adv.event.encounter": {
+    "hash": "2f1cb5a662ba8f77",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:38.614Z"
+  },
+  "adv.event.obstacle": {
+    "hash": "0f1c9ffa3c6e2c60",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:38.625Z"
+  },
+  "adv.event.omen": {
+    "hash": "4c7d88358fcc0164",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:41.442Z"
+  },
+  "adv.event.plea": {
+    "hash": "d7a749a53921df4b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:40.043Z"
+  },
+  "adv.memory": {
+    "hash": "af26cd4c53df211d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:48.186Z"
+  },
+  "adv.narration.blip": {
+    "hash": "5af717111100ea61",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:37.366Z"
+  },
+  "adv.page": {
+    "hash": "88faa2da738ea317",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:36.151Z"
+  },
+  "adv.react.bad": {
+    "hash": "1838a2a6394ae382",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:45.908Z"
+  },
+  "adv.react.good": {
+    "hash": "6a1a2da8af3b310b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:45.616Z"
+  },
+  "battle.crit": {
+    "hash": "dd45ef4e5f9bd28c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:58.030Z"
+  },
+  "battle.draw": {
+    "hash": "8c08465d1fa57a9d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:01.232Z"
+  },
+  "battle.guard_block": {
+    "hash": "1c39525481644203",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:58.094Z"
+  },
+  "battle.lose": {
+    "hash": "5992c39b413c4cc5",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:00.416Z"
+  },
+  "battle.miss": {
+    "hash": "dbc8fcece71c2dd0",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:59.325Z"
+  },
+  "battle.raid.boss_hit": {
+    "hash": "55d9ee261d77ebcd",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:37:03.275Z"
+  },
+  "battle.raid.boss_roar": {
+    "hash": "c1b3f5b75aa3e7b4",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:01.977Z"
+  },
+  "battle.round_start": {
+    "hash": "eb50111c445695fc",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:56.739Z"
+  },
+  "battle.tournament.crowd": {
+    "hash": "8634986936fd43d5",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:03.210Z"
+  },
+  "battle.training.rep": {
+    "hash": "d2508320d9155683",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:37:04.986Z"
+  },
+  "battle.win": {
+    "hash": "334148bb80ed96d6",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:59.986Z"
+  },
+  "chest.open.bronze": {
+    "hash": "1e661bfc6a960a9d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:33.166Z"
+  },
+  "chest.open.diamond": {
+    "hash": "cc2956d6562e9c31",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:36.138Z"
+  },
+  "chest.open.gold": {
+    "hash": "d4ddb89b9bb3b39d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:35.287Z"
+  },
+  "chest.open.mythic": {
+    "hash": "8b372fcfa38ce2c6",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:37.749Z"
+  },
+  "chest.open.silver": {
+    "hash": "e58e9e7142c074f4",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:34.411Z"
+  },
+  "chest.shake": {
+    "hash": "86ac4547f2b0bccf",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:33.094Z"
+  },
+  "cook.ingredient.place": {
+    "hash": "541f7009050e4b41",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:36:31.396Z"
+  },
+  "cook.ingredient.tap": {
+    "hash": "111bd73432d8ffe5",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:28.981Z"
+  },
+  "cook.memorize.show": {
+    "hash": "fe135de05fc8c94d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:28.978Z"
+  },
+  "cook.result.fail": {
+    "hash": "bfcfe1e48236934e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:35.195Z"
+  },
+  "cook.result.good": {
+    "hash": "5f1564564ea1527d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:34.679Z"
+  },
+  "cook.result.perfect": {
+    "hash": "9a383645ec1c3a66",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:34.041Z"
+  },
+  "cook.serve": {
+    "hash": "ae6625a72b831035",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:33.064Z"
+  },
+  "cook.timer_warning": {
+    "hash": "8c4348f22234174b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:32.797Z"
+  },
+  "cook.undo": {
+    "hash": "6a6fa83ee89cf532",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:30.714Z"
+  },
+  "desk.drop_to_habitat": {
+    "hash": "c7198b074a1d88aa",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:09.195Z"
+  },
+  "desk.needs": {
+    "hash": "8e59bf2c4047e2ab",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:11.144Z"
+  },
+  "desk.peek": {
+    "hash": "7ecfb7f2ddd0b42a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:08.790Z"
+  },
+  "desk.pomodoro.break": {
+    "hash": "a42271c3e0cec0e4",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:07.245Z"
+  },
+  "desk.pomodoro.end": {
+    "hash": "eb09cd7629d9e3cb",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:07.247Z"
+  },
+  "desk.pomodoro.start": {
+    "hash": "035f26e178404cf5",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:06.102Z"
+  },
+  "desk.toy_ball.bounce": {
+    "hash": "ccd1af37f82fc565",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:37:06.121Z"
+  },
+  "desk.visitor.arrive": {
+    "hash": "2a4307d8f30ea1ad",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:09.804Z"
+  },
+  "desk.visitor.leave": {
+    "hash": "2a2104aa32e3f112",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:37:10.678Z"
+  },
+  "egg.crack": {
+    "hash": "580763c80daebc85",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:35:20.970Z"
+  },
+  "egg.hatch": {
+    "hash": "1f4b4391ea2a3e88",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:20.709Z"
+  },
+  "egg.shake": {
+    "hash": "9231ac2723c7fab6",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:19.326Z"
+  },
+  "elem.electric.accent": {
+    "hash": "3724476d4a3d135f",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:59.956Z"
+  },
+  "elem.fire.accent": {
+    "hash": "35a1231d42c7255c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:57.890Z"
+  },
+  "elem.light.accent": {
+    "hash": "facdd0956a145d7d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:03.320Z"
+  },
+  "elem.plant.accent": {
+    "hash": "7e72cdf2ef7f0429",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:59.169Z"
+  },
+  "elem.shadow.accent": {
+    "hash": "56e03a079ff82d83",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:01.770Z"
+  },
+  "elem.water.accent": {
+    "hash": "d9852a5c7e41a83a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:58.534Z"
+  },
+  "fx.altar-santuario": {
+    "hash": "087ec4f28d4af69b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:43.842Z"
+  },
+  "fx.chispa-despertar": {
+    "hash": "fd4638e580660aa2",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:50.759Z"
+  },
+  "fx.confeti-codices": {
+    "hash": "ecf0bb02b69f876c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:54.120Z"
+  },
+  "fx.descarga-calida": {
+    "hash": "373e596f1444f58b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:48.939Z"
+  },
+  "fx.desfragmentacion": {
+    "hash": "7e79b56454d05e0e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:46.783Z"
+  },
+  "fx.destello-prisma": {
+    "hash": "ef59f126ea76f755",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:49.118Z"
+  },
+  "fx.estela-flujo": {
+    "hash": "132ac5a4f72292b8",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:50.031Z"
+  },
+  "fx.glitch-animo": {
+    "hash": "dcfe8ea2ce7e9f16",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:45.600Z"
+  },
+  "fx.hebra-invocacion": {
+    "hash": "06e42e4ec492170b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:44.930Z"
+  },
+  "fx.manitas-espirituales": {
+    "hash": "d404d654912fe851",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:52.101Z"
+  },
+  "fx.polvo-estatico": {
+    "hash": "4e14d4bc462cf400",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:46.400Z"
+  },
+  "fx.polvo-impacto": {
+    "hash": "16c149cca91d892d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:52.789Z"
+  },
+  "fx.portal-nexo.enter": {
+    "hash": "83fe6684a0a48812",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:41.315Z"
+  },
+  "fx.portal-nexo.exit": {
+    "hash": "c37a3f4e1021149c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:41.644Z"
+  },
+  "fx.proyeccion-astral": {
+    "hash": "67cedaa0e7dc840e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:42.663Z"
+  },
+  "fx.resonancia": {
+    "hash": "cd6e56a4936e4574",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:47.838Z"
+  },
+  "fx.trenza-juramento": {
+    "hash": "3e4432180e8afdc2",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:51.615Z"
+  },
+  "fx.triunfo-raid": {
+    "hash": "44ccf06180339dde",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:53.615Z"
+  },
+  "fx.velo-eter": {
+    "hash": "251af402d0f815c0",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:44.393Z"
+  },
+  "hab.edit.buy": {
+    "hash": "d6f3fa7ad55ef625",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:56.645Z"
+  },
+  "hab.edit.place": {
+    "hash": "11ebbe598c422137",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:54.077Z"
+  },
+  "hab.edit.remove": {
+    "hash": "3b929ae2332efcc9",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:55.598Z"
+  },
+  "hab.edit.rotate": {
+    "hash": "be5ac2b9f44903e6",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:55.043Z"
+  },
+  "hab.furniture.food_bowl": {
+    "hash": "909c65e499526ffa",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:52.585Z"
+  },
+  "hab.furniture.garden_swing": {
+    "hash": "331aa218e484abff",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:49.669Z"
+  },
+  "hab.furniture.sit": {
+    "hash": "6f165b4d02df3d6b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:53.825Z"
+  },
+  "hab.furniture.soft_bed": {
+    "hash": "5d45387f7baefb0f",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:53.008Z"
+  },
+  "hab.furniture.toy_ball": {
+    "hash": "7e7bf3f1ac82f786",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:36:51.744Z"
+  },
+  "mg.catch_food.good": {
+    "hash": "a1e10adfa2c5d201",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:36:04.905Z"
+  },
+  "mg.catch_food.static": {
+    "hash": "dd6a6778f66c8c1f",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:05.677Z"
+  },
+  "mg.catch_food.tide": {
+    "hash": "bf201a65c0d2ec25",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:01.520Z"
+  },
+  "mg.catch_food.tide_change": {
+    "hash": "3ac0e99e0d4df98b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:06.871Z"
+  },
+  "mg.cifrado.round": {
+    "hash": "f1b5c08364f43c17",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:22.563Z"
+  },
+  "mg.cifrado.wrong": {
+    "hash": "416deac795697b1d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:21.259Z"
+  },
+  "mg.corriente_datos.collect": {
+    "hash": "f9f1502019a0e32a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:17.910Z"
+  },
+  "mg.corriente_datos.crash": {
+    "hash": "bea65e57b38821c6",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:18.682Z"
+  },
+  "mg.corriente_datos.lane": {
+    "hash": "12fe45f84ea01cbb",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:17.616Z"
+  },
+  "mg.faro_claridad.lose": {
+    "hash": "3e554411f85dcf76",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:24.694Z"
+  },
+  "mg.faro_claridad.purify": {
+    "hash": "c972c417e0933dbf",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:22.715Z"
+  },
+  "mg.faro_claridad.spread": {
+    "hash": "a9eb83f6a427dfbf",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:23.815Z"
+  },
+  "mg.forja_termica.bellows": {
+    "hash": "37238311c918536b",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:36:26.727Z"
+  },
+  "mg.forja_termica.burn": {
+    "hash": "d9ec1a833260f9d6",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:27.808Z"
+  },
+  "mg.forja_termica.gold_zone": {
+    "hash": "088759a5cf1abfe3",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:26.565Z"
+  },
+  "mg.forja_termica.temper": {
+    "hash": "1a41af66d58c5c0f",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:27.900Z"
+  },
+  "mg.item_drop": {
+    "hash": "0c594ed73951be13",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:00.492Z"
+  },
+  "mg.memory_match.clear": {
+    "hash": "826d2229333dfb67",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:09.797Z"
+  },
+  "mg.memory_match.flip": {
+    "hash": "a46677c7666b7237",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:36:08.513Z"
+  },
+  "mg.memory_match.match": {
+    "hash": "87f45efdeb00cd02",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:07.905Z"
+  },
+  "mg.memory_match.miss": {
+    "hash": "d336db6d2341dd1c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:09.114Z"
+  },
+  "mg.memory_match.peek": {
+    "hash": "e530e60968a70d05",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:06.721Z"
+  },
+  "mg.new_record": {
+    "hash": "88d8ebc9e1b0d00b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:58.102Z"
+  },
+  "mg.pause": {
+    "hash": "3a8271b4e2efc2ac",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:59.308Z"
+  },
+  "mg.pulso_voltaico.combo_break": {
+    "hash": "8b4e082f45e8adfa",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:16.625Z"
+  },
+  "mg.pulso_voltaico.good": {
+    "hash": "aa91978c69f0f17e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:14.193Z"
+  },
+  "mg.pulso_voltaico.miss": {
+    "hash": "45ed48e3d58ec10c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:16.654Z"
+  },
+  "mg.pulso_voltaico.perfect": {
+    "hash": "519aa7f6af50e839",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:13.314Z"
+  },
+  "mg.raiz_fractal.bloom": {
+    "hash": "d05ba55203dd39d5",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:21.627Z"
+  },
+  "mg.raiz_fractal.light": {
+    "hash": "823ed87ce5d2eee7",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:19.922Z"
+  },
+  "mg.raiz_fractal.rotate": {
+    "hash": "da3574c1a2baba5a",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:36:20.003Z"
+  },
+  "mg.reflex.appear": {
+    "hash": "9d0cfca444530b15",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:10.195Z"
+  },
+  "mg.reflex.expire": {
+    "hash": "08acf333ae6eddf0",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:11.949Z"
+  },
+  "mg.reflex.fast": {
+    "hash": "bada8de151c3e38d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:11.794Z"
+  },
+  "mg.reflex.hit": {
+    "hash": "80db0e9835c98cec",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:10.831Z"
+  },
+  "mg.reflex.lure": {
+    "hash": "4e8b7269d741196a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:36:13.019Z"
+  },
+  "mg.result.good": {
+    "hash": "3bf351fa7247a7d3",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:55.338Z"
+  },
+  "mg.result.great": {
+    "hash": "d16beec21d492d09",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:57.029Z"
+  },
+  "mg.score_tick": {
+    "hash": "48a5236008da89d0",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:54.812Z"
+  },
+  "mg.timer_warning": {
+    "hash": "2d9583c0a26fc2ad",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:59.503Z"
+  },
+  "pet.attack.grunt": {
+    "hash": "a95a41b38f2ab9ac",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:55.216Z"
+  },
+  "pet.bounce": {
+    "hash": "0cb92661ae68cd1f",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:52.416Z"
+  },
+  "pet.clean.bubbles": {
+    "hash": "d1ef5da5eeac4039",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:42.478Z"
+  },
+  "pet.clean.scrub": {
+    "hash": "ca30724a199f2cb6",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:39.359Z"
+  },
+  "pet.clean.shake": {
+    "hash": "96b0e4082b39e8e3",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:40.628Z"
+  },
+  "pet.climb.scrabble": {
+    "hash": "c53f386237cf2e2d",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:50.090Z"
+  },
+  "pet.cry": {
+    "hash": "f8a9990ae3823177",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:33.528Z"
+  },
+  "pet.dance.steps": {
+    "hash": "29212a74b7b0c3f7",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:45.008Z"
+  },
+  "pet.defeat.groan": {
+    "hash": "177a04af35e1211e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:57.278Z"
+  },
+  "pet.drag.lift": {
+    "hash": "9f9ad6e59c3bf97a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:51.202Z"
+  },
+  "pet.eat.burp": {
+    "hash": "60077cc4f72c13e3",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:27.986Z"
+  },
+  "pet.eat.crunch": {
+    "hash": "7fffaf780254ea7e",
+    "candidates": 3,
+    "generatedAt": "2026-11-19T08:34:26.996Z"
+  },
+  "pet.eat.gulp": {
+    "hash": "c6a2cc0f11329d8e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:27.201Z"
+  },
+  "pet.eat.slurp": {
+    "hash": "e35503dbd2439223",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:25.902Z"
+  },
+  "pet.fall.whoosh": {
+    "hash": "07c0b945d5df6b6a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:51.364Z"
+  },
+  "pet.happy.chirp": {
+    "hash": "377329fb7ce176a1",
+    "candidates": 3,
+    "generatedAt": "2026-11-19T08:34:31.854Z"
+  },
+  "pet.heal.relief": {
+    "hash": "22527ca085d91ee3",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:38.142Z"
+  },
+  "pet.highfive.slap": {
+    "hash": "2452a8822575ca73",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:54.033Z"
+  },
+  "pet.hit.hurt": {
+    "hash": "3a1b664144d7f49e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:56.191Z"
+  },
+  "pet.hungry.growl": {
+    "hash": "c65b0221b5849039",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:36.244Z"
+  },
+  "pet.land": {
+    "hash": "cbf6e9a7669e96bd",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:47.434Z"
+  },
+  "pet.laugh": {
+    "hash": "32f842610875fc04",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:32.149Z"
+  },
+  "pet.love.purr": {
+    "hash": "ef05fad61d914d1a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:30.897Z"
+  },
+  "pet.pet.rustle": {
+    "hash": "22ae9c620160fe16",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:52.599Z"
+  },
+  "pet.sad.whimper": {
+    "hash": "db1470552f143007",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:32.980Z"
+  },
+  "pet.sick.cough": {
+    "hash": "c3168a4987b9cdb2",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:34:36.927Z"
+  },
+  "pet.sick.sneeze": {
+    "hash": "b920fbd36e616ac0",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:38.965Z"
+  },
+  "pet.sing.hum": {
+    "hash": "9dd86d2f50627435",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:43.743Z"
+  },
+  "pet.sleep.mumble": {
+    "hash": "af7e402895e68944",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:29.151Z"
+  },
+  "pet.sleep.yawn": {
+    "hash": "36d05ce5ca8452a7",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:28.707Z"
+  },
+  "pet.squash.boing": {
+    "hash": "468bfb71c0579224",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:53.647Z"
+  },
+  "pet.step": {
+    "hash": "7d35b9b706b80fda",
+    "candidates": 4,
+    "generatedAt": "2026-11-19T08:34:48.935Z"
+  },
+  "pet.surprised": {
+    "hash": "4b06e3a14c353362",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:34.480Z"
+  },
+  "pet.talk.babble": {
+    "hash": "06fd204f5a0de2c1",
+    "candidates": 6,
+    "generatedAt": "2026-11-19T08:34:45.138Z"
+  },
+  "pet.tired.sigh": {
+    "hash": "953bd0020201d1c7",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:34.819Z"
+  },
+  "pet.victory.cheer": {
+    "hash": "0e3cfead13483c97",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:56.611Z"
+  },
+  "pet.wake.stretch": {
+    "hash": "db8b708e2051b26c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:29.780Z"
+  },
+  "pet.zoomies": {
+    "hash": "d57fc6820d8c8f80",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:55.078Z"
+  },
+  "reveal.legendary": {
+    "hash": "841fc195f2aa5c44",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:25.040Z"
+  },
+  "reveal.mythic": {
+    "hash": "06ef81249979d8be",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:26.902Z"
+  },
+  "reveal.normal": {
+    "hash": "201941bba9a2f094",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:21.731Z"
+  },
+  "reveal.rare": {
+    "hash": "fa3434b50ae337b1",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:22.360Z"
+  },
+  "reveal.shiny": {
+    "hash": "8cf189efae5d9b35",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:27.153Z"
+  },
+  "reveal.super_rare": {
+    "hash": "8a1e9dc7c8d7859a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:24.777Z"
+  },
+  "reward.daily_gift": {
+    "hash": "76c0c6a64e00e8d1",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:38.579Z"
+  },
+  "reward.evolve.burst": {
+    "hash": "27eb10cb0d0e6aef",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:18.612Z"
+  },
+  "reward.gift": {
+    "hash": "3aa189b9bc831ad9",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:39.043Z"
+  },
+  "reward.level_up": {
+    "hash": "d0d84d34717a4d11",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:18.123Z"
+  },
+  "reward.mission": {
+    "hash": "1610909d7572efee",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:37.301Z"
+  },
+  "reward.ritual.miss": {
+    "hash": "9a3ee332dbf5e0f6",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:40.071Z"
+  },
+  "reward.ritual.ok": {
+    "hash": "93e8dbfea2a54812",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:39.809Z"
+  },
+  "skill.electric.heavy": {
+    "hash": "166ae076d5a8662a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:10.752Z"
+  },
+  "skill.electric.light": {
+    "hash": "62ac61c2368e4839",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:09.295Z"
+  },
+  "skill.electric.medium": {
+    "hash": "89e7e00cbfe099e6",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:10.169Z"
+  },
+  "skill.fire.heavy": {
+    "hash": "e4ff38a3f6cd40ad",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:05.102Z"
+  },
+  "skill.fire.light": {
+    "hash": "c89a808946cdf65e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:03.611Z"
+  },
+  "skill.fire.medium": {
+    "hash": "690f6fdded5b55f5",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:04.700Z"
+  },
+  "skill.guard": {
+    "hash": "3592b0c43a884a9c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:16.746Z"
+  },
+  "skill.heal": {
+    "hash": "5883a2c47c394301",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:17.245Z"
+  },
+  "skill.light.heavy": {
+    "hash": "146ad7d6838aa4ac",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:14.770Z"
+  },
+  "skill.light.light": {
+    "hash": "68b35bcf2dbb9dc0",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:12.983Z"
+  },
+  "skill.light.medium": {
+    "hash": "a42e95d9e670310e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:13.948Z"
+  },
+  "skill.neutral.slam": {
+    "hash": "1ae93fb4e4af00a9",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:15.867Z"
+  },
+  "skill.neutral.strike": {
+    "hash": "4b143360ad212f6b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:15.415Z"
+  },
+  "skill.plant.heavy": {
+    "hash": "807b5f0651f6cd63",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:08.767Z"
+  },
+  "skill.plant.light": {
+    "hash": "1426146022c86c2b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:07.492Z"
+  },
+  "skill.plant.medium": {
+    "hash": "564a2fb5396aa94f",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:08.190Z"
+  },
+  "skill.shadow.heavy": {
+    "hash": "6031db6b352614ab",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:12.786Z"
+  },
+  "skill.shadow.light": {
+    "hash": "0bb1d9deaeef624b",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:11.498Z"
+  },
+  "skill.shadow.medium": {
+    "hash": "c59c1bc1f98df036",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:11.938Z"
+  },
+  "skill.water.heavy": {
+    "hash": "9cdb5ad6939e77ab",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:07.084Z"
+  },
+  "skill.water.light": {
+    "hash": "97c706123a78428f",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:05.793Z"
+  },
+  "skill.water.medium": {
+    "hash": "85cb881fce6cf39e",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:35:06.266Z"
+  },
+  "ui.cancel": {
+    "hash": "f11c444bc957aca3",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:14.083Z"
+  },
+  "ui.coin_gain": {
+    "hash": "4749705a1c08c5a3",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T08:34:15.959Z"
+  },
+  "ui.confirm": {
+    "hash": "c973343869055eb2",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:32:33.145Z"
+  },
+  "ui.equip": {
+    "hash": "05b96661f862d9cf",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:20.302Z"
+  },
+  "ui.error": {
+    "hash": "bdeb1f5b84b53eca",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:12.945Z"
+  },
+  "ui.file_drop": {
+    "hash": "16c5715143385c47",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:22.935Z"
+  },
+  "ui.gem_gain": {
+    "hash": "0ca9befbd987f547",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:22.966Z"
+  },
+  "ui.hover": {
+    "hash": "66e05b2d9d7067d4",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:24.561Z"
+  },
+  "ui.modal_close": {
+    "hash": "ef3b3adc851c1c26",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:10.543Z"
+  },
+  "ui.modal_open": {
+    "hash": "374f16e446cf0f6a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:10.677Z"
+  },
+  "ui.notice_ok": {
+    "hash": "50076cffe556b59c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:12.011Z"
+  },
+  "ui.notification": {
+    "hash": "b604f1d7f4462935",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:15.082Z"
+  },
+  "ui.purchase": {
+    "hash": "5b460bcee7a43302",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:18.092Z"
+  },
+  "ui.purchase_fail": {
+    "hash": "a7bf529ec2ad01d7",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:19.260Z"
+  },
+  "ui.tab": {
+    "hash": "c9c49537404d320a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:08.080Z"
+  },
+  "ui.tap": {
+    "hash": "603b2874e09775e4",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:32:12.414Z"
+  },
+  "ui.tap_soft": {
+    "hash": "f604eee797e9b78c",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:08.035Z"
+  },
+  "ui.toggle_off": {
+    "hash": "5def417cc7a34904",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:09.415Z"
+  },
+  "ui.toggle_on": {
+    "hash": "51985910a06dbe35",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:09.292Z"
+  },
+  "ui.unequip": {
+    "hash": "1b0ec5abb478430a",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:21.672Z"
+  },
+  "ui.xp_tick": {
+    "hash": "98519fa5af5a6664",
+    "candidates": 1,
+    "generatedAt": "2026-11-19T08:34:17.005Z"
+  },
+  "wx.thunder": {
+    "hash": "24887d7388a256cd",
+    "candidates": 3,
+    "generatedAt": "2026-11-19T08:36:51.356Z"
+  }
+}

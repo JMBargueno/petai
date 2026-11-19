@@ -34,6 +34,13 @@
       "port": 5176
     },
     {
+      "name": "pockai-desktop-demo-alt2",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "petai-desktop", "run", "demo"],
+      "env": { "DEMO_PORT": "5178" },
+      "port": 5178
+    },
+    {
       "name": "pockai-minigames-dev",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@pockai/minigames", "run", "dev"],
