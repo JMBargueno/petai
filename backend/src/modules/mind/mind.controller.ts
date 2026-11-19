@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { MindService } from './mind.service';
 import { MindMemoryService } from './mind-memory.service';
 import { InitiativeService } from './initiative.service';
+import { LearningService } from './learning.service';
 
 @ApiTags('Mind')
 @ApiBearerAuth()
@@ -17,7 +18,30 @@ export class MindController {
     private readonly mind: MindService,
     private readonly memory: MindMemoryService,
     private readonly initiative: InitiativeService,
+    private readonly learning: LearningService,
   ) {}
+
+  @Post('pets/:id/mind/reinforce')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'El entrenador premia (o no) lo que el Pockai está haciendo en el escritorio',
+    description:
+      'Inclina un poco la balanza entre conductas del escritorio: lo que se premia sale algo más a menudo y lo que se corta, algo menos. ' +
+      'Siempre acotado, con olvido y con un tope de gestos al día. Pasado el tope responde `applied: false`, nunca error.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['behavior', 'signal'],
+      properties: {
+        behavior: { type: 'string', description: 'Conducta del escritorio (balance.json → personality.desktop.behaviors)' },
+        signal: { type: 'string', description: 'Gesto (balance.json → personality.learning.signals): pet, high_five, click, pickup' },
+      },
+    },
+  })
+  reinforce(@CurrentUser() user: any, @Param('id') petId: string, @Body() body: { behavior?: string; signal?: string }) {
+    return this.learning.reinforce(user.id, petId, body);
+  }
 
   @Post('pets/:id/initiative')
   @HttpCode(HttpStatus.OK)
@@ -79,6 +103,8 @@ export class MindController {
       mood: profile.mood,
       // Ánimo de corto plazo: lo que le acaba de pasar (los clientes lo usan para el tono y las conductas)
       feeling: profile.feeling,
+      // Lo que ha aprendido que a su entrenador le gusta verle hacer en el escritorio
+      learned: this.learning.view(profile.stored),
       bondingTier: profile.bondingTier,
       intelligenceTier: profile.intelligenceTier,
       memory: { counts, capacity },

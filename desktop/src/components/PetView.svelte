@@ -41,7 +41,8 @@
   import { createRng, hashSeed, type Rng } from '@pockai/mind';
   import { DESK_CONFIG } from '../lib/brain/deskConfig';
   import { buildSituation, type DeskSituation, type Surface } from '../lib/brain/deskSituation';
-  import { initialBrain, mayBark, stepBrain, type BrainState } from '../lib/brain/deskBrain';
+  import { creditOf, initialBrain, mayBark, stepBrain, type BrainState } from '../lib/brain/deskBrain';
+  import { LEARNING_CONFIG, petLearned, rewardBehavior } from '../lib/brain/learningStore';
   import type { DeskCommand } from '../lib/brain/deskBehaviors';
   import { clampX, stepLocomotion, type Locomotion } from '../lib/brain/locomotion';
   import { DeskSense } from '../lib/brain/deskSense';
@@ -199,6 +200,15 @@
   // Personalidad: la del servidor, guardada por mascota; mientras llega, la estimada por especie
   let personalityPetId: string | null | undefined = undefined;
   $: watchPersonality(pet?.id ?? null);
+  /**
+   * Un gesto del entrenador cuenta para lo que el Pockai está haciendo o acaba de hacer: así aprende
+   * qué le gusta verle hacer (spec 41, fase D). `behavior` fija la conducta cuando el gesto ya dice cuál es.
+   */
+  function ownerGesture(signal: string, behavior?: string) {
+    if (!USE_BRAIN) return;
+    rewardBehavior(behavior ?? creditOf(brain, performance.now(), LEARNING_CONFIG), signal, (petId, b, s) => api.reinforceBehavior(petId, b, s));
+  }
+
   function watchPersonality(id: string | null) {
     if (id === personalityPetId) return;
     personalityPetId = id;
@@ -466,6 +476,8 @@
     const ny = e.clientY - dragStartY;
     if (!dragMoved && Math.abs(nx - posX) + Math.abs(ny - posY) > 0) {
       dragMoved = true;
+      // Lo apartan de lo que hacía: lo hará algo menos
+      ownerGesture('pickup');
       petSound('pet.drag.lift');
     }
     posX = Math.min(Math.max(0, nx), window.innerWidth - PET_SIZE);
@@ -1012,6 +1024,7 @@
       const entered = behaviorEngine.recordStroke(delta);
       if (entered) {
         isPetting = true;
+        ownerGesture('pet');
         play('happy');
         showParticle('❤️', 2500);
         squash(1.15, 0.85, 200);
@@ -1088,6 +1101,7 @@
     if (isHighFiveWaiting) {
       isHighFiveWaiting = false;
       behaviorEngine.completeHighFive();
+      ownerGesture('high_five', 'high_five_offer');
       petSound('pet.highfive.slap');
       play('celebrate');
       showParticle('🎉✨', 2500);
@@ -1109,6 +1123,7 @@
       }, 70);
     }, 60);
 
+    ownerGesture('click');
     onPetClick();
   }
 
@@ -1502,6 +1517,7 @@
       {
         now,
         dims: $petDims,
+        learned: $petLearned,
         pet,
         away: petAway || travelBusy,
         held: isDragging || physicsState.isAirborne || isEnteringHome,
@@ -1522,7 +1538,7 @@
     );
     lastSituation = situation;
 
-    const out = stepBrain(brain, situation, brainRng, DESK_CONFIG);
+    const out = stepBrain(brain, situation, brainRng, DESK_CONFIG, LEARNING_CONFIG);
     brain = out.state;
     if (out.commands.length) runCommands(out.commands);
   }

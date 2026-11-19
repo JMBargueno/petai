@@ -308,6 +308,7 @@ const bonding = {
 const dim = (value: number, keyword: string, label: string) => ({ value, keyword, label });
 const mind = (petId: string) => ({
   petId,
+  learned: { prefs: demoLearned },
   dimensions: {
     curiosity: dim(63, 'curious', 'Curioso'),
     sociability: dim(48, 'balanced', 'Equilibrado'),
@@ -424,6 +425,8 @@ let visiting: null | { friendId: string } = null;
 /** Iniciativa de ejemplo (la real la decide el backend con @pockai/mind). */
 let talkLevel = 'normal';
 let talkTurn = 0;
+/** Lo que el Pockai de la demo ha aprendido que gusta. */
+const demoLearned: Record<string, number> = { dance: 0.42, climb: -0.3 };
 const TALK_DEMO = [
   { id: 'return_real_pet', kind: 'return', text: '¡Has vuelto! ¿Qué tal está Toby?' },
   { id: 'care_real_pet_fed', kind: 'care', text: '¿Has recordado dar de comer hoy a tu perro Toby?' },
@@ -701,6 +704,12 @@ const routes: [string, RegExp, Handler][] = [
     return { phrase, retryInMs: 60_000, level: talkLevel, feeling: 'content' };
   }],
   ['GET', /^\/pets\/[^/]+\/initiative\/settings$/, () => talkSettings()],
+  ['POST', /^\/pets\/[^/]+\/mind\/reinforce$/, ({ body }) => {
+    const v = demoLearned[body?.behavior] ?? 0;
+    const up = body?.signal !== 'pickup';
+    demoLearned[body?.behavior] = Math.round((v + 0.12 * ((up ? 1 : -1) - v)) * 1000) / 1000;
+    return { applied: true, behavior: body?.behavior, prefs: demoLearned };
+  }],
   ['PUT', /^\/pets\/[^/]+\/initiative\/settings$/, ({ body }) => ((talkLevel = body?.level ?? talkLevel), talkSettings())],
   ['POST', /^\/habitat\/furniture\/([^/]+)\/place$/, ({ m, body }) => {
     const f = habitats.furniture.find((x: any) => x.id === m[1]);

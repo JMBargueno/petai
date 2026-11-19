@@ -858,6 +858,11 @@ export const api = {
     return minigameRequest<InitiativeSettings>('PUT', `/v1/pets/${petId}/initiative/settings`, { level });
   },
 
+  /** Un gesto tuyo mientras hacía algo en el escritorio: el servidor guarda lo que aprende de ello. */
+  async reinforceBehavior(petId: string, behavior: string, signal: string) {
+    return minigameRequest<{ applied: boolean; reason?: string; behavior: string; prefs: Record<string, number> }>('POST', `/v1/pets/${petId}/mind/reinforce`, { behavior, signal });
+  },
+
   async forgetMemory(petId: string, memoryId: string) {
     return minigameRequest<{ deleted: number }>('DELETE', `/v1/pets/${petId}/memories/${memoryId}`);
   },
@@ -1982,6 +1987,8 @@ export interface PetMind {
   mood: string;
   /** Ánimo de corto plazo: lo que le acaba de pasar. Ausente con un servidor anterior. */
   feeling?: { label: string; valence: number; arousal: number } | null;
+  /** Lo que ha aprendido que te gusta verle hacer: conducta → de -1 a 1. Ausente con un servidor anterior. */
+  learned?: { prefs: Record<string, number> };
   bondingTier: string;
   intelligenceTier: 'chat' | 'memory' | 'agent';
   memory: { counts: Record<MemoryLayer, number>; capacity: Record<MemoryLayer, number> | null };

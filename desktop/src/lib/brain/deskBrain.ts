@@ -10,7 +10,7 @@
  * - En modo libre o foco, un **selector por utilidad** (`@pockai/mind`) elige la siguiente
  *   conducta según la personalidad, las necesidades, la app en foco y lo que hizo hace poco.
  */
-import { pushRecent, rngRange, selectByUtility, type Rng, type UtilityCandidate } from '@pockai/mind';
+import { creditTarget, learnedFactor, pushRecent, rngRange, selectByUtility, type LearningConfig, type Rng, type UtilityCandidate } from '@pockai/mind';
 import type { BehaviorConfig, BehaviorRequires, DeskConfig } from './deskConfig';
 import { DESK_BEHAVIORS, canPerchOn, type ActiveBehavior, type BehaviorCtx, type DeskCommand } from './deskBehaviors';
 import type { DeskSituation } from './deskSituation';
@@ -28,6 +28,8 @@ export interface BrainState {
   timeSlot: string | null;
   /** Desde cuándo falta el usuario (solo mientras duerme la siesta). */
   awaySince: number | null;
+  /** La última conducta que terminó: un gesto justo después aún va por ella. */
+  lastEnded?: { id: string; at: number } | null;
 }
 
 export interface BrainStep {
@@ -106,14 +108,16 @@ function needsFactor(b: BehaviorConfig, sit: DeskSituation, cfg: DeskConfig): nu
 }
 
 /** Candidatas de este instante: las que tienen guion, cumplen requisitos y admite el modo. */
-export function candidatesFor(mode: DeskMode, sit: DeskSituation, state: BrainState, cfg: DeskConfig): UtilityCandidate[] {
+export function candidatesFor(mode: DeskMode, sit: DeskSituation, state: BrainState, cfg: DeskConfig, learning?: LearningConfig): UtilityCandidate[] {
   const profile = cfg.appProfiles[sit.appCategory];
   const out: UtilityCandidate[] = [];
   for (const [id, b] of Object.entries(cfg.behaviors)) {
     if (!DESK_BEHAVIORS[id]) continue;
     if (mode === 'focus' && !cfg.focus.includes(id)) continue;
     if (!meets(b.requires, sit, state, cfg)) continue;
-    const factor = needsFactor(b, sit, cfg) * (profile?.factors[id] ?? 1);
+    // Lo aprendido inclina la balanza, pero no salta requisitos ni lo que la app en foco descarta
+    const liked = learning ? learnedFactor(sit.learned, id, learning) : 1;
+    const factor = needsFactor(b, sit, cfg) * (profile?.factors[id] ?? 1) * liked;
     if (factor <= 0) continue;
     out.push({ id, base: b.base, weights: b.weights, cooldownMs: b.cooldownMs, factor });
   }
@@ -127,6 +131,11 @@ export function mayBark(state: BrainState, sit: DeskSituation, cfg: DeskConfig, 
   return factor > 0 && rng() < factor;
 }
 
+/** A qué conducta va un gesto del entrenador ahora mismo (`null`: a ninguna). */
+export function creditOf(state: BrainState, now: number, learning: LearningConfig): string | null {
+  return creditTarget(state.active?.id ?? null, state.lastEnded ?? null, now, learning);
+}
+
 const pause = (rng: Rng, cfg: DeskConfig) => rngRange(rng, cfg.pauseMs[0], cfg.pauseMs[1]);
 
 /** Termina la conducta en curso y devuelve sus órdenes de limpieza. */
@@ -134,6 +143,7 @@ function finish(state: BrainState, ctx: BehaviorCtx): DeskCommand[] {
   const active = state.active;
   if (!active) return [];
   state.active = null;
+  state.lastEnded = { id: active.id, at: ctx.sit.now };
   state.nextDecisionAt = ctx.sit.now + pause(ctx.rng, ctx.cfg);
   return DESK_BEHAVIORS[active.id]?.end?.(ctx, active) ?? [];
 }
@@ -176,7 +186,7 @@ function onModeChange(prev: DeskMode, next: DeskMode, state: BrainState, ctx: Be
 /**
  * Un tic del cerebro. No muta el estado recibido: devuelve el nuevo y las órdenes para la vista.
  */
-export function stepBrain(prev: BrainState, sit: DeskSituation, rng: Rng, cfg: DeskConfig): BrainStep {
+export function stepBrain(prev: BrainState, sit: DeskSituation, rng: Rng, cfg: DeskConfig, learning?: LearningConfig): BrainStep {
   const state: BrainState = { ...prev, recent: prev.recent, lastAt: prev.lastAt };
   const ctx: BehaviorCtx = { sit, rng, cfg };
   const commands: DeskCommand[] = [];
@@ -226,7 +236,7 @@ export function stepBrain(prev: BrainState, sit: DeskSituation, rng: Rng, cfg: D
   if (sit.body.surface !== 'ground' || sit.now < state.nextDecisionAt) return { state, commands };
 
   const id = selectByUtility({
-    candidates: candidatesFor(mode, sit, state, cfg),
+    candidates: candidatesFor(mode, sit, state, cfg, learning),
     dims: sit.dims,
     recent: state.recent,
     lastAt: state.lastAt,

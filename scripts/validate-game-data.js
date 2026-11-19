@@ -748,6 +748,23 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
     console.log(`✓ balance.json: iniciativa (${LEVELS.length} niveles, ${ini.priority.length} prioridades) validada`);
   }
 
+  // Aprendizaje: inclina la balanza entre conductas del escritorio, siempre acotado
+  const learn = pers.learning;
+  if (learn) {
+    const at = 'balance.personality.learning';
+    if (!(learn.rate > 0 && learn.rate <= 0.5)) throw new Error(`${at}.rate debe estar en (0, 0,5]`);
+    if (!(learn.creditWindowMs >= 1000 && learn.creditWindowMs <= 30000)) throw new Error(`${at}.creditWindowMs debe estar entre 1000 y 30000`);
+    if (!(learn.halfLifeDays >= 1 && learn.halfLifeDays <= 365)) throw new Error(`${at}.halfLifeDays debe estar entre 1 y 365`);
+    // Nada desaparece del todo ni lo acapara todo
+    if (!(learn.factor?.min >= 0.3 && learn.factor.min < 1 && learn.factor.max > 1 && learn.factor.max <= 2)) throw new Error(`${at}.factor: min en [0,3, 1) y max en (1, 2]`);
+    if (!(Number.isInteger(learn.maxEntries) && learn.maxEntries >= 5)) throw new Error(`${at}.maxEntries debe ser un entero ≥ 5`);
+    if (!(Number.isInteger(learn.dailyCap) && learn.dailyCap >= 1 && learn.dailyCap <= 200)) throw new Error(`${at}.dailyCap debe ser un entero de 1 a 200`);
+    const signals = Object.entries(learn.signals ?? {});
+    for (const [id, v] of signals) if (!(typeof v === 'number' && v !== 0 && Math.abs(v) <= 1)) throw new Error(`${at}.signals.${id} debe estar en [-1, 1] y no ser 0`);
+    if (!signals.some(([, v]) => v > 0)) throw new Error(`${at}.signals: hace falta al menos un gesto que premie`);
+    console.log(`✓ balance.json: aprendizaje (${signals.length} gestos, factor ${learn.factor.min}–${learn.factor.max}) validado`);
+  }
+
   const feeling = pers.feeling;
   if (feeling) {
     if (!(feeling.halfLifeMinutes >= 5 && feeling.halfLifeMinutes <= 1440)) throw new Error('balance.personality.feeling.halfLifeMinutes debe estar entre 5 y 1440');

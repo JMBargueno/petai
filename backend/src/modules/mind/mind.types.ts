@@ -58,6 +58,8 @@ export interface PersonalityConfig {
   autonomy: AutonomyConfig;
   /** Iniciativa: cuándo y cuánto habla por su cuenta (`@pockai/mind` → initiative). */
   initiative?: import('@pockai/mind/node').InitiativeConfig;
+  /** Aprendizaje de lo que su entrenador premia (spec 41, fase D). */
+  learning?: import('@pockai/mind/node').LearningConfig;
   /** Estado de ánimo de corto plazo (`@pockai/mind` → feeling). */
   feeling?: import('@pockai/mind/node').FeelingConfig;
   /** Progresión de inteligencia (spec 37 §3.4). */
@@ -172,6 +174,8 @@ export interface StoredPersonality {
   apologyDay?: string;
   /** Iniciativa: nivel elegido, enfriamientos y lo último que dijo (ver `@pockai/mind` → initiative). */
   initiative?: unknown;
+  /** Preferencias aprendidas entre conductas del escritorio; ver `@pockai/mind` learning. */
+  learned?: unknown;
   /** Ánimo de corto plazo: lo que le acaba de pasar (`@pockai/mind` → feeling). */
   feeling?: { valence: number; arousal: number; at: number };
   /** Último turno de chat con su entrenador (ISO). Con él se sabe cuál es el primero tras una ausencia. */

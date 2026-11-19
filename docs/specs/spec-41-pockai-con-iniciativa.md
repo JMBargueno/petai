@@ -23,7 +23,7 @@ entrenador con datos concretos, en el escritorio y en las apps.
 | A | Frases con variables, datos del entrenador y ánimo de corto plazo | Hecha |
 | B | Iniciativa fuera del chat (bocadillos, con tres niveles de insistencia) | Hecha en librería, servidor, escritorio y Android (Android sin compilar en local) |
 | C | Evaluación con un modelo real (manual, con la clave del desarrollador) | Hecha: `pnpm run eval:mind` en `backend` (ver `backend/scripts/eval-mind.ts`); sin ejecutar aún contra un modelo real |
-| D | El escritorio aprende de lo que su entrenador premia | Pendiente |
+| D | El escritorio aprende de lo que su entrenador premia | Hecha en librería, servidor y escritorio |
 | E | Memoria que consolida | Pendiente |
 | F | Rutinas con continuidad en la vida autónoma | Pendiente |
 
@@ -112,9 +112,51 @@ Dentro de cada grupo elige `pickPhrase` (personalidad, enfriamiento, repetición
 
 ### 4.4 Sin hacer
 
-- **Android** no pregunta todavía ni tiene el ajuste.
 - **No hay notificaciones con la app cerrada:** el backend no tiene envío de notificaciones
   push. El canal `mobile` y su tope diario existen, pero solo servirán con la app abierta
   hasta que haya ese envío.
 - Las frases salen siempre en castellano (no hay preferencia de idioma por cuenta).
 - Dos dispositivos que pregunten a la vez pueden hablar los dos.
+
+## 5. Fase C
+
+Evaluación del chat con un modelo real: `pnpm run eval:mind` en `backend`
+(`backend/scripts/eval-mind.ts`, casos en `backend/src/modules/mind/eval/cases.json`). Se lanza a
+mano con la clave de quien lo ejecuta; no corre en la CI. Aún no se ha ejecutado contra un modelo.
+
+## 6. Fase D
+
+El Pockai aprende qué le gusta a su entrenador verle hacer en el escritorio.
+
+### 6.1 Cómo aprende
+
+- **Gestos** (`balance.json → personality.learning.signals`): acariciarlo y chocar los cinco
+  premian; pulsarlo premia un poco; apartarlo arrastrándolo cuenta en contra.
+- **A qué se atribuye:** a la conducta en curso o a la que terminó hace menos de
+  `creditWindowMs`. Pasado ese margen el gesto no va por nada.
+- **Qué cambia:** una preferencia por conducta en [-1, 1], que multiplica su peso en el selector
+  por utilidad entre `factor.min` y `factor.max` (0,6 y 1,5). No cambia la personalidad ni salta
+  requisitos: lo premiado sigue sin ofrecerse cuando no toca.
+
+### 6.2 Límites
+
+- Nada desaparece ni lo acapara todo (los dos extremos del factor los valida `validate:data`).
+- Se olvida solo: vida media de `halfLifeDays` días.
+- Tope de `dailyCap` gestos al día por mascota; pasado el tope el servidor responde
+  `applied: false`, nunca error.
+
+### 6.3 Dónde vive
+
+- **Librería:** `shared/mind/src/learning.ts` (`reinforce`, `settleLearned`, `learnedFactor`,
+  `creditTarget`, `strongestPrefs`).
+- **Servidor:** `mind/learning.service.ts`; `POST /v1/pets/:id/mind/reinforce` con
+  `{ behavior, signal }` y `learned` en `GET /v1/pets/:id/mind`. Se guarda en
+  `Pet.personality.learned`, así viaja con la mascota entre equipos.
+- **Escritorio:** `lib/brain/learningStore.ts`. El gesto se aplica al momento con la misma
+  librería y se envía al servidor, cuya respuesta manda. La pestaña Mente cuenta lo aprendido.
+
+### 6.4 Sin hacer
+
+- Android e iOS no tienen conductas de escritorio: no envían gestos. Pueden leer `learned`.
+- Lo aprendido no influye todavía en el chat ni en las frases de iniciativa.
+- El escritorio no guarda lo aprendido en disco: sin red, dura lo que la sesión.
