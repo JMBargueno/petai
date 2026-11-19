@@ -148,5 +148,33 @@
     "priceCoins": 0,
     "priceGems": 20,
     "effects": {}
+  },
+  {
+    "id": "ether_threader",
+    "name": "Enhebrador",
+    "kind": "level_up",
+    "availability": "drop",
+    "description": "Aguja de hilo vivo que cose una hebra más de Éter en la vena del Pockai y lo hace crecer.",
+    "priceCoins": 0,
+    "priceGems": 0,
+    "effects": {
+      "levels": 1
+    }
+  },
+  {
+    "id": "origin_nectar",
+    "name": "Néctar del Origen",
+    "kind": "medicine",
+    "availability": "hidden",
+    "description": "La primera gota del Origen, que sacia, alegra, reanima y cura cualquier mal.",
+    "priceCoins": 0,
+    "priceGems": 0,
+    "effects": {
+      "hunger": 100,
+      "happiness": 100,
+      "energy": 100,
+      "health": 100,
+      "curesSick": true
+    }
   }
 ]

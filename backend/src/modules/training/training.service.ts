@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PetsService } from '../pets/pets.service';
 import { GameDataService } from '../game-data/game-data.service';
 import { createRng } from '../battles/combat/rng';
+import { ActivityDropsService } from '../inventory/activity-drops.service';
 
 export type Element = 'fire' | 'water' | 'plant' | 'electric' | 'shadow' | 'light';
 
@@ -39,6 +40,8 @@ export interface SubmitResponse {
   predictionBonus?: boolean;
   xp?: number;
   coins?: number;
+  /** Objeto que soltó la mazmorra al completarla (spec 41). */
+  bonusItem?: { itemId: string; name: string; qty: number };
 }
 
 @Injectable()
@@ -59,6 +62,8 @@ export class TrainingService {
     private readonly petsService: PetsService,
     private readonly gameData: GameDataService,
     @Optional() private readonly realtime?: RealtimeGateway,
+    // Drops de actividades (spec 41)
+    @Optional() private readonly activityDrops?: ActivityDropsService,
   ) {}
 
   private get combatCfg() {
@@ -196,6 +201,10 @@ export class TrainingService {
     if (prediction && updated.predictionCorrect) response.predictionBonus = true;
     if (xp) response.xp = xp;
     if (coins) response.coins = coins;
+    if (newStatus === 'completed') {
+      const bonusItem = await this.activityDrops?.roll(userId, 'training');
+      if (bonusItem) response.bonusItem = bonusItem;
+    }
 
     return response;
   }

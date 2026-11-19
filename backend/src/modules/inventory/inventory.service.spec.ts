@@ -123,3 +123,23 @@ describe('InventoryService.grantExclusiveItem', () => {
     expect(inv.get('ach_item_care_crown')).toBe(1);
   });
 });
+
+describe('Disponibilidad de objetos (spec 41)', () => {
+  it('los objetos de solo drop y los ocultos no se venden aunque tengan precio', async () => {
+    const threader = { id: 'ether_threader', kind: 'level_up', availability: 'drop', effects: { levels: 1 }, priceCoins: 10, priceGems: 0 };
+    const nectar = { id: 'origin_nectar', kind: 'medicine', availability: 'hidden', effects: {}, priceCoins: 10, priceGems: 0 };
+    const { service, inv, user } = build([threader, nectar]);
+    for (const id of ['ether_threader', 'origin_nectar']) {
+      await expect(service.buyItem('u1', id)).rejects.toBeInstanceOf(BadRequestException);
+    }
+    expect(inv.size).toBe(0);
+    expect(user).toEqual({ coins: 1000, gems: 50 });
+  });
+
+  it('la tienda solo lista lo que está a la venta', async () => {
+    const findMany = jest.fn(async () => []);
+    const service = new InventoryService({ item: { findMany } } as any);
+    await service.getShopItems('food');
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { availability: 'shop', kind: 'food' } }));
+  });
+});

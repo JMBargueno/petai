@@ -34,6 +34,7 @@
   import HandleField from './HandleField.svelte';
   import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, X, Users } from 'lucide-svelte';
   import HomeView from './views/HomeView.svelte';
+  import BackpackView from './views/BackpackView.svelte';
   import HatchView from './views/HatchView.svelte';
   import ShopView from './views/ShopView.svelte';
   import AccountView from './views/AccountView.svelte';
@@ -140,7 +141,7 @@
 
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
   const NAV = [
-    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['mind', 'Mente'], ['habitat', 'Hábitat'], ['wardrobe', 'Armario'], ['skills', 'Habilidades']] },
+    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['backpack', 'Mochila'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['mind', 'Mente'], ['habitat', 'Hábitat'], ['wardrobe', 'Armario'], ['skills', 'Habilidades']] },
     { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo'], ['training', 'Entrenamiento'], ['cooking', 'Cocina'], ['adventure', 'Aventura']] },
     { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
     { id: 'social', label: 'Social', icon: Users, subs: [['profile', 'Mi Perfil'], ['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
@@ -493,6 +494,32 @@
       dispatch('actionTriggered', 'eat');
       await refreshInventory();
       showPanelNotice('ok', food ? `${petName()} se ha comido: ${food}.` : `${petName()} ha comido.`, null);
+    });
+  }
+
+  /** Mochila (spec 41): usa cualquier objeto; el servidor decide qué hace según su tipo. */
+  function handleUseItem(itemId: string) {
+    if (!pet) return;
+    const row = inventory.find((i) => i.itemId === itemId);
+    const name = row?.item?.name;
+    const kind = row?.item?.kind;
+    const before = pet.level;
+    return runAction(`use:${itemId}`, async () => {
+      const updated = await api.usePetItem(pet.id, itemId);
+      dispatch('petUpdated', updated);
+      if (kind === 'food') dispatch('actionTriggered', 'eat');
+      await refreshInventory();
+      const msg =
+        kind === 'level_up' && updated?.level > before
+          ? `¡${petName()} sube al nivel ${updated.level}!`
+          : kind === 'medicine'
+            ? `${petName()} se siente mucho mejor.`
+            : kind === 'evolution'
+              ? `¡${petName()} ha alcanzado su forma final!`
+              : name
+                ? `Has usado: ${name}.`
+                : 'Objeto usado.';
+      showPanelNotice('ok', msg, null);
     });
   }
 
@@ -874,6 +901,15 @@
             on:toggleSleep={handleToggleSleep}
             on:toggleHabitat={(e) => handleToggleHabitat(e.detail)}
             on:feed={(e) => handleFeed(e.detail)}
+            on:go={(e) => go(e.detail.dest, e.detail.sub)}
+          />
+
+        {:else if dest === 'pet' && sub === 'backpack'}
+          <BackpackView
+            {pet}
+            {inventory}
+            busy={busyAction}
+            on:use={(e) => handleUseItem(e.detail)}
             on:go={(e) => go(e.detail.dest, e.detail.sub)}
           />
 

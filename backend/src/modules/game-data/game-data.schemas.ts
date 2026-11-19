@@ -240,6 +240,8 @@ export const foodsSchema = z.array(
       priceCoins: z.number(),
       priceGems: z.number(),
       effects: z.record(z.string(), z.union([z.number(), z.boolean()])),
+      /** shop: se vende · drop: solo cofres/actividades · hidden: solo lo da el admin (spec 41). Por defecto, shop. */
+      availability: z.enum(['shop', 'drop', 'hidden']).optional(),
     })
     .passthrough(),
 );
@@ -559,6 +561,7 @@ export function validateGameData(b: GameDataBundle): string[] {
     }
     foodIds.add(f.id);
   }
+  errors.push(...validateItemAvailability(foods ?? [], balance));
 
   // 6. Especies (elemento, favoriteFood, rarity)
   for (const sp of species ?? []) {
@@ -666,4 +669,53 @@ export function validateGameData(b: GameDataBundle): string[] {
   }
 
   return errors;
+}
+/**
+ * Spec 41: un objeto `hidden` solo lo da el admin, así que no puede estar en ninguna fuente de drop;
+ * los ids de `activityDrops` deben existir; un objeto `level_up` necesita `effects.levels` ≥ 1, y lo
+ * que no se vende (drop/hidden) va a precio 0.
+ */
+export function validateItemAvailability(foods: any[], balance: any): string[] {
+  const errors: string[] = [];
+  const byId = new Map(foods.map((f) => [f.id, f]));
+  const sources = itemDropSources(balance);
+  for (const [src, list] of Object.entries<any>(balance?.activityDrops?.sources ?? {})) {
+    for (const d of list ?? []) {
+      if (!(d.chance > 0 && d.chance <= 1)) errors.push(`activityDrops.${src}: chance de ${d.itemId} debe estar en (0, 1]`);
+    }
+  }
+  for (const [id, cap] of Object.entries<any>(balance?.activityDrops?.dailyCaps ?? {})) {
+    if (!byId.has(id)) errors.push(`activityDrops.dailyCaps: ${id} no existe en foods.json`);
+    if (!(Number.isInteger(cap) && cap >= 0)) errors.push(`activityDrops.dailyCaps.${id} debe ser un entero ≥ 0`);
+  }
+  for (const [where, id] of sources) {
+    const f = byId.get(id);
+    if (!f) errors.push(`${where}: ${id} no existe en foods.json`);
+    else if (f.availability === 'hidden') errors.push(`${where}: ${id} es un objeto oculto (solo admin) y no puede caer`);
+  }
+  for (const f of foods) {
+    if (f.kind === 'level_up' && !(Number.isInteger(f.effects?.levels) && f.effects.levels >= 1)) {
+      errors.push(`${f.id}: un objeto level_up necesita effects.levels entero ≥ 1`);
+    }
+    if ((f.availability === 'drop' || f.availability === 'hidden') && (f.priceCoins > 0 || f.priceGems > 0)) {
+      errors.push(`${f.id}: un objeto ${f.availability} no se vende y debe tener precio 0`);
+    }
+  }
+  return errors;
+}
+
+/** Todas las fuentes de drop de objetos de balance.json como pares [dónde, itemId]. */
+export function itemDropSources(balance: any): Array<[string, string]> {
+  const sources: Array<[string, string]> = [];
+  for (const [type, chest] of Object.entries<any>(balance?.chests ?? {})) {
+    for (const d of chest?.dropTable ?? []) sources.push([`chests.${type}`, d.itemId]);
+  }
+  for (const [id, g] of Object.entries<any>(balance?.minigames?.games ?? {})) {
+    if (g?.itemDrop?.itemId) sources.push([`minigames.${id}.itemDrop`, g.itemDrop.itemId]);
+  }
+  for (const id of balance?.personality?.autonomy?.itemFind?.items ?? []) sources.push(['autonomy.itemFind', id]);
+  for (const [src, list] of Object.entries<any>(balance?.activityDrops?.sources ?? {})) {
+    for (const d of list ?? []) sources.push([`activityDrops.${src}`, d.itemId]);
+  }
+  return sources;
 }

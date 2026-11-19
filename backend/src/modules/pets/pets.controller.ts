@@ -87,6 +87,16 @@ export class PetsController {
     return this.petsService.evolve(user.id, petId);
   }
 
+  @Post(':id/use-item')
+  @ApiOperation({ summary: 'Usar un objeto del inventario sobre la mascota (comida, medicina, evolución o subida de nivel)' })
+  useItem(
+    @CurrentUser() user: any,
+    @Param('id') petId: string,
+    @Body() body: { itemId: string } | undefined,
+  ) {
+    return this.petsService.useItem(user.id, petId, body?.itemId);
+  }
+
   @Post(':id/heal')
   @ApiOperation({ summary: 'Administrar medicina a la mascota' })
   heal(

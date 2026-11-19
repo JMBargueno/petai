@@ -28,6 +28,16 @@ export interface Rewards {
   proDays: number;
   chests: { type: ChestType; qty: number }[];
   accessories: string[];
+  /** Consumibles (spec 41), también los de solo drop y los ocultos. */
+  items: { id: string; qty: number }[];
+}
+
+export interface ItemOption {
+  id: string;
+  name: string;
+  kind: string;
+  availability: 'shop' | 'drop' | 'hidden';
+  description: string;
 }
 
 export interface AccessoryOption {
@@ -70,6 +80,7 @@ export interface GrantResult {
     proUntil: string | null;
     chests: { type: ChestType; qty: number }[];
     accessories: { id: string; name: string; alreadyOwned: boolean }[];
+    items?: { id: string; name: string; qty: number }[];
   };
 }
 
@@ -80,7 +91,7 @@ interface Page {
 
 const PAGE_SIZE = 100;
 
-export const emptyRewards = (): Rewards => ({ coins: 0, gems: 0, proDays: 0, chests: [], accessories: [] });
+export const emptyRewards = (): Rewards => ({ coins: 0, gems: 0, proDays: 0, chests: [], accessories: [], items: [] });
 
 /** Solo lo que lleva algo: el servidor rechaza un paquete vacío. */
 export function compactRewards(r: Rewards): Partial<Rewards> {
@@ -91,19 +102,26 @@ export function compactRewards(r: Rewards): Partial<Rewards> {
   const chests = r.chests.filter((c) => c.qty > 0);
   if (chests.length) out.chests = chests;
   if (r.accessories.length) out.accessories = [...r.accessories];
+  const items = (r.items ?? []).filter((i) => i.qty > 0);
+  if (items.length) out.items = items;
   return out;
 }
 
 export const hasRewards = (r: Rewards) => Object.keys(compactRewards(r)).length > 0;
 
 /** Resumen corto de un paquete para tablas y avisos: «500 monedas · 7 días Pro · 2 cofres de Oro». */
-export function describeRewards(r: Partial<Rewards>, accessoryName: (id: string) => string = (id) => id): string {
+export function describeRewards(
+  r: Partial<Rewards>,
+  accessoryName: (id: string) => string = (id) => id,
+  itemName: (id: string) => string = (id) => id,
+): string {
   const parts: string[] = [];
   if (r.coins) parts.push(`${r.coins.toLocaleString('es')} monedas`);
   if (r.gems) parts.push(`${r.gems.toLocaleString('es')} gemas`);
   if (r.proDays) parts.push(`${r.proDays} ${r.proDays === 1 ? 'día' : 'días'} Pro`);
   for (const c of r.chests ?? []) parts.push(`${c.qty} ${c.qty === 1 ? 'cofre' : 'cofres'} de ${CHEST_LABELS[c.type] ?? c.type}`);
   for (const a of r.accessories ?? []) parts.push(accessoryName(a));
+  for (const i of r.items ?? []) parts.push(`${i.qty} × ${itemName(i.id)}`);
   return parts.join(' · ') || '—';
 }
 
@@ -126,6 +144,10 @@ export class VouchersHttp {
 
   accessories(): Promise<AccessoryOption[]> {
     return this.api.request<AccessoryOption[]>('/v1/admin/vouchers/accessories');
+  }
+
+  items(): Promise<ItemOption[]> {
+    return this.api.request<ItemOption[]>('/v1/admin/vouchers/items');
   }
 
   async create(input: NewVouchers): Promise<Voucher[]> {

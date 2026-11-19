@@ -1,3 +1,4 @@
+import { InventoryModule } from '../inventory/inventory.module';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { RedisModule } from '../../redis/redis.module';
@@ -16,7 +17,7 @@ import { LegacyAdventureController } from './legacy-adventure.controller';
  * (DecisionStoryGenerator) y las partidas de los usuarios sobre ellas.
  */
 @Module({
-  imports: [PrismaModule, RedisModule, AiModule, BillingModule, GameDataModule, PetsModule],
+  imports: [InventoryModule, PrismaModule, RedisModule, AiModule, BillingModule, GameDataModule, PetsModule],
   controllers: [DecisionStoryController, AdminDecisionStoryController, LegacyAdventureController],
   providers: [DecisionStoryGenerator, DecisionStoryService],
   exports: [DecisionStoryGenerator, DecisionStoryService],

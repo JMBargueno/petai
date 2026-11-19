@@ -17,6 +17,13 @@ const DEFAULT_CLEAN_MAX_HYGIENE = 80;
 /** Por debajo de este intervalo (~36 s) el lazy tick no cambia nada. */
 const MIN_TICK_HOURS = 0.01;
 
+/** Nivel máximo de una mascota. */
+const MAX_LEVEL = 100;
+/** XP necesaria para pasar del nivel `level` al siguiente: round(100 · n^1.5). */
+export function xpForLevel(level: number): number {
+  return Math.round(100 * Math.pow(level, 1.5));
+}
+
 function hoursSinceTick(pet: { lastTickAt: Date | string }, now: Date): number {
   return (now.getTime() - new Date(pet.lastTickAt).getTime()) / (1000 * 60 * 60);
 }
@@ -265,6 +272,57 @@ export class PetsService {
     return updated;
   }
 
+  /**
+   * Usar cualquier objeto del inventario (spec 41, Mochila): reparte según el `kind` a la acción
+   * que ya existe para él. Así un cliente no tiene que saber qué ruta corresponde a cada objeto.
+   */
+  async useItem(userId: string, petId: string, itemId?: string) {
+    if (!itemId || typeof itemId !== 'string' || itemId.length > 64) {
+      throw new BadRequestException('itemId es obligatorio');
+    }
+    const item = await this.prisma.item.findUnique({ where: { id: itemId } });
+    if (!item) throw new NotFoundException('Objeto no encontrado');
+    switch (item.kind) {
+      case 'food':
+        return this.feed(userId, petId, itemId);
+      case 'medicine':
+        return this.heal(userId, petId, itemId);
+      case 'evolution':
+        if (itemId !== this.gameData.getBalance().evolution?.finalStageItemId) {
+          throw new BadRequestException('Este objeto no se puede usar');
+        }
+        return this.evolve(userId, petId);
+      case 'level_up':
+        return this.useLevelUpItem(userId, petId, itemId);
+      default:
+        throw new BadRequestException('Este objeto no se puede usar sobre la mascota');
+    }
+  }
+
+  /**
+   * Enhebrador y similares (`kind: level_up`, spec 41): sube `effects.levels` niveles y conserva la XP
+   * que la mascota llevaba dentro de su nivel. Pasa por `addXpInternal` con la XP exacta de cada
+   * nivel, así que puntos de combate, cambio de etapa y eventos `pet:level_up` son los de siempre.
+   */
+  async useLevelUpItem(userId: string, petId: string, itemId: string) {
+    const pet = await this.getPetById(userId, petId);
+    if (pet.level >= MAX_LEVEL) {
+      throw new BadRequestException('Tu Pockai ya está en el nivel máximo');
+    }
+    const candidate = await this.prisma.item.findUnique({ where: { id: itemId } });
+    const levels = Math.max(1, Math.floor(Number((candidate?.effects as any)?.levels) || 1));
+
+    await this.inventoryService.consumeItem(userId, itemId, 'level_up');
+
+    const target = Math.min(MAX_LEVEL, pet.level + levels);
+    let xpToGrant = 0;
+    for (let lv = pet.level; lv < target; lv++) xpToGrant += xpForLevel(lv);
+    // Como el umbral crece con el nivel, la XP que ya llevaba no encadena un nivel extra.
+    const updated = await this.addXpInternal(pet, xpToGrant);
+    this.realtimeGateway.emitPetUpdate(userId, updated);
+    return updated;
+  }
+
   /** Recompensa de actividades (minijuegos): XP, felicidad y coste de energía. */
   async applyActivityReward(
     userId: string,
@@ -476,9 +534,9 @@ export class PetsService {
     let levelChanged = false;
 
     // xp(n) = round(100 * n^1.5)
-    let neededXp = Math.round(100 * Math.pow(currentLevel, 1.5));
+    let neededXp = xpForLevel(currentLevel);
 
-    while (currentXp >= neededXp && currentLevel < 100) {
+    while (currentXp >= neededXp && currentLevel < MAX_LEVEL) {
       currentXp -= neededXp;
       currentLevel += 1;
       statPoints += 3; // 3 puntos de combate por nivel
@@ -488,7 +546,7 @@ export class PetsService {
       const reached = stageForLevel(currentLevel);
       if (STAGE_ORDER.indexOf(reached) > STAGE_ORDER.indexOf(stage as Stage)) stage = reached;
 
-      neededXp = Math.round(100 * Math.pow(currentLevel, 1.5));
+      neededXp = xpForLevel(currentLevel);
     }
 
     const updated = await this.prisma.pet.update({

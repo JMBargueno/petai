@@ -67,6 +67,7 @@ describe('RewardsService', () => {
         { id: 'gorro_nieve', name: 'Gorro de nieve', alreadyOwned: false },
         { id: 'capa', name: 'Capa', alreadyOwned: true },
       ],
+      items: [],
     });
     expect(res.chests).toHaveLength(2);
   });
@@ -143,5 +144,43 @@ describe('dominantReward', () => {
   it('una prenda que ya tenía solo manda si no llega nada más', () => {
     expect(dominantReward({ ...base, coins: 9, accessories: hat(true) })).toEqual({ reward: 'coins' });
     expect(dominantReward({ ...base, accessories: hat(true) })).toEqual({ reward: 'accessory' });
+  });
+});
+
+describe('Consumibles en recompensas (spec 41)', () => {
+  it('el esquema acepta objetos, une líneas repetidas y aplica topes', () => {
+    const r = rewardsSchema.parse({ items: [{ id: 'ether_threader', qty: 2 }, { id: 'ether_threader', qty: 3 }] });
+    expect(r.items).toEqual([{ id: 'ether_threader', qty: 5 }]);
+    expect(rewardsSchema.safeParse({ items: [{ id: 'apple', qty: 100 }] }).success).toBe(false);
+    expect(rewardsSchema.safeParse({ items: [{ id: 'apple', qty: 0 }] }).success).toBe(false);
+  });
+
+  it('apply suma los objetos al inventario, también los ocultos', async () => {
+    const { service, tx } = build();
+    tx.item = { findMany: jest.fn(async () => [{ id: 'origin_nectar', name: 'Néctar del Origen' }]) };
+    tx.inventoryItem.upsert = jest.fn(async () => ({}));
+    const res = await service.apply(tx, 'u1', rewardsSchema.parse({ items: [{ id: 'origin_nectar', qty: 2 }] }), 'admin_grant');
+    expect(tx.inventoryItem.upsert).toHaveBeenCalledWith({
+      where: { userId_itemId: { userId: 'u1', itemId: 'origin_nectar' } },
+      update: { qty: { increment: 2 } },
+      create: { userId: 'u1', itemId: 'origin_nectar', qty: 2 },
+    });
+    expect(res.granted.items).toEqual([{ id: 'origin_nectar', name: 'Néctar del Origen', qty: 2 }]);
+    expect(dominantReward(res.granted).reward).toBe('accessory');
+  });
+
+  it('apply rechaza un objeto que no está cargado en la base de datos', async () => {
+    const { service, tx } = build();
+    tx.item = { findMany: jest.fn(async () => []) };
+    await expect(service.apply(tx, 'u1', rewardsSchema.parse({ items: [{ id: 'nope', qty: 1 }] }), 'admin_grant')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('assertItems valida contra foods.json sin mirar la disponibilidad', () => {
+    const { service } = build();
+    (service as any).gameData.getFoods = () => [{ id: 'origin_nectar', availability: 'hidden' }, { id: 'apple' }];
+    expect(() => service.assertItems([{ id: 'origin_nectar' }, { id: 'apple' }])).not.toThrow();
+    expect(() => service.assertItems([{ id: 'zzz' }])).toThrow(BadRequestException);
   });
 });

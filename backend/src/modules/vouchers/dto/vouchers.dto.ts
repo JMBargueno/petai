@@ -8,6 +8,17 @@ export class RewardChestDto {
   @ApiProperty({ minimum: 1, maximum: REWARD_LIMITS.chestQty }) qty: number;
 }
 
+export class RewardItemDto {
+  @ApiProperty() id: string;
+  @ApiProperty({ minimum: 1, maximum: REWARD_LIMITS.itemQty }) qty: number;
+}
+
+class GrantedItemDto {
+  @ApiProperty() id: string;
+  @ApiProperty() name: string;
+  @ApiProperty() qty: number;
+}
+
 export class RewardsDto {
   @ApiProperty({ required: false, minimum: 0, maximum: REWARD_LIMITS.coins }) coins?: number;
   @ApiProperty({ required: false, minimum: 0, maximum: REWARD_LIMITS.gems }) gems?: number;
@@ -15,6 +26,7 @@ export class RewardsDto {
   proDays?: number;
   @ApiProperty({ required: false, type: [RewardChestDto] }) chests?: RewardChestDto[];
   @ApiProperty({ required: false, type: [String], description: 'Ids de prendas de accessories.json' }) accessories?: string[];
+  @ApiProperty({ required: false, type: () => [RewardItemDto], description: 'Consumibles de foods.json (también solo drop y ocultos)' }) items?: RewardItemDto[];
 }
 
 export class CreateVouchersDto {
@@ -80,6 +92,7 @@ export class GrantedRewardsDto {
   @ApiProperty({ nullable: true, type: String, format: 'date-time' }) proUntil: string | null;
   @ApiProperty({ type: [RewardChestDto] }) chests: RewardChestDto[];
   @ApiProperty({ type: [GrantedAccessoryDto] }) accessories: GrantedAccessoryDto[];
+  @ApiProperty({ type: [GrantedItemDto], required: false }) items?: GrantedItemDto[];
 }
 
 /** Respuesta del canje y del regalo, y payload del evento WebSocket `reward:received`. */
@@ -96,4 +109,12 @@ export class RewardAccessoryOptionDto {
   @ApiProperty() name: string;
   @ApiProperty() slot: string;
   @ApiProperty() rarity: string;
+}
+
+export class RewardItemOptionDto {
+  @ApiProperty() id: string;
+  @ApiProperty() name: string;
+  @ApiProperty({ description: 'food | medicine | evolution | level_up' }) kind: string;
+  @ApiProperty({ enum: ['shop', 'drop', 'hidden'] }) availability: string;
+  @ApiProperty() description: string;
 }

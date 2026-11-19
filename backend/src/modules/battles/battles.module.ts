@@ -1,3 +1,4 @@
+import { InventoryModule } from '../inventory/inventory.module';
 import { Module } from '@nestjs/common';
 import { BattlesController } from './battles.controller';
 import { BattlesService } from './battles.service';
@@ -8,7 +9,7 @@ import { BondingModule } from '../bonding/bonding.module';
 import { HabitatModule } from '../habitat/habitat.module';
 
 @Module({
-  imports: [PetsModule, GameDataModule, BondingModule, HabitatModule],
+  imports: [InventoryModule, PetsModule, GameDataModule, BondingModule, HabitatModule],
   controllers: [BattlesController],
   providers: [BattlesService, LeaderboardService],
   exports: [BattlesService, LeaderboardService],

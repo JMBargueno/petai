@@ -329,7 +329,8 @@
   async function loadInitialData() {
     try {
       const catalog = await api.getCatalog();
-      shopItems = catalog.foods || [];
+      // Spec 41: lo que es solo drop (cofres y actividades) u oculto (solo admin) no se vende
+      shopItems = (catalog.foods || []).filter((f: any) => (f.availability ?? 'shop') === 'shop');
 
       if (getAccessToken()) {
         user = await api.getMe();

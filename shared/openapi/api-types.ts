@@ -1159,6 +1159,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/pets/{id}/use-item": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Usar un objeto del inventario sobre la mascota (comida, medicina, evolución o subida de nivel) */
+        post: operations["PetsController_useItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pets/{id}/heal": {
         parameters: {
             query?: never;
@@ -4437,6 +4454,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/vouchers/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consumibles que se pueden incluir en un voucher o regalo (foods.json, también los de solo drop y los ocultos) */
+        get: operations["AdminVouchersController_items"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/vouchers/{id}/revoke": {
         parameters: {
             query?: never;
@@ -5881,6 +5915,10 @@ export interface components {
             type: "bronze" | "silver" | "gold" | "diamond" | "mythic";
             qty: number;
         };
+        RewardItemDto: {
+            id: string;
+            qty: number;
+        };
         RewardsDto: {
             coins?: number;
             gems?: number;
@@ -5889,6 +5927,8 @@ export interface components {
             chests?: components["schemas"]["RewardChestDto"][];
             /** @description Ids de prendas de accessories.json */
             accessories?: string[];
+            /** @description Consumibles de foods.json (también solo drop y ocultos) */
+            items?: components["schemas"]["RewardItemDto"][];
         };
         VoucherCreatorDto: {
             id: string;
@@ -5925,6 +5965,15 @@ export interface components {
             slot: string;
             rarity: string;
         };
+        RewardItemOptionDto: {
+            id: string;
+            name: string;
+            /** @description food | medicine | evolution | level_up */
+            kind: string;
+            /** @enum {string} */
+            availability: "shop" | "drop" | "hidden";
+            description: string;
+        };
         CreateVouchersDto: {
             /**
              * @description Código personalizado (si falta, se generan `count` aleatorios)
@@ -5957,6 +6006,11 @@ export interface components {
             /** @description Ya la tenía: no se ha dado otra */
             alreadyOwned: boolean;
         };
+        GrantedItemDto: {
+            id: string;
+            name: string;
+            qty: number;
+        };
         GrantedRewardsDto: {
             coins: number;
             gems: number;
@@ -5965,6 +6019,7 @@ export interface components {
             proUntil: string | null;
             chests: components["schemas"]["RewardChestDto"][];
             accessories: components["schemas"]["GrantedAccessoryDto"][];
+            items?: components["schemas"]["GrantedItemDto"][];
         };
         RewardReceivedDto: {
             /** @enum {string} */
@@ -7580,6 +7635,25 @@ export interface operations {
         };
     };
     PetsController_evolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PetsController_useItem: {
         parameters: {
             query?: never;
             header?: never;
@@ -12990,6 +13064,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RewardAccessoryOptionDto"][];
+                };
+            };
+        };
+    };
+    AdminVouchersController_items: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardItemOptionDto"][];
                 };
             };
         };

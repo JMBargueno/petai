@@ -96,7 +96,8 @@
           res.status === 'completed'
             ? `¡Mazmorra superada! +${res.xp ?? 0} XP, +${res.coins ?? 0} monedas` +
               (res.buff ? ` · bonificación ×${(1 + res.buff.multiplier).toFixed(2)} durante 24 h` : '') +
-              (res.predictionBonus ? ' · ¡predicción acertada!' : '')
+              (res.predictionBonus ? ' · ¡predicción acertada!' : '') +
+              (res.bonusItem ? ` · ¡Ha caído ${res.bonusItem.name}! Está en tu Mochila.` : '')
             : `Te has quedado sin corazones en el piso ${res.floor + 1}.` +
               (res.xp ? ` +${res.xp} XP, +${res.coins ?? 0} monedas` : '');
         await loadBuff();

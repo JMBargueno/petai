@@ -1,3 +1,4 @@
+import { InventoryModule } from '../inventory/inventory.module';
 import { Module } from '@nestjs/common';
 import { MinigamesService } from './minigames.service';
 import { MinigamesController } from './minigames.controller';
@@ -6,7 +7,7 @@ import { GameDataModule } from '../game-data/game-data.module';
 import { BondingModule } from '../bonding/bonding.module';
 
 @Module({
-  imports: [PetsModule, GameDataModule, BondingModule],
+  imports: [InventoryModule, PetsModule, GameDataModule, BondingModule],
   controllers: [MinigamesController],
   providers: [MinigamesService],
 })

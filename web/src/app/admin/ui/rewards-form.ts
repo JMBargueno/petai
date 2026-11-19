@@ -1,9 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, input, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CHEST_LABELS, CHEST_TYPES, type AccessoryOption, type ChestType, type Rewards } from '../data/vouchers-http';
+import { CHEST_LABELS, CHEST_TYPES, type AccessoryOption, type ChestType, type ItemOption, type Rewards } from '../data/vouchers-http';
+
+const ITEM_GROUPS: { key: ItemOption['availability']; label: string }[] = [
+  { key: 'shop', label: 'Tienda' },
+  { key: 'drop', label: 'Solo drop' },
+  { key: 'hidden', label: 'Ocultos (solo admin)' },
+];
 
 /**
- * Campos de un paquete de recompensas (monedas, gemas, días Pro, cofres y prendas). Lo comparten el
+ * Campos de un paquete de recompensas (monedas, gemas, días Pro, cofres, objetos y prendas). Lo comparten el
  * alta de vouchers y «Dar recompensa» en Usuarios. Va dentro del `<form>` de quien lo usa.
  */
 @Component({
@@ -40,6 +46,26 @@ import { CHEST_LABELS, CHEST_TYPES, type AccessoryOption, type ChestType, type R
       padding: 4px;
       border: 1px solid var(--line-soft);
       border-radius: 8px;
+    }
+    .items {
+      display: grid;
+      gap: 8px;
+      max-block-size: 260px;
+      overflow: auto;
+      padding: 4px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+    }
+    .items h4 {
+      margin: 4px 0 0;
+      font-size: 0.875em;
+      opacity: 0.8;
+    }
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr 80px;
+      align-items: center;
+      gap: 8px;
     }
     .hint {
       margin: 0;
@@ -84,6 +110,23 @@ import { CHEST_LABELS, CHEST_TYPES, type AccessoryOption, type ChestType, type R
     </fieldset>
 
     <fieldset>
+      <legend>Objetos ({{ itemCount() }})</legend>
+      <div class="items" role="group" aria-label="Objetos">
+        @for (g of itemGroups(); track g.key) {
+          <h4>{{ g.label }}</h4>
+          @for (it of g.items; track it.id) {
+            <div class="item-row">
+              <label [for]="uid + '-item-' + it.id" [title]="it.description">{{ it.name }} <small>· {{ it.id }}</small></label>
+              <input class="input" [id]="uid + '-item-' + it.id" [name]="uid + '-item-' + it.id" type="number" min="0" max="99" step="1" [ngModel]="itemQty(it.id)" (ngModelChange)="setItem(it.id, $event)" />
+            </div>
+          }
+        } @empty {
+          <p class="hint">Cargando objetos…</p>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset>
       <legend>Prendas ({{ value().accessories.length }})</legend>
       <label>
         <span class="visually-hidden">Buscar prendas</span>
@@ -109,6 +152,8 @@ export class RewardsForm {
 
   readonly value = model.required<Rewards>();
   readonly accessories = input<AccessoryOption[]>([]);
+  /** Consumibles de foods.json (spec 41): también los de solo drop y los ocultos. */
+  readonly items = input<ItemOption[]>([]);
   readonly canGrantPro = input(false);
 
   protected readonly chestTypes = CHEST_TYPES;
@@ -119,6 +164,23 @@ export class RewardsForm {
     const list = this.accessories();
     return q ? list.filter((a) => a.name.toLowerCase().includes(q) || a.id.includes(q)) : list;
   });
+
+  protected readonly itemGroups = computed(() =>
+    ITEM_GROUPS.map((g) => ({ ...g, items: this.items().filter((i) => (i.availability ?? 'shop') === g.key) })).filter((g) => g.items.length),
+  );
+  protected readonly itemCount = computed(() => (this.value().items ?? []).reduce((n, i) => n + i.qty, 0));
+
+  protected itemQty(id: string) {
+    return (this.value().items ?? []).find((i) => i.id === id)?.qty ?? 0;
+  }
+
+  protected setItem(id: string, raw: unknown) {
+    const qty = Math.min(99, toInt(raw));
+    this.value.update((v) => {
+      const rest = (v.items ?? []).filter((i) => i.id !== id);
+      return { ...v, items: qty > 0 ? [...rest, { id, qty }] : rest };
+    });
+  }
 
   protected set(key: 'coins' | 'gems' | 'proDays', raw: unknown) {
     this.value.update((v) => ({ ...v, [key]: toInt(raw) }));

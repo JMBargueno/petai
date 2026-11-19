@@ -56,6 +56,7 @@ model User {
   activePetId    String?
   eggs           Egg[]
   inventory      InventoryItem[]
+  dailyItemDrops DailyItemDrop[]
   pityCounter    PityCounter?
   aiConfig       AiConfig?
   reminders      Reminder[]
@@ -415,6 +416,8 @@ model Item {
   effects     Json
   priceCoins  Int      @default(0)
   priceGems   Int      @default(0)
+  /// shop: se vende · drop: solo cofres/actividades · hidden: solo lo da el admin (spec 41)
+  availability String  @default("shop")
 
   inventory   InventoryItem[]
 }
@@ -428,6 +431,18 @@ model InventoryItem {
   qty       Int      @default(1)
 
   @@unique([userId, itemId])
+}
+
+/// Cuántas unidades de un objeto ha soltado una actividad a un usuario en un día UTC (tope de activityDrops, spec 41).
+model DailyItemDrop {
+  id      String @id @default(uuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId  String
+  day     String // YYYY-MM-DD (UTC)
+  count   Int    @default(0)
+
+  @@unique([userId, itemId, day])
 }
 
 model MinigameSession {

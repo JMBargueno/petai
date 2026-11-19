@@ -448,6 +448,37 @@ const foodIds = new Set(foods.map(f => f.id));
 if (foodIds.size !== foods.length) {
   throw new Error('IDs de alimentos duplicados en foods.json');
 }
+// Disponibilidad (spec 41): shop | drop | hidden. Lo oculto solo lo da el admin: nunca cae.
+{
+  const AVAIL = ['shop', 'drop', 'hidden'];
+  const byId = new Map(foods.map((f) => [f.id, f]));
+  const sources = [];
+  for (const [type, chest] of Object.entries(balance.chests ?? {})) for (const d of chest?.dropTable ?? []) sources.push([`chests.${type}`, d.itemId]);
+  for (const [id, g] of Object.entries(balance.minigames?.games ?? {})) if (g?.itemDrop?.itemId) sources.push([`minigames.${id}.itemDrop`, g.itemDrop.itemId]);
+  for (const id of balance.personality?.autonomy?.itemFind?.items ?? []) sources.push(['autonomy.itemFind', id]);
+  for (const [src, list] of Object.entries(balance.activityDrops?.sources ?? {})) {
+    for (const d of list ?? []) {
+      sources.push([`activityDrops.${src}`, d.itemId]);
+      if (!(d.chance > 0 && d.chance <= 1)) throw new Error(`activityDrops.${src}: chance de ${d.itemId} debe estar en (0, 1]`);
+    }
+  }
+  for (const [id, cap] of Object.entries(balance.activityDrops?.dailyCaps ?? {})) {
+    if (!byId.has(id)) throw new Error(`activityDrops.dailyCaps: ${id} no existe en foods.json`);
+    if (!(Number.isInteger(cap) && cap >= 0)) throw new Error(`activityDrops.dailyCaps.${id} debe ser un entero ≥ 0`);
+  }
+  for (const [where, id] of sources) {
+    const f = byId.get(id);
+    if (!f) throw new Error(`${where}: ${id} no existe en foods.json`);
+    if (f.availability === 'hidden') throw new Error(`${where}: ${id} es un objeto oculto (solo admin) y no puede caer`);
+  }
+  for (const f of foods) {
+    const av = f.availability ?? 'shop';
+    if (!AVAIL.includes(av)) throw new Error(`${f.id}: availability "${av}" no es shop, drop ni hidden`);
+    if (av !== 'shop' && (f.priceCoins > 0 || f.priceGems > 0)) throw new Error(`${f.id}: un objeto ${av} no se vende y debe tener precio 0`);
+    if (av === 'drop' && !sources.some(([, id]) => id === f.id)) console.warn(`⚠ ${f.id} es solo drop pero no cae en ninguna parte`);
+    if (f.kind === 'level_up' && !(Number.isInteger(f.effects?.levels) && f.effects.levels >= 1)) throw new Error(`${f.id}: level_up necesita effects.levels entero ≥ 1`);
+  }
+}
 console.log(`✓ foods.json: ${foods.length} alimentos validados`);
 
 // 3. Validar especies

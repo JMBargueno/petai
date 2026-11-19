@@ -22,6 +22,7 @@ function build() {
       if (r.proDays > 0 && actor.role !== 'superadmin') throw new ForbiddenException();
     }),
     assertAccessories: jest.fn(),
+    assertItems: jest.fn(),
     apply: jest.fn(async () => ({ granted, chests: [] })),
     announce: jest.fn(async () => undefined),
   };

@@ -6,7 +6,7 @@ import { bulkPriceSchema, updateItemPriceSchema } from './admin.schemas';
 
 type Actor = { id: string };
 
-const ITEM_SELECT = { id: true, kind: true, name: true, description: true, priceCoins: true, priceGems: true } as const;
+const ITEM_SELECT = { id: true, kind: true, name: true, description: true, priceCoins: true, priceGems: true, availability: true } as const;
 
 /**
  * Catálogo para el panel: precios de la tienda (tabla `Item`, la que cobra `InventoryService.buyItem`)

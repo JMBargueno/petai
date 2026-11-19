@@ -855,6 +855,11 @@ export const api = {
     return minigameRequest<{ habits: number; stored: boolean }>('POST', `/v1/pets/${petId}/context-digest`, body);
   },
 
+  /** Usa cualquier objeto del inventario sobre la mascota (comida, medicina, evolución, Enhebrador…). */
+  async usePetItem(petId: string, itemId: string) {
+    return minigameRequest<any>('POST', `/v1/pets/${petId}/use-item`, { itemId });
+  },
+
   async evolvePet(petId: string) {
     return minigameRequest<any>('POST', `/v1/pets/${petId}/evolve`);
   },
@@ -1245,6 +1250,8 @@ export interface TrainingSubmit {
   predictionBonus?: boolean;
   xp?: number;
   coins?: number;
+  /** Objeto que soltó la mazmorra al completarla (spec 41). */
+  bonusItem?: { itemId: string; name: string; qty: number };
 }
 
 export interface TrainingBuff {
@@ -1353,6 +1360,8 @@ export interface StoryAnswer {
   community: { counts: number[]; total: number };
   next: StoryScene | null;
   completed: StoryResult | null;
+  /** Objeto que soltó la aventura al terminarla (spec 41). */
+  bonusItem?: { itemId: string; name: string; qty: number } | null;
 }
 
 export interface StoryHistoryEntry {
@@ -1447,6 +1456,8 @@ export interface BattleResponse {
   opponent: { name: string; speciesId: string; element: string; level: number; isBot: boolean; ownerName: string | null };
   elo: { before: number; after: number; delta: number; league: CombatProfile['league'] };
   rewards: { xp: number; coins: number; happiness: number; energyCost: number };
+  /** Objeto que soltó la victoria (spec 41), p. ej. un Enhebrador. */
+  bonusItem?: { itemId: string; name: string; qty: number } | null;
   replay: any;
   pet: any;
 }
