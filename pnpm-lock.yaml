@@ -499,6 +499,9 @@ importers:
 
   shared/minigames:
     dependencies:
+      '@pockai/audio':
+        specifier: workspace:*
+        version: link:../audio
       '@pockai/scene':
         specifier: workspace:*
         version: link:../scene

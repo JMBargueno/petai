@@ -5,6 +5,7 @@ import { TICKS_PER_SECOND } from './core/types';
 import { createPetActor, type PetSheetResolver } from './pet';
 import type { MinigameEvent, MinigamePet } from './protocol';
 import { getMinigame } from './registry';
+import { createViewSound, MG, type MinigameSound } from './sound';
 import { ensureStyles } from './styles';
 import { button, el } from './views/types';
 
@@ -20,6 +21,8 @@ export interface MountOptions {
   pet?: MinigamePet;
   /** De dónde salen las hojas de la mascota. Sin él, el juego funciona sin mascota a la vista. */
   resolvePetSheet?: PetSheetResolver;
+  /** Motor de sonido del anfitrión (spec 40). Sin él, el juego es mudo. */
+  sound?: MinigameSound;
   onEvent: (event: MinigameEvent) => void;
 }
 
@@ -57,6 +60,7 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
   });
   const view = entry.createView();
   const pet = createPetActor(doc, opts.pet, opts.resolvePetSheet);
+  const sfx = createViewSound(opts.sound);
 
   const root = el('div', `pmg pmg--${entry.id}${opts.reducedMotion ? ' pmg--reduced' : ''}`);
   const hud = el('div', 'pmg-hud');
@@ -71,12 +75,13 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
   overlay.append(el('strong', '', 'En pausa'), resumeBtn);
   root.append(hud, stage);
   host.append(root);
-  view.mount(stage, { push: (i) => !paused && runner.push(i), reducedMotion: !!opts.reducedMotion, pet }, runner.state);
+  view.mount(stage, { push: (i) => !paused && runner.push(i), reducedMotion: !!opts.reducedMotion, pet, sfx }, runner.state);
   stage.append(overlay);
 
   let raf = 0;
   let last = 0;
   let lastScore = -1;
+  let lastLeft = -1;
   let done = false;
   let paused = false;
   let pauseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -87,6 +92,11 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
     const left = Math.max(0, Math.ceil((durationTicks - runner.tick) / TICKS_PER_SECOND));
     const timeText = `⏱ ${left} s`;
     if (time.textContent !== timeText) time.textContent = timeText;
+    // Los últimos 5 segundos avisan, uno por segundo (no al pintar el primer frame).
+    if (left !== lastLeft) {
+      if (lastLeft >= 0 && left > 0 && left <= 5 && !runner.over()) sfx.play(MG.timerWarning);
+      lastLeft = left;
+    }
     const st = view.status(runner.state);
     if (status.textContent !== st) status.textContent = st;
     const score = runner.score();
@@ -101,6 +111,7 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
     done = true;
     cancelAnimationFrame(raf);
     if (pauseTimer) clearTimeout(pauseTimer);
+    sfx.stopAll();
     opts.onEvent({
       type: 'finished',
       gameId: entry.id,
@@ -126,6 +137,8 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
     if (done || paused) return;
     paused = true;
     cancelAnimationFrame(raf);
+    sfx.stopAll();
+    sfx.play(MG.pause);
     overlay.hidden = false;
     opts.onEvent({ type: 'paused', paused: true });
     pauseTimer = setTimeout(finish, MAX_PAUSE_MS);
@@ -164,6 +177,7 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
         doc.removeEventListener('visibilitychange', onVisibility);
       }
       view.dispose();
+      sfx.stopAll();
       pet.dispose();
       root.remove();
     },

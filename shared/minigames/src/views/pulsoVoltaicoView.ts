@@ -1,5 +1,6 @@
 import { applyBackdrop, piece, pieceUrl } from '../assets';
 import { PULSO as P, type PulsoState } from '../games/pulsoVoltaico';
+import { MG } from '../sound';
 import { button, el, on, pct, typing, type GameView, type ViewContext } from './types';
 
 const GAME = 'pulso_voltaico';
@@ -20,6 +21,8 @@ export function createPulsoVoltaicoView(): GameView<PulsoState> {
   let feedback: HTMLElement;
   let ctx: ViewContext;
   let seenEvent = -1;
+  let beat = -1;
+  let combo = 0;
   const notes = new Map<number, HTMLElement>();
   const nodes: HTMLElement[] = [];
   const pads: HTMLButtonElement[] = [];
@@ -98,6 +101,12 @@ export function createPulsoVoltaicoView(): GameView<PulsoState> {
           notes.delete(i);
         }
       }
+      // Metrónomo sintetizado, exacto al tempo de la partida (un pulso por negra).
+      const nowBeat = Math.floor((s.tick * s.bpm) / 3600);
+      if (nowBeat !== beat) {
+        beat = nowBeat;
+        ctx.sfx.play(MG.pulsoVoltaico.metronome, { step: nowBeat });
+      }
       const recent = s.last && s.tick - s.last.tick < 30 ? s.last : null;
       const text = recent ? GRADE_TEXT[recent.grade] : '';
       if (feedback.textContent !== text) feedback.textContent = text;
@@ -106,6 +115,12 @@ export function createPulsoVoltaicoView(): GameView<PulsoState> {
       if (s.last && s.last.tick !== seenEvent) {
         seenEvent = s.last.tick;
         ctx.pet.play(s.last.grade === 'perfect' ? 'happy' : s.last.grade === 'good' ? 'attack' : 'hit', { once: true });
+        const pan = (s.last.lane - 1) * 0.5;
+        ctx.sfx.play({ perfect: MG.pulsoVoltaico.perfect, good: MG.pulsoVoltaico.good, miss: MG.pulsoVoltaico.miss }[s.last.grade], { pan });
+        // La racha sube de tono cada 4 aciertos; al romperse una racha larga, se oye caer.
+        if (s.combo > 0 && s.combo % 4 === 0) ctx.sfx.play(MG.streak, { step: s.combo / 4 });
+        if (s.combo === 0 && combo >= 4) ctx.sfx.play(MG.pulsoVoltaico.comboBreak);
+        combo = s.combo;
       }
     },
     status: (s) => `★ ${s.score} · racha ${s.combo} · ${s.bpm} BPM`,
