@@ -3,7 +3,7 @@ import { navPages } from '../shared/layout/nav-pages';
 import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
 import { SeoService } from '../shared/seo/seo.service';
-import { SITE_NAME, pageUrl } from '../site.config';
+import { OG_IMAGE, SITE_NAME, pageUrl } from '../site.config';
 import site from '../site.json';
 import { WEB_CLIENT_HEADERS } from '../shared/auth/api';
 
@@ -299,6 +299,8 @@ export class Contact {
       title,
       description,
       path: 'contact',
+      image: OG_IMAGE('contact'),
+      imageAlt: $localize`:@@contact.meta.imageAlt:Axolunar saluda al equipo de Pockai junto a un sobre`,
       jsonLd: [
         { '@context': 'https://schema.org', '@type': 'ContactPage', '@id': `${url}#webpage`, name: title, description, url, inLanguage: this.locale },
         {

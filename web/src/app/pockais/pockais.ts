@@ -7,7 +7,7 @@ import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
 import { SectionToc, TocSection } from '../shared/layout/section-toc';
 import { SeoService } from '../shared/seo/seo.service';
-import { SITE_NAME, pageUrl } from '../site.config';
+import { OG_IMAGE, SITE_NAME, pageUrl } from '../site.config';
 
 /** Especies iniciales, cómo evolucionan, rarezas y patrones: todo lo que puede salir de un huevo, en una página. */
 @Component({
@@ -88,6 +88,8 @@ export class Pockais {
       title,
       description,
       path: 'pockais',
+      image: OG_IMAGE('pockais'),
+      imageAlt: $localize`:@@pockais.meta.imageAlt:Los pockais por rareza: una mítica, una rara, una súper rara y dos legendarias`,
       jsonLd: [
         { '@context': 'https://schema.org', '@type': 'WebPage', '@id': `${url}#webpage`, name: title, description, url, inLanguage: this.locale },
         {

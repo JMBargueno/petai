@@ -49,10 +49,10 @@ describe('SeoService', () => {
     expect(head().querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, follow');
   });
 
-  it('rellena Open Graph y Twitter con la imagen por defecto del idioma', () => {
+  it('rellena Open Graph y Twitter con la imagen por defecto', () => {
     TestBed.inject(SeoService).set({ title: 'Título', description: 'd', path: '' });
     const prop = (p: string) => head().querySelector(`meta[property="${p}"]`)?.getAttribute('content');
-    expect(prop('og:image')).toBe(`${SITE_URL}/og/home-es.png`);
+    expect(prop('og:image')).toBe(`${SITE_URL}/og/home-v2.png`);
     expect(prop('og:locale')).toBe('es_ES');
     expect(prop('og:locale:alternate')).toBe('en_US');
     expect(head().querySelector('meta[name="twitter:card"]')?.getAttribute('content')).toBe('summary_large_image');

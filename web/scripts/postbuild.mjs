@@ -1,5 +1,7 @@
 // Completa la salida estática de `ng build`:
-//  1. index.html en la raíz que redirige a /es/ o /en/ según el idioma del navegador.
+//  1. index.html en la raíz que redirige a /es/ o /en/ según el idioma del navegador, con las
+//     etiquetas Open Graph / Twitter: los rastreadores de las redes no ejecutan la redirección y es
+//     la URL que más se comparte (pockai.world a secas).
 //  2. Copias del shell CSR en cada ruta del panel, para que /es/admin/… abra en cualquier
 //     hosting estático sin reglas de reescritura.
 //     Igual para las páginas públicas que solo se renderizan en el cliente (CLIENT_ROUTES).
@@ -19,7 +21,45 @@ const LOCALES = site.locales;
 const ADMIN_LOCALE = 'es';
 // Páginas públicas sin prerender (leen parámetros de la URL, p. ej. ?token=): shell CSR en cada idioma.
 const CLIENT_ROUTES = ['verify-email', 'login', 'register', 'forgot-password', 'account'];
+const OG_VERSION = site.ogVersion;
 const ADMIN_ROUTES = ['', 'login', 'resumen', 'precios', 'eventos', 'usuarios', 'invitaciones', 'vouchers', 'sitio', 'correos', 'pockais', 'facturacion', 'registro'];
+
+const escapeAttr = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+/** Etiquetas sociales (las mismas que escribe SeoService en las páginas prerenderizadas). */
+function socialTags({ url, title, description, image = 'home', imageAlt, locale = 'es' }) {
+  const img = `${SITE_URL}/og/${image}-v${OG_VERSION}.png`;
+  const ogLocale = { es: 'es_ES', en: 'en_US' };
+  const meta = [
+    ['name', 'description', description],
+    ['property', 'og:site_name', SITE_NAME],
+    ['property', 'og:title', title],
+    ['property', 'og:description', description],
+    ['property', 'og:type', 'website'],
+    ['property', 'og:url', url],
+    ['property', 'og:image', img],
+    ['property', 'og:image:type', 'image/png'],
+    ['property', 'og:image:width', '1200'],
+    ['property', 'og:image:height', '630'],
+    ['property', 'og:image:alt', imageAlt],
+    ['property', 'og:locale', ogLocale[locale] ?? 'es_ES'],
+    ['name', 'twitter:card', 'summary_large_image'],
+    ['name', 'twitter:site', '@pockais'],
+    ['name', 'twitter:title', title],
+    ['name', 'twitter:description', description],
+    ['name', 'twitter:image', img],
+    ['name', 'twitter:image:alt', imageAlt],
+  ];
+  return meta.map(([k, n, v]) => `<meta ${k}="${n}" content="${escapeAttr(v)}" />`).join('\n    ');
+}
+
+// Título, descripción y alt de la home de cada idioma: los mismos textos traducidos de la landing.
+const HOME_META = Object.fromEntries(
+  LOCALES.map((l) => {
+    const t = JSON.parse(readFileSync(join(web, 'src', 'locale', `messages.${l}.json`), 'utf8')).translations;
+    return [l, { title: t['meta.title'], description: t['meta.description'], imageAlt: t['meta.imageAlt'] }];
+  }),
+);
 
 for (const locale of LOCALES) {
   if (!existsSync(join(out, locale, 'index.html'))) {
@@ -33,8 +73,10 @@ writeFileSync(
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>Pockai</title>
+    <title>${escapeAttr(HOME_META.es.title)}</title>
     <meta name="robots" content="noindex" />
+    <link rel="canonical" href="${SITE_URL}/es/" />
+    ${socialTags({ url: `${SITE_URL}/`, ...HOME_META.es })}
     <script>
       location.replace((navigator.language || 'es').toLowerCase().startsWith('es') ? '/es/' : '/en/');
     </script>
@@ -57,10 +99,16 @@ for (const route of ADMIN_ROUTES) {
 for (const locale of LOCALES) {
   const localeShell = join(out, locale, 'index.csr.html');
   if (!existsSync(localeShell)) throw new Error(`postbuild: falta ${locale}/index.csr.html`);
+  const shellHtml = readFileSync(localeShell, 'utf8');
+  const home = HOME_META[locale] ?? HOME_META.es;
   for (const route of CLIENT_ROUTES) {
     const dir = join(out, locale, route);
     mkdirSync(dir, { recursive: true });
-    copyFileSync(localeShell, join(dir, 'index.html'));
+    // El shell no lleva etiquetas sociales: sin ellas, un enlace a /login o /register sale sin imagen.
+    const tags = shellHtml.includes('property="og:image"')
+      ? ''
+      : `    ${socialTags({ url: `${SITE_URL}/${locale}/${route}`, ...home, locale })}\n`;
+    writeFileSync(join(dir, 'index.html'), shellHtml.replace('</head>', `${tags}</head>`));
   }
 }
 

@@ -5,7 +5,7 @@ import { NavLink, SiteHeader } from '../shared/layout/site-header';
 import { SiteFooter } from '../shared/layout/site-footer';
 import { SectionToc, TocSection } from '../shared/layout/section-toc';
 import { SeoService } from '../shared/seo/seo.service';
-import { SITE_NAME, pageUrl } from '../site.config';
+import { OG_IMAGE, SITE_NAME, pageUrl } from '../site.config';
 
 /** La Arena a fondo, en su propia página (antes era una banda más de la home). */
 @Component({
@@ -77,6 +77,8 @@ export class Arena {
       title,
       description,
       path: 'arena',
+      image: OG_IMAGE('arena'),
+      imageAlt: $localize`:@@arena.meta.imageAlt:Dos pockais frente a frente en la Arena: fuego contra agua`,
       jsonLd: [
         { '@context': 'https://schema.org', '@type': 'WebPage', '@id': `${url}#webpage`, name: title, description, url, inLanguage: this.locale },
         {
