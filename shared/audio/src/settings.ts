@@ -9,6 +9,8 @@ export interface AudioSettings {
   enabled: boolean;
   /** Volumen general, 0–1. */
   master: number;
+  /** Cada tipo de sonido encendido o apagado (Ajustes › Sonido). */
+  busOn: Record<Bus, boolean>;
   /** Volumen por bus, 0–1. */
   buses: Record<Bus, number>;
   /** Silencio total cuando la app no tiene el foco (también la mascota del escritorio). */
@@ -30,6 +32,7 @@ export function defaultAudioSettings(platform: AudioPlatform = 'web'): AudioSett
   return {
     enabled: true,
     master: desktop ? 0.6 : 0.8,
+    busOn: { ui: true, sfx: true, pet: true, ambient: true, music: true },
     buses: { ...BUS_DEFAULTS, pet: desktop ? 0.5 : BUS_DEFAULTS.pet },
     muteWhenUnfocused: false,
     reduced: false,
@@ -58,9 +61,13 @@ export function parseAudioSettings(raw: unknown, platform: AudioPlatform = 'web'
   const rb = (r.buses && typeof r.buses === 'object' ? r.buses : {}) as Record<string, unknown>;
   const buses = {} as Record<Bus, number>;
   for (const b of BUSES) buses[b] = unit(rb[b], d.buses[b]);
+  const ro = (r.busOn && typeof r.busOn === 'object' ? r.busOn : {}) as Record<string, unknown>;
+  const busOn = {} as Record<Bus, boolean>;
+  for (const b of BUSES) busOn[b] = bool(ro[b], d.busOn[b]);
   return {
     enabled: bool(r.enabled, d.enabled),
     master: unit(r.master, d.master),
+    busOn,
     buses,
     muteWhenUnfocused: bool(r.muteWhenUnfocused, d.muteWhenUnfocused),
     reduced: bool(r.reduced, d.reduced),
@@ -88,6 +95,7 @@ export interface AudioEnv {
 export function effectiveBusGain(s: AudioSettings, bus: Bus, env: AudioEnv): number {
   if (!s.enabled || !env.visible) return 0;
   if (s.muteWhenUnfocused && !env.focused) return 0;
+  if (!s.busOn[bus]) return 0;
   if (env.surface === 'desktop') {
     // Fuera de la app no hay interfaz que oír; la mascota y sus efectos, si se permite.
     if (bus === 'ui' || bus === 'music') return 0;

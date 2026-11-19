@@ -51,7 +51,7 @@ object UiSounds {
     }
 
     fun setPrefs(prefs: AudioPrefs) {
-        gain = if (prefs.enabled) (prefs.master * prefs.ui).coerceIn(0f, 1f) else 0f
+        gain = if (prefs.enabled && prefs.uiOn) (prefs.master * prefs.ui).coerceIn(0f, 1f) else 0f
     }
 
     /** Dispara un sonido de interfaz (`ui.tap`, `ui.tab`…). Ignora ráfagas de menos de 60 ms. */

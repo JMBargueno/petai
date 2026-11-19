@@ -34,8 +34,8 @@
   import { setPetOnScreen } from '../lib/window-visibility';
   import Ico from './Ico.svelte';
   import EffectLayer from './EffectLayer.svelte';
-  import { EFFECTS, EffectPlayer, admitMoment, flowPalette, moodForBase, phasesOf, portalNexo, soundForClip, voiceForPet, type EffectDef, type FxPalette } from '@pockai/scene/effects';
-  import { sfx, sfxLoop, sfxStopLoop } from '../lib/audio';
+  import { EFFECTS, EffectPlayer, admitMoment, flowPalette, moodForBase, phasesOf, portalNexo, soundForClip, soundsForEffectPhase, voiceForPet, type FxPhase, type EffectDef, type FxPalette } from '@pockai/scene/effects';
+  import { sfx, sfxFirst, sfxLoop, sfxStopLoop } from '../lib/audio';
   import type { PlayOptions } from '@pockai/audio';
   import { registerTravelPresenter, travel, travelArrived, type TravelState } from '../lib/visitTravel';
   import { createRng, hashSeed, type Rng } from '@pockai/mind';
@@ -230,6 +230,17 @@
     const w = typeof window !== 'undefined' ? window.innerWidth || 800 : 800;
     const pan = ((posX + PET_SIZE / 2) / w) * 2 - 1;
     sfx(id, { ...voice, pan: pan * 0.6, ...extra });
+  }
+  /**
+   * Sonido de una fase de un efecto visual (portal, altar, capullo, logro…), con el panorama del sitio
+   * donde se dibuja. Suena aunque el Pockai esté fuera (el portal por el que vuelve, p. ej.).
+   */
+  function fxSound(effectId: string, phases: FxPhase[], phase: string, params: Record<string, string | number> = {}, at: { x: number } | null = null) {
+    const ids = soundsForEffectPhase(effectId, phases, phase, params);
+    if (!ids.length) return;
+    const w = typeof window !== 'undefined' ? window.innerWidth || 800 : 800;
+    const x = at?.x ?? posX + PET_SIZE / 2;
+    sfxFirst(ids, { pan: ((x / w) * 2 - 1) * 0.6 });
   }
   // Ronquido en bucle mientras duerme (y está a la vista).
   $: snoring = (isSleeping || baseState === 'sleep') && !petAway;
@@ -513,7 +524,9 @@
   }
 
   function launchPortal(spot: { x: number; y: number }, onHold: (p: EffectPlayer) => Promise<void>): void {
-    const player = new EffectPlayer(reducedMotion ? portalNexo.reducedPhases : portalNexo.phases, (phase) => {
+    const phases = reducedMotion ? portalNexo.reducedPhases : portalNexo.phases;
+    const player = new EffectPlayer(phases, (phase) => {
+      fxSound('portal-nexo', phases, phase, {}, spot);
       if (phase === 'hold') void onHold(player);
       if (phase === 'done') {
         portal = null;
@@ -622,7 +635,9 @@
     if (!verdict.play) return false;
     if (verdict.replace.length) moments = moments.filter((_, i) => !verdict.replace.includes(i));
     const id = ++momentSeq;
-    const player = new EffectPlayer(phasesOf(def, params, reducedMotion), (phase) => {
+    const phases = phasesOf(def, params, reducedMotion);
+    const player = new EffectPlayer(phases, (phase) => {
+      fxSound(effectId, phases, phase, params, opts.at ?? null);
       if (phase === 'hold') opts.onHold ? opts.onHold(player) : player.release(performance.now());
       if (phase === 'done') {
         moments = moments.filter((m) => m.id !== id);
@@ -642,7 +657,9 @@
     const def = EFFECTS[effectId];
     if (!def || petAway || fxHidden || minors.length >= MAX_MINORS) return;
     const id = ++momentSeq;
-    const player = new EffectPlayer(phasesOf(def, params, reducedMotion), (phase) => {
+    const phases = phasesOf(def, params, reducedMotion);
+    const player = new EffectPlayer(phases, (phase) => {
+      fxSound(effectId, phases, phase, params, at);
       if (phase === 'hold') player.release(performance.now());
       if (phase === 'done') minors = minors.filter((m) => m.id !== id);
     });
