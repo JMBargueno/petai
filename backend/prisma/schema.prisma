@@ -379,6 +379,7 @@ model Pet {
   tournamentEntries TournamentEntry[]
   // Feature 015: Cooking
   cookingSessions  CookingSession[]
+  combatBuffs      CombatBuff[]
 
   @@index([userId])
   @@index([speciesId])
@@ -932,6 +933,24 @@ model CookingSession {
   createdAt       DateTime  @default(now())
 
   @@index([userId, finishedAt])
+}
+
+/// Buff temporal de una stat de combate (hoy, la comida de la Cocina). Uno por mascota, stat y
+/// fuente: al cocinar otra vez se queda el mayor y se renueva la duración. El combate lo suma a la
+/// stat con tope (balance.cooking.buffCapPct).
+model CombatBuff {
+  id        String   @id @default(uuid())
+  petId     String
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  stat      String
+  value     Int
+  source    String
+  sourceId  String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([petId, stat, source])
+  @@index([petId, expiresAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

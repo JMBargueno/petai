@@ -388,6 +388,12 @@ const seasonProgress = { seasonId: 's-1', seasonName: season.name, currentTier: 
 // Aventura diaria: las historias semilla de game-data, jugables de verdad en la demo
 const storySeeds = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/story-seeds.json'), 'utf8')).stories as any[];
 const storyRewards = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/stories.json'), 'utf8')).rewards;
+// Cocina: las recetas de verdad; lo cocinado y los buffs viven mientras dure el servidor de la demo
+const mockRecipes = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/recipes.json'), 'utf8')) as any[];
+const mockMenu = () => mockRecipes.find((r) => r.dailyMenu && r.weekday === new Date().getUTCDay());
+let cookCurrent: any = null;
+const cookBest: Record<string, number> = {};
+let cookBuffs: { stat: string; value: number; source: string; sourceId: string; expiresAt: string }[] = [];
 const storyPlays: Record<string, { answers: number[]; status: string; outcome: string | null }> = {};
 const storyLimit = 3;
 const storyPublic = (scene: any, index: number) => ({ index, locationId: scene.locationId, narration: scene.narration, event: scene.event, choices: scene.choices.map((c: any) => ({ label: c.label, approach: c.approach })) });
@@ -566,15 +572,35 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/training\/active-buff$/, () => ({ active: true, buff: { petId: 'p-1', multiplier: 1.1, stats: ['atk'], expiresAt: iso(40 * MIN), remainingMs: 40 * MIN } })],
   ['POST', /^\/training\/start$/, ({ body }) => ({ sessionId: uid('tr'), petId: body.petId, seed: 7, hearts: 3, currentFloor: 1, floors: [1, 2, 3, 4, 5].map((floor) => ({ floor, enemyElement: ['plant', 'water', 'electric', 'shadow', 'light'][floor - 1], enemyName: ['Brotón', 'Marea', 'Chispazo', 'Penumbra', 'Fulgor'][floor - 1], enemyLevel: 4 + floor })) })],
   ['POST', /^\/training\/submit$/, ({ body }) => ({ floor: 1, result: 'advanced', enemyElement: 'plant', playerElement: body.element, multiplier: 1.5, hearts: 3, currentFloor: 2, status: 'active', predictionBonus: false })],
-  // Cocina (spec 15): la receta lleva comida de foods.json y la encimera añade un señuelo.
-  ['GET', /^\/cooking\/daily-menu$/, () => ({ date: iso().slice(0, 10), recipeId: 'elemental_brew', recipeName: 'Infusión de los Flujos', difficulty: 2, ingredients: ['sun_seed', 'sweet_coral', 'spicy_berry', 'spark_candy'], buff: { stat: 'def', value: 5 }, bonus: 'buff extra ×1.5 hoy' })],
-  ['POST', /^\/cooking\/start$/, () => ({ sessionId: uid('ck'), recipeId: 'elemental_brew', recipeName: 'Infusión de los Flujos', difficulty: 2, ingredients: ['sun_seed', 'sweet_coral', 'spicy_berry', 'spark_candy'], order: ['spicy_berry', 'apple', 'spark_candy', 'sun_seed', 'sweet_coral'], hotPotPositions: [1], durationSeconds: 60, seed: 42, expiresAt: iso(MIN) })],
+  // Cocina (spec 15): recetas de verdad de recipes.json; el menú es el del día de la semana (UTC).
+  ['GET', /^\/cooking\/daily-menu$/, () => { const m = mockMenu(); return { date: iso().slice(0, 10), recipeId: m.id, recipeName: m.name, description: m.description, weekday: m.weekday, difficulty: m.difficulty, ingredients: m.ingredients, buff: { stat: m.buff.stat, value: Math.round(m.buff.value * 1.5) }, bonus: 'buff ×1.5 hoy', nextReset: iso(12 * HOUR) }; }],
+  ['GET', /^\/cooking\/recipes/, () => mockRecipes.map((r: any) => { const today = !!r.dailyMenu && r.weekday === new Date().getUTCDay(); const available = r.dailyMenu ? today : r.unlockLevel <= 30; return { id: r.id, name: r.name, description: r.description ?? null, difficulty: r.difficulty, unlockLevel: r.unlockLevel, dailyMenu: !!r.dailyMenu, weekday: r.weekday ?? null, today, available, ingredients: available ? r.ingredients : null, buff: today ? { stat: r.buff.stat, value: Math.round(r.buff.value * 1.5) } : r.buff, best: cookBest[r.id] ?? null, perfect: (cookBest[r.id] ?? -1) >= r.ingredients.length }; })],
+  ['GET', /^\/cooking\/buffs/, () => cookBuffs],
+  ['POST', /^\/cooking\/start$/, ({ body }) => {
+    const r = (body?.recipeId ? mockRecipes.find((x: any) => x.id === body.recipeId) : null) ?? mockMenu();
+    cookCurrent = r;
+    const decoys = ['apple', 'cake', 'healthy_salad', 'spicy_berry', 'dawn_honey'].filter((d) => !r.ingredients.includes(d)).slice(0, Math.min(3, Math.ceil(r.difficulty / 2)));
+    const order = [...r.ingredients, ...decoys].sort((x, y) => (x < y ? -1 : 1));
+    const d = r.difficulty - 1;
+    return { sessionId: uid('ck'), recipeId: r.id, recipeName: r.name, recipeDescription: r.description ?? null, difficulty: r.difficulty, isDailyMenu: !!r.dailyMenu, ingredients: r.ingredients, order, hotPotPositions: r.difficulty > 1 ? [Math.min(2, r.ingredients.length - 1)] : [], revealMs: [900, 800, 700, 600, 500][d], durationSeconds: [45, 40, 35, 30, 25][d], hotPotWindowMs: [6000, 5000, 4500, 4000, 3500][d], seed: 42, expiresAt: iso(MIN) };
+  }],
   ['POST', /^\/cooking\/submit$/, ({ body }) => {
-    const recipe = ['sun_seed', 'sweet_coral', 'spicy_berry', 'spark_candy'];
+    const r = cookCurrent ?? mockMenu();
     const picked: string[] = Array.isArray(body?.picked) ? body.picked : [];
-    const ok = picked.filter((ing, k) => recipe[k] === ing).length;
-    const pct = Math.round((ok / recipe.length) * 100);
-    return { score: ok, buff: pct >= 75 ? { stat: 'def', value: pct >= 100 ? 5 : 3, durationMs: 24 * HOUR } : null, coins: Math.floor((ok / recipe.length) * 40), correctPct: pct };
+    const at: number[] = Array.isArray(body?.pickedAt) ? body.pickedAt : [];
+    // Aproximación de la alineación del servidor: avanza por la receta casando en orden.
+    const slots: string[] = r.ingredients.map(() => 'miss');
+    let j = 0;
+    r.ingredients.forEach((ing: string, i: number) => { const k = picked.indexOf(ing, j); if (k >= 0) { slots[i] = k > 0 && i === Math.min(2, r.ingredients.length - 1) && r.difficulty > 1 && at[k] - at[k - 1] > 6000 ? 'burned' : 'ok'; j = k + 1; } });
+    const ok = slots.filter((x) => x === 'ok').length;
+    const pct = ok / r.ingredients.length;
+    const grade = pct >= 1 ? 'perfect' : pct >= 0.6 ? 'good' : 'bad';
+    const factor = (grade === 'perfect' ? 1 : 0.5) * (r.dailyMenu ? 1.5 : 1);
+    const buff = grade === 'bad' ? null : { stat: r.buff.stat, value: Math.max(1, Math.round(r.buff.value * factor)), durationMs: 24 * HOUR };
+    if (buff) for (const stat of buff.stat === 'all' ? ['atk', 'def', 'esp', 'vel'] : [buff.stat]) { cookBuffs = cookBuffs.filter((x) => x.stat !== stat); cookBuffs.push({ stat, value: buff.value, source: 'cooking', sourceId: r.id, expiresAt: iso(24 * HOUR) }); }
+    cookBest[r.id] = Math.max(cookBest[r.id] ?? 0, ok);
+    const speedBonus = grade === 'perfect' ? 9 : 0;
+    return { score: ok, buff, coins: Math.floor(pct * 40) + speedBonus, speedBonus, correctPct: Math.round(pct * 100), grade, slots, message: null };
   }],
   ['GET', /^\/stories\/today$/, () => ({
     day: iso().slice(0, 10), plan: 'pro', limit: storyLimit, used: Object.keys(storyPlays).length, resetsAt: iso(8 * HOUR),

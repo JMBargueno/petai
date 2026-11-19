@@ -4,7 +4,7 @@
   import { friendlyError } from '../lib/ui/errors';
   import { api } from '../lib/api';
   import { AsyncState, Badge, Button, Card, EmptyState, Notice, SectionHeader, StatTile, Switch } from './ui';
-  import { MINIGAMES, type PackedEntry } from '@pockai/minigames';
+  import { MINIGAMES, iconUrl, type PackedEntry } from '@pockai/minigames';
   import foods from '@shared/game-data/foods.json';
   import { elementMeta } from '../lib/ui/maps';
   import MinigameHost from './MinigameHost.svelte';
@@ -150,7 +150,10 @@
         {#each games as g (g.id)}
           {@const noEnergy = g.energyCost != null && (pet.energy ?? 0) < g.energyCost}
           <button class="ui-row game" disabled={busy || pet.sleeping || noEnergy} on:click={() => play(g.id)}>
-            <span class="ui-feature__icon game-icon" aria-hidden="true"><Ico n={MINIGAMES[g.id]?.icon || 'gamepad'} size={20} /></span>
+            <span class="ui-feature__icon game-icon" aria-hidden="true">
+              <!-- Icono de pixel art del juego; mientras no tenga, el de interfaz del registro. -->
+              {#if iconUrl(g.id)}<img class="game-icon__art" src={iconUrl(g.id)} alt="" width="32" height="32" draggable="false" />{:else}<Ico n={MINIGAMES[g.id]?.icon || 'gamepad'} size={20} />{/if}
+            </span>
             <span class="ui-row__body">
               <span class="ui-row__title">
                 {g.name}
@@ -259,6 +262,11 @@
   .game-icon {
     width: 38px;
     height: 38px;
+  }
+  .game-icon__art {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
   }
   :global(.ui-card.result) {
     align-items: stretch;

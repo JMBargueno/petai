@@ -2797,6 +2797,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cooking/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recetario: recetas, si se pueden cocinar con la mascota y la mejor nota */
+        get: operations["CookingController_recipes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cooking/buffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Buffs de comida activos de una mascota */
+        get: operations["CookingController_buffs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cooking/daily-menu": {
         parameters: {
             query?: never;
@@ -2804,7 +2838,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Receta especial del día (determinista por fecha) */
+        /** Menú del día: una receta propia por día de la semana (UTC), con el buff ×1.5 */
         get: operations["CookingController_dailyMenu"];
         put?: never;
         post?: never;
@@ -10181,6 +10215,8 @@ export interface operations {
                 "application/json": {
                     /** @description Pet que cocina */
                     petId: string;
+                    /** @description Receta a cocinar. Si falta, el menú del día */
+                    recipeId?: string;
                 };
             };
         };
@@ -10211,11 +10247,51 @@ export interface operations {
                     correctOrder: boolean;
                     /** @description Ingredientes echados a la olla, en orden. Si se envía, el servidor cuenta los aciertos y no usa score ni correctOrder */
                     picked?: string[];
+                    /** @description Ms desde que empezó a cocinar en que se echó cada ingrediente de picked (olla caliente) */
+                    pickedAt?: number[];
                 };
             };
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CookingController_recipes: {
+        parameters: {
+            query: {
+                petId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CookingController_buffs: {
+        parameters: {
+            query: {
+                petId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

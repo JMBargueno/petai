@@ -5,7 +5,8 @@
     "difficulty": 1,
     "unlockLevel": 1,
     "ingredients": ["apple", "healthy_salad", "sun_seed"],
-    "buff": { "stat": "atk", "value": 5 }
+    "buff": { "stat": "atk", "value": 5 },
+    "description": "La primera sopa que se enseña en la cocina del Santuario: templa el cuerpo antes de salir a la arena."
   },
   {
     "id": "elemental_brew",
@@ -13,7 +14,8 @@
     "difficulty": 2,
     "unlockLevel": 5,
     "ingredients": ["sun_seed", "sweet_coral", "spicy_berry", "spark_candy"],
-    "buff": { "stat": "def", "value": 5 }
+    "buff": { "stat": "def", "value": 5 },
+    "description": "Una gota de cada Flujo en la misma tetera. Endurece la piel contra golpes de cualquier color."
   },
   {
     "id": "shadow_paste",
@@ -21,7 +23,8 @@
     "difficulty": 3,
     "unlockLevel": 15,
     "ingredients": ["midnight_berry", "healthy_salad", "sweet_coral"],
-    "buff": { "stat": "esp", "value": 5 }
+    "buff": { "stat": "esp", "value": 5 },
+    "description": "Se amasa a oscuras, con las bayas aún frías de la noche. Aguza la mente."
   },
   {
     "id": "storm_roast",
@@ -29,7 +32,8 @@
     "difficulty": 3,
     "unlockLevel": 20,
     "ingredients": ["spark_candy", "spicy_berry", "apple", "midnight_berry"],
-    "buff": { "stat": "vel", "value": 5 }
+    "buff": { "stat": "vel", "value": 5 },
+    "description": "Se asa sobre caramelos de chispa que crepitan. Quien lo come no se está quieto."
   },
   {
     "id": "solar_bake",
@@ -37,7 +41,8 @@
     "difficulty": 4,
     "unlockLevel": 30,
     "ingredients": ["dawn_honey", "sun_seed", "cake", "apple"],
-    "buff": { "stat": "atk", "value": 8 }
+    "buff": { "stat": "atk", "value": 8 },
+    "description": "Pan dulce que se hornea al amanecer, cuando el Flujo de la luz es más fuerte."
   },
   {
     "id": "abyssal_caviar",
@@ -45,7 +50,8 @@
     "difficulty": 5,
     "unlockLevel": 40,
     "ingredients": ["sweet_coral", "midnight_berry", "dawn_honey"],
-    "buff": { "stat": "def", "value": 8 }
+    "buff": { "stat": "def", "value": 8 },
+    "description": "Perlas que solo cuajan en el fondo del Flujo del agua. Un caparazón comestible."
   },
   {
     "id": "mythic_feast",
@@ -53,6 +59,84 @@
     "difficulty": 5,
     "unlockLevel": 50,
     "ingredients": ["spicy_berry", "dawn_honey", "midnight_berry", "spark_candy"],
-    "buff": { "stat": "atk", "value": 10 }
+    "buff": { "stat": "atk", "value": 10 },
+    "description": "La receta que, según el Santuario, cocinó el primer Pockai al despertar."
+  },
+  {
+    "id": "menu_rest_stew",
+    "name": "Guiso del Descanso",
+    "description": "El domingo la cocina del Santuario cuece a fuego lento lo que sobró de la semana. Sabe a casa.",
+    "difficulty": 2,
+    "unlockLevel": 1,
+    "dailyMenu": true,
+    "weekday": 0,
+    "ingredients": ["apple", "healthy_salad", "dawn_honey", "cake"],
+    "buff": { "stat": "all", "value": 3 }
+  },
+  {
+    "id": "menu_sprout_broth",
+    "name": "Caldo de Primer Brote",
+    "description": "Un caldo claro para empezar la semana: semillas que brotan en la olla mientras hierve.",
+    "difficulty": 1,
+    "unlockLevel": 1,
+    "dailyMenu": true,
+    "weekday": 1,
+    "ingredients": ["sun_seed", "healthy_salad", "apple", "sweet_coral"],
+    "buff": { "stat": "all", "value": 2 }
+  },
+  {
+    "id": "menu_spark_skewers",
+    "name": "Brochetas de Chispa Roja",
+    "description": "Martes de brasas: las bayas picantes y los caramelos de chispa se ensartan alternos y chisporrotean.",
+    "difficulty": 3,
+    "unlockLevel": 1,
+    "dailyMenu": true,
+    "weekday": 2,
+    "ingredients": ["spicy_berry", "spark_candy", "apple", "sun_seed"],
+    "buff": { "stat": "all", "value": 3 }
+  },
+  {
+    "id": "menu_tide_soup",
+    "name": "Sopa de Marea Mansa",
+    "description": "A mitad de semana el Flujo del agua se calma y la sopa sale tan quieta que refleja la luna.",
+    "difficulty": 2,
+    "unlockLevel": 1,
+    "dailyMenu": true,
+    "weekday": 3,
+    "ingredients": ["sweet_coral", "healthy_salad", "midnight_berry", "apple"],
+    "buff": { "stat": "all", "value": 3 }
+  },
+  {
+    "id": "menu_lighthouse_tart",
+    "name": "Tarta del Faro",
+    "description": "Cinco capas que brillan como la linterna del Faro de Claridad. Hay que montarlas sin dudar.",
+    "difficulty": 4,
+    "unlockLevel": 1,
+    "dailyMenu": true,
+    "weekday": 4,
+    "ingredients": ["cake", "dawn_honey", "sun_seed", "spark_candy", "apple"],
+    "buff": { "stat": "all", "value": 4 }
+  },
+  {
+    "id": "menu_midnight_pie",
+    "name": "Empanada de Medianoche",
+    "description": "Se rellena cuando se apagan los faroles del viernes y se come aún caliente, a escondidas.",
+    "difficulty": 3,
+    "unlockLevel": 1,
+    "dailyMenu": true,
+    "weekday": 5,
+    "ingredients": ["midnight_berry", "spicy_berry", "cake", "sweet_coral"],
+    "buff": { "stat": "all", "value": 3 }
+  },
+  {
+    "id": "menu_six_flows_feast",
+    "name": "Festín de los Seis Flujos",
+    "description": "El sábado se cocina un fruto de cada Flujo en el mismo caldero. Pocos lo sirven entero.",
+    "difficulty": 5,
+    "unlockLevel": 1,
+    "dailyMenu": true,
+    "weekday": 6,
+    "ingredients": ["spicy_berry", "sweet_coral", "sun_seed", "spark_candy", "midnight_berry", "dawn_honey"],
+    "buff": { "stat": "all", "value": 4 }
   }
 ]

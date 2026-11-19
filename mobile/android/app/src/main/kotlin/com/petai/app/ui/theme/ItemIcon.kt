@@ -28,13 +28,31 @@ private val MISSING = Any()
 private val cache = ConcurrentHashMap<String, Any>()
 
 /** Icono de un objeto, o `null` si no tiene arte en esta versión de la app. Se lee una sola vez. */
-private fun itemBitmap(assets: AssetManager, id: String): ImageBitmap? {
-    if (!ITEM_ID.matches(id)) return null
-    val hit = cache.getOrPut(id) {
-        runCatching { assets.open("items/$id.png").use { BitmapFactory.decodeStream(it) } }
+private fun itemBitmap(assets: AssetManager, id: String): ImageBitmap? =
+    if (ITEM_ID.matches(id)) assetBitmap(assets, "items/$id.png") else null
+
+/** PNG de `shared/assets` (empaquetada en el APK), o `null` si no existe. Se lee una sola vez. */
+private fun assetBitmap(assets: AssetManager, path: String): ImageBitmap? {
+    val hit = cache.getOrPut(path) {
+        runCatching { assets.open(path).use { BitmapFactory.decodeStream(it) } }
             .getOrNull()?.asImageBitmap() ?: MISSING
     }
     return hit as? ImageBitmap
+}
+
+/**
+ * Icono de tarjeta de un minijuego: `shared/assets/minigames/<juego>/icon.png` (32 px nativos a ×2,
+ * pixel art). Si el juego aún no tiene, pinta `fallback`.
+ */
+@Composable
+fun MinigameIcon(gameId: String, modifier: Modifier = Modifier, size: Dp = 32.dp, fallback: ImageVector = Lucide.Gamepad2) {
+    val assets = LocalContext.current.assets
+    val bitmap = remember(gameId) { if (ITEM_ID.matches(gameId)) assetBitmap(assets, "minigames/$gameId/icon.png") else null }
+    if (bitmap != null) {
+        Image(bitmap = bitmap, contentDescription = null, modifier = modifier.size(size), filterQuality = FilterQuality.None)
+    } else {
+        Icon(fallback, null, modifier.size(size).padding(size / 5))
+    }
 }
 
 /**

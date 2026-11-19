@@ -7,7 +7,7 @@ export { MINIGAMES, getMinigame, isSupportedMinigame, type MinigameEntry } from 
 export { mountMinigame, MAX_PAUSE_MS, type MountOptions, type MountedMinigame } from './host';
 export * from './protocol';
 export { sheetFromAssetBase, DEFAULT_PET, type PetActor, type PetSheetResolver, type PetSheetUrls } from './pet';
-export { pieceUrl, backdropUrl, itemUrl } from './assets';
+export { pieceUrl, backdropUrl, iconUrl, itemUrl } from './assets';
 export { MG, minigameSoundIds, type MinigameSound, type SoundOptions } from './sound';
 export { catchFood, CATCH_FOOD } from './games/catchFood';
 export { memoryMatch, MEMORY_MATCH } from './games/memoryMatch';

@@ -35,6 +35,10 @@ No se genera lo que ya existe (comida, mascota) ni lo que es una marca de CSS (`
    ```
    `--free-ids` deja usar nombres que no están en `foods.json`. El resto de opciones son las de siempre: `--pick`, `--colors 12`, `--fit 28`, `--size 32`, `--no-outline`, `--crop x,y,w,h`. Para una pieza grande: `--size 48 --fit 44`, en una llamada aparte con `--pick`.
 
+## Icono de tarjeta
+
+El icono de la lista de minijuegos es una pieza más: `icon.png`, de 32 px. Un emblema que nazca de la pieza protagonista del juego (el códice, el cristal, el fuelle…), no el icono del elemento. Van tres iconos por lámina (prompts de ejemplo en `sprite-previews/minigames/icons-{a,b,c}.txt` si siguen ahí): en la plantilla de piezas, pide "round menu ICONS… one emblem per game… fill most of its square, compact" y sin nombres escritos. Importa cada uno a su carpeta con `--ids icon --pick <n>`; si sobra algo (un sedal largo), `--crop`. Después, `pnpm generate:minigames` y reinicia el servidor de Vite: el `import.meta.glob` no ve archivos nuevos en caliente.
+
 ## Fondo
 
 1. **Prompt.** Copia `references/backdrop-prompt.txt` a `sprite-previews/minigames/<id>-backdrop.txt` y rellénalo.

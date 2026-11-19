@@ -177,7 +177,7 @@ Por juego. Se enganchan en el campo `last` del estado de cada juego dentro de `s
 - `cook.ingredient.tap` y `cook.ingredient.place`.
 - `cook.undo`, `cook.serve` y `cook.timer_warning`.
 - Resultados: `cook.result.perfect`, `cook.result.good` y `cook.result.fail` ("Tiempo agotado").
-- Toques especiales para ingredientes con temática (lightning, sun_nectar, ink, phoenix, star_dust): reutilizan `elem.*.accent`.
+- Los frutos de un Flujo (baya picante, coral, semilla solar, caramelo de chispa, baya de medianoche, miel de alba) suenan con su `elem.*.accent` al caer en la olla. Cuando la olla caliente se quema suena `cook.result.fail` más agudo y bajito.
 - Reacción del Pockai: `cooked` → `pet.eat.*` + `pet.happy`.
 
 ### 2.8 Aventuras (`adv.*`), unos 30 sonidos

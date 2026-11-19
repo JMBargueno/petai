@@ -27,6 +27,7 @@ import { applyElo, leagueFor, pickOpponent } from './combat/ranking';
 import { createRng } from './combat/rng';
 import {
   allocatedPoints,
+  applyStatBuffs,
   effectiveStats,
   equippedSkills,
   moodMultiplier,
@@ -34,7 +35,7 @@ import {
   validateAllocation,
   validateEquip,
 } from './combat/stats';
-import { BattleLog, CombatConfig, Element, Fighter, SkillDef, Strategy } from './combat/types';
+import { BattleLog, CombatConfig, Element, Fighter, SkillDef, Stats, Strategy } from './combat/types';
 
 const STRATEGIES: Strategy[] = ['aggressive', 'defensive', 'balanced'];
 const DAY_MS = 24 * 3600 * 1000;
@@ -82,8 +83,28 @@ export class BattlesService {
     return out;
   }
 
-  /** @param moodBonus `combat_mood_bonus` del hábitat de la mascota (ver `combatMoodBonuses`). */
-  fighterFromPet(pet: any, moodBonus = 0): Fighter {
+  /**
+   * Buffs de comida activos (spec 15, `CombatBuff`) de cada mascota, sumados por stat, con UNA
+   * consulta para todas. El tope lo pone `fighterFromPet`.
+   */
+  async combatStatBuffs(petIds: string[]): Promise<Map<string, Partial<Stats>>> {
+    const out = new Map<string, Partial<Stats>>();
+    if (petIds.length === 0 || !this.prisma.combatBuff) return out;
+    const rows = await this.prisma.combatBuff.findMany({ where: { petId: { in: petIds }, expiresAt: { gt: new Date() } } });
+    for (const r of rows) {
+      const acc = out.get(r.petId) ?? {};
+      const k = r.stat as keyof Stats;
+      acc[k] = (acc[k] ?? 0) + r.value;
+      out.set(r.petId, acc);
+    }
+    return out;
+  }
+
+  /**
+   * @param moodBonus `combat_mood_bonus` del hábitat de la mascota (ver `combatMoodBonuses`).
+   * @param statBuffs buffs de comida de la mascota (ver `combatStatBuffs`), con tope `cooking.buffCapPct`.
+   */
+  fighterFromPet(pet: any, moodBonus = 0, statBuffs?: Partial<Stats>): Fighter {
     const element = pet.species.element as Element;
     return {
       name: pet.nickname || pet.species.name,
@@ -91,7 +112,7 @@ export class BattlesService {
       stage: pet.stage ?? 'baby',
       element,
       level: pet.level,
-      stats: effectiveStats(pet),
+      stats: applyStatBuffs(effectiveStats(pet), statBuffs, this.gameData.getBalance().cooking?.buffCapPct ?? 0.15),
       mood: moodMultiplier(pet, this.cfg, moodBonus),
       skills: equippedSkills(pet, element, this.catalog),
       strategy: STRATEGIES.includes(pet.strategy) ? pet.strategy : 'balanced',
@@ -138,12 +159,16 @@ export class BattlesService {
     const equipped = equippedSkills(pet, element, this.catalog);
     const blocker = this.fightBlocker(pet, used);
     const moodBonus = (await this.combatMoodBonuses([pet.id])).get(pet.id) ?? 0;
+    const base = effectiveStats(pet);
+    const buffed = applyStatBuffs(base, (await this.combatStatBuffs([pet.id])).get(pet.id), this.gameData.getBalance().cooking?.buffCapPct ?? 0.15);
     return {
       petId: pet.id,
       name: pet.nickname,
       element,
       level: pet.level,
-      stats: effectiveStats(pet),
+      stats: base,
+      // Lo que suma la comida de la Cocina en el próximo combate (ya con tope)
+      foodBuffs: Object.fromEntries(Object.entries(buffed).map(([k, v]) => [k, v - base[k as keyof typeof base]]).filter(([, d]) => (d as number) > 0)),
       allocated: allocatedPoints(pet),
       statPoints: pet.statPoints,
       // El mismo ánimo que usará el combate, con el bonus de los muebles incluido
@@ -232,13 +257,14 @@ export class BattlesService {
     const chosen = pickOpponent(candidates, pet.elo, cfg.elo, rng);
 
     // El hábitat del rival también cuenta: una sola consulta para los dos
-    const moodBonuses = await this.combatMoodBonuses(chosen ? [pet.id, chosen.row.id] : [pet.id]);
-    const attacker = this.fighterFromPet(pet, moodBonuses.get(pet.id) ?? 0);
+    const ids = chosen ? [pet.id, chosen.row.id] : [pet.id];
+    const [moodBonuses, statBuffs] = await Promise.all([this.combatMoodBonuses(ids), this.combatStatBuffs(ids)]);
+    const attacker = this.fighterFromPet(pet, moodBonuses.get(pet.id) ?? 0, statBuffs.get(pet.id));
     let defender: Fighter;
     let defenderRow: (typeof rows)[number] | null = null;
     if (chosen) {
       defenderRow = chosen.row;
-      defender = this.fighterFromPet(chosen.row, moodBonuses.get(chosen.row.id) ?? 0);
+      defender = this.fighterFromPet(chosen.row, moodBonuses.get(chosen.row.id) ?? 0, statBuffs.get(chosen.row.id));
     } else {
       // Sin rival cercano: bot determinista derivado de la semilla del combate
       defender = generateBot((seed ^ 0x9e3779b9) >>> 0, pet.level, this.gameData.getSpecies(), this.catalog, cfg);
