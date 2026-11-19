@@ -106,15 +106,15 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 export function normalizeManifest(raw: unknown): { manifest: SoundManifest; errors: string[] } {
   const errors: string[] = [];
   const sounds = new Map<string, SoundDef>();
-  if (!isObj(raw) || !Array.isArray(raw.sounds)) {
+  if (!isObj(raw) || !Array.isArray(raw['sounds'])) {
     return { manifest: { version: 0, sounds }, errors: ['sounds.json: falta la lista `sounds`'] };
   }
-  const style = (isObj(raw.style) ? raw.style : {}) as Partial<Record<Bus, string>>;
-  const defaults = (isObj(raw.defaults) ? raw.defaults : {}) as Partial<Record<Bus, Partial<SoundFields>>>;
+  const style = (isObj(raw['style']) ? raw['style'] : {}) as Partial<Record<Bus, string>>;
+  const defaults = (isObj(raw['defaults']) ? raw['defaults'] : {}) as Partial<Record<Bus, Partial<SoundFields>>>;
   for (const k of Object.keys(defaults)) if (!BUSES.includes(k as Bus)) errors.push(`defaults.${k}: bus desconocido`);
 
-  for (const [i, entry] of (raw.sounds as unknown[]).entries()) {
-    if (!isObj(entry) || typeof entry.id !== 'string') {
+  for (const [i, entry] of (raw['sounds'] as unknown[]).entries()) {
+    if (!isObj(entry) || typeof entry['id'] !== 'string') {
       errors.push(`sounds[${i}]: falta el id`);
       continue;
     }
@@ -149,7 +149,7 @@ export function normalizeManifest(raw: unknown): { manifest: SoundManifest; erro
     }
     sounds.set(def.id, def);
   }
-  return { manifest: { version: typeof raw.version === 'number' ? raw.version : 0, sounds }, errors };
+  return { manifest: { version: typeof raw['version'] === 'number' ? raw['version'] : 0, sounds }, errors };
 }
 
 /** Ruta relativa del fichero de una toma dentro de shared/assets/audio. */

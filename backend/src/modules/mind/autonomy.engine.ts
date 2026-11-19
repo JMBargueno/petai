@@ -13,6 +13,7 @@
  */
 import { createRng, hashSeed } from '../battles/combat/rng';
 import { AutonomyActivity, AutonomyConfig, AutonomyDaily, Dims, ExtraActivity } from './mind.types';
+import { text, variants } from './strings';
 import { weighted } from './personality.engine';
 
 export const ACTIVITIES: AutonomyActivity[] = ['rest', 'play_alone', 'explore', 'socialize', 'wait_owner'];
@@ -95,16 +96,8 @@ export interface SimResult {
 
 const pick = <T>(arr: T[], r: number): T => arr[Math.floor(r * arr.length) % arr.length];
 
-const TEXTS: Record<AutonomyActivity | 'sleep', string[]> = {
-  sleep: ['Dormí profundamente y soñé con el Éter.', 'Me eché una siesta larguísima.'],
-  rest: ['Descansé tranquilamente en mi rincón favorito del hábitat.', 'Pasé un rato tumbado mirando las luces del hábitat.'],
-  play_alone: ['Estuve jugando yo solo a perseguir mi sombra.', 'Inventé un juego nuevo con una hoja que encontré.'],
-  explore: ['Exploré los alrededores y descubrí un rincón nuevo.', 'Seguí un rastro de chispas del Éter hasta un sitio desconocido.'],
-  socialize: ['Jugué un rato con otros ecos del vecindario.', 'Charlé con un Pockai que pasaba por allí.'],
-  wait_owner: ['Esperé junto a la puerta por si volvía mi entrenador.', 'Estuve pensando en mi entrenador y en cuándo volvería.'],
-  practice_trick: ['Estuve practicando un truco yo solo, una y otra vez.', 'Ensayé mi truco a escondidas para sorprender a mi entrenador.'],
-  tidy_habitat: ['Ordené mi hábitat: cada cosa en su sitio.', 'Di una vuelta por mi hábitat recolocando mis cosas.'],
-};
+/** Frases de lo que hizo por su cuenta: `AUTO_<ACTIVIDAD>_<n>` en `shared/game-data/strings`. */
+const textsOf = (activity: AutonomyActivity | 'sleep'): string[] => variants(`AUTO_${activity.toUpperCase()}`);
 
 /**
  * A qué amigo va a ver. Si se sabe cuánto tira cada uno, es más probable el que mejor le cae; si
@@ -168,7 +161,7 @@ export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): S
     if (input.sleeping) {
       // Dormido: el lazy tick ya recupera la energía; aquí solo se recuerda (una vez por tanda)
       if (!sleptLogged) {
-        res.episodes.push({ index: idx, activity: 'sleep', content: pick(TEXTS.sleep, rText), importance: 0.3, valence: 0.2 });
+        res.episodes.push({ index: idx, activity: 'sleep', content: pick(textsOf('sleep'), rText), importance: 0.3, valence: 0.2 });
         sleptLogged = true;
       }
       continue;
@@ -205,7 +198,7 @@ export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): S
         daily.items++;
         res.itemsFound.push(itemId);
         res.evolutionEvents.push('auto_find_item');
-        episode = { index: idx, activity, content: `Explorando encontré algo: ${input.itemNames?.[itemId] ?? itemId}. ¡Lo guardé para mi entrenador!`, importance: 0.6, valence: 0.6, itemId };
+        episode = { index: idx, activity, content: text('AUTO_FIND', { item: input.itemNames?.[itemId] ?? itemId }), importance: 0.6, valence: 0.6, itemId };
       }
     }
     if (activity === 'socialize' && input.friends.length && daily.encounters < cfg.social.dailyCapPerPet) {
@@ -215,14 +208,14 @@ export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): S
       episode = {
         index: idx,
         activity,
-        content: `Visité el hábitat de ${friend.ownerName} y jugué con ${friend.name}. Me lo pasé bien.`,
+        content: text('AUTO_VISIT_FRIEND', { owner: friend.ownerName, friend: friend.name }),
         importance: 0.65,
         valence: 0.6,
         friend,
       };
     }
     if (!episode && rMemorable < cfg.memorableChance) {
-      episode = { index: idx, activity, content: pick(TEXTS[activity], rText), importance: activity === 'explore' ? 0.45 : 0.35, valence: activity === 'wait_owner' ? -0.1 : 0.3 };
+      episode = { index: idx, activity, content: pick(textsOf(activity), rText), importance: activity === 'explore' ? 0.45 : 0.35, valence: activity === 'wait_owner' ? -0.1 : 0.3 };
     }
     if (episode) res.episodes.push(episode);
   }

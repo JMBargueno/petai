@@ -11,7 +11,7 @@
  * importancia + recencia) y solo inyecta los mejores, dentro de un presupuesto de caracteres.
  * Al llenarse una capa se olvida lo que menos retención tiene.
  */
-import { cleanText, isSensitive, normalizeForMatch } from '../ai/memory';
+import { cleanText, isSensitive, tokens } from '../ai/memory';
 import { IntelligenceTier, MEMORY_LAYERS, MemoryLayer, PersonalityConfig } from './mind.types';
 
 export const MAX_MEMORY_CHARS = 220;
@@ -109,9 +109,20 @@ export function pickEvictions(
   return out;
 }
 
-const STOP = new Set('que los las una uno del por con para como pero mas muy esta este eso tus sus mis algo todo hay son fue ser the and you'.split(' '));
-function tokens(text: string): Set<string> {
-  return new Set(normalizeForMatch(text).split(' ').filter((w) => w.length >= 3 && !STOP.has(w)));
+/**
+ * Sujetos (`pet:<id>`, `user:<id>`) a los que el mensaje nombra. El nombre es la primera palabra
+ * de la etiqueta de la relación («Brasa (Pockai de Ana)»). El entrenador no cuenta: ya tiene su extra.
+ */
+export function namedSubjects(rows: readonly MemoryRow[], message: string): Set<string> {
+  const q = tokens(message);
+  const out = new Set<string>();
+  if (!q.size) return out;
+  for (const m of rows) {
+    if (layerOf(m) !== 'emotional' || !m.subject || m.subject === 'owner') continue;
+    const name = [...tokens(m.content.split('(')[0])][0];
+    if (name && q.has(name)) out.add(m.subject);
+  }
+  return out;
 }
 
 export interface RecallSelection {
@@ -124,7 +135,8 @@ export interface RecallSelection {
 
 /**
  * Elige qué recuerdos ver en esta interacción: relevancia léxica con el mensaje (peso 1 por
- * palabra compartida), más retención, más un extra a la relación con el entrenador.
+ * palabra compartida, comparando sin terminaciones), más retención, más un extra a la relación
+ * con el entrenador y a los recuerdos de quien el mensaje nombra.
  * Respeta el máximo por capa y el presupuesto de caracteres del plan.
  *
  * Para que no salgan siempre los mismos: lo inyectado hace poco y sin relación con el mensaje
@@ -148,6 +160,7 @@ export function selectForPrompt(
 ): RecallSelection {
   const q = tokens(message);
   const ensure = new Set(opts.ensureIds ?? []);
+  const named = namedSubjects(rows, message);
   const recentMs = cfg.memory.recentRecallMinutes * 60_000;
   const scored = rows
     .filter((m) => !(m.kind === 'summary' && m.content === EMPTY_SUMMARY))
@@ -157,6 +170,8 @@ export function selectForPrompt(
       // Preguntar por alguien es hablar de sus recuerdos, aunque el texto no comparta palabras;
       // y lo que la criatura va a contar tiene que estar delante del modelo
       if (opts.subject && m.subject === opts.subject) overlap += 3;
+      // Nombrar a alguien trae lo vivido con él, aunque el recuerdo no repita su nombre
+      else if (m.subject && named.has(m.subject)) overlap += 2;
       if (ensure.has(m.id)) overlap += 10;
       const owner = m.key === 'emo:owner';
       const justSeen =

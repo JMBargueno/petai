@@ -59,6 +59,7 @@
   import { activeVisit } from './lib/activeVisit';
   import { configureTravel, endTravel, resetTravel, restoreFromHistory } from './lib/visitTravel';
   import { getSoundEngine, setPanelOpen } from './lib/audio';
+  import { installUiSounds } from './lib/uiSounds';
 
   // Visita en vivo: el servidor la cierra a los 15 min sin avisar al visitante. A esa hora el
   // Pockai vuelve por su portal y se cierra también aquí (si ya estaba cerrada, el error no importa).
@@ -761,6 +762,7 @@
 
   onMount(() => {
     getSoundEngine();
+    installUiSounds();
     // Solo en desarrollo (y en la demo): lanzar momentos a mano para probar los efectos del
     // escritorio sin backend (skill pockai-effect-architect, integration-checklist.md).
     if (import.meta.env.DEV) {

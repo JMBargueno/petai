@@ -65,6 +65,12 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
   readonly cdnHitTotal: client.Counter;
   readonly cdnFallbackOriginTotal: client.Counter;
   readonly cdnRefreshMs: client.Histogram;
+  // Cerebro del Pockai (spec 37 §3.1)
+  readonly mindMemoriesInjected: client.Counter;
+  readonly mindBehavior: client.Counter;
+  readonly mindBehaviorStreak: client.Counter;
+  readonly mindIntent: client.Counter;
+  readonly mindExtraction: client.Counter;
 
   private metricsPort: number;
 
@@ -146,6 +152,38 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
       help: 'Latencia del auth refresh (ms) por región y outcome (edge/origin) — p95 < 50ms',
       labelNames: ['region', 'outcome'],
       buckets: [5, 10, 20, 30, 50, 75, 100, 150, 250, 500, 1000],
+      registers: [this.register],
+    });
+    // Cerebro del Pockai. Las etiquetas son siempre de conjuntos cerrados (capas, reacciones e
+    // intenciones del catálogo): nunca ids de mascota ni texto del usuario.
+    this.mindMemoriesInjected = new client.Counter({
+      name: 'petai_mind_memories_injected_total',
+      help: 'Recuerdos inyectados en el prompt, por capa y según compartan palabras con el mensaje',
+      labelNames: ['layer', 'matched'],
+      registers: [this.register],
+    });
+    this.mindBehavior = new client.Counter({
+      name: 'petai_mind_behavior_total',
+      help: 'Reacciones del chat: las que decide el motor y las que propone el modelo (aceptadas o rechazadas)',
+      labelNames: ['action', 'source', 'outcome'],
+      registers: [this.register],
+    });
+    this.mindBehaviorStreak = new client.Counter({
+      name: 'petai_mind_behavior_streak_total',
+      help: 'Reacción vista al final de cada turno, según cuántas veces seguidas lleva (1, 2, 3+)',
+      labelNames: ['action', 'streak'],
+      registers: [this.register],
+    });
+    this.mindIntent = new client.Counter({
+      name: 'petai_mind_intent_total',
+      help: 'Intención interpretada en cada mensaje del entrenador',
+      labelNames: ['intent'],
+      registers: [this.register],
+    });
+    this.mindExtraction = new client.Counter({
+      name: 'petai_mind_extraction_total',
+      help: 'Extracciones de memoria: correctas, sin formato válido o con error',
+      labelNames: ['outcome'],
       registers: [this.register],
     });
   }
@@ -250,6 +288,50 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
       this.httpDuration.labels(method, route, String(status)).observe(Math.max(0, durationSeconds));
     } catch {
       // Nunca dejamos que una métrica rompa la ruta crítica (FR-010).
+    }
+  }
+
+  /** Recuerdos que entraron en un prompt, por capa; `matched` = compartían palabras con el mensaje. */
+  recordMindRecall(layer: string, matched: number, unmatched: number): void {
+    try {
+      if (matched > 0) this.mindMemoriesInjected.labels(layer, 'yes').inc(matched);
+      if (unmatched > 0) this.mindMemoriesInjected.labels(layer, 'no').inc(unmatched);
+    } catch {
+      /* noop */
+    }
+  }
+
+  /** Una reacción decidida por el motor (`engine`) o propuesta por el modelo (`model`). */
+  recordMindBehavior(action: string, source: 'engine' | 'model', outcome: 'accepted' | 'rejected'): void {
+    try {
+      this.mindBehavior.labels(action, source, outcome).inc();
+    } catch {
+      /* noop */
+    }
+  }
+
+  /** Reacción que se vio al final del turno y cuántas veces seguidas lleva. */
+  recordMindBehaviorStreak(action: string, streak: number): void {
+    try {
+      this.mindBehaviorStreak.labels(action, streak >= 3 ? '3+' : String(Math.max(1, streak))).inc();
+    } catch {
+      /* noop */
+    }
+  }
+
+  recordMindIntent(intent: string): void {
+    try {
+      this.mindIntent.labels(intent).inc();
+    } catch {
+      /* noop */
+    }
+  }
+
+  recordMindExtraction(outcome: 'ok' | 'invalid' | 'error'): void {
+    try {
+      this.mindExtraction.labels(outcome).inc();
+    } catch {
+      /* noop */
     }
   }
 

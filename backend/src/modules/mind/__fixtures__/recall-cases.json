@@ -1,0 +1,129 @@
+{
+  "_": "Casos de evaluación de selectForPrompt (spec 37 §3.2 y §3.3). Cada caso: un mensaje, los recuerdos de la mascota y qué ids deben entrar (include), cuáles deben contar como coincidencia con el mensaje (matched) y cuáles no deben entrar (exclude). `ageDays` es la antigüedad del recuerdo; `recalledMinutesAgo`, hace cuánto se inyectó. Para añadir un caso basta con añadir una entrada.",
+  "cases": [
+    {
+      "name": "un verbo conjugado encuentra el infinitivo («jugamos» / «jugar»)",
+      "message": "¿jugamos un rato?",
+      "rows": [
+        { "id": "jugar", "kind": "fact", "layer": "semantic", "content": "A mi entrenador le gusta jugar a la pelota conmigo", "importance": 0.4, "ageDays": 200 },
+        { "id": "color", "kind": "fact", "layer": "semantic", "content": "El color favorito de mi entrenador es el verde", "importance": 0.4, "ageDays": 200 }
+      ],
+      "include": ["jugar"],
+      "matched": ["jugar"],
+      "exclude": ["color"]
+    },
+    {
+      "name": "el plural encuentra el singular («gatos» / «gato»)",
+      "message": "hoy he visto unos gatos preciosos",
+      "rows": [
+        { "id": "gato", "kind": "fact", "layer": "semantic", "content": "Mi entrenador tiene un gato que se llama Miso", "importance": 0.4, "ageDays": 300 },
+        { "id": "trabajo", "kind": "fact", "layer": "semantic", "content": "Mi entrenador madruga mucho", "importance": 0.4, "ageDays": 300 }
+      ],
+      "include": ["gato"],
+      "matched": ["gato"],
+      "exclude": ["trabajo"]
+    },
+    {
+      "name": "el gerundio encuentra el pasado («cocinando» / «cocinamos»)",
+      "message": "estoy cocinando la cena",
+      "rows": [
+        { "id": "cocina", "kind": "event", "layer": "episodic", "content": "Ayer cocinamos juntos una tarta", "importance": 0.4, "ageDays": 40 }
+      ],
+      "include": ["cocina"],
+      "matched": ["cocina"]
+    },
+    {
+      "name": "en inglés también («playing» / «play»)",
+      "message": "are we playing today?",
+      "rows": [
+        { "id": "play", "kind": "fact", "layer": "semantic", "content": "My trainer loves to play fetch", "importance": 0.4, "ageDays": 300 }
+      ],
+      "include": ["play"],
+      "matched": ["play"]
+    },
+    {
+      "name": "nombrar a un amigo trae lo vivido con él, aunque el recuerdo no diga su nombre",
+      "message": "¿y Brasa qué tal?",
+      "rows": [
+        { "id": "emo-brasa", "kind": "relation", "layer": "emotional", "key": "emo:pet:brasa", "subject": "pet:brasa", "content": "Brasa (Pockai de Ana)", "importance": 0.5, "valence": 0.4, "ageDays": 30 },
+        { "id": "con-brasa", "kind": "encounter", "layer": "episodic", "subject": "pet:brasa", "content": "Jugamos al pilla-pilla por toda su sala", "importance": 0.4, "ageDays": 45 },
+        { "id": "con-lumo", "kind": "encounter", "layer": "episodic", "subject": "pet:lumo", "content": "Dormimos la siesta en su casa", "importance": 0.4, "ageDays": 45 }
+      ],
+      "include": ["emo-brasa", "con-brasa"],
+      "matched": ["emo-brasa", "con-brasa"],
+      "exclude": ["con-lumo"]
+    },
+    {
+      "name": "una palabra corriente no pasa por el nombre de nadie",
+      "message": "mañana vamos al parque",
+      "rows": [
+        { "id": "emo-ana", "kind": "relation", "layer": "emotional", "key": "emo:user:ana", "subject": "user:ana", "content": "Ana (otro entrenador)", "importance": 0.5, "valence": 0.2, "ageDays": 5 },
+        { "id": "con-ana", "kind": "visit", "layer": "episodic", "subject": "user:ana", "content": "Vino a verme y me hizo mimos", "importance": 0.35, "ageDays": 50 }
+      ],
+      "matched": [],
+      "exclude": ["con-ana"]
+    },
+    {
+      "name": "con un «hola» no se cuela lo casi olvidado",
+      "message": "hola",
+      "rows": [
+        { "id": "viejo", "kind": "event", "layer": "episodic", "content": "Una tarde estuve mirando por la ventana", "importance": 0.3, "ageDays": 90 },
+        { "id": "reciente", "kind": "event", "layer": "episodic", "content": "Hoy me bañaron y quedé reluciente", "importance": 0.6, "ageDays": 0 }
+      ],
+      "include": ["reciente"],
+      "matched": [],
+      "exclude": ["viejo"]
+    },
+    {
+      "name": "las palabras vacías no cuentan como coincidencia",
+      "message": "pero qué tal todo por ahí",
+      "rows": [
+        { "id": "vacio", "kind": "event", "layer": "episodic", "content": "Todo esto fue hace mucho, pero no importa", "importance": 0.3, "ageDays": 90 }
+      ],
+      "matched": [],
+      "exclude": ["vacio"]
+    },
+    {
+      "name": "la relación con el entrenador entra siempre",
+      "message": "hola",
+      "rows": [
+        { "id": "owner", "kind": "relation", "layer": "emotional", "key": "emo:owner", "subject": "owner", "content": "Mi entrenador", "importance": 0.3, "valence": 0, "ageDays": 400 }
+      ],
+      "include": ["owner"]
+    },
+    {
+      "name": "la marca de conversación vacía no llega nunca al prompt",
+      "message": "conversación sin datos relevantes",
+      "rows": [
+        { "id": "marca", "kind": "summary", "layer": "episodic", "content": "Conversación sin datos relevantes.", "importance": 0.9, "ageDays": 0 }
+      ],
+      "exclude": ["marca"]
+    },
+    {
+      "name": "lo que acaba de salir cede el puesto si el mensaje no habla de ello",
+      "message": "hola",
+      "rows": [
+        { "id": "visto", "kind": "event", "layer": "episodic", "content": "Gané un combate en la Arena", "importance": 0.5, "ageDays": 1, "recalledMinutesAgo": 5 },
+        { "id": "a", "kind": "event", "layer": "episodic", "content": "Encontré una piedra brillante", "importance": 0.45, "ageDays": 1 },
+        { "id": "b", "kind": "event", "layer": "episodic", "content": "Me bañaron con espuma", "importance": 0.45, "ageDays": 1 },
+        { "id": "c", "kind": "event", "layer": "episodic", "content": "Dormí una siesta larga", "importance": 0.45, "ageDays": 1 },
+        { "id": "d", "kind": "event", "layer": "episodic", "content": "Perseguí una mariposa", "importance": 0.45, "ageDays": 1 }
+      ],
+      "include": ["a", "b", "c", "d"],
+      "exclude": ["visto"]
+    },
+    {
+      "name": "pero vuelve si el mensaje pregunta por ello",
+      "message": "cuéntame otra vez lo del combate",
+      "rows": [
+        { "id": "visto", "kind": "event", "layer": "episodic", "content": "Gané un combate en la Arena", "importance": 0.5, "ageDays": 1, "recalledMinutesAgo": 5 },
+        { "id": "a", "kind": "event", "layer": "episodic", "content": "Encontré una piedra brillante", "importance": 0.45, "ageDays": 1 },
+        { "id": "b", "kind": "event", "layer": "episodic", "content": "Me bañaron con espuma", "importance": 0.45, "ageDays": 1 },
+        { "id": "c", "kind": "event", "layer": "episodic", "content": "Dormí una siesta larga", "importance": 0.45, "ageDays": 1 },
+        { "id": "d", "kind": "event", "layer": "episodic", "content": "Perseguí una mariposa", "importance": 0.45, "ageDays": 1 }
+      ],
+      "include": ["visto"],
+      "matched": ["visto"]
+    }
+  ]
+}

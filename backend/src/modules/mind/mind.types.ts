@@ -56,6 +56,8 @@ export interface PersonalityConfig {
     earlyExtractEvery: number;
   };
   autonomy: AutonomyConfig;
+  /** Progresión de inteligencia (spec 37 §3.4). */
+  intelligence?: { /** Puntos de inteligencia que el chat puede dar en un día. */ dailyChatCap: number };
   social: import('./social.engine').SocialConfig;
   tricks: import('./tricks.engine').TricksConfig;
   wishes: import('./wishes.engine').WishesConfig;

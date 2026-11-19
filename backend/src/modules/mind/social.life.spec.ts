@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { InteractionEngineService, SCENE_NOTE, SCENE_TO_BUDDY } from '../buddies/interaction-engine.service';
+import { InteractionEngineService, SCENE_TO_BUDDY, sceneNote } from '../buddies/interaction-engine.service';
 import { BuddiesService } from '../buddies/buddies.service';
 import { EncounterInput, EncounterService } from './encounter.service';
 import { EvolutionListener } from './evolution.listener';
@@ -83,7 +83,7 @@ describe('Escenas fuera de la visita en vivo (spec 37 §6.3)', () => {
     const engine = new InteractionEngineService();
     for (const type of SCENE_TYPES) {
       expect(engine.effectsFor(SCENE_TO_BUDDY[type])).toBeDefined();
-      expect(SCENE_NOTE[type]?.length).toBeGreaterThan(2);
+      expect(sceneNote(type)?.length).toBeGreaterThan(2);
     }
   });
 });
@@ -417,7 +417,7 @@ describe('BuddiesService: decide el cerebro, sin Math.random (spec 37 §6.3)', (
     const { s, res, minute } = await untilItHappens(() => build());
     expect(random).not.toHaveBeenCalled();
     expect(Object.values(SCENE_TO_BUDDY)).toContain(res.type);
-    expect(Object.values(SCENE_NOTE)).toContain((res.effects as any).note);
+    expect(SCENE_TYPES.map((t) => sceneNote(t))).toContain((res.effects as any).note);
     expect(s.events.emit).toHaveBeenCalledWith('buddy:interacted', {
       userId: 'u',
       petAId: 'a',

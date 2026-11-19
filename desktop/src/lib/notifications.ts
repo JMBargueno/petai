@@ -2,6 +2,7 @@
 // bocadillo (cola de `speech-queue`); solo si la ventana está oculta o minimizada se recurre a la
 // notificación nativa (Tauri) o, en el navegador, a la Notification API.
 
+import { sfx } from './audio';
 import { speak, type SpeechPriority } from './speech-queue';
 import { isPetVisible } from './window-visibility';
 
@@ -95,6 +96,8 @@ export async function notifyNow(title: string, body: string, opts: AnnounceOptio
     if (await isPetVisible()) {
       const text = opts.speech ?? body;
       if (text) speak(text, { priority: opts.priority, key: opts.key });
+      // Las necesidades llevan su aviso suave; el resto, el de notificación (spec 40).
+      sfx(opts.key?.startsWith('needs:') ? 'desk.needs' : 'ui.notification');
       return true;
     }
     return await sendNative(title, body);
