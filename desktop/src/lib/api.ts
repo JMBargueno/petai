@@ -960,6 +960,13 @@ export const api = {
     return minigameRequest<{ message: string; furnitureId: string }>('DELETE', `/v1/habitat/furniture/${furnitureId}`);
   },
 
+  /**
+   * Avisa de que el Pockai ha usado un mueble de su sala. El servidor decide si tiene efecto
+   * (tope diario y enfriamiento): `applied: false` no es un error.
+   */
+  async useHabitatItem(itemId: string) {
+    return minigameRequest<FurnitureUseResult>('POST', `/v1/habitat/items/${encodeURIComponent(itemId)}/use`);
+  },
   async getHabitatBuffs() {
     return minigameRequest<HabitatBuffs>('GET', '/v1/habitat/buffs');
   },
@@ -1134,6 +1141,10 @@ export const api = {
       '/v1/habitat/visit/interact',
       choice === undefined ? { ownerId } : { ownerId, choice, turn },
     );
+  },
+  /** La sala del amigo al que estás visitando: sala, muebles y aspecto de los dos Pockai. */
+  async getVisitRoom(ownerId: string) {
+    return minigameRequest<VisitRoom>('GET', `/v1/habitat/visit/room?ownerId=${encodeURIComponent(ownerId)}`);
   },
   /** Cierra tu visita en curso (el backend emite `habitat:visitor_left`). */
   async endHabitatVisit() {
@@ -1672,7 +1683,7 @@ export interface VisitMenuOption {
 export interface VisitInteraction {
   turn: number;
   line: string;
-  behavior: { action: string; animation: string; emote: string | null };
+  behavior: { action: string; animation: string; emote: string | null; clip?: string };
   options: VisitMenuOption[];
   /** Interacciones que quedan en esta visita. */
   remaining: number;
@@ -1682,7 +1693,38 @@ export interface VisitInteraction {
   petName: string;
 }
 
+/** Resultado de avisar de que el Pockai usó un mueble. */
+export interface FurnitureUseResult {
+  applied: boolean;
+  /** daily_cap | cooldown | away | asleep | disabled */
+  reason?: string;
+  interaction: string;
+  petId: string;
+  vitals: { hunger: number; happiness: number; energy: number; hygiene: number };
+  remainingToday?: number;
+}
+
+/** La sala del amigo, para quien le visita. Solo aspecto: nada de su estado ni su memoria. */
+export interface VisitRoom {
+  ownerId: string;
+  room: {
+    id: string;
+    name: string;
+    theme: HabitatRoom['theme'];
+    gridWidth: number;
+    gridHeight: number;
+    blocked: number[][];
+    items: { id: string; furnitureId: string; x: number; y: number; rotation: number }[];
+  };
+  furniture: { id: string; name: string; footprint: number[]; mount: string; interaction?: string }[];
+  host: HabitatVisitor['pet'];
+  guest: HabitatVisitor['pet'];
+}
+
 export interface HabitatSceneEvent {
+  /** `host`: la escena ocurre en tu sala. `guest`: en la del amigo al que visitas (`ownerId`). */
+  role?: 'host' | 'guest';
+  ownerId?: string;
   visitorId: string;
   slot: number;
   /** greet | explore_together | play_tag | share_food | nap_together | squabble | make_up */

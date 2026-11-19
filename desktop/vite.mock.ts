@@ -424,7 +424,7 @@ let talk = { turn: 0, done: [] as string[], ended: false, last: null as any };
 function talkReply(line: string) {
   const left = ['greet', 'pet', 'treat', 'play', 'ask'].filter((id) => !talk.done.includes(id));
   const options = talk.ended ? [] : [...(talk.done.length >= 5 ? [] : left), 'bye'].map((id) => ({ id, label: TALK_LABELS[id], ...(id === 'treat' ? { item: { id: 'apple', name: 'Manzana' } } : {}) }));
-  talk.last = { turn: talk.turn, line, behavior: { action: 'greet_visitor', animation: 'happy', emote: 'wave' }, options, remaining: Math.max(0, 5 - talk.done.length), ended: talk.ended, stage: 'friend', petName: 'Luna' };
+  talk.last = { turn: talk.turn, line, behavior: { action: 'greet_visitor', animation: 'happy', emote: 'wave', clip: talk.done[talk.done.length - 1] === 'treat' ? 'eat' : talk.done[talk.done.length - 1] === 'pet' ? 'love' : 'happy' }, options, remaining: Math.max(0, 5 - talk.done.length), ended: talk.ended, stage: 'friend', petName: 'Luna' };
   return talk.last;
 }
 let tick = 0;
@@ -641,6 +641,28 @@ const routes: [string, RegExp, Handler][] = [
   }],
   ['POST', /^\/habitat\/visit$/, ({ body }) => ((visiting = { friendId: body?.friendId ?? 'u-2' }), { success: true, visit: { visitorId: 'u-demo', visitorName: user.displayName, pet: { petId: 'p-1', nickname: 'Fuego', speciesName: 'Ignisaur', speciesId: 'ignisaur', spriteRef: 'sprites/ignisaur_idle' }, startedAt: iso() }, energy: 54 })],
   ['POST', /^\/habitat\/visit\/end$/, () => ((visiting = null), (talk = { turn: 0, done: [], ended: false, last: null }), { ok: true })],
+  ['GET', /^\/habitat\/visit\/room$/, () => {
+    const sala: any = habitats.rooms[0];
+    return {
+      ownerId: 'u-2',
+      room: {
+        id: sala.id,
+        name: sala.name,
+        theme: sala.theme ?? null,
+        gridWidth: sala.gridWidth,
+        gridHeight: sala.gridHeight,
+        blocked: sala.blocked ?? [],
+        items: [
+          { id: 'f-1', furnitureId: 'soft_bed', x: 1, y: 1, rotation: 0 },
+          { id: 'f-2', furnitureId: 'toy_ball', x: 5, y: 4, rotation: 0 },
+        ],
+      },
+      furniture: habitats.furniture.filter((f: any) => ['soft_bed', 'toy_ball'].includes(f.id)).map((f: any) => ({ id: f.id, name: f.name, footprint: f.footprint ?? [1, 1], mount: f.mount ?? 'floor', interaction: f.interaction })),
+      host: { petId: 'p-20', nickname: 'Luna', speciesName: 'Axolunar', speciesId: 'axolunar', spriteRef: 'axolunar', stage: 'juvenile', look: { palette: { primary: '#7FB7E6', secondary: '#F4C6E0' }, pattern: null, visualSeed: 77, shiny: false, accessories: {} } },
+      guest: { petId: 'p-1', nickname: 'Fuego', speciesName: 'Ignisaur', speciesId: 'ignisaur', spriteRef: 'ignisaur', stage: 'juvenile', look: { palette: { primary: '#E25822', secondary: '#F3C544' }, pattern: null, visualSeed: 1337, shiny: false, accessories: {} } },
+    };
+  }],
+  ['POST', /^\/habitat\/items\/([^/]+)\/use$/, () => ({ applied: true, interaction: 'play', petId: 'p-1', vitals: { hunger: 72, happiness: 83, energy: 63, hygiene: 36 }, remainingToday: 5 })],
   ['POST', /^\/habitat\/visit\/interact$/, ({ body }) => {
     if (body?.choice === undefined) {
       if (talk.last && !talk.ended) return talk.last;

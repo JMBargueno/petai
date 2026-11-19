@@ -37,7 +37,19 @@ export interface VisitorInteractionEvent {
   petId: string;
   option: string;
   line: string;
-  behavior?: { action: string; animation: string; emote: string | null };
+  behavior?: { action: string; animation: string; emote: string | null; clip?: string };
+}
+
+/** Clip pedido a una sala: `n` crece con cada uno, para relanzarlo aunque se repita. */
+export interface ClipCue {
+  n: number;
+  clip: string;
+}
+
+let cues = 0;
+/** Clip de una reacción, listo para pasarlo a la sala; `null` si no trae clip. */
+export function clipCueOf(behavior: { clip?: string } | null | undefined): ClipCue | null {
+  return behavior?.clip && /^[a-z_]{1,24}$/.test(behavior.clip) ? { n: ++cues, clip: behavior.clip } : null;
 }
 
 /** Última interacción de un visitante con tu Pockai. `n` crece con cada una. */

@@ -9,8 +9,9 @@
    * mano dentro de la sala, y el «fantasma» para sacarlo de ella).
    */
   import { onDestroy, onMount, createEventDispatcher } from 'svelte';
-  import { PockaiScene, parseClock, type Activity, type HostMessage, type RoomState, type SceneEvent } from '@pockai/scene';
-  import type { HabitatFurniture, HabitatRoom } from '../lib/api';
+  import { PockaiScene, parseClock, type Activity, type HostMessage, type PetState, type RoomState, type SceneEvent } from '@pockai/scene';
+  import { api, type FurnitureUseResult, type HabitatFurniture, type HabitatRoom } from '../lib/api';
+  import { clipCueOf, visitorTalk, type ClipCue } from '../lib/visitDialog';
   import type { RoomPetDrag } from '../lib/habitatExitDrag';
   import { environmentalStatus } from '../lib/environmental';
   import { habitatBackdrop } from '../lib/habitatBackdrop';
@@ -32,12 +33,24 @@
   export let fill = false;
   /** Dibuja en la sala al Pockai del amigo que esté de visita (solo si el tuyo está en ella). */
   export let showVisitors = false;
+  /**
+   * Sala ajena (la del amigo al que visitas): solo se mira. Sin agarrar al Pockai, sin avisar al
+   * servidor de los muebles que usa y con el invitado y las escenas dados desde fuera.
+   */
+  export let readonly = false;
+  /** Invitado dado desde fuera (en la sala del amigo, tu propio Pockai). */
+  export let guestPet: PetState | null = null;
+  /** Escena a representar, dada desde fuera. */
+  export let sceneCue: { n: number; type: string } | null = null;
+  /** Clip que debe hacer el Pockai de la sala (la reacción a lo que le acaban de hacer). */
+  export let clipCue: ClipCue | null = null;
 
   const dispatch = createEventDispatcher<{
     move: { itemId: string; x: number; y: number; rotation: number };
     select: { itemId: string | null };
     petTap: void;
     petPress: { event: MouseEvent; ghost: HTMLElement; room: RoomPetDrag };
+    furnitureUsed: FurnitureUseResult;
   }>();
 
   let host: HTMLDivElement;
@@ -51,10 +64,25 @@
       selectedId = e.itemId;
       dispatch('select', { itemId: e.itemId });
     } else if (e.type === 'petTapped') dispatch('petTap');
+    else if (e.type === 'furnitureUsed') void reportUse(e.itemId);
     else if (e.type === 'error') console.warn('[IsoRoomView]', e.message);
   }
 
   const send = (m: HostMessage) => scene?.receive(m);
+
+  /**
+   * El Pockai ha usado un mueble: se avisa al servidor, que decide si tiene efecto (tope diario y
+   * enfriamiento). Solo en la sala propia y con la mascota en ella. Un fallo de red no molesta.
+   */
+  async function reportUse(itemId: string) {
+    if (readonly || edit || activity === 'away' || !room?.items.some((i) => i.id === itemId)) return;
+    try {
+      const res = await api.useHabitatItem(itemId);
+      if (res?.applied) dispatch('furnitureUsed', res);
+    } catch {
+      /* sin conexión: el uso se queda en la animación */
+    }
+  }
 
   onMount(() => {
     void PockaiScene.create({ host, label, onEvent, observeResize: fill }).then((s) => {
@@ -136,17 +164,36 @@
 
   // Visita: el Pockai del amigo entra en la sala y los dos representan lo que decide el servidor.
   // La clave evita volver a hornearlo cada vez que cambia otra cosa de la lista de visitantes.
-  $: guest = showVisitors && activity !== 'away' ? roomGuestOf($visitorsStore) : null;
-  $: guestKey = guest ? `${guest.visitorId}:${guest.pet.petId}:${guest.pet.stage ?? ''}` : '';
+  $: guest = !readonly && showVisitors && activity !== 'away' ? roomGuestOf($visitorsStore) : null;
+  $: guestState = guestPet ?? (guest ? guestPetState(guest) : null);
+  $: guestKey = guestPet ? `given:${guestPet.species}:${guestPet.stage}:${guestPet.visualSeed}` : guest ? `${guest.visitorId}:${guest.pet.petId}:${guest.pet.stage ?? ''}` : '';
   let sentGuestKey = '';
   $: if (scene && guestKey !== sentGuestKey) {
     sentGuestKey = guestKey;
-    send({ type: 'setGuest', pet: guest ? guestPetState(guest) : null });
+    send({ type: 'setGuest', pet: guestState });
   }
   let playedScene = 0;
-  $: if (scene && guest && $visitScene && $visitScene.n !== playedScene && $visitScene.visitorId === guest.visitorId) {
+  // Solo las escenas de tu sala: las que llegan como visitante (`role: 'guest'`) son de otra
+  $: if (scene && guest && $visitScene && $visitScene.role !== 'guest' && $visitScene.n !== playedScene && $visitScene.visitorId === guest.visitorId) {
     playedScene = $visitScene.n;
     send({ type: 'playScene', scene: $visitScene.type });
+  }
+  let playedCue = 0;
+  $: if (scene && guestState && sceneCue && sceneCue.n !== playedCue) {
+    playedCue = sceneCue.n;
+    send({ type: 'playScene', scene: sceneCue.type });
+  }
+  // La reacción de tu Pockai a lo que le hace quien le visita (saludarle, traerle un premio…)
+  let playedTalk = 0;
+  $: if (scene && guest && $visitorTalk && $visitorTalk.n !== playedTalk && $visitorTalk.visitorId === guest.visitorId) {
+    playedTalk = $visitorTalk.n;
+    const cue = clipCueOf($visitorTalk.behavior);
+    if (cue) send({ type: 'playClip', clip: cue.clip, once: true });
+  }
+  let playedClip = 0;
+  $: if (scene && clipCue && clipCue.n !== playedClip) {
+    playedClip = clipCue.n;
+    send({ type: 'playClip', clip: clipCue.clip, once: true });
   }
   // Clima y sol reales (la hora la pone el reloj del equipo dentro de la escena). Sin ubicación
   // no hay dato: cielo despejado y horas de sol por defecto.
@@ -165,7 +212,7 @@
   $: if (scene) send({ type: 'selectItem', itemId: selectedId });
 
   function onMouseDown(e: MouseEvent) {
-    if (edit || !scene || e.button !== 0 || !scene.isPetAt(e.clientX, e.clientY)) return;
+    if (readonly || edit || !scene || e.button !== 0 || !scene.isPetAt(e.clientX, e.clientY)) return;
     const rect = scene.petClientRect();
     const snap = scene.petSnapshot();
     if (!rect || !snap) return;
@@ -201,7 +248,7 @@
   // Mano abierta al pasar sobre el Pockai (se puede agarrar)
   let overPet = false;
   function onHover(e: MouseEvent) {
-    const over = !edit && !!scene?.isPetAt(e.clientX, e.clientY);
+    const over = !readonly && !edit && !!scene?.isPetAt(e.clientX, e.clientY);
     if (over !== overPet) overPet = over;
   }
 </script>

@@ -19,6 +19,8 @@
   import UserProfileModal from '../features/profile/UserProfileModal.svelte';
   import HomeScene from './HomeScene.svelte';
   import VisitDialog from './VisitDialog.svelte';
+  import FriendRoomView from './FriendRoomView.svelte';
+  import { clipCueOf, type ClipCue } from '../lib/visitDialog';
   import { Drumstick, Gamepad2, Droplets, Home, LogOut, PawPrint, RefreshCw, Users, AlertCircle, CircleCheck, History } from 'lucide-svelte';
 
   /** Amigo a preseleccionar (otherUserId), p. ej. al pulsar «Visitar» en Amigos. */
@@ -38,6 +40,8 @@
   $: visiting = $activeVisit;
   /** Mensaje opcional que lleva tu Pockai a la visita. */
   let visitMessage = '';
+  /** Reacción del Pockai del amigo a tu última elección del menú, para animarla en su sala. */
+  let friendClip: ClipCue | null = null;
   /** Perfil abierto (userId del amigo). */
   let profileOf = '';
 
@@ -236,7 +240,8 @@
 
           {#if visiting === selectedFriend.otherUserId}
             {#key selectedFriend.otherUserId}
-              <VisitDialog ownerId={selectedFriend.otherUserId} />
+              <FriendRoomView ownerId={selectedFriend.otherUserId} ownerName={selectedFriend.otherDisplayName} clipCue={friendClip} />
+              <VisitDialog ownerId={selectedFriend.otherUserId} on:reply={(e) => (friendClip = clipCueOf(e.detail.behavior))} />
             {/key}
             <Button block icon="logout" loading={busy === 'end'} disabled={!!busy} on:click={endVisit}>Terminar visita</Button>
           {:else}

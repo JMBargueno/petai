@@ -406,7 +406,11 @@
           }
         });
         // Lo que el visitante hace con tu Pockai (saludarle, traerle un premio…) y cómo responde
-        socket.on('habitat:visitor_interaction', (ev: VisitorInteractionEvent | null) => visitorInteracted(ev));
+        socket.on('habitat:visitor_interaction', (ev: VisitorInteractionEvent | null) => {
+          visitorInteracted(ev);
+          // En el escritorio (fuera de su sala) reacciona igual que a un turno de chat
+          if (ev?.behavior) reactToBehavior(ev.behavior);
+        });
         // Qué hacen tu Pockai y el visitante: lo decide el servidor y se representa en la sala
         socket.on('habitat:scene', (ev: HabitatSceneEvent | null) => sceneReceived(ev));
         // Estado inicial: quién visita ahora mismo (por si la app arrancó con visitas en curso)

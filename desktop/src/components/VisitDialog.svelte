@@ -3,7 +3,7 @@
    * Hablar con el Pockai del amigo al que estás visitando (spec 37 §6.2). Por menú: el servidor
    * decide qué contesta y qué opciones hay; aquí solo se muestran y se envía la elegida.
    */
-  import { onMount } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import { api, type VisitInteraction } from '../lib/api';
   import { friendlyError } from '../lib/ui/errors';
   import { visitorStageLabel, optionIcon } from '../lib/visitDialog';
@@ -11,6 +11,9 @@
 
   /** Amigo al que se visita (su userId). */
   export let ownerId: string;
+
+  /** `reply`: cada respuesta del Pockai, para que la sala del amigo la represente. */
+  const dispatch = createEventDispatcher<{ reply: VisitInteraction }>();
 
   let reply: VisitInteraction | null = null;
   let error = '';
@@ -37,6 +40,7 @@
     try {
       // El turno evita que un doble clic o un reintento repita el efecto (p. ej. gastar dos premios)
       reply = await api.visitInteract(ownerId, index, reply.turn);
+      dispatch('reply', reply);
     } catch (e: any) {
       error = friendlyError(e, 'No se pudo enviar tu elección.');
     } finally {

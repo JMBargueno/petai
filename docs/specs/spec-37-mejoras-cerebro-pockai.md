@@ -967,6 +967,10 @@ tres capas, las mismas de la sección 7:
   - **Métricas.** Panel `infra/observability/grafana/dashboards/mind.json` y grupo `petai-mind`
     en `alert-rules.yml`: el motor no decide reacciones habiendo chat, rechazos del modelo por
     encima del 40 % y extracciones fallidas por encima del 30 %.
-- **Pendiente.** Nada de los seis lotes. Los clientes (escritorio y Android) consumen los
-  contratos de la fase 9 en sus propios PR.
+- **Fase 9 — escritorio (hecho).** `FriendRoomView.svelte` dibuja la sala del amigo con los dos
+  Pockai mientras dura la visita (`IsoRoomView` en modo `readonly`); la reacción del menú se anima
+  con `behavior.clip` en la sala del amigo, en la del anfitrión y en el escritorio;
+  `reactionForBehavior` usa el clip del servidor cuando es de una pasada; `IsoRoomView` avisa al
+  servidor de los muebles usados.
+- **Pendiente.** Nada de los seis lotes. Android consume los contratos de la fase 9 en su PR.
 
