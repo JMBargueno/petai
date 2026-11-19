@@ -286,6 +286,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/habitat/visit/room": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * La sala del amigo al que estás visitando
+         * @description Solo con una visita en vivo activa (403 si no). Devuelve la sala (rejilla, tema y muebles) y el aspecto de los dos Pockai, para dibujar la visita en el cliente de quien visita. No incluye vitales, personalidad ni recuerdos del anfitrión.
+         */
+        get: operations["HabitatVisitController_room"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/habitat/visitors": {
         parameters: {
             query?: never;
@@ -1331,6 +1351,26 @@ export interface paths {
         head?: never;
         /** Mover y/o girar un mueble ya colocado (sin coste) */
         patch: operations["HabitatController_moveFurniture"];
+        trace?: never;
+    };
+    "/v1/habitat/items/{itemId}/use": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * El Pockai ha usado un mueble de su sala
+         * @description Lo avisa el cliente cuando el Pockai usa un mueble por su cuenta. El efecto es pequeño y está acotado: tope diario por mascota y enfriamiento entre usos. Pasados los límites responde 201 con `applied: false` y el motivo, no un error.
+         */
+        post: operations["HabitatController_useItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/habitat/furniture/{id}": {
@@ -6441,6 +6481,26 @@ export interface operations {
             };
         };
     };
+    HabitatVisitController_room: {
+        parameters: {
+            query: {
+                /** @description El amigo visitado */
+                ownerId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     HabitatVisitController_list: {
         parameters: {
             query?: never;
@@ -7888,6 +7948,40 @@ export interface operations {
             };
             /** @description Token inválido */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mueble no encontrado en el hábitat */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HabitatController_useItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resultado del uso (aplicado o no) y vitales actuales */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El mueble no se puede usar */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

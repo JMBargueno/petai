@@ -346,7 +346,7 @@ describe('HabitatVisitService — aspecto del visitante y escenas (fase 4)', () 
     it('reenvía al anfitrión la escena que resuelve la mente y adopta su duración de ranura', () => {
       const s = setup([]);
       s.svc.onSceneResolved({ ownerId: 'host', visitorId: 'visitor', slotMs: 120_000, scene: { slot: 1, type: 'play_tag', stage: 'friend' } });
-      expect(s.realtime.emitToUser).toHaveBeenCalledWith('host', 'habitat:scene', { visitorId: 'visitor', slot: 1, type: 'play_tag', stage: 'friend' });
+      expect(s.realtime.emitToUser).toHaveBeenCalledWith('host', 'habitat:scene', { visitorId: 'visitor', role: 'host', slot: 1, type: 'play_tag', stage: 'friend' });
       expect(s.svc.sceneSlotMs).toBe(120_000);
     });
 

@@ -1,0 +1,17 @@
+{
+  // El núcleo compilado a CommonJS para el backend (mismo esquema que @pockai/minigames).
+  // Sin "DOM" en lib: si algo aquí tocara el navegador, no compilaría.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "types": [],
+    "strict": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "dist/node"
+  },
+  "files": ["src/index.ts"]
+}

@@ -8,15 +8,11 @@ import { describeDims } from './personality.engine';
 import { fulfilEpisode, type WishId } from './wishes.engine';
 import { type SceneType } from './social.engine';
 import { EncounterService } from './encounter.service';
+import { hasText, text } from './strings';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-/** Lo que hizo un amigo al venir a cuidarla, en palabras de la mascota. */
-const CARE_TEXT: Record<string, string> = {
-  feed: 'me dio de comer',
-  clean: 'me dejó bien limpio',
-  play: 'jugó conmigo',
-  pet: 'me hizo mimos',
-};
+/** Lo que hizo un amigo al venir a cuidarla, en palabras de la mascota (`CARE_*` en strings). */
+const CARE_LINE: Record<string, string> = { feed: 'CARE_FEED', clean: 'CARE_CLEAN', play: 'CARE_PLAY', pet: 'CARE_PET' };
 
 /** Encuentro de dos mascotas en una visita. `slot` es la ranura de tiempo (0 = llegada). */
 interface VisitEvent {
@@ -79,7 +75,7 @@ export class EvolutionListener {
   onMinigame(p: { petId: string }) {
     return this.safe(async () => {
       await this.mind.applyExperience(p.petId, ['minigame']);
-      await this.memory.feel(p.petId, 'owner', 'Mi entrenador', 0.05);
+      await this.memory.feel(p.petId, 'owner', text('LABEL_OWNER'), 0.05);
     });
   }
 
@@ -91,7 +87,7 @@ export class EvolutionListener {
         {
           layer: 'episodic',
           kind: 'event',
-          content: p.won ? 'Gané un combate en la Arena. ¡Qué subidón!' : 'Perdí un combate en la Arena; la próxima vez lo haré mejor.',
+          content: text(p.won ? 'EVENT_BATTLE_WON' : 'EVENT_BATTLE_LOST'),
           importance: 0.45,
           valence: p.won ? 0.6 : -0.3,
         },
@@ -155,8 +151,8 @@ export class EvolutionListener {
     ]);
     if (!visitorPet || !hostPet) return;
     const social = this.mind.config().social;
-    const visitorName = visitorPet.user?.displayName || 'un entrenador';
-    const hostName = hostPet.user?.displayName || 'un entrenador';
+    const visitorName = visitorPet.user?.displayName || text('NAME_SOME_TRAINER');
+    const hostName = hostPet.user?.displayName || text('NAME_SOME_TRAINER');
     const [guestMind, hostMind] = await Promise.all([this.mind.ensureDims(visitorPet), this.mind.ensureDims(hostPet)]);
     const key = `${p.userId}>${p.ownerId}:${visitorPet.id}:${hostPet.id}`;
     // En la llegada no hay escena anterior en esta visita: se mira cómo acabó la última vez
@@ -178,7 +174,7 @@ export class EvolutionListener {
         // Si alguno llevaba tiempo queriendo ver a sus amigos, ya los ha visto
         await this.wishFulfilled(visitorPet.id, 'see_friend');
         await this.wishFulfilled(hostPet.id, 'see_friend');
-        await this.memory.feel(hostPet.id, `user:${p.userId}`, `${visitorName} (otro entrenador)`, 0.15);
+        await this.memory.feel(hostPet.id, `user:${p.userId}`, text('LABEL_TRAINER', { visitor: visitorName }), 0.15);
       }
       await this.encounters.record(resolved);
     }
@@ -254,6 +250,22 @@ export class EvolutionListener {
     });
   }
 
+  /**
+   * Usó un mueble de su sala por su cuenta. Deriva un poco su carácter y, como mucho una vez al
+   * día, lo recuerda (misma clave por tipo de uso: no se acumulan).
+   */
+  @OnEvent('habitat:furniture_used', { async: true })
+  onFurnitureUsed(p: { petId: string; interaction: string; firstToday?: boolean }) {
+    return this.safe(async () => {
+      await this.mind.applyExperience(p.petId, [`furniture_${p.interaction}`]);
+      const line = `FURNITURE_${String(p.interaction).toUpperCase()}`;
+      if (!p.firstToday || !hasText(line)) return;
+      await this.memory.remember(p.petId, [
+        { layer: 'episodic', kind: 'event', key: `use:${p.interaction}`, bump: true, content: text(line), importance: 0.35, valence: 0.3 },
+      ]);
+    });
+  }
+
   /** Un amigo vino a cuidarla mientras su entrenador no estaba (visita de cuidado co-op). */
   @OnEvent('coop:care_received', { async: true })
   onCare(p: { ownerId: string; visitorId: string; petId: string; action: string }) {
@@ -263,38 +275,37 @@ export class EvolutionListener {
         this.prisma.user.findUnique({ where: { id: p.visitorId }, select: { displayName: true } }),
       ]);
       if (!pet) return;
-      const name = visitor?.displayName || 'Un amigo de mi entrenador';
-      const what = CARE_TEXT[p.action] ?? 'me cuidó un rato';
+      const name = visitor?.displayName || text('NAME_OWNER_FRIEND');
       await this.mind.applyExperience(pet.id, ['care_received']);
       await this.memory.remember(pet.id, [
-        { layer: 'episodic', kind: 'visit', content: `${name} vino a verme y ${what}.`, importance: 0.55, valence: 0.5, subject: `user:${p.visitorId}` },
+        { layer: 'episodic', kind: 'visit', content: text(CARE_LINE[p.action] ?? 'CARE_OTHER', { visitor: name }), importance: 0.55, valence: 0.5, subject: `user:${p.visitorId}` },
       ]);
-      await this.memory.feel(pet.id, `user:${p.visitorId}`, `${name} (otro entrenador)`, 0.1);
+      await this.memory.feel(pet.id, `user:${p.visitorId}`, text('LABEL_TRAINER', { visitor: name }), 0.1);
     });
   }
 
   /** Otro entrenador le envía un regalo. Lo recuerda la mascota a la que iba dirigido. */
   @OnEvent('gift:received', { async: true })
-  onGift(p: { senderId: string; recipientId: string; petId?: string; itemName?: string }) {
+  onGift(p: { senderId: string; recipientId: string; petId?: string; itemName?: string; kind?: 'gift' | 'care' }) {
     return this.safe(async () => {
       const [pet, sender] = await Promise.all([
         this.petInVisit(p.recipientId, p.petId),
         this.prisma.user.findUnique({ where: { id: p.senderId }, select: { displayName: true } }),
       ]);
       if (!pet) return;
-      const name = sender?.displayName || 'Un amigo de mi entrenador';
+      const name = sender?.displayName || text('NAME_OWNER_FRIEND');
       await this.mind.applyExperience(pet.id, ['gift_received']);
       await this.memory.remember(pet.id, [
         {
           layer: 'episodic',
           kind: 'event',
-          content: p.itemName ? `${name} me mandó un regalo: ${p.itemName}. ¡Qué ilusión!` : `${name} me mandó un regalo. ¡Qué ilusión!`,
+          content: p.kind === 'care' ? text('CARE_PACKAGE', { visitor: name }) : p.itemName ? text('GIFT_ITEM', { visitor: name, item: p.itemName }) : text('GIFT_PLAIN', { visitor: name }),
           importance: 0.55,
           valence: 0.6,
           subject: `user:${p.senderId}`,
         },
       ]);
-      await this.memory.feel(pet.id, `user:${p.senderId}`, `${name} (otro entrenador)`, 0.1);
+      await this.memory.feel(pet.id, `user:${p.senderId}`, text('LABEL_TRAINER', { visitor: name }), 0.1);
     });
   }
 

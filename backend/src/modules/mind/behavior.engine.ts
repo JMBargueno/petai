@@ -55,9 +55,45 @@ export interface BehaviorView {
   action: Behavior;
   animation: 'idle' | 'happy' | 'sleep';
   emote: 'heart' | 'sparkle' | 'note' | 'question' | 'tear' | 'zzz' | 'wave' | 'star' | null;
+  /**
+   * Clip de la hoja de animación con el que el cliente la representa (en la sala o en el
+   * escritorio). Lo decide el servidor para que cada cliente no mantenga su propia tabla.
+   * `animation` se conserva para las apps que aún no leen `clip`.
+   */
+  clip: string;
 }
 
-const VIEW: Record<Behavior, Omit<BehaviorView, 'action'>> = {
+/** Clip de cada reacción. Solo clips que existen en todas las hojas (lo comprueba un test). */
+const CLIP: Record<Behavior, string> = {
+  comfort: 'love',
+  celebrate: 'celebrate',
+  cuddle: 'love',
+  invite_play: 'happy',
+  propose_explore: 'happy',
+  greet: 'happy',
+  wave_goodbye: 'happy',
+  listen: 'idle_alt',
+  ask_back: 'talk',
+  sulk: 'sad',
+  show_off: 'dance',
+  yawn: 'tired',
+  bring_gift: 'happy',
+  tell_story: 'talk',
+  ask_about_day: 'talk',
+  apologize: 'sad',
+  perform_trick: 'dance',
+  greet_visitor: 'happy',
+  hide: 'surprised',
+  show_habitat: 'happy',
+  accept_treat: 'eat',
+  play_tag: 'happy',
+  share_food: 'eat',
+  nap_together: 'sleep',
+  squabble: 'attack',
+  make_up: 'love',
+};
+
+const VIEW: Record<Behavior, Omit<BehaviorView, 'action' | 'clip'>> = {
   comfort: { animation: 'idle', emote: 'heart' },
   celebrate: { animation: 'happy', emote: 'sparkle' },
   cuddle: { animation: 'happy', emote: 'heart' },
@@ -202,7 +238,7 @@ export interface Validation {
 }
 
 export function viewOf(action: Behavior): BehaviorView {
-  return { action, ...VIEW[action] };
+  return { action, ...VIEW[action], clip: CLIP[action] };
 }
 
 export function isBehavior(v: unknown): v is Behavior {
