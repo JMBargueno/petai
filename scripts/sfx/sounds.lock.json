@@ -694,6 +694,31 @@
     "candidates": 1,
     "generatedAt": "2026-11-19T08:35:59.503Z"
   },
+  "music.brand-sting": {
+    "hash": "845739f5ee8b4ebe",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:45.437Z"
+  },
+  "music.coliseo": {
+    "hash": "fa28bf2e00824269",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:50.327Z"
+  },
+  "music.primer-latido": {
+    "hash": "dcc325ac18a2e6fd",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:50.415Z"
+  },
+  "music.santuario": {
+    "hash": "f32c9a1e5f949fbb",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:47.572Z"
+  },
+  "music.telar": {
+    "hash": "bb9dc2ef61571871",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:47.631Z"
+  },
   "pet.attack.grunt": {
     "hash": "a95a41b38f2ab9ac",
     "candidates": 1,
