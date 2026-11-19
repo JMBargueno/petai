@@ -12,6 +12,7 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import { EFFECTS, phasesOf } from './index';
 import { admitMoment } from './momentQueue';
+import { soundsForEffectPhase } from './sounds';
 import { CanvasSink, renderFrame } from './render';
 import { EffectPlayer, quantize } from './timeline';
 import type { EffectDef, FxPalette } from './types';
@@ -42,6 +43,8 @@ export interface PixiEffectsOptions {
   palette: () => FxPalette;
   seed: () => number;
   onEnded?: (id: string) => void;
+  /** Sonidos candidatos de una fase (spec 40); el anfitrión reproduce el primero que tenga. */
+  onSound?: (ids: string[]) => void;
 }
 
 export class PixiEffects {
@@ -99,7 +102,10 @@ export class PixiEffects {
       minor,
       player: null as unknown as EffectPlayer,
     };
-    entry.player = new EffectPlayer(phasesOf(def, params, reduced), (phase) => {
+    const phases = phasesOf(def, params, reduced);
+    entry.player = new EffectPlayer(phases, (phase) => {
+      const ids = soundsForEffectPhase(id, phases, phase, params);
+      if (ids.length) this.opts.onSound?.(ids);
       if (phase === 'hold') entry.releaseAt = entry.released ? this.now : this.now + entry.holdMs;
       if (phase === 'done') this.finish(entry);
     });

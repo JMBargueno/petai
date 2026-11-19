@@ -39,6 +39,7 @@
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import HabitatWidget from './components/HabitatWidget.svelte';
+  import EtherObjectLayer from './components/EtherObjectLayer.svelte';
   import { habitatMode } from './lib/habitatMode';
   import FileDropModal from './components/FileDropModal.svelte';
   import AchievementToast from './features/achievements/AchievementToast.svelte';
@@ -329,7 +330,8 @@
   async function loadInitialData() {
     try {
       const catalog = await api.getCatalog();
-      shopItems = catalog.foods || [];
+      // Spec 41: lo que es solo drop (cofres y actividades) u oculto (solo admin) no se vende
+      shopItems = (catalog.foods || []).filter((f: any) => (f.availability ?? 'shop') === 'shop');
 
       if (getAccessToken()) {
         user = await api.getMe();
@@ -957,6 +959,9 @@
       on:kick={(e) => handleBallKick(e.detail.vx, e.detail.vy)}
     />
   {/if}
+
+  <!-- Objetos que el Pockai saca del Éter (el reloj del pomodoro): se arrastran por la pantalla -->
+  <EtherObjectLayer />
 
   <!-- Mascota Interactiva Flotante (oculta si está en su Hábitat/casa) -->
   {#if currentPet && (!currentPet.inHabitat || homeAnim)}

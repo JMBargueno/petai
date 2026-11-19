@@ -254,7 +254,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                     Dest.More -> when (sub) {
                         0 -> ShopScreen(state, onRefresh = vm::refreshAll, onBuy = vm::buy)
                         1 -> ChestsScreen(app.service, onChanged = { vm.refreshAll() })
-                        2 -> CoopScreen(app.service, onChanged = { vm.refreshAll() })
+                        2 -> CoopScreen(app.service, onChanged = { vm.refreshAll() }, realtime = app.realtime)
                         3 -> ClanScreen(app.service, app.realtime, onChanged = { vm.refreshAll() })
                         else -> AccountScreen(state, onLogout = vm::logout, onLinkDevice = vm::linkDevice, onRedeemVoucher = vm::redeemVoucher)
                     }

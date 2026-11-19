@@ -363,6 +363,7 @@
         { "itemId": "healthy_salad", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
         { "itemId": "medicine", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
         { "itemId": "evolution_stone", "tier": "epic", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "ether_threader", "tier": "epic", "qtyMin": 1, "qtyMax": 1 },
         { "itemId": "apple", "tier": "legendary", "qtyMin": 1, "qtyMax": 1 }
       ],
       "tierWeights": { "common": 40, "uncommon": 30, "rare": 20, "epic": 7, "legendary": 3 },
@@ -378,6 +379,7 @@
         { "itemId": "healthy_salad", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
         { "itemId": "medicine", "tier": "epic", "qtyMin": 1, "qtyMax": 2 },
         { "itemId": "evolution_stone", "tier": "epic", "qtyMin": 1, "qtyMax": 1 },
+        { "itemId": "ether_threader", "tier": "epic", "qtyMin": 1, "qtyMax": 1 },
         { "itemId": "evolution_stone", "tier": "legendary", "qtyMin": 1, "qtyMax": 2 }
       ],
       "tierWeights": { "common": 30, "uncommon": 30, "rare": 24, "epic": 11, "legendary": 5 },
@@ -392,7 +394,8 @@
         { "itemId": "healthy_salad", "tier": "rare", "qtyMin": 1, "qtyMax": 2 },
         { "itemId": "medicine", "tier": "epic", "qtyMin": 1, "qtyMax": 2 },
         { "itemId": "evolution_stone", "tier": "epic", "qtyMin": 1, "qtyMax": 2 },
-        { "itemId": "evolution_stone", "tier": "legendary", "qtyMin": 1, "qtyMax": 2 }
+        { "itemId": "evolution_stone", "tier": "legendary", "qtyMin": 1, "qtyMax": 2 },
+        { "itemId": "ether_threader", "tier": "legendary", "qtyMin": 1, "qtyMax": 1 }
       ],
       "tierWeights": { "common": 0, "uncommon": 30, "rare": 30, "epic": 28, "legendary": 12 },
       "pity": { "threshold": 3, "minTier": "legendary" },
@@ -406,12 +409,36 @@
     "maxPurchasesPerDay": 5,
     "expiryDays": 30
   },
+  "activityDrops": {
+    "_comment": "Objetos que pueden caer al terminar actividades (spec 41). chance por partida/sesión; dailyCaps limita cuántos caen al día por actividades (los cofres no cuentan). Nunca un objeto availability=hidden.",
+    "dailyCaps": { "ether_threader": 1 },
+    "sources": {
+      "minigame": [{ "itemId": "ether_threader", "chance": 0.02 }],
+      "training": [{ "itemId": "ether_threader", "chance": 0.03 }],
+      "adventure": [{ "itemId": "ether_threader", "chance": 0.05 }],
+      "battleWin": [{ "itemId": "ether_threader", "chance": 0.03 }],
+      "explore": [{ "itemId": "ether_threader", "chance": 0.1 }]
+    }
+  },
   "publicApi": {
     "leaderboardMax": 100,
     "eventsLimit": 10,
     "standings": {
       "defaultLimit": 50,
       "maxLimit": 200
+    }
+  },
+  "habitat": {
+    "use": {
+      "dailyCap": 6,
+      "cooldownSeconds": 120,
+      "effects": {
+        "eat": { "hunger": 3 },
+        "bathe": { "hygiene": 3 },
+        "sit": { "energy": 2 },
+        "sleep": { "energy": 3 },
+        "play": { "happiness": 2, "energy": -1 }
+      }
     }
   },
   "personality": {
@@ -498,7 +525,12 @@
         "visitor_pet": { "affection": 0.075 },
         "visitor_treat": { "affection": 0.05 },
         "visitor_play": { "temper": 0.1, "sociability": 0.05 },
-        "visitor_ask": { "sociability": 0.03 }
+        "visitor_ask": { "sociability": 0.03 },
+        "furniture_eat": { "affection": 0.02 },
+        "furniture_bathe": { "temper": -0.02 },
+        "furniture_sit": { "temper": -0.02 },
+        "furniture_sleep": { "temper": -0.03 },
+        "furniture_play": { "temper": 0.05, "curiosity": 0.02 }
       }
     },
     "memory": {

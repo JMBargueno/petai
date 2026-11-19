@@ -60,6 +60,7 @@ export class VouchersService {
     const input = parseOrBadRequest(createVouchersSchema, raw);
     this.rewards.assertCanGrant(actor, input.rewards);
     this.rewards.assertAccessories(input.rewards.accessories);
+    this.rewards.assertItems(input.rewards.items);
     const data = {
       rewards: input.rewards as unknown as Prisma.InputJsonValue,
       maxUses: input.maxUses,

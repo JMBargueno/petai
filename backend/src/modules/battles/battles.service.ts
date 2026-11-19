@@ -36,6 +36,7 @@ import {
   validateEquip,
 } from './combat/stats';
 import { BattleLog, CombatConfig, Element, Fighter, SkillDef, Stats, Strategy } from './combat/types';
+import { ActivityDropsService } from '../inventory/activity-drops.service';
 
 const STRATEGIES: Strategy[] = ['aggressive', 'defensive', 'balanced'];
 const DAY_MS = 24 * 3600 * 1000;
@@ -60,6 +61,8 @@ export class BattlesService {
     private readonly cache: RedisCacheService,
     // Buffs de muebles (spec 10): opcional para no romper tests que construyen el servicio a mano
     @Optional() private readonly habitat?: HabitatService,
+    // Drops de actividades (spec 41)
+    @Optional() private readonly activityDrops?: ActivityDropsService,
   ) {}
 
   private get cfg(): CombatConfig & Record<string, any> {
@@ -367,8 +370,10 @@ export class BattlesService {
       });
     }
 
+    const bonusItem = outcome === 'win' ? ((await this.activityDrops?.roll(userId, 'battleWin')) ?? null) : null;
     const league = leagueFor(eloAfter, cfg.leagues);
     return {
+      bonusItem,
       battleId: battle.id,
       seed,
       result: { outcome, winner: result.winner, rounds: result.rounds },

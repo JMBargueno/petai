@@ -27,6 +27,7 @@ import { PlanLimits } from '../billing/plans';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MindService } from '../mind/mind.service';
 import { MindMemoryService } from '../mind/mind-memory.service';
+import { text } from '../mind/strings';
 import { Interpretation } from '../mind/conversation.engine';
 import {
   BehaviorView,
@@ -512,10 +513,10 @@ export class ChatService {
             outcome.episodes.map((e) => ({ layer: 'episodic' as const, kind: 'event', key: e.key, bump: true, content: e.content, importance: e.importance, valence: e.valence, subject: 'owner' })),
           );
         }
-        if (outcome?.ownerDelta) await this.mindMemory.feel(pet.id, 'owner', 'Mi entrenador', outcome.ownerDelta);
+        if (outcome?.ownerDelta) await this.mindMemory.feel(pet.id, 'owner', text('LABEL_OWNER'), outcome.ownerDelta);
         // La relación con el entrenador solo se mueve con mensajes significativos (no con cada «hola»)
         if (ep || Math.abs(turn.interpretation.sentiment) >= 0.5) {
-          await this.mindMemory.feel(pet.id, 'owner', 'Mi entrenador', 0.02 + turn.interpretation.sentiment * 0.08);
+          await this.mindMemory.feel(pet.id, 'owner', text('LABEL_OWNER'), 0.02 + turn.interpretation.sentiment * 0.08);
         }
       }
     } catch (e: any) {

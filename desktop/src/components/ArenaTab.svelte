@@ -280,6 +280,9 @@
             <br />ELO {last.elo.before} → {last.elo.after} ({sign(last.elo.delta)}) · {last.elo.league.name}
             <br />+{last.rewards.xp} XP · +{last.rewards.coins} <Ico n="coin" /> · {sign(last.rewards.happiness)} <Ico n="smile" /> · −{last.rewards.energyCost} <Ico n="energy" />
           </Notice>
+          {#if last.bonusItem}
+          <Notice tone="ok" icon="gift">¡Ha caído {last.bonusItem.name}! Está en tu Mochila.</Notice>
+        {/if}
         {/if}
 
         {#if replayLog}

@@ -955,12 +955,14 @@ export class IsoRoom extends Container {
     // Va al mueble que le pilla más a mano y, dentro de él, a la celda más cercana a la que llegue
     const here = this.petCell();
     const options = candidates.map((pf) => ({ pf, cells: footprintCells(pf.def, pf.item) }));
-    for (const { cells } of byNearest(options, here)) {
+    for (const { pf, cells } of byNearest(options, here)) {
       const allowed = new Set(cells);
       for (const target of cellsByDistance(cells, here)) {
         const ok = this.goTo(target, allowed, () => {
           this.using = true;
           this.placePetSprite();
+          // Ha llegado y lo usa: se avisa una vez por uso (si se queda, como al dormir, también)
+          this.opts.emit({ type: 'furnitureUsed', itemId: pf.item.id, interaction });
           const clip = USE_CLIP[interaction];
           if (stay) this.pet.setBaseClip(clip);
           else {

@@ -4,6 +4,7 @@ import com.petai.app.data.AudioPrefs
 import com.petai.app.data.HabitatFurniture
 import com.petai.app.data.HabitatRoom
 import com.petai.app.data.Pet
+import com.petai.app.data.PetIdentity
 import com.petai.app.data.StoryScene
 import com.petai.app.data.WeatherInfo
 import kotlinx.serialization.json.JsonNull
@@ -127,11 +128,80 @@ object SceneMessages {
         }
     }
 
-    /** `rest`: clip de reposo según el estado del Pockai (ver [restClip]). */
-    fun setActivity(activity: String, rest: String): JsonObject = buildJsonObject {
+    /**
+     * `rest`: clip de reposo según el estado del Pockai (ver [restClip]). [mind] (opcional, ver
+     * [roomMind]): personalidad y necesidades, para que en la sala elija qué hacer según cómo es
+     * y cómo está; sin él la sala se porta de forma neutra.
+     */
+    fun setActivity(activity: String, rest: String, mind: JsonObject? = null): JsonObject = buildJsonObject {
         put("type", "setActivity")
         put("activity", activity)
         put("rest", rest)
+        if (mind != null) put("mind", mind)
+    }
+
+    /** Personalidad (cinco dimensiones 0-100) y necesidades del Pockai para la sala. */
+    fun roomMind(pet: Pet, dims: Map<String, Double>): JsonObject = buildJsonObject {
+        putJsonObject("dims") {
+            for (d in listOf("curiosity", "sociability", "bravery", "affection", "temper")) put(d, dims[d] ?: 50.0)
+        }
+        putJsonObject("needs") {
+            put("hunger", pet.hunger)
+            put("energy", pet.energy)
+            put("hygiene", pet.hygiene)
+            put("happiness", pet.happiness)
+        }
+        // Semilla estable por mascota: mismo carácter, mismas costumbres
+        put("seed", pet.id.hashCode() and 0x7fffffff)
+    }
+
+    private fun identityState(pet: PetIdentity): JsonObject? {
+        val look = pet.look ?: return null
+        return buildJsonObject {
+            put("species", pet.speciesId.ifBlank { pet.spriteRef })
+            put("stage", pet.stage)
+            putJsonObject("palette") {
+                put("primary", look.palette.primary)
+                put("secondary", look.palette.secondary)
+                look.palette.accent?.let { put("accent", it) }
+            }
+            val pattern = look.pattern
+            if (pattern != null) put("pattern", pattern) else put("pattern", JsonNull)
+            put("visualSeed", look.visualSeed)
+            put("shiny", look.shiny)
+            putJsonObject("accessories") { look.accessories.forEach { (slot, id) -> put(slot, id) } }
+        }
+    }
+
+    /** Pockai de la sala a partir de su aspecto (la sala del amigo al que visitas). */
+    fun setPetIdentity(pet: PetIdentity): JsonObject? = identityState(pet)?.let { state ->
+        buildJsonObject {
+            put("type", "setPet")
+            put("pet", state)
+        }
+    }
+
+    /**
+     * Pockai de visita en la sala (mensaje opcional, protocolo v4). `null`, o un visitante sin
+     * aspecto (backend antiguo), lo quita.
+     */
+    fun setGuest(pet: PetIdentity?): JsonObject = buildJsonObject {
+        put("type", "setGuest")
+        val state = pet?.let { identityState(it) }
+        if (state != null) put("pet", state) else put("pet", JsonNull)
+    }
+
+    /** Escena entre el Pockai de la sala y el visitante (la decide el servidor). */
+    fun playScene(scene: String): JsonObject = buildJsonObject {
+        put("type", "playScene")
+        put("scene", scene)
+    }
+
+    /** Un clip de una pasada en el Pockai de la sala (la reacción a lo que le acaban de hacer). */
+    fun playClip(clip: String): JsonObject = buildJsonObject {
+        put("type", "playClip")
+        put("clip", clip)
+        put("once", true)
     }
 
     fun setNight(night: Boolean): JsonObject = buildJsonObject {
@@ -190,6 +260,12 @@ object SceneMessages {
             put("enabled", prefs.enabled)
             put("master", prefs.master)
             put("reduced", prefs.reduced)
+            putJsonObject("busOn") {
+                put("ui", prefs.uiOn)
+                put("sfx", prefs.sfxOn)
+                put("pet", prefs.petOn)
+                put("ambient", prefs.ambientOn)
+            }
             putJsonObject("buses") {
                 put("ui", prefs.ui)
                 put("sfx", prefs.sfx)

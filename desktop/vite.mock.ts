@@ -87,11 +87,16 @@ const foods = [
   { id: 'sweet_coral', name: 'Coral Glaseado', description: 'Delicadeza marina dulce y refrescante. Favorita de las criaturas acuáticas.', priceCoins: 25 },
   { id: 'cake', name: 'Pastel de Fresas', description: 'Un dulce delicioso que aumenta mucho la felicidad, aunque no es lo más saludable.', priceCoins: 40 },
   { id: 'royal_feast', name: 'Banquete real', description: 'Llena del todo y da energía para una tarde entera de juegos.', priceCoins: 1500 },
-];
+  // Spec 41: solo drop y oculto (no salen en la tienda; sí en la Mochila)
+  { id: 'ether_threader', kind: 'level_up', availability: 'drop', name: 'Enhebrador', description: 'Aguja de hilo vivo que cose una hebra más de Éter en la vena del Pockai y lo hace crecer.', priceCoins: 0 },
+  { id: 'origin_nectar', kind: 'medicine', availability: 'hidden', name: 'Néctar del Origen', description: 'La primera gota del Origen, que sacia, alegra, reanima y cura cualquier mal.', priceCoins: 0 },
+].map((f: any) => ({ kind: 'food', availability: 'shop', ...f }));
 
 let inventory = [
   { itemId: 'apple', qty: 5, item: foods[0] },
   { itemId: 'spicy_berry', qty: 2, item: foods[1] },
+  { itemId: 'ether_threader', qty: 2, item: foods[5] },
+  { itemId: 'origin_nectar', qty: 1, item: foods[6] },
 ];
 
 const friends = [
@@ -458,7 +463,7 @@ const routes: [string, RegExp, Handler][] = [
   ['PUT', /^\/me\/featured-badges$/, ({ body }) => ((featuredBadges = body.achIds ?? []), { featuredBadges })],
   ['GET', /^\/users\/[^/]+\/profile$/, () => profile({ id: 'u-2', displayName: 'Marta', handle: 'marta', title: 'Forjadora del Nexo', isFriend: true, isSelf: false, isPro: true })],
   ['GET', /^\/catalog$/, () => ({ foods, eggPriceCoins: 50 })],
-  ['GET', /^\/shop$/, () => foods],
+  ['GET', /^\/shop$/, () => foods.filter((f) => f.availability === 'shop')],
   ['POST', /^\/shop\/buy$/, ({ body }) => {
     const food = foods.find((f) => f.id === body.itemId) ?? foods[0];
     spend('coins', food.priceCoins);
@@ -489,6 +494,18 @@ const routes: [string, RegExp, Handler][] = [
     row.qty -= 1;
     inventory = inventory.filter((i) => i.qty > 0);
     p.hunger = clamp(p.hunger + 15);
+    return p;
+  }],
+  ['POST', /^\/pets\/([^/]+)\/use-item$/, ({ m, body }) => {
+    const p = findPet(m[1]);
+    const row = inventory.find((i) => i.itemId === body?.itemId);
+    if (!row) throw fail(400, 'No posees este objeto en el inventario');
+    row.qty -= 1;
+    inventory = inventory.filter((i) => i.qty > 0);
+    const kind = (row.item as any).kind;
+    if (kind === 'level_up') p.level = Math.min(100, (p.level ?? 1) + 1);
+    else if (kind === 'medicine') Object.assign(p, { hunger: 100, happiness: 100, energy: 100, health: 100, sick: false });
+    else p.hunger = clamp(p.hunger + 15);
     return p;
   }],
   ['POST', /^\/pets\/([^/]+)\/clean$/, ({ m }) => Object.assign(findPet(m[1]), { hygiene: 100 })],

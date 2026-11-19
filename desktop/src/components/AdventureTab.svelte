@@ -40,6 +40,8 @@
   /** Respuesta a la escena actual, mientras se ve su consecuencia. */
   let answer: StoryAnswer | null = null;
   let ending: StoryResult | null = null;
+  /** Objeto que soltó la aventura al terminarla (spec 41). */
+  let endingItem: { itemId: string; name: string; qty: number } | null = null;
   let textEl: HTMLElement | null = null;
 
   $: petName = pet?.nickname || pet?.species?.name || 'Tu Pockai';
@@ -137,6 +139,7 @@
 
   function finish() {
     ending = answer?.completed ?? null;
+    endingItem = answer?.bonusItem ?? null;
     play = null;
     scene = null;
     answer = null;
@@ -217,6 +220,9 @@
             <b>{o?.label}</b> · +{ending.rewards.xp} XP, +{ending.rewards.coins} monedas
             {#if ending.memory}<p class="memory">{ending.memory}</p>{/if}
           </Notice>
+          {#if endingItem}
+          <Notice tone="ok" icon="gift">¡Ha caído {endingItem.name}! Está en tu Mochila.</Notice>
+        {/if}
         {/if}
         {#if !pet}
           <Notice tone="info">Necesitas una mascota activa para vivir una historia.</Notice>

@@ -36,7 +36,13 @@ const onEvent = (event: SceneEvent) => {
   bridge.send(event);
 };
 
-const ready = PockaiScene.create({ host: root, onEvent }).then((s) => {
+// Sonidos de los efectos: el primero de los candidatos que tenga fichero.
+const onSound = (ids: string[]) => {
+  const id = ids.find((x) => audio.has(x));
+  if (id) audio.play(id);
+};
+
+const ready = PockaiScene.create({ host: root, onEvent, onSound }).then((s) => {
   scene = s;
   pending.splice(0).forEach((m) => s.receive(m));
 });

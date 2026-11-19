@@ -25,6 +25,8 @@ export interface GrantedRewards {
   chests: { type: RewardChestType; qty: number }[];
   /** `alreadyOwned`: el usuario ya tenía la prenda y no se le ha dado otra. */
   accessories: { id: string; name: string; alreadyOwned: boolean }[];
+  /** Consumibles (spec 41). Puede faltar en entregas guardadas antes de existir. */
+  items?: { id: string; name: string; qty: number }[];
 }
 
 /** Payload del evento WebSocket `reward:received` y respuesta del canje. */
@@ -56,6 +58,8 @@ export function dominantReward(g: GrantedRewards): DominantReward {
     return { reward: 'chest', tier };
   }
   if (g.accessories.some((a) => !a.alreadyOwned)) return { reward: 'accessory' };
+  // Un objeto (Enhebrador, Néctar…) se celebra con el sello del lazo, como un regalo: el sello no tiene glifo propio
+  if (g.items?.length) return { reward: 'accessory' };
   if (g.gems > 0) return { reward: 'gems' };
   if (g.coins > 0) return { reward: 'coins' };
   return { reward: g.accessories.length ? 'accessory' : 'coins' };
@@ -88,6 +92,25 @@ export class RewardsService {
     const known = new Set((this.gameData.getAccessories() ?? []).map((a: any) => a.id));
     const unknown = ids.filter((id) => !known.has(id));
     if (unknown.length) throw new BadRequestException(`Prenda desconocida: ${unknown.join(', ')}`);
+  }
+
+  /** Comprueba que los consumibles existen en foods.json (cualquier disponibilidad: el admin puede dar ocultos). */
+  assertItems(items: { id: string }[] | undefined): void {
+    if (!items?.length) return;
+    const known = new Set((this.gameData.getFoods() ?? []).map((f: any) => f.id));
+    const unknown = items.filter((i) => !known.has(i.id)).map((i) => i.id);
+    if (unknown.length) throw new BadRequestException(`Objeto desconocido: ${unknown.join(', ')}`);
+  }
+
+  /** Catálogo de consumibles para el selector del panel, con su disponibilidad (tienda, solo drop u oculto). */
+  itemOptions(): { id: string; name: string; kind: string; availability: string; description: string }[] {
+    return (this.gameData.getFoods() ?? []).map((f: any) => ({
+      id: f.id,
+      name: f.name,
+      kind: f.kind,
+      availability: f.availability ?? 'shop',
+      description: f.description ?? '',
+    }));
   }
 
   /** Catálogo de prendas para el selector del panel. */
@@ -133,8 +156,26 @@ export class RewardsService {
       }
     }
 
+    // Consumibles (spec 41). `?? []`: los vouchers creados antes de existir este campo no lo traen.
+    const items: NonNullable<GrantedRewards['items']> = [];
+    const itemLines = rewards.items ?? [];
+    if (itemLines.length) {
+      const rows = await tx.item.findMany({ where: { id: { in: itemLines.map((i) => i.id) } }, select: { id: true, name: true } });
+      const names = new Map(rows.map((r) => [r.id, r.name]));
+      const missing = itemLines.filter((i) => !names.has(i.id)).map((i) => i.id);
+      if (missing.length) throw new BadRequestException(`Objeto sin cargar en la base de datos (falta el seed): ${missing.join(', ')}`);
+      for (const { id, qty } of itemLines) {
+        await tx.inventoryItem.upsert({
+          where: { userId_itemId: { userId, itemId: id } },
+          update: { qty: { increment: qty } },
+          create: { userId, itemId: id, qty },
+        });
+        items.push({ id, name: names.get(id)!, qty });
+      }
+    }
+
     return {
-      granted: { coins: rewards.coins, gems: rewards.gems, proDays: rewards.proDays, proUntil, chests: rewards.chests, accessories },
+      granted: { coins: rewards.coins, gems: rewards.gems, proDays: rewards.proDays, proUntil, chests: rewards.chests, accessories, items },
       chests,
     };
   }
@@ -178,6 +219,7 @@ export class RewardsService {
     const { rewards, note } = parseOrBadRequest(grantSchema, raw);
     this.assertCanGrant(actor, rewards);
     this.assertAccessories(rewards.accessories);
+    this.assertItems(rewards.items);
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 

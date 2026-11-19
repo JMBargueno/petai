@@ -7,6 +7,7 @@ import { GameDataService } from '../game-data/game-data.service';
 import { PetsService } from '../pets/pets.service';
 import { BondingService } from '../bonding/bonding.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ActivityDropsService } from '../inventory/activity-drops.service';
 
 export interface MinigameRewards {
   coins: number;
@@ -46,6 +47,8 @@ export class MinigamesService {
     private readonly bonding: BondingService,
     @Optional() private readonly realtime?: RealtimeGateway,
     @Optional() private readonly events?: EventEmitter2,
+    // Drops de actividades (spec 41): opcional para no romper tests que construyen el servicio a mano
+    @Optional() private readonly activityDrops?: ActivityDropsService,
   ) {}
 
   private get cfg() {
@@ -189,6 +192,8 @@ export class MinigamesService {
       data: { coins: { increment: rewards.coins }, accountXp: { increment: rewards.xp } },
     });
     const item = await this.maybeDropItem(userId, game, score);
+    // Objeto extra de actividades (Enhebrador…): solo en partidas que dieron premio
+    const bonusItem = rewards.coins > 0 ? ((await this.activityDrops?.roll(userId, 'minigame')) ?? null) : null;
     const pet = await this.petsService.applyActivityReward(userId, session.petId, rewards);
     // Vínculo (feature 006): minijuego terminado con premio sube el bonding (+2)
     await this.bonding.recordInteraction(session.petId, userId, 'minigame');
@@ -196,7 +201,7 @@ export class MinigamesService {
     // Misiones y logros de minijuegos.
     this.events?.emit('minigame:finished', { userId, petId: session.petId, gameId: session.gameId, score });
 
-    return { score, rewards, pet, verified, affinity, item };
+    return { score, rewards, pet, verified, affinity, item, bonusItem };
   }
 
   /**

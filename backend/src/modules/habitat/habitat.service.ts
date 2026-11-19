@@ -3,7 +3,10 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
+  Optional,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { RedisService } from '../../redis/redis.service';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
@@ -65,13 +68,36 @@ export interface HabitatData {
   buffCaps: Record<string, number>;
 }
 
+export interface FurnitureUseConfig {
+  dailyCap: number;
+  cooldownSeconds: number;
+  effects: Record<string, Partial<Record<'hunger' | 'happiness' | 'energy' | 'hygiene', number>>>;
+}
+
+export interface FurnitureUseResult {
+  /** Si el uso ha tenido efecto. */
+  applied: boolean;
+  /** Por qué no: límite diario, enfriamiento, fuera de su hábitat, dormido o desactivado. */
+  reason?: 'daily_cap' | 'cooldown' | 'away' | 'asleep' | 'disabled';
+  interaction: string;
+  petId: string;
+  vitals: { hunger: number; happiness: number; energy: number; hygiene: number };
+  remainingToday?: number;
+}
+
 @Injectable()
 export class HabitatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
     private readonly gameData: GameDataService,
+    @Optional() private readonly redis?: RedisService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
+
+  /** Respaldo en memoria de los contadores de uso cuando Redis no responde. */
+  private readonly localUses = new Map<string, number>();
+  private readonly localCooldown = new Map<string, number>();
 
   /**
    * C-03: el game-data de hábitat se lee de `GameDataService` (snapshot validado con zod y
@@ -208,6 +234,84 @@ export class HabitatService {
 
     await this.prisma.habitatItem.delete({ where: { id: item.id } });
     return { message: 'Furniture removed', itemId: item.id, furnitureId: item.furnitureId };
+  }
+
+  /**
+   * El Pockai ha usado un mueble en su sala (lo avisa el cliente, que es quien lo ve). El efecto
+   * es pequeño y está acotado en servidor: un tope diario por mascota y un enfriamiento entre
+   * usos, para que dejar la sala abierta no sustituya a cuidar de la mascota. Pasados los
+   * límites no es un error: se contesta `applied: false` con el motivo.
+   */
+  async useItem(userId: string, itemId: string, now = new Date()): Promise<FurnitureUseResult> {
+    const item = await this.prisma.habitatItem.findUnique({ where: { id: itemId } });
+    const pet = item ? await this.prisma.pet.findFirst({ where: { id: item.petId, userId } }) : null;
+    if (!item || !pet) throw new NotFoundException('Furniture not found in habitat');
+    const interaction = this.data().furniture.find((f) => f.id === item.furnitureId)?.interaction;
+    if (!interaction) throw new BadRequestException('Este mueble no se puede usar');
+
+    const vitals = () => ({ hunger: pet.hunger, happiness: pet.happiness, energy: pet.energy, hygiene: pet.hygiene });
+    const skip = (reason: FurnitureUseResult['reason']): FurnitureUseResult => ({ applied: false, reason, interaction, petId: pet.id, vitals: vitals() });
+    const cfg = (this.gameData.getBalance() as { habitat?: { use?: FurnitureUseConfig } } | null)?.habitat?.use;
+    const effect = cfg?.effects?.[interaction];
+    if (!cfg || !effect) return skip('disabled');
+    if (!pet.inHabitat) return skip('away');
+    if (pet.sleeping && interaction !== 'sleep') return skip('asleep');
+
+    const day = now.toISOString().slice(0, 10);
+    const dayKey = `furniture:day:${pet.id}:${day}`;
+    const used = await this.useCount(dayKey);
+    if (used >= cfg.dailyCap) return skip('daily_cap');
+    if (!(await this.acquireUseCooldown(pet.id, cfg.cooldownSeconds, now))) return skip('cooldown');
+
+    const clamp = (v: number) => Math.min(100, Math.max(0, v));
+    const data: Record<string, number> = {};
+    for (const [vital, delta] of Object.entries(effect)) data[vital] = clamp(((pet as unknown as Record<string, number>)[vital] ?? 0) + delta);
+    const updated = await this.prisma.pet.update({ where: { id: pet.id }, data });
+    const count = await this.bumpUseCount(dayKey);
+    // La mente lo recuerda (una vez al día) y deriva un poco su carácter. Nunca rompe la respuesta.
+    try {
+      this.events?.emit('habitat:furniture_used', { userId, petId: pet.id, interaction, firstToday: count === 1 });
+    } catch {
+      /* la mente es opcional */
+    }
+    return {
+      applied: true,
+      interaction,
+      petId: pet.id,
+      vitals: { hunger: updated.hunger, happiness: updated.happiness, energy: updated.energy, hygiene: updated.hygiene },
+      remainingToday: Math.max(0, cfg.dailyCap - count),
+    };
+  }
+
+  private async useCount(key: string): Promise<number> {
+    const raw = await this.redis?.run((c) => c.get(this.redis!.key(key)), 'habitat.use.get');
+    const n = typeof raw === 'string' ? Number(raw) : NaN;
+    return Math.max(Number.isFinite(n) ? n : 0, this.localUses.get(key) ?? 0);
+  }
+
+  private async bumpUseCount(key: string): Promise<number> {
+    if (this.localUses.size > 5000) this.localUses.clear();
+    const local = (this.localUses.get(key) ?? 0) + 1;
+    this.localUses.set(key, local);
+    const remote = await this.redis?.run(async (c) => {
+      const n = await c.incr(this.redis!.key(key));
+      if (n === 1) await c.expire(this.redis!.key(key), 36 * 60 * 60);
+      return n;
+    }, 'habitat.use.incr');
+    return Math.max(local, typeof remote === 'number' ? remote : 0);
+  }
+
+  /** `true` si puede usar un mueble ahora (y deja puesto el enfriamiento). */
+  private async acquireUseCooldown(petId: string, seconds: number, now: Date): Promise<boolean> {
+    const until = this.localCooldown.get(petId) ?? 0;
+    if (until > now.getTime()) return false;
+    const key = `furniture:cooldown:${petId}`;
+    const set = await this.redis?.run((c) => c.set(this.redis!.key(key), '1', 'EX', seconds, 'NX'), 'habitat.use.cooldown');
+    // Redis responde y ya había enfriamiento (otra réplica): no toca
+    if (this.redis && set === null && (await this.redis.run((c) => c.exists(this.redis!.key(key)), 'habitat.use.exists')) === 1) return false;
+    if (this.localCooldown.size > 5000) this.localCooldown.clear();
+    this.localCooldown.set(petId, now.getTime() + seconds * 1000);
+    return true;
   }
 
   /** Quita un mueble por tipo (el más reciente). Se mantiene para los clientes antiguos. */

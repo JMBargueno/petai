@@ -49,10 +49,18 @@ fun SoundSettingsCard() {
             Spacer(Modifier.height(8.dp))
             SwitchRow("Sonido activado", prefs.enabled) { on -> update { it.copy(enabled = on) } }
             VolumeRow("Volumen general", prefs.master, prefs.enabled) { v -> update { it.copy(master = v) } }
-            VolumeRow("Tu Pockai", prefs.pet, prefs.enabled) { v -> update { it.copy(pet = v) } }
-            VolumeRow("Efectos y juegos", prefs.sfx, prefs.enabled) { v -> update { it.copy(sfx = v) } }
-            VolumeRow("Interfaz", prefs.ui, prefs.enabled) { v -> update { it.copy(ui = v) } }
-            VolumeRow("Ambiente", prefs.ambient, prefs.enabled) { v -> update { it.copy(ambient = v) } }
+            Spacer(Modifier.height(8.dp))
+            Text("Tipos de sonido", style = MaterialTheme.typography.labelLarge)
+            // Cada tipo: interruptor y volumen (el volumen se apaga con su interruptor).
+            SwitchRow("Tu Pockai", prefs.petOn, prefs.enabled) { on -> update { it.copy(petOn = on) } }
+            VolumeRow("Volumen", prefs.pet, prefs.enabled && prefs.petOn) { v -> update { it.copy(pet = v) } }
+            SwitchRow("Efectos y juegos", prefs.sfxOn, prefs.enabled) { on -> update { it.copy(sfxOn = on) } }
+            VolumeRow("Volumen", prefs.sfx, prefs.enabled && prefs.sfxOn) { v -> update { it.copy(sfx = v) } }
+            SwitchRow("Interfaz", prefs.uiOn, prefs.enabled) { on -> update { it.copy(uiOn = on) } }
+            VolumeRow("Volumen", prefs.ui, prefs.enabled && prefs.uiOn) { v -> update { it.copy(ui = v) } }
+            SwitchRow("Ambiente", prefs.ambientOn, prefs.enabled) { on -> update { it.copy(ambientOn = on) } }
+            VolumeRow("Volumen", prefs.ambient, prefs.enabled && prefs.ambientOn) { v -> update { it.copy(ambient = v) } }
+            Spacer(Modifier.height(8.dp))
             SwitchRow("Audio reducido (solo interfaz y avisos)", prefs.reduced, prefs.enabled) { on -> update { it.copy(reduced = on) } }
         }
     }

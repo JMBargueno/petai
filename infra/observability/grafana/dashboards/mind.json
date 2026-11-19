@@ -1,0 +1,116 @@
+{
+  "title": "PetAI Cerebro del Pockai",
+  "uid": "petai-mind",
+  "tags": ["petai", "observabilidad", "mente"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Reacciones decididas por el motor (por minuto)",
+      "description": "Si esta línea cae a cero habiendo chat, el plan del turno está fallando y el Pockai responde sin reacción.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(petai_mind_behavior_total{source=\"engine\"}[5m])) * 60", "refId": "A", "legendFormat": "motor" },
+        { "expr": "sum(rate(petai_mind_behavior_total{source=\"model\"}[5m])) * 60", "refId": "B", "legendFormat": "propuestas del modelo" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Propuestas del modelo rechazadas (%)",
+      "description": "Reacciones que propone el modelo y que las reglas de juego sustituyen.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(petai_mind_behavior_total{source=\"model\",outcome=\"rejected\"}[15m])) / clamp_min(sum(rate(petai_mind_behavior_total{source=\"model\"}[15m])), 0.000001)",
+          "refId": "A",
+          "legendFormat": "rechazadas"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Reacciones más vistas",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "targets": [
+        { "expr": "topk(8, sum(rate(petai_mind_behavior_streak_total[15m])) by (action))", "refId": "A", "legendFormat": "{{action}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Reacción repetida tres o más veces seguidas (%)",
+      "description": "Mide si el Pockai se repite. Debería quedarse cerca de cero.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "targets": [
+        {
+          "expr": "sum(rate(petai_mind_behavior_streak_total{streak=\"3+\"}[30m])) / clamp_min(sum(rate(petai_mind_behavior_streak_total[30m])), 0.000001)",
+          "refId": "A",
+          "legendFormat": "3 o más seguidas"
+        },
+        {
+          "expr": "sum(rate(petai_mind_behavior_streak_total{streak=\"2\"}[30m])) / clamp_min(sum(rate(petai_mind_behavior_streak_total[30m])), 0.000001)",
+          "refId": "B",
+          "legendFormat": "2 seguidas"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Recuerdos inyectados en el prompt, por capa",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 18 },
+      "targets": [
+        { "expr": "sum(rate(petai_mind_memories_injected_total[15m])) by (layer) * 60", "refId": "A", "legendFormat": "{{layer}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Recuerdos que coinciden con el mensaje (%)",
+      "description": "De lo que se inyecta, cuánto comparte palabras con lo que dijo el entrenador. Si baja mucho, la recuperación trae relleno.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 18 },
+      "targets": [
+        {
+          "expr": "sum(rate(petai_mind_memories_injected_total{matched=\"yes\"}[30m])) by (layer) / clamp_min(sum(rate(petai_mind_memories_injected_total[30m])) by (layer), 0.000001)",
+          "refId": "A",
+          "legendFormat": "{{layer}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Intenciones interpretadas",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 27 },
+      "targets": [
+        { "expr": "topk(10, sum(rate(petai_mind_intent_total[15m])) by (intent))", "refId": "A", "legendFormat": "{{intent}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Extracciones de memoria, por resultado",
+      "description": "ok: guardada. invalid: el modelo no devolvió el formato pedido. error: fallo del proveedor o de la base de datos.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 27 },
+      "targets": [
+        { "expr": "sum(increase(petai_mind_extraction_total[1h])) by (outcome)", "refId": "A", "legendFormat": "{{outcome}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    }
+  ]
+}

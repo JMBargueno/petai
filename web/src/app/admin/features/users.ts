@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { AdminAuth } from '../auth';
 import { AdminUser, ROLES, options } from '../data/models';
 import { USERS } from '../data/repository';
-import { VOUCHERS, describeRewards, emptyRewards, hasRewards, type AccessoryOption, type Rewards } from '../data/vouchers-http';
+import { VOUCHERS, describeRewards, emptyRewards, hasRewards, type AccessoryOption, type ItemOption, type Rewards } from '../data/vouchers-http';
 import { Column, Field, Filter, ResourcePage, RowAction } from '../ui/resource-page';
 import { RewardsForm } from '../ui/rewards-form';
 
@@ -44,7 +44,7 @@ import { RewardsForm } from '../ui/rewards-form';
       <form class="form" ngNativeValidate (ngSubmit)="grant()">
         <h2 id="users-grant-title">Dar recompensa · {{ grantTarget()?.email }}</h2>
         <p>Se acredita al momento y el jugador lo verá con una celebración en sus apps. Queda en el registro.</p>
-        <app-rewards-form [(value)]="rewards" [accessories]="accessories()" [canGrantPro]="canGrantPro" />
+        <app-rewards-form [(value)]="rewards" [accessories]="accessories()" [items]="items()" [canGrantPro]="canGrantPro" />
         <div class="field">
           <label for="users-grant-note">Mensaje para el jugador (opcional)</label>
           <input class="input" id="users-grant-note" name="note" type="text" maxlength="200" placeholder="¡Gracias por tu paciencia!" [(ngModel)]="note" />
@@ -79,6 +79,7 @@ export class Users {
   protected readonly grantTarget = signal<AdminUser | null>(null);
   protected readonly rewards = signal<Rewards>(emptyRewards());
   protected readonly accessories = signal<AccessoryOption[]>([]);
+  protected readonly items = signal<ItemOption[]>([]);
   protected readonly granting = signal(false);
   protected readonly grantError = signal<string | null>(null);
   protected readonly grantNotice = signal<string | null>(null);
@@ -132,6 +133,12 @@ export class Users {
         () => undefined,
       );
     }
+    if (!this.items().length) {
+      this.vouchers.items().then(
+        (list) => this.items.set(list),
+        () => undefined,
+      );
+    }
     this.grantDialog().nativeElement.showModal();
   }
 
@@ -148,7 +155,11 @@ export class Users {
       const { granted } = await this.vouchers.grant(user.id, this.rewards(), this.note);
       const names = new Map(granted.accessories.map((a) => [a.id, a.alreadyOwned ? `${a.name} (ya la tenía)` : a.name]));
       this.grantNotice.set(
-        `Recompensa dada a ${user.email}: ${describeRewards({ ...granted, accessories: granted.accessories.map((a) => a.id) }, (id) => names.get(id) ?? id)}`,
+        `Recompensa dada a ${user.email}: ${describeRewards(
+          { ...granted, accessories: granted.accessories.map((a) => a.id), items: (granted.items ?? []).map((i) => ({ id: i.id, qty: i.qty })) },
+          (id) => names.get(id) ?? id,
+          (id) => granted.items?.find((i) => i.id === id)?.name ?? id,
+        )}`,
       );
       this.grantDialog().nativeElement.close();
       // El saldo ha cambiado: se recarga la tabla.
