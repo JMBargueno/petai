@@ -38,6 +38,8 @@
   } from './lib/animation/eventMap';
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
+  import HabitatWidget from './components/HabitatWidget.svelte';
+  import { habitatMode } from './lib/habitatMode';
   import FileDropModal from './components/FileDropModal.svelte';
   import AchievementToast from './features/achievements/AchievementToast.svelte';
   import type { AchievementUnlockedPayload } from './features/achievements/achievements.api';
@@ -128,6 +130,41 @@
   $: maintenanceLocked = $maintenanceLock !== null;
   $: locked = updateLocked || maintenanceLocked;
   $: if (locked) isPanelOpen = true;
+
+  // Modo hábitat (lib/habitatMode): solo la sala, grande, en el escritorio; sin panel ni dock.
+  $: showHabitatWidget = $habitatMode.on && !!user && !!currentPet && !locked;
+  let habitatWidgetShown = false;
+  $: onHabitatWidget(showHabitatWidget);
+  function onHabitatWidget(on: boolean) {
+    if (on === habitatWidgetShown) return;
+    habitatWidgetShown = on;
+    if (!on) return;
+    isPanelOpen = false;
+    // Si estaba paseando por el escritorio, entra en casa (por el altar, como con «Llevar a casa»)
+    if (currentPet && !currentPet.inHabitat) void sendPetHome(currentPet.id);
+  }
+  async function sendPetHome(petId: string) {
+    try {
+      const updated = await api.setPetInHabitat(petId, true);
+      if (currentPet?.id !== petId) return;
+      currentPet = updated;
+      const idx = pets.findIndex((p) => p.id === petId);
+      if (idx !== -1) pets[idx] = updated;
+    } catch (err: any) {
+      console.error('Error llevando a casa al entrar en el modo hábitat:', err);
+    }
+  }
+  // Cualquier cosa que abra el panel (clic en la mascota, avisos, atajo…) sale del modo
+  let panelWasOpen = isPanelOpen;
+  $: onPanelOpen(isPanelOpen);
+  function onPanelOpen(open: boolean) {
+    if (open && !panelWasOpen && habitatWidgetShown) habitatMode.exit();
+    panelWasOpen = open;
+  }
+  function exitHabitatMode() {
+    habitatMode.exit();
+    isPanelOpen = true;
+  }
   // Sonido: con el panel cerrado la mascota «vive en el escritorio» (lib/audio.ts).
   $: setPanelOpen(isPanelOpen);
   // Al terminar el mantenimiento se recarga: sesión, socket y datos vuelven a empezar limpios.
@@ -851,6 +888,7 @@
   on:dragover|preventDefault
 >
   {#if !locked}
+  {#if !showHabitatWidget}
   <div class="dock">
   <!-- Pelotita interactiva de escritorio -->
   <button
@@ -883,6 +921,19 @@
     {#if isPanelOpen}<X size={16} /> Ocultar panel{:else}<PawPrint size={16} /> Abrir panel{/if}
   </Button>
   </div>
+  {/if}
+
+  {#if showHabitatWidget}
+    <HabitatWidget
+      pet={currentPet}
+      on:exit={exitHabitatMode}
+      on:petUpdated={(e) => {
+        currentPet = e.detail;
+        const idx = pets.findIndex((p) => p.id === currentPet.id);
+        if (idx !== -1) pets[idx] = currentPet;
+      }}
+    />
+  {/if}
 
   {#if showBall}
     <DesktopBall

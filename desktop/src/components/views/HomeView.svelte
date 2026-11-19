@@ -7,7 +7,7 @@
   import Ico from '../Ico.svelte';
   import ItemIcon from '../ItemIcon.svelte';
   import PetHouse from '../PetHouse.svelte';
-  import { startHabitatExitDrag } from '../../lib/habitatExitDrag';
+  import { startHabitatExitDrag, type RoomPetDrag } from '../../lib/habitatExitDrag';
   import { elementMeta, rarityMeta } from '../../lib/ui/maps';
   import { Badge, Button, Card, EmptyState, ProgressBar, SectionHeader, Segmented } from '../ui';
 
@@ -38,8 +38,8 @@
     : [];
 
   /** Arrastrar al Pockai fuera de su casa lo saca al escritorio (como en Mascota › Hábitat). */
-  function handlePetPress(e: CustomEvent<{ event: MouseEvent; ghost: HTMLElement }>) {
-    startHabitatExitDrag(e.detail.event, e.detail.ghost);
+  function handlePetPress(e: CustomEvent<{ event: MouseEvent; ghost: HTMLElement; room: RoomPetDrag }>) {
+    startHabitatExitDrag(e.detail.event, e.detail.ghost, e.detail.room);
   }
 </script>
 
