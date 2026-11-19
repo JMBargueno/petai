@@ -6,9 +6,11 @@
  *   pnpm sfx:generate --only ui,pet.eat      # solo esos prefijos
  *   pnpm sfx:generate --only ui --force      # regenera aunque el prompt no haya cambiado
  *   pnpm sfx:generate --candidates 2         # menos tomas por sonido (ahorra créditos)
+ *   pnpm sfx:generate --no-loops             # sin los bucles de ambiente (los más caros)
  *
- * Necesita ELEVENLABS_API_KEY en el entorno o en `.env` de la raíz (está en .gitignore).
- * Solo se usa aquí, en desarrollo: la key no va nunca en las apps ni en el backend.
+ * Necesita ELEVENLABS_API_KEY en el entorno o en `.env.local` / `.env` de la raíz (ignorados por
+ * git; `npx @elevenlabs/cli onboard init` la deja en `.env.local`). Solo se usa aquí, en desarrollo:
+ * la key no va nunca en las apps ni en el backend. Usa el SDK oficial @elevenlabs/elevenlabs-js.
  *
  * Solo pide lo nuevo o lo que cambió (hash del prompt, duración, loop e influencia en
  * scripts/sfx/sounds.lock.json). Las tomas quedan en scripts/sfx/.candidates/<id>/<n>.mp3;
@@ -16,6 +18,7 @@
  */
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { ElevenLabsClient, ElevenLabsError } from '@elevenlabs/elevenlabs-js';
 import type { SoundDef } from '../../shared/audio/src/manifest';
 import {
   argValue,
@@ -29,14 +32,16 @@ import {
   writeLock,
 } from './common';
 
-const API_URL = 'https://api.elevenlabs.io/v1/sound-generation';
 const OUTPUT_FORMAT = 'mp3_44100_128';
 
 loadEnv();
 const apiKey = process.env.ELEVENLABS_API_KEY;
-const model = process.env.ELEVENLABS_SFX_MODEL || 'eleven_text_to_sound_v2';
+// SFX v3: sigue mejor los prompts con varias partes y suena más natural (skill oficial de ElevenLabs).
+const model = process.env.ELEVENLABS_SFX_MODEL || 'eleven_text_to_sound_v3';
 const dryRun = hasFlag('--dry-run');
 const force = hasFlag('--force');
+/** Sin los bucles de ambiente (son lo más caro: largos y se usan en fases posteriores). */
+const noLoops = hasFlag('--no-loops');
 const only = (argValue('--only') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const candidatesOverride = argValue('--candidates') ? Number(argValue('--candidates')) : undefined;
 const concurrency = Math.max(1, Number(argValue('--concurrency') ?? 3));
@@ -46,6 +51,7 @@ const lock = readLock();
 
 const todo = [...sounds.values()].filter((d) => {
   if (d.source !== 'elevenlabs' || !matchesOnly(d.id, only)) return false;
+  if (noLoops && d.loop) return false;
   if (force) return true;
   const prev = lock[d.id];
   return !prev || prev.hash !== generationHash(d);
@@ -61,35 +67,38 @@ if (dryRun || todo.length === 0) {
   process.exit(0);
 }
 if (!apiKey) {
-  console.error('Falta ELEVENLABS_API_KEY (en el entorno o en .env de la raíz).');
+  console.error('Falta ELEVENLABS_API_KEY (en el entorno, .env.local o .env de la raíz). Ejecuta: npx -y @elevenlabs/cli@latest onboard init');
   process.exit(1);
 }
 
+// El SDK lee ELEVENLABS_API_KEY del entorno (cargado por loadEnv); la key nunca va en el código.
+const client = new ElevenLabsClient();
+
 async function generateOne(def: SoundDef, attempt = 0): Promise<Buffer> {
-  const body: Record<string, unknown> = {
-    text: def.prompt,
-    duration_seconds: def.duration,
-    prompt_influence: def.promptInfluence,
-    model_id: model,
-  };
-  if (def.loop) body.loop = true;
-  const res = await fetch(`${API_URL}?output_format=${OUTPUT_FORMAT}`, {
-    method: 'POST',
-    headers: { 'xi-api-key': apiKey!, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-    body: JSON.stringify(body),
-  });
-  if (res.status === 429 || res.status >= 500) {
-    if (attempt >= 4) throw new Error(`${def.id}: HTTP ${res.status} tras ${attempt + 1} intentos`);
-    const wait = 2000 * 2 ** attempt;
-    console.warn(`  ${def.id}: HTTP ${res.status}, reintento en ${wait / 1000}s`);
-    await new Promise((r) => setTimeout(r, wait));
-    return generateOne(def, attempt + 1);
+  try {
+    const stream = await client.textToSoundEffects.convert({
+      text: def.prompt,
+      modelId: model,
+      durationSeconds: def.duration,
+      promptInfluence: def.promptInfluence,
+      loop: def.loop || undefined,
+      outputFormat: OUTPUT_FORMAT,
+    });
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of stream as unknown as AsyncIterable<Uint8Array>) chunks.push(chunk);
+    return Buffer.concat(chunks);
+  } catch (err) {
+    const status = err instanceof ElevenLabsError ? err.statusCode : undefined;
+    if (status === 429 || (status !== undefined && status >= 500)) {
+      if (attempt >= 4) throw new Error(`${def.id}: HTTP ${status} tras ${attempt + 1} intentos`);
+      const wait = 2000 * 2 ** attempt;
+      console.warn(`  ${def.id}: HTTP ${status}, reintento en ${wait / 1000}s`);
+      await new Promise((r) => setTimeout(r, wait));
+      return generateOne(def, attempt + 1);
+    }
+    const detail = err instanceof ElevenLabsError ? JSON.stringify(err.body ?? err.message).slice(0, 300) : (err as Error).message;
+    throw new Error(`${def.id}: HTTP ${status ?? '?'} ${detail}`);
   }
-  if (!res.ok) {
-    const text = (await res.text()).slice(0, 300);
-    throw new Error(`${def.id}: HTTP ${res.status} ${text}`);
-  }
-  return Buffer.from(await res.arrayBuffer());
 }
 
 async function processSound(def: SoundDef): Promise<void> {
