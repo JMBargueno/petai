@@ -1554,6 +1554,145 @@
         ]
       }
     },
+    "/v1/pets/{id}/initiative": {
+      "post": {
+        "description": "Lo decide el servidor: según el nivel de insistencia elegido, el carácter de la mascota, su ánimo, lo que necesita o le apetece y lo que sabe de su entrenador. Devuelve una frase ya escrita (o ninguna) y cuándo volver a preguntar. El cliente solo la muestra. `back: true` avisa de que el entrenador acaba de volver tras un rato fuera; `focus: true`, de que está concentrado y no hay que interrumpir.",
+        "operationId": "MindController_speak",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "channel"
+                ],
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "desktop",
+                      "mobile"
+                    ]
+                  },
+                  "back": {
+                    "type": "boolean",
+                    "description": "El entrenador acaba de volver"
+                  },
+                  "focus": {
+                    "type": "boolean",
+                    "description": "El entrenador está concentrado (Pomodoro, pantalla completa)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "¿Tiene el Pockai algo que decir por su cuenta?",
+        "tags": [
+          "Mind"
+        ]
+      }
+    },
+    "/v1/pets/{id}/initiative/settings": {
+      "get": {
+        "operationId": "MindController_initiativeSettings",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cuánto puede interrumpir el Pockai: nivel elegido y niveles disponibles",
+        "tags": [
+          "Mind"
+        ]
+      },
+      "put": {
+        "operationId": "MindController_setInitiativeLevel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "level"
+                ],
+                "properties": {
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "quiet",
+                      "normal",
+                      "chatty"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir cuánto puede interrumpir el Pockai (quiet | normal | chatty)",
+        "tags": [
+          "Mind"
+        ]
+      }
+    },
     "/v1/pets/{id}/mind": {
       "get": {
         "operationId": "MindController_profile",
