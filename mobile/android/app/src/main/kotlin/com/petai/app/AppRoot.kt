@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.petai.app.audio.UiSounds
 import com.petai.app.ui.account.AccountScreen
 import androidx.activity.compose.BackHandler
 import com.petai.app.ui.auth.AuthScreen
@@ -172,7 +173,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                 Dest.entries.forEach { d ->
                     NavigationBarItem(
                         selected = dest == d,
-                        onClick = { dest = d },
+                        onClick = { if (dest != d) UiSounds.play("ui.tab"); dest = d },
                         icon = { Icon(d.icon, contentDescription = null) },
                         label = { Text(d.label, style = MaterialTheme.typography.labelMedium) },
                         colors = NavigationBarItemDefaults.colors(

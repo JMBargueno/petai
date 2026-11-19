@@ -291,10 +291,26 @@ Un id sin fichero no suena ni falla, así que en F1 y siguientes se puede cablea
    - el manifiesto `sounds.json`;
    - los scripts `scripts/sfx/` (generate, review, postprocess);
    - los ajustes en desktop y su paso al WebView de Android.
-2. **F1, interfaz y Pockai básico:**
+2. **F1, interfaz y Pockai básico (hecho):**
    - `ui.*` en desktop y en Android (SoundPool en `UiSounds.kt`);
    - `pet.*` de cuidado (comer, dormir, limpiar, curar, ánimo, caricias, pasos);
    - el enganche en `clips.ts` (`soundForPetAction`) y en PetView.
+
+   Cómo quedó:
+   - **Tabla compartida** `shared/scene/src/effects/sounds.ts`. Hay sonido por clip (`soundForClip`) en vez de por aviso: así suena igual venga del backend o de un gesto local. Los extras van por aviso (burbujas al limpiar, tos, bostezo). La voz sale de `voiceForPet`, con especie, etapa, elemento y rareza del catálogo, y el humor del estado base.
+   - **Interfaz del escritorio:**
+     - un solo oyente de clics (`desktop/src/lib/uiSounds.ts`): pestañas, interruptores, botones y botones suaves; `data-sound` lo cambia o lo calla;
+     - `Modal` suena al abrirse y al cerrarse;
+     - `CurrencyPill sound` (el saldo de la cabecera) suena al subir;
+     - los avisos del panel llevan `ui.notice_ok` / `ui.error`, las compras `ui.purchase`, y dar de comer y limpiar no llevan «ding» porque ya suena el Pockai;
+     - cuando la mascota anuncia algo suena `ui.notification`, y en las necesidades `desk.needs`.
+   - **Pockai en el escritorio** (`PetView`):
+     - el sonido de cada clip, pasos en el paseo, rebote según la fuerza, levantarlo al arrastrar, boing al tocarlo, choca esos cinco;
+     - ronquido en bucle mientras duerme, con el panorama según su posición en la pantalla.
+   - **Escena incrustada** (`embed/petSounds.ts`): `petAction`, `playClip`, ronquido con `setActivity: sleep` y boing con `petTapped`.
+   - **Android nativo:** `UiSounds` (SoundPool, lee `audio/ui` de shared/assets) en los botones del tema, chips, subpestañas, barra de navegación y compras.
+   - **Depuración:** en desarrollo, `window.__pockaiSfx` guarda los últimos sonidos pedidos (suenen o no) para comprobar el cableado sin ficheros.
+   - **Pendiente para otras fases:** la voz al hablar (babble en las burbujas) y la voz del amigo de visita.
 3. **F2, recompensas y efectos:** subir de nivel, evolución, huevos, rarezas, logros, cofres, y las fases de `EffectPlayer`.
 4. **F3, minijuegos y cocina:** las señales `last`, `timer_warning` en `host.ts`, y los sintetizados.
 5. **F4, aventuras y combate:** stingers, enfoques, finales, ambientes de localización, habilidades.

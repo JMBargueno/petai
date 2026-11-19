@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { api, isTerminalError } from '../lib/api';
+  import { sfx } from '../lib/audio';
   import { petVoice } from '../lib/petVoice';
   import MinigamesTab from './MinigamesTab.svelte';
   import AiTab from './AiTab.svelte';
@@ -98,7 +99,9 @@
   let panelOk = '';
   let panelNoticeTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function showPanelNotice(kind: 'error' | 'ok', message: string) {
+  /** `sound`: el del aviso por defecto, otro (p. ej. `ui.purchase`) o `null` para callar. */
+  function showPanelNotice(kind: 'error' | 'ok', message: string, sound: string | null = kind === 'ok' ? 'ui.notice_ok' : 'ui.error') {
+    if (sound) sfx(sound);
     panelError = kind === 'error' ? message : '';
     panelOk = kind === 'ok' ? message : '';
     if (panelNoticeTimer) clearTimeout(panelNoticeTimer);
@@ -489,7 +492,7 @@
       dispatch('petUpdated', updated);
       dispatch('actionTriggered', 'eat');
       await refreshInventory();
-      showPanelNotice('ok', food ? `${petName()} se ha comido: ${food}.` : `${petName()} ha comido.`);
+      showPanelNotice('ok', food ? `${petName()} se ha comido: ${food}.` : `${petName()} ha comido.`, null);
     });
   }
 
@@ -499,7 +502,7 @@
       const updated = await api.cleanPet(pet.id);
       dispatch('petUpdated', updated);
       dispatch('actionTriggered', 'clean');
-      showPanelNotice('ok', `${petName()} está reluciente.`);
+      showPanelNotice('ok', `${petName()} está reluciente.`, null);
     });
   }
 
@@ -584,7 +587,7 @@
       await api.buyEgg();
       dispatch('refreshEggs');
       dispatch('refreshUser');
-      showPanelNotice('ok', 'Huevo comprado. Ya está incubando.');
+      showPanelNotice('ok', 'Huevo comprado. Ya está incubando.', 'ui.purchase');
     });
   }
 
@@ -594,7 +597,7 @@
       await api.buyShopItem(itemId, 1);
       dispatch('refreshUser');
       await refreshInventory();
-      showPanelNotice('ok', name ? `Comprado: ${name}.` : 'Compra hecha.');
+      showPanelNotice('ok', name ? `Comprado: ${name}.` : 'Compra hecha.', 'ui.purchase');
     });
   }
 
@@ -622,8 +625,8 @@
         <span class="logo"><PockaiMark size={30} /><span class="display">Pockai</span></span>
         {#if user}
           <div class="user-pill">
-            <CurrencyPill kind="coins" amount={user.coins} />
-            <CurrencyPill kind="gems" amount={user.gems} />
+            <CurrencyPill kind="coins" amount={user.coins} sound />
+            <CurrencyPill kind="gems" amount={user.gems} sound />
           </div>
         {/if}
       </div>

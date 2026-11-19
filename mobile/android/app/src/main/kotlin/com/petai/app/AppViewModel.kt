@@ -3,6 +3,7 @@ package com.petai.app
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.petai.app.audio.UiSounds
 import com.petai.app.data.ApiException
 import com.petai.app.data.Egg
 import com.petai.app.data.Handle
@@ -406,12 +407,14 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
         service.buyEgg()
         _state.update { it.copy(eggs = service.eggs()) }
         reloadInventoryAndUser()
+        UiSounds.play("ui.purchase")
         message("¡Huevo comprado! Tardará unos minutos en eclosionar.")
     }
 
     fun buy(item: ItemDto) = act {
         service.buy(item.id)
         reloadInventoryAndUser()
+        UiSounds.play("ui.purchase")
         message("Comprado: ${item.name}")
     }
 }
