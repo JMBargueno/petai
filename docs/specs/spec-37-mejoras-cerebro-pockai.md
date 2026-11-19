@@ -631,7 +631,7 @@ bloquea.
 | Punto | Decisión |
 |---|---|
 | 2.4 | Cadencia de extracción de memoria en el plan gratuito (gasta presupuesto de IA gestionada). |
-| 3.4 | Tope diario de progresión de inteligencia. |
+| 3.4 | ~~Tope diario de progresión de inteligencia.~~ **Decidido:** 50 puntos al día por chat. |
 | 4.5 | ~~Cada cuántos turnos puede el Pockai sacar un deseo por su cuenta.~~ **Decidido:** como mucho uno cada 8 turnos. |
 | 6.1 | ~~Si existe la etapa `rival`.~~ **Decidido:** no. Dos Pockai pueden discutir y reconciliarse, pero la relación tiene suelo y no hay etapa `rival`. |
 | 6.2 | ~~Topes por visitante y día; si ofrecer un premio consume un alimento real del visitante.~~ **Decidido:** hasta 5 interacciones por visita, 3 al día por visitante con efecto, deriva del anfitrión a la mitad que la del dueño; el premio consume un alimento real del visitante. |
@@ -873,6 +873,30 @@ tres capas, las mismas de la sección 7:
   - **Sin hacer aquí:** Android y web no pintan el menú; el Pockai anfitrión no anima la
     reacción en la sala (solo se muestra la línea); el visitante elige el menú desde la pestaña,
     sin ver la sala del amigo.
-- **Pendiente.** Lote 3 salvo 3.2 (métricas, lematización, tope de inteligencia, orden del
-  prompt) y lote 5 (diálogo por datos).
+- **Fase 7 — resto del lote 3 (hecho): 3.1, 3.3, 3.4 y 3.6.**
+  - **3.1 Métricas.** En `observability/metrics.service.ts`, con etiquetas siempre de conjuntos
+    cerrados (nunca ids ni texto del usuario): `petai_mind_memories_injected_total{layer,
+    matched}`, `petai_mind_behavior_total{action, source, outcome}` (lo que decide el motor y lo
+    que propone el modelo, aceptado o rechazado), `petai_mind_behavior_streak_total{action,
+    streak}` (la reacción vista y si lleva 1, 2 o 3+ seguidas), `petai_mind_intent_total{intent}`
+    y `petai_mind_extraction_total{outcome}`. `ChatService` avisa al arrancar si la mente o su
+    memoria no están inyectadas.
+  - **3.2 (lo que faltaba).** Tabla de casos de `selectForPrompt` en
+    `mind/__fixtures__/recall-cases.json`, con su test `mind/recall.cases.spec.ts`.
+  - **3.3 Recuperación.** `stem` en `ai/memory.ts`: recorta terminaciones para comparar («jugar»
+    y «jugamos», «gato» y «gatos»); no es un lematizador y solo sirve para comparar. La usan el
+    prompt (`selectForPrompt`) y la búsqueda del agente (`searchByKeywords`), que ahora comparten
+    `tokens`. Nombrar a alguien (`namedSubjects`: la primera palabra de la etiqueta de la
+    relación) da puntos a los recuerdos vividos con él aunque no repitan su nombre. Sin
+    embeddings: la tabla de casos pasa con lo léxico.
+  - **3.4 Tope de inteligencia. Decidido: 50 puntos al día por chat**
+    (`balance.json → personality.intelligence.dailyChatCap`). `persistExchange` cuenta las
+    respuestas de hoy de esa mascota (día UTC); pasado el tope, el mensaje se guarda pero no
+    suma. Si no se puede contar, el punto se concede. Vale también para el modo local.
+  - **3.5.** Ya anotado en 6.6: el diario de ausencia no lee `PetMemory`.
+  - **3.6 Prompt.** `buildSystemPrompt` pone primero lo que no cambia de un turno a otro
+    (identidad, especie, reglas y herramientas) y después nivel, carácter, vínculo, habilidades,
+    ánimo, estadísticas, entorno, hora y la pista del turno. La hora deja de ir dentro de la regla
+    de herramientas. Los recuerdos y el lore se siguen añadiendo al final.
+- **Pendiente.** Lote 5 (diálogo por datos).
 

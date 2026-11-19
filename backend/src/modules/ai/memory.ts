@@ -168,11 +168,32 @@ const STOPWORDS = new Set(
   'que los las una uno del por con para como pero mas muy esta este eso eso tus sus mis algo todo hay son fue ser the and you'.split(' '),
 );
 
-function tokens(text: string): Set<string> {
+/** Terminaciones que se quitan para comparar palabras, de la más larga a la más corta. */
+const SUFFIXES = [
+  'aremos', 'eremos', 'iremos', 'abamos', 'iendo', 'ieron', 'amos', 'emos', 'imos', 'ando', 'aron', 'aban', 'aste', 'iste',
+  'ado', 'ido', 'ada', 'ida', 'aba', 'ing', 'ar', 'er', 'ir', 'as', 'es', 'os', 'an', 'en', 'ed', 'a', 'e', 'o', 's',
+];
+
+/**
+ * Lematización ligera (spec 37 §3.3): quita la terminación para que «jugar», «jugamos» y «jugando»
+ * cuenten como la misma palabra, igual que «gato» y «gatos». No es un lematizador: solo recorta, y
+ * solo si lo que queda tiene al menos tres letras. Sirve para comparar, nunca para mostrar.
+ */
+export function stem(word: string): string {
+  if (word.length < 4) return word;
+  for (const suffix of SUFFIXES) {
+    if (word.length - suffix.length >= 3 && word.endsWith(suffix)) return word.slice(0, -suffix.length);
+  }
+  return word;
+}
+
+/** Palabras con significado de un texto, ya recortadas para comparar. */
+export function tokens(text: string): Set<string> {
   return new Set(
     normalizeForMatch(text)
       .split(' ')
-      .filter((w) => w.length >= 3 && !STOPWORDS.has(w)),
+      .filter((w) => w.length >= 3 && !STOPWORDS.has(w))
+      .map(stem),
   );
 }
 

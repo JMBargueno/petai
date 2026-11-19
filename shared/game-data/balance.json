@@ -518,6 +518,7 @@
       "repeatCap": 0.8,
       "sinceLastMax": 2
     },
+    "intelligence": { "dailyChatCap": 50 },
     "autonomy": {
       "intervalMinutes": 60,
       "maxIntervalsPerCatchUp": 24,

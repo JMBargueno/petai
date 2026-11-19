@@ -16,6 +16,7 @@ import {
   selectRelevantFacts,
 } from './memory';
 import { MEMORY_UNLOCK } from './personality';
+import { MetricsService } from '../../observability/metrics.service';
 import { EMPTY_SUMMARY } from '../mind/memory.engine';
 import { MindMemoryService } from '../mind/mind-memory.service';
 import { UsageService } from './usage.service';
@@ -52,6 +53,7 @@ export class MemoryService {
     @Optional() private readonly managedBudget?: ManagedBudgetService,
     // Memoria por capas (spec 36): con ella, el olvido lo decide una sola política (por retención)
     @Optional() private readonly mindMemory?: MindMemoryService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   /** Bloque de recuerdos para el prompt (vacío si la mascota aún no tiene memoria). */
@@ -168,11 +170,14 @@ export class MemoryService {
 
       const extraction = parseExtraction(output, known.length);
       if (!extraction) {
+        this.metrics?.recordMindExtraction('invalid');
         this.logger.warn(`Extracción de memoria sin formato válido (mascota ${petId})`);
         return;
       }
       await this.store(petId, extraction, known, recent[recent.length - 1].createdAt);
+      this.metrics?.recordMindExtraction('ok');
     } catch (err: any) {
+      this.metrics?.recordMindExtraction('error');
       this.logger.warn(`No se pudo actualizar la memoria (mascota ${petId}): ${err?.message}`);
     } finally {
       this.inflight.delete(petId);
