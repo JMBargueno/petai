@@ -12,6 +12,7 @@ import { nextTrick, normalizeTricks, practiceTrick } from './tricks.engine';
 import { activeWishes, activityBoosts, normalizeWishes } from './wishes.engine';
 import { layerOf, type MemoryRow } from './memory.engine';
 import { EncounterService } from './encounter.service';
+import { ActivityDropsService } from '../inventory/activity-drops.service';
 import { text } from './strings';
 
 const STAGE_PULL: Record<string, number> = { stranger: 1, acquaintance: 1.3, friend: 2, best_friend: 3 };
@@ -64,6 +65,8 @@ export class AutonomyService {
     private readonly memory: MindMemoryService,
     @Optional() private readonly cronLock?: CronLockService,
     @Optional() encounters?: EncounterService,
+    // Drops de actividades (spec 41): al encontrar algo explorando, a veces cae también un objeto raro
+    @Optional() private readonly activityDrops?: ActivityDropsService,
   ) {
     this.encounters = encounters ?? new EncounterService(mind, memory);
   }
@@ -161,6 +164,7 @@ export class AutonomyService {
         });
       }
       for (const itemId of sim.itemsFound) await this.grantItem(pet.userId, itemId);
+      if (sim.itemsFound.length) await this.activityDrops?.roll(pet.userId, 'explore');
 
       // Memoria episódica (fechada en el intervalo en que ocurrió: "ayer visité…")
       // Los encuentros con amigos los escribe la escena (más abajo), cada uno desde su lado

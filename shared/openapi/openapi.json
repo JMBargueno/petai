@@ -2140,6 +2140,35 @@
         ]
       }
     },
+    "/v1/pets/{id}/use-item": {
+      "post": {
+        "operationId": "PetsController_useItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Usar un objeto del inventario sobre la mascota (comida, medicina, evolución o subida de nivel)",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
     "/v1/pets/{id}/heal": {
       "post": {
         "operationId": "PetsController_heal",
@@ -9792,6 +9821,36 @@
         ]
       }
     },
+    "/v1/admin/vouchers/items": {
+      "get": {
+        "operationId": "AdminVouchersController_items",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RewardItemOptionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consumibles que se pueden incluir en un voucher o regalo (foods.json, también los de solo drop y los ocultos)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/v1/admin/vouchers/{id}/revoke": {
       "post": {
         "operationId": "AdminVouchersController_revoke",
@@ -12878,6 +12937,23 @@
           "qty"
         ]
       },
+      "RewardItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 99
+          }
+        },
+        "required": [
+          "id",
+          "qty"
+        ]
+      },
       "RewardsDto": {
         "type": "object",
         "properties": {
@@ -12908,6 +12984,13 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "items": {
+            "description": "Consumibles de foods.json (también solo drop y ocultos)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardItemDto"
             }
           }
         }
@@ -13051,6 +13134,39 @@
           "rarity"
         ]
       },
+      "RewardItemOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "food | medicine | evolution | level_up"
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "shop",
+              "drop",
+              "hidden"
+            ]
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "availability",
+          "description"
+        ]
+      },
       "CreateVouchersDto": {
         "type": "object",
         "properties": {
@@ -13138,6 +13254,25 @@
           "alreadyOwned"
         ]
       },
+      "GrantedItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "qty"
+        ]
+      },
       "GrantedRewardsDto": {
         "type": "object",
         "properties": {
@@ -13165,6 +13300,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/GrantedAccessoryDto"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrantedItemDto"
             }
           }
         },

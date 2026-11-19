@@ -8,6 +8,7 @@ import {
   emptyRewards,
   hasRewards,
   type AccessoryOption,
+  type ItemOption,
   type Rewards,
   type Voucher,
   type VoucherStatus,
@@ -203,7 +204,7 @@ type Mode = 'random' | 'custom';
             </div>
           </div>
 
-          <app-rewards-form [(value)]="rewards" [accessories]="accessories()" [canGrantPro]="canGrantPro" />
+          <app-rewards-form [(value)]="rewards" [accessories]="accessories()" [items]="items()" [canGrantPro]="canGrantPro" />
 
           @if (formError(); as e) {
             <p class="error" role="alert">{{ e }}</p>
@@ -250,6 +251,8 @@ export class Vouchers implements OnInit {
   protected minExpiry = '';
 
   private readonly accessoryNames = computed(() => new Map(this.accessories().map((a) => [a.id, a.name])));
+  protected readonly items = signal<ItemOption[]>([]);
+  private readonly itemNames = computed(() => new Map(this.items().map((i) => [i.id, i.name])));
 
   protected readonly visible = computed(() => {
     const q = this.query().trim().toLowerCase();
@@ -265,11 +268,16 @@ export class Vouchers implements OnInit {
       (list) => this.accessories.set(list),
       () => undefined,
     );
+    this.vouchers.items().then(
+      (list) => this.items.set(list),
+      () => undefined,
+    );
   }
 
   protected summary(row: Voucher) {
     const names = this.accessoryNames();
-    return describeRewards(row.rewards, (id) => names.get(id) ?? id);
+    const items = this.itemNames();
+    return describeRewards(row.rewards, (id) => names.get(id) ?? id, (id) => items.get(id) ?? id);
   }
 
   protected statusLabel(status: VoucherStatus) {

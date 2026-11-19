@@ -118,7 +118,7 @@
   function resultSounds(r: any) {
     const max = games.find((g) => g.id === lastGameId)?.maxCoins ?? 0;
     sfx(max > 0 && (r?.rewards?.coins ?? 0) >= max * 0.8 ? 'mg.result.great' : 'mg.result.good');
-    if (r?.item) sfx('mg.item_drop', { delayMs: 900 });
+    if (r?.item || r?.bonusItem) sfx('mg.item_drop', { delayMs: 900 });
     if (r?.affinity && petElement) sfx(`elem.${petElement}.accent`, { delayMs: 500 });
   }
 
@@ -216,6 +216,9 @@
         </div>
         {#if result.item}
           <Notice tone="success" icon="gift">¡La partida ha dejado {result.item.qty} × {FOOD_NAMES[result.item.itemId] ?? result.item.itemId} en tu inventario!</Notice>
+        {/if}
+{#if result.bonusItem}
+          <Notice tone="ok" icon="gift">¡Ha caído {result.bonusItem.name}! Está en tu Mochila.</Notice>
         {/if}
         {#if result.affinity}
           <p class="ui-card__hint">Prueba de su elemento: {pet.nickname || pet.species?.name} lo ha disfrutado más.</p>

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CatalogItem, ITEM_KINDS, options } from '../data/models';
+import { CatalogItem, ITEM_AVAILABILITY, ITEM_KINDS, options } from '../data/models';
 import { ITEMS } from '../data/repository';
 import { Column, Field, Filter, ResourcePage } from '../ui/resource-page';
 
@@ -81,6 +81,7 @@ export class Prices {
     { key: 'name', label: 'Ítem' },
     { key: 'kind', label: 'Tipo', format: (i) => ITEM_KINDS[i.kind] ?? i.kind },
     { key: 'id', label: 'Identificador' },
+    { key: 'availability', label: 'Disponibilidad', format: (i) => ITEM_AVAILABILITY[i.availability ?? 'shop'] ?? String(i.availability) },
     { key: 'priceCoins', label: 'Monedas', type: 'number', editable: true },
     { key: 'priceGems', label: 'Gemas', type: 'number', editable: true },
   ];

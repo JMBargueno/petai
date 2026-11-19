@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { PermissionsGuard } from '../authz/permissions.guard';
 import { RequirePermissions } from '../authz/require-permissions.decorator';
-import { CreatedVouchersDto, CreateVouchersDto, RewardAccessoryOptionDto, GrantRewardsDto, RewardReceivedDto, VoucherDto, VoucherListDto } from './dto/vouchers.dto';
+import { CreatedVouchersDto, CreateVouchersDto, RewardAccessoryOptionDto, RewardItemOptionDto, GrantRewardsDto, RewardReceivedDto, VoucherDto, VoucherListDto } from './dto/vouchers.dto';
 import { RewardsService } from './rewards.service';
 import { VOUCHER_STATUSES } from './vouchers.schemas';
 import { VouchersService } from './vouchers.service';
@@ -35,6 +35,13 @@ export class AdminVouchersController {
   @ApiResponse({ status: HttpStatus.OK, type: [RewardAccessoryOptionDto] })
   accessories() {
     return this.rewards.accessoryOptions();
+  }
+
+  @Get('vouchers/items')
+  @ApiOperation({ summary: 'Consumibles que se pueden incluir en un voucher o regalo (foods.json, también los de solo drop y los ocultos)' })
+  @ApiResponse({ status: HttpStatus.OK, type: [RewardItemOptionDto] })
+  items() {
+    return this.rewards.itemOptions();
   }
 
   @Post('vouchers')

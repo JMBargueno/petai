@@ -1,3 +1,4 @@
+import { InventoryModule } from '../inventory/inventory.module';
 import { Module } from '@nestjs/common';
 import { GameDataModule } from '../game-data/game-data.module';
 import { BillingModule } from '../billing/billing.module';
@@ -13,7 +14,7 @@ import { MindController } from './mind.controller';
  * No depende de PetsModule ni AiModule (son ellos los que lo usan), así no hay ciclos.
  */
 @Module({
-  imports: [GameDataModule, BillingModule],
+  imports: [InventoryModule, GameDataModule, BillingModule],
   controllers: [MindController],
   providers: [MindService, MindMemoryService, EncounterService, AutonomyService, EvolutionListener],
   exports: [MindService, MindMemoryService, EncounterService, AutonomyService],

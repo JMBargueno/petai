@@ -11,6 +11,9 @@ export const REWARD_LIMITS = {
   proDays: 365,
   chestQty: 10,
   accessories: 20,
+  /** Consumibles (spec 41): líneas distintas por paquete y unidades por línea. */
+  items: 10,
+  itemQty: 99,
 } as const;
 
 const amount = (name: string, max: number) =>
@@ -44,12 +47,30 @@ export const rewardsSchema = z
       .max(REWARD_LIMITS.accessories, `como mucho ${REWARD_LIMITS.accessories} prendas`)
       .default([])
       .transform((ids) => [...new Set(ids)]),
+    /** Consumibles de foods.json, también los de solo drop y los ocultos (spec 41). */
+    items: z
+      .array(
+        z.object({
+          id: z.string().min(1).max(64),
+          qty: z.coerce.number().int().min(1, 'qty debe ser al menos 1').max(REWARD_LIMITS.itemQty, `qty no puede superar ${REWARD_LIMITS.itemQty}`),
+        }),
+      )
+      .max(REWARD_LIMITS.items, `como mucho ${REWARD_LIMITS.items} objetos distintos`)
+      .default([])
+      .transform(mergeItems),
   })
-  .refine((r) => r.coins > 0 || r.gems > 0 || r.proDays > 0 || r.chests.length > 0 || r.accessories.length > 0, {
+  .refine((r) => r.coins > 0 || r.gems > 0 || r.proDays > 0 || r.chests.length > 0 || r.accessories.length > 0 || r.items.length > 0, {
     message: 'El paquete debe incluir al menos una recompensa',
   });
 
 export type Rewards = z.infer<typeof rewardsSchema>;
+
+/** Une las líneas repetidas del mismo objeto (respetando el tope por línea). */
+function mergeItems(lines: { id: string; qty: number }[]) {
+  const byId = new Map<string, number>();
+  for (const l of lines) byId.set(l.id, Math.min(REWARD_LIMITS.itemQty, (byId.get(l.id) ?? 0) + l.qty));
+  return [...byId].map(([id, qty]) => ({ id, qty }));
+}
 
 /** Une las líneas repetidas del mismo tipo de cofre (respetando el tope por tipo). */
 function mergeChests(lines: { type: RewardChestType; qty: number }[]) {
