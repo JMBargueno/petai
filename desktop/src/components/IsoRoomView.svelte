@@ -30,6 +30,8 @@
   export let height = 360;
   /** Ocupa todo el alto de su contenedor (modo hábitat) en vez de `height`. */
   export let fill = false;
+  /** Solo la sala, sin cielo ni paisaje alrededor (modo hábitat). Se lee al montarse. */
+  export let bare = false;
   /** Dibuja en la sala al Pockai del amigo que esté de visita (solo si el tuyo está en ella). */
   export let showVisitors = false;
 
@@ -57,7 +59,7 @@
   const send = (m: HostMessage) => scene?.receive(m);
 
   onMount(() => {
-    void PockaiScene.create({ host, label, onEvent, observeResize: fill }).then((s) => {
+    void PockaiScene.create({ host, label, onEvent, observeResize: fill, bare }).then((s) => {
       if (destroyed) return s.destroy();
       scene = s;
     });
