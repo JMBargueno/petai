@@ -5,296 +5,1593 @@
     "ui": "clean soft mobile game interface sound, cozy pastel fantasy, short, no music, no voice",
     "sfx": "cute fantasy video game sound effect, clean, crisp, no music, no speech",
     "pet": "tiny cute fantasy creature, close mic, dry recording, no music, no human words",
-    "ambient": "seamless gentle ambient loop, cozy fantasy game, no music, no voices"
+    "ambient": "seamless gentle ambient loop, cozy fantasy game, no music, no voices",
+    "music": "cozy pastel fantasy music, warm, no vocals"
   },
   "defaults": {
-    "ui": { "duration": 0.5, "candidates": 3, "gainDb": -10, "cooldownMs": 60, "profile": "subtle", "promptInfluence": 0.5, "platforms": ["scene", "android-native"] },
-    "sfx": { "duration": 1, "candidates": 4, "gainDb": -6, "cooldownMs": 80, "profile": "none", "promptInfluence": 0.45 },
-    "pet": { "duration": 1, "candidates": 4, "gainDb": -6, "cooldownMs": 200, "profile": "creature", "promptInfluence": 0.35 },
-    "ambient": { "duration": 22, "loop": true, "candidates": 2, "gainDb": -16, "cooldownMs": 0, "promptInfluence": 0.3 }
+    "ui": {
+      "duration": 0.5,
+      "candidates": 3,
+      "gainDb": -10,
+      "cooldownMs": 60,
+      "profile": "subtle",
+      "promptInfluence": 0.5,
+      "platforms": [
+        "scene",
+        "android-native"
+      ]
+    },
+    "sfx": {
+      "duration": 1,
+      "candidates": 4,
+      "gainDb": -6,
+      "cooldownMs": 80,
+      "profile": "none",
+      "promptInfluence": 0.45
+    },
+    "pet": {
+      "duration": 1,
+      "candidates": 4,
+      "gainDb": -6,
+      "cooldownMs": 200,
+      "profile": "creature",
+      "promptInfluence": 0.35
+    },
+    "ambient": {
+      "duration": 22,
+      "loop": true,
+      "candidates": 2,
+      "gainDb": -16,
+      "cooldownMs": 0,
+      "promptInfluence": 0.3
+    },
+    "music": {
+      "gainDb": -18,
+      "candidates": 2
+    }
   },
   "sounds": [
-    { "id": "ui.tap", "prompt": "soft rounded wooden button tap" },
-    { "id": "ui.tap_soft", "prompt": "very soft muted bubble pop click", "gainDb": -14 },
-    { "id": "ui.tab", "prompt": "light paper page flick, quick tab switch" },
-    { "id": "ui.toggle_on", "prompt": "small bright rising two-note switch click" },
-    { "id": "ui.toggle_off", "prompt": "small soft falling two-note switch click" },
-    { "id": "ui.modal_open", "prompt": "gentle airy whoosh up with a tiny sparkle", "duration": 0.6 },
-    { "id": "ui.modal_close", "prompt": "gentle airy whoosh down, soft", "duration": 0.6 },
-    { "id": "ui.confirm", "prompt": "warm positive confirmation chime, two soft bell notes", "duration": 0.7 },
-    { "id": "ui.cancel", "prompt": "soft low muted cancel blip" },
-    { "id": "ui.notice_ok", "prompt": "friendly small success ding, glassy" , "duration": 0.7 },
-    { "id": "ui.error", "prompt": "soft gentle error buzz, low wobble, not harsh", "duration": 0.6, "essential": true },
-    { "id": "ui.notification", "prompt": "pleasant notification ping, crystal bell, airy tail", "duration": 1, "essential": true, "cooldownMs": 1500 },
-    { "id": "ui.coin_gain", "prompt": "small fantasy coins clinking into a pouch", "duration": 0.8, "variants": 2, "candidates": 4 },
-    { "id": "ui.gem_gain", "prompt": "magical gem chime, sparkling crystal shimmer", "duration": 0.9 },
-    { "id": "ui.xp_tick", "prompt": "tiny bright tick blip, rising", "cooldownMs": 40, "gainDb": -16 },
-    { "id": "ui.purchase", "prompt": "cheerful shop purchase, coin drop then happy sparkle chime", "duration": 1.2 },
-    { "id": "ui.purchase_fail", "prompt": "empty coin purse shake, soft disappointed thud", "duration": 0.8, "essential": true },
-    { "id": "ui.equip", "prompt": "soft cloth rustle with a tiny magical twinkle", "duration": 0.7 },
-    { "id": "ui.unequip", "prompt": "soft cloth slip off, quick", "duration": 0.6 },
-    { "id": "ui.file_drop", "prompt": "paper sheet sliding into a magical portal, soft swoosh", "duration": 0.8, "platforms": ["desktop"] },
-    { "id": "ui.slider_tick", "source": "synth" },
-    { "id": "ui.hover", "prompt": "almost silent tiny tick", "gainDb": -24, "platforms": ["desktop"], "note": "Apagado por defecto; solo si se activa en ajustes." },
-
-    { "id": "pet.eat.crunch", "prompt": "small creature crunching a crispy snack, happy nibbling", "duration": 0.8, "variants": 3, "candidates": 6 },
-    { "id": "pet.eat.slurp", "prompt": "small creature slurping juicy soft food" },
-    { "id": "pet.eat.gulp", "prompt": "small creature single satisfied gulp", "duration": 0.5 },
-    { "id": "pet.eat.burp", "prompt": "tiny cute creature burp, funny and short", "duration": 0.6, "cooldownMs": 30000 },
-    { "id": "pet.sleep.yawn", "prompt": "small creature long sleepy yawn, squeaky", "duration": 1.5, "profile": "creature-voice" },
-    { "id": "pet.sleep.snore", "prompt": "tiny creature softly snoring, slow peaceful breathing, whistle", "duration": 6, "loop": true, "gainDb": -14 },
-    { "id": "pet.sleep.mumble", "prompt": "tiny creature sleep mumbling, dreamy murmur", "duration": 1.2, "profile": "creature-voice" },
-    { "id": "pet.wake.stretch", "prompt": "small creature stretching and waking up, cute squeak then sigh", "duration": 1.4, "profile": "creature-voice" },
-    { "id": "pet.happy.chirp", "prompt": "cheerful little creature chirp, bright happy squeak", "duration": 0.6, "variants": 3, "candidates": 6, "profile": "creature-voice" },
-    { "id": "pet.love.purr", "prompt": "tiny creature affectionate purr, warm and content", "duration": 1.6 },
-    { "id": "pet.laugh", "prompt": "tiny creature giggle, playful", "duration": 1, "profile": "creature-voice" },
-    { "id": "pet.sad.whimper", "prompt": "small creature sad whimper, soft", "duration": 1, "profile": "creature-voice" },
-    { "id": "pet.cry", "prompt": "small creature crying sobs, cute, not distressing", "duration": 1.8, "profile": "creature-voice" },
-    { "id": "pet.surprised", "prompt": "small creature surprised gasp squeak", "duration": 0.5, "profile": "creature-voice" },
-    { "id": "pet.tired.sigh", "prompt": "small creature tired sigh, droopy", "duration": 0.9 },
-    { "id": "pet.hungry.growl", "prompt": "tiny tummy rumble growl, funny", "duration": 1, "cooldownMs": 20000 },
-    { "id": "pet.sick.cough", "prompt": "tiny creature small cough, cute", "duration": 0.6, "variants": 2, "candidates": 4 },
-    { "id": "pet.sick.sneeze", "prompt": "tiny creature sneeze, achoo squeak", "duration": 0.7 },
-    { "id": "pet.heal.relief", "prompt": "small creature relieved happy sigh", "duration": 0.9, "profile": "creature-voice" },
-    { "id": "pet.clean.scrub", "prompt": "soft sponge scrubbing fur with bubbles", "duration": 1.5, "profile": "none" },
-    { "id": "pet.clean.bubbles", "prompt": "soapy bubbles popping, light and bubbly", "duration": 1.2, "profile": "none" },
-    { "id": "pet.clean.shake", "prompt": "small wet creature shaking off water, droplets flying", "duration": 1, "profile": "footstep" },
-    { "id": "pet.talk.babble", "prompt": "tiny creature cute gibberish babble syllable, single short chirpy blip", "duration": 0.5, "variants": 6, "candidates": 10, "profile": "creature-voice", "cooldownMs": 60, "gainDb": -9, "note": "Granos cortos: el motor los encadena al azar mientras se escribe la burbuja." },
-    { "id": "pet.sing.hum", "prompt": "tiny creature humming a simple happy melody, la la la", "duration": 3, "profile": "creature-voice" },
-    { "id": "pet.dance.steps", "prompt": "tiny feet tapping rhythmically, happy dance shuffle", "duration": 2, "profile": "footstep" },
-    { "id": "pet.step", "prompt": "single soft tiny paw footstep on wood", "duration": 0.5, "variants": 4, "candidates": 8, "profile": "footstep", "cooldownMs": 90, "gainDb": -14 },
-    { "id": "pet.land", "prompt": "small soft body landing thump, plush", "duration": 0.5, "profile": "footstep" },
-    { "id": "pet.fall.whoosh", "prompt": "quick falling whoosh, cartoon", "duration": 0.7, "profile": "none" },
-    { "id": "pet.climb.scrabble", "prompt": "tiny claws scrabbling and climbing up", "duration": 1, "profile": "footstep" },
-    { "id": "pet.drag.lift", "prompt": "small creature lifted up, surprised wee squeak", "duration": 0.6, "profile": "creature-voice" },
-    { "id": "pet.bounce", "prompt": "soft rubbery bounce boing, small", "duration": 0.5, "profile": "footstep", "cooldownMs": 60 },
-    { "id": "pet.pet.rustle", "prompt": "gentle hand petting soft fur, rustle, content coo", "duration": 1 },
-    { "id": "pet.squash.boing", "prompt": "squishy jelly squash boing, cute", "duration": 0.5, "cooldownMs": 120 },
-    { "id": "pet.highfive.slap", "prompt": "tiny paw high five slap with sparkle", "duration": 0.6, "profile": "none" },
-    { "id": "pet.zoomies", "prompt": "tiny creature excited running zoom, fast pitter patter", "duration": 1.5, "profile": "footstep" },
-    { "id": "pet.attack.grunt", "prompt": "small creature determined battle cry, hyah", "duration": 0.6, "profile": "creature-voice" },
-    { "id": "pet.hit.hurt", "prompt": "small creature hurt ouch squeak, cartoon", "duration": 0.5, "profile": "creature-voice" },
-    { "id": "pet.victory.cheer", "prompt": "small creature triumphant happy cheer", "duration": 1.2, "profile": "creature-voice" },
-    { "id": "pet.defeat.groan", "prompt": "small creature defeated groan, dizzy", "duration": 1.2, "profile": "creature-voice" },
-
-    { "id": "elem.fire.accent", "prompt": "magical fire whoosh ignite burst", "profile": "element" },
-    { "id": "elem.water.accent", "prompt": "magical water splash and bubble swirl", "profile": "element" },
-    { "id": "elem.plant.accent", "prompt": "magical leaves rustle and vine sprout", "profile": "element" },
-    { "id": "elem.electric.accent", "prompt": "magical electric zap crackle spark", "profile": "element" },
-    { "id": "elem.shadow.accent", "prompt": "magical dark shadow whoosh, eerie but cute", "profile": "element" },
-    { "id": "elem.light.accent", "prompt": "magical holy light shimmer, bright chime", "profile": "element" },
-    { "id": "skill.fire.light", "prompt": "small ember flick, fire spit", "profile": "element" },
-    { "id": "skill.fire.medium", "prompt": "flame burst explosion, fiery", "duration": 1.2, "profile": "element" },
-    { "id": "skill.fire.heavy", "prompt": "huge inferno roar, blazing fire wave", "duration": 2, "profile": "element" },
-    { "id": "skill.water.light", "prompt": "bubble shot pop pop", "profile": "element" },
-    { "id": "skill.water.medium", "prompt": "tidal wave crash splash", "duration": 1.4, "profile": "element" },
-    { "id": "skill.water.heavy", "prompt": "massive tsunami rushing water impact", "duration": 2, "profile": "element" },
-    { "id": "skill.plant.light", "prompt": "vine whip crack", "profile": "element" },
-    { "id": "skill.plant.medium", "prompt": "razor leaves slicing through air", "duration": 1.2, "profile": "element" },
-    { "id": "skill.plant.heavy", "prompt": "overgrowth, roots erupting from ground, creaking wood", "duration": 2, "profile": "element" },
-    { "id": "skill.electric.light", "prompt": "small static spark zap", "profile": "element" },
-    { "id": "skill.electric.medium", "prompt": "volt surge electric crackle", "duration": 1.2, "profile": "element" },
-    { "id": "skill.electric.heavy", "prompt": "thunderclap lightning strike boom", "duration": 2, "profile": "element" },
-    { "id": "skill.shadow.light", "prompt": "shade touch, eerie whisper swipe", "profile": "element" },
-    { "id": "skill.shadow.medium", "prompt": "umbral dark wave pulse", "duration": 1.2, "profile": "element" },
-    { "id": "skill.shadow.heavy", "prompt": "eclipse, deep dark void boom", "duration": 2, "profile": "element" },
-    { "id": "skill.light.light", "prompt": "glimmer sparkle ping", "profile": "element" },
-    { "id": "skill.light.medium", "prompt": "radiant beam laser hum shine", "duration": 1.2, "profile": "element" },
-    { "id": "skill.light.heavy", "prompt": "solar flare blinding burst, choir shimmer", "duration": 2, "profile": "element" },
-    { "id": "skill.neutral.strike", "prompt": "quick cartoon tackle hit, whoosh and thump" },
-    { "id": "skill.neutral.slam", "prompt": "heavy body slam impact, cartoon", "duration": 1.2 },
-    { "id": "skill.guard", "prompt": "magical shield block, glassy barrier clang" },
-    { "id": "skill.heal", "prompt": "healing magic, soft rising sparkles", "duration": 1.4 },
-
-    { "id": "reward.level_up", "prompt": "level up fanfare jingle, ascending sparkling arpeggio", "duration": 2, "essential": true },
-    { "id": "reward.evolve.charge", "prompt": "magical energy charging up, rising hum with sparkles", "duration": 4, "loop": true, "note": "Suena durante la fase hold de capullo-telar." },
-    { "id": "reward.evolve.burst", "prompt": "magical transformation burst, triumphant shimmer explosion", "duration": 2.5, "essential": true },
-    { "id": "egg.shake", "prompt": "egg wobbling and rattling on a table", "duration": 0.8 },
-    { "id": "egg.crack", "prompt": "eggshell cracking, small crisp crack", "duration": 0.6, "variants": 2, "candidates": 5 },
-    { "id": "egg.hatch", "prompt": "egg bursting open with magical pop and sparkles", "duration": 1.5 },
-    { "id": "reveal.normal", "prompt": "pleasant reveal chime, simple", "duration": 1.2 },
-    { "id": "reveal.rare", "prompt": "bright reveal chime with sparkle, a bit special", "duration": 1.5 },
-    { "id": "reveal.super_rare", "prompt": "exciting reveal fanfare, shimmering bells", "duration": 2 },
-    { "id": "reveal.legendary", "prompt": "epic legendary reveal, choir swell and golden shimmer", "duration": 3 },
-    { "id": "reveal.mythic", "prompt": "mythic cosmic reveal, deep magical boom, ethereal choir and stars", "duration": 3.5 },
-    { "id": "reveal.shiny", "prompt": "special shiny sparkle twinkle, glittering", "duration": 1.2 },
-    { "id": "achievement.common", "prompt": "achievement unlocked stamp, satisfying seal press with chime", "duration": 1.2, "essential": true },
-    { "id": "achievement.rare", "prompt": "achievement unlocked, seal stamp with bright bells", "duration": 1.5, "essential": true },
-    { "id": "achievement.epic", "prompt": "epic achievement unlocked, short triumphant brass sting", "duration": 2, "essential": true },
-    { "id": "achievement.legendary", "prompt": "legendary achievement unlocked, grand fanfare with sparkle", "duration": 2.5, "essential": true },
-    { "id": "chest.shake", "prompt": "treasure chest rattling, lid jiggling", "duration": 0.8 },
-    { "id": "chest.open.bronze", "prompt": "wooden chest creaking open, small coins", "duration": 1.2 },
-    { "id": "chest.open.silver", "prompt": "chest opening with silver chime and coins", "duration": 1.4 },
-    { "id": "chest.open.gold", "prompt": "golden treasure chest opening, coins pouring, sparkle", "duration": 1.8 },
-    { "id": "chest.open.diamond", "prompt": "diamond chest opening, crystal shimmer and jewels", "duration": 2 },
-    { "id": "chest.open.mythic", "prompt": "mythic chest opening, cosmic magic burst and treasure", "duration": 2.5 },
-    { "id": "reward.mission", "prompt": "mission complete, cheerful check-off jingle with confetti pop", "duration": 1.4 },
-    { "id": "reward.daily_gift", "prompt": "present unwrapping, ribbon pull and happy sparkle", "duration": 1.4 },
-    { "id": "reward.gift", "prompt": "small parcel arrives through magic, soft poof and chime", "duration": 1.2 },
-    { "id": "reward.ritual.ok", "prompt": "ritual complete, warm resonant bell and shimmer", "duration": 1.6 },
-    { "id": "reward.ritual.miss", "prompt": "soft fading bell, gentle melancholic", "duration": 1.4 },
-
-    { "id": "fx.portal-nexo.enter", "prompt": "magical portal opening, swirling whoosh", "duration": 1.4 },
-    { "id": "fx.portal-nexo.hold", "prompt": "magical portal humming, swirling energy", "duration": 5, "loop": true, "gainDb": -12 },
-    { "id": "fx.portal-nexo.exit", "prompt": "magical portal closing, swoosh and pop", "duration": 1 },
-    { "id": "fx.proyeccion-astral", "prompt": "astral projection, ethereal whoosh with echo", "duration": 1.6 },
-    { "id": "fx.velo-eter", "prompt": "silky ethereal veil sweeping across, airy shimmer", "duration": 1.4 },
-    { "id": "fx.altar-santuario", "prompt": "sacred altar activation, deep resonant chime", "duration": 1.8 },
-    { "id": "fx.hebra-invocacion", "prompt": "summoning thread of light weaving, magical string pluck", "duration": 1.4 },
-    { "id": "fx.glitch-animo", "prompt": "digital glitch stutter, cute data static", "duration": 0.8 },
-    { "id": "fx.polvo-estatico", "prompt": "static dust crackle, tiny sparkling crackles", "duration": 1 },
-    { "id": "fx.desfragmentacion", "prompt": "soft computer powering down hum, sleepy descending tones", "duration": 1.6 },
-    { "id": "fx.descarga-calida", "prompt": "warm energy wave washing over, gentle whoosh glow", "duration": 1.4 },
-    { "id": "fx.resonancia", "prompt": "crystal resonance ring, singing bowl hum", "duration": 1.6 },
-    { "id": "fx.destello-prisma", "prompt": "prism flash, rainbow shimmer ping", "duration": 0.9 },
-    { "id": "fx.estela-flujo", "prompt": "flowing magical trail, swishing ribbon whoosh", "duration": 1 },
-    { "id": "fx.chispa-despertar", "prompt": "awakening spark, bright magical ignition twinkle", "duration": 1 },
-    { "id": "fx.trenza-juramento", "prompt": "oath braid weaving, two magical tones intertwining", "duration": 1.6 },
-    { "id": "fx.manitas-espirituales", "prompt": "spirit hands gentle clapping, ghostly soft taps", "duration": 1.2 },
-    { "id": "fx.polvo-impacto", "prompt": "dust puff impact, soft poof", "duration": 0.6, "cooldownMs": 150 },
-    { "id": "fx.triunfo-raid", "prompt": "raid victory, triumphant fanfare with crowd cheer", "duration": 3, "essential": true },
-    { "id": "fx.confeti-codices", "prompt": "confetti burst pop, paper streamers fluttering", "duration": 1.2 },
-
-    { "id": "mg.countdown.tick", "source": "synth" },
-    { "id": "mg.countdown.go", "source": "synth" },
-    { "id": "mg.score_tick", "prompt": "tiny score point blip", "duration": 0.5, "cooldownMs": 40, "gainDb": -12 },
-    { "id": "mg.result.good", "prompt": "minigame finished, nice result jingle", "duration": 1.6 },
-    { "id": "mg.result.great", "prompt": "minigame finished, excellent result fanfare", "duration": 2 },
-    { "id": "mg.new_record", "prompt": "new high score, sparkling celebratory sting", "duration": 1.8 },
-    { "id": "mg.pause", "prompt": "game paused, soft descending blip", "duration": 0.5 },
-    { "id": "mg.timer_warning", "prompt": "clock ticking urgently, light", "duration": 1, "essential": true, "cooldownMs": 900 },
-    { "id": "mg.item_drop", "prompt": "item obtained, pop and sparkle", "duration": 1 },
-    { "id": "mg.combo.step", "source": "synth" },
-    { "id": "mg.catch_food.good", "prompt": "small creature catches a falling magic fruit, soft juicy pop", "duration": 0.5, "variants": 2, "candidates": 4 },
-    { "id": "mg.catch_food.tide", "prompt": "special glowing fruit caught, brighter juicy pop with a short sparkle", "duration": 0.6 },
-    { "id": "mg.catch_food.static", "prompt": "touching a clump of static, short dry electric crackle fizz, harmless", "duration": 0.6 },
-    { "id": "mg.catch_food.tide_change", "prompt": "magical tide rising, soft airy swell with a gentle shimmer", "duration": 1.2, "cooldownMs": 2000 },
-    { "id": "mg.memory_match.peek", "prompt": "crystal lights up from inside, glassy shimmering reveal", "duration": 1.2 },
-    { "id": "mg.memory_match.flip", "prompt": "crystal facet turning, small glassy click", "duration": 0.5, "variants": 2, "candidates": 4 },
-    { "id": "mg.memory_match.match", "prompt": "matching pair found, bright ding", "duration": 0.7 },
-    { "id": "mg.memory_match.miss", "prompt": "mismatch, soft dull glass thunk", "duration": 0.5 },
-    { "id": "mg.memory_match.clear", "prompt": "board cleared, short happy fanfare", "duration": 1.4 },
-    { "id": "mg.reflex.appear", "prompt": "something surfaces in calm water, small bloop", "duration": 0.5 },
-    { "id": "mg.reflex.hit", "prompt": "fishing line pulls a small catch out of water, splash and pop", "duration": 0.5 },
-    { "id": "mg.reflex.fast", "prompt": "super fast catch out of water, high bright ping with sparkle", "duration": 0.5 },
-    { "id": "mg.reflex.expire", "prompt": "catch sinks back under water, soft glug", "duration": 0.5 },
-    { "id": "mg.reflex.lure", "prompt": "fishing line tangles on junk, dull twang and static fizz", "duration": 0.7 },
-    { "id": "mg.pulso_voltaico.perfect", "prompt": "perfect rhythm hit, bright electric zap ding", "duration": 0.5 },
-    { "id": "mg.pulso_voltaico.good", "prompt": "good rhythm hit, soft electric blip", "duration": 0.5 },
-    { "id": "mg.pulso_voltaico.miss", "prompt": "missed note, short static fizz", "duration": 0.5 },
-    { "id": "mg.pulso_voltaico.combo_break", "prompt": "combo broken, power down zap", "duration": 0.7 },
-    { "id": "mg.pulso_voltaico.metronome", "source": "synth" },
-    { "id": "mg.corriente_datos.lane", "prompt": "quick data swoosh, lane change", "duration": 0.5, "cooldownMs": 60 },
-    { "id": "mg.corriente_datos.collect", "prompt": "data packet collected, digital bloop", "duration": 0.5 },
-    { "id": "mg.corriente_datos.crash", "prompt": "corrupt block crash, digital glitch thud", "duration": 0.8 },
-    { "id": "mg.raiz_fractal.rotate", "prompt": "wooden tile rotate click", "duration": 0.5, "variants": 2, "candidates": 4 },
-    { "id": "mg.raiz_fractal.light", "prompt": "root path lighting up, rising magical glow tone", "duration": 0.8 },
-    { "id": "mg.raiz_fractal.bloom", "prompt": "flower blooming, magical plant growth swell", "duration": 1.6 },
-    { "id": "mg.cifrado.glyph", "source": "synth" },
-    { "id": "mg.cifrado.wrong", "prompt": "wrong seal pressed, dull stone thud", "duration": 0.6 },
-    { "id": "mg.cifrado.round", "prompt": "sequence of seals completed, mystical chime", "duration": 1.2 },
-    { "id": "mg.faro_claridad.beam", "prompt": "lighthouse light beam hum, warm", "duration": 4, "loop": true, "gainDb": -14 },
-    { "id": "mg.faro_claridad.purify", "prompt": "darkness purified, cleansing light sparkle", "duration": 0.8 },
-    { "id": "mg.faro_claridad.spread", "prompt": "corruption spreading, creeping dark gurgle", "duration": 0.8 },
-    { "id": "mg.faro_claridad.lose", "prompt": "darkness overruns, light fades out, descending", "duration": 1.6 },
-    { "id": "mg.forja_termica.bellows", "prompt": "forge bellows pump, air whoosh", "duration": 0.6, "variants": 2, "candidates": 4 },
-    { "id": "mg.forja_termica.fire", "prompt": "forge fire roaring steadily", "duration": 5, "loop": true, "gainDb": -12 },
-    { "id": "mg.forja_termica.gold_zone", "prompt": "golden zone reached, warm resonant ding", "duration": 0.7 },
-    { "id": "mg.forja_termica.temper", "prompt": "tempered metal knot rings, bright blacksmith clang", "duration": 0.8 },
-    { "id": "mg.forja_termica.burn", "prompt": "overheated metal hiss, steam sizzle", "duration": 1 },
-
-    { "id": "cook.ambient", "bus": "ambient", "prompt": "cozy fantasy kitchen, pot gently bubbling, soft fire crackle", "duration": 20, "loop": true },
-    { "id": "cook.memorize.show", "prompt": "ingredient appears, soft pop with chime", "duration": 0.5 },
-    { "id": "cook.ingredient.tap", "prompt": "picking up an ingredient, soft pluck", "duration": 0.5 },
-    { "id": "cook.ingredient.place", "prompt": "dropping ingredient into a pot, plop splash", "duration": 0.6, "variants": 2, "candidates": 4 },
-    { "id": "cook.undo", "prompt": "taking ingredient back out, quick reverse whoosh", "duration": 0.5 },
-    { "id": "cook.serve", "prompt": "plate served on table, ceramic clink and ding", "duration": 0.8 },
-    { "id": "cook.timer_warning", "prompt": "kitchen timer ticking fast", "duration": 1, "essential": true, "cooldownMs": 900 },
-    { "id": "cook.result.perfect", "prompt": "perfect dish, delicious sparkle fanfare, bell ding", "duration": 1.8 },
-    { "id": "cook.result.good", "prompt": "good dish, pleasant chime", "duration": 1.2 },
-    { "id": "cook.result.fail", "prompt": "dish failed, comedic sad trombone-like wobble, burnt puff", "duration": 1.4 },
-    { "id": "cook.hotpot.warn", "prompt": "small cooking pot starting to overheat, rising sizzle and quick bubbling hiss, cozy fantasy kitchen", "duration": 1, "essential": true, "cooldownMs": 900 },
-    { "id": "cook.hotpot.burn", "prompt": "ingredient scorching in an overheated pot, sharp sizzle then a smoky puff, light and cartoonish", "duration": 1 },
-    { "id": "cook.hotpot.saved", "prompt": "ingredient dropped into a hot pot just in time, short sizzle then a bright relieved ding", "duration": 0.8 },
-
-    { "id": "adv.page", "prompt": "storybook page turning, magical", "duration": 0.8 },
-    { "id": "adv.choice.hover", "prompt": "tiny soft parchment tick", "duration": 0.5, "gainDb": -18, "platforms": ["desktop"] },
-    { "id": "adv.choice.select", "prompt": "choice made, quill stroke with chime", "duration": 0.7 },
-    { "id": "adv.narration.blip", "prompt": "very soft typewriter tick", "duration": 0.5, "gainDb": -20, "cooldownMs": 50 },
-    { "id": "adv.event.encounter", "prompt": "surprise encounter sting, curious plucked strings", "duration": 1.5 },
-    { "id": "adv.event.obstacle", "prompt": "obstacle ahead sting, low tense drum hit", "duration": 1.5 },
-    { "id": "adv.event.discovery", "prompt": "discovery sting, wondrous sparkling harp", "duration": 1.5 },
-    { "id": "adv.event.plea", "prompt": "someone asks for help sting, gentle emotional flute", "duration": 1.5 },
-    { "id": "adv.event.omen", "prompt": "mysterious omen sting, eerie bell and wind", "duration": 1.8 },
-    { "id": "adv.approach.brave", "prompt": "brave choice, bold heroic drum hit", "duration": 0.9 },
-    { "id": "adv.approach.careful", "prompt": "careful choice, quiet tiptoe pizzicato", "duration": 0.9 },
-    { "id": "adv.approach.kind", "prompt": "kind choice, warm soft chime", "duration": 0.9 },
-    { "id": "adv.approach.curious", "prompt": "curious choice, playful questioning plink", "duration": 0.9 },
-    { "id": "adv.approach.cunning", "prompt": "cunning choice, sly sneaky pluck", "duration": 0.9 },
-    { "id": "adv.react.good", "prompt": "good outcome, uplifting short chime", "duration": 1 },
-    { "id": "adv.react.bad", "prompt": "bad outcome, comedic descending wobble", "duration": 1 },
-    { "id": "adv.end.win", "prompt": "adventure success, joyful storybook fanfare", "duration": 2.5 },
-    { "id": "adv.end.partial", "prompt": "adventure ended, bittersweet gentle resolve", "duration": 2 },
-    { "id": "adv.end.lose", "prompt": "adventure failed, soft sad but hopeful ending", "duration": 2 },
-    { "id": "adv.memory", "prompt": "memory saved, nostalgic music box twinkle", "duration": 1.6 },
-    { "id": "amb.loc.rotura-del-nexo", "prompt": "cosmic void, distant stardust twinkles, low airy drone" },
-    { "id": "amb.loc.claro-de-las-hebras", "prompt": "magical forest clearing at dusk, fireflies, soft leaves, crickets" },
-    { "id": "amb.loc.corriente-de-datos", "prompt": "flowing digital stream, water mixed with soft data blips" },
-    { "id": "amb.loc.orilla-del-telar", "prompt": "breezy shore of light, soft wind, distant loom clacking" },
-    { "id": "amb.loc.paramo-de-ascuas", "prompt": "ember wasteland, crackling embers, warm hot wind" },
-    { "id": "amb.loc.campo-de-nodos", "prompt": "field of humming electric nodes, gentle buzzing, light breeze" },
-    { "id": "amb.loc.santuario-a-la-deriva", "prompt": "drifting floating sanctuary, hollow wind, distant chimes" },
-    { "id": "amb.loc.ciudadela-del-nexo", "prompt": "bright crystal citadel, airy echoes, soft hum" },
-    { "id": "amb.loc.coliseo-de-resonancia", "prompt": "arena coliseum, distant murmuring crowd, banners flapping" },
-    { "id": "amb.loc.despensa-del-santuario", "prompt": "warm pantry, crackling hearth, jars clinking softly" },
-    { "id": "amb.loc.sala-de-sincronia", "prompt": "calm garden hall, trickling water, rustling plants" },
-
-    { "id": "hab.sala", "prompt": "cozy indoor room, distant clock ticking, soft room tone" },
-    { "id": "hab.jardin.day", "prompt": "sunny garden, gentle birdsong, light breeze in leaves" },
-    { "id": "hab.jardin.night", "prompt": "garden at night, crickets chirping, calm" },
-    { "id": "hab.santuario", "prompt": "mystic sanctuary, deep soft drone, faint crystal shimmer" },
-    { "id": "hab.citafinal", "prompt": "grand celestial hall, airy echoes, gentle ethereal pad-like wind" },
-    { "id": "wx.rain", "prompt": "steady light rain outdoors" },
-    { "id": "wx.rain_indoor", "prompt": "rain tapping on a window from inside, cozy" },
-    { "id": "wx.snow_wind", "prompt": "soft snowy wind, muffled and cold" },
-    { "id": "wx.fog_drone", "prompt": "foggy morning, low muffled stillness, distant drip" },
-    { "id": "wx.storm", "prompt": "heavy rain storm with wind gusts" },
-    { "id": "wx.thunder", "bus": "ambient", "prompt": "distant rolling thunder", "duration": 4, "loop": false, "variants": 3, "candidates": 5, "cooldownMs": 6000, "gainDb": -10 },
-    { "id": "hab.furniture.fountain_water", "prompt": "small water fountain trickling", "duration": 10 },
-    { "id": "hab.furniture.garden_pond", "prompt": "garden pond, gentle lapping, occasional frog", "duration": 15 },
-    { "id": "hab.furniture.star_fountain", "prompt": "magical starlight fountain, trickling water with twinkles", "duration": 10 },
-    { "id": "hab.furniture.wall_clock", "prompt": "wall clock ticking softly", "duration": 6, "gainDb": -22 },
-    { "id": "hab.furniture.crystal_lamp", "prompt": "crystal lamp faint magical hum", "duration": 6, "gainDb": -24 },
-    { "id": "hab.furniture.garden_swing", "bus": "sfx", "prompt": "wooden garden swing creaking back and forth", "duration": 2, "loop": false },
-    { "id": "hab.furniture.toy_ball", "bus": "sfx", "prompt": "rubber toy ball bouncing", "duration": 0.6, "loop": false, "variants": 2, "candidates": 4 },
-    { "id": "hab.furniture.food_bowl", "bus": "sfx", "prompt": "ceramic food bowl clink, kibble rattle", "duration": 0.8, "loop": false },
-    { "id": "hab.furniture.soft_bed", "bus": "sfx", "prompt": "flopping onto a soft fluffy bed, cushion puff", "duration": 0.8, "loop": false },
-    { "id": "hab.furniture.sit", "bus": "sfx", "prompt": "sitting down on a cushion, soft fabric puff", "duration": 0.5, "loop": false },
-    { "id": "hab.edit.place", "bus": "sfx", "prompt": "placing furniture down, soft wooden thunk", "duration": 0.5, "loop": false },
-    { "id": "hab.edit.rotate", "bus": "sfx", "prompt": "rotating furniture, wooden swivel click", "duration": 0.5, "loop": false },
-    { "id": "hab.edit.remove", "bus": "sfx", "prompt": "picking furniture up into inventory, poof", "duration": 0.5, "loop": false },
-    { "id": "hab.edit.buy", "bus": "sfx", "prompt": "new furniture purchased, delivery box opened with sparkle", "duration": 1, "loop": false },
-
-    { "id": "battle.round_start", "prompt": "battle round start, gong hit", "duration": 1.2 },
-    { "id": "battle.crit", "prompt": "critical hit, sharp powerful impact with sparkle", "duration": 0.8 },
-    { "id": "battle.guard_block", "prompt": "attack blocked, metallic clang deflect", "duration": 0.6 },
-    { "id": "battle.miss", "prompt": "attack missed, quick whiff whoosh", "duration": 0.5 },
-    { "id": "battle.win", "prompt": "battle won, victory fanfare", "duration": 2.5, "essential": true },
-    { "id": "battle.lose", "prompt": "battle lost, short sad fanfare", "duration": 2 },
-    { "id": "battle.draw", "prompt": "battle draw, neutral two-note sting", "duration": 1.5 },
-    { "id": "battle.raid.boss_roar", "prompt": "giant cute monster boss roar, booming", "duration": 2 },
-    { "id": "battle.raid.boss_hit", "prompt": "heavy hit on a giant monster, deep thud", "duration": 0.8, "variants": 2, "candidates": 4 },
-    { "id": "battle.tournament.crowd", "prompt": "small arena crowd cheering and clapping", "duration": 3 },
-    { "id": "battle.training.rep", "prompt": "training exercise rep, punching bag thump", "duration": 0.6, "variants": 2, "candidates": 4 },
-
-    { "id": "desk.toy_ball.bounce", "prompt": "small rubber ball bouncing on desk", "duration": 0.5, "variants": 2, "candidates": 4, "platforms": ["desktop"], "cooldownMs": 60 },
-    { "id": "desk.pomodoro.start", "prompt": "focus session start, gentle wind-up timer click and chime", "duration": 1.2, "platforms": ["desktop"], "essential": true },
-    { "id": "desk.pomodoro.end", "prompt": "focus session complete, pleasant alarm bell, not harsh", "duration": 2, "platforms": ["desktop"], "essential": true },
-    { "id": "desk.pomodoro.break", "prompt": "break time, relaxed soft chime", "duration": 1.4, "platforms": ["desktop"], "essential": true },
-    { "id": "desk.drop_to_habitat", "prompt": "dropping into a magical home, soft whoop and poof", "duration": 0.9, "platforms": ["desktop"] },
-    { "id": "desk.peek", "prompt": "sneaky peek, tiny curious boop", "duration": 0.5, "platforms": ["desktop"], "cooldownMs": 10000 },
-    { "id": "desk.visitor.arrive", "prompt": "friend arrives, cheerful doorbell sparkle", "duration": 1.2, "platforms": ["desktop"] },
-    { "id": "desk.visitor.leave", "prompt": "friend leaves, soft goodbye chime fading", "duration": 1.2, "platforms": ["desktop"] },
-    { "id": "desk.needs", "prompt": "gentle soft attention chime, cute", "duration": 1, "platforms": ["desktop"], "essential": true, "cooldownMs": 60000 }
+    {
+      "id": "ui.tap",
+      "prompt": "soft rounded wooden button tap"
+    },
+    {
+      "id": "ui.tap_soft",
+      "prompt": "very soft muted bubble pop click",
+      "gainDb": -14
+    },
+    {
+      "id": "ui.tab",
+      "prompt": "light paper page flick, quick tab switch"
+    },
+    {
+      "id": "ui.toggle_on",
+      "prompt": "small bright rising two-note switch click"
+    },
+    {
+      "id": "ui.toggle_off",
+      "prompt": "small soft falling two-note switch click"
+    },
+    {
+      "id": "ui.modal_open",
+      "prompt": "gentle airy whoosh up with a tiny sparkle",
+      "duration": 0.6
+    },
+    {
+      "id": "ui.modal_close",
+      "prompt": "gentle airy whoosh down, soft",
+      "duration": 0.6
+    },
+    {
+      "id": "ui.confirm",
+      "prompt": "warm positive confirmation chime, two soft bell notes",
+      "duration": 0.7
+    },
+    {
+      "id": "ui.cancel",
+      "prompt": "soft low muted cancel blip"
+    },
+    {
+      "id": "ui.notice_ok",
+      "prompt": "friendly small success ding, glassy",
+      "duration": 0.7
+    },
+    {
+      "id": "ui.error",
+      "prompt": "soft gentle error buzz, low wobble, not harsh",
+      "duration": 0.6,
+      "essential": true
+    },
+    {
+      "id": "ui.notification",
+      "prompt": "pleasant notification ping, crystal bell, airy tail",
+      "duration": 1,
+      "essential": true,
+      "cooldownMs": 1500
+    },
+    {
+      "id": "ui.coin_gain",
+      "prompt": "small fantasy coins clinking into a pouch",
+      "duration": 0.8,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "ui.gem_gain",
+      "prompt": "magical gem chime, sparkling crystal shimmer",
+      "duration": 0.9
+    },
+    {
+      "id": "ui.xp_tick",
+      "prompt": "tiny bright tick blip, rising",
+      "cooldownMs": 40,
+      "gainDb": -16
+    },
+    {
+      "id": "ui.purchase",
+      "prompt": "cheerful shop purchase, coin drop then happy sparkle chime",
+      "duration": 1.2
+    },
+    {
+      "id": "ui.purchase_fail",
+      "prompt": "empty coin purse shake, soft disappointed thud",
+      "duration": 0.8,
+      "essential": true
+    },
+    {
+      "id": "ui.equip",
+      "prompt": "soft cloth rustle with a tiny magical twinkle",
+      "duration": 0.7
+    },
+    {
+      "id": "ui.unequip",
+      "prompt": "soft cloth slip off, quick",
+      "duration": 0.6
+    },
+    {
+      "id": "ui.file_drop",
+      "prompt": "paper sheet sliding into a magical portal, soft swoosh",
+      "duration": 0.8,
+      "platforms": [
+        "desktop"
+      ]
+    },
+    {
+      "id": "ui.slider_tick",
+      "source": "synth"
+    },
+    {
+      "id": "ui.hover",
+      "prompt": "almost silent tiny tick",
+      "gainDb": -24,
+      "platforms": [
+        "desktop"
+      ],
+      "note": "Apagado por defecto; solo si se activa en ajustes."
+    },
+    {
+      "id": "pet.eat.crunch",
+      "prompt": "small creature crunching a crispy snack, happy nibbling",
+      "duration": 0.8,
+      "variants": 3,
+      "candidates": 6
+    },
+    {
+      "id": "pet.eat.slurp",
+      "prompt": "small creature slurping juicy soft food"
+    },
+    {
+      "id": "pet.eat.gulp",
+      "prompt": "small creature single satisfied gulp",
+      "duration": 0.5
+    },
+    {
+      "id": "pet.eat.burp",
+      "prompt": "tiny cute creature burp, funny and short",
+      "duration": 0.6,
+      "cooldownMs": 30000
+    },
+    {
+      "id": "pet.sleep.yawn",
+      "prompt": "small creature long sleepy yawn, squeaky",
+      "duration": 1.5,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.sleep.snore",
+      "prompt": "tiny creature softly snoring, slow peaceful breathing, whistle",
+      "duration": 6,
+      "loop": true,
+      "gainDb": -14
+    },
+    {
+      "id": "pet.sleep.mumble",
+      "prompt": "tiny creature sleep mumbling, dreamy murmur",
+      "duration": 1.2,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.wake.stretch",
+      "prompt": "small creature stretching and waking up, cute squeak then sigh",
+      "duration": 1.4,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.happy.chirp",
+      "prompt": "cheerful little creature chirp, bright happy squeak",
+      "duration": 0.6,
+      "variants": 3,
+      "candidates": 6,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.love.purr",
+      "prompt": "tiny creature affectionate purr, warm and content",
+      "duration": 1.6
+    },
+    {
+      "id": "pet.laugh",
+      "prompt": "tiny creature giggle, playful",
+      "duration": 1,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.sad.whimper",
+      "prompt": "small creature sad whimper, soft",
+      "duration": 1,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.cry",
+      "prompt": "small creature crying sobs, cute, not distressing",
+      "duration": 1.8,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.surprised",
+      "prompt": "small creature surprised gasp squeak",
+      "duration": 0.5,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.tired.sigh",
+      "prompt": "small creature tired sigh, droopy",
+      "duration": 0.9
+    },
+    {
+      "id": "pet.hungry.growl",
+      "prompt": "tiny tummy rumble growl, funny",
+      "duration": 1,
+      "cooldownMs": 20000
+    },
+    {
+      "id": "pet.sick.cough",
+      "prompt": "tiny creature small cough, cute",
+      "duration": 0.6,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "pet.sick.sneeze",
+      "prompt": "tiny creature sneeze, achoo squeak",
+      "duration": 0.7
+    },
+    {
+      "id": "pet.heal.relief",
+      "prompt": "small creature relieved happy sigh",
+      "duration": 0.9,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.clean.scrub",
+      "prompt": "soft sponge scrubbing fur with bubbles",
+      "duration": 1.5,
+      "profile": "none"
+    },
+    {
+      "id": "pet.clean.bubbles",
+      "prompt": "soapy bubbles popping, light and bubbly",
+      "duration": 1.2,
+      "profile": "none"
+    },
+    {
+      "id": "pet.clean.shake",
+      "prompt": "small wet creature shaking off water, droplets flying",
+      "duration": 1,
+      "profile": "footstep"
+    },
+    {
+      "id": "pet.talk.babble",
+      "prompt": "tiny creature cute gibberish babble syllable, single short chirpy blip",
+      "duration": 0.5,
+      "variants": 6,
+      "candidates": 10,
+      "profile": "creature-voice",
+      "cooldownMs": 60,
+      "gainDb": -9,
+      "note": "Granos cortos: el motor los encadena al azar mientras se escribe la burbuja."
+    },
+    {
+      "id": "pet.sing.hum",
+      "prompt": "tiny creature humming a simple happy melody, la la la",
+      "duration": 3,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.dance.steps",
+      "prompt": "tiny feet tapping rhythmically, happy dance shuffle",
+      "duration": 2,
+      "profile": "footstep"
+    },
+    {
+      "id": "pet.step",
+      "prompt": "single soft tiny paw footstep on wood",
+      "duration": 0.5,
+      "variants": 4,
+      "candidates": 8,
+      "profile": "footstep",
+      "cooldownMs": 90,
+      "gainDb": -14
+    },
+    {
+      "id": "pet.land",
+      "prompt": "small soft body landing thump, plush",
+      "duration": 0.5,
+      "profile": "footstep"
+    },
+    {
+      "id": "pet.fall.whoosh",
+      "prompt": "quick falling whoosh, cartoon",
+      "duration": 0.7,
+      "profile": "none"
+    },
+    {
+      "id": "pet.climb.scrabble",
+      "prompt": "tiny claws scrabbling and climbing up",
+      "duration": 1,
+      "profile": "footstep"
+    },
+    {
+      "id": "pet.drag.lift",
+      "prompt": "small creature lifted up, surprised wee squeak",
+      "duration": 0.6,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.bounce",
+      "prompt": "soft rubbery bounce boing, small",
+      "duration": 0.5,
+      "profile": "footstep",
+      "cooldownMs": 60
+    },
+    {
+      "id": "pet.pet.rustle",
+      "prompt": "gentle hand petting soft fur, rustle, content coo",
+      "duration": 1
+    },
+    {
+      "id": "pet.squash.boing",
+      "prompt": "squishy jelly squash boing, cute",
+      "duration": 0.5,
+      "cooldownMs": 120
+    },
+    {
+      "id": "pet.highfive.slap",
+      "prompt": "tiny paw high five slap with sparkle",
+      "duration": 0.6,
+      "profile": "none"
+    },
+    {
+      "id": "pet.zoomies",
+      "prompt": "tiny creature excited running zoom, fast pitter patter",
+      "duration": 1.5,
+      "profile": "footstep"
+    },
+    {
+      "id": "pet.attack.grunt",
+      "prompt": "small creature determined battle cry, hyah",
+      "duration": 0.6,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.hit.hurt",
+      "prompt": "small creature hurt ouch squeak, cartoon",
+      "duration": 0.5,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.victory.cheer",
+      "prompt": "small creature triumphant happy cheer",
+      "duration": 1.2,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "pet.defeat.groan",
+      "prompt": "small creature defeated groan, dizzy",
+      "duration": 1.2,
+      "profile": "creature-voice"
+    },
+    {
+      "id": "elem.fire.accent",
+      "prompt": "magical fire whoosh ignite burst",
+      "profile": "element"
+    },
+    {
+      "id": "elem.water.accent",
+      "prompt": "magical water splash and bubble swirl",
+      "profile": "element"
+    },
+    {
+      "id": "elem.plant.accent",
+      "prompt": "magical leaves rustle and vine sprout",
+      "profile": "element"
+    },
+    {
+      "id": "elem.electric.accent",
+      "prompt": "magical electric zap crackle spark",
+      "profile": "element"
+    },
+    {
+      "id": "elem.shadow.accent",
+      "prompt": "magical dark shadow whoosh, eerie but cute",
+      "profile": "element"
+    },
+    {
+      "id": "elem.light.accent",
+      "prompt": "magical holy light shimmer, bright chime",
+      "profile": "element"
+    },
+    {
+      "id": "skill.fire.light",
+      "prompt": "small ember flick, fire spit",
+      "profile": "element"
+    },
+    {
+      "id": "skill.fire.medium",
+      "prompt": "flame burst explosion, fiery",
+      "duration": 1.2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.fire.heavy",
+      "prompt": "huge inferno roar, blazing fire wave",
+      "duration": 2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.water.light",
+      "prompt": "bubble shot pop pop",
+      "profile": "element"
+    },
+    {
+      "id": "skill.water.medium",
+      "prompt": "tidal wave crash splash",
+      "duration": 1.4,
+      "profile": "element"
+    },
+    {
+      "id": "skill.water.heavy",
+      "prompt": "massive tsunami rushing water impact",
+      "duration": 2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.plant.light",
+      "prompt": "vine whip crack",
+      "profile": "element"
+    },
+    {
+      "id": "skill.plant.medium",
+      "prompt": "razor leaves slicing through air",
+      "duration": 1.2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.plant.heavy",
+      "prompt": "overgrowth, roots erupting from ground, creaking wood",
+      "duration": 2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.electric.light",
+      "prompt": "small static spark zap",
+      "profile": "element"
+    },
+    {
+      "id": "skill.electric.medium",
+      "prompt": "volt surge electric crackle",
+      "duration": 1.2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.electric.heavy",
+      "prompt": "thunderclap lightning strike boom",
+      "duration": 2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.shadow.light",
+      "prompt": "shade touch, eerie whisper swipe",
+      "profile": "element"
+    },
+    {
+      "id": "skill.shadow.medium",
+      "prompt": "umbral dark wave pulse",
+      "duration": 1.2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.shadow.heavy",
+      "prompt": "eclipse, deep dark void boom",
+      "duration": 2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.light.light",
+      "prompt": "glimmer sparkle ping",
+      "profile": "element"
+    },
+    {
+      "id": "skill.light.medium",
+      "prompt": "radiant beam laser hum shine",
+      "duration": 1.2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.light.heavy",
+      "prompt": "solar flare blinding burst, choir shimmer",
+      "duration": 2,
+      "profile": "element"
+    },
+    {
+      "id": "skill.neutral.strike",
+      "prompt": "quick cartoon tackle hit, whoosh and thump"
+    },
+    {
+      "id": "skill.neutral.slam",
+      "prompt": "heavy body slam impact, cartoon",
+      "duration": 1.2
+    },
+    {
+      "id": "skill.guard",
+      "prompt": "magical shield block, glassy barrier clang"
+    },
+    {
+      "id": "skill.heal",
+      "prompt": "healing magic, soft rising sparkles",
+      "duration": 1.4
+    },
+    {
+      "id": "reward.level_up",
+      "prompt": "level up fanfare jingle, ascending sparkling arpeggio",
+      "duration": 2,
+      "essential": true
+    },
+    {
+      "id": "reward.evolve.charge",
+      "prompt": "magical energy charging up, rising hum with sparkles",
+      "duration": 4,
+      "loop": true,
+      "note": "Suena durante la fase hold de capullo-telar."
+    },
+    {
+      "id": "reward.evolve.burst",
+      "prompt": "magical transformation burst, triumphant shimmer explosion",
+      "duration": 2.5,
+      "essential": true
+    },
+    {
+      "id": "egg.shake",
+      "prompt": "egg wobbling and rattling on a table",
+      "duration": 0.8
+    },
+    {
+      "id": "egg.crack",
+      "prompt": "eggshell cracking, small crisp crack",
+      "duration": 0.6,
+      "variants": 2,
+      "candidates": 5
+    },
+    {
+      "id": "egg.hatch",
+      "prompt": "egg bursting open with magical pop and sparkles",
+      "duration": 1.5
+    },
+    {
+      "id": "reveal.normal",
+      "prompt": "pleasant reveal chime, simple",
+      "duration": 1.2
+    },
+    {
+      "id": "reveal.rare",
+      "prompt": "bright reveal chime with sparkle, a bit special",
+      "duration": 1.5
+    },
+    {
+      "id": "reveal.super_rare",
+      "prompt": "exciting reveal fanfare, shimmering bells",
+      "duration": 2
+    },
+    {
+      "id": "reveal.legendary",
+      "prompt": "epic legendary reveal, choir swell and golden shimmer",
+      "duration": 3
+    },
+    {
+      "id": "reveal.mythic",
+      "prompt": "mythic cosmic reveal, deep magical boom, ethereal choir and stars",
+      "duration": 3.5
+    },
+    {
+      "id": "reveal.shiny",
+      "prompt": "special shiny sparkle twinkle, glittering",
+      "duration": 1.2
+    },
+    {
+      "id": "achievement.common",
+      "prompt": "achievement unlocked stamp, satisfying seal press with chime",
+      "duration": 1.2,
+      "essential": true
+    },
+    {
+      "id": "achievement.rare",
+      "prompt": "achievement unlocked, seal stamp with bright bells",
+      "duration": 1.5,
+      "essential": true
+    },
+    {
+      "id": "achievement.epic",
+      "prompt": "epic achievement unlocked, short triumphant brass sting",
+      "duration": 2,
+      "essential": true
+    },
+    {
+      "id": "achievement.legendary",
+      "prompt": "legendary achievement unlocked, grand fanfare with sparkle",
+      "duration": 2.5,
+      "essential": true
+    },
+    {
+      "id": "chest.shake",
+      "prompt": "treasure chest rattling, lid jiggling",
+      "duration": 0.8
+    },
+    {
+      "id": "chest.open.bronze",
+      "prompt": "wooden chest creaking open, small coins",
+      "duration": 1.2
+    },
+    {
+      "id": "chest.open.silver",
+      "prompt": "chest opening with silver chime and coins",
+      "duration": 1.4
+    },
+    {
+      "id": "chest.open.gold",
+      "prompt": "golden treasure chest opening, coins pouring, sparkle",
+      "duration": 1.8
+    },
+    {
+      "id": "chest.open.diamond",
+      "prompt": "diamond chest opening, crystal shimmer and jewels",
+      "duration": 2
+    },
+    {
+      "id": "chest.open.mythic",
+      "prompt": "mythic chest opening, cosmic magic burst and treasure",
+      "duration": 2.5
+    },
+    {
+      "id": "reward.mission",
+      "prompt": "mission complete, cheerful check-off jingle with confetti pop",
+      "duration": 1.4
+    },
+    {
+      "id": "reward.daily_gift",
+      "prompt": "present unwrapping, ribbon pull and happy sparkle",
+      "duration": 1.4
+    },
+    {
+      "id": "reward.gift",
+      "prompt": "small parcel arrives through magic, soft poof and chime",
+      "duration": 1.2
+    },
+    {
+      "id": "reward.ritual.ok",
+      "prompt": "ritual complete, warm resonant bell and shimmer",
+      "duration": 1.6
+    },
+    {
+      "id": "reward.ritual.miss",
+      "prompt": "soft fading bell, gentle melancholic",
+      "duration": 1.4
+    },
+    {
+      "id": "fx.portal-nexo.enter",
+      "prompt": "magical portal opening, swirling whoosh",
+      "duration": 1.4
+    },
+    {
+      "id": "fx.portal-nexo.hold",
+      "prompt": "magical portal humming, swirling energy",
+      "duration": 5,
+      "loop": true,
+      "gainDb": -12
+    },
+    {
+      "id": "fx.portal-nexo.exit",
+      "prompt": "magical portal closing, swoosh and pop",
+      "duration": 1
+    },
+    {
+      "id": "fx.proyeccion-astral",
+      "prompt": "astral projection, ethereal whoosh with echo",
+      "duration": 1.6
+    },
+    {
+      "id": "fx.velo-eter",
+      "prompt": "silky ethereal veil sweeping across, airy shimmer",
+      "duration": 1.4
+    },
+    {
+      "id": "fx.altar-santuario",
+      "prompt": "sacred altar activation, deep resonant chime",
+      "duration": 1.8
+    },
+    {
+      "id": "fx.hebra-invocacion",
+      "prompt": "summoning thread of light weaving, magical string pluck",
+      "duration": 1.4
+    },
+    {
+      "id": "fx.glitch-animo",
+      "prompt": "digital glitch stutter, cute data static",
+      "duration": 0.8
+    },
+    {
+      "id": "fx.polvo-estatico",
+      "prompt": "static dust crackle, tiny sparkling crackles",
+      "duration": 1
+    },
+    {
+      "id": "fx.desfragmentacion",
+      "prompt": "soft computer powering down hum, sleepy descending tones",
+      "duration": 1.6
+    },
+    {
+      "id": "fx.descarga-calida",
+      "prompt": "warm energy wave washing over, gentle whoosh glow",
+      "duration": 1.4
+    },
+    {
+      "id": "fx.resonancia",
+      "prompt": "crystal resonance ring, singing bowl hum",
+      "duration": 1.6
+    },
+    {
+      "id": "fx.destello-prisma",
+      "prompt": "prism flash, rainbow shimmer ping",
+      "duration": 0.9
+    },
+    {
+      "id": "fx.estela-flujo",
+      "prompt": "flowing magical trail, swishing ribbon whoosh",
+      "duration": 1
+    },
+    {
+      "id": "fx.chispa-despertar",
+      "prompt": "awakening spark, bright magical ignition twinkle",
+      "duration": 1
+    },
+    {
+      "id": "fx.trenza-juramento",
+      "prompt": "oath braid weaving, two magical tones intertwining",
+      "duration": 1.6
+    },
+    {
+      "id": "fx.manitas-espirituales",
+      "prompt": "spirit hands gentle clapping, ghostly soft taps",
+      "duration": 1.2
+    },
+    {
+      "id": "fx.polvo-impacto",
+      "prompt": "dust puff impact, soft poof",
+      "duration": 0.6,
+      "cooldownMs": 150
+    },
+    {
+      "id": "fx.triunfo-raid",
+      "prompt": "raid victory, triumphant fanfare with crowd cheer",
+      "duration": 3,
+      "essential": true
+    },
+    {
+      "id": "fx.confeti-codices",
+      "prompt": "confetti burst pop, paper streamers fluttering",
+      "duration": 1.2
+    },
+    {
+      "id": "mg.countdown.tick",
+      "source": "synth"
+    },
+    {
+      "id": "mg.countdown.go",
+      "source": "synth"
+    },
+    {
+      "id": "mg.score_tick",
+      "prompt": "tiny score point blip",
+      "duration": 0.5,
+      "cooldownMs": 40,
+      "gainDb": -12
+    },
+    {
+      "id": "mg.result.good",
+      "prompt": "minigame finished, nice result jingle",
+      "duration": 1.6
+    },
+    {
+      "id": "mg.result.great",
+      "prompt": "minigame finished, excellent result fanfare",
+      "duration": 2
+    },
+    {
+      "id": "mg.new_record",
+      "prompt": "new high score, sparkling celebratory sting",
+      "duration": 1.8
+    },
+    {
+      "id": "mg.pause",
+      "prompt": "game paused, soft descending blip",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.timer_warning",
+      "prompt": "clock ticking urgently, light",
+      "duration": 1,
+      "essential": true,
+      "cooldownMs": 900
+    },
+    {
+      "id": "mg.item_drop",
+      "prompt": "item obtained, pop and sparkle",
+      "duration": 1
+    },
+    {
+      "id": "mg.combo.step",
+      "source": "synth"
+    },
+    {
+      "id": "mg.catch_food.good",
+      "prompt": "small creature catches a falling magic fruit, soft juicy pop",
+      "duration": 0.5,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "mg.catch_food.tide",
+      "prompt": "special glowing fruit caught, brighter juicy pop with a short sparkle",
+      "duration": 0.6
+    },
+    {
+      "id": "mg.catch_food.static",
+      "prompt": "touching a clump of static, short dry electric crackle fizz, harmless",
+      "duration": 0.6
+    },
+    {
+      "id": "mg.catch_food.tide_change",
+      "prompt": "magical tide rising, soft airy swell with a gentle shimmer",
+      "duration": 1.2,
+      "cooldownMs": 2000
+    },
+    {
+      "id": "mg.memory_match.peek",
+      "prompt": "crystal lights up from inside, glassy shimmering reveal",
+      "duration": 1.2
+    },
+    {
+      "id": "mg.memory_match.flip",
+      "prompt": "crystal facet turning, small glassy click",
+      "duration": 0.5,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "mg.memory_match.match",
+      "prompt": "matching pair found, bright ding",
+      "duration": 0.7
+    },
+    {
+      "id": "mg.memory_match.miss",
+      "prompt": "mismatch, soft dull glass thunk",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.memory_match.clear",
+      "prompt": "board cleared, short happy fanfare",
+      "duration": 1.4
+    },
+    {
+      "id": "mg.reflex.appear",
+      "prompt": "something surfaces in calm water, small bloop",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.reflex.hit",
+      "prompt": "fishing line pulls a small catch out of water, splash and pop",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.reflex.fast",
+      "prompt": "super fast catch out of water, high bright ping with sparkle",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.reflex.expire",
+      "prompt": "catch sinks back under water, soft glug",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.reflex.lure",
+      "prompt": "fishing line tangles on junk, dull twang and static fizz",
+      "duration": 0.7
+    },
+    {
+      "id": "mg.pulso_voltaico.perfect",
+      "prompt": "perfect rhythm hit, bright electric zap ding",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.pulso_voltaico.good",
+      "prompt": "good rhythm hit, soft electric blip",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.pulso_voltaico.miss",
+      "prompt": "missed note, short static fizz",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.pulso_voltaico.combo_break",
+      "prompt": "combo broken, power down zap",
+      "duration": 0.7
+    },
+    {
+      "id": "mg.pulso_voltaico.metronome",
+      "source": "synth"
+    },
+    {
+      "id": "mg.corriente_datos.lane",
+      "prompt": "quick data swoosh, lane change",
+      "duration": 0.5,
+      "cooldownMs": 60
+    },
+    {
+      "id": "mg.corriente_datos.collect",
+      "prompt": "data packet collected, digital bloop",
+      "duration": 0.5
+    },
+    {
+      "id": "mg.corriente_datos.crash",
+      "prompt": "corrupt block crash, digital glitch thud",
+      "duration": 0.8
+    },
+    {
+      "id": "mg.raiz_fractal.rotate",
+      "prompt": "wooden tile rotate click",
+      "duration": 0.5,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "mg.raiz_fractal.light",
+      "prompt": "root path lighting up, rising magical glow tone",
+      "duration": 0.8
+    },
+    {
+      "id": "mg.raiz_fractal.bloom",
+      "prompt": "flower blooming, magical plant growth swell",
+      "duration": 1.6
+    },
+    {
+      "id": "mg.cifrado.glyph",
+      "source": "synth"
+    },
+    {
+      "id": "mg.cifrado.wrong",
+      "prompt": "wrong seal pressed, dull stone thud",
+      "duration": 0.6
+    },
+    {
+      "id": "mg.cifrado.round",
+      "prompt": "sequence of seals completed, mystical chime",
+      "duration": 1.2
+    },
+    {
+      "id": "mg.faro_claridad.beam",
+      "prompt": "lighthouse light beam hum, warm",
+      "duration": 4,
+      "loop": true,
+      "gainDb": -14
+    },
+    {
+      "id": "mg.faro_claridad.purify",
+      "prompt": "darkness purified, cleansing light sparkle",
+      "duration": 0.8
+    },
+    {
+      "id": "mg.faro_claridad.spread",
+      "prompt": "corruption spreading, creeping dark gurgle",
+      "duration": 0.8
+    },
+    {
+      "id": "mg.faro_claridad.lose",
+      "prompt": "darkness overruns, light fades out, descending",
+      "duration": 1.6
+    },
+    {
+      "id": "mg.forja_termica.bellows",
+      "prompt": "forge bellows pump, air whoosh",
+      "duration": 0.6,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "mg.forja_termica.fire",
+      "prompt": "forge fire roaring steadily",
+      "duration": 5,
+      "loop": true,
+      "gainDb": -12
+    },
+    {
+      "id": "mg.forja_termica.gold_zone",
+      "prompt": "golden zone reached, warm resonant ding",
+      "duration": 0.7
+    },
+    {
+      "id": "mg.forja_termica.temper",
+      "prompt": "tempered metal knot rings, bright blacksmith clang",
+      "duration": 0.8
+    },
+    {
+      "id": "mg.forja_termica.burn",
+      "prompt": "overheated metal hiss, steam sizzle",
+      "duration": 1
+    },
+    {
+      "id": "cook.ambient",
+      "bus": "ambient",
+      "prompt": "cozy fantasy kitchen, pot gently bubbling, soft fire crackle",
+      "duration": 20,
+      "loop": true
+    },
+    {
+      "id": "cook.memorize.show",
+      "prompt": "ingredient appears, soft pop with chime",
+      "duration": 0.5
+    },
+    {
+      "id": "cook.ingredient.tap",
+      "prompt": "picking up an ingredient, soft pluck",
+      "duration": 0.5
+    },
+    {
+      "id": "cook.ingredient.place",
+      "prompt": "dropping ingredient into a pot, plop splash",
+      "duration": 0.6,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "cook.undo",
+      "prompt": "taking ingredient back out, quick reverse whoosh",
+      "duration": 0.5
+    },
+    {
+      "id": "cook.serve",
+      "prompt": "plate served on table, ceramic clink and ding",
+      "duration": 0.8
+    },
+    {
+      "id": "cook.timer_warning",
+      "prompt": "kitchen timer ticking fast",
+      "duration": 1,
+      "essential": true,
+      "cooldownMs": 900
+    },
+    {
+      "id": "cook.result.perfect",
+      "prompt": "perfect dish, delicious sparkle fanfare, bell ding",
+      "duration": 1.8
+    },
+    {
+      "id": "cook.result.good",
+      "prompt": "good dish, pleasant chime",
+      "duration": 1.2
+    },
+    {
+      "id": "cook.result.fail",
+      "prompt": "dish failed, comedic sad trombone-like wobble, burnt puff",
+      "duration": 1.4
+    },
+    {
+      "id": "cook.hotpot.warn",
+      "prompt": "small cooking pot starting to overheat, rising sizzle and quick bubbling hiss, cozy fantasy kitchen",
+      "duration": 1,
+      "essential": true,
+      "cooldownMs": 900
+    },
+    {
+      "id": "cook.hotpot.burn",
+      "prompt": "ingredient scorching in an overheated pot, sharp sizzle then a smoky puff, light and cartoonish",
+      "duration": 1
+    },
+    {
+      "id": "cook.hotpot.saved",
+      "prompt": "ingredient dropped into a hot pot just in time, short sizzle then a bright relieved ding",
+      "duration": 0.8
+    },
+    {
+      "id": "adv.page",
+      "prompt": "storybook page turning, magical",
+      "duration": 0.8
+    },
+    {
+      "id": "adv.choice.hover",
+      "prompt": "tiny soft parchment tick",
+      "duration": 0.5,
+      "gainDb": -18,
+      "platforms": [
+        "desktop"
+      ]
+    },
+    {
+      "id": "adv.choice.select",
+      "prompt": "choice made, quill stroke with chime",
+      "duration": 0.7
+    },
+    {
+      "id": "adv.narration.blip",
+      "prompt": "very soft typewriter tick",
+      "duration": 0.5,
+      "gainDb": -20,
+      "cooldownMs": 50
+    },
+    {
+      "id": "adv.event.encounter",
+      "prompt": "surprise encounter sting, curious plucked strings",
+      "duration": 1.5
+    },
+    {
+      "id": "adv.event.obstacle",
+      "prompt": "obstacle ahead sting, low tense drum hit",
+      "duration": 1.5
+    },
+    {
+      "id": "adv.event.discovery",
+      "prompt": "discovery sting, wondrous sparkling harp",
+      "duration": 1.5
+    },
+    {
+      "id": "adv.event.plea",
+      "prompt": "someone asks for help sting, gentle emotional flute",
+      "duration": 1.5
+    },
+    {
+      "id": "adv.event.omen",
+      "prompt": "mysterious omen sting, eerie bell and wind",
+      "duration": 1.8
+    },
+    {
+      "id": "adv.approach.brave",
+      "prompt": "brave choice, bold heroic drum hit",
+      "duration": 0.9
+    },
+    {
+      "id": "adv.approach.careful",
+      "prompt": "careful choice, quiet tiptoe pizzicato",
+      "duration": 0.9
+    },
+    {
+      "id": "adv.approach.kind",
+      "prompt": "kind choice, warm soft chime",
+      "duration": 0.9
+    },
+    {
+      "id": "adv.approach.curious",
+      "prompt": "curious choice, playful questioning plink",
+      "duration": 0.9
+    },
+    {
+      "id": "adv.approach.cunning",
+      "prompt": "cunning choice, sly sneaky pluck",
+      "duration": 0.9
+    },
+    {
+      "id": "adv.react.good",
+      "prompt": "good outcome, uplifting short chime",
+      "duration": 1
+    },
+    {
+      "id": "adv.react.bad",
+      "prompt": "bad outcome, comedic descending wobble",
+      "duration": 1
+    },
+    {
+      "id": "adv.end.win",
+      "prompt": "adventure success, joyful storybook fanfare",
+      "duration": 2.5
+    },
+    {
+      "id": "adv.end.partial",
+      "prompt": "adventure ended, bittersweet gentle resolve",
+      "duration": 2
+    },
+    {
+      "id": "adv.end.lose",
+      "prompt": "adventure failed, soft sad but hopeful ending",
+      "duration": 2
+    },
+    {
+      "id": "adv.memory",
+      "prompt": "memory saved, nostalgic music box twinkle",
+      "duration": 1.6
+    },
+    {
+      "id": "amb.loc.rotura-del-nexo",
+      "prompt": "cosmic void, distant stardust twinkles, low airy drone"
+    },
+    {
+      "id": "amb.loc.claro-de-las-hebras",
+      "prompt": "magical forest clearing at dusk, fireflies, soft leaves, crickets"
+    },
+    {
+      "id": "amb.loc.corriente-de-datos",
+      "prompt": "flowing digital stream, water mixed with soft data blips"
+    },
+    {
+      "id": "amb.loc.orilla-del-telar",
+      "prompt": "breezy shore of light, soft wind, distant loom clacking"
+    },
+    {
+      "id": "amb.loc.paramo-de-ascuas",
+      "prompt": "ember wasteland, crackling embers, warm hot wind"
+    },
+    {
+      "id": "amb.loc.campo-de-nodos",
+      "prompt": "field of humming electric nodes, gentle buzzing, light breeze"
+    },
+    {
+      "id": "amb.loc.santuario-a-la-deriva",
+      "prompt": "drifting floating sanctuary, hollow wind, distant chimes"
+    },
+    {
+      "id": "amb.loc.ciudadela-del-nexo",
+      "prompt": "bright crystal citadel, airy echoes, soft hum"
+    },
+    {
+      "id": "amb.loc.coliseo-de-resonancia",
+      "prompt": "arena coliseum, distant murmuring crowd, banners flapping"
+    },
+    {
+      "id": "amb.loc.despensa-del-santuario",
+      "prompt": "warm pantry, crackling hearth, jars clinking softly"
+    },
+    {
+      "id": "amb.loc.sala-de-sincronia",
+      "prompt": "calm garden hall, trickling water, rustling plants"
+    },
+    {
+      "id": "hab.sala",
+      "prompt": "cozy indoor room, distant clock ticking, soft room tone"
+    },
+    {
+      "id": "hab.jardin.day",
+      "prompt": "sunny garden, gentle birdsong, light breeze in leaves"
+    },
+    {
+      "id": "hab.jardin.night",
+      "prompt": "garden at night, crickets chirping, calm"
+    },
+    {
+      "id": "hab.santuario",
+      "prompt": "mystic sanctuary, deep soft drone, faint crystal shimmer"
+    },
+    {
+      "id": "hab.citafinal",
+      "prompt": "grand celestial hall, airy echoes, gentle ethereal pad-like wind"
+    },
+    {
+      "id": "wx.rain",
+      "prompt": "steady light rain outdoors"
+    },
+    {
+      "id": "wx.rain_indoor",
+      "prompt": "rain tapping on a window from inside, cozy"
+    },
+    {
+      "id": "wx.snow_wind",
+      "prompt": "soft snowy wind, muffled and cold"
+    },
+    {
+      "id": "wx.fog_drone",
+      "prompt": "foggy morning, low muffled stillness, distant drip"
+    },
+    {
+      "id": "wx.storm",
+      "prompt": "heavy rain storm with wind gusts"
+    },
+    {
+      "id": "wx.thunder",
+      "bus": "ambient",
+      "prompt": "distant rolling thunder",
+      "duration": 4,
+      "loop": false,
+      "variants": 3,
+      "candidates": 5,
+      "cooldownMs": 6000,
+      "gainDb": -10
+    },
+    {
+      "id": "hab.furniture.fountain_water",
+      "prompt": "small water fountain trickling",
+      "duration": 10
+    },
+    {
+      "id": "hab.furniture.garden_pond",
+      "prompt": "garden pond, gentle lapping, occasional frog",
+      "duration": 15
+    },
+    {
+      "id": "hab.furniture.star_fountain",
+      "prompt": "magical starlight fountain, trickling water with twinkles",
+      "duration": 10
+    },
+    {
+      "id": "hab.furniture.wall_clock",
+      "prompt": "wall clock ticking softly",
+      "duration": 6,
+      "gainDb": -22
+    },
+    {
+      "id": "hab.furniture.crystal_lamp",
+      "prompt": "crystal lamp faint magical hum",
+      "duration": 6,
+      "gainDb": -24
+    },
+    {
+      "id": "hab.furniture.garden_swing",
+      "bus": "sfx",
+      "prompt": "wooden garden swing creaking back and forth",
+      "duration": 2,
+      "loop": false
+    },
+    {
+      "id": "hab.furniture.toy_ball",
+      "bus": "sfx",
+      "prompt": "rubber toy ball bouncing",
+      "duration": 0.6,
+      "loop": false,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "hab.furniture.food_bowl",
+      "bus": "sfx",
+      "prompt": "ceramic food bowl clink, kibble rattle",
+      "duration": 0.8,
+      "loop": false
+    },
+    {
+      "id": "hab.furniture.soft_bed",
+      "bus": "sfx",
+      "prompt": "flopping onto a soft fluffy bed, cushion puff",
+      "duration": 0.8,
+      "loop": false
+    },
+    {
+      "id": "hab.furniture.sit",
+      "bus": "sfx",
+      "prompt": "sitting down on a cushion, soft fabric puff",
+      "duration": 0.5,
+      "loop": false
+    },
+    {
+      "id": "hab.edit.place",
+      "bus": "sfx",
+      "prompt": "placing furniture down, soft wooden thunk",
+      "duration": 0.5,
+      "loop": false
+    },
+    {
+      "id": "hab.edit.rotate",
+      "bus": "sfx",
+      "prompt": "rotating furniture, wooden swivel click",
+      "duration": 0.5,
+      "loop": false
+    },
+    {
+      "id": "hab.edit.remove",
+      "bus": "sfx",
+      "prompt": "picking furniture up into inventory, poof",
+      "duration": 0.5,
+      "loop": false
+    },
+    {
+      "id": "hab.edit.buy",
+      "bus": "sfx",
+      "prompt": "new furniture purchased, delivery box opened with sparkle",
+      "duration": 1,
+      "loop": false
+    },
+    {
+      "id": "battle.round_start",
+      "prompt": "battle round start, gong hit",
+      "duration": 1.2
+    },
+    {
+      "id": "battle.crit",
+      "prompt": "critical hit, sharp powerful impact with sparkle",
+      "duration": 0.8
+    },
+    {
+      "id": "battle.guard_block",
+      "prompt": "attack blocked, metallic clang deflect",
+      "duration": 0.6
+    },
+    {
+      "id": "battle.miss",
+      "prompt": "attack missed, quick whiff whoosh",
+      "duration": 0.5
+    },
+    {
+      "id": "battle.win",
+      "prompt": "battle won, victory fanfare",
+      "duration": 2.5,
+      "essential": true
+    },
+    {
+      "id": "battle.lose",
+      "prompt": "battle lost, short sad fanfare",
+      "duration": 2
+    },
+    {
+      "id": "battle.draw",
+      "prompt": "battle draw, neutral two-note sting",
+      "duration": 1.5
+    },
+    {
+      "id": "battle.raid.boss_roar",
+      "prompt": "giant cute monster boss roar, booming",
+      "duration": 2
+    },
+    {
+      "id": "battle.raid.boss_hit",
+      "prompt": "heavy hit on a giant monster, deep thud",
+      "duration": 0.8,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "battle.tournament.crowd",
+      "prompt": "small arena crowd cheering and clapping",
+      "duration": 3
+    },
+    {
+      "id": "battle.training.rep",
+      "prompt": "training exercise rep, punching bag thump",
+      "duration": 0.6,
+      "variants": 2,
+      "candidates": 4
+    },
+    {
+      "id": "desk.toy_ball.bounce",
+      "prompt": "small rubber ball bouncing on desk",
+      "duration": 0.5,
+      "variants": 2,
+      "candidates": 4,
+      "platforms": [
+        "desktop"
+      ],
+      "cooldownMs": 60
+    },
+    {
+      "id": "desk.pomodoro.start",
+      "prompt": "focus session start, gentle wind-up timer click and chime",
+      "duration": 1.2,
+      "platforms": [
+        "desktop"
+      ],
+      "essential": true
+    },
+    {
+      "id": "desk.pomodoro.end",
+      "prompt": "focus session complete, pleasant alarm bell, not harsh",
+      "duration": 2,
+      "platforms": [
+        "desktop"
+      ],
+      "essential": true
+    },
+    {
+      "id": "desk.pomodoro.break",
+      "prompt": "break time, relaxed soft chime",
+      "duration": 1.4,
+      "platforms": [
+        "desktop"
+      ],
+      "essential": true
+    },
+    {
+      "id": "desk.drop_to_habitat",
+      "prompt": "dropping into a magical home, soft whoop and poof",
+      "duration": 0.9,
+      "platforms": [
+        "desktop"
+      ]
+    },
+    {
+      "id": "desk.peek",
+      "prompt": "sneaky peek, tiny curious boop",
+      "duration": 0.5,
+      "platforms": [
+        "desktop"
+      ],
+      "cooldownMs": 10000
+    },
+    {
+      "id": "desk.visitor.arrive",
+      "prompt": "friend arrives, cheerful doorbell sparkle",
+      "duration": 1.2,
+      "platforms": [
+        "desktop"
+      ]
+    },
+    {
+      "id": "desk.visitor.leave",
+      "prompt": "friend leaves, soft goodbye chime fading",
+      "duration": 1.2,
+      "platforms": [
+        "desktop"
+      ]
+    },
+    {
+      "id": "desk.needs",
+      "prompt": "gentle soft attention chime, cute",
+      "duration": 1,
+      "platforms": [
+        "desktop"
+      ],
+      "essential": true,
+      "cooldownMs": 60000
+    },
+    {
+      "id": "music.brand-sting",
+      "prompt": "short magical brand sting, warm rising two-note chime with a soft shimmer, no drums",
+      "duration": 2
+    },
+    {
+      "id": "music.telar",
+      "prompt": "gentle warm music box melody over soft felt-piano arpeggios, sparse, hopeful, 85 bpm",
+      "duration": 10,
+      "loop": true
+    },
+    {
+      "id": "music.santuario",
+      "prompt": "warm lo-fi felt piano with soft music box, cozy bedroom ambience, gentle, 70 bpm",
+      "duration": 15,
+      "loop": true
+    },
+    {
+      "id": "music.coliseo",
+      "prompt": "light playful pizzicato strings theme, cute fantasy arena, upbeat but gentle, no harsh brass",
+      "duration": 10,
+      "loop": true
+    },
+    {
+      "id": "music.primer-latido",
+      "prompt": "deep warm resonant heartbeat chime expanding into soft cosmic shimmer, eerie but cute",
+      "duration": 3
+    }
   ]
 }
