@@ -37,6 +37,8 @@ sealed interface SceneEvent {
     data class ItemSelected(val itemId: String?) : SceneEvent
     data class FurnitureMoved(val itemId: String, val x: Int, val y: Int, val rotation: Int) : SceneEvent
     data object PetTapped : SceneEvent
+    /** El Pockai ha usado un mueble por su cuenta (comer, bañarse, sentarse, jugar, dormir). */
+    data class FurnitureUsed(val itemId: String, val interaction: String) : SceneEvent
     /** Un efecto de `playEffect`/`petAction` terminó (protocolo v3). */
     data class EffectEnded(val id: String) : SceneEvent
     /** Hito de la escena de historia (protocolo v4): `arrived`, `reacted` o `exited`. */
@@ -63,6 +65,7 @@ private fun parseEvent(raw: String): SceneEvent? = runCatching {
             o["rotation"]!!.jsonPrimitive.int,
         )
         "petTapped" -> SceneEvent.PetTapped
+        "furnitureUsed" -> SceneEvent.FurnitureUsed(str("itemId") ?: return null, str("interaction") ?: "")
         "effectEnded" -> SceneEvent.EffectEnded(str("id") ?: return null)
         "storyBeat" -> SceneEvent.StoryBeat(str("key") ?: return null, str("beat") ?: return null)
         "screenCovered" -> SceneEvent.ScreenCovered
@@ -86,7 +89,9 @@ class SceneController {
     fun send(msg: JsonObject) {
         val type = msg["type"]?.jsonPrimitive?.content ?: return
         val raw = msg.toString()
-        if (type != "rotateSelected") latest[type] = raw
+        // Órdenes de un momento (girar, una escena, un clip): no son estado y no se repiten al recargar
+        val momentary = type == "rotateSelected" || type == "playScene" || type == "playClip"
+        if (!momentary) latest[type] = raw
         val wv = webView
         if (wv == null || !ready) {
             if (type == "rotateSelected") pending.addLast(raw)

@@ -44,6 +44,7 @@ import com.petai.app.data.HabitatBuffs
 import com.petai.app.data.HabitatCatalog
 import com.petai.app.data.HabitatFurniture
 import com.petai.app.data.HabitatRoom
+import com.petai.app.data.HabitatSceneEvent
 import com.petai.app.data.HabitatState
 import com.petai.app.data.HabitatVisitor
 import com.petai.app.data.Pet
@@ -134,10 +135,18 @@ fun HabitatScreen(
     onSoloChange: (Boolean) -> Unit = {},
 ) {
     val currentPet by rememberUpdatedState(pet)
+    val onChangedNow by rememberUpdatedState(onChanged)
     var catalog by remember { mutableStateOf<HabitatCatalog?>(null) }
     var state by remember { mutableStateOf<HabitatState?>(null) }
     var buffs by remember { mutableStateOf<HabitatBuffs?>(null) }
     var visitors by remember { mutableStateOf<List<HabitatVisitor>>(emptyList()) }
+    // Personalidad (para que en la sala elija qué hacer según cómo es) y lo último de la visita
+    var dims by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
+    var visitScene by remember { mutableStateOf<HabitatSceneEvent?>(null) }
+    var visitTalk by remember { mutableStateOf("") }
+    // El Pockai del amigo que cabe en la sala: el primero que llegó con su aspecto
+    val roomGuest = visitors.firstOrNull { it.pet.look != null }
+    val currentGuest by rememberUpdatedState(roomGuest)
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf("") }
     var busyId by remember { mutableStateOf("") }
@@ -197,6 +206,29 @@ fun HabitatScreen(
         launch {
             realtime.visitorLeft().collect { id ->
                 visitors = visitors.filter { it.visitorId != id }
+                if (visitScene?.visitorId == id) {
+                    visitScene = null
+                    visitTalk = ""
+                }
+            }
+        }
+        // Qué hacen tu Pockai y el visitante: lo decide el servidor y lo representa la escena.
+        // Las que llegan con `role = guest` son de la sala del amigo al que visitas tú.
+        launch {
+            realtime.habitatScene().collect { ev ->
+                if (ev.role != "guest" && ev.type.isNotBlank() && ev.visitorId == currentGuest?.visitorId) {
+                    visitScene = ev
+                    scene.send(SceneMessages.playScene(ev.type))
+                }
+            }
+        }
+        // Lo que el visitante hace con tu Pockai (saludarle, traerle un premio…) y cómo responde
+        launch {
+            realtime.visitorInteraction().collect { ev ->
+                if (ev.visitorId == currentGuest?.visitorId) {
+                    visitTalk = ev.line
+                    ev.behavior?.clip?.takeIf { it.isNotBlank() }?.let { scene.send(SceneMessages.playClip(it)) }
+                }
             }
         }
         // Lo que le pasa a tu Pockai (sube de nivel, evoluciona, gana un logro…): la escena pinta
@@ -272,6 +304,12 @@ fun HabitatScreen(
                 }
             }
             is SceneEvent.ScreenCovered -> coverWaiter?.complete(Unit)
+            // El Pockai ha usado un mueble: el servidor decide si tiene efecto (tope diario)
+            is SceneEvent.FurnitureUsed -> if (!editing) {
+                scope.launch {
+                    runCatching { service.useHabitatItem(ev.itemId) }.onSuccess { if (it.applied) onChangedNow() }
+                }
+            }
             is SceneEvent.Error -> android.util.Log.w("PockaiScene", ev.message)
             else -> Unit
         }
@@ -327,11 +365,16 @@ fun HabitatScreen(
     if (!canEdit && editing) editing = false
     val selectedItem = activeRoom?.items?.firstOrNull { it.id == selectedId }
 
-    LaunchedEffect(pet) {
+    LaunchedEffect(pet.id) {
+        runCatching { service.petMind(pet.id) }.onSuccess { m -> dims = m.dimensions.mapValues { it.value.value } }
+    }
+    LaunchedEffect(pet, dims) {
         scene.send(SceneMessages.setPet(pet))
-        scene.send(SceneMessages.setActivity(if (pet.sleeping) "sleep" else "idle", restClip(pet)))
+        scene.send(SceneMessages.setActivity(if (pet.sleeping) "sleep" else "idle", restClip(pet), SceneMessages.roomMind(pet, dims)))
         scene.send(SceneMessages.setNight(pet.sleeping))
     }
+    // El Pockai del amigo que está de visita entra en la sala (cabe uno: el que llegó primero)
+    LaunchedEffect(roomGuest?.visitorId, roomGuest?.pet?.petId) { scene.send(SceneMessages.setGuest(roomGuest?.pet)) }
     LaunchedEffect(activeRoom, catalog) { scene.send(SceneMessages.setRoom(activeRoom, catalog?.furniture ?: emptyList())) }
     LaunchedEffect(editing) { scene.send(SceneMessages.setEditMode(editing)) }
     LaunchedEffect(selectedId) { scene.send(SceneMessages.selectItem(selectedId)) }
@@ -367,6 +410,25 @@ fun HabitatScreen(
                             Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 visitors.forEach { v -> VisitorPet(v) }
+                            }
+                            // Quién está en la sala y qué hacen: el dibujo solo no dice de quién es el otro Pockai
+                            roomGuest?.let { g ->
+                                val doing = visitScene?.takeIf { it.visitorId == g.visitorId }
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    buildString {
+                                        append(g.pet.nickname.ifBlank { g.pet.speciesName })
+                                        append(", de ").append(g.visitorName).append(", está en tu sala")
+                                        sceneLabel(doing?.type)?.let { append(": ").append(it) }
+                                        append('.')
+                                        stageLabel(doing?.stage)?.let { append(' ').append(it).append('.') }
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                if (visitTalk.isNotBlank()) {
+                                    Text("${g.visitorName}: $visitTalk", style = MaterialTheme.typography.bodySmall)
+                                }
                             }
                         }
                     }
@@ -610,6 +672,28 @@ private fun VisitorPet(visitor: HabitatVisitor) {
             textAlign = TextAlign.Center,
         )
     }
+}
+
+/** Qué hacen los dos Pockai, en una frase (mismas escenas que el escritorio). */
+internal fun sceneLabel(type: String?): String? = when (type) {
+    "greet" -> "se están saludando"
+    "explore_together" -> "curiosean juntos por la sala"
+    "play_tag" -> "juegan al pilla-pilla"
+    "share_food" -> "comparten la comida"
+    "nap_together" -> "se echan una siesta juntos"
+    "squabble" -> "se han picado"
+    "make_up" -> "hacen las paces"
+    "give_gift" -> "se hacen un regalo"
+    else -> null
+}
+
+/** Cómo se llevan, en una frase. */
+internal fun stageLabel(stage: String?): String? = when (stage) {
+    "stranger" -> "Acaban de conocerse"
+    "acquaintance" -> "Ya se conocen"
+    "friend" -> "Son amigos"
+    "best_friend" -> "Son mejores amigos"
+    else -> null
 }
 
 private val KNOWN_SPRITE_KEYS = setOf(

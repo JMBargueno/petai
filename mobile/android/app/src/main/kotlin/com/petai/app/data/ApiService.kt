@@ -365,6 +365,27 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
 
     suspend fun endHabitatVisit(): Int = api.request<VisitEndResponse>("POST", "/habitat/visit/end").ended
 
+    /**
+     * Habla por menú con el Pockai del amigo al que visitas. Sin [choice] empieza (o retoma) la
+     * conversación; con él, elige una de las opciones recibidas. [turn] es el de la respuesta a la
+     * que se contesta: así un reintento no repite el efecto.
+     */
+    suspend fun visitInteract(ownerId: String, choice: Int? = null, turn: Int? = null): VisitInteraction =
+        api.request("POST", "/habitat/visit/interact", obj("ownerId" to ownerId, "choice" to choice, "turn" to turn))
+
+    /** La sala del amigo al que estás visitando: sala, muebles y aspecto de los dos Pockai. */
+    suspend fun visitRoom(ownerId: String): VisitRoom =
+        api.request("GET", "/habitat/visit/room?ownerId=" + java.net.URLEncoder.encode(ownerId, "UTF-8"))
+
+    /**
+     * Avisa de que el Pockai ha usado un mueble de su sala. El servidor decide si tiene efecto
+     * (tope diario y enfriamiento): `applied = false` no es un error.
+     */
+    suspend fun useHabitatItem(itemId: String): FurnitureUseResult = api.request("POST", "/habitat/items/$itemId/use")
+
+    /** Personalidad de la mascota, para que en la sala elija qué hacer según cómo es. */
+    suspend fun petMind(petId: String): MindProfile = api.request("GET", "/pets/$petId/mind")
+
     suspend fun getHabitatVisitors(): List<HabitatVisitor> = api.request<VisitorsResponse>("GET", "/habitat/visitors").visitors
 
     /** Clima y sol reales del usuario (según las coordenadas guardadas en su perfil). */
