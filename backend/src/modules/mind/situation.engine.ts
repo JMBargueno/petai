@@ -85,7 +85,7 @@ export interface SituationInput {
   };
   now: Date;
   /** Última vez que su entrenador interactuó con ella. */
-  lastOwnerInteractionAt?: Date | null;
+  lastOwnerInteractionAt?: Date | string | null;
   /** Hay una visita activa en su hábitat. */
   hosting?: boolean;
   /** Su entrenador la ha llevado de visita. */
@@ -95,6 +95,17 @@ export interface SituationInput {
   memories?: readonly MemoryRow[];
   wishes?: readonly string[];
   tricks?: readonly string[];
+}
+
+/**
+ * Fecha a partir de lo que venga. La mascota llega a veces tal como la devuelve la API o la caché
+ * (`PetsService.getPetById`), con las fechas como texto: aquí se aceptan las dos formas. `null`
+ * si no hay fecha o no es válida.
+ */
+export function asDate(v: unknown): Date | null {
+  if (v === null || v === undefined || v === '') return null;
+  const d = v instanceof Date ? v : new Date(v as string | number);
+  return Number.isFinite(d.getTime()) ? d : null;
 }
 
 const vital = (v: number | null | undefined, fallback = 60) =>
@@ -177,7 +188,7 @@ export function buildSituation(input: SituationInput, cfg: PersonalityConfig, is
     input.subject && (input.audience === 'owner' ? input.subject.key === 'owner' : input.subject.key !== 'owner') ? input.subject : null;
   const window = cfg.behavior.antiRepeat?.window ?? 4;
   const recent = (input.recent ?? []).filter(isBehavior).slice(-window);
-  const last = input.lastOwnerInteractionAt;
+  const last = asDate(input.lastOwnerInteractionAt);
   const awayMinutes = last ? Math.max(0, Math.floor((input.now.getTime() - last.getTime()) / 60_000)) : 0;
   return {
     mode: resolveMode(needs, input.audience, { hosting: input.hosting, visiting: input.visiting }),
