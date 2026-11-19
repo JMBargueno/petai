@@ -400,7 +400,12 @@ export class ChatService {
           })
         : [];
       // Percibir y decidir, sin efectos: la pizarra se monta una vez y de ella lee todo lo demás
-      const plan = planOwnerTurn({ message, pet, dims: profile.dims, stored: profile.stored ?? {}, rows, now: new Date() }, this.mind.config());
+      // `getPetById` devuelve `lastInteractionAt` ya serializado (texto ISO, para el cliente) y el
+      // motor trabaja con fechas: se convierte aquí. Sin esto el plan fallaba en cada turno real y
+      // el chat se quedaba sin personalidad, sin reacción y sin `express_behavior`.
+      const lastAt = pet.lastInteractionAt ? new Date(pet.lastInteractionAt) : null;
+      const turnPet = { ...pet, lastInteractionAt: lastAt && !Number.isNaN(lastAt.getTime()) ? lastAt : null };
+      const plan = planOwnerTurn({ message, pet: turnPet, dims: profile.dims, stored: profile.stored ?? {}, rows, now: new Date() }, this.mind.config());
       return {
         interpretation: plan.interpretation,
         behavior: plan.behavior,
