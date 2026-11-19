@@ -24,7 +24,7 @@ entrenador con datos concretos, en el escritorio y en las apps.
 | B | Iniciativa fuera del chat (bocadillos, con tres niveles de insistencia) | Hecha en librería, servidor, escritorio y Android (Android sin compilar en local) |
 | C | Evaluación con un modelo real (manual, con la clave del desarrollador) | Hecha: `pnpm run eval:mind` en `backend` (ver `backend/scripts/eval-mind.ts`); sin ejecutar aún contra un modelo real |
 | D | El escritorio aprende de lo que su entrenador premia | Hecha en librería, servidor y escritorio |
-| E | Memoria que consolida | Pendiente |
+| E | Memoria que consolida | Hecha en librería y servidor (sin modelo; lo nacido del chat no se resume) |
 | F | Rutinas con continuidad en la vida autónoma | Pendiente |
 
 ## 3. Fase A
@@ -160,3 +160,44 @@ El Pockai aprende qué le gusta a su entrenador verle hacer en el escritorio.
 - Android e iOS no tienen conductas de escritorio: no envían gestos. Pueden leer `learned`.
 - Lo aprendido no influye todavía en el chat ni en las frases de iniciativa.
 - El escritorio no guarda lo aprendido en disco: sin red, dura lo que la sesión.
+
+## 7. Fase E
+
+Consolidación de la memoria: lo que se va a olvidar se pliega antes en un resumen.
+
+### 7.1 Qué hace
+
+- Al llenarse la capa de episodios, los de menor retención se borraban sin más. Ahora, antes de
+  borrarse, se **pliegan** en el resumen de su grupo: alguien (`sum:pet:<id>`, `sum:user:<id>`)
+  o un tipo de vivencia (`sum:find`, `sum:adventure`).
+- De cada grupo se guardan solo un contador, la media de cómo fueron y las fechas, en
+  `Pet.personality.digests`. Nunca texto de los episodios.
+- El resumen es un recuerdo más de la capa semántica (`kind: digest`, vida media de 60 días):
+  «He quedado muchísimas veces con Brasa (Pockai de Ana): nos conocemos de sobra. Casi siempre lo
+  pasamos genial.». El texto sale de `strings` (`DIGEST_<GRUPO>_<SOME|MANY>` y
+  `DIGEST_<GRUPO>_TONE_<GOOD|MIXED|BAD>`), sin modelo.
+- En el prompt va marcado «(de hace tiempo)».
+
+### 7.2 Límites
+
+- Solo se pliegan los tipos de `balance.json → personality.memory.consolidation.kinds`
+  (encuentros, visitas, hallazgos y aventuras). **Lo nacido del chat se olvida como antes:**
+  resumirlo bien exige leerlo, y eso es cosa de un modelo.
+- Hasta `minCount` episodios plegados no se escribe resumen; a partir de `manyFrom` son «muchas».
+- Como mucho `maxDigests` grupos por mascota: se sueltan aquellos de los que hace más que no
+  pasa nada.
+- Sin relación guardada con alguien no se escribe su resumen (no hay cómo llamarlo), pero se cuenta.
+- Privacidad: el resumen vive en la capa semántica, que nunca se enseña a visitantes ni a otros
+  Pockais. Si el entrenador lo borra, se borra también su contador y no reaparece.
+
+### 7.3 Dónde vive
+
+- **Librería:** `shared/mind/src/consolidate.ts` (`groupOf`, `foldEpisodes`, `digestView`).
+- **Servidor:** `MindMemoryService.enforceCapacity` → `consolidate`; `forgetDigests`.
+- **Clientes:** nada que cambiar; ya listan y dejan olvidar cualquier recuerdo.
+
+### 7.4 Sin hacer
+
+- Resumir lo nacido del chat con un modelo.
+- Búsqueda por significado: la relevancia sigue siendo por palabras compartidas.
+- Los resúmenes salen en castellano (no hay preferencia de idioma por cuenta); el inglés está escrito.

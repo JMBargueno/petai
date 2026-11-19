@@ -54,6 +54,8 @@ export interface PersonalityConfig {
      * (más espaciado que la cadencia del plan). 0 = no se extrae hasta alcanzar ese nivel.
      */
     earlyExtractEvery: number;
+    /** Lo que se va a olvidar se pliega antes en resúmenes (spec 41, fase E). */
+    consolidation?: import('@pockai/mind/node').ConsolidationConfig;
   };
   autonomy: AutonomyConfig;
   /** Iniciativa: cuándo y cuánto habla por su cuenta (`@pockai/mind` → initiative). */
@@ -174,6 +176,8 @@ export interface StoredPersonality {
   apologyDay?: string;
   /** Iniciativa: nivel elegido, enfriamientos y lo último que dijo (ver `@pockai/mind` → initiative). */
   initiative?: unknown;
+  /** Contadores de los resúmenes de memoria por grupo; ver `@pockai/mind` consolidate. */
+  digests?: unknown;
   /** Preferencias aprendidas entre conductas del escritorio; ver `@pockai/mind` learning. */
   learned?: unknown;
   /** Ánimo de corto plazo: lo que le acaba de pasar (`@pockai/mind` → feeling). */

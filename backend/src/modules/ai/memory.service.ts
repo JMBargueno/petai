@@ -386,6 +386,8 @@ export class MemoryService {
     const memory = await this.prisma.petMemory.findFirst({ where: { id: memoryId, petId }, select: { kind: true, key: true } });
     const res = await this.prisma.petMemory.deleteMany({ where: { id: memoryId, petId } });
     if (res.count === 0) throw new NotFoundException('Recuerdo no encontrado');
+    // Un resumen borrado no vuelve: se olvidan también sus contadores
+    if (memory?.kind === 'digest') await this.mindMemory?.forgetDigests(petId, memory.key);
     // Un hábito borrado se silencia: el siguiente resumen del escritorio no lo vuelve a crear
     if (memory?.kind === 'habit' && memory.key) {
       const row = await this.prisma.petContextProfile.findUnique({ where: { petId } });
@@ -403,6 +405,7 @@ export class MemoryService {
     const res = await this.prisma.petMemory.deleteMany({ where: { petId } });
     // «Olvidar todo» borra también el perfil de hábitos del que salen
     await this.prisma.petContextProfile.deleteMany({ where: { petId } });
+    await this.mindMemory?.forgetDigests(petId);
     return { deleted: res.count };
   }
 

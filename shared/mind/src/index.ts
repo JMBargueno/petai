@@ -5,3 +5,4 @@ export * from './phrases';
 export * from './feeling';
 export * from './initiative';
 export * from './learning';
+export * from './consolidate';
