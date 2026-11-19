@@ -2172,9 +2172,102 @@ const PRIMPULSO: PixelSpecies = {
   },
 };
 
+// ───────────────────────── Hebrisigno (siniestro, mítico) ─────────────────────────
+// Plan corporal: AMALGAMA FLOTANTE de partes prestadas. Un núcleo de bloques sin apoyo, con
+// hebras deshilachadas, una oreja de pico y píxeles corridos. Boceto de disposición: el arte
+// final lo dibuja Nano Banana (`target-sheet-pipeline.md`).
+
+/** Bloques de error: cuadrados desplazados que rompen el contorno. */
+const glitchBlocks = (g: Grid, pts: [number, number, number][], role: 'trait' | 'accent' = 'trait') =>
+  pts.forEach(([x, y, s]) => g.poly(5, role, [[x, y], [x + s, y], [x + s, y + s], [x, y + s]], { flat: true }));
+
+/** Hebra suelta: tubo fino que acaba en un hilo roto. */
+const hebra = (g: Grid, pts: [number, number, number][]) => tube(g, 42, 'body', pts);
+
+const HEBRISIGNO: PixelSpecies = {
+  id: 'hebrisigno',
+  stages: {
+    // Hebra suelta: una bola de bloques con un hilo roto y un ojo enorme.
+    baby: stage('baby', {
+      ...FLOAT,
+      torso: [32, 49, 12.5, 10],
+      eye: { ...BASE.baby.eye, y: 46, x1: 31, x2: 40, style: 'bead' },
+      cheek: [28, 53],
+      hat: [33, 40],
+      behind: (g, _s, p) => tail(g, p, 20, 51, () => hebra(g, [[14, 53, 1], [17, 51, 1.6], [21, 51, 2.4]])),
+      onHead: (g) => glitchBlocks(g, [[42, 43, 2.5], [21, 44, 2]]),
+    }),
+    // Nudo: cuerpo alargado en el aire, dos hebras y una oreja de pico.
+    juvenile: stage('juvenile', {
+      ...FLOAT,
+      torso: [31, 44, 15, 10.5],
+      belly: [34, 49, 10, 5],
+      eye: { ...BASE.juvenile.eye, y: 41, x1: 30, x2: 40, style: 'bead' },
+      hat: [32, 33],
+      neck: [34, 51],
+      back: [19, 40],
+      behind: (g, _s, p) => {
+        tail(g, p, 18, 46, () => {
+          hebra(g, [[8, 52, 1], [12, 49, 1.6], [18, 46, 2.8]]);
+          hebra(g, [[9, 44, 1], [13, 45, 1.6], [18, 45, 2.4]]);
+        });
+      },
+      onHead: (g, _s, p) => {
+        appendage(g, p, 36, 34, () => g.poly(5, 'trait', [[33, 35], [38, 35], [37, 28]], { flat: true }));
+        glitchBlocks(g, [[43, 40, 3], [20, 50, 2.5]], 'accent');
+      },
+    }),
+    // Amalgama: cabeza de otro, un trozo de ala y una cola de hebras.
+    adult: stage('adult', {
+      ...FLOAT,
+      torso: [30, 41, 17, 12],
+      belly: [34, 47, 12, 6],
+      eye: { ...BASE.adult.eye, y: 38, x1: 31, x2: 43, style: 'bead' },
+      hat: [34, 28],
+      neck: [36, 50],
+      back: [17, 34],
+      behind: (g, _s, p) => {
+        tail(g, p, 15, 42, () => {
+          hebra(g, [[5, 50, 1], [9, 47, 1.8], [15, 42, 3.2]]);
+          hebra(g, [[6, 38, 1], [10, 40, 1.8], [15, 41, 2.8]]);
+        });
+        appendage(g, p, 22, 33, () => g.poly(5, 'trait', [[22, 34], [14, 24], [20, 27], [17, 20], [26, 31]], { flat: true }));
+      },
+      onHead: (g, _s, p) => {
+        appendage(g, p, 36, 29, () => g.poly(5, 'trait', [[33, 30], [39, 30], [38, 21]], { flat: true }));
+        glitchBlocks(g, [[45, 37, 3.5], [22, 46, 3], [40, 53, 2.5]], 'accent');
+        glow(g, 4, 31, 38, 1.4, PEARL, 4);
+      },
+    }),
+    // Primera Hebra: ancha, con bloques flotando alrededor, doble cola y ala prestada.
+    final: stage('final', {
+      ...FLOAT,
+      torso: [31, 38, 19, 13],
+      belly: [35, 45, 14, 6.5],
+      emblem: [33, 46, 2, 2],
+      eye: { ...BASE.final.eye, y: 35, x1: 31, x2: 45, style: 'bead' },
+      hat: [36, 25],
+      neck: [38, 49],
+      back: [15, 30],
+      behind: (g, _s, p) => {
+        tail(g, p, 13, 40, () => {
+          hebra(g, [[2, 52, 1], [6, 46, 2], [13, 40, 3.6]]);
+          hebra(g, [[3, 32, 1], [8, 37, 2], [13, 39, 3.2]]);
+        });
+        appendage(g, p, 21, 31, () => g.poly(5, 'trait', [[21, 33], [10, 18], [19, 23], [14, 12], [28, 29]], { flat: true }));
+      },
+      onHead: (g, _s, p) => {
+        appendage(g, p, 37, 27, () => g.poly(5, 'trait', [[34, 28], [41, 28], [40, 15]], { flat: true }));
+        glitchBlocks(g, [[47, 31, 4], [49, 41, 3], [20, 50, 3.5], [43, 52, 2.5], [28, 20, 3]], 'accent');
+        glow(g, 4, 31, 35, 1.8, PEARL, 4);
+      },
+    }),
+  },
+};
+
 export const PIXEL_SPECIES: PixelSpecies[] = [
   IGNISAUR, AXOLUNAR, FLORABUD, LIVOLT, INKTOPUS, SOLAREJO, MAGMADILLO, NUBEBALLENA, CACTUERNO, FENIXEL, CERBITO, KIRISOL,
-  LEVIATIN, YGGDRITO, PRIMPULSO,
+  LEVIATIN, YGGDRITO, PRIMPULSO, HEBRISIGNO,
 ];
 
 // ───────────────────────── Dibujo ─────────────────────────
