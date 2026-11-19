@@ -21,7 +21,7 @@ entrenador con datos concretos, en el escritorio y en las apps.
 | Fase | Qué | Estado |
 |---|---|---|
 | A | Frases con variables, datos del entrenador y ánimo de corto plazo | Hecha |
-| B | Iniciativa fuera del chat (bocadillos y notificaciones, con tres niveles de insistencia) | Pendiente |
+| B | Iniciativa fuera del chat (bocadillos, con tres niveles de insistencia) | Hecha en librería, servidor y escritorio; falta Android |
 | C | Evaluación con un modelo real (manual, con la clave del desarrollador) | Pendiente |
 | D | El escritorio aprende de lo que su entrenador premia | Pendiente |
 | E | Memoria que consolida | Pendiente |
@@ -77,3 +77,44 @@ recuerdos en texto libre.
 - El ánimo aún no cambia el peso de las reacciones del chat ni las conductas del escritorio.
 - No hay pantalla para ver o corregir los datos del entrenador más allá de la lista de recuerdos.
 - Las frases salen en castellano o inglés, pero no existe una preferencia de idioma por cuenta.
+
+## 4. Fase B
+
+### 4.1 Cuánto puede interrumpir
+
+- **Tres niveles (decidido), elegibles por mascota:** `quiet` (solo al volver su entrenador),
+  `normal` (discreto) y `chatty` (hablador). Están en
+  `balance.json → personality.initiative.levels`.
+- **El carácter modula la frecuencia (decidido):** `talkFactor` parte de 1 y suma peso por
+  sociabilidad y temperamento, acotado entre 0,6 y 1,6. Divide la espera del escritorio y
+  multiplica el tope diario del móvil.
+- **Nunca habla** dormido, con su entrenador concentrado (Pomodoro), ni en las horas de
+  silencio (23 a 8, en la zona horaria del entrenador).
+
+### 4.2 Qué dice
+
+Por prioridad de tipos de frase (`priority`): bienvenida si acaba de volver; saludo o
+necesidad; cómo se siente; lo que le apetece; cosas de su entrenador o suyas; y charla sin más.
+Dentro de cada grupo elige `pickPhrase` (personalidad, enfriamiento, repetición).
+
+### 4.3 Reparto
+
+- **Librería:** `shared/mind/src/initiative.ts` (`maySpeak`, `takeInitiative`,
+  `shouldGreetReturn`, `talkFactor`).
+- **Servidor:** `mind/initiative.service.ts`. `POST /pets/:id/initiative` con
+  `{ channel, back?, focus? }` devuelve la frase ya escrita (o ninguna), el motivo si calla y
+  `retryInMs`. `GET` y `PUT /pets/:id/initiative/settings` leen y eligen el nivel; los
+  minutos y topes que devuelve ya llevan el carácter de ese Pockai. El estado (nivel,
+  enfriamientos, lo último dicho) vive en `Pet.personality.initiative`.
+- **Escritorio:** `lib/initiative.ts` es el reloj de las preguntas; el bocadillo usa la cola
+  de voz de siempre. La bienvenida al volver (que detecta `presence_sense`) pasa por el
+  servidor y cae a la frase local si no contesta. El ajuste está en la pestaña Mente.
+
+### 4.4 Sin hacer
+
+- **Android** no pregunta todavía ni tiene el ajuste.
+- **No hay notificaciones con la app cerrada:** el backend no tiene envío de notificaciones
+  push. El canal `mobile` y su tope diario existen, pero solo servirán con la app abierta
+  hasta que haya ese envío.
+- Las frases salen siempre en castellano (no hay preferencia de idioma por cuenta).
+- Dos dispositivos que pregunten a la vez pueden hablar los dos.
