@@ -10,7 +10,8 @@
   import { resolveVisitorSpriteKey, visitorSeed } from '../lib/visitors';
   import type { HabitatVisitor } from '../lib/api';
   import EffectLayer from './EffectLayer.svelte';
-  import { EffectPlayer, flowPalette, portalNexo, speciesElement } from '@pockai/scene/effects';
+  import { EffectPlayer, flowPalette, portalNexo, soundsForEffectPhase, speciesElement } from '@pockai/scene/effects';
+  import { sfxFirst } from '../lib/audio';
 
   export let visitor: HabitatVisitor;
   /** Se va del hábitat: vuelve a cruzar su portal y avisa con `gone` al terminar. */
@@ -30,7 +31,10 @@
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   function openPortal(onHold: (p: EffectPlayer) => Promise<void>, onDone: () => void) {
-    const player = new EffectPlayer(reducedMotion ? portalNexo.reducedPhases : portalNexo.phases, (phase) => {
+    const phases = reducedMotion ? portalNexo.reducedPhases : portalNexo.phases;
+    const player = new EffectPlayer(phases, (phase) => {
+      // El portal del amigo suena como el propio (spec 40)
+      sfxFirst(soundsForEffectPhase('portal-nexo', phases, phase));
       if (phase === 'hold') void onHold(player);
       if (phase === 'done') {
         portal = null;

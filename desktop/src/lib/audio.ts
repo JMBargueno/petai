@@ -45,7 +45,11 @@ export function updateAudioSettings(
   patch: Partial<AudioSettings>,
   storage: WriteStorage | undefined = defaultStorage(),
 ): AudioSettings {
-  const next = parseAudioSettings({ ...get(audioSettings), ...patch, buses: { ...get(audioSettings).buses, ...patch.buses } }, 'desktop');
+  const cur = get(audioSettings);
+  const next = parseAudioSettings(
+    { ...cur, ...patch, buses: { ...cur.buses, ...patch.buses }, busOn: { ...cur.busOn, ...patch.busOn } },
+    'desktop',
+  );
   audioSettings.set(next);
   engine?.setSettings(next);
   try {
@@ -122,6 +126,13 @@ export function sfx(id: string, opts?: PlayOptions): boolean {
   const played = getSoundEngine().play(id, opts);
   trace(id, played);
   return played;
+}
+
+/** Reproduce el primero de `ids` que tenga fichero (candidatos de `soundsForEffectPhase`). */
+export function sfxFirst(ids: string[], opts?: PlayOptions): boolean {
+  const engine = getSoundEngine();
+  const id = ids.find((x) => engine.has(x));
+  return id ? sfx(id, opts) : false;
 }
 
 export function sfxLoop(id: string, opts?: LoopOptions): boolean {

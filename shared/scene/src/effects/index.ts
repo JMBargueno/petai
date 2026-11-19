@@ -105,6 +105,6 @@ export { hash, invert } from './fxMath';
 export { speciesElement } from './speciesElement';
 export { effectForPetAction, birthParams, ACTIONS_WITH_EFFECT, type EffectRequest } from './reactions';
 export { clipsForPetAction, ACTIONS_WITH_CLIPS, MOOD_ACT_CLIPS } from './clips';
-export { CLIP_SOUNDS, soundForClip, extraSoundsForPetAction, moodForBase, voiceForPet } from './sounds';
+export { CLIP_SOUNDS, cueForPhase, extraSoundsForPetAction, moodForBase, soundForClip, soundsForEffectPhase, voiceForPet, type FxCue } from './sounds';
 export type { EffectDef, FxFrame, FxPalette, FxPhase, PixelSink } from './types';
 export { paintSheetFrame, frameSize, frameOrigin, roleCenter, type FrameSheet, type SheetColors } from './sheet';
