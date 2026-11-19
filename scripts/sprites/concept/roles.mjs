@@ -98,7 +98,7 @@ const accent = anchor('accent', primary.map((v) => v * 0.42));
 const BASE = { primary, secondary, accent };
 
 // Tono: el gris del generador que deja la luminancia más cerca de la del color original.
-const MAX_DRIFT = 30;
+const MAX_DRIFT = Number(process.env.MAX_DRIFT) || 30;
 const TONES = {
   primary: [['body', 'base', 239], ['body', 'shade', 172], ['body', 'deep', 124], ['mark', 'deep', 96]],
   secondary: [['belly', 'base', 239], ['belly', 'shade', 200], ['trait', 'shade', 172], ['belly', 'deep', 160], ['trait', 'deep', 124]],

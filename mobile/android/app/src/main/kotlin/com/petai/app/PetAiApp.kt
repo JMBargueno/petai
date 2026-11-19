@@ -4,6 +4,7 @@ import android.app.Application
 import com.petai.app.data.ApiClient
 import com.petai.app.data.ApiService
 import com.petai.app.data.RealtimeClient
+import com.petai.app.data.AudioPrefsStore
 import com.petai.app.data.SessionStore
 import com.petai.app.widget.PetSyncWorker
 
@@ -15,10 +16,14 @@ class PetAiApp : Application() {
         private set
     lateinit var realtime: RealtimeClient
         private set
+    /** Ajustes de sonido (spec 40), los lee la escena y Cuenta › Sonido. */
+    lateinit var audio: AudioPrefsStore
+        private set
 
     override fun onCreate() {
         super.onCreate()
         session = SessionStore(this)
+        audio = AudioPrefsStore(this)
         val api = ApiClient(session, BuildConfig.API_BASE_URL)
         service = ApiService(api, session)
         realtime = RealtimeClient(session, api, BuildConfig.API_BASE_URL)

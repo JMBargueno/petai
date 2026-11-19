@@ -111,7 +111,6 @@ describe('parseHostMessage (sala)', () => {
   });
 
   it('v3: valida playEffect y petAction (efectos compartidos)', () => {
-    expect(PROTOCOL_VERSION).toBe(3);
     expect(parseHostMessage({ type: 'playEffect', id: 'resonancia', params: { level: 12, kind: 'gift', bad: { x: 1 }, 'no válido': 1 } })).toEqual({
       type: 'playEffect',
       id: 'resonancia',
@@ -125,5 +124,48 @@ describe('parseHostMessage (sala)', () => {
     });
     expect(parseHostMessage({ type: 'petAction', action: 'level_up', context: [1] })).toEqual({ type: 'petAction', action: 'level_up' });
     expect(parseHostMessage({ type: 'petAction', action: 'DROP TABLE' })).toBeNull();
+  });
+
+  it('v4: valida setStory (escena de la aventura diaria)', () => {
+    expect(PROTOCOL_VERSION).toBe(4);
+    expect(parseHostMessage({ type: 'setStory', story: null })).toEqual({ type: 'setStory', story: null });
+    expect(
+      parseHostMessage({
+        type: 'setStory',
+        story: { key: 'a1b2:0', locationId: 'rotura-del-nexo', phase: 'enter', mood: { timeOfDay: 'night', weather: 'storm' }, fx: 'portal-nexo', clip: 'happy', extra: 1 },
+      }),
+    ).toEqual({
+      type: 'setStory',
+      story: { key: 'a1b2:0', locationId: 'rotura-del-nexo', phase: 'enter', mood: { timeOfDay: 'night', weather: 'storm' }, fx: 'portal-nexo', clip: 'happy' },
+    });
+    // Lo opcional mal formado se descarta sin tirar el mensaje
+    expect(parseHostMessage({ type: 'setStory', story: { key: 'k', locationId: 'claro-de-las-hebras', phase: 'await', mood: { timeOfDay: 'mediodia' }, fx: 'Mal Fx', clip: 9 } })).toEqual({
+      type: 'setStory',
+      story: { key: 'k', locationId: 'claro-de-las-hebras', phase: 'await' },
+    });
+    // Lo obligatorio mal formado sí lo invalida
+    expect(parseHostMessage({ type: 'setStory', story: { key: 'k', locationId: 'claro', phase: 'bailar' } })).toBeNull();
+    expect(parseHostMessage({ type: 'setStory', story: { key: '', locationId: 'claro', phase: 'enter' } })).toBeNull();
+    expect(parseHostMessage({ type: 'setStory', story: { key: 'k', locationId: '../etc', phase: 'enter' } })).toBeNull();
+    expect(parseHostMessage({ type: 'setStory' })).toBeNull();
+  });
+
+  it('valida coverScreen y uncoverScreen (velo de pantalla)', () => {
+    expect(parseHostMessage({ type: 'coverScreen' })).toEqual({ type: 'coverScreen' });
+    expect(parseHostMessage('{"type":"coverScreen","effect":"velo-eter"}')).toEqual({ type: 'coverScreen', effect: 'velo-eter' });
+    expect(parseHostMessage({ type: 'coverScreen', effect: 'Velo Malo' })).toBeNull();
+    expect(parseHostMessage({ type: 'coverScreen', effect: 3 })).toBeNull();
+    expect(parseHostMessage({ type: 'uncoverScreen', extra: true })).toEqual({ type: 'uncoverScreen' });
+  });
+
+  it('valida setAudio (ajustes de sonido, spec 40)', () => {
+    const msg = parseHostMessage({ type: 'setAudio', settings: { enabled: false, master: 7, buses: { pet: 0.3 } } });
+    expect(msg?.type).toBe('setAudio');
+    if (msg?.type !== 'setAudio') return;
+    expect(msg.settings.enabled).toBe(false);
+    expect(msg.settings.master).toBe(1);
+    expect(msg.settings.buses.pet).toBe(0.3);
+    expect(parseHostMessage({ type: 'setAudio' })).toBeNull();
+    expect(parseHostMessage({ type: 'setAudio', settings: [1] })).toBeNull();
   });
 });

@@ -418,5 +418,33 @@
       "secondary": "#D6A024",
       "accent": "#1DE2F2"
     }
+  },
+  {
+    "id": "hebrisigno",
+    "name": "Hebrisigno",
+    "description": "Un amasijo de hebras y bloques desparejados que parpadea entre ser y no ser: la primera hebra que alguien intentó trenzar, y no salió bien. Es tímido y curioso, y se esconde en cuanto oye jaleo.",
+    "element": "shadow",
+    "rarity": "mythic",
+    "baseStats": {
+      "hp": 60,
+      "atk": 52,
+      "def": 50,
+      "vel": 80,
+      "esp": 78
+    },
+    "favoriteFood": "midnight_berry",
+    "spriteKey": "hebrisigno",
+    "personalityBias": {
+      "curiosity": 80,
+      "sociability": 20,
+      "bravery": 25,
+      "affection": 60,
+      "temper": 70
+    },
+    "defaultPalette": {
+      "primary": "#9A5CFF",
+      "secondary": "#FFFFD3",
+      "accent": "#FFEE2D"
+    }
   }
 ]

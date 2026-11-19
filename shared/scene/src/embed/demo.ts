@@ -26,6 +26,7 @@ const PALETTES: Record<string, { primary: string; secondary: string }> = {
   leviatin: { primary: '#3D4FA8', secondary: '#9FE8E0' },
   yggdrito: { primary: '#6FAE3A', secondary: '#C9A06B' },
   primpulso: { primary: '#F2C230', secondary: '#7DF9FF' },
+  hebrisigno: { primary: '#34285C', secondary: '#8A5CE0' },
 };
 /** Prendas de ejemplo por ranura (ids de shared/game-data/accessories.json). */
 const DEMO_ACCESSORIES: Record<string, string[]> = {

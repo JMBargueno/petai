@@ -88,5 +88,11 @@
     "juvenile": { "size": "S", "head": [38, 28], "face": [38, 33], "neck": [35, 39], "back": [28, 40] },
     "adult": { "size": "S", "head": [44, 19], "face": [44, 25], "neck": [40, 32], "back": [30, 34] },
     "final": { "size": "M", "head": [44, 12], "face": [44, 19], "neck": [40, 26], "back": [30, 30] }
+  },
+  "hebrisigno": {
+    "baby": { "size": "M", "head": [37, 38], "face": [40, 47], "neck": [37, 55], "back": [26, 43] },
+    "juvenile": { "size": "S", "head": [33, 27], "face": [34, 32], "neck": [33, 38], "back": [27, 39] },
+    "adult": { "size": "S", "head": [36, 16], "face": [38, 24], "neck": [36, 30], "back": [28, 31] },
+    "final": { "size": "M", "head": [39, 12], "face": [40, 22], "neck": [40, 30], "back": [30, 26] }
   }
 }

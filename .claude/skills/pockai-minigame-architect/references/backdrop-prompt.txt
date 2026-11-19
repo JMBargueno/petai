@@ -1,0 +1,18 @@
+Background scene for a small game inside a cozy creature-collecting game. Landscape, 4:3.
+
+The place: {{PLACE}}. {{PLACE_DETAILS}}
+
+World: the "Éter Digital" is a living network seen from inside, a soft digital spirit world: currents of light, floating threads, deep violet void (#0d0a1a to #231a42). Technology as gentle mythology, never sci-fi machinery, never dark or scary.
+
+Composition (strict):
+- This is a BACKGROUND for gameplay. Small bright game pieces will move over it, so it must stay calm and quiet.
+- {{CLEAR_ZONE}} must be an almost flat, uncluttered area of {{CLEAR_COLOR}} with very low contrast.
+- Put the detail and the interesting shapes {{DETAIL_ZONE}}.
+- {{GROUND_LINE}}
+- No characters, no creatures, no animals, no items, no food, no text, no symbols, no UI, no frame.
+
+Style:
+- Painted low-poly pixel-art look with big flat shapes and few planes, like a 16-bit RPG backdrop. Hard edges, no photo realism, no lens blur.
+- Ambient light color: {{AMBIENT_HEXES}}. Overall mid-to-dark values, low saturation, so that saturated game pieces pop.
+- Avoid these colors, they belong to the game pieces: {{AVOID_COLORS}}. No pink and no magenta.
+- Light from the top left.

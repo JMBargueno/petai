@@ -212,6 +212,13 @@ jobs:
           pnpm --filter @pockai/minigames run typecheck
           pnpm --filter @pockai/minigames run test
 
+      # Escena compartida (escritorio y WebView de Android/iOS): protocolo, efectos, fondos por capas
+      # y el paseo de la aventura diaria.
+      - name: Test shared scene
+        run: |
+          pnpm --filter @pockai/scene run typecheck
+          pnpm --filter @pockai/scene run test
+
       - name: Build frontend (Svelte + Vite)
         run: pnpm --filter petai-desktop run build
 

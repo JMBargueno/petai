@@ -60,9 +60,29 @@ import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Arte isométrico del mueble (shared/assets/furniture, generado con `pnpm generate:furniture`). */
 @Composable
@@ -78,6 +98,14 @@ private fun FurnitureIcon(id: String, size: androidx.compose.ui.unit.Dp) {
     )
 }
 
+/**
+ * Modo «solo hábitat»: cuánto se espera como mucho a que la escena diga que el velo ya tapa todo
+ * (si la escena aún no está lista, se cambia igual) y cuánto se deja al WebView para recolocar la
+ * sala con su nuevo tamaño antes de abrir el velo.
+ */
+private const val COVER_TIMEOUT_MS = 900L
+private const val RESIZE_SETTLE_MS = 160L
+
 /** Cada cuánto se vuelve a pedir el clima (el servidor lo cachea 30 min). */
 private const val AMBIENCE_REFRESH_MS = 15 * 60_000L
 
@@ -91,9 +119,20 @@ private val BUFF_LABELS = mapOf(
 /**
  * Pestaña "Hábitat" (feature 019): salas, muebles (compra y colocación vía el backend) y
  * buffs activos. El cobro/colocación lo hace el servidor (cobro atómico por WalletService).
+ *
+ * [solo]: modo «solo hábitat», la sala a pantalla completa sin el resto del panel. Lo guarda quien
+ * pinta la navegación (AppRoot), que también esconde sus barras; esta pantalla lo pide con
+ * [onSoloChange] tapando el cambio con el velo de Éter de la escena.
  */
 @Composable
-fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onChanged: () -> Unit) {
+fun HabitatScreen(
+    service: ApiService,
+    realtime: RealtimeClient,
+    pet: Pet,
+    onChanged: () -> Unit,
+    solo: Boolean = false,
+    onSoloChange: (Boolean) -> Unit = {},
+) {
     val currentPet by rememberUpdatedState(pet)
     var catalog by remember { mutableStateOf<HabitatCatalog?>(null) }
     var state by remember { mutableStateOf<HabitatState?>(null) }
@@ -110,6 +149,10 @@ fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onCha
     // Movimientos de la sala: se guardan con un pequeño retardo (una petición por gesto, no por celda).
     val pendingMoves = remember { linkedMapOf<String, Triple<Int, Int, Int>>() }
     var moveJob by remember { mutableStateOf<Job?>(null) }
+    val listState = rememberLazyListState()
+    // Cambio de modo en curso (velo cerrándose, vista cambiando de tamaño, velo abriéndose)
+    var switching by remember { mutableStateOf(false) }
+    var coverWaiter by remember { mutableStateOf<CompletableDeferred<Unit>?>(null) }
 
     fun loadAll() {
         scope.launch {
@@ -228,9 +271,51 @@ fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onCha
                     flushMoves()
                 }
             }
+            is SceneEvent.ScreenCovered -> coverWaiter?.complete(Unit)
             is SceneEvent.Error -> android.util.Log.w("PockaiScene", ev.message)
             else -> Unit
         }
+    }
+
+    /**
+     * Entra o sale del modo «solo hábitat»: la escena corre el velo de Éter, con todo tapado se
+     * cambia la disposición (la vista crece o encoge y la sala se recoloca sola), y se abre el velo.
+     * El WebView no se mueve de sitio en la composición, así que no se recarga.
+     */
+    fun switchSolo(target: Boolean) {
+        if (switching || target == solo) return
+        switching = true
+        scope.launch {
+            try {
+                val covered = CompletableDeferred<Unit>()
+                coverWaiter = covered
+                scene.send(SceneMessages.coverScreen())
+                withTimeoutOrNull(COVER_TIMEOUT_MS) { covered.await() }
+                coverWaiter = null
+                onSoloChange(target)
+                // Que Compose mida el nuevo tamaño y el WebView lo reciba antes de destapar
+                repeat(2) { withFrameNanos { } }
+                if (target) listState.scrollToItem(0)
+                delay(RESIZE_SETTLE_MS)
+            } finally {
+                scene.send(SceneMessages.uncoverScreen())
+                switching = false
+            }
+        }
+    }
+
+    BackHandler(enabled = solo) { switchSolo(false) }
+
+    // Inmersivo total: sin barra de estado ni de navegación (vuelven un momento al deslizar)
+    val view = LocalView.current
+    DisposableEffect(solo) {
+        val window = view.context.findActivity()?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        if (solo && controller != null) {
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        }
+        onDispose { if (solo) controller?.show(WindowInsetsCompat.Type.systemBars()) }
     }
 
     val rooms = state?.rooms ?: emptyList()
@@ -251,54 +336,87 @@ fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onCha
     LaunchedEffect(editing) { scene.send(SceneMessages.setEditMode(editing)) }
     LaunchedEffect(selectedId) { scene.send(SceneMessages.selectItem(selectedId)) }
 
-    PullToRefreshBox(isRefreshing = loading, onRefresh = { loadAll() }, modifier = Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (error.isNotEmpty()) item { Text(error, color = MaterialTheme.colorScheme.error) }
+    val editControls: @Composable (Modifier) -> Unit = { modifier ->
+        EditControls(
+            editing = editing,
+            selectedName = selectedItem?.let { item -> roomFurniture.firstOrNull { it.id == item.furnitureId }?.name ?: item.furnitureId },
+            removing = selectedItem != null && busyId == selectedItem.id,
+            canRemove = busyId.isEmpty(),
+            onRotate = { scene.send(SceneMessages.rotateSelected()) },
+            onRemove = { selectedItem?.let { remove(it.id) } },
+            onToggle = { editing = !editing },
+            modifier = modifier,
+        )
+    }
 
-            if (visitors.isNotEmpty()) {
-                item {
-                    PockaiCard(Modifier.fillMaxWidth()) {
-                        Text("De visita en tu hábitat", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            visitors.forEach { v -> VisitorPet(v) }
+    PullToRefreshBox(isRefreshing = loading && !solo, onRefresh = { if (!solo) loadAll() }, modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(if (solo) 0.dp else 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            userScrollEnabled = !solo,
+        ) {
+            if (!solo) {
+                if (error.isNotEmpty()) item { Text(error, color = MaterialTheme.colorScheme.error) }
+
+                if (visitors.isNotEmpty()) {
+                    item {
+                        PockaiCard(Modifier.fillMaxWidth()) {
+                            Text("De visita en tu hábitat", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                visitors.forEach { v -> VisitorPet(v) }
+                            }
                         }
                     }
                 }
-            }
 
-            item {
-                PockaiCard(Modifier.fillMaxWidth()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Buffs activos (${buffs?.itemCount ?: 0} muebles)", style = MaterialTheme.typography.titleMedium)
-                        val active = buffs?.activeBuffs ?: emptyMap()
-                        if (active.isEmpty()) {
-                            Text("Coloca muebles para activar buffs.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            active.forEach { (k, v) ->
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text(BUFF_LABELS[k] ?: k, style = MaterialTheme.typography.bodySmall)
-                                    Text("+${(v * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = PockaiTheme.colors.accentInk)
+                item {
+                    PockaiCard(Modifier.fillMaxWidth()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Buffs activos (${buffs?.itemCount ?: 0} muebles)", style = MaterialTheme.typography.titleMedium)
+                            val active = buffs?.activeBuffs ?: emptyMap()
+                            if (active.isEmpty()) {
+                                Text("Coloca muebles para activar buffs.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                active.forEach { (k, v) ->
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(BUFF_LABELS[k] ?: k, style = MaterialTheme.typography.bodySmall)
+                                        Text("+${(v * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = PockaiTheme.colors.accentInk)
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    rooms.forEach { r ->
-                        PockaiChip(r.name, r.id == activeRoom?.id, { activeRoomId = r.id }, icon = if (r.unlocked) null else Lucide.Lock)
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        rooms.forEach { r ->
+                            PockaiChip(r.name, r.id == activeRoom?.id, { activeRoomId = r.id }, icon = if (r.unlocked) null else Lucide.Lock)
+                        }
                     }
                 }
             }
 
             activeRoom?.let { room ->
-                item { Text(room.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                item {
-                    PockaiCard(Modifier.fillMaxWidth(), contentPadding = CardNoPadding) {
-                        Box(Modifier.fillMaxWidth().height(300.dp)) {
+                if (!solo) {
+                    item { Text(room.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+                // Clave fija: al entrar o salir del modo solo los demás items aparecen o desaparecen,
+                // pero este conserva su composición (y con ella el WebView de la escena).
+                item(key = "scene") {
+                    val shape = RoundedCornerShape(if (solo) 0.dp else 20.dp)
+                    val outline = MaterialTheme.colorScheme.outline
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(shape)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .then(if (solo) Modifier else Modifier.border(BorderStroke(1.dp, outline), shape)),
+                    ) {
+                        Box(if (solo) Modifier.fillParentMaxSize() else Modifier.fillMaxWidth().height(300.dp)) {
                             PockaiSceneView(
                                 controller = scene,
                                 modifier = Modifier.fillMaxSize(),
@@ -312,45 +430,39 @@ fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onCha
                                     modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
                                 )
                             }
-                        }
-                    }
-                }
-                if (canEdit) {
-                    item {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (editing && selectedItem != null) {
-                                Text(
-                                    roomFurniture.firstOrNull { it.id == selectedItem.furnitureId }?.name ?: selectedItem.furnitureId,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                SecondaryButton("Girar", onClick = { scene.send(SceneMessages.rotateSelected()) }, icon = Lucide.RotateCw)
-                                SecondaryButton(
-                                    if (busyId == selectedItem.id) "…" else "Quitar",
-                                    onClick = { remove(selectedItem.id) },
-                                    enabled = busyId.isEmpty(),
-                                )
-                            } else if (editing) {
-                                Text(
-                                    "Toca un mueble y arrástralo",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f),
+                            if (room.unlocked || solo) {
+                                SoloToggle(
+                                    solo = solo,
+                                    enabled = !switching,
+                                    onClick = { switchSolo(!solo) },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .then(if (solo) Modifier.windowInsetsPadding(WindowInsets.displayCutout) else Modifier)
+                                        .padding(if (solo) 16.dp else 10.dp),
                                 )
                             }
-                            SecondaryButton(
-                                if (editing) "Listo" else "Editar",
-                                onClick = { editing = !editing },
-                                icon = if (editing) Lucide.Check else Lucide.Pencil,
-                            )
+                            if (solo && canEdit) {
+                                GlassSurface(
+                                    Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .windowInsetsPadding(WindowInsets.displayCutout)
+                                        .padding(16.dp)
+                                        .fillMaxWidth(),
+                                    shape = RoundedCornerShape(24.dp),
+                                ) {
+                                    editControls(Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                                }
+                            }
                         }
                     }
                 }
+                if (canEdit && !solo) {
+                    item { editControls(Modifier) }
+                }
             }
+
+            // En modo solo no hay tienda ni lista: solo la sala
+            if (solo) return@LazyColumn
 
             item { Text("Muebles de ${activeRoom?.name ?: ""}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
             roomFurniture.forEach { f ->
@@ -388,6 +500,70 @@ fun HabitatScreen(service: ApiService, realtime: RealtimeClient, pet: Pet, onCha
             }
         }
     }
+}
+
+/** Botón redondo de cristal para entrar en el modo «solo hábitat» o volver al panel. */
+@Composable
+private fun SoloToggle(solo: Boolean, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    GlassSurface(modifier.size(48.dp), shape = CircleShape) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clickable(enabled = enabled, role = Role.Button, onClickLabel = if (solo) "Volver al panel" else "Ver solo el hábitat", onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (solo) Lucide.Minimize2 else Lucide.Maximize2,
+                contentDescription = if (solo) "Volver al panel" else "Ver solo el hábitat",
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/** Editar / Listo y, con un mueble elegido, Girar y Quitar (en el panel y sobre la sala en modo solo). */
+@Composable
+private fun EditControls(
+    editing: Boolean,
+    selectedName: String?,
+    removing: Boolean,
+    canRemove: Boolean,
+    onRotate: () -> Unit,
+    onRemove: () -> Unit,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (editing && selectedName != null) {
+            Text(selectedName, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+            SecondaryButton("Girar", onClick = onRotate, icon = Lucide.RotateCw)
+            SecondaryButton(if (removing) "…" else "Quitar", onClick = onRemove, enabled = canRemove)
+        } else if (editing) {
+            Text(
+                "Toca un mueble y arrástralo",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        SecondaryButton(
+            if (editing) "Listo" else "Editar",
+            onClick = onToggle,
+            icon = if (editing) Lucide.Check else Lucide.Pencil,
+        )
+    }
+}
+
+/** Actividad que aloja la vista (el contexto de Compose puede venir envuelto). */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @Composable
@@ -438,7 +614,7 @@ private fun VisitorPet(visitor: HabitatVisitor) {
 
 private val KNOWN_SPRITE_KEYS = setOf(
     "axolunar", "cactuerno", "cerbito", "fenixel", "florabud", "ignisaur", "inktopus", "kirisol", "leviatin",
-    "livolt", "magmadillo", "nubeballena", "primpulso", "solarejo", "yggdrito",
+    "livolt", "magmadillo", "nubeballena", "primpulso", "solarejo", "yggdrito", "hebrisigno",
 )
 
 /** Resuelve la clave del sprite de un visitante con fallback a una especie conocida. */

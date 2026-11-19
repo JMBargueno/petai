@@ -15,6 +15,19 @@ interface BillingStats {
   activeConfigVersion: number;
 }
 
+/** Conexión de IA interna tal como la devuelve el backend (la clave nunca viaja, solo su máscara). */
+interface InternalAiView {
+  configured: boolean;
+  enabled: boolean;
+  baseUrl: string | null;
+  model: string | null;
+  hasKey: boolean;
+  keyMask: string | null;
+  jsonMode: boolean;
+  allowPrivateNetwork: boolean;
+  updatedAt: string | null;
+}
+
 interface BillingConfigVersion {
   id: string;
   version: number;
@@ -123,6 +136,10 @@ interface BillingConfigVersion {
                     <span>Mensajes en memoria/historial</span>
                     <input type="number" [(ngModel)]="formConfig.free.historyMessages" name="freeHist" required min="1" />
                   </label>
+                  <label class="field">
+                    <span>Historias de aventura al día</span>
+                    <input type="number" [(ngModel)]="formConfig.free.dailyStories" name="freeStories" required min="0" max="8" />
+                  </label>
                 </div>
               </div>
 
@@ -140,6 +157,10 @@ interface BillingConfigVersion {
                   <label class="field">
                     <span>Mensajes en memoria/historial</span>
                     <input type="number" [(ngModel)]="formConfig.pro.historyMessages" name="proHist" required min="1" />
+                  </label>
+                  <label class="field">
+                    <span>Historias de aventura al día</span>
+                    <input type="number" [(ngModel)]="formConfig.pro.dailyStories" name="proStories" required min="0" max="8" />
                   </label>
                 </div>
                 <div class="row checkbox-row">
@@ -185,6 +206,42 @@ interface BillingConfigVersion {
                   </label>
                 </div>
               </div>
+
+              @if (formConfig.systemAi) {
+                <div class="fieldset-group">
+                  <h4>IA del sistema (aventura diaria)</h4>
+                  <p class="section-desc">
+                    Límites de las tareas internas, como tejer las historias de cada noche. La conexión que usan se
+                    configura más abajo, en «IA interna».
+                  </p>
+                  <div class="row checkbox-row">
+                    <label class="checkbox-label">
+                      <input type="checkbox" [(ngModel)]="formConfig.systemAi.enabled" name="systemEnabled" />
+                      <span>IA del sistema habilitada (apagada, las historias salen de las de reserva)</span>
+                    </label>
+                  </div>
+                  <div class="row">
+                    <label class="field">
+                      <span>Presupuesto diario ($ USD)</span>
+                      <input type="number" step="0.1" [(ngModel)]="formConfig.systemAi.dailyBudgetUsd" name="systemBudget" required min="0" />
+                    </label>
+                    <label class="field">
+                      <span>Tokens de salida máx.</span>
+                      <input type="number" [(ngModel)]="formConfig.systemAi.maxOutputTokens" name="systemTokens" required min="256" max="8000" />
+                    </label>
+                    <label class="field">
+                      <span>Temperatura</span>
+                      <input type="number" step="0.1" [(ngModel)]="formConfig.systemAi.temperature" name="systemTemp" required min="0" max="2" />
+                    </label>
+                  </div>
+                  <div class="row">
+                    <label class="field field-full">
+                      <span>Modelo de respaldo en OpenRouter (solo si no hay IA interna activa)</span>
+                      <input type="text" [(ngModel)]="formConfig.systemAi.model" name="systemModel" required />
+                    </label>
+                  </div>
+                </div>
+              }
 
               <div class="fieldset-group">
                 <h4>Nota de cambio</h4>
@@ -233,9 +290,113 @@ interface BillingConfigVersion {
           </div>
         </section>
       </div>
+
+      <!-- Conexión de IA interna -->
+      <section class="card">
+        <h3>IA interna</h3>
+        <p class="section-desc">
+          Conexión propia del equipo a cualquier servidor compatible con la API de OpenAI (Chat Completions).
+          La usa la IA del sistema para tejer las historias de la aventura diaria. El chat de los usuarios no
+          pasa por aquí: sigue con la IA gestionada de OpenRouter o con la clave de cada usuario.
+        </p>
+
+        @if (internalAi(); as ia) {
+          <p class="internal-status" [class.is-on]="ia.configured && ia.enabled">
+            @if (!ia.configured) {
+              Sin configurar: la IA del sistema usa el respaldo de OpenRouter, si el servidor tiene su clave.
+            } @else if (!ia.enabled) {
+              Guardada pero desactivada: la IA del sistema usa el respaldo de OpenRouter.
+            } @else {
+              Activa · {{ ia.model }} · {{ ia.hasKey ? 'clave ' + ia.keyMask : 'sin clave' }}
+            }
+          </p>
+        }
+        @if (internalError()) {
+          <div class="alert alert-error">{{ internalError() }}</div>
+        }
+        @if (internalSuccess()) {
+          <div class="alert alert-success">{{ internalSuccess() }}</div>
+        }
+
+        <form (ngSubmit)="saveInternalAi()">
+          <div class="row">
+            <label class="field field-full">
+              <span>URL base (termina normalmente en /v1)</span>
+              <input type="url" [(ngModel)]="internalForm.baseUrl" name="iaBaseUrl" placeholder="https://ia.ejemplo.com/v1" required />
+            </label>
+          </div>
+          <div class="row">
+            <label class="field">
+              <span>Modelo</span>
+              <input type="text" [(ngModel)]="internalForm.model" name="iaModel" placeholder="nombre-del-modelo" required />
+            </label>
+            <label class="field">
+              <span>Clave de API</span>
+              <input
+                type="password"
+                [(ngModel)]="internalForm.apiKey"
+                name="iaApiKey"
+                autocomplete="off"
+                [placeholder]="internalAi()?.hasKey ? 'Guardada (' + internalAi()?.keyMask + '). Escribe para cambiarla' : 'Opcional si el servidor no la pide'"
+              />
+            </label>
+          </div>
+          <div class="row checkbox-row">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="internalForm.enabled" name="iaEnabled" />
+              <span>Conexión activa</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="internalForm.jsonMode" name="iaJsonMode" />
+              <span>Pedir la salida en modo JSON (desmárcalo si el servidor rechaza <code>response_format</code>)</span>
+            </label>
+          </div>
+          <div class="row checkbox-row">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="internalForm.allowPrivateNetwork" name="iaPrivate" />
+              <span>El servidor está en nuestra red privada (permite http y direcciones internas)</span>
+            </label>
+            @if (internalAi()?.hasKey) {
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="internalForm.clearKey" name="iaClearKey" />
+                <span>Borrar la clave guardada</span>
+              </label>
+            }
+          </div>
+          <div class="form-actions internal-actions">
+            @if (internalAi()?.configured) {
+              <button type="button" class="btn btn-secondary" (click)="removeInternalAi()" [disabled]="internalBusy()">Quitar conexión</button>
+              <button type="button" class="btn btn-secondary" (click)="testInternalAi()" [disabled]="internalBusy()">
+                {{ internalBusy() === 'test' ? 'Probando…' : 'Probar conexión guardada' }}
+              </button>
+            }
+            <button type="submit" class="btn btn-primary" [disabled]="internalBusy()">
+              {{ internalBusy() === 'save' ? 'Guardando…' : 'Guardar conexión' }}
+            </button>
+          </div>
+        </form>
+      </section>
     </div>
   `,
   styles: [`
+    .internal-status {
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border, #27272a);
+      margin-bottom: 16px;
+    }
+    .internal-status.is-on {
+      border-color: #14532d;
+      color: #86efac;
+    }
+    .internal-actions {
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .card .alert {
+      margin-bottom: 12px;
+    }
     .billing-page {
       display: flex;
       flex-direction: column;
@@ -462,6 +623,13 @@ export class Billing {
   fallbackModelsString = '';
   changeNote = '';
 
+  // Conexión de IA interna (se guarda aparte: no forma parte de las versiones de configuración)
+  readonly internalAi = signal<InternalAiView | null>(null);
+  readonly internalBusy = signal<'save' | 'test' | 'remove' | null>(null);
+  readonly internalError = signal<string | null>(null);
+  readonly internalSuccess = signal<string | null>(null);
+  internalForm = { baseUrl: '', model: '', apiKey: '', jsonMode: true, allowPrivateNetwork: false, enabled: true, clearKey: false };
+
   constructor() {
     this.loadAll();
   }
@@ -470,11 +638,13 @@ export class Billing {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const [stats, configRes, versions] = await Promise.all([
+      const [stats, configRes, versions, internal] = await Promise.all([
         this.api.request<BillingStats>('/v1/admin/billing/stats'),
         this.api.request<{ version: number; data: any }>('/v1/admin/billing/config'),
         this.api.request<BillingConfigVersion[]>('/v1/admin/billing/config/versions'),
+        this.api.request<InternalAiView>('/v1/admin/ai/internal'),
       ]);
+      this.applyInternalAi(internal);
 
       this.stats.set(stats);
       this.currentVersion.set(configRes.version);
@@ -485,6 +655,76 @@ export class Billing {
       this.error.set(err.message || 'Error cargando datos de facturación');
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  private applyInternalAi(view: InternalAiView) {
+    this.internalAi.set(view);
+    this.internalForm = {
+      baseUrl: view.baseUrl ?? '',
+      model: view.model ?? '',
+      apiKey: '',
+      jsonMode: view.jsonMode,
+      allowPrivateNetwork: view.allowPrivateNetwork,
+      enabled: view.configured ? view.enabled : true,
+      clearKey: false,
+    };
+  }
+
+  async saveInternalAi() {
+    this.internalBusy.set('save');
+    this.internalError.set(null);
+    this.internalSuccess.set(null);
+    try {
+      const f = this.internalForm;
+      // Sin `apiKey` el backend conserva la clave guardada; vacía la borra
+      const apiKey = f.clearKey ? '' : f.apiKey.trim() || undefined;
+      const view = await this.api.request<InternalAiView>('/v1/admin/ai/internal', {
+        method: 'PUT',
+        body: JSON.stringify({
+          baseUrl: f.baseUrl.trim(),
+          model: f.model.trim(),
+          ...(apiKey !== undefined ? { apiKey } : {}),
+          jsonMode: f.jsonMode,
+          allowPrivateNetwork: f.allowPrivateNetwork,
+          enabled: f.enabled,
+        }),
+      });
+      this.applyInternalAi(view);
+      this.internalSuccess.set('Conexión guardada. Pruébala antes de la próxima generación de historias.');
+    } catch (err: any) {
+      this.internalError.set(err.message || 'No se pudo guardar la conexión');
+    } finally {
+      this.internalBusy.set(null);
+    }
+  }
+
+  async testInternalAi() {
+    this.internalBusy.set('test');
+    this.internalError.set(null);
+    this.internalSuccess.set(null);
+    try {
+      const res = await this.api.request<{ ok: boolean; model: string }>('/v1/admin/ai/internal/test', { method: 'POST' });
+      this.internalSuccess.set(`La IA interna responde con el modelo ${res.model}.`);
+    } catch (err: any) {
+      this.internalError.set(err.message || 'La IA interna no respondió');
+    } finally {
+      this.internalBusy.set(null);
+    }
+  }
+
+  async removeInternalAi() {
+    if (!confirm('¿Quitar la conexión de IA interna? La IA del sistema volverá a su respaldo de OpenRouter.')) return;
+    this.internalBusy.set('remove');
+    this.internalError.set(null);
+    this.internalSuccess.set(null);
+    try {
+      this.applyInternalAi(await this.api.request<InternalAiView>('/v1/admin/ai/internal', { method: 'DELETE' }));
+      this.internalSuccess.set('Conexión quitada.');
+    } catch (err: any) {
+      this.internalError.set(err.message || 'No se pudo quitar la conexión');
+    } finally {
+      this.internalBusy.set(null);
     }
   }
 

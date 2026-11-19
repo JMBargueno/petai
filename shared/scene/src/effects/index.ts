@@ -27,6 +27,7 @@ import { confetiCodices } from './confetiCodices';
 import { cofreTier } from './cofreTier';
 import { destelloRitual } from './destelloRitual';
 import { triunfoRaid } from './triunfoRaid';
+import { veloEter } from './veloEter';
 import type { EffectDef, FxPhase } from './types';
 
 export const EFFECTS: Record<string, EffectDef> = {
@@ -55,6 +56,7 @@ export const EFFECTS: Record<string, EffectDef> = {
   [cofreTier.id]: cofreTier,
   [destelloRitual.id]: destelloRitual,
   [triunfoRaid.id]: triunfoRaid,
+  [veloEter.id]: veloEter,
 };
 
 /** Fases que tocan para estos datos (algunos efectos se saltan fases según el momento). */
@@ -88,6 +90,7 @@ export {
   cofreTier,
   destelloRitual,
   triunfoRaid,
+  veloEter,
 };
 export { prismColors } from './destelloPrisma';
 export { EffectPlayer, fixedDuration, quantize } from './timeline';

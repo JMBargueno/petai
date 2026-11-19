@@ -109,6 +109,8 @@ fun AccountScreen(state: AppUiState, onLogout: () -> Unit, onLinkDevice: (code: 
             }
         }
         Spacer(Modifier.height(16.dp))
+        SoundSettingsCard()
+        Spacer(Modifier.height(16.dp))
         PockaiCard(Modifier.fillMaxWidth()) {
             Column {
                 Text("Contacto", style = MaterialTheme.typography.titleMedium)

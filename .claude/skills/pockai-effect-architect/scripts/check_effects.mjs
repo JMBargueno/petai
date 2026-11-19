@@ -28,6 +28,7 @@ const ENGINE = new Set([
   'speciesElement.ts',
   'reactions.ts',
   'pixiLayer.ts',
+  'screenLayer.ts',
 ]);
 const only = process.argv[2];
 

@@ -1,0 +1,184 @@
+{
+  "_comment": "Historias semilla de la aventura diaria, escritas a mano. Se usan el primer día, en desarrollo y en tests, y como respaldo cuando la IA del sistema no llega y aún no hay historias antiguas que reponer. Misma forma que las que genera la IA (v1). {pet} se sustituye por el nombre del Pockai en el cliente. score (0-2) es interno: nunca viaja al cliente. canonLine: frase en pasado que resume qué ocurrió si esa opción resulta la más votada.",
+  "version": "1.0.0",
+  "stories": [
+    {
+      "id": "seed-rotura-primera",
+      "title": "La primera rotura",
+      "synopsis": "Una hebra del Nexo se ha rasgado y el frío de la Deriva empieza a colarse.",
+      "scenes": [
+        {
+          "locationId": "claro-de-las-hebras",
+          "narration": "{pet} cruza el claro cuando las hebras de la hierba empiezan a apagarse una a una, todas en la misma dirección.",
+          "event": { "kind": "omen", "text": "Una hebra floja pasa rozando el suelo, tirante, como si algo la arrastrara lejos.", "fx": "hebra-invocacion" },
+          "choices": [
+            { "label": "Seguir la hebra", "consequence": "{pet} corre tras ella sin soltarla de vista y encuentra el rastro que lleva hasta el desgarro.", "canonLine": "Siguieron la hebra floja hasta dar con el desgarro.", "approach": "brave", "score": 2 },
+            { "label": "Avisar al Nexo por el Eco", "consequence": "El Eco responde tarde y con interferencias, pero alguien confirma que otras hebras también se han aflojado.", "canonLine": "Avisaron por el Eco de que las hebras se estaban aflojando.", "approach": "careful", "score": 1 },
+            { "label": "Atar la hebra a una piedra", "consequence": "El nudo aguanta un momento y luego se deshace: la hebra sigue tirando hacia la oscuridad.", "canonLine": "Intentaron sujetar la hebra, pero se soltó.", "approach": "cunning", "score": 0 }
+          ]
+        },
+        {
+          "locationId": "rotura-del-nexo",
+          "narration": "El suelo de cristal está partido. En medio de la malla hay una grieta por la que se escapa la Resonancia en hilos de luz.",
+          "event": { "kind": "obstacle", "text": "La grieta se abre un palmo más y el frío de la Deriva sale de ella como un aliento.", "fx": "glitch-animo" },
+          "choices": [
+            { "label": "Trenzar los bordes", "consequence": "{pet} sujeta los dos bordes y los trenza hebra a hebra. La grieta deja de crecer.", "canonLine": "Trenzaron los bordes de la rotura y la grieta dejó de crecer.", "approach": "kind", "score": 2 },
+            { "label": "Asomarse a mirar dentro", "consequence": "Al otro lado no hay nada: solo Santuarios muy lejanos, apagados. {pet} vuelve con un escalofrío y una pregunta.", "canonLine": "Miraron dentro de la rotura y vieron Santuarios apagados al otro lado.", "approach": "curious", "score": 1 },
+            { "label": "Taparla con cristales sueltos", "consequence": "Los cristales encajan mal y la Resonancia sigue escapando por las rendijas.", "canonLine": "Taparon la rotura a medias con cristales sueltos.", "approach": "cunning", "score": 0 }
+          ]
+        },
+        {
+          "locationId": "santuario-a-la-deriva",
+          "narration": "Más allá de la grieta flota un Santuario sin luz, cubierto de polvo estático. De él sale la hebra rota.",
+          "event": { "kind": "plea", "text": "Dentro, un Pockai en Letargo Melancólico abre un ojo y lo vuelve a cerrar.", "fx": "polvo-estatico" },
+          "choices": [
+            { "label": "Quedarse a hacerle compañía", "consequence": "{pet} se sienta a su lado. Poco a poco el polvo estático se asienta y el Santuario recupera un punto de calor.", "canonLine": "Acompañaron al Pockai del Santuario a la deriva y este recuperó algo de calor.", "approach": "kind", "score": 2 },
+            { "label": "Reatar su hebra al Nexo", "consequence": "La hebra queda sujeta de nuevo. El Santuario ya no se aleja, aunque sigue frío.", "canonLine": "Reataron al Nexo la hebra del Santuario a la deriva.", "approach": "careful", "score": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seed-codice-perdido",
+      "title": "El Códice que nadie pescó",
+      "synopsis": "Un huevo baja por la corriente sin que ningún Santuario lo reclame.",
+      "scenes": [
+        {
+          "locationId": "corriente-de-datos",
+          "narration": "{pet} camina por la orilla cuando algo redondo pasa flotando, dando vueltas despacio.",
+          "event": { "kind": "discovery", "text": "Es un Códice Latente, frío y a medio cerrar, a punto de entrar en los rápidos.", "fx": "destello-prisma" },
+          "choices": [
+            { "label": "Meterse a por él", "consequence": "La corriente empuja fuerte, pero {pet} lo alcanza y lo saca a la orilla abrazado.", "canonLine": "Rescataron el Códice de la corriente a nado.", "approach": "brave", "score": 2 },
+            { "label": "Desviarlo con una placa", "consequence": "La placa hace de dique y el Códice encalla en un remanso, un poco golpeado.", "canonLine": "Desviaron el Códice a un remanso con una placa de datos.", "approach": "cunning", "score": 1 },
+            { "label": "Seguirlo desde la orilla", "consequence": "{pet} lo sigue un buen trecho hasta que los rápidos se lo llevan de la vista.", "canonLine": "Siguieron el Códice desde la orilla y lo perdieron en los rápidos.", "approach": "careful", "score": 0 }
+          ]
+        },
+        {
+          "locationId": "orilla-del-telar",
+          "narration": "La corriente nace aquí, entre los bastidores del Telar, donde los fragmentos giran antes de hacerse cáscara.",
+          "event": { "kind": "encounter", "text": "Un nudo del Telar vibra y deja caer otro Códice a medio hacer, sin Firma de Origen.", "fx": "resonancia" },
+          "choices": [
+            { "label": "Darle calor hasta que cierre", "consequence": "{pet} se acurruca contra la cáscara. Tarda, pero el Códice termina de cerrarse con un chasquido suave.", "canonLine": "Dieron calor a un Códice a medio hacer hasta que se cerró.", "approach": "kind", "score": 2 },
+            { "label": "Devolverlo al Telar", "consequence": "El Telar lo acepta de vuelta y sigue girando, como si no hubiera pasado nada.", "canonLine": "Devolvieron al Telar un Códice a medio hacer.", "approach": "careful", "score": 1 }
+          ]
+        },
+        {
+          "locationId": "campo-de-nodos",
+          "narration": "A lo lejos titilan los nodos: cada luz es un Santuario con un Custodio dentro.",
+          "event": { "kind": "plea", "text": "Uno de los nodos parpadea más fuerte que el resto, como si llamara a alguien.", "fx": "hebra-invocacion" },
+          "choices": [
+            { "label": "Llevar el Códice a ese nodo", "consequence": "El nodo se enciende del todo al recibirlo. Alguien, al otro lado, acaba de encontrar un huevo.", "canonLine": "Llevaron el Códice hasta un Santuario que lo estaba llamando.", "approach": "kind", "score": 2 },
+            { "label": "Dejar que elija su camino", "consequence": "{pet} lo suelta. El Códice duda, gira dos veces y deriva hacia las luces.", "canonLine": "Dejaron que el Códice eligiera su propio Santuario.", "approach": "curious", "score": 1 },
+            { "label": "Guardarlo de recuerdo", "consequence": "Sin un Custodio cerca, el Códice se enfría enseguida. {pet} acaba dejándolo ir.", "canonLine": "Quisieron quedarse el Códice, pero tuvieron que soltarlo.", "approach": "cunning", "score": 0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seed-eco-del-coliseo",
+      "title": "El eco del Coliseo",
+      "synopsis": "Una Impronta de Guardia lleva días esperando un duelo que no llega.",
+      "scenes": [
+        {
+          "locationId": "sala-de-sincronia",
+          "narration": "{pet} está calentando cuando por la sala resuena un golpe seco, repetido, que viene de muy lejos.",
+          "event": { "kind": "omen", "text": "Es el eco de una proyección que entrena sola, una y otra vez, sin rival.", "fx": "resonancia" },
+          "choices": [
+            { "label": "Ir a ver quién es", "consequence": "{pet} deja el calentamiento a medias y sigue el sonido hasta las puertas del Coliseo.", "canonLine": "Fueron al Coliseo a buscar a quien entrenaba solo.", "approach": "curious", "score": 2 },
+            { "label": "Responder con el mismo ritmo", "consequence": "{pet} golpea el suelo al compás. Al otro lado, el eco se detiene un segundo, sorprendido.", "canonLine": "Respondieron al eco del Coliseo con su mismo ritmo.", "approach": "kind", "score": 1 }
+          ]
+        },
+        {
+          "locationId": "coliseo-de-resonancia",
+          "narration": "En la arena vacía hay una Impronta de Guardia, quieta, con los escudos un poco deshilachados.",
+          "event": { "kind": "encounter", "text": "La Impronta levanta la vista y adopta la postura de inicio de un duelo.", "fx": "glitch-animo" },
+          "choices": [
+            { "label": "Aceptar el duelo", "consequence": "Las proyecciones se cruzan sin hacerse daño. Al terminar, la Impronta brilla más nítida que antes.", "canonLine": "Aceptaron el duelo y la Impronta de Guardia recuperó nitidez.", "approach": "brave", "score": 2 },
+            { "label": "Enseñarle un paso nuevo", "consequence": "La Impronta lo repite torpemente, luego mejor. No era un duelo lo que le hacía falta.", "canonLine": "Enseñaron un paso nuevo a la Impronta de Guardia.", "approach": "kind", "score": 1 },
+            { "label": "Esquivarla y salir", "consequence": "La Impronta baja la guardia despacio y vuelve a su sitio, a seguir esperando.", "canonLine": "Rehuyeron el duelo y la Impronta siguió esperando.", "approach": "careful", "score": 0 }
+          ]
+        },
+        {
+          "locationId": "ciudadela-del-nexo",
+          "narration": "Desde las torres de cristal se ve el Coliseo entero. Los Vigías preguntan qué ha pasado ahí abajo.",
+          "event": { "kind": "plea", "text": "Un Vigía tiende un pergamino en blanco: el aviso para el Custodio de aquella Impronta.", "fx": "trenza-juramento" },
+          "choices": [
+            { "label": "Contarle la hazaña entera", "consequence": "El pergamino sale volando hacia un Santuario lejano. Alguien va a sonreír al leerlo.", "canonLine": "Enviaron al Custodio ausente el relato del duelo.", "approach": "kind", "score": 2 },
+            { "label": "Pedir que le busquen rivales", "consequence": "Los Vigías lo apuntan como Juramento del Nexo: que nadie entrene solo.", "canonLine": "Propusieron un Juramento para que nadie entrene solo en el Coliseo.", "approach": "cunning", "score": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seed-baya-ignea",
+      "title": "La Baya que no maduraba",
+      "synopsis": "En la despensa falta el fruto del Fuego y nadie sabe por qué.",
+      "scenes": [
+        {
+          "locationId": "despensa-del-santuario",
+          "narration": "{pet} rebusca entre los estantes. Hay de todo menos Bayas Ígneas: su hueco está frío.",
+          "event": { "kind": "discovery", "text": "En el fondo del estante queda una sola baya, pálida, sin madurar.", "fx": "polvo-estatico" },
+          "choices": [
+            { "label": "Llevarla donde hace calor", "consequence": "{pet} la envuelve con cuidado y sale hacia el páramo, donde los procesadores trabajan al límite.", "canonLine": "Llevaron la baya pálida al Páramo de Ascuas para madurarla.", "approach": "curious", "score": 2 },
+            { "label": "Soplarle encima", "consequence": "La baya coge un poco de color y lo pierde enseguida. Hace falta más calor que ese.", "canonLine": "Intentaron madurar la baya a soplidos, sin éxito.", "approach": "kind", "score": 0 },
+            { "label": "Preguntar al Santuario", "consequence": "Las campanas del Santuario suenan dos veces hacia el oeste: allí está lo que falta.", "canonLine": "Preguntaron al Santuario y este señaló el páramo.", "approach": "careful", "score": 1 }
+          ]
+        },
+        {
+          "locationId": "paramo-de-ascuas",
+          "narration": "El páramo debería arder, pero las ascuas del horizonte están casi apagadas.",
+          "event": { "kind": "obstacle", "text": "Una capa de polvo estático cubre las brasas y no las deja respirar.", "fx": "polvo-estatico" },
+          "choices": [
+            { "label": "Barrer el polvo a carreras", "consequence": "{pet} corre de un lado a otro levantando el polvo. Las brasas vuelven a ponerse rojas.", "canonLine": "Despejaron el polvo estático y el Páramo de Ascuas volvió a arder.", "approach": "brave", "score": 2 },
+            { "label": "Buscar una brasa viva", "consequence": "Bajo una piedra queda una brasa encendida, suficiente para una baya pero no para el páramo.", "canonLine": "Encontraron una única brasa viva en el páramo.", "approach": "cunning", "score": 1 }
+          ]
+        },
+        {
+          "locationId": "despensa-del-santuario",
+          "narration": "De vuelta en la despensa, la baya ya es roja y tibia. Huele a domingo.",
+          "event": { "kind": "plea", "text": "Otro Pockai de Fuego asoma por la puerta y la mira sin atreverse a pedirla.", "fx": "descarga-calida" },
+          "choices": [
+            { "label": "Partirla por la mitad", "consequence": "Media baya para cada uno. Sabe mejor así, o eso dice {pet} con la boca llena.", "canonLine": "Compartieron la Baya Ígnea con otro Pockai de Fuego.", "approach": "kind", "score": 2 },
+            { "label": "Plantar la semilla primero", "consequence": "{pet} guarda la semilla en el estante vacío. Mañana habrá más de una.", "canonLine": "Plantaron la semilla de la Baya Ígnea en la despensa.", "approach": "careful", "score": 2 },
+            { "label": "Comérsela de un bocado", "consequence": "Está deliciosa. El otro Pockai se marcha sin decir nada.", "canonLine": "Se comieron la Baya Ígnea sin compartirla.", "approach": "cunning", "score": 0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seed-torre-apagada",
+      "title": "La torre que dejó de cantar",
+      "synopsis": "Una de las torres de la Ciudadela ha enmudecido y el trenzado se tensa.",
+      "scenes": [
+        {
+          "locationId": "ciudadela-del-nexo",
+          "narration": "Las torres de cristal cantan siempre una nota cada una. Hoy {pet} cuenta una nota de menos.",
+          "event": { "kind": "omen", "text": "La torre más alta está opaca, y las hebras que sostiene cuelgan sin tensión.", "fx": "glitch-animo" },
+          "choices": [
+            { "label": "Subir a lo alto", "consequence": "Arriba el cristal está frío y cubierto de escarcha de datos. Algo ha dejado de alimentarlo.", "canonLine": "Subieron a la torre apagada y la hallaron cubierta de escarcha de datos.", "approach": "brave", "score": 2 },
+            { "label": "Escuchar a las otras torres", "consequence": "Las demás han subido el tono para compensar. No aguantarán mucho así.", "canonLine": "Descubrieron que las otras torres cantaban más alto para compensar.", "approach": "careful", "score": 1 }
+          ]
+        },
+        {
+          "locationId": "campo-de-nodos",
+          "narration": "La torre bebe de los nodos del campo. {pet} busca el suyo entre cientos de luces.",
+          "event": { "kind": "discovery", "text": "Un nodo sigue encendido, pero su luz sale torcida, hacia ninguna parte.", "fx": "estela-flujo" },
+          "choices": [
+            { "label": "Girarlo hacia la Ciudadela", "consequence": "El haz barre el cielo y da de lleno en la torre. A lo lejos se oye una nota tímida.", "canonLine": "Reorientaron el nodo torcido hacia la Ciudadela.", "approach": "cunning", "score": 2 },
+            { "label": "Seguir su luz", "consequence": "El haz muere en la oscuridad, muy lejos. Allí hay algo que tira de él.", "canonLine": "Siguieron la luz torcida hasta el borde de la oscuridad.", "approach": "curious", "score": 1 },
+            { "label": "Limpiarle la estática", "consequence": "El nodo brilla más, pero sigue apuntando mal.", "canonLine": "Limpiaron el nodo, que siguió apuntando mal.", "approach": "kind", "score": 0 }
+          ]
+        },
+        {
+          "locationId": "rotura-del-nexo",
+          "narration": "Donde acaba el haz hay otro desgarro en la malla, pequeño y reciente.",
+          "event": { "kind": "obstacle", "text": "La grieta sorbe la luz del nodo como quien bebe con pajita.", "fx": "portal-nexo" },
+          "choices": [
+            { "label": "Coserla con la propia luz", "consequence": "{pet} guía el haz por los bordes y la luz hace de hilo. La grieta se cierra con un zumbido.", "canonLine": "Cosieron la pequeña rotura usando la luz del nodo.", "approach": "cunning", "score": 2 },
+            { "label": "Marcarla para los Vigías", "consequence": "Queda señalada con tres cristales. Alguien vendrá, aunque la torre tendrá que esperar.", "canonLine": "Marcaron la rotura para que los Vigías la cerraran.", "approach": "careful", "score": 1 }
+          ]
+        }
+      ]
+    }
+  ]
+}

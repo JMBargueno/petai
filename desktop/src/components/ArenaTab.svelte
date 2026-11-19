@@ -244,7 +244,7 @@
     {#if view === 'fight'}
       {#if profile}
         {@const el = elementMeta(profile.element)}
-        <Card variant="hero">
+        <Card variant="hero" backdrop="arena">
           <div class="ui-feature">
             <span class="ui-feature__icon" style="--feature-tint: {el.color}" aria-hidden="true"><Ico n={el.icon} size={22} /></span>
             <div class="ui-feature__body">

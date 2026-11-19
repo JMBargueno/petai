@@ -64,9 +64,9 @@ Este documento describe la estructura de los endpoints REST (`/v1`) y los evento
 - `GET /inventory`: Obtener los objetos y consumibles del usuario.
 
 ### 2.7 Minijuegos (`/minigames`)
-- `GET /minigames`: Lista de minijuegos (`catch_food`, `memory_match`, `reflex`) con duración y recompensas máximas.
-- `POST /minigames/:gameId/start` `{ petId }`: Inicia una sesión y devuelve `sessionId`, `seed`, `durationSeconds` y `expiresAt`. Falla si la mascota duerme o está sin energía, durante el cooldown, o al superar el límite diario de partidas recompensadas.
-- `POST /minigames/sessions/:id/finish` `{ score }`: Envía la puntuación final (entero). La sesión es de un solo uso; se rechaza si caducó, si fue demasiado corta o si la puntuación supera el máximo por segundo del juego. Devuelve `{ score, rewards, pet }` (monedas, XP, felicidad y coste de energía).
+- `GET /minigames`: Lista de los 9 minijuegos (`catch_food`, `memory_match`, `reflex` y las seis Pruebas de los Flujos) con nombre, elemento, duración, recompensas máximas y coste de energía. Las reglas de cada uno están en `docs/minijuegos/<id>.md`.
+- `POST /minigames/:gameId/start` `{ petId, variant? }`: Inicia una sesión (`variant`: `standard` o `easy`) y devuelve `sessionId`, `seed`, `variant`, `durationSeconds` y `expiresAt`. Falla si la mascota duerme o está sin energía, durante el cooldown, o al superar el límite diario de partidas recompensadas.
+- `POST /minigames/sessions/:id/finish` `{ score, ticks?, log? }`: Envía la puntuación final (entero) con los ticks jugados y el registro de entradas, que el servidor usa para repetir la partida (obligatorio en las Pruebas; ver spec 39 §3). La sesión es de un solo uso; se rechaza si caducó, si fue demasiado corta o si la puntuación supera el máximo por segundo del juego. Devuelve `{ score, rewards, pet, verified, affinity, item }` (monedas, XP, felicidad y coste de energía; `item` si la partida ha soltado un objeto).
 
 ### 2.7b Tienda y evolución
 - `GET /shop?kind=food|medicine|evolution`: Catálogo, filtrable por tipo.

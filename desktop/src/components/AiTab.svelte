@@ -1003,8 +1003,15 @@
           {#if memErr}<Notice tone="error">{memErr}</Notice>{/if}
           {#if mem && !mem.unlocked}
             <Notice tone="info" icon="lock">
-              La memoria se desbloquea con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}). Sigue charlando.
+              {#if mem.memories.length === 0}
+                La memoria se desbloquea con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}). Sigue charlando.
+              {:else}
+                Ya recuerda algunas cosas. Con {mem.unlockAt} de inteligencia (ahora {mem.intelligence}) recordará más y más a menudo.
+              {/if}
             </Notice>
+          {/if}
+          {#if mem && !mem.unlocked && mem.memories.length === 0}
+            <!-- Sin recuerdos y aún bloqueada: basta el aviso de arriba -->
           {:else if mem && mem.memories.length === 0}
             <EmptyState compact icon="folder" text="Todavía no recuerda nada. Tras unas cuantas charlas empezará a hacerlo." />
           {:else if mem}

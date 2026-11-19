@@ -61,7 +61,8 @@ export class PixiEffects {
    */
   play(id: string, params: Record<string, string | number> = {}, opts: { holdMs?: number } = {}): boolean {
     const def = EFFECTS[id];
-    if (!def) return false;
+    // Los de pantalla (transiciones) van por `PixiScreenFx`, no colgados del Pockai
+    if (!def || def.space === 'screen') return false;
     const minor = def.channel === 'minor';
     if (minor) {
       if (this.active.filter((a) => a.minor).length >= MAX_MINORS) return false;

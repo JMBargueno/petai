@@ -7,11 +7,28 @@
  * independiente del protocolo de la escena.
  *  - v2: `finished` lleva el registro empaquetado (`log`) para que el servidor repita la partida;
  *    `start` admite `variant`; nuevos `pause`/`resume` y evento `paused`.
+ *  - v3: `start` admite `pet`, la mascota del jugador, que sale dentro del juego. Es opcional: un
+ *    anfitrión que no la mande sigue jugando, con la especie por defecto.
  */
 import type { PackedEntry } from './core/log';
 import type { GameVariant } from './core/types';
 
-export const MINIGAME_PROTOCOL_VERSION = 2;
+export const MINIGAME_PROTOCOL_VERSION = 3;
+
+export type PetStage = 'baby' | 'juvenile' | 'adult' | 'final';
+
+/**
+ * La mascota que sale en el juego. Solo es aspecto: no cambia las reglas ni la puntuación (la lógica
+ * no la recibe), así que el servidor repite la partida sin ella.
+ */
+export interface MinigamePet {
+  species: string;
+  stage?: PetStage;
+  palette?: { primary: string; secondary: string; accent?: string };
+  /** Id del patrón de piel (`shared/assets/patterns/<id>.png`); `plain` o ausente, sin patrón. */
+  pattern?: string | null;
+  visualSeed?: number;
+}
 
 export interface StartMessage {
   type: 'start';
@@ -20,6 +37,7 @@ export interface StartMessage {
   durationSeconds: number;
   variant?: GameVariant;
   reducedMotion?: boolean;
+  pet?: MinigamePet;
 }
 
 export type HostMessage = StartMessage | { type: 'dispose' } | { type: 'pause' } | { type: 'resume' };
@@ -30,6 +48,27 @@ export type MinigameEvent =
   | { type: 'paused'; paused: boolean }
   | { type: 'finished'; gameId: string; score: number; ticks: number; log: PackedEntry[] }
   | { type: 'error'; message: string };
+
+const ID = /^[a-z][a-z0-9_]{0,63}$/;
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const STAGES: readonly PetStage[] = ['baby', 'juvenile', 'adult', 'final'];
+
+/** Valida la mascota de `start`. Lo que no vale se descarta campo a campo; sin especie, no hay mascota. */
+export function parsePet(raw: unknown): MinigamePet | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.species !== 'string' || !ID.test(r.species)) return undefined;
+  const pet: MinigamePet = { species: r.species };
+  if (STAGES.includes(r.stage as PetStage)) pet.stage = r.stage as PetStage;
+  const p = r.palette as Record<string, unknown> | null | undefined;
+  if (p && typeof p === 'object' && typeof p.primary === 'string' && HEX.test(p.primary) && typeof p.secondary === 'string' && HEX.test(p.secondary)) {
+    pet.palette = { primary: p.primary, secondary: p.secondary };
+    if (typeof p.accent === 'string' && HEX.test(p.accent)) pet.palette.accent = p.accent;
+  }
+  if (typeof r.pattern === 'string' && ID.test(r.pattern)) pet.pattern = r.pattern;
+  if (Number.isInteger(r.visualSeed)) pet.visualSeed = r.visualSeed as number;
+  return pet;
+}
 
 /** Valida un mensaje del anfitrión sin confiar en él. */
 export function parseHostMessage(raw: unknown): HostMessage | null {
@@ -54,5 +93,6 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
     durationSeconds: m.durationSeconds,
     variant: m.variant === 'easy' ? 'easy' : 'standard',
     reducedMotion: m.reducedMotion === true,
+    pet: parsePet(m.pet),
   };
 }

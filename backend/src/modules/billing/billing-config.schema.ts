@@ -10,6 +10,8 @@ const freePlanLimitsSchema = z.object({
   memoryExtractEvery: z.number().int().min(0).max(50),
   monthlyTokenQuota: z.number().int().min(0).max(50_000_000),
   trialMessagesUnverified: z.number().int().min(0).max(50).default(3),
+  // Aventura diaria: historias del bucket que puede jugar al día
+  dailyStories: z.number().int().min(0).max(8).default(1),
 });
 
 const proPlanLimitsSchema = z.object({
@@ -21,6 +23,7 @@ const proPlanLimitsSchema = z.object({
   agentTools: z.boolean(),
   memoryExtractEvery: z.number().int().min(0).max(50),
   monthlyTokenQuota: z.number().int().min(0).max(50_000_000),
+  dailyStories: z.number().int().min(0).max(8).default(3),
 });
 
 export const billingConfigSchema = z
@@ -46,6 +49,7 @@ export const billingConfigSchema = z
       memoryExtractEvery: 12,
       monthlyTokenQuota: 300_000,
       trialMessagesUnverified: 3,
+      dailyStories: 1,
     }),
     pro: proPlanLimitsSchema.default({
       dailyMessages: 200,
@@ -56,6 +60,7 @@ export const billingConfigSchema = z
       agentTools: true,
       memoryExtractEvery: 6,
       monthlyTokenQuota: 3_000_000,
+      dailyStories: 3,
     }),
     byok: z
       .object({
@@ -91,6 +96,29 @@ export const billingConfigSchema = z
         estimatePromptUsdPerMTok: 0.5,
         estimateCompletionUsdPerMTok: 2,
       }),
+    // IA del sistema: tareas internas sin usuario (historias de la aventura diaria). Modelo y
+    // presupuesto propios, separados de la IA gestionada del chat.
+    systemAi: z
+      .object({
+        enabled: z.boolean().default(true),
+        model: z.string().min(1).default('google/gemini-2.5-flash'),
+        fallbackModels: z.array(z.string()).default(['google/gemini-2.5-flash-lite']),
+        dailyBudgetUsd: z.number().min(0).max(1000).default(1),
+        maxOutputTokens: z.number().int().min(256).max(8000).default(3000),
+        temperature: z.number().min(0).max(2).default(0.9),
+        estimatePromptUsdPerMTok: z.number().min(0).max(100).default(0.5),
+        estimateCompletionUsdPerMTok: z.number().min(0).max(400).default(3),
+      })
+      .default({
+        enabled: true,
+        model: 'google/gemini-2.5-flash',
+        fallbackModels: ['google/gemini-2.5-flash-lite'],
+        dailyBudgetUsd: 1,
+        maxOutputTokens: 3000,
+        temperature: 0.9,
+        estimatePromptUsdPerMTok: 0.5,
+        estimateCompletionUsdPerMTok: 3,
+      }),
     subscription: z
       .object({
         gracePeriodDays: z.number().int().min(0).max(14).default(3),
@@ -102,6 +130,10 @@ export const billingConfigSchema = z
   .refine((data) => data.pro.dailyMessages >= data.free.dailyMessages, {
     message: 'Los mensajes diarios de Pro deben ser mayores o iguales que los de Free (invariante pro >= free)',
     path: ['pro', 'dailyMessages'],
+  })
+  .refine((data) => data.pro.dailyStories >= data.free.dailyStories, {
+    message: 'Las historias diarias de Pro deben ser mayores o iguales que las de Free (invariante pro >= free)',
+    path: ['pro', 'dailyStories'],
   });
 
 export type BillingConfigData = z.infer<typeof billingConfigSchema>;

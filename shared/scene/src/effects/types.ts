@@ -76,6 +76,12 @@ export interface EffectDef {
    * convive con otros y no bloquea a la mascota; `ambient` = bucle que dura mientras su condición.
    */
   channel?: 'moment' | 'minor' | 'ambient';
+  /**
+   * `pet` (por defecto): rejilla fija anclada a los pies del Pockai. `screen`: cubre todo el lienzo
+   * (transiciones de pantalla); su `draw` debe usar `sink.width × sink.height`, que es el viewport
+   * en celdas nativas, y `width × height` queda solo para la hoja de frames y los tests.
+   */
+  space?: 'pet' | 'screen';
   /** Delante o detrás de la mascota (por defecto, detrás). */
   layer?: 'behind' | 'front';
   /**

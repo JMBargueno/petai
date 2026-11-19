@@ -1,0 +1,44 @@
+{
+  "_comment": "Aventura diaria (DecisionStoryGenerator). Números jugables de las historias de decisión: forma de cada historia, tamaño del bucket diario, recompensas y reglas del generador nocturno. El cupo por plan (historias al día) vive en BillingConfig (dailyStories), no aquí.",
+  "version": "1.0.0",
+  "scenesPerStory": 3,
+  "choicesPerScene": { "min": 2, "max": 3 },
+  "bucket": {
+    "storiesPerDay": 4,
+    "timezone": "Europe/Madrid",
+    "generateAtHour": 2,
+    "aiDeadlineHour": 6,
+    "attemptsPerStory": 3
+  },
+  "canon": {
+    "minVotesForCanon": 5
+  },
+  "arc": {
+    "maxChapters": 7,
+    "contextChapters": 3
+  },
+  "rerun": {
+    "minAgeDays": 21
+  },
+  "outcome": {
+    "winAt": 0.7,
+    "partialAt": 0.4
+  },
+  "rewards": {
+    "win": { "xp": 30, "coins": 20, "happiness": 8 },
+    "partial": { "xp": 15, "coins": 10, "happiness": 3 },
+    "lose": { "xp": 5, "coins": 3, "happiness": 3 }
+  },
+  "text": {
+    "titleMax": 60,
+    "synopsisMax": 200,
+    "narrationMax": 280,
+    "eventMax": 200,
+    "labelMax": 60,
+    "consequenceMax": 240,
+    "canonLineMax": 140
+  },
+  "eventKinds": ["encounter", "obstacle", "discovery", "plea", "omen"],
+  "approaches": ["brave", "careful", "kind", "curious", "cunning"],
+  "eventFx": ["portal-nexo", "resonancia", "hebra-invocacion", "glitch-animo", "polvo-estatico", "destello-prisma", "descarga-calida", "trenza-juramento", "chispa-despertar", "estela-flujo"]
+}

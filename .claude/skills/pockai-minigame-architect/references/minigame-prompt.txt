@@ -1,0 +1,18 @@
+Pixel-art game pieces for a cozy creature-collecting game. Draw exactly {{COUNT}} separate objects in ONE horizontal row, evenly spaced, all the same size, none touching, in this order from left to right:
+{{PIECES_NUMBERED_LIST}}
+
+World: small spirit creatures ("Pockais") live in the "Éter Digital", a living network. These are the pieces of a small game they play: {{GAME_LORE}}
+
+Style rules (strict):
+- Chunky low-resolution pixel art, each object as if drawn on a {{GRID}}x{{GRID}} pixel grid and shown enlarged with big hard square pixels. No anti-aliasing, no gradients, no blur, no glow, no dithering.
+- Big simple shapes with one clear silhouette each, readable while moving fast. Nothing thinner than two grid pixels.
+- Three-quarter view from slightly above, like an item in a 16-bit RPG. Not flat side view, not top-down.
+- Light from the top left: one small near-white highlight on the upper left, shadow on the lower right. The shadow color shifts hue toward violet instead of just getting darker.
+- Dark tinted outline all around each object. Never pure black.
+- Exact flat colors, nothing else. {{COLORS_PER_PIECE}}
+- At most 12 colors per object. No pink and no magenta anywhere on the objects.
+- {{FACE_RULE}}
+- No text, no numbers, no labels, no frame, no UI, no ground shadow, no sparkles floating away from the objects.
+- Background: one flat solid magenta #ff00ff, edge to edge, also between the objects.
+
+{{GOOD_VS_BAD_NOTE}}

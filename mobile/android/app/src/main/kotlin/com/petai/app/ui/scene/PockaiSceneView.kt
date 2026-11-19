@@ -17,7 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.petai.app.PetAiApp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -37,6 +39,12 @@ sealed interface SceneEvent {
     data object PetTapped : SceneEvent
     /** Un efecto de `playEffect`/`petAction` terminó (protocolo v3). */
     data class EffectEnded(val id: String) : SceneEvent
+    /** Hito de la escena de historia (protocolo v4): `arrived`, `reacted` o `exited`. */
+    data class StoryBeat(val key: String, val beat: String) : SceneEvent
+    /** El velo de `coverScreen` ya tapa todo el lienzo. */
+    data object ScreenCovered : SceneEvent
+    /** El velo terminó de abrirse. */
+    data object ScreenUncovered : SceneEvent
     data class Error(val message: String) : SceneEvent
 }
 
@@ -56,6 +64,9 @@ private fun parseEvent(raw: String): SceneEvent? = runCatching {
         )
         "petTapped" -> SceneEvent.PetTapped
         "effectEnded" -> SceneEvent.EffectEnded(str("id") ?: return null)
+        "storyBeat" -> SceneEvent.StoryBeat(str("key") ?: return null, str("beat") ?: return null)
+        "screenCovered" -> SceneEvent.ScreenCovered
+        "screenUncovered" -> SceneEvent.ScreenUncovered
         "error" -> SceneEvent.Error(str("message") ?: "")
         else -> null
     }
@@ -144,6 +155,7 @@ fun PockaiSceneView(
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
+                // El sonido (WebAudio) se desbloquea igualmente con el primer toque en la escena.
                 settings.mediaPlaybackRequiresUserGesture = true
                 isVerticalScrollBarEnabled = false
                 isHorizontalScrollBarEnabled = false
@@ -199,4 +211,11 @@ fun PockaiSceneView(
     }
 
     LaunchedEffect(Unit) { controller.send(SceneMessages.setPaused(false)) }
+
+    // Ajustes de sonido (spec 40): se reenvían cada vez que cambian; el controlador guarda el último
+    // y lo repite si la página se recarga.
+    val app = LocalContext.current.applicationContext as? PetAiApp
+    LaunchedEffect(controller, app) {
+        app?.audio?.prefs?.collect { controller.send(SceneMessages.setAudio(it)) }
+    }
 }

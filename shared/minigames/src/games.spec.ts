@@ -6,7 +6,7 @@ import { createRunner, replay, type AnyGameDefinition } from './core/runner';
 import { maxLogEntries, packLog, unpackLog } from './core/log';
 import { TICKS_PER_SECOND, TICK_MS, type GameInput, type GameVariant } from './core/types';
 import { GAME_DEFINITIONS } from './logic';
-import type { CatchFoodState } from './games/catchFood';
+import { CATCH_FOOD, type CatchFoodState } from './games/catchFood';
 import { memoryMatch, type MemoryMatchState } from './games/memoryMatch';
 import { reflex, type ReflexState } from './games/reflex';
 import type { PulsoState } from './games/pulsoVoltaico';
@@ -27,16 +27,21 @@ type Bot<S> = (s: S) => GameInput[];
 
 const BOTS: Record<string, Bot<any>> = {
   catch_food: (s: CatchFoodState) => {
-    const good = s.items.filter((it) => it.kind >= 0).sort((a, b) => b.y - a.y)[0];
-    return good ? [{ kind: 'move', x: good.x }] : [];
+    // El fruto más bajo al que el Pockai todavía llega corriendo.
+    const bottom = CATCH_FOOD.CATCH_Y + 16;
+    const good = s.items
+      .filter((it) => it.kind >= 0 && it.y <= bottom)
+      .filter((it) => Math.abs(it.x - s.petX) - s.catchHalf <= (CATCH_FOOD.SPEED * (bottom - it.y)) / it.vy)
+      .sort((a, b) => b.y - a.y)[0];
+    return good ? [{ kind: 'move', x: Math.round(good.x) }] : [];
   },
   memory_match: (s: MemoryMatchState) => {
     const i = s.matched.findIndex((m) => !m);
-    if (i < 0 || s.lockedUntil >= 0) return [];
+    if (i < 0 || s.lockedUntil >= 0 || s.tick < s.peekUntil) return [];
     const j = s.deck.findIndex((f, k) => k !== i && f === s.deck[i]);
     return [{ kind: 'flip', i }, { kind: 'flip', i: j }];
   },
-  reflex: (s: ReflexState) => (s.target ? [{ kind: 'hit' }] : []),
+  reflex: (s: ReflexState) => (s.target && !s.target.lure ? [{ kind: 'hit' }] : []),
   pulso_voltaico: (s: PulsoState) => s.notes.filter((n) => !n.grade && n.hit === s.tick).map((n) => ({ kind: 'tap', lane: n.lane })),
   corriente_datos: (s: CorrienteState) => {
     const next = s.objects.filter((o) => o.kind === 'packet').sort((a, b) => a.spawn + a.fall - (b.spawn + b.fall))[0];

@@ -9,6 +9,7 @@ import {
   validateFile,
   validateGameData,
 } from './game-data.schemas';
+import { StoryData, validateStoryData } from './story-data.schemas';
 
 /**
  * Snapshot inmutable de game-data en memoria. El `GameDataService` mantiene UN snapshot vigente y
@@ -44,6 +45,11 @@ export interface GameDataSnapshot {
   accessories: any | null;
   /** Lore por temas para la IA: `lore.json` (opcional, fuera del hot-reload). `{ intro, topics }` o `null`. */
   lore: any | null;
+  /**
+   * Aventura diaria: `stories.json`, `story-locations.json` y `story-seeds.json` ya validados
+   * (opcionales, fuera del hot-reload). `null` si falta alguno.
+   */
+  stories: StoryData | null;
   /** ISO de cuando el snapshot se construyó/actualizó. */
   loadedAt: string;
   /** Origen del último cambio aplicado: `disk` (watcher/arranque) o `inline` (hot-reload inline). */
@@ -165,9 +171,19 @@ export class GameDataService implements OnModuleInit {
         const p = path.join(this.dataDir, 'lore.json');
         return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
       })(),
+      stories: this.readStoryData(),
       loadedAt: new Date().toISOString(),
       source,
     };
+  }
+
+  /** Lee y valida los tres archivos de la aventura diaria. Un archivo inválido impide arrancar. */
+  private readStoryData(): StoryData | null {
+    const [stories, locations, seeds] = ['stories', 'story-locations', 'story-seeds'].map((f) => this.readFileFromDisk(f));
+    if (stories === null || locations === null || seeds === null) return null;
+    const { data, errors } = validateStoryData({ stories, locations, seeds });
+    if (!data) throw new Error(`Datos de la aventura diaria inválidos:\n- ${errors.join('\n- ')}`);
+    return data;
   }
 
   // ---------- Lectores (snapshot vigente) ----------
@@ -241,6 +257,11 @@ export class GameDataService implements OnModuleInit {
   /** Lore por temas que consulta la IA (`lore.json`), o `null` si el archivo no existe. */
   getLore() {
     return this.snapshot.lore ?? null;
+  }
+
+  /** Aventura diaria: configuración, catálogo de localizaciones y semillas, o `null` si no hay datos. */
+  getStoryData(): StoryData | null {
+    return this.snapshot.stories ?? null;
   }
 
   /** Catálogo de juego (los 6 game-data gestionados). Lo sirve el endpoint público `/catalog`. */

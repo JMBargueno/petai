@@ -175,7 +175,7 @@ Lateral y Aeonik Pro son comerciales. Si se instalan, la pila las coge sola; mie
 
 Pesos: 500 (medio), 700 (negrita) y 800 (extra).
 
-**Mínimo de 12 px:** ningún texto de interfaz baja de `--text-caption`. En el escritorio los `font-size` van siempre con token; solo quedan en píxeles los glifos que hacen de ilustración (emoji de minijuegos, el reloj del pomodoro).
+**Mínimo de 12 px:** ningún texto de interfaz baja de `--text-caption`. En el escritorio los `font-size` van siempre con token; solo quedan en píxeles los glifos que hacen de ilustración (el reloj del pomodoro). Los minijuegos ya no pintan emoji: llevan arte propio (`docs/ART_PIPELINE.md` §11).
 
 **Etiquetas:** el eyebrow y `.label-caps` van a 12 px, en negrita, en MAYÚSCULAS y con tracking 0,08 em. El eyebrow es una pastilla con un punto de color `--accent`. Los `.tag` usan tracking 0,04 em.
 
@@ -600,7 +600,7 @@ Esta sección lista lo que existe hoy y no sigue esta guía. Corregirlo es traba
 | Android: tipografía y forma | Sin `Type.kt` ni `Shape.kt`; radios inline de 12–36 dp | §4 y §5 |
 | Android: iconos | Material Icons rellenos | Lucide o equivalente de trazo |
 | Huevo | Icono Android `#FDE68A` con manchas azules; sprite `#FDE047` con manchas `#F59E0B` | Un solo huevo de marca (§2) |
-| Emoji de contenido | En el escritorio quedan emoji como contenido de juego (frutas de minijuegos, accesorios y muebles, iconos de elemento) | Pegatinas/Lucide cuando haya arte propio; los muebles, en SVG isométrico (§7.4) |
+| Emoji de contenido | En el escritorio quedan emoji como contenido de juego (accesorios y muebles, iconos de elemento). Los minijuegos ya tienen arte propio | Pegatinas/Lucide cuando haya arte propio; los muebles, en SVG isométrico (§7.4) |
 | Vista | Pockais de perfil y hábitat en diorama lateral (CSS) | Pockais en 3/4 por etapa y salas isométricas (§7.4) |
 | Escala y render | Escritorio y escena de PixiJS ya escalan por enteros y sin suavizado; falta revisar Android, iOS y la web | Escalas enteras y vecino más próximo en todas las plataformas (§7.5) |
 | Accesorios | Armario y tienda solo en el escritorio; los festivales siguen usando emoji | Armario en todos los clientes y accesorios de festival como prendas (§7.6) |

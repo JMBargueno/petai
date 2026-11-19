@@ -179,6 +179,7 @@
       seed={session.seed}
       durationSeconds={session.durationSeconds}
       variant={session.variant ?? (accessible ? 'easy' : 'standard')}
+      {pet}
       on:finish={onFinish}
       on:error={(e) => {
         back();

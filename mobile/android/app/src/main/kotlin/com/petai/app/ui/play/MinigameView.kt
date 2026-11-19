@@ -20,6 +20,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.webkit.WebViewAssetLoader
+import com.petai.app.data.Pet
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -29,9 +30,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 /** Versión del protocolo de minijuegos que entiende la app (`MINIGAME_PROTOCOL_VERSION`). */
-const val MINIGAME_PROTOCOL = 2
+const val MINIGAME_PROTOCOL = 3
 
 /** Eventos minijuego → app que usa la pantalla (el resto se ignora). */
 sealed interface MinigameEvent {
@@ -65,8 +67,10 @@ private const val MINIGAMES_URL = "${MINIGAMES_ORIGIN}index.html"
  * escritorio), en un WebView. El bundle va en los assets de la app (tarea Gradle
  * `syncPockaiMinigames`) y se sirve con [WebViewAssetLoader] desde un origen https local, sin red.
  *
- * Al anunciar `ready`, se le envía `start` con la semilla de la sesión. Cuando la app pasa a segundo
- * plano se pausa la partida; al volver, sigue.
+ * Al anunciar `ready`, se le envía `start` con la semilla de la sesión y la mascota que juega ([pet]:
+ * especie, etapa, color y patrón), que sale dentro del juego. Sus hojas no van en el bundle: el juego
+ * las pide a `/assets/species/…`, que son los assets compartidos de la app. Cuando la app pasa a
+ * segundo plano se pausa la partida; al volver, sigue.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -76,6 +80,7 @@ fun MinigameView(
     durationSeconds: Int,
     variant: String,
     modifier: Modifier = Modifier,
+    pet: Pet? = null,
     onEvent: (MinigameEvent) -> Unit,
 ) {
     val currentOnEvent by rememberUpdatedState(onEvent)
@@ -89,13 +94,26 @@ fun MinigameView(
         holder[0]?.evaluateJavascript("window.pockaiMinigame&&window.pockaiMinigame.receive($literal)", null)
     }
 
-    val startMessage = remember(gameId, seed, durationSeconds, variant) {
+    val startMessage = remember(gameId, seed, durationSeconds, variant, pet?.id, pet?.stage) {
         buildJsonObject {
             put("type", "start")
             put("gameId", gameId)
             put("seed", seed)
             put("durationSeconds", durationSeconds)
             put("variant", variant)
+            if (pet != null) {
+                putJsonObject("pet") {
+                    put("species", pet.species.id.ifEmpty { pet.species.spriteKey })
+                    put("stage", pet.stage)
+                    putJsonObject("palette") {
+                        put("primary", pet.palette.primary)
+                        put("secondary", pet.palette.secondary)
+                        put("accent", pet.palette.accent)
+                    }
+                    put("pattern", pet.pattern.id)
+                    put("visualSeed", pet.visualSeed)
+                }
+            }
         }.toString()
     }
 

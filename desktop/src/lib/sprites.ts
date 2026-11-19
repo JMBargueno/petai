@@ -165,6 +165,15 @@ const PATTERN_REGISTRY: Record<string, string> = Object.fromEntries(
   Object.entries(PATTERN_PNGS).map(([path, url]) => [path.split('/').pop()!.replace('.png', ''), url]),
 );
 
+/**
+ * URLs de la hoja de una mascota, sin hornear. Las usa `@pockai/minigames`, que pinta a la mascota
+ * dentro del juego con su propio horneado (el mismo algoritmo, en un canvas suelto).
+ */
+export function petSheetUrls(speciesId: string, stage?: string | null, patternId?: string | null) {
+  const spec = SPECIES_REGISTRY[sheetKey(speciesId, stage)];
+  return { base: spec.base, mask: spec.mask, anim: spec.anim, pattern: (patternId && PATTERN_REGISTRY[patternId]) || null };
+}
+
 // Fallbacks: nombres antiguos o que no existan en una hoja → animación existente
 export const ANIM_FALLBACKS: Record<string, string> = {
   sit: 'perch',

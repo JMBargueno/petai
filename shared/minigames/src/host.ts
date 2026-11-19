@@ -2,7 +2,8 @@ import { packLog } from './core/log';
 import { createRunner } from './core/runner';
 import type { GameVariant } from './core/types';
 import { TICKS_PER_SECOND } from './core/types';
-import type { MinigameEvent } from './protocol';
+import { createPetActor, type PetSheetResolver } from './pet';
+import type { MinigameEvent, MinigamePet } from './protocol';
 import { getMinigame } from './registry';
 import { ensureStyles } from './styles';
 import { button, el } from './views/types';
@@ -15,6 +16,10 @@ export interface MountOptions {
   reducedMotion?: boolean;
   /** Pausar solo al perder el foco u ocultar la ventana (por defecto, sí). */
   autoPause?: boolean;
+  /** La mascota del jugador; sin ella sale la especie por defecto. */
+  pet?: MinigamePet;
+  /** De dónde salen las hojas de la mascota. Sin él, el juego funciona sin mascota a la vista. */
+  resolvePetSheet?: PetSheetResolver;
   onEvent: (event: MinigameEvent) => void;
 }
 
@@ -51,6 +56,7 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
     variant: opts.variant ?? 'standard',
   });
   const view = entry.createView();
+  const pet = createPetActor(doc, opts.pet, opts.resolvePetSheet);
 
   const root = el('div', `pmg pmg--${entry.id}${opts.reducedMotion ? ' pmg--reduced' : ''}`);
   const hud = el('div', 'pmg-hud');
@@ -65,7 +71,7 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
   overlay.append(el('strong', '', 'En pausa'), resumeBtn);
   root.append(hud, stage);
   host.append(root);
-  view.mount(stage, { push: (i) => !paused && runner.push(i), reducedMotion: !!opts.reducedMotion }, runner.state);
+  view.mount(stage, { push: (i) => !paused && runner.push(i), reducedMotion: !!opts.reducedMotion, pet }, runner.state);
   stage.append(overlay);
 
   let raf = 0;
@@ -106,7 +112,10 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
 
   const frame = (ts: number) => {
     if (done || paused) return;
-    if (last) runner.advance(ts - last);
+    if (last) {
+      runner.advance(ts - last);
+      pet.advance(ts - last);
+    }
     last = ts;
     paint();
     if (runner.over()) return finish();
@@ -155,6 +164,7 @@ export function mountMinigame(host: HTMLElement, opts: MountOptions): MountedMin
         doc.removeEventListener('visibilitychange', onVisibility);
       }
       view.dispose();
+      pet.dispose();
       root.remove();
     },
   };

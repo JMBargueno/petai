@@ -1,0 +1,155 @@
+{
+  "scale": 2,
+  "backdrop": [680, 520],
+  "games": {
+    "catch_food": {
+      "backdrop": true,
+      "pieces": {
+        "catch_spark": {
+          "size": 32,
+          "colors": 4,
+          "box": [2, 2, 28, 28]
+        },
+        "static_dust": {
+          "size": 32,
+          "colors": 8,
+          "box": [2, 3, 28, 26]
+        },
+        "tide_halo": {
+          "size": 48,
+          "colors": 7,
+          "box": [2, 2, 44, 43]
+        }
+      }
+    },
+    "memory_match": {
+      "backdrop": false,
+      "pieces": {
+        "facet_back": {
+          "size": 48,
+          "colors": 8,
+          "box": [2, 1, 44, 46]
+        },
+        "facet_front": {
+          "size": 48,
+          "colors": 7,
+          "box": [2, 1, 44, 46]
+        }
+      }
+    },
+    "reflex": {
+      "backdrop": true,
+      "pieces": {
+        "codex": {
+          "size": 48,
+          "colors": 11,
+          "box": [6, 2, 36, 44]
+        },
+        "lure": {
+          "size": 48,
+          "colors": 6,
+          "box": [3, 2, 41, 44]
+        },
+        "ripple": {
+          "size": 32,
+          "colors": 5,
+          "box": [4, 2, 24, 28]
+        }
+      }
+    },
+    "pulso_voltaico": {
+      "backdrop": true,
+      "pieces": {
+        "node": {
+          "size": 32,
+          "colors": 6,
+          "box": [2, 3, 28, 26]
+        },
+        "pulse": {
+          "size": 32,
+          "colors": 8,
+          "box": [7, 2, 18, 28]
+        }
+      }
+    },
+    "corriente_datos": {
+      "backdrop": true,
+      "pieces": {
+        "block": {
+          "size": 32,
+          "colors": 6,
+          "box": [2, 2, 28, 27]
+        },
+        "packet": {
+          "size": 32,
+          "colors": 7,
+          "box": [2, 2, 27, 28]
+        }
+      }
+    },
+    "raiz_fractal": {
+      "backdrop": true,
+      "pieces": {
+        "bloom": {
+          "size": 32,
+          "colors": 8,
+          "box": [2, 2, 28, 27]
+        },
+        "seed": {
+          "size": 32,
+          "colors": 9,
+          "box": [7, 2, 18, 28]
+        }
+      }
+    },
+    "cifrado": {
+      "backdrop": true,
+      "pieces": {
+        "seal_electric": {
+          "size": 48,
+          "colors": 9,
+          "box": [2, 1, 43, 46]
+        },
+        "seal_fire": {
+          "size": 48,
+          "colors": 9,
+          "box": [1, 1, 45, 46]
+        },
+        "seal_light": {
+          "size": 48,
+          "colors": 8,
+          "box": [1, 1, 45, 46]
+        },
+        "seal_plant": {
+          "size": 48,
+          "colors": 10,
+          "box": [2, 1, 44, 46]
+        },
+        "seal_shadow": {
+          "size": 48,
+          "colors": 8,
+          "box": [1, 1, 45, 46]
+        },
+        "seal_water": {
+          "size": 48,
+          "colors": 8,
+          "box": [1, 1, 45, 46]
+        }
+      }
+    },
+    "faro_claridad": {
+      "backdrop": true,
+      "pieces": {
+        "corrupt_bit": {
+          "size": 32,
+          "colors": 7,
+          "box": [3, 2, 26, 28]
+        }
+      }
+    },
+    "forja_termica": {
+      "backdrop": true,
+      "pieces": {}
+    }
+  }
+}

@@ -5,8 +5,9 @@ clientes y por el servidor), **qué fallaba**, **cómo se valida una partida**, 
 tres juegos clásicos** y **seis juegos nuevos** ligados al lore de los elementos.
 
 Estado: **fases 1 y 3 hechas; fases 2 y 4, en parte** (Android con el embed, variantes accesibles,
-pausa y las seis Pruebas, sí; el Pockai dentro del juego, la Semilla del día, iOS y modding, no). El
-detalle está en la sección 8.
+pausa, las seis Pruebas, el Pockai dentro del juego y arte propio, sí; la Semilla del día, iOS y
+modding, no). El detalle está en la sección 8. Los juegos se diseñan con la skill
+`pockai-minigame-architect`; el brief de cada uno está en `docs/minijuegos/<id>.md`.
 
 ## 1. Punto de partida (análisis)
 
@@ -31,7 +32,7 @@ detalle está en la sección 8.
 | 5 | `listGames()` no devolvía `energyCost`; el aviso de energía del escritorio nunca salía | **Resuelto** |
 | 6 | `minigame:finished` no llevaba `gameId` | **Resuelto** |
 | 7 | El catálogo estaba en mapas a mano en cada cliente | **Resuelto**: registro único (`registry.ts`) |
-| 8 | Arte de emoji; el Pockai no aparece en sus juegos | Pendiente (§8) |
+| 8 | Arte de emoji; el Pockai no aparece en sus juegos | **Resuelto**: arte propio y la mascota del jugador dentro (§2.6) |
 | 9 | El servidor no podía verificar la partida, solo acotarla | **Resuelto**: repite la partida (§3) |
 | 10 | Las variantes accesibles no las usaba nadie | **Resuelto**: «Modo accesible» en escritorio y Android |
 
@@ -58,10 +59,9 @@ shared/minigames/
   src/bridge.ts, src/embed/       puente Android/iOS/iframe y entrada del bundle
 ```
 
-**Por qué vistas DOM y no PixiJS (todavía).** Conservan la accesibilidad (botones con
-`aria-label`, Tab + Enter, avisos `aria-live`) y el bundle se queda en ~15 KB comprimido. La lógica
-no sabe nada de la vista: cuando el Pockai entre en el juego se añade una vista PixiJS con
-`PetSprite` sin tocar reglas ni tests.
+**Por qué vistas DOM y no PixiJS.** Conservan la accesibilidad (botones con `aria-label`, Tab +
+Enter, avisos `aria-live`) y el bundle sigue siendo pequeño (~90 KB con el arte). La mascota no
+necesitó PixiJS: se hornea con `@pockai/scene/bake` en un canvas suelto (§2.6).
 
 ### 2.1 Determinismo
 
@@ -74,9 +74,9 @@ no sabe nada de la vista: cuando el Pockai entre en el juego se añade una vista
 - Las entradas continuas (posición del puntero) se funden por tick (`coalesce`) y se redondean, para
   que el registro sea pequeño: una partida de 45 s cabe en ~30 KB de JSON.
 
-### 2.2 Protocolo del embed (v2)
+### 2.2 Protocolo del embed (v3)
 
-Anfitrión → juego: `start { gameId, seed, durationSeconds, variant?, reducedMotion? }`, `pause`,
+Anfitrión → juego: `start { gameId, seed, durationSeconds, variant?, reducedMotion?, pet? }`, `pause`,
 `resume`, `dispose`.
 Juego → anfitrión: `ready { protocol }`, `score { score }`, `paused { paused }`,
 `finished { gameId, score, ticks, log }`, `error { message }`.
@@ -108,6 +108,17 @@ score(t) ≤ maxScorePerSecond × max(t, minDurationSeconds)
 
 Un cambio de reglas que rompa el techo falla en CI (job de escritorio).
 
+### 2.6 La mascota dentro del juego y el arte
+
+- `start.pet` (v3, opcional): `{ species, stage?, palette?, pattern?, visualSeed? }`. Sin él sale la
+  especie por defecto, así un anfitrión antiguo sigue jugando.
+- `src/pet.ts` hornea la hoja y la anima; la vista la recibe en `ctx.pet` (`play`, `face`). **La
+  lógica no recibe la mascota**: no cambia reglas ni puntuación, y el servidor repite la partida sin ella.
+- Las hojas no van en el bundle: el escritorio pasa un `resolvePetSheet` con su registro y el embed
+  las pide a `../species/…` (los assets compartidos de la app en Android).
+- El arte de cada juego (piezas y fondo) está en `shared/assets/minigames/<id>/`
+  (`docs/ART_PIPELINE.md` §11).
+
 ## 3. Validación en el servidor (fase 3)
 
 1. `POST /minigames/:id/start { petId, variant? }`: el servidor guarda la **variante** en la sesión
@@ -138,12 +149,13 @@ arranca de otra forma (p. ej. `ts-node src/main.ts`) tras cambiar un juego, hay 
 
 | Juego | Duración | Regla | Techo | Variante accesible |
 |---|---|---|---|---|
-| `catch_food` | 45 s (mín. 20) | 1 objeto cada 0,55 s, 20 % piedras (−1, mínimo 0), comida +1 | ≤ 1,82 pt/s < 3 | caída a la mitad, zona de captura ×3 |
-| `memory_match` | 90 s (mín. 8) | 8 parejas × 2 + bonus (≤ 8) − fallos/3 | máx. 24 ≤ 3 × 8 | 4 parejas; brilla la pareja de la carta destapada |
-| `reflex` | 30 s (mín. 10) | objetivo cada 1,0–1,4 s, dura 0,9 s; 2 pt si < 0,4 s, si no 1 | ≤ 2 pt/s | el objetivo espera; 1 pt siempre |
+| `catch_food` Cosecha del Éter | 45 s (mín. 20) | El Pockai recoge frutos de los Flujos: +1, +2 si es de la marea (cambia cada 15 s), +1 cada 5 seguidos; el polvo estático rompe la racha y lo deja 0,75 s sin recoger | ≤ 2,8 pt/s < 3 | caída a la mitad, zona de recogida ×3 |
+| `memory_match` Cristal de Recuerdos | 90 s (mín. 8) | Destello inicial de 2 s; 8 parejas × 2 + bonus (≤ 8) − fallos/3 | máx. 24 ≤ 3 × 8 | 4 parejas, destello de 3 s; brilla la pareja de la faceta destapada |
+| `reflex` Pesca de Códices | 30 s (mín. 10) | Aflora algo cada 1,0–1,4 s, dura 0,9 s; Códice: 2 pt si < 0,4 s, si no 1; 1 de cada 5 es un señuelo que enreda el sedal 1 s | ≤ 2 pt/s | el Códice espera; 1 pt siempre; sin señuelos |
 
-Mejoras ya hechas: táctil en todo, glifos de los seis elementos en Parejas, tiempo medio de reacción
-en Reflejos, pausa, variante accesible.
+Los tres se rediseñaron con lore, arte propio y la mascota dentro; el detalle de cada uno y la cuenta
+de su techo están en `docs/minijuegos/<id>.md`. La Cosecha suelta una Manzana Crujiente (40 % con 75
+puntos o más). Las seis Pruebas conservan sus reglas y estrenan arte y mascota.
 
 ## 5. Las Pruebas de los Seis Flujos
 
@@ -187,7 +199,7 @@ Controles: todas admiten ratón, teclado y táctil (carriles con J K L / flechas
 | Fase | Contenido | Hecho | Pendiente |
 |---|---|---|---|
 | 1 | Paquete compartido con los 3 juegos; escritorio conectado; `energyCost`; `gameId` en el evento; techo de Parejas; validación de variantes | Todo | — |
-| 2 | Android con el embed; mejoras de §4 | Android usa el embed (`MiniGames.kt` eliminado); variantes accesibles conectadas; pausa con límite; glifos de elementos en Parejas; reacción media en Reflejos | El Pockai dentro del juego (vista PixiJS con `PetSprite`); comida en pixel art; récord personal y desglose; misiones y logros por juego (el evento ya lleva `gameId`); sonido y vibración; en Atrapa la comida: dificultad creciente, rachas, comida favorita y «glitch»; en Reflejos: señuelos y dos objetivos |
+| 2 | Android con el embed; mejoras de §4 | Android usa el embed (`MiniGames.kt` eliminado); variantes accesibles conectadas; pausa con límite; glifos de elementos en Parejas; reacción media en Reflejos | Récord personal y desglose; misiones y logros por juego (el evento ya lleva `gameId`); sonido y vibración; dos objetivos a la vez en Pesca de Códices; el fondo de Cristal de Recuerdos y las piezas de Forja Térmica (prompts listos, sin generar) |
 | 3 | Validación por repetición en el servidor | Variante en la sesión, registro empaquetado, repetición y comparación; obligatoria en las Pruebas | Activar `requireReplay` para los clásicos cuando no queden clientes antiguos |
 | 4 | Pruebas, Semilla del día, iOS, modding | Las seis Pruebas con afinidad y premio de la Forja, en escritorio y Android | Semilla del día con clasificación; iOS (no hay app); minijuegos de modding sobre `GameDefinition`; ecos en Cifrado |
 

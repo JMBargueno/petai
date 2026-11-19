@@ -5,6 +5,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -52,6 +53,7 @@ import com.petai.app.ui.pet.PetScreen
 import com.petai.app.ui.play.PlayScreen
 import com.petai.app.ui.play.PlayViewModel
 import com.petai.app.ui.play.PlayViewModelFactory
+import com.petai.app.ui.adventure.AdventureScreen
 import com.petai.app.ui.raid.RaidScreen
 import com.petai.app.ui.shop.ShopScreen
 import com.petai.app.ui.theme.BalanceHeader
@@ -63,12 +65,12 @@ import com.petai.app.ui.tournament.TournamentScreen
 
 /**
  * Cinco destinos de primer nivel (docs/PANTALLAS.md §3.1) con sub-pestañas:
- * Mascota (Inicio, Hábitat) · Jugar (Arena, Minijuegos, Raid, Torneo) · Chat · Progreso (Misiones) ·
+ * Mascota (Inicio, Hábitat) · Jugar (Arena, Minijuegos, Raid, Torneo, Aventura) · Chat · Progreso (Misiones) ·
  * Más (Tienda, Cofres, Amigos, Cuenta).
  */
 private enum class Dest(val label: String, val icon: ImageVector, val subs: List<String>) {
     Pet("Mascota", Lucide.PawPrint, listOf("Inicio", "Hábitat")),
-    Play("Jugar", Lucide.Gamepad2, listOf("Arena", "Minijuegos", "Raid", "Torneo")),
+    Play("Jugar", Lucide.Gamepad2, listOf("Arena", "Minijuegos", "Raid", "Torneo", "Aventura")),
     Chat("Chat", Lucide.MessageCircle, emptyList()),
     Progress("Progreso", Lucide.Trophy, emptyList()),
     More("Más", Lucide.Ellipsis, listOf("Tienda", "Cofres", "Amigos", "Clan", "Cuenta")),
@@ -139,6 +141,12 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
     val subStates = Dest.entries.map { d -> rememberSaveable(d.name) { mutableIntStateOf(0) } }
     val sub = subStates[dest.ordinal].intValue
     val app = LocalContext.current.applicationContext as PetAiApp
+    // Modo «solo hábitat»: la sala a pantalla completa, sin cabecera, navegación ni sub-pestañas.
+    // Solo vale en Mascota › Hábitat con mascota; cualquier otro sitio lo apaga.
+    var habitatSolo by rememberSaveable { mutableStateOf(false) }
+    val onHabitat = dest == Dest.Pet && sub == 1 && state.pet != null
+    LaunchedEffect(onHabitat) { if (!onHabitat) habitatSolo = false }
+    val solo = habitatSolo && onHabitat
 
     fun go(d: Dest, s: Int = 0) {
         dest = d
@@ -149,7 +157,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            BalanceHeader(
+            if (!solo) BalanceHeader(
                 coins = state.user?.coins ?: 0,
                 gems = state.user?.gems ?: 0,
                 onShop = { go(Dest.More, 0) },
@@ -157,7 +165,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
             )
         },
         bottomBar = {
-            NavigationBar(
+            if (!solo) NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
                 modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
@@ -177,8 +185,8 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
             }
         },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
-            if (dest.subs.isNotEmpty()) {
+        Column(Modifier.padding(if (solo) PaddingValues(0.dp) else padding).fillMaxSize()) {
+            if (dest.subs.isNotEmpty() && !solo) {
                 SubTabs(dest.subs, sub, { subStates[dest.ordinal].intValue = it })
             }
             Box(Modifier.weight(1f).fillMaxSize()) {
@@ -204,7 +212,14 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                             onBuyEgg = vm::buyEgg,
                             onGoToShop = { go(Dest.More, 0) },
                         )
-                        else -> if (pet == null) noPet() else HabitatScreen(app.service, app.realtime, pet = pet, onChanged = { vm.refreshAll() })
+                        else -> if (pet == null) noPet() else HabitatScreen(
+                            app.service,
+                            app.realtime,
+                            pet = pet,
+                            onChanged = { vm.refreshAll() },
+                            solo = solo,
+                            onSoloChange = { habitatSolo = it },
+                        )
                     }
                     Dest.Play ->
                         if (pet == null) noPet() else when (sub) {
@@ -214,10 +229,11 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                                     factory = PlayViewModelFactory(app.service, pet.id) { vm.refreshAll() },
                                 )
                                 LaunchedEffect(Unit) { play.refresh() }
-                                PlayScreen(play, section = sub)
+                                PlayScreen(play, section = sub, pet = pet)
                             }
                             2 -> RaidScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
-                            else -> TournamentScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
+                            3 -> TournamentScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
+                            else -> AdventureScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
                         }
                     Dest.Chat ->
                         if (pet == null) noPet() else {

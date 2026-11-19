@@ -28,9 +28,9 @@ export interface MinigameEntry {
 }
 
 const UI: Record<string, Omit<MinigameEntry, 'id' | 'definition'>> = {
-  catch_food: { createView: createCatchFoodView, icon: 'apple', howTo: 'Mueve la cesta con el ratón, el dedo o las flechas ← → y atrapa la comida.' },
-  memory_match: { createView: createMemoryMatchView, icon: 'cards', howTo: 'Destapa dos cartas iguales. Puedes usar Tab y Enter.' },
-  reflex: { createView: createReflexView, icon: 'target', howTo: 'Pulsa el objetivo en cuanto aparezca, con el ratón, tocándolo o con Espacio.' },
+  catch_food: { createView: createCatchFoodView, icon: 'apple', howTo: 'Lleva a tu Pockai bajo los frutos con el ratón, el dedo o las flechas ← →. Los de la marea valen doble.' },
+  memory_match: { createView: createMemoryMatchView, icon: 'cards', howTo: 'Mira el destello del Cristal y empareja las facetas iguales. Puedes usar Tab y Enter.' },
+  reflex: { createView: createReflexView, icon: 'target', howTo: 'Pesca el Códice en cuanto aflore (clic, toque o Espacio) y deja pasar los que están rotos.' },
   pulso_voltaico: { createView: createPulsoVoltaicoView, icon: 'energy', howTo: 'Pulsa el carril (J K L) cuando el pulso cruce la línea de sinapsis.' },
   corriente_datos: { createView: createCorrienteDatosView, icon: 'water', howTo: 'Cambia de carril (← →) para recoger paquetes y esquivar bloques corruptos.' },
   raiz_fractal: { createView: createRaizFractalView, icon: 'leaf', howTo: 'Gira las raíces para llevar la savia de la semilla al borde derecho.' },
