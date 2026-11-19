@@ -901,5 +901,42 @@ tres capas, las mismas de la sección 7:
     (identidad, especie, reglas y herramientas) y después nivel, carácter, vínculo, habilidades,
     ánimo, estadísticas, entorno, hora y la pista del turno. La hora deja de ir dentro de la regla
     de herramientas. Los recuerdos y el lore se siguen añadiendo al final.
-- **Pendiente.** Lote 5 (diálogo por datos).
+- **Fase 8 — lote 5 (hecho): diálogo por datos, sin LLM.**
+  - **5.1 Formato.** `shared/game-data/dialogues.json` (conversaciones con `start`, `vars` y
+    `nodes`) y `shared/game-data/strings/es.json` y `en.json` (ID de línea → texto). Variantes
+    por carácter con `ID@<palabra clave de banda>`; alternativas con `ID_1`, `ID_2`.
+    Interpolación solo de `{pet}`, `{friend}`, `{visitor}`, `{owner}`, `{item}`, `{hint}`,
+    `{mood}` y `{story}`, saneados (`mind/strings.ts`). Un nodo es una línea, un conjunto de
+    opciones, un salto o el final. Sobre la spec, dos precisiones: una línea indica por dónde
+    sigue (`next` o `end`) y un salto puede ser una lista de transiciones con `if`, que es lo
+    mínimo para bifurcar sin opciones.
+  - **5.2 Intérprete.** `mind/dialogue.engine.ts` (puro): `start`, `choose` y `evaluate`.
+    Las expresiones son de lista blanca: números, booleanos, cadenas, variables declaradas,
+    comparaciones, `and`/`or`/`not`, suma, resta y paréntesis. No hay llamadas, propiedades ni
+    índices. Devuelve líneas, opciones visibles y comandos; no escribe ni emite nada.
+  - **5.3 Estado.** La posición vive en el servidor (Redis, por visita); el cliente envía el
+    índice de la opción entre las visibles. Los efectos van en la transición: un nodo al que se
+    vuelve no cobra otra vez.
+  - **5.4 Comandos.** Catálogo cerrado: `behavior`, `feel`, `remember`, `take_item` y
+    `wish_done`. Hoy el grafo de visita usa los cuatro primeros.
+  - **5.5 Validación.** `scripts/lib/validate-dialogues.js`, enganchada en `pnpm validate:data`:
+    destinos que no existen, nodos sin salida o inalcanzables, variables no declaradas,
+    expresiones no permitidas, líneas sin texto en algún idioma, comandos fuera de catálogo,
+    bucles de saltos sin opciones, interpolaciones no permitidas y variantes de un carácter que
+    no existe. Tiene su propio analizador de expresiones (el script es JS y el motor, TS); un
+    test comprueba que los dos aceptan y rechazan lo mismo. Otro recorre todos los caminos de
+    cada conversación.
+  - **5.6 Migración.** Las frases de `TEXTS` (vida autónoma), `EPISODES` (chat), `PROMPT_HINT`
+    (reacciones) y las notas de buddies salen de `strings`, con el castellano idéntico. Un test
+    comprueba que no queda ninguna literal en esos cuatro archivos.
+  - **El menú de visita, sobre el grafo.** `visitor.engine.ts` pasa a ser un adaptador: situación
+    → variables, líneas → texto con la variante del carácter, comandos → reacción validada y
+    efecto acotado. La API hacia `VisitDialogService` no cambia. Cuánto mejora la relación
+    cada opción lo dice ahora el grafo (`feel`), no `balance.json` (`social.visitor.deltas`
+    desaparece).
+  - **Sin hacer aquí:** los textos de las escenas entre Pockai (`social.engine.ts`), deseos y
+    trucos siguen en código; los recuerdos se guardan siempre en castellano (falta pasar el
+    idioma del dueño, `UserSettings.language`); `wish_done` no tiene quien lo use; los textos
+    no se recargan en caliente.
+- **Pendiente.** Nada de los seis lotes. Quedan los cabos sueltos anotados en cada fase.
 

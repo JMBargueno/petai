@@ -1,3 +1,4 @@
+import { text } from './strings';
 /**
  * Conversation Engine (spec 36) — interpretación previa al LLM, sin coste.
  *
@@ -95,15 +96,21 @@ const SENTIMENT: Record<Intent, number> = {
   teach: 0.3,
 };
 
-const EPISODES: Partial<Record<Intent, { content: string; importance: number; valence: number }>> = {
-  sad_day: { content: 'Mi entrenador me contó que estaba teniendo un mal día y estuve a su lado.', importance: 0.65, valence: -0.2 },
-  good_news: { content: 'Mi entrenador me contó una buena noticia y lo celebramos juntos.', importance: 0.6, valence: 0.6 },
-  affection: { content: 'Mi entrenador me dijo que me quiere.', importance: 0.55, valence: 0.8 },
-  scold: { content: 'Mi entrenador me regañó y me sentí mal.', importance: 0.5, valence: -0.6 },
-  praise: { content: 'Mi entrenador me felicitó por lo que había hecho.', importance: 0.5, valence: 0.7 },
-  apology: { content: 'Mi entrenador me pidió perdón y me sentí mejor.', importance: 0.5, valence: 0.5 },
-  gift: { content: 'Mi entrenador me dijo que me traía algo.', importance: 0.45, valence: 0.6 },
+const EPISODES: Partial<Record<Intent, { line: string; importance: number; valence: number }>> = {
+  sad_day: { line: 'EP_SAD_DAY', importance: 0.65, valence: -0.2 },
+  good_news: { line: 'EP_GOOD_NEWS', importance: 0.6, valence: 0.6 },
+  affection: { line: 'EP_AFFECTION', importance: 0.55, valence: 0.8 },
+  scold: { line: 'EP_SCOLD', importance: 0.5, valence: -0.6 },
+  praise: { line: 'EP_PRAISE', importance: 0.5, valence: 0.7 },
+  apology: { line: 'EP_APOLOGY', importance: 0.5, valence: 0.5 },
+  gift: { line: 'EP_GIFT', importance: 0.45, valence: 0.6 },
 };
+
+/** Episodio de plantilla de una intención, con el texto ya resuelto (los recuerdos guardan texto). */
+function episodeOf(intent: Intent): Interpretation['episode'] {
+  const ep = EPISODES[intent];
+  return ep ? { content: text(ep.line), importance: ep.importance, valence: ep.valence } : null;
+}
 
 const EVOLUTION: Partial<Record<Intent, string>> = {
   sad_day: 'talk_comfort',
@@ -162,7 +169,7 @@ export function interpretMessage(text: string): Interpretation {
     intent,
     ...(mentioned ? { mentioned } : {}),
     sentiment: SENTIMENT[intent],
-    episode: EPISODES[intent] ?? null,
+    episode: episodeOf(intent),
     evolutionEvent: EVOLUTION[intent],
   };
 }

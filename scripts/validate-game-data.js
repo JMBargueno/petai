@@ -270,9 +270,18 @@ if (pers) {
       if (!(Number.isInteger(vi.dailyEffects) && vi.dailyEffects >= 0 && vi.dailyEffects <= vi.maxPerVisit)) throw new Error(`${at}.dailyEffects debe ser un entero en [0, maxPerVisit]`);
       for (const k of ['shyBelow', 'aloofBelow', 'minEnergyToPlay']) if (!(vi[k] >= 0 && vi[k] <= 100)) throw new Error(`${at}.${k} debe estar en [0, 100]`);
       if (!(vi.treat?.happiness >= 0 && vi.treat.happiness <= 10 && vi.treat?.hunger >= 0 && vi.treat.hunger <= 15)) throw new Error(`${at}.treat fuera de rango`);
-      for (const [k, v] of Object.entries(vi.deltas ?? {})) {
-        // Sin opciones negativas: un visitante no puede empeorar la relación
-        if (!OPTS.includes(k) || !(typeof v === 'number' && v >= 0 && v <= 0.15)) throw new Error(`${at}.deltas.${k} inválido (0 a 0,15)`);
+      // Cuánto mejora la relación cada opción lo dice el grafo (dialogues.json → visit, comando
+      // `feel`). Sin opciones negativas: un visitante no puede empeorar la relación con un Pockai ajeno.
+      if (vi.deltas !== undefined) throw new Error(`${at}.deltas ya no se usa: los efectos van en dialogues.json`);
+      const visit = readJson('shared/game-data/dialogues.json').conversations?.visit;
+      for (const node of Object.values(visit?.nodes ?? {})) {
+        for (const t of [...(node.choices ?? []), ...(Array.isArray(node.next) ? node.next : [])]) {
+          for (const cmd of t.cmd ?? []) {
+            if (cmd.startsWith('feel:') && !(Number(cmd.slice(5)) >= 0 && Number(cmd.slice(5)) <= 0.15)) {
+              throw new Error(`dialogues.json › visit: «${cmd}» debe estar entre 0 y 0,15 (un visitante no puede empeorar la relación)`);
+            }
+          }
+        }
       }
       // La deriva que provoca un tercero es, como mucho, la mitad de la del propio entrenador
       const owner = { greet: 'chat', pet: 'chat', ask: 'chat', treat: 'fed', play: 'minigame' };
@@ -627,6 +636,28 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
   }
   if (seedIds.size < bucket.storiesPerDay) throw new Error(`story-seeds.json: hacen falta al menos ${bucket.storiesPerDay} semillas`);
   console.log(`✓ aventura diaria: ${layerSlot.size} capas, ${locationIds.size} localizaciones y ${seedIds.size} semillas validadas`);
+}
+
+// 4z. Diálogos por datos y textos (spec 37, lote 5)
+{
+  const { validateDialogues } = require('./lib/validate-dialogues');
+  const stringsDir = path.resolve(__dirname, '..', 'shared/game-data/strings');
+  const strings = {};
+  for (const file of fs.readdirSync(stringsDir).filter((f) => f.endsWith('.json')).sort((x, y) => (x === 'es.json' ? -1 : y === 'es.json' ? 1 : x.localeCompare(y)))) {
+    strings[file.replace(/\.json$/, '')] = readJson(`shared/game-data/strings/${file}`);
+  }
+  const pers = balance.personality ?? {};
+  const errors = validateDialogues({
+    dialogues: readJson('shared/game-data/dialogues.json'),
+    strings,
+    keywords: Object.values(pers.dimensions ?? {}).flatMap((d) => (d.bands ?? []).map((band) => band.keyword)),
+    behaviors: Object.keys(pers.behavior?.catalog ?? {}),
+    wishes: Object.keys(pers.wishes?.catalog ?? {}),
+    // Los mismos nombres que acepta backend/src/modules/mind/strings.ts
+    placeholders: ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story'],
+  });
+  if (errors.length) throw new Error(`Diálogos o textos inválidos:\n  - ${errors.join('\n  - ')}`);
+  console.log(`✓ diálogos: ${Object.keys(readJson('shared/game-data/dialogues.json').conversations).length} conversación(es) y ${Object.keys(strings.es ?? {}).length} textos en ${Object.keys(strings).join(', ')} validados`);
 }
 
 // 5. Validar existencia de sprites base

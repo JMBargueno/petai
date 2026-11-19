@@ -721,8 +721,7 @@
         "shyBelow": 35,
         "aloofBelow": 35,
         "minEnergyToPlay": 25,
-        "treat": { "happiness": 3, "hunger": 5 },
-        "deltas": { "greet": 0.04, "pet": 0.06, "treat": 0.1, "play": 0.08, "ask": 0.03 }
+        "treat": { "happiness": 3, "hunger": 5 }
       }
     },
     "room": {
