@@ -26,6 +26,8 @@ for (const [file, url] of Object.entries(ITEM_FILES)) {
 export const pieceUrl = (gameId: string, piece: string): string | undefined => byGame[gameId]?.[piece];
 /** URL del fondo de arena del juego (`backdrop.webp`), o `undefined`. */
 export const backdropUrl = (gameId: string): string | undefined => byGame[gameId]?.backdrop;
+/** URL del icono de tarjeta del juego (`icon.png`, 32 px nativos a ×2), o `undefined` si aún no tiene. */
+export const iconUrl = (gameId: string): string | undefined => byGame[gameId]?.icon;
 /** URL del icono de un objeto de `foods.json`, o `undefined`. */
 export const itemUrl = (itemId: string): string | undefined => items[itemId];
 

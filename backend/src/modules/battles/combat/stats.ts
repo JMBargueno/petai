@@ -23,6 +23,20 @@ export function effectiveStats(pet: {
   return out;
 }
 
+/**
+ * Suma los buffs temporales (comida de la Cocina, spec 15) a las stats, cada uno con tope
+ * `capPct` de la stat sin buff: un buff de +8 a una stat de 30 con tope 0.15 se queda en +5.
+ */
+export function applyStatBuffs(stats: Stats, buffs: Partial<Stats> | undefined, capPct: number): Stats {
+  if (!buffs) return stats;
+  const out = { ...stats };
+  for (const k of STAT_KEYS) {
+    const b = Math.max(0, Math.floor(Number(buffs[k]) || 0));
+    if (b > 0) out[k] = stats[k] + Math.min(b, Math.max(1, Math.round(stats[k] * capPct)));
+  }
+  return out;
+}
+
 export function allocatedPoints(pet: { combatStats: any }): Stats {
   const allocated = pet.combatStats?.allocated ?? {};
   const out = {} as Stats;

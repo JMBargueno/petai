@@ -5738,6 +5738,10 @@
                   "petId": {
                     "type": "string",
                     "description": "Pet que cocina"
+                  },
+                  "recipeId": {
+                    "type": "string",
+                    "description": "Receta a cocinar. Si falta, el menú del día"
                   }
                 }
               }
@@ -5794,6 +5798,13 @@
                       "type": "string"
                     },
                     "description": "Ingredientes echados a la olla, en orden. Si se envía, el servidor cuenta los aciertos y no usa score ni correctOrder"
+                  },
+                  "pickedAt": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Ms desde que empezó a cocinar en que se echó cada ingrediente de picked (olla caliente)"
                   }
                 }
               }
@@ -5816,6 +5827,64 @@
         ]
       }
     },
+    "/v1/cooking/recipes": {
+      "get": {
+        "operationId": "CookingController_recipes",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recetario: recetas, si se pueden cocinar con la mascota y la mejor nota",
+        "tags": [
+          "Cooking"
+        ]
+      }
+    },
+    "/v1/cooking/buffs": {
+      "get": {
+        "operationId": "CookingController_buffs",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Buffs de comida activos de una mascota",
+        "tags": [
+          "Cooking"
+        ]
+      }
+    },
     "/v1/cooking/daily-menu": {
       "get": {
         "operationId": "CookingController_dailyMenu",
@@ -5830,7 +5899,7 @@
             "bearer": []
           }
         ],
-        "summary": "Receta especial del día (determinista por fecha)",
+        "summary": "Menú del día: una receta propia por día de la semana (UTC), con el buff ×1.5",
         "tags": [
           "Cooking"
         ]

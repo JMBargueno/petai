@@ -14,10 +14,11 @@ Las rutas son relativas a la raíz del repo.
 
 ## Vista
 7. `shared/minigames/src/views/<id>View.ts` (`minigame-contract.md`, `pockai-in-game.md`). Sin emoji.
-8. `shared/minigames/src/registry.ts`: `createView`, `icon` (un nombre que exista en `desktop/src/components/Ico.svelte`) y `howTo`.
+8. `shared/minigames/src/registry.ts`: `createView`, `icon` (un nombre que exista en `desktop/src/components/Ico.svelte`; es solo el respaldo mientras no haya `icon.png`) y `howTo`.
 9. Sonido: añade los ids del juego a `MG` en `shared/minigames/src/sound.ts` y a `shared/game-data/sounds.json` (`mg.<id>.<sonido>`, con su `prompt` en inglés; `source: "synth"` y receta en `shared/audio/src/synth.ts` si tiene que ir exacto al tempo o seguir una escala). Un test exige que coincidan. Generar los ficheros es aparte y cuesta dinero (`pnpm sfx:generate --only mg`, spec 40).
 9b. Estilos en `shared/minigames/src/styles.ts`, con prefijo `pmg-` y una clase de arena propia (`pmg-arena--<algo>`).
-10. Android lleva su propio mapa de iconos y pistas por juego (`mobile/android/.../ui/play/PlayScreen.kt`): añade el juego ahí o dilo al cerrar.
+10. Icono de tarjeta: `shared/assets/minigames/<id>/icon.png` (32 px nativos, ver `nano-banana-minigames.md` y ART_PIPELINE §11). Escritorio y Android lo cogen solos.
+10b. Android lleva su propio mapa de iconos de respaldo y pistas por juego (`mobile/android/.../ui/play/PlayScreen.kt`): añade el juego ahí o dilo al cerrar.
 
 ## Brief y arte
 11. `docs/minijuegos/<id>.md` con la plantilla de `pixel-minigame-brief.md`.

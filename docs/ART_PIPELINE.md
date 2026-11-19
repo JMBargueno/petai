@@ -358,11 +358,12 @@ Se diseña con la skill `pockai-minigame-architect`. Cada minijuego lleva un **f
 | Qué | Formato | Cómo llega |
 |---|---|---|
 | Piezas | PNG de 32×32 o 48×48 px nativos, guardado a ×2, 12 colores como mucho, sin transparencias parciales | Lámina de Nano Banana → `scripts/sprites/items/import.mjs --free-ids --out shared/assets/minigames/<id>` |
+| Icono de tarjeta | `icon.png`: una pieza más, de 32×32 px nativos a ×2. Un emblema compacto del juego (su pieza protagonista), no el icono del elemento | Lámina de Nano Banana con 3 iconos → `import.mjs --ids icon --pick <n> --free-ids --out shared/assets/minigames/<id>` (o `--crop` para quitar un sobrante) |
 | Fondo | `backdrop.webp` de 680×520 (el doble de la arena de 340×260), sin transparencia | Nano Banana → `scripts/sprites/minigames/backdrop.mjs <png> <id>` |
 | Manifiesto | `shared/assets/minigames/manifest.json` | `pnpm generate:minigames` (comprueba la norma) |
 | Hoja de contactos | `sprite-previews/minigames-contact.png` | `pnpm generate:minigames --preview` |
 
-**Clientes.** Las vistas piden el arte por nombre (`shared/minigames/src/assets.ts`: `pieceUrl`, `backdropUrl`, `itemUrl`). El escritorio lo sirve desde su bundle; el embed lo empaqueta en `dist/embed`, así que Android lo recibe con `syncPockaiMinigames`. Una pieza sin archivo se pinta como un recuadro de color: el juego funciona y se nota que falta.
+**Clientes.** Las vistas piden el arte por nombre (`shared/minigames/src/assets.ts`: `pieceUrl`, `backdropUrl`, `iconUrl`, `itemUrl`). El escritorio lo sirve desde su bundle; el embed lo empaqueta en `dist/embed`, así que Android lo recibe con `syncPockaiMinigames`. Una pieza sin archivo se pinta como un recuadro de color: el juego funciona y se nota que falta. El icono de tarjeta lo pintan la lista de Minijuegos del escritorio (`iconUrl`) y la de Android (`MinigameIcon`, que lee `minigames/<id>/icon.png` de los assets compartidos del APK); sin él, cada uno cae a su icono Lucide.
 
 **La mascota dentro del juego.** El anfitrión manda la mascota en `start` (protocolo v3, campo `pet`: especie, etapa, paleta, patrón y semilla visual) y `shared/minigames/src/pet.ts` la hornea con `@pockai/scene/bake` en un canvas. Las hojas no van en el bundle de minijuegos: el escritorio las resuelve con su registro y el embed las pide a `../species/…`, que en Android son los assets compartidos de la app. Todo va a la misma densidad: un píxel nativo mide lo mismo en la mascota (64 px) que en una pieza.
 

@@ -1174,12 +1174,22 @@ export const api = {
   async cookingDailyMenu() {
     return minigameRequest<CookingDailyMenu>('GET', '/v1/cooking/daily-menu');
   },
-  async cookingStart(petId: string) {
-    return minigameRequest<CookingStart>('POST', '/v1/cooking/start', { petId });
+  async cookingRecipes(petId: string) {
+    return minigameRequest<CookingRecipe[]>('GET', `/v1/cooking/recipes?petId=${encodeURIComponent(petId)}`);
   },
-  /** `picked`: lo que se echó a la olla, en orden. Con él, el servidor cuenta los aciertos por su cuenta. */
-  async cookingSubmit(sessionId: string, score: number, correctOrder: boolean, picked?: string[]) {
-    return minigameRequest<CookingSubmit>('POST', '/v1/cooking/submit', { sessionId, score, correctOrder, picked });
+  async cookingBuffs(petId: string) {
+    return minigameRequest<CookingBuff[]>('GET', `/v1/cooking/buffs?petId=${encodeURIComponent(petId)}`);
+  },
+  /** Sin `recipeId` se cocina el menú del día. */
+  async cookingStart(petId: string, recipeId?: string) {
+    return minigameRequest<CookingStart>('POST', '/v1/cooking/start', { petId, recipeId });
+  },
+  /**
+   * `picked`: lo que se echó a la olla, en orden. Con él, el servidor cuenta los aciertos por su cuenta.
+   * `pickedAt`: ms desde que empezó a cocinar en que cayó cada uno (para la olla caliente).
+   */
+  async cookingSubmit(sessionId: string, score: number, correctOrder: boolean, picked?: string[], pickedAt?: number[]) {
+    return minigameRequest<CookingSubmit>('POST', '/v1/cooking/submit', { sessionId, score, correctOrder, picked, pickedAt });
   },
 
   // ── Aventura diaria (historias de decisión) ──────────────────────────────────
@@ -1260,21 +1270,63 @@ export interface TrainingBuff {
 }
 
 // ── Cocina ────────────────────────────────────────────────────────────────────
+/** `all`: el mismo valor a ataque, defensa, especial y velocidad (los menús del día). */
+export type CookingBuffStat = 'atk' | 'def' | 'esp' | 'vel' | 'all';
+
 export interface CookingDailyMenu {
   date: string;
   recipeId: string;
   recipeName: string;
+  description: string | null;
+  weekday: number;
   difficulty: number;
   ingredients: string[];
-  buff: { stat: string; value: number };
+  /** Ya multiplicado por el bonus del día. */
+  buff: { stat: CookingBuffStat; value: number };
   bonus: string;
+  nextReset: string;
+}
+
+export interface CookingRecipe {
+  id: string;
+  name: string;
+  description: string | null;
+  difficulty: number;
+  unlockLevel: number;
+  dailyMenu: boolean;
+  /** Día de la semana del menú (UTC, 0 = domingo); null en las recetas normales. */
+  weekday: number | null;
+  /** Es el menú de hoy. */
+  today: boolean;
+  /** Se puede cocinar ya (nivel alcanzado, o es el menú de hoy). */
+  available: boolean;
+  /** null si aún no se puede cocinar: no se enseñan. */
+  ingredients: string[] | null;
+  buff: { stat: CookingBuffStat; value: number };
+  /** Mejor número de aciertos del usuario, o null si nunca la cocinó. */
+  best: number | null;
+  perfect: boolean;
+}
+
+export interface CookingBuff {
+  stat: 'atk' | 'def' | 'esp' | 'vel';
+  value: number;
+  source: string;
+  sourceId: string | null;
+  expiresAt: string;
 }
 
 export interface CookingStart {
   sessionId: string;
   recipeId: string;
   recipeName: string;
+  recipeDescription: string | null;
   difficulty: number;
+  isDailyMenu: boolean;
+  /** Cada cuánto dicta el Pockai un ingrediente (más rápido cuanto más difícil). */
+  revealMs: number;
+  /** En las posiciones de `hotPotPositions` (de la receta) el ingrediente tiene que caer antes de esto desde el anterior. */
+  hotPotWindowMs: number;
   /** Orden correcto de la receta. */
   ingredients: string[];
   /** Lo que hay en la encimera: los ingredientes de la receta y unos señuelos, barajados. */
@@ -1287,10 +1339,14 @@ export interface CookingStart {
 
 export interface CookingSubmit {
   score: number;
-  buff: { stat: string; value: number; durationMs: number } | null;
+  buff: { stat: CookingBuffStat; value: number; durationMs: number } | null;
   coins?: number;
+  speedBonus?: number;
   correctPct?: number;
-  message?: string;
+  grade?: 'perfect' | 'good' | 'bad';
+  /** Por cada ingrediente de la receta: si entró, faltó o se quemó (olla caliente). */
+  slots?: ('ok' | 'miss' | 'burned')[];
+  message?: string | null;
 }
 
 // ── Aventura diaria (historias de decisión) ───────────────────────────────────

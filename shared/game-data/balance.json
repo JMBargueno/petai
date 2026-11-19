@@ -897,5 +897,16 @@
         }
       }
     }
+  },
+  "cooking": {
+    "dailyLimit": 20, "energyCost": 10, "cooldownSeconds": 15, "buffDurationHours": 24, "buffCapPct": 0.15,
+    "gracePeriodSeconds": 5, "minSecondsPerIngredient": 0.25,
+    "thresholds": { "perfect": 1, "good": 0.6 },
+    "goodBuffFactor": 0.5, "dailyMenuBuffFactor": 1.5,
+    "coins": { "max": 40, "speedBonusMax": 15 },
+    "decoysByDifficulty": [1, 1, 2, 2, 3],
+    "revealMsByDifficulty": [900, 800, 700, 600, 500],
+    "durationSecondsByDifficulty": [45, 40, 35, 30, 25],
+    "hotPot": { "maxPerRecipe": 2, "windowMsByDifficulty": [6000, 5000, 4500, 4000, 3500] }
   }
 }

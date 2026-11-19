@@ -1,5 +1,10 @@
 package com.petai.app.ui.play
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -175,7 +180,12 @@ private fun GamesTab(state: PlayUiState, vm: PlayViewModel) {
             val (icon, hint) = GAME_INFO[g.id] ?: (Lucide.Gamepad2 to "Minijuego del Éter.")
             PockaiCard(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Sticker(icon, color = PockaiTheme.colors.themeArena, size = 48.dp)
+                    // Pegatina con el icono de pixel art del juego (o el Lucide de GAME_INFO si aún no tiene)
+                    Box(
+                        Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(PockaiTheme.colors.themeArena)
+                            .border(1.dp, Brand.Carbon, RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) { MinigameIcon(g.id, size = 32.dp, fallback = icon) }
                     Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                         Text(g.name, style = MaterialTheme.typography.titleMedium)
                         g.element?.let { el ->

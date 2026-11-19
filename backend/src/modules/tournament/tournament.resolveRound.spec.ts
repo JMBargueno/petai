@@ -26,6 +26,7 @@ describe('TournamentService.resolveRound (F-05: usa stats reales)', () => {
     const battlesService: any = {
       fighterFromPet: jest.fn().mockReturnValue({ petId: 'x' }),
       combatMoodBonuses: jest.fn().mockResolvedValue(new Map()),
+      combatStatBuffs: jest.fn().mockResolvedValue(new Map()),
     };
     const bracketService: any = {
       resolveMatch: jest.fn().mockResolvedValue({ winnerPetId: 'pa' }),
