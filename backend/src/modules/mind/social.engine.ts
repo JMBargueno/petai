@@ -13,12 +13,12 @@
  * Por decisión de producto no hay etapa «rival»: dos Pockai pueden discutir y reconciliarse, pero
  * la relación tiene suelo.
  *
- * Los textos de los episodios viven aquí en castellano; el lote 5 de la spec 37 (diálogo por
- * datos) los pasará a identificadores de línea.
+ * Los textos de los episodios viven en `shared/game-data/strings` (`SCENE_*`).
  */
 import { createRng, hashSeed } from '../battles/combat/rng';
 import { DIMENSIONS, Dims } from './mind.types';
 import { weighted } from './personality.engine';
+import { Lang, pickText, text } from './strings';
 
 export const STAGES = ['stranger', 'acquaintance', 'friend', 'best_friend'] as const;
 export type Stage = (typeof STAGES)[number];
@@ -115,12 +115,6 @@ export function floorValence(valence: number, cfg: SocialConfig): number {
   return Math.max(cfg.valenceFloor, valence);
 }
 
-export const STAGE_LABEL: Record<Stage, string> = {
-  stranger: 'un desconocido',
-  acquaintance: 'un conocido',
-  friend: 'un amigo',
-  best_friend: 'su mejor amigo',
-};
 
 export interface SceneActor {
   petId: string;
@@ -149,6 +143,8 @@ export interface SceneInput {
   first?: boolean;
   /** Viven en la misma casa (buddies del mismo entrenador): nadie va de visita ni se presenta. */
   sameHome?: boolean;
+  /** Idioma en el que se escriben los recuerdos (por defecto, castellano). */
+  lang?: Lang;
 }
 
 export interface SceneSide {
@@ -208,110 +204,15 @@ export function sceneCandidates(input: SceneInput, cfg: SocialConfig): { type: S
   return out;
 }
 
-type Lines = { first: string[]; again: string[] };
+
+
 
 /**
- * Episodios por escena y papel. `{other}` es el otro Pockai y `{owner}` su entrenador. `first` es
- * para quienes apenas se conocen; `again`, para amigos (el quinto encuentro no se cuenta como el primero).
+ * Frase de una escena desde el punto de vista de uno de los dos: `other` es el otro Pockai. Los
+ * textos viven en `shared/game-data/strings` (`SCENE_<ESCENA>_<PAPEL>_<FIRST|AGAIN>_<n>`): `first`
+ * es para quienes apenas se conocen y `again` para amigos.
  */
-const EPISODES: Record<Exclude<SceneType, 'give_gift'>, { host: Lines; guest: Lines }> = {
-  greet: {
-    host: {
-      first: ['{owner} vino a visitarme con {other}. Nos olisqueamos con curiosidad.', 'Hoy conocí a {other}, que vino de visita con {owner}.'],
-      again: ['{other} volvió a visitarme con {owner}. ¡Qué alegría verle!', '{owner} trajo otra vez a {other}; salí corriendo a recibirle.'],
-    },
-    guest: {
-      first: ['Fui de visita al hábitat de {owner} y conocí a {other}.', 'Visité a {other} en su casa. Me recibió con curiosidad.'],
-      again: ['Volví al hábitat de {owner} a ver a {other}. Me recibió con alegría.', 'Fui otra vez a casa de {other}; ya me conozco el camino.'],
-    },
-  },
-  explore_together: {
-    host: {
-      first: ['Le enseñé mi hábitat a {other}, rincón por rincón.', '{other} y yo curioseamos juntos por toda mi sala.'],
-      again: ['{other} y yo revisamos mi hábitat por si había algo nuevo.', 'Le enseñé a {other} mi rincón favorito.'],
-    },
-    guest: {
-      first: ['{other} me enseñó su hábitat. Tiene cosas que yo no tengo.', 'Curioseé con {other} por toda su sala.'],
-      again: ['{other} me enseñó lo nuevo de su hábitat.', 'Volví a husmear por la sala de {other}; siempre encuentro algo.'],
-    },
-  },
-  play_tag: {
-    host: {
-      first: ['Jugué al pilla-pilla con {other} por mi sala. Corre mucho.', '{other} y yo nos perseguimos hasta quedarnos sin aliento.'],
-      again: ['Otra partida de pilla-pilla con {other}. Esta vez le alcancé yo.', '{other} y yo jugamos a perseguirnos, como siempre que viene.'],
-    },
-    guest: {
-      first: ['Jugué al pilla-pilla con {other} en su sala. ¡Qué divertido!', '{other} me persiguió por toda su casa y casi me pilla.'],
-      again: ['Volví a jugar al pilla-pilla con {other}. Ya nos sabemos los trucos.', 'Otra carrera con {other} por su sala; no me canso.'],
-    },
-  },
-  share_food: {
-    host: {
-      first: ['Compartí mi comida con {other}.', 'Le dejé a {other} probar de mi cuenco.'],
-      again: ['Compartí mi comida con {other}, como buenos amigos.', '{other} y yo comimos juntos; le guardé lo mejor.'],
-    },
-    guest: {
-      first: ['{other} compartió su comida conmigo.', '{other} me dejó probar de su cuenco. Qué detalle.'],
-      again: ['{other} compartió su comida conmigo, como siempre.', 'Comí con {other}; me guardó lo mejor.'],
-    },
-  },
-  nap_together: {
-    host: {
-      first: ['{other} y yo estábamos cansados y nos echamos una siesta juntos.', 'Dormí un rato al lado de {other}.'],
-      again: ['Siesta con {other}, acurrucados. Se duerme mejor en compañía.', '{other} se quedó dormido a mi lado y yo también.'],
-    },
-    guest: {
-      first: ['Me eché una siesta en casa de {other}, a su lado.', 'Estaba cansado y dormí un rato junto a {other}.'],
-      again: ['Siesta en casa de {other}, acurrucados.', 'Me dormí al lado de {other}; en su casa descanso bien.'],
-    },
-  },
-  squabble: {
-    host: {
-      first: ['{other} y yo discutimos por un juguete. Los dos queríamos mandar.', 'Me piqué con {other}: ninguno quería ceder.'],
-      again: ['{other} y yo nos picamos por una tontería. Ya se nos pasará.', 'Discutí con {other}; los dos tenemos mucho genio.'],
-    },
-    guest: {
-      first: ['Discutí con {other} en su casa. Los dos queríamos mandar.', 'Me piqué con {other}: ninguno quería ceder.'],
-      again: ['{other} y yo nos picamos por una tontería. Ya se nos pasará.', 'Discutí con {other}; los dos tenemos mucho genio.'],
-    },
-  },
-  make_up: {
-    host: {
-      first: ['{other} y yo hicimos las paces. Mejor así.', 'Me reconcilié con {other} después del pique.'],
-      again: ['{other} y yo hicimos las paces enseguida. No sabemos estar enfadados.', 'Me reconcilié con {other}; lo de antes fue una tontería.'],
-    },
-    guest: {
-      first: ['Hice las paces con {other}. Mejor así.', 'Me reconcilié con {other} después del pique.'],
-      again: ['Hice las paces con {other} enseguida. No sabemos estar enfadados.', 'Me reconcilié con {other}; lo de antes fue una tontería.'],
-    },
-  },
-};
-
-/** Un regalo: `host` son las líneas de quien da y `guest` las de quien recibe, sea quien sea el anfitrión. */
-const GIFT: { giver: Lines; receiver: Lines } = {
-  giver: {
-    first: ['Le regalé a {other} una cosa que encontré en mis paseos.'],
-    again: ['Le regalé a {other} una cosa que encontré en mis paseos. Le hizo mucha ilusión.', 'Guardaba algo que encontré para {other} y hoy se lo di.'],
-  },
-  receiver: {
-    first: ['{other} me regaló una cosa que encontró en sus paseos.'],
-    again: ['{other} me regaló una cosa que encontró en sus paseos. ¡Qué detalle!', '{other} me había guardado un regalo de sus paseos.'],
-  },
-};
-
-/** Episodios entre compañeros de casa (mismo entrenador): sin visitas ni presentaciones. */
-const HOME_EPISODES: Record<SceneType, string[]> = {
-  greet: ['Saludé a {other}, mi compañero de casa.', '{other} y yo nos dimos los buenos días.'],
-  explore_together: ['{other} y yo curioseamos juntos por casa.', 'Husmeé por los rincones con {other}.'],
-  play_tag: ['Jugué al pilla-pilla con {other} por casa.', '{other} y yo nos perseguimos hasta quedarnos sin aliento.'],
-  share_food: ['Comí al lado de {other}; compartimos lo que había.', '{other} y yo comimos juntos.'],
-  nap_together: ['Siesta con {other}, acurrucados.', 'Me dormí al lado de {other}.'],
-  squabble: ['{other} y yo nos picamos por una tontería. Ya se nos pasará.', 'Discutí con {other}; los dos queríamos el mismo sitio.'],
-  make_up: ['{other} y yo hicimos las paces enseguida.', 'Me reconcilié con {other}; vivimos juntos, no podemos estar enfadados.'],
-  give_gift: ['Le di a {other} una cosa que encontré.', '{other} y yo nos enseñamos nuestros tesoros.'],
-};
-
-const fill = (text: string, other: SceneActor) => text.replace(/\{other\}/g, other.name).replace(/\{owner\}/g, other.ownerName);
+const line = (prefix: string, r: number, other: SceneActor, lang?: Lang) => pickText(prefix, r, { friend: other.name, owner: other.ownerName }, { lang });
 
 /**
  * Resuelve la escena de una pareja en una ranura. Función pura y determinista: la semilla sale de
@@ -341,36 +242,30 @@ export function resolveScene(input: SceneInput, cfg: SocialConfig): SceneResult 
   }
 
   const delta = cfg.scenes[type]?.delta ?? 0;
-  const set: keyof Lines = rank(input.stage) >= rank('friend') ? 'again' : 'first';
-  const pick = (lines: string[], r: number) => lines[Math.min(lines.length - 1, Math.floor(r * lines.length))];
+  const set = rank(input.stage) >= rank('friend') ? 'AGAIN' : 'FIRST';
   const mood = delta < 0 ? -0.3 : Math.min(0.8, 0.3 + delta * 3);
+  const T = type.toUpperCase();
+  const side = (prefix: string, r: number, other: SceneActor): SceneSide => ({ episode: line(prefix, r, other, input.lang), delta, mood });
   if (input.sameHome) {
-    const lines = HOME_EPISODES[type];
-    return {
-      type,
-      slot: input.slot,
-      host: { episode: fill(pick(lines, rHost), input.guest), delta, mood },
-      guest: { episode: fill(pick(lines, rGuest), input.host), delta, mood },
-    };
+    return { type, slot: input.slot, host: side(`SCENE_HOME_${T}`, rHost, input.guest), guest: side(`SCENE_HOME_${T}`, rGuest, input.host) };
   }
   if (type === 'give_gift') {
     const both = !!input.host.hasFind && !!input.guest.hasFind;
     const giver: 'host' | 'guest' = both ? (rGiver < 0.5 ? 'host' : 'guest') : input.guest.hasFind ? 'guest' : 'host';
-    const hostLines = giver === 'host' ? GIFT.giver : GIFT.receiver;
-    const guestLines = giver === 'guest' ? GIFT.giver : GIFT.receiver;
+    const role = (who: 'host' | 'guest') => (giver === who ? 'GIVER' : 'RECEIVER');
     return {
       type,
       slot: input.slot,
       giver,
-      host: { episode: fill(pick(hostLines[set], rHost), input.guest), delta, mood },
-      guest: { episode: fill(pick(guestLines[set], rGuest), input.host), delta, mood },
+      host: side(`SCENE_GIFT_${role('host')}_${set}`, rHost, input.guest),
+      guest: side(`SCENE_GIFT_${role('guest')}_${set}`, rGuest, input.host),
     };
   }
   return {
     type,
     slot: input.slot,
-    host: { episode: fill(pick(EPISODES[type].host[set], rHost), input.guest), delta, mood },
-    guest: { episode: fill(pick(EPISODES[type].guest[set], rGuest), input.host), delta, mood },
+    host: side(`SCENE_${T}_HOST_${set}`, rHost, input.guest),
+    guest: side(`SCENE_${T}_GUEST_${set}`, rGuest, input.host),
   };
 }
 
@@ -419,6 +314,7 @@ export function pickRumor(
   shareable: { host: readonly Shareable[]; guest: readonly Shareable[] },
   cfg: SocialConfig,
   now: Date,
+  lang?: Lang,
 ): RumorPick | null {
   const r = cfg.rumors;
   if (!r || rank(input.stage) < rank('friend') || input.type === 'squabble') return null;
@@ -437,5 +333,5 @@ export function pickRumor(
   if (!list.length) return null;
   const source = list[Math.min(list.length - 1, Math.floor(rPick * list.length))];
   const name = teller === 'host' ? input.hostName : input.guestName;
-  return { teller, source, content: `${name} me contó algo suyo: «${source.content}»` };
+  return { teller, source, content: text('RUMOR_TOLD', { friend: name, story: source.content }, { lang }) };
 }

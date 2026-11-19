@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { MindService } from './mind.service';
 import { MindMemoryService } from './mind-memory.service';
 import type { Dims } from './mind.types';
+import { text } from './strings';
 import { pickRumor, resolveScene, type RumorPick, type SceneResult, type SceneType, type Shareable, type Stage } from './social.engine';
 
 /** Un Pockai que participa en un encuentro. */
@@ -107,7 +108,7 @@ export class EncounterService {
     const { input, scene, rumor } = res;
     const { host, guest } = input;
     const createdAt = input.at ? { createdAt: input.at } : {};
-    const label = (p: EncounterPet) => (input.sameHome ? `${p.name} (mi compañero de casa)` : `${p.name} (Pockai de ${p.ownerName})`);
+    const label = (p: EncounterPet) => (input.sameHome ? text('LABEL_HOUSEMATE', { friend: p.name }) : text('LABEL_POCKAI', { friend: p.name, owner: p.ownerName }));
 
     // El anfitrión recuerda una visita recibida; el otro, un encuentro. Su entrenador se entera
     // antes de quién vino a casa que de adónde fue (§6.6).

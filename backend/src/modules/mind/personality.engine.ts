@@ -8,28 +8,24 @@
  * Este motor responde "cómo es esta criatura": describe el perfil, lo traduce a prompt, sesga la
  * IA de combate y deriva los campos heredados (trait de notificaciones y temperament de genes).
  */
-import { createRng, hashSeed } from '../battles/combat/rng';
+import * as core from '@pockai/mind/node';
 import { DIMENSIONS, Band, Dimension, DimView, Dims, PersonalityConfig, StoredPersonality } from './mind.types';
+
+// El núcleo (acotar, nacer, bandas y pesos) es el de `@pockai/mind`, el mismo que usan el
+// escritorio y la sala: una sola implementación. Aquí solo se adapta a la configuración del
+// servidor (`PersonalityConfig`) y se añade lo que es solo suyo (prompt, combate, heredados).
 
 /**
  * Acota a 0-100 y guarda con 3 decimales. Con un solo decimal los deltas de 0,05 de balance.json se
  * perdían o se duplicaban al redondear; quien presenta el valor lo redondea a entero.
  */
-export const clampDim = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 1000) / 1000;
+export const clampDim = core.clampDim;
 
-export function neutralDims(value = 50): Dims {
-  return { curiosity: value, sociability: value, bravery: value, affection: value, temper: value };
-}
+export const neutralDims: (value?: number) => Dims = core.neutralDims;
 
 /** Valores al nacer: sesgo de especie ± variación, determinista por semilla (visualSeed). */
 export function rollBirthDims(bias: Partial<Dims> | undefined, seed: number, cfg: PersonalityConfig): Dims {
-  const rng = createRng(hashSeed(`dims:${seed}`));
-  const out = {} as Dims;
-  for (const d of DIMENSIONS) {
-    const base = bias?.[d] ?? cfg.birth.defaultBias;
-    out[d] = Math.round(clampDim(base + (rng() * 2 - 1) * cfg.birth.variance));
-  }
-  return out;
+  return core.rollBirthDims(bias, seed, cfg.birth);
 }
 
 /**
@@ -60,14 +56,10 @@ export function legacyDims(base: Dims, chatTraitId: string | undefined, temperam
   return out;
 }
 
-export function isValidDims(v: unknown): v is Dims {
-  if (!v || typeof v !== 'object') return false;
-  return DIMENSIONS.every((d) => typeof (v as any)[d] === 'number' && Number.isFinite((v as any)[d]));
-}
+export const isValidDims: (v: unknown) => v is Dims = core.isValidDims;
 
 export function bandOf(dim: Dimension, value: number, cfg: PersonalityConfig): Band {
-  const bands = cfg.dimensions[dim].bands;
-  return bands.find((b) => value <= b.max) ?? bands[bands.length - 1];
+  return core.bandOf(dim, value, cfg.dimensions as unknown as core.BandTable) as unknown as Band;
 }
 
 export function describeDims(dims: Dims, cfg: PersonalityConfig): Record<Dimension, DimView> {
@@ -146,8 +138,4 @@ export function combatBias(dims: Dims | undefined, cfg: PersonalityConfig): { he
 }
 
 /** Peso de una actividad/acción según las dimensiones: base + Σ peso·(valor-50). */
-export function weighted(base: number, weights: Partial<Dims>, dims: Dims, floor = 0.1): number {
-  let w = base;
-  for (const d of DIMENSIONS) w += (weights[d] ?? 0) * (dims[d] - 50);
-  return Math.max(floor, w);
-}
+export const weighted: (base: number, weights: Partial<Dims> | undefined, dims: Dims, floor?: number) => number = core.weighted;

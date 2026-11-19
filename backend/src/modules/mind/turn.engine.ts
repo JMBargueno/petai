@@ -19,6 +19,7 @@ import { Situation, asDate, buildSituation, sinceLastOrder } from './situation.e
 import { TricksState, nextTrick, normalizeTricks, practiceTrick, trickToPerform } from './tricks.engine';
 import { WishId, WishesState, activeWishes, afterChatTurn, fulfilEpisode, fulfilWish, mayShowWish, normalizeWishes, wishHint } from './wishes.engine';
 import { createRng, hashSeed } from '../battles/combat/rng';
+import { text } from './strings';
 
 const DAY_MS = 86_400_000;
 
@@ -150,25 +151,21 @@ export function planOwnerTurn(input: TurnInput, cfg: PersonalityConfig): TurnPla
     subject = subjectByName(rows, interpretation.mentioned);
     // Sin recuerdos de esa persona no hay nada que contar: que lo diga, no que se lo invente
     hints.push(
-      subject
-        ? `Te pregunta por ${interpretation.mentioned}: responde solo con lo que recuerdas de él.`
-        : `Te pregunta por ${interpretation.mentioned}, pero no recuerdas a nadie con ese nombre: dilo con naturalidad y no inventes nada.`,
+      text(subject ? 'TURN_ASK_FRIEND_KNOWN' : 'TURN_ASK_FRIEND_UNKNOWN', { friend: interpretation.mentioned }),
     );
   }
   if (interpretation.intent === 'ask_life' && !situation.untold.length) {
-    hints.push('Te pregunta qué has hecho: si no recuerdas nada nuevo, dilo con sencillez y no inventes aventuras.');
+    hints.push(text('TURN_ASK_LIFE_EMPTY'));
   }
   if (behavior.action === 'perform_trick') {
     const rng = createRng(hashSeed(`trick:${pet.id}:${wishesState.turn}`));
     const id = trickToPerform(tricks, rng());
-    if (id) hints.push(`El truco que haces: ${cfg.tricks.catalog[id].name}.`);
+    if (id) hints.push(text('TURN_TRICK_PERFORM', { trick: cfg.tricks.catalog[id].name }));
   }
   if (interpretation.intent === 'teach') {
     const id = tricks.learning?.id ?? nextTrick(tricks, dims, cfg.tricks);
     hints.push(
-      id
-        ? `Tu entrenador te está enseñando un truco: ${cfg.tricks.catalog[id].name}. Aún lo estás practicando; no digas que ya lo dominas.`
-        : 'Tu entrenador quiere enseñarte un truco, pero ya sabes todos los que puedes aprender: díselo con gracia.',
+      id ? text('TURN_TRICK_TEACHING', { trick: cfg.tricks.catalog[id].name }) : text('TURN_TRICK_ALL_KNOWN'),
     );
   }
 
@@ -188,9 +185,7 @@ export function planOwnerTurn(input: TurnInput, cfg: PersonalityConfig): TurnPla
       if (ensureIds.length >= Math.max(max, before)) break;
       if (!ensureIds.includes(u.id)) ensureIds.push(u.id);
     }
-    hints.push(
-      'Tu entrenador vuelve después de un rato sin veros. Entre tus recuerdos tienes lo que viviste mientras no estaba: si viene a cuento, cuéntale algo de eso con tus palabras, en una frase y sin inventar nada.',
-    );
+    hints.push(text('TURN_SINCE_LAST'));
   }
 
   // Un deseo, como mucho cada tantos turnos, y nunca cuando el mensaje pide otra cosa
@@ -245,7 +240,7 @@ export function settleOwnerTurn(plan: TurnPlanData, action: Behavior, dims: Dims
     tricks = res.state;
     if (res.learned) {
       learned = res.learned;
-      episodes.push({ key: `trick:${res.learned}`, content: `Aprendí un truco nuevo con mi entrenador: ${cfg.tricks.catalog[res.learned].name}.`, importance: 0.6, valence: 0.7 });
+      episodes.push({ key: `trick:${res.learned}`, content: text('TRICK_LEARNED_TAUGHT', { trick: cfg.tricks.catalog[res.learned].name }), importance: 0.6, valence: 0.7 });
       fulfil('learn_trick');
     }
   }

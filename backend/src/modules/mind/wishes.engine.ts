@@ -12,6 +12,7 @@
  *   Ignorado, caduca solo y sin castigo.
  */
 import { Dims } from './mind.types';
+import { Lang, text } from './strings';
 import { weighted } from './personality.engine';
 
 export const WISH_IDS = ['go_explore', 'see_friend', 'show_find', 'be_cuddled', 'learn_trick'] as const;
@@ -157,30 +158,16 @@ export function activityBoosts(wishes: readonly WishId[], cfg: WishesConfig): Re
   return out;
 }
 
-/** Tema opcional para el prompt del chat. Nunca una orden: el modelo decide si encaja. */
-const PROMPT: Record<WishId, string> = {
-  go_explore: 'te apetece salir de aventura a explorar',
-  see_friend: 'echas de menos a tus amigos y te apetece verlos',
-  show_find: 'tienes ganas de enseñarle algo que encontraste',
-  be_cuddled: 'le has echado de menos y te apetece que te haga unos mimos',
-  learn_trick: 'te apetece aprender un truco nuevo',
-};
 
-export function wishHint(id: WishId): string {
-  return `Algo que te apetece ahora mismo: ${PROMPT[id]}. Si encaja con la conversación puedes decirlo con tus palabras; si no, no lo fuerces.`;
+/** Tema opcional para el prompt del chat. Nunca una orden: el modelo decide si encaja. */
+export function wishHint(id: WishId, lang?: Lang): string {
+  return text('WISH_HINT', { hint: text(`WISH_${id.toUpperCase()}`, {}, { lang }) }, { lang });
 }
 
-/** Recuerdo al cumplirse un deseo, en primera persona. */
-const FULFILLED: Record<WishId, string> = {
-  go_explore: 'Tenía muchas ganas de salir de aventura y por fin fuimos.',
-  see_friend: 'Echaba de menos a mis amigos y por fin los vi.',
-  show_find: 'Le enseñé a mi entrenador lo que había encontrado. Tenía ganas.',
-  be_cuddled: 'Echaba de menos a mi entrenador y me hizo unos mimos.',
-  learn_trick: 'Tenía ganas de aprender un truco y lo conseguí.',
-};
 
-export function fulfilEpisode(id: WishId): string {
-  return FULFILLED[id];
+/** Recuerdo al cumplirse un deseo, en primera persona. */
+export function fulfilEpisode(id: WishId, lang?: Lang): string {
+  return text(`WISH_DONE_${id.toUpperCase()}`, {}, { lang });
 }
 
 export function isWish(v: unknown): v is WishId {

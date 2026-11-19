@@ -654,7 +654,7 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
     behaviors: Object.keys(pers.behavior?.catalog ?? {}),
     wishes: Object.keys(pers.wishes?.catalog ?? {}),
     // Los mismos nombres que acepta backend/src/modules/mind/strings.ts
-    placeholders: ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story'],
+    placeholders: ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story', 'trick'],
   });
   if (errors.length) throw new Error(`Diálogos o textos inválidos:\n  - ${errors.join('\n  - ')}`);
   console.log(`✓ diálogos: ${Object.keys(readJson('shared/game-data/dialogues.json').conversations).length} conversación(es) y ${Object.keys(strings.es ?? {}).length} textos en ${Object.keys(strings).join(', ')} validados`);
