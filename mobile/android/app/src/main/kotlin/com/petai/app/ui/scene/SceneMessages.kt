@@ -1,5 +1,6 @@
 package com.petai.app.ui.scene
 
+import com.petai.app.data.AudioPrefs
 import com.petai.app.data.HabitatFurniture
 import com.petai.app.data.HabitatRoom
 import com.petai.app.data.Pet
@@ -180,6 +181,22 @@ object SceneMessages {
     fun setPaused(paused: Boolean): JsonObject = buildJsonObject {
         put("type", "setPaused")
         put("paused", paused)
+    }
+
+    /** Ajustes de sonido (spec 40). Mensaje opcional: no sube la versión del protocolo. */
+    fun setAudio(prefs: AudioPrefs): JsonObject = buildJsonObject {
+        put("type", "setAudio")
+        putJsonObject("settings") {
+            put("enabled", prefs.enabled)
+            put("master", prefs.master)
+            put("reduced", prefs.reduced)
+            putJsonObject("buses") {
+                put("ui", prefs.ui)
+                put("sfx", prefs.sfx)
+                put("pet", prefs.pet)
+                put("ambient", prefs.ambient)
+            }
+        }
     }
 
     /**

@@ -157,4 +157,15 @@ describe('parseHostMessage (sala)', () => {
     expect(parseHostMessage({ type: 'coverScreen', effect: 3 })).toBeNull();
     expect(parseHostMessage({ type: 'uncoverScreen', extra: true })).toEqual({ type: 'uncoverScreen' });
   });
+
+  it('valida setAudio (ajustes de sonido, spec 40)', () => {
+    const msg = parseHostMessage({ type: 'setAudio', settings: { enabled: false, master: 7, buses: { pet: 0.3 } } });
+    expect(msg?.type).toBe('setAudio');
+    if (msg?.type !== 'setAudio') return;
+    expect(msg.settings.enabled).toBe(false);
+    expect(msg.settings.master).toBe(1);
+    expect(msg.settings.buses.pet).toBe(0.3);
+    expect(parseHostMessage({ type: 'setAudio' })).toBeNull();
+    expect(parseHostMessage({ type: 'setAudio', settings: [1] })).toBeNull();
+  });
 });

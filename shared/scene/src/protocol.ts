@@ -10,6 +10,7 @@ export const PROTOCOL_VERSION = 4;
 // v3: efectos compartidos (`playEffect`, `petAction` → `effectEnded`), ver src/effects.
 // v4: escena de la aventura diaria (`setStory` → `storyBeat`), ver src/story.
 
+import { parseAudioSettings, type AudioSettings } from '@pockai/audio/settings';
 import { parseEquipped, type EquippedAccessories } from './bake/accessories';
 import { parseClock } from './ambience/sunClock';
 import { parseRoomMind, type RoomMind } from './room/petWander';
@@ -174,7 +175,13 @@ export type HostMessage =
    */
   | { type: 'coverScreen'; effect?: string }
   /** Abre el velo de `coverScreen`. Responde con `screenUncovered` al terminar. */
-  | { type: 'uncoverScreen' };
+  | { type: 'uncoverScreen' }
+  /**
+   * Ajustes de sonido del usuario (spec 40). Los aplica el bundle embed (Android/iOS), que tiene
+   * su propio motor @pockai/audio; el escritorio usa el suyo y no lo manda.
+   * Mensaje nuevo y opcional: no sube PROTOCOL_VERSION.
+   */
+  | { type: 'setAudio'; settings: AudioSettings };
 
 /** Datos de un efecto: solo textos y números (viajan por el puente como JSON). */
 export type EffectParams = Record<string, string | number>;
@@ -218,6 +225,7 @@ const HOST_TYPES = new Set<HostMessage['type']>([
   'setStory',
   'coverScreen',
   'uncoverScreen',
+  'setAudio',
 ]);
 
 /** Escena de historia validada; undefined si está mal formada. */
@@ -410,6 +418,10 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
         : null;
     case 'uncoverScreen':
       return { type: 'uncoverScreen' };
+    case 'setAudio':
+      return m.settings && typeof m.settings === 'object' && !Array.isArray(m.settings)
+        ? { type: 'setAudio', settings: parseAudioSettings(m.settings) }
+        : null;
     case 'petAction': {
       if (typeof m.action !== 'string' || !/^[a-z_]{1,40}$/.test(m.action)) return null;
       const ctx = m.context && typeof m.context === 'object' && !Array.isArray(m.context) ? (m.context as Record<string, unknown>) : undefined;

@@ -8,6 +8,7 @@
 import { createBridge } from '../bridge';
 import { PockaiScene } from '../PockaiScene';
 import type { HostMessage } from '../protocol';
+import { getEmbedAudio } from './audio';
 
 declare global {
   interface Window {
@@ -19,7 +20,13 @@ const root = document.getElementById('scene')!;
 const pending: HostMessage[] = [];
 let scene: PockaiScene | null = null;
 
-const bridge = createBridge((msg) => (scene ? scene.receive(msg) : pending.push(msg)));
+const audio = getEmbedAudio();
+
+const bridge = createBridge((msg) => {
+  if (msg.type === 'setAudio') audio.setSettings(msg.settings);
+  else if (scene) scene.receive(msg);
+  else pending.push(msg);
+});
 
 const ready = PockaiScene.create({ host: root, onEvent: bridge.send }).then((s) => {
   scene = s;
