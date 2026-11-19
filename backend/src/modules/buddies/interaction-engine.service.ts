@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { hasText, text } from '../mind/strings';
 
 export type BuddyInteractionType =
   | 'chase'
@@ -20,17 +21,11 @@ export const SCENE_TO_BUDDY: Record<string, BuddyInteractionType> = {
   give_gift: 'idle_chat',
 };
 
-/** Lo que se dicen, por escena: sustituye a las notas fijas cuando decide el cerebro. */
-export const SCENE_NOTE: Record<string, string> = {
-  greet: '¡Hola!',
-  explore_together: '¡Mira esto!',
-  play_tag: '¡A que no me pillas!',
-  share_food: '¿Quieres un poco?',
-  nap_together: 'Zzz... juntos...',
-  squabble: '¡Eso es mío!',
-  make_up: '¿Amigos otra vez?',
-  give_gift: 'Toma, para ti.',
-};
+/** Lo que se dicen, por escena (`SCENE_NOTE_<ESCENA>` en `shared/game-data/strings`). */
+export function sceneNote(scene: string): string | undefined {
+  const id = `SCENE_NOTE_${scene.toUpperCase()}`;
+  return hasText(id) ? text(id) : undefined;
+}
 
 export interface BuddyEffect {
   happiness?: number;
@@ -92,17 +87,17 @@ export class InteractionEngineService {
   effectsFor(type: BuddyInteractionType): BuddyEffect {
     switch (type) {
       case 'chase':
-        return { happiness: 2, bonding: 1, note: '¡Espera!' };
+        return { happiness: 2, bonding: 1, note: text('BUDDY_NOTE_CHASE') };
       case 'play_fight':
-        return { happiness: 5, bonding: 1, note: '¡Jajá!' };
+        return { happiness: 5, bonding: 1, note: text('BUDDY_NOTE_PLAY_FIGHT') };
       case 'eat_together':
-        return { happiness: 2, bonding: 1, note: '¡Mía también!' };
+        return { happiness: 2, bonding: 1, note: text('BUDDY_NOTE_EAT_TOGETHER') };
       case 'idle_chat':
-        return { happiness: 1, bonding: 1, note: '...' };
+        return { happiness: 1, bonding: 1, note: text('BUDDY_NOTE_IDLE_CHAT') };
       case 'watch_together':
-        return { happiness: 1, bonding: 1, note: '¡Mira!' };
+        return { happiness: 1, bonding: 1, note: text('BUDDY_NOTE_WATCH_TOGETHER') };
       case 'sleep_together':
-        return { energy: 5, bonding: 1, note: 'Zzz... juntos...' };
+        return { energy: 5, bonding: 1, note: text('BUDDY_NOTE_SLEEP_TOGETHER') };
     }
   }
 

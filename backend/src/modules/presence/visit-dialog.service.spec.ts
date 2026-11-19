@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ForbiddenException } from '@nestjs/common';
 import { Dims, PersonalityConfig } from '../mind/mind.types';
 import { neutralDims } from '../mind/personality.engine';
-import { VisitorCtx, VisitorOption, emptyVisitorState, episodeOption, menuFor, moodLine, openVisit, stepVisit } from '../mind/visitor.engine';
+import { VisitorCtx, VisitorOption, episodeOption, menuFor, moodLine, openVisit, stepVisit } from '../mind/visitor.engine';
 import { VisitDialogService } from './visit-dialog.service';
 
 const balance = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../shared/game-data/balance.json'), 'utf8'));
@@ -32,7 +32,11 @@ const ids = (c: VisitorCtx, state = openVisit(c, cfg).state) => menuFor(state, c
 describe('Visitor Engine — menú del entrenador que visita (spec 37 §6.2)', () => {
   it('ofrece saludar, acariciar, un premio, jugar y preguntar; nunca nada negativo', () => {
     expect(ids(ctx())).toEqual(['greet', 'pet', 'treat', 'play', 'ask', 'bye']);
-    expect(Object.values(v.deltas).every((d) => (d as number) >= 0)).toBe(true);
+    // Ningún efecto del grafo empeora la relación
+    const visit = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../shared/game-data/dialogues.json'), 'utf8')).conversations.visit;
+    const feels = Object.values(visit.nodes).flatMap((n: any) => [...(n.choices ?? []), ...(Array.isArray(n.next) ? n.next : [])]).flatMap((t: any) => (t.cmd ?? []).filter((c: string) => c.startsWith('feel:')));
+    expect(feels.length).toBeGreaterThan(3);
+    expect(feels.every((c: string) => Number(c.slice(5)) > 0)).toBe(true);
   });
 
   it('un tímido se esconde de un desconocido y solo deja esperar; con un amigo se acerca', () => {
@@ -62,14 +66,15 @@ describe('Visitor Engine — menú del entrenador que visita (spec 37 §6.2)', (
     const warm = ctx({}, { sociability: 90, affection: 90, temper: 90 });
     const cold = ctx({}, { sociability: 10, affection: 10, temper: 10 });
     expect(openVisit(warm, cfg).reply.behavior.action).not.toBe(openVisit(cold, cfg).reply.behavior.action);
+    // El frío se esconde: hay que esperar a que salga para ofrecerle lo mismo que al cálido
+    const warmOpen = openVisit(warm, cfg).state;
+    const coldOpen = stepVisit(openVisit(cold, cfg).state, 'wait', cold, cfg)!.state;
     for (const option of ['greet', 'pet', 'play'] as VisitorOption[]) {
-      const state = { ...emptyVisitorState(), turn: 1, open: true };
-      const a = stepVisit(state, option, warm, cfg)!;
-      const b = stepVisit(state, option, cold, cfg)!;
+      const a = stepVisit(warmOpen, option, warm, cfg)!;
+      const b = stepVisit(coldOpen, option, cold, cfg)!;
       expect(a.reply.line).not.toBe(b.reply.line);
     }
-    const state = { ...emptyVisitorState(), turn: 1, open: true };
-    expect(stepVisit(state, 'pet', warm, cfg)!.reply.behavior.action).not.toBe(stepVisit(state, 'pet', cold, cfg)!.reply.behavior.action);
+    expect(stepVisit(warmOpen, 'pet', warm, cfg)!.reply.behavior.action).not.toBe(stepVisit(coldOpen, 'pet', cold, cfg)!.reply.behavior.action);
   });
 
   it('todas las reacciones son del catálogo y valen ante un visitante', () => {
@@ -110,13 +115,13 @@ describe('Visitor Engine — menú del entrenador que visita (spec 37 §6.2)', (
 
   it('dormido no se le molesta; cansado o enfermo no juega', () => {
     expect(openVisit(ctx({ sleeping: true }), cfg).reply.options.map((o) => o.id)).toEqual(['bye']);
-    const open = { ...emptyVisitorState(), turn: 1, open: true };
+    const open = openVisit(ctx(), cfg).state;
     expect(stepVisit(open, 'play', ctx({ energy: 5 }), cfg)!.effect).toBeNull();
     expect(stepVisit(open, 'play', ctx({ sick: true }), cfg)!.effect).toBeNull();
   });
 
   it('«¿qué tal estás?» cuenta su ánimo sin números y, a quien conoce, una vivencia suya', () => {
-    const open = { ...emptyVisitorState(), turn: 1, open: true };
+    const open = openVisit(ctx(), cfg).state;
     const story = 'Explorando encontré algo: Semilla solar.';
     const toStranger = stepVisit(open, 'ask', ctx({ story, hunger: 10 }), cfg)!.reply.line;
     expect(toStranger).toContain('hambre');
