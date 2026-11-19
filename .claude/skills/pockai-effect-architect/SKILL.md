@@ -20,6 +20,7 @@ Lee las referencias cuando las necesites:
 - `references/nano-banana-effects.md`: cuándo y cómo pedir un concepto a Nano Banana, el coste y la confirmación.
 - `references/integration-checklist.md`: archivos que hay que tocar y validación.
 - `references/effect-prompt.txt`: plantilla del prompt de concepto.
+- `references/ether-objects.md`: patrón para objetos interactivos que el Pockai saca del Éter (reloj del pomodoro), con sus tres efectos y el parpadeo rápido.
 
 Manda la norma de `docs/GUIA_ARTISTICA.md` (§3.6 color por elemento, §7 pixel art) y el lore de `docs/LORE.md`. Si chocan con esta skill, mandan ellos.
 
@@ -37,6 +38,7 @@ Manda la norma de `docs/GUIA_ARTISTICA.md` (§3.6 color por elemento, §7 pixel 
 Hay dos patrones de referencia:
 - **Viaje con estado de juego:** `visitTravel.ts` + `departThroughPortal` en PetView.
 - **Efecto de momento:** `effect` en `eventMap.ts` + `startMoment` en PetView.
+- **Objeto del Éter** (el Pockai saca un objeto interactivo, lo maneja con su hebra y lo devuelve; el reloj del pomodoro es el primero): `desktop/src/lib/etherObjects/` + `EtherObjectLayer` + `runPetErrand` en PetView. Ver `references/ether-objects.md`.
 
 En `lore-effects.md` está la lista priorizada de lo pendiente.
 
@@ -90,7 +92,8 @@ npx tsx .claude/skills/pockai-effect-architect/scripts/effect_contact.ts <id> --
 ### 7. Validar
 ```bash
 node .claude/skills/pockai-effect-architect/scripts/check_effects.mjs <id>
-cd desktop && npx vitest run src/lib/effects src/lib/visitTravel.spec.ts
+cd shared/scene && npm test && npm run typecheck
+cd desktop && npx vitest run src/lib/visitTravel.spec.ts src/lib/etherObjects
 ```
 Después, pruébalo de verdad: `preview_start` con `pockai-desktop-demo` (puerto 5175, API simulada), lanza el disparador y captura cada fase (zoom sobre la mascota). Comprueba que no hay errores de consola, que al terminar no queda nada pintado y que la mascota vuelve a recibir clics.
 

@@ -39,6 +39,7 @@
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import HabitatWidget from './components/HabitatWidget.svelte';
+  import EtherObjectLayer from './components/EtherObjectLayer.svelte';
   import { habitatMode } from './lib/habitatMode';
   import FileDropModal from './components/FileDropModal.svelte';
   import AchievementToast from './features/achievements/AchievementToast.svelte';
@@ -957,6 +958,9 @@
       on:kick={(e) => handleBallKick(e.detail.vx, e.detail.vy)}
     />
   {/if}
+
+  <!-- Objetos que el Pockai saca del Éter (el reloj del pomodoro): se arrastran por la pantalla -->
+  <EtherObjectLayer />
 
   <!-- Mascota Interactiva Flotante (oculta si está en su Hábitat/casa) -->
   {#if currentPet && (!currentPet.inHabitat || homeAnim)}

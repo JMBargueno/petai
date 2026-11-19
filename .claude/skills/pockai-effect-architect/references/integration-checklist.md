@@ -16,7 +16,7 @@
 node .claude/skills/pockai-effect-architect/scripts/check_effects.mjs <id>
 npx tsx .claude/skills/pockai-effect-architect/scripts/effect_contact.ts <id>
 npx tsx .claude/skills/pockai-effect-architect/scripts/effect_contact.ts <id> --reduced
-cd desktop && npx vitest run src/lib/effects
+cd shared/scene && npm test && npm run typecheck
 cd desktop && npx svelte-check --threshold error   # filtra por tus archivos: el repo arrastra errores ajenos
 ```
 

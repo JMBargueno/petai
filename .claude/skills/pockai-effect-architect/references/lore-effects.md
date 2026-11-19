@@ -55,6 +55,9 @@ Un mismo efecto sirve para todos los Flujos cambiando la rampa. Si un Flujo pide
 | `polvo-impacto` / `estela-flujo` (menores) | Posarse tras un lanzamiento / zoomies | Polvo del escritorio y estela del Flujo, pequeños y de ≤400 ms. |
 | `destello-prisma` (menor) | Shiny, cada 6 s (renderLoop) | §3: estrellitas en paleta invertida alrededor de la cabeza; complementan el brillo de la variante que la hoja horneada pinta sobre el cuerpo (`fxFrame`). |
 | `clima` (ambiente) | `environmental.weather.condition` = `rain` / `snow` | Lluvia o nieve en pixel art (rampa fija) en vez del emoji; se queda mientras dure. |
+| `grieta-objeto` | Un objeto del Éter sale o vuelve (reloj del pomodoro: iniciar / detener) | §2, §9: rendija con forma de ojo, borde del Flujo y vacío dentro; motas que brotan (`dir: out`) o se tragan (`in`); en su `hold` el objeto emerge o se hunde. Anclada al centro del objeto. |
+| `hebra-toque` (pantalla) | El Pockai maneja un objeto del Éter a distancia (pausar / reanudar / detener) | §8: la hebra del Custodio como mano larga, en arco de la patita al objeto; su punta sigue al objeto en vivo y chispea al tocar. Primer efecto `space: screen` del escritorio. |
+| `parpadeo-eter` (menor) | Acciones encadenadas más rápido que el Pockai (iniciar y detener al momento…) | §9: el Éter se traga o escupe el objeto en ≤240 ms; chispas que convergen o se abren. |
 
 | `huevo-grietas` | Eclosión desde el panel (`ControlPanel` → `hatchProgress` shake/crack/abort → `PetView.hatchEgg`) | §1: huevo que tiembla en su fase `hold`, se agrieta con la luz del Flujo de quien nace y estalla justo antes de la revelación. Solo escritorio. |
 | `confeti-codices` | `mission_completed {dailyCompleted: true}` | §1: lluvia de rombos-Códice (spec 01). |
