@@ -673,4 +673,26 @@ for (const sp of species) {
 }
 console.log('✓ shared/assets/sprites: Todos los sprites de animación requeridos están presentes');
 
+// Recetas de cocina (spec 15): se cocina con comida de foods.json.
+{
+  const recipes = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'shared', 'game-data', 'recipes.json'), 'utf8'));
+  const foods = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'shared', 'game-data', 'foods.json'), 'utf8'));
+  const edible = new Set(foods.filter((f) => f.kind === 'food').map((f) => f.id));
+  const seen = new Set();
+  for (const r of recipes) {
+    const bad = (msg) => {
+      console.error(`❌ recipes.json [${r.id}]: ${msg}`);
+      process.exit(1);
+    };
+    if (!/^[a-z][a-z0-9_]*$/.test(r.id || '') || seen.has(r.id)) bad('id inválido o repetido');
+    seen.add(r.id);
+    if (!r.name || !(r.difficulty >= 1 && r.difficulty <= 5) || !(r.unlockLevel >= 1)) bad('faltan name, difficulty (1–5) o unlockLevel');
+    if (!Array.isArray(r.ingredients) || r.ingredients.length < 3 || r.ingredients.length > 4) bad('lleva 3 o 4 ingredientes');
+    if (new Set(r.ingredients).size !== r.ingredients.length) bad('repite un ingrediente');
+    for (const ing of r.ingredients) if (!edible.has(ing)) bad(`el ingrediente '${ing}' no es una comida de foods.json`);
+    if (!['atk', 'def', 'esp', 'vel'].includes(r.buff?.stat) || !(r.buff?.value > 0)) bad('buff inválido');
+  }
+  console.log(`✓ recipes.json: ${recipes.length} recetas validadas`);
+}
+
 console.log('=== TODOS LOS DATOS DE JUEGO Y ASSETS SON VÁLIDOS ===');

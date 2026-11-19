@@ -10209,6 +10209,8 @@ export interface operations {
                     score: number;
                     /** @description Si el orden de los pasos fue correcto */
                     correctOrder: boolean;
+                    /** @description Ingredientes echados a la olla, en orden. Si se envía, el servidor cuenta los aciertos y no usa score ni correctOrder */
+                    picked?: string[];
                 };
             };
         };

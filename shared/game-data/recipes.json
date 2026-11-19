@@ -4,55 +4,55 @@
     "name": "Sopa de Arranque",
     "difficulty": 1,
     "unlockLevel": 1,
-    "ingredients": ["carrot", "onion", "water"],
+    "ingredients": ["apple", "healthy_salad", "sun_seed"],
     "buff": { "stat": "atk", "value": 5 }
   },
   {
     "id": "elemental_brew",
-    "name": "Brew Elemental",
+    "name": "Infusión de los Flujos",
     "difficulty": 2,
     "unlockLevel": 5,
-    "ingredients": ["herb", "crystal", "water", "salt"],
+    "ingredients": ["sun_seed", "sweet_coral", "spicy_berry", "spark_candy"],
     "buff": { "stat": "def", "value": 5 }
   },
   {
     "id": "shadow_paste",
-    "name": "Pasta Sombria",
+    "name": "Pasta de Medianoche",
     "difficulty": 3,
     "unlockLevel": 15,
-    "ingredients": ["mushroom", "ink", "rice"],
+    "ingredients": ["midnight_berry", "healthy_salad", "sweet_coral"],
     "buff": { "stat": "esp", "value": 5 }
   },
   {
     "id": "storm_roast",
-    "name": "Asado Tormenta",
+    "name": "Asado de Tormenta",
     "difficulty": 3,
     "unlockLevel": 20,
-    "ingredients": ["beef", "lightning", "pepper", "salt"],
+    "ingredients": ["spark_candy", "spicy_berry", "apple", "midnight_berry"],
     "buff": { "stat": "vel", "value": 5 }
   },
   {
     "id": "solar_bake",
-    "name": "Horno Solar",
+    "name": "Hornada de Alba",
     "difficulty": 4,
     "unlockLevel": 30,
-    "ingredients": ["flour", "sun_nectar", "butter", "honey"],
+    "ingredients": ["dawn_honey", "sun_seed", "cake", "apple"],
     "buff": { "stat": "atk", "value": 8 }
   },
   {
     "id": "abyssal_caviar",
-    "name": "Caviar Abisal",
+    "name": "Perlas del Flujo Profundo",
     "difficulty": 5,
     "unlockLevel": 40,
-    "ingredients": ["roe", "seaweed", "pearl"],
+    "ingredients": ["sweet_coral", "midnight_berry", "dawn_honey"],
     "buff": { "stat": "def", "value": 8 }
   },
   {
     "id": "mythic_feast",
-    "name": "Banquete Mítico",
+    "name": "Banquete del Primer Latido",
     "difficulty": 5,
     "unlockLevel": 50,
-    "ingredients": ["phoenix", "dragon_glass", "star_dust", "elixir"],
+    "ingredients": ["spicy_berry", "dawn_honey", "midnight_berry", "spark_candy"],
     "buff": { "stat": "atk", "value": 10 }
   }
 ]

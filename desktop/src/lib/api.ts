@@ -1172,8 +1172,9 @@ export const api = {
   async cookingStart(petId: string) {
     return minigameRequest<CookingStart>('POST', '/v1/cooking/start', { petId });
   },
-  async cookingSubmit(sessionId: string, score: number, correctOrder: boolean) {
-    return minigameRequest<CookingSubmit>('POST', '/v1/cooking/submit', { sessionId, score, correctOrder });
+  /** `picked`: lo que se echó a la olla, en orden. Con él, el servidor cuenta los aciertos por su cuenta. */
+  async cookingSubmit(sessionId: string, score: number, correctOrder: boolean, picked?: string[]) {
+    return minigameRequest<CookingSubmit>('POST', '/v1/cooking/submit', { sessionId, score, correctOrder, picked });
   },
 
   // ── Aventura diaria (historias de decisión) ──────────────────────────────────
@@ -1269,7 +1270,7 @@ export interface CookingStart {
   difficulty: number;
   /** Orden correcto de la receta. */
   ingredients: string[];
-  /** Los mismos ingredientes barajados: así se muestran al jugador. */
+  /** Lo que hay en la encimera: los ingredientes de la receta y unos señuelos, barajados. */
   order: string[];
   hotPotPositions: number[];
   durationSeconds: number;

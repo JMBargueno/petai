@@ -566,9 +566,16 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/training\/active-buff$/, () => ({ active: true, buff: { petId: 'p-1', multiplier: 1.1, stats: ['atk'], expiresAt: iso(40 * MIN), remainingMs: 40 * MIN } })],
   ['POST', /^\/training\/start$/, ({ body }) => ({ sessionId: uid('tr'), petId: body.petId, seed: 7, hearts: 3, currentFloor: 1, floors: [1, 2, 3, 4, 5].map((floor) => ({ floor, enemyElement: ['plant', 'water', 'electric', 'shadow', 'light'][floor - 1], enemyName: ['Brotón', 'Marea', 'Chispazo', 'Penumbra', 'Fulgor'][floor - 1], enemyLevel: 4 + floor })) })],
   ['POST', /^\/training\/submit$/, ({ body }) => ({ floor: 1, result: 'advanced', enemyElement: 'plant', playerElement: body.element, multiplier: 1.5, hearts: 3, currentFloor: 2, status: 'active', predictionBonus: false })],
-  ['GET', /^\/cooking\/daily-menu$/, () => ({ date: iso().slice(0, 10), recipeId: 'stew', recipeName: 'Guiso de brasas', difficulty: 2, ingredients: ['Seta', 'Baya', 'Raíz', 'Miel'], buff: { stat: 'energy', value: 10 }, bonus: 'Doble de monedas hoy' })],
-  ['POST', /^\/cooking\/start$/, () => ({ sessionId: uid('ck'), recipeId: 'stew', recipeName: 'Guiso de brasas', difficulty: 2, ingredients: ['Seta', 'Baya', 'Raíz', 'Miel'], order: ['Baya', 'Miel', 'Seta', 'Raíz'], hotPotPositions: [1], durationSeconds: 30, seed: 3, expiresAt: iso(2 * MIN) })],
-  ['POST', /^\/cooking\/submit$/, () => ({ score: 75, buff: { stat: 'energy', value: 10, durationMs: HOUR }, coins: 40, correctPct: 75, message: '¡Casi perfecto!' })],
+  // Cocina (spec 15): la receta lleva comida de foods.json y la encimera añade un señuelo.
+  ['GET', /^\/cooking\/daily-menu$/, () => ({ date: iso().slice(0, 10), recipeId: 'elemental_brew', recipeName: 'Infusión de los Flujos', difficulty: 2, ingredients: ['sun_seed', 'sweet_coral', 'spicy_berry', 'spark_candy'], buff: { stat: 'def', value: 5 }, bonus: 'buff extra ×1.5 hoy' })],
+  ['POST', /^\/cooking\/start$/, () => ({ sessionId: uid('ck'), recipeId: 'elemental_brew', recipeName: 'Infusión de los Flujos', difficulty: 2, ingredients: ['sun_seed', 'sweet_coral', 'spicy_berry', 'spark_candy'], order: ['spicy_berry', 'apple', 'spark_candy', 'sun_seed', 'sweet_coral'], hotPotPositions: [1], durationSeconds: 60, seed: 42, expiresAt: iso(MIN) })],
+  ['POST', /^\/cooking\/submit$/, ({ body }) => {
+    const recipe = ['sun_seed', 'sweet_coral', 'spicy_berry', 'spark_candy'];
+    const picked: string[] = Array.isArray(body?.picked) ? body.picked : [];
+    const ok = picked.filter((ing, k) => recipe[k] === ing).length;
+    const pct = Math.round((ok / recipe.length) * 100);
+    return { score: ok, buff: pct >= 75 ? { stat: 'def', value: pct >= 100 ? 5 : 3, durationMs: 24 * HOUR } : null, coins: Math.floor((ok / recipe.length) * 40), correctPct: pct };
+  }],
   ['GET', /^\/stories\/today$/, () => ({
     day: iso().slice(0, 10), plan: 'pro', limit: storyLimit, used: Object.keys(storyPlays).length, resetsAt: iso(8 * HOUR),
     stories: storySeeds.slice(0, 4).map((s, slot) => ({
