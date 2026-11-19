@@ -3,6 +3,7 @@
 
 mod ai_cli;
 mod desk_sense;
+mod location;
 
 use serde::Deserialize;
 use std::sync::Mutex;
@@ -289,7 +290,8 @@ fn main() {
             desk_sense::set_desk_sense,
             ai_cli::run_ai_cli,
             ai_cli::cancel_ai_cli,
-            ai_cli::detect_ai_cli
+            ai_cli::detect_ai_cli,
+            location::get_device_location
         ])
         // Cerrar la ventana (Alt+F4, «Cerrar ventana» en la barra de tareas) solo la oculta: Pockai
         // sigue en la bandeja. Para salir del todo, menú de la bandeja › «Salir de Pockai».

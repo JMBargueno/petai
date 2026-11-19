@@ -64,8 +64,6 @@ export class UsersController {
       properties: {
         displayName: { type: 'string' },
         timezone: { type: 'string' },
-        latitude: { type: 'number', nullable: true, description: 'Coordenada opt-in para el clima (se borra con null)' },
-        longitude: { type: 'number', nullable: true, description: 'Coordenada opt-in para el clima (se borra con null)' },
         birthday: { type: 'string', nullable: true, description: 'Cumpleaños (YYYY-MM-DD)' },
         achievementsPublic: { type: 'boolean', description: 'Opt-in de visibilidad pública de logros' },
         notificationPrefs: {
@@ -91,8 +89,6 @@ export class UsersController {
     body: {
       displayName?: string;
       timezone?: string;
-      latitude?: number | null;
-      longitude?: number | null;
       birthday?: string | null;
       achievementsPublic?: boolean;
       notificationPrefs?: {

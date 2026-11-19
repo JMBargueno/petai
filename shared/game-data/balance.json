@@ -67,9 +67,6 @@
   "environmental": {
     "hot_temp": 30,
     "cold_temp": 5,
-    "hunger_hot": 0.5,
-    "happiness_rain": 0.5,
-    "energy_snow": 0.5,
     "inactivityThresholdHours": 2
   },
   "leveling": {

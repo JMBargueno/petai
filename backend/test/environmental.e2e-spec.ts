@@ -6,9 +6,9 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { RedisService } from '../src/redis/redis.service';
 
 /**
- * Environmental Awareness (e2e). Cubre US1 (T016): `GET /environmental/status` con weather mock
- * (upstream, cache, API down) y degradación; y US2 (T021): heartbeat → inactividad → `solo` →
- * retorno `active`. El clima se mockea con `global.fetch` (Open-Meteo no existe en el entorno de test).
+ * Environmental Awareness (e2e). Cubre US1 (T016): `GET /environmental/status` (el clima es siempre
+ * `unknown`: la ubicación se queda en el dispositivo y cada app pide el clima por su cuenta); y US2
+ * (T021): heartbeat → inactividad → `solo` → retorno `active`.
  */
 describe('Environmental Awareness (e2e)', () => {
   let app: INestApplication;
@@ -32,13 +32,6 @@ describe('Environmental Awareness (e2e)', () => {
     return { token, userId };
   }
 
-  function weatherResponse(temp: number, code: number): Response {
-    return new Response(JSON.stringify({ current: { temperature_2m: temp, weather_code: code, is_day: 1 } }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
   beforeAll(async () => {
     const mod = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = mod.createNestApplication();
@@ -56,7 +49,7 @@ describe('Environmental Awareness (e2e)', () => {
   });
 
   describe('GET /environmental/status (US1)', () => {
-    it('sin coordenadas → weather unknown, pero devolve timeOfDay/activity/festival (degradación)', async () => {
+    it('weather siempre unknown, pero devuelve timeOfDay/activity/festival (degradación)', async () => {
       const { token } = await signup();
       const res = await api().get('/v1/environmental/status').set(auth(token)).expect(200);
       expect(res.body.timeOfDay).toMatch(/^(late_night|morning|afternoon|evening|night)$/);
@@ -73,36 +66,14 @@ describe('Environmental Awareness (e2e)', () => {
       expect(res.body).toHaveProperty('festival');
     });
 
-    it('con coordenadas + upstream OK → condition correcta, 2ª llamada servida de cache (sin upstream)', async () => {
+    it('las coordenadas que aún mandan los escritorios antiguos se ignoran y no se consulta el clima', async () => {
       const { token } = await signup();
       await api().patch('/v1/me').set(auth(token)).send({ latitude: 19.4, longitude: -99.13 }).expect(200);
-      await redis.run((r) => r.del(redis.key('weather:19.4:-99.13'))); // limpiar cache previa
-
-      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(weatherResponse(32, 0));
-      try {
-        const res1 = await api().get('/v1/environmental/status').set(auth(token)).expect(200);
-        expect(res1.body.weather.condition).toBe('hot'); // 32 >= hot_temp (30)
-        expect(res1.body.weather.temperature).toBe(32);
-        expect(res1.body.weather.cached).toBe(false);
-        expect(fetchSpy).toHaveBeenCalledTimes(1);
-
-        const res2 = await api().get('/v1/environmental/status').set(auth(token)).expect(200);
-        expect(res2.body.weather.cached).toBe(true);
-        expect(fetchSpy).toHaveBeenCalledTimes(1); // segunda llamada NO consulta el upstream
-      } finally {
-        fetchSpy.mockRestore();
-      }
-    });
-
-    it('API de meteo cae → degrada a unknown y NUNCA devuelve 5xx', async () => {
-      const { token } = await signup();
-      await api().patch('/v1/me').set(auth(token)).send({ latitude: 40.4, longitude: -3.7 }).expect(200);
-      await redis.run((r) => r.del(redis.key('weather:40.4:-3.7')));
-
-      const fetchSpy = jest.spyOn(global, 'fetch').mockRejectedValue(new Error('timeout'));
+      const fetchSpy = jest.spyOn(global, 'fetch');
       try {
         const res = await api().get('/v1/environmental/status').set(auth(token)).expect(200);
         expect(res.body.weather.condition).toBe('unknown');
+        expect(fetchSpy).not.toHaveBeenCalled();
       } finally {
         fetchSpy.mockRestore();
       }

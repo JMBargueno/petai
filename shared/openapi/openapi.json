@@ -1273,16 +1273,6 @@
                   "timezone": {
                     "type": "string"
                   },
-                  "latitude": {
-                    "type": "number",
-                    "nullable": true,
-                    "description": "Coordenada opt-in para el clima (se borra con null)"
-                  },
-                  "longitude": {
-                    "type": "number",
-                    "nullable": true,
-                    "description": "Coordenada opt-in para el clima (se borra con null)"
-                  },
                   "birthday": {
                     "type": "string",
                     "nullable": true,

@@ -32,8 +32,6 @@ export class UsersService {
         displayName: true,
         handle: true,
         timezone: true,
-        latitude: true,
-        longitude: true,
         birthday: true,
         coins: true,
         gems: true,
@@ -61,7 +59,7 @@ export class UsersService {
   }
 
   /**
-   * Solo se aceptan displayName, timezone, latitude, longitude y birthday, validados. El cuerpo
+   * Solo se aceptan displayName, timezone y birthday (y preferencias), validados. El cuerpo
    * NUNCA se pasa tal cual a Prisma: de lo contrario el usuario podría modificar coins, gems,
    * passwordHash, etc. (asignación masiva).
    */
@@ -70,8 +68,6 @@ export class UsersService {
     const data: {
       displayName?: string;
       timezone?: string;
-      latitude?: number | null;
-      longitude?: number | null;
       birthday?: string | null;
       achievementsPublic?: boolean;
       notificationPrefs?: Prisma.InputJsonValue | null;
@@ -100,15 +96,9 @@ export class UsersService {
       data.timezone = input.timezone;
     }
 
-    // Coordenadas opt-in (privacidad): se redondean a 2 decimales y se usan solo para el clima.
-    if (input.latitude !== undefined) {
-      const lat = this.parseCoordinate(input.latitude, -90, 90, 'latitude');
-      data.latitude = lat;
-    }
-    if (input.longitude !== undefined) {
-      const lon = this.parseCoordinate(input.longitude, -180, 180, 'longitude');
-      data.longitude = lon;
-    }
+    // `latitude`/`longitude` ya no se guardan: la ubicación se queda en el dispositivo (solo
+    // sirve para pedir el clima desde la app). Los escritorios antiguos aún las mandan: se
+    // ignoran sin error para no romperles el arranque.
 
     if (input.birthday !== undefined) {
       if (input.birthday === null) {
@@ -161,8 +151,6 @@ export class UsersService {
         displayName: true,
         handle: true,
         timezone: true,
-        latitude: true,
-        longitude: true,
         birthday: true,
         coins: true,
         gems: true,
@@ -221,14 +209,5 @@ export class UsersService {
     });
     if (!user) throw new NotFoundException('No hay ningún jugador con ese nickname');
     return user;
-  }
-
-  /** Valida y redondea una coordenada; `null` borra el valor (opt-out). */
-  private parseCoordinate(value: unknown, min: number, max: number, field: string): number | null {
-    if (value === null) return null; // opt-out
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
-      throw new BadRequestException(`${field} debe ser un número entre ${min} y ${max}`);
-    }
-    return Math.round(value * 100) / 100;
   }
 }
