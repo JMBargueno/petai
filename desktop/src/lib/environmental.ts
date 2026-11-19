@@ -266,3 +266,15 @@ export function mergeLocalWeather(
   const w = weather ?? UNKNOWN_WEATHER;
   return { ...status, weather: { ...w } };
 }
+
+/**
+ * Dentro de la app el latido lo manda el núcleo: la UI solo le dice si el jugador está delante
+ * (ventana visible). Devuelve cómo dejar de informar.
+ */
+export function startPresenceReport(report: (present: boolean) => void): () => void {
+  if (typeof document === 'undefined') return () => {};
+  const tell = () => report(document.visibilityState === 'visible');
+  tell();
+  document.addEventListener('visibilitychange', tell);
+  return () => document.removeEventListener('visibilitychange', tell);
+}

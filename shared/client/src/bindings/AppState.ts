@@ -19,4 +19,9 @@ shop: Array<Record<string, unknown>>,
 /**
  * Bandeja de avisos de la mascota que no se pudieron mostrar (los más recientes primero).
  */
-inbox: Array<Record<string, unknown>>, };
+inbox: Array<Record<string, unknown>>, 
+/**
+ * Estado ambiental que da el servidor (hora del día, actividad, festividad), o `null`. El clima
+ * no va aquí: sale del propio dispositivo.
+ */
+environment: Record<string, unknown> | null, };

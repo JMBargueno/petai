@@ -266,3 +266,8 @@ export function inboxTake(): Promise<unknown[]> {
 export function inboxMarkAllRead(): Promise<void> {
   return command<void>('inbox_mark_all_read');
 }
+
+/** Le dice al núcleo si el jugador está delante (ventana visible): va en su latido al servidor. */
+export function setPresent(present: boolean): Promise<void> {
+  return command<void>('set_present', { present });
+}

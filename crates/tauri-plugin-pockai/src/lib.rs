@@ -156,6 +156,13 @@ async fn inbox_mark_all_read(core: State<'_, Core>) -> Result<(), String> {
     Ok(())
 }
 
+/// La UI dice si el jugador está delante (ventana visible): va en el latido al servidor.
+#[tauri::command]
+async fn set_present(core: State<'_, Core>, present: bool) -> Result<(), String> {
+    core.set_present(present);
+    Ok(())
+}
+
 fn forward<R: Runtime>(app: &AppHandle<R>, event: CoreEvent) {
     let result = match event {
         CoreEvent::Session(kind) => app.emit(EVENT_SESSION, SessionEvent { kind }),
@@ -189,7 +196,8 @@ pub fn init<R: Runtime>(config: PockaiConfig) -> TauriPlugin<R> {
             state_select_pet,
             inbox_push,
             inbox_take,
-            inbox_mark_all_read
+            inbox_mark_all_read,
+            set_present
         ])
         .setup(move |app, _api| {
             let data_dir = app.path().app_config_dir().ok();

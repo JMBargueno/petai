@@ -43,6 +43,11 @@ export const activePetId = writable<string | null>(null);
 export const eggs = writable<any[]>([]);
 export const inventory = writable<any[]>([]);
 export const shopItems = writable<any[]>([]);
+/**
+ * Estado ambiental que da el servidor (hora del día, actividad, festividad). Solo lo rellena el
+ * núcleo; sin él lo sigue llevando `App.svelte` con `lib/environmental`.
+ */
+export const environment = writable<any>(null);
 
 /** La mascota activa: la que pasea por el escritorio y a la que se refieren todas las pestañas. */
 export const currentPet = derived([pets, activePetId], ([$pets, $id]) => pickActivePet($pets, $id));
@@ -89,6 +94,7 @@ function applySnapshot(state: AppState) {
   inventory.set(state.inventory);
   shopItems.set(state.shop);
   setInboxFromCore(state.inbox as unknown as InboxNotification[]);
+  environment.set(state.environment);
 }
 
 function applyChange(change: StateChange) {
@@ -102,6 +108,7 @@ function applyChange(change: StateChange) {
   else if (change.slice === 'inventory') inventory.set(value);
   else if (change.slice === 'shop') shopItems.set(value);
   else if (change.slice === 'inbox') setInboxFromCore(value);
+  else if (change.slice === 'environment') environment.set(value);
   if (change.slice === 'pets' && change.source === 'server') serverPetsArrived();
 }
 

@@ -3,7 +3,7 @@
   import { onMount, onDestroy, tick } from 'svelte';
   import { api, getAccessToken, onEmailUnverified, onHandleRequired, onSessionExpired } from './lib/api';
   import * as appState from './lib/appState';
-  import { hasCore, onNotice } from '@pockai/client';
+  import { hasCore, onNotice, setPresent } from '@pockai/client';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
   import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
@@ -17,6 +17,7 @@
   import {
     fetchStatus,
     startHeartbeat,
+    startPresenceReport,
     refreshLocalWeather,
     mergeLocalWeather,
     localWeather,
@@ -87,6 +88,8 @@
   let eggs: any[] = [];
   let inventory: any[] = [];
   let shopItems: any[] = [];
+  /** Estado ambiental del servidor (hora del día, actividad, festividad); el clima sale del equipo. */
+  let serverEnvironmental: EnvironmentalStatus | null = null;
   const stopAppState = [
     appState.user.subscribe((v) => (user = v)),
     appState.pets.subscribe((v) => (pets = v)),
@@ -94,6 +97,8 @@
     appState.eggs.subscribe((v) => (eggs = v)),
     appState.inventory.subscribe((v) => (inventory = v)),
     appState.shopItems.subscribe((v) => (shopItems = v)),
+    // Solo con núcleo: sin él, `serverEnvironmental` lo carga esta misma página (más abajo).
+    appState.environment.subscribe((v) => hasCore() && (serverEnvironmental = v)),
     // Lectura fresca del servidor (sondeo o tiempo real): ¿necesita atención la mascota activa?
     // Dentro de la app lo decide el núcleo y llega como aviso (`onNotice`, más abajo).
     appState.onServerPets(() => !hasCore() && currentPet && notifyPetNeeds(currentPet)),
@@ -305,7 +310,6 @@
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
   // El servidor da hora del día, actividad y festividad; el clima sale del propio equipo
   // (ubicación nativa → Open-Meteo, sin pasar por el servidor) y se funde aquí.
-  let serverEnvironmental: EnvironmentalStatus | null = null;
   $: environmental = mergeLocalWeather(serverEnvironmental, $localWeather);
   let stopHeartbeat: () => void = () => {};
   let stopEnvRefresh: () => void = () => {};
@@ -447,7 +451,9 @@
         else socket.once('connect', checkWelcomeBack);
 
         // Feature ambiental: hora del día, clima, inactividad y festividades
-        socket.on('environmental:changed', (ev: EnvironmentalChangedEvent) => handleEnvironmentalChanged(ev));
+        socket.on('environmental:changed', (ev: EnvironmentalChangedEvent) => {
+          if (!hasCore()) handleEnvironmentalChanged(ev); // con núcleo lo aplica él
+        });
 
         // Logro desbloqueado → aviso con la insignia (la recompensa ya está acreditada: refresca saldo).
         socket.on('achievement:unlocked', (p: AchievementUnlockedPayload | null) => {
@@ -470,7 +476,9 @@
         });
 
         loadEnvironmental(); // estado inicial (y clima del lugar, desde el propio equipo)
-        stopHeartbeat = startHeartbeat(); // heartbeat cada 60 s
+        // Latido cada 60 s: dentro de la app lo manda el núcleo y aquí solo se le dice si el jugador
+        // está delante.
+        stopHeartbeat = hasCore() ? startPresenceReport((present) => void setPresent(present).catch(() => {})) : startHeartbeat();
         // El clima cambia a lo largo del día: sin este refresco solo se leía al arrancar.
         stopEnvRefresh();
         const envTimer = setInterval(loadEnvironmental, STATUS_REFRESH_MS);
@@ -591,7 +599,8 @@
   async function loadEnvironmental() {
     // Clima del lugar: ubicación nativa del equipo → Open-Meteo (caché de 30 min, nunca lanza).
     void refreshLocalWeather();
-    if (!getAccessToken()) return;
+    // Dentro de la app el estado ambiental del servidor lo lleva el núcleo (`appState.environment`).
+    if (hasCore() || !getAccessToken()) return;
     try {
       serverEnvironmental = await fetchStatus();
     } catch {

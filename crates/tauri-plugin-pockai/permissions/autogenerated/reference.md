@@ -21,6 +21,7 @@ Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en 
 - `allow-inbox-push`
 - `allow-inbox-take`
 - `allow-inbox-mark-all-read`
+- `allow-set-present`
 
 ## Permission Table
 
@@ -313,6 +314,32 @@ Enables the session_state command without any pre-configured scope.
 <td>
 
 Denies the session_state command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:allow-set-present`
+
+</td>
+<td>
+
+Enables the set_present command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:deny-set-present`
+
+</td>
+<td>
+
+Denies the set_present command without any pre-configured scope.
 
 </td>
 </tr>

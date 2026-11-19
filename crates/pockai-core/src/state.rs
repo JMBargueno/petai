@@ -10,6 +10,7 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -39,7 +40,11 @@ pub enum Slice {
     Inventory,
     Shop,
     Inbox,
+    Environment,
 }
+
+/// Cada cuántos ciclos de sondeo (de un minuto) se vuelve a pedir el estado ambiental completo.
+const ENVIRONMENT_REFRESH_EVERY: u32 = 15;
 
 /// Avisos que se guardan como mucho en la bandeja.
 const INBOX_MAX: usize = 100;
@@ -91,6 +96,10 @@ pub struct AppState {
     /// Bandeja de avisos de la mascota que no se pudieron mostrar (los más recientes primero).
     #[ts(type = "Array<Record<string, unknown>>")]
     pub inbox: Vec<Value>,
+    /// Estado ambiental que da el servidor (hora del día, actividad, festividad), o `null`. El clima
+    /// no va aquí: sale del propio dispositivo.
+    #[ts(type = "Record<string, unknown> | null")]
+    pub environment: Value,
 }
 
 impl AppState {
@@ -103,6 +112,7 @@ impl AppState {
             Slice::Inventory => Value::Array(self.inventory.clone()),
             Slice::Shop => Value::Array(self.shop.clone()),
             Slice::Inbox => Value::Array(self.inbox.clone()),
+            Slice::Environment => self.environment.clone(),
         }
     }
 
@@ -150,6 +160,8 @@ pub struct LoadOutcome {
 pub(crate) struct StateStore {
     /// Cuándo se avisó por última vez de cada necesidad de cada mascota.
     pub(crate) needs_sent: Mutex<HashMap<String, Instant>>,
+    /// ¿Está el jugador delante? Lo dice la UI (ventana visible); va en el latido al servidor.
+    present: AtomicBool,
     state: Mutex<AppState>,
     poll: Mutex<Option<JoinHandle<()>>>,
     /// Mascota activa ya comunicada al servidor en esta sesión.
@@ -168,7 +180,7 @@ impl StateStore {
                 .unwrap_or_default(),
             _ => AppState::default(),
         };
-        Self { needs_sent: Mutex::new(HashMap::new()), state: Mutex::new(state), poll: Mutex::new(None), activated: Mutex::new(None), path }
+        Self { needs_sent: Mutex::new(HashMap::new()), present: AtomicBool::new(true), state: Mutex::new(state), poll: Mutex::new(None), activated: Mutex::new(None), path }
     }
 
     fn persist(&self, state: &AppState) {
@@ -261,7 +273,64 @@ impl Core {
         self.sync_active_pet();
         self.start_poll();
         self.deliver_reminders().await;
+        // Entorno: estado inicial y primer latido (los siguientes van con el sondeo).
+        let _ = self.environment_refresh().await;
+        self.heartbeat().await;
         outcome
+    }
+
+    /// Vuelve a pedir al servidor el estado ambiental (hora del día, actividad, festividad).
+    pub async fn environment_refresh(&self) -> Result<(), String> {
+        let status = self.get_json("/v1/environmental/status", true).await?;
+        self.change(Slice::Environment, ChangeSource::Server, |s| s.environment = status);
+        Ok(())
+    }
+
+    /// La UI dice si el jugador está delante (ventana visible). Va en el siguiente latido.
+    pub fn set_present(&self, present: bool) {
+        self.store().present.store(present, Ordering::SeqCst);
+    }
+
+    /// Latido de actividad: el servidor lo usa para saber si la mascota está acompañada.
+    async fn heartbeat(&self) {
+        let active = self.store().present.load(Ordering::SeqCst);
+        let _ = self.send_json("POST", "/v1/environmental/activity", json!({ "active": active })).await;
+    }
+
+    /// `environmental:changed` del tiempo real. Los de clima se ignoran: el servidor ya no conoce la
+    /// ubicación y el clima sale del propio dispositivo.
+    fn environment_changed(&self, event: &Value) {
+        let known = !self.store().state.lock().unwrap().environment.is_null();
+        if !known {
+            let core = self.clone();
+            tokio::spawn(async move {
+                let _ = core.environment_refresh().await;
+            });
+            return;
+        }
+        let kind = event.get("type").and_then(Value::as_str).unwrap_or("");
+        let data = event.get("data").cloned().unwrap_or(Value::Null);
+        self.change(Slice::Environment, ChangeSource::Server, |s| {
+            let Some(env) = s.environment.as_object_mut() else { return };
+            match kind {
+                "timeOfDay" => {
+                    env.insert("timeOfDay".into(), data.get("timeOfDay").cloned().unwrap_or(Value::Null));
+                }
+                "activity" => {
+                    let mode = data.get("mode").cloned().unwrap_or(Value::Null);
+                    let active = mode.as_str() == Some("active");
+                    let activity = env.entry("activity").or_insert_with(|| json!({}));
+                    if let Some(activity) = activity.as_object_mut() {
+                        activity.insert("mode".into(), mode);
+                        activity.insert("active".into(), Value::Bool(active));
+                    }
+                }
+                "festival" => {
+                    env.insert("festival".into(), data);
+                }
+                _ => {}
+            }
+        });
     }
 
     /// Vuelve a pedir al servidor una parte del estado.
@@ -289,6 +358,7 @@ impl Core {
                 let inventory = as_list(self.get_json("/v1/inventory", true).await?);
                 self.change(slice, ChangeSource::Server, |s| s.inventory = inventory);
             }
+            Slice::Environment => return self.environment_refresh().await,
             Slice::Shop | Slice::ActivePetId | Slice::Inbox => return Err("esta parte del estado no se recarga sola".into()),
         }
         Ok(())
@@ -374,6 +444,7 @@ impl Core {
     pub(crate) fn state_on_realtime(&self, name: &str, payload: &Value) {
         match name {
             "pet:update" => self.apply_pet(payload.clone(), false, ChangeSource::Server),
+            "environmental:changed" => self.environment_changed(payload),
             // La recompensa ya está acreditada: se refresca el saldo.
             "achievement:unlocked" | "reward:received" => {
                 let core = self.clone();
@@ -417,6 +488,7 @@ impl Core {
         self.change(Slice::Pets, ChangeSource::Local, |s| s.pets.clear());
         self.change(Slice::Eggs, ChangeSource::Local, |s| s.eggs.clear());
         self.change(Slice::Inventory, ChangeSource::Local, |s| s.inventory.clear());
+        self.change(Slice::Environment, ChangeSource::Local, |s| s.environment = Value::Null);
     }
 
     /// Aplica un cambio, lo guarda en disco y lo anuncia.
@@ -480,10 +552,16 @@ impl Core {
         }
         let core = self.clone();
         *slot = Some(tokio::spawn(async move {
+            let mut cycle: u32 = 0;
             loop {
                 tokio::time::sleep(POLL_INTERVAL).await;
                 if !core.session_state().active {
                     break;
+                }
+                cycle = cycle.wrapping_add(1);
+                core.heartbeat().await;
+                if cycle % ENVIRONMENT_REFRESH_EVERY == 0 {
+                    let _ = core.environment_refresh().await;
                 }
                 let has_pets = !core.store().state.lock().unwrap().pets.is_empty();
                 if has_pets {
@@ -634,5 +712,45 @@ mod tests {
         assert!(is_sold(&json!({ "availability": "shop" })));
         assert!(!is_sold(&json!({ "availability": "drop" })));
         assert!(!is_sold(&json!({ "availability": "hidden" })));
+    }
+}
+
+#[cfg(test)]
+mod realtime_tests {
+    use super::*;
+    use crate::config::CoreConfig;
+    use crate::secrets::MemoryStore;
+
+    fn core_with(state: AppState) -> Core {
+        let core = Core::new(CoreConfig::desktop("http://127.0.0.1:9", None), Box::new(MemoryStore::default()));
+        *core.store().state.lock().unwrap() = state;
+        core
+    }
+
+    #[tokio::test]
+    async fn pet_update_sustituye_solo_a_las_mascotas_que_ya_se_tienen() {
+        let core = core_with(AppState { pets: vec![json!({ "id": "p1", "hunger": 80 })], ..Default::default() });
+
+        core.state_on_realtime("pet:update", &json!({ "id": "p1", "hunger": 20 }));
+        core.state_on_realtime("pet:update", &json!({ "id": "ajena", "hunger": 1 }));
+
+        assert_eq!(core.state_snapshot().pets, vec![json!({ "id": "p1", "hunger": 20 })]);
+    }
+
+    #[tokio::test]
+    async fn los_cambios_ambientales_se_funden_con_el_estado_y_el_clima_se_ignora() {
+        let environment = json!({ "timeOfDay": "morning", "activity": { "mode": "active", "active": true, "lastActiveAt": "x" }, "festival": null });
+        let core = core_with(AppState { environment, ..Default::default() });
+
+        core.state_on_realtime("environmental:changed", &json!({ "type": "timeOfDay", "data": { "timeOfDay": "night" } }));
+        core.state_on_realtime("environmental:changed", &json!({ "type": "activity", "data": { "mode": "solo" } }));
+        core.state_on_realtime("environmental:changed", &json!({ "type": "festival", "data": { "id": "f1", "name": "Fiesta" } }));
+        core.state_on_realtime("environmental:changed", &json!({ "type": "weather", "data": { "condition": "rain" } }));
+
+        let env = core.state_snapshot().environment;
+        assert_eq!(env["timeOfDay"], "night");
+        assert_eq!(env["activity"], json!({ "mode": "solo", "active": false, "lastActiveAt": "x" }));
+        assert_eq!(env["festival"]["id"], "f1");
+        assert!(env.get("weather").is_none());
     }
 }

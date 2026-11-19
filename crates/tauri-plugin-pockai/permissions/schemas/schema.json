@@ -427,6 +427,18 @@
           "markdownDescription": "Denies the session_state command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_present command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-present",
+          "markdownDescription": "Enables the set_present command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_present command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-present",
+          "markdownDescription": "Denies the set_present command without any pre-configured scope."
+        },
+        {
           "description": "Enables the state_apply_pet command without any pre-configured scope.",
           "type": "string",
           "const": "allow-state-apply-pet",
@@ -499,10 +511,10 @@
           "markdownDescription": "Denies the state_snapshot command without any pre-configured scope."
         },
         {
-          "description": "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real, estado global y avisos.\n#### This default permission set includes:\n\n- `allow-api-request`\n- `allow-chat-stream`\n- `allow-chat-cancel`\n- `allow-session-state`\n- `allow-session-logout`\n- `allow-session-import-legacy`\n- `allow-realtime-start`\n- `allow-realtime-stop`\n- `allow-state-snapshot`\n- `allow-state-load`\n- `allow-state-refresh`\n- `allow-state-apply-pet`\n- `allow-state-patch-pet`\n- `allow-state-select-pet`\n- `allow-inbox-push`\n- `allow-inbox-take`\n- `allow-inbox-mark-all-read`",
+          "description": "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real, estado global y avisos.\n#### This default permission set includes:\n\n- `allow-api-request`\n- `allow-chat-stream`\n- `allow-chat-cancel`\n- `allow-session-state`\n- `allow-session-logout`\n- `allow-session-import-legacy`\n- `allow-realtime-start`\n- `allow-realtime-stop`\n- `allow-state-snapshot`\n- `allow-state-load`\n- `allow-state-refresh`\n- `allow-state-apply-pet`\n- `allow-state-patch-pet`\n- `allow-state-select-pet`\n- `allow-inbox-push`\n- `allow-inbox-take`\n- `allow-inbox-mark-all-read`\n- `allow-set-present`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real, estado global y avisos.\n#### This default permission set includes:\n\n- `allow-api-request`\n- `allow-chat-stream`\n- `allow-chat-cancel`\n- `allow-session-state`\n- `allow-session-logout`\n- `allow-session-import-legacy`\n- `allow-realtime-start`\n- `allow-realtime-stop`\n- `allow-state-snapshot`\n- `allow-state-load`\n- `allow-state-refresh`\n- `allow-state-apply-pet`\n- `allow-state-patch-pet`\n- `allow-state-select-pet`\n- `allow-inbox-push`\n- `allow-inbox-take`\n- `allow-inbox-mark-all-read`"
+          "markdownDescription": "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real, estado global y avisos.\n#### This default permission set includes:\n\n- `allow-api-request`\n- `allow-chat-stream`\n- `allow-chat-cancel`\n- `allow-session-state`\n- `allow-session-logout`\n- `allow-session-import-legacy`\n- `allow-realtime-start`\n- `allow-realtime-stop`\n- `allow-state-snapshot`\n- `allow-state-load`\n- `allow-state-refresh`\n- `allow-state-apply-pet`\n- `allow-state-patch-pet`\n- `allow-state-select-pet`\n- `allow-inbox-push`\n- `allow-inbox-take`\n- `allow-inbox-mark-all-read`\n- `allow-set-present`"
         }
       ]
     }
