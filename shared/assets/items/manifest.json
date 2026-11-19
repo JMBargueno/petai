@@ -45,6 +45,14 @@
     "evolution_stone": {
       "colors": 9,
       "box": [6, 2, 19, 28]
+    },
+    "ether_threader": {
+      "colors": 7,
+      "box": [2, 1, 27, 30]
+    },
+    "origin_nectar": {
+      "colors": 7,
+      "box": [5, 2, 21, 28]
     }
   }
 }

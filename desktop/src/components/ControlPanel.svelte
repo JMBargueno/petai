@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { api, isTerminalError } from '../lib/api';
+  import { sfx } from '../lib/audio';
   import { petVoice } from '../lib/petVoice';
   import MinigamesTab from './MinigamesTab.svelte';
   import AiTab from './AiTab.svelte';
@@ -24,6 +25,7 @@
   import ProfileTab from '../features/profile/ProfileTab.svelte';
   import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
   import DesktopSettingsPanel from './DesktopSettingsPanel.svelte';
+  import SoundSettingsPanel from './SoundSettingsPanel.svelte';
   import AboutPanel from './AboutPanel.svelte';
   import PockaiMark from './PockaiMark.svelte';
   import { updateState, updateLock, hasUpdate } from '../lib/updater';
@@ -33,6 +35,7 @@
   import HandleField from './HandleField.svelte';
   import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, X, Users } from 'lucide-svelte';
   import HomeView from './views/HomeView.svelte';
+  import BackpackView from './views/BackpackView.svelte';
   import HatchView from './views/HatchView.svelte';
   import ShopView from './views/ShopView.svelte';
   import AccountView from './views/AccountView.svelte';
@@ -98,7 +101,9 @@
   let panelOk = '';
   let panelNoticeTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function showPanelNotice(kind: 'error' | 'ok', message: string) {
+  /** `sound`: el del aviso por defecto, otro (p. ej. `ui.purchase`) o `null` para callar. */
+  function showPanelNotice(kind: 'error' | 'ok', message: string, sound: string | null = kind === 'ok' ? 'ui.notice_ok' : 'ui.error') {
+    if (sound) sfx(sound);
     panelError = kind === 'error' ? message : '';
     panelOk = kind === 'ok' ? message : '';
     if (panelNoticeTimer) clearTimeout(panelNoticeTimer);
@@ -137,13 +142,13 @@
 
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
   const NAV = [
-    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['mind', 'Mente'], ['habitat', 'Hábitat'], ['wardrobe', 'Armario'], ['skills', 'Habilidades']] },
+    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['backpack', 'Mochila'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['mind', 'Mente'], ['habitat', 'Hábitat'], ['wardrobe', 'Armario'], ['skills', 'Habilidades']] },
     { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo'], ['training', 'Entrenamiento'], ['cooking', 'Cocina'], ['adventure', 'Aventura']] },
     { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
     { id: 'social', label: 'Social', icon: Users, subs: [['profile', 'Mi Perfil'], ['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
     { id: 'progress', label: 'Progreso', icon: Trophy, subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
     { id: 'shop', label: 'Tienda', icon: ShoppingBag, subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
-    { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['desktop', 'Escritorio'], ['about', 'Acerca de']] },
+    { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['sound', 'Sonido'], ['desktop', 'Escritorio'], ['about', 'Acerca de']] },
   ];
   let dest: string = 'pet';
   let sub: string = 'home';
@@ -489,7 +494,33 @@
       dispatch('petUpdated', updated);
       dispatch('actionTriggered', 'eat');
       await refreshInventory();
-      showPanelNotice('ok', food ? `${petName()} se ha comido: ${food}.` : `${petName()} ha comido.`);
+      showPanelNotice('ok', food ? `${petName()} se ha comido: ${food}.` : `${petName()} ha comido.`, null);
+    });
+  }
+
+  /** Mochila (spec 41): usa cualquier objeto; el servidor decide qué hace según su tipo. */
+  function handleUseItem(itemId: string) {
+    if (!pet) return;
+    const row = inventory.find((i) => i.itemId === itemId);
+    const name = row?.item?.name;
+    const kind = row?.item?.kind;
+    const before = pet.level;
+    return runAction(`use:${itemId}`, async () => {
+      const updated = await api.usePetItem(pet.id, itemId);
+      dispatch('petUpdated', updated);
+      if (kind === 'food') dispatch('actionTriggered', 'eat');
+      await refreshInventory();
+      const msg =
+        kind === 'level_up' && updated?.level > before
+          ? `¡${petName()} sube al nivel ${updated.level}!`
+          : kind === 'medicine'
+            ? `${petName()} se siente mucho mejor.`
+            : kind === 'evolution'
+              ? `¡${petName()} ha alcanzado su forma final!`
+              : name
+                ? `Has usado: ${name}.`
+                : 'Objeto usado.';
+      showPanelNotice('ok', msg, null);
     });
   }
 
@@ -499,7 +530,7 @@
       const updated = await api.cleanPet(pet.id);
       dispatch('petUpdated', updated);
       dispatch('actionTriggered', 'clean');
-      showPanelNotice('ok', `${petName()} está reluciente.`);
+      showPanelNotice('ok', `${petName()} está reluciente.`, null);
     });
   }
 
@@ -584,7 +615,7 @@
       await api.buyEgg();
       dispatch('refreshEggs');
       dispatch('refreshUser');
-      showPanelNotice('ok', 'Huevo comprado. Ya está incubando.');
+      showPanelNotice('ok', 'Huevo comprado. Ya está incubando.', 'ui.purchase');
     });
   }
 
@@ -594,7 +625,7 @@
       await api.buyShopItem(itemId, 1);
       dispatch('refreshUser');
       await refreshInventory();
-      showPanelNotice('ok', name ? `Comprado: ${name}.` : 'Compra hecha.');
+      showPanelNotice('ok', name ? `Comprado: ${name}.` : 'Compra hecha.', 'ui.purchase');
     });
   }
 
@@ -622,8 +653,8 @@
         <span class="logo"><PockaiMark size={30} /><span class="display">Pockai</span></span>
         {#if user}
           <div class="user-pill">
-            <CurrencyPill kind="coins" amount={user.coins} />
-            <CurrencyPill kind="gems" amount={user.gems} />
+            <CurrencyPill kind="coins" amount={user.coins} sound />
+            <CurrencyPill kind="gems" amount={user.gems} sound />
           </div>
         {/if}
       </div>
@@ -874,6 +905,15 @@
             on:go={(e) => go(e.detail.dest, e.detail.sub)}
           />
 
+        {:else if dest === 'pet' && sub === 'backpack'}
+          <BackpackView
+            {pet}
+            {inventory}
+            busy={busyAction}
+            on:use={(e) => handleUseItem(e.detail)}
+            on:go={(e) => go(e.detail.dest, e.detail.sub)}
+          />
+
         {:else if dest === 'pet' && sub === 'hatch'}
           <HatchView
             {eggs}
@@ -982,6 +1022,8 @@
         {:else if dest === 'settings' && sub === 'notifications'}
           <NotificationSettingsPanel />
 
+        {:else if dest === 'settings' && sub === 'sound'}
+          <SoundSettingsPanel />
         {:else if dest === 'settings' && sub === 'desktop'}
           <DesktopSettingsPanel />
 

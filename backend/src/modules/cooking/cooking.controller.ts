@@ -36,11 +36,16 @@ export class CookingController {
         sessionId: { type: 'string', description: 'ID de la sesión de cocina' },
         score: { type: 'number', description: 'Puntuación obtenida' },
         correctOrder: { type: 'boolean', description: 'Si el orden de los pasos fue correcto' },
+        picked: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Ingredientes echados a la olla, en orden. Si se envía, el servidor cuenta los aciertos y no usa score ni correctOrder',
+        },
       },
     },
   })
-  submit(@CurrentUser() user: any, @Body() body: { sessionId: string; score: number; correctOrder: boolean }) {
-    return this.cookingService.submit(user.id, body?.sessionId, body?.score, body?.correctOrder);
+  submit(@CurrentUser() user: any, @Body() body: { sessionId: string; score: number; correctOrder: boolean; picked?: string[] }) {
+    return this.cookingService.submit(user.id, body?.sessionId, body?.score, body?.correctOrder, body?.picked);
   }
 
   @Get('daily-menu')

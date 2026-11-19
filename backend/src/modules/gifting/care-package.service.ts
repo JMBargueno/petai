@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
@@ -18,6 +19,7 @@ export class CarePackageService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimeGateway,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   async sendCarePackage(
@@ -122,6 +124,12 @@ export class CarePackageService {
     });
     if (careUpdated) this.realtime.emitPetUpdate(recipient.id, careUpdated);
     this.realtime.emitPetAction(recipient.id, pet.id, 'care_received');
+    // La mascota que lo recibe lo recuerda y le coge cariño a quien lo envió. Nunca rompe el envío.
+    try {
+      this.events?.emit('gift:received', { senderId: userId, recipientId: recipient.id, petId: pet.id, kind: 'care' });
+    } catch {
+      /* la mente es opcional */
+    }
     return payload;
   }
 

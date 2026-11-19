@@ -10,6 +10,7 @@ import { adventureEpisode } from '../mind/memory.engine';
 import { PetsService } from '../pets/pets.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { publicScene, resolveOutcome, sceneCounts } from './decision-story.engine';
+import { ActivityDropsService } from '../inventory/activity-drops.service';
 
 const scenesOf = (story: { scenes: unknown }): StoryScene[] => (story.scenes as StoredScenes).scenes;
 
@@ -30,6 +31,8 @@ export class DecisionStoryService {
     private readonly dailyQuota: DailyQuotaService,
     @Optional() private readonly realtime?: RealtimeGateway,
     @Optional() private readonly events?: EventEmitter2,
+    // Drops de actividades (spec 41)
+    @Optional() private readonly activityDrops?: ActivityDropsService,
   ) {}
 
   private data(): StoryData {
@@ -211,6 +214,8 @@ export class DecisionStoryService {
       community: { counts, total: counts.reduce((a, b) => a + b, 0) },
       next: last ? null : publicScene(scenes[sceneIndex + 1], sceneIndex + 1),
       completed: null as null | { outcome: string; score: number; rewards: { xp: number; coins: number; happiness: number }; memory: string },
+      /** Objeto que soltó la aventura al terminarla (spec 41). */
+      bonusItem: null as null | { itemId: string; name: string; qty: number },
     };
     if (!result) return response;
 
@@ -225,6 +230,7 @@ export class DecisionStoryService {
     }
     this.logger.log(`Historia ${storyId} terminada por ${userId}: ${result.outcome} (${result.score})`);
     response.completed = { outcome: result.outcome, score: result.score, rewards, memory: adventureEpisode(story.title, result.outcome) };
+    response.bonusItem = (await this.activityDrops?.roll(userId, 'adventure')) ?? null;
     return response;
   }
 

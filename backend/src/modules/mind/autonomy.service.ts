@@ -12,6 +12,8 @@ import { nextTrick, normalizeTricks, practiceTrick } from './tricks.engine';
 import { activeWishes, activityBoosts, normalizeWishes } from './wishes.engine';
 import { layerOf, type MemoryRow } from './memory.engine';
 import { EncounterService } from './encounter.service';
+import { ActivityDropsService } from '../inventory/activity-drops.service';
+import { text } from './strings';
 
 const STAGE_PULL: Record<string, number> = { stranger: 1, acquaintance: 1.3, friend: 2, best_friend: 3 };
 
@@ -63,6 +65,8 @@ export class AutonomyService {
     private readonly memory: MindMemoryService,
     @Optional() private readonly cronLock?: CronLockService,
     @Optional() encounters?: EncounterService,
+    // Drops de actividades (spec 41): al encontrar algo explorando, a veces cae también un objeto raro
+    @Optional() private readonly activityDrops?: ActivityDropsService,
   ) {
     this.encounters = encounters ?? new EncounterService(mind, memory);
   }
@@ -160,6 +164,7 @@ export class AutonomyService {
         });
       }
       for (const itemId of sim.itemsFound) await this.grantItem(pet.userId, itemId);
+      if (sim.itemsFound.length) await this.activityDrops?.roll(pet.userId, 'explore');
 
       // Memoria episódica (fechada en el intervalo en que ocurrió: "ayer visité…")
       // Los encuentros con amigos los escribe la escena (más abajo), cada uno desde su lado
@@ -197,7 +202,7 @@ export class AutonomyService {
               layer: 'episodic' as const,
               kind: 'event',
               key: `trick:${id}`,
-              content: `Aprendí un truco yo solo: ${mindCfg.tricks.catalog[id].name}. ¡Quiero enseñárselo a mi entrenador!`,
+              content: text('TRICK_LEARNED_ALONE', { trick: mindCfg.tricks.catalog[id].name }),
               importance: 0.6,
               valence: 0.7,
             })),
@@ -229,7 +234,7 @@ export class AutonomyService {
     });
     return users
       .filter((u) => u.pets.length)
-      .map((u) => ({ petId: u.pets[0].id, name: u.pets[0].nickname, ownerId: u.id, ownerName: u.displayName || 'un amigo' }))
+      .map((u) => ({ petId: u.pets[0].id, name: u.pets[0].nickname, ownerId: u.id, ownerName: u.displayName || text('NAME_SOME_FRIEND') }))
       .sort((a, b) => a.petId.localeCompare(b.petId));
   }
 
@@ -244,7 +249,7 @@ export class AutonomyService {
     // La misma escena que en una visita en vivo: la mascota va a casa de su amigo
     await this.encounters.play({
       host: { id: friend.petId, name: friend.name, ownerName: friend.ownerName, dims: friendMind.dims, energy: friendPet.energy ?? 60 },
-      guest: { id: pet.id, name: pet.nickname || 'un Pockai', ownerName: owner?.displayName || 'un amigo', dims, energy: pet.energy ?? 60 },
+      guest: { id: pet.id, name: pet.nickname || text('NAME_SOME_POCKAI'), ownerName: owner?.displayName || text('NAME_SOME_FRIEND'), dims, energy: pet.energy ?? 60 },
       slot,
       first: true,
       at,
@@ -326,7 +331,7 @@ export class AutonomyService {
     );
     if (counters.some((c) => c.encounters >= cfg.social.dailyCapPerPet)) return false;
 
-    const ownerName = (p: any) => p.user?.displayName || 'un amigo';
+    const ownerName = (p: any) => p.user?.displayName || text('NAME_SOME_FRIEND');
     // Una escena para los dos: `b` va a casa de `a`, y cada uno la recuerda desde su lado
     await this.encounters.play({
       host: { id: a.id, name: a.nickname, ownerName: ownerName(a), dims: da.dims, energy: a.energy ?? 60 },

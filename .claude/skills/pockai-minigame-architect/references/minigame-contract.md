@@ -10,7 +10,7 @@ La norma es `docs/specs/spec-39-minijuegos-compartidos.md` §2 y §3. Aquí va l
 | Vista | `shared/minigames/src/views/<id>View.ts` | Pintar el estado y traducir ratón, teclado y toque a entradas |
 | Registro | `shared/minigames/src/logic.ts` (lógica) y `src/registry.ts` (vista, icono, `howTo`) | Qué juegos existen |
 
-El backend compila **solo** lo que cuelga de `src/logic.ts` (`tsconfig.node.json` → `dist/node`). Si la lógica importa algo de la vista, de `assets.ts` o de `pet.ts`, el backend deja de compilar.
+El backend compila **solo** lo que cuelga de `src/logic.ts` (`tsconfig.node.json` → `dist/node`). Si la lógica importa algo de la vista, de `assets.ts`, de `pet.ts` o de `sound.ts`, el backend deja de compilar.
 
 ## `GameDefinition` (`src/core/types.ts`)
 
@@ -76,7 +76,7 @@ interface GameView<S> {
 }
 ```
 
-- `ctx.push(input)` encola una entrada para el tick siguiente; `ctx.reducedMotion`; `ctx.pet` es la mascota (`pockai-in-game.md`).
+- `ctx.push(input)` encola una entrada para el tick siguiente; `ctx.reducedMotion`; `ctx.pet` es la mascota (`pockai-in-game.md`); `ctx.sfx` es el sonido (`play`, `loop`, `stopLoop`; los ids, en `MG` de `src/sound.ts`).
 - Ayudas: `el`, `button` (con `aria-label`), `on`, `toLogical`, `pct`, `typing` (no te quedes las teclas de un campo de texto o de otro botón).
 - Las teclas de movimiento llaman a `preventDefault` para no mover el scroll del panel.
 - Si la ventana pierde el foco con una tecla pulsada, el `keyup` no llega: suéltalas en `blur`.

@@ -60,10 +60,15 @@ export function argValue(name: string): string | undefined {
 
 export const hasFlag = (name: string) => process.argv.includes(name);
 
-/** Lee `.env` de la raíz si existe (Node 22). La key nunca se imprime. */
+/**
+ * Lee `.env.local` y `.env` de la raíz si existen (Node 22). `loadEnvFile` no pisa lo ya definido,
+ * así que manda el entorno, luego `.env.local` (donde la deja la CLI de ElevenLabs) y luego `.env`.
+ * La key nunca se imprime.
+ */
 export function loadEnv(): void {
-  const p = join(ROOT, '.env');
-  if (existsSync(p)) {
+  for (const name of ['.env.local', '.env']) {
+    const p = join(ROOT, name);
+    if (!existsSync(p)) continue;
     try {
       process.loadEnvFile(p);
     } catch {

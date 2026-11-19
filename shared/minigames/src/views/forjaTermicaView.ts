@@ -1,5 +1,6 @@
 import { applyBackdrop, piece, pieceUrl } from '../assets';
 import { FORJA as F, inZone, type ForjaState } from '../games/forjaTermica';
+import { MG } from '../sound';
 import { button, el, on, pct, typing, type GameView, type ViewContext } from './types';
 
 const GAME = 'forja_termica';
@@ -11,7 +12,7 @@ const PET_Y = 246;
 const BELLOWS_X = 184;
 const BELLOWS_Y = 222;
 const KNOT_X = 245;
-const KNOT_Y = 136;
+const KNOT_Y = 146;
 
 /** Forja Térmica: el Pockai aviva el fuelle y el nudo del Telar se templa mientras la forja está en su punto. */
 export function createForjaTermicaView(): GameView<ForjaState> {
@@ -27,6 +28,7 @@ export function createForjaTermicaView(): GameView<ForjaState> {
   let lastTemp = -1;
   let seenEvent = -1;
   let pumpedAt = -99;
+  let wasInZone = false;
   const cleanups: (() => void)[] = [];
 
   const stopHold = () => {
@@ -100,16 +102,22 @@ export function createForjaTermicaView(): GameView<ForjaState> {
       // El nudo está al rojo solo mientras la forja está en su punto: dos dibujos, no un filtro.
       hot.hidden = !inZone(s);
       cold.hidden = inZone(s);
+      // El fuego ruge toda la partida; entrar en la franja dorada avisa.
+      ctx.sfx.loop(MG.forjaTermica.fire);
+      if (inZone(s) && !wasInZone) ctx.sfx.play(MG.forjaTermica.goldZone);
+      wasInZone = inZone(s);
       // La temperatura solo sube de golpe con un golpe de fuelle: ahí el Pockai empuja.
       if (lastTemp >= 0 && s.temp > lastTemp + 1) {
         pumpedAt = s.tick;
         ctx.pet.play('attack', { once: true });
+        ctx.sfx.play(MG.forjaTermica.bellows);
       }
       lastTemp = s.temp;
       bellowsArt.classList.toggle('is-pumped', s.tick - pumpedAt < 6);
       if (s.last && s.last.tick !== seenEvent) {
         seenEvent = s.last.tick;
         ctx.pet.play(s.last.kind === 'piece' ? 'happy' : 'hit', { once: true });
+        ctx.sfx.play(s.last.kind === 'piece' ? MG.forjaTermica.temper : MG.forjaTermica.burn);
       }
       const recent = s.last && s.tick - s.last.tick < 45 ? s.last : null;
       const text = recent ? (recent.kind === 'piece' ? '¡Nudo templado! +4' : '¡Se ha quemado!') : '';

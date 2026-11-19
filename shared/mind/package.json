@@ -2,19 +2,35 @@
   "name": "@pockai/mind",
   "version": "0.1.0",
   "private": true,
-  "description": "Núcleo de decisión compartido de Pockai: dimensiones de personalidad, generador sembrado y selector por utilidad. Funciones puras, sin reloj, red ni azar no sembrado.",
+  "description": "Núcleo de decisión compartido de Pockai: dimensiones de personalidad, generador sembrado y selector por utilidad. Funciones puras, sin reloj, red ni azar no sembrado. Lo usan el escritorio, la escena y el backend.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./node": {
+      "require": {
+        "types": "./dist/node/index.d.ts",
+        "default": "./dist/node/index.js"
+      },
+      "default": "./src/index.ts"
+    }
   },
   "scripts": {
+    "postinstall": "tsc -p tsconfig.node.json && node scripts/mark-cjs.mjs",
+    "build:node": "tsc -p tsconfig.node.json && node scripts/mark-cjs.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.7.3",
     "vitest": "^3.0.0"
+  },
+  "typesVersions": {
+    "*": {
+      "node": [
+        "dist/node/index.d.ts"
+      ]
+    }
   }
 }

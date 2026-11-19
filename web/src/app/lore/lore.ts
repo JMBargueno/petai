@@ -131,7 +131,7 @@ export class Lore {
       description: META.description,
       path: 'lore',
       type: 'article',
-      image: OG_IMAGE(this.locale, 'lore'),
+      image: OG_IMAGE('lore'),
       imageAlt: META.imageAlt,
       jsonLd: [
         {
@@ -143,7 +143,7 @@ export class Lore {
           inLanguage: this.locale,
           url,
           mainEntityOfPage: url,
-          image: `${SITE_URL}/${OG_IMAGE(this.locale, 'lore')}`,
+          image: `${SITE_URL}/${OG_IMAGE('lore')}`,
           author: { '@type': 'Organization', name: SITE_NAME, url: `${SITE_URL}/` },
           publisher: { '@id': `${SITE_URL}/#organization` },
           isPartOf: { '@id': `${SITE_URL}/#website` },

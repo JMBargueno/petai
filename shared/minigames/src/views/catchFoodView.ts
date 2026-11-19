@@ -1,6 +1,7 @@
 import { applyBackdrop, itemUrl, piece, pieceUrl } from '../assets';
 import { TICKS_PER_SECOND } from '../core/types';
 import { CATCH_FOOD as C, isStunned, tideFlow, type CatchFoodState } from '../games/catchFood';
+import { MG, panAt } from '../sound';
 import { el, pct, toLogical, typing, type GameView, type ViewContext } from './types';
 
 const GAME = 'catch_food';
@@ -101,7 +102,10 @@ export function createCatchFoodView(): GameView<CatchFoodState> {
     render(s) {
       const doc = arena.ownerDocument;
       const flow = tideFlow(s);
-      if (flow !== shownFlow) showTide(flow);
+      if (flow !== shownFlow) {
+        showTide(flow);
+        ctx.sfx.play(MG.catchFood.tideChange);
+      }
 
       // El Pockai: corre hacia donde va, se queda quieto si no, y parpadea con la estática.
       const pet = ctx.pet;
@@ -118,6 +122,10 @@ export function createCatchFoodView(): GameView<CatchFoodState> {
         seenEvent = s.last.tick;
         if (s.last.delta === 0) pet.play('hit', { once: true });
         else if (s.last.streakBonus) pet.play('happy', { once: true });
+        const pan = panAt(s.petX, C.W);
+        if (s.last.delta === 0) ctx.sfx.play(MG.catchFood.static, { pan });
+        else ctx.sfx.play(s.last.tide ? MG.catchFood.tide : MG.catchFood.good, { pan });
+        if (s.last.streakBonus) ctx.sfx.play(MG.streak, { step: s.streak / C.STREAK_EVERY });
         spark.style.left = pct(s.petX, C.W);
         spark.style.top = pct(C.CATCH_Y - 14, C.H);
         spark.classList.toggle('is-big', s.last.tide || s.last.streakBonus);

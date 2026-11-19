@@ -8,7 +8,9 @@ export interface Entity {
 }
 
 /** Tipos de objeto de la tienda (`foods.json`); el backend puede añadir otros. */
-export type ItemKind = 'food' | 'medicine' | 'evolution' | (string & {});
+export type ItemKind = 'food' | 'medicine' | 'evolution' | 'level_up' | (string & {});
+/** shop: se vende · drop: solo cofres y actividades · hidden: solo lo da el admin (spec 41). */
+export type ItemAvailability = 'shop' | 'drop' | 'hidden';
 
 export interface CatalogItem extends Entity {
   name: string;
@@ -16,6 +18,7 @@ export interface CatalogItem extends Entity {
   description: string;
   priceCoins: number;
   priceGems: number;
+  availability?: ItemAvailability;
 }
 
 export type EventSource = 'festival' | 'season' | 'tournament' | 'raid';
@@ -97,6 +100,13 @@ export const ITEM_KINDS: Record<string, string> = {
   food: 'Comida',
   medicine: 'Medicina',
   evolution: 'Evolución',
+  level_up: 'Subida de nivel',
+};
+
+export const ITEM_AVAILABILITY: Record<ItemAvailability, string> = {
+  shop: 'Tienda',
+  drop: 'Solo drop',
+  hidden: 'Oculto (solo admin)',
 };
 
 export const EVENT_SOURCES: Record<EventSource, string> = {
@@ -115,6 +125,10 @@ export const AUDIT_EVENTS: Record<string, string> = {
   item_price_bulk: 'Ajuste de precios',
   invite_create: 'Invitaciones creadas',
   invite_revoke: 'Invitación revocada',
+  voucher_create: 'Vouchers creados',
+  voucher_revoke: 'Voucher revocado',
+  voucher_redeem: 'Voucher canjeado',
+  user_grant: 'Recompensa regalada',
   registration_settings_change: 'Ajuste de registro',
   account_deleted: 'Cuenta borrada',
   key_created: 'Clave creada',

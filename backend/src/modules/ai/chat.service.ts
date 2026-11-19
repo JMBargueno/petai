@@ -2,6 +2,7 @@ import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, Opt
 import { RedisService } from '../../redis/redis.service';
 import { ExclusiveLockService } from '../../redis/exclusive-lock.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MetricsService } from '../../observability/metrics.service';
 import { PetsService } from '../pets/pets.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { AiConfigService } from './ai-config.service';
@@ -26,6 +27,7 @@ import { PlanLimits } from '../billing/plans';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MindService } from '../mind/mind.service';
 import { MindMemoryService } from '../mind/mind-memory.service';
+import { text } from '../mind/strings';
 import { Interpretation } from '../mind/conversation.engine';
 import {
   BehaviorView,
@@ -114,7 +116,17 @@ export class ChatService {
     @Optional() private readonly mind?: MindService,
     @Optional() private readonly mindMemory?: MindMemoryService,
     @Optional() private readonly gameData?: GameDataService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
+
+  /**
+   * La mente es opcional para que el chat arranque sin ella, pero entonces el Pockai responde sin
+   * personalidad, sin memoria por capas y sin reacciones: que se vea en el arranque, no en silencio.
+   */
+  onModuleInit() {
+    if (!this.mind) this.logger.warn('MindService no está inyectado: el chat funcionará sin personalidad ni reacciones');
+    if (!this.mindMemory) this.logger.warn('MindMemoryService no está inyectado: el chat funcionará sin memoria por capas');
+  }
 
   private async checkRateLimit(userId: string) {
     const tooMany = () => new HttpException('Demasiados mensajes seguidos, espera un momento', HttpStatus.TOO_MANY_REQUESTS);
@@ -406,6 +418,8 @@ export class ChatService {
       const lastAt = pet.lastInteractionAt ? new Date(pet.lastInteractionAt) : null;
       const turnPet = { ...pet, lastInteractionAt: lastAt && !Number.isNaN(lastAt.getTime()) ? lastAt : null };
       const plan = planOwnerTurn({ message, pet: turnPet, dims: profile.dims, stored: profile.stored ?? {}, rows, now: new Date() }, this.mind.config());
+      this.metrics?.recordMindIntent(plan.interpretation.intent);
+      this.metrics?.recordMindBehavior(plan.behavior.action, 'engine', 'accepted');
       return {
         interpretation: plan.interpretation,
         behavior: plan.behavior,
@@ -437,6 +451,8 @@ export class ChatService {
     }
     // Mismas condiciones que usó el motor: el modelo tampoco puede contar lo que no ha vivido
     const v = validateBehavior(action, turn.dims, this.behaviorState(pet), this.mind!.config(), 'owner', turn.plan?.flags);
+    // La etiqueta es siempre una acción del catálogo: lo que propuso el modelo puede ser cualquier texto
+    this.metrics?.recordMindBehavior(v.view.action, 'model', v.ok ? 'accepted' : 'rejected');
     turn.behavior = v.view;
     return v.ok ? `ok: ${v.view.action}` : `no permitido (${v.reason}); se usará ${v.view.action}`;
   }
@@ -467,6 +483,11 @@ export class ChatService {
       // La reacción que al final se vio (la del motor o la que propuso el modelo, ya validada)
       // entra en el historial, en la misma escritura que la deriva
       const recent = turn.situation ? pushRecentBehavior(turn.situation.recent, turn.behavior.action, this.mind.config()) : undefined;
+      if (this.metrics && turn.situation) {
+        let streak = 1;
+        for (let i = turn.situation.recent.length - 1; i >= 0 && turn.situation.recent[i] === turn.behavior.action; i--) streak++;
+        this.metrics.recordMindBehaviorStreak(turn.behavior.action, streak);
+      }
       await this.mind.applyExperience(pet.id, events, now, outcome?.patch ?? (recent ? { recent } : undefined));
       if (this.mindMemory) {
         const ep = turn.interpretation.episode;
@@ -492,10 +513,10 @@ export class ChatService {
             outcome.episodes.map((e) => ({ layer: 'episodic' as const, kind: 'event', key: e.key, bump: true, content: e.content, importance: e.importance, valence: e.valence, subject: 'owner' })),
           );
         }
-        if (outcome?.ownerDelta) await this.mindMemory.feel(pet.id, 'owner', 'Mi entrenador', outcome.ownerDelta);
+        if (outcome?.ownerDelta) await this.mindMemory.feel(pet.id, 'owner', text('LABEL_OWNER'), outcome.ownerDelta);
         // La relación con el entrenador solo se mueve con mensajes significativos (no con cada «hola»)
         if (ep || Math.abs(turn.interpretation.sentiment) >= 0.5) {
-          await this.mindMemory.feel(pet.id, 'owner', 'Mi entrenador', 0.02 + turn.interpretation.sentiment * 0.08);
+          await this.mindMemory.feel(pet.id, 'owner', text('LABEL_OWNER'), 0.02 + turn.interpretation.sentiment * 0.08);
         }
       }
     } catch (e: any) {
@@ -593,7 +614,22 @@ export class ChatService {
     const saved = await this.prisma.chatMessage.create({
       data: { petId: pet.id, role: 'assistant', content: reply, tokens, createdAt: new Date(at + 1) },
     });
-    const intelligence = Math.min(INTELLIGENCE_MAX, (pet.intelligence ?? 0) + 1);
+    // Tope diario (spec 37 §3.4): charlar mucho en un día no dispara la inteligencia. Se cuentan
+    // las respuestas de hoy, incluida esta: no hace falta guardar ningún contador aparte.
+    const cap = this.mind?.config()?.intelligence?.dailyChatCap;
+    let gain = 1;
+    if (typeof cap === 'number' && cap >= 0) {
+      const day = new Date(at);
+      const dayStart = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()));
+      try {
+        const today = await this.prisma.chatMessage.count({ where: { petId: pet.id, role: 'assistant', createdAt: { gte: dayStart } } });
+        if (today > cap) gain = 0;
+      } catch (e) {
+        // Si no se puede contar, el turno no se pierde: se concede el punto
+        this.logger.debug(`Tope diario de inteligencia no comprobado: ${(e as Error).message}`);
+      }
+    }
+    const intelligence = Math.min(INTELLIGENCE_MAX, (pet.intelligence ?? 0) + gain);
     const updated = await this.prisma.pet.update({
       where: { id: pet.id },
       data: { intelligence, awakened: true },

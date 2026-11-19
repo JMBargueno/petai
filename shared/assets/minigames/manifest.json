@@ -23,7 +23,7 @@
       }
     },
     "memory_match": {
-      "backdrop": false,
+      "backdrop": true,
       "pieces": {
         "facet_back": {
           "size": 48,
@@ -149,7 +149,23 @@
     },
     "forja_termica": {
       "backdrop": true,
-      "pieces": {}
+      "pieces": {
+        "bellows": {
+          "size": 48,
+          "colors": 8,
+          "box": [2, 7, 44, 33]
+        },
+        "knot_cold": {
+          "size": 48,
+          "colors": 5,
+          "box": [2, 4, 44, 39]
+        },
+        "knot_hot": {
+          "size": 48,
+          "colors": 8,
+          "box": [2, 4, 44, 39]
+        }
+      }
     }
   }
 }

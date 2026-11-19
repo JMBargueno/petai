@@ -158,6 +158,9 @@ class RealtimeClient(private val session: SessionStore, private val api: ApiClie
     /** `pet:action`: acción para animar la mascota. */
     fun petAction(): Flow<PetActionEvent> = event("pet:action") { args -> decodeJson<PetActionEvent>(args.firstOrNull()) }
 
+    /** `reward:received`: voucher canjeado o regalo del equipo (para la celebración). */
+    fun rewardReceived(): Flow<RewardReceived> = event("reward:received") { args -> decodeJson<RewardReceived>(args.firstOrNull()) }
+
     /** `habitat:visitor_joined`: un amigo entró de visita a tu hábitat. */
     fun visitorJoined(): Flow<HabitatVisitor> = event("habitat:visitor_joined") { args -> decodeJson<HabitatVisitor>(args.firstOrNull()) }
 
@@ -168,6 +171,13 @@ class RealtimeClient(private val session: SessionStore, private val api: ApiClie
                 .getOrNull()?.takeIf { it.isNotEmpty() }
         }
     }
+
+    /** `habitat:scene`: qué hacen los dos Pockai durante una visita (lo decide el servidor). */
+    fun habitatScene(): Flow<HabitatSceneEvent> = event("habitat:scene") { args -> decodeJson<HabitatSceneEvent>(args.firstOrNull()) }
+
+    /** `habitat:visitor_interaction`: lo que un visitante hace con tu Pockai y cómo responde. */
+    fun visitorInteraction(): Flow<VisitorInteractionEvent> =
+        event("habitat:visitor_interaction") { args -> decodeJson<VisitorInteractionEvent>(args.firstOrNull()) }
 
     /** `clan:message`: mensaje nuevo del chat del clan. */
     fun clanMessage(): Flow<ClanMessage> = event("clan:message") { args -> decodeJson<ClanMessage>(args.firstOrNull()) }

@@ -14,6 +14,7 @@
 import { createRng, hashSeed } from '../battles/combat/rng';
 import { Intent } from './conversation.engine';
 import { Dims, PersonalityConfig, ReactionAudience, ReactionEntry } from './mind.types';
+import { text } from './strings';
 import { weighted } from './personality.engine';
 
 export const BEHAVIORS = [
@@ -54,9 +55,45 @@ export interface BehaviorView {
   action: Behavior;
   animation: 'idle' | 'happy' | 'sleep';
   emote: 'heart' | 'sparkle' | 'note' | 'question' | 'tear' | 'zzz' | 'wave' | 'star' | null;
+  /**
+   * Clip de la hoja de animación con el que el cliente la representa (en la sala o en el
+   * escritorio). Lo decide el servidor para que cada cliente no mantenga su propia tabla.
+   * `animation` se conserva para las apps que aún no leen `clip`.
+   */
+  clip: string;
 }
 
-const VIEW: Record<Behavior, Omit<BehaviorView, 'action'>> = {
+/** Clip de cada reacción. Solo clips que existen en todas las hojas (lo comprueba un test). */
+const CLIP: Record<Behavior, string> = {
+  comfort: 'love',
+  celebrate: 'celebrate',
+  cuddle: 'love',
+  invite_play: 'happy',
+  propose_explore: 'happy',
+  greet: 'happy',
+  wave_goodbye: 'happy',
+  listen: 'idle_alt',
+  ask_back: 'talk',
+  sulk: 'sad',
+  show_off: 'dance',
+  yawn: 'tired',
+  bring_gift: 'happy',
+  tell_story: 'talk',
+  ask_about_day: 'talk',
+  apologize: 'sad',
+  perform_trick: 'dance',
+  greet_visitor: 'happy',
+  hide: 'surprised',
+  show_habitat: 'happy',
+  accept_treat: 'eat',
+  play_tag: 'happy',
+  share_food: 'eat',
+  nap_together: 'sleep',
+  squabble: 'attack',
+  make_up: 'love',
+};
+
+const VIEW: Record<Behavior, Omit<BehaviorView, 'action' | 'clip'>> = {
   comfort: { animation: 'idle', emote: 'heart' },
   celebrate: { animation: 'happy', emote: 'sparkle' },
   cuddle: { animation: 'happy', emote: 'heart' },
@@ -86,34 +123,6 @@ const VIEW: Record<Behavior, Omit<BehaviorView, 'action'>> = {
 };
 
 /** Guía para el LLM: cómo debe sonar la respuesta para encajar con la acción. */
-const PROMPT_HINT: Record<Behavior, string> = {
-  comfort: 'Consuela a tu entrenador con calidez y dile que estás a su lado.',
-  celebrate: 'Celébralo con entusiasmo.',
-  cuddle: 'Acércate y muestra cariño, con ternura.',
-  invite_play: 'Ofrece jugar un rato juntos para animar el momento.',
-  propose_explore: 'Propón salir a explorar juntos.',
-  greet: 'Saluda con alegría.',
-  wave_goodbye: 'Despídete con cariño.',
-  listen: 'Escucha con atención y responde con pocas palabras.',
-  ask_back: 'Responde y devuelve una pregunta curiosa.',
-  sulk: 'Muéstrate algo dolido, sin ser cruel, y deja la puerta abierta a hacer las paces.',
-  show_off: 'Presume un poco de lo que sabes hacer, con gracia.',
-  yawn: 'Estás muy cansado: responde bostezando y con pocas palabras.',
-  bring_gift: 'Enséñale con ilusión lo que encontraste para él mientras no estaba (está entre tus recuerdos).',
-  tell_story: 'Cuéntale algo que te ha pasado mientras no estaba (está entre tus recuerdos), con tus palabras.',
-  ask_about_day: 'Salúdale y pregúntale con interés qué tal le ha ido el día.',
-  apologize: 'Pídele perdón por lo de antes, con sinceridad y pocas palabras.',
-  perform_trick: 'Haz uno de tus trucos y cuéntalo con gracia.',
-  greet_visitor: 'Saluda al visitante con alegría.',
-  hide: 'Te da vergüenza: escóndete un poco y responde con timidez.',
-  show_habitat: 'Enséñale tu hábitat con orgullo.',
-  accept_treat: 'Acepta el premio y da las gracias.',
-  play_tag: 'Proponle jugar al pilla-pilla.',
-  share_food: 'Comparte tu comida con él.',
-  nap_together: 'Estáis cansados: echad una siesta juntos.',
-  squabble: 'Os habéis picado: muéstrate molesto, sin crueldad.',
-  make_up: 'Haz las paces con él.',
-};
 
 export interface BehaviorState {
   sleeping: boolean;
@@ -229,7 +238,7 @@ export interface Validation {
 }
 
 export function viewOf(action: Behavior): BehaviorView {
-  return { action, ...VIEW[action] };
+  return { action, ...VIEW[action], clip: CLIP[action] };
 }
 
 export function isBehavior(v: unknown): v is Behavior {
@@ -285,7 +294,8 @@ export function pushRecentBehavior(recent: readonly string[], action: Behavior, 
 }
 
 export function promptHint(view: BehaviorView): string {
-  return `Reacción decidida para este mensaje: ${PROMPT_HINT[view.action]}`;
+  // Las pistas viven en `shared/game-data/strings` (`HINT_<REACCIÓN>`)
+  return text('HINT_PREFIX', { hint: text(`HINT_${view.action.toUpperCase()}`) });
 }
 
 /** Efectos que aplica el game engine tras la respuesta (acotados) y evento de evolución. */

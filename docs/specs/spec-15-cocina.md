@@ -9,6 +9,16 @@ para cocinarlos (clic en el ingrediente correcto en orden, evitando la "olla ard
 preparado otorga un **buff de combate** (p. ej. ATK +10 por 1 día). Hay recetas nuevas por nivel y
 un **"Menú del día"** (receta especial que cambia cada día) que da un motivo diario para volver.
 
+## Estado (rediseño)
+Lo que hay hoy difiere del diseño original de más abajo, que se conserva como referencia:
+
+- **Módulo propio**, no un `gameId` de minijuegos: `backend/src/modules/cooking` y la pestaña Jugar › Cocina del escritorio (`CookingTab.svelte`). Android no la tiene.
+- **Se cocina con éter condensado.** Los ingredientes son comida de `foods.json` (frutos de los Flujos y Mímesis Terrenal), con su icono en pixel art. Las recetas están solo en `shared/game-data/recipes.json`; el backend las lee de ahí y `validate-game-data.js` comprueba que cada ingrediente es una comida que existe.
+- **Mecánica:** el Pockai dicta la receta, un ingrediente cada 0,7 s, y la deja a la vista 2,5 s más. Después hay que echar los ingredientes a la olla en ese orden. En la encimera hay **señuelos** (1 con dificultad 1–2, 2 con 3–4, 3 con 5), elegidos con la semilla: ya no basta con ordenar, también hay que recordar qué entraba.
+- **Validación:** el cliente manda `picked` (lo que echó, en orden) y el servidor cuenta los aciertos contra la receta. `score` y `correctOrder` siguen aceptándose por compatibilidad, acotados.
+- **Sonido** (spec 40, F3): bucle de cocina, un tono que sube con cada ingrediente dictado, el ingrediente al caer en la olla (con el acento de su Flujo si es un fruto), sacar el último, servir, aviso en los últimos 5 s y resultado.
+- **Sin hacer:** la «olla ardiente» (`hotPotPositions` se calcula y no se usa) y, sobre todo, **el buff no se aplica en combate**: `createBuff` solo lo registra en el log y no existe el modelo `CombatBuff`. La interfaz anuncia «+N durante 24 h», pero hoy no tiene efecto.
+
 ## Contexto
 Hoy existen 3 minijuegos (`balance.json → minigames.games`: catch_food, memory_match, reflex) con
 recompensas de coins/XP/felicidad, pero ninguno da **buffs de combate**. La cocina conecta el bucle de

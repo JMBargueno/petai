@@ -9,6 +9,8 @@
  *    `start` admite `variant`; nuevos `pause`/`resume` y evento `paused`.
  *  - v3: `start` admite `pet`, la mascota del jugador, que sale dentro del juego. Es opcional: un
  *    anfitrión que no la mande sigue jugando, con la especie por defecto.
+ *  - `setAudio` (spec 40): ajustes de sonido de la app. Mensaje nuevo y opcional, como en la escena:
+ *    no sube la versión. El embed los valida con `parseAudioSettings`.
  */
 import type { PackedEntry } from './core/log';
 import type { GameVariant } from './core/types';
@@ -40,7 +42,13 @@ export interface StartMessage {
   pet?: MinigamePet;
 }
 
-export type HostMessage = StartMessage | { type: 'dispose' } | { type: 'pause' } | { type: 'resume' };
+export type HostMessage =
+  | StartMessage
+  | { type: 'dispose' }
+  | { type: 'pause' }
+  | { type: 'resume' }
+  /** Ajustes de sonido tal como los manda la app; el embed los valida antes de usarlos. */
+  | { type: 'setAudio'; settings: Record<string, unknown> };
 
 export type MinigameEvent =
   | { type: 'ready'; protocol: number }
@@ -83,6 +91,9 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
   if (!v || typeof v !== 'object') return null;
   const m = v as Record<string, unknown>;
   if (m.type === 'dispose' || m.type === 'pause' || m.type === 'resume') return { type: m.type };
+  if (m.type === 'setAudio') {
+    return m.settings && typeof m.settings === 'object' && !Array.isArray(m.settings) ? { type: 'setAudio', settings: m.settings as Record<string, unknown> } : null;
+  }
   if (m.type !== 'start') return null;
   if (typeof m.gameId !== 'string' || !Number.isInteger(m.seed)) return null;
   if (typeof m.durationSeconds !== 'number' || !(m.durationSeconds > 0) || m.durationSeconds > 600) return null;

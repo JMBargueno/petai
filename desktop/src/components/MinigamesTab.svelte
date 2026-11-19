@@ -8,6 +8,7 @@
   import foods from '@shared/game-data/foods.json';
   import { elementMeta } from '../lib/ui/maps';
   import MinigameHost from './MinigameHost.svelte';
+  import { sfx } from '../lib/audio';
 
   export let pet: any = null;
 
@@ -79,10 +80,12 @@
       countdown = 3;
       phase = 'countdown';
       stopCountdown();
+      sfx('mg.countdown.tick');
       countdownTimer = setInterval(() => {
         countdown -= 1;
-        if (countdown > 0) return;
+        if (countdown > 0) return sfx('mg.countdown.tick');
         stopCountdown();
+        sfx('mg.countdown.go');
         phase = 'playing';
       }, 800);
     } catch (e: any) {
@@ -100,6 +103,7 @@
     phase = 'saving';
     try {
       result = await api.finishMinigame(session.sessionId, score, { ticks, log });
+      resultSounds(result);
       dispatch('petUpdated', result.pet);
       dispatch('refreshUser');
       error = '';
@@ -108,6 +112,14 @@
       error = friendlyError(err, 'No se pudo guardar el resultado.');
     }
     phase = 'result';
+  }
+
+  /** El resultado suena según lo cerca que quedó del máximo; el objeto y la afinidad, un poco después. */
+  function resultSounds(r: any) {
+    const max = games.find((g) => g.id === lastGameId)?.maxCoins ?? 0;
+    sfx(max > 0 && (r?.rewards?.coins ?? 0) >= max * 0.8 ? 'mg.result.great' : 'mg.result.good');
+    if (r?.item || r?.bonusItem) sfx('mg.item_drop', { delayMs: 900 });
+    if (r?.affinity && petElement) sfx(`elem.${petElement}.accent`, { delayMs: 500 });
   }
 
   function back() {
@@ -204,6 +216,9 @@
         </div>
         {#if result.item}
           <Notice tone="success" icon="gift">¡La partida ha dejado {result.item.qty} × {FOOD_NAMES[result.item.itemId] ?? result.item.itemId} en tu inventario!</Notice>
+        {/if}
+{#if result.bonusItem}
+          <Notice tone="ok" icon="gift">¡Ha caído {result.bonusItem.name}! Está en tu Mochila.</Notice>
         {/if}
         {#if result.affinity}
           <p class="ui-card__hint">Prueba de su elemento: {pet.nickname || pet.species?.name} lo ha disfrutado más.</p>

@@ -1,5 +1,6 @@
 import { applyBackdrop, piece, pieceUrl } from '../assets';
 import { E, N, S, W, cellMatches, type RaizBoard, type RaizState } from '../games/raizFractal';
+import { MG } from '../sound';
 import { el, pct, type GameView, type ViewContext } from './types';
 
 const GAME = 'raiz_fractal';
@@ -48,6 +49,8 @@ export function createRaizFractalView(): GameView<RaizState> {
   let cells: HTMLButtonElement[] = [];
   const shown: string[] = [];
   let wasBlooming = false;
+  let rotations = 0;
+  let litCount = 0;
   let push: (i: number) => void = () => {};
 
   const rowY = (b: RaizBoard, row: number) => GRID_Y + ((row + 0.5) * GRID) / b.size;
@@ -117,7 +120,18 @@ export function createRaizFractalView(): GameView<RaizState> {
       if (blooming) for (let r = 0; r < size; r++) if (s.lit[r * size + size - 1] && s.board.cells[r * size + size - 1] & E) exitRow = r;
       bloom.hidden = exitRow < 0;
       if (exitRow >= 0) bloom.style.top = pct(rowY(s.board, exitRow), AH);
-      if (blooming && !wasBlooming) ctx.pet.play('happy', { once: true });
+      if (blooming && !wasBlooming) {
+        ctx.pet.play('happy', { once: true });
+        ctx.sfx.play(MG.raizFractal.bloom);
+      }
+      if (s.rotations !== rotations) {
+        rotations = s.rotations;
+        ctx.sfx.play(MG.raizFractal.rotate);
+      }
+      // La savia avanza: suena cuando llega a más casillas que antes (no al cambiar de tablero).
+      const lit = s.lit.reduce((n, on) => n + (on ? 1 : 0), 0);
+      if (lit > litCount && !blooming && litCount > 0) ctx.sfx.play(MG.raizFractal.light);
+      litCount = lit;
       wasBlooming = blooming;
       const msg = blooming ? '¡La raíz florece!' : '';
       if (live.textContent !== msg) live.textContent = msg;

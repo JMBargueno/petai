@@ -41,6 +41,7 @@
   const SOURCE_LABEL: Record<string, string> = {
     daily_missions: 'Misiones diarias', mission: 'Misión', season_pass: 'Pase de temporada', season: 'Temporada',
     purchase: 'Comprado', raid: 'Raid', tournament: 'Torneo', achievement: 'Logro', gift: 'Regalo', login: 'Regalo diario',
+    voucher: 'Código canjeado', admin_grant: 'Regalo del equipo',
   };
   const sourceLabel = (s: string) => SOURCE_LABEL[s] ?? 'Recompensa';
 
@@ -131,7 +132,7 @@
       {#if lastOpen}
         <Card variant="pop" title="¡Cofre {label(lastOpen.chest.type)} abierto!" icon="party">
           <div class="drops">
-            {#each lastOpen.drops as d (d.itemId + d.tier)}
+            {#each lastOpen.drops as d, i (i)}
               <span class="drop">
                 {#if itemIcon(d.itemId)}<ItemIcon id={d.itemId} scale={2} />{/if}
                 <Badge color={TIER_COLOR[d.tier]} title={tierLabel(d.tier)}>
@@ -199,10 +200,10 @@
 
       <SectionHeader title="Historial" icon="log" />
       <div class="ui-list ui-list--scroll">
-        {#each history?.openings ?? [] as h (h.openedAt)}
+        {#each history?.openings ?? [] as h (h.chestId)}
           <ListRow icon="gift" iconTint={CHEST_COLOR[h.type]} title={label(h.type)} sub={new Date(h.openedAt).toLocaleDateString()}>
             <div class="drops">
-              {#each h.drops.slice(0, 3) as d (d.itemId + d.tier)}
+              {#each h.drops.slice(0, 3) as d, i (i)}
                 <Badge size="sm" color={TIER_COLOR[d.tier]} title={tierLabel(d.tier)}>{d.name} ×{d.qty}<span class="sr-only"> ({tierLabel(d.tier)})</span></Badge>
               {/each}
               {#if h.drops.length > 3}<Badge size="sm">+{h.drops.length - 3}</Badge>{/if}

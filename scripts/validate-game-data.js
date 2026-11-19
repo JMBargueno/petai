@@ -270,9 +270,18 @@ if (pers) {
       if (!(Number.isInteger(vi.dailyEffects) && vi.dailyEffects >= 0 && vi.dailyEffects <= vi.maxPerVisit)) throw new Error(`${at}.dailyEffects debe ser un entero en [0, maxPerVisit]`);
       for (const k of ['shyBelow', 'aloofBelow', 'minEnergyToPlay']) if (!(vi[k] >= 0 && vi[k] <= 100)) throw new Error(`${at}.${k} debe estar en [0, 100]`);
       if (!(vi.treat?.happiness >= 0 && vi.treat.happiness <= 10 && vi.treat?.hunger >= 0 && vi.treat.hunger <= 15)) throw new Error(`${at}.treat fuera de rango`);
-      for (const [k, v] of Object.entries(vi.deltas ?? {})) {
-        // Sin opciones negativas: un visitante no puede empeorar la relación
-        if (!OPTS.includes(k) || !(typeof v === 'number' && v >= 0 && v <= 0.15)) throw new Error(`${at}.deltas.${k} inválido (0 a 0,15)`);
+      // Cuánto mejora la relación cada opción lo dice el grafo (dialogues.json → visit, comando
+      // `feel`). Sin opciones negativas: un visitante no puede empeorar la relación con un Pockai ajeno.
+      if (vi.deltas !== undefined) throw new Error(`${at}.deltas ya no se usa: los efectos van en dialogues.json`);
+      const visit = readJson('shared/game-data/dialogues.json').conversations?.visit;
+      for (const node of Object.values(visit?.nodes ?? {})) {
+        for (const t of [...(node.choices ?? []), ...(Array.isArray(node.next) ? node.next : [])]) {
+          for (const cmd of t.cmd ?? []) {
+            if (cmd.startsWith('feel:') && !(Number(cmd.slice(5)) >= 0 && Number(cmd.slice(5)) <= 0.15)) {
+              throw new Error(`dialogues.json › visit: «${cmd}» debe estar entre 0 y 0,15 (un visitante no puede empeorar la relación)`);
+            }
+          }
+        }
       }
       // La deriva que provoca un tercero es, como mucho, la mitad de la del propio entrenador
       const owner = { greet: 'chat', pet: 'chat', ask: 'chat', treat: 'fed', play: 'minigame' };
@@ -285,6 +294,8 @@ if (pers) {
         }
       }
     }
+    const icap = pers.intelligence?.dailyChatCap;
+    if (pers.intelligence && !(Number.isInteger(icap) && icap >= 1 && icap <= 1000)) throw new Error('balance.personality.intelligence.dailyChatCap debe ser un entero en [1, 1000]');
     const slm = pers.memory?.sinceLastMax;
     if (slm !== undefined && !(Number.isInteger(slm) && slm >= 0 && slm <= 4)) throw new Error('balance.personality.memory.sinceLastMax debe ser un entero en [0, 4]');
     console.log(`✓ balance.json: vida social (${SCENE_IDS.length} escenas, 4 etapas) validada`);
@@ -436,6 +447,37 @@ console.log(`✓ combate: ${skills.length} habilidades y ${cb.leagues.length} li
 const foodIds = new Set(foods.map(f => f.id));
 if (foodIds.size !== foods.length) {
   throw new Error('IDs de alimentos duplicados en foods.json');
+}
+// Disponibilidad (spec 41): shop | drop | hidden. Lo oculto solo lo da el admin: nunca cae.
+{
+  const AVAIL = ['shop', 'drop', 'hidden'];
+  const byId = new Map(foods.map((f) => [f.id, f]));
+  const sources = [];
+  for (const [type, chest] of Object.entries(balance.chests ?? {})) for (const d of chest?.dropTable ?? []) sources.push([`chests.${type}`, d.itemId]);
+  for (const [id, g] of Object.entries(balance.minigames?.games ?? {})) if (g?.itemDrop?.itemId) sources.push([`minigames.${id}.itemDrop`, g.itemDrop.itemId]);
+  for (const id of balance.personality?.autonomy?.itemFind?.items ?? []) sources.push(['autonomy.itemFind', id]);
+  for (const [src, list] of Object.entries(balance.activityDrops?.sources ?? {})) {
+    for (const d of list ?? []) {
+      sources.push([`activityDrops.${src}`, d.itemId]);
+      if (!(d.chance > 0 && d.chance <= 1)) throw new Error(`activityDrops.${src}: chance de ${d.itemId} debe estar en (0, 1]`);
+    }
+  }
+  for (const [id, cap] of Object.entries(balance.activityDrops?.dailyCaps ?? {})) {
+    if (!byId.has(id)) throw new Error(`activityDrops.dailyCaps: ${id} no existe en foods.json`);
+    if (!(Number.isInteger(cap) && cap >= 0)) throw new Error(`activityDrops.dailyCaps.${id} debe ser un entero ≥ 0`);
+  }
+  for (const [where, id] of sources) {
+    const f = byId.get(id);
+    if (!f) throw new Error(`${where}: ${id} no existe en foods.json`);
+    if (f.availability === 'hidden') throw new Error(`${where}: ${id} es un objeto oculto (solo admin) y no puede caer`);
+  }
+  for (const f of foods) {
+    const av = f.availability ?? 'shop';
+    if (!AVAIL.includes(av)) throw new Error(`${f.id}: availability "${av}" no es shop, drop ni hidden`);
+    if (av !== 'shop' && (f.priceCoins > 0 || f.priceGems > 0)) throw new Error(`${f.id}: un objeto ${av} no se vende y debe tener precio 0`);
+    if (av === 'drop' && !sources.some(([, id]) => id === f.id)) console.warn(`⚠ ${f.id} es solo drop pero no cae en ninguna parte`);
+    if (f.kind === 'level_up' && !(Number.isInteger(f.effects?.levels) && f.effects.levels >= 1)) throw new Error(`${f.id}: level_up necesita effects.levels entero ≥ 1`);
+  }
 }
 console.log(`✓ foods.json: ${foods.length} alimentos validados`);
 
@@ -627,6 +669,47 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
   console.log(`✓ aventura diaria: ${layerSlot.size} capas, ${locationIds.size} localizaciones y ${seedIds.size} semillas validadas`);
 }
 
+// 4y. Usar un mueble del hábitat: efecto pequeño y con tope (no es una vía para criar sin cuidar)
+{
+  const use = balance.habitat?.use;
+  if (use) {
+    const VITALS = ['hunger', 'happiness', 'energy', 'hygiene'];
+    const USES = ['eat', 'bathe', 'sit', 'sleep', 'play'];
+    if (!(Number.isInteger(use.dailyCap) && use.dailyCap >= 0 && use.dailyCap <= 12)) throw new Error('balance.habitat.use.dailyCap debe ser un entero en [0, 12]');
+    if (!(use.cooldownSeconds >= 30)) throw new Error('balance.habitat.use.cooldownSeconds debe ser al menos 30');
+    for (const [id, fx] of Object.entries(use.effects ?? {})) {
+      if (!USES.includes(id)) throw new Error(`balance.habitat.use.effects: uso desconocido ${id}`);
+      for (const [vital, n] of Object.entries(fx)) {
+        if (!VITALS.includes(vital) || !(typeof n === 'number' && Math.abs(n) <= 5)) throw new Error(`balance.habitat.use.effects.${id}.${vital} inválido (vital conocido, de -5 a 5)`);
+      }
+      if (!balance.personality?.evolution?.events?.[`furniture_${id}`]) throw new Error(`balance.personality.evolution.events.furniture_${id} falta`);
+    }
+    console.log(`✓ balance.json: uso de muebles (${Object.keys(use.effects ?? {}).length} usos, tope ${use.dailyCap} al día) validado`);
+  }
+}
+
+// 4z. Diálogos por datos y textos (spec 37, lote 5)
+{
+  const { validateDialogues } = require('./lib/validate-dialogues');
+  const stringsDir = path.resolve(__dirname, '..', 'shared/game-data/strings');
+  const strings = {};
+  for (const file of fs.readdirSync(stringsDir).filter((f) => f.endsWith('.json')).sort((x, y) => (x === 'es.json' ? -1 : y === 'es.json' ? 1 : x.localeCompare(y)))) {
+    strings[file.replace(/\.json$/, '')] = readJson(`shared/game-data/strings/${file}`);
+  }
+  const pers = balance.personality ?? {};
+  const errors = validateDialogues({
+    dialogues: readJson('shared/game-data/dialogues.json'),
+    strings,
+    keywords: Object.values(pers.dimensions ?? {}).flatMap((d) => (d.bands ?? []).map((band) => band.keyword)),
+    behaviors: Object.keys(pers.behavior?.catalog ?? {}),
+    wishes: Object.keys(pers.wishes?.catalog ?? {}),
+    // Los mismos nombres que acepta backend/src/modules/mind/strings.ts
+    placeholders: ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story', 'trick'],
+  });
+  if (errors.length) throw new Error(`Diálogos o textos inválidos:\n  - ${errors.join('\n  - ')}`);
+  console.log(`✓ diálogos: ${Object.keys(readJson('shared/game-data/dialogues.json').conversations).length} conversación(es) y ${Object.keys(strings.es ?? {}).length} textos en ${Object.keys(strings).join(', ')} validados`);
+}
+
 // 5. Validar existencia de sprites base
 const spritesDir = path.resolve(__dirname, '..', 'shared/assets/sprites');
 for (const sp of species) {
@@ -639,5 +722,27 @@ for (const sp of species) {
   }
 }
 console.log('✓ shared/assets/sprites: Todos los sprites de animación requeridos están presentes');
+
+// Recetas de cocina (spec 15): se cocina con comida de foods.json.
+{
+  const recipes = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'shared', 'game-data', 'recipes.json'), 'utf8'));
+  const foods = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'shared', 'game-data', 'foods.json'), 'utf8'));
+  const edible = new Set(foods.filter((f) => f.kind === 'food').map((f) => f.id));
+  const seen = new Set();
+  for (const r of recipes) {
+    const bad = (msg) => {
+      console.error(`❌ recipes.json [${r.id}]: ${msg}`);
+      process.exit(1);
+    };
+    if (!/^[a-z][a-z0-9_]*$/.test(r.id || '') || seen.has(r.id)) bad('id inválido o repetido');
+    seen.add(r.id);
+    if (!r.name || !(r.difficulty >= 1 && r.difficulty <= 5) || !(r.unlockLevel >= 1)) bad('faltan name, difficulty (1–5) o unlockLevel');
+    if (!Array.isArray(r.ingredients) || r.ingredients.length < 3 || r.ingredients.length > 4) bad('lleva 3 o 4 ingredientes');
+    if (new Set(r.ingredients).size !== r.ingredients.length) bad('repite un ingrediente');
+    for (const ing of r.ingredients) if (!edible.has(ing)) bad(`el ingrediente '${ing}' no es una comida de foods.json`);
+    if (!['atk', 'def', 'esp', 'vel'].includes(r.buff?.stat) || !(r.buff?.value > 0)) bad('buff inválido');
+  }
+  console.log(`✓ recipes.json: ${recipes.length} recetas validadas`);
+}
 
 console.log('=== TODOS LOS DATOS DE JUEGO Y ASSETS SON VÁLIDOS ===');

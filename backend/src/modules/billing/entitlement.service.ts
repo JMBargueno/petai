@@ -5,7 +5,8 @@ import { Plan } from './plans';
 
 export interface EntitlementInfo {
   plan: Plan;
-  source?: 'stripe' | 'google_play' | null;
+  /** `voucher`: Pro regalado (vouchers o regalo del admin); no hay suscripción que gestionar. */
+  source?: 'stripe' | 'google_play' | 'voucher' | null;
   currentPeriodEnd?: Date | null;
   cancelAtPeriodEnd?: boolean;
   status?: string | null;
@@ -89,13 +90,16 @@ export class EntitlementService {
       return { plan: 'free' };
     }
 
-    const primary = subs[0];
-    const sources = new Set(subs.map((s) => s.source));
+    // Una suscripción de pago manda sobre el Pro regalado (es la que el usuario puede gestionar), y
+    // el regalo no cuenta como suscripción duplicada.
+    const paid = subs.filter((s) => s.source !== 'voucher');
+    const primary = paid[0] ?? subs[0];
+    const sources = new Set(paid.map((s) => s.source));
     const duplicateSubscriptions = sources.size > 1;
 
     return {
       plan: 'pro',
-      source: primary.source as 'stripe' | 'google_play',
+      source: primary.source as 'stripe' | 'google_play' | 'voucher',
       currentPeriodEnd: primary.currentPeriodEnd,
       cancelAtPeriodEnd: primary.cancelAtPeriodEnd,
       status: primary.status,

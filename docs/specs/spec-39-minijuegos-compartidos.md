@@ -199,7 +199,7 @@ Controles: todas admiten ratón, teclado y táctil (carriles con J K L / flechas
 | Fase | Contenido | Hecho | Pendiente |
 |---|---|---|---|
 | 1 | Paquete compartido con los 3 juegos; escritorio conectado; `energyCost`; `gameId` en el evento; techo de Parejas; validación de variantes | Todo | — |
-| 2 | Android con el embed; mejoras de §4 | Android usa el embed (`MiniGames.kt` eliminado); variantes accesibles conectadas; pausa con límite; glifos de elementos en Parejas; reacción media en Reflejos | Récord personal y desglose; misiones y logros por juego (el evento ya lleva `gameId`); sonido y vibración; dos objetivos a la vez en Pesca de Códices; el fondo de Cristal de Recuerdos y las piezas de Forja Térmica (prompts listos, sin generar) |
+| 2 | Android con el embed; mejoras de §4 | Android usa el embed (`MiniGames.kt` eliminado); variantes accesibles conectadas; pausa con límite; glifos de elementos en Parejas; reacción media en Reflejos | Récord personal y desglose; misiones y logros por juego (el evento ya lleva `gameId`); los ficheros de sonido (el cableado está hecho: spec 40 §3, F3) y vibración; dos objetivos a la vez en Pesca de Códices |
 | 3 | Validación por repetición en el servidor | Variante en la sesión, registro empaquetado, repetición y comparación; obligatoria en las Pruebas | Activar `requireReplay` para los clásicos cuando no queden clientes antiguos |
 | 4 | Pruebas, Semilla del día, iOS, modding | Las seis Pruebas con afinidad y premio de la Forja, en escritorio y Android | Semilla del día con clasificación; iOS (no hay app); minijuegos de modding sobre `GameDefinition`; ecos en Cifrado |
 

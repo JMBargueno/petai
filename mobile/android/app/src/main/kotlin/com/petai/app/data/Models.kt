@@ -245,7 +245,101 @@ data class PetIdentity(
     val speciesName: String = "",
     val speciesId: String = "",
     val spriteRef: String = "",
+    /** Etapa evolutiva (baby, juvenile, adult, final). */
+    val stage: String = "baby",
+    /** Aspecto para dibujarlo en la sala; nulo con un backend que aún no lo manda. */
+    val look: PetLook? = null,
 )
+
+/** Colores de un Pockai ajeno (el acento es opcional: sin él la escena lo deriva del primario). */
+@Serializable
+data class PetLookPalette(
+    val primary: String = "#E25822",
+    val secondary: String = "#F3C544",
+    val accent: String? = null,
+)
+
+/** Aspecto de un Pockai ajeno. Solo apariencia: nada de su estado ni de su memoria. */
+@Serializable
+data class PetLook(
+    val palette: PetLookPalette = PetLookPalette(),
+    val pattern: String? = null,
+    val visualSeed: Int = 1337,
+    val shiny: Boolean = false,
+    val accessories: Map<String, String> = emptyMap(),
+)
+
+/** Reacción de un Pockai: `clip` es el clip de animación con el que se representa. */
+@Serializable
+data class BehaviorView(
+    val action: String = "",
+    val animation: String = "",
+    val emote: String? = null,
+    val clip: String? = null,
+)
+
+/**
+ * `habitat:scene`: lo que hacen dos Pockai durante una visita. `role` = `host` si ocurre en tu
+ * sala y `guest` si es en la del amigo al que visitas ([ownerId]).
+ */
+@Serializable
+data class HabitatSceneEvent(
+    val role: String? = null,
+    val ownerId: String? = null,
+    val visitorId: String = "",
+    val slot: Int = 0,
+    val type: String = "",
+    val stage: String = "",
+)
+
+/** `habitat:visitor_interaction`: lo que un visitante hace con tu Pockai y cómo responde. */
+@Serializable
+data class VisitorInteractionEvent(
+    val visitorId: String = "",
+    val petId: String = "",
+    val option: String = "",
+    val line: String = "",
+    val behavior: BehaviorView? = null,
+)
+
+/** Una opción del menú de visita. El texto lo pone el servidor. */
+@Serializable
+data class VisitMenuOption(val id: String = "", val label: String = "")
+
+/** Respuesta del Pockai anfitrión a quien le visita (POST /habitat/visit/interact). */
+@Serializable
+data class VisitInteraction(
+    val turn: Int = 0,
+    val line: String = "",
+    val behavior: BehaviorView = BehaviorView(),
+    val options: List<VisitMenuOption> = emptyList(),
+    val remaining: Int = 0,
+    val ended: Boolean = false,
+    /** Lo que ese Pockai siente por ti: stranger | acquaintance | friend | best_friend. */
+    val stage: String = "",
+    val petName: String = "",
+)
+
+/** La sala del amigo, para quien le visita (GET /habitat/visit/room). Solo aspecto. */
+@Serializable
+data class VisitRoom(
+    val ownerId: String = "",
+    val room: HabitatRoom = HabitatRoom(),
+    val furniture: List<HabitatFurniture> = emptyList(),
+    val host: PetIdentity = PetIdentity(),
+    val guest: PetIdentity = PetIdentity(),
+)
+
+/** Resultado de avisar de que el Pockai usó un mueble (POST /habitat/items/:id/use). */
+@Serializable
+data class FurnitureUseResult(val applied: Boolean = false, val reason: String? = null, val interaction: String = "")
+
+@Serializable
+data class MindDimension(val value: Double = 50.0)
+
+/** Perfil de criatura (GET /pets/:id/mind): aquí solo interesan las cinco dimensiones. */
+@Serializable
+data class MindProfile(val dimensions: Map<String, MindDimension> = emptyMap())
 
 /** Amigo de visita en vivo en tu hábitat. */
 @Serializable
@@ -266,3 +360,36 @@ const val VISIT_ENERGY_COST = 10
 /** Evento `pet:action`: qué le acaba de pasar a la mascota para animarla. */
 @Serializable
 data class PetActionEvent(val petId: String? = null, val action: String = "", val context: JsonObject? = null)
+
+// ---------- Vouchers y regalos del equipo ----------
+
+/** Cofre recibido en un paquete de recompensas (`bronze | silver | gold | diamond | mythic`). */
+@Serializable
+data class RewardChest(val type: String = "", val qty: Int = 0)
+
+/** Prenda recibida; `alreadyOwned`: ya la tenía y no se ha dado otra. */
+@Serializable
+data class RewardAccessory(val id: String = "", val name: String = "", val alreadyOwned: Boolean = false)
+
+@Serializable
+data class GrantedRewards(
+    val coins: Int = 0,
+    val gems: Int = 0,
+    val proDays: Int = 0,
+    /** Fin del Pro regalado (ISO 8601) si había días. */
+    val proUntil: String? = null,
+    val chests: List<RewardChest> = emptyList(),
+    val accessories: List<RewardAccessory> = emptyList(),
+)
+
+/** Respuesta de POST /vouchers/redeem y payload del evento `reward:received`. */
+@Serializable
+data class RewardReceived(
+    /** `voucher` (código canjeado) o `admin_grant` (regalo del equipo). */
+    val source: String = "voucher",
+    /** Id único de la entrega: evita celebrarla dos veces (respuesta + evento). */
+    val redemptionId: String = "",
+    val code: String? = null,
+    val note: String? = null,
+    val granted: GrantedRewards = GrantedRewards(),
+)

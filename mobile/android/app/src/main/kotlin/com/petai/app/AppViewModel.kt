@@ -3,6 +3,7 @@ package com.petai.app
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.petai.app.audio.UiSounds
 import com.petai.app.data.ApiException
 import com.petai.app.data.Egg
 import com.petai.app.data.Handle
@@ -10,6 +11,7 @@ import com.petai.app.data.HandleAvailability
 import com.petai.app.data.InventoryEntry
 import com.petai.app.data.ItemDto
 import com.petai.app.data.Pet
+import com.petai.app.data.RewardReceived
 import com.petai.app.data.UserDto
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -58,6 +61,12 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
     /** Mensajes breves para la barra inferior (errores y confirmaciones). */
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
+    private val _reward = MutableStateFlow<RewardReceived?>(null)
+    /** Recompensa recibida pendiente de celebrar (voucher canjeado o regalo del equipo). */
+    val reward: StateFlow<RewardReceived?> = _reward.asStateFlow()
+    /** Entregas ya celebradas: la misma llega por la respuesta del canje y por el socket. */
+    private val celebrated = mutableSetOf<String>()
+
     init {
         viewModelScope.launch {
             session.load()
@@ -75,6 +84,13 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
                         else -> {}
                     }
                 }
+        }
+        viewModelScope.launch {
+            // Recompensas en tiempo real (vouchers y regalos del equipo): se escucha mientras el socket
+            // está conectado; al reconectar se vuelve a suscribir.
+            app.realtime.connected.collectLatest { connected ->
+                if (connected) app.realtime.rewardReceived().collect { onReward(it) }
+            }
         }
         viewModelScope.launch {
             // Si el servidor invalida la sesión (refresh caducado), se limpian los datos del usuario
@@ -173,6 +189,37 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
             }
             onResult(error)
         }
+    }
+
+    /** Canjea un voucher. `onResult(null)` si fue bien (la celebración sale sola). */
+    fun redeemVoucher(code: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            val error = try {
+                onReward(service.redeemVoucher(code))
+                null
+            } catch (e: ApiException) {
+                when (e.status) {
+                    409 -> "Ya has canjeado este código."
+                    429 -> "Demasiados intentos. Espera unos minutos."
+                    400, 404 -> "El código no es válido o ha caducado."
+                    else -> e.message
+                }
+            } catch (e: java.io.IOException) {
+                "Sin conexión con el servidor"
+            }
+            onResult(error)
+        }
+    }
+
+    /** Muestra la celebración (una vez por entrega) y recarga saldo, cofres e inventario. */
+    private fun onReward(reward: RewardReceived) {
+        if (reward.redemptionId.isNotEmpty() && !celebrated.add(reward.redemptionId)) return
+        _reward.value = reward
+        refreshAll()
+    }
+
+    fun dismissReward() {
+        _reward.value = null
     }
 
     fun logout() {
@@ -406,12 +453,14 @@ class AppViewModel(private val app: PetAiApp) : ViewModel() {
         service.buyEgg()
         _state.update { it.copy(eggs = service.eggs()) }
         reloadInventoryAndUser()
+        UiSounds.play("ui.purchase")
         message("¡Huevo comprado! Tardará unos minutos en eclosionar.")
     }
 
     fun buy(item: ItemDto) = act {
         service.buy(item.id)
         reloadInventoryAndUser()
+        UiSounds.play("ui.purchase")
         message("Comprado: ${item.name}")
     }
 }

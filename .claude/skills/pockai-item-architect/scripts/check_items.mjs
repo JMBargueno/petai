@@ -16,10 +16,10 @@ const balance = read('balance.json');
 const accessories = read('accessories.json').accessories ?? [];
 
 // Tipos con mecánica en el backend (references/item-schema.md). Cualquier otro es un objeto que no hace nada.
-const KINDS = ['food', 'medicine', 'evolution'];
+const KINDS = ['food', 'medicine', 'evolution', 'level_up'];
 const ELEMENTS = ['fire', 'water', 'plant', 'electric', 'shadow', 'light'];
 const STATS = ['hunger', 'happiness', 'energy', 'health'];
-const EFFECT_KEYS = [...STATS, 'curesSick'];
+const EFFECT_KEYS = [...STATS, 'curesSick', 'levels'];
 const TIERS = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 const ID = /^[a-z][a-z0-9_]*$/;
 // Bandas orientativas (references/balance.md).
@@ -91,7 +91,11 @@ for (const f of foods) {
   if (!Number.isInteger(f.priceCoins) || f.priceCoins < 0) err('priceCoins debe ser un entero mayor o igual que 0');
   if (!Number.isInteger(f.priceGems) || f.priceGems < 0) err('priceGems debe ser un entero mayor o igual que 0');
   // buyItem rechaza lo que no tiene precio, pero la tienda lo sigue listando con un botón que falla.
-  if (f.priceCoins === 0 && f.priceGems === 0) warn('sin precio: no está a la venta, pero la tienda lo lista igualmente. Ponle precio salvo que solo deba salir de cofres o regalos');
+  // Spec 41: availability drop (cofres y actividades) u hidden (solo admin) no se vende y va a precio 0
+  const avail = f.availability ?? 'shop';
+  if (!['shop', 'drop', 'hidden'].includes(avail)) err(`availability '${avail}' no válida (shop, drop, hidden)`);
+  if (avail !== 'shop' && (f.priceCoins > 0 || f.priceGems > 0)) err(`un objeto ${avail} no se vende: precio 0`);
+  if (avail === 'shop' && f.priceCoins === 0 && f.priceGems === 0) warn('sin precio: no está a la venta, pero la tienda lo lista igualmente. Ponle precio salvo que solo deba salir de cofres o regalos');
 
   const e = f.effects ?? {};
   for (const k of Object.keys(e)) if (!EFFECT_KEYS.includes(k)) err(`effects.${k}: clave que el backend no lee (válidas: ${EFFECT_KEYS.join(', ')})`);
@@ -123,6 +127,8 @@ for (const f of foods) {
     // PetsService.heal suma los cuatro efectos (health vale 40 si falta o es 0) y siempre quita la enfermedad.
     if ((e.hunger ?? 0) > 0) warn('una medicina no debería saciar: para eso está la comida');
     if (!(e.health > 0)) warn('sin effects.health el backend da 40 de salud por defecto: escríbelo');
+  } else if (f.kind === 'level_up') {
+    if (!(Number.isInteger(e.levels) && e.levels >= 1)) err('un objeto level_up necesita effects.levels entero ≥ 1');
   } else if (f.kind === 'evolution') {
     if (f.id !== evoId) err(`no es balance.evolution.finalStageItemId ('${evoId}'): el backend nunca lo usará`);
     if (Object.keys(e).length) warn('un objeto de evolución no lleva effects: los ignora el backend');
@@ -139,10 +145,10 @@ for (const f of foods) {
 // --- Inventario ---
 const line = (f) => {
   const e = f.effects ?? {};
-  const fx = STATS.filter((k) => e[k]).map((k) => `${k} ${e[k] > 0 ? '+' : ''}${e[k]}`).concat(e.curesSick ? ['cura'] : []).join(', ') || 'sin efectos';
-  const price = [f.priceCoins ? `${f.priceCoins} mon.` : '', f.priceGems ? `${f.priceGems} gem.` : ''].filter(Boolean).join(' + ') || 'no se vende';
+  const fx = STATS.filter((k) => e[k]).map((k) => `${k} ${e[k] > 0 ? '+' : ''}${e[k]}`).concat(e.curesSick ? ['cura'] : []).concat(e.levels ? [`+${e.levels} nivel`] : []).join(', ') || 'sin efectos';
+  const price = [f.priceCoins ? `${f.priceCoins} mon.` : '', f.priceGems ? `${f.priceGems} gem.` : ''].filter(Boolean).join(' + ') || ({ drop: 'solo drop', hidden: 'oculto (solo admin)' }[f.availability] ?? 'no se vende');
   const fav = favoriteOf(f.id);
-  const where = [chestTier(f.id) ? `cofres (${chestTier(f.id)})` : '', itemFind.includes(f.id) ? 'hallazgo' : '', ...minigameDrops.filter(([, id]) => id === f.id).map(([g]) => `minijuego ${g}`)].filter(Boolean).join(', ');
+  const where = [chestTier(f.id) ? `cofres (${chestTier(f.id)})` : '', itemFind.includes(f.id) ? 'hallazgo' : '', ...minigameDrops.filter(([, id]) => id === f.id).map(([g]) => `minijuego ${g}`), ...Object.entries(balance.activityDrops?.sources ?? {}).filter(([, l]) => (l ?? []).some((d) => d.itemId === f.id)).map(([src]) => `actividad ${src}`)].filter(Boolean).join(', ');
   const art = fs.existsSync(path.join(root, 'shared/assets/items', `${f.id}.png`)) ? 'arte ✓' : 'arte —';
   return `  ${f.id} «${f.name}» · ${price} · ${fx}${fav.length ? ` · favorita de ${fav.join('/')}` : ''}${where ? ` · ${where}` : ''} · ${art}`;
 };

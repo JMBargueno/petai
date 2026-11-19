@@ -14,6 +14,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { CoopCareService } from './coop-care.service';
 import { PetsService } from '../pets/pets.service';
+import { HabitatService } from '../habitat/habitat.service';
 
 /**
  * HabitatVisitService — "visita en vivo": el pet del visitante aparece en el habitat del dueño.
@@ -69,6 +70,27 @@ export function lookOf(row: { palette?: unknown; patternId?: string | null; visu
     shiny: !!row.shiny,
     accessories,
   };
+}
+
+/**
+ * Lo que ve quien está de visita: la sala del amigo y el aspecto de los dos Pockai. Nada del
+ * estado ni de la memoria del anfitrión.
+ */
+export interface VisitRoom {
+  ownerId: string;
+  room: {
+    id: string;
+    name: string;
+    theme: unknown;
+    gridWidth: number;
+    gridHeight: number;
+    blocked: number[][];
+    items: { id: string; furnitureId: string; x: number; y: number; rotation: number }[];
+  };
+  /** Los muebles de esa sala, con lo justo para dibujarlos. */
+  furniture: { id: string; name: string; footprint: number[]; mount: string; interaction?: string }[];
+  host: PetIdentity;
+  guest: PetIdentity;
 }
 
 export interface ActiveVisitor {
@@ -288,6 +310,57 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
 
 
   /**
+   * La sala del amigo, para quien le está visitando. Solo con una visita activa entre ambos.
+   * Viajan la sala (rejilla, tema y muebles) y el aspecto de los dos Pockai: ni vitales, ni
+   * personalidad, ni recuerdos, ni las demás mascotas del anfitrión.
+   */
+  async visitRoom(actorId: string, ownerId: string): Promise<VisitRoom> {
+    if (!ownerId) throw new BadRequestException('Indica el ownerId del amigo');
+    const visit = await this.prisma.habitatVisit.findFirst({ where: { visitorId: actorId, ownerId, status: 'active' } });
+    if (!visit) throw new ForbiddenException('No tienes ninguna visita en curso con este amigo');
+    const habitats = this.habitatService();
+    if (!habitats) throw new NotFoundException('La sala no está disponible ahora mismo');
+
+    const [host, guestRow, habitat] = await Promise.all([
+      this.resolveActivePet(ownerId),
+      this.prisma.pet.findFirst({ where: { id: visit.petId, userId: actorId }, include: { species: { select: { id: true, name: true } } } }),
+      habitats.getHabitat(ownerId),
+    ]);
+    if (!host || !guestRow || !habitat) throw new NotFoundException('Tu amigo no tiene ningún Pockai en casa');
+    // La sala en uso (la primera activa y desbloqueada); si no hay ninguna marcada, la primera
+    const room = habitat.rooms.find((r) => r.active && r.unlocked) ?? habitat.rooms.find((r) => r.unlocked) ?? habitat.rooms[0];
+    if (!room) throw new NotFoundException('La sala no está disponible ahora mismo');
+    const used = new Set(room.items.map((i) => i.furnitureId));
+    const furniture = habitats
+      .getCatalog()
+      .furniture.filter((f) => used.has(f.id))
+      .map((f) => ({ id: f.id, name: f.name, footprint: f.footprint ?? [1, 1], mount: f.mount ?? 'floor', ...(f.interaction ? { interaction: f.interaction } : {}) }));
+    return {
+      ownerId,
+      room: {
+        id: room.id,
+        name: room.name,
+        theme: room.theme ?? null,
+        gridWidth: room.gridWidth,
+        gridHeight: room.gridHeight,
+        blocked: (room.blocked ?? []) as number[][],
+        items: room.items,
+      },
+      furniture,
+      host: host.pet,
+      guest: {
+        petId: guestRow.id,
+        nickname: guestRow.nickname,
+        speciesName: guestRow.species.name,
+        speciesId: guestRow.species.id,
+        spriteRef: guestRow.species.id || 'default',
+        stage: guestRow.stage ?? 'baby',
+        look: lookOf(guestRow),
+      },
+    };
+  }
+
+  /**
    * Cleanup periódico: finaliza las visitas activas con más de 15 min y emite `habitat:visitor_left`
    * para cada una. Protegido contra solapamientos y relleno de errores (no debe tumbar el servicio).
    */
@@ -366,7 +439,11 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
   @OnEvent('habitat:scene_resolved')
   onSceneResolved(p: { ownerId: string; visitorId: string; scene: Record<string, unknown>; slotMs?: number }) {
     if (typeof p.slotMs === 'number' && p.slotMs >= 30_000) this.sceneSlotMs = p.slotMs;
-    this.realtime?.emitToUser(p.ownerId, 'habitat:scene', { visitorId: p.visitorId, ...p.scene });
+    this.realtime?.emitToUser(p.ownerId, 'habitat:scene', { visitorId: p.visitorId, role: 'host', ...p.scene });
+    // Quien visita ve la misma escena en la sala del amigo. Del anfitrión no viaja nada más que
+    // el tipo de escena y cómo se llevan; los rasgos del visitante son los de su propio Pockai.
+    const { guestTraits: _own, ...shared } = p.scene as Record<string, unknown> & { guestTraits?: unknown };
+    this.realtime?.emitToUser(p.visitorId, 'habitat:scene', { ownerId: p.ownerId, visitorId: p.visitorId, role: 'guest', ...shared });
   }
 
   private visitEnded(v: { id: string; visitorId: string; ownerId: string; petId: string; startedAt: Date }) {
@@ -440,6 +517,15 @@ export class HabitatVisitService implements OnModuleInit, OnModuleDestroy {
       energy,
       sleeping,
     };
+  }
+
+  /** Igual que con las mascotas: importar HabitatModule aquí cerraría un ciclo de módulos. */
+  private habitatService(): HabitatService | null {
+    try {
+      return this.moduleRef?.get(HabitatService, { strict: false }) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   private petsService(): PetsService | null {

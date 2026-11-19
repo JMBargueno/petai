@@ -2,7 +2,7 @@
  * Traduce lo que le pasa a la mascota (acciones del backend o de la propia UI) a una reacción:
  * una secuencia de animaciones, un bocadillo opcional y una partícula opcional.
  */
-import { birthParams, clipsForPetAction, effectForPetAction } from '@pockai/scene/effects';
+import { birthParams, clipsForPetAction, effectForPetAction, extraSoundsForPetAction } from '@pockai/scene/effects';
 import type { PetAction, PetActionEvent } from './petActions';
 
 export interface Reaction {
@@ -12,6 +12,8 @@ export interface Reaction {
   particle?: string;
   /** Efecto (@pockai/scene/effects) que acompaña al momento, con sus datos. */
   effect?: { id: string; params?: Record<string, string | number> };
+  /** Sonidos extra del Pockai además de los de sus clips (spec 40), p. ej. burbujas al limpiar. */
+  sounds?: string[];
   /** Momento exagerado (Mood Theater): PetView añade un squash marcado. */
   emphasis?: boolean;
 }
@@ -163,6 +165,8 @@ export function reactionForAction(event: Pick<PetActionEvent, 'action' | 'contex
   const extras = EXTRAS[event.action]?.(event.context) ?? {};
   const reaction: Reaction = { anims, ...extras };
   if (reaction.particle === undefined) delete reaction.particle;
+  const sounds = extraSoundsForPetAction(event.action, event.context);
+  if (sounds.length) reaction.sounds = sounds;
   const effect = effectForPetAction(event.action, event.context);
   return effect ? { ...reaction, effect } : reaction;
 }

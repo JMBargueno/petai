@@ -39,9 +39,13 @@
   import { isPetActionEvent, type PetAction } from './lib/animation/petActions';
   import ControlPanel from './components/ControlPanel.svelte';
   import HabitatWidget from './components/HabitatWidget.svelte';
+  import EtherObjectLayer from './components/EtherObjectLayer.svelte';
   import { habitatMode } from './lib/habitatMode';
   import FileDropModal from './components/FileDropModal.svelte';
   import AchievementToast from './features/achievements/AchievementToast.svelte';
+  import RewardToast from './features/rewards/RewardToast.svelte';
+  import { celebrateReward, rewardToCelebrate } from './lib/rewards';
+  import type { RewardReceived } from './lib/api';
   import type { AchievementUnlockedPayload } from './features/achievements/achievements.api';
   import type { AnalyzedFile } from './lib/fileAnalyzer';
   import { PawPrint, Bell, X, Volleyball } from 'lucide-svelte';
@@ -58,6 +62,7 @@
   import { activeVisit } from './lib/activeVisit';
   import { configureTravel, endTravel, resetTravel, restoreFromHistory } from './lib/visitTravel';
   import { getSoundEngine, setPanelOpen } from './lib/audio';
+  import { installUiSounds } from './lib/uiSounds';
 
   // Visita en vivo: el servidor la cierra a los 15 min sin avisar al visitante. A esa hora el
   // Pockai vuelve por su portal y se cierra también aquí (si ya estaba cerrada, el error no importa).
@@ -325,7 +330,8 @@
   async function loadInitialData() {
     try {
       const catalog = await api.getCatalog();
-      shopItems = catalog.foods || [];
+      // Spec 41: lo que es solo drop (cofres y actividades) u oculto (solo admin) no se vende
+      shopItems = (catalog.foods || []).filter((f: any) => (f.availability ?? 'shop') === 'shop');
 
       if (getAccessToken()) {
         user = await api.getMe();
@@ -455,6 +461,14 @@
         socket.on('achievement:unlocked', (p: AchievementUnlockedPayload | null) => {
           if (!p) return;
           unlockedAchievement = p;
+          api.getMe().then((u) => (user = u)).catch(() => {});
+        });
+
+        // Recompensa recibida (voucher canjeado o regalo del equipo): la mascota ya lo celebra con
+        // `pet:action gift_received`; aquí el desglose y el saldo al día. Se deduplica por redemptionId.
+        socket.on('reward:received', (p: RewardReceived | null) => {
+          if (!p) return;
+          celebrateReward(p);
           api.getMe().then((u) => (user = u)).catch(() => {});
         });
 
@@ -787,6 +801,7 @@
 
   onMount(() => {
     getSoundEngine();
+    installUiSounds();
     // Solo en desarrollo (y en la demo): lanzar momentos a mano para probar los efectos del
     // escritorio sin backend (skill pockai-effect-architect, integration-checklist.md).
     if (import.meta.env.DEV) {
@@ -945,6 +960,9 @@
     />
   {/if}
 
+  <!-- Objetos que el Pockai saca del Éter (el reloj del pomodoro): se arrastran por la pantalla -->
+  <EtherObjectLayer />
+
   <!-- Mascota Interactiva Flotante (oculta si está en su Hábitat/casa) -->
   {#if currentPet && (!currentPet.inHabitat || homeAnim)}
     <PetView
@@ -997,6 +1015,7 @@
   />
 
   <AchievementToast payload={unlockedAchievement} onDismiss={() => (unlockedAchievement = null)} />
+  <RewardToast payload={$rewardToCelebrate} onDismiss={() => rewardToCelebrate.set(null)} />
 
   {#if droppedFile && !locked}
     <FileDropModal

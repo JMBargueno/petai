@@ -21,6 +21,19 @@ describe('effectForPetAction (tabla compartida escritorio / escena)', () => {
     expect(effectForPetAction('achievement', { tier: 'epic' })?.params).toEqual({ tier: 'epic' });
   });
 
+  it('lo que entrega el Éter (voucher o regalo del equipo) es un sello del color de lo recibido; el regalo de un amigo, el paquete', () => {
+    expect(effectForPetAction('gift_received', { source: 'voucher', reward: 'gems' })).toEqual({ id: 'sello-eter', params: { reward: 'gems' } });
+    expect(effectForPetAction('gift_received', { source: 'admin_grant', reward: 'chest', tier: 'gold' })).toEqual({
+      id: 'sello-eter',
+      params: { reward: 'chest', tier: 'gold' },
+    });
+    // El tier solo acompaña al cofre; sin tipo, monedas
+    expect(effectForPetAction('gift_received', { source: 'voucher', reward: 'pro', tier: 'gold' })?.params).toEqual({ reward: 'pro' });
+    expect(effectForPetAction('gift_received', { source: 'admin_grant' })?.params).toEqual({ reward: 'coins' });
+    expect(effectForPetAction('gift_received', { source: 'friend' })).toEqual({ id: 'paquete-hebra', params: { kind: 'gift' } });
+    expect(effectForPetAction('gift_received')).toEqual({ id: 'paquete-hebra', params: { kind: 'gift' } });
+  });
+
   it('los momentos sin efecto propio devuelven null', () => {
     expect(effectForPetAction('fed', {})).toBeNull();
     expect(effectForPetAction('accion_inventada')).toBeNull();

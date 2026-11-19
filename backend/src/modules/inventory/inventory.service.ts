@@ -22,7 +22,8 @@ export class InventoryService {
 
   async getShopItems(kind?: string) {
     return this.prisma.item.findMany({
-      where: kind ? { kind } : undefined,
+      // Spec 41: lo que es solo drop u oculto no sale en la tienda
+      where: { availability: 'shop', ...(kind ? { kind } : {}) },
       orderBy: [{ kind: 'asc' }, { priceCoins: 'asc' }],
     });
   }
@@ -46,6 +47,10 @@ export class InventoryService {
     const unlock = (item.effects as { unlock?: string } | null)?.unlock;
     if (item.kind === 'cosmetic' || (isAccessory && unlock === 'achievement')) {
       throw new BadRequestException('Este objeto no se puede comprar: se consigue con un logro');
+    }
+    // Spec 41: los objetos de solo drop (cofres, actividades) y los ocultos (solo admin) no se venden
+    if ((item.availability ?? 'shop') !== 'shop') {
+      throw new BadRequestException('Este objeto no está a la venta');
     }
     // Lo que no tiene precio no está a la venta: sin este filtro, cualquier objeto a 0 (un consumible
     // mal configurado, un objeto creado solo para cofres o regalos) se podría «comprar» gratis sin límite.

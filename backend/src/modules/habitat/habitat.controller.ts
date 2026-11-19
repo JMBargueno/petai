@@ -81,6 +81,20 @@ export class HabitatController {
     return this.habitatService.removeItem(user.id, itemId);
   }
 
+  @Post('items/:itemId/use')
+  @ApiOperation({
+    summary: 'El Pockai ha usado un mueble de su sala',
+    description:
+      'Lo avisa el cliente cuando el Pockai usa un mueble por su cuenta. El efecto es pequeño y está acotado: tope diario por mascota y ' +
+      'enfriamiento entre usos. Pasados los límites responde 201 con `applied: false` y el motivo, no un error.',
+  })
+  @ApiResponse({ status: 201, description: 'Resultado del uso (aplicado o no) y vitales actuales' })
+  @ApiResponse({ status: 400, description: 'El mueble no se puede usar' })
+  @ApiResponse({ status: 404, description: 'Mueble no encontrado en el hábitat' })
+  useItem(@CurrentUser() user: { id: string }, @Param('itemId') itemId: string) {
+    return this.habitatService.useItem(user.id, itemId);
+  }
+
   @Delete('furniture/:id')
   @ApiOperation({ summary: 'Quitar un mueble del hábitat por tipo (el más reciente). Preferible: DELETE items/:itemId' })
   @ApiResponse({ status: 200, description: 'Mueble removido' })

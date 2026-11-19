@@ -13,6 +13,8 @@
 
   export let pet: any = null;
   export let inventory: any[] = [];
+  /** Solo la comida va a «Alimentar»: el resto (medicinas, Enhebrador…) se usa desde la Mochila. */
+  $: foods = inventory.filter((i) => i.qty > 0 && (i.item?.kind ?? 'food') === 'food');
   /** Todas las mascotas: con más de una aparece el selector de mascota activa. */
   export let pets: any[] = [];
   /** Acción en curso en el panel (`clean`, `sleep`, `habitat`, `feed:<id>`), para bloquear su botón. */
@@ -127,10 +129,10 @@
       {/if}
     </div>
 
-    <SectionHeader title="Alimentar" icon="food" count={inventory.length || null} />
-    {#if inventory.length}
+    <SectionHeader title="Alimentar" icon="food" count={foods.length || null} />
+    {#if foods.length}
       <div class="food">
-        {#each inventory as item}
+        {#each foods as item}
           <button
             class="food-chip"
             disabled={!!busy}

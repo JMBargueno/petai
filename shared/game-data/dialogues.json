@@ -1,0 +1,135 @@
+{
+  "_": "Conversaciones sin LLM (spec 37, lote 5). Cada una: `start`, `vars` (toda variable usada debe estar declarada, con su valor inicial) y `nodes`. Un nodo es una línea (`speaker` + `line`, con `next` o `end`), un conjunto de opciones (`choices`), un salto (`next`, que puede ser una lista de transiciones con `if`) o el final (`end`). `line` y `text` son IDs de strings/<idioma>.json, nunca texto. Los efectos (`set`, `cmd`) van en la transición, no en el nodo. Comandos: behavior:<reacción>, feel:<delta>, remember:<id de línea>, take_item:<origen>, wish_done:<deseo>. Lo valida scripts/validate-game-data.js.",
+  "conversations": {
+    "visit": {
+      "start": "arrive",
+      "vars": {
+        "sleeping": false,
+        "sick": false,
+        "shy": false,
+        "aloof": false,
+        "knows": false,
+        "friends": false,
+        "has_treat": false,
+        "can_effect": true,
+        "has_story": false,
+        "energy": 60,
+        "min_energy": 25,
+        "max": 5,
+        "count": 0,
+        "done_greet": false,
+        "done_pet": false,
+        "done_treat": false,
+        "done_play": false,
+        "done_ask": false
+      },
+      "nodes": {
+        "arrive": {
+          "next": [
+            { "if": "sleeping", "to": "asleep", "cmd": ["behavior:yawn"] },
+            { "if": "shy and not knows", "to": "hiding", "cmd": ["behavior:hide"] },
+            { "if": "friends", "to": "welcome_friend", "cmd": ["behavior:greet_visitor"] },
+            { "to": "welcome", "cmd": ["behavior:greet_visitor"] }
+          ]
+        },
+        "asleep": { "speaker": "pet", "line": "DLG_VISIT_ASLEEP", "next": "only_bye" },
+        "only_bye": { "choices": [{ "text": "DLG_OPT_BYE", "to": "bye" }] },
+        "hiding": { "speaker": "pet", "line": "DLG_VISIT_HIDE", "next": "hidden_menu" },
+        "hidden_menu": {
+          "choices": [
+            { "text": "DLG_OPT_WAIT", "to": "wait_out", "set": { "count": "count + 1" }, "cmd": ["behavior:listen"] },
+            { "text": "DLG_OPT_BYE", "to": "bye", "cmd": ["behavior:hide"] }
+          ]
+        },
+        "wait_out": { "speaker": "pet", "line": "DLG_VISIT_WAIT_OUT", "next": "after" },
+        "welcome": { "speaker": "pet", "line": "DLG_VISIT_OPEN", "next": "menu" },
+        "welcome_friend": { "speaker": "pet", "line": "DLG_VISIT_OPEN_FRIEND", "next": "menu" },
+        "menu": {
+          "choices": [
+            {
+              "text": "DLG_OPT_GREET",
+              "if": "not done_greet and count < max",
+              "to": "greeted",
+              "set": { "done_greet": "true", "count": "count + 1" },
+              "cmd": ["behavior:greet_visitor", "feel:0.04", "remember:DLG_VISIT_EP_GREET"]
+            },
+            {
+              "text": "DLG_OPT_PET",
+              "if": "not done_pet and count < max and (knows or not aloof)",
+              "to": "pet_ok",
+              "set": { "done_pet": "true", "count": "count + 1" },
+              "cmd": ["behavior:greet_visitor", "feel:0.06", "remember:DLG_VISIT_EP_PET"]
+            },
+            {
+              "text": "DLG_OPT_PET",
+              "if": "not done_pet and count < max and aloof and not knows",
+              "to": "pet_no",
+              "set": { "done_pet": "true", "count": "count + 1" },
+              "cmd": ["behavior:listen"]
+            },
+            {
+              "text": "DLG_OPT_TREAT",
+              "if": "not done_treat and count < max and has_treat and can_effect and not sick",
+              "to": "treated",
+              "set": { "done_treat": "true", "count": "count + 1" },
+              "cmd": ["take_item:visitor", "behavior:accept_treat", "feel:0.1", "remember:DLG_VISIT_EP_TREAT"]
+            },
+            {
+              "text": "DLG_OPT_PLAY",
+              "if": "not done_play and count < max and not sick and energy >= min_energy",
+              "to": "play_ok",
+              "set": { "done_play": "true", "count": "count + 1" },
+              "cmd": ["behavior:show_habitat", "feel:0.08", "remember:DLG_VISIT_EP_PLAY"]
+            },
+            {
+              "text": "DLG_OPT_PLAY",
+              "if": "not done_play and count < max and not sick and energy < min_energy",
+              "to": "play_tired",
+              "set": { "done_play": "true", "count": "count + 1" },
+              "cmd": ["behavior:yawn"]
+            },
+            {
+              "text": "DLG_OPT_PLAY",
+              "if": "not done_play and count < max and sick",
+              "to": "play_sick",
+              "set": { "done_play": "true", "count": "count + 1" },
+              "cmd": ["behavior:listen"]
+            },
+            {
+              "text": "DLG_OPT_ASK",
+              "if": "not done_ask and count < max and has_story and knows",
+              "to": "asked_story",
+              "set": { "done_ask": "true", "count": "count + 1" },
+              "cmd": ["behavior:listen", "feel:0.03", "remember:DLG_VISIT_EP_ASK"]
+            },
+            {
+              "text": "DLG_OPT_ASK",
+              "if": "not done_ask and count < max and not (has_story and knows)",
+              "to": "asked",
+              "set": { "done_ask": "true", "count": "count + 1" },
+              "cmd": ["behavior:listen", "feel:0.03", "remember:DLG_VISIT_EP_ASK"]
+            },
+            { "text": "DLG_OPT_BYE", "to": "bye", "cmd": ["behavior:greet_visitor"] }
+          ]
+        },
+        "greeted": { "speaker": "pet", "line": "DLG_VISIT_GREET", "next": "after" },
+        "pet_ok": { "speaker": "pet", "line": "DLG_VISIT_PET_OK", "next": "after" },
+        "pet_no": { "speaker": "pet", "line": "DLG_VISIT_PET_NO", "next": "after" },
+        "treated": { "speaker": "pet", "line": "DLG_VISIT_TREAT", "next": "after" },
+        "play_ok": { "speaker": "pet", "line": "DLG_VISIT_PLAY_OK", "next": "after" },
+        "play_tired": { "speaker": "pet", "line": "DLG_VISIT_PLAY_TIRED", "next": "after" },
+        "play_sick": { "speaker": "pet", "line": "DLG_VISIT_PLAY_SICK", "next": "after" },
+        "asked": { "speaker": "pet", "line": "DLG_VISIT_ASKED", "next": "after" },
+        "asked_story": { "speaker": "pet", "line": "DLG_VISIT_ASKED_STORY", "next": "after" },
+        "after": {
+          "next": [
+            { "if": "count >= max", "to": "enough" },
+            { "to": "menu" }
+          ]
+        },
+        "enough": { "speaker": "pet", "line": "DLG_VISIT_LIMIT", "next": "menu" },
+        "bye": { "speaker": "pet", "line": "DLG_VISIT_BYE", "end": true }
+      }
+    }
+  }
+}

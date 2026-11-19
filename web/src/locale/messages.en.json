@@ -476,6 +476,7 @@
     "arena.page.lore": "The Colosseum of Resonance in the lore →",
     "arena.meta.title": "The Pockai Arena: battles, elements and leagues",
     "arena.meta.description": "Asynchronous battles between pockais: elemental advantages, strategies, skills and leagues from Bronze to Mythic. This is how the Pockai Arena works.",
+    "arena.meta.imageAlt": "Two pockais face off in the Arena: fire against water",
     "feat.link.pockais": "Meet the pockais →",
     "feat.link.arena": "The Arena in depth →",
     "feat.link.ai": "The AI awakening →",
@@ -485,6 +486,7 @@
     "pockais.cta.title": "Want your own?",
     "pockais.meta.title": "The pockais: species, rarities and patterns",
     "pockais.meta.description": "Meet the pockais: their species, the real odds for each rarity, the shiny variant and the patterns that can hatch from every egg.",
+    "pockais.meta.imageAlt": "The pockais by rarity: one mythic, one rare, one super rare and two legendaries",
     "footer.contact": "Contact",
     "footer.social": "Social media",
     "footer.social.link": "Pockai on {$INTERPOLATION}",
@@ -515,6 +517,7 @@
     "contact.send": "Send message",
     "contact.meta.title": "Contact · Pockai",
     "contact.meta.description": "Write to the Pockai team: questions, ideas, bugs or collaborations. We reply by email.",
+    "contact.meta.imageAlt": "Axolunar waves at the Pockai team next to an envelope",
     "verifyEmail.done.eyebrow": "Account verified",
     "verifyEmail.done.title": "Email verified!",
     "verifyEmail.done.lead": " You can go back to the Pockai app now. If it was open, tap “Ya lo he verificado” (I've verified it) to continue. ",
@@ -664,6 +667,18 @@
     "evo.florabud.baby": "A bud with legs: mint green, ending in a point, with a single little leaf on top.",
     "evo.florabud.juvenile": "The sprout stands up: two leaves on its head and a leaf for a tail.",
     "evo.florabud.adult": "It begins to bloom: a collar of pink petals and two big leaves on its head.",
-    "evo.florabud.final": "The spirit in bloom: a great pink flower opens above its head and vines wind along its arms."
+    "evo.florabud.final": "The spirit in bloom: a great pink flower opens above its head and vines wind along its arms.",
+    "account.redeem.title": "Redeem a code",
+    "account.redeem.label": "Voucher code",
+    "account.redeem.submit": "Redeem",
+    "account.redeem.ok": "Reward received!",
+    "account.redeem.coins": "+{$n} coins",
+    "account.redeem.gems": "+{$n} gems",
+    "account.redeem.pro": "+{$n} days of Pro (until {$date})",
+    "account.redeem.chest": "{$n} × {$type} chest",
+    "account.redeem.accessoryOwned": "{$name} (already owned)",
+    "account.redeem.accessory": "Accessory: {$name}",
+    "account.redeem.already": "You have already redeemed this code.",
+    "account.redeem.invalid": "The code is not valid or has expired."
   }
 }

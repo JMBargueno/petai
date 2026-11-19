@@ -9,6 +9,7 @@ import { MindService } from '../mind/mind.service';
 import { MindMemoryService } from '../mind/mind-memory.service';
 import { dayKey } from '../mind/evolution.engine';
 import { isShareable } from '../mind/social.engine';
+import { text } from '../mind/strings';
 import { VisitorCtx, VisitorEffect, VisitorReply, VisitorState, openVisit, stepVisit } from '../mind/visitor.engine';
 
 /** Lo que dura guardada una conversación: algo más que la visita más larga (15 min). */
@@ -112,7 +113,7 @@ export class VisitDialogService {
       this.storyOf(host.id, now),
       this.dailyCount(dailyKey),
     ]);
-    const visitorName = visitor?.displayName || 'Un amigo de mi entrenador';
+    const visitorName = visitor?.displayName || text('NAME_OWNER_FRIEND');
     const ctx: VisitorCtx = {
       petId: host.id,
       petName: host.nickname || 'El Pockai',
@@ -180,7 +181,7 @@ export class VisitDialogService {
         });
       }
       await this.mind.applyExperience(host.id, [effect.event]);
-      await this.memory.feel(host.id, `user:${actorId}`, `${visitorName} (otro entrenador)`, effect.delta);
+      await this.memory.feel(host.id, `user:${actorId}`, text('LABEL_TRAINER', { visitor: visitorName }), effect.delta);
       // Un solo recuerdo por visita, que se va completando (misma clave)
       await this.memory.remember(host.id, [
         { layer: 'episodic', kind: 'visit', key: `visitor:${visit.id}`, content: effect.episode, importance: 0.55, valence: 0.5, subject: `user:${actorId}` },

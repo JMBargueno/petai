@@ -20,6 +20,7 @@ export const PERMISSIONS = [
   'users:verify', // marcar el correo como verificado / reenviar la verificación (soporte)
   'email:send', // enviar correos a usuarios desde el panel
   'site:manage', // ajustes de la web pública (landing «Coming soon», cuenta atrás)
+  'vouchers:manage', // vouchers de recompensas y regalos directos (los días Pro exigen además billing:manage)
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -48,6 +49,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Grant[]> = {
     'users:verify',
     'email:send',
     'site:manage',
+    'vouchers:manage',
   ],
   moderator: ['admin:access', 'users:read', 'mods:moderate', 'audit:read', 'pets:read'],
   user: [],

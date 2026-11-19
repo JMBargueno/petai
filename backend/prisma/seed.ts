@@ -74,6 +74,7 @@ async function main() {
         name: food.name,
         description: food.description,
         effects: food.effects,
+        availability: food.availability ?? 'shop',
       },
       create: {
         id: food.id,
@@ -83,6 +84,7 @@ async function main() {
         effects: food.effects,
         priceCoins: food.priceCoins,
         priceGems: food.priceGems,
+        availability: food.availability ?? 'shop',
       },
     });
   }

@@ -10,6 +10,7 @@ import {
   destelloRitual,
   huevoGrietas,
   triunfoRaid,
+  selloEter,
   destelloPrisma,
   estelaFlujo,
   glitchAnimo,
@@ -60,6 +61,7 @@ const MOMENTS: EffectDef[] = [
   cofreTier,
   destelloRitual,
   triunfoRaid,
+  selloEter,
 ];
 
 function render(def: EffectDef, phase: string, t: number, opts: { el?: string; reduced?: boolean; ms?: number; params?: Record<string, string | number> } = {}) {

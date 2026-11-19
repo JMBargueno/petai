@@ -18,6 +18,7 @@
   import { hashSeed } from '@pockai/mind';
   import { fallbackDims, loadDims, petDims } from '../lib/brain/personalityStore';
   import { guestPetState, roomGuestOf, visitScene, visitorsStore } from '../lib/visitors';
+  import { sfxFirst } from '../lib/audio';
 
   export let pet: any = null;
   export let room: HabitatRoom | null = null;
@@ -59,7 +60,7 @@
   const send = (m: HostMessage) => scene?.receive(m);
 
   onMount(() => {
-    void PockaiScene.create({ host, label, onEvent, observeResize: fill, bare }).then((s) => {
+    void PockaiScene.create({ host, label, onEvent, observeResize: fill, bare, onSound: (ids) => sfxFirst(ids) }).then((s) => {
       if (destroyed) return s.destroy();
       scene = s;
     });

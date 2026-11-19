@@ -69,3 +69,53 @@ groups:
         annotations:
           summary: "GC pause p99 > 500ms"
           description: "GC pauses p99 superan {{ $value | humanizeDuration }} (umbral: 500ms)."
+
+  # Cerebro del Pockai (spec 37 §3.1). Avisos, no críticas: el chat sigue funcionando, pero peor.
+  - name: petai-mind
+    rules:
+      # 1. Hay chat pero el motor no decide ninguna reacción: el plan del turno está fallando en
+      #    silencio (pasó con las fechas serializadas) y el Pockai responde sin personalidad.
+      - alert: MindEngineSilent
+        expr: |
+          sum(rate(petai_http_request_duration_seconds_count{route=~".*chat.*", status=~"2.."}[15m])) > 0
+          and
+          (sum(rate(petai_mind_behavior_total{source="engine"}[15m])) or vector(0)) == 0
+        for: 30m
+        labels:
+          severity: warning
+          service: petai-backend
+        annotations:
+          summary: "El cerebro del Pockai no decide reacciones aunque hay chat"
+          description: "Llevan 30 min llegando mensajes de chat sin ninguna reacción del motor. Revisar el log de ChatService («Plan de turno no disponible»)."
+
+      # 2. El modelo propone reacciones que las reglas rechazan con demasiada frecuencia
+      - alert: MindBehaviorRejections
+        expr: |
+          (
+            sum(rate(petai_mind_behavior_total{source="model", outcome="rejected"}[30m]))
+            /
+            sum(rate(petai_mind_behavior_total{source="model"}[30m]))
+          ) > 0.4
+        for: 30m
+        labels:
+          severity: warning
+          service: petai-backend
+        annotations:
+          summary: "Más del 40% de las reacciones propuestas por el modelo se rechazan"
+          description: "El ratio de rechazo es {{ $value | humanizePercentage }} desde hace 30 min. El modelo o el prompt de express_behavior pueden haber cambiado."
+
+      # 3. La extracción de memoria devuelve un formato que no se entiende
+      - alert: MindExtractionInvalid
+        expr: |
+          (
+            sum(rate(petai_mind_extraction_total{outcome=~"invalid|error"}[30m]))
+            /
+            sum(rate(petai_mind_extraction_total[30m]))
+          ) > 0.3
+        for: 30m
+        labels:
+          severity: warning
+          service: petai-backend
+        annotations:
+          summary: "Más del 30% de las extracciones de memoria fallan"
+          description: "El ratio de extracciones inválidas o con error es {{ $value | humanizePercentage }} desde hace 30 min: los Pockai no están aprendiendo de las conversaciones."

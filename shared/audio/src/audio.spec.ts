@@ -178,3 +178,14 @@ describe('motor sin WebAudio', () => {
     expect(desk.has('ui.tap')).toBe(true);
   });
 });
+
+describe('interruptor por tipo de sonido', () => {
+  it('apagar un tipo lo silencia sin tocar los demás, y se guarda al parsear', () => {
+    const s = parseAudioSettings({ busOn: { ambient: false } });
+    expect(s.busOn).toMatchObject({ ambient: false, pet: true, ui: true, sfx: true });
+    const env = { surface: 'app', focused: true, visible: true } as const;
+    expect(effectiveBusGain(s, 'ambient', env)).toBe(0);
+    expect(effectiveBusGain(s, 'pet', env)).toBeGreaterThan(0);
+    expect(parseAudioSettings({ busOn: { ui: 'no' } }).busOn.ui).toBe(true);
+  });
+});

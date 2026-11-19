@@ -15,7 +15,8 @@ Las rutas son relativas a la raíz del repo.
 ## Vista
 7. `shared/minigames/src/views/<id>View.ts` (`minigame-contract.md`, `pockai-in-game.md`). Sin emoji.
 8. `shared/minigames/src/registry.ts`: `createView`, `icon` (un nombre que exista en `desktop/src/components/Ico.svelte`) y `howTo`.
-9. Estilos en `shared/minigames/src/styles.ts`, con prefijo `pmg-` y una clase de arena propia (`pmg-arena--<algo>`).
+9. Sonido: añade los ids del juego a `MG` en `shared/minigames/src/sound.ts` y a `shared/game-data/sounds.json` (`mg.<id>.<sonido>`, con su `prompt` en inglés; `source: "synth"` y receta en `shared/audio/src/synth.ts` si tiene que ir exacto al tempo o seguir una escala). Un test exige que coincidan. Generar los ficheros es aparte y cuesta dinero (`pnpm sfx:generate --only mg`, spec 40).
+9b. Estilos en `shared/minigames/src/styles.ts`, con prefijo `pmg-` y una clase de arena propia (`pmg-arena--<algo>`).
 10. Android lleva su propio mapa de iconos y pistas por juego (`mobile/android/.../ui/play/PlayScreen.kt`): añade el juego ahí o dilo al cerrar.
 
 ## Brief y arte
@@ -26,11 +27,11 @@ Las rutas son relativas a la raíz del repo.
 
 ## Validación
 15. `node .claude/skills/pockai-minigame-architect/scripts/check_minigames.mjs <id>`: errores a 0; revisa los avisos.
-16. `pnpm --filter @pockai/minigames test` y `pnpm --filter @pockai/minigames typecheck`.
+16. `pnpm --filter @pockai/minigames test` y `pnpm --filter @pockai/minigames typecheck`; `pnpm validate:sounds` si tocaste el catálogo.
 17. `node scripts/validate-game-data.js` y `node scripts/validate-assets.js`.
 18. Si cambió la lógica: `pnpm --filter @pockai/minigames build:node` y, desde `backend/`, `npx jest src/modules/minigames`.
 19. Desde `desktop/`: `npx svelte-check --threshold error`.
-20. **Jugar:** `preview_start` con `pockai-minigames-dev`, `/?demo=<id>` y `/?demo=<id>&easy`. Ratón y teclado, consola sin errores, captura.
+20. **Jugar:** `preview_start` con `pockai-minigames-dev`, `/?demo=<id>` y `/?demo=<id>&easy`. Ratón y teclado, consola sin errores, captura. En esa página `window.__pockaiSfx` lista los sonidos pedidos: comprueba que cada suceso pide el suyo.
 21. `git diff --stat`: solo cambia lo previsto.
 
 ## Después

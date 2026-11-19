@@ -602,6 +602,37 @@
         ]
       }
     },
+    "/v1/habitat/visit/room": {
+      "get": {
+        "description": "Solo con una visita en vivo activa (403 si no). Devuelve la sala (rejilla, tema y muebles) y el aspecto de los dos Pockai, para dibujar la visita en el cliente de quien visita. No incluye vitales, personalidad ni recuerdos del anfitrión.",
+        "operationId": "HabitatVisitController_room",
+        "parameters": [
+          {
+            "name": "ownerId",
+            "required": true,
+            "in": "query",
+            "description": "El amigo visitado",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "La sala del amigo al que estás visitando",
+        "tags": [
+          "Habitat · Visita en vivo"
+        ]
+      }
+    },
     "/v1/habitat/visitors": {
       "get": {
         "operationId": "HabitatVisitController_list",
@@ -2109,6 +2140,35 @@
         ]
       }
     },
+    "/v1/pets/{id}/use-item": {
+      "post": {
+        "operationId": "PetsController_useItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Usar un objeto del inventario sobre la mascota (comida, medicina, evolución o subida de nivel)",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
     "/v1/pets/{id}/heal": {
       "post": {
         "operationId": "PetsController_heal",
@@ -2496,6 +2556,42 @@
           }
         ],
         "summary": "Quitar un mueble concreto del hábitat (por id de item)",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/items/{itemId}/use": {
+      "post": {
+        "description": "Lo avisa el cliente cuando el Pockai usa un mueble por su cuenta. El efecto es pequeño y está acotado: tope diario por mascota y enfriamiento entre usos. Pasados los límites responde 201 con `applied: false` y el motivo, no un error.",
+        "operationId": "HabitatController_useItem",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Resultado del uso (aplicado o no) y vitales actuales"
+          },
+          "400": {
+            "description": "El mueble no se puede usar"
+          },
+          "404": {
+            "description": "Mueble no encontrado en el hábitat"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "El Pockai ha usado un mueble de su sala",
         "tags": [
           "Habitat"
         ]
@@ -5691,6 +5787,13 @@
                   "correctOrder": {
                     "type": "boolean",
                     "description": "Si el orden de los pasos fue correcto"
+                  },
+                  "picked": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Ingredientes echados a la olla, en orden. Si se envía, el servidor cuenta los aciertos y no usa score ni correctOrder"
                   }
                 }
               }
@@ -9594,6 +9697,287 @@
           "Admin"
         ]
       }
+    },
+    "/v1/admin/vouchers": {
+      "get": {
+        "operationId": "AdminVouchersController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "active",
+                "used",
+                "revoked",
+                "expired"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoucherListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar vouchers de recompensas (paginado; filtro: status)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "operationId": "AdminVouchersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVouchersDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedVouchersDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear vouchers (lote aleatorio o código personalizado). Días Pro: exige billing:manage",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/vouchers/accessories": {
+      "get": {
+        "operationId": "AdminVouchersController_accessories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RewardAccessoryOptionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Prendas que se pueden incluir en un voucher o regalo (catálogo de accessories.json)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/vouchers/items": {
+      "get": {
+        "operationId": "AdminVouchersController_items",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RewardItemOptionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consumibles que se pueden incluir en un voucher o regalo (foods.json, también los de solo drop y los ocultos)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/vouchers/{id}/revoke": {
+      "post": {
+        "operationId": "AdminVouchersController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoucherDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revocar un voucher (idempotente)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/grant": {
+      "post": {
+        "operationId": "AdminVouchersController_grant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantRewardsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardReceivedDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dar un paquete de recompensas a un usuario (queda auditado). Días Pro: exige billing:manage",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/vouchers/redeem": {
+      "post": {
+        "operationId": "VouchersController_redeem",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemVoucherDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardReceivedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Código no válido o caducado"
+          },
+          "409": {
+            "description": "Ya canjeado por esta cuenta"
+          },
+          "429": {
+            "description": "Demasiados intentos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Canjear un voucher de recompensas (una vez por cuenta)",
+        "tags": [
+          "Vouchers"
+        ]
+      }
     }
   },
   "info": {
@@ -12527,6 +12911,453 @@
           "total",
           "page",
           "pageSize"
+        ]
+      },
+      "RewardChestDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "bronze",
+              "silver",
+              "gold",
+              "diamond",
+              "mythic"
+            ]
+          },
+          "qty": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10
+          }
+        },
+        "required": [
+          "type",
+          "qty"
+        ]
+      },
+      "RewardItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 99
+          }
+        },
+        "required": [
+          "id",
+          "qty"
+        ]
+      },
+      "RewardsDto": {
+        "type": "object",
+        "properties": {
+          "coins": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "gems": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "proDays": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 365,
+            "description": "Días de Pro (exige billing:manage)"
+          },
+          "chests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardChestDto"
+            }
+          },
+          "accessories": {
+            "description": "Ids de prendas de accessories.json",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "items": {
+            "description": "Consumibles de foods.json (también solo drop y ocultos)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardItemDto"
+            }
+          }
+        }
+      },
+      "VoucherCreatorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName"
+        ]
+      },
+      "VoucherDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "example": "ABCD-EF23"
+          },
+          "rewards": {
+            "$ref": "#/components/schemas/RewardsDto"
+          },
+          "maxUses": {
+            "type": "number"
+          },
+          "usedCount": {
+            "type": "number"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VoucherCreatorDto"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "used",
+              "revoked",
+              "expired"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "rewards",
+          "maxUses",
+          "usedCount",
+          "expiresAt",
+          "revokedAt",
+          "note",
+          "createdAt",
+          "createdBy",
+          "status"
+        ]
+      },
+      "VoucherListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VoucherDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "RewardAccessoryOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slot",
+          "rarity"
+        ]
+      },
+      "RewardItemOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "food | medicine | evolution | level_up"
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "shop",
+              "drop",
+              "hidden"
+            ]
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "availability",
+          "description"
+        ]
+      },
+      "CreateVouchersDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "NAVIDAD2026",
+            "description": "Código personalizado (si falta, se generan `count` aleatorios)"
+          },
+          "count": {
+            "type": "number",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 100
+          },
+          "maxUses": {
+            "type": "number",
+            "default": 1,
+            "minimum": 1,
+            "description": "Canjes totales permitidos (cada cuenta, una vez)"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "rewards": {
+            "$ref": "#/components/schemas/RewardsDto"
+          }
+        },
+        "required": [
+          "rewards"
+        ]
+      },
+      "CreatedVouchersDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VoucherDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "GrantRewardsDto": {
+        "type": "object",
+        "properties": {
+          "rewards": {
+            "$ref": "#/components/schemas/RewardsDto"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Mensaje que verá el jugador en el aviso"
+          }
+        },
+        "required": [
+          "rewards"
+        ]
+      },
+      "GrantedAccessoryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "alreadyOwned": {
+            "type": "boolean",
+            "description": "Ya la tenía: no se ha dado otra"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "alreadyOwned"
+        ]
+      },
+      "GrantedItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "qty"
+        ]
+      },
+      "GrantedRewardsDto": {
+        "type": "object",
+        "properties": {
+          "coins": {
+            "type": "number"
+          },
+          "gems": {
+            "type": "number"
+          },
+          "proDays": {
+            "type": "number"
+          },
+          "proUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "chests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardChestDto"
+            }
+          },
+          "accessories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrantedAccessoryDto"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrantedItemDto"
+            }
+          }
+        },
+        "required": [
+          "coins",
+          "gems",
+          "proDays",
+          "proUntil",
+          "chests",
+          "accessories"
+        ]
+      },
+      "RewardReceivedDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "voucher",
+              "admin_grant"
+            ]
+          },
+          "redemptionId": {
+            "type": "string",
+            "description": "Id único de la entrega (para no celebrarla dos veces)"
+          },
+          "code": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "granted": {
+            "$ref": "#/components/schemas/GrantedRewardsDto"
+          }
+        },
+        "required": [
+          "source",
+          "redemptionId",
+          "granted"
+        ]
+      },
+      "RedeemVoucherDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "ABCD-EF23"
+          }
+        },
+        "required": [
+          "code"
         ]
       }
     }

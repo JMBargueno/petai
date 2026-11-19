@@ -7,7 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PetsService } from '../pets/pets.service';
 import { BondingService } from '../bonding/bonding.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
-import { InteractionEngineService, SCENE_NOTE, SCENE_TO_BUDDY } from './interaction-engine.service';
+import { InteractionEngineService, SCENE_TO_BUDDY, sceneNote } from './interaction-engine.service';
 
 /**
  * Servicio de Pet Buddies (feature 029). Coordina pares de 2 pets del mismo usuario,
@@ -135,7 +135,7 @@ export class BuddiesService {
         sameHome: true,
       });
       type = SCENE_TO_BUDDY[res.scene.type] ?? 'idle_chat';
-      note = SCENE_NOTE[res.scene.type];
+      note = sceneNote(res.scene.type);
       scene = { previous: res.previous };
     } else {
       type = this.engine.rollInteraction(() => rHappens, state);

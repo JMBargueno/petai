@@ -631,7 +631,7 @@ bloquea.
 | Punto | Decisión |
 |---|---|
 | 2.4 | ~~Cadencia de extracción de memoria en el plan gratuito.~~ **Decidido:** cada 20 mensajes por debajo de inteligencia 200. |
-| 3.4 | Tope diario de progresión de inteligencia. |
+| 3.4 | ~~Tope diario de progresión de inteligencia.~~ **Decidido:** 50 puntos al día por chat. |
 | 4.5 | ~~Cada cuántos turnos puede el Pockai sacar un deseo por su cuenta.~~ **Decidido:** como mucho uno cada 8 turnos. |
 | 6.1 | ~~Si existe la etapa `rival`.~~ **Decidido:** no. Dos Pockai pueden discutir y reconciliarse, pero la relación tiene suelo y no hay etapa `rival`. |
 | 6.2 | ~~Topes por visitante y día; si ofrecer un premio consume un alimento real del visitante.~~ **Decidido:** hasta 5 interacciones por visita, 3 al día por visitante con efecto, deriva del anfitrión a la mitad que la del dueño; el premio consume un alimento real del visitante. |
@@ -876,6 +876,97 @@ tres capas, las mismas de la sección 7:
   - **Sin hacer aquí:** Android y web no pintan el menú; el Pockai anfitrión no anima la
     reacción en la sala (solo se muestra la línea); el visitante elige el menú desde la pestaña,
     sin ver la sala del amigo.
-- **Pendiente.** Lote 3 salvo 3.2 (métricas, lematización, tope de inteligencia, orden del
-  prompt) y lote 5 (diálogo por datos).
+- **Fase 7 — resto del lote 3 (hecho): 3.1, 3.3, 3.4 y 3.6.**
+  - **3.1 Métricas.** En `observability/metrics.service.ts`, con etiquetas siempre de conjuntos
+    cerrados (nunca ids ni texto del usuario): `petai_mind_memories_injected_total{layer,
+    matched}`, `petai_mind_behavior_total{action, source, outcome}` (lo que decide el motor y lo
+    que propone el modelo, aceptado o rechazado), `petai_mind_behavior_streak_total{action,
+    streak}` (la reacción vista y si lleva 1, 2 o 3+ seguidas), `petai_mind_intent_total{intent}`
+    y `petai_mind_extraction_total{outcome}`. `ChatService` avisa al arrancar si la mente o su
+    memoria no están inyectadas.
+  - **3.2 (lo que faltaba).** Tabla de casos de `selectForPrompt` en
+    `mind/__fixtures__/recall-cases.json`, con su test `mind/recall.cases.spec.ts`.
+  - **3.3 Recuperación.** `stem` en `ai/memory.ts`: recorta terminaciones para comparar («jugar»
+    y «jugamos», «gato» y «gatos»); no es un lematizador y solo sirve para comparar. La usan el
+    prompt (`selectForPrompt`) y la búsqueda del agente (`searchByKeywords`), que ahora comparten
+    `tokens`. Nombrar a alguien (`namedSubjects`: la primera palabra de la etiqueta de la
+    relación) da puntos a los recuerdos vividos con él aunque no repitan su nombre. Sin
+    embeddings: la tabla de casos pasa con lo léxico.
+  - **3.4 Tope de inteligencia. Decidido: 50 puntos al día por chat**
+    (`balance.json → personality.intelligence.dailyChatCap`). `persistExchange` cuenta las
+    respuestas de hoy de esa mascota (día UTC); pasado el tope, el mensaje se guarda pero no
+    suma. Si no se puede contar, el punto se concede. Vale también para el modo local.
+  - **3.5.** Ya anotado en 6.6: el diario de ausencia no lee `PetMemory`.
+  - **3.6 Prompt.** `buildSystemPrompt` pone primero lo que no cambia de un turno a otro
+    (identidad, especie, reglas y herramientas) y después nivel, carácter, vínculo, habilidades,
+    ánimo, estadísticas, entorno, hora y la pista del turno. La hora deja de ir dentro de la regla
+    de herramientas. Los recuerdos y el lore se siguen añadiendo al final.
+- **Fase 8 — lote 5 (hecho): diálogo por datos, sin LLM.**
+  - **5.1 Formato.** `shared/game-data/dialogues.json` (conversaciones con `start`, `vars` y
+    `nodes`) y `shared/game-data/strings/es.json` y `en.json` (ID de línea → texto). Variantes
+    por carácter con `ID@<palabra clave de banda>`; alternativas con `ID_1`, `ID_2`.
+    Interpolación solo de `{pet}`, `{friend}`, `{visitor}`, `{owner}`, `{item}`, `{hint}`,
+    `{mood}` y `{story}`, saneados (`mind/strings.ts`). Un nodo es una línea, un conjunto de
+    opciones, un salto o el final. Sobre la spec, dos precisiones: una línea indica por dónde
+    sigue (`next` o `end`) y un salto puede ser una lista de transiciones con `if`, que es lo
+    mínimo para bifurcar sin opciones.
+  - **5.2 Intérprete.** `mind/dialogue.engine.ts` (puro): `start`, `choose` y `evaluate`.
+    Las expresiones son de lista blanca: números, booleanos, cadenas, variables declaradas,
+    comparaciones, `and`/`or`/`not`, suma, resta y paréntesis. No hay llamadas, propiedades ni
+    índices. Devuelve líneas, opciones visibles y comandos; no escribe ni emite nada.
+  - **5.3 Estado.** La posición vive en el servidor (Redis, por visita); el cliente envía el
+    índice de la opción entre las visibles. Los efectos van en la transición: un nodo al que se
+    vuelve no cobra otra vez.
+  - **5.4 Comandos.** Catálogo cerrado: `behavior`, `feel`, `remember`, `take_item` y
+    `wish_done`. Hoy el grafo de visita usa los cuatro primeros.
+  - **5.5 Validación.** `scripts/lib/validate-dialogues.js`, enganchada en `pnpm validate:data`:
+    destinos que no existen, nodos sin salida o inalcanzables, variables no declaradas,
+    expresiones no permitidas, líneas sin texto en algún idioma, comandos fuera de catálogo,
+    bucles de saltos sin opciones, interpolaciones no permitidas y variantes de un carácter que
+    no existe. Tiene su propio analizador de expresiones (el script es JS y el motor, TS); un
+    test comprueba que los dos aceptan y rechazan lo mismo. Otro recorre todos los caminos de
+    cada conversación.
+  - **5.6 Migración.** Las frases de `TEXTS` (vida autónoma), `EPISODES` (chat), `PROMPT_HINT`
+    (reacciones) y las notas de buddies salen de `strings`, con el castellano idéntico. Un test
+    comprueba que no queda ninguna literal en esos cuatro archivos.
+  - **El menú de visita, sobre el grafo.** `visitor.engine.ts` pasa a ser un adaptador: situación
+    → variables, líneas → texto con la variante del carácter, comandos → reacción validada y
+    efecto acotado. La API hacia `VisitDialogService` no cambia. Cuánto mejora la relación
+    cada opción lo dice ahora el grafo (`feel`), no `balance.json` (`social.visitor.deltas`
+    desaparece).
+  - **Sin hacer aquí:** los textos de las escenas entre Pockai (`social.engine.ts`), deseos y
+    trucos siguen en código; los recuerdos se guardan siempre en castellano (falta pasar el
+    idioma del dueño, `UserSettings.language`); `wish_done` no tiene quien lo use; los textos
+    no se recargan en caliente.
+- **Fase 9 — deuda técnica y contratos para los clientes (servidor, hecho).**
+  - **Textos.** Las escenas entre Pockai, los regalos, los deseos, los trucos, las pistas del
+    turno, los eventos (combate, cuidados, regalos) y las etiquetas de relación salen de
+    `shared/game-data/strings` (240 textos por idioma). `strings.ts` gana `pickText` (una de las
+    alternativas, con huecos) y el hueco `{trick}`. Los motores aceptan `lang`, pero **los
+    recuerdos se siguen guardando en castellano: no existe una preferencia de idioma por
+    cuenta** (el único campo `language` es de las sesiones de voz). Siguen en código las
+    cabeceras del bloque de recuerdos del prompt y `adventureEpisode` (`memory.engine.ts`).
+  - **Un solo motor.** El backend importa `@pockai/mind/node` (compilado a CommonJS con el mismo
+    esquema que `@pockai/minigames`): `battles/combat/rng.ts` y `personality.engine.ts` ya no
+    tienen copia. El test de paridad del escritorio se sustituye por `mind/mind.core.spec.ts`.
+    `behavior.engine.ts` conserva su selector propio: cambiarlo a `selectByUtility` movería la
+    regresión de 72.030 casos.
+  - **Muebles con efecto (decidido: pequeño y con tope).** La escena emite `furnitureUsed`
+    cuando el Pockai usa un mueble; el cliente llama a `POST /habitat/items/:itemId/use`.
+    `balance.json → habitat.use`: 6 usos con efecto al día por mascota, 120 s entre usos y como
+    mucho 3 puntos por uso. Fuera del hábitat o dormido no cuenta. La mente deriva un poco el
+    carácter (`furniture_*`) y guarda un recuerdo como mucho al día.
+  - **Paquetes de cuidados.** `CarePackageService` emite `gift:received` con `kind: 'care'`.
+  - **Sala del amigo.** `GET /habitat/visit/room?ownerId=` (403 sin visita activa): la sala, sus
+    muebles y el aspecto de los dos Pockai. Nada del estado ni de la memoria del anfitrión.
+  - **Escenas para el visitante.** `habitat:scene` llega también a quien visita, con
+    `role: 'guest'` y sin `guestTraits`; al anfitrión le llega con `role: 'host'`.
+  - **Clip de cada reacción.** `BehaviorView.clip`: el servidor dice con qué clip se representa
+    cada reacción (en el `done` del chat y en `habitat:visitor_interaction`). Un test comprueba
+    que existe en la hoja de todas las especies.
+  - **Métricas.** Panel `infra/observability/grafana/dashboards/mind.json` y grupo `petai-mind`
+    en `alert-rules.yml`: el motor no decide reacciones habiendo chat, rechazos del modelo por
+    encima del 40 % y extracciones fallidas por encima del 30 %.
+- **Pendiente.** Nada de los seis lotes. Los clientes (escritorio y Android) consumen los
+  contratos de la fase 9 en sus propios PR.
 

@@ -7,8 +7,9 @@
  */
 import { createBridge } from '../bridge';
 import { PockaiScene } from '../PockaiScene';
-import type { HostMessage } from '../protocol';
+import type { HostMessage, SceneEvent } from '../protocol';
 import { getEmbedAudio } from './audio';
+import { EmbedPetSounds } from './petSounds';
 
 declare global {
   interface Window {
@@ -21,14 +22,27 @@ const pending: HostMessage[] = [];
 let scene: PockaiScene | null = null;
 
 const audio = getEmbedAudio();
+const petSounds = new EmbedPetSounds(audio);
 
 const bridge = createBridge((msg) => {
-  if (msg.type === 'setAudio') audio.setSettings(msg.settings);
-  else if (scene) scene.receive(msg);
+  if (msg.type === 'setAudio') return audio.setSettings(msg.settings);
+  petSounds.onHost(msg);
+  if (scene) scene.receive(msg);
   else pending.push(msg);
 });
 
-const ready = PockaiScene.create({ host: root, onEvent: bridge.send }).then((s) => {
+const onEvent = (event: SceneEvent) => {
+  petSounds.onScene(event);
+  bridge.send(event);
+};
+
+// Sonidos de los efectos: el primero de los candidatos que tenga fichero.
+const onSound = (ids: string[]) => {
+  const id = ids.find((x) => audio.has(x));
+  if (id) audio.play(id);
+};
+
+const ready = PockaiScene.create({ host: root, onEvent, onSound }).then((s) => {
   scene = s;
   pending.splice(0).forEach((m) => s.receive(m));
 });

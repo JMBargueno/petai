@@ -52,7 +52,9 @@ describe('reactionForAction', () => {
       particle: '🎵',
       emphasis: true,
     });
-    expect(reactionForAction({ action: 'slept' })).toEqual({ anims: [], effect: { id: 'desfragmentacion', params: {} } });
+    expect(reactionForAction({ action: 'slept' })).toEqual({ anims: [], sounds: ['pet.sleep.yawn'], effect: { id: 'desfragmentacion', params: {} } });
+    expect(reactionForAction({ action: 'cleaned' })?.sounds).toEqual(['pet.clean.bubbles']);
+    expect(reactionForAction({ action: 'fed' })?.sounds).toBeUndefined();
     expect(reactionForAction({ action: 'sick' })?.effect?.id).toBe('glitch-animo');
     expect(reactionForAction({ action: 'cleaned' })?.effect?.id).toBe('polvo-estatico');
     expect(reactionForAction({ action: 'care_received' })?.effect).toEqual({ id: 'paquete-hebra', params: { kind: 'care' } });
