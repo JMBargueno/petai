@@ -1,8 +1,7 @@
-import { EnvironmentalService } from './environmental.service';
+import { EnvironmentalService, UNKNOWN_WEATHER } from './environmental.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { RedisService } from '../../redis/redis.service';
-import { WeatherService } from './weather.service';
 import { ActivityTrackerService } from './activity-tracker.service';
 import { FestivalService } from './festival.service';
 
@@ -10,7 +9,6 @@ describe('EnvironmentalService (orquestador)', () => {
   let service: EnvironmentalService;
 
   const mockPrisma = { user: { findUnique: jest.fn() } };
-  const mockWeather = { getWeather: jest.fn() };
   const mockActivity = { getStatus: jest.fn(), recordHeartbeat: jest.fn() };
   const mockFestival = { getActive: jest.fn(), getUpcoming: jest.fn() };
   const mockRealtime = { emitToUser: jest.fn() };
@@ -33,16 +31,7 @@ describe('EnvironmentalService (orquestador)', () => {
     envStore.clear();
     mockPrisma.user.findUnique.mockClear().mockResolvedValue({
       timezone: 'America/Mexico_City',
-      latitude: 19.4,
-      longitude: -99.13,
       birthday: null,
-    });
-    mockWeather.getWeather.mockClear().mockResolvedValue({
-      condition: 'hot',
-      temperature: 32,
-      weatherCode: 0,
-      cached: true,
-      fetchedAt: '2026-01-01T00:00:00.000Z',
     });
     mockActivity.getStatus.mockClear().mockResolvedValue({ active: true, mode: 'active', lastActiveAt: 'x' });
     mockActivity.recordHeartbeat.mockClear().mockResolvedValue({ transitionedToActive: false });
@@ -52,7 +41,6 @@ describe('EnvironmentalService (orquestador)', () => {
 
     service = new EnvironmentalService(
       mockPrisma as unknown as PrismaService,
-      mockWeather as unknown as WeatherService,
       mockActivity as unknown as ActivityTrackerService,
       mockFestival as unknown as FestivalService,
       mockRealtime as unknown as RealtimeGateway,
@@ -63,7 +51,8 @@ describe('EnvironmentalService (orquestador)', () => {
   it('compone el estado ambiental { timeOfDay, weather, activity, festival }', async () => {
     const status = await service.getStatus('u1');
     expect(status.timeOfDay).toMatch(/^(late_night|morning|afternoon|evening|night)$/);
-    expect(status.weather.condition).toBe('hot');
+    // El servidor ya no conoce la ubicación: el clima lo pone cada app desde su dispositivo.
+    expect(status.weather).toEqual(UNKNOWN_WEATHER);
     expect(status.activity.mode).toBe('active');
     expect(status.festival).toBeNull();
   });
@@ -73,20 +62,16 @@ describe('EnvironmentalService (orquestador)', () => {
     expect(mockRealtime.emitToUser).not.toHaveBeenCalled();
   });
 
-  it('emite "weather" al cambiar la condición de clima', async () => {
+  it('nunca emite "weather" y no lee coordenadas', async () => {
     await service.getStatus('u1');
-    mockWeather.getWeather.mockResolvedValue({
-      condition: 'rain',
-      temperature: 18,
-      weatherCode: 61,
-      cached: false,
-      fetchedAt: '2026-01-01T00:00:00.000Z',
-    });
     await service.getStatus('u1');
-    expect(mockRealtime.emitToUser).toHaveBeenCalledWith(
+    expect(mockRealtime.emitToUser).not.toHaveBeenCalledWith(
       'u1',
       'environmental:changed',
-      { type: 'weather', data: expect.objectContaining({ condition: 'rain', temperature: 18 }) },
+      expect.objectContaining({ type: 'weather' }),
+    );
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ select: { timezone: true, birthday: true } }),
     );
   });
 
@@ -103,7 +88,7 @@ describe('EnvironmentalService (orquestador)', () => {
   it('emite "activity" (retorno active) al reenviar un heartbeat desde solo', async () => {
     // Último estado recordado: solo
     await service.getStatus('u1');
-    envStore.set('env:last:u1', JSON.stringify({ timeOfDay: 'morning', condition: 'hot', mode: 'solo', festivalId: null }));
+    envStore.set('env:last:u1', JSON.stringify({ timeOfDay: 'morning', mode: 'solo', festivalId: null }));
     mockActivity.recordHeartbeat.mockResolvedValue({ transitionedToActive: true });
 
     await service.recordActivity('u1', { active: true });

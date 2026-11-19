@@ -134,3 +134,29 @@ describe('isPetActionEvent', () => {
     expect(isPetActionEvent(null)).toBe(false);
   });
 });
+
+describe('reactionForBehavior: el clip lo dice el servidor', () => {
+  it('usa el clip de una pasada que manda el servidor', () => {
+    expect(reactionForBehavior({ action: 'accept_treat', animation: 'happy', emote: 'heart', clip: 'eat' })).toEqual({ anims: ['eat'], particle: '❤️' });
+    expect(reactionForBehavior({ action: 'perform_trick', animation: 'happy', emote: 'star', clip: 'dance' })?.anims).toEqual(['dance']);
+    expect(reactionForBehavior({ action: 'hide', animation: 'idle', emote: null, clip: 'surprised' })).toEqual({ anims: ['surprised'] });
+  });
+
+  it('un bucle o un clip desconocido no se lanza como acción: se queda en la tabla de siempre', () => {
+    expect(reactionForBehavior({ action: 'yawn', animation: 'sleep', emote: 'zzz', clip: 'tired' })).toEqual({ anims: ['wake'], particle: '💤' });
+    expect(reactionForBehavior({ action: 'listen', animation: 'idle', emote: null, clip: 'idle_alt' })).toBeNull();
+    expect(reactionForBehavior({ action: 'greet', animation: 'happy', emote: 'wave', clip: 'no_existe' })).toEqual({ anims: ['happy'], particle: '👋' });
+  });
+
+  it('todos los clips de una pasada existen y terminan en todas las especies', async () => {
+    const { BEHAVIOR_ONE_SHOT } = await import('./eventMap');
+    for (const species of ['axolunar', 'ignisaur', 'florabud']) {
+      const { library, aliases } = getAnimLibrary(species);
+      for (const name of BEHAVIOR_ONE_SHOT) {
+        const clip = library[name] ?? library[aliases[name]];
+        expect(clip, `${species}: ${name}`).toBeTruthy();
+        expect(clip.loop, `${species}: ${name} no debe ser un bucle`).toBe(false);
+      }
+    }
+  });
+});

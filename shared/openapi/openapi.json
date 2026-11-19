@@ -1273,16 +1273,6 @@
                   "timezone": {
                     "type": "string"
                   },
-                  "latitude": {
-                    "type": "number",
-                    "nullable": true,
-                    "description": "Coordenada opt-in para el clima (se borra con null)"
-                  },
-                  "longitude": {
-                    "type": "number",
-                    "nullable": true,
-                    "description": "Coordenada opt-in para el clima (se borra con null)"
-                  },
                   "birthday": {
                     "type": "string",
                     "nullable": true,
@@ -1551,6 +1541,199 @@
         "summary": "Eclosionar huevo completado (nombre opcional de la mascota)",
         "tags": [
           "Eggs"
+        ]
+      }
+    },
+    "/v1/pets/{id}/mind/reinforce": {
+      "post": {
+        "description": "Inclina un poco la balanza entre conductas del escritorio: lo que se premia sale algo más a menudo y lo que se corta, algo menos. Siempre acotado, con olvido y con un tope de gestos al día. Pasado el tope responde `applied: false`, nunca error.",
+        "operationId": "MindController_reinforce",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "behavior",
+                  "signal"
+                ],
+                "properties": {
+                  "behavior": {
+                    "type": "string",
+                    "description": "Conducta del escritorio (balance.json → personality.desktop.behaviors)"
+                  },
+                  "signal": {
+                    "type": "string",
+                    "description": "Gesto (balance.json → personality.learning.signals): pet, high_five, click, pickup"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "El entrenador premia (o no) lo que el Pockai está haciendo en el escritorio",
+        "tags": [
+          "Mind"
+        ]
+      }
+    },
+    "/v1/pets/{id}/initiative": {
+      "post": {
+        "description": "Lo decide el servidor: según el nivel de insistencia elegido, el carácter de la mascota, su ánimo, lo que necesita o le apetece y lo que sabe de su entrenador. Devuelve una frase ya escrita (o ninguna) y cuándo volver a preguntar. El cliente solo la muestra. `back: true` avisa de que el entrenador acaba de volver tras un rato fuera; `focus: true`, de que está concentrado y no hay que interrumpir.",
+        "operationId": "MindController_speak",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "channel"
+                ],
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "desktop",
+                      "mobile"
+                    ]
+                  },
+                  "back": {
+                    "type": "boolean",
+                    "description": "El entrenador acaba de volver"
+                  },
+                  "focus": {
+                    "type": "boolean",
+                    "description": "El entrenador está concentrado (Pomodoro, pantalla completa)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "¿Tiene el Pockai algo que decir por su cuenta?",
+        "tags": [
+          "Mind"
+        ]
+      }
+    },
+    "/v1/pets/{id}/initiative/settings": {
+      "get": {
+        "operationId": "MindController_initiativeSettings",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cuánto puede interrumpir el Pockai: nivel elegido y niveles disponibles",
+        "tags": [
+          "Mind"
+        ]
+      },
+      "put": {
+        "operationId": "MindController_setInitiativeLevel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "level"
+                ],
+                "properties": {
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "quiet",
+                      "normal",
+                      "chatty"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir cuánto puede interrumpir el Pockai (quiet | normal | chatty)",
+        "tags": [
+          "Mind"
         ]
       }
     },
@@ -5738,6 +5921,10 @@
                   "petId": {
                     "type": "string",
                     "description": "Pet que cocina"
+                  },
+                  "recipeId": {
+                    "type": "string",
+                    "description": "Receta a cocinar. Si falta, el menú del día"
                   }
                 }
               }
@@ -5794,6 +5981,13 @@
                       "type": "string"
                     },
                     "description": "Ingredientes echados a la olla, en orden. Si se envía, el servidor cuenta los aciertos y no usa score ni correctOrder"
+                  },
+                  "pickedAt": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Ms desde que empezó a cocinar en que se echó cada ingrediente de picked (olla caliente)"
                   }
                 }
               }
@@ -5816,6 +6010,64 @@
         ]
       }
     },
+    "/v1/cooking/recipes": {
+      "get": {
+        "operationId": "CookingController_recipes",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recetario: recetas, si se pueden cocinar con la mascota y la mejor nota",
+        "tags": [
+          "Cooking"
+        ]
+      }
+    },
+    "/v1/cooking/buffs": {
+      "get": {
+        "operationId": "CookingController_buffs",
+        "parameters": [
+          {
+            "name": "petId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Buffs de comida activos de una mascota",
+        "tags": [
+          "Cooking"
+        ]
+      }
+    },
     "/v1/cooking/daily-menu": {
       "get": {
         "operationId": "CookingController_dailyMenu",
@@ -5830,7 +6082,7 @@
             "bearer": []
           }
         ],
-        "summary": "Receta especial del día (determinista por fecha)",
+        "summary": "Menú del día: una receta propia por día de la semana (UTC), con el buff ×1.5",
         "tags": [
           "Cooking"
         ]

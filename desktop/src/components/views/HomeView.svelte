@@ -68,6 +68,8 @@
           <div class="hero-tags">
             {#if pet.species?.element}<Badge size="sm" color={el.color} icon={el.icon}>{el.label}</Badge>{/if}
             {#if pet.rarity}<Badge size="sm" color={rar.color} solid>{rar.label}</Badge>{/if}
+            {#if pet.pattern}<Badge size="sm" icon="magic" title={pet.pattern.description}>Patrón: {pet.pattern.name ?? pet.pattern.id}</Badge>{/if}
+            {#if pet.shiny}<Badge size="sm" color="var(--rarity-legendary)" icon="xp" solid title="Pockai brillante">Shiny</Badge>{/if}
           </div>
         </div>
         <span class="level-tag">Nv. {pet.level}</span>

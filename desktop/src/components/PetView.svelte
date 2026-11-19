@@ -41,7 +41,8 @@
   import { createRng, hashSeed, type Rng } from '@pockai/mind';
   import { DESK_CONFIG } from '../lib/brain/deskConfig';
   import { buildSituation, type DeskSituation, type Surface } from '../lib/brain/deskSituation';
-  import { initialBrain, mayBark, stepBrain, type BrainState } from '../lib/brain/deskBrain';
+  import { creditOf, initialBrain, mayBark, stepBrain, type BrainState } from '../lib/brain/deskBrain';
+  import { LEARNING_CONFIG, petLearned, rewardBehavior } from '../lib/brain/learningStore';
   import type { DeskCommand } from '../lib/brain/deskBehaviors';
   import { clampX, stepLocomotion, type Locomotion } from '../lib/brain/locomotion';
   import { DeskSense } from '../lib/brain/deskSense';
@@ -65,6 +66,11 @@
 
   export let pet: any;
   export let onPetClick: () => void = () => {};
+  /**
+   * Su entrenador ha vuelto tras un rato fuera. Si se da, la bienvenida la decide el servidor
+   * (iniciativa) y `fallback` es la frase local de siempre, por si no contesta.
+   */
+  export let onOwnerBack: ((fallback: () => void) => void) | null = null;
   /** Estado ambiental (feature 005): hora del día, clima, actividad y festividad. */
   export let environmental: EnvironmentalStatus | null = null;
   /** Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía. */
@@ -194,6 +200,15 @@
   // Personalidad: la del servidor, guardada por mascota; mientras llega, la estimada por especie
   let personalityPetId: string | null | undefined = undefined;
   $: watchPersonality(pet?.id ?? null);
+  /**
+   * Un gesto del entrenador cuenta para lo que el Pockai está haciendo o acaba de hacer: así aprende
+   * qué le gusta verle hacer (spec 41, fase D). `behavior` fija la conducta cuando el gesto ya dice cuál es.
+   */
+  function ownerGesture(signal: string, behavior?: string) {
+    if (!USE_BRAIN) return;
+    rewardBehavior(behavior ?? creditOf(brain, performance.now(), LEARNING_CONFIG), signal, (petId, b, s) => api.reinforceBehavior(petId, b, s));
+  }
+
   function watchPersonality(id: string | null) {
     if (id === personalityPetId) return;
     personalityPetId = id;
@@ -461,6 +476,8 @@
     const ny = e.clientY - dragStartY;
     if (!dragMoved && Math.abs(nx - posX) + Math.abs(ny - posY) > 0) {
       dragMoved = true;
+      // Lo apartan de lo que hacía: lo hará algo menos
+      ownerGesture('pickup');
       petSound('pet.drag.lift');
     }
     posX = Math.min(Math.max(0, nx), window.innerWidth - PET_SIZE);
@@ -1007,6 +1024,7 @@
       const entered = behaviorEngine.recordStroke(delta);
       if (entered) {
         isPetting = true;
+        ownerGesture('pet');
         play('happy');
         showParticle('❤️', 2500);
         squash(1.15, 0.85, 200);
@@ -1083,6 +1101,7 @@
     if (isHighFiveWaiting) {
       isHighFiveWaiting = false;
       behaviorEngine.completeHighFive();
+      ownerGesture('high_five', 'high_five_offer');
       petSound('pet.highfive.slap');
       play('celebrate');
       showParticle('🎉✨', 2500);
@@ -1104,6 +1123,7 @@
       }, 70);
     }, 60);
 
+    ownerGesture('click');
     onPetClick();
   }
 
@@ -1426,8 +1446,12 @@
           break;
         case 'bark': {
           const name = pet?.nickname || pet?.species?.name;
-          const text = barksEngine.barkFrom(c.category as any, name, brainRng);
-          speak(text, { priority: 'low', durationMs: 6000, key: `brain-${c.category}` });
+          const local = () => {
+            const text = barksEngine.barkFrom(c.category as any, name, brainRng);
+            speak(text, { priority: 'low', durationMs: 6000, key: `brain-${c.category}` });
+          };
+          if (c.category === 'welcome_back' && onOwnerBack) onOwnerBack(local);
+          else local();
           break;
         }
         case 'particle':
@@ -1506,6 +1530,7 @@
       {
         now,
         dims: $petDims,
+        learned: $petLearned,
         pet,
         away: petAway || travelBusy,
         held: isDragging || physicsState.isAirborne || isEnteringHome,
@@ -1526,7 +1551,7 @@
     );
     lastSituation = situation;
 
-    const out = stepBrain(brain, situation, brainRng, DESK_CONFIG);
+    const out = stepBrain(brain, situation, brainRng, DESK_CONFIG, LEARNING_CONFIG);
     brain = out.state;
     if (out.commands.length) runCommands(out.commands);
   }

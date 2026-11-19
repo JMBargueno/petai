@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampBox, defaultBox, HABITAT_MIN, parseState, placeBox } from './habitatMode';
+import { clampBox, defaultBox, HABITAT_MIN, parseState, placeBox, scaleBox } from './habitatMode';
 
 const screen = { w: 1920, h: 1080 };
 
@@ -28,6 +28,30 @@ describe('placeBox', () => {
     const saved = { x: 1500, y: 900, w: 640, h: 460 };
     expect(placeBox(saved, { w: 1280, h: 720 })).toEqual({ x: 640, y: 260, w: 640, h: 460 });
     expect(placeBox(saved, screen)).toEqual({ x: 1280, y: 620, w: 640, h: 460 });
+  });
+});
+
+describe('scaleBox', () => {
+  it('crece y encoge desde el centro manteniendo la proporción', () => {
+    const b = { x: 600, y: 300, w: 600, h: 400 };
+    expect(scaleBox(b, 1.5, screen)).toEqual({ x: 450, y: 200, w: 900, h: 600 });
+    expect(scaleBox(b, 0.75, screen)).toEqual({ x: 675, y: 350, w: 450, h: 300 });
+  });
+
+  it('se detiene en el mínimo y en la pantalla sin deformarse', () => {
+    const b = { x: 600, y: 300, w: 600, h: 400 };
+    const tiny = scaleBox(b, 0.1, screen);
+    expect(tiny.h).toBe(HABITAT_MIN.h);
+    expect(tiny.w).toBe(390);
+    const huge = scaleBox(b, 10, screen);
+    expect(huge).toEqual({ x: 90, y: 0, w: 1620, h: 1080 });
+  });
+
+  it('si crece pegada a un borde, se recoloca dentro de la pantalla', () => {
+    const b = scaleBox({ x: 1300, y: 660, w: 600, h: 400 }, 1.2, screen);
+    expect(b.x + b.w).toBeLessThanOrEqual(screen.w);
+    expect(b.y + b.h).toBeLessThanOrEqual(screen.h);
+    expect(b.w).toBe(720);
   });
 });
 

@@ -2,12 +2,16 @@
   /** Mascota › Mente (spec 36): personalidad en 5 dimensiones, memoria por capas y vida autónoma. */
   import { onMount } from 'svelte';
   import { api, type PetMind } from '../lib/api';
+  import { LEVEL_LABEL, TALK_LEVELS, levelHint, talkFactorLabel, type InitiativeSettings, type TalkLevel } from '../lib/initiative';
+  import { Segmented } from './ui';
   import { DIMENSIONS, MEMORY_LAYERS, layerUsage, memoryIcon, relativeTime } from '../lib/mind';
+  import { describeLearned } from '../lib/brain/learningStore';
   import { AsyncState, Badge, Card, EmptyState, FeatureHeader, ListRow, ProgressBar, SectionHeader } from './ui';
 
   export let pet: any = null;
 
   let data: PetMind | null = null;
+  $: learned = describeLearned(data?.learned?.prefs);
   let error = '';
   let loading = true;
   let now = new Date();
@@ -33,9 +37,45 @@
   }
 
   // Recarga al cambiar de mascota (no en cada actualización del objeto `pet`)
+  /** Ánimo de corto plazo, en palabras (el neutro no se muestra). */
+  const FEELING_LABEL: Record<string, string> = {
+    excited: 'Eufórico',
+    content: 'A gusto',
+    upset: 'Dolido',
+    down: 'Alicaído',
+    restless: 'Inquieto',
+    sleepy: 'Adormilado',
+  };
+
+  /** Cuánto puede interrumpir: tres niveles, que el carácter del Pockai acerca o aleja. */
+  let talk: InitiativeSettings | null = null;
+  let talkError = '';
+  async function loadTalk() {
+    try {
+      talk = pet?.id ? await api.getInitiativeSettings(pet.id) : null;
+    } catch {
+      // Servidor anterior o sin red: la sección no se muestra
+      talk = null;
+    }
+  }
+  async function setTalkLevel(level: string) {
+    if (!pet?.id || !talk || level === talk.level) return;
+    const previous = talk;
+    talkError = '';
+    // Se refleja al momento y se deshace si el servidor no lo guarda
+    talk = { ...talk, level: level as TalkLevel };
+    try {
+      talk = await api.setInitiativeLevel(pet.id, level as TalkLevel);
+    } catch {
+      talk = previous;
+      talkError = 'No se pudo guardar. Inténtalo de nuevo.';
+    }
+  }
+
   let loadedFor = '';
   $: if (pet?.id && pet.id !== loadedFor) {
     loadedFor = pet.id;
+    void loadTalk();
     data = null;
     load();
   }
@@ -61,6 +101,7 @@
           </FeatureHeader>
           <div class="chips">
             {#if data.mood}<Badge size="sm" icon="smile" title="Ánimo">{pretty(MOOD_LABEL, data.mood)}</Badge>{/if}
+            {#if data.feeling && FEELING_LABEL[data.feeling.label]}<Badge size="sm" icon="heart" title="Cómo se siente ahora mismo">{FEELING_LABEL[data.feeling.label]}</Badge>{/if}
             {#if data.bondingTier}<Badge size="sm" icon="bond" title="Vínculo">{pretty(BOND_LABEL, data.bondingTier)}</Badge>{/if}
           </div>
         </Card>
@@ -81,6 +122,32 @@
             {/if}
           {/each}
         </div>
+
+        {#if talk}
+          <SectionHeader title="Cuánto te habla" icon="chat" />
+          <div class="talk">
+            <Segmented
+              label="Cuánto te habla por su cuenta"
+              options={TALK_LEVELS.map((id) => ({ value: id, label: LEVEL_LABEL[id] }))}
+              value={talk.level}
+              on:change={(e) => setTalkLevel(e.detail)}
+            />
+            <p class="talk-hint">
+              {levelHint(talk.levels.find((l) => l.id === talk?.level))}
+              {talkFactorLabel(talk.talkFactor)}
+            </p>
+            {#if talkError}<p class="talk-hint talk-error" role="alert">{talkError}</p>{/if}
+          </div>
+        {/if}
+
+        {#if learned.likes.length || learned.dislikes.length}
+          <SectionHeader title="Lo que ha aprendido de ti" icon="heart" />
+          <div class="talk">
+            {#if learned.likes.length}<p class="talk-hint">Sabe que te gusta verle {learned.likes.join(', ')}: lo hace algo más a menudo.</p>{/if}
+            {#if learned.dislikes.length}<p class="talk-hint">Cree que prefieres que no se ponga a {learned.dislikes.join(', ')}: lo hace algo menos.</p>{/if}
+            <p class="talk-hint">Lo aprende de tus gestos en el escritorio (caricias, chocar los cinco, apartarlo) y lo va olvidando si dejas de hacerlos.</p>
+          </div>
+        {/if}
 
         <SectionHeader title="Memoria" icon="folder" />
         <div class="ui-list">
@@ -153,5 +220,19 @@
     font-size: var(--text-caption);
     color: var(--ink-muted);
     white-space: nowrap;
+  }
+  .talk {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .talk-hint {
+    margin: 0;
+    font-size: var(--text-caption);
+    color: var(--ink-soft, var(--ink));
+    text-wrap: pretty;
+  }
+  .talk-error {
+    color: var(--color-danger, #c0392b);
   }
 </style>

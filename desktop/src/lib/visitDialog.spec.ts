@@ -46,3 +46,21 @@ describe('menú de visita: lo que ve el dueño', () => {
     expect(get(visitorTalk)).toBeNull();
   });
 });
+
+describe('menú de visita: el clip de la reacción', () => {
+  it('convierte la reacción en una orden para la sala y la numera, para relanzarla aunque se repita', async () => {
+    const { clipCueOf } = await import('./visitDialog');
+    const a = clipCueOf({ clip: 'eat' })!;
+    const b = clipCueOf({ clip: 'eat' })!;
+    expect(a.clip).toBe('eat');
+    expect(b.n).toBeGreaterThan(a.n);
+  });
+
+  it('sin clip, o con algo que no es un nombre de clip, no hay orden', async () => {
+    const { clipCueOf } = await import('./visitDialog');
+    expect(clipCueOf(null)).toBeNull();
+    expect(clipCueOf({})).toBeNull();
+    expect(clipCueOf({ clip: 'eat; rm -rf' })).toBeNull();
+    expect(clipCueOf({ clip: 'Happy' })).toBeNull();
+  });
+});

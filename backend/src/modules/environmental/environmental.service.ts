@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { RedisService } from '../../redis/redis.service';
-import { WeatherService } from './weather.service';
 import { ActivityTrackerService, ActivityHeartbeatInput } from './activity-tracker.service';
 import { FestivalService } from './festival.service';
 import { calendarDayOf, safeTimeZone, timeOfDay } from './time-of-day';
@@ -12,13 +11,27 @@ import {
   FestivalInfo,
   TimeOfDay,
   UpcomingFestival,
-  WeatherCondition,
+  WeatherInfo,
 } from './environmental.types';
+
+/**
+ * El servidor ya no conoce la ubicación del usuario: cada app la lee del sistema y pide el clima
+ * a Open-Meteo desde el propio dispositivo (`@pockai/scene/weather`). Se mantiene el campo
+ * `weather` en la respuesta, siempre `unknown`, para que los clientes antiguos sigan leyéndola.
+ */
+export const UNKNOWN_WEATHER: WeatherInfo = {
+  condition: 'unknown',
+  temperature: null,
+  weatherCode: null,
+  cached: false,
+  fetchedAt: null,
+  sunrise: null,
+  sunset: null,
+};
 
 /** Estado ambiental recordado por usuario (para detectar transiciones y emitir el WS). */
 interface LastEnv {
   timeOfDay?: TimeOfDay;
-  condition?: WeatherCondition;
   mode?: ActivityMode;
   festivalId?: string | null;
 }
@@ -35,7 +48,6 @@ const LAST_ENV_TTL_S = 24 * 60 * 60;
 export class EnvironmentalService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly weather: WeatherService,
     private readonly activity: ActivityTrackerService,
     private readonly festival: FestivalService,
     private readonly realtime: RealtimeGateway,
@@ -73,14 +85,14 @@ export class EnvironmentalService {
   async getStatus(userId: string): Promise<EnvironmentalStatus> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { timezone: true, latitude: true, longitude: true, birthday: true },
+      select: { timezone: true, birthday: true },
     });
 
     const tz = safeTimeZone(user?.timezone ?? null);
     const now = new Date();
 
     const tod = timeOfDay(now, tz);
-    const weather = await this.weather.getWeather(user?.latitude ?? null, user?.longitude ?? null);
+    const weather = { ...UNKNOWN_WEATHER };
     const activity = await this.activity.getStatus(userId);
     const day = calendarDayOf(now, tz);
     // v1: sin campo de región en User → solo festividades globales.
@@ -130,16 +142,6 @@ export class EnvironmentalService {
           data: { timeOfDay: status.timeOfDay },
         });
       }
-      if (prev.condition !== undefined && prev.condition !== status.weather.condition) {
-        this.realtime.emitToUser(userId, 'environmental:changed', {
-          type: 'weather',
-          data: {
-            condition: status.weather.condition,
-            temperature: status.weather.temperature,
-            weatherCode: status.weather.weatherCode,
-          },
-        });
-      }
       if (prev.mode !== undefined && prev.mode !== status.activity.mode) {
         this.realtime.emitToUser(userId, 'environmental:changed', {
           type: 'activity',
@@ -156,7 +158,6 @@ export class EnvironmentalService {
 
     await this.saveLastEnv(userId, {
       timeOfDay: status.timeOfDay,
-      condition: status.weather.condition,
       mode: status.activity.mode,
       festivalId,
     });

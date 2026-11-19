@@ -126,7 +126,9 @@ private fun PetContent(
                 )
                 Spacer(Modifier.height(8.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (pet.species.element.isNotBlank()) ElementTag(pet.species.element)
                     RarityTag(pet.rarity)
+                    PatternTag(pet.pattern)
                     if (pet.shiny) ShinyTag()
                 }
                 Spacer(Modifier.height(8.dp))
@@ -143,6 +145,10 @@ private fun PetContent(
             }
         }
 
+        Spacer(Modifier.height(16.dp))
+
+        // Lo que dice por su cuenta y cuánto puede interrumpir (lo decide el servidor)
+        InitiativeCard(service, pet.nickname.ifBlank { pet.species.name }, pet.id)
         Spacer(Modifier.height(16.dp))
 
         val vitals = listOf(
@@ -228,6 +234,7 @@ private fun FoodSheet(
 
 // ======================= Huevos =======================
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HatchSection(state: AppUiState, onHatch: (String, String?, (Pet) -> Unit) -> Unit, onBuyEgg: () -> Unit) {
     var revealed by remember { mutableStateOf<Pet?>(null) }
@@ -263,8 +270,10 @@ private fun HatchSection(state: AppUiState, onHatch: (String, String?, (Pet) -> 
             text = {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     PetSprite(pet, animation = "happy", size = 160.dp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (pet.species.element.isNotBlank()) ElementTag(pet.species.element)
                         RarityTag(pet.rarity)
+                        PatternTag(pet.pattern)
                         if (pet.shiny) ShinyTag()
                     }
                 }

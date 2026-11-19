@@ -54,8 +54,16 @@ export interface PersonalityConfig {
      * (más espaciado que la cadencia del plan). 0 = no se extrae hasta alcanzar ese nivel.
      */
     earlyExtractEvery: number;
+    /** Lo que se va a olvidar se pliega antes en resúmenes (spec 41, fase E). */
+    consolidation?: import('@pockai/mind/node').ConsolidationConfig;
   };
   autonomy: AutonomyConfig;
+  /** Iniciativa: cuándo y cuánto habla por su cuenta (`@pockai/mind` → initiative). */
+  initiative?: import('@pockai/mind/node').InitiativeConfig;
+  /** Aprendizaje de lo que su entrenador premia (spec 41, fase D). */
+  learning?: import('@pockai/mind/node').LearningConfig;
+  /** Estado de ánimo de corto plazo (`@pockai/mind` → feeling). */
+  feeling?: import('@pockai/mind/node').FeelingConfig;
   /** Progresión de inteligencia (spec 37 §3.4). */
   intelligence?: { /** Puntos de inteligencia que el chat puede dar en un día. */ dailyChatCap: number };
   social: import('./social.engine').SocialConfig;
@@ -166,6 +174,14 @@ export interface StoredPersonality {
   wishes?: unknown;
   /** Último día en que una disculpa del entrenador reparó la relación (una vez al día). */
   apologyDay?: string;
+  /** Iniciativa: nivel elegido, enfriamientos y lo último que dijo (ver `@pockai/mind` → initiative). */
+  initiative?: unknown;
+  /** Contadores de los resúmenes de memoria por grupo; ver `@pockai/mind` consolidate. */
+  digests?: unknown;
+  /** Preferencias aprendidas entre conductas del escritorio; ver `@pockai/mind` learning. */
+  learned?: unknown;
+  /** Ánimo de corto plazo: lo que le acaba de pasar (`@pockai/mind` → feeling). */
+  feeling?: { valence: number; arousal: number; at: number };
   /** Último turno de chat con su entrenador (ISO). Con él se sabe cuál es el primero tras una ausencia. */
   lastChatAt?: string;
   trait?: string;
@@ -195,6 +211,8 @@ export interface CreatureProfile {
   traits: Record<Dimension, DimView>;
   legacy: { trait: string; temperament: string };
   mood: string;
+  /** Ánimo de corto plazo, ya asentado a este momento. `null` si no está configurado. */
+  feeling: { label: string; valence: number; arousal: number } | null;
   bondingTier: string;
   intelligenceTier: IntelligenceTier;
   vitals: { hunger: number; happiness: number; energy: number; hygiene: number; health: number; sick: boolean; sleeping: boolean };

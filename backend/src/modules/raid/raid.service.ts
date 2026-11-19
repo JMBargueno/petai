@@ -82,7 +82,8 @@ export class RaidService {
     const recentBattles = await this.battlesService.battlesInLastDay(userId);
     if (recentBattles >= this.cfg.maxAttacksPer24h) throw new BadRequestException('Límite de combates diario alcanzado');
     const moodBonus = (await this.battlesService.combatMoodBonuses([pet.id])).get(pet.id) ?? 0;
-    const petFighter = this.battlesService.fighterFromPet(pet, moodBonus);
+    const statBuffs = (await this.battlesService.combatStatBuffs([pet.id])).get(pet.id);
+    const petFighter = this.battlesService.fighterFromPet(pet, moodBonus, statBuffs);
     const bossFighter = this.buildBossFighter(raid);
     const seed = hashSeed(`${raid.id}:${petId}:${Date.now().toString(36)}`);
     const result = simulateBattle(petFighter, bossFighter, seed, this.combatConfig());

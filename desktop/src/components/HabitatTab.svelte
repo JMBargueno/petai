@@ -313,6 +313,7 @@
         height={340}
         on:move={onMove}
         on:petPress={onPetPress}
+        on:furnitureUsed={() => dispatch('refreshUser')}
       />
 
       {#if roomGuest && isInHabitat && !editing}

@@ -17,11 +17,15 @@
   import { setMixerEnabled } from './lib/mixer';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
   import { speak, clearSpeech, MAX_AI_CHUNKS, type SpeakOptions } from './lib/speech-queue';
+  import { createInitiativeLoop } from './lib/initiative';
+  import { get } from 'svelte/store';
+  import { pomodoroStore } from './lib/pomodoro';
   import {
     fetchStatus,
     startHeartbeat,
-    requestOptInCoordinates,
-    saveCoordinates,
+    refreshLocalWeather,
+    mergeLocalWeather,
+    localWeather,
     environmentalStatus,
     STATUS_REFRESH_MS,
     type EnvironmentalStatus,
@@ -315,7 +319,10 @@
     ensureBallLoop();
   }
   // Estado ambiental (feature 005): hora del día, clima, actividad y festividad del usuario.
-  let environmental: EnvironmentalStatus | null = null;
+  // El servidor da hora del día, actividad y festividad; el clima sale del propio equipo
+  // (ubicación nativa → Open-Meteo, sin pasar por el servidor) y se funde aquí.
+  let serverEnvironmental: EnvironmentalStatus | null = null;
+  $: environmental = mergeLocalWeather(serverEnvironmental, $localWeather);
   let stopHeartbeat: () => void = () => {};
   let stopEnvRefresh: () => void = () => {};
   // Las salas del hábitat leen el clima y el sol de este store.
@@ -326,6 +333,21 @@
   function showBubble(text: string, opts?: SpeakOptions) {
     speak(text, opts);
   }
+
+  // Iniciativa (spec 41): el Pockai habla por su cuenta. Qué dice y cuándo lo decide el servidor;
+  // aquí solo se le pregunta y se muestra. Con el Pomodoro en marcha no se le interrumpe.
+  const initiative = createInitiativeLoop({
+    ask: async (back) => {
+      if (!currentPet?.id) return null;
+      const p = get(pomodoroStore);
+      return api.petInitiative(currentPet.id, { back, focus: p.isRunning && p.phase === 'work' });
+    },
+    say: (text) => showBubble(text, { priority: 'low', durationMs: 7000, key: 'initiative' }),
+    setTimer: (fn, ms) => setTimeout(fn, ms),
+    clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+  });
+  $: if (currentPet?.id) initiative.start();
+  else initiative.stop();
 
   // Badge de la bandeja/tray (feature 007 / US3): refleja los avisos no leídos en el título de la app.
   $: if (typeof document !== 'undefined') {
@@ -425,7 +447,11 @@
           }
         });
         // Lo que el visitante hace con tu Pockai (saludarle, traerle un premio…) y cómo responde
-        socket.on('habitat:visitor_interaction', (ev: VisitorInteractionEvent | null) => visitorInteracted(ev));
+        socket.on('habitat:visitor_interaction', (ev: VisitorInteractionEvent | null) => {
+          visitorInteracted(ev);
+          // En el escritorio (fuera de su sala) reacciona igual que a un turno de chat
+          if (ev?.behavior) reactToBehavior(ev.behavior);
+        });
         // Qué hacen tu Pockai y el visitante: lo decide el servidor y se representa en la sala
         socket.on('habitat:scene', (ev: HabitatSceneEvent | null) => sceneReceived(ev));
         // Estado inicial: quién visita ahora mismo (por si la app arrancó con visitas en curso)
@@ -494,8 +520,7 @@
           checkForUpdates();
         });
 
-        setupCoordinates(); // geolocalización opt-in → clima real
-        loadEnvironmental(); // estado inicial
+        loadEnvironmental(); // estado inicial (y clima del lugar, desde el propio equipo)
         stopHeartbeat = startHeartbeat(); // heartbeat cada 60 s
         // El clima cambia a lo largo del día: sin este refresco solo se leía al arrancar.
         stopEnvRefresh();
@@ -606,7 +631,7 @@
     pets = [];
     eggs = [];
     inventory = [];
-    environmental = null;
+    serverEnvironmental = null;
     clearVisitors();
     clearSpeech();
     activeVisit.set('');
@@ -619,53 +644,36 @@
   // ---------- Ambiental (feature 005) ----------
   /** Recarga el estado ambiental completo. */
   async function loadEnvironmental() {
+    // Clima del lugar: ubicación nativa del equipo → Open-Meteo (caché de 30 min, nunca lanza).
+    void refreshLocalWeather();
     if (!getAccessToken()) return;
     try {
-      environmental = await fetchStatus();
+      serverEnvironmental = await fetchStatus();
     } catch {
       /* sin conexión o sesión: se reintenta con el heartbeat */
     }
   }
 
-  /** Geolocalización opt-in (privacidad): si el usuario acepta, se guardan las coordenadas. */
-  async function setupCoordinates() {
-    if (!getAccessToken()) return;
-    const coords = await requestOptInCoordinates();
-    if (!coords) return; // denegado o no disponible → se sigue sin clima (degradación elegante)
-    try {
-      await saveCoordinates(coords);
-    } catch {
-      /* no crítico: se reintenta en el próximo arranque */
-    }
-  }
-
-  /** Aplica un evento `environmental:changed` del WebSocket al estado local. */
+  /**
+   * Aplica un evento `environmental:changed` del WebSocket al estado local. Los de clima se
+   * ignoran: el servidor ya no conoce la ubicación y el clima sale del propio equipo.
+   */
   function handleEnvironmentalChanged(ev: EnvironmentalChangedEvent) {
-    if (!environmental) {
+    if (!serverEnvironmental) {
       loadEnvironmental();
       return;
     }
-    if (ev.type === 'weather') {
-      const d = ev.data as { condition: any; temperature: number | null; weatherCode: number | null };
-      environmental = {
-        ...environmental,
-        weather: {
-          ...environmental.weather,
-          condition: d.condition,
-          temperature: d.temperature,
-          weatherCode: d.weatherCode,
-        },
-      };
-    } else if (ev.type === 'timeOfDay') {
-      environmental = { ...environmental, timeOfDay: (ev.data as { timeOfDay: any }).timeOfDay };
+    const env = serverEnvironmental;
+    if (ev.type === 'timeOfDay') {
+      serverEnvironmental = { ...env, timeOfDay: (ev.data as { timeOfDay: any }).timeOfDay };
     } else if (ev.type === 'activity') {
       const mode = (ev.data as { mode: any }).mode;
-      environmental = {
-        ...environmental,
-        activity: { ...environmental.activity, mode, active: mode === 'active' },
+      serverEnvironmental = {
+        ...env,
+        activity: { ...env.activity, mode, active: mode === 'active' },
       };
     } else if (ev.type === 'festival') {
-      environmental = { ...environmental, festival: ev.data };
+      serverEnvironmental = { ...env, festival: ev.data as any };
     }
   }
 
@@ -852,8 +860,10 @@
         intelligence: (n: number) => currentPet && (currentPet = { ...currentPet, intelligence: n }),
         // Cualquier campo de la mascota activa (p. ej. { shiny: true } para ver el destello del Prisma)
         patchPet: (p: Record<string, unknown>) => currentPet && (currentPet = { ...currentPet, ...p }),
-        weather: (condition: string) =>
-          (environmental = { ...(environmental ?? {}), weather: { condition, temperature: 12, weatherCode: 0 } } as any),
+        weather: (condition: string) => {
+          serverEnvironmental = serverEnvironmental ?? ({} as any);
+          localWeather.set({ ...($localWeather ?? {}), condition, temperature: 12, weatherCode: 0 } as any);
+        },
         gift: (kind: 'gift' | 'care' = 'gift') => currentPet && reactToAction(currentPet.id, kind === 'gift' ? 'gift_received' : 'care_received'),
         // Eclosión vista en el escritorio: el huevo tiembla, se agrieta con el Flujo de quien nace y estalla
         eggHatch: (element = 'water') => {
@@ -895,6 +905,7 @@
   });
 
   onDestroy(() => {
+    initiative.stop();
     if (ballRaf) cancelAnimationFrame(ballRaf);
     window.removeEventListener('petai:file_dropped', handleFileDropped);
     window.removeEventListener('petai:move_to_habitat', handleMoveToHabitat);
@@ -991,6 +1002,7 @@
       visitors={$visitorsStore}
       ball={showBall && !ballGrabbed ? ballState : null}
       onBallKick={handleBallHit}
+      onOwnerBack={(fallback) => void initiative.ownerBack(fallback)}
       onPetClick={() => {
         isPanelOpen = true;
         panelRequest = { dest: 'pet', sub: 'home', n: ++requestN };

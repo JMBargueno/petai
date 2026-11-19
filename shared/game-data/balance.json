@@ -67,9 +67,6 @@
   "environmental": {
     "hot_temp": 30,
     "cold_temp": 5,
-    "hunger_hot": 0.5,
-    "happiness_rain": 0.5,
-    "energy_snow": 0.5,
     "inactivityThresholdHours": 2
   },
   "leveling": {
@@ -552,9 +549,71 @@
       "repeatBoost": 0.05,
       "repeatCap": 0.8,
       "sinceLastMax": 2,
-      "earlyExtractEvery": 20
+      "earlyExtractEvery": 20,
+      "consolidation": {
+        "kinds": { "encounter": "subject", "visit": "subject", "find": "kind", "adventure": "kind" },
+        "keyPrefixes": ["visitor:"],
+        "minCount": 2,
+        "manyFrom": 6,
+        "maxDigests": 24,
+        "tone": { "good": 0.25, "bad": -0.25 },
+        "importance": { "base": 0.5, "perEpisode": 0.02, "max": 0.8 }
+      }
     },
     "intelligence": { "dailyChatCap": 50 },
+    "feeling": {
+      "halfLifeMinutes": 90,
+      "labels": { "high": 0.3, "low": -0.3, "excited": 0.6, "sleepy": 0.15 },
+      "events": {
+        "chat": { "valence": 0.03 },
+        "fed": { "valence": 0.08 },
+        "cleaned": { "valence": 0.05 },
+        "slept": { "valence": 0.05, "arousal": -0.3 },
+        "minigame": { "valence": 0.15, "arousal": 0.25 },
+        "battle_won": { "valence": 0.3, "arousal": 0.3 },
+        "battle_lost": { "valence": -0.25, "arousal": 0.2 },
+        "habitat_visit": { "valence": 0.2, "arousal": 0.2 },
+        "friend_made": { "valence": 0.25, "arousal": 0.15 },
+        "adventure": { "valence": 0.2, "arousal": 0.3 },
+        "talk_comfort": { "valence": 0.15, "arousal": -0.05 },
+        "talk_play": { "valence": 0.1, "arousal": 0.15 },
+        "talk_scold": { "valence": -0.35, "arousal": 0.15 },
+        "auto_socialize": { "valence": 0.1, "arousal": 0.1 },
+        "auto_find_item": { "valence": 0.12, "arousal": 0.1 },
+        "neglect_day": { "valence": -0.3, "arousal": -0.1 },
+        "buddy_play": { "valence": 0.1, "arousal": 0.15 },
+        "care_received": { "valence": 0.15 },
+        "gift_received": { "valence": 0.2, "arousal": 0.1 },
+        "visitor_pet": { "valence": 0.08 },
+        "visitor_treat": { "valence": 0.12, "arousal": 0.05 },
+        "visitor_play": { "valence": 0.1, "arousal": 0.15 },
+        "furniture_sleep": { "arousal": -0.2 },
+        "furniture_play": { "valence": 0.05, "arousal": 0.1 },
+        "furniture_bathe": { "valence": 0.04, "arousal": -0.05 }
+      }
+    },
+    "learning": {
+      "rate": 0.12,
+      "creditWindowMs": 6000,
+      "halfLifeDays": 21,
+      "factor": { "min": 0.6, "max": 1.5 },
+      "maxEntries": 30,
+      "dailyCap": 40,
+      "signals": { "pet": 1, "high_five": 1, "click": 0.35, "pickup": -0.5 }
+    },
+    "initiative": {
+      "defaultLevel": "normal",
+      "levels": {
+        "quiet": { "desktopMinutes": 20, "mobilePerDay": 1, "onlyOnReturn": true },
+        "normal": { "desktopMinutes": 20, "mobilePerDay": 2 },
+        "chatty": { "desktopMinutes": 8, "mobilePerDay": 5 }
+      },
+      "personality": { "weights": { "sociability": 0.008, "temper": 0.004 }, "min": 0.6, "max": 1.6 },
+      "quietHours": { "from": 23, "to": 8 },
+      "backAfterMinutes": 30,
+      "priority": [["return"], ["greeting", "need"], ["feeling"], ["wish"], ["care", "share"], ["idle"]],
+      "recentWindow": 8
+    },
     "autonomy": {
       "intervalMinutes": 60,
       "maxIntervalsPerCatchUp": 24,
@@ -900,5 +959,16 @@
         }
       }
     }
+  },
+  "cooking": {
+    "dailyLimit": 20, "energyCost": 10, "cooldownSeconds": 15, "buffDurationHours": 24, "buffCapPct": 0.15,
+    "gracePeriodSeconds": 5, "minSecondsPerIngredient": 0.25,
+    "thresholds": { "perfect": 1, "good": 0.6 },
+    "goodBuffFactor": 0.5, "dailyMenuBuffFactor": 1.5,
+    "coins": { "max": 40, "speedBonusMax": 15 },
+    "decoysByDifficulty": [1, 1, 2, 2, 3],
+    "revealMsByDifficulty": [900, 800, 700, 600, 500],
+    "durationSecondsByDifficulty": [45, 40, 35, 30, 25],
+    "hotPot": { "maxPerRecipe": 2, "windowMsByDifficulty": [6000, 5000, 4500, 4000, 3500] }
   }
 }

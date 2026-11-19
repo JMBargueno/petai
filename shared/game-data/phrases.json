@@ -1,0 +1,261 @@
+{
+  "_": "Frases que el Pockai dice por su cuenta, con variables. No las escribe un modelo: son plantillas con huecos {{como.este}} que rellena la librería @pockai/mind (shared/mind/src/phrases.ts). Una frase solo sale si se conocen TODAS sus variables. `variables`: catálogo cerrado (toda variable usada debe estar aquí) y de dónde sale cada una. `facts`: datos concretos del entrenador que el Pockai aprende del chat (lista cerrada; lo que no esté aquí no se guarda como dato). `flags`: señales de contexto que puede pedir una frase en `when`. `kinds`: para qué sirve cada frase. Lo valida scripts/validate-game-data.js.",
+  "variables": {
+    "nombre.custodio": { "source": "owner", "desc": "Cómo llama a su entrenador: el apodo que aprendió o, si no, su nombre visible" },
+    "nombre.pockai": { "source": "pet", "desc": "Nombre del Pockai" },
+    "especie.pockai": { "source": "pet", "desc": "Especie del Pockai" },
+    "tipo.mascota.real": { "source": "fact", "fact": "real_pet.type", "desc": "Qué animal es la mascota real del entrenador" },
+    "nombre.mascota.real": { "source": "fact", "fact": "real_pet.name", "desc": "Nombre de la mascota real del entrenador" },
+    "trabajo.custodio": { "source": "fact", "fact": "owner.job", "desc": "A qué se dedica el entrenador" },
+    "aficion.custodio": { "source": "fact", "fact": "owner.hobby", "desc": "Una afición del entrenador" },
+    "comida.favorita.custodio": { "source": "fact", "fact": "owner.favorite_food", "desc": "La comida favorita del entrenador" },
+    "amigo.pockai": { "source": "relation", "desc": "Nombre del Pockai con el que mejor se lleva" },
+    "truco.pockai": { "source": "trick", "desc": "Un truco que sabe hacer" }
+  },
+  "facts": {
+    "owner.nickname": { "label": { "es": "A mi entrenador le gusta que le llamen", "en": "My trainer likes to be called" }, "hint": "apodo o nombre corto con el que quiere que le llamen", "max": 24 },
+    "real_pet.type": { "label": { "es": "Mi entrenador tiene de mascota un animal de este tipo", "en": "My trainer has a pet of this kind" }, "hint": "una palabra en minúscula: perro, gata, conejo, loro…", "max": 24 },
+    "real_pet.name": { "label": { "es": "La mascota real de mi entrenador se llama", "en": "My trainer's real pet is called" }, "hint": "nombre propio de su mascota real", "max": 24 },
+    "owner.job": { "label": { "es": "Mi entrenador se dedica a", "en": "My trainer works on" }, "hint": "en pocas palabras y en minúscula: la enfermería, programar, dar clase…", "max": 40 },
+    "owner.hobby": { "label": { "es": "A mi entrenador le gusta", "en": "My trainer enjoys" }, "hint": "una afición, en minúscula: la escalada, pintar, los juegos de mesa…", "max": 40 },
+    "owner.favorite_food": { "label": { "es": "La comida favorita de mi entrenador es", "en": "My trainer's favourite food is" }, "hint": "un plato o alimento, en minúscula", "max": 40 }
+  },
+  "flags": [
+    "morning", "afternoon", "evening", "night",
+    "back", "first_today",
+    "hungry", "tired", "dirty",
+    "feeling_excited", "feeling_content", "feeling_upset", "feeling_down", "feeling_restless", "feeling_sleepy",
+    "wish_go_explore", "wish_see_friend", "wish_show_find", "wish_be_cuddled", "wish_learn_trick",
+    "knows_trick", "has_friend", "has_untold"
+  ],
+  "kinds": ["return", "greeting", "care", "need", "wish", "share", "feeling", "idle"],
+  "phrases": [
+    {
+      "id": "return_missed",
+      "kind": "return",
+      "text": { "es": "¡{{nombre.custodio}}! Ya te echaba de menos.", "en": "{{nombre.custodio}}! I was missing you." },
+      "weights": { "affection": 0.03 },
+      "when": { "all": ["back"] },
+      "cooldownMinutes": 180
+    },
+    {
+      "id": "return_plain",
+      "kind": "return",
+      "text": { "es": "Anda, has vuelto.", "en": "Oh, you're back." },
+      "weights": { "affection": -0.02 },
+      "when": { "all": ["back"] },
+      "cooldownMinutes": 180
+    },
+    {
+      "id": "return_real_pet",
+      "kind": "return",
+      "text": { "es": "¡Has vuelto, {{nombre.custodio}}! ¿Qué tal está {{nombre.mascota.real}}?", "en": "You're back, {{nombre.custodio}}! How is {{nombre.mascota.real}} doing?" },
+      "weights": { "curiosity": 0.02, "sociability": 0.02 },
+      "when": { "all": ["back"] },
+      "cooldownMinutes": 1440
+    },
+    {
+      "id": "return_untold",
+      "kind": "return",
+      "text": { "es": "¡{{nombre.custodio}}! Tengo cosas que contarte.", "en": "{{nombre.custodio}}! I have things to tell you." },
+      "base": 1.4,
+      "weights": { "sociability": 0.03 },
+      "when": { "all": ["back", "has_untold"] },
+      "cooldownMinutes": 240
+    },
+    {
+      "id": "greeting_morning",
+      "kind": "greeting",
+      "text": { "es": "Buenos días, {{nombre.custodio}}.", "en": "Good morning, {{nombre.custodio}}." },
+      "when": { "all": ["morning", "first_today"], "none": ["feeling_upset", "feeling_down"] },
+      "cooldownMinutes": 720
+    },
+    {
+      "id": "greeting_night",
+      "kind": "greeting",
+      "text": { "es": "Ya es tarde, {{nombre.custodio}}. ¿No tienes sueño?", "en": "It's late, {{nombre.custodio}}. Aren't you sleepy?" },
+      "weights": { "affection": 0.02 },
+      "when": { "all": ["night"] },
+      "cooldownMinutes": 720
+    },
+    {
+      "id": "care_real_pet_fed",
+      "kind": "care",
+      "text": {
+        "es": "¿Has recordado dar de comer hoy a tu {{tipo.mascota.real}} {{nombre.mascota.real}}, {{nombre.custodio}}?",
+        "en": "Did you remember to feed your {{tipo.mascota.real}} {{nombre.mascota.real}} today, {{nombre.custodio}}?"
+      },
+      "weights": { "affection": 0.03 },
+      "when": { "any": ["morning", "evening"] },
+      "cooldownMinutes": 1440
+    },
+    {
+      "id": "care_real_pet_hello",
+      "kind": "care",
+      "text": { "es": "Dale un saludo a {{nombre.mascota.real}} de mi parte.", "en": "Say hi to {{nombre.mascota.real}} for me." },
+      "weights": { "sociability": 0.03 },
+      "cooldownMinutes": 2880
+    },
+    {
+      "id": "care_job",
+      "kind": "care",
+      "text": { "es": "¿Mucho lío hoy con {{trabajo.custodio}}, {{nombre.custodio}}?", "en": "Busy day with {{trabajo.custodio}}, {{nombre.custodio}}?" },
+      "weights": { "curiosity": 0.02 },
+      "when": { "any": ["afternoon", "evening"] },
+      "cooldownMinutes": 1440
+    },
+    {
+      "id": "care_hobby",
+      "kind": "care",
+      "text": { "es": "¿Cuándo me cuentas más de {{aficion.custodio}}? Me gustó.", "en": "When will you tell me more about {{aficion.custodio}}? I liked it." },
+      "weights": { "curiosity": 0.03 },
+      "cooldownMinutes": 2880
+    },
+    {
+      "id": "care_food",
+      "kind": "care",
+      "text": { "es": "Hoy me he acordado de {{comida.favorita.custodio}}. ¿A qué sabe?", "en": "I thought about {{comida.favorita.custodio}} today. What does it taste like?" },
+      "weights": { "curiosity": 0.03 },
+      "when": { "none": ["hungry"] },
+      "cooldownMinutes": 4320
+    },
+    {
+      "id": "need_hungry",
+      "kind": "need",
+      "text": { "es": "{{nombre.custodio}}, tengo hambre…", "en": "{{nombre.custodio}}, I'm hungry…" },
+      "base": 1.5,
+      "when": { "all": ["hungry"] },
+      "cooldownMinutes": 120
+    },
+    {
+      "id": "need_tired",
+      "kind": "need",
+      "text": { "es": "Se me cierran los ojos…", "en": "My eyes keep closing…" },
+      "when": { "all": ["tired"] },
+      "cooldownMinutes": 180
+    },
+    {
+      "id": "need_dirty",
+      "kind": "need",
+      "text": { "es": "Creo que me hace falta un baño.", "en": "I think I need a bath." },
+      "when": { "all": ["dirty"] },
+      "cooldownMinutes": 240
+    },
+    {
+      "id": "wish_explore",
+      "kind": "wish",
+      "text": { "es": "{{nombre.custodio}}, ¿salimos de aventura? Me apetece explorar.", "en": "{{nombre.custodio}}, shall we go on an adventure? I feel like exploring." },
+      "weights": { "curiosity": 0.03 },
+      "when": { "all": ["wish_go_explore"], "none": ["tired"] },
+      "cooldownMinutes": 480
+    },
+    {
+      "id": "wish_friend",
+      "kind": "wish",
+      "text": { "es": "Echo de menos a {{amigo.pockai}}. ¿Vamos a verle?", "en": "I miss {{amigo.pockai}}. Shall we go and see them?" },
+      "weights": { "sociability": 0.03 },
+      "when": { "all": ["wish_see_friend"] },
+      "cooldownMinutes": 480
+    },
+    {
+      "id": "wish_find",
+      "kind": "wish",
+      "text": { "es": "¡{{nombre.custodio}}! Encontré una cosa y quiero enseñártela.", "en": "{{nombre.custodio}}! I found something and I want to show you." },
+      "base": 1.3,
+      "when": { "all": ["wish_show_find"] },
+      "cooldownMinutes": 240
+    },
+    {
+      "id": "wish_cuddle",
+      "kind": "wish",
+      "text": { "es": "¿Me haces unos mimos, {{nombre.custodio}}?", "en": "Will you cuddle me, {{nombre.custodio}}?" },
+      "weights": { "affection": 0.04 },
+      "when": { "all": ["wish_be_cuddled"] },
+      "cooldownMinutes": 480
+    },
+    {
+      "id": "wish_trick",
+      "kind": "wish",
+      "text": { "es": "Quiero aprender un truco nuevo. ¿Me enseñas?", "en": "I want to learn a new trick. Will you teach me?" },
+      "weights": { "curiosity": 0.02, "temper": 0.02 },
+      "when": { "all": ["wish_learn_trick"] },
+      "cooldownMinutes": 480
+    },
+    {
+      "id": "share_trick",
+      "kind": "share",
+      "text": { "es": "¡Mira, {{nombre.custodio}}! Sé hacer esto: {{truco.pockai}}.", "en": "Look, {{nombre.custodio}}! I can do this: {{truco.pockai}}." },
+      "weights": { "temper": 0.03, "bravery": 0.02 },
+      "when": { "all": ["knows_trick"], "none": ["tired"] },
+      "cooldownMinutes": 720
+    },
+    {
+      "id": "share_friend",
+      "kind": "share",
+      "text": { "es": "{{amigo.pockai}} es mi mejor amigo, ¿sabes?", "en": "{{amigo.pockai}} is my best friend, you know?" },
+      "weights": { "sociability": 0.03 },
+      "when": { "all": ["has_friend"] },
+      "cooldownMinutes": 2880
+    },
+    {
+      "id": "feeling_excited",
+      "kind": "feeling",
+      "text": { "es": "¡Hoy me siento genial!", "en": "I feel great today!" },
+      "when": { "all": ["feeling_excited"] },
+      "cooldownMinutes": 240
+    },
+    {
+      "id": "feeling_upset",
+      "kind": "feeling",
+      "text": { "es": "Todavía me escuece lo de antes…", "en": "What happened before still stings…" },
+      "when": { "all": ["feeling_upset"] },
+      "cooldownMinutes": 240
+    },
+    {
+      "id": "feeling_down",
+      "kind": "feeling",
+      "text": { "es": "Hoy no estoy muy animado.", "en": "I'm not feeling very cheerful today." },
+      "when": { "all": ["feeling_down"] },
+      "cooldownMinutes": 240
+    },
+    {
+      "id": "idle_here",
+      "kind": "idle",
+      "text": { "es": "Aquí sigo, {{nombre.custodio}}.", "en": "Still here, {{nombre.custodio}}." },
+      "base": 0.6,
+      "cooldownMinutes": 120
+    },
+    {
+      "id": "idle_self",
+      "kind": "idle",
+      "text": { "es": "A {{nombre.pockai}} le vendría bien un poco de atención. O sea, a mí.", "en": "{{nombre.pockai}} could use a little attention. That's me." },
+      "weights": { "temper": 0.03, "sociability": 0.02 },
+      "when": { "none": ["feeling_upset", "feeling_down", "tired"] },
+      "cooldownMinutes": 360
+    },
+    {
+      "id": "idle_curious",
+      "kind": "idle",
+      "text": { "es": "¿Qué haces, {{nombre.custodio}}?", "en": "What are you doing, {{nombre.custodio}}?" },
+      "weights": { "curiosity": 0.03 },
+      "when": { "none": ["feeling_upset", "feeling_down"] },
+      "cooldownMinutes": 90
+    },
+    {
+      "id": "idle_company",
+      "kind": "idle",
+      "text": { "es": "Me gusta estar aquí contigo.", "en": "I like being here with you." },
+      "weights": { "affection": 0.04 },
+      "when": { "none": ["feeling_upset"] },
+      "cooldownMinutes": 180
+    },
+    {
+      "id": "idle_species",
+      "kind": "idle",
+      "text": { "es": "Los {{especie.pockai}} como yo no nos aburrimos nunca.", "en": "{{especie.pockai}} like me never get bored." },
+      "weights": { "temper": 0.03 },
+      "when": { "none": ["feeling_down", "tired"] },
+      "cooldownMinutes": 720
+    }
+  ]
+}

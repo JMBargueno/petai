@@ -12,8 +12,9 @@
  * git; `npx @elevenlabs/cli onboard init` la deja en `.env.local`). Solo se usa aquí, en desarrollo:
  * la key no va nunca en las apps ni en el backend. Usa el SDK oficial @elevenlabs/elevenlabs-js.
  *
- * Los sonidos del bus `music` (temas lofi del MP3, spec 42) usan la API de música (`music.compose`,
- * instrumental) en vez la de efectos; el resto del flujo es igual.
+ * Los temas del bus `music` de más de 30 s (los lofi del MP3, spec 42) usan la API de música
+ * (`music.compose`, instrumental): la de efectos no pasa de 30 s. Los cortos siguen por la de
+ * efectos. El resto del flujo es igual.
  *
  * Solo pide lo nuevo o lo que cambió (hash del prompt, duración, loop e influencia en
  * scripts/sfx/sounds.lock.json). Las tomas quedan en scripts/sfx/.candidates/<id>/<n>.mp3;
@@ -65,7 +66,9 @@ const candidatesFor = (d: SoundDef) => Math.max(d.variants, candidatesOverride ?
 const seconds = todo.reduce((s, d) => s + d.duration * candidatesFor(d), 0);
 const calls = todo.reduce((s, d) => s + candidatesFor(d), 0);
 
-const musicSeconds = todo.filter((d) => d.bus === 'music').reduce((s, d) => s + d.duration * candidatesFor(d), 0);
+/** Pista larga del bus music: va por la API de música (la de efectos tiene un tope de 30 s). */
+const usesMusicApi = (d: SoundDef) => d.bus === 'music' && d.duration > 30;
+const musicSeconds = todo.filter(usesMusicApi).reduce((s, d) => s + d.duration * candidatesFor(d), 0);
 console.log(`${todo.length} sonidos → ${calls} llamadas, ≈ ${Math.round(seconds - musicSeconds)} s de efectos (modelo ${model}) y ${Math.round(musicSeconds)} s de música`);
 if (dryRun || todo.length === 0) {
   for (const d of todo) console.log(`  ${d.id.padEnd(40)} ${candidatesFor(d)} × ${d.duration}s${d.loop ? ' loop' : ''}`);
@@ -82,7 +85,7 @@ const client = new ElevenLabsClient();
 async function generateOne(def: SoundDef, attempt = 0): Promise<Buffer> {
   try {
     const stream =
-      def.bus === 'music'
+      usesMusicApi(def)
         ? await client.music.compose({
             prompt: def.prompt,
             musicLengthMs: Math.round(def.duration * 1000),

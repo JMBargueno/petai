@@ -1,4 +1,5 @@
 import createClient from 'openapi-fetch';
+import type { InitiativeReply, InitiativeSettings, TalkLevel } from './initiative';
 import type { paths } from '@shared/openapi/api-types';
 import { CLIENT_HEADERS, inspectMaintenance, setMaintenanceBaseUrl } from './maintenance';
 
@@ -842,6 +843,26 @@ export const api = {
     return minigameRequest<PetMind>('GET', `/v1/pets/${petId}/mind`);
   },
 
+  /**
+   * ¿Tiene el Pockai algo que decir por su cuenta? Lo decide el servidor (nivel elegido, carácter,
+   * ánimo, lo que necesita y lo que sabe de ti) y devuelve la frase ya escrita, o ninguna, y
+   * cuándo volver a preguntar.
+   */
+  async petInitiative(petId: string, opts: { back?: boolean; focus?: boolean } = {}) {
+    return minigameRequest<InitiativeReply>('POST', `/v1/pets/${petId}/initiative`, { channel: 'desktop', back: !!opts.back, focus: !!opts.focus });
+  },
+  async getInitiativeSettings(petId: string) {
+    return minigameRequest<InitiativeSettings>('GET', `/v1/pets/${petId}/initiative/settings`);
+  },
+  async setInitiativeLevel(petId: string, level: TalkLevel) {
+    return minigameRequest<InitiativeSettings>('PUT', `/v1/pets/${petId}/initiative/settings`, { level });
+  },
+
+  /** Un gesto tuyo mientras hacía algo en el escritorio: el servidor guarda lo que aprende de ello. */
+  async reinforceBehavior(petId: string, behavior: string, signal: string) {
+    return minigameRequest<{ applied: boolean; reason?: string; behavior: string; prefs: Record<string, number> }>('POST', `/v1/pets/${petId}/mind/reinforce`, { behavior, signal });
+  },
+
   async forgetMemory(petId: string, memoryId: string) {
     return minigameRequest<{ deleted: number }>('DELETE', `/v1/pets/${petId}/memories/${memoryId}`);
   },
@@ -965,6 +986,13 @@ export const api = {
     return minigameRequest<{ message: string; furnitureId: string }>('DELETE', `/v1/habitat/furniture/${furnitureId}`);
   },
 
+  /**
+   * Avisa de que el Pockai ha usado un mueble de su sala. El servidor decide si tiene efecto
+   * (tope diario y enfriamiento): `applied: false` no es un error.
+   */
+  async useHabitatItem(itemId: string) {
+    return minigameRequest<FurnitureUseResult>('POST', `/v1/habitat/items/${encodeURIComponent(itemId)}/use`);
+  },
   async getHabitatBuffs() {
     return minigameRequest<HabitatBuffs>('GET', '/v1/habitat/buffs');
   },
@@ -1140,6 +1168,10 @@ export const api = {
       choice === undefined ? { ownerId } : { ownerId, choice, turn },
     );
   },
+  /** La sala del amigo al que estás visitando: sala, muebles y aspecto de los dos Pockai. */
+  async getVisitRoom(ownerId: string) {
+    return minigameRequest<VisitRoom>('GET', `/v1/habitat/visit/room?ownerId=${encodeURIComponent(ownerId)}`);
+  },
   /** Cierra tu visita en curso (el backend emite `habitat:visitor_left`). */
   async endHabitatVisit() {
     return minigameRequest<{ ok: boolean }>('POST', '/v1/habitat/visit/end');
@@ -1174,12 +1206,22 @@ export const api = {
   async cookingDailyMenu() {
     return minigameRequest<CookingDailyMenu>('GET', '/v1/cooking/daily-menu');
   },
-  async cookingStart(petId: string) {
-    return minigameRequest<CookingStart>('POST', '/v1/cooking/start', { petId });
+  async cookingRecipes(petId: string) {
+    return minigameRequest<CookingRecipe[]>('GET', `/v1/cooking/recipes?petId=${encodeURIComponent(petId)}`);
   },
-  /** `picked`: lo que se echó a la olla, en orden. Con él, el servidor cuenta los aciertos por su cuenta. */
-  async cookingSubmit(sessionId: string, score: number, correctOrder: boolean, picked?: string[]) {
-    return minigameRequest<CookingSubmit>('POST', '/v1/cooking/submit', { sessionId, score, correctOrder, picked });
+  async cookingBuffs(petId: string) {
+    return minigameRequest<CookingBuff[]>('GET', `/v1/cooking/buffs?petId=${encodeURIComponent(petId)}`);
+  },
+  /** Sin `recipeId` se cocina el menú del día. */
+  async cookingStart(petId: string, recipeId?: string) {
+    return minigameRequest<CookingStart>('POST', '/v1/cooking/start', { petId, recipeId });
+  },
+  /**
+   * `picked`: lo que se echó a la olla, en orden. Con él, el servidor cuenta los aciertos por su cuenta.
+   * `pickedAt`: ms desde que empezó a cocinar en que cayó cada uno (para la olla caliente).
+   */
+  async cookingSubmit(sessionId: string, score: number, correctOrder: boolean, picked?: string[], pickedAt?: number[]) {
+    return minigameRequest<CookingSubmit>('POST', '/v1/cooking/submit', { sessionId, score, correctOrder, picked, pickedAt });
   },
 
   // ── Aventura diaria (historias de decisión) ──────────────────────────────────
@@ -1260,21 +1302,63 @@ export interface TrainingBuff {
 }
 
 // ── Cocina ────────────────────────────────────────────────────────────────────
+/** `all`: el mismo valor a ataque, defensa, especial y velocidad (los menús del día). */
+export type CookingBuffStat = 'atk' | 'def' | 'esp' | 'vel' | 'all';
+
 export interface CookingDailyMenu {
   date: string;
   recipeId: string;
   recipeName: string;
+  description: string | null;
+  weekday: number;
   difficulty: number;
   ingredients: string[];
-  buff: { stat: string; value: number };
+  /** Ya multiplicado por el bonus del día. */
+  buff: { stat: CookingBuffStat; value: number };
   bonus: string;
+  nextReset: string;
+}
+
+export interface CookingRecipe {
+  id: string;
+  name: string;
+  description: string | null;
+  difficulty: number;
+  unlockLevel: number;
+  dailyMenu: boolean;
+  /** Día de la semana del menú (UTC, 0 = domingo); null en las recetas normales. */
+  weekday: number | null;
+  /** Es el menú de hoy. */
+  today: boolean;
+  /** Se puede cocinar ya (nivel alcanzado, o es el menú de hoy). */
+  available: boolean;
+  /** null si aún no se puede cocinar: no se enseñan. */
+  ingredients: string[] | null;
+  buff: { stat: CookingBuffStat; value: number };
+  /** Mejor número de aciertos del usuario, o null si nunca la cocinó. */
+  best: number | null;
+  perfect: boolean;
+}
+
+export interface CookingBuff {
+  stat: 'atk' | 'def' | 'esp' | 'vel';
+  value: number;
+  source: string;
+  sourceId: string | null;
+  expiresAt: string;
 }
 
 export interface CookingStart {
   sessionId: string;
   recipeId: string;
   recipeName: string;
+  recipeDescription: string | null;
   difficulty: number;
+  isDailyMenu: boolean;
+  /** Cada cuánto dicta el Pockai un ingrediente (más rápido cuanto más difícil). */
+  revealMs: number;
+  /** En las posiciones de `hotPotPositions` (de la receta) el ingrediente tiene que caer antes de esto desde el anterior. */
+  hotPotWindowMs: number;
   /** Orden correcto de la receta. */
   ingredients: string[];
   /** Lo que hay en la encimera: los ingredientes de la receta y unos señuelos, barajados. */
@@ -1287,10 +1371,14 @@ export interface CookingStart {
 
 export interface CookingSubmit {
   score: number;
-  buff: { stat: string; value: number; durationMs: number } | null;
+  buff: { stat: CookingBuffStat; value: number; durationMs: number } | null;
   coins?: number;
+  speedBonus?: number;
   correctPct?: number;
-  message?: string;
+  grade?: 'perfect' | 'good' | 'bad';
+  /** Por cada ingrediente de la receta: si entró, faltó o se quemó (olla caliente). */
+  slots?: ('ok' | 'miss' | 'burned')[];
+  message?: string | null;
 }
 
 // ── Aventura diaria (historias de decisión) ───────────────────────────────────
@@ -1683,7 +1771,7 @@ export interface VisitMenuOption {
 export interface VisitInteraction {
   turn: number;
   line: string;
-  behavior: { action: string; animation: string; emote: string | null };
+  behavior: { action: string; animation: string; emote: string | null; clip?: string };
   options: VisitMenuOption[];
   /** Interacciones que quedan en esta visita. */
   remaining: number;
@@ -1693,7 +1781,38 @@ export interface VisitInteraction {
   petName: string;
 }
 
+/** Resultado de avisar de que el Pockai usó un mueble. */
+export interface FurnitureUseResult {
+  applied: boolean;
+  /** daily_cap | cooldown | away | asleep | disabled */
+  reason?: string;
+  interaction: string;
+  petId: string;
+  vitals: { hunger: number; happiness: number; energy: number; hygiene: number };
+  remainingToday?: number;
+}
+
+/** La sala del amigo, para quien le visita. Solo aspecto: nada de su estado ni su memoria. */
+export interface VisitRoom {
+  ownerId: string;
+  room: {
+    id: string;
+    name: string;
+    theme: HabitatRoom['theme'];
+    gridWidth: number;
+    gridHeight: number;
+    blocked: number[][];
+    items: { id: string; furnitureId: string; x: number; y: number; rotation: number }[];
+  };
+  furniture: { id: string; name: string; footprint: number[]; mount: string; interaction?: string }[];
+  host: HabitatVisitor['pet'];
+  guest: HabitatVisitor['pet'];
+}
+
 export interface HabitatSceneEvent {
+  /** `host`: la escena ocurre en tu sala. `guest`: en la del amigo al que visitas (`ownerId`). */
+  role?: 'host' | 'guest';
+  ownerId?: string;
   visitorId: string;
   slot: number;
   /** greet | explore_together | play_tag | share_food | nap_together | squabble | make_up */
@@ -1866,6 +1985,10 @@ export interface PetMind {
   dimensions: Record<MindDimension, MindDimensionView>;
   legacy: { trait: string; temperament: string };
   mood: string;
+  /** Ánimo de corto plazo: lo que le acaba de pasar. Ausente con un servidor anterior. */
+  feeling?: { label: string; valence: number; arousal: number } | null;
+  /** Lo que ha aprendido que te gusta verle hacer: conducta → de -1 a 1. Ausente con un servidor anterior. */
+  learned?: { prefs: Record<string, number> };
   bondingTier: string;
   intelligenceTier: 'chat' | 'memory' | 'agent';
   memory: { counts: Record<MemoryLayer, number>; capacity: Record<MemoryLayer, number> | null };

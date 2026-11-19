@@ -43,6 +43,21 @@ export function placeBox(box: Box | null, screen: Screen): Box {
   return box ? clampBox(box, screen) : defaultBox(screen);
 }
 
+/**
+ * Botones + y −: escala la ventanita desde su centro manteniendo la proporción. Al topar con el
+ * mínimo o con la pantalla se detiene en ese lado (sin deformarse) y se vuelve a encajar.
+ */
+export function scaleBox(box: Box, factor: number, screen: Screen): Box {
+  const maxF = Math.min(screen.w / box.w, screen.h / box.h);
+  const minF = Math.max(HABITAT_MIN.w / box.w, HABITAT_MIN.h / box.h);
+  const f = Math.min(maxF, Math.max(minF, factor));
+  const w = box.w * f;
+  const h = box.h * f;
+  const cx = box.x + box.w / 2;
+  const cy = box.y + box.h / 2;
+  return clampBox({ x: cx - w / 2, y: cy - h / 2, w, h }, screen);
+}
+
 /** Lee el estado guardado; cualquier cosa rara vuelve a los valores por defecto. */
 export function parseState(raw: string | null): HabitatModeState {
   const base: HabitatModeState = { on: false, roomId: '', box: null };

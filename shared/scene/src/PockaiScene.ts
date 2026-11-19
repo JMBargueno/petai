@@ -63,6 +63,11 @@ export interface SceneOptions {
    * podría crecer sin fin.
    */
   observeResize?: boolean;
+  /**
+   * Solo la sala: sin cielo, paisaje pintado ni clima por delante (el lienzo es transparente
+   * alrededor). La luz del día y de la noche sigue aplicándose a la sala.
+   */
+  bare?: boolean;
   /** Texto accesible del lienzo. */
   label?: string;
 }
@@ -367,6 +372,10 @@ export class PockaiScene {
       });
       this.app.stage.addChildAt(this.ambience.back, 0);
       this.app.stage.addChild(this.ambience.front);
+      if (this.opts.bare) {
+        this.ambience.back.visible = false;
+        this.ambience.front.visible = false;
+      }
       this.raiseScreen();
       this.ambience.setEdit(this.edit);
       this.ambience.set(this.ambienceState);
@@ -438,7 +447,8 @@ export class PockaiScene {
   private async syncBackdrop(): Promise<void> {
     const seq = ++this.backdropSeq;
     const roomId = this.backdropRoom;
-    const texture = this.backdropMode === 'painted' ? await loadBackdrop(roomId) : null;
+    // Sin fondo (solo la sala) no se carga el paisaje ni se proyecta sombra sobre él
+    const texture = this.backdropMode === 'painted' && !this.opts.bare ? await loadBackdrop(roomId) : null;
     if (seq !== this.backdropSeq || !this.ambience || !this.room) return; // cambió la sala mientras cargaba
     this.ambience.setBackdrop(texture);
     this.room.setGrounded(!!texture);

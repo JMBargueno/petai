@@ -229,6 +229,21 @@
     "candidates": 1,
     "generatedAt": "2026-11-19T08:35:33.094Z"
   },
+  "cook.hotpot.burn": {
+    "hash": "9eff101ac73b9afc",
+    "candidates": 4,
+    "generatedAt": "2026-11-19T12:44:53.885Z"
+  },
+  "cook.hotpot.saved": {
+    "hash": "745e2583474c5e56",
+    "candidates": 4,
+    "generatedAt": "2026-11-19T12:44:54.998Z"
+  },
+  "cook.hotpot.warn": {
+    "hash": "c471eee2cd08d8ca",
+    "candidates": 4,
+    "generatedAt": "2026-11-19T12:44:53.530Z"
+  },
   "cook.ingredient.place": {
     "hash": "541f7009050e4b41",
     "candidates": 2,
@@ -704,6 +719,16 @@
     "candidates": 1,
     "generatedAt": "2026-11-19T08:35:59.503Z"
   },
+  "music.brand-sting": {
+    "hash": "845739f5ee8b4ebe",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:45.437Z"
+  },
+  "music.coliseo": {
+    "hash": "fa28bf2e00824269",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:50.327Z"
+  },
   "music.lofi.bits": {
     "hash": "aa38a0b2ab30addb",
     "candidates": 2,
@@ -718,6 +743,21 @@
     "hash": "0b6a4be244625765",
     "candidates": 2,
     "generatedAt": "2026-11-19T17:17:12.285Z"
+  },
+  "music.primer-latido": {
+    "hash": "dcc325ac18a2e6fd",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:50.415Z"
+  },
+  "music.santuario": {
+    "hash": "f32c9a1e5f949fbb",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:47.572Z"
+  },
+  "music.telar": {
+    "hash": "bb9dc2ef61571871",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T14:58:47.631Z"
   },
   "pet.attack.grunt": {
     "hash": "a95a41b38f2ab9ac",

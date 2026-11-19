@@ -101,6 +101,8 @@ const ELEMENTS: Record<string, string> = {
 
 export interface PromptOptions {
   tier?: 'chat' | 'memory' | 'agent';
+  /** Ánimo de corto plazo en una frase (lo que le acaba de pasar). Va con lo que cambia cada turno. */
+  feelingLine?: string;
   now?: Date;
   timeZone?: string;
   /**
@@ -228,6 +230,7 @@ export function buildSystemPrompt(
     bondingLine,
     desktopSkillsBlock,
     `Estado de ánimo ahora mismo: ${MOOD_TONE[mood]}`,
+    opts.feelingLine,
     `Tus estadísticas (0-100): hambre ${Math.round(pet.hunger)}, felicidad ${Math.round(pet.happiness)}, energía ${Math.round(pet.energy)}, higiene ${Math.round(pet.hygiene)}, salud ${Math.round(pet.health)}.`,
     environmentBlock,
     locationBlock,

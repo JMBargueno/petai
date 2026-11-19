@@ -11,6 +11,7 @@ import { DIMENSIONS, isValidDims, neutralDims, rollBirthDims, type Dims } from '
 // Ruta relativa (no el alias @shared) para que también cargue en Node (tests).
 import speciesData from '../../../../shared/game-data/species.json';
 import { BIRTH_CONFIG } from './deskConfig';
+import { rememberLearned, useLearnedOf } from './learningStore';
 
 type KeyValueStore = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -66,6 +67,7 @@ let activePetId: string | null = null;
 
 /** Guarda lo que el servidor dice de la mente de una mascota (lo llama también la pestaña Mente). */
 export function rememberMind(petId: string, mind: unknown) {
+  rememberLearned(petId, mind);
   const dims = dimsFromMind(mind);
   if (!dims) return;
   saveDims(browserStorage(), petId, dims);
@@ -82,6 +84,7 @@ export async function usePersonalityOf(
 ) {
   const petId = pet?.id ?? null;
   activePetId = petId;
+  useLearnedOf(petId);
   petDims.set((petId && loadDims(browserStorage(), petId)) || fallbackDims(pet));
   if (!petId) return;
   try {

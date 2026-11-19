@@ -310,6 +310,7 @@ const bonding = {
 const dim = (value: number, keyword: string, label: string) => ({ value, keyword, label });
 const mind = (petId: string) => ({
   petId,
+  learned: { prefs: demoLearned },
   dimensions: {
     curiosity: dim(63, 'curious', 'Curioso'),
     sociability: dim(48, 'balanced', 'Equilibrado'),
@@ -395,6 +396,12 @@ const seasonProgress = { seasonId: 's-1', seasonName: season.name, currentTier: 
 // Aventura diaria: las historias semilla de game-data, jugables de verdad en la demo
 const storySeeds = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/story-seeds.json'), 'utf8')).stories as any[];
 const storyRewards = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/stories.json'), 'utf8')).rewards;
+// Cocina: las recetas de verdad; lo cocinado y los buffs viven mientras dure el servidor de la demo
+const mockRecipes = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/recipes.json'), 'utf8')) as any[];
+const mockMenu = () => mockRecipes.find((r) => r.dailyMenu && r.weekday === new Date().getUTCDay());
+let cookCurrent: any = null;
+const cookBest: Record<string, number> = {};
+let cookBuffs: { stat: string; value: number; source: string; sourceId: string; expiresAt: string }[] = [];
 const storyPlays: Record<string, { answers: number[]; status: string; outcome: string | null }> = {};
 const storyLimit = 3;
 const storyPublic = (scene: any, index: number) => ({ index, locationId: scene.locationId, narration: scene.narration, event: scene.event, choices: scene.choices.map((c: any) => ({ label: c.label, approach: c.approach })) });
@@ -417,6 +424,27 @@ function storyState(id: string) {
 
 let visiting: null | { friendId: string } = null;
 
+/** Iniciativa de ejemplo (la real la decide el backend con @pockai/mind). */
+let talkLevel = 'normal';
+let talkTurn = 0;
+/** Lo que el Pockai de la demo ha aprendido que gusta. */
+const demoLearned: Record<string, number> = { dance: 0.42, climb: -0.3 };
+const TALK_DEMO = [
+  { id: 'return_real_pet', kind: 'return', text: '¡Has vuelto! ¿Qué tal está Toby?' },
+  { id: 'care_real_pet_fed', kind: 'care', text: '¿Has recordado dar de comer hoy a tu perro Toby?' },
+  { id: 'wish_explore', kind: 'wish', text: '¿Salimos de aventura? Me apetece explorar.' },
+  { id: 'idle_company', kind: 'idle', text: 'Me gusta estar aquí contigo.' },
+];
+const talkSettings = () => ({
+  level: talkLevel,
+  levels: [
+    { id: 'quiet', desktopMinutes: 17, mobilePerDay: 1, onlyOnReturn: true },
+    { id: 'normal', desktopMinutes: 17, mobilePerDay: 2, onlyOnReturn: false },
+    { id: 'chatty', desktopMinutes: 7, mobilePerDay: 6, onlyOnReturn: false },
+  ],
+  talkFactor: 1.2,
+});
+
 /** Conversación de ejemplo del menú de visita (el real lo decide el backend). */
 const TALK_LINES: Record<string, string> = {
   greet: 'Luna te saluda contenta.',
@@ -431,7 +459,7 @@ let talk = { turn: 0, done: [] as string[], ended: false, last: null as any };
 function talkReply(line: string) {
   const left = ['greet', 'pet', 'treat', 'play', 'ask'].filter((id) => !talk.done.includes(id));
   const options = talk.ended ? [] : [...(talk.done.length >= 5 ? [] : left), 'bye'].map((id) => ({ id, label: TALK_LABELS[id], ...(id === 'treat' ? { item: { id: 'apple', name: 'Manzana' } } : {}) }));
-  talk.last = { turn: talk.turn, line, behavior: { action: 'greet_visitor', animation: 'happy', emote: 'wave' }, options, remaining: Math.max(0, 5 - talk.done.length), ended: talk.ended, stage: 'friend', petName: 'Luna' };
+  talk.last = { turn: talk.turn, line, behavior: { action: 'greet_visitor', animation: 'happy', emote: 'wave', clip: talk.done[talk.done.length - 1] === 'treat' ? 'eat' : talk.done[talk.done.length - 1] === 'pet' ? 'love' : 'happy' }, options, remaining: Math.max(0, 5 - talk.done.length), ended: talk.ended, stage: 'friend', petName: 'Luna' };
   return talk.last;
 }
 let tick = 0;
@@ -585,15 +613,35 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/training\/active-buff$/, () => ({ active: true, buff: { petId: 'p-1', multiplier: 1.1, stats: ['atk'], expiresAt: iso(40 * MIN), remainingMs: 40 * MIN } })],
   ['POST', /^\/training\/start$/, ({ body }) => ({ sessionId: uid('tr'), petId: body.petId, seed: 7, hearts: 3, currentFloor: 1, floors: [1, 2, 3, 4, 5].map((floor) => ({ floor, enemyElement: ['plant', 'water', 'electric', 'shadow', 'light'][floor - 1], enemyName: ['Brotón', 'Marea', 'Chispazo', 'Penumbra', 'Fulgor'][floor - 1], enemyLevel: 4 + floor })) })],
   ['POST', /^\/training\/submit$/, ({ body }) => ({ floor: 1, result: 'advanced', enemyElement: 'plant', playerElement: body.element, multiplier: 1.5, hearts: 3, currentFloor: 2, status: 'active', predictionBonus: false })],
-  // Cocina (spec 15): la receta lleva comida de foods.json y la encimera añade un señuelo.
-  ['GET', /^\/cooking\/daily-menu$/, () => ({ date: iso().slice(0, 10), recipeId: 'elemental_brew', recipeName: 'Infusión de los Flujos', difficulty: 2, ingredients: ['sun_seed', 'sweet_coral', 'spicy_berry', 'spark_candy'], buff: { stat: 'def', value: 5 }, bonus: 'buff extra ×1.5 hoy' })],
-  ['POST', /^\/cooking\/start$/, () => ({ sessionId: uid('ck'), recipeId: 'elemental_brew', recipeName: 'Infusión de los Flujos', difficulty: 2, ingredients: ['sun_seed', 'sweet_coral', 'spicy_berry', 'spark_candy'], order: ['spicy_berry', 'apple', 'spark_candy', 'sun_seed', 'sweet_coral'], hotPotPositions: [1], durationSeconds: 60, seed: 42, expiresAt: iso(MIN) })],
+  // Cocina (spec 15): recetas de verdad de recipes.json; el menú es el del día de la semana (UTC).
+  ['GET', /^\/cooking\/daily-menu$/, () => { const m = mockMenu(); return { date: iso().slice(0, 10), recipeId: m.id, recipeName: m.name, description: m.description, weekday: m.weekday, difficulty: m.difficulty, ingredients: m.ingredients, buff: { stat: m.buff.stat, value: Math.round(m.buff.value * 1.5) }, bonus: 'buff ×1.5 hoy', nextReset: iso(12 * HOUR) }; }],
+  ['GET', /^\/cooking\/recipes/, () => mockRecipes.map((r: any) => { const today = !!r.dailyMenu && r.weekday === new Date().getUTCDay(); const available = r.dailyMenu ? today : r.unlockLevel <= 30; return { id: r.id, name: r.name, description: r.description ?? null, difficulty: r.difficulty, unlockLevel: r.unlockLevel, dailyMenu: !!r.dailyMenu, weekday: r.weekday ?? null, today, available, ingredients: available ? r.ingredients : null, buff: today ? { stat: r.buff.stat, value: Math.round(r.buff.value * 1.5) } : r.buff, best: cookBest[r.id] ?? null, perfect: (cookBest[r.id] ?? -1) >= r.ingredients.length }; })],
+  ['GET', /^\/cooking\/buffs/, () => cookBuffs],
+  ['POST', /^\/cooking\/start$/, ({ body }) => {
+    const r = (body?.recipeId ? mockRecipes.find((x: any) => x.id === body.recipeId) : null) ?? mockMenu();
+    cookCurrent = r;
+    const decoys = ['apple', 'cake', 'healthy_salad', 'spicy_berry', 'dawn_honey'].filter((d) => !r.ingredients.includes(d)).slice(0, Math.min(3, Math.ceil(r.difficulty / 2)));
+    const order = [...r.ingredients, ...decoys].sort((x, y) => (x < y ? -1 : 1));
+    const d = r.difficulty - 1;
+    return { sessionId: uid('ck'), recipeId: r.id, recipeName: r.name, recipeDescription: r.description ?? null, difficulty: r.difficulty, isDailyMenu: !!r.dailyMenu, ingredients: r.ingredients, order, hotPotPositions: r.difficulty > 1 ? [Math.min(2, r.ingredients.length - 1)] : [], revealMs: [900, 800, 700, 600, 500][d], durationSeconds: [45, 40, 35, 30, 25][d], hotPotWindowMs: [6000, 5000, 4500, 4000, 3500][d], seed: 42, expiresAt: iso(MIN) };
+  }],
   ['POST', /^\/cooking\/submit$/, ({ body }) => {
-    const recipe = ['sun_seed', 'sweet_coral', 'spicy_berry', 'spark_candy'];
+    const r = cookCurrent ?? mockMenu();
     const picked: string[] = Array.isArray(body?.picked) ? body.picked : [];
-    const ok = picked.filter((ing, k) => recipe[k] === ing).length;
-    const pct = Math.round((ok / recipe.length) * 100);
-    return { score: ok, buff: pct >= 75 ? { stat: 'def', value: pct >= 100 ? 5 : 3, durationMs: 24 * HOUR } : null, coins: Math.floor((ok / recipe.length) * 40), correctPct: pct };
+    const at: number[] = Array.isArray(body?.pickedAt) ? body.pickedAt : [];
+    // Aproximación de la alineación del servidor: avanza por la receta casando en orden.
+    const slots: string[] = r.ingredients.map(() => 'miss');
+    let j = 0;
+    r.ingredients.forEach((ing: string, i: number) => { const k = picked.indexOf(ing, j); if (k >= 0) { slots[i] = k > 0 && i === Math.min(2, r.ingredients.length - 1) && r.difficulty > 1 && at[k] - at[k - 1] > 6000 ? 'burned' : 'ok'; j = k + 1; } });
+    const ok = slots.filter((x) => x === 'ok').length;
+    const pct = ok / r.ingredients.length;
+    const grade = pct >= 1 ? 'perfect' : pct >= 0.6 ? 'good' : 'bad';
+    const factor = (grade === 'perfect' ? 1 : 0.5) * (r.dailyMenu ? 1.5 : 1);
+    const buff = grade === 'bad' ? null : { stat: r.buff.stat, value: Math.max(1, Math.round(r.buff.value * factor)), durationMs: 24 * HOUR };
+    if (buff) for (const stat of buff.stat === 'all' ? ['atk', 'def', 'esp', 'vel'] : [buff.stat]) { cookBuffs = cookBuffs.filter((x) => x.stat !== stat); cookBuffs.push({ stat, value: buff.value, source: 'cooking', sourceId: r.id, expiresAt: iso(24 * HOUR) }); }
+    cookBest[r.id] = Math.max(cookBest[r.id] ?? 0, ok);
+    const speedBonus = grade === 'perfect' ? 9 : 0;
+    return { score: ok, buff, coins: Math.floor(pct * 40) + speedBonus, speedBonus, correctPct: Math.round(pct * 100), grade, slots, message: null };
   }],
   ['GET', /^\/stories\/today$/, () => ({
     day: iso().slice(0, 10), plan: 'pro', limit: storyLimit, used: Object.keys(storyPlays).length, resetsAt: iso(8 * HOUR),
@@ -653,6 +701,18 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/habitat\/catalog$/, () => habitats],
   ['GET', /^\/habitat\/buffs$/, () => ({ petId: 'p-1', activeBuffs: { energy_recovery_boost: 0.15, happiness_decay_reduction: 0.05 }, itemCount: 2 })],
   ['GET', /^\/habitat\/visitors$/, () => ({ visitors: [] })],
+  ['POST', /^\/pets\/[^/]+\/initiative$/, ({ body }) => {
+    const phrase = body?.back ? TALK_DEMO[0] : TALK_DEMO[1 + (talkTurn++ % (TALK_DEMO.length - 1))];
+    return { phrase, retryInMs: 60_000, level: talkLevel, feeling: 'content' };
+  }],
+  ['GET', /^\/pets\/[^/]+\/initiative\/settings$/, () => talkSettings()],
+  ['POST', /^\/pets\/[^/]+\/mind\/reinforce$/, ({ body }) => {
+    const v = demoLearned[body?.behavior] ?? 0;
+    const up = body?.signal !== 'pickup';
+    demoLearned[body?.behavior] = Math.round((v + 0.12 * ((up ? 1 : -1) - v)) * 1000) / 1000;
+    return { applied: true, behavior: body?.behavior, prefs: demoLearned };
+  }],
+  ['PUT', /^\/pets\/[^/]+\/initiative\/settings$/, ({ body }) => ((talkLevel = body?.level ?? talkLevel), talkSettings())],
   ['POST', /^\/habitat\/furniture\/([^/]+)\/place$/, ({ m, body }) => {
     const f = habitats.furniture.find((x: any) => x.id === m[1]);
     spend(f?.currency ?? 'coins', f?.price ?? 0);
@@ -660,6 +720,28 @@ const routes: [string, RegExp, Handler][] = [
   }],
   ['POST', /^\/habitat\/visit$/, ({ body }) => ((visiting = { friendId: body?.friendId ?? 'u-2' }), { success: true, visit: { visitorId: 'u-demo', visitorName: user.displayName, pet: { petId: 'p-1', nickname: 'Fuego', speciesName: 'Ignisaur', speciesId: 'ignisaur', spriteRef: 'sprites/ignisaur_idle' }, startedAt: iso() }, energy: 54 })],
   ['POST', /^\/habitat\/visit\/end$/, () => ((visiting = null), (talk = { turn: 0, done: [], ended: false, last: null }), { ok: true })],
+  ['GET', /^\/habitat\/visit\/room$/, () => {
+    const sala: any = habitats.rooms[0];
+    return {
+      ownerId: 'u-2',
+      room: {
+        id: sala.id,
+        name: sala.name,
+        theme: sala.theme ?? null,
+        gridWidth: sala.gridWidth,
+        gridHeight: sala.gridHeight,
+        blocked: sala.blocked ?? [],
+        items: [
+          { id: 'f-1', furnitureId: 'soft_bed', x: 1, y: 1, rotation: 0 },
+          { id: 'f-2', furnitureId: 'toy_ball', x: 5, y: 4, rotation: 0 },
+        ],
+      },
+      furniture: habitats.furniture.filter((f: any) => ['soft_bed', 'toy_ball'].includes(f.id)).map((f: any) => ({ id: f.id, name: f.name, footprint: f.footprint ?? [1, 1], mount: f.mount ?? 'floor', interaction: f.interaction })),
+      host: { petId: 'p-20', nickname: 'Luna', speciesName: 'Axolunar', speciesId: 'axolunar', spriteRef: 'axolunar', stage: 'juvenile', look: { palette: { primary: '#7FB7E6', secondary: '#F4C6E0' }, pattern: null, visualSeed: 77, shiny: false, accessories: {} } },
+      guest: { petId: 'p-1', nickname: 'Fuego', speciesName: 'Ignisaur', speciesId: 'ignisaur', spriteRef: 'ignisaur', stage: 'juvenile', look: { palette: { primary: '#E25822', secondary: '#F3C544' }, pattern: null, visualSeed: 1337, shiny: false, accessories: {} } },
+    };
+  }],
+  ['POST', /^\/habitat\/items\/([^/]+)\/use$/, () => ({ applied: true, interaction: 'play', petId: 'p-1', vitals: { hunger: 72, happiness: 83, energy: 63, hygiene: 36 }, remainingToday: 5 })],
   ['POST', /^\/habitat\/visit\/interact$/, ({ body }) => {
     if (body?.choice === undefined) {
       if (talk.last && !talk.ended) return talk.last;

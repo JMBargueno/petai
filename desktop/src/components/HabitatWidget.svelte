@@ -1,20 +1,19 @@
 <script lang="ts">
   /**
-   * Modo hábitat (lib/habitatMode): solo la sala del Pockai, grande, flotando en el escritorio.
+   * Modo hábitat (lib/habitatMode): solo la sala del Pockai, grande, flotando en el escritorio, sin
+   * cielo ni paisaje alrededor (la escena va en modo `bare` y el contenedor es transparente).
    * Lleva la clase `panel-card` para que el click-through la trate como zona interactiva y para que
    * soltar al Pockai encima lo meta en casa (y sacarlo fuera lo saque al escritorio), igual que el
-   * panel. Una barra pequeña aparece al pasar el ratón: mover, cambiar de sala, paisaje y volver
-   * al panel. La esquina inferior derecha la redimensiona.
+   * panel. Una barra pequeña aparece al pasar el ratón: mover, cambiar de sala, hacerla más grande o
+   * más pequeña (+ / −) y volver al panel. La esquina inferior derecha también la redimensiona.
    */
   import { createEventDispatcher, onDestroy } from 'svelte';
-  import { ChevronLeft, ChevronRight, GripHorizontal, Minimize2, Mountain } from 'lucide-svelte';
-  import { backdropUrl } from '@pockai/scene';
+  import { ChevronLeft, ChevronRight, GripHorizontal, Minimize2, Minus, Plus } from 'lucide-svelte';
   import IsoRoomView from './IsoRoomView.svelte';
   import { Button } from './ui';
   import { api, type HabitatCatalog, type HabitatState } from '../lib/api';
   import { friendlyError } from '../lib/ui/errors';
-  import { habitatBackdrop } from '../lib/habitatBackdrop';
-  import { HABITAT_MIN, habitatMode, placeBox, type Box } from '../lib/habitatMode';
+  import { HABITAT_MIN, habitatMode, placeBox, scaleBox, type Box } from '../lib/habitatMode';
   import { startHabitatExitDrag, type RoomPetDrag } from '../lib/habitatExitDrag';
 
   export let pet: any = null;
@@ -74,6 +73,8 @@
 
   // ---------- Mover y redimensionar (como el panel: captura todo el viewport mientras dura) ----------
   const screen = () => ({ w: window.innerWidth, h: window.innerHeight });
+  let innerW = window.innerWidth;
+  let innerH = window.innerHeight;
   let box: Box = placeBox($habitatMode.box, screen());
   let gesture: { kind: 'move' | 'resize'; sx: number; sy: number; start: Box } | null = null;
 
@@ -117,6 +118,15 @@
     habitatMode.setBox(box);
   }
 
+  // Botones + y −: crece o encoge desde el centro, sin salirse de la pantalla
+  const ZOOM_STEP = 1.2;
+  $: canGrow = box.w < innerW - 1 && box.h < innerH - 1;
+  $: canShrink = box.w > HABITAT_MIN.w + 1 && box.h > HABITAT_MIN.h + 1;
+  function zoom(factor: number) {
+    box = scaleBox(box, factor, screen());
+    habitatMode.setBox(box);
+  }
+
   /** Al cambiar la pantalla se vuelve a encajar, sin olvidar dónde la dejó el jugador. */
   function onWindowResize() {
     if (!gesture) box = placeBox($habitatMode.box, screen());
@@ -131,7 +141,7 @@
   }
 </script>
 
-<svelte:window on:resize={onWindowResize} />
+<svelte:window on:resize={onWindowResize} bind:innerWidth={innerW} bind:innerHeight={innerH} />
 
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 <div
@@ -146,6 +156,7 @@
     {#key room.id}
       <IsoRoomView
         fill
+        bare
         {pet}
         {room}
         furniture={catalog.furniture}
@@ -179,15 +190,8 @@
       <button class="bar-btn" aria-label="Sala siguiente" title="Sala siguiente" on:click={() => stepRoom(1)}><ChevronRight size={16} /></button>
     {/if}
     <span class="bar-gap"></span>
-    {#if room && backdropUrl(room.id)}
-      <button
-        class="bar-btn"
-        aria-pressed={$habitatBackdrop === 'painted'}
-        aria-label={$habitatBackdrop === 'painted' ? 'Ver solo el cielo' : 'Ver el paisaje pintado'}
-        title={$habitatBackdrop === 'painted' ? 'Ver solo el cielo' : 'Ver el paisaje pintado'}
-        on:click={() => habitatBackdrop.update((m) => (m === 'painted' ? 'plain' : 'painted'))}
-      ><Mountain size={16} /></button>
-    {/if}
+    <button class="bar-btn" aria-label="Más pequeño" title="Más pequeño" disabled={!canShrink} on:click={() => zoom(1 / ZOOM_STEP)}><Minus size={16} /></button>
+    <button class="bar-btn" aria-label="Más grande" title="Más grande" disabled={!canGrow} on:click={() => zoom(ZOOM_STEP)}><Plus size={16} /></button>
     <button class="bar-btn bar-exit" title="Volver al panel" on:click={() => dispatch('exit')}>
       <Minimize2 size={16} /> Panel
     </button>
@@ -203,21 +207,21 @@
     position: fixed;
     z-index: var(--z-panel);
     pointer-events: auto;
+    /* Solo la sala: sin fondo, borde ni sombra alrededor */
+    background: transparent;
     border-radius: var(--radius-3xl);
-    overflow: hidden;
-    border: 1.5px solid var(--line);
-    box-shadow: var(--shadow-4);
-    background:
-      radial-gradient(80% 70% at 50% 35%, rgb(255 255 255 / 0.65), transparent 75%),
-      var(--band-sky, #dceeff);
-    outline: 3px solid transparent;
-    outline-offset: -3px;
-    transition: outline-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
+    outline: 1.5px dashed transparent;
+    outline-offset: -2px;
+    transition: outline-color var(--dur-1) ease;
+  }
+  /* Al pasar el ratón se intuyen los límites (para moverla o redimensionarla) */
+  .habitat-widget:hover,
+  .habitat-widget.busy {
+    outline-color: rgb(255 255 255 / 0.35);
   }
   /* El Pockai del escritorio se arrastra encima: su casa se marca como destino */
-  :global(body[data-pet-over-panel]) .habitat-widget {
-    outline-color: color-mix(in srgb, var(--success) 85%, transparent);
-    box-shadow: var(--shadow-4), 0 0 28px color-mix(in srgb, var(--success) 45%, transparent);
+  :global(body[data-pet-over-panel]) .habitat-widget :global(canvas) {
+    filter: drop-shadow(0 0 14px color-mix(in srgb, var(--success) 70%, transparent));
   }
 
   .widget-msg {
@@ -291,14 +295,15 @@
     font-weight: 700;
     cursor: pointer;
   }
-  .bar-btn:hover {
+  .bar-btn:hover:not(:disabled) {
     background: rgb(0 0 0 / 0.08);
+  }
+  .bar-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
   }
   .bar-btn:focus-visible {
     outline: var(--focus-ring);
-  }
-  .bar-btn[aria-pressed='true'] {
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
   }
 
   .resize-grip {
@@ -329,8 +334,9 @@
     gap: var(--space-2);
     padding: var(--space-3);
     text-align: center;
-    background: rgb(11 10 20 / 0.38);
-    backdrop-filter: blur(2px);
+  }
+  .absent-hint {
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
   }
   .absent-text {
     font-size: var(--text-caption);

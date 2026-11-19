@@ -11,7 +11,8 @@
     "./bake": "./src/bake/index.ts",
     "./protocol": "./src/protocol.ts",
     "./effects": "./src/effects/index.ts",
-    "./backdrop": "./src/backdrop/index.ts"
+    "./backdrop": "./src/backdrop/index.ts",
+    "./weather": "./src/ambience/openMeteo.ts"
   },
   "scripts": {
     "dev": "vite",

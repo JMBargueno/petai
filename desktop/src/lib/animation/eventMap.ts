@@ -188,6 +188,12 @@ const BEHAVIOR_ACTION_ANIMS: Record<string, string[]> = {
   cuddle: ['love'],
 };
 
+/**
+ * Clips que el servidor puede pedir para una reacción y que terminan solos. Los demás (`sleep`,
+ * `tired`, `idle_alt`, `talk`…) son bucles o reposos: lanzados como acción no acabarían.
+ */
+export const BEHAVIOR_ONE_SHOT: ReadonlySet<string> = new Set(['happy', 'love', 'dance', 'celebrate', 'eat', 'surprised', 'attack', 'wake']);
+
 export const EMOTE_EMOJI: Record<string, string> = {
   heart: '❤️',
   sparkle: '✨',
@@ -202,10 +208,13 @@ export const EMOTE_EMOJI: Record<string, string> = {
 /** Tolerante: `behavior` ausente, nulo o con valores desconocidos no rompe el chat. */
 export function reactionForBehavior(raw: unknown): Reaction | null {
   if (!raw || typeof raw !== 'object') return null;
-  const b = raw as { action?: unknown; animation?: unknown; emote?: unknown };
+  const b = raw as { action?: unknown; animation?: unknown; emote?: unknown; clip?: unknown };
   const base = typeof b.animation === 'string' ? BEHAVIOR_ANIMS[b.animation] : undefined;
   const override = typeof b.action === 'string' ? BEHAVIOR_ACTION_ANIMS[b.action] : undefined;
-  const anims = base ? (override ?? base) : [];
+  // El servidor dice con qué clip se representa cada reacción. Se usa si es de una pasada; los
+  // bucles de la capa base (dormir, cansado, escuchar…) se quedan en la tabla de arriba.
+  const clip = typeof b.clip === 'string' && BEHAVIOR_ONE_SHOT.has(b.clip) ? [b.clip] : undefined;
+  const anims = clip ?? (base ? (override ?? base) : []);
   const particle = typeof b.emote === 'string' ? EMOTE_EMOJI[b.emote] : undefined;
   if (!anims.length && !particle) return null;
   return particle ? { anims, particle } : { anims };

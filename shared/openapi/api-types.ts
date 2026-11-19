@@ -837,6 +837,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/pets/{id}/mind/reinforce": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * El entrenador premia (o no) lo que el Pockai está haciendo en el escritorio
+         * @description Inclina un poco la balanza entre conductas del escritorio: lo que se premia sale algo más a menudo y lo que se corta, algo menos. Siempre acotado, con olvido y con un tope de gestos al día. Pasado el tope responde `applied: false`, nunca error.
+         */
+        post: operations["MindController_reinforce"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pets/{id}/initiative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * ¿Tiene el Pockai algo que decir por su cuenta?
+         * @description Lo decide el servidor: según el nivel de insistencia elegido, el carácter de la mascota, su ánimo, lo que necesita o le apetece y lo que sabe de su entrenador. Devuelve una frase ya escrita (o ninguna) y cuándo volver a preguntar. El cliente solo la muestra. `back: true` avisa de que el entrenador acaba de volver tras un rato fuera; `focus: true`, de que está concentrado y no hay que interrumpir.
+         */
+        post: operations["MindController_speak"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pets/{id}/initiative/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cuánto puede interrumpir el Pockai: nivel elegido y niveles disponibles */
+        get: operations["MindController_initiativeSettings"];
+        /** Elegir cuánto puede interrumpir el Pockai (quiet | normal | chatty) */
+        put: operations["MindController_setInitiativeLevel"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pets/{id}/mind": {
         parameters: {
             query?: never;
@@ -2854,6 +2912,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cooking/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recetario: recetas, si se pueden cocinar con la mascota y la mejor nota */
+        get: operations["CookingController_recipes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cooking/buffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Buffs de comida activos de una mascota */
+        get: operations["CookingController_buffs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cooking/daily-menu": {
         parameters: {
             query?: never;
@@ -2861,7 +2953,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Receta especial del día (determinista por fecha) */
+        /** Menú del día: una receta propia por día de la semana (UTC), con el buff ×1.5 */
         get: operations["CookingController_dailyMenu"];
         put?: never;
         post?: never;
@@ -7103,10 +7195,6 @@ export interface operations {
                 "application/json": {
                     displayName?: string;
                     timezone?: string;
-                    /** @description Coordenada opt-in para el clima (se borra con null) */
-                    latitude?: number | null;
-                    /** @description Coordenada opt-in para el clima (se borra con null) */
-                    longitude?: number | null;
                     /** @description Cumpleaños (YYYY-MM-DD) */
                     birthday?: string | null;
                     /** @description Opt-in de visibilidad pública de logros */
@@ -7289,6 +7377,109 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MindController_reinforce: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Conducta del escritorio (balance.json → personality.desktop.behaviors) */
+                    behavior: string;
+                    /** @description Gesto (balance.json → personality.learning.signals): pet, high_five, click, pickup */
+                    signal: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MindController_speak: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    channel: "desktop" | "mobile";
+                    /** @description El entrenador acaba de volver */
+                    back?: boolean;
+                    /** @description El entrenador está concentrado (Pomodoro, pantalla completa) */
+                    focus?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MindController_initiativeSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MindController_setInitiativeLevel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    level: "quiet" | "normal" | "chatty";
+                };
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10353,6 +10544,8 @@ export interface operations {
                 "application/json": {
                     /** @description Pet que cocina */
                     petId: string;
+                    /** @description Receta a cocinar. Si falta, el menú del día */
+                    recipeId?: string;
                 };
             };
         };
@@ -10383,11 +10576,51 @@ export interface operations {
                     correctOrder: boolean;
                     /** @description Ingredientes echados a la olla, en orden. Si se envía, el servidor cuenta los aciertos y no usa score ni correctOrder */
                     picked?: string[];
+                    /** @description Ms desde que empezó a cocinar en que se echó cada ingrediente de picked (olla caliente) */
+                    pickedAt?: number[];
                 };
             };
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CookingController_recipes: {
+        parameters: {
+            query: {
+                petId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CookingController_buffs: {
+        parameters: {
+            query: {
+                petId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

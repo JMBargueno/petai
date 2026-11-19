@@ -27,7 +27,7 @@ export interface SoundDef {
   source: SoundSource;
   /** Prompt completo para ElevenLabs (ya con el `style` del bus). Vacío en los `synth`. */
   prompt: string;
-  /** Segundos (0.5–30, límite de la API de efectos; la música llega a 180). */
+  /** Segundos (0.5–30, límite de la API de efectos; los temas largos del bus `music`, hasta 180). */
   duration: number;
   loop: boolean;
   /** Tomas que se quedan en el juego y se rotan. */
@@ -51,6 +51,8 @@ type SoundFields = Omit<SoundDef, 'id' | 'bus' | 'prompt'>;
 export interface RawSound extends Partial<SoundFields> {
   id: string;
   prompt?: string;
+  /** Sustituye al `style` de su bus (p. ej. los temas lofi del MP3 dentro del bus `music`). */
+  style?: string;
 }
 
 export interface RawManifest {
@@ -129,8 +131,10 @@ export function normalizeManifest(raw: unknown): { manifest: SoundManifest; erro
       errors.push(`${at}: bus desconocido "${String(bus)}"`);
       continue;
     }
-    const def: SoundDef = { ...BASE, ...defaults[bus], ...e, id: e.id, bus, prompt: '' } as SoundDef;
-    const extraStyle = style[bus];
+    const { style: ownStyle, ...fields } = e;
+    const def: SoundDef = { ...BASE, ...defaults[bus], ...fields, id: e.id, bus, prompt: '' } as SoundDef;
+    if (ownStyle !== undefined && typeof ownStyle !== 'string') errors.push(`${at}: style debe ser un texto`);
+    const extraStyle = typeof ownStyle === 'string' ? ownStyle : style[bus];
     if (def.source === 'elevenlabs') {
       const prompt = (e.prompt ?? '').trim();
       if (!prompt) errors.push(`${at}: falta el prompt`);

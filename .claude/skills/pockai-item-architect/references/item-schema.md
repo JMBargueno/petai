@@ -42,7 +42,7 @@ Los efectos se suman tal cual y la estadística se recorta entre 0 y 100. Un val
 
 ### Tipos que no existen
 - `toy`: `care-package.service.ts` exige un objeto de este tipo, pero no hay ninguno ni mecánica de uso.
-- Ingredientes de cocina: `recipes.json` nombra `carrot`, `crystal`, `star_dust`… que no son objetos.
+- Ingredientes de cocina propios: `recipes.json` usa comida de `foods.json` (`kind: "food"`); no hay ingredientes que no se coman.
 - `accessory` y `cosmetic` son de las prendas: usa `pockai-accessory-architect`.
 
 Si te piden uno de estos, no lo metas en `foods.json` «para ir avanzando»: explica qué falta y propón la mecánica como trabajo aparte.

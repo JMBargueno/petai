@@ -58,6 +58,8 @@ interface TurnPlan {
   plan?: TurnPlanData;
   /** JSON de personalidad leído al planificar (para liquidar el turno sin volver a leer). */
   stored?: StoredPersonality;
+  /** Ánimo de corto plazo al empezar el turno (etiqueta de `@pockai/mind`). */
+  feeling?: string | null;
   dims: Dims;
 }
 
@@ -354,6 +356,8 @@ export class ChatService {
 
     let systemPrompt = buildSystemPrompt(pet, owner ?? {}, {
       personalityBlock: turn ? this.mind!.personalityBlock(turn.dims) : undefined,
+      // Lo que le acaba de pasar tiñe la respuesta (un ánimo neutro no añade nada)
+      feelingLine: turn?.feeling && turn.feeling !== 'neutral' ? text(`FEELING_${turn.feeling.toUpperCase()}`) : undefined,
       // Reacción decidida y, si los hay, el truco que hace, por quién le preguntan y qué le apetece
       behaviorHint: turn ? (turn.plan?.hints.join('\n') ?? promptHint(turn.behavior)) : undefined,
       tier,
@@ -427,6 +431,7 @@ export class ChatService {
         situation: plan.situation,
         plan,
         stored: profile.stored ?? {},
+        feeling: profile.feeling?.label ?? null,
       };
     } catch (e) {
       this.logger.debug(`Plan de turno no disponible: ${(e as Error).message}`);

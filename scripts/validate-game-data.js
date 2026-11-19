@@ -707,7 +707,102 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
     placeholders: ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story', 'trick'],
   });
   if (errors.length) throw new Error(`Diálogos o textos inválidos:\n  - ${errors.join('\n  - ')}`);
+
+  // Consolidación de la memoria: cada grupo que se pliega necesita su frase de resumen
+  const cons = pers.memory?.consolidation;
+  if (cons) {
+    const at = 'balance.personality.memory.consolidation';
+    const groups = new Set();
+    for (const [kind, by] of Object.entries(cons.kinds ?? {})) {
+      if (!['subject', 'kind'].includes(by)) throw new Error(`${at}.kinds.${kind} debe ser subject o kind`);
+      // Lo nacido del chat no se pliega sin leerlo: resumirlo bien es cosa de un modelo
+      if (['summary', 'event', 'fact', 'habit', 'relation', 'rumor'].includes(kind)) throw new Error(`${at}.kinds: «${kind}» no se puede plegar`);
+      for (const g of by === 'subject' ? ['PET', 'USER'] : [kind.toUpperCase()]) groups.add(g);
+    }
+    if (!groups.size) throw new Error(`${at}.kinds no puede estar vacío`);
+    if (!(Number.isInteger(cons.minCount) && cons.minCount >= 2)) throw new Error(`${at}.minCount debe ser un entero ≥ 2`);
+    if (!(Number.isInteger(cons.manyFrom) && cons.manyFrom > cons.minCount)) throw new Error(`${at}.manyFrom debe ser mayor que minCount`);
+    if (!(Number.isInteger(cons.maxDigests) && cons.maxDigests >= 4 && cons.maxDigests <= 100)) throw new Error(`${at}.maxDigests debe ser un entero de 4 a 100`);
+    if (!(cons.tone?.good > 0 && cons.tone.bad < 0)) throw new Error(`${at}.tone: good > 0 y bad < 0`);
+    const imp = cons.importance ?? {};
+    if (!(imp.base >= (pers.memory.minImportanceToStore ?? 0) && imp.max <= 1 && imp.base <= imp.max && imp.perEpisode >= 0)) throw new Error(`${at}.importance inválida`);
+    for (const lang of Object.keys(strings)) {
+      for (const g of groups) for (const amount of ['SOME', 'MANY']) if (typeof strings[lang][`DIGEST_${g}_${amount}`] !== 'string') throw new Error(`strings/${lang}.json: falta DIGEST_${g}_${amount} (resumen de memoria)`);
+    }
+    console.log(`✓ balance.json: consolidación de memoria (${Object.keys(cons.kinds).length} tipos, ${groups.size} grupos con frase) validada`);
+  }
   console.log(`✓ diálogos: ${Object.keys(readJson('shared/game-data/dialogues.json').conversations).length} conversación(es) y ${Object.keys(strings.es ?? {}).length} textos en ${Object.keys(strings).join(', ')} validados`);
+}
+
+// 4zz. Frases con variables y estado de ánimo
+{
+  const { validatePhrases } = require('./lib/validate-phrases');
+  const phrases = readJson('shared/game-data/phrases.json');
+  const pers = balance.personality ?? {};
+  const errors = validatePhrases({ phrases, langs: ['es', 'en'], dims: Object.keys(pers.dimensions ?? {}) });
+  if (errors.length) throw new Error(`Frases inválidas:\n  - ${errors.join('\n  - ')}`);
+  console.log(`✓ phrases.json: ${phrases.phrases.length} frases, ${Object.keys(phrases.variables).length} variables y ${Object.keys(phrases.facts).length} datos del entrenador validados`);
+
+  // Iniciativa: tres niveles de insistencia y prioridad de tipos de frase
+  const ini = pers.initiative;
+  if (ini) {
+    const at = 'balance.personality.initiative';
+    const LEVELS = ['quiet', 'normal', 'chatty'];
+    if (!LEVELS.includes(ini.defaultLevel)) throw new Error(`${at}.defaultLevel desconocido`);
+    for (const id of LEVELS) {
+      const l = ini.levels?.[id];
+      if (!l || !(l.desktopMinutes >= 2) || !(Number.isInteger(l.mobilePerDay) && l.mobilePerDay >= 0 && l.mobilePerDay <= 12)) throw new Error(`${at}.levels.${id} inválido (desktopMinutes ≥ 2, mobilePerDay entero de 0 a 12)`);
+    }
+    for (const id of Object.keys(ini.levels ?? {})) if (!LEVELS.includes(id)) throw new Error(`${at}.levels: nivel desconocido ${id}`);
+    // De más callado a más hablador: nunca al revés
+    if (!(ini.levels.chatty.desktopMinutes <= ini.levels.normal.desktopMinutes && ini.levels.chatty.mobilePerDay >= ini.levels.normal.mobilePerDay && ini.levels.normal.mobilePerDay >= ini.levels.quiet.mobilePerDay)) {
+      throw new Error(`${at}.levels: «chatty» debe hablar al menos tanto como «normal», y «normal» como «quiet»`);
+    }
+    const pw = ini.personality ?? {};
+    if (!(pw.min > 0 && pw.min <= 1 && pw.max >= 1 && pw.max <= 3)) throw new Error(`${at}.personality: min en (0, 1] y max en [1, 3]`);
+    for (const d of Object.keys(pw.weights ?? {})) if (!Object.keys(pers.dimensions ?? {}).includes(d)) throw new Error(`${at}.personality.weights: dimensión desconocida ${d}`);
+    const q = ini.quietHours ?? {};
+    for (const k of ['from', 'to']) if (!(Number.isInteger(q[k]) && q[k] >= 0 && q[k] <= 23)) throw new Error(`${at}.quietHours.${k} debe ser una hora de 0 a 23`);
+    if (!(ini.backAfterMinutes >= 5)) throw new Error(`${at}.backAfterMinutes debe ser al menos 5`);
+    const kinds = new Set(phrases.kinds);
+    const listed = (ini.priority ?? []).flat();
+    for (const k of listed) if (!kinds.has(k)) throw new Error(`${at}.priority: tipo de frase desconocido ${k}`);
+    for (const k of kinds) if (!listed.includes(k)) throw new Error(`${at}.priority: falta el tipo de frase ${k} (nunca se diría)`);
+    if (new Set(listed).size !== listed.length) throw new Error(`${at}.priority: tipo repetido`);
+    console.log(`✓ balance.json: iniciativa (${LEVELS.length} niveles, ${ini.priority.length} prioridades) validada`);
+  }
+
+  // Aprendizaje: inclina la balanza entre conductas del escritorio, siempre acotado
+  const learn = pers.learning;
+  if (learn) {
+    const at = 'balance.personality.learning';
+    if (!(learn.rate > 0 && learn.rate <= 0.5)) throw new Error(`${at}.rate debe estar en (0, 0,5]`);
+    if (!(learn.creditWindowMs >= 1000 && learn.creditWindowMs <= 30000)) throw new Error(`${at}.creditWindowMs debe estar entre 1000 y 30000`);
+    if (!(learn.halfLifeDays >= 1 && learn.halfLifeDays <= 365)) throw new Error(`${at}.halfLifeDays debe estar entre 1 y 365`);
+    // Nada desaparece del todo ni lo acapara todo
+    if (!(learn.factor?.min >= 0.3 && learn.factor.min < 1 && learn.factor.max > 1 && learn.factor.max <= 2)) throw new Error(`${at}.factor: min en [0,3, 1) y max en (1, 2]`);
+    if (!(Number.isInteger(learn.maxEntries) && learn.maxEntries >= 5)) throw new Error(`${at}.maxEntries debe ser un entero ≥ 5`);
+    if (!(Number.isInteger(learn.dailyCap) && learn.dailyCap >= 1 && learn.dailyCap <= 200)) throw new Error(`${at}.dailyCap debe ser un entero de 1 a 200`);
+    const signals = Object.entries(learn.signals ?? {});
+    for (const [id, v] of signals) if (!(typeof v === 'number' && v !== 0 && Math.abs(v) <= 1)) throw new Error(`${at}.signals.${id} debe estar en [-1, 1] y no ser 0`);
+    if (!signals.some(([, v]) => v > 0)) throw new Error(`${at}.signals: hace falta al menos un gesto que premie`);
+    console.log(`✓ balance.json: aprendizaje (${signals.length} gestos, factor ${learn.factor.min}–${learn.factor.max}) validado`);
+  }
+
+  const feeling = pers.feeling;
+  if (feeling) {
+    if (!(feeling.halfLifeMinutes >= 5 && feeling.halfLifeMinutes <= 1440)) throw new Error('balance.personality.feeling.halfLifeMinutes debe estar entre 5 y 1440');
+    const l = feeling.labels ?? {};
+    if (!(l.low < 0 && l.high > 0 && l.sleepy < l.excited && l.sleepy >= 0 && l.excited <= 1)) throw new Error('balance.personality.feeling.labels inválido');
+    for (const [ev, push] of Object.entries(feeling.events ?? {})) {
+      // Solo acontecimientos que el motor de evolución conoce: un nombre mal escrito no haría nada
+      if (!pers.evolution?.events?.[ev]) throw new Error(`balance.personality.feeling.events.${ev}: no es un acontecimiento de evolution.events`);
+      for (const [k, n] of Object.entries(push)) {
+        if (!['valence', 'arousal'].includes(k) || !(typeof n === 'number' && Math.abs(n) <= 0.5)) throw new Error(`balance.personality.feeling.events.${ev}.${k} inválido (de -0,5 a 0,5)`);
+      }
+    }
+    console.log(`✓ balance.json: estado de ánimo (${Object.keys(feeling.events ?? {}).length} acontecimientos) validado`);
+  }
 }
 
 // 5. Validar existencia de sprites base
@@ -737,12 +832,32 @@ console.log('✓ shared/assets/sprites: Todos los sprites de animación requerid
     if (!/^[a-z][a-z0-9_]*$/.test(r.id || '') || seen.has(r.id)) bad('id inválido o repetido');
     seen.add(r.id);
     if (!r.name || !(r.difficulty >= 1 && r.difficulty <= 5) || !(r.unlockLevel >= 1)) bad('faltan name, difficulty (1–5) o unlockLevel');
-    if (!Array.isArray(r.ingredients) || r.ingredients.length < 3 || r.ingredients.length > 4) bad('lleva 3 o 4 ingredientes');
+    if (r.description !== undefined && (typeof r.description !== 'string' || !r.description.trim())) bad('description vacía');
+    // El Menú del día (una receta por día de la semana, UTC) puede llevar hasta 6 ingredientes y un
+    // buff a todas las stats; las normales, 3 o 4 y una stat.
+    const maxIng = r.dailyMenu ? 6 : 4;
+    if (!Array.isArray(r.ingredients) || r.ingredients.length < 3 || r.ingredients.length > maxIng) bad(`lleva de 3 a ${maxIng} ingredientes`);
     if (new Set(r.ingredients).size !== r.ingredients.length) bad('repite un ingrediente');
     for (const ing of r.ingredients) if (!edible.has(ing)) bad(`el ingrediente '${ing}' no es una comida de foods.json`);
-    if (!['atk', 'def', 'esp', 'vel'].includes(r.buff?.stat) || !(r.buff?.value > 0)) bad('buff inválido');
+    const stats = r.dailyMenu ? ['atk', 'def', 'esp', 'vel', 'all'] : ['atk', 'def', 'esp', 'vel'];
+    if (!stats.includes(r.buff?.stat) || !(r.buff?.value > 0)) bad('buff inválido');
+    if (r.dailyMenu !== undefined && r.dailyMenu !== true) bad('dailyMenu solo puede ser true');
+    if (r.dailyMenu && !(Number.isInteger(r.weekday) && r.weekday >= 0 && r.weekday <= 6)) bad('un menú del día necesita weekday 0–6 (0 = domingo)');
+    if (!r.dailyMenu && r.weekday !== undefined) bad('weekday solo vale en un menú del día');
   }
-  console.log(`✓ recipes.json: ${recipes.length} recetas validadas`);
+  const days = recipes.filter((r) => r.dailyMenu).map((r) => r.weekday).sort();
+  if (days.join() !== '0,1,2,3,4,5,6') {
+    console.error(`❌ recipes.json: tiene que haber exactamente un menú del día por día de la semana (hay: ${days.join(', ') || 'ninguno'})`);
+    process.exit(1);
+  }
+  const c = balance.cooking;
+  const per5 = (a) => Array.isArray(a) && a.length === 5 && a.every((n) => n > 0);
+  if (!c || !per5(c.decoysByDifficulty) || !per5(c.revealMsByDifficulty) || !per5(c.durationSecondsByDifficulty) || !per5(c.hotPot?.windowMsByDifficulty)
+    || !(c.thresholds?.good > 0 && c.thresholds.good < c.thresholds.perfect && c.thresholds.perfect <= 1)) {
+    console.error('❌ balance.json: falta cooking o le faltan las tablas por dificultad (5 valores) o los umbrales');
+    process.exit(1);
+  }
+  console.log(`✓ recipes.json: ${recipes.length} recetas validadas (${days.length} menús del día)`);
 }
 
 console.log('=== TODOS LOS DATOS DE JUEGO Y ASSETS SON VÁLIDOS ===');

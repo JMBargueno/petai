@@ -13,6 +13,8 @@ import {
   formatTranscript,
   normalizeForMatch,
   parseExtraction,
+  SLOT_PREFIX,
+  slotContent,
   selectRelevantFacts,
 } from './memory';
 import { MEMORY_UNLOCK } from './personality';
@@ -147,7 +149,8 @@ export class MemoryService {
       // Los hechos que ya recuerda van numerados en el prompt, para que el extractor pueda
       // corregirlos o retirarlos en vez de acumular versiones contradictorias.
       const known = (
-        await this.prisma.petMemory.findMany({ where: { petId, kind: 'fact' }, orderBy: { createdAt: 'asc' } })
+        // Sin los datos concretos (`slot:*`): tienen su propio formato y no se corrigen como texto libre
+        await this.prisma.petMemory.findMany({ where: { petId, kind: 'fact', key: null }, orderBy: { createdAt: 'asc' } })
       ).slice(-MAX_KNOWN_FACTS_IN_PROMPT);
       const transcript = buildExtractionInput(
         formatTranscript(recent),
@@ -200,9 +203,20 @@ export class MemoryService {
   private async store(petId: string, extraction: Extraction, known: { id: string; content: string }[], processedUpTo: Date) {
     const { summary } = extraction;
     const existing = await this.prisma.petMemory.findMany({
-      where: { petId, kind: 'fact' },
+      where: { petId, kind: 'fact', key: null },
       orderBy: { createdAt: 'asc' },
     });
+
+    // Datos concretos del entrenador: uno por clave, se sobrescribe o se olvida
+    for (const [id, value] of Object.entries(extraction.slots ?? {})) {
+      const key = `${SLOT_PREFIX}${id}`;
+      if (value === null) {
+        await this.prisma.petMemory.deleteMany({ where: { petId, key } });
+        continue;
+      }
+      const data = { kind: 'fact', layer: 'semantic', subject: 'owner', importance: 0.75, content: slotContent(id, value) };
+      await this.prisma.petMemory.upsert({ where: { petId_key: { petId, key } }, create: { petId, key, ...data }, update: data });
+    }
 
     // Correcciones y bajas sobre lo ya conocido
     const removed = new Set<string>();
@@ -372,6 +386,8 @@ export class MemoryService {
     const memory = await this.prisma.petMemory.findFirst({ where: { id: memoryId, petId }, select: { kind: true, key: true } });
     const res = await this.prisma.petMemory.deleteMany({ where: { id: memoryId, petId } });
     if (res.count === 0) throw new NotFoundException('Recuerdo no encontrado');
+    // Un resumen borrado no vuelve: se olvidan también sus contadores
+    if (memory?.kind === 'digest') await this.mindMemory?.forgetDigests(petId, memory.key);
     // Un hábito borrado se silencia: el siguiente resumen del escritorio no lo vuelve a crear
     if (memory?.kind === 'habit' && memory.key) {
       const row = await this.prisma.petContextProfile.findUnique({ where: { petId } });
@@ -389,6 +405,7 @@ export class MemoryService {
     const res = await this.prisma.petMemory.deleteMany({ where: { petId } });
     // «Olvidar todo» borra también el perfil de hábitos del que salen
     await this.prisma.petContextProfile.deleteMany({ where: { petId } });
+    await this.mindMemory?.forgetDigests(petId);
     return { deleted: res.count };
   }
 

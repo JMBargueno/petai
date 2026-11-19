@@ -196,6 +196,11 @@ fun RarityTag(rarity: String, modifier: Modifier = Modifier) =
 fun ElementTag(element: String, modifier: Modifier = Modifier) =
     Tag(elementLabel(element), modifier, elementColor(element), elementIcon(element))
 
+/** Patrón del pelaje (nombre de patterns.json que manda el servidor). Se muestra siempre, incluido «Liso». */
+@Composable
+fun PatternTag(pattern: com.petai.app.data.PatternDto, modifier: Modifier = Modifier) =
+    Tag("Patrón: " + (pattern.name ?: pattern.id.replaceFirstChar { it.uppercase() }), modifier, Brand.SkyWash)
+
 /** Pastilla "brillante": se suma a la rareza, no la sustituye. */
 @Composable
 fun ShinyTag(modifier: Modifier = Modifier) {
