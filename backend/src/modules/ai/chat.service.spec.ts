@@ -241,6 +241,19 @@ describe('ChatService: orquestador del cerebro (spec 36)', () => {
     return out;
   }
 
+  it('planTurn acepta lastInteractionAt como texto ISO, tal como lo devuelve getPetById', async () => {
+    const s = setup([[{ type: 'done' }]]);
+    Object.assign(s.mind, { profile: jest.fn(async () => ({ dims: neutralDims(), stored: {} })) });
+    Object.assign(s.mindMemory, { situationRows: jest.fn(async () => []) });
+    const iso = new Date(Date.now() - 5 * 60_000).toISOString();
+    const turn = await (s.svc as any).planTurn({ ...s.pet, energy: 80, lastInteractionAt: iso }, 'hola');
+    expect(turn).toBeDefined();
+    expect(turn.situation.awayMinutes).toBe(5);
+    // Una fecha ilegible no rompe el turno: cuenta como «no se sabe»
+    const odd = await (s.svc as any).planTurn({ ...s.pet, lastInteractionAt: 'no-es-fecha' }, 'hola');
+    expect(odd?.situation.awayMinutes).toBe(0);
+  });
+
   it('texto + express_behavior: una sola llamada al proveedor y done con la reacción validada', async () => {
     const s = setup([
       [
