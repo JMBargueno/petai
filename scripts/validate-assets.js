@@ -312,6 +312,56 @@ if (itemsWithArt < foodsData.length) {
 }
 console.log(`✓ items/: ${itemsWithArt} de ${foodsData.length} objetos con icono`);
 
+// Minijuegos (skill pockai-minigame-architect): piezas de 32 o 48 px nativos a ×2 y un fondo de arena
+// por juego. El arte es opcional (la vista pinta un recuadro en su lugar): que falte es un aviso.
+const minigameIds = Object.keys(readJson(path.join(sharedGameDataDir, 'balance.json'))?.minigames?.games || {});
+const minigamesDir = path.join(sharedAssetsDir, 'minigames');
+let minigamesWithArt = 0;
+if (fs.existsSync(minigamesDir)) {
+  const manifest = fs.existsSync(path.join(minigamesDir, 'manifest.json')) ? readJson(path.join(minigamesDir, 'manifest.json')) : null;
+  for (const entry of fs.readdirSync(minigamesDir, { withFileTypes: true }).filter((d) => d.isDirectory())) {
+    const game = entry.name;
+    const fail = (msg) => {
+      console.error(`❌ CRÍTICO [minigames/${game}]: ${msg}`);
+      criticalErrors++;
+    };
+    if (!minigameIds.includes(game)) {
+      fail('no es un minijuego de balance.json');
+      continue;
+    }
+    for (const file of fs.readdirSync(path.join(minigamesDir, game))) {
+      if (file === 'backdrop.webp') {
+        if (!manifest?.games?.[game]?.backdrop) fail('backdrop.webp no está en manifest.json (ejecuta pnpm generate:minigames)');
+      } else if (file.endsWith('.png')) {
+        const piece = file.replace('.png', '');
+        try {
+          const dim = readPngDimensions(path.join(minigamesDir, game, file));
+          if (dim.width !== dim.height || ![64, 96].includes(dim.width)) fail(`${file} mide ${dim.width}×${dim.height} (debe ser 64×64 o 96×96)`);
+        } catch {
+          fail(`${file} no es un PNG válido`);
+        }
+        if (!manifest?.games?.[game]?.pieces?.[piece]) fail(`${file} no está en manifest.json (ejecuta pnpm generate:minigames)`);
+      } else {
+        fail(`${file}: solo se admiten piezas .png y backdrop.webp`);
+      }
+    }
+    minigamesWithArt++;
+  }
+  for (const [game, g] of Object.entries(manifest?.games || {})) {
+    for (const piece of Object.keys(g.pieces || {})) {
+      if (!fs.existsSync(path.join(minigamesDir, game, `${piece}.png`))) {
+        console.error(`❌ CRÍTICO [minigames/${game}]: manifest.json lista la pieza ${piece} y falta su PNG`);
+        criticalErrors++;
+      }
+    }
+  }
+}
+if (minigamesWithArt < minigameIds.length) {
+  console.warn(`⚠️ ADVERTENCIA [minigames]: ${minigameIds.length - minigamesWithArt} de ${minigameIds.length} minijuegos sin arte propio.`);
+  warnings++;
+}
+console.log(`✓ minigames/: ${minigamesWithArt} de ${minigameIds.length} minijuegos con arte`);
+
 console.log('\n=== Resumen de Validación ===');
 console.log(`Errores críticos: ${criticalErrors}`);
 console.log(`Advertencias (con fallback activo): ${warnings}`);

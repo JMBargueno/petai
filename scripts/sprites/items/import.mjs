@@ -3,7 +3,7 @@
 //
 //   node scripts/sprites/items/import.mjs <lámina> --ids <id>[,<id>…]
 //        [--pick 0,2] [--colors 12] [--fit 28] [--size 32] [--no-outline] [--crop x,y,w,h]
-//        [--out shared/assets/items] [--preview <png>]
+//        [--out shared/assets/items] [--free-ids] [--preview <png>]
 //
 // La lámina trae los objetos en fila sobre magenta #ff00ff. Cada objeto se localiza como mancha
 // conexa (lo que comparte columna se funde con él: un rabito suelto, un destello pegado), su paleta
@@ -31,8 +31,12 @@ const OUT = opt('out', 'shared/assets/items');
 const SCALE = 2;
 if (FIT > SIZE - 2) { console.error(`--fit ${FIT} no deja 1 px de margen en un lienzo de ${SIZE}`); process.exit(2); }
 
-const foods = JSON.parse(fs.readFileSync('shared/game-data/foods.json', 'utf8'));
-for (const id of ids) if (!foods.some((f) => f.id === id)) { console.error(`'${id}' no existe en shared/game-data/foods.json`); process.exit(2); }
+// --free-ids: los ids no tienen que estar en foods.json. Es para las piezas de los minijuegos, que se
+// importan igual a shared/assets/minigames/<juego>/ con --out (ver pockai-minigame-architect).
+const FREE_IDS = args.includes('--free-ids');
+for (const id of ids) if (!/^[a-z][a-z0-9_]*$/.test(id)) { console.error(`'${id}' no es un nombre válido (snake_case)`); process.exit(2); }
+const foods = FREE_IDS ? [] : JSON.parse(fs.readFileSync('shared/game-data/foods.json', 'utf8'));
+if (!FREE_IDS) for (const id of ids) if (!foods.some((f) => f.id === id)) { console.error(`'${id}' no existe en shared/game-data/foods.json`); process.exit(2); }
 
 const crop = opt('crop')?.split(',').map(Number);
 let img = sharp(file).removeAlpha();

@@ -5,12 +5,26 @@
    * reglas y la vista viven en shared/minigames; la pausa al perder el foco también.
    */
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-  import { mountMinigame, type MountedMinigame, type PackedEntry, type GameVariant } from '@pockai/minigames';
+  import { mountMinigame, type MountedMinigame, type MinigamePet, type PackedEntry, type GameVariant } from '@pockai/minigames';
+  import { petSheetUrls } from '../lib/sprites';
 
   export let gameId: string;
   export let seed: number;
   export let durationSeconds: number;
   export let variant: GameVariant = 'standard';
+  /** La mascota que juega: sale dentro del minijuego con su especie, etapa, color y patrón. */
+  export let pet: any = null;
+
+  function gamePet(): MinigamePet | undefined {
+    if (!pet) return undefined;
+    return {
+      species: pet.species?.id || pet.species?.spriteKey || 'ignisaur',
+      stage: pet.stage ?? undefined,
+      palette: pet.palette ?? undefined,
+      pattern: pet.pattern?.id ?? null,
+      visualSeed: pet.visualSeed ?? undefined,
+    };
+  }
 
   const dispatch = createEventDispatcher<{
     finish: { score: number; ticks: number; log: PackedEntry[] };
@@ -28,6 +42,8 @@
       durationSeconds,
       variant,
       reducedMotion,
+      pet: gamePet(),
+      resolvePetSheet: (p) => petSheetUrls(p.species, p.stage, p.pattern),
       onEvent: (e) => {
         if (e.type === 'finished') dispatch('finish', { score: e.score, ticks: e.ticks, log: e.log });
         else if (e.type === 'error') dispatch('error', { message: e.message });

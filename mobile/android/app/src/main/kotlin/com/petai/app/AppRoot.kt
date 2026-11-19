@@ -228,7 +228,7 @@ private fun MainScaffold(vm: AppViewModel, state: AppUiState, snackbar: Snackbar
                                     factory = PlayViewModelFactory(app.service, pet.id) { vm.refreshAll() },
                                 )
                                 LaunchedEffect(Unit) { play.refresh() }
-                                PlayScreen(play, section = sub)
+                                PlayScreen(play, section = sub, pet = pet)
                             }
                             2 -> RaidScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })
                             else -> TournamentScreen(app.service, pet = pet, onChanged = { vm.refreshAll() })

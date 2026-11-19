@@ -29,11 +29,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.petai.app.data.BattleOutcome
+import com.petai.app.data.Pet
 import com.petai.app.data.ReplayEvent
 
-/** «Jugar»: arena (`section` 0) y minijuegos (`section` 1). La navegación entre secciones vive en `AppRoot`. */
+/**
+ * «Jugar»: arena (`section` 0) y minijuegos (`section` 1). La navegación entre secciones vive en `AppRoot`.
+ * [pet] es la mascota que juega: sale dentro del minijuego.
+ */
 @Composable
-fun PlayScreen(vm: PlayViewModel, section: Int) {
+fun PlayScreen(vm: PlayViewModel, section: Int, pet: Pet? = null) {
     val state by vm.state.collectAsState()
     val tab = section
 
@@ -54,6 +58,7 @@ fun PlayScreen(vm: PlayViewModel, section: Int) {
                 seed = s.seed,
                 durationSeconds = s.durationSeconds,
                 variant = s.variant,
+                pet = pet,
                 modifier = Modifier.fillMaxSize(),
             ) { ev ->
                 when (ev) {
@@ -189,15 +194,15 @@ private fun GamesTab(state: PlayUiState, vm: PlayViewModel) {
 
 /** Icono y pista de cada minijuego (las reglas viven en el paquete compartido). */
 private val GAME_INFO: Map<String, Pair<ImageVector, String>> = mapOf(
-    "catch_food" to (Lucide.Apple to "Arrastra la cesta para atrapar la comida; esquiva las piedras."),
-    "memory_match" to (Lucide.Brain to "Encuentra todas las parejas antes de que acabe el tiempo."),
-    "reflex" to (Lucide.Zap to "Toca el objetivo en cuanto aparezca."),
-    "pulso_voltaico" to (Lucide.Zap to "Toca el carril cuando el pulso cruce la línea."),
+    "catch_food" to (Lucide.Apple to "Lleva a tu Pockai bajo los frutos; los de la marea valen doble."),
+    "memory_match" to (Lucide.Brain to "Mira el destello del Cristal y empareja los recuerdos."),
+    "reflex" to (Lucide.Zap to "Pesca el Códice en cuanto aflore; deja pasar los rotos."),
+    "pulso_voltaico" to (Lucide.Zap to "Toca el hilo cuando el pulso llegue a la sinapsis."),
     "corriente_datos" to (Lucide.Droplet to "Cambia de carril para recoger paquetes y esquivar bloques."),
     "raiz_fractal" to (Lucide.Leaf to "Gira las raíces hasta que la savia llegue al borde."),
-    "cifrado" to (Lucide.Moon to "Memoriza el orden de los glifos y repítelo."),
+    "cifrado" to (Lucide.Moon to "Memoriza el orden de los sellos y repítelo."),
     "faro_claridad" to (Lucide.Sun to "Deja el haz sobre los bits corruptos para purificarlos."),
-    "forja_termica" to (Lucide.Flame to "Mantén pulsado el fuelle para templar piezas sin quemarlas."),
+    "forja_termica" to (Lucide.Flame to "Mantén pulsado el fuelle para templar nudos sin quemarlos."),
 )
 
 private val ELEMENT_NAMES = mapOf(
@@ -206,7 +211,7 @@ private val ELEMENT_NAMES = mapOf(
 )
 
 /** Objetos que pueden soltar los minijuegos (foods.json). */
-private val ITEM_NAMES = mapOf("spicy_berry" to "Baya Ígnea")
+private val ITEM_NAMES = mapOf("spicy_berry" to "Baya Ígnea", "apple" to "Manzana Crujiente")
 
 private fun describe(e: ReplayEvent, names: List<String>): String? = when (e.t) {
     "round" -> "— Asalto ${e.n} —"

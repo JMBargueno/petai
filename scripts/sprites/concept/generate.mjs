@@ -8,11 +8,31 @@
 // GEMINI_API_KEY o de un archivo .env.local en la raíz (ignorado por git) con una línea
 // GEMINI_API_KEY=…
 import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+
+/**
+ * `.env.local` de aquí, el de la copia principal del repo y el de los demás worktrees: así el script
+ * funciona también desde un worktree recién creado (igual que scripts/art/habitat-backdrops/generate.mjs).
+ */
+function envFiles() {
+  const files = ['.env.local'];
+  try {
+    const common = execSync('git rev-parse --path-format=absolute --git-common-dir', { encoding: 'utf8' }).trim();
+    files.push(path.join(path.dirname(common), '.env.local'));
+    const list = execSync('git worktree list --porcelain', { encoding: 'utf8' });
+    for (const m of list.matchAll(/^worktree (.+)$/gm)) files.push(path.join(m[1].trim(), '.env.local'));
+  } catch {
+    /* fuera de git: solo el de aquí */
+  }
+  return files;
+}
 
 function apiKey() {
   if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-  if (fs.existsSync('.env.local')) {
-    const m = fs.readFileSync('.env.local', 'utf8').match(/^\s*GEMINI_API_KEY\s*=\s*"?([^"\r\n]+)"?\s*$/m);
+  for (const file of envFiles()) {
+    if (!fs.existsSync(file)) continue;
+    const m = fs.readFileSync(file, 'utf8').match(/^\s*GEMINI_API_KEY\s*=\s*"?([^"\r\n]+)"?\s*$/m);
     if (m) return m[1].trim();
   }
   console.error('Falta la clave: define GEMINI_API_KEY o crea .env.local con GEMINI_API_KEY=…');

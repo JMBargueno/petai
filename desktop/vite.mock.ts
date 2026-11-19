@@ -502,9 +502,9 @@ const routes: [string, RegExp, Handler][] = [
     festival: null,
   })],
   ['GET', /^\/minigames$/, () => [
-    { id: 'catch_food', name: 'Atrapa la comida', durationSeconds: 30, maxCoins: 60, maxXp: 40, energyCost: 5 },
-    { id: 'memory_match', name: 'Parejas', durationSeconds: 45, maxCoins: 80, maxXp: 50, energyCost: 5 },
-    { id: 'reflex', name: 'Reflejos', durationSeconds: 20, maxCoins: 40, maxXp: 30, energyCost: 5 },
+    { id: 'catch_food', name: 'Cosecha del Éter', durationSeconds: 30, maxCoins: 60, maxXp: 40, energyCost: 5 },
+    { id: 'memory_match', name: 'Cristal de Recuerdos', durationSeconds: 45, maxCoins: 80, maxXp: 50, energyCost: 5 },
+    { id: 'reflex', name: 'Pesca de Códices', durationSeconds: 20, maxCoins: 40, maxXp: 30, energyCost: 5 },
     // Pruebas de los Seis Flujos (spec 39)
     { id: 'pulso_voltaico', name: 'Pulso Voltaico', element: 'electric', durationSeconds: 30, maxCoins: 40, maxXp: 60, energyCost: 5 },
     { id: 'corriente_datos', name: 'Corriente de Datos', element: 'water', durationSeconds: 30, maxCoins: 40, maxXp: 60, energyCost: 5 },

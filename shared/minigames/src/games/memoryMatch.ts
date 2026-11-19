@@ -2,9 +2,16 @@ import { createRng, shuffle } from '../core/rng';
 import { TICKS_PER_SECOND, secondsToTicks, type GameDefinition, type GameOptions } from '../core/types';
 
 /**
- * Parejas de memoria: 8 parejas boca abajo (4 en la variante accesible). 2 puntos por pareja +
- * bonus de rapidez (hasta 8, solo si se completa) − 1 por cada 3 fallos. Máximo 24, por debajo de
- * 2 pt/s × 15 s de duración mínima.
+ * Cristal de Recuerdos (`memory_match`). El Cristal guarda lo que habéis vivido en facetas
+ * desordenadas; emparejarlas las fija para que no se borren.
+ *
+ * - 8 parejas de facetas (4 en la variante accesible).
+ * - **Destello:** al empezar, el Cristal enseña todas las facetas 2 s (3 s en la accesible) y luego
+ *   las apaga. Mientras dura no se puede tocar nada.
+ * - 2 puntos por pareja + bonus de rapidez (hasta 8, solo si se completa) − 1 por cada 3 fallos.
+ *
+ * Techo: la puntuación máxima es 24 y no depende del tiempo, así que cabe en 3 pt/s × 8 s de duración
+ * mínima aunque el destello permita acabar antes.
  */
 export const MEMORY_MATCH = {
   PAIRS: 8,
@@ -12,6 +19,8 @@ export const MEMORY_MATCH = {
   MAX_CARDS: 16,
   FLIP_BACK_TICKS: secondsToTicks(0.7),
   MAX_BONUS: 8,
+  PEEK_TICKS: secondsToTicks(2),
+  EASY_PEEK_TICKS: secondsToTicks(3),
 } as const;
 
 export interface MemoryMatchState {
@@ -27,6 +36,10 @@ export interface MemoryMatchState {
   /** Tick hasta el que el tablero está bloqueado mostrando un fallo; −1 si no. */
   lockedUntil: number;
   misses: number;
+  /** Hasta este tick dura el destello inicial: todas las facetas a la vista y sin poder tocar. */
+  peekUntil: number;
+  /** Último par destapado, acertado o no (para que la vista reaccione). */
+  last: { tick: number; ok: boolean } | null;
   /** Tick en que se emparejó la última carta; −1 si no ha terminado. */
   completedAt: number;
 }
@@ -36,6 +49,8 @@ export type MemoryMatchInput = { kind: 'flip'; i: number };
 const M = MEMORY_MATCH;
 
 export const pairsFound = (s: MemoryMatchState) => s.matched.filter(Boolean).length / 2;
+/** ¿Sigue el destello inicial? */
+export const isPeeking = (s: Pick<MemoryMatchState, 'tick' | 'peekUntil'>) => s.tick < s.peekUntil;
 
 export const memoryMatch: GameDefinition<MemoryMatchState, MemoryMatchInput> = {
   id: 'memory_match',
@@ -55,6 +70,8 @@ export const memoryMatch: GameDefinition<MemoryMatchState, MemoryMatchInput> = {
       matched: deck.map(() => false),
       lockedUntil: -1,
       misses: 0,
+      peekUntil: easy ? M.EASY_PEEK_TICKS : M.PEEK_TICKS,
+      last: null,
       completedAt: -1,
     };
   },
@@ -67,16 +84,18 @@ export const memoryMatch: GameDefinition<MemoryMatchState, MemoryMatchInput> = {
     return null;
   },
   input(s, { i }) {
-    if (i >= s.deck.length || s.lockedUntil >= 0 || s.flipped.includes(i) || s.matched[i]) return;
+    if (i >= s.deck.length || isPeeking(s) || s.lockedUntil >= 0 || s.flipped.includes(i) || s.matched[i]) return;
     s.flipped.push(i);
     if (s.flipped.length < 2) return;
     const [a, b] = s.flipped;
     if (s.deck[a] === s.deck[b]) {
       s.matched[a] = s.matched[b] = true;
       s.flipped = [];
+      s.last = { tick: s.tick, ok: true };
       if (s.matched.every(Boolean)) s.completedAt = s.tick;
     } else {
       s.misses += 1;
+      s.last = { tick: s.tick, ok: false };
       s.lockedUntil = s.tick + M.FLIP_BACK_TICKS;
     }
   },
