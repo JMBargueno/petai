@@ -243,5 +243,6 @@
   "FURNITURE_BATHE": "I had a good bath in my habitat.",
   "FURNITURE_SIT": "I sat for a while in my favourite spot.",
   "FURNITURE_SLEEP": "I slept in my bed, nice and warm.",
-  "FURNITURE_PLAY": "I played with my things in my habitat."
+  "FURNITURE_PLAY": "I played with my things in my habitat.",
+  "FURNITURE_LISTEN": "I listened to some music on my MP3 player."
 }

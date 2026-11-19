@@ -11,7 +11,7 @@ import { nightHoursBetween, safeTimeZone } from './sleep-cycle';
 import { HabitatService } from '../habitat/habitat.service';
 import { boostedRecovery, reducedDecay, type ActiveBuffs } from '../habitat/habitat-buffs';
 import { STAGE_ORDER, stageForLevel, type Stage } from './stages';
-import { DESKTOP_SKILL_REGISTRY } from '../ai/desktop-skills';
+import { DESKTOP_SKILL_REGISTRY, skillStateOf } from '../ai/desktop-skills';
 /** Higiene a partir de la cual el baño se rechaza (balance.vitals.cleanMaxHygiene lo sustituye). */
 const DEFAULT_CLEAN_MAX_HYGIENE = 80;
 /** Por debajo de este intervalo (~36 s) el lazy tick no cambia nada. */
@@ -56,15 +56,32 @@ export class PetsService {
     const toTick = pets.filter((p) => hoursSinceTick(p, now) >= MIN_TICK_HOURS).map((p) => p.id);
     const buffsByPet = this.habitat && toTick.length ? await this.habitat.getActiveBuffsForPets(toTick) : undefined;
 
+    const owned = await this.ownedFurnitureByPet(pets.map((p) => p.id));
     const updatedPets = [];
     for (const pet of pets) {
       const ticked = await this.applyLazyTick(pet, buffsByPet?.get(pet.id) ?? (buffsByPet ? {} : undefined));
       // Vida autónoma (spec 36): los clientes cargan la lista al abrir; como mucho una simulación por hora y mascota
       const updated = this.autonomy ? await this.autonomy.catchUp(ticked) : ticked;
       // Campos de vínculo (feature 006): el cliente recibe el rango sin calcular nada
-      updatedPets.push({ ...updated, ...this.bonding.bondingFields(updated) });
+      updatedPets.push({ ...updated, ...this.bonding.bondingFields(updated), ownedFurniture: owned.get(pet.id) ?? [] });
     }
     return updatedPets;
+  }
+
+  /**
+   * Muebles distintos que tiene colocados cada mascota (spec 42): algunas habilidades de escritorio
+   * se desbloquean con un mueble. Lo calcula el servidor; los clientes solo lo muestran.
+   */
+  private async ownedFurnitureByPet(petIds: string[]): Promise<Map<string, string[]>> {
+    const out = new Map<string, string[]>();
+    if (!petIds.length) return out;
+    const rows = await this.prisma.habitatItem.findMany({
+      where: { petId: { in: petIds } },
+      select: { petId: true, furnitureId: true },
+      distinct: ['petId', 'furnitureId'],
+    });
+    for (const r of rows ?? []) out.set(r.petId, [...(out.get(r.petId) ?? []), r.furnitureId]);
+    return out;
   }
 
   async getPetById(userId: string, petId: string) {
@@ -78,7 +95,8 @@ export class PetsService {
     const ticked = await this.applyLazyTick(pet);
     // Vida autónoma (spec 36): simula lo que hizo mientras no estabas (perezoso, sin LLM)
     const updated = this.autonomy ? await this.autonomy.catchUp(ticked) : ticked;
-    return { ...updated, ...this.bonding.bondingFields(updated) };
+    const owned = await this.ownedFurnitureByPet([pet.id]);
+    return { ...updated, ...this.bonding.bondingFields(updated), ownedFurniture: owned.get(pet.id) ?? [] };
   }
 
   async feed(userId: string, petId: string, itemId?: string) {
@@ -587,6 +605,14 @@ export class PetsService {
       petIntelligence >= 500 || petIntelligence === 3 ? 3 : petIntelligence >= 200 || petIntelligence === 2 ? 2 : 1;
 
     for (const [skillId, enabled] of Object.entries(skills)) {
+      // Habilidades que se desbloquean con un mueble del hábitat (spec 42)
+      const info = DESKTOP_SKILL_REGISTRY.find((sk) => sk.id === skillId);
+      if (enabled && info?.requiredFurniture) {
+        const st = skillStateOf(info, {}, pet as any);
+        if (st.state === 'locked' && st.missingFurniture) {
+          throw new BadRequestException(`Para activar "${skillId}" necesitas el mueble ${st.missingFurniture} en tu hábitat`);
+        }
+      }
       if (enabled && SKILL_REQUIREMENTS[skillId]) {
         const req = SKILL_REQUIREMENTS[skillId];
         if (petBonding < req.bonding || petIntelligenceLevel < req.intelligence) {

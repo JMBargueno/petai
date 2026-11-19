@@ -27,7 +27,7 @@ export interface SoundDef {
   source: SoundSource;
   /** Prompt completo para ElevenLabs (ya con el `style` del bus). Vacío en los `synth`. */
   prompt: string;
-  /** Segundos (0.5–30, límite de la API). */
+  /** Segundos (0.5–30, límite de la API de efectos; la música llega a 180). */
   duration: number;
   loop: boolean;
   /** Tomas que se quedan en el juego y se rotan. */
@@ -68,6 +68,8 @@ export interface SoundManifest {
 export const ID_RE = /^[a-z0-9_]+(\.[a-z0-9_-]+)+$/;
 const MIN_SECONDS = 0.5;
 const MAX_SECONDS = 30;
+/** Los temas del bus `music` se generan con la API de música de ElevenLabs (spec 42). */
+const MAX_MUSIC_SECONDS = 180;
 
 const BASE: SoundFields = {
   source: 'elevenlabs',
@@ -137,7 +139,8 @@ export function normalizeManifest(raw: unknown): { manifest: SoundManifest; erro
     } else if (!SOUND_SOURCES.includes(def.source)) {
       errors.push(`${at}: source desconocido "${def.source}"`);
     }
-    if (!(def.duration >= MIN_SECONDS && def.duration <= MAX_SECONDS)) errors.push(`${at}: duration debe estar entre ${MIN_SECONDS} y ${MAX_SECONDS} s`);
+    const maxSeconds = bus === 'music' ? MAX_MUSIC_SECONDS : MAX_SECONDS;
+    if (!(def.duration >= MIN_SECONDS && def.duration <= maxSeconds)) errors.push(`${at}: duration debe estar entre ${MIN_SECONDS} y ${maxSeconds} s`);
     if (!Number.isInteger(def.variants) || def.variants < 1 || def.variants > 8) errors.push(`${at}: variants debe ser 1–8`);
     if (!Number.isInteger(def.candidates) || def.candidates < def.variants || def.candidates > 10) errors.push(`${at}: candidates debe ser ≥ variants y ≤ 10`);
     if (!(def.promptInfluence >= 0 && def.promptInfluence <= 1)) errors.push(`${at}: promptInfluence debe ser 0–1`);

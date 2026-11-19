@@ -5422,6 +5422,8 @@ export interface components {
             y?: number;
             /** @description Giro en pasos de 90° */
             rotation?: number;
+            /** @description Sala destino (solo muebles de cualquier sala) */
+            roomId?: string;
         };
         MoveFurnitureDto: {
             /** @description Celda ancla x (con y) */
@@ -5430,6 +5432,8 @@ export interface components {
             y?: number;
             /** @description Giro en pasos de 90° */
             rotation?: number;
+            /** @description Sala destino (solo muebles de cualquier sala) */
+            roomId?: string;
         };
         ContactDto: {
             /**

@@ -23,6 +23,7 @@ function makePrisma(items: Item[] = [], stage = 'adult') {
     habitatItem: {
       findMany: jest.fn(async ({ where: w }: any) => items.filter(where(w))),
       findFirst: jest.fn(async ({ where: w }: any) => items.find(where(w)) ?? null),
+      count: jest.fn(async ({ where: w }: any) => items.filter(where(w)).length),
       create: jest.fn(async ({ data }: any) => {
         const it = { id: `i${++seq}`, purchasedAt: new Date(), rotation: 0, ...data };
         items.push(it);
@@ -125,5 +126,32 @@ describe('HabitatService (huellas, colocación y movimiento)', () => {
     prisma.habitatItem.update.mockClear();
     await service.getHabitat('u1');
     expect(prisma.habitatItem.update).not.toHaveBeenCalled(); // ya reparado
+  });
+});
+
+describe('HabitatService · muebles de cualquier sala (spec 42)', () => {
+  it('el MP3 va a la sala que pide el cliente, o a la primera si no dice ninguna', async () => {
+    const { service } = makeService();
+    await expect(service.placeFurniture('u1', 'mp3', { roomId: 'jardin' })).resolves.toMatchObject({ room: 'jardin' });
+    const { service: other } = makeService();
+    await expect(other.placeFurniture('u1', 'mp3')).resolves.toMatchObject({ room: 'sala' });
+  });
+
+  it('respeta el bloqueo de la sala elegida', async () => {
+    const { service } = makeService([], { stage: 'baby' });
+    await expect(service.placeFurniture('u1', 'mp3', { roomId: 'santuario' })).rejects.toThrow(/Room locked/);
+  });
+
+  it('es único: no se compra dos veces (y no se cobra)', async () => {
+    const { service, wallet } = makeService([item({ id: 'm', furnitureId: 'mp3', x: 3, y: 3 })]);
+    await expect(service.placeFurniture('u1', 'mp3', { roomId: 'jardin' })).rejects.toThrow(/Already owned/);
+    expect(wallet.debit).not.toHaveBeenCalled();
+  });
+
+  it('se mueve a otra sala sin cobro; los muebles normales no pueden cambiar de sala', async () => {
+    const { service, items } = makeService([item({ id: 'm', furnitureId: 'mp3', x: 3, y: 3 }), item({ id: 'b', x: 6, y: 6 })]);
+    await expect(service.moveFurniture('u1', 'm', { roomId: 'jardin' })).resolves.toMatchObject({ room: 'jardin' });
+    expect(items.find((i) => i.id === 'm')!.roomId).toBe('jardin');
+    await expect(service.moveFurniture('u1', 'b', { roomId: 'jardin' })).rejects.toThrow(/cannot change room/);
   });
 });

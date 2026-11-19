@@ -11,7 +11,7 @@
 import { PlayGate, pickVariant } from './gate';
 import { BUSES, type Bus, type SoundDef, type SoundManifest, type SoundPlatform } from './manifest';
 import { computeVoice, type FxSpec, type VoiceTraits } from './profiles';
-import { defaultAudioSettings, effectiveBusGain, type AudioEnv, type AudioSettings } from './settings';
+import { defaultAudioSettings, effectiveBusGain, playerBusGain, type AudioEnv, type AudioSettings } from './settings';
 import { SYNTHS, type SynthFn } from './synth';
 
 export interface PlayOptions extends VoiceTraits {
@@ -34,6 +34,10 @@ export interface LoopOptions extends PlayOptions {
   /** Clave para tener varios loops del mismo id (p. ej. dos fuentes en la sala). Por defecto, el id. */
   key?: string;
   fadeMs?: number;
+  /** Volumen propio del loop, 0–1 (las capas del MP3). Por defecto 1. */
+  volume?: number;
+  /** Lo pone el usuario con el reproductor MP3: no se calla en el escritorio (spec 42). */
+  player?: boolean;
 }
 
 export interface EngineOptions {
@@ -54,17 +58,25 @@ export interface EngineOptions {
 interface BusNodes {
   gain: GainNode;
   duck: GainNode;
+  /** Salida de los loops del reproductor: mismo bus, sin el silencio del escritorio. */
+  player: GainNode;
 }
 
 interface LoopVoice {
   id: string;
   gain: GainNode;
+  /** Volumen al que sube tras el fundido (0–1). */
+  level: number;
+  player: boolean;
+  /** Ya suena (el buffer ha cargado). */
+  started: boolean;
   stop: (when: number) => void;
 }
 
 /** Un one-shot que tarda más que esto en cargar ya no se reproduce: llegaría a destiempo. */
 const MAX_LATE_MS = 250;
 const dbToGain = (db: number) => Math.pow(10, db / 20);
+const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1);
 
 function defaultContext(): AudioContext | null {
   const Ctor =
@@ -245,12 +257,16 @@ export class SoundEngine {
     const fade = (opts.fadeMs ?? 600) / 1000;
     const gain = ctx.createGain();
     gain.gain.value = 0;
-    gain.connect(this.busNodes(def.bus).gain);
+    const player = !!opts.player;
+    gain.connect(player ? this.busNodes(def.bus).player : this.busNodes(def.bus).gain);
     let stopped = false;
     let source: AudioBufferSourceNode | null = null;
     const voice: LoopVoice = {
       id,
       gain,
+      level: clamp01(opts.volume ?? 1),
+      player,
+      started: false,
       stop: (when) => {
         stopped = true;
         try {
@@ -261,14 +277,29 @@ export class SoundEngine {
       },
     };
     this.loops.set(key, voice);
+    if (player) this.applyGains();
     void this.load(url).then((buf) => {
       if (!buf || stopped || this.loops.get(key) !== voice) return;
       source = this.startBuffer(ctx, def, buf, opts, true, gain);
+      voice.started = true;
       const t = ctx.currentTime;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(1, t + fade);
+      gain.gain.linearRampToValueAtTime(voice.level, t + fade);
     });
     return true;
+  }
+
+  /** Cambia el volumen (0–1) de un loop que ya suena, con una rampa corta. */
+  setLoopVolume(key: string, volume: number, rampMs = 200): void {
+    const v = this.loops.get(key);
+    if (!v) return;
+    v.level = clamp01(volume);
+    const ctx = this.ctx;
+    if (!ctx || !v.started) return;
+    const t = ctx.currentTime;
+    v.gain.gain.cancelScheduledValues(t);
+    v.gain.gain.setValueAtTime(v.gain.gain.value, t);
+    v.gain.gain.linearRampToValueAtTime(v.level, t + rampMs / 1000);
   }
 
   stopLoop(key: string, fadeMs = 600): void {
@@ -277,6 +308,7 @@ export class SoundEngine {
     this.loops.delete(key);
     const ctx = this.ctx;
     if (!ctx) return;
+    if (v.player) this.applyGains();
     const t = ctx.currentTime;
     v.gain.gain.cancelScheduledValues(t);
     v.gain.gain.setValueAtTime(v.gain.gain.value, t);
@@ -343,7 +375,9 @@ export class SoundEngine {
   }
 
   private audible(): boolean {
-    return BUSES.some((b) => this.busGain(b) > 0);
+    if (BUSES.some((b) => this.busGain(b) > 0)) return true;
+    // El reproductor MP3 sigue sonando aunque el resto esté callado (escritorio, sin foco)
+    return [...this.loops.values()].some((v) => v.player && playerBusGain(this.settings, this.manifest.sounds.get(v.id)?.bus ?? 'music', this.env) > 0);
   }
 
   private ensureContext(): AudioContext | null {
@@ -367,9 +401,11 @@ export class SoundEngine {
     let n = this.buses.get(bus);
     if (!n) {
       const ctx = this.ctx!;
-      n = { gain: ctx.createGain(), duck: ctx.createGain() };
+      n = { gain: ctx.createGain(), duck: ctx.createGain(), player: ctx.createGain() };
       n.gain.gain.value = this.busGain(bus);
+      n.player.gain.value = playerBusGain(this.settings, bus, this.env);
       n.gain.connect(n.duck).connect(this.master!);
+      n.player.connect(n.duck);
       this.buses.set(bus, n);
     }
     return n;
@@ -384,6 +420,10 @@ export class SoundEngine {
       g.cancelScheduledValues(t);
       g.setValueAtTime(g.value, t);
       g.linearRampToValueAtTime(this.busGain(b), t + 0.15);
+      const p = this.busNodes(b).player.gain;
+      p.cancelScheduledValues(t);
+      p.setValueAtTime(p.value, t);
+      p.linearRampToValueAtTime(playerBusGain(this.settings, b, this.env), t + 0.15);
     }
     if (!this.audible()) {
       if (ctx.state === 'running') void ctx.suspend().catch(() => {});

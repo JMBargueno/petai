@@ -48,7 +48,9 @@ export interface FurnitureConfig {
   description: string;
   footprint?: [number, number];
   mount?: Mount;
-  interaction?: 'sleep' | 'eat' | 'play' | 'bathe' | 'sit';
+  interaction?: 'sleep' | 'eat' | 'play' | 'bathe' | 'sit' | 'listen';
+  /** Solo se puede tener uno (spec 42). */
+  unique?: boolean;
 }
 
 type ItemRow = { id: string; furnitureId: string; roomId: string; x: number; y: number; rotation: number };
@@ -157,7 +159,7 @@ export class HabitatService {
     const furniture = this.data().furniture.find((f) => f.id === furnitureId);
     if (!furniture) throw new NotFoundException('Furniture not found');
 
-    const room = this.data().rooms.find((r) => r.id === furniture.room);
+    const room = this.targetRoom(furniture, input.roomId);
     if (!room) throw new BadRequestException('Invalid room for furniture');
 
     if (STAGE_ORDER.indexOf(pet.stage) < STAGE_ORDER.indexOf(room.unlockStage)) {
@@ -167,6 +169,10 @@ export class HabitatService {
     // S-05 (SDD §3.3): cobro atómico race-safe (C-01) y entrega en la misma transacción. Si no hay
     // hueco o la posición no es válida, el cargo se revierte.
     return await this.prisma.$transaction(async (tx) => {
+      // Muebles únicos (spec 42): solo se compran una vez; para cambiarlos de sala se mueven.
+      if (furniture.unique && (await tx.habitatItem.count({ where: { petId: pet.id, furnitureId: furniture.id } })) > 0) {
+        throw new BadRequestException('Already owned: move it to another room instead');
+      }
       const { ok } = await this.wallet.debit(tx, userId, furniture.currency, furniture.price);
       if (!ok) throw new BadRequestException(`Not enough ${furniture.currency}`);
 
@@ -204,24 +210,54 @@ export class HabitatService {
       if (!item) throw new NotFoundException('Furniture not found in habitat');
       await this.lockHabitat(tx, item.habitatId);
 
-      const room = this.data().rooms.find((r) => r.id === item.roomId);
+      // Cambiar de sala solo vale para los muebles de cualquier sala (`room: "*"`, spec 42).
+      const changingRoom = input.roomId !== undefined && input.roomId !== item.roomId;
+      const def = this.data().furniture.find((f) => f.id === item.furnitureId);
+      if (changingRoom && def?.room !== '*') throw new BadRequestException('This furniture cannot change room');
+      const room = this.data().rooms.find((r) => r.id === (changingRoom ? input.roomId : item.roomId));
       if (!room) throw new BadRequestException('Invalid room for furniture');
+      if (changingRoom && STAGE_ORDER.indexOf(pet.stage) < STAGE_ORDER.indexOf(room.unlockStage)) {
+        throw new BadRequestException(`Room locked. Requires stage: ${room.unlockStage}`);
+      }
       const shape = this.shapeOf(item.furnitureId);
 
-      const placement: Placement = {
-        x: input.x ?? item.x,
-        y: input.y ?? item.y,
-        rotation: normalizeRotation(input.rotation ?? item.rotation),
-      };
-      const others = (await tx.habitatItem.findMany({ where: { petId: pet.id, roomId: item.roomId } }))
+      const others = (await tx.habitatItem.findMany({ where: { petId: pet.id, roomId: room.id } }))
         .filter((i) => i.id !== item.id)
         .map((i) => this.placedShape(i));
-      const err = validatePlacement(room, shape, placement, others);
-      if (err) throw new BadRequestException(PLACEMENT_ERRORS[err]);
+      let placement: Placement | null;
+      if (changingRoom && (input.x === undefined || input.y === undefined)) {
+        // A otra sala sin posición: al primer hueco donde quepa
+        placement = findFreePlacement(room, shape, others);
+        if (!placement) throw new BadRequestException('No free cells in room');
+      } else {
+        placement = {
+          x: input.x ?? item.x,
+          y: input.y ?? item.y,
+          rotation: normalizeRotation(input.rotation ?? item.rotation),
+        };
+        const err = validatePlacement(room, shape, placement, others);
+        if (err) throw new BadRequestException(PLACEMENT_ERRORS[err]);
+      }
 
-      await tx.habitatItem.update({ where: { id: item.id }, data: placement });
-      return { message: 'Furniture moved', itemId: item.id, furnitureId: item.furnitureId, room: item.roomId, ...placement };
+      await tx.habitatItem.update({ where: { id: item.id }, data: { ...placement, roomId: room.id } });
+      return { message: 'Furniture moved', itemId: item.id, furnitureId: item.furnitureId, room: room.id, ...placement };
     });
+  }
+
+  /**
+   * Sala donde va un mueble. Los de cualquier sala (`room: "*"`) usan la que pide el cliente o,
+   * si no dice ninguna (clientes antiguos), la primera del catálogo.
+   */
+  private targetRoom(furniture: FurnitureConfig, roomId?: string): RoomConfig | undefined {
+    const rooms = this.data().rooms;
+    if (furniture.room !== '*') return rooms.find((r) => r.id === furniture.room);
+    return roomId ? rooms.find((r) => r.id === roomId) : rooms[0];
+  }
+
+  /** Muebles distintos que tiene colocados la mascota (desbloquean habilidades, spec 42). */
+  async ownedFurniture(petId: string): Promise<string[]> {
+    const rows = await this.prisma.habitatItem.findMany({ where: { petId }, select: { furnitureId: true }, distinct: ['furnitureId'] });
+    return rows.map((r) => r.furnitureId);
   }
 
   /** Quita un mueble concreto (por id de item). */

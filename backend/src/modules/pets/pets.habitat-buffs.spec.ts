@@ -135,7 +135,9 @@ describe('PetsService · buffs del hábitat en el lazy tick (spec 10)', () => {
       const { service, prisma } = makeServices({ p1: ['fountain_water'], p2: ['soft_bed'] });
       prisma.pet.findMany.mockResolvedValue([awakePet('p1'), sleepingPet('p2')]);
       const pets = await service.getPets('u1');
-      expect(prisma.habitatItem.findMany).toHaveBeenCalledTimes(1);
+      // Una consulta de buffs (la otra, con `distinct`, es la de muebles que desbloquean habilidades: spec 42)
+      const buffQueries = prisma.habitatItem.findMany.mock.calls.filter(([q]: any[]) => !q?.distinct);
+      expect(buffQueries).toHaveLength(1);
       expect(pets.find((p: any) => p.id === 'p1')!.hygiene).toBe(95.4); // 100 − 2.5·2·0.92
       expect(pets.find((p: any) => p.id === 'p2')!.energy).toBe(43);
     });

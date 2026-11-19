@@ -6,7 +6,15 @@
   import { startClickThrough } from './lib/clickthrough';
   import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
   import { initSummonShortcut } from './lib/summonShortcut';
-  import { setActiveSkillsPet } from './lib/stores/desktopSkillsStore';
+  import {
+    getPetBonding,
+    isSkillActive,
+    ownedFurniture,
+    setActiveSkillsPet,
+    skillAuthorizations,
+    syncOwnedFurniture,
+  } from './lib/stores/desktopSkillsStore';
+  import { setMixerEnabled } from './lib/mixer';
   import { notifyPetNeeds, notifyNow } from './lib/notifications';
   import { speak, clearSpeech, MAX_AI_CHUNKS, type SpeakOptions } from './lib/speech-queue';
   import {
@@ -107,7 +115,16 @@
   $: if ((currentPet?.id ?? null) !== skillsPetId) {
     skillsPetId = currentPet?.id ?? null;
     setActiveSkillsPet(skillsPetId, currentPet?.desktopSkills);
+    ownedFurniture.set([]);
   }
+  // Muebles colocados (desbloquean habilidades, spec 42): solo si la respuesta los trae
+  $: syncOwnedFurniture(currentPet);
+  // El reproductor MP3 solo suena con la habilidad Música ambiente activa (mueble MP3 en el hábitat)
+  $: setMixerEnabled(
+    !!currentPet &&
+      $ownedFurniture.includes('mp3') &&
+      isSkillActive('ambient_mixer', $skillAuthorizations, getPetBonding(currentPet), currentPet?.intelligence ?? 0),
+  );
 
   let syncedActivePetId: string | null = null;
   $: if (user && currentPet?.id && currentPet.id !== syncedActivePetId && currentPet.id === loadActivePetId()) {

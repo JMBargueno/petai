@@ -6,6 +6,7 @@
     skillSyncFailed,
     syncSkillsFromBackend,
     isSkillUnlocked,
+    ownedFurniture,
     getPetBonding,
     getPetIntelligenceLevel,
     getPetIntelligenceTierName,
@@ -14,6 +15,7 @@
   import Ico from './Ico.svelte';
   import { Badge, Button, FeatureHeader, Notice, Segmented } from './ui';
   import PomodoroWidget from './PomodoroWidget.svelte';
+  import MixerWidget from './MixerWidget.svelte';
   import {
     DEFAULT_SUMMON_SHORTCUT,
     SUMMON_SKILL_ID,
@@ -121,7 +123,8 @@
 
   <div class="ui-list">
     {#each filteredSkills as skill (skill.id)}
-      {@const unlocked = isSkillUnlocked(skill, petBonding, petIntelligencePoints)}
+      {@const unlocked = isSkillUnlocked(skill, petBonding, petIntelligencePoints, $ownedFurniture)}
+      {@const furnMet = !skill.requiredFurniture || $ownedFurniture.includes(skill.requiredFurniture.id)}
       {@const enabled = !!$skillAuthorizations[skill.id]}
       {@const bondMet = petBonding >= skill.requiredBonding}
       {@const reqTierPoints = getPetIntelligenceRequiredPoints(skill.requiredIntelligence)}
@@ -182,6 +185,11 @@
                 IA {reqTierName} · {petIntelligencePoints}/{reqTierPoints}
               </Badge>
             {/if}
+            {#if skill.requiredFurniture}
+              <Badge size="sm" tone={furnMet ? 'success' : 'warning'} icon={furnMet ? 'check' : 'lock'}>
+                Compra el {skill.requiredFurniture.name} en el hábitat
+              </Badge>
+            {/if}
           </div>
         {:else}
           <p class="met"><Ico n="check" size={12} />
@@ -191,6 +199,8 @@
               Vínculo {skill.requiredBonding}+ pts
             {:else if skill.requiredIntelligence > 1}
               IA {reqTierName} ({reqTierPoints}+ pts)
+            {:else if skill.requiredFurniture}
+              {skill.requiredFurniture.name} en tu hábitat
             {:else}
               Habilidad básica disponible
             {/if}
@@ -244,6 +254,9 @@
 
         {#if skill.id === 'pomodoro_companion' && unlocked && enabled}
           <PomodoroWidget />
+        {/if}
+        {#if skill.id === 'ambient_mixer' && unlocked && enabled}
+          <MixerWidget />
         {/if}
       </div>
     {/each}

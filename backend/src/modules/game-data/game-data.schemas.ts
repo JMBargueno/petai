@@ -379,6 +379,7 @@ export const habitatsSchema = z.object({
     z.object({
       id: z.string().min(1),
       name: z.string().min(1),
+      /** Sala del mueble, o `*` si se puede colocar en cualquiera (spec 42). */
       room: z.string().min(1),
       price: z.number().int().min(0),
       currency: z.enum(['coins', 'gems']),
@@ -389,7 +390,9 @@ export const habitatsSchema = z.object({
       /** `floor`: ocupa celdas del suelo. `wall`: va pegado a una pared y no bloquea el suelo. */
       mount: z.enum(['floor', 'wall']).default('floor'),
       /** Uso que le da el Pockai (cama → dormir…). */
-      interaction: z.enum(['sleep', 'eat', 'play', 'bathe', 'sit']).optional(),
+      interaction: z.enum(['sleep', 'eat', 'play', 'bathe', 'sit', 'listen']).optional(),
+      /** Solo se puede tener uno: comprarlo otra vez no se permite; se mueve entre salas. */
+      unique: z.boolean().optional(),
     }),
   ),
   buffCaps: z.record(z.string(), z.number().min(0)),
@@ -647,18 +650,22 @@ export function validateGameData(b: GameDataBundle): string[] {
         break;
       }
       furnIds.add(f.id);
-      if (!roomIds.has(f.room)) errors.push(`Mueble ${f.id}: la sala '${f.room}' no existe en habitats.json`);
-      const room = ((habitats as any).rooms ?? []).find((r: any) => r.id === f.room);
+      // `*` = cualquier sala (spec 42): la huella tiene que caber en todas.
+      const anyRoom = f.room === '*';
+      if (!anyRoom && !roomIds.has(f.room)) errors.push(`Mueble ${f.id}: la sala '${f.room}' no existe en habitats.json`);
+      const targets = ((habitats as any).rooms ?? []).filter((r: any) => anyRoom || r.id === f.room);
       const [fw, fd] = Array.isArray(f.footprint) ? f.footprint : [1, 1];
-      if (room && (Math.max(fw, fd) > Math.min(room.gridWidth, room.gridHeight))) {
-        errors.push(`Mueble ${f.id}: la huella ${fw}×${fd} no cabe girada en la sala '${f.room}'`);
+      for (const room of targets) {
+        if (Math.max(fw, fd) > Math.min(room.gridWidth, room.gridHeight)) {
+          errors.push(`Mueble ${f.id}: la huella ${fw}×${fd} no cabe girada en la sala '${room.id}'`);
+        }
       }
     }
     // Forma de cada sala: huecos lejos de las paredes del fondo, suelo conexo y sitio para su
     // mueble más grande.
     for (const r of (habitats as any).rooms ?? []) {
       const sizes = ((habitats as any).furniture ?? [])
-        .filter((f: any) => f.room === r.id && f.mount !== 'wall')
+        .filter((f: any) => (f.room === r.id || f.room === '*') && f.mount !== 'wall')
         .map((f: any) => (Array.isArray(f.footprint) ? f.footprint : [1, 1]) as [number, number]);
       const biggest = sizes.reduce(
         (a: [number, number], f: [number, number]) => (f[0] * f[1] > a[0] * a[1] ? f : a),

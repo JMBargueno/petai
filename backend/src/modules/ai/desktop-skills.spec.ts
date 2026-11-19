@@ -41,6 +41,14 @@ describe('desktop-skills', () => {
     expect(block).not.toContain('Mascota → Habilidades');
   });
 
+  it('Música ambiente se desbloquea con el mueble MP3 (spec 42)', () => {
+    const mixer = getDesktopSkill('ambient_mixer')!;
+    expect(skillStateOf(mixer, {}, { bonding: 90, intelligence: 900 })).toMatchObject({ state: 'locked', missingFurniture: 'Reproductor MP3' });
+    expect(skillStateOf(mixer, {}, { bonding: 0, ownedFurniture: ['soft_bed'] }).state).toBe('locked');
+    expect(skillStateOf(mixer, {}, { bonding: 0, ownedFurniture: ['mp3'] })).toEqual({ state: 'active' });
+    expect(buildDesktopSkillsBlock({ bonding: 50 })).toMatch(/Música ambiente: te falta tener el mueble Reproductor MP3/);
+  });
+
   it('ids únicos', () => {
     const ids = DESKTOP_SKILL_REGISTRY.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);

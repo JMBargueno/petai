@@ -1320,6 +1320,19 @@
     }
   }
 
+  /**
+   * Reproductor MP3 (spec 42): al poner música se alegra. El recado del Éter (sacar el MP3 y
+   * tocarlo con la hebra) ya lo anima el director; aquí solo el gesto si está libre.
+   */
+  function handleMixerEvent(e: Event) {
+    const action = (e as CustomEvent<{ action: string }>).detail?.action;
+    if (!isSkillActive('ambient_mixer', $skillAuthorizations, petBonding, petIntelligence)) return;
+    if (action === 'play' && !errandBusy) {
+      play('happy');
+      squash(1.08, 0.92, 160);
+    }
+  }
+
   /** Ofrece la patita para chocar los cinco durante unos segundos. */
   function offerHighFive() {
     if (isHighFiveWaiting) return;
@@ -1528,6 +1541,7 @@
 
     window.addEventListener('petai:summon', handleQuickSummon);
     window.addEventListener('petai:pomodoro_event', handlePomodoroEvent);
+    window.addEventListener('petai:mixer_event', handleMixerEvent);
 
     // Ciclo de comportamiento anterior al cerebro (tiradas al azar cada 3 s). Se conserva tal cual
     // tras el interruptor `petai:desk_brain` hasta dar por bueno el cerebro; después se retira.
@@ -1798,6 +1812,7 @@
     window.removeEventListener('mouseup', handleMouseUp);
     window.removeEventListener('petai:summon', handleQuickSummon);
     window.removeEventListener('petai:pomodoro_event', handlePomodoroEvent);
+    window.removeEventListener('petai:mixer_event', handleMixerEvent);
   });
 </script>
 

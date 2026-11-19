@@ -13,7 +13,7 @@ const data = JSON.parse(fs.readFileSync(path.join(root, 'shared/game-data/habita
 
 const BUFFS = ['hygiene_decay_reduction', 'happiness_decay_reduction', 'energy_recovery_boost', 'combat_mood_bonus'];
 const MOUNTS = ['floor', 'wall'];
-const INTERACTIONS = ['sleep', 'eat', 'play', 'bathe', 'sit'];
+const INTERACTIONS = ['sleep', 'eat', 'play', 'bathe', 'sit', 'listen'];
 const ID = /^[a-z][a-z0-9_]*$/;
 const only = process.argv[2];
 const errors = [];
@@ -27,8 +27,11 @@ for (const f of data.furniture) {
   if (only && f.id !== only) continue;
   const tag = `[${f.id}]`;
   if (!ID.test(f.id)) errors.push(`${tag} id inválido (snake_case)`);
-  const room = rooms.get(f.room);
+  // `*` = cualquier sala (spec 42): la huella debe caber en todas.
+  const anyRoom = f.room === "*";
+  const room = anyRoom ? [...rooms.values()].reduce((a, r) => (r.gridWidth * r.gridHeight < a.gridWidth * a.gridHeight ? r : a)) : rooms.get(f.room);
   if (!room) errors.push(`${tag} sala inexistente: ${f.room}`);
+  if (f.unique !== undefined && typeof f.unique !== "boolean") errors.push(`${tag} unique debe ser booleano`);
   const keys = Object.keys(f.buffs ?? {});
   for (const k of keys) if (!BUFFS.includes(k)) errors.push(`${tag} buff desconocido: ${k} (válidos: ${BUFFS.join(', ')})`);
   if (keys.length > 2) warnings.push(`${tag} más de 2 buffs`);
@@ -39,7 +42,7 @@ for (const f of data.furniture) {
     if (typeof cap === 'number' && f.buffs[k] > cap * 0.6) warnings.push(`${tag} ${k}=${f.buffs[k]} se acerca al tope (${cap})`);
   }
   if (f.currency === 'gems' && f.price > 5) warnings.push(`${tag} precio en gemas alto (${f.price})`);
-  if (f.currency === 'coins' && keys.length === 0 && f.price > 250) warnings.push(`${tag} decorativo caro (${f.price} coins)`);
+  if (f.currency === 'coins' && keys.length === 0 && !f.interaction && f.price > 250) warnings.push(`${tag} decorativo caro (${f.price} coins)`);
   if (!/\d/.test(f.description) && keys.length) warnings.push(`${tag} la description no cita el valor del buff`);
 
   // Campos de la migración isométrica (GUIA_ARTISTICA §7.4)
@@ -91,7 +94,7 @@ for (const r of data.rooms) {
 }
 
 for (const r of data.rooms) {
-  const n = data.furniture.filter((f) => f.room === r.id).length;
+  const n = data.furniture.filter((f) => f.room === r.id || f.room === "*").length;
   console.log(`Sala ${r.id} (${r.unlockStage}, ${r.gridWidth}×${r.gridHeight}, ${(r.blocked ?? []).length} huecos): ${n} muebles${r.theme ? '' : ' · sin theme'}`);
 }
 console.log('Buffs del catálogo: ' + BUFFS.map((k) => `${k}=${totals[k].toFixed(2)}/${capOf(k) ?? '∞'}`).join(' '));

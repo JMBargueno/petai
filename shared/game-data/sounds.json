@@ -5,15 +5,26 @@
     "ui": "clean soft mobile game interface sound, cozy pastel fantasy, short, no music, no voice",
     "sfx": "cute fantasy video game sound effect, clean, crisp, no music, no speech",
     "pet": "tiny cute fantasy creature, close mic, dry recording, no music, no human words",
-    "ambient": "seamless gentle ambient loop, cozy fantasy game, no music, no voices"
+    "ambient": "seamless gentle ambient loop, cozy fantasy game, no music, no voices",
+    "music": "instrumental lofi hip hop, warm, mellow, relaxed tempo around 75 bpm, vinyl crackle, soft jazzy chords, cozy study music, no vocals, seamless loop that ends where it begins"
   },
   "defaults": {
     "ui": { "duration": 0.5, "candidates": 3, "gainDb": -10, "cooldownMs": 60, "profile": "subtle", "promptInfluence": 0.5, "platforms": ["scene", "android-native"] },
     "sfx": { "duration": 1, "candidates": 4, "gainDb": -6, "cooldownMs": 80, "profile": "none", "promptInfluence": 0.45 },
     "pet": { "duration": 1, "candidates": 4, "gainDb": -6, "cooldownMs": 200, "profile": "creature", "promptInfluence": 0.35 },
-    "ambient": { "duration": 22, "loop": true, "candidates": 2, "gainDb": -16, "cooldownMs": 0, "promptInfluence": 0.3 }
+    "ambient": { "duration": 22, "loop": true, "candidates": 2, "gainDb": -16, "cooldownMs": 0, "promptInfluence": 0.3 },
+    "music": { "duration": 90, "loop": true, "candidates": 2, "gainDb": -10, "cooldownMs": 0, "platforms": ["desktop"] }
   },
   "sounds": [
+    { "id": "music.lofi.night", "prompt": "Quiet night lofi: dreamy Rhodes piano, soft brushed drums, warm bass, gentle rain-like vinyl hiss", "note": "MP3 (spec 42). Tema 1: noche tranquila." },
+    { "id": "music.lofi.tea", "prompt": "Afternoon tea lofi: nylon guitar melody, light boom bap drums, airy flute pad, sunny and calm", "note": "MP3 (spec 42). Tema 2: tarde de té." },
+    { "id": "music.lofi.bits", "prompt": "Pixel dreams lofi: soft chiptune lead blended with mellow keys, dusty drums, deep sub bass, nostalgic video game mood", "note": "MP3 (spec 42). Tema 3: lluvia de bits." },
+    { "id": "amb.mixer.rain", "prompt": "steady soft rain falling on a roof and leaves, constant, no thunder", "duration": 24, "gainDb": -6, "platforms": ["desktop"], "note": "Capa del MP3 (spec 42)." },
+    { "id": "amb.mixer.thunder", "prompt": "distant rolling thunder rumbles with long quiet gaps, no rain, far away storm", "duration": 28, "gainDb": -6, "platforms": ["desktop"], "note": "Capa del MP3 (spec 42)." },
+    { "id": "amb.mixer.wind", "prompt": "soft wind blowing through trees and grass, gentle gusts, airy", "duration": 24, "gainDb": -6, "platforms": ["desktop"], "note": "Capa del MP3 (spec 42)." },
+    { "id": "amb.mixer.crickets", "prompt": "summer night crickets chirping in a meadow, calm and steady", "duration": 20, "gainDb": -6, "platforms": ["desktop"], "note": "Capa del MP3 (spec 42)." },
+    { "id": "amb.mixer.birds", "prompt": "morning songbirds chirping in a peaceful forest, sparse and gentle", "duration": 24, "gainDb": -6, "platforms": ["desktop"], "note": "Capa del MP3 (spec 42)." },
+
     { "id": "ui.tap", "prompt": "soft rounded wooden button tap" },
     { "id": "ui.tap_soft", "prompt": "very soft muted bubble pop click", "gainDb": -14 },
     { "id": "ui.tab", "prompt": "light paper page flick, quick tab switch" },

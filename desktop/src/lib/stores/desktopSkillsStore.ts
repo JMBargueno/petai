@@ -157,15 +157,34 @@ export function getPetIntelligenceRequiredPoints(level: number): number {
   return 0;
 }
 
+/**
+ * Muebles que tiene colocados la mascota (`pet.ownedFurniture`, lo calcula el servidor). Algunas
+ * habilidades se desbloquean con un mueble (spec 42). Sin dato, cuenta como que no lo tiene.
+ */
+export const ownedFurniture = writable<readonly string[]>([]);
+let ownedNow: readonly string[] = [];
+ownedFurniture.subscribe((v) => (ownedNow = v));
+
+/** Copia la lista del servidor si la respuesta de la mascota la trae (las parciales no la borran). */
+export function syncOwnedFurniture(pet: any): void {
+  if (Array.isArray(pet?.ownedFurniture)) ownedFurniture.set(pet.ownedFurniture.filter((x: unknown) => typeof x === 'string'));
+}
+
+export function hasRequiredFurniture(skill: DesktopSkillDefinition, owned: readonly string[] = ownedNow): boolean {
+  return !skill.requiredFurniture || owned.includes(skill.requiredFurniture.id);
+}
+
 export function isSkillUnlocked(
   skill: DesktopSkillDefinition,
   petBonding = 0,
-  petIntelligence = 1
+  petIntelligence = 1,
+  owned: readonly string[] = ownedNow
 ): boolean {
   const intLevel = getPetIntelligenceLevel(petIntelligence);
   return (
     petBonding >= skill.requiredBonding &&
-    intLevel >= skill.requiredIntelligence
+    intLevel >= skill.requiredIntelligence &&
+    hasRequiredFurniture(skill, owned)
   );
 }
 

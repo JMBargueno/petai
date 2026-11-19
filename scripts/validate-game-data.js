@@ -305,7 +305,7 @@ if (pers) {
   const roomCfg = pers.room;
   if (roomCfg) {
     const where = 'balance.personality.room';
-    const INTERACTIONS = ['sleep', 'eat', 'play', 'bathe', 'sit'];
+    const INTERACTIONS = ['sleep', 'eat', 'play', 'bathe', 'sit', 'listen'];
     const ROOM_BOOSTS = ['lowHunger', 'highHunger', 'lowHygiene', 'highHygiene', 'lowEnergy', 'highEnergy', 'lowHappiness', 'highHappiness'];
     const ar = roomCfg.antiRepeat;
     if (!ar || !Number.isInteger(ar.window) || ar.window < 1 || !(ar.penalty > 0 && ar.penalty <= 1) || !Number.isInteger(ar.top) || ar.top < 1 || !(ar.margin >= 0)) {
@@ -674,7 +674,7 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
   const use = balance.habitat?.use;
   if (use) {
     const VITALS = ['hunger', 'happiness', 'energy', 'hygiene'];
-    const USES = ['eat', 'bathe', 'sit', 'sleep', 'play'];
+    const USES = ['eat', 'bathe', 'sit', 'sleep', 'play', 'listen'];
     if (!(Number.isInteger(use.dailyCap) && use.dailyCap >= 0 && use.dailyCap <= 12)) throw new Error('balance.habitat.use.dailyCap debe ser un entero en [0, 12]');
     if (!(use.cooldownSeconds >= 30)) throw new Error('balance.habitat.use.cooldownSeconds debe ser al menos 30');
     for (const [id, fx] of Object.entries(use.effects ?? {})) {

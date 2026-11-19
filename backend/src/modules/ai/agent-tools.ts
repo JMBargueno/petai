@@ -230,6 +230,12 @@ export const MIN_POMODORO_MINUTES = 5;
 export const MAX_POMODORO_MINUTES = 120;
 export const MAX_BREAK_MINUTES = 30;
 
+/** Temas y capas del reproductor MP3 (spec 42; mismos ids que @pockai/audio → mixer.ts). */
+export const AMBIENT_TRACKS = ['night', 'tea', 'bits', 'none'] as const;
+export const AMBIENT_LAYERS = ['rain', 'thunder', 'wind', 'crickets', 'birds'] as const;
+const TRACK_NAME: Record<string, string> = { night: 'Noche tranquila', tea: 'Tarde de té', bits: 'Lluvia de bits' };
+const LAYER_NAME: Record<string, string> = { rain: 'lluvia', thunder: 'trueno', wind: 'viento', crickets: 'grillos', birds: 'pájaros' };
+
 const intArg = (v: unknown, min: number, max: number): number | undefined =>
   typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : undefined;
 
@@ -298,6 +304,52 @@ TOOLS.push(
     validate: acceptNoArgs,
     describe() {
       return 'Detener el Pomodoro en curso';
+    },
+  },
+  {
+    name: 'play_ambient',
+    description:
+      'Pone música en tu reproductor MP3 del escritorio: un tema lofi en bucle (night = noche tranquila, tea = tarde de té, bits = lluvia de bits, none = sin música) y capas de ambiente que se suman (rain, thunder, wind, crickets, birds). REQUIERE confirmación. Sin argumentos sigue con la última mezcla.',
+    parameters: {
+      type: 'object',
+      properties: {
+        track: { type: 'string', enum: [...AMBIENT_TRACKS] },
+        layers: { type: 'array', items: { type: 'string', enum: [...AMBIENT_LAYERS] }, maxItems: AMBIENT_LAYERS.length },
+      },
+      additionalProperties: false,
+    },
+    requiresConfirmation: true,
+    clientSide: true,
+    validate(raw) {
+      const a = (raw ?? {}) as any;
+      if (typeof a !== 'object' || Array.isArray(a)) return { ok: false, error: 'Argumentos no válidos' };
+      if (a.track !== undefined && !(AMBIENT_TRACKS as readonly string[]).includes(a.track)) {
+        return { ok: false, error: `track debe ser uno de: ${AMBIENT_TRACKS.join(', ')}` };
+      }
+      if (a.layers !== undefined && (!Array.isArray(a.layers) || a.layers.some((l: unknown) => !(AMBIENT_LAYERS as readonly unknown[]).includes(l)))) {
+        return { ok: false, error: `layers debe ser una lista con: ${AMBIENT_LAYERS.join(', ')}` };
+      }
+      const args: { track?: string; layers?: string[] } = {};
+      if (a.track !== undefined) args.track = a.track;
+      if (a.layers !== undefined) args.layers = [...new Set<string>(a.layers)];
+      return { ok: true, args };
+    },
+    describe(args: { track?: string; layers?: string[] }) {
+      const parts: string[] = [];
+      if (args.track && args.track !== 'none') parts.push(`«${TRACK_NAME[args.track]}»`);
+      if (args.layers?.length) parts.push(args.layers.map((l) => LAYER_NAME[l]).join(', '));
+      return parts.length ? `Poner en el MP3: ${parts.join(' con ')}` : 'Poner música en el MP3';
+    },
+  },
+  {
+    name: 'stop_ambient',
+    description: 'Pausa la música y los sonidos de ambiente de tu reproductor MP3. REQUIERE confirmación.',
+    parameters: noArgs,
+    requiresConfirmation: true,
+    clientSide: true,
+    validate: acceptNoArgs,
+    describe() {
+      return 'Pausar la música del MP3';
     },
   },
   {

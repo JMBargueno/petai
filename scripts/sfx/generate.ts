@@ -12,6 +12,9 @@
  * git; `npx @elevenlabs/cli onboard init` la deja en `.env.local`). Solo se usa aquí, en desarrollo:
  * la key no va nunca en las apps ni en el backend. Usa el SDK oficial @elevenlabs/elevenlabs-js.
  *
+ * Los sonidos del bus `music` (temas lofi del MP3, spec 42) usan la API de música (`music.compose`,
+ * instrumental) en vez la de efectos; el resto del flujo es igual.
+ *
  * Solo pide lo nuevo o lo que cambió (hash del prompt, duración, loop e influencia en
  * scripts/sfx/sounds.lock.json). Las tomas quedan en scripts/sfx/.candidates/<id>/<n>.mp3;
  * después: `pnpm sfx:review` para elegir y `pnpm sfx:import` para pasarlas al juego.
@@ -38,6 +41,7 @@ loadEnv();
 const apiKey = process.env.ELEVENLABS_API_KEY;
 // SFX v3: sigue mejor los prompts con varias partes y suena más natural (skill oficial de ElevenLabs).
 const model = process.env.ELEVENLABS_SFX_MODEL || 'eleven_text_to_sound_v3';
+const musicModel = process.env.ELEVENLABS_MUSIC_MODEL || undefined;
 const dryRun = hasFlag('--dry-run');
 const force = hasFlag('--force');
 /** Sin los bucles de ambiente (son lo más caro: largos y se usan en fases posteriores). */
@@ -61,7 +65,8 @@ const candidatesFor = (d: SoundDef) => Math.max(d.variants, candidatesOverride ?
 const seconds = todo.reduce((s, d) => s + d.duration * candidatesFor(d), 0);
 const calls = todo.reduce((s, d) => s + candidatesFor(d), 0);
 
-console.log(`${todo.length} sonidos → ${calls} llamadas, ≈ ${Math.round(seconds)} s de audio (modelo ${model})`);
+const musicSeconds = todo.filter((d) => d.bus === 'music').reduce((s, d) => s + d.duration * candidatesFor(d), 0);
+console.log(`${todo.length} sonidos → ${calls} llamadas, ≈ ${Math.round(seconds - musicSeconds)} s de efectos (modelo ${model}) y ${Math.round(musicSeconds)} s de música`);
 if (dryRun || todo.length === 0) {
   for (const d of todo) console.log(`  ${d.id.padEnd(40)} ${candidatesFor(d)} × ${d.duration}s${d.loop ? ' loop' : ''}`);
   process.exit(0);
@@ -76,14 +81,23 @@ const client = new ElevenLabsClient();
 
 async function generateOne(def: SoundDef, attempt = 0): Promise<Buffer> {
   try {
-    const stream = await client.textToSoundEffects.convert({
+    const stream =
+      def.bus === 'music'
+        ? await client.music.compose({
+            prompt: def.prompt,
+            musicLengthMs: Math.round(def.duration * 1000),
+            forceInstrumental: true,
+            modelId: musicModel as never,
+            outputFormat: OUTPUT_FORMAT,
+          })
+        : await client.textToSoundEffects.convert({
       text: def.prompt,
       modelId: model,
       durationSeconds: def.duration,
       promptInfluence: def.promptInfluence,
       loop: def.loop || undefined,
       outputFormat: OUTPUT_FORMAT,
-    });
+          });
     const chunks: Uint8Array[] = [];
     for await (const chunk of stream as unknown as AsyncIterable<Uint8Array>) chunks.push(chunk);
     return Buffer.concat(chunks);

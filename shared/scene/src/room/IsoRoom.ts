@@ -70,6 +70,7 @@ const USE_CLIP: Record<Interaction, string> = {
   play: 'happy',
   bathe: 'clean',
   sit: 'perch',
+  listen: 'happy',
 };
 
 interface PlacedFurniture {
