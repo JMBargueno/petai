@@ -679,6 +679,31 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
   console.log(`✓ diálogos: ${Object.keys(readJson('shared/game-data/dialogues.json').conversations).length} conversación(es) y ${Object.keys(strings.es ?? {}).length} textos en ${Object.keys(strings).join(', ')} validados`);
 }
 
+// 4zz. Frases con variables y estado de ánimo
+{
+  const { validatePhrases } = require('./lib/validate-phrases');
+  const phrases = readJson('shared/game-data/phrases.json');
+  const pers = balance.personality ?? {};
+  const errors = validatePhrases({ phrases, langs: ['es', 'en'], dims: Object.keys(pers.dimensions ?? {}) });
+  if (errors.length) throw new Error(`Frases inválidas:\n  - ${errors.join('\n  - ')}`);
+  console.log(`✓ phrases.json: ${phrases.phrases.length} frases, ${Object.keys(phrases.variables).length} variables y ${Object.keys(phrases.facts).length} datos del entrenador validados`);
+
+  const feeling = pers.feeling;
+  if (feeling) {
+    if (!(feeling.halfLifeMinutes >= 5 && feeling.halfLifeMinutes <= 1440)) throw new Error('balance.personality.feeling.halfLifeMinutes debe estar entre 5 y 1440');
+    const l = feeling.labels ?? {};
+    if (!(l.low < 0 && l.high > 0 && l.sleepy < l.excited && l.sleepy >= 0 && l.excited <= 1)) throw new Error('balance.personality.feeling.labels inválido');
+    for (const [ev, push] of Object.entries(feeling.events ?? {})) {
+      // Solo acontecimientos que el motor de evolución conoce: un nombre mal escrito no haría nada
+      if (!pers.evolution?.events?.[ev]) throw new Error(`balance.personality.feeling.events.${ev}: no es un acontecimiento de evolution.events`);
+      for (const [k, n] of Object.entries(push)) {
+        if (!['valence', 'arousal'].includes(k) || !(typeof n === 'number' && Math.abs(n) <= 0.5)) throw new Error(`balance.personality.feeling.events.${ev}.${k} inválido (de -0,5 a 0,5)`);
+      }
+    }
+    console.log(`✓ balance.json: estado de ánimo (${Object.keys(feeling.events ?? {}).length} acontecimientos) validado`);
+  }
+}
+
 // 5. Validar existencia de sprites base
 const spritesDir = path.resolve(__dirname, '..', 'shared/assets/sprites');
 for (const sp of species) {

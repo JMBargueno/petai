@@ -243,5 +243,11 @@
   "FURNITURE_BATHE": "Me di un buen baño en mi hábitat.",
   "FURNITURE_SIT": "Estuve un rato sentado en mi sitio favorito.",
   "FURNITURE_SLEEP": "Dormí en mi cama, bien calentito.",
-  "FURNITURE_PLAY": "Estuve jugando con mis cosas en mi hábitat."
+  "FURNITURE_PLAY": "Estuve jugando con mis cosas en mi hábitat.",
+  "FEELING_EXCITED": "Ahora mismo estás eufórico por algo bueno que acaba de pasar: se te nota en cada frase.",
+  "FEELING_CONTENT": "Ahora mismo estás a gusto y de buen humor por lo que ha pasado hace poco.",
+  "FEELING_UPSET": "Ahora mismo estás dolido y alterado por algo que acaba de pasar: te cuesta disimularlo.",
+  "FEELING_DOWN": "Ahora mismo estás alicaído por algo reciente: hablas más bajito y con menos ganas.",
+  "FEELING_RESTLESS": "Ahora mismo estás inquieto y con ganas de moverte.",
+  "FEELING_SLEEPY": "Ahora mismo estás adormilado y tranquilo."
 }
