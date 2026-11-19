@@ -71,6 +71,11 @@ export class RewardsService {
     if (unknown.length) throw new BadRequestException(`Prenda desconocida: ${unknown.join(', ')}`);
   }
 
+  /** Catálogo de prendas para el selector del panel. */
+  accessoryOptions(): { id: string; name: string; slot: string; rarity: string }[] {
+    return (this.gameData.getAccessories() ?? []).map((a: any) => ({ id: a.id, name: a.name, slot: a.slot, rarity: a.rarity }));
+  }
+
   /** Los días Pro cuestan dinero real: solo quien gestiona la facturación puede regalarlos. */
   assertCanGrant(actor: Actor, rewards: Rewards): void {
     if (rewards.proDays > 0 && !hasPermission(actor.role, 'billing:manage')) {

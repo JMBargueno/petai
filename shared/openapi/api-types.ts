@@ -4400,6 +4400,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/vouchers/accessories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prendas que se pueden incluir en un voucher o regalo (catálogo de accessories.json) */
+        get: operations["AdminVouchersController_accessories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/vouchers/{id}/revoke": {
         parameters: {
             query?: never;
@@ -5881,6 +5898,12 @@ export interface components {
             total: number;
             page: number;
             pageSize: number;
+        };
+        RewardAccessoryOptionDto: {
+            id: string;
+            name: string;
+            slot: string;
+            rarity: string;
         };
         CreateVouchersDto: {
             /**
@@ -12898,6 +12921,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CreatedVouchersDto"];
+                };
+            };
+        };
+    };
+    AdminVouchersController_accessories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardAccessoryOptionDto"][];
                 };
             };
         };

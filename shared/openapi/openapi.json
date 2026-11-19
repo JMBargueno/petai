@@ -9642,6 +9642,36 @@
         ]
       }
     },
+    "/v1/admin/vouchers/accessories": {
+      "get": {
+        "operationId": "AdminVouchersController_accessories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RewardAccessoryOptionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Prendas que se pueden incluir en un voucher o regalo (catálogo de accessories.json)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/v1/admin/vouchers/{id}/revoke": {
       "post": {
         "operationId": "AdminVouchersController_revoke",
@@ -12876,6 +12906,29 @@
           "total",
           "page",
           "pageSize"
+        ]
+      },
+      "RewardAccessoryOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slot",
+          "rarity"
         ]
       },
       "CreateVouchersDto": {

@@ -90,3 +90,10 @@ export class RewardReceivedDto {
   @ApiProperty({ required: false }) note?: string;
   @ApiProperty({ type: GrantedRewardsDto }) granted: GrantedRewardsDto;
 }
+
+export class RewardAccessoryOptionDto {
+  @ApiProperty() id: string;
+  @ApiProperty() name: string;
+  @ApiProperty() slot: string;
+  @ApiProperty() rarity: string;
+}

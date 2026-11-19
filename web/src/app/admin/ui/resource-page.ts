@@ -43,6 +43,14 @@ export interface Field<T> {
   lockedOnEdit?: boolean;
 }
 
+/** Acción propia de la sección en cada fila (p. ej. «Dar recompensa» en Usuarios). */
+export interface RowAction<T> {
+  label: string;
+  run: (row: T) => void;
+  /** Sin ella se muestra en todas las filas. */
+  visible?: (row: T) => boolean;
+}
+
 export interface Filter<T> {
   key: keyof T & string;
   label: string;
@@ -82,6 +90,8 @@ export class ResourcePage<T extends Entity> implements OnInit {
   readonly deletable = input(true);
   /** Sin permiso de edición se oculta «Editar». */
   readonly editable = input(true);
+  /** Botones extra por fila, después de «Editar». */
+  readonly rowActions = input<RowAction<T>[]>([]);
   /** Validación propia del recurso; devuelve el mensaje de error o null. */
   readonly validate = input<((entity: T) => string | null) | null>(null);
 

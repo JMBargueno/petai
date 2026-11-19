@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { PermissionsGuard } from '../authz/permissions.guard';
 import { RequirePermissions } from '../authz/require-permissions.decorator';
-import { CreatedVouchersDto, CreateVouchersDto, GrantRewardsDto, RewardReceivedDto, VoucherDto, VoucherListDto } from './dto/vouchers.dto';
+import { CreatedVouchersDto, CreateVouchersDto, RewardAccessoryOptionDto, GrantRewardsDto, RewardReceivedDto, VoucherDto, VoucherListDto } from './dto/vouchers.dto';
 import { RewardsService } from './rewards.service';
 import { VOUCHER_STATUSES } from './vouchers.schemas';
 import { VouchersService } from './vouchers.service';
@@ -28,6 +28,13 @@ export class AdminVouchersController {
   @ApiResponse({ status: HttpStatus.OK, type: VoucherListDto })
   list(@Query() query: Record<string, string>) {
     return this.vouchers.list(query);
+  }
+
+  @Get('vouchers/accessories')
+  @ApiOperation({ summary: 'Prendas que se pueden incluir en un voucher o regalo (catálogo de accessories.json)' })
+  @ApiResponse({ status: HttpStatus.OK, type: [RewardAccessoryOptionDto] })
+  accessories() {
+    return this.rewards.accessoryOptions();
   }
 
   @Post('vouchers')
