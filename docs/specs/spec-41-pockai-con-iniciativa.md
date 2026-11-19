@@ -21,8 +21,8 @@ entrenador con datos concretos, en el escritorio y en las apps.
 | Fase | Qué | Estado |
 |---|---|---|
 | A | Frases con variables, datos del entrenador y ánimo de corto plazo | Hecha |
-| B | Iniciativa fuera del chat (bocadillos, con tres niveles de insistencia) | Hecha en librería, servidor y escritorio; falta Android |
-| C | Evaluación con un modelo real (manual, con la clave del desarrollador) | Pendiente |
+| B | Iniciativa fuera del chat (bocadillos, con tres niveles de insistencia) | Hecha en librería, servidor, escritorio y Android (Android sin compilar en local) |
+| C | Evaluación con un modelo real (manual, con la clave del desarrollador) | Hecha: `pnpm run eval:mind` en `backend` (ver `backend/scripts/eval-mind.ts`); sin ejecutar aún contra un modelo real |
 | D | El escritorio aprende de lo que su entrenador premia | Pendiente |
 | E | Memoria que consolida | Pendiente |
 | F | Rutinas con continuidad en la vida autónoma | Pendiente |
