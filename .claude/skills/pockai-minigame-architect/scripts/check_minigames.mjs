@@ -81,7 +81,7 @@ for (const [id, g] of Object.entries(games)) {
     const src = readText(`shared/minigames/src/games/${lf}`);
     if (/Math\.random|Date\.now|performance\.now|setTimeout|setInterval/.test(src)) err(`${lf} usa reloj o azar que no sale de la semilla: la partida no se podría repetir`);
     if (/Math\.(sin|cos|tan|pow|exp|log|sqrt)\b/.test(src)) warn(`${lf} usa funciones de Math que no son iguales bit a bit en todos los motores`);
-    if (/from '\.\.\/(views|assets|pet|host|styles)/.test(src)) err(`${lf} importa código de la vista: el backend no compilará`);
+    if (/from '\.\.\/(views|assets|pet|sound|host|styles)/.test(src)) err(`${lf} importa código de la vista: el backend no compilará`);
     if (!/variant/.test(src)) warn(`${lf} no lee la variante: ¿la versión accesible es igual que la normal?`);
     const constName = (src.match(/export const (\w+)\s*[:=]\s*(GameDefinition|{)/) ?? [])[1];
     const exported = (src.match(/export const (\w+): GameDefinition/) ?? [])[1];
@@ -130,6 +130,7 @@ for (const [id, g] of Object.entries(games)) {
   if (!brief) warn(`sin brief en docs/minijuegos/${id}.md`);
   if (emoji.length) warn(`la vista (${vf}) todavía pinta emoji: ${emoji.join(' ')}`);
   if (vf && !usesPet) warn(`la vista (${vf}) no usa ctx.pet: el Pockai no sale en el juego`);
+  if (vf && !/\.sfx\.(play|loop)\(/.test(viewSrc)) warn(`la vista (${vf}) no dispara ningún sonido (ctx.sfx)`);
   if (!backdrop) warn(`sin fondo de arena (shared/assets/minigames/${id}/backdrop.webp)`);
   if (vf) {
     // Piezas que la vista pide por nombre y todavía no tienen arte: `pieceUrl(GAME, 'x')` es del propio

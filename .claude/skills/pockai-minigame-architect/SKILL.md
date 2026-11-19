@@ -30,7 +30,8 @@ La norma es `docs/specs/spec-39-minijuegos-compartidos.md` (arquitectura y antit
 - Un solo paquete, `shared/minigames` (`@pockai/minigames`), sirve a todos: el escritorio importa el código fuente, Android carga el bundle `dist/embed` en un WebView y el backend importa solo la lógica (`dist/node`) para repetir la partida.
 - Cada juego son tres piezas: lógica pura en `src/games/<id>.ts`, vista DOM en `src/views/<id>View.ts` y una línea en `src/registry.ts`. Los números viven en `shared/game-data/balance.json` (`minigames.games`) y la variante fácil en `accessibility.json`.
 - El arte vive en `shared/assets/minigames/<id>/` y la vista lo pide por nombre (`src/assets.ts`). La comida se reutiliza de `shared/assets/items/`. La mascota se pinta con `src/pet.ts`.
-- No hay sonido ni vibración. No hay sistema de traducción: los textos van en español en la vista, en `registry.ts` (`howTo`) y en `balance.json` (`name`).
+- El sonido va por `ctx.sfx` con los ids de `MG` (`src/sound.ts`), que tienen que existir en `shared/game-data/sounds.json` (spec 40). El motor lo pone el anfitrión; un id sin fichero no suena ni falla. No hay vibración.
+- No hay sistema de traducción: los textos van en español en la vista, en `registry.ts` (`howTo`) y en `balance.json` (`name`).
 - Los `id` de juego están en sesiones, misiones, logros y en la herramienta de IA `suggest_minigame`: **no se renombran**. El nombre visible sí puede cambiar.
 
 ## Flujo
@@ -98,6 +99,7 @@ Si no hay clave o el usuario no quiere gastar ahora, deja la lógica, el brief y
 - La mascota es `ctx.pet` (`pockai-in-game.md`): cambia de clip según lo que pase en el estado.
 - Respeta `ctx.reducedMotion`: sin sacudidas ni destellos; el estado se sigue leyendo.
 - Los avisos de puntuación van en `status()`, que el HUD anuncia con `role="status"`.
+- Suena lo que pasa, no lo que se pulsa: `ctx.sfx.play(MG.<juego>.<sonido>)` cuando cambia el estado (`last`), con `pan` según dónde ocurre. Un sonido por suceso; nada que suene en cada frame salvo un bucle (`ctx.sfx.loop`). El sonido nunca es la única señal de algo.
 
 ### 8. Validar
 ```bash

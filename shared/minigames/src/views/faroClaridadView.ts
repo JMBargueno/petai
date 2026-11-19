@@ -1,5 +1,6 @@
 import { applyBackdrop, piece, pieceUrl } from '../assets';
 import { FARO as F, corruptCount, type FaroState } from '../games/faroClaridad';
+import { MG } from '../sound';
 import { el, on, pct, typing, type GameView, type ViewContext } from './types';
 
 const GAME = 'faro_claridad';
@@ -31,6 +32,8 @@ export function createFaroClaridadView(): GameView<FaroState> {
   let aim = -1;
   let petCol = F.COLS / 2 - 0.5;
   let seenEvent = -1;
+  let corrupt = -1;
+  let lost = false;
 
   return {
     mount(root, c) {
@@ -110,12 +113,23 @@ export function createFaroClaridadView(): GameView<FaroState> {
         shaft.style.height = `${(PET_Y / 260) * 100 - 14 - top}%`;
       }
       shaft.hidden = s.aim < 0;
+      // El haz zumba mientras apunta a algo; la corrupción suena cuando gana casillas.
+      if (s.aim >= 0 && !s.overrun) ctx.sfx.loop(MG.faroClaridad.beam);
+      else ctx.sfx.stopLoop(MG.faroClaridad.beam);
+      const bad = corruptCount(s);
+      if (corrupt >= 0 && bad > corrupt) ctx.sfx.play(MG.faroClaridad.spread);
+      corrupt = bad;
+      if (s.overrun && !lost) {
+        lost = true;
+        ctx.sfx.play(MG.faroClaridad.lose);
+      }
       const x = `${((petCol + 0.5) / F.COLS) * 100}%`;
       ctx.pet.el.style.left = shadow.style.left = x;
       ctx.pet.el.style.top = shadow.style.top = pct(PET_Y, 260);
       if (s.last && s.last.tick !== seenEvent) {
         seenEvent = s.last.tick;
         ctx.pet.play('happy', { once: true });
+        ctx.sfx.play(MG.faroClaridad.purify);
       }
     },
     status: (s) => `★ ${s.score} · corrupción ${Math.round((corruptCount(s) / (F.COLS * F.ROWS)) * 100)} %`,

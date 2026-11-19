@@ -33,6 +33,7 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit"
   },
   "dependencies": {
+    "@pockai/audio": "workspace:*",
     "@pockai/scene": "workspace:*"
   },
   "devDependencies": {

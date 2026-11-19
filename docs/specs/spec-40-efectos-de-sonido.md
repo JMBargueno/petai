@@ -161,9 +161,9 @@ Comunes: `mg.countdown.tick`, `mg.countdown.go` (la cuenta 3‑2‑1 de `Minigam
 Por juego. Se enganchan en el campo `last` del estado de cada juego dentro de `shared/minigames/src/views/*View.ts`, y el bundle importa `@pockai/audio` directamente:
 | Juego | Sonidos |
 |---|---|
-| `catch_food` | aparece objeto (pop), atrapa bueno (ñam), atrapa malo (bleh), cesta en movimiento (swoosh suave) |
-| `memory_match` | girar carta, pareja (ding), fallo (thunk), tablero completo (fanfarria corta) |
-| `reflex` | aparece objetivo, acierto, acierto rápido (agudo), expira |
+| `catch_food` (Cosecha del Éter) | fruto recogido, fruto de la marea (más brillante), polvo estático (chasquido), cambio de marea; la racha sube por la escala (`mg.combo.step`) |
+| `memory_match` (Cristal de Recuerdos) | destello inicial, girar faceta, pareja (ding), fallo (thunk), tablero completo (fanfarria corta) |
+| `reflex` (Pesca de Códices) | algo aflora, Códice pescado, pescado rápido (agudo), se hunde, señuelo (el sedal se enreda) |
 | `pulso_voltaico` | perfect, good, miss, combo up (pitch que sube con el combo, por programa), combo roto, metrónomo y beat (o sintetizado en WebAudio para que vaya exacto al BPM) |
 | `corriente_datos` | cambio de carril, paquete recogido (pitch sube con el combo), golpe corrupto y aturdimiento |
 | `raiz_fractal` | rotar pieza, el camino se ilumina, florece (bloom), siguiente tablero |
@@ -283,7 +283,7 @@ Un id sin fichero no suena ni falla, así que en F1 y siguientes se puede cablea
   - «Silencio total al usar otras apps» es opcional.
 - Sin `.ogg` de respaldo: `.m4a` funciona en WebView2, en el WebView de Android y en WKWebView.
 - El mensaje es `setAudio`, no `audio:settings`, siguiendo el estilo del protocolo. No sube la versión del protocolo.
-- Los minijuegos recibirán los ajustes en F3, cuando empiecen a sonar.
+- Los minijuegos reciben los ajustes con su propio `setAudio` (hecho en F3; ver §3).
 
 ## 3. Fases de implementación
 1. **F0, infraestructura (hecho):**
@@ -312,7 +312,19 @@ Un id sin fichero no suena ni falla, así que en F1 y siguientes se puede cablea
    - **Depuración:** en desarrollo, `window.__pockaiSfx` guarda los últimos sonidos pedidos (suenen o no) para comprobar el cableado sin ficheros.
    - **Pendiente para otras fases:** la voz al hablar (babble en las burbujas) y la voz del amigo de visita.
 3. **F2, recompensas y efectos:** subir de nivel, evolución, huevos, rarezas, logros, cofres, y las fases de `EffectPlayer`.
-4. **F3, minijuegos y cocina:** las señales `last`, `timer_warning` en `host.ts`, y los sintetizados.
+4. **F3, minijuegos (hecho) y cocina (pendiente):** las señales `last`, `timer_warning` en `host.ts`, y los sintetizados.
+
+   Cómo quedaron los minijuegos:
+   - **El paquete no lleva motor propio.** `shared/minigames/src/sound.ts` define lo que necesita (`MinigameSound`: `play`, `loop`, `stopLoop`) y el anfitrión se lo pasa a `mountMinigame({ sound })`. El escritorio pasa el motor de la ventana (`sfx`, `sfxLoop`, `sfxStopLoop`), con los ajustes del usuario; el embed crea el suyo (`embed/audio.ts`, solo con los `mg.*`). Sin motor, el juego es mudo y funciona igual.
+   - **Las vistas disparan con `ctx.sfx` al cambiar el estado** (el campo `last` de cada juego y poco más), nunca al pulsar. Los ids están en `MG` (`sound.ts`); un test del paquete exige que todos existan en `sounds.json` y que no quede ninguno de juego sin usar.
+   - **Anfitrión:** `mg.timer_warning` en cada uno de los últimos 5 s y `mg.pause`. Corta los bucles al pausar y al terminar.
+   - **Sintetizados:** el metrónomo de Pulso Voltaico va exacto al tempo; los sellos de Cifrado cantan una nota cada uno, igual al mostrarse que al acertarlos; las rachas de Cosecha, Pulso y Corriente suben por la escala con `mg.combo.step`.
+   - **Bucles:** el haz del Faro mientras apunta y el fuego de la Forja toda la partida.
+   - **Escritorio** (`MinigamesTab.svelte`): cuenta atrás (`mg.countdown.tick` / `go`), resultado (`mg.result.great` con el 80 % de las monedas máximas o más, si no `good`), `mg.item_drop` si la partida suelta un objeto y `elem.<flujo>.accent` si hubo afinidad.
+   - **Android:** `MinigameView.kt` reenvía los ajustes de la app al WebView con `setAudio` (mensaje opcional, no sube el protocolo), al anunciar `ready` y cada vez que cambian.
+   - **Catálogo:** `sounds.json` sigue a las reglas nuevas (marea, polvo estático, destello, señuelos); se quitaron los sonidos de la cesta, la piedra y la aparición de objetos.
+   - **Depuración:** en desarrollo, la página de demo guarda los sonidos pedidos en `window.__pockaiSfx`, como el escritorio.
+   - **Pendiente:** generar los ficheros (`pnpm sfx:generate --only mg`); hasta entonces solo suenan los sintetizados. En Android, la cuenta atrás y el resultado son pantallas nativas y aún no suenan. `mg.score_tick` y `mg.new_record` están en el catálogo sin enganchar (no hay récord personal todavía). Vibración.
 5. **F4, aventuras y combate:** stingers, enfoques, finales, ambientes de localización, habilidades.
 6. **F5, hábitats y clima:** loops por sala, muebles posicionales, clima, visitas, ducking.
 7. **F6, pulido:** mezcla final de niveles, modo audio reducido y comprobación de que no hay spam en el escritorio tras 8 h de uso. Opcional: hápticos en Android junto a los sonidos clave.

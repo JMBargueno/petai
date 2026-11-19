@@ -1,5 +1,6 @@
 import { applyBackdrop, piece, pieceUrl } from '../assets';
 import { CIFRADO as C, litGlyph, type CifradoState } from '../games/cifrado';
+import { MG } from '../sound';
 import { button, el, on, pct, typing, type GameView, type ViewContext } from './types';
 
 const GAME = 'cifrado';
@@ -21,6 +22,7 @@ export function createCifradoView(): GameView<CifradoState> {
   let ctx: ViewContext;
   let seenEvent = -1;
   let rounds = 0;
+  let shown = -1;
   const cleanups: (() => void)[] = [];
 
   return {
@@ -71,13 +73,23 @@ export function createCifradoView(): GameView<CifradoState> {
         b.setAttribute('aria-disabled', String(s.phase !== 'input'));
       });
       if (replay) replay.disabled = s.phase !== 'input';
+      // Cada sello que se enciende en la reproducción canta su nota.
+      const showing = s.phase === 'show' ? lit : -1;
+      if (showing !== shown) {
+        shown = showing;
+        if (showing >= 0) ctx.sfx.play(MG.cifrado.glyph, { note: showing });
+      }
       if (s.last && s.last.tick !== seenEvent) {
         seenEvent = s.last.tick;
         if (!s.last.ok) ctx.pet.play('hit', { once: true });
+        // Acertar un sello suena con su misma nota: la secuencia es una melodía.
+        if (s.last.ok) ctx.sfx.play(MG.cifrado.glyph, { note: s.last.glyph });
+        else ctx.sfx.play(MG.cifrado.wrong);
       }
       if (s.rounds !== rounds) {
         rounds = s.rounds;
         ctx.pet.play('happy', { once: true });
+        ctx.sfx.play(MG.cifrado.round);
       }
       // Durante la reproducción se anuncia cada sello para quien no lo ve.
       const msg = s.phase === 'show' ? (lit >= 0 ? NAMES[lit] : 'Mira…') : `Tu turno: ${s.pos}/${s.sequence.length}`;

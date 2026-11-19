@@ -8,6 +8,7 @@
  * para elegir la mascota.
  */
 import { createBridge } from '../bridge';
+import { embedSound, setEmbedAudioSettings } from './audio';
 import { mountMinigame, type MountedMinigame } from '../host';
 import { sheetFromAssetBase } from '../pet';
 import { MINIGAME_PROTOCOL_VERSION, parsePet, type HostMessage } from '../protocol';
@@ -30,11 +31,13 @@ let current: MountedMinigame | null = null;
 const onMessage = (msg: HostMessage) => {
   if (msg.type === 'pause') return current?.pause();
   if (msg.type === 'resume') return current?.resume();
+  // Los ajustes de sonido no tocan la partida en curso.
+  if (msg.type === 'setAudio') return setEmbedAudioSettings(msg.settings);
   current?.dispose();
   current = null;
   if (msg.type === 'start') {
     // En el WebView la app nativa avisa de la pausa (ciclo de vida); el foco no es fiable.
-    current = mountMinigame(root, { ...msg, resolvePetSheet, autoPause: bridge.transport === 'dom' || bridge.transport === 'iframe', onEvent: bridge.send });
+    current = mountMinigame(root, { ...msg, resolvePetSheet, sound: embedSound(), autoPause: bridge.transport === 'dom' || bridge.transport === 'iframe', onEvent: bridge.send });
   }
 };
 

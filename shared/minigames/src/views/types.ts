@@ -1,5 +1,6 @@
 import type { GameInput } from '../core/types';
 import type { PetActor } from '../pet';
+import type { ViewSound } from '../sound';
 
 /** Lo que la vista puede hacer: encolar entradas para el siguiente tick. */
 export interface ViewContext {
@@ -7,6 +8,8 @@ export interface ViewContext {
   reducedMotion: boolean;
   /** La mascota del jugador, lista para colocar en la arena (ver pet.ts). */
   pet: PetActor;
+  /** Sonidos de la partida (ver sound.ts). Se disparan al cambiar el estado, no al pulsar. */
+  sfx: ViewSound;
 }
 
 /**

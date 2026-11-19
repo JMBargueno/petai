@@ -1,5 +1,6 @@
 import { applyBackdrop, itemUrl, piece, pieceUrl } from '../assets';
 import { isPeeking, pairsFound, type MemoryMatchState } from '../games/memoryMatch';
+import { MG } from '../sound';
 import { el, pct, type GameView, type ViewContext } from './types';
 
 const GAME = 'memory_match';
@@ -38,6 +39,7 @@ export function createMemoryMatchView(): GameView<MemoryMatchState> {
   let arena: HTMLElement;
   let seenEvent = -1;
   let done = false;
+  let flipped = 0;
 
   return {
     mount(root, c, initial) {
@@ -63,6 +65,7 @@ export function createMemoryMatchView(): GameView<MemoryMatchState> {
       c.pet.face(-1);
       c.pet.play('idle');
       c.pet.play('surprised', { once: true });
+      c.sfx.play(MG.memoryMatch.peek);
       arena.append(shadow, c.pet.el);
       const hint = initial.hints ? ' La pareja de la faceta destapada brilla.' : '';
       root.append(arena, el('p', 'pmg-hint', `Mira el destello del Cristal y empareja las ${initial.pairs} parejas de recuerdos. Con menos fallos y más rapidez, más puntos. Puedes usar Tab y Enter.${hint}`));
@@ -89,13 +92,18 @@ export function createMemoryMatchView(): GameView<MemoryMatchState> {
         b.disabled = matched;
         b.setAttribute('aria-label', `Faceta ${i + 1}: ${matched ? `${face.name}, emparejada` : up ? face.name : 'apagada'}`);
       });
+      // Cada faceta que se destapa suena; la segunda de un par suena con su resultado.
+      if (s.flipped.length > flipped && s.flipped.length === 1) ctx.sfx.play(MG.memoryMatch.flip);
+      flipped = s.flipped.length;
       if (s.last && s.last.tick !== seenEvent) {
         seenEvent = s.last.tick;
         ctx.pet.play(s.last.ok ? 'happy' : 'hit', { once: true });
+        if (s.completedAt < 0) ctx.sfx.play(s.last.ok ? MG.memoryMatch.match : MG.memoryMatch.miss);
       }
       if (s.completedAt >= 0 && !done) {
         done = true;
         ctx.pet.play('celebrate', { once: true });
+        ctx.sfx.play(MG.memoryMatch.clear);
       }
     },
     status: (s) => (isPeeking(s) ? 'Mira el destello…' : `${pairsFound(s)}/${s.pairs} recuerdos · fallos ${s.misses}`),

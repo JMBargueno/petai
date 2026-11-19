@@ -1,5 +1,6 @@
 import { applyBackdrop, piece, pieceUrl } from '../assets';
 import { REFLEX as R, isTangled, meanReactionMs, type ReflexState } from '../games/reflex';
+import { MG, panAt } from '../sound';
 import { el, pct, typing, type GameView, type ViewContext } from './types';
 
 const GAME = 'reflex';
@@ -74,6 +75,7 @@ export function createReflexView(): GameView<ReflexState> {
         target.classList.toggle('is-lure', t.lure);
         target.setAttribute('aria-label', t.lure ? 'Códice sin tejer: no lo pesques' : 'Códice: péscalo');
         ctx.pet.face(t.x < PET_X ? -1 : 1);
+        ctx.sfx.play(MG.reflex.appear, { pan: panAt(t.x, R.W) });
         // Reinicia la animación de aparición.
         target.classList.remove('is-pop');
         void target.offsetWidth;
@@ -87,6 +89,7 @@ export function createReflexView(): GameView<ReflexState> {
         if (s.last.kind === 'fast') ctx.pet.play('happy', { once: true });
         else if (s.last.kind === 'catch') ctx.pet.play('attack', { once: true });
         else if (s.last.kind === 'lure') ctx.pet.play('hit', { once: true });
+        ctx.sfx.play({ fast: MG.reflex.fast, catch: MG.reflex.hit, lure: MG.reflex.lure, miss: MG.reflex.expire }[s.last.kind]);
       }
       const msg = tangled ? 'Sedal enredado' : t ? (t.lure ? 'Sin tejer: déjalo' : '¡Códice!') : '';
       if (live.textContent !== msg) live.textContent = msg;

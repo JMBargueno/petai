@@ -11,16 +11,20 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.webkit.WebViewAssetLoader
+import com.petai.app.PetAiApp
 import com.petai.app.data.Pet
+import com.petai.app.ui.scene.SceneMessages
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -87,6 +91,8 @@ fun MinigameView(
     val lifecycleOwner = LocalLifecycleOwner.current
     val main = remember { Handler(Looper.getMainLooper()) }
     val holder = remember { arrayOfNulls<WebView>(1) }
+    // Último `setAudio` (spec 40): se reenvía cuando el juego anuncia `ready`, por si llegó antes.
+    val audioMessage = remember { arrayOfNulls<String>(1) }
 
     fun deliver(raw: String) {
         // JSON como literal de cadena JS: el juego lo parsea y valida (parseHostMessage).
@@ -149,6 +155,7 @@ fun MinigameView(
                                         currentOnEvent(MinigameEvent.Error("Versión de minijuegos incompatible (${ev.protocol})"))
                                         return@post
                                     }
+                                    audioMessage[0]?.let { deliver(it) }
                                     deliver(startMessage)
                                 }
                                 currentOnEvent(ev)
@@ -167,6 +174,16 @@ fun MinigameView(
             wv.destroy()
         },
     )
+
+    // Ajustes de sonido de la app: los mismos que recibe la escena, cada vez que cambian.
+    val app = LocalContext.current.applicationContext as? PetAiApp
+    LaunchedEffect(app) {
+        app?.audio?.prefs?.collect {
+            val msg = SceneMessages.setAudio(it).toString()
+            audioMessage[0] = msg
+            deliver(msg)
+        }
+    }
 
     // En segundo plano se pausa la partida (el juego muestra «En pausa» y espera a que vuelvas).
     DisposableEffect(lifecycleOwner) {

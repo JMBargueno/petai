@@ -17,6 +17,8 @@ import type { FaroState } from './games/faroClaridad';
 import type { ForjaState } from './games/forjaTermica';
 import { MINIGAMES } from './registry';
 import { parseHostMessage } from './protocol';
+import { minigameSoundIds } from './sound';
+import sounds from '../../game-data/sounds.json';
 
 type Rules = { durationSeconds: number; minDurationSeconds: number; maxScorePerSecond: number };
 const rules = balance.minigames.games as Record<string, Rules>;
@@ -205,5 +207,27 @@ describe('protocolo', () => {
     expect(parseHostMessage({ type: 'start', gameId: 'reflex', seed: 1, durationSeconds: -1 })).toBeNull();
     expect(parseHostMessage('{no json')).toBeNull();
     expect(parseHostMessage(null)).toBeNull();
+  });
+
+  it('setAudio pasa los ajustes sin tocar la partida y rechaza lo que no es un objeto', () => {
+    expect(parseHostMessage({ type: 'setAudio', settings: { master: 0.5 } })).toEqual({ type: 'setAudio', settings: { master: 0.5 } });
+    expect(parseHostMessage({ type: 'setAudio', settings: 'alto' })).toBeNull();
+    expect(parseHostMessage({ type: 'setAudio' })).toBeNull();
+  });
+});
+
+describe('sonido (spec 40)', () => {
+  it('todos los sonidos que disparan los minijuegos están en sounds.json', () => {
+    const known = new Set((sounds as { sounds: { id: string }[] }).sounds.map((s) => s.id));
+    const missing = minigameSoundIds().filter((id) => !known.has(id));
+    expect(missing).toEqual([]);
+  });
+
+  it('no queda en el manifiesto ningún sonido de juego que nadie dispare', () => {
+    const used = new Set(minigameSoundIds());
+    // Los comunes de la app (cuenta atrás, resultado, récord, objeto) los dispara el anfitrión.
+    const HOST = ['mg.countdown.tick', 'mg.countdown.go', 'mg.score_tick', 'mg.result.good', 'mg.result.great', 'mg.new_record', 'mg.item_drop'];
+    const orphan = (sounds as { sounds: { id: string }[] }).sounds.map((s) => s.id).filter((id) => id.startsWith('mg.') && !used.has(id) && !HOST.includes(id));
+    expect(orphan).toEqual([]);
   });
 });

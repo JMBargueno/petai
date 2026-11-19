@@ -1,5 +1,6 @@
 import { applyBackdrop, piece, pieceUrl } from '../assets';
 import { CORRIENTE as C, type CorrienteState } from '../games/corrienteDatos';
+import { MG } from '../sound';
 import { el, on, typing, type GameView, type ViewContext } from './types';
 
 const GAME = 'corriente_datos';
@@ -55,12 +56,22 @@ export function createCorrienteDatosView(): GameView<CorrienteState> {
       const doc = arena.ownerDocument;
       const pet = ctx.pet;
       pet.el.style.left = laneX(s.lane);
-      if (lastLane >= 0 && s.lane !== lastLane) pet.face(s.lane - lastLane);
+      const pan = ((s.lane + 0.5) / C.LANES) * 1.2 - 0.6;
+      if (lastLane >= 0 && s.lane !== lastLane) {
+        pet.face(s.lane - lastLane);
+        ctx.sfx.play(MG.corrienteDatos.lane, { pan });
+      }
       lastLane = s.lane;
       pet.el.classList.toggle('is-stunned', s.tick < s.stunnedUntil);
       if (s.last && s.last.tick !== seenEvent) {
         seenEvent = s.last.tick;
-        if (s.last.kind === 'block') pet.play('hit', { once: true });
+        if (s.last.kind === 'block') {
+          pet.play('hit', { once: true });
+          ctx.sfx.play(MG.corrienteDatos.crash, { pan });
+        } else {
+          ctx.sfx.play(MG.corrienteDatos.collect, { pan });
+          if (s.combo > 0 && s.combo % 5 === 0) ctx.sfx.play(MG.streak, { step: s.combo / 5 });
+        }
       }
       const alive = new Set<number>();
       for (const o of s.objects) {
