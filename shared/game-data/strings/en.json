@@ -266,5 +266,12 @@
   "DIGEST_ADVENTURE_MANY": "I have been on countless adventures.",
   "DIGEST_ADVENTURE_TONE_GOOD": "Almost all of them went well.",
   "DIGEST_ADVENTURE_TONE_MIXED": "Some went well and some did not.",
-  "DIGEST_ADVENTURE_TONE_BAD": "Hardly any went well, but I learned a lot."
+  "DIGEST_ADVENTURE_TONE_BAD": "Hardly any went well, but I learned a lot.",
+  "AUTO_LONG_REST_1": "I spent hours resting happily, without leaving my corner.",
+  "AUTO_LONG_PLAY_ALONE_1": "I played on my own for a good long while without getting tired.",
+  "AUTO_LONG_EXPLORE_1": "I spent hours exploring: every corner led me to another.",
+  "AUTO_LONG_SOCIALIZE_1": "I spent a good while with other echoes from the neighbourhood; time flew by.",
+  "AUTO_LONG_WAIT_OWNER_1": "I waited a long time for my trainer by the door.",
+  "AUTO_LONG_PRACTICE_TRICK_1": "I spent hours rehearsing my trick until I almost got it.",
+  "AUTO_LONG_TIDY_HABITAT_1": "I spent a good while tidying my habitat from top to bottom."
 }

@@ -11,6 +11,7 @@
  * sociable → busca a otros Pockai; tranquila → descansa en su hábitat; afectuosa → espera al
  * entrenador. Lo memorable se convierte en recuerdos episódicos y en eventos de evolución.
  */
+import { advanceRoutine, isLongStretch, normalizeRoutine, phaseOf, routineFactor, type RoutineState } from '@pockai/mind/node';
 import { createRng, hashSeed } from '../battles/combat/rng';
 import { AutonomyActivity, AutonomyConfig, AutonomyDaily, Dims, ExtraActivity } from './mind.types';
 import { text, variants } from './strings';
@@ -69,6 +70,14 @@ export interface SimInput {
   canPractice?: boolean;
   /** Multiplicador de peso por actividad: lo que le apetece (deseos activos) pesa más. */
   boosts?: Readonly<Record<string, number>>;
+  /**
+   * Hora local de su entrenador (0-23) y día de cada intervalo. Con ella hay rutina (día y noche,
+   * hilo entre horas) y los topes diarios se cuentan en el día en que ocurrió cada hora, no en el
+   * de la lectura. Sin ella, todo es como antes.
+   */
+  clock?: (index: number) => { hour: number; day: string };
+  /** En qué andaba al acabar la simulación anterior. */
+  routine?: unknown;
 }
 
 export interface Episode {
@@ -92,6 +101,8 @@ export interface SimResult {
   /** Veces que practicó un truco por su cuenta. */
   practices: number;
   daily: AutonomyDaily;
+  /** En qué anda al acabar (solo con rutina). */
+  routine?: RoutineState;
 }
 
 const pick = <T>(arr: T[], r: number): T => arr[Math.floor(r * arr.length) % arr.length];
@@ -115,7 +126,7 @@ export function pickFriend(friends: Friend[], r: number): Friend {
   return friends[friends.length - 1];
 }
 
-function chooseActivity(input: SimInput, energy: number, r: number, cfg: AutonomyConfig): AutonomyActivity {
+function chooseActivity(input: SimInput, energy: number, r: number, cfg: AutonomyConfig, routine?: (a: AutonomyActivity) => number): AutonomyActivity {
   if (input.sick || energy < cfg.minEnergyForActivity) return 'rest';
   const list = activitiesFor(input, cfg);
   const weights = list.map((a) => {
@@ -125,6 +136,8 @@ function chooseActivity(input: SimInput, energy: number, r: number, cfg: Autonom
     // Lo que le apetece pesa más (solo si hay deseo: sin él no se toca la cuenta)
     const boost = input.boosts?.[a];
     if (boost !== undefined) w *= boost;
+    // El momento del día y lo que venía haciendo inclinan la balanza (solo con rutina)
+    if (routine) w *= routine(a);
     return w;
   });
   const total = weights.reduce((s, w) => s + w, 0);
@@ -144,9 +157,21 @@ const EVOLUTION: Partial<Record<AutonomyActivity, string>> = {
 };
 
 export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): SimResult {
-  const daily: AutonomyDaily =
-    input.daily?.day === today ? { ...input.daily } : { day: today, items: 0, happiness: 0, energy: 0, encounters: 0 };
-  const res: SimResult = { episodes: [], evolutionEvents: [], energyDelta: 0, happinessDelta: 0, itemsFound: [], encounters: [], practices: 0, daily };
+  const fresh = (day: string): AutonomyDaily => ({ day, items: 0, happiness: 0, energy: 0, encounters: 0 });
+  const clock = input.clock;
+  // Sin reloj, los contadores son los de hoy (como siempre). Con él, los del día de cada hora.
+  let current: AutonomyDaily = input.daily && (clock || input.daily.day === today) ? { ...input.daily } : fresh(today);
+  let past: AutonomyDaily | null = null;
+  const countersOf = (day: string): AutonomyDaily => {
+    if (day === current.day) return current;
+    if (day > current.day) return (current = fresh(day));
+    // Una hora de un día ya cerrado no gasta los topes de un día posterior
+    if (past?.day !== day) past = fresh(day);
+    return past;
+  };
+  const res: SimResult = { episodes: [], evolutionEvents: [], energyDelta: 0, happinessDelta: 0, itemsFound: [], encounters: [], practices: 0, daily: current };
+  const routineCfg = clock ? cfg.routine : undefined;
+  let routine = normalizeRoutine(input.routine);
   let energy = input.energy;
   let sleptLogged = false;
 
@@ -167,8 +192,15 @@ export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): S
       continue;
     }
 
-    const activity = chooseActivity(input, energy, rActivity, cfg);
+    const at = clock?.(idx);
+    const daily = at ? countersOf(at.day) : current;
+    const phase = routineCfg && at ? phaseOf(at.hour, routineCfg) : null;
+    const activity = chooseActivity(input, energy, rActivity, cfg, routineCfg && phase ? (a) => routineFactor(a, phase, routine, idx, routineCfg) : undefined);
     const conf = cfg.activities[activity]!;
+    if (routineCfg) routine = advanceRoutine(routine, activity, idx);
+    // Lleva un buen rato con lo mismo: se cuenta una vez, en vez de repetir el mismo recuerdo
+    const long = !!routineCfg && isLongStretch(routine, routineCfg);
+    const repeating = !!routineCfg && routine.streak > 1;
     if (activity === 'practice_trick') res.practices++;
 
     // Energía y felicidad con topes diarios (el lazy tick sigue gestionando el decaimiento)
@@ -214,7 +246,10 @@ export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): S
         friend,
       };
     }
-    if (!episode && rMemorable < cfg.memorableChance) {
+    if (!episode && long && textsOf(`long_${activity}` as AutonomyActivity).length) {
+      episode = { index: idx, activity, content: pick(textsOf(`long_${activity}` as AutonomyActivity), rText), importance: 0.5, valence: activity === 'wait_owner' ? -0.2 : 0.4 };
+    }
+    if (!episode && !repeating && rMemorable < cfg.memorableChance) {
       episode = { index: idx, activity, content: pick(textsOf(activity), rText), importance: activity === 'explore' ? 0.45 : 0.35, valence: activity === 'wait_owner' ? -0.1 : 0.3 };
     }
     if (episode) res.episodes.push(episode);
@@ -227,6 +262,8 @@ export function simulate(input: SimInput, cfg: AutonomyConfig, today: string): S
       .slice(0, cfg.maxEpisodesPerCatchUp)
       .sort((a, b) => a.index - b.index);
   }
+  res.daily = current;
+  if (routineCfg) res.routine = routine;
   return res;
 }
 

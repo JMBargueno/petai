@@ -2,6 +2,7 @@
 
 > Actualizado: 15/11/2026 — después de cerrar Pasos 1-4 del informe de mejoras.
 > 18/11/2026: añadida la §8 (pixel art, accesorios y rareza por especie).
+> 19/11/2026: añadida la §9 (cerebro del Pockai, spec 41).
 > Base: `main` tip `db3ff00`.
 
 ## 1. Commits/PRs sin mergear
@@ -153,6 +154,40 @@ Features sin UI (solo backend + API):
 
 ---
 
+## 9. Cerebro del Pockai (spec 41)
+
+> Apuntado el 19/11/2026, tras los PR 198, 201, 203, 204 y 208 (fases A a F de la spec 41).
+> Referencia: `docs/specs/spec-41-pockai-con-iniciativa.md`. Las seis fases están escritas; esto es lo que no se ha comprobado y lo que quedó fuera.
+
+### 9a. Sin comprobar (hecho, pero no verificado)
+
+| Item | Qué falta comprobar |
+|---|---|
+| **Evaluación con modelo real** | `pnpm run eval:mind` (en `backend`) no se ha lanzado nunca: no hay nota de referencia. Necesita `EVAL_API_KEY`, `EVAL_BASE_URL` y `EVAL_MODEL`. El prompt que monta la evaluación usa las funciones del chat, pero no se ha comparado línea a línea con `chat.service.ts`. |
+| **Tests e2e** | No se han ejecutado desde la fase B (iniciativa, aprendizaje, consolidación de memoria, rutinas). `mind.e2e` (concurrencia) falla en local y pasa en la CI; sin investigar. |
+| **Base de datos real** | La consolidación de memoria y las rutinas solo están probadas con tablas en memoria. |
+| **Android** | La tarjeta de iniciativa (`ui/pet/InitiativeCard.kt`) no se ha compilado en local ni probado en un dispositivo. |
+| **App de Tauri** | El bocadillo de iniciativa y el aprendizaje por gestos solo se han visto en la demo del navegador y en tests. El bocadillo no llegó a verse en pantalla ni en la demo. |
+| **Números de las rutinas** | `balance.json → personality.autonomy.routine` es una primera estimación, sin ajustar viendo a un Pockai real durante días. Cambia el comportamiento de todas las mascotas. |
+| **Números del aprendizaje** | Apartar al Pockai arrastrándolo cuenta en contra aunque sea para jugar a lanzarlo (`personality.learning.signals.pickup`, la mitad que una caricia). |
+| **Panel y alertas de la mente** | `infra/observability/grafana/dashboards/mind.json` y el grupo `petai-mind` no se han visto con datos de verdad ni pasado por `promtool`. |
+
+### 9b. Lo que quedó fuera
+
+| Item | Por qué | Qué haría falta |
+|---|---|---|
+| **Desde cuándo duerme, está enfermo o está en su hábitat** | La vida autónoma aplica esos tres estados tal como están ahora a todas las horas simuladas. | Guardar cuándo cambió cada uno (migración en `Pet`) y usarlo en `autonomy.service.ts`. |
+| **Resumir lo nacido del chat** | La consolidación pliega encuentros, visitas, hallazgos y aventuras sin modelo; lo del chat se olvida como antes, porque resumirlo exige leerlo. | Un paso con modelo al desalojar episodios de `kind: summary` / `event` del entrenador. |
+| **Búsqueda por significado** | La relevancia de un recuerdo sigue siendo por palabras compartidas con el mensaje. | Embeddings (pgvector o similar) y su coste. |
+| **Notificaciones con la app cerrada** | El backend no tiene envío push: el canal `mobile` de la iniciativa y su tope diario solo sirven con la app abierta. | Infraestructura push (FCM/APNs) y permiso en las apps. |
+| **Idioma por cuenta** | No hay preferencia de idioma: frases, recuerdos y resúmenes salen siempre en castellano (el inglés está escrito en `strings` y `phrases.json`). | Campo de idioma en la cuenta y pasarlo a `text(...)` y `renderPhrase`. |
+| **El ánimo no mueve las conductas** | El ánimo de corto plazo se nota en el chat y en las frases, pero no en los pesos de las conductas del escritorio ni de la vida autónoma. | Un factor por ánimo en `deskBrain` y en `autonomy.engine`. |
+| **Lo aprendido no llega al chat** | Las preferencias aprendidas de los gestos solo inclinan las conductas del escritorio. | Una línea en el prompt y señales para `phrases.json`. |
+| **Aprendizaje sin red** | El escritorio no guarda lo aprendido en disco: sin red dura lo que la sesión. | Persistirlo como ya se hace con las dimensiones (`personalityStore`). |
+| **Escrituras simultáneas** | `LearningService.reinforce` y la consolidación leen y luego escriben con `patchStored`: dos a la vez pueden pisarse y perder una cuenta. Dos dispositivos que pregunten a la vez por la iniciativa pueden hablar los dos. | Hacer la lectura dentro de la transacción con bloqueo, como `applyExperience`. |
+| **Rutina igual para todos** | La personalidad solo entra por los pesos de siempre; no hay madrugadores ni trasnochadores. | Desplazar `phaseStarts` por dimensión. |
+| **Clientes sin lo nuevo** | Android no envía gestos (no tiene conductas de escritorio) y ningún cliente muestra la rutina ni marca los resúmenes de memoria con icono propio. iOS no tiene nada de la spec 41. | UI en cada cliente; el servidor ya lo sirve. |
+
 ## Resumen por prioridad
 
 **Ahora (bloquea prod):**
@@ -173,6 +208,11 @@ Features sin UI (solo backend + API):
 - [ ] Arreglar o actualizar los tests de buffs del hábitat (§8a)
 - [ ] Validar el estilo del pixel art procedural (§8c)
 - [ ] Crear especies de otras rarezas, para que la eclosión y el pity tengan sentido (§8d)
+- [ ] Lanzar la evaluación del chat con un modelo real y guardar la nota de referencia (§9a)
+- [ ] Ejecutar los e2e de la mente y probar consolidación y rutinas contra una base de datos (§9a)
+- [ ] Compilar y probar en Android la tarjeta de iniciativa (§9a)
+- [ ] Ver el bocadillo de iniciativa y el aprendizaje en la app de Tauri (§9a)
+- [ ] Ajustar los números de las rutinas y del aprendizaje con uso real (§9a)
 
 **Medio plazo:**
 - [ ] Unit specs de 13 módulos
@@ -180,6 +220,12 @@ Features sin UI (solo backend + API):
 - [ ] Convertir premios de logro en prendas y equilibrar el catálogo (§8b)
 - [ ] Escalado de pixel art en Android, iOS y web, y escala entera en la sala (§8c)
 - [ ] Mostrar la rareza del patrón en las apps y revisar los logros de rareza (§8d)
+- [ ] Guardar desde cuándo duerme, está enfermo o está en su hábitat (migración, §9b)
+- [ ] Bloqueo en las escrituras de aprendizaje, consolidación e iniciativa (§9b)
+- [ ] Preferencia de idioma por cuenta (§9b)
+- [ ] Notificaciones push para que el Pockai hable con la app cerrada (§9b)
+- [ ] Que el ánimo mueva las conductas y que lo aprendido llegue al chat (§9b)
+- [ ] Resumir con un modelo lo nacido del chat antes de olvidarlo (§9b)
 - [ ] UI de features oleadas 2/3
 - [ ] Dashboard observabilidad
 - [ ] CI: load test manual
@@ -191,6 +237,8 @@ Features sin UI (solo backend + API):
 - [ ] Capa `front.png` para pintar el gorro detrás del rasgo icónico (§8b)
 - [ ] Toque, flotar y daño de la mascota por frames (§8c)
 - [ ] Muebles y salas en pixel art (§8c)
+- [ ] Búsqueda de recuerdos por significado (§9b)
+- [ ] Rutina distinta según la personalidad y verla en los clientes (§9b)
 - [ ] Sala isométrica en iOS (ISO-IOS, §7)
 - [ ] Web Angular — features oleadas
 - [ ] Más colas BullMQ

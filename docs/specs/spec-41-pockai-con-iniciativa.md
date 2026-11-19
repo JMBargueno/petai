@@ -25,7 +25,7 @@ entrenador con datos concretos, en el escritorio y en las apps.
 | C | Evaluación con un modelo real (manual, con la clave del desarrollador) | Hecha: `pnpm run eval:mind` en `backend` (ver `backend/scripts/eval-mind.ts`); sin ejecutar aún contra un modelo real |
 | D | El escritorio aprende de lo que su entrenador premia | Hecha en librería, servidor y escritorio |
 | E | Memoria que consolida | Hecha en librería y servidor (sin modelo; lo nacido del chat no se resume) |
-| F | Rutinas con continuidad en la vida autónoma | Pendiente |
+| F | Rutinas con continuidad en la vida autónoma | Hecha en librería y servidor |
 
 ## 3. Fase A
 
@@ -201,3 +201,51 @@ Consolidación de la memoria: lo que se va a olvidar se pliega antes en un resum
 - Resumir lo nacido del chat con un modelo.
 - Búsqueda por significado: la relevancia sigue siendo por palabras compartidas.
 - Los resúmenes salen en castellano (no hay preferencia de idioma por cuenta); el inglés está escrito.
+
+## 8. Fase F
+
+Rutinas con continuidad en la vida autónoma.
+
+### 8.1 Qué cambia
+
+La vida autónoma simula qué hace el Pockai cada hora que su entrenador no está. Cada hora era una
+tirada suelta. Ahora, sobre los mismos pesos por personalidad:
+
+- **Momento del día**, en la hora local de su entrenador (`User.timezone`): mañana, tarde,
+  anochecer y noche. De noche descansa casi siempre; por la mañana explora más; al anochecer
+  espera a que vuelva.
+- **Hilo:** lo que está haciendo tiende a seguir (`momentum.stay`) hasta llevar
+  `momentum.maxStreak` horas, y entonces se cansa (`momentum.tired`). De descansar y de esperar
+  no se cansa. Al dejar una actividad, otras apetecen más (`after`: descansar tras explorar).
+- **Recuerdos:** una racha de `longFrom` horas se cuenta una vez («Me pasé horas explorando…»,
+  `AUTO_LONG_<ACTIVIDAD>_1`) en lugar de repetir el mismo recuerdo cada hora.
+- **Entre lecturas:** en qué andaba se guarda en `Pet.personality.routine` y se retoma si la
+  siguiente hora simulada es la inmediata; con un hueco de por medio, se empieza de nuevo.
+
+### 8.2 Arreglo: cada hora en su día
+
+Los topes diarios (felicidad, energía, objetos, encuentros) se cargaban todos al día de la
+lectura: tras una ausencia que cruzaba la medianoche, lo de ayer gastaba el cupo de hoy. Ahora
+cada hora cuenta en su día (UTC, el mismo criterio del barrido social), y una hora de un día ya
+cerrado no gasta ni borra los contadores de un día posterior.
+
+### 8.3 Dónde vive
+
+- **Librería:** `shared/mind/src/routine.ts` (`phaseOf`, `routineFactor`, `advanceRoutine`,
+  `isLongStretch`).
+- **Datos:** `balance.json → personality.autonomy.routine`. Los factores inclinan, no prohíben
+  (entre 0,05 y 10): lo valida `validate:data`.
+- **Servidor:** `mind/autonomy.engine.ts` (`simulate` con `clock` y `routine`) y
+  `mind/autonomy.service.ts`. Sin `clock` el motor se comporta exactamente como antes.
+
+### 8.4 Sin hacer
+
+- Sigue sin saberse desde cuándo duerme, está enfermo o está en su hábitat: esos tres estados se
+  aplican tal como están ahora a todas las horas simuladas. Haría falta guardar cuándo cambiaron.
+- La rutina es la misma para todos; la personalidad solo entra por los pesos de siempre.
+- Los clientes no muestran la rutina (qué suele hacer a cada hora).
+
+## 9. Qué queda
+
+Las seis fases están escritas. Lo que no se ha comprobado y lo que quedó fuera está apuntado, con
+qué haría falta para cada cosa, en `docs/PENDIENTES.md` §9.

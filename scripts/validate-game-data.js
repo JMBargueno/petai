@@ -708,6 +708,42 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
   });
   if (errors.length) throw new Error(`Diálogos o textos inválidos:\n  - ${errors.join('\n  - ')}`);
 
+  // Rutinas de la vida autónoma: momentos del día e hilo entre una hora y la siguiente
+  const rut = pers.autonomy?.routine;
+  if (rut) {
+    const at = 'balance.personality.autonomy.routine';
+    const PHASES = ['morning', 'afternoon', 'evening', 'night'];
+    const known = Object.keys(pers.autonomy.activities ?? {});
+    const starts = PHASES.map((ph) => rut.phaseStarts?.[ph]);
+    if (!starts.every((h) => Number.isInteger(h) && h >= 0 && h <= 23)) throw new Error(`${at}.phaseStarts: cada momento necesita una hora de 0 a 23`);
+    for (let i = 1; i < starts.length; i++) if (!(starts[i] > starts[i - 1])) throw new Error(`${at}.phaseStarts: las horas deben ir en orden (mañana < tarde < anochecer < noche)`);
+    for (const ph of Object.keys(rut.phaseFactors ?? {})) if (!PHASES.includes(ph)) throw new Error(`${at}.phaseFactors: momento desconocido ${ph}`);
+    for (const ph of PHASES) {
+      for (const [a, f] of Object.entries(rut.phaseFactors?.[ph] ?? {})) {
+        if (!known.includes(a)) throw new Error(`${at}.phaseFactors.${ph}: actividad desconocida ${a}`);
+        // Inclina, no prohíbe: nada llega a cero ni lo acapara todo
+        if (!(f >= 0.05 && f <= 10)) throw new Error(`${at}.phaseFactors.${ph}.${a} debe estar entre 0,05 y 10`);
+      }
+    }
+    const mo = rut.momentum ?? {};
+    if (!(mo.stay >= 1 && mo.stay <= 3)) throw new Error(`${at}.momentum.stay debe estar entre 1 y 3`);
+    if (!(mo.tired > 0 && mo.tired <= 1)) throw new Error(`${at}.momentum.tired debe estar en (0, 1]`);
+    if (!(Number.isInteger(mo.maxStreak) && mo.maxStreak >= 2 && mo.maxStreak <= 12)) throw new Error(`${at}.momentum.maxStreak debe ser un entero de 2 a 12`);
+    for (const a of mo.noFatigue ?? []) if (!known.includes(a)) throw new Error(`${at}.momentum.noFatigue: actividad desconocida ${a}`);
+    for (const [prev, nexts] of Object.entries(rut.after ?? {})) {
+      if (!known.includes(prev)) throw new Error(`${at}.after: actividad desconocida ${prev}`);
+      for (const [a, f] of Object.entries(nexts)) {
+        if (!known.includes(a) || a === prev) throw new Error(`${at}.after.${prev}: actividad inválida ${a}`);
+        if (!(f >= 0.2 && f <= 3)) throw new Error(`${at}.after.${prev}.${a} debe estar entre 0,2 y 3`);
+      }
+    }
+    if (!(Number.isInteger(rut.longFrom) && rut.longFrom >= 2 && rut.longFrom <= mo.maxStreak)) throw new Error(`${at}.longFrom debe ser un entero entre 2 y momentum.maxStreak`);
+    for (const lang of Object.keys(strings)) {
+      for (const a of known) if (typeof strings[lang][`AUTO_LONG_${a.toUpperCase()}_1`] !== 'string') throw new Error(`strings/${lang}.json: falta AUTO_LONG_${a.toUpperCase()}_1 (un buen rato seguido)`);
+    }
+    console.log(`✓ balance.json: rutinas de la vida autónoma (${PHASES.length} momentos del día, ${Object.keys(rut.after ?? {}).length} encadenamientos) validadas`);
+  }
+
   // Consolidación de la memoria: cada grupo que se pliega necesita su frase de resumen
   const cons = pers.memory?.consolidation;
   if (cons) {

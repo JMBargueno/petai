@@ -266,5 +266,12 @@
   "DIGEST_ADVENTURE_MANY": "He vivido muchísimas aventuras.",
   "DIGEST_ADVENTURE_TONE_GOOD": "Casi todas salieron bien.",
   "DIGEST_ADVENTURE_TONE_MIXED": "Unas salieron bien y otras no.",
-  "DIGEST_ADVENTURE_TONE_BAD": "Casi ninguna salió bien, pero aprendí mucho."
+  "DIGEST_ADVENTURE_TONE_BAD": "Casi ninguna salió bien, pero aprendí mucho.",
+  "AUTO_LONG_REST_1": "Me pasé horas descansando a gusto, sin moverme de mi rincón.",
+  "AUTO_LONG_PLAY_ALONE_1": "Estuve jugando yo solo un buen rato seguido, sin cansarme.",
+  "AUTO_LONG_EXPLORE_1": "Me pasé horas explorando: cada rincón me llevaba a otro.",
+  "AUTO_LONG_SOCIALIZE_1": "Estuve un buen rato con otros ecos del vecindario; se me pasó el tiempo volando.",
+  "AUTO_LONG_WAIT_OWNER_1": "Esperé mucho rato a mi entrenador junto a la puerta.",
+  "AUTO_LONG_PRACTICE_TRICK_1": "Estuve horas ensayando mi truco hasta que casi me sale.",
+  "AUTO_LONG_TIDY_HABITAT_1": "Me pasé un buen rato ordenando mi hábitat de arriba abajo."
 }
