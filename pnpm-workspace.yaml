@@ -23,7 +23,10 @@ allowBuilds:
   workerd: true
 
 overrides:
-  deepmerge-ts: '>=8.0.0'  
+  deepmerge-ts: '>=8.0.0'
+  # GHSA-7589-6fvf-x4pw: ReDoS en effect <=3.22.0. Llega vía backend > @prisma/client > prisma >
+  # @prisma/config. Quitar cuando Prisma dependa de una versión parcheada.
+  effect: '^3.22.1'
 
 # Avisos de `pnpm audit` aceptados a sabiendas. Revisar cada uno cuando salga un parche y quitarlo.
 auditConfig:
