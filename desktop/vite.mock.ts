@@ -410,6 +410,25 @@ function storyState(id: string) {
 
 let visiting: null | { friendId: string } = null;
 
+/** Iniciativa de ejemplo (la real la decide el backend con @pockai/mind). */
+let talkLevel = 'normal';
+let talkTurn = 0;
+const TALK_DEMO = [
+  { id: 'return_real_pet', kind: 'return', text: '¡Has vuelto! ¿Qué tal está Toby?' },
+  { id: 'care_real_pet_fed', kind: 'care', text: '¿Has recordado dar de comer hoy a tu perro Toby?' },
+  { id: 'wish_explore', kind: 'wish', text: '¿Salimos de aventura? Me apetece explorar.' },
+  { id: 'idle_company', kind: 'idle', text: 'Me gusta estar aquí contigo.' },
+];
+const talkSettings = () => ({
+  level: talkLevel,
+  levels: [
+    { id: 'quiet', desktopMinutes: 17, mobilePerDay: 1, onlyOnReturn: true },
+    { id: 'normal', desktopMinutes: 17, mobilePerDay: 2, onlyOnReturn: false },
+    { id: 'chatty', desktopMinutes: 7, mobilePerDay: 6, onlyOnReturn: false },
+  ],
+  talkFactor: 1.2,
+});
+
 /** Conversación de ejemplo del menú de visita (el real lo decide el backend). */
 const TALK_LINES: Record<string, string> = {
   greet: 'Luna te saluda contenta.',
@@ -634,6 +653,12 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/habitat\/catalog$/, () => habitats],
   ['GET', /^\/habitat\/buffs$/, () => ({ petId: 'p-1', activeBuffs: { energy_recovery_boost: 0.15, happiness_decay_reduction: 0.05 }, itemCount: 2 })],
   ['GET', /^\/habitat\/visitors$/, () => ({ visitors: [] })],
+  ['POST', /^\/pets\/[^/]+\/initiative$/, ({ body }) => {
+    const phrase = body?.back ? TALK_DEMO[0] : TALK_DEMO[1 + (talkTurn++ % (TALK_DEMO.length - 1))];
+    return { phrase, retryInMs: 60_000, level: talkLevel, feeling: 'content' };
+  }],
+  ['GET', /^\/pets\/[^/]+\/initiative\/settings$/, () => talkSettings()],
+  ['PUT', /^\/pets\/[^/]+\/initiative\/settings$/, ({ body }) => ((talkLevel = body?.level ?? talkLevel), talkSettings())],
   ['POST', /^\/habitat\/furniture\/([^/]+)\/place$/, ({ m, body }) => {
     const f = habitats.furniture.find((x: any) => x.id === m[1]);
     spend(f?.currency ?? 'coins', f?.price ?? 0);

@@ -67,7 +67,7 @@
       "id": "greeting_morning",
       "kind": "greeting",
       "text": { "es": "Buenos días, {{nombre.custodio}}.", "en": "Good morning, {{nombre.custodio}}." },
-      "when": { "all": ["morning", "first_today"] },
+      "when": { "all": ["morning", "first_today"], "none": ["feeling_upset", "feeling_down"] },
       "cooldownMinutes": 720
     },
     {

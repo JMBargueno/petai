@@ -570,6 +570,19 @@
         "furniture_bathe": { "valence": 0.04, "arousal": -0.05 }
       }
     },
+    "initiative": {
+      "defaultLevel": "normal",
+      "levels": {
+        "quiet": { "desktopMinutes": 20, "mobilePerDay": 1, "onlyOnReturn": true },
+        "normal": { "desktopMinutes": 20, "mobilePerDay": 2 },
+        "chatty": { "desktopMinutes": 8, "mobilePerDay": 5 }
+      },
+      "personality": { "weights": { "sociability": 0.008, "temper": 0.004 }, "min": 0.6, "max": 1.6 },
+      "quietHours": { "from": 23, "to": 8 },
+      "backAfterMinutes": 30,
+      "priority": [["return"], ["greeting", "need"], ["feeling"], ["wish"], ["care", "share"], ["idle"]],
+      "recentWindow": 8
+    },
     "autonomy": {
       "intervalMinutes": 60,
       "maxIntervalsPerCatchUp": 24,
