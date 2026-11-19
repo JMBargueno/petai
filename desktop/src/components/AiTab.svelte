@@ -89,6 +89,9 @@
 
   $: isManaged = activeMode === 'managed';
   $: isPro = (usage?.plan === 'pro') || (entitlement?.plan === 'pro');
+  // Pro regalado (voucher o regalo del equipo): no hay suscripción que gestionar en Stripe.
+  $: giftedPro = entitlement?.source === 'voucher';
+  $: giftedUntil = giftedPro && entitlement?.currentPeriodEnd ? new Date(entitlement.currentPeriodEnd).toLocaleDateString() : '';
   $: dailyLimit = usage?.daily?.limit ?? (isPro ? 200 : 15);
   $: dailyUsed = usage?.daily?.used ?? 0;
   $: dailyRemaining = Math.max(0, dailyLimit - dailyUsed);
@@ -741,7 +744,9 @@
       <Notice tone="info" icon="chat">
         Te quedan <strong>{dailyRemaining} de {dailyLimit}</strong> mensajes hoy · se renuevan a medianoche.
         <svelte:fragment slot="end">
-          {#if isPro}
+          {#if isPro && giftedPro}
+            <Badge tone="accent" icon="star" title="Pro regalado">Pro hasta {giftedUntil}</Badge>
+          {:else if isPro}
             <Button variant="ghost" size="sm" on:click={openPortal}>Gestionar</Button>
           {:else}
             <Button variant="ghost" size="sm" icon="star" on:click={() => (showPaywall = true)}>Pro</Button>
@@ -757,7 +762,9 @@
             Conversa directamente con tu mascota sin necesidad de crear cuentas externas ni introducir claves.
             El servidor gestiona la IA con OpenRouter y optimización automática.
           </p>
-          {#if isPro}
+          {#if isPro && giftedPro}
+            <Notice tone="ok"><strong>Pro regalado hasta el {giftedUntil}:</strong> 200 mensajes diarios y herramientas de agente habilitadas.</Notice>
+          {:else if isPro}
             <Notice tone="ok"><strong>Plan Pro activo:</strong> 200 mensajes diarios y herramientas de agente habilitadas.</Notice>
             <Button variant="primary" block on:click={openPortal}>Gestionar suscripción en Stripe</Button>
           {:else}
@@ -1082,7 +1089,9 @@
 
   {#if paywallErr}<Notice tone="error">{paywallErr}</Notice>{/if}
 
-  {#if isPro}
+  {#if isPro && giftedPro}
+    <Notice tone="ok"><strong>Tienes Pro regalado hasta el {giftedUntil}.</strong></Notice>
+  {:else if isPro}
     <Button variant="primary" size="lg" block loading={paywallBusy} on:click={openPortal}>Gestionar suscripción en Stripe</Button>
   {:else}
     <Button variant="primary" size="lg" block icon="star" loading={paywallBusy} on:click={subscribePro}>

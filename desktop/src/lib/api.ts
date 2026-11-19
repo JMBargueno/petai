@@ -197,6 +197,23 @@ function authHeaders() {
     : {};
 }
 
+/** Recompensa recibida (canje de voucher o regalo del equipo): respuesta del canje y evento `reward:received`. */
+export interface RewardReceived {
+  source: 'voucher' | 'admin_grant';
+  /** Id único de la entrega: sirve para no celebrarla dos veces. */
+  redemptionId: string;
+  code?: string;
+  note?: string;
+  granted: {
+    coins: number;
+    gems: number;
+    proDays: number;
+    proUntil: string | null;
+    chests: { type: 'bronze' | 'silver' | 'gold' | 'diamond' | 'mythic'; qty: number }[];
+    accessories: { id: string; name: string; alreadyOwned: boolean }[];
+  };
+}
+
 /** Error de la API con el estado HTTP, para distinguir errores de negocio de los terminales. */
 export class ApiError extends Error {
   constructor(message: string, readonly status?: number) {
@@ -640,6 +657,17 @@ export const api = {
     }>('GET', '/v1/ai/usage');
   },
 
+  // ---- Vouchers de recompensas ----
+  /** Canjea un voucher. Lanza ApiError: 400 código no válido, 409 ya canjeado, 429 demasiados intentos. */
+  async redeemVoucher(code: string): Promise<RewardReceived> {
+    const res = await client.POST('/v1/vouchers/redeem', {
+      body: { code: code.trim() },
+      ...authHeaders(),
+    });
+    if (res.error) throw apiError(res, 'No se pudo canjear el código');
+    return res.data as RewardReceived;
+  },
+
   // ---- Facturación y Suscripción Pro (Spec-34) ----
   async getBillingPlans() {
     return minigameRequest<{
@@ -655,7 +683,7 @@ export const api = {
   async getBillingEntitlement() {
     return minigameRequest<{
       plan: 'free' | 'pro';
-      source?: 'stripe' | 'google_play' | null;
+      source?: 'stripe' | 'google_play' | 'voucher' | null;
       currentPeriodEnd?: string | null;
       cancelAtPeriodEnd?: boolean;
       status?: string | null;
