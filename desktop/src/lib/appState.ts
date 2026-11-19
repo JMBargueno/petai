@@ -9,6 +9,7 @@
 import { derived, get, writable } from 'svelte/store';
 import {
   hasCore,
+  inboxPush,
   onStateChange,
   stateApplyPet,
   stateLoad,
@@ -21,6 +22,7 @@ import {
 } from '@pockai/client';
 import { api, getAccessToken, sessionReady } from './api';
 import { loadActivePetId, pickActivePet, saveActivePetId } from './activePet';
+import { setInboxFromCore, takeLegacyInbox, type InboxNotification } from './notification-inbox';
 
 /** Paso de alta que le falta a la cuenta. */
 export type AccountLock = 'unverified' | 'noHandle';
@@ -86,6 +88,7 @@ function applySnapshot(state: AppState) {
   eggs.set(state.eggs);
   inventory.set(state.inventory);
   shopItems.set(state.shop);
+  setInboxFromCore(state.inbox as unknown as InboxNotification[]);
 }
 
 function applyChange(change: StateChange) {
@@ -98,6 +101,7 @@ function applyChange(change: StateChange) {
   else if (change.slice === 'eggs') eggs.set(value);
   else if (change.slice === 'inventory') inventory.set(value);
   else if (change.slice === 'shop') shopItems.set(value);
+  else if (change.slice === 'inbox') setInboxFromCore(value);
   if (change.slice === 'pets' && change.source === 'server') serverPetsArrived();
 }
 
@@ -106,6 +110,8 @@ function connectCore(): Promise<void> {
   return (coreReady ??= (async () => {
     await onStateChange(applyChange);
     applySnapshot(await stateSnapshot());
+    // La bandeja que guardaba el webview pasa al núcleo (del aviso más antiguo al más reciente).
+    for (const notice of takeLegacyInbox().reverse()) await inboxPush(notice).catch(() => {});
   })());
 }
 

@@ -28,6 +28,9 @@ vi.mock('@pockai/client', () => ({
     return () => {};
   },
   stateSnapshot: async () => core.snapshot,
+  inboxPush: vi.fn(async () => {}),
+  inboxTake: vi.fn(async () => []),
+  inboxMarkAllRead: vi.fn(async () => {}),
   stateLoad: core.stateLoad,
   stateRefresh: core.stateRefresh,
   stateApplyPet: core.stateApplyPet,

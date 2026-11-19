@@ -232,3 +232,37 @@ export function stateSelectPet(id: string): Promise<void> {
 export function onStateChange(cb: (change: StateChange) => void): Promise<() => void> {
   return listenTo<StateChange>(STATE_EVENT, cb);
 }
+
+// ── Avisos y bandeja ─────────────────────────────────────────────────────────────────────────
+
+import type { Notice } from './bindings/Notice';
+import type { NoticeKind } from './bindings/NoticeKind';
+import type { NoticePriority } from './bindings/NoticePriority';
+
+export type { Notice, NoticeKind, NoticePriority };
+
+/** Nombre del evento con el que el núcleo pide avisar de algo. */
+export const NOTICE_EVENT = 'core://notice';
+
+/**
+ * El núcleo ha decidido avisar de algo (la mascota necesita atención, un recordatorio ha vencido).
+ * Cómo se muestra lo decide cada plataforma.
+ */
+export function onNotice(cb: (notice: Notice) => void): Promise<() => void> {
+  return listenTo<Notice>(NOTICE_EVENT, cb);
+}
+
+/** Guarda en la bandeja un aviso de la mascota que no se pudo mostrar. */
+export function inboxPush(notice: unknown): Promise<void> {
+  return command<void>('inbox_push', { notice });
+}
+
+/** Vacía la bandeja y devuelve lo que había. */
+export function inboxTake(): Promise<unknown[]> {
+  return command<unknown[]>('inbox_take');
+}
+
+/** Marca como leídos todos los avisos de la bandeja. */
+export function inboxMarkAllRead(): Promise<void> {
+  return command<void>('inbox_mark_all_read');
+}

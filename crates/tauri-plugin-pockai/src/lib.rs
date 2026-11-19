@@ -25,6 +25,7 @@ pub const EVENT_MAINTENANCE: &str = "core://maintenance";
 pub const EVENT_REALTIME: &str = "core://realtime";
 pub const EVENT_REALTIME_STATUS: &str = "core://realtime-status";
 pub const EVENT_STATE: &str = "core://state";
+pub const EVENT_NOTICE: &str = "core://notice";
 
 /// Lo que el shell de cada plataforma le dice al puente al registrarlo.
 pub struct PockaiConfig {
@@ -139,8 +140,19 @@ async fn state_select_pet(core: State<'_, Core>, id: String) -> Result<(), Strin
 }
 
 #[tauri::command]
-async fn state_clear(core: State<'_, Core>) -> Result<(), String> {
-    core.state_clear();
+async fn inbox_push(core: State<'_, Core>, notice: Value) -> Result<(), String> {
+    core.inbox_push(notice);
+    Ok(())
+}
+
+#[tauri::command]
+async fn inbox_take(core: State<'_, Core>) -> Result<Vec<Value>, String> {
+    Ok(core.inbox_take())
+}
+
+#[tauri::command]
+async fn inbox_mark_all_read(core: State<'_, Core>) -> Result<(), String> {
+    core.inbox_mark_all_read();
     Ok(())
 }
 
@@ -151,6 +163,7 @@ fn forward<R: Runtime>(app: &AppHandle<R>, event: CoreEvent) {
         CoreEvent::Realtime(event) => app.emit(EVENT_REALTIME, event),
         CoreEvent::RealtimeStatus { connected } => app.emit(EVENT_REALTIME_STATUS, RealtimeStatus { connected }),
         CoreEvent::State(change) => app.emit(EVENT_STATE, change),
+        CoreEvent::Notice(notice) => app.emit(EVENT_NOTICE, notice),
     };
     if let Err(e) = result {
         log::warn!("[puente] no se pudo emitir un evento a la UI: {e}");
@@ -174,7 +187,9 @@ pub fn init<R: Runtime>(config: PockaiConfig) -> TauriPlugin<R> {
             state_apply_pet,
             state_patch_pet,
             state_select_pet,
-            state_clear
+            inbox_push,
+            inbox_take,
+            inbox_mark_all_read
         ])
         .setup(move |app, _api| {
             let data_dir = app.path().app_config_dir().ok();

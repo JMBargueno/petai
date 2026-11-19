@@ -8,9 +8,10 @@
 //! de las respuestas y la UI lee muchos campos que al núcleo no le importan. El núcleo solo
 //! interpreta lo que necesita para decidir (`id`, `emailVerified`, `handle`, `timezone`…).
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
@@ -37,7 +38,11 @@ pub enum Slice {
     Eggs,
     Inventory,
     Shop,
+    Inbox,
 }
+
+/// Avisos que se guardan como mucho en la bandeja.
+const INBOX_MAX: usize = 100;
 
 /// De dónde viene un cambio: del servidor (carga, sondeo, tiempo real) o de este dispositivo.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -83,6 +88,9 @@ pub struct AppState {
     /// Lo que se vende en la tienda (sin lo que solo sale de cofres ni lo oculto).
     #[ts(type = "Array<Record<string, unknown>>")]
     pub shop: Vec<Value>,
+    /// Bandeja de avisos de la mascota que no se pudieron mostrar (los más recientes primero).
+    #[ts(type = "Array<Record<string, unknown>>")]
+    pub inbox: Vec<Value>,
 }
 
 impl AppState {
@@ -94,6 +102,7 @@ impl AppState {
             Slice::Eggs => Value::Array(self.eggs.clone()),
             Slice::Inventory => Value::Array(self.inventory.clone()),
             Slice::Shop => Value::Array(self.shop.clone()),
+            Slice::Inbox => Value::Array(self.inbox.clone()),
         }
     }
 
@@ -139,6 +148,8 @@ pub struct LoadOutcome {
 
 /// Dónde vive el estado dentro del núcleo.
 pub(crate) struct StateStore {
+    /// Cuándo se avisó por última vez de cada necesidad de cada mascota.
+    pub(crate) needs_sent: Mutex<HashMap<String, Instant>>,
     state: Mutex<AppState>,
     poll: Mutex<Option<JoinHandle<()>>>,
     /// Mascota activa ya comunicada al servidor en esta sesión.
@@ -157,7 +168,7 @@ impl StateStore {
                 .unwrap_or_default(),
             _ => AppState::default(),
         };
-        Self { state: Mutex::new(state), poll: Mutex::new(None), activated: Mutex::new(None), path }
+        Self { needs_sent: Mutex::new(HashMap::new()), state: Mutex::new(state), poll: Mutex::new(None), activated: Mutex::new(None), path }
     }
 
     fn persist(&self, state: &AppState) {
@@ -249,6 +260,7 @@ impl Core {
 
         self.sync_active_pet();
         self.start_poll();
+        self.deliver_reminders().await;
         outcome
     }
 
@@ -277,7 +289,7 @@ impl Core {
                 let inventory = as_list(self.get_json("/v1/inventory", true).await?);
                 self.change(slice, ChangeSource::Server, |s| s.inventory = inventory);
             }
-            Slice::Shop | Slice::ActivePetId => return Err("esta parte del estado no se recarga sola".into()),
+            Slice::Shop | Slice::ActivePetId | Slice::Inbox => return Err("esta parte del estado no se recarga sola".into()),
         }
         Ok(())
     }
@@ -315,7 +327,33 @@ impl Core {
         self.clear_game();
         self.change(Slice::User, ChangeSource::Local, |s| s.user = Value::Null);
         self.change(Slice::ActivePetId, ChangeSource::Local, |s| s.active_pet_id = None);
+        self.change(Slice::Inbox, ChangeSource::Local, |s| s.inbox.clear());
+        self.store().needs_sent.lock().unwrap().clear();
         self.store().forget();
+    }
+
+    /// Guarda en la bandeja un aviso de la mascota que no se pudo mostrar.
+    pub fn inbox_push(&self, notice: Value) {
+        self.change(Slice::Inbox, ChangeSource::Local, |s| {
+            s.inbox.insert(0, notice);
+            s.inbox.truncate(INBOX_MAX);
+        });
+    }
+
+    /// Vacía la bandeja y devuelve lo que había, para volver a intentar mostrarlo.
+    pub fn inbox_take(&self) -> Vec<Value> {
+        let pending = self.store().state.lock().unwrap().inbox.clone();
+        self.change(Slice::Inbox, ChangeSource::Local, |s| s.inbox.clear());
+        pending
+    }
+
+    /// Marca como leídos todos los avisos de la bandeja (los conserva).
+    pub fn inbox_mark_all_read(&self) {
+        self.change(Slice::Inbox, ChangeSource::Local, |s| {
+            for notice in s.inbox.iter_mut().filter_map(Value::as_object_mut) {
+                notice.insert("read".into(), Value::Bool(true));
+            }
+        });
     }
 
     // ── Interno ──────────────────────────────────────────────────────────────────────────────
@@ -400,6 +438,10 @@ impl Core {
             StateChange { slice, rev: state.rev, value, source }
         };
         self.emit(CoreEvent::State(change));
+        // Lectura fresca de las mascotas: ¿necesita atención la activa?
+        if slice == Slice::Pets && source == ChangeSource::Server {
+            self.announce_needs();
+        }
     }
 
     /// Le dice al servidor cuál es la mascota activa, una vez por sesión y elección. Solo si es una
@@ -448,15 +490,16 @@ impl Core {
                     // Sin conexión o sesión caducada: se reintenta en el siguiente ciclo.
                     let _ = core.state_refresh(Slice::Pets).await;
                 }
+                core.deliver_reminders().await;
             }
         }));
     }
 
-    async fn get_json(&self, path: &str, auth: bool) -> Result<Value, String> {
+    pub(crate) async fn get_json(&self, path: &str, auth: bool) -> Result<Value, String> {
         self.json(ApiRequest { method: "GET".into(), path: path.into(), body: None, auth, content_type: None }).await
     }
 
-    async fn send_json(&self, method: &str, path: &str, body: Value) -> Result<Value, String> {
+    pub(crate) async fn send_json(&self, method: &str, path: &str, body: Value) -> Result<Value, String> {
         self.json(ApiRequest {
             method: method.into(),
             path: path.into(),

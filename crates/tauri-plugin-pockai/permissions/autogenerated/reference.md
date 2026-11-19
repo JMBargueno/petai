@@ -1,6 +1,6 @@
 ## Default Permission
 
-Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real y estado global.
+Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real, estado global y avisos.
 
 #### This default permission set includes the following:
 
@@ -18,7 +18,9 @@ Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en 
 - `allow-state-apply-pet`
 - `allow-state-patch-pet`
 - `allow-state-select-pet`
-- `allow-state-clear`
+- `allow-inbox-push`
+- `allow-inbox-take`
+- `allow-inbox-mark-all-read`
 
 ## Permission Table
 
@@ -103,6 +105,84 @@ Enables the chat_stream command without any pre-configured scope.
 <td>
 
 Denies the chat_stream command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:allow-inbox-mark-all-read`
+
+</td>
+<td>
+
+Enables the inbox_mark_all_read command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:deny-inbox-mark-all-read`
+
+</td>
+<td>
+
+Denies the inbox_mark_all_read command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:allow-inbox-push`
+
+</td>
+<td>
+
+Enables the inbox_push command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:deny-inbox-push`
+
+</td>
+<td>
+
+Denies the inbox_push command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:allow-inbox-take`
+
+</td>
+<td>
+
+Enables the inbox_take command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:deny-inbox-take`
+
+</td>
+<td>
+
+Denies the inbox_take command without any pre-configured scope.
 
 </td>
 </tr>
@@ -259,32 +339,6 @@ Enables the state_apply_pet command without any pre-configured scope.
 <td>
 
 Denies the state_apply_pet command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`pockai:allow-state-clear`
-
-</td>
-<td>
-
-Enables the state_clear command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`pockai:deny-state-clear`
-
-</td>
-<td>
-
-Denies the state_clear command without any pre-configured scope.
 
 </td>
 </tr>

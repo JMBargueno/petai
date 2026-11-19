@@ -1,6 +1,7 @@
 use serde_json::Value;
 
 use crate::contract::{RealtimeEvent, SessionKind};
+use crate::notices::Notice;
 use crate::state::StateChange;
 
 /// Lo que el núcleo anuncia a quien se suscriba: el puente de Tauri (que lo reenvía a la UI) y los
@@ -17,4 +18,6 @@ pub enum CoreEvent {
     RealtimeStatus { connected: bool },
     /// Ha cambiado una parte del estado global.
     State(StateChange),
+    /// El núcleo ha decidido avisar de algo (una necesidad de la mascota, un recordatorio vencido).
+    Notice(Notice),
 }

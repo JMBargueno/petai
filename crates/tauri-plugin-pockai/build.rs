@@ -13,7 +13,9 @@ const COMMANDS: &[&str] = &[
     "state_apply_pet",
     "state_patch_pet",
     "state_select_pet",
-    "state_clear",
+    "inbox_push",
+    "inbox_take",
+    "inbox_mark_all_read",
 ];
 
 fn main() {

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-inbox-push"
+description = "Enables the inbox_push command without any pre-configured scope."
+commands.allow = ["inbox_push"]
+
+[[permission]]
+identifier = "deny-inbox-push"
+description = "Denies the inbox_push command without any pre-configured scope."
+commands.deny = ["inbox_push"]

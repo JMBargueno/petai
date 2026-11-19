@@ -3,4 +3,4 @@
 /**
  * Cada parte del estado que cambia y se anuncia por separado.
  */
-export type Slice = "user" | "pets" | "activePetId" | "eggs" | "inventory" | "shop";
+export type Slice = "user" | "pets" | "activePetId" | "eggs" | "inventory" | "shop" | "inbox";

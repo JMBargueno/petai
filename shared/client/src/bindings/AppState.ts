@@ -15,4 +15,8 @@ activePetId: string | null, eggs: Array<Record<string, unknown>>, inventory: Arr
 /**
  * Lo que se vende en la tienda (sin lo que solo sale de cofres ni lo oculto).
  */
-shop: Array<Record<string, unknown>>, };
+shop: Array<Record<string, unknown>>, 
+/**
+ * Bandeja de avisos de la mascota que no se pudieron mostrar (los más recientes primero).
+ */
+inbox: Array<Record<string, unknown>>, };

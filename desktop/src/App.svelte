@@ -3,6 +3,7 @@
   import { onMount, onDestroy, tick } from 'svelte';
   import { api, getAccessToken, onEmailUnverified, onHandleRequired, onSessionExpired } from './lib/api';
   import * as appState from './lib/appState';
+  import { hasCore, onNotice } from '@pockai/client';
   import { initSocket, closeSocket } from './lib/socket';
   import { startClickThrough } from './lib/clickthrough';
   import { EXIT_HABITAT_EVENT, type ExitHabitatDetail } from './lib/habitatExitDrag';
@@ -94,8 +95,17 @@
     appState.inventory.subscribe((v) => (inventory = v)),
     appState.shopItems.subscribe((v) => (shopItems = v)),
     // Lectura fresca del servidor (sondeo o tiempo real): ¿necesita atención la mascota activa?
-    appState.onServerPets(() => currentPet && notifyPetNeeds(currentPet)),
+    // Dentro de la app lo decide el núcleo y llega como aviso (`onNotice`, más abajo).
+    appState.onServerPets(() => !hasCore() && currentPet && notifyPetNeeds(currentPet)),
   ];
+  // Avisos que decide el núcleo (necesidades de la mascota, recordatorios vencidos): aquí solo se
+  // muestran, por el bocadillo si la mascota está a la vista o como notificación del sistema.
+  let stopNotices: () => void = () => {};
+  if (hasCore()) {
+    void onNotice((n) => void notifyNow(n.title, n.body, { speech: n.speech, priority: n.priority, key: n.key })).then(
+      (stop) => (stopNotices = stop),
+    );
+  }
   let isPanelOpen = true;
   let droppedFile: AnalyzedFile | null = null;
   /** Último logro desbloqueado (aviso con la insignia). */
@@ -648,7 +658,8 @@
   // se consulta cada minuto para poder avisar cuando la mascota necesita atención.
   // Recordatorios creados por la mascota (con confirmación): al vencer se avisa y se marcan entregados
   async function checkReminders() {
-    if (!getAccessToken()) return;
+    // Dentro de la app los recordatorios los lleva el núcleo y llegan como aviso.
+    if (hasCore() || !getAccessToken()) return;
     try {
       const due = await api.getDueReminders();
       for (const r of due) {
@@ -832,6 +843,7 @@
 
   onDestroy(() => {
     stopAppState.forEach((stop) => stop());
+    stopNotices();
     initiative.stop();
     if (ballRaf) cancelAnimationFrame(ballRaf);
     window.removeEventListener('petai:file_dropped', handleFileDropped);

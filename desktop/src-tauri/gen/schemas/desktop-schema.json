@@ -2949,10 +2949,10 @@
           "markdownDescription": "Denies the show command without any pre-configured scope."
         },
         {
-          "description": "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real y estado global.\n#### This default permission set includes:\n\n- `allow-api-request`\n- `allow-chat-stream`\n- `allow-chat-cancel`\n- `allow-session-state`\n- `allow-session-logout`\n- `allow-session-import-legacy`\n- `allow-realtime-start`\n- `allow-realtime-stop`\n- `allow-state-snapshot`\n- `allow-state-load`\n- `allow-state-refresh`\n- `allow-state-apply-pet`\n- `allow-state-patch-pet`\n- `allow-state-select-pet`\n- `allow-state-clear`",
+          "description": "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real, estado global y avisos.\n#### This default permission set includes:\n\n- `allow-api-request`\n- `allow-chat-stream`\n- `allow-chat-cancel`\n- `allow-session-state`\n- `allow-session-logout`\n- `allow-session-import-legacy`\n- `allow-realtime-start`\n- `allow-realtime-stop`\n- `allow-state-snapshot`\n- `allow-state-load`\n- `allow-state-refresh`\n- `allow-state-apply-pet`\n- `allow-state-patch-pet`\n- `allow-state-select-pet`\n- `allow-inbox-push`\n- `allow-inbox-take`\n- `allow-inbox-mark-all-read`",
           "type": "string",
           "const": "pockai:default",
-          "markdownDescription": "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real y estado global.\n#### This default permission set includes:\n\n- `allow-api-request`\n- `allow-chat-stream`\n- `allow-chat-cancel`\n- `allow-session-state`\n- `allow-session-logout`\n- `allow-session-import-legacy`\n- `allow-realtime-start`\n- `allow-realtime-stop`\n- `allow-state-snapshot`\n- `allow-state-load`\n- `allow-state-refresh`\n- `allow-state-apply-pet`\n- `allow-state-patch-pet`\n- `allow-state-select-pet`\n- `allow-state-clear`"
+          "markdownDescription": "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real, estado global y avisos.\n#### This default permission set includes:\n\n- `allow-api-request`\n- `allow-chat-stream`\n- `allow-chat-cancel`\n- `allow-session-state`\n- `allow-session-logout`\n- `allow-session-import-legacy`\n- `allow-realtime-start`\n- `allow-realtime-stop`\n- `allow-state-snapshot`\n- `allow-state-load`\n- `allow-state-refresh`\n- `allow-state-apply-pet`\n- `allow-state-patch-pet`\n- `allow-state-select-pet`\n- `allow-inbox-push`\n- `allow-inbox-take`\n- `allow-inbox-mark-all-read`"
         },
         {
           "description": "Enables the api_request command without any pre-configured scope.",
@@ -2971,6 +2971,24 @@
           "type": "string",
           "const": "pockai:allow-chat-stream",
           "markdownDescription": "Enables the chat_stream command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the inbox_mark_all_read command without any pre-configured scope.",
+          "type": "string",
+          "const": "pockai:allow-inbox-mark-all-read",
+          "markdownDescription": "Enables the inbox_mark_all_read command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the inbox_push command without any pre-configured scope.",
+          "type": "string",
+          "const": "pockai:allow-inbox-push",
+          "markdownDescription": "Enables the inbox_push command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the inbox_take command without any pre-configured scope.",
+          "type": "string",
+          "const": "pockai:allow-inbox-take",
+          "markdownDescription": "Enables the inbox_take command without any pre-configured scope."
         },
         {
           "description": "Enables the realtime_start command without any pre-configured scope.",
@@ -3007,12 +3025,6 @@
           "type": "string",
           "const": "pockai:allow-state-apply-pet",
           "markdownDescription": "Enables the state_apply_pet command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the state_clear command without any pre-configured scope.",
-          "type": "string",
-          "const": "pockai:allow-state-clear",
-          "markdownDescription": "Enables the state_clear command without any pre-configured scope."
         },
         {
           "description": "Enables the state_load command without any pre-configured scope.",
@@ -3063,6 +3075,24 @@
           "markdownDescription": "Denies the chat_stream command without any pre-configured scope."
         },
         {
+          "description": "Denies the inbox_mark_all_read command without any pre-configured scope.",
+          "type": "string",
+          "const": "pockai:deny-inbox-mark-all-read",
+          "markdownDescription": "Denies the inbox_mark_all_read command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the inbox_push command without any pre-configured scope.",
+          "type": "string",
+          "const": "pockai:deny-inbox-push",
+          "markdownDescription": "Denies the inbox_push command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the inbox_take command without any pre-configured scope.",
+          "type": "string",
+          "const": "pockai:deny-inbox-take",
+          "markdownDescription": "Denies the inbox_take command without any pre-configured scope."
+        },
+        {
           "description": "Denies the realtime_start command without any pre-configured scope.",
           "type": "string",
           "const": "pockai:deny-realtime-start",
@@ -3097,12 +3127,6 @@
           "type": "string",
           "const": "pockai:deny-state-apply-pet",
           "markdownDescription": "Denies the state_apply_pet command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the state_clear command without any pre-configured scope.",
-          "type": "string",
-          "const": "pockai:deny-state-clear",
-          "markdownDescription": "Denies the state_clear command without any pre-configured scope."
         },
         {
           "description": "Denies the state_load command without any pre-configured scope.",

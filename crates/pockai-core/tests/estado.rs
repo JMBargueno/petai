@@ -283,3 +283,78 @@ async fn el_estado_guardado_se_recupera_al_arrancar_con_sesion() {
     assert!(!dir.join("state.json").exists());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+fn notices(events: &mut tokio::sync::broadcast::Receiver<CoreEvent>) -> Vec<pockai_core::Notice> {
+    let mut out = Vec::new();
+    while let Ok(event) = events.try_recv() {
+        if let CoreEvent::Notice(notice) = event {
+            out.push(notice);
+        }
+    }
+    out
+}
+
+#[tokio::test]
+async fn avisa_de_lo_que_necesita_la_mascota_activa_una_vez_por_media_hora() {
+    let server = MockServer::start().await;
+    get(&server, "/v1/catalog", json!({ "foods": [] })).await;
+    get(&server, "/v1/me", json!({ "id": "u1" })).await;
+    get(&server, "/v1/pets", json!([{ "id": "p1", "nickname": "Filo", "hunger": 10 }, { "id": "p2", "hunger": 5 }])).await;
+    get(&server, "/v1/eggs", json!([])).await;
+    get(&server, "/v1/inventory", json!([])).await;
+    let core = core(&server);
+    let mut events = core.subscribe();
+
+    core.state_load(LoadOptions::default()).await;
+    // Otra lectura fresca enseguida: mismo aviso, todavía en espera.
+    core.state_refresh(Slice::Pets).await.unwrap();
+
+    let sent = notices(&mut events);
+    assert_eq!(sent.len(), 1, "solo la mascota activa, y una sola vez");
+    assert_eq!(sent[0].key, "needs:p1:hunger");
+    assert_eq!(sent[0].title, "Filo tiene hambre");
+}
+
+#[tokio::test]
+async fn los_recordatorios_vencidos_se_avisan_y_se_marcan_entregados() {
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    get(&server, "/v1/reminders/due", json!([{ "id": "r1", "text": "Regar las plantas", "dueAt": "2026-11-19T10:00:00Z" }])).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/reminders/r1/delivered"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "ok": true })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let core = core(&server);
+    let mut events = core.subscribe();
+
+    core.state_load(LoadOptions::default()).await;
+
+    let sent = notices(&mut events);
+    assert_eq!(sent.len(), 1);
+    assert_eq!(sent[0].key, "reminder:r1");
+    assert_eq!(sent[0].body, "Regar las plantas");
+    assert_eq!(sent[0].speech, "⏰ Regar las plantas");
+}
+
+#[tokio::test]
+async fn la_bandeja_guarda_los_avisos_que_no_se_pudieron_mostrar() {
+    let server = MockServer::start().await;
+    let dir = data_dir();
+    let core = Core::new(CoreConfig::desktop(server.uri(), Some(dir.clone())), session());
+
+    core.inbox_push(json!({ "message": "primero", "read": false }));
+    core.inbox_push(json!({ "message": "segundo", "read": false }));
+    core.inbox_mark_all_read();
+
+    // Los más recientes primero, y sobrevive a un reinicio.
+    let restored = Core::new(CoreConfig::desktop(server.uri(), Some(dir.clone())), session());
+    let inbox = restored.state_snapshot().inbox;
+    assert_eq!(inbox[0], json!({ "message": "segundo", "read": true }));
+    assert_eq!(inbox.len(), 2);
+
+    assert_eq!(restored.inbox_take().len(), 2);
+    assert!(restored.state_snapshot().inbox.is_empty());
+    let _ = std::fs::remove_dir_all(&dir);
+}
