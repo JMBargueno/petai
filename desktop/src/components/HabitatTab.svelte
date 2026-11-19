@@ -13,8 +13,9 @@
   import IsoRoomView from './IsoRoomView.svelte';
   import { AsyncState, Badge, Button, ConfirmDialog, EmptyState, Notice, SectionHeader, Segmented } from './ui';
   import { friendlyError } from '../lib/ui/errors';
-  import { startHabitatExitDrag } from '../lib/habitatExitDrag';
-  import { Home, Pencil, Check, RotateCw, Trash2, Mountain } from 'lucide-svelte';
+  import { startHabitatExitDrag, type RoomPetDrag } from '../lib/habitatExitDrag';
+  import { habitatMode } from '../lib/habitatMode';
+  import { Home, Pencil, Check, RotateCw, Trash2, Mountain, Maximize2 } from 'lucide-svelte';
   import { habitatBackdrop } from '../lib/habitatBackdrop';
   import { roomGuestOf, sceneLabel, stageLabel, visitScene, visitorsStore } from '../lib/visitors';
   import { visitorTalk } from '../lib/visitDialog';
@@ -202,9 +203,9 @@
     }
   });
 
-  function onPetPress(e: CustomEvent<{ event: MouseEvent; ghost: HTMLElement }>) {
+  function onPetPress(e: CustomEvent<{ event: MouseEvent; ghost: HTMLElement; room: RoomPetDrag }>) {
     if (habitatBusy) return;
-    startHabitatExitDrag(e.detail.event, e.detail.ghost);
+    startHabitatExitDrag(e.detail.event, e.detail.ghost, e.detail.room);
   }
 
   function handleStageDrop() {
@@ -301,6 +302,16 @@
           on:click={() => habitatBackdrop.update((m) => (m === 'painted' ? 'plain' : 'painted'))}
         >
           <Mountain size={14} /> {$habitatBackdrop === 'painted' ? 'Paisaje' : 'Solo cielo'}
+        </button>
+      {/if}
+
+      {#if !editing && activeRoom.unlocked}
+        <button
+          class="btn btn--sm habitat-mode-btn"
+          title="Ocultar la interfaz y dejar solo la sala, grande, en el escritorio"
+          on:click={() => habitatMode.enter(activeRoom?.id)}
+        >
+          <Maximize2 size={14} /> Modo hábitat
         </button>
       {/if}
 
@@ -514,6 +525,17 @@
     position: absolute;
     left: 8px;
     bottom: 8px;
+    z-index: calc(var(--z-sticky) + 2);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgb(255 255 255 / 0.9);
+    color: var(--on-color);
+  }
+  .habitat-mode-btn {
+    position: absolute;
+    right: 8px;
+    top: 8px;
     z-index: calc(var(--z-sticky) + 2);
     display: inline-flex;
     align-items: center;

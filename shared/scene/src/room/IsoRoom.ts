@@ -31,6 +31,7 @@ import { isWet, type WeatherLook } from '../ambience/weather';
 import { createRng, pushRecent, type Rng } from '@pockai/mind';
 import { ROOM_CONFIG, byNearest, cellsByDistance, chooseRoomAction, type RoomMind } from './petWander';
 import { entranceCell, freeNeighbor, roamCell, scriptFor, type ActorStep, type Beat } from './visitScene';
+import { nearestFreeCell } from './petHold';
 
 export { WALL_H } from './roomStyles';
 // Pixel art (GUIA_ARTISTICA §7.5): la hoja va a ×2, así que 0,5 deja 1 px nativo = 1 px de sala.
@@ -124,6 +125,9 @@ export class IsoRoom extends Container {
   private waitMs = 1200;
   private using = false;
 
+  // Agarrado con el ratón (petHold): desfase entre el cursor y los pies, y última x para orientarlo.
+  private held: { dx: number; dy: number; lastX: number } | null = null;
+
   // Decisión del paseo (petWander): personalidad y necesidades, azar sembrado y memoria corta
   private mind: RoomMind | null = null;
   private rng: Rng = createRng((Math.random() * 0xffffffff) >>> 0);
@@ -205,6 +209,7 @@ export class IsoRoom extends Container {
       return;
     }
     this.activity = activity;
+    this.held = null;
     this.pet.visible = activity !== 'away';
     // Sin anfitrión en la sala no hay visita que ver aquí (se muestra junto a la mascota del escritorio)
     if (this.guest) this.guest.visible = activity !== 'away';
@@ -275,7 +280,7 @@ export class IsoRoom extends Container {
    * decorando: una escena es un extra, nunca interrumpe otra cosa.
    */
   playScene(type: string): void {
-    if (!this.room || !this.guest || this.activity !== 'idle' || this.edit || this.staysPut) return;
+    if (!this.room || !this.guest || this.held || this.activity !== 'idle' || this.edit || this.staysPut) return;
     const beats = scriptFor(type);
     if (!beats.length) return;
     this.endScene();
@@ -473,7 +478,7 @@ export class IsoRoom extends Container {
 
   /** Un rayo: si el Pockai está quieto y despierto, se asusta (como mucho cada 20 s). */
   startle(): void {
-    if (this.activity !== 'idle' || this.path.length || this.using || this.staysPut || this.startleMs > 0) return;
+    if (this.held || this.activity !== 'idle' || this.path.length || this.using || this.staysPut || this.startleMs > 0) return;
     this.startleMs = STARTLE_EVERY_MS;
     this.pet.play('sad', true);
     this.waitMs = Math.max(this.waitMs, 2200);
@@ -847,11 +852,73 @@ export class IsoRoom extends Container {
     this.pet.zIndex = depthOf(this.petPos.x, this.petPos.y, this.using ? 2 : 0.05);
   }
 
+  // ───────────────────────── Agarrado con el ratón ─────────────────────────
+
+  get holding(): boolean {
+    return !!this.held;
+  }
+
+  /**
+   * Levanta al Pockai (clip `drag`, como en el escritorio). `x`, `y` es el cursor en coordenadas
+   * de la sala: se guarda el desfase para que no salte a los pies del cursor.
+   */
+  grabPet(x: number, y: number): boolean {
+    if (!this.room || this.edit || this.activity === 'away' || !this.pet.visible) return false;
+    this.endScene();
+    this.path = [];
+    this.onArrive = null;
+    this.using = false;
+    this.held = { dx: this.pet.x - x, dy: this.pet.y - y, lastX: x };
+    this.pet.setBaseClip('drag');
+    return true;
+  }
+
+  /** Sigue al cursor (coordenadas de la sala), un pelín levantado y siempre por delante. */
+  holdPetAt(x: number, y: number): void {
+    if (!this.held) return;
+    const dx = x - this.held.lastX;
+    if (Math.abs(dx) > 1) {
+      this.pet.setFacing(dx > 0 ? 1 : -1);
+      this.held.lastX = x;
+    }
+    this.pet.position.set(x + this.held.dx, y + this.held.dy);
+    this.pet.zIndex = 1e6;
+  }
+
+  /** Lo suelta: aterriza en la celda libre más cercana a sus pies y sigue a lo suyo. */
+  releasePet(x: number, y: number): void {
+    if (!this.held || !this.room) return this.cancelHold();
+    const feet = toGrid(x + this.held.dx, y + this.held.dy);
+    const cell = nearestFreeCell(this.room, this.blockedCells(), feet);
+    if (cell) this.petPos = { x: cell.x + 0.5, y: cell.y + 0.5 };
+    this.finishHold();
+    this.pet.play('land', true);
+  }
+
+  /** Lo devuelve a donde estaba (se lo llevaron fuera de la sala o se soltó en otro sitio). */
+  cancelHold(): void {
+    if (!this.held) return;
+    this.finishHold();
+  }
+
+  private finishHold(): void {
+    this.held = null;
+    this.setPetHidden(false);
+    this.pet.setBaseClip(this.activity === 'sleep' ? 'sleep' : this.restClip);
+    this.placePetSprite();
+    this.waitMs = 900;
+  }
+
+  /** Lo oculta mientras el anfitrión lo dibuja fuera de la sala. */
+  setPetHidden(hidden: boolean): void {
+    this.pet.visible = this.activity !== 'away' && !hidden;
+  }
+
   /** Si una edición tapa el camino o la celda del Pockai, recalcula. */
   private replanIfBlocked(): void {
     const blocked = this.blockedCells();
     const here = this.petCell();
-    if (blocked.has(`${here.x},${here.y}`) && !this.using) {
+    if (blocked.has(`${here.x},${here.y}`) && !this.using && !this.held) {
       this.placePetAtStart();
       return;
     }
@@ -965,6 +1032,7 @@ export class IsoRoom extends Container {
       this.life.update(dt);
     }
     if (!this.room || this.activity === 'away') return;
+    if (this.held) return; // en la mano: ni pasea ni representa escenas
 
     this.updateGuest(dt);
     this.updateScene(dt);

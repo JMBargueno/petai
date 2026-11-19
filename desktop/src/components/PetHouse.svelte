@@ -7,12 +7,13 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import { api, type HabitatFurniture, type HabitatRoom } from '../lib/api';
   import IsoRoomView from './IsoRoomView.svelte';
+  import type { RoomPetDrag } from '../lib/habitatExitDrag';
 
   export let pet: any = null;
   export let height = 220;
   export let label = 'Casa del Pockai';
 
-  const dispatch = createEventDispatcher<{ petPress: { event: MouseEvent; ghost: HTMLElement } }>();
+  const dispatch = createEventDispatcher<{ petPress: { event: MouseEvent; ghost: HTMLElement; room: RoomPetDrag } }>();
 
   /** Sala por defecto mientras carga (o si la API falla): la "sala" sin muebles. */
   const EMPTY_ROOM: HabitatRoom = {

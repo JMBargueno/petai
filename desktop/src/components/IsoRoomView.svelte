@@ -5,11 +5,13 @@
    * protocolo y reenvía los eventos de la escena.
    *
    * Eventos: `move` (mueble movido o girado a una posición válida), `select` (mueble
-   * seleccionado), `petTap` y `petPress` (mousedown sobre el Pockai, para sacarlo de la sala).
+   * seleccionado), `petTap` y `petPress` (mousedown sobre el Pockai: trae `room`, para llevarlo en la
+   * mano dentro de la sala, y el «fantasma» para sacarlo de ella).
    */
   import { onDestroy, onMount, createEventDispatcher } from 'svelte';
   import { PockaiScene, parseClock, type Activity, type HostMessage, type RoomState, type SceneEvent } from '@pockai/scene';
   import type { HabitatFurniture, HabitatRoom } from '../lib/api';
+  import type { RoomPetDrag } from '../lib/habitatExitDrag';
   import { environmentalStatus } from '../lib/environmental';
   import { habitatBackdrop } from '../lib/habitatBackdrop';
   import { resolveBaseState } from '../lib/animation/AnimationController';
@@ -26,6 +28,8 @@
   export let selectedId: string | null = null;
   export let label = 'Sala del Pockai';
   export let height = 360;
+  /** Ocupa todo el alto de su contenedor (modo hábitat) en vez de `height`. */
+  export let fill = false;
   /** Dibuja en la sala al Pockai del amigo que esté de visita (solo si el tuyo está en ella). */
   export let showVisitors = false;
 
@@ -33,7 +37,7 @@
     move: { itemId: string; x: number; y: number; rotation: number };
     select: { itemId: string | null };
     petTap: void;
-    petPress: { event: MouseEvent; ghost: HTMLElement };
+    petPress: { event: MouseEvent; ghost: HTMLElement; room: RoomPetDrag };
   }>();
 
   let host: HTMLDivElement;
@@ -53,7 +57,7 @@
   const send = (m: HostMessage) => scene?.receive(m);
 
   onMount(() => {
-    void PockaiScene.create({ host, label, onEvent }).then((s) => {
+    void PockaiScene.create({ host, label, onEvent, observeResize: fill }).then((s) => {
       if (destroyed) return s.destroy();
       scene = s;
     });
@@ -175,12 +179,44 @@
     snap.style.width = '100%';
     snap.style.height = '100%';
     ghost.replaceChildren(snap);
-    dispatch('petPress', { event: e, ghost });
+    dispatch('petPress', { event: e, ghost, room: petDrag });
+  }
+
+  /** Llevar al Pockai en la mano dentro de esta sala (habitatExitDrag). */
+  const petDrag: RoomPetDrag = {
+    contains: (x, y) => !!scene?.containsClientPoint(x, y) && isTopmost(x, y),
+    grab: (x, y) => !!scene?.grabPet(x, y),
+    move: (x, y) => scene?.dragPetTo(x, y),
+    release: (x, y) => scene?.releasePet(x, y),
+    cancel: () => scene?.cancelPetDrag(),
+    setHidden: (h) => scene?.setPetHidden(h),
+  };
+
+  /** Que lo que hay bajo el cursor sea esta sala (no un diálogo u otra cosa por encima). */
+  function isTopmost(x: number, y: number): boolean {
+    const top = document.elementFromPoint?.(x, y);
+    return !top || !host || host.contains(top);
+  }
+
+  // Mano abierta al pasar sobre el Pockai (se puede agarrar)
+  let overPet = false;
+  function onHover(e: MouseEvent) {
+    const over = !edit && !!scene?.isPetAt(e.clientX, e.clientY);
+    if (over !== overPet) overPet = over;
   }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="iso-room" style="--room-h: {height}px" bind:this={host} on:mousedown={onMouseDown}></div>
+<div
+  class="iso-room"
+  class:fill
+  class:over-pet={overPet}
+  style="--room-h: {height}px"
+  bind:this={host}
+  on:mousedown={onMouseDown}
+  on:mousemove={onHover}
+  on:mouseleave={() => (overPet = false)}
+></div>
 <div class="pet-ghost-src" bind:this={ghost} aria-hidden="true"></div>
 
 <style>
@@ -188,6 +224,12 @@
     position: relative;
     width: 100%;
     height: var(--room-h);
+  }
+  .iso-room.fill {
+    height: 100%;
+  }
+  .iso-room.over-pet :global(canvas) {
+    cursor: grab;
   }
   .iso-room :global(canvas:focus-visible) {
     outline: var(--focus-ring);

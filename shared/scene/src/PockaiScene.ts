@@ -52,6 +52,12 @@ export interface SceneOptions {
   reducedMotion?: boolean;
   /** Pausar el ticker cuando la página no se ve (por defecto, sí). */
   pauseWhenHidden?: boolean;
+  /**
+   * Reajustar el lienzo cuando cambie el tamaño del contenedor (no solo el de la ventana). Solo
+   * para contenedores de tamaño fijo, como una ventanita redimensionable: con alto automático
+   * podría crecer sin fin.
+   */
+  observeResize?: boolean;
   /** Texto accesible del lienzo. */
   label?: string;
 }
@@ -179,6 +185,13 @@ export class PockaiScene {
     });
     this.app.renderer.on('resize', () => this.layout());
     this.layout();
+    // `resizeTo` solo atiende al resize de la ventana: si el contenedor cambia de tamaño por su
+    // cuenta (p. ej. la ventanita redimensionable del modo hábitat), se reajusta igualmente.
+    if (this.opts.observeResize && typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => this.app.queueResize());
+      ro.observe(sizeEl);
+      this.disposers.push(() => ro.disconnect());
+    }
 
     const onKey = (e: KeyboardEvent) => this.onKey(e);
     canvas.addEventListener('keydown', onKey);
@@ -594,10 +607,58 @@ export class PockaiScene {
     return !!b && clientX >= b.left && clientX <= b.left + b.width && clientY >= b.top && clientY <= b.top + b.height;
   }
 
+  /** ¿Este punto de la ventana cae sobre el lienzo de la escena? */
+  containsClientPoint(clientX: number, clientY: number): boolean {
+    const r = this.app.canvas.getBoundingClientRect();
+    return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+  }
+
+  /** Punto de la ventana → coordenadas de la sala. */
+  private roomPoint(clientX: number, clientY: number): { x: number; y: number } | null {
+    if (!this.room) return null;
+    const r = this.app.canvas.getBoundingClientRect();
+    const p = this.room.toLocal({ x: clientX - r.left, y: clientY - r.top });
+    return { x: p.x, y: p.y };
+  }
+
+  /**
+   * Agarra al Pockai de la sala con el cursor en ese punto (se levanta con el clip `drag`).
+   * Devuelve `false` si no hay sala, se está decorando o no está en ella.
+   */
+  grabPet(clientX: number, clientY: number): boolean {
+    const p = this.roomPoint(clientX, clientY);
+    return !!p && !!this.room?.grabPet(p.x, p.y);
+  }
+
+  /** El Pockai agarrado sigue al cursor. */
+  dragPetTo(clientX: number, clientY: number): void {
+    const p = this.roomPoint(clientX, clientY);
+    if (p) this.room?.holdPetAt(p.x, p.y);
+  }
+
+  /** Lo suelta en ese punto: aterriza en la celda libre más cercana. */
+  releasePet(clientX: number, clientY: number): void {
+    const p = this.roomPoint(clientX, clientY);
+    if (p) this.room?.releasePet(p.x, p.y);
+    else this.room?.cancelHold();
+  }
+
+  /** Lo devuelve a su sitio sin soltarlo en la sala (p. ej. salió al escritorio). */
+  cancelPetDrag(): void {
+    this.room?.cancelHold();
+  }
+
+  /** Oculta al Pockai de la sala mientras el anfitrión lo dibuja fuera (arrastrándolo). */
+  setPetHidden(hidden: boolean): void {
+    this.room?.setPetHidden(hidden);
+  }
+
   /** Imagen del Pockai tal como se ve ahora (para el «fantasma» al arrastrarlo). */
   petSnapshot(): HTMLCanvasElement | null {
     if (!this.pet.texture) return null;
-    return this.app.renderer.extract.canvas(this.pet.texture) as HTMLCanvasElement;
+    // Se renderiza el contenedor entero (cuerpo, prendas y orientación): extraer solo la textura
+    // del frame devolvía un lienzo vacío y el Pockai no se veía al arrastrarlo fuera de la sala.
+    return this.app.renderer.extract.canvas({ target: this.pet, resolution: 2 }) as HTMLCanvasElement;
   }
 
   destroy(): void {
