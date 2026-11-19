@@ -244,3 +244,8 @@ cerrado no gasta ni borra los contadores de un día posterior.
   aplican tal como están ahora a todas las horas simuladas. Haría falta guardar cuándo cambiaron.
 - La rutina es la misma para todos; la personalidad solo entra por los pesos de siempre.
 - Los clientes no muestran la rutina (qué suele hacer a cada hora).
+
+## 9. Qué queda
+
+Las seis fases están escritas. Lo que no se ha comprobado y lo que quedó fuera está apuntado, con
+qué haría falta para cada cosa, en `docs/PENDIENTES.md` §9.
