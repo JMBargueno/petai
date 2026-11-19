@@ -17,15 +17,9 @@ interface Recipe {
   ingredients: string[]; buff: { stat: string; value: number };
 }
 
-const RECIPES: Recipe[] = [
-  { id: 'starter_soup', name: 'Sopa de Arranque', difficulty: 1, unlockLevel: 1, ingredients: ['carrot', 'onion', 'water'], buff: { stat: 'atk', value: 5 } },
-  { id: 'elemental_brew', name: 'Brew Elemental', difficulty: 2, unlockLevel: 5, ingredients: ['herb', 'crystal', 'water', 'salt'], buff: { stat: 'def', value: 5 } },
-  { id: 'shadow_paste', name: 'Pasta Sombria', difficulty: 3, unlockLevel: 15, ingredients: ['mushroom', 'ink', 'rice'], buff: { stat: 'esp', value: 5 } },
-  { id: 'storm_roast', name: 'Asado Tormenta', difficulty: 3, unlockLevel: 20, ingredients: ['beef', 'lightning', 'pepper', 'salt'], buff: { stat: 'vel', value: 5 } },
-  { id: 'solar_bake', name: 'Horno Solar', difficulty: 4, unlockLevel: 30, ingredients: ['flour', 'sun_nectar', 'butter', 'honey'], buff: { stat: 'atk', value: 8 } },
-  { id: 'abyssal_caviar', name: 'Caviar Abisal', difficulty: 5, unlockLevel: 40, ingredients: ['roe', 'seaweed', 'pearl'], buff: { stat: 'def', value: 8 } },
-  { id: 'mythic_feast', name: 'Banquete Mítico', difficulty: 5, unlockLevel: 50, ingredients: ['phoenix', 'dragon_glass', 'star_dust', 'elixir'], buff: { stat: 'atk', value: 10 } },
-];
+/** Ingredientes señuelo que se mezclan con los de la receta, según su dificultad (1–5). */
+const DECOYS_BY_DIFFICULTY = [1, 1, 2, 2, 3];
+const decoysFor = (difficulty: number) => DECOYS_BY_DIFFICULTY[Math.min(DECOYS_BY_DIFFICULTY.length, Math.max(1, difficulty)) - 1];
 
 @Injectable()
 export class CookingService {
@@ -37,6 +31,16 @@ export class CookingService {
     private readonly petsService: PetsService,
     @Optional() private readonly realtime?: RealtimeGateway,
   ) {}
+
+  /**
+   * Las recetas viven en `shared/game-data/recipes.json`, la única fuente (antes había una copia a
+   * mano aquí). Sus ingredientes son objetos de `foods.json`: en el Éter se cocina con éter condensado.
+   */
+  private recipes(): Recipe[] {
+    const raw = this.gameData.readFileFromDisk('recipes');
+    if (!Array.isArray(raw) || raw.length === 0) throw new BadRequestException('No hay recetas configuradas');
+    return raw as Recipe[];
+  }
 
   async start(userId: string, petId: string) {
     if (!petId || typeof petId !== 'string') throw new BadRequestException('petId es obligatorio');
@@ -50,13 +54,13 @@ export class CookingService {
     if (last && Date.now() - last.startedAt.getTime() < COOLDOWN_SECONDS * 1000) {
       throw new BadRequestException('Espera unos segundos antes de cocinar de nuevo');
     }
-    const available = RECIPES.filter((r) => r.unlockLevel <= pet.level);
+    const available = this.recipes().filter((r) => r.unlockLevel <= pet.level);
     if (available.length === 0) throw new BadRequestException('Nivel insuficiente para cocinar');
     const recipe = available[Math.floor(Math.random() * available.length)];
     // & 0x7FFFFFFF: la columna `cookingSession.seed` es INT4 (signed). `hashSeed` devuelve `>>> 0`
     // (unsigned, hasta 2^32); sin la máscara, ~50% de las semillas no caben → 500 al crear la sesión.
     const seed = hashSeed(`${userId}:${petId}:${Date.now().toString(36)}`) & 0x7fffffff;
-    const ingredientOrder = this.buildOrder(recipe.ingredients, seed);
+    const ingredientOrder = this.buildOrder(this.withDecoys(recipe, seed), seed);
     const hotPotPositions = this.buildHotPots(recipe.ingredients.length, seed);
     const tired = await this.prisma.pet.update({
       where: { id: petId },
@@ -75,11 +79,18 @@ export class CookingService {
     };
   }
 
-  async submit(userId: string, sessionId: string, score: number, correctOrder: boolean) {
+  /**
+   * Cierra la sesión. Si el cliente manda `picked` (lo que echó a la olla, en orden), el servidor
+   * cuenta los aciertos él mismo contra la receta y no se fía de `score` ni de `correctOrder`.
+   */
+  async submit(userId: string, sessionId: string, score: number, correctOrder: boolean, picked?: string[]) {
     // S-12: `score`/`correctOrder` los afirma el cliente (minijuego de un solo uso). Se validan
     // aquí y `correctCount` se acota abajo para que no se pueda inflar la recompensa.
     if (typeof score !== 'number' || !Number.isFinite(score) || typeof correctOrder !== 'boolean') {
       throw new BadRequestException('score y correctOrder inválidos');
+    }
+    if (picked !== undefined && (!Array.isArray(picked) || picked.length > 16 || picked.some((p) => typeof p !== 'string'))) {
+      throw new BadRequestException('picked inválido');
     }
     const session = await this.prisma.cookingSession.findFirst({ where: { id: sessionId, userId } });
     if (!session) throw new NotFoundException('Sesión no encontrada');
@@ -94,10 +105,14 @@ export class CookingService {
       await this.prisma.cookingSession.update({ where: { id: sessionId }, data: { score: 0 } });
       return { score: 0, buff: null, message: 'Tiempo agotado' };
     }
-    const ingredients = session.ingredients as string[];
+    // La sesión guarda lo que se enseñó al jugador (receta + señuelos, barajado); lo que cuenta para
+    // el porcentaje es la receta. Sesiones antiguas de una receta que ya no existe: lo guardado.
+    const recipe = this.recipes().find((r) => r.id === session.recipeId);
+    const ingredients = recipe?.ingredients ?? (session.ingredients as string[]);
     // S-12: acotar correctCount a [0, ingredientes] → pct <= 1. Sin acotado, un score desorbitado
     // (lo afirma el cliente) daría buff máx. y monedas sin límite.
-    const correctCount = Math.min(ingredients.length, Math.max(0, Math.floor(correctOrder ? ingredients.length : score / 25)));
+    const counted = picked ? picked.filter((ing, i) => ingredients[i] === ing).length : Math.floor(correctOrder ? ingredients.length : score / 25);
+    const correctCount = Math.min(ingredients.length, Math.max(0, counted));
     const pct = ingredients.length > 0 ? correctCount / ingredients.length : 0;
     let buff = null;
     if (pct >= 1.0) buff = this.buildBuff(session.recipeId, 1.0);
@@ -119,8 +134,8 @@ export class CookingService {
     const dateStr = today.toISOString().split('T')[0];
     const daySeed = hashSeed(`daily:${dateStr}`);
     const rng = createRng(daySeed);
-    const idx = Math.floor(rng() * RECIPES.length);
-    const recipe = RECIPES[idx];
+    const recipes = this.recipes();
+    const recipe = recipes[Math.floor(rng() * recipes.length)];
     return {
       date: dateStr, recipeId: recipe.id, recipeName: recipe.name,
       difficulty: recipe.difficulty, ingredients: recipe.ingredients,
@@ -138,6 +153,21 @@ export class CookingService {
     return arr;
   }
 
+  /**
+   * Los ingredientes de la receta más unos señuelos (otras comidas), elegidos con la semilla. Sin
+   * señuelos el juego era solo ordenar; con ellos también hay que recordar qué entraba.
+   */
+  private withDecoys(recipe: Recipe, seed: number): string[] {
+    const foods = (this.gameData.getFoods() ?? []) as { id: string; kind?: string }[];
+    const pool = foods.filter((f) => f.kind === 'food' && !recipe.ingredients.includes(f.id)).map((f) => f.id);
+    const rng = createRng(seed + 2);
+    const decoys: string[] = [];
+    for (let n = decoysFor(recipe.difficulty); n > 0 && pool.length > 0; n--) {
+      decoys.push(...pool.splice(Math.floor(rng() * pool.length), 1));
+    }
+    return [...recipe.ingredients, ...decoys];
+  }
+
   private buildHotPots(ingredientCount: number, seed: number): number[] {
     const rng = createRng(seed + 1);
     const totalSlots = 8;
@@ -151,7 +181,7 @@ export class CookingService {
   }
 
   private buildBuff(recipeId: string, multiplier: number) {
-    const recipe = RECIPES.find((r) => r.id === recipeId);
+    const recipe = this.recipes().find((r) => r.id === recipeId);
     if (!recipe) return null;
     return { stat: recipe.buff.stat, value: Math.round(recipe.buff.value * multiplier), durationMs: BUFF_DURATION_MS, source: 'cooking', recipeId };
   }

@@ -17,8 +17,9 @@ import { PrismaService } from '../src/prisma/prisma.service';
  *     tener pet.energy >= ENERGY_COST (=10), tener < DAILY_LIMIT (=20) sesiones en las
  *     últimas 24 h, respetar el cooldown de COOLDOWN_SECONDS (=15 s) desde la última
  *     sesión, y pet.level >= unlockLevel de al menos una receta (=1, `starter_soup`).
- *   · submit: `score` (number) + `correctOrder` (boolean). Con correctOrder=true ⇒
- *     correctCount = ingredientes.length ⇒ pct=1 ⇒ buff al 100% y coins = floor(1*40)=40.
+ *   · submit: `score` (number) + `correctOrder` (boolean) + `picked` (lo que se echó a la olla).
+ *     Con `picked` el servidor cuenta los aciertos contra la receta e ignora los otros dos; la
+ *     receta entera y en orden ⇒ pct=1 ⇒ buff al 100% y coins = floor(1*40)=40.
  *   · daily-menu: solo requiere auth; la receta se elige con hashSeed(`daily:YYYY-MM-DD`)
  *     y es determinista dentro de un mismo día.
  *
@@ -97,11 +98,12 @@ describe('Cooking: cocina, submit y menú del día (e2e) — happy path', () => 
     expect(typeof body.difficulty).toBe('number');
     expect(Array.isArray(body.ingredients)).toBe(true);
     expect(body.ingredients.length).toBeGreaterThan(0);
-    // `order` es una permutación de `ingredients` (misma longitud, mismos elementos).
+    // `order` es la encimera: todos los ingredientes de la receta más al menos un señuelo,
+    // barajados y sin repetir.
     expect(Array.isArray(body.order)).toBe(true);
-    expect(body.order.length).toBe(body.ingredients.length);
-    expect(new Set(body.order).size).toBe(body.ingredients.length);
-    expect(new Set(body.order).size).toBe(new Set(body.ingredients).size);
+    expect(body.order.length).toBeGreaterThan(body.ingredients.length);
+    expect(new Set(body.order).size).toBe(body.order.length);
+    for (const ing of body.ingredients) expect(body.order).toContain(ing);
     expect(Array.isArray(body.hotPotPositions)).toBe(true);
     expect(body.durationSeconds).toBe(60);
     expect(typeof body.seed).toBe('number');
@@ -130,12 +132,12 @@ describe('Cooking: cocina, submit y menú del día (e2e) — happy path', () => 
 
     const coinsBefore = (await prisma.user.findUniqueOrThrow({ where: { id: userId } })).coins;
 
-    // correctOrder=true ⇒ correctCount = ingredientes.length ⇒ pct=1 ⇒ buff full + coins=40.
-    // `score` es irrelevante cuando correctOrder=true; se envía 0 (número finito válido).
+    // Se manda la receta entera y en orden en `picked`: el servidor cuenta los aciertos él mismo
+    // (pct=1 ⇒ buff full + coins=40) aunque `score` y `correctOrder` digan lo contrario.
     const submit = await api()
       .post('/v1/cooking/submit')
       .set(a)
-      .send({ sessionId, score: 0, correctOrder: true })
+      .send({ sessionId, score: 0, correctOrder: false, picked: start.body.ingredients })
       .expect(201);
 
     const body = submit.body;

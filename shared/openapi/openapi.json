@@ -5691,6 +5691,13 @@
                   "correctOrder": {
                     "type": "boolean",
                     "description": "Si el orden de los pasos fue correcto"
+                  },
+                  "picked": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Ingredientes echados a la olla, en orden. Si se envía, el servidor cuenta los aciertos y no usa score ni correctOrder"
                   }
                 }
               }

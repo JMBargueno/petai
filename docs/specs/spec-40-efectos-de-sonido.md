@@ -312,7 +312,7 @@ Un id sin fichero no suena ni falla, así que en F1 y siguientes se puede cablea
    - **Depuración:** en desarrollo, `window.__pockaiSfx` guarda los últimos sonidos pedidos (suenen o no) para comprobar el cableado sin ficheros.
    - **Pendiente para otras fases:** la voz al hablar (babble en las burbujas) y la voz del amigo de visita.
 3. **F2, recompensas y efectos:** subir de nivel, evolución, huevos, rarezas, logros, cofres, y las fases de `EffectPlayer`.
-4. **F3, minijuegos (hecho) y cocina (pendiente):** las señales `last`, `timer_warning` en `host.ts`, y los sintetizados.
+4. **F3, minijuegos y cocina (hecho):** las señales `last`, `timer_warning` en `host.ts`, y los sintetizados.
 
    Cómo quedaron los minijuegos:
    - **El paquete no lleva motor propio.** `shared/minigames/src/sound.ts` define lo que necesita (`MinigameSound`: `play`, `loop`, `stopLoop`) y el anfitrión se lo pasa a `mountMinigame({ sound })`. El escritorio pasa el motor de la ventana (`sfx`, `sfxLoop`, `sfxStopLoop`), con los ajustes del usuario; el embed crea el suyo (`embed/audio.ts`, solo con los `mg.*`). Sin motor, el juego es mudo y funciona igual.
@@ -325,6 +325,13 @@ Un id sin fichero no suena ni falla, así que en F1 y siguientes se puede cablea
    - **Catálogo:** `sounds.json` sigue a las reglas nuevas (marea, polvo estático, destello, señuelos); se quitaron los sonidos de la cesta, la piedra y la aparición de objetos.
    - **Depuración:** en desarrollo, la página de demo guarda los sonidos pedidos en `window.__pockaiSfx`, como el escritorio.
    - **Pendiente:** generar los ficheros (`pnpm sfx:generate --only mg`); hasta entonces solo suenan los sintetizados. En Android, la cuenta atrás y el resultado son pantallas nativas y aún no suenan. `mg.score_tick` y `mg.new_record` están en el catálogo sin enganchar (no hay récord personal todavía). Vibración.
+   Cómo quedó la cocina (`CookingTab.svelte`, solo escritorio):
+   - `cook.ambient` en bucle mientras se cocina; se corta al servir y al salir de la pestaña.
+   - `cook.memorize.show` por cada ingrediente que dicta el Pockai, cada uno un poco más agudo (`rate`).
+   - `cook.ingredient.place` al echar un ingrediente a la olla, más `elem.<flujo>.accent` (bajo) si es el fruto de un Flujo. Los botones de la encimera llevan `data-sound="none"` para que no suene además el clic de interfaz.
+   - `cook.undo`, `cook.serve`, `cook.timer_warning` en cada uno de los últimos 5 s, y `cook.result.perfect` / `good` / `fail` con el 100 %, el 50 % o menos.
+   - `cook.ingredient.tap` queda en el catálogo sin enganchar: no hay gesto de «coger» separado del de echar.
+
 5. **F4, aventuras y combate:** stingers, enfoques, finales, ambientes de localización, habilidades.
 6. **F5, hábitats y clima:** loops por sala, muebles posicionales, clima, visitas, ducking.
 7. **F6, pulido:** mezcla final de niveles, modo audio reducido y comprobación de que no hay spam en el escritorio tras 8 h de uso. Opcional: hápticos en Android junto a los sonidos clave.
