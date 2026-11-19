@@ -3,6 +3,7 @@
   import { createEventDispatcher } from 'svelte';
   import SocialAvatar from '../SocialAvatar.svelte';
   import { Badge, Button, Card, ListRow } from '../ui';
+  import RedeemVoucherCard from './RedeemVoucherCard.svelte';
 
   export let user: any;
 
@@ -31,6 +32,8 @@
       <ListRow icon="note" title="Correo" sub={user.email} />
     {/if}
   </div>
+
+  <RedeemVoucherCard />
 
   <!-- Cerrar sesión no borra nada: es una acción normal, no de peligro -->
   <Button block icon="logout" on:click={() => dispatch('logout')}>Cerrar sesión</Button>

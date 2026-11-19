@@ -82,6 +82,9 @@ class ApiService(private val api: ApiClient, private val session: SessionStore) 
     // ---------- Usuario y mascotas ----------
 
     suspend fun me(): UserDto = api.request("GET", "/me")
+
+    /** Canjea un voucher. Errores: 400 código no válido o caducado, 409 ya canjeado, 429 demasiados intentos. */
+    suspend fun redeemVoucher(code: String): RewardReceived = api.request("POST", "/vouchers/redeem", obj("code" to code.trim()))
     suspend fun updateTimezone(timezone: String): UserDto = api.request("PATCH", "/me", obj("timezone" to timezone))
 
     suspend fun pets(): List<Pet> = api.json.decodeFromString(ListSerializer(Pet.serializer()), api.send("GET", "/pets"))

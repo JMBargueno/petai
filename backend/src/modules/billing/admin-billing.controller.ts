@@ -90,14 +90,15 @@ export class AdminBillingController {
       activeUsersToday,
     ] = await Promise.all([
       this.prisma.subscription.count({
-        where: { status: { in: ['active', 'trialing'] } },
+        where: { status: { in: ['active', 'trialing'] }, source: { not: 'voucher' } },
       }),
       this.prisma.subscription.count({
-        where: { status: 'past_due' },
+        where: { status: 'past_due', source: { not: 'voucher' } },
       }),
       this.prisma.subscription.count({
         where: {
           status: 'canceled',
+          source: { not: 'voucher' },
           updatedAt: { gte: thirtyDaysAgo },
         },
       }),

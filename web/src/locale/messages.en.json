@@ -664,6 +664,18 @@
     "evo.florabud.baby": "A bud with legs: mint green, ending in a point, with a single little leaf on top.",
     "evo.florabud.juvenile": "The sprout stands up: two leaves on its head and a leaf for a tail.",
     "evo.florabud.adult": "It begins to bloom: a collar of pink petals and two big leaves on its head.",
-    "evo.florabud.final": "The spirit in bloom: a great pink flower opens above its head and vines wind along its arms."
+    "evo.florabud.final": "The spirit in bloom: a great pink flower opens above its head and vines wind along its arms.",
+    "account.redeem.title": "Redeem a code",
+    "account.redeem.label": "Voucher code",
+    "account.redeem.submit": "Redeem",
+    "account.redeem.ok": "Reward received!",
+    "account.redeem.coins": "+{$n} coins",
+    "account.redeem.gems": "+{$n} gems",
+    "account.redeem.pro": "+{$n} days of Pro (until {$date})",
+    "account.redeem.chest": "{$n} × {$type} chest",
+    "account.redeem.accessoryOwned": "{$name} (already owned)",
+    "account.redeem.accessory": "Accessory: {$name}",
+    "account.redeem.already": "You have already redeemed this code.",
+    "account.redeem.invalid": "The code is not valid or has expired."
   }
 }

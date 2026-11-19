@@ -158,6 +158,9 @@ class RealtimeClient(private val session: SessionStore, private val api: ApiClie
     /** `pet:action`: acción para animar la mascota. */
     fun petAction(): Flow<PetActionEvent> = event("pet:action") { args -> decodeJson<PetActionEvent>(args.firstOrNull()) }
 
+    /** `reward:received`: voucher canjeado o regalo del equipo (para la celebración). */
+    fun rewardReceived(): Flow<RewardReceived> = event("reward:received") { args -> decodeJson<RewardReceived>(args.firstOrNull()) }
+
     /** `habitat:visitor_joined`: un amigo entró de visita a tu hábitat. */
     fun visitorJoined(): Flow<HabitatVisitor> = event("habitat:visitor_joined") { args -> decodeJson<HabitatVisitor>(args.firstOrNull()) }
 

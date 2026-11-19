@@ -655,6 +655,18 @@
     "verifyEmail.error": "No hemos podido conectar con el servidor. Inténtalo de nuevo en un momento.",
     "verifyEmail.sending": "Verificando…",
     "verifyEmail.button": "Verificar mi correo",
-    "verifyEmail.meta.title": "Verifica tu correo · Pockai"
+    "verifyEmail.meta.title": "Verifica tu correo · Pockai",
+    "account.redeem.title": "Canjear código",
+    "account.redeem.label": "Código del voucher",
+    "account.redeem.submit": "Canjear",
+    "account.redeem.ok": "¡Recompensa recibida!",
+    "account.redeem.coins": "+{$n} monedas",
+    "account.redeem.gems": "+{$n} gemas",
+    "account.redeem.pro": "+{$n} días de Pro (hasta el {$date})",
+    "account.redeem.chest": "{$n} × cofre {$type}",
+    "account.redeem.accessoryOwned": "{$name} (ya la tenías)",
+    "account.redeem.accessory": "Prenda: {$name}",
+    "account.redeem.already": "Ya has canjeado este código.",
+    "account.redeem.invalid": "El código no es válido o ha caducado."
   }
 }

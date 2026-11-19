@@ -105,6 +105,13 @@
                     Editar
                   </button>
                 }
+                @for (action of rowActions(); track action.label) {
+                  @if (!action.visible || action.visible(row)) {
+                    <button class="btn btn--sm" type="button" [attr.aria-label]="action.label + ' · ' + nameOf()(row)" (click)="action.run(row)">
+                      {{ action.label }}
+                    </button>
+                  }
+                }
                 @if (deletable()) {
                   <button
                     class="btn btn--sm"

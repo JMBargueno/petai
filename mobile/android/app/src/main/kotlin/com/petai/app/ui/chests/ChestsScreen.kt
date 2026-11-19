@@ -136,7 +136,7 @@ fun ChestsScreen(service: ApiService, onChanged: () -> Unit) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(c.type, style = MaterialTheme.typography.titleMedium)
-                                Text(c.source, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(when (c.source) { "voucher" -> "Código canjeado"; "admin_grant" -> "Regalo del equipo"; else -> c.source }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             PrimaryButton("Abrir", onClick = { open(c) }, enabled = busyKey.isEmpty())
                         }

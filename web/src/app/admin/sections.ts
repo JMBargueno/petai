@@ -8,6 +8,7 @@ export const SECTIONS = [
   { path: 'eventos', label: 'Eventos', permission: 'admin:access' },
   { path: 'usuarios', label: 'Usuarios', permission: 'users:read' },
   { path: 'invitaciones', label: 'Invitaciones', permission: 'invites:manage' },
+  { path: 'vouchers', label: 'Vouchers', permission: 'vouchers:manage' },
   { path: 'sitio', label: 'Sitio web', permission: 'site:manage' },
   { path: 'correos', label: 'Correos', permission: 'email:send' },
   { path: 'pockais', label: 'Pockais', permission: 'pets:read' },
