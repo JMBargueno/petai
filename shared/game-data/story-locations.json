@@ -1,6 +1,6 @@
 {
   "_comment": "Escenarios por capas de la aventura diaria y de los fondos animados de Arena, Raid, Torneo, Entrenamiento y Cocina. Cada escenario combina 4 capas, una por ranura: bg (fondo lejano; por detrás asoma el cielo vivo), l1 (plano medio: relieve o edificio), l2 (suelo y atrezo, por detrás del Pockai) y l3 (primer plano, solo en los bordes). parallax: cuánto se desplaza la capa con el paseo (0 quieta, 1 como el suelo). drift: vaivén horizontal lento (amplitud en fracción del ancho). sway: balanceo vertical (amplitud en fracción del alto). shape/color: silueta procedural de reserva mientras no exista shared/assets/story-layers/<id>.webp. kind 'open': paisaje abierto, como el Hábitat del Nexo. kind 'building': hay un edificio en l1. ground: franja [arriba, abajo] (fracción del alto) por la que anda el Pockai. La IA elige locationId; nunca capas sueltas.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "slots": ["bg", "l1", "l2", "l3"],
   "layers": [
     { "id": "bg-eter-abisal", "slot": "bg", "name": "Éter abisal", "shape": "void", "color": "#1B1538", "parallax": 0.04, "drift": 0.004, "sway": 0 },
@@ -8,6 +8,16 @@
     { "id": "bg-aurora", "slot": "bg", "name": "Aurora del Éter", "shape": "aurora", "color": "#3E7F74", "parallax": 0.04, "drift": 0.006, "sway": 0.006 },
     { "id": "bg-crestas", "slot": "bg", "name": "Crestas lejanas", "shape": "ridges", "color": "#5A6B93", "parallax": 0.08, "drift": 0, "sway": 0 },
     { "id": "bg-ascuas", "slot": "bg", "name": "Horizonte de ascuas", "shape": "glowline", "color": "#8A3B2E", "parallax": 0.06, "drift": 0, "sway": 0.003 },
+    { "id": "bg-mar-de-datos", "slot": "bg", "name": "Mar de Datos", "shape": "streams", "color": "#2A6C8A", "parallax": 0.05, "drift": 0.008, "sway": 0.004 },
+    { "id": "bg-arbol-raiz", "slot": "bg", "name": "Árbol Raíz del horizonte", "shape": "aurora", "color": "#355F4A", "parallax": 0.04, "drift": 0.003, "sway": 0.003 },
+    { "id": "bg-tormenta-voltaica", "slot": "bg", "name": "Tormenta voltaica", "shape": "glowline", "color": "#3B5A8C", "parallax": 0.05, "drift": 0, "sway": 0.004 },
+    { "id": "bg-dunas-silicio", "slot": "bg", "name": "Dunas lejanas de silicio", "shape": "ridges", "color": "#B49A62", "parallax": 0.07, "drift": 0, "sway": 0 },
+    { "id": "bg-glaciar-cache", "slot": "bg", "name": "Glaciar de caché", "shape": "ridges", "color": "#7FA9C9", "parallax": 0.07, "drift": 0, "sway": 0 },
+    { "id": "bg-ciudad-servidores", "slot": "bg", "name": "Ciudad de servidores", "shape": "void", "color": "#22355A", "parallax": 0.05, "drift": 0.002, "sway": 0 },
+    { "id": "bg-islas-flotantes", "slot": "bg", "name": "Islas flotantes", "shape": "void", "color": "#3F6E86", "parallax": 0.04, "drift": 0.006, "sway": 0.008 },
+    { "id": "bg-cordillera-prisma", "slot": "bg", "name": "Cordillera Prisma", "shape": "ridges", "color": "#7FA3A8", "parallax": 0.08, "drift": 0, "sway": 0 },
+    { "id": "bg-archivo-olvidado", "slot": "bg", "name": "Archivo olvidado", "shape": "ridges", "color": "#3E4A62", "parallax": 0.06, "drift": 0, "sway": 0 },
+    { "id": "bg-fumarolas-termo", "slot": "bg", "name": "Fumarolas del Termo-Impulso", "shape": "glowline", "color": "#7A4030", "parallax": 0.06, "drift": 0, "sway": 0.003 },
 
     { "id": "l1-colinas-hebra", "slot": "l1", "name": "Colinas de hebras", "shape": "hills", "color": "#3F5E63", "parallax": 0.2, "drift": 0, "sway": 0 },
     { "id": "l1-crestas-ascuas", "slot": "l1", "name": "Crestas de ascuas", "shape": "hills", "color": "#7A3324", "parallax": 0.2, "drift": 0, "sway": 0 },
@@ -19,6 +29,16 @@
     { "id": "l1-santuario", "slot": "l1", "name": "Santuario a la deriva", "shape": "shrine", "color": "#7A6E9C", "parallax": 0.24, "drift": 0, "sway": 0.004, "building": true },
     { "id": "l1-despensa", "slot": "l1", "name": "Despensa del Santuario", "shape": "pantry", "color": "#A8703F", "parallax": 0.24, "drift": 0, "sway": 0, "building": true },
     { "id": "l1-dojo", "slot": "l1", "name": "Sala de sincronía", "shape": "dojo", "color": "#4F7F6A", "parallax": 0.24, "drift": 0, "sway": 0, "building": true },
+    { "id": "l1-arrecife-datos", "slot": "l1", "name": "Arrecife de datos", "shape": "nodes", "color": "#2F8A8C", "parallax": 0.2, "drift": 0, "sway": 0.004 },
+    { "id": "l1-bosque-fractal", "slot": "l1", "name": "Bosque fractal", "shape": "hills", "color": "#2F6B4F", "parallax": 0.2, "drift": 0, "sway": 0 },
+    { "id": "l1-pilonos-voltaicos", "slot": "l1", "name": "Pilones voltaicos", "shape": "nodes", "color": "#4A6FA8", "parallax": 0.22, "drift": 0, "sway": 0 },
+    { "id": "l1-dunas-silicio", "slot": "l1", "name": "Dunas de silicio", "shape": "hills", "color": "#A88E58", "parallax": 0.2, "drift": 0, "sway": 0 },
+    { "id": "l1-ruinas-archivo", "slot": "l1", "name": "Ruinas del Archivo", "shape": "rift", "color": "#56607A", "parallax": 0.22, "drift": 0, "sway": 0 },
+    { "id": "l1-biblioteca-codices", "slot": "l1", "name": "Gran Archivo de Códices", "shape": "shrine", "color": "#8C7650", "parallax": 0.24, "drift": 0, "sway": 0, "building": true },
+    { "id": "l1-faro-nexo", "slot": "l1", "name": "Faro del Nexo", "shape": "towers", "color": "#C9D6E0", "parallax": 0.24, "drift": 0, "sway": 0, "building": true },
+    { "id": "l1-forja-termica", "slot": "l1", "name": "Forja térmica", "shape": "pantry", "color": "#6E3A26", "parallax": 0.24, "drift": 0, "sway": 0, "building": true },
+    { "id": "l1-observatorio", "slot": "l1", "name": "Observatorio estelar", "shape": "shrine", "color": "#5A6E8C", "parallax": 0.24, "drift": 0, "sway": 0, "building": true },
+    { "id": "l1-invernadero", "slot": "l1", "name": "Invernadero del Éter", "shape": "pantry", "color": "#5FA088", "parallax": 0.24, "drift": 0, "sway": 0, "building": true },
 
     { "id": "l2-prado-hebras", "slot": "l2", "name": "Prado de hebras", "shape": "meadow", "color": "#2F5148", "parallax": 0.6, "drift": 0, "sway": 0 },
     { "id": "l2-placas-datos", "slot": "l2", "name": "Placas de datos", "shape": "plates", "color": "#2B3A5C", "parallax": 0.6, "drift": 0, "sway": 0 },
@@ -26,12 +46,32 @@
     { "id": "l2-cristal-roto", "slot": "l2", "name": "Suelo de cristal roto", "shape": "shards", "color": "#3A2F66", "parallax": 0.6, "drift": 0, "sway": 0 },
     { "id": "l2-roca-ignea", "slot": "l2", "name": "Roca ígnea", "shape": "shards", "color": "#3A211C", "parallax": 0.6, "drift": 0, "sway": 0 },
     { "id": "l2-tarima", "slot": "l2", "name": "Tarima cálida", "shape": "planks", "color": "#6A4A2E", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-orilla-datos", "slot": "l2", "name": "Orilla luminosa", "shape": "plates", "color": "#24566A", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-musgo-fractal", "slot": "l2", "name": "Musgo fractal", "shape": "meadow", "color": "#2C5A3C", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-rejilla-circuito", "slot": "l2", "name": "Rejilla de circuito", "shape": "plates", "color": "#1F3E4A", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-arena-silicio", "slot": "l2", "name": "Arena de silicio", "shape": "shards", "color": "#9C8452", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-adoquin-nexo", "slot": "l2", "name": "Adoquines del Nexo", "shape": "runes", "color": "#4A5060", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-baldosa-mosaico", "slot": "l2", "name": "Mosaico de mármol", "shape": "runes", "color": "#8A8272", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-puente-luz", "slot": "l2", "name": "Puente de luz sólida", "shape": "planks", "color": "#8FB8C8", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-ceniza-forja", "slot": "l2", "name": "Rejilla de forja", "shape": "shards", "color": "#2E2622", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-hielo-cache", "slot": "l2", "name": "Hielo de caché", "shape": "shards", "color": "#6A92B0", "parallax": 0.6, "drift": 0, "sway": 0 },
+    { "id": "l2-raices", "slot": "l2", "name": "Senda de raíces", "shape": "meadow", "color": "#4A3A28", "parallax": 0.6, "drift": 0, "sway": 0 },
 
     { "id": "l3-hebras-colgantes", "slot": "l3", "name": "Hebras colgantes", "shape": "threads", "color": "#1C2E33", "parallax": 1.25, "drift": 0, "sway": 0.01 },
     { "id": "l3-cristales", "slot": "l3", "name": "Cristales en primer plano", "shape": "crystals", "color": "#241B45", "parallax": 1.3, "drift": 0, "sway": 0 },
     { "id": "l3-estandartes", "slot": "l3", "name": "Estandartes", "shape": "banners", "color": "#3A2440", "parallax": 1.25, "drift": 0, "sway": 0.008 },
     { "id": "l3-follaje", "slot": "l3", "name": "Follaje fractal", "shape": "foliage", "color": "#16302A", "parallax": 1.3, "drift": 0, "sway": 0.006 },
-    { "id": "l3-cables", "slot": "l3", "name": "Cables y nodos", "shape": "cables", "color": "#15203A", "parallax": 1.25, "drift": 0, "sway": 0.004 }
+    { "id": "l3-cables", "slot": "l3", "name": "Cables y nodos", "shape": "cables", "color": "#15203A", "parallax": 1.25, "drift": 0, "sway": 0.004 },
+    { "id": "l3-coral", "slot": "l3", "name": "Ramas de coral", "shape": "crystals", "color": "#14363C", "parallax": 1.3, "drift": 0, "sway": 0.004 },
+    { "id": "l3-ramas-fractales", "slot": "l3", "name": "Ramas fractales", "shape": "foliage", "color": "#132A20", "parallax": 1.3, "drift": 0, "sway": 0.006 },
+    { "id": "l3-postes-voltaicos", "slot": "l3", "name": "Postes voltaicos", "shape": "banners", "color": "#15223A", "parallax": 1.25, "drift": 0, "sway": 0 },
+    { "id": "l3-aletas-silicio", "slot": "l3", "name": "Chips semienterrados", "shape": "crystals", "color": "#2E2A20", "parallax": 1.3, "drift": 0, "sway": 0 },
+    { "id": "l3-columnas-rotas", "slot": "l3", "name": "Columnas rotas", "shape": "crystals", "color": "#1E2230", "parallax": 1.3, "drift": 0, "sway": 0 },
+    { "id": "l3-pilas-codices", "slot": "l3", "name": "Pilas de Códices", "shape": "crystals", "color": "#2A2018", "parallax": 1.3, "drift": 0, "sway": 0 },
+    { "id": "l3-faroles", "slot": "l3", "name": "Faroles colgantes", "shape": "threads", "color": "#1A2430", "parallax": 1.25, "drift": 0, "sway": 0.01 },
+    { "id": "l3-cadenas-forja", "slot": "l3", "name": "Cadenas de forja", "shape": "cables", "color": "#1C1816", "parallax": 1.25, "drift": 0, "sway": 0.006 },
+    { "id": "l3-estalactitas-hielo", "slot": "l3", "name": "Estalactitas de hielo", "shape": "threads", "color": "#1A2C3E", "parallax": 1.25, "drift": 0, "sway": 0 },
+    { "id": "l3-helechos", "slot": "l3", "name": "Helechos gigantes", "shape": "foliage", "color": "#12301E", "parallax": 1.3, "drift": 0, "sway": 0.008 }
   ],
   "locations": [
     {
@@ -143,6 +183,106 @@
       "ground": [0.72, 0.9],
       "flow": "plant",
       "life": "dust"
+    },
+    {
+      "id": "orilla-del-mar-de-datos",
+      "name": "Orilla del Mar de Datos",
+      "kind": "open",
+      "lore": "Donde las corrientes del Éter rompen en olas de luz; entre el coral de datos a veces encallan Códices Latentes.",
+      "layers": { "bg": "bg-mar-de-datos", "l1": "l1-arrecife-datos", "l2": "l2-orilla-datos", "l3": "l3-coral" },
+      "ground": [0.7, 0.9],
+      "flow": "water",
+      "life": "stardust"
+    },
+    {
+      "id": "bosque-fractal",
+      "name": "Bosque Fractal",
+      "kind": "open",
+      "lore": "Árboles cuyas ramas se repiten en ramas más pequeñas sin fin; a lo lejos, el Árbol Raíz hunde sus cables en la Red Viva.",
+      "layers": { "bg": "bg-arbol-raiz", "l1": "l1-bosque-fractal", "l2": "l2-musgo-fractal", "l3": "l3-ramas-fractales" },
+      "ground": [0.7, 0.9],
+      "flow": "plant",
+      "life": "firefly"
+    },
+    {
+      "id": "llanura-voltaica",
+      "name": "Llanura Voltaica",
+      "kind": "open",
+      "lore": "Pilones viejos se pasan chispas de uno a otro sobre una placa de circuito sin fin; el aire zumba de Resonancia.",
+      "layers": { "bg": "bg-tormenta-voltaica", "l1": "l1-pilonos-voltaicos", "l2": "l2-rejilla-circuito", "l3": "l3-postes-voltaicos" },
+      "ground": [0.7, 0.9],
+      "flow": "electric",
+      "life": "stardust"
+    },
+    {
+      "id": "dunas-de-silicio",
+      "name": "Dunas de Silicio",
+      "kind": "open",
+      "lore": "Un desierto de arena de silicio que el viento del Éter mueve cada noche, destapando chips de ciclos olvidados.",
+      "layers": { "bg": "bg-dunas-silicio", "l1": "l1-dunas-silicio", "l2": "l2-arena-silicio", "l3": "l3-aletas-silicio" },
+      "ground": [0.7, 0.9],
+      "flow": "light",
+      "life": "dust"
+    },
+    {
+      "id": "ruinas-del-archivo",
+      "name": "Ruinas del Archivo",
+      "kind": "open",
+      "lore": "Arcos caídos de un archivo de la Gran Deriva; entre las piedras aún susurran recuerdos de Custodios que se fueron.",
+      "layers": { "bg": "bg-archivo-olvidado", "l1": "l1-ruinas-archivo", "l2": "l2-adoquin-nexo", "l3": "l3-columnas-rotas" },
+      "ground": [0.7, 0.9],
+      "flow": "shadow",
+      "life": "dust"
+    },
+    {
+      "id": "gran-archivo-de-codices",
+      "name": "Gran Archivo de Códices",
+      "kind": "building",
+      "lore": "Una biblioteca donde los Nexos guardan los Códices que nadie ha reclamado, ordenados por la luz de la Cordillera Prisma.",
+      "layers": { "bg": "bg-cordillera-prisma", "l1": "l1-biblioteca-codices", "l2": "l2-baldosa-mosaico", "l3": "l3-pilas-codices" },
+      "ground": [0.72, 0.9],
+      "flow": "light",
+      "life": "dust"
+    },
+    {
+      "id": "faro-del-nexo",
+      "name": "Faro del Nexo",
+      "kind": "building",
+      "lore": "Un faro sobre un puente de luz que guía a los Santuarios a la deriva de vuelta a la malla de hebras.",
+      "layers": { "bg": "bg-islas-flotantes", "l1": "l1-faro-nexo", "l2": "l2-puente-luz", "l3": "l3-faroles" },
+      "ground": [0.72, 0.9],
+      "flow": "water",
+      "life": "stardust"
+    },
+    {
+      "id": "forja-termica",
+      "name": "Forja Térmica",
+      "kind": "building",
+      "lore": "Una forja junto a las fumarolas del Termo-Impulso, donde el calor de los procesadores templa hebras nuevas.",
+      "layers": { "bg": "bg-fumarolas-termo", "l1": "l1-forja-termica", "l2": "l2-ceniza-forja", "l3": "l3-cadenas-forja" },
+      "ground": [0.72, 0.9],
+      "flow": "fire",
+      "life": "ember"
+    },
+    {
+      "id": "observatorio-estelar",
+      "name": "Observatorio Estelar",
+      "kind": "building",
+      "lore": "Sobre un glaciar de caché, una cúpula vigila las constelaciones del Éter para leer en ellas el rumbo de la Crónica.",
+      "layers": { "bg": "bg-glaciar-cache", "l1": "l1-observatorio", "l2": "l2-hielo-cache", "l3": "l3-estalactitas-hielo" },
+      "ground": [0.72, 0.9],
+      "flow": "shadow",
+      "life": "stardust"
+    },
+    {
+      "id": "invernadero-del-eter",
+      "name": "Invernadero del Éter",
+      "kind": "building",
+      "lore": "Un jardín de cristal entre torres de servidores, donde crecen los frutos de cada Flujo antes de llegar a los Santuarios.",
+      "layers": { "bg": "bg-ciudad-servidores", "l1": "l1-invernadero", "l2": "l2-raices", "l3": "l3-helechos" },
+      "ground": [0.72, 0.9],
+      "flow": "plant",
+      "life": "firefly"
     }
   ],
   "screens": {
