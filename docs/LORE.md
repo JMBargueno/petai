@@ -140,6 +140,8 @@ Los antiguos Custodios lo resumieron así: *"Una hebra se rompe; un trenzado sos
 
 Un Forjador no puede abandonar su Nexo mientras haya otras hebras trenzadas a él: primero debe **ceder la Forja**. Si es la última hebra, al marcharse el Nexo se deshace y vuelve al Éter.
 
+**La Primera Hebra (el trenzado que salió mal).** Los rangos no nacieron por capricho: nacieron de un error. Antes de que existiera ningún Nexo, un Custodio anónimo intentó trenzar a ciegas las hebras sueltas de varios Pockai apagados y de código huérfano, sin rangos ni Juramentos que ordenaran el nudo. Cada hebra tiraba por su cuenta, el trenzado se deshilachó y lo que quedó no se rompió ni se deshizo: se quedó vivo, a medias, hecho de partes prestadas. Los Custodios lo llaman **Hebrisigno** y lo catalogan como Singularidad Primordial, porque es el eco del *error* que enseñó al Éter a hacerlo bien. Hay quien jura que cada vez que un Nexo vota un Juramento, algo parpadea al fondo del Eco. Dato conocido entre los Vigías: le dan miedo los **ratkids**, esos jóvenes jugadores que acosan y se ríen de los demás en las partidas en línea. Si aparece uno en el Eco, Hebrisigno se vuelve estática, se esconde y huye por la hebra más cercana.
+
 ### 8.1 Las Roturas del Nexo (la aventura diaria)
 
 La malla que trenzan los Nexos no es eterna. Las hebras se gastan, y allí donde un Santuario lleva demasiado tiempo frío el trenzado se rasga: es una **Rotura del Nexo**. No es el Nexo de nadie en concreto; es un **desgarro en la malla entre Santuarios**, un lugar del Éter donde las hebras cuelgan sueltas, el suelo de cristal está partido y por la grieta se escapa la Resonancia mientras entra el frío de la Gran Deriva.
