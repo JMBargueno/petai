@@ -17,6 +17,7 @@
   import { api, type CookingBuff, type CookingDailyMenu, type CookingRecipe, type CookingStart, type CookingSubmit } from '../lib/api';
   import { sfx, sfxLoop, sfxStopLoop } from '../lib/audio';
   import ItemIcon from './ItemIcon.svelte';
+  import { dishArt } from '../lib/dishes';
   import PetMiniAvatar from './PetMiniAvatar.svelte';
   import foods from '@shared/game-data/foods.json';
   import speciesData from '@shared/game-data/species.json';
@@ -60,8 +61,11 @@
   let petActionKey = 0;
   /** Índices de `session.order` ya usados. */
   let usedIdx: number[] = [];
-  /** Para avisar una sola vez de que la olla se está quemando. */
+  /** Hueco de la olla caliente del que ya se avisó (calentándose / quemado), para sonar una vez. */
   let hotWarned = -1;
+  let hotBurned = -1;
+  /** Con menos de esto en la olla caliente suena el aviso. */
+  const HOT_WARN_MS = 1500;
 
   // El servidor manda las estadísticas en inglés.
   const STAT_LABEL: Record<string, string> = { atk: 'ataque', def: 'defensa', vel: 'velocidad', hp: 'vida', esp: 'especial', all: 'todas las stats' };
@@ -109,6 +113,7 @@
     usedIdx = [];
     revealed = 0;
     hotWarned = -1;
+    hotBurned = -1;
     try {
       session = await api.cookingStart(pet.id, recipeId);
       dispatch('refreshPet');
@@ -141,9 +146,14 @@
         // Los últimos 5 segundos avisan, uno por segundo.
         if (left !== secondsLeft && left > 0 && left <= 5 && phase === 'cook') sfx('cook.timer_warning');
         secondsLeft = left;
-        if (hotLeft !== null && hotLeft <= 0 && hotWarned !== picked.length) {
+        if (hotLeft !== null && hotLeft > 0 && hotLeft <= HOT_WARN_MS && hotWarned !== picked.length) {
           hotWarned = picked.length;
-          sfx('cook.result.fail', { gainDb: -10, rate: 1.4 });
+          sfx('cook.hotpot.warn');
+        }
+        if (hotLeft !== null && hotLeft <= 0 && hotBurned !== picked.length) {
+          hotBurned = picked.length;
+          // Sin el sonido propio (aún no generado), el del plato fallido, agudo y bajito
+          if (!sfx('cook.hotpot.burn')) sfx('cook.result.fail', { gainDb: -10, rate: 1.4 });
         }
         if (secondsLeft === 0 && phase !== 'done') void submit();
       }, 100);
@@ -157,6 +167,8 @@
   function pick(i: number) {
     if (phase !== 'cook' || !session || usedIdx.includes(i)) return;
     const ing = session.order[i];
+    // Llegó a tiempo a un hueco de la olla caliente
+    if (hotLeft !== null && hotLeft > 0) sfx('cook.hotpot.saved', { delayMs: 80 });
     usedIdx = [...usedIdx, i];
     picked = [...picked, ing];
     pickedAt = [...pickedAt, Math.max(0, Date.now() - cookT0)];
@@ -227,9 +239,14 @@
 
     {#if menu && phase === 'idle'}
       <div class="menu">
-        <span class="label-caps muted">Menú del día · {DAYS[menu.weekday]}</span>
-        <strong class="recipe">{menu.recipeName}</strong>
-        {#if menu.description}<p class="lore">{menu.description}</p>{/if}
+        <div class="menu__head">
+          {#if dishArt(menu.recipeId)}<img class="dish-art dish-art--lg" src={dishArt(menu.recipeId)} alt="" width="96" height="96" draggable="false" />{/if}
+          <div class="menu__title">
+            <span class="label-caps muted">Menú del día · {DAYS[menu.weekday]}</span>
+            <strong class="recipe">{menu.recipeName}</strong>
+            {#if menu.description}<p class="lore">{menu.description}</p>{/if}
+          </div>
+        </div>
         <div class="chips">
           {#each menu.ingredients as ing}<span class="ing"><ItemIcon id={ing} /> {label(ing)}</span>{/each}
         </div>
@@ -263,7 +280,8 @@
           <button class="dish" class:is-locked={!r.available} disabled={!r.available || busy || !pet} on:click={() => start(r.id)}
             title={r.available ? `Cocinar ${r.name}` : `Se aprende a nivel ${r.unlockLevel}`}>
             <span class="dish__top">
-              <strong>{r.name}</strong>
+              {#if dishArt(r.id)}<img class="dish-art" src={dishArt(r.id)} alt="" width="64" height="64" draggable="false" />{/if}
+              <strong class="dish__name">{r.name}</strong>
               {#if r.perfect}<Ico n="crown" size={14} />{:else if !r.available}<Ico n="lock" size={14} />{/if}
             </span>
             <span class="stars" aria-label="Dificultad {r.difficulty} de 5">{stars(r.difficulty)}</span>
@@ -285,6 +303,7 @@
         {#each weekMenus as r (r.id)}
           <span class="day" class:is-today={r.today} title={r.description ?? r.name}>
             <b>{DAYS[r.weekday ?? 0].slice(0, 3)}</b>
+            {#if dishArt(r.id)}<img class="dish-art" class:is-dim={!r.today} src={dishArt(r.id)} alt="" width="32" height="32" draggable="false" />{/if}
             <span>{r.name}</span>
             {#if r.perfect}<Ico n="crown" size={12} />{/if}
           </span>
@@ -366,6 +385,11 @@
       <Notice tone="info">{result.message}</Notice>
     {:else}
       {@const grade = result.grade ?? 'bad'}
+      {#if session && dishArt(session.recipeId)}
+        <div class="served" class:is-bad={grade === 'bad'}>
+          <img class="dish-art dish-art--lg" src={dishArt(session.recipeId)} alt={session.recipeName} width="96" height="96" draggable="false" />
+        </div>
+      {/if}
       <Notice tone={grade === 'perfect' ? 'ok' : grade === 'good' ? 'info' : 'warning'} icon={grade === 'perfect' ? 'party' : 'chef'}>
         {grade === 'perfect' ? '¡Plato perfecto!' : grade === 'good' ? 'Te ha salido bien.' : 'Este no ha salido.'}
         {result.correctPct ?? 0}% de la receta · +{result.coins ?? 0} monedas{#if result.speedBonus} (+{result.speedBonus} por rapidez){/if}
@@ -397,6 +421,41 @@
     flex-direction: column;
     gap: var(--space-2);
     font-size: var(--text-label);
+  }
+  .menu__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .menu__title {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+  .dish-art {
+    flex-shrink: 0;
+    image-rendering: pixelated;
+  }
+  .dish-art--lg {
+    width: 96px;
+    height: 96px;
+  }
+  .dish-art.is-dim {
+    opacity: 0.55;
+    filter: grayscale(0.6);
+  }
+  .served {
+    display: grid;
+    place-items: center;
+    animation: serve 0.45s var(--ease-out) both;
+  }
+  .served.is-bad .dish-art {
+    filter: grayscale(0.8) brightness(0.7);
+  }
+  @keyframes serve {
+    from { transform: translateY(8px) scale(0.85); opacity: 0; }
+    to { transform: none; opacity: 1; }
   }
   .lore {
     margin: 0;
@@ -448,9 +507,13 @@
   }
   .dish__top {
     display: flex;
-    justify-content: space-between;
-    gap: var(--space-1);
+    align-items: center;
+    gap: var(--space-2);
     width: 100%;
+  }
+  .dish__name {
+    flex: 1;
+    min-width: 0;
   }
   .dish__ings {
     display: flex;
@@ -635,6 +698,9 @@
     .ing--btn,
     .dish {
       transition: none;
+    }
+    .served {
+      animation: none;
     }
     .step.is-burning {
       animation: none;

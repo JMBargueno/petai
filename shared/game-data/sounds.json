@@ -213,6 +213,9 @@
     { "id": "cook.result.perfect", "prompt": "perfect dish, delicious sparkle fanfare, bell ding", "duration": 1.8 },
     { "id": "cook.result.good", "prompt": "good dish, pleasant chime", "duration": 1.2 },
     { "id": "cook.result.fail", "prompt": "dish failed, comedic sad trombone-like wobble, burnt puff", "duration": 1.4 },
+    { "id": "cook.hotpot.warn", "prompt": "small cooking pot starting to overheat, rising sizzle and quick bubbling hiss, cozy fantasy kitchen", "duration": 1, "essential": true, "cooldownMs": 900 },
+    { "id": "cook.hotpot.burn", "prompt": "ingredient scorching in an overheated pot, sharp sizzle then a smoky puff, light and cartoonish", "duration": 1 },
+    { "id": "cook.hotpot.saved", "prompt": "ingredient dropped into a hot pot just in time, short sizzle then a bright relieved ding", "duration": 0.8 },
 
     { "id": "adv.page", "prompt": "storybook page turning, magical", "duration": 0.8 },
     { "id": "adv.choice.hover", "prompt": "tiny soft parchment tick", "duration": 0.5, "gainDb": -18, "platforms": ["desktop"] },
