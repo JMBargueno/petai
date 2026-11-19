@@ -29,6 +29,9 @@ import { destelloRitual } from './destelloRitual';
 import { triunfoRaid } from './triunfoRaid';
 import { veloEter } from './veloEter';
 import { selloEter } from './selloEter';
+import { grietaObjeto } from './grietaObjeto';
+import { hebraToque } from './hebraToque';
+import { parpadeoEter } from './parpadeoEter';
 import type { EffectDef, FxPhase } from './types';
 
 export const EFFECTS: Record<string, EffectDef> = {
@@ -59,6 +62,9 @@ export const EFFECTS: Record<string, EffectDef> = {
   [triunfoRaid.id]: triunfoRaid,
   [veloEter.id]: veloEter,
   [selloEter.id]: selloEter,
+  [grietaObjeto.id]: grietaObjeto,
+  [hebraToque.id]: hebraToque,
+  [parpadeoEter.id]: parpadeoEter,
 };
 
 /** Fases que tocan para estos datos (algunos efectos se saltan fases según el momento). */
@@ -94,6 +100,9 @@ export {
   triunfoRaid,
   veloEter,
   selloEter,
+  grietaObjeto,
+  hebraToque,
+  parpadeoEter,
 };
 export { rewardRamp, type RewardKind } from './selloEter';
 export { prismColors } from './destelloPrisma';
@@ -101,7 +110,7 @@ export { EffectPlayer, fixedDuration, quantize } from './timeline';
 export { flowPalette, FLOW_PALETTES, FLOW_NAMES } from './palettes';
 export { renderFrame, GridSink, CanvasSink } from './render';
 export { admitMoment } from './momentQueue';
-export { hash, invert } from './fxMath';
+export { hash, invert, Canvas2 } from './fxMath';
 export { speciesElement } from './speciesElement';
 export { effectForPetAction, birthParams, ACTIONS_WITH_EFFECT, type EffectRequest } from './reactions';
 export { clipsForPetAction, ACTIONS_WITH_CLIPS, MOOD_ACT_CLIPS } from './clips';

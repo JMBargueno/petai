@@ -43,11 +43,24 @@
   import { buildSituation, type DeskSituation, type Surface } from '../lib/brain/deskSituation';
   import { initialBrain, mayBark, stepBrain, type BrainState } from '../lib/brain/deskBrain';
   import type { DeskCommand } from '../lib/brain/deskBehaviors';
-  import { stepLocomotion, type Locomotion } from '../lib/brain/locomotion';
+  import { clampX, stepLocomotion, type Locomotion } from '../lib/brain/locomotion';
   import { DeskSense } from '../lib/brain/deskSense';
   import { petDims, usePersonalityOf } from '../lib/brain/personalityStore';
   import { DESKTOP_SKILLS } from '../lib/types/desktopSkills';
   import { pomodoroStore } from '../lib/pomodoro';
+  import {
+    castThread,
+    etherPalette,
+    etherSeed,
+    getEtherObject,
+    placeIfUnplaced,
+    riftIn,
+    riftOut,
+    setPetErrandRunner,
+    touchObject,
+  } from '../lib/etherObjects/store';
+  import { ETHER_KINDS } from '../lib/etherObjects/kinds';
+  import type { Errand } from '../lib/etherObjects/director';
   import { api } from '../lib/api';
 
   export let pet: any;
@@ -473,6 +486,117 @@
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const friendLabel = () => $travel.friendName || 'tu amigo';
+
+  // ---------- Recados con los objetos del Éter (reloj del pomodoro…; lib/etherObjects) ----------
+  // Los efectos del objeto se tiñen con su Flujo
+  $: etherPalette.set(portalPalette);
+  $: etherSeed.set(portalSeed);
+  /** Está haciendo un recado: el cerebro no decide nada mientras (la locomoción sí sigue). */
+  let errandBusy = false;
+  let unregisterErrands: () => void = () => {};
+  /** Si el objeto está más cerca que esto (en horizontal), lanza la hebra sin andar. */
+  const THREAD_REACH_PX = 200;
+  const ERRAND_WALK_MAX_MS = 9000;
+
+  function canRunErrand(kind: string): boolean {
+    const skill = ETHER_KINDS[kind]?.skill;
+    return (
+      !!pet &&
+      (!skill || isSkillActive(skill, $skillAuthorizations, petBonding, petIntelligence)) &&
+      !petAway &&
+      !travelBusy &&
+      !fxLock &&
+      !fxHidden &&
+      !brainHidden &&
+      !isSleeping &&
+      !isDragging &&
+      !physicsState.isAirborne &&
+      !isEnteringHome &&
+      !errandBusy
+    );
+  }
+
+  /** De dónde sale la hebra: la patita delantera, hacia donde mira. */
+  function pawPoint(): { x: number; y: number } {
+    return { x: posX + PET_SIZE / 2 + direction * 22, y: posY + PET_SIZE * 0.55 };
+  }
+
+  /**
+   * Anda por el suelo hasta quedar al lado del objeto (si no lo tiene ya a mano). Se re-objetiva
+   * cada poco: si arrastran el objeto mientras va, lo sigue. Trepando o posada, no anda.
+   */
+  async function approachObject(e: Errand): Promise<void> {
+    if (isClimbing || isPerched) return;
+    const first = getEtherObject(e.objectId);
+    if (!first || Math.abs(first.x - (posX + PET_SIZE / 2)) <= THREAD_REACH_PX) return;
+    const started = performance.now();
+    while (!e.aborted && performance.now() - started < ERRAND_WALK_MAX_MS) {
+      const o = getEtherObject(e.objectId);
+      if (!o) break;
+      const center = posX + PET_SIZE / 2;
+      const side = center < o.x ? -1 : 1;
+      const w = window.innerWidth || 800;
+      const targetX = clampX(o.x + side * (o.w / 2 + PET_SIZE / 2 + 12) - PET_SIZE / 2, w, PET_SIZE);
+      if (Math.abs(targetX - posX) < 4) break;
+      // Lejos, corre (deja su estela); cerca, anda
+      const far = Math.abs(targetX - posX) > 320;
+      loco = { targetX, targetY: null, speed: far ? DESK_CONFIG.speeds.run : DESK_CONFIG.speeds.walk, trail: far };
+      await wait(250);
+    }
+    loco = null;
+  }
+
+  /** Ejecuta un recado con el Pockai; `null` si ahora no puede (el objeto lo hará solo). */
+  function runPetErrand(e: Errand): Promise<void> | null {
+    const o = getEtherObject(e.objectId);
+    if (!o || !canRunErrand(o.kind)) return null;
+    return doPetErrand(e, o.kind);
+  }
+
+  async function doPetErrand(e: Errand, kind: string): Promise<void> {
+    errandBusy = true;
+    loco = null;
+    brainPose = null;
+    isHighFiveWaiting = false;
+    walkUntil = 0;
+    try {
+      if (e.kind === 'summon') {
+        // Lo saca a su lado, a la altura de la cabeza (si no tenía ya un sitio guardado)
+        const w = window.innerWidth || 800;
+        const center = posX + PET_SIZE / 2;
+        let side = direction === -1 ? -1 : 1;
+        const gap = 170;
+        if (center + side * gap < 60 || center + side * gap > w - 60) side = -side;
+        placeIfUnplaced(e.objectId, center + side * gap, posY - 20);
+        const o = getEtherObject(e.objectId);
+        if (o) direction = o.x > center ? 1 : -1;
+        play('summon');
+        await wait(reducedMotion ? 0 : 220);
+        if (e.aborted) return;
+        await riftOut(e);
+      } else {
+        await approachObject(e);
+        if (e.aborted) return;
+        const o = getEtherObject(e.objectId);
+        if (o) direction = o.x > posX + PET_SIZE / 2 ? 1 : -1;
+        play('summon');
+        const thread = castThread(e, pawPoint());
+        await thread.touched;
+        if (e.aborted) return;
+        if (e.kind === 'tap') {
+          touchObject(e);
+          await thread.done;
+        } else {
+          await Promise.all([riftIn(e), thread.done]);
+        }
+      }
+      const line = e.aborted ? null : ETHER_KINDS[kind]?.line(e.kind, e.to);
+      if (line) speak(line, { key: 'ether', durationMs: 2600, maxWaitMs: 800 });
+    } finally {
+      if (e.aborted) loco = null;
+      errandBusy = false;
+    }
+  }
 
   function onTravel(state: TravelState) {
     if (state === travelHandled) return;
@@ -1167,7 +1291,8 @@
     }
 
     if (eventType === 'work_start') {
-      controller.stop();
+      // Si está sacando el reloj del Éter, que no se corte el gesto
+      if (!errandBusy) controller.stop();
       speak('💼 ¡A trabajar! Estaré a tu lado en silencio.', { durationMs: 6000, maxWaitMs: 20_000 });
     } else if (eventType === 'work_finish') {
       play('celebrate');
@@ -1332,6 +1457,8 @@
 
   /** Un tic del cerebro: monta la pizarra, decide y ejecuta. */
   function brainTick() {
+    // En pleno recado con un objeto del Éter manda el recado
+    if (errandBusy) return;
     void checkAppContext();
 
     const now = performance.now();
@@ -1377,6 +1504,7 @@
   onMount(() => {
     setPetOnScreen(!petAway);
     unregisterTravel = registerTravelPresenter();
+    unregisterErrands = setPetErrandRunner(runPetErrand);
     if (entrance === 'altar' && !petAway) emergeFromAltar();
     // Inicializar loop de animación
     animRafId = requestAnimationFrame(renderLoop);
@@ -1387,7 +1515,7 @@
     // Ciclo de comportamiento anterior al cerebro (tiradas al azar cada 3 s). Se conserva tal cual
     // tras el interruptor `petai:desk_brain` hasta dar por bueno el cerebro; después se retira.
     const legacyTick = async () => {
-      if (petAway || travelBusy || fxLock) return;
+      if (petAway || travelBusy || fxLock || errandBusy) return;
       if (isSleeping || isDragging || physicsState.isAirborne || controller.actionPriority >= BUSY_PRIORITY) return;
 
       const windowWidth = window.innerWidth || 800;
@@ -1644,6 +1772,7 @@
     clearInterval(moveInterval);
     clearInterval(barkInterval);
     unregisterTravel();
+    unregisterErrands();
     clearTimeout(cursorStopTimer);
     clearTimeout(hopTimer);
     sense.stop();
