@@ -414,6 +414,19 @@
       "maxLimit": 200
     }
   },
+  "habitat": {
+    "use": {
+      "dailyCap": 6,
+      "cooldownSeconds": 120,
+      "effects": {
+        "eat": { "hunger": 3 },
+        "bathe": { "hygiene": 3 },
+        "sit": { "energy": 2 },
+        "sleep": { "energy": 3 },
+        "play": { "happiness": 2, "energy": -1 }
+      }
+    }
+  },
   "personality": {
     "dimensions": {
       "curiosity": {
@@ -498,7 +511,12 @@
         "visitor_pet": { "affection": 0.075 },
         "visitor_treat": { "affection": 0.05 },
         "visitor_play": { "temper": 0.1, "sociability": 0.05 },
-        "visitor_ask": { "sociability": 0.03 }
+        "visitor_ask": { "sociability": 0.03 },
+        "furniture_eat": { "affection": 0.02 },
+        "furniture_bathe": { "temper": -0.02 },
+        "furniture_sit": { "temper": -0.02 },
+        "furniture_sleep": { "temper": -0.03 },
+        "furniture_play": { "temper": 0.05, "curiosity": 0.02 }
       }
     },
     "memory": {

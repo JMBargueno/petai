@@ -238,5 +238,10 @@
   "NAME_SOME_TRAINER": "un entrenador",
   "NAME_SOME_FRIEND": "un amigo",
   "NAME_SOME_POCKAI": "un Pockai",
-  "NAME_OWNER_FRIEND": "Un amigo de mi entrenador"
+  "NAME_OWNER_FRIEND": "Un amigo de mi entrenador",
+  "FURNITURE_EAT": "Comí en mi comedero, tan a gusto.",
+  "FURNITURE_BATHE": "Me di un buen baño en mi hábitat.",
+  "FURNITURE_SIT": "Estuve un rato sentado en mi sitio favorito.",
+  "FURNITURE_SLEEP": "Dormí en mi cama, bien calentito.",
+  "FURNITURE_PLAY": "Estuve jugando con mis cosas en mi hábitat."
 }

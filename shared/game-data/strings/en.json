@@ -238,5 +238,10 @@
   "NAME_SOME_TRAINER": "a trainer",
   "NAME_SOME_FRIEND": "a friend",
   "NAME_SOME_POCKAI": "a Pockai",
-  "NAME_OWNER_FRIEND": "A friend of my trainer's"
+  "NAME_OWNER_FRIEND": "A friend of my trainer's",
+  "FURNITURE_EAT": "I ate at my feeder, nice and content.",
+  "FURNITURE_BATHE": "I had a good bath in my habitat.",
+  "FURNITURE_SIT": "I sat for a while in my favourite spot.",
+  "FURNITURE_SLEEP": "I slept in my bed, nice and warm.",
+  "FURNITURE_PLAY": "I played with my things in my habitat."
 }

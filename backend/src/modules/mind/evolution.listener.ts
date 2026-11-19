@@ -8,7 +8,7 @@ import { describeDims } from './personality.engine';
 import { fulfilEpisode, type WishId } from './wishes.engine';
 import { type SceneType } from './social.engine';
 import { EncounterService } from './encounter.service';
-import { text } from './strings';
+import { hasText, text } from './strings';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 /** Lo que hizo un amigo al venir a cuidarla, en palabras de la mascota (`CARE_*` en strings). */
@@ -247,6 +247,22 @@ export class EvolutionListener {
       });
       await this.mind.applyExperience(a.id, ['buddy_play']);
       await this.mind.applyExperience(b.id, ['buddy_play']);
+    });
+  }
+
+  /**
+   * Usó un mueble de su sala por su cuenta. Deriva un poco su carácter y, como mucho una vez al
+   * día, lo recuerda (misma clave por tipo de uso: no se acumulan).
+   */
+  @OnEvent('habitat:furniture_used', { async: true })
+  onFurnitureUsed(p: { petId: string; interaction: string; firstToday?: boolean }) {
+    return this.safe(async () => {
+      await this.mind.applyExperience(p.petId, [`furniture_${p.interaction}`]);
+      const line = `FURNITURE_${String(p.interaction).toUpperCase()}`;
+      if (!p.firstToday || !hasText(line)) return;
+      await this.memory.remember(p.petId, [
+        { layer: 'episodic', kind: 'event', key: `use:${p.interaction}`, bump: true, content: text(line), importance: 0.35, valence: 0.3 },
+      ]);
     });
   }
 

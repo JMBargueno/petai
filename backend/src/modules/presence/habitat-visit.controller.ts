@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { HabitatVisitService, ActiveVisitor } from './habitat-visit.service';
+import { Controller, Get, Post, Body, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { HabitatVisitService, ActiveVisitor, VisitRoom } from './habitat-visit.service';
 import { VisitDialogService, VisitInteraction } from './visit-dialog.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -10,6 +10,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
  *
  *   - POST /v1/habitat/visit       → iniciar visita { ownerId } (exige amistad aceptada)
  *   - POST /v1/habitat/visit/end   → terminar mi visita activa
+ *   - GET  /v1/habitat/visit/room  → la sala del amigo, para quien le visita
  *   - POST /v1/habitat/visit/interact → hablar por menú con el Pockai anfitrión
  *   - GET  /v1/habitat/visitors    → visitas activas donde el actor es el dueño
  */
@@ -87,6 +88,18 @@ export class HabitatVisitController {
   })
   end(@CurrentUser() user: any, @Body() body: { ownerId?: string }): Promise<{ success: boolean; ended: number }> {
     return this.habitatVisitService.endVisit(user.id, body?.ownerId);
+  }
+
+  @Get('visit/room')
+  @ApiOperation({
+    summary: 'La sala del amigo al que estás visitando',
+    description:
+      'Solo con una visita en vivo activa (403 si no). Devuelve la sala (rejilla, tema y muebles) y el aspecto de los dos Pockai, ' +
+      'para dibujar la visita en el cliente de quien visita. No incluye vitales, personalidad ni recuerdos del anfitrión.',
+  })
+  @ApiQuery({ name: 'ownerId', description: 'El amigo visitado' })
+  room(@CurrentUser() user: any, @Query('ownerId') ownerId: string): Promise<VisitRoom> {
+    return this.habitatVisitService.visitRoom(user.id, ownerId);
   }
 
   @Get('visitors')
