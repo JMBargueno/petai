@@ -938,5 +938,35 @@ tres capas, las mismas de la sección 7:
     trucos siguen en código; los recuerdos se guardan siempre en castellano (falta pasar el
     idioma del dueño, `UserSettings.language`); `wish_done` no tiene quien lo use; los textos
     no se recargan en caliente.
-- **Pendiente.** Nada de los seis lotes. Quedan los cabos sueltos anotados en cada fase.
+- **Fase 9 — deuda técnica y contratos para los clientes (servidor, hecho).**
+  - **Textos.** Las escenas entre Pockai, los regalos, los deseos, los trucos, las pistas del
+    turno, los eventos (combate, cuidados, regalos) y las etiquetas de relación salen de
+    `shared/game-data/strings` (240 textos por idioma). `strings.ts` gana `pickText` (una de las
+    alternativas, con huecos) y el hueco `{trick}`. Los motores aceptan `lang`, pero **los
+    recuerdos se siguen guardando en castellano: no existe una preferencia de idioma por
+    cuenta** (el único campo `language` es de las sesiones de voz). Siguen en código las
+    cabeceras del bloque de recuerdos del prompt y `adventureEpisode` (`memory.engine.ts`).
+  - **Un solo motor.** El backend importa `@pockai/mind/node` (compilado a CommonJS con el mismo
+    esquema que `@pockai/minigames`): `battles/combat/rng.ts` y `personality.engine.ts` ya no
+    tienen copia. El test de paridad del escritorio se sustituye por `mind/mind.core.spec.ts`.
+    `behavior.engine.ts` conserva su selector propio: cambiarlo a `selectByUtility` movería la
+    regresión de 72.030 casos.
+  - **Muebles con efecto (decidido: pequeño y con tope).** La escena emite `furnitureUsed`
+    cuando el Pockai usa un mueble; el cliente llama a `POST /habitat/items/:itemId/use`.
+    `balance.json → habitat.use`: 6 usos con efecto al día por mascota, 120 s entre usos y como
+    mucho 3 puntos por uso. Fuera del hábitat o dormido no cuenta. La mente deriva un poco el
+    carácter (`furniture_*`) y guarda un recuerdo como mucho al día.
+  - **Paquetes de cuidados.** `CarePackageService` emite `gift:received` con `kind: 'care'`.
+  - **Sala del amigo.** `GET /habitat/visit/room?ownerId=` (403 sin visita activa): la sala, sus
+    muebles y el aspecto de los dos Pockai. Nada del estado ni de la memoria del anfitrión.
+  - **Escenas para el visitante.** `habitat:scene` llega también a quien visita, con
+    `role: 'guest'` y sin `guestTraits`; al anfitrión le llega con `role: 'host'`.
+  - **Clip de cada reacción.** `BehaviorView.clip`: el servidor dice con qué clip se representa
+    cada reacción (en el `done` del chat y en `habitat:visitor_interaction`). Un test comprueba
+    que existe en la hoja de todas las especies.
+  - **Métricas.** Panel `infra/observability/grafana/dashboards/mind.json` y grupo `petai-mind`
+    en `alert-rules.yml`: el motor no decide reacciones habiendo chat, rechazos del modelo por
+    encima del 40 % y extracciones fallidas por encima del 30 %.
+- **Pendiente.** Nada de los seis lotes. Los clientes (escritorio y Android) consumen los
+  contratos de la fase 9 en sus propios PR.
 
