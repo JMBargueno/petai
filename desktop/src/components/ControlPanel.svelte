@@ -25,6 +25,7 @@
   import ProfileTab from '../features/profile/ProfileTab.svelte';
   import NotificationSettingsPanel from './NotificationSettingsPanel.svelte';
   import DesktopSettingsPanel from './DesktopSettingsPanel.svelte';
+  import SoundSettingsPanel from './SoundSettingsPanel.svelte';
   import AboutPanel from './AboutPanel.svelte';
   import PockaiMark from './PockaiMark.svelte';
   import { updateState, updateLock, hasUpdate } from '../lib/updater';
@@ -147,7 +148,7 @@
     { id: 'social', label: 'Social', icon: Users, subs: [['profile', 'Mi Perfil'], ['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
     { id: 'progress', label: 'Progreso', icon: Trophy, subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
     { id: 'shop', label: 'Tienda', icon: ShoppingBag, subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
-    { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['desktop', 'Escritorio'], ['about', 'Acerca de']] },
+    { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['sound', 'Sonido'], ['desktop', 'Escritorio'], ['about', 'Acerca de']] },
   ];
   let dest: string = 'pet';
   let sub: string = 'home';
@@ -1021,6 +1022,8 @@
         {:else if dest === 'settings' && sub === 'notifications'}
           <NotificationSettingsPanel />
 
+        {:else if dest === 'settings' && sub === 'sound'}
+          <SoundSettingsPanel />
         {:else if dest === 'settings' && sub === 'desktop'}
           <DesktopSettingsPanel />
 

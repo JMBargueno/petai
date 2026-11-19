@@ -195,6 +195,11 @@ export type SceneEvent =
   | { type: 'itemSelected'; itemId: string | null }
   /** El usuario movió o giró un mueble a una posición válida (la escena ya lo muestra ahí). */
   | { type: 'furnitureMoved'; itemId: string; x: number; y: number; rotation: number }
+  /**
+   * El Pockai ha usado un mueble por su cuenta (comer, bañarse, sentarse, jugar, dormir). El
+   * anfitrión puede avisar al servidor, que decide si tiene efecto (con tope diario).
+   */
+  | { type: 'furnitureUsed'; itemId: string; interaction: string }
   /** Un efecto pedido con `playEffect` o `petAction` terminó (o se descartó por otro más importante). */
   | { type: 'effectEnded'; id: string }
   /** Hito de la escena de historia en curso (ver `StoryState.phase`). Cada uno llega una vez por escena. */

@@ -15,7 +15,7 @@ export const LANGS = ['es', 'en'] as const;
 export type Lang = (typeof LANGS)[number];
 
 /** Únicos nombres que una línea puede interpolar. */
-export const PLACEHOLDERS = ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story'] as const;
+export const PLACEHOLDERS = ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story', 'trick'] as const;
 export type Placeholder = (typeof PLACEHOLDERS)[number];
 
 type Table = Record<string, string>;
@@ -84,6 +84,18 @@ export function variants(prefix: string, lang: Lang = 'es'): string[] {
   }
   if (!out.length) throw new Error(`Sin frases para ${prefix}`);
   return out;
+}
+
+/**
+ * Una de las alternativas `<prefijo>_1`, `<prefijo>_2`…, elegida con `r` (0..1, de un generador
+ * sembrado) y con sus huecos rellenos. Misma tirada, misma frase.
+ */
+export function pickText(prefix: string, r: number, params: Partial<Record<Placeholder, unknown>> = {}, opts: TextOptions = {}): string {
+  let count = 0;
+  while (hasText(`${prefix}_${count + 1}`, 'es')) count++;
+  if (!count) throw new Error(`Sin frases para ${prefix}`);
+  const index = Math.min(count - 1, Math.max(0, Math.floor(r * count)));
+  return text(`${prefix}_${index + 1}`, params, opts);
 }
 
 /** Todos los IDs de un idioma (para tests y validación). */

@@ -47,6 +47,11 @@ export interface SceneOptions {
   /** Elemento donde se inserta el canvas (o canvas existente). */
   host: HTMLElement | HTMLCanvasElement;
   onEvent?: (event: SceneEvent) => void;
+  /**
+   * Sonidos de los efectos (spec 40): candidatos en orden; el anfitrión reproduce el primero que
+   * tenga. La escena no suena por sí misma: el escritorio y el embed traen su motor @pockai/audio.
+   */
+  onSound?: (ids: string[]) => void;
   /** Tamaño en px CSS del Pockai en pantalla (alto del frame), en modo solo Pockai. */
   petSize?: number;
   reducedMotion?: boolean;
@@ -158,6 +163,7 @@ export class PockaiScene {
       palette: () => flowPalette(speciesElement(this.petState?.species)),
       seed: () => this.petState?.visualSeed ?? 1,
       onEnded: (id) => this.emit({ type: 'effectEnded', id }),
+      onSound: (ids) => this.opts.onSound?.(ids),
     });
     this.app.stage.addChild(this.screenLayer);
     this.screenFx = new PixiScreenFx(this.screenLayer, {
@@ -166,6 +172,7 @@ export class PockaiScene {
       seed: () => this.petState?.visualSeed ?? 1,
       viewport: () => this.app.screen,
       onCovered: () => this.emit({ type: 'screenCovered' }),
+      onSound: (ids) => this.opts.onSound?.(ids),
       onUncovered: () => this.emit({ type: 'screenUncovered' }),
     });
     // Escenario interactivo en toda su área: arrastres de muebles y clics en vacío.

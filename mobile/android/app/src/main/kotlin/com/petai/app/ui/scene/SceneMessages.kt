@@ -190,6 +190,12 @@ object SceneMessages {
             put("enabled", prefs.enabled)
             put("master", prefs.master)
             put("reduced", prefs.reduced)
+            putJsonObject("busOn") {
+                put("ui", prefs.uiOn)
+                put("sfx", prefs.sfxOn)
+                put("pet", prefs.petOn)
+                put("ambient", prefs.ambientOn)
+            }
             putJsonObject("buses") {
                 put("ui", prefs.ui)
                 put("sfx", prefs.sfx)

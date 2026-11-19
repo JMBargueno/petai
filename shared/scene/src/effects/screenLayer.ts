@@ -15,6 +15,7 @@
 import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import { EFFECTS, phasesOf } from './index';
 import { CanvasSink, renderFrame } from './render';
+import { soundsForEffectPhase } from './sounds';
 import { EffectPlayer, quantize } from './timeline';
 import type { EffectDef, FxPalette } from './types';
 
@@ -28,6 +29,8 @@ export interface PixiScreenFxOptions {
   /** Tamaño del lienzo en px de CSS (el `app.screen` de Pixi). */
   viewport: () => { width: number; height: number };
   onCovered?: () => void;
+  /** Sonidos candidatos de una fase (spec 40); el anfitrión reproduce el primero que tenga. */
+  onSound?: (ids: string[]) => void;
   onUncovered?: () => void;
 }
 
@@ -104,7 +107,10 @@ export class PixiScreenFx {
       released: false,
       player: null as unknown as EffectPlayer,
     };
-    a.player = new EffectPlayer(phasesOf(def, {}, !!this.opts.reducedMotion), (phase) => {
+    const phases = phasesOf(def, {}, !!this.opts.reducedMotion);
+    a.player = new EffectPlayer(phases, (phase) => {
+      const ids = soundsForEffectPhase(id, phases, phase);
+      if (ids.length) this.opts.onSound?.(ids);
       if (phase === 'hold') {
         a.covered = true;
         a.coveredAt = this.now;

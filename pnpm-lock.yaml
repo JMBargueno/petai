@@ -265,6 +265,9 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.45.0
         version: 1.45.0
+      '@pockai/mind':
+        specifier: workspace:*
+        version: link:../shared/mind
       '@pockai/minigames':
         specifier: workspace:*
         version: link:../shared/minigames

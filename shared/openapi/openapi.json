@@ -602,6 +602,37 @@
         ]
       }
     },
+    "/v1/habitat/visit/room": {
+      "get": {
+        "description": "Solo con una visita en vivo activa (403 si no). Devuelve la sala (rejilla, tema y muebles) y el aspecto de los dos Pockai, para dibujar la visita en el cliente de quien visita. No incluye vitales, personalidad ni recuerdos del anfitrión.",
+        "operationId": "HabitatVisitController_room",
+        "parameters": [
+          {
+            "name": "ownerId",
+            "required": true,
+            "in": "query",
+            "description": "El amigo visitado",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "La sala del amigo al que estás visitando",
+        "tags": [
+          "Habitat · Visita en vivo"
+        ]
+      }
+    },
     "/v1/habitat/visitors": {
       "get": {
         "operationId": "HabitatVisitController_list",
@@ -2525,6 +2556,42 @@
           }
         ],
         "summary": "Quitar un mueble concreto del hábitat (por id de item)",
+        "tags": [
+          "Habitat"
+        ]
+      }
+    },
+    "/v1/habitat/items/{itemId}/use": {
+      "post": {
+        "description": "Lo avisa el cliente cuando el Pockai usa un mueble por su cuenta. El efecto es pequeño y está acotado: tope diario por mascota y enfriamiento entre usos. Pasados los límites responde 201 con `applied: false` y el motivo, no un error.",
+        "operationId": "HabitatController_useItem",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Resultado del uso (aplicado o no) y vitales actuales"
+          },
+          "400": {
+            "description": "El mueble no se puede usar"
+          },
+          "404": {
+            "description": "Mueble no encontrado en el hábitat"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "El Pockai ha usado un mueble de su sala",
         "tags": [
           "Habitat"
         ]

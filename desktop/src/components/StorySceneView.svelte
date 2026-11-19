@@ -10,6 +10,7 @@
   import { onDestroy, onMount, createEventDispatcher } from 'svelte';
   import { PockaiScene, parseClock, type HostMessage, type SceneEvent, type StoryBeat, type StoryState } from '@pockai/scene';
   import { environmentalStatus } from '../lib/environmental';
+  import { sfxFirst } from '../lib/audio';
 
   export let pet: any = null;
   /** Escena en curso (`null` mientras no hay historia). */
@@ -31,7 +32,7 @@
   const send = (m: HostMessage) => scene?.receive(m);
 
   onMount(() => {
-    void PockaiScene.create({ host, label, onEvent }).then((s) => {
+    void PockaiScene.create({ host, label, onEvent, onSound: (ids) => sfxFirst(ids) }).then((s) => {
       if (destroyed) return s.destroy();
       scene = s;
     });

@@ -669,6 +669,25 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
   console.log(`✓ aventura diaria: ${layerSlot.size} capas, ${locationIds.size} localizaciones y ${seedIds.size} semillas validadas`);
 }
 
+// 4y. Usar un mueble del hábitat: efecto pequeño y con tope (no es una vía para criar sin cuidar)
+{
+  const use = balance.habitat?.use;
+  if (use) {
+    const VITALS = ['hunger', 'happiness', 'energy', 'hygiene'];
+    const USES = ['eat', 'bathe', 'sit', 'sleep', 'play'];
+    if (!(Number.isInteger(use.dailyCap) && use.dailyCap >= 0 && use.dailyCap <= 12)) throw new Error('balance.habitat.use.dailyCap debe ser un entero en [0, 12]');
+    if (!(use.cooldownSeconds >= 30)) throw new Error('balance.habitat.use.cooldownSeconds debe ser al menos 30');
+    for (const [id, fx] of Object.entries(use.effects ?? {})) {
+      if (!USES.includes(id)) throw new Error(`balance.habitat.use.effects: uso desconocido ${id}`);
+      for (const [vital, n] of Object.entries(fx)) {
+        if (!VITALS.includes(vital) || !(typeof n === 'number' && Math.abs(n) <= 5)) throw new Error(`balance.habitat.use.effects.${id}.${vital} inválido (vital conocido, de -5 a 5)`);
+      }
+      if (!balance.personality?.evolution?.events?.[`furniture_${id}`]) throw new Error(`balance.personality.evolution.events.furniture_${id} falta`);
+    }
+    console.log(`✓ balance.json: uso de muebles (${Object.keys(use.effects ?? {}).length} usos, tope ${use.dailyCap} al día) validado`);
+  }
+}
+
 // 4z. Diálogos por datos y textos (spec 37, lote 5)
 {
   const { validateDialogues } = require('./lib/validate-dialogues');
@@ -685,7 +704,7 @@ console.log(`✓ accessories.json: ${accessoriesData.accessories.length} accesor
     behaviors: Object.keys(pers.behavior?.catalog ?? {}),
     wishes: Object.keys(pers.wishes?.catalog ?? {}),
     // Los mismos nombres que acepta backend/src/modules/mind/strings.ts
-    placeholders: ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story'],
+    placeholders: ['pet', 'friend', 'visitor', 'owner', 'item', 'hint', 'mood', 'story', 'trick'],
   });
   if (errors.length) throw new Error(`Diálogos o textos inválidos:\n  - ${errors.join('\n  - ')}`);
   console.log(`✓ diálogos: ${Object.keys(readJson('shared/game-data/dialogues.json').conversations).length} conversación(es) y ${Object.keys(strings.es ?? {}).length} textos en ${Object.keys(strings).join(', ')} validados`);
