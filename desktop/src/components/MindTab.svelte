@@ -5,11 +5,13 @@
   import { LEVEL_LABEL, TALK_LEVELS, levelHint, talkFactorLabel, type InitiativeSettings, type TalkLevel } from '../lib/initiative';
   import { Segmented } from './ui';
   import { DIMENSIONS, MEMORY_LAYERS, layerUsage, memoryIcon, relativeTime } from '../lib/mind';
+  import { describeLearned } from '../lib/brain/learningStore';
   import { AsyncState, Badge, Card, EmptyState, FeatureHeader, ListRow, ProgressBar, SectionHeader } from './ui';
 
   export let pet: any = null;
 
   let data: PetMind | null = null;
+  $: learned = describeLearned(data?.learned?.prefs);
   let error = '';
   let loading = true;
   let now = new Date();
@@ -135,6 +137,15 @@
               {talkFactorLabel(talk.talkFactor)}
             </p>
             {#if talkError}<p class="talk-hint talk-error" role="alert">{talkError}</p>{/if}
+          </div>
+        {/if}
+
+        {#if learned.likes.length || learned.dislikes.length}
+          <SectionHeader title="Lo que ha aprendido de ti" icon="heart" />
+          <div class="talk">
+            {#if learned.likes.length}<p class="talk-hint">Sabe que te gusta verle {learned.likes.join(', ')}: lo hace algo más a menudo.</p>{/if}
+            {#if learned.dislikes.length}<p class="talk-hint">Cree que prefieres que no se ponga a {learned.dislikes.join(', ')}: lo hace algo menos.</p>{/if}
+            <p class="talk-hint">Lo aprende de tus gestos en el escritorio (caricias, chocar los cinco, apartarlo) y lo va olvidando si dejas de hacerlos.</p>
           </div>
         {/if}
 

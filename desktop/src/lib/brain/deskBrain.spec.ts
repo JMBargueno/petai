@@ -4,7 +4,8 @@ import { BARKS_CATALOG } from '../barks';
 import { DESKTOP_SKILLS } from '../types/desktopSkills';
 import { DESK_CONFIG as cfg } from './deskConfig';
 import { DESK_BEHAVIORS, type DeskCommand } from './deskBehaviors';
-import { candidatesFor, initialBrain, mayBark, meets, resolveMode, stepBrain, type BrainState } from './deskBrain';
+import { candidatesFor, creditOf, initialBrain, mayBark, meets, resolveMode, stepBrain, type BrainState } from './deskBrain';
+import { LEARNING_CONFIG } from './learningStore';
 import { buildSituation, cursorKindOf, moodOf, type DeskSituation, type RawSituation } from './deskSituation';
 import { stepLocomotion } from './locomotion';
 
@@ -438,5 +439,38 @@ describe('trepar y posarse', () => {
     // La ventana se desplaza 200 px: la sigue sin salto
     expect(perches.some((p) => !p.hop && Math.abs(p.x - (perchedAt + 200)) < 1)).toBe(true);
     expect(types(commands)).toContain('drop');
+  });
+});
+
+describe('lo aprendido de su entrenador (spec 41, fase D)', () => {
+  const factorOf = (learned: Record<string, number> | undefined, id: string) =>
+    candidatesFor('free', sit({ learned }), initialBrain(0), cfg, LEARNING_CONFIG).find((c) => c.id === id)?.factor ?? 0;
+
+  it('lo premiado pesa más y lo cortado menos, dentro de los límites', () => {
+    const plain = factorOf(undefined, 'stroll');
+    expect(factorOf({ stroll: 1 }, 'stroll')).toBeCloseTo(plain * LEARNING_CONFIG.factor.max, 5);
+    expect(factorOf({ stroll: -1 }, 'stroll')).toBeCloseTo(plain * LEARNING_CONFIG.factor.min, 5);
+    expect(factorOf({ stroll: 99 }, 'stroll')).toBeCloseTo(plain * LEARNING_CONFIG.factor.max, 5);
+    expect(factorOf({ dance: 1 }, 'stroll')).toBe(plain);
+  });
+
+  it('no salta los requisitos: lo premiado sigue sin ofrecerse cuando no toca', () => {
+    const tired = sit({ learned: { zoomies: 1 }, pet: { energy: 5, happiness: 60 } });
+    expect(candidatesFor('free', tired, initialBrain(0), cfg, LEARNING_CONFIG).some((c) => c.id === 'zoomies')).toBe(false);
+  });
+
+  it('sin configuración de aprendizaje no cambia nada', () => {
+    const a = candidatesFor('free', sit({ learned: { stroll: 1 } }), initialBrain(0), cfg);
+    const b = candidatesFor('free', sit(), initialBrain(0), cfg);
+    expect(a).toEqual(b);
+  });
+
+  it('el gesto va por lo que hace o acaba de hacer', () => {
+    const state = initialBrain(0);
+    expect(creditOf(state, 1000, LEARNING_CONFIG)).toBeNull();
+    expect(creditOf({ ...state, active: { id: 'dance', startedAt: 0, phase: 0, phaseAt: 0, endsAt: 9999, data: {} } }, 1000, LEARNING_CONFIG)).toBe('dance');
+    const ended = { ...state, lastEnded: { id: 'stroll', at: 1000 } };
+    expect(creditOf(ended, 1000 + LEARNING_CONFIG.creditWindowMs, LEARNING_CONFIG)).toBe('stroll');
+    expect(creditOf(ended, 1001 + LEARNING_CONFIG.creditWindowMs, LEARNING_CONFIG)).toBeNull();
   });
 });

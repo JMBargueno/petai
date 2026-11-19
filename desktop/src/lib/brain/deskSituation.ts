@@ -43,6 +43,8 @@ export interface RawSituation {
     sleeping?: boolean | null;
     element?: string | null;
   } | null;
+  /** Lo aprendido de su entrenador: conducta → preferencia de -1 a 1. */
+  learned?: Record<string, number>;
   /** Fuera de casa o cruzando un portal. */
   away: boolean;
   /** Arrastrada o en el aire. */
@@ -66,6 +68,8 @@ export interface RawSituation {
 export interface DeskSituation {
   now: number;
   dims: Dims;
+  /** Lo aprendido de su entrenador: conducta → preferencia de -1 a 1. */
+  learned?: Record<string, number>;
   needs: Needs;
   mood: Mood;
   sleeping: boolean;
@@ -151,6 +155,7 @@ export function buildSituation(raw: RawSituation, cfg: DeskConfig): DeskSituatio
   return {
     now: raw.now,
     dims: raw.dims,
+    learned: raw.learned,
     needs,
     mood: moodOf(needs),
     sleeping: !!raw.pet?.sleeping,

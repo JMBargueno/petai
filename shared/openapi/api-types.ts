@@ -837,6 +837,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/pets/{id}/mind/reinforce": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * El entrenador premia (o no) lo que el Pockai está haciendo en el escritorio
+         * @description Inclina un poco la balanza entre conductas del escritorio: lo que se premia sale algo más a menudo y lo que se corta, algo menos. Siempre acotado, con olvido y con un tope de gestos al día. Pasado el tope responde `applied: false`, nunca error.
+         */
+        post: operations["MindController_reinforce"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pets/{id}/initiative": {
         parameters: {
             query?: never;
@@ -7268,6 +7288,34 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MindController_reinforce: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Conducta del escritorio (balance.json → personality.desktop.behaviors) */
+                    behavior: string;
+                    /** @description Gesto (balance.json → personality.learning.signals): pet, high_five, click, pickup */
+                    signal: string;
+                };
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
