@@ -2,6 +2,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EntitlementService } from '../billing/entitlement.service';
+import { MetricsService } from '../../observability/metrics.service';
 import { intelligenceTier } from '../ai/personality';
 import { MemoryLayer } from './mind.types';
 import { MindService } from './mind.service';
@@ -50,6 +51,7 @@ export class MindMemoryService {
     private readonly prisma: PrismaService,
     private readonly mind: MindService,
     @Optional() private readonly entitlements?: EntitlementService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   private async planOf(userId: string): Promise<string> {
@@ -216,6 +218,13 @@ export class MindMemoryService {
     })) as unknown as MemoryRow[];
     const budget = cfg.memory.promptBudgetChars[budgetKey] ?? cfg.memory.promptBudgetChars.free ?? 700;
     const sel = selectForPrompt(rows, message, now, cfg, budget, opts);
+    if (this.metrics) {
+      const matched = new Set(sel.matched);
+      for (const layer of ['episodic', 'semantic', 'emotional'] as const) {
+        const hit = sel[layer].filter((m) => matched.has(m.id)).length;
+        this.metrics.recordMindRecall(layer, hit, sel[layer].length - hit);
+      }
+    }
     await this.markRecalled(sel, now);
     return buildLayeredMemoryBlock(sel, now);
   }

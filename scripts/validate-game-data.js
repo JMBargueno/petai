@@ -282,6 +282,8 @@ if (pers) {
         }
       }
     }
+    const icap = pers.intelligence?.dailyChatCap;
+    if (pers.intelligence && !(Number.isInteger(icap) && icap >= 1 && icap <= 1000)) throw new Error('balance.personality.intelligence.dailyChatCap debe ser un entero en [1, 1000]');
     const slm = pers.memory?.sinceLastMax;
     if (slm !== undefined && !(Number.isInteger(slm) && slm >= 0 && slm <= 4)) throw new Error('balance.personality.memory.sinceLastMax debe ser un entero en [0, 4]');
     console.log(`✓ balance.json: vida social (${SCENE_IDS.length} escenas, 4 etapas) validada`);
