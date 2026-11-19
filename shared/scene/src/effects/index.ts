@@ -28,6 +28,7 @@ import { cofreTier } from './cofreTier';
 import { destelloRitual } from './destelloRitual';
 import { triunfoRaid } from './triunfoRaid';
 import { veloEter } from './veloEter';
+import { selloEter } from './selloEter';
 import type { EffectDef, FxPhase } from './types';
 
 export const EFFECTS: Record<string, EffectDef> = {
@@ -57,6 +58,7 @@ export const EFFECTS: Record<string, EffectDef> = {
   [destelloRitual.id]: destelloRitual,
   [triunfoRaid.id]: triunfoRaid,
   [veloEter.id]: veloEter,
+  [selloEter.id]: selloEter,
 };
 
 /** Fases que tocan para estos datos (algunos efectos se saltan fases según el momento). */
@@ -91,7 +93,9 @@ export {
   destelloRitual,
   triunfoRaid,
   veloEter,
+  selloEter,
 };
+export { rewardRamp, type RewardKind } from './selloEter';
 export { prismColors } from './destelloPrisma';
 export { EffectPlayer, fixedDuration, quantize } from './timeline';
 export { flowPalette, FLOW_PALETTES, FLOW_NAMES } from './palettes';

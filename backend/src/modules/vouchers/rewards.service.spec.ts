@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { rewardsSchema } from './rewards.schemas';
-import { RewardsService } from './rewards.service';
+import { dominantReward, RewardsService } from './rewards.service';
 
 function build() {
   const proEnd = new Date('2026-12-26T00:00:00.000Z');
@@ -101,9 +101,15 @@ describe('RewardsService', () => {
     expect(entitlement.invalidate).toHaveBeenCalledWith('u1');
     expect(realtime.emitToUser).toHaveBeenCalledWith('u1', 'entitlement:updated', { plan: 'pro' });
     expect(realtime.emitToUser).toHaveBeenCalledWith('u1', 'reward:received', event);
-    expect(realtime.emitPetAction).toHaveBeenCalledWith('u1', null, 'gift_received', { source: 'voucher' });
+    expect(realtime.emitPetAction).toHaveBeenCalledWith('u1', null, 'gift_received', { source: 'voucher', reward: 'pro' });
   });
 
+  it('announce pasa a la mascota el cofre de mejor tipo para colorear el sello del Éter', async () => {
+    const { service, realtime } = build();
+    const granted = { coins: 50, gems: 5, proDays: 0, proUntil: null, chests: [{ type: 'silver' as const, qty: 2 }, { type: 'diamond' as const, qty: 1 }, { type: 'gold' as const, qty: 1 }], accessories: [] };
+    await service.announce('u1', { source: 'admin_grant', redemptionId: 'r2', granted }, []);
+    expect(realtime.emitPetAction).toHaveBeenCalledWith('u1', null, 'gift_received', { source: 'admin_grant', reward: 'chest', tier: 'diamond' });
+  });
   it('grantToUser acredita, audita y avisa al usuario', async () => {
     const { service, tx, realtime } = build();
     const res = await service.grantToUser(admin, 'u1', { rewards: { coins: 100 }, note: 'Perdón por la caída' });
@@ -119,5 +125,23 @@ describe('RewardsService', () => {
     await expect(service.grantToUser(admin, 'u1', { rewards: { proDays: 1 } })).rejects.toBeInstanceOf(ForbiddenException);
     prisma.user.findUnique.mockResolvedValue(null);
     await expect(service.grantToUser(admin, 'nadie', { rewards: { coins: 1 } })).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('dominantReward', () => {
+  const base = { coins: 0, gems: 0, proDays: 0, proUntil: null, chests: [], accessories: [] };
+  const hat = (alreadyOwned: boolean) => [{ id: 'gorro', name: 'Gorro', alreadyOwned }];
+
+  it('elige Pro > cofre > prenda nueva > gemas > monedas', () => {
+    expect(dominantReward({ ...base, coins: 9, gems: 9, proDays: 3, chests: [{ type: 'mythic', qty: 1 }], accessories: hat(false) })).toEqual({ reward: 'pro' });
+    expect(dominantReward({ ...base, coins: 9, gems: 9, chests: [{ type: 'bronze', qty: 1 }], accessories: hat(false) })).toEqual({ reward: 'chest', tier: 'bronze' });
+    expect(dominantReward({ ...base, coins: 9, gems: 9, accessories: hat(false) })).toEqual({ reward: 'accessory' });
+    expect(dominantReward({ ...base, coins: 9, gems: 9 })).toEqual({ reward: 'gems' });
+    expect(dominantReward({ ...base, coins: 9 })).toEqual({ reward: 'coins' });
+  });
+
+  it('una prenda que ya tenía solo manda si no llega nada más', () => {
+    expect(dominantReward({ ...base, coins: 9, accessories: hat(true) })).toEqual({ reward: 'coins' });
+    expect(dominantReward({ ...base, accessories: hat(true) })).toEqual({ reward: 'accessory' });
   });
 });

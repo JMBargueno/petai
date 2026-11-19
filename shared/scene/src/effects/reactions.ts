@@ -29,6 +29,20 @@ export function birthParams(c: Ctx): Record<string, string | number> {
 
 const astral = (outcome: 'won' | 'lost' | 'draw'): EffectRequest => ({ id: 'proyeccion-astral', params: { outcome } });
 
+/** Orígenes de recompensas que entrega el propio Éter (vouchers y regalos del panel). */
+const ETHER_SOURCES = new Set(['voucher', 'admin_grant']);
+
+/**
+ * Un regalo de otro Custodio baja por su hebra (`paquete-hebra`); lo que entrega el Éter (un código
+ * canjeado o un regalo del equipo) llega como `sello-eter`, del color de lo más valioso recibido.
+ */
+function giftEffect(c: Ctx): EffectRequest {
+  if (!ETHER_SOURCES.has(str(c, 'source') ?? '')) return { id: 'paquete-hebra', params: { kind: 'gift' } };
+  const reward = str(c, 'reward') ?? 'coins';
+  const tier = reward === 'chest' ? str(c, 'tier') : undefined;
+  return { id: 'sello-eter', params: tier ? { reward, tier } : { reward } };
+}
+
 const TABLE: Record<string, (c: Ctx) => EffectRequest | null> = {
   level_up: (c) => {
     const level = num(c, 'level');
@@ -46,7 +60,7 @@ const TABLE: Record<string, (c: Ctx) => EffectRequest | null> = {
   battle_won: () => astral('won'),
   battle_lost: () => astral('lost'),
   battle_defended: (c) => (c?.['draw'] ? astral('draw') : c?.['won'] ? astral('won') : astral('lost')),
-  gift_received: () => ({ id: 'paquete-hebra', params: { kind: 'gift' } }),
+  gift_received: (c) => giftEffect(c),
   care_received: () => ({ id: 'paquete-hebra', params: { kind: 'care' } }),
   cleaned: () => ({ id: 'polvo-estatico', params: {} }),
   slept: () => ({ id: 'desfragmentacion', params: {} }),

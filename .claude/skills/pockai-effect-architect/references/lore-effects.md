@@ -46,7 +46,8 @@ Un mismo efecto sirve para todos los Flujos cambiando la rampa. Si un Flujo pide
 | `proyeccion-astral` | Arena (`battle_won/lost/defended` → `outcome`) | §7: la proyección vuelve del Coliseo y se funde; estrella si gana, franjas rotas si pierde (más el golpe `triggerHurt`), medias lunas si empata. |
 | `trenza-juramento` | Juramento de clan cumplido (`clan:goal_completed` → `reactionForClanGoal`) | §8: cinco hebras de colores se trenzan en arco y se tensan. |
 | `chispa-despertar` | La inteligencia cruza 200 o 500 (`watchAwakening` en PetView) | §5: la Chispa entra en la frente y uno o dos halos de runas giran. |
-| `paquete-hebra` | `gift_received` / `care_received` | §8: paquete (o sobre con corazón) que baja colgado de una hebra y se abre. |
+| `paquete-hebra` | `gift_received` (de un amigo) / `care_received` | §8: paquete (o sobre con corazón) que baja colgado de una hebra y se abre. |
+| `sello-eter` | `gift_received` con `source` = `voucher` o `admin_grant` | §1: lo entrega el propio Éter: un sello cae de una grieta del vacío y se rompe en destellos del color de lo recibido (`reward`: monedas dorado, gemas cian, Pro prisma, cofre el metal de su `tier`, prenda rosa). |
 | `manitas-espirituales` (menor) | El agente abre una web o lee el portapapeles (`AiTab` → `agentAction`) | §5: manitas de luz sostienen un portal web o un pergamino. |
 | `glitch-animo` (menor) | `sick` | §7: franjas de interferencia a ~6 fps, sin estroboscopio. |
 | `polvo-estatico` (menor) | `cleaned` | §6: chispas grises de estática en zigzag. |
