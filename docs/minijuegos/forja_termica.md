@@ -28,5 +28,5 @@ Una herrería de piedra: a la derecha, la boca del horno con un resplandor apaga
 - El termómetro, la franja y la barra de temple son marcas en CSS.
 
 ## Notas
-- **Las tres piezas están pendientes de generar** (la API devolvió un 429 por tope de gasto; el prompt está en `sprite-previews/minigames/sheet-e.txt`). Mientras, la vista pinta un recuadro en su sitio.
+- El nudo se apoya en el yunque del fondo: si se regenera el fondo, hay que recolocarlo (`KNOT_X`, `KNOT_Y` en la vista).
 - El nudo está al rojo solo mientras la forja está en su punto: son dos dibujos, no un filtro.

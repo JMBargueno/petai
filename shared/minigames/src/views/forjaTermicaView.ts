@@ -11,7 +11,7 @@ const PET_Y = 246;
 const BELLOWS_X = 184;
 const BELLOWS_Y = 222;
 const KNOT_X = 245;
-const KNOT_Y = 136;
+const KNOT_Y = 146;
 
 /** Forja Térmica: el Pockai aviva el fuelle y el nudo del Telar se templa mientras la forja está en su punto. */
 export function createForjaTermicaView(): GameView<ForjaState> {

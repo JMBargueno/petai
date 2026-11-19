@@ -20,7 +20,7 @@
 Espera a la derecha del tablero mirando las facetas. Se sorprende con el destello (`surprised`), se alegra con cada pareja (`happy`), se encoge con cada fallo (`hit`) y celebra al completarlo (`celebrate`).
 
 ## Fondo
-El interior de una gema hueca: paredes facetadas en violeta profundo a los lados, que se cierran arriba como una bóveda, y un suelo liso de cristal. Dos tercios de la izquierda lisos, para el tablero. **Pendiente de generar** (la API devolvió un 429 por tope de gasto): mientras, la arena usa el fondo de reserva en CSS.
+El interior de una gema hueca: paredes facetadas en violeta profundo a los lados, que se cierran arriba como una bóveda, y un suelo liso de cristal. Dos tercios de la izquierda lisos, para el tablero.
 
 ## Piezas
 | Archivo | Qué es | Tamaño | Rampa | Silueta |
