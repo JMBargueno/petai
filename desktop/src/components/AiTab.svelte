@@ -3,7 +3,7 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { api } from '../lib/api';
   import { Badge, Button, Card, EmptyState, ListRow, Modal, Notice, Skeleton, Switch } from './ui';
-  import { ChatView, type ChatApi, type ChatDone, type ChatStreamHandlers, type ConfirmedAction } from '@pockai/ui';
+  import { AiKeyForm, ChatView, type AiApi, type AiConfigView, type ChatApi, type ChatDone, type ChatStreamHandlers, type ConfirmedAction } from '@pockai/ui';
   import { friendlyError } from '../lib/ui/errors';
   import {
     isLoopbackUrl,
@@ -53,12 +53,14 @@
   let paywallBusy = false;
   let paywallErr = '';
 
-  // Formulario de ajustes BYOK
-  let provider = 'openai';
-  let baseUrl = '';
-  let model = '';
-  let apiKey = '';
-  let settingsMsg = '';
+  // «Mi propia clave»: el formulario es `AiKeyForm` (@pockai/ui) con la API del escritorio.
+  const aiApi: AiApi = {
+    getConfig: () => api.getAiConfig() as Promise<AiConfigView>,
+    saveConfig: (cfg) => api.saveAiConfig(cfg) as Promise<AiConfigView>,
+    testConfig: () => api.testAiConfig() as Promise<{ ok: boolean; error?: string }>,
+    deleteConfig: () => api.deleteAiConfig(),
+    errorText: (err, fallback) => friendlyError(err, fallback),
+  };
   let settingsErr = '';
   let busy = false;
 
@@ -247,7 +249,6 @@
     else chatView.setInput(pendingPrompt.text);
   }
 
-  $: needsUrl = provider !== 'openai';
   $: tier = (pet?.intelligence ?? 0) >= 500 ? 'Agente' : (pet?.intelligence ?? 0) >= 200 ? 'Memoria' : 'Charla';
 
   function handleEntitlementUpdated() {
@@ -292,9 +293,6 @@
         activeMode = 'local';
       } else if (config.mode === 'byok' && config.configured) {
         activeMode = 'byok';
-        provider = config.provider || 'openai';
-        baseUrl = config.baseUrl || '';
-        model = config.model || '';
       } else {
         activeMode = 'managed';
       }
@@ -339,65 +337,18 @@
     }
   }
 
-  async function save() {
-    settingsErr = '';
-    settingsMsg = '';
-    busy = true;
-    try {
-      const cleanUrl = baseUrl?.trim().replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
-      config = await api.saveAiConfig({
-        mode: 'byok',
-        provider,
-        baseUrl: needsUrl ? cleanUrl : undefined,
-        model: model?.trim() || undefined,
-        apiKey: apiKey?.trim() || undefined,
-      });
-      activeMode = 'byok';
-      if (needsUrl) baseUrl = cleanUrl;
-      apiKey = '';
-      settingsMsg = 'Guardado. Pulsa "Probar conexión" para comprobarlo.';
-      chatKey += 1; // la conversación se monta de nuevo con el motor recién guardado
-      await loadUsage();
-    } catch (e: any) {
-      settingsErr = e.message;
-    } finally {
-      busy = false;
-    }
+  /** La clave se guardó: la conversación se monta de nuevo con el motor recién guardado. */
+  async function keySaved(next: any) {
+    config = next;
+    activeMode = 'byok';
+    chatKey += 1;
+    await loadUsage();
   }
 
-  async function test() {
-    settingsErr = '';
-    settingsMsg = '';
-    busy = true;
-    try {
-      const r = await api.testAiConfig();
-      if (r.ok) {
-        settingsMsg = 'Conexión correcta';
-        config = await api.getAiConfig();
-      } else {
-        settingsErr = r.error || 'No se pudo conectar';
-      }
-    } catch (e: any) {
-      settingsErr = e.message;
-    } finally {
-      busy = false;
-    }
-  }
-
-  async function remove() {
-    busy = true;
-    try {
-      await api.deleteAiConfig();
-      config = { configured: false, mode: 'managed' };
-      activeMode = 'managed';
-      apiKey = '';
-      settingsMsg = 'Se volvió a la IA de Pockai';
-      await loadUsage();
-    } catch (e: any) {
-      settingsErr = e.message;
-    } finally {
-      busy = false;
-    }
+  async function keyRemoved() {
+    config = { configured: false, mode: 'managed' };
+    activeMode = 'managed';
+    await loadUsage();
   }
 
   function saveLocal() {
@@ -520,49 +471,8 @@
           {/if}
         </Card>
       {:else if activeMode === 'byok'}
-        <Card title="Mi propia clave" icon="lock">
-          <div class="form-group">
-            <label for="ai-provider">Proveedor</label>
-            <select id="ai-provider" class="select" bind:value={provider}>
-              <option value="openai">OpenAI</option>
-              <option value="hermes">Hermes Agent (remoto, HTTPS)</option>
-              <option value="custom">Otro compatible con OpenAI</option>
-            </select>
-          </div>
-          {#if needsUrl}
-            <div class="form-group">
-              <label for="ai-url">URL base (HTTPS)</label>
-              <input id="ai-url" class="input" type="url" bind:value={baseUrl} placeholder="https://mi-servidor.com/v1" autocomplete="off" />
-            </div>
-          {/if}
-          <div class="form-group">
-            <label for="ai-model">Modelo {#if provider === 'openai'}<small class="form-hint">(vacío = gpt-4o-mini)</small>{/if}</label>
-            <input id="ai-model" class="input" type="text" bind:value={model} placeholder="gpt-4o-mini" autocomplete="off" />
-          </div>
-          <div class="form-group">
-            <label for="ai-key">API key</label>
-            <input
-              id="ai-key"
-              class="input"
-              type="password"
-              bind:value={apiKey}
-              autocomplete="off"
-              placeholder={config.hasKey ? 'Guardada (' + (config.keyMask ?? '••••') + ') — déjalo vacío para conservarla' : 'sk-…'}
-            />
-          </div>
-          <p class="ui-card__hint">Tu key se cifra en el servidor (AES-256-GCM) y nunca se vuelve a mostrar completa. Sin límites diarios en Pockai.</p>
-          <div class="row">
-            <Button variant="primary" loading={busy} on:click={save}>Guardar</Button>
-            {#if config.configured}
-              <Button disabled={busy} on:click={test}>Probar conexión</Button>
-              <Button variant="ghost" disabled={busy} on:click={remove}>Volver a IA de Pockai</Button>
-            {:else}
-              <Button variant="ghost" disabled={busy} on:click={() => setMode('managed')}>Cancelar</Button>
-            {/if}
-          </div>
-          {#if settingsMsg}<Notice tone="ok">{settingsMsg}</Notice>{/if}
-          {#if settingsErr}<Notice tone="error">{settingsErr}</Notice>{/if}
-        </Card>
+        {#if settingsErr}<Notice tone="error">{settingsErr}</Notice>{/if}
+        <AiKeyForm {aiApi} {config} on:saved={(e) => keySaved(e.detail)} on:removed={keyRemoved} on:cancel={() => setMode('managed')} />
       {:else if cliEngine}
         <Card title="{CLI_LABELS[cliEngine]} (este equipo)" icon="monitor">
           <p class="ui-card__hint">

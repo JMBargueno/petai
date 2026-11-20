@@ -5,6 +5,8 @@
  * plataforma. Los usan las UIs de escritorio, Android e iOS. Los estilos van aparte, para que cada
  * app los cargue una vez: `@pockai/ui/fonts.css`, `tokens.css`, `base.css` y `kit.css`.
  */
+export { default as AiKeyForm } from './AiKeyForm.svelte';
+export { default as AiSettingsView } from './AiSettingsView.svelte';
 export { default as AsyncState } from './AsyncState.svelte';
 export { default as AuthLayout } from './AuthLayout.svelte';
 export { default as AuthView } from './AuthView.svelte';
@@ -97,3 +99,4 @@ export { badgeIcon, BADGE_ICONS } from './badge-icons';
 export { ITEM_ICON_SIZE, itemIcon } from './items';
 export type { RoomPetDrag } from './roomDrag';
 export type { AuthApi, HandleCheck, RegisterInput } from './authApi';
+export type { AiApi, AiConfigInput, AiConfigView } from './aiApi';

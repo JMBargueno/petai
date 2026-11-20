@@ -477,6 +477,9 @@ const TALK_LINES: Record<string, string> = {
   bye: 'Luna te acompaña hasta la puerta.',
 };
 const TALK_LABELS: Record<string, string> = { greet: 'Saludar', pet: 'Acariciar', treat: 'Ofrecer Manzana', play: 'Jugar un momento', ask: '¿Qué tal estás?', bye: 'Despedirse' };
+/** Configuración de IA del modo demo (la IA de Pockai o una clave propia de pega). */
+let aiConfig: Record<string, unknown> = { mode: 'managed', configured: false };
+let aiKey = '';
 let talk = { turn: 0, done: [] as string[], ended: false, last: null as any };
 function talkReply(line: string) {
   const left = ['greet', 'pet', 'treat', 'play', 'ask'].filter((id) => !talk.done.includes(id));
@@ -603,7 +606,17 @@ const routes: [string, RegExp, Handler][] = [
   ['POST', /^\/pets\/([^/]+)\/combat\/stats$/, ({ m }) => ({ ...combat(m[1]), statPoints: 0 })],
   ['PUT', /^\/pets\/([^/]+)\/combat\/skills$/, ({ m, body }) => ({ ...combat(m[1]), equippedSkills: body.skills })],
   ['GET', /^\/ai\/usage$/, () => ({ month: iso().slice(0, 7), tokens: 12400, requests: 38, quota: null, remaining: null, mode: 'managed', plan: 'free', daily: { used: 4, limit: 15, resetsAt: iso(9 * HOUR) } })],
-  ['GET', /^\/ai\/config$/, () => ({ mode: 'managed', configured: false })],
+  ['GET', /^\/ai\/config$/, () => aiConfig],
+  // Clave propia: la key no vuelve nunca, solo su máscara. «Probar» falla si la key no empieza por sk-.
+  ['PUT', /^\/ai\/config$/, ({ body }) => {
+    if (body.mode === 'managed') return (aiConfig = { ...aiConfig, mode: 'managed', configured: false });
+    const key = body.apiKey ?? aiKey;
+    if (!key) throw fail(400, 'Falta la API key');
+    aiKey = key;
+    return (aiConfig = { mode: 'byok', configured: true, provider: body.provider, baseUrl: body.baseUrl ?? null, model: body.model ?? null, hasKey: true, keyMask: `••••${key.slice(-4)}` });
+  }],
+  ['POST', /^\/ai\/config\/test$/, () => (aiKey.startsWith('sk-') ? { ok: true } : { ok: false, error: 'La clave no es válida (401)' })],
+  ['DELETE', /^\/ai\/config$/, () => ((aiKey = ''), (aiConfig = { mode: 'managed', configured: false }), { ok: true })],
   ['GET', /^\/billing\/plans$/, () => ({
     pricing: { monthlyPriceUsd: 4.99, monthlyPriceEur: 4.99, trialDays: 7 },
     plans: {

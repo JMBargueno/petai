@@ -5,6 +5,7 @@
  * lo que el jugador hace se le pide con una acción tipada. Es el mismo núcleo que usa el escritorio.
  */
 import { get, writable } from 'svelte/store';
+import type { AuthApi, HandleCheck } from '@pockai/ui';
 import { clearClan, clearVisitors, connectSocialFeed } from '@pockai/ui/social';
 import {
   hasCore,
@@ -13,10 +14,12 @@ import {
   onSession,
   onStateChange,
   perform,
+  query,
   sessionState,
   stateLoad,
   stateSnapshot,
   type Action,
+  type AccountLock,
   type ActionError,
   type AppState,
 } from '@pockai/client';
@@ -26,6 +29,8 @@ export type Phase = 'starting' | 'signedOut' | 'ready' | 'locked';
 const EMPTY: AppState = { rev: 0, user: null, pets: [], activePetId: null, eggs: [], inventory: [], shop: [], inbox: [], environment: null };
 
 export const phase = writable<Phase>('starting');
+/** Con `phase` en `locked`: qué paso de alta le falta a la cuenta. */
+export const lock = writable<AccountLock | null>(null);
 export const state = writable<AppState>(EMPTY);
 /** El último estado se cargó del disco porque no hay conexión. */
 export const offline = writable(false);
@@ -47,7 +52,10 @@ export async function start(): Promise<void> {
   await connectRealtimeFeeds();
   await onSession((kind) => {
     if (kind === 'loggedOut' || kind === 'expired') phase.set('signedOut');
-    else if (kind === 'unverified' || kind === 'handleRequired') phase.set('locked');
+    else if (kind === 'unverified' || kind === 'handleRequired') {
+      lock.set(kind === 'unverified' ? 'unverified' : 'noHandle');
+      phase.set('locked');
+    }
   });
   state.set(await stateSnapshot());
   if ((await sessionState()).active) await load();
@@ -63,6 +71,7 @@ async function load(): Promise<void> {
   const outcome = await stateLoad({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? null });
   state.set(await stateSnapshot());
   offline.set(outcome.offline);
+  lock.set(outcome.lock);
   if (!outcome.session) phase.set('signedOut');
   else if (outcome.lock) phase.set('locked');
   else phase.set(get(state).user ? 'ready' : 'signedOut');
@@ -75,10 +84,29 @@ export function failureText(e: unknown, fallback: string): string {
   return failure.message || fallback;
 }
 
-export async function signIn(email: string, password: string): Promise<void> {
-  await perform({ type: 'login', email, password });
-  await load();
-}
+/**
+ * Las llamadas de las pantallas de acceso de `@pockai/ui` (entrar, alta, verificar el correo,
+ * nickname, recuperar la contraseña), todas por el núcleo. Cuando una abre sesión o completa un paso
+ * de alta, la pantalla avisa y se llama a `reload`, que vuelve a cargar el estado y decide la fase.
+ */
+export const authApi: AuthApi = {
+  login: (email, password) => perform({ type: 'login', email, password }),
+  register: ({ email, password, handle, displayName, inviteCode }) =>
+    perform({ type: 'register', email, password, handle, displayName: displayName ?? null, inviteCode: inviteCode ?? null }),
+  registrationConfig: () => query<{ inviteRequired: boolean }>({ type: 'registrationConfig' }),
+  requestPasswordReset: (email) => perform({ type: 'requestPasswordReset', email }),
+  confirmPasswordReset: (email, code, newPassword) => perform({ type: 'confirmPasswordReset', email, code, newPassword }),
+  checkHandle: (handle) =>
+    query<HandleCheck>({ type: 'handleAvailable', handle }).catch((e) => ({ handle, available: false, reason: failureText(e, 'No se pudo comprobar') })),
+  verifyEmail: (code) => perform({ type: 'verifyEmail', code }),
+  resendVerification: () => perform({ type: 'resendVerification' }),
+  isEmailVerified: async () => Boolean((await query<{ emailVerified?: boolean } | null>({ type: 'me' }))?.emailVerified),
+  setHandle: (handle) => perform({ type: 'setHandle', handle }),
+  errorText: failureText,
+};
+
+/** Tras entrar o completar un paso de alta: se recarga el estado y con él la fase. */
+export const reload = () => load();
 
 export async function signOut(): Promise<void> {
   await coreLogout();
