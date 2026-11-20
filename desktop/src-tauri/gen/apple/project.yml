@@ -3,6 +3,8 @@ options:
   bundleIdPrefix: com.petai.app
   deploymentTarget:
     iOS: 16.2
+    # La app del reloj (spec 44). watchOS 10 es lo que piden `TabView(.verticalPage)` y el Smart Stack.
+    watchOS: 10.0
 fileGroups: [../../src]
 configs:
   debug: debug
@@ -57,8 +59,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 0.41.0
-        CFBundleVersion: "0.41.0"
+        CFBundleShortVersionString: 0.42.0
+        CFBundleVersion: "0.42.0"
         # Avisos de cuidado con la app cerrada (paso 4.8): el identificador tiene que coincidir con
         # `PockaiBackground.taskIdentifier`.
         UIBackgroundModes: [fetch]
@@ -98,6 +100,8 @@ targets:
       - sdk: Security.framework
       - sdk: UIKit.framework
       - sdk: WebKit.framework
+      # El puente con el reloj (spec 44, `PockaiWristLink.swift`).
+      - sdk: WatchConnectivity.framework
       # La extensión de los widgets y la Live Activity (fase 5), que viaja dentro de la app.
       - target: PockaiWidgets
         embed: true
@@ -122,8 +126,8 @@ targets:
       path: PockaiWidgets/Info.plist
       properties:
         CFBundleDisplayName: Pockai
-        CFBundleShortVersionString: 0.41.0
-        CFBundleVersion: "0.41.0"
+        CFBundleShortVersionString: 0.42.0
+        CFBundleVersion: "0.42.0"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
@@ -136,6 +140,80 @@ targets:
       base:
         PRODUCT_NAME: PockaiWidgets
         PRODUCT_BUNDLE_IDENTIFIER: com.petai.app.widgets
+        SWIFT_VERSION: "5.0"
+        INFOPLIST_KEY_CFBundleDisplayName: Pockai
+        SKIP_INSTALL: true
+    dependencies:
+      - sdk: SwiftUI.framework
+      - sdk: WidgetKit.framework
+
+  # ── El Apple Watch (spec 44) ───────────────────────────────────────────────────────────────────
+  # Una superficie, no un cliente: no habla con el backend, no ve tokens y no tiene estado propio.
+  # Lo que pinta se lo manda el iPhone por WatchConnectivity (`PockaiWristLink.swift`) y lo que hace
+  # se lo devuelve como intención. De la UI Svelte no hay nada: watchOS no tiene WKWebView.
+  PockaiWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: PockaiWatch
+      - path: Shared
+    info:
+      path: PockaiWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Pockai
+        CFBundleShortVersionString: 0.42.0
+        CFBundleVersion: "0.42.0"
+        # El target único de watchOS. La clave antigua `WKWatchKitApp` no vale.
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.petai.app
+    entitlements:
+      path: PockaiWatch/PockaiWatch.entitlements
+      properties:
+        # El App Group del reloj, que **no** es el del iPhone: un App Group no cruza de dispositivo.
+        # Va aquí y no en el `.entitlements` a mano, porque xcodegen regenera ese fichero desde este
+        # bloque y, si no está declarado, lo deja vacío (la trampa del paso 5.5).
+        com.apple.security.application-groups:
+          - group.com.petai.app.watchkitapp
+    settings:
+      base:
+        PRODUCT_NAME: PockaiWatch
+        PRODUCT_BUNDLE_IDENTIFIER: com.petai.app.watchkitapp
+        SWIFT_VERSION: "5.0"
+        INFOPLIST_KEY_CFBundleDisplayName: Pockai
+        SKIP_INSTALL: true
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: ""
+        GENERATE_INFOPLIST_FILE: false
+    dependencies:
+      - sdk: SwiftUI.framework
+      - sdk: WatchConnectivity.framework
+      - target: PockaiWatchComplications
+        embed: true
+
+  # Las complicaciones de la esfera y el widget del Smart Stack. No puede llamar al núcleo ni al
+  # iPhone: solo lee el último resumen que la app del reloj dejó en su App Group.
+  PockaiWatchComplications:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: PockaiWatchComplications
+      - path: Shared
+    info:
+      path: PockaiWatchComplications/Info.plist
+      properties:
+        CFBundleDisplayName: Pockai
+        CFBundleShortVersionString: 0.42.0
+        CFBundleVersion: "0.42.0"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: PockaiWatchComplications/PockaiWatchComplications.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.petai.app.watchkitapp
+    settings:
+      base:
+        PRODUCT_NAME: PockaiWatchComplications
+        PRODUCT_BUNDLE_IDENTIFIER: com.petai.app.watchkitapp.complications
         SWIFT_VERSION: "5.0"
         INFOPLIST_KEY_CFBundleDisplayName: Pockai
         SKIP_INSTALL: true

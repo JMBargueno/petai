@@ -52,6 +52,12 @@ struct Inner {
     /// Las superficies vivas que la plataforma tiene a la vista ahora mismo (fase 5). El núcleo las
     /// recuerda para que cada pasada solo pida lo que cambia: ver `surfaces.rs`.
     shown_surfaces: Mutex<Vec<crate::surfaces::Surface>>,
+    /// Los últimos `request_id` del reloj que ya se atendieron (spec 44). La cola del sistema puede
+    /// entregar el mismo mensaje dos veces, y una manzana pagada dos veces se nota.
+    wrist_seen: Mutex<Vec<String>>,
+    /// El último resumen que se le mandó al reloj, y cuándo. Igual que con las superficies, el
+    /// núcleo lo recuerda para no reenviar lo que no ha cambiado: ver `wrist.rs`.
+    wrist_sent: Mutex<Option<(crate::wrist::WristSnapshot, i64)>>,
 }
 
 /// Resultado de una petición: ya leída, o un flujo de eventos todavía abierto.
@@ -85,6 +91,8 @@ impl Core {
                 realtime: Mutex::new(None),
                 store,
                 shown_surfaces: Mutex::new(Vec::new()),
+                wrist_seen: Mutex::new(Vec::new()),
+                wrist_sent: Mutex::new(None),
             }),
         }
     }
@@ -92,6 +100,30 @@ impl Core {
     /// Las superficies vivas que la plataforma tiene a la vista (fase 5; ver `surfaces.rs`).
     pub(crate) fn shown_surfaces(&self) -> std::sync::MutexGuard<'_, Vec<crate::surfaces::Surface>> {
         self.inner.shown_surfaces.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Los `request_id` del reloj ya atendidos (spec 44).
+    pub(crate) fn wrist_seen(&self) -> Vec<String> {
+        self.inner.wrist_seen.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    /// Apunta un `request_id` como atendido. Se guardan solo los últimos: el reloj no manda más de
+    /// unos pocos y una lista infinita solo crecería.
+    pub(crate) fn wrist_remember(&self, request_id: &str) {
+        const KEEP: usize = 32;
+        let mut seen = self.inner.wrist_seen.lock().unwrap_or_else(|e| e.into_inner());
+        seen.push(request_id.to_string());
+        if seen.len() > KEEP {
+            let extra = seen.len() - KEEP;
+            seen.drain(..extra);
+        }
+    }
+
+    /// Lo último que se le mandó al reloj, y cuándo (spec 44).
+    pub(crate) fn wrist_sent(
+        &self,
+    ) -> std::sync::MutexGuard<'_, Option<(crate::wrist::WristSnapshot, i64)>> {
+        self.inner.wrist_sent.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     pub fn config(&self) -> &CoreConfig {

@@ -260,7 +260,7 @@ Se entrega por fases, empezando por el backend + la mascota de escritorio (prime
 - **Contrato:** `@nestjs/swagger` → `shared/openapi/openapi.json` (fuente única para generar clientes).
 - **Núcleo cliente:** Rust (`crates/pockai-core`: `reqwest`, `rust_socketio`, llavero del sistema) y su puente con la UI (`crates/tauri-plugin-pockai`). Workspace de Cargo en la raíz.
 - **Escritorio:** Tauri 2 (Rust `edition 2021`, plugins shell/http/notification, `tray-icon`) + Svelte 5 + Vite 6 + TypeScript. La UI usa `@pockai/client` para hablar con el núcleo; `openapi-fetch` da los tipos de las llamadas.
-- **Móviles (fases posteriores):** la misma app Tauri 2 con una UI Svelte por plataforma (`apps/android`, `apps/ios`). El código nativo se limita a plugins de Tauri en Kotlin y Swift para lo que el webview no alcanza: almacén seguro, trabajo en segundo plano, widgets y Live Activities.
+- **Móviles:** la misma app Tauri 2 con una UI Svelte por plataforma (`apps/android`, `apps/ios`). El código nativo se limita a lo que el webview no alcanza: almacén seguro, trabajo en segundo plano, widgets, Live Activities y **las superficies de un sistema que no tiene webview**, hoy solo el Apple Watch (`docs/specs/spec-44-reloj-apple-watch.md`, implementada). Una superficie nativa no es un cliente: no habla con el backend, no ve tokens y no tiene estado propio; recibe del núcleo lo que debe pintar y le devuelve intenciones.
 - **Datos de juego:** `shared/game-data/*.json` (`$schema` draft-07) — `balance.json`, `species.json`, `patterns.json`, `foods.json`, `skills.json`, `missions.json`.
 - **Monorepo:** pnpm workspaces; `docker-compose.yml` con Postgres + Redis (+ mock de LLM para tests); CI en `.github/workflows`.
 
@@ -281,8 +281,9 @@ Se entrega por fases, empezando por el backend + la mascota de escritorio (prime
 - **Amen­dments:** cualquier enmienda a esta constitución requiere (1) una modificación versionada de este archivo, (2) justificación y plan de migración cuando afecte a código existente, y (3) actualización de las secciones afectadas para mantener coherencia con el código real.
 - Las revisiones de código verifican, como mínimo, cumplimiento de: autoritatividad del backend (I), determinismo del combate (II), contrato único (III) y las reglas de seguridad (VIII).
 
-**Version**: 1.1.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-19
+**Version**: 1.2.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-20
 
 ### Enmiendas
 
+- **1.2.0 (2026-11-20):** el stack admite **superficies nativas en sistemas sin webview**, hoy solo el Apple Watch. Justificación: watchOS no tiene WKWebView, así que la única forma de estar en la muñeca es SwiftUI nativo; la redacción anterior solo contemplaba plugins para «almacén seguro, trabajo en segundo plano, widgets y Live Activities», y una app de reloj entera no cabía ahí aunque sí en su espíritu. Límite, que es lo que la hace compatible con el principio III: una superficie nativa **no es un cliente** (ni backend, ni tokens, ni estado propio); el núcleo en Rust decide y ella pinta. No afecta al código existente. Plan: `docs/specs/spec-44-reloj-apple-watch.md` y la fase 6 de `docs/MIGRACION_NUCLEO_RUST.md`.
 - **1.1.0 (2026-11-19):** el principio III y el stack dejan de exigir clientes nativos separados (Compose y SwiftUI, cada uno generado desde OpenAPI) y pasan a un único núcleo cliente en Rust dentro de una app Tauri 2 con una UI por plataforma. Justificación: la lógica de cliente (sesión, renovación de tokens, tiempo real, estado) se estaba escribiendo tres veces y el refresh token, que rota, no tolera implementaciones divergentes. Plan de migración: `docs/specs/spec-43-nucleo-rust-tauri.md` y `docs/MIGRACION_NUCLEO_RUST.md`. La app Android en Kotlin se mantiene como referencia hasta que el target Android de Tauri la sustituya (fase 4).

@@ -29,7 +29,7 @@ struct PockaiActivityAttributes: ActivityAttributes {
 
 /// El resumen de la mascota que el núcleo deja en el App Group para el widget de la pantalla de
 /// inicio (`PetGlance` en `care.rs`). La extensión no puede llamar al núcleo: solo lee esto.
-struct PockaiPetGlance: Codable {
+struct PockaiPetGlance: Codable, Equatable {
     let name: String
     let level: Int
     /// `sick`, `sleeping`, `hungry`, `sad` o `happy`.

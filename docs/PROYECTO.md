@@ -38,6 +38,7 @@ petai/
   apps/android/       Cáscara de la app de Android: plataforma, estilos y configuración
   apps/ios/           Cáscara de la app de iOS: plataforma, estilos y configuración
   crates/             Núcleo cliente en Rust (pockai-core) y su puente con Tauri (tauri-plugin-pockai)
+                      El nativo de cada móvil va dentro del puente: Kotlin en android/, Swift en gen/apple
   desktop/            Tauri 2 (src-tauri en Rust + frontend en Svelte/TS)
   shared/
     openapi/          openapi.json exportado por el backend
@@ -269,9 +270,16 @@ PushToken(userId, platform, token)
 - **Proyecto de Xcode**: `desktop/src-tauri/gen/apple`, generado con `tauri ios init` y versionado
   como el de Android. El Team ID va por `APPLE_DEVELOPMENT_TEAM`, nunca en `tauri.ios.conf.json`.
   Mínimo iOS 16.2. CocoaPods, `xcodegen` e `idevicesyslog` son requisitos del `init`.
-- **Nativo pendiente**: `BGAppRefreshTask` para los avisos de cuidado en segundo plano, la fase 5
-  (Live Activity, Dynamic Island, WidgetKit) y el `.ipa` firmado. Sign in with Apple y StoreKit 2 no
-  tienen backend todavía.
+- **Nativo pendiente**: un iPhone de verdad y el `.ipa` firmado (hace falta un Team ID de Apple).
+  `BGAppRefreshTask`, la Live Activity, la isla dinámica y el widget de WidgetKit están hechos. Sign in
+  with Apple y StoreKit 2 no tienen backend todavía.
+- **Reloj**: la app de Apple Watch compañera ([spec 44](specs/spec-44-reloj-apple-watch.md)) es la
+  tercera consumidora de esta misma vía nativa (después del widget y la Live Activity) y la única
+  parte del proyecto que no cabe en «una app de Tauri con una UI por plataforma», porque watchOS no
+  tiene webview. Sus dos targets están en el `project.yml` de `gen/apple` y sus tipos compartidos en
+  `gen/apple/Shared/`, como los de la extensión de widgets. No es dependencia del target de iPhone:
+  `tauri ios build` pasa un `-sdk` global que compilaría el reloj contra iOS, así que se compila
+  aparte y se empaqueta dentro (spec 44 §7).
 
 ## 8. Mascota de escritorio (Tauri 2)
 - **Ventana**: transparente, sin decoración, siempre visible y sin icono en la barra de tareas; ocupa la parte inferior de la pantalla principal.

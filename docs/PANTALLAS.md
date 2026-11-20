@@ -1,6 +1,6 @@
 # PetAI — Pantallas y opciones por aplicación
 
-Este documento describe qué pantallas y opciones debe tener cada cliente de PetAI: la **app de móvil** (Android e iOS) y la **app de ordenador** (Tauri, Windows y macOS). Sirve de guía para construir la interfaz de las features que el backend ya ofrece y aún no tienen pantalla.
+Este documento describe qué pantallas y opciones debe tener cada cliente de PetAI: la **app de móvil** (Android e iOS), la **app de ordenador** (Tauri, Windows y macOS) y la **app de reloj** (watchOS, planificada). Sirve de guía para construir la interfaz de las features que el backend ya ofrece y aún no tienen pantalla.
 
 - Las rutas citadas son las del backend en `main` (prefijo `/v1`), comprobadas contra los controladores.
 - El estado «Existe» se comprobó contra el código de `desktop/src` y de la app Kotlin de entonces (`mobile/android`), no contra documentación anterior. Esa app se retiró el 2026-11-20; la de Android es ahora `apps/android` (Tauri), con todo lo que tenía la Kotlin.
@@ -31,53 +31,54 @@ Las dos apps muestran la misma cuenta y la misma mascota, sincronizadas por WebS
 
 - **Móvil: el juego completo.** Es donde se cuida, se juega y se progresa. Sesiones cortas y frecuentes, una mano, notificaciones y widget. Todas las features de juego deben estar aquí.
 - **Ordenador: el compañero permanente.** La mascota vive sobre el escritorio mientras se trabaja. Lo principal es la ventana de la mascota, las interacciones rápidas y el chat. El panel de control cubre el juego, pero se priorizan las acciones de un clic y las herramientas que solo tienen sentido en un ordenador (Hermes local, abrir enlaces, portapapeles, API keys y webhooks).
+- **Reloj: el vistazo y el cuidado de un toque.** No es el juego: constantes vitales, cuentas atrás y cuatro acciones. Lo que ve se lo pasa el iPhone, y lo que hace se lo manda al iPhone (§5 y [spec 44](specs/spec-44-reloj-apple-watch.md)).
 
 ### Tabla resumen
 
 Cada celda indica el estado actual en ese cliente. «—» significa que esa feature no debe tener pantalla en ese cliente.
 
-| Área | Feature | Móvil | Ordenador | Prioridad |
-|---|---|---|---|---|
-| Núcleo | Registro e inicio de sesión | ✅ | ✅ | P1 |
-| Núcleo | Recuperar contraseña | ⛔ sin backend | ⛔ sin backend | P1 |
-| Núcleo | Mascota: vitales y cuidados | ✅ | ✅ | P1 |
-| Núcleo | Eclosión de huevos | ✅ | ✅ | P1 |
-| Núcleo | Colección de mascotas | 🟡 | 🟡 | P1 |
-| Núcleo | Tienda e inventario | ✅ | ✅ | P1 |
-| Núcleo | Minijuegos (3) | ✅ | ✅ | P1 |
-| Núcleo | Arena: combate, repetición, clasificación | ✅ | ✅ | P1 |
-| Núcleo | Chat IA y ajustes BYOK | ✅ | ✅ | P1 |
-| Núcleo | Recuerdos, acciones y recordatorios | ⬜ | ✅ | P1 |
-| Núcleo | Vincular escritorio por código | ✅ | ✅ | P1 |
-| 001 | Misiones diarias y semanales | ⬜ | ⬜ | P1 |
-| 002 | Cofres | ⬜ | ⬜ | P1 |
-| 005 | Ambiente: clima, hora, festividades | ⬜ | ✅ | P2 |
-| 006 | Vínculo (bonding) | ⬜ | ⬜ | P1 |
-| 007 | Notificaciones de la mascota | 🟡 locales | ✅ | P1 |
-| 008 | Logros y constelación | ⬜ | ✅ | P1 |
-| 010 | Hábitat | ⬜ | ⬜ | P2 |
-| 011 | Temporadas y pase | ⬜ | ⬜ | P2 |
-| 012 | Breeding | ⬜ | ⬜ | P2 |
-| 013 | Raid Boss | ⛔ | ⛔ | P2 |
-| 014 | Torneo | ⛔ | ⛔ | P2 |
-| 015 | Cocina | ⬜ | ⬜ | P2 |
-| 016 | Entrenamiento elemental | ⬜ | ⬜ | P2 |
-| 017 | Genes y temperamento | ⬜ | ⬜ | P2 |
-| 018 | Aventura narrativa | ⬜ | ⬜ | P2 |
-| 019 | Router de modelos de IA | — | ⛔ | P3 |
-| 020 | Voz (STT/TTS) | ⛔ | ⛔ | P3 |
-| 021 | Presencia y cuidado cooperativo | ⛔ | ⛔ | P3 |
-| 022 | Modo sin conexión | ⛔ | — | P3 |
-| 023 | Espectador de combates | ⛔ | ⛔ | P3 |
-| 024 | Mods y Workshop | ⛔ | ⛔ | P3 |
-| 025 | API keys y webhooks | — | ⬜ | P3 |
-| 026 | Seguridad: sesiones y auditoría | ⬜ | ⬜ | P2 |
-| 028 | Bienvenida tras ausencia | ⬜ | ⬜ | P2 |
-| 029 | Pet Buddies | ⬜ | ⬜ | P3 |
-| 030 | Rituales | ⬜ | ⬜ | P2 |
-| 031 | Mood Theater | ⬜ | ⬜ | P3 |
-| 032 | Accesibilidad | ⬜ | ⬜ | P2 |
-| 033 | Regalos y care packages | ⬜ | ⬜ | P3 |
+| Área | Feature | Móvil | Ordenador | Reloj | Prioridad |
+|---|---|---|---|---|---|
+| Núcleo | Registro e inicio de sesión | ✅ | ✅ | — | P1 |
+| Núcleo | Recuperar contraseña | ⛔ sin backend | ⛔ sin backend | — | P1 |
+| Núcleo | Mascota: vitales y cuidados | ✅ | ✅ | ✅ vitales y 3 cuidados | P1 |
+| Núcleo | Eclosión de huevos | ✅ | ✅ | ✅ cuenta atrás | P1 |
+| Núcleo | Colección de mascotas | 🟡 | 🟡 | — | P1 |
+| Núcleo | Tienda e inventario | ✅ | ✅ | — | P1 |
+| Núcleo | Minijuegos (3) | ✅ | ✅ | — | P1 |
+| Núcleo | Arena: combate, repetición, clasificación | ✅ | ✅ | — | P1 |
+| Núcleo | Chat IA y ajustes BYOK | ✅ | ✅ | — | P1 |
+| Núcleo | Recuerdos, acciones y recordatorios | ⬜ | ✅ | — | P1 |
+| Núcleo | Vincular escritorio por código | ✅ | ✅ | — | P1 |
+| 001 | Misiones diarias y semanales | ⬜ | ⬜ | — de momento | P1 |
+| 002 | Cofres | ⬜ | ⬜ | — | P1 |
+| 005 | Ambiente: clima, hora, festividades | ⬜ | ✅ | — | P2 |
+| 006 | Vínculo (bonding) | ⬜ | ⬜ | — | P1 |
+| 007 | Notificaciones de la mascota | 🟡 locales | ✅ | ⬜ las refleja el iPhone, sin comprobar | P1 |
+| 008 | Logros y constelación | ⬜ | ✅ | — | P1 |
+| 010 | Hábitat | ⬜ | ⬜ | — | P2 |
+| 011 | Temporadas y pase | ⬜ | ⬜ | — | P2 |
+| 012 | Breeding | ⬜ | ⬜ | — | P2 |
+| 013 | Raid Boss | ⛔ | ⛔ | — | P2 |
+| 014 | Torneo | ⛔ | ⛔ | — | P2 |
+| 015 | Cocina | ⬜ | ⬜ | — | P2 |
+| 016 | Entrenamiento elemental | ⬜ | ⬜ | — | P2 |
+| 017 | Genes y temperamento | ⬜ | ⬜ | — | P2 |
+| 018 | Aventura narrativa | ⬜ | ⬜ | — | P2 |
+| 019 | Router de modelos de IA | — | ⛔ | — | P3 |
+| 020 | Voz (STT/TTS) | ⛔ | ⛔ | — | P3 |
+| 021 | Presencia y cuidado cooperativo | ⛔ | ⛔ | — | P3 |
+| 022 | Modo sin conexión | ⛔ | — | — | P3 |
+| 023 | Espectador de combates | ⛔ | ⛔ | — | P3 |
+| 024 | Mods y Workshop | ⛔ | ⛔ | — | P3 |
+| 025 | API keys y webhooks | — | ⬜ | — | P3 |
+| 026 | Seguridad: sesiones y auditoría | ⬜ | ⬜ | — | P2 |
+| 028 | Bienvenida tras ausencia | ⬜ | ⬜ | — | P2 |
+| 029 | Pet Buddies | ⬜ | ⬜ | — | P3 |
+| 030 | Rituales | ⬜ | ⬜ | — | P2 |
+| 031 | Mood Theater | ⬜ | ⬜ | — | P3 |
+| 032 | Accesibilidad | ⬜ | ⬜ | — | P2 |
+| 033 | Regalos y care packages | ⬜ | ⬜ | — | P3 |
 
 Las features 003 (observabilidad), 004 (DevKit), 009 (CDN) y 027 (motor de animación) son de infraestructura y no tienen pantalla de usuario. El DevKit tiene una sección propia en el ordenador, solo en compilaciones de desarrollo (§4.5).
 
@@ -366,10 +367,12 @@ El borrado de cuenta es requisito de las tiendas de apps y del RGPD, y no existe
 
 | Elemento | Qué hace | Estado |
 |---|---|---|
-| Widget de pantalla de inicio | Sprite, nombre y vitales de la mascota activa; toque para abrir | ✅ Android (4×2) |
-| Notificaciones locales | Avisos de cuidados calculados en el dispositivo | ✅ Android (cada ~30 min) |
+| Widget de pantalla de inicio | Nombre, nivel, ánimo y vitales de la mascota activa; toque para abrir | ✅ Android (4×2) · ✅ iOS (WidgetKit) |
+| Notificaciones locales | Avisos de cuidados calculados en el dispositivo, con el mismo `care_sync` del núcleo | ✅ Android (WorkManager, cada ~30 min) · ✅ iOS (`BGAppRefreshTask`) |
 | Notificaciones push | Combate recibido, regalo, recordatorio, misión completada, mensaje de la mascota | ⬜ (falta FCM y APNs) |
-| Live Activity (iOS) | Cuenta atrás de eclosión en la isla dinámica | ⬜ |
+| Live Activity (iOS) | Cuenta atrás de eclosión en la isla dinámica y en la pantalla de bloqueo | ✅ (falta verla en un iPhone) |
+| Live Activity reflejada en el reloj | La misma cuenta atrás, en el Smart Stack del Apple Watch, sin target de watchOS (iOS 18 y watchOS 11) | ⬜ sin comprobar: hay que mirar la muñeca en la prueba del paso 5.7 |
+| Complicación del reloj | Ánimo, la constante más baja y la cuenta atrás más próxima en la esfera | 🟡 hecha (spec 44); falta verla en una esfera |
 | Modo sin conexión | Ver el último estado y encolar cuidados para enviarlos al reconectar | ⛔ (F-04) |
 
 ### 3.9 Diferencias entre Android e iOS
@@ -382,7 +385,7 @@ La especificación es la misma. Solo cambia lo que depende de la plataforma:
 | Inicio de sesión social | Google (Credential Manager) | Sign in with Apple |
 | Compras | Play Billing | StoreKit 2 |
 | Push | FCM | APNs |
-| Widget | Glance | WidgetKit y Live Activity |
+| Widget | Glance | WidgetKit y Live Activity (y, planificado, el reloj: [spec 44](specs/spec-44-reloj-apple-watch.md)) |
 | Estado | Funcional | Funcional en el simulador (la misma app: `@pockai/mobile`) |
 
 El inicio de sesión social y las compras no tienen backend todavía.
@@ -544,7 +547,46 @@ Esta sección va solo en el ordenador: son tareas de configuración que no encaj
 
 ---
 
-## 5. Coherencia entre apps
+## 5. App de reloj (watchOS)
+
+Hecha y probada en el simulador: [spec 44](specs/spec-44-reloj-apple-watch.md). Es una **superficie**,
+no un cliente. No habla con el backend, no guarda tokens y no tiene estado propio: el iPhone le manda
+un resumen y ella le manda intenciones. De la UI Svelte no se reutiliza nada, porque watchOS no tiene
+WKWebView: son unas 400 líneas de SwiftUI.
+
+Antes de construirla hay que comprobar si hace falta: desde iOS 18 y watchOS 11, una Live Activity del
+iPhone **se refleja sola** en el Smart Stack del reloj, sin ningún target de watchOS. Como la fase 5 de
+la spec 43 ya está hecha, puede que las cuentas atrás y los avisos de cuidado se vean ya en la muñeca.
+Está sin comprobar: se mira en la prueba en dispositivo del paso 5.7.
+
+### 5.1 Pantallas
+
+| Pantalla | Qué enseña | Estado |
+|---|---|---|
+| Vitales | Nombre, nivel, ánimo y las constantes en arcos, con la hora del último dato | ✅ |
+| En marcha | Las cuentas atrás con hora de fin conocida (hoy la eclosión), con el cronómetro corriendo sin red | ✅ |
+| Cuidar | Dar de comer, bañar y dormir o despertar, cada uno con su motivo si está gris | 🟡 se ven y el camino está probado contra el backend; falta pulsarlos en el reloj |
+| Complicación | Ánimo, la constante más baja y la cuenta atrás más próxima, en cuatro familias | 🟡 compila y lee el resumen; falta verla en una esfera |
+
+### 5.2 Acciones
+
+Tres, y solo tres, todas resueltas por el núcleo en el iPhone: **dar de comer** (el alimento lo elige
+el núcleo con el inventario, prefiriendo la favorita de la especie), **bañar** y **dormir o
+despertar** (un botón que alterna). Si el iPhone no está accesible, la intención queda en la cola del
+sistema con su caducidad; si no hay resumen, el reloj pide abrir el iPhone.
+
+Dos que no están: **dar un mimo** no se puede, porque el backend no tiene ruta de caricia (el vínculo
+sube como efecto de las demás interacciones); y **la recompensa diaria** espera a que las misiones
+estén en el estado del núcleo, para que el resumen siga siendo una función pura del estado.
+
+### 5.3 Lo que no va en el reloj
+
+Chat de IA, minijuegos, Arena, tienda, cofres, hábitat, aventura, cualquier escena, eclosionar (solo la
+cuenta atrás), cuenta, ajustes y cualquier texto largo.
+
+---
+
+## 6. Coherencia entre apps
 
 **Mismos nombres.** Hoy difieren: «Juegos» y «Arena» en el ordenador frente a «Jugar» en móvil; «IA» frente a «Chat». Unificar en: Mascota, Jugar, Chat, Progreso, Tienda, Social, Ajustes.
 
@@ -568,7 +610,7 @@ Esta sección va solo en el ordenador: son tareas de configuración que no encaj
 
 **Saldo siempre visible.** Monedas y gemas en la cabecera, con acceso a la tienda.
 
-## 6. Orden de construcción recomendado
+## 7. Orden de construcción recomendado
 
 1. **P1 en móvil y ordenador**: Misiones, Cofres, Vínculo, Recordatorios y ampliación de la bandeja y del menú contextual de la mascota. En móvil, además, Logros (ya existe en el ordenador).
 2. **Cuenta completa**: región y ubicación, notificaciones, cambio de contraseña y cierre de sesiones. En el backend: recuperación de contraseña y borrado de cuenta.

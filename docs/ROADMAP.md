@@ -13,7 +13,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
 | **Fase 3** | Inteligencia Artificial (IA) | ✅ Completada (salvo modo suscripción y Redis) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ✅ Completada (falta fin de temporada) | Motor determinista, emparejamiento ELO y repeticiones |
-| **Fase 5** | Clientes móviles | ✅ Android (salvo Play Billing/FCM) · ✅ iOS en el simulador (sin APNs ni StoreKit) | Una app de Tauri con la UI Svelte compartida (`@pockai/mobile`) y el núcleo en Rust; `apps/android` y `apps/ios` son su cáscara |
+| **Fase 5** | Clientes móviles | ✅ Android (salvo Play Billing/FCM) · ✅ iOS en el simulador (sin APNs ni StoreKit) · 🟡 Apple Watch (en el simulador) | Una app de Tauri con la UI Svelte compartida (`@pockai/mobile`) y el núcleo en Rust; `apps/android` y `apps/ios` son su cáscara. El reloj es la única superficie que no cabe en ese molde (spec 44) |
 | **Fase 6** | Pulido y Lanzamiento | 🚧 Hecho lo técnico; pendiente lo que depende de cuentas externas | Seguridad, balance, optimización, tiendas y despliegue |
 | **Fase 7** | Funcionalidades Expandidas | 🚧 Oleada 1 completada; oleadas 2 y 3 en el backend con tests de backend crecientes, sin consumo desde clientes | 33 nuevas features (hábito, meta, IA, comunidad y ecosistema) |
 
@@ -102,7 +102,11 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
   - [x] Todo lo que tenía la app Kotlin: cuenta (alta, verificación, nickname, recuperar la contraseña), eclosión, cuidados, tienda y cofres, Jugar, chat IA con clave propia, widget de la pantalla de inicio, avisos de cuidado con WorkManager y sesión cifrada con el Keystore.
   - [ ] Pendiente (requiere cuentas externas): Play Billing (Play Console + endpoint de verificación de compras en el backend) y push con FCM (proyecto de Firebase y `google-services.json`).
   - Build: ver «Compilar para Android en Windows» en `docs/MIGRACION_NUCLEO_RUST.md`.
-- **iOS**: la misma app de Tauri que Android (`apps/ios` sobre `@pockai/mobile`), con el aspecto de Cupertino que ya trae `@pockai/ui`; la spec 43 sustituyó el planteamiento de SwiftUI nativo. Probada en el simulador con un backend local. Faltan `BGAppRefreshTask` y, en la fase 5 de esa spec, Live Activities y WidgetKit. StoreKit 2 espera al backend.
+- **iOS**: la misma app de Tauri que Android (`apps/ios` sobre `@pockai/mobile`), con el aspecto de Cupertino que ya trae `@pockai/ui`; la spec 43 sustituyó el planteamiento de SwiftUI nativo. Probada en el simulador con un backend local, con `BGAppRefreshTask`, Live Activity, isla dinámica y widget de WidgetKit. Faltan un iPhone de verdad, el `.ipa` firmado y APNs. StoreKit 2 espera al backend.
+- **Apple Watch**: app compañera del iPhone en SwiftUI, [`docs/specs/spec-44-reloj-apple-watch.md`](specs/spec-44-reloj-apple-watch.md) (fase 6 de la migración). Una superficie, no un cliente: el iPhone le pasa un resumen y ella le manda tres acciones (dar de comer, bañar, dormir o despertar). De la UI Svelte no se reutiliza nada, porque watchOS no tiene WKWebView, y el núcleo en Rust no se compila para watchOS.
+  - [x] Tres pantallas (vitales, cuentas atrás y cuidados) y las complicaciones, probadas en un simulador emparejado con la app de iPhone y el backend local: el resumen cruza y se actualiza solo al cambiar el estado.
+  - [ ] Pulsar los botones en el reloj, la complicación puesta en una esfera, el hardware (hace falta un Team ID), el job de CI y automatizar el empaquetado del reloj dentro de la app.
+  - Queda una comprobación que puede ahorrar trabajo: desde iOS 18 y watchOS 11 una Live Activity del iPhone se refleja sola en el Smart Stack del reloj, sin target de watchOS, así que la fase 5 puede estar poniendo ya las cuentas atrás en la muñeca.
 - **Sincronización**: la misma cuenta en todos los dispositivos. La vinculación por código (`/auth/device/*`) está en el backend, pero ningún cliente la inicia.
 
 ---

@@ -15,8 +15,9 @@ se desvía del plan, se anota en «Desviaciones» al final.
 | 1 | Toda la red del escritorio pasa por Rust; ningún token en el webview | 24 / 24 | ✅ |
 | 2 | El estado global vive en Rust; `App.svelte` solo se suscribe | 5 / 6 | 🟡 |
 | 3 | Dominios restantes y fin de la pasarela `api_request` | 4 / 4 (2 descartados) | ✅ |
-| 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 1 / 10 | 🟡 |
-| 5 | Live Activity / Dynamic Island y widgets | 0 / 7 | ⬜ |
+| 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 8 / 10 | 🟡 |
+| 5 | Live Activity / Dynamic Island y widgets | 6 / 7 | 🟡 |
+| 6 | App de Apple Watch compañera del iPhone ([spec 44](specs/spec-44-reloj-apple-watch.md)) | 7 / 11 | 🟡 |
 
 ## Estado actual (2026-11-20): dónde se paró y cómo retomar
 
@@ -60,7 +61,14 @@ fases de abajo y en las secciones de verificación del final.
    `BGAppRefreshTask`; falta ver una pasada en segundo plano de verdad, que el sistema concede
    cuando quiere.
 5. **App Kotlin**: borrada (4.10, ver «La app Kotlin, retirada»).
-6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
+6. **Fase 5**: hecha salvo el paso 5.7, la prueba en un dispositivo (iPhone con Dynamic Island y
+   Android 16). La política está en `surfaces.rs`, la Live Activity en `PockaiSurfaces.swift`, la isla
+   y el widget en `PockaiWidgets`, y la notificación en curso de Android en `PockaiSurfaces.kt`.
+7. **Fase 6**: app de Apple Watch compañera ([spec 44](specs/spec-44-reloj-apple-watch.md)), hecha y
+   probada en el simulador. Faltan pulsar los botones en el reloj, la complicación en una esfera, el
+   hardware, el job de CI y automatizar el empaquetado. Y queda una comprobación que puede ahorrar
+   trabajo: desde iOS 18 y watchOS 11 una Live Activity del iPhone **se refleja sola** en el Smart
+   Stack del reloj, así que en la prueba del paso 5.7 hay que mirar la muñeca.
 
 ### Pantallas que quedan, por tipo (2026-11-20)
 
@@ -262,7 +270,87 @@ de verdad (el sistema las concede cuando quiere).
 Y de la fase 4: ✅ 4.8, `BGAppRefreshTask` en iOS (`PockaiBackground.swift`), con el mismo `care_sync`
 del núcleo que usa WorkManager en Android.
 
+## Fase 6 — Apple Watch (reloj)
+
+Compañera del iPhone: una superficie de lectura y tres gestos, no un cliente. La arquitectura, las
+trampas de Xcode y lo que falta están en
+[`specs/spec-44-reloj-apple-watch.md`](specs/spec-44-reloj-apple-watch.md). Se montó encima de lo que
+ya había (`surfaces.rs`, la interfaz en C de `ios.rs`, `gen/apple/Shared/` y el `project.yml`): no hay
+crate, plugin ni paquete Swift nuevos.
+
+- ✅ 6.0 Documentación: la spec 44 y los enlaces desde la spec 43, este documento, `PANTALLAS.md`,
+  `ROADMAP.md`, `PROYECTO.md`, el README y la enmienda 1.2.0 de la constitución
+- ✅ 6.1 `crates/pockai-core/src/wrist.rs`: `WristSnapshot`, `snapshot`, `buttons`, `resolve`,
+  `should_send` y `complication`, reutilizando `pet_glance` y la lista de `surfaces()`, con 15 tests
+  (incluido uno que comprueba que el resumen no lleva tokens) y el fixture
+  `tests/fixtures/wrist-snapshot.json`. Módulo aparte y no dentro de `surfaces.rs`: una cosa es qué
+  actividades vivas abrir y otra qué enseñar y qué se puede hacer
+- ✅ 6.2 `ios.rs`: `pockai_wrist_push` (solo si cambió algo que se vea), `pockai_wrist_snapshot`,
+  `pockai_wrist_perform` y `pockai_wrist_forget`, en la misma interfaz en C que `pockai_care_sync`.
+  El empujón al reloj va dentro del bucle `watch_surfaces` que ya existía
+- ✅ 6.3 `gen/apple/Shared/PockaiWrist.swift` con los tipos `Codable`, en las `sources` de los cuatro
+  targets, y `gen/apple/Tests/PockaiWristFixture.swift`, un programa suelto que decodifica el fixture
+  que escribe Rust (ver «Cómo se prueba» en la spec 44)
+- ✅ 6.4 `PockaiWristLink.swift`: `WCSessionDelegate` en el proceso del iPhone, con
+  `updateApplicationContext`, `transferCurrentComplicationUserInfo` comprobando presupuesto, y
+  recepción de `sendMessage` y `didReceiveUserInfo`. Se enciende en `pockaiBackgroundRegister`, antes
+  de que arranque la app, porque un mensaje del reloj despierta el proceso con el webview muerto
+- ✅ 6.5 Targets `PockaiWatch` y `PockaiWatchComplications` en `gen/apple/project.yml`, con
+  `watchOS: 10.0`, `WKApplication`, `WKCompanionAppBundleIdentifier` y el App Group
+  `group.com.petai.app.watchkitapp` en `entitlements.properties`. **No** son dependencia del target de
+  iPhone: ver desviaciones
+- ✅ 6.6 Pantallas SwiftUI: Vitales (constantes en arcos, ánimo y la hora del último dato), En marcha
+  (las cuentas atrás con `ProgressView(timerInterval:)`) y Cuidar (los tres botones con su motivo si
+  están grises). Con símbolos del sistema, sin sprites, como el widget de iOS
+- 🟡 6.7 Acciones: `sendMessage` con respaldo en `transferUserInfo`, `request_id`, caducidad, cola
+  visible y la pantalla que no se toca mientras se espera. El camino entero está probado contra el
+  backend real (`el_reloj_da_de_comer_de_verdad` en `tests/backend_real.rs`: el núcleo eligió el
+  `sweet_coral` por ser la favorita de la especie, el hambre pasó de 80 a 100 y la intención repetida
+  se rechazó). Falta **pulsar el botón en el reloj**: para eso hay que tocar la pantalla a mano
+- 🟡 6.8 `PockaiWatchComplications`: las cuatro familias (circular, esquina, en línea y rectangular) y
+  su timeline desde el App Group del reloj, con `WidgetCenter.reloadAllTimelines()` al recibir
+  contexto. Compila y lee el resumen; **falta verla puesta en una esfera**
+- ⬜ 6.9 Prueba en hardware (iPhone y Apple Watch emparejados) y repaso de accesibilidad. Necesita un
+  Team ID
+- ⬜ 6.10 CI: compilar el reloj y correr la comprobación del fixture en el job `ios-tauri`, y
+  automatizar el empaquetado del reloj dentro de la app (hoy es un `cp -R` a mano, ver spec 44 §7)
+
+### Verificado en el simulador (2026-11-20)
+
+Con el backend local en el 3000, la app de iPhone en el simulador «iPhone 17 Pro» y un «Apple Watch
+Series 11 (46mm)» emparejado:
+
+- La app del reloj arranca y, sin resumen, enseña «Abre Pockai en el iPhone».
+- Con la app de iPhone abierta y con sesión, el resumen cruza y el reloj pinta la mascota de verdad:
+  «Emi2, Nv. 1, Contento», hambre 80 y felicidad 90, los mismos números que el teléfono.
+- Tras dar de comer (por el test contra el backend), el iPhone empujó el resumen nuevo y el reloj pasó
+  a 100 y 100 sin que nadie lo tocara.
+- En el App Group del reloj queda el resumen con el botón de bañar en gris y su motivo («Ya está
+  limpia», con la higiene en 90), que es la política del núcleo decidiendo sobre datos reales.
+
+No verificado: pulsar los botones en el reloj (conducir el simulador de watchOS desde la terminal
+necesita permisos de accesibilidad), la complicación puesta en una esfera, y cualquier cosa en
+hardware.
+
 ## Desviaciones respecto al plan
+
+- **El reloj no es dependencia del target de iPhone** (6.5). `tauri ios build` llama a xcodebuild con
+  un `-sdk iphonesimulator` **global**, que pisa el `SDKROOT` de los targets de watchOS y los compila
+  contra iOS (`'accessoryCorner' is unavailable in iOS`). El reloj se compila con su propio
+  `xcodebuild -sdk watchsimulator` y se mete en la app con un `cp -R` a `Pockai.app/Watch/`, que es lo
+  que hace que el iPhone lo dé por instalado (`appInstalled: YES`) y lo instale en el reloj. Ver la
+  spec 44 §7.
+- **El producto del reloj se llama `PockaiWatch`, no `Pockai`** (6.5). Con el mismo nombre que el del
+  iPhone, los dos targets escribirían `Pockai.app` en el mismo `Products` y xcodebuild falla
+  («Multiple commands produce»). Lo que ve el usuario es `CFBundleDisplayName`, que sigue siendo
+  Pockai.
+- **Tres botones, no cuatro** (6.7). La recompensa diaria se quedó fuera: las misiones no están en el
+  `AppState`, así que decidir si ofrecerla obligaría a preguntar al servidor y el resumen dejaría de
+  ser una función pura del estado. Dar un mimo no existe en el backend (no hay ruta de caricia: el
+  vínculo sube como efecto de las demás interacciones).
+- **`wrist.rs` es un módulo propio, no parte de `surfaces.rs`** (6.1), aunque usa su `surfaces()`:
+  una cosa es qué actividades vivas abrir y cerrar, y otra qué enseñar en la muñeca y qué se puede
+  pulsar.
 
 - **Nada de `tauri-plugin-pockai-surfaces` ni de un paquete Swift `PockaiActivityKit`** (5.2). Lo
   nativo de cada plataforma vive dentro de `tauri-plugin-pockai` (`src/ios.rs` y `src/android.rs`),

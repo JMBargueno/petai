@@ -6,6 +6,10 @@
 //!   órdenes para las superficies vivas (`{"notice": …, "widget": …, "surfaces": …}`).
 //! - `pockai_surfaces_poll`: con la app abierta, para mantener la Live Activity al día sin esperar a
 //!   que el sistema conceda una pasada en segundo plano.
+//! - `pockai_wrist_push`: el resumen para el Apple Watch, solo si cambió algo que se vea (spec 44).
+//! - `pockai_wrist_snapshot`: el mismo resumen, siempre, para cuando el reloj lo pide él.
+//! - `pockai_wrist_perform`: una intención del reloj (dar de comer, bañar, dormir), ya resuelta por
+//!   el núcleo, y el resumen nuevo.
 //! - `pockai_string_free`: Swift devuelve cada cadena aquí; la memoria es de Rust.
 //!
 //! La sesión no pasa por aquí: en iOS va al llavero del sistema (crate `keyring`), que el núcleo usa
@@ -17,9 +21,10 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
-use pockai_core::{Core, CoreConfig, CoreEvent, Slice, SurfaceDiff};
+use pockai_core::{Core, CoreConfig, CoreEvent, Slice, SurfaceDiff, WristRequest};
 use tokio::sync::broadcast::error::RecvError;
 use serde::Serialize;
+use serde_json::json;
 
 /// Un solo núcleo por proceso: lo crea quien llegue antes (la app o la pasada en segundo plano) y el
 /// otro lo reutiliza. Con dos, cada uno renovaría con su copia del refresh token y el backend
@@ -185,6 +190,80 @@ pub unsafe extern "C" fn pockai_surfaces_poll() -> *mut c_char {
             return None;
         }
         serde_json::to_string(&diff).ok()
+    }));
+    out(result.ok().flatten())
+}
+
+/// El resumen para el Apple Watch con el estado que el núcleo ya tiene (spec 44). Devuelve nulo si
+/// no hay núcleo todavía; sin sesión devuelve un resumen vacío, que es lo que el reloj necesita para
+/// enseñar «abre Pockai» en lugar de datos de quien se fue.
+///
+/// # Safety
+/// El resultado se libera con [`pockai_string_free`].
+#[no_mangle]
+pub unsafe extern "C" fn pockai_wrist_snapshot() -> *mut c_char {
+    let result = catch_unwind(AssertUnwindSafe(|| -> Option<String> {
+        let core = CORE.lock().unwrap_or_else(|e| e.into_inner()).clone()?;
+        serde_json::to_string(&core.wrist_snapshot(now_millis())).ok()
+    }));
+    out(result.ok().flatten())
+}
+
+/// El resumen para el reloj **solo si hay algo nuevo que se vea**. Devuelve nulo si no hay núcleo
+/// o si nada ha cambiado desde el último envío, para que Swift no gaste el presupuesto de
+/// WatchConnectivity. Es la hermana de `pockai_surfaces_poll`.
+///
+/// # Safety
+/// El resultado se libera con [`pockai_string_free`].
+#[no_mangle]
+pub unsafe extern "C" fn pockai_wrist_push() -> *mut c_char {
+    let result = catch_unwind(AssertUnwindSafe(|| -> Option<String> {
+        let core = CORE.lock().unwrap_or_else(|e| e.into_inner()).clone()?;
+        serde_json::to_string(&core.wrist_push(now_millis())?).ok()
+    }));
+    out(result.ok().flatten())
+}
+
+/// Olvida lo último que se le mandó al reloj, para que el siguiente resumen salga sí o sí. Lo llama
+/// Swift cuando el reloj dice que no tiene nada guardado (se reinstaló, o es la primera vez).
+#[no_mangle]
+pub extern "C" fn pockai_wrist_forget() {
+    let _ = catch_unwind(AssertUnwindSafe(|| {
+        if let Some(core) = CORE.lock().unwrap_or_else(|e| e.into_inner()).clone() {
+            core.wrist_forget();
+        }
+    }));
+}
+
+/// Lo que ha pulsado el jugador en el reloj. `request` es el JSON de un `WristRequest`.
+///
+/// Devuelve siempre un JSON con el resultado: `{"ok": <resumen>}` si se hizo, o
+/// `{"error": {"reason": …}, "message": "…", "snapshot": <resumen>}` si no. El reloj enseña el
+/// mensaje y pinta el resumen que venga, así que un rechazo no le deja la pantalla a medias.
+/// Devuelve nulo solo si no hay núcleo o el JSON no se entiende.
+///
+/// # Safety
+/// `request` tiene que ser una cadena de C válida. El resultado se libera con
+/// [`pockai_string_free`].
+#[no_mangle]
+pub unsafe extern "C" fn pockai_wrist_perform(request: *const c_char) -> *mut c_char {
+    let result = catch_unwind(AssertUnwindSafe(|| -> Option<String> {
+        let body = text(request)?;
+        let req: WristRequest = serde_json::from_str(&body).ok()?;
+        let core = CORE.lock().unwrap_or_else(|e| e.into_inner()).clone()?;
+        let now = now_millis();
+        match tauri::async_runtime::block_on(core.wrist_perform(&req, now)) {
+            Ok(snapshot) => serde_json::to_string(&json!({ "ok": snapshot })).ok(),
+            Err(reject) => {
+                log::info!("[ios] el reloj pidió algo que no se pudo hacer: {}", reject.message());
+                serde_json::to_string(&json!({
+                    "error": reject,
+                    "message": reject.message(),
+                    "snapshot": core.wrist_snapshot(now),
+                }))
+                .ok()
+            }
+        }
     }));
     out(result.ok().flatten())
 }
