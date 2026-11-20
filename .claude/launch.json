@@ -158,6 +158,17 @@
         "dev"
       ],
       "port": 5183
+    },
+    {
+      "name": "pockai-ios-ui",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@pockai/ios-ui",
+        "run",
+        "dev"
+      ],
+      "port": 5185
     }
   ]
 }

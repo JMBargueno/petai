@@ -236,11 +236,20 @@ jobs:
           pnpm --filter @pockai/client run typecheck
           pnpm --filter @pockai/client run test
 
-      # UI de Android (Tauri): solo presentación sobre el núcleo.
-      - name: Build Android UI
+      # App móvil compartida (spec 43, fase 4): el shell, la navegación y los contenedores de
+      # pantalla que usan Android e iOS. Solo presentación sobre el núcleo.
+      - name: Test shared mobile app
+        run: |
+          pnpm --filter @pockai/mobile run typecheck
+          pnpm --filter @pockai/mobile run check
+
+      # Las dos UIs móviles (Tauri): cada una es su plataforma, sus estilos y su configuración.
+      - name: Build mobile UIs
         run: |
           pnpm --filter @pockai/android-ui run check
           pnpm --filter @pockai/android-ui run build
+          pnpm --filter @pockai/ios-ui run check
+          pnpm --filter @pockai/ios-ui run build
 
       # Lógica del escritorio (cargador de assets, tema, notificaciones…).
       - name: Test desktop
@@ -380,6 +389,48 @@ jobs:
           name: pockai-android-tauri-debug
           path: desktop/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           retention-days: 7
+
+  # La app de Tauri para iOS (spec 43, fase 4). Compila el núcleo para el simulador y la UI; no
+  # construye el .ipa, que exige firma y un Team ID de Apple y no cabe en un PR de rama.
+  ios-tauri:
+    name: iOS app (Tauri)
+    runs-on: macos-15
+    needs: validate-data
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: aarch64-apple-ios-sim
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: .
+          key: ios
+
+      # El núcleo cliente y el shell móvil, compilados para el simulador: keyring (Keychain) y
+      # rustls tienen que seguir compilando para Apple.
+      - name: Build core for the iOS simulator
+        run: cargo build -p petai-desktop --lib --target aarch64-apple-ios-sim
+
+      - name: Build iOS UI
+        run: pnpm --filter @pockai/ios-ui run build
 
   docker:
     name: Backend image (Docker build)

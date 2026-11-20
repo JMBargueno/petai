@@ -49,6 +49,9 @@ struct Inner {
     device_id_fresh: AtomicBool,
     realtime: Mutex<Option<JoinHandle<()>>>,
     store: StateStore,
+    /// Las superficies vivas que la plataforma tiene a la vista ahora mismo (fase 5). El núcleo las
+    /// recuerda para que cada pasada solo pida lo que cambia: ver `surfaces.rs`.
+    shown_surfaces: Mutex<Vec<crate::surfaces::Surface>>,
 }
 
 /// Resultado de una petición: ya leída, o un flujo de eventos todavía abierto.
@@ -81,8 +84,14 @@ impl Core {
                 device_id_fresh: AtomicBool::new(fresh),
                 realtime: Mutex::new(None),
                 store,
+                shown_surfaces: Mutex::new(Vec::new()),
             }),
         }
+    }
+
+    /// Las superficies vivas que la plataforma tiene a la vista (fase 5; ver `surfaces.rs`).
+    pub(crate) fn shown_surfaces(&self) -> std::sync::MutexGuard<'_, Vec<crate::surfaces::Surface>> {
+        self.inner.shown_surfaces.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     pub fn config(&self) -> &CoreConfig {

@@ -200,28 +200,41 @@ importers:
 
   apps/android:
     dependencies:
-      '@pockai/audio':
+      '@pockai/mobile':
         specifier: workspace:*
-        version: link:../../shared/audio
-      '@pockai/client':
-        specifier: workspace:*
-        version: link:../../shared/client
-      '@pockai/minigames':
-        specifier: workspace:*
-        version: link:../../shared/minigames
+        version: link:../../shared/mobile
       '@pockai/ui':
         specifier: workspace:*
         version: link:../../shared/ui
-      '@tauri-apps/api':
-        specifier: ^2.0.0
-        version: 2.12.4
-      '@tauri-apps/plugin-notification':
-        specifier: ^2.8.1
-        version: 2.8.1
     devDependencies:
       '@playwright/test':
         specifier: ^1.65.1
         version: 1.65.1
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^5.0.0
+        version: 5.1.1(supports-color@10.2.2)(svelte@5.57.3)(vite@6.4.6(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+      svelte:
+        specifier: ^5.0.0
+        version: 5.57.3
+      svelte-check:
+        specifier: ^4.7.8
+        version: 4.7.8(picomatch@4.0.7)(svelte@5.57.3)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.6(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
+  apps/ios:
+    dependencies:
+      '@pockai/mobile':
+        specifier: workspace:*
+        version: link:../../shared/mobile
+      '@pockai/ui':
+        specifier: workspace:*
+        version: link:../../shared/ui
+    devDependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^5.0.0
         version: 5.1.1(supports-color@10.2.2)(svelte@5.57.3)(vite@6.4.6(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
@@ -584,6 +597,49 @@ importers:
       vitest:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(sass-embedded@1.104.1)(sass@1.104.1)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
+  shared/mobile:
+    dependencies:
+      '@pockai/audio':
+        specifier: workspace:*
+        version: link:../audio
+      '@pockai/client':
+        specifier: workspace:*
+        version: link:../client
+      '@pockai/minigames':
+        specifier: workspace:*
+        version: link:../minigames
+      '@pockai/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.12.4
+      '@tauri-apps/plugin-notification':
+        specifier: ^2.8.1
+        version: 2.8.1
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.65.1
+        version: 1.65.1
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^5.0.0
+        version: 5.1.1(supports-color@10.2.2)(svelte@5.57.3)(vite@6.4.6(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+      '@types/node':
+        specifier: ^22.13.0
+        version: 22.20.5
+      svelte:
+        specifier: ^5.0.0
+        version: 5.57.3
+      svelte-check:
+        specifier: ^4.7.8
+        version: 4.7.8(picomatch@4.0.7)(svelte@5.57.3)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.6(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
 
   shared/scene:
     dependencies:

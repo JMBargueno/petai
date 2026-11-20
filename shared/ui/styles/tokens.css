@@ -63,6 +63,17 @@
   --surface: light-dark(#ffffff, #17162a);
   --surface-2: light-dark(#f2f1f8, #201e37);
   --surface-glass: light-dark(rgb(255 255 255 / 0.72), rgb(23 22 42 / 0.72));
+
+  /* Vidrio (Liquid Glass): una lámina translúcida que deja pasar el color de lo que tiene debajo.
+     El tinte va bajo a propósito: subirlo lo convierte en un panel lechoso y tapa el contenido, que
+     es justo lo que el vidrio no debe hacer. La separación es un filo oscuro finísimo, y el brillo,
+     una línea especular de media línea arriba: ni biseles gruesos ni contornos de colores. */
+  --glass-tint: light-dark(rgb(255 255 255 / 0.44), rgb(28 26 50 / 0.52));
+  --glass-edge: light-dark(rgb(11 10 20 / 0.16), rgb(0 0 0 / 0.5));
+  --glass-specular: light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.22));
+  /* El lustre que cruza la lámina: se funde con `overlay`, así que reacciona al color de debajo en
+     vez de pintar encima. */
+  --glass-sheen: light-dark(rgb(255 255 255 / 0.5), rgb(255 255 255 / 0.14));
   --ink: light-dark(#0b0a14, #f4f2ff);
   --ink-muted: light-dark(#4b4862, #b9b5d8);
   --line: light-dark(#0b0a14, #3d3a63);

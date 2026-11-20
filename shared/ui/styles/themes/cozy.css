@@ -9,6 +9,11 @@
   --surface: light-dark(#fffaf2, #241b15);
   --surface-2: light-dark(#f3e7d3, #2f241c);
   --surface-glass: light-dark(rgb(255 250 242 / 0.78), rgb(36 27 21 / 0.78));
+  /* Vidrio con la calidez del tema: crema de día, luz de vela de noche. */
+  --glass-tint: light-dark(rgb(255 250 242 / 0.46), rgb(46 34 26 / 0.54));
+  --glass-edge: light-dark(rgb(74 52 38 / 0.18), rgb(0 0 0 / 0.5));
+  --glass-specular: light-dark(rgb(255 252 246 / 0.92), rgb(255 236 210 / 0.24));
+  --glass-sheen: light-dark(rgb(255 252 246 / 0.52), rgb(255 236 210 / 0.16));
   --ink: light-dark(#3b2a1e, #f6e9d8);
   --ink-muted: light-dark(#6f5845, #c9b49d);
   --line: light-dark(#4a3426, #5a4534);

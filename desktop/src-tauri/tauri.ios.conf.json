@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "com.petai.app",
+  "build": {
+    "devUrl": "http://localhost:5185",
+    "frontendDist": "../../apps/ios/dist",
+    "beforeDevCommand": "pnpm --filter @pockai/ios-ui run dev",
+    "beforeBuildCommand": "pnpm --filter @pockai/ios-ui run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Pockai"
+      }
+    ]
+  },
+  "bundle": {
+    "iOS": {
+      "minimumSystemVersion": "16.2"
+    }
+  }
+}

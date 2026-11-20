@@ -79,8 +79,8 @@ Features sin UI (solo backend + API):
 |---|---|
 | `socket.io-redis` deprecated | Reemplazo: `@socket.io/redis-adapter` (API pub/sub). Migrar en upgrade mayor. |
 | BullMQ: más colas | Futuras: `notifications` (push), `seasons:expire`, `gifts:expire`. |
-| iOS client | No existe. Proyecto nuevo (Swift + OpenAPI). |
-| ISO-IOS | **Sala isométrica en iOS** (fase 7 de `docs/ROADMAP_ISOMETRICO.md`). Incrustar `@pockai/scene` en un `WKWebView` con el puente `pockai`, igual que la app Kotlin de Android, ya retirada (el Android de Tauri usa `@pockai/scene` directamente). Depende del cliente iOS. |
+| iOS client | ➖ Hecho: `apps/ios` sobre `@pockai/mobile`, probada en el simulador con un backend local (la spec 43 sustituyó el plan de Swift + OpenAPI). Quedan `BGAppRefreshTask`, la Live Activity y el `.ipa` firmado. |
+| ISO-IOS | ➖ Ya no aplica: `apps/ios` es la misma app de Tauri que Android y usa `@pockai/scene` directamente dentro del webview, sin `WKWebView` incrustado a mano ni puente propio. |
 | Web (Angular) | Existe con CI build, sin features oleadas. |
 
 ---
@@ -107,8 +107,8 @@ Features sin UI (solo backend + API):
 
 | Item | Estado |
 |---|---|
-| Armario y tienda en Android, iOS y web | Solo existen en el escritorio. |
-| iOS: enviar `accessories` en `setPet` | El hábitat de iOS no las envía a la escena. |
+| Armario y tienda en web | En el móvil ya están (`@pockai/mobile`, las dos apps); en la web, no. |
+| iOS: enviar `accessories` en `setPet` | ➖ Ya no aplica por separado: el hábitat del móvil es el mismo código en las dos apps (`@pockai/mobile`). |
 | `GET /v1/shop` sin filtro | Sigue listando las prendas junto a la comida, también las de logro a precio 0 (no se pueden comprar, pero se ven). |
 | Premios de logro sin convertir en prenda | Quedan 20 `ach_item_*` que se entregan como cosmético genérico (`check_accessories.mjs` los lista). |
 | Reparto del catálogo | La ranura de cara tiene una sola prenda y solo 3 de 9 se compran con monedas. |

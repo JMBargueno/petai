@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * Chat con la mascota en Android: la conversación es `ChatView`, de `@pockai/ui`, por el núcleo
+   * Chat con la mascota en el móvil: la conversación es `ChatView`, de `@pockai/ui`, por el núcleo
    * (`chatTurn`). El engranaje abre `AiSettingsView`: la IA de Pockai o la clave propia del jugador.
    * Sin motores locales, sin herramientas del equipo y sin pasar a Pro desde aquí (los pagos en la app
    * irían por Google Play): al agotar la cuota solo se avisa.

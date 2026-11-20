@@ -2,7 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <!-- Tauri lo fusiona con el Info.plist generado. CoreLocation no pide permiso sin esta clave. -->
+  <!-- Solo macOS: lo referencia `bundle.macOS.infoPlist` en tauri.conf.json. No se llama
+       `Info.plist` a propósito: ese nombre lo recoge Tauri solo, y entonces estas claves se
+       cuelan también en el Info.plist de iOS, donde la app no usa CoreLocation (`location.rs`
+       es `cfg(desktop)`) y un permiso que no se usa es motivo de rechazo en la App Store. -->
   <key>NSLocationUsageDescription</key>
   <string>Pockai usa tu ubicación aproximada solo en este equipo para saber el clima y la luz del sol. No se envía a los servidores de Pockai.</string>
   <key>NSLocationWhenInUseUsageDescription</key>

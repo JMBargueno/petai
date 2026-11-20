@@ -25,12 +25,14 @@ use tokio::sync::broadcast::error::RecvError;
 const KEYSTORE_CLASS: &str = "app/pockai/core/PockaiKeystore";
 const CARE_SYNC_CLASS: &str = "app/pockai/core/CareSync";
 const WIDGET_CLASS: &str = "app/pockai/core/PockaiWidget";
+const SURFACES_CLASS: &str = "app/pockai/core/PockaiSurfaces";
 
 struct Java {
     vm: JavaVM,
     keystore: GlobalRef,
     care_sync: GlobalRef,
     widget: GlobalRef,
+    surfaces: GlobalRef,
     /// El contexto de la aplicación (no el de la actividad, que puede destruirse). Solo existe si
     /// la app está abierta; el trabajo en segundo plano actualiza el widget por su cuenta.
     app_context: Option<GlobalRef>,
@@ -56,11 +58,13 @@ fn bind_from_env(env: &mut JNIEnv) -> jni::errors::Result<&'static Java> {
     let keystore = env.find_class(KEYSTORE_CLASS)?;
     let care_sync = env.find_class(CARE_SYNC_CLASS)?;
     let widget = env.find_class(WIDGET_CLASS)?;
+    let surfaces = env.find_class(SURFACES_CLASS)?;
     let java = Java {
         vm: env.get_java_vm()?,
         keystore: env.new_global_ref(keystore)?,
         care_sync: env.new_global_ref(care_sync)?,
         widget: env.new_global_ref(widget)?,
+        surfaces: env.new_global_ref(surfaces)?,
         app_context: None,
     };
     Ok(JAVA.get_or_init(|| java))
@@ -77,7 +81,7 @@ fn bind_from_context() -> Result<&'static Java, String> {
     let activity = unsafe { JObject::from_raw(ctx.context().cast()) };
     let java = {
         let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
-        let loaded = (|| -> jni::errors::Result<(GlobalRef, GlobalRef, GlobalRef, GlobalRef)> {
+        let loaded = (|| -> jni::errors::Result<(GlobalRef, GlobalRef, GlobalRef, GlobalRef, GlobalRef)> {
             let loader = env.call_method(&activity, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])?.l()?;
             let mut load = |name: &str| -> jni::errors::Result<GlobalRef> {
                 let name = env.new_string(name.replace('/', "."))?;
@@ -87,16 +91,17 @@ fn bind_from_context() -> Result<&'static Java, String> {
                 env.new_global_ref(class)
             };
             let (keystore, care_sync, widget) = (load(KEYSTORE_CLASS)?, load(CARE_SYNC_CLASS)?, load(WIDGET_CLASS)?);
+            let surfaces = load(SURFACES_CLASS)?;
             let app = env.call_method(&activity, "getApplicationContext", "()Landroid/content/Context;", &[])?.l()?;
-            Ok((keystore, care_sync, widget, env.new_global_ref(app)?))
+            Ok((keystore, care_sync, widget, surfaces, env.new_global_ref(app)?))
         })();
         if loaded.is_err() {
             let _ = env.exception_clear();
         }
         loaded.map_err(|e| e.to_string())?
     };
-    let (keystore, care_sync, widget, app) = java;
-    Ok(JAVA.get_or_init(|| Java { vm, keystore, care_sync, widget, app_context: Some(app) }))
+    let (keystore, care_sync, widget, surfaces, app) = java;
+    Ok(JAVA.get_or_init(|| Java { vm, keystore, care_sync, widget, surfaces, app_context: Some(app) }))
 }
 
 /// Llama a un método estático `(String) -> String?` de una clase guardada.
@@ -160,8 +165,58 @@ pub(crate) fn core_for_app(base_url: String, data_dir: Option<PathBuf>, library:
             }
         }
         watch_widget(java, core.clone());
+        watch_surfaces(java, core.clone());
     }
     core
+}
+
+/// Las superficies vivas (fase 5): con la app abierta, la notificación en curso sigue a los huevos.
+/// Qué abrir, actualizar o cerrar lo decide `surfaces.rs`; aquí solo se le pasa a Kotlin.
+fn watch_surfaces(java: &'static Java, core: Core) {
+    let mut events = core.subscribe();
+    tauri::async_runtime::spawn(async move {
+        push_surfaces(java, &core);
+        loop {
+            match events.recv().await {
+                Ok(CoreEvent::State(change)) if change.slice == Slice::Eggs => {}
+                Ok(CoreEvent::Session(_)) => {}
+                Ok(_) => continue,
+                Err(RecvError::Lagged(_)) => {}
+                Err(RecvError::Closed) => break,
+            }
+            push_surfaces(java, &core);
+        }
+    });
+}
+
+/// `PockaiSurfaces.apply(context, json)`. Si no hay nada que cambiar, no se llama.
+fn push_surfaces(java: &Java, core: &Core) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0);
+    let diff = core.surfaces_diff(now);
+    if diff.is_empty() {
+        return;
+    }
+    let Ok(json) = serde_json::to_string(&diff) else { return };
+    let Some(context) = &java.app_context else { return };
+    let Ok(mut env) = java.vm.attach_current_thread() else { return };
+    let result = (|| -> jni::errors::Result<()> {
+        let json = env.new_string(json)?;
+        let class: &JClass = java.surfaces.as_obj().into();
+        env.call_static_method(
+            class,
+            "apply",
+            "(Landroid/content/Context;Ljava/lang/String;)V",
+            &[JValue::Object(context.as_obj()), JValue::Object(&json)],
+        )?;
+        Ok(())
+    })();
+    if let Err(e) = result {
+        let _ = env.exception_clear();
+        log::warn!("[android] no se pudieron actualizar las superficies: {e}");
+    }
 }
 
 fn schedule_care_sync(java: &Java, dir: &std::path::Path, base_url: &str, library: &str) -> jni::errors::Result<()> {

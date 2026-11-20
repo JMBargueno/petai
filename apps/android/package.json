@@ -2,7 +2,7 @@
   "name": "@pockai/android-ui",
   "version": "0.1.0",
   "private": true,
-  "description": "UI de Pockai para Android (Tauri). Solo presentación: lo que muestra sale del estado del núcleo y lo que hace se lo pide al núcleo con acciones tipadas.",
+  "description": "UI de Pockai para Android (Tauri). Es el shell compartido (@pockai/mobile) con la plataforma, los estilos y la configuración de Android: aquí no hay lógica ni pantallas.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,12 +12,8 @@
     "test:visual": "playwright test"
   },
   "dependencies": {
-    "@pockai/audio": "workspace:*",
-    "@pockai/client": "workspace:*",
-    "@pockai/minigames": "workspace:*",
-    "@pockai/ui": "workspace:*",
-    "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-notification": "^2.8.1"
+    "@pockai/mobile": "workspace:*",
+    "@pockai/ui": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

@@ -15,7 +15,15 @@ const path = require('path');
 const rootDir = path.resolve(__dirname, '..');
 const baselinePath = path.join(__dirname, 'ui-colors-baseline.json');
 
-const ROOTS = ['shared/ui/src', 'shared/ui/styles', 'desktop/src', 'apps/android/src'];
+const ROOTS = [
+  'shared/ui/src',
+  'shared/ui/styles',
+  'shared/mobile/src',
+  'shared/mobile/styles',
+  'desktop/src',
+  'apps/android/src',
+  'apps/ios/src',
+];
 const EXTENSIONS = new Set(['.svelte', '.css']);
 /** Ficheros que definen la paleta: aquí los colores fijos son el punto. */
 const EXEMPT = [

@@ -1,0 +1,34 @@
+/* Lo propio del WKWebView de iOS. La geometría de Cupertino viene de
+   @pockai/ui/styles/platform/ios.css (--hit-min: 44px, --nav-h, opacidad al pulsar) y la disposición
+   del móvil, de @pockai/mobile/app.css (incluidos sus bloques :root[data-platform='ios']). Aquí solo
+   va lo que el navegador de iOS hace distinto. */
+
+/* iOS rebota el documento entero al llegar al final y arrastra con él la barra de pestañas fija. */
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
+body {
+  /* Safari agranda el texto por su cuenta al girar el móvil. */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* La inercia la da el contenedor que tiene el scroll, no el documento. */
+main .screen {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* En horizontal, el recorte de la pantalla también come por los lados (la de arriba y la de abajo
+   las respeta ya el CSS común). */
+main {
+  padding-left: max(var(--space-4), env(safe-area-inset-left));
+  padding-right: max(var(--space-4), env(safe-area-inset-right));
+}
+
+/* Al mantener pulsado, iOS ofrece copiar o compartir: en un botón del juego solo molesta. */
+main nav.tabbar button,
+main .screen .food-chip {
+  -webkit-touch-callout: none;
+  user-select: none;
+}

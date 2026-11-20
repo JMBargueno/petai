@@ -1,0 +1,317 @@
+/* La disposición de la app móvil, común a Android e iOS: la página, la cabecera, la pantalla de la
+   pestaña activa y la barra de pestañas. Los colores, la tipografía y los componentes vienen de
+   @pockai/ui (tokens.css, base.css, kit.css), y la geometría de cada sistema, de su platform.css.
+   Lo que de verdad cambia entre los dos va en los bloques :root[data-platform='…'] de abajo; lo
+   propio de una sola app, en su app.css. */
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+main {
+  /* El hueco de arriba, con nombre: la cabecera de iOS lo necesita para taparse a sí misma al
+     quedarse fija (ver más abajo). */
+  --main-pad-top: max(var(--space-4), env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 100dvh;
+  max-width: 560px;
+  margin: 0 auto;
+  /* Respeta el recorte de la pantalla y la barra de gestos. */
+  padding: var(--main-pad-top) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  font-size: var(--text-body-lg);
+}
+
+/* Antes de entrar no hay nada más en pantalla: el formulario va centrado. */
+main.centered {
+  justify-content: center;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* El nombre del jugador abre Cuenta: es la sexta pestaña, que no cabe en la barra. */
+header .who {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  margin-left: calc(-1 * var(--space-2));
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+}
+
+header .who.active {
+  background: var(--surface-2);
+}
+
+header strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet {
+  display: flex;
+  gap: var(--space-2);
+}
+
+h1 {
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.actions > * {
+  flex: 1 1 140px;
+}
+
+/* El alto táctil de los controles del kit (48 en Android, 44 en iOS) lo pone @pockai/ui/platform.css. */
+.input {
+  font-size: var(--text-body-lg);
+}
+
+/* Lo mismo para los chips de comida de la ficha compartida, pensados para el ratón. */
+main .screen .food-chip {
+  min-height: var(--hit-min);
+  padding-inline: var(--space-3);
+  font-size: var(--text-label);
+}
+
+/* Pantalla de la pestaña activa: ocupa el hueco y deja sitio a la barra de pestañas. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1;
+  padding-bottom: calc(var(--nav-h) + var(--space-1));
+}
+
+/* En iOS la barra flota separada del borde, así que hace falta más hueco: su alto, el aire de
+   abajo y el de arriba. Si no, la última tarjeta se queda debajo del vidrio. */
+:root[data-platform='ios'] .screen {
+  padding-bottom: calc(var(--nav-h) + var(--space-3) * 2);
+}
+
+/* Barra de pestañas: la navegación es de cada app, no de la biblioteca. Se pinta como en el sistema
+   (data-platform): barra de navegación de Material 3 en Android y barra de pestañas en iOS. */
+nav.tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: space-around;
+  min-height: var(--nav-h);
+  padding: 0 var(--space-2) env(safe-area-inset-bottom);
+  background: var(--surface);
+  border-top: 1px solid var(--line-soft);
+}
+
+nav.tabbar button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--hit-min);
+  padding: var(--space-2) 0;
+  font: inherit;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Material 3: el icono activo va dentro de una píldora de 64×32 con el tinte del acento. */
+:root[data-platform='android'] nav.tabbar {
+  border-top: 0;
+  background: var(--surface-2);
+}
+:root[data-platform='android'] nav.tabbar .tab-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 32px;
+  border-radius: var(--radius-pills);
+  transition: background var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='android'] nav.tabbar button.active {
+  color: var(--ink);
+  font-weight: 700;
+}
+:root[data-platform='android'] nav.tabbar button.active .tab-icon {
+  background: color-mix(in srgb, var(--accent) 24%, var(--surface-2));
+}
+
+/* iOS: la barra flota. No se pega a los bordes ni ocupa todo el ancho: es una lámina separada del
+   contenido, que sigue viéndose correr por debajo. Esa separación es lo que la hace parecer cristal
+   y no un pie de página translúcido.
+
+   El vidrio (fondo, filo y lustre) lo pone `@pockai/ui/styles/platform/ios.css`, que es donde vive
+   esa receta para todas las láminas. Aquí solo dónde flota y la sombra que la despega. */
+:root[data-platform='ios'] nav.tabbar {
+  position: fixed;
+  inset: auto var(--space-3) calc(env(safe-area-inset-bottom) + var(--space-3)) var(--space-3);
+  isolation: isolate;
+  justify-content: space-evenly;
+  min-height: var(--nav-h);
+  padding: var(--space-1) var(--space-2);
+  border-top: 0;
+  border-radius: var(--radius-pills);
+  /* Cuánto del hueco de cada destino ocupa la lente a lo ancho (1 = el hueco entero). Con cinco
+     destinos el hueco mide ~72 pt, así que 0,92 deja una cápsula de ~67×41 pt: llena el hueco sin
+     llegar a tocar la de al lado. */
+  --tab-lens-fill: 0.92;
+  box-shadow: var(--shadow-3);
+}
+
+/* La cabecera de iOS se queda fija arriba, también de vidrio: sin ella, al desplazar, el contenido
+   se va por debajo de la barra de estado y choca con la hora. Se extiende hasta el borde con
+   márgenes negativos para cubrir el hueco de la zona segura, que es suyo. */
+:root[data-platform='ios'] header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  isolation: isolate;
+  margin: calc(-1 * var(--main-pad-top)) calc(-1 * var(--space-4)) 0;
+  padding: var(--main-pad-top) var(--space-4) var(--space-2);
+  /* El vidrio (fondo, filo, lustre) lo pone `@pockai/ui/styles/platform/ios.css`, que es donde
+     vive esa receta para todas las láminas. Aquí solo dónde se queda y cuánto ocupa. */
+}
+
+/* En iOS la barra es solo iconos: sin los textos, la lámina queda más estrecha y el icono respira.
+   El nombre de cada destino no se pierde, va en el `aria-label` del botón (ver MobileApp.svelte);
+   sin él, al ocultar el texto el botón se quedaría sin nombre para un lector de pantalla. */
+:root[data-platform='ios'] nav.tabbar .tab-label {
+  display: none;
+}
+:root[data-platform='ios'] nav.tabbar button {
+  /* Sin padding lateral: así cada botón ocupa exactamente 1/n de la barra y la lente, que se
+     coloca por fracciones, cae justo encima. */
+  padding: var(--space-2) 0;
+  border-radius: var(--radius-pills);
+}
+
+/* El icono activo se agranda: es lo que se ve a través de la lente. */
+:root[data-platform='ios'] nav.tabbar button .tab-icon {
+  position: relative;
+  z-index: 1;
+  transition: scale var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='ios'] nav.tabbar button.active {
+  color: var(--accent-ink);
+}
+:root[data-platform='ios'] nav.tabbar button.active .tab-icon {
+  scale: 1.34;
+}
+
+/* La lente: una gota de vidrio sobre el destino activo, que se desliza hasta el nuevo al cambiar.
+   Va delante del icono (se mira *a través* de ella), así que no puede comerse los toques.
+
+   Se coloca por fracciones de la barra: `--tab-count` y `--tab-index` los pone el shell. El
+   `scale` horizontal la estrecha dentro de su hueco sin tocar el `translate`, que usa el ancho
+   propio del elemento: las propiedades individuales se aplican en orden translate → rotate → scale,
+   así que una no arrastra a la otra.
+
+   Ojo con la caja de referencia: al estar posicionada en absoluto, sus porcentajes y su `inset` se
+   miden contra la **caja de relleno** de la barra, mientras que los botones (con `flex: 1`) se
+   reparten la **caja de contenido**. Hay que descontar el relleno lateral a mano, o la lente queda
+   corrida y con huecos más anchos que los botones. */
+:root[data-platform='ios'] nav.tabbar::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset-block: var(--space-1);
+  inset-inline-start: var(--space-2);
+  width: calc((100% - 2 * var(--space-2)) / var(--tab-count));
+  translate: calc(var(--tab-index) * 100%);
+  scale: var(--tab-lens-fill) 1;
+  border-radius: var(--radius-pills);
+  corner-shape: inherit;
+  /* El bulto del cristal: claro en el centro, donde la lente es más gruesa, y apagándose hacia el
+     borde. Es lo que hace que se lea como una lupa y no como una pastilla translúcida. */
+  background:
+    radial-gradient(ellipse 72% 96% at 50% 42%, var(--glass-sheen), transparent 72%),
+    var(--glass-tint);
+  backdrop-filter: saturate(1.6) brightness(1.1);
+  -webkit-backdrop-filter: saturate(1.6) brightness(1.1);
+  /* Canto iluminado arriba, y sombra interior arriba y abajo: el grosor del vidrio visto de lado. */
+  box-shadow:
+    inset 0 0 0 0.5px var(--glass-edge),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 4px 8px -5px var(--glass-edge),
+    inset 0 -4px 8px -5px var(--glass-edge);
+  pointer-events: none;
+  transition:
+    translate var(--dur-2) var(--ease-standard),
+    scale var(--dur-2) var(--ease-standard);
+}
+
+/* Mientras viaja, la lente se alarga y se aplana, como una gota de líquido que se estira al moverse
+   y recupera su forma al llegar. Es lo que convierte el desplazamiento en algo vivo en lugar de en
+   una pastilla que se teletransporta. La clase la pone y la quita el shell, que sabe cuándo empieza
+   el viaje y cuánto dura. */
+:root[data-platform='ios'] nav.tabbar.lens-moving::after {
+  scale: calc(var(--tab-lens-fill) * 1.16) 0.9;
+}
+
+/* Cuenta no está en la barra: sin destino activo, la lente se desvanece donde estaba. */
+:root[data-platform='ios'] nav.tabbar.no-lens::after {
+  opacity: 0;
+  transition: opacity var(--dur-1), translate var(--dur-2) var(--ease-standard);
+}
+
+/* Con movimiento reducido, la lente salta al destino nuevo sin recorrido ni estirón. */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-platform='ios'] nav.tabbar::after,
+  :root[data-platform='ios'] nav.tabbar button .tab-icon {
+    transition: none;
+  }
+  :root[data-platform='ios'] nav.tabbar.lens-moving::after {
+    scale: var(--tab-lens-fill) 1;
+  }
+}
+:root[data-platform='ios'] nav.tabbar button:active {
+  opacity: var(--press-opacity);
+}
+:root[data-platform='ios'] nav.tabbar button.active {
+  color: var(--accent-ink);
+}
+
+/* En el ancho de un móvil no caben cuatro cifras ni cinco desbloqueos en fila: menos columnas. */
+main .ui-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+main .screen .unlocks {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}

@@ -1,0 +1,144 @@
+name: petai-desktop
+options:
+  bundleIdPrefix: com.petai.app
+  deploymentTarget:
+    iOS: 16.2
+fileGroups: [../../src]
+configs:
+  debug: debug
+  release: release
+settingGroups:
+  app:
+    base:
+      PRODUCT_NAME: Pockai
+      PRODUCT_BUNDLE_IDENTIFIER: com.petai.app
+targetTemplates:
+  app:
+    type: application
+    sources:
+      - path: Sources
+    scheme:
+      environmentVariables:
+        RUST_BACKTRACE: full
+        RUST_LOG: info
+    settings:
+      groups: [app]
+targets:
+  petai-desktop_iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Assets.xcassets
+      # Exclude built static libs: regenerating with xcodegen after a build
+      # otherwise turns the per-configuration libapp.a copies into colliding
+      # resources ("Multiple commands produce …/libapp.a"). They are linked
+      # via LIBRARY_SEARCH_PATHS, never bundled as resources.
+      - path: Externals
+        excludes: ["**/*.a"]
+      - path: petai-desktop_iOS
+      - path: Shared
+      - path: assets
+        buildPhase: resources
+        type: folder
+      - path: LaunchScreen.storyboard
+    info:
+      path: petai-desktop_iOS/Info.plist
+      properties:
+        LSRequiresIPhoneOS: true
+        UILaunchStoryboardName: LaunchScreen
+        UIRequiredDeviceCapabilities: [arm64, metal]
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        CFBundleShortVersionString: 0.41.0
+        CFBundleVersion: "0.41.0"
+        # Avisos de cuidado con la app cerrada (paso 4.8): el identificador tiene que coincidir con
+        # `PockaiBackground.taskIdentifier`.
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.petai.app.care]
+        # Live Activity y Dynamic Island (fase 5).
+        NSSupportsLiveActivities: true
+    entitlements:
+      path: petai-desktop_iOS/petai-desktop_iOS.entitlements
+      properties:
+        # El App Group por el que la app le pasa a la extensión el resumen de la mascota. Va aquí y
+        # no en el .entitlements a mano: xcodegen regenera ese fichero desde este bloque y, si no
+        # está declarado, lo deja vacío y el widget nunca ve el resumen.
+        com.apple.security.application-groups:
+          - group.com.petai.app
+    scheme:
+      environmentVariables:
+        RUST_BACKTRACE: full
+        RUST_LOG: info
+    settings:
+      base:
+        ENABLE_BITCODE: false
+        SWIFT_VERSION: "5.0"
+        ARCHS: [arm64]
+        VALID_ARCHS: arm64 
+        LIBRARY_SEARCH_PATHS[arch=x86_64]: $(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
+        LIBRARY_SEARCH_PATHS[arch=arm64]: $(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
+        ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: true
+        EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
+      groups: [app]
+    dependencies:
+      - framework: libapp.a
+        embed: false
+      - sdk: CoreGraphics.framework
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: QuartzCore.framework
+      - sdk: Security.framework
+      - sdk: UIKit.framework
+      - sdk: WebKit.framework
+      # La extensión de los widgets y la Live Activity (fase 5), que viaja dentro de la app.
+      - target: PockaiWidgets
+        embed: true
+    preBuildScripts:
+      - script: |
+          pnpm tauri ios xcode-script -v --platform "${PLATFORM_DISPLAY_NAME:?}" --sdk-root "${SDKROOT:?}" --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:-}" --configuration "${CONFIGURATION:?}" ${FORCE_COLOR} ${ARCHS:?}
+        name: Build Rust Code
+        basedOnDependencyAnalysis: false
+        outputFiles:
+          - $(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a
+          - $(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a
+
+  # La extensión que dibuja el widget de la pantalla de inicio y la Live Activity. No puede llamar al
+  # núcleo ni alojar un webview: solo lee el resumen del App Group y lo que le pasa ActivityKit.
+  PockaiWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: PockaiWidgets
+      - path: Shared
+    info:
+      path: PockaiWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Pockai
+        CFBundleShortVersionString: 0.41.0
+        CFBundleVersion: "0.41.0"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: PockaiWidgets/PockaiWidgets.entitlements
+      properties:
+        # El mismo App Group que la app: por ahí llega el resumen que pinta el widget.
+        com.apple.security.application-groups:
+          - group.com.petai.app
+    settings:
+      base:
+        PRODUCT_NAME: PockaiWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: com.petai.app.widgets
+        SWIFT_VERSION: "5.0"
+        INFOPLIST_KEY_CFBundleDisplayName: Pockai
+        SKIP_INSTALL: true
+    dependencies:
+      - sdk: SwiftUI.framework
+      - sdk: WidgetKit.framework

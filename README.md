@@ -57,7 +57,7 @@ La app es multiplataforma: un backend autoritativo y varios clientes que muestra
 |---|---|---|
 | **Escritorio** (Windows, Tauri 2 + Svelte) | Funcional | Mascota en una ventana transparente sobre el escritorio que camina, duerme y come, con clics a través de la ventana. Bandeja del sistema, panel de control (cuenta, eclosión, inventario, estadísticas, minijuegos, tienda, Arena, IA), chat flotante y notificaciones nativas. Modo Hermes local. Sincronización por WebSocket. |
 | **Android** (Tauri 2 + Svelte, con el núcleo en Rust) | Funcional, sin Play Billing ni FCM | Las mismas pantallas que el escritorio (`@pockai/ui`): cuenta completa, eclosión, cuidados, tienda y cofres, Jugar, progreso, social, hábitat, chat IA (con clave propia), widget de pantalla de inicio, avisos de cuidado en segundo plano y sesión cifrada con el Keystore. |
-| **iOS** (SwiftUI, Liquid Glass) | Pendiente | — |
+| **iOS** (Tauri 2 + Svelte, con el núcleo en Rust) | Funcional en el simulador, sin APNs ni StoreKit | La misma app que Android: las dos UIs móviles son `@pockai/mobile` con su plataforma y sus estilos, así que el juego entra entero. Sesión en el Keychain. Faltan los avisos en segundo plano (`BGAppRefreshTask`), la Live Activity y el `.ipa` firmado. |
 | **Web** (Angular 22, [`web/`](web/README.md)) | Landing funcional; panel con datos de ejemplo | Web oficial con el nombre público del juego, **Pockai** (pocket + yokai + AI): landing estática en español e inglés y un panel de administración oculto que, de momento, trabaja con datos simulados y no se conecta al backend. |
 
 Para usar la misma cuenta en el escritorio y en el móvil, entra con el mismo correo en los dos. El backend tiene una vinculación por código (`/v1/auth/device/*`), pero ningún cliente la inicia todavía.
@@ -106,7 +106,7 @@ Además del núcleo original, PetAI incluye **33 funcionalidades nuevas** organi
 | 024 | **Modding API** | UGC: publicar mods (especies, muebles, minijuegos). Sandbox + rating. |
 | 025 | **Public API + Webhooks** | API keys, endpoints públicos, webhooks (`pet.evolved`, `combat.finished`). |
 | 026 | **Security Zero-Trust** | Token rotación, device fingerprinting, cifrado de keys de IA. (El "E2E" de chat es solo una clave pública almacenada; el chat sigue en claro por el servidor, ver S-13.) |
-| 027 | **iOS + Skia** | Motor de animación unificado (Rust/Skia). Live Activity en Dynamic Island. |
+| 027 | **iOS + Skia** | Motor de animación unificado (Rust/Skia). Live Activity en Dynamic Island. **Superada por la spec 043**: queda como registro. |
 | 028 | **Welcome Back** | Diario visual de ausencia, ritual de disculpa, regalos sorpresa. |
 | 029 | **Pet Buddies** | Dos pets interactúan. Bonus de bonding mutuo. |
 | 030 | **Rituals** | Hábitos y streaks. El pet "aprende" rutinas del jugador. |
@@ -201,4 +201,5 @@ Consulta [`docs/ROADMAP.md`](docs/ROADMAP.md) para ver el detalle de cada fase. 
 - Backend, escritorio y minijuegos, IA (salvo modo suscripción) y Arena: completados.
 - **33 funcionalidades expandidas (Fase 7)**: implementadas en el backend. Oleada 1: con tests unitarios y e2e. Oleadas 2 y 3 (010-033): con red de tests de backend creciente (e2e de camino feliz por módulo + specs unit) y los defectos de lógica de 013 (raid, F-06) y 014 (torneo, F-05) corregidos y cubiertos con tests; aún sin consumo desde los clientes, y 021 (cuidado cooperativo), 023 (spectator) y 026 (E2E) son prototipos. Ver [`docs/informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md`](docs/informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md), F-03 a F-10.
 - Android: funcional, pendientes Play Billing y FCM (requieren cuentas externas).
-- iOS y el despliegue público de las apps: pendientes.
+- iOS: funcional en el simulador (la misma app que Android, `@pockai/mobile`); faltan los avisos en segundo plano, la Live Activity y publicar.
+- El despliegue público de las apps: pendiente.
