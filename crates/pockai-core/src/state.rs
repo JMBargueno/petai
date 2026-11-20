@@ -272,6 +272,9 @@ impl Core {
 
         self.sync_active_pet();
         self.start_poll();
+        // El tiempo real lo arranca el núcleo, no cada UI: sin él no llegan los cambios que el
+        // servidor hace por su cuenta (recompensas de logros, visitas, avisos).
+        self.realtime_start();
         self.deliver_reminders().await;
         // Entorno: estado inicial y primer latido (los siguientes van con el sondeo).
         let _ = self.environment_refresh().await;

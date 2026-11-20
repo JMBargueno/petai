@@ -328,6 +328,10 @@ pub struct ActionError {
     pub status: Option<u16>,
     /// Mensaje del servidor, si lo dio (vacío si no: la UI pone el suyo).
     pub message: String,
+    /// El porqué técnico cuando no se llegó al servidor (DNS, TLS, conexión rechazada…). Es para
+    /// diagnóstico: no está pensado para enseñárselo al jugador.
+    #[serde(default)]
+    pub detail: Option<String>,
 }
 
 impl Action {
@@ -493,12 +497,15 @@ impl Core {
     pub(crate) async fn call(&self, (method, path, body, auth): Call) -> Result<Value, ActionError> {
         let request = ApiRequest { method: method.into(), path, body: body.map(|b| b.to_string()), auth, content_type: None };
         let res = self.request(request).await.map_err(|e| match e {
-            CoreError::Network(_) => ActionError { status: None, message: String::new() },
-            CoreError::InvalidRequest(message) => ActionError { status: None, message },
+            CoreError::Network(detail) => {
+                log::warn!("[núcleo] sin conexión: {detail}");
+                ActionError { status: None, message: String::new(), detail: Some(detail) }
+            }
+            CoreError::InvalidRequest(message) => ActionError { status: None, message, detail: None },
         })?;
         let body: Value = serde_json::from_str(&res.body).unwrap_or(Value::Null);
         if !(200..300).contains(&res.status) {
-            return Err(ActionError { status: Some(res.status), message: server_message(&body) });
+            return Err(ActionError { status: Some(res.status), message: server_message(&body), detail: None });
         }
         Ok(body)
     }

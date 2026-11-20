@@ -198,6 +198,28 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  apps/android:
+    dependencies:
+      '@pockai/client':
+        specifier: workspace:*
+        version: link:../../shared/client
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.12.4
+    devDependencies:
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^5.0.0
+        version: 5.1.1(supports-color@10.2.2)(svelte@5.57.3)(vite@6.4.6(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+      svelte:
+        specifier: ^5.0.0
+        version: 5.57.3
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.6(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
   backend:
     dependencies:
       '@nestjs/bullmq':

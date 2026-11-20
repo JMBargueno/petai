@@ -28,8 +28,8 @@ pub use crate::error::CoreError;
 pub use crate::events::CoreEvent;
 pub use crate::queries::Query;
 pub use crate::notices::{pet_needs, Notice, NoticeKind, NoticePriority};
-pub use crate::secrets::{MemoryStore, SecretStore, Tokens};
+pub use crate::secrets::{FileStore, MemoryStore, SecretStore, Tokens};
 pub use crate::state::{AccountLock, AppState, ChangeSource, LoadOptions, LoadOutcome, Slice, StateChange};
 
-#[cfg(feature = "keyring-store")]
+#[cfg(all(feature = "keyring-store", not(target_os = "android")))]
 pub use crate::secrets::KeyringStore;

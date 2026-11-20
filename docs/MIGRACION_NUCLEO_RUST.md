@@ -15,7 +15,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 | 1 | Toda la red del escritorio pasa por Rust; ningún token en el webview | 24 / 24 | ✅ |
 | 2 | El estado global vive en Rust; `App.svelte` solo se suscribe | 5 / 6 | 🟡 |
 | 3 | Dominios restantes y fin de la pasarela `api_request` | 4 / 4 (2 descartados) | ✅ |
-| 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 0 / 10 | ⬜ |
+| 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 1 / 10 | 🟡 |
 | 5 | Live Activity / Dynamic Island y widgets | 0 / 7 | ⬜ |
 
 ## Fase 1 — Núcleo + escritorio
@@ -73,15 +73,15 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 3.6 Retirada la pasarela `api_request` y `coreFetch`: el inicio de sesión, el alta, las lecturas de estado, el canje y el mantenimiento van por acciones y consultas. `api.ts` y el transporte web se conservan para el modo demo y los tests
 
 ## Fase 4 — Móvil
-- ⬜ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; código de escritorio bajo `cfg(desktop)`
-- ⬜ 4.2 `tauri android init` / `tauri ios init`; versionar `gen/android` y `gen/apple`
-- ⬜ 4.3 `tauri.android.conf.json` / `tauri.ios.conf.json` y capacidades por plataforma
+- ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
+- 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
+- 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
 - ⬜ 4.4 `shared/ui` (`@pockai/ui`): tokens y componentes comunes
-- ⬜ 4.5 `apps/android`: UI Svelte
+- 🟡 4.5 `apps/android`: primera UI Svelte (entrar, mascota, cuidar, alimentar, eclosionar, salir). Probada sobre el núcleo alojándola en el shell de escritorio; no en un dispositivo
 - ⬜ 4.6 `apps/ios`: UI Svelte
-- ⬜ 4.7 `tauri-plugin-pockai-secure`: Keychain / Keystore
+- 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
-- ⬜ 4.9 CI de Android e iOS
+- 🟡 4.9 CI: job `android-tauri` que compila el APK de depuración. Falta todo lo de iOS
 - ⬜ 4.10 Borrar `mobile/android`, su job de CI y las referencias en docs, specs y skills
 
 ## Fase 5 — Superficies nativas
@@ -207,3 +207,50 @@ de recuperación de contraseña; comprobación de mantenimiento; y lecturas de u
 
 No se ha visto en la app: confirmar el cambio de contraseña con el código ni verificar el correo
 (hacen falta los códigos que el backend manda por correo).
+
+## Verificado: fase 4, primer tramo (2026-11-20)
+
+- El escritorio compila y arranca con el shell convertido en librería.
+- La UI de Android, alojada en el shell de escritorio contra un backend local: una contraseña
+  incorrecta muestra su error; entrar; eclosionar; dar de comer (5 → 4); dormir y despertar; salir.
+  Todo el estado que pinta sale del núcleo.
+- Esa prueba destapó un fallo: el canal en tiempo real solo lo arrancaba la UI de escritorio, así que
+  en otra UI no llegaban los cambios que el servidor hace por su cuenta (el saldo se quedaba atrás).
+  Ahora lo arranca el núcleo al cargar el estado.
+
+No verificado: nada de esto ha corrido en un dispositivo o emulador Android. La compilación del núcleo
+para Android (OpenSSL incluido) solo la comprueba el CI.
+
+## Verificado en el emulador de Android (2026-11-20)
+
+APK de depuración (x86_64) en un emulador con Android 17 (API 37), contra un backend local:
+
+- La app arranca y el núcleo en Rust funciona dentro del APK.
+- Entrar, eclosionar, dar de comer (5 → 4) y dormir desde la UI; el saldo del núcleo coincide con el
+  del servidor.
+- El canal en tiempo real conecta, entrega `pet:update`, `pet:action` y `achievement:unlocked`, y se
+  recupera solo cuando caduca el token (`auth:expired` → renovar → reconectar).
+- La sesión sobrevive a cerrar y volver a abrir la app; al salir se borran la sesión y el estado
+  guardados. Ningún token en el webview.
+
+Lo que hizo falta para llegar aquí:
+
+- **Cliente Socket.IO propio.** El crate `rust_socketio` arrastraba el TLS del sistema, que en
+  Android exige compilar OpenSSL (y desde Windows no se pudo). Como el canal solo recibe, se sustituyó
+  por un cliente mínimo sobre WebSocket con el mismo TLS en Rust puro que usa el resto del núcleo
+  (`realtime.rs`). OpenSSL ya no está en el árbol de dependencias de ninguna plataforma.
+- **`ActionError.detail`.** El porqué técnico de un fallo de red, para diagnóstico (la UI no lo enseña).
+
+## Compilar para Android en Windows
+
+- Variables: `ANDROID_HOME` (SDK) y `NDK_HOME` (NDK r27c); targets de Rust `x86_64-linux-android`
+  (emulador) y `aarch64-linux-android` (dispositivos).
+- `tauri android build` falla al final con «Failed to create a symbolic link» si Windows no tiene
+  activado el **Modo de desarrollador**. Sin activarlo: copiar
+  `target/<target>/debug/libpetai_desktop_lib.so` a
+  `desktop/src-tauri/gen/android/app/src/main/jniLibs/<abi>/` y lanzar
+  `gradlew assembleX86_64Debug -x rustBuildX86_64Debug`.
+- Gradle necesita `-Djdk.net.unixdomain.tmpdir=C:/t` también en el proceso que lo lanza
+  (`GRADLE_OPTS` y `JAVA_TOOL_OPTIONS`), y que exista `C:/t`.
+- En el emulador de API 37 las apps no llegan a `10.0.2.2`. Funciona con `adb reverse tcp:3000
+  tcp:3000` y la app compilada con `VITE_API_URL=http://127.0.0.1:3000`.
