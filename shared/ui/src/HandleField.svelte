@@ -80,7 +80,7 @@
       aria-describedby="{id}-hint"
     />
   </div>
-  <small id="{id}-hint" class="subtitle handle-hint" class:ok={status === 'ok'} class:bad={status === 'error'} aria-live="polite">
+  <small id="{id}-hint" class="form-hint handle-hint" class:ok={status === 'ok'} class:bad={status === 'error'} aria-live="polite">
     {#if status === 'ok'}<Check size={12} /> {message}{:else if status === 'error'}<AlertCircle size={12} /> {message}{:else if status === 'checking'}{message}{:else}Así te encontrarán tus amigos. <strong>No podrás cambiarlo después.</strong>{/if}
   </small>
 </div>
@@ -99,7 +99,8 @@
     font-weight: 600;
   }
   .handle-input .input {
-    padding-left: var(--space-6);
+    /* Relativo a la letra del campo: en Android es más grande. */
+    padding-left: 2em;
     width: 100%;
   }
   .handle-input.ok .input {

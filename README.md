@@ -60,7 +60,7 @@ La app es multiplataforma: un backend autoritativo y varios clientes que muestra
 | **iOS** (SwiftUI, Liquid Glass) | Pendiente | — |
 | **Web** (Angular 22, [`web/`](web/README.md)) | Landing funcional; panel con datos de ejemplo | Web oficial con el nombre público del juego, **Pockai** (pocket + yokai + AI): landing estática en español e inglés y un panel de administración oculto que, de momento, trabaja con datos simulados y no se conecta al backend. |
 
-Para vincular el escritorio con el móvil, la app de escritorio muestra un código de 6 dígitos que confirmas desde Android.
+Para usar la misma cuenta en el escritorio y en el móvil, entra con el mismo correo en los dos. El backend tiene una vinculación por código (`/v1/auth/device/*`), pero ningún cliente la inicia todavía.
 
 ## Funcionalidades Expandidas (33 features)
 

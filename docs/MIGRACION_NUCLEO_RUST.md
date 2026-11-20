@@ -53,7 +53,8 @@ fases de abajo y en las secciones de verificación del final.
    backend de pega. Falta probarlos contra el backend real y lo de iOS (`BGAppRefreshTask`).
 5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
    acordada: que la app de Tauri tenga portados el widget y la sincronización. Ya se cumple (ver
-   «El widget de Android»); falta decidir cuándo.
+   «El widget de Android»), y también lo que tenía la app Kotlin de la cuenta: alta, verificar el
+   correo, nickname, recuperar la contraseña y la clave de IA propia (ver «La cuenta en Android»).
 6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
 
 ### Pantallas que quedan, por tipo (2026-11-20)
@@ -1024,3 +1025,44 @@ Verificado en el emulador con el backend de pega:
   backend y el widget pasó a «Contento» con 60.
 
 **Sin verificar:** el modo oscuro, otros tamaños del widget y otros lanzadores.
+
+### La cuenta en Android (2026-11-20)
+
+Antes de borrar la app Kotlin faltaba en la de Tauri todo lo de la cuenta salvo entrar. Ahora es
+compartido, con el patrón de los puertos (como `chatApi`): son flujos de varios pasos que esperan al
+servidor.
+
+- **`@pockai/ui`**: `AuthLayout`, `CodeInput`, `HandleField` (con `checkHandle`) y `PockaiMark`
+  salen del escritorio. Vistas nuevas con el puerto `AuthApi`:
+  - `AuthView`: entrar, crear cuenta y recuperar la contraseña.
+  - `VerifyEmailView`: verificar el correo.
+  - `ChooseHandleView`: elegir nickname.
+- **IA**: `AiKeyForm` («Mi propia clave», puerto `AiApi`) y `AiSettingsView` (IA de Pockai o clave
+  propia).
+  - El escritorio usa `AiKeyForm` dentro de su selector de motor.
+  - Android abre `AiSettingsView` con el engranaje de Mascota › Charla.
+  - Hermes local, los CLI y el pago de Pro siguen solo en el escritorio (en Android, Pro iría por
+    Google Play).
+- **Escritorio**: `ControlPanel` usa las tres vistas de acceso (de 1222 a 852 líneas).
+- **Android**: `core.ts` guarda qué paso de alta falta (`lock`, de `LoadOutcome.lock` y de los
+  eventos de sesión) y, al completar uno, vuelve a cargar el estado (`reload`). Se quita la regla
+  global de `label` de la pantalla de entrada antigua.
+- **Vinculación por código**: no se porta. El backend tiene `/v1/auth/device/*`, pero nadie inicia
+  una vinculación (el escritorio nunca tuvo `start` ni `poll`); la app Kotlin solo tenía la mitad de
+  confirmar el código. Queda decidir si se completa o se quita del backend.
+
+Verificado:
+- **Escritorio**, en el modo demo (ahora simula el alta sin verificar ni nickname, los códigos
+  123456 y la clave de IA): nickname cogido; alta, verificar (código mal y bien), nickname con su
+  confirmación y entrar; recuperar la contraseña (contraseñas distintas y luego bien) y entrar; clave
+  propia (guardar, probar, volver a la IA de Pockai). 441 tests; `svelte-check` sin errores nuevos.
+- **Android**, en el emulador con un backend de pega:
+  - El alta completa: nickname cogido, crear cuenta, verificar el correo, elegir nickname, permiso de
+    notificaciones y la mascota en Inicio.
+  - Recuperar la contraseña: sale con sesión nueva.
+  - Clave de IA propia: guardar, probar y volver a la IA de Pockai.
+
+**Sin verificar:**
+- Contra el backend real.
+- «Ya lo he verificado con el enlace» y «Reenviar correo» en Android.
+- El registro con invitación obligatoria.

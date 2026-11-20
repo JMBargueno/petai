@@ -93,7 +93,11 @@
     if (hasCore()) void start().catch((e) => (message = failureText(e, 'No se pudo arrancar')));
     const clock = setInterval(() => (now = Date.now()), 1000);
     // Con sesión, el permiso para los avisos de cuidado en segundo plano (una sola vez).
-    const unphase = phase.subscribe((p) => p === 'ready' && void askNotificationsOnce());
+    // Cada cambio de fase es otra pantalla: se empieza arriba (el alta es larga y deja la página bajada).
+    const unphase = phase.subscribe((p) => {
+      window.scrollTo(0, 0);
+      if (p === 'ready') void askNotificationsOnce();
+    });
     return () => {
       clearInterval(clock);
       unphase();

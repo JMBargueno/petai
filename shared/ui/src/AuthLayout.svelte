@@ -47,6 +47,8 @@
   .auth-title {
     margin: var(--space-2) 0 var(--space-1);
     font-size: 28px;
+    /* En dos líneas, la tilde de la Ñ necesita aire para no quedar tapada por la línea de arriba. */
+    line-height: 1.25;
   }
   .auth-subtitle {
     margin: 0;
