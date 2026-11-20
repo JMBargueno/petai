@@ -4,8 +4,8 @@
    * la eclosión y sus fases (`isShaking`, `isCracking`, `isHatchingOut`) las lleva el contenedor
    * de cada app, así siguen aunque el jugador cambie de pestaña a mitad.
    *
-   * El huevo se dibuja en el hueco `egg`, que recibe la animación del momento (`anim`). El
-   * escritorio pone ahí su huevo de sprites; sin nada, sale un icono que tiembla.
+   * El huevo es el de sprites (`EggSprite`) con la animación del momento (`anim`). Una app puede
+   * cambiarlo por otro dibujo en el hueco `egg`, que recibe esa misma animación.
    */
   import { createEventDispatcher } from 'svelte';
   import { rarityMeta } from './maps';
@@ -14,7 +14,7 @@
   import Card from './Card.svelte';
   import CurrencyPill from './CurrencyPill.svelte';
   import EmptyState from './EmptyState.svelte';
-  import Ico from './Ico.svelte';
+  import EggSprite from './EggSprite.svelte';
   import Notice from './Notice.svelte';
   import SectionHeader from './SectionHeader.svelte';
 
@@ -91,7 +91,7 @@
       <div class="egg">
         <div class="egg-preview">
           <slot name="egg" {anim}>
-            <span class="egg-icon" class:moving={anim !== 'idle'} aria-hidden="true"><Ico n="egg" size={40} /></span>
+            <EggSprite {anim} />
           </slot>
         </div>
         <div class="egg-info">
@@ -148,32 +148,6 @@
     flex-shrink: 0;
     width: 64px;
     height: 64px;
-  }
-  .egg-icon {
-    display: grid;
-    place-items: center;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: var(--surface-2);
-    color: var(--color-sunburst);
-  }
-  .egg-icon.moving {
-    animation: egg-wobble 0.4s ease-in-out infinite;
-  }
-  @keyframes egg-wobble {
-    0%,
-    100% {
-      rotate: -8deg;
-    }
-    50% {
-      rotate: 8deg;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .egg-icon.moving {
-      animation: none;
-    }
   }
   .egg-info {
     display: flex;

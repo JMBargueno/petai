@@ -5,9 +5,11 @@
  * lo que el jugador hace se le pide con una acción tipada. Es el mismo núcleo que usa el escritorio.
  */
 import { get, writable } from 'svelte/store';
+import { clearClan, clearVisitors, connectSocialFeed } from '@pockai/ui/social';
 import {
   hasCore,
   logout as coreLogout,
+  onRealtime,
   onSession,
   onStateChange,
   perform,
@@ -42,6 +44,7 @@ export async function start(): Promise<void> {
   if (started) return;
   started = true;
   await onStateChange((change) => state.update((s) => (change.rev > s.rev ? { ...s, rev: change.rev, [sliceKey(change.slice)]: change.value } : s)));
+  await connectRealtimeFeeds();
   await onSession((kind) => {
     if (kind === 'loggedOut' || kind === 'expired') phase.set('signedOut');
     else if (kind === 'unverified' || kind === 'handleRequired') phase.set('locked');
@@ -79,7 +82,27 @@ export async function signIn(email: string, password: string): Promise<void> {
 
 export async function signOut(): Promise<void> {
   await coreLogout();
+  clearVisitors();
+  clearClan();
   phase.set('signedOut');
+}
+
+/**
+ * Los eventos de tiempo real que el núcleo reenvía (`onRealtime`), repartidos por nombre. Hoy solo
+ * los usa el feed social compartido, que llena los stores de visitantes y de clan.
+ */
+const realtimeHandlers = new Map<string, Set<(payload: any) => void>>();
+
+async function connectRealtimeFeeds(): Promise<void> {
+  await onRealtime((event) => {
+    for (const handler of realtimeHandlers.get(event.name) ?? []) handler(event.payload);
+  });
+  connectSocialFeed((name, handler) => {
+    const set = realtimeHandlers.get(name) ?? new Set();
+    set.add(handler);
+    realtimeHandlers.set(name, set);
+    return () => set.delete(handler);
+  });
 }
 
 /** Una acción del jugador. El estado se actualiza solo: el núcleo lo deja al día. */

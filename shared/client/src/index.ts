@@ -280,3 +280,74 @@ export type { Query };
 export function query<T = unknown>(q: Query): Promise<T> {
   return command<T>('query', { query: q });
 }
+
+/** Lo que va llegando de un turno de chat en streaming. */
+export interface ChatTurnHandlers {
+  onDelta(text: string): void;
+  /** Pensamiento del modelo de razonamiento: se muestra plegado, nunca como respuesta. */
+  onReasoning?(text: string): void;
+  onTool?(name: string): void;
+  onAction?(action: { id: string; tool: string; summary: string; expiresAt: string; clientSide?: boolean }): void;
+  onModerated?(info: { reason: string; message: string; hideUserMessage: boolean }): void;
+}
+
+/**
+ * Un turno de chat con la mascota por el núcleo: manda el mensaje, reparte los eventos del flujo a
+ * `handlers` y se resuelve con el evento `done` (o `{ moderated: true }` si se moderó). Lo usan el
+ * escritorio y el móvil; cancelable con `signal`.
+ */
+export function chatTurn<T = any>(
+  petId: string,
+  message: string,
+  handlers: ChatTurnHandlers,
+  opts: { clientTools?: readonly string[]; clientContext?: unknown; signal?: AbortSignal } = {},
+): Promise<T | { moderated: true }> {
+  // El origen no importa: el núcleo solo usa la ruta. La cabecera marca que va con sesión.
+  const url = `http://core/v1/pets/${encodeURIComponent(petId)}/chat`;
+  const init: RequestInit = {
+    method: 'POST',
+    signal: opts.signal,
+    headers: { 'Content-Type': 'application/json', Authorization: 'core' },
+    body: JSON.stringify({ message, clientTools: opts.clientTools ?? [], clientContext: opts.clientContext }),
+  };
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+    const apply = (event: string, data: any): T | { moderated: true } | undefined => {
+      if (event === 'delta') handlers.onDelta(data.text);
+      else if (event === 'reasoning') handlers.onReasoning?.(data.text);
+      else if (event === 'tool') handlers.onTool?.(data.name);
+      else if (event === 'action') handlers.onAction?.(data.action);
+      else if (event === 'moderated') {
+        handlers.onModerated?.(data);
+        return { moderated: true };
+      } else if (event === 'error') throw new Error(data.message);
+      else if (event === 'done') return data as T;
+      return undefined;
+    };
+    coreStream(url, init, (ev) => {
+      if (settled) return;
+      try {
+        const result = apply(ev.event, JSON.parse(ev.data));
+        if (result !== undefined) settle(() => resolve(result));
+      } catch (e) {
+        settle(() => reject(e));
+      }
+    }).then(
+      async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          settle(() => reject(Object.assign(new Error(data?.message || 'Error al enviar el mensaje'), { status: res.status })));
+          return;
+        }
+        // Los últimos eventos del canal pueden llegar justo después de la respuesta del comando.
+        setTimeout(() => settle(() => reject(new Error('La respuesta terminó sin completarse'))), 500);
+      },
+      (e) => settle(() => reject(e)),
+    );
+  });
+}

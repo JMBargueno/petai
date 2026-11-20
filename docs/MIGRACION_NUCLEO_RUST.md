@@ -30,28 +30,42 @@ fases de abajo y en las secciones de verificación del final.
   avisos y 85 acciones y 67 consultas tipadas. Ningún token en el webview.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
-- **Biblioteca `@pockai/ui`, fusionada** (PR 211). Contiene el kit (20 componentes), los estilos
-  y doce pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo,
-  Temporada, y desde la rama `claude/migracion-nucleo-rust-ec3965` Cofres, Raid, Torneo y
-  Entrenamiento. Las usan el escritorio y la app de Android.
-- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos), Mochila, Jugar (Raid,
-  Torneo, Entrenar), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta (desde el
-  nombre de la cabecera). Jugar y Cofres aún no se han probado en el emulador.
+- **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
+  estilos y veinticuatro pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
+  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos, Visitas, Clanes, Mente, Hábitat y Chat. Las usan el escritorio y la app de Android.
+- **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
+  `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
+- **App de Android (`apps/android`)**: Mascota (Inicio, Charla, Vínculo, Huevos, Armario, Mente, Hábitat), Mochila, Jugar
+  (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta
+  (Cuenta, Perfil, Amigos, Visitas, Clanes; desde el nombre de la cabecera). Jugar, Cofres, Armario y lo social aún no se han
+  probado en el emulador.
 
 ### Qué falta, por orden
 
-1. **Probar Jugar y Cofres en el emulador** y fusionar su rama.
-2. **Más pantallas a la biblioteca** (4.4 y 4.5). Quedan las pestañas del escritorio que cargan sus
-   datos: Armario, Mente, Arena, Cocina, Amigos, Visitas, Clanes, Perfil, Minijuegos, Aventura,
-   Hábitat y Chat. Dependen del motor de sprites, de la escena o del audio del escritorio
-   (`lib/sprites`, `@pockai/scene`, `lib/audio`): antes hay que decidir si ese motor se comparte
-   o si cada app pone el suyo en un hueco, como el huevo de Eclosión.
+1. **Probar en el emulador** Jugar entera, Cofres, Armario, lo social entero y el huevo de sprites.
+2. **Pantallas a la biblioteca** (4.4 y 4.5): hechas todas, con sus escenas (sala del hábitat,
+   sala del amigo y hábitat del clan; en Android, la casa del amigo sigue siendo la cabecera
+   sencilla). Falta en Android el clima local.
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
 4. **Plugins nativos** (4.7, 4.8): sesión cifrada con el Keystore en Android (hoy es un fichero
    privado de la app) y sincronización en segundo plano con avisos de cuidado.
 5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
    acordada: que la app de Tauri tenga portados el widget y la sincronización. Aún no se cumple.
 6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
+
+### Pantallas que quedan, por tipo (2026-11-20)
+
+| Tipo | Pantallas | Qué las ata al escritorio | Cómo se mueven |
+|---|---|---|---|
+| (a) Sprites, datos estáticos y sonido | Hechas todas: Armario, Arena, Cocina, Minijuegos y Aventura | — | Patrón de siempre; los efectos de un juego van por el puerto de sonido (`setUiSound`) |
+| (b) Estado de pantalla alimentado por tiempo real | Hechas todas: Amigos, Visitas y Clanes | Las escenas siguen en el escritorio (sala del amigo, casa, hábitat del clan) | Decidido: feed social compartido, no núcleo (ver «Lo social: decisión»). Las escenas, en un hueco de momento |
+| (c) Funciones del escritorio | Hechas todas: Mente, Hábitat y Chat | Hábitat: la sala isométrica con arrastre a la ventana, modo pantalla completa y muebles de habilidades. Chat: IA local, herramientas del equipo, voz y pagos con Stripe | Lo compartible a la biblioteca y lo del escritorio en huecos; en Android, sin pagos (normas de Google Play) ni IA local |
+| (d) Perfil | Hecha | — | — |
+
+Pendiente aparte: el motor de sprites (`@pockai/scene/sprites`) y el registro de la escena PixiJS
+(`@pockai/scene`, `assets.ts`) descubren las mismas hojas cada uno a su manera. Unificarlos es
+otra tarea.
 
 ### Cómo se parte una pantalla
 
@@ -63,8 +77,9 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
   va a la biblioteca con `data`, `loading`, `error` y eventos (`refresh`, `claim`…). El
   contenedor del escritorio conserva nombre y props y llama a `api.*`; el de Android va en
   `apps/android/src/screens/` y usa `query` y `perform` de `@pockai/client`.
-- **Si tiene algo propio de una plataforma** (la casita arrastrable de Inicio, el huevo de sprites
-  de Eclosión): la vista deja un hueco (`slot`) y cada app lo rellena.
+- **Si tiene algo propio de una plataforma** (la casita arrastrable de Inicio): la vista deja un
+  hueco (`slot`) y cada app lo rellena. Los sprites ya no cuentan como propios: están en
+  `@pockai/scene/sprites` y la vista los usa directamente (el huevo de Eclosión).
 - En Android, los ajustes táctiles y de ancho van en `apps/android/src/app.css`. Los estilos de un
   componente ganan a un selector simple: hay que usar `main .screen .clase`.
 - Lo que una acción cambia en el estado (saldo, mascota, inventario) lo pone al día el núcleo, por
@@ -78,7 +93,8 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 
 - **Escritorio**: `pnpm --filter petai-desktop test` (438 tests) y el modo demo
   (`pnpm --filter petai-desktop run demo`, puerto 5175). La ejecución de tests acaba en rojo por dos
-  rechazos no capturados de `game-data.client.spec.ts`, anteriores a esta migración.
+  rechazos no capturados, anteriores a esta migración: `game-data/balance` en
+  `game-data.client.spec.ts` y `sprites/ignisaur_idle` en `asset-loader.spec.ts`.
 - **Android en el emulador** (Windows; ver también «Compilar para Android en Windows»):
   1. Base de datos desechable: `createdb petai_core_e2e`, `prisma migrate deploy` y
      `prisma:seed` con `DATABASE_URL` apuntando a ella. No se usa `petai_dev`.
@@ -159,8 +175,8 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Quedan las pestañas que dependen de sprites, escena o audio (Mente, Armario, Social, Arena…)
-- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Raid, Torneo, Entrenar) y Tienda › Cofres, sin probar en él. Faltan el resto de pantallas del juego
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Armario, Arena, Cocina, Minijuegos, Aventura, Perfil y el motor de sprites (`@pockai/scene/sprites`, `PetMiniAvatar`, `EggSprite`, `ReplayViewer`) en rama. Quedan las pestañas de la tabla «Pantallas que quedan, por tipo»
+- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda › Cofres, Mascota › Armario y el huevo de sprites, sin probar en él. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -507,3 +523,411 @@ escritorio y UI de Android.
 **Sin verificar:** nada de este tramo en el emulador de Android (ni las cuatro pantallas ni la
 navegación nueva), ni atacar a la raid con una mascota despierta, ni una mazmorra completa hasta
 el final.
+
+### Motor de sprites compartido y Armario (2026-11-20)
+
+- **Motor**: `sprites.ts`, `AnimationController`, `asset-loader`, `asset-cache` y `accessories.ts`
+  pasan de `desktop/src/lib` a `shared/scene/src/sprites` (export `@pockai/scene/sprites`, y
+  `@pockai/scene/sprites/<módulo>` para cada fichero). Las rutas `@shared/assets/…` pasan a
+  relativas para que Android las resuelva sin el alias del escritorio. `eventMap` y `petActions`
+  (reacciones de la mascota del escritorio) se quedan. El escritorio conserva sus rutas como
+  reexportaciones; las de `asset-loader` y `asset-cache` apuntan a su módulo, no al índice, para
+  no arrastrar las cargas que hace `sprites.ts` al importarse.
+- **Componentes**: `PetMiniAvatar` y `EggSprite` pasan a `@pockai/ui`. `HatchView` pinta el huevo
+  de sprites por sí misma, así que Android lo tiene sin código propio.
+- **Armario**: `WardrobeView` en la biblioteca, `WardrobeTab` como contenedor y
+  `WardrobeScreen` en Android (Mascota › Armario). El núcleo vuelve a pedir el saldo tras
+  comprar una prenda y las mascotas tras equiparla (test
+  `comprar_y_equipar_una_prenda_ponen_al_dia_saldo_y_mascota`).
+- **Modo demo**: el mock sirve el catálogo real de prendas (`accessories.json`), comprar y equipar.
+
+Verificado en el escritorio en modo demo: Armario con el arte de cada prenda, comprar las gafas
+(1250 → 950 monedas) y equiparlas; la mascota del escritorio lleva su prenda; el huevo de sprites
+en Eclosión desde la vista compartida. Tests de escena (335), del escritorio (438) y del núcleo;
+compilan escritorio, escena y UI de Android (que ya incluye las hojas de especies).
+
+**Sin verificar:** nada de esto en el emulador de Android.
+
+### Arena compartida (2026-11-20)
+
+- **Vista**: `ArenaView` en `@pockai/ui`. Los borradores (puntos por repartir, habilidades
+  marcadas, la confirmación del reparto) son de la vista y se rehacen solo cuando el perfil cambia
+  de verdad (puntos, estadísticas o habilidades), no al cambiar la estrategia. La sección visible
+  (Pelea, Historial, Ranking) la lleva el contenedor, porque abrir una repetición vuelve a Pelea.
+- **Visor de repeticiones**: `ReplayViewer` y `replay.ts` (fotogramas a partir del registro del
+  servidor, función pura) pasan a `@pockai/ui`. `speciesPalette` y `visitorSeed` (dibujar una
+  mascota de la que solo se sabe la especie) pasan al motor de sprites; `visitors.ts` reexporta
+  `visitorSeed`.
+- **Contenedores**: `ArenaTab` en el escritorio; `ArenaScreen` en Android (Jugar › Arena, la
+  primera sección).
+- **Núcleo**: tras una pelea aplica la mascota que trae la respuesta y vuelve a pedir el saldo
+  (test `una_pelea_de_arena_aplica_la_mascota_y_refresca_el_saldo`).
+- **Modo demo**: no tenía pelea ni detalle de una pelea del historial (respondía `{ok:true}` y no
+  pasaba nada); ahora sirve una pelea corta con su repetición.
+
+Verificado en el escritorio en modo demo: buscar rival (victoria, ELO 1340 → 1354, saldo
+1250 → 1275) y su repetición con los dos luchadores dibujados por el motor compartido; abrir una
+pelea del historial (vuelve a Pelea con «Fuego vs Luna»); el ranking con tu puesto; repartir 2
+puntos con su confirmación, que se cierra sola. 438 tests del escritorio, 23 de estado del núcleo;
+compilan escritorio, escena y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; guardar habilidades y cambiar la estrategia (el
+catálogo del demo no trae habilidades).
+
+### Cocina compartida y puerto de sonido (2026-11-20)
+
+- **Puerto de sonido** (`shared/ui/src/sound.ts`): las pantallas que son un juego piden efectos por
+  id (`uiSfx`, `uiLoop`, `uiStopLoop`) sin saber cómo suenan. Cada app instala su motor con
+  `setUiSound`: el escritorio, el suyo (`lib/audio`) en `main.ts`. Android aún no instala
+  ninguno, así que su Cocina y sus minijuegos van sin sonido. `onUiFeedback` sigue para los momentos del kit
+  (abrir un modal, ganar monedas).
+- **Vista**: `CookingView` en `@pockai/ui` con el juego entero (dictado, reloj, olla caliente,
+  sonidos, gesto del Pockai). El contenedor carga el recetario, empieza (la sesión llega por
+  `session` y arranca el dictado) y sirve (la nota llega por `result`). `dishes.ts` (arte de los
+  platos) pasa a la biblioteca.
+- **Contenedores**: `CookingTab` en el escritorio; `CookingScreen` en Android (Jugar › Cocina).
+- **Núcleo**: empezar a cocinar vuelve a pedir las mascotas (gasta energía) y servir, el saldo
+  (test `cocinar_pone_al_dia_la_energia_y_servir_el_saldo`).
+
+Verificado en el escritorio en modo demo: recetario con el arte de los platos, el Pockai dicta la
+receta (con su sprite en la cocina), echar los cuatro ingredientes en orden, «¡Plato perfecto!»
+con su buff y el repaso de la receta, y volver al recetario con los buffs activos. El mock del demo
+no paga las monedas al servir, así que el saldo de la cabecera no sube allí. 438 tests del
+escritorio, 24 de estado del núcleo; compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; en el demo, la olla caliente quemándose y el reloj
+agotándose; que suenen los efectos (no se ha escuchado).
+
+### Minijuegos compartidos (2026-11-20)
+
+- **Anfitrión**: `MinigameHost` pasa a `@pockai/ui`. Monta el juego de `@pockai/minigames` con las
+  hojas del motor de sprites compartido (`petSheetUrls`) y el puerto de sonido, que ahora acepta
+  la clave y el fundido de los bucles (la forma de `SoundEngine`). `@pockai/ui` y la UI de Android
+  dependen de `@pockai/minigames`.
+- **Vista**: `MinigamesView` con la lista, la cuenta atrás, la partida y el resultado, y sus
+  sonidos. El modo accesible es una preferencia del dispositivo (`localStorage`). El contenedor
+  carga la lista, empieza (la sesión llega por `session`) y guarda la partida (`busy` mientras
+  tanto; la recompensa llega por `result`). Se corrigió un `tone="success"` que `Notice` no
+  admite (heredado del escritorio).
+- **Contenedores**: `MinigamesTab` en el escritorio; `MinigamesScreen` en Android (Jugar ›
+  Minijuegos, la primera sección, como en el escritorio).
+- **Núcleo**: empezar un minijuego vuelve a pedir las mascotas; terminarlo aplica la mascota de la
+  respuesta y vuelve a pedir saldo e inventario (test
+  `terminar_un_minijuego_aplica_la_mascota_y_refresca_saldo_e_inventario`).
+
+Verificado en el escritorio en modo demo: la lista con sus 9 juegos y su arte; Pesca de Códices
+con su cuenta atrás, la partida con el sprite de la mascota, un códice pescado y el resultado
+(+24 monedas, +18 XP, +6 felicidad); volver a la lista. 438 tests del escritorio, 25 de estado del
+núcleo; compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador (ni que el juego responda al tacto allí); el modo
+accesible; un error del juego a mitad de partida.
+
+### Aventura compartida (2026-11-20)
+
+- **Escena**: `StorySceneView` pasa a `@pockai/ui`. Lo que la ataba al escritorio era el clima
+  (`environmentalStatus`) y el sonido: el clima es ahora una prop (`weather`) que pasa cada app si
+  lo tiene, y el sonido va por el puerto (`uiSfxFirst`, nuevo: el primero de varios ids que suene).
+  El núcleo no guarda el clima local (en la fase 3 se quedó en la UI), así que en Android la escena
+  usa su propio ambiente.
+- **Vista**: `AdventureView` con la narración (escena, fase, reacción, final), marcada por los
+  hitos de la escena. El contenedor carga el día, empieza la historia (llega por `started`) y manda
+  cada respuesta (llega por `answered`).
+- **Contenedores**: `AdventureTab` en el escritorio (con el clima de `environmentalStatus`);
+  `AdventureScreen` en Android (Jugar › Aventura).
+- **Núcleo**: solo la respuesta que cierra la historia (trae `completed`) vuelve a pedir mascotas,
+  saldo e inventario (test `solo_la_respuesta_que_cierra_una_historia_refresca_el_saldo`).
+
+Con esto el grupo (a) de la tabla está entero.
+
+Verificado en el escritorio en modo demo: la lista de historias del día; «La primera rotura» con
+la escena compartida (el Pockai entra andando y al llegar aparecen las respuestas), la
+consecuencia y el voto de la comunidad, las tres escenas y el final («Victoria · +30 XP, +20
+monedas» con su recuerdo); de vuelta, «2 de 3 historias por vivir hoy». 438 tests del escritorio,
+26 de estado del núcleo; compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador (ni que PixiJS dibuje la escena en el WebView de
+Android); el clima real en la escena del escritorio (el demo no trae clima); continuar una
+historia a medias.
+
+### Perfil compartido (2026-11-20)
+
+- **Piezas**: `ProfileView` (la ficha de un perfil, propio o ajeno) ya solo pintaba y pasa tal cual a
+  `@pockai/ui`, con `profile-format.ts`, `badge-icons.ts` y la insignia de logro, que se llama
+  `AchievementBadge` en la biblioteca (ya había un `Badge`). El escritorio conserva sus rutas;
+  la ventana de perfil de otro jugador (`UserProfileModal`) usa la vista de la biblioteca.
+- **Vista**: `MyProfileView` con tu perfil, la privacidad y la colección filtrada. Editar la
+  vitrina y los filtros son de la vista; el contenedor carga, guarda la vitrina y cambia la
+  privacidad.
+- **Contenedores**: `ProfileTab` en el escritorio (sigue recargando al desbloquear un logro, salvo
+  con la vitrina en edición); `ProfileScreen` en Android, como sección de Cuenta (Cuenta · Perfil).
+- El test de `badge-icons` lee ahora el fuente en `shared/ui`.
+
+Con esto quedan solo los grupos (b) y (c) de la tabla, que necesitan una decisión antes.
+
+Verificado en el escritorio en modo demo: Mi Perfil (cabecera, vitrina, estadísticas); editar la
+vitrina, añadir una insignia y guardar («Vitrina actualizada.», sale del modo edición); hacer
+privado el perfil; abrir el perfil de otro jugador desde Amigos. 438 tests del escritorio; compilan
+escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; en Android, que el perfil se recargue al
+desbloquear un logro (allí solo carga al abrirlo).
+
+### Lo social: decisión y Amigos (2026-11-20)
+
+**Decisión: el estado social no sube al núcleo; se comparte en TypeScript.** Los visitantes de tu
+hábitat, el chat y los objetivos de clan son estado de pantalla: sin persistencia ni reglas, y casi
+toda su lógica ya era pura. Lo que faltaba en Android no era dónde guardarlo sino quién lo llenara,
+y el núcleo ya reenvía todos los eventos de tiempo real a cualquier UI (`onRealtime`). Llevarlo a
+Rust habría sido modelar visitantes, mensajes y objetivos (estado, eventos y tipos generados) sin
+que nada fuera de la pantalla lo consuma. Si la fase 5 necesita algo fuera de la pantalla, se sube
+esa pieza entonces, como la visita en curso, que sigue prevista para la fase 5.
+
+- **`@pockai/ui/social`**: los tipos de lo social (`types.ts`, antes en el `api.ts` del
+  escritorio, que ahora los reexporta), los stores y su lógica (`visitors.ts`, `clans.ts`, antes en
+  `desktop/src/lib`, que conserva sus rutas) y `connectSocialFeed(on)`, que suscribe los eventos
+  `habitat:*` y `clan:*` y escribe en los stores. Cada app le pasa su fuente: el escritorio, su
+  socket (también en el modo demo); Android, `onRealtime` (en `core.ts`, que reparte los eventos por
+  nombre y vacía los stores al cerrar sesión).
+- **Lo propio del escritorio** sigue en `App.svelte`, colgado de los mismos eventos: la reacción de
+  la mascota a una visita, los avisos del sistema, la celebración del objetivo de clan y el viaje
+  por el portal (`visitTravel`).
+- **Amigos**: `FriendsView` en la biblioteca (con `handle.ts`, la validación del nickname);
+  `FriendsTab` como contenedor, que conserva su ventana de perfil. En Android, `FriendsScreen`
+  en Cuenta › Amigos (no queda hueco en la barra), con su propia ventana de perfil sobre
+  `ProfileView` y sin «Visitar» (`canVisit={false}`) hasta que llegue Visitas.
+- **Android** compila ahora con los tipos de Vite (`vite/client` en su `tsconfig`): `core.ts` importa
+  el motor de sprites a través de lo social, y `tsc` necesita entender `import.meta.glob` y los PNG.
+
+Verificado en el escritorio en modo demo: Amigos (solicitudes, presencia, «1 en línea»); un
+nickname mal escrito se avisa sin preguntar al servidor; pedir amistad a @lucia (el campo se vacía);
+aceptar a Dani; abrir el perfil de Marta con «Visitar». 438 tests del escritorio (con los de
+`visitors` y `clan-store` sobre las rutas de siempre); compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; que un visitante o un mensaje de clan llegue en
+vivo por el feed (el modo demo no emite esos eventos).
+
+**Siguiente:** Visitas y Clanes. Llevan escenas (la sala del amigo, la escena de casa, el hábitat
+del clan) que de momento irán en un hueco que rellena el escritorio.
+
+### Visitas compartidas (2026-11-20)
+
+- **Vista**: `VisitsView` en `@pockai/ui`: selector de amigo, su tarjeta con los cuidados, empezar
+  y terminar la visita (con su mensaje) e historial. Las escenas van en dos huecos: `scene` (cabecera
+  de la casa del amigo; por defecto un banner sencillo) y `room` (su sala durante la visita en vivo;
+  por defecto, nada).
+- **Lo puro de las visitas** (`social/visits.ts`): las constantes (`VISIT_MESSAGE_MAX`,
+  `VISIT_ENERGY_COST`, que el `api.ts` del escritorio reexporta), deducir la visita en curso del
+  historial (`ongoingVisitFrom`, antes en `activeVisit.ts`, que conserva el store) y la fecha
+  relativa del historial.
+- **Escritorio**: `VisitTab` como contenedor con lo suyo: el store de la visita en curso, el viaje
+  por el portal, `HomeScene` en `scene`, la sala del amigo y el diálogo de la visita en `room`, y
+  la ventana de perfil.
+- **Android**: `VisitsScreen` en Cuenta › Visitas. Deduce la visita en curso del historial (la
+  fase 5 la llevará al núcleo) y va sin escenas. Amigos gana «Visitar», que lleva a Visitas con ese
+  amigo elegido.
+- **Núcleo**: cuidar la mascota de un amigo vuelve a pedir el usuario (XP); visitar un hábitat,
+  mascotas y usuario (energía); terminar la visita no pide nada (test
+  `visitar_un_habitat_pone_al_dia_la_energia_y_terminar_no_toca_nada`).
+
+Verificado en el escritorio en modo demo: Visitas con la casa del amigo en el hueco; alimentar a
+Luna («+12 XP»); empezar la visita con mensaje (aparece la sala del amigo en su hueco, el selector
+marca «En visita» y el campo se vacía); terminarla; «Visitar» desde Amigos abre Visitas con ese
+amigo elegido. 438 tests del escritorio, 27 de estado del núcleo; compilan escritorio y UI de
+Android.
+
+**Sin verificar:** nada de esto en el emulador; el viaje por el portal en el escritorio con la
+mascota en pantalla (en el demo estaba dormida).
+
+### Clanes compartidos (2026-11-20)
+
+- **Puerto en vez de vista + contenedor.** Clanes tiene unas veinte llamadas con mucha lógica entre
+  ellas (confirmaciones en dos pasos, rangos, chat que se queda abajo, objetivos). Partirla como las
+  demás habría repetido esa lógica en dos contenedores. La pantalla entera vive en `ClansView` y
+  recibe `clansApi` (`social/clansApi.ts`): las operaciones que necesita más `errorText`. El
+  escritorio lo implementa con su `api`; Android, con `query` y `perform` del núcleo. Es una
+  excepción a «datos por props, avisos por eventos», documentada en la vista.
+- **El hábitat del clan** envuelve la cabecera del clan, así que no es un hueco normal: la vista
+  recibe `habitat` (un componente opcional) y pinta la cabecera dentro; sin él (Android), la
+  cabecera va sola.
+- `chatScroll.ts` (pegarse al final del chat) pasa a la biblioteca.
+- **Android**: `ClansScreen` en Cuenta › Clanes. El chat y los objetivos llegan en vivo por el feed
+  social.
+- **Modo demo**: los mensajes sembrados del clan tenían ids (`m-1`…) que el generador del mock
+  repetía, y un mensaje enviado no aparecía.
+
+Verificado en el escritorio en modo demo: Clanes con el hábitat envolviendo la cabecera; enviar un
+mensaje al chat; sumar progreso a un objetivo (31/50 → 32/50); invitar con un nickname mal escrito
+(se avisa sin preguntar al servidor); editar el Nexo (aviso y el formulario se cierra; el mock no
+guarda el nombre). 438 tests del escritorio; compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; crear, unirse, salir, expulsar, cambiar rangos y
+disolver un clan (no se ha probado en el demo).
+
+Con esto lo social está entero. Queda el grupo (c): Chat/IA, Mente y Hábitat, ligados a funciones
+del escritorio.
+
+### Mente compartida (2026-11-20)
+
+Mente resultó compartible entera: lo que la ataba al escritorio eran textos y lógica pura.
+
+- `mind.ts` (dimensiones, capas de memoria, fechas relativas) y los tipos de la mente
+  (`mindTypes.ts`, antes en `api.ts`, que los reexporta) pasan a `@pockai/ui`.
+- De `initiative.ts` pasan solo los niveles de charla y sus textos (`talk.ts`); el reloj de la
+  iniciativa se queda en el escritorio. De `learningStore.ts`, los textos de lo aprendido
+  (`learned.ts`, con `@pockai/mind`, nueva dependencia de la biblioteca); el store y el refuerzo
+  se quedan.
+- `MindView` en la biblioteca; `MindTab` como contenedor (guarda el nivel de charla al momento y
+  lo deshace si el servidor falla); `MindScreen` en Android (Mascota › Mente).
+
+Verificado en el escritorio en modo demo: Mente con personalidad, nivel de charla y lo aprendido;
+cambiar a «Hablador» (el texto pasa de cada 17 a cada 7 minutos). 438 tests del escritorio;
+compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador.
+
+### Hábitat compartido (2026-11-20)
+
+- **Como Clanes, con un puerto**: la pantalla tiene mucha lógica entre llamadas (edición de la
+  sala, compra y retirada, movimientos agrupados), así que vive entera en `HabitatView` y recibe
+  `habitatApi` (`habitatApi.ts`).
+- **Lo de cada app, opcional**: `room` (la sala isométrica; el escritorio pasa `IsoRoomView`; sin
+  ella no hay sala ni edición, solo salas, catálogo, muebles colocados y buffs), `canLeave` (la
+  mascota puede salir al escritorio; en el móvil no) y `hooks` (arrastrar a la mascota fuera de la
+  ventana, modo hábitat a pantalla completa, paisaje, lo que dice el visitante y los muebles que
+  desbloquean habilidades).
+- **Contenedores**: `HabitatTab` en el escritorio pasa el puerto, la sala y los hooks;
+  `HabitatScreen` en Android (Mascota › Hábitat), sin sala de momento.
+- **Núcleo**: comprar un mueble vuelve a pedir el saldo (test `comprar_un_mueble_pone_al_dia_el_saldo`).
+
+Verificado en el escritorio en modo demo: la sala con «Modo hábitat» y «Paisaje»; llevar a la
+mascota a casa; editar la sala, elegir un mueble y girarlo; comprar la Fuente de Agua con su
+confirmación (1250 → 850 monedas; se abre la edición). 438 tests del escritorio, 28 de estado del
+núcleo; compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; arrastrar un mueble del catálogo a la sala;
+arrastrar a la mascota fuera de la ventana; el modo hábitat.
+
+### Chat compartido (2026-11-20)
+
+- **`ChatView`** en `@pockai/ui`: la conversación (historial, envío con la respuesta en vivo,
+  razonamiento plegado), las acciones que propone la mascota, el compositor, los recordatorios y
+  los recuerdos. Habla por el puerto `chatApi` (`chatApi.ts`). El texto en negrita (`parseBold`)
+  pasa a `chatText.ts`.
+- **Lo del escritorio se queda en `AiTab`**: el selector de motor y sus ajustes (clave propia,
+  Hermes local, los CLI), el uso, la suscripción Pro (Stripe) y el aviso de pago. Los motores
+  locales viven dentro de su puerto: su `chatStream` decide si el turno va al servidor o al motor
+  del equipo, y la vista no se entera. Las herramientas del equipo (abrir una web, el portapapeles,
+  pomodoro, música, habilidades) van en `runClientTool`. Al cambiar de motor la conversación se
+  vuelve a montar (`{#key}`) y carga su historial.
+- **`chatTurn` en `@pockai/client`**: el turno de chat por el núcleo (mandar, repartir los
+  eventos del flujo y resolverse con `done`), que antes estaba en el `api.ts` del escritorio. Lo
+  usan el escritorio y Android.
+- **Android**: `ChatScreen` en Mascota › Charla, con la IA de Pockai por el núcleo y su cuota.
+  Sin motores locales, sin herramientas del equipo y sin pasar a Pro desde la app (los pagos irían
+  por Google Play); al agotar la cuota solo se avisa.
+- **Modo demo**: no tenía chat (respondía `{ok:true}` y el turno acababa en «La respuesta terminó
+  sin completarse»); ahora contesta por un flujo de eventos a trozos.
+- Los estilos se repartieron: cada componente se queda solo con las reglas de su marcado.
+
+Verificado en el escritorio en modo demo: la barra del escritorio (motor, cuota, Pro) sobre la
+conversación compartida con su historial; mandar un mensaje y ver la respuesta llegar a trozos;
+el bocadillo de la mascota al terminar; los recuerdos por capas; abrir y cerrar los ajustes (la
+conversación se vuelve a montar con su historial). 438 tests del escritorio, 2 de `@pockai/client`;
+compilan escritorio y UI de Android, sin avisos de CSS.
+
+**Sin verificar:** nada de esto en el emulador (ni el streaming por el núcleo en Android); en el
+escritorio, los motores locales, la clave propia, el pago y las acciones de la mascota (el demo no
+las propone); una respuesta moderada.
+
+### Revisión del tramo antes del PR (2026-11-20)
+
+- **Tipos de Android**: su `typecheck` (`tsc`) no mira los `.svelte`. Pasado `svelte-check` sobre
+  `apps/android`: las pantallas (formas de consultas y acciones) no tenían errores; sí salieron
+  los de su configuración estricta en cuatro vistas de la biblioteca (`noImplicitAny`, null) y los
+  de `Segmented` en `App.svelte`, ya corregidos. Quedan solo los «No Svelte configuration» del
+  entorno.
+- **Caminos que el modo demo no recorre**, ahora con tests:
+  - `chatTurn` (`shared/client/src/index.spec.ts`): trozos, razonamiento, herramientas y acciones a
+    sus handlers; `done`; moderado; `error`; y un 429 que rechaza con su estado. Es el camino del
+    chat del **escritorio en Tauri** desde este tramo (antes `coreChat` en `api.ts`).
+  - `connectSocialFeed` (`desktop/src/lib/socialFeed.spec.ts`): visitantes y su escena, chat,
+    objetivos, XP y roster del clan, y que al pararlo deja de escuchar. `App.svelte` ya no escribe
+    en esos stores: si el feed fallara, el escritorio perdería lo social en vivo.
+- **CI en local**: los pasos del job de escritorio (minijuegos, escena, cliente, UI de Android,
+  escritorio, `cargo check --workspace --locked`, tests del núcleo) en verde.
+
+Sin verificar en todo el tramo (`claude/pantallas-sprites`): nada en el emulador ni en la app de
+Tauri del escritorio (todo en el modo demo del navegador); las secciones de Android con hasta siete
+pastillas a 360 px.
+
+### Sonido en Android (2026-11-20)
+
+- `apps/android/src/audio.ts` crea el motor de `@pockai/audio` (el mismo que el escritorio y que
+  los bundles de la escena y los minijuegos) y lo conecta a la biblioteca al arrancar
+  (`installSound` en `main.ts`): `setUiSound` para los juegos compartidos y `onUiFeedback` para los
+  momentos del kit (modal, monedas, gemas), con los mismos ids que el escritorio.
+- Plataforma `scene`: suenan los sonidos sin plataforma del manifiesto; los veinte que son solo del
+  escritorio no.
+- Solo se empaquetan los ficheros que piden esas pantallas: `cook.*`, `mg.*`, `elem.*` y los de
+  interfaz (70 ficheros, unos 760 KB). La música y los ambientes (unos 7 MB) no entran en el APK.
+- Ajustes con los valores por defecto del móvil, guardados en el dispositivo (`pockai_audio`). La
+  app aún no tiene pantalla de sonido.
+- `.claude/launch.json` gana `pockai-android-ui` para servir la UI de Android en el navegador.
+
+Verificado sirviendo la UI de Android en el navegador: el puerto de la biblioteca suena por el
+motor de Android (`mg.countdown.go`, `cook.serve` y `elem.fire.accent` devuelven que han sonado;
+un id inexistente y la música, que no se empaqueta, no), los ficheros se cargan (200) y sin
+errores en la consola. Compila la UI de Android (`tsc` y build).
+
+**Sin verificar:** oírlo en el emulador o en un dispositivo (el WebView exige un toque antes de
+sonar: `attachAutoUnlock`); una pantalla de ajustes de sonido.
+
+### Escenas en Android: la sala isométrica y la del amigo (2026-11-20)
+
+No hace falta el bundle de la app Kotlin: la UI de Android ya corre en un WebView y dibuja
+`@pockai/scene` directamente (Aventura ya lo hacía).
+
+- **`IsoRoomView`** pasa a `@pockai/ui`. Lo que leía de stores del escritorio llega por props: el
+  clima local (`weather`), el paisaje (`backdrop`), la personalidad (`dims`; sin ella, valores
+  neutros) y el aviso de uso de un mueble (`useItem`). El sonido va por el puerto de la biblioteca.
+  El tipo de arrastre `RoomPetDrag` va en `roomDrag.ts`.
+- El `IsoRoomView.svelte` del escritorio queda como envoltorio que pone esas props desde sus stores y
+  su `api`, y deja pasar el resto (props, eventos, `selectedId`, `rotate()`): Hábitat, la sala del
+  amigo, el widget del modo hábitat y la casita no cambian.
+- **`visitDialog.ts`** (lo que dice el entrenador visitante) pasa a `@pockai/ui/social`, y el feed
+  social atiende `habitat:visitor_interaction`; el escritorio solo conserva su reacción.
+- **`FriendRoomView`** pasa a la biblioteca: recibe cómo traer la sala (`loadRoom`) y, si quiere, qué
+  sala usar (`roomView`; el escritorio pasa su envoltorio).
+- **Android**: Hábitat con la sala (`Room.svelte`: la de la biblioteca con el uso de muebles por el
+  núcleo), editar, mover y girar muebles. En el móvil la mascota está siempre en casa
+  (`canLeave={false}` ya no la da por «fuera»). Visitas enseña la sala del amigo durante la visita.
+
+Verificado en el escritorio en modo demo (ya por el componente compartido): la sala de Hábitat con
+sus controles; cambiar el paisaje; editar, elegir un mueble y girarlo; empezar una visita y ver la
+sala del amigo con su pie («Fuego está en casa de Luna.»). 441 tests del escritorio; compilan
+escritorio y UI de Android; `svelte-check` de Android sin errores propios.
+
+**Sin verificar:** nada de esto en el emulador: que la sala se dibuje en el WebView, y mover
+muebles y tocar a la mascota con el dedo (la escena se probó con ratón). En Android no hay clima
+local ni personalidad en la sala, ni el menú del visitante (`VisitDialog`).
+
+### Escenas en Android: el hábitat del clan (2026-11-20)
+
+- **`ClanHabitat`** pasa a `@pockai/ui` con sus piezas: `ambience2d.ts` (cielo, velo y clima en
+  2D; solo usa `@pockai/scene`) y `social/clanHabitat.ts` (niveles y paseantes, sobre
+  `clan-habitat.json`). Lo que leía del escritorio llega por props: cómo traer el hábitat
+  (`loadHabitat`) y el clima local (`weather`). El escritorio conserva sus rutas
+  (`lib/ambience-2d.ts`, que también usa `HomeScene`, y `lib/clan-habitat.ts`) y su
+  `ClanHabitat.svelte` como envoltorio que pone la consulta y el clima.
+- **Android**: `ClansScreen` pasa su envoltorio (`ClanHabitatView.svelte`, con la consulta por el
+  núcleo) a `ClansView`: la cabecera del clan va dentro del hábitat, como en el escritorio.
+- La prop `habitat` de `ClansView` se tipa como `any`: con `ComponentType` el modo estricto de
+  Android no acepta un componente con props obligatorias.
+
+Verificado en el escritorio en modo demo (ya por el componente compartido): Clanes con el hábitat
+pintado envolviendo la cabecera («Nexo de Resonancia», nivel, cielo, efectos y pockais). 441 tests
+del escritorio; compilan escritorio y UI de Android; `svelte-check` sin errores propios en ninguna.
+
+**Sin verificar:** nada de esto en el emulador (que el diorama 2D y los pockais se dibujen en el
+WebView). En Android, el cielo del clan sigue la hora sin clima local.

@@ -21,6 +21,10 @@ const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 
 const balance = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/balance.json'), 'utf8'));
+// Armario: el catálogo real de prendas; la primera se tiene y está puesta, las de logro bloqueadas.
+const accessoryCatalog = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/accessories.json'), 'utf8'));
+const accessories = (accessoryCatalog.accessories as any[]).map((a, i) => ({ animated: false, fx: null, ...a, state: i === 0 ? 'owned' : a.unlock?.type === 'achievement' ? 'locked' : 'available' }));
+const wornAccessories: Record<string, string | null> = { [accessories[0].slot]: accessories[0].id };
 const habitats = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/habitats.json'), 'utf8'));
 
 // ── Estado mutable de la sesión demo ─────────────────────────────────────────
@@ -166,9 +170,9 @@ let clanGoals = [
   { id: 'g-2', clanId: 'c-1', title: 'Subir el clan a nivel 5', description: '', metric: 'xp', target: 5000, progress: 5000, status: 'completed', createdAt: iso(-10 * DAY), completedAt: iso(-DAY) },
 ];
 let clanMessages = [
-  { id: 'm-1', clanId: 'c-1', userId: 'u-2', senderName: 'Marta', body: '¿Raid esta noche a las 21:00?', createdAt: iso(-50 * MIN) },
-  { id: 'm-2', clanId: 'c-1', userId: 'u-demo', senderName: 'Entrenadora Demo', body: 'Me apunto. Dejo aquí la guía: https://pockai.world/es/guias/raid-de-fuego-estrategias-y-composiciones-recomendadas', createdAt: iso(-45 * MIN) },
-  { id: 'm-3', clanId: 'c-1', userId: 'u-3', senderName: 'Un nombre de jugador bastante largo', body: 'Yo llego un poco tarde, empezad sin mí.', createdAt: iso(-10 * MIN) },
+  { id: 'm-seed-1', clanId: 'c-1', userId: 'u-2', senderName: 'Marta', body: '¿Raid esta noche a las 21:00?', createdAt: iso(-50 * MIN) },
+  { id: 'm-seed-2', clanId: 'c-1', userId: 'u-demo', senderName: 'Entrenadora Demo', body: 'Me apunto. Dejo aquí la guía: https://pockai.world/es/guias/raid-de-fuego-estrategias-y-composiciones-recomendadas', createdAt: iso(-45 * MIN) },
+  { id: 'm-seed-3', clanId: 'c-1', userId: 'u-3', senderName: 'Un nombre de jugador bastante largo', body: 'Yo llego un poco tarde, empezad sin mí.', createdAt: iso(-10 * MIN) },
 ];
 
 const mission = (id: string, description: string, current: number, target: number, claimed: boolean, reward: object, resetsIn: number) => ({
@@ -226,6 +230,24 @@ const combat = (petId: string) => ({
   energyCost: 10,
   canFight: true,
   reason: null,
+});
+/** Una pelea corta de ejemplo para el visor de repeticiones (formato `replay` del servidor). */
+const demoReplay = (rival: string, rivalSpecies: string) => ({
+  version: 1,
+  seed: 7,
+  participants: [
+    { name: 'Fuego', speciesId: 'ignisaur', stage: 'juvenile', petId: 'p-1', element: 'fire', level: 7, maxHp: 120, skills: ['ember'], strategy: 'balanced', isBot: false },
+    { name: rival, speciesId: rivalSpecies, stage: 'baby', petId: 'p-rival', element: 'water', level: 6, maxHp: 100, skills: ['tail_whip'], strategy: 'aggressive', isBot: false },
+  ],
+  events: [
+    { t: 'round', n: 1 },
+    { t: 'move', actor: 0, skill: 'ember', hit: true, damage: 45, crit: false, mult: 1, hp: [120, 55] },
+    { t: 'move', actor: 1, skill: 'tail_whip', hit: true, damage: 20, crit: false, mult: 1, hp: [100, 55] },
+    { t: 'round', n: 2 },
+    { t: 'move', actor: 0, skill: 'ember', hit: true, damage: 60, crit: true, mult: 1, hp: [100, 0] },
+    { t: 'faint', actor: 1 },
+    { t: 'end', winner: 0, reason: 'ko', hp: [100, 0] },
+  ],
 });
 const battles = ['win', 'loss', 'win', 'draw', 'win'].map((outcome, i) => ({
   id: `b-${i}`,
@@ -602,6 +624,13 @@ const routes: [string, RegExp, Handler][] = [
   })],
   ['GET', /^\/arena\/leagues$/, () => ({ leagues: [{ id: 'bronze', name: 'Bronce', minElo: 0 }, league, league.next], dailyFreeBattles: 5, energyCost: 10 })],
   ['GET', /^\/battles$/, () => battles],
+  ['GET', /^\/battles\/([^/]+)$/, ({ m }) => ({ id: m[1], seed: 7, createdAt: iso(-HOUR), role: 'attacker', outcome: 'win', eloDelta: 14, replay: demoReplay('Luna', 'axolunar') })],
+  ['POST', /^\/battles\/matchmake$/, ({ body }) => {
+    const pet = findPet(body.petId);
+    pet.energy = Math.max(0, (pet.energy ?? 0) - 10);
+    user.coins += 25;
+    return { battleId: uid('b'), seed: 7, result: { outcome: 'win', winner: 0, rounds: 2 }, opponent: { name: 'Luna', speciesId: 'axolunar', element: 'water', level: 6, isBot: false, ownerName: 'Jugador 4' }, elo: { before: 1340, after: 1354, delta: 14, league }, rewards: { xp: 30, coins: 25, happiness: 3, energyCost: 10 }, bonusItem: null, replay: demoReplay('Luna', 'axolunar'), pet };
+  }],
   ['GET', /^\/leaderboard$/, () => ({ scope: 'global', entries: leaderboard, me: { rank: 7, score: 1360 } })],
   ['GET', /^\/raid\/current$/, () => raid],
   ['GET', /^\/raid\/leaderboard$/, () => ({ raidId: 'r-1', totalDamage: 187600, hpRemaining: raid.hpRemaining, entries: leaderboard.slice(0, 8).map((e) => ({ rank: e.rank, userId: `u-${e.rank}`, displayName: e.owner, petId: e.petId, petName: e.name || 'Fuego', petLevel: e.level, petElement: 'fire', damageDealt: 9000 - e.rank * 700, percentage: 4.8 - e.rank * 0.4, attacks: 6, mine: e.mine })) })],
@@ -814,6 +843,15 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/seasons\/current$/, () => season],
   ['GET', /^\/seasons\/progress$/, () => seasonProgress],
   ['POST', /^\/seasons\/pass\/purchase$/, () => (spend('gems', season.passPrice), (seasonProgress.hasPass = true), { hasPass: true, gemsRemaining: user.gems })],
+  ['GET', /^\/accessories$/, () => ({ slots: accessoryCatalog.slots, accessories })],
+  ['POST', /^\/accessories\/([^/]+)\/buy$/, ({ m }) => {
+    const a = accessories.find((x) => x.id === m[1]);
+    if (a?.unlock?.type === 'coins' || a?.unlock?.type === 'gems') spend(a.unlock.type, a.unlock.price ?? 0);
+    if (a) a.state = 'owned';
+    return { ok: true };
+  }],
+  ['GET', /^\/pets\/([^/]+)\/accessories$/, ({ m }) => ({ petId: m[1], accessories: wornAccessories })],
+  ['PUT', /^\/pets\/([^/]+)\/accessories$/, ({ m, body }) => (Object.assign(wornAccessories, body), { petId: m[1], accessories: wornAccessories })],
   ['GET', /^\/chests$/, () => ({ chests })],
   ['GET', /^\/chests\/history$/, () => ({ openings: [{ chestId: 'ch-0', type: 'silver', drops, openedAt: iso(-3 * DAY) }], total: 1 })],
   ['POST', /^\/chests\/open$/, ({ body }) => {
@@ -871,6 +909,20 @@ export function demoApi(enabled: boolean): Plugin {
         const failOn = process.env.MOCK_FAIL;
         if (url.searchParams.has('__fail') || (failOn && url.pathname.includes(failOn))) {
           return send(res, 500, { message: 'Error simulado del modo demo' });
+        }
+        // Chat: la respuesta llega a trozos por un flujo de eventos, como en el servidor.
+        const chat = method === 'POST' ? route.match(/^\/pets\/([^/]+)\/chat$/) : null;
+        if (chat) {
+          res.statusCode = 200;
+          res.setHeader('content-type', 'text/event-stream');
+          const reply = ['¡Hola! ', 'Estoy de maravilla, ', 'gracias por preguntar. ', '¿Jugamos luego?'];
+          const event = (name: string, data: unknown) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+          for (const text of reply) {
+            await new Promise((r) => setTimeout(r, 200));
+            event('delta', { text });
+          }
+          event('done', { message: { id: uid('msg'), content: reply.join('') }, intelligence: 180, tier: 'chat' });
+          return res.end();
         }
         // Latencia corta para poder ver los estados de carga.
         await new Promise((r) => setTimeout(r, Number(process.env.MOCK_DELAY ?? 250)));

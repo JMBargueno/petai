@@ -457,6 +457,189 @@ async fn atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_mascotas_saldo_e_inventa
 }
 
 #[tokio::test]
+async fn comprar_un_mueble_pone_al_dia_el_saldo() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 2 })).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/habitat/furniture/sofa/place"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "itemId": "i1" })))
+        .mount(&server)
+        .await;
+
+    core.perform(Action::PlaceHabitatFurniture { furniture_id: "sofa".into(), at: Value::Null }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 2);
+}
+
+#[tokio::test]
+async fn visitar_un_habitat_pone_al_dia_la_energia_y_terminar_no_toca_nada() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/pets", json!([{ "id": "p1", "energy": 30 }, { "id": "p2" }])).await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 10, "xp": 5 })).await;
+    for route in ["/v1/habitat/visit", "/v1/habitat/visit/end"] {
+        Mock::given(method("POST"))
+            .and(path(route))
+            .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "ok": true })))
+            .mount(&server)
+            .await;
+    }
+
+    core.perform(Action::EndHabitatVisit).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().pets[0]["hunger"], 80, "terminar la visita no pide nada");
+
+    core.perform(Action::StartHabitatVisit { owner_id: "u2".into(), message: None }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().pets[0]["energy"], 30);
+}
+
+#[tokio::test]
+async fn solo_la_respuesta_que_cierra_una_historia_refresca_el_saldo() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 88 })).await;
+    get(&server, "/v1/pets", json!([{ "id": "p1" }, { "id": "p2" }])).await;
+    get(&server, "/v1/inventory", json!([])).await;
+    let answer = |completed: Value| {
+        Mock::given(method("POST"))
+            .and(path("/v1/stories/h1/answer"))
+            .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "consequence": "…", "completed": completed })))
+    };
+    let turn = || Action::StoryAnswer { story_id: "h1".into(), scene_index: 0.0, option_index: 1.0 };
+
+    let guard = answer(Value::Null).mount_as_scoped(&server).await;
+    core.perform(turn()).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 10, "una escena a mitad no paga");
+    drop(guard);
+
+    answer(json!({ "outcome": "win" })).mount(&server).await;
+    core.perform(turn()).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 88);
+}
+
+#[tokio::test]
+async fn terminar_un_minijuego_aplica_la_mascota_y_refresca_saldo_e_inventario() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 70 })).await;
+    get(&server, "/v1/inventory", json!([{ "itemId": "manzana", "quantity": 3 }])).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/minigames/sessions/s1/finish"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "score": 40, "pet": { "id": "p1", "happiness": 90 } })))
+        .mount(&server)
+        .await;
+
+    core.perform(Action::FinishMinigame { session_id: "s1".into(), body: json!({ "score": 40 }) }).await.unwrap();
+    settle().await;
+
+    let state = core.state_snapshot();
+    assert_eq!(state.pets[0]["happiness"], 90);
+    assert_eq!(state.user["coins"], 70);
+    assert_eq!(state.inventory[0]["quantity"], 3);
+}
+
+#[tokio::test]
+async fn cocinar_pone_al_dia_la_energia_y_servir_el_saldo() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/pets", json!([{ "id": "p1", "energy": 5 }, { "id": "p2" }])).await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 61 })).await;
+    for route in ["/v1/cooking/start", "/v1/cooking/submit"] {
+        Mock::given(method("POST"))
+            .and(path(route))
+            .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "sessionId": "s1" })))
+            .mount(&server)
+            .await;
+    }
+
+    core.perform(Action::CookingStart { pet_id: "p1".into(), recipe_id: None }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().pets[0]["energy"], 5);
+    assert_eq!(core.state_snapshot().user["coins"], 10, "empezar no paga");
+
+    core.perform(Action::CookingSubmit { session_id: "s1".into(), score: 100.0, correct_order: true, picked: None, picked_at: None }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 61);
+}
+
+#[tokio::test]
+async fn una_pelea_de_arena_aplica_la_mascota_y_refresca_el_saldo() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 33 })).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/battles/matchmake"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "result": { "outcome": "win" }, "pet": { "id": "p1", "energy": 12 } })))
+        .mount(&server)
+        .await;
+
+    core.perform(Action::Matchmake { pet_id: "p1".into() }).await.unwrap();
+    settle().await;
+
+    let state = core.state_snapshot();
+    assert_eq!(state.pets[0]["energy"], 12);
+    assert_eq!(state.user["coins"], 33);
+}
+
+#[tokio::test]
+async fn comprar_y_equipar_una_prenda_ponen_al_dia_saldo_y_mascota() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 4 })).await;
+    get(&server, "/v1/pets", json!([{ "id": "p1", "accessories": { "head": "gorro" } }, { "id": "p2" }])).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/accessories/gorro/buy"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "ok": true })))
+        .mount(&server)
+        .await;
+    Mock::given(method("PUT"))
+        .and(path("/v1/pets/p1/accessories"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "accessories": { "head": "gorro" } })))
+        .mount(&server)
+        .await;
+
+    core.perform(Action::BuyAccessory { id: "gorro".into() }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 4);
+
+    core.perform(Action::EquipAccessories { pet_id: "p1".into(), change: json!({ "head": "gorro" }) }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().pets[0]["accessories"]["head"], "gorro");
+}
+
+#[tokio::test]
 async fn la_mazmorra_solo_pone_al_dia_el_estado_cuando_termina() {
     use pockai_core::Action;
     let server = MockServer::start().await;

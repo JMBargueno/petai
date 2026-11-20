@@ -17,11 +17,25 @@
     "./base.css": "./styles/base.css",
     "./kit.css": "./styles/kit.css",
     "./fonts.css": "./styles/fonts.css",
-    "./maps": "./src/maps.ts"
+    "./maps": "./src/maps.ts",
+    "./profile-format": "./src/profile-format.ts",
+    "./badge-icons": "./src/badge-icons.ts",
+    "./social/*": "./src/social/*.ts",
+    "./social": "./src/social/index.ts",
+    "./handle": "./src/handle.ts",
+    "./chatScroll": "./src/chatScroll.ts",
+    "./mind": "./src/mind.ts",
+    "./mindTypes": "./src/mindTypes.ts",
+    "./talk": "./src/talk.ts",
+    "./learned": "./src/learned.ts",
+    "./chatText": "./src/chatText.ts",
+    "./ambience2d": "./src/ambience2d.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource/bowlby-one": "^5.3.0",
+    "@pockai/mind": "workspace:*",
+    "@pockai/minigames": "workspace:*",
     "@pockai/scene": "workspace:*",
     "lucide-svelte": "^0.475.0"
   },

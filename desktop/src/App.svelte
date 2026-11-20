@@ -66,10 +66,10 @@
   import { PawPrint, Bell, X, Volleyball } from 'lucide-svelte';
   import { initNotificationHandler, stopNotificationHandler } from './lib/notification-handler';
   import { unreadCount } from './lib/notification-inbox';
-  import { clearVisitors, sceneReceived, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
-  import { clearVisitorTalk, visitorInteracted, type VisitorInteractionEvent } from './lib/visitDialog';
-  import { pushClanMessage, upsertClanGoal, dropClanMessage, bumpClanRoster, emitClanHabitatEvent } from './lib/clan-store';
-  import type { HabitatVisitor, HabitatSceneEvent, ClanMessage, ClanGoal, ClanXpEvent } from './lib/api';
+  import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
+  import { connectSocialFeed } from '@pockai/ui/social';
+  import type { VisitorInteractionEvent } from './lib/visitDialog';
+  import type { HabitatVisitor, ClanGoal } from './lib/api';
   import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
   import { maintenanceLock } from './lib/maintenance';
   import { startContextDigest } from './lib/contextDigest';
@@ -403,27 +403,23 @@
           notifyNow('Te han retado en la arena', text, { speech: false });
         });
 
+        // Lo social (visitantes, chat y objetivos de clan): el feed compartido llena los stores
+        // con los eventos de este socket. Aquí solo se engancha lo propio del escritorio.
+        connectSocialFeed((event, handler) => {
+          socket.on(event, handler);
+          return () => socket.off(event, handler);
+        });
         // Amigos de visita en el hábitat (feature 021): su mascota se dibuja junto a la mía.
         socket.on('habitat:visitor_joined', (v: HabitatVisitor | null) => {
           if (!v?.visitorId) return;
-          visitorJoined(v);
           // Reacción reutilizando la acción del backend `friend_visit` (ya existe en eventMap)
           if (currentPet) reactToAction(currentPet.id, 'friend_visit', { visitorName: v.visitorName });
         });
-        socket.on('habitat:visitor_left', (ev: { visitorId?: string } | null) => {
-          if (ev?.visitorId) {
-            visitorLeft(ev.visitorId);
-            clearVisitorTalk(ev.visitorId);
-          }
-        });
         // Lo que el visitante hace con tu Pockai (saludarle, traerle un premio…) y cómo responde
         socket.on('habitat:visitor_interaction', (ev: VisitorInteractionEvent | null) => {
-          visitorInteracted(ev);
           // En el escritorio (fuera de su sala) reacciona igual que a un turno de chat
           if (ev?.behavior) reactToBehavior(ev.behavior);
         });
-        // Qué hacen tu Pockai y el visitante: lo decide el servidor y se representa en la sala
-        socket.on('habitat:scene', (ev: HabitatSceneEvent | null) => sceneReceived(ev));
         // Estado inicial: quién visita ahora mismo (por si la app arrancó con visitas en curso)
         api.getHabitatVisitors()
           .then((r) => setVisitors(r?.visitors ?? []))
@@ -433,34 +429,15 @@
           .then((h) => restoreFromHistory(h?.visits ?? []))
           .catch(() => {/* sin historial: la pestaña de Visitas lo recupera al abrirla */});
 
-        // Chat y objetivos de clan (feature 021): se reflejan en vivo en la pestaña de clanes.
-        socket.on('clan:message', (m: ClanMessage | null) => {
-          if (m?.id && m?.clanId) pushClanMessage(m);
-        });
-        socket.on('clan:goal_progress', (g: ClanGoal | null) => {
-          if (g?.id && g?.clanId) upsertClanGoal(g);
-        });
+        // Objetivo de clan cumplido: el store lo pone al día el feed; aquí, lo del escritorio.
         socket.on('clan:goal_completed', (g: ClanGoal | null) => {
           if (!g?.id || !g?.clanId) return;
-          upsertClanGoal(g);
-          emitClanHabitatEvent({ kind: 'goal', clanId: g.clanId, title: g.title });
           // La trenza del Juramento se tensa sobre la mascota (si está en el escritorio)
           celebrateClanGoal(g.title);
           notifyNow('Objetivo de clan cumplido', `«${g.title}» llegó a ${g.progress}/${g.target}.`, {
             speech: `¡Objetivo de clan cumplido! «${g.title}» llegó a ${g.progress}/${g.target}. 🎉`,
           });
         });
-        // Rangos del Nexo: borrados en el chat y cambios de roster (la pestaña recarga el clan).
-        socket.on('clan:message_deleted', (ev: { id?: string } | null) => {
-          if (ev?.id) dropClanMessage(ev.id);
-        });
-        // Hábitat del Nexo: la XP del clan sube (y a veces el escenario cambia de nivel).
-        socket.on('clan:xp', (ev: ClanXpEvent | null) => {
-          if (ev?.clanId && typeof ev.xp === 'number') emitClanHabitatEvent({ kind: 'xp', ...ev });
-        });
-        socket.on('clan:role_changed', () => bumpClanRoster());
-        socket.on('clan:member_kicked', () => bumpClanRoster());
-        socket.on('clan:disbanded', () => bumpClanRoster());
 
         // Bienvenida: si el jugador vuelve tras una ausencia, el backend emite `pet:action
         // welcome_back`. Se pide una vez por sesión, con el socket ya conectado para recibirlo.

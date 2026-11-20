@@ -2,7 +2,7 @@ import createClient from 'openapi-fetch';
 import type { InitiativeReply, InitiativeSettings, TalkLevel } from './initiative';
 import type { paths } from '@shared/openapi/api-types';
 import {
-  coreStream,
+  chatTurn,
   hasCore,
   importLegacySession,
   logout as coreLogout,
@@ -307,40 +307,6 @@ export function isTerminalError(err: unknown): boolean {
   return err.status >= 500 || err.status === 401;
 }
 
-/**
- * Chat en streaming a través del núcleo: los eventos llegan por un canal y `apply` devuelve el
- * resultado cuando procesa el último (`done` o `moderated`).
- */
-function coreChat<T>(url: string, init: RequestInit, apply: (event: string, data: any) => T | undefined): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    let settled = false;
-    const settle = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      fn();
-    };
-    coreStream(url, init, (ev) => {
-      if (settled) return;
-      try {
-        const result = apply(ev.event, JSON.parse(ev.data));
-        if (result !== undefined) settle(() => resolve(result));
-      } catch (e) {
-        settle(() => reject(e));
-      }
-    }).then(
-      async (res) => {
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          settle(() => reject(new Error(data?.message || 'Error al enviar el mensaje')));
-          return;
-        }
-        // Los últimos eventos del canal pueden llegar justo después de la respuesta del comando.
-        setTimeout(() => settle(() => reject(new Error('La respuesta terminó sin completarse'))), 500);
-      },
-      (e) => settle(() => reject(e)),
-    );
-  });
-}
 
 /**
  * Acción del jugador a través del núcleo (`crates/pockai-core/src/actions.rs`): la UI dice qué quiere
@@ -802,20 +768,8 @@ export const api = {
       },
       body: JSON.stringify({ message, clientTools, clientContext }),
     };
-    if (CORE) {
-      return coreChat(url, init, (event, data) => {
-        if (event === 'delta') handlers.onDelta(data.text);
-        else if (event === 'reasoning') handlers.onReasoning?.(data.text);
-        else if (event === 'tool') handlers.onTool?.(data.name);
-        else if (event === 'action') handlers.onAction?.(data.action);
-        else if (event === 'moderated') {
-          handlers.onModerated?.(data);
-          return { moderated: true as const };
-        } else if (event === 'error') throw new Error(data.message);
-        else if (event === 'done') return data;
-        return undefined;
-      });
-    }
+    // Por el núcleo: el turno lo lleva `chatTurn`, el mismo que usa el móvil.
+    if (CORE) return chatTurn(petId, message, handlers, { clientTools, clientContext, signal });
     const res = await authFetch(url, init);
     if (!res.ok || !res.body) {
       const data = await res.json().catch(() => ({}));
@@ -1919,270 +1873,12 @@ export interface LeaderboardEntry {
   mine: boolean;
 }
 
-// ── Amistad + Co-op ─────────────────────────────────────────────────────────
-export interface CoopFriend {
-  id: string;
-  status: 'pending' | 'accepted' | 'revoked';
-  direction: 'incoming' | 'outgoing';
-  otherUserId: string;
-  otherDisplayName: string;
-  /** Nickname público del otro jugador (null si aún no lo ha elegido). */
-  otherHandle?: string | null;
-  otherPet: { petId: string; nickname: string; speciesName: string } | null;
-  updatedAt: string;
-}
-
-export interface CoopVisitLog {
-  /** Campos nuevos (backend ≥ 0.24): opcionales para tolerar un backend antiguo. */
-  id?: string;
-  kind?: 'care' | 'habitat';
-  /** `in` = visitaron a mis pets; `out` = visité yo. */
-  direction?: 'in' | 'out';
-  otherUserId?: string;
-  otherName?: string;
-  otherHandle?: string | null;
-  ownerId?: string;
-  endedAt?: string | null;
-  visitorId: string;
-  /** feed | play | clean, o `habitat` para visitas en vivo. */
-  action: string;
-  petId: string;
-  xpGained: number;
-  createdAt: string;
-}
-
-export interface CoopVisitResult {
-  success: boolean;
-  message: string;
-  xpGained: number;
-  petState: { hunger: number; happiness: number; hygiene: number };
-}
-
-// ── Presencia + Clanes ──────────────────────────────────────────────────────
-/** Dispositivos de un jugador; la forma concreta la decide el backend (lo que importa es `active`). */
-export interface PresenceDevice {
-  deviceId: string;
-  platform?: string;
-  lastSeenAt?: string;
-  active?: boolean;
-}
-
-export interface PresenceInfo {
-  userId: string;
-  devices: PresenceDevice[];
-  hasActiveDevices: boolean;
-}
-
-/**
- * Rango dentro del clan (lore: Nexo de Resonancia): creator = Forjador, admin = Guardián,
- * moderator = Vigía, member = Hermano.
- */
-export type ClanRole = 'creator' | 'admin' | 'moderator' | 'member';
-
-export interface ClanMember {
-  userId: string;
-  displayName: string;
-  handle?: string | null;
-  role: ClanRole;
-  isOnline: boolean;
-  joinedAt: string;
-}
-
-export interface ClanSummary {
-  id: string;
-  name: string;
-  tag: string;
-  description: string;
-  leaderId: string;
-  xp: number;
-  memberCount: number;
-  leader: { userId: string; displayName: string; handle?: string | null };
-  members: ClanMember[];
-}
-
-/** Pockai de un residente del hábitat del clan (misma forma que espera `PetMiniAvatar`). */
-export interface ClanHabitatPet {
-  id: string;
-  nickname: string;
-  species: { id: string; name: string };
-  pattern: { id: string };
-  rarity: string;
-  stage: string;
-  palette: Record<string, string>;
-  visualSeed: number;
-  shiny: boolean;
-  accessories: Record<string, string>;
-  level: number;
-  sleeping: boolean;
-  sick: boolean;
-  hunger: number;
-  happiness: number;
-  energy: number;
-  hygiene: number;
-  health: number;
-}
-
-export interface ClanHabitatResident {
-  userId: string;
-  displayName: string;
-  handle: string | null;
-  role: ClanRole;
-  isMe: boolean;
-  pet: ClanHabitatPet;
-}
-
-/** `GET /v1/clans/:id/habitat`: nivel visual 1–5 y residentes sorteados. */
-export interface ClanHabitat {
-  clanId: string;
-  xp: number;
-  tier: number;
-  tierId: string;
-  nextTierXp: number | null;
-  residents: ClanHabitatResident[];
-}
-
-/** Evento de socket `clan:xp`: el Nexo ganó Resonancia. */
-export interface ClanXpEvent {
-  clanId: string;
-  xp: number;
-  delta: number;
-  tier: number;
-  leveledUp: boolean;
-  byUserId: string;
-}
-
-/** Mensaje del chat de clan (feature 021). */
-export interface ClanMessage {
-  id: string;
-  clanId: string;
-  userId: string;
-  senderName: string;
-  body: string;
-  createdAt: string;
-}
-
-/** Métrica que alimenta el progreso de un objetivo de clan. */
-export type ClanGoalMetric = 'xp' | 'visits' | 'generic' | string;
-
-/** Estado de un objetivo de clan (feature 021). */
-export interface ClanGoal {
-  id: string;
-  clanId: string;
-  title: string;
-  description: string;
-  metric: ClanGoalMetric;
-  target: number;
-  progress: number;
-  status: 'active' | 'completed' | string;
-  createdAt: string;
-  completedAt?: string | null;
-}
-
-// ── Visitas en vivo al hábitat ─────────────────────────────────────────────
-/** Identidad de la mascota de un amigo (suficiente para dibujar su sprite). */
-export interface PetIdentity {
-  petId: string;
-  nickname: string;
-  speciesName: string;
-  speciesId: string;
-  /** Referencia del sprite del backend (p. ej. `sprites/ignisaur_idle`); puede no resolver. */
-  spriteRef: string;
-  /** Etapa evolutiva; si falta (backend antiguo) se dibuja la de bebé. */
-  stage?: string;
-  /** Aspecto con el que se dibuja en la sala del anfitrión (backend antiguo: no viene). */
-  look?: PetLook;
-}
-
-/** Aspecto de la mascota de un visitante. Solo apariencia: nada de su estado ni de su memoria. */
-export interface PetLook {
-  palette: { primary: string; secondary: string; accent?: string };
-  pattern: string | null;
-  visualSeed: number;
-  shiny: boolean;
-  accessories: Record<string, string>;
-}
-
-/** Escena entre tu Pockai y el de un visitante, tal como la resuelve el servidor. */
-/** Una opción del menú de visita. El texto lo pone el servidor. */
-export interface VisitMenuOption {
-  /** greet | pet | treat | play | ask | wait | bye */
-  id: string;
-  label: string;
-  /** En «ofrecer un premio», el alimento de tu inventario que se gastaría. */
-  item?: { id: string; name: string };
-}
-
-/** Respuesta del Pockai anfitrión a quien le visita (spec 37 §6.2). */
-export interface VisitInteraction {
-  turn: number;
-  line: string;
-  behavior: { action: string; animation: string; emote: string | null; clip?: string };
-  options: VisitMenuOption[];
-  /** Interacciones que quedan en esta visita. */
-  remaining: number;
-  ended: boolean;
-  /** Lo que ese Pockai siente por ti: stranger | acquaintance | friend | best_friend */
-  stage: string;
-  petName: string;
-}
-
-/** Resultado de avisar de que el Pockai usó un mueble. */
-export interface FurnitureUseResult {
-  applied: boolean;
-  /** daily_cap | cooldown | away | asleep | disabled */
-  reason?: string;
-  interaction: string;
-  petId: string;
-  vitals: { hunger: number; happiness: number; energy: number; hygiene: number };
-  remainingToday?: number;
-}
-
-/** La sala del amigo, para quien le visita. Solo aspecto: nada de su estado ni su memoria. */
-export interface VisitRoom {
-  ownerId: string;
-  room: {
-    id: string;
-    name: string;
-    theme: HabitatRoom['theme'];
-    gridWidth: number;
-    gridHeight: number;
-    blocked: number[][];
-    items: { id: string; furnitureId: string; x: number; y: number; rotation: number }[];
-  };
-  furniture: { id: string; name: string; footprint: number[]; mount: string; interaction?: string }[];
-  host: HabitatVisitor['pet'];
-  guest: HabitatVisitor['pet'];
-}
-
-export interface HabitatSceneEvent {
-  /** `host`: la escena ocurre en tu sala. `guest`: en la del amigo al que visitas (`ownerId`). */
-  role?: 'host' | 'guest';
-  ownerId?: string;
-  visitorId: string;
-  slot: number;
-  /** greet | explore_together | play_tag | share_food | nap_together | squabble | make_up */
-  type: string;
-  /** Relación de tu Pockai con el visitante: stranger | acquaintance | friend | best_friend */
-  stage: string;
-  hostPetId: string;
-  guestPetId: string;
-  /** Carácter del visitante en palabras, por dimensión (p. ej. `{ temper: 'calm' }`). */
-  guestTraits?: Record<string, string>;
-}
-
-export interface HabitatVisitor {
-  visitorId: string;
-  visitorName: string;
-  visitorHandle?: string | null;
-  pet: PetIdentity;
-  /** Mensaje corto que trae el visitante (≤140), si dejó alguno. */
-  message?: string | null;
-  startedAt: string;
-}
+// Tipos de lo social: viven en @pockai/ui (`social/types.ts`).
+import type { CoopFriend, CoopVisitLog, CoopVisitResult, PresenceDevice, PresenceInfo, ClanRole, ClanMember, ClanSummary, ClanHabitatPet, ClanHabitatResident, ClanHabitat, ClanXpEvent, ClanMessage, ClanGoalMetric, ClanGoal, PetIdentity, PetLook, VisitMenuOption, VisitInteraction, FurnitureUseResult, VisitRoom, HabitatSceneEvent, HabitatVisitor } from '@pockai/ui/social/types';
+export type { CoopFriend, CoopVisitLog, CoopVisitResult, PresenceDevice, PresenceInfo, ClanRole, ClanMember, ClanSummary, ClanHabitatPet, ClanHabitatResident, ClanHabitat, ClanXpEvent, ClanMessage, ClanGoalMetric, ClanGoal, PetIdentity, PetLook, VisitMenuOption, VisitInteraction, FurnitureUseResult, VisitRoom, HabitatSceneEvent, HabitatVisitor };
 
 /** Límites de la visita en vivo (deben coincidir con el backend: habitat-visit.service.ts). */
-export const VISIT_MESSAGE_MAX = 140;
-export const VISIT_ENERGY_COST = 10;
+export { VISIT_MESSAGE_MAX, VISIT_ENERGY_COST } from '@pockai/ui/social/visits';
 
 // ── Misiones (Paso 3) ─────────────────────────────────────────────────────
 export interface MissionReward {
@@ -2306,53 +2002,8 @@ export interface BondingUnlocks {
 // ── Cerebro del Pockai (spec 36) ────────────────────────────────────────────
 // `GET /v1/pets/{id}/mind` no declara esquema de respuesta en OpenAPI: se refleja aquí a mano
 // desde `backend/src/modules/mind/mind.controller.ts`.
-export type MindDimension = 'curiosity' | 'sociability' | 'bravery' | 'affection' | 'temper';
-export type MemoryLayer = 'episodic' | 'semantic' | 'emotional';
-
-export interface MindDimensionView {
-  /** 0-100. */
-  value: number;
-  /** Tramo de 20 puntos (p. ej. `curious`). */
-  keyword: string;
-  /** Nombre del tramo en castellano (p. ej. `Curioso`). */
-  label: string;
-}
-
-export interface MindLifeEntry {
-  id: string;
-  kind: string;
-  content: string;
-  createdAt: string;
-}
-
-export interface PetMind {
-  petId: string;
-  dimensions: Record<MindDimension, MindDimensionView>;
-  legacy: { trait: string; temperament: string };
-  mood: string;
-  /** Ánimo de corto plazo: lo que le acaba de pasar. Ausente con un servidor anterior. */
-  feeling?: { label: string; valence: number; arousal: number } | null;
-  /** Lo que ha aprendido que te gusta verle hacer: conducta → de -1 a 1. Ausente con un servidor anterior. */
-  learned?: { prefs: Record<string, number> };
-  bondingTier: string;
-  intelligenceTier: 'chat' | 'memory' | 'agent';
-  memory: { counts: Record<MemoryLayer, number>; capacity: Record<MemoryLayer, number> | null };
-  recentLife: MindLifeEntry[];
-}
-
-export interface PetMemoryItem {
-  id: string;
-  /** fact, summary, habit, event, encounter, relation… */
-  kind: string;
-  /** Recuerdos anteriores a la spec 36 pueden no traerla: se deduce de `kind`. */
-  layer?: string | null;
-  importance?: number;
-  /** -1 (negativo) … 1 (positivo); solo tiene sentido en la capa emocional. */
-  valence?: number | null;
-  subject?: string | null;
-  content: string;
-  createdAt: string;
-}
+import type { MindDimension, MemoryLayer, MindDimensionView, MindLifeEntry, PetMind, PetMemoryItem } from '@pockai/ui/mindTypes';
+export type { MindDimension, MemoryLayer, MindDimensionView, MindLifeEntry, PetMind, PetMemoryItem };
 
 /** Reacción del Pockai al final de un turno de chat (evento SSE `done`). */
 export interface PetBehavior {

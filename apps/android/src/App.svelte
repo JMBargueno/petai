@@ -2,13 +2,25 @@
   import { onMount } from 'svelte';
   import { AccountView, BackpackView, Button, Card, CurrencyPill, HatchView, Ico, Notice, PetHomeView, Segmented, ShopView } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
+  import AdventureScreen from './screens/AdventureScreen.svelte';
+  import ArenaScreen from './screens/ArenaScreen.svelte';
   import BondingScreen from './screens/BondingScreen.svelte';
+  import ChatScreen from './screens/ChatScreen.svelte';
   import ChestsScreen from './screens/ChestsScreen.svelte';
+  import ClansScreen from './screens/ClansScreen.svelte';
+  import CookingScreen from './screens/CookingScreen.svelte';
+  import FriendsScreen from './screens/FriendsScreen.svelte';
+  import HabitatScreen from './screens/HabitatScreen.svelte';
+  import MindScreen from './screens/MindScreen.svelte';
+  import MinigamesScreen from './screens/MinigamesScreen.svelte';
   import MissionsScreen from './screens/MissionsScreen.svelte';
+  import ProfileScreen from './screens/ProfileScreen.svelte';
   import RaidScreen from './screens/RaidScreen.svelte';
   import SeasonScreen from './screens/SeasonScreen.svelte';
   import TournamentScreen from './screens/TournamentScreen.svelte';
   import TrainingScreen from './screens/TrainingScreen.svelte';
+  import VisitsScreen from './screens/VisitsScreen.svelte';
+  import WardrobeScreen from './screens/WardrobeScreen.svelte';
   import { act, activePet, failureText, hasCore, offline, phase, signIn, signOut, start, state as core } from './core';
 
   type Tab = 'pet' | 'backpack' | 'play' | 'shop' | 'progress' | 'account';
@@ -25,14 +37,28 @@
   let password = $state('');
   let tab = $state<Tab>('pet');
   /** Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión). */
-  let petSection = $state<'home' | 'bond' | 'eggs'>('home');
+  let petSection = $state<'home' | 'chat' | 'bond' | 'eggs' | 'wardrobe' | 'mind' | 'habitat'>('home');
   let progressSection = $state<'missions' | 'season'>('missions');
-  let playSection = $state<'raid' | 'tournament' | 'training'>('raid');
+  let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking' | 'adventure'>('games');
   let shopSection = $state<'store' | 'chests'>('store');
+  let accountSection = $state<'account' | 'profile' | 'friends' | 'visits' | 'clans'>('account');
+  /** Amigo que se eligió con «Visitar» en Amigos. */
+  let visitFriend = $state('');
+  const ACCOUNT_SECTIONS = [
+    { value: 'account', label: 'Cuenta', icon: 'user' },
+    { value: 'profile', label: 'Perfil', icon: 'trophy' },
+    { value: 'friends', label: 'Amigos', icon: 'users' },
+    { value: 'visits', label: 'Visitas', icon: 'home' },
+    { value: 'clans', label: 'Clanes', icon: 'shield' },
+  ];
   const PLAY_SECTIONS = [
+    { value: 'games', label: 'Minijuegos', icon: 'gamepad' },
+    { value: 'arena', label: 'Arena', icon: 'medal' },
     { value: 'raid', label: 'Raid', icon: 'swords' },
     { value: 'tournament', label: 'Torneo', icon: 'trophy' },
     { value: 'training', label: 'Entrenar', icon: 'castle' },
+    { value: 'cooking', label: 'Cocina', icon: 'chef' },
+    { value: 'adventure', label: 'Aventura', icon: 'map' },
   ];
   const SHOP_SECTIONS = [
     { value: 'store', label: 'Tienda', icon: 'shop' },
@@ -40,8 +66,12 @@
   ];
   const PET_SECTIONS = [
     { value: 'home', label: 'Inicio', icon: 'home' },
+    { value: 'chat', label: 'Charla', icon: 'chat' },
     { value: 'bond', label: 'Vínculo', icon: 'bond' },
     { value: 'eggs', label: 'Huevos', icon: 'egg' },
+    { value: 'wardrobe', label: 'Armario', icon: 'star' },
+    { value: 'mind', label: 'Mente', icon: 'brain' },
+    { value: 'habitat', label: 'Hábitat', icon: 'home' },
   ];
   const PROGRESS_SECTIONS = [
     { value: 'missions', label: 'Misiones', icon: 'target' },
@@ -160,7 +190,7 @@
 
     <div class="screen">
       {#if tab === 'pet'}
-        <Segmented variant="pills" label="Sección de Mascota" value={petSection} options={PET_SECTIONS} on:change={(e) => (petSection = e.detail)} />
+        <Segmented variant="pills" label="Sección de Mascota" value={petSection} options={PET_SECTIONS} on:change={(e) => (petSection = e.detail as typeof petSection)} />
       {/if}
       {#if tab === 'pet' && petSection === 'home'}
         <!-- La misma ficha que el escritorio. Aquí la mascota no sale de su hábitat: sin «A casa». -->
@@ -180,6 +210,14 @@
           on:selectPet={(e) => run('selectPet', 'No se pudo cambiar de mascota', () => stateSelectPet(String(e.detail)))}
           on:go={(e) => go(e.detail.dest, e.detail.sub)}
         />
+      {:else if tab === 'pet' && petSection === 'chat'}
+        <ChatScreen {pet} />
+      {:else if tab === 'pet' && petSection === 'habitat'}
+        <HabitatScreen {pet} user={$core.user} />
+      {:else if tab === 'pet' && petSection === 'mind'}
+        <MindScreen {pet} />
+      {:else if tab === 'pet' && petSection === 'wardrobe'}
+        <WardrobeScreen {pet} user={$core.user} />
       {:else if tab === 'pet' && petSection === 'bond'}
         <BondingScreen petId={pet?.id ?? null} />
       {:else if tab === 'pet'}
@@ -208,25 +246,46 @@
           on:go={() => (tab = 'shop')}
         />
       {:else if tab === 'progress'}
-        <Segmented variant="pills" label="Sección de Progreso" value={progressSection} options={PROGRESS_SECTIONS} on:change={(e) => (progressSection = e.detail)} />
+        <Segmented variant="pills" label="Sección de Progreso" value={progressSection} options={PROGRESS_SECTIONS} on:change={(e) => (progressSection = e.detail as typeof progressSection)} />
         {#if progressSection === 'missions'}
           <MissionsScreen />
         {:else}
           <SeasonScreen {coins} gems={Number($core.user?.gems ?? 0)} />
         {/if}
       {:else if tab === 'play'}
-        <Segmented variant="pills" label="Sección de Jugar" value={playSection} options={PLAY_SECTIONS} on:change={(e) => (playSection = e.detail)} />
-        {#if playSection === 'raid'}
+        <Segmented variant="pills" label="Sección de Jugar" value={playSection} options={PLAY_SECTIONS} on:change={(e) => (playSection = e.detail as typeof playSection)} />
+        {#if playSection === 'games'}
+          <MinigamesScreen {pet} />
+        {:else if playSection === 'arena'}
+          <ArenaScreen {pet} />
+        {:else if playSection === 'raid'}
           <RaidScreen {pet} />
         {:else if playSection === 'tournament'}
           <TournamentScreen {pet} />
-        {:else}
+        {:else if playSection === 'training'}
           <TrainingScreen {pet} />
+        {:else if playSection === 'cooking'}
+          <CookingScreen {pet} />
+        {:else}
+          <AdventureScreen {pet} />
         {/if}
       {:else if tab === 'account'}
-        <AccountView user={$core.user} on:logout={leave} />
+        <Segmented variant="pills" label="Sección de Cuenta" value={accountSection} options={ACCOUNT_SECTIONS} on:change={(e) => (accountSection = e.detail as typeof accountSection)} />
+        {#if accountSection === 'profile'}
+          <ProfileScreen />
+        {:else if accountSection === 'friends'}
+          <FriendsScreen onVisit={(userId) => { visitFriend = userId; accountSection = 'visits'; }} />
+        {:else if accountSection === 'clans'}
+          <ClansScreen />
+        {:else if accountSection === 'visits'}
+          {#key visitFriend}
+            <VisitsScreen initialFriend={visitFriend} onGoFriends={() => (accountSection = 'friends')} />
+          {/key}
+        {:else}
+          <AccountView user={$core.user} on:logout={leave} />
+        {/if}
       {:else}
-        <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail)} />
+        <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail as typeof shopSection)} />
         {#if shopSection === 'chests'}
           <ChestsScreen {coins} gems={Number($core.user?.gems ?? 0)} />
         {:else}

@@ -12,7 +12,9 @@
     "./protocol": "./src/protocol.ts",
     "./effects": "./src/effects/index.ts",
     "./backdrop": "./src/backdrop/index.ts",
-    "./weather": "./src/ambience/openMeteo.ts"
+    "./weather": "./src/ambience/openMeteo.ts",
+    "./sprites": "./src/sprites/index.ts",
+    "./sprites/*": "./src/sprites/*.ts"
   },
   "scripts": {
     "dev": "vite",

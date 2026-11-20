@@ -471,6 +471,10 @@ impl Core {
                 if matches!(segments.get(2), Some(&"feed") | Some(&"heal") | Some(&"use-item")) {
                     self.refresh_later(&[Slice::Inventory]);
                 }
+                // Equipar prendas responde solo con las prendas: la mascota se vuelve a pedir.
+                if segments.get(2) == Some(&"accessories") {
+                    self.refresh_later(&[Slice::Pets]);
+                }
             }
             ["eggs", _, "hatch"] => {
                 if pet_id(&value).is_some() {
@@ -483,15 +487,44 @@ impl Core {
             // Combates y cofres: la respuesta es el resultado, no la mascota ni el saldo. Gastan
             // energía y dan premios (monedas, gemas, objetos), así que se vuelven a pedir.
             ["raid", "attack"] => self.refresh_later(&[Slice::Pets, Slice::User]),
+            // Pelea de arena: la respuesta trae la mascota ya actualizada; el premio cambia el saldo.
+            ["battles", "matchmake"] => {
+                if let Some(pet) = value.get("pet").filter(|p| pet_id(p).is_some()) {
+                    self.apply_pet(pet.clone(), false, ChangeSource::Server);
+                }
+                self.refresh_later(&[Slice::User]);
+            }
             // Cada piso de la mazmorra es un turno: solo cambia algo cuando la mazmorra termina.
             ["training", "submit"] => {
                 if value.get("status").and_then(Value::as_str) != Some("active") {
                     self.refresh_later(&[Slice::Pets, Slice::User]);
                 }
             }
-            ["training", "start"] => self.refresh_later(&[Slice::Pets]),
+            ["training", "start"] | ["cooking", "start"] => self.refresh_later(&[Slice::Pets]),
+            // Minijuegos: empezar gasta energía; terminar trae la mascota y paga monedas y, a veces, un objeto.
+            ["minigames", _, "start"] => self.refresh_later(&[Slice::Pets]),
+            ["minigames", "sessions", _, "finish"] => {
+                if let Some(pet) = value.get("pet").filter(|p| pet_id(p).is_some()) {
+                    self.apply_pet(pet.clone(), false, ChangeSource::Server);
+                }
+                self.refresh_later(&[Slice::User, Slice::Inventory]);
+            }
+            // Aventura: solo la respuesta que cierra la historia da premio (XP, monedas, a veces un objeto).
+            ["stories", _, "answer"] => {
+                if value.get("completed").is_some_and(|c| !c.is_null()) {
+                    self.refresh_later(&[Slice::Pets, Slice::User, Slice::Inventory]);
+                }
+            }
+            // Servir un plato paga monedas (y su buff es de combate, no de la mascota).
+            ["cooking", "submit"] => self.refresh_later(&[Slice::User]),
             ["tournament", "enter"] => self.refresh_later(&[Slice::User]),
             ["chests", "open"] | ["chests", "purchase"] => self.refresh_later(&[Slice::User, Slice::Inventory]),
+            ["accessories", _, "buy"] => self.refresh_later(&[Slice::User]),
+            // Visitas: cuidar la mascota de un amigo da XP a la cuenta; visitar su hábitat gasta energía.
+            ["coop", "visit"] => self.refresh_later(&[Slice::User]),
+            ["habitat", "visit"] => self.refresh_later(&[Slice::Pets, Slice::User]),
+            // Comprar un mueble para el hábitat cuesta monedas o gemas.
+            ["habitat", "furniture", _, "place"] => self.refresh_later(&[Slice::User]),
             _ => {}
         }
     }
