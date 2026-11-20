@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use pockai_core::{
-    ApiRequest, ApiResponse, AppState, Core, CoreConfig, CoreEvent, KeyringStore, LoadOptions, LoadOutcome,
+    Action, ActionError, ApiRequest, ApiResponse, AppState, Core, CoreConfig, CoreEvent, KeyringStore, LoadOptions, LoadOutcome,
     MaintenanceEvent, RealtimeStatus, SessionEvent, SessionState, Slice, SseEvent,
 };
 use serde_json::{Map, Value};
@@ -163,6 +163,12 @@ async fn set_present(core: State<'_, Core>, present: bool) -> Result<(), String>
     Ok(())
 }
 
+/// Una acción del jugador (dar de comer, eclosionar, comprar…). El núcleo construye la petición.
+#[tauri::command]
+async fn perform(core: State<'_, Core>, action: Action) -> Result<Value, ActionError> {
+    core.perform(action).await
+}
+
 fn forward<R: Runtime>(app: &AppHandle<R>, event: CoreEvent) {
     let result = match event {
         CoreEvent::Session(kind) => app.emit(EVENT_SESSION, SessionEvent { kind }),
@@ -197,7 +203,8 @@ pub fn init<R: Runtime>(config: PockaiConfig) -> TauriPlugin<R> {
             inbox_push,
             inbox_take,
             inbox_mark_all_read,
-            set_present
+            set_present,
+            perform
         ])
         .setup(move |app, _api| {
             let data_dir = app.path().app_config_dir().ok();

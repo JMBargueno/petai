@@ -69,7 +69,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 3.2 Entorno: estado ambiental del servidor, latido y cambios por tiempo real en el núcleo. El clima se queda en la UI: ver decisiones
 - ➖ 3.3 Social: la visita en curso pasa a la fase 5; visitantes y clanes se quedan en la UI: ver decisiones
 - ➖ 3.4 Skills de escritorio, digest de contexto y ajustes: se quedan en la UI: ver decisiones
-- 🟡 3.5 El núcleo actualiza el estado con las respuestas de cuidado, huevos y tienda. Quedan los commands tipados, pestaña a pestaña (arena, cocina, misiones, …)
+- 🟡 3.5 Acciones tipadas (`actions.rs`, command `perform`). Hecho: cuidado, huevos y tienda (11 llamadas). Pendiente, por dominio: cuenta y sesión, IA y chat, arena, misiones y logros, cofres, temporadas, hábitat, armario, vínculo, mente, social y clanes, minijuegos, cocina, entrenamiento, historias, incursión y torneo (unas 100 llamadas)
 - ⬜ 3.6 Borrar `api_request`, `api.ts` y el transporte web salvo el modo demo
 
 ## Fase 4 — Móvil

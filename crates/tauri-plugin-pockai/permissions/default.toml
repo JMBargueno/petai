@@ -19,4 +19,5 @@ permissions = [
   "allow-inbox-take",
   "allow-inbox-mark-all-read",
   "allow-set-present",
+  "allow-perform",
 ]

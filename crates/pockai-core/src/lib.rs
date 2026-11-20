@@ -4,6 +4,7 @@
 //! igual para escritorio, iOS y Android. No depende de Tauri: el puente (`tauri-plugin-pockai`) y
 //! los plugins nativos consumen [`Core`] y se suscriben a [`CoreEvent`].
 
+pub mod actions;
 pub mod config;
 pub mod contract;
 mod core;
@@ -15,6 +16,7 @@ mod realtime;
 pub mod secrets;
 pub mod state;
 
+pub use crate::actions::{Action, ActionError};
 pub use crate::config::CoreConfig;
 pub use crate::contract::{
     ApiRequest, ApiResponse, MaintenanceEvent, RealtimeEvent, RealtimeStatus, SessionEvent, SessionKind, SessionState,

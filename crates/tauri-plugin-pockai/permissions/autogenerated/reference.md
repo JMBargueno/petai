@@ -22,6 +22,7 @@ Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en 
 - `allow-inbox-take`
 - `allow-inbox-mark-all-read`
 - `allow-set-present`
+- `allow-perform`
 
 ## Permission Table
 
@@ -184,6 +185,32 @@ Enables the inbox_take command without any pre-configured scope.
 <td>
 
 Denies the inbox_take command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:allow-perform`
+
+</td>
+<td>
+
+Enables the perform command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:deny-perform`
+
+</td>
+<td>
+
+Denies the perform command without any pre-configured scope.
 
 </td>
 </tr>

@@ -271,3 +271,19 @@ export function inboxMarkAllRead(): Promise<void> {
 export function setPresent(present: boolean): Promise<void> {
   return command<void>('set_present', { present });
 }
+
+// ── Acciones del jugador ─────────────────────────────────────────────────────────────────────
+
+import type { Action } from './bindings/Action';
+import type { ActionError } from './bindings/ActionError';
+
+export type { Action, ActionError };
+
+/**
+ * Hace una acción del jugador (dar de comer, eclosionar, comprar…). La UI dice *qué* quiere hacer;
+ * la petición la construye el núcleo, que además deja el estado global al día. Devuelve lo que
+ * responde el servidor. Si falla, rechaza con un `ActionError` (`status` es `null` sin conexión).
+ */
+export function perform<T = unknown>(action: Action): Promise<T> {
+  return command<T>('perform', { action });
+}

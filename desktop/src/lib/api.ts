@@ -9,7 +9,10 @@ import {
   logout as coreLogout,
   onMaintenance,
   onSession,
+  perform,
   sessionState,
+  type Action,
+  type ActionError,
 } from '@pockai/client';
 import { CLIENT_HEADERS, enterMaintenance, inspectMaintenance, setMaintenanceBaseUrl } from './maintenance';
 
@@ -337,6 +340,23 @@ function coreChat<T>(url: string, init: RequestInit, apply: (event: string, data
   });
 }
 
+/**
+ * Acción del jugador a través del núcleo (`crates/pockai-core/src/actions.rs`): la UI dice qué quiere
+ * hacer y el núcleo construye la petición y deja el estado al día. Los fallos llegan como `ApiError`,
+ * igual que con el transporte web.
+ */
+async function coreAction(action: Action, fallback: string): Promise<any> {
+  try {
+    return await perform<any>(action);
+  } catch (e) {
+    const failure = (e ?? {}) as Partial<ActionError>;
+    if (failure.status == null && !failure.message) {
+      throw new ApiError('Sin conexión con el servidor. Inténtalo de nuevo en un momento.');
+    }
+    throw new ApiError(failure.message || fallback, failure.status ?? undefined);
+  }
+}
+
 /** POST a una ruta pública de /auth/ (sin sesión). Lanza ApiError con el mensaje del servidor. */
 async function authPost(path: string, body: unknown, fallback: string): Promise<any> {
   let res: Response;
@@ -515,6 +535,7 @@ export const api = {
   },
 
   async buyEgg() {
+    if (CORE) return coreAction({ type: 'buyEgg' }, 'Error al comprar huevo');
     const res = await client.POST('/v1/eggs/buy', {
       ...authHeaders(),
     });
@@ -523,6 +544,7 @@ export const api = {
   },
 
   async hatchEgg(eggId: string, nickname?: string) {
+    if (CORE) return coreAction({ type: 'hatchEgg', eggId, nickname: nickname ?? null }, 'Error al eclosionar');
     // Nombre opcional: solo se envía si, tras trim, no queda vacío. El backend lo valida (1-16).
     const name = typeof nickname === 'string' ? nickname.trim() : '';
     const res = await client.POST('/v1/eggs/{id}/hatch', {
@@ -543,6 +565,7 @@ export const api = {
   },
 
   async feedPet(petId: string, itemId: string) {
+    if (CORE) return coreAction({ type: 'feed', petId, itemId }, 'Error al alimentar');
     const res = await client.POST('/v1/pets/{id}/feed', {
       params: { path: { id: petId } },
       body: { itemId },
@@ -553,6 +576,7 @@ export const api = {
   },
 
   async cleanPet(petId: string) {
+    if (CORE) return coreAction({ type: 'clean', petId }, 'Error al limpiar');
     const res = await client.POST('/v1/pets/{id}/clean', {
       params: { path: { id: petId } },
       ...authHeaders(),
@@ -562,6 +586,7 @@ export const api = {
   },
 
   async sleepPet(petId: string) {
+    if (CORE) return coreAction({ type: 'sleep', petId }, 'Error al dormir');
     const res = await client.POST('/v1/pets/{id}/sleep', {
       params: { path: { id: petId } },
       ...authHeaders(),
@@ -571,6 +596,7 @@ export const api = {
   },
 
   async wakePet(petId: string) {
+    if (CORE) return coreAction({ type: 'wake', petId }, 'Error al despertar');
     const res = await client.POST('/v1/pets/{id}/wake', {
       params: { path: { id: petId } },
       ...authHeaders(),
@@ -580,6 +606,7 @@ export const api = {
   },
 
   async healPet(petId: string, itemId: string) {
+    if (CORE) return coreAction({ type: 'heal', petId, itemId }, 'Error al curar');
     const res = await client.POST('/v1/pets/{id}/heal', {
       params: { path: { id: petId } },
       body: { itemId },
@@ -604,6 +631,7 @@ export const api = {
   },
 
   async buyShopItem(itemId: string, quantity: number = 1) {
+    if (CORE) return coreAction({ type: 'buyItem', itemId, quantity }, 'Error al comprar');
     const res = await client.POST('/v1/shop/buy', {
       body: { itemId, quantity },
       ...authHeaders(),
@@ -874,6 +902,7 @@ export const api = {
   },
 
   async setPetInHabitat(petId: string, inHabitat: boolean) {
+    if (CORE) return coreAction({ type: 'setInHabitat', petId, inHabitat }, 'Error en la petición');
     return minigameRequest<any>('PATCH', `/v1/pets/${petId}/in-habitat`, { inHabitat });
   },
 
@@ -997,10 +1026,12 @@ export const api = {
 
   /** Usa cualquier objeto del inventario sobre la mascota (comida, medicina, evolución, Enhebrador…). */
   async usePetItem(petId: string, itemId: string) {
+    if (CORE) return coreAction({ type: 'useItem', petId, itemId }, 'Error en la petición');
     return minigameRequest<any>('POST', `/v1/pets/${petId}/use-item`, { itemId });
   },
 
   async evolvePet(petId: string) {
+    if (CORE) return coreAction({ type: 'evolve', petId }, 'Error en la petición');
     return minigameRequest<any>('POST', `/v1/pets/${petId}/evolve`);
   },
 

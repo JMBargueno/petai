@@ -17,6 +17,7 @@ const COMMANDS: &[&str] = &[
     "inbox_take",
     "inbox_mark_all_read",
     "set_present",
+    "perform",
 ];
 
 fn main() {

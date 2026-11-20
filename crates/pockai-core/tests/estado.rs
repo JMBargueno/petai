@@ -444,3 +444,44 @@ async fn una_respuesta_que_no_es_la_mascota_no_toca_el_estado() {
 
     assert_eq!(core.state_snapshot().pets[0], json!({ "id": "p1", "hunger": 80 }));
 }
+
+#[tokio::test]
+async fn una_accion_tipada_hace_la_llamada_y_deja_el_estado_al_dia() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/pets/p1/feed"))
+        .and(body_json(json!({ "itemId": "manzana" })))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "id": "p1", "hunger": 100 })))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v1/pets/p2/clean"))
+        .respond_with(ResponseTemplate::new(400).set_body_json(json!({ "message": "Ya está limpio" })))
+        .mount(&server)
+        .await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+
+    let pet = core.perform(Action::Feed { pet_id: "p1".into(), item_id: "manzana".into() }).await.unwrap();
+    assert_eq!(pet["hunger"], 100);
+    assert_eq!(core.state_snapshot().pets[0]["hunger"], 100);
+
+    // El error del servidor llega con su estado y su mensaje.
+    let error = core.perform(Action::Clean { pet_id: "p2".into() }).await.unwrap_err();
+    assert_eq!((error.status, error.message.as_str()), (Some(400), "Ya está limpio"));
+
+    // Un id que no lo parece ni siquiera sale hacia el servidor.
+    let invalid = core.perform(Action::Clean { pet_id: "../x".into() }).await.unwrap_err();
+    assert_eq!(invalid.status, None);
+}
+
+#[tokio::test]
+async fn sin_conexion_la_accion_falla_sin_estado_http() {
+    use pockai_core::Action;
+    let core = Core::new(CoreConfig::desktop("http://127.0.0.1:9", None), session());
+    let error = core.perform(Action::BuyEgg).await.unwrap_err();
+    assert_eq!(error.status, None);
+    assert!(error.message.is_empty());
+}
