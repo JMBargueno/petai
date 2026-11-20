@@ -24,6 +24,7 @@ pub use crate::contract::{
     ApiRequest, ApiResponse, MaintenanceEvent, RealtimeEvent, RealtimeStatus, SessionEvent, SessionKind, SessionState,
     SseEvent,
 };
+pub use crate::care::{pet_glance, CareSync, PetGlance};
 pub use crate::core::Core;
 pub use crate::error::CoreError;
 pub use crate::events::CoreEvent;

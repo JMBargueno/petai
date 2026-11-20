@@ -2,4 +2,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Avisos de cuidado con la app cerrada (se pide en tiempo de ejecución desde Android 13). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <!-- Widget de la pantalla de inicio con la mascota activa (PockaiWidget). -->
+        <receiver
+            android:name="app.pockai.core.PockaiWidgetReceiver"
+            android:exported="true"
+            android:label="@string/pockai_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pockai_widget_info" />
+        </receiver>
+    </application>
 </manifest>

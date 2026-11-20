@@ -2,3 +2,4 @@
 -keep class app.pockai.core.PockaiKeystore { *; }
 -keep class app.pockai.core.CareSync { *; }
 -keep class app.pockai.core.CareSyncWorker { *; }
+-keep class app.pockai.core.PockaiWidget { *; }

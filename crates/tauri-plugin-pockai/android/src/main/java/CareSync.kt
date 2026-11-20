@@ -26,7 +26,8 @@ import java.util.concurrent.TimeUnit
 /**
  * Avisos de cuidado con la app cerrada. Cada ~30 min (con red) WorkManager despierta a la app; el
  * núcleo (Rust, el mismo de la app si sigue viva) pide las mascotas al servidor y dice si hace falta
- * avisar. Aquí solo se muestra la notificación, como mucho una cada 4 horas.
+ * avisar y qué enseñar en el widget. Aquí solo se muestra la notificación, como mucho una cada 4
+ * horas, y se le pasa el resumen al widget (`PockaiWidget`).
  *
  * La app lo programa al arrancar (`schedule`, desde Rust) con lo que el trabajo necesita para cargar
  * el núcleo sin Tauri: la carpeta de datos, la URL del backend y el nombre de la librería.
@@ -54,8 +55,8 @@ object CareSync {
     }
 
     /**
-     * Lo implementa Rust (`Java_app_pockai_core_CareSync_check`): el aviso en JSON, `"null"` si no hace
-     * falta avisar, o null si hay que reintentar (sin red, error del servidor).
+     * Lo implementa Rust (`Java_app_pockai_core_CareSync_check`): `{"notice": …, "widget": …}` en JSON
+     * (cada uno puede ser null), o null si hay que reintentar (sin red, error del servidor).
      */
     @JvmStatic
     external fun check(dataDir: String, baseUrl: String): String?
@@ -75,8 +76,9 @@ object CareSync {
             return Outcome.DONE
         }
         val json = check(dataDir, baseUrl) ?: return Outcome.RETRY
-        val notice = runCatching { JSONObject(json) }.getOrNull() ?: return Outcome.DONE
-        notify(context, notice.optString("title"), notice.optString("body"))
+        val sync = runCatching { JSONObject(json) }.getOrNull() ?: return Outcome.DONE
+        PockaiWidget.update(context, sync.optJSONObject("widget")?.toString())
+        sync.optJSONObject("notice")?.let { notify(context, it.optString("title"), it.optString("body")) }
         return Outcome.DONE
     }
 

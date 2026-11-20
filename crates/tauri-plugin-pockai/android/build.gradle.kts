@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-// Lo nativo de Android de tauri-plugin-pockai: el Keystore para la sesión y WorkManager para los
-// avisos de cuidado. Rust lo llama por JNI (ver `src/android.rs`); no es un plugin de comandos.
+// Lo nativo de Android de tauri-plugin-pockai: el Keystore para la sesión, WorkManager para los
+// avisos de cuidado y el widget de la pantalla de inicio. Rust lo llama por JNI (ver `src/android.rs`); no es un plugin de comandos.
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")

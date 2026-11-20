@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tokens de marca: primary = accent-ink, con contraste AA sobre la superficie. -->
+    <color name="pockai_widget_surface">#FFFFFFFF</color>
+    <color name="pockai_widget_on_surface">#FF0B0A14</color>
+    <color name="pockai_widget_primary">#FF4A39C9</color>
+    <string name="pockai_widget_label">Pockai</string>
+    <string name="pockai_widget_description">Estado de tu mascota de un vistazo</string>
+    <string name="pockai_widget_empty">Abre la app para ver a tu mascota</string>
+</resources>
