@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AccountView, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, RedeemCodeCard, RewardToast, Segmented, ShopView, VerifyEmailView, redeemErrorText, rewardToCelebrate } from '@pockai/ui';
+  import { AccountView, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, RedeemCodeCard, RewardToast, Segmented, ShopView, SoundSettingsView, VerifyEmailView, redeemErrorText, rewardToCelebrate } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
   import AdventureScreen from './screens/AdventureScreen.svelte';
   import ArenaScreen from './screens/ArenaScreen.svelte';
@@ -23,6 +23,7 @@
   import WardrobeScreen from './screens/WardrobeScreen.svelte';
   import { act, activePet, authApi, failureText, hasCore, lock, offline, phase, redeemCode, reload, signOut, start, state as core } from './core';
   import { askNotificationsOnce } from './notifications';
+  import { audioSettings, previewSound, updateAudioSettings } from './audio';
 
   type Tab = 'pet' | 'backpack' | 'play' | 'shop' | 'progress' | 'account';
   /** Cuenta no está en la barra: se abre tocando el nombre de la cabecera (seis pestañas no caben a 48 px). */
@@ -294,6 +295,8 @@
           <AccountView user={$core.user} on:logout={leave}>
             <RedeemCodeCard slot="redeem" busy={redeemBusy} error={redeemError} ok={redeemOk} on:redeem={(e) => redeem(e.detail)} />
           </AccountView>
+          <!-- En el móvil solo suenan efectos e interfaz (la voz de la mascota y el ambiente no van en el APK). -->
+          <SoundSettingsView settings={$audioSettings} buses={['sfx', 'ui']} previews={{ sfx: 'mg.result.good' }} on:change={(e) => updateAudioSettings(e.detail)} on:preview={(e) => previewSound(e.detail)} />
         {/if}
       {:else}
         <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail as typeof shopSection)} />

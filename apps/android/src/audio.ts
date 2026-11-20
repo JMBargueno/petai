@@ -7,9 +7,10 @@
  *
  * Solo se empaquetan los sonidos que piden esas pantallas (`cook.*`, `mg.*`, `elem.*` y los de
  * interfaz, unos 760 KB): la música y los ambientes del escritorio no entran en el APK. Un id sin
- * fichero simplemente no suena. Los ajustes se guardan en el dispositivo (`localStorage`); la app
- * aún no tiene pantalla para cambiarlos y suena con los valores por defecto del móvil.
+ * fichero simplemente no suena. Los ajustes se guardan en el dispositivo (`localStorage`) y se cambian
+ * en Cuenta con `SoundSettingsView` (solo efectos e interfaz: lo que suena en el móvil).
  */
+import { writable, get } from 'svelte/store';
 import { normalizeManifest, parseAudioSettings, SoundEngine, sourcesFromFiles, type AudioSettings } from '@pockai/audio';
 import { onUiFeedback, setUiSound, type UiFeedback } from '@pockai/ui';
 import soundsJson from '../../../shared/game-data/sounds.json';
@@ -24,6 +25,28 @@ function loadSettings(): AudioSettings {
   }
 }
 
+/** Los ajustes de sonido del dispositivo. */
+export const audioSettings = writable<AudioSettings>(loadSettings());
+
+/** Cambia los ajustes (todos o parte), los aplica al motor y los recuerda. */
+export function updateAudioSettings(patch: Partial<AudioSettings>): void {
+  const cur = get(audioSettings);
+  const next = parseAudioSettings(
+    { ...cur, ...patch, buses: { ...cur.buses, ...patch.buses }, busOn: { ...cur.busOn, ...patch.busOn } },
+    'android',
+  );
+  audioSettings.set(next);
+  engine?.setSettings(next);
+  try {
+    localStorage.setItem(AUDIO_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    /* almacenamiento indisponible: vale para esta sesión */
+  }
+}
+
+/** Una muestra de un tipo de sonido (al cambiar su volumen). */
+export const previewSound = (id: string) => void getEngine().play(id);
+
 let engine: SoundEngine | null = null;
 
 /** El motor (se crea al primer sonido; el WebView exige un gesto antes de que suene). */
@@ -35,7 +58,7 @@ function getEngine(): SoundEngine {
     ...import.meta.glob<string>('../../../shared/assets/audio/ui/*.{m4a,mp3,ogg}', { query: '?url', import: 'default', eager: true }),
   };
   // `scene`: los sonidos sin plataforma del manifiesto (los del escritorio no le tocan).
-  engine = new SoundEngine({ manifest, sources: sourcesFromFiles(files), settings: loadSettings(), platform: 'scene' });
+  engine = new SoundEngine({ manifest, sources: sourcesFromFiles(files), settings: get(audioSettings), platform: 'scene' });
   engine.attachAutoUnlock();
   engine.attachWindowState();
   return engine;
