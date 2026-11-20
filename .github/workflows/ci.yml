@@ -545,13 +545,14 @@ jobs:
       # El reloj (spec 44). No sale del `tauri ios build` —ese pasa un `-sdk iphonesimulator`
       # global que pisa el SDKROOT de los targets de watchOS—, así que se compila aparte. Solo
       # compilar: no hace falta arrancar ningún simulador.
-      - name: Install xcodegen
-        run: brew install xcodegen
-
+      # Se compila el `.xcodeproj` **tal como está versionado**, sin pasar antes por `xcodegen`:
+      # `project.yml` declara para el target de iPhone dos directorios (`Externals/` y `assets/`)
+      # que crea `tauri ios init` y que están ignorados, así que en un checkout limpio `xcodegen`
+      # se planta con «missing source directory». Quien toque `project.yml` regenera el proyecto en
+      # local y lo commitea, que es como ya funcionaba.
       - name: Build the Apple Watch app
         working-directory: desktop/src-tauri/gen/apple
         run: |
-          xcodegen generate
           xcodebuild -project petai-desktop.xcodeproj -target PockaiWatch \
             -configuration debug -sdk watchsimulator -arch arm64 \
             CODE_SIGNING_ALLOWED=NO SYMROOT="$RUNNER_TEMP/pockai-watch" build
