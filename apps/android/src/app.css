@@ -133,3 +133,12 @@ nav button.active {
   color: var(--accent-ink);
   background: var(--surface-2);
 }
+
+/* En el ancho de un móvil no caben cuatro cifras ni cinco desbloqueos en fila: menos columnas. */
+main .ui-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+main .screen .unlocks {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}

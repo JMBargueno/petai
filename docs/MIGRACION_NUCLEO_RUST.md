@@ -77,7 +77,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
 - 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo y Temporada, usadas por el escritorio y por Android. Quedan las demás pestañas que cargan sus datos (Cofres, Entrenamiento, Mente, Armario, Social, Arena…), a partir una a una
-- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta. Probadas en el emulador todas menos Vínculo, Misiones, Temporada y la nueva navegación por secciones, que solo compilan. Faltan el resto de pantallas del juego
+- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, todas probadas en el emulador. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -372,3 +372,22 @@ Verificado en el escritorio en modo demo: Vínculo; reclamar una misión («Has 
 20 XP», pasa a Reclamada); comprar el pase con su confirmación (cuesta 30, tienes 40; se cierra y
 queda «Pase activo»). 438 tests; compilan escritorio y UI de Android. **Sin verificar:** estas tres
 pantallas y la navegación por secciones en el emulador de Android.
+
+### Vínculo, Misiones y Temporada en el emulador (2026-11-20)
+
+Misma receta (APK x86_64, API 37, backend local con base de datos desechable):
+
+- **Secciones**: Mascota › Inicio, Vínculo y Huevos; Progreso › Misiones y Temporada. «Ir a
+  eclosionar un huevo» lleva a Mascota › Huevos.
+- **Vínculo**: carga al entrar y refleja lo que se hace (dar de comer +2,0, dormir +0,5 en el
+  historial).
+- **Misiones**: tras dormir a la mascota, «Pon a dormir a tu pet» pasa a 1/1; al reclamarla sale el
+  aviso, queda «Reclamada» y el saldo de la cabecera sube (1040 → 1045 monedas).
+- **Temporada**: se pinta, pero la de la semilla está finalizada.
+
+Dos ajustes de maquetación salieron de la prueba, ambos en `apps/android/src/app.css`: las cuatro
+cifras de Misiones y los cinco desbloqueos de Vínculo no cabían en fila en el ancho de un móvil;
+ahora van en dos y tres columnas.
+
+Sin verificar en Android: comprar el pase de temporada (hace falta una temporada activa; en el
+escritorio en modo demo sí está probado).
