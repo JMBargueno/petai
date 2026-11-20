@@ -36,6 +36,8 @@ export { default as BondingView } from './BondingView.svelte';
 export { default as BackpackView } from './BackpackView.svelte';
 export { default as ChestsView } from './ChestsView.svelte';
 export { default as ItemIcon } from './ItemIcon.svelte';
+export { default as EggSprite } from './EggSprite.svelte';
+export { default as PetMiniAvatar } from './PetMiniAvatar.svelte';
 export { default as HatchView } from './HatchView.svelte';
 export { default as MissionsView } from './MissionsView.svelte';
 export { default as PetHomeView } from './PetHomeView.svelte';
