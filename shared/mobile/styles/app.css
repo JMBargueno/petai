@@ -187,6 +187,10 @@ nav.tabbar button {
   padding: var(--space-1) var(--space-2);
   border-top: 0;
   border-radius: var(--radius-pills);
+  /* Cuánto del hueco de cada destino ocupa la lente a lo ancho (1 = el hueco entero). Con cinco
+     destinos el hueco mide ~72 pt, así que 0,8 deja una cápsula de ~58×41 pt: el icono respira y
+     sigue quedando aire entre una lente y la siguiente. */
+  --tab-lens-fill: 0.8;
   box-shadow: var(--shadow-3);
 }
 
@@ -250,7 +254,7 @@ nav.tabbar button {
   inset-inline-start: var(--space-2);
   width: calc((100% - 2 * var(--space-2)) / var(--tab-count));
   translate: calc(var(--tab-index) * 100%);
-  scale: 0.62 1;
+  scale: var(--tab-lens-fill) 1;
   border-radius: var(--radius-pills);
   corner-shape: inherit;
   background: var(--glass-tint);
