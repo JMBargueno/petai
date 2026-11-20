@@ -76,8 +76,8 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio (ficha de la mascota) y Cuenta, usadas por el escritorio y por Android. Falta Eclosión (depende del motor de sprites del escritorio)
-- 🟡 4.5 `apps/android`: UI Svelte con pestañas (Mascota, Mochila, Tienda, Cuenta) hecha con `@pockai/ui`. Tienda y Mochila probadas en el emulador; la ficha compartida y Cuenta, solo compiladas. Faltan el resto de pantallas del juego
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta y Eclosión, usadas por el escritorio y por Android. Lo siguiente son las pantallas que hablan con el servidor por su cuenta (Vínculo, Mente, Armario…), que hay que partir una a una
+- 🟡 4.5 `apps/android`: UI Svelte con pestañas (Mascota, Huevos, Mochila, Tienda, Cuenta) hecha con `@pockai/ui`. Tienda y Mochila probadas en el emulador; Mascota, Huevos y Cuenta, solo compiladas. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -314,3 +314,21 @@ códigos todavía). El cambio de mascota activa va por `stateSelectPet` del núc
 Verificado en el escritorio en modo demo: ficha, dar de comer (5 → 4), llevar a casa (aparece la
 casita y desaparece «A casa»), Cuenta y canje de un código. 438 tests del escritorio; compilan
 escritorio y UI de Android. **Sin verificar:** la ficha y Cuenta en el emulador de Android.
+
+### Eclosión compartida (2026-11-20)
+
+`HatchView` pasa a la biblioteca. Lo único que la ataba al escritorio era el huevo animado
+(`EggSprite`, que usa el motor de sprites): ahora la vista tiene un hueco `egg` que recibe la
+animación del momento (`anim`: `idle`, `shake`, `crack`, `hatch`) y el escritorio pone ahí su
+`EggSprite`. Sin nada en el hueco sale un icono que tiembla mientras eclosiona. El texto del botón
+para pasar a la recién nacida es una prop (`switchLabel`): el escritorio dice «Sacar a … al
+escritorio».
+
+Android gana la pestaña Huevos con esa pantalla (nombre opcional, cuenta atrás, comprar un huevo)
+en lugar de su tarjeta con un botón. De momento con el icono: el huevo de sprites llegará cuando el
+motor de sprites salga del escritorio. Su eclosión no tiene las fases de grietas del escritorio: el
+huevo tiembla mientras responde el servidor.
+
+Verificado en el escritorio en modo demo: huevo de sprites en el hueco, eclosión con sus fases y
+aviso del nacimiento. 438 tests; compilan escritorio y UI de Android. **Sin verificar:** la pestaña
+Huevos en el emulador de Android.

@@ -35,8 +35,8 @@
   import HandleField from './HandleField.svelte';
   import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, X, Users } from 'lucide-svelte';
   import HomeView from './views/HomeView.svelte';
-  import { AccountView, BackpackView, ShopView } from '@pockai/ui';
-  import HatchView from './views/HatchView.svelte';
+  import { AccountView, BackpackView, HatchView, ShopView } from '@pockai/ui';
+  import EggSprite from './EggSprite.svelte';
   import RedeemVoucherCard from './views/RedeemVoucherCard.svelte';
   import AuthLayout from './auth/AuthLayout.svelte';
   import CodeInput from './auth/CodeInput.svelte';
@@ -930,7 +930,11 @@
             on:buyEgg={handleBuyEgg}
             on:selectPet
             on:dismissResult={() => (hatchedResult = null)}
-          />
+            switchLabel={(name) => `Sacar a ${name} al escritorio`}
+          >
+            <!-- El huevo animado sale del motor de sprites, que es del escritorio. -->
+            <svelte:fragment slot="egg" let:anim><EggSprite {anim} /></svelte:fragment>
+          </HatchView>
 
         {:else if dest === 'pet' && sub === 'bonding'}
           <BondingTab pet={pet} />

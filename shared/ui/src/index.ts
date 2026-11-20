@@ -34,6 +34,7 @@ export { emitUiFeedback, onUiFeedback, type UiFeedback } from './feedback';
 export { default as AccountView } from './AccountView.svelte';
 export { default as BackpackView } from './BackpackView.svelte';
 export { default as ItemIcon } from './ItemIcon.svelte';
+export { default as HatchView } from './HatchView.svelte';
 export { default as PetHomeView } from './PetHomeView.svelte';
 export { default as RedeemCodeCard } from './RedeemCodeCard.svelte';
 export { default as ShopView } from './ShopView.svelte';

@@ -1,12 +1,22 @@
 <script lang="ts">
   /**
-   * Mascota › Eclosión: huevos en incubación, nombre opcional, compra y anuncio del nacimiento.
-   * El estado de la animación vive en ControlPanel (sigue aunque cambies de pestaña a mitad).
+   * Eclosión: huevos en incubación, nombre opcional, compra y anuncio del nacimiento. Solo pinta:
+   * la eclosión y sus fases (`isShaking`, `isCracking`, `isHatchingOut`) las lleva el contenedor
+   * de cada app, así siguen aunque el jugador cambie de pestaña a mitad.
+   *
+   * El huevo se dibuja en el hueco `egg`, que recibe la animación del momento (`anim`). El
+   * escritorio pone ahí su huevo de sprites; sin nada, sale un icono que tiembla.
    */
   import { createEventDispatcher } from 'svelte';
-  import EggSprite from '../EggSprite.svelte';
-  import { rarityMeta } from '../../lib/ui/maps';
-  import { Badge, Button, Card, CurrencyPill, EmptyState, Notice, SectionHeader } from '../ui';
+  import { rarityMeta } from './maps';
+  import Badge from './Badge.svelte';
+  import Button from './Button.svelte';
+  import Card from './Card.svelte';
+  import CurrencyPill from './CurrencyPill.svelte';
+  import EmptyState from './EmptyState.svelte';
+  import Ico from './Ico.svelte';
+  import Notice from './Notice.svelte';
+  import SectionHeader from './SectionHeader.svelte';
 
   export let eggs: any[] = [];
   export let eggNames: Record<string, string> = {};
@@ -20,6 +30,14 @@
   export let activePetId: string | null = null;
   export let coins = 0;
   export let buying = false;
+  /** Texto del botón para pasar a la recién nacida (el escritorio habla de sacarla al escritorio). */
+  export let switchLabel: (name: string) => string = (name) => `Cambiar a ${name}`;
+
+  type EggAnim = 'idle' | 'shake' | 'crack' | 'hatch';
+  function eggAnim(id: string, hatching: string | null, out: boolean, cracking: boolean, shaking: boolean): EggAnim {
+    if (hatching !== id) return 'idle';
+    return out ? 'hatch' : cracking ? 'crack' : shaking ? 'shake' : 'idle';
+  }
 
   const EGG_PRICE = 50;
 
@@ -60,7 +78,7 @@
       <Card size="sm">
         <p class="ui-card__hint">Tu mascota activa sigue siendo la de antes. Puedes cambiar cuando quieras desde Mascota › Inicio.</p>
         <Button variant="primary" size="sm" icon="paw" on:click={() => { dispatch('selectPet', hatchedResult.id); dispatch('dismissResult'); }}>
-          Sacar a {bornName} al escritorio
+          {switchLabel(bornName)}
         </Button>
       </Card>
     {/if}
@@ -68,10 +86,13 @@
 
   <SectionHeader title="Tus huevos en incubación" icon="egg" count={eggs.length} />
   {#each eggs as egg (egg.id)}
+    {@const anim = eggAnim(egg.id, hatchingEggId, isHatchingOut, isCracking, isShaking)}
     <Card size="sm" class="egg-card">
       <div class="egg">
         <div class="egg-preview">
-          <EggSprite anim={hatchingEggId !== egg.id ? 'idle' : isHatchingOut ? 'hatch' : isCracking ? 'crack' : isShaking ? 'shake' : 'idle'} />
+          <slot name="egg" {anim}>
+            <span class="egg-icon" class:moving={anim !== 'idle'} aria-hidden="true"><Ico n="egg" size={40} /></span>
+          </slot>
         </div>
         <div class="egg-info">
           <strong class="egg-type">Huevo {egg.eggType ?? ''}</strong>
@@ -127,6 +148,32 @@
     flex-shrink: 0;
     width: 64px;
     height: 64px;
+  }
+  .egg-icon {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--color-sunburst);
+  }
+  .egg-icon.moving {
+    animation: egg-wobble 0.4s ease-in-out infinite;
+  }
+  @keyframes egg-wobble {
+    0%,
+    100% {
+      rotate: -8deg;
+    }
+    50% {
+      rotate: 8deg;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .egg-icon.moving {
+      animation: none;
+    }
   }
   .egg-info {
     display: flex;

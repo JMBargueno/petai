@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AccountView, BackpackView, Button, Card, CurrencyPill, Ico, Notice, PetHomeView, ShopView } from '@pockai/ui';
+  import { AccountView, BackpackView, Button, Card, CurrencyPill, HatchView, Ico, Notice, PetHomeView, ShopView } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
   import { act, activePet, failureText, hasCore, offline, phase, signIn, signOut, start, state as core } from './core';
 
-  type Tab = 'pet' | 'backpack' | 'shop' | 'account';
+  type Tab = 'pet' | 'eggs' | 'backpack' | 'shop' | 'account';
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'pet', label: 'Mascota', icon: 'paw' },
+    { id: 'eggs', label: 'Huevos', icon: 'egg' },
     { id: 'backpack', label: 'Mochila', icon: 'gift' },
     { id: 'shop', label: 'Tienda', icon: 'shop' },
     { id: 'account', label: 'Cuenta', icon: 'user' },
@@ -19,11 +20,36 @@
   let busy = $state<string | null>(null);
   let message = $state('');
 
+  /** Eclosión en curso: qué huevo, quién ha nacido y los nombres que el jugador va escribiendo. */
+  let hatchingEggId = $state<string | null>(null);
+  let hatched = $state<any>(null);
+  let eggNames = $state<Record<string, string>>({});
+  /** Reloj de las cuentas atrás de los huevos. */
+  let now = $state(Date.now());
+
   const pet = $derived(activePet($core));
   const coins = $derived(Number($core.user?.coins ?? 0));
   onMount(() => {
     if (hasCore()) void start().catch((e) => (message = failureText(e, 'No se pudo arrancar')));
+    const clock = setInterval(() => (now = Date.now()), 1000);
+    return () => clearInterval(clock);
   });
+
+  /** Eclosiona un huevo. El huevo tiembla mientras responde el servidor; quién nace lo dice él. */
+  async function hatch(eggId: string, name?: string) {
+    if (hatchingEggId || busy) return;
+    hatchingEggId = eggId;
+    hatched = null;
+    message = '';
+    try {
+      hatched = await act({ type: 'hatchEgg', eggId, nickname: name?.trim() || null });
+      delete eggNames[eggId];
+    } catch (e) {
+      message = failureText(e, 'No se pudo eclosionar');
+    } finally {
+      hatchingEggId = null;
+    }
+  }
 
   /** Hace algo y, si falla, se lo dice al jugador. El estado lo actualiza el núcleo. */
   async function run(key: string, fallback: string, fn: () => Promise<unknown>) {
@@ -47,8 +73,8 @@
   const leave = () => run('signOut', 'No se pudo cerrar la sesión', signOut);
 
   /** A dónde lleva cada «ir a…» de las vistas compartidas. Lo que aún no existe aquí se queda en Mascota. */
-  function go(dest: string) {
-    tab = dest === 'shop' ? 'shop' : 'pet';
+  function go(dest: string, sub?: string) {
+    tab = dest === 'shop' ? 'shop' : sub === 'hatch' ? 'eggs' : 'pet';
   }
 </script>
 
@@ -113,26 +139,24 @@
             )}
           on:feed={(e) => pet && run(`feed:${e.detail}`, 'No se pudo dar de comer', () => act({ type: 'feed', petId: pet.id, itemId: String(e.detail) }))}
           on:selectPet={(e) => run('selectPet', 'No se pudo cambiar de mascota', () => stateSelectPet(String(e.detail)))}
-          on:go={(e) => go(e.detail.dest)}
+          on:go={(e) => go(e.detail.dest, e.detail.sub)}
         />
-
-        {#if $core.eggs.length}
-          <Card title="Huevos" icon="egg">
-            <div class="actions">
-              {#each $core.eggs as egg (egg.id)}
-                <Button
-                  variant="primary"
-                  size="lg"
-                  loading={busy === `hatch:${egg.id}`}
-                  disabled={!!busy}
-                  on:click={() => run(`hatch:${egg.id}`, 'No se pudo eclosionar', () => act({ type: 'hatchEgg', eggId: String(egg.id) }))}
-                >
-                  Eclosionar
-                </Button>
-              {/each}
-            </div>
-          </Card>
-        {/if}
+      {:else if tab === 'eggs'}
+        <HatchView
+          eggs={$core.eggs}
+          bind:eggNames
+          {now}
+          {hatchingEggId}
+          isShaking={hatchingEggId !== null}
+          hatchedResult={hatched}
+          activePetId={pet?.id ?? null}
+          {coins}
+          buying={busy === 'buy:egg'}
+          on:hatch={(e) => hatch(e.detail.id, e.detail.name)}
+          on:buyEgg={() => run('buy:egg', 'No se pudo comprar el huevo', () => act({ type: 'buyEgg' }))}
+          on:selectPet={(e) => run('selectPet', 'No se pudo cambiar de mascota', () => stateSelectPet(String(e.detail)))}
+          on:dismissResult={() => (hatched = null)}
+        />
       {:else if tab === 'backpack'}
         <!-- La misma pantalla que el escritorio: aquí solo se atiende lo que pide el jugador. -->
         <BackpackView
