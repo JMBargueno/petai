@@ -98,7 +98,7 @@
   }
 
   const pct = (cur: number, max: number) => Math.max(0, Math.min(100, (cur / max) * 100));
-  const barColor = (p: number) => (p > 50 ? '#22c55e' : p > 25 ? '#f59e0b' : '#ef4444');
+  const barColor = (p: number) => (p > 50 ? 'var(--success)' : p > 25 ? 'var(--warning)' : 'var(--danger)');
 
   onDestroy(stop);
 </script>
@@ -180,7 +180,7 @@
   }
   .float {
     position: absolute; top: -4px; left: 50%; transform: translateX(-50%) scaleX(var(--dir, 1));
-    font-weight: 800; font-size: var(--text-title); color: var(--danger-ink); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    font-weight: 800; font-size: var(--text-title); color: var(--danger-ink); text-shadow: 0 1px 4px var(--color-carbon);
     animation: rise 1s ease-out forwards; pointer-events: none;
   }
   .float.crit { color: var(--warning-ink); font-size: var(--text-subheading); }

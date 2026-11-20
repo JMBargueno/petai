@@ -552,7 +552,7 @@
     font-weight: 800;
     padding: 1px var(--space-2);
     border-radius: var(--radius-pills);
-    border: 1px solid var(--on-color);
+    border: var(--sticker-border, 1px solid var(--on-color));
     background: var(--color-sunburst);
     color: var(--on-color);
   }
@@ -567,18 +567,27 @@
     width: 100%;
     border-radius: var(--radius-cards);
     overflow: hidden;
-    border: 1.5px solid var(--line);
+    border: var(--sticker-border, 1.5px solid var(--line));
     box-shadow: var(--shadow-pop);
     background:
-      radial-gradient(80% 70% at 50% 35%, rgb(255 255 255 / 0.65), transparent 75%),
-      var(--band-sky, #dceeff);
+      radial-gradient(80% 70% at 50% 35%, var(--scene-sky-glow), transparent 75%),
+      var(--band-sky, var(--scene-sky));
     transition: outline-color var(--dur-1), box-shadow var(--dur-1);
     outline: 3px solid transparent;
     outline-offset: 2px;
   }
+  /* Tinte del tema sobre el fondo pintado (cozy lo calienta; transparente en el clásico). */
+  .room-stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: calc(var(--z-sticky) - 1);
+    background: var(--backdrop-tint);
+    pointer-events: none;
+  }
   .room-stage.drop-target {
     outline-color: var(--color-mint-pop);
-    box-shadow: var(--shadow-pop), 0 0 24px rgb(85 219 156 / 0.55);
+    box-shadow: var(--shadow-pop), 0 0 24px var(--scene-drop-glow);
   }
   .room-stage.editing {
     outline-color: var(--accent);
@@ -592,8 +601,8 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: rgb(255 255 255 / 0.9);
-    color: var(--on-color);
+    background: var(--scene-label-bg);
+    color: var(--scene-label-ink);
   }
   .habitat-mode-btn {
     position: absolute;
@@ -603,8 +612,8 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: rgb(255 255 255 / 0.9);
-    color: var(--on-color);
+    background: var(--scene-label-bg);
+    color: var(--scene-label-ink);
   }
   .room-tools {
     position: absolute;
@@ -616,9 +625,9 @@
     gap: var(--space-2);
     padding: var(--space-1);
     border-radius: var(--radius-pills);
-    background: rgb(255 255 255 / 0.9);
-    border: 1px solid var(--on-color);
-    color: var(--on-color);
+    background: var(--scene-label-bg);
+    border: var(--sticker-border, 1px solid var(--on-color));
+    color: var(--scene-label-ink);
   }
   .sel-name,
   .sel-hint {
@@ -643,20 +652,20 @@
     gap: var(--space-2);
     padding: var(--space-3);
     text-align: center;
-    background: rgb(11 10 20 / 0.38);
+    background: var(--scene-veil);
     backdrop-filter: blur(2px);
   }
   .absent-text {
     font-size: var(--text-caption);
     font-weight: 700;
-    color: var(--on-color);
-    background: rgb(255 255 255 / 0.9);
-    border: 1px solid var(--on-color);
+    color: var(--scene-label-ink);
+    background: var(--scene-label-bg);
+    border: var(--sticker-border, 1px solid var(--on-color));
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pills);
   }
-  .absent-hint { font-size: var(--text-caption); color: rgb(255 255 255 / 0.85); font-weight: 600; }
-  .drop-target .pet-absent-overlay { background: rgb(85 219 156 / 0.35); }
+  .absent-hint { font-size: var(--text-caption); color: var(--scene-veil-ink); font-weight: 600; }
+  .drop-target .pet-absent-overlay { background: var(--scene-drop-veil); }
 
   .room-locked-badge {
     position: absolute;
@@ -670,7 +679,7 @@
     font-weight: 700;
     color: var(--on-color);
     background: var(--color-soft-mist);
-    border: 1px solid var(--on-color);
+    border: var(--sticker-border, 1px solid var(--on-color));
     border-radius: var(--radius-pills);
     padding: 2px var(--space-2);
   }

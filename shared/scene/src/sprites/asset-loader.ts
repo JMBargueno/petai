@@ -118,8 +118,11 @@ export class AssetLoader {
 
     const promise = this.loadAssetImpl(key, asset);
     this.inFlight.set(key, promise);
-    // Limpiamos la dedup cuando termina (éxito o fallo).
-    promise.finally(() => this.inFlight.delete(key));
+    // Limpiamos la dedup cuando termina (éxito o fallo). Con `then(f, f)` y no `finally`: `finally`
+    // devuelve otra promesa que rechaza igual y, como nadie la espera, quedaba como rechazo sin
+    // manejar cada vez que un asset no se encontraba (el error ya le llega a quien llamó).
+    const done = () => void this.inFlight.delete(key);
+    promise.then(done, done);
     void opts?.priority; // 'low' no bloquea el hilo principal; la concurrencia la limita el preloader.
     return promise;
   }

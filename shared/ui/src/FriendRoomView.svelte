@@ -111,6 +111,6 @@
     opacity: 0.75;
   }
   .friend-room__error {
-    color: var(--color-danger, #c0392b);
+    color: var(--danger-ink);
   }
 </style>

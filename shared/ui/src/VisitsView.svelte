@@ -292,7 +292,7 @@
     border-radius: var(--radius-pills);
     background: var(--theme-social);
     color: var(--on-color);
-    border: 1px solid var(--on-color);
+    border: var(--sticker-border, 1px solid var(--on-color));
   }
 
   /* Tarjeta del amigo */
@@ -314,8 +314,8 @@
     width: 54px;
     height: 54px;
     border-radius: 50%;
-    border: 1.5px solid var(--on-color);
-    background: #fffaf0;
+    border: var(--sticker-border, 1.5px solid var(--on-color));
+    background: var(--scene-window-frame);
     color: var(--on-color);
     animation: bob 3s ease-in-out infinite;
   }
@@ -363,9 +363,9 @@
     transition: transform var(--dur-1) var(--ease-out), border-color var(--dur-1), box-shadow var(--dur-1);
   }
   .care:hover:not(:disabled) {
-    transform: translateY(-2px);
+    transform: translateY(var(--hover-lift, -2px));
     border-color: var(--line);
-    box-shadow: 2px 3px 0 var(--line);
+    box-shadow: var(--sticker, 2px 3px 0 var(--line));
   }
   .care:disabled {
     opacity: 0.5;
@@ -377,7 +377,7 @@
     width: 30px;
     height: 30px;
     border-radius: var(--radius-md);
-    border: 1px solid var(--on-color);
+    border: var(--sticker-border, 1px solid var(--on-color));
     background: var(--c);
     color: var(--on-color);
   }
@@ -409,7 +409,7 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 1px solid var(--on-color);
+    border: var(--sticker-border, 1px solid var(--on-color));
     background: var(--c);
     color: var(--on-color);
   }

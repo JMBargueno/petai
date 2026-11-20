@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AccountView, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, RedeemCodeCard, RewardToast, Segmented, ShopView, SoundSettingsView, VerifyEmailView, createInitiativeLoop, redeemErrorText, rewardToCelebrate, type InitiativeReply } from '@pockai/ui';
+  import { AccountView, AppearancePicker, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, RedeemCodeCard, RewardToast, Segmented, ShopView, SoundSettingsView, VerifyEmailView, createInitiativeLoop, redeemErrorText, rewardToCelebrate, type InitiativeReply } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
   import AdventureScreen from './screens/AdventureScreen.svelte';
   import ArenaScreen from './screens/ArenaScreen.svelte';
@@ -41,7 +41,7 @@
   let progressSection = $state<'missions' | 'season'>('missions');
   let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking' | 'adventure'>('games');
   let shopSection = $state<'store' | 'chests'>('store');
-  let accountSection = $state<'account' | 'profile' | 'friends' | 'visits' | 'clans'>('account');
+  let accountSection = $state<'account' | 'profile' | 'friends' | 'visits' | 'clans' | 'settings'>('account');
   /** Amigo que se eligió con «Visitar» en Amigos. */
   let visitFriend = $state('');
   const ACCOUNT_SECTIONS = [
@@ -50,6 +50,7 @@
     { value: 'friends', label: 'Amigos', icon: 'users' },
     { value: 'visits', label: 'Visitas', icon: 'home' },
     { value: 'clans', label: 'Clanes', icon: 'shield' },
+    { value: 'settings', label: 'Ajustes', icon: 'settings' },
   ];
   const PLAY_SECTIONS = [
     { value: 'games', label: 'Minijuegos', icon: 'gamepad' },
@@ -329,12 +330,16 @@
           {#key visitFriend}
             <VisitsScreen initialFriend={visitFriend} onGoFriends={() => (accountSection = 'friends')} />
           {/key}
+        {:else if accountSection === 'settings'}
+          <Card title="Apariencia" icon="sun">
+            <AppearancePicker />
+          </Card>
+          <!-- En el móvil solo suenan efectos e interfaz (la voz de la mascota y el ambiente no van en el APK). -->
+          <SoundSettingsView settings={$audioSettings} buses={['sfx', 'ui']} previews={{ sfx: 'mg.result.good' }} on:change={(e) => updateAudioSettings(e.detail)} on:preview={(e) => previewSound(e.detail)} />
         {:else}
           <AccountView user={$core.user} on:logout={leave}>
             <RedeemCodeCard slot="redeem" busy={redeemBusy} error={redeemError} ok={redeemOk} on:redeem={(e) => redeem(e.detail)} />
           </AccountView>
-          <!-- En el móvil solo suenan efectos e interfaz (la voz de la mascota y el ambiente no van en el APK). -->
-          <SoundSettingsView settings={$audioSettings} buses={['sfx', 'ui']} previews={{ sfx: 'mg.result.good' }} on:change={(e) => updateAudioSettings(e.detail)} on:preview={(e) => previewSound(e.detail)} />
         {/if}
       {:else}
         <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail as typeof shopSection)} />
@@ -352,10 +357,10 @@
       {/if}
     </div>
 
-    <nav aria-label="Secciones">
+    <nav class="tabbar" aria-label="Secciones">
       {#each TABS as item (item.id)}
         <button type="button" class:active={tab === item.id} aria-current={tab === item.id ? 'page' : undefined} onclick={() => (tab = item.id)}>
-          <Ico n={item.icon} size={22} />
+          <span class="tab-icon"><Ico n={item.icon} size={22} /></span>
           <span>{item.label}</span>
         </button>
       {/each}

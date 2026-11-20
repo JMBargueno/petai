@@ -92,8 +92,8 @@
     z-index: calc(var(--z-raised) + 1);
     padding: 2px var(--space-2);
     border-radius: var(--radius-pills);
-    background: rgb(255 255 255 / 0.8);
-    color: var(--on-color);
+    background: var(--scene-label-bg);
+    color: var(--scene-label-ink);
     font-size: var(--text-caption);
     font-weight: 700;
     pointer-events: none;

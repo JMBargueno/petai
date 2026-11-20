@@ -151,11 +151,12 @@
   --hit-min: 44px;
 }
 
-/* Tema manual (Ajustes): fuerza el esquema; sin atributo se sigue al sistema. */
-:root[data-theme='light'] {
+/* Esquema manual (Ajustes › Apariencia): fuerza claro u oscuro; sin atributo se sigue al sistema.
+   El tema (clásico, cozy…) va aparte, en `data-theme` (styles/themes.css). Solo lo usan las apps. */
+:root[data-scheme='light'] {
   color-scheme: light;
 }
-:root[data-theme='dark'] {
+:root[data-scheme='dark'] {
   color-scheme: dark;
 }
 

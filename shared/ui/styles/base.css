@@ -81,12 +81,14 @@ textarea {
     box-shadow var(--dur-1) var(--ease-out),
     background var(--dur-1);
 }
+/* Elevación y pulsación según la plataforma (styles/platform.css): en móvil no hay hover que se quede pegado. */
 .btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-2);
+  transform: translateY(var(--hover-lift, -2px));
+  box-shadow: var(--hover-shadow, var(--shadow-2));
 }
 .btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.97);
+  transform: translateY(var(--press-shift, 1px)) scale(var(--press-scale, 0.97));
+  opacity: var(--press-opacity, 1);
 }
 .btn:disabled {
   opacity: 0.5;
@@ -109,10 +111,10 @@ textarea {
   background: var(--grad-accent);
   color: var(--on-dark);
   border-color: transparent;
-  box-shadow: var(--shadow-2), inset 0 1px 0 rgb(255 255 255 / 0.35);
+  box-shadow: var(--shadow-2), var(--btn-sheen);
 }
 .btn--primary:hover:not(:disabled) {
-  box-shadow: var(--glow-accent), inset 0 1px 0 rgb(255 255 255 / 0.35);
+  box-shadow: var(--glow-accent), var(--btn-sheen);
 }
 .btn--ink {
   background: var(--ink);
@@ -224,7 +226,7 @@ textarea {
   padding: 0 var(--space-2);
   background: var(--color-sunburst);
   color: var(--on-color);
-  border: 1px solid var(--on-color);
-  box-shadow: 3px 3px 0 var(--on-color);
+  border: var(--sticker-border, 1px solid var(--on-color));
+  box-shadow: var(--sticker, 3px 3px 0 var(--on-color));
   rotate: -2.5deg;
 }

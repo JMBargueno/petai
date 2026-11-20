@@ -150,6 +150,6 @@
     color: var(--ink-soft, var(--ink));
   }
   .talk-error {
-    color: var(--color-danger, #c0392b);
+    color: var(--danger-ink);
   }
 </style>

@@ -32,6 +32,7 @@ import { createRng, pushRecent, type Rng } from '@pockai/mind';
 import { ROOM_CONFIG, byNearest, cellsByDistance, chooseRoomAction, type RoomMind } from './petWander';
 import { entranceCell, freeNeighbor, roamCell, scriptFor, type ActorStep, type Beat } from './visitScene';
 import { nearestFreeCell } from './petHold';
+import { AMBIENT_ALPHA, CLASSIC_ROOM_PALETTE, type RoomPalette } from './roomPalette';
 
 export { WALL_H } from './roomStyles';
 // Pixel art (GUIA_ARTISTICA §7.5): la hoja va a ×2, así que 0,5 deja 1 px nativo = 1 px de sala.
@@ -48,7 +49,6 @@ const DEFAULT_THEME: RoomTheme = {
   light: '#fff0be',
 };
 
-const NIGHT_TINT = 0x1b1846;
 /** Con las luces apagadas (el Pockai duerme) la sala queda al menos así de oscura. */
 const SLEEP_ALPHA = 0.42;
 /** En modo edición la luz del día no debe estorbar al colocar muebles. */
@@ -58,10 +58,8 @@ const MARGIN = 10;
 /** Celdas del fondo donde el Pockai se resguarda de la lluvia (bajo el árbol del jardín). */
 const SHELTER = 4;
 const STARTLE_EVERY_MS = 20_000;
-const TWINKLE = 0xfff8e6;
 const OK = 0x55db9c;
 const BAD = 0xfb4903;
-const ACCENT = 0x5c4ade;
 
 /** Clip que se reproduce al usar un mueble. */
 const USE_CLIP: Record<Interaction, string> = {
@@ -110,6 +108,7 @@ export class IsoRoom extends Container {
 
   private activity: Activity = 'idle';
   private isNight = false;
+  private palette: RoomPalette = CLASSIC_ROOM_PALETTE;
   private grounded = false;
   /** Cielo y clima actuales (los pone `Ambience`); sin ellos la sala se ve como de día. */
   private sky: SkyState | null = null;
@@ -449,6 +448,15 @@ export class IsoRoom extends Container {
     }
   }
 
+  /** Colores del tema de la app (roomPalette.ts): partículas, destellos, penumbra y resalte. */
+  setPalette(palette: RoomPalette): void {
+    if (palette === this.palette) return;
+    this.palette = palette;
+    this.life.setPalette(palette);
+    this.drawNight();
+    this.drawOverlay();
+  }
+
   setNight(night: boolean): void {
     this.isNight = night;
     this.life.set({ sleeping: night });
@@ -588,7 +596,9 @@ export class IsoRoom extends Container {
       if (lit > 0.005) cover(this.sky.tint, lit);
     }
     // Luces apagadas porque duerme: se oscurece lo que falte hasta la penumbra de siempre.
-    if (this.isNight && lit < SLEEP_ALPHA) cover(NIGHT_TINT, SLEEP_ALPHA - lit * 0.6);
+    if (this.isNight && lit < SLEEP_ALPHA) cover(this.palette.nightTint, SLEEP_ALPHA - lit * 0.6);
+    // Velo del tema de la app (cozy calienta la sala; el clásico no lleva).
+    if (this.palette.ambient !== null) cover(this.palette.ambient, AMBIENT_ALPHA);
   }
 
   /** ¿Está el Pockai a la intemperie con lluvia o nieve? */
@@ -614,7 +624,7 @@ export class IsoRoom extends Container {
     for (const tw of this.twinkles) {
       const a = Math.sin(this.clock / 700 + tw.phase);
       if (a <= 0.2) continue;
-      sparkle(g, tw.x, tw.y, tw.size * (0.6 + 0.4 * a), TWINKLE, a);
+      sparkle(g, tw.x, tw.y, tw.size * (0.6 + 0.4 * a), this.palette.twinkle, a);
     }
   }
 
@@ -644,7 +654,7 @@ export class IsoRoom extends Container {
       if (pf) outline(footprintCells(pf.def, { ...this.drag.cand, rotation: pf.item.rotation }), this.drag.valid ? OK : BAD, 0.35);
     } else if (this.selected) {
       const pf = this.placed.get(this.selected);
-      if (pf) outline(footprintCells(pf.def, pf.item), ACCENT, 0.18);
+      if (pf) outline(footprintCells(pf.def, pf.item), this.palette.accent, 0.18);
     }
   }
 

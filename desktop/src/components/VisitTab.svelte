@@ -155,7 +155,7 @@
     height: 54px;
     border-radius: 50%;
     border: 1.5px solid var(--on-color);
-    background: #fffaf0;
+    background: var(--scene-window-frame);
     color: var(--on-color);
     animation: bob 3s ease-in-out infinite;
   }

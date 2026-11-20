@@ -1,0 +1,58 @@
+/*
+ * Tokens de decorado: los fondos ilustrados de la interfaz (la casita de HomeScene, los rótulos sobre
+ * el hábitat, los colores de cada premio). Son los valores del tema clásico; un tema los cambia en
+ * styles/themes/<id>.css igual que los tokens de tokens.css.
+ * No va en tokens.css porque ese fichero es una copia de la web.
+ */
+:root {
+  /* Casita del panel (desktop/src/components/HomeScene.svelte): pared por ánimo, ventana, suelo y alfombra */
+  --scene-room-day:
+    radial-gradient(70% 60% at 50% 30%, rgb(255 236 179 / 0.9), transparent 70%),
+    repeating-linear-gradient(90deg, transparent 0 22px, rgb(160 110 60 / 0.07) 22px 24px),
+    linear-gradient(180deg, #fff3d6 0%, #ffe3b0 100%);
+  --scene-room-night:
+    radial-gradient(70% 60% at 50% 30%, rgb(140 130 220 / 0.55), transparent 70%),
+    repeating-linear-gradient(90deg, transparent 0 22px, rgb(30 20 80 / 0.12) 22px 24px),
+    linear-gradient(180deg, #3b3570 0%, #2a2552 100%);
+  --scene-room-live:
+    radial-gradient(70% 70% at 50% 20%, rgb(85 219 156 / 0.55), transparent 70%),
+    linear-gradient(180deg, #e9fff4 0%, #c9f5df 100%);
+  --scene-window-frame: #fffaf0;
+  --scene-window-day: linear-gradient(180deg, #8fd0ff 0%, #dceeff 100%);
+  --scene-window-night: radial-gradient(circle at 70% 30%, #fff6c8 0 5px, transparent 6px), linear-gradient(180deg, #1b1846 0%, #3a2f7a 100%);
+  --scene-floor-day:
+    repeating-linear-gradient(90deg, transparent 0 38px, rgb(0 0 0 / 0.12) 38px 40px),
+    linear-gradient(180deg, #c98a4b 0%, #a86a33 100%);
+  --scene-floor-night:
+    repeating-linear-gradient(90deg, transparent 0 38px, rgb(0 0 0 / 0.18) 38px 40px),
+    linear-gradient(180deg, #6b4a2c 0%, #4f361f 100%);
+  --scene-rug: radial-gradient(closest-side, #ffb3c7 0 55%, #ff8fab 56% 75%, #ffb3c7 76%);
+  --scene-rug-edge: rgb(11 10 20 / 0.35);
+
+  /* Sobre un decorado (hábitat, clan): rótulos claros, velos oscuros y halos */
+  --scene-sky: var(--color-sky-wash);
+  --scene-sky-glow: rgb(255 255 255 / 0.65);
+  --scene-label-bg: rgb(255 255 255 / 0.9);
+  --scene-label-ink: var(--color-carbon);
+  --scene-veil: rgb(11 10 20 / 0.38);
+  --scene-veil-ink: rgb(255 255 255 / 0.85);
+  --scene-drop-glow: rgb(85 219 156 / 0.55);
+  --scene-drop-veil: rgb(85 219 156 / 0.35);
+  /* Tinte del tema sobre los fondos pintados (transparente en el clásico). */
+  --backdrop-tint: transparent;
+
+  /* Paneles sobre la escena nocturna del clan */
+  --scene-hud-bg: rgb(8 10 32 / 0.55);
+  --scene-hud-ink: #f2f0ff;
+  --scene-hud-track: rgb(255 255 255 / 0.16);
+
+  /* Brillo del borde superior del botón principal */
+  --btn-sheen: inset 0 1px 0 rgb(255 255 255 / 0.35);
+
+  /* Color de cada tipo de premio (desktop/src/features/rewards/RewardToast.svelte) */
+  --reward-coins: #d49b00;
+  --reward-gems: #1aa3c8;
+  --reward-pro: var(--color-voltage-violet);
+  --reward-chest: #b8742a;
+  --reward-accessory: #d6457c;
+}

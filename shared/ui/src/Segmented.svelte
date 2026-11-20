@@ -7,6 +7,7 @@
    */
   import { createEventDispatcher, onMount, tick } from 'svelte';
   import Ico from './Ico.svelte';
+  import { getPlatform } from './platform';
 
   type Option = { value: string; label: string; icon?: string; badge?: number | string };
   export let options: Option[] = [];
@@ -15,6 +16,8 @@
   export let label = 'Secciones';
   let klass = '';
   export { klass as class };
+
+  const checkMark = getPlatform() === 'android';
 
   const dispatch = createEventDispatcher<{ change: string }>();
   let host: HTMLDivElement;
@@ -88,7 +91,8 @@
 >
   {#each options as o (o.value)}
     <button type="button" role="tab" aria-selected={value === o.value} tabindex={value === o.value ? 0 : -1} class:active={value === o.value} on:click={() => pick(o.value)}>
-      {#if o.icon}<Ico n={o.icon} size={13} />{/if}{o.label}
+      <!-- Material 3: el segmento o chip elegido lleva un check delante en lugar de su icono. -->
+      {#if checkMark && value === o.value}<Ico n="check" size={14} />{:else if o.icon}<Ico n={o.icon} size={13} />{/if}{o.label}
       {#if o.badge}<span class="chip ui-chip ui-count">{o.badge}</span>{/if}
     </button>
   {/each}

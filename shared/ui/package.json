@@ -16,6 +16,9 @@
     "./tokens.css": "./styles/tokens.css",
     "./base.css": "./styles/base.css",
     "./kit.css": "./styles/kit.css",
+    "./platform.css": "./styles/platform.css",
+    "./themes.css": "./styles/themes.css",
+    "./scene.css": "./styles/scene.css",
     "./fonts.css": "./styles/fonts.css",
     "./maps": "./src/maps.ts",
     "./profile-format": "./src/profile-format.ts",
@@ -31,7 +34,16 @@
     "./chatText": "./src/chatText.ts",
     "./ambience2d": "./src/ambience2d.ts",
     "./rewards": "./src/rewards.ts",
-    "./initiative": "./src/initiative.ts"
+    "./initiative": "./src/initiative.ts",
+    "./platform": "./src/platform.ts",
+    "./appearance": "./src/appearance.ts",
+    "./themes": "./src/themes/index.ts",
+    "./gallery": "./src/KitGallery.svelte"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "svelte-check --tsconfig ./tsconfig.json --threshold error"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
@@ -44,5 +56,11 @@
   },
   "peerDependencies": {
     "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "svelte-check": "^4.7.8",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.0"
   }
 }
