@@ -76,8 +76,8 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las primeras pantallas de dominio (Tienda, Mochila, icono de objeto), usados por el escritorio y por Android. Faltan Eclosión (depende del motor de sprites del escritorio), Inicio y Cuenta
-- 🟡 4.5 `apps/android`: UI Svelte con pestañas (Mascota, Mochila, Tienda) hecha con `@pockai/ui`. Probada en el emulador. Faltan el resto de pantallas del juego
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio (ficha de la mascota) y Cuenta, usadas por el escritorio y por Android. Falta Eclosión (depende del motor de sprites del escritorio)
+- 🟡 4.5 `apps/android`: UI Svelte con pestañas (Mascota, Mochila, Tienda, Cuenta) hecha con `@pockai/ui`. Tienda y Mochila probadas en el emulador; la ficha compartida y Cuenta, solo compiladas. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -290,3 +290,27 @@ escritorio (arrastre del hábitat, ventana), antes hay que partirla.
 
 Verificado: Tienda del escritorio en modo demo (iconos, compra, saldo); en el emulador de Android,
 comprar en la Tienda (1120 → 1110 monedas, manzanas 5 → 6) y usar un objeto de la Mochila (6 → 5).
+
+### Inicio y Cuenta compartidas (2026-11-20)
+
+Estas dos pantallas no eran presentacionales del todo, así que se partieron:
+
+- **Inicio** → `PetHomeView` (ficha, constantes, cuidados, comida y selector de mascota) en la
+  biblioteca. La casita de la que se saca al Pockai arrastrando es del escritorio: se queda en
+  `desktop/src/components/views/HomeView.svelte`, que la mete en el hueco `habitat` de la vista
+  compartida. `habitatToggle={false}` quita «A casa» donde la mascota no sale de su hábitat (móvil).
+- **Cuenta** → `AccountView` y `SocialAvatar` en la biblioteca. El canje de códigos llamaba a
+  `api.redeemVoucher`: el formulario pasa a `RedeemCodeCard` (props `busy`, `error`, `ok`; evento
+  `redeem`) y `RedeemVoucherCard` del escritorio queda como contenedor, en el hueco `redeem`.
+- `lib/ui/maps.ts` (elementos, rarezas, iconos de recompensa) pasa a `@pockai/ui/maps`; el
+  escritorio conserva la ruta con una reexportación.
+
+Patrón para lo que venga: lo común a la biblioteca, lo propio de una plataforma en un hueco
+(`slot`) que rellena su contenedor.
+
+Android usa `PetHomeView` en lugar de su ficha hecha a mano y gana la pestaña Cuenta (sin canje de
+códigos todavía). El cambio de mascota activa va por `stateSelectPet` del núcleo.
+
+Verificado en el escritorio en modo demo: ficha, dar de comer (5 → 4), llevar a casa (aparece la
+casita y desaparece «A casa»), Cuenta y canje de un código. 438 tests del escritorio; compilan
+escritorio y UI de Android. **Sin verificar:** la ficha y Cuenta en el emulador de Android.

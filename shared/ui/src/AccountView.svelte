@@ -1,9 +1,14 @@
 <script lang="ts">
-  /** Ajustes › Cuenta: datos del jugador y cerrar sesión. */
+  /**
+   * Cuenta: datos del jugador y cerrar sesión. El canje de códigos habla con el servidor, así que
+   * cada app pone el suyo en el hueco `redeem` (con `RedeemCodeCard` para pintarlo).
+   */
   import { createEventDispatcher } from 'svelte';
-  import SocialAvatar from '../SocialAvatar.svelte';
-  import { Badge, Button, Card, ListRow } from '../ui';
-  import RedeemVoucherCard from './RedeemVoucherCard.svelte';
+  import SocialAvatar from './SocialAvatar.svelte';
+  import Badge from './Badge.svelte';
+  import Button from './Button.svelte';
+  import Card from './Card.svelte';
+  import ListRow from './ListRow.svelte';
 
   export let user: any;
 
@@ -33,7 +38,7 @@
     {/if}
   </div>
 
-  <RedeemVoucherCard />
+  <slot name="redeem" />
 
   <!-- Cerrar sesión no borra nada: es una acción normal, no de peligro -->
   <Button block icon="logout" on:click={() => dispatch('logout')}>Cerrar sesión</Button>

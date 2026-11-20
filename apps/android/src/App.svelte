@@ -1,13 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { BackpackView, Button, Card, CurrencyPill, EmptyState, Ico, Notice, ProgressBar, ShopView } from '@pockai/ui';
+  import { AccountView, BackpackView, Button, Card, CurrencyPill, Ico, Notice, PetHomeView, ShopView } from '@pockai/ui';
+  import { stateSelectPet } from '@pockai/client';
   import { act, activePet, failureText, hasCore, offline, phase, signIn, signOut, start, state as core } from './core';
 
-  type Tab = 'pet' | 'backpack' | 'shop';
+  type Tab = 'pet' | 'backpack' | 'shop' | 'account';
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'pet', label: 'Mascota', icon: 'paw' },
     { id: 'backpack', label: 'Mochila', icon: 'gift' },
     { id: 'shop', label: 'Tienda', icon: 'shop' },
+    { id: 'account', label: 'Cuenta', icon: 'user' },
   ];
 
   let email = $state('');
@@ -19,19 +21,6 @@
 
   const pet = $derived(activePet($core));
   const coins = $derived(Number($core.user?.coins ?? 0));
-  const foods = $derived($core.inventory.filter((i: any) => i.item?.kind === 'food' && (i.qty ?? 0) > 0));
-  const vitals = $derived(
-    pet
-      ? [
-          { label: 'Saciedad', value: Number(pet.hunger ?? 0), color: 'var(--color-ember)' },
-          { label: 'Felicidad', value: Number(pet.happiness ?? 0), color: 'var(--color-sunburst)' },
-          { label: 'Energía', value: Number(pet.energy ?? 0), color: 'var(--color-electric-blue)' },
-          { label: 'Higiene', value: Number(pet.hygiene ?? 0), color: 'var(--color-mint-pop)' },
-        ]
-      : [],
-  );
-  const status = $derived(pet ? `Nivel ${pet.level ?? 1}${pet.sleeping ? ' · durmiendo' : ''}${pet.sick ? ' · enfermo' : ''}` : '');
-
   onMount(() => {
     if (hasCore()) void start().catch((e) => (message = failureText(e, 'No se pudo arrancar')));
   });
@@ -56,6 +45,11 @@
   }
 
   const leave = () => run('signOut', 'No se pudo cerrar la sesión', signOut);
+
+  /** A dónde lleva cada «ir a…» de las vistas compartidas. Lo que aún no existe aquí se queda en Mascota. */
+  function go(dest: string) {
+    tab = dest === 'shop' ? 'shop' : 'pet';
+  }
 </script>
 
 <main class:centered={$phase === 'signedOut' || $phase === 'starting'}>
@@ -93,7 +87,6 @@
         <CurrencyPill kind="coins" amount={coins} />
         <CurrencyPill kind="gems" amount={Number($core.user?.gems ?? 0)} />
       </span>
-      <Button variant="ghost" size="lg" icon="logout" iconOnly label="Salir" on:click={leave} />
     </header>
 
     {#if $offline}
@@ -105,73 +98,23 @@
 
     <div class="screen">
       {#if tab === 'pet'}
-        {#if pet}
-          <Card title={pet.nickname ?? pet.species?.name ?? 'Tu Pockai'} icon="paw" hint={status}>
-            <div class="vitals">
-              {#each vitals as vital (vital.label)}
-                <ProgressBar value={vital.value} label={vital.label} detail="{Math.round(vital.value)}%" color={vital.color} size="lg" />
-              {/each}
-            </div>
-            <div class="actions">
-              <Button
-                size="lg"
-                icon="bath"
-                loading={busy === 'clean'}
-                disabled={!!busy}
-                on:click={() => run('clean', 'No se pudo bañar', () => act({ type: 'clean', petId: pet.id }))}
-              >
-                Bañar
-              </Button>
-              {#if pet.sleeping}
-                <Button
-                  size="lg"
-                  icon="sun"
-                  loading={busy === 'sleep'}
-                  disabled={!!busy}
-                  on:click={() => run('sleep', 'No se pudo despertar', () => act({ type: 'wake', petId: pet.id }))}
-                >
-                  Despertar
-                </Button>
-              {:else}
-                <Button
-                  size="lg"
-                  icon="moon"
-                  loading={busy === 'sleep'}
-                  disabled={!!busy}
-                  on:click={() => run('sleep', 'No se pudo dormir', () => act({ type: 'sleep', petId: pet.id }))}
-                >
-                  Dormir
-                </Button>
-              {/if}
-            </div>
-          </Card>
-
-          <Card title="Alimentar" icon="apple">
-            {#if foods.length}
-              <div class="actions">
-                {#each foods as food (food.id ?? food.itemId)}
-                  <Button
-                    size="lg"
-                    loading={busy === `feed:${food.itemId}`}
-                    disabled={!!busy}
-                    on:click={() =>
-                      run(`feed:${food.itemId}`, 'No se pudo dar de comer', () => act({ type: 'feed', petId: pet.id, itemId: String(food.itemId) }))}
-                  >
-                    {food.item?.name ?? food.itemId} · {food.qty}
-                  </Button>
-                {/each}
-              </div>
-            {:else}
-              <EmptyState icon="apple" title="No te queda comida" compact>
-                <Button size="lg" icon="shop" on:click={() => (tab = 'shop')}>Ir a la tienda</Button>
-              </EmptyState>
-            {/if}
-          </Card>
-        {:else}
-          <Card>
-            <EmptyState icon="egg" title="Sin mascota" text="Eclosiona un huevo para conocer a tu Pockai." />
-          </Card>
-        {/if}
+        <!-- La misma ficha que el escritorio. Aquí la mascota no sale de su hábitat: sin «A casa». -->
+        <PetHomeView
+          {pet}
+          pets={$core.pets}
+          inventory={$core.inventory}
+          {busy}
+          habitatToggle={false}
+          on:clean={() => pet && run('clean', 'No se pudo bañar', () => act({ type: 'clean', petId: pet.id }))}
+          on:toggleSleep={() =>
+            pet &&
+            run('sleep', pet.sleeping ? 'No se pudo despertar' : 'No se pudo dormir', () =>
+              act({ type: pet.sleeping ? 'wake' : 'sleep', petId: pet.id }),
+            )}
+          on:feed={(e) => pet && run(`feed:${e.detail}`, 'No se pudo dar de comer', () => act({ type: 'feed', petId: pet.id, itemId: String(e.detail) }))}
+          on:selectPet={(e) => run('selectPet', 'No se pudo cambiar de mascota', () => stateSelectPet(String(e.detail)))}
+          on:go={(e) => go(e.detail.dest)}
+        />
 
         {#if $core.eggs.length}
           <Card title="Huevos" icon="egg">
@@ -199,6 +142,8 @@
           on:use={(e) => pet && run(`use:${e.detail}`, 'No se pudo usar el objeto', () => act({ type: 'useItem', petId: pet.id, itemId: e.detail }))}
           on:go={() => (tab = 'shop')}
         />
+      {:else if tab === 'account'}
+        <AccountView user={$core.user} on:logout={leave} />
       {:else}
         <ShopView
           shopItems={$core.shop}

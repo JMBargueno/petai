@@ -35,9 +35,9 @@
   import HandleField from './HandleField.svelte';
   import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, X, Users } from 'lucide-svelte';
   import HomeView from './views/HomeView.svelte';
-  import { BackpackView, ShopView } from '@pockai/ui';
+  import { AccountView, BackpackView, ShopView } from '@pockai/ui';
   import HatchView from './views/HatchView.svelte';
-  import AccountView from './views/AccountView.svelte';
+  import RedeemVoucherCard from './views/RedeemVoucherCard.svelte';
   import AuthLayout from './auth/AuthLayout.svelte';
   import CodeInput from './auth/CodeInput.svelte';
   import { Button, CurrencyPill, Notice, Segmented } from './ui';
@@ -1016,7 +1016,9 @@
           <ChestsTab on:refreshUser />
 
         {:else if dest === 'settings' && sub === 'account'}
-          <AccountView {user} on:logout={() => { api.logout(); dispatch('logout'); }} />
+          <AccountView {user} on:logout={() => { api.logout(); dispatch('logout'); }}>
+            <RedeemVoucherCard slot="redeem" />
+          </AccountView>
 
         {:else if dest === 'settings' && sub === 'notifications'}
           <NotificationSettingsPanel />

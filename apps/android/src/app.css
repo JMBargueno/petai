@@ -64,12 +64,6 @@ label {
   font-size: var(--text-label);
 }
 
-.vitals {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -88,6 +82,13 @@ label {
 
 .input {
   font-size: var(--text-body-lg);
+}
+
+/* Lo mismo para los chips de comida de la ficha compartida, pensados para el ratón. */
+.food-chip {
+  min-height: 48px;
+  padding-inline: var(--space-3);
+  font-size: var(--text-label);
 }
 
 /* Pantalla de la pestaña activa: ocupa el hueco y deja sitio a la barra de pestañas. */
