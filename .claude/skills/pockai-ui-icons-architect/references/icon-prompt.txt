@@ -1,0 +1,3 @@
+Design a sheet of {{N}} minimal UI icons on a plain white background, laid out in a grid with equal spacing. Style: Apple SF Symbols / macOS Big Sur, soft geometric shapes, rounded corners, balanced proportions, warm but technological. Single line weight at a 24 px grid, round caps and joins, black monochrome outline only, with one subtle flat tint shape per icon for depth (very light). No text, no labels, no shadows, no gradients, no pixel art, no faces unless the icon asks for one.
+Icons, left to right, top to bottom:
+{{LISTA_DE_ICONOS}}

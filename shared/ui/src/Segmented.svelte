@@ -92,7 +92,7 @@
   {#each options as o (o.value)}
     <button type="button" role="tab" aria-selected={value === o.value} tabindex={value === o.value ? 0 : -1} class:active={value === o.value} on:click={() => pick(o.value)}>
       <!-- Material 3: el segmento o chip elegido lleva un check delante en lugar de su icono. -->
-      {#if checkMark && value === o.value}<Ico n="check" size={14} />{:else if o.icon}<Ico n={o.icon} size={13} />{/if}{o.label}
+      {#if checkMark && value === o.value}<Ico n="check" size={14} />{:else if o.icon}<Ico n={o.icon} size={16} />{/if}{o.label}
       {#if o.badge}<span class="chip ui-chip ui-count">{o.badge}</span>{/if}
     </button>
   {/each}

@@ -35,17 +35,39 @@
     music: Music,
   };
 
+  import { uiIconSvg } from './icons';
+
+  /**
+   * `n` es un nombre de Lucide (`chat`, `home`…) o, con prefijo `ui:`, un icono del set propio de
+   * interfaz (`ui:pet`, `ui:hatch`…, ver `icons/`). El prefijo evita choques de nombre entre ambos sets.
+   * `active` elige la variante duotone del set propio (Lucide no tiene variante activa).
+   */
   export let n: string;
   export let size = 14;
+  export let active = false;
 
+  $: uiSvg = n.startsWith('ui:') ? uiIconSvg(n.slice(3), active) : undefined;
   $: Cmp = ICONS[n] ?? Star;
 </script>
 
-<span class="ico" aria-hidden="true"><svelte:component this={Cmp} {size} /></span>
+{#if uiSvg}
+  <span class="ico ico-ui" aria-hidden="true" style="width:{size}px;height:{size}px">{@html uiSvg}</span>
+{:else}
+  <span class="ico" aria-hidden="true"><svelte:component this={Cmp} {size} /></span>
+{/if}
 
 <style>
   .ico {
     display: inline-flex;
     vertical-align: -0.15em;
+  }
+  .ico-ui {
+    vertical-align: middle;
+    flex: none;
+  }
+  .ico-ui :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 </style>
