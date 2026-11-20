@@ -14,7 +14,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 |---|---|---|---|
 | 1 | Toda la red del escritorio pasa por Rust; ningún token en el webview | 24 / 24 | ✅ |
 | 2 | El estado global vive en Rust; `App.svelte` solo se suscribe | 5 / 6 | 🟡 |
-| 3 | Dominios restantes y fin de la pasarela `api_request` | 2 / 4 (2 descartados) | 🟡 |
+| 3 | Dominios restantes y fin de la pasarela `api_request` | 3 / 4 (2 descartados) | 🟡 |
 | 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 0 / 10 | ⬜ |
 | 5 | Live Activity / Dynamic Island y widgets | 0 / 7 | ⬜ |
 
@@ -69,8 +69,8 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 3.2 Entorno: estado ambiental del servidor, latido y cambios por tiempo real en el núcleo. El clima se queda en la UI: ver decisiones
 - ➖ 3.3 Social: la visita en curso pasa a la fase 5; visitantes y clanes se quedan en la UI: ver decisiones
 - ➖ 3.4 Skills de escritorio, digest de contexto y ajustes: se quedan en la UI: ver decisiones
-- 🟡 3.5 Acciones tipadas (`actions.rs`, command `perform`). Hecho: cuidado, huevos y tienda (11 llamadas). Pendiente, por dominio: cuenta y sesión, IA y chat, arena, misiones y logros, cofres, temporadas, hábitat, armario, vínculo, mente, social y clanes, minijuegos, cocina, entrenamiento, historias, incursión y torneo (unas 100 llamadas)
-- ⬜ 3.6 Borrar `api_request`, `api.ts` y el transporte web salvo el modo demo
+- ✅ 3.5 Acciones y consultas tipadas (`actions.rs`, `queries.rs`; commands `perform` y `query`): 77 acciones y 56 consultas, que cubren todo lo que pasaba por `minigameRequest` más cuidado, huevos y tienda
+- 🟡 3.6 Retirar la pasarela `api_request`. La siguen usando el inicio de sesión y el alta (registro, contraseña, verificación, nickname), las lecturas de estado del transporte web, el canje de códigos y la comprobación de mantenimiento: unas 17 llamadas. `api.ts` y el transporte web se conservan para el modo demo
 
 ## Fase 4 — Móvil
 - ⬜ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; código de escritorio bajo `cfg(desktop)`
@@ -184,3 +184,14 @@ nickname y el ajuste de zona horaria. Los tres están cubiertos por los tests de
 
 - Un test que ya fallaba antes de esta migración: `desktop/src/lib/game-data.client.spec.ts` deja un
   rechazo sin atender (`AssetNotFound: game-data/balance`). Es código sin uso y no se ha tocado.
+
+## Verificado en la app: acciones y consultas tipadas (2026-11-20)
+
+Compilación de desarrollo contra un backend local, llamando a los métodos reales de `api.ts`: 29
+consultas y 17 acciones de arena, misiones, cofres, logros, hábitat, visitas, clanes (crear, escribir,
+leer, salir), mente, iniciativa, vínculo, armario, temporadas, historias, cocina, entrenamiento, IA y
+recordatorios. Todas responden; los errores del servidor (404, 400) llegan a la UI con su mensaje y su
+estado, y los cambios de cuenta y de estrategia se reflejan en el estado del núcleo.
+
+El resto de variantes no se ha ejercitado una a una: se generaron con un script a partir de `api.ts`
+(misma ruta, mismo método, mismos campos) y comparten el camino de las probadas.

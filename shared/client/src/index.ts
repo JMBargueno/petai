@@ -287,3 +287,15 @@ export type { Action, ActionError };
 export function perform<T = unknown>(action: Action): Promise<T> {
   return command<T>('perform', { action });
 }
+
+import type { Query } from './bindings/Query';
+
+export type { Query };
+
+/**
+ * Hace una consulta (listas, perfiles, historiales, clasificaciones…). La UI dice *qué* quiere saber;
+ * la petición la construye el núcleo. Si falla, rechaza con un `ActionError`.
+ */
+export function query<T = unknown>(q: Query): Promise<T> {
+  return command<T>('query', { query: q });
+}

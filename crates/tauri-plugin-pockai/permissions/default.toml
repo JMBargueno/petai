@@ -20,4 +20,5 @@ permissions = [
   "allow-inbox-mark-all-read",
   "allow-set-present",
   "allow-perform",
+  "allow-query",
 ]

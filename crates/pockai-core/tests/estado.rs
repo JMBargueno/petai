@@ -472,9 +472,9 @@ async fn una_accion_tipada_hace_la_llamada_y_deja_el_estado_al_dia() {
     let error = core.perform(Action::Clean { pet_id: "p2".into() }).await.unwrap_err();
     assert_eq!((error.status, error.message.as_str()), (Some(400), "Ya está limpio"));
 
-    // Un id que no lo parece ni siquiera sale hacia el servidor.
+    // Un id raro va codificado: no puede salirse de su ruta, y el servidor simplemente no lo conoce.
     let invalid = core.perform(Action::Clean { pet_id: "../x".into() }).await.unwrap_err();
-    assert_eq!(invalid.status, None);
+    assert_eq!(invalid.status, Some(404));
 }
 
 #[tokio::test]

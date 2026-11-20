@@ -23,6 +23,7 @@ Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en 
 - `allow-inbox-mark-all-read`
 - `allow-set-present`
 - `allow-perform`
+- `allow-query`
 
 ## Permission Table
 
@@ -211,6 +212,32 @@ Enables the perform command without any pre-configured scope.
 <td>
 
 Denies the perform command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:allow-query`
+
+</td>
+<td>
+
+Enables the query command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pockai:deny-query`
+
+</td>
+<td>
+
+Denies the query command without any pre-configured scope.
 
 </td>
 </tr>

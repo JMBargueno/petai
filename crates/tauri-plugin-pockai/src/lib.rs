@@ -11,7 +11,7 @@ use std::sync::Mutex;
 
 use pockai_core::{
     Action, ActionError, ApiRequest, ApiResponse, AppState, Core, CoreConfig, CoreEvent, KeyringStore, LoadOptions, LoadOutcome,
-    MaintenanceEvent, RealtimeStatus, SessionEvent, SessionState, Slice, SseEvent,
+    MaintenanceEvent, Query, RealtimeStatus, SessionEvent, SessionState, Slice, SseEvent,
 };
 use serde_json::{Map, Value};
 use tauri::ipc::Channel;
@@ -169,6 +169,12 @@ async fn perform(core: State<'_, Core>, action: Action) -> Result<Value, ActionE
     core.perform(action).await
 }
 
+/// Una consulta de la UI (listas, perfiles, historiales…). El núcleo construye la petición.
+#[tauri::command]
+async fn query(core: State<'_, Core>, query: Query) -> Result<Value, ActionError> {
+    core.query(query).await
+}
+
 fn forward<R: Runtime>(app: &AppHandle<R>, event: CoreEvent) {
     let result = match event {
         CoreEvent::Session(kind) => app.emit(EVENT_SESSION, SessionEvent { kind }),
@@ -204,7 +210,8 @@ pub fn init<R: Runtime>(config: PockaiConfig) -> TauriPlugin<R> {
             inbox_take,
             inbox_mark_all_read,
             set_present,
-            perform
+            perform,
+            query
         ])
         .setup(move |app, _api| {
             let data_dir = app.path().app_config_dir().ok();

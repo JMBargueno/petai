@@ -12,6 +12,7 @@ pub mod error;
 pub mod events;
 mod jwt;
 pub mod notices;
+pub mod queries;
 mod realtime;
 pub mod secrets;
 pub mod state;
@@ -25,6 +26,7 @@ pub use crate::contract::{
 pub use crate::core::Core;
 pub use crate::error::CoreError;
 pub use crate::events::CoreEvent;
+pub use crate::queries::Query;
 pub use crate::notices::{pet_needs, Notice, NoticeKind, NoticePriority};
 pub use crate::secrets::{MemoryStore, SecretStore, Tokens};
 pub use crate::state::{AccountLock, AppState, ChangeSource, LoadOptions, LoadOutcome, Slice, StateChange};
