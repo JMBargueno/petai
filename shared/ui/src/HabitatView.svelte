@@ -102,7 +102,8 @@
   }
 
   $: petId = pet?.id;
-  $: isInHabitat = !!pet?.inHabitat;
+  // Donde la mascota no puede salir (móvil), está siempre en casa.
+  $: isInHabitat = !canLeave || !!pet?.inHabitat;
   $: isSleeping = !!pet?.sleeping;
   $: petName = pet?.nickname || pet?.species?.name || 'Tu Pockai';
   // Carga al montar y al cambiar de mascota (no en cada actualización de `pet` ni de `loading`).

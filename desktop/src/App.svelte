@@ -68,7 +68,7 @@
   import { unreadCount } from './lib/notification-inbox';
   import { clearVisitors, setVisitors, visitorJoined, visitorLeft, visitorsStore } from './lib/visitors';
   import { connectSocialFeed } from '@pockai/ui/social';
-  import { clearVisitorTalk, visitorInteracted, type VisitorInteractionEvent } from './lib/visitDialog';
+  import type { VisitorInteractionEvent } from './lib/visitDialog';
   import type { HabitatVisitor, ClanGoal } from './lib/api';
   import { updateState, updateLock, startAutoCheck, checkForUpdates } from './lib/updater';
   import { maintenanceLock } from './lib/maintenance';
@@ -415,12 +415,8 @@
           // Reacción reutilizando la acción del backend `friend_visit` (ya existe en eventMap)
           if (currentPet) reactToAction(currentPet.id, 'friend_visit', { visitorName: v.visitorName });
         });
-        socket.on('habitat:visitor_left', (ev: { visitorId?: string } | null) => {
-          if (ev?.visitorId) clearVisitorTalk(ev.visitorId);
-        });
         // Lo que el visitante hace con tu Pockai (saludarle, traerle un premio…) y cómo responde
         socket.on('habitat:visitor_interaction', (ev: VisitorInteractionEvent | null) => {
-          visitorInteracted(ev);
           // En el escritorio (fuera de su sala) reacciona igual que a un turno de chat
           if (ev?.behavior) reactToBehavior(ev.behavior);
         });

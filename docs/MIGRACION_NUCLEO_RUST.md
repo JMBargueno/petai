@@ -882,3 +882,32 @@ errores en la consola. Compila la UI de Android (`tsc` y build).
 
 **Sin verificar:** oírlo en el emulador o en un dispositivo (el WebView exige un toque antes de
 sonar: `attachAutoUnlock`); una pantalla de ajustes de sonido.
+
+### Escenas en Android: la sala isométrica y la del amigo (2026-11-20)
+
+No hace falta el bundle de la app Kotlin: la UI de Android ya corre en un WebView y dibuja
+`@pockai/scene` directamente (Aventura ya lo hacía).
+
+- **`IsoRoomView`** pasa a `@pockai/ui`. Lo que leía de stores del escritorio llega por props: el
+  clima local (`weather`), el paisaje (`backdrop`), la personalidad (`dims`; sin ella, valores
+  neutros) y el aviso de uso de un mueble (`useItem`). El sonido va por el puerto de la biblioteca.
+  El tipo de arrastre `RoomPetDrag` va en `roomDrag.ts`.
+- El `IsoRoomView.svelte` del escritorio queda como envoltorio que pone esas props desde sus stores y
+  su `api`, y deja pasar el resto (props, eventos, `selectedId`, `rotate()`): Hábitat, la sala del
+  amigo, el widget del modo hábitat y la casita no cambian.
+- **`visitDialog.ts`** (lo que dice el entrenador visitante) pasa a `@pockai/ui/social`, y el feed
+  social atiende `habitat:visitor_interaction`; el escritorio solo conserva su reacción.
+- **`FriendRoomView`** pasa a la biblioteca: recibe cómo traer la sala (`loadRoom`) y, si quiere, qué
+  sala usar (`roomView`; el escritorio pasa su envoltorio).
+- **Android**: Hábitat con la sala (`Room.svelte`: la de la biblioteca con el uso de muebles por el
+  núcleo), editar, mover y girar muebles. En el móvil la mascota está siempre en casa
+  (`canLeave={false}` ya no la da por «fuera»). Visitas enseña la sala del amigo durante la visita.
+
+Verificado en el escritorio en modo demo (ya por el componente compartido): la sala de Hábitat con
+sus controles; cambiar el paisaje; editar, elegir un mueble y girarlo; empezar una visita y ver la
+sala del amigo con su pie («Fuego está en casa de Luna.»). 441 tests del escritorio; compilan
+escritorio y UI de Android; `svelte-check` de Android sin errores propios.
+
+**Sin verificar:** nada de esto en el emulador: que la sala se dibuje en el WebView, y mover
+muebles y tocar a la mascota con el dedo (la escena se probó con ratón). En Android no hay clima
+local ni personalidad en la sala, ni el menú del visitante (`VisitDialog`).

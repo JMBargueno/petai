@@ -1,12 +1,12 @@
 <script lang="ts">
   /**
    * Social › Visitas: carga, cuida, empieza y termina por el núcleo; la pantalla es la de
-   * `@pockai/ui`. La visita en curso se deduce del historial (en la fase 5 pasará al núcleo). Sin
-   * escena de la sala del amigo todavía: la vista enseña su cabecera sencilla.
+   * `@pockai/ui`. La visita en curso se deduce del historial (en la fase 5 pasará al núcleo). Durante
+   * la visita se ve la sala del amigo (la de la biblioteca); la cabecera de su casa es la sencilla.
    */
   import { onMount } from 'svelte';
   import { query } from '@pockai/client';
-  import { Button, Modal, Notice, ProfileView, VisitsView } from '@pockai/ui';
+  import { Button, FriendRoomView, Modal, Notice, ProfileView, VisitsView } from '@pockai/ui';
   import { acceptedFriends, ongoingVisitFrom } from '@pockai/ui/social';
   import { act, failureText } from '../core';
 
@@ -95,7 +95,20 @@
   on:openProfile={(e) => openProfile(e.detail)}
   on:goFriends={() => onGoFriends?.()}
   on:dismissError={() => (error = '')}
-/>
+>
+  <svelte:fragment slot="room" let:friend>
+    {#if friend}
+    {#key friend.otherUserId}
+      <FriendRoomView
+        ownerId={friend.otherUserId}
+        ownerName={friend.otherDisplayName}
+        loadRoom={(ownerId) => query({ type: 'getVisitRoom', ownerId }) as Promise<any>}
+        errorText={(e, fallback) => failureText(e, fallback)}
+      />
+    {/key}
+    {/if}
+  </svelte:fragment>
+</VisitsView>
 
 {#if profileOf}
   <Modal title="Perfil" on:close={() => (profileOf = '')}>

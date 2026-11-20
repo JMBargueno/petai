@@ -1,12 +1,13 @@
 <script lang="ts">
   /**
    * Mascota › Hábitat: la pantalla entera es `HabitatView`, de `@pockai/ui`, hablando con el núcleo.
-   * En el móvil la mascota no sale de su hábitat y aún no hay sala isométrica: salas, catálogo,
-   * comprar y quitar muebles, y buffs. La mascota y el saldo los pone al día el núcleo.
+   * En el móvil la mascota no sale de su hábitat. La sala isométrica es la de la biblioteca con lo de
+   * Android (`Room.svelte`): editar, mover y girar muebles. La mascota y el saldo los pone al día el núcleo.
    */
   import { query } from '@pockai/client';
   import { HabitatView, type HabitatApi } from '@pockai/ui';
   import { act, failureText } from '../core';
+  import Room from './Room.svelte';
 
   let { pet = null, user = null }: { pet?: any; user?: any } = $props();
 
@@ -22,4 +23,4 @@
   };
 </script>
 
-<HabitatView {pet} {user} {habitatApi} canLeave={false} />
+<HabitatView {pet} {user} {habitatApi} room={Room} canLeave={false} />

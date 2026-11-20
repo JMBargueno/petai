@@ -9,6 +9,7 @@
  */
 import type { ClanGoal, ClanMessage, ClanXpEvent, HabitatSceneEvent, HabitatVisitor } from './types';
 import { sceneReceived, visitorJoined, visitorLeft } from './visitors';
+import { clearVisitorTalk, visitorInteracted, type VisitorInteractionEvent } from './visitDialog';
 import { bumpClanRoster, dropClanMessage, emitClanHabitatEvent, pushClanMessage, upsertClanGoal } from './clans';
 
 /** Cómo suscribirse a un evento; puede devolver cómo dejar de escucharlo. */
@@ -19,6 +20,7 @@ export const SOCIAL_EVENTS = [
   'habitat:visitor_joined',
   'habitat:visitor_left',
   'habitat:scene',
+  'habitat:visitor_interaction',
   'clan:message',
   'clan:goal_progress',
   'clan:goal_completed',
@@ -42,8 +44,13 @@ export function connectSocialFeed(on: SocialEventSource): () => void {
     if (v?.visitorId) visitorJoined(v);
   });
   listen('habitat:visitor_left', (ev: { visitorId?: string } | null) => {
-    if (ev?.visitorId) visitorLeft(ev.visitorId);
+    if (ev?.visitorId) {
+      visitorLeft(ev.visitorId);
+      clearVisitorTalk(ev.visitorId);
+    }
   });
+  // Lo que el visitante hace con tu Pockai (saludarle, traerle un premio…) y lo que contesta
+  listen('habitat:visitor_interaction', (ev: VisitorInteractionEvent | null) => visitorInteracted(ev));
   // Qué hacen tu Pockai y el visitante: lo decide el servidor y se representa en la sala
   listen('habitat:scene', (ev: HabitatSceneEvent | null) => sceneReceived(ev));
 
