@@ -8,7 +8,7 @@
    *  suyo). El hábitat del clan es de cada app: si pasa `habitat` (un componente que recibe
    *  `clanId`, `xp`, `refreshKey` y avisa con `xp`), la cabecera del clan se pinta dentro. */
   import SocialAvatar from './SocialAvatar.svelte';
-  import { onMount, type ComponentType } from 'svelte';
+  import { onMount } from 'svelte';
   import { isNearBottom } from './chatScroll';
   import Button from './Button.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
@@ -41,7 +41,7 @@
   /** Cómo habla esta pantalla con el servidor. */
   export let clansApi: ClansApi;
   /** Hábitat del clan (opcional): envuelve la cabecera del clan. */
-  export let habitat: ComponentType | null = null;
+  export let habitat: any = null; // un componente con clanId, xp y refreshKey (ver arriba)
 
   let clan: ClanSummary | null = null;
   let meId = '';
@@ -471,7 +471,7 @@
     </div>
     {/snippet}
     {#if habitat}
-      <svelte:component this={habitat} clanId={clan.id} xp={clan.xp ?? 0} refreshKey={habitatKey} on:xp={(e) => clan && (clan = { ...clan, xp: e.detail })}>
+      <svelte:component this={habitat} clanId={clan.id} xp={clan.xp ?? 0} refreshKey={habitatKey} on:xp={(e: CustomEvent<number>) => clan && (clan = { ...clan, xp: e.detail })}>
         {@render clanHero()}
       </svelte:component>
     {:else}

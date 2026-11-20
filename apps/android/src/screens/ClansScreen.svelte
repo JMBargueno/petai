@@ -1,13 +1,14 @@
 <script lang="ts">
   /**
    * Social › Clanes: la pantalla entera es `ClansView`, de `@pockai/ui`. Aquí solo se le da cómo
-   * hablar con el servidor (consultas y acciones del núcleo). Sin hábitat del clan todavía: la
-   * cabecera del clan se pinta sola. El chat y los objetivos llegan en vivo por el feed social.
+   * hablar con el servidor (consultas y acciones del núcleo) y el hábitat del clan, que envuelve la
+   * cabecera. El chat y los objetivos llegan en vivo por el feed social.
    */
   import { query } from '@pockai/client';
   import { ClansView } from '@pockai/ui';
   import type { ClansApi } from '@pockai/ui/social';
   import { act, failureText } from '../core';
+  import ClanHabitatView from './ClanHabitatView.svelte';
 
   const ask = (q: Parameters<typeof query>[0]) => query(q) as Promise<any>;
   const run = (a: Parameters<typeof act>[0]) => act(a) as Promise<any>;
@@ -44,4 +45,4 @@
   };
 </script>
 
-<ClansView {clansApi} />
+<ClansView {clansApi} habitat={ClanHabitatView} />

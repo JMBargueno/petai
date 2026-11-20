@@ -44,9 +44,9 @@ fases de abajo y en las secciones de verificación del final.
 ### Qué falta, por orden
 
 1. **Probar en el emulador** Jugar entera, Cofres, Armario, lo social entero y el huevo de sprites.
-2. **Pantallas a la biblioteca** (4.4 y 4.5): hechas todas las de la tabla de abajo. Quedan, de
-   cada app, las escenas que van en huecos (sala del amigo, casa, hábitat del clan, sala del
-   hábitat) y, en Android, el clima local.
+2. **Pantallas a la biblioteca** (4.4 y 4.5): hechas todas, con sus escenas (sala del hábitat,
+   sala del amigo y hábitat del clan; en Android, la casa del amigo sigue siendo la cabecera
+   sencilla). Falta en Android el clima local.
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
 4. **Plugins nativos** (4.7, 4.8): sesión cifrada con el Keystore en Android (hoy es un fichero
    privado de la app) y sincronización en segundo plano con avisos de cuidado.
@@ -911,3 +911,23 @@ escritorio y UI de Android; `svelte-check` de Android sin errores propios.
 **Sin verificar:** nada de esto en el emulador: que la sala se dibuje en el WebView, y mover
 muebles y tocar a la mascota con el dedo (la escena se probó con ratón). En Android no hay clima
 local ni personalidad en la sala, ni el menú del visitante (`VisitDialog`).
+
+### Escenas en Android: el hábitat del clan (2026-11-20)
+
+- **`ClanHabitat`** pasa a `@pockai/ui` con sus piezas: `ambience2d.ts` (cielo, velo y clima en
+  2D; solo usa `@pockai/scene`) y `social/clanHabitat.ts` (niveles y paseantes, sobre
+  `clan-habitat.json`). Lo que leía del escritorio llega por props: cómo traer el hábitat
+  (`loadHabitat`) y el clima local (`weather`). El escritorio conserva sus rutas
+  (`lib/ambience-2d.ts`, que también usa `HomeScene`, y `lib/clan-habitat.ts`) y su
+  `ClanHabitat.svelte` como envoltorio que pone la consulta y el clima.
+- **Android**: `ClansScreen` pasa su envoltorio (`ClanHabitatView.svelte`, con la consulta por el
+  núcleo) a `ClansView`: la cabecera del clan va dentro del hábitat, como en el escritorio.
+- La prop `habitat` de `ClansView` se tipa como `any`: con `ComponentType` el modo estricto de
+  Android no acepta un componente con props obligatorias.
+
+Verificado en el escritorio en modo demo (ya por el componente compartido): Clanes con el hábitat
+pintado envolviendo la cabecera («Nexo de Resonancia», nivel, cielo, efectos y pockais). 441 tests
+del escritorio; compilan escritorio y UI de Android; `svelte-check` sin errores propios en ninguna.
+
+**Sin verificar:** nada de esto en el emulador (que el diorama 2D y los pockais se dibujen en el
+WebView). En Android, el cielo del clan sigue la hora sin clima local.

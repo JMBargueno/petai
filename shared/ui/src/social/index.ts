@@ -9,3 +9,4 @@ export * from './feed';
 export * from './visits';
 export * from './clansApi';
 export * from './visitDialog';
+export * from './clanHabitat';
