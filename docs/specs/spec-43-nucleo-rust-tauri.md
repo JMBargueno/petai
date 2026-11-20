@@ -3,8 +3,10 @@
 Documento autocontenido. Define **dónde vive la lógica de cliente** (un núcleo en Rust compartido por
 las tres plataformas), **qué se queda en la UI**, **cómo hablan entre sí** y **en qué orden se migra**.
 
-Estado: **fases 1, 2 y 3 hechas** (la red, el estado global y todas las llamadas del escritorio van por el núcleo, con tipo propio). Las fases 4 y 5 están
-planificadas. El avance paso a paso se lleva en [`../MIGRACION_NUCLEO_RUST.md`](../MIGRACION_NUCLEO_RUST.md).
+Estado: **fases 1 a 5 hechas** (la red, el estado global y todas las llamadas del escritorio van por
+el núcleo, con tipo propio; Android e iOS tienen su app y sus plugins nativos; las superficies vivas
+están, salvo la prueba en dispositivo). La fase 6, el reloj, está planificada. El avance paso a paso se
+lleva en [`../MIGRACION_NUCLEO_RUST.md`](../MIGRACION_NUCLEO_RUST.md).
 
 Sustituye el planteamiento de clientes nativos separados (Compose y SwiftUI) de la spec 27 y de
 `PROYECTO.md`: habrá una sola app Tauri v2 con una UI por plataforma. **El backend no cambia.**
@@ -119,7 +121,8 @@ creciente (1 s a 60 s). El id del dispositivo se guarda en la carpeta de datos d
 
 - **No hay endpoint para registrar tokens de push** (FCM o APNs). Live Activities y widgets solo se
   actualizan con la app viva o en los refrescos en segundo plano que conceda el sistema, así que se
-  diseñan sobre marcas de tiempo.
+  diseñan sobre marcas de tiempo. Tampoco se puede despertar un Apple Watch:
+  ver la [spec 44](spec-44-reloj-apple-watch.md), que lo resuelve pasando por el iPhone.
 - **`/sync` es un prototipo.** «Sin conexión» significa caché de lectura del último estado, no una
   cola de cambios.
 - **OpenAPI tipa 97 de 98 cuerpos de petición pero solo 49 de 295 respuestas**, y el tiempo real y el
@@ -133,8 +136,9 @@ creciente (1 s a 60 s). El id del dispositivo se guarda en la carpeta de datos d
 | 1 | Workspace, `pockai-core`, puente, `@pockai/client`; `api.ts`, `socket.ts` y `environmental.ts` del escritorio pasan por el núcleo | Hecha |
 | 2 | Estado global en Rust (`state.rs`): carga, sondeo, tiempo real y snapshot en disco; `App.svelte` solo lo refleja | Hecha |
 | 3 | Avisos y entorno en el núcleo; acciones y consultas con tipo propio para todos los dominios; se retira `api_request` | Hecha |
-| 4 | Targets Android e iOS con su UI; plugins de almacén seguro y sync en segundo plano; se borra `mobile/android` | Pendiente |
-| 5 | Live Activity / Dynamic Island, WidgetKit y su equivalente en Android | Pendiente |
+| 4 | Targets Android e iOS con su UI; plugins de almacén seguro y sync en segundo plano; se borra `mobile/android` | Hecha (quedan pantallas de Android) |
+| 5 | Live Activity / Dynamic Island, WidgetKit y su equivalente en Android | Hecha (falta la prueba en dispositivo) |
+| 6 | App de Apple Watch compañera del iPhone ([spec 44](spec-44-reloj-apple-watch.md)) | Pendiente |
 
 ### Orden de migración de la lógica TypeScript
 

@@ -198,6 +198,9 @@ enum PockaiBackground {
         if let notice = sync.notice { show(notice) }
         saveWidget(sync.widget)
         PockaiSurfaces.apply(sync.surfaces)
+        // Una de las pocas ocasiones al día en que el reloj puede enterarse de algo sin que el
+        // jugador abra nada.
+        PockaiWristLink.shared.push()
     }
 
     /// Una notificación local con el aviso, si no es el mismo que ya se mostró.
@@ -263,6 +266,9 @@ public func pockaiBackgroundRegister() {
     // El núcleo avisa por aquí cuando cambian los huevos con la app abierta, para que la Live
     // Activity no tenga que esperar a una pasada en segundo plano.
     pockai_surfaces_set_callback(pockaiSurfacesRefresh)
+    // El enlace con el Apple Watch (spec 44). Se enciende aquí, antes de que arranque la app: cuando
+    // el reloj manda algo, el sistema despierta el proceso y el delegado tiene que estar puesto.
+    PockaiWristLink.shared.activate()
 }
 
 /// Repasa lo que se ve fuera de la app con el estado que el núcleo ya tiene: el resumen del widget
@@ -279,5 +285,8 @@ private func pockaiSurfacesRefresh() {
     DispatchQueue.main.async {
         PockaiBackground.saveWidget(widget)
         if let diff { PockaiSurfaces.apply(diff) }
+        // Lo mismo que cambia en el widget cambia en la muñeca. El núcleo decide si vale la pena
+        // mandarlo: `pockai_wrist_push` devuelve nulo si no cambió nada que se vea.
+        PockaiWristLink.shared.push()
     }
 }

@@ -18,6 +18,7 @@ mod realtime;
 pub mod secrets;
 pub mod state;
 pub mod surfaces;
+pub mod wrist;
 
 pub use crate::actions::{Action, ActionError};
 pub use crate::config::CoreConfig;
@@ -34,6 +35,9 @@ pub use crate::notices::{pet_needs, Notice, NoticeKind, NoticePriority};
 pub use crate::secrets::{FileStore, MemoryStore, SealedFileStore, Sealer, SecretStore, Tokens};
 pub use crate::state::{AccountLock, AppState, ChangeSource, LoadOptions, LoadOutcome, Slice, StateChange};
 pub use crate::surfaces::{diff as surface_diff, surfaces, Surface, SurfaceDiff, SurfaceKind};
+pub use crate::wrist::{
+    WristAction, WristButton, WristComplication, WristReject, WristRequest, WristSnapshot,
+};
 
 #[cfg(all(feature = "keyring-store", not(target_os = "android")))]
 pub use crate::secrets::KeyringStore;

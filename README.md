@@ -57,7 +57,8 @@ La app es multiplataforma: un backend autoritativo y varios clientes que muestra
 |---|---|---|
 | **Escritorio** (Windows, Tauri 2 + Svelte) | Funcional | Mascota en una ventana transparente sobre el escritorio que camina, duerme y come, con clics a través de la ventana. Bandeja del sistema, panel de control (cuenta, eclosión, inventario, estadísticas, minijuegos, tienda, Arena, IA), chat flotante y notificaciones nativas. Modo Hermes local. Sincronización por WebSocket. |
 | **Android** (Tauri 2 + Svelte, con el núcleo en Rust) | Funcional, sin Play Billing ni FCM | Las mismas pantallas que el escritorio (`@pockai/ui`): cuenta completa, eclosión, cuidados, tienda y cofres, Jugar, progreso, social, hábitat, chat IA (con clave propia), widget de pantalla de inicio, avisos de cuidado en segundo plano y sesión cifrada con el Keystore. |
-| **iOS** (Tauri 2 + Svelte, con el núcleo en Rust) | Funcional en el simulador, sin APNs ni StoreKit | La misma app que Android: las dos UIs móviles son `@pockai/mobile` con su plataforma y sus estilos, así que el juego entra entero. Sesión en el Keychain. Faltan los avisos en segundo plano (`BGAppRefreshTask`), la Live Activity y el `.ipa` firmado. |
+| **iOS** (Tauri 2 + Svelte, con el núcleo en Rust) | Funcional en el simulador, sin APNs ni StoreKit | La misma app que Android: las dos UIs móviles son `@pockai/mobile` con su plataforma y sus estilos, así que el juego entra entero. Sesión en el Keychain, avisos en segundo plano con `BGAppRefreshTask`, Live Activity en la isla dinámica y widget de WidgetKit. Faltan un iPhone de verdad y el `.ipa` firmado. |
+| **Apple Watch** (SwiftUI nativo, compañera del iPhone) | Funcional en el simulador ([spec 44](docs/specs/spec-44-reloj-apple-watch.md)) | Una superficie, no un cliente: constantes vitales, cuentas atrás, tres acciones (dar de comer, bañar, dormir) y complicaciones. El iPhone le pasa el resumen y recibe sus intenciones; el reloj no habla con el backend ni ve tokens. De la UI Svelte no se reutiliza nada: watchOS no tiene WKWebView. Faltan el hardware y la complicación puesta en una esfera. |
 | **Web** (Angular 22, [`web/`](web/README.md)) | Landing funcional; panel con datos de ejemplo | Web oficial con el nombre público del juego, **Pockai** (pocket + yokai + AI): landing estática en español e inglés y un panel de administración oculto que, de momento, trabaja con datos simulados y no se conecta al backend. |
 
 Para usar la misma cuenta en el escritorio y en el móvil, entra con el mismo correo en los dos. El backend tiene una vinculación por código (`/v1/auth/device/*`), pero ningún cliente la inicia todavía.
@@ -140,10 +141,10 @@ petai/
 - [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md): reglas del juego (incluye las 33 features de la Fase 7).
 - [`docs/API.md`](docs/API.md): referencia de la API.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): estado de cada fase (incluye Fase 7 con las 33 features).
-- [`docs/PANTALLAS.md`](docs/PANTALLAS.md): pantallas y opciones que debe tener cada app (móvil y ordenador), con su estado actual.
+- [`docs/PANTALLAS.md`](docs/PANTALLAS.md): pantallas y opciones que debe tener cada app (móvil, ordenador y reloj), con su estado actual.
 - [`docs/GUIA_ARTISTICA.md`](docs/GUIA_ARTISTICA.md): guía artística común de la web y las apps (paleta, tipografía, iconos, formas, sprites y movimiento).
 - [`docs/NUEVAS_FUNCIONALIDADES.md`](docs/NUEVAS_FUNCIONALIDADES.md): análisis y priorización de las 33 funcionalidades.
-- [`docs/specs/`](docs/specs/): especificaciones de detalle por feature (33 specs).
+- [`docs/specs/`](docs/specs/): especificaciones de detalle por feature (33 specs) y las posteriores (`spec-34`+), entre ellas el núcleo en Rust (43) y el reloj (44).
 - [`docs/DEPLOY.md`](docs/DEPLOY.md): despliegue del backend en producción.
 - [`docs/informes/`](docs/informes/): informes de auditoría y SDD de solución — [`AUDITORIA_SEGURIDAD.md`](docs/informes/AUDITORIA_SEGURIDAD.md), [`SDD_SEGURIDAD.md`](docs/informes/SDD_SEGURIDAD.md) y [`MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md`](docs/informes/MEJORAS_FUNCIONALIDAD_RENDIMIENTO.md).
 

@@ -1,0 +1,44 @@
+{
+  "rev": 7,
+  "generatedAt": 1795186800000,
+  "staleAt": 1795188600000,
+  "signedIn": true,
+  "pet": {
+    "name": "Brasa",
+    "level": 7,
+    "mood": "happy",
+    "moodLabel": "Contento",
+    "hunger": 40,
+    "happiness": 70,
+    "energy": 60,
+    "hygiene": 30,
+    "health": 90
+  },
+  "surfaces": [
+    {
+      "id": "egg:e1",
+      "kind": "eggHatching",
+      "title": "Tu huevo está incubando",
+      "body": "Huevo starter: ya falta poco para saber quién hay dentro.",
+      "endsAt": 1795190400000,
+      "staleAt": 1795190700000
+    }
+  ],
+  "buttons": [
+    {
+      "action": "feed",
+      "label": "Dar de comer",
+      "enabled": true
+    },
+    {
+      "action": "clean",
+      "label": "Bañar",
+      "enabled": true
+    },
+    {
+      "action": "sleep",
+      "label": "A dormir",
+      "enabled": true
+    }
+  ]
+}
