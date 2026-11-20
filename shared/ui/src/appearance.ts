@@ -88,18 +88,33 @@ export function effectiveScheme(a: Appearance, prefersDark = darkQuery()?.matche
   return forcedScheme(a) ?? (prefersDark ? 'dark' : 'light');
 }
 
-/** Pone los atributos en <html> y el color de la barra del sistema en el móvil. */
+/** Pone los atributos en <html>. Las barras del sistema las sigue `initAppearance` (ver systemChrome). */
 export function applyAppearance(a: Appearance, root: AppearanceRoot | undefined = defaultRoot()) {
   if (!root) return;
   root.setAttribute('data-theme', a.theme);
   const forced = forcedScheme(a);
   if (forced) root.setAttribute('data-scheme', forced);
   else root.removeAttribute('data-scheme');
-  updateThemeColor(a);
 }
 
-/** `<meta name="theme-color">`: la barra de estado y de tareas del móvil toma el fondo del tema. */
-function updateThemeColor(a: Appearance) {
+/**
+ * Puente nativo de las barras del sistema. En Android lo expone MainActivity.kt (iconos claros u
+ * oscuros según el fondo del tema); en el escritorio y el navegador no existe y no pasa nada.
+ */
+export type SystemBars = { setDark(dark: boolean): void };
+const nativeBars = (): SystemBars | undefined =>
+  (globalThis as { PockaiSystemBars?: SystemBars }).PockaiSystemBars;
+
+/**
+ * Ajusta lo que pinta el sistema alrededor de la app al tema y esquema que se ven: el color de la
+ * barra (`<meta name="theme-color">`) y el color de sus iconos (puente nativo).
+ */
+export function systemChrome(resolved: { theme: string; scheme: ColorScheme }, bars: SystemBars | undefined = nativeBars()) {
+  try {
+    bars?.setDark(resolved.scheme === 'dark');
+  } catch {
+    /* el puente nativo no está listo: la próxima actualización lo intentará otra vez */
+  }
   if (typeof document === 'undefined' || !document.head) return;
   let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
   if (!meta) {
@@ -107,7 +122,7 @@ function updateThemeColor(a: Appearance) {
     meta.name = 'theme-color';
     document.head.appendChild(meta);
   }
-  meta.content = getTheme(a.theme).swatch[effectiveScheme(a)][0];
+  meta.content = getTheme(resolved.theme).swatch[resolved.scheme][0];
 }
 
 /** Apariencia elegida (lo que se guarda). */
@@ -129,10 +144,11 @@ export function setAppearance(patch: Partial<Appearance>, storage: WriteStorage 
 /**
  * Aplica la apariencia guardada. La app la llama en main.ts antes de montar, para que la primera
  * pintura ya salga bien. Escucha el evento `storage` para que las otras ventanas del escritorio
- * cambien a la vez. Devuelve la función que deja de escuchar.
+ * cambien a la vez, y mantiene las barras del sistema (color e iconos) al día, también cuando el
+ * sistema cambia de claro a oscuro. Devuelve la función que deja de escuchar.
  */
 export function initAppearance(
-  opts: { storage?: ReadStorage; root?: AppearanceRoot; win?: AppearanceWindow } = {},
+  opts: { storage?: ReadStorage; root?: AppearanceRoot; win?: AppearanceWindow; bars?: SystemBars } = {},
 ): () => void {
   const storage = 'storage' in opts ? opts.storage : defaultStorage();
   const root = 'root' in opts ? opts.root : defaultRoot();
@@ -148,7 +164,11 @@ export function initAppearance(
     if (e.key === APPEARANCE_KEY || e.key === null) sync();
   };
   win?.addEventListener('storage', onStorage);
-  return () => win?.removeEventListener('storage', onStorage);
+  const stopChrome = resolvedAppearance.subscribe((r) => systemChrome(r, 'bars' in opts ? opts.bars : nativeBars()));
+  return () => {
+    win?.removeEventListener('storage', onStorage);
+    stopChrome();
+  };
 }
 
 /** Preferencia de oscuro del sistema, viva. */

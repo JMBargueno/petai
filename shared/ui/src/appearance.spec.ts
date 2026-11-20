@@ -11,6 +11,7 @@ import {
   initAppearance,
   loadAppearance,
   setAppearance,
+  systemChrome,
 } from './appearance';
 import { THEMES } from './themes';
 import type { ThemeManifest } from './themes';
@@ -134,6 +135,29 @@ describe('appearance', () => {
 
     stop();
     expect(win.listeners.size).toBe(0);
+  });
+
+  it('initAppearance avisa a las barras nativas del esquema que se ve, y al cambiar', () => {
+    const calls: boolean[] = [];
+    const bars = { setDark: (dark: boolean) => void calls.push(dark) };
+    const s = fakeStorage({ [APPEARANCE_KEY]: JSON.stringify({ theme: 'cozy', scheme: 'dark' }) });
+    const stop = initAppearance({ storage: s, root: fakeRoot(), win: fakeWindow(), bars });
+    expect(calls.at(-1)).toBe(true);
+    setAppearance({ scheme: 'light' }, fakeStorage());
+    expect(calls.at(-1)).toBe(false);
+    stop();
+    const n = calls.length;
+    setAppearance({ scheme: 'dark' }, fakeStorage());
+    expect(calls.length).toBe(n);
+  });
+
+  it('systemChrome no falla si el puente nativo lanza', () => {
+    const broken = {
+      setDark: () => {
+        throw new Error('sin ventana');
+      },
+    };
+    expect(() => systemChrome({ theme: 'classic', scheme: 'dark' }, broken)).not.toThrow();
   });
 
   it('canvasPalette da la paleta del tema y esquema', () => {
