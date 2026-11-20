@@ -64,16 +64,21 @@ fn notify_swift() {
     }
 }
 
-/// Mientras la app esté abierta, la Live Activity sigue a los huevos: cada vez que cambian (uno
-/// nuevo, uno que eclosiona, o al cerrar sesión) se le pide a Swift que repase. Lo que haya que
-/// abrir, actualizar o cerrar lo decide el núcleo; aquí solo se le da el aviso.
+/// Mientras la app esté abierta, lo que se ve fuera de ella sigue al estado: la Live Activity a los
+/// huevos, y el widget de la pantalla de inicio a la mascota activa. Cada vez que cambian (un huevo
+/// nuevo, uno que eclosiona, una mascota que come, otra que se elige, o al cerrar sesión) se le pide
+/// a Swift que repase. Qué enseñar lo decide el núcleo; aquí solo se le da el aviso.
+///
+/// Sin esto, el resumen del widget solo se escribiría en las pasadas en segundo plano, que el
+/// sistema concede cuando quiere: el widget se quedaría en «Abre Pockai» por mucho que se abriera.
 fn watch_surfaces(core: Core) {
     let mut events = core.subscribe();
     tauri::async_runtime::spawn(async move {
         notify_swift();
         loop {
             match events.recv().await {
-                Ok(CoreEvent::State(change)) if change.slice == Slice::Eggs => {}
+                Ok(CoreEvent::State(change))
+                    if matches!(change.slice, Slice::Eggs | Slice::Pets | Slice::ActivePetId) => {}
                 Ok(CoreEvent::Session(_)) => {}
                 Ok(_) => continue,
                 Err(RecvError::Lagged(_)) => {}
@@ -146,6 +151,21 @@ pub unsafe extern "C" fn pockai_care_sync(data_dir: *const c_char, base_url: *co
                 None
             }
         }
+    }));
+    out(result.ok().flatten())
+}
+
+/// El resumen de la mascota activa para el widget de la pantalla de inicio, con el estado que el
+/// núcleo ya tiene. Devuelve nulo si no hay núcleo o no hay mascota (sin sesión), y entonces Swift
+/// borra el resumen y el widget vuelve a «Abre Pockai».
+///
+/// # Safety
+/// El resultado se libera con [`pockai_string_free`].
+#[no_mangle]
+pub unsafe extern "C" fn pockai_widget_poll() -> *mut c_char {
+    let result = catch_unwind(AssertUnwindSafe(|| -> Option<String> {
+        let core = CORE.lock().unwrap_or_else(|e| e.into_inner()).clone()?;
+        serde_json::to_string(&core.pet_glance()?).ok()
     }));
     out(result.ok().flatten())
 }

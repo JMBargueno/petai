@@ -24,6 +24,9 @@ private func pockai_care_sync(_ dataDir: UnsafePointer<CChar>?, _ baseURL: Unsaf
 @_silgen_name("pockai_surfaces_poll")
 private func pockai_surfaces_poll() -> UnsafeMutablePointer<CChar>?
 
+@_silgen_name("pockai_widget_poll")
+private func pockai_widget_poll() -> UnsafeMutablePointer<CChar>?
+
 @_silgen_name("pockai_string_free")
 private func pockai_string_free(_ ptr: UnsafeMutablePointer<CChar>?)
 
@@ -121,11 +124,9 @@ enum PockaiBackground {
 
     /// El App Group que comparten la app y la extensión del widget.
     ///
-    /// **Necesita firma.** Los entitlements solo se aplican a una compilación firmada, así que en un
-    /// build sin firmar (el `tauri ios dev` de toda la vida) el contenedor del grupo no existe y
-    /// cada proceso se queda con sus propios ajustes: el widget de la pantalla de inicio enseña
-    /// «Abre Pockai» aunque la app tenga el resumen. La Live Activity no pasa por aquí (su contenido
-    /// va por ActivityKit), así que esa sí se ve sin firmar.
+    /// Va declarado en `entitlements.properties` de **project.yml**, no a mano en el `.entitlements`:
+    /// `xcodegen` regenera ese fichero desde el proyecto y, si no está declarado ahí, lo deja vacío
+    /// y los dos procesos se quedan cada uno con sus propios ajustes.
     static let appGroup = "group.com.petai.app"
 
     /// Los ajustes compartidos con la extensión, o `nil` si el App Group no está disponible.
@@ -217,10 +218,15 @@ enum PockaiBackground {
     }
 
     /// Guarda el resumen en el App Group y pide a la extensión que se redibuje. `nil` lo borra (sin
-    /// sesión o sin mascota, el widget vuelve a «Abre la app»).
+    /// sesión o sin mascota, el widget vuelve a «Abre Pockai»).
+    ///
+    /// Si el resumen no ha cambiado no se pide el redibujado: esto se llama en cada cambio de estado
+    /// (comer, bañar, un minijuego…) y WidgetKit limita cuántas veces al día atiende.
     static func saveWidget(_ widget: AnyCodableBox?) {
         // Este sí lo lee la extensión: sin App Group no hay nada que compartir.
         guard let store = sharedDefaults() else { return }
+        let before = store.data(forKey: widgetKey)
+        guard before != widget?.raw else { return }
         if let widget {
             store.set(widget.raw, forKey: widgetKey)
         } else {
@@ -259,11 +265,19 @@ public func pockaiBackgroundRegister() {
     pockai_surfaces_set_callback(pockaiSurfacesRefresh)
 }
 
-/// Repasa las superficies con el estado que el núcleo ya tiene. Lo llama el núcleo desde su hilo, así
-/// que el trabajo de UI se manda al principal.
+/// Repasa lo que se ve fuera de la app con el estado que el núcleo ya tiene: el resumen del widget
+/// de la pantalla de inicio y las superficies vivas. Lo llama el núcleo desde su hilo, así que el
+/// trabajo de UI se manda al principal.
 private func pockaiSurfacesRefresh() {
-    guard let json = coreString({ pockai_surfaces_poll() }),
-          let diff = try? JSONDecoder().decode(SurfaceDiff.self, from: json)
-    else { return }
-    DispatchQueue.main.async { PockaiSurfaces.apply(diff) }
+    // El resumen del widget: `nil` lo borra (sin sesión o sin mascota).
+    let widget = coreString { pockai_widget_poll() }.flatMap { data in
+        try? JSONDecoder().decode(AnyCodableBox.self, from: data)
+    }
+    let diff = coreString { pockai_surfaces_poll() }.flatMap { data in
+        try? JSONDecoder().decode(SurfaceDiff.self, from: data)
+    }
+    DispatchQueue.main.async {
+        PockaiBackground.saveWidget(widget)
+        if let diff { PockaiSurfaces.apply(diff) }
+    }
 }

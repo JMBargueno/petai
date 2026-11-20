@@ -172,7 +172,8 @@ Desviaciones encontradas y resueltas:
   Se renombró a `Info.macos.plist` y se referencia desde `bundle.macOS.infoPlist`: Tauri recoge solo
   `Info.plist` e `Info.ios.plist` por su nombre.
 
-No verificado en iOS: un dispositivo físico y el `.ipa` firmado.
+No verificado en iOS: un dispositivo físico, el `.ipa` firmado y una pasada de `BGAppRefreshTask`
+de verdad (el sistema las concede cuando quiere).
 
 ### Sin verificar
 
@@ -254,7 +255,7 @@ No verificado en iOS: un dispositivo físico y el `.ipa` firmado.
 - ➖ 5.2 Sin plugin aparte ni paquete Swift: lo de iOS va dentro de `tauri-plugin-pockai` (`src/ios.rs`, interfaz en C), como lo de Android va en `src/android.rs`. Los `ActivityAttributes` viven en `gen/apple/Shared/`, que compilan la app y la extensión (ver desviaciones)
 - ✅ 5.3 `PockaiSurfaces.swift`: abre, actualiza y cierra la Live Activity con lo que manda el núcleo, con `pushType: nil`
 - ✅ 5.4 Widget Extension `PockaiWidgets`: isla expandida, compacta y mínima, y pantalla de bloqueo
-- 🟡 5.5 App Group `group.com.petai.app` y el resumen (`PetGlance`) que lee el widget de inicio. Escrito y declarado en los entitlements de la app y de la extensión, pero **sin verificar**: los entitlements solo se aplican a una compilación firmada, y en un build sin firmar el contenedor del grupo no existe (`simctl get_app_container … groups` vuelve vacío), así que el widget de inicio enseña «Abre Pockai». La Live Activity no pasa por ahí y sí se ve. Hace falta un Team ID para comprobarlo. Sin sprites pre-horneados: el widget usa símbolos del sistema (ver desviaciones)
+- ✅ 5.5 App Group `group.com.petai.app` y el resumen (`PetGlance`) que lee el widget de inicio. Dos trampas que costaron un rato: el App Group hay que declararlo en `entitlements.properties` de **project.yml**, porque `xcodegen` regenera el fichero `.entitlements` desde ahí y, si no está, lo deja vacío; y el resumen hay que escribirlo también con la app abierta (`watch_surfaces` sigue `Pets` y `ActivePetId`, no solo `Eggs`), porque si solo se escribiera en las pasadas en segundo plano el widget se quedaría en «Abre Pockai» para siempre. Sin sprites pre-horneados: el widget usa símbolos del sistema (ver desviaciones)
 - ✅ 5.6 Android: `PockaiSurfaces.kt`, una notificación en curso con cronómetro por actividad, sobre la misma política. El widget Glance ya estaba
 - ⬜ 5.7 Prueba en dispositivo (iPhone con Dynamic Island, Android 16)
 

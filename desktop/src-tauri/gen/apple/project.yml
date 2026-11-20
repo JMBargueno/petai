@@ -67,6 +67,12 @@ targets:
         NSSupportsLiveActivities: true
     entitlements:
       path: petai-desktop_iOS/petai-desktop_iOS.entitlements
+      properties:
+        # El App Group por el que la app le pasa a la extensión el resumen de la mascota. Va aquí y
+        # no en el .entitlements a mano: xcodegen regenera ese fichero desde este bloque y, si no
+        # está declarado, lo deja vacío y el widget nunca ve el resumen.
+        com.apple.security.application-groups:
+          - group.com.petai.app
     scheme:
       environmentVariables:
         RUST_BACKTRACE: full
@@ -122,6 +128,10 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
       path: PockaiWidgets/PockaiWidgets.entitlements
+      properties:
+        # El mismo App Group que la app: por ahí llega el resumen que pinta el widget.
+        com.apple.security.application-groups:
+          - group.com.petai.app
     settings:
       base:
         PRODUCT_NAME: PockaiWidgets
