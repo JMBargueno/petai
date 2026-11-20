@@ -979,10 +979,22 @@ Verificado:
   - Su primera ejecución con la app abierta devuelve `RETRY` (hay sesión, falla la red) sin errores.
   - Una ejecución en un proceso frío, con la app muerta, carga la librería, abre la sesión por JNI y
     devuelve `RETRY` sin errores.
+- En el emulador, con un backend de pega en Node (login, renovación, `/v1/me` y una mascota con
+  hambre; sin base de datos):
+  - Entrar por la UI cifra la sesión (desde un hilo de tokio, no de Java).
+  - Al reiniciar, la app entra directa en Inicio.
+  - Con el access token invalidado, el núcleo renueva al arrancar y el fichero cifrado cambia.
+  - Al entrar sale el diálogo del permiso de notificaciones.
+  - El trabajo, con sesión, publica «Brasa tiene hambre · Dale de comer antes de que enferme.» con
+    el icono de la app. Al tocarla se abre la app.
+
+**Diferencias con el trabajo de la app Kotlin:**
+- `CareSync` reintenta ante cualquier error del núcleo, también un 4xx como una cuenta bloqueada.
+  `PetSyncWorker` daba por bueno lo que no fuera 5xx. En un trabajo periódico la espera entre
+  reintentos crece, así que el ritmo de 30 min se puede alargar.
+- Ya no refresca un widget (la app de Tauri no tiene).
 
 **Sin verificar:**
-- Con backend y sesión real: que se renueve el token desde el trabajo y que salga la notificación
-  (y su icono).
-- El diálogo del permiso.
+- Contra el backend real, y una renovación del token hecha desde el propio trabajo en segundo plano.
 - Una compilación de *release* con R8 (`consumer-rules.pro` conserva las clases que usa JNI).
 - iOS (`BGAppRefreshTask`).
