@@ -2,12 +2,15 @@
   /**
    * Campo de nickname (@handle) con comprobación de disponibilidad en vivo. Se usa en el registro y en
    * la pantalla "Elige tu nickname". `value` queda normalizado (minúsculas, sin "@") y `valid` solo es
-   * true cuando el servidor confirma que está libre.
+   * true cuando el servidor confirma que está libre. Cómo se comprueba lo pone cada app
+   * (`checkHandle`: el núcleo en Android, la API en el escritorio).
    */
   import { onDestroy } from 'svelte';
   import { Check, AlertCircle } from 'lucide-svelte';
-  import { api } from '../lib/api';
-  import { HANDLE_MAX_LENGTH, handleFormatError, normalizeHandle } from '../lib/handle';
+  import { HANDLE_MAX_LENGTH, handleFormatError, normalizeHandle } from './handle';
+
+  /** Disponibilidad de un nickname ya normalizado. Si falla, debe resolver con `available: false` y el motivo. */
+  export let checkHandle: (handle: string) => Promise<{ handle: string; available: boolean; reason?: string }>;
 
   export let id = 'auth-handle';
   export let value = '';
@@ -41,7 +44,7 @@
     const mine = ++seq;
     const handle = value;
     timer = setTimeout(async () => {
-      const res = await api.checkHandleAvailable(handle);
+      const res = await checkHandle(handle).catch(() => ({ handle, available: false, reason: 'No se pudo comprobar' }));
       if (mine !== seq) return; // llegó tarde: el usuario ya escribió otra cosa
       if (res.available) {
         status = 'ok';
@@ -77,7 +80,7 @@
       aria-describedby="{id}-hint"
     />
   </div>
-  <small id="{id}-hint" class="subtitle handle-hint" class:ok={status === 'ok'} class:bad={status === 'error'} aria-live="polite">
+  <small id="{id}-hint" class="form-hint handle-hint" class:ok={status === 'ok'} class:bad={status === 'error'} aria-live="polite">
     {#if status === 'ok'}<Check size={12} /> {message}{:else if status === 'error'}<AlertCircle size={12} /> {message}{:else if status === 'checking'}{message}{:else}Así te encontrarán tus amigos. <strong>No podrás cambiarlo después.</strong>{/if}
   </small>
 </div>
@@ -96,7 +99,8 @@
     font-weight: 600;
   }
   .handle-input .input {
-    padding-left: var(--space-6);
+    /* Relativo a la letra del campo: en Android es más grande. */
+    padding-left: 2em;
     width: 100%;
   }
   .handle-input.ok .input {

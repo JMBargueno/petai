@@ -6,7 +6,7 @@
   import { createEventDispatcher } from 'svelte';
   import { api, ApiError } from '../../lib/api';
   import { celebrateReward } from '../../lib/rewards';
-  import { RedeemCodeCard } from '@pockai/ui';
+  import { RedeemCodeCard, redeemErrorText } from '@pockai/ui';
 
   const dispatch = createEventDispatcher<{ redeemed: void }>();
 
@@ -15,12 +15,8 @@
   let ok = '';
 
   function messageFor(e: unknown): string {
-    if (e instanceof ApiError) {
-      if (e.status === 409) return 'Ya has canjeado este código.';
-      if (e.status === 429) return 'Demasiados intentos. Espera unos minutos y vuelve a probar.';
-      if (e.status === 400 || e.status === 404) return 'El código no es válido o ha caducado.';
-    }
-    return e instanceof Error && e.message ? e.message : 'No se pudo canjear el código.';
+    const fallback = e instanceof Error && e.message ? e.message : 'No se pudo canjear el código.';
+    return redeemErrorText(e instanceof ApiError ? e.status : undefined, fallback);
   }
 
   async function redeem(value: string) {

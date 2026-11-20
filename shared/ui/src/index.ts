@@ -7,7 +7,16 @@
  * Los estilos van aparte, para que cada app los cargue una vez y en este orden: `@pockai/ui/fonts.css`,
  * `tokens.css`, `themes.css`, `scene.css`, `base.css`, `kit.css` y `platform.css`.
  */
+export { default as AiKeyForm } from './AiKeyForm.svelte';
+export { default as AiSettingsView } from './AiSettingsView.svelte';
 export { default as AsyncState } from './AsyncState.svelte';
+export { default as AuthLayout } from './AuthLayout.svelte';
+export { default as AuthView } from './AuthView.svelte';
+export { default as ChooseHandleView } from './ChooseHandleView.svelte';
+export { default as VerifyEmailView } from './VerifyEmailView.svelte';
+export { default as CodeInput } from './CodeInput.svelte';
+export { default as HandleField } from './HandleField.svelte';
+export { default as PockaiMark } from './PockaiMark.svelte';
 export { default as Badge } from './Badge.svelte';
 export { default as Button } from './Button.svelte';
 export { default as Card } from './Card.svelte';
@@ -23,6 +32,7 @@ export { default as ProgressBar } from './ProgressBar.svelte';
 export { default as SectionHeader } from './SectionHeader.svelte';
 export { default as Segmented } from './Segmented.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
+export { default as SoundSettingsView } from './SoundSettingsView.svelte';
 export { default as Slider } from './Slider.svelte';
 export { default as StatTile } from './StatTile.svelte';
 export { default as Switch } from './Switch.svelte';
@@ -67,6 +77,7 @@ export { default as ProfileView } from './ProfileView.svelte';
 export { default as MyProfileView } from './MyProfileView.svelte';
 export { default as RaidView } from './RaidView.svelte';
 export { default as RedeemCodeCard } from './RedeemCodeCard.svelte';
+export { default as RewardToast } from './RewardToast.svelte';
 export { default as ReplayViewer } from './ReplayViewer.svelte';
 export { default as SeasonsView } from './SeasonsView.svelte';
 export { default as ShopView } from './ShopView.svelte';
@@ -74,6 +85,7 @@ export { default as SocialAvatar } from './SocialAvatar.svelte';
 export { default as StorySceneView } from './StorySceneView.svelte';
 export { default as TournamentView } from './TournamentView.svelte';
 export { default as TrainingView } from './TrainingView.svelte';
+export { default as VisitDialog } from './VisitDialog.svelte';
 export { default as VisitsView } from './VisitsView.svelte';
 export { default as WardrobeView } from './WardrobeView.svelte';
 export * from './maps';
@@ -96,3 +108,7 @@ export * from './profile-format';
 export { badgeIcon, BADGE_ICONS } from './badge-icons';
 export { ITEM_ICON_SIZE, itemIcon } from './items';
 export type { RoomPetDrag } from './roomDrag';
+export type { AuthApi, HandleCheck, RegisterInput } from './authApi';
+export type { AiApi, AiConfigInput, AiConfigView } from './aiApi';
+export { celebrateReward, redeemErrorText, rewardLines, rewardToCelebrate, type RewardLineKind, type RewardReceived } from './rewards';
+export { createInitiativeLoop, DEFAULT_INITIATIVE, type InitiativeLoop } from './initiative';

@@ -1,17 +1,23 @@
 <script lang="ts">
   /**
-   * Chat con la mascota en Android: la conversación es `ChatView`, de `@pockai/ui`, con la IA de
-   * Pockai por el núcleo (`chatTurn`). Sin motores locales, sin herramientas del equipo y sin pasar
-   * a Pro desde aquí (los pagos en la app irían por Google Play): al agotar la cuota solo se avisa.
+   * Chat con la mascota en Android: la conversación es `ChatView`, de `@pockai/ui`, por el núcleo
+   * (`chatTurn`). El engranaje abre `AiSettingsView`: la IA de Pockai o la clave propia del jugador.
+   * Sin motores locales, sin herramientas del equipo y sin pasar a Pro desde aquí (los pagos en la app
+   * irían por Google Play): al agotar la cuota solo se avisa.
    */
   import { onMount } from 'svelte';
   import { chatTurn, query } from '@pockai/client';
-  import { ChatView, type ChatApi } from '@pockai/ui';
+  import { AiSettingsView, Button, ChatView, type AiApi, type AiConfigView, type ChatApi } from '@pockai/ui';
   import { act, failureText } from '../core';
 
   let { pet = null }: { pet?: any } = $props();
 
   let usage = $state<any>(null);
+  let showSettings = $state(false);
+  /** Con clave propia no hay cuota de Pockai. Se sabe al cargar la configuración. */
+  let managed = $state(true);
+  /** Cambia al cambiar de motor: la conversación se rehace con el nuevo. */
+  let chatKey = $state(0);
   const dailyLimit = $derived(usage?.daily?.limit ?? (usage?.plan === 'pro' ? 200 : 15));
   const quotaExceeded = $derived(!!usage && Math.max(0, dailyLimit - (usage?.daily?.used ?? 0)) <= 0);
 
@@ -37,13 +43,54 @@
     errorText: (e, fallback) => failureText(e, fallback ?? 'Algo ha fallado. Inténtalo de nuevo.'),
   };
 
-  onMount(() => void loadUsage());
+  const aiApi: AiApi = {
+    getConfig: () => query<AiConfigView>({ type: 'getAiConfig' }),
+    saveConfig: (cfg) => act({ type: 'saveAiConfig', cfg }) as Promise<AiConfigView>,
+    testConfig: () => act({ type: 'testAiConfig' }) as Promise<{ ok: boolean; error?: string }>,
+    deleteConfig: () => act({ type: 'deleteAiConfig' }),
+    errorText: failureText,
+  };
+
+  function engineChanged(config: AiConfigView) {
+    managed = !(config.mode === 'byok' && config.configured);
+    chatKey += 1;
+    void loadUsage();
+  }
+
+  onMount(() => {
+    void loadUsage();
+    aiApi.getConfig().then((c) => (managed = !(c.mode === 'byok' && c.configured)), () => {});
+  });
 </script>
 
 {#if pet}
-  {#key pet.id}
-    <ChatView {pet} {chatApi} managed {quotaExceeded} {dailyLimit} maxChars={240} on:done={() => loadUsage()} on:quota={() => loadUsage()} />
-  {/key}
+  <div class="chat-bar">
+    <span class="muted">{managed ? 'IA de Pockai' : 'Tu propia clave'}</span>
+    <Button
+      variant={showSettings ? 'ink' : 'ghost'}
+      size="sm"
+      iconOnly
+      icon="settings"
+      label={showSettings ? 'Ocultar ajustes' : 'Ajustes de la IA'}
+      on:click={() => (showSettings = !showSettings)}
+    />
+  </div>
+  {#if showSettings}
+    <AiSettingsView {aiApi} dailyLimit={managed ? dailyLimit : null} on:changed={(e) => engineChanged(e.detail)} />
+  {:else}
+    {#key `${pet.id}:${chatKey}`}
+      <ChatView {pet} {chatApi} {managed} canUseOwnKey quotaExceeded={managed && quotaExceeded} {dailyLimit} maxChars={240} on:done={() => loadUsage()} on:quota={() => loadUsage()} on:useOwnKey={() => (showSettings = true)} />
+    {/key}
+  {/if}
 {:else}
   <p class="muted">Necesitas una mascota para conversar. Eclosiona un huevo primero.</p>
 {/if}
+
+<style>
+  .chat-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+</style>

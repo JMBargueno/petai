@@ -33,6 +33,8 @@
     "./learned": "./src/learned.ts",
     "./chatText": "./src/chatText.ts",
     "./ambience2d": "./src/ambience2d.ts",
+    "./rewards": "./src/rewards.ts",
+    "./initiative": "./src/initiative.ts",
     "./platform": "./src/platform.ts",
     "./appearance": "./src/appearance.ts",
     "./themes": "./src/themes/index.ts",
@@ -47,6 +49,7 @@
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource/bowlby-one": "^5.3.0",
     "@pockai/mind": "workspace:*",
+    "@pockai/audio": "workspace:*",
     "@pockai/minigames": "workspace:*",
     "@pockai/scene": "workspace:*",
     "lucide-svelte": "^0.475.0"

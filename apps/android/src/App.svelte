@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AccountView, AppearancePicker, BackpackView, Button, Card, CurrencyPill, HatchView, Ico, Notice, PetHomeView, Segmented, ShopView } from '@pockai/ui';
+  import { AccountView, AppearancePicker, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, RedeemCodeCard, RewardToast, Segmented, ShopView, SoundSettingsView, VerifyEmailView, createInitiativeLoop, redeemErrorText, rewardToCelebrate, type InitiativeReply } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
   import AdventureScreen from './screens/AdventureScreen.svelte';
   import ArenaScreen from './screens/ArenaScreen.svelte';
@@ -21,8 +21,9 @@
   import TrainingScreen from './screens/TrainingScreen.svelte';
   import VisitsScreen from './screens/VisitsScreen.svelte';
   import WardrobeScreen from './screens/WardrobeScreen.svelte';
-  import { act, activePet, failureText, hasCore, offline, phase, signIn, signOut, start, state as core } from './core';
+  import { act, activePet, authApi, failureText, hasCore, lock, offline, phase, redeemCode, reload, signOut, start, state as core } from './core';
   import { askNotificationsOnce } from './notifications';
+  import { audioSettings, previewSound, updateAudioSettings } from './audio';
 
   type Tab = 'pet' | 'backpack' | 'play' | 'shop' | 'progress' | 'account';
   /** Cuenta no está en la barra: se abre tocando el nombre de la cabecera (seis pestañas no caben a 48 px). */
@@ -34,8 +35,6 @@
     { id: 'progress', label: 'Progreso', icon: 'trophy' },
   ];
 
-  let email = $state('');
-  let password = $state('');
   let tab = $state<Tab>('pet');
   /** Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión). */
   let petSection = $state<'home' | 'chat' | 'bond' | 'eggs' | 'wardrobe' | 'mind' | 'habitat'>('home');
@@ -91,13 +90,52 @@
   let now = $state(Date.now());
 
   const pet = $derived(activePet($core));
+
+  /**
+   * Iniciativa (spec 41): la mascota habla por su cuenta. Qué dice y cuándo lo decide el servidor;
+   * aquí solo se le pregunta y se enseña en Inicio. Abrir la app o volver a ella cuenta como «el
+   * entrenador ha vuelto» (el servidor saluda una sola vez por ausencia).
+   */
+  let petSays = $state('');
+  let initiativeOn = false;
+  const initiative = createInitiativeLoop({
+    ask: async (back) => {
+      if (!pet?.id) return null;
+      return (await act({ type: 'petInitiative', petId: String(pet.id), back, focus: false })) as InitiativeReply;
+    },
+    say: (text) => (petSays = text),
+    setTimer: (fn, ms) => setTimeout(fn, ms),
+    clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+  });
+  $effect(() => {
+    const on = $phase === 'ready' && !!pet?.id;
+    if (on === initiativeOn) return;
+    initiativeOn = on;
+    if (on) {
+      initiative.start();
+      void initiative.ownerBack();
+    } else {
+      initiative.stop();
+      petSays = '';
+    }
+  });
+  function onVisible() {
+    if (document.visibilityState === 'visible' && initiativeOn) void initiative.ownerBack();
+  }
   const coins = $derived(Number($core.user?.coins ?? 0));
   onMount(() => {
     if (hasCore()) void start().catch((e) => (message = failureText(e, 'No se pudo arrancar')));
     const clock = setInterval(() => (now = Date.now()), 1000);
     // Con sesión, el permiso para los avisos de cuidado en segundo plano (una sola vez).
-    const unphase = phase.subscribe((p) => p === 'ready' && void askNotificationsOnce());
+    // Cada cambio de fase es otra pantalla: se empieza arriba (el alta es larga y deja la página bajada).
+    const unphase = phase.subscribe((p) => {
+      window.scrollTo(0, 0);
+      if (p === 'ready') void askNotificationsOnce();
+    });
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      initiative.stop();
       clearInterval(clock);
       unphase();
     };
@@ -133,12 +171,28 @@
     }
   }
 
-  function submit(event: SubmitEvent) {
-    event.preventDefault();
-    void run('signIn', 'No se pudo iniciar sesión', () => signIn(email.trim(), password));
-  }
+  /** Tras entrar, darse de alta o completar un paso de alta, el núcleo recarga y decide la fase. */
+  const onAuth = () => run('auth', 'No se pudo cargar tu cuenta', reload);
 
   const leave = () => run('signOut', 'No se pudo cerrar la sesión', signOut);
+
+  /** Cuenta › Canjear código: lo recibido se celebra con `RewardToast`. */
+  let redeemBusy = $state(false);
+  let redeemError = $state('');
+  let redeemOk = $state('');
+  async function redeem(code: string) {
+    if (redeemBusy) return;
+    redeemBusy = true;
+    redeemError = redeemOk = '';
+    try {
+      await redeemCode(code);
+      redeemOk = '¡Código canjeado! Mira tu recompensa.';
+    } catch (e) {
+      redeemError = redeemErrorText((e as { status?: number } | null)?.status, failureText(e, 'No se pudo canjear el código.'));
+    } finally {
+      redeemBusy = false;
+    }
+  }
 
   /** A dónde lleva cada «ir a…» de las vistas compartidas. Lo que aún no existe aquí se queda en Mascota. */
   function go(dest: string, sub?: string) {
@@ -156,26 +210,11 @@
   {:else if $phase === 'starting'}
     <p class="muted" aria-live="polite">Despertando a tu Pockai…</p>
   {:else if $phase === 'signedOut'}
-    <Card variant="pop">
-      <form onsubmit={submit}>
-        <h1 class="display">Pockai</h1>
-        <p class="muted">Conecta con tu mascota virtual</p>
-        <label>
-          Correo electrónico
-          <input class="input" type="email" bind:value={email} autocomplete="username" inputmode="email" required />
-        </label>
-        <label>
-          Contraseña
-          <input class="input" type="password" bind:value={password} autocomplete="current-password" required />
-        </label>
-        <Button variant="primary" size="lg" block type="submit" loading={busy === 'signIn'}>Entrar</Button>
-      </form>
-    </Card>
+    <AuthView {authApi} on:success={onAuth} />
+  {:else if $phase === 'locked' && $lock === 'unverified'}
+    <VerifyEmailView {authApi} email={String($core.user?.email ?? '')} on:success={onAuth} on:logout={leave} />
   {:else if $phase === 'locked'}
-    <Card title="Falta un paso" icon="lock">
-      <p>Verifica tu correo o elige tu nickname desde la app de escritorio para seguir.</p>
-      <Button size="lg" block on:click={leave}>Usar otra cuenta</Button>
-    </Card>
+    <ChooseHandleView {authApi} on:success={onAuth} on:logout={leave} />
   {:else}
     <header>
       <button type="button" class="who" class:active={tab === 'account'} aria-label="Cuenta" onclick={() => (tab = 'account')}>
@@ -200,6 +239,9 @@
         <Segmented variant="pills" label="Sección de Mascota" value={petSection} options={PET_SECTIONS} on:change={(e) => (petSection = e.detail as typeof petSection)} />
       {/if}
       {#if tab === 'pet' && petSection === 'home'}
+        {#if petSays}
+          <Notice tone="info" icon="chat"><strong>{String(pet?.nickname || (pet?.species as { name?: string } | undefined)?.name || 'Tu Pockai')} dice:</strong> «{petSays}»</Notice>
+        {/if}
         <!-- La misma ficha que el escritorio. Aquí la mascota no sale de su hábitat: sin «A casa». -->
         <PetHomeView
           {pet}
@@ -292,8 +334,12 @@
           <Card title="Apariencia" icon="sun">
             <AppearancePicker />
           </Card>
+          <!-- En el móvil solo suenan efectos e interfaz (la voz de la mascota y el ambiente no van en el APK). -->
+          <SoundSettingsView settings={$audioSettings} buses={['sfx', 'ui']} previews={{ sfx: 'mg.result.good' }} on:change={(e) => updateAudioSettings(e.detail)} on:preview={(e) => previewSound(e.detail)} />
         {:else}
-          <AccountView user={$core.user} on:logout={leave} />
+          <AccountView user={$core.user} on:logout={leave}>
+            <RedeemCodeCard slot="redeem" busy={redeemBusy} error={redeemError} ok={redeemOk} on:redeem={(e) => redeem(e.detail)} />
+          </AccountView>
         {/if}
       {:else}
         <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail as typeof shopSection)} />
@@ -325,3 +371,5 @@
     <Notice tone="error">{message}</Notice>
   {/if}
 </main>
+
+<RewardToast payload={$rewardToCelebrate} onDismiss={() => rewardToCelebrate.set(null)} />

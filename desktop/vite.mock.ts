@@ -477,6 +477,9 @@ const TALK_LINES: Record<string, string> = {
   bye: 'Luna te acompaña hasta la puerta.',
 };
 const TALK_LABELS: Record<string, string> = { greet: 'Saludar', pet: 'Acariciar', treat: 'Ofrecer Manzana', play: 'Jugar un momento', ask: '¿Qué tal estás?', bye: 'Despedirse' };
+/** Configuración de IA del modo demo (la IA de Pockai o una clave propia de pega). */
+let aiConfig: Record<string, unknown> = { mode: 'managed', configured: false };
+let aiKey = '';
 let talk = { turn: 0, done: [] as string[], ended: false, last: null as any };
 function talkReply(line: string) {
   const left = ['greet', 'pet', 'treat', 'play', 'ask'].filter((id) => !talk.done.includes(id));
@@ -499,10 +502,31 @@ const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
 // ── Rutas ────────────────────────────────────────────────────────────────────
 const routes: [string, RegExp, Handler][] = [
-  ['POST', /^\/auth\/(login|register)$/, () => ({ accessToken: 'demo-access', refreshToken: 'demo-refresh', user })],
+  ['POST', /^\/auth\/login$/, () => ({ accessToken: 'demo-access', refreshToken: 'demo-refresh', user })],
+  // Alta: la cuenta nueva queda sin verificar y sin nickname hasta pasar por esas pantallas.
+  ['POST', /^\/auth\/register$/, ({ body }) => {
+    Object.assign(user as Record<string, unknown>, { email: body.email, displayName: body.displayName ?? body.email, emailVerified: false, handle: null });
+    return { accessToken: 'demo-access', refreshToken: 'demo-refresh', user };
+  }],
   ['POST', /^\/auth\/logout$/, () => ({ ok: true })],
   ['GET', /^\/auth\/registration-config$/, () => ({ inviteRequired: false })],
-  ['GET', /^\/auth\/handle-available$/, () => ({ available: true })],
+  ['GET', /^\/auth\/handle-available$/, ({ query }) => {
+    const handle = query.get('handle') ?? '';
+    return handle === 'ocupado' ? { handle, available: false, reason: 'Ese nickname ya está cogido' } : { handle, available: true };
+  }],
+  // Códigos de los correos: en el modo demo siempre es 123456.
+  ['POST', /^\/auth\/verify-email\/confirm$/, ({ body }) => {
+    if (body.code !== '123456') throw fail(400, 'El código no es correcto');
+    user.emailVerified = true;
+    return { ok: true };
+  }],
+  ['POST', /^\/auth\/verify-email\/resend$/, () => ({ ok: true })],
+  ['POST', /^\/me\/handle$/, ({ body }) => ((user.handle = body.handle), user)],
+  ['POST', /^\/auth\/reset\/request$/, () => ({ ok: true })],
+  ['POST', /^\/auth\/reset\/confirm$/, ({ body }) => {
+    if (body.code !== '123456') throw fail(400, 'El código no es correcto o ha caducado');
+    return { accessToken: 'demo-access', refreshToken: 'demo-refresh', user };
+  }],
   ['GET', /^\/me$/, () => user],
   ['PATCH', /^\/me$/, ({ body }) => Object.assign(user, body)],
   ['GET', /^\/me\/profile$/, () => profile()],
@@ -582,7 +606,17 @@ const routes: [string, RegExp, Handler][] = [
   ['POST', /^\/pets\/([^/]+)\/combat\/stats$/, ({ m }) => ({ ...combat(m[1]), statPoints: 0 })],
   ['PUT', /^\/pets\/([^/]+)\/combat\/skills$/, ({ m, body }) => ({ ...combat(m[1]), equippedSkills: body.skills })],
   ['GET', /^\/ai\/usage$/, () => ({ month: iso().slice(0, 7), tokens: 12400, requests: 38, quota: null, remaining: null, mode: 'managed', plan: 'free', daily: { used: 4, limit: 15, resetsAt: iso(9 * HOUR) } })],
-  ['GET', /^\/ai\/config$/, () => ({ mode: 'managed', configured: false })],
+  ['GET', /^\/ai\/config$/, () => aiConfig],
+  // Clave propia: la key no vuelve nunca, solo su máscara. «Probar» falla si la key no empieza por sk-.
+  ['PUT', /^\/ai\/config$/, ({ body }) => {
+    if (body.mode === 'managed') return (aiConfig = { ...aiConfig, mode: 'managed', configured: false });
+    const key = body.apiKey ?? aiKey;
+    if (!key) throw fail(400, 'Falta la API key');
+    aiKey = key;
+    return (aiConfig = { mode: 'byok', configured: true, provider: body.provider, baseUrl: body.baseUrl ?? null, model: body.model ?? null, hasKey: true, keyMask: `••••${key.slice(-4)}` });
+  }],
+  ['POST', /^\/ai\/config\/test$/, () => (aiKey.startsWith('sk-') ? { ok: true } : { ok: false, error: 'La clave no es válida (401)' })],
+  ['DELETE', /^\/ai\/config$/, () => ((aiKey = ''), (aiConfig = { mode: 'managed', configured: false }), { ok: true })],
   ['GET', /^\/billing\/plans$/, () => ({
     pricing: { monthlyPriceUsd: 4.99, monthlyPriceEur: 4.99, trialDays: 7 },
     plans: {
@@ -730,6 +764,12 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/habitat\/catalog$/, () => habitats],
   ['GET', /^\/habitat\/buffs$/, () => ({ petId: 'p-1', activeBuffs: { energy_recovery_boost: 0.15, happiness_decay_reduction: 0.05 }, itemCount: 2 })],
   ['GET', /^\/habitat\/visitors$/, () => ({ visitors: [] })],
+  // Canjear código: REGALO da 50 monedas y un cofre de oro; el resto no vale.
+  ['POST', /^\/vouchers\/redeem$/, ({ body }) => {
+    if (String(body.code).toUpperCase() !== 'REGALO') throw fail(404, 'Código no encontrado');
+    user.coins += 50;
+    return { source: 'voucher', redemptionId: uid('r'), code: 'REGALO', granted: { coins: 50, gems: 0, proDays: 0, proUntil: null, chests: [{ type: 'gold', qty: 1 }], accessories: [] } };
+  }],
   ['POST', /^\/pets\/[^/]+\/initiative$/, ({ body }) => {
     const phrase = body?.back ? TALK_DEMO[0] : TALK_DEMO[1 + (talkTurn++ % (TALK_DEMO.length - 1))];
     return { phrase, retryInMs: 60_000, level: talkLevel, feeling: 'content' };
