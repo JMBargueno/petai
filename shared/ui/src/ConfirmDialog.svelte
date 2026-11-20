@@ -29,7 +29,7 @@
   $: unit = currency === 'gems' ? 'gemas' : 'monedas';
 </script>
 
-<Modal {open} {title} {icon} closable={!loading} on:close={() => dispatch('cancel')}>
+<Modal {open} {title} {icon} presentation="dialog" closable={!loading} on:close={() => dispatch('cancel')}>
   <div class="ui-confirm">
     <slot />
     {#if cost !== null}

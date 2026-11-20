@@ -19,6 +19,7 @@
   import type { ClanHabitat, ClanHabitatResident } from './social/types';
   import { clanHabitatEvents, CLAN_ROLE_LABEL } from './social/clans';
   import { localMinute } from '@pockai/scene';
+  import { canvasPalette, resolvedAppearance } from './appearance';
   import { calmOf, drawSky, fireflyShare, outsideAt, veilOf, Weather2D } from './ambience2d';
   import {
     tierProgress,
@@ -136,7 +137,7 @@
     } else {
       goalBanner = ev.title;
       walkers = celebrateAll(walkers, 'victory', 2400);
-      burst(60, ['#ffd84d', '#ff8fd1', '#7ee8ff']);
+      burst(60, [...pal.confetti]);
       later(3200, () => (goalBanner = null));
     }
   }
@@ -147,7 +148,7 @@
     flash = true;
     shake = !reducedMotion;
     walkers = celebrateAll(walkers, 'level_up', 2600);
-    burst(140, ['#ffffff', '#ffe27a', '#9ff3ff', '#c9a6ff']);
+    burst(140, [...pal.sparkle]);
     later(650, () => (shownLevel = Math.max(level, tier.level)));
     later(1400, () => {
       flash = false;
@@ -184,27 +185,31 @@
     };
   }
 
+  /** Colores de partículas y destellos: los del tema y esquema de la app (src/themes). */
+  $: pal = canvasPalette($resolvedAppearance);
+  const pick = (colors: readonly string[]) => colors[Math.floor(Math.random() * colors.length)];
+
   function spawn(kind: Particle['kind']): Particle {
     const w = width || 400;
     const h = height || 240;
     switch (kind) {
       case 'firefly':
         return { kind, x: Math.random() * w, y: h * (0.45 + Math.random() * 0.5), vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 6,
-          life: 0, max: 4000 + Math.random() * 5000, size: 1.6 + Math.random() * 1.4, color: '#e9ff8a', phase: Math.random() * 6.28 };
+          life: 0, max: 4000 + Math.random() * 5000, size: 1.6 + Math.random() * 1.4, color: pal.firefly, phase: Math.random() * 6.28 };
       case 'ember':
         return { kind, x: w * (0.15 + Math.random() * 0.7), y: h * 0.95, vx: (Math.random() - 0.5) * 10, vy: -(14 + Math.random() * 22),
-          life: 0, max: 3000 + Math.random() * 3000, size: 1.2 + Math.random() * 1.6, color: Math.random() < 0.5 ? '#ffb347' : '#ff6a3d', phase: Math.random() * 6.28 };
+          life: 0, max: 3000 + Math.random() * 3000, size: 1.2 + Math.random() * 1.6, color: pick(pal.ember), phase: Math.random() * 6.28 };
       case 'mote':
         return { kind, x: Math.random() * w, y: h * (0.2 + Math.random() * 0.75), vx: 0, vy: -(4 + Math.random() * 8),
-          life: 0, max: 5000 + Math.random() * 4000, size: 1 + Math.random() * 2, color: Math.random() < 0.5 ? '#9ff3ff' : '#c9a6ff', phase: Math.random() * 6.28 };
+          life: 0, max: 5000 + Math.random() * 4000, size: 1 + Math.random() * 2, color: pick(pal.wisp), phase: Math.random() * 6.28 };
       case 'star':
         return { kind, x: Math.random() * w, y: Math.random() * h * 0.4, vx: 0, vy: 0,
-          life: 0, max: 6000 + Math.random() * 8000, size: 0.8 + Math.random() * 1.2, color: '#ffffff', phase: Math.random() * 6.28 };
+          life: 0, max: 6000 + Math.random() * 8000, size: 0.8 + Math.random() * 1.2, color: pal.star, phase: Math.random() * 6.28 };
       case 'shoot':
         return { kind, x: Math.random() * w * 0.6, y: Math.random() * h * 0.25, vx: 220 + Math.random() * 120, vy: 70 + Math.random() * 50,
-          life: 0, max: 900, size: 1.6, color: '#ffffff', phase: 0 };
+          life: 0, max: 900, size: 1.6, color: pal.star, phase: 0 };
       default:
-        return { kind, x: w / 2, y: h / 2, vx: 0, vy: 0, life: 0, max: 1000, size: 2, color: '#fff', phase: 0 };
+        return { kind, x: w / 2, y: h / 2, vx: 0, vy: 0, life: 0, max: 1000, size: 2, color: pal.star, phase: 0 };
     }
   }
 
@@ -273,8 +278,8 @@
       ctx.globalAlpha = Math.max(0, alpha);
       if (p.kind === 'shoot') {
         const grad = ctx.createLinearGradient(p.x, p.y, p.x - p.vx * 0.25, p.y - p.vy * 0.25);
-        grad.addColorStop(0, 'rgba(255,255,255,0.95)');
-        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        grad.addColorStop(0, `rgba(${pal.glowRgb}, 0.95)`);
+        grad.addColorStop(1, `rgba(${pal.glowRgb}, 0)`);
         ctx.strokeStyle = grad;
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -497,13 +502,13 @@
 
 <style>
   .habitat {
-    --sky-top: #1d2a5c;
-    --sky-bottom: #5b6fb5;
-    --ridge-far: #3a4a86;
-    --ridge-near: #2c3a6c;
-    --ground-top: #3f7a4a;
-    --ground-bottom: #24502f;
-    --glow: #e9ff8a;
+    --sky-top: #1d2a5c; /* color-ok: ilustración del clan */
+    --sky-bottom: #5b6fb5; /* color-ok: ilustración del clan */
+    --ridge-far: #3a4a86; /* color-ok: ilustración del clan */
+    --ridge-near: #2c3a6c; /* color-ok: ilustración del clan */
+    --ground-top: #3f7a4a; /* color-ok: ilustración del clan */
+    --ground-bottom: #24502f; /* color-ok: ilustración del clan */
+    --glow: #e9ff8a; /* color-ok: ilustración del clan */
     position: relative;
     height: 320px;
     container-type: inline-size;
@@ -515,10 +520,10 @@
     background: var(--sky-bottom);
     user-select: none;
   }
-  .tier-2 { --sky-top: #2a2350; --sky-bottom: #b06a5c; --ridge-far: #5a3f6a; --ridge-near: #3f2d52; --ground-top: #5a7a3a; --ground-bottom: #34502a; }
-  .tier-3 { --sky-top: #1b1f4a; --sky-bottom: #6a4fa3; --ridge-far: #45397a; --ridge-near: #2f2860; --ground-top: #3c6e5e; --ground-bottom: #22463d; --glow: #9ff3ff; }
-  .tier-4 { --sky-top: #0f1a3d; --sky-bottom: #3f7fb8; --ridge-far: #2c4f7e; --ridge-near: #1f3a62; --ground-top: #3b6a7a; --ground-bottom: #1f3f4c; --glow: #9ff3ff; }
-  .tier-5 { --sky-top: #070b24; --sky-bottom: #2b2f78; --ridge-far: #232a66; --ridge-near: #171c4a; --ground-top: #2f4f7a; --ground-bottom: #172848; --glow: #c9a6ff; }
+  .tier-2 { --sky-top: #2a2350; --sky-bottom: #b06a5c; --ridge-far: #5a3f6a; --ridge-near: #3f2d52; --ground-top: #5a7a3a; --ground-bottom: #34502a; } /* color-ok: ilustración del clan */
+  .tier-3 { --sky-top: #1b1f4a; --sky-bottom: #6a4fa3; --ridge-far: #45397a; --ridge-near: #2f2860; --ground-top: #3c6e5e; --ground-bottom: #22463d; --glow: #9ff3ff; } /* color-ok: ilustración del clan */
+  .tier-4 { --sky-top: #0f1a3d; --sky-bottom: #3f7fb8; --ridge-far: #2c4f7e; --ridge-near: #1f3a62; --ground-top: #3b6a7a; --ground-bottom: #1f3f4c; --glow: #9ff3ff; } /* color-ok: ilustración del clan */
+  .tier-5 { --sky-top: #070b24; --sky-bottom: #2b2f78; --ridge-far: #232a66; --ridge-near: #171c4a; --ground-top: #2f4f7a; --ground-bottom: #172848; --glow: #c9a6ff; } /* color-ok: ilustración del clan */
 
   .shake { animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) 2; }
   @keyframes shake {
@@ -543,14 +548,14 @@
   .diorama { position: absolute; inset: 0; animation: fade-in 0.9s ease; }
   .sky-live { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .daylight, .snowcover { position: absolute; inset: 0; pointer-events: none; transition: opacity 2s ease, background-color 2s ease; }
-  .snowcover { background: linear-gradient(180deg, rgba(244, 248, 255, 0.35) 0%, rgba(244, 248, 255, 0.35) 45%, #f4f8ff 60%); }
+  .snowcover { background: linear-gradient(180deg, rgba(244, 248, 255, 0.35) 0%, rgba(244, 248, 255, 0.35) 45%, #f4f8ff 60%); } /* color-ok: ilustración del clan */
   .aurora-sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; transition: opacity 2s ease; }
   .aurora {
     position: absolute;
     inset: -10% -20% 40% -20%;
     background:
-      radial-gradient(60% 40% at 30% 40%, rgba(110, 255, 210, 0.35), transparent 70%),
-      radial-gradient(50% 35% at 70% 30%, rgba(190, 120, 255, 0.35), transparent 70%);
+      radial-gradient(60% 40% at 30% 40%, rgba(110, 255, 210, 0.35), transparent 70%), /* color-ok: ilustración del clan */
+      radial-gradient(50% 35% at 70% 30%, rgba(190, 120, 255, 0.35), transparent 70%); /* color-ok: ilustración del clan */
     filter: blur(6px);
     animation: aurora 9s ease-in-out infinite alternate;
   }
@@ -561,9 +566,9 @@
   .ridge { position: absolute; left: 0; width: 100%; }
   .ridge.far { bottom: 34%; height: 34%; fill: var(--ridge-far); }
   .ridge.near { bottom: 30%; height: 22%; fill: var(--ridge-near); }
-  .citadel { position: absolute; left: 0; bottom: 36%; width: 100%; height: 40%; fill: color-mix(in srgb, var(--ridge-near) 70%, #000); }
-  .citadel .core { fill: #c9a6ff; filter: drop-shadow(0 0 6px #c9a6ff); animation: pulse 2.4s ease-in-out infinite; }
-  .tier-4 .citadel path { filter: drop-shadow(0 0 3px rgba(159, 243, 255, 0.5)); }
+  .citadel { position: absolute; left: 0; bottom: 36%; width: 100%; height: 40%; fill: color-mix(in srgb, var(--ridge-near) 70%, #000); } /* color-ok: ilustración del clan */
+  .citadel .core { fill: #c9a6ff; filter: drop-shadow(0 0 6px #c9a6ff); animation: pulse 2.4s ease-in-out infinite; } /* color-ok: ilustración del clan */
+  .tier-4 .citadel path { filter: drop-shadow(0 0 3px rgba(159, 243, 255, 0.5)); } /* color-ok: ilustración del clan */
   .ground {
     position: absolute;
     left: 0;
@@ -571,9 +576,9 @@
     bottom: 0;
     height: 42%;
     background:
-      repeating-linear-gradient(90deg, transparent 0 22px, rgba(255, 255, 255, 0.04) 22px 24px),
+      repeating-linear-gradient(90deg, transparent 0 22px, rgba(255, 255, 255, 0.04) 22px 24px), /* color-ok: ilustración del clan */
       linear-gradient(180deg, var(--ground-top), var(--ground-bottom));
-    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.12); /* color-ok: ilustración del clan */
   }
   .props { position: absolute; inset: 0; pointer-events: none; }
   .tent {
@@ -583,17 +588,17 @@
     height: 0;
     border-left: 22px solid transparent;
     border-right: 22px solid transparent;
-    border-bottom: 30px solid #c0794a;
-    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3));
+    border-bottom: 30px solid #c0794a; /* color-ok: ilustración del clan */
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3)); /* color-ok: ilustración del clan */
   }
   .tent.l { left: 6%; }
-  .tent.r { right: 7%; border-bottom-color: #7a5aa8; }
+  .tent.r { right: 7%; border-bottom-color: #7a5aa8; } /* color-ok: ilustración del clan */
   .banner {
     position: absolute;
     bottom: 40%;
     width: 3px;
     height: 46px;
-    background: #4a3a2a;
+    background: #4a3a2a; /* color-ok: ilustración del clan */
   }
   .banner::after {
     content: '';
@@ -602,14 +607,14 @@
     left: 3px;
     width: 16px;
     height: 22px;
-    background: var(--theme-social, #ff6fa8);
+    background: var(--theme-social, #ff6fa8); /* color-ok: ilustración del clan */
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
     animation: wave 2.2s ease-in-out infinite;
     transform-origin: left center;
   }
   .banner.b1 { left: 22%; }
   .banner.b2 { right: 24%; }
-  .banner.b2::after { animation-delay: -1s; background: #ffd84d; }
+  .banner.b2::after { animation-delay: -1s; background: #ffd84d; } /* color-ok: ilustración del clan */
   @keyframes wave { 50% { transform: skewY(8deg) scaleX(0.9); } }
   .fire {
     position: absolute;
@@ -618,9 +623,9 @@
     width: 14px;
     height: 18px;
     translate: -50% 0;
-    background: radial-gradient(circle at 50% 80%, #fff3a0, #ff9a3d 45%, #ff4d2d 70%, transparent 72%);
+    background: radial-gradient(circle at 50% 80%, #fff3a0, #ff9a3d 45%, #ff4d2d 70%, transparent 72%); /* color-ok: ilustración del clan */
     border-radius: 50% 50% 40% 40%;
-    filter: drop-shadow(0 0 10px #ff9a3d);
+    filter: drop-shadow(0 0 10px #ff9a3d); /* color-ok: ilustración del clan */
     animation: flicker 0.35s ease-in-out infinite alternate;
   }
   @keyframes flicker { to { transform: scaleY(1.15) scaleX(0.9); opacity: 0.85; } }
@@ -629,9 +634,9 @@
     bottom: 38%;
     width: 10px;
     height: 26px;
-    background: #2a2f55;
+    background: #2a2f55; /* color-ok: ilustración del clan */
     border-radius: 3px 3px 0 0;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3); /* color-ok: ilustración del clan */
   }
   .rune::after {
     content: '';
@@ -653,7 +658,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: repeating-conic-gradient(from 200deg at 50% -20%, rgba(255, 255, 255, 0.07) 0deg 4deg, transparent 4deg 12deg);
+    background: repeating-conic-gradient(from 200deg at 50% -20%, rgba(255, 255, 255, 0.07) 0deg 4deg, transparent 4deg 12deg); /* color-ok: ilustración del clan */
     mask-image: linear-gradient(180deg, black, transparent 75%);
     animation: rays 14s linear infinite alternate;
     mix-blend-mode: screen;
@@ -663,7 +668,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(120% 90% at 50% 60%, transparent 55%, rgba(5, 8, 25, 0.55));
+    background: radial-gradient(120% 90% at 50% 60%, transparent 55%, rgba(5, 8, 25, 0.55)); /* color-ok: ilustración del clan */
   }
 
   .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
@@ -683,7 +688,7 @@
     height: 8px;
     translate: -50% 50%;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.32);
+    background: rgba(0, 0, 0, 0.32); /* color-ok: ilustración del clan */
   }
   .sprite { position: relative; }
   .sprite.flip { transform: scaleX(-1); }
@@ -696,7 +701,7 @@
   }
   .resident.selected .shadow,
   .resident.me .shadow {
-    background: radial-gradient(closest-side, color-mix(in srgb, var(--glow) 55%, transparent), rgba(0, 0, 0, 0.25));
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--glow) 55%, transparent), rgba(0, 0, 0, 0.25)); /* color-ok: ilustración del clan */
   }
   .me-tag {
     position: absolute;
@@ -707,10 +712,10 @@
     font-size: 10px;
     font-weight: 800;
     line-height: 14px;
-    color: #1b1640;
+    color: #1b1640; /* color-ok: ilustración del clan */
     background: var(--glow);
     border-radius: 999px;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); /* color-ok: ilustración del clan */
     pointer-events: none;
   }
 
@@ -761,8 +766,8 @@
     translate: -50% 0;
     font-family: var(--font-display);
     font-size: 16px;
-    color: #fff6b0;
-    text-shadow: 0 2px 0 #3a2a00, 0 0 10px rgba(255, 220, 90, 0.8);
+    color: #fff6b0; /* color-ok: ilustración del clan */
+    text-shadow: 0 2px 0 #3a2a00, 0 0 10px rgba(255, 220, 90, 0.8); /* color-ok: ilustración del clan */
     pointer-events: none;
     animation: float-up 1.8s ease-out forwards;
   }
@@ -794,21 +799,21 @@
     gap: 8px;
     padding: 3px 9px;
     border-radius: 999px;
-    background: rgba(8, 10, 32, 0.55);
+    background: var(--scene-hud-bg);
     backdrop-filter: blur(4px);
-    color: #f2f0ff;
+    color: var(--scene-hud-ink);
     font-size: 11px;
     font-weight: 700;
     pointer-events: none;
   }
   .tier-name { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
   .tier-next { opacity: 0.8; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .bar { height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); overflow: hidden; }
+  .bar { height: 6px; border-radius: 999px; background: var(--scene-hud-track); overflow: hidden; }
   .bar span {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--glow), #ffffff);
+    background: linear-gradient(90deg, var(--glow), #ffffff); /* color-ok: ilustración del clan */
     box-shadow: 0 0 8px var(--glow);
     transition: width 0.8s cubic-bezier(.2,.8,.2,1);
   }
@@ -828,8 +833,8 @@
     margin: 0;
     padding: 4px 10px;
     border-radius: 999px;
-    background: rgba(8, 10, 32, 0.55);
-    color: #f2f0ff;
+    background: var(--scene-hud-bg);
+    color: var(--scene-hud-ink);
     font-size: 11px;
     text-align: center;
   }
@@ -839,7 +844,7 @@
     position: absolute;
     inset: 0;
     z-index: 300;
-    background: radial-gradient(circle at 50% 70%, #ffffff, color-mix(in srgb, var(--glow) 70%, #fff) 40%, transparent 80%);
+    background: radial-gradient(circle at 50% 70%, #ffffff, color-mix(in srgb, var(--glow) 70%, #fff) 40%, transparent 80%); /* color-ok: ilustración del clan */
     animation: flash 1.4s ease-out forwards;
     pointer-events: none;
   }
@@ -857,10 +862,10 @@
     min-width: 60%;
     padding: 10px 18px;
     border-radius: var(--radius-cards);
-    background: linear-gradient(180deg, rgba(10, 8, 40, 0.86), rgba(30, 18, 70, 0.86));
+    background: linear-gradient(180deg, rgba(10, 8, 40, 0.86), rgba(30, 18, 70, 0.86)); /* color-ok: ilustración del clan */
     border: 1.5px solid color-mix(in srgb, var(--glow) 70%, transparent);
     box-shadow: 0 0 30px color-mix(in srgb, var(--glow) 45%, transparent);
-    color: #fff;
+    color: #fff; /* color-ok: ilustración del clan */
     text-align: center;
     animation: banner 0.6s cubic-bezier(.2,1.4,.4,1) both;
     pointer-events: none;
@@ -869,7 +874,7 @@
   .lu-kicker { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--glow); font-weight: 800; }
   .lu-name { font-family: var(--font-display); font-size: 20px; text-transform: uppercase; line-height: 1.1; text-shadow: 0 0 12px var(--glow); }
   .lu-tag { font-size: 11px; opacity: 0.85; max-width: 280px; }
-  .levelup.goal { --glow: #ffd84d; }
+  .levelup.goal { --glow: #ffd84d; } /* color-ok: ilustración del clan */
 
   @media (prefers-reduced-motion: reduce) {
     .aurora, .rays, .banner::after, .fire, .rune::after, .citadel .core { animation: none; }

@@ -18,6 +18,7 @@ import { toScreen } from '../iso/projection';
 import { mix, type SkyState } from '../ambience/sunClock';
 import { isWet, type WeatherLook } from '../ambience/weather';
 import { cellHash, openHoles, styleFor, type Glow, type Pane, type ParticleKind } from './roomStyles';
+import { CLASSIC_ROOM_PALETTE, type RoomPalette } from './roomPalette';
 
 /** Luz de un mueble (`id` del mueble → dónde brilla respecto a su ancla en el suelo). */
 export const FURNITURE_LIGHTS: Record<string, { dy: number; r: number; color: number }> = {
@@ -128,6 +129,8 @@ export class RoomLife {
   private spawnIn = 0;
   private flash = 0;
   private seed = 1;
+  /** Colores del tema de la app (roomPalette.ts). */
+  private palette: RoomPalette = CLASSIC_ROOM_PALETTE;
 
   constructor(private readonly reducedMotion: boolean) {
     this.under.addChild(this.snowG, this.wetG);
@@ -135,6 +138,11 @@ export class RoomLife {
     this.mid.eventMode = 'none';
     this.over.eventMode = 'none';
     this.over.blendMode = 'add';
+  }
+
+  /** Colores del tema para las partículas que nazcan desde ahora. */
+  setPalette(palette: RoomPalette): void {
+    this.palette = palette;
   }
 
   setRoom(roomId: string, W: number, H: number, holes: Set<string>): void {
@@ -218,15 +226,15 @@ export class RoomLife {
     switch (kind) {
       case 'dust': {
         const p = this.randomFloor();
-        return { ...base, x: p.x, y: p.y - 20 - r() * 50, vx: (r() - 0.5) * 3, vy: -1 - r() * 2, max: 5000 + r() * 4000, color: 0xfff3c8 };
+        return { ...base, x: p.x, y: p.y - 20 - r() * 50, vx: (r() - 0.5) * 3, vy: -1 - r() * 2, max: 5000 + r() * 4000, color: this.palette.dust };
       }
       case 'firefly': {
         const p = this.randomFloor();
-        return { ...base, x: p.x, y: p.y - 6 - r() * 34, vx: (r() - 0.5) * 8, vy: (r() - 0.5) * 6, max: 5000 + r() * 5000, color: 0xd9ff7a };
+        return { ...base, x: p.x, y: p.y - 6 - r() * 34, vx: (r() - 0.5) * 8, vy: (r() - 0.5) * 6, max: 5000 + r() * 5000, color: this.palette.firefly };
       }
       case 'butterfly': {
         const p = this.randomFloor();
-        const colors = [0xffd84d, 0xff8fb1, 0x9fd8ff, 0xffffff];
+        const colors = this.palette.butterfly;
         return { ...base, x: p.x, y: p.y - 18 - r() * 26, vx: (r() - 0.5) * 16, vy: (r() - 0.5) * 8, max: 9000 + r() * 6000, color: colors[Math.floor(r() * colors.length)] };
       }
       case 'leaf': {
@@ -242,7 +250,7 @@ export class RoomLife {
       case 'stardust': {
         const a = r() * Math.PI * 2;
         const p = toScreen(this.W / 2 + 2.4 * Math.cos(a), this.H / 2 + 2.4 * Math.sin(a));
-        return { ...base, x: p.x, y: p.y, vx: (r() - 0.5) * 3, vy: -8 - r() * 8, max: 3500 + r() * 2500, color: r() < 0.5 ? 0xffe9a0 : 0xd6c8ff };
+        return { ...base, x: p.x, y: p.y, vx: (r() - 0.5) * 3, vy: -8 - r() * 8, max: 3500 + r() * 2500, color: this.palette.stardust[Math.floor(r() * this.palette.stardust.length)] };
       }
     }
   }

@@ -1,9 +1,11 @@
 /**
  * @pockai/ui: componentes de interfaz de Pockai, solo presentacionales.
  *
- * Reciben datos por props y avisan con eventos: no saben nada del núcleo, del backend ni de la
- * plataforma. Los usan las UIs de escritorio, Android e iOS. Los estilos van aparte, para que cada
- * app los cargue una vez: `@pockai/ui/fonts.css`, `tokens.css`, `base.css` y `kit.css`.
+ * Reciben datos por props y avisan con eventos: no saben nada del núcleo ni del backend. Los usan las
+ * UIs de escritorio, Android e iOS, y cada una se pinta como en su sistema: la app fija la plataforma
+ * con `setPlatform()` y la apariencia (tema × claro/oscuro) con `initAppearance()` antes de montar.
+ * Los estilos van aparte, para que cada app los cargue una vez y en este orden: `@pockai/ui/fonts.css`,
+ * `tokens.css`, `themes.css`, `scene.css`, `base.css`, `kit.css` y `platform.css`.
  */
 export { default as AiKeyForm } from './AiKeyForm.svelte';
 export { default as AiSettingsView } from './AiSettingsView.svelte';
@@ -35,7 +37,12 @@ export { default as StatTile } from './StatTile.svelte';
 export { default as Switch } from './Switch.svelte';
 export { default as TileButton } from './TileButton.svelte';
 export { default as Ico } from './Ico.svelte';
+export { default as AppearancePicker } from './AppearancePicker.svelte';
 export { focusTrap } from './focusTrap';
+export { press } from './press';
+export * from './platform';
+export * from './appearance';
+export * from './themes';
 export { emitUiFeedback, onUiFeedback, type UiFeedback } from './feedback';
 export { setUiSound, uiSfx, uiSfxFirst, uiLoop, uiStopLoop, type UiSound, type UiSoundOptions } from './sound';
 

@@ -14,8 +14,8 @@
   aria-hidden="true"
   focusable="false"
 >
-  <circle cx="32" cy="32" r="30" fill="#ffd731" stroke="#000" stroke-width="3" />
-  <path d="M32 12c-9 0-16 13-16 24a16 16 0 0 0 32 0c0-11-7-24-16-24z" fill="#fff" stroke="#000" stroke-width="3" />
+  <circle cx="32" cy="32" r="30" fill="#ffd731" stroke="#000" stroke-width="3" /> <!-- color-ok: logo de marca -->
+  <path d="M32 12c-9 0-16 13-16 24a16 16 0 0 0 32 0c0-11-7-24-16-24z" fill="#fff" stroke="#000" stroke-width="3" /> <!-- color-ok: logo de marca -->
   <circle cx="26" cy="36" r="3" />
   <circle cx="38" cy="36" r="3" />
 </svg>
@@ -24,7 +24,7 @@
   .pockai-mark {
     display: block;
     flex-shrink: 0;
-    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.18));
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.18)); /* color-ok: logo de marca */
     transition: rotate var(--dur-2) ease, scale var(--dur-2) ease;
   }
   .pockai-mark.tilt {

@@ -238,7 +238,7 @@
   }
   .pr-tier {
     padding: 0 var(--space-2);
-    border: 1px solid var(--on-color);
+    border: var(--sticker-border, 1px solid var(--on-color));
     border-radius: var(--radius-pills);
     font-size: var(--text-caption);
     font-weight: 800;

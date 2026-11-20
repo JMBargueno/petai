@@ -95,7 +95,7 @@
     display: inline-block;
     font-size: 42px;
     line-height: 1;
-    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+    filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--shadow-c) 25%, transparent));
     animation: bob 3.2s ease-in-out infinite;
   }
 

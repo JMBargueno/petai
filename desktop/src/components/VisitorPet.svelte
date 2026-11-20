@@ -87,7 +87,7 @@
   const SIZE = 64;
   const speciesKey = resolveVisitorSpriteKey(visitor.pet);
   /** El visitante no trae paleta ni patrón: seed determinista por jugador y paleta por defecto. */
-  const palette = { primary: '#8F7BD8', secondary: '#F3C544', accent: '#2D2A4A' };
+  const palette = { primary: '#8F7BD8', secondary: '#F3C544', accent: '#2D2A4A' }; /* color-ok: paleta de criatura */
   const seed = visitorSeed(visitor.visitorId);
 
   const { library, aliases } = getAnimLibrary(speciesKey);

@@ -1,0 +1,6 @@
+/*
+ * Temas de la app (registro en src/themes). Se cargan todos de una vez, así cambiar de tema es
+ * instantáneo. El clásico son los tokens de tokens.css y scene.css; cada tema los redefine para su
+ * `data-theme`, con light-dark() para sus versiones clara y oscura.
+ */
+@import './themes/cozy.css';

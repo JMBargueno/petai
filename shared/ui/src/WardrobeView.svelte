@@ -123,7 +123,7 @@
     gap: 4px;
     padding: 2px 10px;
     border-radius: var(--radius-pills);
-    border: 1px solid var(--line);
+    border: var(--outline);
     background: var(--color-mint-pop);
     color: var(--on-color);
     font-size: 11px;

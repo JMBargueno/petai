@@ -4,8 +4,14 @@
   import Ico from './Ico.svelte';
   import { emitUiFeedback } from './feedback';
   import { focusTrap } from './focusTrap';
+  import { getPlatform, isMobilePlatform } from './platform';
 
   export let open = true;
+  /**
+   * Cómo se presenta: `dialog` centrado, `sheet` como hoja inferior (Android/iOS) o `auto`, que es
+   * diálogo en el escritorio y hoja en el móvil. Las confirmaciones usan `dialog` (alerta en iOS).
+   */
+  export let presentation: 'auto' | 'dialog' | 'sheet' = 'auto';
   export let title = '';
   /** Nombre accesible cuando no hay `title` visible. */
   export let label = '';
@@ -13,6 +19,8 @@
   export let closable = true;
 
   const titleId = `ui-modal-${Math.random().toString(36).slice(2, 9)}`;
+  $: kind = presentation === 'auto' ? (isMobilePlatform(getPlatform()) ? 'sheet' : 'dialog') : presentation;
+
   const dispatch = createEventDispatcher<{ close: void }>();
   function close() {
     if (closable) dispatch('close');
@@ -34,8 +42,8 @@
 {#if open}
   <div class="ui-modal-backdrop" role="presentation" on:click|self={close}>
     <div
-      class="ui-modal"
-      role="dialog"
+      class="ui-modal ui-modal--{kind}"
+      role={kind === 'dialog' && getPlatform() === 'ios' ? 'alertdialog' : 'dialog'}
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
       aria-label={title ? undefined : label || undefined}

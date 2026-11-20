@@ -98,9 +98,9 @@
     height: 16px;
     margin-top: -6px;
     border-radius: 50%;
-    border: 1px solid var(--line);
+    border: var(--outline);
     background: var(--surface);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+    box-shadow: var(--shadow-1);
   }
   input[type='range']::-moz-range-track {
     height: 6px;
@@ -116,7 +116,7 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    border: 1px solid var(--line);
+    border: var(--outline);
     background: var(--surface);
   }
   input[type='range']:focus-visible {

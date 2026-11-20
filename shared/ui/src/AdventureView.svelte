@@ -320,7 +320,7 @@
     display: grid;
     gap: var(--space-1);
     padding: var(--space-3);
-    border: var(--border-ui, 1px solid var(--line));
+    border: var(--outline);
     border-radius: var(--radius-cards);
     background: var(--surface);
   }

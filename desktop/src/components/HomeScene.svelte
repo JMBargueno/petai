@@ -93,23 +93,15 @@
     overflow: hidden;
     border: 1.5px solid var(--color-carbon);
     border-radius: var(--radius-2xl);
-    background:
-      radial-gradient(70% 60% at 50% 30%, rgb(255 236 179 / 0.9), transparent 70%),
-      repeating-linear-gradient(90deg, transparent 0 22px, rgb(160 110 60 / 0.07) 22px 24px),
-      linear-gradient(180deg, #fff3d6 0%, #ffe3b0 100%);
+    background: var(--scene-room-day);
     user-select: none;
     --floor-h: min(46px, calc(var(--scene-h) * 0.3));
   }
   .mood-night {
-    background:
-      radial-gradient(70% 60% at 50% 30%, rgb(140 130 220 / 0.55), transparent 70%),
-      repeating-linear-gradient(90deg, transparent 0 22px, rgb(30 20 80 / 0.12) 22px 24px),
-      linear-gradient(180deg, #3b3570 0%, #2a2552 100%);
+    background: var(--scene-room-night);
   }
   .mood-live {
-    background:
-      radial-gradient(70% 70% at 50% 20%, rgb(85 219 156 / 0.55), transparent 70%),
-      linear-gradient(180deg, #e9fff4 0%, #c9f5df 100%);
+    background: var(--scene-room-live);
   }
   .sign {
     position: absolute;
@@ -138,10 +130,10 @@
     width: 46px;
     height: 46px;
     overflow: hidden;
-    border: 3px solid #fffaf0;
+    border: 3px solid var(--scene-window-frame);
     outline: 1.5px solid var(--color-carbon);
     border-radius: 10px;
-    background: linear-gradient(180deg, #8fd0ff 0%, #dceeff 100%);
+    background: var(--scene-window-day);
   }
   .window canvas {
     position: absolute;
@@ -161,11 +153,11 @@
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(90deg, transparent calc(50% - 1.5px), #fffaf0 calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
-      linear-gradient(0deg, transparent calc(50% - 1.5px), #fffaf0 calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px));
+      linear-gradient(90deg, transparent calc(50% - 1.5px), var(--scene-window-frame) calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+      linear-gradient(0deg, transparent calc(50% - 1.5px), var(--scene-window-frame) calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px));
   }
   .mood-night .window {
-    background: radial-gradient(circle at 70% 30%, #fff6c8 0 5px, transparent 6px), linear-gradient(180deg, #1b1846 0%, #3a2f7a 100%);
+    background: var(--scene-window-night);
   }
   .frame {
     position: absolute;
@@ -181,14 +173,10 @@
     bottom: 0;
     height: var(--floor-h);
     border-top: 1.5px solid var(--color-carbon);
-    background:
-      repeating-linear-gradient(90deg, transparent 0 38px, rgb(0 0 0 / 0.12) 38px 40px),
-      linear-gradient(180deg, #c98a4b 0%, #a86a33 100%);
+    background: var(--scene-floor-day);
   }
   .mood-night .floor {
-    background:
-      repeating-linear-gradient(90deg, transparent 0 38px, rgb(0 0 0 / 0.18) 38px 40px),
-      linear-gradient(180deg, #6b4a2c 0%, #4f361f 100%);
+    background: var(--scene-floor-night);
   }
   .rug {
     position: absolute;
@@ -197,9 +185,9 @@
     width: 150px;
     height: 26px;
     transform: translateX(-50%);
-    border: 1.5px solid rgb(11 10 20 / 0.35);
+    border: 1.5px solid var(--scene-rug-edge);
     border-radius: 50%;
-    background: radial-gradient(closest-side, #ffb3c7 0 55%, #ff8fab 56% 75%, #ffb3c7 76%);
+    background: var(--scene-rug);
   }
   .stage {
     position: absolute;
