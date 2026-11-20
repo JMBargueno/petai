@@ -457,6 +457,36 @@ async fn atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_mascotas_saldo_e_inventa
 }
 
 #[tokio::test]
+async fn solo_la_respuesta_que_cierra_una_historia_refresca_el_saldo() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 88 })).await;
+    get(&server, "/v1/pets", json!([{ "id": "p1" }, { "id": "p2" }])).await;
+    get(&server, "/v1/inventory", json!([])).await;
+    let answer = |completed: Value| {
+        Mock::given(method("POST"))
+            .and(path("/v1/stories/h1/answer"))
+            .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "consequence": "…", "completed": completed })))
+    };
+    let turn = || Action::StoryAnswer { story_id: "h1".into(), scene_index: 0.0, option_index: 1.0 };
+
+    let guard = answer(Value::Null).mount_as_scoped(&server).await;
+    core.perform(turn()).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 10, "una escena a mitad no paga");
+    drop(guard);
+
+    answer(json!({ "outcome": "win" })).mount(&server).await;
+    core.perform(turn()).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 88);
+}
+
+#[tokio::test]
 async fn terminar_un_minijuego_aplica_la_mascota_y_refresca_saldo_e_inventario() {
     use pockai_core::Action;
     let server = MockServer::start().await;

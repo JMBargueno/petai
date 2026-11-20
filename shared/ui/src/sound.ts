@@ -37,6 +37,11 @@ export function uiSfx(id: string, opts?: UiSoundOptions): boolean {
   }
 }
 
+/** El primero de `ids` que suene (la escena propone variantes, de la más concreta a la general). */
+export function uiSfxFirst(ids: string[], opts?: UiSoundOptions): boolean {
+  return ids.some((id) => uiSfx(id, opts));
+}
+
 export function uiLoop(id: string, opts?: UiSoundOptions & { key?: string }): boolean {
   try {
     return installed?.loop(id, opts) ?? false;

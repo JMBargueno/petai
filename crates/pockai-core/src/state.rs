@@ -509,6 +509,12 @@ impl Core {
                 }
                 self.refresh_later(&[Slice::User, Slice::Inventory]);
             }
+            // Aventura: solo la respuesta que cierra la historia da premio (XP, monedas, a veces un objeto).
+            ["stories", _, "answer"] => {
+                if value.get("completed").is_some_and(|c| !c.is_null()) {
+                    self.refresh_later(&[Slice::Pets, Slice::User, Slice::Inventory]);
+                }
+            }
             // Servir un plato paga monedas (y su buff es de combate, no de la mascota).
             ["cooking", "submit"] => self.refresh_later(&[Slice::User]),
             ["tournament", "enter"] => self.refresh_later(&[Slice::User]),

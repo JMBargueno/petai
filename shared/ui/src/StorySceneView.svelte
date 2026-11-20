@@ -4,19 +4,23 @@
    * derecha, dibujado con el núcleo compartido `@pockai/scene` (el mismo que incrusta Android).
    * Traduce las props a mensajes del protocolo (`setStory`) y reenvía los hitos de la escena.
    *
+   * El clima real (`weather`) lo pasa cada app si lo tiene; sin él, la escena usa su propio
+   * ambiente. Los sonidos van por el puerto de sonido de la biblioteca.
+   *
    * Eventos: `beat` (`arrived` al llegar al centro, `reacted` al acabar la reacción y `exited` al
    * salir por la derecha), una vez cada uno por escena.
    */
   import { onDestroy, onMount, createEventDispatcher } from 'svelte';
   import { PockaiScene, parseClock, type HostMessage, type SceneEvent, type StoryBeat, type StoryState } from '@pockai/scene';
-  import { environmentalStatus } from '../lib/environmental';
-  import { sfxFirst } from '../lib/audio';
+  import { uiSfxFirst } from './sound';
 
   export let pet: any = null;
   /** Escena en curso (`null` mientras no hay historia). */
   export let story: StoryState | null = null;
   export let label = 'Escena de la aventura';
   export let height = 300;
+  /** Clima local (`weatherCode`, `temperature`, `sunrise`, `sunset`), o `null`. */
+  export let weather: any = null;
 
   const dispatch = createEventDispatcher<{ beat: { key: string; beat: StoryBeat } }>();
 
@@ -32,7 +36,7 @@
   const send = (m: HostMessage) => scene?.receive(m);
 
   onMount(() => {
-    void PockaiScene.create({ host, label, onEvent, onSound: (ids) => sfxFirst(ids) }).then((s) => {
+    void PockaiScene.create({ host, label, onEvent, onSound: (ids) => uiSfxFirst(ids) }).then((s) => {
       if (destroyed) return s.destroy();
       scene = s;
     });
@@ -61,7 +65,6 @@
       },
     });
   // Clima y sol reales para las escenas que no traen ambiente propio
-  $: weather = $environmentalStatus?.weather ?? null;
   $: sunrise = parseClock(weather?.sunrise);
   $: sunset = parseClock(weather?.sunset);
   $: if (scene)

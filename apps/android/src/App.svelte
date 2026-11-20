@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { AccountView, BackpackView, Button, Card, CurrencyPill, HatchView, Ico, Notice, PetHomeView, Segmented, ShopView } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
+  import AdventureScreen from './screens/AdventureScreen.svelte';
   import ArenaScreen from './screens/ArenaScreen.svelte';
   import BondingScreen from './screens/BondingScreen.svelte';
   import ChestsScreen from './screens/ChestsScreen.svelte';
@@ -31,7 +32,7 @@
   /** Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión). */
   let petSection = $state<'home' | 'bond' | 'eggs' | 'wardrobe'>('home');
   let progressSection = $state<'missions' | 'season'>('missions');
-  let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking'>('games');
+  let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking' | 'adventure'>('games');
   let shopSection = $state<'store' | 'chests'>('store');
   const PLAY_SECTIONS = [
     { value: 'games', label: 'Minijuegos', icon: 'gamepad' },
@@ -40,6 +41,7 @@
     { value: 'tournament', label: 'Torneo', icon: 'trophy' },
     { value: 'training', label: 'Entrenar', icon: 'castle' },
     { value: 'cooking', label: 'Cocina', icon: 'chef' },
+    { value: 'adventure', label: 'Aventura', icon: 'map' },
   ];
   const SHOP_SECTIONS = [
     { value: 'store', label: 'Tienda', icon: 'shop' },
@@ -236,8 +238,10 @@
           <TournamentScreen {pet} />
         {:else if playSection === 'training'}
           <TrainingScreen {pet} />
-        {:else}
+        {:else if playSection === 'cooking'}
           <CookingScreen {pet} />
+        {:else}
+          <AdventureScreen {pet} />
         {/if}
       {:else if tab === 'account'}
         <AccountView user={$core.user} on:logout={leave} />

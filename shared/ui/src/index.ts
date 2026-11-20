@@ -28,11 +28,12 @@ export { default as TileButton } from './TileButton.svelte';
 export { default as Ico } from './Ico.svelte';
 export { focusTrap } from './focusTrap';
 export { emitUiFeedback, onUiFeedback, type UiFeedback } from './feedback';
-export { setUiSound, uiSfx, uiLoop, uiStopLoop, type UiSound, type UiSoundOptions } from './sound';
+export { setUiSound, uiSfx, uiSfxFirst, uiLoop, uiStopLoop, type UiSound, type UiSoundOptions } from './sound';
 
 // Piezas de dominio: pantallas enteras que solo pintan. Reciben el estado por props y avisan de lo
 // que el jugador quiere hacer; quien las usa (el contenedor de cada app) habla con el núcleo.
 export { default as AccountView } from './AccountView.svelte';
+export { default as AdventureView } from './AdventureView.svelte';
 export { default as ArenaView } from './ArenaView.svelte';
 export { default as BondingView } from './BondingView.svelte';
 export { default as BackpackView } from './BackpackView.svelte';
@@ -52,6 +53,7 @@ export { default as ReplayViewer } from './ReplayViewer.svelte';
 export { default as SeasonsView } from './SeasonsView.svelte';
 export { default as ShopView } from './ShopView.svelte';
 export { default as SocialAvatar } from './SocialAvatar.svelte';
+export { default as StorySceneView } from './StorySceneView.svelte';
 export { default as TournamentView } from './TournamentView.svelte';
 export { default as TrainingView } from './TrainingView.svelte';
 export { default as WardrobeView } from './WardrobeView.svelte';
