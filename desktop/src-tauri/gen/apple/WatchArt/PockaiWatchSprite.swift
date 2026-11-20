@@ -26,7 +26,14 @@ struct AnimatedPockai: View {
             // El paso es el frame más corto de la pose: con él, cada frame cae en su momento aunque
             // duren distinto. `.periodic` y no `.animation`: esto es pixel art, no hay que interpolar
             // nada entre frames y pedir cada refresco de pantalla solo gastaría batería.
-            TimelineView(.periodic(from: clip.start, by: clip.step)) { ctx in
+            //
+            // El ancla es `.now` y no una fecha fija lejana: `.periodic(from:)` va soltando
+            // instantes desde ahí, y anclarlo al 2001 con pasos de 0,17 s son miles de millones de
+            // ticks hasta el presente. Que `.now` cambie en cada redibujado da igual, porque solo
+            // fija la fase de los avisos: el frame se calcula del reloj absoluto.
+            //
+            // Medido en el simulador: 59 avisos en 10 s, recorriendo los 6 índices por igual.
+            TimelineView(.periodic(from: .now, by: clip.step)) { ctx in
                 frame(clip.image(at: ctx.date))
             }
         } else {
@@ -52,8 +59,6 @@ struct AnimatedPockai: View {
         let frames: [Image]
         let durations: [Int]
         let step: TimeInterval
-        /// Un origen fijo y no `Date()`: así el bucle no se reinicia cada vez que la vista se redibuja.
-        let start = Date(timeIntervalSinceReferenceDate: 0)
 
         init?(pet: PockaiWristPet) {
             // La misma cadena de reservas que `PockaiWristArt.pockai`: la pose del ánimo, y si la
@@ -73,11 +78,12 @@ struct AnimatedPockai: View {
 
         var cycleMs: Int { max(1, durations.reduce(0, +)) }
 
-        /// El frame que toca en un instante dado. Se deriva del tiempo y no de un contador: si el
-        /// reloj deja de pedir frames con la muñeca baja, al volver retoma donde debería estar.
+        /// El frame que toca en un instante dado, sacado del reloj absoluto. Sin contador y sin
+        /// ancla propia: si el reloj deja de pedir frames con la muñeca baja, al volver retoma
+        /// donde debería estar, y redibujar la vista no corta el bucle.
         func image(at date: Date) -> Image {
-            let elapsed = Int((date.timeIntervalSince(start) * 1000).rounded())
-            var left = ((elapsed % cycleMs) + cycleMs) % cycleMs
+            let ms = Int((date.timeIntervalSince1970 * 1000).rounded())
+            var left = ((ms % cycleMs) + cycleMs) % cycleMs
             for (i, ms) in durations.enumerated() {
                 if left < ms { return frames[i] }
                 left -= ms

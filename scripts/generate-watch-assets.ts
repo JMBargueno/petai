@@ -88,6 +88,8 @@ interface AnimJson {
 
 /** Lo que el manifiesto le cuenta a SwiftUI de una pose: la duración en ms de cada frame. */
 const DURATIONS = new Map<string, number[]>();
+/** Poses cuyos frames son todos el mismo dibujo: se hornean igual, pero en la muñeca no se mueven. */
+const PLANAS: string[] = [];
 
 // ── Utilidades del catálogo ────────────────────────────────────────────────────────────────────
 
@@ -214,6 +216,11 @@ function bakeSheet(
       durations.push(Math.max(1, Math.round(anim.frames[i].duration)));
     }
     DURATIONS.set(key, durations);
+    // Que una pose tenga varios frames no quiere decir que se mueva: hoy `idle` y `sad` son el
+    // mismo dibujo repetido en todas las especies (ver `docs/PENDIENTES.md`). Conviene que se vea
+    // al generar, y no descubrirlo mirando un reloj.
+    const dibujos = new Set(out.slice(-durations.length).map((f) => Buffer.from(f.data).toString('base64')));
+    if (durations.length > 1 && dibujos.size === 1) PLANAS.push(key);
   }
   return out;
 }
@@ -377,6 +384,14 @@ namespace('element');
 for (const [name, hex] of Object.entries(ELEMENTS)) colorset(join('element', name), hex);
 
 console.log(
-  `generate-watch-assets: ${sprites} láminas en ${DURATIONS.size} poses animadas, ${items} objetos, ` +
+  `generate-watch-assets: ${sprites} láminas en ${DURATIONS.size} poses, ${items} objetos, ` +
     `${UI_ICONS.length} iconos y ${Object.keys(ELEMENTS).length} colores → ${OUT.slice(ROOT.length + 1)}`,
 );
+if (PLANAS.length) {
+  const poses = [...new Set(PLANAS.map((k) => k.split('_').pop()))].sort();
+  console.warn(
+    `  ⚠ ${PLANAS.length} de ${DURATIONS.size} poses son el mismo dibujo repetido (${poses.join(', ')}): ` +
+      'se hornean sus frames, pero en la muñeca no se mueven. El arreglo está en la hoja de la ' +
+      'especie, no aquí.',
+  );
+}
