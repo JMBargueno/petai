@@ -222,7 +222,11 @@ Pesos: 500 (medio), 700 (negrita) y 800 (extra).
 - Pueden ir giradas unos grados solo si son decoración suelta. **Las tarjetas con texto no se giran.**
 
 **Iconos de interfaz** (botones, navegación, pestañas):
-- Un único set de **trazo** en todas las plataformas. Se propone **Lucide**, que ya es dependencia del escritorio: trazo de 2 px, esquinas redondeadas, 20–24 px y color `currentColor`.
+- Un único set de **trazo** en todas las plataformas: el **set propio** de `shared/ui/src/icons`
+  (viewBox 24, trazo 1,75, `currentColor`, variante de contorno y duotone), que mantiene la skill
+  `pockai-ui-icons-architect`. Convive con **Lucide** para lo que aún no cubre: `Ico` resuelve el set
+  propio con el prefijo `ui:` y lo demás con Lucide.
+- El reloj es el único cliente que **solo** usa el set propio: no tiene Lucide (§10).
 - **Ni emoji ni Material Icons rellenos en la UI.** Los emoji solo se admiten dentro de textos de chat de la mascota.
 - Iconos nuevos de marca (cofre, sartén, espada, constelación…): mismas reglas que las pegatinas (relleno blanco, contorno negro y formas simples).
 
@@ -555,11 +559,25 @@ Es la referencia: aplica todo lo anterior con tokens en `tokens.css`, componente
 
 ### Android (`apps/android`)
 - Es la misma app de Tauri que el escritorio: usa los tokens y el kit de `@pockai/ui` con el aspecto de Android (modo de plataforma), así que la paleta y la tipografía son las del escritorio.
-- Icono adaptativo: el huevo de marca (§2) con capa monocroma.
+- Icono adaptativo: el huevo de marca (§2) con capa monocroma, en `mipmap-anydpi-v26/ic_launcher.xml`.
+  Lo genera `scripts/generate-app-icons.mjs` desde `desktop/public/favicon.svg`, que es la fuente de
+  verdad del icono en **las cuatro apps** (escritorio, iOS, Android y reloj).
 
 ### iOS (pendiente)
 - La marca va sobre el estilo nativo (Liquid Glass): `AccentColor` = `#5c4ade` en claro y `#b3a8ff` en oscuro, con los mismos fondos y tipografía que Android.
 - El vidrio nativo sustituye a `--surface-glass`.
+- Icono de app: el huevo de marca, generado con `pnpm generate:app-icons`. **Sin canal alfa**:
+  `actool` rechaza los iconos que lo llevan, y `tauri icon` los escribe en RGBA, así que el script
+  los aplana después.
+
+### Reloj (`PockaiWatch`, watchOS)
+- `AccentColor` = **`#b3a8ff`**, sin pareja clara: watchOS no tiene modo claro, así que el valor
+  universal es el único que se ve, y el `#5c4ade` de iOS sobre la esfera negra apenas contrasta.
+- Los iconos de interfaz son **el set propio** (§6), horneados a PNG de plantilla en el catálogo del
+  reloj por `pnpm generate:watch-assets`: watchOS no tiene Lucide ni webview.
+- El pixel art (los Pockais y los objetos) se pinta con `.interpolation(.none)` y a múltiplos
+  enteros, igual que en el resto de clientes.
+- El color por Flujo (§3.6) viaja en el resumen y tiñe el halo del Pockai y el anillo de nivel.
 
 ## 11 · Accesibilidad
 

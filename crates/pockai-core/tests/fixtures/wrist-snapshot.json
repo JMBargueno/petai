@@ -12,7 +12,19 @@
     "happiness": 70,
     "energy": 60,
     "hygiene": 30,
-    "health": 90
+    "health": 90,
+    "speciesId": "ignisaur",
+    "stage": "juvenile",
+    "element": "fire",
+    "xp": 900,
+    "xpNeeded": 1852,
+    "bonding": 42,
+    "lowest": "hygiene",
+    "lowestValue": 30
+  },
+  "wallet": {
+    "coins": 1250,
+    "gems": 7
   },
   "surfaces": [
     {
@@ -28,17 +40,37 @@
     {
       "action": "feed",
       "label": "Dar de comer",
-      "enabled": true
+      "enabled": true,
+      "icon": "feed",
+      "itemId": "apple",
+      "itemName": "apple"
     },
     {
       "action": "clean",
       "label": "Bañar",
-      "enabled": true
+      "enabled": true,
+      "icon": "clean"
     },
     {
       "action": "sleep",
       "label": "A dormir",
-      "enabled": true
+      "enabled": true,
+      "icon": "sleep"
+    },
+    {
+      "action": "heal",
+      "label": "Curar",
+      "enabled": true,
+      "icon": "heal",
+      "itemId": "medicine",
+      "itemName": "medicine"
+    },
+    {
+      "action": "evolve",
+      "label": "Evolucionar",
+      "enabled": false,
+      "icon": "evolve",
+      "disabledReason": "Todavía no es adulta"
     }
   ]
 }

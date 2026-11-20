@@ -31,7 +31,7 @@ Las dos apps muestran la misma cuenta y la misma mascota, sincronizadas por WebS
 
 - **Móvil: el juego completo.** Es donde se cuida, se juega y se progresa. Sesiones cortas y frecuentes, una mano, notificaciones y widget. Todas las features de juego deben estar aquí.
 - **Ordenador: el compañero permanente.** La mascota vive sobre el escritorio mientras se trabaja. Lo principal es la ventana de la mascota, las interacciones rápidas y el chat. El panel de control cubre el juego, pero se priorizan las acciones de un clic y las herramientas que solo tienen sentido en un ordenador (Hermes local, abrir enlaces, portapapeles, API keys y webhooks).
-- **Reloj: el vistazo y el cuidado de un toque.** No es el juego: constantes vitales, cuentas atrás y cuatro acciones. Lo que ve se lo pasa el iPhone, y lo que hace se lo manda al iPhone (§5 y [spec 44](specs/spec-44-reloj-apple-watch.md)).
+- **Reloj: el vistazo y el cuidado de un toque.** No es el juego: constantes vitales, cuentas atrás, el monedero y cinco acciones. Lo que ve se lo pasa el iPhone, y lo que hace se lo manda al iPhone (§5 y [spec 44](specs/spec-44-reloj-apple-watch.md)).
 
 ### Tabla resumen
 
@@ -387,7 +387,7 @@ El borrado de cuenta es requisito de las tiendas de apps y del RGPD, y no existe
 | Notificaciones push | Combate recibido, regalo, recordatorio, misión completada, mensaje de la mascota | ⬜ (falta FCM y APNs) |
 | Live Activity (iOS) | Cuenta atrás de eclosión en la isla dinámica y en la pantalla de bloqueo | ✅ (falta verla en un iPhone) |
 | Live Activity reflejada en el reloj | La misma cuenta atrás, en el Smart Stack del Apple Watch, sin target de watchOS (iOS 18 y watchOS 11) | ⬜ sin comprobar: hay que mirar la muñeca en la prueba del paso 5.7 |
-| Complicación del reloj | Ánimo, la constante más baja y la cuenta atrás más próxima en la esfera | 🟡 hecha (spec 44); falta verla en una esfera |
+| Complicación del reloj | El sprite del Pockai, la constante más baja y la cuenta atrás más próxima en la esfera | 🟡 hecha (spec 44); falta verla en una esfera |
 | Modo sin conexión | Ver el último estado y encolar cuidados para enviarlos al reconectar | ⛔ (F-04) |
 
 ### 3.9 Diferencias entre Android e iOS
@@ -400,7 +400,7 @@ La especificación es la misma. Solo cambia lo que depende de la plataforma:
 | Inicio de sesión social | Google (Credential Manager) | Sign in with Apple |
 | Compras | Play Billing | StoreKit 2 |
 | Push | FCM | APNs |
-| Widget | Glance | WidgetKit y Live Activity (y, planificado, el reloj: [spec 44](specs/spec-44-reloj-apple-watch.md)) |
+| Widget | Glance | WidgetKit, Live Activity y el reloj ([spec 44](specs/spec-44-reloj-apple-watch.md)) |
 | Estado | Funcional | Funcional en el simulador (la misma app: `@pockai/mobile`) |
 
 El inicio de sesión social y las compras no tienen backend todavía.
@@ -578,17 +578,26 @@ Está sin comprobar: se mira en la prueba en dispositivo del paso 5.7.
 
 | Pantalla | Qué enseña | Estado |
 |---|---|---|
-| Vitales | Nombre, nivel, ánimo y las constantes en arcos, con la hora del último dato | ✅ |
+| Vitales | El sprite del Pockai con la cara de su ánimo sobre el color de su Flujo, nombre, nivel con el anillo de XP y las cinco constantes, con la hora del último dato | ✅ |
 | En marcha | Las cuentas atrás con hora de fin conocida (hoy la eclosión), con el cronómetro corriendo sin red | ✅ |
-| Cuidar | Dar de comer, bañar y dormir o despertar, cada uno con su motivo si está gris | 🟡 se ven y el camino está probado contra el backend; falta pulsarlos en el reloj |
+| Cuidar | Dar de comer, bañar, dormir o despertar, curar y evolucionar, cada uno con su motivo si está gris; comer y curar enseñan con qué objeto | 🟡 se ven y el camino está probado contra el backend; falta pulsarlos en el reloj |
+| Monedero | Monedas y gemas | ✅ |
 | Complicación | Ánimo, la constante más baja y la cuenta atrás más próxima, en cuatro familias | 🟡 compila y lee el resumen; falta verla en una esfera |
+
+El arte no es genérico: el reloj lleva horneados los sprites de las 16 especies (4 etapas × 5 ánimos)
+y el mismo set de iconos propio que el escritorio y el móvil ([spec 44](specs/spec-44-reloj-apple-watch.md) §4.1).
 
 ### 5.2 Acciones
 
-Tres, y solo tres, todas resueltas por el núcleo en el iPhone: **dar de comer** (el alimento lo elige
-el núcleo con el inventario, prefiriendo la favorita de la especie), **bañar** y **dormir o
-despertar** (un botón que alterna). Si el iPhone no está accesible, la intención queda en la cola del
-sistema con su caducidad; si no hay resumen, el reloj pide abrir el iPhone.
+Cinco, todas resueltas por el núcleo en el iPhone: **dar de comer** (el alimento lo elige el núcleo
+con el inventario, prefiriendo la favorita de la especie), **bañar**, **dormir o despertar** (un
+botón que alterna), **curar** (la medicina también la elige el núcleo, y nunca una que no se venda) y
+**evolucionar** (adulta, nivel 50 y Piedra de Evolución). Si el iPhone no está accesible, la
+intención queda en la cola del sistema con su caducidad; si no hay resumen, el reloj pide abrir el
+iPhone.
+
+Las cinco están además como **atajos de Siri**, y la primera que se pueda hacer responde al **doble
+pinch**.
 
 Dos que no están: **dar un mimo** no se puede, porque el backend no tiene ruta de caricia (el vínculo
 sube como efecto de las demás interacciones); y **la recompensa diaria** espera a que las misiones

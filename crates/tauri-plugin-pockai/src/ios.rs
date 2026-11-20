@@ -82,8 +82,15 @@ fn watch_surfaces(core: Core) {
         notify_swift();
         loop {
             match events.recv().await {
+                // El inventario y el usuario también: los botones del reloj dependen de la mochila
+                // (comida, medicina, Piedra de Evolución) y el resumen lleva monedas y gemas. Sin
+                // esto, comprar o gastar en el iPhone no empuja nada y el reloj se queda con un
+                // botón gris que ya debería estar activo.
                 Ok(CoreEvent::State(change))
-                    if matches!(change.slice, Slice::Eggs | Slice::Pets | Slice::ActivePetId) => {}
+                    if matches!(
+                        change.slice,
+                        Slice::Eggs | Slice::Pets | Slice::ActivePetId | Slice::Inventory | Slice::User
+                    ) => {}
                 Ok(CoreEvent::Session(_)) => {}
                 Ok(_) => continue,
                 Err(RecvError::Lagged(_)) => {}

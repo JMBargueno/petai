@@ -157,6 +157,9 @@ targets:
     sources:
       - path: PockaiWatch
       - path: Shared
+      # El arte horneado (`pnpm generate:watch-assets`). Va aparte de `Shared/`, que lo compilan los
+      # cuatro targets: ahí metería las láminas del reloj dentro de la app de iPhone y de su widget.
+      - path: WatchArt
     info:
       path: PockaiWatch/Info.plist
       properties:
@@ -181,11 +184,14 @@ targets:
         SWIFT_VERSION: "5.0"
         INFOPLIST_KEY_CFBundleDisplayName: Pockai
         SKIP_INSTALL: true
-        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: ""
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: false
     dependencies:
       - sdk: SwiftUI.framework
       - sdk: WatchConnectivity.framework
+      # Los atajos de Siri (`PockaiWatchIntents.swift`). No obliga a subir el deployment target:
+      # App Intents es watchOS 9+.
+      - sdk: AppIntents.framework
       - target: PockaiWatchComplications
         embed: true
 
@@ -197,6 +203,8 @@ targets:
     sources:
       - path: PockaiWatchComplications
       - path: Shared
+      # Su propia copia: una extensión de WidgetKit no lee los assets de la app que la contiene.
+      - path: WatchArt
     info:
       path: PockaiWatchComplications/Info.plist
       properties:

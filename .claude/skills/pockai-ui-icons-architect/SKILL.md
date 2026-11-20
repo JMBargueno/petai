@@ -18,8 +18,10 @@ Lee las referencias cuando las necesites:
 - Fuente de verdad: `scripts/icon-defs.mjs` (formas por icono, en `base` y `acc`).
 - Build: `scripts/build_icons.mjs` escribe `shared/ui/src/icons/<nombre>.outline.svg`, `<nombre>.duo.svg`, `index.ts` y `raw.d.ts`. **No edites los SVG a mano**.
 - Checker: `scripts/check_icons.mjs` valida la spec sobre esos archivos.
+- Hoja de contactos: `scripts/contact_sheet.mjs <salida.png> [nombres…]` saca la rejilla de claro y
+  oscuro × 16 y 20 px × contorno y duotone que pide el paso 5.
 - Cableado: `shared/ui/src/Ico.svelte` (`n="ui:pet"`, `active` para duotone). Lo usan la navegación de escritorio (`desktop/src/components/ControlPanel.svelte`, `NAV`), las subsecciones (`Segmented`) y la barra móvil (`shared/mobile/src/config.ts`, `MobileApp.svelte`).
-- 37 iconos, 74 archivos.
+- 49 iconos, 98 archivos.
 
 ## Flujo
 
@@ -54,7 +56,11 @@ Pregunta en **una sola tanda** y solo lo que falte, con una opción recomendada:
 
 ### 5. Verificar
 - `check_icons.mjs` en verde.
-- Hoja de contactos a 16 y 20 px, en claro y en oscuro. Revísala a simple vista: si un icono no se distingue de su vecino, cámbialo.
+- Hoja de contactos a 16 y 20 px, en claro y en oscuro, **con los vecinos de forma parecida al lado**:
+  ```bash
+  node .claude/skills/pockai-ui-icons-architect/scripts/contact_sheet.mjs /tmp/hoja.png <nuevos…> <parecidos…>
+  ```
+  Revísala a simple vista: si un icono no se distingue de su vecino, cámbialo.
 - Tests de `shared/ui` y del escritorio.
 
 ### 6. Propuesta

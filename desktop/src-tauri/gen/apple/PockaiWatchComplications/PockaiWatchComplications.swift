@@ -59,29 +59,24 @@ struct PetProvider: TimelineProvider {
 
 // MARK: - Las vistas
 
-/// La constante que peor está, que es lo que importa de un vistazo.
-private func lowest(_ pet: PockaiPetGlance) -> (key: String, value: Int) {
-    let stats = [
-        ("hunger", pet.hunger), ("happiness", pet.happiness), ("energy", pet.energy),
-        ("hygiene", pet.hygiene), ("health", pet.health),
-    ]
-    let worst = stats.min { $0.1 < $1.1 } ?? ("hunger", pet.hunger)
-    return (worst.0, worst.1)
-}
+// Cuál es la constante que peor está **no se calcula aquí**: viene decidida en el resumen
+// (`pet.lowest` y `pet.lowestValue`, de `wrist.rs`). Antes se recalculaba en Swift, que era una
+// regla de juego viviendo en SwiftUI.
 
 struct CircularView: View {
     let entry: PetEntry
 
     var body: some View {
         if let pet = entry.snapshot?.pet {
-            let worst = lowest(pet)
-            Gauge(value: Double(max(0, min(100, worst.value))), in: 0...100) {
-                Image(systemName: PockaiWristSymbols.mood(pet.mood))
+            Gauge(value: Double(max(0, min(100, pet.lowestValue))), in: 0...100) {
+                PockaiWristArt.pockai(pet)
             }
             .gaugeStyle(.accessoryCircularCapacity)
             .opacity(entry.stale ? 0.5 : 1)
+            .accessibilityLabel(pet.name)
+            .accessibilityValue("\(PockaiWristArt.statLabel(pet.lowest)) \(pet.lowestValue)")
         } else {
-            Image(systemName: "pawprint.fill")
+            PockaiWristArt.away
         }
     }
 }
@@ -91,16 +86,16 @@ struct CornerView: View {
 
     var body: some View {
         if let pet = entry.snapshot?.pet {
-            let worst = lowest(pet)
-            Image(systemName: PockaiWristSymbols.mood(pet.mood))
+            PockaiWristArt.mood(pet.mood)
                 .widgetLabel {
-                    Gauge(value: Double(max(0, min(100, worst.value))), in: 0...100) {
-                        Text(PockaiWristSymbols.statLabel(worst.key))
+                    Gauge(value: Double(max(0, min(100, pet.lowestValue))), in: 0...100) {
+                        Text(PockaiWristArt.statLabel(pet.lowest))
                     }
                 }
                 .opacity(entry.stale ? 0.5 : 1)
+                .accessibilityLabel("\(pet.name): \(PockaiWristArt.statLabel(pet.lowest)) \(pet.lowestValue)")
         } else {
-            Image(systemName: "pawprint.fill")
+            PockaiWristArt.away
         }
     }
 }
@@ -113,8 +108,7 @@ struct InlineView: View {
             if let next = snapshot.surfaces.first(where: { $0.endsAtDate > entry.date }) {
                 Text("\(pet.name) · \(next.endsAtDate, style: .relative)")
             } else {
-                let worst = lowest(pet)
-                Text("\(pet.name) · \(PockaiWristSymbols.statLabel(worst.key)) \(worst.value)")
+                Text("\(pet.name) · \(PockaiWristArt.statLabel(pet.lowest)) \(pet.lowestValue)")
             }
         } else {
             Text("Abre Pockai")
@@ -129,14 +123,13 @@ struct RectangularView: View {
         if let snapshot = entry.snapshot, let pet = snapshot.pet {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Image(systemName: PockaiWristSymbols.mood(pet.mood))
+                    PockaiWristArt.pockai(pet).frame(width: 20, height: 20)
                     Text(pet.name).font(.headline).lineLimit(1)
                 }
                 if let next = snapshot.surfaces.first(where: { $0.endsAtDate > entry.date }) {
                     Text(next.endsAtDate, style: .timer).font(.caption2)
                 } else {
-                    let worst = lowest(pet)
-                    Text("\(PockaiWristSymbols.statLabel(worst.key)) \(worst.value) · \(pet.moodLabel)")
+                    Text("\(PockaiWristArt.statLabel(pet.lowest)) \(pet.lowestValue) · \(pet.moodLabel)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -144,7 +137,7 @@ struct RectangularView: View {
             .opacity(entry.stale ? 0.6 : 1)
         } else {
             HStack(spacing: 4) {
-                Image(systemName: "pawprint.fill")
+                PockaiWristArt.away
                 Text("Abre Pockai en el iPhone").font(.caption2)
             }
             .foregroundStyle(.secondary)

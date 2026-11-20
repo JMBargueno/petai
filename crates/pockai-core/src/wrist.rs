@@ -36,8 +36,25 @@ const MIN_SEND_GAP_MS: i64 = 15 * 1000;
 /// la pena.
 const CLEAN_MAX_HYGIENE: i64 = 80;
 
-/// Lo que el jugador puede hacer desde el reloj. Cuatro, y solo cuatro: lo que se resuelve de un
-/// toque y no necesita leer nada más que el estado que el núcleo ya tiene.
+/// Nivel mínimo para la forma final y el objeto que la libera. Los mismos que
+/// `evolution.finalStageMinLevel` y `evolution.finalStageItemId` de `balance.json`, replicados aquí
+/// por lo mismo que [`CLEAN_MAX_HYGIENE`]: el núcleo no carga los datos de juego y preguntar al
+/// servidor para saber si pintar un botón gris no vale la pena.
+const EVOLVE_MIN_LEVEL: i64 = 50;
+const EVOLVE_ITEM_ID: &str = "evolution_stone";
+
+/// La experiencia que hace falta para pasar de `level` al siguiente.
+///
+/// **Es una regla del servidor replicada**: vive en `xpForLevel` de
+/// `backend/src/modules/pets/pets.service.ts` y no en `balance.json`, así que si allí cambia la
+/// curva hay que cambiarla aquí. Se replica porque el anillo de nivel del reloj no merece una
+/// consulta al servidor, y es el mismo trato que [`CLEAN_MAX_HYGIENE`].
+fn xp_for_level(level: i64) -> i64 {
+    (100.0 * (level.max(1) as f64).powf(1.5)).round() as i64
+}
+
+/// Lo que el jugador puede hacer desde el reloj: lo que se resuelve de un toque y no necesita leer
+/// nada más que el estado que el núcleo ya tiene.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WristAction {
@@ -45,6 +62,8 @@ pub enum WristAction {
     Clean,
     Sleep,
     Wake,
+    Heal,
+    Evolve,
 }
 
 impl WristAction {
@@ -54,6 +73,21 @@ impl WristAction {
             WristAction::Clean => "Bañar",
             WristAction::Sleep => "A dormir",
             WristAction::Wake => "Despertar",
+            WristAction::Heal => "Curar",
+            WristAction::Evolve => "Evolucionar",
+        }
+    }
+
+    /// El nombre del icono en el set propio (`shared/ui/src/icons`). Viaja como **dato**, no como un
+    /// `switch` en Swift: el reloj dibuja lo que le dicen y no decide nada.
+    fn icon(self) -> &'static str {
+        match self {
+            WristAction::Feed => "feed",
+            WristAction::Clean => "clean",
+            WristAction::Sleep => "sleep",
+            WristAction::Wake => "wake",
+            WristAction::Heal => "heal",
+            WristAction::Evolve => "evolve",
         }
     }
 }
@@ -65,9 +99,66 @@ pub struct WristButton {
     pub action: WristAction,
     pub label: String,
     pub enabled: bool,
+    /// El icono que lo pinta, del set propio de interfaz.
+    pub icon: String,
     /// Qué enseñar cuando está gris. Corto: cabe en una pantalla de reloj.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub disabled_reason: Option<String>,
+    /// Con qué se hace, cuando la acción gasta un objeto (comer y curar). **Lo elige el núcleo**;
+    /// decírselo al reloj no le da ningún conocimiento nuevo de la mochila, solo deja de pintarle un
+    /// cubierto genérico donde va una manzana.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_name: Option<String>,
+}
+
+/// La mascota activa, vista desde la muñeca: el [`PetGlance`] que ya comparten el widget de iOS y
+/// los avisos, más lo que solo el reloj necesita.
+///
+/// Es un tipo aparte y **no campos nuevos en `PetGlance`** a propósito: ese resumen vive guardado en
+/// el App Group del iPhone y lo decodifica `PockaiPetGlance.load` con campos no opcionales, así que
+/// una clave obligatoria nueva dejaría sin decodificar lo ya guardado y el widget se caería a «Abre
+/// Pockai» hasta la siguiente pasada en segundo plano.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WristPet {
+    /// Plano en el JSON: Swift declara un solo tipo con todos los campos al mismo nivel.
+    #[serde(flatten)]
+    pub glance: PetGlance,
+    /// Con qué sprite se dibuja: el `spriteKey` de la especie y la etapa.
+    pub species_id: String,
+    /// `baby`, `juvenile`, `adult` o `final`.
+    pub stage: String,
+    /// El Flujo de la especie (`fire`, `water`, `plant`, `electric`, `shadow`, `light`), para teñir.
+    pub element: String,
+    pub xp: i64,
+    /// Cuánta experiencia pide el nivel siguiente. El reloj pinta la barra; aquí no se resta nada.
+    pub xp_needed: i64,
+    /// El vínculo, de 0 a 100.
+    pub bonding: i64,
+    /// La constante que peor está y su valor: es lo que se enseña en la esfera. **Lo decide aquí el
+    /// núcleo** y no SwiftUI, que antes lo recalculaba por su cuenta.
+    pub lowest: String,
+    pub lowest_value: i64,
+}
+
+impl std::ops::Deref for WristPet {
+    type Target = PetGlance;
+    /// `pet.hunger` en lugar de `pet.glance.hunger`: el resumen de siempre sigue leyéndose igual
+    /// desde fuera, aunque dentro vaya envuelto.
+    fn deref(&self) -> &PetGlance {
+        &self.glance
+    }
+}
+
+/// Lo que el jugador lleva encima. Va empaquetado y no suelto en el resumen para que
+/// [`should_send`] lo cubra con una sola comparación.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WristWallet {
+    pub coins: i64,
+    pub gems: i64,
 }
 
 /// El resumen que el iPhone le manda al reloj. Sin tokens y sin nada que identifique al usuario:
@@ -85,7 +176,10 @@ pub struct WristSnapshot {
     pub signed_in: bool,
     /// La mascota activa, o `None` sin sesión o sin mascota.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pet: Option<PetGlance>,
+    pub pet: Option<WristPet>,
+    /// Monedas y gemas, o `None` sin sesión.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wallet: Option<WristWallet>,
     /// Las cuentas atrás con hora de fin conocida, las mismas que la Live Activity del iPhone.
     pub surfaces: Vec<Surface>,
     pub buttons: Vec<WristButton>,
@@ -158,14 +252,64 @@ pub fn snapshot(state: &AppState, now: i64) -> WristSnapshot {
         generated_at: now,
         stale_at: now + STALE_AFTER_MS,
         signed_in,
-        pet: pet.filter(|_| signed_in).map(pet_glance),
+        pet: pet.filter(|_| signed_in).map(wrist_pet),
+        wallet: signed_in.then(|| WristWallet {
+            coins: state.user.get("coins").and_then(Value::as_i64).unwrap_or(0),
+            gems: state.user.get("gems").and_then(Value::as_i64).unwrap_or(0),
+        }),
         surfaces: if signed_in { surfaces(state, now) } else { Vec::new() },
         buttons: buttons(state),
     }
 }
 
-/// Los cuatro botones, ya decididos. Sin sesión o sin mascota no hay ninguno: el reloj enseña «abre
-/// el iPhone» en lugar de botones que no harían nada.
+/// La mascota activa vista desde la muñeca. El ánimo y las constantes salen de [`pet_glance`], que
+/// es el mismo criterio que usan los avisos y el widget de iOS: no hay dos reglas en la app.
+fn wrist_pet(pet: &Value) -> WristPet {
+    let glance = pet_glance(pet);
+    let level = glance.level;
+    let (lowest, lowest_value) = worst(&glance);
+    WristPet {
+        species_id: pet
+            .get("species")
+            .and_then(|s| s.get("spriteKey").or_else(|| s.get("id")))
+            .and_then(Value::as_str)
+            .or_else(|| pet.get("speciesId").and_then(Value::as_str))
+            .unwrap_or("ignisaur")
+            .to_string(),
+        stage: pet.get("stage").and_then(Value::as_str).unwrap_or("baby").to_string(),
+        element: pet
+            .get("species")
+            .and_then(|s| s.get("element"))
+            .and_then(Value::as_str)
+            .unwrap_or("neutral")
+            .to_string(),
+        xp: stat(pet, "xp"),
+        xp_needed: xp_for_level(level),
+        bonding: stat(pet, "bonding"),
+        lowest,
+        lowest_value,
+        glance,
+    }
+}
+
+/// La constante que peor está. A igual valor gana la primera de la lista, que es el orden en que se
+/// cuidan.
+fn worst(g: &PetGlance) -> (String, i64) {
+    [
+        ("hunger", g.hunger),
+        ("happiness", g.happiness),
+        ("energy", g.energy),
+        ("hygiene", g.hygiene),
+        ("health", g.health),
+    ]
+    .into_iter()
+    .min_by_key(|(_, v)| *v)
+    .map(|(k, v)| (k.to_string(), v))
+    .expect("la lista no está vacía")
+}
+
+/// Los botones, ya decididos. Sin sesión o sin mascota no hay ninguno: el reloj enseña «abre el
+/// iPhone» en lugar de botones que no harían nada.
 pub fn buttons(state: &AppState) -> Vec<WristButton> {
     if state.user.is_null() {
         return Vec::new();
@@ -174,17 +318,23 @@ pub fn buttons(state: &AppState) -> Vec<WristButton> {
     let sleeping = pet.get("sleeping").and_then(Value::as_bool).unwrap_or(false);
     let hygiene = stat(pet, "hygiene");
 
-    let mut out = Vec::with_capacity(3);
-    out.push(button(
-        WristAction::Feed,
-        if sleeping {
-            Some("Está durmiendo".into())
-        } else if food_item(state).is_none() {
-            Some("Sin comida en la mochila".into())
-        } else {
-            None
-        },
-    ));
+    let food = food_item(state);
+    let medicine = medicine_item(state);
+
+    let mut out = Vec::with_capacity(5);
+    out.push(
+        button(
+            WristAction::Feed,
+            if sleeping {
+                Some("Está durmiendo".into())
+            } else if food.is_none() {
+                Some("Sin comida en la mochila".into())
+            } else {
+                None
+            },
+        )
+        .with_item(food),
+    );
     out.push(button(
         WristAction::Clean,
         if sleeping {
@@ -197,11 +347,71 @@ pub fn buttons(state: &AppState) -> Vec<WristButton> {
     ));
     // Dormir y despertar son el mismo botón: lo que toque según cómo esté.
     out.push(button(if sleeping { WristAction::Wake } else { WristAction::Sleep }, None));
+    // Curar **no** se cierra por «no está enferma»: el backend no lo exige (solo una medicina
+    // válida), y esconderlo dejaría fuera el caso útil de la salud baja sin enfermedad.
+    out.push(
+        button(
+            WristAction::Heal,
+            if sleeping {
+                Some("Está durmiendo".into())
+            } else if medicine.is_none() {
+                Some("Sin medicinas en la mochila".into())
+            } else {
+                None
+            },
+        )
+        .with_item(medicine),
+    );
+    out.push(button(
+        WristAction::Evolve,
+        evolve_blocked(state, pet, stat(pet, "level"), sleeping),
+    ));
     out
 }
 
+/// Por qué no se puede evolucionar, si no se puede. Las mismas tres puertas que el backend
+/// (`pets.service.ts`, `evolve()`): etapa, nivel y la Piedra de Evolución.
+fn evolve_blocked(state: &AppState, pet: &Value, level: i64, sleeping: bool) -> Option<String> {
+    let stage = pet.get("stage").and_then(Value::as_str).unwrap_or("baby");
+    if sleeping {
+        return Some("Está durmiendo".into());
+    }
+    if stage == "final" {
+        return Some("Ya está en su forma final".into());
+    }
+    if stage != "adult" {
+        return Some("Todavía no es adulta".into());
+    }
+    if level < EVOLVE_MIN_LEVEL {
+        return Some(format!("Hace falta nivel {EVOLVE_MIN_LEVEL}"));
+    }
+    if !has_item(state, EVOLVE_ITEM_ID) {
+        return Some("Sin Piedra de Evolución".into());
+    }
+    None
+}
+
 fn button(action: WristAction, disabled_reason: Option<String>) -> WristButton {
-    WristButton { action, label: action.label().into(), enabled: disabled_reason.is_none(), disabled_reason }
+    WristButton {
+        action,
+        label: action.label().into(),
+        enabled: disabled_reason.is_none(),
+        icon: action.icon().into(),
+        disabled_reason,
+        item_id: None,
+        item_name: None,
+    }
+}
+
+impl WristButton {
+    /// Anota con qué objeto se hará la acción, para que el reloj lo pinte.
+    fn with_item(mut self, item: Option<(String, String)>) -> Self {
+        if let Some((id, name)) = item {
+            self.item_name = Some(name);
+            self.item_id = Some(id);
+        }
+        self
+    }
 }
 
 /// La acción del núcleo que corresponde a una intención del reloj, o por qué no se hace.
@@ -242,44 +452,104 @@ pub fn resolve(
 
     Ok(match req.action {
         WristAction::Feed => {
-            let item_id = food_item(state).ok_or_else(|| WristReject::Unavailable("Sin comida en la mochila".into()))?;
+            let (item_id, _) =
+                food_item(state).ok_or_else(|| WristReject::Unavailable("Sin comida en la mochila".into()))?;
             crate::Action::Feed { pet_id, item_id }
         }
         WristAction::Clean => crate::Action::Clean { pet_id },
         WristAction::Sleep => crate::Action::Sleep { pet_id },
         WristAction::Wake => crate::Action::Wake { pet_id },
+        WristAction::Heal => {
+            let (item_id, _) = medicine_item(state)
+                .ok_or_else(|| WristReject::Unavailable("Sin medicinas en la mochila".into()))?;
+            crate::Action::Heal { pet_id, item_id }
+        }
+        WristAction::Evolve => crate::Action::Evolve { pet_id },
     })
 }
 
+/// Lo que hay en la mochila de una clase, con su identificador y su nombre. Se recorre entero: el
+/// inventario del núcleo es una lista corta.
+fn bag<'a>(state: &'a AppState, kind: &str) -> impl Iterator<Item = (&'a str, &'a Value)> {
+    let kind = kind.to_string();
+    state.inventory.iter().filter_map(move |entry| {
+        if entry.get("qty").and_then(Value::as_i64).unwrap_or(0) <= 0 {
+            return None;
+        }
+        let item = entry.get("item")?;
+        if item.get("kind").and_then(Value::as_str) != Some(kind.as_str()) {
+            return None;
+        }
+        Some((item.get("id").and_then(Value::as_str)?, item))
+    })
+}
+
+/// Si hay al menos una unidad de este objeto, sea de la clase que sea.
+fn has_item(state: &AppState, id: &str) -> bool {
+    state.inventory.iter().any(|entry| {
+        entry.get("qty").and_then(Value::as_i64).unwrap_or(0) > 0
+            && entry.get("item").and_then(|i| i.get("id")).and_then(Value::as_str) == Some(id)
+    })
+}
+
+fn item_name(item: &Value, id: &str) -> String {
+    item.get("name").and_then(Value::as_str).unwrap_or(id).to_string()
+}
+
+/// Lo que cuesta un objeto, para ordenar de más corriente a más raro. Un objeto que no se vende
+/// (precio cero en las dos monedas: los que solo salen de cofres o hallazgos) va el último, no el
+/// primero: gastar el más raro del juego desde la muñeca y sin preguntar sería una faena.
+fn price_rank(item: &Value) -> (bool, i64, i64) {
+    let coins = item.get("priceCoins").and_then(Value::as_i64).unwrap_or(0);
+    let gems = item.get("priceGems").and_then(Value::as_i64).unwrap_or(0);
+    let sold = coins > 0 || gems > 0;
+    (!sold, gems, coins)
+}
+
 /// Con qué se le da de comer: la comida favorita de su especie si está en la mochila y, si no, la
-/// más barata. El reloj no elige: no conoce la mochila ni debería.
-fn food_item(state: &AppState) -> Option<String> {
+/// más corriente. El reloj no elige: no conoce la mochila ni debería.
+fn food_item(state: &AppState) -> Option<(String, String)> {
     let favorite = state
         .active_pet()
         .and_then(|p| p.get("species"))
         .and_then(|s| s.get("favoriteFood"))
         .and_then(Value::as_str);
 
-    let mut best: Option<(i64, String)> = None;
-    for entry in &state.inventory {
-        if entry.get("qty").and_then(Value::as_i64).unwrap_or(0) <= 0 {
-            continue;
-        }
-        let item = entry.get("item")?;
-        if item.get("kind").and_then(Value::as_str) != Some("food") {
-            continue;
-        }
-        let id = item.get("id").and_then(Value::as_str)?;
+    let mut best: Option<((bool, i64, i64), &str, &Value)> = None;
+    for (id, item) in bag(state, "food") {
         if Some(id) == favorite {
-            return Some(id.to_string());
+            return Some((id.to_string(), item_name(item, id)));
         }
-        let price = item.get("priceCoins").and_then(Value::as_i64).unwrap_or(i64::MAX);
+        let rank = price_rank(item);
         // A igual precio, el id decide: así la elección no depende del orden de la mochila.
-        if best.as_ref().is_none_or(|(p, bid)| price < *p || (price == *p && id < bid.as_str())) {
-            best = Some((price, id.to_string()));
+        if best.as_ref().is_none_or(|(r, bid, _)| rank < *r || (rank == *r && id < *bid)) {
+            best = Some((rank, id, item));
         }
     }
-    best.map(|(_, id)| id)
+    best.map(|(_, id, item)| (id.to_string(), item_name(item, id)))
+}
+
+/// Con qué se cura: la medicina más corriente de la mochila que de verdad sirva.
+///
+/// El backend (`pets.service.ts`, `heal()`) rechaza con un 400 un objeto medicinal que no cure la
+/// enfermedad ni dé salud, y el rechazo llega **después** de haberlo gastado, así que aquí se filtra
+/// igual. Y no vale «la más barata» a secas: el Néctar del Origen vale cero en las dos monedas
+/// porque no se vende, y sería justo el que se gastaría.
+fn medicine_item(state: &AppState) -> Option<(String, String)> {
+    let mut best: Option<((bool, i64, i64), &str, &Value)> = None;
+    for (id, item) in bag(state, "medicine") {
+        let effects = item.get("effects");
+        let cures = effects.and_then(|e| e.get("curesSick")).and_then(Value::as_bool).unwrap_or(false);
+        let heals = effects.and_then(|e| e.get("health")).and_then(Value::as_i64).unwrap_or(0) > 0;
+        if !cures && !heals {
+            continue;
+        }
+        let rank = price_rank(item);
+        if best.as_ref().is_none_or(|(r, bid, _)| rank < *r || (rank == *r && id < *bid)) {
+            best = Some((rank, id, item));
+        }
+    }
+    best.map(|(_, id, item)| (id.to_string(), item_name(item, id)))
 }
 
 fn stat(pet: &Value, key: &str) -> i64 {
@@ -295,31 +565,18 @@ pub fn should_send(previous: Option<&WristSnapshot>, next: &WristSnapshot, last_
     }
     before.signed_in != next.signed_in
         || before.pet != next.pet
+        || before.wallet != next.wallet
         || before.surfaces != next.surfaces
         || before.buttons != next.buttons
 }
 
 /// Lo que cabe en una complicación de la esfera.
 pub fn complication(snap: &WristSnapshot) -> WristComplication {
-    let lowest = snap.pet.as_ref().map(|p| {
-        [
-            ("hunger", p.hunger),
-            ("happiness", p.happiness),
-            ("energy", p.energy),
-            ("hygiene", p.hygiene),
-            ("health", p.health),
-        ]
-        .into_iter()
-        // A igual valor gana el primero de la lista, que es el orden en que se cuidan.
-        .min_by_key(|(_, v)| *v)
-        .map(|(k, v)| (k.to_string(), v))
-        .unwrap()
-    });
     WristComplication {
-        name: snap.pet.as_ref().map(|p| p.name.clone()),
-        mood: snap.pet.as_ref().map(|p| p.mood.to_string()),
-        lowest: lowest.as_ref().map(|(k, _)| k.clone()),
-        lowest_value: lowest.map(|(_, v)| v),
+        name: snap.pet.as_ref().map(|p| p.glance.name.clone()),
+        mood: snap.pet.as_ref().map(|p| p.glance.mood.to_string()),
+        lowest: snap.pet.as_ref().map(|p| p.lowest.clone()),
+        lowest_value: snap.pet.as_ref().map(|p| p.lowest_value),
         ends_at: snap.surfaces.first().map(|s| s.ends_at),
         stale_at: snap.stale_at,
     }
@@ -393,10 +650,32 @@ mod tests {
 
     fn pet() -> Value {
         json!({
-            "id": "p1", "nickname": "Brasa", "level": 7,
+            "id": "p1", "nickname": "Brasa", "level": 7, "xp": 900, "stage": "juvenile", "bonding": 42,
             "hunger": 40, "happiness": 70, "energy": 60, "hygiene": 30, "health": 90,
-            "species": { "name": "Ignisaurio", "favoriteFood": "spicy_berry" },
+            "species": { "id": "ignisaur", "spriteKey": "ignisaur", "name": "Ignisaurio",
+                         "element": "fire", "favoriteFood": "spicy_berry" },
         })
+    }
+
+    /// Una medicina de la mochila. `sold` distingue la que se vende de la que solo sale de cofres.
+    fn medicine(id: &str, coins: i64, cures: bool, health: i64) -> Value {
+        json!({ "qty": 1, "item": { "id": id, "kind": "medicine", "name": id, "priceCoins": coins,
+                                    "priceGems": 0, "effects": { "curesSick": cures, "health": health } } })
+    }
+
+    fn stone() -> Value {
+        json!({ "qty": 1, "item": { "id": "evolution_stone", "kind": "evolution",
+                                    "name": "Piedra de Evolución", "priceCoins": 0, "priceGems": 20 } })
+    }
+
+    /// Los botones que hay ahora mismo, por acción.
+    fn acciones(s: &AppState) -> Vec<WristAction> {
+        buttons(s).iter().map(|b| b.action).collect()
+    }
+
+    /// Un botón concreto.
+    fn boton(s: &AppState, action: WristAction) -> WristButton {
+        buttons(s).into_iter().find(|b| b.action == action).expect("el botón existe")
     }
 
     fn food(id: &str, price: i64, qty: i64) -> Value {
@@ -419,9 +698,126 @@ mod tests {
         assert_eq!(snap.surfaces.len(), 1);
         assert_eq!(snap.surfaces[0].ends_at, NOW + 3_600_000);
         assert_eq!(snap.stale_at, NOW + 30 * 60 * 1000);
-        assert_eq!(snap.buttons.iter().map(|b| b.action).collect::<Vec<_>>(),
-                   vec![WristAction::Feed, WristAction::Clean, WristAction::Sleep]);
-        assert!(snap.buttons.iter().all(|b| b.enabled));
+        assert_eq!(
+            snap.buttons.iter().map(|b| b.action).collect::<Vec<_>>(),
+            vec![WristAction::Feed, WristAction::Clean, WristAction::Sleep, WristAction::Heal, WristAction::Evolve]
+        );
+        // Comer, bañar y dormir sí; curar y evolucionar no, que no hay ni medicina ni piedra.
+        assert_eq!(snap.buttons.iter().filter(|b| b.enabled).count(), 3);
+    }
+
+    #[test]
+    fn el_resumen_lleva_con_que_dibujar_a_la_mascota_y_lo_que_lleva_encima() {
+        let mut s = state(pet(), vec![food("apple", 10, 2)]);
+        s.user = json!({ "id": "u1", "coins": 1250, "gems": 7 });
+        let snap = snapshot(&s, NOW);
+        let p = snap.pet.as_ref().expect("mascota");
+        assert_eq!((p.species_id.as_str(), p.stage.as_str(), p.element.as_str()), ("ignisaur", "juvenile", "fire"));
+        assert_eq!((p.xp, p.bonding), (900, 42));
+        // La curva del servidor: round(100 · 7^1.5) = 1852.
+        assert_eq!(p.xp_needed, 1852);
+        // La higiene es la que peor está (30), y la decide el núcleo, no SwiftUI.
+        assert_eq!((p.lowest.as_str(), p.lowest_value), ("hygiene", 30));
+        assert_eq!(snap.wallet, Some(WristWallet { coins: 1250, gems: 7 }));
+        // Y el botón de comer dice con qué, para que el reloj pinte la manzana.
+        let feed = boton(&s, WristAction::Feed);
+        assert_eq!((feed.item_id.as_deref(), feed.item_name.as_deref()), (Some("apple"), Some("apple")));
+        assert_eq!(feed.icon, "feed");
+    }
+
+    #[test]
+    fn curar_no_depende_de_estar_enferma_sino_de_tener_medicina_que_sirva() {
+        // Sin medicinas, gris con su motivo.
+        let vacia = state(pet(), vec![food("apple", 10, 1)]);
+        let gris = boton(&vacia, WristAction::Heal);
+        assert!(!gris.enabled);
+        assert_eq!(gris.disabled_reason.as_deref(), Some("Sin medicinas en la mochila"));
+
+        // Un objeto medicinal que ni cura ni da salud no cuenta: el backend lo rechazaría con un
+        // 400 **después** de gastarlo.
+        let inservible = state(pet(), vec![medicine("agua", 5, false, 0)]);
+        assert!(!boton(&inservible, WristAction::Heal).enabled);
+
+        // Con una que sirve, el botón va, aunque la mascota no esté enferma.
+        let con = state(pet(), vec![medicine("medicine", 80, true, 40)]);
+        let activo = boton(&con, WristAction::Heal);
+        assert!(activo.enabled, "la salud baja sin enfermedad también se cura");
+        assert_eq!(activo.item_id.as_deref(), Some("medicine"));
+    }
+
+    #[test]
+    fn curar_no_gasta_la_medicina_que_no_se_vende() {
+        // El Néctar del Origen vale cero en las dos monedas porque no se vende: «la más barata»
+        // gastaría el objeto más raro del juego desde la muñeca.
+        let s = state(
+            pet(),
+            vec![medicine("origin_nectar", 0, true, 100), medicine("medicine", 80, true, 40)],
+        );
+        assert_eq!(medicine_item(&s).map(|(id, _)| id).as_deref(), Some("medicine"));
+
+        // Si es lo único que hay, entonces sí.
+        let solo = state(pet(), vec![medicine("origin_nectar", 0, true, 100)]);
+        assert_eq!(medicine_item(&solo).map(|(id, _)| id).as_deref(), Some("origin_nectar"));
+    }
+
+    #[test]
+    fn evolucionar_pide_etapa_nivel_y_piedra() {
+        let adulta = |level: i64| {
+            let mut p = pet();
+            p["stage"] = json!("adult");
+            p["level"] = json!(level);
+            p
+        };
+        let motivo = |s: &AppState| boton(s, WristAction::Evolve).disabled_reason.unwrap_or_default();
+
+        // La etapa.
+        assert_eq!(motivo(&state(pet(), vec![stone()])), "Todavía no es adulta");
+        // El nivel.
+        assert_eq!(motivo(&state(adulta(49), vec![stone()])), "Hace falta nivel 50");
+        // La piedra.
+        assert_eq!(motivo(&state(adulta(50), vec![])), "Sin Piedra de Evolución");
+        // Ya está.
+        let lista = state(adulta(50), vec![stone()]);
+        assert!(boton(&lista, WristAction::Evolve).enabled);
+        assert_eq!(
+            resolve(&req(WristAction::Evolve), &lista, NOW, &[]),
+            Ok(crate::Action::Evolve { pet_id: "p1".into() })
+        );
+
+        // Y en su forma final ya no hay a dónde ir.
+        let mut final_ = adulta(60);
+        final_["stage"] = json!("final");
+        assert_eq!(motivo(&state(final_, vec![stone()])), "Ya está en su forma final");
+    }
+
+    #[test]
+    fn durmiendo_no_se_cura_ni_se_evoluciona() {
+        let mut p = pet();
+        p["sleeping"] = json!(true);
+        p["stage"] = json!("adult");
+        p["level"] = json!(50);
+        let s = state(p, vec![medicine("medicine", 80, true, 40), stone()]);
+        for accion in [WristAction::Heal, WristAction::Evolve] {
+            let b = boton(&s, accion);
+            assert!(!b.enabled, "{accion:?} debería estar gris durmiendo");
+            assert_eq!(b.disabled_reason.as_deref(), Some("Está durmiendo"));
+        }
+        // Y el mismo juez rechaza la intención, no solo la pinta gris.
+        assert!(matches!(
+            resolve(&req(WristAction::Heal), &s, NOW, &[]),
+            Err(WristReject::Unavailable(_))
+        ));
+        assert_eq!(acciones(&s).len(), 5);
+    }
+
+    #[test]
+    fn el_monedero_tambien_hace_que_se_reenvie_el_resumen() {
+        let mut s = state(pet(), vec![food("apple", 10, 1)]);
+        s.user = json!({ "id": "u1", "coins": 100, "gems": 0 });
+        let antes = snapshot(&s, NOW);
+        s.user = json!({ "id": "u1", "coins": 90, "gems": 0 });
+        let despues = snapshot(&s, NOW + MIN_SEND_GAP_MS);
+        assert!(should_send(Some(&antes), &despues, NOW, NOW + MIN_SEND_GAP_MS));
     }
 
     #[test]
@@ -459,10 +855,10 @@ mod tests {
     #[test]
     fn dar_de_comer_prefiere_la_favorita_y_si_no_la_mas_barata() {
         let con_favorita = state(pet(), vec![food("apple", 10, 3), food("spicy_berry", 25, 1)]);
-        assert_eq!(food_item(&con_favorita).as_deref(), Some("spicy_berry"));
+        assert_eq!(food_item(&con_favorita).map(|(id, _)| id).as_deref(), Some("spicy_berry"));
 
         let sin_favorita = state(pet(), vec![food("sweet_coral", 25, 1), food("apple", 10, 1)]);
-        assert_eq!(food_item(&sin_favorita).as_deref(), Some("apple"));
+        assert_eq!(food_item(&sin_favorita).map(|(id, _)| id).as_deref(), Some("apple"));
 
         // Lo que no es comida, o lo que se acabó, no cuenta.
         let nada = state(
@@ -614,7 +1010,8 @@ mod tests {
     #[test]
     #[ignore = "escribe un fichero; se corre a mano al cambiar el contrato"]
     fn fixture_del_reloj() {
-        let mut s = state(pet(), vec![food("apple", 10, 1)]);
+        let mut s = state(pet(), vec![food("apple", 10, 1), medicine("medicine", 80, true, 40)]);
+        s.user = json!({ "id": "u1", "coins": 1250, "gems": 7 });
         s.eggs = vec![json!({ "id": "e1", "eggType": "starter", "hatchesAt": "2026-11-20T16:00:00Z" })];
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
         std::fs::create_dir_all(&dir).unwrap();

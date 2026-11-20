@@ -36,6 +36,8 @@
     "generate:furniture": "tsx scripts/generate-furniture.ts",
     "generate:accessories": "tsx scripts/generate-accessories.ts",
     "generate:items": "tsx scripts/generate-items.ts",
+    "generate:app-icons": "node scripts/generate-app-icons.mjs",
+    "generate:watch-assets": "tsx scripts/generate-watch-assets.ts",
     "generate:minigames": "tsx scripts/generate-minigames.ts",
     "items:import": "node scripts/sprites/items/import.mjs",
     "sprites:concept": "node scripts/sprites/concept/stage.mjs",

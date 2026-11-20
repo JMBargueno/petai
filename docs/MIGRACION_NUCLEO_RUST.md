@@ -17,7 +17,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 | 3 | Dominios restantes y fin de la pasarela `api_request` | 4 / 4 (2 descartados) | ✅ |
 | 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 8 / 10 | 🟡 |
 | 5 | Live Activity / Dynamic Island y widgets | 6 / 7 | 🟡 |
-| 6 | App de Apple Watch compañera del iPhone ([spec 44](specs/spec-44-reloj-apple-watch.md)) | 7 / 11 | 🟡 |
+| 6 | App de Apple Watch compañera del iPhone ([spec 44](specs/spec-44-reloj-apple-watch.md)) | 10 / 13 | 🟡 |
 
 ## Estado actual (2026-11-20): dónde se paró y cómo retomar
 
@@ -299,9 +299,10 @@ crate, plugin ni paquete Swift nuevos.
   `watchOS: 10.0`, `WKApplication`, `WKCompanionAppBundleIdentifier` y el App Group
   `group.com.petai.app.watchkitapp` en `entitlements.properties`. **No** son dependencia del target de
   iPhone: ver desviaciones
-- ✅ 6.6 Pantallas SwiftUI: Vitales (constantes en arcos, ánimo y la hora del último dato), En marcha
-  (las cuentas atrás con `ProgressView(timerInterval:)`) y Cuidar (los tres botones con su motivo si
-  están grises). Con símbolos del sistema, sin sprites, como el widget de iOS
+- ✅ 6.6 Pantallas SwiftUI: Vitales (el sprite del Pockai, el anillo de XP y las **cinco** constantes
+  —la salud no se pintaba—, con la hora del último dato), En marcha (las cuentas atrás con
+  `ProgressView(timerInterval:)`), Cuidar (los cinco botones con su motivo si están grises, y con el
+  objeto que eligió el núcleo) y Monedero. Con `accessibilityLabel` en todo, que no había ninguna
 - 🟡 6.7 Acciones: `sendMessage` con respaldo en `transferUserInfo`, `request_id`, caducidad, cola
   visible y la pantalla que no se toca mientras se espera. El camino entero está probado contra el
   backend real (`el_reloj_da_de_comer_de_verdad` en `tests/backend_real.rs`: el núcleo eligió el
@@ -309,11 +310,24 @@ crate, plugin ni paquete Swift nuevos.
   se rechazó). Falta **pulsar el botón en el reloj**: para eso hay que tocar la pantalla a mano
 - 🟡 6.8 `PockaiWatchComplications`: las cuatro familias (circular, esquina, en línea y rectangular) y
   su timeline desde el App Group del reloj, con `WidgetCenter.reloadAllTimelines()` al recibir
-  contexto. Compila y lee el resumen; **falta verla puesta en una esfera**
-- ⬜ 6.9 Prueba en hardware (iPhone y Apple Watch emparejados) y repaso de accesibilidad. Necesita un
-  Team ID
-- ⬜ 6.10 CI: compilar el reloj y correr la comprobación del fixture en el job `ios-tauri`, y
-  automatizar el empaquetado del reloj dentro de la app (hoy es un `cp -R` a mano, ver spec 44 §7)
+  contexto. Compila y lee el resumen; **falta verla puesta en una esfera**. Ya no recalcula en Swift
+  la constante más baja: la decide `wrist.rs` y viaja en el resumen
+- ⬜ 6.9 Prueba en hardware (iPhone y Apple Watch emparejados). Necesita un Team ID
+- ✅ 6.10 CI y empaquetado: `scripts/build-watch-app.sh` mete el reloj dentro del `Pockai.app`, y el
+  job `ios-tauri` compila el reloj y corre la comprobación del contrato. Esa comprobación además
+  **compara clave a clave**: antes solo decodificaba, y `JSONDecoder` ignora en silencio lo que no
+  conoce, así que un campo nuevo de Rust pasaba en verde
+- ✅ 6.11 El arte: catálogo del reloj con los sprites de las 16 especies (4 etapas × 5 ánimos), los
+  objetos y el set de iconos propio, horneado por `scripts/generate-watch-assets.ts`; icono de app y
+  acento de marca. De paso, el huevo de marca llega a **iOS y Android**, que llevaban el marcador
+  genérico de `tauri init` (`scripts/generate-app-icons.mjs`)
+- ✅ 6.12 Contrato ancho y dos acciones más: `WristPet` (especie, etapa, Flujo, XP, vínculo y la
+  constante más baja), el monedero, el objeto elegido en cada botón, y **curar** y **evolucionar**.
+  Arreglado de camino que `watch_surfaces` no escuchaba `Inventory` ni `User`, así que comprar o
+  gastar en el iPhone no empujaba nada al reloj
+- 🟡 6.13 Siri: cinco `AppIntent` con su `AppShortcutsProvider`, que activan su propia `WCSession` y
+  esperan a que lo esté (el sistema puede lanzarlos con la app fría). Compilan y se registran;
+  **falta decir un atajo de verdad**
 
 ### Verificado en el simulador (2026-11-20)
 

@@ -73,6 +73,30 @@ import desktopOutline from './desktop.outline.svg?raw';
 import desktopDuo from './desktop.duo.svg?raw';
 import aboutOutline from './about.outline.svg?raw';
 import aboutDuo from './about.duo.svg?raw';
+import hungerOutline from './hunger.outline.svg?raw';
+import hungerDuo from './hunger.duo.svg?raw';
+import happinessOutline from './happiness.outline.svg?raw';
+import happinessDuo from './happiness.duo.svg?raw';
+import energyOutline from './energy.outline.svg?raw';
+import energyDuo from './energy.duo.svg?raw';
+import hygieneOutline from './hygiene.outline.svg?raw';
+import hygieneDuo from './hygiene.duo.svg?raw';
+import healthOutline from './health.outline.svg?raw';
+import healthDuo from './health.duo.svg?raw';
+import cleanOutline from './clean.outline.svg?raw';
+import cleanDuo from './clean.duo.svg?raw';
+import sleepOutline from './sleep.outline.svg?raw';
+import sleepDuo from './sleep.duo.svg?raw';
+import wakeOutline from './wake.outline.svg?raw';
+import wakeDuo from './wake.duo.svg?raw';
+import healOutline from './heal.outline.svg?raw';
+import healDuo from './heal.duo.svg?raw';
+import evolveOutline from './evolve.outline.svg?raw';
+import evolveDuo from './evolve.duo.svg?raw';
+import coinOutline from './coin.outline.svg?raw';
+import coinDuo from './coin.duo.svg?raw';
+import gemOutline from './gem.outline.svg?raw';
+import gemDuo from './gem.duo.svg?raw';
 
 export interface UiIconPair { outline: string; duo: string }
 
@@ -115,6 +139,18 @@ export const UI_ICONS: Record<string, UiIconPair> = {
   'sound': { outline: soundOutline, duo: soundDuo },
   'desktop': { outline: desktopOutline, duo: desktopDuo },
   'about': { outline: aboutOutline, duo: aboutDuo },
+  'hunger': { outline: hungerOutline, duo: hungerDuo },
+  'happiness': { outline: happinessOutline, duo: happinessDuo },
+  'energy': { outline: energyOutline, duo: energyDuo },
+  'hygiene': { outline: hygieneOutline, duo: hygieneDuo },
+  'health': { outline: healthOutline, duo: healthDuo },
+  'clean': { outline: cleanOutline, duo: cleanDuo },
+  'sleep': { outline: sleepOutline, duo: sleepDuo },
+  'wake': { outline: wakeOutline, duo: wakeDuo },
+  'heal': { outline: healOutline, duo: healDuo },
+  'evolve': { outline: evolveOutline, duo: evolveDuo },
+  'coin': { outline: coinOutline, duo: coinDuo },
+  'gem': { outline: gemOutline, duo: gemDuo },
 };
 
 /** SVG de un icono en la variante pedida, o undefined si el set no lo tiene. */
