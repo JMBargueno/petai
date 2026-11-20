@@ -185,11 +185,11 @@ Las cinco poses son **los cinco `mood` que decide `care.rs`** (`idle`, `sleep`, 
 `hungry`), ni una más. El reloj **sí las anima** (`AnimatedPockai`, en `WatchArt/`), pero solo esas:
 `eat` o `happy` seguirían siendo láminas sin público, porque el reloj no representa acciones.
 
-> **Dos de las cinco no se mueven, y no es cosa del reloj.** En las hojas de origen, los 6 frames de
-> `idle` y los 4 de `sad` son el mismo dibujo repetido en todas las especies y etapas, así que en la
-> muñeca salen quietas por mucho que el reproductor haga su trabajo (medido: 59 avisos en 10 s
-> recorriendo los 6 índices). `sleep`, `sick` y `hungry` sí se mueven. Está anotado en
-> [`../PENDIENTES.md`](../PENDIENTES.md) y `pnpm generate:watch-assets` lo avisa al terminar.
+> **Las cinco se mueven, pero costó.** `idle` y `sad` salían quietas: en las hojas de origen sus
+> frames eran el mismo dibujo repetido, porque el arte importado solo recibe `dx`/`dy` de la pose
+> (ver [`../PENDIENTES.md`](../PENDIENTES.md)). No era cosa del reloj —el reproductor hace su
+> trabajo: 59 avisos en 10 s recorriendo los 6 índices— sino del generador de sprites, que ahora les
+> da un balanceo de 1 px. `pnpm generate:watch-assets` avisa si alguna vuelve a quedarse plana.
 
 Cinco cosas que costaron un rato y conviene no volver a descubrir:
 
