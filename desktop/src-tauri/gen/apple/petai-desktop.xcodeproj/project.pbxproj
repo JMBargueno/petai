@@ -9,12 +9,14 @@
 /* Begin PBXBuildFile section */
 		01066486C3A160929DC3CF32 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D7D84122FE2ED434FF58BDFE /* LaunchScreen.storyboard */; };
 		0698BA09316D52C2235B483C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3001E16696B14CE4AE055AB8 /* SwiftUI.framework */; };
+		07E9B4B206E16B3EF574CA42 /* PockaiWatchSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BB96F7D8A0549CC46CDF38D /* PockaiWatchSprite.swift */; };
 		09929E0AA8CA2F88C1F0BA7D /* PockaiWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6A2A1A23C703D3B914D819 /* PockaiWidgets.swift */; };
 		0F6227DE11A4B62EB1248CE9 /* PockaiActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A39B9E7B72649DDA74F166 /* PockaiActivityAttributes.swift */; };
 		15958F46499FB6D85DCFE95A /* PockaiActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A39B9E7B72649DDA74F166 /* PockaiActivityAttributes.swift */; };
 		1DD81A421B69352CA0B13CC9 /* PockaiBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73D5ECBCF23A0A9291928CCA /* PockaiBackground.swift */; };
 		20D4C2F72730B184F5B53904 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3001E16696B14CE4AE055AB8 /* SwiftUI.framework */; };
 		26E802B1739DB39384EFF5A7 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 6BF39906F5E88AF057D8CC37 /* assets */; };
+		27FDEDE3169BCCA57AFA29F4 /* PockaiWatchFrames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C5220B7D1E9E957A42C8E36 /* PockaiWatchFrames.swift */; };
 		2BAD0A440DE6CC2D1DD5F1C3 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0764F09ECEA180143D781EAE /* main.mm */; };
 		2EEDF5C6FD4A61C47EC2F02A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F42DB1D4EB45935F1D346CD4 /* Assets.xcassets */; };
 		2F5C265AF923D764B000431C /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DDADFCAEA28DEA99426A6F8 /* MetalKit.framework */; };
@@ -22,10 +24,13 @@
 		3448B0D5356CB92453FA45DD /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F62F521F9A32CF11A2D026F3 /* libapp.a */; };
 		3BE0CE65CD42DA951AA75020 /* PockaiBackgroundBootstrap.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3DA9DA2895633B80C7D975EC /* PockaiBackgroundBootstrap.mm */; };
 		3D9E31F2E00F9B7AF7461AB5 /* PockaiWrist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB37CDB16B60D426EA6A92AD /* PockaiWrist.swift */; };
+		44027DCFDA52BBECC9E9186A /* PockaiWatchFrames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C5220B7D1E9E957A42C8E36 /* PockaiWatchFrames.swift */; };
+		452982E9699CECCDBE3C2444 /* PockaiWatchSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BB96F7D8A0549CC46CDF38D /* PockaiWatchSprite.swift */; };
 		4C6EE322A1929F2272C828AD /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F2CAFA414318DA9AB23798DB /* QuartzCore.framework */; };
 		54D80646ED15D54CFFE92804 /* PockaiWatchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A81AC3CCC424D14A8086617 /* PockaiWatchStore.swift */; };
 		5A5F134814325C9A9CBB2033 /* PockaiWatchComplications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 828934DED806B0E83ECE0226 /* PockaiWatchComplications.swift */; };
 		5D052792E3715642E7A5FAF8 /* PockaiWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1AE12A022A4609371D11ED23 /* PockaiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5D0F022F63D1E71BED40C660 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = "TEMP_D5D968D7-D92F-412C-926D-96003FB19361" /* Assets.xcassets */; };
 		6260ECF5C395B58139881BD2 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9689A0D9F5E3C2389173A12F /* WatchConnectivity.framework */; };
 		65AFA3DA15F08FE29D4D2F61 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 38DED2E8A1D375F7E31D8613 /* WebKit.framework */; };
 		67DE65D22E9E9660691B4294 /* PockaiWrist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB37CDB16B60D426EA6A92AD /* PockaiWrist.swift */; };
@@ -37,7 +42,6 @@
 		8CF455269D2814537CC377AC /* PockaiSurfaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63B0DB73658B15B643F89AA3 /* PockaiSurfaces.swift */; };
 		9BE7DBA8D7E4183B51883CE4 /* PockaiActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A39B9E7B72649DDA74F166 /* PockaiActivityAttributes.swift */; };
 		A119630A8CE8DBA0F87BB77C /* PockaiActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A39B9E7B72649DDA74F166 /* PockaiActivityAttributes.swift */; };
-		A40CBE45B554EDB1723AE214 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2A4861478F88AFBFC438F50B /* Assets.xcassets */; };
 		AC5C335FC25EB150C046B2ED /* PockaiArt.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BA76733A9B912EA4587184CF /* PockaiArt.xcassets */; };
 		BFB48DFEBEEE3C79DD0D3D9F /* PockaiWrist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB37CDB16B60D426EA6A92AD /* PockaiWrist.swift */; };
 		C1D40AFAA092D46CE185AF41 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C8B2940B26D46A35505058E0 /* Metal.framework */; };
@@ -103,7 +107,6 @@
 		1A43588A9EA54BFEB1E251DA /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		1AE12A022A4609371D11ED23 /* PockaiWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PockaiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D15DA23D13F96C34A08EEA9 /* mobile.rs */ = {isa = PBXFileReference; path = mobile.rs; sourceTree = "<group>"; };
-		2A4861478F88AFBFC438F50B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3001E16696B14CE4AE055AB8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		38DED2E8A1D375F7E31D8613 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		3A81AC3CCC424D14A8086617 /* PockaiWatchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PockaiWatchStore.swift; sourceTree = "<group>"; };
@@ -113,6 +116,7 @@
 		438CC646300956F7BA60501E /* ai_cli.rs */ = {isa = PBXFileReference; path = ai_cli.rs; sourceTree = "<group>"; };
 		4CBE0158B497DCE122C06D51 /* PockaiWatchComplications.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PockaiWatchComplications.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		57FA9F20BE381CB9C4EEA779 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
+		5BB96F7D8A0549CC46CDF38D /* PockaiWatchSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PockaiWatchSprite.swift; sourceTree = "<group>"; };
 		61978F1A8A336EA231403819 /* PockaiWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PockaiWidgets.entitlements; sourceTree = "<group>"; };
 		63B0DB73658B15B643F89AA3 /* PockaiSurfaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PockaiSurfaces.swift; sourceTree = "<group>"; };
 		6819BAFC85E786C7B3408C2A /* petai-desktop_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "petai-desktop_iOS.entitlements"; sourceTree = "<group>"; };
@@ -122,6 +126,7 @@
 		7DDADFCAEA28DEA99426A6F8 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		7E7CE66EFB974F6053D52D36 /* PockaiWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PockaiWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		828934DED806B0E83ECE0226 /* PockaiWatchComplications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PockaiWatchComplications.swift; sourceTree = "<group>"; };
+		8C5220B7D1E9E957A42C8E36 /* PockaiWatchFrames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PockaiWatchFrames.swift; sourceTree = "<group>"; };
 		8FE21F52ED1C28D9C086EAA4 /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
 		9689A0D9F5E3C2389173A12F /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
 		A30EF85136E2ACA790C7E352 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -143,6 +148,7 @@
 		F42DB1D4EB45935F1D346CD4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F62F521F9A32CF11A2D026F3 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		FF65FA2F623BFCD60FDCA2A6 /* desktop.rs */ = {isa = PBXFileReference; path = desktop.rs; sourceTree = "<group>"; };
+		"TEMP_D5D968D7-D92F-412C-926D-96003FB19361" /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -206,6 +212,8 @@
 			isa = PBXGroup;
 			children = (
 				BA76733A9B912EA4587184CF /* PockaiArt.xcassets */,
+				8C5220B7D1E9E957A42C8E36 /* PockaiWatchFrames.swift */,
+				5BB96F7D8A0549CC46CDF38D /* PockaiWatchSprite.swift */,
 			);
 			path = WatchArt;
 			sourceTree = "<group>";
@@ -337,7 +345,6 @@
 			isa = PBXGroup;
 			children = (
 				6BF39906F5E88AF057D8CC37 /* assets */,
-				2A4861478F88AFBFC438F50B /* Assets.xcassets */,
 				D7D84122FE2ED434FF58BDFE /* LaunchScreen.storyboard */,
 				5667B4F838B1CC10FDFA8A92 /* Externals */,
 				028677EA66601A4655A9D89F /* petai-desktop_iOS */,
@@ -353,14 +360,14 @@
 			);
 			sourceTree = "<group>";
 		};
-		"TEMP_5E2A105E-9CB9-4F84-8B8C-22A7DA894921" /* x86_64 */ = {
+		"TEMP_1BA476A6-3ACF-4B3B-AE7E-AB4A26E7C6D4" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = x86_64;
 			sourceTree = "<group>";
 		};
-		"TEMP_B4B5AEA0-F492-43AC-9BA1-B4CF73D637E4" /* arm64 */ = {
+		"TEMP_C85949A5-B1C8-44F3-A224-FD0F32B85F85" /* arm64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -488,7 +495,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A40CBE45B554EDB1723AE214 /* Assets.xcassets in Resources */,
+				5D0F022F63D1E71BED40C660 /* Assets.xcassets in Resources */,
 				01066486C3A160929DC3CF32 /* LaunchScreen.storyboard in Resources */,
 				26E802B1739DB39384EFF5A7 /* assets in Resources */,
 			);
@@ -544,6 +551,8 @@
 			files = (
 				0F6227DE11A4B62EB1248CE9 /* PockaiActivityAttributes.swift in Sources */,
 				5A5F134814325C9A9CBB2033 /* PockaiWatchComplications.swift in Sources */,
+				44027DCFDA52BBECC9E9186A /* PockaiWatchFrames.swift in Sources */,
+				452982E9699CECCDBE3C2444 /* PockaiWatchSprite.swift in Sources */,
 				67DE65D22E9E9660691B4294 /* PockaiWrist.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -578,7 +587,9 @@
 			files = (
 				A119630A8CE8DBA0F87BB77C /* PockaiActivityAttributes.swift in Sources */,
 				F2D0559A223FA54D2B776AEC /* PockaiWatchApp.swift in Sources */,
+				27FDEDE3169BCCA57AFA29F4 /* PockaiWatchFrames.swift in Sources */,
 				E63C9D0923DFE6D8A2E970AA /* PockaiWatchIntents.swift in Sources */,
+				07E9B4B206E16B3EF574CA42 /* PockaiWatchSprite.swift in Sources */,
 				54D80646ED15D54CFFE92804 /* PockaiWatchStore.swift in Sources */,
 				3D9E31F2E00F9B7AF7461AB5 /* PockaiWrist.swift in Sources */,
 			);
@@ -624,7 +635,7 @@
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.petai.app;
-				PRODUCT_NAME = Pockai;
+				PRODUCT_NAME = "Pockai";
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -815,7 +826,7 @@
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.petai.app;
-				PRODUCT_NAME = Pockai;
+				PRODUCT_NAME = "Pockai";
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

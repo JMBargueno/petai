@@ -9,11 +9,14 @@
  * web. Escribe:
  *
  *   desktop/src-tauri/gen/apple/WatchArt/PockaiArt.xcassets/
- *     pockai/<especie>_<etapa>_<pose>.imageset   16 especies × 4 etapas × 5 poses
- *     pockai/egg_idle.imageset
+ *     pockai/<especie>_<etapa>_<pose>_<n>.imageset   16 especies × 4 etapas × 5 poses × sus frames
+ *     pockai/egg_idle_<n>.imageset
  *     item/<id>.imageset                         los objetos de shared/assets/items
  *     ui/<nombre>.imageset                       el set propio, aplanado y rasterizado
- *     element/<flujo>.colorset                   los seis Flujos
+ *     element/<flujo>.colorset                       los seis Flujos
+ *
+ * Y, al lado, `PockaiWatchFrames.swift`: cuántos frames tiene cada pose y cuánto dura cada uno,
+ * para que SwiftUI los pase a tiempo sin leer ningún `anim.json`.
  *
  * **Va en `WatchArt/` y no en `Shared/`** aunque lo compartan los dos targets de watchOS: `Shared/`
  * está en las `sources` de los cuatro targets, así que metería este arte dentro de la app de iPhone
@@ -38,14 +41,16 @@ const ROOT = resolve(__dirname, '..');
 const SPECIES_DIR = join(ROOT, 'shared', 'assets', 'species');
 const ITEMS_DIR = join(ROOT, 'shared', 'assets', 'items');
 const ICONS_DIR = join(ROOT, 'shared', 'ui', 'src', 'icons');
-const OUT = join(ROOT, 'desktop/src-tauri/gen/apple/WatchArt/PockaiArt.xcassets');
+const WATCH_ART = join(ROOT, 'desktop/src-tauri/gen/apple/WatchArt');
+const OUT = join(WATCH_ART, 'PockaiArt.xcassets');
 
 /** La raíz de cada especie es la etapa adulta; el resto son subcarpetas. */
 const STAGES: Record<string, string> = { baby: 'baby', juvenile: 'juvenile', adult: '', final: 'final' };
 
 /**
  * Las poses que el reloj sabe pedir: **los cinco `mood` que decide `care.rs::pet_glance`**, ni uno
- * más. El reloj no anima nada, así que `eat` o `happy` serían láminas sin público.
+ * más. De cada una se hornean todos sus frames, porque el reloj las anima; `eat` o `happy` seguirían
+ * siendo láminas sin público, que el reloj no representa acciones.
  */
 const POSES = ['idle', 'sleep', 'sick', 'sad', 'hungry'] as const;
 
@@ -77,9 +82,12 @@ interface SpeciesEntry {
   defaultPalette: { primary: string; secondary: string; accent?: string };
 }
 interface AnimJson {
-  frames: { frame: { x: number; y: number; w: number; h: number } }[];
-  meta: { frameTags: { name: string; from: number }[] };
+  frames: { frame: { x: number; y: number; w: number; h: number }; duration: number }[];
+  meta: { frameTags: { name: string; from: number; to: number }[] };
 }
+
+/** Lo que el manifiesto le cuenta a SwiftUI de una pose: la duración en ms de cada frame. */
+const DURATIONS = new Map<string, number[]>();
 
 // ── Utilidades del catálogo ────────────────────────────────────────────────────────────────────
 
@@ -171,8 +179,8 @@ interface Frame {
 }
 
 /**
- * Hornea una carpeta de hoja (`base.png` + `mask.png` + `anim.json`) y devuelve el primer frame de
- * cada pose pedida.
+ * Hornea una carpeta de hoja (`base.png` + `mask.png` + `anim.json`) y devuelve **todos** los frames
+ * de cada pose pedida, numerados desde 0, apuntando sus duraciones en el manifiesto.
  */
 function bakeSheet(
   dir: string,
@@ -192,8 +200,20 @@ function bakeSheet(
   for (const pose of POSES) {
     const tag = anim.meta.frameTags.find((t) => t.name === pose);
     if (!tag) continue; // El huevo, por ejemplo, solo tiene `idle`.
-    const { x, y, w, h } = anim.frames[tag.from].frame;
-    out.push({ name: name(pose), group, w, h, data: crop(baked, base.width, x, y, w, h) });
+    const key = name(pose);
+    const durations: number[] = [];
+    for (let i = tag.from; i <= tag.to; i++) {
+      const { x, y, w, h } = anim.frames[i].frame;
+      out.push({
+        name: `${key}_${i - tag.from}`,
+        group,
+        w,
+        h,
+        data: crop(baked, base.width, x, y, w, h),
+      });
+      durations.push(Math.max(1, Math.round(anim.frames[i].duration)));
+    }
+    DURATIONS.set(key, durations);
   }
   return out;
 }
@@ -311,6 +331,29 @@ const egg = bakeSheet(join(SPECIES_DIR, 'egg'), { primary: '#ffd731', secondary:
 squareAndWrite(egg, 'pockai');
 sprites += egg.length;
 
+// 2b. El manifiesto de frames, para que SwiftUI anime sin leer ningún `anim.json`.
+//
+// Va en `WatchArt/` y **no** en `Shared/`: `Shared/` lo compilan los cuatro targets, así que este
+// símbolo entraría también en la app de iPhone y en su widget, que no tienen este catálogo. Es la
+// misma razón por la que el arte vive aquí (ver `project.yml`).
+const manifest = [...DURATIONS.entries()].sort(([a], [b]) => a.localeCompare(b));
+write(
+  join(WATCH_ART, 'PockaiWatchFrames.swift'),
+  `// Generado por \`pnpm generate:watch-assets\`. No editar a mano.
+//
+// Cuánto dura cada frame de cada pose, en milisegundos, tal como lo declara el \`anim.json\` de la
+// especie. El número de frames es el largo de la lista: las láminas son
+// \`pockai/<clave>_0\` … \`pockai/<clave>_<n-1>\`.
+
+enum PockaiWatchFrames {
+    /// "<especie>_<etapa>_<pose>" → duración en ms de cada frame.
+    static let durations: [String: [Int]] = [
+${manifest.map(([key, ms]) => `        "${key}": [${ms.join(', ')}],`).join('\n')}
+    ]
+}
+`,
+);
+
 // 3. Los objetos, tal cual: ya son pixel art de 32 px guardado a ×2.
 namespace('item');
 let items = 0;
@@ -334,6 +377,6 @@ namespace('element');
 for (const [name, hex] of Object.entries(ELEMENTS)) colorset(join('element', name), hex);
 
 console.log(
-  `generate-watch-assets: ${sprites} sprites, ${items} objetos, ${UI_ICONS.length} iconos y ` +
-    `${Object.keys(ELEMENTS).length} colores → ${OUT.slice(ROOT.length + 1)}`,
+  `generate-watch-assets: ${sprites} láminas en ${DURATIONS.size} poses animadas, ${items} objetos, ` +
+    `${UI_ICONS.length} iconos y ${Object.keys(ELEMENTS).length} colores → ${OUT.slice(ROOT.length + 1)}`,
 );

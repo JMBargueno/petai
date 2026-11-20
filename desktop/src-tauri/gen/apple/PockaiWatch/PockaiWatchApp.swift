@@ -84,10 +84,9 @@ private struct Header: View {
             // El halo es un cuadrado redondeado y no un círculo: la lámina es cuadrada y lleva los
             // efectos del ánimo (las marcas de hambre, las Z de dormir) en las esquinas, que un
             // círculo recorta justo donde están.
-            PockaiWristArt.pockai(pet)
-                .resizable()
-                .interpolation(.none)   // pixel art: ni un píxel interpolado
-                .scaledToFit()
+            // Pasa los frames de la pose del ánimo (`AnimatedPockai`, en `WatchArt/`); con
+            // *Reducir movimiento* o en segundo plano se queda en el primero.
+            AnimatedPockai(pet: pet)
                 .padding(2)
                 .frame(width: 48, height: 48)
                 .background(
