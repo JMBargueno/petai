@@ -8,7 +8,7 @@
   import { focusTrap } from '../../lib/ui/focusTrap';
   import { friendlyError } from '../../lib/ui/errors';
   import { api, type PublicProfile } from '../../lib/api';
-  import ProfileView from './ProfileView.svelte';
+  import { ProfileView } from '@pockai/ui';
   import { X, AlertCircle, Home } from 'lucide-svelte';
 
   export let userId: string;

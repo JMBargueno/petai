@@ -17,7 +17,9 @@
     "./base.css": "./styles/base.css",
     "./kit.css": "./styles/kit.css",
     "./fonts.css": "./styles/fonts.css",
-    "./maps": "./src/maps.ts"
+    "./maps": "./src/maps.ts",
+    "./profile-format": "./src/profile-format.ts",
+    "./badge-icons": "./src/badge-icons.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

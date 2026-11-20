@@ -33,6 +33,7 @@ export { setUiSound, uiSfx, uiSfxFirst, uiLoop, uiStopLoop, type UiSound, type U
 // Piezas de dominio: pantallas enteras que solo pintan. Reciben el estado por props y avisan de lo
 // que el jugador quiere hacer; quien las usa (el contenedor de cada app) habla con el núcleo.
 export { default as AccountView } from './AccountView.svelte';
+export { default as AchievementBadge } from './AchievementBadge.svelte';
 export { default as AdventureView } from './AdventureView.svelte';
 export { default as ArenaView } from './ArenaView.svelte';
 export { default as BondingView } from './BondingView.svelte';
@@ -47,6 +48,8 @@ export { default as MissionsView } from './MissionsView.svelte';
 export { default as MinigameHost } from './MinigameHost.svelte';
 export { default as MinigamesView } from './MinigamesView.svelte';
 export { default as PetHomeView } from './PetHomeView.svelte';
+export { default as ProfileView } from './ProfileView.svelte';
+export { default as MyProfileView } from './MyProfileView.svelte';
 export { default as RaidView } from './RaidView.svelte';
 export { default as RedeemCodeCard } from './RedeemCodeCard.svelte';
 export { default as ReplayViewer } from './ReplayViewer.svelte';
@@ -65,4 +68,6 @@ export * from './chests';
 export * from './training';
 export * from './replay';
 export { dishArt } from './dishes';
+export * from './profile-format';
+export { badgeIcon, BADGE_ICONS } from './badge-icons';
 export { ITEM_ICON_SIZE, itemIcon } from './items';

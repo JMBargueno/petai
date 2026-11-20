@@ -9,6 +9,7 @@
   import CookingScreen from './screens/CookingScreen.svelte';
   import MinigamesScreen from './screens/MinigamesScreen.svelte';
   import MissionsScreen from './screens/MissionsScreen.svelte';
+  import ProfileScreen from './screens/ProfileScreen.svelte';
   import RaidScreen from './screens/RaidScreen.svelte';
   import SeasonScreen from './screens/SeasonScreen.svelte';
   import TournamentScreen from './screens/TournamentScreen.svelte';
@@ -34,6 +35,11 @@
   let progressSection = $state<'missions' | 'season'>('missions');
   let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking' | 'adventure'>('games');
   let shopSection = $state<'store' | 'chests'>('store');
+  let accountSection = $state<'account' | 'profile'>('account');
+  const ACCOUNT_SECTIONS = [
+    { value: 'account', label: 'Cuenta', icon: 'user' },
+    { value: 'profile', label: 'Perfil', icon: 'trophy' },
+  ];
   const PLAY_SECTIONS = [
     { value: 'games', label: 'Minijuegos', icon: 'gamepad' },
     { value: 'arena', label: 'Arena', icon: 'medal' },
@@ -244,7 +250,12 @@
           <AdventureScreen {pet} />
         {/if}
       {:else if tab === 'account'}
-        <AccountView user={$core.user} on:logout={leave} />
+        <Segmented variant="pills" label="Sección de Cuenta" value={accountSection} options={ACCOUNT_SECTIONS} on:change={(e) => (accountSection = e.detail)} />
+        {#if accountSection === 'profile'}
+          <ProfileScreen />
+        {:else}
+          <AccountView user={$core.user} on:logout={leave} />
+        {/if}
       {:else}
         <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail)} />
         {#if shopSection === 'chests'}

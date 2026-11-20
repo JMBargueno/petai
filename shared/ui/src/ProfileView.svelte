@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { Button } from '../../components/ui';
+  import Button from './Button.svelte';
   /**
    * Vista de un perfil (propio o de otro jugador): cabecera, vitrina de insignias destacadas,
    * estadísticas e insignias desbloqueadas. En el perfil propio (`own`) la vitrina se puede editar:
    * en modo edición, pulsar una insignia la añade o quita de la vitrina (máx. 3).
    */
   import { createEventDispatcher } from 'svelte';
-  import type { ProfileBase, ProfileBadge } from '../../lib/api';
+  type ProfileBase = any;
+  type ProfileBadge = any;
   import {
     TIER_LABELS,
     RARITY_LABELS,
@@ -15,9 +16,9 @@
     formatMonthYear,
     formatPlayTime,
     sortBadges,
-  } from '../../lib/profile-format';
-  import SocialAvatar from '../../components/SocialAvatar.svelte';
-  import Badge from './Badge.svelte';
+  } from './profile-format';
+  import SocialAvatar from './SocialAvatar.svelte';
+  import Badge from './AchievementBadge.svelte';
   import {
     Crown, Clock, Drumstick, Egg, Flame, Users, DoorOpen, Gem, Sparkles, Coins, EyeOff, Pencil, Check, Award,
   } from 'lucide-svelte';
@@ -35,12 +36,12 @@
 
   const dispatch = createEventDispatcher<{ edit: void; save: void; cancel: void; toggle: string }>();
 
-  $: badges = sortBadges(profile.badges);
+  $: badges = sortBadges<ProfileBadge>(profile.badges);
   $: byId = new Map(profile.badges.map((b) => [b.id, b]));
   $: featuredIds = editing ? draftFeatured : profile.featuredBadges;
   $: featured = featuredIds.map((id) => byId.get(id)).filter(Boolean) as ProfileBadge[];
   $: s = profile.stats;
-  $: rarities = s ? Object.entries(s.byRarity).filter(([, n]) => n > 0) : [];
+  $: rarities = s ? (Object.entries(s.byRarity) as [string, number][]).filter(([, n]) => n > 0) : [];
 </script>
 
 <div class="pf">

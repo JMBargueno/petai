@@ -31,18 +31,19 @@ fases de abajo y en las secciones de verificación del final.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
 - **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
-  estilos y diecisiete pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  estilos y dieciocho pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
   Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
-  Armario, Arena, Cocina, Minijuegos y Aventura. Las usan el escritorio y la app de Android.
+  Armario, Arena, Cocina, Minijuegos, Aventura y Perfil. Las usan el escritorio y la app de Android.
 - **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
   `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
 - **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario), Mochila, Jugar
   (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta
-  (desde el nombre de la cabecera). Jugar, Cofres y Armario aún no se han probado en el emulador.
+  (Cuenta, Perfil; desde el nombre de la cabecera). Jugar, Cofres, Armario y Perfil aún no se han
+  probado en el emulador.
 
 ### Qué falta, por orden
 
-1. **Probar en el emulador** Jugar entera, Cofres, Armario y el huevo de sprites.
+1. **Probar en el emulador** Jugar entera, Cofres, Armario, Perfil y el huevo de sprites.
 2. **Más pantallas a la biblioteca** (4.4 y 4.5), por tramos según la tabla de abajo. Decidido:
    el motor de sprites se comparte (no un hueco por app).
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
@@ -59,7 +60,7 @@ fases de abajo y en las secciones de verificación del final.
 | (a) Sprites, datos estáticos y sonido | Hechas todas: Armario, Arena, Cocina, Minijuegos y Aventura | — | Patrón de siempre; los efectos de un juego van por el puerto de sonido (`setUiSound`) |
 | (b) Estado de pantalla alimentado por tiempo real | Amigos, Visitas, Clanes | `visitors.ts`, `clan-store.ts`, `activeVisit`, `visitTravel` (se quedaron en la UI en la fase 3) | Antes, decidir si ese estado sube al núcleo; sin eso, Android no tiene de dónde leerlo |
 | (c) Funciones del escritorio | Chat/IA, Mente, partes de Hábitat | `hermesLocal`, `aiCli`, `deskContext`, `desktopSkillsStore`, `initiative`, `brain`, arrastre de ventana | No van enteras: frontera de la spec 43. El móvil tendrá su contenedor o una vista reducida con huecos |
-| (d) Perfil | Perfil (`features/profile`) | Solo `api` y `profile-format` | Pequeña: patrón de siempre |
+| (d) Perfil | Hecha | — | — |
 
 Pendiente aparte: el motor de sprites (`@pockai/scene/sprites`) y el registro de la escena PixiJS
 (`@pockai/scene`, `assets.ts`) descubren las mismas hojas cada uno a su manera. Unificarlos es
@@ -173,7 +174,7 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Armario, Arena, Cocina, Minijuegos, Aventura y el motor de sprites (`@pockai/scene/sprites`, `PetMiniAvatar`, `EggSprite`, `ReplayViewer`) en rama. Quedan las pestañas de la tabla «Pantallas que quedan, por tipo»
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Armario, Arena, Cocina, Minijuegos, Aventura, Perfil y el motor de sprites (`@pockai/scene/sprites`, `PetMiniAvatar`, `EggSprite`, `ReplayViewer`) en rama. Quedan las pestañas de la tabla «Pantallas que quedan, por tipo»
 - 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda › Cofres, Mascota › Armario y el huevo de sprites, sin probar en él. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
@@ -647,3 +648,26 @@ monedas» con su recuerdo); de vuelta, «2 de 3 historias por vivir hoy». 438 t
 **Sin verificar:** nada de esto en el emulador (ni que PixiJS dibuje la escena en el WebView de
 Android); el clima real en la escena del escritorio (el demo no trae clima); continuar una
 historia a medias.
+
+### Perfil compartido (2026-11-20)
+
+- **Piezas**: `ProfileView` (la ficha de un perfil, propio o ajeno) ya solo pintaba y pasa tal cual a
+  `@pockai/ui`, con `profile-format.ts`, `badge-icons.ts` y la insignia de logro, que se llama
+  `AchievementBadge` en la biblioteca (ya había un `Badge`). El escritorio conserva sus rutas;
+  la ventana de perfil de otro jugador (`UserProfileModal`) usa la vista de la biblioteca.
+- **Vista**: `MyProfileView` con tu perfil, la privacidad y la colección filtrada. Editar la
+  vitrina y los filtros son de la vista; el contenedor carga, guarda la vitrina y cambia la
+  privacidad.
+- **Contenedores**: `ProfileTab` en el escritorio (sigue recargando al desbloquear un logro, salvo
+  con la vitrina en edición); `ProfileScreen` en Android, como sección de Cuenta (Cuenta · Perfil).
+- El test de `badge-icons` lee ahora el fuente en `shared/ui`.
+
+Con esto quedan solo los grupos (b) y (c) de la tabla, que necesitan una decisión antes.
+
+Verificado en el escritorio en modo demo: Mi Perfil (cabecera, vitrina, estadísticas); editar la
+vitrina, añadir una insignia y guardar («Vitrina actualizada.», sale del modo edición); hacer
+privado el perfil; abrir el perfil de otro jugador desde Amigos. 438 tests del escritorio; compilan
+escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; en Android, que el perfil se recargue al
+desbloquear un logro (allí solo carga al abrirlo).
