@@ -20,10 +20,10 @@
   const dispatch = createEventDispatcher<{ use: string; go: { dest: string; sub: string } }>();
 
   const GROUPS: { kind: string; title: string; icon: string }[] = [
-    { kind: 'level_up', title: 'Especiales', icon: 'xp' },
-    { kind: 'medicine', title: 'Medicinas', icon: 'heart' },
-    { kind: 'evolution', title: 'Evolución', icon: 'party' },
-    { kind: 'food', title: 'Comida', icon: 'food' },
+    { kind: 'level_up', title: 'Especiales', icon: 'ui:skills' },
+    { kind: 'medicine', title: 'Medicinas', icon: 'ui:bonding' },
+    { kind: 'evolution', title: 'Evolución', icon: 'ui:hatch' },
+    { kind: 'food', title: 'Comida', icon: 'ui:cooking' },
   ];
   const AVAILABILITY: Record<string, string> = { drop: 'Solo drop', hidden: 'Exclusivo' };
   const MAX_LEVEL = 100;
@@ -82,7 +82,7 @@
       {/each}
     </div>
   {:else}
-    <EmptyState icon="gift" text="Tu mochila está vacía. Los objetos que compres o encuentres aparecerán aquí.">
+    <EmptyState icon="ui:backpack" text="Tu mochila está vacía. Los objetos que compres o encuentres aparecerán aquí.">
       <Button size="sm" icon="shop" on:click={() => dispatch('go', { dest: 'shop', sub: 'store' })}>Ir a la tienda</Button>
     </EmptyState>
   {/each}

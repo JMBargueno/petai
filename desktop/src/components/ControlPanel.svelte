@@ -31,9 +31,9 @@
   import UpdateLockPanel from './UpdateLockPanel.svelte';
   import MaintenanceLockPanel from './MaintenanceLockPanel.svelte';
   import { maintenanceLock } from '../lib/maintenance';
-  import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, X, Users } from 'lucide-svelte';
+  import { X } from 'lucide-svelte';
   import HomeView from './views/HomeView.svelte';
-  import { AccountView, AuthView, BackpackView, ChooseHandleView, HatchView, PockaiMark, ShopView, VerifyEmailView, type AuthApi } from '@pockai/ui';
+  import { AccountView, AuthView, BackpackView, ChooseHandleView, HatchView, Ico, PockaiMark, ShopView, VerifyEmailView, type AuthApi } from '@pockai/ui';
   import RedeemVoucherCard from './views/RedeemVoucherCard.svelte';
   import { Button, CurrencyPill, Notice, Segmented } from './ui';
   import Onboarding from './Onboarding.svelte';
@@ -135,13 +135,13 @@
 
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
   const NAV = [
-    { id: 'pet', label: 'Mascota', icon: PawPrint, subs: [['home', 'Inicio'], ['backpack', 'Mochila'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['mind', 'Mente'], ['habitat', 'Hábitat'], ['wardrobe', 'Armario'], ['skills', 'Habilidades']] },
-    { id: 'play', label: 'Jugar', icon: Gamepad2, subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo'], ['training', 'Entrenamiento'], ['cooking', 'Cocina'], ['adventure', 'Aventura']] },
-    { id: 'chat', label: 'Chat', icon: MessageCircle, subs: [] },
-    { id: 'social', label: 'Social', icon: Users, subs: [['profile', 'Mi Perfil'], ['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
-    { id: 'progress', label: 'Progreso', icon: Trophy, subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
-    { id: 'shop', label: 'Tienda', icon: ShoppingBag, subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
-    { id: 'settings', label: 'Ajustes', icon: Settings, subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['sound', 'Sonido'], ['desktop', 'Escritorio'], ['about', 'Acerca de']] },
+    { id: 'pet', label: 'Mascota', icon: 'ui:pet', subs: [['home', 'Inicio'], ['backpack', 'Mochila'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['mind', 'Mente'], ['habitat', 'Hábitat'], ['wardrobe', 'Armario'], ['skills', 'Habilidades']] },
+    { id: 'play', label: 'Jugar', icon: 'ui:play', subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo'], ['training', 'Entrenamiento'], ['cooking', 'Cocina'], ['adventure', 'Aventura']] },
+    { id: 'chat', label: 'Chat', icon: 'ui:chat', subs: [] },
+    { id: 'social', label: 'Social', icon: 'ui:social', subs: [['profile', 'Mi Perfil'], ['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
+    { id: 'progress', label: 'Progreso', icon: 'ui:progress', subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
+    { id: 'shop', label: 'Tienda', icon: 'ui:shop', subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
+    { id: 'settings', label: 'Ajustes', icon: 'ui:settings', subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['sound', 'Sonido'], ['desktop', 'Escritorio'], ['about', 'Acerca de']] },
   ];
   let dest: string = 'pet';
   let sub: string = 'home';
@@ -442,7 +442,7 @@
               title={dest === 'settings' ? 'Cerrar ajustes' : 'Ajustes'}
               on:click={toggleSettings}
             >
-              <Settings size={18} />
+              <Ico n="ui:settings" active={dest === 'settings'} size={22} />
               {#if hasUpdate($updateState)}<span class="dot-badge" aria-hidden="true"></span>{/if}
             </button>
           {/if}
@@ -487,7 +487,7 @@
             title="{n.label} (Ctrl+{i + 1})"
             on:click={() => go(n.id)}
           >
-            <svelte:component this={n.icon} size={18} />
+            <Ico n={n.icon} active={dest === n.id} size={22} />
             <span>{n.label}</span>
             {#if n.id === 'pet' && readyEggs > 0}
               <span class="tab-badge" aria-label="{readyEggs} {readyEggs === 1 ? 'huevo listo' : 'huevos listos'}">{readyEggs}</span>
@@ -503,7 +503,7 @@
           class="sub-tabs"
           label={current.label}
           value={sub}
-          options={current.subs.map(([value, label]) => ({ value, label, badge: value === 'hatch' && readyEggs > 0 ? readyEggs : undefined }))}
+          options={current.subs.map(([value, label]) => ({ value, label, icon: 'ui:' + value, badge: value === 'hatch' && readyEggs > 0 ? readyEggs : undefined }))}
           on:change={(e) => setSub(e.detail)}
         />
       {/if}

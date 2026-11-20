@@ -10,7 +10,7 @@
   /** Escala entera sobre los 32 px nativos: 1 en listas y chips, 2 en tarjetas. */
   export let scale: 1 | 2 | 4 = 1;
   /** Icono de interfaz si el objeto no tiene arte. */
-  export let fallback = 'food';
+  export let fallback = 'ui:cooking';
 
   $: url = itemIcon(id);
   $: side = ITEM_ICON_SIZE * scale;

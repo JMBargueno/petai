@@ -38,6 +38,7 @@ export { default as StatTile } from './StatTile.svelte';
 export { default as Switch } from './Switch.svelte';
 export { default as TileButton } from './TileButton.svelte';
 export { default as Ico } from './Ico.svelte';
+export { uiIconSvg, UI_ICONS } from './icons';
 export { default as AppearancePicker } from './AppearancePicker.svelte';
 export { focusTrap } from './focusTrap';
 export { press } from './press';

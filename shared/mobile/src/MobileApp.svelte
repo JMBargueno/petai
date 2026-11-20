@@ -372,7 +372,7 @@
           aria-label={item.label}
           onclick={() => goToTab(item.id)}
         >
-          <span class="tab-icon"><Ico n={item.icon} size={22} /></span>
+          <span class="tab-icon"><Ico n={item.icon} active={tab === item.id} size={26} /></span>
           <span class="tab-label">{item.label}</span>
         </button>
       {/each}
