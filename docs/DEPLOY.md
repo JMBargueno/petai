@@ -237,13 +237,12 @@ Notas:
 ### Android
 
 ```bash
-cd mobile/android
-./gradlew :app:bundleRelease      # .aab para Play Store (necesita keystore de firma)
+POCKAI_API_URL=https://… pnpm --filter petai-desktop exec tauri android build --aab   # .aab para Play Store
 ```
 
-El `buildType release` apunta a `https://api.petai.example/v1` (marcador de posición): cámbialo en
-`app/build.gradle.kts` (`API_BASE_URL`) antes de publicar, y configura la firma de la release (keystore fuera del
-repositorio). Play Billing y notificaciones push (FCM) siguen pendientes.
+La URL de la API se fija al compilar (`POCKAI_API_URL`; en release tiene que ser `https`). La firma de la release
+se configura en `desktop/src-tauri/gen/android` con un keystore fuera del repositorio. Para compilar en Windows,
+ver «Compilar para Android en Windows» en `docs/MIGRACION_NUCLEO_RUST.md`. Play Billing y notificaciones push (FCM) siguen pendientes.
 
 ### iOS
 

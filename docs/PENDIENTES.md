@@ -80,7 +80,7 @@ Features sin UI (solo backend + API):
 | `socket.io-redis` deprecated | Reemplazo: `@socket.io/redis-adapter` (API pub/sub). Migrar en upgrade mayor. |
 | BullMQ: más colas | Futuras: `notifications` (push), `seasons:expire`, `gifts:expire`. |
 | iOS client | No existe. Proyecto nuevo (Swift + OpenAPI). |
-| ISO-IOS | **Sala isométrica en iOS** (fase 7 de `docs/ROADMAP_ISOMETRICO.md`). Incrustar `@pockai/scene` en un `WKWebView` con el puente `pockai`, igual que Android (`mobile/android/.../ui/scene/`). Depende del cliente iOS. |
+| ISO-IOS | **Sala isométrica en iOS** (fase 7 de `docs/ROADMAP_ISOMETRICO.md`). Incrustar `@pockai/scene` en un `WKWebView` con el puente `pockai`, igual que la app Kotlin de Android, ya retirada (el Android de Tauri usa `@pockai/scene` directamente). Depende del cliente iOS. |
 | Web (Angular) | Existe con CI build, sin features oleadas. |
 
 ---
@@ -98,7 +98,6 @@ Features sin UI (solo backend + API):
 | **Seed de prendas** | `backend/prisma/seed.ts` crea un `Item` por prenda; sin ejecutar. Sin seed las prendas se listan, pero no se pueden comprar. |
 | **Tests e2e** | No se han ejecutado para accesorios, inventario ni eclosión. |
 | **Escritorio en marcha** | El armario (Mascota › Armario) y la mascota flotante con prendas compilan y pasan sus tests, pero no se han visto funcionando contra un backend. |
-| **Android** | `Pet.accessories` y `SceneMessages.setPet` se cambiaron en Kotlin sin compilar ni probar en un dispositivo. |
 | **Demo de eclosión de la web** | Pasa sus tests, pero no se ha visto en el navegador (la web local necesita backend). |
 | **PR 118 y PR 120 juntos** | El de rareza salió de `main` antes de fusionar el de pixel art; no se han probado combinados. |
 | **Tests de buffs del hábitat** | `habitat-buffs.spec.ts` y `pets.habitat-buffs.spec.ts` fallan en local (5 tests) por valores de muebles. Parecen desfasados respecto al rebalanceo de buffs (§4); no se ha comprobado en `main` limpio. |

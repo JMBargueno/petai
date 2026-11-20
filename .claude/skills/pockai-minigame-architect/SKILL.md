@@ -119,4 +119,4 @@ Resume al usuario:
 - La cuenta del techo y las recompensas.
 - Archivos tocados y resultado de las validaciones; avisos de `check_minigames.mjs` que dejes sin resolver, y por qué.
 - La hoja de contactos y la captura de la partida, y cuántas imágenes de Nano Banana ha costado.
-- Lo que queda fuera del repo: el backend y los clientes se despliegan juntos si cambiaron las reglas; Android necesita `build:embed` y una versión nueva de la app para recibir el arte.
+- Lo que queda fuera del repo: el backend y los clientes se despliegan juntos si cambiaron las reglas; Android (la app de Tauri) recibe juegos y arte con una versión nueva de la app.

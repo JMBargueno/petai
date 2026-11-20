@@ -8,7 +8,7 @@ PetAI es una mascota virtual al estilo tamagotchi. Cada jugador eclosiona huevos
 **Plataformas**
 | Pieza | Tecnología | Estilo visual |
 |---|---|---|
-| Android | Kotlin + Jetpack Compose | Material 3 Expressive (Android 17) |
+| Android | Tauri 2 + Svelte (`apps/android`), núcleo cliente en Rust | El kit de `@pockai/ui` con el aspecto de Android |
 | iOS | Swift + SwiftUI | Liquid Glass (iOS 27) |
 | Mascota de escritorio | Tauri 2 (Windows 11 / macOS 26+) | Ventana transparente con sprite y bandeja del sistema |
 | Backend | NestJS 11 | API REST + WebSocket, autoritativo |
@@ -26,7 +26,7 @@ PetAI es una mascota virtual al estilo tamagotchi. Cada jugador eclosiona huevos
 - **Android 17 (API 37)**: estable desde junio de 2026. `targetSdk 37`, `minSdk 26`.
 - **NestJS 11.1.x** sobre Node.js 22 LTS (el `backend/Dockerfile` usa `node:22-slim` y la CI corre con Node 22).
 - **Prisma ORM 6** (versión instalada: 6.19, según `pnpm-lock.yaml`).
-- **PostgreSQL 17** y **Redis 7** (versiones de `docker-compose.yml` y `docker-compose.prod.yml`), **Tauri 2.x**, **Kotlin 2.x**, **Swift 6.x**.
+- **PostgreSQL 17** y **Redis 7** (versiones de `docker-compose.yml` y `docker-compose.prod.yml`), **Tauri 2.x** y **Rust** (núcleo cliente compartido).
 - **Paso 0**: confirmar las últimas versiones estables en el momento de crear cada proyecto.
 
 ---
@@ -35,7 +35,8 @@ PetAI es una mascota virtual al estilo tamagotchi. Cada jugador eclosiona huevos
 ```
 petai/
   backend/            NestJS 11 + Prisma + PostgreSQL + Redis (sin colas aún; crons con @nestjs/schedule)
-  mobile/android/     Proyecto Gradle (Kotlin DSL, version catalog)
+  apps/android/       UI de Android (Svelte) de la app de Tauri
+  crates/             Núcleo cliente en Rust (pockai-core) y su puente con Tauri (tauri-plugin-pockai)
   ios/                Pendiente (aún no existe; ver Fase 5)
   desktop/            Tauri 2 (src-tauri en Rust + frontend en Svelte/TS)
   shared/
@@ -46,7 +47,7 @@ petai/
   docker-compose.yml  postgres + redis (+ un mock de LLM para tests)
   .github/workflows/  CI: backend, android, ios (runner macOS), desktop
 ```
-- **Contrato único**: el backend genera `openapi.json` con `@nestjs/swagger`. A partir de él se generan los clientes: `openapi-generator` (Kotlin/Retrofit) en Android, `swift-openapi-generator` en iOS y `openapi-typescript` en escritorio.
+- **Contrato único**: el backend genera `openapi.json` con `@nestjs/swagger`. Los clientes hablan con él a través del núcleo cliente en Rust (`crates/pockai-core`), el mismo en escritorio y móviles; `openapi-typescript` genera los tipos de la API para el escritorio.
 - **Datos de juego** en JSON compartido: el backend los carga en la base de datos con un seed y los clientes los usan para el arte y los textos.
 
 ---
@@ -245,13 +246,10 @@ PushToken(userId, platform, token)
 ---
 
 ## 6. App Android
-- **Stack**:
-  - Kotlin 2.x y Jetpack Compose (BOM más reciente) con Material 3 Expressive: Dynamic Color, formas y movimiento expresivos, edge-to-edge y predictive back.
-  - Arquitectura MVVM + UDF (`StateFlow`), Hilt y Navigation Compose type-safe.
-  - Retrofit/OkHttp con Kotlinx Serialization, Room (caché offline), DataStore, Coil, WorkManager y FCM.
-  - Credential Manager (Google), Play Billing 8 y widget Glance (estado de la mascota en la pantalla de inicio).
-- **Módulos**: `:app`, `:core:network` (cliente generado), `:core:data`, `:core:designsystem` y `:feature:{home,hatch,care,shop,minigames,arena,chat,collection,settings}`.
-- **Renderizado de la mascota**: `PetSprite` implementa composición acelerada por hardware. En Android 13+ (API 33–37) usa `RuntimeShader` (AGSL) con `RenderEffect` para componer `base.png`, `mask.png` y `pattern.png` en un solo draw call en GPU. En API 26–32 recurre a fallback con `BlendMode.Multiply` en Canvas. Aplica **In-Memory Baking** (se hornea el sprite sheet una vez sobre un `Bitmap` en caché y las animaciones reproducen los cuadros de esa textura). Soporta 14 estados de animación con tabla de fallbacks.
+- **Stack**: la misma app de Tauri 2 que el escritorio, con una UI en Svelte para el móvil (`apps/android`) hecha con las pantallas de `@pockai/ui`. Toda la comunicación con el backend pasa por el núcleo cliente en Rust (`crates/pockai-core`).
+- **Lo nativo** va en la librería Android de `crates/tauri-plugin-pockai`: la sesión cifrada con el Android Keystore, los avisos de cuidado en segundo plano con WorkManager y el widget de la pantalla de inicio.
+- **Mascota y salas**: se dibujan con `@pockai/scene`, igual que en el escritorio.
+- Sustituye a la app Kotlin con Jetpack Compose, retirada el 2026-11-20 (ver `docs/MIGRACION_NUCLEO_RUST.md`).
 
 ## 7. App iOS
 - **Stack**:

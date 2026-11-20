@@ -51,10 +51,7 @@ fases de abajo y en las secciones de verificación del final.
 4. **Plugins nativos** (4.7, 4.8): hechos en Android (sesión cifrada con el Keystore y avisos de
    cuidado con WorkManager; ver «Plugins nativos de Android»), probados en el emulador con un
    backend de pega. Falta probarlos contra el backend real y lo de iOS (`BGAppRefreshTask`).
-5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
-   acordada: que la app de Tauri tenga portados el widget y la sincronización. Ya se cumple (ver
-   «El widget de Android»), y también todo lo demás que tenía la app Kotlin, revisado ruta a ruta
-   (ver «La cuenta en Android» y «Lo que le quedaba a Android»). Se puede borrar.
+5. **App Kotlin**: borrada (4.10, ver «La app Kotlin, retirada»).
 6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
 
 ### Pantallas que quedan, por tipo (2026-11-20)
@@ -184,7 +181,7 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 - ✅ 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero de la app cifrado con el Keystore (`SealedFileStore` + `PockaiKeystore`), que adopta el fichero en claro de antes
 - 🟡 4.8 Avisos de cuidado en segundo plano: en Android, WorkManager dentro de `tauri-plugin-pockai` (no un plugin aparte) con el mismo núcleo de la app, y el widget de la pantalla de inicio. Falta `BGAppRefreshTask` en iOS
 - 🟡 4.9 CI: job `android-tauri` que compila el APK de depuración. Falta todo lo de iOS
-- ⬜ 4.10 Borrar `mobile/android`, su job de CI y las referencias en docs, specs y skills
+- ✅ 4.10 Borrar `mobile/android`, su job de CI y las referencias en docs y skills (las specs y los informes antiguos se quedan como registro)
 
 ## Fase 5 — Superficies nativas
 - ⬜ 5.1 `surfaces.rs`: política pura `AppState → descriptor`, y la visita en curso como parte del estado del núcleo
@@ -1109,3 +1106,16 @@ Verificado:
   tiene amigos, visitas ni hábitat; los componentes son los del escritorio).
 - Que la celebración entre con su animación en el escritorio: el panel del navegador estaba oculto
   y no avanza las animaciones. En el emulador entra bien.
+
+### La app Kotlin, retirada (2026-11-20)
+
+Con todo lo suyo ya en la app de Tauri (ver «La cuenta en Android» y «Lo que le quedaba a Android»):
+
+- Se borran `mobile/android` y el job `Android build (Compose)` de CI. El APK de Android lo construye el
+  job `android-tauri`.
+- Referencias actualizadas: README, PROYECTO, ROADMAP, ART_PIPELINE (sin la versión Kotlin de
+  Mulberry32 ni el puente de la escena), DEPLOY (release con `tauri android build --aab`),
+  GUIA_ARTISTICA, PANTALLAS, PENDIENTES, los checklists de las skills `pockai-architect` y
+  `pockai-minigame-architect`, y los comentarios de Mulberry32 en `@pockai/scene`.
+- Se quedan como están, por ser registro: las specs (`docs/specs/`), los informes (`docs/informes/`),
+  el historial de la constitución y los planes de `.specify/memory/features/`.

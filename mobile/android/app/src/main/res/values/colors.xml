@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Fondo de página (guía §3.2): claro #fbfaff / oscuro #0d0c19 -->
-    <color name="pockai_background">#FBFAFF</color>
-    <color name="pockai_sunburst">#FFD731</color>
-</resources>

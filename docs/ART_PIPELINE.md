@@ -6,7 +6,7 @@ Este documento técnico describe el estándar de assets, el algoritmo de renderi
 
 ## 1. Visión y Principios del Sistema
 
-Para que el arte no bloquee el desarrollo y la apariencia sea 100% idéntica en **Tauri (Svelte/Canvas)**, **Android (Jetpack Compose / AGSL)** e **iOS (SpriteKit / SKShader)**, el pipeline visual opera como un **sistema de composición por capas en tiempo real** en lugar de generar y exportar miles de sprites estáticos pre-renderizados.
+Para que el arte no bloquee el desarrollo y la apariencia sea 100% idéntica en **Tauri (Svelte/Canvas: escritorio y Android)** e **iOS (SpriteKit / SKShader)**, el pipeline visual opera como un **sistema de composición por capas en tiempo real** en lugar de generar y exportar miles de sprites estáticos pre-renderizados.
 
 ### Ventajas clave
 1. **Huella de memoria mínima**: Cada una de las 21 especies requiere únicamente 3 hojas de sprites (`base.png`, `mask.png`, `anim.json`), ocupando menos de 300 KB por especie.
@@ -57,7 +57,7 @@ Para condensar todas las capas en un único archivo de máscara y ahorrar memori
 Cada mascota posee un `visualSeed` (entero de 32 bits asignado autoritativamente por el servidor al eclosionar).
 
 ### PRNG idéntico: Mulberry32
-El generador `Mulberry32` garantiza la misma secuencia exacta de números pseudoaleatorios en JavaScript/TypeScript, Kotlin y Swift:
+El generador `Mulberry32` garantiza la misma secuencia exacta de números pseudoaleatorios en JavaScript/TypeScript (escritorio y Android) y Swift:
 
 #### TypeScript (Desktop)
 ```typescript
@@ -69,22 +69,6 @@ export function createMulberry32(seed: number) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-```
-
-#### Kotlin (Android)
-```kotlin
-class Mulberry32(seed: Long) {
-    private var state: Int = seed.toInt()
-
-    fun nextFloat(): Float {
-        state = state + 0x6D2B79F5
-        var t = state xor (state ushr 15)
-        t = Math.imul(t, 1 or state)
-        t = (t + Math.imul(t xor (t ushr 7), 61 or t)) xor t
-        val res = (t xor (t ushr 14)) ushr 0
-        return (res.toLong() and 0xFFFFFFFFL).toFloat() / 4294967296f
-    }
 }
 ```
 
@@ -152,14 +136,8 @@ Para componer un cuadro o la hoja de sprites completa:
 - El resultado se almacena en una imagen `ImageBitmap` o `HTMLCanvasElement` en RAM.
 - La reproducción de las animaciones a 60 FPS se realiza mediante llamadas directas `ctx.drawImage(bakedCanvas, sx, sy, sw, sh, dx, dy, dw, dh)` según las coordenadas de `anim.json`.
 
-### 5.2 Android (Jetpack Compose / AGSL)
-- **Dispositivos Android 13+ (API 33 a 37)**:
-  - Se utiliza `android.graphics.RuntimeShader` (AGSL) con `RenderEffect.createRuntimeShaderEffect()`.
-  - Recibe las texturas `u_base`, `u_mask`, `u_pattern` y los uniformes de color `u_primary`, `u_secondary`, `u_pattern_offset`.
-  - La composición se realiza en un único *draw call* en GPU.
-- **Dispositivos Android 8.0 a 12 (API 26 a 32)**:
-  - Fallback mediante `android.graphics.Canvas` y `PorterDuff.Mode.MULTIPLY` / `BlendModeCompat`.
-- **Baking en memoria**: El resultado se dibuja una sola vez sobre un `Bitmap` de dimensiones idénticas al sprite sheet, reciclando dicho `Bitmap` durante la vida del composable `PetSprite`.
+### 5.2 Android
+La app de Android es la misma app de Tauri que el escritorio: compone y hornea el sprite con el mismo código (`@pockai/scene`).
 
 ### 5.3 iOS (SwiftUI + SpriteKit / Metal)
 - En `SpriteView`, se instancia un `SKScene` con un `SKSpriteNode`.
@@ -290,15 +268,7 @@ Versión actual: **3** (`PROTOCOL_VERSION`, anunciada en `ready`).
 - `setAmbience { weather: { code, temperature }, sun: { sunrise, sunset }, clock, backdrop }`: clima y sol reales (de `GET /environmental/status`). Todos los campos son opcionales; `clock` fuerza la hora (demo y pruebas) y `backdrop` (`painted` por defecto o `plain`) enciende o apaga el paisaje pintado del modo híbrido. `setNight` queda para "luces apagadas porque duerme".
 - Salida: `ready`, `petLoaded`, `petTapped`, `clipEnded`, `itemSelected`, `furnitureMoved`, `effectEnded` (v3), `error`.
 
-**Android** (`mobile/android`):
-- `pnpm --filter @pockai/scene build:embed` genera `shared/scene/dist/embed/`. La tarea Gradle `syncPockaiScene` (en `preBuild`) lo copia a `assets/scene/` y falla con un mensaje claro si falta.
-- `ui/scene/PockaiSceneView.kt`: un `WebView` que sirve el bundle con `WebViewAssetLoader` desde `https://appassets.androidplatform.net/assets/scene/` y bloquea cualquier otra navegación.
-  - Los eventos llegan por `AndroidBridge.postMessage`.
-  - `SceneController` encola los mensajes hasta `ready` y, si la página se recarga, repite el último estado.
-  - Se pausa en `ON_PAUSE`.
-- `ui/scene/SceneMessages.kt` construye los mensajes del protocolo (v3); `restClip` es el equivalente de `resolveBaseState`.
-- `HabitatScreen` reenvía a la escena los `pet:action` del Pockai del hábitat (`SceneMessages.petAction`): los efectos salen igual que en el escritorio.
-- En builds debug, `adb shell am start -n com.petai.app/.debug.SceneDebugActivity` abre la sala con datos de ejemplo, sin backend (eventos en logcat con la etiqueta `PockaiScene`).
+**Android** (`apps/android`): la app de Tauri usa `@pockai/scene` directamente en su WebView, como el escritorio; no hace falta puente.
 
 **Reglas:**
 - El bundle se carga desde los assets de la app, sin red.

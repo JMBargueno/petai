@@ -56,7 +56,7 @@ La app es multiplataforma: un backend autoritativo y varios clientes que muestra
 | Cliente | Estado | Qué incluye |
 |---|---|---|
 | **Escritorio** (Windows, Tauri 2 + Svelte) | Funcional | Mascota en una ventana transparente sobre el escritorio que camina, duerme y come, con clics a través de la ventana. Bandeja del sistema, panel de control (cuenta, eclosión, inventario, estadísticas, minijuegos, tienda, Arena, IA), chat flotante y notificaciones nativas. Modo Hermes local. Sincronización por WebSocket. |
-| **Android** (Kotlin + Jetpack Compose) | Funcional, sin Play Billing ni FCM | Registro e inicio de sesión, eclosión, cuidados con los sprites compartidos, tienda, pestaña Jugar (Arena y minijuegos), chat IA, ajustes de IA, vinculación con el escritorio por código, widget de pantalla de inicio y avisos locales de cuidados. |
+| **Android** (Tauri 2 + Svelte, con el núcleo en Rust) | Funcional, sin Play Billing ni FCM | Las mismas pantallas que el escritorio (`@pockai/ui`): cuenta completa, eclosión, cuidados, tienda y cofres, Jugar, progreso, social, hábitat, chat IA (con clave propia), widget de pantalla de inicio, avisos de cuidado en segundo plano y sesión cifrada con el Keystore. |
 | **iOS** (SwiftUI, Liquid Glass) | Pendiente | — |
 | **Web** (Angular 22, [`web/`](web/README.md)) | Landing funcional; panel con datos de ejemplo | Web oficial con el nombre público del juego, **Pockai** (pocket + yokai + AI): landing estática en español e inglés y un panel de administración oculto que, de momento, trabaja con datos simulados y no se conecta al backend. |
 
@@ -120,7 +120,8 @@ Además del núcleo original, PetAI incluye **33 funcionalidades nuevas** organi
 petai/
   backend/            API NestJS 11 (Prisma, PostgreSQL, Redis)
   desktop/            Escritorio con Tauri 2 (Rust) y Svelte/TypeScript
-  mobile/android/     App Android (Kotlin, Jetpack Compose)
+  apps/android/       UI de Android (Svelte) de la app de Tauri; el proyecto nativo lo genera Tauri
+  crates/             Núcleo cliente en Rust (pockai-core) y su puente con Tauri (tauri-plugin-pockai)
   shared/
     game-data/        Especies, patrones, comidas, habilidades y balance (JSON)
     assets/           Sprites SVG compartidos
@@ -180,10 +181,10 @@ Requisitos: Node.js 22 LTS (el `backend/Dockerfile` usa `node:22-slim` y la CI c
    pnpm desktop:dev
    ```
 
-6. Android: abre `mobile/android` en Android Studio, o compila desde la línea de comandos:
+6. Android: es la misma app de Tauri que el escritorio, con la UI de `apps/android`. Compila el APK de depuración (ver «Compilar para Android en Windows» en `docs/MIGRACION_NUCLEO_RUST.md` para Windows):
 
    ```bash
-   cd mobile/android && ./gradlew assembleDebug
+   pnpm --filter petai-desktop exec tauri android build --debug --target x86_64 --apk
    ```
 
 ## Pruebas

@@ -1,7 +1,7 @@
 /**
  * Mulberry32 y rasgos visuales derivados de `visualSeed` (docs/ART_PIPELINE.md §3).
  * Fuente única para todos los clientes: el escritorio la importa y los WebView de Android/iOS la
- * ejecutan dentro de la escena. Debe dar la misma secuencia que las versiones Kotlin/Swift.
+ * ejecutan dentro de la escena. Debe dar la misma secuencia que la versión Swift.
  */
 export function createMulberry32(seed: number) {
   let s = seed >>> 0;
