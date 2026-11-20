@@ -1,0 +1,13 @@
+{
+  "images": [
+    {
+      "idiom": "universal",
+      "scale": "2x",
+      "filename": "solarejo_adult_sleep.png"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

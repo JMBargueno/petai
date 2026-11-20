@@ -91,6 +91,11 @@ jobs:
               - 'shared/**'
             ios:
               - *rust
+              # El reloj (spec 44). Su proyecto vive en `gen/apple`, que `*rust` ya cubre por
+              # `desktop/src-tauri/**`, pero su arte se hornea desde `shared/`: sin esto, regenerar
+              # sprites o iconos no dispararía el job que los compila.
+              - 'shared/assets/**'
+              - 'shared/ui/src/icons/**'
               - '.github/workflows/ci.yml'
             ui-visual:
               - *common
@@ -536,6 +541,30 @@ jobs:
       # rustls tienen que seguir compilando para Apple.
       - name: Build core for the iOS simulator
         run: cargo build -p petai-desktop --lib --target aarch64-apple-ios-sim
+
+      # El reloj (spec 44). No sale del `tauri ios build` —ese pasa un `-sdk iphonesimulator`
+      # global que pisa el SDKROOT de los targets de watchOS—, así que se compila aparte. Solo
+      # compilar: no hace falta arrancar ningún simulador.
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Build the Apple Watch app
+        working-directory: desktop/src-tauri/gen/apple
+        run: |
+          xcodegen generate
+          xcodebuild -project petai-desktop.xcodeproj -target PockaiWatch \
+            -configuration debug -sdk watchsimulator -arch arm64 \
+            CODE_SIGNING_ALLOWED=NO SYMROOT="$RUNNER_TEMP/pockai-watch" build
+
+      # Lo único que impide que los dos lados del cable se separen sin que nadie se entere: compara
+      # clave a clave el JSON que escribe Rust con el que escriben los tipos de Swift.
+      - name: Check the watch contract (Rust ↔ Swift)
+        working-directory: desktop/src-tauri/gen/apple
+        run: |
+          swiftc -O Shared/PockaiWrist.swift Tests/PockaiWristFixture.swift \
+            -o "$RUNNER_TEMP/pockai-wrist-fixture"
+          "$RUNNER_TEMP/pockai-wrist-fixture" \
+            ../../../../crates/pockai-core/tests/fixtures/wrist-snapshot.json
 
   docker:
     name: Backend image (Docker build)

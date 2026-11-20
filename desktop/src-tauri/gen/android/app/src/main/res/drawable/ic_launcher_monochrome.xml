@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GENERADO por scripts/generate-app-icons.mjs desde desktop/public/favicon.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:scaleX="1.1" android:scaleY="1.1" android:translateX="18.799999999999997" android:translateY="18.799999999999997">
+        <path android:pathData="M32 12c-9 0-16 13-16 24a16 16 0 0 0 32 0c0-11-7-24-16-24z"
+            android:fillColor="#ffffff" android:strokeColor="#ffffff" android:strokeWidth="3"/>
+        <path android:fillColor="#ffffff" android:pathData="M23,36a3,3 0 1,0 6,0a3,3 0 1,0 -6,0z"/>
+        <path android:fillColor="#ffffff" android:pathData="M35,36a3,3 0 1,0 6,0a3,3 0 1,0 -6,0z"/>
+    </group>
+</vector>

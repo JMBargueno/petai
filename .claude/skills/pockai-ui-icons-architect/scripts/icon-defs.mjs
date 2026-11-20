@@ -32,6 +32,15 @@ const POT = 'M5 11h14v5.5a3.5 3.5 0 0 1-3.5 3.5h-7A3.5 3.5 0 0 1 5 16.5z';
 const HEAD = 'M12 4.5a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6z';
 const BODY = 'M4.5 20a7.5 7.5 0 0 1 15 0z';
 const STAR4 = 'M16 3.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z';
+const BOWL = 'M3.5 11.5h17a8.5 8.5 0 0 1-17 0z';
+const BOLT = 'M13.5 2.5 5.5 13.5h5l-1 8 8-11h-5z';
+const DROP = 'M12 3.5c3.2 3.6 5.5 6.7 5.5 9.5a5.5 5.5 0 0 1-11 0c0-2.8 2.3-5.9 5.5-9.5z';
+const TUB = 'M3 12.5h18v2.5a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z';
+const MOON = 'M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z';
+const VIAL = 'M10.5 9.7 7.2 16a3.2 3.2 0 0 0 2.8 4.8h4a3.2 3.2 0 0 0 2.8-4.8l-3.3-6.3z';
+const SPARK_UP = 'M12 2.5l.9 2.2 2.2.9-2.2.9-.9 2.2-.9-2.2-2.2-.9 2.2-.9z';
+const COIN_STAR = 'M12 8l1.1 2.6 2.6 1.1-2.6 1.1L12 15.4l-1.1-2.6-2.6-1.1 2.6-1.1z';
+const GEM = 'M7 4h10l4 5.5-9 11-9-11z';
 const SPARK4 = 'M16 3.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z';
 
 export const ICONS = {
@@ -195,6 +204,63 @@ export const ICONS = {
   about: {
     acc: accCircle(12, 12, 8.5),
     base: `<circle cx="12" cy="12" r="8.5" fill="${F}"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r=".6"/>`,
+  },
+
+  // ── Constantes vitales y cuidados (la app de reloj, spec 44) ─────────
+  // El reloj no tiene Lucide, así que estos destinos necesitan icono propio. Se eligen formas que
+  // no choquen con las que ya hay: el corazón es de `bonding`, el huevo de `hatch` (que el reloj
+  // reutiliza para la cuenta atrás de la eclosión) y la estrella de `skills`.
+  hunger: {
+    acc: acc(BOWL),
+    base: `<path d="${BOWL}" fill="${F}"/><path d="M2.5 11.5h19"/><path d="M12 10.5c-1.8 0-2.9-1.1-2.9-2.5S10.2 5.5 12 5.5s2.9 1.1 2.9 2.5S13.8 10.5 12 10.5z" fill="${F}"/><path d="M12 5.5V4"/>`,
+  },
+  happiness: {
+    acc: accCircle(12, 12, 8.5),
+    base: `<circle cx="12" cy="12" r="8.5" fill="${F}"/><circle cx="9.3" cy="10.2" r=".9" fill="currentColor" stroke="none"/><circle cx="14.7" cy="10.2" r=".9" fill="currentColor" stroke="none"/><path d="M8.3 14c.9 1.4 2.2 2.1 3.7 2.1s2.8-.7 3.7-2.1"/>`,
+  },
+  energy: {
+    acc: acc(BOLT),
+    base: `<path d="${BOLT}" fill="${F}"/>`,
+  },
+  hygiene: {
+    acc: acc(DROP),
+    base: `<path d="${DROP}" fill="${F}"/><path d="M9.5 14.2a2.6 2.6 0 0 0 2.5 2.6"/>`,
+  },
+  health: {
+    acc: accRect(3.5, 6, 17, 13, 3),
+    base: `<rect x="3.5" y="6" width="17" height="13" rx="3" fill="${F}"/><path d="M9 6V4.5h6V6"/><path d="M12 9.8v5.4M9.3 12.5h5.4"/>`,
+  },
+  clean: {
+    acc: acc(TUB),
+    base: `<path d="${TUB}" fill="${F}"/><path d="M6 12.5V6.5a2 2 0 0 1 4 0"/><path d="M7 19.5 6 21M17 19.5l1 1.5"/><circle cx="15.5" cy="6.5" r="1.5"/><circle cx="18.5" cy="9" r="1"/>`,
+  },
+  sleep: {
+    acc: acc(MOON),
+    base: `<path d="${MOON}" fill="${F}"/>`,
+  },
+  wake: {
+    acc: accCircle(12, 12, 4.5),
+    base: `<circle cx="12" cy="12" r="4.5" fill="${F}"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12h2.5M19 12h2.5M5.2 5.2 7 7M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/>`,
+  },
+  heal: {
+    acc: acc(VIAL),
+    base: `<path d="M9 3.5h6M10.5 3.5v6.2L7.2 16a3.2 3.2 0 0 0 2.8 4.8h4a3.2 3.2 0 0 0 2.8-4.8l-3.3-6.3V3.5" fill="${F}"/><path d="M7.8 14.5h8.4"/><path d="M12 11.5v3M10.5 13h3"/>`,
+  },
+  evolve: {
+    acc: acc(SPARK_UP),
+    base: `<path d="M6.5 13.5 12 8l5.5 5.5"/><path d="M6.5 19.5 12 14l5.5 5.5"/><path d="${SPARK_UP}" fill="${F}"/>`,
+  },
+
+  // ── Monedas y gemas ──────────────────────────────────────────────────
+  // El resto de clientes las sigue pintando con Lucide (GUIA_ARTISTICA §6); estas dos entran al set
+  // porque el reloj no tiene de dónde sacarlas. El cableado de web y escritorio no cambia.
+  coin: {
+    acc: accCircle(12, 12, 8.5),
+    base: `<circle cx="12" cy="12" r="8.5" fill="${F}"/><path d="${COIN_STAR}" fill="${F}"/>`,
+  },
+  gem: {
+    acc: acc(GEM),
+    base: `<path d="${GEM}" fill="${F}"/><path d="M3 9.5h18"/><path d="M7 4 9.5 9.5 12 20.5 14.5 9.5 17 4"/>`,
   },
 };
 

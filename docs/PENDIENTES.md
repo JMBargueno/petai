@@ -3,6 +3,7 @@
 > Actualizado: 15/11/2026 — después de cerrar Pasos 1-4 del informe de mejoras.
 > 18/11/2026: añadida la §8 (pixel art, accesorios y rareza por especie).
 > 19/11/2026: añadida la §9 (cerebro del Pockai, spec 41).
+> 20/11/2026: añadida la §10 (reloj de Apple Watch y el icono de marca, spec 44).
 > Base: `main` tip `db3ff00`.
 
 ## 1. Commits/PRs sin mergear
@@ -187,6 +188,39 @@ Features sin UI (solo backend + API):
 | **Rutina igual para todos** | La personalidad solo entra por los pesos de siempre; no hay madrugadores ni trasnochadores. | Desplazar `phaseStarts` por dimensión. |
 | **Clientes sin lo nuevo** | Android no envía gestos (no tiene conductas de escritorio) y ningún cliente muestra la rutina ni marca los resúmenes de memoria con icono propio. iOS no tiene nada de la spec 41. | UI en cada cliente; el servidor ya lo sirve. |
 
+## 10. Reloj de Apple Watch e icono de marca (spec 44)
+
+> Apuntado el 20/11/2026, al traer el arte del juego a la muñeca.
+> Referencia: [`docs/specs/spec-44-reloj-apple-watch.md`](specs/spec-44-reloj-apple-watch.md) §9.
+> El reloj compila en la CI y las cuatro páginas se han visto en el simulador con un resumen puesto
+> a mano; lo que falta es tocarlo y verlo en sitios donde no llega ni la CI ni `simctl`.
+
+### 10a. Sin comprobar (hecho, pero no verificado)
+
+| Item | Qué falta comprobar |
+|---|---|
+| **Pulsar los botones en el reloj** | El camino de la acción está probado de punta a punta contra el backend real (`el_reloj_da_de_comer_de_verdad`), pero el toque en sí no: dirigir el simulador de watchOS desde la terminal no se puede sin dar permisos de accesibilidad. Afecta a los cinco botones, y sobre todo a **curar** y **evolucionar**, que son nuevos. |
+| **La complicación en una esfera** | Las cuatro familias compilan y leen el resumen del App Group, pero ninguna se ha puesto en una esfera. Ahora además enseñan el sprite del Pockai, que a tamaño de complicación no se ha visto. |
+| **Un atajo de Siri** | Los cinco `AppIntent` compilan y el `Metadata.appintents` se genera, pero no se ha dicho ninguna frase. Lo delicado no es la disponibilidad sino el arranque en frío: el sistema puede lanzar el intent con la app sin arrancar, y la espera a `activationDidCompleteWith` solo se prueba de verdad diciéndolo. |
+| **El doble pinch** | `.handGestureShortcut(.primaryAction)` solo existe en hardware con Doble Toque (Series 9 / Ultra 2 en adelante): el simulador no lo tiene. Tampoco se ha comprobado que un solo `.primaryAction` en una `TabView` de cuatro páginas se comporte como se espera. |
+| **Hardware** | `isReachable`, el comportamiento de `transferUserInfo` y el presupuesto de complicaciones (50 al día) solo se comprueban en un iPhone y un Apple Watch reales. Hace falta un Team ID (`APPLE_DEVELOPMENT_TEAM`). |
+| **El icono en iOS y Android** | El huevo de marca se ha regenerado para las cuatro apps y se ha visto el `AppIcon` de watchOS dentro del `Assets.car`, pero **no se ha instalado en un simulador de iPhone ni en un emulador de Android**. En Android, además, el icono adaptativo y su capa monocroma (los iconos temáticos de Android 13) no se han visto en una pantalla de inicio. |
+| **El sprite de las 16 especies** | De las 321 láminas horneadas solo se ha mirado el Ignisaurio joven en la muñeca. El recorte es común por etapa (para que todas salgan a la misma escala) y centrado por especie, pero no se ha revisado una hoja de contactos de las 64 combinaciones de especie y etapa. |
+| **Los avisos cuando algo no se puede** | Los motivos en gris («Sin medicinas en la mochila», «Hace falta nivel 50») tienen test en Rust, pero no se ha visto ninguno en pantalla: el resumen de prueba traía la mascota en un estado solo. |
+
+### 10b. Lo que quedó fuera
+
+| Item | Por qué | Qué haría falta |
+|---|---|---|
+| **El sprite del jugador, no el de la especie** | Las láminas se hornean con la `defaultPalette` de `species.json`: sin shiny, sin accesorios y sin el `visualSeed` de la mascota. Empaquetarlas es lo que permite que el reloj funcione con el iPhone cerrado. | Hornear en el iPhone (que sí tiene webview y `@pockai/scene`) y mandar la lámina dentro del resumen, con lo que eso engorda el payload de WatchConnectivity. |
+| **Las demás cuentas atrás** | `surfaces()` solo publica el huevo incubando; la visita, el sueño y la aventura no llevan hora de fin en el `AppState`, y una cuenta atrás que no cuenta nada es peor que ninguna. | Que el estado lleve la hora de fin de esas tres (ya anotado en el paso 5.1 de la migración). |
+| **La recompensa diaria** | Las misiones no están en el `AppState`, así que ofrecerla obligaría a consultar al servidor para decidir si pintar un botón, y el resumen dejaría de ser una función pura del estado. | Que el estado del núcleo lleve las misiones. |
+| **Dar un mimo** | El backend no tiene ruta de caricia: el vínculo sube como *efecto* de las demás interacciones. | Un endpoint nuevo, y el backend no cambia en esta spec. |
+| **Traducir el reloj** | Los literales de las pantallas («Nada en marcha», «Cuidar», «Al día») y las etiquetas que manda Rust (`WristAction::label`) están en castellano. Meter un `.xcstrings` solo en el reloj lo dejaría a medio camino del resto de la app. | Decidir el idioma por cuenta (es el mismo pendiente que la §9b) y pasarlo al resumen. |
+| **La curva de nivel, duplicada** | `xp_needed` replica `round(100 · nivel^1.5)` de `backend/src/modules/pets/pets.service.ts`, que **no está en `balance.json`**. Es el mismo trato que `CLEAN_MAX_HYGIENE`, pero si la curva cambia hay que cambiarla en dos sitios. | Mover la curva a `balance.json` y que el núcleo la lea, o aceptar la duplicación con su test. |
+| **`coin` y `gem` solo en el reloj** | Entraron al set propio porque watchOS no tiene Lucide. Web, escritorio y móvil las siguen pintando con Lucide (`GUIA_ARTISTICA` §6). | Unificarlas es cambiar un icono que ya se ve en producción: decisión aparte. |
+| **El `Pockai.app` que busca el empaquetado** | `scripts/build-watch-app.sh` coge el `Pockai.app` más reciente de `gen/apple/build`. Con builds de simulador y de dispositivo a la vez, manda la fecha. | Un argumento para elegir cuál, si llega a molestar. |
+
 ## Resumen por prioridad
 
 **Ahora (bloquea prod):**
@@ -212,6 +246,10 @@ Features sin UI (solo backend + API):
 - [ ] Compilar y probar en Android la tarjeta de iniciativa (§9a)
 - [ ] Ver el bocadillo de iniciativa y el aprendizaje en la app de Tauri (§9a)
 - [ ] Ajustar los números de las rutinas y del aprendizaje con uso real (§9a)
+- [ ] Instalar el icono de marca en un simulador de iPhone y un emulador de Android (§10a)
+- [ ] Pulsar los cinco botones del reloj y ver la complicación en una esfera (§10a)
+- [ ] Decir un atajo de Siri y probar el doble pinch en hardware con Doble Toque (§10a)
+- [ ] Revisar una hoja de contactos de las 64 combinaciones de especie y etapa del reloj (§10a)
 
 **Medio plazo:**
 - [ ] Unit specs de 13 módulos
