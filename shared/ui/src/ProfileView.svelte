@@ -6,8 +6,8 @@
    * en modo edición, pulsar una insignia la añade o quita de la vitrina (máx. 3).
    */
   import { createEventDispatcher } from 'svelte';
-  type ProfileBase = any;
-  type ProfileBadge = any;
+  type ProfileBadge = { id: string; tier: string; unlockedAt?: string | null } & Record<string, any>;
+  type ProfileBase = { badges: ProfileBadge[]; featuredBadges: string[]; stats?: any } & Record<string, any>;
   import {
     TIER_LABELS,
     RARITY_LABELS,

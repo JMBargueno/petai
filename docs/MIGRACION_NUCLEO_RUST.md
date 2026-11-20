@@ -839,3 +839,24 @@ compilan escritorio y UI de Android, sin avisos de CSS.
 **Sin verificar:** nada de esto en el emulador (ni el streaming por el núcleo en Android); en el
 escritorio, los motores locales, la clave propia, el pago y las acciones de la mascota (el demo no
 las propone); una respuesta moderada.
+
+### Revisión del tramo antes del PR (2026-11-20)
+
+- **Tipos de Android**: su `typecheck` (`tsc`) no mira los `.svelte`. Pasado `svelte-check` sobre
+  `apps/android`: las pantallas (formas de consultas y acciones) no tenían errores; sí salieron
+  los de su configuración estricta en cuatro vistas de la biblioteca (`noImplicitAny`, null) y los
+  de `Segmented` en `App.svelte`, ya corregidos. Quedan solo los «No Svelte configuration» del
+  entorno.
+- **Caminos que el modo demo no recorre**, ahora con tests:
+  - `chatTurn` (`shared/client/src/index.spec.ts`): trozos, razonamiento, herramientas y acciones a
+    sus handlers; `done`; moderado; `error`; y un 429 que rechaza con su estado. Es el camino del
+    chat del **escritorio en Tauri** desde este tramo (antes `coreChat` en `api.ts`).
+  - `connectSocialFeed` (`desktop/src/lib/socialFeed.spec.ts`): visitantes y su escena, chat,
+    objetivos, XP y roster del clan, y que al pararlo deja de escuchar. `App.svelte` ya no escribe
+    en esos stores: si el feed fallara, el escritorio perdería lo social en vivo.
+- **CI en local**: los pasos del job de escritorio (minijuegos, escena, cliente, UI de Android,
+  escritorio, `cargo check --workspace --locked`, tests del núcleo) en verde.
+
+Sin verificar en todo el tramo (`claude/pantallas-sprites`): nada en el emulador ni en la app de
+Tauri del escritorio (todo en el modo demo del navegador); las secciones de Android con hasta siete
+pastillas a 360 px; el sonido de juegos en Android (`setUiSound` sin motor).

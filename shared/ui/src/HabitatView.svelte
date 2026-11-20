@@ -23,11 +23,11 @@
   import { Home, Pencil, Check, RotateCw, Trash2, Mountain, Maximize2 } from 'lucide-svelte';
   import { roomGuestOf, sceneLabel, stageLabel, visitScene, visitorsStore } from './social/visitors';
 
-  type HabitatCatalog = any;
-  type HabitatState = any;
+  type HabitatCatalog = { furniture: HabitatFurniture[]; rooms: any[] } & Record<string, any>;
+  type HabitatState = { rooms: HabitatRoom[] } & Record<string, any>;
   type HabitatBuffs = any;
   type HabitatFurniture = any;
-  type HabitatRoom = any;
+  type HabitatRoom = { id: string; name: string; unlocked: boolean; active: boolean; items: any[] } & Record<string, any>;
   type RoomPetDrag = any;
 
   /** Cómo habla esta pantalla con el servidor. */
@@ -88,7 +88,7 @@
         habitatApi.getHabitat(),
         habitatApi.getHabitatBuffs(),
       ]);
-      const rooms = state.rooms;
+      const rooms = state?.rooms ?? [];
       // Muebles que tiene (desbloquean habilidades como Música ambiente, spec 42)
       hooks.ownedFurniture?.([...new Set<string>(rooms.flatMap((r: any) => r.items.map((i: any) => i.furnitureId)))]);
       if (!rooms.some((r) => r.id === activeRoomId)) {

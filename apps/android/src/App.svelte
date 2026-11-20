@@ -190,7 +190,7 @@
 
     <div class="screen">
       {#if tab === 'pet'}
-        <Segmented variant="pills" label="Sección de Mascota" value={petSection} options={PET_SECTIONS} on:change={(e) => (petSection = e.detail)} />
+        <Segmented variant="pills" label="Sección de Mascota" value={petSection} options={PET_SECTIONS} on:change={(e) => (petSection = e.detail as typeof petSection)} />
       {/if}
       {#if tab === 'pet' && petSection === 'home'}
         <!-- La misma ficha que el escritorio. Aquí la mascota no sale de su hábitat: sin «A casa». -->
@@ -246,14 +246,14 @@
           on:go={() => (tab = 'shop')}
         />
       {:else if tab === 'progress'}
-        <Segmented variant="pills" label="Sección de Progreso" value={progressSection} options={PROGRESS_SECTIONS} on:change={(e) => (progressSection = e.detail)} />
+        <Segmented variant="pills" label="Sección de Progreso" value={progressSection} options={PROGRESS_SECTIONS} on:change={(e) => (progressSection = e.detail as typeof progressSection)} />
         {#if progressSection === 'missions'}
           <MissionsScreen />
         {:else}
           <SeasonScreen {coins} gems={Number($core.user?.gems ?? 0)} />
         {/if}
       {:else if tab === 'play'}
-        <Segmented variant="pills" label="Sección de Jugar" value={playSection} options={PLAY_SECTIONS} on:change={(e) => (playSection = e.detail)} />
+        <Segmented variant="pills" label="Sección de Jugar" value={playSection} options={PLAY_SECTIONS} on:change={(e) => (playSection = e.detail as typeof playSection)} />
         {#if playSection === 'games'}
           <MinigamesScreen {pet} />
         {:else if playSection === 'arena'}
@@ -270,7 +270,7 @@
           <AdventureScreen {pet} />
         {/if}
       {:else if tab === 'account'}
-        <Segmented variant="pills" label="Sección de Cuenta" value={accountSection} options={ACCOUNT_SECTIONS} on:change={(e) => (accountSection = e.detail)} />
+        <Segmented variant="pills" label="Sección de Cuenta" value={accountSection} options={ACCOUNT_SECTIONS} on:change={(e) => (accountSection = e.detail as typeof accountSection)} />
         {#if accountSection === 'profile'}
           <ProfileScreen />
         {:else if accountSection === 'friends'}
@@ -285,7 +285,7 @@
           <AccountView user={$core.user} on:logout={leave} />
         {/if}
       {:else}
-        <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail)} />
+        <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail as typeof shopSection)} />
         {#if shopSection === 'chests'}
           <ChestsScreen {coins} gems={Number($core.user?.gems ?? 0)} />
         {:else}

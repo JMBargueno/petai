@@ -278,7 +278,7 @@
           <ListRow
             icon="map"
             title={h.title}
-            sub="{new Date(h.startedAt).toLocaleDateString('es-ES')} · {h.answers.map((a) => a.label).join(' → ') || 'Sin terminar'}"
+            sub="{new Date(h.startedAt).toLocaleDateString('es-ES')} · {h.answers.map((a: any) => a.label).join(' → ') || 'Sin terminar'}"
           >
             <svelte:fragment slot="end">
               {#if o}<Badge size="sm" tone={o.tone} icon={o.icon}>{o.label}</Badge>{:else}<Badge size="sm">En curso</Badge>{/if}

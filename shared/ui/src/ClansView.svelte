@@ -441,18 +441,19 @@
   {:else if clan}
     <!-- Cabecera del Nexo: el hábitat vivo, con la información del clan encima -->
     {#snippet clanHero()}
+    {@const c = clan!}
     <div class="clan-hero">
       <div class="clan-hero__crest" aria-hidden="true"><Shield size={26} /></div>
       <div class="clan-hero__info">
         <div class="clan-hero__title">
-          <span class="clan-name">{clan.name}</span>
-          <span class="chip clan-tag">[{clan.tag}]</span>
+          <span class="clan-name">{c.name}</span>
+          <span class="chip clan-tag">[{c.tag}]</span>
         </div>
-        <p class="clan-desc">{clan.description || 'Sin descripción'}</p>
-        <span class="clan-leader">Forjador: {clan.leader?.displayName ?? 'Desconocido'}{clan.leader?.handle ? ` · @${clan.leader.handle}` : ''}</span>
+        <p class="clan-desc">{c.description || 'Sin descripción'}</p>
+        <span class="clan-leader">Forjador: {c.leader?.displayName ?? 'Desconocido'}{c.leader?.handle ? ` · @${c.leader.handle}` : ''}</span>
         <div class="clan-stats">
-          <span class="chip clan-stat"><Sparkles size={12} /> {(clan.xp ?? 0).toLocaleString()} XP</span>
-          <span class="chip clan-stat" title="Hebras"><Users size={12} /> {clan.memberCount}</span>
+          <span class="chip clan-stat"><Sparkles size={12} /> {(c.xp ?? 0).toLocaleString()} XP</span>
+          <span class="chip clan-stat" title="Hebras"><Users size={12} /> {c.memberCount}</span>
           <span class="chip clan-stat role-chip role-{myRole}" title="Tu rango">
             {#if ROLE_ICON[myRole]}<svelte:component this={ROLE_ICON[myRole]} size={12} />{/if}
             {CLAN_ROLE_LABEL[myRole]}
