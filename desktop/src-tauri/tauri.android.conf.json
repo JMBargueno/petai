@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "com.petai.app",
+  "build": {
+    "devUrl": "http://localhost:5183",
+    "frontendDist": "../../apps/android/dist",
+    "beforeDevCommand": "pnpm --filter @pockai/android-ui run dev",
+    "beforeBuildCommand": "pnpm --filter @pockai/android-ui run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Pockai"
+      }
+    ]
+  }
+}

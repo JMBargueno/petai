@@ -14,7 +14,6 @@ keyring-store = ["dep:keyring"]
 base64 = "0.22"
 eventsource-stream = "0.2"
 futures-util = "0.3"
-keyring = { version = "3", features = ["windows-native", "apple-native", "linux-native"], optional = true }
 log = "0.4"
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
 rust_socketio = { version = "0.6", features = ["async"] }
@@ -28,3 +27,12 @@ uuid = { version = "1", features = ["v4"] }
 [dev-dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 wiremock = "0.6"
+
+# Llavero del sistema: Credential Manager, Keychain (macOS e iOS) o Secret Service. Android no tiene
+# uno accesible desde Rust: allí la sesión va a un fichero privado de la app (ver secrets.rs).
+[target.'cfg(not(target_os = "android"))'.dependencies]
+keyring = { version = "3", features = ["windows-native", "apple-native", "linux-native"], optional = true }
+
+# El cliente de Socket.IO usa el TLS del sistema, que en Android no existe: se compila OpenSSL con él.
+[target.'cfg(target_os = "android")'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }

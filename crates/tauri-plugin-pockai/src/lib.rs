@@ -9,11 +9,12 @@
 //! Los tipos de las cargas se definen en `pockai_core::contract` y de ahí se generan los de la UI.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use pockai_core::{
-    Action, ActionError, ApiRequest, ApiResponse, AppState, Core, CoreConfig, CoreEvent, KeyringStore, LoadOptions, LoadOutcome,
-    MaintenanceEvent, Query, RealtimeStatus, SessionEvent, SessionState, Slice, SseEvent,
+    Action, ActionError, ApiRequest, ApiResponse, AppState, Core, CoreConfig, CoreEvent, LoadOptions, LoadOutcome,
+    MaintenanceEvent, Query, RealtimeStatus, SecretStore, SessionEvent, SessionState, Slice, SseEvent,
 };
 use serde_json::{Map, Value};
 use tauri::ipc::Channel;
@@ -186,6 +187,31 @@ fn forward<R: Runtime>(app: &AppHandle<R>, event: CoreEvent) {
     }
 }
 
+/// La configuración del núcleo según dónde corre la app.
+fn core_config(base_url: String, data_dir: Option<PathBuf>) -> CoreConfig {
+    if cfg!(target_os = "android") {
+        CoreConfig::mobile(base_url, "android", data_dir)
+    } else if cfg!(target_os = "ios") {
+        CoreConfig::mobile(base_url, "ios", data_dir)
+    } else {
+        CoreConfig::desktop(base_url, data_dir)
+    }
+}
+
+/// Dónde se guarda la sesión: el llavero del sistema, salvo en Android (fichero privado de la app).
+#[cfg(not(target_os = "android"))]
+fn secret_store(cfg: &CoreConfig) -> Box<dyn SecretStore> {
+    Box::new(pockai_core::KeyringStore::new(&cfg.base_url))
+}
+
+#[cfg(target_os = "android")]
+fn secret_store(cfg: &CoreConfig) -> Box<dyn SecretStore> {
+    match &cfg.data_dir {
+        Some(dir) => Box::new(pockai_core::FileStore::new(dir.clone())),
+        None => Box::new(pockai_core::MemoryStore::default()),
+    }
+}
+
 pub fn init<R: Runtime>(config: PockaiConfig) -> TauriPlugin<R> {
     Builder::new("pockai")
         .invoke_handler(tauri::generate_handler![
@@ -211,8 +237,8 @@ pub fn init<R: Runtime>(config: PockaiConfig) -> TauriPlugin<R> {
         ])
         .setup(move |app, _api| {
             let data_dir = app.path().app_config_dir().ok();
-            let cfg = CoreConfig::desktop(config.base_url, data_dir);
-            let secrets = Box::new(KeyringStore::new(&cfg.base_url));
+            let cfg = core_config(config.base_url, data_dir);
+            let secrets = secret_store(&cfg);
             let core = Core::new(cfg, secrets);
 
             // Todo lo que anuncia el núcleo llega a la UI como evento de Tauri.

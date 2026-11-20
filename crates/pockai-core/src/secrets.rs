@@ -1,6 +1,7 @@
 //! Dónde se guarda la sesión. En el escritorio es el llavero del sistema; en móvil lo pondrá un
 //! plugin nativo (Keychain / Keystore) que implemente [`SecretStore`].
 
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
@@ -44,14 +45,14 @@ impl SecretStore for MemoryStore {
 /// Llavero del sistema: Credential Manager (Windows), Keychain (macOS) o Secret Service (Linux).
 /// La entrada lleva el servidor en el nombre, para que una compilación de desarrollo y la de
 /// producción no compartan sesión.
-#[cfg(feature = "keyring-store")]
+#[cfg(all(feature = "keyring-store", not(target_os = "android")))]
 pub struct KeyringStore {
     account: String,
     /// Copia en memoria por si el llavero falla al escribir: la sesión sigue viva en este proceso.
     fallback: MemoryStore,
 }
 
-#[cfg(feature = "keyring-store")]
+#[cfg(all(feature = "keyring-store", not(target_os = "android")))]
 impl KeyringStore {
     const SERVICE: &'static str = "Pockai";
 
@@ -67,7 +68,7 @@ impl KeyringStore {
     }
 }
 
-#[cfg(feature = "keyring-store")]
+#[cfg(all(feature = "keyring-store", not(target_os = "android")))]
 impl SecretStore for KeyringStore {
     fn load(&self) -> Option<Tokens> {
         if let Some(tokens) = self.fallback.load() {
@@ -91,5 +92,72 @@ impl SecretStore for KeyringStore {
         if let Some(entry) = self.entry() {
             let _ = entry.delete_credential();
         }
+    }
+}
+
+/// La sesión en un fichero de la carpeta privada de la app. Es lo que se usa en Android, donde el
+/// sistema ya aísla esa carpeta de las demás apps; cifrarla con el Keystore queda para el plugin
+/// nativo de almacén seguro.
+pub struct FileStore {
+    path: PathBuf,
+    /// Copia en memoria por si el disco falla: la sesión sigue viva en este proceso.
+    fallback: MemoryStore,
+}
+
+impl FileStore {
+    const FILE: &'static str = "session.json";
+
+    pub fn new(data_dir: PathBuf) -> Self {
+        Self { path: data_dir.join(Self::FILE), fallback: MemoryStore::default() }
+    }
+}
+
+impl SecretStore for FileStore {
+    fn load(&self) -> Option<Tokens> {
+        if let Some(tokens) = self.fallback.load() {
+            return Some(tokens);
+        }
+        serde_json::from_str(&std::fs::read_to_string(&self.path).ok()?).ok()
+    }
+
+    fn save(&self, tokens: &Tokens) {
+        self.fallback.save(tokens);
+        let Ok(raw) = serde_json::to_vec(tokens) else { return };
+        if let Some(dir) = self.path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        // Escritura atómica: un corte a mitad no deja el fichero a medias.
+        let tmp = self.path.with_extension("json.tmp");
+        if std::fs::write(&tmp, raw).is_ok() {
+            let _ = std::fs::rename(&tmp, &self.path);
+        } else {
+            log::warn!("[núcleo] no se pudo guardar la sesión en disco");
+        }
+    }
+
+    fn clear(&self) {
+        self.fallback.clear();
+        let _ = std::fs::remove_file(&self.path);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn la_sesion_en_fichero_sobrevive_a_un_reinicio_y_se_borra_al_salir() {
+        let dir = std::env::temp_dir().join(format!("pockai-filestore-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let tokens = Tokens { access: "a".into(), refresh: "r".into() };
+
+        FileStore::new(dir.clone()).save(&tokens);
+        // Otra instancia (otro arranque) la encuentra.
+        let restarted = FileStore::new(dir.clone());
+        assert_eq!(restarted.load(), Some(tokens));
+
+        restarted.clear();
+        assert_eq!(FileStore::new(dir.clone()).load(), None);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

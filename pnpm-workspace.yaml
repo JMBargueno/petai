@@ -1,6 +1,7 @@
 packages:
   - 'backend'
   - 'desktop'
+  - 'apps/*'
   - 'edge'
   - 'web'
   - 'shared/*'

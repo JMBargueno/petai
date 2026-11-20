@@ -23,6 +23,12 @@ impl CoreConfig {
             data_dir,
         }
     }
+
+    /// Configuración para la app móvil. `client` es `android` o `ios`: el backend los distingue en
+    /// el mantenimiento y agrupa a los dos como `mobile` para la presencia y la iniciativa.
+    pub fn mobile(base_url: impl Into<String>, client: &str, data_dir: Option<PathBuf>) -> Self {
+        Self { base_url: normalize_base_url(&base_url.into()), client: client.into(), platform: "mobile".into(), data_dir }
+    }
 }
 
 /// Quita espacios y barras finales: las rutas siempre empiezan por `/`.

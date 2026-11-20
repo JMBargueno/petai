@@ -225,6 +225,10 @@ jobs:
           pnpm --filter @pockai/client run typecheck
           pnpm --filter @pockai/client run test
 
+      # UI de Android (Tauri): solo presentación sobre el núcleo.
+      - name: Build Android UI
+        run: pnpm --filter @pockai/android-ui run build
+
       - name: Build frontend (Svelte + Vite)
         run: pnpm --filter petai-desktop run build
 
@@ -257,6 +261,14 @@ jobs:
       # Canal en tiempo real contra un servidor Socket.IO de verdad (el paquete del backend).
       - name: Test core realtime
         run: cargo test -p pockai-core --locked --test tiempo_real -- --ignored
+
+      # El núcleo también tiene que compilar para Android: allí cambian el TLS del canal en tiempo
+      # real (OpenSSL compilado con él) y dónde se guarda la sesión (sin llavero del sistema).
+      - name: Check core (Android)
+        run: |
+          rustup target add aarch64-linux-android
+          cargo install cargo-ndk --locked
+          cargo ndk -t arm64-v8a check -p pockai-core --locked
 
       - name: Core contract types are up to date
         run: |

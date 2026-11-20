@@ -1,0 +1,22 @@
+{
+  "name": "@pockai/android-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UI de Pockai para Android (Tauri). Solo presentación: lo que muestra sale del estado del núcleo y lo que hace se lo pide al núcleo con acciones tipadas.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pockai/client": "workspace:*",
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "svelte": "^5.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.0"
+  }
+}

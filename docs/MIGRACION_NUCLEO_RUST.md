@@ -15,7 +15,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 | 1 | Toda la red del escritorio pasa por Rust; ningún token en el webview | 24 / 24 | ✅ |
 | 2 | El estado global vive en Rust; `App.svelte` solo se suscribe | 5 / 6 | 🟡 |
 | 3 | Dominios restantes y fin de la pasarela `api_request` | 4 / 4 (2 descartados) | ✅ |
-| 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 0 / 10 | ⬜ |
+| 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 1 / 10 | 🟡 |
 | 5 | Live Activity / Dynamic Island y widgets | 0 / 7 | ⬜ |
 
 ## Fase 1 — Núcleo + escritorio
@@ -73,15 +73,15 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 3.6 Retirada la pasarela `api_request` y `coreFetch`: el inicio de sesión, el alta, las lecturas de estado, el canje y el mantenimiento van por acciones y consultas. `api.ts` y el transporte web se conservan para el modo demo y los tests
 
 ## Fase 4 — Móvil
-- ⬜ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; código de escritorio bajo `cfg(desktop)`
-- ⬜ 4.2 `tauri android init` / `tauri ios init`; versionar `gen/android` y `gen/apple`
-- ⬜ 4.3 `tauri.android.conf.json` / `tauri.ios.conf.json` y capacidades por plataforma
+- ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
+- ⬜ 4.2 `tauri android init` / `tauri ios init`; versionar `gen/android` y `gen/apple`. Android necesita el NDK y los targets de Rust (no están en el equipo de desarrollo); iOS, un Mac
+- 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
 - ⬜ 4.4 `shared/ui` (`@pockai/ui`): tokens y componentes comunes
-- ⬜ 4.5 `apps/android`: UI Svelte
+- 🟡 4.5 `apps/android`: primera UI Svelte (entrar, mascota, cuidar, alimentar, eclosionar, salir). Probada sobre el núcleo alojándola en el shell de escritorio; no en un dispositivo
 - ⬜ 4.6 `apps/ios`: UI Svelte
-- ⬜ 4.7 `tauri-plugin-pockai-secure`: Keychain / Keystore
+- 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
-- ⬜ 4.9 CI de Android e iOS
+- 🟡 4.9 CI: el núcleo se comprueba para Android (`cargo ndk check`) y se compila la UI de Android. Falta compilar la app (APK) y todo lo de iOS
 - ⬜ 4.10 Borrar `mobile/android`, su job de CI y las referencias en docs, specs y skills
 
 ## Fase 5 — Superficies nativas
@@ -207,3 +207,16 @@ de recuperación de contraseña; comprobación de mantenimiento; y lecturas de u
 
 No se ha visto en la app: confirmar el cambio de contraseña con el código ni verificar el correo
 (hacen falta los códigos que el backend manda por correo).
+
+## Verificado: fase 4, primer tramo (2026-11-20)
+
+- El escritorio compila y arranca con el shell convertido en librería.
+- La UI de Android, alojada en el shell de escritorio contra un backend local: una contraseña
+  incorrecta muestra su error; entrar; eclosionar; dar de comer (5 → 4); dormir y despertar; salir.
+  Todo el estado que pinta sale del núcleo.
+- Esa prueba destapó un fallo: el canal en tiempo real solo lo arrancaba la UI de escritorio, así que
+  en otra UI no llegaban los cambios que el servidor hace por su cuenta (el saldo se quedaba atrás).
+  Ahora lo arranca el núcleo al cargar el estado.
+
+No verificado: nada de esto ha corrido en un dispositivo o emulador Android. La compilación del núcleo
+para Android (OpenSSL incluido) solo la comprueba el CI.
