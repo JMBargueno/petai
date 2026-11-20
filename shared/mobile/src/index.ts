@@ -12,11 +12,11 @@ export { startMobileApp } from './bootstrap';
 export {
   DEFAULT_SECTIONS,
   DEFAULT_TABS,
-  firstSection,
   mobileConfig,
   type MobileConfig,
   type MobilePlatform,
   type MobileSection,
+  type MobileSections,
   type MobileTab,
   type TabId,
 } from './config';

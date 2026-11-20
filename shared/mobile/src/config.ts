@@ -6,6 +6,9 @@
  * atributo `data-platform` (Material 3 en `platform/android.css`, Cupertino en `platform/ios.css`),
  * así que aquí no hay nada de estilo.
  *
+ * Destinos y secciones vienen de `@pockai/ui` (`nav.ts`), igual que en el escritorio: aquí solo se
+ * ponen las etiquetas e iconos del móvil y qué va en la barra.
+ *
  * Regla: **una opción solo existe si hoy tiene dos valores distintos.** Lo que todavía no existe en
  * ninguna de las dos apps (pagos con Play Billing o StoreKit, inicio de sesión social, push) no se
  * declara hasta que haya backend y haya que distinguirlas; cuando llegue, entra aquí y no en una
@@ -13,22 +16,31 @@
  */
 import type { Bus } from '@pockai/audio';
 import type { Platform } from '@pockai/ui';
+import type { MobileBarDest, NavDest, NavSub } from '@pockai/ui';
 
 export type MobilePlatform = Extract<Platform, 'android' | 'ios'>;
 
-/** Pestaña de la barra inferior. `account` no está en la barra: se abre por el nombre de la cabecera. */
-export type TabId = 'pet' | 'backpack' | 'play' | 'shop' | 'progress' | 'account';
+/** Destino de la barra inferior. Tienda y Ajustes no están aquí: van en la cabecera. */
+export type TabId = MobileBarDest;
+
 export interface MobileTab {
   id: TabId;
   label: string;
   icon: string;
 }
-/** Sección dentro de una pestaña (el `Segmented` de arriba). */
-export interface MobileSection {
-  value: string;
+
+/** Sección dentro de un destino (el `Segmented` de arriba). `value` es una clave real de `nav.ts`. */
+export interface MobileSection<S extends string = string> {
+  value: S;
   label: string;
   icon: string;
 }
+
+/**
+ * Las secciones de cada destino. Tipado contra `NavSub`: una clave que no exista en `nav.ts` no
+ * compila. Un destino sin secciones (Chat, Ajustes) lleva `[]`.
+ */
+export type MobileSections = { [D in NavDest]: MobileSection<NavSub<D>>[] };
 
 export interface MobileConfig {
   /** La plataforma de esta app: fija `data-platform` y los ajustes de sonido por defecto. */
@@ -37,31 +49,32 @@ export interface MobileConfig {
   noCoreText: string;
   /** La barra de pestañas y sus iconos. */
   tabs: MobileTab[];
-  /** Las secciones de cada pestaña. Una sección que no esté aquí no se pinta ni se puede alcanzar. */
-  sections: Record<Exclude<TabId, 'backpack'>, MobileSection[]>;
+  /** Las secciones de cada destino. Una sección que no esté aquí no se pinta ni se puede alcanzar. */
+  sections: MobileSections;
   /** Qué tipos de sonido se ofrecen en Ajustes y con qué muestra. */
   audio: { buses: Bus[]; previews: Partial<Record<Bus, string>> };
   /** Si se pide el permiso de avisos al entrar (una vez). */
   askNotifications: boolean;
 }
 
+/** La barra inferior, en orden. Chat va en el centro. */
 export const DEFAULT_TABS: MobileTab[] = [
   { id: 'pet', label: 'Mascota', icon: 'ui:pet' },
-  { id: 'backpack', label: 'Mochila', icon: 'ui:backpack' },
   { id: 'play', label: 'Jugar', icon: 'ui:play' },
-  { id: 'shop', label: 'Tienda', icon: 'ui:shop' },
+  { id: 'chat', label: 'Chat', icon: 'ui:chat' },
+  { id: 'social', label: 'Social', icon: 'ui:social' },
   { id: 'progress', label: 'Progreso', icon: 'ui:progress' },
 ];
 
-export const DEFAULT_SECTIONS: MobileConfig['sections'] = {
+export const DEFAULT_SECTIONS: MobileSections = {
   pet: [
     { value: 'home', label: 'Inicio', icon: 'ui:home' },
-    { value: 'chat', label: 'Charla', icon: 'ui:chat' },
-    { value: 'bond', label: 'Vínculo', icon: 'ui:bonding' },
-    { value: 'eggs', label: 'Huevos', icon: 'ui:hatch' },
-    { value: 'wardrobe', label: 'Armario', icon: 'ui:wardrobe' },
+    { value: 'backpack', label: 'Mochila', icon: 'ui:backpack' },
+    { value: 'hatch', label: 'Huevos', icon: 'ui:hatch' },
+    { value: 'bonding', label: 'Vínculo', icon: 'ui:bonding' },
     { value: 'mind', label: 'Mente', icon: 'ui:mind' },
     { value: 'habitat', label: 'Hábitat', icon: 'ui:habitat' },
+    { value: 'wardrobe', label: 'Armario', icon: 'ui:wardrobe' },
   ],
   play: [
     { value: 'games', label: 'Minijuegos', icon: 'ui:games' },
@@ -72,23 +85,27 @@ export const DEFAULT_SECTIONS: MobileConfig['sections'] = {
     { value: 'cooking', label: 'Cocina', icon: 'ui:cooking' },
     { value: 'adventure', label: 'Aventura', icon: 'ui:adventure' },
   ],
+  chat: [],
+  social: [
+    { value: 'profile', label: 'Perfil', icon: 'ui:profile' },
+    { value: 'friends', label: 'Amigos', icon: 'ui:friends' },
+    { value: 'clans', label: 'Clanes', icon: 'ui:clans' },
+    { value: 'visits', label: 'Visitas', icon: 'ui:visits' },
+  ],
+  progress: [
+    { value: 'missions', label: 'Misiones', icon: 'ui:missions' },
+    { value: 'seasons', label: 'Temporada', icon: 'ui:seasons' },
+  ],
+  // La tienda y sus cofres: se abren desde la cabecera, con su propio `Segmented`.
   shop: [
     { value: 'store', label: 'Tienda', icon: 'ui:store' },
     { value: 'chests', label: 'Cofres', icon: 'ui:chests' },
   ],
-  progress: [
-    { value: 'missions', label: 'Misiones', icon: 'ui:missions' },
-    { value: 'season', label: 'Temporada', icon: 'ui:seasons' },
-  ],
-  account: [
-    { value: 'account', label: 'Cuenta', icon: 'ui:account' },
-    { value: 'profile', label: 'Perfil', icon: 'ui:profile' },
-    { value: 'friends', label: 'Amigos', icon: 'ui:friends' },
-    { value: 'visits', label: 'Visitas', icon: 'ui:visits' },
-    { value: 'clans', label: 'Clanes', icon: 'ui:clans' },
-    { value: 'settings', label: 'Ajustes', icon: 'ui:settings' },
-  ],
+  // Ajustes es una sola pantalla con sus tarjetas (cuenta, apariencia, sonido): sin `Segmented`.
+  settings: [],
 };
+
+
 
 /**
  * La config de una app móvil: lo de siempre salvo lo que cambie. En el móvil solo suenan efectos e
@@ -104,9 +121,4 @@ export function mobileConfig(platform: MobilePlatform, patch: Partial<MobileConf
     askNotifications: true,
     ...patch,
   };
-}
-
-/** La primera sección de una pestaña: con la que se abre. */
-export function firstSection(config: MobileConfig, tab: Exclude<TabId, 'backpack'>): string {
-  return config.sections[tab][0]?.value ?? '';
 }

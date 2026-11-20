@@ -35,7 +35,7 @@ header {
   gap: var(--space-3);
 }
 
-/* El nombre del jugador abre Cuenta: es la sexta pestaña, que no cabe en la barra. */
+/* El nombre del jugador abre su perfil (Social › Perfil). Tienda y Ajustes van a la derecha. */
 header .who {
   flex: 1;
   min-width: 0;
@@ -67,6 +67,43 @@ header strong {
 .wallet {
   display: flex;
   gap: var(--space-2);
+}
+
+/* Saldo, tienda y ajustes: a la derecha de la cabecera, con el mismo toque mínimo que la barra. */
+header .head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+header .wallet-btn {
+  display: flex;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+header .head-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+header .head-icon.active {
+  background: var(--surface-2);
 }
 
 h1 {
