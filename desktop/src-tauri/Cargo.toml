@@ -20,6 +20,8 @@ tauri-plugin-process = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
+# Núcleo cliente compartido (red, sesión, tiempo real) y su puente con la UI.
+tauri-plugin-pockai = { path = "../../crates/tauri-plugin-pockai" }
 tokio = { version = "1", features = ["process", "io-util", "time", "sync", "macros", "rt"] }
 
 # Ubicación nativa del equipo (src/location.rs): se queda en el equipo, solo para el clima.

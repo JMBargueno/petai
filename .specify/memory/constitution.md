@@ -73,7 +73,9 @@ Un solo contrato y un solo juego de datos alimentan a todas las plataformas (esc
 
 **Reglas obligatorias:**
 - El contrato único es `openapi.json`, generado por `@nestjs/swagger` en el backend. Se regenera con `export-openapi.ts` (y en arranque no-producción, ver `main.ts`) y se publica en `shared/openapi/`.
-- Los clientes se **generan** a partir de ese contrato: `openapi-typescript` en escritorio, `openapi-generator` (Kotlin/Retrofit) en Android, `swift-openapi-generator` en iOS. No se reescribe a mano el tipo de cada respuesta.
+- Hay **un solo cliente de la API**: el núcleo en Rust (`crates/pockai-core`), compartido por escritorio, Android e iOS dentro de una única app Tauri 2 (spec 43). Las UIs no hablan con el backend ni guardan tokens: piden las cosas al núcleo y escuchan sus eventos.
+- Los tipos del contrato de la API salen de `openapi.json` (`openapi-typescript`). Donde el contrato no tipa la respuesta, el tipo se escribe **una vez**, en el núcleo, y de ahí se genera para la UI (`ts-rs`); no se repite a mano en cada plataforma.
+- El contrato entre el núcleo y la UI (commands, events) se define en `crates/pockai-core/src/contract.rs` y se genera a TypeScript en `shared/client/src/bindings/`.
 - Los datos de juego (especies, patrones, comida, habilidades, balance, misiones) viven en `shared/game-data/*.json`: el backend los carga a la BD con el seed y los clientes los usan para arte y textos.
 - El renderizado de una mascota es determinista a partir de `visualSeed` + `palette` (JSON en la BD), de modo que todos los clientes dibujan el mismo sprite/patrón.
 
@@ -86,7 +88,8 @@ El escritorio consume tipos generados (`openapi-fetch`) en vez de tipos inventad
 **No cumple:**
 ```ts
 // ❌ endpoint nuevo cuyo tipo se define a mano en cada cliente, sin pasar por @nestjs/swagger
-// ❌ mover una especie a un array duro en el bundle de Android en vez de shared/game-data/species.json
+// ❌ un `fetch` o un socket contra el backend desde el webview, o un token en `localStorage`
+// ❌ mover una especie a un array duro en el bundle de una app en vez de shared/game-data/species.json
 // ❌ cambiar el orden de los JSON de combate sin actualizar shared/openapi y la `version` del registro
 ```
 
@@ -255,8 +258,9 @@ Se entrega por fases, empezando por el backend + la mascota de escritorio (prime
 - **Persistencia:** PostgreSQL vía Prisma ORM; migraciones en `backend/prisma/migrations`. Redis (ioredis) para clasificación/colas.
 - **Seguridad:** `argon2` (contraseñas), `passport`/`passport-jwt` + `@nestjs/jwt`, `helmet`, validación de env con `zod`, AES-GCM para keys de IA.
 - **Contrato:** `@nestjs/swagger` → `shared/openapi/openapi.json` (fuente única para generar clientes).
-- **Escritorio:** Tauri 2 (Rust `edition 2021`, plugins shell/http/notification, `tray-icon`) + Svelte 5 + Vite 6 + TypeScript; `openapi-fetch` + `socket.io-client`.
-- **Móviles (fases posteriores):** Android (Kotlin + Jetpack Compose, Material 3 Expressive, API 37 / min 26) e iOS (Swift + SwiftUI, Liquid Glass, SDK 27).
+- **Núcleo cliente:** Rust (`crates/pockai-core`: `reqwest`, `rust_socketio`, llavero del sistema) y su puente con la UI (`crates/tauri-plugin-pockai`). Workspace de Cargo en la raíz.
+- **Escritorio:** Tauri 2 (Rust `edition 2021`, plugins shell/http/notification, `tray-icon`) + Svelte 5 + Vite 6 + TypeScript. La UI usa `@pockai/client` para hablar con el núcleo; `openapi-fetch` da los tipos de las llamadas.
+- **Móviles (fases posteriores):** la misma app Tauri 2 con una UI Svelte por plataforma (`apps/android`, `apps/ios`). El código nativo se limita a plugins de Tauri en Kotlin y Swift para lo que el webview no alcanza: almacén seguro, trabajo en segundo plano, widgets y Live Activities.
 - **Datos de juego:** `shared/game-data/*.json` (`$schema` draft-07) — `balance.json`, `species.json`, `patterns.json`, `foods.json`, `skills.json`, `missions.json`.
 - **Monorepo:** pnpm workspaces; `docker-compose.yml` con Postgres + Redis (+ mock de LLM para tests); CI en `.github/workflows`.
 
@@ -277,4 +281,8 @@ Se entrega por fases, empezando por el backend + la mascota de escritorio (prime
 - **Amen­dments:** cualquier enmienda a esta constitución requiere (1) una modificación versionada de este archivo, (2) justificación y plan de migración cuando afecte a código existente, y (3) actualización de las secciones afectadas para mantener coherencia con el código real.
 - Las revisiones de código verifican, como mínimo, cumplimiento de: autoritatividad del backend (I), determinismo del combate (II), contrato único (III) y las reglas de seguridad (VIII).
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-13
+**Version**: 1.1.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-19
+
+### Enmiendas
+
+- **1.1.0 (2026-11-19):** el principio III y el stack dejan de exigir clientes nativos separados (Compose y SwiftUI, cada uno generado desde OpenAPI) y pasan a un único núcleo cliente en Rust dentro de una app Tauri 2 con una UI por plataforma. Justificación: la lógica de cliente (sesión, renovación de tokens, tiempo real, estado) se estaba escribiendo tres veces y el refresh token, que rota, no tolera implementaciones divergentes. Plan de migración: `docs/specs/spec-43-nucleo-rust-tauri.md` y `docs/MIGRACION_NUCLEO_RUST.md`. La app Android en Kotlin se mantiene como referencia hasta que el target Android de Tauri la sustituya (fase 4).

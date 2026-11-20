@@ -1,0 +1,23 @@
+{
+  "name": "@pockai/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lado de la UI del núcleo cliente de Pockai (Rust): tipos del contrato generados desde `pockai-core` y funciones para hablar con él por commands, events y channels de Tauri. Lo usan las UIs de escritorio, iOS y Android.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.0"
+  }
+}

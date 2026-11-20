@@ -1,7 +1,30 @@
 import createClient from 'openapi-fetch';
 import type { InitiativeReply, InitiativeSettings, TalkLevel } from './initiative';
 import type { paths } from '@shared/openapi/api-types';
-import { CLIENT_HEADERS, inspectMaintenance, setMaintenanceBaseUrl } from './maintenance';
+import {
+  coreStream,
+  hasCore,
+  importLegacySession,
+  logout as coreLogout,
+  onMaintenance,
+  onSession,
+  perform,
+  query,
+  sessionState,
+  type Action,
+  type ActionError,
+  type Query,
+} from '@pockai/client';
+import { CLIENT_HEADERS, enterMaintenance, inspectMaintenance, setMaintenanceBaseUrl } from './maintenance';
+
+/**
+ * Dentro de la app, la red y la sesión las lleva el núcleo en Rust (`crates/pockai-core`): este
+ * módulo solo describe las llamadas y el webview no ve ningún token. En el navegador (modo demo) y
+ * en los tests no hay núcleo y se usa el transporte web de siempre.
+ */
+const CORE = hasCore();
+/** Con núcleo, lo que la UI tiene en lugar del token: solo indica que hay sesión. */
+const CORE_SESSION = 'core';
 
 /**
  * URL del backend. En el servidor de desarrollo de Vite se usa el proxy (misma origin); en una
@@ -25,6 +48,9 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   for (const [name, value] of Object.entries(CLIENT_HEADERS)) {
     if (!req.headers.has(name)) req.headers.set(name, value);
   }
+  // Dentro de la app la red es del núcleo: todo va por acciones y consultas (`coreAction`,
+  // `coreQuery`). Si algo llega hasta aquí es que le falta su acción.
+  if (CORE) throw new TypeError(`Llamada sin acción ni consulta en el núcleo: ${req.method} ${new URL(req.url).pathname}`);
   const res = await fetch(req);
   await inspectMaintenance(res);
   return res;
@@ -33,17 +59,18 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
 const ACCESS_KEY = 'petai_access_token';
 const REFRESH_KEY = 'petai_refresh_token';
 
-let currentToken: string | null = typeof localStorage !== 'undefined' ? localStorage.getItem(ACCESS_KEY) : null;
-let currentRefreshToken: string | null = typeof localStorage !== 'undefined' ? localStorage.getItem(REFRESH_KEY) : null;
+const webStorage = !CORE && typeof localStorage !== 'undefined';
+let currentToken: string | null = webStorage ? localStorage.getItem(ACCESS_KEY) : null;
+let currentRefreshToken: string | null = webStorage ? localStorage.getItem(REFRESH_KEY) : null;
 
 function store(key: string, value: string | null) {
-  if (typeof localStorage === 'undefined') return;
+  if (!webStorage) return;
   if (value) localStorage.setItem(key, value);
   else localStorage.removeItem(key);
 }
 
 export function setAccessToken(token: string | null) {
-  currentToken = token;
+  currentToken = token && CORE ? CORE_SESSION : token;
   store(ACCESS_KEY, token);
 }
 
@@ -107,6 +134,46 @@ function expireSession() {
   if (hadSession) sessionExpiredListeners.forEach((cb) => cb());
 }
 
+let coreSession: Promise<void> | null = null;
+
+/**
+ * Se resuelve cuando ya se sabe si hay sesión. Con núcleo hay que preguntárselo (y, la primera vez
+ * tras actualizar, entregarle la sesión que guardaba el webview); sin él se sabe desde el arranque.
+ */
+export function sessionReady(): Promise<void> {
+  if (!CORE) return Promise.resolve();
+  return (coreSession ??= initCoreSession());
+}
+
+async function initCoreSession() {
+  await onSession((kind) => {
+    if (kind === 'active') currentToken = CORE_SESSION;
+    else if (kind === 'loggedOut') currentToken = null;
+    else if (kind === 'expired') expireSession();
+    else if (kind === 'unverified') emailUnverifiedListeners.forEach((cb) => cb());
+    else if (kind === 'handleRequired') handleRequiredListeners.forEach((cb) => cb());
+  });
+  // Mantenimiento detectado por el núcleo fuera de una llamada de la UI (tiempo real, renovación).
+  await onMaintenance(enterMaintenance);
+  await importLegacySessionOnce();
+  currentToken = (await sessionState()).active ? CORE_SESSION : null;
+}
+
+/** Versiones anteriores guardaban los tokens en el webview: pasan al núcleo y se borran de aquí. */
+async function importLegacySessionOnce() {
+  if (typeof localStorage === 'undefined') return;
+  const access = localStorage.getItem(ACCESS_KEY);
+  const refresh = localStorage.getItem(REFRESH_KEY);
+  if (!access && !refresh) return;
+  try {
+    if (access && refresh) await importLegacySession(access, refresh, localStorage.getItem('petai.deviceId'));
+    localStorage.removeItem(ACCESS_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+  } catch {
+    // El núcleo no respondió: se conservan para intentarlo en el próximo arranque.
+  }
+}
+
 let refreshing: Promise<string | null> | null = null;
 
 /**
@@ -120,6 +187,8 @@ let refreshing: Promise<string | null> | null = null;
  * refresh token; un fallo de red o un 429/5xx la conserva para reintentar más tarde.
  */
 export function renewAccessToken(stale?: string | null): Promise<string | null> {
+  // Con núcleo la renovación es suya: aquí no hay nada que renovar.
+  if (CORE) return Promise.resolve(currentToken);
   if (stale !== undefined && currentToken && currentToken !== stale) return Promise.resolve(currentToken);
   refreshing ??= doRefresh().finally(() => {
     refreshing = null;
@@ -164,7 +233,7 @@ async function doRefresh(): Promise<string | null> {
  * repite una vez. Las rutas /auth/* (login incorrecto, refresh caducado) no se reintentan, salvo
  * /auth/verify-email/* (con sesión; el usuario puede volver a la pantalla de verificación horas después).
  */
-async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const req = new Request(input, init);
   const sent = req.headers.get('Authorization')?.replace(/^Bearer /, '') ?? null;
   const path = new URL(req.url).pathname;
@@ -238,6 +307,73 @@ export function isTerminalError(err: unknown): boolean {
   return err.status >= 500 || err.status === 401;
 }
 
+/**
+ * Chat en streaming a través del núcleo: los eventos llegan por un canal y `apply` devuelve el
+ * resultado cuando procesa el último (`done` o `moderated`).
+ */
+function coreChat<T>(url: string, init: RequestInit, apply: (event: string, data: any) => T | undefined): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+    coreStream(url, init, (ev) => {
+      if (settled) return;
+      try {
+        const result = apply(ev.event, JSON.parse(ev.data));
+        if (result !== undefined) settle(() => resolve(result));
+      } catch (e) {
+        settle(() => reject(e));
+      }
+    }).then(
+      async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          settle(() => reject(new Error(data?.message || 'Error al enviar el mensaje')));
+          return;
+        }
+        // Los últimos eventos del canal pueden llegar justo después de la respuesta del comando.
+        setTimeout(() => settle(() => reject(new Error('La respuesta terminó sin completarse'))), 500);
+      },
+      (e) => settle(() => reject(e)),
+    );
+  });
+}
+
+/**
+ * Acción del jugador a través del núcleo (`crates/pockai-core/src/actions.rs`): la UI dice qué quiere
+ * hacer y el núcleo construye la petición y deja el estado al día. Los fallos llegan como `ApiError`,
+ * igual que con el transporte web.
+ */
+async function coreAction(action: Action, fallback: string): Promise<any> {
+  try {
+    return await perform<any>(action);
+  } catch (e) {
+    throw coreFailure(e, fallback);
+  }
+}
+
+/** Los fallos del núcleo llegan como `ApiError`, igual que con el transporte web. */
+function coreFailure(e: unknown, fallback: string): ApiError {
+  const failure = (e ?? {}) as Partial<ActionError>;
+  if (failure.status == null && !failure.message) return new ApiError('Sin conexión con el servidor. Inténtalo de nuevo en un momento.');
+  return new ApiError(failure.message || fallback, failure.status ?? undefined);
+}
+
+/**
+ * Consulta a través del núcleo (`crates/pockai-core/src/queries.rs`): la UI dice qué quiere saber y
+ * el núcleo construye la petición.
+ */
+async function coreQuery(q: Query, fallback: string): Promise<any> {
+  try {
+    return await query<any>(q);
+  } catch (e) {
+    throw coreFailure(e, fallback);
+  }
+}
+
 /** POST a una ruta pública de /auth/ (sin sesión). Lanza ApiError con el mensaje del servidor. */
 async function authPost(path: string, body: unknown, fallback: string): Promise<any> {
   let res: Response;
@@ -262,6 +398,14 @@ export const api = {
   client,
 
   async register(email: string, password: string, displayName?: string, inviteCode?: string, handle?: string) {
+    if (CORE) {
+      const data = await coreAction(
+        { type: 'register', email, password, displayName: displayName ?? null, inviteCode: inviteCode ?? null, handle: handle ?? null },
+        'Error en registro',
+      );
+      if (data?.accessToken) setSession(data);
+      return data as never;
+    }
     const code = inviteCode?.trim();
     const res = await client.POST('/v1/auth/register', {
       body: { email, password, displayName, ...(code ? { inviteCode: code } : {}), ...(handle ? { handle } : {}) },
@@ -275,6 +419,12 @@ export const api = {
 
   /** ¿El registro exige código de invitación? Ante un fallo de red se asume que no (el servidor decide igualmente). */
   async getRegistrationConfig(): Promise<{ inviteRequired: boolean }> {
+    if (CORE) {
+      return coreQuery({ type: 'registrationConfig' }, '').then(
+        (data) => ({ inviteRequired: !!data?.inviteRequired }),
+        () => ({ inviteRequired: false }),
+      );
+    }
     try {
       const res = await client.GET('/v1/auth/registration-config');
       return { inviteRequired: !!res.data?.inviteRequired };
@@ -284,6 +434,11 @@ export const api = {
   },
 
   async login(email: string, password: string) {
+    if (CORE) {
+      const data = await coreAction({ type: 'login', email, password }, 'Credenciales inválidas');
+      if (data?.accessToken) setSession(data);
+      return data as never;
+    }
     const res = await client.POST('/v1/auth/login', {
       body: { email, password },
     });
@@ -299,6 +454,10 @@ export const api = {
    * la cuenta (no revela qué correos están registrados).
    */
   async requestPasswordReset(email: string) {
+    if (CORE) {
+      await coreAction({ type: 'requestPasswordReset', email }, 'No se pudo enviar el código');
+      return;
+    }
     await authPost('/v1/auth/reset/request', { email: email.trim() }, 'No se pudo enviar el código');
   },
 
@@ -307,6 +466,12 @@ export const api = {
    * sesiones y devuelve una nueva, que se guarda: el usuario entra directamente.
    */
   async confirmPasswordReset(email: string, code: string, newPassword: string) {
+    if (CORE) {
+      const data = await coreAction({ type: 'confirmPasswordReset', email, code, newPassword }, 'No se pudo cambiar la contraseña');
+      if (!data?.accessToken || !data?.refreshToken) throw new ApiError('Respuesta inesperada del servidor');
+      setSession(data);
+      return data;
+    }
     const data = await authPost(
       '/v1/auth/reset/confirm',
       { email: email.trim(), code: code.trim(), newPassword },
@@ -321,6 +486,10 @@ export const api = {
   logout() {
     const refreshToken = currentRefreshToken;
     setSession(null);
+    if (CORE) {
+      void coreLogout().catch(() => {});
+      return;
+    }
     if (refreshToken) {
       void apiFetch(`${API_BASE_URL}/v1/auth/logout`, {
         method: 'POST',
@@ -334,6 +503,7 @@ export const api = {
   },
 
   async getMe() {
+    if (CORE) return coreQuery({ type: 'me' }, 'No autenticado') as Promise<never>;
     const res = await client.GET('/v1/me', {
       ...authHeaders(),
     });
@@ -343,6 +513,7 @@ export const api = {
 
   /** Verifica el correo con el código de 6 dígitos del email. */
   async verifyEmail(code: string) {
+    if (CORE) return coreAction({ type: 'verifyEmail', code }, 'No se pudo verificar el código') as Promise<never>;
     const res = await client.POST('/v1/auth/verify-email/confirm', {
       body: { code: code.trim() },
       ...authHeaders(),
@@ -356,6 +527,13 @@ export const api = {
    * "no disponible" con el motivo, para no dejar seguir con un nickname sin comprobar.
    */
   async checkHandleAvailable(handle: string): Promise<{ handle: string; available: boolean; reason?: string }> {
+    if (CORE) {
+      return coreQuery({ type: 'handleAvailable', handle }, 'No se pudo comprobar').catch((e: ApiError) => ({
+        handle,
+        available: false,
+        reason: e.status === undefined ? 'Sin conexión con el servidor' : e.message,
+      }));
+    }
     try {
       const res = await client.GET('/v1/auth/handle-available', { params: { query: { handle } } });
       if (res.error || !res.data) return { handle, available: false, reason: (res.error as any)?.message || 'No se pudo comprobar' };
@@ -367,6 +545,7 @@ export const api = {
 
   /** Fija el nickname de la cuenta (una sola vez: es inmutable). Devuelve el perfil actualizado. */
   async setMyHandle(handle: string) {
+    if (CORE) return coreAction({ type: 'setHandle', handle }, 'No se pudo guardar el nickname') as Promise<never>;
     const res = await client.POST('/v1/me/handle', { body: { handle }, ...authHeaders() });
     if (res.error) throw apiError(res, 'No se pudo guardar el nickname');
     return res.data as any;
@@ -374,6 +553,7 @@ export const api = {
 
   /** Perfil público mínimo de un jugador por su nickname (con o sin "@"). */
   async getUserByHandle(handle: string) {
+    if (CORE) return coreQuery({ type: 'userByHandle', handle }, 'No hay ningún jugador con ese nickname') as Promise<never>;
     const res = await client.GET('/v1/users/by-handle/{handle}', {
       params: { path: { handle: handle.trim().replace(/^@/, '') } },
       ...authHeaders(),
@@ -384,6 +564,10 @@ export const api = {
 
   /** Reenvía el correo de verificación (invalida el código anterior). */
   async resendVerification() {
+    if (CORE) {
+      await coreAction({ type: 'resendVerification' }, 'No se pudo reenviar el correo');
+      return;
+    }
     const res = await client.POST('/v1/auth/verify-email/resend', {
       ...authHeaders(),
     });
@@ -391,12 +575,20 @@ export const api = {
   },
 
   async getCatalog() {
+    if (CORE) return coreQuery({ type: 'catalog' }, 'Error al obtener catálogo') as Promise<never>;
     const res = await client.GET('/v1/catalog');
     if (res.error) throw new Error('Error al obtener catálogo');
     return res.data;
   },
 
   async getEggs() {
+    if (CORE) {
+      const at = Date.now();
+      const list = ((await coreQuery({ type: 'eggs' }, 'Error al listar huevos')) ?? []) as any[];
+      return list.map((egg) =>
+        typeof egg?.remainingMs === 'number' ? { ...egg, hatchesAt: new Date(at + egg.remainingMs).toISOString() } : egg,
+      ) as never;
+    }
     const res = await client.GET('/v1/eggs', {
       ...authHeaders(),
     });
@@ -412,6 +604,7 @@ export const api = {
   },
 
   async buyEgg() {
+    if (CORE) return coreAction({ type: 'buyEgg' }, 'Error al comprar huevo');
     const res = await client.POST('/v1/eggs/buy', {
       ...authHeaders(),
     });
@@ -420,6 +613,7 @@ export const api = {
   },
 
   async hatchEgg(eggId: string, nickname?: string) {
+    if (CORE) return coreAction({ type: 'hatchEgg', eggId, nickname: nickname ?? null }, 'Error al eclosionar');
     // Nombre opcional: solo se envía si, tras trim, no queda vacío. El backend lo valida (1-16).
     const name = typeof nickname === 'string' ? nickname.trim() : '';
     const res = await client.POST('/v1/eggs/{id}/hatch', {
@@ -432,6 +626,7 @@ export const api = {
   },
 
   async getPets() {
+    if (CORE) return coreQuery({ type: 'pets' }, 'Error al obtener mascotas') as Promise<never>;
     const res = await client.GET('/v1/pets', {
       ...authHeaders(),
     });
@@ -440,6 +635,7 @@ export const api = {
   },
 
   async feedPet(petId: string, itemId: string) {
+    if (CORE) return coreAction({ type: 'feed', petId, itemId }, 'Error al alimentar');
     const res = await client.POST('/v1/pets/{id}/feed', {
       params: { path: { id: petId } },
       body: { itemId },
@@ -450,6 +646,7 @@ export const api = {
   },
 
   async cleanPet(petId: string) {
+    if (CORE) return coreAction({ type: 'clean', petId }, 'Error al limpiar');
     const res = await client.POST('/v1/pets/{id}/clean', {
       params: { path: { id: petId } },
       ...authHeaders(),
@@ -459,6 +656,7 @@ export const api = {
   },
 
   async sleepPet(petId: string) {
+    if (CORE) return coreAction({ type: 'sleep', petId }, 'Error al dormir');
     const res = await client.POST('/v1/pets/{id}/sleep', {
       params: { path: { id: petId } },
       ...authHeaders(),
@@ -468,6 +666,7 @@ export const api = {
   },
 
   async wakePet(petId: string) {
+    if (CORE) return coreAction({ type: 'wake', petId }, 'Error al despertar');
     const res = await client.POST('/v1/pets/{id}/wake', {
       params: { path: { id: petId } },
       ...authHeaders(),
@@ -477,6 +676,7 @@ export const api = {
   },
 
   async healPet(petId: string, itemId: string) {
+    if (CORE) return coreAction({ type: 'heal', petId, itemId }, 'Error al curar');
     const res = await client.POST('/v1/pets/{id}/heal', {
       params: { path: { id: petId } },
       body: { itemId },
@@ -487,6 +687,7 @@ export const api = {
   },
 
   async getInventory() {
+    if (CORE) return coreQuery({ type: 'inventory' }, 'Error al obtener inventario') as Promise<never>;
     const res = await client.GET('/v1/inventory', {
       ...authHeaders(),
     });
@@ -495,12 +696,14 @@ export const api = {
   },
 
   async getShop() {
+    if (CORE) return coreQuery({ type: 'shop' }, 'Error al obtener tienda') as Promise<never>;
     const res = await client.GET('/v1/shop');
     if (res.error) throw new Error('Error al obtener tienda');
     return res.data;
   },
 
   async buyShopItem(itemId: string, quantity: number = 1) {
+    if (CORE) return coreAction({ type: 'buyItem', itemId, quantity }, 'Error al comprar');
     const res = await client.POST('/v1/shop/buy', {
       body: { itemId, quantity },
       ...authHeaders(),
@@ -511,10 +714,12 @@ export const api = {
 
   // ---- Minijuegos (Fase 2) ----
   async listMinigames() {
+    if (CORE) return coreQuery({ type: 'listMinigames' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<any[]>('GET', '/v1/minigames');
   },
 
   async startMinigame(gameId: string, petId: string, variant: 'standard' | 'easy' = 'standard') {
+    if (CORE) return coreAction({ type: 'startMinigame', gameId, petId, variant }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{
       sessionId: string;
       gameId: string;
@@ -528,6 +733,7 @@ export const api = {
 
   /** `ticks` y `log` (spec 39): el servidor repite la partida para validar la puntuación. */
   async finishMinigame(sessionId: string, score: number, proof: { ticks?: number; log?: unknown[] } = {}) {
+    if (CORE) return coreAction({ type: 'finishMinigame', sessionId, body: { score, ...proof } }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{
       score: number;
       rewards: any;
@@ -540,22 +746,27 @@ export const api = {
 
   // ---- IA (Fase 3) ----
   async getAiConfig() {
+    if (CORE) return coreQuery({ type: 'getAiConfig' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<any>('GET', '/v1/ai/config');
   },
 
   async saveAiConfig(cfg: { mode?: 'byok' | 'managed'; provider?: string; baseUrl?: string; model?: string; apiKey?: string }) {
+    if (CORE) return coreAction({ type: 'saveAiConfig', cfg }, 'Error en la petición') as Promise<never>;
     return minigameRequest<any>('PUT', '/v1/ai/config', cfg);
   },
 
   async deleteAiConfig() {
+    if (CORE) return coreAction({ type: 'deleteAiConfig' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<any>('DELETE', '/v1/ai/config');
   },
 
   async testAiConfig() {
+    if (CORE) return coreAction({ type: 'testAiConfig' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ ok: boolean; error?: string }>('POST', '/v1/ai/config/test');
   },
 
   async getChatHistory(petId: string) {
+    if (CORE) return coreQuery({ type: 'getChatHistory', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ id: string; role: 'user' | 'assistant'; content: string }[]>(
       'GET',
       `/v1/pets/${petId}/chat/history`,
@@ -581,7 +792,8 @@ export const api = {
     signal?: AbortSignal,
     clientContext?: unknown,
   ): Promise<{ message: { id: string; content: string; thinking?: string }; intelligence: number; tier: string; behavior?: PetBehavior } | { moderated: true }> {
-    const res = await authFetch(`${API_BASE_URL}/v1/pets/${petId}/chat`, {
+    const url = `${API_BASE_URL}/v1/pets/${petId}/chat`;
+    const init: RequestInit = {
       method: 'POST',
       signal,
       headers: {
@@ -589,7 +801,22 @@ export const api = {
         ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
       },
       body: JSON.stringify({ message, clientTools, clientContext }),
-    });
+    };
+    if (CORE) {
+      return coreChat(url, init, (event, data) => {
+        if (event === 'delta') handlers.onDelta(data.text);
+        else if (event === 'reasoning') handlers.onReasoning?.(data.text);
+        else if (event === 'tool') handlers.onTool?.(data.name);
+        else if (event === 'action') handlers.onAction?.(data.action);
+        else if (event === 'moderated') {
+          handlers.onModerated?.(data);
+          return { moderated: true as const };
+        } else if (event === 'error') throw new Error(data.message);
+        else if (event === 'done') return data;
+        return undefined;
+      });
+    }
+    const res = await authFetch(url, init);
     if (!res.ok || !res.body) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data?.message || 'Error al enviar el mensaje');
@@ -638,10 +865,12 @@ export const api = {
       maxPerDay?: number;
     } | null;
   }) {
+    if (CORE) return coreAction({ type: 'updateMe', data }, 'Error en la petición') as Promise<never>;
     return minigameRequest<any>('PATCH', '/v1/me', data);
   },
 
   async getAiUsage() {
+    if (CORE) return coreQuery({ type: 'getAiUsage' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{
       month: string;
       tokens: number;
@@ -661,6 +890,7 @@ export const api = {
   // ---- Vouchers de recompensas ----
   /** Canjea un voucher. Lanza ApiError: 400 código no válido, 409 ya canjeado, 429 demasiados intentos. */
   async redeemVoucher(code: string): Promise<RewardReceived> {
+    if (CORE) return coreAction({ type: 'redeemVoucher', code }, 'No se pudo canjear el código') as Promise<never>;
     const res = await client.POST('/v1/vouchers/redeem', {
       body: { code: code.trim() },
       ...authHeaders(),
@@ -671,6 +901,7 @@ export const api = {
 
   // ---- Facturación y Suscripción Pro (Spec-34) ----
   async getBillingPlans() {
+    if (CORE) return coreQuery({ type: 'getBillingPlans' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{
       pricing: { monthlyPriceUsd: number; monthlyPriceEur: number; trialDays: number };
       plans: {
@@ -682,6 +913,7 @@ export const api = {
   },
 
   async getBillingEntitlement() {
+    if (CORE) return coreQuery({ type: 'getBillingEntitlement' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{
       plan: 'free' | 'pro';
       source?: 'stripe' | 'google_play' | 'voucher' | null;
@@ -693,15 +925,18 @@ export const api = {
   },
 
   async createStripeCheckout() {
+    if (CORE) return coreAction({ type: 'createStripeCheckout' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ url: string }>('POST', '/v1/billing/stripe/checkout');
   },
 
   async createStripePortal() {
+    if (CORE) return coreAction({ type: 'createStripePortal' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ url: string }>('POST', '/v1/billing/stripe/portal');
   },
 
   /** Modo Hermes local, paso 1: el servidor valida, modera y devuelve los mensajes a enviar al modelo local. */
   async localChatContext(petId: string, message: string, clientContext?: unknown) {
+    if (CORE) return coreAction({ type: 'localChatContext', petId, message, clientContext }, 'Error en la petición') as Promise<never>;
     return minigameRequest<
       | { turnId: string; messages: { role: 'system' | 'user' | 'assistant'; content: string }[]; maxTokens: number }
       | { moderated: { reason: string; message: string; hideUserMessage: boolean } }
@@ -710,6 +945,7 @@ export const api = {
 
   /** Modo Hermes local, paso 2: entrega la respuesta generada para moderarla y guardarla. */
   async localChatSync(petId: string, turnId: string, reply: string) {
+    if (CORE) return coreAction({ type: 'localChatSync', petId, turnId, reply }, 'Error en la petición') as Promise<never>;
     return minigameRequest<
       | { message: { id: string; content: string }; intelligence: number; tier: string; behavior?: PetBehavior }
       | { moderated: { reason: string; message: string; hideUserMessage: boolean } }
@@ -718,55 +954,68 @@ export const api = {
 
   // ---- Arena (Fase 4) ----
   async getCombatProfile(petId: string) {
+    if (CORE) return coreQuery({ type: 'getCombatProfile', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CombatProfile>('GET', `/v1/pets/${petId}/combat`);
   },
 
   async allocateStats(petId: string, points: Record<string, number>) {
+    if (CORE) return coreAction({ type: 'allocateStats', petId, points }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CombatProfile>('POST', `/v1/pets/${petId}/combat/stats`, points);
   },
 
   async equipSkills(petId: string, skills: string[]) {
+    if (CORE) return coreAction({ type: 'equipSkills', petId, skills }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CombatProfile>('PUT', `/v1/pets/${petId}/combat/skills`, { skills });
   },
 
   async setStrategy(petId: string, strategy: string) {
+    if (CORE) return coreAction({ type: 'setStrategy', petId, strategy }, 'Error en la petición') as Promise<never>;
     return minigameRequest<any>('PATCH', `/v1/pets/${petId}`, { strategy });
   },
 
   async updateDesktopSkills(petId: string, skills: Record<string, boolean>) {
+    if (CORE) return coreAction({ type: 'updateDesktopSkills', petId, skills }, 'Error en la petición') as Promise<never>;
     return minigameRequest<any>('PATCH', `/v1/pets/${petId}/desktop-skills`, { skills });
   },
 
   // Prendas (spec 38): catálogo con estado, compra y equipado por ranura.
   async getAccessories() {
+    if (CORE) return coreQuery({ type: 'getAccessories' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<AccessoryCatalog>('GET', '/v1/accessories');
   },
 
   async buyAccessory(id: string) {
+    if (CORE) return coreAction({ type: 'buyAccessory', id }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ id: string; slot: AccessorySlotId; state: 'owned' }>('POST', `/v1/accessories/${encodeURIComponent(id)}/buy`);
   },
 
   async getPetAccessories(petId: string) {
+    if (CORE) return coreQuery({ type: 'getPetAccessories', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<PetAccessories>('GET', `/v1/pets/${petId}/accessories`);
   },
 
   async equipAccessories(petId: string, change: Partial<Record<AccessorySlotId, string | null>>) {
+    if (CORE) return coreAction({ type: 'equipAccessories', petId, change }, 'Error en la petición') as Promise<never>;
     return minigameRequest<PetAccessories>('PUT', `/v1/pets/${petId}/accessories`, change);
   },
 
   async setPetInHabitat(petId: string, inHabitat: boolean) {
+    if (CORE) return coreAction({ type: 'setInHabitat', petId, inHabitat }, 'Error en la petición');
     return minigameRequest<any>('PATCH', `/v1/pets/${petId}/in-habitat`, { inHabitat });
   },
 
   async matchmake(petId: string) {
+    if (CORE) return coreAction({ type: 'matchmake', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<BattleResponse>('POST', '/v1/battles/matchmake', { petId });
   },
 
   async getBattles(limit = 20) {
+    if (CORE) return coreQuery({ type: 'getBattles', limit }, 'Error en la petición') as Promise<never>;
     return minigameRequest<BattleSummary[]>('GET', `/v1/battles?limit=${limit}`);
   },
 
   async getBattle(id: string) {
+    if (CORE) return coreQuery({ type: 'getBattle', id }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ id: string; seed: number; createdAt: string; role: string; outcome: string; eloDelta: number; replay: any }>(
       'GET',
       `/v1/battles/${id}`,
@@ -774,6 +1023,7 @@ export const api = {
   },
 
   async getLeaderboard(scope: 'global' | 'weekly', petId?: string, limit = 20) {
+    if (CORE) return coreQuery({ type: 'leaderboard', scope, petId: petId ?? null, limit }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{
       scope: string;
       entries: LeaderboardEntry[];
@@ -782,6 +1032,7 @@ export const api = {
   },
 
   async getArenaRules() {
+    if (CORE) return coreQuery({ type: 'getArenaRules' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ leagues: { id: string; name: string; minElo: number }[]; dailyFreeBattles: number; energyCost: number }>(
       'GET',
       '/v1/arena/leagues',
@@ -789,6 +1040,7 @@ export const api = {
   },
 
   async getPendingActions(petId: string) {
+    if (CORE) return coreQuery({ type: 'getPendingActions', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ id: string; tool: string; summary: string; expiresAt: string; clientSide?: boolean }[]>(
       'GET',
       `/v1/pets/${petId}/actions`,
@@ -796,6 +1048,7 @@ export const api = {
   },
 
   async confirmAction(petId: string, actionId: string) {
+    if (CORE) return coreAction({ type: 'confirmAction', petId, actionId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{
       ok: boolean;
       tool: string;
@@ -810,10 +1063,12 @@ export const api = {
   },
 
   async rejectAction(petId: string, actionId: string) {
+    if (CORE) return coreAction({ type: 'rejectAction', petId, actionId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ ok: boolean }>('POST', `/v1/pets/${petId}/actions/${actionId}/reject`);
   },
 
   async listReminders() {
+    if (CORE) return coreQuery({ type: 'listReminders' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ id: string; text: string; dueAt: string }[]>('GET', '/v1/reminders');
   },
 
@@ -826,10 +1081,12 @@ export const api = {
   },
 
   async deleteReminder(id: string) {
+    if (CORE) return coreAction({ type: 'deleteReminder', id }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ ok: boolean }>('DELETE', `/v1/reminders/${id}`);
   },
 
   async getMemories(petId: string) {
+    if (CORE) return coreQuery({ type: 'getMemories', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{
       unlocked: boolean;
       unlockAt: number;
@@ -840,6 +1097,7 @@ export const api = {
 
   /** Cerebro del Pockai (spec 36): 5 dimensiones, memoria por capas y vida autónoma reciente. */
   async getMind(petId: string) {
+    if (CORE) return coreQuery({ type: 'getMind', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<PetMind>('GET', `/v1/pets/${petId}/mind`);
   },
 
@@ -849,50 +1107,62 @@ export const api = {
    * cuándo volver a preguntar.
    */
   async petInitiative(petId: string, opts: { back?: boolean; focus?: boolean } = {}) {
+    if (CORE) return coreAction({ type: 'petInitiative', petId, back: !!opts.back, focus: !!opts.focus }, 'Error en la petición') as Promise<never>;
     return minigameRequest<InitiativeReply>('POST', `/v1/pets/${petId}/initiative`, { channel: 'desktop', back: !!opts.back, focus: !!opts.focus });
   },
   async getInitiativeSettings(petId: string) {
+    if (CORE) return coreQuery({ type: 'getInitiativeSettings', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<InitiativeSettings>('GET', `/v1/pets/${petId}/initiative/settings`);
   },
   async setInitiativeLevel(petId: string, level: TalkLevel) {
+    if (CORE) return coreAction({ type: 'setInitiativeLevel', petId, level }, 'Error en la petición') as Promise<never>;
     return minigameRequest<InitiativeSettings>('PUT', `/v1/pets/${petId}/initiative/settings`, { level });
   },
 
   /** Un gesto tuyo mientras hacía algo en el escritorio: el servidor guarda lo que aprende de ello. */
   async reinforceBehavior(petId: string, behavior: string, signal: string) {
+    if (CORE) return coreAction({ type: 'reinforceBehavior', petId, behavior, signal }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ applied: boolean; reason?: string; behavior: string; prefs: Record<string, number> }>('POST', `/v1/pets/${petId}/mind/reinforce`, { behavior, signal });
   },
 
   async forgetMemory(petId: string, memoryId: string) {
+    if (CORE) return coreAction({ type: 'forgetMemory', petId, memoryId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ deleted: number }>('DELETE', `/v1/pets/${petId}/memories/${memoryId}`);
   },
 
   async forgetAllMemories(petId: string) {
+    if (CORE) return coreAction({ type: 'forgetAllMemories', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ deleted: number }>('DELETE', `/v1/pets/${petId}/memories`);
   },
 
   /** Resumen diario de hábitos de escritorio (solo categorías y minutos; ver lib/contextDigest.ts). */
   async sendContextDigest(petId: string, body: unknown) {
+    if (CORE) return coreAction({ type: 'sendContextDigest', petId, body }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ habits: number; stored: boolean }>('POST', `/v1/pets/${petId}/context-digest`, body);
   },
 
   /** Usa cualquier objeto del inventario sobre la mascota (comida, medicina, evolución, Enhebrador…). */
   async usePetItem(petId: string, itemId: string) {
+    if (CORE) return coreAction({ type: 'useItem', petId, itemId }, 'Error en la petición');
     return minigameRequest<any>('POST', `/v1/pets/${petId}/use-item`, { itemId });
   },
 
   async evolvePet(petId: string) {
+    if (CORE) return coreAction({ type: 'evolve', petId }, 'Error en la petición');
     return minigameRequest<any>('POST', `/v1/pets/${petId}/evolve`);
   },
 
   // ── Temporadas (oleada 3, F-10/F-11) ─────────────────────────────────────────
   async getSeasonCurrent() {
+    if (CORE) return coreQuery({ type: 'getSeasonCurrent' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<SeasonCurrent>('GET', '/v1/seasons/current');
   },
   async getSeasonProgress() {
+    if (CORE) return coreQuery({ type: 'getSeasonProgress' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<SeasonProgress>('GET', '/v1/seasons/progress');
   },
   async purchaseSeasonPass() {
+    if (CORE) return coreAction({ type: 'purchaseSeasonPass' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{
       message: string;
       pass: { id: string; seasonId: string; price: number; purchasedAt: string };
@@ -901,88 +1171,110 @@ export const api = {
 
   // ── Misiones (Paso 3) ─────────────────────────────────────────────────────
   async getMissions() {
+    if (CORE) return coreQuery({ type: 'getMissions' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<MissionList>('GET', '/v1/missions');
   },
   async getMissionsSummary() {
+    if (CORE) return coreQuery({ type: 'getMissionsSummary' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<MissionSummary>('GET', '/v1/missions/summary');
   },
   async claimMission(id: string) {
+    if (CORE) return coreAction({ type: 'claimMission', id }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClaimMissionResponse>('POST', `/v1/missions/${id}/claim`);
   },
 
   // ── Cofres (Paso 3) ───────────────────────────────────────────────────────
   async getChests() {
+    if (CORE) return coreQuery({ type: 'getChests' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ChestList>('GET', '/v1/chests');
   },
   async openChest(chestId: string) {
+    if (CORE) return coreAction({ type: 'openChest', chestId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<OpenChestResponse>('POST', '/v1/chests/open', { chestId });
   },
   async purchaseChest(type: 'bronze' | 'silver' | 'gold', paymentMethod: 'coins' | 'gems') {
+    if (CORE) return coreAction({ type: 'purchaseChest', kind: type, paymentMethod }, 'Error en la petición') as Promise<never>;
     return minigameRequest<PurchaseChestResponse>('POST', '/v1/chests/purchase', { type, paymentMethod });
   },
   async getChestHistory(limit = 20, offset = 0) {
+    if (CORE) return coreQuery({ type: 'getChestHistory', limit, offset }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ChestHistory>('GET', `/v1/chests/history?limit=${limit}&offset=${offset}`);
   },
 
   // ── Vínculo (Paso 3, feature 006) ─────────────────────────────────────────
   async getBonding(petId: string) {
+    if (CORE) return coreQuery({ type: 'getBonding', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<BondingDetail>('GET', `/v1/pets/${petId}/bonding?limit=20`);
   },
 
   // ── Raid Boss (Paso 5, feature 013) ──────────────────────────────────────────
   async getRaidCurrent() {
+    if (CORE) return coreQuery({ type: 'getRaidCurrent' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<RaidCurrent>('GET', '/v1/raid/current');
   },
   async raidAttack(petId: string) {
+    if (CORE) return coreAction({ type: 'raidAttack', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<RaidAttackResponse>('POST', '/v1/raid/attack', { petId });
   },
   async getRaidLeaderboard(limit = 100) {
+    if (CORE) return coreQuery({ type: 'getRaidLeaderboard', limit }, 'Error en la petición') as Promise<never>;
     return minigameRequest<RaidLeaderboard>('GET', `/v1/raid/leaderboard?limit=${limit}`);
   },
   async getRaidHistory(limit = 10) {
+    if (CORE) return coreQuery({ type: 'getRaidHistory', limit }, 'Error en la petición') as Promise<never>;
     return minigameRequest<RaidHistoryEntry[]>('GET', `/v1/raid/history?limit=${limit}`);
   },
 
   // ── Torneo Knockout (Paso 5, feature 014) ─────────────────────────────────────
   async getTournamentCurrent() {
+    if (CORE) return coreQuery({ type: 'getTournamentCurrent' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<TournamentCurrent>('GET', '/v1/tournament/current');
   },
   async tournamentEnter(petId: string) {
+    if (CORE) return coreAction({ type: 'tournamentEnter', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<TournamentEnterResponse>('POST', '/v1/tournament/enter', { petId });
   },
   async getTournamentBracket() {
+    if (CORE) return coreQuery({ type: 'getTournamentBracket' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<TournamentBracket>('GET', '/v1/tournament/bracket');
   },
   async getTournamentStandings(limit = 50) {
+    if (CORE) return coreQuery({ type: 'getTournamentStandings', limit }, 'Error en la petición') as Promise<never>;
     return minigameRequest<TournamentStandings>('GET', `/v1/tournament/standings?limit=${limit}`);
   },
 
   // Hábitat (feature 019)
   async getHabitat() {
+    if (CORE) return coreQuery({ type: 'getHabitat' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<HabitatState>('GET', '/v1/habitat');
   },
 
   async getHabitatCatalog() {
+    if (CORE) return coreQuery({ type: 'getHabitatCatalog' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<HabitatCatalog>('GET', '/v1/habitat/catalog');
   },
 
   /** Compra y coloca un mueble. Sin `at`, el servidor lo pone en el primer hueco donde quepa. */
   async placeHabitatFurniture(furnitureId: string, at?: Partial<HabitatPlacement> & { roomId?: string }) {
+    if (CORE) return coreAction({ type: 'placeHabitatFurniture', furnitureId, at }, 'Error en la petición') as Promise<never>;
     return minigameRequest<HabitatPlaceResult>('POST', `/v1/habitat/furniture/${furnitureId}/place`, at);
   },
 
   /** Mueve y/o gira un mueble ya colocado (sin coste). */
   async moveHabitatItem(itemId: string, to: Partial<HabitatPlacement> & { roomId?: string }) {
+    if (CORE) return coreAction({ type: 'moveHabitatItem', itemId, to }, 'Error en la petición') as Promise<never>;
     return minigameRequest<HabitatPlaceResult>('PATCH', `/v1/habitat/items/${itemId}`, to);
   },
 
   /** Quita un mueble concreto (por id de item). */
   async removeHabitatItem(itemId: string) {
+    if (CORE) return coreAction({ type: 'removeHabitatItem', itemId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ message: string; itemId: string; furnitureId: string }>('DELETE', `/v1/habitat/items/${itemId}`);
   },
 
   /** Quita el mueble más reciente de ese tipo. Preferible `removeHabitatItem`. */
   async removeHabitatFurniture(furnitureId: string) {
+    if (CORE) return coreAction({ type: 'removeHabitatFurniture', furnitureId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ message: string; furnitureId: string }>('DELETE', `/v1/habitat/furniture/${furnitureId}`);
   },
 
@@ -991,29 +1283,37 @@ export const api = {
    * (tope diario y enfriamiento): `applied: false` no es un error.
    */
   async useHabitatItem(itemId: string) {
+    if (CORE) return coreAction({ type: 'useHabitatItem', itemId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<FurnitureUseResult>('POST', `/v1/habitat/items/${encodeURIComponent(itemId)}/use`);
   },
   async getHabitatBuffs() {
+    if (CORE) return coreQuery({ type: 'getHabitatBuffs' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<HabitatBuffs>('GET', '/v1/habitat/buffs');
   },
 
   // ── Perfil social e insignias ─────────────────────────────────────────────
   async getMyProfile() {
+    if (CORE) return coreQuery({ type: 'getMyProfile' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<MyProfile>('GET', '/v1/me/profile');
   },
   async getUserProfile(userId: string) {
+    if (CORE) return coreQuery({ type: 'getUserProfile', userId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<PublicProfile>('GET', `/v1/users/${encodeURIComponent(userId)}/profile`);
   },
   async setFeaturedBadges(achIds: string[]) {
+    if (CORE) return coreAction({ type: 'setFeaturedBadges', achIds }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ featuredBadges: string[] }>('PUT', '/v1/me/featured-badges', { achIds });
   },
   async getAchievements() {
+    if (CORE) return coreQuery({ type: 'getAchievements' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<AchievementListResponse>('GET', '/v1/achievements');
   },
   async getConstellation(category: string) {
+    if (CORE) return coreQuery({ type: 'getConstellation', category }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ConstellationResponse>('GET', `/v1/achievements/constellation/${encodeURIComponent(category)}`);
   },
   async claimAchievement(id: string) {
+    if (CORE) return coreAction({ type: 'claimAchievement', id }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ achievement: { claimed: boolean }; reward: AchievementReward }>(
       'POST',
       `/v1/achievements/${encodeURIComponent(id)}/claim`,
@@ -1022,15 +1322,19 @@ export const api = {
 
   // ── Amistad + Co-op (feature 021) ─────────────────────────────────────────
   async getCoopFriends() {
+    if (CORE) return coreQuery({ type: 'getCoopFriends' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CoopFriend[]>('GET', '/v1/coop/friends');
   },
   async requestCoopFriend(target: { targetUserId?: string; handle?: string }) {
+    if (CORE) return coreAction({ type: 'requestCoopFriend', target }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CoopFriend>('POST', '/v1/coop/friends', target);
   },
   async acceptCoopFriend(friendshipId: string) {
+    if (CORE) return coreAction({ type: 'acceptCoopFriend', friendshipId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CoopFriend>('POST', `/v1/coop/friends/${friendshipId}/accept`);
   },
   async declineCoopFriend(friendshipId: string) {
+    if (CORE) return coreAction({ type: 'declineCoopFriend', friendshipId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CoopFriend>('POST', `/v1/coop/friends/${friendshipId}/decline`);
   },
   async coopVisit(body: {
@@ -1039,9 +1343,11 @@ export const api = {
     action: 'feed' | 'play' | 'clean';
     itemId?: string;
   }) {
+    if (CORE) return coreAction({ type: 'coopVisit', body }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CoopVisitResult>('POST', '/v1/coop/visit', body);
   },
   async getCoopHistory() {
+    if (CORE) return coreQuery({ type: 'getCoopHistory' }, 'Error en la petición') as Promise<never>;
     // scope=all: visitas en ambos sentidos y de hábitat (sin él, el formato antiguo).
     return minigameRequest<{ userId: string; visits: CoopVisitLog[] }>('GET', '/v1/coop/history?scope=all');
   },
@@ -1049,16 +1355,19 @@ export const api = {
   // ── Presencia (feature 021) ────────────────────────────────────────────────
   /** Dispositivos de un jugador y si tiene alguno activo (punto de presencia). */
   async getPresence(userId: string) {
+    if (CORE) return coreQuery({ type: 'getPresence', userId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<PresenceInfo>('GET', `/v1/presence/${encodeURIComponent(userId)}`);
   },
 
   // ── Clanes (feature 021) ──────────────────────────────────────────────────
   async createClan({ name, tag, description }: { name: string; tag: string; description?: string }) {
+    if (CORE) return coreAction({ type: 'createClan', name, tag, description: description ?? null }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanSummary>('POST', '/v1/clans', { name, tag, description });
   },
   /** El clan del usuario; `null` si aún no está en ningún clan (404 del contrato). */
   async getMyClan(): Promise<ClanSummary | null> {
     try {
+      if (CORE) return (await coreQuery({ type: 'myClan' }, 'Error en la petición')) as ClanSummary;
       return await minigameRequest<ClanSummary>('GET', '/v1/clans');
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) return null;
@@ -1066,53 +1375,65 @@ export const api = {
     }
   },
   async joinClan(tag: string) {
+    if (CORE) return coreAction({ type: 'joinClan', tag }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanSummary>('POST', '/v1/clans/join', { tag });
   },
   async leaveClan() {
+    if (CORE) return coreAction({ type: 'leaveClan' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ ok: boolean }>('POST', '/v1/clans/leave');
   },
   /** Invita a un jugador (Vigía o superior). Devuelve el resumen actualizado. */
   async inviteToClan(clanId: string, target: { userId?: string; handle?: string }) {
+    if (CORE) return coreAction({ type: 'inviteToClan', clanId, target }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanSummary>('POST', `/v1/clans/${encodeURIComponent(clanId)}/invite`, target);
   },
   /** Roster vivo del clan (el backend devuelve el resumen completo). */
   async getClanMembers(clanId: string) {
+    if (CORE) return coreQuery({ type: 'getClanMembers', clanId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanSummary>('GET', `/v1/clans/${encodeURIComponent(clanId)}/members`);
   },
 
   // ── Gestión del Nexo (rangos de clan) ──────────────────────────────────────
   /** Edita nombre y/o descripción (Guardián o superior). */
   async updateClan(clanId: string, patch: { name?: string; description?: string | null }) {
+    if (CORE) return coreAction({ type: 'updateClan', clanId, patch }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanSummary>('PATCH', `/v1/clans/${encodeURIComponent(clanId)}`, patch);
   },
   /** Disuelve el clan (solo el Forjador). */
   async disbandClan(clanId: string) {
+    if (CORE) return coreAction({ type: 'disbandClan', clanId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ success: boolean; message: string }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}`);
   },
   /** Expulsa a un miembro de rango inferior (Vigía o superior). */
   async kickClanMember(clanId: string, userId: string) {
+    if (CORE) return coreAction({ type: 'kickClanMember', clanId, userId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanSummary>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/members/${encodeURIComponent(userId)}`);
   },
   /** Cambia el rango de un miembro (Guardián o superior; Guardianes solo el Forjador). */
   async setClanMemberRole(clanId: string, userId: string, role: Exclude<ClanRole, 'creator'>) {
+    if (CORE) return coreAction({ type: 'setClanMemberRole', clanId, userId, role }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanSummary>('PATCH', `/v1/clans/${encodeURIComponent(clanId)}/members/${encodeURIComponent(userId)}/role`, { role });
   },
   /** Cede la Forja a otro miembro (solo el Forjador; pasa a Guardián). */
   async transferClanCreator(clanId: string, userId: string) {
+    if (CORE) return coreAction({ type: 'transferClanCreator', clanId, userId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanSummary>('POST', `/v1/clans/${encodeURIComponent(clanId)}/transfer`, { userId });
   },
   /** Borra un mensaje del chat (el autor o un Vigía o superior). */
   async deleteClanMessage(clanId: string, messageId: string) {
+    if (CORE) return coreAction({ type: 'deleteClanMessage', clanId, messageId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ success: boolean }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/messages/${encodeURIComponent(messageId)}`);
   },
 
   // ── Chat de clan (feature 021) ─────────────────────────────────────────────
   /** Envía un mensaje al chat del clan. Devuelve el mensaje persistido. */
   async sendClanMessage(clanId: string, body: string) {
+    if (CORE) return coreAction({ type: 'sendClanMessage', clanId, body }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanMessage>('POST', `/v1/clans/${encodeURIComponent(clanId)}/messages`, { body });
   },
   /** Historial reciente del chat del clan (más nuevos al final). */
   async getClanMessages(clanId: string, { limit, before }: { limit?: number; before?: string } = {}) {
+    if (CORE) return coreQuery({ type: 'clanMessages', clanId, limit: limit ?? null, before: before ?? null }, 'Error en la petición') as Promise<never>;
     const params = new URLSearchParams();
     if (limit != null) params.set('limit', String(limit));
     if (before) params.set('before', before);
@@ -1123,10 +1444,12 @@ export const api = {
   // ── Objetivos de clan (feature 021) ────────────────────────────────────────
   /** Crea un objetivo de clan. Devuelve el objetivo persistido. */
   async createClanGoal(clanId: string, goal: { title: string; description?: string; metric: ClanGoalMetric; target: number }) {
+    if (CORE) return coreAction({ type: 'createClanGoal', clanId, goal }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanGoal>('POST', `/v1/clans/${encodeURIComponent(clanId)}/goals`, goal);
   },
   /** Hábitat del Nexo: nivel por XP y hasta 5 pockais activos (uno por miembro, el tuyo siempre). */
   async getClanHabitat(clanId: string) {
+    if (CORE) return coreQuery({ type: 'getClanHabitat', clanId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanHabitat>('GET', `/v1/clans/${encodeURIComponent(clanId)}/habitat`);
   },
   /** Guarda en el servidor cuál es la mascota activa (la que te representa en clan y visitas). */
@@ -1135,20 +1458,24 @@ export const api = {
   },
   /** Objetivos del clan (activos y completados). */
   async getClanGoals(clanId: string) {
+    if (CORE) return coreQuery({ type: 'getClanGoals', clanId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanGoal[]>('GET', `/v1/clans/${encodeURIComponent(clanId)}/goals`);
   },
   /** Añade progreso a un objetivo. Devuelve el objetivo actualizado. */
   async addClanGoalProgress(clanId: string, goalId: string, amount: number) {
+    if (CORE) return coreAction({ type: 'addClanGoalProgress', clanId, goalId, amount }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ClanGoal>('POST', `/v1/clans/${encodeURIComponent(clanId)}/goals/${encodeURIComponent(goalId)}/progress`, { amount });
   },
   /** Borra un objetivo del clan (solo el líder, según el contrato). */
   async deleteClanGoal(clanId: string, goalId: string) {
+    if (CORE) return coreAction({ type: 'deleteClanGoal', clanId, goalId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ ok: boolean }>('DELETE', `/v1/clans/${encodeURIComponent(clanId)}/goals/${encodeURIComponent(goalId)}`);
   },
 
   // ── Visitas en vivo al hábitat (feature 021) ───────────────────────────────
   /** Inicia una visita del jugador a tu hábitat (el backend emite `habitat:visitor_joined`). */
   async startHabitatVisit(ownerId: string, message?: string) {
+    if (CORE) return coreAction({ type: 'startHabitatVisit', ownerId, message: message ?? null }, 'Error en la petición') as Promise<never>;
     const text = message?.trim();
     return minigameRequest<{ success: boolean; visit: HabitatVisitor; energy: number }>(
       'POST',
@@ -1162,6 +1489,7 @@ export const api = {
    * que se contesta: así un reintento no repite el efecto.
    */
   async visitInteract(ownerId: string, choice?: number, turn?: number) {
+    if (CORE) return coreAction({ type: 'visitInteract', ownerId, choice: choice ?? null, turn: turn ?? null }, 'Error en la petición') as Promise<never>;
     return minigameRequest<VisitInteraction>(
       'POST',
       '/v1/habitat/visit/interact',
@@ -1170,50 +1498,62 @@ export const api = {
   },
   /** La sala del amigo al que estás visitando: sala, muebles y aspecto de los dos Pockai. */
   async getVisitRoom(ownerId: string) {
+    if (CORE) return coreQuery({ type: 'getVisitRoom', ownerId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<VisitRoom>('GET', `/v1/habitat/visit/room?ownerId=${encodeURIComponent(ownerId)}`);
   },
   /** Cierra tu visita en curso (el backend emite `habitat:visitor_left`). */
   async endHabitatVisit() {
+    if (CORE) return coreAction({ type: 'endHabitatVisit' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ ok: boolean }>('POST', '/v1/habitat/visit/end');
   },
   /** Amigos que ahora mismo están de visita en tu hábitat. */
   async getHabitatVisitors() {
+    if (CORE) return coreQuery({ type: 'getHabitatVisitors' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<{ visitors: HabitatVisitor[] }>('GET', '/v1/habitat/visitors');
   },
 
   // ── Bienvenida (feature 028) ────────────────────────────────────────────────
   /** Estado de la bienvenida. Si hubo ausencia, el backend emite `pet:action welcome_back`. */
   async getReengagementStatus() {
+    if (CORE) return coreQuery({ type: 'getReengagementStatus' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ReengagementStatus>('GET', '/v1/reengagement/status');
   },
   async getReengagementDiary() {
+    if (CORE) return coreQuery({ type: 'getReengagementDiary' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<ReengagementDiary>('GET', '/v1/reengagement/diary');
   },
 
   // ── Entrenamiento elemental ─────────────────────────────────────────────────
   async trainingStart(petId: string) {
+    if (CORE) return coreAction({ type: 'trainingStart', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<TrainingStart>('POST', '/v1/training/start', { petId });
   },
   async trainingSubmit(petId: string, element: TrainingElement, prediction?: TrainingElement) {
+    if (CORE) return coreAction({ type: 'trainingSubmit', petId, element, prediction }, 'Error en la petición') as Promise<never>;
     return minigameRequest<TrainingSubmit>('POST', '/v1/training/submit', { petId, element, prediction });
   },
   async trainingActiveBuff(petId?: string) {
+    if (CORE) return coreQuery({ type: 'trainingActiveBuff', petId: petId ?? null }, 'Error en la petición') as Promise<never>;
     const q = petId ? `?petId=${encodeURIComponent(petId)}` : '';
     return minigameRequest<TrainingBuff>('GET', `/v1/training/active-buff${q}`);
   },
 
   // ── Cocina ──────────────────────────────────────────────────────────────────
   async cookingDailyMenu() {
+    if (CORE) return coreQuery({ type: 'cookingDailyMenu' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CookingDailyMenu>('GET', '/v1/cooking/daily-menu');
   },
   async cookingRecipes(petId: string) {
+    if (CORE) return coreQuery({ type: 'cookingRecipes', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CookingRecipe[]>('GET', `/v1/cooking/recipes?petId=${encodeURIComponent(petId)}`);
   },
   async cookingBuffs(petId: string) {
+    if (CORE) return coreQuery({ type: 'cookingBuffs', petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CookingBuff[]>('GET', `/v1/cooking/buffs?petId=${encodeURIComponent(petId)}`);
   },
   /** Sin `recipeId` se cocina el menú del día. */
   async cookingStart(petId: string, recipeId?: string) {
+    if (CORE) return coreAction({ type: 'cookingStart', petId, recipeId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CookingStart>('POST', '/v1/cooking/start', { petId, recipeId });
   },
   /**
@@ -1221,21 +1561,26 @@ export const api = {
    * `pickedAt`: ms desde que empezó a cocinar en que cayó cada uno (para la olla caliente).
    */
   async cookingSubmit(sessionId: string, score: number, correctOrder: boolean, picked?: string[], pickedAt?: number[]) {
+    if (CORE) return coreAction({ type: 'cookingSubmit', sessionId, score, correctOrder, picked, pickedAt }, 'Error en la petición') as Promise<never>;
     return minigameRequest<CookingSubmit>('POST', '/v1/cooking/submit', { sessionId, score, correctOrder, picked, pickedAt });
   },
 
   // ── Aventura diaria (historias de decisión) ──────────────────────────────────
   async storiesToday() {
+    if (CORE) return coreQuery({ type: 'storiesToday' }, 'Error en la petición') as Promise<never>;
     return minigameRequest<StoryToday>('GET', '/v1/stories/today');
   },
   /** Empieza una historia de hoy o devuelve la partida si ya estaba empezada. */
   async storyStart(storyId: string, petId: string) {
+    if (CORE) return coreAction({ type: 'storyStart', storyId, petId }, 'Error en la petición') as Promise<never>;
     return minigameRequest<StoryPlayState>('POST', `/v1/stories/${storyId}/start`, { petId });
   },
   async storyAnswer(storyId: string, sceneIndex: number, optionIndex: number) {
+    if (CORE) return coreAction({ type: 'storyAnswer', storyId, sceneIndex, optionIndex }, 'Error en la petición') as Promise<never>;
     return minigameRequest<StoryAnswer>('POST', `/v1/stories/${storyId}/answer`, { sceneIndex, optionIndex });
   },
   async storiesHistory(limit = 10) {
+    if (CORE) return coreQuery({ type: 'storiesHistory', limit }, 'Error en la petición') as Promise<never>;
     return minigameRequest<StoryHistoryEntry[]>('GET', `/v1/stories/history?limit=${limit}`);
   },
 };

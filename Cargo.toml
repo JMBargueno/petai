@@ -1,0 +1,4 @@
+# Workspace de Rust del monorepo: el shell de Tauri y los crates del núcleo cliente.
+[workspace]
+resolver = "2"
+members = ["desktop/src-tauri", "crates/*"]

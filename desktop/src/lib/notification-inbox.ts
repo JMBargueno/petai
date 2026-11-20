@@ -1,9 +1,13 @@
 import { writable, derived } from 'svelte/store';
+import { hasCore, inboxMarkAllRead, inboxPush, inboxTake } from '@pockai/client';
 
 /**
  * Inbox offline de notificaciones con personalidad (feature 007 / US3).
  *
- * Svelte store persistente (localStorage) con los avisos `pet:notification` que no se pudieron
+ * Dentro de la app la bandeja la guarda el núcleo (Rust): este store solo la refleja y le entrega
+ * los cambios. En el navegador (modo demo) se guarda en localStorage, como antes.
+ *
+ * Svelte store persistente con los avisos `pet:notification` que no se pudieron
  * entregar de forma nativa (WS caído o sin permiso). Se expone `unreadCount` para el badge de la
  * bandeja; al reconectar, `takeInbox()` vacía la cola para que el handler la reenvíe.
  */
@@ -31,6 +35,7 @@ function load(): InboxNotification[] {
 }
 
 function persist(list: InboxNotification[]) {
+  if (hasCore()) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   } catch {
@@ -39,7 +44,26 @@ function persist(list: InboxNotification[]) {
 }
 
 /** Cola de avisos pendientes (más recientes primero). */
-export const inbox = writable<InboxNotification[]>(load());
+export const inbox = writable<InboxNotification[]>(hasCore() ? [] : load());
+
+/** La bandeja que guarda el núcleo (la pone `appState` al reflejar su estado). */
+export function setInboxFromCore(list: InboxNotification[]) {
+  inbox.set(list);
+}
+
+/**
+ * Avisos que guardaba el webview en versiones anteriores: se devuelven una vez (para pasarlos al
+ * núcleo) y se borran de aquí.
+ */
+export function takeLegacyInbox(): InboxNotification[] {
+  const legacy = load();
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* almacenamiento indisponible */
+  }
+  return legacy;
+}
 
 /** Cantidad de avisos no leídos (badge de la bandeja). */
 export const unreadCount = derived(inbox, ($i) => $i.filter((n) => !n.read).length);
@@ -51,6 +75,7 @@ export function pushInbox(n: InboxNotification) {
     persist(next);
     return next;
   });
+  if (hasCore()) void inboxPush(n).catch(() => {});
 }
 
 /**
@@ -63,6 +88,7 @@ export function takeInbox(): InboxNotification[] {
     persist([]);
     return [];
   });
+  if (hasCore()) void inboxTake().catch(() => {});
   return out;
 }
 
@@ -74,10 +100,12 @@ export function markAllRead() {
     persist(next);
     return next;
   });
+  if (hasCore()) void inboxMarkAllRead().catch(() => {});
 }
 
 /** Limpia por completo el inbox. */
 export function clearInbox() {
   persist([]);
   inbox.set([]);
+  if (hasCore()) void inboxTake().catch(() => {});
 }

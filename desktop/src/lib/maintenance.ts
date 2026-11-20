@@ -1,4 +1,5 @@
 import { writable, get } from 'svelte/store';
+import { hasCore, query } from '@pockai/client';
 
 /** Cabecera con la que el backend distingue la app de escritorio de la web (mantenimiento por alcance). */
 export const CLIENT_HEADERS = { 'X-Client': 'desktop' } as const;
@@ -40,9 +41,16 @@ export async function inspectMaintenance(res: Response): Promise<boolean> {
 /** ¿Sigue el mantenimiento para las apps? Lo dice la configuración pública (siempre abierta). */
 export async function checkMaintenance(fetcher: typeof fetch = fetch): Promise<boolean> {
   try {
-    const res = await fetcher(`${baseUrl}/v1/site/config`, { headers: { Accept: 'application/json', ...CLIENT_HEADERS } });
-    if (!res.ok) return get(maintenanceLock) !== null;
-    const m = (await res.json())?.maintenance;
+    let config: any;
+    if (hasCore()) {
+      // Dentro de la app la red es del núcleo; si el servidor no responde bien, la consulta falla.
+      config = await query<any>({ type: 'siteConfig' });
+    } else {
+      const res = await fetcher(`${baseUrl}/v1/site/config`, { headers: { Accept: 'application/json', ...CLIENT_HEADERS } });
+      if (!res.ok) return get(maintenanceLock) !== null;
+      config = await res.json();
+    }
+    const m = config?.maintenance;
     const active = !!m?.enabled && m.scope !== 'web';
     if (!active) maintenanceLock.set(null);
     else {

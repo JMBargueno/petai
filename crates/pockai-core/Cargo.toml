@@ -1,0 +1,30 @@
+[package]
+name = "pockai-core"
+version = "0.1.0"
+description = "Núcleo cliente de Pockai: red, sesión, tiempo real y contrato con la UI. Rust puro, sin Tauri."
+edition = "2021"
+publish = false
+
+[features]
+default = ["keyring-store"]
+# Guarda la sesión en el llavero del sistema (Credential Manager, Keychain, Secret Service).
+keyring-store = ["dep:keyring"]
+
+[dependencies]
+base64 = "0.22"
+eventsource-stream = "0.2"
+futures-util = "0.3"
+keyring = { version = "3", features = ["windows-native", "apple-native", "linux-native"], optional = true }
+log = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+rust_socketio = { version = "0.6", features = ["async"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["sync", "time", "rt", "macros"] }
+ts-rs = { version = "10", features = ["serde-json-impl"] }
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+wiremock = "0.6"

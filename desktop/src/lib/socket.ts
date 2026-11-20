@@ -1,5 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { API_BASE_URL, getAccessToken, onTokenRenewed, renewAccessToken } from './api';
+import { hasCore } from '@pockai/client';
+import { CoreSocket } from './coreSocket';
 import { enterMaintenance } from './maintenance';
 
 let socket: Socket | null = null;
@@ -74,6 +76,14 @@ export function getDeviceId(): string {
 
 export function initSocket() {
   closeSocket();
+
+  // Dentro de la app el canal lo lleva el núcleo (Rust): conexión, token y reconexión son suyos.
+  if (hasCore()) {
+    const core = new CoreSocket();
+    void core.open().catch((e) => console.error('[tiempo real] no se pudo abrir el canal', e));
+    socket = core as unknown as Socket;
+    return socket;
+  }
 
   const socketUrl = API_BASE_URL || window.location.origin;
 

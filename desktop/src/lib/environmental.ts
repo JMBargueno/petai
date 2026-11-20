@@ -18,7 +18,8 @@ import {
   type WeatherThresholds,
 } from '@pockai/scene/weather';
 import balance from '@shared/game-data/balance.json';
-import { API_BASE_URL, apiFetch, getAccessToken, renewAccessToken } from './api';
+import { hasCore, query } from '@pockai/client';
+import { API_BASE_URL, authFetch, getAccessToken } from './api';
 
 export type TimeOfDay = 'late_night' | 'morning' | 'afternoon' | 'evening' | 'night';
 export type WeatherCondition = 'clear' | 'cloud' | 'rain' | 'snow' | 'hot' | 'cold' | 'unknown';
@@ -86,22 +87,15 @@ export const environmentalStatus = writable<EnvironmentalStatus | null>(null);
 export const STATUS_REFRESH_MS = 15 * 60_000;
 
 async function authedFetch(path: string, init?: RequestInit): Promise<Response> {
-  const base = `${API_BASE_URL}${path}`;
-  const doFetch = (token: string | null) =>
-    apiFetch(base, {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-
-  let res = await doFetch(getAccessToken());
-  if (res.status === 401) {
-    const token = await renewAccessToken(getAccessToken());
-    if (token) res = await doFetch(token);
-  }
-  return res;
+  // La renovación de sesión es la de `authFetch` (una sola en toda la app), no una propia.
+  const token = getAccessToken();
+  return authFetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
 }
 
 async function json<T>(res: Response): Promise<T> {
@@ -127,6 +121,7 @@ export async function sendHeartbeat(body: { active?: boolean; cpuUsage?: number 
 
 /** Lista las festividades próximas. */
 export async function getUpcomingFestivals(): Promise<UpcomingFestival[]> {
+  if (hasCore()) return query<UpcomingFestival[]>({ type: 'upcomingFestivals' });
   const res = await authedFetch('/v1/environmental/festivals/upcoming');
   return json<UpcomingFestival[]>(res);
 }
@@ -272,4 +267,16 @@ export function mergeLocalWeather(
   if (!status) return null;
   const w = weather ?? UNKNOWN_WEATHER;
   return { ...status, weather: { ...w } };
+}
+
+/**
+ * Dentro de la app el latido lo manda el núcleo: la UI solo le dice si el jugador está delante
+ * (ventana visible). Devuelve cómo dejar de informar.
+ */
+export function startPresenceReport(report: (present: boolean) => void): () => void {
+  if (typeof document === 'undefined') return () => {};
+  const tell = () => report(document.visibilityState === 'visible');
+  tell();
+  document.addEventListener('visibilitychange', tell);
+  return () => document.removeEventListener('visibilitychange', tell);
 }
