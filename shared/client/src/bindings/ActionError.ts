@@ -11,4 +11,9 @@ status: number | null,
 /**
  * Mensaje del servidor, si lo dio (vacío si no: la UI pone el suyo).
  */
-message: string, };
+message: string, 
+/**
+ * El porqué técnico cuando no se llegó al servidor (DNS, TLS, conexión rechazada…). Es para
+ * diagnóstico: no está pensado para enseñárselo al jugador.
+ */
+detail: string | null, };

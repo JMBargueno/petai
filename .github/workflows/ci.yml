@@ -262,20 +262,71 @@ jobs:
       - name: Test core realtime
         run: cargo test -p pockai-core --locked --test tiempo_real -- --ignored
 
-      # El núcleo también tiene que compilar para Android: allí cambian el TLS del canal en tiempo
-      # real (OpenSSL compilado con él) y dónde se guarda la sesión (sin llavero del sistema).
-      - name: Check core (Android)
-        run: |
-          rustup target add aarch64-linux-android
-          cargo install cargo-ndk --locked
-          cargo ndk -t arm64-v8a check -p pockai-core --locked
-
       - name: Core contract types are up to date
         run: |
           git diff --exit-code -- shared/client/src/bindings || {
             echo "::error::Los tipos del contrato están desactualizados. Ejecuta: cargo test -p pockai-core export_bindings"
             exit 1
           }
+
+  # La app de Tauri para Android (spec 43): el mismo shell y el mismo núcleo que el escritorio, con la
+  # UI de apps/android. Compila el APK de depuración para el emulador (x86_64).
+  android-tauri:
+    name: Android app (Tauri)
+    runs-on: ubuntu-latest
+    needs: validate-data
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # El runner ya trae el SDK y el NDK de Android; solo se añade la plataforma 37
+      - name: Install platform (compileSdk 37)
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-37.0"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: x86_64-linux-android
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: .
+          key: android
+
+      - name: Build APK (debug, x86_64)
+        run: |
+          export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          pnpm --filter petai-desktop exec tauri android build --debug --target x86_64 --apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pockai-android-tauri-debug
+          path: desktop/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          retention-days: 7
 
   android:
     name: Android build (Compose)

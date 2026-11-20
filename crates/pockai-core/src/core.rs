@@ -336,7 +336,7 @@ impl Core {
                 .header(CONTENT_TYPE, req.content_type.as_deref().unwrap_or("application/json"))
                 .body(body.clone());
         }
-        builder.send().await.map_err(|e| CoreError::Network(e.to_string()))
+        builder.send().await.map_err(|e| CoreError::Network(error_chain(&e)))
     }
 
     async fn buffer(&self, res: reqwest::Response) -> Result<ApiResponse, CoreError> {
@@ -385,6 +385,18 @@ impl Core {
         body["refreshToken"] = Value::String(REDACTED.into());
         res.body = body.to_string();
     }
+}
+
+/// Un error con todas sus causas encadenadas («error sending request: … : connection refused»).
+fn error_chain(error: &dyn std::error::Error) -> String {
+    let mut text = error.to_string();
+    let mut source = error.source();
+    while let Some(cause) = source {
+        text.push_str(": ");
+        text.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    text
 }
 
 fn tokens_in(body: &Value) -> Option<Tokens> {
