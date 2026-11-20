@@ -18,6 +18,85 @@ se desvía del plan, se anota en «Desviaciones» al final.
 | 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 1 / 10 | 🟡 |
 | 5 | Live Activity / Dynamic Island y widgets | 0 / 7 | ⬜ |
 
+## Estado actual (2026-11-20): dónde se paró y cómo retomar
+
+El trabajo se detuvo aquí a petición. Esta sección es la foto; el detalle de cada paso está en las
+fases de abajo y en las secciones de verificación del final.
+
+### Qué hay
+
+- **Fases 1 a 3, terminadas y fusionadas** (PR 209). El escritorio habla con el backend solo a
+  través del núcleo en Rust (`crates/pockai-core`): sesión, tiempo real, chat, estado global,
+  avisos y 85 acciones y 67 consultas tipadas. Ningún token en el webview.
+- **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
+  móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
+- **Biblioteca `@pockai/ui`, en el PR 211 (abierto, CI en verde, sin fusionar)**. Rama
+  `claude/pockai-ui`. Contiene el kit (20 componentes), los estilos y ocho pantallas de dominio:
+  Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo y Temporada. Las usan el
+  escritorio y la app de Android.
+- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda,
+  Progreso (Misiones, Temporada) y Cuenta. Todas probadas en el emulador.
+
+### Qué falta, por orden
+
+1. **Fusionar el PR 211.**
+2. **Más pantallas a la biblioteca** (4.4 y 4.5). Quedan las pestañas del escritorio que cargan sus
+   datos: Cofres, Entrenamiento, Torneo, Raid, Armario, Mente, Arena, Cocina, Amigos, Visitas,
+   Clanes, Perfil, Minijuegos, Aventura, Hábitat y Chat. Las cinco primeras son pequeñas y siguen
+   el patrón de abajo sin más. Las demás dependen del motor de sprites, de la escena o del audio
+   del escritorio (`lib/sprites`, `@pockai/scene`, `lib/audio`): antes hay que decidir si ese
+   motor se comparte o si cada app pone el suyo en un hueco, como el huevo de Eclosión.
+3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
+4. **Plugins nativos** (4.7, 4.8): sesión cifrada con el Keystore en Android (hoy es un fichero
+   privado de la app) y sincronización en segundo plano con avisos de cuidado.
+5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
+   acordada: que la app de Tauri tenga portados el widget y la sincronización. Aún no se cumple.
+6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
+
+### Cómo se parte una pantalla
+
+Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, backend ni plataforma.
+
+- **Si ya solo pinta** (Tienda, Mochila): se mueve con `git mv` a `shared/ui/src` y se exporta en
+  `index.ts`.
+- **Si carga sus datos** (Misiones, Vínculo, Temporada): se parte en vista y contenedor. La vista
+  va a la biblioteca con `data`, `loading`, `error` y eventos (`refresh`, `claim`…). El
+  contenedor del escritorio conserva nombre y props y llama a `api.*`; el de Android va en
+  `apps/android/src/screens/` y usa `query` y `perform` de `@pockai/client`.
+- **Si tiene algo propio de una plataforma** (la casita arrastrable de Inicio, el huevo de sprites
+  de Eclosión): la vista deja un hueco (`slot`) y cada app lo rellena.
+- En Android, los ajustes táctiles y de ancho van en `apps/android/src/app.css`. Los estilos de un
+  componente ganan a un selector simple: hay que usar `main .screen .clase`.
+- Tras una acción que cambia el saldo y que el núcleo no reconoce por su ruta, el contenedor pide
+  `stateRefresh('user')`.
+
+### Cómo se prueba
+
+- **Escritorio**: `pnpm --filter petai-desktop test` (438 tests) y el modo demo
+  (`pnpm --filter petai-desktop run demo`, puerto 5175). La ejecución de tests acaba en rojo por dos
+  rechazos no capturados de `game-data.client.spec.ts`, anteriores a esta migración.
+- **Android en el emulador** (Windows; ver también «Compilar para Android en Windows»):
+  1. Base de datos desechable: `createdb petai_core_e2e`, `prisma migrate deploy` y
+     `prisma:seed` con `DATABASE_URL` apuntando a ella. No se usa `petai_dev`.
+  2. Backend en el puerto 3100 contra esa base, con `EMAIL_VERIFICATION_REQUIRED=false` y
+     `HANDLE_REQUIRED=false`.
+  3. Emulador `Medium_Phone_API_37.0` y `adb reverse tcp:3100 tcp:3100`.
+  4. `VITE_API_URL=http://127.0.0.1:3100`, `tauri android build --debug --target x86_64 --apk`,
+     copiar la `.so` a `jniLibs/x86_64` y `gradlew assembleX86_64Debug -x rustBuildX86_64Debug`.
+  5. Instalar el APK y entrar con la cuenta de la semilla.
+  6. Al terminar: desinstalar la app, apagar el emulador y borrar la base de datos. La compilación
+     toca `desktop/src-tauri/gen/schemas/acl-manifests.json` y `shared/openapi/openapi.json`: se
+     restauran con `git checkout`.
+
+### Sin verificar
+
+- En Android: comprar el pase de temporada (la temporada de la semilla está finalizada), el
+  selector de mascota activa (hace falta una segunda mascota) y el temblor del icono del huevo.
+- En el escritorio dentro de la app de Tauri: el kit y las pantallas compartidas solo se han visto
+  en el modo demo del navegador. Tampoco se han oído los sonidos de abrir un modal o ganar monedas.
+- El chat con respuesta real de un modelo, `release.yml` con el workspace, macOS y Linux, y un
+  dispositivo físico o ARM.
+
 ## Fase 1 — Núcleo + escritorio
 
 ### 1.0 Preparación
