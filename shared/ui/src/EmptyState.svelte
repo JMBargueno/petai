@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Estado vacío: icono en círculo + título + texto + acción opcional (slot). `compact` para listas. */
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let icon = 'paw';
   export let title = '';

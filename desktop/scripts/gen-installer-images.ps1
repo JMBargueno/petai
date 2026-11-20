@@ -17,7 +17,7 @@ $logoPath = Join-Path $tauriDir 'icons\icon.png'
 $outDir = Join-Path $tauriDir 'icons\installer'
 New-Item -ItemType Directory -Force $outDir | Out-Null
 
-# Paleta (desktop/src/styles/tokens.css)
+# Paleta (shared/ui/styles/tokens.css)
 $sunburst = [System.Drawing.ColorTranslator]::FromHtml('#ffd731')
 $ink = [System.Drawing.ColorTranslator]::FromHtml('#0b0a14')
 $white = [System.Drawing.Color]::White

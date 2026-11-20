@@ -99,7 +99,7 @@ Abreviaturas de plataforma: **E** = escena web compartida (desktop + Android + i
 ### 2.1 Interfaz compartida (`ui.*`), unos 22 sonidos
 | ID | Dónde se engancha |
 |---|---|
-| `ui.tap`, `ui.tap_soft` | `desktop/src/components/ui/Button.svelte`, `TileButton.svelte`; Android en un `Modifier.clickSound()` común |
+| `ui.tap`, `ui.tap_soft` | `shared/ui/src/Button.svelte`, `TileButton.svelte`; Android en un `Modifier.clickSound()` común |
 | `ui.tab` | pestañas y subpestañas de `ControlPanel.svelte`; navegación de `AppRoot.kt` |
 | `ui.toggle_on/off` | `ui/Switch.svelte`, `Segmented.svelte` |
 | `ui.modal_open/close` | `ui/Modal.svelte`, `ConfirmDialog.svelte` |

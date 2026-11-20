@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Interruptor on/off con etiqueta. Emite `change` con el nuevo valor (no muta `checked` por sí solo si se usa como controlado). */
   import { createEventDispatcher } from 'svelte';
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let checked = false;
   export let label = '';

@@ -1,0 +1,10 @@
+/* Lo propio de la ventana de escritorio: es transparente, cubre toda la pantalla y no se desplaza
+   (la mascota pasea por encima del escritorio). El resto de estilos viene de @pockai/ui. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  user-select: none;
+  overflow: hidden;
+}

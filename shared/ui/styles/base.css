@@ -1,13 +1,5 @@
-/* Componentes base de Pockai (guía §9). Reutilizables en todos los componentes Svelte. */
-html,
-body {
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  user-select: none;
-  overflow: hidden;
-}
-
+/* Componentes base de Pockai (guía §9). Reutilizables en todos los componentes Svelte.
+   El fondo y el desplazamiento de la página los pone cada app (ver su hoja propia). */
 body {
   font-family: var(--font-ui);
   font-size: var(--text-body);

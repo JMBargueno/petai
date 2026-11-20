@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Baldosa pulsable con icono grande + etiqueta (elementos, cuidados, desbloqueos). Agrupar en .ui-tiles. */
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let icon: string;
   export let label: string;

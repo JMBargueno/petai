@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Aviso en línea (error / ok / warning / info). Con `dismissible` emite `dismiss`. */
   import { createEventDispatcher } from 'svelte';
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let tone: 'error' | 'ok' | 'warning' | 'info' = 'info';
   export let icon: string | null = null;

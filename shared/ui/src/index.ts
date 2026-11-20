@@ -1,0 +1,30 @@
+/**
+ * @pockai/ui: componentes de interfaz de Pockai, solo presentacionales.
+ *
+ * Reciben datos por props y avisan con eventos: no saben nada del núcleo, del backend ni de la
+ * plataforma. Los usan las UIs de escritorio, Android e iOS. Los estilos van aparte, para que cada
+ * app los cargue una vez: `@pockai/ui/fonts.css`, `tokens.css`, `base.css` y `kit.css`.
+ */
+export { default as AsyncState } from './AsyncState.svelte';
+export { default as Badge } from './Badge.svelte';
+export { default as Button } from './Button.svelte';
+export { default as Card } from './Card.svelte';
+export { default as ConfirmDialog } from './ConfirmDialog.svelte';
+export { default as CurrencyPill } from './CurrencyPill.svelte';
+export { default as EmptyState } from './EmptyState.svelte';
+export { default as FeatureHeader } from './FeatureHeader.svelte';
+export { default as ListRow } from './ListRow.svelte';
+export { default as Modal } from './Modal.svelte';
+export { default as Notice } from './Notice.svelte';
+export { default as SceneBackdrop } from './SceneBackdrop.svelte';
+export { default as ProgressBar } from './ProgressBar.svelte';
+export { default as SectionHeader } from './SectionHeader.svelte';
+export { default as Segmented } from './Segmented.svelte';
+export { default as Skeleton } from './Skeleton.svelte';
+export { default as Slider } from './Slider.svelte';
+export { default as StatTile } from './StatTile.svelte';
+export { default as Switch } from './Switch.svelte';
+export { default as TileButton } from './TileButton.svelte';
+export { default as Ico } from './Ico.svelte';
+export { focusTrap } from './focusTrap';
+export { emitUiFeedback, onUiFeedback, type UiFeedback } from './feedback';

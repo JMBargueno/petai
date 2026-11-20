@@ -3,7 +3,7 @@
    * Fila de lista (historiales, rankings, miembros…). Slots: `lead` (icono/avatar), default (contenido
    * extra bajo el título), `end` (valor/acciones). `icon` pinta un icono en círculo si no hay `lead`.
    */
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let title = '';
   export let sub = '';

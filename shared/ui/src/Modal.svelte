@@ -1,9 +1,9 @@
 <script lang="ts">
   /** Diálogo modal con fondo. Cierra con Esc, clic fuera o la X (emite `close`). Slot `footer` para acciones. */
   import { createEventDispatcher, onDestroy } from 'svelte';
-  import Ico from '../Ico.svelte';
-  import { sfx } from '../../lib/audio';
-  import { focusTrap } from '../../lib/ui/focusTrap';
+  import Ico from './Ico.svelte';
+  import { emitUiFeedback } from './feedback';
+  import { focusTrap } from './focusTrap';
 
   export let open = true;
   export let title = '';
@@ -21,11 +21,11 @@
   // Sonido al abrirse y cerrarse (spec 40), tanto si cambia `open` como si se monta/desmonta abierto.
   let wasOpen = false;
   $: if (open !== wasOpen) {
-    sfx(open ? 'ui.modal_open' : 'ui.modal_close');
+    emitUiFeedback(open ? 'modalOpen' : 'modalClose');
     wasOpen = open;
   }
   onDestroy(() => {
-    if (wasOpen) sfx('ui.modal_close');
+    if (wasOpen) emitUiFeedback('modalClose');
   });
 </script>
 
