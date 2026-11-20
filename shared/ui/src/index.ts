@@ -69,6 +69,7 @@ export { default as IsoRoomView } from './IsoRoomView.svelte';
 export { default as ItemIcon } from './ItemIcon.svelte';
 export { default as EggSprite } from './EggSprite.svelte';
 export { default as PetMiniAvatar } from './PetMiniAvatar.svelte';
+export { default as PetStageView } from './PetStageView.svelte';
 export { default as HatchView } from './HatchView.svelte';
 export { default as MissionsView } from './MissionsView.svelte';
 export { default as MinigameHost } from './MinigameHost.svelte';

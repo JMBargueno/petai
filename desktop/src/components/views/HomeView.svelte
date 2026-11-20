@@ -25,7 +25,7 @@
   }
 </script>
 
-<PetHomeView {pet} {inventory} {pets} {busy} on:clean on:toggleSleep on:toggleHabitat on:feed on:selectPet on:go>
+<PetHomeView {pet} {inventory} {pets} {busy} stage on:caress on:clean on:toggleSleep on:toggleHabitat on:feed on:selectPet on:go>
   <svelte:fragment slot="habitat">
     <Card variant="pop" size="sm">
       <!-- svelte-ignore a11y-no-static-element-interactions -->

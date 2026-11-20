@@ -325,6 +325,16 @@
     });
   }
 
+  function handleCaress() {
+    if (!pet) return;
+    return runAction('caress', async () => {
+      const updated = await api.caressPet(pet.id);
+      dispatch('petUpdated', updated);
+      dispatch('actionTriggered', 'caress');
+      showPanelNotice('ok', `${petName()} se deja mimar.`, null);
+    });
+  }
+
   function handleToggleSleep() {
     if (!pet) return;
     return runAction('sleep', async () => {
@@ -544,6 +554,7 @@
             {inventory}
             busy={busyAction}
             on:selectPet
+            on:caress={handleCaress}
             on:clean={handleClean}
             on:toggleSleep={handleToggleSleep}
             on:toggleHabitat={(e) => handleToggleHabitat(e.detail)}
