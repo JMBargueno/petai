@@ -49,8 +49,8 @@ fases de abajo y en las secciones de verificación del final.
    sencilla). Falta en Android el clima local.
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
 4. **Plugins nativos** (4.7, 4.8): hechos en Android (sesión cifrada con el Keystore y avisos de
-   cuidado con WorkManager; ver «Plugins nativos de Android»). Falta probarlos con sesión en el
-   emulador y lo de iOS (`BGAppRefreshTask`).
+   cuidado con WorkManager; ver «Plugins nativos de Android»), probados en el emulador con un
+   backend de pega. Falta probarlos contra el backend real y lo de iOS (`BGAppRefreshTask`).
 5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
    acordada: que la app de Tauri tenga portados el widget y la sincronización. La sincronización ya
    está; falta el widget.
