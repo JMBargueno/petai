@@ -31,12 +31,12 @@ fases de abajo y en las secciones de verificación del final.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
 - **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
-  estilos y veintiuna pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  estilos y veintidós pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
   Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
-  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos, Visitas y Clanes. Las usan el escritorio y la app de Android.
+  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos, Visitas, Clanes y Mente. Las usan el escritorio y la app de Android.
 - **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
   `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
-- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario), Mochila, Jugar
+- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario, Mente), Mochila, Jugar
   (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta
   (Cuenta, Perfil, Amigos, Visitas, Clanes; desde el nombre de la cabecera). Jugar, Cofres, Armario y lo social aún no se han
   probado en el emulador.
@@ -59,7 +59,7 @@ fases de abajo y en las secciones de verificación del final.
 |---|---|---|---|
 | (a) Sprites, datos estáticos y sonido | Hechas todas: Armario, Arena, Cocina, Minijuegos y Aventura | — | Patrón de siempre; los efectos de un juego van por el puerto de sonido (`setUiSound`) |
 | (b) Estado de pantalla alimentado por tiempo real | Hechas todas: Amigos, Visitas y Clanes | Las escenas siguen en el escritorio (sala del amigo, casa, hábitat del clan) | Decidido: feed social compartido, no núcleo (ver «Lo social: decisión»). Las escenas, en un hueco de momento |
-| (c) Funciones del escritorio | Chat/IA, Mente, partes de Hábitat | `hermesLocal`, `aiCli`, `deskContext`, `desktopSkillsStore`, `initiative`, `brain`, arrastre de ventana | No van enteras: frontera de la spec 43. El móvil tendrá su contenedor o una vista reducida con huecos |
+| (c) Funciones del escritorio | Hábitat y Chat/IA (Mente hecha) | Hábitat: la sala isométrica con arrastre a la ventana, modo pantalla completa y muebles de habilidades. Chat: IA local, herramientas del equipo, voz y pagos con Stripe | Lo compartible a la biblioteca y lo del escritorio en huecos; en Android, sin pagos (normas de Google Play) ni IA local |
 | (d) Perfil | Hecha | — | — |
 
 Pendiente aparte: el motor de sprites (`@pockai/scene/sprites`) y el registro de la escena PixiJS
@@ -765,3 +765,22 @@ disolver un clan (no se ha probado en el demo).
 
 Con esto lo social está entero. Queda el grupo (c): Chat/IA, Mente y Hábitat, ligados a funciones
 del escritorio.
+
+### Mente compartida (2026-11-20)
+
+Mente resultó compartible entera: lo que la ataba al escritorio eran textos y lógica pura.
+
+- `mind.ts` (dimensiones, capas de memoria, fechas relativas) y los tipos de la mente
+  (`mindTypes.ts`, antes en `api.ts`, que los reexporta) pasan a `@pockai/ui`.
+- De `initiative.ts` pasan solo los niveles de charla y sus textos (`talk.ts`); el reloj de la
+  iniciativa se queda en el escritorio. De `learningStore.ts`, los textos de lo aprendido
+  (`learned.ts`, con `@pockai/mind`, nueva dependencia de la biblioteca); el store y el refuerzo
+  se quedan.
+- `MindView` en la biblioteca; `MindTab` como contenedor (guarda el nivel de charla al momento y
+  lo deshace si el servidor falla); `MindScreen` en Android (Mascota › Mente).
+
+Verificado en el escritorio en modo demo: Mente con personalidad, nivel de charla y lo aprendido;
+cambiar a «Hablador» (el texto pasa de cada 17 a cada 7 minutos). 438 tests del escritorio;
+compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador.
