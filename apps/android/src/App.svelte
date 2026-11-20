@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AccountView, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, RedeemCodeCard, RewardToast, Segmented, ShopView, SoundSettingsView, VerifyEmailView, redeemErrorText, rewardToCelebrate } from '@pockai/ui';
+  import { AccountView, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, RedeemCodeCard, RewardToast, Segmented, ShopView, SoundSettingsView, VerifyEmailView, createInitiativeLoop, redeemErrorText, rewardToCelebrate, type InitiativeReply } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
   import AdventureScreen from './screens/AdventureScreen.svelte';
   import ArenaScreen from './screens/ArenaScreen.svelte';
@@ -89,6 +89,38 @@
   let now = $state(Date.now());
 
   const pet = $derived(activePet($core));
+
+  /**
+   * Iniciativa (spec 41): la mascota habla por su cuenta. Qué dice y cuándo lo decide el servidor;
+   * aquí solo se le pregunta y se enseña en Inicio. Abrir la app o volver a ella cuenta como «el
+   * entrenador ha vuelto» (el servidor saluda una sola vez por ausencia).
+   */
+  let petSays = $state('');
+  let initiativeOn = false;
+  const initiative = createInitiativeLoop({
+    ask: async (back) => {
+      if (!pet?.id) return null;
+      return (await act({ type: 'petInitiative', petId: String(pet.id), back, focus: false })) as InitiativeReply;
+    },
+    say: (text) => (petSays = text),
+    setTimer: (fn, ms) => setTimeout(fn, ms),
+    clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+  });
+  $effect(() => {
+    const on = $phase === 'ready' && !!pet?.id;
+    if (on === initiativeOn) return;
+    initiativeOn = on;
+    if (on) {
+      initiative.start();
+      void initiative.ownerBack();
+    } else {
+      initiative.stop();
+      petSays = '';
+    }
+  });
+  function onVisible() {
+    if (document.visibilityState === 'visible' && initiativeOn) void initiative.ownerBack();
+  }
   const coins = $derived(Number($core.user?.coins ?? 0));
   onMount(() => {
     if (hasCore()) void start().catch((e) => (message = failureText(e, 'No se pudo arrancar')));
@@ -99,7 +131,10 @@
       window.scrollTo(0, 0);
       if (p === 'ready') void askNotificationsOnce();
     });
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      initiative.stop();
       clearInterval(clock);
       unphase();
     };
@@ -203,6 +238,9 @@
         <Segmented variant="pills" label="Sección de Mascota" value={petSection} options={PET_SECTIONS} on:change={(e) => (petSection = e.detail as typeof petSection)} />
       {/if}
       {#if tab === 'pet' && petSection === 'home'}
+        {#if petSays}
+          <Notice tone="info" icon="chat"><strong>{String(pet?.nickname || (pet?.species as { name?: string } | undefined)?.name || 'Tu Pockai')} dice:</strong> «{petSays}»</Notice>
+        {/if}
         <!-- La misma ficha que el escritorio. Aquí la mascota no sale de su hábitat: sin «A casa». -->
         <PetHomeView
           {pet}

@@ -103,3 +103,4 @@ export type { RoomPetDrag } from './roomDrag';
 export type { AuthApi, HandleCheck, RegisterInput } from './authApi';
 export type { AiApi, AiConfigInput, AiConfigView } from './aiApi';
 export { celebrateReward, redeemErrorText, rewardLines, rewardToCelebrate, type RewardLineKind, type RewardReceived } from './rewards';
+export { createInitiativeLoop, DEFAULT_INITIATIVE, type InitiativeLoop } from './initiative';
