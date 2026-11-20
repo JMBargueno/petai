@@ -39,6 +39,7 @@ export { default as ArenaView } from './ArenaView.svelte';
 export { default as BondingView } from './BondingView.svelte';
 export { default as BackpackView } from './BackpackView.svelte';
 export { default as ChestsView } from './ChestsView.svelte';
+export { default as ClansView } from './ClansView.svelte';
 export { default as CookingView } from './CookingView.svelte';
 export { default as FriendsView } from './FriendsView.svelte';
 export { default as ItemIcon } from './ItemIcon.svelte';

@@ -31,19 +31,19 @@ fases de abajo y en las secciones de verificación del final.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
 - **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
-  estilos y veinte pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  estilos y veintiuna pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
   Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
-  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos y Visitas. Las usan el escritorio y la app de Android.
+  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos, Visitas y Clanes. Las usan el escritorio y la app de Android.
 - **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
   `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
 - **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario), Mochila, Jugar
   (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta
-  (Cuenta, Perfil, Amigos, Visitas; desde el nombre de la cabecera). Jugar, Cofres, Armario y lo social aún no se han
+  (Cuenta, Perfil, Amigos, Visitas, Clanes; desde el nombre de la cabecera). Jugar, Cofres, Armario y lo social aún no se han
   probado en el emulador.
 
 ### Qué falta, por orden
 
-1. **Probar en el emulador** Jugar entera, Cofres, Armario, Perfil, Amigos, Visitas y el huevo de sprites.
+1. **Probar en el emulador** Jugar entera, Cofres, Armario, lo social entero y el huevo de sprites.
 2. **Más pantallas a la biblioteca** (4.4 y 4.5), por tramos según la tabla de abajo. Decidido:
    el motor de sprites se comparte (no un hueco por app).
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
@@ -58,7 +58,7 @@ fases de abajo y en las secciones de verificación del final.
 | Tipo | Pantallas | Qué las ata al escritorio | Cómo se mueven |
 |---|---|---|---|
 | (a) Sprites, datos estáticos y sonido | Hechas todas: Armario, Arena, Cocina, Minijuegos y Aventura | — | Patrón de siempre; los efectos de un juego van por el puerto de sonido (`setUiSound`) |
-| (b) Estado de pantalla alimentado por tiempo real | Clanes (Amigos y Visitas hechas) | El hábitat del clan (`ClanHabitat`) | Decidido: feed social compartido, no núcleo (ver «Lo social: decisión»). Las escenas, en un hueco de momento |
+| (b) Estado de pantalla alimentado por tiempo real | Hechas todas: Amigos, Visitas y Clanes | Las escenas siguen en el escritorio (sala del amigo, casa, hábitat del clan) | Decidido: feed social compartido, no núcleo (ver «Lo social: decisión»). Las escenas, en un hueco de momento |
 | (c) Funciones del escritorio | Chat/IA, Mente, partes de Hábitat | `hermesLocal`, `aiCli`, `deskContext`, `desktopSkillsStore`, `initiative`, `brain`, arrastre de ventana | No van enteras: frontera de la spec 43. El móvil tendrá su contenedor o una vista reducida con huecos |
 | (d) Perfil | Hecha | — | — |
 
@@ -737,3 +737,31 @@ Android.
 
 **Sin verificar:** nada de esto en el emulador; el viaje por el portal en el escritorio con la
 mascota en pantalla (en el demo estaba dormida).
+
+### Clanes compartidos (2026-11-20)
+
+- **Puerto en vez de vista + contenedor.** Clanes tiene unas veinte llamadas con mucha lógica entre
+  ellas (confirmaciones en dos pasos, rangos, chat que se queda abajo, objetivos). Partirla como las
+  demás habría repetido esa lógica en dos contenedores. La pantalla entera vive en `ClansView` y
+  recibe `clansApi` (`social/clansApi.ts`): las operaciones que necesita más `errorText`. El
+  escritorio lo implementa con su `api`; Android, con `query` y `perform` del núcleo. Es una
+  excepción a «datos por props, avisos por eventos», documentada en la vista.
+- **El hábitat del clan** envuelve la cabecera del clan, así que no es un hueco normal: la vista
+  recibe `habitat` (un componente opcional) y pinta la cabecera dentro; sin él (Android), la
+  cabecera va sola.
+- `chatScroll.ts` (pegarse al final del chat) pasa a la biblioteca.
+- **Android**: `ClansScreen` en Cuenta › Clanes. El chat y los objetivos llegan en vivo por el feed
+  social.
+- **Modo demo**: los mensajes sembrados del clan tenían ids (`m-1`…) que el generador del mock
+  repetía, y un mensaje enviado no aparecía.
+
+Verificado en el escritorio en modo demo: Clanes con el hábitat envolviendo la cabecera; enviar un
+mensaje al chat; sumar progreso a un objetivo (31/50 → 32/50); invitar con un nickname mal escrito
+(se avisa sin preguntar al servidor); editar el Nexo (aviso y el formulario se cierra; el mock no
+guarda el nombre). 438 tests del escritorio; compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; crear, unirse, salir, expulsar, cambiar rangos y
+disolver un clan (no se ha probado en el demo).
+
+Con esto lo social está entero. Queda el grupo (c): Chat/IA, Mente y Hábitat, ligados a funciones
+del escritorio.

@@ -7,3 +7,4 @@ export * from './visitors';
 export * from './clans';
 export * from './feed';
 export * from './visits';
+export * from './clansApi';

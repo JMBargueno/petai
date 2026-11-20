@@ -6,6 +6,7 @@
   import ArenaScreen from './screens/ArenaScreen.svelte';
   import BondingScreen from './screens/BondingScreen.svelte';
   import ChestsScreen from './screens/ChestsScreen.svelte';
+  import ClansScreen from './screens/ClansScreen.svelte';
   import CookingScreen from './screens/CookingScreen.svelte';
   import FriendsScreen from './screens/FriendsScreen.svelte';
   import MinigamesScreen from './screens/MinigamesScreen.svelte';
@@ -37,7 +38,7 @@
   let progressSection = $state<'missions' | 'season'>('missions');
   let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking' | 'adventure'>('games');
   let shopSection = $state<'store' | 'chests'>('store');
-  let accountSection = $state<'account' | 'profile' | 'friends' | 'visits'>('account');
+  let accountSection = $state<'account' | 'profile' | 'friends' | 'visits' | 'clans'>('account');
   /** Amigo que se eligió con «Visitar» en Amigos. */
   let visitFriend = $state('');
   const ACCOUNT_SECTIONS = [
@@ -45,6 +46,7 @@
     { value: 'profile', label: 'Perfil', icon: 'trophy' },
     { value: 'friends', label: 'Amigos', icon: 'users' },
     { value: 'visits', label: 'Visitas', icon: 'home' },
+    { value: 'clans', label: 'Clanes', icon: 'shield' },
   ];
   const PLAY_SECTIONS = [
     { value: 'games', label: 'Minijuegos', icon: 'gamepad' },
@@ -261,6 +263,8 @@
           <ProfileScreen />
         {:else if accountSection === 'friends'}
           <FriendsScreen onVisit={(userId) => { visitFriend = userId; accountSection = 'visits'; }} />
+        {:else if accountSection === 'clans'}
+          <ClansScreen />
         {:else if accountSection === 'visits'}
           {#key visitFriend}
             <VisitsScreen initialFriend={visitFriend} onGoFriends={() => (accountSection = 'friends')} />

@@ -170,9 +170,9 @@ let clanGoals = [
   { id: 'g-2', clanId: 'c-1', title: 'Subir el clan a nivel 5', description: '', metric: 'xp', target: 5000, progress: 5000, status: 'completed', createdAt: iso(-10 * DAY), completedAt: iso(-DAY) },
 ];
 let clanMessages = [
-  { id: 'm-1', clanId: 'c-1', userId: 'u-2', senderName: 'Marta', body: '¿Raid esta noche a las 21:00?', createdAt: iso(-50 * MIN) },
-  { id: 'm-2', clanId: 'c-1', userId: 'u-demo', senderName: 'Entrenadora Demo', body: 'Me apunto. Dejo aquí la guía: https://pockai.world/es/guias/raid-de-fuego-estrategias-y-composiciones-recomendadas', createdAt: iso(-45 * MIN) },
-  { id: 'm-3', clanId: 'c-1', userId: 'u-3', senderName: 'Un nombre de jugador bastante largo', body: 'Yo llego un poco tarde, empezad sin mí.', createdAt: iso(-10 * MIN) },
+  { id: 'm-seed-1', clanId: 'c-1', userId: 'u-2', senderName: 'Marta', body: '¿Raid esta noche a las 21:00?', createdAt: iso(-50 * MIN) },
+  { id: 'm-seed-2', clanId: 'c-1', userId: 'u-demo', senderName: 'Entrenadora Demo', body: 'Me apunto. Dejo aquí la guía: https://pockai.world/es/guias/raid-de-fuego-estrategias-y-composiciones-recomendadas', createdAt: iso(-45 * MIN) },
+  { id: 'm-seed-3', clanId: 'c-1', userId: 'u-3', senderName: 'Un nombre de jugador bastante largo', body: 'Yo llego un poco tarde, empezad sin mí.', createdAt: iso(-10 * MIN) },
 ];
 
 const mission = (id: string, description: string, current: number, target: number, claimed: boolean, reward: object, resetsIn: number) => ({
