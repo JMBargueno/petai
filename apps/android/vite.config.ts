@@ -8,6 +8,8 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig({
   plugins: [svelte()],
   clearScreen: false,
+  // Una sola copia de Svelte: el shell vive en @pockai/mobile y sus runas tienen que ser las de aquí.
+  resolve: { dedupe: ['svelte'] },
   server: {
     port: 5183,
     strictPort: true,

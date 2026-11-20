@@ -13,7 +13,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
 | **Fase 3** | Inteligencia Artificial (IA) | ✅ Completada (salvo modo suscripción y Redis) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ✅ Completada (falta fin de temporada) | Motor determinista, emparejamiento ELO y repeticiones |
-| **Fase 5** | Clientes Móviles Nativos | ✅ Android (salvo Play Billing/FCM) · ⏳ iOS pendiente | Android (Tauri + Svelte, núcleo en Rust) e iOS (pendiente) |
+| **Fase 5** | Clientes móviles | ✅ Android (salvo Play Billing/FCM) · ✅ iOS en el simulador (sin APNs ni StoreKit) | Una app de Tauri con la UI Svelte compartida (`@pockai/mobile`) y el núcleo en Rust; `apps/android` y `apps/ios` son su cáscara |
 | **Fase 6** | Pulido y Lanzamiento | 🚧 Hecho lo técnico; pendiente lo que depende de cuentas externas | Seguridad, balance, optimización, tiendas y despliegue |
 | **Fase 7** | Funcionalidades Expandidas | 🚧 Oleada 1 completada; oleadas 2 y 3 en el backend con tests de backend crecientes, sin consumo desde clientes | 33 nuevas features (hábito, meta, IA, comunidad y ecosistema) |
 
@@ -102,7 +102,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
   - [x] Todo lo que tenía la app Kotlin: cuenta (alta, verificación, nickname, recuperar la contraseña), eclosión, cuidados, tienda y cofres, Jugar, chat IA con clave propia, widget de la pantalla de inicio, avisos de cuidado con WorkManager y sesión cifrada con el Keystore.
   - [ ] Pendiente (requiere cuentas externas): Play Billing (Play Console + endpoint de verificación de compras en el backend) y push con FCM (proyecto de Firebase y `google-services.json`).
   - Build: ver «Compilar para Android en Windows» en `docs/MIGRACION_NUCLEO_RUST.md`.
-- **iOS**: SwiftUI con Liquid Glass para iOS 27, Live Activities y StoreKit 2.
+- **iOS**: la misma app de Tauri que Android (`apps/ios` sobre `@pockai/mobile`), con el aspecto de Cupertino que ya trae `@pockai/ui`; la spec 43 sustituyó el planteamiento de SwiftUI nativo. Probada en el simulador con un backend local. Faltan `BGAppRefreshTask` y, en la fase 5 de esa spec, Live Activities y WidgetKit. StoreKit 2 espera al backend.
 - **Sincronización**: la misma cuenta en todos los dispositivos. La vinculación por código (`/auth/device/*`) está en el backend, pero ningún cliente la inicia.
 
 ---
@@ -162,7 +162,7 @@ Implementación de 33 nuevas funcionalidades organizadas en tres oleadas. Cada f
 | 024 — Modding API + Workshop | `backend/src/modules/modding/` | ⚠️ |
 | 025 — Public API + Webhooks | `backend/src/modules/webhooks/` | ⚠️ |
 | 026 — Security Zero-Trust + E2E | `backend/src/modules/security/` | ⚠️ (E2E: prototipo) |
-| 027 — iOS + Skia Animation | `shared/assets/animation-specs.json` | ⚠️ (sin app iOS todavía) |
+| 027 — iOS + Skia Animation | `shared/assets/animation-specs.json` | ➖ (superada por la spec 043: una app de Tauri y `@pockai/scene`, no Skia nativo) |
 | 028 — Welcome Back | `backend/src/modules/reengagement/` | ⚠️ |
 | 029 — Pet Buddies | `backend/src/modules/buddies/` | ⚠️ |
 | 030 — Rituals | `backend/src/modules/rituals/` | ⚠️ |

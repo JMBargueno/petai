@@ -2,7 +2,7 @@
   /**
    * Mascota › Hábitat: la pantalla entera es `HabitatView`, de `@pockai/ui`, hablando con el núcleo.
    * En el móvil la mascota no sale de su hábitat. La sala isométrica es la de la biblioteca con lo de
-   * Android (`Room.svelte`): editar, mover y girar muebles. La mascota y el saldo los pone al día el núcleo.
+   * En el móvil (`Room.svelte`): editar, mover y girar muebles. La mascota y el saldo los pone al día el núcleo.
    */
   import { query } from '@pockai/client';
   import { HabitatView, type HabitatApi } from '@pockai/ui';

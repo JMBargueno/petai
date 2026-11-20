@@ -378,12 +378,12 @@ La especificación es la misma. Solo cambia lo que depende de la plataforma:
 
 | Aspecto | Android | iOS |
 |---|---|---|
-| Estilo | Material 3 Expressive, color dinámico | Liquid Glass |
+| Estilo | Material 3 Expressive | Cupertino (`@pockai/ui/styles/platform/ios.css`) |
 | Inicio de sesión social | Google (Credential Manager) | Sign in with Apple |
 | Compras | Play Billing | StoreKit 2 |
 | Push | FCM | APNs |
 | Widget | Glance | WidgetKit y Live Activity |
-| Estado | Funcional | Sin código |
+| Estado | Funcional | Funcional en el simulador (la misma app: `@pockai/mobile`) |
 
 El inicio de sesión social y las compras no tienen backend todavía.
 

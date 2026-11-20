@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * La sala isométrica de `@pockai/ui` con lo de Android: el uso de un mueble se avisa al núcleo.
+   * La sala isométrica de `@pockai/ui` con lo del móvil: el uso de un mueble se avisa al núcleo.
    * Sin clima local ni personalidad todavía (la sala usa los valores por defecto). El resto (props,
    * eventos, `selectedId` y `rotate()`) pasa tal cual, como el envoltorio del escritorio.
    */

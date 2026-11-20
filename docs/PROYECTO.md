@@ -8,8 +8,8 @@ PetAI es una mascota virtual al estilo tamagotchi. Cada jugador eclosiona huevos
 **Plataformas**
 | Pieza | Tecnología | Estilo visual |
 |---|---|---|
-| Android | Tauri 2 + Svelte (`apps/android`), núcleo cliente en Rust | El kit de `@pockai/ui` con el aspecto de Android |
-| iOS | Swift + SwiftUI | Liquid Glass (iOS 27) |
+| Android | Tauri 2 + Svelte (`apps/android` sobre `@pockai/mobile`), núcleo cliente en Rust | El kit de `@pockai/ui` con el aspecto de Android |
+| iOS | Tauri 2 + Svelte (`apps/ios` sobre `@pockai/mobile`), núcleo cliente en Rust (ver spec 43: sustituye a SwiftUI) | El kit de `@pockai/ui` con el aspecto de Cupertino |
 | Mascota de escritorio | Tauri 2 (Windows 11 / macOS 26+) | Ventana transparente con sprite y bandeja del sistema |
 | Backend | NestJS 11 | API REST + WebSocket, autoritativo |
 
@@ -35,9 +35,9 @@ PetAI es una mascota virtual al estilo tamagotchi. Cada jugador eclosiona huevos
 ```
 petai/
   backend/            NestJS 11 + Prisma + PostgreSQL + Redis (sin colas aún; crons con @nestjs/schedule)
-  apps/android/       UI de Android (Svelte) de la app de Tauri
+  apps/android/       Cáscara de la app de Android: plataforma, estilos y configuración
+  apps/ios/           Cáscara de la app de iOS: plataforma, estilos y configuración
   crates/             Núcleo cliente en Rust (pockai-core) y su puente con Tauri (tauri-plugin-pockai)
-  ios/                Pendiente (aún no existe; ver Fase 5)
   desktop/            Tauri 2 (src-tauri en Rust + frontend en Svelte/TS)
   shared/
     openapi/          openapi.json exportado por el backend
@@ -252,11 +252,26 @@ PushToken(userId, platform, token)
 - Sustituye a la app Kotlin con Jetpack Compose, retirada el 2026-11-20 (ver `docs/MIGRACION_NUCLEO_RUST.md`).
 
 ## 7. App iOS
-- **Stack**:
-  - Swift 6 y SwiftUI para iOS 27 con Liquid Glass: `TabView` con la barra de pestañas de iOS 27, `NavigationStack` y `.glassEffect`.
-  - `@Observable`, async/await, SwiftData (caché) y cliente generado con `swift-openapi-generator`.
-  - Sign in with Apple, StoreKit 2, APNs, WidgetKit y Live Activity ("tu huevo eclosiona en 12 min").
-- **Renderizado de la mascota**: `SpriteView` renderizando un `SKSpriteNode` con un `SKShader` personalizado en Metal/GLSL que recibe las 3 texturas (`u_base`, `u_mask`, `u_pattern`) y los uniformes de color y transformación derivados con Mulberry32. Aplica baking en textura en memoria para garantizar 60 FPS estables.
+
+> Esta sección describía una app nativa en Swift y SwiftUI. La [spec 43](specs/spec-43-nucleo-rust-tauri.md)
+> la sustituyó por una sola app de Tauri v2 con una UI por plataforma; lo de SwiftUI y el motor Skia
+> de la spec 27 queda como registro histórico.
+
+- **Stack**: Tauri 2 con el núcleo cliente en Rust (`crates/pockai-core`) y una UI Svelte. La app
+  móvil es común a Android e iOS (`shared/mobile`, `@pockai/mobile`): el mismo shell, la misma
+  navegación y los mismos contenedores de pantalla. `apps/ios` solo fija la plataforma (`'ios'`,
+  que hace que `@pockai/ui` se pinte con las convenciones de Cupertino), sus estilos propios y su
+  `MobileConfig`.
+- **Sesión**: el Keychain del sistema, desde el núcleo (crate `keyring` con `apple-native`).
+- **Renderizado de la mascota**: el mismo de las demás plataformas, `@pockai/scene` (PixiJS) dentro
+  del webview; ver [ART_PIPELINE](ART_PIPELINE.md) §9. Solo los widgets y la Live Activity son
+  nativos, con PNG ya horneados (fase 5 de la spec 43).
+- **Proyecto de Xcode**: `desktop/src-tauri/gen/apple`, generado con `tauri ios init` y versionado
+  como el de Android. El Team ID va por `APPLE_DEVELOPMENT_TEAM`, nunca en `tauri.ios.conf.json`.
+  Mínimo iOS 16.2. CocoaPods, `xcodegen` e `idevicesyslog` son requisitos del `init`.
+- **Nativo pendiente**: `BGAppRefreshTask` para los avisos de cuidado en segundo plano, la fase 5
+  (Live Activity, Dynamic Island, WidgetKit) y el `.ipa` firmado. Sign in with Apple y StoreKit 2 no
+  tienen backend todavía.
 
 ## 8. Mascota de escritorio (Tauri 2)
 - **Ventana**: transparente, sin decoración, siempre visible y sin icono en la barra de tareas; ocupa la parte inferior de la pantalla principal.
@@ -322,8 +337,8 @@ PushToken(userId, platform, token)
 
 ### Fase 5 — Apps móviles nativas (Android + iOS)
 - [ ] Backend: Sign in with Apple y Google, código de dispositivo (vincular el escritorio desde el móvil), `notifications` (APNs/FCM con BullMQ) y `subscriptions` (StoreKit 2, Play Billing, webhooks y modo IA gestionado)
-- [ ] Android: Compose con M3 Expressive y todas las pantallas (Inicio, Eclosión, Comida, Minijuegos, Arena, Chat IA, Colección, Ajustes), widget Glance, FCM y Play Billing
-- [ ] iOS: SwiftUI con Liquid Glass y las mismas pantallas, WidgetKit, Live Activity, APNs y StoreKit 2 (se compila en Mac o en la CI)
+- [x] Android e iOS: una sola app de Tauri con la UI Svelte compartida (`@pockai/mobile`) y todas las pantallas. El widget Glance, los avisos en segundo plano y la sesión con el Keystore, hechos en Android
+- [ ] iOS: el proyecto de Xcode (`tauri ios init`), el simulador, `BGAppRefreshTask`, el job de CI y la fase 5 (WidgetKit y Live Activity). StoreKit 2 y Sign in with Apple esperan al backend
 - **Hecho cuando**: la misma cuenta y mascota funcionan en el móvil y en el escritorio, sincronizadas al momento, y la suscripción de IA se puede comprar en las dos tiendas.
 
 ### Fase 6 — Pulido y lanzamiento
@@ -348,8 +363,8 @@ PushToken(userId, platform, token)
 - **Backend**:
   - Tests unitarios con Jest de rareza, pity, deterioro, motor de combate, XP, cifrado y validación de minijuegos.
   - Tests e2e con Supertest contra el Postgres/Redis de docker-compose.
-- **Android**: tests de ViewModel y de UI con Compose en un emulador con API 37.
-- **iOS**: Swift Testing y XCUITest en un simulador de iOS 27. **Compilar y probar iOS y macOS requiere un Mac con Xcode 27**: desde Windows se escribe el código y se compila en un Mac o en la CI (runner macOS).
+- **Móvil**: `svelte-check` y `build` de `@pockai/mobile` y de las dos cáscaras, y los tests visuales del kit (Playwright) en las tres plataformas. Luego, la app en el emulador de Android (API 37) y en el simulador de iOS.
+- **iOS**: **compilar y probar iOS y macOS requiere un Mac con Xcode** y los targets de Rust de Apple; desde Windows se escribe el código y se compila en un Mac o en la CI (runner macOS).
 - **Escritorio**: `tauri dev` en Windows; build de macOS en la CI.
 - **Flujo de punta a punta**: registrarse → eclosionar → alimentar → minijuego → subir de nivel → pelear → conectar la key → chatear → ver la misma mascota en el escritorio.
 

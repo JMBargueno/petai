@@ -1,8 +1,9 @@
 /**
- * El núcleo visto desde la UI de Android.
+ * El núcleo visto desde la UI del móvil (Android e iOS).
  *
  * Aquí no hay lógica de juego ni llamadas al backend: el estado se refleja desde el núcleo (Rust) y
- * lo que el jugador hace se le pide con una acción tipada. Es el mismo núcleo que usa el escritorio.
+ * lo que el jugador hace se le pide con una acción tipada. Es el mismo núcleo que usa el escritorio,
+ * y este fichero no tiene nada propio de una plataforma: las dos apps lo comparten tal cual.
  */
 import { get, writable } from 'svelte/store';
 import { celebrateReward, type AuthApi, type HandleCheck, type RewardReceived } from '@pockai/ui';

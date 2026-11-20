@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  /**
+   * El shell de la app móvil, común a Android e iOS: la barra de pestañas con sus secciones, el
+   * enrutado por fase (arrancando, sin sesión, con un paso de alta pendiente, dentro) y los momentos
+   * que no son de una sola pantalla (la iniciativa de la mascota, la eclosión, el canje de un
+   * código, el saldo de la cabecera).
+   *
+   * Aquí no hay nada de una plataforma concreta: lo que cambia entre las dos apps entra por
+   * `config` (`./config.ts`), y el aspecto de cada sistema lo pone `@pockai/ui` por `data-platform`.
+   */
+  import { onMount, untrack } from 'svelte';
   import { AccountView, AppearancePicker, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, RedeemCodeCard, RewardToast, Segmented, ShopView, SoundSettingsView, VerifyEmailView, createInitiativeLoop, redeemErrorText, rewardToCelebrate, type InitiativeReply } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
   import AdventureScreen from './screens/AdventureScreen.svelte';
@@ -24,60 +33,27 @@
   import { act, activePet, authApi, failureText, hasCore, lock, offline, phase, redeemCode, reload, signOut, start, state as core } from './core';
   import { askNotificationsOnce } from './notifications';
   import { audioSettings, previewSound, updateAudioSettings } from './audio';
+  import { firstSection, type MobileConfig, type TabId } from './config';
 
-  type Tab = 'pet' | 'backpack' | 'play' | 'shop' | 'progress' | 'account';
-  /** Cuenta no está en la barra: se abre tocando el nombre de la cabecera (seis pestañas no caben a 48 px). */
-  const TABS: { id: Tab; label: string; icon: string }[] = [
-    { id: 'pet', label: 'Mascota', icon: 'paw' },
-    { id: 'backpack', label: 'Mochila', icon: 'gift' },
-    { id: 'play', label: 'Jugar', icon: 'gamepad' },
-    { id: 'shop', label: 'Tienda', icon: 'shop' },
-    { id: 'progress', label: 'Progreso', icon: 'trophy' },
-  ];
+  /**
+   * La configuración de la app que monta este shell (`apps/android`, `apps/ios`): su plataforma, su
+   * barra de pestañas y sus secciones. Todo lo demás es igual en las dos.
+   */
+  let { config }: { config: MobileConfig } = $props();
 
-  let tab = $state<Tab>('pet');
-  /** Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión). */
-  let petSection = $state<'home' | 'chat' | 'bond' | 'eggs' | 'wardrobe' | 'mind' | 'habitat'>('home');
-  let progressSection = $state<'missions' | 'season'>('missions');
-  let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking' | 'adventure'>('games');
-  let shopSection = $state<'store' | 'chests'>('store');
-  let accountSection = $state<'account' | 'profile' | 'friends' | 'visits' | 'clans' | 'settings'>('account');
+  let tab = $state<TabId>('pet');
+  /**
+   * Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión).
+   * Cada una arranca en la primera de su lista; `untrack` deja claro que de la configuración solo se
+   * toma el valor de partida (no cambia en caliente, igual que la plataforma).
+   */
+  let petSection = $state(untrack(() => firstSection(config, 'pet')));
+  let progressSection = $state(untrack(() => firstSection(config, 'progress')));
+  let playSection = $state(untrack(() => firstSection(config, 'play')));
+  let shopSection = $state(untrack(() => firstSection(config, 'shop')));
+  let accountSection = $state(untrack(() => firstSection(config, 'account')));
   /** Amigo que se eligió con «Visitar» en Amigos. */
   let visitFriend = $state('');
-  const ACCOUNT_SECTIONS = [
-    { value: 'account', label: 'Cuenta', icon: 'user' },
-    { value: 'profile', label: 'Perfil', icon: 'trophy' },
-    { value: 'friends', label: 'Amigos', icon: 'users' },
-    { value: 'visits', label: 'Visitas', icon: 'home' },
-    { value: 'clans', label: 'Clanes', icon: 'shield' },
-    { value: 'settings', label: 'Ajustes', icon: 'settings' },
-  ];
-  const PLAY_SECTIONS = [
-    { value: 'games', label: 'Minijuegos', icon: 'gamepad' },
-    { value: 'arena', label: 'Arena', icon: 'medal' },
-    { value: 'raid', label: 'Raid', icon: 'swords' },
-    { value: 'tournament', label: 'Torneo', icon: 'trophy' },
-    { value: 'training', label: 'Entrenar', icon: 'castle' },
-    { value: 'cooking', label: 'Cocina', icon: 'chef' },
-    { value: 'adventure', label: 'Aventura', icon: 'map' },
-  ];
-  const SHOP_SECTIONS = [
-    { value: 'store', label: 'Tienda', icon: 'shop' },
-    { value: 'chests', label: 'Cofres', icon: 'gift' },
-  ];
-  const PET_SECTIONS = [
-    { value: 'home', label: 'Inicio', icon: 'home' },
-    { value: 'chat', label: 'Charla', icon: 'chat' },
-    { value: 'bond', label: 'Vínculo', icon: 'bond' },
-    { value: 'eggs', label: 'Huevos', icon: 'egg' },
-    { value: 'wardrobe', label: 'Armario', icon: 'star' },
-    { value: 'mind', label: 'Mente', icon: 'brain' },
-    { value: 'habitat', label: 'Hábitat', icon: 'home' },
-  ];
-  const PROGRESS_SECTIONS = [
-    { value: 'missions', label: 'Misiones', icon: 'target' },
-    { value: 'season', label: 'Temporada', icon: 'trophy' },
-  ];
   /** Qué se está haciendo ahora (`buy:<id>`, `use:<id>`, `sleep`…), o `null`. Bloquea los botones. */
   let busy = $state<string | null>(null);
   let message = $state('');
@@ -130,7 +106,7 @@
     // Cada cambio de fase es otra pantalla: se empieza arriba (el alta es larga y deja la página bajada).
     const unphase = phase.subscribe((p) => {
       window.scrollTo(0, 0);
-      if (p === 'ready') void askNotificationsOnce();
+      if (p === 'ready' && config.askNotifications) void askNotificationsOnce();
     });
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -205,7 +181,7 @@
 <main class:centered={$phase === 'signedOut' || $phase === 'starting'}>
   {#if !hasCore()}
     <Card title="Pockai" icon="paw">
-      <p>Esta pantalla es la app de Android: ábrela desde la app, no desde el navegador.</p>
+      <p>{config.noCoreText}</p>
     </Card>
   {:else if $phase === 'starting'}
     <p class="muted" aria-live="polite">Despertando a tu Pockai…</p>
@@ -236,7 +212,7 @@
 
     <div class="screen">
       {#if tab === 'pet'}
-        <Segmented variant="pills" label="Sección de Mascota" value={petSection} options={PET_SECTIONS} on:change={(e) => (petSection = e.detail as typeof petSection)} />
+        <Segmented variant="pills" label="Sección de Mascota" value={petSection} options={config.sections.pet} on:change={(e) => (petSection = e.detail)} />
       {/if}
       {#if tab === 'pet' && petSection === 'home'}
         {#if petSays}
@@ -295,14 +271,14 @@
           on:go={() => (tab = 'shop')}
         />
       {:else if tab === 'progress'}
-        <Segmented variant="pills" label="Sección de Progreso" value={progressSection} options={PROGRESS_SECTIONS} on:change={(e) => (progressSection = e.detail as typeof progressSection)} />
+        <Segmented variant="pills" label="Sección de Progreso" value={progressSection} options={config.sections.progress} on:change={(e) => (progressSection = e.detail)} />
         {#if progressSection === 'missions'}
           <MissionsScreen />
         {:else}
           <SeasonScreen {coins} gems={Number($core.user?.gems ?? 0)} />
         {/if}
       {:else if tab === 'play'}
-        <Segmented variant="pills" label="Sección de Jugar" value={playSection} options={PLAY_SECTIONS} on:change={(e) => (playSection = e.detail as typeof playSection)} />
+        <Segmented variant="pills" label="Sección de Jugar" value={playSection} options={config.sections.play} on:change={(e) => (playSection = e.detail)} />
         {#if playSection === 'games'}
           <MinigamesScreen {pet} />
         {:else if playSection === 'arena'}
@@ -319,7 +295,7 @@
           <AdventureScreen {pet} />
         {/if}
       {:else if tab === 'account'}
-        <Segmented variant="pills" label="Sección de Cuenta" value={accountSection} options={ACCOUNT_SECTIONS} on:change={(e) => (accountSection = e.detail as typeof accountSection)} />
+        <Segmented variant="pills" label="Sección de Cuenta" value={accountSection} options={config.sections.account} on:change={(e) => (accountSection = e.detail)} />
         {#if accountSection === 'profile'}
           <ProfileScreen />
         {:else if accountSection === 'friends'}
@@ -335,14 +311,14 @@
             <AppearancePicker />
           </Card>
           <!-- En el móvil solo suenan efectos e interfaz (la voz de la mascota y el ambiente no van en el APK). -->
-          <SoundSettingsView settings={$audioSettings} buses={['sfx', 'ui']} previews={{ sfx: 'mg.result.good' }} on:change={(e) => updateAudioSettings(e.detail)} on:preview={(e) => previewSound(e.detail)} />
+          <SoundSettingsView settings={$audioSettings} buses={config.audio.buses} previews={config.audio.previews} on:change={(e) => updateAudioSettings(e.detail)} on:preview={(e) => previewSound(e.detail)} />
         {:else}
           <AccountView user={$core.user} on:logout={leave}>
             <RedeemCodeCard slot="redeem" busy={redeemBusy} error={redeemError} ok={redeemOk} on:redeem={(e) => redeem(e.detail)} />
           </AccountView>
         {/if}
       {:else}
-        <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail as typeof shopSection)} />
+        <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={config.sections.shop} on:change={(e) => (shopSection = e.detail)} />
         {#if shopSection === 'chests'}
           <ChestsScreen {coins} gems={Number($core.user?.gems ?? 0)} />
         {:else}
@@ -358,7 +334,7 @@
     </div>
 
     <nav class="tabbar" aria-label="Secciones">
-      {#each TABS as item (item.id)}
+      {#each config.tabs as item (item.id)}
         <button type="button" class:active={tab === item.id} aria-current={tab === item.id ? 'page' : undefined} onclick={() => (tab = item.id)}>
           <span class="tab-icon"><Ico n={item.icon} size={22} /></span>
           <span>{item.label}</span>

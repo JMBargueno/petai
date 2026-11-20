@@ -32,8 +32,9 @@ crates/
   tauri-plugin-pockai-bgsync/   WorkManager / BGAppRefreshTask               (fase 4)
   tauri-plugin-pockai-surfaces/ Live Activity, WidgetKit, Glance             (fase 5)
 desktop/                        UI de escritorio + shell Tauri de los tres targets
-apps/android/, apps/ios/        UI Svelte de cada móvil                      (fase 4)
+apps/android/, apps/ios/        cáscara de cada móvil: plataforma, estilos y configuración  (fase 4)
 shared/client/                  @pockai/client: tipos generados y funciones para hablar con el núcleo
+shared/mobile/                  @pockai/mobile: la app móvil común a Android e iOS (shell, navegación, pantallas)  (fase 4)
 shared/ui/                      @pockai/ui: tokens y componentes comunes     (fase 4)
 shared/{mind,minigames,scene,audio,game-data,assets,openapi}   sin cambios
 ```
@@ -41,7 +42,10 @@ shared/{mind,minigames,scene,audio,game-data,assets,openapi}   sin cambios
 `desktop/` no se mueve: CI, `release.yml`, `.claude/launch.json`, la documentación y las skills
 `pockai-*` usan esa ruta.
 
-**Una UI por target.** Tauri fusiona `tauri.conf.json` con `tauri.android.conf.json` y
+**Una UI por target.** Las dos móviles son la misma app: `@pockai/mobile` trae el shell, la
+navegación y los contenedores de pantalla, y `apps/android` y `apps/ios` solo fijan su plataforma,
+sus estilos propios y una `MobileConfig` (una opción solo existe ahí si hoy tiene dos valores
+distintos). Tauri fusiona `tauri.conf.json` con `tauri.android.conf.json` y
 `tauri.ios.conf.json`. La base apunta a `desktop/`; cada fichero de plataforma sobrescribe
 `build.devUrl`, `build.frontendDist`, `build.beforeDevCommand`, `build.beforeBuildCommand`,
 `identifier` y `app.windows`, así cada compilación empaqueta solo su UI. Las capacidades se separan con

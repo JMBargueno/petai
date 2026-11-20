@@ -246,7 +246,20 @@ ver «Compilar para Android en Windows» en `docs/MIGRACION_NUCLEO_RUST.md`. Pla
 
 ### iOS
 
-Pendiente (se desarrollará en macOS).
+La UI ya está (`apps/ios`, la misma app que Android sobre `@pockai/mobile`). Falta todo lo nativo, y
+hace falta un Mac **con Xcode** y los targets de Rust de Apple (`rustup target add
+aarch64-apple-ios aarch64-apple-ios-sim`):
+
+1. `pnpm --filter petai-desktop exec tauri ios init` genera `desktop/src-tauri/gen/apple`, que se
+   versiona como `gen/android`. Revisa antes de commitear que no lleve el Team ID ni rutas del Mac.
+2. `tauri ios dev` para el simulador y `tauri ios build` para el `.ipa`. El Team ID va por
+   `TAURI_APPLE_DEVELOPMENT_TEAM`, nunca en `tauri.ios.conf.json`.
+3. El simulador llega al backend local por `localhost` sin nada en medio (no hace falta el
+   `adb reverse` de Android).
+
+Quedan después: `BGAppRefreshTask` para los avisos de cuidado con la app cerrada, el job de CI
+(runner de macOS) y la fase 5 de la spec 43 (Live Activity, Dynamic Island y WidgetKit). StoreKit 2
+y Sign in with Apple no tienen backend todavía.
 
 ## 10. Lista de comprobación previa al lanzamiento
 

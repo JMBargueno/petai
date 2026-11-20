@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * El hábitat del clan de `@pockai/ui` con lo de Android: se trae por el núcleo. Sin clima local
+   * El hábitat del clan de `@pockai/ui` con lo del móvil: se trae por el núcleo. Sin clima local
    * todavía (el cielo sigue la hora). La cabecera del clan llega en el hueco y el evento `xp` pasa.
    */
   import { query } from '@pockai/client';
