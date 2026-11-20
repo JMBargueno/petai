@@ -188,6 +188,17 @@ Requisitos: Node.js 22 LTS (el `backend/Dockerfile` usa `node:22-slim` y la CI c
    pnpm --filter petai-desktop exec tauri android build --debug --target x86_64 --apk
    ```
 
+7. iOS y Apple Watch (simulador de macOS con Xcode 26 y los targets de Rust de Apple, `rustup target add aarch64-apple-ios-sim`). Con el backend en marcha:
+
+   ```bash
+   pnpm ios:dev        # app de iPhone en el simulador (tauri ios dev)
+   pnpm ios:open       # abre el proyecto en Xcode
+   pnpm watch:build    # compila la app de Apple Watch para el simulador (sin firma)
+   pnpm watch:open     # abre el proyecto en Xcode para ejecutar el esquema PockaiWatch
+   ```
+
+   Para ver el reloj en marcha: crea un par de simuladores (iPhone + Apple Watch) en Xcode, arranca primero la app del iPhone y luego ejecuta el esquema `PockaiWatch` sobre el reloj emparejado: el resumen de la mascota le llega desde el iPhone. No uses `xcodegen generate` en un checkout limpio (falla por los directorios `Externals/` y `assets/`); el `.xcodeproj` versionado ya contiene lo necesario.
+
 ## Pruebas
 
 ```bash
