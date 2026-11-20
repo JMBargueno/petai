@@ -321,6 +321,8 @@
             inventory={$core.inventory}
             {busy}
             habitatToggle={false}
+            stage
+            on:caress={() => pet && run('caress', 'No se pudo acariciar', () => act({ type: 'pet', petId: pet.id }))}
             on:clean={() => pet && run('clean', 'No se pudo bañar', () => act({ type: 'clean', petId: pet.id }))}
             on:toggleSleep={() =>
               pet &&

@@ -52,6 +52,12 @@
       "icon": "clean"
     },
     {
+      "action": "pet",
+      "label": "Acariciar",
+      "enabled": true,
+      "icon": "pet"
+    },
+    {
       "action": "sleep",
       "label": "A dormir",
       "enabled": true,

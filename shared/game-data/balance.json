@@ -185,9 +185,11 @@
       "minigame": 2,
       "chat": 1,
       "clean": 1,
+      "pet": 1,
       "sleep": 0.5,
       "evolve": 5
     },
+    "petCooldownMinutes": 30,
     "decayRatePerDay": 0.5,
     "graceWindowHours": 24,
     "decayStartHours": 48,

@@ -69,6 +69,7 @@ struct PockaiWristFixture {
             guard snapshot.nextSurface?.kind == "eggHatching" else { throw Fallo("la cuenta atrás no es la del huevo") }
 
             guard snapshot.buttons.contains(where: { $0.action == "heal" }) else { throw Fallo("falta el botón de curar") }
+            guard snapshot.buttons.contains(where: { $0.action == "pet" }) else { throw Fallo("falta el botón de acariciar") }
             guard snapshot.buttons.allSatisfy({ !$0.icon.isEmpty }) else { throw Fallo("hay un botón sin icono") }
             guard snapshot.wallet != nil else { throw Fallo("el fixture tiene que traer el monedero") }
             guard !pet.speciesId.isEmpty, !pet.stage.isEmpty else { throw Fallo("falta con qué dibujar la mascota") }

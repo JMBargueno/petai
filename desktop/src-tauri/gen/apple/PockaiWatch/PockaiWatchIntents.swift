@@ -130,6 +130,16 @@ struct CleanPockaiIntent: AppIntent {
     }
 }
 
+struct PetPockaiIntent: AppIntent {
+    static var title: LocalizedStringResource = "Acariciar"
+    static var description = IntentDescription("Le hace un mimo a tu Pockai y sube el vínculo.")
+    static var openAppWhenRun = false
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        await realizar("pet", hecho: "Se deja mimar")
+    }
+}
+
 struct SleepPockaiIntent: AppIntent {
     static var title: LocalizedStringResource = "Dormir"
     static var description = IntentDescription("Manda a dormir a tu Pockai.")
@@ -177,6 +187,12 @@ struct PockaiWatchShortcuts: AppShortcutsProvider {
             phrases: ["Baña a mi Pockai en \(.applicationName)"],
             shortTitle: "Bañar",
             systemImageName: "drop.fill"
+        )
+        AppShortcut(
+            intent: PetPockaiIntent(),
+            phrases: ["Acaricia a mi Pockai en \(.applicationName)", "Hazle un mimo a mi Pockai en \(.applicationName)"],
+            shortTitle: "Acariciar",
+            systemImageName: "hand.raised.fill"
         )
         AppShortcut(
             intent: SleepPockaiIntent(),

@@ -391,7 +391,7 @@ model BondingEvent {
   petId     String
   pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
   delta     Float
-  reason    String // feed | battle | minigame | chat | clean | sleep | evolve | decay
+  reason    String // feed | battle | minigame | chat | clean | sleep | pet | evolve | decay
   value     Float
   createdAt DateTime @default(now())
 

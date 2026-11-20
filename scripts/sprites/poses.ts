@@ -39,6 +39,15 @@ export const POSES: Record<string, PoseFn> = {
   idle: (i, n) => {
     const b = Math.sin((i / n) * TAU);
     return pose({
+      // El balanceo de la respiración, en píxeles enteros.
+      //
+      // Va por `dy` y no por `sy` a propósito: las 16 especies usan arte importado, y
+      // `drawImported` (species.ts) coge una lámina clave y solo le aplica `dx`/`dy`; el
+      // achatado, la cola y los brazos se quedan por el camino. Sin esto, los seis frames de
+      // reposo salían **el mismo dibujo**, y la mascota estaba quieta en el escritorio, en el
+      // móvil y en el reloj. `drawImported` recorta el desplazamiento si sacaría a la criatura
+      // del frame, así que una especie que pise el borde sencillamente no baja.
+      dy: b > 0.5 ? -2 : b < -0.5 ? 2 : 0,
       sy: 1 + 0.025 * b,
       sx: 1 - 0.018 * b,
       tail: 6 * b,
@@ -96,7 +105,9 @@ export const POSES: Record<string, PoseFn> = {
     const b = Math.sin((i / n) * TAU);
     return pose({
       sy: 0.94,
-      dy: 3,
+      // Hundida, con un suspiro de 1 px (ver el comentario de `idle`: con arte importado solo
+      // llega `dy`). Sin él, los cuatro frames de tristeza eran el mismo dibujo.
+      dy: 3 + (b > 0.5 ? -2 : 0),
       rot: -2 * b,
       eyes: 'sad',
       mouth: 'frown',

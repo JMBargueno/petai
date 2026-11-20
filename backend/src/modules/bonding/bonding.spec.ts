@@ -6,6 +6,7 @@ import {
   hoursBetween,
   interactionIncrement,
   isBondingTierAtLeast,
+  petCooldownMs,
   round2,
   tierForValue,
   tierNameForValue,
@@ -165,7 +166,7 @@ describe('bonding (motor puro)', () => {
   });
 
   describe('interactionIncrement', () => {
-    const cfg = { interactions: { feed: 2, sleep: 0.5, chat: 1 } } as any;
+    const cfg = { interactions: { feed: 2, sleep: 0.5, chat: 1, pet: 1 } } as any;
 
     it('devuelve el incremento del tipo conocido', () => {
       expect(interactionIncrement(cfg, 'feed')).toBe(2);
@@ -175,6 +176,27 @@ describe('bonding (motor puro)', () => {
     it('devuelve null para tipos desconocidos o sin balance', () => {
       expect(interactionIncrement(cfg, 'hack')).toBeNull();
       expect(interactionIncrement({ interactions: {} } as any, 'feed')).toBeNull();
+    });
+
+    it('la caricia tiene incremento propio en el balance', () => {
+      expect(interactionIncrement(cfg, 'pet')).toBe(cfg.interactions.pet);
+    });
+  });
+
+  describe('petCooldownMs', () => {
+    const con = (petCooldownMinutes?: number) => ({ interactions: {}, petCooldownMinutes }) as any;
+
+    it('pasa los minutos del balance a milisegundos', () => {
+      expect(petCooldownMs(con(30))).toBe(30 * 60_000);
+      expect(petCooldownMs(con(0.5))).toBe(30_000);
+    });
+
+    it('sin cooldown declarado, o con uno absurdo, no frena nada', () => {
+      // `0` quiere decir «sin hueco»: quien lo usa comprueba `<= 0` y se salta la consulta.
+      expect(petCooldownMs(con(undefined))).toBe(0);
+      expect(petCooldownMs(con(0))).toBe(0);
+      expect(petCooldownMs(con(-5))).toBe(0);
+      expect(petCooldownMs(con(Number.NaN))).toBe(0);
     });
   });
 });

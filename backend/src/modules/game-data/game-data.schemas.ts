@@ -150,6 +150,8 @@ export const balanceSchema = z
     bonding: z
       .object({
         interactions: z.record(z.string(), z.number().nonnegative()),
+        /** Minutos entre dos caricias que cuenten. Sin él, la caricia sube el vínculo sin freno. */
+        petCooldownMinutes: z.number().nonnegative().optional(),
         decayRatePerDay: z.number().nonnegative(),
         graceWindowHours: z.number().positive(),
         decayStartHours: z.number().positive(),

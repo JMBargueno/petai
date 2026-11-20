@@ -224,6 +224,7 @@ export function reactionForBehavior(raw: unknown): Reaction | null {
 export const LOCAL_ACTIONS: Record<string, PetAction> = {
   eat: 'fed',
   clean: 'cleaned',
+  caress: 'caressed',
   happy: 'minigame_finished',
   wake: 'woke',
   hatched: 'hatched',

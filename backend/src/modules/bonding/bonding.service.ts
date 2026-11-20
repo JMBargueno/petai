@@ -11,6 +11,7 @@ import {
   hoursBetween,
   interactionIncrement,
   isBondingTierAtLeast,
+  petCooldownMs,
   round2,
   tierForValue,
   tierNameForValue,
@@ -71,6 +72,25 @@ export class BondingService {
       return FALLBACK_BONDING;
     }
     return cfg;
+  }
+
+  /**
+   * Lo que falta para que una caricia vuelva a contar, en ms; `0` si ya puede.
+   *
+   * El freno va aquí y no en una columna nueva de `Pet`: `BondingEvent` ya guarda cada incremento
+   * con su `reason` y tiene índice por `(petId, createdAt)`, así que la última caricia se lee de
+   * ahí sin migración.
+   */
+  async petCooldownRemaining(petId: string, now = new Date()): Promise<number> {
+    const window = petCooldownMs(this.bondCfg);
+    if (window <= 0) return 0;
+    const last = await this.prisma.bondingEvent.findFirst({
+      where: { petId, reason: 'pet' },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    if (!last) return 0;
+    return Math.max(0, window - (now.getTime() - last.createdAt.getTime()));
   }
 
   /**
@@ -305,7 +325,8 @@ export class BondingService {
  * Zod de `balance.json` la valida y el archivo de la feature la incluye).
  */
 const FALLBACK_BONDING: BondingConfig = {
-  interactions: { feed: 2, battle: 3, minigame: 2, chat: 1, clean: 1, sleep: 0.5, evolve: 5 },
+  interactions: { feed: 2, battle: 3, minigame: 2, chat: 1, clean: 1, sleep: 0.5, pet: 1, evolve: 5 },
+  petCooldownMinutes: 30,
   decayRatePerDay: 0.5,
   graceWindowHours: 24,
   decayStartHours: 48,

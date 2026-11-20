@@ -201,12 +201,25 @@ enum PockaiWristArt {
         hay("ui/\(name)") ? Image("ui/\(name)").renderingMode(.template) : Image(systemName: fallback)
     }
 
-    /// El sprite de la mascota, con la cara que le toca por su ánimo. Pixel art: sin interpolar.
+    /// La clave de la pose de una mascota en el catálogo, sin el número de frame.
+    static func pockaiKey(_ pet: PockaiWristPet) -> String {
+        "\(pet.speciesId)_\(pet.stage)_\(moodPose(pet.mood))"
+    }
+
+    /// Una lámina suelta de una pose. Las poses están horneadas frame a frame (`…_0`, `…_1`, …).
+    static func pockaiFrame(_ key: String, _ index: Int) -> Image? {
+        let name = "pockai/\(key)_\(index)"
+        return hay(name) ? Image(name).renderingMode(.original) : nil
+    }
+
+    /// El sprite de la mascota, quieto: el primer frame de la pose que le toca por su ánimo.
+    ///
+    /// Es lo que pintan la complicación y el Smart Stack, que no pueden animar (una
+    /// `TimelineProvider` de WidgetKit entrega instantáneas). La app del reloj usa
+    /// `AnimatedPockai`, que pasa los frames.
     static func pockai(_ pet: PockaiWristPet) -> Image {
-        let pose = moodPose(pet.mood)
-        for name in ["pockai/\(pet.speciesId)_\(pet.stage)_\(pose)", "pockai/\(pet.speciesId)_\(pet.stage)_idle"] {
-            if hay(name) { return Image(name).renderingMode(.original) }
-        }
+        if let art = pockaiFrame(pockaiKey(pet), 0) { return art }
+        if let art = pockaiFrame("\(pet.speciesId)_\(pet.stage)_idle", 0) { return art }
         return mood(pet.mood)
     }
 

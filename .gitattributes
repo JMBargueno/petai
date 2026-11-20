@@ -1,2 +1,7 @@
 # Hooks de git: siempre LF (con CRLF el shebang falla en macOS/Linux)
 .githooks/* text eol=lf
+
+# El arte horneado del Apple Watch (`pnpm generate:watch-assets`): 1.412 láminas, cada una con su
+# PNG y su Contents.json. Se revisa a ojo con el simulador, no leyendo el diff, así que GitHub lo
+# colapsa y deja a la vista el código.
+desktop/src-tauri/gen/apple/WatchArt/PockaiArt.xcassets/** linguist-generated=true

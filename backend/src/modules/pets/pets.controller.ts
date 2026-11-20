@@ -69,6 +69,12 @@ export class PetsController {
     return this.petsService.clean(user.id, petId);
   }
 
+  @Post(':id/pet')
+  @ApiOperation({ summary: 'Acariciar a la mascota (sube vínculo, con cooldown)' })
+  caress(@CurrentUser() user: any, @Param('id') petId: string) {
+    return this.petsService.caress(user.id, petId);
+  }
+
   @Post(':id/sleep')
   @ApiOperation({ summary: 'Poner a dormir a la mascota' })
   sleep(@CurrentUser() user: any, @Param('id') petId: string) {

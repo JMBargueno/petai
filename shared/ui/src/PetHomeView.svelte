@@ -15,6 +15,7 @@
   import Card from './Card.svelte';
   import EmptyState from './EmptyState.svelte';
   import ProgressBar from './ProgressBar.svelte';
+  import PetStageView from './PetStageView.svelte';
   import SectionHeader from './SectionHeader.svelte';
   import Segmented from './Segmented.svelte';
 
@@ -28,12 +29,18 @@
   export let busy: string | null = null;
   /** Enseña «A casa». Solo tiene sentido donde la mascota puede estar fuera de su hábitat (el escritorio). */
   export let habitatToggle = true;
+  /**
+   * Enseña el escenario con el Pockai animado sobre la ficha. Cuando la mascota está en su hábitat
+   * no se pinta: de eso se encarga el hueco `habitat`, y dos Pockais en la misma pantalla sobran.
+   */
+  export let stage = false;
 
   const dispatch = createEventDispatcher<{
     clean: void;
     toggleSleep: void;
     toggleHabitat: boolean;
     feed: string;
+    caress: void;
     selectPet: string;
     go: { dest: string; sub?: string };
   }>();
@@ -63,6 +70,10 @@
   {#if pet}
     {@const el = elementMeta(pet.species?.element)}
     {@const rar = rarityMeta(pet.rarity)}
+    {#if stage && !pet.inHabitat}
+      <PetStageView {pet} {busy} on:caress />
+    {/if}
+
     <Card variant="hero" class="pet-hero">
       <div class="hero-row">
         <div class="hero-info">

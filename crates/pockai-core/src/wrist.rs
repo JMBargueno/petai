@@ -60,6 +60,8 @@ fn xp_for_level(level: i64) -> i64 {
 pub enum WristAction {
     Feed,
     Clean,
+    /// Acariciar. El cooldown lo guarda el servidor, así que aquí el botón solo se cierra si duerme.
+    Pet,
     Sleep,
     Wake,
     Heal,
@@ -71,6 +73,7 @@ impl WristAction {
         match self {
             WristAction::Feed => "Dar de comer",
             WristAction::Clean => "Bañar",
+            WristAction::Pet => "Acariciar",
             WristAction::Sleep => "A dormir",
             WristAction::Wake => "Despertar",
             WristAction::Heal => "Curar",
@@ -84,6 +87,7 @@ impl WristAction {
         match self {
             WristAction::Feed => "feed",
             WristAction::Clean => "clean",
+            WristAction::Pet => "pet",
             WristAction::Sleep => "sleep",
             WristAction::Wake => "wake",
             WristAction::Heal => "heal",
@@ -321,7 +325,7 @@ pub fn buttons(state: &AppState) -> Vec<WristButton> {
     let food = food_item(state);
     let medicine = medicine_item(state);
 
-    let mut out = Vec::with_capacity(5);
+    let mut out = Vec::with_capacity(6);
     out.push(
         button(
             WristAction::Feed,
@@ -344,6 +348,12 @@ pub fn buttons(state: &AppState) -> Vec<WristButton> {
         } else {
             None
         },
+    ));
+    // Acariciar no gasta nada y no pide que esté de ninguna manera: solo que esté despierta. El
+    // hueco entre caricias lo lleva el servidor, que es quien tiene el historial del vínculo.
+    out.push(button(
+        WristAction::Pet,
+        if sleeping { Some("Está durmiendo".into()) } else { None },
     ));
     // Dormir y despertar son el mismo botón: lo que toque según cómo esté.
     out.push(button(if sleeping { WristAction::Wake } else { WristAction::Sleep }, None));
@@ -457,6 +467,7 @@ pub fn resolve(
             crate::Action::Feed { pet_id, item_id }
         }
         WristAction::Clean => crate::Action::Clean { pet_id },
+        WristAction::Pet => crate::Action::Pet { pet_id },
         WristAction::Sleep => crate::Action::Sleep { pet_id },
         WristAction::Wake => crate::Action::Wake { pet_id },
         WristAction::Heal => {
@@ -700,10 +711,17 @@ mod tests {
         assert_eq!(snap.stale_at, NOW + 30 * 60 * 1000);
         assert_eq!(
             snap.buttons.iter().map(|b| b.action).collect::<Vec<_>>(),
-            vec![WristAction::Feed, WristAction::Clean, WristAction::Sleep, WristAction::Heal, WristAction::Evolve]
+            vec![
+                WristAction::Feed,
+                WristAction::Clean,
+                WristAction::Pet,
+                WristAction::Sleep,
+                WristAction::Heal,
+                WristAction::Evolve
+            ]
         );
-        // Comer, bañar y dormir sí; curar y evolucionar no, que no hay ni medicina ni piedra.
-        assert_eq!(snap.buttons.iter().filter(|b| b.enabled).count(), 3);
+        // Comer, bañar, acariciar y dormir sí; curar y evolucionar no, que no hay ni medicina ni piedra.
+        assert_eq!(snap.buttons.iter().filter(|b| b.enabled).count(), 4);
     }
 
     #[test]
@@ -807,7 +825,7 @@ mod tests {
             resolve(&req(WristAction::Heal), &s, NOW, &[]),
             Err(WristReject::Unavailable(_))
         ));
-        assert_eq!(acciones(&s).len(), 5);
+        assert_eq!(acciones(&s).len(), 6);
     }
 
     #[test]
@@ -845,11 +863,13 @@ mod tests {
         let mut p = pet();
         p["sleeping"] = json!(true);
         let b = buttons(&state(p, vec![food("apple", 10, 1)]));
-        assert_eq!(b[2].action, WristAction::Wake);
-        assert!(b[2].enabled);
-        // Durmiendo no se come ni se baña: lo rechazaría el backend.
-        assert_eq!(b[0].disabled_reason.as_deref(), Some("Está durmiendo"));
-        assert_eq!(b[1].disabled_reason.as_deref(), Some("Está durmiendo"));
+        let de = |a: WristAction| b.iter().find(|x| x.action == a).expect("el botón");
+        assert!(!b.iter().any(|x| x.action == WristAction::Sleep));
+        assert!(de(WristAction::Wake).enabled);
+        // Durmiendo no se come, ni se baña, ni se acaricia: lo rechazaría el backend.
+        for accion in [WristAction::Feed, WristAction::Clean, WristAction::Pet] {
+            assert_eq!(de(accion).disabled_reason.as_deref(), Some("Está durmiendo"), "{accion:?}");
+        }
     }
 
     #[test]
@@ -996,7 +1016,8 @@ mod tests {
             assert!(v["pet"].get(campo).is_some(), "falta pet.{campo}");
         }
         assert_eq!(v["buttons"][0]["action"], "feed");
-        assert_eq!(v["buttons"][2]["action"], "sleep");
+        assert_eq!(v["buttons"][2]["action"], "pet");
+        assert_eq!(v["buttons"][3]["action"], "sleep");
         assert_eq!(v["surfaces"][0]["kind"], "eggHatching");
 
         let c = serde_json::to_value(complication(&snapshot(&s, NOW))).unwrap();

@@ -175,15 +175,23 @@ y usa **el set de iconos propio** de la casa, los mismos 49 SVG que pintan el es
 
 | Qué | De dónde | Cuántas |
 |---|---|---|
-| `pockai/<especie>_<etapa>_<pose>` | `shared/assets/species/**` con `bakePixels` | 16 × 4 etapas × 5 poses |
+| `pockai/<especie>_<etapa>_<pose>_<n>` | `shared/assets/species/**` con `bakePixels` | 16 × 4 etapas × 5 poses × sus frames = **1.412** |
+| `PockaiWatchFrames.swift` | las duraciones de cada `anim.json` | 321 poses |
 | `item/<id>` | `shared/assets/items/*.png`, tal cual | 13 |
 | `ui/<nombre>` | `shared/ui/src/icons/*.outline.svg`, aplanado y rasterizado | 15 |
 | `element/<flujo>` | `GUIA_ARTISTICA.md` §3.6 | 7 |
 
 Las cinco poses son **los cinco `mood` que decide `care.rs`** (`idle`, `sleep`, `sick`, `sad`,
-`hungry`), ni una más: el reloj no anima nada, así que `eat` o `happy` serían láminas sin público.
+`hungry`), ni una más. El reloj **sí las anima** (`AnimatedPockai`, en `WatchArt/`), pero solo esas:
+`eat` o `happy` seguirían siendo láminas sin público, porque el reloj no representa acciones.
 
-Cuatro cosas que costaron un rato y conviene no volver a descubrir:
+> **Las cinco se mueven, pero costó.** `idle` y `sad` salían quietas: en las hojas de origen sus
+> frames eran el mismo dibujo repetido, porque el arte importado solo recibe `dx`/`dy` de la pose
+> (ver [`../PENDIENTES.md`](../PENDIENTES.md)). No era cosa del reloj —el reproductor hace su
+> trabajo: 59 avisos en 10 s recorriendo los 6 índices— sino del generador de sprites, que ahora les
+> da un balanceo de 1 px. `pnpm generate:watch-assets` avisa si alguna vuelve a quedarse plana.
+
+Cinco cosas que costaron un rato y conviene no volver a descubrir:
 
 1. **El catálogo va en `WatchArt/`, no en `Shared/`.** `Shared/` está en las `sources` de los cuatro
    targets: ahí dentro metería las láminas del reloj en la app de iPhone y en su widget. Y hacen
@@ -197,6 +205,33 @@ Cuatro cosas que costaron un rato y conviene no volver a descubrir:
    píxel a punto: un sprite de 92 px saldría midiendo 92 pt.
 4. **Las carpetas llevan `provides-namespace`.** Si no, `Image("pockai/ignisaur_baby_idle")` no
    encuentra nada; y haría falta igual, porque hay un `ui/hatch` y un `pockai/egg_idle`.
+5. **Animar multiplica los ficheros por cuatro, y hay que contar con ello.** Ver abajo.
+
+#### El precio de animarlo: 3.336 ficheros
+
+Un `.xcassets` guarda **cada lámina en su propia carpeta, con un PNG y un `Contents.json`**. Mientras
+el reloj enseñaba una lámina fija por ánimo eran 321 láminas (642 ficheros). Al hornear todos los
+frames —`idle` tiene 6; `sleep`, `sick`, `sad` y `hungry`, 4 cada una: 22 por especie y etapa— pasan
+a **1.412 láminas, 2.824 ficheros**.
+
+Conviene tener claro qué cuesta eso de verdad y qué no:
+
+| | |
+|---|---|
+| Contenido en el repo | **0,3 MB → 1,2 MB**. Nada. |
+| En disco, al clonar | ~11 MB, pero son **bloques del sistema de ficheros**: miles de PNG de 1 KB ocupando 4 KB cada uno. No es contenido. |
+| Diff de una regeneración | **1.412 ficheros en lugar de 321.** Esto sí es recurrente: pasa cada vez que se redibuja el arte de una especie. |
+
+Por eso el catálogo está marcado `linguist-generated=true` en `.gitattributes`: GitHub lo colapsa en
+las revisiones y deja a la vista el código. **El arte del reloj se revisa en el simulador, no
+leyendo el diff.**
+
+**Se valoró empaquetar cada pose en una sola tira horizontal** (volverían a ser 321 láminas) y se
+descartó: `Image` no se recorta directamente en SwiftUI —habría que pasar por `UIImage`/`CGImage` o
+montar un `GeometryReader` + `.offset` + `.clipped()`— y con `.interpolation(.none)` a ×2 **un píxel
+de error en el recorte mete una tira del frame vecino**. Además se perdería el fallback por nombre
+(`PockaiWristArt.pockaiFrame`), que hoy hace que una lámina ausente degrade sola. Ahorrar ruido en un
+diff no paga pelearse con el formato: un asset por imagen es justo para lo que sirve un `.xcassets`.
 
 **Lo que sigue fuera**: el sprite usa la **paleta por defecto de la especie**, no la del jugador. Sin
 shiny, sin accesorios y sin `visualSeed`: para eso habría que hornear en el iPhone y mandar la lámina
@@ -227,7 +262,7 @@ desde el resumen guardado en el App Group del reloj (una entrada ahora, otra en 
 otra en `staleAt`) y se recarga con `WidgetCenter.reloadAllTimelines()` cuando la app del reloj recibe
 contexto. La transferencia dirigida es un extra.
 
-## 6. Los cinco botones
+## 6. Los seis botones
 
 Todos sobre `Action` del núcleo. No se abre ninguna pasarela nueva.
 
@@ -235,6 +270,7 @@ Todos sobre `Action` del núcleo. No se abre ninguna pasarela nueva.
 |---|---|---|
 | Dar de comer | `Feed { pet_id, item_id }` | Durmiendo, o sin comida en la mochila |
 | Bañar | `Clean { pet_id }` | Durmiendo, o con la higiene ya en 80 (lo rechazaría el backend) |
+| Acariciar | `Pet { pet_id }` | Durmiendo. **El cooldown no lo sabe el reloj**: lo guarda el servidor, que es quien tiene el historial del vínculo, así que el botón se ve activo y el rechazo llega como aviso |
 | A dormir / Despertar | `Sleep` / `Wake` | Nunca: es un botón que alterna según cómo esté |
 | Curar | `Heal { pet_id, item_id }` | Durmiendo, o sin medicina que sirva |
 | Evolucionar | `Evolve { pet_id }` | Durmiendo, si no es adulta, si le falta nivel 50 o si no hay Piedra de Evolución |
@@ -255,8 +291,8 @@ Dos reglas de la elección que no son obvias:
   desde la muñeca y sin preguntar. Primero lo que se vende, lo más corriente de ello; lo que no se
   vende, solo si no hay otra cosa.
 
-**Siri.** Los mismos cinco, como `AppIntent` en `PockaiWatchIntents.swift`, que mandan exactamente la
-misma intención. Lo delicado no es la disponibilidad (App Intents es watchOS 9+) sino que **el
+**Siri.** Seis `AppIntent` en `PockaiWatchIntents.swift` (todos menos evolucionar, que es
+irreversible y no se pide a voces), que mandan exactamente la misma intención. Lo delicado no es la disponibilidad (App Intents es watchOS 9+) sino que **el
 sistema puede lanzar un intent con la app sin arrancar**: por eso no reutilizan `PockaiWatchStore`,
 sino que activan su propia `WCSession` y **esperan** a `activationDidCompleteWith` antes de mandar.
 Sin alcance van a la cola y lo dicen, en lugar de contestar «hecho».
@@ -268,9 +304,11 @@ se sube el deployment target**: watchOS 11 dejaría fuera Series 4, 5 y SE.
 
 **Lo que no está, y por qué:**
 
-- **Dar un mimo** no existe en el backend. Las únicas acciones de mascota son `feed`, `clean`, `sleep`,
-  `wake`, `evolve`, `use-item`, `heal`, `activate` y tres `PATCH`: el vínculo sube como *efecto* de
-  esas interacciones, no hay ruta de caricia, y el backend no cambia.
+- ~~**Dar un mimo** no existe en el backend~~. Ya existe: `POST /v1/pets/:id/pet` y
+  `Action::Pet`, creados con el escenario del Pockai en el inicio de Mascota. Es la única acción del
+  reloj cuyo freno **no se puede pintar gris**: las demás se cierran con lo que el resumen ya trae
+  (duerme, no hay comida, falta la piedra), pero el cooldown de la caricia vive en `BondingEvent` y
+  el reloj no ve esa tabla. Ofrecerlo y que el servidor diga que no es mejor que esconderlo.
 - **La recompensa diaria** se quedó fuera: las misiones no están en el `AppState`, así que ofrecerla
   obligaría a consultar al servidor para decidir si pintar un botón, y el resumen dejaría de ser una
   función pura del estado. Entra el día que el estado lleve las misiones.
@@ -383,3 +421,6 @@ No sustituye a pulsar los botones (§9.1): comprueba lo que se dibuja, no lo que
    aventura entran cuando el estado lleve su hora de fin (ya anotado en el paso 5.1).
 7. **El sprite del jugador, no el de la especie** (§4.1): shiny, accesorios y paleta propia piden
    hornear en el iPhone y mandar la lámina dentro del resumen.
+8. **Ver la animación del sprite en una muñeca** (§4.1). El target compila y el catálogo y el
+   manifiesto salen bien, pero verla pasar frames pide emparejar simuladores y una sesión viva en el
+   iPhone. Mismo caso que el punto 1.

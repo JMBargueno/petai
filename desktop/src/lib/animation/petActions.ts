@@ -5,6 +5,8 @@
 export const PET_ACTIONS = [
   'fed',
   'cleaned',
+  /** Una caricia: gratis, con cooldown, y sube el vínculo. */
+  'caressed',
   'slept',
   'woke',
   'healed',
