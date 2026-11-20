@@ -1,10 +1,9 @@
 ## Default Permission
 
-Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real, estado global y avisos.
+Permite a la UI usar el núcleo cliente de Pockai: acciones y consultas con tipo propio, chat en streaming, sesión, tiempo real, estado global y avisos.
 
 #### This default permission set includes the following:
 
-- `allow-api-request`
 - `allow-chat-stream`
 - `allow-chat-cancel`
 - `allow-session-state`
@@ -33,32 +32,6 @@ Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en 
 <th>Description</th>
 </tr>
 
-
-<tr>
-<td>
-
-`pockai:allow-api-request`
-
-</td>
-<td>
-
-Enables the api_request command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`pockai:deny-api-request`
-
-</td>
-<td>
-
-Denies the api_request command without any pre-configured scope.
-
-</td>
-</tr>
 
 <tr>
 <td>

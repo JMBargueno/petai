@@ -1,6 +1,8 @@
 //! Puente entre el núcleo cliente (`pockai-core`) y la UI.
 //!
-//! - **Commands** (`plugin:pockai|…`): la UI pide algo y espera la respuesta.
+//! - **Commands** (`plugin:pockai|…`): la UI pide algo y espera la respuesta. Lo que el jugador hace
+//!   va por `perform` y lo que la UI quiere saber por `query`, cada uno con su tipo: no hay pasarela
+//!   genérica hacia la API.
 //! - **Events** (`core://…`): el núcleo avisa de cambios de sesión, mantenimiento y tiempo real.
 //! - **Channels**: flujos largos, como el chat en streaming.
 //!
@@ -36,11 +38,6 @@ pub struct PockaiConfig {
 /// Chats en curso, por id: permite cancelar el flujo desde la UI.
 #[derive(Default)]
 struct Chats(Mutex<HashMap<String, oneshot::Sender<()>>>);
-
-#[tauri::command]
-async fn api_request(core: State<'_, Core>, request: ApiRequest) -> Result<ApiResponse, String> {
-    core.request(request).await.map_err(|e| e.to_string())
-}
 
 #[tauri::command]
 async fn chat_stream(
@@ -192,7 +189,6 @@ fn forward<R: Runtime>(app: &AppHandle<R>, event: CoreEvent) {
 pub fn init<R: Runtime>(config: PockaiConfig) -> TauriPlugin<R> {
     Builder::new("pockai")
         .invoke_handler(tauri::generate_handler![
-            api_request,
             chat_stream,
             chat_cancel,
             session_state,

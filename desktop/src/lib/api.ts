@@ -2,7 +2,6 @@ import createClient from 'openapi-fetch';
 import type { InitiativeReply, InitiativeSettings, TalkLevel } from './initiative';
 import type { paths } from '@shared/openapi/api-types';
 import {
-  coreFetch,
   coreStream,
   hasCore,
   importLegacySession,
@@ -49,7 +48,10 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   for (const [name, value] of Object.entries(CLIENT_HEADERS)) {
     if (!req.headers.has(name)) req.headers.set(name, value);
   }
-  const res = CORE ? await coreFetch(req) : await fetch(req);
+  // Dentro de la app la red es del núcleo: todo va por acciones y consultas (`coreAction`,
+  // `coreQuery`). Si algo llega hasta aquí es que le falta su acción.
+  if (CORE) throw new TypeError(`Llamada sin acción ni consulta en el núcleo: ${req.method} ${new URL(req.url).pathname}`);
+  const res = await fetch(req);
   await inspectMaintenance(res);
   return res;
 }
@@ -232,8 +234,6 @@ async function doRefresh(): Promise<string | null> {
  * /auth/verify-email/* (con sesión; el usuario puede volver a la pantalla de verificación horas después).
  */
 export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  // Con núcleo, todo esto (renovar, repetir, avisar del paso de alta que falta) lo hace él.
-  if (CORE) return apiFetch(input, init);
   const req = new Request(input, init);
   const sent = req.headers.get('Authorization')?.replace(/^Bearer /, '') ?? null;
   const path = new URL(req.url).pathname;
@@ -398,6 +398,14 @@ export const api = {
   client,
 
   async register(email: string, password: string, displayName?: string, inviteCode?: string, handle?: string) {
+    if (CORE) {
+      const data = await coreAction(
+        { type: 'register', email, password, displayName: displayName ?? null, inviteCode: inviteCode ?? null, handle: handle ?? null },
+        'Error en registro',
+      );
+      if (data?.accessToken) setSession(data);
+      return data as never;
+    }
     const code = inviteCode?.trim();
     const res = await client.POST('/v1/auth/register', {
       body: { email, password, displayName, ...(code ? { inviteCode: code } : {}), ...(handle ? { handle } : {}) },
@@ -411,6 +419,12 @@ export const api = {
 
   /** ¿El registro exige código de invitación? Ante un fallo de red se asume que no (el servidor decide igualmente). */
   async getRegistrationConfig(): Promise<{ inviteRequired: boolean }> {
+    if (CORE) {
+      return coreQuery({ type: 'registrationConfig' }, '').then(
+        (data) => ({ inviteRequired: !!data?.inviteRequired }),
+        () => ({ inviteRequired: false }),
+      );
+    }
     try {
       const res = await client.GET('/v1/auth/registration-config');
       return { inviteRequired: !!res.data?.inviteRequired };
@@ -420,6 +434,11 @@ export const api = {
   },
 
   async login(email: string, password: string) {
+    if (CORE) {
+      const data = await coreAction({ type: 'login', email, password }, 'Credenciales inválidas');
+      if (data?.accessToken) setSession(data);
+      return data as never;
+    }
     const res = await client.POST('/v1/auth/login', {
       body: { email, password },
     });
@@ -435,6 +454,10 @@ export const api = {
    * la cuenta (no revela qué correos están registrados).
    */
   async requestPasswordReset(email: string) {
+    if (CORE) {
+      await coreAction({ type: 'requestPasswordReset', email }, 'No se pudo enviar el código');
+      return;
+    }
     await authPost('/v1/auth/reset/request', { email: email.trim() }, 'No se pudo enviar el código');
   },
 
@@ -443,6 +466,12 @@ export const api = {
    * sesiones y devuelve una nueva, que se guarda: el usuario entra directamente.
    */
   async confirmPasswordReset(email: string, code: string, newPassword: string) {
+    if (CORE) {
+      const data = await coreAction({ type: 'confirmPasswordReset', email, code, newPassword }, 'No se pudo cambiar la contraseña');
+      if (!data?.accessToken || !data?.refreshToken) throw new ApiError('Respuesta inesperada del servidor');
+      setSession(data);
+      return data;
+    }
     const data = await authPost(
       '/v1/auth/reset/confirm',
       { email: email.trim(), code: code.trim(), newPassword },
@@ -474,6 +503,7 @@ export const api = {
   },
 
   async getMe() {
+    if (CORE) return coreQuery({ type: 'me' }, 'No autenticado') as Promise<never>;
     const res = await client.GET('/v1/me', {
       ...authHeaders(),
     });
@@ -483,6 +513,7 @@ export const api = {
 
   /** Verifica el correo con el código de 6 dígitos del email. */
   async verifyEmail(code: string) {
+    if (CORE) return coreAction({ type: 'verifyEmail', code }, 'No se pudo verificar el código') as Promise<never>;
     const res = await client.POST('/v1/auth/verify-email/confirm', {
       body: { code: code.trim() },
       ...authHeaders(),
@@ -496,6 +527,13 @@ export const api = {
    * "no disponible" con el motivo, para no dejar seguir con un nickname sin comprobar.
    */
   async checkHandleAvailable(handle: string): Promise<{ handle: string; available: boolean; reason?: string }> {
+    if (CORE) {
+      return coreQuery({ type: 'handleAvailable', handle }, 'No se pudo comprobar').catch((e: ApiError) => ({
+        handle,
+        available: false,
+        reason: e.status === undefined ? 'Sin conexión con el servidor' : e.message,
+      }));
+    }
     try {
       const res = await client.GET('/v1/auth/handle-available', { params: { query: { handle } } });
       if (res.error || !res.data) return { handle, available: false, reason: (res.error as any)?.message || 'No se pudo comprobar' };
@@ -507,6 +545,7 @@ export const api = {
 
   /** Fija el nickname de la cuenta (una sola vez: es inmutable). Devuelve el perfil actualizado. */
   async setMyHandle(handle: string) {
+    if (CORE) return coreAction({ type: 'setHandle', handle }, 'No se pudo guardar el nickname') as Promise<never>;
     const res = await client.POST('/v1/me/handle', { body: { handle }, ...authHeaders() });
     if (res.error) throw apiError(res, 'No se pudo guardar el nickname');
     return res.data as any;
@@ -514,6 +553,7 @@ export const api = {
 
   /** Perfil público mínimo de un jugador por su nickname (con o sin "@"). */
   async getUserByHandle(handle: string) {
+    if (CORE) return coreQuery({ type: 'userByHandle', handle }, 'No hay ningún jugador con ese nickname') as Promise<never>;
     const res = await client.GET('/v1/users/by-handle/{handle}', {
       params: { path: { handle: handle.trim().replace(/^@/, '') } },
       ...authHeaders(),
@@ -524,6 +564,10 @@ export const api = {
 
   /** Reenvía el correo de verificación (invalida el código anterior). */
   async resendVerification() {
+    if (CORE) {
+      await coreAction({ type: 'resendVerification' }, 'No se pudo reenviar el correo');
+      return;
+    }
     const res = await client.POST('/v1/auth/verify-email/resend', {
       ...authHeaders(),
     });
@@ -531,12 +575,20 @@ export const api = {
   },
 
   async getCatalog() {
+    if (CORE) return coreQuery({ type: 'catalog' }, 'Error al obtener catálogo') as Promise<never>;
     const res = await client.GET('/v1/catalog');
     if (res.error) throw new Error('Error al obtener catálogo');
     return res.data;
   },
 
   async getEggs() {
+    if (CORE) {
+      const at = Date.now();
+      const list = ((await coreQuery({ type: 'eggs' }, 'Error al listar huevos')) ?? []) as any[];
+      return list.map((egg) =>
+        typeof egg?.remainingMs === 'number' ? { ...egg, hatchesAt: new Date(at + egg.remainingMs).toISOString() } : egg,
+      ) as never;
+    }
     const res = await client.GET('/v1/eggs', {
       ...authHeaders(),
     });
@@ -574,6 +626,7 @@ export const api = {
   },
 
   async getPets() {
+    if (CORE) return coreQuery({ type: 'pets' }, 'Error al obtener mascotas') as Promise<never>;
     const res = await client.GET('/v1/pets', {
       ...authHeaders(),
     });
@@ -634,6 +687,7 @@ export const api = {
   },
 
   async getInventory() {
+    if (CORE) return coreQuery({ type: 'inventory' }, 'Error al obtener inventario') as Promise<never>;
     const res = await client.GET('/v1/inventory', {
       ...authHeaders(),
     });
@@ -642,6 +696,7 @@ export const api = {
   },
 
   async getShop() {
+    if (CORE) return coreQuery({ type: 'shop' }, 'Error al obtener tienda') as Promise<never>;
     const res = await client.GET('/v1/shop');
     if (res.error) throw new Error('Error al obtener tienda');
     return res.data;
@@ -835,6 +890,7 @@ export const api = {
   // ---- Vouchers de recompensas ----
   /** Canjea un voucher. Lanza ApiError: 400 código no válido, 409 ya canjeado, 429 demasiados intentos. */
   async redeemVoucher(code: string): Promise<RewardReceived> {
+    if (CORE) return coreAction({ type: 'redeemVoucher', code }, 'No se pudo canjear el código') as Promise<never>;
     const res = await client.POST('/v1/vouchers/redeem', {
       body: { code: code.trim() },
       ...authHeaders(),

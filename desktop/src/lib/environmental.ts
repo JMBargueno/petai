@@ -18,6 +18,7 @@ import {
   type WeatherThresholds,
 } from '@pockai/scene/weather';
 import balance from '@shared/game-data/balance.json';
+import { hasCore, query } from '@pockai/client';
 import { API_BASE_URL, authFetch, getAccessToken } from './api';
 
 export type TimeOfDay = 'late_night' | 'morning' | 'afternoon' | 'evening' | 'night';
@@ -120,6 +121,7 @@ export async function sendHeartbeat(body: { active?: boolean; cpuUsage?: number 
 
 /** Lista las festividades próximas. */
 export async function getUpcomingFestivals(): Promise<UpcomingFestival[]> {
+  if (hasCore()) return query<UpcomingFestival[]>({ type: 'upcomingFestivals' });
   const res = await authedFetch('/v1/environmental/festivals/upcoming');
   return json<UpcomingFestival[]>(res);
 }

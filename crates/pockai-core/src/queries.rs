@@ -16,6 +16,26 @@ use crate::core::Core;
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 #[ts(export)]
 pub enum Query {
+    // ── Cuenta, alta y datos públicos ────────────────────────────────────────────────────────
+    /// El usuario de la sesión. La UI lo lee del estado global; esto es para comprobarlo al momento
+    /// (por ejemplo, tras verificar el correo).
+    Me,
+    Pets,
+    Eggs,
+    Inventory,
+    /// Catálogo de datos de juego (público).
+    Catalog,
+    /// Tienda (pública).
+    Shop,
+    /// ¿El registro pide código de invitación? (público)
+    RegistrationConfig,
+    /// ¿Está libre un nickname? (público)
+    HandleAvailable { handle: String },
+    UserByHandle { handle: String },
+    /// Configuración pública del sitio: dice si hay mantenimiento.
+    SiteConfig,
+    UpcomingFestivals,
+
     // ── Con parámetros opcionales ────────────────────────────────────────────────────────────
     /// El clan del jugador (404 si no tiene).
     MyClan,
@@ -147,6 +167,22 @@ impl Query {
     /// La petición HTTP que corresponde a la consulta.
     pub(crate) fn request(&self) -> Call {
         match self {
+            Query::Me => ("GET", "/v1/me".to_string(), None, true),
+            Query::Pets => ("GET", "/v1/pets".to_string(), None, true),
+            Query::Eggs => ("GET", "/v1/eggs".to_string(), None, true),
+            Query::Inventory => ("GET", "/v1/inventory".to_string(), None, true),
+            Query::Catalog => ("GET", "/v1/catalog".to_string(), None, false),
+            Query::Shop => ("GET", "/v1/shop".to_string(), None, false),
+            Query::RegistrationConfig => ("GET", "/v1/auth/registration-config".to_string(), None, false),
+            Query::HandleAvailable { handle } => {
+                ("GET", format!("/v1/auth/handle-available?handle={}", seg(handle)), None, false)
+            }
+            Query::UserByHandle { handle } => {
+                let handle = handle.trim().trim_start_matches('@');
+                ("GET", format!("/v1/users/by-handle/{}", seg(handle)), None, true)
+            }
+            Query::SiteConfig => ("GET", "/v1/site/config".to_string(), None, false),
+            Query::UpcomingFestivals => ("GET", "/v1/environmental/festivals/upcoming".to_string(), None, true),
             Query::MyClan => ("GET", "/v1/clans".to_string(), None, true),
             Query::Leaderboard { scope, pet_id, limit } => {
                 let mut path = format!("/v1/leaderboard?scope={}&limit={}", seg(scope), num(*limit));
@@ -240,7 +276,8 @@ mod tests {
 
     fn path(query: Query) -> String {
         let (method, path, body, auth) = query.request();
-        assert_eq!((method, body, auth), ("GET", None, true));
+        assert_eq!((method, body), ("GET", None));
+        let _ = auth;
         path
     }
 

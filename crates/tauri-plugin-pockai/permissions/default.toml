@@ -1,7 +1,6 @@
 [default]
-description = "Permite a la UI usar el núcleo cliente de Pockai: peticiones a la API, chat en streaming, sesión, tiempo real, estado global y avisos."
+description = "Permite a la UI usar el núcleo cliente de Pockai: acciones y consultas con tipo propio, chat en streaming, sesión, tiempo real, estado global y avisos."
 permissions = [
-  "allow-api-request",
   "allow-chat-stream",
   "allow-chat-cancel",
   "allow-session-state",

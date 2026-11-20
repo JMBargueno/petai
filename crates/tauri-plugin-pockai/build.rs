@@ -1,5 +1,4 @@
 const COMMANDS: &[&str] = &[
-    "api_request",
     "chat_stream",
     "chat_cancel",
     "session_state",

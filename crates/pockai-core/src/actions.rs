@@ -79,6 +79,31 @@ pub enum Action {
     /// La mascota pide hablar por iniciativa propia. El canal (escritorio o móvil) lo pone el núcleo.
     PetInitiative { pet_id: String, back: bool, focus: bool },
 
+    // ── Sesión y alta ────────────────────────────────────────────────────────────────────────
+    // Las que abren sesión (entrar, registrarse, cambiar la contraseña con código) devuelven la
+    // respuesta del servidor con los tokens ya sustituidos: se quedan en el núcleo.
+    Login { email: String, password: String },
+    Register {
+        email: String,
+        password: String,
+        #[serde(default)]
+        display_name: Option<String>,
+        #[serde(default)]
+        invite_code: Option<String>,
+        #[serde(default)]
+        handle: Option<String>,
+    },
+    /// Recuperar contraseña, paso 1: pide un código por correo.
+    RequestPasswordReset { email: String },
+    /// Recuperar contraseña, paso 2: con el código cambia la contraseña y entra.
+    ConfirmPasswordReset { email: String, code: String, new_password: String },
+    VerifyEmail { code: String },
+    ResendVerification,
+    /// Elegir nickname.
+    SetHandle { handle: String },
+    /// Canjear un código de regalo.
+    RedeemVoucher { code: String },
+
     // ── Resto de dominios ────────────────────────────────────────────────────────────────────
     StartMinigame {
         game_id: String,
@@ -359,6 +384,39 @@ impl Action {
                 true,
             ),
 
+            // Entrar y darse de alta no llevan sesión: todavía no la hay.
+            Action::Login { email, password } => {
+                ("POST", "/v1/auth/login".to_string(), Some(json!({ "email": email, "password": password })), false)
+            }
+            Action::Register { email, password, display_name, invite_code, handle } => {
+                let filled = |value: &Option<String>| json!(value.as_deref().map(str::trim).filter(|v| !v.is_empty()));
+                let body = fields(vec![
+                    ("email", json!(email), false),
+                    ("password", json!(password), false),
+                    ("displayName", json!(display_name), true),
+                    ("inviteCode", filled(invite_code), true),
+                    ("handle", filled(handle), true),
+                ]);
+                ("POST", "/v1/auth/register".to_string(), body, false)
+            }
+            Action::RequestPasswordReset { email } => {
+                ("POST", "/v1/auth/reset/request".to_string(), Some(json!({ "email": email.trim() })), false)
+            }
+            Action::ConfirmPasswordReset { email, code, new_password } => (
+                "POST",
+                "/v1/auth/reset/confirm".to_string(),
+                Some(json!({ "email": email.trim(), "code": code.trim(), "newPassword": new_password })),
+                false,
+            ),
+            Action::VerifyEmail { code } => {
+                ("POST", "/v1/auth/verify-email/confirm".to_string(), Some(json!({ "code": code.trim() })), true)
+            }
+            Action::ResendVerification => ("POST", "/v1/auth/verify-email/resend".to_string(), None, true),
+            Action::SetHandle { handle } => ("POST", "/v1/me/handle".to_string(), Some(json!({ "handle": handle })), true),
+            Action::RedeemVoucher { code } => {
+                ("POST", "/v1/vouchers/redeem".to_string(), Some(json!({ "code": code.trim() })), true)
+            }
+
             Action::StartMinigame { game_id, pet_id, variant } => ("POST", format!("/v1/minigames/{}/start", seg(game_id)), fields(vec![("petId", json!(pet_id), false), ("variant", json!(variant), false)]), true),
             Action::SaveAiConfig { cfg } => ("PUT", "/v1/ai/config".to_string(), raw(cfg), true),
             Action::DeleteAiConfig => ("DELETE", "/v1/ai/config".to_string(), None, true),
@@ -571,6 +629,30 @@ mod tests {
         assert_eq!(desktop.2, Some(json!({ "channel": "desktop", "back": true, "focus": false })));
         let mobile = Action::PetInitiative { pet_id: "p1".into(), back: false, focus: false }.request("mobile");
         assert_eq!(mobile.2.unwrap()["channel"], "mobile");
+    }
+
+    #[test]
+    fn entrar_y_darse_de_alta_no_llevan_sesion() {
+        let login = Action::Login { email: "a@b.c".into(), password: "x".into() }.request("desktop");
+        assert_eq!((login.1.as_str(), login.3), ("/v1/auth/login", false));
+
+        let register = Action::Register {
+            email: "a@b.c".into(),
+            password: "x".into(),
+            display_name: None,
+            invite_code: Some("  ".into()),
+            handle: Some(" filo ".into()),
+        }
+        .request("desktop");
+        // Lo que no viene, o viene en blanco, no se envía.
+        assert_eq!(register.2, Some(json!({ "email": "a@b.c", "password": "x", "handle": "filo" })));
+        assert!(!register.3);
+
+        let reset = Action::ConfirmPasswordReset { email: " a@b.c ".into(), code: " 123 ".into(), new_password: " con espacios ".into() };
+        assert_eq!(reset.request("desktop").2, Some(json!({ "email": "a@b.c", "code": "123", "newPassword": " con espacios " })));
+
+        // Verificar el correo sí va con la sesión recién creada.
+        assert!(Action::VerifyEmail { code: "1".into() }.request("desktop").3);
     }
 
     #[test]

@@ -14,7 +14,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 |---|---|---|---|
 | 1 | Toda la red del escritorio pasa por Rust; ningún token en el webview | 24 / 24 | ✅ |
 | 2 | El estado global vive en Rust; `App.svelte` solo se suscribe | 5 / 6 | 🟡 |
-| 3 | Dominios restantes y fin de la pasarela `api_request` | 3 / 4 (2 descartados) | 🟡 |
+| 3 | Dominios restantes y fin de la pasarela `api_request` | 4 / 4 (2 descartados) | ✅ |
 | 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 0 / 10 | ⬜ |
 | 5 | Live Activity / Dynamic Island y widgets | 0 / 7 | ⬜ |
 
@@ -69,8 +69,8 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 3.2 Entorno: estado ambiental del servidor, latido y cambios por tiempo real en el núcleo. El clima se queda en la UI: ver decisiones
 - ➖ 3.3 Social: la visita en curso pasa a la fase 5; visitantes y clanes se quedan en la UI: ver decisiones
 - ➖ 3.4 Skills de escritorio, digest de contexto y ajustes: se quedan en la UI: ver decisiones
-- ✅ 3.5 Acciones y consultas tipadas (`actions.rs`, `queries.rs`; commands `perform` y `query`): 77 acciones y 56 consultas, que cubren todo lo que pasaba por `minigameRequest` más cuidado, huevos y tienda
-- 🟡 3.6 Retirar la pasarela `api_request`. La siguen usando el inicio de sesión y el alta (registro, contraseña, verificación, nickname), las lecturas de estado del transporte web, el canje de códigos y la comprobación de mantenimiento: unas 17 llamadas. `api.ts` y el transporte web se conservan para el modo demo
+- ✅ 3.5 Acciones y consultas tipadas (`actions.rs`, `queries.rs`; commands `perform` y `query`): 85 acciones y 67 consultas, que cubren todo lo que pasaba por `minigameRequest` más cuidado, huevos y tienda
+- ✅ 3.6 Retirada la pasarela `api_request` y `coreFetch`: el inicio de sesión, el alta, las lecturas de estado, el canje y el mantenimiento van por acciones y consultas. `api.ts` y el transporte web se conservan para el modo demo y los tests
 
 ## Fase 4 — Móvil
 - ⬜ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; código de escritorio bajo `cfg(desktop)`
@@ -195,3 +195,15 @@ estado, y los cambios de cuenta y de estrategia se reflejan en el estado del nú
 
 El resto de variantes no se ha ejercitado una a una: se generaron con un script a partir de `api.ts`
 (misma ruta, mismo método, mismos campos) y comparten el camino de las probadas.
+
+## Verificado en la app: sin pasarela (2026-11-20)
+
+Compilación de desarrollo contra un backend local: entrar desde el formulario de la app; el command
+`api_request` ya no existe en el puente; una contraseña incorrecta devuelve su error sin cerrar la
+sesión abierta; el registro de una cuenta nueva abre sesión y a la UI le llegan los tokens
+sustituidos; nickname ocupado y libre; búsqueda por nickname; canje de un código inválido; petición
+de recuperación de contraseña; comprobación de mantenimiento; y lecturas de usuario, mascotas, huevos
+(con su hora de eclosión), inventario, catálogo y tienda. Ningún token en `localStorage`.
+
+No se ha visto en la app: confirmar el cambio de contraseña con el código ni verificar el correo
+(hacen falta los códigos que el backend manda por correo).

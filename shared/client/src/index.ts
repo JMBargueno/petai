@@ -54,7 +54,7 @@ function abortError(): DOMException {
   return new DOMException('La petición se canceló', 'AbortError');
 }
 
-/** Convierte una llamada `fetch` en la petición que entiende el núcleo. */
+/** Convierte la petición del chat (descrita como un `fetch`) en la que entiende el núcleo. */
 async function toApiRequest(input: RequestInfo | URL, init?: RequestInit): Promise<{ request: ApiRequest; signal: AbortSignal }> {
   const req = new Request(input, init);
   const url = new URL(req.url);
@@ -80,25 +80,6 @@ function toResponse(res: ApiResponse): Response {
     if (value !== undefined) headers[name] = value;
   }
   return new Response(empty ? null : res.body, { status: res.status, headers });
-}
-
-/**
- * `fetch` contra la API a través del núcleo. Se usa igual que `fetch`: solo importan la ruta, el
- * método, el cuerpo y si lleva cabecera `Authorization` (con cualquier valor) para ir con sesión.
- * El núcleo añade el token, lo renueva ante un 401 y repite la petición una vez.
- * Sin conexión lanza `TypeError`, como `fetch`.
- */
-export async function coreFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const { request, signal } = await toApiRequest(input, init);
-  if (signal.aborted) throw abortError();
-  let res: ApiResponse;
-  try {
-    res = await command<ApiResponse>('api_request', { request });
-  } catch (e) {
-    throw new TypeError(String(e));
-  }
-  if (signal.aborted) throw abortError();
-  return toResponse(res);
 }
 
 let streamSeq = 0;
