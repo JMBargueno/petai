@@ -3,6 +3,7 @@
   import { onDestroy, createEventDispatcher } from 'svelte';
   import {
     api,
+    ANY_ROOM,
     type HabitatCatalog,
     type HabitatState,
     type HabitatBuffs,
@@ -19,6 +20,7 @@
   import { habitatBackdrop } from '../lib/habitatBackdrop';
   import { roomGuestOf, sceneLabel, stageLabel, visitScene, visitorsStore } from '../lib/visitors';
   import { visitorTalk } from '../lib/visitDialog';
+  import { ownedFurniture } from '../lib/stores/desktopSkillsStore';
 
   const dispatch = createEventDispatcher();
 
@@ -68,6 +70,8 @@
         api.getHabitatBuffs(),
       ]);
       const rooms = state.rooms;
+      // Muebles que tiene (desbloquean habilidades como Música ambiente, spec 42)
+      ownedFurniture.set([...new Set(rooms.flatMap((r) => r.items.map((i) => i.furnitureId)))]);
       if (!rooms.some((r) => r.id === activeRoomId)) {
         activeRoomId = rooms.find((r) => r.unlocked)?.id ?? rooms[0]?.id ?? '';
       }
@@ -98,7 +102,33 @@
   let activeRoom: HabitatRoom | null = null;
   let furnitureByRoom: HabitatFurniture[] = [];
   $: activeRoom = state?.rooms.find((r) => r.id === activeRoomId) ?? null;
-  $: furnitureByRoom = catalog ? catalog.furniture.filter((f) => f.room === activeRoomId) : [];
+  $: furnitureByRoom = catalog ? catalog.furniture.filter((f) => f.room === activeRoomId || f.room === ANY_ROOM) : [];
+  /** Dónde está ya colocado un mueble único (spec 42), o null. */
+  const ownedUnique = (f: HabitatFurniture, st: HabitatState | null): { roomId: string; itemId: string } | null => {
+    if (!f.unique || !st) return null;
+    for (const r of st.rooms) {
+      const it = r.items.find((i) => i.furnitureId === f.id);
+      if (it) return { roomId: r.id, itemId: it.id };
+    }
+    return null;
+  };
+  /** Trae aquí un mueble único que ya está en otra sala (sin cobro). */
+  async function bringHere(f: HabitatFurniture) {
+    const at = ownedUnique(f, state);
+    if (!at || busy) return;
+    busy = f.id;
+    error = '';
+    try {
+      const res = await api.moveHabitatItem(at.itemId, { roomId: activeRoomId });
+      await load();
+      editing = true;
+      selectedId = res.itemId ?? null;
+    } catch (e: any) {
+      error = friendlyError(e, 'No se pudo traer el mueble a esta sala.');
+    } finally {
+      busy = '';
+    }
+  }
   $: canEdit = !!activeRoom?.unlocked && !!activeRoom?.active && activeRoom.items.length > 0;
   $: if (!canEdit && editing) editing = false;
   $: activity = !isInHabitat ? 'away' : isSleeping ? 'sleep' : 'idle';
@@ -143,7 +173,7 @@
     busy = f.id;
     error = '';
     try {
-      const res = await api.placeHabitatFurniture(f.id);
+      const res = await api.placeHabitatFurniture(f.id, f.room === ANY_ROOM ? { roomId: activeRoomId } : undefined);
       await load();
       dispatch('refreshUser');
       editing = true;
@@ -369,6 +399,7 @@
   <div class="shop">
     {#each furnitureByRoom as f (f.id)}
       {@const why = blockedReason(f, activeRoom, user)}
+      {@const owned = ownedUnique(f, state)}
       <div class="shop-row">
         <span class="f-icon">
           {#if furnitureUrl(f.id)}<img src={furnitureUrl(f.id)} alt="" />{:else}<Ico n="home" />{/if}
@@ -378,9 +409,17 @@
           <small>{f.description}</small>
         </div>
         <span class="f-price" class:short={!canAfford(f)} aria-label="{f.price} {f.currency === 'coins' ? 'monedas' : 'gemas'}">{f.price} <Ico n={f.currency === 'coins' ? 'coin' : 'gem'} /></span>
-        <Button size="sm" loading={busy === f.id} disabled={!canPlace(f)} title={why || undefined} label="Comprar {f.name}" on:click={() => (buying = f)}>
-          {why === 'No te alcanzan las monedas' || why === 'No te alcanzan las gemas' ? 'No alcanza' : 'Comprar'}
-        </Button>
+        {#if owned && owned.roomId === activeRoomId}
+          <Badge size="sm" tone="success" icon="check">Aquí</Badge>
+        {:else if owned}
+          <Button size="sm" loading={busy === f.id} disabled={!activeRoom?.unlocked || !activeRoom?.active || !!busy} label="Traer {f.name} a esta sala" on:click={() => bringHere(f)}>
+            Traer aquí
+          </Button>
+        {:else}
+          <Button size="sm" loading={busy === f.id} disabled={!canPlace(f)} title={why || undefined} label="Comprar {f.name}" on:click={() => (buying = f)}>
+            {why === 'No te alcanzan las monedas' || why === 'No te alcanzan las gemas' ? 'No alcanza' : 'Comprar'}
+          </Button>
+        {/if}
       </div>
     {:else}
       <EmptyState compact icon="shop" text="Esta sala no tiene muebles en el catálogo." />

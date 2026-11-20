@@ -22,6 +22,7 @@
   } from '../lib/etherObjects/store';
   import { ETHER_KINDS } from '../lib/etherObjects/kinds';
   import { POMODORO_CLOCK_ID, pomodoroClockWant } from '../lib/etherObjects/pomodoroClock';
+  import { MP3_PLAYER_ID, mp3PlayerWant } from '../lib/etherObjects/mp3Player';
 
   const DRAG_THRESHOLD = 4;
   let drag: { id: string; dx: number; dy: number; sx: number; sy: number; moved: boolean } | null = null;
@@ -105,6 +106,8 @@
   onMount(() => {
     const k = ETHER_KINDS['pomodoro-clock'];
     unregister.push(registerEtherObject(POMODORO_CLOCK_ID, 'pomodoro-clock', { w: k.w, h: k.h }, pomodoroClockWant));
+    const m = ETHER_KINDS['mp3-player'];
+    unregister.push(registerEtherObject(MP3_PLAYER_ID, 'mp3-player', { w: m.w, h: m.h }, mp3PlayerWant));
   });
   onDestroy(() => {
     unregister.forEach((u) => u());

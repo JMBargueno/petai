@@ -219,7 +219,7 @@ jobs:
           pnpm --filter @pockai/scene run typecheck
           pnpm --filter @pockai/scene run test
 
-      # Lado de la UI del núcleo cliente (spec 42): la pasarela `coreFetch` y el canal del chat.
+      # Lado de la UI del núcleo cliente (spec 43): acciones, consultas y el canal del chat.
       - name: Test core client
         run: |
           pnpm --filter @pockai/client run typecheck
@@ -245,7 +245,7 @@ jobs:
         with:
           workspaces: .
 
-      # Workspace de Rust: el shell de Tauri y los crates del núcleo cliente (spec 42).
+      # Workspace de Rust: el shell de Tauri y los crates del núcleo cliente (spec 43).
       - name: Check Rust workspace
         run: cargo check --workspace --locked
 

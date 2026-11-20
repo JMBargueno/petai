@@ -73,7 +73,7 @@ Un solo contrato y un solo juego de datos alimentan a todas las plataformas (esc
 
 **Reglas obligatorias:**
 - El contrato único es `openapi.json`, generado por `@nestjs/swagger` en el backend. Se regenera con `export-openapi.ts` (y en arranque no-producción, ver `main.ts`) y se publica en `shared/openapi/`.
-- Hay **un solo cliente de la API**: el núcleo en Rust (`crates/pockai-core`), compartido por escritorio, Android e iOS dentro de una única app Tauri 2 (spec 42). Las UIs no hablan con el backend ni guardan tokens: piden las cosas al núcleo y escuchan sus eventos.
+- Hay **un solo cliente de la API**: el núcleo en Rust (`crates/pockai-core`), compartido por escritorio, Android e iOS dentro de una única app Tauri 2 (spec 43). Las UIs no hablan con el backend ni guardan tokens: piden las cosas al núcleo y escuchan sus eventos.
 - Los tipos del contrato de la API salen de `openapi.json` (`openapi-typescript`). Donde el contrato no tipa la respuesta, el tipo se escribe **una vez**, en el núcleo, y de ahí se genera para la UI (`ts-rs`); no se repite a mano en cada plataforma.
 - El contrato entre el núcleo y la UI (commands, events) se define en `crates/pockai-core/src/contract.rs` y se genera a TypeScript en `shared/client/src/bindings/`.
 - Los datos de juego (especies, patrones, comida, habilidades, balance, misiones) viven en `shared/game-data/*.json`: el backend los carga a la BD con el seed y los clientes los usan para arte y textos.
@@ -285,4 +285,4 @@ Se entrega por fases, empezando por el backend + la mascota de escritorio (prime
 
 ### Enmiendas
 
-- **1.1.0 (2026-11-19):** el principio III y el stack dejan de exigir clientes nativos separados (Compose y SwiftUI, cada uno generado desde OpenAPI) y pasan a un único núcleo cliente en Rust dentro de una app Tauri 2 con una UI por plataforma. Justificación: la lógica de cliente (sesión, renovación de tokens, tiempo real, estado) se estaba escribiendo tres veces y el refresh token, que rota, no tolera implementaciones divergentes. Plan de migración: `docs/specs/spec-42-nucleo-rust-tauri.md` y `docs/MIGRACION_NUCLEO_RUST.md`. La app Android en Kotlin se mantiene como referencia hasta que el target Android de Tauri la sustituya (fase 4).
+- **1.1.0 (2026-11-19):** el principio III y el stack dejan de exigir clientes nativos separados (Compose y SwiftUI, cada uno generado desde OpenAPI) y pasan a un único núcleo cliente en Rust dentro de una app Tauri 2 con una UI por plataforma. Justificación: la lógica de cliente (sesión, renovación de tokens, tiempo real, estado) se estaba escribiendo tres veces y el refresh token, que rota, no tolera implementaciones divergentes. Plan de migración: `docs/specs/spec-43-nucleo-rust-tauri.md` y `docs/MIGRACION_NUCLEO_RUST.md`. La app Android en Kotlin se mantiene como referencia hasta que el target Android de Tauri la sustituya (fase 4).

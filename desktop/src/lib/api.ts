@@ -1255,13 +1255,13 @@ export const api = {
   },
 
   /** Compra y coloca un mueble. Sin `at`, el servidor lo pone en el primer hueco donde quepa. */
-  async placeHabitatFurniture(furnitureId: string, at?: HabitatPlacement) {
+  async placeHabitatFurniture(furnitureId: string, at?: Partial<HabitatPlacement> & { roomId?: string }) {
     if (CORE) return coreAction({ type: 'placeHabitatFurniture', furnitureId, at }, 'Error en la petición') as Promise<never>;
     return minigameRequest<HabitatPlaceResult>('POST', `/v1/habitat/furniture/${furnitureId}/place`, at);
   },
 
   /** Mueve y/o gira un mueble ya colocado (sin coste). */
-  async moveHabitatItem(itemId: string, to: Partial<HabitatPlacement>) {
+  async moveHabitatItem(itemId: string, to: Partial<HabitatPlacement> & { roomId?: string }) {
     if (CORE) return coreAction({ type: 'moveHabitatItem', itemId, to }, 'Error en la petición') as Promise<never>;
     return minigameRequest<HabitatPlaceResult>('PATCH', `/v1/habitat/items/${itemId}`, to);
   },
@@ -2395,7 +2395,7 @@ export interface HabitatTheme {
   light: string;
 }
 
-export type HabitatInteraction = 'sleep' | 'eat' | 'play' | 'bathe' | 'sit';
+export type HabitatInteraction = 'sleep' | 'eat' | 'play' | 'bathe' | 'sit' | 'listen';
 
 export interface HabitatFurniture {
   id: string;
@@ -2409,6 +2409,8 @@ export interface HabitatFurniture {
   footprint?: [number, number];
   mount?: 'floor' | 'wall';
   interaction?: HabitatInteraction;
+  /** Solo se puede tener uno (spec 42): se mueve entre salas en vez de comprarse otra vez. */
+  unique?: boolean;
 }
 
 /** Celda ancla y giro (0–3, pasos de 90°) de un mueble. */
@@ -2417,6 +2419,9 @@ export interface HabitatPlacement {
   y: number;
   rotation?: number;
 }
+
+/** Sala `*` = el mueble va en cualquier sala (spec 42). */
+export const ANY_ROOM = '*';
 
 export interface HabitatPlaceResult {
   message: string;

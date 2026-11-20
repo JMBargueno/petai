@@ -11908,6 +11908,10 @@
             "minimum": 0,
             "maximum": 3,
             "description": "Giro en pasos de 90°"
+          },
+          "roomId": {
+            "type": "string",
+            "description": "Sala destino (solo muebles de cualquier sala)"
           }
         }
       },
@@ -11929,6 +11933,10 @@
             "minimum": 0,
             "maximum": 3,
             "description": "Giro en pasos de 90°"
+          },
+          "roomId": {
+            "type": "string",
+            "description": "Sala destino (solo muebles de cualquier sala)"
           }
         }
       },

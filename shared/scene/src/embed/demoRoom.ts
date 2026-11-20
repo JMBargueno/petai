@@ -21,6 +21,7 @@ const SAMPLE: Record<string, Omit<RoomItem, 'id'>[]> = {
     { furnitureId: 'food_bowl', x: 3, y: 4, rotation: 0 },
     { furnitureId: 'round_rug', x: 7, y: 4, rotation: 0 },
     { furnitureId: 'wall_clock', x: 10, y: 0, rotation: 0 },
+    { furnitureId: 'mp3', x: 12, y: 2, rotation: 0 },
   ],
   jardin: [
     { furnitureId: 'garden_pond', x: 8, y: 2, rotation: 0 },

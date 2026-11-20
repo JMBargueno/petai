@@ -65,6 +65,8 @@ function pet(id: string, nickname: string, speciesId: string, speciesName: strin
     bondingLevel: 3,
     bonding: { value: 46, level: 3 },
     desktopSkills: {},
+    // Muebles colocados (spec 42): el MP3 desbloquea «Música ambiente»
+    ownedFurniture: ['soft_bed', 'toy_ball', 'mp3'],
     strategy: 'balanced',
     createdAt: iso(-12 * DAY),
     ...extra,
@@ -693,7 +695,7 @@ const routes: [string, RegExp, Handler][] = [
       unlocked: i === 0,
       active: i === 0,
       theme: r.theme ?? null,
-      items: i === 0 ? [{ id: 'it-1', furnitureId: 'soft_bed', x: 2, y: 3, rotation: 0 }, { id: 'it-2', furnitureId: 'toy_ball', x: 7, y: 5, rotation: 0 }] : [],
+      items: i === 0 ? [{ id: 'it-1', furnitureId: 'soft_bed', x: 2, y: 3, rotation: 0 }, { id: 'it-2', furnitureId: 'toy_ball', x: 7, y: 5, rotation: 0 }, { id: 'it-3', furnitureId: 'mp3', x: 10, y: 2, rotation: 0 }] : [],
     })),
   })],
   ['GET', /^\/habitat\/catalog$/, () => habitats],

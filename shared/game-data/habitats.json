@@ -342,6 +342,19 @@
       "description": "Decoración pura. El mapa del cielo de un legendario.",
       "footprint": [2, 1],
       "mount": "wall"
+    },
+    {
+      "id": "mp3",
+      "name": "Reproductor MP3",
+      "room": "*",
+      "unique": true,
+      "price": 300,
+      "currency": "coins",
+      "buffs": {},
+      "description": "Música lofi y sonidos de ambiente por capas. Va en cualquier sala y desbloquea la habilidad Música ambiente.",
+      "footprint": [1, 1],
+      "mount": "floor",
+      "interaction": "listen"
     }
   ],
   "buffCaps": {

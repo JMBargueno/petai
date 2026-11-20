@@ -1,7 +1,7 @@
 # Migración al núcleo cliente en Rust (Tauri v2: escritorio, iOS, Android)
 
 Seguimiento paso a paso. La arquitectura y el porqué están en
-[`specs/spec-42-nucleo-rust-tauri.md`](specs/spec-42-nucleo-rust-tauri.md).
+[`specs/spec-43-nucleo-rust-tauri.md`](specs/spec-43-nucleo-rust-tauri.md).
 
 **Estados:** ⬜ no empezado · 🟡 en progreso · ✅ terminado y verificado · ➖ descartado (con su motivo)
 
@@ -53,7 +53,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 1.4.4 Migración única de la sesión guardada en `localStorage` al llavero
 
 ### 1.5 Cierre
-- ✅ 1.5.1 Spec 42 y enmienda de la constitución (§III y stack)
+- ✅ 1.5.1 Spec 43 y enmienda de la constitución (§III y stack)
 - ✅ 1.5.2 Verificación: tests Rust y vitest, app real contra backend local, modo demo
 
 ## Fase 2 — Estado global en Rust
@@ -124,7 +124,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 
 ## Decisiones de la fase 3: qué no se mueve al núcleo
 
-Al entrar en cada módulo se ha aplicado la frontera de la spec 42 (reglas sin UI al núcleo;
+Al entrar en cada módulo se ha aplicado la frontera de la spec 43 (reglas sin UI al núcleo;
 presentación en la UI). Estos se quedan donde están, y por qué:
 
 - **Iniciativa (`initiative.ts`)**. Es un temporizador alrededor de una llamada cuyo resultado es

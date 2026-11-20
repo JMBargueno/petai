@@ -1592,6 +1592,95 @@
       "id": "music.primer-latido",
       "prompt": "deep warm resonant heartbeat chime expanding into soft cosmic shimmer, eerie but cute",
       "duration": 3
+    },
+    {
+      "id": "music.lofi.night",
+      "prompt": "Quiet night lofi: dreamy Rhodes piano, soft brushed drums, warm bass, gentle rain-like vinyl hiss",
+      "duration": 90,
+      "loop": true,
+      "gainDb": -10,
+      "cooldownMs": 0,
+      "platforms": [
+        "desktop"
+      ],
+      "style": "instrumental lofi hip hop, warm, mellow, relaxed tempo around 75 bpm, vinyl crackle, soft jazzy chords, cozy study music, no vocals, seamless loop that ends where it begins",
+      "note": "MP3 (spec 42). Tema 1: noche tranquila."
+    },
+    {
+      "id": "music.lofi.tea",
+      "prompt": "Afternoon tea lofi: nylon guitar melody, light boom bap drums, airy flute pad, sunny and calm",
+      "duration": 90,
+      "loop": true,
+      "gainDb": -10,
+      "cooldownMs": 0,
+      "platforms": [
+        "desktop"
+      ],
+      "style": "instrumental lofi hip hop, warm, mellow, relaxed tempo around 75 bpm, vinyl crackle, soft jazzy chords, cozy study music, no vocals, seamless loop that ends where it begins",
+      "note": "MP3 (spec 42). Tema 2: tarde de té."
+    },
+    {
+      "id": "music.lofi.bits",
+      "prompt": "Pixel dreams lofi: soft chiptune lead blended with mellow keys, dusty drums, deep sub bass, nostalgic video game mood",
+      "duration": 90,
+      "loop": true,
+      "gainDb": -10,
+      "cooldownMs": 0,
+      "platforms": [
+        "desktop"
+      ],
+      "style": "instrumental lofi hip hop, warm, mellow, relaxed tempo around 75 bpm, vinyl crackle, soft jazzy chords, cozy study music, no vocals, seamless loop that ends where it begins",
+      "note": "MP3 (spec 42). Tema 3: lluvia de bits."
+    },
+    {
+      "id": "amb.mixer.rain",
+      "prompt": "steady soft rain falling on a roof and leaves, constant, no thunder",
+      "duration": 24,
+      "gainDb": -6,
+      "platforms": [
+        "desktop"
+      ],
+      "note": "Capa del MP3 (spec 42)."
+    },
+    {
+      "id": "amb.mixer.thunder",
+      "prompt": "distant rolling thunder rumbles with long quiet gaps, no rain, far away storm",
+      "duration": 28,
+      "gainDb": -6,
+      "platforms": [
+        "desktop"
+      ],
+      "note": "Capa del MP3 (spec 42)."
+    },
+    {
+      "id": "amb.mixer.wind",
+      "prompt": "soft wind blowing through trees and grass, gentle gusts, airy",
+      "duration": 24,
+      "gainDb": -6,
+      "platforms": [
+        "desktop"
+      ],
+      "note": "Capa del MP3 (spec 42)."
+    },
+    {
+      "id": "amb.mixer.crickets",
+      "prompt": "summer night crickets chirping in a meadow, calm and steady",
+      "duration": 20,
+      "gainDb": -6,
+      "platforms": [
+        "desktop"
+      ],
+      "note": "Capa del MP3 (spec 42)."
+    },
+    {
+      "id": "amb.mixer.birds",
+      "prompt": "morning songbirds chirping in a peaceful forest, sparse and gentle",
+      "duration": 24,
+      "gainDb": -6,
+      "platforms": [
+        "desktop"
+      ],
+      "note": "Capa del MP3 (spec 42)."
     }
   ]
 }

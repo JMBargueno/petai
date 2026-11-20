@@ -25,6 +25,8 @@
   import { buildClientContext } from '../lib/deskContext';
   import { setSkillAuthorization } from '../lib/stores/desktopSkillsStore';
   import { startPomodoro, stopPomodoro } from '../lib/pomodoro';
+  import { mixerPlay, mixerStop } from '../lib/mixer';
+  import type { MixerLayer, MixerTrack } from '@pockai/audio';
   import { parseBold, toSpeakable } from '../lib/speech-queue';
   import { getSocket } from '../lib/socket';
   import { MEMORY_LAYERS, groupMemoriesByLayer, memoryIcon, valenceView } from '../lib/mind';
@@ -224,6 +226,14 @@
           } else if (res.tool === 'stop_pomodoro') {
             stopPomodoro();
             card.note = 'Pomodoro detenido';
+          } else if (res.tool === 'play_ambient') {
+            const t = res.args.track as string | undefined;
+            const track = t === undefined ? undefined : t === 'none' ? null : (`music.lofi.${t}` as MixerTrack);
+            mixerPlay(track, res.args.layers as MixerLayer[] | undefined);
+            card.note = 'Música en marcha';
+          } else if (res.tool === 'stop_ambient') {
+            mixerStop();
+            card.note = 'Música en pausa';
           } else if (res.tool === 'read_clipboard') {
             const text = (await readClipboardText()).trim();
             if (!text) {

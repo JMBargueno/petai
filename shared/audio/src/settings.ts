@@ -91,6 +91,15 @@ export interface AudioEnv {
   visible: boolean;
 }
 
+/**
+ * Volumen de lo que pone el usuario a propósito con el reproductor MP3 (spec 42): sigue el
+ * interruptor general, el del bus y su volumen, pero no se calla en el escritorio ni sin foco,
+ * porque es música que el usuario ha elegido escuchar mientras trabaja.
+ */
+export function playerBusGain(s: AudioSettings, bus: Bus, env: AudioEnv): number {
+  return effectiveBusGain(s, bus, { ...env, surface: 'app', focused: true, visible: true });
+}
+
 /** Volumen final (0–1) de un bus en este momento, con todo aplicado. */
 export function effectiveBusGain(s: AudioSettings, bus: Bus, env: AudioEnv): number {
   if (!s.enabled || !env.visible) return 0;

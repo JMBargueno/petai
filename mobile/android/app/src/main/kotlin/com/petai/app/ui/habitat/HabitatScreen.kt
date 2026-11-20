@@ -360,7 +360,7 @@ fun HabitatScreen(
     val activeRoom: HabitatRoom? = rooms.firstOrNull { it.id == activeRoomId }
             ?: rooms.firstOrNull { it.unlocked }
             ?: rooms.firstOrNull()
-    val roomFurniture = (catalog?.furniture ?: emptyList()).filter { it.room == activeRoom?.id }
+    val roomFurniture = (catalog?.furniture ?: emptyList()).filter { it.room == activeRoom?.id || it.room == "*" }
     val canEdit = activeRoom?.unlocked == true && activeRoom.active && activeRoom.items.isNotEmpty()
     if (!canEdit && editing) editing = false
     val selectedItem = activeRoom?.items?.firstOrNull { it.id == selectedId }

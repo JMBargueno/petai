@@ -9,6 +9,8 @@ export interface DesktopSkillDefinition {
   requiredBonding: number;      // 0 a 100
   requiredIntelligence: number; // 1 a 3 (1: Chat, 2: Memoria, 3: Agente)
   defaultEnabled: boolean;
+  /** Mueble del hábitat que hay que tener colocado para desbloquearla (spec 42). */
+  requiredFurniture?: { id: string; name: string };
 }
 
 export const DESKTOP_SKILLS: DesktopSkillDefinition[] = [
@@ -89,6 +91,16 @@ export const DESKTOP_SKILLS: DesktopSkillDefinition[] = [
     requiredBonding: 20,
     requiredIntelligence: 1,
     defaultEnabled: true,
+  },
+  {
+    id: 'ambient_mixer',
+    name: 'Música Ambiente (MP3)',
+    category: 'productivity',
+    description: 'Temas lofi en bucle y sonidos de ambiente (lluvia, trueno, viento, grillos, pájaros) que puedes mezclar por capas. Tu Pockai lleva el reproductor flotando a su lado.',
+    requiredBonding: 0,
+    requiredIntelligence: 1,
+    defaultEnabled: true,
+    requiredFurniture: { id: 'mp3', name: 'Reproductor MP3' },
   },
   {
     id: 'context_awareness',

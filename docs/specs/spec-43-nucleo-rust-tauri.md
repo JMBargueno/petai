@@ -1,4 +1,4 @@
-# Spec 42: núcleo cliente en Rust y Tauri v2 para escritorio, iOS y Android
+# Spec 43: núcleo cliente en Rust y Tauri v2 para escritorio, iOS y Android
 
 Documento autocontenido. Define **dónde vive la lógica de cliente** (un núcleo en Rust compartido por
 las tres plataformas), **qué se queda en la UI**, **cómo hablan entre sí** y **en qué orden se migra**.

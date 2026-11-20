@@ -14,7 +14,7 @@ const reminder = TOOL_BY_NAME.get('create_reminder')!;
 describe('agent-tools', () => {
   it('las herramientas con efectos (servidor o escritorio) siempre requieren confirmación; el resto son de lectura', () => {
     expect(TOOLS.filter((t) => t.requiresConfirmation).map((t) => t.name).sort()).toEqual([
-      'create_reminder', 'open_url', 'read_clipboard', 'set_in_habitat', 'start_pomodoro', 'stop_pomodoro', 'toggle_desktop_skill',
+      'create_reminder', 'open_url', 'play_ambient', 'read_clipboard', 'set_in_habitat', 'start_pomodoro', 'stop_ambient', 'stop_pomodoro', 'toggle_desktop_skill',
     ]);
     expect(TOOLS.filter((t) => t.clientSide).every((t) => t.requiresConfirmation)).toBe(true);
     expect(toolDefinitions().map((t) => t.name).sort()).toEqual([
@@ -104,7 +104,7 @@ describe('agent-tools', () => {
     const v = (url: unknown) => open.validate({ url }, NOW);
 
     it('solo se ofrecen al modelo si el cliente las declara', () => {
-      expect([...CLIENT_TOOL_NAMES].sort()).toEqual(['open_url', 'read_clipboard', 'start_pomodoro', 'stop_pomodoro', 'toggle_desktop_skill']);
+      expect([...CLIENT_TOOL_NAMES].sort()).toEqual(['open_url', 'play_ambient', 'read_clipboard', 'start_pomodoro', 'stop_ambient', 'stop_pomodoro', 'toggle_desktop_skill']);
       expect(toolDefinitions().map((t) => t.name)).not.toContain('open_url');
       expect(toolDefinitions(['open_url']).map((t) => t.name)).toContain('open_url');
       expect(toolDefinitions(['open_url']).map((t) => t.name)).not.toContain('read_clipboard');
@@ -181,5 +181,17 @@ describe('agent-tools', () => {
     expect(parseToolArguments('')).toEqual({});
     expect(parseToolArguments('{"a":1}')).toEqual({ a: 1 });
     expect(parseToolArguments('{roto')).toBeUndefined();
+  });
+});
+
+describe('agent-tools · reproductor MP3 (spec 42)', () => {
+  it('play_ambient valida tema y capas (sin repetidas) y lo describe en castellano', () => {
+    const t = TOOL_BY_NAME.get('play_ambient')!;
+    const ok = t.validate({ track: 'tea', layers: ['rain', 'rain', 'thunder'] }, NOW) as any;
+    expect(ok).toEqual({ ok: true, args: { track: 'tea', layers: ['rain', 'thunder'] } });
+    expect(t.describe!(ok.args, 'Europe/Madrid')).toBe('Poner en el MP3: «Tarde de té» con lluvia, trueno');
+    expect(t.validate({ track: 'metal' }, NOW).ok).toBe(false);
+    expect(t.validate({ layers: ['volcano'] }, NOW).ok).toBe(false);
+    expect(t.validate({}, NOW)).toEqual({ ok: true, args: {} });
   });
 });
