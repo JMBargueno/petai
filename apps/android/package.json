@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@pockai/audio": "workspace:*",
     "@pockai/client": "workspace:*",
     "@pockai/minigames": "workspace:*",
     "@pockai/ui": "workspace:*",

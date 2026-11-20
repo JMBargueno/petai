@@ -200,6 +200,9 @@ importers:
 
   apps/android:
     dependencies:
+      '@pockai/audio':
+        specifier: workspace:*
+        version: link:../../shared/audio
       '@pockai/client':
         specifier: workspace:*
         version: link:../../shared/client

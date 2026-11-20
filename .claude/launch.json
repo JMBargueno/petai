@@ -147,6 +147,17 @@
       ],
       "port": 5199,
       "url": "http://127.0.0.1:5199"
+    },
+    {
+      "name": "pockai-android-ui",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@pockai/android-ui",
+        "run",
+        "dev"
+      ],
+      "port": 5183
     }
   ]
 }

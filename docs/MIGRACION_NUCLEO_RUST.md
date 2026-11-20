@@ -46,7 +46,7 @@ fases de abajo y en las secciones de verificación del final.
 1. **Probar en el emulador** Jugar entera, Cofres, Armario, lo social entero y el huevo de sprites.
 2. **Pantallas a la biblioteca** (4.4 y 4.5): hechas todas las de la tabla de abajo. Quedan, de
    cada app, las escenas que van en huecos (sala del amigo, casa, hábitat del clan, sala del
-   hábitat) y, en Android, el sonido de los juegos y el clima local.
+   hábitat) y, en Android, el clima local.
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
 4. **Plugins nativos** (4.7, 4.8): sesión cifrada con el Keystore en Android (hoy es un fichero
    privado de la app) y sincronización en segundo plano con avisos de cuidado.
@@ -859,4 +859,26 @@ las propone); una respuesta moderada.
 
 Sin verificar en todo el tramo (`claude/pantallas-sprites`): nada en el emulador ni en la app de
 Tauri del escritorio (todo en el modo demo del navegador); las secciones de Android con hasta siete
-pastillas a 360 px; el sonido de juegos en Android (`setUiSound` sin motor).
+pastillas a 360 px.
+
+### Sonido en Android (2026-11-20)
+
+- `apps/android/src/audio.ts` crea el motor de `@pockai/audio` (el mismo que el escritorio y que
+  los bundles de la escena y los minijuegos) y lo conecta a la biblioteca al arrancar
+  (`installSound` en `main.ts`): `setUiSound` para los juegos compartidos y `onUiFeedback` para los
+  momentos del kit (modal, monedas, gemas), con los mismos ids que el escritorio.
+- Plataforma `scene`: suenan los sonidos sin plataforma del manifiesto; los veinte que son solo del
+  escritorio no.
+- Solo se empaquetan los ficheros que piden esas pantallas: `cook.*`, `mg.*`, `elem.*` y los de
+  interfaz (70 ficheros, unos 760 KB). La música y los ambientes (unos 7 MB) no entran en el APK.
+- Ajustes con los valores por defecto del móvil, guardados en el dispositivo (`pockai_audio`). La
+  app aún no tiene pantalla de sonido.
+- `.claude/launch.json` gana `pockai-android-ui` para servir la UI de Android en el navegador.
+
+Verificado sirviendo la UI de Android en el navegador: el puerto de la biblioteca suena por el
+motor de Android (`mg.countdown.go`, `cook.serve` y `elem.fire.accent` devuelven que han sonado;
+un id inexistente y la música, que no se empaqueta, no), los ficheros se cargan (200) y sin
+errores en la consola. Compila la UI de Android (`tsc` y build).
+
+**Sin verificar:** oírlo en el emulador o en un dispositivo (el WebView exige un toque antes de
+sonar: `attachAutoUnlock`); una pantalla de ajustes de sonido.
