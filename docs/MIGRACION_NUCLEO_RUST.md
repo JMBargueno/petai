@@ -30,22 +30,22 @@ fases de abajo y en las secciones de verificación del final.
   avisos y 85 acciones y 67 consultas tipadas. Ningún token en el webview.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
-- **Biblioteca `@pockai/ui`, en el PR 211 (abierto, CI en verde, sin fusionar)**. Rama
-  `claude/pockai-ui`. Contiene el kit (20 componentes), los estilos y ocho pantallas de dominio:
-  Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo y Temporada. Las usan el
-  escritorio y la app de Android.
-- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda,
-  Progreso (Misiones, Temporada) y Cuenta. Todas probadas en el emulador.
+- **Biblioteca `@pockai/ui`, fusionada** (PR 211). Contiene el kit (20 componentes), los estilos
+  y doce pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo,
+  Temporada, y desde la rama `claude/migracion-nucleo-rust-ec3965` Cofres, Raid, Torneo y
+  Entrenamiento. Las usan el escritorio y la app de Android.
+- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos), Mochila, Jugar (Raid,
+  Torneo, Entrenar), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta (desde el
+  nombre de la cabecera). Jugar y Cofres aún no se han probado en el emulador.
 
 ### Qué falta, por orden
 
-1. **Fusionar el PR 211.**
+1. **Probar Jugar y Cofres en el emulador** y fusionar su rama.
 2. **Más pantallas a la biblioteca** (4.4 y 4.5). Quedan las pestañas del escritorio que cargan sus
-   datos: Cofres, Entrenamiento, Torneo, Raid, Armario, Mente, Arena, Cocina, Amigos, Visitas,
-   Clanes, Perfil, Minijuegos, Aventura, Hábitat y Chat. Las cuatro primeras son pequeñas y siguen
-   el patrón de abajo sin más. Las demás dependen del motor de sprites, de la escena o del audio
-   del escritorio (`lib/sprites`, `@pockai/scene`, `lib/audio`): antes hay que decidir si ese
-   motor se comparte o si cada app pone el suyo en un hueco, como el huevo de Eclosión.
+   datos: Armario, Mente, Arena, Cocina, Amigos, Visitas, Clanes, Perfil, Minijuegos, Aventura,
+   Hábitat y Chat. Dependen del motor de sprites, de la escena o del audio del escritorio
+   (`lib/sprites`, `@pockai/scene`, `lib/audio`): antes hay que decidir si ese motor se comparte
+   o si cada app pone el suyo en un hueco, como el huevo de Eclosión.
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
 4. **Plugins nativos** (4.7, 4.8): sesión cifrada con el Keystore en Android (hoy es un fichero
    privado de la app) y sincronización en segundo plano con avisos de cuidado.
@@ -67,8 +67,12 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
   de Eclosión): la vista deja un hueco (`slot`) y cada app lo rellena.
 - En Android, los ajustes táctiles y de ancho van en `apps/android/src/app.css`. Los estilos de un
   componente ganan a un selector simple: hay que usar `main .screen .clase`.
-- Tras una acción que cambia el saldo y que el núcleo no reconoce por su ruta, el contenedor pide
-  `stateRefresh('user')`.
+- Lo que una acción cambia en el estado (saldo, mascota, inventario) lo pone al día el núcleo, por
+  la ruta de la acción (`state_on_response` en `state.rs`). Si una ruta nueva cambia el estado,
+  se le añade ahí con su test; el contenedor solo pide `stateRefresh` mientras tanto.
+- Si dos contenedores repetirían la misma lógica de pantalla (la sesión de la mazmorra, los textos
+  de un aviso), va a la biblioteca como funciones puras junto a la vista (`training.ts`,
+  `chests.ts`…).
 
 ### Cómo se prueba
 
@@ -155,8 +159,8 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo y Temporada, usadas por el escritorio y por Android. Quedan las demás pestañas que cargan sus datos (Cofres, Entrenamiento, Mente, Armario, Social, Arena…), a partir una a una
-- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, todas probadas en el emulador. Faltan el resto de pantallas del juego
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Quedan las pestañas que dependen de sprites, escena o audio (Mente, Armario, Social, Arena…)
+- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Raid, Torneo, Entrenar) y Tienda › Cofres, sin probar en él. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -470,3 +474,36 @@ ahora van en dos y tres columnas.
 
 Sin verificar en Android: comprar el pase de temporada (hace falta una temporada activa; en el
 escritorio en modo demo sí está probado).
+
+### Cofres, Raid, Torneo y Entrenamiento compartidos (2026-11-20)
+
+Mismo patrón que Misiones: vista en `@pockai/ui` (`ChestsView`, `RaidView`, `TournamentView`,
+`TrainingView`), contenedor del escritorio con el nombre de siempre (`ChestsTab`, `RaidTab`…) y
+contenedor de Android en `apps/android/src/screens/`. Tres novedades:
+
+- **El núcleo pone al día el estado tras estas acciones.** Atacar a la raid y terminar la mazmorra
+  vuelven a pedir mascotas y saldo; empezar la mazmorra, las mascotas (gasta energía); inscribirse
+  en el torneo, el saldo; abrir o comprar un cofre, saldo e inventario. Así los contenedores de
+  Android no piden `stateRefresh`. Test: `atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_…`.
+- **Lógica de pantalla compartida.** La sesión de la mazmorra (pisos, corazones, piso revelado,
+  mensaje final, sesión retomada) son funciones puras en `training.ts`; los precios de los cofres
+  salen de `balance.json` en `chests.ts`; los avisos de raid, torneo y compra de cofre también
+  están en la biblioteca. Las confirmaciones (inscribirse, comprar con gemas) son estado de la
+  vista y se cierran solas cuando termina la petición.
+- **Navegación de Android.** Nueva pestaña Jugar (Raid, Torneo, Entrenar) y Tienda con secciones
+  (Tienda, Cofres). Con seis pestañas los botones no llegaban a 48 px en un móvil de 360 px, así que
+  Cuenta sale de la barra y se abre tocando el nombre en la cabecera.
+
+También se corrigió el modo demo: los cofres sembrados tenían ids (`ch-1`, `ch-2`) que el
+generador de ids del mock repetía al comprar, y el cofre comprado no aparecía.
+
+Verificado en el escritorio en modo demo: Raid (se pinta; con la mascota dormida el botón queda
+desactivado con su aviso); Torneo (confirmación, inscripción, «Ya estás inscrito», gemas 40 → 25);
+Entrenamiento (entrar, elegir Fuego, piso revelado y aviso del turno); Cofres (abrir uno con sus
+premios, comprar con gemas pasando por la confirmación y con monedas, 1250 → 1175, aviso y
+cofre nuevo en «Mis cofres»). 20 tests de estado del núcleo; 438 tests del escritorio; compilan
+escritorio y UI de Android.
+
+**Sin verificar:** nada de este tramo en el emulador de Android (ni las cuatro pantallas ni la
+navegación nueva), ni atacar a la raid con una mascota despierta, ni una mazmorra completa hasta
+el final.

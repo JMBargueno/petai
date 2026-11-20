@@ -3,17 +3,22 @@
   import { AccountView, BackpackView, Button, Card, CurrencyPill, HatchView, Ico, Notice, PetHomeView, Segmented, ShopView } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
   import BondingScreen from './screens/BondingScreen.svelte';
+  import ChestsScreen from './screens/ChestsScreen.svelte';
   import MissionsScreen from './screens/MissionsScreen.svelte';
+  import RaidScreen from './screens/RaidScreen.svelte';
   import SeasonScreen from './screens/SeasonScreen.svelte';
+  import TournamentScreen from './screens/TournamentScreen.svelte';
+  import TrainingScreen from './screens/TrainingScreen.svelte';
   import { act, activePet, failureText, hasCore, offline, phase, signIn, signOut, start, state as core } from './core';
 
-  type Tab = 'pet' | 'backpack' | 'shop' | 'progress' | 'account';
+  type Tab = 'pet' | 'backpack' | 'play' | 'shop' | 'progress' | 'account';
+  /** Cuenta no está en la barra: se abre tocando el nombre de la cabecera (seis pestañas no caben a 48 px). */
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'pet', label: 'Mascota', icon: 'paw' },
     { id: 'backpack', label: 'Mochila', icon: 'gift' },
+    { id: 'play', label: 'Jugar', icon: 'gamepad' },
     { id: 'shop', label: 'Tienda', icon: 'shop' },
     { id: 'progress', label: 'Progreso', icon: 'trophy' },
-    { id: 'account', label: 'Cuenta', icon: 'user' },
   ];
 
   let email = $state('');
@@ -22,6 +27,17 @@
   /** Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión). */
   let petSection = $state<'home' | 'bond' | 'eggs'>('home');
   let progressSection = $state<'missions' | 'season'>('missions');
+  let playSection = $state<'raid' | 'tournament' | 'training'>('raid');
+  let shopSection = $state<'store' | 'chests'>('store');
+  const PLAY_SECTIONS = [
+    { value: 'raid', label: 'Raid', icon: 'swords' },
+    { value: 'tournament', label: 'Torneo', icon: 'trophy' },
+    { value: 'training', label: 'Entrenar', icon: 'castle' },
+  ];
+  const SHOP_SECTIONS = [
+    { value: 'store', label: 'Tienda', icon: 'shop' },
+    { value: 'chests', label: 'Cofres', icon: 'gift' },
+  ];
   const PET_SECTIONS = [
     { value: 'home', label: 'Inicio', icon: 'home' },
     { value: 'bond', label: 'Vínculo', icon: 'bond' },
@@ -91,6 +107,7 @@
   function go(dest: string, sub?: string) {
     tab = dest === 'shop' ? 'shop' : 'pet';
     if (tab === 'pet') petSection = sub === 'hatch' ? 'eggs' : 'home';
+    else shopSection = sub === 'chests' ? 'chests' : 'store';
   }
 </script>
 
@@ -124,7 +141,10 @@
     </Card>
   {:else}
     <header>
-      <strong>{$core.user?.displayName ?? $core.user?.email ?? 'Pockai'}</strong>
+      <button type="button" class="who" class:active={tab === 'account'} aria-label="Cuenta" onclick={() => (tab = 'account')}>
+        <Ico n="user" size={18} />
+        <strong>{$core.user?.displayName ?? $core.user?.email ?? 'Pockai'}</strong>
+      </button>
       <span class="wallet">
         <CurrencyPill kind="coins" amount={coins} />
         <CurrencyPill kind="gems" amount={Number($core.user?.gems ?? 0)} />
@@ -194,9 +214,22 @@
         {:else}
           <SeasonScreen {coins} gems={Number($core.user?.gems ?? 0)} />
         {/if}
+      {:else if tab === 'play'}
+        <Segmented variant="pills" label="Sección de Jugar" value={playSection} options={PLAY_SECTIONS} on:change={(e) => (playSection = e.detail)} />
+        {#if playSection === 'raid'}
+          <RaidScreen {pet} />
+        {:else if playSection === 'tournament'}
+          <TournamentScreen {pet} />
+        {:else}
+          <TrainingScreen {pet} />
+        {/if}
       {:else if tab === 'account'}
         <AccountView user={$core.user} on:logout={leave} />
       {:else}
+        <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail)} />
+        {#if shopSection === 'chests'}
+          <ChestsScreen {coins} gems={Number($core.user?.gems ?? 0)} />
+        {:else}
         <ShopView
           shopItems={$core.shop}
           inventory={$core.inventory}
@@ -204,6 +237,7 @@
           busyItem={busy?.startsWith('buy:') ? busy.slice(4) : null}
           on:buy={(e) => run(`buy:${e.detail}`, 'No se pudo comprar', () => act({ type: 'buyItem', itemId: e.detail, quantity: 1 }))}
         />
+        {/if}
       {/if}
     </div>
 
