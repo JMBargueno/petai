@@ -52,8 +52,8 @@ fases de abajo y en las secciones de verificación del final.
    cuidado con WorkManager; ver «Plugins nativos de Android»), probados en el emulador con un
    backend de pega. Falta probarlos contra el backend real y lo de iOS (`BGAppRefreshTask`).
 5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
-   acordada: que la app de Tauri tenga portados el widget y la sincronización. La sincronización ya
-   está; falta el widget.
+   acordada: que la app de Tauri tenga portados el widget y la sincronización. Ya se cumple (ver
+   «El widget de Android»); falta decidir cuándo.
 6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
 
 ### Pantallas que quedan, por tipo (2026-11-20)
@@ -181,7 +181,7 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 - 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda › Cofres, Mascota › Armario y el huevo de sprites, sin probar en él. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - ✅ 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero de la app cifrado con el Keystore (`SealedFileStore` + `PockaiKeystore`), que adopta el fichero en claro de antes
-- 🟡 4.8 Avisos de cuidado en segundo plano: en Android, WorkManager dentro de `tauri-plugin-pockai` (no un plugin aparte) con el mismo núcleo de la app. Falta `BGAppRefreshTask` en iOS
+- 🟡 4.8 Avisos de cuidado en segundo plano: en Android, WorkManager dentro de `tauri-plugin-pockai` (no un plugin aparte) con el mismo núcleo de la app, y el widget de la pantalla de inicio. Falta `BGAppRefreshTask` en iOS
 - 🟡 4.9 CI: job `android-tauri` que compila el APK de depuración. Falta todo lo de iOS
 - ⬜ 4.10 Borrar `mobile/android`, su job de CI y las referencias en docs, specs y skills
 
@@ -992,9 +992,35 @@ Verificado:
 - `CareSync` reintenta ante cualquier error del núcleo, también un 4xx como una cuenta bloqueada.
   `PetSyncWorker` daba por bueno lo que no fuera 5xx. En un trabajo periódico la espera entre
   reintentos crece, así que el ritmo de 30 min se puede alargar.
-- Ya no refresca un widget (la app de Tauri no tiene).
+- El widget se portó después (ver «El widget de Android»).
 
 **Sin verificar:**
 - Contra el backend real, y una renovación del token hecha desde el propio trabajo en segundo plano.
 - Una compilación de *release* con R8 (`consumer-rules.pro` conserva las clases que usa JNI).
 - iOS (`BGAppRefreshTask`).
+
+### El widget de Android (2026-11-20)
+
+- **Qué enseña lo decide el núcleo**: `PetGlance` (`care.rs`) con el nombre, el nivel, el ánimo
+  (`sick`, `sleeping`, `hungry`, `sad` o `happy`, con su texto) y las cinco constantes.
+  - El ánimo usa los umbrales de los avisos (`pet_needs`). En la app Kotlin la tristeza empezaba en
+    felicidad < 30; ahora es < 20, igual que el aviso.
+  - `Core::care_sync` sustituye a `care_check` y devuelve el aviso y el resumen juntos.
+- **Kotlin solo dibuja**: `PockaiWidget` (en la librería `android/` del plugin) guarda el resumen y
+  pinta un `RemoteViews` con un layout XML, los iconos Lucide de la app Kotlin y colores de marca
+  con modo oscuro. Al tocarlo se abre la app.
+  - No usa Glance: necesitaría el compilador de Compose en el proyecto Gradle que genera Tauri.
+  - Los recursos llevan el prefijo `pockai_widget_` para no chocar con los de la app.
+- **Cuándo se actualiza**, como en la app Kotlin:
+  - Con la app abierta, Rust lo redibuja en cuanto cambian las mascotas o la activa. Al cerrar sesión
+    se vacían y el widget vuelve a «Abre la app para ver a tu mascota».
+  - Con la app cerrada, en cada pasada de `CareSync`.
+
+Verificado en el emulador con el backend de pega:
+- El widget aparece en el selector con su vista previa y se coloca en la pantalla de inicio.
+- Tras entrar enseña a Brasa con hambre (icono de manzana, 10 de saciedad) y al tocarlo abre la app.
+- Al cerrar sesión pasa a «Abre la app…».
+- Con la app muerta, el trabajo en segundo plano lo actualiza solo: se cambió la saciedad a 60 en el
+  backend y el widget pasó a «Contento» con 60.
+
+**Sin verificar:** el modo oscuro, otros tamaños del widget y otros lanzadores.

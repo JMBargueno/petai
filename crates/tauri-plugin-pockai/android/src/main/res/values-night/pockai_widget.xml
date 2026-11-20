@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pockai_widget_surface">#FF17162A</color>
+    <color name="pockai_widget_on_surface">#FFF4F2FF</color>
+    <color name="pockai_widget_primary">#FFB3A8FF</color>
+</resources>
