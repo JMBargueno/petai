@@ -27,18 +27,14 @@
   import DesktopSettingsPanel from './DesktopSettingsPanel.svelte';
   import SoundSettingsPanel from './SoundSettingsPanel.svelte';
   import AboutPanel from './AboutPanel.svelte';
-  import PockaiMark from './PockaiMark.svelte';
   import { updateState, updateLock, hasUpdate } from '../lib/updater';
   import UpdateLockPanel from './UpdateLockPanel.svelte';
   import MaintenanceLockPanel from './MaintenanceLockPanel.svelte';
   import { maintenanceLock } from '../lib/maintenance';
-  import HandleField from './HandleField.svelte';
   import { PawPrint, Gamepad2, MessageCircle, Trophy, ShoppingBag, Settings, X, Users } from 'lucide-svelte';
   import HomeView from './views/HomeView.svelte';
-  import { AccountView, BackpackView, HatchView, ShopView } from '@pockai/ui';
+  import { AccountView, AuthView, BackpackView, ChooseHandleView, HatchView, PockaiMark, ShopView, VerifyEmailView, type AuthApi } from '@pockai/ui';
   import RedeemVoucherCard from './views/RedeemVoucherCard.svelte';
-  import AuthLayout from './auth/AuthLayout.svelte';
-  import CodeInput from './auth/CodeInput.svelte';
   import { Button, CurrencyPill, Notice, Segmented } from './ui';
   import Onboarding from './Onboarding.svelte';
   import { completeOnboarding, onboardingDone } from '../lib/onboarding';
@@ -135,7 +131,6 @@
     if (panelNoticeTimer) clearTimeout(panelNoticeTimer);
     hatchTimers.forEach(clearTimeout);
     if (hatchClock) clearInterval(hatchClock);
-    if (resendTimer) clearInterval(resendTimer);
   });
 
   // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
@@ -221,214 +216,29 @@
     settings: 'var(--color-concrete-gray)',
   };
 
-  // Auth inputs
-  let isLoginMode = true;
-  let authEmail = '';
-  let authPassword = '';
-  let authDisplayName = '';
-  let authInviteCode = '';
-  let authHandle = '';
-  let authHandleValid = false;
-  let inviteRequired = false;
-
-  // ---- Elegir nickname (cuentas sin él: anteriores al nickname o creadas desde apps antiguas) ----
-  let chooseHandle = '';
-  let chooseHandleValid = false;
-  let chooseHandleConfirm = false;
-  let chooseHandleError = '';
-
-  async function handleChooseHandle() {
-    chooseHandleError = '';
-    if (!chooseHandleValid) {
-      chooseHandleError = 'Elige un nickname válido y libre';
-      return;
-    }
-    // Es inmutable: se pide una confirmación explícita antes de guardarlo.
-    if (!chooseHandleConfirm) {
-      chooseHandleConfirm = true;
-      return;
-    }
-    isLoading = true;
-    try {
-      await api.setMyHandle(chooseHandle);
-      dispatch('authSuccess');
-    } catch (err: any) {
-      chooseHandleError = err?.message || 'No se pudo guardar el nickname';
-      chooseHandleConfirm = false;
-    } finally {
-      isLoading = false;
-    }
-  }
-  // Si cambia el texto tras pedir confirmación, se vuelve a pedir.
-  $: chooseHandle, (chooseHandleConfirm = false);
-  let authError = '';
-  /** Aviso de éxito en la pantalla de acceso (p. ej. tras cambiar la contraseña). */
+  // Acceso, verificación del correo y nickname: vistas de @pockai/ui con la API del escritorio.
+  const authApi: AuthApi = {
+    login: (email, password) => api.login(email, password),
+    register: ({ email, password, displayName, inviteCode, handle }) => api.register(email, password, displayName, inviteCode, handle),
+    registrationConfig: () => api.getRegistrationConfig(),
+    requestPasswordReset: (email) => api.requestPasswordReset(email),
+    confirmPasswordReset: (email, code, newPassword) => api.confirmPasswordReset(email, code, newPassword),
+    checkHandle: (handle) => api.checkHandleAvailable(handle),
+    verifyEmail: (code) => api.verifyEmail(code),
+    resendVerification: () => api.resendVerification(),
+    isEmailVerified: async () => Boolean(((await api.getMe()) as { emailVerified?: boolean } | null)?.emailVerified),
+    setHandle: (handle) => api.setMyHandle(handle),
+    errorText: (err, fallback) => friendlyError(err, fallback),
+  };
+  /** Tras cambiar la contraseña la app entra sola; el aviso queda por si vuelve al acceso. */
   let authNotice = '';
-  let isLoading = false;
-
-  // ---- Recuperar contraseña (sin sesión) ----
-  let authView: 'login' | 'forgot' | 'reset' = 'login';
-  let resetEmail = '';
-  let resetCode = '';
-  let resetPassword = '';
-  let resetPassword2 = '';
-  let showResetPassword = false;
-  let resetError = '';
-  let resetNotice = '';
-
-  function openForgot() {
-    resetEmail = authEmail.trim();
-    resetCode = '';
-    resetPassword = '';
-    resetPassword2 = '';
-    resetError = '';
-    resetNotice = '';
-    authView = 'forgot';
+  function onAuthSuccess(kind: 'login' | 'register' | 'reset' | void) {
+    if (kind === 'reset') authNotice = 'Contraseña cambiada. Se ha cerrado la sesión en tus otros dispositivos.';
+    dispatch('authSuccess');
   }
-
-  function backToLogin() {
-    authView = 'login';
-    isLoginMode = true;
-    resetError = '';
-    resetNotice = '';
-  }
-
-  async function handleResetRequest() {
-    resetError = '';
-    resetNotice = '';
-    if (!resetEmail.trim()) {
-      resetError = 'Escribe el correo de tu cuenta';
-      return;
-    }
-    isLoading = true;
-    try {
-      await api.requestPasswordReset(resetEmail);
-      authView = 'reset';
-      startResendCooldown();
-    } catch (err: any) {
-      resetError = err?.message || 'No se pudo enviar el código';
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  let resending = false;
-  async function handleResetResend() {
-    if (resending) return;
-    resetError = '';
-    resetNotice = '';
-    resending = true;
-    try {
-      await api.requestPasswordReset(resetEmail);
-      resetNotice = 'Te hemos enviado un código nuevo. El anterior ya no sirve.';
-      startResendCooldown();
-    } catch (err: any) {
-      resetError = friendlyError(err, 'No se pudo reenviar el código');
-    } finally {
-      resending = false;
-    }
-  }
-
-  async function handleResetConfirm() {
-    resetError = '';
-    resetNotice = '';
-    if (!/^[0-9]{6}$/.test(resetCode.trim())) {
-      resetError = 'El código tiene 6 dígitos';
-      return;
-    }
-    if (resetPassword.length < 8) {
-      resetError = 'La contraseña debe tener al menos 8 caracteres';
-      return;
-    }
-    if (resetPassword !== resetPassword2) {
-      resetError = 'Las contraseñas no coinciden';
-      return;
-    }
-    isLoading = true;
-    try {
-      await api.confirmPasswordReset(resetEmail, resetCode, resetPassword);
-      authEmail = resetEmail;
-      authPassword = '';
-      resetPassword = '';
-      resetPassword2 = '';
-      authView = 'login';
-      dispatch('authSuccess');
-      authNotice = 'Contraseña cambiada. Se ha cerrado la sesión en tus otros dispositivos.';
-    } catch (err: any) {
-      resetError = err?.message || 'No se pudo cambiar la contraseña';
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  // ---- Verificación del correo (cuenta recién creada) ----
-  let verifyCode = '';
-  let verifyError = '';
-  let verifyNotice = '';
-  let resendIn = 0;
-  let resendTimer: ReturnType<typeof setInterval> | null = null;
-
-  function startResendCooldown(seconds = 60) {
-    resendIn = seconds;
-    if (resendTimer) clearInterval(resendTimer);
-    resendTimer = setInterval(() => {
-      resendIn -= 1;
-      if (resendIn <= 0 && resendTimer) {
-        clearInterval(resendTimer);
-        resendTimer = null;
-      }
-    }, 1000);
-  }
-
-  async function handleVerifyCode() {
-    verifyError = '';
-    verifyNotice = '';
-    if (!/^[0-9]{6}$/.test(verifyCode.trim())) {
-      verifyError = 'El código tiene 6 dígitos';
-      return;
-    }
-    isLoading = true;
-    try {
-      await api.verifyEmail(verifyCode);
-      verifyCode = '';
-      dispatch('authSuccess');
-    } catch (err: any) {
-      verifyError = err?.message || 'No se pudo verificar el código';
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  /** «Ya lo he verificado» (con el enlace de la web): se vuelve a consultar el perfil. */
-  async function handleVerifyRecheck() {
-    verifyError = '';
-    verifyNotice = '';
-    isLoading = true;
-    try {
-      const me = await api.getMe();
-      if (me?.emailVerified) dispatch('authSuccess');
-      else verifyNotice = 'Aún no consta como verificado. Abre el enlace del correo o escribe el código.';
-    } catch {
-      verifyError = 'Sin conexión con el servidor. Inténtalo de nuevo en un momento.';
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  async function handleResendVerification() {
-    if (resending) return;
-    verifyError = '';
-    verifyNotice = '';
-    resending = true;
-    try {
-      await api.resendVerification();
-      verifyNotice = 'Te hemos enviado un correo nuevo. El código anterior ya no sirve.';
-      startResendCooldown();
-    } catch (err: any) {
-      verifyError = friendlyError(err, 'No se pudo reenviar el correo');
-    } finally {
-      resending = false;
-    }
+  function useOtherAccount() {
+    api.logout();
+    dispatch('logout');
   }
 
   // Hatching animation state
@@ -446,41 +256,6 @@
     // Tick por segundo para el countdown de incubación (solo afecta a la vista de eclosión).
     hatchClock = setInterval(() => (now = Date.now()), 1000);
   });
-
-  async function handleAuth() {
-    authError = '';
-    isLoading = true;
-    try {
-      if (isLoginMode) {
-        await api.login(authEmail, authPassword);
-      } else {
-        if (inviteRequired && !authInviteCode.trim()) {
-          throw new Error('El registro requiere un código de invitación');
-        }
-        if (!authHandleValid) {
-          throw new Error('Elige un nickname válido y libre');
-        }
-        await api.register(authEmail, authPassword, authDisplayName || undefined, authInviteCode || undefined, authHandle);
-      }
-      dispatch('authSuccess');
-    } catch (err: any) {
-      authError = err.message || 'Error durante la autenticación';
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  /** Al pasar a "Crear cuenta" se consulta si el registro exige invitación. */
-  async function toggleAuthMode() {
-    isLoginMode = !isLoginMode;
-    authError = '';
-    if (isLoginMode) return;
-    try {
-      inviteRequired = (await api.getRegistrationConfig()).inviteRequired;
-    } catch (err) {
-      authError = friendlyError(err, 'No se pudo comprobar si el registro está abierto.');
-    }
-  }
 
   const petName = () => pet?.nickname || pet?.species?.name || 'Tu Pockai';
 
@@ -682,164 +457,19 @@
     {:else if $maintenanceLock !== null}
       <!-- Mantenimiento del servidor: solo el aviso hasta que termine -->
       <MaintenanceLockPanel />
-    {:else if !user && authView !== 'login'}
-      <!-- Recuperar contraseña: 1) correo → código; 2) código + contraseña nueva -->
-      <AuthLayout eyebrow="Recuperar contraseña" title={authView === 'forgot' ? '¿Has olvidado tu contraseña?' : 'Nueva contraseña'}>
-        <svelte:fragment slot="subtitle">
-          {#if authView === 'forgot'}
-            Te enviaremos un código de 6 dígitos para crear una contraseña nueva.
-          {:else}
-            Si existe una cuenta con <strong>{resetEmail}</strong>, te hemos enviado un código. Caduca en 15 minutos.
-          {/if}
-        </svelte:fragment>
-
-        {#if authView === 'forgot'}
-          <form class="card auth-form" on:submit|preventDefault={handleResetRequest}>
-            {#if resetError}<Notice tone="error">{resetError}</Notice>{/if}
-            <div class="form-group">
-              <label for="reset-email">Correo electrónico</label>
-              <input class="input" id="reset-email" type="email" autocomplete="email" required bind:value={resetEmail} placeholder="entrenador@pockai.app" />
-            </div>
-            <Button type="submit" variant="primary" size="lg" block loading={isLoading}>Enviar código</Button>
-          </form>
-        {:else}
-          <form class="card auth-form" on:submit|preventDefault={handleResetConfirm}>
-            {#if resetError}<Notice tone="error">{resetError}</Notice>{/if}
-            {#if resetNotice}<Notice tone="info">{resetNotice}</Notice>{/if}
-            <CodeInput id="reset-code" bind:value={resetCode} />
-            <div class="form-group">
-              <label for="reset-pass">Contraseña nueva</label>
-              {#if showResetPassword}
-                <input class="input" id="reset-pass" type="text" autocomplete="new-password" minlength="8" required bind:value={resetPassword} placeholder="Mínimo 8 caracteres" />
-              {:else}
-                <input class="input" id="reset-pass" type="password" autocomplete="new-password" minlength="8" required bind:value={resetPassword} placeholder="Mínimo 8 caracteres" />
-              {/if}
-            </div>
-            <div class="form-group">
-              <label for="reset-pass2">Repite la contraseña</label>
-              {#if showResetPassword}
-                <input class="input" id="reset-pass2" type="text" autocomplete="new-password" required bind:value={resetPassword2} />
-              {:else}
-                <input class="input" id="reset-pass2" type="password" autocomplete="new-password" required bind:value={resetPassword2} />
-              {/if}
-            </div>
-            <label class="show-pass"><input type="checkbox" bind:checked={showResetPassword} /> Mostrar contraseña</label>
-            <Button type="submit" variant="primary" size="lg" block loading={isLoading}>Cambiar contraseña</Button>
-          </form>
-
-          <button type="button" class="auth-link" on:click={handleResetResend} disabled={resendIn > 0 || resending}>
-            {#if resendIn > 0}Puedes pedir otro código en {resendIn} s{:else}¿No te ha llegado? <strong>Reenviar código</strong>{/if}
-          </button>
-        {/if}
-
-        <button type="button" class="auth-link" on:click={backToLogin}>Volver a iniciar sesión</button>
-      </AuthLayout>
     {:else if !user}
-      <AuthLayout eyebrow="Pockai" title={isLoginMode ? 'Iniciar sesión' : 'Crear cuenta'}>
-        <svelte:fragment slot="subtitle">Conecta con tu mascota virtual</svelte:fragment>
-
-        <form class="card auth-form" on:submit|preventDefault={handleAuth}>
-          {#if authNotice}<Notice tone="ok">{authNotice}</Notice>{/if}
-          {#if authError}<Notice tone="error">{authError}</Notice>{/if}
-
-          <div class="form-group">
-            <label for="auth-email">Correo electrónico</label>
-            <input class="input" id="auth-email" type="email" autocomplete="email" required bind:value={authEmail} placeholder="entrenador@pockai.app" />
-          </div>
-
-          {#if !isLoginMode}
-            <HandleField id="auth-handle" bind:value={authHandle} bind:valid={authHandleValid} />
-            <div class="form-group">
-              <label for="auth-name">Nombre de jugador</label>
-              <input class="input" id="auth-name" type="text" autocomplete="nickname" bind:value={authDisplayName} placeholder="Red" />
-              <small class="form-hint">El nombre sí podrás cambiarlo cuando quieras.</small>
-            </div>
-          {/if}
-
-          <div class="form-group">
-            <label for="auth-pass">Contraseña</label>
-            <input class="input" id="auth-pass" type="password" autocomplete={isLoginMode ? 'current-password' : 'new-password'} required bind:value={authPassword} placeholder="••••••••" />
-            {#if isLoginMode}
-              <button type="button" class="forgot-link" on:click={openForgot}>¿Has olvidado tu contraseña?</button>
-            {/if}
-          </div>
-
-          {#if !isLoginMode}
-            <div class="form-group">
-              <label for="auth-invite">Código de invitación{inviteRequired ? '' : ' (opcional)'}</label>
-              <input
-                class="input"
-                id="auth-invite"
-                type="text"
-                autocomplete="off"
-                autocapitalize="characters"
-                spellcheck="false"
-                maxlength="32"
-                required={inviteRequired}
-                bind:value={authInviteCode}
-                placeholder="ABCD-EF23"
-              />
-              {#if inviteRequired}
-                <small class="form-hint">El registro está limitado: necesitas un código de invitación.</small>
-              {/if}
-            </div>
-          {/if}
-
-          <Button type="submit" variant="primary" size="lg" block loading={isLoading}>
-            {isLoginMode ? 'Entrar' : 'Registrarse'}
-          </Button>
-        </form>
-
-        <button type="button" class="auth-link" on:click={toggleAuthMode}>
-          {#if isLoginMode}¿No tienes cuenta? <strong>Regístrate</strong>{:else}¿Ya tienes cuenta? <strong>Inicia sesión</strong>{/if}
-        </button>
-
+      <AuthView {authApi} notice={authNotice} on:success={(e) => onAuthSuccess(e.detail)}>
         <!-- Sin sesión no hay Ajustes: el estado de la actualización se muestra aquí (aviso automático o bandeja). -->
         {#if $updateState.status !== 'idle'}
           <AboutPanel />
         {/if}
-      </AuthLayout>
+      </AuthView>
     {:else if user.emailVerified === false}
       <!-- Cuenta sin verificar: no se puede jugar hasta confirmar el correo -->
-      <AuthLayout eyebrow="Un último paso" title="Verifica tu correo">
-        <svelte:fragment slot="subtitle">
-          Te hemos enviado un código a <strong>{user.email}</strong>. Escríbelo aquí o pulsa el botón del correo.
-        </svelte:fragment>
-
-        <form class="card auth-form" on:submit|preventDefault={handleVerifyCode}>
-          {#if verifyError}<Notice tone="error">{verifyError}</Notice>{/if}
-          {#if verifyNotice}<Notice tone="info">{verifyNotice}</Notice>{/if}
-          <CodeInput id="verify-code" label="Código de verificación" bind:value={verifyCode} />
-          <Button type="submit" variant="primary" size="lg" block loading={isLoading}>Verificar</Button>
-          <Button block disabled={isLoading} on:click={handleVerifyRecheck}>Ya lo he verificado con el enlace</Button>
-        </form>
-
-        <button type="button" class="auth-link" on:click={handleResendVerification} disabled={resendIn > 0 || resending}>
-          {#if resendIn > 0}Puedes reenviarlo en {resendIn} s{:else}¿No te ha llegado? <strong>Reenviar correo</strong>{/if}
-        </button>
-        <button type="button" class="auth-link" on:click={() => { api.logout(); dispatch('logout'); }}>Usar otra cuenta</button>
-      </AuthLayout>
+      <VerifyEmailView {authApi} email={user.email} on:success={() => onAuthSuccess()} on:logout={useOtherAccount} />
     {:else if user.handle === null}
       <!-- Cuenta sin nickname: hay que elegirlo antes de jugar (es único y no se podrá cambiar) -->
-      <AuthLayout eyebrow="Un último paso" title="Elige tu nickname">
-        <svelte:fragment slot="subtitle">
-          Es tu @ en Pockai: con él te añadirán como amigo, te invitarán a clanes y te mandarán pockais de visita.
-          <strong>Es único y no se podrá cambiar.</strong>
-        </svelte:fragment>
-
-        <form class="card auth-form" on:submit|preventDefault={handleChooseHandle}>
-          {#if chooseHandleError}<Notice tone="error">{chooseHandleError}</Notice>{/if}
-          <HandleField id="choose-handle" bind:value={chooseHandle} bind:valid={chooseHandleValid} />
-          {#if chooseHandleConfirm}
-            <Notice tone="warning">¿Seguro que quieres ser <strong>@{chooseHandle}</strong>? No podrás cambiarlo nunca.</Notice>
-          {/if}
-          <Button type="submit" variant="primary" size="lg" block loading={isLoading} disabled={!chooseHandleValid}>
-            {chooseHandleConfirm ? `Sí, quiero ser @${chooseHandle}` : 'Continuar'}
-          </Button>
-        </form>
-
-        <button type="button" class="auth-link" on:click={() => { api.logout(); dispatch('logout'); }}>Usar otra cuenta</button>
-      </AuthLayout>
+      <ChooseHandleView {authApi} on:success={() => onAuthSuccess()} on:logout={useOtherAccount} />
     {:else}
       <!-- Guía de primer uso: una vez, cuando ya hay mascota y no se está en plena eclosión -->
       {#if pet && !$onboardingDone && !onboardingLater && !(dest === 'pet' && sub === 'hatch')}

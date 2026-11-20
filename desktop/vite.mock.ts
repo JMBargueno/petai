@@ -499,10 +499,31 @@ const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
 // ── Rutas ────────────────────────────────────────────────────────────────────
 const routes: [string, RegExp, Handler][] = [
-  ['POST', /^\/auth\/(login|register)$/, () => ({ accessToken: 'demo-access', refreshToken: 'demo-refresh', user })],
+  ['POST', /^\/auth\/login$/, () => ({ accessToken: 'demo-access', refreshToken: 'demo-refresh', user })],
+  // Alta: la cuenta nueva queda sin verificar y sin nickname hasta pasar por esas pantallas.
+  ['POST', /^\/auth\/register$/, ({ body }) => {
+    Object.assign(user as Record<string, unknown>, { email: body.email, displayName: body.displayName ?? body.email, emailVerified: false, handle: null });
+    return { accessToken: 'demo-access', refreshToken: 'demo-refresh', user };
+  }],
   ['POST', /^\/auth\/logout$/, () => ({ ok: true })],
   ['GET', /^\/auth\/registration-config$/, () => ({ inviteRequired: false })],
-  ['GET', /^\/auth\/handle-available$/, () => ({ available: true })],
+  ['GET', /^\/auth\/handle-available$/, ({ query }) => {
+    const handle = query.get('handle') ?? '';
+    return handle === 'ocupado' ? { handle, available: false, reason: 'Ese nickname ya está cogido' } : { handle, available: true };
+  }],
+  // Códigos de los correos: en el modo demo siempre es 123456.
+  ['POST', /^\/auth\/verify-email\/confirm$/, ({ body }) => {
+    if (body.code !== '123456') throw fail(400, 'El código no es correcto');
+    user.emailVerified = true;
+    return { ok: true };
+  }],
+  ['POST', /^\/auth\/verify-email\/resend$/, () => ({ ok: true })],
+  ['POST', /^\/me\/handle$/, ({ body }) => ((user.handle = body.handle), user)],
+  ['POST', /^\/auth\/reset\/request$/, () => ({ ok: true })],
+  ['POST', /^\/auth\/reset\/confirm$/, ({ body }) => {
+    if (body.code !== '123456') throw fail(400, 'El código no es correcto o ha caducado');
+    return { accessToken: 'demo-access', refreshToken: 'demo-refresh', user };
+  }],
   ['GET', /^\/me$/, () => user],
   ['PATCH', /^\/me$/, ({ body }) => Object.assign(user, body)],
   ['GET', /^\/me\/profile$/, () => profile()],

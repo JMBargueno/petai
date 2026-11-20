@@ -6,6 +6,13 @@
  * app los cargue una vez: `@pockai/ui/fonts.css`, `tokens.css`, `base.css` y `kit.css`.
  */
 export { default as AsyncState } from './AsyncState.svelte';
+export { default as AuthLayout } from './AuthLayout.svelte';
+export { default as AuthView } from './AuthView.svelte';
+export { default as ChooseHandleView } from './ChooseHandleView.svelte';
+export { default as VerifyEmailView } from './VerifyEmailView.svelte';
+export { default as CodeInput } from './CodeInput.svelte';
+export { default as HandleField } from './HandleField.svelte';
+export { default as PockaiMark } from './PockaiMark.svelte';
 export { default as Badge } from './Badge.svelte';
 export { default as Button } from './Button.svelte';
 export { default as Card } from './Card.svelte';
@@ -89,3 +96,4 @@ export * from './profile-format';
 export { badgeIcon, BADGE_ICONS } from './badge-icons';
 export { ITEM_ICON_SIZE, itemIcon } from './items';
 export type { RoomPetDrag } from './roomDrag';
+export type { AuthApi, HandleCheck, RegisterInput } from './authApi';

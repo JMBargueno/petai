@@ -2,9 +2,9 @@
   /**
    * Pantalla de autenticación: halo con el logo, eyebrow, título display y subtítulo (slot `subtitle`).
    * El formulario y los enlaces van en el slot por defecto. La usan login/registro, recuperar
-   * contraseña, verificar correo y elegir nickname.
+   * contraseña, verificar correo y elegir nickname, en el escritorio y en Android.
    */
-  import PockaiMark from '../PockaiMark.svelte';
+  import PockaiMark from './PockaiMark.svelte';
 
   export let eyebrow: string;
   export let title: string;
