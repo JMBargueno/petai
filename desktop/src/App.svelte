@@ -58,7 +58,7 @@
   import { habitatMode } from './lib/habitatMode';
   import FileDropModal from './components/FileDropModal.svelte';
   import AchievementToast from './features/achievements/AchievementToast.svelte';
-  import RewardToast from './features/rewards/RewardToast.svelte';
+  import { RewardToast } from '@pockai/ui';
   import { celebrateReward, rewardToCelebrate } from './lib/rewards';
   import type { RewardReceived } from './lib/api';
   import type { AchievementUnlockedPayload } from './features/achievements/achievements.api';

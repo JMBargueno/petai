@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import Ico from '../../components/Ico.svelte';
-  import type { RewardReceived } from '../../lib/api';
-  import { rewardLines, type RewardLineKind } from '../../lib/rewards';
+  import Ico from './Ico.svelte';
+  import { rewardLines, type RewardLineKind, type RewardReceived } from './rewards';
 
   /**
    * Aviso de recompensa recibida (canje de voucher o regalo del equipo). La mascota ya celebra con

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AccountView, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, Segmented, ShopView, VerifyEmailView } from '@pockai/ui';
+  import { AccountView, AuthView, BackpackView, Button, Card, ChooseHandleView, CurrencyPill, HatchView, Ico, Notice, PetHomeView, RedeemCodeCard, RewardToast, Segmented, ShopView, VerifyEmailView, redeemErrorText, rewardToCelebrate } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
   import AdventureScreen from './screens/AdventureScreen.svelte';
   import ArenaScreen from './screens/ArenaScreen.svelte';
@@ -21,7 +21,7 @@
   import TrainingScreen from './screens/TrainingScreen.svelte';
   import VisitsScreen from './screens/VisitsScreen.svelte';
   import WardrobeScreen from './screens/WardrobeScreen.svelte';
-  import { act, activePet, authApi, failureText, hasCore, lock, offline, phase, reload, signOut, start, state as core } from './core';
+  import { act, activePet, authApi, failureText, hasCore, lock, offline, phase, redeemCode, reload, signOut, start, state as core } from './core';
   import { askNotificationsOnce } from './notifications';
 
   type Tab = 'pet' | 'backpack' | 'play' | 'shop' | 'progress' | 'account';
@@ -138,6 +138,24 @@
   const onAuth = () => run('auth', 'No se pudo cargar tu cuenta', reload);
 
   const leave = () => run('signOut', 'No se pudo cerrar la sesión', signOut);
+
+  /** Cuenta › Canjear código: lo recibido se celebra con `RewardToast`. */
+  let redeemBusy = $state(false);
+  let redeemError = $state('');
+  let redeemOk = $state('');
+  async function redeem(code: string) {
+    if (redeemBusy) return;
+    redeemBusy = true;
+    redeemError = redeemOk = '';
+    try {
+      await redeemCode(code);
+      redeemOk = '¡Código canjeado! Mira tu recompensa.';
+    } catch (e) {
+      redeemError = redeemErrorText((e as { status?: number } | null)?.status, failureText(e, 'No se pudo canjear el código.'));
+    } finally {
+      redeemBusy = false;
+    }
+  }
 
   /** A dónde lleva cada «ir a…» de las vistas compartidas. Lo que aún no existe aquí se queda en Mascota. */
   function go(dest: string, sub?: string) {
@@ -273,7 +291,9 @@
             <VisitsScreen initialFriend={visitFriend} onGoFriends={() => (accountSection = 'friends')} />
           {/key}
         {:else}
-          <AccountView user={$core.user} on:logout={leave} />
+          <AccountView user={$core.user} on:logout={leave}>
+            <RedeemCodeCard slot="redeem" busy={redeemBusy} error={redeemError} ok={redeemOk} on:redeem={(e) => redeem(e.detail)} />
+          </AccountView>
         {/if}
       {:else}
         <Segmented variant="pills" label="Sección de Tienda" value={shopSection} options={SHOP_SECTIONS} on:change={(e) => (shopSection = e.detail as typeof shopSection)} />
@@ -305,3 +325,5 @@
     <Notice tone="error">{message}</Notice>
   {/if}
 </main>
+
+<RewardToast payload={$rewardToCelebrate} onDismiss={() => rewardToCelebrate.set(null)} />

@@ -5,7 +5,7 @@
  * lo que el jugador hace se le pide con una acción tipada. Es el mismo núcleo que usa el escritorio.
  */
 import { get, writable } from 'svelte/store';
-import type { AuthApi, HandleCheck } from '@pockai/ui';
+import { celebrateReward, type AuthApi, type HandleCheck, type RewardReceived } from '@pockai/ui';
 import { clearClan, clearVisitors, connectSocialFeed } from '@pockai/ui/social';
 import {
   hasCore,
@@ -17,6 +17,7 @@ import {
   query,
   sessionState,
   stateLoad,
+  stateRefresh,
   stateSnapshot,
   type Action,
   type AccountLock,
@@ -116,8 +117,8 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * Los eventos de tiempo real que el núcleo reenvía (`onRealtime`), repartidos por nombre. Hoy solo
- * los usa el feed social compartido, que llena los stores de visitantes y de clan.
+ * Los eventos de tiempo real que el núcleo reenvía (`onRealtime`), repartidos por nombre: el feed
+ * social compartido (visitantes y clan) y las recompensas recibidas.
  */
 const realtimeHandlers = new Map<string, Set<(payload: any) => void>>();
 
@@ -125,12 +126,30 @@ async function connectRealtimeFeeds(): Promise<void> {
   await onRealtime((event) => {
     for (const handler of realtimeHandlers.get(event.name) ?? []) handler(event.payload);
   });
-  connectSocialFeed((name, handler) => {
+  const on = (name: string, handler: (payload: any) => void) => {
     const set = realtimeHandlers.get(name) ?? new Set();
     set.add(handler);
     realtimeHandlers.set(name, set);
     return () => set.delete(handler);
+  };
+  connectSocialFeed(on);
+  // Un regalo del equipo o un código canjeado en otro dispositivo: se celebra (una vez) y el saldo
+  // se vuelve a pedir.
+  on('reward:received', (reward: RewardReceived | null) => {
+    if (!reward) return;
+    celebrateReward(reward);
+    void stateRefresh('user').catch(() => {});
   });
+}
+
+/**
+ * Canjea un código de regalo y celebra lo recibido. El texto del error depende del estado (ya
+ * canjeado, demasiados intentos, no vale).
+ */
+export async function redeemCode(code: string): Promise<void> {
+  const reward = (await perform({ type: 'redeemVoucher', code })) as RewardReceived;
+  celebrateReward(reward);
+  void stateRefresh('user').catch(() => {});
 }
 
 /** Una acción del jugador. El estado se actualiza solo: el núcleo lo deja al día. */
