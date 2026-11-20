@@ -433,7 +433,7 @@
   .skill.on {
     border-color: var(--line);
     background: color-mix(in srgb, var(--view-tint) 35%, var(--surface));
-    box-shadow: 1px 2px 0 var(--line);
+    box-shadow: var(--sticker, 1px 2px 0 var(--line));
   }
   .skill--locked {
     border-style: dashed;

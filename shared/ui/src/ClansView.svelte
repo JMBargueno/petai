@@ -766,10 +766,10 @@
     width: 52px;
     height: 52px;
     border-radius: var(--radius-2xl);
-    border: 1.5px solid var(--on-color);
+    border: var(--sticker-border, 1.5px solid var(--on-color));
     background: var(--theme-social);
     color: var(--on-color);
-    box-shadow: 2px 3px 0 var(--on-color);
+    box-shadow: var(--sticker, 2px 3px 0 var(--on-color));
     rotate: -4deg;
   }
   .clan-hero__info {

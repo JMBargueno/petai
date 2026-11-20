@@ -226,7 +226,7 @@ textarea {
   padding: 0 var(--space-2);
   background: var(--color-sunburst);
   color: var(--on-color);
-  border: 1px solid var(--on-color);
-  box-shadow: 3px 3px 0 var(--on-color);
+  border: var(--sticker-border, 1px solid var(--on-color));
+  box-shadow: var(--sticker, 3px 3px 0 var(--on-color));
   rotate: -2.5deg;
 }

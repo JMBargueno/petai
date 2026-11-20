@@ -33,6 +33,12 @@
   --nav-h: 80px;
 
   --card-radius: var(--radius-md);
+
+  /* Sin estilo pegatina: contornos suaves, elevación tonal y nada de sombras duras desplazadas. */
+  --outline: 1px solid var(--line-soft);
+  --shadow-pop: var(--shadow-1);
+  --sticker: none;
+  --sticker-border: none;
 }
 
 /* Botones: a 48 de alto con el dedo, sin elevar al "pasar el ratón" y con capa de estado al pulsar. */
@@ -444,7 +450,7 @@
   background: var(--surface-2);
 }
 :root[data-platform='android'] .ui-stat__value {
-  font-size: var(--text-subheading);
+  font-size: var(--text-body-lg);
   font-weight: var(--font-weight-medium);
 }
 

@@ -169,10 +169,10 @@
   .level-tag {
     flex-shrink: 0;
     padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--on-color);
+    border: var(--sticker-border, 1px solid var(--on-color));
     border-radius: var(--radius-pills);
     background: var(--color-sunburst);
-    box-shadow: 2px 2px 0 var(--on-color);
+    box-shadow: var(--sticker, 2px 2px 0 var(--on-color));
     color: var(--on-color);
     font-size: var(--text-label);
     font-weight: 800;
@@ -220,7 +220,7 @@
     place-items: center;
     width: 22px;
     height: 22px;
-    border: 1px solid var(--on-color);
+    border: var(--sticker-border, 1px solid var(--on-color));
     border-radius: var(--radius-sm);
     color: var(--on-color);
   }
@@ -242,7 +242,7 @@
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
-    border: 1px solid var(--on-color);
+    border: var(--sticker-border, 1px solid var(--on-color));
     border-radius: var(--radius-pills);
     background: var(--color-mint-pop);
     color: var(--on-color);
@@ -253,7 +253,7 @@
   }
   .food-chip:hover:not(:disabled) {
     translate: -1px -1px;
-    box-shadow: 2px 2px 0 var(--line);
+    box-shadow: var(--sticker, 2px 2px 0 var(--line));
   }
   .food-chip:disabled {
     opacity: 0.55;

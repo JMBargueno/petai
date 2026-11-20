@@ -142,11 +142,11 @@
   flex-shrink: 0;
   width: 44px;
   height: 44px;
-  border: 1.5px solid var(--on-color);
+  border: var(--sticker-border, 1.5px solid var(--on-color));
   border-radius: var(--radius-2xl);
   background: color-mix(in srgb, var(--feature-tint, var(--view-tint)) 55%, var(--surface));
   color: var(--on-color);
-  box-shadow: 2px 2px 0 var(--on-color);
+  box-shadow: var(--sticker, 2px 2px 0 var(--on-color));
   font-size: var(--text-subheading);
 }
 .ui-feature__body {
@@ -459,7 +459,7 @@
 }
 .ui-tile:hover:not(:disabled) {
   border-color: var(--line);
-  transform: translateY(-1px);
+  transform: translateY(calc(var(--hover-lift, -2px) / 2));
 }
 .ui-tile:active:not(:disabled) {
   transform: scale(0.97);
@@ -471,7 +471,7 @@
 .ui-tile--selected {
   border-color: var(--line);
   background: color-mix(in srgb, var(--tile-c, var(--view-tint)) 35%, var(--surface));
-  box-shadow: 2px 2px 0 var(--line);
+  box-shadow: var(--sticker, 2px 2px 0 var(--line));
 }
 .ui-tile__icon {
   display: grid;
@@ -508,7 +508,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  border: 1.5px solid var(--on-color);
+  border: var(--sticker-border, 1.5px solid var(--on-color));
   background: color-mix(in srgb, var(--view-tint) 40%, var(--surface));
   color: var(--on-color);
 }
@@ -637,7 +637,7 @@
   background: var(--surface);
   color: var(--ink);
   border-color: var(--line);
-  box-shadow: 1px 2px 0 var(--line);
+  box-shadow: var(--sticker, 1px 2px 0 var(--line));
 }
 
 /* Pastillas desplazables (sub-pestañas del panel, salas, filtros) */

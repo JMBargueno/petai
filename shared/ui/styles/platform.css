@@ -20,6 +20,10 @@
   --state-layer: 0%;
   --ease-standard: var(--ease-out);
 
+  /* Estilo pegatina del escritorio (contorno marcado y sombra dura desplazada). `--sticker` y
+     `--sticker-border` no se definen aquí: las vistas los usan con su valor de escritorio como
+     respaldo (`var(--sticker, 2px 2px 0 var(--line))`) y el móvil los apaga. */
+
   /* Tarjetas */
   --card-radius: var(--radius-cards);
 

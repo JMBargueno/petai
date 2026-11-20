@@ -33,6 +33,12 @@
   --nav-h: 49px;
 
   --card-radius: 12px;
+
+  /* Sin estilo pegatina: contornos suaves y superficies lisas, sin sombras duras desplazadas. */
+  --outline: 1px solid var(--line-soft);
+  --shadow-pop: 0 0 0 transparent;
+  --sticker: none;
+  --sticker-border: none;
 }
 
 /* Botones: atenuar al pulsar, sin elevación. */
@@ -437,7 +443,7 @@
   background: color-mix(in srgb, var(--ink) 6%, var(--surface));
 }
 :root[data-platform='ios'] .ui-stat__value {
-  font-size: var(--text-subheading);
+  font-size: var(--text-body-lg);
   font-weight: var(--font-weight-bold);
 }
 

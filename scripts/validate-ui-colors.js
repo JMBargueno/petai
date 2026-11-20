@@ -66,7 +66,9 @@ for (const f of files) {
   const text = fs.readFileSync(f.abs, 'utf8');
   if (PLATFORM_DIR.test(f.rel)) {
     const n = countColors(text);
-    const colorTokens = text.match(/--[\w-]*(?:color|bg|surface|ink|line|accent|tint)[\w-]*\s*:/g) ?? [];
+    // Tokens de color por segmento completo (`--line-soft`, `--accent`), no por subcadena (`--outline`).
+    const colorTokens =
+      text.match(/--(?:[a-z0-9]+-)*(?:color|bg|surface|ink|line|accent|tint)(?:-[a-z0-9]+)*\s*:/g) ?? [];
     if (n || colorTokens.length) {
       console.error(`❌ ${f.rel}: los estilos de plataforma no pueden fijar colores (eso es del tema).`);
       errors++;
