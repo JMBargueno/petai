@@ -457,6 +457,26 @@ async fn atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_mascotas_saldo_e_inventa
 }
 
 #[tokio::test]
+async fn comprar_un_mueble_pone_al_dia_el_saldo() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 2 })).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/habitat/furniture/sofa/place"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "itemId": "i1" })))
+        .mount(&server)
+        .await;
+
+    core.perform(Action::PlaceHabitatFurniture { furniture_id: "sofa".into(), at: Value::Null }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 2);
+}
+
+#[tokio::test]
 async fn visitar_un_habitat_pone_al_dia_la_energia_y_terminar_no_toca_nada() {
     use pockai_core::Action;
     let server = MockServer::start().await;

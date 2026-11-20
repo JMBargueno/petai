@@ -31,12 +31,12 @@ fases de abajo y en las secciones de verificación del final.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
 - **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
-  estilos y veintidós pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  estilos y veintitrés pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
   Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
-  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos, Visitas, Clanes y Mente. Las usan el escritorio y la app de Android.
+  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos, Visitas, Clanes, Mente y Hábitat. Las usan el escritorio y la app de Android.
 - **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
   `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
-- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario, Mente), Mochila, Jugar
+- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario, Mente, Hábitat), Mochila, Jugar
   (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta
   (Cuenta, Perfil, Amigos, Visitas, Clanes; desde el nombre de la cabecera). Jugar, Cofres, Armario y lo social aún no se han
   probado en el emulador.
@@ -59,7 +59,7 @@ fases de abajo y en las secciones de verificación del final.
 |---|---|---|---|
 | (a) Sprites, datos estáticos y sonido | Hechas todas: Armario, Arena, Cocina, Minijuegos y Aventura | — | Patrón de siempre; los efectos de un juego van por el puerto de sonido (`setUiSound`) |
 | (b) Estado de pantalla alimentado por tiempo real | Hechas todas: Amigos, Visitas y Clanes | Las escenas siguen en el escritorio (sala del amigo, casa, hábitat del clan) | Decidido: feed social compartido, no núcleo (ver «Lo social: decisión»). Las escenas, en un hueco de momento |
-| (c) Funciones del escritorio | Hábitat y Chat/IA (Mente hecha) | Hábitat: la sala isométrica con arrastre a la ventana, modo pantalla completa y muebles de habilidades. Chat: IA local, herramientas del equipo, voz y pagos con Stripe | Lo compartible a la biblioteca y lo del escritorio en huecos; en Android, sin pagos (normas de Google Play) ni IA local |
+| (c) Funciones del escritorio | Chat/IA (Mente y Hábitat hechas) | Hábitat: la sala isométrica con arrastre a la ventana, modo pantalla completa y muebles de habilidades. Chat: IA local, herramientas del equipo, voz y pagos con Stripe | Lo compartible a la biblioteca y lo del escritorio en huecos; en Android, sin pagos (normas de Google Play) ni IA local |
 | (d) Perfil | Hecha | — | — |
 
 Pendiente aparte: el motor de sprites (`@pockai/scene/sprites`) y el registro de la escena PixiJS
@@ -784,3 +784,25 @@ cambiar a «Hablador» (el texto pasa de cada 17 a cada 7 minutos). 438 tests de
 compilan escritorio y UI de Android.
 
 **Sin verificar:** nada de esto en el emulador.
+
+### Hábitat compartido (2026-11-20)
+
+- **Como Clanes, con un puerto**: la pantalla tiene mucha lógica entre llamadas (edición de la
+  sala, compra y retirada, movimientos agrupados), así que vive entera en `HabitatView` y recibe
+  `habitatApi` (`habitatApi.ts`).
+- **Lo de cada app, opcional**: `room` (la sala isométrica; el escritorio pasa `IsoRoomView`; sin
+  ella no hay sala ni edición, solo salas, catálogo, muebles colocados y buffs), `canLeave` (la
+  mascota puede salir al escritorio; en el móvil no) y `hooks` (arrastrar a la mascota fuera de la
+  ventana, modo hábitat a pantalla completa, paisaje, lo que dice el visitante y los muebles que
+  desbloquean habilidades).
+- **Contenedores**: `HabitatTab` en el escritorio pasa el puerto, la sala y los hooks;
+  `HabitatScreen` en Android (Mascota › Hábitat), sin sala de momento.
+- **Núcleo**: comprar un mueble vuelve a pedir el saldo (test `comprar_un_mueble_pone_al_dia_el_saldo`).
+
+Verificado en el escritorio en modo demo: la sala con «Modo hábitat» y «Paisaje»; llevar a la
+mascota a casa; editar la sala, elegir un mueble y girarlo; comprar la Fuente de Agua con su
+confirmación (1250 → 850 monedas; se abre la edición). 438 tests del escritorio, 28 de estado del
+núcleo; compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; arrastrar un mueble del catálogo a la sala;
+arrastrar a la mascota fuera de la ventana; el modo hábitat.

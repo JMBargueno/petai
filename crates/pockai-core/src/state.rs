@@ -523,6 +523,8 @@ impl Core {
             // Visitas: cuidar la mascota de un amigo da XP a la cuenta; visitar su hábitat gasta energía.
             ["coop", "visit"] => self.refresh_later(&[Slice::User]),
             ["habitat", "visit"] => self.refresh_later(&[Slice::Pets, Slice::User]),
+            // Comprar un mueble para el hábitat cuesta monedas o gemas.
+            ["habitat", "furniture", _, "place"] => self.refresh_later(&[Slice::User]),
             _ => {}
         }
     }
