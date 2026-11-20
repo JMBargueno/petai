@@ -1,0 +1,74 @@
+/*
+ * Tema cozy: acogedor. De día crema, madera y terracota; de noche, luz de vela.
+ * Solo cambia tokens semánticos y de decorado: los colores de elemento, rareza y sección, el logo
+ * y las fuentes son la identidad de Pockai y se quedan. Manifiesto: src/themes/cozy.ts.
+ */
+:root[data-theme='cozy'] {
+  /* Superficies y texto */
+  --bg: light-dark(#fbf4e8, #1a1410);
+  --surface: light-dark(#fffaf2, #241b15);
+  --surface-2: light-dark(#f3e7d3, #2f241c);
+  --surface-glass: light-dark(rgb(255 250 242 / 0.78), rgb(36 27 21 / 0.78));
+  --ink: light-dark(#3b2a1e, #f6e9d8);
+  --ink-muted: light-dark(#6f5845, #c9b49d);
+  --line: light-dark(#4a3426, #5a4534);
+  --line-soft: light-dark(rgb(74 52 38 / 0.14), rgb(255 236 210 / 0.1));
+
+  /* Acento terracota */
+  --accent: #b0502a;
+  --accent-ink: light-dark(#9a4321, #f0a77f);
+  --grad-accent: linear-gradient(135deg, #c66a3e 0%, #b0502a 50%, #9a5a2c 100%);
+  --glow-accent: 0 8px 28px rgb(176 80 42 / 0.4);
+  --focus-ring: 3px solid light-dark(#b0502a, #f0a77f);
+  --success-ink: light-dark(#3f6b2a, #a8d58a);
+
+  /* Fondo de cabeceras: melocotón, salvia y miel; de noche brasa, musgo y vela */
+  --grad-hero:
+    radial-gradient(60% 70% at 12% 18%, light-dark(#ffd9b8, #4a2a18) 0%, transparent 60%),
+    radial-gradient(55% 60% at 88% 12%, light-dark(#dfe8c9, #2a3020) 0%, transparent 62%),
+    radial-gradient(70% 70% at 70% 100%, light-dark(#ffe6a6, #3d2c12) 0%, transparent 60%),
+    light-dark(#f6ead6, #18120e);
+
+  /* Sombras tintadas de madera */
+  --shadow-c: light-dark(#5a3a22, #000000);
+
+  /* Casita: pared de madera clara; la noche es ámbar en vez de violeta */
+  --scene-room-day:
+    radial-gradient(70% 60% at 50% 30%, rgb(255 222 170 / 0.85), transparent 70%),
+    repeating-linear-gradient(90deg, transparent 0 22px, rgb(140 90 45 / 0.09) 22px 24px),
+    linear-gradient(180deg, #f8e6c8 0%, #ecd0a4 100%);
+  --scene-room-night:
+    radial-gradient(70% 60% at 50% 35%, rgb(255 176 90 / 0.5), transparent 70%),
+    repeating-linear-gradient(90deg, transparent 0 22px, rgb(40 20 5 / 0.14) 22px 24px),
+    linear-gradient(180deg, #5a3a24 0%, #3a2414 100%);
+  --scene-room-live:
+    radial-gradient(70% 70% at 50% 20%, rgb(181 217 156 / 0.6), transparent 70%),
+    linear-gradient(180deg, #f6f1dc 0%, #e4ecc6 100%);
+  --scene-window-frame: #f3e2c4;
+  --scene-window-day: linear-gradient(180deg, #ffd3a3 0%, #fbeacc 100%);
+  --scene-window-night: radial-gradient(circle at 70% 30%, #ffe2a8 0 5px, transparent 6px), linear-gradient(180deg, #2a1a12 0%, #5a3420 100%);
+  --scene-floor-day:
+    repeating-linear-gradient(90deg, transparent 0 38px, rgb(60 30 10 / 0.14) 38px 40px),
+    linear-gradient(180deg, #b87a45 0%, #94592d 100%);
+  --scene-floor-night:
+    repeating-linear-gradient(90deg, transparent 0 38px, rgb(0 0 0 / 0.2) 38px 40px),
+    linear-gradient(180deg, #5e3e24 0%, #432a16 100%);
+  --scene-rug: radial-gradient(closest-side, #e8a57f 0 55%, #c97a55 56% 75%, #e8a57f 76%);
+
+  /* Hábitat y clan */
+  --scene-sky: light-dark(#f6e4c8, #2a1d14);
+  --scene-label-bg: rgb(255 248 236 / 0.92);
+  --scene-label-ink: #3b2a1e;
+  --scene-veil: rgb(40 22 10 / 0.4);
+  --scene-drop-glow: rgb(255 190 110 / 0.55);
+  --scene-drop-veil: rgb(255 190 110 / 0.32);
+  --backdrop-tint: light-dark(rgb(255 196 130 / 0.16), rgb(255 150 60 / 0.14));
+  --scene-hud-bg: rgb(40 24 14 / 0.6);
+  --scene-hud-ink: #fff3e2;
+
+  /* Premios en tonos tierra */
+  --reward-coins: #c08a12;
+  --reward-gems: #3f8f9a;
+  --reward-chest: #a8662a;
+  --reward-accessory: #c4566e;
+}

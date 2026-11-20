@@ -103,7 +103,7 @@
     width: 48px;
     height: 48px;
     border-radius: 14px;
-    background: color-mix(in srgb, var(--color-sunburst, #f5b700) 30%, var(--surface));
+    background: color-mix(in srgb, var(--color-sunburst) 30%, var(--surface));
     color: var(--ink);
     animation: wiggle 0.7s ease-in-out 0.35s both;
   }
@@ -144,11 +144,11 @@
     animation: lineIn 0.35s ease-out both;
     animation-delay: calc(0.45s + var(--d) * 0.12s);
   }
-  .line--coins { color: color-mix(in srgb, #d49b00 80%, var(--ink)); }
-  .line--gems { color: color-mix(in srgb, #1aa3c8 80%, var(--ink)); }
-  .line--pro { color: var(--color-voltage-violet, #8a4fe0); }
-  .line--chest { color: color-mix(in srgb, #b8742a 85%, var(--ink)); }
-  .line--accessory { color: color-mix(in srgb, #d6457c 85%, var(--ink)); }
+  .line--coins { color: color-mix(in srgb, var(--reward-coins) 80%, var(--ink)); }
+  .line--gems { color: color-mix(in srgb, var(--reward-gems) 80%, var(--ink)); }
+  .line--pro { color: var(--reward-pro); }
+  .line--chest { color: color-mix(in srgb, var(--reward-chest) 85%, var(--ink)); }
+  .line--accessory { color: color-mix(in srgb, var(--reward-accessory) 85%, var(--ink)); }
   @keyframes slideIn {
     from { transform: translateX(120%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }

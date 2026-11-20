@@ -100,7 +100,7 @@
     border-radius: 50%;
     border: 1px solid var(--line);
     background: var(--surface);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+    box-shadow: var(--shadow-1);
   }
   input[type='range']::-moz-range-track {
     height: 6px;

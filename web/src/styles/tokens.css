@@ -169,10 +169,11 @@
   --focus-ring: 3px solid light-dark(#5c4ade, #b3a8ff);
 }
 
-/* Tema manual (Ajustes): fuerza el esquema; sin atributo se sigue al sistema. */
-:root[data-theme='light'] {
+/* Esquema manual: fuerza claro u oscuro; sin atributo se sigue al sistema. Mismo atributo que las apps
+   (`data-scheme`); el tema de las apps (`data-theme`) no se usa en la web. */
+:root[data-scheme='light'] {
   color-scheme: light;
 }
-:root[data-theme='dark'] {
+:root[data-scheme='dark'] {
   color-scheme: dark;
 }

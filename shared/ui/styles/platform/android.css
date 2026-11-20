@@ -1,0 +1,259 @@
+/*
+ * Android: convenciones de Material 3 con la identidad de Pockai (fuentes, paleta y tema siguen igual).
+ * - Toques de 48 dp, controles de 40 dp.
+ * - Pulsación con capa de estado (sin escala ni elevación; el hover del WebView se queda pegado).
+ * - Modales como hoja inferior, diálogos con radio 28.
+ * - Interruptor M3 (52×32, el pulgar crece al activarse) y botones segmentados con check.
+ * - Listas a sangre con filas de 56 dp.
+ * Solo geometría, movimiento e interacción: ningún color (es cosa del tema).
+ */
+:root[data-platform='android'] {
+  --control-h: 40px;
+  --control-h-icon: 40px;
+  --hit-min: 48px;
+
+  --hover-lift: 0px;
+  --press-shift: 0px;
+  --press-scale: 1;
+  --press-opacity: 1;
+  --state-layer: 12%;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --sheet-radius: 28px;
+  --dialog-radius: 28px;
+
+  --row-min-h: 56px;
+  --list-inset: 0px;
+
+  --switch-w: 52px;
+  --switch-h: 32px;
+  --switch-thumb: 16px;
+  --switch-thumb-on: 24px;
+
+  --nav-h: 80px;
+}
+
+/* Botones: a 48 de alto con el dedo, sin elevar al "pasar el ratón" y con capa de estado al pulsar. */
+:root[data-platform='android'] .btn {
+  min-height: var(--hit-min);
+  overflow: hidden;
+  isolation: isolate;
+}
+:root[data-platform='android'] .btn--sm {
+  min-height: var(--control-h);
+}
+:root[data-platform='android'] .btn:hover:not(:disabled) {
+  box-shadow: none;
+}
+:root[data-platform='android'] .btn--primary:hover:not(:disabled) {
+  box-shadow: var(--shadow-1);
+}
+:root[data-platform='android'] .btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--dur-1) var(--ease-standard);
+  pointer-events: none;
+}
+:root[data-platform='android'] .btn:active:not(:disabled)::before {
+  opacity: var(--state-layer);
+}
+/* Onda de la acción `press` (src/press.ts): nace donde toca el dedo. */
+:root[data-platform='android'] .ui-ripple {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.16;
+  transform: scale(0);
+  animation: ui-ripple 450ms var(--ease-standard) forwards;
+  pointer-events: none;
+}
+@keyframes ui-ripple {
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+:root[data-platform='android'] .input,
+:root[data-platform='android'] .select {
+  min-height: 56px;
+  border-radius: var(--radius-sm);
+}
+
+/* Modal → hoja inferior (bottom sheet) a todo lo ancho, con asa de arrastre y entrada desde abajo. */
+:root[data-platform='android'] .ui-modal-backdrop:has(.ui-modal--sheet) {
+  place-items: end center;
+  padding: 0;
+}
+:root[data-platform='android'] .ui-modal--sheet {
+  box-sizing: border-box;
+  width: min(640px, 100%);
+  max-height: 90dvh;
+  padding: var(--space-6) var(--space-5) max(var(--space-5), env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
+  box-shadow: var(--shadow-4);
+  animation: ui-sheet-up var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='android'] .ui-modal--sheet::before {
+  content: '';
+  align-self: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 4px;
+  margin: calc(-1 * var(--space-3)) 0 var(--space-1);
+  border-radius: var(--radius-pills);
+  background: var(--ink-muted);
+  opacity: 0.4;
+}
+:root[data-platform='android'] .ui-modal--dialog {
+  box-sizing: border-box;
+  width: min(560px, 100%);
+  padding: var(--space-6);
+  border: 0;
+  border-radius: var(--dialog-radius);
+  box-shadow: var(--shadow-3);
+  animation: ui-fade-in var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='android'] .ui-modal__title {
+  font-family: var(--font-ui);
+  font-size: var(--text-subheading);
+  font-weight: var(--font-weight-medium);
+  text-transform: none;
+}
+:root[data-platform='android'] .ui-modal__foot {
+  gap: var(--space-2);
+}
+
+/* Interruptor M3: pista de 52×32 sin borde marcado; el pulgar crece y lleva un check al activarse. */
+:root[data-platform='android'] .ui-switch {
+  min-height: var(--row-min-h);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding-inline: 0;
+}
+:root[data-platform='android'] .ui-switch__track {
+  width: var(--switch-w);
+  height: var(--switch-h);
+  border: 2px solid var(--ink-muted);
+  background: var(--surface-2);
+  box-sizing: border-box;
+}
+:root[data-platform='android'] .ui-switch__track i {
+  top: 50%;
+  left: 6px;
+  width: var(--switch-thumb);
+  height: var(--switch-thumb);
+  border: 0;
+  background: var(--ink-muted);
+  translate: 0 -50%;
+  transition:
+    translate var(--dur-2) var(--ease-standard),
+    width var(--dur-2) var(--ease-standard),
+    height var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='android'] .ui-switch[aria-checked='true'] .ui-switch__track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+:root[data-platform='android'] .ui-switch[aria-checked='true'] .ui-switch__track i {
+  width: var(--switch-thumb-on);
+  height: var(--switch-thumb-on);
+  background: var(--on-dark);
+  translate: 20px -50%;
+}
+:root[data-platform='android'] .ui-switch[aria-checked='true'] .ui-switch__track i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  rotate: -45deg;
+  translate: 0 -1px;
+}
+
+/* Botones segmentados M3: contorno, 40 de alto, check en el elegido (lo pinta Segmented.svelte). */
+:root[data-platform='android'] .ui-seg {
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--ink-muted);
+  background: transparent;
+  overflow: hidden;
+}
+:root[data-platform='android'] .ui-seg button {
+  min-height: var(--control-h);
+  border: 0;
+  border-left: 1px solid var(--ink-muted);
+  border-radius: 0;
+  font-size: var(--text-label);
+  font-weight: var(--font-weight-medium);
+  color: var(--ink);
+}
+:root[data-platform='android'] .ui-seg button:first-child {
+  border-left: 0;
+}
+:root[data-platform='android'] .ui-seg button.active {
+  border-color: var(--ink-muted);
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  box-shadow: none;
+}
+:root[data-platform='android'] .ui-seg button:active,
+:root[data-platform='android'] .ui-pills button:active {
+  scale: 1;
+}
+/* Pastillas → chips de filtro M3: esquinas de 8, 32 de alto, check en el elegido. */
+:root[data-platform='android'] .ui-pills button {
+  min-height: 32px;
+  border-radius: var(--radius-sm);
+  border-color: var(--ink-muted);
+  font-weight: var(--font-weight-medium);
+}
+:root[data-platform='android'] .ui-pills button.active {
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  border-color: transparent;
+  color: var(--ink);
+}
+
+/* Listas a sangre: filas de 56 con divisor fino, sin tarjeta por fila. */
+:root[data-platform='android'] .ui-list {
+  gap: 0;
+}
+:root[data-platform='android'] .ui-list > .ui-row {
+  min-height: var(--row-min-h);
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: transparent;
+}
+:root[data-platform='android'] .ui-list > .ui-row:last-child {
+  border-bottom: 0;
+}
+
+@keyframes ui-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes ui-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-platform='android'] .ui-modal--sheet,
+  :root[data-platform='android'] .ui-modal--dialog,
+  :root[data-platform='android'] .ui-ripple {
+    animation: none;
+  }
+}

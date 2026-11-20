@@ -1,0 +1,244 @@
+/*
+ * iOS: convenciones de Cupertino con la identidad de Pockai (fuentes, paleta y tema siguen igual).
+ * - Toques de 44 pt.
+ * - Pulsación por opacidad (sin escala ni elevación; el hover del WebView se queda pegado).
+ * - Modales como hoja con radio 12; ConfirmDialog como alerta con los botones en fila.
+ * - Interruptor iOS (51×31, pulgar redondo con sombra) y control segmentado con pulgar deslizante.
+ * - Listas agrupadas con margen y separadores que empiezan tras el icono.
+ * Solo geometría, movimiento e interacción: ningún color (es cosa del tema).
+ */
+:root[data-platform='ios'] {
+  --control-h: 44px;
+  --control-h-icon: 36px;
+  --hit-min: 44px;
+
+  --hover-lift: 0px;
+  --press-shift: 0px;
+  --press-scale: 1;
+  --press-opacity: 0.55;
+  --state-layer: 0%;
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --sheet-radius: 12px;
+  --dialog-radius: 14px;
+
+  --row-min-h: 44px;
+  --list-inset: 16px;
+
+  --switch-w: 51px;
+  --switch-h: 31px;
+  --switch-thumb: 27px;
+  --switch-thumb-on: 27px;
+
+  --nav-h: 49px;
+}
+
+/* Botones: atenuar al pulsar, sin elevación. */
+:root[data-platform='ios'] .btn {
+  min-height: var(--control-h);
+  transition: opacity var(--dur-1) var(--ease-standard);
+}
+:root[data-platform='ios'] .btn--sm {
+  min-height: var(--control-h-icon);
+}
+:root[data-platform='ios'] .btn:hover:not(:disabled),
+:root[data-platform='ios'] .btn--primary:hover:not(:disabled) {
+  box-shadow: none;
+}
+:root[data-platform='ios'] .btn--primary {
+  box-shadow: none;
+}
+:root[data-platform='ios'] .input,
+:root[data-platform='ios'] .select {
+  min-height: var(--control-h);
+  border-radius: var(--radius-md);
+}
+
+/* Modal → hoja de iOS: casi a pantalla completa, radio 12, asa arriba, entrada con muelle suave. */
+:root[data-platform='ios'] .ui-modal-backdrop:has(.ui-modal--sheet) {
+  place-items: end center;
+  padding: env(safe-area-inset-top) 0 0;
+}
+:root[data-platform='ios'] .ui-modal--sheet {
+  box-sizing: border-box;
+  width: min(640px, 100%);
+  max-height: calc(100dvh - max(var(--space-8), env(safe-area-inset-top)));
+  padding: var(--space-5) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
+  box-shadow: var(--shadow-3);
+  animation: ui-ios-sheet var(--dur-3) var(--ease-standard);
+}
+:root[data-platform='ios'] .ui-modal--sheet::before {
+  content: '';
+  align-self: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 5px;
+  margin: calc(-1 * var(--space-2)) 0 0;
+  border-radius: var(--radius-pills);
+  background: var(--ink-muted);
+  opacity: 0.35;
+}
+:root[data-platform='ios'] .ui-modal__title {
+  font-family: var(--font-ui);
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-bold);
+  text-transform: none;
+  text-align: center;
+}
+
+/* Diálogo → alerta: estrecha, centrada, título y texto centrados, botones en fila separados por líneas. */
+:root[data-platform='ios'] .ui-modal--dialog {
+  box-sizing: border-box;
+  width: min(270px, 100%);
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4) 0;
+  border: 0;
+  border-radius: var(--dialog-radius);
+  box-shadow: var(--shadow-3);
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  text-align: center;
+  animation: ui-ios-alert var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='ios'] .ui-modal--dialog .ui-modal__head .ui-ibtn {
+  display: none;
+}
+:root[data-platform='ios'] .ui-modal--dialog .ui-modal__foot {
+  margin: var(--space-2) calc(-1 * var(--space-4)) 0;
+  gap: 0;
+  border-top: 1px solid var(--line-soft);
+}
+:root[data-platform='ios'] .ui-modal--dialog .ui-modal__foot .btn {
+  flex: 1;
+  min-height: var(--control-h);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent-ink);
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-medium);
+}
+:root[data-platform='ios'] .ui-modal--dialog .ui-modal__foot .btn + .btn {
+  border-left: 1px solid var(--line-soft);
+}
+:root[data-platform='ios'] .ui-modal--dialog .ui-modal__foot .btn--primary {
+  font-weight: var(--font-weight-bold);
+}
+:root[data-platform='ios'] .ui-modal--dialog .ui-modal__foot .btn--danger {
+  color: var(--danger-ink);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Interruptor iOS: 51×31, pulgar redondo con sombra, pista sin borde. */
+:root[data-platform='ios'] .ui-switch {
+  min-height: var(--row-min-h);
+}
+:root[data-platform='ios'] .ui-switch__track {
+  width: var(--switch-w);
+  height: var(--switch-h);
+  border: 0;
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+  transition: background var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='ios'] .ui-switch__track i {
+  top: 2px;
+  left: 2px;
+  width: var(--switch-thumb);
+  height: var(--switch-thumb);
+  border: 0;
+  background: var(--color-paper-white);
+  box-shadow: var(--shadow-2);
+  transition: translate var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='ios'] .ui-switch[aria-checked='true'] .ui-switch__track {
+  background: var(--success);
+}
+:root[data-platform='ios'] .ui-switch[aria-checked='true'] .ui-switch__track i {
+  translate: 20px 0;
+}
+
+/* Control segmentado: fondo gris, el elegido es un pulgar claro con sombra suave, sin contornos. */
+:root[data-platform='ios'] .ui-seg {
+  gap: 0;
+  padding: 2px;
+  border: 0;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+:root[data-platform='ios'] .ui-seg button {
+  min-height: 28px;
+  border: 0;
+  border-radius: 7px;
+  font-size: var(--text-label);
+  font-weight: var(--font-weight-medium);
+  color: var(--ink);
+  transition: background var(--dur-2) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='ios'] .ui-seg button.active {
+  background: var(--surface);
+  border: 0;
+  box-shadow: var(--shadow-1);
+  font-weight: var(--font-weight-bold);
+}
+:root[data-platform='ios'] .ui-seg button:active,
+:root[data-platform='ios'] .ui-pills button:active {
+  scale: 1;
+  opacity: var(--press-opacity);
+}
+:root[data-platform='ios'] .ui-pills button {
+  border: 0;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  font-weight: var(--font-weight-medium);
+}
+:root[data-platform='ios'] .ui-pills button.active {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+/* Lista agrupada: un bloque redondeado y separadores que empiezan tras el icono. */
+:root[data-platform='ios'] .ui-list {
+  gap: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+:root[data-platform='ios'] .ui-list > .ui-row {
+  position: relative;
+  min-height: var(--row-min-h);
+  padding: var(--space-2) var(--list-inset);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+:root[data-platform='ios'] .ui-list > .ui-row + .ui-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: calc(var(--list-inset) + 36px);
+  border-top: 1px solid var(--line-soft);
+}
+:root[data-platform='ios'] .ui-list > .ui-row:active {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+@keyframes ui-ios-sheet {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes ui-ios-alert {
+  from {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-platform='ios'] .ui-modal--sheet,
+  :root[data-platform='ios'] .ui-modal--dialog {
+    animation: none;
+  }
+}

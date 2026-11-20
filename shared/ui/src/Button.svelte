@@ -1,6 +1,7 @@
 <script lang="ts">
   /** Botón del sistema (guía §9). Envuelve las clases .btn de base.css/kit.css. */
   import Ico from './Ico.svelte';
+  import { press } from './press';
 
   export let variant: 'default' | 'primary' | 'ink' | 'ghost' | 'danger' | 'success' = 'default';
   export let size: 'sm' | 'md' | 'lg' = 'md';
@@ -36,6 +37,7 @@
   aria-busy={loading || undefined}
   aria-label={label}
   title={title ?? (iconOnly ? label : undefined)}
+  use:press
   on:click
 >
   {#if loading}

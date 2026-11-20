@@ -1,0 +1,39 @@
+/*
+ * Modo de plataforma (src/platform.ts): el mismo componente, pintado como en cada sistema.
+ * La app lo fija con setPlatform() y queda como `data-platform` en <html>. Se carga después de kit.css.
+ *
+ * Desktop es el valor por defecto: estos tokens repiten lo que ya hacían base.css y kit.css, así que el
+ * escritorio no cambia. Android (Material 3) e iOS (Cupertino) los cambian en su fichero.
+ *
+ * Regla: aquí solo hay geometría, movimiento e interacción. Ningún color: eso es del tema
+ * (scripts/validate-ui-colors.js lo comprueba).
+ */
+@import './platform/android.css';
+@import './platform/ios.css';
+
+:root {
+  /* Interacción */
+  --hover-lift: -2px;
+  --press-shift: 1px;
+  --press-scale: 0.97;
+  --press-opacity: 1;
+  --state-layer: 0%;
+  --ease-standard: var(--ease-out);
+
+  /* Hojas y diálogos */
+  --sheet-radius: var(--radius-3xl);
+  --dialog-radius: var(--radius-3xl);
+
+  /* Listas */
+  --row-min-h: 0px;
+  --list-inset: 0px;
+
+  /* Interruptor */
+  --switch-w: 36px;
+  --switch-h: 20px;
+  --switch-thumb: 14px;
+  --switch-thumb-on: 14px;
+
+  /* Barra de navegación de la app */
+  --nav-h: 72px;
+}

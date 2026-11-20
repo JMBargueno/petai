@@ -22,6 +22,8 @@
   import { hashSeed, neutralDims, type Dims } from '@pockai/mind';
   import { guestPetState, roomGuestOf, visitScene, visitorsStore } from './social/visitors';
   import { uiSfxFirst } from './sound';
+  import { canvasPalette, resolvedAppearance } from './appearance';
+  import { DEFAULT_PET_PALETTE } from './maps';
   import type { RoomPetDrag } from './roomDrag';
 
   type HabitatFurniture = any;
@@ -126,8 +128,8 @@
         species: speciesKey,
         stage: pet.stage ?? 'baby',
         palette: {
-          primary: pet.palette?.primary ?? '#E25822',
-          secondary: pet.palette?.secondary ?? '#F3C544',
+          primary: pet.palette?.primary ?? DEFAULT_PET_PALETTE.primary,
+          secondary: pet.palette?.secondary ?? DEFAULT_PET_PALETTE.secondary,
         },
         pattern: pet.pattern?.id && pet.pattern.id !== 'plain' ? pet.pattern.id : null,
         visualSeed: pet.visualSeed ?? 1337,
@@ -155,6 +157,14 @@
       }
     : null;
   $: if (scene) send({ type: 'setRoom', room: roomState });
+  // Apariencia de la app (tema × esquema) con la paleta de canvas del tema, para los efectos.
+  $: if (scene)
+    send({
+      type: 'setTheme',
+      mode: $resolvedAppearance.scheme,
+      themeId: $resolvedAppearance.theme,
+      palette: { ...canvasPalette($resolvedAppearance) },
+    });
   // Clip de reposo según el estado (enfermo, hambriento, cansado, triste…), como PetMiniAvatar.
   $: rest = (() => {
     const s = resolveBaseState(pet);

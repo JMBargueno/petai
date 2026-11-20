@@ -133,9 +133,9 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #ff6b81, #ee5253 60%, #b33939 100%);
-    border: 1.5px solid #222;
-    box-shadow: inset -2px -3px 5px rgba(0, 0, 0, 0.35);
+    background: radial-gradient(circle at 35% 30%, #ff6b81, #ee5253 60%, #b33939 100%); /* color-ok: juguete pintado */
+    border: 1.5px solid #222; /* color-ok: juguete pintado */
+    box-shadow: inset -2px -3px 5px rgba(0, 0, 0, 0.35); /* color-ok: juguete pintado */
     overflow: hidden;
   }
 
@@ -147,8 +147,8 @@
       45deg,
       transparent,
       transparent 6px,
-      rgba(255, 235, 167, 0.75) 6px,
-      rgba(255, 235, 167, 0.75) 12px
+      rgba(255, 235, 167, 0.75) 6px, /* color-ok: juguete pintado */
+      rgba(255, 235, 167, 0.75) 12px /* color-ok: juguete pintado */
     );
     opacity: 0.85;
   }
@@ -159,7 +159,7 @@
     left: 20%;
     width: 25%;
     height: 25%;
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.85); /* color-ok: juguete pintado */
     border-radius: 50%;
     filter: blur(1px);
     pointer-events: none;
@@ -171,7 +171,7 @@
     left: 10%;
     width: 80%;
     height: 6px;
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(0, 0, 0, 0.25); /* color-ok: juguete pintado */
     border-radius: 50%;
     filter: blur(2px);
     pointer-events: none;

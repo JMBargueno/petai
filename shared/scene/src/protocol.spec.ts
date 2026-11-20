@@ -23,6 +23,20 @@ describe('parseHostMessage', () => {
     expect(parseHostMessage({ type: 'setPaused', paused: true })).toEqual({ type: 'setPaused', paused: true });
     expect(parseHostMessage({ type: 'setFacing', facing: -1 })).toEqual({ type: 'setFacing', facing: -1 });
   });
+
+  it('setTheme acepta el tema de la app y su paleta de canvas, y rechaza basura', () => {
+    const palette = { firefly: '#ffe08a', sparkle: ['#fff4e0', '#ffd27a'], glowRgb: '255, 236, 205' };
+    expect(parseHostMessage({ type: 'setTheme', mode: 'light', themeId: 'cozy', palette })).toEqual({
+      type: 'setTheme',
+      mode: 'light',
+      themeId: 'cozy',
+      palette,
+    });
+    expect(parseHostMessage({ type: 'setTheme', mode: 'light', palette: 'rojo' })).toBeNull();
+    expect(parseHostMessage({ type: 'setTheme', mode: 'light', palette: { a: 'url(x)' } })).toBeNull();
+    expect(parseHostMessage({ type: 'setTheme', mode: 'light', palette: { a: ['#fff'] } })).toBeNull();
+    expect(parseHostMessage({ type: 'setTheme', mode: 'light', themeId: '<script>' })).toBeNull();
+  });
 });
 
 describe('parseHostMessage (sala)', () => {

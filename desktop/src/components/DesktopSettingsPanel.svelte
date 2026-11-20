@@ -1,15 +1,8 @@
 <script lang="ts">
-  /** Ajustes › Escritorio: tema, arranque con Windows y cómo funciona la bandeja. El sonido tiene su pestaña. */
+  /** Ajustes › Escritorio: apariencia (tema y modo), arranque con Windows y cómo funciona la bandeja. El sonido tiene su pestaña. */
   import { onMount } from 'svelte';
   import { isAutostartEnabled, isAutostartSupported, setAutostart } from '../lib/autostart';
-  import { setTheme, theme, type ThemeChoice } from '../lib/theme';
-  import { Notice, Segmented, SectionHeader, Skeleton, Switch } from './ui';
-
-  const THEME_OPTIONS = [
-    { value: 'system', label: 'Sistema', icon: 'monitor' },
-    { value: 'light', label: 'Claro', icon: 'sun' },
-    { value: 'dark', label: 'Oscuro', icon: 'moon' },
-  ];
+  import { AppearancePicker, Notice, SectionHeader, Skeleton, Switch } from './ui';
 
   const supported = isAutostartSupported();
   let autostart = false;
@@ -54,8 +47,8 @@
 
 <div class="ui-stack" role="group" aria-label="Ajustes de la aplicación">
   <SectionHeader title="Apariencia" icon="sun" />
-  <Segmented label="Tema" options={THEME_OPTIONS} value={$theme} on:change={(e) => setTheme(e.detail as ThemeChoice)} />
-  <p class="form-hint theme-hint">«Sistema» sigue el modo claro u oscuro de tu equipo.</p>
+  <AppearancePicker />
+  <p class="form-hint">«Sistema» sigue el modo claro u oscuro de tu equipo.</p>
 
   <SectionHeader title="Inicio" icon="settings" />
 

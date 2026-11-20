@@ -76,7 +76,7 @@
     border-radius: 14px;
     background: var(--surface);
     border: 1px solid var(--line-soft);
-    box-shadow: var(--shadow-2, 0 4px 12px rgb(0 0 0 / 0.2));
+    box-shadow: var(--shadow-2);
     opacity: 0;
     pointer-events: none;
     transition: opacity 120ms ease;

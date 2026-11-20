@@ -217,7 +217,7 @@
   /* Al pasar el ratón se intuyen los límites (para moverla o redimensionarla) */
   .habitat-widget:hover,
   .habitat-widget.busy {
-    outline-color: rgb(255 255 255 / 0.35);
+    outline-color: rgb(255 255 255 / 0.35); /* color-ok: sombras del decorado */
   }
   /* El Pockai del escritorio se arrastra encima: su casa se marca como destino */
   :global(body[data-pet-over-panel]) .habitat-widget :global(canvas) {
@@ -246,7 +246,7 @@
     max-width: calc(100% - 16px);
     padding: 4px var(--space-2);
     border-radius: var(--radius-pills);
-    background: rgb(255 255 255 / 0.92);
+    background: var(--scene-label-bg);
     border: 1px solid var(--on-color);
     color: var(--on-color);
     box-shadow: var(--shadow-1);
@@ -296,7 +296,7 @@
     cursor: pointer;
   }
   .bar-btn:hover:not(:disabled) {
-    background: rgb(0 0 0 / 0.08);
+    background: rgb(0 0 0 / 0.08); /* color-ok: sombras del decorado */
   }
   .bar-btn:disabled {
     opacity: 0.35;
@@ -314,7 +314,7 @@
     height: 22px;
     z-index: calc(var(--z-sticky) + 2);
     cursor: nwse-resize;
-    background: linear-gradient(135deg, transparent 50%, rgb(0 0 0 / 0.28) 50% 58%, transparent 58% 70%, rgb(0 0 0 / 0.28) 70% 78%, transparent 78%);
+    background: linear-gradient(135deg, transparent 50%, rgb(0 0 0 / 0.28) 50% 58%, transparent 58% 70%, rgb(0 0 0 / 0.28) 70% 78%, transparent 78%); /* color-ok: sombras del decorado */
     opacity: 0;
     transition: opacity var(--dur-1) ease;
   }
@@ -336,20 +336,20 @@
     text-align: center;
   }
   .absent-hint {
-    text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.6); /* color-ok: sombras del decorado */
   }
   .absent-text {
     font-size: var(--text-caption);
     font-weight: 700;
     color: var(--on-color);
-    background: rgb(255 255 255 / 0.9);
+    background: var(--scene-label-bg);
     border: 1px solid var(--on-color);
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pills);
   }
   .absent-hint {
     font-size: var(--text-caption);
-    color: rgb(255 255 255 / 0.85);
+    color: var(--scene-veil-ink);
     font-weight: 600;
   }
 

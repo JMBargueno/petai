@@ -37,6 +37,7 @@ import {
   type SceneEvent,
   type StoryState,
   type ThemeMode,
+  type ThemePalette,
 } from './protocol';
 
 /** Hora (minuto del día) y clima (código WMO) de una escena de historia con ambiente propio. */
@@ -87,6 +88,9 @@ export class PockaiScene {
   private loadSeq = 0;
   private paused = false;
   private theme: ThemeMode = 'light';
+  /** Tema de la app anfitriona y su paleta de canvas: quedan listos para teñir efectos. */
+  private themeId = 'classic';
+  private themePalette: ThemePalette | null = null;
   private reducedMotion = false;
   // Estado de sala que puede llegar antes que la propia sala
   private activity: Activity = 'idle';
@@ -229,6 +233,8 @@ export class PockaiScene {
         break;
       case 'setTheme':
         this.theme = msg.mode;
+        this.themeId = msg.themeId ?? this.themeId;
+        this.themePalette = msg.palette ?? this.themePalette;
         break;
       case 'setPaused':
         this.paused = msg.paused;
@@ -331,6 +337,11 @@ export class PockaiScene {
 
   get themeMode(): ThemeMode {
     return this.theme;
+  }
+
+  /** Tema de la app (`classic`, `cozy`…) y su paleta, tal como los mandó el anfitrión. */
+  get appTheme(): { id: string; palette: ThemePalette | null } {
+    return { id: this.themeId, palette: this.themePalette };
   }
 
   private setRoom(state: RoomState | null): void {

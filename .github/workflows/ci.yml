@@ -37,6 +37,10 @@ jobs:
       - name: Validate Layered Asset Pipeline
         run: node scripts/validate-assets.js
 
+      # Los componentes pintan con tokens de tema: ningún color fijo nuevo en la UI.
+      - name: Validate UI colors (themes)
+        run: node scripts/validate-ui-colors.js
+
   backend:
     name: Backend build & unit tests
     runs-on: ubuntu-latest
@@ -218,6 +222,12 @@ jobs:
         run: |
           pnpm --filter @pockai/scene run typecheck
           pnpm --filter @pockai/scene run test
+
+      # Biblioteca de UI: plataforma (desktop/android/ios), apariencia y registro de temas.
+      - name: Test shared UI
+        run: |
+          pnpm --filter @pockai/ui run typecheck
+          pnpm --filter @pockai/ui run test
 
       # Lado de la UI del núcleo cliente (spec 43): acciones, consultas y el canal del chat.
       - name: Test core client

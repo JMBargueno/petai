@@ -75,3 +75,11 @@ export function hpColor(pct: number): string {
   if (pct > 30) return 'var(--warning)';
   return 'var(--danger)';
 }
+
+/**
+ * Colores de una mascota sin paleta todavía (los de Ignisaur). Son datos de la criatura, no de la
+ * interfaz: no cambian con el tema.
+ */
+export const DEFAULT_PET_PALETTE = { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' } as const; // color-ok
+/** Paleta del huevo genérico (EggSprite). */
+export const EGG_PALETTE = { primary: '#fff4d6', secondary: '#ffc94d' } as const; // color-ok
