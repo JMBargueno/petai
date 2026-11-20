@@ -3,7 +3,7 @@
 Documento autocontenido. Define **dónde vive la lógica de cliente** (un núcleo en Rust compartido por
 las tres plataformas), **qué se queda en la UI**, **cómo hablan entre sí** y **en qué orden se migra**.
 
-Estado: **fases 1 y 2 hechas** (la red y el estado global del escritorio viven en el núcleo). Las fases 3 a 5 están
+Estado: **fases 1, 2 y 3 hechas** (la red, el estado global y todas las llamadas del escritorio van por el núcleo, con tipo propio). Las fases 4 y 5 están
 planificadas. El avance paso a paso se lleva en [`../MIGRACION_NUCLEO_RUST.md`](../MIGRACION_NUCLEO_RUST.md).
 
 Sustituye el planteamiento de clientes nativos separados (Compose y SwiftUI) de la spec 27 y de
@@ -73,7 +73,6 @@ difiere del versionado.
 
 | Tipo | Nombre | Para qué |
 |---|---|---|
-| Command | `plugin:pockai\|api_request` | Pasarela de transición: la UI describe la llamada, el núcleo pone la sesión |
 | Command | `plugin:pockai\|chat_stream`, `chat_cancel` | Chat; los eventos llegan por un `Channel<SseEvent>` |
 | Command | `plugin:pockai\|session_state`, `session_logout`, `session_import_legacy` | Sesión |
 | Command | `plugin:pockai\|realtime_start`, `realtime_stop` | Canal en tiempo real |
@@ -81,12 +80,16 @@ difiere del versionado.
 | Event | `core://maintenance` | Cuerpo del 503 `MAINTENANCE` |
 | Event | `core://realtime`, `core://realtime-status` | Eventos del servidor y estado de la conexión |
 | Command | `plugin:pockai\|state_snapshot`, `state_load`, `state_refresh`, `state_apply_pet`, `state_patch_pet`, `state_select_pet` | Estado global |
-| Command | `plugin:pockai\|perform` | Acciones del jugador con tipo propio (`Action`): cuidado, huevos y tienda. Sustituye a la pasarela dominio a dominio |
+| Command | `plugin:pockai\|perform` | Lo que el jugador hace, con tipo propio (`Action`, 85 variantes): sesión y alta, cuidado, tienda, arena, clanes… |
+| Command | `plugin:pockai\|query` | Lo que la UI quiere saber, con tipo propio (`Query`, 67 variantes): listas, perfiles, historiales… |
 | Command | `plugin:pockai\|inbox_push`, `inbox_take`, `inbox_mark_all_read`, `set_present` | Bandeja de avisos y presencia del jugador |
 | Event | `core://notice` | El núcleo pide avisar de algo (necesidad de la mascota, recordatorio vencido) |
 | Event | `core://state` | `{slice, rev, value, source}` con la parte del estado que cambia |
 
-En la UI, `@pockai/client` envuelve todo esto: `coreFetch` (compatible con `fetch`), `coreStream`,
+No hay pasarela genérica hacia la API: la UI solo puede pedir lo que está en `Action` o en `Query`
+(la fase 1 tuvo una, `api_request`, que se retiró al terminar la fase 3).
+
+En la UI, `@pockai/client` envuelve todo esto: `perform`, `query`, `coreStream`,
 `onSession`, `onRealtime`… El estado se pide con `stateSnapshot` y se sigue con `onStateChange`; en el escritorio lo refleja `desktop/src/lib/appState.ts`.
 
 ### Cómo trata el núcleo una petición
@@ -125,7 +128,7 @@ creciente (1 s a 60 s). El id del dispositivo se guarda en la carpeta de datos d
 |---|---|---|
 | 1 | Workspace, `pockai-core`, puente, `@pockai/client`; `api.ts`, `socket.ts` y `environmental.ts` del escritorio pasan por el núcleo | Hecha |
 | 2 | Estado global en Rust (`state.rs`): carga, sondeo, tiempo real y snapshot en disco; `App.svelte` solo lo refleja | Hecha |
-| 3 | Avisos, entorno, social, skills y ajustes; commands tipados pestaña a pestaña; se borra `api_request` | Pendiente |
+| 3 | Avisos y entorno en el núcleo; acciones y consultas con tipo propio para todos los dominios; se retira `api_request` | Hecha |
 | 4 | Targets Android e iOS con su UI; plugins de almacén seguro y sync en segundo plano; se borra `mobile/android` | Pendiente |
 | 5 | Live Activity / Dynamic Island, WidgetKit y su equivalente en Android | Pendiente |
 
