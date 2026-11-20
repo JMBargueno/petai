@@ -18,6 +18,85 @@ se desvía del plan, se anota en «Desviaciones» al final.
 | 4 | Targets Android e iOS con su UI y plugins nativos; se borra la app Kotlin | 1 / 10 | 🟡 |
 | 5 | Live Activity / Dynamic Island y widgets | 0 / 7 | ⬜ |
 
+## Estado actual (2026-11-20): dónde se paró y cómo retomar
+
+El trabajo se detuvo aquí a petición. Esta sección es la foto; el detalle de cada paso está en las
+fases de abajo y en las secciones de verificación del final.
+
+### Qué hay
+
+- **Fases 1 a 3, terminadas y fusionadas** (PR 209). El escritorio habla con el backend solo a
+  través del núcleo en Rust (`crates/pockai-core`): sesión, tiempo real, chat, estado global,
+  avisos y 85 acciones y 67 consultas tipadas. Ningún token en el webview.
+- **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
+  móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
+- **Biblioteca `@pockai/ui`, en el PR 211 (abierto, CI en verde, sin fusionar)**. Rama
+  `claude/pockai-ui`. Contiene el kit (20 componentes), los estilos y ocho pantallas de dominio:
+  Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo y Temporada. Las usan el
+  escritorio y la app de Android.
+- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda,
+  Progreso (Misiones, Temporada) y Cuenta. Todas probadas en el emulador.
+
+### Qué falta, por orden
+
+1. **Fusionar el PR 211.**
+2. **Más pantallas a la biblioteca** (4.4 y 4.5). Quedan las pestañas del escritorio que cargan sus
+   datos: Cofres, Entrenamiento, Torneo, Raid, Armario, Mente, Arena, Cocina, Amigos, Visitas,
+   Clanes, Perfil, Minijuegos, Aventura, Hábitat y Chat. Las cuatro primeras son pequeñas y siguen
+   el patrón de abajo sin más. Las demás dependen del motor de sprites, de la escena o del audio
+   del escritorio (`lib/sprites`, `@pockai/scene`, `lib/audio`): antes hay que decidir si ese
+   motor se comparte o si cada app pone el suyo en un hueco, como el huevo de Eclosión.
+3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
+4. **Plugins nativos** (4.7, 4.8): sesión cifrada con el Keystore en Android (hoy es un fichero
+   privado de la app) y sincronización en segundo plano con avisos de cuidado.
+5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
+   acordada: que la app de Tauri tenga portados el widget y la sincronización. Aún no se cumple.
+6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
+
+### Cómo se parte una pantalla
+
+Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, backend ni plataforma.
+
+- **Si ya solo pinta** (Tienda, Mochila): se mueve con `git mv` a `shared/ui/src` y se exporta en
+  `index.ts`.
+- **Si carga sus datos** (Misiones, Vínculo, Temporada): se parte en vista y contenedor. La vista
+  va a la biblioteca con `data`, `loading`, `error` y eventos (`refresh`, `claim`…). El
+  contenedor del escritorio conserva nombre y props y llama a `api.*`; el de Android va en
+  `apps/android/src/screens/` y usa `query` y `perform` de `@pockai/client`.
+- **Si tiene algo propio de una plataforma** (la casita arrastrable de Inicio, el huevo de sprites
+  de Eclosión): la vista deja un hueco (`slot`) y cada app lo rellena.
+- En Android, los ajustes táctiles y de ancho van en `apps/android/src/app.css`. Los estilos de un
+  componente ganan a un selector simple: hay que usar `main .screen .clase`.
+- Tras una acción que cambia el saldo y que el núcleo no reconoce por su ruta, el contenedor pide
+  `stateRefresh('user')`.
+
+### Cómo se prueba
+
+- **Escritorio**: `pnpm --filter petai-desktop test` (438 tests) y el modo demo
+  (`pnpm --filter petai-desktop run demo`, puerto 5175). La ejecución de tests acaba en rojo por dos
+  rechazos no capturados de `game-data.client.spec.ts`, anteriores a esta migración.
+- **Android en el emulador** (Windows; ver también «Compilar para Android en Windows»):
+  1. Base de datos desechable: `createdb petai_core_e2e`, `prisma migrate deploy` y
+     `prisma:seed` con `DATABASE_URL` apuntando a ella. No se usa `petai_dev`.
+  2. Backend en el puerto 3100 contra esa base, con `EMAIL_VERIFICATION_REQUIRED=false` y
+     `HANDLE_REQUIRED=false`.
+  3. Emulador `Medium_Phone_API_37.0` y `adb reverse tcp:3100 tcp:3100`.
+  4. `VITE_API_URL=http://127.0.0.1:3100`, `tauri android build --debug --target x86_64 --apk`,
+     copiar la `.so` a `jniLibs/x86_64` y `gradlew assembleX86_64Debug -x rustBuildX86_64Debug`.
+  5. Instalar el APK y entrar con la cuenta de la semilla.
+  6. Al terminar: desinstalar la app, apagar el emulador y borrar la base de datos. La compilación
+     toca `desktop/src-tauri/gen/schemas/acl-manifests.json` y `shared/openapi/openapi.json`: se
+     restauran con `git checkout`.
+
+### Sin verificar
+
+- En Android: comprar el pase de temporada (la temporada de la semilla está finalizada), el
+  selector de mascota activa (hace falta una segunda mascota) y el temblor del icono del huevo.
+- En el escritorio dentro de la app de Tauri: el kit y las pantallas compartidas solo se han visto
+  en el modo demo del navegador. Tampoco se han oído los sonidos de abrir un modal o ganar monedas.
+- El chat con respuesta real de un modelo, `release.yml` con el workspace, macOS y Linux, y un
+  dispositivo físico o ARM.
+
 ## Fase 1 — Núcleo + escritorio
 
 ### 1.0 Preparación
@@ -76,8 +155,8 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- ⬜ 4.4 `shared/ui` (`@pockai/ui`): tokens y componentes comunes
-- 🟡 4.5 `apps/android`: primera UI Svelte (entrar, mascota, cuidar, alimentar, eclosionar, salir). Probada sobre el núcleo alojándola en el shell de escritorio; no en un dispositivo
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo y Temporada, usadas por el escritorio y por Android. Quedan las demás pestañas que cargan sus datos (Cofres, Entrenamiento, Mente, Armario, Social, Arena…), a partir una a una
+- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, todas probadas en el emulador. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -254,3 +333,140 @@ Lo que hizo falta para llegar aquí:
   (`GRADLE_OPTS` y `JAVA_TOOL_OPTIONS`), y que exista `C:/t`.
 - En el emulador de API 37 las apps no llegan a `10.0.2.2`. Funciona con `adb reverse tcp:3000
   tcp:3000` y la app compilada con `VITE_API_URL=http://127.0.0.1:3000`.
+
+## @pockai/ui: biblioteca de componentes compartida (2026-11-20)
+
+`shared/ui` reúne lo que es solo presentación y sirve a las tres UIs:
+
+- **Estilos**: `fonts.css` (Bowlby One e Inter), `tokens.css` (colores, espaciados, radios, tipografía),
+  `base.css` (botones, tarjetas, campos) y `kit.css`. Cada app los carga una vez y añade su hoja
+  propia con lo suyo (la ventana transparente del escritorio; la página y los 48 px táctiles en móvil).
+- **Componentes**: los 20 del kit que tenía el escritorio (`Button`, `Card`, `Modal`, `ProgressBar`,
+  `CurrencyPill`, `Notice`…), más `Ico` y `focusTrap`. Se movieron con `git mv`, sin reescribirlos.
+- **Sin sonido dentro**: `Modal` y `CurrencyPill` sonaban; ahora avisan (`onUiFeedback`) y cada app
+  decide. El escritorio les pone sus efectos en `main.ts`.
+
+Reglas para lo que entre a partir de ahora: datos por props, avisos por eventos, nada de núcleo,
+backend ni plataforma. Navegación y disposición de pantallas se quedan en cada app.
+
+El escritorio conserva sus rutas de siempre (`components/ui`, `components/Ico.svelte`,
+`lib/ui/focusTrap`) como reexportaciones del paquete, para no tocar sus ~40 componentes.
+
+Verificado: 438 tests y compilación del escritorio; el escritorio en modo demo se ve igual que antes;
+la app de Android en el emulador con el kit (inicio de sesión, mascota, alimentar, salir).
+
+### Pantallas de dominio compartidas (2026-11-20)
+
+`ShopView`, `BackpackView` e `ItemIcon` pasan del escritorio a `@pockai/ui`. Ya eran
+presentacionales (estado por props, lo que pide el jugador por eventos), así que se movieron sin
+reescribirlas. Cada app pone el contenedor: el escritorio en `ControlPanel.svelte`, Android en
+`apps/android/src/App.svelte`, y ambos atienden los mismos eventos (`buy`, `use`, `go`) pidiendo
+la acción al núcleo. La navegación (pestañas de Android, panel del escritorio) no se comparte.
+
+Cómo decidir si una pantalla del escritorio puede compartirse: si solo importa del kit y de otros
+presentacionales, se mueve tal cual. Si importa `lib/api`, `lib/sprites`, `lib/audio` o algo del
+escritorio (arrastre del hábitat, ventana), antes hay que partirla.
+
+Verificado: Tienda del escritorio en modo demo (iconos, compra, saldo); en el emulador de Android,
+comprar en la Tienda (1120 → 1110 monedas, manzanas 5 → 6) y usar un objeto de la Mochila (6 → 5).
+
+### Inicio y Cuenta compartidas (2026-11-20)
+
+Estas dos pantallas no eran presentacionales del todo, así que se partieron:
+
+- **Inicio** → `PetHomeView` (ficha, constantes, cuidados, comida y selector de mascota) en la
+  biblioteca. La casita de la que se saca al Pockai arrastrando es del escritorio: se queda en
+  `desktop/src/components/views/HomeView.svelte`, que la mete en el hueco `habitat` de la vista
+  compartida. `habitatToggle={false}` quita «A casa» donde la mascota no sale de su hábitat (móvil).
+- **Cuenta** → `AccountView` y `SocialAvatar` en la biblioteca. El canje de códigos llamaba a
+  `api.redeemVoucher`: el formulario pasa a `RedeemCodeCard` (props `busy`, `error`, `ok`; evento
+  `redeem`) y `RedeemVoucherCard` del escritorio queda como contenedor, en el hueco `redeem`.
+- `lib/ui/maps.ts` (elementos, rarezas, iconos de recompensa) pasa a `@pockai/ui/maps`; el
+  escritorio conserva la ruta con una reexportación.
+
+Patrón para lo que venga: lo común a la biblioteca, lo propio de una plataforma en un hueco
+(`slot`) que rellena su contenedor.
+
+Android usa `PetHomeView` en lugar de su ficha hecha a mano y gana la pestaña Cuenta (sin canje de
+códigos todavía). El cambio de mascota activa va por `stateSelectPet` del núcleo.
+
+Verificado en el escritorio en modo demo: ficha, dar de comer (5 → 4), llevar a casa (aparece la
+casita y desaparece «A casa»), Cuenta y canje de un código. 438 tests del escritorio; compilan
+escritorio y UI de Android. **Sin verificar:** la ficha y Cuenta en el emulador de Android.
+
+### Eclosión compartida (2026-11-20)
+
+`HatchView` pasa a la biblioteca. Lo único que la ataba al escritorio era el huevo animado
+(`EggSprite`, que usa el motor de sprites): ahora la vista tiene un hueco `egg` que recibe la
+animación del momento (`anim`: `idle`, `shake`, `crack`, `hatch`) y el escritorio pone ahí su
+`EggSprite`. Sin nada en el hueco sale un icono que tiembla mientras eclosiona. El texto del botón
+para pasar a la recién nacida es una prop (`switchLabel`): el escritorio dice «Sacar a … al
+escritorio».
+
+Android gana la pestaña Huevos con esa pantalla (nombre opcional, cuenta atrás, comprar un huevo)
+en lugar de su tarjeta con un botón. De momento con el icono: el huevo de sprites llegará cuando el
+motor de sprites salga del escritorio. Su eclosión no tiene las fases de grietas del escritorio: el
+huevo tiembla mientras responde el servidor.
+
+Verificado en el escritorio en modo demo: huevo de sprites en el hueco, eclosión con sus fases y
+aviso del nacimiento. 438 tests; compilan escritorio y UI de Android. **Sin verificar:** la pestaña
+Huevos en el emulador de Android.
+
+### Mascota, Huevos y Cuenta en el emulador (2026-11-20)
+
+APK de depuración (x86_64) en el emulador de API 37, contra un backend local con base de datos
+desechable y la cuenta de la semilla:
+
+- **Huevos**: eclosionar el huevo inicial con nombre («Chispa», un Magmadillo), aviso del
+  nacimiento, comprar otro huevo (1290 → 1240 monedas) y su cuenta atrás.
+- **Mascota**: la ficha compartida con elemento, rareza, patrón y nivel; dar de comer (5 → 4
+  manzanas), bañar, dormir y despertar.
+- **Cuenta**: datos del jugador y cerrar sesión (vuelve al inicio de sesión). Al reinstalar la app
+  la sesión se conserva.
+
+Un ajuste salió de la prueba: los chips de comida medían 42 px de alto porque el estilo del
+componente ganaba al de la app; el selector de `apps/android/src/app.css` es ahora más específico
+y miden 48 px.
+
+Sin verificar: el selector de mascota activa (hace falta una segunda mascota) y el temblor del
+icono del huevo durante la eclosión (el servidor local responde antes de poder verlo).
+
+### Misiones, Vínculo y Temporada compartidas (2026-11-20)
+
+Primeras pestañas que cargaban sus propios datos. El patrón: la pestaña se parte en **vista**
+(biblioteca) y **contenedor** (cada app).
+
+- `MissionsView`, `BondingView` y `SeasonsView` en `@pockai/ui`: reciben los datos, `loading` y
+  `error` por props y avisan con `refresh`, `claim` y `buyPass`. La confirmación de compra del
+  pase es estado de la vista y se cierra sola cuando `busy` vuelve a `false`.
+- En el escritorio, `MissionsTab`, `BondingTab` y `SeasonsTab` conservan nombre y props, pero ya
+  solo cargan con `api.*` y pintan la vista.
+- En Android, los contenedores están en `apps/android/src/screens/` y piden los datos al núcleo
+  con `query`. Tras reclamar una misión o comprar el pase piden `stateRefresh('user')` para que el
+  saldo se ponga al día.
+- La navegación de Android pasa a parecerse a la del escritorio: Mascota tiene secciones (Inicio,
+  Vínculo, Huevos) y hay una pestaña Progreso (Misiones, Temporada). Huevos deja de ser pestaña.
+
+Verificado en el escritorio en modo demo: Vínculo; reclamar una misión («Has recibido 50 monedas ·
+20 XP», pasa a Reclamada); comprar el pase con su confirmación (cuesta 30, tienes 40; se cierra y
+queda «Pase activo»). 438 tests; compilan escritorio y UI de Android. **Sin verificar:** estas tres
+pantallas y la navegación por secciones en el emulador de Android.
+
+### Vínculo, Misiones y Temporada en el emulador (2026-11-20)
+
+Misma receta (APK x86_64, API 37, backend local con base de datos desechable):
+
+- **Secciones**: Mascota › Inicio, Vínculo y Huevos; Progreso › Misiones y Temporada. «Ir a
+  eclosionar un huevo» lleva a Mascota › Huevos.
+- **Vínculo**: carga al entrar y refleja lo que se hace (dar de comer +2,0, dormir +0,5 en el
+  historial).
+- **Misiones**: tras dormir a la mascota, «Pon a dormir a tu pet» pasa a 1/1; al reclamarla sale el
+  aviso, queda «Reclamada» y el saldo de la cabecera sube (1040 → 1045 monedas).
+- **Temporada**: se pinta, pero la de la semilla está finalizada.
+
+Dos ajustes de maquetación salieron de la prueba, ambos en `apps/android/src/app.css`: las cuatro
+cifras de Misiones y los cinco desbloqueos de Vínculo no cabían en fila en el ancho de un móvil;
+ahora van en dos y tres columnas.
+
+Sin verificar en Android: comprar el pase de temporada (hace falta una temporada activa; en el
+escritorio en modo demo sí está probado).

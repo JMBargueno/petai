@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Insignia de estado. `color` (CSS) tiñe la insignia con cualquier token (rareza, elemento…). */
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let tone: 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'tint' = 'neutral';
   export let color: string | null = null;

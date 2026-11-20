@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Botón del sistema (guía §9). Envuelve las clases .btn de base.css/kit.css. */
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let variant: 'default' | 'primary' | 'ink' | 'ghost' | 'danger' | 'success' = 'default';
   export let size: 'sm' | 'md' | 'lg' = 'md';
