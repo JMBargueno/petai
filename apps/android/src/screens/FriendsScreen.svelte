@@ -1,13 +1,15 @@
 <script lang="ts">
   /**
    * Social › Amigos: carga amigos y presencia por el núcleo y hace las acciones; la pantalla es la
-   * de `@pockai/ui`. Las visitas aún no están en Android: sin botón «Visitar».
+   * de `@pockai/ui`. «Visitar» lleva a Visitas con ese amigo elegido (`onVisit`).
    */
   import { onMount } from 'svelte';
   import { query } from '@pockai/client';
   import { Button, FriendsView, Modal, Notice, ProfileView } from '@pockai/ui';
   import { presenceState, type PresenceState } from '@pockai/ui/social';
   import { act, failureText } from '../core';
+
+  let { onVisit }: { onVisit?: (userId: string) => void } = $props();
 
   let friends = $state<any[]>([]);
   let presence = $state<Record<string, PresenceState>>({});
@@ -84,7 +86,8 @@
   {ok}
   {loading}
   {busy}
-  canVisit={false}
+  canVisit={!!onVisit}
+  on:visit={(e) => onVisit?.(e.detail)}
   on:refresh={() => load()}
   on:accept={(e) => run(`accept-${e.detail.id}`, { type: 'acceptCoopFriend', friendshipId: String(e.detail.id) }, `Ahora sois amigos con ${e.detail.otherDisplayName}.`)}
   on:decline={(e) => run(`decline-${e.detail.id}`, { type: 'declineCoopFriend', friendshipId: String(e.detail.id) }, `Petición de ${e.detail.otherDisplayName} rechazada.`)}

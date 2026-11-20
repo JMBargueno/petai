@@ -1924,8 +1924,7 @@ import type { CoopFriend, CoopVisitLog, CoopVisitResult, PresenceDevice, Presenc
 export type { CoopFriend, CoopVisitLog, CoopVisitResult, PresenceDevice, PresenceInfo, ClanRole, ClanMember, ClanSummary, ClanHabitatPet, ClanHabitatResident, ClanHabitat, ClanXpEvent, ClanMessage, ClanGoalMetric, ClanGoal, PetIdentity, PetLook, VisitMenuOption, VisitInteraction, FurnitureUseResult, VisitRoom, HabitatSceneEvent, HabitatVisitor };
 
 /** Límites de la visita en vivo (deben coincidir con el backend: habitat-visit.service.ts). */
-export const VISIT_MESSAGE_MAX = 140;
-export const VISIT_ENERGY_COST = 10;
+export { VISIT_MESSAGE_MAX, VISIT_ENERGY_COST } from '@pockai/ui/social/visits';
 
 // ── Misiones (Paso 3) ─────────────────────────────────────────────────────
 export interface MissionReward {

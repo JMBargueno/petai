@@ -31,19 +31,19 @@ fases de abajo y en las secciones de verificación del final.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
 - **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
-  estilos y diecinueve pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  estilos y veinte pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
   Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
-  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil y Amigos. Las usan el escritorio y la app de Android.
+  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos y Visitas. Las usan el escritorio y la app de Android.
 - **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
   `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
 - **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario), Mochila, Jugar
   (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta
-  (Cuenta, Perfil, Amigos; desde el nombre de la cabecera). Jugar, Cofres, Armario, Perfil y Amigos aún no se han
+  (Cuenta, Perfil, Amigos, Visitas; desde el nombre de la cabecera). Jugar, Cofres, Armario y lo social aún no se han
   probado en el emulador.
 
 ### Qué falta, por orden
 
-1. **Probar en el emulador** Jugar entera, Cofres, Armario, Perfil, Amigos y el huevo de sprites.
+1. **Probar en el emulador** Jugar entera, Cofres, Armario, Perfil, Amigos, Visitas y el huevo de sprites.
 2. **Más pantallas a la biblioteca** (4.4 y 4.5), por tramos según la tabla de abajo. Decidido:
    el motor de sprites se comparte (no un hueco por app).
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
@@ -58,7 +58,7 @@ fases de abajo y en las secciones de verificación del final.
 | Tipo | Pantallas | Qué las ata al escritorio | Cómo se mueven |
 |---|---|---|---|
 | (a) Sprites, datos estáticos y sonido | Hechas todas: Armario, Arena, Cocina, Minijuegos y Aventura | — | Patrón de siempre; los efectos de un juego van por el puerto de sonido (`setUiSound`) |
-| (b) Estado de pantalla alimentado por tiempo real | Visitas, Clanes (Amigos hecha) | Las escenas: sala del amigo (`FriendRoomView`/`IsoRoomView`), `HomeScene`, `ClanHabitat`; `activeVisit` y `visitTravel` | Decidido: feed social compartido, no núcleo (ver «Lo social: decisión»). Las escenas, en un hueco de momento |
+| (b) Estado de pantalla alimentado por tiempo real | Clanes (Amigos y Visitas hechas) | El hábitat del clan (`ClanHabitat`) | Decidido: feed social compartido, no núcleo (ver «Lo social: decisión»). Las escenas, en un hueco de momento |
 | (c) Funciones del escritorio | Chat/IA, Mente, partes de Hábitat | `hermesLocal`, `aiCli`, `deskContext`, `desktopSkillsStore`, `initiative`, `brain`, arrastre de ventana | No van enteras: frontera de la spec 43. El móvil tendrá su contenedor o una vista reducida con huecos |
 | (d) Perfil | Hecha | — | — |
 
@@ -708,3 +708,32 @@ vivo por el feed (el modo demo no emite esos eventos).
 
 **Siguiente:** Visitas y Clanes. Llevan escenas (la sala del amigo, la escena de casa, el hábitat
 del clan) que de momento irán en un hueco que rellena el escritorio.
+
+### Visitas compartidas (2026-11-20)
+
+- **Vista**: `VisitsView` en `@pockai/ui`: selector de amigo, su tarjeta con los cuidados, empezar
+  y terminar la visita (con su mensaje) e historial. Las escenas van en dos huecos: `scene` (cabecera
+  de la casa del amigo; por defecto un banner sencillo) y `room` (su sala durante la visita en vivo;
+  por defecto, nada).
+- **Lo puro de las visitas** (`social/visits.ts`): las constantes (`VISIT_MESSAGE_MAX`,
+  `VISIT_ENERGY_COST`, que el `api.ts` del escritorio reexporta), deducir la visita en curso del
+  historial (`ongoingVisitFrom`, antes en `activeVisit.ts`, que conserva el store) y la fecha
+  relativa del historial.
+- **Escritorio**: `VisitTab` como contenedor con lo suyo: el store de la visita en curso, el viaje
+  por el portal, `HomeScene` en `scene`, la sala del amigo y el diálogo de la visita en `room`, y
+  la ventana de perfil.
+- **Android**: `VisitsScreen` en Cuenta › Visitas. Deduce la visita en curso del historial (la
+  fase 5 la llevará al núcleo) y va sin escenas. Amigos gana «Visitar», que lleva a Visitas con ese
+  amigo elegido.
+- **Núcleo**: cuidar la mascota de un amigo vuelve a pedir el usuario (XP); visitar un hábitat,
+  mascotas y usuario (energía); terminar la visita no pide nada (test
+  `visitar_un_habitat_pone_al_dia_la_energia_y_terminar_no_toca_nada`).
+
+Verificado en el escritorio en modo demo: Visitas con la casa del amigo en el hueco; alimentar a
+Luna («+12 XP»); empezar la visita con mensaje (aparece la sala del amigo en su hueco, el selector
+marca «En visita» y el campo se vacía); terminarla; «Visitar» desde Amigos abre Visitas con ese
+amigo elegido. 438 tests del escritorio, 27 de estado del núcleo; compilan escritorio y UI de
+Android.
+
+**Sin verificar:** nada de esto en el emulador; el viaje por el portal en el escritorio con la
+mascota en pantalla (en el demo estaba dormida).

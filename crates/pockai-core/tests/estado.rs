@@ -457,6 +457,33 @@ async fn atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_mascotas_saldo_e_inventa
 }
 
 #[tokio::test]
+async fn visitar_un_habitat_pone_al_dia_la_energia_y_terminar_no_toca_nada() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/pets", json!([{ "id": "p1", "energy": 30 }, { "id": "p2" }])).await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 10, "xp": 5 })).await;
+    for route in ["/v1/habitat/visit", "/v1/habitat/visit/end"] {
+        Mock::given(method("POST"))
+            .and(path(route))
+            .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "ok": true })))
+            .mount(&server)
+            .await;
+    }
+
+    core.perform(Action::EndHabitatVisit).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().pets[0]["hunger"], 80, "terminar la visita no pide nada");
+
+    core.perform(Action::StartHabitatVisit { owner_id: "u2".into(), message: None }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().pets[0]["energy"], 30);
+}
+
+#[tokio::test]
 async fn solo_la_respuesta_que_cierra_una_historia_refresca_el_saldo() {
     use pockai_core::Action;
     let server = MockServer::start().await;
