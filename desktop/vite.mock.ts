@@ -910,6 +910,20 @@ export function demoApi(enabled: boolean): Plugin {
         if (url.searchParams.has('__fail') || (failOn && url.pathname.includes(failOn))) {
           return send(res, 500, { message: 'Error simulado del modo demo' });
         }
+        // Chat: la respuesta llega a trozos por un flujo de eventos, como en el servidor.
+        const chat = method === 'POST' ? route.match(/^\/pets\/([^/]+)\/chat$/) : null;
+        if (chat) {
+          res.statusCode = 200;
+          res.setHeader('content-type', 'text/event-stream');
+          const reply = ['¡Hola! ', 'Estoy de maravilla, ', 'gracias por preguntar. ', '¿Jugamos luego?'];
+          const event = (name: string, data: unknown) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+          for (const text of reply) {
+            await new Promise((r) => setTimeout(r, 200));
+            event('delta', { text });
+          }
+          event('done', { message: { id: uid('msg'), content: reply.join('') }, intelligence: 180, tier: 'chat' });
+          return res.end();
+        }
         // Latencia corta para poder ver los estados de carga.
         await new Promise((r) => setTimeout(r, Number(process.env.MOCK_DELAY ?? 250)));
 

@@ -2,7 +2,7 @@ import createClient from 'openapi-fetch';
 import type { InitiativeReply, InitiativeSettings, TalkLevel } from './initiative';
 import type { paths } from '@shared/openapi/api-types';
 import {
-  coreStream,
+  chatTurn,
   hasCore,
   importLegacySession,
   logout as coreLogout,
@@ -307,40 +307,6 @@ export function isTerminalError(err: unknown): boolean {
   return err.status >= 500 || err.status === 401;
 }
 
-/**
- * Chat en streaming a través del núcleo: los eventos llegan por un canal y `apply` devuelve el
- * resultado cuando procesa el último (`done` o `moderated`).
- */
-function coreChat<T>(url: string, init: RequestInit, apply: (event: string, data: any) => T | undefined): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    let settled = false;
-    const settle = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      fn();
-    };
-    coreStream(url, init, (ev) => {
-      if (settled) return;
-      try {
-        const result = apply(ev.event, JSON.parse(ev.data));
-        if (result !== undefined) settle(() => resolve(result));
-      } catch (e) {
-        settle(() => reject(e));
-      }
-    }).then(
-      async (res) => {
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          settle(() => reject(new Error(data?.message || 'Error al enviar el mensaje')));
-          return;
-        }
-        // Los últimos eventos del canal pueden llegar justo después de la respuesta del comando.
-        setTimeout(() => settle(() => reject(new Error('La respuesta terminó sin completarse'))), 500);
-      },
-      (e) => settle(() => reject(e)),
-    );
-  });
-}
 
 /**
  * Acción del jugador a través del núcleo (`crates/pockai-core/src/actions.rs`): la UI dice qué quiere
@@ -802,20 +768,8 @@ export const api = {
       },
       body: JSON.stringify({ message, clientTools, clientContext }),
     };
-    if (CORE) {
-      return coreChat(url, init, (event, data) => {
-        if (event === 'delta') handlers.onDelta(data.text);
-        else if (event === 'reasoning') handlers.onReasoning?.(data.text);
-        else if (event === 'tool') handlers.onTool?.(data.name);
-        else if (event === 'action') handlers.onAction?.(data.action);
-        else if (event === 'moderated') {
-          handlers.onModerated?.(data);
-          return { moderated: true as const };
-        } else if (event === 'error') throw new Error(data.message);
-        else if (event === 'done') return data;
-        return undefined;
-      });
-    }
+    // Por el núcleo: el turno lo lleva `chatTurn`, el mismo que usa el móvil.
+    if (CORE) return chatTurn(petId, message, handlers, { clientTools, clientContext, signal });
     const res = await authFetch(url, init);
     if (!res.ok || !res.body) {
       const data = await res.json().catch(() => ({}));

@@ -31,12 +31,12 @@ fases de abajo y en las secciones de verificación del final.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
 - **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
-  estilos y veintitrés pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  estilos y veinticuatro pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
   Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
-  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos, Visitas, Clanes, Mente y Hábitat. Las usan el escritorio y la app de Android.
+  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil, Amigos, Visitas, Clanes, Mente, Hábitat y Chat. Las usan el escritorio y la app de Android.
 - **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
   `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
-- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario, Mente, Hábitat), Mochila, Jugar
+- **App de Android (`apps/android`)**: Mascota (Inicio, Charla, Vínculo, Huevos, Armario, Mente, Hábitat), Mochila, Jugar
   (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta
   (Cuenta, Perfil, Amigos, Visitas, Clanes; desde el nombre de la cabecera). Jugar, Cofres, Armario y lo social aún no se han
   probado en el emulador.
@@ -44,8 +44,9 @@ fases de abajo y en las secciones de verificación del final.
 ### Qué falta, por orden
 
 1. **Probar en el emulador** Jugar entera, Cofres, Armario, lo social entero y el huevo de sprites.
-2. **Más pantallas a la biblioteca** (4.4 y 4.5), por tramos según la tabla de abajo. Decidido:
-   el motor de sprites se comparte (no un hueco por app).
+2. **Pantallas a la biblioteca** (4.4 y 4.5): hechas todas las de la tabla de abajo. Quedan, de
+   cada app, las escenas que van en huecos (sala del amigo, casa, hábitat del clan, sala del
+   hábitat) y, en Android, el sonido de los juegos y el clima local.
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
 4. **Plugins nativos** (4.7, 4.8): sesión cifrada con el Keystore en Android (hoy es un fichero
    privado de la app) y sincronización en segundo plano con avisos de cuidado.
@@ -59,7 +60,7 @@ fases de abajo y en las secciones de verificación del final.
 |---|---|---|---|
 | (a) Sprites, datos estáticos y sonido | Hechas todas: Armario, Arena, Cocina, Minijuegos y Aventura | — | Patrón de siempre; los efectos de un juego van por el puerto de sonido (`setUiSound`) |
 | (b) Estado de pantalla alimentado por tiempo real | Hechas todas: Amigos, Visitas y Clanes | Las escenas siguen en el escritorio (sala del amigo, casa, hábitat del clan) | Decidido: feed social compartido, no núcleo (ver «Lo social: decisión»). Las escenas, en un hueco de momento |
-| (c) Funciones del escritorio | Chat/IA (Mente y Hábitat hechas) | Hábitat: la sala isométrica con arrastre a la ventana, modo pantalla completa y muebles de habilidades. Chat: IA local, herramientas del equipo, voz y pagos con Stripe | Lo compartible a la biblioteca y lo del escritorio en huecos; en Android, sin pagos (normas de Google Play) ni IA local |
+| (c) Funciones del escritorio | Hechas todas: Mente, Hábitat y Chat | Hábitat: la sala isométrica con arrastre a la ventana, modo pantalla completa y muebles de habilidades. Chat: IA local, herramientas del equipo, voz y pagos con Stripe | Lo compartible a la biblioteca y lo del escritorio en huecos; en Android, sin pagos (normas de Google Play) ni IA local |
 | (d) Perfil | Hecha | — | — |
 
 Pendiente aparte: el motor de sprites (`@pockai/scene/sprites`) y el registro de la escena PixiJS
@@ -806,3 +807,35 @@ núcleo; compilan escritorio y UI de Android.
 
 **Sin verificar:** nada de esto en el emulador; arrastrar un mueble del catálogo a la sala;
 arrastrar a la mascota fuera de la ventana; el modo hábitat.
+
+### Chat compartido (2026-11-20)
+
+- **`ChatView`** en `@pockai/ui`: la conversación (historial, envío con la respuesta en vivo,
+  razonamiento plegado), las acciones que propone la mascota, el compositor, los recordatorios y
+  los recuerdos. Habla por el puerto `chatApi` (`chatApi.ts`). El texto en negrita (`parseBold`)
+  pasa a `chatText.ts`.
+- **Lo del escritorio se queda en `AiTab`**: el selector de motor y sus ajustes (clave propia,
+  Hermes local, los CLI), el uso, la suscripción Pro (Stripe) y el aviso de pago. Los motores
+  locales viven dentro de su puerto: su `chatStream` decide si el turno va al servidor o al motor
+  del equipo, y la vista no se entera. Las herramientas del equipo (abrir una web, el portapapeles,
+  pomodoro, música, habilidades) van en `runClientTool`. Al cambiar de motor la conversación se
+  vuelve a montar (`{#key}`) y carga su historial.
+- **`chatTurn` en `@pockai/client`**: el turno de chat por el núcleo (mandar, repartir los
+  eventos del flujo y resolverse con `done`), que antes estaba en el `api.ts` del escritorio. Lo
+  usan el escritorio y Android.
+- **Android**: `ChatScreen` en Mascota › Charla, con la IA de Pockai por el núcleo y su cuota.
+  Sin motores locales, sin herramientas del equipo y sin pasar a Pro desde la app (los pagos irían
+  por Google Play); al agotar la cuota solo se avisa.
+- **Modo demo**: no tenía chat (respondía `{ok:true}` y el turno acababa en «La respuesta terminó
+  sin completarse»); ahora contesta por un flujo de eventos a trozos.
+- Los estilos se repartieron: cada componente se queda solo con las reglas de su marcado.
+
+Verificado en el escritorio en modo demo: la barra del escritorio (motor, cuota, Pro) sobre la
+conversación compartida con su historial; mandar un mensaje y ver la respuesta llegar a trozos;
+el bocadillo de la mascota al terminar; los recuerdos por capas; abrir y cerrar los ajustes (la
+conversación se vuelve a montar con su historial). 438 tests del escritorio, 2 de `@pockai/client`;
+compilan escritorio y UI de Android, sin avisos de CSS.
+
+**Sin verificar:** nada de esto en el emulador (ni el streaming por el núcleo en Android); en el
+escritorio, los motores locales, la clave propia, el pago y las acciones de la mascota (el demo no
+las propone); una respuesta moderada.

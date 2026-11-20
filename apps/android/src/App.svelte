@@ -5,6 +5,7 @@
   import AdventureScreen from './screens/AdventureScreen.svelte';
   import ArenaScreen from './screens/ArenaScreen.svelte';
   import BondingScreen from './screens/BondingScreen.svelte';
+  import ChatScreen from './screens/ChatScreen.svelte';
   import ChestsScreen from './screens/ChestsScreen.svelte';
   import ClansScreen from './screens/ClansScreen.svelte';
   import CookingScreen from './screens/CookingScreen.svelte';
@@ -36,7 +37,7 @@
   let password = $state('');
   let tab = $state<Tab>('pet');
   /** Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión). */
-  let petSection = $state<'home' | 'bond' | 'eggs' | 'wardrobe' | 'mind' | 'habitat'>('home');
+  let petSection = $state<'home' | 'chat' | 'bond' | 'eggs' | 'wardrobe' | 'mind' | 'habitat'>('home');
   let progressSection = $state<'missions' | 'season'>('missions');
   let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking' | 'adventure'>('games');
   let shopSection = $state<'store' | 'chests'>('store');
@@ -65,6 +66,7 @@
   ];
   const PET_SECTIONS = [
     { value: 'home', label: 'Inicio', icon: 'home' },
+    { value: 'chat', label: 'Charla', icon: 'chat' },
     { value: 'bond', label: 'Vínculo', icon: 'bond' },
     { value: 'eggs', label: 'Huevos', icon: 'egg' },
     { value: 'wardrobe', label: 'Armario', icon: 'star' },
@@ -208,6 +210,8 @@
           on:selectPet={(e) => run('selectPet', 'No se pudo cambiar de mascota', () => stateSelectPet(String(e.detail)))}
           on:go={(e) => go(e.detail.dest, e.detail.sub)}
         />
+      {:else if tab === 'pet' && petSection === 'chat'}
+        <ChatScreen {pet} />
       {:else if tab === 'pet' && petSection === 'habitat'}
         <HabitatScreen {pet} user={$core.user} />
       {:else if tab === 'pet' && petSection === 'mind'}
