@@ -80,9 +80,9 @@ difiere del versionado.
 | Event | `core://session` | `active`, `loggedOut`, `expired`, `unverified`, `handleRequired` |
 | Event | `core://maintenance` | Cuerpo del 503 `MAINTENANCE` |
 | Event | `core://realtime`, `core://realtime-status` | Eventos del servidor y estado de la conexión |
-| Command | `plugin:pockai|state_snapshot`, `state_load`, `state_refresh`, `state_apply_pet`, `state_patch_pet`, `state_select_pet` | Estado global |
-| Command | `plugin:pockai|perform` | Acciones del jugador con tipo propio (`Action`): cuidado, huevos y tienda. Sustituye a la pasarela dominio a dominio |
-| Command | `plugin:pockai|inbox_push`, `inbox_take`, `inbox_mark_all_read`, `set_present` | Bandeja de avisos y presencia del jugador |
+| Command | `plugin:pockai\|state_snapshot`, `state_load`, `state_refresh`, `state_apply_pet`, `state_patch_pet`, `state_select_pet` | Estado global |
+| Command | `plugin:pockai\|perform` | Acciones del jugador con tipo propio (`Action`): cuidado, huevos y tienda. Sustituye a la pasarela dominio a dominio |
+| Command | `plugin:pockai\|inbox_push`, `inbox_take`, `inbox_mark_all_read`, `set_present` | Bandeja de avisos y presencia del jugador |
 | Event | `core://notice` | El núcleo pide avisar de algo (necesidad de la mascota, recordatorio vencido) |
 | Event | `core://state` | `{slice, rev, value, source}` con la parte del estado que cambia |
 
