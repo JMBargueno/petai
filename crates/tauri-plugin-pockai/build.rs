@@ -21,5 +21,6 @@ const COMMANDS: &[&str] = &[
 ];
 
 fn main() {
-    tauri_plugin::Builder::new(COMMANDS).build();
+    // `android/`: el Keystore y WorkManager (ver `src/android.rs`).
+    tauri_plugin::Builder::new(COMMANDS).android_path("android").build();
 }

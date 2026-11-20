@@ -22,6 +22,7 @@
   import VisitsScreen from './screens/VisitsScreen.svelte';
   import WardrobeScreen from './screens/WardrobeScreen.svelte';
   import { act, activePet, failureText, hasCore, offline, phase, signIn, signOut, start, state as core } from './core';
+  import { askNotificationsOnce } from './notifications';
 
   type Tab = 'pet' | 'backpack' | 'play' | 'shop' | 'progress' | 'account';
   /** Cuenta no está en la barra: se abre tocando el nombre de la cabecera (seis pestañas no caben a 48 px). */
@@ -93,7 +94,12 @@
   onMount(() => {
     if (hasCore()) void start().catch((e) => (message = failureText(e, 'No se pudo arrancar')));
     const clock = setInterval(() => (now = Date.now()), 1000);
-    return () => clearInterval(clock);
+    // Con sesión, el permiso para los avisos de cuidado en segundo plano (una sola vez).
+    const unphase = phase.subscribe((p) => p === 'ready' && void askNotificationsOnce());
+    return () => {
+      clearInterval(clock);
+      unphase();
+    };
   });
 
   /** Eclosiona un huevo. El huevo tiembla mientras responde el servidor; quién nace lo dice él. */

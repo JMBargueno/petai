@@ -14,7 +14,8 @@
     "@pockai/client": "workspace:*",
     "@pockai/minigames": "workspace:*",
     "@pockai/ui": "workspace:*",
-    "@tauri-apps/api": "^2.0.0"
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-notification": "^2.8.1"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",

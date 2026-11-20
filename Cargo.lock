@@ -4740,7 +4740,9 @@ dependencies = [
 name = "tauri-plugin-pockai"
 version = "0.1.0"
 dependencies = [
+ "jni 0.21.1",
  "log",
+ "ndk-context",
  "pockai-core",
  "serde",
  "serde_json",
