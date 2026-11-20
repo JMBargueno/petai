@@ -396,6 +396,12 @@ impl Core {
     }
 
     /// Vacía el estado de la sesión (la tienda, que es pública, se conserva).
+    /// Pone los huevos del estado. Solo para tests: en marcha los traen el servidor y el tiempo real.
+    #[cfg(test)]
+    pub(crate) fn state_set_eggs(&self, eggs: Vec<Value>) {
+        self.change(Slice::Eggs, ChangeSource::Local, |s| s.eggs = eggs);
+    }
+
     pub fn state_clear(&self) {
         self.clear_game();
         self.change(Slice::User, ChangeSource::Local, |s| s.user = Value::Null);

@@ -8,34 +8,77 @@
 
 /* Begin PBXBuildFile section */
 		01066486C3A160929DC3CF32 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D7D84122FE2ED434FF58BDFE /* LaunchScreen.storyboard */; };
+		0698BA09316D52C2235B483C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3001E16696B14CE4AE055AB8 /* SwiftUI.framework */; };
+		09929E0AA8CA2F88C1F0BA7D /* PockaiWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6A2A1A23C703D3B914D819 /* PockaiWidgets.swift */; };
+		15958F46499FB6D85DCFE95A /* PockaiActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A39B9E7B72649DDA74F166 /* PockaiActivityAttributes.swift */; };
+		1DD81A421B69352CA0B13CC9 /* PockaiBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73D5ECBCF23A0A9291928CCA /* PockaiBackground.swift */; };
 		26E802B1739DB39384EFF5A7 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 6BF39906F5E88AF057D8CC37 /* assets */; };
 		2BAD0A440DE6CC2D1DD5F1C3 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0764F09ECEA180143D781EAE /* main.mm */; };
 		2F5C265AF923D764B000431C /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DDADFCAEA28DEA99426A6F8 /* MetalKit.framework */; };
 		3448B0D5356CB92453FA45DD /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F62F521F9A32CF11A2D026F3 /* libapp.a */; };
+		3BE0CE65CD42DA951AA75020 /* PockaiBackgroundBootstrap.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3DA9DA2895633B80C7D975EC /* PockaiBackgroundBootstrap.mm */; };
 		4C6EE322A1929F2272C828AD /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F2CAFA414318DA9AB23798DB /* QuartzCore.framework */; };
+		5D052792E3715642E7A5FAF8 /* PockaiWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1AE12A022A4609371D11ED23 /* PockaiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		65AFA3DA15F08FE29D4D2F61 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 38DED2E8A1D375F7E31D8613 /* WebKit.framework */; };
 		6A97EEB3D0C0A754FD71EA37 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA3DF8547184E662B94564BB /* Security.framework */; };
+		6B2CA4E6758FDA33024E4FDD /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A43588A9EA54BFEB1E251DA /* WidgetKit.framework */; };
+		8CF455269D2814537CC377AC /* PockaiSurfaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63B0DB73658B15B643F89AA3 /* PockaiSurfaces.swift */; };
+		9BE7DBA8D7E4183B51883CE4 /* PockaiActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A39B9E7B72649DDA74F166 /* PockaiActivityAttributes.swift */; };
 		A40CBE45B554EDB1723AE214 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2A4861478F88AFBFC438F50B /* Assets.xcassets */; };
 		C1D40AFAA092D46CE185AF41 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C8B2940B26D46A35505058E0 /* Metal.framework */; };
 		ED7C98C36D38754FD52C835C /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DAB6B62CEE3550F14EFD36E7 /* CoreGraphics.framework */; };
 		F140C2222F7F37A41FB00114 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1AA595DA5BB457A1089B117 /* UIKit.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A8F010EB9E3184F71678B14F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2236074F8A8E6294E23F1DD1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 15CCB8E3A50665D554C7B872;
+			remoteInfo = PockaiWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0DF31E35FBDF2CB970F353DC /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5D052792E3715642E7A5FAF8 /* PockaiWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		019874AA24CD82C1D89870FD /* location.rs */ = {isa = PBXFileReference; path = location.rs; sourceTree = "<group>"; };
 		0265E21A1C35D2E7F286A44E /* desk_sense.rs */ = {isa = PBXFileReference; path = desk_sense.rs; sourceTree = "<group>"; };
+		04A39B9E7B72649DDA74F166 /* PockaiActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PockaiActivityAttributes.swift; sourceTree = "<group>"; };
 		0764F09ECEA180143D781EAE /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		0ADFADD225F2512687276AEA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		14FC700A34731AB98CFC1E3B /* petai-desktop_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "petai-desktop_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A43588A9EA54BFEB1E251DA /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		1AE12A022A4609371D11ED23 /* PockaiWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PockaiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D15DA23D13F96C34A08EEA9 /* mobile.rs */ = {isa = PBXFileReference; path = mobile.rs; sourceTree = "<group>"; };
 		2A4861478F88AFBFC438F50B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3001E16696B14CE4AE055AB8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		38DED2E8A1D375F7E31D8613 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		3DA9DA2895633B80C7D975EC /* PockaiBackgroundBootstrap.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = PockaiBackgroundBootstrap.mm; sourceTree = "<group>"; };
 		438CC646300956F7BA60501E /* ai_cli.rs */ = {isa = PBXFileReference; path = ai_cli.rs; sourceTree = "<group>"; };
 		57FA9F20BE381CB9C4EEA779 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
+		61978F1A8A336EA231403819 /* PockaiWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PockaiWidgets.entitlements; sourceTree = "<group>"; };
+		63B0DB73658B15B643F89AA3 /* PockaiSurfaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PockaiSurfaces.swift; sourceTree = "<group>"; };
 		6819BAFC85E786C7B3408C2A /* petai-desktop_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "petai-desktop_iOS.entitlements"; sourceTree = "<group>"; };
 		6BF39906F5E88AF057D8CC37 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
+		73D5ECBCF23A0A9291928CCA /* PockaiBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PockaiBackground.swift; sourceTree = "<group>"; };
 		7DDADFCAEA28DEA99426A6F8 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		8FE21F52ED1C28D9C086EAA4 /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
+		A30EF85136E2ACA790C7E352 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		AA6A2A1A23C703D3B914D819 /* PockaiWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PockaiWidgets.swift; sourceTree = "<group>"; };
 		B6A0846D21EAA001E91A8998 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
 		C8B2940B26D46A35505058E0 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		D7D84122FE2ED434FF58BDFE /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -48,6 +91,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		31C5982547D250473A79247E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0698BA09316D52C2235B483C /* SwiftUI.framework in Frameworks */,
+				6B2CA4E6758FDA33024E4FDD /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8E9B9E682555D0245B03B128 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -84,8 +136,10 @@
 				7DDADFCAEA28DEA99426A6F8 /* MetalKit.framework */,
 				F2CAFA414318DA9AB23798DB /* QuartzCore.framework */,
 				DA3DF8547184E662B94564BB /* Security.framework */,
+				3001E16696B14CE4AE055AB8 /* SwiftUI.framework */,
 				F1AA595DA5BB457A1089B117 /* UIKit.framework */,
 				38DED2E8A1D375F7E31D8613 /* WebKit.framework */,
+				1A43588A9EA54BFEB1E251DA /* WidgetKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -94,8 +148,19 @@
 			isa = PBXGroup;
 			children = (
 				14FC700A34731AB98CFC1E3B /* petai-desktop_iOS.app */,
+				1AE12A022A4609371D11ED23 /* PockaiWidgets.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		54C98EFF56F07FA60A72B763 /* PockaiWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				A30EF85136E2ACA790C7E352 /* Info.plist */,
+				61978F1A8A336EA231403819 /* PockaiWidgets.entitlements */,
+				AA6A2A1A23C703D3B914D819 /* PockaiWidgets.swift */,
+			);
+			path = PockaiWidgets;
 			sourceTree = "<group>";
 		};
 		5667B4F838B1CC10FDFA8A92 /* Externals */ = {
@@ -103,6 +168,14 @@
 			children = (
 			);
 			path = Externals;
+			sourceTree = "<group>";
+		};
+		5F4434E46DA77A7942025126 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				04A39B9E7B72649DDA74F166 /* PockaiActivityAttributes.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		67832C8029E110D73BA07958 /* Sources */ = {
@@ -125,6 +198,9 @@
 			isa = PBXGroup;
 			children = (
 				0764F09ECEA180143D781EAE /* main.mm */,
+				73D5ECBCF23A0A9291928CCA /* PockaiBackground.swift */,
+				3DA9DA2895633B80C7D975EC /* PockaiBackgroundBootstrap.mm */,
+				63B0DB73658B15B643F89AA3 /* PockaiSurfaces.swift */,
 				73EEBD71DD68AE0F72B105B7 /* bindings */,
 			);
 			path = "petai-desktop";
@@ -153,6 +229,8 @@
 				D7D84122FE2ED434FF58BDFE /* LaunchScreen.storyboard */,
 				5667B4F838B1CC10FDFA8A92 /* Externals */,
 				028677EA66601A4655A9D89F /* petai-desktop_iOS */,
+				54C98EFF56F07FA60A72B763 /* PockaiWidgets */,
+				5F4434E46DA77A7942025126 /* Shared */,
 				67832C8029E110D73BA07958 /* Sources */,
 				91B8CFA564467EF95C02F350 /* src */,
 				437D59A1F0927B182CCDBFD5 /* Frameworks */,
@@ -160,9 +238,41 @@
 			);
 			sourceTree = "<group>";
 		};
+		"TEMP_85DC0852-7063-4C9B-98FA-4FCF95D019A7" /* x86_64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = x86_64;
+			sourceTree = "<group>";
+		};
+		"TEMP_9D8A1FDD-0468-4556-9FBE-3BEEAB8B0DB2" /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = arm64;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		15CCB8E3A50665D554C7B872 /* PockaiWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3AD2F460581D84BD002102A /* Build configuration list for PBXNativeTarget "PockaiWidgets" */;
+			buildPhases = (
+				8A4D3F5DCEA0305F95BDF716 /* Sources */,
+				31C5982547D250473A79247E /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PockaiWidgets;
+			packageProductDependencies = (
+			);
+			productName = PockaiWidgets;
+			productReference = 1AE12A022A4609371D11ED23 /* PockaiWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		35272969F8B17A86FF04BD88 /* petai-desktop_iOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7D6DA13DBD2EB73E39D2C830 /* Build configuration list for PBXNativeTarget "petai-desktop_iOS" */;
@@ -171,10 +281,12 @@
 				B5125CBBF4A6F22A1D344685 /* Sources */,
 				7C444FEDD85035C27B3ED599 /* Resources */,
 				8E9B9E682555D0245B03B128 /* Frameworks */,
+				0DF31E35FBDF2CB970F353DC /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F4E01E322FD278062F856D5F /* PBXTargetDependency */,
 			);
 			name = "petai-desktop_iOS";
 			packageProductDependencies = (
@@ -209,6 +321,7 @@
 			projectRoot = "";
 			targets = (
 				35272969F8B17A86FF04BD88 /* petai-desktop_iOS */,
+				15CCB8E3A50665D554C7B872 /* PockaiWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -251,15 +364,36 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		8A4D3F5DCEA0305F95BDF716 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9BE7DBA8D7E4183B51883CE4 /* PockaiActivityAttributes.swift in Sources */,
+				09929E0AA8CA2F88C1F0BA7D /* PockaiWidgets.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B5125CBBF4A6F22A1D344685 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				15958F46499FB6D85DCFE95A /* PockaiActivityAttributes.swift in Sources */,
+				1DD81A421B69352CA0B13CC9 /* PockaiBackground.swift in Sources */,
+				3BE0CE65CD42DA951AA75020 /* PockaiBackgroundBootstrap.mm in Sources */,
+				8CF455269D2814537CC377AC /* PockaiSurfaces.swift in Sources */,
 				2BAD0A440DE6CC2D1DD5F1C3 /* main.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F4E01E322FD278062F856D5F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 15CCB8E3A50665D554C7B872 /* PockaiWidgets */;
+			targetProxy = A8F010EB9E3184F71678B14F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		161D17DC0A4F72B7A07198B9 /* debug */ = {
@@ -288,8 +422,29 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.petai.app;
 				PRODUCT_NAME = "Pockai";
 				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
+			};
+			name = debug;
+		};
+		25AC7C841C7290CA7B09E365 /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PockaiWidgets/PockaiWidgets.entitlements;
+				INFOPLIST_FILE = PockaiWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Pockai;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.petai.app.widgets;
+				PRODUCT_NAME = PockaiWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = debug;
 		};
@@ -382,8 +537,29 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.petai.app;
 				PRODUCT_NAME = "Pockai";
 				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
+			};
+			name = release;
+		};
+		B869D74240625836049D1FD8 /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PockaiWidgets/PockaiWidgets.entitlements;
+				INFOPLIST_FILE = PockaiWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Pockai;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.petai.app.widgets;
+				PRODUCT_NAME = PockaiWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = release;
 		};
@@ -460,6 +636,15 @@
 			buildConfigurations = (
 				161D17DC0A4F72B7A07198B9 /* debug */,
 				A028FE6C5B84E88C2000BE5A /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+		A3AD2F460581D84BD002102A /* Build configuration list for PBXNativeTarget "PockaiWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				25AC7C841C7290CA7B09E365 /* debug */,
+				B869D74240625836049D1FD8 /* release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = debug;

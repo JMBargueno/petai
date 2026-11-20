@@ -37,6 +37,7 @@ targets:
       - path: Externals
         excludes: ["**/*.a"]
       - path: petai-desktop_iOS
+      - path: Shared
       - path: assets
         buildPhase: resources
         type: folder
@@ -58,6 +59,12 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         CFBundleShortVersionString: 0.41.0
         CFBundleVersion: "0.41.0"
+        # Avisos de cuidado con la app cerrada (paso 4.8): el identificador tiene que coincidir con
+        # `PockaiBackground.taskIdentifier`.
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.petai.app.care]
+        # Live Activity y Dynamic Island (fase 5).
+        NSSupportsLiveActivities: true
     entitlements:
       path: petai-desktop_iOS/petai-desktop_iOS.entitlements
     scheme:
@@ -67,6 +74,7 @@ targets:
     settings:
       base:
         ENABLE_BITCODE: false
+        SWIFT_VERSION: "5.0"
         ARCHS: [arm64]
         VALID_ARCHS: arm64 
         LIBRARY_SEARCH_PATHS[arch=x86_64]: $(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
@@ -84,6 +92,9 @@ targets:
       - sdk: Security.framework
       - sdk: UIKit.framework
       - sdk: WebKit.framework
+      # La extensión de los widgets y la Live Activity (fase 5), que viaja dentro de la app.
+      - target: PockaiWidgets
+        embed: true
     preBuildScripts:
       - script: |
           pnpm tauri ios xcode-script -v --platform "${PLATFORM_DISPLAY_NAME:?}" --sdk-root "${SDKROOT:?}" --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:-}" --configuration "${CONFIGURATION:?}" ${FORCE_COLOR} ${ARCHS:?}
@@ -92,3 +103,32 @@ targets:
         outputFiles:
           - $(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a
           - $(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a
+
+  # La extensión que dibuja el widget de la pantalla de inicio y la Live Activity. No puede llamar al
+  # núcleo ni alojar un webview: solo lee el resumen del App Group y lo que le pasa ActivityKit.
+  PockaiWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: PockaiWidgets
+      - path: Shared
+    info:
+      path: PockaiWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Pockai
+        CFBundleShortVersionString: 0.41.0
+        CFBundleVersion: "0.41.0"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: PockaiWidgets/PockaiWidgets.entitlements
+    settings:
+      base:
+        PRODUCT_NAME: PockaiWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: com.petai.app.widgets
+        SWIFT_VERSION: "5.0"
+        INFOPLIST_KEY_CFBundleDisplayName: Pockai
+        SKIP_INSTALL: true
+    dependencies:
+      - sdk: SwiftUI.framework
+      - sdk: WidgetKit.framework

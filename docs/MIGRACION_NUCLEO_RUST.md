@@ -51,12 +51,14 @@ fases de abajo y en las secciones de verificación del final.
 2. **Pantallas a la biblioteca** (4.4 y 4.5): hechas todas, con sus escenas (sala del hábitat,
    sala del amigo y hábitat del clan; en Android, la casa del amigo sigue siendo la cabecera
    sencilla). Falta en Android el clima local.
-3. **iOS**: hecho (4.2, 4.3, 4.6, 4.9). Falta `BGAppRefreshTask` (4.8), un dispositivo físico y
-   el `.ipa` firmado (hace falta un Team ID de Apple, que va por `APPLE_DEVELOPMENT_TEAM`, nunca en
-   `tauri.ios.conf.json`).
-4. **Plugins nativos** (4.7, 4.8): hechos en Android (sesión cifrada con el Keystore y avisos de
-   cuidado con WorkManager; ver «Plugins nativos de Android»), probados en el emulador con un
-   backend de pega. Falta probarlos contra el backend real y lo de iOS (`BGAppRefreshTask`).
+3. **iOS**: hecho (4.2, 4.3, 4.6, 4.8, 4.9) y la fase 5 salvo la prueba en dispositivo. Falta un
+   iPhone de verdad y el `.ipa` firmado (hace falta un Team ID de Apple, que va por
+   `APPLE_DEVELOPMENT_TEAM`, nunca en `tauri.ios.conf.json`).
+4. **Plugins nativos** (4.7, 4.8): hechos en las dos plataformas, dentro de `tauri-plugin-pockai`.
+   En Android, sesión cifrada con el Keystore y avisos con WorkManager (ver «Plugins nativos de
+   Android»), probados en el emulador con un backend de pega. En iOS, el Keychain y
+   `BGAppRefreshTask`; falta ver una pasada en segundo plano de verdad, que el sistema concede
+   cuando quiere.
 5. **App Kotlin**: borrada (4.10, ver «La app Kotlin, retirada»).
 6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
 
@@ -170,7 +172,7 @@ Desviaciones encontradas y resueltas:
   Se renombró a `Info.macos.plist` y se referencia desde `bundle.macOS.infoPlist`: Tauri recoge solo
   `Info.plist` e `Info.ios.plist` por su nombre.
 
-No verificado en iOS: un dispositivo físico, el `.ipa` firmado, `BGAppRefreshTask` (4.8) y la fase 5.
+No verificado en iOS: un dispositivo físico y el `.ipa` firmado.
 
 ### Sin verificar
 
@@ -243,20 +245,37 @@ No verificado en iOS: un dispositivo físico, el `.ipa` firmado, `BGAppRefreshTa
 - 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda › Cofres, Mascota › Armario y el huevo de sprites, sin probar en él. Faltan el resto de pantallas del juego
 - ✅ 4.6 `apps/ios` (`@pockai/ios-ui`): la UI Svelte, con el juego entero, probada en el simulador (ver «Verificado en el simulador de iOS»). La app móvil es una sola (`shared/mobile`, `@pockai/mobile`): el shell, la navegación, el reflejo del núcleo, el sonido, los avisos y los 20 contenedores de pantalla los comparten Android e iOS, y cada `apps/*` solo pone su plataforma, su `app.css` y su `MobileConfig`
 - ✅ 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero de la app cifrado con el Keystore (`SealedFileStore` + `PockaiKeystore`), que adopta el fichero en claro de antes
-- 🟡 4.8 Avisos de cuidado en segundo plano: en Android, WorkManager dentro de `tauri-plugin-pockai` (no un plugin aparte) con el mismo núcleo de la app, y el widget de la pantalla de inicio. Falta `BGAppRefreshTask` en iOS
+- ✅ 4.8 Avisos de cuidado en segundo plano, con el mismo `care_sync` del núcleo en las dos plataformas, dentro de `tauri-plugin-pockai` (no un plugin aparte): en Android, WorkManager y el widget de la pantalla de inicio; en iOS, `BGAppRefreshTask` (`PockaiBackground.swift`) y el widget de WidgetKit
 - ✅ 4.9 CI: job `android-tauri` (APK de depuración), job `ios-tauri` (runner de macOS: el núcleo para `aarch64-apple-ios-sim` y la UI de iOS; el `.ipa` no, que exige firma) y, en el job `desktop`, `@pockai/mobile` y el `check` + `build` de las dos UIs móviles
 - ✅ 4.10 Borrar `mobile/android`, su job de CI y las referencias en docs y skills (las specs y los informes antiguos se quedan como registro)
 
 ## Fase 5 — Superficies nativas
-- ⬜ 5.1 `surfaces.rs`: política pura `AppState → descriptor`, y la visita en curso como parte del estado del núcleo
-- ⬜ 5.2 `tauri-plugin-pockai-surfaces` (Rust) y paquete Swift `PockaiActivityKit`
-- ⬜ 5.3 Plugin Swift: iniciar, actualizar y terminar la Live Activity
-- ⬜ 5.4 Widget Extension: Dynamic Island y pantalla de bloqueo
-- ⬜ 5.5 App Group, snapshot y sprites pre-horneados; widget de inicio (WidgetKit)
-- ⬜ 5.6 Android: notificación en curso y widget Glance sobre el mismo snapshot
+- ✅ 5.1 `surfaces.rs`: política pura `AppState → descriptor` y la diferencia `start`/`update`/`end`, con 15 tests. Hoy publica el huevo incubando, que es lo único del estado con hora de fin conocida; la visita en curso entrará cuando el estado lleve la suya
+- ➖ 5.2 Sin plugin aparte ni paquete Swift: lo de iOS va dentro de `tauri-plugin-pockai` (`src/ios.rs`, interfaz en C), como lo de Android va en `src/android.rs`. Los `ActivityAttributes` viven en `gen/apple/Shared/`, que compilan la app y la extensión (ver desviaciones)
+- ✅ 5.3 `PockaiSurfaces.swift`: abre, actualiza y cierra la Live Activity con lo que manda el núcleo, con `pushType: nil`
+- ✅ 5.4 Widget Extension `PockaiWidgets`: isla expandida, compacta y mínima, y pantalla de bloqueo
+- 🟡 5.5 App Group `group.com.petai.app` y el resumen (`PetGlance`) que lee el widget de inicio. Escrito y declarado en los entitlements de la app y de la extensión, pero **sin verificar**: los entitlements solo se aplican a una compilación firmada, y en un build sin firmar el contenedor del grupo no existe (`simctl get_app_container … groups` vuelve vacío), así que el widget de inicio enseña «Abre Pockai». La Live Activity no pasa por ahí y sí se ve. Hace falta un Team ID para comprobarlo. Sin sprites pre-horneados: el widget usa símbolos del sistema (ver desviaciones)
+- ✅ 5.6 Android: `PockaiSurfaces.kt`, una notificación en curso con cronómetro por actividad, sobre la misma política. El widget Glance ya estaba
 - ⬜ 5.7 Prueba en dispositivo (iPhone con Dynamic Island, Android 16)
 
+Y de la fase 4: ✅ 4.8, `BGAppRefreshTask` en iOS (`PockaiBackground.swift`), con el mismo `care_sync`
+del núcleo que usa WorkManager en Android.
+
 ## Desviaciones respecto al plan
+
+- **Nada de `tauri-plugin-pockai-surfaces` ni de un paquete Swift `PockaiActivityKit`** (5.2). Lo
+  nativo de cada plataforma vive dentro de `tauri-plugin-pockai` (`src/ios.rs` y `src/android.rs`),
+  que es donde ya estaban el Keystore y los avisos de cuidado: un plugin aparte solo para esto
+  duplicaría el puente y el núcleo compartido. Los `ActivityAttributes` tampoco necesitan un paquete
+  Swift: ActivityKit solo exige que el **mismo tipo** lo compilen los dos procesos, y para eso basta
+  con `gen/apple/Shared/`, que está en las `sources` de la app y de la extensión.
+- **Rust no llama a Swift; Swift registra un callback** (`pockai_surfaces_set_callback`). Un
+  `extern "C"` a una función del target de la app deja la librería sin resolver al enlazarla sola
+  (`cargo build --lib`), que es justo lo que hace el script de Xcode.
+- **Sin sprites pre-horneados en el widget** (5.5). El resumen que el núcleo deja en el App Group
+  (`PetGlance`) trae el ánimo como texto (`happy`, `hungry`…) y el widget lo pinta con símbolos del
+  sistema. Hornear los PNG de cada especie y etapa es trabajo de la cadena de arte, no del núcleo, y
+  el widget ya es legible sin ellos.
 
 - **Tipos con `ts-rs` en vez de `tauri-specta`** (1.2.3). `tauri-specta` sigue en versión candidata
   (2.0.0-rc) y su API cambia entre candidatas. `ts-rs` genera los tipos de las cargas; las funciones

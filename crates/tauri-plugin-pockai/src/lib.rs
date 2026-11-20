@@ -10,6 +10,8 @@
 
 #[cfg(target_os = "android")]
 mod android;
+#[cfg(target_os = "ios")]
+mod ios;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -206,11 +208,22 @@ fn core_config(base_url: String, data_dir: Option<PathBuf>) -> CoreConfig {
 }
 
 /// El núcleo, con la sesión en el llavero del sistema.
-#[cfg(not(target_os = "android"))]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn make_core(config: PockaiConfig, data_dir: Option<PathBuf>) -> Core {
     let cfg = core_config(config.base_url, data_dir);
     let secrets: Box<dyn pockai_core::SecretStore> = Box::new(pockai_core::KeyringStore::new(&cfg.base_url));
     Core::new(cfg, secrets)
+}
+
+/// En iOS la sesión también va al llavero, pero el núcleo se comparte con la pasada en segundo plano
+/// de los avisos de cuidado y las superficies vivas (ver `ios`).
+#[cfg(target_os = "ios")]
+fn make_core(config: PockaiConfig, data_dir: Option<PathBuf>) -> Core {
+    ios::core_for_app(|| {
+        let cfg = core_config(config.base_url, data_dir);
+        let secrets: Box<dyn pockai_core::SecretStore> = Box::new(pockai_core::KeyringStore::new(&cfg.base_url));
+        Core::new(cfg, secrets)
+    })
 }
 
 /// En Android, la sesión va en un fichero de la app cifrado con el Keystore, y el núcleo se comparte
