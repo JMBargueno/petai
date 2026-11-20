@@ -53,8 +53,8 @@ fases de abajo y en las secciones de verificación del final.
    backend de pega. Falta probarlos contra el backend real y lo de iOS (`BGAppRefreshTask`).
 5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
    acordada: que la app de Tauri tenga portados el widget y la sincronización. Ya se cumple (ver
-   «El widget de Android»), y también lo que tenía la app Kotlin de la cuenta: alta, verificar el
-   correo, nickname, recuperar la contraseña y la clave de IA propia (ver «La cuenta en Android»).
+   «El widget de Android»), y también todo lo demás que tenía la app Kotlin, revisado ruta a ruta
+   (ver «La cuenta en Android» y «Lo que le quedaba a Android»). Se puede borrar.
 6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
 
 ### Pantallas que quedan, por tipo (2026-11-20)
@@ -1066,3 +1066,46 @@ Verificado:
 - Contra el backend real.
 - «Ya lo he verificado con el enlace» y «Reenviar correo» en Android.
 - El registro con invitación obligatoria.
+
+### Lo que le quedaba a Android (2026-11-20)
+
+Antes de borrar la app Kotlin se compararon las 99 rutas de su `ApiService.kt` con lo que llama la
+app de Tauri, y sus pantallas con las de Tauri. Todo lo demás estaba cubierto. Faltaban cinco cosas, ahora
+compartidas con el escritorio:
+
+- **Canjear código**: Android usa `RedeemCodeCard` en Cuenta. `rewards.ts` (celebrar una vez por
+  entrega, desglose, textos de error del canje) y `RewardToast` pasan a `@pockai/ui`.
+- **Celebrar recompensas**: Android celebra `reward:received` por tiempo real y vuelve a pedir el
+  saldo.
+- **Iniciativa**: `createInitiativeLoop` pasa a `@pockai/ui`. Android pregunta al abrir o volver a la
+  app y cuando lo dice el servidor, y enseña la frase en Inicio. Los niveles ya estaban en Mente.
+- **Visitantes**:
+  - Android carga al entrar los pockais que ya están de visita en tu hábitat; los que llegan o se van
+    ya llegaban por tiempo real.
+  - `VisitDialog` (hablar con el Pockai del amigo durante la visita) pasa a `@pockai/ui` con el
+    puerto `interact` y Android lo enseña en Visitas.
+- **Sonido**: `SoundSettingsView` en `@pockai/ui`. El escritorio la usa en Ajustes › Sonido.
+  Android la tiene en Cuenta, solo con efectos e interfaz (la voz de la mascota y el ambiente no van
+  en el APK) y con una muestra de efectos que sí va.
+
+Quedan fuera:
+- el botón «Curar» de la app Kotlin, un atajo para usar una medicina (en Android se hace desde
+  Mochila, y el escritorio tampoco lo tiene);
+- la vinculación por código.
+
+Verificado:
+- **Android, en el emulador con un backend de pega:**
+  - la frase de bienvenida en Inicio;
+  - canjear un código (uno que no vale y uno que sí): la celebración «+50 monedas, 1 × cofre de
+    Oro» y el saldo al día;
+  - apagar los sonidos de interfaz y que siga apagado tras reiniciar.
+- **Escritorio, en el modo demo** (ahora con el código REGALO):
+  - canjear un código;
+  - empezar una visita y hablar con el Pockai de Marta (la respuesta y las opciones).
+- 441 tests; `svelte-check` sin errores nuevos en las dos apps.
+
+**Sin verificar:**
+- En Android: los visitantes en tu hábitat y hablar con el Pockai del amigo (el backend de pega no
+  tiene amigos, visitas ni hábitat; los componentes son los del escritorio).
+- Que la celebración entre con su animación en el escritorio: el panel del navegador estaba oculto
+  y no avanza las animaciones. En el emulador entra bien.

@@ -764,6 +764,12 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/habitat\/catalog$/, () => habitats],
   ['GET', /^\/habitat\/buffs$/, () => ({ petId: 'p-1', activeBuffs: { energy_recovery_boost: 0.15, happiness_decay_reduction: 0.05 }, itemCount: 2 })],
   ['GET', /^\/habitat\/visitors$/, () => ({ visitors: [] })],
+  // Canjear código: REGALO da 50 monedas y un cofre de oro; el resto no vale.
+  ['POST', /^\/vouchers\/redeem$/, ({ body }) => {
+    if (String(body.code).toUpperCase() !== 'REGALO') throw fail(404, 'Código no encontrado');
+    user.coins += 50;
+    return { source: 'voucher', redemptionId: uid('r'), code: 'REGALO', granted: { coins: 50, gems: 0, proDays: 0, proUntil: null, chests: [{ type: 'gold', qty: 1 }], accessories: [] } };
+  }],
   ['POST', /^\/pets\/[^/]+\/initiative$/, ({ body }) => {
     const phrase = body?.back ? TALK_DEMO[0] : TALK_DEMO[1 + (talkTurn++ % (TALK_DEMO.length - 1))];
     return { phrase, retryInMs: 60_000, level: talkLevel, feeling: 'content' };
