@@ -6,6 +6,7 @@
   import BondingScreen from './screens/BondingScreen.svelte';
   import ChestsScreen from './screens/ChestsScreen.svelte';
   import CookingScreen from './screens/CookingScreen.svelte';
+  import MinigamesScreen from './screens/MinigamesScreen.svelte';
   import MissionsScreen from './screens/MissionsScreen.svelte';
   import RaidScreen from './screens/RaidScreen.svelte';
   import SeasonScreen from './screens/SeasonScreen.svelte';
@@ -30,9 +31,10 @@
   /** Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión). */
   let petSection = $state<'home' | 'bond' | 'eggs' | 'wardrobe'>('home');
   let progressSection = $state<'missions' | 'season'>('missions');
-  let playSection = $state<'arena' | 'raid' | 'tournament' | 'training' | 'cooking'>('arena');
+  let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking'>('games');
   let shopSection = $state<'store' | 'chests'>('store');
   const PLAY_SECTIONS = [
+    { value: 'games', label: 'Minijuegos', icon: 'gamepad' },
     { value: 'arena', label: 'Arena', icon: 'medal' },
     { value: 'raid', label: 'Raid', icon: 'swords' },
     { value: 'tournament', label: 'Torneo', icon: 'trophy' },
@@ -224,7 +226,9 @@
         {/if}
       {:else if tab === 'play'}
         <Segmented variant="pills" label="Sección de Jugar" value={playSection} options={PLAY_SECTIONS} on:change={(e) => (playSection = e.detail)} />
-        {#if playSection === 'arena'}
+        {#if playSection === 'games'}
+          <MinigamesScreen {pet} />
+        {:else if playSection === 'arena'}
           <ArenaScreen {pet} />
         {:else if playSection === 'raid'}
           <RaidScreen {pet} />

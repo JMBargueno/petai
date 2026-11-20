@@ -6,8 +6,8 @@
    */
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { mountMinigame, type MountedMinigame, type MinigamePet, type PackedEntry, type GameVariant } from '@pockai/minigames';
-  import { petSheetUrls } from '../lib/sprites';
-  import { sfx, sfxLoop, sfxStopLoop } from '../lib/audio';
+  import { petSheetUrls } from '@pockai/scene/sprites';
+  import { uiLoop, uiSfx, uiStopLoop } from './sound';
 
   export let gameId: string;
   export let seed: number;
@@ -45,8 +45,8 @@
       reducedMotion,
       pet: gamePet(),
       resolvePetSheet: (p) => petSheetUrls(p.species, p.stage, p.pattern),
-      // El motor de sonido de la ventana, con los ajustes del usuario (spec 40).
-      sound: { play: sfx, loop: sfxLoop, stopLoop: sfxStopLoop },
+      // El motor de sonido que haya instalado la app (spec 40); sin él, el juego va en silencio.
+      sound: { play: uiSfx, loop: uiLoop, stopLoop: uiStopLoop },
       onEvent: (e) => {
         if (e.type === 'finished') dispatch('finish', { score: e.score, ticks: e.ticks, log: e.log });
         else if (e.type === 'error') dispatch('error', { message: e.message });

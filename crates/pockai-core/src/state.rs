@@ -501,6 +501,14 @@ impl Core {
                 }
             }
             ["training", "start"] | ["cooking", "start"] => self.refresh_later(&[Slice::Pets]),
+            // Minijuegos: empezar gasta energía; terminar trae la mascota y paga monedas y, a veces, un objeto.
+            ["minigames", _, "start"] => self.refresh_later(&[Slice::Pets]),
+            ["minigames", "sessions", _, "finish"] => {
+                if let Some(pet) = value.get("pet").filter(|p| pet_id(p).is_some()) {
+                    self.apply_pet(pet.clone(), false, ChangeSource::Server);
+                }
+                self.refresh_later(&[Slice::User, Slice::Inventory]);
+            }
             // Servir un plato paga monedas (y su buff es de combate, no de la mascota).
             ["cooking", "submit"] => self.refresh_later(&[Slice::User]),
             ["tournament", "enter"] => self.refresh_later(&[Slice::User]),

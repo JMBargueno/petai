@@ -457,6 +457,31 @@ async fn atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_mascotas_saldo_e_inventa
 }
 
 #[tokio::test]
+async fn terminar_un_minijuego_aplica_la_mascota_y_refresca_saldo_e_inventario() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 70 })).await;
+    get(&server, "/v1/inventory", json!([{ "itemId": "manzana", "quantity": 3 }])).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/minigames/sessions/s1/finish"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "score": 40, "pet": { "id": "p1", "happiness": 90 } })))
+        .mount(&server)
+        .await;
+
+    core.perform(Action::FinishMinigame { session_id: "s1".into(), body: json!({ "score": 40 }) }).await.unwrap();
+    settle().await;
+
+    let state = core.state_snapshot();
+    assert_eq!(state.pets[0]["happiness"], 90);
+    assert_eq!(state.user["coins"], 70);
+    assert_eq!(state.inventory[0]["quantity"], 3);
+}
+
+#[tokio::test]
 async fn cocinar_pone_al_dia_la_energia_y_servir_el_saldo() {
     use pockai_core::Action;
     let server = MockServer::start().await;

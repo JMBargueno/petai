@@ -43,6 +43,8 @@ export { default as EggSprite } from './EggSprite.svelte';
 export { default as PetMiniAvatar } from './PetMiniAvatar.svelte';
 export { default as HatchView } from './HatchView.svelte';
 export { default as MissionsView } from './MissionsView.svelte';
+export { default as MinigameHost } from './MinigameHost.svelte';
+export { default as MinigamesView } from './MinigamesView.svelte';
 export { default as PetHomeView } from './PetHomeView.svelte';
 export { default as RaidView } from './RaidView.svelte';
 export { default as RedeemCodeCard } from './RedeemCodeCard.svelte';

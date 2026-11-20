@@ -22,7 +22,7 @@ const UI_SOUNDS = {
 onUiFeedback((kind) => sfx(UI_SOUNDS[kind]));
 
 // Las pantallas que son un juego (la Cocina…) piden sus efectos por id: suenan con el motor del escritorio.
-setUiSound({ sfx, loop: (id) => sfxLoop(id), stopLoop: (id) => sfxStopLoop(id) });
+setUiSound({ sfx, loop: sfxLoop, stopLoop: sfxStopLoop });
 
 const app = mount(App, {
   target: document.getElementById('app')!,

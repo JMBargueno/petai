@@ -203,6 +203,9 @@ importers:
       '@pockai/client':
         specifier: workspace:*
         version: link:../../shared/client
+      '@pockai/minigames':
+        specifier: workspace:*
+        version: link:../../shared/minigames
       '@pockai/ui':
         specifier: workspace:*
         version: link:../../shared/ui
@@ -597,6 +600,9 @@ importers:
       '@fontsource/bowlby-one':
         specifier: ^5.3.0
         version: 5.3.0
+      '@pockai/minigames':
+        specifier: workspace:*
+        version: link:../minigames
       '@pockai/scene':
         specifier: workspace:*
         version: link:../scene
