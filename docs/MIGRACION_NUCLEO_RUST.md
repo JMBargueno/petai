@@ -48,10 +48,12 @@ fases de abajo y en las secciones de verificación del final.
    sala del amigo y hábitat del clan; en Android, la casa del amigo sigue siendo la cabecera
    sencilla). Falta en Android el clima local.
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
-4. **Plugins nativos** (4.7, 4.8): sesión cifrada con el Keystore en Android (hoy es un fichero
-   privado de la app) y sincronización en segundo plano con avisos de cuidado.
+4. **Plugins nativos** (4.7, 4.8): hechos en Android (sesión cifrada con el Keystore y avisos de
+   cuidado con WorkManager; ver «Plugins nativos de Android»). Falta probarlos con sesión en el
+   emulador y lo de iOS (`BGAppRefreshTask`).
 5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
-   acordada: que la app de Tauri tenga portados el widget y la sincronización. Aún no se cumple.
+   acordada: que la app de Tauri tenga portados el widget y la sincronización. La sincronización ya
+   está; falta el widget.
 6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
 
 ### Pantallas que quedan, por tipo (2026-11-20)
@@ -178,8 +180,8 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 - 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Armario, Arena, Cocina, Minijuegos, Aventura, Perfil y el motor de sprites (`@pockai/scene/sprites`, `PetMiniAvatar`, `EggSprite`, `ReplayViewer`) en rama. Quedan las pestañas de la tabla «Pantallas que quedan, por tipo»
 - 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda › Cofres, Mascota › Armario y el huevo de sprites, sin probar en él. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
-- 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
-- ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
+- ✅ 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero de la app cifrado con el Keystore (`SealedFileStore` + `PockaiKeystore`), que adopta el fichero en claro de antes
+- 🟡 4.8 Avisos de cuidado en segundo plano: en Android, WorkManager dentro de `tauri-plugin-pockai` (no un plugin aparte) con el mismo núcleo de la app. Falta `BGAppRefreshTask` en iOS
 - 🟡 4.9 CI: job `android-tauri` que compila el APK de depuración. Falta todo lo de iOS
 - ⬜ 4.10 Borrar `mobile/android`, su job de CI y las referencias en docs, specs y skills
 
@@ -931,3 +933,56 @@ del escritorio; compilan escritorio y UI de Android; `svelte-check` sin errores 
 
 **Sin verificar:** nada de esto en el emulador (que el diorama 2D y los pockais se dibujen en el
 WebView). En Android, el cielo del clan sigue la hora sin clima local.
+
+### Plugins nativos de Android: sesión cifrada y avisos de cuidado (2026-11-20)
+
+- **Sesión cifrada (4.7)**. En el núcleo, `Sealer` (cifrar y descifrar; lo pone la plataforma) y
+  `SealedFileStore`, que guarda la sesión en `session.sealed`:
+  - Al abrirse por primera vez adopta el `session.json` en claro de antes: lo cifra y, solo si eso
+    sale bien, lo borra.
+  - Si no se puede cifrar, la sesión vive solo en memoria y nunca se escribe en claro. Con un par
+    nuevo, el `session.json` viejo se borra igualmente: su refresh token ya está canjeado y
+    reutilizarlo cerraría todas las sesiones.
+  - Si no se puede descifrar (clave perdida al reinstalar o al restaurar una copia en otro
+    dispositivo), se borra el fichero y se empieza sin sesión.
+  - En Android, el `Sealer` es `PockaiKeystore` (Kotlin, AES-256-GCM con la clave en el Android
+    Keystore, portado de `Crypto.kt` con alias propio).
+- **Avisos de cuidado (4.8)**. Van dentro de `tauri-plugin-pockai`, no en un plugin aparte:
+  - `CareSync` (Kotlin) programa un trabajo periódico de WorkManager (30 min, con red).
+  - El trabajo carga la librería de la app y llama al núcleo por JNI
+    (`Java_app_pockai_core_CareSync_check`). `Core::care_check` pide las mascotas y devuelve el aviso
+    más urgente de la mascota activa con la regla de siempre (`pet_needs`). Kotlin solo muestra la
+    notificación, como mucho una cada 4 horas.
+  - El widget de la app Kotlin no se ha portado.
+- **Un solo núcleo por proceso**. Lo crea quien llegue antes (la app o el trabajo) y el otro lo
+  reutiliza. Con dos, cada uno renovaría con su copia del refresh token.
+- **JNI directo**, no `run_mobile_plugin`: el núcleo necesita el Keystore al construirse, dentro de
+  `setup`, y el trabajo corre sin Tauri.
+  - Las clases se buscan una vez, con el cargador de la actividad o desde el hilo de Java del
+    trabajo, y se guardan como referencias globales.
+  - La entrada JNI va con `catch_unwind`.
+  - La librería `android/` se enlaza con `.android_path("android")` en `build.rs`. Rust la programa
+    al arrancar con la carpeta de datos, la URL y el nombre de la librería
+    (`PockaiConfig::android_library`).
+- **Permiso de notificaciones**: la UI de Android lo pide una vez al entrar (`notifications.ts`, con
+  `@tauri-apps/plugin-notification`).
+
+Verificado:
+- Tests: 4 de `SealedFileStore` (con un cifrado de pega) y el de `care_check` sin sesión; 61 del
+  núcleo en total.
+- Compilación: compila para `x86_64-linux-android` y el APK de depuración se construye en local.
+  `Java_app_pockai_core_CareSync_check` sale exportado en la `.so`.
+- En el emulador, sin backend y con tokens falsos:
+  - Un `session.json` en claro puesto con `run-as` pasa a `session.sealed` (base64) y desaparece.
+  - Tras reiniciar, el fichero cifrado sigue intacto (se pudo abrir).
+  - El trabajo se programa al arrancar.
+  - Su primera ejecución con la app abierta devuelve `RETRY` (hay sesión, falla la red) sin errores.
+  - Una ejecución en un proceso frío, con la app muerta, carga la librería, abre la sesión por JNI y
+    devuelve `RETRY` sin errores.
+
+**Sin verificar:**
+- Con backend y sesión real: que se renueve el token desde el trabajo y que salga la notificación
+  (y su icono).
+- El diálogo del permiso.
+- Una compilación de *release* con R8 (`consumer-rules.pro` conserva las clases que usa JNI).
+- iOS (`BGAppRefreshTask`).

@@ -8,13 +8,16 @@
 //!
 //! Los tipos de las cargas se definen en `pockai_core::contract` y de ahí se generan los de la UI.
 
+#[cfg(target_os = "android")]
+mod android;
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
 use pockai_core::{
     Action, ActionError, ApiRequest, ApiResponse, AppState, Core, CoreConfig, CoreEvent, LoadOptions, LoadOutcome,
-    MaintenanceEvent, Query, RealtimeStatus, SecretStore, SessionEvent, SessionState, Slice, SseEvent,
+    MaintenanceEvent, Query, RealtimeStatus, SessionEvent, SessionState, Slice, SseEvent,
 };
 use serde_json::{Map, Value};
 use tauri::ipc::Channel;
@@ -34,6 +37,9 @@ pub const EVENT_NOTICE: &str = "core://notice";
 pub struct PockaiConfig {
     /// URL del backend, sin `/v1`.
     pub base_url: String,
+    /// Nombre de la librería de Rust de la app (`env!("CARGO_CRATE_NAME")` en su crate): en Android,
+    /// el trabajo en segundo plano la carga para despertar al núcleo con la app cerrada.
+    pub android_library: Option<&'static str>,
 }
 
 /// Chats en curso, por id: permite cancelar el flujo desde la UI.
@@ -188,6 +194,7 @@ fn forward<R: Runtime>(app: &AppHandle<R>, event: CoreEvent) {
 }
 
 /// La configuración del núcleo según dónde corre la app.
+#[cfg_attr(target_os = "android", allow(dead_code))]
 fn core_config(base_url: String, data_dir: Option<PathBuf>) -> CoreConfig {
     if cfg!(target_os = "android") {
         CoreConfig::mobile(base_url, "android", data_dir)
@@ -198,18 +205,19 @@ fn core_config(base_url: String, data_dir: Option<PathBuf>) -> CoreConfig {
     }
 }
 
-/// Dónde se guarda la sesión: el llavero del sistema, salvo en Android (fichero privado de la app).
+/// El núcleo, con la sesión en el llavero del sistema.
 #[cfg(not(target_os = "android"))]
-fn secret_store(cfg: &CoreConfig) -> Box<dyn SecretStore> {
-    Box::new(pockai_core::KeyringStore::new(&cfg.base_url))
+fn make_core(config: PockaiConfig, data_dir: Option<PathBuf>) -> Core {
+    let cfg = core_config(config.base_url, data_dir);
+    let secrets: Box<dyn pockai_core::SecretStore> = Box::new(pockai_core::KeyringStore::new(&cfg.base_url));
+    Core::new(cfg, secrets)
 }
 
+/// En Android, la sesión va en un fichero de la app cifrado con el Keystore, y el núcleo se comparte
+/// con el trabajo en segundo plano de los avisos de cuidado (ver `android`).
 #[cfg(target_os = "android")]
-fn secret_store(cfg: &CoreConfig) -> Box<dyn SecretStore> {
-    match &cfg.data_dir {
-        Some(dir) => Box::new(pockai_core::FileStore::new(dir.clone())),
-        None => Box::new(pockai_core::MemoryStore::default()),
-    }
+fn make_core(config: PockaiConfig, data_dir: Option<PathBuf>) -> Core {
+    android::core_for_app(config.base_url, data_dir, config.android_library)
 }
 
 pub fn init<R: Runtime>(config: PockaiConfig) -> TauriPlugin<R> {
@@ -237,9 +245,7 @@ pub fn init<R: Runtime>(config: PockaiConfig) -> TauriPlugin<R> {
         ])
         .setup(move |app, _api| {
             let data_dir = app.path().app_config_dir().ok();
-            let cfg = core_config(config.base_url, data_dir);
-            let secrets = secret_store(&cfg);
-            let core = Core::new(cfg, secrets);
+            let core = make_core(config, data_dir);
 
             // Todo lo que anuncia el núcleo llega a la UI como evento de Tauri.
             let mut events = core.subscribe();

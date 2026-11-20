@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Avisos de cuidado con la app cerrada (se pide en tiempo de ejecución desde Android 13). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+</manifest>
