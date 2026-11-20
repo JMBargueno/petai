@@ -197,8 +197,8 @@ const missions = {
 };
 
 let chests = [
-  { id: 'ch-1', type: 'bronze', source: 'daily_missions', createdAt: iso(-DAY) },
-  { id: 'ch-2', type: 'gold', source: 'season_pass', createdAt: iso(-2 * DAY) },
+  { id: 'ch-daily', type: 'bronze', source: 'daily_missions', createdAt: iso(-DAY) },
+  { id: 'ch-season', type: 'gold', source: 'season_pass', createdAt: iso(-2 * DAY) },
 ];
 const drops = [
   { itemId: 'apple', name: 'Manzana Crujiente', qty: 3, tier: 'common', isNew: false },

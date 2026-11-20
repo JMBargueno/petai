@@ -480,6 +480,18 @@ impl Core {
             }
             ["eggs", "buy"] => self.refresh_later(&[Slice::Eggs, Slice::User]),
             ["shop", "buy"] => self.refresh_later(&[Slice::Inventory, Slice::User]),
+            // Combates y cofres: la respuesta es el resultado, no la mascota ni el saldo. Gastan
+            // energía y dan premios (monedas, gemas, objetos), así que se vuelven a pedir.
+            ["raid", "attack"] => self.refresh_later(&[Slice::Pets, Slice::User]),
+            // Cada piso de la mazmorra es un turno: solo cambia algo cuando la mazmorra termina.
+            ["training", "submit"] => {
+                if value.get("status").and_then(Value::as_str) != Some("active") {
+                    self.refresh_later(&[Slice::Pets, Slice::User]);
+                }
+            }
+            ["training", "start"] => self.refresh_later(&[Slice::Pets]),
+            ["tournament", "enter"] => self.refresh_later(&[Slice::User]),
+            ["chests", "open"] | ["chests", "purchase"] => self.refresh_later(&[Slice::User, Slice::Inventory]),
             _ => {}
         }
     }
