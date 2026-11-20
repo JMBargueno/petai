@@ -20,6 +20,9 @@
   --state-layer: 0%;
   --ease-standard: var(--ease-out);
 
+  /* Tarjetas */
+  --card-radius: var(--radius-cards);
+
   /* Hojas y diálogos */
   --sheet-radius: var(--radius-3xl);
   --dialog-radius: var(--radius-3xl);

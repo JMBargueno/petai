@@ -13,6 +13,9 @@
   import ProgressBar from './ProgressBar.svelte';
   import Segmented from './Segmented.svelte';
   import Switch from './Switch.svelte';
+  import FeatureHeader from './FeatureHeader.svelte';
+  import SectionHeader from './SectionHeader.svelte';
+  import TileButton from './TileButton.svelte';
   import { resolvedAppearance } from './appearance';
   import { PLATFORMS, getPlatform } from './platform';
 
@@ -22,6 +25,7 @@
   let off = false;
   let sheet = false;
   let confirm = false;
+  let tileFire = true;
   const platform = getPlatform();
 
   function link(p: string) {
@@ -42,7 +46,28 @@
     {/each}
   </nav>
 
+  <FeatureHeader title="Arena" sub="Combates por turnos contra otros Pockais" icon="medal" />
+
   <Card title="Apariencia" icon="sun"><AppearancePicker /></Card>
+
+  <SectionHeader title="Cuidados" icon="heart" count={3} />
+  <Card variant="hero" title="Tu Pockai" icon="paw" hint="Tarjeta destacada con el color de la sección.">
+    <div class="ui-tiles">
+      <TileButton icon="flame" label="Fuego" color="var(--elem-fire)" bind:selected={tileFire} on:click={() => (tileFire = !tileFire)} />
+      <TileButton icon="water" label="Agua" color="var(--elem-water)" sub="Nv. 3" />
+      <TileButton icon="leaf" label="Planta" color="var(--elem-plant)" disabled />
+    </div>
+  </Card>
+
+  <Card title="Formulario" icon="note">
+    <label class="form-group">
+      <span class="form-label">Nombre</span>
+      <input class="input" placeholder="Ignis" />
+    </label>
+    <Notice tone="ok">Guardado.</Notice>
+    <Notice tone="warning">Le queda poca energía.</Notice>
+    <Notice tone="error" dismissible>No se pudo conectar.</Notice>
+  </Card>
 
   <Card title="Botones" icon="star">
     <div class="ui-gallery__row">

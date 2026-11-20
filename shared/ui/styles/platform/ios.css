@@ -31,6 +31,8 @@
   --switch-thumb-on: 27px;
 
   --nav-h: 49px;
+
+  --card-radius: 12px;
 }
 
 /* Botones: atenuar al pulsar, sin elevación. */
@@ -223,6 +225,112 @@
 }
 :root[data-platform='ios'] .ui-list > .ui-row:active {
   background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+/* Tarjetas: grupo de iOS, liso, de esquinas 12, sin contorno ni sombra de pegatina. */
+:root[data-platform='ios'] .ui-card {
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--card-radius);
+  box-shadow: none;
+}
+:root[data-platform='ios'] .ui-card--pop {
+  box-shadow: var(--shadow-1);
+}
+:root[data-platform='ios'] .ui-card--hero {
+  background: color-mix(in srgb, var(--view-tint) 18%, var(--surface));
+  box-shadow: none;
+}
+:root[data-platform='ios'] .ui-card__title {
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-bold);
+}
+/* Una lista dentro de una tarjeta ya es el grupo: sin doble fondo, a todo lo ancho de la tarjeta. */
+:root[data-platform='ios'] .ui-card .ui-list {
+  margin-inline: calc(-1 * var(--space-4));
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Cabecera de sección: rótulo del grupo, pequeño, gris y alineado con el contenido de la lista. */
+:root[data-platform='ios'] .ui-head {
+  min-height: 0;
+  padding: var(--space-2) var(--list-inset) var(--space-1);
+}
+:root[data-platform='ios'] .ui-head .label-caps {
+  color: var(--ink-muted);
+  font-size: var(--text-label);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* Cabecera de funcionalidad: título grande (Large Title) e icono de esquinas suaves, sin pegatina. */
+:root[data-platform='ios'] .ui-feature__icon {
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: none;
+}
+:root[data-platform='ios'] .ui-feature__title {
+  font-family: var(--font-ui);
+  font-size: var(--text-heading-sm);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+:root[data-platform='ios'] .ui-feature__sub {
+  font-size: var(--text-body);
+}
+
+/* Avisos: bloque liso de esquinas 12, sin borde. */
+:root[data-platform='ios'] .ui-notice {
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 0;
+  border-radius: 12px;
+  font-size: var(--text-body);
+}
+
+/* El botón de cerrar crece hasta la zona táctil sin estirar el aviso. */
+:root[data-platform='ios'] .ui-notice__end {
+  align-self: center;
+  margin-block: calc(var(--space-3) * -1);
+}
+
+/* Baldosas: sin borde ni elevación; se atenúan al pulsar; la elegida lleva un anillo de su color. */
+:root[data-platform='ios'] .ui-tile {
+  min-height: 84px;
+  border: 0;
+  border-radius: 12px;
+  transition: opacity var(--dur-1) var(--ease-standard);
+}
+:root[data-platform='ios'] .ui-tile:hover:not(:disabled) {
+  transform: none;
+}
+:root[data-platform='ios'] .ui-tile:active:not(:disabled) {
+  transform: none;
+  opacity: var(--press-opacity);
+}
+:root[data-platform='ios'] .ui-tile--selected {
+  box-shadow: inset 0 0 0 2px var(--tile-c, var(--accent));
+}
+
+/* Campos: relleno gris, sin borde, esquinas 10. */
+:root[data-platform='ios'] .input,
+:root[data-platform='ios'] .select,
+:root[data-platform='ios'] .textarea {
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 7%, var(--surface));
+}
+:root[data-platform='ios'] .input:focus,
+:root[data-platform='ios'] .select:focus,
+:root[data-platform='ios'] .textarea:focus {
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 @keyframes ui-ios-sheet {
