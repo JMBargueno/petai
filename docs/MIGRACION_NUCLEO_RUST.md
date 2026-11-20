@@ -42,7 +42,7 @@ fases de abajo y en las secciones de verificación del final.
 1. **Fusionar el PR 211.**
 2. **Más pantallas a la biblioteca** (4.4 y 4.5). Quedan las pestañas del escritorio que cargan sus
    datos: Cofres, Entrenamiento, Torneo, Raid, Armario, Mente, Arena, Cocina, Amigos, Visitas,
-   Clanes, Perfil, Minijuegos, Aventura, Hábitat y Chat. Las cinco primeras son pequeñas y siguen
+   Clanes, Perfil, Minijuegos, Aventura, Hábitat y Chat. Las cuatro primeras son pequeñas y siguen
    el patrón de abajo sin más. Las demás dependen del motor de sprites, de la escena o del audio
    del escritorio (`lib/sprites`, `@pockai/scene`, `lib/audio`): antes hay que decidir si ese
    motor se comparte o si cada app pone el suyo en un hueco, como el huevo de Eclosión.
