@@ -1,21 +1,36 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AccountView, BackpackView, Button, Card, CurrencyPill, HatchView, Ico, Notice, PetHomeView, ShopView } from '@pockai/ui';
+  import { AccountView, BackpackView, Button, Card, CurrencyPill, HatchView, Ico, Notice, PetHomeView, Segmented, ShopView } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
+  import BondingScreen from './screens/BondingScreen.svelte';
+  import MissionsScreen from './screens/MissionsScreen.svelte';
+  import SeasonScreen from './screens/SeasonScreen.svelte';
   import { act, activePet, failureText, hasCore, offline, phase, signIn, signOut, start, state as core } from './core';
 
-  type Tab = 'pet' | 'eggs' | 'backpack' | 'shop' | 'account';
+  type Tab = 'pet' | 'backpack' | 'shop' | 'progress' | 'account';
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'pet', label: 'Mascota', icon: 'paw' },
-    { id: 'eggs', label: 'Huevos', icon: 'egg' },
     { id: 'backpack', label: 'Mochila', icon: 'gift' },
     { id: 'shop', label: 'Tienda', icon: 'shop' },
+    { id: 'progress', label: 'Progreso', icon: 'trophy' },
     { id: 'account', label: 'Cuenta', icon: 'user' },
   ];
 
   let email = $state('');
   let password = $state('');
   let tab = $state<Tab>('pet');
+  /** Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión). */
+  let petSection = $state<'home' | 'bond' | 'eggs'>('home');
+  let progressSection = $state<'missions' | 'season'>('missions');
+  const PET_SECTIONS = [
+    { value: 'home', label: 'Inicio', icon: 'home' },
+    { value: 'bond', label: 'Vínculo', icon: 'bond' },
+    { value: 'eggs', label: 'Huevos', icon: 'egg' },
+  ];
+  const PROGRESS_SECTIONS = [
+    { value: 'missions', label: 'Misiones', icon: 'target' },
+    { value: 'season', label: 'Temporada', icon: 'trophy' },
+  ];
   /** Qué se está haciendo ahora (`buy:<id>`, `use:<id>`, `sleep`…), o `null`. Bloquea los botones. */
   let busy = $state<string | null>(null);
   let message = $state('');
@@ -74,7 +89,8 @@
 
   /** A dónde lleva cada «ir a…» de las vistas compartidas. Lo que aún no existe aquí se queda en Mascota. */
   function go(dest: string, sub?: string) {
-    tab = dest === 'shop' ? 'shop' : sub === 'hatch' ? 'eggs' : 'pet';
+    tab = dest === 'shop' ? 'shop' : 'pet';
+    if (tab === 'pet') petSection = sub === 'hatch' ? 'eggs' : 'home';
   }
 </script>
 
@@ -124,6 +140,9 @@
 
     <div class="screen">
       {#if tab === 'pet'}
+        <Segmented variant="pills" label="Sección de Mascota" value={petSection} options={PET_SECTIONS} on:change={(e) => (petSection = e.detail)} />
+      {/if}
+      {#if tab === 'pet' && petSection === 'home'}
         <!-- La misma ficha que el escritorio. Aquí la mascota no sale de su hábitat: sin «A casa». -->
         <PetHomeView
           {pet}
@@ -141,7 +160,9 @@
           on:selectPet={(e) => run('selectPet', 'No se pudo cambiar de mascota', () => stateSelectPet(String(e.detail)))}
           on:go={(e) => go(e.detail.dest, e.detail.sub)}
         />
-      {:else if tab === 'eggs'}
+      {:else if tab === 'pet' && petSection === 'bond'}
+        <BondingScreen petId={pet?.id ?? null} />
+      {:else if tab === 'pet'}
         <HatchView
           eggs={$core.eggs}
           bind:eggNames
@@ -166,6 +187,13 @@
           on:use={(e) => pet && run(`use:${e.detail}`, 'No se pudo usar el objeto', () => act({ type: 'useItem', petId: pet.id, itemId: e.detail }))}
           on:go={() => (tab = 'shop')}
         />
+      {:else if tab === 'progress'}
+        <Segmented variant="pills" label="Sección de Progreso" value={progressSection} options={PROGRESS_SECTIONS} on:change={(e) => (progressSection = e.detail)} />
+        {#if progressSection === 'missions'}
+          <MissionsScreen />
+        {:else}
+          <SeasonScreen {coins} gems={Number($core.user?.gems ?? 0)} />
+        {/if}
       {:else if tab === 'account'}
         <AccountView user={$core.user} on:logout={leave} />
       {:else}

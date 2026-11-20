@@ -76,8 +76,8 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta y Eclosión, usadas por el escritorio y por Android. Lo siguiente son las pantallas que hablan con el servidor por su cuenta (Vínculo, Mente, Armario…), que hay que partir una a una
-- 🟡 4.5 `apps/android`: UI Svelte con pestañas (Mascota, Huevos, Mochila, Tienda, Cuenta) hecha con `@pockai/ui`, todas probadas en el emulador. Faltan el resto de pantallas del juego
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo y Temporada, usadas por el escritorio y por Android. Quedan las demás pestañas que cargan sus datos (Cofres, Entrenamiento, Mente, Armario, Social, Arena…), a partir una a una
+- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta. Probadas en el emulador todas menos Vínculo, Misiones, Temporada y la nueva navegación por secciones, que solo compilan. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -351,3 +351,24 @@ y miden 48 px.
 
 Sin verificar: el selector de mascota activa (hace falta una segunda mascota) y el temblor del
 icono del huevo durante la eclosión (el servidor local responde antes de poder verlo).
+
+### Misiones, Vínculo y Temporada compartidas (2026-11-20)
+
+Primeras pestañas que cargaban sus propios datos. El patrón: la pestaña se parte en **vista**
+(biblioteca) y **contenedor** (cada app).
+
+- `MissionsView`, `BondingView` y `SeasonsView` en `@pockai/ui`: reciben los datos, `loading` y
+  `error` por props y avisan con `refresh`, `claim` y `buyPass`. La confirmación de compra del
+  pase es estado de la vista y se cierra sola cuando `busy` vuelve a `false`.
+- En el escritorio, `MissionsTab`, `BondingTab` y `SeasonsTab` conservan nombre y props, pero ya
+  solo cargan con `api.*` y pintan la vista.
+- En Android, los contenedores están en `apps/android/src/screens/` y piden los datos al núcleo
+  con `query`. Tras reclamar una misión o comprar el pase piden `stateRefresh('user')` para que el
+  saldo se ponga al día.
+- La navegación de Android pasa a parecerse a la del escritorio: Mascota tiene secciones (Inicio,
+  Vínculo, Huevos) y hay una pestaña Progreso (Misiones, Temporada). Huevos deja de ser pestaña.
+
+Verificado en el escritorio en modo demo: Vínculo; reclamar una misión («Has recibido 50 monedas ·
+20 XP», pasa a Reclamada); comprar el pase con su confirmación (cuesta 30, tienes 40; se cierra y
+queda «Pase activo»). 438 tests; compilan escritorio y UI de Android. **Sin verificar:** estas tres
+pantallas y la navegación por secciones en el emulador de Android.

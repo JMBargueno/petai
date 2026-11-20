@@ -32,12 +32,16 @@ export { emitUiFeedback, onUiFeedback, type UiFeedback } from './feedback';
 // Piezas de dominio: pantallas enteras que solo pintan. Reciben el estado por props y avisan de lo
 // que el jugador quiere hacer; quien las usa (el contenedor de cada app) habla con el núcleo.
 export { default as AccountView } from './AccountView.svelte';
+export { default as BondingView } from './BondingView.svelte';
 export { default as BackpackView } from './BackpackView.svelte';
 export { default as ItemIcon } from './ItemIcon.svelte';
 export { default as HatchView } from './HatchView.svelte';
+export { default as MissionsView } from './MissionsView.svelte';
 export { default as PetHomeView } from './PetHomeView.svelte';
 export { default as RedeemCodeCard } from './RedeemCodeCard.svelte';
+export { default as SeasonsView } from './SeasonsView.svelte';
 export { default as ShopView } from './ShopView.svelte';
 export { default as SocialAvatar } from './SocialAvatar.svelte';
 export * from './maps';
+export * from './missions';
 export { ITEM_ICON_SIZE, itemIcon } from './items';
