@@ -48,6 +48,7 @@ export { default as ShopView } from './ShopView.svelte';
 export { default as SocialAvatar } from './SocialAvatar.svelte';
 export { default as TournamentView } from './TournamentView.svelte';
 export { default as TrainingView } from './TrainingView.svelte';
+export { default as WardrobeView } from './WardrobeView.svelte';
 export * from './maps';
 export * from './missions';
 export * from './raid';

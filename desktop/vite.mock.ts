@@ -21,6 +21,10 @@ const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 
 const balance = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/balance.json'), 'utf8'));
+// Armario: el catálogo real de prendas; la primera se tiene y está puesta, las de logro bloqueadas.
+const accessoryCatalog = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/accessories.json'), 'utf8'));
+const accessories = (accessoryCatalog.accessories as any[]).map((a, i) => ({ animated: false, fx: null, ...a, state: i === 0 ? 'owned' : a.unlock?.type === 'achievement' ? 'locked' : 'available' }));
+const wornAccessories: Record<string, string | null> = { [accessories[0].slot]: accessories[0].id };
 const habitats = JSON.parse(readFileSync(path.resolve(__dirname, '../shared/game-data/habitats.json'), 'utf8'));
 
 // ── Estado mutable de la sesión demo ─────────────────────────────────────────
@@ -814,6 +818,15 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/seasons\/current$/, () => season],
   ['GET', /^\/seasons\/progress$/, () => seasonProgress],
   ['POST', /^\/seasons\/pass\/purchase$/, () => (spend('gems', season.passPrice), (seasonProgress.hasPass = true), { hasPass: true, gemsRemaining: user.gems })],
+  ['GET', /^\/accessories$/, () => ({ slots: accessoryCatalog.slots, accessories })],
+  ['POST', /^\/accessories\/([^/]+)\/buy$/, ({ m }) => {
+    const a = accessories.find((x) => x.id === m[1]);
+    if (a?.unlock?.type === 'coins' || a?.unlock?.type === 'gems') spend(a.unlock.type, a.unlock.price ?? 0);
+    if (a) a.state = 'owned';
+    return { ok: true };
+  }],
+  ['GET', /^\/pets\/([^/]+)\/accessories$/, ({ m }) => ({ petId: m[1], accessories: wornAccessories })],
+  ['PUT', /^\/pets\/([^/]+)\/accessories$/, ({ m, body }) => (Object.assign(wornAccessories, body), { petId: m[1], accessories: wornAccessories })],
   ['GET', /^\/chests$/, () => ({ chests })],
   ['GET', /^\/chests\/history$/, () => ({ openings: [{ chestId: 'ch-0', type: 'silver', drops, openedAt: iso(-3 * DAY) }], total: 1 })],
   ['POST', /^\/chests\/open$/, ({ body }) => {

@@ -7,3 +7,4 @@ export * from './sprites';
 export * from './AnimationController';
 export * from './asset-loader';
 export * from './asset-cache';
+export * from './accessories';

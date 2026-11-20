@@ -457,6 +457,36 @@ async fn atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_mascotas_saldo_e_inventa
 }
 
 #[tokio::test]
+async fn comprar_y_equipar_una_prenda_ponen_al_dia_saldo_y_mascota() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 4 })).await;
+    get(&server, "/v1/pets", json!([{ "id": "p1", "accessories": { "head": "gorro" } }, { "id": "p2" }])).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/accessories/gorro/buy"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "ok": true })))
+        .mount(&server)
+        .await;
+    Mock::given(method("PUT"))
+        .and(path("/v1/pets/p1/accessories"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "accessories": { "head": "gorro" } })))
+        .mount(&server)
+        .await;
+
+    core.perform(Action::BuyAccessory { id: "gorro".into() }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 4);
+
+    core.perform(Action::EquipAccessories { pet_id: "p1".into(), change: json!({ "head": "gorro" }) }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().pets[0]["accessories"]["head"], "gorro");
+}
+
+#[tokio::test]
 async fn la_mazmorra_solo_pone_al_dia_el_estado_cuando_termina() {
     use pockai_core::Action;
     let server = MockServer::start().await;

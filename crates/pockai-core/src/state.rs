@@ -471,6 +471,10 @@ impl Core {
                 if matches!(segments.get(2), Some(&"feed") | Some(&"heal") | Some(&"use-item")) {
                     self.refresh_later(&[Slice::Inventory]);
                 }
+                // Equipar prendas responde solo con las prendas: la mascota se vuelve a pedir.
+                if segments.get(2) == Some(&"accessories") {
+                    self.refresh_later(&[Slice::Pets]);
+                }
             }
             ["eggs", _, "hatch"] => {
                 if pet_id(&value).is_some() {
@@ -492,6 +496,7 @@ impl Core {
             ["training", "start"] => self.refresh_later(&[Slice::Pets]),
             ["tournament", "enter"] => self.refresh_later(&[Slice::User]),
             ["chests", "open"] | ["chests", "purchase"] => self.refresh_later(&[Slice::User, Slice::Inventory]),
+            ["accessories", _, "buy"] => self.refresh_later(&[Slice::User]),
             _ => {}
         }
     }

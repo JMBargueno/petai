@@ -30,28 +30,40 @@ fases de abajo y en las secciones de verificación del final.
   avisos y 85 acciones y 67 consultas tipadas. Ningún token en el webview.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
-- **Biblioteca `@pockai/ui`, fusionada** (PR 211). Contiene el kit (20 componentes), los estilos
-  y doce pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo,
-  Temporada, y desde la rama `claude/migracion-nucleo-rust-ec3965` Cofres, Raid, Torneo y
-  Entrenamiento. Las usan el escritorio y la app de Android.
-- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos), Mochila, Jugar (Raid,
-  Torneo, Entrenar), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta (desde el
-  nombre de la cabecera). Jugar y Cofres aún no se han probado en el emulador.
+- **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
+  estilos y trece pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
+  Armario. Las usan el escritorio y la app de Android.
+- **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
+  `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
+- **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario), Mochila, Jugar
+  (Raid, Torneo, Entrenar), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta (desde
+  el nombre de la cabecera). Jugar, Cofres y Armario aún no se han probado en el emulador.
 
 ### Qué falta, por orden
 
-1. **Probar Jugar y Cofres en el emulador** y fusionar su rama.
-2. **Más pantallas a la biblioteca** (4.4 y 4.5). Quedan las pestañas del escritorio que cargan sus
-   datos: Armario, Mente, Arena, Cocina, Amigos, Visitas, Clanes, Perfil, Minijuegos, Aventura,
-   Hábitat y Chat. Dependen del motor de sprites, de la escena o del audio del escritorio
-   (`lib/sprites`, `@pockai/scene`, `lib/audio`): antes hay que decidir si ese motor se comparte
-   o si cada app pone el suyo en un hueco, como el huevo de Eclosión.
+1. **Probar en el emulador** Jugar, Cofres, Armario y el huevo de sprites.
+2. **Más pantallas a la biblioteca** (4.4 y 4.5), por tramos según la tabla de abajo. Decidido:
+   el motor de sprites se comparte (no un hueco por app).
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
 4. **Plugins nativos** (4.7, 4.8): sesión cifrada con el Keystore en Android (hoy es un fichero
    privado de la app) y sincronización en segundo plano con avisos de cuidado.
 5. **Borrar la app Kotlin** (`mobile/android`), su job de CI y sus referencias (4.10). Condición
    acordada: que la app de Tauri tenga portados el widget y la sincronización. Aún no se cumple.
 6. **Fase 5**: Live Activity / Dynamic Island, WidgetKit y su equivalente en Android. Sin empezar.
+
+### Pantallas que quedan, por tipo (2026-11-20)
+
+| Tipo | Pantallas | Qué las ata al escritorio | Cómo se mueven |
+|---|---|---|---|
+| (a) Sprites, datos estáticos y sonido | Arena, Cocina, Minijuegos, Aventura | `ReplayViewer` (sprites, `replay.ts`, `speciesPalette`, `visitorSeed`); `lib/audio`; `MinigameHost`; `StorySceneView` (`@pockai/scene`, `environmental`) | Patrón de siempre. Los auxiliares puros pasan con la vista; el sonido sale por eventos (`onUiFeedback`) y lo pone cada app |
+| (b) Estado de pantalla alimentado por tiempo real | Amigos, Visitas, Clanes | `visitors.ts`, `clan-store.ts`, `activeVisit`, `visitTravel` (se quedaron en la UI en la fase 3) | Antes, decidir si ese estado sube al núcleo; sin eso, Android no tiene de dónde leerlo |
+| (c) Funciones del escritorio | Chat/IA, Mente, partes de Hábitat | `hermesLocal`, `aiCli`, `deskContext`, `desktopSkillsStore`, `initiative`, `brain`, arrastre de ventana | No van enteras: frontera de la spec 43. El móvil tendrá su contenedor o una vista reducida con huecos |
+| (d) Perfil | Perfil (`features/profile`) | Solo `api` y `profile-format` | Pequeña: patrón de siempre |
+
+Pendiente aparte: el motor de sprites (`@pockai/scene/sprites`) y el registro de la escena PixiJS
+(`@pockai/scene`, `assets.ts`) descubren las mismas hojas cada uno a su manera. Unificarlos es
+otra tarea.
 
 ### Cómo se parte una pantalla
 
@@ -63,8 +75,9 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
   va a la biblioteca con `data`, `loading`, `error` y eventos (`refresh`, `claim`…). El
   contenedor del escritorio conserva nombre y props y llama a `api.*`; el de Android va en
   `apps/android/src/screens/` y usa `query` y `perform` de `@pockai/client`.
-- **Si tiene algo propio de una plataforma** (la casita arrastrable de Inicio, el huevo de sprites
-  de Eclosión): la vista deja un hueco (`slot`) y cada app lo rellena.
+- **Si tiene algo propio de una plataforma** (la casita arrastrable de Inicio): la vista deja un
+  hueco (`slot`) y cada app lo rellena. Los sprites ya no cuentan como propios: están en
+  `@pockai/scene/sprites` y la vista los usa directamente (el huevo de Eclosión).
 - En Android, los ajustes táctiles y de ancho van en `apps/android/src/app.css`. Los estilos de un
   componente ganan a un selector simple: hay que usar `main .screen .clase`.
 - Lo que una acción cambia en el estado (saldo, mascota, inventario) lo pone al día el núcleo, por
@@ -78,7 +91,8 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 
 - **Escritorio**: `pnpm --filter petai-desktop test` (438 tests) y el modo demo
   (`pnpm --filter petai-desktop run demo`, puerto 5175). La ejecución de tests acaba en rojo por dos
-  rechazos no capturados de `game-data.client.spec.ts`, anteriores a esta migración.
+  rechazos no capturados, anteriores a esta migración: `game-data/balance` en
+  `game-data.client.spec.ts` y `sprites/ignisaur_idle` en `asset-loader.spec.ts`.
 - **Android en el emulador** (Windows; ver también «Compilar para Android en Windows»):
   1. Base de datos desechable: `createdb petai_core_e2e`, `prisma migrate deploy` y
      `prisma:seed` con `DATABASE_URL` apuntando a ella. No se usa `petai_dev`.
@@ -159,8 +173,8 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Quedan las pestañas que dependen de sprites, escena o audio (Mente, Armario, Social, Arena…)
-- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Raid, Torneo, Entrenar) y Tienda › Cofres, sin probar en él. Faltan el resto de pantallas del juego
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Armario y el motor de sprites (`@pockai/scene/sprites`, `PetMiniAvatar`, `EggSprite`) en rama. Quedan las pestañas de la tabla «Pantallas que quedan, por tipo»
+- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Raid, Torneo, Entrenar), Tienda › Cofres, Mascota › Armario y el huevo de sprites, sin probar en él. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -507,3 +521,27 @@ escritorio y UI de Android.
 **Sin verificar:** nada de este tramo en el emulador de Android (ni las cuatro pantallas ni la
 navegación nueva), ni atacar a la raid con una mascota despierta, ni una mazmorra completa hasta
 el final.
+
+### Motor de sprites compartido y Armario (2026-11-20)
+
+- **Motor**: `sprites.ts`, `AnimationController`, `asset-loader`, `asset-cache` y `accessories.ts`
+  pasan de `desktop/src/lib` a `shared/scene/src/sprites` (export `@pockai/scene/sprites`, y
+  `@pockai/scene/sprites/<módulo>` para cada fichero). Las rutas `@shared/assets/…` pasan a
+  relativas para que Android las resuelva sin el alias del escritorio. `eventMap` y `petActions`
+  (reacciones de la mascota del escritorio) se quedan. El escritorio conserva sus rutas como
+  reexportaciones; las de `asset-loader` y `asset-cache` apuntan a su módulo, no al índice, para
+  no arrastrar las cargas que hace `sprites.ts` al importarse.
+- **Componentes**: `PetMiniAvatar` y `EggSprite` pasan a `@pockai/ui`. `HatchView` pinta el huevo
+  de sprites por sí misma, así que Android lo tiene sin código propio.
+- **Armario**: `WardrobeView` en la biblioteca, `WardrobeTab` como contenedor y
+  `WardrobeScreen` en Android (Mascota › Armario). El núcleo vuelve a pedir el saldo tras
+  comprar una prenda y las mascotas tras equiparla (test
+  `comprar_y_equipar_una_prenda_ponen_al_dia_saldo_y_mascota`).
+- **Modo demo**: el mock sirve el catálogo real de prendas (`accessories.json`), comprar y equipar.
+
+Verificado en el escritorio en modo demo: Armario con el arte de cada prenda, comprar las gafas
+(1250 → 950 monedas) y equiparlas; la mascota del escritorio lleva su prenda; el huevo de sprites
+en Eclosión desde la vista compartida. Tests de escena (335), del escritorio (438) y del núcleo;
+compilan escritorio, escena y UI de Android (que ya incluye las hojas de especies).
+
+**Sin verificar:** nada de esto en el emulador de Android.
