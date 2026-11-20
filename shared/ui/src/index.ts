@@ -42,6 +42,7 @@ export { uiIconSvg, UI_ICONS } from './icons';
 export { default as AppearancePicker } from './AppearancePicker.svelte';
 export { focusTrap } from './focusTrap';
 export { press } from './press';
+export * from './nav';
 export * from './platform';
 export * from './appearance';
 export * from './themes';

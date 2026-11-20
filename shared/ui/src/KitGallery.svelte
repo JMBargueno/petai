@@ -93,7 +93,7 @@
       options={[
         { value: 'home', label: 'Inicio', icon: 'home' },
         { value: 'chat', label: 'Charla', icon: 'chat' },
-        { value: 'bond', label: 'Vínculo', icon: 'bond' },
+        { value: 'bonding', label: 'Vínculo', icon: 'bond' },
       ]}
     />
     <Segmented

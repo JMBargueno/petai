@@ -34,6 +34,7 @@
   import { X } from 'lucide-svelte';
   import HomeView from './views/HomeView.svelte';
   import { AccountView, AuthView, BackpackView, ChooseHandleView, HatchView, Ico, PockaiMark, ShopView, VerifyEmailView, type AuthApi } from '@pockai/ui';
+  import { DESKTOP_NAV_BAR, NAV_LABELS, NAV_SUBS, type NavDest } from '@pockai/ui';
   import RedeemVoucherCard from './views/RedeemVoucherCard.svelte';
   import { Button, CurrencyPill, Notice, Segmented } from './ui';
   import Onboarding from './Onboarding.svelte';
@@ -133,17 +134,26 @@
     if (hatchClock) clearInterval(hatchClock);
   });
 
-  // Navegación: 6 destinos con sub-secciones (docs/PANTALLAS.md §4.3).
-  const NAV = [
-    { id: 'pet', label: 'Mascota', icon: 'ui:pet', subs: [['home', 'Inicio'], ['backpack', 'Mochila'], ['hatch', 'Eclosión'], ['bonding', 'Vínculo'], ['mind', 'Mente'], ['habitat', 'Hábitat'], ['wardrobe', 'Armario'], ['skills', 'Habilidades']] },
-    { id: 'play', label: 'Jugar', icon: 'ui:play', subs: [['games', 'Minijuegos'], ['arena', 'Arena'], ['raid', 'Raid'], ['tournament', 'Torneo'], ['training', 'Entrenamiento'], ['cooking', 'Cocina'], ['adventure', 'Aventura']] },
-    { id: 'chat', label: 'Chat', icon: 'ui:chat', subs: [] },
-    { id: 'social', label: 'Social', icon: 'ui:social', subs: [['profile', 'Mi Perfil'], ['friends', 'Amigos'], ['clans', 'Clanes'], ['visits', 'Visitas']] },
-    { id: 'progress', label: 'Progreso', icon: 'ui:progress', subs: [['missions', 'Misiones'], ['seasons', 'Temporada']] },
-    { id: 'shop', label: 'Tienda', icon: 'ui:shop', subs: [['store', 'Tienda'], ['chests', 'Cofres']] },
-    { id: 'settings', label: 'Ajustes', icon: 'ui:settings', subs: [['account', 'Cuenta'], ['notifications', 'Avisos'], ['sound', 'Sonido'], ['desktop', 'Escritorio'], ['about', 'Acerca de']] },
-  ];
-  let dest: string = 'pet';
+  // Navegación: los destinos y sus sub-secciones vienen de @pockai/ui (nav.ts), los mismos que el móvil.
+  // La barra superior son seis destinos (DESKTOP_NAV_BAR); Ajustes va aparte, en el engranaje.
+  // Los iconos son del set propio de @pockai/ui (`ui:<clave>`), como en el resto de la interfaz.
+  const NAV_ICONS: Record<NavDest, string> = {
+    pet: 'ui:pet',
+    play: 'ui:play',
+    chat: 'ui:chat',
+    social: 'ui:social',
+    progress: 'ui:progress',
+    shop: 'ui:shop',
+    settings: 'ui:settings',
+  };
+  const NAV_IDS: NavDest[] = [...DESKTOP_NAV_BAR, 'settings'];
+  const NAV = NAV_IDS.map((id) => ({
+    id,
+    label: NAV_LABELS[id],
+    icon: NAV_ICONS[id],
+    subs: Object.entries(NAV_SUBS[id]) as [string, string][],
+  }));
+  let dest: NavDest = 'pet';
   let sub: string = 'home';
   /** Amigo elegido en Social › Amigos para abrir directamente su visita. */
   let visitFriend = '';
@@ -180,9 +190,17 @@
     lastSub[dest] = s;
     contentEl?.scrollTo({ top: 0 });
   }
-  /** Limpia lo que solo tiene sentido mientras se mira una sub-sección. */
+  /**
+   * Estado que solo tiene sentido mientras se mira una sub-sección, por «destino/sub». Al salir de
+   * ella se limpia. Para otro caso se añade una entrada aquí, sin tocar `leaveSub`.
+   */
+  const RESET_ON_LEAVE: Record<string, () => void> = {
+    'pet/hatch': () => {
+      if (hatchingEggId === null) hatchedResult = null;
+    },
+  };
   function leaveSub() {
-    if (dest === 'pet' && sub === 'hatch' && hatchingEggId === null) hatchedResult = null;
+    RESET_ON_LEAVE[`${dest}/${sub}`]?.();
   }
   const toggleSettings = () => (dest === 'settings' ? go(beforeSettings.dest, beforeSettings.sub) : go('settings'));
 

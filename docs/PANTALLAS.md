@@ -88,19 +88,34 @@ Las features 003 (observabilidad), 004 (DevKit), 009 (CDN) y 027 (motor de anima
 
 ### 3.1 Navegación
 
-Barra inferior con cinco destinos. Hoy Android tiene Mascota, Chat, Jugar, Tienda y Cuenta; la propuesta reorganiza para dar sitio a la progresión:
+La navegación es la misma en escritorio y móvil: los destinos y sus sub-secciones están definidos una sola vez en `shared/ui/src/nav.ts` (`NAV_SUBS`) y los dos clientes validan contra ellos. Las claves son las mismas en las dos plataformas (`hatch`, `bonding`, `seasons`).
 
-| Pestaña | Contenido | Cambio respecto a hoy |
+**Barra inferior (cinco pestañas, en este orden):**
+
+| Pestaña | Clave | Secciones | Notas |
+|---|---|---|---|
+| **Mascota** | `pet` | Inicio (`home`), Mochila (`backpack`), Huevos (`hatch`), Vínculo (`bonding`), Mente (`mind`), Hábitat (`habitat`), Armario (`wardrobe`) | La mochila pasa a sección de Mascota, como en el escritorio |
+| **Jugar** | `play` | Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura | Sin cambios |
+| **Chat** | `chat` | Sin secciones | Pestaña de primer nivel, en el centro |
+| **Social** | `social` | Perfil (`profile`), Amigos (`friends`), Clanes (`clans`), Visitas (`visits`) | Sube desde Cuenta a primer nivel |
+| **Progreso** | `progress` | Misiones (`missions`), Temporada (`seasons`) | Sin cambios |
+
+**Cabecera (fuera de la barra):**
+
+| Elemento | Destino | Notas |
 |---|---|---|
-| **Mascota** | Inicio, cuidados, colección, eclosión, hábitat | Absorbe la eclosión y añade hábitat |
-| **Jugar** | Minijuegos, cocina, entrenamiento, arena, raid, torneo | Añade cocina, entrenamiento, raid y torneo |
-| **Chat** | Chat IA, voz, aventura, recuerdos, recordatorios | Añade aventura y recordatorios |
-| **Progreso** | Misiones, logros, temporada, rituales | **Nueva** |
-| **Más** | Tienda, cofres, inventario, social, cuenta y ajustes | Sustituye a Tienda y Cuenta |
+| Nombre del jugador (avatar) | Social › Perfil (`social/profile`) | |
+| Saldo de monedas y gemas | Tienda (`shop/store`) | Tocar el saldo abre la tienda |
+| Icono de bolsa | Tienda (`shop/store`) | Acceso directo a la tienda |
+| Icono de engranaje | Ajustes (`settings`) | Una sola pantalla: cuenta (sesión y canje de código), apariencia y sonido |
 
-La tienda deja de ser pestaña propia: se abre desde un acceso con el saldo (monedas y gemas) visible en la cabecera de todas las pestañas.
+**Tienda** (`shop`): secciones Tienda (`store`) y Cofres (`chests`), abiertas desde la cabecera.
 
-Indicadores en la barra: punto en **Progreso** cuando hay recompensas por reclamar, y en **Más** cuando hay regalos pendientes.
+**Lente de la barra:** solo se anima al cambiar de pestaña de la barra. Tienda y Ajustes, desde la cabecera, cambian la pantalla sin moverla y la lente se oculta mientras están abiertas.
+
+**Peticiones entre pantallas:** cualquier «ir a…» (p. ej. «Ir a la tienda» desde la Mochila) pasa por la misma resolución de rutas. Un destino o una sección desconocidos no cambian la pantalla y se avisan en desarrollo.
+
+Indicador pendiente: punto en **Progreso** cuando hay recompensas por reclamar (aún no está en el código).
 
 ### 3.2 Acceso
 
@@ -444,17 +459,17 @@ El icono de la bandeja debe cambiar cuando la mascota necesita atención.
 
 ### 4.3 Panel de control
 
-Ventana normal con pestañas. Hoy tiene siete: Mascota, Eclosionar, Juegos, Arena, IA, Tienda y Cuenta. Propuesta, con los mismos nombres que el móvil:
+Ventana normal con pestañas. La barra superior tiene seis destinos, con los mismos nombres y las mismas claves que el móvil (§3.1): Mascota, Jugar, Chat, Social, Progreso y Tienda. Ajustes va aparte, en el engranaje de la cabecera. Las sub-secciones de cada destino son las de `shared/ui/src/nav.ts`.
 
 | Pestaña | Contenido | Respecto al móvil |
 |---|---|---|
-| **Mascota** | Inicio, colección, eclosión, hábitat, breeding | Igual. La eclosión pasa a ser una sección de esta pestaña |
-| **Jugar** | Minijuegos, cocina, entrenamiento, arena, raid, torneo | Igual. Une las pestañas actuales Juegos y Arena |
-| **Chat** | Chat, recuerdos, recordatorios, aventura | Igual, más las herramientas del ordenador (§4.4). Sustituye a IA |
-| **Progreso** | Misiones, logros, temporada, rituales | Igual. Los logros y la constelación ya existen aquí |
-| **Tienda** | Tienda, cofres, inventario | Igual |
-| **Social** | Regalos, buddies | Igual |
-| **Ajustes** | Cuenta, IA, notificaciones, accesibilidad, escritorio, desarrolladores | Añade las secciones Escritorio y Desarrolladores |
+| **Mascota** | Inicio, mochila, eclosión, vínculo, mente, hábitat, armario, habilidades | Igual, más Habilidades de escritorio (§4.4) |
+| **Jugar** | Minijuegos, arena, raid, torneo, entrenamiento, cocina, aventura | Igual |
+| **Chat** | Chat IA, recuerdos, recordatorios, herramientas del ordenador (§4.4) | Igual, más las herramientas del ordenador |
+| **Social** | Mi perfil, amigos, clanes, visitas | Igual |
+| **Progreso** | Misiones, temporada | Igual. Logros y rituales aún no tienen sección |
+| **Tienda** | Tienda, cofres | Igual |
+| **Ajustes** | Cuenta, avisos, sonido, escritorio, acerca de | Aparte, en el engranaje. Añade Escritorio y Acerca de, que son solo del ordenador |
 
 Las pantallas de cada pestaña siguen la descripción del móvil (§3.3 a §3.7) con las mismas rutas. Diferencias de diseño:
 
