@@ -79,7 +79,7 @@
     <AiSettingsView {aiApi} dailyLimit={managed ? dailyLimit : null} on:changed={(e) => engineChanged(e.detail)} />
   {:else}
     {#key `${pet.id}:${chatKey}`}
-      <ChatView {pet} {chatApi} {managed} quotaExceeded={managed && quotaExceeded} {dailyLimit} maxChars={240} on:done={() => loadUsage()} on:quota={() => loadUsage()} on:useOwnKey={() => (showSettings = true)} />
+      <ChatView {pet} {chatApi} {managed} canUseOwnKey quotaExceeded={managed && quotaExceeded} {dailyLimit} maxChars={240} on:done={() => loadUsage()} on:quota={() => loadUsage()} on:useOwnKey={() => (showSettings = true)} />
     {/key}
   {/if}
 {:else}

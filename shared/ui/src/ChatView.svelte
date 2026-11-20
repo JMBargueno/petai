@@ -35,6 +35,8 @@
   export let maxChars = 240;
   /** Se ofrece pasar a Pro o usar una clave propia al agotar la cuota. */
   export let canUpgrade = false;
+  /** Solo se ofrece la clave propia (donde no se puede pagar Pro desde la app, como en Android). */
+  export let canUseOwnKey = false;
 
   const dispatch = createEventDispatcher<{
     /** Turno terminado (el mensaje final y la reacción de la mascota, si la hay). */
@@ -360,9 +362,11 @@
   {#if managed && quotaExceeded}
     <Notice tone="warning" icon="lock">
       <strong>Límite diario alcanzado ({dailyLimit} mensajes).</strong> Se renueva a medianoche.
-      {#if canUpgrade}
+      {#if canUpgrade || canUseOwnKey}
         <div class="row quota-actions">
-          <Button variant="primary" size="sm" icon="star" on:click={() => dispatch('upgrade')}>Hazte Pro</Button>
+          {#if canUpgrade}
+            <Button variant="primary" size="sm" icon="star" on:click={() => dispatch('upgrade')}>Hazte Pro</Button>
+          {/if}
           <Button size="sm" on:click={() => dispatch('useOwnKey')}>Usar mi clave gratis</Button>
         </div>
       {/if}
