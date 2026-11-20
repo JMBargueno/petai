@@ -457,6 +457,29 @@ async fn atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_mascotas_saldo_e_inventa
 }
 
 #[tokio::test]
+async fn una_pelea_de_arena_aplica_la_mascota_y_refresca_el_saldo() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 33 })).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/battles/matchmake"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "result": { "outcome": "win" }, "pet": { "id": "p1", "energy": 12 } })))
+        .mount(&server)
+        .await;
+
+    core.perform(Action::Matchmake { pet_id: "p1".into() }).await.unwrap();
+    settle().await;
+
+    let state = core.state_snapshot();
+    assert_eq!(state.pets[0]["energy"], 12);
+    assert_eq!(state.user["coins"], 33);
+}
+
+#[tokio::test]
 async fn comprar_y_equipar_una_prenda_ponen_al_dia_saldo_y_mascota() {
     use pockai_core::Action;
     let server = MockServer::start().await;

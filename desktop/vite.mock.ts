@@ -231,6 +231,24 @@ const combat = (petId: string) => ({
   canFight: true,
   reason: null,
 });
+/** Una pelea corta de ejemplo para el visor de repeticiones (formato `replay` del servidor). */
+const demoReplay = (rival: string, rivalSpecies: string) => ({
+  version: 1,
+  seed: 7,
+  participants: [
+    { name: 'Fuego', speciesId: 'ignisaur', stage: 'juvenile', petId: 'p-1', element: 'fire', level: 7, maxHp: 120, skills: ['ember'], strategy: 'balanced', isBot: false },
+    { name: rival, speciesId: rivalSpecies, stage: 'baby', petId: 'p-rival', element: 'water', level: 6, maxHp: 100, skills: ['tail_whip'], strategy: 'aggressive', isBot: false },
+  ],
+  events: [
+    { t: 'round', n: 1 },
+    { t: 'move', actor: 0, skill: 'ember', hit: true, damage: 45, crit: false, mult: 1, hp: [120, 55] },
+    { t: 'move', actor: 1, skill: 'tail_whip', hit: true, damage: 20, crit: false, mult: 1, hp: [100, 55] },
+    { t: 'round', n: 2 },
+    { t: 'move', actor: 0, skill: 'ember', hit: true, damage: 60, crit: true, mult: 1, hp: [100, 0] },
+    { t: 'faint', actor: 1 },
+    { t: 'end', winner: 0, reason: 'ko', hp: [100, 0] },
+  ],
+});
 const battles = ['win', 'loss', 'win', 'draw', 'win'].map((outcome, i) => ({
   id: `b-${i}`,
   createdAt: iso(-(i + 1) * 3 * HOUR),
@@ -606,6 +624,13 @@ const routes: [string, RegExp, Handler][] = [
   })],
   ['GET', /^\/arena\/leagues$/, () => ({ leagues: [{ id: 'bronze', name: 'Bronce', minElo: 0 }, league, league.next], dailyFreeBattles: 5, energyCost: 10 })],
   ['GET', /^\/battles$/, () => battles],
+  ['GET', /^\/battles\/([^/]+)$/, ({ m }) => ({ id: m[1], seed: 7, createdAt: iso(-HOUR), role: 'attacker', outcome: 'win', eloDelta: 14, replay: demoReplay('Luna', 'axolunar') })],
+  ['POST', /^\/battles\/matchmake$/, ({ body }) => {
+    const pet = findPet(body.petId);
+    pet.energy = Math.max(0, (pet.energy ?? 0) - 10);
+    user.coins += 25;
+    return { battleId: uid('b'), seed: 7, result: { outcome: 'win', winner: 0, rounds: 2 }, opponent: { name: 'Luna', speciesId: 'axolunar', element: 'water', level: 6, isBot: false, ownerName: 'Jugador 4' }, elo: { before: 1340, after: 1354, delta: 14, league }, rewards: { xp: 30, coins: 25, happiness: 3, energyCost: 10 }, bonusItem: null, replay: demoReplay('Luna', 'axolunar'), pet };
+  }],
   ['GET', /^\/leaderboard$/, () => ({ scope: 'global', entries: leaderboard, me: { rank: 7, score: 1360 } })],
   ['GET', /^\/raid\/current$/, () => raid],
   ['GET', /^\/raid\/leaderboard$/, () => ({ raidId: 'r-1', totalDamage: 187600, hpRemaining: raid.hpRemaining, entries: leaderboard.slice(0, 8).map((e) => ({ rank: e.rank, userId: `u-${e.rank}`, displayName: e.owner, petId: e.petId, petName: e.name || 'Fuego', petLevel: e.level, petElement: 'fire', damageDealt: 9000 - e.rank * 700, percentage: 4.8 - e.rank * 0.4, attacks: 6, mine: e.mine })) })],

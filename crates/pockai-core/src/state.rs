@@ -487,6 +487,13 @@ impl Core {
             // Combates y cofres: la respuesta es el resultado, no la mascota ni el saldo. Gastan
             // energía y dan premios (monedas, gemas, objetos), así que se vuelven a pedir.
             ["raid", "attack"] => self.refresh_later(&[Slice::Pets, Slice::User]),
+            // Pelea de arena: la respuesta trae la mascota ya actualizada; el premio cambia el saldo.
+            ["battles", "matchmake"] => {
+                if let Some(pet) = value.get("pet").filter(|p| pet_id(p).is_some()) {
+                    self.apply_pet(pet.clone(), false, ChangeSource::Server);
+                }
+                self.refresh_later(&[Slice::User]);
+            }
             // Cada piso de la mazmorra es un turno: solo cambia algo cuando la mazmorra termina.
             ["training", "submit"] => {
                 if value.get("status").and_then(Value::as_str) != Some("active") {

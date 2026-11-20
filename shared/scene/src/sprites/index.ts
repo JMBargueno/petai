@@ -8,3 +8,5 @@ export * from './AnimationController';
 export * from './asset-loader';
 export * from './asset-cache';
 export * from './accessories';
+export * from './speciesPalette';
+export * from './seed';

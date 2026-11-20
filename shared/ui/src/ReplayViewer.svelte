@@ -2,11 +2,9 @@
   import Ico from './Ico.svelte';
   import { onDestroy } from 'svelte';
   import PetMiniAvatar from './PetMiniAvatar.svelte';
-  import { DEFAULT_STAGE } from '../lib/sprites';
-  import { speciesPalette } from '../lib/speciesPalette';
-  import { visitorSeed } from '../lib/visitors';
-  import type { ReplayParticipant } from '../lib/replay';
-  import { buildFrames, type Frame, type ReplayLog } from '../lib/replay';
+  import { DEFAULT_STAGE, speciesPalette, visitorSeed } from '@pockai/scene/sprites';
+  import type { ReplayParticipant } from './replay';
+  import { buildFrames, type Frame, type ReplayLog } from './replay';
 
   export let log: ReplayLog;
   /** id de habilidad → nombre */

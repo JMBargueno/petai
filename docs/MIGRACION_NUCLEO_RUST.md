@@ -31,18 +31,18 @@ fases de abajo y en las secciones de verificación del final.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
 - **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
-  estilos y trece pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  estilos y catorce pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
   Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
-  Armario. Las usan el escritorio y la app de Android.
+  Armario y Arena. Las usan el escritorio y la app de Android.
 - **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
   `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
 - **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario), Mochila, Jugar
-  (Raid, Torneo, Entrenar), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta (desde
-  el nombre de la cabecera). Jugar, Cofres y Armario aún no se han probado en el emulador.
+  (Arena, Raid, Torneo, Entrenar), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta
+  (desde el nombre de la cabecera). Jugar, Cofres y Armario aún no se han probado en el emulador.
 
 ### Qué falta, por orden
 
-1. **Probar en el emulador** Jugar, Cofres, Armario y el huevo de sprites.
+1. **Probar en el emulador** Jugar (con Arena), Cofres, Armario y el huevo de sprites.
 2. **Más pantallas a la biblioteca** (4.4 y 4.5), por tramos según la tabla de abajo. Decidido:
    el motor de sprites se comparte (no un hueco por app).
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
@@ -56,7 +56,7 @@ fases de abajo y en las secciones de verificación del final.
 
 | Tipo | Pantallas | Qué las ata al escritorio | Cómo se mueven |
 |---|---|---|---|
-| (a) Sprites, datos estáticos y sonido | Arena, Cocina, Minijuegos, Aventura | `ReplayViewer` (sprites, `replay.ts`, `speciesPalette`, `visitorSeed`); `lib/audio`; `MinigameHost`; `StorySceneView` (`@pockai/scene`, `environmental`) | Patrón de siempre. Los auxiliares puros pasan con la vista; el sonido sale por eventos (`onUiFeedback`) y lo pone cada app |
+| (a) Sprites, datos estáticos y sonido | Cocina, Minijuegos, Aventura (Arena hecha) | `lib/audio`; `MinigameHost`; `StorySceneView` (`@pockai/scene`, `environmental`) | Patrón de siempre. Los auxiliares puros pasan con la vista; el sonido sale por eventos (`onUiFeedback`) y lo pone cada app |
 | (b) Estado de pantalla alimentado por tiempo real | Amigos, Visitas, Clanes | `visitors.ts`, `clan-store.ts`, `activeVisit`, `visitTravel` (se quedaron en la UI en la fase 3) | Antes, decidir si ese estado sube al núcleo; sin eso, Android no tiene de dónde leerlo |
 | (c) Funciones del escritorio | Chat/IA, Mente, partes de Hábitat | `hermesLocal`, `aiCli`, `deskContext`, `desktopSkillsStore`, `initiative`, `brain`, arrastre de ventana | No van enteras: frontera de la spec 43. El móvil tendrá su contenedor o una vista reducida con huecos |
 | (d) Perfil | Perfil (`features/profile`) | Solo `api` y `profile-format` | Pequeña: patrón de siempre |
@@ -173,8 +173,8 @@ Regla de la biblioteca: datos por props, avisos por eventos, nada de núcleo, ba
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Armario y el motor de sprites (`@pockai/scene/sprites`, `PetMiniAvatar`, `EggSprite`) en rama. Quedan las pestañas de la tabla «Pantallas que quedan, por tipo»
-- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Raid, Torneo, Entrenar), Tienda › Cofres, Mascota › Armario y el huevo de sprites, sin probar en él. Faltan el resto de pantallas del juego
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones, Vínculo, Temporada, Cofres, Raid, Torneo y Entrenamiento, usadas por el escritorio y por Android. Armario, Arena y el motor de sprites (`@pockai/scene/sprites`, `PetMiniAvatar`, `EggSprite`, `ReplayViewer`) en rama. Quedan las pestañas de la tabla «Pantallas que quedan, por tipo»
+- 🟡 4.5 `apps/android`: UI Svelte hecha con `@pockai/ui`: Mascota (Inicio, Vínculo, Huevos), Mochila, Tienda, Progreso (Misiones, Temporada) y Cuenta, probadas en el emulador; Jugar (Arena, Raid, Torneo, Entrenar), Tienda › Cofres, Mascota › Armario y el huevo de sprites, sin probar en él. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -545,3 +545,29 @@ en Eclosión desde la vista compartida. Tests de escena (335), del escritorio (4
 compilan escritorio, escena y UI de Android (que ya incluye las hojas de especies).
 
 **Sin verificar:** nada de esto en el emulador de Android.
+
+### Arena compartida (2026-11-20)
+
+- **Vista**: `ArenaView` en `@pockai/ui`. Los borradores (puntos por repartir, habilidades
+  marcadas, la confirmación del reparto) son de la vista y se rehacen solo cuando el perfil cambia
+  de verdad (puntos, estadísticas o habilidades), no al cambiar la estrategia. La sección visible
+  (Pelea, Historial, Ranking) la lleva el contenedor, porque abrir una repetición vuelve a Pelea.
+- **Visor de repeticiones**: `ReplayViewer` y `replay.ts` (fotogramas a partir del registro del
+  servidor, función pura) pasan a `@pockai/ui`. `speciesPalette` y `visitorSeed` (dibujar una
+  mascota de la que solo se sabe la especie) pasan al motor de sprites; `visitors.ts` reexporta
+  `visitorSeed`.
+- **Contenedores**: `ArenaTab` en el escritorio; `ArenaScreen` en Android (Jugar › Arena, la
+  primera sección).
+- **Núcleo**: tras una pelea aplica la mascota que trae la respuesta y vuelve a pedir el saldo
+  (test `una_pelea_de_arena_aplica_la_mascota_y_refresca_el_saldo`).
+- **Modo demo**: no tenía pelea ni detalle de una pelea del historial (respondía `{ok:true}` y no
+  pasaba nada); ahora sirve una pelea corta con su repetición.
+
+Verificado en el escritorio en modo demo: buscar rival (victoria, ELO 1340 → 1354, saldo
+1250 → 1275) y su repetición con los dos luchadores dibujados por el motor compartido; abrir una
+pelea del historial (vuelve a Pelea con «Fuego vs Luna»); el ranking con tu puesto; repartir 2
+puntos con su confirmación, que se cierra sola. 438 tests del escritorio, 23 de estado del núcleo;
+compilan escritorio, escena y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; guardar habilidades y cambiar la estrategia (el
+catálogo del demo no trae habilidades).

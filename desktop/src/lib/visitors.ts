@@ -62,15 +62,8 @@ export function resolveVisitorSpriteKey(pet: PetIdentity | null | undefined): st
   return DEFAULT;
 }
 
-/** `visualSeed` determinista por visitante: el sprite no cambia entre sesiones. */
-export function visitorSeed(visitorId: string): number {
-  let h = 0x811c9dc5; // FNV-1a
-  for (let i = 0; i < visitorId.length; i++) {
-    h ^= visitorId.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0) % 99991 || 1337;
-}
+/** `visualSeed` determinista por visitante: el sprite no cambia entre sesiones. Vive en el motor de sprites. */
+export { visitorSeed } from '@pockai/scene/sprites/seed';
 
 // ── Store: visitantes ahora mismo en tu hábitat ─────────────────────────────
 export const visitorsStore = writable<HabitatVisitor[]>([]);
