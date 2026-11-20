@@ -77,7 +77,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
 - 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las pantallas de dominio Tienda, Mochila, Inicio, Cuenta y Eclosión, usadas por el escritorio y por Android. Lo siguiente son las pantallas que hablan con el servidor por su cuenta (Vínculo, Mente, Armario…), que hay que partir una a una
-- 🟡 4.5 `apps/android`: UI Svelte con pestañas (Mascota, Huevos, Mochila, Tienda, Cuenta) hecha con `@pockai/ui`. Tienda y Mochila probadas en el emulador; Mascota, Huevos y Cuenta, solo compiladas. Faltan el resto de pantallas del juego
+- 🟡 4.5 `apps/android`: UI Svelte con pestañas (Mascota, Huevos, Mochila, Tienda, Cuenta) hecha con `@pockai/ui`, todas probadas en el emulador. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -332,3 +332,22 @@ huevo tiembla mientras responde el servidor.
 Verificado en el escritorio en modo demo: huevo de sprites en el hueco, eclosión con sus fases y
 aviso del nacimiento. 438 tests; compilan escritorio y UI de Android. **Sin verificar:** la pestaña
 Huevos en el emulador de Android.
+
+### Mascota, Huevos y Cuenta en el emulador (2026-11-20)
+
+APK de depuración (x86_64) en el emulador de API 37, contra un backend local con base de datos
+desechable y la cuenta de la semilla:
+
+- **Huevos**: eclosionar el huevo inicial con nombre («Chispa», un Magmadillo), aviso del
+  nacimiento, comprar otro huevo (1290 → 1240 monedas) y su cuenta atrás.
+- **Mascota**: la ficha compartida con elemento, rareza, patrón y nivel; dar de comer (5 → 4
+  manzanas), bañar, dormir y despertar.
+- **Cuenta**: datos del jugador y cerrar sesión (vuelve al inicio de sesión). Al reinstalar la app
+  la sesión se conserva.
+
+Un ajuste salió de la prueba: los chips de comida medían 42 px de alto porque el estilo del
+componente ganaba al de la app; el selector de `apps/android/src/app.css` es ahora más específico
+y miden 48 px.
+
+Sin verificar: el selector de mascota activa (hace falta una segunda mascota) y el temblor del
+icono del huevo durante la eclosión (el servidor local responde antes de poder verlo).
