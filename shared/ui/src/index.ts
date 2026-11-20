@@ -28,6 +28,7 @@ export { default as TileButton } from './TileButton.svelte';
 export { default as Ico } from './Ico.svelte';
 export { focusTrap } from './focusTrap';
 export { emitUiFeedback, onUiFeedback, type UiFeedback } from './feedback';
+export { setUiSound, uiSfx, uiLoop, uiStopLoop, type UiSound, type UiSoundOptions } from './sound';
 
 // Piezas de dominio: pantallas enteras que solo pintan. Reciben el estado por props y avisan de lo
 // que el jugador quiere hacer; quien las usa (el contenedor de cada app) habla con el núcleo.
@@ -36,6 +37,7 @@ export { default as ArenaView } from './ArenaView.svelte';
 export { default as BondingView } from './BondingView.svelte';
 export { default as BackpackView } from './BackpackView.svelte';
 export { default as ChestsView } from './ChestsView.svelte';
+export { default as CookingView } from './CookingView.svelte';
 export { default as ItemIcon } from './ItemIcon.svelte';
 export { default as EggSprite } from './EggSprite.svelte';
 export { default as PetMiniAvatar } from './PetMiniAvatar.svelte';
@@ -58,4 +60,5 @@ export * from './tournament';
 export * from './chests';
 export * from './training';
 export * from './replay';
+export { dishArt } from './dishes';
 export { ITEM_ICON_SIZE, itemIcon } from './items';

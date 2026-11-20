@@ -5,6 +5,7 @@
   import ArenaScreen from './screens/ArenaScreen.svelte';
   import BondingScreen from './screens/BondingScreen.svelte';
   import ChestsScreen from './screens/ChestsScreen.svelte';
+  import CookingScreen from './screens/CookingScreen.svelte';
   import MissionsScreen from './screens/MissionsScreen.svelte';
   import RaidScreen from './screens/RaidScreen.svelte';
   import SeasonScreen from './screens/SeasonScreen.svelte';
@@ -29,13 +30,14 @@
   /** Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión). */
   let petSection = $state<'home' | 'bond' | 'eggs' | 'wardrobe'>('home');
   let progressSection = $state<'missions' | 'season'>('missions');
-  let playSection = $state<'arena' | 'raid' | 'tournament' | 'training'>('arena');
+  let playSection = $state<'arena' | 'raid' | 'tournament' | 'training' | 'cooking'>('arena');
   let shopSection = $state<'store' | 'chests'>('store');
   const PLAY_SECTIONS = [
     { value: 'arena', label: 'Arena', icon: 'medal' },
     { value: 'raid', label: 'Raid', icon: 'swords' },
     { value: 'tournament', label: 'Torneo', icon: 'trophy' },
     { value: 'training', label: 'Entrenar', icon: 'castle' },
+    { value: 'cooking', label: 'Cocina', icon: 'chef' },
   ];
   const SHOP_SECTIONS = [
     { value: 'store', label: 'Tienda', icon: 'shop' },
@@ -228,8 +230,10 @@
           <RaidScreen {pet} />
         {:else if playSection === 'tournament'}
           <TournamentScreen {pet} />
-        {:else}
+        {:else if playSection === 'training'}
           <TrainingScreen {pet} />
+        {:else}
+          <CookingScreen {pet} />
         {/if}
       {:else if tab === 'account'}
         <AccountView user={$core.user} on:logout={leave} />

@@ -500,7 +500,9 @@ impl Core {
                     self.refresh_later(&[Slice::Pets, Slice::User]);
                 }
             }
-            ["training", "start"] => self.refresh_later(&[Slice::Pets]),
+            ["training", "start"] | ["cooking", "start"] => self.refresh_later(&[Slice::Pets]),
+            // Servir un plato paga monedas (y su buff es de combate, no de la mascota).
+            ["cooking", "submit"] => self.refresh_later(&[Slice::User]),
             ["tournament", "enter"] => self.refresh_later(&[Slice::User]),
             ["chests", "open"] | ["chests", "purchase"] => self.refresh_later(&[Slice::User, Slice::Inventory]),
             ["accessories", _, "buy"] => self.refresh_later(&[Slice::User]),

@@ -457,6 +457,34 @@ async fn atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_mascotas_saldo_e_inventa
 }
 
 #[tokio::test]
+async fn cocinar_pone_al_dia_la_energia_y_servir_el_saldo() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/pets", json!([{ "id": "p1", "energy": 5 }, { "id": "p2" }])).await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 61 })).await;
+    for route in ["/v1/cooking/start", "/v1/cooking/submit"] {
+        Mock::given(method("POST"))
+            .and(path(route))
+            .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "sessionId": "s1" })))
+            .mount(&server)
+            .await;
+    }
+
+    core.perform(Action::CookingStart { pet_id: "p1".into(), recipe_id: None }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().pets[0]["energy"], 5);
+    assert_eq!(core.state_snapshot().user["coins"], 10, "empezar no paga");
+
+    core.perform(Action::CookingSubmit { session_id: "s1".into(), score: 100.0, correct_order: true, picked: None, picked_at: None }).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 61);
+}
+
+#[tokio::test]
 async fn una_pelea_de_arena_aplica_la_mascota_y_refresca_el_saldo() {
     use pockai_core::Action;
     let server = MockServer::start().await;
